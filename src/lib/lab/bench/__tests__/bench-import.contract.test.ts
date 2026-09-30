@@ -25,6 +25,7 @@ import {
   buildSanitizedProfileRow,
   computeChecksum,
   createReadOnlySourceClient,
+  ensureContentAddressedObject,
   importOneStore,
   isForbiddenSourceTarget,
   materializeStoreAssets,
@@ -207,6 +208,10 @@ function makeSource(seed: SourceSeed = {}) {
 interface DestinationOptions {
   existingUser?: { id: string; email: string } | null;
   uploadError?: Error;
+  /** Objetos já existentes no destino: chave `${bucket}:${path}` → conteúdo. */
+  existingObjects?: Record<string, Buffer>;
+  /** Simula erro ambíguo/timeout no upload (o objeto é gravado e o erro retornado). */
+  ambiguousUpload?: boolean;
 }
 
 /** Política real dos buckets de branding (migrations): reproduzida no mock. */
@@ -216,15 +221,49 @@ const BUCKET_ALLOWED_MIME: Record<string, readonly string[]> = {
   "visual-signatures": ["image/png", "image/svg+xml"],
 };
 
+const objectKey = (bucket: string, path: string) => `${bucket}:${path}`;
+
 function makeDestination(options: DestinationOptions = {}) {
   const uploads: Array<{ bucket: string; path: string; bytes: number; contentType: string }> = [];
   const removals: Array<{ bucket: string; path: string }> = [];
+  const objects = new Map<string, Buffer>();
+  for (const [key, value] of Object.entries(options.existingObjects ?? {})) {
+    objects.set(key, Buffer.from(value));
+  }
   let user = options.existingUser ?? null;
+
+  // Storage fake do destino local: `download`/`upload` com `upsert` respeitado.
+  const storage = {
+    async download(bucket: string, path: string) {
+      const value = objects.get(objectKey(bucket, path));
+      if (value === undefined) return { data: null, error: { message: "Object not found" } };
+      return { data: Buffer.from(value), error: null };
+    },
+    async upload(
+      bucket: string,
+      path: string,
+      buffer: Buffer,
+      opts: { contentType?: string; upsert?: boolean } = {},
+    ) {
+      if (options.uploadError) return { error: { message: options.uploadError.message } };
+      const key = objectKey(bucket, path);
+      if (objects.has(key) && !opts.upsert) {
+        return { error: { message: "KeyAlreadyExists" } };
+      }
+      objects.set(key, Buffer.from(buffer));
+      uploads.push({ bucket, path, bytes: buffer.length, contentType: opts.contentType ?? "" });
+      if (options.ambiguousUpload) {
+        return { error: { message: "The upstream server is timing out" } };
+      }
+      return { error: null };
+    },
+  };
 
   return {
     host: "local:54321",
     uploads,
     removals,
+    objects,
     async findUserByEmail(email: string) {
       return user && user.email === email ? user : null;
     },
@@ -249,11 +288,37 @@ function makeDestination(options: DestinationOptions = {}) {
         throw new Error(`mime type ${contentType} is not supported`);
       }
       uploads.push({ bucket, path, bytes: buffer.length, contentType });
+      objects.set(objectKey(bucket, path), Buffer.from(buffer));
       return { bucket, path };
     },
-    async removeBrandingObjects(objects: Array<{ bucket: string; path: string }>) {
-      for (const object of objects) removals.push(object);
-      return { removed: objects.length, failed: 0 };
+    async ensureBrandingObject({
+      bucket,
+      path,
+      buffer,
+      contentType,
+      expectedChecksum,
+    }: {
+      bucket: string;
+      path: string;
+      buffer: Buffer;
+      contentType: string;
+      expectedChecksum?: string;
+    }) {
+      return ensureContentAddressedObject({
+        storage,
+        bucket,
+        path,
+        buffer,
+        contentType,
+        expectedChecksum,
+      });
+    },
+    async removeBrandingObjects(list: Array<{ bucket: string; path: string }>) {
+      for (const object of list) {
+        removals.push(object);
+        objects.delete(objectKey(object.bucket, object.path));
+      }
+      return { removed: list.length, failed: 0 };
     },
   };
 }
@@ -575,26 +640,32 @@ describe("(f) estado atual pelo comportamento produtivo", () => {
 // ─── (g) Idempotência ────────────────────────────────────────────────────────
 
 describe("(g) idempotência (mesmos checksums → mesmos paths)", () => {
-  it("reexecução sem mudanças produz os mesmos paths e não duplica", async () => {
+  it("reexecução reutiliza os objetos e não duplica", async () => {
     const source = makeSource();
     const manifestStore = makeManifestStore();
 
-    const dest1 = makeDestination();
-    await importOneStore({ storeId: STORE_ID, source, destination: dest1, db: makeDb(), manifestStore });
-    const firstUploads = JSON.parse(JSON.stringify(dest1.uploads));
+    // Mesmo destino nas duas execuções: os objetos content-addressed persistem.
+    const destination = makeDestination();
+    const first = await importOneStore({ storeId: STORE_ID, source, destination, db: makeDb(), manifestStore });
+    expect(first.objectsWritten).toBe(2);
+    expect(first.objectsReused).toBe(0);
+    const firstUploads = JSON.parse(JSON.stringify(destination.uploads));
 
-    // Segunda execução: a identidade anterior já aponta para os MESMOS paths novos.
-    const dest2 = makeDestination();
+    // Segunda execução: a identidade anterior aponta para os MESMOS paths, que já
+    // existem no destino → reutilizados, sem novo upload.
     const db2 = makeDb({
       rows: {
-        brandAssets: [{ asset_type: "logo", storage_path: dest1.uploads[0].path }],
-        signatures: [{ storage_path: dest1.uploads[1].path }],
+        brandAssets: [{ asset_type: "logo", storage_path: firstUploads[0].path }],
+        signatures: [{ storage_path: firstUploads[1].path }],
       },
     });
-    await importOneStore({ storeId: STORE_ID, source, destination: dest2, db: db2, manifestStore });
+    const second = await importOneStore({ storeId: STORE_ID, source, destination, db: db2, manifestStore });
 
-    expect(dest2.uploads).toEqual(firstUploads);
-    expect(dest2.removals).toEqual([]);
+    expect(second.objectsWritten).toBe(0);
+    expect(second.objectsReused).toBe(2);
+    expect(second.removedOldObjects).toBe(0);
+    expect(destination.uploads).toEqual(firstUploads);
+    expect(destination.removals).toEqual([]);
     expect(manifestStore.current().stores).toHaveLength(1);
   });
 });
@@ -627,6 +698,220 @@ describe("(h) falha antes do commit remove apenas os objetos novos", () => {
         { bucket: "visual-signatures", path: "old/sig.png" },
       ]),
     );
+  });
+});
+
+// ─── Idempotência do objeto content-addressed (correção de idempotência) ─────
+
+describe("ensureContentAddressedObject — garantia idempotente", () => {
+  const makeStorage = (seed: Record<string, Buffer> = {}, opts: { ambiguous?: boolean } = {}) => {
+    const objects = new Map<string, Buffer>(Object.entries(seed));
+    const uploads: Array<{ bucket: string; path: string }> = [];
+    return {
+      objects,
+      uploads,
+      async download(bucket: string, path: string) {
+        const value = objects.get(objectKey(bucket, path));
+        return value === undefined
+          ? { data: null, error: { message: "Object not found" } }
+          : { data: Buffer.from(value), error: null };
+      },
+      async upload(bucket: string, path: string, buffer: Buffer) {
+        const key = objectKey(bucket, path);
+        if (objects.has(key)) return { error: { message: "KeyAlreadyExists" } };
+        objects.set(key, Buffer.from(buffer));
+        uploads.push({ bucket, path });
+        if (opts.ambiguous) return { error: { message: "The upstream server is timing out" } };
+        return { error: null };
+      },
+    };
+  };
+
+  it("objeto ausente → upload realizado → created", async () => {
+    const storage = makeStorage();
+    const result = await ensureContentAddressedObject({
+      storage,
+      bucket: "store-brand-assets",
+      path: "s/a/x.png",
+      buffer: Buffer.from("novo"),
+      contentType: "image/png",
+    });
+    expect(result).toEqual({ bucket: "store-brand-assets", path: "s/a/x.png", created: true, reused: false });
+    expect(storage.uploads).toHaveLength(1);
+  });
+
+  it("objeto existente com mesmo checksum → reutilizado, sem upload", async () => {
+    const buffer = Buffer.from("igual");
+    const path = `s/a/${computeChecksum(buffer)}.png`;
+    const storage = makeStorage({ [`store-brand-assets:${path}`]: buffer });
+
+    const result = await ensureContentAddressedObject({
+      storage,
+      bucket: "store-brand-assets",
+      path,
+      buffer,
+      contentType: "image/png",
+    });
+
+    expect(result.created).toBe(false);
+    expect(result.reused).toBe(true);
+    expect(storage.uploads).toHaveLength(0);
+  });
+
+  it("objeto existente com checksum divergente → erro de integridade, sem overwrite nem remoção", async () => {
+    const path = "s/a/divergente.png";
+    const storage = makeStorage({ [`store-brand-assets:${path}`]: Buffer.from("antigo") });
+
+    await expectCode(
+      () =>
+        ensureContentAddressedObject({
+          storage,
+          bucket: "store-brand-assets",
+          path,
+          buffer: Buffer.from("novo"),
+          contentType: "image/png",
+        }),
+      "import_destination_object_integrity_mismatch",
+    );
+
+    expect(storage.uploads).toHaveLength(0);
+    expect(storage.objects.get(`store-brand-assets:${path}`)?.toString()).toBe("antigo");
+  });
+
+  it("erro ambíguo no upload + readback com checksum correto → aceito como criado", async () => {
+    const storage = makeStorage({}, { ambiguous: true });
+    const result = await ensureContentAddressedObject({
+      storage,
+      bucket: "store-brand-assets",
+      path: "s/a/amb.png",
+      buffer: Buffer.from("ambiguo"),
+      contentType: "image/png",
+    });
+    expect(result.created).toBe(true);
+    expect(storage.uploads).toHaveLength(1);
+  });
+
+  it("erro ambíguo no upload + readback ausente → erro sanitizado", async () => {
+    const storage = {
+      async download() {
+        return { data: null, error: { message: "Object not found" } };
+      },
+      async upload() {
+        return { error: { message: "The upstream server is timing out" } };
+      },
+    };
+
+    await expectCode(
+      () =>
+        ensureContentAddressedObject({
+          storage,
+          bucket: "store-brand-assets",
+          path: "s/a/x.png",
+          buffer: Buffer.from("x"),
+          contentType: "image/png",
+        }),
+      "import_destination_upload_failed",
+    );
+  });
+});
+
+describe("materializeStoreAssets — referenciado vs criado vs reutilizado", () => {
+  const asset = (over: Row = {}): Row => ({
+    id: ASSET_ID,
+    store_id: STORE_ID,
+    asset_type: "logo",
+    variant_type: "original",
+    source: "user_upload",
+    parent_asset_id: null,
+    storage_path: ASSET_PATH,
+    mime_type: "image/png",
+    width: 1,
+    height: 1,
+    size_bytes: LOGO_BYTES.length,
+    checksum: null,
+    version: 1,
+    status: "active",
+    metadata: {},
+    ...over,
+  });
+
+  it("reutiliza objetos existentes e não os contabiliza como criados", async () => {
+    const source = makeSource();
+    const logoPath = `${STORE_ID}/${ASSET_ID}/${computeChecksum(LOGO_BYTES)}.png`;
+    const sigPath = `${STORE_ID}/${SIG_ID}/${computeChecksum(SIG_BYTES)}.png`;
+    const destination = makeDestination({
+      existingObjects: {
+        [`store-brand-assets:${logoPath}`]: LOGO_BYTES,
+        [`visual-signatures:${sigPath}`]: SIG_BYTES,
+      },
+    });
+
+    const result = await materializeStoreAssets({
+      source,
+      destination,
+      storeId: STORE_ID,
+      state: {
+        assets: [asset()],
+        signature: { id: SIG_ID, store_id: STORE_ID, storage_path: SIG_PATH, status: "active" },
+      },
+    });
+
+    expect(result.referencedObjects).toHaveLength(2);
+    expect(result.createdObjects).toEqual([]);
+    expect(result.reusedObjects).toHaveLength(2);
+    expect(destination.uploads).toEqual([]);
+  });
+
+  it("falha durante a materialização remove só os criados; reutilizados permanecem", async () => {
+    const logoPath = `${STORE_ID}/${ASSET_ID}/${computeChecksum(LOGO_BYTES)}.png`;
+    const createdPath = `${STORE_ID}/44444444-4444-4444-8444-444444444444/${computeChecksum(LOGO_BYTES)}.png`;
+    const destination = makeDestination({
+      existingObjects: { [`store-brand-assets:${logoPath}`]: LOGO_BYTES },
+    });
+    const source = makeSource({
+      objects: {
+        "store-brand-assets:loja/logo.png": LOGO_BYTES,
+        "store-brand-assets:loja/novo.png": LOGO_BYTES,
+        "store-brand-assets:loja/bad.bin": LOGO_BYTES,
+      },
+    });
+    const assets = [
+      asset({ id: ASSET_ID, storage_path: "loja/logo.png" }),
+      asset({ id: "44444444-4444-4444-8444-444444444444", storage_path: "loja/novo.png" }),
+      asset({
+        id: "55555555-5555-4555-8555-555555555555",
+        storage_path: "loja/bad.bin",
+        mime_type: "application/octet-stream",
+      }),
+    ];
+
+    await expect(
+      materializeStoreAssets({ source, destination, storeId: STORE_ID, state: { assets, signature: null } }),
+    ).rejects.toThrow(/MIME de branding ausente\/desconhecido/);
+
+    // Apenas o objeto CRIADO nesta tentativa é removido.
+    expect(destination.removals).toEqual([{ bucket: "store-brand-assets", path: createdPath }]);
+    // O objeto REUTILIZADO permanece intacto no destino.
+    expect(destination.objects.has(`store-brand-assets:${logoPath}`)).toBe(true);
+    expect(destination.objects.has(`store-brand-assets:${createdPath}`)).toBe(false);
+  });
+
+  it("falha na transação remove só os criados; reutilizado permanece", async () => {
+    const source = makeSource();
+    const logoPath = `${STORE_ID}/${ASSET_ID}/${computeChecksum(LOGO_BYTES)}.png`;
+    const destination = makeDestination({
+      existingObjects: { [`store-brand-assets:${logoPath}`]: LOGO_BYTES },
+    });
+    const db = makeDb({ failWhen: (text) => text === "COMMIT" });
+
+    await expect(
+      importOneStore({ storeId: STORE_ID, source, destination, db }),
+    ).rejects.toThrow("db_failure");
+
+    // Logo (reutilizado) permanece; assinatura (criada nesta tentativa) é removida.
+    expect(destination.objects.has(`store-brand-assets:${logoPath}`)).toBe(true);
+    expect(destination.removals).toHaveLength(1);
+    expect(destination.removals[0].bucket).toBe("visual-signatures");
   });
 });
 
@@ -748,8 +1033,8 @@ describe("helpers puros da importação", () => {
       { bucket: "store-brand-assets", path: "keep.png" },
       { bucket: "store-brand-assets", path: "drop.png" },
     ];
-    const newObjects = [{ bucket: "store-brand-assets", path: "keep.png" }];
-    expect(selectUnreferencedOldObjects({ oldObjects, newObjects })).toEqual([
+    const referencedObjects = [{ bucket: "store-brand-assets", path: "keep.png" }];
+    expect(selectUnreferencedOldObjects({ oldObjects, referencedObjects })).toEqual([
       { bucket: "store-brand-assets", path: "drop.png" },
     ]);
   });

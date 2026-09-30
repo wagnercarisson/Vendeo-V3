@@ -153,6 +153,17 @@ maybe("importação integrada real (PostgreSQL + Storage locais)", () => {
       const result = await importOneStore({ storeId, source, destination, db, manifestStore, importedBy: "integracao" });
       expect(result.imported).toBe(true);
       expect(result.assetCount).toBe(6);
+      expect(result.objectsWritten).toBe(7);
+      expect(result.objectsReused).toBe(0);
+
+      // Segunda importação IDÊNTICA sobre o mesmo destino local: todos os objetos
+      // content-addressed já existem → reutilizados, nenhum upload novo, nenhum
+      // órfão/duplicação e nenhuma remoção de objeto referenciado.
+      const second = await importOneStore({ storeId, source, destination, db, manifestStore, importedBy: "integracao" });
+      expect(second.imported).toBe(true);
+      expect(second.objectsWritten).toBe(0);
+      expect(second.objectsReused).toBe(7);
+      expect(second.removedOldObjects).toBe(0);
 
       const stores = await query<{ id: string; name: string }>("select id, name from public.stores where id = $1", [storeId]);
       expect(stores).toHaveLength(1);
@@ -185,12 +196,15 @@ maybe("importação integrada real (PostgreSQL + Storage locais)", () => {
       const sigRows = await query<{ id: string }>("select id from public.store_visual_signatures where store_id = $1", [storeId]);
       expect(sigRows).toHaveLength(1);
 
-      const auditRows = await query<{ status: string; detail: unknown }>(
+      const auditRows = await query<{ status: string; detail: Record<string, unknown> }>(
         "select status, detail from public.lab_bench_store_imports where store_id = $1",
         [storeId],
       );
-      expect(auditRows).toHaveLength(1);
-      expect(typeof auditRows[0].detail).toBe("object");
+      // Duas importações → dois registros de auditoria (histórico preservado), sem
+      // duplicar a identidade. A segunda importação reutilizou os 7 objetos.
+      expect(auditRows).toHaveLength(2);
+      for (const row of auditRows) expect(typeof row.detail).toBe("object");
+      expect(auditRows.some((row) => row.detail.objectsReused === 7)).toBe(true);
 
       expect(manifest.stores).toContainEqual({ id: storeId, label: "Loja Teste Integração" });
 

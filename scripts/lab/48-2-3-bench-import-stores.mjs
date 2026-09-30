@@ -478,6 +478,27 @@ export function createLocalDestination(env = process.env, clientFactory = create
       return { bucket, path: objectPath };
     },
 
+    /**
+     * Garantia **idempotente** do objeto content-addressed no DESTINO local
+     * (F48.2.3, correção de idempotência). Pré-checagem local por checksum +
+     * upload `upsert:false` + confirmação pós-erro ambíguo. Nunca consulta a
+     * origem remota e nunca sobrescreve/remove um objeto divergente.
+     */
+    async ensureBrandingObject({ bucket, path: objectPath, buffer, contentType, expectedChecksum }) {
+      const storage = {
+        download: (b, p) => client.storage.from(b).download(p),
+        upload: (b, p, buf, opts) => client.storage.from(b).upload(p, buf, opts),
+      };
+      return ensureContentAddressedObject({
+        storage,
+        bucket,
+        path: objectPath,
+        buffer,
+        contentType,
+        expectedChecksum,
+      });
+    },
+
     /** Remove objetos de branding locais (best-effort; nunca lança). */
     async removeBrandingObjects(objects) {
       let removed = 0;
@@ -1072,12 +1093,96 @@ export async function toBuffer(data) {
 }
 
 /**
+ * Lê um objeto do **destino local** e devolve seu checksum (se existir). Somente
+ * leitura do destino — nunca consulta a origem/remoto. Um erro de leitura é
+ * tratado como ausência (permite a confirmação pós-upload); a idempotência NÃO
+ * depende de reconhecer texto de erro de duplicidade.
+ */
+async function readDestinationObjectChecksum(storage, bucket, objectPath) {
+  const { data, error } = await storage.download(bucket, objectPath);
+  if (error || data == null) return { exists: false, checksum: null };
+  const buffer = await toBuffer(data);
+  return { exists: true, checksum: computeChecksum(buffer) };
+}
+
+/**
+ * Garantia **idempotente** de um objeto content-addressed no DESTINO local.
+ *
+ * Regras:
+ *  1. pré-checagem local: se o path já existe, compara o checksum do conteúdo;
+ *     - idêntico → reutiliza (sem upload, `created: false`, `reused: true`);
+ *     - divergente → aborta com erro sanitizado de integridade (nunca
+ *       sobrescreve nem remove o objeto divergente);
+ *  2. ausente → upload com `upsert: false` (`created: true` em sucesso);
+ *  3. erro ambíguo/timeout no upload → UMA leitura de confirmação no destino;
+ *     se o objeto agora existe com o checksum esperado, considera concluído e
+ *     **criado nesta tentativa** (o pré-check confirmou ausência); caso
+ *     contrário, propaga erro sanitizado.
+ *
+ * Não confia em regex de `error.message` para reconhecer duplicidade e nunca
+ * consulta a origem remota.
+ *
+ * @param {{ storage: any, bucket: string, path: string, buffer: Buffer, contentType: string, expectedChecksum?: string }} params
+ */
+export async function ensureContentAddressedObject(params) {
+  const { storage, bucket, path: objectPath, buffer, contentType, expectedChecksum } = params;
+  assertAllowedSourceBucket(bucket);
+  const expected = expectedChecksum ?? computeChecksum(buffer);
+
+  const existing = await readDestinationObjectChecksum(storage, bucket, objectPath);
+  if (existing.exists) {
+    if (existing.checksum === expected) {
+      return { bucket, path: objectPath, created: false, reused: true };
+    }
+    throw new BenchImportBlockedError(
+      "import_destination_object_integrity_mismatch",
+      `Objeto content-addressed divergente no destino: ${bucket}:${objectPath}`,
+    );
+  }
+
+  const { error } = await storage.upload(bucket, objectPath, buffer, {
+    contentType,
+    upsert: false,
+  });
+  if (!error) {
+    return { bucket, path: objectPath, created: true, reused: false };
+  }
+
+  const confirmation = await readDestinationObjectChecksum(storage, bucket, objectPath);
+  if (confirmation.exists && confirmation.checksum === expected) {
+    return { bucket, path: objectPath, created: true, reused: false };
+  }
+
+  throw new BenchImportBlockedError(
+    "import_destination_upload_failed",
+    sanitizeAiErrorMessage(`import_destination_upload_failed:${error.message}`),
+  );
+}
+
+/**
  * Baixa e grava os assets atuais em paths versionados ANTES da transação (D8).
- * Em falha, remove APENAS os objetos novos já gravados e re-lança.
+ *
+ * Distingue inequivocamente:
+ *  - `referencedObjects`: TODOS os objetos exigidos pela nova identidade;
+ *  - `createdObjects`: apenas objetos realmente criados nesta tentativa;
+ *  - `reusedObjects`: objetos content-addressed já existentes e validados.
+ *
+ * Em falha, remove **SOMENTE** `createdObjects` — objetos reutilizados/
+ * preexistentes NUNCA são removidos (podem pertencer à identidade anterior).
  */
 export async function materializeStoreAssets({ source, destination, storeId, state }) {
   const storedAssets = [];
-  const newObjects = [];
+  const referencedObjects = [];
+  const createdObjects = [];
+  const reusedObjects = [];
+
+  const track = (result) => {
+    const reference = { bucket: result.bucket, path: result.path };
+    referencedObjects.push(reference);
+    if (result.created) createdObjects.push(reference);
+    else reusedObjects.push(reference);
+  };
+
   try {
     for (const asset of state.assets) {
       const bucket = resolveAssetBucket(asset);
@@ -1092,13 +1197,14 @@ export async function materializeStoreAssets({ source, destination, storeId, sta
       assertBrandingMimeAllowedForBucket(bucket, mime);
       const checksum = computeChecksum(buffer);
       const localPath = buildContentAddressedPath({ storeId, objectId: asset.id, checksum, extension });
-      await destination.uploadBrandingObject({
+      const result = await destination.ensureBrandingObject({
         bucket,
         path: localPath,
         buffer,
         contentType: mime,
+        expectedChecksum: checksum,
       });
-      newObjects.push({ bucket, path: localPath });
+      track(result);
       storedAssets.push({ assetId: asset.id, localPath, checksum, sizeBytes: buffer.length, mime });
     }
 
@@ -1116,19 +1222,22 @@ export async function materializeStoreAssets({ source, destination, storeId, sta
       assertBrandingMimeAllowedForBucket(SIGNATURE_BUCKET, mime);
       const checksum = computeChecksum(buffer);
       const localPath = buildContentAddressedPath({ storeId, objectId: signature.id, checksum, extension });
-      await destination.uploadBrandingObject({
+      const result = await destination.ensureBrandingObject({
         bucket: SIGNATURE_BUCKET,
         path: localPath,
         buffer,
         contentType: mime,
+        expectedChecksum: checksum,
       });
-      newObjects.push({ bucket: SIGNATURE_BUCKET, path: localPath });
+      track(result);
       storedSignature = { signatureId: signature.id, localPath, mime };
     }
 
-    return { storedAssets, storedSignature, newObjects };
+    return { storedAssets, storedSignature, referencedObjects, createdObjects, reusedObjects };
   } catch (error) {
-    await removeBrandingObjectsBestEffort(destination, newObjects);
+    // Remove SOMENTE os objetos criados nesta tentativa. Reutilizados/preexistentes
+    // permanecem (podem pertencer à identidade local anterior).
+    await removeBrandingObjectsBestEffort(destination, createdObjects);
     throw error;
   }
 }
@@ -1145,10 +1254,14 @@ export async function removeBrandingObjectsBestEffort(destination, objects) {
   }
 }
 
-/** Old objects que NÃO estão referenciados pelo novo conjunto (remover após commit). */
-export function selectUnreferencedOldObjects({ oldObjects, newObjects }) {
+/**
+ * Old objects que NÃO estão referenciados pelo novo conjunto (remover após
+ * commit). `referencedObjects` inclui criados E reutilizados — reutilizados
+ * continuam pertencendo à identidade e NÃO devem ser removidos.
+ */
+export function selectUnreferencedOldObjects({ oldObjects, referencedObjects }) {
   const keyOf = (object) => `${object.bucket}:${object.path}`;
-  const referenced = new Set((newObjects ?? []).map(keyOf));
+  const referenced = new Set((referencedObjects ?? []).map(keyOf));
   return (oldObjects ?? []).filter((object) => !referenced.has(keyOf(object)));
 }
 
@@ -1389,7 +1502,7 @@ export async function importOneStore(params) {
   };
 
   if (dryRun) {
-    return { ...base, ownerUserId: null, ownerCreated: false, dryRun: true, imported: false, objectsWritten: 0, removedOldObjects: 0, manifestUpdated: false };
+    return { ...base, ownerUserId: null, ownerCreated: false, dryRun: true, imported: false, objectsWritten: 0, objectsReused: 0, objectsReferenced: 0, removedOldObjects: 0, manifestUpdated: false };
   }
 
   // D6 — proprietário sintético local por loja (idempotente por e-mail).
@@ -1418,31 +1531,35 @@ export async function importOneStore(params) {
     sourceHost: source.host,
     importedBy,
     sourceUpdatedAt: store.updated_at ?? null,
-    assetCount: materialized.newObjects.length,
+    assetCount: materialized.referencedObjects.length,
     status: "succeeded",
     detail: {
       profileSource: state.profileSource,
       profileStatus: state.profileStatus,
       syncedProfiles: state.profile ? 1 : 0,
       hasSignature: state.signature !== null,
-      objectCount: materialized.newObjects.length,
+      objectCount: materialized.referencedObjects.length,
+      objectsCreated: materialized.createdObjects.length,
+      objectsReused: materialized.reusedObjects.length,
       destinationHost: destination.host ?? null,
       profileFkAdjusted,
     },
   });
 
-  // D8 (5) — falha antes do commit remove APENAS os objetos novos.
+  // D8 (5) — falha antes do commit remove APENAS os objetos CRIADOS nesta
+  // tentativa; reutilizados/preexistentes permanecem.
   try {
     await runIdentityTransaction({ db, storeId, ownerUserId: owner.userId, identity, audit });
   } catch (error) {
-    await removeBrandingObjectsBestEffort(destination, materialized.newObjects);
+    await removeBrandingObjectsBestEffort(destination, materialized.createdObjects);
     throw error;
   }
 
-  // D8 (4) — após o commit, remover best-effort os antigos sem referência.
+  // D8 (4) — após o commit, remover best-effort apenas os antigos SEM referência
+  // (referenciados inclui criados e reutilizados).
   const unreferenced = selectUnreferencedOldObjects({
     oldObjects,
-    newObjects: materialized.newObjects,
+    referencedObjects: materialized.referencedObjects,
   });
   await removeBrandingObjectsBestEffort(destination, unreferenced);
 
@@ -1461,7 +1578,9 @@ export async function importOneStore(params) {
     ownerCreated: owner.created,
     dryRun: false,
     imported: true,
-    objectsWritten: materialized.newObjects.length,
+    objectsWritten: materialized.createdObjects.length,
+    objectsReused: materialized.reusedObjects.length,
+    objectsReferenced: materialized.referencedObjects.length,
     removedOldObjects: unreferenced.length,
     manifestUpdated,
   };
@@ -1485,6 +1604,8 @@ function toStoreSummary(result) {
     dryRun: result.dryRun,
     imported: result.imported,
     objectsWritten: result.objectsWritten,
+    objectsReused: result.objectsReused,
+    objectsReferenced: result.objectsReferenced,
     removedOldObjects: result.removedOldObjects,
     manifestUpdated: result.manifestUpdated,
   };
