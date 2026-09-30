@@ -53,6 +53,13 @@ vi.mock("@/lib/supabase/server", () => ({
 import BancadaPage from "@/app/(app)/admin/laboratorio/bancada/page";
 import LaboratorioLayout from "@/app/(app)/admin/laboratorio/layout";
 
+import { BENCH_DEFAULT_PROMPT_BASE } from "@/lib/lab/bench/domain/prompt-base";
+import { COMPOSER_VERSION } from "@/lib/lab/bench/domain/prompt-composer";
+import {
+  BenchPreflightEvidenceSchema,
+  type BenchPreflightEvidence,
+} from "@/lib/lab/bench/domain/schemas";
+
 import { BenchBrandingPanel, type BenchBrandingView } from "../bench-branding-panel";
 import { BenchBrandColorIndicator } from "../bench-brand-color-indicator";
 import {
@@ -68,6 +75,14 @@ import { BenchImageUpload } from "../bench-image-upload";
 import { BenchPresetSelector } from "../bench-preset-selector";
 import { BenchPreflightPanel } from "../bench-preflight-panel";
 import { BenchPromptEditor } from "../bench-prompt-editor";
+import {
+  BenchPoliciesPanel,
+  type BenchPromptPolicyView,
+} from "../bench-policies-panel";
+import {
+  BenchAttemptsPanel,
+  type BenchAttemptView,
+} from "../bench-attempts-panel";
 
 const COMPONENTS_DIR = "src/app/(app)/admin/laboratorio/bancada/_components";
 
@@ -588,12 +603,38 @@ const ESTIMATE = {
   costRuleVersion: "2026-09-bench-1",
 };
 
-const PREFLIGHT_EVIDENCE = {
+const PREFLIGHT_EVIDENCE: BenchPreflightEvidence = {
   promptBase: "prompt base",
   promptCompiled: "prompt compilado",
   promptApproved: "Foto do produto em fundo claro",
   promptBlocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
-  composerVersion: "48.2.3-prompt-composer-v1",
+  composerVersion: COMPOSER_VERSION,
+  // Campos da F48.2.4 exigidos pelo schema estrito (D11/D14): sem eles o
+  // `POST /runs` responde 400 por preflight-evidence ausente.
+  policyVersions: {
+    intencao: "48.2.4-oferta-v1",
+    formato: "48.2.4-formato-1-1-v1",
+    tipoConteudo: "48.2.4-produto-v1",
+    estrutura: "48.2.4-peca-unica-v1",
+    tema: "48.2.4-tema-nenhum-v1",
+  },
+  promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+  identityReference: {
+    kind: "logo",
+    variantType: "primary",
+    storagePath: "stores/aurora/logo.png",
+  },
+  presetId: PRESET_ENABLED.id,
+  config: {
+    pipeline: "manual-direto",
+    formato: "1:1",
+    modelo: "gpt-image-2",
+    qualidade: "low",
+    intencao: "oferta",
+    tipoConteudo: "produto",
+    estrutura: "peca-unica",
+    tema: "nenhum",
+  },
 };
 
 const EVIDENCE_RUN = {
@@ -840,6 +881,282 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
       .map(readComponentSource)
       .join("\n");
     expect(sources).not.toMatch(/lado a lado|vota(ção|r)|enquete/i);
+    expect(EMOJI_PATTERN.test(sources)).toBe(false);
+  });
+});
+
+// ─── 4. F48.2.4 — políticas/versões, prompt-base padrão e identidade ─────────
+
+const POLICIES: BenchPromptPolicyView[] = [
+  {
+    dimension: "intencao",
+    id: "policy.intencao.oferta",
+    value: "oferta",
+    version: "48.2.4-oferta-v1",
+  },
+  {
+    dimension: "formato",
+    id: "policy.formato.1-1",
+    value: "1:1",
+    version: "48.2.4-formato-1-1-v1",
+  },
+  {
+    dimension: "tipoConteudo",
+    id: "policy.tipoConteudo.produto",
+    value: "produto",
+    version: "48.2.4-produto-v1",
+  },
+  {
+    dimension: "estrutura",
+    id: "policy.estrutura.peca-unica",
+    value: "peca-unica",
+    version: "48.2.4-peca-unica-v1",
+  },
+  {
+    dimension: "tema",
+    id: "policy.tema.nenhum",
+    value: "nenhum",
+    version: "48.2.4-tema-nenhum-v1",
+  },
+];
+
+const ATTEMPTS: BenchAttemptView[] = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    status: "succeeded",
+    attemptOfRunId: null,
+    createdAt: "2026-09-30T10:00:00.000Z",
+    finishedAt: "2026-09-30T10:01:00.000Z",
+    promptBaseVersion: "48.2.4-oferta-1-1-v1",
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    status: "failed",
+    attemptOfRunId: "11111111-1111-4111-8111-111111111111",
+    createdAt: "2026-09-30T11:00:00.000Z",
+    finishedAt: null,
+    promptBaseVersion: null,
+  },
+];
+
+describe("contrato de UI — políticas/versões e prompt-base padrão (F48.2.4)", () => {
+  it("exibe as políticas habilitadas com id+versão, a versão do compositor e a do prompt-base padrão", () => {
+    render(
+      <BenchPoliciesPanel
+        policies={POLICIES}
+        composerVersion={COMPOSER_VERSION}
+        promptBaseVersion={BENCH_DEFAULT_PROMPT_BASE.version}
+      />,
+    );
+
+    expect(screen.getByTestId("bench-policies-panel")).toBeInTheDocument();
+    expect(screen.getByText("Políticas habilitadas")).toBeInTheDocument();
+    expect(screen.getByTestId("bench-policy-intencao")).toHaveTextContent("oferta");
+    expect(screen.getByTestId("bench-policy-formato")).toHaveTextContent("1:1");
+    expect(screen.getByText(/policy\.intencao\.oferta/)).toBeInTheDocument();
+    expect(screen.getByText(/48\.2\.4-oferta-v1/)).toBeInTheDocument();
+    expect(screen.getByText("Versão do compositor")).toBeInTheDocument();
+    expect(screen.getByText(COMPOSER_VERSION)).toBeInTheDocument();
+    expect(screen.getByText("Prompt-base padrão")).toBeInTheDocument();
+    expect(screen.getByText(BENCH_DEFAULT_PROMPT_BASE.version)).toBeInTheDocument();
+  });
+
+  it("o painel de políticas é somente leitura e não expõe secrets", () => {
+    const source = readComponentSource("bench-policies-panel.tsx");
+    expect(source).not.toContain("fetch(");
+    expect(source).not.toMatch(/process\.env|service_role|sk-/);
+    expect(source).not.toMatch(/lado a lado|vota(ção|r)|enquete|ranking/i);
+    expect(EMOJI_PATTERN.test(source)).toBe(false);
+  });
+
+  it("semeia o editor com o prompt-base padrão e oferece reposição explícita", () => {
+    const onReset = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <BenchPromptEditor
+        value={BENCH_DEFAULT_PROMPT_BASE.content}
+        onChange={onChange}
+        promptBaseVersion={BENCH_DEFAULT_PROMPT_BASE.version}
+        onResetToDefault={onReset}
+      />,
+    );
+
+    const textarea = screen.getByRole("textbox", {
+      name: "Prompt",
+    }) as HTMLTextAreaElement;
+    expect(textarea.value).toBe(BENCH_DEFAULT_PROMPT_BASE.content);
+
+    fireEvent.click(screen.getByTestId("bench-reset-prompt-base"));
+    expect(onReset).toHaveBeenCalledTimes(1);
+    // A reposição é delegada ao contêiner; o editor não altera sozinho o valor.
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("a página server semeia o prompt-base padrão a partir das props iniciais, sem POST /compose", async () => {
+    render(await BancadaPage());
+
+    const textarea = screen.getByRole("textbox", {
+      name: "Prompt",
+    }) as HTMLTextAreaElement;
+    expect(textarea.value).toBe(BENCH_DEFAULT_PROMPT_BASE.content);
+    expect(screen.getByTestId("bench-policies-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("bench-attempts-panel")).toBeInTheDocument();
+
+    const composeCalls = mockFetch.mock.calls.filter(([url]) =>
+      String(url).includes("/compose"),
+    );
+    expect(composeCalls).toHaveLength(0);
+  });
+
+  it("exibe as versões no painel de preflight", () => {
+    render(
+      <BenchPreflightPanel
+        status="composed"
+        compiledPrompt="[IDENTIDADE E DIREÇÃO VISUAL]\nLoja: Aurora"
+        finalPrompt="[IDENTIDADE E DIREÇÃO VISUAL]\nLoja: Aurora"
+        composerVersion={COMPOSER_VERSION}
+        policyVersions={PREFLIGHT_EVIDENCE.policyVersions ?? {}}
+        promptBaseVersion={BENCH_DEFAULT_PROMPT_BASE.version}
+        composing={false}
+        error={null}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+      />,
+    );
+
+    const versions = screen.getByTestId("bench-preflight-versions");
+    expect(versions).toHaveTextContent(COMPOSER_VERSION);
+    expect(versions).toHaveTextContent(BENCH_DEFAULT_PROMPT_BASE.version);
+    expect(versions).toHaveTextContent("intencao:48.2.4-oferta-v1");
+  });
+
+  it("exibe a referência canônica de identidade sem URL assinada", () => {
+    render(<BenchBrandingPanel branding={BRANDING} />);
+
+    const label = screen.getByText("Identidade enviada ao modelo");
+    expect(label).toBeInTheDocument();
+    const row = label.closest("div");
+    expect(row?.textContent).toContain("stores/aurora/logo.png");
+    expect(row?.textContent).not.toContain("signed");
+  });
+});
+
+// ─── 5. F48.2.4 — tentativas, invalidação reforçada e evidência estrita ──────
+
+describe("contrato de UI — tentativas e 'Nova tentativa' (F48.2.4)", () => {
+  it("lista as tentativas por linhagem e oferece 'Nova tentativa'", () => {
+    const onNewAttempt = vi.fn();
+    render(
+      <BenchAttemptsPanel
+        attempts={ATTEMPTS}
+        canStartAttempt
+        onNewAttempt={onNewAttempt}
+      />,
+    );
+
+    expect(screen.getByText("Tentativas anteriores")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`bench-attempt-${ATTEMPTS[0].id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`bench-attempt-${ATTEMPTS[1].id}`),
+    ).toBeInTheDocument();
+
+    const button = screen.getByTestId("bench-new-attempt-button");
+    expect(button).toHaveTextContent("Nova tentativa");
+    fireEvent.click(button);
+    expect(onNewAttempt).toHaveBeenCalledTimes(1);
+  });
+
+  it("mostra o empty state quando não há tentativas e desabilita a ação", () => {
+    render(<BenchAttemptsPanel attempts={[]} />);
+
+    expect(screen.getByText("Nenhuma tentativa anterior")).toBeInTheDocument();
+    expect(screen.getByTestId("bench-new-attempt-button")).toBeDisabled();
+  });
+
+  it("é desktop-only e não oferece lado a lado/votação/ranking", () => {
+    const source = readComponentSource("bench-attempts-panel.tsx");
+    expect(source).not.toMatch(/lado a lado|vota(ção|r)|enquete|ranking/i);
+    expect(EMOJI_PATTERN.test(source)).toBe(false);
+  });
+
+  it("o workbench reforça a invalidação e monta a evidência alinhada ao schema estrito", () => {
+    const source = readComponentSource("bench-workbench.tsx");
+    // Invalidação reforçada: prompt-base, configuração e modelo/qualidade.
+    expect(source).toContain("invalidatePreflight");
+    expect(source).toContain("handlePromptBaseChange");
+    expect(source).toContain("handlePresetChange");
+    expect(source).toContain("setPolicyVersions({})");
+    // Evidência do preflight com todos os campos exigidos pelo schema estrito.
+    expect(source).toContain("policyVersions");
+    expect(source).toContain("promptBaseVersion");
+    expect(source).toContain("identityReference");
+    expect(source).toContain("presetId");
+    expect(source).toContain("config:");
+    // Sem hashes persistidos e sem comparação lado a lado/votação.
+    expect(source).not.toMatch(/createHash|sha256/i);
+    expect(source).not.toMatch(/lado a lado|vota(ção|r)|enquete|ranking/i);
+    expect(source).not.toContain("campaign-images");
+  });
+
+  it("a fixture PREFLIGHT_EVIDENCE satisfaz o BenchPreflightEvidenceSchema estrito", () => {
+    const result = BenchPreflightEvidenceSchema.safeParse(PREFLIGHT_EVIDENCE);
+    expect(result.success).toBe(true);
+  });
+
+  it("o POST /runs envia a evidência de preflight completa (sem 400 por campo ausente)", async () => {
+    const onCompleted = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse(ESTIMATE))
+      .mockResolvedValueOnce(
+        ndjsonResponse([{ type: "done", runId: RUN_ID }]),
+      );
+    renderExecutionPanel(onCompleted);
+
+    await openConfirmation();
+    fireEvent.click(screen.getByTestId("lab-confirm-button"));
+
+    await waitFor(() => expect(runCalls()).toHaveLength(1));
+    const body = JSON.parse(String(runCalls()[0][1].body));
+    expect(body.preflight).toEqual(PREFLIGHT_EVIDENCE);
+    expect(BenchPreflightEvidenceSchema.safeParse(body.preflight).success).toBe(true);
+  });
+
+  it("o painel de evidências distingue prompt-base, versões e custo reportado", () => {
+    render(
+      <BenchEvidencePanel
+        run={{
+          ...EVIDENCE_RUN,
+          promptBase: "prompt base",
+          promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+          policyVersions: { intencao: "48.2.4-oferta-v1" },
+          composerVersion: COMPOSER_VERSION,
+          reportedCostUsd: 1.23,
+        }}
+        artifacts={[]}
+      />,
+    );
+
+    expect(screen.getByText("Prompt-base usado")).toBeInTheDocument();
+    expect(screen.getByText("Prompt-base padrão (versão)")).toBeInTheDocument();
+    expect(screen.getByText("Versões (compositor/políticas)")).toBeInTheDocument();
+    expect(screen.getByText("Custo reportado pelo provider")).toBeInTheDocument();
+    expect(screen.getByText("US$ 1.23")).toBeInTheDocument();
+  });
+
+  it("nenhum painel novo expõe secrets nem URL assinada de identidade", () => {
+    const sources = [
+      "bench-policies-panel.tsx",
+      "bench-attempts-panel.tsx",
+      "bench-prompt-editor.tsx",
+      "bench-workbench.tsx",
+    ]
+      .map(readComponentSource)
+      .join("\n");
+    expect(sources).not.toMatch(/process\.env|service_role|SUPABASE_SERVICE|sk-/);
+    expect(sources).not.toContain("signedUrl");
     expect(EMOJI_PATTERN.test(sources)).toBe(false);
   });
 });
