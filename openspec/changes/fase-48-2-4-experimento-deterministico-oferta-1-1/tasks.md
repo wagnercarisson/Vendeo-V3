@@ -110,3 +110,10 @@
 - [x] 11.3 Sunburst no caminho isolado: `BENCH_MODEL_ALLOWLIST`, catálogo/bootstrap local, presets `gpt-image-2.5-sunburst-low`/`-medium`, resolver de capability/protocolo e pricing local; `MODEL_ALLOWLIST` produtivo, adapter produtivo e `supabase/migrations/**` intocados; `responses` permanece desabilitado.
 - [x] 11.4 Testes: pricing unitário; cálculo pós-usage dos três modelos; cobertura `partial`/`missing`; presets Sunburst; allowlist exclusiva da bancada; resolução de capability/protocolo; adapter com referências na ordem correta; mesmo prompt aprovado aceito por modelos diferentes; troca de modelo preserva a aprovação e invalida só estimativa/confirmação; API/UI dos novos presets; isolamento e architecture guard.
 - [x] 11.5 Registrar no UAT o resultado do Flare low (`requer ajuste`; latência 14,6 s; US$ 0,03) e os follow-ups da **F48.2.5** (principal × referências; revisão ortográfica/acentuação/números; preservação literal; ciclos de refinamento/comparação) — **sem implementar** os refinamentos. Sunburst permanece **PENDENTE** de UAT manual.
+
+## 12. Correção — chave de API exclusiva da bancada
+
+- [ ] 12.1 Fonte OpenSpec: requisito "Chave de API exclusiva da bancada" (`lab-isolation`) e D21 no `design.md`.
+- [ ] 12.2 Resolvedor dedicado `bench-api-key.ts`: lê **somente** `OPENAI_BENCH_API_KEY`; **nunca** fallback para `OPENAI_API_KEY`; ausente/vazia ⇒ falha antes de criar o cliente/chamar o provider; `BenchImagesAdapter` usa `getBenchApiKey`; `getApiKey` produtivo intocado; chave nunca registrada/persistida/exibida.
+- [ ] 12.3 Gate arquitetural: a bancada lê apenas `OPENAI_BENCH_API_KEY` (nunca `OPENAI_API_KEY`/`GEMINI_API_KEY`); o adapter da bancada não usa o resolvedor produtivo `getApiKey`.
+- [ ] 12.4 Testes: ambas as chaves ⇒ usa exclusivamente a da bancada; só `OPENAI_API_KEY` ⇒ bancada recusa; só `OPENAI_BENCH_API_KEY` ⇒ funciona; chave vazia ⇒ nenhuma chamada ao provider.

@@ -184,6 +184,10 @@ O **fingerprint da operação** representa `storeId + principal + adicionais em 
 
 **Sunburst.** `gpt-image-2.5-sunburst` é adicionado **somente** ao caminho isolado da bancada: `BENCH_MODEL_ALLOWLIST`, catálogo/bootstrap local, registry de presets (`gpt-image-2.5-sunburst-low`, `gpt-image-2.5-sunburst-medium`), resolvedor de capability/protocolo e pricing local. Confirmado pela documentação oficial: ID válido; geração/edição com texto e imagens (Images API e Responses); qualidades `low`/`medium`/`high`/`xhigh`/`max`/`auto`; saída token-based; dimensão 1024x1024. O `MODEL_ALLOWLIST` produtivo, o adapter produtivo e `supabase/migrations/**` permanecem intocados; Sunburst **não** é promovido. `responses` permanece desabilitado sem confirmação específica. O mesmo prompt aprovado é reutilizável **byte a byte** com Image 2, Flare ou Sunburst (D11); trocar modelo/qualidade invalida **apenas** estimativa e confirmação financeira.
 
+### D21 — Chave de API exclusiva da bancada (isolamento de credencial)
+
+O runtime da bancada passa a resolver a chave de API por um **resolvedor dedicado** (`src/lib/lab/bench/gateway/bench-api-key.ts`) que lê **somente** `OPENAI_BENCH_API_KEY`. Regras: **nunca** faz fallback para `OPENAI_API_KEY` (nem qualquer outra chave); chave ausente ou vazia ⇒ `BenchApiKeyError` (`bench_api_key_missing`) **antes** de criar o cliente/chamar o provider; o resolvedor produtivo `getApiKey` (`src/lib/ai/api-keys.ts`) permanece **intocado**; a chave **não** é registrada, persistida ou exibida (nem em log, snapshot ou artefato). O `BenchImagesAdapter` passa a usar `getBenchApiKey` em vez de `getApiKey`. O gate arquitetural do laboratório é estendido para provar que a bancada lê apenas `OPENAI_BENCH_API_KEY` (nunca `OPENAI_API_KEY`/`GEMINI_API_KEY`) e que o adapter da bancada não usa o resolvedor produtivo. **Alternativa rejeitada:** reutilizar `getApiKey` com uma env-var configurável — permitiria a bancada consumir a credencial produtiva por engano.
+
 ## Risks / Trade-offs
 
 - **[Combinação não suportada gerando chamada paga]** → resolução de políticas fail-closed antes da chamada; teste negativo para cada dimensão desabilitada.
