@@ -14,7 +14,7 @@ A API SHALL retornar o detalhe da geração com a configuração, as **versões*
 
 ### Requirement: Exposição do briefing, do prompt compilado e da aprovação
 
-A API da bancada SHALL expor o briefing estruturado, o **prompt compilado** (com os blocos canônicos e as versões das políticas e do prompt-base padrão) e permitir a **aprovação explícita** antes da confirmação, sem expor secrets, validando o manifesto (`assertBenchTestStore`) antes de qualquer leitura quando houver `storeId`. A API SHALL rejeitar a geração sem preflight aprovado, SHALL recusar combinações de políticas não suportadas **antes da chamada paga**, SHALL revalidar server-side a composição aprovada e SHALL garantir que o `prompt_sent` corresponda **byte a byte** ao prompt final aprovado, sem composição oculta.
+A API da bancada SHALL expor o briefing estruturado, o **prompt compilado** (com os blocos canônicos e as versões das políticas e do prompt-base padrão) e permitir a **aprovação explícita** antes da confirmação, sem expor secrets, validando o manifesto (`assertBenchTestStore`) antes de qualquer leitura quando houver `storeId`. A API SHALL rejeitar a geração sem preflight aprovado, SHALL recusar combinações de políticas não suportadas **antes da chamada paga**, SHALL revalidar server-side a composição aprovada **e a evidência textual** (`policyVersions`/`promptBaseVersion`/`composerVersion`/`identityReference`) e SHALL garantir que o `prompt_sent` corresponda **byte a byte** ao prompt final aprovado, sem composição oculta. A **configuração de execução** (`presetId`/`modelo`/`qualidade`) SHALL ser validada e persistida no run, **sem** integrar a evidência textual nem a comparação de aprovação: o mesmo prompt aprovado SHALL poder ser executado com presets/modelos distintos.
 
 #### Scenario: Briefing experimental é exposto
 
@@ -33,6 +33,13 @@ A API da bancada SHALL expor o briefing estruturado, o **prompt compilado** (com
 - **WHEN** uma geração é solicitada sem prompt aprovado
 - **THEN** a API recusa a geração antes de qualquer chamada paga
 - **AND** nenhum provider é acionado e nenhum `prompt_sent` é gravado
+
+#### Scenario: Mesmo prompt aprovado com presets distintos é aceito
+
+- **WHEN** a geração é solicitada com o mesmo prompt aprovado e um `presetId`/modelo diferente
+- **THEN** a revalidação da composição e da evidência textual prossegue
+- **AND** a configuração de execução é validada e persistida no run
+- **AND** o `prompt_sent` permanece byte a byte igual ao aprovado
 
 #### Scenario: Combinação não suportada é recusada antes da chamada paga
 

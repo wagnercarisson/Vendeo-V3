@@ -4,7 +4,7 @@
 
 ### Requirement: Preflight visível: compor, editar e aprovar
 
-A tela da bancada SHALL oferecer a etapa de preflight — "Compor prompt", exibição do prompt compilado (com os blocos canônicos, a direção tipográfica e as **versões das políticas e do prompt-base padrão**), edição manual e **aprovação explícita** — antes de habilitar a estimativa/confirmação da geração. A tela SHALL exibir a **referência canônica de identidade** que será transportada. Qualquer mudança nas entradas (incluindo prompt-base, configuração multidimensional e modelo/qualidade) ou no prompt após a aprovação SHALL invalidar a aprovação na UI. A confirmação financeira SHALL permanecer separada da aprovação do prompt.
+A tela da bancada SHALL oferecer a etapa de preflight — "Compor prompt", exibição do prompt compilado (com os blocos canônicos, a direção tipográfica e as **versões das políticas e do prompt-base padrão**), edição manual e **aprovação explícita** — antes de habilitar a estimativa/confirmação da geração. A tela SHALL exibir a **referência canônica de identidade** que será transportada. Qualquer mudança nas entradas que **componham o texto ou as referências** (incluindo prompt-base, branding/identidade, produto/campanha, imagens, condições comerciais, intenção/formato/tipo de conteúdo/estrutura/tema e textos obrigatórios) ou no prompt após a aprovação SHALL invalidar a aprovação na UI. A **configuração de execução** (`modelo`/`preset`/`qualidade`) SHALL NOT invalidar a aprovação: alterá-la SHALL invalidar **somente** a estimativa e a confirmação financeira, mantendo o mesmo prompt aprovado. A confirmação financeira SHALL permanecer separada da aprovação do prompt.
 
 #### Scenario: Prompt compilado é exibido e editável
 
@@ -18,11 +18,17 @@ A tela da bancada SHALL oferecer a etapa de preflight — "Compor prompt", exibi
 - **THEN** o caminho de estimativa/confirmação é habilitado
 - **AND** a confirmação financeira permanece um passo separado
 
-#### Scenario: Mudança invalida a aprovação
+#### Scenario: Mudança de entrada que compõe o texto invalida a aprovação
 
-- **WHEN** um dado de entrada (incluindo prompt-base, configuração ou modelo/qualidade) ou o prompt muda após a aprovação
+- **WHEN** um dado de entrada que compõe o texto/referências (incluindo prompt-base) ou o prompt muda após a aprovação
 - **THEN** a aprovação é invalidada
 - **AND** uma nova composição e aprovação é exigida
+
+#### Scenario: Mudança de modelo/qualidade não invalida a aprovação
+
+- **WHEN** o modelo, o preset ou a qualidade muda após a aprovação
+- **THEN** a aprovação do prompt permanece válida
+- **AND** somente a estimativa e a confirmação financeira são invalidadas
 
 #### Scenario: Identidade transportada é visível
 

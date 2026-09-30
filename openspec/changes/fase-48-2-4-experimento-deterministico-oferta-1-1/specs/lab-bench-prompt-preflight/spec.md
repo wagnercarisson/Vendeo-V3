@@ -26,11 +26,13 @@ A bancada SHALL compor o prompt final a partir da identidade local + dados estru
 
 ### Requirement: Invalidação por mudança de entradas ou pós-aprovação
 
-Qualquer alteração em dados usados pela composição SHALL invalidar o prompt compilado/aprovado e exigir nova composição e aprovação. Isso inclui loja/branding, produto/campanha, imagens/referências, intenção/formato/configuração multidimensional, **prompt-base**, prompt final aprovado e **modelo/qualidade** quando afetarem a execução. Alterar o prompt final depois da aprovação também SHALL invalidar a aprovação.
+Qualquer alteração em dados que efetivamente **componham o texto ou as referências** SHALL invalidar o prompt compilado/aprovado e exigir nova composição e aprovação. Isso inclui loja/branding, produto/campanha, imagens/referências, condições comerciais, intenção/formato/tipo de conteúdo/estrutura/tema, textos obrigatórios e **prompt-base**. Alterar o prompt final depois da aprovação também SHALL invalidar a aprovação.
 
-#### Scenario: Mudança de entrada invalida
+A **configuração de execução** (`presetId`, `modelo`, `qualidade`) SHALL NOT invalidar o prompt compilado/aprovado nem exigir nova composição: esses campos não participam da composição textual. Alterá-los SHALL invalidar **somente** a estimativa e a confirmação financeira.
 
-- **WHEN** um dado usado na composição muda
+#### Scenario: Mudança de entrada que compõe o texto invalida
+
+- **WHEN** um dado usado na composição do texto/referências muda
 - **THEN** o prompt compilado/aprovado é invalidado
 - **AND** uma nova composição e aprovação é exigida
 
@@ -40,11 +42,18 @@ Qualquer alteração em dados usados pela composição SHALL invalidar o prompt 
 - **THEN** a aprovação é invalidada
 - **AND** o caminho de geração é bloqueado até nova aprovação
 
-#### Scenario: Mudança de prompt-base ou de modelo/qualidade invalida
+#### Scenario: Mudança de prompt-base invalida
 
-- **WHEN** o prompt-base ou o modelo/qualidade muda após a aprovação
+- **WHEN** o prompt-base muda após a aprovação
 - **THEN** a aprovação é invalidada
 - **AND** uma nova composição e aprovação é exigida
+
+#### Scenario: Mudança de preset/modelo/qualidade não invalida o prompt
+
+- **WHEN** o `presetId`, o `modelo` ou a `qualidade` muda após a aprovação
+- **THEN** o prompt compilado/aprovado permanece válido
+- **AND** somente a estimativa e a confirmação financeira são invalidadas
+- **AND** o mesmo prompt aprovado é reutilizado byte a byte
 
 ### Requirement: Execução envia exatamente o texto aprovado
 
@@ -82,7 +91,7 @@ A bancada SHALL registrar como evidência: prompt-base manual; **versão do prom
 
 ### Requirement: Revalidação server-side da composição aprovada
 
-Antes de qualquer chamada paga, o servidor SHALL **recompor** o prompt a partir das entradas atuais e SHALL exigir que o resultado seja idêntico ao prompt compilado registrado na aprovação. Divergência SHALL invalidar a aprovação (`approval_invalidated`) antes da chamada paga.
+Antes de qualquer chamada paga, o servidor SHALL **recompor** o prompt a partir das entradas atuais e SHALL exigir que o resultado seja idêntico ao prompt compilado registrado na aprovação. O servidor SHALL também comparar a **evidência textual** aprovada (`policyVersions`, `promptBaseVersion`, `composerVersion`, `identityReference`) campo a campo com os valores resolvidos no servidor, sem hash persistido. Divergência de composição ou de evidência textual SHALL invalidar a aprovação (`approval_invalidated`) antes da chamada paga. A **configuração de execução** (`presetId`/`modelo`/`qualidade`) SHALL NOT integrar a evidência textual nem a comparação de aprovação: o servidor SHALL validá-la como configuração de execução e persistí-la no run.
 
 #### Scenario: Composição divergente invalida a aprovação
 
@@ -94,3 +103,10 @@ Antes de qualquer chamada paga, o servidor SHALL **recompor** o prompt a partir 
 
 - **WHEN** o servidor recomputa a composição e o resultado é idêntico ao prompt compilado aprovado
 - **THEN** a execução prossegue com o prompt final aprovado
+
+#### Scenario: Mesmo prompt aprovado com presets distintos prossegue
+
+- **WHEN** o mesmo prompt aprovado é submetido com um `presetId`/modelo diferente do usado na aprovação
+- **THEN** a revalidação de composição e de evidência textual prossegue
+- **AND** a configuração de execução é validada e persistida no run
+- **AND** nenhuma nova composição/aprovação é exigida

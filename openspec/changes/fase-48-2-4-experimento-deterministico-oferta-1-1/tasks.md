@@ -63,7 +63,7 @@
 
 ## 7. Preflight, revalidação e novas tentativas
 
-- [ ] 7.1 Reforçar a invalidação da aprovação por loja/branding, produto/campanha, imagens, configuração multidimensional, prompt-base, prompt final e modelo/qualidade.
+- [ ] 7.1 Reforçar a invalidação da aprovação por loja/branding, produto/campanha, imagens, condições comerciais, intenção/formato/tipo de conteúdo/estrutura/tema, textos obrigatórios, prompt-base e prompt final; a configuração de execução (preset/modelo/qualidade) invalida **somente** a estimativa e a confirmação financeira (não o prompt).
 - [ ] 7.2 Implementar a revalidação server-side em `POST /runs`: recompor e exigir igualdade com `preflight.promptCompiled`, senão `approval_invalidated` antes da chamada paga.
 - [ ] 7.3 Garantir `prompt_sent` byte a byte igual ao prompt final aprovado; recusar divergência antes da chamada paga.
 - [ ] 7.4 Implementar `duplicateBenchRunInputs` (novo run `draft` + cópia das entradas para `bench/{novoRunId}/inputs/...`) mantendo o guard de path e gravando `attempt_of_run_id` apontando para o run de origem.
