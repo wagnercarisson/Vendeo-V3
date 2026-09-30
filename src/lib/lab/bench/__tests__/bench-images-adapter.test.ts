@@ -139,6 +139,25 @@ describe("BenchImagesAdapter — quality propagado e referências explícitas", 
     expect(Array.isArray(image)).toBe(false);
     expect(image.name).toBe("product.png");
   });
+
+  it("ordem principal → adicionais → identidade (identidade é a última)", async () => {
+    const adapter = new BenchImagesAdapter();
+    await adapter.invoke(
+      {
+        prompt: "p",
+        productImagesDataUrls: [PNG_A, PNG_B],
+        identityImageUrl: "data:image/png;base64,TE9HTw==",
+        quality: "low",
+      },
+      TARGET,
+    );
+    const files = editCalls[0].params.image as Array<{ name: string }>;
+    expect(files.map((file) => file.name)).toEqual([
+      "product.png",
+      "reference-1.png",
+      "identity.png",
+    ]);
+  });
 });
 
 describe("createBenchAdapterRegistry — adapter dedicado apenas no runtime da bancada", () => {
