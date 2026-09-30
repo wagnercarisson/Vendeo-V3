@@ -30,6 +30,9 @@ export const BENCH_MODEL_ALLOWLIST: Record<AiProvider, Record<string, readonly A
   openai: {
     "gpt-image-2": ["images"],
     "gpt-image-2.5-flare": ["images"],
+    // F48.2.4 (correção cirúrgica): Sunburst — **somente** no caminho isolado da
+    // bancada (nunca no `MODEL_ALLOWLIST` produtivo).
+    "gpt-image-2.5-sunburst": ["images"],
   },
   gemini: {},
 };

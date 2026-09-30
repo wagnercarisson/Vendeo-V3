@@ -29,10 +29,16 @@ const CONFIRMED_PRESET_IDS = [
   "gpt-image-2-medium",
   "gpt-image-2.5-flare-low",
   "gpt-image-2.5-flare-medium",
+  "gpt-image-2.5-sunburst-low",
+  "gpt-image-2.5-sunburst-medium",
 ] as const;
 
-/** Modelos confirmados no caminho direto `images` pelo spike. */
-const CONFIRMED_MODELS = ["gpt-image-2", "gpt-image-2.5-flare"] as const;
+/** Modelos confirmados no caminho direto `images` (spike + F48.2.4 Sunburst). */
+const CONFIRMED_MODELS = [
+  "gpt-image-2",
+  "gpt-image-2.5-flare",
+  "gpt-image-2.5-sunburst",
+] as const;
 
 const DISABLED_PRESET_IDS = ["gpt-image-2-responses", "gpt-image-2.5-flare-responses"] as const;
 
@@ -97,7 +103,7 @@ function createReadOnlyCatalogClient(rows: CatalogRow[]): {
 }
 
 describe("preset-registry — presets confirmados pelo spike", () => {
-  it("os quatro presets do caminho direto `images` existem e estão habilitados", () => {
+  it("os seis presets do caminho direto `images` existem e estão habilitados", () => {
     for (const id of CONFIRMED_PRESET_IDS) {
       const preset = findPreset(id);
       expect(preset.enabled, id).toBe(true);
@@ -187,6 +193,22 @@ describe("preset-registry — validação contra a allowlist própria da bancada
     // O MODEL_ALLOWLIST produtivo permanece inalterado (mesmas chaves antes/depois).
     expect(Object.keys(MODEL_ALLOWLIST.openai).sort()).toEqual(prodKeysBefore);
     expect(MODEL_ALLOWLIST.openai["gpt-image-2.5-flare"]).toBeUndefined();
+  });
+
+  it("gpt-image-2.5-sunburst (ausente do MODEL_ALLOWLIST) é aceito via BENCH_MODEL_ALLOWLIST sem alterar o MODEL_ALLOWLIST", () => {
+    const preset = findPreset("gpt-image-2.5-sunburst-low");
+
+    const prodKeysBefore = Object.keys(MODEL_ALLOWLIST.openai).sort();
+    expect(MODEL_ALLOWLIST.openai["gpt-image-2.5-sunburst"]).toBeUndefined();
+
+    expect(BENCH_MODEL_ALLOWLIST.openai["gpt-image-2.5-sunburst"]).toEqual(["images"]);
+    expect(validatePresetAgainstAllowlist(preset)).toEqual({ ok: true });
+    expect(() =>
+      assertBenchTargetAllowed(preset.provider, preset.model, preset.protocol),
+    ).not.toThrow();
+
+    expect(Object.keys(MODEL_ALLOWLIST.openai).sort()).toEqual(prodKeysBefore);
+    expect(MODEL_ALLOWLIST.openai["gpt-image-2.5-sunburst"]).toBeUndefined();
   });
 
   it("a expansão de um novo preset não exige migration (o registry acomoda sem persistência)", () => {

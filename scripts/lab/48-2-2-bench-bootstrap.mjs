@@ -44,6 +44,7 @@ export const PRODUCTION_DOMAINS = ["supabase.co", "supabase.in", "supabase.com"]
 export const BENCH_CATALOG_ROWS = [
   { model: "gpt-image-2", label: "GPT Image 2 (bancada)" },
   { model: "gpt-image-2.5-flare", label: "GPT Image 2.5 Flare (bancada)" },
+  { model: "gpt-image-2.5-sunburst", label: "GPT Image 2.5 Sunburst (bancada)" },
 ];
 
 /** Erro de bloqueio/execução do bootstrap (mensagem clara, exit code 1 na CLI). */

@@ -78,19 +78,31 @@ Consulta em **2026-09-28** à página oficial de pricing
 imagens (`https://developers.openai.com/api/docs/guides/image-generation`). Nenhuma
 chamada paga foi executada.
 
+> **Atualização F48.2.4 (correção cirúrgica, 2026-09-30):** o pricing oficial foi
+> revisado. Os valores vigentes (Standard, por 1M tokens) passam a ser **texto US$5 /
+> imagem de entrada US$8 / imagem de saída US$30** para os três modelos, sob a regra
+> `2026-09-bench-2`. A tabela abaixo reflete os valores vigentes.
+
 | Modelo | Entrada (texto) | Entrada (imagem) | Saída (imagem) |
 |---|---|---|---|
-| `gpt-image-2` | US$2,50/M tokens | US$4,00/M tokens | US$15,00/M tokens |
+| `gpt-image-2` | US$5,00/M tokens | US$8,00/M tokens | US$30,00/M tokens |
 | `gpt-image-2.5-flare` | US$5,00/M tokens | US$8,00/M tokens | US$30,00/M tokens |
+| `gpt-image-2.5-sunburst` | US$5,00/M tokens | US$8,00/M tokens | US$30,00/M tokens |
 
 **Referência de custo por peça (1:1, somente saída):**
 
-- `gpt-image-2`: ~US$0,006 em `low` e ~US$0,053 em `medium` (estimativa oficial da calculadora).
+- `gpt-image-2`: a estimativa anterior (~US$0,006 `low` / ~US$0,053 `medium`) foi
+  **derivada da tarifa antiga** (US$15/M) e **não** é reaproveitada sob a nova tarifa
+  (dobraria o valor). Sem valor comprovado sob a regra vigente, a cobertura é
+  `partial` e a estimativa é **parcial/indisponível**.
 - `gpt-image-2.5-flare`: `low` com **196 tokens de saída** e ~US$0,00588 (calculador
-  oficial); `medium` **sem referência por peça publicada** — a estimativa fica
-  **ausente** até haver valor comprovado (não reaproveita os tokens do `gpt-image-2`).
+  oficial; a tarifa de US$30/M é inalterada); `medium` **sem referência por peça
+  publicada** — a estimativa fica **ausente**.
+- `gpt-image-2.5-sunburst`: **sem** valor comprovado ⇒ estimativa **ausente**
+  (cobertura `partial`).
 
-Entradas de texto e de imagem são **adicionais**.
+Entradas de texto e de imagem são **adicionais**. O **cache** de input só se aplica à
+Responses API e **não** é simulado no caminho direto `Images`.
 
 > O pricing efetivo é **calculado em código** (`bench-pricing.ts`, plano 04), chaveado
 > pelo preset completo (`provider+model+protocol+quality+size`); não há tabela de
@@ -106,6 +118,7 @@ Decisão do spike por candidato (baseada em documentação oficial + evidência 
 |---|---|---|
 | `gpt-image-2` | **confirmado** | ID, provider e protocolo `images` confirmados pela documentação oficial **e** pelo repositório (`src/lib/ai/model-registry.ts:34`); `POST /images/edits` aceita referências (até 16 imagens), qualidades `low`/`medium`/`high`/`auto`, tamanhos padrão e resolução arbitrária; `usage` token-based e pricing público documentado. **Pendência não bloqueante:** disponibilidade específica da conta (`account_availability_pending`), a comprovar no UAT autorizado. |
 | `gpt-image-2.5-flare` | **confirmado (pela documentação)** | A documentação oficial confirma: ID válido, aceita **texto e imagens**, suporta `POST /v1/images/edits`, utilizável diretamente pela Image API, qualidades `low`/`medium`/`high`/`xhigh`/`max`/`auto` e pricing público publicado. A **ausência no `MODEL_ALLOWLIST` produtivo não é impedimento** — a `BENCH_MODEL_ALLOWLIST` isola modelos experimentais. **Pendência não bloqueante:** disponibilidade específica da conta (`account_availability_pending`), a comprovar no **UAT autorizado** (plano 08). |
+| `gpt-image-2.5-sunburst` | **confirmado (pela documentação — F48.2.4)** | Documentação oficial confirma: ID válido, geração/edição com **texto e imagens** (Images API e Responses), qualidades `low`/`medium`/`high`/`xhigh`/`max`/`auto`, saída token-based e pricing público publicado (texto US$5 / imagem entrada US$8 / saída US$30 por 1M tokens). Adicionado **somente** ao caminho isolado da bancada (allowlist própria + catálogo local); **não** promovido. **Pendência não bloqueante:** disponibilidade específica da conta (`account_availability_pending`), a comprovar no **UAT autorizado**. |
 
 ### Presets propostos para habilitação no CHECKPOINT 2
 

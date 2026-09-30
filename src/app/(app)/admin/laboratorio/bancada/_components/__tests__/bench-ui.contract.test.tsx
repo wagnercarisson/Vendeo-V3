@@ -934,12 +934,12 @@ const REFERENCES = [`bench/${RUN_ID}/inputs/0.png`];
 
 const ESTIMATE = {
   presetId: PRESET_ENABLED.id,
-  estimatedUsd: 0.04,
-  coverage: "complete",
+  estimatedUsd: 0.00588,
+  coverage: "partial",
   mode: "token_based",
   isEstimate: true,
   costSource: "bench_local_pricing",
-  costRuleVersion: "2026-09-bench-1",
+  costRuleVersion: "2026-09-bench-2",
 };
 
 const PREFLIGHT_EVIDENCE: BenchPreflightEvidence = {
@@ -976,11 +976,11 @@ const EVIDENCE_RUN = {
   size: "1024x1024",
   quality: "low",
   latencyMs: 8400,
-  usage: { outputImageTokens: 400 },
-  estimatedCostUsd: 0.006,
+  usage: { outputImageTokens: 196 },
+  estimatedCostUsd: 0.03,
   costDetail: { mode: "token_based" },
   costSource: "bench_local_pricing",
-  costRuleVersion: "2026-09-bench-1",
+  costRuleVersion: "2026-09-bench-2",
   errorType: null,
   errorMessage: null,
   config: { formato: "1:1" },
@@ -1050,7 +1050,9 @@ async function openConfirmation() {
 
 describe("contrato de UI — estimativa, confirmação, execução e evidências", () => {
   it("'Gerar imagem' exibe a estimativa e exige confirmação sem POST", async () => {
-    mockFetch.mockResolvedValueOnce(jsonResponse(ESTIMATE));
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ ...ESTIMATE, coverage: "complete", estimatedUsd: 0.04 }),
+    );
     renderExecutionPanel();
 
     await openConfirmation();
@@ -1063,7 +1065,7 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
 
   it("apresenta pricing parcial como faixa e ausente como indisponível", async () => {
     mockFetch.mockResolvedValueOnce(
-      jsonResponse({ ...ESTIMATE, coverage: "partial" }),
+      jsonResponse({ ...ESTIMATE, coverage: "partial", estimatedUsd: 0.04 }),
     );
     renderExecutionPanel();
     await openConfirmation();

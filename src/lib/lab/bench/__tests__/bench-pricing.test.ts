@@ -7,11 +7,11 @@ import {
 } from "@/lib/lab/bench/domain/bench-pricing";
 
 /**
- * Pricing local da bancada (F48.2.2, D11/D12).
+ * Pricing local da bancada (F48.2.4, regra `2026-09-bench-2`).
  *
- * O pricing é chaveado pelo preset completo (`provider + model + protocol +
- * quality + size`) e vive **somente em código** — nunca no pricing produtivo por
- * `provider + model` (que não distingue qualidade).
+ * Tarifas oficiais (Standard, por 1M tokens): **texto US$5 / imagem de entrada
+ * US$8 / imagem de saída US$30** para os três modelos. A estimativa prévia é
+ * honesta: só existe onde comprovada pelo calculador oficial.
  */
 
 const BASE = {
@@ -20,76 +20,75 @@ const BASE = {
   size: "1024x1024",
 } as const;
 
+const OFFICIAL_RATES = {
+  inputTextUsdPerMillion: 5,
+  inputImageUsdPerMillion: 8,
+  outputImageUsdPerMillion: 30,
+};
+
 describe("bench-pricing — versionamento", () => {
-  it("a versão da regra é estável e propagada na resolução", () => {
-    expect(BENCH_PRICING_RULE_VERSION).toBe("2026-09-bench-1");
+  it("a versão vigente é 2026-09-bench-2 e é propagada na resolução", () => {
+    expect(BENCH_PRICING_RULE_VERSION).toBe("2026-09-bench-2");
     const resolution = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "low" });
     expect(resolution.ruleVersion).toBe(BENCH_PRICING_RULE_VERSION);
   });
 });
 
-describe("bench-pricing — quality distingue o custo (low ≠ medium)", () => {
-  it("gpt-image-2: low e medium devolvem custos/estimativas distintos", () => {
+describe("bench-pricing — tarifas oficiais por token (5/8/30)", () => {
+  it.each(["gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst"])(
+    "%s usa texto US$5 / imagem entrada US$8 / saída US$30",
+    (model) => {
+      const resolution = resolveBenchPricing({ ...BASE, model, quality: "low" });
+      expect(resolution.mode).toBe("token_based");
+      expect(resolution.tokenRates).toEqual(OFFICIAL_RATES);
+    },
+  );
+});
+
+describe("bench-pricing — estimativa prévia honesta", () => {
+  it("gpt-image-2 é partial SEM estimativa derivada da tarifa antiga", () => {
     const low = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "low" });
     const medium = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "medium" });
 
-    expect(low.coverage).toBe("complete");
-    expect(medium.coverage).toBe("complete");
-    expect(low.unitPriceUsd).toBeDefined();
-    expect(medium.unitPriceUsd).toBeDefined();
-    expect(low.unitPriceUsd).not.toBe(medium.unitPriceUsd);
-    expect(low.estimatedOutputTokens).not.toBe(medium.estimatedOutputTokens);
-    expect(low.mode).toBe("token_based");
-    expect(low.estimateSource).toBe("derived_from_published_price");
+    expect(low.coverage).toBe("partial");
+    expect(medium.coverage).toBe("partial");
+    // Os tokens 400/3533 derivados da tarifa antiga (US$15/M) NÃO são reaproveitados.
+    expect(low.estimatedOutputTokens).toBeUndefined();
+    expect(medium.estimatedOutputTokens).toBeUndefined();
+    expect(low.unitPriceUsd).toBeUndefined();
+    expect(medium.unitPriceUsd).toBeUndefined();
   });
 
-  it("há entradas distintas por qualidade para o mesmo modelo/protocolo/tamanho", () => {
-    const forModel = BENCH_PRICING_ENTRIES.filter((entry) => entry.model === "gpt-image-2");
-    const qualities = new Set(forModel.map((entry) => entry.quality));
-    expect(qualities.size).toBeGreaterThan(1);
-    const unitPrices = new Set(forModel.map((entry) => entry.unitPriceUsd));
-    expect(unitPrices.size).toBeGreaterThan(1);
-  });
-});
-
-describe("bench-pricing — Flare usa somente valores comprovados pelo calculador oficial", () => {
-  it("gpt-image-2.5-flare low usa 196 tokens (calculador oficial), não os tokens do gpt-image-2", () => {
-    const flareLow = resolveBenchPricing({
-      ...BASE,
-      model: "gpt-image-2.5-flare",
-      quality: "low",
-    });
-    const gptLow = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "low" });
-
-    expect(flareLow.estimatedOutputTokens).toBe(196);
-    expect(flareLow.estimateSource).toBe("official_calculator");
-    expect(flareLow.estimatedOutputTokens).not.toBe(gptLow.estimatedOutputTokens);
-    expect(flareLow.unitPriceUsd).toBeCloseTo(0.00588, 6);
-    expect(flareLow.coverage).toBe("partial");
-  });
-
-  it("gpt-image-2.5-flare medium fica ausente (sem valor comprovado) — não reaproveita o gpt-image-2", () => {
-    const flareMedium = resolveBenchPricing({
+  it("gpt-image-2.5-flare low usa 196 tokens (calculador oficial); medium fica ausente", () => {
+    const low = resolveBenchPricing({ ...BASE, model: "gpt-image-2.5-flare", quality: "low" });
+    const medium = resolveBenchPricing({
       ...BASE,
       model: "gpt-image-2.5-flare",
       quality: "medium",
     });
 
-    expect(flareMedium.estimatedOutputTokens).toBeUndefined();
-    expect(flareMedium.unitPriceUsd).toBeUndefined();
-    expect(flareMedium.estimateSource).toBeUndefined();
-    expect(flareMedium.coverage).toBe("partial");
-    expect(flareMedium.mode).toBe("token_based");
+    expect(low.estimatedOutputTokens).toBe(196);
+    expect(low.estimateSource).toBe("official_calculator");
+    expect(low.unitPriceUsd).toBeCloseTo(0.00588, 6);
+    expect(low.coverage).toBe("partial");
+
+    expect(medium.estimatedOutputTokens).toBeUndefined();
+    expect(medium.unitPriceUsd).toBeUndefined();
+    expect(medium.coverage).toBe("partial");
   });
 
-  it("preserva as taxas publicadas do Flare (imagem entrada US$8/M, saída US$30/M)", () => {
-    const flare = resolveBenchPricing({
-      ...BASE,
-      model: "gpt-image-2.5-flare",
-      quality: "low",
-    });
-    expect(flare.tokenRates?.inputImageUsdPerMillion).toBe(8);
-    expect(flare.tokenRates?.outputImageUsdPerMillion).toBe(30);
+  it("gpt-image-2.5-sunburst inicia partial sem estimativa de saída comprovada", () => {
+    for (const quality of ["low", "medium"]) {
+      const resolution = resolveBenchPricing({
+        ...BASE,
+        model: "gpt-image-2.5-sunburst",
+        quality,
+      });
+      expect(resolution.coverage, quality).toBe("partial");
+      expect(resolution.mode, quality).toBe("token_based");
+      expect(resolution.estimatedOutputTokens, quality).toBeUndefined();
+      expect(resolution.unitPriceUsd, quality).toBeUndefined();
+    }
   });
 });
 
@@ -117,11 +116,11 @@ describe("bench-pricing — combinação ausente e modo confirmado", () => {
     expect(missing.coverage).toBe("missing");
   });
 
-  it("o modo confirmado pelo spike é token_based com taxas por token", () => {
+  it("todos os presets habilitados são token_based com as tarifas oficiais", () => {
     for (const entry of BENCH_PRICING_ENTRIES) {
       expect(entry.mode).toBe("token_based");
-      expect(entry.tokenRates).toBeDefined();
-      expect(entry.tokenRates!.outputImageUsdPerMillion).toBeGreaterThan(0);
+      expect(entry.tokenRates).toEqual(OFFICIAL_RATES);
+      expect(entry.coverage).toBe("partial");
     }
   });
 });

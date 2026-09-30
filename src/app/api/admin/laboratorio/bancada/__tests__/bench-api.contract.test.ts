@@ -524,10 +524,10 @@ const DETAIL_RUN = {
   theme: "nenhum",
   latencyMs: 12,
   usage: { promptTokens: 1000 },
-  estimatedCostUsd: 0.006,
+  estimatedCostUsd: 0.03,
   costDetail: { is_estimate: true, cost_source: "bench_local_pricing" },
   costSource: "bench_local_pricing",
-  costRuleVersion: "2026-09-bench-1",
+  costRuleVersion: "2026-09-bench-2",
 };
 
 const VALID_RUN_BODY = {
@@ -725,6 +725,17 @@ beforeEach(() => {
   mockListBenchPresets.mockReturnValue([
     PRESET,
     {
+      id: "gpt-image-2.5-sunburst-low",
+      label: "GPT Image 2.5 Sunburst · low",
+      capability: "campaign_image",
+      provider: "openai",
+      model: "gpt-image-2.5-sunburst",
+      protocol: "images",
+      quality: "low",
+      size: "1024x1024",
+      enabled: true,
+    },
+    {
       id: "gpt-image-2-responses",
       label: "GPT Image 2 · responses (desabilitado)",
       capability: "campaign_image",
@@ -745,10 +756,12 @@ beforeEach(() => {
   mockResolveBenchConfig.mockImplementation((dims: unknown) => dims);
   mockResolveBenchCost.mockReturnValue({
     costSource: "bench_local_pricing",
-    costRuleVersion: "2026-09-bench-1",
+    costRuleVersion: "2026-09-bench-2",
     mode: "token_based",
-    coverage: "complete",
-    estimatedCostUsd: 0.006,
+    // Pricing v2: gpt-image-2 é `partial` (tarifas conhecidas; estimativa prévia
+    // não comprovada sob a nova tarifa) — estimativa indisponível.
+    coverage: "partial",
+    estimatedCostUsd: null,
     isEstimate: true,
   });
 
@@ -999,11 +1012,17 @@ describe("contrato da API da bancada — leitura", () => {
     expect(body.branding.signatureUrl).toBeNull();
   });
 
-  it("GET /presets ⇒ 200 com habilitados e desabilitados com motivo", async () => {
+  it("GET /presets ⇒ 200 com habilitados (incl. Sunburst) e desabilitados com motivo", async () => {
     const res = await getPresets();
     const body = await res.json();
 
     expect(res.status).toBe(200);
+    const sunburst = body.presets.find(
+      (preset: { id: string }) => preset.id === "gpt-image-2.5-sunburst-low",
+    );
+    expect(sunburst.enabled).toBe(true);
+    expect(sunburst.protocol).toBe("images");
+
     const disabled = body.presets.find(
       (preset: { id: string }) => preset.id === "gpt-image-2-responses",
     );
@@ -1011,24 +1030,25 @@ describe("contrato da API da bancada — leitura", () => {
     expect(disabled.reason).toBe("protocolo_nao_confirmado");
   });
 
-  it("GET /estimate ⇒ 200 com cobertura complete pelo resolvedor local", async () => {
+  it("GET /estimate ⇒ 200 mapeando a cobertura parcial do gpt-image-2 (pricing v2)", async () => {
     const res = await getEstimate();
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.coverage).toBe("complete");
-    expect(body.estimatedUsd).toBe(0.006);
+    expect(body.coverage).toBe("partial");
+    expect(body.estimatedUsd).toBeNull();
     expect(body.costSource).toBe("bench_local_pricing");
     expect(mockResolveBenchCost).toHaveBeenCalledTimes(1);
   });
 
-  it("GET /estimate com cobertura partial continua 200 (não bloqueia)", async () => {
+  it("GET /estimate com cobertura partial e valor estimado continua 200 (não bloqueia)", async () => {
     mockResolveBenchCost.mockReturnValue({
       costSource: "bench_local_pricing",
-      costRuleVersion: "2026-09-bench-1",
+      costRuleVersion: "2026-09-bench-2",
       mode: "token_based",
       coverage: "partial",
-      estimatedCostUsd: null,
+      // Ex.: gpt-image-2.5-flare low (196 tokens do calculador oficial).
+      estimatedCostUsd: 0.00588,
       isEstimate: true,
     });
 
@@ -1037,13 +1057,13 @@ describe("contrato da API da bancada — leitura", () => {
 
     expect(res.status).toBe(200);
     expect(body.coverage).toBe("partial");
-    expect(body.estimatedUsd).toBeNull();
+    expect(body.estimatedUsd).toBe(0.00588);
   });
 
   it("GET /estimate com cobertura missing continua 200 (não bloqueia)", async () => {
     mockResolveBenchCost.mockReturnValue({
       costSource: "bench_local_pricing",
-      costRuleVersion: "2026-09-bench-1",
+      costRuleVersion: "2026-09-bench-2",
       mode: "unknown",
       coverage: "missing",
       estimatedCostUsd: null,
@@ -1930,7 +1950,7 @@ describe("contrato da API da bancada — detalhe e artefatos", () => {
     expect(body.run.latencyMs).toBe(12);
     expect(body.run.usage).toMatchObject({ promptTokens: 1000 });
     expect(body.run.costSource).toBe("bench_local_pricing");
-    expect(body.run.costRuleVersion).toBe("2026-09-bench-1");
+    expect(body.run.costRuleVersion).toBe("2026-09-bench-2");
     // Custo estimado não é rotulado como faturado.
     expect(body.run.costDetail.is_estimate).toBe(true);
     expect(body.artifacts[0].signedUrl).toBe("https://signed.test/artifact");
@@ -2006,7 +2026,7 @@ describe("contrato da API da bancada — detalhe e artefatos", () => {
       storagePath: "logos/loja-a.png",
     });
     // Custo calculado × reportado separados.
-    expect(body.run.calculatedCostUsd).toBe(0.006);
+    expect(body.run.calculatedCostUsd).toBe(0.03);
     expect(body.run.reportedCostUsd).toBe(0.009);
     // Tentativas por linhagem explícita.
     expect(body.attempts).toHaveLength(2);

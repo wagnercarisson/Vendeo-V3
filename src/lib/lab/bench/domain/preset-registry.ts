@@ -14,10 +14,12 @@ import { BENCH_MODEL_ALLOWLIST } from "./bench-model-allowlist";
  *
  * ## Estado após o CHECKPOINT 1 (plano 04)
  *
- * O spike bloqueante (`docs/lab/48-2-2-spike-models.md`) confirmou **ambos** os
- * modelos (`gpt-image-2` e `gpt-image-2.5-flare`) no **caminho direto `images`**.
- * Assim, os quatro presets candidatos do primeiro recorte ficam `enabled: true`,
- * validados pela `BENCH_MODEL_ALLOWLIST` e pelo catálogo ativo (leitura). O
+ * O spike bloqueante (`docs/lab/48-2-2-spike-models.md`) confirmou os modelos
+ * (`gpt-image-2` e `gpt-image-2.5-flare`) no **caminho direto `images`**. A
+ * F48.2.4 (correção cirúrgica) adiciona `gpt-image-2.5-sunburst` **somente** ao
+ * caminho isolado da bancada (allowlist própria + catálogo local). Os presets
+ * habilitados ficam validados pela `BENCH_MODEL_ALLOWLIST` e pelo catálogo ativo
+ * (leitura). O
  * protocolo `responses` **não** foi exigido por nenhum modelo confirmado e
  * permanece **desabilitado com motivo** (`protocolo_nao_confirmado`). Nenhum CHECK
  * por valor e nenhuma tabela de presets no banco (D7).
@@ -93,6 +95,29 @@ export const BENCH_PRESETS: readonly BenchPreset[] = [
     capability: "campaign_image",
     provider: "openai",
     model: "gpt-image-2.5-flare",
+    protocol: "images",
+    quality: "medium",
+    size: "1024x1024",
+    enabled: true,
+  },
+  // F48.2.4 (correção cirúrgica): Sunburst — somente no caminho isolado da bancada.
+  {
+    id: "gpt-image-2.5-sunburst-low",
+    label: "GPT Image 2.5 Sunburst · low",
+    capability: "campaign_image",
+    provider: "openai",
+    model: "gpt-image-2.5-sunburst",
+    protocol: "images",
+    quality: "low",
+    size: "1024x1024",
+    enabled: true,
+  },
+  {
+    id: "gpt-image-2.5-sunburst-medium",
+    label: "GPT Image 2.5 Sunburst · medium",
+    capability: "campaign_image",
+    provider: "openai",
+    model: "gpt-image-2.5-sunburst",
     protocol: "images",
     quality: "medium",
     size: "1024x1024",
