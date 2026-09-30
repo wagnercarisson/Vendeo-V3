@@ -113,7 +113,7 @@
 
 ## 12. Correção — chave de API exclusiva da bancada
 
-- [ ] 12.1 Fonte OpenSpec: requisito "Chave de API exclusiva da bancada" (`lab-isolation`) e D21 no `design.md`.
-- [ ] 12.2 Resolvedor dedicado `bench-api-key.ts`: lê **somente** `OPENAI_BENCH_API_KEY`; **nunca** fallback para `OPENAI_API_KEY`; ausente/vazia ⇒ falha antes de criar o cliente/chamar o provider; `BenchImagesAdapter` usa `getBenchApiKey`; `getApiKey` produtivo intocado; chave nunca registrada/persistida/exibida.
-- [ ] 12.3 Gate arquitetural: a bancada lê apenas `OPENAI_BENCH_API_KEY` (nunca `OPENAI_API_KEY`/`GEMINI_API_KEY`); o adapter da bancada não usa o resolvedor produtivo `getApiKey`.
-- [ ] 12.4 Testes: ambas as chaves ⇒ usa exclusivamente a da bancada; só `OPENAI_API_KEY` ⇒ bancada recusa; só `OPENAI_BENCH_API_KEY` ⇒ funciona; chave vazia ⇒ nenhuma chamada ao provider.
+- [x] 12.1 Fonte OpenSpec: requisito "Chave de API exclusiva da bancada" (`lab-isolation`) e D21 no `design.md`.
+- [x] 12.2 Resolvedor dedicado `bench-api-key.ts`: lê **somente** `OPENAI_BENCH_API_KEY`; **nunca** fallback para `OPENAI_API_KEY`; ausente/vazia ⇒ falha antes de criar o cliente/chamar o provider; `BenchImagesAdapter` usa `getBenchApiKey`; `getApiKey` produtivo intocado; chave nunca registrada/persistida/exibida.
+- [x] 12.3 Gate arquitetural: a bancada lê apenas `OPENAI_BENCH_API_KEY` (nunca `OPENAI_API_KEY`/`GEMINI_API_KEY`); o adapter da bancada não usa o resolvedor produtivo `getApiKey`.
+- [x] 12.4 Testes: ambas as chaves ⇒ usa exclusivamente a da bancada; só `OPENAI_API_KEY` ⇒ bancada recusa; só `OPENAI_BENCH_API_KEY` ⇒ funciona; chave vazia ⇒ nenhuma chamada ao provider.
