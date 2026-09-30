@@ -256,10 +256,17 @@ export const POST = apiHandler(async (request: Request) => {
 
   // ── Revalidação server-side do preflight (D11) — ANTES do CAS e do provider ──
   // (a) recompõe o prompt a partir das entradas atuais e exige igualdade byte a
-  // byte com o `promptCompiled` aprovado; (b) compara a evidência completa
-  // aprovada (`presetId`/config/políticas/prompt-base/compositor/identidade) com
-  // os valores RESOLVIDOS NO SERVIDOR — campo a campo, sem hash. QUALQUER
-  // divergência ⇒ 409 `approval_invalidated`, sem chamada paga.
+  // byte com o `promptCompiled` aprovado; (b) compara a **evidência textual**
+  // aprovada (políticas/prompt-base/compositor/identidade) com os valores
+  // RESOLVIDOS NO SERVIDOR — campo a campo, sem hash. QUALQUER divergência ⇒ 409
+  // `approval_invalidated`, sem chamada paga.
+  //
+  // `presetId`/`modelo`/`qualidade` NÃO entram nessa comparação (correção de UAT):
+  // são **configuração de execução** — validados por `resolveBenchPreset` abaixo e
+  // persistidos no run (`provider`/`protocol`/`model`/`size`/`quality`). Trocar de
+  // preset/modelo/qualidade reutiliza o MESMO prompt aprovado byte a byte, exigindo
+  // apenas nova estimativa e nova confirmação financeira (no cliente), nunca nova
+  // composição/aprovação.
   const recomposition = recomposeBenchPrompt({
     briefing,
     promptBase: input.preflight.promptBase,
@@ -284,8 +291,6 @@ export const POST = apiHandler(async (request: Request) => {
   const defaultPromptBase = resolveBenchDefaultPromptBase(config);
   const currentEvidence = resolveServerResolvedEvidence({
     recomposition,
-    presetId: input.presetId,
-    config,
     promptBaseVersion: defaultPromptBase.version,
     identityReference,
   });
@@ -293,8 +298,6 @@ export const POST = apiHandler(async (request: Request) => {
   try {
     assertPreflightEvidenceMatches({
       approved: {
-        presetId: input.preflight.presetId ?? null,
-        config: input.preflight.config ?? null,
         policyVersions: input.preflight.policyVersions ?? null,
         promptBaseVersion: input.preflight.promptBaseVersion ?? null,
         composerVersion: input.preflight.composerVersion,
@@ -304,8 +307,8 @@ export const POST = apiHandler(async (request: Request) => {
     });
   } catch (error) {
     if (error instanceof BenchPreflightRevalidationError) {
-      // Evidência divergente (preset/config/políticas/prompt-base/compositor/
-      // identidade) ⇒ 409 approval_invalidated, sem hash persistido.
+      // Evidência textual divergente (políticas/prompt-base/compositor/identidade)
+      // ⇒ 409 approval_invalidated, sem hash persistido.
       return NextResponse.json({ error: "approval_invalidated" }, { status: 409 });
     }
     throw error;

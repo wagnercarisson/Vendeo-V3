@@ -137,6 +137,13 @@ const PRESET_DISABLED = {
   reason: "protocolo_nao_confirmado",
 };
 
+const PRESET_ENABLED_MEDIUM = {
+  ...PRESET_ENABLED,
+  id: "gpt-image-2-medium",
+  label: "GPT Image 2 · medium",
+  quality: "medium",
+};
+
 const PRESETS = [PRESET_ENABLED, PRESET_DISABLED];
 
 const mockFetch = vi.fn();
@@ -571,16 +578,67 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     const source = readComponentSource("bench-workbench.tsx");
     expect(source).toContain("invalidatePreflight");
     expect(source).toContain("preflightRevision");
-    // A invalidação é chamada por TODAS as entradas usadas na composição.
+    // A invalidação cobre as entradas que compõem texto/referências.
     expect(source).toContain("handleStoreChange");
     expect(source).toContain("handleCampaignChange");
     expect(source).toContain("handlePromptBaseChange");
-    expect(source).toContain("handlePresetChange");
     expect(source).toContain("handleUploaded");
+    // Configuração de execução (preset/modelo/qualidade) invalida só a estimativa
+    // e a confirmação financeira — não o prompt aprovado (correção de UAT).
+    expect(source).toContain("handlePresetChange");
+    expect(source).toContain("executionConfigRevision");
     // Sem hashes persistidos e sem comparação lado a lado/votação.
     expect(source).not.toMatch(/createHash|sha256/i);
     expect(source).not.toMatch(/lado a lado|vota(ção|r)|enquete/i);
     expect(source).not.toContain("campaign-images");
+  });
+
+  it("trocar preset/modelo/qualidade NÃO invalida o prompt aprovado (correção de UAT)", async () => {
+    mockListBenchPresets.mockReturnValue([
+      PRESET_ENABLED,
+      PRESET_ENABLED_MEDIUM,
+      PRESET_DISABLED,
+    ]);
+    mockFetch.mockImplementation(async (url: unknown) => {
+      const target = String(url);
+      if (target.includes("/compose")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            compiledPrompt: "PROMPT COMPILADO",
+            blocks: { "IDENTIDADE E DIREÇÃO VISUAL": "Loja: Aurora" },
+            composerVersion: COMPOSER_VERSION,
+            policyVersions: { intencao: "48.2.4-oferta-v1" },
+            promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+          }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({ branding: BRANDING }) };
+    });
+
+    render(await BancadaPage());
+
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
+        "PROMPT COMPILADO",
+      ),
+    );
+    fireEvent.click(screen.getByTestId("bench-approve-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent(
+        "Prompt aprovado",
+      ),
+    );
+
+    // Troca a configuração de execução (qualidade → medium): o prompt permanece aprovado.
+    fireEvent.change(screen.getByLabelText("Qualidade"), { target: { value: "medium" } });
+
+    expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado");
+    expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
+      "PROMPT COMPILADO",
+    );
   });
 });
 
@@ -610,7 +668,8 @@ const PREFLIGHT_EVIDENCE: BenchPreflightEvidence = {
   promptBlocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
   composerVersion: COMPOSER_VERSION,
   // Campos da F48.2.4 exigidos pelo schema estrito (D11/D14): sem eles o
-  // `POST /runs` responde 400 por preflight-evidence ausente.
+  // `POST /runs` responde 400 por preflight-evidence ausente. A evidência é
+  // **textual**: NÃO carrega `presetId`/`config` de execução (correção de UAT).
   policyVersions: {
     intencao: "48.2.4-oferta-v1",
     formato: "48.2.4-formato-1-1-v1",
@@ -623,17 +682,6 @@ const PREFLIGHT_EVIDENCE: BenchPreflightEvidence = {
     kind: "logo",
     variantType: "primary",
     storagePath: "stores/aurora/logo.png",
-  },
-  presetId: PRESET_ENABLED.id,
-  config: {
-    pipeline: "manual-direto",
-    formato: "1:1",
-    modelo: "gpt-image-2",
-    qualidade: "low",
-    intencao: "oferta",
-    tipoConteudo: "produto",
-    estrutura: "peca-unica",
-    tema: "nenhum",
   },
 };
 
@@ -1082,19 +1130,19 @@ describe("contrato de UI — tentativas e 'Nova tentativa' (F48.2.4)", () => {
     expect(EMOJI_PATTERN.test(source)).toBe(false);
   });
 
-  it("o workbench reforça a invalidação e monta a evidência alinhada ao schema estrito", () => {
+  it("o workbench separa aprovação de configuração de execução e monta a evidência textual", () => {
     const source = readComponentSource("bench-workbench.tsx");
-    // Invalidação reforçada: prompt-base, configuração e modelo/qualidade.
+    // Invalidação do prompt cobre prompt-base e as entradas de texto.
     expect(source).toContain("invalidatePreflight");
     expect(source).toContain("handlePromptBaseChange");
-    expect(source).toContain("handlePresetChange");
     expect(source).toContain("setPolicyVersions({})");
-    // Evidência do preflight com todos os campos exigidos pelo schema estrito.
+    // Configuração de execução separada (não invalida o prompt — correção de UAT).
+    expect(source).toContain("handlePresetChange");
+    expect(source).toContain("executionConfigRevision");
+    // Evidência do preflight é textual (campos exigidos pelo schema estrito).
     expect(source).toContain("policyVersions");
     expect(source).toContain("promptBaseVersion");
     expect(source).toContain("identityReference");
-    expect(source).toContain("presetId");
-    expect(source).toContain("config:");
     // Sem hashes persistidos e sem comparação lado a lado/votação.
     expect(source).not.toMatch(/createHash|sha256/i);
     expect(source).not.toMatch(/lado a lado|vota(ção|r)|enquete|ranking/i);

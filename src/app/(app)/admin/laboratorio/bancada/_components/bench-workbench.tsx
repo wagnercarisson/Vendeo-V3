@@ -52,9 +52,17 @@ import { buildValidityDisplayText } from "@/lib/lab/bench/domain/form-rules";
  * **Invalidação centralizada (D17):** um ponto único `invalidatePreflight()`
  * incrementa o contador em memória `preflightRevision` e limpa a composição
  * aprovada. **Toda** transição de entrada usada na composição passa por ele —
- * loja/briefing, produto/campanha, imagens/referências, intenção/formato/config,
+ * loja/branding, produto/campanha, imagens/referências, condições comerciais,
+ * intenção/formato/tipo de conteúdo/estrutura/tema, textos obrigatórios,
  * prompt-base e o prompt final após a aprovação. Nenhum hash é persistido: a
  * revisão vive apenas no estado da UI.
+ *
+ * **Separação aprovação e configuração de execução (correção de UAT):** trocar
+ * `preset`/`modelo`/`qualidade` **NÃO** invalida o prompt compilado/aprovado nem
+ * exige nova composição — esses campos não participam da composição textual.
+ * Trocar a configuração de execução apenas **invalida a estimativa e a confirmação
+ * financeira** (`executionConfigRevision`), mantendo o mesmo prompt aprovado, que
+ * é reutilizado byte a byte.
  *
  * Ele mantém apenas estado de UI; nenhuma chamada paga parte daqui.
  */
@@ -96,24 +104,6 @@ export interface BenchWorkbenchProps {
   enabledPolicies: BenchPromptPolicyView[];
   /** Versão estática do compositor (evidência — D20). */
   composerVersion: string;
-}
-
-/** Config canônica (8 dimensões) aprovada no preflight — modelo/qualidade do preset. */
-function buildCanonicalConfig(
-  config: BenchConfigOptions,
-  preset: BenchPresetOption | undefined,
-): Record<string, string> | null {
-  if (!preset) return null;
-  return {
-    pipeline: config.defaults.pipeline ?? "",
-    formato: config.defaults.formato ?? "",
-    modelo: preset.model,
-    qualidade: preset.quality,
-    intencao: config.defaults.intencao ?? "",
-    tipoConteudo: config.defaults.tipoConteudo ?? "",
-    estrutura: config.defaults.estrutura ?? "",
-    tema: config.defaults.tema ?? "",
-  };
 }
 
 function buildProductPayload(campaign: BenchCampaignFormValue): BenchProductPayload {
@@ -172,6 +162,10 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   const [presetId, setPresetId] = useState(
     presets.find((preset) => preset.enabled)?.id ?? presets[0]?.id ?? "",
   );
+  // Revisão da configuração de execução (preset/modelo/qualidade). Trocar a
+  // configuração NÃO invalida o prompt aprovado; invalida apenas a estimativa e a
+  // confirmação financeira no painel de execução (correção de UAT).
+  const [executionConfigRevision, setExecutionConfigRevision] = useState(0);
   const [upload, setUpload] = useState<BenchUploadResult | null>(null);
   const [runEvidence, setRunEvidence] = useState<{
     run: BenchRunEvidence;
@@ -254,7 +248,10 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
 
   function handlePresetChange(nextPresetId: string) {
     setPresetId(nextPresetId);
-    invalidatePreflight();
+    // Preset/modelo/qualidade NÃO compõem o texto: o prompt aprovado permanece
+    // válido byte a byte. Apenas a estimativa e a confirmação financeira são
+    // invalidadas (o painel de execução reinicia ao ver a nova revisão).
+    setExecutionConfigRevision((revision) => revision + 1);
   }
 
   function handleUploaded(result: BenchUploadResult) {
@@ -324,8 +321,6 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   }
 
   const approvedPrompt = preflightStatus === "approved" ? finalPrompt : null;
-  const selectedPreset = presets.find((preset) => preset.id === presetId);
-  const canonicalConfig = buildCanonicalConfig(config, selectedPreset);
   const canonicalIdentityReference = branding?.identityReference
     ? {
         kind: branding.identityReference.kind,
@@ -333,11 +328,11 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         storagePath: branding.identityReference.storagePath,
       }
     : null;
-  // Evidência capturada no momento da aprovação, com TODOS os campos exigidos pelo
-  // `BenchPreflightEvidenceSchema` estrito (D11/D14) — inclusive `presetId`,
-  // `config` canônica (modelo/qualidade + recorte), `policyVersions`,
-  // `promptBaseVersion` e `identityReference` (sem URL assinada). Sem esses campos
-  // `POST /runs` responde 400 por preflight-evidence ausente.
+  // Evidência **textual** capturada no momento da aprovação, com os campos exigidos
+  // pelo `BenchPreflightEvidenceSchema` estrito (D11/D14): `policyVersions`,
+  // `promptBaseVersion` e `identityReference` (sem URL assinada). **Não** inclui
+  // `presetId`/`config` de execução (correção de UAT): o preset/modelo/qualidade é
+  // enviado separadamente em `POST /runs` como configuração de execução.
   const preflightEvidence: BenchPreflightEvidenceView | null =
     preflightStatus === "approved"
       ? {
@@ -349,8 +344,6 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           policyVersions,
           promptBaseVersion: composedPromptBaseVersion,
           identityReference: canonicalIdentityReference,
-          presetId,
-          ...(canonicalConfig ? { config: canonicalConfig } : {}),
         }
       : null;
 
@@ -528,6 +521,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         <BenchExecutionPanel
           storeId={storeId}
           presetId={presetId}
+          configRevision={executionConfigRevision}
           approvedPrompt={approvedPrompt}
           preflightEvidence={preflightEvidence}
           product={buildProductPayload(campaign)}

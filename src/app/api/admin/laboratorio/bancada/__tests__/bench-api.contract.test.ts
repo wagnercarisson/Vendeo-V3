@@ -821,17 +821,7 @@ beforeEach(() => {
   mockAssertPreflightCompositionMatches.mockReturnValue(undefined);
   mockAssertPreflightEvidenceMatches.mockReturnValue(undefined);
   mockResolveServerResolvedEvidence.mockReturnValue({
-    presetId: PRESET_ID,
-    config: {
-      pipeline: "manual-direto",
-      formato: "1:1",
-      modelo: "gpt-image-2",
-      qualidade: "low",
-      intencao: "oferta",
-      tipoConteudo: "produto",
-      estrutura: "peca-unica",
-      tema: "nenhum",
-    },
+    // Evidência TEXTUAL (sem presetId/config de execução — correção de UAT).
     policyVersions: { intencao: "oferta-v1" },
     promptBaseVersion: "test-prompt-base-v1",
     composerVersion: "test-composer-v1",
@@ -1419,6 +1409,43 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     expect(execCall.request.prompt).toBe("prompt manual");
   });
 
+  it("o mesmo prompt aprovado é aceito byte a byte com dois presets/modelos distintos (sem provider real)", async () => {
+    // Correção de UAT: a configuração de execução (preset/modelo/qualidade) NÃO
+    // integra a evidência textual. O mesmo prompt aprovado prossegue com presets
+    // diferentes; trocar de preset exige apenas nova estimativa/confirmação no
+    // cliente — nunca nova composição/aprovação.
+    mockResolveBenchPreset.mockImplementation((id: unknown) => ({
+      ...PRESET,
+      id: String(id),
+      model: "gpt-image-2",
+      quality: id === "gpt-image-2-medium" ? "medium" : "low",
+    }));
+
+    const first = await postRun({ ...VALID_RUN_BODY, presetId: "gpt-image-2-low" });
+    const firstText = await first.text();
+    const second = await postRun({ ...VALID_RUN_BODY, presetId: "gpt-image-2-medium" });
+    const secondText = await second.text();
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(firstText).toContain('"type":"done"');
+    expect(secondText).toContain('"type":"done"');
+
+    // Ambas as execuções enviam EXATAMENTE o mesmo prompt aprovado (byte a byte).
+    expect(mockExecuteBenchRun).toHaveBeenCalledTimes(2);
+    const prompts = mockExecuteBenchRun.mock.calls.map(
+      (call) => (call[0] as { request: { prompt: string } }).request.prompt,
+    );
+    expect(prompts[0]).toBe("prompt manual");
+    expect(prompts[1]).toBe(prompts[0]);
+
+    // A configuração de execução persistida difere por preset (qualidade).
+    const qualities = mockSetBenchRunInput.mock.calls.map(
+      (call) => (call[0] as { quality: string }).quality,
+    );
+    expect(new Set(qualities).size).toBe(2);
+  });
+
   it("operation_id sem draft prévio ⇒ 400 e nenhum run criado", async () => {
     mockGetBenchRunByOperationId.mockResolvedValue(null);
 
@@ -1625,9 +1652,9 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     expect(mockExecuteBenchRun).not.toHaveBeenCalled();
   });
 
-  it("evidência divergente (config/modelo/qualidade) ⇒ 409 approval_invalidated sem chamada paga", async () => {
+  it("evidência TEXTUAL divergente (policy_versions) ⇒ 409 approval_invalidated sem chamada paga", async () => {
     mockAssertPreflightEvidenceMatches.mockImplementation(() => {
-      throw new MockBenchPreflightRevalidationError("config_diverged");
+      throw new MockBenchPreflightRevalidationError("policy_versions_diverged");
     });
 
     const res = await postRun(VALID_RUN_BODY);

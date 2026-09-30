@@ -33,10 +33,15 @@ export type BenchPreflightStatus =
 /**
  * Evidência do preflight aprovada — alinhada ao `BenchPreflightEvidenceSchema`
  * **estrito** (F48.2.4, D11/D14). Além dos campos legados, carrega as versões das
- * políticas, a versão do prompt-base padrão, a referência canônica da identidade
- * (sem URL assinada), o preset e a configuração canônica aprovada (modelo/qualidade
- * + dimensões do recorte) — capturados no momento da aprovação — de modo que
+ * políticas, a versão do prompt-base padrão e a referência canônica da identidade
+ * (sem URL assinada) — capturados no momento da aprovação — de modo que
  * `POST /runs` não responda 400 por campo ausente.
+ *
+ * **Correção de UAT (separação aprovação e execução):** a evidência **não** carrega
+ * `presetId` nem a configuração de execução (`modelo`/`qualidade`) — eles não
+ * participam da composição textual e são enviados separadamente em `POST /runs`
+ * como configuração de execução. Trocar de preset/modelo/qualidade reutiliza o
+ * mesmo prompt aprovado byte a byte.
  */
 export interface BenchPreflightEvidenceView {
   promptBase: string;
@@ -47,8 +52,6 @@ export interface BenchPreflightEvidenceView {
   policyVersions?: Record<string, string>;
   promptBaseVersion?: string;
   identityReference?: BenchIdentityReference | null;
-  presetId?: string;
-  config?: Record<string, string>;
 }
 
 interface BenchPreflightPanelProps {

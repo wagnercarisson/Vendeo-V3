@@ -18,13 +18,20 @@ import { composePromptBlocks, type BenchPromptComposition } from "./prompt-compo
  *     orientação de identidade da composição aprovada;
  *  2. exige que o texto recomposto seja **idêntico** ao `promptCompiled` aprovado
  *     (`assertPreflightCompositionMatches`) — divergência ⇒ `approval_invalidated`;
- *  3. exige que a **evidência aprovada** (`presetId`, config canônica com
- *     `modelo`/`qualidade`/dimensões do recorte, `policyVersions`,
+ *  3. exige que a **evidência textual aprovada** (`policyVersions`,
  *     `promptBaseVersion`, `composerVersion` e `identityReference`) coincida,
  *     **campo a campo e sem hash persistido**, com os valores **resolvidos no
  *     servidor** (`assertPreflightEvidenceMatches`) — QUALQUER divergência ⇒
- *     `approval_invalidated` (409), inclusive quando `modelo`/`qualidade` não
- *     alteram o texto ou quando o asset de logo muda mantendo `kind=logo`.
+ *     `approval_invalidated` (409).
+ *
+ * **Separação aprovação ↔ configuração de execução (correção de UAT):** o
+ * `presetId` e `modelo`/`qualidade` **NÃO** participam da composição textual e,
+ * portanto, **não** integram a evidência textual nem a comparação de aprovação.
+ * Eles são **configuração de execução**: validados server-side
+ * (`resolveBenchPreset`/`resolveBenchConfig`) e persistidos no run
+ * (`provider`/`model`/`quality`/`size`). Trocar de preset/modelo/qualidade usa o
+ * **mesmo prompt aprovado byte a byte** e exige apenas **nova estimativa e nova
+ * confirmação financeira** — nunca nova composição/aprovação.
  *
  * A **persistência usa sempre os valores resolvidos no servidor**
  * (`resolveServerResolvedEvidence`); a evidência do preflight do cliente serve
@@ -113,34 +120,18 @@ export function assertPreflightCompositionMatches(params: {
 // ─── Comparação da evidência (campo a campo, sem hash persistido) ────────────
 
 /**
- * Visão da evidência do preflight usada na comparação. Os campos são os
- * **resolvidos no servidor no momento atual** (para persistência) ou os
+ * Visão da **evidência textual** do preflight usada na comparação. Os campos são
+ * os **resolvidos no servidor no momento atual** (para persistência) ou os
  * registrados na aprovação do cliente (apenas para comparação).
+ *
+ * **Não** inclui `presetId`/`modelo`/`qualidade`: são configuração de execução,
+ * não participam da composição textual e não invalidam a aprovação.
  */
 export interface BenchPreflightEvidenceView {
-  presetId: string | null;
-  config: BenchConfig | null;
   policyVersions: Readonly<Record<string, string>> | null;
   promptBaseVersion: string | null;
   composerVersion: string | null;
   identityReference: BenchIdentityReference | null;
-}
-
-/** Ordem canônica das dimensões comparadas (config canônica completa). */
-const CONFIG_FIELDS: readonly (keyof BenchConfig)[] = [
-  "pipeline",
-  "formato",
-  "modelo",
-  "qualidade",
-  "intencao",
-  "tipoConteudo",
-  "estrutura",
-  "tema",
-];
-
-function configEquals(left: BenchConfig | null, right: BenchConfig | null): boolean {
-  if (left === null || right === null) return left === right;
-  return CONFIG_FIELDS.every((field) => left[field] === right[field]);
 }
 
 function versionsEqual(
@@ -167,13 +158,17 @@ function identityEquals(
 }
 
 /**
- * Compara a evidência aprovada com os valores **resolvidos no servidor** no
- * momento atual, **campo a campo** (`presetId`, config canônica com
- * `modelo`/`qualidade`/dimensões, `policyVersions`, `promptBaseVersion`,
- * `composerVersion` e `identityReference`). QUALQUER divergência ⇒
- * `approval_invalidated` — inclusive quando `modelo`/`qualidade` não alteram o
- * texto ou quando o asset de logo muda mantendo `kind=logo`. **Sem hash
- * persistido**: a comparação é entre valores já existentes.
+ * Compara a **evidência textual** aprovada com os valores **resolvidos no
+ * servidor** no momento atual, **campo a campo** (`policyVersions`,
+ * `promptBaseVersion`, `composerVersion` e `identityReference`). QUALQUER
+ * divergência ⇒ `approval_invalidated` — inclusive quando o asset de logo muda
+ * mantendo `kind=logo`. **Sem hash persistido**: a comparação é entre valores já
+ * existentes.
+ *
+ * **`presetId`/`modelo`/`qualidade` NÃO são comparados aqui** (correção de UAT):
+ * são configuração de execução, validados/persistidos separadamente no run. O
+ * mesmo prompt aprovado pode ser reutilizado byte a byte com outro preset/modelo,
+ * exigindo apenas nova estimativa e nova confirmação financeira.
  */
 export function assertPreflightEvidenceMatches(params: {
   approved: BenchPreflightEvidenceView;
@@ -181,12 +176,6 @@ export function assertPreflightEvidenceMatches(params: {
 }): void {
   const { approved, current } = params;
 
-  if (approved.presetId !== current.presetId) {
-    throw new BenchPreflightRevalidationError("preset_id_diverged");
-  }
-  if (!configEquals(approved.config, current.config)) {
-    throw new BenchPreflightRevalidationError("config_diverged");
-  }
   if (!versionsEqual(approved.policyVersions, current.policyVersions)) {
     throw new BenchPreflightRevalidationError("policy_versions_diverged");
   }
@@ -202,21 +191,20 @@ export function assertPreflightEvidenceMatches(params: {
 }
 
 /**
- * Monta a visão da evidência a partir dos valores **resolvidos no servidor**:
- * versões das políticas e do compositor vêm da recomposição; `presetId`, config,
- * versão do prompt-base padrão e referência de identidade vêm da resolução atual
- * do servidor. É o que a rota **persiste** — nunca a evidência do cliente.
+ * Monta a visão da **evidência textual** a partir dos valores **resolvidos no
+ * servidor**: versões das políticas e do compositor vêm da recomposição; versão
+ * do prompt-base padrão e referência de identidade vêm da resolução atual do
+ * servidor. É o que a rota **persiste** — nunca a evidência do cliente.
+ *
+ * **`presetId`/`modelo`/`qualidade` não integram esta evidência**: são
+ * configuração de execução, validados/persistidos separadamente no run.
  */
 export function resolveServerResolvedEvidence(params: {
   recomposition: BenchPromptComposition;
-  presetId: string;
-  config: BenchConfig;
   promptBaseVersion: string | null;
   identityReference: BenchIdentityReference | null;
 }): BenchPreflightEvidenceView {
   return {
-    presetId: params.presetId,
-    config: { ...params.config },
     policyVersions: { ...params.recomposition.policyVersions },
     promptBaseVersion: params.promptBaseVersion,
     composerVersion: params.recomposition.composerVersion,

@@ -235,10 +235,14 @@ function isBenchInputReference(reference: string, runId: string): boolean {
  *
  * Campos da F48.2.4 (opcionais para preservar o comportamento de
  * `BenchRunInputSchema` e a compatibilidade dos consumidores atuais): versões das
- * políticas, versão do prompt-base PADRÃO, referência canônica da identidade (sem
- * URL assinada), preset de modelo/qualidade aprovado e a configuração canônica
- * aprovada (modelo/qualidade + dimensões do recorte) — esta última fecha o GAP de
- * revalidação de `modelo`/`qualidade` antes do CAS `draft → pending`.
+ * políticas, versão do prompt-base PADRÃO e referência canônica da identidade (sem
+ * URL assinada).
+ *
+ * **Correção de UAT (separação aprovação ↔ execução):** `presetId` e a configuração
+ * de execução (`modelo`/`qualidade`) **não** integram a evidência do preflight —
+ * não participam da composição textual e são validados/persistidos separadamente
+ * como configuração de execução do run. Trocar de preset/modelo/qualidade reutiliza
+ * o mesmo prompt aprovado byte a byte.
  */
 export const BenchPreflightEvidenceSchema = z
   .object({
@@ -258,10 +262,6 @@ export const BenchPreflightEvidenceSchema = z
     promptBaseVersion: z.string().min(1).optional(),
     /** Referência canônica da identidade — sem URL assinada (F48.2.4, D10/D14). */
     identityReference: BenchIdentityReferenceSchema.nullable().optional(),
-    /** Preset de modelo/qualidade aprovado (F48.2.4, D11). */
-    presetId: z.string().min(1).optional(),
-    /** Configuração canônica aprovada (modelo/qualidade + dimensões) (F48.2.4, D11). */
-    config: BenchConfigSchema.optional(),
   })
   .strict();
 

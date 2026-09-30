@@ -40,10 +40,14 @@ import type { BenchConfig, BenchOffer, BenchProduct } from "../domain/schemas";
  * Prova, sem nenhuma chamada de rede/IA:
  *  - recomposição determinística (mesma entrada ⇒ mesma saída);
  *  - composição idêntica prossegue; divergente ⇒ `approval_invalidated`;
- *  - **divergência de QUALQUER campo da evidência** (`presetId`, config com
- *    modelo/qualidade/dimensões, `policyVersions`, `promptBaseVersion`,
- *    `composerVersion`, `identityReference`) ⇒ `approval_invalidated`, sem hash
- *    persistido — incluindo troca de asset de logo mantendo `kind=logo`;
+ *  - **divergência de QUALQUER campo da evidência TEXTUAL** (`policyVersions`,
+ *    `promptBaseVersion`, `composerVersion`, `identityReference`) ⇒
+ *    `approval_invalidated`, sem hash persistido — incluindo troca de asset de logo
+ *    mantendo `kind=logo`;
+ *  - **separação aprovação ↔ execução (correção de UAT):** `presetId`/`modelo`/
+ *    `qualidade` NÃO participam da composição textual nem da comparação de
+ *    aprovação; o mesmo prompt aprovado é reutilizado byte a byte com dois
+ *    presets/modelos distintos;
  *  - a persistência usa os valores **resolvidos no servidor** (nunca os do cliente);
  *  - `prompt_sent` é **byte a byte** o prompt aprovado (via `RecordingAdapter`).
  */
@@ -182,8 +186,6 @@ describe("assertPreflightEvidenceMatches — campo a campo", () => {
   function serverEvidence(): BenchPreflightEvidenceView {
     return resolveServerResolvedEvidence({
       recomposition: recompose(),
-      presetId: "gpt-image-2-low",
-      config: CONFIG,
       promptBaseVersion: "48.2.4-oferta-1-1-v1",
       identityReference: LOGO_REF,
     });
@@ -196,30 +198,46 @@ describe("assertPreflightEvidenceMatches — campo a campo", () => {
     ).not.toThrow();
   });
 
-  it("divergência de presetId ⇒ approval_invalidated", () => {
-    const current = serverEvidence();
-    expect(() =>
-      assertPreflightEvidenceMatches({
-        approved: { ...current, presetId: "gpt-image-2-medium" },
-        current,
-      }),
-    ).toThrow(BenchPreflightRevalidationError);
-  });
+  it("mesmo prompt aprovado é reutilizável com dois presets/modelos distintos (sem nova composição)", () => {
+    // O prompt compilado é independente da configuração de execução: dois presets
+    // com modelos/qualidades diferentes produzem a MESMA evidência textual.
+    const approved = serverEvidence();
+    const lowPreset = recomposeBenchPrompt({
+      briefing: makeBriefing(),
+      promptBase: PROMPT_BASE,
+      references: [`bench/${RUN_ID}/inputs/0.png`],
+      config: { ...CONFIG, modelo: "gpt-image-2", qualidade: "low" },
+      identityReference: LOGO_REF,
+    });
+    const flarePreset = recomposeBenchPrompt({
+      briefing: makeBriefing(),
+      promptBase: PROMPT_BASE,
+      references: [`bench/${RUN_ID}/inputs/0.png`],
+      config: { ...CONFIG, modelo: "gpt-image-2.5-flare", qualidade: "medium" },
+      identityReference: LOGO_REF,
+    });
 
-  it("divergência de modelo/qualidade (sem alterar o texto) ⇒ approval_invalidated", () => {
-    const current = serverEvidence();
+    // Mesmo texto byte a byte entre os dois presets (a config de execução não compõe).
+    expect(flarePreset.text).toBe(lowPreset.text);
+
+    const currentLow = resolveServerResolvedEvidence({
+      recomposition: lowPreset,
+      promptBaseVersion: "48.2.4-oferta-1-1-v1",
+      identityReference: LOGO_REF,
+    });
+    const currentFlare = resolveServerResolvedEvidence({
+      recomposition: flarePreset,
+      promptBaseVersion: "48.2.4-oferta-1-1-v1",
+      identityReference: LOGO_REF,
+    });
+
+    // O mesmo prompt aprovado (evidência textual) prossegue com AMBOS os presets.
     expect(() =>
-      assertPreflightEvidenceMatches({
-        approved: { ...current, config: { ...CONFIG, modelo: "gpt-image-2.5-flare" } },
-        current,
-      }),
-    ).toThrow(BenchPreflightRevalidationError);
+      assertPreflightEvidenceMatches({ approved, current: currentLow }),
+    ).not.toThrow();
     expect(() =>
-      assertPreflightEvidenceMatches({
-        approved: { ...current, config: { ...CONFIG, qualidade: "high" } },
-        current,
-      }),
-    ).toThrow(BenchPreflightRevalidationError);
+      assertPreflightEvidenceMatches({ approved, current: currentFlare }),
+    ).not.toThrow();
   });
 
   it("divergência de policyVersions/promptBaseVersion/composerVersion ⇒ approval_invalidated", () => {
@@ -280,8 +298,6 @@ describe("server-resolved-persisted", () => {
 
     const server = resolveServerResolvedEvidence({
       recomposition,
-      presetId: "gpt-image-2-low",
-      config: CONFIG,
       promptBaseVersion: "48.2.4-oferta-1-1-v1",
       identityReference: LOGO_REF,
     });

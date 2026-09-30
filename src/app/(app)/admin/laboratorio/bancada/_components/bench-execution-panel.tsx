@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, CheckCircle2, Loader2, Play, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "../../_components/confirm-dialog";
@@ -57,6 +57,12 @@ export interface BenchOfferPayload {
 interface BenchExecutionPanelProps {
   storeId: string;
   presetId: string;
+  /**
+   * Revisão da configuração de execução (preset/modelo/qualidade). Ao mudar,
+   * invalida apenas a estimativa e a confirmação financeira — o prompt aprovado
+   * permanece válido (correção de UAT).
+   */
+  configRevision?: number;
   /** Prompt final aprovado no preflight; `null` bloqueia a geração. */
   approvedPrompt: string | null;
   /** Evidência mínima do preflight, persistida no run (D20). */
@@ -81,6 +87,7 @@ interface BenchStreamEvent {
 export function BenchExecutionPanel({
   storeId,
   presetId,
+  configRevision = 0,
   approvedPrompt,
   preflightEvidence,
   product,
@@ -97,6 +104,16 @@ export function BenchExecutionPanel({
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Trocar a configuração de execução (preset/modelo/qualidade) invalida apenas a
+  // estimativa e a confirmação financeira — o prompt aprovado permanece válido
+  // (correção de UAT). A próxima estimativa será recalculada para a nova config.
+  useEffect(() => {
+    setEstimate(null);
+    setConfirmOpen(false);
+    setError(null);
+    setStatus(null);
+  }, [configRevision]);
 
   const promptApproved =
     typeof approvedPrompt === "string" && approvedPrompt.trim().length > 0;
