@@ -34,9 +34,11 @@ decisions:
   - "loadBenchBranding() is the single decision point for identity; the route only renews the already-selected descriptor's signed URL."
   - "Identity variant selection is by active-record presence (normalized > original > on_dark), never by signed-URL success; signing failure preserves the selected descriptor with signedUrl: null."
   - "identity_state absent/unknown fails closed at import (before the transaction) and in the resolver (no silent text_only conversion)."
+  - "Content-addressed object materialization is idempotent: local checksum precheck, upload upsert:false, single readback confirmation on ambiguous error; objects are tracked as referenced/created/reused and cleanup removes ONLY created objects."
 metrics:
   duration: "~25 min"
   completed: "2026-09-29"
+  status: "implementação concluída — reimportação remota e UAT pendentes de autorização humana"
 ---
 
 # Quick Task 260929-rtl: Fidelidade de identidade visual da bancada (`stores.identity_state`)
@@ -87,6 +89,74 @@ Tasks 1 and 2 were marked `tdd="true"`. Implementation and tests were developed 
 
 - **Remote reimport UAT was NOT run.** The "Planned local UAT" step 1 (`node scripts/lab/48-2-3-bench-import-stores.mjs --store ...`) was intentionally skipped — it requires separate explicit human authorization. No remote Supabase read/write occurred.
 - No production edits; no `bench-images.ts` change to use `identityImageUrl`; no image generation/provider calls; no Oferta 1:1 prompt; no `--all`; no creative fallback/logo↔signature swap; ROADMAP.md untouched.
+
+## Complementary correction — idempotent import (follow-up, no new quick)
+
+### Real cause
+
+The first real reimport of the two test stores failed with
+`import_destination_upload_failed:The upstream server is timing out`. The local
+Storage logs showed the real cause: the content-addressed **signature object of
+NovaTek already existed**; the upload used `upsert: false`; Storage internally
+raised `KeyAlreadyExists`/`ResourceAlreadyExists`; the client error did **not**
+carry reliable duplicate text; the old `error.message` regex therefore failed to
+guarantee idempotency. The local Storage was healthy — this was **not** an outage.
+Local state after the failure was preserved (NovaTek `visual_signature` + 1
+signature object; Adega `text_only` + 6 logo objects; no prior object removed; no
+remote write).
+
+### What changed
+
+- **`ensureContentAddressedObject`** (new, exported, pure orchestration over a
+  storage adapter): (1) local-only precheck — if the path exists, compare the
+  stored checksum; identical → reuse (`created:false`), divergent → sanitized
+  integrity error (`import_destination_object_integrity_mismatch`) **without
+  overwrite/removal**; (2) absent → upload `upsert:false`; (3) ambiguous/timeout
+  error → **one** readback confirmation; if it now exists with the expected
+  checksum, accept as created; otherwise propagate a sanitized error. Duplicate
+  detection no longer relies on `error.message` regex.
+- **`createLocalDestination().ensureBrandingObject`** delegates to the helper with
+  the real local storage client.
+- **`materializeStoreAssets`** now returns `storedAssets`, `storedSignature`,
+  `referencedObjects`, `createdObjects`, `reusedObjects`. On failure it removes
+  **only `createdObjects`** — reused/preexisting objects are never deleted.
+- **`importOneStore`**: transaction-failure cleanup removes only `createdObjects`;
+  post-commit cleanup removes `oldObjects − referencedObjects`; counters are
+  honest — `objectsWritten` = created this attempt, plus `objectsReused` and
+  `objectsReferenced`; audit `assetCount`/`objectCount` = referenced final set,
+  with `objectsCreated`/`objectsReused` in the detail.
+- **`toStoreSummary`** exposes `objectsWritten`, `objectsReused`,
+  `objectsReferenced`.
+
+### Tests added
+
+- `ensureContentAddressedObject`: absent → created; existing same checksum →
+  reused (no upload); divergent checksum → integrity error, no overwrite/removal;
+  ambiguous error + correct readback → created; ambiguous error + absent readback
+  → sanitized error.
+- `materializeStoreAssets`: reuse of existing objects (created empty); failure on a
+  later asset removes only created and keeps reused; transaction failure removes
+  only created and keeps reused.
+- Import idempotency (g): a second identical import over the **same destination**
+  reuses both objects (`objectsWritten: 0`, `objectsReused: 2`, no removals).
+- Integrated local real test (opt-in): runs the **same import twice** against real
+  local PostgreSQL + Storage (fake read-only source), proving 7 objects created
+  then 7 reused, identity intact, no duplication (6 + 1 objects), two audit rows,
+  and integral fixture cleanup.
+
+### Verification (this correction)
+
+- `bench-import.contract.test.ts`: **77 passed**.
+- Integrated local real test (`BENCH_IMPORT_REAL_INTEGRATION=1`): **1 passed**.
+- Lab + architecture guard: **1119 passed / 2 skipped**.
+- `npm run typecheck` exit 0; `npm run lint` exit 0.
+- Production boundary: `git diff --exit-code -- src/lib/store-identity-service.ts src/lib/ai/adapters/bench-images.ts supabase/migrations` → empty.
+- No remote read, no provider, no image generation, cost US$ 0.
+
+### Status
+
+Implementation corrected. **Remote reimport of the two test stores and the local
+UAT remain pending explicit human authorization** — not executed here.
 
 ## Self-Check: PASSED
 

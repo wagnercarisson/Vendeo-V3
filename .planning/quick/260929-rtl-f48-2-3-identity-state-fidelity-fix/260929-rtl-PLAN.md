@@ -230,6 +230,43 @@ Co-localizados em `src/lib/lab/bench/__tests__/` (e na pasta da API):
 
 O **transporte da referência de identidade ao modelo** (envio de logo/assinatura como referência) e sua **orientação no prompt** **NÃO** fazem parte desta correção — permanecem para a **F48.2.4 (Experimento determinístico Oferta 1:1)**. Esta task apenas garante que o estado e a referência correta sejam persistidos, resolvidos e visíveis na bancada.
 
+## Adendo — correção complementar de idempotência (mesma quick, sem ampliar escopo)
+
+**Causa real (confirmada pelos logs do Storage local):** a primeira reimportação
+das duas lojas falhou com `import_destination_upload_failed:The upstream server is
+timing out`. O objeto content-addressed da assinatura da NovaTek **já existia**; o
+upload com `upsert: false` fez o Storage registrar internamente
+`KeyAlreadyExists`/`ResourceAlreadyExists`; o erro do cliente **não** trouxe texto
+confiável de duplicidade e a detecção por regex em `error.message` não garantiu a
+idempotência. O Storage local estava saudável — não foi indisponibilidade.
+
+**Separação de objetos (semântica adotada):**
+- `referencedObjects` — todos os objetos exigidos pela nova identidade;
+- `createdObjects` — somente os criados nesta tentativa;
+- `reusedObjects` — content-addressed já existentes e validados.
+
+Cleanup: falha na materialização ou na transação remove **somente `createdObjects`**;
+reutilizados/preexistentes nunca são removidos; após o commit remove
+`oldObjects − referencedObjects`. A transação usa os paths de todos os objetos
+referenciados (criados ou reutilizados).
+
+**Garantia idempotente:** `ensureContentAddressedObject` — pré-checagem local por
+checksum; existente idêntico → reutiliza; existente divergente → erro sanitizado de
+integridade (sem overwrite/remoção); ausente → upload `upsert:false`; erro
+ambíguo/timeout → **uma** leitura de confirmação; duplicidade não é reconhecida por
+regex de mensagem.
+
+**Contadores honestos:** `objectsWritten` = criados nesta tentativa; `objectsReused`;
+`objectsReferenced`; auditoria `assetCount`/`objectCount` = conjunto final referenciado.
+
+**Testes:** `ensureContentAddressedObject` (5 casos), `materializeStoreAssets`
+(reuso e cleanup seletivo), idempotência de duas importações consecutivas sobre o
+mesmo destino, e teste integrado local real (PostgreSQL + Storage) executando a
+importação duas vezes com origem fake (sem remoto) e cleanup integral.
+
+**Estado:** implementação corrigida e testada; **reimportação remota e UAT ainda
+pendentes de nova autorização humana** (não executados).
+
 <threat_model>
 ## Trust Boundaries
 
