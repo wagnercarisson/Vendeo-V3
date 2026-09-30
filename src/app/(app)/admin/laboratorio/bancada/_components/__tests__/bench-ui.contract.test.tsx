@@ -71,7 +71,7 @@ import {
   BENCH_ACTIVE_RUN_MESSAGE,
   BenchExecutionPanel,
 } from "../bench-execution-panel";
-import { BenchImageUpload } from "../bench-image-upload";
+import { BenchImageUpload, benchUploadFingerprint } from "../bench-image-upload";
 import { BenchPresetSelector } from "../bench-preset-selector";
 import { BenchPreflightPanel } from "../bench-preflight-panel";
 import { BenchPromptEditor } from "../bench-prompt-editor";
@@ -359,7 +359,7 @@ describe("contrato de UI — branding, upload, prompt e presets", () => {
     const file = new File([new Uint8Array([1, 2, 3])], "produto.png", {
       type: "image/png",
     });
-    fireEvent.change(screen.getByTestId("bench-image-input"), {
+    fireEvent.change(screen.getByTestId("bench-image-input-main"), {
       target: { files: [file] },
     });
     fireEvent.click(screen.getByTestId("bench-upload-button"));
@@ -387,6 +387,219 @@ describe("contrato de UI — branding, upload, prompt e presets", () => {
     expect(source).not.toContain("campaign-images");
     expect(source).toContain("lab-artifacts");
     expect(source).toContain("inputs");
+  });
+
+  describe("uploader — principal + adicionais ordenados (correção de UAT)", () => {
+    function makeFile(name: string, lastModified = 1): File {
+      return new File([new Uint8Array([1, 2, 3])], name, {
+        type: "image/png",
+        lastModified,
+      });
+    }
+
+    function renderUploader(options?: {
+      getOperationId?: (fingerprint: string) => string;
+      onUploaded?: (result: unknown) => void;
+    }) {
+      const onUploaded = options?.onUploaded ?? vi.fn();
+      const getOperationId = options?.getOperationId ?? (() => "op-fixed");
+      render(
+        <BenchImageUpload
+          storeId={STORE_A.id}
+          getOperationId={getOperationId}
+          onUploaded={onUploaded}
+        />,
+      );
+      return { onUploaded, getOperationId };
+    }
+
+    function selectMain(file: File) {
+      fireEvent.change(screen.getByTestId("bench-image-input-main"), {
+        target: { files: [file] },
+      });
+    }
+
+    function selectAdditional(files: File[]) {
+      fireEvent.change(screen.getByTestId("bench-image-input-additional"), {
+        target: { files },
+      });
+    }
+
+    function inputsResponse(runId: string, count: number) {
+      return {
+        ok: true,
+        status: 201,
+        json: async () => ({
+          runId,
+          inputs: Array.from({ length: count }, (_, index) => ({
+            path: `bench/${runId}/inputs/${index}.png`,
+            mimeType: "image/png",
+            width: 1024,
+            height: 1024,
+            bytes: 3,
+            checksum: "deadbeefcafebabe",
+          })),
+        }),
+      };
+    }
+
+    it("1. selecionar a principal e depois uma segunda imagem mantém as duas", () => {
+      renderUploader();
+      selectMain(makeFile("principal.png"));
+      selectAdditional([makeFile("adicional.png")]);
+
+      expect(screen.getByTestId("bench-main-image")).toHaveTextContent("principal.png");
+      expect(screen.getByTestId("bench-additional-image-0")).toHaveTextContent(
+        "adicional.png",
+      );
+    });
+
+    it("2. adicionais em ação posterior não apagam a principal", () => {
+      renderUploader();
+      selectMain(makeFile("principal.png"));
+      selectAdditional([makeFile("a1.png")]);
+      selectAdditional([makeFile("a2.png")]);
+
+      expect(screen.getByTestId("bench-main-image")).toHaveTextContent("principal.png");
+      expect(screen.getByTestId("bench-additional-image-0")).toHaveTextContent("a1.png");
+      expect(screen.getByTestId("bench-additional-image-1")).toHaveTextContent("a2.png");
+    });
+
+    it("3. remover e substituir imagens funciona antes do envio", () => {
+      renderUploader();
+      selectMain(makeFile("principal.png"));
+      selectAdditional([makeFile("a1.png")]);
+
+      fireEvent.click(screen.getByTestId("bench-remove-additional-0"));
+      expect(screen.queryByTestId("bench-additional-image-0")).toBeNull();
+      selectAdditional([makeFile("a1-nova.png")]);
+      expect(screen.getByTestId("bench-additional-image-0")).toHaveTextContent(
+        "a1-nova.png",
+      );
+
+      fireEvent.click(screen.getByTestId("bench-remove-main"));
+      expect(screen.queryByTestId("bench-main-image")).toBeNull();
+      selectMain(makeFile("principal-nova.png"));
+      expect(screen.getByTestId("bench-main-image")).toHaveTextContent(
+        "principal-nova.png",
+      );
+    });
+
+    it("4. mais de três adicionais é recusado", () => {
+      renderUploader();
+      selectMain(makeFile("principal.png"));
+      selectAdditional([makeFile("a1.png"), makeFile("a2.png"), makeFile("a3.png")]);
+      expect(screen.getAllByTestId(/^bench-additional-image-\d+$/)).toHaveLength(3);
+
+      selectAdditional([makeFile("a4.png")]);
+      expect(screen.getAllByTestId(/^bench-additional-image-\d+$/)).toHaveLength(3);
+      expect(screen.getByRole("alert")).toHaveTextContent("no máximo 3");
+    });
+
+    it("5. multipart preserva a ordem principal → adicionais", async () => {
+      mockFetch.mockResolvedValueOnce(inputsResponse("run-ordem", 3));
+      renderUploader();
+      selectMain(makeFile("principal.png"));
+      selectAdditional([makeFile("a1.png"), makeFile("a2.png")]);
+      fireEvent.click(screen.getByTestId("bench-upload-button"));
+
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+      const body = mockFetch.mock.calls[0][1].body as FormData;
+      const files = body.getAll("files") as File[];
+      expect(files.map((file) => file.name)).toEqual([
+        "principal.png",
+        "a1.png",
+        "a2.png",
+      ]);
+    });
+
+    it("6. a resposta produz references na mesma ordem", async () => {
+      const runId = "run-ref";
+      mockFetch.mockResolvedValueOnce(inputsResponse(runId, 2));
+      const onUploaded = vi.fn();
+      renderUploader({ onUploaded });
+      selectMain(makeFile("principal.png"));
+      selectAdditional([makeFile("a1.png")]);
+      fireEvent.click(screen.getByTestId("bench-upload-button"));
+
+      await waitFor(() => expect(onUploaded).toHaveBeenCalled());
+      expect(
+        (onUploaded.mock.calls[0][0] as { references: string[] }).references,
+      ).toEqual([`bench/${runId}/inputs/0.png`, `bench/${runId}/inputs/1.png`]);
+    });
+
+    it("7. trocar principal/adicional, remover ou reordenar altera o fingerprint; mesmo conjunto mantém", () => {
+      const main = makeFile("principal.png");
+      const a1 = makeFile("a1.png");
+      const a2 = makeFile("a2.png");
+
+      const base = benchUploadFingerprint(STORE_A.id, main, [a1]);
+      const sameSet = benchUploadFingerprint(STORE_A.id, main, [a1]);
+      const swapped = benchUploadFingerprint(STORE_A.id, a1, [main]);
+      const added = benchUploadFingerprint(STORE_A.id, main, [a1, a2]);
+      const reordered = benchUploadFingerprint(STORE_A.id, main, [a2, a1]);
+
+      expect(sameSet).toBe(base);
+      expect(swapped).not.toBe(base);
+      expect(added).not.toBe(base);
+      expect(reordered).not.toBe(added);
+    });
+
+    it("8. reenviar o mesmo conjunto e ordem mantém a idempotência", async () => {
+      let cache: { fingerprint: string; id: string } | null = null;
+      const getOperationId = (fingerprint: string) => {
+        if (cache && cache.fingerprint === fingerprint) return cache.id;
+        const id = cache ? "op-2" : "op-1";
+        cache = { fingerprint, id };
+        return id;
+      };
+      mockFetch.mockResolvedValue(inputsResponse("run-idem", 1));
+      renderUploader({ getOperationId });
+
+      selectMain(makeFile("principal.png"));
+      fireEvent.click(screen.getByTestId("bench-upload-button"));
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+
+      selectMain(makeFile("principal.png"));
+      fireEvent.click(screen.getByTestId("bench-upload-button"));
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+
+      const op1 = (mockFetch.mock.calls[0][1].body as FormData).get("operationId");
+      const op2 = (mockFetch.mock.calls[1][1].body as FormData).get("operationId");
+      expect(op2).toBe(op1);
+    });
+
+    it("10. a identidade é anexada por último pelo adapter da bancada (fonte)", () => {
+      const source = readComponentSource("bench-image-upload.tsx");
+      // A UI envia apenas imagens de produto (principal → adicionais); a identidade
+      // é anexada pelo runtime/adapter da bancada como última referência.
+      expect(source).not.toContain("identityImageUrl");
+      expect(source).not.toContain("campaign-images");
+      const adapterSource = readFileSync(
+        path.resolve(
+          process.cwd(),
+          "src/lib/ai/adapters/bench-images.ts",
+        ),
+        "utf8",
+      );
+      // A identidade é anexada APÓS as imagens do produto (loop de referências).
+      const productIdx = adapterSource.indexOf("reference-");
+      const identityIdx = adapterSource.indexOf('"identity"');
+      expect(productIdx).toBeGreaterThan(-1);
+      expect(identityIdx).toBeGreaterThan(productIdx);
+    });
+
+    it("11. nenhuma chamada real de IA ocorre no upload", async () => {
+      mockFetch.mockResolvedValueOnce(inputsResponse("run-noai", 1));
+      renderUploader();
+      selectMain(makeFile("principal.png"));
+      fireEvent.click(screen.getByTestId("bench-upload-button"));
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+
+      const url = String(mockFetch.mock.calls[0][0]);
+      expect(url).toBe("/api/admin/laboratorio/bancada/inputs");
+      expect(url).not.toMatch(/openai|anthropic|generativelanguage|provider/i);
+    });
   });
 
   it("trava as dimensões do primeiro recorte (não editáveis)", () => {
@@ -638,6 +851,74 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado");
     expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
       "PROMPT COMPILADO",
+    );
+  });
+
+  it("alterar as imagens invalida o prompt aprovado (correção de UAT)", async () => {
+    mockFetch.mockImplementation(async (url: unknown) => {
+      const target = String(url);
+      if (target.includes("/compose")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            compiledPrompt: "PROMPT COMPILADO",
+            blocks: { "IDENTIDADE E DIREÇÃO VISUAL": "Loja: Aurora" },
+            composerVersion: COMPOSER_VERSION,
+            policyVersions: { intencao: "48.2.4-oferta-v1" },
+            promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+          }),
+        };
+      }
+      if (target.includes("/inputs")) {
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            runId: "run-img",
+            inputs: [
+              {
+                path: "bench/run-img/inputs/0.png",
+                mimeType: "image/png",
+                width: 1024,
+                height: 1024,
+                bytes: 3,
+                checksum: "deadbeefcafebabe",
+              },
+            ],
+          }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({ branding: BRANDING }) };
+    });
+
+    render(await BancadaPage());
+
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
+        "PROMPT COMPILADO",
+      ),
+    );
+    fireEvent.click(screen.getByTestId("bench-approve-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent(
+        "Prompt aprovado",
+      ),
+    );
+
+    const file = new File([new Uint8Array([1, 2, 3])], "principal.png", {
+      type: "image/png",
+    });
+    fireEvent.change(screen.getByTestId("bench-image-input-main"), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByTestId("bench-upload-button"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent(
+        "Prompt invalidado",
+      ),
     );
   });
 });

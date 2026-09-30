@@ -1304,6 +1304,33 @@ describe("contrato da API da bancada — upload multipart", () => {
     );
   });
 
+  it("preserva a ordem principal → adicionais (índice 0 = principal)", async () => {
+    const form = new FormData();
+    form.append("operationId", OP_ID);
+    form.append(
+      "files",
+      new File([new Uint8Array([1])], "principal.png", { type: "image/png" }),
+    );
+    form.append("files", new File([new Uint8Array([2])], "a1.png", { type: "image/png" }));
+    form.append("files", new File([new Uint8Array([3])], "a2.png", { type: "image/png" }));
+
+    const res = await postInputs(form);
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    // A resposta devolve `inputs` na mesma ordem: principal (índice 0) → adicionais.
+    expect(body.inputs.map((entry: { path: string }) => entry.path)).toEqual([
+      `bench/${RUN_ID}/inputs/0.png`,
+      `bench/${RUN_ID}/inputs/1.png`,
+      `bench/${RUN_ID}/inputs/2.png`,
+    ]);
+    expect(
+      mockPersistBenchArtifact.mock.calls.map(
+        (call) => (call[0] as { index: number }).index,
+      ),
+    ).toEqual([0, 1, 2]);
+  });
+
   it("sem operationId válido ⇒ 400 e nenhuma reserva", async () => {
     const form = new FormData();
     form.append("operationId", "não-é-uuid");
