@@ -47,7 +47,8 @@ import { executeBenchRun } from "@/lib/lab/bench/execution/bench-execution-servi
  * Prova que: (a) o resolver devolve capability + alvo do preset; (b) preset
  * desabilitado é recusado (`preset_not_enabled`); (c) a seleção produtiva não é
  * consultada; (d) a requisição montada leva modelo/qualidade/tamanho/prompt/
- * referências (ordem/papel) e `signal`; (e) o branding não vira referência; e
+ * referências (ordem/papel) e `signal`; (e) a identidade canônica é transportada
+ * quando resolvida (nunca inventada); e
  * (f) exatamente um envelope de imagem é emitido, sem fallback/segunda chamada.
  *
  * Tudo com fakes em memória: nenhuma chamada de rede e nenhuma chamada paga.
@@ -210,15 +211,24 @@ describe("harness — parâmetros explícitos e exatamente uma chamada", () => {
     expect(call.request.signal).toBe(controller.signal);
   });
 
-  it("não envia o branding (identityImageUrl) como referência", async () => {
+  it("transporta a identidade (identityImageUrl) quando resolvida, sem inventá-la", async () => {
     const preset = resolveBenchPreset("gpt-image-2-low");
-    const request = buildBenchInvocationRequest({
+    const withoutIdentity = buildBenchInvocationRequest({
       preset,
       prompt: "p",
       productImagesDataUrls: [PNG_A],
     });
-    expect(request).not.toHaveProperty("identityImageUrl");
-    expect(request.productImagesDataUrls).toEqual([PNG_A]);
+    expect(withoutIdentity).not.toHaveProperty("identityImageUrl");
+    expect(withoutIdentity.productImagesDataUrls).toEqual([PNG_A]);
+
+    const identity = "data:image/png;base64,TE9HTw==";
+    const withIdentity = buildBenchInvocationRequest({
+      preset,
+      prompt: "p",
+      productImagesDataUrls: [PNG_A],
+      identityImageUrl: identity,
+    });
+    expect(withIdentity.identityImageUrl).toBe(identity);
   });
 
   it("emite exatamente um envelope de imagem e não tem alvo de fallback", async () => {

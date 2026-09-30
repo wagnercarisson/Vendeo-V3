@@ -21,12 +21,15 @@ const DATA_URL_PATTERN = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i;
  * é registrado **apenas** no runtime da bancada
  * (`src/lib/lab/bench/gateway/runtime.ts`), nunca no registry padrão.
  *
- * ## Referências e branding (T-48-2-2-29)
+ * ## Referências e identidade (F48.2.4, D10)
  *
- * As referências são **somente** as imagens de produto enviadas por upload, na
- * ordem/papel recebidos. O logo/assinatura do branding (`identityImageUrl`) **não**
- * é enviado automaticamente ao modelo — por isso este adapter **não** lê
- * `request.identityImageUrl`.
+ * A ordem das referências é **documentada e fixa**: (1) imagem principal do
+ * produto; (2) imagens adicionais do produto, na ordem recebida; (3) a
+ * **referência canônica de identidade** (`request.identityImageUrl`), quando
+ * aplicável — sempre a **última** referência. O data URL da identidade é obtido
+ * pelo transporte dedicado da bancada a partir da referência já resolvida por
+ * `loadBenchBranding` (nunca re-resolvida aqui). Quando ausente (ex.: `text_only`),
+ * nenhuma imagem de identidade é anexada.
  *
  * ## Single-shot (T-48-2-2-26)
  *
@@ -49,7 +52,8 @@ export class BenchImagesAdapter implements AiAdapter {
       );
     }
 
-    // Ordem determinística: [primary, referências...] exatamente como recebidas.
+    // Ordem determinística: [primary, referências..., identidade] exatamente como
+    // recebidas. A identidade canônica é sempre a ÚLTIMA referência (D10).
     const files: unknown[] = [await dataUrlToFile(toFile, primaryDataUrl, "product")];
     for (let i = 1; i < productImages.length; i++) {
       const referenceDataUrl = productImages[i];
@@ -57,8 +61,11 @@ export class BenchImagesAdapter implements AiAdapter {
       files.push(await dataUrlToFile(toFile, referenceDataUrl, `reference-${i}`));
     }
 
-    // O logo/assinatura do branding NÃO é enviado: `request.identityImageUrl` é
-    // deliberadamente ignorado neste caminho dedicado da bancada.
+    // Identidade canônica como ÚLTIMA referência (após as imagens do produto).
+    // `text_only` não envia imagem: `identityImageUrl` ausente ⇒ nada é anexado.
+    if (request.identityImageUrl) {
+      files.push(await dataUrlToFile(toFile, request.identityImageUrl, "identity"));
+    }
 
     const response = await openai.images.edit(
       {

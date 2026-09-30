@@ -42,6 +42,12 @@ import { BENCH_COST_SOURCE, resolveBenchCost, type BenchCostResolution } from ".
 export interface BenchExecutionRequest {
   prompt: string;
   productImagesDataUrls?: readonly string[];
+  /**
+   * Identidade visual canônica (data URL) já resolvida por
+   * `resolveBenchIdentityImageDataUrl` (F48.2.4, D10). Repassada ao adapter da
+   * bancada como a última referência; ausente em `text_only`.
+   */
+  identityImageUrl?: string;
   signal?: AbortSignal;
   timeout?: number;
   /** Proporção esperada do artefato (primeiro recorte: `1`). */
@@ -130,6 +136,7 @@ export async function executeBenchRun(
     preset,
     prompt: params.request.prompt,
     productImagesDataUrls: params.request.productImagesDataUrls,
+    identityImageUrl: params.request.identityImageUrl,
     signal: params.request.signal,
     timeout: params.request.timeout,
   });

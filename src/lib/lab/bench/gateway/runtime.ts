@@ -64,14 +64,17 @@ export function createBenchGateway(params: {
  * produto (ordem/papel recebidos), tamanho e **qualidade** do preset, além do
  * `signal` (timeout/cancelamento).
  *
- * O **logo/assinatura do branding não entra** aqui: `identityImageUrl` é
- * deliberadamente omitido — apenas imagens de produto enviadas por upload são
- * referências (T-48-2-2-29).
+ * A **identidade visual canônica** (F48.2.4, D10) entra por `identityImageUrl` —
+ * um data URL obtido **exatamente** da referência já resolvida por
+ * `loadBenchBranding` (nunca re-resolvida aqui). O adapter dedicado da bancada a
+ * anexa como a **última** referência, após as imagens do produto. Quando ausente
+ * (ex.: `text_only`), apenas as imagens de produto são referências.
  */
 export function buildBenchInvocationRequest(params: {
   preset: BenchPreset;
   prompt: string;
   productImagesDataUrls?: readonly string[];
+  identityImageUrl?: string;
   signal?: AbortSignal;
   timeout?: number;
 }): AiInvocationRequest {
@@ -80,6 +83,7 @@ export function buildBenchInvocationRequest(params: {
     productImagesDataUrls: params.productImagesDataUrls ? [...params.productImagesDataUrls] : [],
     size: params.preset.size,
     quality: params.preset.quality,
+    ...(params.identityImageUrl ? { identityImageUrl: params.identityImageUrl } : {}),
     ...(params.signal ? { signal: params.signal } : {}),
     ...(params.timeout !== undefined ? { timeout: params.timeout } : {}),
   };

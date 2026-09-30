@@ -112,7 +112,7 @@ describe("BenchImagesAdapter — quality propagado e referências explícitas", 
     expect(editCalls).toHaveLength(0);
   });
 
-  it("não envia o logo/assinatura do branding como referência", async () => {
+  it("anexa a identidade canônica como ÚLTIMA referência (após o produto)", async () => {
     const adapter = new BenchImagesAdapter();
     await adapter.invoke(
       {
@@ -123,10 +123,21 @@ describe("BenchImagesAdapter — quality propagado e referências explícitas", 
       },
       TARGET,
     );
+    const files = editCalls[0].params.image as Array<{ name: string }>;
+    // Ordem documentada: principal → adicionais → identidade (a identidade é a última).
+    expect(Array.isArray(files)).toBe(true);
+    expect(files.map((file) => file.name)).toEqual(["product.png", "identity.png"]);
+  });
+
+  it("sem identidade (text_only) envia apenas as imagens do produto", async () => {
+    const adapter = new BenchImagesAdapter();
+    await adapter.invoke(
+      { prompt: "p", productImagesDataUrls: [PNG_A], quality: "low" },
+      TARGET,
+    );
     const image = editCalls[0].params.image as { name: string };
-    expect(image.name).toBe("product.png");
-    // Nenhum arquivo de identidade/branding é adicionado.
     expect(Array.isArray(image)).toBe(false);
+    expect(image.name).toBe("product.png");
   });
 });
 
@@ -151,8 +162,8 @@ describe("registry padrão permanece intocado (regressão T-48-2-2-25)", () => {
   });
 });
 
-describe("buildBenchInvocationRequest — parâmetros explícitos, sem branding", () => {
-  it("usa size/quality do preset e nunca inclui identityImageUrl", () => {
+describe("buildBenchInvocationRequest — parâmetros explícitos e identidade", () => {
+  it("usa size/quality do preset e omite identityImageUrl quando ausente", () => {
     const preset = resolveBenchPreset("gpt-image-2-medium");
     const request = buildBenchInvocationRequest({
       preset,
@@ -164,5 +175,18 @@ describe("buildBenchInvocationRequest — parâmetros explícitos, sem branding"
     expect(request.quality).toBe("medium");
     expect(request.productImagesDataUrls).toEqual([PNG_A, PNG_B]);
     expect(request).not.toHaveProperty("identityImageUrl");
+  });
+
+  it("inclui identityImageUrl quando fornecido (data URL da identidade)", () => {
+    const preset = resolveBenchPreset("gpt-image-2-medium");
+    const identity = "data:image/png;base64,TE9HTw==";
+    const request = buildBenchInvocationRequest({
+      preset,
+      prompt: "p",
+      productImagesDataUrls: [PNG_A],
+      identityImageUrl: identity,
+    });
+
+    expect(request.identityImageUrl).toBe(identity);
   });
 });
