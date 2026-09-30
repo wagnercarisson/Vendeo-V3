@@ -174,6 +174,16 @@ No envio, o uploader constrói **um único multipart ordenado** — (1) principa
 
 O **fingerprint da operação** representa `storeId + principal + adicionais em ordem` (não uma ordenação alfabética de assinaturas): trocar principal por adicional, remover uma imagem ou mudar a ordem produz fingerprint/operação diferente; reenviar o mesmo conjunto, com os mesmos papéis e ordem, permanece idempotente. Alterações nas imagens continuam invalidando o prompt compilado/aprovado (D11). Limites preservados: uma principal, até três adicionais, apenas MIME já aceitos e o limite de tamanho já definido; nenhum tipo, bucket ou política de storage é ampliado. **Alternativa rejeitada:** um único seletor múltiplo — não distingue papéis nem ordem e substitui a seleção anterior.
 
+### D20 — Pricing local v2 e suporte a gpt-image-2.5-sunburst (correção cirúrgica)
+
+**Pricing v2 (`2026-09-bench-2`).** O catálogo local da bancada é alinhado ao pricing oficial vigente (Standard, por 1M tokens): texto US$5, imagem de entrada US$8 e imagem de saída US$30 para `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`. Uma **nova versão** da regra é criada (`2026-09-bench-2`); a `2026-09-bench-1` **não** é reescrita — runs antigos preservam a versão registrada em `cost_rule_version`.
+
+**Estimativas prévias.** As estimativas de saída do `gpt-image-2` (400/3533 tokens) foram derivadas da tarifa antiga de US$15/M e **não** são reaproveitadas sob a nova tarifa (dobrariam o valor). Sem valor comprovado pelo calculador oficial sob a nova regra, o `gpt-image-2` fica `coverage: partial` (tarifas conhecidas; consumo de saída **não comprovado**) — estimativa parcial/indisponível honesta. O `gpt-image-2.5-flare` mantém a estimativa do calculador oficial (`low` = 196 tokens ≈ US$0,00588; a tarifa de US$30/M é inalterada) e `medium` permanece ausente. O `gpt-image-2.5-sunburst` inicia `coverage: partial` sem estimativa de saída comprovada. Nenhum token é inventado.
+
+**Quatro noções separadas** (nunca confundidas): (a) tarifas por token; (b) estimativa prévia por modelo/qualidade/tamanho; (c) custo pós-execução calculado pelo usage real; (d) custo reportado pelo provider (campo separado). O cache de input **não** é simulado no caminho direto `Images` — as tarifas de cache da documentação só valem para a Responses API.
+
+**Sunburst.** `gpt-image-2.5-sunburst` é adicionado **somente** ao caminho isolado da bancada: `BENCH_MODEL_ALLOWLIST`, catálogo/bootstrap local, registry de presets (`gpt-image-2.5-sunburst-low`, `gpt-image-2.5-sunburst-medium`), resolvedor de capability/protocolo e pricing local. Confirmado pela documentação oficial: ID válido; geração/edição com texto e imagens (Images API e Responses); qualidades `low`/`medium`/`high`/`xhigh`/`max`/`auto`; saída token-based; dimensão 1024x1024. O `MODEL_ALLOWLIST` produtivo, o adapter produtivo e `supabase/migrations/**` permanecem intocados; Sunburst **não** é promovido. `responses` permanece desabilitado sem confirmação específica. O mesmo prompt aprovado é reutilizável **byte a byte** com Image 2, Flare ou Sunburst (D11); trocar modelo/qualidade invalida **apenas** estimativa e confirmação financeira.
+
 ## Risks / Trade-offs
 
 - **[Combinação não suportada gerando chamada paga]** → resolução de políticas fail-closed antes da chamada; teste negativo para cada dimensão desabilitada.
@@ -185,6 +195,8 @@ O **fingerprint da operação** representa `storeId + principal + adicionais em 
 - **[Crescimento de escopo para outras combinações]** → políticas plugáveis e prompt-base padrão resolvido por configuração; nesta fase somente 5 políticas habilitadas; divisão sinalizada se ultrapassar 8–10 planos.
 - **[Reuso de imagens corrompendo isolamento por paths]** → cópia para o prefixo do novo run; guard de path inalterado.
 - **[Linhagem de tentativas ambígua]** → coluna nullable `attempt_of_run_id` na própria `lab_bench_runs`; linhagem explícita, sem heurística de fingerprint e sem nova tabela.
+
+- **[Pricing desatualizado inflando a estimativa]** → nova versão de regra (`2026-09-bench-2`) alinhada ao oficial; estimativa prévia revisada (sem reaproveitar tokens derivados da tarifa antiga); `coverage: partial` honesto quando o consumo não é comprovado; histórico preservado por `cost_rule_version`.
 
 ## Migration Plan
 

@@ -6,7 +6,7 @@
 >
 > Isolamento: o adapter `Images` produtivo, o caminho `Responses` produtivo, o `store-identity-service` produtivo, os prompts produtivos, a seleção produtiva de modelos e `supabase/migrations/**` permanecem intocados. Nenhuma chamada de IA em implementação/testes/CI; toda geração real é manual e autorizada; UAT pago precedido de checkpoint humano bloqueante; testes usam adapters gravadores/fakes.
 >
-> Specs: `lab-bench-prompt-policy`, `lab-bench-prompt-base`, `lab-bench-identity-transport`, `lab-bench-run-history`, `lab-bench-prompt-preflight`, `lab-bench-branding`, `lab-generation-bench`, `lab-isolation`, `lab-admin-api`, `lab-admin-ui`. Design: `design.md`.
+> Specs: `lab-bench-prompt-policy`, `lab-bench-prompt-base`, `lab-bench-identity-transport`, `lab-bench-run-history`, `lab-bench-prompt-preflight`, `lab-bench-branding`, `lab-generation-bench`, `lab-isolation`, `lab-admin-api`, `lab-admin-ui`, `lab-bench-pricing`. Design: `design.md`.
 >
 > Checkpoints humanos: (A) revisão de contratos/políticas/identidade antes de qualquer chamada paga; (B) UAT manual completo. Nenhuma task autônoma executa provider.
 >
@@ -100,3 +100,13 @@
 - [x] 10.3 Fingerprint por `storeId + principal + adicionais em ordem` (sem ordenação alfabética); multipart único ordenado (principal → adicionais); resposta `references` na mesma ordem; identidade anexada por último pelo runtime.
 - [x] 10.4 Testes (sem provider): principal + segunda mantém ambas; adicionais não apagam a principal; remover/substituir antes do envio; >3 adicionais recusado; multipart preserva a ordem; `references` na ordem; trocar papéis altera o fingerprint; reenvio idempotente; alterar imagens invalida o prompt; identidade por último; nenhuma chamada real de IA.
 - [x] 10.5 Refletir a correção nos artefatos GSD (planos 08/09, `48.2.4-CONTEXT.md`, `48.2.4-UI-SPEC.md`) e em `48.2.4-UAT.md` (descoberta + correção; geração real = 0; custo US$ 0; CHECKPOINT B comercial/visual pendente).
+
+## 11. Correção cirúrgica — pricing local v2 + gpt-image-2.5-sunburst
+
+> Pricing oficial atualizado (Standard, por 1M tokens): texto US$5, imagem de entrada US$8, imagem de saída US$30. Nova versão de regra; histórico preservado.
+
+- [ ] 11.1 Fonte OpenSpec: novo spec `lab-bench-pricing`, D20 no `design.md` e bullet/capability no `proposal.md`.
+- [ ] 11.2 Pricing local v2 (`2026-09-bench-2`): tarifas oficiais 5/8/30 para `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`; estimativa prévia do `gpt-image-2` revisada (sem reaproveitar os tokens derivados da tarifa antiga) com `coverage: partial`; `2026-09-bench-1` não reescrita (histórico por `cost_rule_version`).
+- [ ] 11.3 Sunburst no caminho isolado: `BENCH_MODEL_ALLOWLIST`, catálogo/bootstrap local, presets `gpt-image-2.5-sunburst-low`/`-medium`, resolver de capability/protocolo e pricing local; `MODEL_ALLOWLIST` produtivo, adapter produtivo e `supabase/migrations/**` intocados; `responses` permanece desabilitado.
+- [ ] 11.4 Testes: pricing unitário; cálculo pós-usage dos três modelos; cobertura `partial`/`missing`; presets Sunburst; allowlist exclusiva da bancada; resolução de capability/protocolo; adapter com referências na ordem correta; mesmo prompt aprovado aceito por modelos diferentes; troca de modelo preserva a aprovação e invalida só estimativa/confirmação; API/UI dos novos presets; isolamento e architecture guard.
+- [ ] 11.5 Registrar no UAT o resultado do Flare low (`requer ajuste`; latência 14,6 s; US$ 0,03) e os follow-ups da **F48.2.5** (principal × referências; revisão ortográfica/acentuação/números; preservação literal; ciclos de refinamento/comparação) — **sem implementar** os refinamentos. Sunburst permanece **PENDENTE** de UAT manual.
