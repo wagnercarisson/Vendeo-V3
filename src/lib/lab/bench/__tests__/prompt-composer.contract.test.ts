@@ -16,22 +16,26 @@ import type { BenchBrandingContract } from "../domain/branding-service";
 import type { BenchConfig, BenchOffer, BenchProduct } from "../domain/schemas";
 
 /**
- * Contrato do **compositor determinístico** da bancada (F48.2.3, D19/D20/D21;
- * spec `lab-bench-prompt-preflight`).
+ * Contrato do **núcleo do compositor determinístico** da bancada (F48.2.4,
+ * D1/D7/D19; specs `lab-bench-prompt-policy` + `lab-bench-prompt-preflight`).
+ *
+ * A partir da F48.2.4 o compositor é um **núcleo neutro contribution-based**: ele
+ * não contém regra de dimensão e não emite valores crus de configuração. Este
+ * teste usa **contribuições sintéticas** (`{ block, lines }` literais) para provar
+ * o comportamento do núcleo **sem** importar `branding-prompt-mapping.ts` /
+ * `identity-direction.ts` / `policies/**` (mantém o plano independente).
  *
  * Prova, sem nenhuma chamada de rede/IA:
  *  - os 7 blocos canônicos na ordem travada;
- *  - um dado → um bloco (tipografia e `preserveImageContext` sem duplicação);
- *  - blocos vazios omitidos;
+ *  - contribuições mescladas por bloco declarado; blocos vazios omitidos;
  *  - o prompt-base é preservado **verbatim** (inclusive palavras legítimas como
  *    "teste"/"comparação"/"avaliação") — sem filtragem lexical;
- *  - **ausência de contexto experimental por origem**: a verificação incide
- *    sobre os blocos **gerados** pelo compositor (prompt-base vazio), não como
- *    blacklist sobre o prompt completo;
- *  - determinismo: mesma entrada → mesma saída (texto único estável).
- *
- * O `prompt_sent` idêntico ao aprovado via adapter gravador é comprovado no
- * Plano 07; aqui garantimos que a saída do compositor é um texto único estável.
+ *  - **ausência de contexto experimental por origem**: a verificação incide sobre
+ *    os blocos **gerados** pelo compositor (prompt-base vazio), não como blacklist
+ *    sobre o prompt completo;
+ *  - **neutralidade do núcleo**: sem regra de dimensão e sem emissão de valores
+ *    crus de configuração;
+ *  - determinismo: mesma entrada → mesma saída (texto único estável + versões).
  */
 
 const STORE_ID = "11111111-1111-4111-8111-111111111111";
@@ -46,6 +50,25 @@ const CONFIG: BenchConfig = {
   estrutura: "peca-unica",
   tema: "nenhum",
 };
+
+// ─── Contribuições sintéticas (sem importar policies/**) ─────────────────────
+
+const IDENTITY_CONTRIBUTION = {
+  block: PROMPT_BLOCK_LABELS.identity,
+  lines: ["Loja: Loja Exemplo", "Cor da marca: #22C55E"],
+} as const;
+
+const TYPOGRAPHY_CONTRIBUTION = {
+  block: PROMPT_BLOCK_LABELS.typography,
+  lines: ["Direção tipográfica: Poppins para títulos; Open Sans para textos"],
+} as const;
+
+const INTENT_CONTRIBUTION = {
+  block: PROMPT_BLOCK_LABELS.intent,
+  lines: ["Oferta", "Formato: quadrado 1:1", "Estrutura: peça única"],
+} as const;
+
+const ALL_CONTRIBUTIONS = [IDENTITY_CONTRIBUTION, TYPOGRAPHY_CONTRIBUTION, INTENT_CONTRIBUTION];
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -89,7 +112,7 @@ function makeProduct(overrides: Partial<BenchProduct> = {}): BenchProduct {
     description: "100% algodão",
     priceCents: 4990,
     originalPriceCents: 9990,
-    mandatoryArtworkText: "Imagem meramente ilustrativa",
+    mandatoryArtworkText: "Válido para retirada na loja",
     preserveImageContext: false,
     ...overrides,
   };
@@ -104,16 +127,11 @@ function makeOffer(overrides: Partial<BenchOffer> = {}): BenchOffer {
   };
 }
 
-interface BriefingFixture {
-  briefing: ReturnType<typeof buildBenchExperimentalBriefing>;
-  snapshot: ReturnType<typeof buildBenchCampaignSnapshot>;
-}
-
 function makeBriefing(overrides: {
   branding?: Partial<BenchBrandingContract>;
   product?: Partial<BenchProduct>;
   offer?: Partial<BenchOffer>;
-} = {}): BriefingFixture {
+} = {}) {
   const snapshot = buildBenchCampaignSnapshot({
     product: makeProduct(overrides.product),
     offer: makeOffer(overrides.offer),
@@ -128,7 +146,7 @@ function makeBriefing(overrides: {
 }
 
 /** Destaque (não-oferta) com `preserveImageContext` ligado. */
-function spotlightBriefing(): BriefingFixture {
+function spotlightBriefing() {
   return makeBriefing({
     offer: { campaignIntent: "spotlight", badge: "", validity: "" },
     product: {
@@ -143,10 +161,14 @@ const PROMPT_BASE = "Crie uma arte comercial clara e legível.";
 
 // ─── Blocos canônicos ────────────────────────────────────────────────────────
 
-describe("compositor — estrutura de blocos canônicos", () => {
-  it("usa os 7 blocos canônicos na ordem travada", () => {
+describe("núcleo do compositor — estrutura de blocos canônicos", () => {
+  it("usa os 7 blocos canônicos na ordem travada (dados + contribuições)", () => {
     const { briefing } = makeBriefing();
-    const { text, blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
+    const { text, blocks } = composePromptBlocks({
+      briefing,
+      promptBase: PROMPT_BASE,
+      contributions: ALL_CONTRIBUTIONS,
+    });
 
     expect(Object.keys(blocks)).toEqual([...PROMPT_BLOCK_ORDER]);
 
@@ -158,23 +180,24 @@ describe("compositor — estrutura de blocos canônicos", () => {
     }
   });
 
-  it("omite blocos vazios (tipografia/condições/prompt-base/restrições)", () => {
+  it("omite blocos vazios (identidade/tipografia/comercial/intenção/prompt-base/restrições)", () => {
     const { briefing } = makeBriefing({
-      branding: { typographyDirection: null },
-      product: { mandatoryArtworkText: undefined, priceCents: undefined, originalPriceCents: undefined },
+      product: {
+        mandatoryArtworkText: undefined,
+        priceCents: undefined,
+        originalPriceCents: undefined,
+      },
       offer: { badge: "", validity: "", showIllustrativeNotice: false },
     });
 
     const { text, blocks } = composePromptBlocks({ briefing, promptBase: "" });
 
-    expect(Object.keys(blocks)).toEqual([
-      PROMPT_BLOCK_LABELS.identity,
-      PROMPT_BLOCK_LABELS.product,
-      PROMPT_BLOCK_LABELS.intent,
-    ]);
+    expect(Object.keys(blocks)).toEqual([PROMPT_BLOCK_LABELS.product]);
     for (const omitted of [
+      PROMPT_BLOCK_LABELS.identity,
       PROMPT_BLOCK_LABELS.typography,
       PROMPT_BLOCK_LABELS.commercial,
+      PROMPT_BLOCK_LABELS.intent,
       PROMPT_BLOCK_LABELS.promptBase,
       PROMPT_BLOCK_LABELS.constraints,
     ]) {
@@ -182,14 +205,28 @@ describe("compositor — estrutura de blocos canônicos", () => {
     }
   });
 
-  it("coloca a direção tipográfica apenas em [DIREÇÃO TIPOGRÁFICA]", () => {
+  it("mescla as contribuições no bloco declarado (intenção)", () => {
     const { briefing } = makeBriefing();
-    const typography = briefing.typographyDirection!;
+    const { blocks } = composePromptBlocks({
+      briefing,
+      promptBase: PROMPT_BASE,
+      contributions: [INTENT_CONTRIBUTION],
+    });
 
-    const { blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
+    expect(blocks[PROMPT_BLOCK_LABELS.intent]).toBe(INTENT_CONTRIBUTION.lines.join("\n"));
+  });
 
-    expect(blocks[PROMPT_BLOCK_LABELS.typography]).toContain(typography);
-    const occurrences = Object.values(blocks).filter((content) => content.includes(typography));
+  it("coloca a direção tipográfica sintética apenas em [DIREÇÃO TIPOGRÁFICA]", () => {
+    const { briefing } = makeBriefing();
+    const { blocks } = composePromptBlocks({
+      briefing,
+      promptBase: PROMPT_BASE,
+      contributions: [TYPOGRAPHY_CONTRIBUTION],
+    });
+
+    const line = TYPOGRAPHY_CONTRIBUTION.lines[0];
+    expect(blocks[PROMPT_BLOCK_LABELS.typography]).toContain(line);
+    const occurrences = Object.values(blocks).filter((content) => content.includes(line));
     expect(occurrences).toHaveLength(1);
   });
 
@@ -205,20 +242,45 @@ describe("compositor — estrutura de blocos canônicos", () => {
     );
     expect(occurrences).toHaveLength(1);
   });
+});
 
-  it("não repete deliberadamente o mesmo dado em vários blocos (cor da marca)", () => {
+// ─── Neutralidade do núcleo (sem regra de dimensão) ──────────────────────────
+
+describe("núcleo do compositor — neutralidade", () => {
+  it("não emite valores crus de configuração (sem contribuições de intenção)", () => {
     const { briefing } = makeBriefing();
-    const { blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
+    const { text, blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
 
-    const occurrences = Object.values(blocks).filter((content) => content.includes("#22C55E"));
-    expect(occurrences).toHaveLength(1);
-    expect(blocks[PROMPT_BLOCK_LABELS.identity]).toContain("#22C55E");
+    expect(blocks[PROMPT_BLOCK_LABELS.intent]).toBeUndefined();
+    for (const raw of ["Intenção:", "Formato:", "Tipo de conteúdo:", "Estrutura:", "Tema:"]) {
+      expect(text).not.toContain(raw);
+    }
+  });
+
+  it("a fonte do núcleo não contém regra de dimensão nem emite config cru", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/lab/bench/domain/prompt-composer.ts"),
+      "utf8",
+    );
+
+    // Removidos do núcleo (movidos para as políticas/Planos 03-04):
+    for (const removed of ["briefing.config", "briefing.commercial.intent", "intentLines", "identityLines", "typographyLines"]) {
+      expect(source, `núcleo não deve conter ${removed}`).not.toContain(removed);
+    }
+    // Sem literais de valor de dimensão (as regras vivem nas políticas):
+    for (const literal of ['"oferta"', '"destaque"', '"exclusivo"', '"peca-unica"', '"carrossel"', '"nenhum"', '"1:1"', '"9:16"', '"produto"']) {
+      expect(source, `núcleo não deve conter literal ${literal}`).not.toContain(literal);
+    }
+    // Sem rótulos crus de configuração:
+    for (const rawLabel of ["Intenção", "Tipo de conteúdo", "Estrutura:", "Tema:"]) {
+      expect(source, `núcleo não deve conter rótulo ${rawLabel}`).not.toContain(rawLabel);
+    }
   });
 });
 
 // ─── Preservação do prompt-base ──────────────────────────────────────────────
 
-describe("compositor — preservação integral do prompt-base", () => {
+describe("núcleo do compositor — preservação integral do prompt-base", () => {
   it("inclui o prompt-base verbatim, sem filtrar palavras legítimas", () => {
     const { briefing } = makeBriefing();
     const promptBase = "Faça um teste desta comparação para avaliação interna da equipe.";
@@ -235,7 +297,7 @@ describe("compositor — preservação integral do prompt-base", () => {
 
 // ─── Ausência de contexto experimental (por origem) ──────────────────────────
 
-describe("compositor — ausência de contexto experimental por origem", () => {
+describe("núcleo do compositor — ausência de contexto experimental por origem", () => {
   const FORBIDDEN_TERMS = [
     "laboratório",
     "laboratorio",
@@ -249,8 +311,11 @@ describe("compositor — ausência de contexto experimental por origem", () => {
 
   it("os blocos gerados não introduzem contexto experimental (prompt-base vazio)", () => {
     const { briefing } = makeBriefing();
-    // Prompt-base vazio ⇒ o texto é composto apenas pelos blocos GERADOS.
-    const { text } = composePromptBlocks({ briefing, promptBase: "" });
+    const { text } = composePromptBlocks({
+      briefing,
+      promptBase: "",
+      contributions: ALL_CONTRIBUTIONS,
+    });
 
     const lowered = text.toLowerCase();
     for (const term of FORBIDDEN_TERMS) {
@@ -265,7 +330,6 @@ describe("compositor — ausência de contexto experimental por origem", () => {
 
     const { text } = composePromptBlocks({ briefing, promptBase });
 
-    // O termo aparece no prompt-base (preservado), mas não nos blocos gerados.
     expect(text).toContain("baseline");
     expect(text).toContain("comparação");
     expect(text).toContain("avaliação");
@@ -274,17 +338,31 @@ describe("compositor — ausência de contexto experimental por origem", () => {
 
 // ─── Determinismo e pureza ───────────────────────────────────────────────────
 
-describe("compositor — determinismo e pureza", () => {
-  it("mesma entrada → mesma saída (texto único estável)", () => {
+describe("núcleo do compositor — determinismo e pureza", () => {
+  it("mesma entrada → mesma saída (texto único estável + versões)", () => {
     const { briefing } = makeBriefing();
-    const input = { briefing, promptBase: PROMPT_BASE, references: ["bench/run/inputs/0.png"] };
+    const input = {
+      briefing,
+      promptBase: PROMPT_BASE,
+      references: ["bench/run/inputs/0.png"],
+      contributions: ALL_CONTRIBUTIONS,
+      policyVersions: { intencao: "v1" },
+    };
 
-    const first = composePrompt(input);
-    const second = composePrompt(input);
+    const first = composePromptBlocks(input);
+    const second = composePromptBlocks(input);
 
-    expect(typeof first).toBe("string");
-    expect(first.length).toBeGreaterThan(0);
-    expect(first).toBe(second);
+    expect(typeof first.text).toBe("string");
+    expect(first.text.length).toBeGreaterThan(0);
+    expect(first.text).toBe(second.text);
+    expect(first.composerVersion).toBe(COMPOSER_VERSION);
+    expect(first.policyVersions).toEqual({ intencao: "v1" });
+  });
+
+  it("composePrompt devolve o texto do núcleo", () => {
+    const { briefing } = makeBriefing();
+    const input = { briefing, promptBase: PROMPT_BASE, contributions: ALL_CONTRIBUTIONS };
+    expect(composePrompt(input)).toBe(composePromptBlocks(input).text);
   });
 
   it("inclui as referências de imagem quando fornecidas", () => {
@@ -298,9 +376,9 @@ describe("compositor — determinismo e pureza", () => {
     expect(blocks[PROMPT_BLOCK_LABELS.product]).toContain("Imagens de referência: 2");
   });
 
-  it("exporta COMPOSER_VERSION como string estática", () => {
+  it("exporta COMPOSER_VERSION como string estática da fase", () => {
     expect(typeof COMPOSER_VERSION).toBe("string");
-    expect(COMPOSER_VERSION.length).toBeGreaterThan(0);
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v1");
   });
 
   it("o módulo é puro e sem IA (fonte): sem env, rede, provider ou supabase", () => {
@@ -317,46 +395,9 @@ describe("compositor — determinismo e pureza", () => {
   });
 });
 
-// ─── Caso do UAT (sem duplicidade) ───────────────────────────────────────────
+// ─── Restrições combinam aviso + texto livre (buildMandatoryArtworkText) ─────
 
-describe("compositor — caso do UAT (sem duplicidade)", () => {
-  it("R$ 8,99 → R$ 7,49, selo Promoção, validade até 03/10/2026 — cada dado uma vez", () => {
-    const { briefing } = makeBriefing({
-      product: { priceCents: 749, originalPriceCents: 899, mandatoryArtworkText: undefined },
-      offer: {
-        badge: "Promoção",
-        validity: "até 03/10/2026",
-        campaignIntent: "offer",
-        showIllustrativeNotice: true,
-      },
-    });
-
-    const { text, blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
-
-    const commercial = blocks[PROMPT_BLOCK_LABELS.commercial];
-    expect(commercial).toBeDefined();
-    expect(commercial).toContain("Preço original:");
-    expect(commercial).toContain("8,99");
-    expect(commercial).toContain("Preço promocional:");
-    expect(commercial).toContain("7,49");
-    expect(commercial).toContain("Selo: Promoção");
-    expect(commercial).toContain("Validade: até 03/10/2026");
-
-    // Cada valor comercial aparece EXATAMENTE uma vez no prompt compilado.
-    for (const value of ["8,99", "7,49", "Promoção", "03/10/2026"]) {
-      const occurrences = text.split(value).length - 1;
-      expect(occurrences, `duplicidade de "${value}"`).toBe(1);
-    }
-
-    // A linha manual "Oferta:" não existe mais em [PRODUTO E IMAGENS DE REFERÊNCIA].
-    expect(blocks[PROMPT_BLOCK_LABELS.product]).not.toContain("Oferta:");
-
-    // Aviso ilustrativo (checkbox ligado, sem texto livre) uma única vez.
-    expect(text.split("Imagem meramente ilustrativa").length - 1).toBe(1);
-  });
-});
-
-describe("compositor — restrições combinam aviso + texto livre (buildMandatoryArtworkText)", () => {
+describe("núcleo do compositor — restrições combinam aviso + texto livre", () => {
   const cases = [
     {
       name: "checkbox ligado + texto livre",

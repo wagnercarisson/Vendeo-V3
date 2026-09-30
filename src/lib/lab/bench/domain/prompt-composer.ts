@@ -1,38 +1,42 @@
 import type { BenchExperimentalBriefing } from "./experimental-briefing";
+import type { BenchPromptContribution } from "./policies/types";
 
 /**
- * Compositor determinístico mínimo do prompt da bancada (F48.2.3, D17/D19/D20).
+ * **Núcleo** determinístico do compositor de prompt da bancada (F48.2.4, D1/D7).
  *
  * Módulo **puro e sem IA** — sem I/O, sem variáveis de ambiente, sem provider e
- * sem client Supabase. Apenas **serializa** dados estruturados (briefing
- * experimental do Plano 05 + snapshot fiel do Plano 04) e o prompt-base manual
- * em blocos canônicos travados.
+ * sem client Supabase. Apenas **coleta, ordena e serializa** dados estruturados
+ * (briefing experimental + snapshot fiel) e as **contribuições de política**
+ * recebidas, além do prompt-base manual, nos 7 blocos canônicos travados.
+ *
+ * ## Separação núcleo × políticas (D1)
+ *
+ * O núcleo **não contém regra alguma específica de dimensão** (intenção, formato,
+ * tipo de conteúdo, estrutura ou tema) — não emite valores crus de configuração.
+ * As regras de dimensão vivem **apenas** nas políticas versionadas
+ * (`policies/**`), que produzem as contribuições consumidas aqui. Acrescentar
+ * dimensões futuras = adicionar políticas + habilitar valores, **sem alterar o
+ * núcleo**.
  *
  * Garantias (spec `lab-bench-prompt-preflight` + D19):
  *  - **não** reescreve o prompt-base, **não** interpreta criatividade, **não**
- *    avalia qualidade, **não** faz deduplicação semântica, **não** chama
- *    provider e **não** promove nada;
- *  - **um dado → um bloco** (sem repetição deliberada do mesmo campo em vários
- *    blocos); **blocos vazios são omitidos**;
+ *    avalia qualidade, **não** faz deduplicação semântica, **não** chama provider
+ *    e **não** promove nada;
+ *  - **um dado → um bloco**; **blocos vazios são omitidos**; a ordem canônica é
+ *    travada;
  *  - o prompt-base é incluído **verbatim** em `[INSTRUÇÕES DO PROMPT-BASE]` —
- *    nenhuma filtragem/reescrita lexical (palavras legítimas como "teste",
- *    "comparação" ou "avaliação" fornecidas pelo operador são preservadas);
+ *    nenhuma filtragem/reescrita lexical (palavras legítimas do operador são
+ *    preservadas) e ele fica **fora** de qualquer deduplicação;
  *  - os rótulos fixos e os templates dos blocos **gerados** não introduzem
  *    contexto de laboratório, experimento, baseline, comparação de variantes ou
- *    avaliação, nem um bloco dedicado ao objetivo do experimento: a proibição
- *    incide sobre a **origem** do conteúdo gerado pelo compositor, **não** é uma
- *    blacklist lexical sobre o prompt completo e nunca filtra o prompt-base do
- *    operador;
- *  - `typography_direction` integra `[DIREÇÃO TIPOGRÁFICA]`;
- *    `preserveImageContext` integra `[PRODUTO E IMAGENS DE REFERÊNCIA]`;
- *  - determinístico: mesma entrada → mesma saída.
- *
- * Este compositor **não** substitui o futuro template criativo de Oferta 1:1
- * (F48.2.4); é uma primeira versão avaliável, não arquitetura definitiva.
+ *    avaliação: a proibição incide sobre a **origem** do conteúdo gerado pelo
+ *    compositor, **não** é blacklist lexical sobre o prompt completo;
+ *  - determinístico: mesma entrada → mesma saída (inclui `composerVersion` e
+ *    `policyVersions`).
  */
 
 /** Versão estática do compositor — evidência do preflight (D20). */
-export const COMPOSER_VERSION = "48.2.3-prompt-composer-v1";
+export const COMPOSER_VERSION = "48.2.4-prompt-composer-v1";
 
 // ─── Blocos canônicos (travados — D19) ───────────────────────────────────────
 
@@ -63,12 +67,19 @@ export const PROMPT_BLOCK_ORDER: readonly BenchPromptBlockLabel[] = [
 // ─── Entrada / saída ─────────────────────────────────────────────────────────
 
 export interface BenchPromptCompositionInput {
-  /** Briefing experimental estruturado (Plano 05) — entrada canônica do compositor. */
+  /** Briefing experimental estruturado — entrada canônica do compositor. */
   briefing: BenchExperimentalBriefing;
   /** Prompt-base manual do operador — preservado **verbatim**. */
   promptBase: string;
   /** Referências de imagem anexadas ao run (paths locais). Opcional. */
   references?: readonly string[];
+  /**
+   * Contribuições resolvidas das políticas versionadas (via
+   * `resolveBenchPromptPolicies`). O núcleo apenas as mescla por bloco.
+   */
+  contributions?: readonly BenchPromptContribution[];
+  /** Versões das políticas resolvidas (evidência). Opcional. */
+  policyVersions?: Readonly<Record<string, string>>;
 }
 
 export interface BenchPromptComposition {
@@ -76,9 +87,13 @@ export interface BenchPromptComposition {
   text: string;
   /** Blocos estruturados utilizados (rótulo → conteúdo, sem os vazios). */
   blocks: Record<string, string>;
+  /** Versão estática do compositor (evidência). */
+  composerVersion: string;
+  /** Versões das políticas resolvidas (evidência). */
+  policyVersions: Readonly<Record<string, string>>;
 }
 
-// ─── Helpers de serialização ─────────────────────────────────────────────────
+// ─── Helpers de serialização (dados não-dimensionais) ────────────────────────
 
 /** Acrescenta `Rótulo: valor` quando o valor (trimado) é não vazio. */
 function pushLine(lines: string[], label: string, value: string | null | undefined): void {
@@ -86,26 +101,6 @@ function pushLine(lines: string[], label: string, value: string | null | undefin
   const trimmed = value.trim();
   if (trimmed.length === 0) return;
   lines.push(`${label}: ${trimmed}`);
-}
-
-function identityLines(briefing: BenchExperimentalBriefing): string[] {
-  const lines: string[] = [];
-  pushLine(lines, "Loja", briefing.storeName);
-  pushLine(lines, "Segmento", briefing.segment);
-  pushLine(lines, "Cor da marca", briefing.brandColor);
-  const direction = briefing.visualDirection;
-  pushLine(lines, "Brief da marca", direction.campaignBrief);
-  pushLine(lines, "Diretrizes de campanha", direction.campaignGuidelines);
-  pushLine(lines, "Estilo visual", direction.visualStyle);
-  pushLine(lines, "Tom visual", direction.visualTone);
-  pushLine(lines, "Personalidade da marca", direction.brandPersonality);
-  return lines;
-}
-
-function typographyLines(briefing: BenchExperimentalBriefing): string[] {
-  const lines: string[] = [];
-  pushLine(lines, "Direção tipográfica", briefing.typographyDirection);
-  return lines;
 }
 
 function productLines(
@@ -133,16 +128,6 @@ function commercialLines(briefing: BenchExperimentalBriefing): string[] {
   return lines;
 }
 
-function intentLines(briefing: BenchExperimentalBriefing): string[] {
-  const lines: string[] = [];
-  pushLine(lines, "Intenção", briefing.commercial.intent);
-  pushLine(lines, "Formato", briefing.config.formato);
-  pushLine(lines, "Tipo de conteúdo", briefing.config.tipoConteudo);
-  pushLine(lines, "Estrutura", briefing.config.estrutura);
-  pushLine(lines, "Tema", briefing.config.tema);
-  return lines;
-}
-
 /**
  * Prompt-base manual — preservado **verbatim** (nenhuma filtragem/reescrita).
  * O compositor **não** aplica blacklist lexical sobre este texto: palavras
@@ -166,32 +151,40 @@ function constraintsLines(briefing: BenchExperimentalBriefing): string[] {
 
 /**
  * Compõe os blocos canônicos do prompt, omitindo os vazios e preservando o
- * prompt-base verbatim. Determinístico e sem efeitos colaterais.
+ * prompt-base verbatim. Mescla as **contribuições de política** por bloco na
+ * ordem canônica travada. Determinístico e sem efeitos colaterais.
  */
 export function composePromptBlocks(input: BenchPromptCompositionInput): BenchPromptComposition {
-  const { briefing, promptBase, references } = input;
+  const { briefing, promptBase, references, contributions = [], policyVersions = {} } = input;
 
-  const ordered: Array<{ label: BenchPromptBlockLabel; lines: string[] }> = [
-    { label: PROMPT_BLOCK_LABELS.identity, lines: identityLines(briefing) },
-    { label: PROMPT_BLOCK_LABELS.typography, lines: typographyLines(briefing) },
-    { label: PROMPT_BLOCK_LABELS.product, lines: productLines(briefing, references) },
-    { label: PROMPT_BLOCK_LABELS.commercial, lines: commercialLines(briefing) },
-    { label: PROMPT_BLOCK_LABELS.intent, lines: intentLines(briefing) },
-    { label: PROMPT_BLOCK_LABELS.promptBase, lines: promptBaseLines(promptBase) },
-    { label: PROMPT_BLOCK_LABELS.constraints, lines: constraintsLines(briefing) },
-  ];
+  // Linhas de **dados** (não-dimensionais) produzidas pelo núcleo.
+  const dataLines: Partial<Record<BenchPromptBlockLabel, string[]>> = {
+    [PROMPT_BLOCK_LABELS.product]: productLines(briefing, references),
+    [PROMPT_BLOCK_LABELS.commercial]: commercialLines(briefing),
+    [PROMPT_BLOCK_LABELS.promptBase]: promptBaseLines(promptBase),
+    [PROMPT_BLOCK_LABELS.constraints]: constraintsLines(briefing),
+  };
+
+  // Linhas de **política**, agregadas por bloco na ordem recebida.
+  const contributionLines = new Map<BenchPromptBlockLabel, string[]>();
+  for (const contribution of contributions) {
+    const existing = contributionLines.get(contribution.block) ?? [];
+    existing.push(...contribution.lines);
+    contributionLines.set(contribution.block, existing);
+  }
 
   const blocks: Record<string, string> = {};
   const parts: string[] = [];
 
-  for (const { label, lines } of ordered) {
+  for (const label of PROMPT_BLOCK_ORDER) {
+    const lines = [...(dataLines[label] ?? []), ...(contributionLines.get(label) ?? [])];
     const content = lines.join("\n");
     if (content.length === 0) continue;
     blocks[label] = content;
     parts.push(`[${label}]\n${content}`);
   }
 
-  return { text: parts.join("\n\n"), blocks };
+  return { text: parts.join("\n\n"), blocks, composerVersion: COMPOSER_VERSION, policyVersions };
 }
 
 /**
