@@ -32,9 +32,21 @@ export interface BenchRunEvidence {
   latencyMs: number | null;
   usage: unknown;
   estimatedCostUsd: number | null;
+  /** Custo calculado localmente (D14) — alias de `estimatedCostUsd`. */
+  calculatedCostUsd?: number | null;
+  /** Custo reportado pelo provider, em campo separado (D14). */
+  reportedCostUsd?: number | null;
   costDetail: unknown;
   costSource: string | null;
   costRuleVersion: string | null;
+  /** Prompt-base manual usado na composição (D14). */
+  promptBase?: string | null;
+  /** Versão do prompt-base padrão resolvido (D14). */
+  promptBaseVersion?: string | null;
+  /** Versões das políticas por dimensão (D14). */
+  policyVersions?: Record<string, string> | null;
+  /** Versão do compositor (D14). */
+  composerVersion?: string | null;
   errorType: string | null;
   errorMessage: string | null;
   config?: unknown;
@@ -72,6 +84,15 @@ function formatJson(value: unknown): string {
   } catch {
     return "—";
   }
+}
+
+function formatPolicyVersions(
+  policyVersions: Record<string, string> | null | undefined,
+): string {
+  if (!policyVersions) return "—";
+  const entries = Object.entries(policyVersions);
+  if (entries.length === 0) return "—";
+  return entries.map(([dimension, version]) => `${dimension}:${version}`).join(" · ");
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -130,6 +151,17 @@ export function BenchEvidencePanel({
           <div className="space-y-4">
             <dl className="grid gap-4 sm:grid-cols-2">
               <Row label="Prompt enviado" value={run.promptSent ?? "—"} />
+              <Row label="Prompt-base usado" value={run.promptBase ?? "—"} />
+              <Row
+                label="Prompt-base padrão (versão)"
+                value={run.promptBaseVersion ?? "—"}
+              />
+              <Row
+                label="Versões (compositor/políticas)"
+                value={`${run.composerVersion ?? "—"} · ${formatPolicyVersions(
+                  run.policyVersions,
+                )}`}
+              />
               <Row
                 label="Provider / modelo / protocolo"
                 value={`${run.provider ?? "—"} / ${run.model ?? "—"} / ${
@@ -146,9 +178,17 @@ export function BenchEvidencePanel({
               <Row label="Configuração" value={formatJson(run.config)} />
               <Row
                 label="Custo calculado"
-                value={`${formatUsdDisplay(run.estimatedCostUsd ?? 0)} (${
-                  run.costSource ?? "—"
-                } · ${run.costRuleVersion ?? "—"})`}
+                value={`${formatUsdDisplay(
+                  run.calculatedCostUsd ?? run.estimatedCostUsd ?? 0,
+                )} (${run.costSource ?? "—"} · ${run.costRuleVersion ?? "—"})`}
+              />
+              <Row
+                label="Custo reportado pelo provider"
+                value={
+                  typeof run.reportedCostUsd === "number"
+                    ? formatUsdDisplay(run.reportedCostUsd)
+                    : "indisponível"
+                }
               />
               <Row
                 label="Custo estimado — não é valor faturado"

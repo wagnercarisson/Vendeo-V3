@@ -170,6 +170,16 @@ export function BenchBrandingPanel({
                   : EMPTY
               }
             />
+            <DataRow
+              label="Identidade enviada ao modelo"
+              value={
+                branding.identityReference
+                  ? `${branding.identityReference.kind} · ${
+                      branding.identityReference.variantType ?? EMPTY
+                    } · ${branding.identityReference.storagePath}`
+                  : branding.identityState
+              }
+            />
             <DataRow label="Motivo da identidade" value={branding.identityReason} />
           </dl>
 

@@ -6,7 +6,13 @@ import {
   DEFAULT_BENCH_CONFIG,
   listBenchConfigOptions,
 } from "@/lib/lab/bench/domain/config-registry";
+import {
+  BENCH_PROMPT_POLICY_REGISTRY,
+  PROMPT_POLICY_DIMENSIONS,
+} from "@/lib/lab/bench/domain/policies/registry";
 import { listBenchPresets } from "@/lib/lab/bench/domain/preset-registry";
+import { COMPOSER_VERSION } from "@/lib/lab/bench/domain/prompt-composer";
+import { resolveBenchDefaultPromptBase } from "@/lib/lab/bench/domain/prompt-base";
 import {
   listBenchTestStores,
   type BenchTestStoreSummary,
@@ -20,6 +26,7 @@ import type {
   BenchConfigOptions,
   BenchPresetOption,
 } from "./_components/bench-workbench";
+import type { BenchPromptPolicyView } from "./_components/bench-policies-panel";
 
 /**
  * Página da bancada de geração (F48.2.2, D15).
@@ -48,6 +55,25 @@ function buildConfigOptions(): BenchConfigOptions {
     }));
   }
   return { dimensions, defaults: { ...DEFAULT_BENCH_CONFIG } };
+}
+
+/**
+ * Políticas habilitadas do recorte (id/valor/versão) resolvidas server-side a
+ * partir do registry puro — entregues como **props iniciais** (D2/D16).
+ */
+function buildEnabledPolicies(): BenchPromptPolicyView[] {
+  return PROMPT_POLICY_DIMENSIONS.flatMap((dimension) => {
+    const policy = BENCH_PROMPT_POLICY_REGISTRY[dimension];
+    if (!policy) return [];
+    return [
+      {
+        dimension,
+        id: policy.id,
+        value: policy.value,
+        version: policy.version,
+      },
+    ];
+  });
 }
 
 export default async function BancadaPage() {
@@ -99,6 +125,11 @@ export default async function BancadaPage() {
     );
   }
 
+  // Prompt-base padrão versionado resolvido server-side a partir da configuração
+  // inicial — semeado no editor como **prop inicial** (a UI nunca espera
+  // `POST /compose` para exibir o padrão) (D6/D16).
+  const defaultPromptBase = resolveBenchDefaultPromptBase(DEFAULT_BENCH_CONFIG);
+
   return (
     <div className="max-w-6xl space-y-6">
       <PageHeader title="Bancada" />
@@ -111,6 +142,10 @@ export default async function BancadaPage() {
         stores={stores}
         presets={presets}
         config={buildConfigOptions()}
+        defaultPromptBase={defaultPromptBase.content}
+        promptBaseVersion={defaultPromptBase.version}
+        enabledPolicies={buildEnabledPolicies()}
+        composerVersion={COMPOSER_VERSION}
       />
     </div>
   );
