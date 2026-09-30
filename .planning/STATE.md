@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-09-29T19:30:00.000Z"
+last_updated: "2026-09-30T00:00:00.000Z"
 progress:
   total_phases: 40
   completed_phases: 36
@@ -20,16 +20,16 @@ progress:
 - Core value: transformar uma oferta simples em uma campanha profissional, clara e publicável.
 - Foco atual: F48.2.3 — **Fidelidade experimental da bancada** (**CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA** em 2026-09-29; 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`).
 - Fase anterior: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
-- Próxima fase: **F48.2.4 — Experimento determinístico Oferta 1:1** (**PLANEJADA** em 2026-09-30; 9 planos em 6 ondas; aguardando **revisão humana antes do executor**; **nenhuma execução**). Base OpenSpec `openspec/changes/fase-48-2-4-experimento-deterministico-oferta-1-1/`; CONTEXT/UI-SPEC/PATTERNS/9 PLAN em `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/`; verificado por `gsd-plan-checker` (0 blockers após revisão).
+- Foco atual: **F48.2.4 — Experimento determinístico Oferta 1:1** (**EM EXECUÇÃO** desde 2026-09-30; planos `48-2-4-01`..`48-2-4-08` executados/summarized; plano `48-2-4-09` Task 1 (gates) concluída; **PARADO no CHECKPOINT A** aguardando decisão humana antes de qualquer chamada paga). Base OpenSpec `openspec/changes/fase-48-2-4-experimento-deterministico-oferta-1-1/`; CONTEXT/UI-SPEC/PATTERNS/9 PLAN em `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/`. Nenhuma geração real; custo **US$ 0**.
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
-Phase: 48.2.4 (experimento-deterministico-oferta-1-1) — **PLANEJADA (aguardando revisão humana; NÃO executada)**
-Plan: 9 planos criados (`48-2-4-01` .. `48-2-4-09`), em 6 ondas; **0 summaries** (nenhuma execução).
-Plans: `48-2-4-01` .. `48-2-4-09` — **planejados** (2026-09-30); verificados por `gsd-plan-checker` (0 blockers após 2 rodadas de revisão).
-Checkpoints humanos previstos: **CHECKPOINT A** (plano 09 — revisão de contratos/políticas/branding/identidade/revalidação **antes de qualquer chamada paga**) e **CHECKPOINT B** (plano 09 — UAT manual técnico + comercial/visual). Nenhuma geração real executada; custo **US$ 0**.
-Próxima ação: **revisão humana dos planos** e, somente após aprovação explícita, execução via `/gsd-execute-phase 48-2-4-01`. **Nenhuma execução após o planejamento** (exigência do usuário).
+Phase: 48.2.4 (experimento-deterministico-oferta-1-1) — **EM EXECUÇÃO (PARADO no CHECKPOINT A)**
+Plan: 9 planos em 6 ondas; **8 summaries** (`48-2-4-01` .. `48-2-4-08`); `48-2-4-09` Task 1 (gates) concluída (commit `65fe2cc4`); **Tasks 2–4 do plano 09 não executadas** (CHECKPOINT A pendente).
+Plans: `48-2-4-01` .. `48-2-4-08` — **executados/summarized** (2026-09-30). Ondas: W1 `01`; W2 `02`,`03`,`04`,`05`; W3 `06`; W4 `07`; W5 `08`; W6 `09` (checkpoints).
+Checkpoints humanos: **CHECKPOINT A** (plano 09 — revisão de contratos/políticas/branding/identidade/revalidação **antes de qualquer chamada paga**) — **AGUARDANDO decisão humana**; **CHECKPOINT B** (plano 09 — UAT manual técnico + comercial/visual) — não iniciado. Nenhuma geração real executada; custo **US$ 0**.
+Próxima ação: **decisão humana no CHECKPOINT A** (aprovar o UAT pago com o número de gerações reais, ou descrever ajustes). Após aprovação, executar as Tasks 2–4 do plano 09 (UAT + produção intocada + VERIFICATION/UAT + closeout não-destrutivo).
 Fase anterior: 48.2.3 (Fidelidade experimental da bancada) — **COMPLETE (verificada, sincronizada e arquivada)**.
 Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **COMPLETE (verificada, sincronizada e arquivada)**.
 
@@ -98,7 +98,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 - **F48.2.2 concluída** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com uma geração real controlada; produção intocada; nenhuma promoção). **OpenSpec verificado, sincronizado e arquivado** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`; 3 specs novas (`lab-generation-bench`, `lab-bench-config`, `lab-bench-branding`) e 5 sincronizadas.
 - **F48.2.3 concluída** (8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider**, custo **US$ 0**; produção intocada). **OpenSpec verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`; 4 specs novas (`lab-bench-store-import`, `lab-bench-form-parity`, `lab-bench-experimental-briefing`, `lab-bench-prompt-preflight`) e 5 sincronizadas.
-- F48.2.4 — Experimento determinístico Oferta 1:1 — **PLANEJADA** (2026-09-30; 9 planos/6 ondas; CONTEXT + UI-SPEC + PATTERNS + 9 PLAN; verificado por `gsd-plan-checker`). **Aguardando revisão humana antes do executor**; nenhuma execução. Base OpenSpec `openspec/changes/fase-48-2-4-experimento-deterministico-oferta-1-1/`; artefatos em `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/`.
+- F48.2.4 — Experimento determinístico Oferta 1:1 — **EM EXECUÇÃO** (2026-09-30; 9 planos/6 ondas). `48-2-4-01`..`48-2-4-08` executados/summarized; `48-2-4-09` Task 1 (gates) concluída; **PARADO no CHECKPOINT A** (aguardando decisão humana antes de qualquer chamada paga). Base OpenSpec `openspec/changes/fase-48-2-4-experimento-deterministico-oferta-1-1/`; artefatos em `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/`. Nenhuma geração real; custo **US$ 0**.
 - Sessões manuais de teste dos prompts do Diretor (`offer`/`spotlight`/`exclusive`), conduzidas pelo usuário e pelo assistente; qualquer operação real paga exige novo programa e nova autorização humana explícita.
 - F48.2.2 antiga (Auditoria e Otimização do Prompt do Revisor) — **descartada/substituída**; implementação não iniciada; sem artefatos mantidos (recuperável pelo histórico do Git).
 - Exceção preexistente F50 (`src/lib/legal/__tests__/legal-document-versions.test.ts`, `ENOENT`) é falha externa à F48.2.1; registrada como follow-up.
@@ -130,5 +130,5 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - Última sessão: 2026-09-29 — execução e encerramento da F48.2.3 (8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider**, custo **US$ 0**) e **verify/sync/archive manuais** do OpenSpec.
 - Último trabalho: F48.2.3 **concluída** (8/8 planos; `48.2.3-UAT.md` + `48-2-3-VERIFICATION.md` + `48-2-3-08-SUMMARY.md`; produção intocada; OpenSpec **verificado, sincronizado e arquivado**).
 - Último quick: `260929-rtl` — **concluída**. Fidelidade de `identity_state` da bancada (Tasks 1–3: import fail-closed, resolver puro, contrato/snapshot/API) + **correção de idempotência da importação** (`ensureContentAddressedObject`: precheck `exists` fail-closed; referenciado/criado/reutilizado; cleanup remove só criados; `uploadBrandingObject` removido). Testes de contrato (79), integrado local (2 importações consecutivas) e suíte lab/architecture guard verdes; produção intocada; custo **US$ 0**. Reimportação autorizada idempotente: NovaTek `visual_signature` (1 objeto reutilizado) e Adega `logo` (6 reutilizados), 0 criados, sem duplicação/órfãos.
-- Próximo trabalho: **F48.2.4 — Experimento determinístico Oferta 1:1** — **planejada** (9 planos em 6 ondas), aguardando **revisão humana** dos planos antes de qualquer execução. Sessões manuais de teste dos prompts do Diretor seguem em paralelo, com novo programa e nova autorização humana antes de qualquer chamada paga.
-- Resume file: `None` (F48.2.4 planejada; próxima ação é a revisão humana dos planos e, após aprovação, `/gsd-execute-phase 48-2-4-01`).
+- Próximo trabalho: **F48.2.4 — Experimento determinístico Oferta 1:1** — **em execução**, **PARADA no CHECKPOINT A** (plano `48-2-4-09`). Aguardando **decisão humana**: aprovar o UAT pago (CHECKPOINT B) com o número de gerações reais, ou descrever ajustes. Recusa ⇒ fase NÃO concluída. Nenhuma chamada paga até aqui.
+- Resume file: `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48-2-4-VERIFICATION.md` (Task 1 do plano 09 concluída; próxima ação é a decisão humana no CHECKPOINT A e, após aprovação, as Tasks 2–4 do plano 09).
