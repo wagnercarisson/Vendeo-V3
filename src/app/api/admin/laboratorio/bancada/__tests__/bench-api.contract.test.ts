@@ -24,6 +24,12 @@ const {
   mockBuildBenchCampaignSnapshot,
   mockBuildBenchExperimentalBriefing,
   mockComposePromptBlocks,
+  mockResolveBenchPromptPolicies,
+  MockBenchPromptPolicyError,
+  mockResolveBenchDefaultPromptBase,
+  MockBenchPromptBaseError,
+  mockBuildBrandingPromptContributions,
+  mockBuildIdentityDirectionContributions,
   mockReserveBenchRun,
   mockGetBenchRunByOperationId,
   mockSetBenchRunInput,
@@ -78,6 +84,26 @@ const {
     }
   }
 
+  class MockBenchPromptPolicyError extends Error {
+    readonly code = "bench_policy_not_implemented";
+    readonly dimension: string;
+    readonly value: string;
+    constructor(params: { dimension: string; value: string }) {
+      super(`bench_policy_not_implemented:${params.dimension}=${params.value}`);
+      this.name = "BenchPromptPolicyError";
+      this.dimension = params.dimension;
+      this.value = params.value;
+    }
+  }
+
+  class MockBenchPromptBaseError extends Error {
+    readonly code = "bench_prompt_base_not_found";
+    constructor(signature: string) {
+      super(`bench_prompt_base_not_found:${signature}`);
+      this.name = "BenchPromptBaseError";
+    }
+  }
+
   return {
     mockRequireAdmin: vi.fn(),
     mockAssertLabEnvironment: vi.fn(),
@@ -97,6 +123,12 @@ const {
     mockBuildBenchCampaignSnapshot: vi.fn(),
     mockBuildBenchExperimentalBriefing: vi.fn(),
     mockComposePromptBlocks: vi.fn(),
+    mockResolveBenchPromptPolicies: vi.fn(),
+    MockBenchPromptPolicyError,
+    mockResolveBenchDefaultPromptBase: vi.fn(),
+    MockBenchPromptBaseError,
+    mockBuildBrandingPromptContributions: vi.fn(),
+    mockBuildIdentityDirectionContributions: vi.fn(),
     mockReserveBenchRun: vi.fn(),
     mockGetBenchRunByOperationId: vi.fn(),
     mockSetBenchRunInput: vi.fn(),
@@ -206,6 +238,32 @@ vi.mock("@/lib/lab/bench/domain/prompt-composer", () => ({
   COMPOSER_VERSION: "test-composer-v1",
   composePromptBlocks: (...args: unknown[]) => mockComposePromptBlocks(...args),
   composePrompt: (...args: unknown[]) => mockComposePromptBlocks(...args).text,
+}));
+
+vi.mock("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies", () => ({
+  resolveBenchPromptPolicies: (...args: unknown[]) => mockResolveBenchPromptPolicies(...args),
+  BenchPromptPolicyError: MockBenchPromptPolicyError,
+}));
+
+vi.mock("@/lib/lab/bench/domain/prompt-base", () => ({
+  resolveBenchDefaultPromptBase: (...args: unknown[]) =>
+    mockResolveBenchDefaultPromptBase(...args),
+  BenchPromptBaseError: MockBenchPromptBaseError,
+  BENCH_DEFAULT_PROMPT_BASE_VERSION: "test-prompt-base-v1",
+  BENCH_DEFAULT_PROMPT_BASE: {
+    version: "test-prompt-base-v1",
+    content: "instruções complementares padrão",
+  },
+}));
+
+vi.mock("@/lib/lab/bench/domain/branding-prompt-mapping", () => ({
+  buildBrandingPromptContributions: (...args: unknown[]) =>
+    mockBuildBrandingPromptContributions(...args),
+}));
+
+vi.mock("@/lib/lab/bench/domain/identity-direction", () => ({
+  buildIdentityDirectionContributions: (...args: unknown[]) =>
+    mockBuildIdentityDirectionContributions(...args),
 }));
 
 vi.mock("@/lib/lab/bench/persistence/bench-run-service", () => ({
@@ -643,6 +701,22 @@ beforeEach(() => {
     text: "prompt compilado",
     blocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
   });
+  mockResolveBenchPromptPolicies.mockReturnValue({
+    contributions: [],
+    versions: {
+      intencao: "oferta-v1",
+      formato: "1-1-v1",
+      tipoConteudo: "produto-v1",
+      estrutura: "peca-unica-v1",
+      tema: "nenhum-v1",
+    },
+  });
+  mockResolveBenchDefaultPromptBase.mockReturnValue({
+    version: "test-prompt-base-v1",
+    content: "instruções complementares padrão",
+  });
+  mockBuildBrandingPromptContributions.mockReturnValue([]);
+  mockBuildIdentityDirectionContributions.mockReturnValue([]);
 
   mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: false });
   mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN });
@@ -1004,6 +1078,66 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("invalid_payload");
     expect(mockComposePromptBlocks).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose expõe policyVersions, promptBaseVersion e defaultPromptBase (informativos)", async () => {
+    const res = await postCompose();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.policyVersions).toMatchObject({ intencao: "oferta-v1", formato: "1-1-v1" });
+    expect(body.promptBaseVersion).toBe("test-prompt-base-v1");
+    expect(body.defaultPromptBase).toBe("instruções complementares padrão");
+
+    // As políticas resolvidas são repassadas ao compositor com as versões.
+    expect(mockResolveBenchPromptPolicies).toHaveBeenCalledTimes(1);
+    expect(mockComposePromptBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        policyVersions: expect.objectContaining({ intencao: "oferta-v1" }),
+      }),
+    );
+    // Composição pura: nenhuma geração paga disparada.
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose com política não implementada ⇒ 400 bench_policy_not_implemented sem compor nem gerar", async () => {
+    mockResolveBenchPromptPolicies.mockImplementation(() => {
+      throw new MockBenchPromptPolicyError({ dimension: "intencao", value: "destaque" });
+    });
+
+    const res = await postCompose();
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("bench_policy_not_implemented");
+    // Falha fail-closed ANTES de qualquer I/O com a loja e de qualquer composição.
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+    expect(mockComposePromptBlocks).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose compõe SEMPRE com o promptBase do operador (nunca substitui pelo padrão)", async () => {
+    // O compositor recebe o promptBase do corpo e o preserva no bloco do prompt-base.
+    mockComposePromptBlocks.mockImplementation((input: { promptBase: string }) => ({
+      text: `[INSTRUÇÕES DO PROMPT-BASE]\n${input.promptBase}`,
+      blocks: { "INSTRUÇÕES DO PROMPT-BASE": input.promptBase },
+      composerVersion: "test-composer-v1",
+    }));
+
+    const customPromptBase = "prompt customizado do operador";
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, promptBase: customPromptBase });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.blocks["INSTRUÇÕES DO PROMPT-BASE"]).toBe(customPromptBase);
+    expect(body.compiledPrompt).toContain(customPromptBase);
+
+    // O prompt-base padrão é apenas informativo — NÃO substitui a edição do operador.
+    expect(body.defaultPromptBase).toBe("instruções complementares padrão");
+    expect(body.blocks["INSTRUÇÕES DO PROMPT-BASE"]).not.toBe(body.defaultPromptBase);
+
+    const composeCall = mockComposePromptBlocks.mock.calls[0][0] as { promptBase: string };
+    expect(composeCall.promptBase).toBe(customPromptBase);
   });
 });
 

@@ -2,12 +2,22 @@ import { NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { buildBrandingPromptContributions } from "@/lib/lab/bench/domain/branding-prompt-mapping";
 import { buildBenchCampaignSnapshot } from "@/lib/lab/bench/domain/campaign-snapshot";
 import {
   DEFAULT_BENCH_CONFIG,
   resolveBenchConfig,
 } from "@/lib/lab/bench/domain/config-registry";
 import { buildBenchExperimentalBriefing } from "@/lib/lab/bench/domain/experimental-briefing";
+import { buildIdentityDirectionContributions } from "@/lib/lab/bench/domain/identity-direction";
+import {
+  BenchPromptPolicyError,
+  resolveBenchPromptPolicies,
+} from "@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies";
+import {
+  BenchPromptBaseError,
+  resolveBenchDefaultPromptBase,
+} from "@/lib/lab/bench/domain/prompt-base";
 import { BenchPresetError, resolveBenchPreset } from "@/lib/lab/bench/domain/preset-registry";
 import {
   COMPOSER_VERSION,
@@ -134,6 +144,38 @@ export const POST = apiHandler(async (request: Request) => {
     qualidade: preset.quality,
   });
 
+  // Resolução **fail-closed** das políticas do recorte (D2/D15): combinação não
+  // suportada falha com `bench_policy_not_implemented` **antes** de qualquer I/O
+  // com a loja e antes de qualquer chamada paga (nenhum fallback/improvisação).
+  let policies;
+  try {
+    policies = resolveBenchPromptPolicies(config);
+  } catch (error) {
+    if (error instanceof BenchPromptPolicyError) {
+      return NextResponse.json(
+        { error: "bench_policy_not_implemented" },
+        { status: 400 },
+      );
+    }
+    throw error;
+  }
+
+  // Prompt-base padrão versionado (D6/D15) — **apenas informativo** para exibição
+  // e reposição explícita do operador; **nunca** aplicado implicitamente. A
+  // composição abaixo usa SEMPRE o `promptBase` enviado pelo operador.
+  let defaultPromptBase;
+  try {
+    defaultPromptBase = resolveBenchDefaultPromptBase(config);
+  } catch (error) {
+    if (error instanceof BenchPromptBaseError) {
+      return NextResponse.json(
+        { error: "bench_prompt_base_not_found" },
+        { status: 400 },
+      );
+    }
+    throw error;
+  }
+
   const branding = await loadBenchBranding({ client: supabaseAdmin, storeId });
   const snapshot = buildBenchCampaignSnapshot({
     product: product.data,
@@ -141,16 +183,33 @@ export const POST = apiHandler(async (request: Request) => {
     config,
   });
   const briefing = buildBenchExperimentalBriefing({ branding, snapshot, config });
+
+  // Contribuições determinísticas: políticas do recorte → branding (D8) →
+  // orientação de identidade (D9). O núcleo apenas coleta/ordena/serializa.
+  const contributions = [
+    ...policies.contributions,
+    ...buildBrandingPromptContributions(briefing),
+    // A identidade vem do `branding` retornado por `loadBenchBranding` — o
+    // briefing experimental NÃO carrega `identityReference`.
+    ...buildIdentityDirectionContributions(branding.identityReference),
+  ];
   const composition = composePromptBlocks({
     briefing,
     promptBase,
     references,
+    contributions,
+    policyVersions: policies.versions,
   });
 
   return NextResponse.json({
     compiledPrompt: composition.text,
     blocks: composition.blocks,
     composerVersion: COMPOSER_VERSION,
+    // Versões das políticas resolvidas (evidência — D14/D15).
+    policyVersions: policies.versions,
+    // Versão e conteúdo do prompt-base PADRÃO — apenas informativos (D6).
+    promptBaseVersion: defaultPromptBase.version,
+    defaultPromptBase: defaultPromptBase.content,
     briefing,
     // A aprovação é explícita: o cliente devolve `approved: true` apenas quando o
     // operador aprovou o texto final. O servidor não inventa aprovação.
