@@ -360,4 +360,37 @@ describe("architecture-guard — camada única de IA (F46-06)", () => {
     }
     expect(violations).toEqual([]);
   });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // F48.2.4 (D10/D17) — gate de fronteira estendido à região do laboratório e
+  // aos comandos `scripts/lab/**`. Estritamente aditivo: nenhuma regra acima é
+  // afrouxada. Prova que o adapter `Images` produtivo nunca é importado/
+  // instanciado pela bancada (que registra apenas o `BenchImagesAdapter`) e que
+  // `images` nunca é resolvido pelo registry padrão no runtime da bancada.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("a bancada e os comandos não importam/instanciam o ImagesAdapter produtivo", () => {
+    const violations: string[] = [];
+    for (const file of benchBoundaryFiles) {
+      const code = readCode(file);
+      if (/@\/lib\/ai\/adapters\/images\b/.test(code)) {
+        violations.push(`${file} → ImagesAdapter produtivo`);
+      }
+      if (/new\s+ImagesAdapter\s*\(/.test(code)) {
+        violations.push(`${file} → new ImagesAdapter(`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("o runtime da bancada não resolve `images` pelo registry padrão", () => {
+    const violations: string[] = [];
+    for (const file of benchFiles) {
+      const code = readCode(file);
+      if (/defaultAdapterRegistry\s*\.\s*get\s*\(\s*["'`]images["'`]\s*\)/.test(code)) {
+        violations.push(`${file} → registry padrão resolve images`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
 });

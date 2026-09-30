@@ -283,6 +283,9 @@ export const ALLOWED_TABLES = new Set([
   // destino de escrita ADITIVO permitido ao runtime; loja/branding permanecem
   // somente leitura (READ_ONLY_TABLES abaixo).
   "lab_bench_store_imports",
+  // F48.2.4 (D13/D14) — as colunas aditivas (policy_versions/prompt_base_version/
+  // identity_reference/attempt_of_run_id) NÃO criam tabelas novas: a linhagem usa
+  // coluna nullable na própria lab_bench_runs. Nenhuma mudança de allowlist.
   // F48.2.2 — leitura somente-leitura de lojas/branding do Supabase **local** (D3/D4).
   "stores",
   "store_brand_profiles",
@@ -333,10 +336,12 @@ export const ALLOWED_ENTRY_RE =
 export const FORBIDDEN_TARGETS = [
   "campaigns",
   "campaign_art_versions",
+  "campaign_images",
   "generation_events",
   "ai_model_selection",
   "admin_audit_log",
   "credit_transactions",
+  "credit_",
   "campaign-images",
 ];
 

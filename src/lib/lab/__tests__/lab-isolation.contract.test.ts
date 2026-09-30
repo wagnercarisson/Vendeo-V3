@@ -48,12 +48,17 @@ import { remainingUsd } from "@/lib/lab/domain/program-service";
 import { prepareLabRun, runReservedLabRun } from "@/lib/lab/run-service";
 import type { LabRunStatus } from "@/lib/lab/run-service";
 import {
+  ALLOWED_BUCKETS,
   ALLOWED_ENTRY_RE,
   ALLOWED_TABLES,
   FORBIDDEN_TARGETS,
   createRecordingClient,
   type Row,
 } from "./recording-supabase-client";
+import {
+  BenchBrandingSnapshotSchema,
+  BenchIdentityReferenceSchema,
+} from "@/lib/lab/bench/domain/schemas";
 
 /**
  * Suíte de contrato nº 1 (48-1-11, task 11.2) — **isolamento absoluto da produção**.
@@ -740,5 +745,132 @@ describe("isolamento — fronteira da bancada de geração (F48.2.2)", () => {
   it("ALLOWED_ENTRY_RE reconhece a auditoria local de importação", () => {
     expect(ALLOWED_TABLES.has("lab_bench_store_imports")).toBe(true);
     expect(ALLOWED_ENTRY_RE.test("from:lab_bench_store_imports")).toBe(true);
+  });
+});
+
+// ─── (F48.2.4) Identidade canônica, produção intocada e local-only ───────────
+
+describe("isolamento — identidade canônica e produção intocada (F48.2.4)", () => {
+  function minimalBrandingSnapshot(): Record<string, unknown> {
+    return {
+      storeId: STORE_ID,
+      storeName: "Loja Teste",
+      segment: "outros",
+      subsegment: null,
+      toneOfVoice: null,
+      positioning: null,
+      shortDescription: null,
+      slogan: null,
+      typographyDirection: null,
+      safeColorTokens: {},
+      brandColorsChosen: [],
+      inferredPrimaryColor: null,
+      storeBrandColor: null,
+      brandColor: "#22C55E",
+      logoColorsDetected: [],
+      visualStyle: null,
+      visualTone: null,
+      brandPersonality: null,
+      campaignGuidelines: null,
+      campaignBrief: null,
+      profileSource: null,
+      profileStatus: null,
+      logoUrl: null,
+      signatureUrl: null,
+      identityState: "logo",
+      identityReference: {
+        kind: "logo",
+        variantType: null,
+        storagePath: "store-logos/logo.png",
+      },
+      identityReason: "logo_resolved",
+      assets: [],
+    };
+  }
+
+  it("o descritor de identidade aceita apenas { kind, variantType, storagePath } — nunca URL assinada", () => {
+    expect(
+      BenchIdentityReferenceSchema.safeParse({
+        kind: "logo",
+        variantType: null,
+        storagePath: "store-logos/logo.png",
+      }).success,
+    ).toBe(true);
+
+    // `.strict()` recusa qualquer URL assinada/token embutido no descritor.
+    expect(
+      BenchIdentityReferenceSchema.safeParse({
+        kind: "logo",
+        variantType: null,
+        storagePath: "store-logos/logo.png",
+        signedUrl: "https://projeto.supabase.co/storage/v1/object/sign/store-logos/logo.png",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("o snapshot de branding não persiste URL assinada (identityReference strict)", () => {
+    expect(BenchBrandingSnapshotSchema.safeParse(minimalBrandingSnapshot()).success).toBe(true);
+
+    const withSignedUrl = {
+      ...minimalBrandingSnapshot(),
+      identityReference: {
+        kind: "logo",
+        variantType: null,
+        storagePath: "store-logos/logo.png",
+        signedUrl: "https://projeto.supabase.co/storage/v1/object/sign/store-logos/logo.png",
+      },
+    };
+    expect(BenchBrandingSnapshotSchema.safeParse(withSignedUrl).success).toBe(false);
+  });
+
+  it("o runtime não abre conexão remota (alvos remotos lançam)", () => {
+    const client = createRecordingClient().client as unknown as {
+      from: (table: string) => unknown;
+      storage: { from: (bucket: string) => unknown };
+    };
+    expect(() => client.from("remote_stores")).toThrow(/forbidden_production_access:remote_stores/);
+    expect(() => client.storage.from("remote-store-logos")).toThrow(
+      /forbidden_production_access:storage:remote-store-logos/,
+    );
+  });
+
+  it("nenhuma escrita em tabelas produtivas e o bucket campaign-images nunca é reutilizado", () => {
+    const client = createRecordingClient().client as unknown as {
+      from: (table: string) => { insert: (payload: unknown) => unknown };
+      storage: {
+        from: (bucket: string) => { createSignedUrl: (p: string, ttl: number) => unknown };
+      };
+    };
+    for (const table of [
+      "campaigns",
+      "campaign_art_versions",
+      "generation_events",
+      "ai_model_selection",
+      "admin_audit_log",
+      "credit_transactions",
+    ]) {
+      expect(() => client.from(table).insert({}), `escrita ${table}`).toThrow(
+        new RegExp(`forbidden_production_access:${table}`),
+      );
+    }
+    expect(() => client.storage.from("campaign-images").createSignedUrl("x", 60)).toThrow(
+      /forbidden_production_access:storage:campaign-images/,
+    );
+    expect(ALLOWED_BUCKETS.has("campaign-images")).toBe(false);
+    expect(ALLOWED_ENTRY_RE.test("storage.from:campaign-images")).toBe(false);
+  });
+
+  it("FORBIDDEN_TARGETS preserva todos os alvos produtivos (nenhuma regra afrouxada)", () => {
+    for (const target of [
+      "campaigns",
+      "campaign_images",
+      "generation_events",
+      "ai_model_selection",
+      "admin_audit_log",
+      "credit_",
+      "campaign-images",
+    ]) {
+      expect(FORBIDDEN_TARGETS).toContain(target);
+    }
   });
 });
