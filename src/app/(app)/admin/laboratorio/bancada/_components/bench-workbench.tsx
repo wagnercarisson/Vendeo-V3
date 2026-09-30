@@ -19,6 +19,14 @@ import {
   type BenchProductPayload,
 } from "./bench-execution-panel";
 import { BenchImageUpload, type BenchUploadResult } from "./bench-image-upload";
+import {
+  BenchAttemptsPanel,
+  type BenchAttemptView,
+} from "./bench-attempts-panel";
+import {
+  BenchPoliciesPanel,
+  type BenchPromptPolicyView,
+} from "./bench-policies-panel";
 import { BenchPresetSelector } from "./bench-preset-selector";
 import {
   BenchPreflightPanel,
@@ -80,6 +88,32 @@ export interface BenchWorkbenchProps {
   stores: BenchStoreOption[];
   presets: BenchPresetOption[];
   config: BenchConfigOptions;
+  /** Prompt-base padrão resolvido server-side (props iniciais — D6/D16). */
+  defaultPromptBase: string;
+  /** Versão do prompt-base padrão (evidência — D14). */
+  promptBaseVersion: string;
+  /** Políticas habilitadas do recorte (id/valor/versão) — props iniciais. */
+  enabledPolicies: BenchPromptPolicyView[];
+  /** Versão estática do compositor (evidência — D20). */
+  composerVersion: string;
+}
+
+/** Config canônica (8 dimensões) aprovada no preflight — modelo/qualidade do preset. */
+function buildCanonicalConfig(
+  config: BenchConfigOptions,
+  preset: BenchPresetOption | undefined,
+): Record<string, string> | null {
+  if (!preset) return null;
+  return {
+    pipeline: config.defaults.pipeline ?? "",
+    formato: config.defaults.formato ?? "",
+    modelo: preset.model,
+    qualidade: preset.quality,
+    intencao: config.defaults.intencao ?? "",
+    tipoConteudo: config.defaults.tipoConteudo ?? "",
+    estrutura: config.defaults.estrutura ?? "",
+    tema: config.defaults.tema ?? "",
+  };
 }
 
 function buildProductPayload(campaign: BenchCampaignFormValue): BenchProductPayload {
@@ -115,7 +149,15 @@ function buildOfferPayload(campaign: BenchCampaignFormValue): BenchOfferPayload 
 }
 
 export function BenchWorkbench(props: BenchWorkbenchProps) {
-  const { stores, presets, config } = props;
+  const {
+    stores,
+    presets,
+    config,
+    defaultPromptBase,
+    promptBaseVersion,
+    enabledPolicies,
+    composerVersion: composerVersionConstant,
+  } = props;
 
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
   const [branding, setBranding] = useState<BenchBrandingView | null>(null);
@@ -124,7 +166,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   const [campaign, setCampaign] = useState<BenchCampaignFormValue>(
     EMPTY_BENCH_CAMPAIGN_FORM,
   );
-  const [prompt, setPrompt] = useState("");
+  // O editor do prompt-base é semeado pelo padrão resolvido server-side (props
+  // iniciais) — sem depender de `POST /compose` (D6/D16).
+  const [prompt, setPrompt] = useState(defaultPromptBase);
   const [presetId, setPresetId] = useState(
     presets.find((preset) => preset.enabled)?.id ?? presets[0]?.id ?? "",
   );
@@ -143,9 +187,17 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   const [finalPrompt, setFinalPrompt] = useState("");
   const [promptBlocks, setPromptBlocks] = useState<Record<string, string>>({});
   const [composerVersion, setComposerVersion] = useState("");
+  const [policyVersions, setPolicyVersions] = useState<Record<string, string>>({});
+  const [composedPromptBaseVersion, setComposedPromptBaseVersion] =
+    useState(promptBaseVersion);
   const [composing, setComposing] = useState(false);
   const [preflightError, setPreflightError] = useState<string | null>(null);
   const hasComposedRef = useRef(false);
+
+  // Tentativas por linhagem explícita (D12/D13).
+  const [attempts, setAttempts] = useState<BenchAttemptView[]>([]);
+  const [startingAttempt, setStartingAttempt] = useState(false);
+  const [attemptsError, setAttemptsError] = useState<string | null>(null);
 
   const operationRef = useRef<{ id: string; fingerprint: string } | null>(null);
 
@@ -160,7 +212,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   /**
    * Ponto único de invalidação do preflight (D17/D20). Incrementa a revisão em
    * memória e descarta a composição aprovada. Chamado por **qualquer** mudança de
-   * entrada usada na composição — nunca apenas por `handleStoreChange`.
+   * entrada usada na composição — nunca apenas por `handleStoreChange`. A F48.2.4
+   * o reforça para cobrir prompt-base, configuração multidimensional
+   * (incl. modelo/qualidade) e as versões resolvidas.
    */
   const invalidatePreflight = useCallback(() => {
     setPreflightRevision((revision) => revision + 1);
@@ -169,6 +223,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     setFinalPrompt("");
     setPromptBlocks({});
     setComposerVersion("");
+    setPolicyVersions({});
     setPreflightError(null);
   }, []);
 
@@ -189,6 +244,11 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
 
   function handlePromptBaseChange(next: string) {
     setPrompt(next);
+    invalidatePreflight();
+  }
+
+  function handleResetPromptBase() {
+    setPrompt(defaultPromptBase);
     invalidatePreflight();
   }
 
@@ -225,6 +285,8 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         compiledPrompt?: string;
         blocks?: Record<string, string>;
         composerVersion?: string;
+        policyVersions?: Record<string, string>;
+        promptBaseVersion?: string;
       };
 
       if (!response.ok || typeof data.compiledPrompt !== "string") {
@@ -239,7 +301,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
       setCompiledPrompt(data.compiledPrompt);
       setFinalPrompt(data.compiledPrompt);
       setPromptBlocks(data.blocks ?? {});
-      setComposerVersion(data.composerVersion ?? "");
+      setComposerVersion(data.composerVersion ?? composerVersionConstant);
+      setPolicyVersions(data.policyVersions ?? {});
+      setComposedPromptBaseVersion(data.promptBaseVersion ?? promptBaseVersion);
       setPreflightStatus("composed");
       setComposing(false);
     } catch {
@@ -260,6 +324,20 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   }
 
   const approvedPrompt = preflightStatus === "approved" ? finalPrompt : null;
+  const selectedPreset = presets.find((preset) => preset.id === presetId);
+  const canonicalConfig = buildCanonicalConfig(config, selectedPreset);
+  const canonicalIdentityReference = branding?.identityReference
+    ? {
+        kind: branding.identityReference.kind,
+        variantType: branding.identityReference.variantType,
+        storagePath: branding.identityReference.storagePath,
+      }
+    : null;
+  // Evidência capturada no momento da aprovação, com TODOS os campos exigidos pelo
+  // `BenchPreflightEvidenceSchema` estrito (D11/D14) — inclusive `presetId`,
+  // `config` canônica (modelo/qualidade + recorte), `policyVersions`,
+  // `promptBaseVersion` e `identityReference` (sem URL assinada). Sem esses campos
+  // `POST /runs` responde 400 por preflight-evidence ausente.
   const preflightEvidence: BenchPreflightEvidenceView | null =
     preflightStatus === "approved"
       ? {
@@ -268,6 +346,11 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           promptApproved: finalPrompt,
           promptBlocks,
           composerVersion,
+          policyVersions,
+          promptBaseVersion: composedPromptBaseVersion,
+          identityReference: canonicalIdentityReference,
+          presetId,
+          ...(canonicalConfig ? { config: canonicalConfig } : {}),
         }
       : null;
 
@@ -283,6 +366,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         const data = (await response.json().catch(() => ({}))) as {
           run?: BenchRunEvidence;
           artifacts?: BenchArtifactView[];
+          attempts?: BenchAttemptView[];
         };
         if (!response.ok || !data.run) {
           setEvidenceError("Não foi possível carregar as evidências.");
@@ -290,6 +374,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           return;
         }
         setRunEvidence({ run: data.run, artifacts: data.artifacts ?? [] });
+        setAttempts(data.attempts ?? []);
         setEvidenceLoading(false);
       })
       .catch(() => {
@@ -297,6 +382,60 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         setEvidenceLoading(false);
       });
   }, []);
+
+  /**
+   * "Nova tentativa" (D12/D13): cria um novo run `draft` a partir do run de
+   * origem (último da linhagem, terminal) via `POST /runs/[id]/attempts`,
+   * reaproveitando as entradas copiadas server-side (sem reupload manual) e
+   * elevando `runId`/`references`/`operationId` do novo draft. Nenhuma chamada
+   * paga parte daqui; o operador edita/recompõe/aprova o novo prompt.
+   */
+  async function handleNewAttempt() {
+    const sourceId =
+      attempts.length > 0
+        ? attempts[attempts.length - 1].id
+        : (runEvidence?.run.id ?? null);
+    if (!sourceId) return;
+
+    setStartingAttempt(true);
+    setAttemptsError(null);
+
+    try {
+      const operationId = crypto.randomUUID();
+      const response = await fetch(
+        `/api/admin/laboratorio/bancada/runs/${encodeURIComponent(sourceId)}/attempts`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ operationId }),
+        },
+      );
+      const data = (await response.json().catch(() => ({}))) as {
+        runId?: string;
+        references?: string[];
+      };
+
+      if (!response.ok || !data.runId || !Array.isArray(data.references)) {
+        setAttemptsError("Não foi possível iniciar uma nova tentativa. Tente novamente.");
+        setStartingAttempt(false);
+        return;
+      }
+
+      setUpload({
+        runId: data.runId,
+        references: data.references,
+        operationId,
+        inputs: [],
+      });
+      setRunEvidence(null);
+      setEvidenceError(null);
+      invalidatePreflight();
+      setStartingAttempt(false);
+    } catch {
+      setAttemptsError("Não foi possível iniciar uma nova tentativa. Tente novamente.");
+      setStartingAttempt(false);
+    }
+  }
 
   useEffect(() => {
     if (!storeId) {
@@ -353,13 +492,25 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           getOperationId={getOperationId}
           onUploaded={handleUploaded}
         />
-        <BenchPromptEditor value={prompt} onChange={handlePromptBaseChange} />
+        <BenchPromptEditor
+          value={prompt}
+          onChange={handlePromptBaseChange}
+          promptBaseVersion={promptBaseVersion}
+          onResetToDefault={handleResetPromptBase}
+        />
+        <BenchPoliciesPanel
+          policies={enabledPolicies}
+          composerVersion={composerVersionConstant}
+          promptBaseVersion={promptBaseVersion}
+        />
         <BenchPreflightPanel
           key={preflightRevision}
           status={preflightStatus}
           compiledPrompt={compiledPrompt}
           finalPrompt={finalPrompt}
           composerVersion={composerVersion}
+          policyVersions={policyVersions}
+          promptBaseVersion={composedPromptBaseVersion}
           composing={composing}
           error={preflightError}
           onCompose={handleCompose}
@@ -394,6 +545,13 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
             error={evidenceError}
           />
         )}
+        <BenchAttemptsPanel
+          attempts={attempts}
+          error={attemptsError}
+          canStartAttempt={attempts.length > 0 || runEvidence !== null}
+          starting={startingAttempt}
+          onNewAttempt={handleNewAttempt}
+        />
       </div>
     </div>
   );

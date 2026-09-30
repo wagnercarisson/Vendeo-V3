@@ -4,6 +4,8 @@ import { AlertCircle, CheckCircle2, Loader2, PenLine, Wand2 } from "lucide-react
 
 import { Button } from "@/components/ui/button";
 
+import type { BenchIdentityReference } from "@/lib/lab/bench/domain/schemas";
+
 import { LabTextarea } from "../../_components/lab-textarea";
 
 /**
@@ -28,12 +30,25 @@ export type BenchPreflightStatus =
   | "approved"
   | "invalidated";
 
+/**
+ * Evidência do preflight aprovada — alinhada ao `BenchPreflightEvidenceSchema`
+ * **estrito** (F48.2.4, D11/D14). Além dos campos legados, carrega as versões das
+ * políticas, a versão do prompt-base padrão, a referência canônica da identidade
+ * (sem URL assinada), o preset e a configuração canônica aprovada (modelo/qualidade
+ * + dimensões do recorte) — capturados no momento da aprovação — de modo que
+ * `POST /runs` não responda 400 por campo ausente.
+ */
 export interface BenchPreflightEvidenceView {
   promptBase: string;
   promptCompiled: string;
   promptApproved: string;
   promptBlocks: Record<string, string>;
   composerVersion: string;
+  policyVersions?: Record<string, string>;
+  promptBaseVersion?: string;
+  identityReference?: BenchIdentityReference | null;
+  presetId?: string;
+  config?: Record<string, string>;
 }
 
 interface BenchPreflightPanelProps {
@@ -44,6 +59,10 @@ interface BenchPreflightPanelProps {
   composing: boolean;
   error: string | null;
   disabled?: boolean;
+  /** Versões das políticas resolvidas (exibidas junto ao prompt compilado). */
+  policyVersions?: Record<string, string>;
+  /** Versão do prompt-base padrão (exibida junto ao prompt compilado). */
+  promptBaseVersion?: string;
   onCompose: () => void;
   onEditFinal: (value: string) => void;
   onApprove: () => void;
@@ -65,6 +84,8 @@ export function BenchPreflightPanel({
   composing,
   error,
   disabled = false,
+  policyVersions,
+  promptBaseVersion,
   onCompose,
   onEditFinal,
   onApprove,
@@ -73,6 +94,12 @@ export function BenchPreflightPanel({
   const canApprove =
     (status === "composed" || status === "edited") && finalPrompt.trim().length > 0;
   const invalidated = status === "invalidated";
+  const policyVersionsText =
+    policyVersions && Object.keys(policyVersions).length > 0
+      ? Object.entries(policyVersions)
+          .map(([dimension, version]) => `${dimension}:${version}`)
+          .join(" · ")
+      : "—";
 
   return (
     <section
@@ -134,6 +161,36 @@ export function BenchPreflightPanel({
           Aprovar prompt
         </Button>
       </div>
+
+      <dl
+        data-testid="bench-preflight-versions"
+        className="grid gap-3 rounded-lg border border-border bg-bg-deep/40 p-3 sm:grid-cols-3"
+      >
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-xs font-medium uppercase tracking-wider text-text-muted font-heading">
+            Versão do compositor
+          </dt>
+          <dd className="break-words font-mono text-xs text-text-primary">
+            {composerVersion || "—"}
+          </dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-xs font-medium uppercase tracking-wider text-text-muted font-heading">
+            Prompt-base padrão
+          </dt>
+          <dd className="break-words font-mono text-xs text-text-primary">
+            {promptBaseVersion || "—"}
+          </dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-xs font-medium uppercase tracking-wider text-text-muted font-heading">
+            Versões das políticas
+          </dt>
+          <dd className="break-words font-mono text-xs text-text-primary">
+            {policyVersionsText}
+          </dd>
+        </div>
+      </dl>
 
       {showCompiled && (
         <LabTextarea
