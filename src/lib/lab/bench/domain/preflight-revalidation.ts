@@ -10,8 +10,8 @@ import { composePromptBlocks, type BenchPromptComposition } from "./prompt-compo
  * **Revalidação server-side do preflight** da bancada (F48.2.4, D11; spec
  * `lab-bench-prompt-preflight`).
  *
- * Módulo **puro e sem IA** — sem I/O, sem `process.env`, sem provider e sem
- * client Supabase. Antes de qualquer chamada paga, o servidor:
+ * Módulo **puro e sem IA** — sem I/O, sem variáveis de ambiente, sem provider e
+ * sem client Supabase. Antes de qualquer chamada paga, o servidor:
  *
  *  1. **recompõe** o prompt a partir das entradas atuais de forma determinística
  *     (`recomposeBenchPrompt`) — o mesmo núcleo + políticas + branding mapping +
