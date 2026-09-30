@@ -468,6 +468,106 @@ export async function finalizeBenchRun(params: {
   }
 }
 
+// ─── Linhagem explícita de tentativas (D13 — sem nova tabela) ────────────────
+
+/** Linhagem completa de uma campanha: raiz + descendentes (ordem de criação). */
+export interface BenchRunLineage {
+  root: BenchRunRecord;
+  /** Raiz + descendentes, ordenados por `created_at`. */
+  runs: BenchRunRecord[];
+}
+
+/** Carrega todos os runs da bancada (consulta direta, sem heurística). */
+async function loadAllBenchRuns(client: SupabaseClient): Promise<BenchRunRecord[]> {
+  const { data, error } = await client.from(BENCH_RUNS_TABLE).select("*");
+  if (error) throw new BenchRunError("bench_run_transition_failed");
+  return ((data ?? []) as Array<Record<string, unknown>>).map(mapBenchRunRow);
+}
+
+/** `storeId` real persistido no branding snapshot (ou `null`). */
+function storeIdFromBrandingSnapshot(snapshot: unknown): string | null {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  const candidate = (snapshot as { storeId?: unknown }).storeId;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+/** Coleta a raiz + descendentes por `attempt_of_run_id`, ordenados por `created_at`. */
+function collectLineage(root: BenchRunRecord, all: readonly BenchRunRecord[]): BenchRunRecord[] {
+  const childrenOf = new Map<string, BenchRunRecord[]>();
+  for (const run of all) {
+    if (!run.attemptOfRunId) continue;
+    const bucket = childrenOf.get(run.attemptOfRunId) ?? [];
+    bucket.push(run);
+    childrenOf.set(run.attemptOfRunId, bucket);
+  }
+
+  const collected: BenchRunRecord[] = [];
+  const queue: BenchRunRecord[] = [root];
+  const seen = new Set<string>([root.id]);
+  while (queue.length > 0) {
+    const current = queue.shift() as BenchRunRecord;
+    collected.push(current);
+    for (const child of childrenOf.get(current.id) ?? []) {
+      if (seen.has(child.id)) continue;
+      seen.add(child.id);
+      queue.push(child);
+    }
+  }
+
+  return collected.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+}
+
+/**
+ * Encontra a **raiz** da linhagem de `runId` e devolve **raiz + descendentes** por
+ * `attempt_of_run_id`, ordenados por `created_at` (usado por `GET /runs/[id]`).
+ * Sem heurística de fingerprint e sem nova tabela. `run_not_found` ⇒
+ * `bench_run_not_found`.
+ */
+export async function listBenchRunLineage(params: {
+  client: SupabaseClient;
+  runId: string;
+}): Promise<BenchRunRecord[]> {
+  const all = await loadAllBenchRuns(params.client);
+  const byId = new Map(all.map((run) => [run.id, run]));
+  const target = byId.get(params.runId);
+  if (!target) throw new BenchRunError("bench_run_not_found");
+
+  let root = target;
+  const visited = new Set<string>([root.id]);
+  while (root.attemptOfRunId) {
+    const parent = byId.get(root.attemptOfRunId);
+    if (!parent || visited.has(parent.id)) break; // guarda contra ciclo
+    visited.add(parent.id);
+    root = parent;
+  }
+
+  return collectLineage(root, all);
+}
+
+/**
+ * Devolve **múltiplas linhagens separadas** (uma por raiz) de uma loja (usado por
+ * `GET /runs?storeId=...`). Campanhas independentes da mesma loja **nunca** são
+ * mescladas. A loja da raiz é derivada do `branding_snapshot.storeId` (o
+ * `campaign_snapshot` usa um `storeId` sintético). Descendentes `draft` aparecem
+ * agrupados sob sua raiz **pela linhagem** (`attempt_of_run_id`), mesmo antes de o
+ * novo run receber `campaign_snapshot`. Sem nova tabela.
+ */
+export async function listBenchRunLineagesByStore(params: {
+  client: SupabaseClient;
+  storeId: string;
+}): Promise<BenchRunLineage[]> {
+  const all = await loadAllBenchRuns(params.client);
+  const roots = all
+    .filter(
+      (run) =>
+        run.attemptOfRunId === null &&
+        storeIdFromBrandingSnapshot(run.brandingSnapshot) === params.storeId,
+    )
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+
+  return roots.map((root) => ({ root, runs: collectLineage(root, all) }));
+}
+
 // ─── Reconciliação preguiçosa (sem scheduler) ────────────────────────────────
 
 /**
