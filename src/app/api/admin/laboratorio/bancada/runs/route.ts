@@ -16,6 +16,15 @@ import {
   loadBenchBranding,
   toBenchBrandingSnapshot,
 } from "@/lib/lab/bench/domain/branding-service";
+import { buildBenchExperimentalBriefing } from "@/lib/lab/bench/domain/experimental-briefing";
+import {
+  BenchPreflightRevalidationError,
+  assertPreflightCompositionMatches,
+  assertPreflightEvidenceMatches,
+  recomposeBenchPrompt,
+  resolveServerResolvedEvidence,
+} from "@/lib/lab/bench/domain/preflight-revalidation";
+import { resolveBenchDefaultPromptBase } from "@/lib/lab/bench/domain/prompt-base";
 import { BenchPresetError, resolveBenchPreset } from "@/lib/lab/bench/domain/preset-registry";
 import { BenchRunInputSchema } from "@/lib/lab/bench/domain/schemas";
 import {
@@ -24,6 +33,10 @@ import {
 } from "@/lib/lab/bench/domain/store-manifest";
 import { executeBenchRun } from "@/lib/lab/bench/execution/bench-execution-service";
 import {
+  BenchIdentityTransportError,
+  resolveBenchIdentityImageDataUrl,
+} from "@/lib/lab/bench/execution/bench-identity-transport";
+import {
   createBenchAdapterRegistry,
   createBenchGateway,
 } from "@/lib/lab/bench/gateway/runtime";
@@ -31,6 +44,7 @@ import {
   BenchRunError,
   confirmBenchRun,
   getBenchRunByOperationId,
+  listBenchRunLineagesByStore,
   setBenchRunInput,
 } from "@/lib/lab/bench/persistence/bench-run-service";
 import {
@@ -54,6 +68,9 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 /** Tabela de erros da bancada que a rota mapeia em HTTP. */
 const CONFLICT_CODES: readonly string[] = ["bench_run_already_active"];
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Extensão do path de entrada → MIME canônico aceito pelo bucket. */
 const INPUT_MIME_BY_EXTENSION: Record<string, string> = {
@@ -216,9 +233,100 @@ export const POST = apiHandler(async (request: Request) => {
     offer: input.offer,
     config,
   });
-  const brandingSnapshot = toBenchBrandingSnapshot(
-    await loadBenchBranding({ client: supabaseAdmin, storeId: input.storeId }),
-  );
+
+  const branding = await loadBenchBranding({
+    client: supabaseAdmin,
+    storeId: input.storeId,
+  });
+  const brandingSnapshot = toBenchBrandingSnapshot(branding);
+  const briefing = buildBenchExperimentalBriefing({
+    branding,
+    snapshot: campaignSnapshot,
+    config,
+  });
+
+  // Referência canônica da identidade (sem URL assinada — D10/D14).
+  const identityReference = branding.identityReference
+    ? {
+        kind: branding.identityReference.kind,
+        variantType: branding.identityReference.variantType,
+        storagePath: branding.identityReference.storagePath,
+      }
+    : null;
+
+  // ── Revalidação server-side do preflight (D11) — ANTES do CAS e do provider ──
+  // (a) recompõe o prompt a partir das entradas atuais e exige igualdade byte a
+  // byte com o `promptCompiled` aprovado; (b) compara a evidência completa
+  // aprovada (`presetId`/config/políticas/prompt-base/compositor/identidade) com
+  // os valores RESOLVIDOS NO SERVIDOR — campo a campo, sem hash. QUALQUER
+  // divergência ⇒ 409 `approval_invalidated`, sem chamada paga.
+  const recomposition = recomposeBenchPrompt({
+    briefing,
+    promptBase: input.preflight.promptBase,
+    references: input.references,
+    config,
+    identityReference,
+  });
+
+  try {
+    assertPreflightCompositionMatches({
+      recomposed: recomposition.text,
+      promptCompiled: input.preflight.promptCompiled,
+    });
+  } catch (error) {
+    if (error instanceof BenchPreflightRevalidationError) {
+      // Composição divergente ⇒ 409 approval_invalidated (evidência obsoleta).
+      return NextResponse.json({ error: "approval_invalidated" }, { status: 409 });
+    }
+    throw error;
+  }
+
+  const defaultPromptBase = resolveBenchDefaultPromptBase(config);
+  const currentEvidence = resolveServerResolvedEvidence({
+    recomposition,
+    presetId: input.presetId,
+    config,
+    promptBaseVersion: defaultPromptBase.version,
+    identityReference,
+  });
+
+  try {
+    assertPreflightEvidenceMatches({
+      approved: {
+        presetId: input.preflight.presetId ?? null,
+        config: input.preflight.config ?? null,
+        policyVersions: input.preflight.policyVersions ?? null,
+        promptBaseVersion: input.preflight.promptBaseVersion ?? null,
+        composerVersion: input.preflight.composerVersion,
+        identityReference: input.preflight.identityReference ?? null,
+      },
+      current: currentEvidence,
+    });
+  } catch (error) {
+    if (error instanceof BenchPreflightRevalidationError) {
+      // Evidência divergente (preset/config/políticas/prompt-base/compositor/
+      // identidade) ⇒ 409 approval_invalidated, sem hash persistido.
+      return NextResponse.json({ error: "approval_invalidated" }, { status: 409 });
+    }
+    throw error;
+  }
+
+  // ── Transporte canônico da identidade (D10) — fail-closed ANTES da chamada paga.
+  let identityImageUrl: string | null;
+  try {
+    identityImageUrl = await resolveBenchIdentityImageDataUrl({
+      client: supabaseAdmin,
+      identityState: branding.identityState,
+      identityReference,
+    });
+  } catch (error) {
+    if (error instanceof BenchIdentityTransportError) {
+      // `bench_identity_reference_unavailable` (ou `_incompatible`): identidade
+      // exigida indisponível — recusa antes de qualquer chamada paga, sem fallback.
+      return NextResponse.json({ error: error.code }, { status: 400 });
+    }
+    throw error;
+  }
 
   try {
     await setBenchRunInput({
@@ -235,6 +343,12 @@ export const POST = apiHandler(async (request: Request) => {
       promptApproved: approvedPrompt,
       promptBlocks: input.preflight.promptBlocks,
       composerVersion: input.preflight.composerVersion,
+      // Novas evidências SEMPRE com os valores RESOLVIDOS NO SERVIDOR (nunca os do
+      // cliente): versões das políticas, versão do prompt-base padrão e referência
+      // canônica da identidade (sem URL assinada).
+      policyVersions: currentEvidence.policyVersions,
+      promptBaseVersion: currentEvidence.promptBaseVersion ?? undefined,
+      identityReference: currentEvidence.identityReference,
       references: input.references,
       provider: preset.provider,
       protocol: preset.protocol,
@@ -307,7 +421,13 @@ export const POST = apiHandler(async (request: Request) => {
           telemetrySink: sink,
           run: { id: runId },
           preset,
-          request: { prompt: approvedPrompt, productImagesDataUrls },
+          request: {
+            prompt: approvedPrompt,
+            productImagesDataUrls,
+            // Identidade canônica já resolvida (última referência; ausente em
+            // `text_only`). Nunca re-resolvida aqui (D10).
+            ...(identityImageUrl ? { identityImageUrl } : {}),
+          },
           telemetry,
         });
 
@@ -336,5 +456,66 @@ export const POST = apiHandler(async (request: Request) => {
 
   return new Response(stream, {
     headers: { "Content-Type": "application/x-ndjson" },
+  });
+});
+
+// ─── GET /runs?storeId=... (linhagens separadas por loja — D13/D15) ───────────
+//
+// Ordem obrigatória: admin → guarda de ambiente → `storeId` (400) →
+// `assertBenchTestStore` ANTES de qualquer leitura com `storeId`. Devolve
+// **múltiplas linhagens separadas** (uma por raiz) via
+// `listBenchRunLineagesByStore`: campanhas independentes da mesma loja NUNCA são
+// mescladas, e descendentes `draft` aparecem agrupados sob sua raiz pela linhagem
+// (`attempt_of_run_id`). Nenhum secret é exposto.
+export const GET = apiHandler(async (request: Request) => {
+  await requireAdmin();
+
+  try {
+    assertLabEnvironment();
+  } catch (error) {
+    if (error instanceof LabEnvironmentError) {
+      return NextResponse.json(labEnvironmentDeniedBody(error.reason), {
+        status: 403,
+      });
+    }
+    throw error;
+  }
+
+  const storeId = new URL(request.url).searchParams.get("storeId") ?? "";
+  if (!UUID_REGEX.test(storeId)) {
+    return NextResponse.json(
+      { error: "invalid_payload", details: ["storeId"] },
+      { status: 400 },
+    );
+  }
+
+  // Manifesto ANTES de qualquer leitura com `storeId`.
+  try {
+    await assertBenchTestStore({ client: supabaseAdmin, storeId });
+  } catch (error) {
+    if (error instanceof BenchStoreManifestError) {
+      return NextResponse.json({ error: error.code }, { status: 400 });
+    }
+    throw error;
+  }
+
+  const lineages = await listBenchRunLineagesByStore({
+    client: supabaseAdmin,
+    storeId,
+  });
+
+  return NextResponse.json({
+    lineages: lineages.map((lineage) => ({
+      rootId: lineage.root.id,
+      runs: lineage.runs.map((run) => ({
+        id: run.id,
+        status: run.status,
+        attemptOfRunId: run.attemptOfRunId,
+        createdAt: run.createdAt,
+        finishedAt: run.finishedAt,
+        promptBaseVersion: run.promptBaseVersion,
+        estimatedCostUsd: run.estimatedCostUsd,
+      })),
+    })),
   });
 });

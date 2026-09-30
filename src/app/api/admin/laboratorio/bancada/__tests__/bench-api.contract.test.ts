@@ -30,6 +30,14 @@ const {
   MockBenchPromptBaseError,
   mockBuildBrandingPromptContributions,
   mockBuildIdentityDirectionContributions,
+  mockRecomposeBenchPrompt,
+  MockBenchPreflightRevalidationError,
+  mockAssertPreflightCompositionMatches,
+  mockAssertPreflightEvidenceMatches,
+  mockResolveServerResolvedEvidence,
+  mockResolveBenchIdentityImageDataUrl,
+  MockBenchIdentityTransportError,
+  mockListBenchRunLineagesByStore,
   mockReserveBenchRun,
   mockGetBenchRunByOperationId,
   mockSetBenchRunInput,
@@ -104,6 +112,26 @@ const {
     }
   }
 
+  class MockBenchPreflightRevalidationError extends Error {
+    readonly code = "approval_invalidated";
+    readonly reason: string;
+    constructor(reason: string) {
+      super(`approval_invalidated:${reason}`);
+      this.name = "BenchPreflightRevalidationError";
+      this.code = "approval_invalidated";
+      this.reason = reason;
+    }
+  }
+
+  class MockBenchIdentityTransportError extends Error {
+    readonly code: string;
+    constructor(code: string, detail: string) {
+      super(`${code}:${detail}`);
+      this.name = "BenchIdentityTransportError";
+      this.code = code;
+    }
+  }
+
   return {
     mockRequireAdmin: vi.fn(),
     mockAssertLabEnvironment: vi.fn(),
@@ -129,6 +157,14 @@ const {
     MockBenchPromptBaseError,
     mockBuildBrandingPromptContributions: vi.fn(),
     mockBuildIdentityDirectionContributions: vi.fn(),
+    mockRecomposeBenchPrompt: vi.fn(),
+    MockBenchPreflightRevalidationError,
+    mockAssertPreflightCompositionMatches: vi.fn(),
+    mockAssertPreflightEvidenceMatches: vi.fn(),
+    mockResolveServerResolvedEvidence: vi.fn(),
+    mockResolveBenchIdentityImageDataUrl: vi.fn(),
+    MockBenchIdentityTransportError,
+    mockListBenchRunLineagesByStore: vi.fn(),
     mockReserveBenchRun: vi.fn(),
     mockGetBenchRunByOperationId: vi.fn(),
     mockSetBenchRunInput: vi.fn(),
@@ -266,6 +302,22 @@ vi.mock("@/lib/lab/bench/domain/identity-direction", () => ({
     mockBuildIdentityDirectionContributions(...args),
 }));
 
+vi.mock("@/lib/lab/bench/domain/preflight-revalidation", () => ({
+  recomposeBenchPrompt: (...args: unknown[]) => mockRecomposeBenchPrompt(...args),
+  assertPreflightCompositionMatches: (...args: unknown[]) =>
+    mockAssertPreflightCompositionMatches(...args),
+  assertPreflightEvidenceMatches: (...args: unknown[]) =>
+    mockAssertPreflightEvidenceMatches(...args),
+  resolveServerResolvedEvidence: (...args: unknown[]) => mockResolveServerResolvedEvidence(...args),
+  BenchPreflightRevalidationError: MockBenchPreflightRevalidationError,
+}));
+
+vi.mock("@/lib/lab/bench/execution/bench-identity-transport", () => ({
+  resolveBenchIdentityImageDataUrl: (...args: unknown[]) =>
+    mockResolveBenchIdentityImageDataUrl(...args),
+  BenchIdentityTransportError: MockBenchIdentityTransportError,
+}));
+
 vi.mock("@/lib/lab/bench/persistence/bench-run-service", () => ({
   reserveBenchRun: (...args: unknown[]) => mockReserveBenchRun(...args),
   getBenchRunByOperationId: (...args: unknown[]) => mockGetBenchRunByOperationId(...args),
@@ -273,6 +325,7 @@ vi.mock("@/lib/lab/bench/persistence/bench-run-service", () => ({
   confirmBenchRun: (...args: unknown[]) => mockConfirmBenchRun(...args),
   finalizeBenchRun: (...args: unknown[]) => mockFinalizeBenchRun(...args),
   getBenchRun: (...args: unknown[]) => mockGetBenchRun(...args),
+  listBenchRunLineagesByStore: (...args: unknown[]) => mockListBenchRunLineagesByStore(...args),
   BenchRunError: MockBenchRunError,
 }));
 
@@ -555,6 +608,11 @@ async function getRun(id: string = RUN_ID): Promise<Response> {
   return GET(new NextRequest(`${BASE}/runs/${id}`), { params: Promise.resolve({ id }) });
 }
 
+async function getRuns(storeId: string = STORE_ID): Promise<Response> {
+  const { GET } = await import("@/app/api/admin/laboratorio/bancada/runs/route");
+  return GET(new NextRequest(`${BASE}/runs?storeId=${storeId}`));
+}
+
 interface RouteCall {
   name: string;
   call: () => Promise<Response>;
@@ -570,6 +628,7 @@ function allRouteCalls(): RouteCall[] {
     { name: "POST /compose", call: () => postCompose() },
     { name: "POST /inputs", call: () => postInputs(buildInputForm(OP_ID)) },
     { name: "POST /runs", call: () => postRun(VALID_RUN_BODY) },
+    { name: "GET /runs", call: () => getRuns() },
     { name: "GET /runs/[id]", call: () => getRun() },
   ];
 }
@@ -717,6 +776,40 @@ beforeEach(() => {
   });
   mockBuildBrandingPromptContributions.mockReturnValue([]);
   mockBuildIdentityDirectionContributions.mockReturnValue([]);
+
+  mockRecomposeBenchPrompt.mockReturnValue({
+    text: "prompt compilado",
+    blocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
+    composerVersion: "test-composer-v1",
+    policyVersions: { intencao: "oferta-v1" },
+  });
+  mockAssertPreflightCompositionMatches.mockReturnValue(undefined);
+  mockAssertPreflightEvidenceMatches.mockReturnValue(undefined);
+  mockResolveServerResolvedEvidence.mockReturnValue({
+    presetId: PRESET_ID,
+    config: {
+      pipeline: "manual-direto",
+      formato: "1:1",
+      modelo: "gpt-image-2",
+      qualidade: "low",
+      intencao: "oferta",
+      tipoConteudo: "produto",
+      estrutura: "peca-unica",
+      tema: "nenhum",
+    },
+    policyVersions: { intencao: "oferta-v1" },
+    promptBaseVersion: "test-prompt-base-v1",
+    composerVersion: "test-composer-v1",
+    identityReference: {
+      kind: "logo",
+      variantType: "primary",
+      storagePath: "logos/loja-a.png",
+    },
+  });
+  mockResolveBenchIdentityImageDataUrl.mockResolvedValue("data:image/png;base64,AAAA");
+  mockListBenchRunLineagesByStore.mockResolvedValue([
+    { root: { ...DETAIL_RUN }, runs: [{ ...DETAIL_RUN }] },
+  ]);
 
   mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: false });
   mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN });
@@ -1473,6 +1566,140 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     expect(text).not.toContain("Bearer ");
     expect(text).toContain("Execução falhou");
   });
+
+  // ─── 5b. Revalidação server-side do preflight e transporte de identidade ─────
+
+  it("composição divergente ⇒ 409 approval_invalidated antes do CAS e do provider", async () => {
+    mockAssertPreflightCompositionMatches.mockImplementation(() => {
+      throw new MockBenchPreflightRevalidationError("composition_diverged");
+    });
+
+    const res = await postRun(VALID_RUN_BODY);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("approval_invalidated");
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("evidência divergente (config/modelo/qualidade) ⇒ 409 approval_invalidated sem chamada paga", async () => {
+    mockAssertPreflightEvidenceMatches.mockImplementation(() => {
+      throw new MockBenchPreflightRevalidationError("config_diverged");
+    });
+
+    const res = await postRun(VALID_RUN_BODY);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("approval_invalidated");
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("identidade indisponível ⇒ 400 bench_identity_reference_unavailable antes da chamada paga", async () => {
+    mockResolveBenchIdentityImageDataUrl.mockRejectedValue(
+      new MockBenchIdentityTransportError("bench_identity_reference_unavailable", "logo:download_failed"),
+    );
+
+    const res = await postRun(VALID_RUN_BODY);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("bench_identity_reference_unavailable");
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("revalida antes do CAS e persiste as evidências RESOLVIDAS no servidor", async () => {
+    const res = await postRun(VALID_RUN_BODY);
+    await res.text();
+
+    // Ordem: recomposição → fixação em draft → CAS.
+    const recomposeIdx = mockRecomposeBenchPrompt.mock.invocationCallOrder[0];
+    const setIdx = mockSetBenchRunInput.mock.invocationCallOrder[0];
+    const confirmIdx = mockConfirmBenchRun.mock.invocationCallOrder[0];
+    expect(recomposeIdx).toBeLessThan(setIdx);
+    expect(setIdx).toBeLessThan(confirmIdx);
+
+    // As evidências persistidas vêm dos valores resolvidos no servidor.
+    const setCall = mockSetBenchRunInput.mock.calls[0][0] as {
+      policyVersions: unknown;
+      promptBaseVersion: string;
+      identityReference: unknown;
+      promptSent: string;
+    };
+    expect(setCall.policyVersions).toEqual({ intencao: "oferta-v1" });
+    expect(setCall.promptBaseVersion).toBe("test-prompt-base-v1");
+    expect(setCall.identityReference).toEqual({
+      kind: "logo",
+      variantType: "primary",
+      storagePath: "logos/loja-a.png",
+    });
+    // `prompt_sent` permanece byte a byte o prompt aprovado.
+    expect(setCall.promptSent).toBe("prompt manual");
+
+    // A identidade resolvida é transportada ao provider (última referência).
+    const execCall = mockExecuteBenchRun.mock.calls[0][0] as {
+      request: { prompt: string; identityImageUrl?: string };
+    };
+    expect(execCall.request.prompt).toBe("prompt manual");
+    expect(execCall.request.identityImageUrl).toBe("data:image/png;base64,AAAA");
+  });
+});
+
+// ─── 5c. Listagem de linhagens por loja (GET /runs?storeId=...) ───────────────
+
+describe("contrato da API da bancada — linhagens por loja", () => {
+  it("GET /runs?storeId=... ⇒ 200 com múltiplas linhagens separadas via listBenchRunLineagesByStore", async () => {
+    mockListBenchRunLineagesByStore.mockResolvedValue([
+      { root: { ...DETAIL_RUN }, runs: [{ ...DETAIL_RUN }] },
+      {
+        root: { ...DETAIL_RUN, id: "55555555-5555-4555-8555-555555555555" },
+        runs: [{ ...DETAIL_RUN, id: "55555555-5555-4555-8555-555555555555" }],
+      },
+    ]);
+
+    const res = await getRuns();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.lineages).toHaveLength(2);
+    expect(body.lineages[0].rootId).toBe(RUN_ID);
+    expect(body.lineages[0].runs[0].id).toBe(RUN_ID);
+    expect(mockListBenchRunLineagesByStore).toHaveBeenCalledWith(
+      expect.objectContaining({ storeId: STORE_ID }),
+    );
+
+    // Manifesto validado antes de qualquer leitura por linhagem.
+    const assertIdx = mockAssertBenchTestStore.mock.invocationCallOrder[0];
+    const listIdx = mockListBenchRunLineagesByStore.mock.invocationCallOrder[0];
+    expect(assertIdx).toBeLessThan(listIdx);
+  });
+
+  it("GET /runs sem storeId válido ⇒ 400 sem listar linhagens", async () => {
+    const res = await getRuns("");
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
+    expect(mockListBenchRunLineagesByStore).not.toHaveBeenCalled();
+  });
+
+  it("GET /runs com loja fora do manifesto ⇒ 400 sem listar linhagens", async () => {
+    mockAssertBenchTestStore.mockRejectedValue(
+      new MockBenchStoreManifestError("store_not_in_manifest", OUTSIDE_STORE_ID),
+    );
+
+    const res = await getRuns(OUTSIDE_STORE_ID);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("store_not_in_manifest");
+    expect(mockListBenchRunLineagesByStore).not.toHaveBeenCalled();
+  });
 });
 
 // ─── 6. Detalhe (/runs/[id]) ─────────────────────────────────────────────────
@@ -1665,6 +1892,19 @@ describe("contrato de fonte — ordem de guards e fronteiras", () => {
     const source = readRoute("runs/[id]/route.ts");
     expect(source).toContain("createBenchArtifactSignedUrl");
     expect(source).toContain("listBenchArtifacts");
+  });
+
+  it("runs revalida o preflight, transporta a identidade e lista linhagens", () => {
+    const source = readRoute("runs/route.ts");
+    expect(source).toContain("approval_invalidated");
+    expect(source).toContain("bench_identity_reference_unavailable");
+    expect(source).toContain("recomposeBenchPrompt");
+    expect(source).toContain("assertPreflightCompositionMatches");
+    expect(source).toContain("assertPreflightEvidenceMatches");
+    expect(source).toContain("resolveServerResolvedEvidence");
+    expect(source).toContain("resolveBenchIdentityImageDataUrl");
+    expect(source).toContain("listBenchRunLineagesByStore");
+    expect(source).toContain("export const GET");
   });
 
   it("nenhuma rota da bancada toca a produção (campaign-images/prompts/ai_model_selection)", () => {
