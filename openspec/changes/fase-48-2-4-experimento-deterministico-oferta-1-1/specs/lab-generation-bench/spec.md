@@ -23,6 +23,12 @@ A bancada SHALL persistir uma unidade de auditoria própria por geração, conte
 - **THEN** nenhuma linha de baseline/candidata/cenário/repetição/avaliação é criada
 - **AND** nenhuma tabela operacional de campanhas é alterada
 
+#### Scenario: Referências de entrada preservam a ordem principal → adicionais
+
+- **WHEN** as referências locais de entrada são persistidas
+- **THEN** a imagem principal ocupa o índice 0 e as adicionais os índices seguintes, na ordem selecionada
+- **AND** a ordem é preservada até o transporte ao modelo
+
 ### Requirement: Geração exige preflight aprovado
 
 A bancada SHALL exigir um **preflight aprovado** (`lab-bench-prompt-preflight`) antes de qualquer geração e SHALL enviar exatamente o `prompt_sent` aprovado, registrando na evidência o briefing estruturado, os blocos, o prompt compilado, o prompt final aprovado e as versões, sem criar campanhas produtivas, runs produtivos ou eventos. Antes da chamada paga, o servidor SHALL recompor o prompt e recusar a geração quando a composição divergir da aprovada (`approval_invalidated`).

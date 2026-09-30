@@ -87,6 +87,17 @@ A API SHALL permitir iniciar uma **nova tentativa** a partir de uma geração an
 - **THEN** os artefatos de entrada do run anterior são reaproveitados sob o prefixo do novo run
 - **AND** nenhuma nova tabela é criada
 
+### Requirement: Upload de entradas preserva a ordem principal → adicionais
+
+A rota de inputs SHALL aceitar múltiplos arquivos em um **único multipart** (`operationId` + `files`) e SHALL persistir a **imagem principal no índice 0** e as **imagens adicionais nos índices seguintes, na ordem recebida**, devolvendo `inputs` nessa mesma ordem. A rota SHALL NOT criar endpoint adicional, SHALL NOT permitir append mutável em um run já enviado e SHALL NOT ler nem gravar o bucket produtivo de imagens de campanha.
+
+#### Scenario: Inputs preservam a ordem principal → adicionais
+
+- **WHEN** a rota de inputs recebe um multipart com a principal e as adicionais em ordem
+- **THEN** ela persiste a principal no índice 0 e as adicionais nos índices seguintes, na ordem recebida
+- **AND** a resposta devolve `inputs` nessa mesma ordem
+- **AND** nenhum bucket produtivo é lido ou gravado
+
 #### Scenario: Lista de tentativas usa a linhagem explícita
 
 - **WHEN** as tentativas de uma campanha são solicitadas

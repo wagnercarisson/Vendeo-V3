@@ -4,13 +4,19 @@
 
 ### Requirement: Ordem documentada das referências enviadas ao modelo
 
-O adapter `Images` dedicado da bancada SHALL enviar as referências ao modelo na ordem documentada e fixa: (1) imagem principal do produto; (2) imagens adicionais do produto; (3) referência canônica de identidade, quando aplicável. A orientação textual SHALL exigir reprodução fiel da identidade, sem redesenhar, distorcer, completar ou reinterpretar, mantendo-a **secundária** à comunicação comercial e **sem posição fixa**.
+O adapter `Images` dedicado da bancada SHALL enviar as referências ao modelo na ordem documentada e fixa: (1) imagem principal do produto; (2) imagens adicionais do produto, **na ordem selecionada**; (3) referência canônica de identidade, quando aplicável. A **imagem principal** SHALL corresponder ao índice 0 das referências do produto (`bench/{runId}/inputs/0.*`) e as **adicionais** aos índices seguintes, na ordem selecionada pelo operador. A orientação textual SHALL exigir reprodução fiel da identidade, sem redesenhar, distorcer, completar ou reinterpretar, mantendo-a **secundária** à comunicação comercial e **sem posição fixa**.
 
 #### Scenario: Ordem das referências é respeitada
 
 - **WHEN** a geração é executada
-- **THEN** as referências são enviadas na ordem principal → adicionais → identidade canônica
+- **THEN** as referências são enviadas na ordem principal → adicionais (na ordem selecionada) → identidade canônica
 - **AND** a identidade, quando aplicável, é a última referência
+
+#### Scenario: Principal é a referência de índice 0
+
+- **WHEN** o conjunto de imagens do produto é enviado
+- **THEN** a imagem principal é persistida no índice 0
+- **AND** as imagens adicionais são persistidas nos índices seguintes, na ordem selecionada
 
 #### Scenario: Identidade permanece secundária e sem posição fixa
 
