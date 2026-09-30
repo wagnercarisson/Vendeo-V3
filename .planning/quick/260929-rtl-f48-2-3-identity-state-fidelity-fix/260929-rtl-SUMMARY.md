@@ -108,15 +108,25 @@ remote write).
 ### What changed
 
 - **`ensureContentAddressedObject`** (new, exported, pure orchestration over a
-  storage adapter): (1) local-only precheck — if the path exists, compare the
-  stored checksum; identical → reuse (`created:false`), divergent → sanitized
-  integrity error (`import_destination_object_integrity_mismatch`) **without
-  overwrite/removal**; (2) absent → upload `upsert:false`; (3) ambiguous/timeout
-  error → **one** readback confirmation; if it now exists with the expected
-  checksum, accept as created; otherwise propagate a sanitized error. Duplicate
-  detection no longer relies on `error.message` regex.
+  storage adapter), fail-closed: (1) precheck via the SDK
+  `storage.from(bucket).exists(path)` — a **thrown exception** or an error whose
+  status is not 400/404 **aborts** (`import_destination_exists_check_failed`),
+  never interpreted as absence; `exists === true` → download + checksum
+  validation (download failure aborts `import_destination_object_read_failed`;
+  identical checksum → reuse `created:false`; divergent → abort
+  `import_destination_object_integrity_mismatch` **without overwrite/removal**);
+  `exists === false` confirmed (400/404) → upload `upsert:false`; (2) upload with
+  no error → created; (3) ambiguous/timeout upload error → **one** `exists`
+  confirmation under the same fail-closed rule (error/thrown → abort;
+  `false` → propagate the upload error; `true` → download/validate; correct
+  checksum → created this attempt; download failure or divergent checksum →
+  abort). Duplicate detection never relies on `error.message` regex. The SDK
+  signals absence as `{ data:false, error(400/404) }` and **throws** on real
+  failures, so absence is distinguished from genuine error by status.
 - **`createLocalDestination().ensureBrandingObject`** delegates to the helper with
-  the real local storage client.
+  the real local storage client (`exists`/`download`/`upload`).
+- **`uploadBrandingObject` removed** (from `createLocalDestination` and the test
+  fake) — obsolete and still regex-based, removed to prevent accidental reuse.
 - **`materializeStoreAssets`** now returns `storedAssets`, `storedSignature`,
   `referencedObjects`, `createdObjects`, `reusedObjects`. On failure it removes
   **only `createdObjects`** — reused/preexisting objects are never deleted.
@@ -133,7 +143,9 @@ remote write).
 - `ensureContentAddressedObject`: absent → created; existing same checksum →
   reused (no upload); divergent checksum → integrity error, no overwrite/removal;
   ambiguous error + correct readback → created; ambiguous error + absent readback
-  → sanitized error.
+  → sanitized error; **precheck error/timeout → abort with no upload attempt**;
+  **existing object whose download fails → abort, no upload and no removal**;
+  **readback error after upload → not classified as created**.
 - `materializeStoreAssets`: reuse of existing objects (created empty); failure on a
   later asset removes only created and keeps reused; transaction failure removes
   only created and keeps reused.
@@ -146,9 +158,9 @@ remote write).
 
 ### Verification (this correction)
 
-- `bench-import.contract.test.ts`: **77 passed**.
+- `bench-import.contract.test.ts`: **79 passed**.
 - Integrated local real test (`BENCH_IMPORT_REAL_INTEGRATION=1`): **1 passed**.
-- Lab + architecture guard: **1119 passed / 2 skipped**.
+- Lab + architecture guard: **1119 passed / 2 skipped** (bench suite: **1103 passed / 2 skipped**).
 - `npm run typecheck` exit 0; `npm run lint` exit 0.
 - Production boundary: `git diff --exit-code -- src/lib/store-identity-service.ts src/lib/ai/adapters/bench-images.ts supabase/migrations` → empty.
 - No remote read, no provider, no image generation, cost US$ 0.

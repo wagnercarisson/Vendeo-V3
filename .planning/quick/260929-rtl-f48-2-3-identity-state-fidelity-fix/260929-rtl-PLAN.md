@@ -250,19 +250,25 @@ reutilizados/preexistentes nunca são removidos; após o commit remove
 `oldObjects − referencedObjects`. A transação usa os paths de todos os objetos
 referenciados (criados ou reutilizados).
 
-**Garantia idempotente:** `ensureContentAddressedObject` — pré-checagem local por
-checksum; existente idêntico → reutiliza; existente divergente → erro sanitizado de
-integridade (sem overwrite/remoção); ausente → upload `upsert:false`; erro
-ambíguo/timeout → **uma** leitura de confirmação; duplicidade não é reconhecida por
-regex de mensagem.
+**Garantia idempotente (fail-closed):** `ensureContentAddressedObject` —
+pré-checagem por `storage.from(bucket).exists(path)`: exceção ou erro que não seja
+400/404 → **aborta** (nunca interpreta como ausência); `exists === true` → baixa e
+valida o checksum (falha de download → aborta; idêntico → reutiliza; divergente →
+erro sanitizado de integridade, sem overwrite/remoção); `exists === false`
+confirmado → upload `upsert:false`; erro ambíguo/timeout no upload → **uma**
+confirmação por `exists` com a mesma regra fail-closed. Duplicidade não é
+reconhecida por regex de mensagem. O método obsoleto `uploadBrandingObject` foi
+**removido** para impedir reutilização acidental.
 
 **Contadores honestos:** `objectsWritten` = criados nesta tentativa; `objectsReused`;
 `objectsReferenced`; auditoria `assetCount`/`objectCount` = conjunto final referenciado.
 
-**Testes:** `ensureContentAddressedObject` (5 casos), `materializeStoreAssets`
-(reuso e cleanup seletivo), idempotência de duas importações consecutivas sobre o
-mesmo destino, e teste integrado local real (PostgreSQL + Storage) executando a
-importação duas vezes com origem fake (sem remoto) e cleanup integral.
+**Testes:** `ensureContentAddressedObject` (8 casos, incl. precheck erro/timeout sem
+upload; objeto existente com download falho sem upload e sem remoção; erro no
+readback não classifica como criado), `materializeStoreAssets` (reuso e cleanup
+seletivo), idempotência de duas importações consecutivas sobre o mesmo destino, e
+teste integrado local real (PostgreSQL + Storage) executando a importação duas
+vezes com origem fake (sem remoto) e cleanup integral.
 
 **Estado:** implementação corrigida e testada; **reimportação remota e UAT ainda
 pendentes de nova autorização humana** (não executados).
