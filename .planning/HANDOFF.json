@@ -1,20 +1,20 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-30T18:00:00.000Z",
+  "timestamp": "2026-09-30T21:26:05.487Z",
   "phase": "48.2.4",
   "phase_name": "experimento-deterministico-oferta-1-1",
   "phase_dir": ".planning/phases/48.2.4-experimento-deterministico-oferta-1-1",
   "status": "complete",
-  "phase_status": "complete_openspec_active",
+  "phase_status": "complete_verified_synced_archived",
   "plan": "48-2-4-10",
   "openspec_source": "fase-48-2-4-experimento-deterministico-oferta-1-1",
   "openspec_archive": {
-    "path": "openspec/changes/fase-48-2-4-experimento-deterministico-oferta-1-1",
-    "verified": false,
-    "synced": false,
-    "archived": false,
-    "active": true,
-    "note": "Change ATIVA. /opsx-verify, /opsx-sync e /opsx-archive sao acoes manuais exclusivas do responsavel; o executor nao as prepara, executa nem condiciona."
+    "path": "openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1",
+    "verified": true,
+    "synced": true,
+    "archived": true,
+    "active": false,
+    "note": "Change verificada, sincronizada e arquivada. /opsx-verify, /opsx-sync e /opsx-archive concluidos; 11 specs sincronizadas nas specs principais."
   },
   "previous_phase": {
     "phase": "48.2.3",
@@ -70,17 +70,12 @@
   "blockers": [],
   "human_actions_pending": [
     {
-      "action": "OpenSpec verify/sync/archive da change fase-48-2-4-experimento-deterministico-oferta-1-1",
-      "context": "/opsx-verify, /opsx-sync e /opsx-archive sao manuais do responsavel; o executor nao as executa",
-      "blocking": false
-    },
-    {
       "action": "Conduzir os follow-ups da F48.2.5 (papel da imagem principal x referencias; ortografia e integridade textual; ciclos comparativos de refinamento)",
       "context": "Encaminhados a partir do UAT da F48.2.4; qualquer chamada paga exige novo programa e nova autorizacao humana",
       "blocking": false
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Iniciar F48.2.5 - refinamento experimental Oferta 1:1 (follow-ups do UAT). A change OpenSpec da F48.2.4 permanece ATIVA para verify/sync/archive manuais do responsavel. Nenhuma promocao, nenhum db push remoto, nenhuma chamada paga pendente na F48.2.4.",
-  "context_notes": "F48.2.4 CONCLUIDA (2026-09-30): 10/10 planos; CHECKPOINT A e CHECKPOINT B aprovados; UAT manual com duas geracoes reais (Flare low 'requer ajuste', 14,592 s; Sunburst low 'aprovado com follow-up', 18,407 s; US$ 0,03 cada), mesmo prompt/dados/duas referencias; cobranca confirmada no projeto separado Vendeo Lab. Producao intocada (base..HEAD vazio, BASE f5a7fe9a...); supabase/migrations limpo; nenhum db push; nenhum credito do executor; 0 chamadas ao provider pelo executor. Correcoes de UAT sem nova fase: (1) desacoplamento aprovacao x configuracao de execucao; (2) uploader principal + adicionais ordenados; (3) pricing local v2 (2026-09-bench-2) + gpt-image-2.5-sunburst; (4) chave exclusiva da bancada (OPENAI_BENCH_API_KEY). Change OpenSpec ATIVA (verify/sync/archive manuais). Sequencia: F48.2.1 (arquivada) -> F48.2.2 (arquivada) -> F48.2.3 (arquivada) -> F48.2.4 (concluida, change ativa) -> F48.2.5 (follow-ups)."
+  "next_action": "Iniciar F48.2.5 - refinamento experimental Oferta 1:1 (follow-ups do UAT). A change OpenSpec da F48.2.4 esta verificada, sincronizada e arquivada em openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1. Nenhuma promocao, nenhum db push remoto, nenhuma chamada paga pendente na F48.2.4.",
+  "context_notes": "F48.2.4 CONCLUIDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (2026-09-30): 10/10 planos; CHECKPOINT A e CHECKPOINT B aprovados; UAT manual com duas geracoes reais (Flare low 'requer ajuste', 14,592 s; Sunburst low 'aprovado com follow-up', 18,407 s; US$ 0,03 cada), mesmo prompt/dados/duas referencias; cobranca confirmada no projeto separado Vendeo Lab. Producao intocada (base..HEAD vazio, BASE f5a7fe9a...); supabase/migrations limpo; nenhum db push; nenhum credito do executor; 0 chamadas ao provider pelo executor. Correcoes de UAT sem nova fase: (1) desacoplamento aprovacao x configuracao de execucao; (2) uploader principal + adicionais ordenados; (3) pricing local v2 (2026-09-bench-2) + gpt-image-2.5-sunburst; (4) chave exclusiva da bancada (OPENAI_BENCH_API_KEY). OpenSpec arquivado em openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1 (11 specs sincronizadas). Sequencia: F48.2.1 (arquivada) -> F48.2.2 (arquivada) -> F48.2.3 (arquivada) -> F48.2.4 (concluida, verificada, sincronizada e arquivada) -> F48.2.5 (follow-ups, nao iniciada)."
 }
