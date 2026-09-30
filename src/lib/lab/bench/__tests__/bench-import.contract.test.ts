@@ -208,18 +208,15 @@ function makeSource(seed: SourceSeed = {}) {
 interface DestinationOptions {
   existingUser?: { id: string; email: string } | null;
   uploadError?: Error;
+  /** Simula erro no precheck `exists` (não pode ser interpretado como ausência). */
+  existsError?: Error;
+  /** Simula falha de download de um objeto existente. */
+  downloadError?: Error;
   /** Objetos já existentes no destino: chave `${bucket}:${path}` → conteúdo. */
   existingObjects?: Record<string, Buffer>;
   /** Simula erro ambíguo/timeout no upload (o objeto é gravado e o erro retornado). */
   ambiguousUpload?: boolean;
 }
-
-/** Política real dos buckets de branding (migrations): reproduzida no mock. */
-const BUCKET_ALLOWED_MIME: Record<string, readonly string[]> = {
-  "store-logos": ["image/png", "image/jpeg", "image/webp"],
-  "store-brand-assets": ["image/png", "image/jpeg", "image/webp"],
-  "visual-signatures": ["image/png", "image/svg+xml"],
-};
 
 const objectKey = (bucket: string, path: string) => `${bucket}:${path}`;
 
@@ -232,9 +229,18 @@ function makeDestination(options: DestinationOptions = {}) {
   }
   let user = options.existingUser ?? null;
 
-  // Storage fake do destino local: `download`/`upload` com `upsert` respeitado.
+  // Storage fake do destino local: `exists`/`download`/`upload` (upsert respeitado).
   const storage = {
+    async exists(bucket: string, path: string) {
+      if (options.existsError) throw new Error(options.existsError.message);
+      return objects.has(objectKey(bucket, path))
+        ? { data: true, error: null }
+        : { data: false, error: { message: "Object not found", status: 404 } };
+    },
     async download(bucket: string, path: string) {
+      if (options.downloadError) {
+        return { data: null, error: { message: options.downloadError.message } };
+      }
       const value = objects.get(objectKey(bucket, path));
       if (value === undefined) return { data: null, error: { message: "Object not found" } };
       return { data: Buffer.from(value), error: null };
@@ -270,26 +276,6 @@ function makeDestination(options: DestinationOptions = {}) {
     async createSyntheticUser(email: string) {
       user = { id: `owner:${email}`, email };
       return user;
-    },
-    async uploadBrandingObject({
-      bucket,
-      path,
-      buffer,
-      contentType,
-    }: {
-      bucket: string;
-      path: string;
-      buffer: Buffer;
-      contentType: string;
-    }) {
-      if (options.uploadError) throw options.uploadError;
-      const allowed = BUCKET_ALLOWED_MIME[bucket] ?? [];
-      if (!allowed.includes(contentType)) {
-        throw new Error(`mime type ${contentType} is not supported`);
-      }
-      uploads.push({ bucket, path, bytes: buffer.length, contentType });
-      objects.set(objectKey(bucket, path), Buffer.from(buffer));
-      return { bucket, path };
     },
     async ensureBrandingObject({
       bucket,
@@ -704,13 +690,23 @@ describe("(h) falha antes do commit remove apenas os objetos novos", () => {
 // ─── Idempotência do objeto content-addressed (correção de idempotência) ─────
 
 describe("ensureContentAddressedObject — garantia idempotente", () => {
-  const makeStorage = (seed: Record<string, Buffer> = {}, opts: { ambiguous?: boolean } = {}) => {
+  const makeStorage = (
+    seed: Record<string, Buffer> = {},
+    opts: { ambiguous?: boolean; existsError?: boolean; downloadError?: boolean } = {},
+  ) => {
     const objects = new Map<string, Buffer>(Object.entries(seed));
     const uploads: Array<{ bucket: string; path: string }> = [];
     return {
       objects,
       uploads,
+      async exists(bucket: string, path: string) {
+        if (opts.existsError) throw new Error("exists timeout");
+        return objects.has(objectKey(bucket, path))
+          ? { data: true, error: null }
+          : { data: false, error: { message: "Object not found", status: 404 } };
+      },
       async download(bucket: string, path: string) {
+        if (opts.downloadError) return { data: null, error: { message: "download timeout" } };
         const value = objects.get(objectKey(bucket, path));
         return value === undefined
           ? { data: null, error: { message: "Object not found" } }
@@ -793,6 +789,9 @@ describe("ensureContentAddressedObject — garantia idempotente", () => {
 
   it("erro ambíguo no upload + readback ausente → erro sanitizado", async () => {
     const storage = {
+      async exists() {
+        return { data: false, error: null };
+      },
       async download() {
         return { data: null, error: { message: "Object not found" } };
       },
@@ -812,6 +811,67 @@ describe("ensureContentAddressedObject — garantia idempotente", () => {
         }),
       "import_destination_upload_failed",
     );
+  });
+
+  it("erro/timeout no precheck (exists) → aborta sem tentar upload", async () => {
+    const storage = makeStorage({}, { existsError: true });
+
+    await expectCode(
+      () =>
+        ensureContentAddressedObject({
+          storage,
+          bucket: "store-brand-assets",
+          path: "s/a/x.png",
+          buffer: Buffer.from("x"),
+          contentType: "image/png",
+        }),
+      "import_destination_exists_check_failed",
+    );
+
+    expect(storage.uploads).toHaveLength(0);
+  });
+
+  it("objeto existente cujo download falha → aborta sem upload e sem remoção", async () => {
+    const path = `s/a/${computeChecksum(Buffer.from("preexistente"))}.png`;
+    const storage = makeStorage(
+      { [`store-brand-assets:${path}`]: Buffer.from("preexistente") },
+      { downloadError: true },
+    );
+
+    await expectCode(
+      () =>
+        ensureContentAddressedObject({
+          storage,
+          bucket: "store-brand-assets",
+          path,
+          buffer: Buffer.from("preexistente"),
+          contentType: "image/png",
+        }),
+      "import_destination_object_read_failed",
+    );
+
+    expect(storage.uploads).toHaveLength(0);
+    // Objeto preexistente permanece intacto (nada foi removido).
+    expect(storage.objects.has(`store-brand-assets:${path}`)).toBe(true);
+  });
+
+  it("erro no readback pós-upload não classifica o objeto como criado", async () => {
+    const storage = makeStorage({}, { ambiguous: true, downloadError: true });
+
+    await expectCode(
+      () =>
+        ensureContentAddressedObject({
+          storage,
+          bucket: "store-brand-assets",
+          path: "s/a/amb2.png",
+          buffer: Buffer.from("amb2"),
+          contentType: "image/png",
+        }),
+      "import_destination_object_read_failed",
+    );
+
+    // O upload ocorreu, mas o resultado NÃO é reportado como criado.
+    expect(storage.uploads).toHaveLength(1);
   });
 });
 
@@ -1289,18 +1349,6 @@ describe("MIME de branding — resolução e política de bucket (correção UAT
       bucket: destination.uploads[0].bucket,
       path: destination.uploads[0].path,
     });
-  });
-
-  it("mock do destino reproduz a política real (rejeita octet-stream)", async () => {
-    const destination = makeDestination();
-    await expect(
-      destination.uploadBrandingObject({
-        bucket: "store-brand-assets",
-        path: "x",
-        buffer: LOGO_BYTES,
-        contentType: "application/octet-stream",
-      }),
-    ).rejects.toThrow(/not supported/);
   });
 });
 

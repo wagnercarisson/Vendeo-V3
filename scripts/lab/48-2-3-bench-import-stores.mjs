@@ -459,33 +459,15 @@ export function createLocalDestination(env = process.env, clientFactory = create
     },
 
     /**
-     * Grava um objeto de branding no bucket LOCAL em path versionado/content-
-     * addressed. Usa `upsert: false` para nunca sobrescrever um objeto existente
-     * (um objeto já existente no mesmo path é o MESMO conteúdo, por construção) e
-     * tolera o erro de duplicidade (idempotência).
-     */
-    async uploadBrandingObject({ bucket, path: objectPath, buffer, contentType }) {
-      assertAllowedSourceBucket(bucket);
-      const { error } = await client.storage
-        .from(bucket)
-        .upload(objectPath, buffer, { contentType, upsert: false });
-      if (error && !/already exists|duplicate/i.test(error.message ?? "")) {
-        throw new BenchImportBlockedError(
-          "import_destination_upload_failed",
-          sanitizeAiErrorMessage(`import_destination_upload_failed:${error.message}`),
-        );
-      }
-      return { bucket, path: objectPath };
-    },
-
-    /**
      * Garantia **idempotente** do objeto content-addressed no DESTINO local
-     * (F48.2.3, correção de idempotência). Pré-checagem local por checksum +
-     * upload `upsert:false` + confirmação pós-erro ambíguo. Nunca consulta a
-     * origem remota e nunca sobrescreve/remove um objeto divergente.
+     * (F48.2.3, correção de idempotência). Pré-checagem por `exists` + validação
+     * de checksum + upload `upsert:false` + confirmação pós-erro ambíguo, tudo
+     * fail-closed. Nunca consulta a origem remota e nunca sobrescreve/remove um
+     * objeto divergente.
      */
     async ensureBrandingObject({ bucket, path: objectPath, buffer, contentType, expectedChecksum }) {
       const storage = {
+        exists: (b, p) => client.storage.from(b).exists(p),
         download: (b, p) => client.storage.from(b).download(p),
         upload: (b, p, buf, opts) => client.storage.from(b).upload(p, buf, opts),
       };
@@ -1092,32 +1074,90 @@ export async function toBuffer(data) {
   throw new BenchImportBlockedError("import_asset_download_unsupported", "Formato de asset nao suportado.");
 }
 
+/** Extrai o status HTTP de um erro de storage (StorageApiError/StorageUnknownError). */
+function storageErrorStatus(error) {
+  if (!error || typeof error !== "object") return undefined;
+  if (typeof error.status === "number") return error.status;
+  if (typeof error.statusCode === "number") return error.statusCode;
+  const original = error.originalError;
+  if (original && typeof original === "object" && typeof original.status === "number") {
+    return original.status;
+  }
+  return undefined;
+}
+
 /**
- * Lê um objeto do **destino local** e devolve seu checksum (se existir). Somente
- * leitura do destino — nunca consulta a origem/remoto. Um erro de leitura é
- * tratado como ausência (permite a confirmação pós-upload); a idempotência NÃO
- * depende de reconhecer texto de erro de duplicidade.
+ * `true` quando o erro de storage representa "não encontrado" (HTTP 400/404).
+ * O SDK `exists()` sinaliza ausência como `{ data: false, error }` com status
+ * 400/404 e **lança** em falhas reais — por isso ausência é distinguida de erro
+ * genuíno pelo status, nunca por regex de mensagem.
+ */
+function isNotFoundStorageError(error) {
+  const status = storageErrorStatus(error);
+  return status === 400 || status === 404;
+}
+
+/** Erro sanitizado do precheck/confirmação de existência (fail-closed). */
+function existsCheckFailed(error) {
+  return new BenchImportBlockedError(
+    "import_destination_exists_check_failed",
+    sanitizeAiErrorMessage(`import_destination_exists_check_failed:${error?.message ?? error}`),
+  );
+}
+
+/**
+ * Executa `storage.exists` com semântica fail-closed. Devolve `true`/`false`
+ * apenas quando a presença/ausência é CONFIRMADA; exceção ou erro que não seja
+ * 400/404 **aborta** — nunca é interpretado como ausência.
+ */
+async function confirmedObjectExists(storage, bucket, objectPath) {
+  let result;
+  try {
+    result = await storage.exists(bucket, objectPath);
+  } catch (error) {
+    throw existsCheckFailed(error);
+  }
+  if (result?.error && !isNotFoundStorageError(result.error)) {
+    throw existsCheckFailed(result.error);
+  }
+  return result?.data === true;
+}
+
+/**
+ * Lê um objeto do **destino local** e devolve seu checksum. Só é chamada quando
+ * `exists` confirmou a presença. Qualquer falha de leitura é reportada como
+ * `{ ok: false }` para que o chamador **aborte** (fail-closed) — nunca é
+ * interpretada como ausência.
  */
 async function readDestinationObjectChecksum(storage, bucket, objectPath) {
-  const { data, error } = await storage.download(bucket, objectPath);
-  if (error || data == null) return { exists: false, checksum: null };
-  const buffer = await toBuffer(data);
-  return { exists: true, checksum: computeChecksum(buffer) };
+  try {
+    const { data, error } = await storage.download(bucket, objectPath);
+    if (error || data == null) return { ok: false, checksum: null };
+    const buffer = await toBuffer(data);
+    return { ok: true, checksum: computeChecksum(buffer) };
+  } catch {
+    return { ok: false, checksum: null };
+  }
 }
 
 /**
  * Garantia **idempotente** de um objeto content-addressed no DESTINO local.
  *
- * Regras:
- *  1. pré-checagem local: se o path já existe, compara o checksum do conteúdo;
- *     - idêntico → reutiliza (sem upload, `created: false`, `reused: true`);
- *     - divergente → aborta com erro sanitizado de integridade (nunca
- *       sobrescreve nem remove o objeto divergente);
- *  2. ausente → upload com `upsert: false` (`created: true` em sucesso);
- *  3. erro ambíguo/timeout no upload → UMA leitura de confirmação no destino;
- *     se o objeto agora existe com o checksum esperado, considera concluído e
- *     **criado nesta tentativa** (o pré-check confirmou ausência); caso
- *     contrário, propaga erro sanitizado.
+ * Regras (fail-closed):
+ *  1. pré-checagem por `storage.exists(path)`:
+ *     - `error` → **aborta** (`import_destination_exists_check_failed`); nunca
+ *       interpreta erro como ausência;
+ *     - `data === true` → baixa e valida o checksum; falha de download →
+ *       **aborta** (`import_destination_object_read_failed`); idêntico →
+ *       reutiliza (`created: false`); divergente → **aborta**
+ *       (`import_destination_object_integrity_mismatch`, sem overwrite/remoção);
+ *     - `data === false` confirmado → upload com `upsert: false`;
+ *  2. upload sem erro → `created: true`;
+ *  3. erro ambíguo/timeout no upload → **uma** confirmação por `exists` com a
+ *     mesma regra fail-closed: erro no `exists` → aborta; `data === false` →
+ *     propaga o erro do upload; `data === true` → baixa/valida; checksum correto
+ *     → **criado nesta tentativa**; download falho ou checksum divergente →
+ *     aborta.
  *
  * Não confia em regex de `error.message` para reconhecer duplicidade e nunca
  * consulta a origem remota.
@@ -1129,8 +1169,16 @@ export async function ensureContentAddressedObject(params) {
   assertAllowedSourceBucket(bucket);
   const expected = expectedChecksum ?? computeChecksum(buffer);
 
-  const existing = await readDestinationObjectChecksum(storage, bucket, objectPath);
-  if (existing.exists) {
+  const precheckExists = await confirmedObjectExists(storage, bucket, objectPath);
+
+  if (precheckExists) {
+    const existing = await readDestinationObjectChecksum(storage, bucket, objectPath);
+    if (!existing.ok) {
+      throw new BenchImportBlockedError(
+        "import_destination_object_read_failed",
+        `Falha ao ler objeto existente no destino: ${bucket}:${objectPath}`,
+      );
+    }
     if (existing.checksum === expected) {
       return { bucket, path: objectPath, created: false, reused: true };
     }
@@ -1148,9 +1196,22 @@ export async function ensureContentAddressedObject(params) {
     return { bucket, path: objectPath, created: true, reused: false };
   }
 
-  const confirmation = await readDestinationObjectChecksum(storage, bucket, objectPath);
-  if (confirmation.exists && confirmation.checksum === expected) {
-    return { bucket, path: objectPath, created: true, reused: false };
+  const confirmationExists = await confirmedObjectExists(storage, bucket, objectPath);
+  if (confirmationExists) {
+    const stored = await readDestinationObjectChecksum(storage, bucket, objectPath);
+    if (!stored.ok) {
+      throw new BenchImportBlockedError(
+        "import_destination_object_read_failed",
+        `Falha ao ler objeto apos upload no destino: ${bucket}:${objectPath}`,
+      );
+    }
+    if (stored.checksum === expected) {
+      return { bucket, path: objectPath, created: true, reused: false };
+    }
+    throw new BenchImportBlockedError(
+      "import_destination_object_integrity_mismatch",
+      `Objeto content-addressed divergente no destino: ${bucket}:${objectPath}`,
+    );
   }
 
   throw new BenchImportBlockedError(
