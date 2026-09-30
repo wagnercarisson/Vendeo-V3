@@ -104,6 +104,11 @@ export interface BenchRunRecord {
   promptApproved: string | null;
   promptBlocks: unknown;
   composerVersion: string | null;
+  /** Evidências/linhagem da F48.2.4 (D13/D14). */
+  policyVersions: unknown;
+  promptBaseVersion: string | null;
+  identityReference: unknown;
+  attemptOfRunId: string | null;
   references: unknown;
   provider: string | null;
   protocol: string | null;
@@ -143,6 +148,10 @@ function mapBenchRunRow(row: Record<string, unknown>): BenchRunRecord {
     promptApproved: (row.prompt_approved as string | null) ?? null,
     promptBlocks: row.prompt_blocks ?? null,
     composerVersion: (row.composer_version as string | null) ?? null,
+    policyVersions: row.policy_versions ?? null,
+    promptBaseVersion: (row.prompt_base_version as string | null) ?? null,
+    identityReference: row.identity_reference ?? null,
+    attemptOfRunId: (row.attempt_of_run_id as string | null) ?? null,
     references: row.references ?? null,
     provider: (row.provider as string | null) ?? null,
     protocol: (row.protocol as string | null) ?? null,
@@ -221,6 +230,11 @@ export async function reserveBenchRun(params: {
   client: SupabaseClient;
   operationId: string;
   createdBy: string;
+  /**
+   * Linhagem explícita de tentativas (F48.2.4, D13): id do run de origem.
+   * Ausente ⇒ primeira geração (`attempt_of_run_id` fica NULL no banco).
+   */
+  attemptOfRunId?: string;
 }): Promise<{ runId: string; idempotent: boolean }> {
   const { client, operationId, createdBy } = params;
 
@@ -235,7 +249,14 @@ export async function reserveBenchRun(params: {
 
   const { data, error } = await client
     .from(BENCH_RUNS_TABLE)
-    .insert({ operation_id: operationId, created_by: createdBy, status: "draft" })
+    .insert({
+      operation_id: operationId,
+      created_by: createdBy,
+      status: "draft",
+      ...(params.attemptOfRunId !== undefined
+        ? { attempt_of_run_id: params.attemptOfRunId }
+        : {}),
+    })
     .select("id")
     .single();
 
@@ -272,6 +293,10 @@ export async function setBenchRunInput(params: {
   promptApproved?: string;
   promptBlocks?: unknown;
   composerVersion?: string;
+  /** Evidências/linhagem da F48.2.4 (D13/D14) — persistidas no run `draft`. */
+  policyVersions?: unknown;
+  promptBaseVersion?: string;
+  identityReference?: unknown;
   references?: unknown;
   provider?: string | null;
   protocol?: string | null;
@@ -305,6 +330,11 @@ export async function setBenchRunInput(params: {
   }
   if (params.promptBlocks !== undefined) update.prompt_blocks = params.promptBlocks;
   if (params.composerVersion !== undefined) update.composer_version = params.composerVersion;
+  // Evidências/linhagem da F48.2.4 (D14): `attempt_of_run_id` NÃO é atualizado
+  // aqui — é imutável desde a criação (fixado em `reserveBenchRun`).
+  if (params.policyVersions !== undefined) update.policy_versions = params.policyVersions;
+  if (params.promptBaseVersion !== undefined) update.prompt_base_version = params.promptBaseVersion;
+  if (params.identityReference !== undefined) update.identity_reference = params.identityReference;
   if (params.references !== undefined) update["references"] = params.references;
   if (params.provider !== undefined) update.provider = params.provider;
   if (params.protocol !== undefined) update.protocol = params.protocol;

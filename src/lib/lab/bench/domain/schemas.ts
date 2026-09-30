@@ -227,10 +227,18 @@ function isBenchInputReference(reference: string, runId: string): boolean {
 }
 
 /**
- * Evidência mínima do preflight do prompt (F48.2.3, D20). Reusa `prompt_sent` e
- * `campaign_snapshot`; NÃO cria tabela de versões, histórico de rascunhos, novo
- * estado do run, hashes persistidos nem infraestrutura de assinatura.
- * `promptApproved` é o prompt final aprovado e é gravado idêntico a `prompt_sent`.
+ * Evidência mínima do preflight do prompt (F48.2.3, D20; estendida na F48.2.4,
+ * D2/D6/D10/D11/D14). Reusa `prompt_sent` e `campaign_snapshot`; NÃO cria tabela
+ * de versões, histórico de rascunhos, novo estado do run, hashes persistidos nem
+ * infraestrutura de assinatura. `promptApproved` é o prompt final aprovado e é
+ * gravado idêntico a `prompt_sent`.
+ *
+ * Campos da F48.2.4 (opcionais para preservar o comportamento de
+ * `BenchRunInputSchema` e a compatibilidade dos consumidores atuais): versões das
+ * políticas, versão do prompt-base PADRÃO, referência canônica da identidade (sem
+ * URL assinada), preset de modelo/qualidade aprovado e a configuração canônica
+ * aprovada (modelo/qualidade + dimensões do recorte) — esta última fecha o GAP de
+ * revalidação de `modelo`/`qualidade` antes do CAS `draft → pending`.
  */
 export const BenchPreflightEvidenceSchema = z
   .object({
@@ -244,6 +252,16 @@ export const BenchPreflightEvidenceSchema = z
     promptBlocks: z.record(z.string(), z.string()),
     /** Versão estática do compositor (evidência). */
     composerVersion: z.string().min(1),
+    /** Versões resolvidas das políticas por dimensão (F48.2.4, D2/D14). */
+    policyVersions: z.record(z.string(), z.string()).optional(),
+    /** Versão do prompt-base PADRÃO resolvido por configuração (F48.2.4, D6/D14). */
+    promptBaseVersion: z.string().min(1).optional(),
+    /** Referência canônica da identidade — sem URL assinada (F48.2.4, D10/D14). */
+    identityReference: BenchIdentityReferenceSchema.nullable().optional(),
+    /** Preset de modelo/qualidade aprovado (F48.2.4, D11). */
+    presetId: z.string().min(1).optional(),
+    /** Configuração canônica aprovada (modelo/qualidade + dimensões) (F48.2.4, D11). */
+    config: BenchConfigSchema.optional(),
   })
   .strict();
 
