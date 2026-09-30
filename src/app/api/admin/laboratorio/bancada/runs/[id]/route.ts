@@ -6,7 +6,10 @@ import {
   createBenchArtifactSignedUrl,
   listBenchArtifacts,
 } from "@/lib/lab/bench/persistence/bench-artifact-service";
-import { getBenchRun } from "@/lib/lab/bench/persistence/bench-run-service";
+import {
+  getBenchRun,
+  listBenchRunLineage,
+} from "@/lib/lab/bench/persistence/bench-run-service";
 import {
   LabEnvironmentError,
   assertLabEnvironment,
@@ -31,6 +34,17 @@ async function signArtifact(storagePath: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Custo reportado pelo provider, extraído de `cost_detail` (F48.2.4, D14) — mantido
+ * **separado** do custo calculado/estimado localmente. Sem secrets.
+ */
+function reportedCostFromDetail(costDetail: unknown): number | null {
+  if (!costDetail || typeof costDetail !== "object") return null;
+  const candidate = (costDetail as { provider_reported_cost_usd?: unknown })
+    .provider_reported_cost_usd;
+  return typeof candidate === "number" && Number.isFinite(candidate) ? candidate : null;
 }
 
 export const GET = apiHandler(
@@ -71,6 +85,18 @@ export const GET = apiHandler(
       ),
     );
 
+    // Lista de tentativas por linhagem explícita (`attempt_of_run_id`): raiz +
+    // descendentes, ordenados por `created_at` (D13). Sem heurística de fingerprint.
+    const lineage = await listBenchRunLineage({ client: supabaseAdmin, runId: id });
+    const attempts = lineage.map((entry) => ({
+      id: entry.id,
+      status: entry.status,
+      attemptOfRunId: entry.attemptOfRunId,
+      createdAt: entry.createdAt,
+      finishedAt: entry.finishedAt,
+      promptBaseVersion: entry.promptBaseVersion,
+    }));
+
     return NextResponse.json({
       run: {
         id: run.id,
@@ -88,6 +114,11 @@ export const GET = apiHandler(
         promptApproved: run.promptApproved,
         promptBlocks: run.promptBlocks,
         composerVersion: run.composerVersion,
+        // Versões/identidade/linhagem da F48.2.4 (D14/D15).
+        policyVersions: run.policyVersions,
+        promptBaseVersion: run.promptBaseVersion,
+        identityReference: run.identityReference,
+        attemptOfRunId: run.attemptOfRunId,
         references: run.references,
         provider: run.provider,
         protocol: run.protocol,
@@ -100,7 +131,10 @@ export const GET = apiHandler(
         theme: run.theme,
         latencyMs: run.latencyMs,
         usage: run.usage,
+        // Custo calculado (local) × custo reportado pelo provider — separados.
         estimatedCostUsd: run.estimatedCostUsd,
+        calculatedCostUsd: run.estimatedCostUsd,
+        reportedCostUsd: reportedCostFromDetail(run.costDetail),
         costDetail: run.costDetail,
         costSource: run.costSource,
         costRuleVersion: run.costRuleVersion,
@@ -108,6 +142,7 @@ export const GET = apiHandler(
         errorMessage: run.errorMessage,
         technicalValidation: run.technicalValidation,
       },
+      attempts,
       artifacts,
     });
   },

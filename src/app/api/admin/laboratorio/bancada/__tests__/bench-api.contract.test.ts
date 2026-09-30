@@ -38,6 +38,9 @@ const {
   mockResolveBenchIdentityImageDataUrl,
   MockBenchIdentityTransportError,
   mockListBenchRunLineagesByStore,
+  mockListBenchRunLineage,
+  mockDuplicateBenchRunInputs,
+  MockBenchDuplicateError,
   mockReserveBenchRun,
   mockGetBenchRunByOperationId,
   mockSetBenchRunInput,
@@ -132,6 +135,15 @@ const {
     }
   }
 
+  class MockBenchDuplicateError extends Error {
+    readonly code: string;
+    constructor(code: string) {
+      super(code);
+      this.name = "BenchDuplicateError";
+      this.code = code;
+    }
+  }
+
   return {
     mockRequireAdmin: vi.fn(),
     mockAssertLabEnvironment: vi.fn(),
@@ -165,6 +177,9 @@ const {
     mockResolveBenchIdentityImageDataUrl: vi.fn(),
     MockBenchIdentityTransportError,
     mockListBenchRunLineagesByStore: vi.fn(),
+    mockListBenchRunLineage: vi.fn(),
+    mockDuplicateBenchRunInputs: vi.fn(),
+    MockBenchDuplicateError,
     mockReserveBenchRun: vi.fn(),
     mockGetBenchRunByOperationId: vi.fn(),
     mockSetBenchRunInput: vi.fn(),
@@ -325,8 +340,15 @@ vi.mock("@/lib/lab/bench/persistence/bench-run-service", () => ({
   confirmBenchRun: (...args: unknown[]) => mockConfirmBenchRun(...args),
   finalizeBenchRun: (...args: unknown[]) => mockFinalizeBenchRun(...args),
   getBenchRun: (...args: unknown[]) => mockGetBenchRun(...args),
+  listBenchRunLineage: (...args: unknown[]) => mockListBenchRunLineage(...args),
   listBenchRunLineagesByStore: (...args: unknown[]) => mockListBenchRunLineagesByStore(...args),
   BenchRunError: MockBenchRunError,
+}));
+
+vi.mock("@/lib/lab/bench/persistence/duplicate-bench-run-inputs", () => ({
+  duplicateBenchRunInputs: (...args: unknown[]) => mockDuplicateBenchRunInputs(...args),
+  BenchDuplicateError: MockBenchDuplicateError,
+  BENCH_ATTEMPT_INPUT_COPY_FAILED: "bench_attempt_input_copy_failed",
 }));
 
 vi.mock("@/lib/lab/bench/persistence/bench-artifact-service", () => ({
@@ -488,7 +510,7 @@ const DETAIL_RUN = {
     tema: "nenhum",
   },
   campaignSnapshot: { product: { source: "manual", name: "Produto" } },
-  brandingSnapshot: { typographyDirection: "serif" },
+  brandingSnapshot: { storeId: STORE_ID, typographyDirection: "serif" },
   promptSent: "prompt manual",
   references: [`bench/${RUN_ID}/inputs/0.png`],
   provider: "openai",
@@ -613,6 +635,18 @@ async function getRuns(storeId: string = STORE_ID): Promise<Response> {
   return GET(new NextRequest(`${BASE}/runs?storeId=${storeId}`));
 }
 
+async function postAttempt(
+  id: string = RUN_ID,
+  body: unknown = { operationId: OP_ID },
+): Promise<Response> {
+  const { POST } = await import(
+    "@/app/api/admin/laboratorio/bancada/runs/[id]/attempts/route"
+  );
+  return POST(jsonRequest(`${BASE}/runs/${id}/attempts`, body), {
+    params: Promise.resolve({ id }),
+  });
+}
+
 interface RouteCall {
   name: string;
   call: () => Promise<Response>;
@@ -629,6 +663,7 @@ function allRouteCalls(): RouteCall[] {
     { name: "POST /inputs", call: () => postInputs(buildInputForm(OP_ID)) },
     { name: "POST /runs", call: () => postRun(VALID_RUN_BODY) },
     { name: "GET /runs", call: () => getRuns() },
+    { name: "POST /runs/[id]/attempts", call: () => postAttempt() },
     { name: "GET /runs/[id]", call: () => getRun() },
   ];
 }
@@ -810,6 +845,12 @@ beforeEach(() => {
   mockListBenchRunLineagesByStore.mockResolvedValue([
     { root: { ...DETAIL_RUN }, runs: [{ ...DETAIL_RUN }] },
   ]);
+  mockListBenchRunLineage.mockResolvedValue([{ ...DETAIL_RUN }]);
+  mockDuplicateBenchRunInputs.mockResolvedValue({
+    runId: RUN_ID,
+    references: [`bench/${RUN_ID}/inputs/0.png`],
+    idempotent: false,
+  });
 
   mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: false });
   mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN });
@@ -1702,6 +1743,126 @@ describe("contrato da API da bancada — linhagens por loja", () => {
   });
 });
 
+// ─── 5d. Nova tentativa (POST /runs/[id]/attempts) ───────────────────────────
+
+describe("contrato da API da bancada — nova tentativa", () => {
+  it("POST /runs/[id]/attempts ⇒ 201 cria novo draft com attempt_of_run_id, copia entradas e devolve prefill", async () => {
+    const res = await postAttempt();
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.runId).toBe(RUN_ID);
+    expect(body.references).toEqual([`bench/${RUN_ID}/inputs/0.png`]);
+    expect(body.campaignSnapshot).toBeDefined();
+    expect(body.brandingSnapshot).toBeDefined();
+
+    // Novo draft com linhagem explícita (novo operationId).
+    expect(mockReserveBenchRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operationId: OP_ID,
+        createdBy: ADMIN_ID,
+        attemptOfRunId: RUN_ID,
+      }),
+    );
+    // Cópia das entradas para o prefixo do novo run.
+    expect(mockDuplicateBenchRunInputs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromRunId: RUN_ID,
+        toRunId: RUN_ID,
+        attemptOperationId: OP_ID,
+      }),
+    );
+    // Nenhuma chamada paga nesta rota.
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+    // Manifesto validado antes de qualquer leitura com storeId.
+    const assertIdx = mockAssertBenchTestStore.mock.invocationCallOrder[0];
+    const dupIdx = mockDuplicateBenchRunInputs.mock.invocationCallOrder[0];
+    expect(assertIdx).toBeLessThan(dupIdx);
+  });
+
+  it("run de origem não terminal ⇒ 409 attempt_source_not_terminal sem reservar", async () => {
+    mockGetBenchRun.mockResolvedValue({ ...DRAFT_RUN, status: "running" });
+
+    const res = await postAttempt();
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("attempt_source_not_terminal");
+    expect(mockReserveBenchRun).not.toHaveBeenCalled();
+    expect(mockDuplicateBenchRunInputs).not.toHaveBeenCalled();
+  });
+
+  it("operationId inválido ⇒ 400 sem ler o run", async () => {
+    const res = await postAttempt(RUN_ID, { operationId: "não-é-uuid" });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_payload");
+    expect(mockGetBenchRun).not.toHaveBeenCalled();
+    expect(mockReserveBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("run de origem inexistente ⇒ 404 run_not_found sem reservar", async () => {
+    mockGetBenchRun.mockResolvedValue(null);
+
+    const res = await postAttempt();
+
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe("run_not_found");
+    expect(mockReserveBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("draft incompleto (cópia em andamento) ⇒ 409 attempt_preparing", async () => {
+    mockDuplicateBenchRunInputs.mockRejectedValue(
+      new MockBenchDuplicateError("attempt_preparing"),
+    );
+
+    const res = await postAttempt();
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("attempt_preparing");
+  });
+
+  it("operationId anterior failed ⇒ 409 attempt_requires_new_operation_id", async () => {
+    mockDuplicateBenchRunInputs.mockRejectedValue(
+      new MockBenchDuplicateError("attempt_retry_requires_new_operation_id"),
+    );
+
+    const res = await postAttempt();
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("attempt_requires_new_operation_id");
+  });
+
+  it("falha de cópia parcial ⇒ 400 attempt_duplicate_failed (compensação no serviço)", async () => {
+    mockDuplicateBenchRunInputs.mockRejectedValue(
+      new MockBenchDuplicateError("attempt_duplicate_failed"),
+    );
+
+    const res = await postAttempt();
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("attempt_duplicate_failed");
+  });
+
+  it("loja fora do manifesto ⇒ 400 antes de reservar/copiar", async () => {
+    mockAssertBenchTestStore.mockRejectedValue(
+      new MockBenchStoreManifestError("store_not_in_manifest", STORE_ID),
+    );
+
+    const res = await postAttempt();
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("store_not_in_manifest");
+    expect(mockReserveBenchRun).not.toHaveBeenCalled();
+    expect(mockDuplicateBenchRunInputs).not.toHaveBeenCalled();
+  });
+});
+
 // ─── 6. Detalhe (/runs/[id]) ─────────────────────────────────────────────────
 
 describe("contrato da API da bancada — detalhe e artefatos", () => {
@@ -1753,6 +1914,54 @@ describe("contrato da API da bancada — detalhe e artefatos", () => {
     expect(body.run.composerVersion).toBe("48.2.3-prompt-composer-v1");
   });
 
+  it("GET /runs/[id] expõe versões, identidade, custos separados e tentativas por linhagem", async () => {
+    mockGetBenchRun.mockResolvedValue({
+      ...DETAIL_RUN,
+      policyVersions: { intencao: "oferta-v1" },
+      promptBaseVersion: "test-prompt-base-v1",
+      identityReference: {
+        kind: "logo",
+        variantType: "primary",
+        storagePath: "logos/loja-a.png",
+      },
+      attemptOfRunId: null,
+      costDetail: {
+        is_estimate: true,
+        estimated_cost_usd: 0.006,
+        provider_reported_cost_usd: 0.009,
+      },
+    });
+    mockListBenchRunLineage.mockResolvedValue([
+      { ...DETAIL_RUN },
+      {
+        ...DETAIL_RUN,
+        id: "66666666-6666-4666-8666-666666666666",
+        attemptOfRunId: RUN_ID,
+      },
+    ]);
+
+    const res = await getRun();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.run.policyVersions).toEqual({ intencao: "oferta-v1" });
+    expect(body.run.promptBaseVersion).toBe("test-prompt-base-v1");
+    expect(body.run.identityReference).toEqual({
+      kind: "logo",
+      variantType: "primary",
+      storagePath: "logos/loja-a.png",
+    });
+    // Custo calculado × reportado separados.
+    expect(body.run.calculatedCostUsd).toBe(0.006);
+    expect(body.run.reportedCostUsd).toBe(0.009);
+    // Tentativas por linhagem explícita.
+    expect(body.attempts).toHaveLength(2);
+    expect(body.attempts[1].attemptOfRunId).toBe(RUN_ID);
+    expect(mockListBenchRunLineage).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: RUN_ID }),
+    );
+  });
+
   it("acesso não-admin a artefato é negado (403) sem listar/assinar", async () => {
     mockRequireAdmin.mockRejectedValue(new ForbiddenError("Acesso restrito a administradores"));
 
@@ -1793,6 +2002,7 @@ describe("contrato de fonte — ordem de guards e fronteiras", () => {
     "inputs/route.ts",
     "runs/route.ts",
     "runs/[id]/route.ts",
+    "runs/[id]/attempts/route.ts",
   ];
 
   it.each(routeFiles)("%s chama await requireAdmin() antes de assertLabEnvironment()", (file) => {
@@ -1905,6 +2115,25 @@ describe("contrato de fonte — ordem de guards e fronteiras", () => {
     expect(source).toContain("resolveBenchIdentityImageDataUrl");
     expect(source).toContain("listBenchRunLineagesByStore");
     expect(source).toContain("export const GET");
+  });
+
+  it("runs/[id]/attempts cria novo draft com linhagem e copia entradas sem geração paga", () => {
+    const source = readRoute("runs/[id]/attempts/route.ts");
+    expect(source).toContain("reserveBenchRun");
+    expect(source).toContain("attemptOfRunId");
+    expect(source).toContain("duplicateBenchRunInputs");
+    expect(source).toContain("attempt_preparing");
+    expect(source).toContain("attempt_requires_new_operation_id");
+    expect(source).toContain("attempt_source_not_terminal");
+    expect(source).not.toContain("executeBenchRun");
+    expect(source).not.toContain("campaign-images");
+  });
+
+  it("runs/[id] expõe a linhagem explícita via listBenchRunLineage", () => {
+    const source = readRoute("runs/[id]/route.ts");
+    expect(source).toContain("listBenchRunLineage");
+    expect(source).toContain("identityReference");
+    expect(source).toContain("policyVersions");
   });
 
   it("nenhuma rota da bancada toca a produção (campaign-images/prompts/ai_model_selection)", () => {
