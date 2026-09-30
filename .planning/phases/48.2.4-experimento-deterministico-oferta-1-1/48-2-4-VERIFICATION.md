@@ -4,9 +4,10 @@
 > início da execução da fase (Plano `48-2-4-01`) e é a referência para o encerramento (Task 4)
 > comparar `base..HEAD` — não apenas o working tree.
 >
-> **Status deste arquivo:** ⏳ **INICIADO (Task 1 — gates).** Os CHECKPOINTS **A** e **B**
-> permanecem **pendentes** (humanos). As seções de produção intocada (`base..HEAD`) e de
-> closeout serão preenchidas na **Task 4**, após o UAT.
+> **Status deste arquivo:** ✅ **GATES VERDES no ambiente atual** (Supabase local ativo; exceção
+> externa `legal` registrada). **CHECKPOINT A aprovado** pelo usuário; **CHECKPOINT B** em condução —
+> UAT **técnico verde**, comercial/visual **pendente** da 1 geração manual autorizada. A seção de
+> produção intocada (`base..HEAD`) e o closeout serão preenchidos na **Task 4** (não executada aqui).
 
 Base SHA: f5a7fe9a27e823b64b355ec8c431d4e514d5ab99
 
@@ -32,34 +33,39 @@ Fonte da verdade: `openspec/changes/fase-48-2-4-experimento-deterministico-ofert
 
 | # | Verdade exigida | Evidência | Resultado |
 |---|---|---|---|
-| 1 | typecheck, lint, build e a suíte completa passam; nenhum teste faz chamada real de IA | §3 | ✅ (Task 1) |
-| 2 | CHECKPOINT A (humano) revisa políticas/branding/ordem das imagens/revalidação **antes de qualquer chamada paga** | §4 | ⏳ pendente |
-| 3 | CHECKPOINT B (humano) executa o UAT manual completo (técnico + comercial/visual) | §4 | ⏳ pendente |
-| 4 | O UAT pago exige autorização humana explícita; recusa ⇒ fase NÃO concluída | §4 | ⏳ pendente |
+| 1 | typecheck, lint, build e a suíte completa passam; nenhum teste faz chamada real de IA | §3 | ✅ **verde no ambiente atual** |
+| 2 | CHECKPOINT A (humano) revisa políticas/branding/ordem das imagens/revalidação **antes de qualquer chamada paga** | §4 / `48.2.4-UAT.md` | ✅ **aprovado** |
+| 3 | CHECKPOINT B (humano) executa o UAT manual completo (técnico + comercial/visual) | `48.2.4-UAT.md` | ⏳ técnico **verde**; comercial/visual **pendente** (1 geração manual) |
+| 4 | O UAT pago exige autorização humana explícita; recusa ⇒ fase NÃO concluída | `48.2.4-UAT.md` | ✅ autorização explícita registrada (1 geração manual) |
 | 5 | Produção intocada por `base..HEAD`; base ausente ⇒ falha | §6 | ⏳ a preencher (Task 4) |
-| 6 | `48-2-4-VERIFICATION.md` e `48.2.4-UAT.md` gerados; nenhum provider autônomo | este arquivo | ⏳ parcial (UAT na Task 3) |
+| 6 | `48-2-4-VERIFICATION.md` e `48.2.4-UAT.md` gerados; nenhum provider autônomo | este arquivo + `48.2.4-UAT.md` | ✅ ambos gerados; provider autônomo = 0 |
 
 ---
 
-## 3. Gates automatizados (Task 1)
+## 3. Gates automatizados
 
 Executados com `npm.cmd` (exit code real; o shim `npm` no PowerShell não propaga `$LASTEXITCODE`
-de forma confiável). Data: 2026-09-30.
+de forma confiável). Data: 2026-09-30. **Reexecutados no ambiente atual (Supabase local ativo).**
 
 | Gate | Comando | Resultado |
 |---|---|---|
 | Typecheck | `npm.cmd run typecheck` | ✅ exit 0 |
 | Lint | `npm.cmd run lint` | ✅ exit 0 (0 warnings) |
-| Build | `npm.cmd run build` | ✅ exit 0 (`✓ Compiled successfully`; 76/76 páginas geradas; `check:cnae OK`) |
-| Suíte completa (exceção externa `legal`; `--testTimeout=30000`) | `npm.cmd test -- --exclude "**/legal-document-versions.test.ts" --testTimeout=30000` | ⚠️ exit 1 — `Test Files 6 failed \| 391 passed \| 1 skipped (398)` / `Tests 2 failed \| 4558 passed \| 26 skipped (4586)` — **as 6 falhas são suites de integração que exigem Postgres local em `127.0.0.1:54322` (Docker não está em execução)**; ver §5 |
-| Suíte completa (exceção externa `legal` **+** suites de integração de DB ambientalmente bloqueadas; `--testTimeout=30000`) | `npm.cmd test -- --testTimeout=30000 --exclude …` (7 `--exclude`; ver §5) | ✅ exit 0 — `Test Files 391 passed \| 1 skipped (392)` / `Tests 4558 passed \| 2 skipped (4560)` |
-| Testes da fase (14 arquivos) | `npm.cmd test -- --run --testTimeout=30000 <14 arquivos>` | ✅ exit 0 — `Test Files 14 passed (14)` / `Tests 333 passed (333)` |
+| Build | `npm.cmd run build` | ✅ exit 0 |
+| Suíte completa (só exceção externa `legal`; `--testTimeout=60000`) | `npm.cmd test -- --exclude "**/legal-document-versions.test.ts" --testTimeout=60000` | ✅ exit 0 — `Test Files 397 passed \| 1 skipped (398)` / `Tests 4584 passed \| 2 skipped (4586)` |
+| Testes da fase (14 arquivos) | `npm.cmd test -- --run --testTimeout=60000 <14 arquivos>` | ✅ exit 0 — `Test Files 14 passed (14)` / `Tests 333 passed (333)` |
+
+**Ambiente do run verde:** Supabase local **ativo** (`http://127.0.0.1:54321/rest/v1/` → HTTP 200) e
+`VENDEO_LAB_ENABLED=true` em `.env.local`. Com o Postgres local disponível, as **6 suites de integração
+de DB** que antes falhavam por `ECONNREFUSED 127.0.0.1:54322` **passaram** — a suíte completa agora fica
+verde excluindo **apenas** a exceção externa preexistente `legal-document-versions.test.ts` (`ENOENT`).
+As mensagens `Not implemented: navigation to another Document` / `Window's scrollTo()` são ruído do
+jsdom, **não** falhas.
 
 **Observação sobre o `--testTimeout`:** os flakes de 5 s preexistentes e já registrados nos planos
 05 e 08 (`bench-execution.contract.test.ts` — processamento de imagem `sharp` + fetch ao Supabase
-local `localhost:54321`, que não está em execução) reapareceram no primeiro run do gate. Com
-`--testTimeout=30000` **todos passam** — nenhum timeout de 5 s remanescente. Nenhum arquivo de
-produção/teste foi alterado para contornar o timeout.
+local) são absorvidos com `--testTimeout=60000`. Nenhum arquivo de produção/teste foi alterado para
+contornar o timeout.
 
 ---
 
@@ -92,9 +98,10 @@ implementação/testes/CI.
 
 1. **Exceção externa preexistente (F50) — `legal-document-versions.test.ts`:** `ENOENT` do caminho
    antigo da change arquivada da F50. **Não corrigida** nesta fase; follow-up externo. Excluída
-   explicitamente do gate via `--exclude` — **não** é sucesso silencioso.
-2. **Pré-requisito ambiental ausente — Postgres local (`127.0.0.1:54322`) / Docker não em execução:**
-   6 suites de integração que abrem conexão real ao Postgres local falham por `ECONNREFUSED 127.0.0.1:54322`:
+   explicitamente do gate via `--exclude` — **não** é sucesso silencioso. **Permanece registrada.**
+2. **Suites de integração de DB — RESOLVIDAS no ambiente atual.** No primeiro run do gate (Docker/Postgres
+   local ausente) 6 suites de integração de crédito/access-request/dados pessoais falhavam por
+   `ECONNREFUSED 127.0.0.1:54322`:
    - `src/lib/__tests__/access-request-limit.postgres.test.ts`
    - `src/lib/__tests__/data-subject-requests.postgres.test.ts`
    - `src/lib/credit/__tests__/credit-concurrency.test.ts`
@@ -102,17 +109,10 @@ implementação/testes/CI.
    - `src/lib/credit/__tests__/credit-idempotency.test.ts`
    - `src/lib/credit/__tests__/operation-cost-service.integration.test.ts`
 
-   **Diagnóstico:** `docker info` → `failed to connect to the docker API … daemon is not running`;
-   portanto o Supabase local **não pode** ser iniciado neste ambiente. Essas suites são de
-   **crédito/access-request/dados pessoais (F50)** — **nenhuma pertence à F48.2.4** e nenhuma foi
-   tocada por esta fase. São **bloqueio ambiental** (Docker/Postgres ausente), **não** regressão de
-   código. Foram **excluídas explicitamente** do run verde (§3, linha 2) para comprovar ausência de
-   outras regressões — a exclusão é **documentada**, não silenciosa. Quando o Supabase local estiver
-   ativo (pré-requisito do UAT/CHECKPOINT A), essas suites devem ser reexecutadas no gate final.
-
-   **Precedente na fase:** os Planos 05 e 08 já registraram que `bench-execution.contract.test.ts`
-   estoura o timeout padrão de 5 s por causa do Supabase local (`localhost:54321`) não estar em
-   execução — pré-existente e não relacionado.
+   Com o **Supabase local ativo** (`127.0.0.1:54322`), essas suites **passaram** no gate atual (§3,
+   linha 4). Não pertencem à F48.2.4 e não foram tocadas por esta fase; o bloqueio era **ambiental**
+   (Docker/Postgres ausente), não regressão de código. **Nenhuma exclusão adicional é necessária** —
+   a suíte completa roda excluindo **apenas** a exceção externa `legal`.
 
 ---
 
@@ -131,23 +131,28 @@ na Task 4 (encerramento), após o UAT.
 
 | Checkpoint | Plano/Task | Conteúdo | Status |
 |---|---|---|---|
-| **A** | 48-2-4-09 / Task 2 | Revisão de políticas/versões, mapeamento de branding, ordem das imagens + resolução de identidade, revalidação do preflight e `prompt_sent` byte a byte — **antes de qualquer chamada paga**. Autoriza o número de gerações reais do UAT. | ⏳ **PENDENTE** |
-| **B** | 48-2-4-09 / Task 3 | UAT manual completo (técnico sem provider + comercial/visual humano por geração); decisão aprovado/rejeitado/requer ajuste. | ⏳ **PENDENTE** |
+| **A** | 48-2-4-09 / Task 2 | Revisão de políticas/versões, mapeamento de branding, ordem das imagens + resolução de identidade, revalidação do preflight e `prompt_sent` byte a byte — **antes de qualquer chamada paga**. Autoriza o número de gerações reais do UAT. | ✅ **APROVADO** (env prep + CHECKPOINT B; 1 geração manual) |
+| **B** | 48-2-4-09 / Task 3 | UAT manual completo (técnico sem provider + comercial/visual humano por geração); decisão aprovado/rejeitado/requer ajuste. | ⏳ **técnico verde (7/7)**; comercial/visual **PENDENTE** (1 geração manual) |
+
+Detalhamento em `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48.2.4-UAT.md`.
 
 ---
 
-## 8. Conclusão parcial (Task 1)
+## 8. Conclusão parcial
 
-**⏳ Fase 48.2.4 em verificação — gates da Task 1 executados.**
+**⏳ Fase 48.2.4 em verificação — gates verdes no ambiente atual; CHECKPOINT A aprovado; UAT técnico verde.**
 
 - `typecheck`, `lint` e `build` **verdes** (exit 0).
 - Testes próprios da fase **verdes** (14 arquivos / 333 testes).
-- Suíte completa **verde** excluindo a exceção externa `legal` e as 6 suites de integração de DB
-  ambientalmente bloqueadas (Docker/Postgres ausente) — `391 passed | 1 skipped` / `4558 passed | 2 skipped`.
+- Suíte completa **verde** excluindo **apenas** a exceção externa `legal` — `397 passed | 1 skipped`
+  / `4584 passed | 2 skipped` (as 6 suites de DB agora passam com o Supabase local ativo).
 - **Nenhuma chamada real de IA** em testes/CI (fakes/adapters gravadores + gate arquitetural).
-- **CHECKPOINT A** e **CHECKPOINT B** permanecem **pendentes**; nenhuma geração paga foi executada.
+- **CHECKPOINT A APROVADO**; **CHECKPOINT B** técnico **verde** (7/7) e comercial/visual **PENDENTE**
+  (1 geração manual autorizada). Nenhuma geração paga executada por task autônoma; custo **US$ 0**.
+- **Task 4** (produção `base..HEAD` + closeout de tracking) **NÃO executada** nesta etapa.
 
 ---
 
-*Fase: 48.2.4-experimento-deterministico-oferta-1-1. Verificação **iniciada** na Task 1 (gates).
-Produção intocada (`base..HEAD`) e closeout serão preenchidos na Task 4, após os CHECKPOINTS A/B.*
+*Fase: 48.2.4-experimento-deterministico-oferta-1-1. Verificação com **gates verdes no ambiente
+atual**; **CHECKPOINT A aprovado** e **CHECKPOINT B técnico verde** (comercial/visual pendente da 1
+geração manual). Produção intocada (`base..HEAD`) e closeout serão preenchidos na Task 4.*
