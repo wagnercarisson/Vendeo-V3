@@ -270,8 +270,9 @@ seletivo), idempotência de duas importações consecutivas sobre o mesmo destin
 teste integrado local real (PostgreSQL + Storage) executando a importação duas
 vezes com origem fake (sem remoto) e cleanup integral.
 
-**Estado:** implementação corrigida e testada; **reimportação remota e UAT ainda
-pendentes de nova autorização humana** (não executados).
+**Estado:** **concluída** — implementação corrigida e testada; reimportação
+autorizada idempotente (NovaTek `visual_signature` 1 objeto reutilizado; Adega
+`logo` 6 reutilizados; 0 criados) e UAT local registrados no SUMMARY.
 
 <threat_model>
 ## Trust Boundaries

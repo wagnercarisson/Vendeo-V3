@@ -38,7 +38,7 @@ decisions:
 metrics:
   duration: "~25 min"
   completed: "2026-09-29"
-  status: "implementação concluída — reimportação remota e UAT pendentes de autorização humana"
+  status: "concluída — UAT local registrado; reimportação idempotente confirmada (objetos reutilizados, zero criados)"
 ---
 
 # Quick Task 260929-rtl: Fidelidade de identidade visual da bancada (`stores.identity_state`)
@@ -165,10 +165,39 @@ remote write).
 - Production boundary: `git diff --exit-code -- src/lib/store-identity-service.ts src/lib/ai/adapters/bench-images.ts supabase/migrations` → empty.
 - No remote read, no provider, no image generation, cost US$ 0.
 
+### Remote reimport (authorized, idempotent) + local UAT evidence
+
+The authorized reimport of the two test stores was executed by the operator
+(`imported_by: wagne`) against the local Supabase; the app runtime never queried
+the remote. The latest audit rows in `lab_bench_store_imports` prove idempotency:
+
+| Store | identity_state | latest import (UTC) | objectCount | objectsCreated | objectsReused |
+|---|---|---|---|---|---|
+| NovaTek `3dc7d274-…` | `visual_signature` | 2026-09-30T00:31:46.519Z | 1 | 0 | 1 |
+| Adega `48b212f8-…` | `logo` | 2026-09-30T00:31:50.189Z | 6 | 0 | 6 |
+
+- **No duplication / no orphan:** storage objects per store match the identity —
+  NovaTek: 1 object in `visual-signatures`, 0 logo assets; Adega: 6 objects in
+  `store-brand-assets` (`normalized`, `original`, `on_dark`, `on_light`,
+  `horizontal_safe`, `square_safe`), 0 signatures.
+- **identity_state persisted faithfully:** NovaTek `visual_signature`, Adega
+  `logo` — no silent `text_only` default.
+- **Resolution per state:** NovaTek (`visual_signature`) resolves its active
+  signature; Adega (`logo`) resolves the `normalized` variant (priority
+  normalized → original → on_dark). `text_only` → no identity image is covered by
+  the resolver unit tests (there is no local `text_only` test store).
+- **Inspection:** state + chosen asset (kind/variant/storagePath) + reason are
+  exposed by `GET /branding` and shown in the bench branding panel.
+- **Failed attempt context:** an earlier import attempt failed with
+  `import_destination_upload_failed:The upstream server is timing out`; the
+  idempotency correction above made the subsequent reimport reuse the preexisting
+  content-addressed objects (zero created) with no removal of prior objects.
+
 ### Status
 
-Implementation corrected. **Remote reimport of the two test stores and the local
-UAT remain pending explicit human authorization** — not executed here.
+**Concluída.** Implementation corrected and verified; the authorized idempotent
+reimport and the local UAT evidence are recorded above. Production untouched; no
+provider called; cost US$ 0.
 
 ## Self-Check: PASSED
 
