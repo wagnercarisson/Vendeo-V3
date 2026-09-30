@@ -12,6 +12,10 @@
 --   * public.lab_bench_store_imports — auditoria local da importação de identidade
 --     das lojas de teste (F48.2.3, D11) + colunas de evidência do preflight do
 --     prompt em lab_bench_runs (F48.2.3, D20) — ambos ADITIVOS, com REVERT.
+--   * Colunas ADITIVAS de evidências/linhagem em lab_bench_runs (F48.2.4, D13/D14):
+--     `policy_versions`/`prompt_base_version`/`identity_reference` (sem URL assinada)
+--     e `attempt_of_run_id` (linhagem explícita, SEM nova tabela) — com REVERT e
+--     imutabilidade estendida.
 --   * Índice único parcial GLOBAL de geração ativa — SOMENTE `pending`/`running`
 --     (o estado `draft` não ocupa o slot; vários drafts coexistem) (D10)
 --   * RLS + policy service_role + REVOKE/GRANT (mesmo padrão da F48.1)
@@ -84,6 +88,22 @@ ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS prompt_blocks JSONB;
 ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS composer_version TEXT;
 
 -- =============================================================================
+-- 1c. Evidências e linhagem de tentativas (F48.2.4, D13/D14)
+--     Colunas ADITIVAS e NULLABLE em `lab_bench_runs` (mesma tabela — NENHUMA
+--     tabela nova de experimentos/candidatas/revisores/avaliações). A linhagem
+--     de tentativas usa a coluna nullable `attempt_of_run_id` (FK para o próprio
+--     run de origem); a primeira geração permanece NULL. `identity_reference`
+--     guarda APENAS `{ kind, variantType, storagePath }` — a URL assinada é
+--     transitória e NUNCA é persistida. Aplicadas com
+--     `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` para idempotência sobre uma base
+--     já existente (o `CREATE TABLE IF NOT EXISTS` acima é um no-op nesse caso).
+-- =============================================================================
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS policy_versions JSONB;
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS prompt_base_version TEXT;
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS identity_reference JSONB;
+ALTER TABLE public.lab_bench_runs ADD COLUMN IF NOT EXISTS attempt_of_run_id UUID REFERENCES public.lab_bench_runs(id);
+
+-- =============================================================================
 -- 2. public.lab_bench_artifacts — metadados das entradas/saída (D9)
 --    `kind` restrito a `input`/`output`; o objeto vive no bucket privado
 --    `lab-artifacts` sob `bench/{runId}/...`. `removed_at` marca a remoção física.
@@ -142,13 +162,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.lab_bench_runs TO service_r
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.lab_bench_artifacts TO service_role;
 
 -- =============================================================================
--- 5. Trigger de imutabilidade (D9/D10)
---    `operation_id`/`created_by`/`created_at` são imutáveis SEMPRE.
---    `campaign_snapshot`/`branding_snapshot`/`config`/`prompt_sent` são imutáveis
---    a partir de `running` — na prática, o trigger só bloqueia alterações dessas
---    colunas quando `OLD.status NOT IN ('draft','pending')`, permitindo a
---    população em `draft` e a transição `draft → pending`. As colunas de resultado
---    permanecem atualizáveis.
+-- 5. Trigger de imutabilidade (D9/D10; estendido na F48.2.4, D13/D14)
+--    `operation_id`/`created_by`/`created_at`/`attempt_of_run_id` são imutáveis
+--    SEMPRE (a linhagem é fixada na criação).
+--    `campaign_snapshot`/`branding_snapshot`/`config`/`prompt_sent` e as colunas
+--    de evidência da F48.2.4 (`policy_versions`/`prompt_base_version`/
+--    `identity_reference`) são imutáveis a partir de `running` — na prática, o
+--    trigger só bloqueia alterações dessas colunas quando
+--    `OLD.status NOT IN ('draft','pending')`, permitindo a população em `draft` e
+--    a transição `draft → pending`. As colunas de resultado permanecem atualizáveis.
 -- =============================================================================
 CREATE OR REPLACE FUNCTION public.trg_lab_bench_runs_snapshot_immutable_fn()
 RETURNS TRIGGER
@@ -158,7 +180,8 @@ AS $$
 BEGIN
   IF NEW.operation_id IS DISTINCT FROM OLD.operation_id
      OR NEW.created_by IS DISTINCT FROM OLD.created_by
-     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at
+     OR NEW.attempt_of_run_id IS DISTINCT FROM OLD.attempt_of_run_id THEN
     RAISE EXCEPTION 'lab_bench_run_snapshot_immutable';
   END IF;
 
@@ -166,7 +189,10 @@ BEGIN
     IF NEW.campaign_snapshot IS DISTINCT FROM OLD.campaign_snapshot
        OR NEW.branding_snapshot IS DISTINCT FROM OLD.branding_snapshot
        OR NEW.config IS DISTINCT FROM OLD.config
-       OR NEW.prompt_sent IS DISTINCT FROM OLD.prompt_sent THEN
+       OR NEW.prompt_sent IS DISTINCT FROM OLD.prompt_sent
+       OR NEW.policy_versions IS DISTINCT FROM OLD.policy_versions
+       OR NEW.prompt_base_version IS DISTINCT FROM OLD.prompt_base_version
+       OR NEW.identity_reference IS DISTINCT FROM OLD.identity_reference THEN
       RAISE EXCEPTION 'lab_bench_run_snapshot_immutable';
     END IF;
   END IF;
@@ -246,6 +272,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.lab_bench_store_imports TO 
 -- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS prompt_approved;
 -- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS prompt_compiled;
 -- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS prompt_base;
+-- F48.2.4 (D13/D14) — evidências e linhagem de tentativas.
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS attempt_of_run_id;
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS identity_reference;
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS prompt_base_version;
+-- ALTER TABLE public.lab_bench_runs DROP COLUMN IF EXISTS policy_versions;
 -- DROP POLICY IF EXISTS "Service role can manage lab_bench_store_imports" ON public.lab_bench_store_imports;
 -- ALTER TABLE public.lab_bench_store_imports DISABLE ROW LEVEL SECURITY;
 -- REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLE public.lab_bench_store_imports FROM service_role;
