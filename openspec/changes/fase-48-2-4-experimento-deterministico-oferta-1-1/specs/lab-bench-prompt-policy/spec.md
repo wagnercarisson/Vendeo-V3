@@ -63,19 +63,37 @@ A bancada SHALL resolver **explicitamente** as políticas habilitadas a partir d
 
 ### Requirement: Política Oferta orienta a hierarquia comercial sem posições fixas
 
-A política `oferta` SHALL orientar, **sem fixar posições nem coordenadas**, o produto como elemento principal; a preservação fiel da aparência, embalagem e características do produto; o preço promocional com maior importância comercial; o preço original claramente secundário **quando informado**; selo, validade e textos obrigatórios com hierarquia adequada; leitura imediata; excelente legibilidade; acabamento comercial de alta qualidade; liberdade para o modelo encontrar o melhor arranjo; e a proibição de inventar produto, preço, desconto, validade, benefícios ou textos. A política SHALL NOT impor regras como "logo à direita", "produto centralizado" ou coordenadas rígidas.
+A política `oferta` SHALL orientar, **sem fixar posições nem coordenadas**, a **hierarquia comercial**: o preço promocional com maior importância comercial; o preço original claramente secundário **quando informado**; selo, validade e textos comerciais com hierarquia adequada; leitura imediata; excelente legibilidade; acabamento comercial de alta qualidade; liberdade para o modelo encontrar o melhor arranjo; e a proibição de inventar **preço, desconto, validade ou textos comerciais**. A política `oferta` SHALL NOT declarar orientações de produto (produto como elemento principal, fidelidade de aparência/embalagem, uso das referências, proibição de inventar produto/benefícios), que pertencem **exclusivamente** à política `produto`. A política SHALL NOT impor regras como "logo à direita", "produto centralizado" ou coordenadas rígidas.
 
 #### Scenario: Orientação comercial é gerada
 
 - **WHEN** a política `oferta` contribui para o prompt
-- **THEN** ela orienta produto principal, hierarquia de preços, selo, validade, legibilidade e acabamento comercial
-- **AND** proíbe inventar produto, preço, desconto, validade, benefícios ou textos
+- **THEN** ela orienta a hierarquia de preços, selo, validade, textos comerciais, legibilidade e acabamento comercial
+- **AND** proíbe inventar preço, desconto, validade ou textos comerciais
+- **AND** não declara orientações de produto
 
 #### Scenario: Nenhuma posição fixa é imposta
 
 - **WHEN** a política `oferta` é aplicada
 - **THEN** nenhuma posição fixa, coordenada ou regra de layout rígida é imposta
 - **AND** o modelo permanece livre para encontrar o melhor arranjo
+
+### Requirement: Política Produto orienta o foco no produto e o uso das referências
+
+A política `produto` SHALL orientar, **sem fixar posições nem coordenadas**, o produto como elemento principal; a fidelidade de aparência, embalagem e características; o uso das imagens/referências do produto; e a proibição de inventar produto ou benefícios. A política `produto` SHALL NOT declarar orientações comerciais (hierarquia de preço, selo, validade, textos comerciais, legibilidade, invenção de preço/desconto/validade), que pertencem **exclusivamente** à política `oferta`. As políticas `oferta` e `produto` SHALL ter **propriedade exclusiva e disjunta**, de modo que nenhuma orientação seja emitida por ambas.
+
+#### Scenario: Foco no produto é gerado
+
+- **WHEN** a política `produto` contribui para o prompt
+- **THEN** ela orienta o produto como elemento principal, a fidelidade de aparência/embalagem e o uso das referências
+- **AND** proíbe inventar produto ou benefícios
+- **AND** não declara orientações comerciais
+
+#### Scenario: Propriedade exclusiva entre oferta e produto
+
+- **WHEN** as políticas `oferta` e `produto` compõem o prompt
+- **THEN** nenhuma orientação é emitida por ambas
+- **AND** a não-duplicação semântica é verificada por um teste golden do prompt completo e por atribuição exclusiva por política
 
 ### Requirement: Política de formato 1:1 orienta composição quadrada sem congelar layout
 

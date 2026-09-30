@@ -57,14 +57,14 @@ O núcleo apenas coleta, ordena e serializa. Acrescentar Destaque/9:16/serviços
 
 `resolveBenchPromptPolicies(config)` percorre as dimensões do recorte (`intencao`, `formato`, `tipoConteudo`, `estrutura`, `tema`) e resolve a política habilitada de cada uma pelo registry de dimensões (`config-registry.ts`), que já recusa valor desconhecido/desabilitado. Se uma dimensão habilitada **não** possuir política implementada, a resolução lança `bench_policy_not_implemented` **antes** de qualquer chamada paga (fail-closed, sem fallback/improvisação). As versões resolvidas integram a evidência. **Alternativa rejeitada:** cair em um "prompt genérico" — improvisaria composição e mascararia combinação não suportada.
 
-### D3 — Política `oferta` (orientação, não layout)
+### D3 — Política `oferta` (orientação comercial, não layout)
 
-A política `oferta` (versionada) contribui com orientação comercial, **sem posições fixas nem coordenadas**:
+A política `oferta` (versionada) contribui com **orientação comercial**, **sem posições fixas nem coordenadas**:
 
-- no bloco `[CONDIÇÕES COMERCIAIS]`: produto como elemento principal; preservação fiel da aparência, embalagem e características; preço promocional com maior importância comercial; preço original claramente secundário **quando informado**; selo, validade e textos obrigatórios com hierarquia adequada; leitura imediata; legibilidade; acabamento comercial de alta qualidade; liberdade para o modelo encontrar o melhor arranjo; proibição de inventar produto, preço, desconto, validade, benefícios ou textos;
+- no bloco `[CONDIÇÕES COMERCIAIS]`: preço promocional com maior importância comercial; preço original claramente secundário **quando informado**; selo, validade e textos comerciais com hierarquia adequada; leitura imediata; legibilidade; acabamento comercial de alta qualidade; liberdade para o modelo encontrar o melhor arranjo; proibição de inventar **preço, desconto, validade ou textos comerciais**;
 - no bloco `[INTENÇÃO E FORMATO]`: a intenção em linguagem natural ("Oferta").
 
-São proibidas regras como "logo à direita", "produto centralizado" ou coordenadas rígidas. **Alternativa rejeitada:** congelar layout por política — contradiz "composição livre para o modelo".
+São proibidas regras como "logo à direita", "produto centralizado" ou coordenadas rígidas. **A política `oferta` NÃO declara orientações de produto** (produto como elemento principal, fidelidade de aparência/embalagem, uso das referências, proibição de inventar produto/benefícios) — essas pertencem **exclusivamente** à política `produto` (D5), evitando duplicação semântica. **Alternativa rejeitada:** congelar layout por política — contradiz "composição livre para o modelo".
 
 ### D4 — Política de formato `1:1`
 
@@ -72,9 +72,11 @@ A política `1:1` (versionada) contribui no bloco `[INTENÇÃO E FORMATO]` com a
 
 ### D5 — Políticas `produto`, `peca-unica` e tema `nenhum`
 
-- `produto` contribui no bloco `[PRODUTO E IMAGENS DE REFERÊNCIA]` (foco no produto; imagens de referência).
+- `produto` (versionada) contribui **exclusivamente** no bloco `[PRODUTO E IMAGENS DE REFERÊNCIA]` com: produto como elemento principal; fidelidade de aparência, embalagem e características; uso das imagens/referências do produto; e a proibição de inventar produto ou benefícios. **A política `produto` NÃO declara orientações comerciais** (hierarquia de preço, selo, validade, textos comerciais, legibilidade, invenção de preço/desconto/validade) — essas pertencem **exclusivamente** à política `oferta` (D3).
 - `peca-unica` contribui no bloco `[INTENÇÃO E FORMATO]` ("peça única").
 - tema `nenhum` é **neutro**: não contribui com nenhuma linha e é **omitido** do prompt (dimensão que não acrescenta orientação). Ainda assim é resolvido/versionado e registrado na evidência.
+
+**Propriedade exclusiva (anti-duplicação semântica):** as políticas `oferta` e `produto` têm atribuição **exclusiva e disjunta** — nenhuma orientação é emitida por ambas. A não-duplicação é verificada por um **teste golden do prompt completo** (comparação determinística do texto inteiro do recorte Oferta 1:1) e por uma **verificação de atribuição exclusiva por política**, e **não** apenas por contagem de ocorrências.
 
 ### D6 — Prompt-base padrão versionado, resolvido por configuração
 
