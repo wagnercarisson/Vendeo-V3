@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { BenchImagesAdapter } from "@/lib/ai/adapters/bench-images";
 import { ImagesAdapter } from "@/lib/ai/adapters/images";
@@ -52,8 +52,17 @@ const PNG_B = "data:image/png;base64,QkJC";
 
 const TARGET = { provider: "openai", model: "gpt-image-2", protocol: "images" } as const;
 
+const ORIGINAL_BENCH_KEY = process.env.OPENAI_BENCH_API_KEY;
+
 beforeEach(() => {
   editCalls.length = 0;
+  // Chave exclusiva da bancada (D21) — o adapter nunca usa a chave produtiva.
+  process.env.OPENAI_BENCH_API_KEY = "sk-bench-test";
+});
+
+afterEach(() => {
+  if (ORIGINAL_BENCH_KEY === undefined) delete process.env.OPENAI_BENCH_API_KEY;
+  else process.env.OPENAI_BENCH_API_KEY = ORIGINAL_BENCH_KEY;
 });
 
 describe("BenchImagesAdapter — quality propagado e referências explícitas", () => {
@@ -207,5 +216,16 @@ describe("buildBenchInvocationRequest — parâmetros explícitos e identidade",
     });
 
     expect(request.identityImageUrl).toBe(identity);
+  });
+
+  it("chave da bancada ausente/vazia ⇒ falha antes de qualquer chamada ao provider", async () => {
+    delete process.env.OPENAI_BENCH_API_KEY;
+    const adapter = new BenchImagesAdapter();
+
+    await expect(
+      adapter.invoke({ prompt: "p", productImagesDataUrls: [PNG_A] }, TARGET),
+    ).rejects.toMatchObject({ code: "bench_api_key_missing" });
+    // Nenhuma chamada ao provider (o SDK mockado não foi acionado).
+    expect(editCalls).toHaveLength(0);
   });
 });

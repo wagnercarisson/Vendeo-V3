@@ -1,6 +1,6 @@
 import { MalformedResponseError } from "@/lib/copy/errors";
 import type { AiModelTarget } from "../model-resolver";
-import { getApiKey } from "../api-keys";
+import { getBenchApiKey } from "@/lib/lab/bench/gateway/bench-api-key";
 import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../types";
 import { normalizeImagesUsage } from "./images";
 
@@ -31,6 +31,12 @@ const DATA_URL_PATTERN = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i;
  * `loadBenchBranding` (nunca re-resolvida aqui). Quando ausente (ex.: `text_only`),
  * nenhuma imagem de identidade é anexada.
  *
+ * ## Credencial exclusiva da bancada (F48.2.4, D21)
+ *
+ * A chave é resolvida **exclusivamente** por `getBenchApiKey`
+ * (`OPENAI_BENCH_API_KEY`), nunca pela chave produtiva (`getApiKey`). Ausente ou
+ * vazia ⇒ falha **antes** de criar o cliente/chamar o provider.
+ *
  * ## Single-shot (T-48-2-2-26)
  *
  * Exatamente uma chamada `images.edit` por invocação — sem retry interno, sem
@@ -42,7 +48,9 @@ export class BenchImagesAdapter implements AiAdapter {
 
   async invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult> {
     const { default: OpenAI, toFile } = await import("openai");
-    const openai = new OpenAI({ apiKey: getApiKey(target.provider) });
+    // Chave **exclusiva da bancada** (`OPENAI_BENCH_API_KEY`) — nunca a chave
+    // produtiva (`getApiKey`). Ausente/vazia ⇒ falha aqui, antes do cliente/rede.
+    const openai = new OpenAI({ apiKey: getBenchApiKey(target.provider) });
 
     const productImages = request.productImagesDataUrls ?? [];
     const primaryDataUrl = productImages[0];

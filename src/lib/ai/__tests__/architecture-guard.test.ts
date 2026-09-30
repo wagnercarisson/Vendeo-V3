@@ -283,6 +283,36 @@ describe("architecture-guard — camada única de IA (F46-06)", () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
+  // F48.2.4 (D21) — chave de API exclusiva da bancada. A bancada lê SOMENTE
+  // `OPENAI_BENCH_API_KEY` (resolvedor dedicado) e nunca a chave produtiva; o
+  // adapter da bancada usa o resolvedor dedicado, não o produtivo `getApiKey`.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("a bancada lê apenas OPENAI_BENCH_API_KEY e o adapter usa o resolvedor dedicado", () => {
+    const resolverFile = "src/lib/lab/bench/gateway/bench-api-key.ts";
+    expect(files).toContain(resolverFile);
+
+    const benchKeyReadRe = /process\.env\.OPENAI_BENCH_API_KEY\b/;
+    const violations: string[] = [];
+    for (const file of benchFiles) {
+      const code = readCode(file);
+      if (benchKeyReadRe.test(code) && file !== resolverFile) {
+        violations.push(`${file} → OPENAI_BENCH_API_KEY fora do resolvedor dedicado`);
+      }
+      if (LAB_API_KEY_ENV_RE.test(code)) {
+        violations.push(`${file} → chave de provider produtiva`);
+      }
+    }
+    expect(violations).toEqual([]);
+
+    const adapter = readCode("src/lib/ai/adapters/bench-images.ts");
+    expect(adapter).toContain("getBenchApiKey");
+    expect(adapter).not.toMatch(/\bgetApiKey\b/);
+    // A chave é resolvida ANTES de criar o cliente OpenAI.
+    expect(adapter.indexOf("getBenchApiKey")).toBeLessThan(adapter.indexOf("new OpenAI"));
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
   // F48.2.3 (D4/D17) — gate estático de FRONTEIRA ARQUITETURAL da bancada e do
   // comando de importação. Verifica IMPORTS/USO — NÃO congela conteúdo de
   // arquivos produtivos (a prova temporal de produção intocada é do Plano 08, via
