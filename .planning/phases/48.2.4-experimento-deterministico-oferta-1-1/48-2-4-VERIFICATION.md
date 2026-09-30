@@ -4,10 +4,10 @@
 > início da execução da fase (Plano `48-2-4-01`) e é a referência para o encerramento (Task 4)
 > comparar `base..HEAD` — não apenas o working tree.
 >
-> **Status deste arquivo:** ✅ **GATES VERDES no ambiente atual** (Supabase local ativo; exceção
-> externa `legal` registrada). **CHECKPOINT A aprovado** pelo usuário; **CHECKPOINT B** em condução —
-> UAT **técnico verde**, comercial/visual **pendente** da 1 geração manual autorizada. A seção de
-> produção intocada (`base..HEAD`) e o closeout serão preenchidos na **Task 4** (não executada aqui).
+> **Status deste arquivo:** ✅ **FINAL — FASE CONCLUÍDA** (2026-09-30). Gates verdes (Supabase local
+> ativo; exceção externa `legal` registrada). **CHECKPOINT A** e **CHECKPOINT B** **aprovados**
+> (técnico + comercial/visual). Produção intocada comprovada por `base..HEAD` (§6). **Task 4
+> (closeout) executada.** OpenSpec **ATIVO** (verify/sync/archive manuais do responsável).
 
 Base SHA: f5a7fe9a27e823b64b355ec8c431d4e514d5ab99
 
@@ -35,9 +35,9 @@ Fonte da verdade: `openspec/changes/fase-48-2-4-experimento-deterministico-ofert
 |---|---|---|---|
 | 1 | typecheck, lint, build e a suíte completa passam; nenhum teste faz chamada real de IA | §3 | ✅ **verde no ambiente atual** |
 | 2 | CHECKPOINT A (humano) revisa políticas/branding/ordem das imagens/revalidação **antes de qualquer chamada paga** | §4 / `48.2.4-UAT.md` | ✅ **aprovado** |
-| 3 | CHECKPOINT B (humano) executa o UAT manual completo (técnico + comercial/visual) | `48.2.4-UAT.md` | ⏳ técnico **verde**; comercial/visual **pendente** (1 geração manual) |
-| 4 | O UAT pago exige autorização humana explícita; recusa ⇒ fase NÃO concluída | `48.2.4-UAT.md` | ✅ autorização explícita registrada (1 geração manual) |
-| 5 | Produção intocada por `base..HEAD`; base ausente ⇒ falha | §6 | ⏳ a preencher (Task 4) |
+| 3 | CHECKPOINT B (humano) executa o UAT manual completo (técnico + comercial/visual) | `48.2.4-UAT.md` | ✅ **aprovado** — técnico **8/8**; comercial/visual: Flare low `requer ajuste`, Sunburst low `aprovado com follow-up` |
+| 4 | O UAT pago exige autorização humana explícita; recusa ⇒ fase NÃO concluída | `48.2.4-UAT.md` | ✅ autorização explícita registrada; **CHECKPOINT B aprovado** |
+| 5 | Produção intocada por `base..HEAD`; base ausente ⇒ falha | §6 | ✅ **`base..HEAD` vazio**; `supabase/migrations` limpo |
 | 6 | `48-2-4-VERIFICATION.md` e `48.2.4-UAT.md` gerados; nenhum provider autônomo | este arquivo + `48.2.4-UAT.md` | ✅ ambos gerados; provider autônomo = 0 |
 
 ---
@@ -52,8 +52,8 @@ de forma confiável). Data: 2026-09-30. **Reexecutados no ambiente atual (Supaba
 | Typecheck | `npm.cmd run typecheck` | ✅ exit 0 |
 | Lint | `npm.cmd run lint` | ✅ exit 0 (0 warnings) |
 | Build | `npm.cmd run build` | ✅ exit 0 |
-| Suíte completa (só exceção externa `legal`; `--testTimeout=60000`) | `npm.cmd test -- --exclude "**/legal-document-versions.test.ts" --testTimeout=60000` | ✅ exit 0 — `Test Files 397 passed \| 1 skipped (398)` / `Tests 4584 passed \| 2 skipped (4586)` |
-| Testes da fase (14 arquivos) | `npm.cmd test -- --run --testTimeout=60000 <14 arquivos>` | ✅ exit 0 — `Test Files 14 passed (14)` / `Tests 333 passed (333)` |
+| Suíte completa (só exceção externa `legal`; `--testTimeout=60000`) | `npm.cmd test -- --exclude "**/legal-document-versions.test.ts" --testTimeout=60000` | ✅ exit 0 — `Test Files 398 passed \| 1 skipped (399)` / `Tests 4609 passed \| 2 skipped (4611)` |
+| Testes próprios da fase (política/compositor/prompt-base/branding/identidade/transporte/revalidação/histórico/adapter/execução/API/UI/isolamento/gate/chave/pricing) | `npm.cmd test -- --run --testTimeout=60000 <arquivos>` | ✅ exit 0 — todos verdes (incl. uploader principal+adicionais, `bench-api-key`, pricing v2) |
 
 **Ambiente do run verde:** Supabase local **ativo** (`http://127.0.0.1:54321/rest/v1/` → HTTP 200) e
 `VENDEO_LAB_ENABLED=true` em `.env.local`. Com o Postgres local disponível, as **6 suites de integração
@@ -116,14 +116,17 @@ implementação/testes/CI.
 
 ---
 
-## 6. Produção intocada — comparativo `base..HEAD` (Task 4 — pendente)
+## 6. Produção intocada — comparativo `base..HEAD` (Task 4 — executada)
 
-> Preenchido na **Task 4**, após o CHECKPOINT B. `BASE = f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`
-> (lido da linha `Base SHA` acima; **não** recriado). Comando:
-> `git diff --name-only $BASE..HEAD -- <caminhos produtivos>` (vazio esperado).
+`BASE = f5a7fe9a27e823b64b355ec8c431d4e514d5ab99` (lido da linha `Base SHA` acima; **não** recriado).
 
-⏳ **Pendente** — a prova `base..HEAD` e a confirmação de ausência de uso remoto serão registradas
-na Task 4 (encerramento), após o UAT.
+Comando executado no encerramento:
+`git diff --name-only $BASE..HEAD -- src/components/campaign/types.ts src/lib/store-identity-service.ts src/lib/image-generation/services/art-director-briefing.ts src/lib/ai/adapters/images.ts src/lib/ai/adapters/registry.ts src/lib/ai/model-registry.ts src/lib/ai/api-keys.ts src/lib/ai-cost/cost-estimator.ts src/components/flow prompts supabase/migrations src/lib/campaign src/app/api/campaign`
+
+**Resultado:** ✅ **vazio** (nenhum caminho produtivo alterado). `git status --porcelain supabase/migrations`
+→ **limpo**; nenhum `supabase db push` executado. A prova é **temporal** (`base..HEAD`), não um
+congelamento de conteúdo. `HEAD` do encerramento: `b85115cac1790658c5d7b3b7f9f6fe21888f3157`
+(53 commits na fase). Nenhum uso de credencial/comando remoto; nenhuma promoção; nenhum crédito.
 
 ---
 
@@ -132,27 +135,35 @@ na Task 4 (encerramento), após o UAT.
 | Checkpoint | Plano/Task | Conteúdo | Status |
 |---|---|---|---|
 | **A** | 48-2-4-09 / Task 2 | Revisão de políticas/versões, mapeamento de branding, ordem das imagens + resolução de identidade, revalidação do preflight e `prompt_sent` byte a byte — **antes de qualquer chamada paga**. Autoriza o número de gerações reais do UAT. | ✅ **APROVADO** (env prep + CHECKPOINT B; 1 geração manual) |
-| **B** | 48-2-4-09 / Task 3 | UAT manual completo (técnico sem provider + comercial/visual humano por geração); decisão aprovado/rejeitado/requer ajuste. | ⏳ **técnico verde (7/7)**; comercial/visual **PENDENTE** (1 geração manual) |
+| **B** | 48-2-4-09 / Task 3 | UAT manual completo (técnico sem provider + comercial/visual humano por geração); decisão aprovado/rejeitado/requer ajuste. | ✅ **APROVADO** — técnico **8/8**; comercial/visual registrado (Flare low `requer ajuste`; Sunburst low `aprovado com follow-up`) |
 
 Detalhamento em `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48.2.4-UAT.md`.
 
 ---
 
-## 8. Conclusão parcial
+## 8. Conclusão final
 
-**⏳ Fase 48.2.4 em verificação — gates verdes no ambiente atual; CHECKPOINT A aprovado; UAT técnico verde.**
+**✅ Fase 48.2.4 CONCLUÍDA** (2026-09-30).
 
 - `typecheck`, `lint` e `build` **verdes** (exit 0).
-- Testes próprios da fase **verdes** (14 arquivos / 333 testes).
-- Suíte completa **verde** excluindo **apenas** a exceção externa `legal` — `397 passed | 1 skipped`
-  / `4584 passed | 2 skipped` (as 6 suites de DB agora passam com o Supabase local ativo).
-- **Nenhuma chamada real de IA** em testes/CI (fakes/adapters gravadores + gate arquitetural).
-- **CHECKPOINT A APROVADO**; **CHECKPOINT B** técnico **verde** (7/7) e comercial/visual **PENDENTE**
-  (1 geração manual autorizada). Nenhuma geração paga executada por task autônoma; custo **US$ 0**.
-- **Task 4** (produção `base..HEAD` + closeout de tracking) **NÃO executada** nesta etapa.
+- Testes próprios da fase **verdes** (incl. políticas/compositor/prompt-base/branding/identidade/
+  transporte/revalidação/histórico/adapter/execução/API/UI/isolamento/gate/chave/pricing).
+- Suíte completa **verde** excluindo **apenas** a exceção externa `legal` — `398 passed | 1 skipped`
+  / `4609 passed | 2 skipped`.
+- **Nenhuma chamada real de IA** pelo executor em testes/CI (fakes/adapters gravadores + gate
+  arquitetural); custo do executor **US$ 0**.
+- **CHECKPOINT A APROVADO**; **CHECKPOINT B APROVADO** — técnico **8/8** e comercial/visual
+  registrado (Flare low `requer ajuste`; Sunburst low `aprovado com follow-up`). As duas gerações
+  reais foram **manuais** (US$ 0,03 cada), com mesmo prompt/dados/duas referências.
+- **Produção intocada** (`base..HEAD` vazio; `supabase/migrations` limpo); nenhum `db push`;
+  nenhuma promoção.
+- **Task 4** (produção `base..HEAD` + closeout não-destrutivo de `STATE.md`/`ROADMAP.md`/
+  `HANDOFF.json`) **executada**.
+- **OpenSpec ATIVO** — `/opsx-verify`, `/opsx-sync` e `/opsx-archive` são **manuais do responsável**.
+- **Follow-ups encaminhados à F48.2.5:** papel da imagem principal × referências; ortografia e
+  integridade textual; ciclos comparativos de refinamento.
 
 ---
 
-*Fase: 48.2.4-experimento-deterministico-oferta-1-1. Verificação com **gates verdes no ambiente
-atual**; **CHECKPOINT A aprovado** e **CHECKPOINT B técnico verde** (comercial/visual pendente da 1
-geração manual). Produção intocada (`base..HEAD`) e closeout serão preenchidos na Task 4.*
+*Fase: 48.2.4-experimento-deterministico-oferta-1-1. Verificação **final**: gates verdes, CHECKPOINT
+A e B aprovados, produção intocada (`base..HEAD` vazio) e closeout executado. Change OpenSpec ativa.*
