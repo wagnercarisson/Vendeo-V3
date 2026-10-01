@@ -1,6 +1,11 @@
 import type { BenchExperimentalBriefing } from "./experimental-briefing";
 import type { BenchIdentityReference } from "./resolve-bench-identity";
-import type { BenchConfig } from "./schemas";
+import type { BenchConfig, BenchTextIntegrityEvidence, BenchTextIntegrityPair } from "./schemas";
+import {
+  createBenchTextIntegrityRevision,
+  detectBenchTextIntegrity,
+  TEXT_INTEGRITY_POLICY_VERSION,
+} from "./text-integrity-detector";
 import { buildBrandingPromptContributions } from "./branding-prompt-mapping";
 import { buildIdentityDirectionContributions } from "./identity-direction";
 import { resolveBenchPromptPolicies } from "./policies/resolve-bench-prompt-policies";
@@ -61,6 +66,91 @@ export class BenchPreflightRevalidationError extends Error {
     this.code = "approval_invalidated";
     this.reason = reason;
   }
+}
+
+export type BenchTextIntegrityReviewErrorCode =
+  | "text_integrity_review_required"
+  | "text_integrity_review_stale";
+
+export interface BenchTextIntegrityReviewState {
+  policyVersion: string;
+  reviewRevision: string;
+  alerts: ReturnType<typeof detectBenchTextIntegrity>;
+}
+
+export type BenchTextIntegrityReviewResult =
+  | {
+      ok: true;
+      evidence: BenchTextIntegrityEvidence;
+      review: BenchTextIntegrityReviewState;
+    }
+  | {
+      ok: false;
+      error: BenchTextIntegrityReviewErrorCode;
+      status: 409 | 422;
+      review: BenchTextIntegrityReviewState;
+    };
+
+/**
+ * Recalcula alertas e revisão usando somente os valores atuais. A evidência é
+ * efêmera: serve para vincular conteúdo, versão e decisão, não como assinatura
+ * nem prova independente do ato de clicar.
+ */
+export function validateBenchTextIntegrityEvidence(params: {
+  fields: readonly BenchTextIntegrityPair[];
+  evidence?: BenchTextIntegrityEvidence;
+  requireEvidence?: boolean;
+}): BenchTextIntegrityReviewResult {
+  const alerts = detectBenchTextIntegrity(params.fields);
+  const review: BenchTextIntegrityReviewState = {
+    policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+    reviewRevision: createBenchTextIntegrityRevision(params.fields),
+    alerts,
+  };
+
+  if (!params.evidence) {
+    if (params.requireEvidence) {
+      return {
+        ok: false,
+        error: "text_integrity_review_stale",
+        status: 409,
+        review,
+      };
+    }
+    if (alerts.length > 0) {
+      return {
+        ok: false,
+        error: "text_integrity_review_required",
+        status: 422,
+        review,
+      };
+    }
+    return {
+      ok: true,
+      evidence: {
+        policyVersion: review.policyVersion,
+        reviewRevision: review.reviewRevision,
+        decision: "no_alerts",
+      },
+      review,
+    };
+  }
+
+  if (
+    params.evidence.policyVersion !== review.policyVersion ||
+    params.evidence.reviewRevision !== review.reviewRevision
+  ) {
+    return { ok: false, error: "text_integrity_review_stale", status: 409, review };
+  }
+
+  if (
+    (params.evidence.decision === "no_alerts" && alerts.length > 0) ||
+    (params.evidence.decision === "keep_exactly" && alerts.length === 0)
+  ) {
+    return { ok: false, error: "text_integrity_review_stale", status: 409, review };
+  }
+
+  return { ok: true, evidence: params.evidence, review };
 }
 
 // ─── Recomposição determinística ─────────────────────────────────────────────

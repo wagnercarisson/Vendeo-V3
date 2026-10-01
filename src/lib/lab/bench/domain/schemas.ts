@@ -135,6 +135,18 @@ export const BenchTextIntegrityAlertSchema = z
 
 export type BenchTextIntegrityAlert = z.infer<typeof BenchTextIntegrityAlertSchema>;
 
+export const BenchTextIntegrityDecisionSchema = z.enum(["no_alerts", "keep_exactly"]);
+
+export const BenchTextIntegrityEvidenceSchema = z
+  .object({
+    policyVersion: z.string().min(1),
+    reviewRevision: z.string().regex(/^[0-9a-f]{64}$/i),
+    decision: BenchTextIntegrityDecisionSchema,
+  })
+  .strict();
+
+export type BenchTextIntegrityEvidence = z.infer<typeof BenchTextIntegrityEvidenceSchema>;
+
 /**
  * Oferta — contrato FIEL ao formulário produtivo (F48.2.3, D14): validade, selo,
  * intenção e aviso ilustrativo usados pela paridade. **Não** há texto manual de
@@ -293,6 +305,8 @@ export const BenchPreflightEvidenceSchema = z
     promptBaseVersion: z.string().min(1).optional(),
     /** Referência canônica da identidade — sem URL assinada (F48.2.4, D10/D14). */
     identityReference: BenchIdentityReferenceSchema.nullable().optional(),
+    /** Revisão textual efêmera validada em /compose e revalidada em /runs. */
+    textIntegrityEvidence: BenchTextIntegrityEvidenceSchema.optional(),
   })
   .strict();
 

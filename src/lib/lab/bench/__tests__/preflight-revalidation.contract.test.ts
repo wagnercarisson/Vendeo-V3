@@ -26,8 +26,13 @@ import {
   assertPreflightEvidenceMatches,
   recomposeBenchPrompt,
   resolveServerResolvedEvidence,
+  validateBenchTextIntegrityEvidence,
   type BenchPreflightEvidenceView,
 } from "../domain/preflight-revalidation";
+import {
+  collectBenchTextIntegrityFields,
+  TEXT_INTEGRITY_POLICY_VERSION,
+} from "../domain/text-integrity-detector";
 import { setBenchRunInput } from "../persistence/bench-run-service";
 import type { BenchBrandingContract } from "../domain/branding-service";
 import type { BenchIdentityReference } from "../domain/resolve-bench-identity";
@@ -313,6 +318,89 @@ describe("server-resolved-persisted", () => {
 
     // A evidência do servidor corresponde aos valores resolvidos (não aos do cliente).
     expect(server.policyVersions).toEqual(serverVersions);
+  });
+});
+
+describe("revisão de integridade textual efêmera", () => {
+  it("emite no_alerts somente quando os quatro campos não têm alertas", () => {
+    const fields = collectBenchTextIntegrityFields({
+      product: { name: "Produto" },
+      promptBase: "Texto claro.",
+    });
+
+    const result = validateBenchTextIntegrityEvidence({ fields });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.evidence).toMatchObject({
+        policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+        decision: "no_alerts",
+      });
+      expect(result.review.alerts).toEqual([]);
+    }
+  });
+
+  it("exige revisão para alertas e aceita keep_exactly na mesma revisão", () => {
+    const fields = collectBenchTextIntegrityFields({
+      product: { name: "voce!!" },
+      promptBase: "Instrução manual.",
+    });
+    const pending = validateBenchTextIntegrityEvidence({ fields });
+
+    expect(pending).toMatchObject({ ok: false, error: "text_integrity_review_required", status: 422 });
+    if (pending.ok) throw new Error("expected review-required result");
+
+    const accepted = validateBenchTextIntegrityEvidence({
+      fields,
+      evidence: {
+        policyVersion: pending.review.policyVersion,
+        reviewRevision: pending.review.reviewRevision,
+        decision: "keep_exactly",
+      },
+    });
+    expect(accepted).toMatchObject({ ok: true, evidence: { decision: "keep_exactly" } });
+  });
+
+  it("alterar somente promptBase torna a evidência anterior stale", () => {
+    const fields = collectBenchTextIntegrityFields({
+      product: { name: "Produto", description: "Descrição literal" },
+      promptBase: "Texto manual original.",
+    });
+    const original = validateBenchTextIntegrityEvidence({ fields });
+    if (!original.ok) throw new Error("expected no-alerts evidence");
+
+    const changed = collectBenchTextIntegrityFields({
+      product: { name: "Produto", description: "Descrição literal" },
+      promptBase: "Texto manual alterado.",
+    });
+    const result = validateBenchTextIntegrityEvidence({
+      fields: changed,
+      evidence: original.evidence,
+      requireEvidence: true,
+    });
+
+    expect(result).toMatchObject({ ok: false, error: "text_integrity_review_stale", status: 409 });
+    if (!result.ok) expect(result.review.reviewRevision).not.toBe(original.review.reviewRevision);
+  });
+
+  it("exige evidência em runs e rejeita uma decisão incompatível com os alertas", () => {
+    const fields = collectBenchTextIntegrityFields({ product: { name: "voce" }, promptBase: "" });
+
+    expect(validateBenchTextIntegrityEvidence({ fields, requireEvidence: true })).toMatchObject({
+      ok: false,
+      error: "text_integrity_review_stale",
+      status: 409,
+    });
+
+    const decision = validateBenchTextIntegrityEvidence({
+      fields,
+      evidence: {
+        policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+        reviewRevision: "0".repeat(64),
+        decision: "no_alerts",
+      },
+    });
+    expect(decision).toMatchObject({ ok: false, error: "text_integrity_review_stale", status: 409 });
   });
 });
 
