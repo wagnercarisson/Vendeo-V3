@@ -104,6 +104,37 @@ export const BenchProductSchema = z
 
 export type BenchProduct = z.infer<typeof BenchProductSchema>;
 
+/** Campos livres editáveis pelo operador e cobertos pela integridade textual (F48.2.5). */
+export const BENCH_TEXT_INTEGRITY_FIELDS = [
+  "product.name",
+  "product.description",
+  "product.mandatoryArtworkText",
+  "promptBase",
+] as const;
+
+export const BenchTextIntegrityFieldSchema = z.enum(BENCH_TEXT_INTEGRITY_FIELDS);
+export type BenchTextIntegrityField = z.infer<typeof BenchTextIntegrityFieldSchema>;
+
+export const BenchTextIntegrityPairSchema = z
+  .object({
+    field: BenchTextIntegrityFieldSchema,
+    value: z.string(),
+  })
+  .strict();
+
+export type BenchTextIntegrityPair = z.infer<typeof BenchTextIntegrityPairSchema>;
+
+export const BenchTextIntegrityAlertSchema = z
+  .object({
+    field: BenchTextIntegrityFieldSchema,
+    excerpt: z.string(),
+    reason: z.string().min(1),
+    ruleId: z.string().min(1),
+  })
+  .strict();
+
+export type BenchTextIntegrityAlert = z.infer<typeof BenchTextIntegrityAlertSchema>;
+
 /**
  * Oferta — contrato FIEL ao formulário produtivo (F48.2.3, D14): validade, selo,
  * intenção e aviso ilustrativo usados pela paridade. **Não** há texto manual de
