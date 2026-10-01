@@ -6,6 +6,8 @@
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
+**Alinhamento F48.2.5 (2026-09-30):** denominação normativa e operacional: **Estabilização experimental Oferta 1:1** (`openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/`), planejada em `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/` com 8 planos e aguardando revisão humana. As ocorrências de “refinamento experimental Oferta 1:1” em descrições narrativas de continuidade eram rótulos provisórios; não representam mudança de escopo. A linha operacional da F48.2.5 abaixo usa o nome normativo.
+
 ## Overview
 
 | # | Phase | Goal / status |
@@ -49,6 +51,7 @@
 | 48.2.2 | ✅ Concluída e arquivada — Fundação da bancada de geração no Admin/Laboratório | 8/8 planos; CP1, CP2 e CP3 aprovados; UAT técnico aprovado com uma geração real controlada (`gpt-image-2.5-flare`); produção intocada; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`; nenhuma promoção |
 | 48.2.3 | ✅ Concluída, verificada, sincronizada e arquivada — Fidelidade experimental da bancada | 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; duas lojas de teste importadas localmente; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/` |
 | 48.2.4 | ✅ Concluída, verificada, sincronizada e arquivada — Experimento determinístico Oferta 1:1 | 10/10 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual (Flare low `requer ajuste`; Sunburst low `aprovado com follow-up`); gerações reais **manuais** (US$ 0,03 cada); produção intocada (`base..HEAD` vazio); pricing `2026-09-bench-2`; chave exclusiva da bancada validada; OpenSpec arquivado em `openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1/` |
+| 48.2.5 | ◉ Planejada — Estabilização experimental Oferta 1:1 | 8 planos GSD elaborados a partir da fonte normativa `openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/`; aguardando revisão humana antes da execução |
 | 48.2.2-antiga | ⏸ Descartada — Auditoria e Otimização do Prompt do Revisor | Escopo descartado/substituído em 2026-09-28; sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
