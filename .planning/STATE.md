@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-01T17:37:36.540Z"
+last_updated: "2026-10-01T19:08:13.827Z"
 progress:
   total_phases: 40
   completed_phases: 37
@@ -27,7 +27,7 @@ progress:
 ## Current Position
 
 Phase: 48.2.5 (estabilizacao-experimental-oferta-1-1) — **EM EXECUÇÃO** (2026-09-30)
-Plan: 8 planos; Planos `48-2-5-01` a `48-2-5-06` concluídos/summarized (6/8); Plano 07: suites/gates/Base SHA concluídos; teste adicional confirma resposta compose atrasada descartada após editar produto/promptBase; aguarda decisão do CHECKPOINT A.
+Plan: 8 planos; Planos `48-2-5-01` a `48-2-5-06` concluídos/summarized (6/8); Plano 07: suites/gates/Base SHA concluídos; teste adicional confirma resposta compose atrasada descartada após editar produto/promptBase; ajuste de UI apresenta alertas humanos e foco nos quatro campos. Aguarda decisão do CHECKPOINT A.
 Checkpoints humanos: CHECKPOINT A apresentado, decisão pendente; CHECKPOINT B pendente. A aprovação para iniciar execução não autoriza provider nem substitui checkpoint.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
