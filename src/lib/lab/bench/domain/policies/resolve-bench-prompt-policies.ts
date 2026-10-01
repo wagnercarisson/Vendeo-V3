@@ -1,5 +1,6 @@
 import { resolveBenchConfig } from "../config-registry";
 import type { BenchConfig } from "../schemas";
+import { generalIntegrityPolicy } from "./general-integrity";
 import {
   BENCH_PROMPT_POLICY_REGISTRY,
   PROMPT_POLICY_DIMENSIONS,
@@ -8,7 +9,8 @@ import {
 import type { BenchPromptContribution } from "./types";
 
 /**
- * Resolução explícita e **fail-closed** das políticas de prompt (F48.2.4, D2).
+ * Resolução explícita e **fail-closed** das políticas de dimensão (F48.2.4, D2),
+ * mais a política geral versionada e independente de dimensão (F48.2.5, D4).
  *
  * Módulo **puro** — sem I/O, sem `process.env`, sem provider e sem client
  * Supabase. Percorre as dimensões do recorte (`intencao`, `formato`,
@@ -43,14 +45,15 @@ export class BenchPromptPolicyError extends Error {
   }
 }
 
-/** Contribuições resolvidas + versões por dimensão (evidência do preflight). */
+/** Contribuições resolvidas + versões por dimensão e da política geral (preflight). */
 export interface ResolvedBenchPromptPolicies {
   readonly contributions: readonly BenchPromptContribution[];
   readonly versions: Readonly<Record<string, string>>;
 }
 
 /**
- * Resolve as políticas habilitadas a partir da configuração multidimensional.
+ * Resolve as políticas habilitadas a partir da configuração multidimensional e
+ * inclui exatamente uma vez a política geral de integridade textual.
  * A configuração é validada pelo `config-registry` (valores desconhecidos/
  * desabilitados falham ali); dimensões habilitadas sem política falham aqui com
  * `bench_policy_not_implemented`. Determinístico: mesma entrada ⇒ mesma saída.
@@ -77,6 +80,11 @@ export function resolveBenchPromptPolicies(
     versions[dimension] = policy.version;
     contributions.push(...policy.contributions({ config: resolved }));
   }
+
+  // Política linguística geral, independente das dimensões configuráveis. Tem
+  // versão própria para invalidar o preflight sem criar uma nova dimensão.
+  contributions.push(...generalIntegrityPolicy.contributions());
+  versions.geral = generalIntegrityPolicy.version;
 
   return { contributions, versions };
 }

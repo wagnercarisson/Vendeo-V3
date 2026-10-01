@@ -11,6 +11,7 @@ import type { BenchBrandingContract } from "../domain/branding-service";
 import type { BenchConfig, BenchOffer, BenchProduct } from "../domain/schemas";
 import { ofertaPolicy } from "../domain/policies/oferta";
 import { produtoPolicy } from "../domain/policies/produto";
+import { generalIntegrityPolicy } from "../domain/policies/general-integrity";
 import { temaNenhumPolicy } from "../domain/policies/tema-nenhum";
 import { BENCH_PROMPT_POLICY_REGISTRY } from "../domain/policies/registry";
 import {
@@ -132,6 +133,7 @@ describe("políticas — resolução explícita e versionada", () => {
       "tipoConteudo",
       "estrutura",
       "tema",
+      "geral",
     ]);
     for (const version of Object.values(resolved.versions)) {
       expect(version.length).toBeGreaterThan(0);
@@ -149,12 +151,25 @@ describe("políticas — resolução explícita e versionada", () => {
 
   it("versiona a orientação da imagem principal e das adicionais em produto", () => {
     const lines = produtoPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines);
-    expect(produtoPolicy.version).toBe("48.2.5-produto-v2");
+    expect(produtoPolicy.version).toBe("48.2.5-produto-v3");
     expect(lines).toContain(
       "Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.",
     );
     expect(lines.join(" ").toLowerCase()).not.toContain("garantia de aparição");
     expect(lines.join(" ").toLowerCase()).not.toContain("layout programático");
+  });
+
+  it("versiona a política geral uma vez sem adicioná-la às dimensões configuráveis", () => {
+    const resolved = resolveBenchPromptPolicies(CONFIG);
+    const generalLines = generalIntegrityPolicy.contributions().flatMap((entry) => entry.lines);
+    const resolvedGeneralLines = resolved.contributions
+      .flatMap((entry) => entry.lines)
+      .filter((line) => generalLines.includes(line));
+
+    expect(generalIntegrityPolicy.version).toBe("48.2.5-general-integrity-v1");
+    expect(resolved.versions.geral).toBe(generalIntegrityPolicy.version);
+    expect(BENCH_PROMPT_POLICY_REGISTRY).not.toHaveProperty("geral");
+    expect(resolvedGeneralLines).toEqual(generalLines);
   });
 
   it("cada política declara apenas blocos canônicos", () => {
@@ -221,6 +236,44 @@ describe("políticas — atribuição exclusiva e disjunta (oferta × produto)",
       }
     }
   });
+
+  it("separa a política geral da propriedade de produto e de Oferta", () => {
+    const generalLines = generalIntegrityPolicy.contributions().flatMap((entry) => entry.lines);
+    const productLines = produtoPolicy
+      .contributions({ config: CONFIG })
+      .flatMap((entry) => entry.lines);
+    const offerLines = ofertaPolicy
+      .contributions({ config: CONFIG })
+      .flatMap((entry) => entry.lines);
+
+    expect(generalLines).toEqual([
+      "Use português correto e natural.",
+      "Evite caracteres, símbolos ou pontuação duplicados ou anômalos.",
+      "Não corrija silenciosamente os textos de entrada.",
+    ]);
+    for (const line of generalLines) {
+      expect(productLines).not.toContain(line);
+      expect(offerLines).not.toContain(line);
+    }
+    for (const forbiddenOwnerTerm of [
+      "produto",
+      "nome",
+      "descrição",
+      "obrigatório",
+      "preço",
+      "data",
+      "selo",
+      "condição",
+      "oferta",
+    ]) {
+      expect(generalLines.join(" ").toLowerCase()).not.toContain(forbiddenOwnerTerm);
+    }
+    expect(productLines.join(" ")).toContain("nome do produto inteiro");
+    expect(productLines.join(" ")).toContain("contexto e significado");
+    expect(productLines.join(" ")).toContain("informações explicitamente obrigatórias");
+    expect(offerLines.join(" ")).toContain("Não inventar preço");
+    expect(offerLines.join(" ").toLowerCase()).not.toContain("português correto");
+  });
 });
 
 // ─── Ausência de redundância no conteúdo gerado ──────────────────────────────
@@ -263,7 +316,10 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       "Reproduzir com fidelidade a aparência, a embalagem e as características do produto.",
       "Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.",
       "Usar as imagens e referências do produto como base visual, sem inventar elementos.",
-      "Não inventar produto, características nem benefícios; usar apenas o que foi informado.",
+      "Exiba o nome do produto inteiro e exatamente como informado e aprovado; não abrevie, omita, parafraseie nem corrija silenciosamente.",
+      "Use a descrição como complemento. Pode selecionar, resumir ou adaptar a redação, preservando contexto e significado; não invente características, benefícios, condições ou usos.",
+      "Reproduza literalmente as informações explicitamente obrigatórias na arte.",
+      "Não represente nem invente outro produto além do informado.",
       "",
       "[CONDIÇÕES COMERCIAIS]",
       `Preço original: R$${NBSP}99,90`,
@@ -287,6 +343,9 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       "[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]",
       "Informações obrigatórias na arte: Imagem meramente ilustrativa",
       "Válido para retirada na loja",
+      "Use português correto e natural.",
+      "Evite caracteres, símbolos ou pontuação duplicados ou anômalos.",
+      "Não corrija silenciosamente os textos de entrada.",
     ].join("\n");
 
     expect(composeResolved()).toBe(golden);

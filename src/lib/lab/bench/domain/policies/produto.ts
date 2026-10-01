@@ -2,13 +2,13 @@ import { PROMPT_BLOCK_LABELS } from "../prompt-composer";
 import type { BenchPromptPolicy } from "./types";
 
 /**
- * Política `produto` (F48.2.4, D5/D7) — orientação de **produto**, sem posições
+ * Política `produto` (F48.2.5, D1/D1a/D4) — orientação de **produto**, sem posições
  * fixas nem coordenadas rígidas.
  *
  * Contribui **exclusivamente** em `[PRODUTO E IMAGENS DE REFERÊNCIA]` com:
  * produto como elemento principal; fidelidade de aparência, embalagem e
- * características; uso das imagens/referências do produto; e proibição de
- * inventar produto/benefícios.
+ * características; papéis de imagens; nome integral/literal, descrição
+ * semanticamente fiel e textos obrigatórios literais; sem invenção de produto.
  *
  * **Atribuição exclusiva (D7):** esta política **não** declara nenhuma orientação
  * comercial (hierarquia de preço, selo, validade, textos comerciais,
@@ -16,7 +16,7 @@ import type { BenchPromptPolicy } from "./types";
  * exclusivamente à política `oferta`.
  */
 
-export const PRODUTO_POLICY_VERSION = "48.2.5-produto-v2";
+export const PRODUTO_POLICY_VERSION = "48.2.5-produto-v3";
 
 export const produtoPolicy: BenchPromptPolicy = {
   id: "policy.tipoConteudo.produto",
@@ -32,7 +32,10 @@ export const produtoPolicy: BenchPromptPolicy = {
           "Reproduzir com fidelidade a aparência, a embalagem e as características do produto.",
           "Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.",
           "Usar as imagens e referências do produto como base visual, sem inventar elementos.",
-          "Não inventar produto, características nem benefícios; usar apenas o que foi informado.",
+          "Exiba o nome do produto inteiro e exatamente como informado e aprovado; não abrevie, omita, parafraseie nem corrija silenciosamente.",
+          "Use a descrição como complemento. Pode selecionar, resumir ou adaptar a redação, preservando contexto e significado; não invente características, benefícios, condições ou usos.",
+          "Reproduza literalmente as informações explicitamente obrigatórias na arte.",
+          "Não represente nem invente outro produto além do informado.",
         ],
       },
     ];

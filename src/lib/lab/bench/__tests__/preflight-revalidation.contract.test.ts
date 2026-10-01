@@ -255,6 +255,15 @@ describe("assertPreflightEvidenceMatches — campo a campo", () => {
     ).toThrow(BenchPreflightRevalidationError);
     expect(() =>
       assertPreflightEvidenceMatches({
+        approved: {
+          ...current,
+          policyVersions: { ...current.policyVersions, geral: "48.2.5-general-integrity-old" },
+        },
+        current,
+      }),
+    ).toThrow(BenchPreflightRevalidationError);
+    expect(() =>
+      assertPreflightEvidenceMatches({
         approved: { ...current, promptBaseVersion: "outra-versao" },
         current,
       }),

@@ -840,7 +840,7 @@ beforeEach(() => {
     versions: {
       intencao: "oferta-v1",
       formato: "1-1-v1",
-      tipoConteudo: "produto-v1",
+      tipoConteudo: "48.2.5-produto-v3",
       estrutura: "peca-unica-v1",
       tema: "nenhum-v1",
     },
