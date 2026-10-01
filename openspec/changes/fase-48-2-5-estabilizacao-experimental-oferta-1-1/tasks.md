@@ -14,7 +14,7 @@
 
 - [x] 1.1 Conferir estado atual da bancada, specs sincronizadas pós-F48.2.4 e paths protegidos de produção; registrar Base SHA e baseline de paths produtivos/`supabase/migrations/**`.
 - [x] 1.2 Mapear campos livres editáveis pelo operador e pontos cliente/servidor de composição: `product.name`, `product.description`, `product.mandatoryArtworkText` e `promptBase`; documentar nome literal, descrição adaptável com significado preservado, textos obrigatórios literais e `promptBase` byte a byte/sem julgamento semântico; excluir preço, validade, enums/valores controlados e branding importado somente para leitura.
-- [ ] 1.3 Criar/estender gates arquiteturais para provar ausência de provider em testes/tasks, ausência de acesso remoto e produção/migrations intocadas.
+- [x] 1.3 Criar/estender gates arquiteturais para provar ausência de provider em testes/tasks, ausência de acesso remoto e produção/migrations intocadas.
 - [x] 1.4 Auditar persistência existente para versões/evidências/decisões; se impossível sem tabela nova, parar e reportar bloqueio com prova técnica antes de alterar schema.
 
 ## 2. Política determinística de papéis de imagem
@@ -58,10 +58,10 @@
 
 ## 7. Testes integrados e validação sem provider
 
-- [ ] 7.1 Testar cliente/API de composição, aprovação e execução contra alertas, decisões e alterações obsoletas; simular provider com adapter gravador/fake.
-- [ ] 7.2 Testar a ordem das referências e a evidência de versões/prompt; confirmar isolamento e ausência de secrets, campanhas produtivas, créditos e escrita remota.
-- [ ] 7.3 Executar typecheck, lint, build e testes de contrato/suítes relevantes; nenhuma chamada real de IA ou geração paga.
-- [ ] 7.4 Verificar Base SHA: nenhuma alteração em caminhos produtivos protegidos nem em `supabase/migrations/**`; registrar resultado e ambiente local.
+- [x] 7.1 Testar cliente/API de composição, aprovação e execução contra alertas, decisões e alterações obsoletas; simular provider com adapter gravador/fake.
+- [x] 7.2 Testar a ordem das referências e a evidência de versões/prompt; confirmar isolamento e ausência de secrets, campanhas produtivas, créditos e escrita remota.
+- [x] 7.3 Executar typecheck, lint, build e testes de contrato/suítes relevantes; nenhuma chamada real de IA ou geração paga.
+- [x] 7.4 Verificar Base SHA: nenhuma alteração em caminhos produtivos protegidos nem em `supabase/migrations/**`; registrar resultado e ambiente local.
 
 ## 8. Checkpoints, UAT humano e fechamento de evidências
 

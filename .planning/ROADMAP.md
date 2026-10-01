@@ -65,7 +65,7 @@
 - Demonstração pública, e-mail e signup público permanecem desativados; o beta fechado está preservado.
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
-- **Execução atual F48.2.5:** Planos 01–06 concluídos/summarized (6/8); CHECKPOINT A/B ainda pendentes; nenhuma geração paga ou chamada de provider pelo executor.
+- **Execução atual F48.2.5:** Planos 01–06 concluídos/summarized (6/8); gates integrados do Plano 07 verdes; aguarda decisão do CHECKPOINT A; CHECKPOINT B pendente; nenhuma geração paga ou chamada de provider pelo executor.
 
 - F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada**: `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao). Programa local `860ca4fe-...` `closed` (recusa novas reservas) e experimento `c48e21b5-...` `archived` (recusa execucoes), com historico preservado. Zero runs e zero custo; sem promocao. OpenSpec `017b8799` verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`). Local-only.
 
