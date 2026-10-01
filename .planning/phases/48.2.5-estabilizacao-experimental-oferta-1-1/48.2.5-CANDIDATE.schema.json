@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "48.2.5-CANDIDATE.schema.json",
+  "title": "Manifesto documental do candidato experimental Oferta 1:1",
+  "description": "Handoff documental versionável. Não é carregado pelo runtime e não promove configuração.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidateId",
+    "candidateVersion",
+    "status",
+    "composerVersion",
+    "imageRolePolicyVersion",
+    "textIntegrityPolicyVersion",
+    "promptBase",
+    "promptBaseVersion",
+    "policyVersions",
+    "provider",
+    "model",
+    "presetId",
+    "quality",
+    "protocol",
+    "pricingVersion",
+    "evidenceRunIds",
+    "runRecords",
+    "humanEvaluations",
+    "limitations",
+    "decision",
+    "decisionBy",
+    "decisionAt",
+    "decisionRationale"
+  ],
+  "properties": {
+    "candidateId": { "type": "string", "minLength": 1 },
+    "candidateVersion": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "awaiting_review", "approved", "rejected", "needs_adjustment"]
+    },
+    "composerVersion": { "type": "string", "minLength": 1 },
+    "imageRolePolicyVersion": { "type": "string", "minLength": 1 },
+    "textIntegrityPolicyVersion": { "type": "string", "minLength": 1 },
+    "promptBase": { "type": ["string", "null"] },
+    "promptBaseVersion": { "type": ["string", "null"] },
+    "policyVersions": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "provider": { "type": ["string", "null"] },
+    "model": { "type": ["string", "null"] },
+    "presetId": { "type": ["string", "null"] },
+    "quality": { "type": ["string", "null"] },
+    "protocol": { "type": ["string", "null"] },
+    "pricingVersion": { "type": ["string", "null"] },
+    "evidenceRunIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/runId" }
+    },
+    "runRecords": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/runRecord" }
+    },
+    "humanEvaluations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/humanEvaluation" }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected", "adjust"]
+    },
+    "decisionBy": { "type": ["string", "null"] },
+    "decisionAt": { "type": ["string", "null"], "format": "date-time" },
+    "decisionRationale": { "type": ["string", "null"] }
+  },
+  "definitions": {
+    "runId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "promptEvidenceFields": {
+      "type": "array",
+      "const": ["prompt_compiled", "prompt_approved", "prompt_sent"]
+    },
+    "runRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "caseId", "promptEvidenceFields"],
+      "properties": {
+        "runId": { "$ref": "#/definitions/runId" },
+        "caseId": { "type": "string", "minLength": 1 },
+        "promptEvidenceFields": { "$ref": "#/definitions/promptEvidenceFields" },
+        "provider": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "presetId": { "type": ["string", "null"] },
+        "quality": { "type": ["string", "null"] },
+        "protocol": { "type": ["string", "null"] },
+        "pricingVersion": { "type": ["string", "null"] },
+        "inputChecksums": { "type": "array", "items": { "type": "string" } },
+        "usage": {},
+        "usageSource": { "type": ["string", "null"] },
+        "latencyMs": { "type": ["integer", "null"], "minimum": 0 },
+        "estimatedCostUsd": { "type": ["number", "null"], "minimum": 0 },
+        "reportedCostUsd": { "type": ["number", "null"], "minimum": 0 },
+        "costSource": { "type": ["string", "null"] }
+      }
+    },
+    "evaluationValue": {
+      "type": "string",
+      "enum": ["approved", "partial", "requires_adjustment", "not_applicable", "pending"]
+    },
+    "humanEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "reviewer", "reviewedAt", "criteria", "notes"],
+      "properties": {
+        "runId": { "$ref": "#/definitions/runId" },
+        "reviewer": { "type": "string", "minLength": 1 },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "criteria": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "productNameLiteral",
+            "descriptionContext",
+            "mandatoryTextLiteral",
+            "primaryImageProtagonism",
+            "additionalImageContribution",
+            "storeIdentityFidelity",
+            "commercialIntegrity",
+            "orthographyAndPunctuation",
+            "visualHierarchy",
+            "finishAndPublishability",
+            "absenceOfInvention",
+            "technicalAndFinancialMetrics"
+          ],
+          "properties": {
+            "productNameLiteral": { "$ref": "#/definitions/evaluationValue" },
+            "descriptionContext": { "$ref": "#/definitions/evaluationValue" },
+            "mandatoryTextLiteral": { "$ref": "#/definitions/evaluationValue" },
+            "primaryImageProtagonism": { "$ref": "#/definitions/evaluationValue" },
+            "additionalImageContribution": { "$ref": "#/definitions/evaluationValue" },
+            "storeIdentityFidelity": { "$ref": "#/definitions/evaluationValue" },
+            "commercialIntegrity": { "$ref": "#/definitions/evaluationValue" },
+            "orthographyAndPunctuation": { "$ref": "#/definitions/evaluationValue" },
+            "visualHierarchy": { "$ref": "#/definitions/evaluationValue" },
+            "finishAndPublishability": { "$ref": "#/definitions/evaluationValue" },
+            "absenceOfInvention": { "$ref": "#/definitions/evaluationValue" },
+            "technicalAndFinancialMetrics": { "$ref": "#/definitions/evaluationValue" }
+          }
+        },
+        "notes": { "type": "string" },
+        "limitations": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

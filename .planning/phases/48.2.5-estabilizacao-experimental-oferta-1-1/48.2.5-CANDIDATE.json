@@ -1,0 +1,36 @@
+{
+  "candidateId": "oferta-1-1-draft",
+  "candidateVersion": "draft-1",
+  "status": "draft",
+  "composerVersion": "48.2.4-prompt-composer-v1",
+  "imageRolePolicyVersion": "48.2.5-produto-v3",
+  "textIntegrityPolicyVersion": "48.2.5-text-integrity-v1",
+  "promptBase": null,
+  "promptBaseVersion": null,
+  "policyVersions": {
+    "intencao": "48.2.4-oferta-v1",
+    "formato": "48.2.4-formato-1-1-v1",
+    "tipoConteudo": "48.2.5-produto-v3",
+    "estrutura": "48.2.4-peca-unica-v1",
+    "tema": "48.2.4-tema-nenhum-v1",
+    "geral": "48.2.5-general-integrity-v1"
+  },
+  "provider": null,
+  "model": null,
+  "presetId": null,
+  "quality": null,
+  "protocol": null,
+  "pricingVersion": null,
+  "evidenceRunIds": [],
+  "runRecords": [],
+  "humanEvaluations": [],
+  "limitations": [
+    "A presença e a fidelidade visual do nome, descrição, textos obrigatórios, imagem principal e imagens adicionais são avaliadas por humanos e não têm garantia técnica.",
+    "O detector textual é heurístico: pode sinalizar marcas, nomes próprios, abreviações e termos técnicos e pode não detectar todos os problemas; não corrige entradas.",
+    "Este manifesto é evidência documental, não configuração de runtime nem promoção para produção."
+  ],
+  "decision": "pending",
+  "decisionBy": null,
+  "decisionAt": null,
+  "decisionRationale": null
+}
