@@ -147,6 +147,16 @@ describe("políticas — resolução explícita e versionada", () => {
     expect(composeResolved()).toBe(composeResolved());
   });
 
+  it("versiona a orientação da imagem principal e das adicionais em produto", () => {
+    const lines = produtoPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines);
+    expect(produtoPolicy.version).toBe("48.2.5-produto-v2");
+    expect(lines).toContain(
+      "Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.",
+    );
+    expect(lines.join(" ").toLowerCase()).not.toContain("garantia de aparição");
+    expect(lines.join(" ").toLowerCase()).not.toContain("layout programático");
+  });
+
   it("cada política declara apenas blocos canônicos", () => {
     const { contributions } = resolveBenchPromptPolicies(CONFIG);
     const canonical = new Set(Object.values(PROMPT_BLOCK_LABELS));
@@ -251,6 +261,7 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       "Descrição: 100% algodão",
       "Produto como elemento principal da peça.",
       "Reproduzir com fidelidade a aparência, a embalagem e as características do produto.",
+      "Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.",
       "Usar as imagens e referências do produto como base visual, sem inventar elementos.",
       "Não inventar produto, características nem benefícios; usar apenas o que foi informado.",
       "",
@@ -279,6 +290,19 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
     ].join("\n");
 
     expect(composeResolved()).toBe(golden);
+  });
+
+  it("exibe a mensagem normativa exata para imagens adicionais opcionais", () => {
+    const source = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "src/app/(app)/admin/laboratorio/bancada/_components/bench-image-upload.tsx",
+      ),
+      "utf8",
+    );
+    expect(source).toContain(
+      "Imagens adicionais de referência — opcionais. Podem ajudar a preservar detalhes e orientar a composição, mas nem todas necessariamente aparecerão na arte final.",
+    );
   });
 });
 

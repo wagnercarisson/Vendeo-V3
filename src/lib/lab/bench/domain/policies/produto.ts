@@ -16,7 +16,7 @@ import type { BenchPromptPolicy } from "./types";
  * exclusivamente à política `oferta`.
  */
 
-export const PRODUTO_POLICY_VERSION = "48.2.4-produto-v1";
+export const PRODUTO_POLICY_VERSION = "48.2.5-produto-v2";
 
 export const produtoPolicy: BenchPromptPolicy = {
   id: "policy.tipoConteudo.produto",
@@ -30,6 +30,7 @@ export const produtoPolicy: BenchPromptPolicy = {
         lines: [
           "Produto como elemento principal da peça.",
           "Reproduzir com fidelidade a aparência, a embalagem e as características do produto.",
+          "Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.",
           "Usar as imagens e referências do produto como base visual, sem inventar elementos.",
           "Não inventar produto, características nem benefícios; usar apenas o que foi informado.",
         ],
