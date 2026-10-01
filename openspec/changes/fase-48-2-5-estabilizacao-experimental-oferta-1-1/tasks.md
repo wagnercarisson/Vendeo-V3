@@ -13,7 +13,7 @@
 ## 1. Contratos, fronteiras e baseline
 
 - [ ] 1.1 Conferir estado atual da bancada, specs sincronizadas pós-F48.2.4 e paths protegidos de produção; registrar Base SHA e baseline de paths produtivos/`supabase/migrations/**`.
-- [ ] 1.2 Mapear campos livres do snapshot/formulário e pontos cliente/servidor de composição; documentar contratos distintos para nome literal, descrição adaptável com significado preservado e textos obrigatórios literais, além de exclusões estruturais/controladas do detector.
+- [ ] 1.2 Mapear campos livres editáveis pelo operador e pontos cliente/servidor de composição: `product.name`, `product.description`, `product.mandatoryArtworkText` e `promptBase`; documentar nome literal, descrição adaptável com significado preservado, textos obrigatórios literais e `promptBase` byte a byte/sem julgamento semântico; excluir preço, validade, enums/valores controlados e branding importado somente para leitura.
 - [ ] 1.3 Criar/estender gates arquiteturais para provar ausência de provider em testes/tasks, ausência de acesso remoto e produção/migrations intocadas.
 - [ ] 1.4 Auditar persistência existente para versões/evidências/decisões; se impossível sem tabela nova, parar e reportar bloqueio com prova técnica antes de alterar schema.
 
@@ -33,11 +33,11 @@
 
 ## 4. Gate de revisão textual no preflight
 
-- [ ] 4.1 Definir schema comum de `textIntegrityEvidence`: versão ativa, revisão determinística dos pares campo/valor em ordem canônica e decisão (`no_alerts`/`keep_exactly`), sem normalizar texto.
+- [ ] 4.1 Definir schema comum de `textIntegrityEvidence`: versão ativa, revisão determinística dos pares campo/valor em ordem canônica, incluindo `promptBase`, e decisão (`no_alerts`/`keep_exactly`), sem normalizar texto.
 - [ ] 4.2 Implementar `/compose`: detector server-side; retornar `422 text_integrity_review_required` + alertas/revisão sem prompt quando houver alerta não resolvido; compor sem alertas e emitir evidência `no_alerts`.
 - [ ] 4.3 Implementar reenvio `/compose` para decisão declarada `keep_exactly`: receber os mesmos valores e revisão, recalcular no servidor e aceitar somente conteúdo/versão correspondentes; stale retorna `409 text_integrity_review_stale` com estado/alertas atuais. A UI registra a escolha; evidência não é prova independente de clique.
 - [ ] 4.4 Integrar UI para editar/revalidar ou confirmar manter; apresentar alertas; guardar evidência efêmera e invalidá-la em qualquer alteração de campo coberto.
-- [ ] 4.5 Implementar `/runs` para receber evidência junto ao snapshot, recalcular alertas/revisão e validar conteúdo, versão e decisão declarada antes de persistir execução ou provider; ausente/divergente retorna `409 text_integrity_review_stale`.
+- [ ] 4.5 Implementar `/runs` para receber evidência junto ao snapshot e `promptBase`, recalcular alertas/revisão e validar conteúdo byte a byte, versão e decisão declarada antes de persistir execução ou provider; alteração isolada de `promptBase`, evidência ausente ou divergente retorna `409 text_integrity_review_stale`.
 - [ ] 4.6 Testar rotas separadamente e em fluxo combinado: alertas sem decisão/422, manter exato atual, correção, payload adulterado, mudança pós-decisão, versão obsoleta/409, entrada sem alertas/no_alerts, evidência ausente/divergente em runs/409 e prompt aprovado/sent byte a byte; provar bloqueio pré-persistência/provider sem provider real.
 
 ## 5. Integridade geral do resultado criado pelo modelo
