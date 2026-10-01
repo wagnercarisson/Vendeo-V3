@@ -51,7 +51,7 @@
 | 48.2.2 | ✅ Concluída e arquivada — Fundação da bancada de geração no Admin/Laboratório | 8/8 planos; CP1, CP2 e CP3 aprovados; UAT técnico aprovado com uma geração real controlada (`gpt-image-2.5-flare`); produção intocada; OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`; nenhuma promoção |
 | 48.2.3 | ✅ Concluída, verificada, sincronizada e arquivada — Fidelidade experimental da bancada | 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; duas lojas de teste importadas localmente; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/` |
 | 48.2.4 | ✅ Concluída, verificada, sincronizada e arquivada — Experimento determinístico Oferta 1:1 | 10/10 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual (Flare low `requer ajuste`; Sunburst low `aprovado com follow-up`); gerações reais **manuais** (US$ 0,03 cada); produção intocada (`base..HEAD` vazio); pricing `2026-09-bench-2`; chave exclusiva da bancada validada; OpenSpec arquivado em `openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1/` |
-| 48.2.5 | ◉ Em execução — Estabilização experimental Oferta 1:1 | Planos 01–05 concluídos/summarized (5/8); CHECKPOINT A/B pendentes; próxima ação: Plano 06 |
+| 48.2.5 | ◉ Em execução — Estabilização experimental Oferta 1:1 | Planos 01–06 concluídos/summarized (6/8); CHECKPOINT A/B pendentes; próxima ação: Plano 07/CHECKPOINT A |
 | 48.2.2-antiga | ⏸ Descartada — Auditoria e Otimização do Prompt do Revisor | Escopo descartado/substituído em 2026-09-28; sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
@@ -65,7 +65,7 @@
 - Demonstração pública, e-mail e signup público permanecem desativados; o beta fechado está preservado.
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
-- **Execução atual F48.2.5:** Planos 01–05 concluídos/summarized (5/8); CHECKPOINT A/B ainda pendentes; nenhuma geração paga ou chamada de provider pelo executor.
+- **Execução atual F48.2.5:** Planos 01–06 concluídos/summarized (6/8); CHECKPOINT A/B ainda pendentes; nenhuma geração paga ou chamada de provider pelo executor.
 
 - F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada**: `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao). Programa local `860ca4fe-...` `closed` (recusa novas reservas) e experimento `c48e21b5-...` `archived` (recusa execucoes), com historico preservado. Zero runs e zero custo; sem promocao. OpenSpec `017b8799` verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`). Local-only.
 
@@ -76,7 +76,7 @@
 - F23 e F24 são pré-requisitos históricos de F25; F25 alimenta F26/F27 e a operação de F28.
 - F28 e F29 sustentam launch controls, observabilidade e readiness; F30 sustenta os gates legais.
 - A cadeia de produto segue F31.1 → F31.2 → F31.3 → F32 → F33 → F34 → F35 → F36 → F37 → F38 → F38.1/F38.2 → F38.2.1 → F39 → F40 → F41 → F42 → F43 → F45 → F46 → F47 → F48.1 → F48.2.1 → F49 → F50.
-- **Trilha do laboratorio:** F48.2.1 (concluida/arquivada) → **F48.2.2 (Fundacao da bancada de geracao no Admin/Laboratorio)** (concluida/arquivada) → **F48.2.3 (Fidelidade experimental da bancada)** (concluida/arquivada) → **F48.2.4 (Experimento deterministico Oferta 1:1)** (**concluida, verificada, sincronizada e arquivada**, 2026-09-30) → **F48.2.5 — Estabilização experimental Oferta 1:1** (**em execução; Planos 01–05 concluídos/summarized, 5/8; checkpoints A/B pendentes**). “Refinamento experimental Oferta 1:1” era rótulo provisório de tracking, sem mudança de escopo. A F48.2.2 antiga (Revisor) foi descartada/substituida (sem artefatos mantidos).
+- **Trilha do laboratorio:** F48.2.1 (concluida/arquivada) → **F48.2.2 (Fundacao da bancada de geracao no Admin/Laboratorio)** (concluida/arquivada) → **F48.2.3 (Fidelidade experimental da bancada)** (concluida/arquivada) → **F48.2.4 (Experimento deterministico Oferta 1:1)** (**concluida, verificada, sincronizada e arquivada**, 2026-09-30) → **F48.2.5 — Estabilização experimental Oferta 1:1** (**em execução; Planos 01–06 concluídos/summarized, 6/8; CHECKPOINT A/B pendentes**). “Refinamento experimental Oferta 1:1” era rótulo provisório de tracking, sem mudança de escopo. A F48.2.2 antiga (Revisor) foi descartada/substituida (sem artefatos mantidos).
 - F50.1 depende externamente da constituição da PJ e dos dados legais reais; não bloqueia o estado concluído de F50.
 - O índice operacional de requisitos está em `.planning/REQUIREMENTS.md`; o detalhamento histórico integral está em `.planning/REQUIREMENTS-ARCHIVE.md`, no archive deste roadmap e nos artefatos das fases.
 

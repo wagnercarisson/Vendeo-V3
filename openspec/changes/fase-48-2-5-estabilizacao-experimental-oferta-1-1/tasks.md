@@ -49,12 +49,12 @@
 
 ## 6. Protocolo documental, manifesto e isolamento
 
-- [ ] 6.1 Criar template versionável de experimento por rodada: hipótese, variável única, run ID, entradas mantidas, resultado, avaliação humana, decisão e próximo ajuste.
-- [ ] 6.2 Criar protocolo UAT para duas lojas e dois produtos distintos; incluir caso com principal isolada e caso principal+adicionais, entradas idênticas entre modelos e rubrica humana separando nome inteiro/literal, descrição/contexto, textos obrigatórios literais e integridade comercial.
-- [ ] 6.3 Fixar matriz manual inicial `gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst` em `low`; exigir hipótese concreta para `medium+`; registrar protocolo, pricing version, usage, latência e custo por run.
-- [ ] 6.4 Criar schema/template de manifesto candidato que congela prompt-base exato reutilizável e versões (candidateId/version, composer, image-role, text-integrity, prompt-base e policy versions), modelo/qualidade/protocolo/pricing, runs, avaliações, limitações e decisão humana.
-- [ ] 6.5 Associar prompt compilado/aprovado/sent exato ao run que contém loja, produto e oferta; manifesto referencia esses prompts por run ID e nunca elege um prompt específico de caso como candidato universal.
-- [ ] 6.6 Provar que manifesto/documentos não são carregados pelo runtime, não ativam configuração e reutilizam runs/linhagem/snapshots; nenhuma tabela nova.
+- [x] 6.1 Criar template versionável de experimento por rodada: hipótese, variável única, run ID, entradas mantidas, resultado, avaliação humana, decisão e próximo ajuste.
+- [x] 6.2 Criar protocolo UAT para duas lojas e dois produtos distintos; incluir caso com principal isolada e caso principal+adicionais, entradas idênticas entre modelos e rubrica humana separando nome inteiro/literal, descrição/contexto, textos obrigatórios literais e integridade comercial.
+- [x] 6.3 Fixar matriz manual inicial `gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst` em `low`; exigir hipótese concreta para `medium+`; registrar protocolo, pricing version, usage, latência e custo por run.
+- [x] 6.4 Criar schema/template de manifesto candidato que congela prompt-base exato reutilizável e versões (candidateId/version, composer, image-role, text-integrity, prompt-base e policy versions), modelo/qualidade/protocolo/pricing, runs, avaliações, limitações e decisão humana.
+- [x] 6.5 Associar prompt compilado/aprovado/sent exato ao run que contém loja, produto e oferta; manifesto referencia esses prompts por run ID e nunca elege um prompt específico de caso como candidato universal.
+- [x] 6.6 Provar que manifesto/documentos não são carregados pelo runtime, não ativam configuração e reutilizam runs/linhagem/snapshots; nenhuma tabela nova.
 
 ## 7. Testes integrados e validação sem provider
 
