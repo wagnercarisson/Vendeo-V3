@@ -94,6 +94,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  vi.restoreAllMocks();
   if (SAVED_ENV.VENDEO_LAB_ENABLED === undefined) delete process.env.VENDEO_LAB_ENABLED;
   else process.env.VENDEO_LAB_ENABLED = SAVED_ENV.VENDEO_LAB_ENABLED;
   if (SAVED_ENV.NEXT_PUBLIC_SUPABASE_URL === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -209,6 +210,15 @@ beforeEach(() => {
 
 describe("fronteira da bancada — fluxo completo toca somente alvos permitidos", () => {
   it("seleção → branding → upload em draft → confirmação → execução → persistência → leitura", async () => {
+    const nativeFetch = globalThis.fetch.bind(globalThis);
+    const networkFetch = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const hostname = new URL(url).hostname;
+      if (!["127.0.0.1", "localhost", "::1"].includes(hostname)) {
+        return Promise.reject(new Error("remote_network_forbidden"));
+      }
+      return nativeFetch(input, init);
+    });
     const recording = createRecordingClient(seed());
     const client = recording.client;
     const preset = resolveBenchPreset("gpt-image-2-low");
@@ -323,6 +333,10 @@ describe("fronteira da bancada — fluxo completo toca somente alvos permitidos"
     expect(
       recording.accessLog.some((entry) => entry.startsWith("storage.upload:lab-artifacts:bench/")),
     ).toBe(true);
+    expect(networkFetch.mock.calls.every(([input]) => {
+      const url = input instanceof Request ? input.url : String(input);
+      return ["127.0.0.1", "localhost", "::1"].includes(new URL(url).hostname);
+    })).toBe(true);
   });
 });
 
