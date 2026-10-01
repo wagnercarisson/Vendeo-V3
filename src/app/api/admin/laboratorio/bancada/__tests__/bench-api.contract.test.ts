@@ -317,15 +317,19 @@ vi.mock("@/lib/lab/bench/domain/identity-direction", () => ({
     mockBuildIdentityDirectionContributions(...args),
 }));
 
-vi.mock("@/lib/lab/bench/domain/preflight-revalidation", () => ({
-  recomposeBenchPrompt: (...args: unknown[]) => mockRecomposeBenchPrompt(...args),
-  assertPreflightCompositionMatches: (...args: unknown[]) =>
-    mockAssertPreflightCompositionMatches(...args),
-  assertPreflightEvidenceMatches: (...args: unknown[]) =>
-    mockAssertPreflightEvidenceMatches(...args),
-  resolveServerResolvedEvidence: (...args: unknown[]) => mockResolveServerResolvedEvidence(...args),
-  BenchPreflightRevalidationError: MockBenchPreflightRevalidationError,
-}));
+vi.mock("@/lib/lab/bench/domain/preflight-revalidation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/lab/bench/domain/preflight-revalidation")>();
+  return {
+    ...actual,
+    recomposeBenchPrompt: (...args: unknown[]) => mockRecomposeBenchPrompt(...args),
+    assertPreflightCompositionMatches: (...args: unknown[]) =>
+      mockAssertPreflightCompositionMatches(...args),
+    assertPreflightEvidenceMatches: (...args: unknown[]) =>
+      mockAssertPreflightEvidenceMatches(...args),
+    resolveServerResolvedEvidence: (...args: unknown[]) => mockResolveServerResolvedEvidence(...args),
+    BenchPreflightRevalidationError: MockBenchPreflightRevalidationError,
+  };
+});
 
 vi.mock("@/lib/lab/bench/execution/bench-identity-transport", () => ({
   resolveBenchIdentityImageDataUrl: (...args: unknown[]) =>
@@ -386,6 +390,11 @@ vi.mock("@/lib/lab/technical-validation", () => ({
 
 import { ForbiddenError } from "@/lib/auth/errors";
 import type { LabEnvironmentReason } from "@/lib/lab/environment-guard";
+import {
+  collectBenchTextIntegrityFields,
+  createBenchTextIntegrityRevision,
+  TEXT_INTEGRITY_POLICY_VERSION,
+} from "@/lib/lab/bench/domain/text-integrity-detector";
 
 /**
  * F48.2.2 — contrato HTTP da API administrativa da bancada
@@ -530,6 +539,23 @@ const DETAIL_RUN = {
   costRuleVersion: "2026-09-bench-2",
 };
 
+const VALID_RUN_PRODUCT = {
+  name: "Produto",
+  priceCents: 1000,
+  originalPriceCents: 1500,
+};
+const VALID_RUN_PROMPT_BASE = "prompt base";
+const VALID_RUN_TEXT_INTEGRITY_EVIDENCE = {
+  policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+  reviewRevision: createBenchTextIntegrityRevision(
+    collectBenchTextIntegrityFields({
+      product: VALID_RUN_PRODUCT,
+      promptBase: VALID_RUN_PROMPT_BASE,
+    }),
+  ),
+  decision: "no_alerts" as const,
+};
+
 const VALID_RUN_BODY = {
   operationId: OP_ID,
   runId: RUN_ID,
@@ -538,14 +564,15 @@ const VALID_RUN_BODY = {
   prompt: "prompt manual",
   references: [`bench/${RUN_ID}/inputs/0.png`],
   confirmed: true,
-  product: { name: "Produto", priceCents: 1000, originalPriceCents: 1500 },
+  product: VALID_RUN_PRODUCT,
   offer: {},
   preflight: {
-    promptBase: "prompt base",
+    promptBase: VALID_RUN_PROMPT_BASE,
     promptCompiled: "prompt compilado",
     promptApproved: "prompt manual",
     promptBlocks: { "INSTRUÇÕES DO PROMPT-BASE": "prompt base" },
     composerVersion: "48.2.3-prompt-composer-v1",
+    textIntegrityEvidence: VALID_RUN_TEXT_INTEGRITY_EVIDENCE,
   },
 };
 
@@ -1176,6 +1203,11 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(body.blocks).toBeDefined();
     expect(body.composerVersion).toBe("test-composer-v1");
     expect(body.approved).toBe(false);
+    expect(body.textIntegrityEvidence).toMatchObject({
+      policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+      decision: "no_alerts",
+    });
+    expect(body.textIntegrityEvidence.reviewRevision).toMatch(/^[0-9a-f]{64}$/);
 
     // Composição é pura: nenhuma geração paga disparada.
     expect(mockComposePromptBlocks).toHaveBeenCalledTimes(1);
@@ -1185,6 +1217,80 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     const assertIdx = mockAssertBenchTestStore.mock.invocationCallOrder[0];
     const brandingIdx = mockLoadBenchBranding.mock.invocationCallOrder[0];
     expect(assertIdx).toBeLessThan(brandingIdx);
+  });
+
+  it("POST /compose com alertas ⇒ 422 e não compõe prompt nem lê branding", async () => {
+    const res = await postCompose({
+      ...VALID_COMPOSE_BODY,
+      product: { name: "voce!!" },
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(422);
+    expect(body.error).toBe("text_integrity_review_required");
+    expect(body.compiledPrompt).toBeUndefined();
+    expect(body.textIntegrityReview).toMatchObject({
+      policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+      alerts: expect.arrayContaining([
+        expect.objectContaining({ field: "product.name", ruleId: "ptbr_voce_without_accent" }),
+        expect.objectContaining({ field: "product.name", ruleId: "punctuation_repeated" }),
+      ]),
+    });
+    expect(body.textIntegrityReview.reviewRevision).toMatch(/^[0-9a-f]{64}$/);
+    expect(mockComposePromptBlocks).not.toHaveBeenCalled();
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose aceita keep_exactly apenas na revisão atual", async () => {
+    const initial = await postCompose({
+      ...VALID_COMPOSE_BODY,
+      product: { name: "voce!!" },
+    });
+    const reviewBody = await initial.json();
+    const textIntegrityEvidence = {
+      policyVersion: reviewBody.textIntegrityReview.policyVersion,
+      reviewRevision: reviewBody.textIntegrityReview.reviewRevision,
+      decision: "keep_exactly",
+    };
+
+    const accepted = await postCompose({
+      ...VALID_COMPOSE_BODY,
+      product: { name: "voce!!" },
+      textIntegrityEvidence,
+    });
+    const acceptedBody = await accepted.json();
+
+    expect(accepted.status).toBe(200);
+    expect(acceptedBody.compiledPrompt).toBe("prompt compilado");
+    expect(acceptedBody.textIntegrityEvidence).toEqual(textIntegrityEvidence);
+  });
+
+  it("POST /compose recusa keep_exactly obsoleto se somente promptBase mudou", async () => {
+    const initial = await postCompose({
+      ...VALID_COMPOSE_BODY,
+      product: { name: "voce!!" },
+    });
+    const reviewBody = await initial.json();
+
+    const stale = await postCompose({
+      ...VALID_COMPOSE_BODY,
+      promptBase: "prompt base editado após a revisão",
+      product: { name: "voce!!" },
+      textIntegrityEvidence: {
+        policyVersion: reviewBody.textIntegrityReview.policyVersion,
+        reviewRevision: reviewBody.textIntegrityReview.reviewRevision,
+        decision: "keep_exactly",
+      },
+    });
+    const staleBody = await stale.json();
+
+    expect(stale.status).toBe(409);
+    expect(staleBody.error).toBe("text_integrity_review_stale");
+    expect(staleBody.compiledPrompt).toBeUndefined();
+    expect(staleBody.textIntegrityReview.reviewRevision).not.toBe(
+      reviewBody.textIntegrityReview.reviewRevision,
+    );
+    expect(mockComposePromptBlocks).not.toHaveBeenCalled();
   });
 
   it("POST /compose com approved: true ecoa a aprovação explícita", async () => {
@@ -1434,18 +1540,89 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     expect(mockExecuteBenchRun).not.toHaveBeenCalled();
   });
 
-  it("sem preflight aprovado ⇒ 422 confirmation_required sem chamada paga", async () => {
+  it("sem preflight/evidência textual ⇒ 409 stale sem leitura ou chamada paga", async () => {
     const { preflight, ...withoutPreflight } = VALID_RUN_BODY;
     void preflight;
 
     const res = await postRun(withoutPreflight);
     const body = await res.json();
 
-    expect(res.status).toBe(422);
-    expect(body.error).toBe("confirmation_required");
+    expect(res.status).toBe(409);
+    expect(body.error).toBe("text_integrity_review_stale");
+    expect(mockGetBenchRunByOperationId).not.toHaveBeenCalled();
     expect(mockSetBenchRunInput).not.toHaveBeenCalled();
     expect(mockConfirmBenchRun).not.toHaveBeenCalled();
     expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("sem evidência textual ⇒ 409 stale antes de ler ou confirmar o draft", async () => {
+    const body = {
+      ...VALID_RUN_BODY,
+      preflight: {
+        ...VALID_RUN_BODY.preflight,
+        textIntegrityEvidence: undefined,
+      },
+    };
+
+    const res = await postRun(body);
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("text_integrity_review_stale");
+    expect(mockGetBenchRunByOperationId).not.toHaveBeenCalled();
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("alterar somente promptBase após compose ⇒ 409 stale antes de persistência/provider", async () => {
+    const body = {
+      ...VALID_RUN_BODY,
+      preflight: {
+        ...VALID_RUN_BODY.preflight,
+        promptBase: "prompt base alterado depois da revisão",
+      },
+    };
+
+    const res = await postRun(body);
+    const response = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(response.error).toBe("text_integrity_review_stale");
+    expect(response.textIntegrityReview.reviewRevision).not.toBe(
+      VALID_RUN_BODY.preflight.textIntegrityEvidence.reviewRevision,
+    );
+    expect(mockGetBenchRunByOperationId).not.toHaveBeenCalled();
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("keep_exactly consistente prossegue sem transformar os textos", async () => {
+    const product = { ...VALID_RUN_PRODUCT, name: "voce!!" };
+    const fields = collectBenchTextIntegrityFields({
+      product,
+      promptBase: VALID_RUN_PROMPT_BASE,
+    });
+    const textIntegrityEvidence = {
+      policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+      reviewRevision: createBenchTextIntegrityRevision(fields),
+      decision: "keep_exactly" as const,
+    };
+    const body = {
+      ...VALID_RUN_BODY,
+      product,
+      preflight: { ...VALID_RUN_BODY.preflight, textIntegrityEvidence },
+    };
+
+    const res = await postRun(body);
+    await res.text();
+
+    expect(res.status).toBe(200);
+    expect(mockConfirmBenchRun).toHaveBeenCalledTimes(1);
+    expect(mockExecuteBenchRun).toHaveBeenCalledTimes(1);
+    expect(mockSetBenchRunInput).toHaveBeenCalledWith(
+      expect.objectContaining({ campaignSnapshot: expect.anything() }),
+    );
   });
 
   it("prompt divergente do prompt aprovado ⇒ 400 sem mutação", async () => {

@@ -4,7 +4,11 @@ import { AlertCircle, CheckCircle2, Loader2, PenLine, Wand2 } from "lucide-react
 
 import { Button } from "@/components/ui/button";
 
-import type { BenchIdentityReference } from "@/lib/lab/bench/domain/schemas";
+import type {
+  BenchIdentityReference,
+  BenchTextIntegrityAlert,
+  BenchTextIntegrityEvidence,
+} from "@/lib/lab/bench/domain/schemas";
 
 import { LabTextarea } from "../../_components/lab-textarea";
 
@@ -49,9 +53,17 @@ export interface BenchPreflightEvidenceView {
   promptApproved: string;
   promptBlocks: Record<string, string>;
   composerVersion: string;
+  textIntegrityEvidence: BenchTextIntegrityEvidence;
   policyVersions?: Record<string, string>;
   promptBaseVersion?: string;
   identityReference?: BenchIdentityReference | null;
+}
+
+export interface BenchTextIntegrityReviewView {
+  policyVersion: string;
+  reviewRevision: string;
+  alerts: BenchTextIntegrityAlert[];
+  stale: boolean;
 }
 
 interface BenchPreflightPanelProps {
@@ -69,6 +81,8 @@ interface BenchPreflightPanelProps {
   onCompose: () => void;
   onEditFinal: (value: string) => void;
   onApprove: () => void;
+  textIntegrityReview?: BenchTextIntegrityReviewView | null;
+  onKeepExactly?: () => void;
 }
 
 const STATUS_LABELS: Record<BenchPreflightStatus, string> = {
@@ -92,6 +106,8 @@ export function BenchPreflightPanel({
   onCompose,
   onEditFinal,
   onApprove,
+  textIntegrityReview = null,
+  onKeepExactly,
 }: BenchPreflightPanelProps) {
   const showCompiled = status === "composed" || status === "edited" || status === "approved";
   const canApprove =
@@ -141,6 +157,64 @@ export function BenchPreflightPanel({
         )}
         {STATUS_LABELS[status]}
       </p>
+
+      {textIntegrityReview && (
+        <section
+          role="alert"
+          data-testid="bench-text-integrity-review"
+          className="space-y-3 rounded-lg border border-accent-amber/50 bg-accent-amber/10 p-4"
+          aria-labelledby="bench-text-integrity-review-title"
+        >
+          <div>
+            <h3
+              id="bench-text-integrity-review-title"
+              className="font-heading text-sm font-semibold text-text-primary"
+            >
+              {textIntegrityReview.stale
+                ? "Revisão textual desatualizada"
+                : "Revise os textos destacados"}
+            </h3>
+            <p className="mt-1 text-xs text-text-secondary font-body">
+              São sugestões de possíveis problemas; o sistema não corrige nem altera seus textos.
+              Edite os campos e recomponha, ou mantenha exatamente esta revisão.
+            </p>
+          </div>
+          {textIntegrityReview.alerts.length > 0 ? (
+            <ul className="space-y-2">
+              {textIntegrityReview.alerts.map((alert, index) => (
+                <li
+                  key={`${alert.field}:${alert.ruleId}:${index}`}
+                  data-testid="bench-text-integrity-alert"
+                  className="rounded-md border border-border bg-bg-elevated p-3"
+                >
+                  <p className="text-xs font-semibold text-text-primary font-heading">
+                    {alert.field} · {alert.ruleId}
+                  </p>
+                  <p className="mt-1 break-words font-mono text-xs text-text-secondary">
+                    {alert.excerpt}
+                  </p>
+                  <p className="mt-1 text-xs text-text-secondary font-body">{alert.reason}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-text-secondary font-body">
+              Nenhum alerta está ativo. Recompose para emitir uma revisão atual.
+            </p>
+          )}
+          {textIntegrityReview.alerts.length > 0 && onKeepExactly ? (
+            <Button
+              type="button"
+              variant="secondary"
+              data-testid="bench-keep-text-exactly-button"
+              onClick={onKeepExactly}
+              disabled={disabled || composing}
+            >
+              Manter exatamente como informado
+            </Button>
+          ) : null}
+        </section>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <Button

@@ -23,7 +23,15 @@ import {
   COMPOSER_VERSION,
   composePromptBlocks,
 } from "@/lib/lab/bench/domain/prompt-composer";
-import { BenchOfferSchema, BenchProductSchema } from "@/lib/lab/bench/domain/schemas";
+import {
+  BenchOfferSchema,
+  BenchProductSchema,
+  BenchTextIntegrityEvidenceSchema,
+} from "@/lib/lab/bench/domain/schemas";
+import {
+  collectBenchTextIntegrityFields,
+} from "@/lib/lab/bench/domain/text-integrity-detector";
+import { validateBenchTextIntegrityEvidence } from "@/lib/lab/bench/domain/preflight-revalidation";
 import {
   BenchStoreManifestError,
   assertBenchTestStore,
@@ -115,6 +123,30 @@ export const POST = apiHandler(async (request: Request) => {
   const references = Array.isArray(raw.references)
     ? raw.references.filter((entry): entry is string => typeof entry === "string")
     : [];
+
+  const textIntegrityEvidenceResult =
+    raw.textIntegrityEvidence === undefined
+      ? undefined
+      : BenchTextIntegrityEvidenceSchema.safeParse(raw.textIntegrityEvidence);
+  if (textIntegrityEvidenceResult && !textIntegrityEvidenceResult.success) {
+    return NextResponse.json(
+      { error: "invalid_payload", details: ["textIntegrityEvidence"] },
+      { status: 400 },
+    );
+  }
+
+  const textIntegrityReview = validateBenchTextIntegrityEvidence({
+    fields: collectBenchTextIntegrityFields({ product: product.data, promptBase }),
+    ...(textIntegrityEvidenceResult?.success
+      ? { evidence: textIntegrityEvidenceResult.data }
+      : {}),
+  });
+  if (!textIntegrityReview.ok) {
+    return NextResponse.json(
+      { error: textIntegrityReview.error, textIntegrityReview: textIntegrityReview.review },
+      { status: textIntegrityReview.status },
+    );
+  }
 
   // Config resolvida (dimensões travadas + preset habilitado). As dimensões
   // `modelo`/`qualidade` não entram no texto do prompt — o registry permanece a
@@ -211,6 +243,7 @@ export const POST = apiHandler(async (request: Request) => {
     promptBaseVersion: defaultPromptBase.version,
     defaultPromptBase: defaultPromptBase.content,
     briefing,
+    textIntegrityEvidence: textIntegrityReview.evidence,
     // A aprovação é explícita: o cliente devolve `approved: true` apenas quando o
     // operador aprovou o texto final. O servidor não inventa aprovação.
     approved: raw.approved === true,

@@ -57,8 +57,12 @@ import { BENCH_DEFAULT_PROMPT_BASE } from "@/lib/lab/bench/domain/prompt-base";
 import { COMPOSER_VERSION } from "@/lib/lab/bench/domain/prompt-composer";
 import {
   BenchPreflightEvidenceSchema,
-  type BenchPreflightEvidence,
 } from "@/lib/lab/bench/domain/schemas";
+import {
+  collectBenchTextIntegrityFields,
+  createBenchTextIntegrityRevision,
+  TEXT_INTEGRITY_POLICY_VERSION,
+} from "@/lib/lab/bench/domain/text-integrity-detector";
 
 import { BenchBrandingPanel, type BenchBrandingView } from "../bench-branding-panel";
 import { BenchBrandColorIndicator } from "../bench-brand-color-indicator";
@@ -73,7 +77,10 @@ import {
 } from "../bench-execution-panel";
 import { BenchImageUpload, benchUploadFingerprint } from "../bench-image-upload";
 import { BenchPresetSelector } from "../bench-preset-selector";
-import { BenchPreflightPanel } from "../bench-preflight-panel";
+import {
+  BenchPreflightPanel,
+  type BenchPreflightEvidenceView,
+} from "../bench-preflight-panel";
 import { BenchPromptEditor } from "../bench-prompt-editor";
 import {
   BenchPoliciesPanel,
@@ -145,6 +152,11 @@ const PRESET_ENABLED_MEDIUM = {
 };
 
 const PRESETS = [PRESET_ENABLED, PRESET_DISABLED];
+const MOCK_TEXT_INTEGRITY_EVIDENCE = {
+  policyVersion: "48.2.5-text-integrity-v1",
+  reviewRevision: "a".repeat(64),
+  decision: "no_alerts" as const,
+};
 
 const mockFetch = vi.fn();
 
@@ -731,6 +743,118 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     expect(screen.getByTestId("bench-approve-button")).toBeDisabled();
   });
 
+  it("apresenta alertas e reenvia keep_exactly para os mesmos textos", async () => {
+    const reviewRevision = "b".repeat(64);
+    const composeBodies: Array<Record<string, unknown>> = [];
+    let composeCount = 0;
+    mockFetch.mockImplementation(async (url: unknown, init?: RequestInit) => {
+      if (String(url).includes("/compose")) {
+        composeCount += 1;
+        composeBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        if (composeCount === 1) {
+          return jsonResponse(
+            {
+              error: "text_integrity_review_required",
+              textIntegrityReview: {
+                policyVersion: "48.2.5-text-integrity-v1",
+                reviewRevision,
+                alerts: [
+                  {
+                    field: "product.name",
+                    excerpt: "voce!!",
+                    reason: "A grafia pode precisar de revisão.",
+                    ruleId: "ptbr_voce_without_accent",
+                  },
+                ],
+              },
+            },
+            422,
+          );
+        }
+        return jsonResponse({
+          compiledPrompt: "PROMPT APÓS KEEP",
+          blocks: {},
+          composerVersion: COMPOSER_VERSION,
+          policyVersions: { intencao: "48.2.4-oferta-v1" },
+          promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+          textIntegrityEvidence: {
+            policyVersion: "48.2.5-text-integrity-v1",
+            reviewRevision,
+            decision: "keep_exactly",
+          },
+        });
+      }
+      return jsonResponse({ branding: BRANDING });
+    });
+
+    render(await BancadaPage());
+    expect(screen.getByTestId("bench-compose-button")).toBeEnabled();
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    await waitFor(() =>
+      expect(mockFetch.mock.calls.some(([url]) => String(url).includes("/compose"))).toBe(true),
+    );
+
+    const review = await screen.findByTestId("bench-text-integrity-review");
+    expect(review).toHaveTextContent("product.name");
+    expect(review).toHaveTextContent("voce!!");
+    expect(review).toHaveTextContent("ptbr_voce_without_accent");
+    expect(screen.queryByRole("textbox", { name: "Prompt compilado" })).toBeNull();
+
+    fireEvent.click(screen.getByTestId("bench-keep-text-exactly-button"));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
+        "PROMPT APÓS KEEP",
+      ),
+    );
+    expect(composeBodies).toHaveLength(2);
+    expect(composeBodies[1].textIntegrityEvidence).toEqual({
+      policyVersion: "48.2.5-text-integrity-v1",
+      reviewRevision,
+      decision: "keep_exactly",
+    });
+    expect(composeBodies[1].promptBase).toBe(composeBodies[0].promptBase);
+  });
+
+  it.each([
+    { label: "Nome do produto", value: "Café" },
+    { label: "Descrição (opcional)", value: "Descrição" },
+    { label: "Informações obrigatórias na arte", value: "Lote 2" },
+    { label: "Prompt", value: "Prompt-base editado" },
+  ])("invalidates the preflight after editing covered field $label", async ({ label, value }) => {
+    mockFetch.mockImplementation(async (url: unknown) => {
+      if (String(url).includes("/compose")) {
+        return jsonResponse({
+          compiledPrompt: "PROMPT COMPILADO",
+          blocks: {},
+          composerVersion: COMPOSER_VERSION,
+          policyVersions: { intencao: "48.2.4-oferta-v1" },
+          promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+          textIntegrityEvidence: MOCK_TEXT_INTEGRITY_EVIDENCE,
+        });
+      }
+      return jsonResponse({ branding: BRANDING });
+    });
+
+    render(await BancadaPage());
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    await screen.findByRole("textbox", { name: "Prompt compilado" });
+    fireEvent.click(screen.getByTestId("bench-approve-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado"),
+    );
+
+    const field =
+      label === "Prompt"
+        ? screen.getByRole("textbox", { name: "Prompt" })
+        : screen.getByLabelText(label);
+    fireEvent.change(field, { target: { value } });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt invalidado"),
+    );
+    expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
+  });
+
   it("exibe o prompt compilado, habilita aprovação e mostra o estado aprovado", () => {
     const { rerender } = render(
       <BenchPreflightPanel
@@ -767,6 +891,94 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     );
   });
 
+  it("encaminha a evidência no_alerts recebida de compose até /runs", async () => {
+    let composedPromptBase = "";
+    mockFetch.mockImplementation(async (url: unknown, init?: RequestInit) => {
+      const target = String(url);
+      if (target.includes("/branding")) return jsonResponse({ branding: BRANDING });
+      if (target.includes("/inputs")) {
+        return jsonResponse(
+          {
+            runId: RUN_ID,
+            inputs: [
+              {
+                path: `bench/${RUN_ID}/inputs/0.png`,
+                mimeType: "image/png",
+                width: 8,
+                height: 8,
+                bytes: 3,
+                checksum: "input-checksum",
+              },
+            ],
+          },
+          201,
+        );
+      }
+      if (target.includes("/compose")) {
+        const request = JSON.parse(String(init?.body)) as {
+          product: { name: string; description?: string; mandatoryArtworkText?: string };
+          promptBase: string;
+        };
+        composedPromptBase = request.promptBase;
+        const reviewRevision = createBenchTextIntegrityRevision(
+          collectBenchTextIntegrityFields({
+            product: request.product,
+            promptBase: request.promptBase,
+          }),
+        );
+        return jsonResponse({
+          compiledPrompt: "PROMPT SEM ALERTAS",
+          blocks: {},
+          composerVersion: COMPOSER_VERSION,
+          policyVersions: { tipoConteudo: "produto-v2" },
+          promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+          textIntegrityEvidence: {
+            policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+            reviewRevision,
+            decision: "no_alerts",
+          },
+        });
+      }
+      if (target.includes("/estimate")) return jsonResponse(ESTIMATE);
+      if (target.endsWith("/runs")) {
+        return ndjsonResponse([{ type: "done", runId: RUN_ID }]);
+      }
+      return jsonResponse({ error: "unexpected_test_request" }, 400);
+    });
+
+    render(await BancadaPage());
+    fireEvent.change(screen.getByLabelText("Nome do produto"), {
+      target: { value: "Café especial" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Prompt" }), {
+      target: { value: "Crie uma arte comercial clara." },
+    });
+    fireEvent.change(screen.getByTestId("bench-image-input-main"), {
+      target: {
+        files: [new File([new Uint8Array([1, 2, 3])], "principal.png", { type: "image/png" })],
+      },
+    });
+    fireEvent.click(screen.getByTestId("bench-upload-button"));
+    await waitFor(() => expect(mockFetch.mock.calls.some(([url]) => String(url).includes("/inputs"))).toBe(true));
+
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    await screen.findByRole("textbox", { name: "Prompt compilado" });
+    fireEvent.click(screen.getByTestId("bench-approve-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado"),
+    );
+
+    await openConfirmation();
+    fireEvent.click(screen.getByTestId("lab-confirm-button"));
+    await waitFor(() => expect(runCalls()).toHaveLength(1));
+
+    const runBody = JSON.parse(String(runCalls()[0][1].body)) as {
+      preflight: { textIntegrityEvidence: { decision: string }; promptBase: string };
+    };
+    expect(runBody.preflight.textIntegrityEvidence.decision).toBe("no_alerts");
+    expect(runBody.preflight.promptBase).toBe(composedPromptBase);
+  });
+
   it("mostra o estado de invalidação em accent.amber", () => {
     render(
       <BenchPreflightPanel
@@ -785,6 +997,42 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent(
       "Prompt invalidado — recomponha e aprove",
     );
+  });
+
+  it("distingue estado stale e mostra a revisão/alertas atuais", () => {
+    render(
+      <BenchPreflightPanel
+        status="invalidated"
+        compiledPrompt=""
+        finalPrompt=""
+        composerVersion=""
+        composing={false}
+        error="Recomponha com a revisão atual."
+        textIntegrityReview={{
+          policyVersion: "48.2.5-text-integrity-v1",
+          reviewRevision: "c".repeat(64),
+          alerts: [
+            {
+              field: "promptBase",
+              excerpt: "voce",
+              reason: "A grafia pode precisar de revisão.",
+              ruleId: "ptbr_voce_without_accent",
+            },
+          ],
+          stale: true,
+        }}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+        onKeepExactly={() => {}}
+      />,
+    );
+
+    const review = screen.getByTestId("bench-text-integrity-review");
+    expect(review).toHaveTextContent("Revisão textual desatualizada");
+    expect(review).toHaveTextContent("promptBase");
+    expect(review).toHaveTextContent("ptbr_voce_without_accent");
+    expect(screen.getByTestId("bench-keep-text-exactly-button")).toBeInTheDocument();
   });
 
   it("o workbench invalida o preflight de forma centralizada (ponto único + revisão)", () => {
@@ -824,6 +1072,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             composerVersion: COMPOSER_VERSION,
             policyVersions: { intencao: "48.2.4-oferta-v1" },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+            textIntegrityEvidence: MOCK_TEXT_INTEGRITY_EVIDENCE,
           }),
         };
       }
@@ -867,6 +1116,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             composerVersion: COMPOSER_VERSION,
             policyVersions: { intencao: "48.2.4-oferta-v1" },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+            textIntegrityEvidence: MOCK_TEXT_INTEGRITY_EVIDENCE,
           }),
         };
       }
@@ -942,7 +1192,7 @@ const ESTIMATE = {
   costRuleVersion: "2026-09-bench-2",
 };
 
-const PREFLIGHT_EVIDENCE: BenchPreflightEvidence = {
+const PREFLIGHT_EVIDENCE: BenchPreflightEvidenceView = {
   promptBase: "prompt base",
   promptCompiled: "prompt compilado",
   promptApproved: "Foto do produto em fundo claro",
@@ -959,6 +1209,16 @@ const PREFLIGHT_EVIDENCE: BenchPreflightEvidence = {
     tema: "48.2.4-tema-nenhum-v1",
   },
   promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+  textIntegrityEvidence: {
+    policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+    reviewRevision: createBenchTextIntegrityRevision(
+      collectBenchTextIntegrityFields({
+        product: { name: "Café especial" },
+        promptBase: "prompt base",
+      }),
+    ),
+    decision: "no_alerts",
+  },
   identityReference: {
     kind: "logo",
     variantType: "primary",

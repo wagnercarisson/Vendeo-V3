@@ -23,10 +23,12 @@ import {
   assertPreflightEvidenceMatches,
   recomposeBenchPrompt,
   resolveServerResolvedEvidence,
+  validateBenchTextIntegrityEvidence,
 } from "@/lib/lab/bench/domain/preflight-revalidation";
 import { resolveBenchDefaultPromptBase } from "@/lib/lab/bench/domain/prompt-base";
 import { BenchPresetError, resolveBenchPreset } from "@/lib/lab/bench/domain/preset-registry";
 import { BenchRunInputSchema } from "@/lib/lab/bench/domain/schemas";
+import { collectBenchTextIntegrityFields } from "@/lib/lab/bench/domain/text-integrity-detector";
 import {
   BenchStoreManifestError,
   assertBenchTestStore,
@@ -142,6 +144,23 @@ export const POST = apiHandler(async (request: Request) => {
     );
   }
   const input = parsed.data;
+
+  // A revisão textual é o primeiro gate após o parse. Até a ausência completa de
+  // preflight/evidência recusa com stale antes de ler ou reservar qualquer run.
+  const textIntegrityReview = validateBenchTextIntegrityEvidence({
+    fields: collectBenchTextIntegrityFields({
+      product: input.product,
+      promptBase: input.preflight?.promptBase ?? "",
+    }),
+    evidence: input.preflight?.textIntegrityEvidence,
+    requireEvidence: true,
+  });
+  if (!textIntegrityReview.ok) {
+    return NextResponse.json(
+      { error: "text_integrity_review_stale", textIntegrityReview: textIntegrityReview.review },
+      { status: 409 },
+    );
+  }
 
   // Preflight aprovado é OBRIGATÓRIO (D17/D20): a geração sem prompt aprovado é
   // recusada. A aprovação é explícita e o `prompt_sent` será **exatamente** o

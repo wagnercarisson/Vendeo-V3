@@ -32,10 +32,12 @@ import {
   BenchPreflightPanel,
   type BenchPreflightEvidenceView,
   type BenchPreflightStatus,
+  type BenchTextIntegrityReviewView,
 } from "./bench-preflight-panel";
 import { BenchPromptEditor } from "./bench-prompt-editor";
 import { BenchStoreSelector, type BenchStoreOption } from "./bench-store-selector";
 import { buildValidityDisplayText } from "@/lib/lab/bench/domain/form-rules";
+import type { BenchTextIntegrityEvidence } from "@/lib/lab/bench/domain/schemas";
 
 /**
  * Contêiner cliente da bancada (F48.2.2, D15; F48.2.3, D17/D20).
@@ -109,14 +111,14 @@ export interface BenchWorkbenchProps {
 function buildProductPayload(campaign: BenchCampaignFormValue): BenchProductPayload {
   return {
     name: campaign.productName,
-    ...(campaign.productDescription.trim().length > 0
+    ...(campaign.productDescription.length > 0
       ? { description: campaign.productDescription }
       : {}),
     ...(campaign.priceCents > 0 ? { priceCents: campaign.priceCents } : {}),
     ...(campaign.originalPriceCents > 0
       ? { originalPriceCents: campaign.originalPriceCents }
       : {}),
-    ...(campaign.mandatoryArtworkText.trim().length > 0
+    ...(campaign.mandatoryArtworkText.length > 0
       ? { mandatoryArtworkText: campaign.mandatoryArtworkText }
       : {}),
     ...(campaign.preserveImageContext ? { preserveImageContext: true } : {}),
@@ -184,6 +186,10 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   const [policyVersions, setPolicyVersions] = useState<Record<string, string>>({});
   const [composedPromptBaseVersion, setComposedPromptBaseVersion] =
     useState(promptBaseVersion);
+  const [textIntegrityEvidence, setTextIntegrityEvidence] =
+    useState<BenchTextIntegrityEvidence | null>(null);
+  const [textIntegrityReview, setTextIntegrityReview] =
+    useState<BenchTextIntegrityReviewView | null>(null);
   const [composing, setComposing] = useState(false);
   const [preflightError, setPreflightError] = useState<string | null>(null);
   const hasComposedRef = useRef(false);
@@ -218,6 +224,8 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     setPromptBlocks({});
     setComposerVersion("");
     setPolicyVersions({});
+    setTextIntegrityEvidence(null);
+    setTextIntegrityReview(null);
     setPreflightError(null);
   }, []);
 
@@ -261,9 +269,14 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     invalidatePreflight();
   }
 
-  async function handleCompose() {
+  function handleCompose() {
+    void submitCompose();
+  }
+
+  async function submitCompose(evidenceOverride?: BenchTextIntegrityEvidence) {
     setComposing(true);
     setPreflightError(null);
+    const evidenceForRequest = evidenceOverride ?? textIntegrityEvidence ?? undefined;
 
     try {
       const response = await fetch("/api/admin/laboratorio/bancada/compose", {
@@ -276,17 +289,50 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           offer: buildOfferPayload(campaign),
           promptBase: prompt,
           references: upload?.references ?? [],
+          ...(evidenceForRequest ? { textIntegrityEvidence: evidenceForRequest } : {}),
         }),
       });
       const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
         compiledPrompt?: string;
         blocks?: Record<string, string>;
         composerVersion?: string;
         policyVersions?: Record<string, string>;
         promptBaseVersion?: string;
+        textIntegrityEvidence?: BenchTextIntegrityEvidence;
+        textIntegrityReview?: Omit<BenchTextIntegrityReviewView, "stale">;
       };
 
-      if (!response.ok || typeof data.compiledPrompt !== "string") {
+      if (
+        (data.error === "text_integrity_review_required" ||
+          data.error === "text_integrity_review_stale") &&
+        data.textIntegrityReview
+      ) {
+        setCompiledPrompt("");
+        setFinalPrompt("");
+        setPromptBlocks({});
+        setComposerVersion("");
+        setPolicyVersions({});
+        setTextIntegrityEvidence(null);
+        setTextIntegrityReview({
+          ...data.textIntegrityReview,
+          stale: data.error === "text_integrity_review_stale",
+        });
+        setPreflightStatus(hasComposedRef.current ? "invalidated" : "idle");
+        setPreflightError(
+          data.error === "text_integrity_review_stale"
+            ? "A revisão textual ficou desatualizada. Revise os valores atuais e recomponha."
+            : null,
+        );
+        setComposing(false);
+        return;
+      }
+
+      if (
+        !response.ok ||
+        typeof data.compiledPrompt !== "string" ||
+        !data.textIntegrityEvidence
+      ) {
         setPreflightError(
           "Não foi possível compor o prompt. Verifique os dados do produto/oferta e tente novamente.",
         );
@@ -301,12 +347,23 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
       setComposerVersion(data.composerVersion ?? composerVersionConstant);
       setPolicyVersions(data.policyVersions ?? {});
       setComposedPromptBaseVersion(data.promptBaseVersion ?? promptBaseVersion);
+      setTextIntegrityEvidence(data.textIntegrityEvidence);
+      setTextIntegrityReview(null);
       setPreflightStatus("composed");
       setComposing(false);
     } catch {
       setPreflightError("Não foi possível compor o prompt. Tente novamente.");
       setComposing(false);
     }
+  }
+
+  function handleKeepTextExactly() {
+    if (!textIntegrityReview || textIntegrityReview.alerts.length === 0) return;
+    void submitCompose({
+      policyVersion: textIntegrityReview.policyVersion,
+      reviewRevision: textIntegrityReview.reviewRevision,
+      decision: "keep_exactly",
+    });
   }
 
   function handleEditFinal(value: string) {
@@ -316,7 +373,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   }
 
   function handleApprove() {
-    if (finalPrompt.trim().length === 0) return;
+    if (finalPrompt.trim().length === 0 || !textIntegrityEvidence) return;
     setPreflightStatus("approved");
   }
 
@@ -334,7 +391,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   // `presetId`/`config` de execução (correção de UAT): o preset/modelo/qualidade é
   // enviado separadamente em `POST /runs` como configuração de execução.
   const preflightEvidence: BenchPreflightEvidenceView | null =
-    preflightStatus === "approved"
+    preflightStatus === "approved" && textIntegrityEvidence
       ? {
           promptBase: prompt,
           promptCompiled: compiledPrompt,
@@ -343,8 +400,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           composerVersion,
           policyVersions,
           promptBaseVersion: composedPromptBaseVersion,
-          identityReference: canonicalIdentityReference,
-        }
+           identityReference: canonicalIdentityReference,
+           textIntegrityEvidence,
+         }
       : null;
 
   const handleCompleted = useCallback((completedRunId: string) => {
@@ -509,6 +567,8 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           onCompose={handleCompose}
           onEditFinal={handleEditFinal}
           onApprove={handleApprove}
+          textIntegrityReview={textIntegrityReview}
+          onKeepExactly={handleKeepTextExactly}
         />
         <BenchPresetSelector
           presets={presets}
