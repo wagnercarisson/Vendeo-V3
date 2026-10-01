@@ -42,10 +42,10 @@
 
 ## 5. Integridade geral do resultado criado pelo modelo
 
-- [ ] 5.1 Atualizar orientação geral somente para português correto, ausência geral de caracteres/símbolos/pontuação duplicados/anômalos e proibição de correção silenciosa; manter os contratos textuais específicos sob política `produto`.
-- [ ] 5.2 Manter fidelidade a preço, data, selo e condições, além da proibição de inventar/reinterpretar comercialmente, exclusivamente na política Oferta; versionar políticas sem redundância.
-- [ ] 5.3 Atualizar golden/contratos do prompt e testes de propriedade disjunta: integridade linguística/literal geral versus integridade comercial da Oferta.
-- [ ] 5.4 Atualizar política `produto` para instruir nome inteiro/literal conforme aprovado, descrição complementar adaptável sem distorção/invenção e textos obrigatórios literais; avaliar visualmente cada categoria no UAT sem promessas técnicas.
+- [x] 5.1 Atualizar orientação geral somente para português correto, ausência geral de caracteres/símbolos/pontuação duplicados/anômalos e proibição de correção silenciosa; manter os contratos textuais específicos sob política `produto`.
+- [x] 5.2 Manter fidelidade a preço, data, selo e condições, além da proibição de inventar/reinterpretar comercialmente, exclusivamente na política Oferta; versionar políticas sem redundância.
+- [x] 5.3 Atualizar golden/contratos do prompt e testes de propriedade disjunta: integridade linguística/literal geral versus integridade comercial da Oferta.
+- [ ] 5.4 Atualizar política `produto` para instruir nome inteiro/literal conforme aprovado, descrição complementar adaptável sem distorção/invenção e textos obrigatórios literais; avaliar visualmente cada categoria no UAT sem promessas técnicas. (Política implementada no Plano 05; avaliação visual permanece para CHECKPOINT A/UAT no Plano 07.)
 
 ## 6. Protocolo documental, manifesto e isolamento
 
