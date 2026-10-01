@@ -2,7 +2,7 @@
 
 ### Requirement: Experimentação manual e controlada de prompts e modelos
 
-A estabilização SHALL conduzir experimentos manualmente na bancada: executar, avaliar, alterar uma variável, executar novamente e registrar a decisão. SHALL NOT gerar candidatas, otimizar prompts ou avaliar por IA automaticamente, nem alterar código por cada edição experimental do prompt. A matriz inicial de modelos SHALL conter `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`, todos em qualidade `low`. Comparações entre modelos SHALL usar as mesmas entradas, imagens e prompt aprovado; qualidade `medium` ou superior exige hipótese concreta. Toda geração real SHALL ser manual, precedida de autorização humana explícita e não executável por task autônoma. O registro SHALL incluir custo, latência, usage e versão de pricing.
+A estabilização SHALL conduzir experimentos manualmente na bancada: executar, avaliar, alterar uma variável, executar novamente e registrar a decisão. SHALL NOT gerar candidatas, otimizar prompts ou avaliar por IA automaticamente, nem alterar código por cada edição experimental do prompt. A matriz inicial de modelos SHALL conter `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`, todos em qualidade `low`. Comparações entre modelos SHALL usar as mesmas entradas, imagens e prompt aprovado; qualidade `medium` ou superior exige hipótese concreta. Toda geração real SHALL ser manual, precedida de autorização humana explícita e não executável por task autônoma. O registro SHALL incluir custo, latência, usage e versão de pricing. A estimativa local de saída SHALL ser rotulada como parcial e somente de saída, manter `coverage: partial`, e declarar que custos de texto/imagem de entrada são adicionais; não SHALL ser apresentada como custo total, fatura ou teto.
 
 #### Scenario: Rodada de prompt muda uma variável
 - **WHEN** uma rodada manual de refinamento é iniciada
@@ -23,6 +23,12 @@ A estabilização SHALL conduzir experimentos manualmente na bancada: executar, 
 - **WHEN** uma task autônoma chega ao ponto de geração real
 - **THEN** ela para no checkpoint e não invoca provider
 - **AND** cada chamada paga só ocorre manualmente após autorização humana explícita
+
+#### Scenario: Estimativa parcial exige confirmação financeira por geração
+- **WHEN** a estimativa local de saída é exibida antes de uma geração
+- **THEN** ela é identificada como estimativa parcial somente de saída, com custos de entrada adicionais e `coverage: partial`
+- **AND** o usuário revisa a estimativa e confirma financeiramente cada geração manual separadamente
+- **AND** não existe autorização financeira global, batch ou chamada automática ao provider
 
 ### Requirement: Amostra mínima e revisão humana visual
 

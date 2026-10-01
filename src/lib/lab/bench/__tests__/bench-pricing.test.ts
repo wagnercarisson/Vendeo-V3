@@ -7,11 +7,12 @@ import {
 } from "@/lib/lab/bench/domain/bench-pricing";
 
 /**
- * Pricing local da bancada (F48.2.4, regra `2026-09-bench-2`).
+ * Pricing local da bancada (F48.2.5, regra `2026-10-bench-3`).
  *
  * Tarifas oficiais (Standard, por 1M tokens): **texto US$5 / imagem de entrada
  * US$8 / imagem de saída US$30** para os três modelos. A estimativa prévia é
- * honesta: só existe onde comprovada pelo calculador oficial.
+ * honesta: estimativa do calculador oficial é somente de saída; tokens de entrada
+ * e imagens parciais em streaming são adicionais, logo coverage permanece partial.
  */
 
 const BASE = {
@@ -27,8 +28,8 @@ const OFFICIAL_RATES = {
 };
 
 describe("bench-pricing — versionamento", () => {
-  it("a versão vigente é 2026-09-bench-2 e é propagada na resolução", () => {
-    expect(BENCH_PRICING_RULE_VERSION).toBe("2026-09-bench-2");
+  it("a versão vigente é 2026-10-bench-3 e é propagada na resolução", () => {
+    expect(BENCH_PRICING_RULE_VERSION).toBe("2026-10-bench-3");
     const resolution = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "low" });
     expect(resolution.ruleVersion).toBe(BENCH_PRICING_RULE_VERSION);
   });
@@ -46,17 +47,19 @@ describe("bench-pricing — tarifas oficiais por token (5/8/30)", () => {
 });
 
 describe("bench-pricing — estimativa prévia honesta", () => {
-  it("gpt-image-2 é partial SEM estimativa derivada da tarifa antiga", () => {
+  it("gpt-image-2 low usa estimativa oficial de saída; medium permanece sem estimativa", () => {
     const low = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "low" });
     const medium = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "medium" });
 
     expect(low.coverage).toBe("partial");
     expect(medium.coverage).toBe("partial");
     // Os tokens 400/3533 derivados da tarifa antiga (US$15/M) NÃO são reaproveitados.
-    expect(low.estimatedOutputTokens).toBeUndefined();
+    expect(low.estimatedOutputTokens).toBe(196);
+    expect(low.estimateSource).toBe("official_calculator");
+    expect(low.unitPriceUsd).toBeCloseTo(0.00588, 6);
     expect(medium.estimatedOutputTokens).toBeUndefined();
-    expect(low.unitPriceUsd).toBeUndefined();
     expect(medium.unitPriceUsd).toBeUndefined();
+    expect(low.coverage).toBe("partial");
   });
 
   it("gpt-image-2.5-flare low usa 196 tokens (calculador oficial); medium fica ausente", () => {
@@ -77,7 +80,7 @@ describe("bench-pricing — estimativa prévia honesta", () => {
     expect(medium.coverage).toBe("partial");
   });
 
-  it("gpt-image-2.5-sunburst inicia partial sem estimativa de saída comprovada", () => {
+  it("gpt-image-2.5-sunburst low usa estimativa oficial; medium permanece ausente", () => {
     for (const quality of ["low", "medium"]) {
       const resolution = resolveBenchPricing({
         ...BASE,
@@ -86,8 +89,14 @@ describe("bench-pricing — estimativa prévia honesta", () => {
       });
       expect(resolution.coverage, quality).toBe("partial");
       expect(resolution.mode, quality).toBe("token_based");
-      expect(resolution.estimatedOutputTokens, quality).toBeUndefined();
-      expect(resolution.unitPriceUsd, quality).toBeUndefined();
+      if (quality === "low") {
+        expect(resolution.estimatedOutputTokens).toBe(196);
+        expect(resolution.estimateSource).toBe("official_calculator");
+        expect(resolution.unitPriceUsd).toBeCloseTo(0.00588, 6);
+      } else {
+        expect(resolution.estimatedOutputTokens).toBeUndefined();
+        expect(resolution.unitPriceUsd).toBeUndefined();
+      }
     }
   });
 });

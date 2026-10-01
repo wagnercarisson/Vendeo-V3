@@ -79,6 +79,12 @@ Não criar executor de matriz, fila, botão de batch, gerador de variantes nem a
 
 CHECKPOINT A bloqueia qualquer chamada paga até aprovação humana dos contratos determinísticos, regras de texto, matriz e roteiro de avaliação. CHECKPOINT B é UAT pago manual conduzido pelo usuário; inclui duas lojas, dois produtos visualmente distintos, principal isolada e principal+adicionais, comparações com entradas idênticas e avaliação humana da rubrica completa. Fluxo: dados+identidade+prompt aprovado → geração manual → validações técnicas objetivas → revisão visual humana → aprovar/rejeitar/ajustar/nova tentativa. Nenhum agente/task cruza gates ou executa provider. Confirmação financeira existente continua obrigatória por geração.
 
+#### D7a — Estimativa local de saída não é custo total nem autorização
+
+Estimativas de saída derivadas do calculador oficial SHALL ser identificadas como **estimativa parcial somente de saída**, vinculadas ao modelo/qualidade/tamanho e à versão local da regra. Para os presets da matriz `low`, `1024x1024`, as capturas oficiais fornecidas pelo responsável confirmam 196 tokens de saída e US$ 0,00588 somente de saída para `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst` (tarifa Standard de US$30 por milhão de tokens de saída). A estimativa exclui tokens de texto/imagem de entrada e imagens parciais em streaming; entradas adicionais são cobradas conforme usage e tarifas aplicáveis. A cobertura do pricing permanece `partial`; o valor não é custo total, fatura, teto ou orçamento garantido.
+
+Neste UAT, “revisão de orçamento” significa o usuário revisar a estimativa parcial e dar confirmação financeira explícita **para cada geração manual**, imediatamente antes dela. Não há autorização financeira global, aprovação implícita, execução automática ou batch. Estimativa disponível não satisfaz por si só a confirmação humana nem autoriza geração.
+
 ### D8 — Limites produtivos e fechamento
 
 Todas as mudanças de runtime permanecem sob bounded context da bancada e ambientes locais. Não tocar adapters, prompts, seleção de modelos, allowlist, pipeline, tabelas ou migrations produtivas. Nenhum remoto/provider é acessado na elaboração ou execução autônoma desta change. O manifesto não promove. Após UAT, executor pode registrar evidência e atualizar tracking somente em fase posterior autorizada e não destrutiva; `/opsx-verify`, `/opsx-sync` e `/opsx-archive` são exclusivos do responsável.

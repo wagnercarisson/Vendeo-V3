@@ -272,26 +272,26 @@ describe("resolveBenchCost — resolvedor local chaveado pelo preset completo", 
   const low = resolveBenchPreset("gpt-image-2-low");
   const medium = resolveBenchPreset("gpt-image-2-medium");
 
-  it("carrega cost_source bench_local_pricing e cost_rule_version (v2)", () => {
+  it("carrega cost_source bench_local_pricing e cost_rule_version vigente", () => {
     const resolution = resolveBenchCost({ preset: low });
     expect(resolution.costSource).toBe("bench_local_pricing");
-    expect(resolution.costRuleVersion).toBe("2026-09-bench-2");
+    expect(resolution.costRuleVersion).toBe("2026-10-bench-3");
     expect(resolution.mode).toBe("token_based");
-    // Pricing v2: gpt-image-2 é `partial` (tarifas conhecidas; estimativa não comprovada).
+    // Pricing v3 mantém partial: estimativa de saída comprovada, inputs adicionais.
     expect(resolution.coverage).toBe("partial");
   });
 
-  it("gpt-image-2 (v2): sem estimativa comprovada ⇒ estimatedCostUsd null", () => {
+  it("gpt-image-2 low estima somente saída; medium continua sem valor comprovado", () => {
     const lowCost = resolveBenchCost({ preset: low });
     const mediumCost = resolveBenchCost({ preset: medium });
     expect(lowCost.isEstimate).toBe(true);
     expect(mediumCost.isEstimate).toBe(true);
-    expect(lowCost.estimatedCostUsd).toBeNull();
+    expect(lowCost.estimatedCostUsd).toBeCloseTo(0.00588, 6);
     expect(mediumCost.estimatedCostUsd).toBeNull();
     expect(lowCost.usageReported).toBeUndefined();
   });
 
-  it("gpt-image-2.5-flare low (v2): ramo estimado com o valor do calculador oficial", () => {
+  it("gpt-image-2.5-flare low: estimativa parcial de saída do calculador oficial", () => {
     const resolution = resolveBenchCost({ preset: resolveBenchPreset("gpt-image-2.5-flare-low") });
     expect(resolution.isEstimate).toBe(true);
     expect(resolution.coverage).toBe("partial");
@@ -382,8 +382,8 @@ describe("resolveBenchCost — resolvedor local chaveado pelo preset completo", 
     const resolution = resolveBenchCost({ preset: low, providerReportedCostUsd: 0.123 });
     expect(resolution.isEstimate).toBe(true);
     expect(resolution.providerReportedCostUsd).toBe(0.123);
-    // gpt-image-2 (v2) não tem estimativa comprovada ⇒ null; o valor do provider NÃO substitui.
-    expect(resolution.estimatedCostUsd).toBeNull();
+    // Estimativa local somente de saída; valor do provider NÃO substitui.
+    expect(resolution.estimatedCostUsd).toBeCloseTo(0.00588, 6);
     expect(resolution.estimatedCostUsd).not.toBe(0.123);
   });
 
@@ -640,7 +640,7 @@ describe("executeBenchRun — single-shot, custo local e erro sanitizado", () =>
     expect(typeof runUpdate?.values.latency_ms).toBe("number");
     expect(runUpdate?.values.usage).toMatchObject({ promptTokens: 1000 });
     expect(runUpdate?.values.cost_source).toBe("bench_local_pricing");
-    expect(runUpdate?.values.cost_rule_version).toBe("2026-09-bench-2");
+    expect(runUpdate?.values.cost_rule_version).toBe("2026-10-bench-3");
     const detail = runUpdate?.values.cost_detail as Record<string, unknown>;
     expect(detail).toMatchObject({
       provider: "openai",

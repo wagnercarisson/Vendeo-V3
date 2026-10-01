@@ -24,7 +24,7 @@ import type { AiProtocol, AiProvider } from "@/lib/ai/model-resolver";
  * tokens de saída estimados), usada quando o `usage` real ainda não existe —
  * **nunca** como multiplicação genérica de `usage × unitPriceUsd` (D11).
  *
- * ## Estimativas de saída (regra 2026-09-bench-2)
+ * ## Estimativas de saída (regra 2026-10-bench-3)
  *
  * Modelos diferentes consomem **quantidades diferentes** de tokens na mesma
  * qualidade, portanto a estimativa de tokens de saída é chaveada por
@@ -32,19 +32,22 @@ import type { AiProtocol, AiProvider } from "@/lib/ai/model-resolver";
  * valores comprovados (`official_calculator`). Quando um valor não está
  * comprovado sob a regra vigente, ele fica **ausente** de propósito — não é
  * inventado nem reaproveitado de outro modelo nem de uma tarifa supersedida.
- * Sem estimativa comprovada, a cobertura é `partial` (tarifas conhecidas;
- * consumo de saída não comprovado).
+ * A estimativa disponível é somente de saída; texto/imagem de entrada e imagens
+ * parciais em streaming são adicionais. A cobertura permanece `partial`, não
+ * representa custo total, fatura ou teto.
  */
 
 /**
  * Versão da regra de pricing local (rastreada em `cost_rule_version`).
  *
- * `2026-09-bench-2` (F48.2.4, correção cirúrgica): tarifas oficiais vigentes
- * (texto US$5 / imagem entrada US$8 / imagem saída US$30 por 1M tokens) para os
- * três modelos e estimativa prévia honesta. A `2026-09-bench-1` **não** é
- * reescrita — runs antigos preservam a versão registrada na época.
+ * `2026-10-bench-3` (F48.2.5): preserva as tarifas oficiais Standard e registra
+ * estimativas oficiais de saída low/1024x1024 dos três modelos. As estimativas
+ * são somente de saída — não custo total, teto ou orçamento garantido; tokens de
+ * texto/imagem de entrada e imagens parciais em streaming são adicionais.
+ * `2026-09-bench-2` e `2026-09-bench-1` **não** são reescritas — runs antigos
+ * preservam a versão registrada na época.
  */
-export const BENCH_PRICING_RULE_VERSION = "2026-09-bench-2";
+export const BENCH_PRICING_RULE_VERSION = "2026-10-bench-3";
 
 /** Modo de cobrança do preset. `unknown` é usado quando não há entrada de pricing. */
 export type BenchPricingMode = "per_image" | "token_based" | "unknown";
@@ -101,7 +104,7 @@ export interface BenchPricingKey {
   size: string;
 }
 
-// ─── Taxas por token (pricing público oficial — regra 2026-09-bench-2) ───────
+// ─── Taxas por token (pricing público oficial — regra 2026-10-bench-3) ───────
 //
 // Standard, por 1M tokens: texto US$5, imagem de entrada US$8 e imagem de saída
 // US$30 para `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`. As
@@ -143,19 +146,24 @@ interface BenchOutputEstimate {
 /**
  * Estimativas comprovadas, chaveadas por `model + quality + size`.
  *
- * **Regra `2026-09-bench-2`:** as estimativas do `gpt-image-2` (400/3533 tokens)
- * foram derivadas da tarifa **antiga** de US$15/M e **não** são reaproveitadas
- * sob a nova tarifa (dobrariam o valor). Sem valor comprovado pelo calculador
- * oficial sob a nova regra, o `gpt-image-2` fica **ausente de propósito** e a
- * cobertura é `partial` (tarifas conhecidas; consumo de saída não comprovado).
- *
- * - `gpt-image-2.5-flare`: apenas o valor do **calculador oficial** — `low` com
- *   196 tokens de saída (~US$0,00588; a tarifa de US$30/M é inalterada).
- *   `medium` **não** tem valor comprovado e fica **ausente de propósito**.
- * - `gpt-image-2.5-sunburst`: sem valor comprovado ⇒ ausente (cobertura `partial`).
+ * **Regra `2026-10-bench-3`:** estimativas antigas de `gpt-image-2` (400/3533
+ * tokens) foram derivadas da tarifa **antiga** de US$15/M e não são reutilizadas.
+ * Capturas do calculador oficial fornecidas pelo responsável confirmam `low`,
+ * `1024x1024`, 196 tokens de saída (~US$0,00588 pela tarifa Standard US$30/M)
+ * para `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`.
+ * `medium` permanece ausente por não ter valor comprovado. Estimativas cobrem
+ * somente saída; entrada e imagens parciais em streaming são adicionais.
  */
 const ESTIMATED_OUTPUT_BY_PRESET: Readonly<Record<string, BenchOutputEstimate>> = {
+  "gpt-image-2|low|1024x1024": {
+    estimatedOutputTokens: 196,
+    source: "official_calculator",
+  },
   "gpt-image-2.5-flare|low|1024x1024": {
+    estimatedOutputTokens: 196,
+    source: "official_calculator",
+  },
+  "gpt-image-2.5-sunburst|low|1024x1024": {
     estimatedOutputTokens: 196,
     source: "official_calculator",
   },
@@ -201,10 +209,12 @@ function tokenBasedEntry(params: {
  * Pricing local da bancada, chaveado por `provider + model + protocol + quality
  * + size`. `low` e `medium` têm entradas distintas.
  *
- * Cobertura (`2026-09-bench-2`): `partial` para os três modelos — as **tarifas
- * por token** são conhecidas, mas a **estimativa de saída** só existe onde
- * comprovada pelo calculador oficial (`gpt-image-2.5-flare` `low`). Valores não
- * comprovados ficam **ausentes** (nunca inventados).
+ * Cobertura (`2026-10-bench-3`): `partial` para os três modelos — as estimativas
+ * oficiais de saída existem para os três em `low`/`1024x1024`; custos de texto/
+ * imagem de entrada e streaming parcial permanecem adicionais. O valor de saída
+ * não é custo total, fatura ou teto. Estimativas `medium` sem prova ficam
+ * ausentes (nunca inventadas). A revisão e confirmação financeira cabem ao
+ * usuário, separadamente para cada geração manual.
  */
 export const BENCH_PRICING_ENTRIES: readonly BenchPricingEntry[] = [
   tokenBasedEntry({

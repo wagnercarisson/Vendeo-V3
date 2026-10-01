@@ -1599,7 +1599,7 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
     expect(runCalls()).toHaveLength(0);
   });
 
-  it("apresenta pricing parcial como faixa e ausente como indisponível", async () => {
+  it("identifica pricing parcial como somente saída e informa custos adicionais", async () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse({ ...ESTIMATE, coverage: "partial", estimatedUsd: 0.04 }),
     );
@@ -1607,7 +1607,14 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
     await openConfirmation();
 
     const panel = screen.getByTestId("bench-estimate-panel");
-    expect(within(panel).getByText("a partir de US$ 0.04")).toBeInTheDocument();
+    expect(within(panel).getByText("saída: US$ 0.04")).toBeInTheDocument();
+    expect(within(panel).getByText("Estimativa parcial — somente saída")).toBeInTheDocument();
+    expect(
+      within(panel).getByText(/tokens de texto e imagem de entrada.*adicionais/i),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText(/confirme financeiramente cada geração manual separadamente/i),
+    ).toBeInTheDocument();
     expect(within(panel).queryByText("US$ 0.04")).toBeNull();
     expect(runCalls()).toHaveLength(0);
   });

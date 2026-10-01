@@ -7,10 +7,10 @@ import { formatUsdDisplay } from "@/lib/lab/display-format";
 /**
  * Painel de estimativa da bancada (F48.2.2, D12/T-48-2-2-41).
  *
- * A estimativa é exibida **antes** da confirmação. A cobertura de pricing decide
- * a apresentação: `complete` mostra o valor; `partial` mostra a faixa **"a partir
- * de US$ X"** (nunca um total exato); `missing` mostra **"indisponível"**. O valor
- * estimado nunca é apresentado como faturado.
+ * A estimativa é exibida **antes** da confirmação. `partial` indica estimativa
+ * somente de saída, com tokens de texto/imagem de entrada e imagens parciais em
+ * streaming adicionais; nunca custo total, fatura ou teto. A confirmação continua
+ * individual e manual para cada geração.
  */
 
 export interface BenchEstimate {
@@ -29,8 +29,8 @@ interface BenchEstimatePanelProps {
 }
 
 /**
- * Custo coerente com a cobertura de pricing: `complete` mostra o valor; `partial`
- * mostra "a partir de US$ X"; qualquer outra cobertura mostra "indisponível".
+ * Valor da estimativa de saída: `partial` é rotulado como estimativa parcial;
+ * qualquer outra cobertura sem valor mostra "indisponível".
  */
 export function formatCostByCoverage(
   value: number | null | undefined,
@@ -41,7 +41,7 @@ export function formatCostByCoverage(
   }
   if (coverage === "partial") {
     return typeof value === "number"
-      ? `a partir de ${formatUsdDisplay(value)}`
+      ? `saída: ${formatUsdDisplay(value)}`
       : "indisponível";
   }
   return "indisponível";
@@ -82,7 +82,11 @@ export function BenchEstimatePanel({
         <div className="space-y-2">
           <dl className="grid gap-2 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-text-muted font-body">Custo estimado</dt>
+              <dt className="text-text-muted font-body">
+                {estimate.coverage === "partial"
+                  ? "Estimativa parcial — somente saída"
+                  : "Custo estimado"}
+              </dt>
               <dd
                 className={`font-mono ${
                   estimate.coverage === "partial"
@@ -109,14 +113,15 @@ export function BenchEstimatePanel({
             <p className="flex items-start gap-2 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>
-                Pricing parcial ou ausente — o valor é uma faixa/aviso, não um valor
-                exato.
+                Estimativa de saída, não custo total nem teto. Tokens de texto e
+                imagem de entrada e imagens parciais em streaming são adicionais.
               </span>
             </p>
           )}
 
           <p className="text-xs text-text-muted font-body">
-            Valor estimado antes da confirmação — não é valor faturado.
+            Revise esta estimativa e confirme financeiramente cada geração manual
+            separadamente. Não é autorização global nem valor faturado.
           </p>
         </div>
       )}
