@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -860,6 +860,97 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     await waitFor(() =>
       expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt invalidado"),
     );
+    expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
+  });
+
+  it.each([
+    { label: "Nome do produto", value: "Produto atualizado" },
+    { label: "Prompt", value: "Prompt-base atualizado" },
+  ])("descarta resposta atrasada de compose após editar $label", async ({ label, value }) => {
+    let composeCount = 0;
+    let originalEvidence: typeof MOCK_TEXT_INTEGRITY_EVIDENCE | null = null;
+    let finishDelayedResponse: ((response: ReturnType<typeof jsonResponse>) => void) | null = null;
+    mockFetch.mockImplementation((url: unknown, init?: RequestInit) => {
+      const target = String(url);
+      if (target.includes("/branding")) return Promise.resolve(jsonResponse({ branding: BRANDING }));
+      if (target.includes("/compose")) {
+        composeCount += 1;
+        const request = JSON.parse(String(init?.body)) as {
+          product: { name: string; description?: string; mandatoryArtworkText?: string };
+          promptBase: string;
+        };
+        if (composeCount === 2) {
+          return new Promise<ReturnType<typeof jsonResponse>>((resolve) => {
+            finishDelayedResponse = resolve;
+          });
+        }
+        const reviewRevision = createBenchTextIntegrityRevision(
+          collectBenchTextIntegrityFields({
+            product: request.product,
+            promptBase: request.promptBase,
+          }),
+        );
+        originalEvidence = {
+          policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
+          reviewRevision,
+          decision: "no_alerts",
+        };
+        return Promise.resolve(
+          jsonResponse({
+            compiledPrompt: "PROMPT ATUAL",
+            blocks: {},
+            composerVersion: COMPOSER_VERSION,
+            policyVersions: {},
+            promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+            textIntegrityEvidence: originalEvidence,
+          }),
+        );
+      }
+      return Promise.resolve(jsonResponse({ error: "unexpected_test_request" }, 400));
+    });
+
+    render(await BancadaPage());
+    fireEvent.change(screen.getByLabelText("Nome do produto"), {
+      target: { value: "Produto inicial" },
+    });
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    await waitFor(() => expect(composeCount).toBe(1));
+    await screen.findByDisplayValue("PROMPT ATUAL");
+    fireEvent.click(screen.getByTestId("bench-approve-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado"),
+    );
+
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    await waitFor(() => expect(composeCount).toBe(2));
+    const editedField =
+      label === "Prompt"
+        ? screen.getByRole("textbox", { name: "Prompt" })
+        : screen.getByLabelText(label);
+    fireEvent.change(editedField, { target: { value } });
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt invalidado"),
+    );
+    expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
+
+    await act(async () => {
+      if (!finishDelayedResponse) throw new Error("compose response was not held");
+      finishDelayedResponse(
+        jsonResponse({
+          compiledPrompt: "PROMPT OBSOLETO",
+          blocks: {},
+          composerVersion: COMPOSER_VERSION,
+          policyVersions: {},
+          promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+          textIntegrityEvidence: originalEvidence,
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt invalidado");
+    expect(screen.queryByDisplayValue("PROMPT OBSOLETO")).toBeNull();
     expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
   });
 

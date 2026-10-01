@@ -178,6 +178,8 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
 
   // Preflight (D17/D20).
   const [preflightRevision, setPreflightRevision] = useState(0);
+  const preflightRevisionRef = useRef(0);
+  const composeRequestIdRef = useRef(0);
   const [preflightStatus, setPreflightStatus] = useState<BenchPreflightStatus>("idle");
   const [compiledPrompt, setCompiledPrompt] = useState("");
   const [finalPrompt, setFinalPrompt] = useState("");
@@ -217,7 +219,10 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
    * (incl. modelo/qualidade) e as versões resolvidas.
    */
   const invalidatePreflight = useCallback(() => {
-    setPreflightRevision((revision) => revision + 1);
+    const nextRevision = preflightRevisionRef.current + 1;
+    preflightRevisionRef.current = nextRevision;
+    composeRequestIdRef.current += 1;
+    setPreflightRevision(nextRevision);
     setPreflightStatus(hasComposedRef.current ? "invalidated" : "idle");
     setCompiledPrompt("");
     setFinalPrompt("");
@@ -227,6 +232,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     setTextIntegrityEvidence(null);
     setTextIntegrityReview(null);
     setPreflightError(null);
+    setComposing(false);
   }, []);
 
   function handleStoreChange(nextStoreId: string) {
@@ -274,6 +280,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   }
 
   async function submitCompose(evidenceOverride?: BenchTextIntegrityEvidence) {
+    const inputRevision = preflightRevisionRef.current;
+    const requestId = composeRequestIdRef.current + 1;
+    composeRequestIdRef.current = requestId;
     setComposing(true);
     setPreflightError(null);
     const evidenceForRequest = evidenceOverride ?? textIntegrityEvidence ?? undefined;
@@ -302,6 +311,15 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         textIntegrityEvidence?: BenchTextIntegrityEvidence;
         textIntegrityReview?: Omit<BenchTextIntegrityReviewView, "stale">;
       };
+
+      // Uma mudança de qualquer entrada coberta invalida esta requisição. A
+      // resposta antiga não pode recompor/aprovar dados que já não estão visíveis.
+      if (
+        requestId !== composeRequestIdRef.current ||
+        inputRevision !== preflightRevisionRef.current
+      ) {
+        return;
+      }
 
       if (
         (data.error === "text_integrity_review_required" ||
@@ -352,6 +370,12 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
       setPreflightStatus("composed");
       setComposing(false);
     } catch {
+      if (
+        requestId !== composeRequestIdRef.current ||
+        inputRevision !== preflightRevisionRef.current
+      ) {
+        return;
+      }
       setPreflightError("Não foi possível compor o prompt. Tente novamente.");
       setComposing(false);
     }
