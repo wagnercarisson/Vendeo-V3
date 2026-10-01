@@ -49,6 +49,8 @@ vi.mock("openai", () => {
 
 const PNG_A = "data:image/png;base64,QUFB";
 const PNG_B = "data:image/png;base64,QkJC";
+const PNG_C = "data:image/png;base64,Q0ND";
+const PNG_D = "data:image/png;base64,REVE";
 
 const TARGET = { provider: "openai", model: "gpt-image-2", protocol: "images" } as const;
 
@@ -166,6 +168,40 @@ describe("BenchImagesAdapter — quality propagado e referências explícitas", 
       "reference-1.png",
       "identity.png",
     ]);
+  });
+
+  it.each([
+    { label: "zero adicionais", additional: [], expected: ["product.png", "identity.png"] },
+    {
+      label: "uma adicional",
+      additional: [PNG_B],
+      expected: ["product.png", "reference-1.png", "identity.png"],
+    },
+    {
+      label: "três adicionais",
+      additional: [PNG_B, PNG_C, PNG_D],
+      expected: [
+        "product.png",
+        "reference-1.png",
+        "reference-2.png",
+        "reference-3.png",
+        "identity.png",
+      ],
+    },
+  ])("preserva principal → $label → identidade por último", async ({ additional, expected }) => {
+    const adapter = new BenchImagesAdapter();
+    await adapter.invoke(
+      {
+        prompt: "p",
+        productImagesDataUrls: [PNG_A, ...additional],
+        identityImageUrl: "data:image/png;base64,TE9HTw==",
+        quality: "low",
+      },
+      TARGET,
+    );
+
+    const files = editCalls[0].params.image as Array<{ name: string }>;
+    expect(files.map((file) => file.name)).toEqual(expected);
   });
 });
 

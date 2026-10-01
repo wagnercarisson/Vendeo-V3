@@ -53,6 +53,8 @@ interface BenchImageUploadProps {
 
 export const MAX_ADDITIONAL_IMAGES = 3;
 const ACCEPTED_MIME_TYPES = "image/png,image/jpeg,image/webp";
+const ADDITIONAL_IMAGES_HELP =
+  "Imagens adicionais de referência — opcionais. Podem ajudar a preservar detalhes e orientar a composição, mas nem todas necessariamente aparecerão na arte final.";
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "—";
@@ -252,6 +254,7 @@ export function BenchImageUpload({
         <p className="text-xs font-medium uppercase tracking-wider text-text-muted font-heading">
           Imagens adicionais (opcionais — até {MAX_ADDITIONAL_IMAGES})
         </p>
+        <p className="text-sm text-text-secondary font-body">{ADDITIONAL_IMAGES_HELP}</p>
         <input
           ref={additionalInputRef}
           data-testid="bench-image-input-additional"
