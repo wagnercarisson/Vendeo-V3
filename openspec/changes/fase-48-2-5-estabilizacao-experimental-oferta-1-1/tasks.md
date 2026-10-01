@@ -19,10 +19,10 @@
 
 ## 2. Política determinística de papéis de imagem
 
-- [ ] 2.1 Atualizar política `produto` com a principal obrigatória/canônica/protagonista e adicionais opcionais do mesmo produto, subordinadas e sem garantia de aparição; versionar a política.
-- [ ] 2.2 Preservar validação de uma principal e até três adicionais; comprovar multipart, persistência e transporte na ordem principal → adicionais informadas → identidade.
-- [ ] 2.3 Atualizar UI com a mensagem curta e honesta de adicionais opcionais, sem prometer que todas aparecerão.
-- [ ] 2.4 Testar política e contratos para zero/uma/três adicionais, sem produtos independentes, duplicação de protagonista, reorder ou layout programático.
+- [x] 2.1 Atualizar política `produto` com a principal obrigatória/canônica/protagonista e adicionais opcionais do mesmo produto, subordinadas e sem garantia de aparição; versionar a política.
+- [x] 2.2 Preservar validação de uma principal e até três adicionais; comprovar multipart, persistência e transporte na ordem principal → adicionais informadas → identidade.
+- [x] 2.3 Atualizar UI com a mensagem curta e honesta de adicionais opcionais, sem prometer que todas aparecerão.
+- [x] 2.4 Testar política e contratos para zero/uma/três adicionais, sem produtos independentes, duplicação de protagonista, reorder ou layout programático.
 
 ## 3. Detector determinístico de integridade textual
 
