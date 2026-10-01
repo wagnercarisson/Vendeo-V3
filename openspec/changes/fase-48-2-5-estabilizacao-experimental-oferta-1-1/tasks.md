@@ -26,10 +26,10 @@
 
 ## 3. Detector determinístico de integridade textual
 
-- [ ] 3.1 Implementar módulo puro e versionado de regras pequenas para possíveis erros ortográficos tipográficos, pontuação/caracteres duplicados, espaços anormais, palavras adjacentes repetidas e anomalias simples.
-- [ ] 3.2 Retornar alertas ordenados com campo, trecho, motivo e identificador de regra; manter textos originais byte a byte e excluir preço/validade/valores controlados.
-- [ ] 3.3 Definir regras conservadoras para padrões ortográficos/PT-BR comuns, documentando limitações e falso positivo em marcas, nomes próprios, abreviações e termos técnicos; sem dicionário completo, dependência ou serviço remoto.
-- [ ] 3.4 Criar testes determinísticos para casos positivos/negativos, ordem estável, campos excluídos, caracteres Unicode/acentos e preservação literal; sem provider.
+- [x] 3.1 Implementar módulo puro e versionado de regras pequenas para possíveis erros ortográficos tipográficos, pontuação/caracteres duplicados, espaços anormais, palavras adjacentes repetidas e anomalias simples.
+- [x] 3.2 Retornar alertas ordenados com campo, trecho, motivo e identificador de regra; manter textos originais byte a byte e excluir preço/validade/valores controlados.
+- [x] 3.3 Definir regras conservadoras para padrões ortográficos/PT-BR comuns, documentando limitações e falso positivo em marcas, nomes próprios, abreviações e termos técnicos; sem dicionário completo, dependência ou serviço remoto.
+- [x] 3.4 Criar testes determinísticos para casos positivos/negativos, ordem estável, campos excluídos, caracteres Unicode/acentos e preservação literal; sem provider.
 
 ## 4. Gate de revisão textual no preflight
 
