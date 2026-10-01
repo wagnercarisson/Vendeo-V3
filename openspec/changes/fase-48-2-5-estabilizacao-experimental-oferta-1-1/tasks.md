@@ -33,12 +33,12 @@
 
 ## 4. Gate de revisão textual no preflight
 
-- [ ] 4.1 Definir schema comum de `textIntegrityEvidence`: versão ativa, revisão determinística dos pares campo/valor em ordem canônica, incluindo `promptBase`, e decisão (`no_alerts`/`keep_exactly`), sem normalizar texto.
-- [ ] 4.2 Implementar `/compose`: detector server-side; retornar `422 text_integrity_review_required` + alertas/revisão sem prompt quando houver alerta não resolvido; compor sem alertas e emitir evidência `no_alerts`.
-- [ ] 4.3 Implementar reenvio `/compose` para decisão declarada `keep_exactly`: receber os mesmos valores e revisão, recalcular no servidor e aceitar somente conteúdo/versão correspondentes; stale retorna `409 text_integrity_review_stale` com estado/alertas atuais. A UI registra a escolha; evidência não é prova independente de clique.
-- [ ] 4.4 Integrar UI para editar/revalidar ou confirmar manter; apresentar alertas; guardar evidência efêmera e invalidá-la em qualquer alteração de campo coberto.
-- [ ] 4.5 Implementar `/runs` para receber evidência junto ao snapshot e `promptBase`, recalcular alertas/revisão e validar conteúdo byte a byte, versão e decisão declarada antes de persistir execução ou provider; alteração isolada de `promptBase`, evidência ausente ou divergente retorna `409 text_integrity_review_stale`.
-- [ ] 4.6 Testar rotas separadamente e em fluxo combinado: alertas sem decisão/422, manter exato atual, correção, payload adulterado, mudança pós-decisão (incluindo alteração isolada de `promptBase`), versão obsoleta/409, entrada sem alertas/no_alerts, evidência ausente/divergente em runs/409 e prompt aprovado/sent byte a byte; provar bloqueio pré-persistência/provider sem provider real.
+- [x] 4.1 Definir schema comum de `textIntegrityEvidence`: versão ativa, revisão determinística dos pares campo/valor em ordem canônica, incluindo `promptBase`, e decisão (`no_alerts`/`keep_exactly`), sem normalizar texto.
+- [x] 4.2 Implementar `/compose`: detector server-side; retornar `422 text_integrity_review_required` + alertas/revisão sem prompt quando houver alerta não resolvido; compor sem alertas e emitir evidência `no_alerts`.
+- [x] 4.3 Implementar reenvio `/compose` para decisão declarada `keep_exactly`: receber os mesmos valores e revisão, recalcular no servidor e aceitar somente conteúdo/versão correspondentes; stale retorna `409 text_integrity_review_stale` com estado/alertas atuais. A UI registra a escolha; evidência não é prova independente de clique.
+- [x] 4.4 Integrar UI para editar/revalidar ou confirmar manter; apresentar alertas; guardar evidência efêmera e invalidá-la em qualquer alteração de campo coberto.
+- [x] 4.5 Implementar `/runs` para receber evidência junto ao snapshot e `promptBase`, recalcular alertas/revisão e validar conteúdo byte a byte, versão e decisão declarada antes de persistir execução ou provider; alteração isolada de `promptBase`, evidência ausente ou divergente retorna `409 text_integrity_review_stale`.
+- [x] 4.6 Testar rotas separadamente e em fluxo combinado: alertas sem decisão/422, manter exato atual, correção, payload adulterado, mudança pós-decisão (incluindo alteração isolada de `promptBase`), versão obsoleta/409, entrada sem alertas/no_alerts, evidência ausente/divergente em runs/409 e prompt aprovado/sent byte a byte; provar bloqueio pré-persistência/provider sem provider real.
 
 ## 5. Integridade geral do resultado criado pelo modelo
 

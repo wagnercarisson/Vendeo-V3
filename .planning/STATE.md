@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-01T01:20:30.510Z"
+last_updated: "2026-10-01T16:16:18.219Z"
 progress:
   total_phases: 40
   completed_phases: 37
@@ -21,13 +21,13 @@ progress:
 - Foco anterior (histórico): F48.2.3 — **Fidelidade experimental da bancada** (**CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA** em 2026-09-29; 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`).
 - Fase anterior: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
 - Fase anterior: **F48.2.4 — Experimento determinístico Oferta 1:1** (**CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA** em 2026-09-30; 10/10 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados — técnico 8/8 + comercial/visual: Flare low `requer ajuste`, Sunburst low `aprovado com follow-up`; gerações reais **manuais** US$ 0,03 cada; produção intocada; pricing `2026-09-bench-2`; chave exclusiva da bancada validada). OpenSpec arquivado em `openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1/`; CONTEXT/UI-SPEC/PATTERNS/10 PLAN em `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/`.
-- Foco atual: **F48.2.5 — Estabilização experimental Oferta 1:1** (**EM EXECUÇÃO**; Planos 01–03 executados/summarized; 3/8; CHECKPOINT A/B pendentes; nenhuma chamada ao provider). Plano 01: Base SHA `1003dc46996d2608097d1fe2027a7f24c2845cd4`, tasks 1.1/1.2/1.4 concluídas e 1.3 parcialmente pendente para o gate integrado do Plano 07. Plano 02: papéis de imagem e ordem cobertos por testes. Plano 03: detector textual puro/versionado e 13 testes; produção intocada.
+- Foco atual: **F48.2.5 — Estabilização experimental Oferta 1:1** (**EM EXECUÇÃO**; Planos 01–04 executados/summarized; 4/8; CHECKPOINT A/B pendentes; nenhuma chamada ao provider). Plano 01: Base SHA `1003dc46996d2608097d1fe2027a7f24c2845cd4`, task 1.3 parcialmente pendente para gate integrado do Plano 07. Plano 02: papéis de imagem e ordem cobertos. Plano 03: detector puro/versionado. Plano 04: evidência efêmera e gate `/compose`/`/runs`, incluindo promptBase stale.
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
 Phase: 48.2.5 (estabilizacao-experimental-oferta-1-1) — **EM EXECUÇÃO** (2026-09-30)
-Plan: 8 planos; Planos `48-2-5-01` a `48-2-5-03` concluídos/summarized (3/8); execução sequencial, próxima ação: Plano 04.
+Plan: 8 planos; Planos `48-2-5-01` a `48-2-5-04` concluídos/summarized (4/8); execução sequencial, próxima ação: Plano 05.
 Checkpoints humanos: CHECKPOINT A e CHECKPOINT B pendentes nesta fase. A aprovação para iniciar execução não autoriza provider nem substitui checkpoint.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
@@ -36,7 +36,7 @@ Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conform
 **Correção cirúrgica 3 (2026-09-30):** pricing local v2 (`2026-09-bench-2`) alinhado ao oficial (texto US$5 / imagem entrada US$8 / saída US$30 por 1M tokens) para `gpt-image-2`/`gpt-image-2.5-flare`/`gpt-image-2.5-sunburst`; estimativa prévia do `gpt-image-2` revisada (sem reaproveitar os tokens derivados da tarifa antiga) com `coverage: partial`; `gpt-image-2.5-sunburst` adicionado **somente** ao caminho isolado (allowlist própria, catálogo local, presets `low`/`medium`, pricing); `MODEL_ALLOWLIST` produtivo, adapter produtivo e `supabase/migrations/**` intocados. UAT Flare low registrado (`requer ajuste`; 14,6 s; US$ 0,03); Sunburst **PENDENTE**. Commits `3f3d19ae` (código+testes), `afa1d55e` (OpenSpec), `7fcad239` (GSD/planos/UAT). Gates: typecheck/lint/build verdes; suíte completa `4600 passed | 2 skipped` (1 flake em uma execução); `openspec validate --strict` válido; produção intocada.
 **Correção cirúrgica 4 (2026-09-30):** resolvedor de chave **exclusivo da bancada** (`src/lib/lab/bench/gateway/bench-api-key.ts`): lê **somente** `OPENAI_BENCH_API_KEY`, **nunca** faz fallback para `OPENAI_API_KEY`, falha antes de criar o cliente/chamar o provider se ausente/vazia, e não registra/persiste/exibe a chave; `BenchImagesAdapter` usa `getBenchApiKey`; `getApiKey` produtivo intocado; gate arquitetural prova que a bancada não lê a chave produtiva. Commits `ff0130e8` (código+testes), `9d468f88` (OpenSpec/plano 10/UAT), `974692b4` (tasks.md). Gates: typecheck/lint/build verdes; suíte completa `4609 passed | 2 skipped`; `openspec validate --strict` válido; produção intocada. Geração real = **0**; custo **US$ 0**.
 **UAT Sunburst (2026-09-30):** geração manual concluída com `gpt-image-2.5-sunburst` **low** — prompt **idêntico** ao Flare (sem recomposição); **duas** referências (somente a principal teve uso visual evidente); custo local e de plataforma **US$ 0,03**; latência **18,407 s** (Flare **14,592 s**); o Sunburst **corrigiu a duplicação de pontuação** do preço; decisão **`aprovado com follow-up`**. Atribuição ao projeto **Vendeo Lab** **confirmada** no dashboard (“Last used”) após a atualização da plataforma. Registrado em `48.2.4-UAT.md` — **CHECKPOINT B comercial/visual registrado** (Flare: `requer ajuste`; Sunburst: `aprovado com follow-up`).
-Próxima ação: **F48.2.5 Plano 04 — Gate de revisão textual entre `/compose` e `/runs`**, conforme `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-04-PLAN.md`. Regressão obrigatória: alterar somente `promptBase` torna a evidência anterior obsoleta. CHECKPOINT A/B permanecem pendentes e nenhuma geração paga está autorizada. Fonte normativa: `openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/`.
+Próxima ação: **F48.2.5 Plano 05 — Políticas disjuntas de integridade textual**, conforme `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-05-PLAN.md`. CHECKPOINT A/B permanecem pendentes e nenhuma geração paga está autorizada. Fonte normativa: `openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/`.
 Fase anterior: 48.2.3 (Fidelidade experimental da bancada) — **COMPLETE (verificada, sincronizada e arquivada)**.
 Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **COMPLETE (verificada, sincronizada e arquivada)**.
 
@@ -103,7 +103,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 ## Pending Todos
 
-- **F48.2.5 — Estabilização experimental Oferta 1:1:** **EM EXECUÇÃO**, Planos 01–03 concluídos/summarized (3/8). Plano 03 entrega o detector determinístico versionado; Plano 01 mantém task 1.3 parcialmente pendente para o gate integrado do Plano 07. CHECKPOINT A/B pendentes; nenhuma chamada de provider. Fonte normativa: `openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/`.
+- **F48.2.5 — Estabilização experimental Oferta 1:1:** **EM EXECUÇÃO**, Planos 01–04 concluídos/summarized (4/8). O gate textual revalida os quatro campos em compose/runs antes de persistir/confirmar; testes provam stale com mudança isolada de `promptBase`. Plano 01 mantém task 1.3 parcialmente pendente para o gate integrado do Plano 07. CHECKPOINT A/B pendentes; nenhuma chamada de provider. Fonte normativa: `openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/`.
 
 - **F48.2.2 concluída** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com uma geração real controlada; produção intocada; nenhuma promoção). **OpenSpec verificado, sincronizado e arquivado** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`; 3 specs novas (`lab-generation-bench`, `lab-bench-config`, `lab-bench-branding`) e 5 sincronizadas.
 - **F48.2.3 concluída** (8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider**, custo **US$ 0**; produção intocada). **OpenSpec verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`; 4 specs novas (`lab-bench-store-import`, `lab-bench-form-parity`, `lab-bench-experimental-briefing`, `lab-bench-prompt-preflight`) e 5 sincronizadas.
@@ -136,8 +136,8 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 ## Session Continuity
 
-- Última sessão: 2026-09-30 — execução dos Planos 01–03 da F48.2.5; detector local e testes sem provider.
-- Último trabalho: F48.2.5 Planos 01–03 concluídos/summarized; Plano 03 implementa detector puro/versionado; CHECKPOINT A/B pendentes.
+- Última sessão: 2026-10-01 — execução dos Planos 01–04 da F48.2.5; gates textuais UI/API sem provider.
+- Último trabalho: Planos 01–04 concluídos/summarized; Plano 04 implementa evidência textual efêmera e stale antes da persistência executável/provider.
 - Último quick: `260929-rtl` — **concluída**. Fidelidade de `identity_state` da bancada (Tasks 1–3: import fail-closed, resolver puro, contrato/snapshot/API) + **correção de idempotência da importação** (`ensureContentAddressedObject`: precheck `exists` fail-closed; referenciado/criado/reutilizado; cleanup remove só criados; `uploadBrandingObject` removido). Testes de contrato (79), integrado local (2 importações consecutivas) e suíte lab/architecture guard verdes; produção intocada; custo **US$ 0**. Reimportação autorizada idempotente: NovaTek `visual_signature` (1 objeto reutilizado) e Adega `logo` (6 reutilizados), 0 criados, sem duplicação/órfãos.
-- Próximo trabalho: **F48.2.5 Plano 04 — Gate de revisão textual `/compose`/`/runs`**; prosseguir sequencialmente e parar no próximo checkpoint humano.
+- Próximo trabalho: **F48.2.5 Plano 05 — Políticas disjuntas de integridade textual**; prosseguir sequencialmente e parar no próximo checkpoint humano.
 - Resume file: `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48.2.4-UAT.md` (CHECKPOINT A e B aprovados; UAT técnico 8/8 + comercial/visual registrado — Flare `requer ajuste`, Sunburst `aprovado com follow-up`; produção intocada; OpenSpec arquivado).
