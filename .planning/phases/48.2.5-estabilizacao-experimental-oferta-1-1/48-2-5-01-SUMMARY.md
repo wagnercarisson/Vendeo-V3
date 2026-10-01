@@ -21,7 +21,8 @@ key-files:
 key-decisions:
   - "O detector cobre product.name, product.description, product.mandatoryArtworkText e promptBase; exclui valores controlados e branding importado somente para leitura."
   - "textIntegrityEvidence permanece efêmera; snapshots, prompt_base, prompts e policy_versions existentes são suficientes sem tabela nova."
-requirements-completed: [lab-bench-text-integrity, lab-admin-api, lab-bench-candidate]
+requirements-completed: []
+requirements-reviewed: [lab-bench-text-integrity, lab-admin-api, lab-bench-candidate]
 duration: 16min
 completed: 2026-09-30
 ---
@@ -44,6 +45,7 @@ Fronteiras protegidas pelo D8 e conferidas contra a Base SHA:
 - `src/lib/store-identity-service.ts`
 - `src/lib/image-generation/services/art-director-briefing.ts`
 - `src/lib/ai/adapters/images.ts`
+- `src/lib/ai/adapters/responses.ts`
 - `src/lib/ai/adapters/registry.ts`
 - `src/lib/ai/model-registry.ts`
 - `src/lib/ai/api-keys.ts`
@@ -79,6 +81,7 @@ A especificação OpenSpec foi atualizada antes do plano e explicita essa fronte
 - O conteúdo coberto pode ser reconstituído do snapshot e `prompt_base`; a decisão e a revisão determinística são efêmeras entre `/compose` e `/runs`, como requerido pela spec. O servidor revalidará ambas antes de execução; não há necessidade demonstrada de persistir esses metadados nem de criar tabela.
 - `createRecordingClient` impede acessos fora da allowlist e escritas em lojas/branding; `FakeGateway` cobre execução sem provider. `architecture-guard.test.ts` verifica fronteiras estáticas do bounded context.
 - O contrato de fronteira foi estendido para rejeitar qualquer `fetch` cujo host não seja loopback, permitindo somente endpoints locais. A execução observou uma consulta de pricing em `127.0.0.1`; nenhum host remoto foi permitido.
+- Estado das tarefas OpenSpec §1: **1.1, 1.2 e 1.4 concluídas** conforme evidências acima; **1.3 permanece pendente em parte**. Este ciclo acrescentou bloqueio de fetch não local e confirmou os doubles/gates existentes, mas não criou uma varredura estática abrangente sobre todos os testes/tasks para ausência de provider. O gate integrado de isolamento/no-provider permanece no escopo do Plano 07; a tarefa 1.3 não é marcada como concluída aqui.
 - Verificação: `npm.cmd test -- --run src/lib/lab/bench/__tests__/bench-boundary.contract.test.ts src/lib/ai/__tests__/architecture-guard.test.ts` — 2 arquivos, 36 testes passaram.
 - A regressão funcional que altera somente `promptBase` após `/compose` e exige stale/409 em `/runs` fica coberta no Plano 04, junto à implementação desses contratos; está especificada na change e foi adicionada explicitamente à ação e aos critérios de aceitação do Plano 04. Não foi antecipada como teste executável no Plano 01, pois a evidência textual ainda será implementada nesse plano posterior.
 
@@ -93,4 +96,4 @@ Commits de alinhamento normativo anteriores à Base SHA:
 
 ## Estado e próximos passos
 
-Plano 01 concluído sem alteração em runtime, persistência ou paths produtivos. Nenhuma geração ou chamada a provider foi realizada. O Plano 02 poderá implementar papéis de imagem segundo a mesma fronteira; tracking compartilhado `STATE.md`/`ROADMAP.md` permanece conforme instrução explícita do Plano 01 para não ser alterado nesta onda.
+Plano 01 concluiu as auditorias 1.1, 1.2 e 1.4; a tarefa 1.3 segue parcialmente pendente para fechamento do gate integrado no Plano 07. Não declara as capabilities inteiras como implementadas: `requirements-completed` permanece vazio e as três capabilities estão apenas registradas em `requirements-reviewed`; suas entregas funcionais dependem dos planos seguintes. Nenhuma alteração de runtime/persistência, geração ou chamada de provider foi realizada. O Plano 02 poderá implementar papéis de imagem segundo a mesma fronteira; tracking compartilhado `STATE.md`/`ROADMAP.md` permanece conforme instrução explícita do Plano 01 para não ser alterado nesta onda.

@@ -12,10 +12,10 @@
 
 ## 1. Contratos, fronteiras e baseline
 
-- [ ] 1.1 Conferir estado atual da bancada, specs sincronizadas pós-F48.2.4 e paths protegidos de produção; registrar Base SHA e baseline de paths produtivos/`supabase/migrations/**`.
-- [ ] 1.2 Mapear campos livres editáveis pelo operador e pontos cliente/servidor de composição: `product.name`, `product.description`, `product.mandatoryArtworkText` e `promptBase`; documentar nome literal, descrição adaptável com significado preservado, textos obrigatórios literais e `promptBase` byte a byte/sem julgamento semântico; excluir preço, validade, enums/valores controlados e branding importado somente para leitura.
+- [x] 1.1 Conferir estado atual da bancada, specs sincronizadas pós-F48.2.4 e paths protegidos de produção; registrar Base SHA e baseline de paths produtivos/`supabase/migrations/**`.
+- [x] 1.2 Mapear campos livres editáveis pelo operador e pontos cliente/servidor de composição: `product.name`, `product.description`, `product.mandatoryArtworkText` e `promptBase`; documentar nome literal, descrição adaptável com significado preservado, textos obrigatórios literais e `promptBase` byte a byte/sem julgamento semântico; excluir preço, validade, enums/valores controlados e branding importado somente para leitura.
 - [ ] 1.3 Criar/estender gates arquiteturais para provar ausência de provider em testes/tasks, ausência de acesso remoto e produção/migrations intocadas.
-- [ ] 1.4 Auditar persistência existente para versões/evidências/decisões; se impossível sem tabela nova, parar e reportar bloqueio com prova técnica antes de alterar schema.
+- [x] 1.4 Auditar persistência existente para versões/evidências/decisões; se impossível sem tabela nova, parar e reportar bloqueio com prova técnica antes de alterar schema.
 
 ## 2. Política determinística de papéis de imagem
 
