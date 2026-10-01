@@ -58,6 +58,7 @@ export function BenchPromptEditor({
       </div>
       <LabTextarea
         label="Prompt"
+        data-bench-text-field="promptBase"
         value={value}
         disabled={disabled}
         rows={6}

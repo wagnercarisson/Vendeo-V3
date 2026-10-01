@@ -37,7 +37,10 @@ import {
 import { BenchPromptEditor } from "./bench-prompt-editor";
 import { BenchStoreSelector, type BenchStoreOption } from "./bench-store-selector";
 import { buildValidityDisplayText } from "@/lib/lab/bench/domain/form-rules";
-import type { BenchTextIntegrityEvidence } from "@/lib/lab/bench/domain/schemas";
+import type {
+  BenchTextIntegrityEvidence,
+  BenchTextIntegrityField,
+} from "@/lib/lab/bench/domain/schemas";
 
 /**
  * Contêiner cliente da bancada (F48.2.2, D15; F48.2.3, D17/D20).
@@ -390,6 +393,15 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     });
   }
 
+  function handleVerifyTextField(field: BenchTextIntegrityField) {
+    const target = document.querySelector<HTMLElement>(
+      `[data-bench-text-field="${field}"]`,
+    );
+    if (!target) return;
+    target.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    target.focus({ preventScroll: true });
+  }
+
   function handleEditFinal(value: string) {
     setFinalPrompt(value);
     // Editar o prompt final após a aprovação invalida a aprovação (D17).
@@ -593,6 +605,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           onApprove={handleApprove}
           textIntegrityReview={textIntegrityReview}
           onKeepExactly={handleKeepTextExactly}
+          onVerifyField={handleVerifyTextField}
         />
         <BenchPresetSelector
           presets={presets}

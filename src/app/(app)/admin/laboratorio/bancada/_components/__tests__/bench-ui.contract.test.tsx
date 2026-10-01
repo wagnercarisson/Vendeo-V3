@@ -61,6 +61,7 @@ import {
 import {
   collectBenchTextIntegrityFields,
   createBenchTextIntegrityRevision,
+  detectBenchTextIntegrity,
   TEXT_INTEGRITY_POLICY_VERSION,
 } from "@/lib/lab/bench/domain/text-integrity-detector";
 
@@ -745,6 +746,9 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
 
   it("apresenta alertas e reenvia keep_exactly para os mesmos textos", async () => {
     const reviewRevision = "b".repeat(64);
+    const mouseAlert = detectBenchTextIntegrity([
+      { field: "product.name", value: "Mouseeee sem fio" },
+    ])[0];
     const composeBodies: Array<Record<string, unknown>> = [];
     let composeCount = 0;
     mockFetch.mockImplementation(async (url: unknown, init?: RequestInit) => {
@@ -758,14 +762,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
               textIntegrityReview: {
                 policyVersion: "48.2.5-text-integrity-v1",
                 reviewRevision,
-                alerts: [
-                  {
-                    field: "product.name",
-                    excerpt: "voce!!",
-                    reason: "A grafia pode precisar de revisão.",
-                    ruleId: "ptbr_voce_without_accent",
-                  },
-                ],
+                alerts: [mouseAlert],
               },
             },
             422,
@@ -792,6 +789,9 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     });
 
     render(await BancadaPage());
+    fireEvent.change(screen.getByLabelText("Nome do produto"), {
+      target: { value: "Mouseeee sem fio" },
+    });
     expect(screen.getByTestId("bench-compose-button")).toBeEnabled();
     fireEvent.click(screen.getByTestId("bench-compose-button"));
     await waitFor(() =>
@@ -799,10 +799,25 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     );
 
     const review = await screen.findByTestId("bench-text-integrity-review");
-    expect(review).toHaveTextContent("product.name");
-    expect(review).toHaveTextContent("voce!!");
-    expect(review).toHaveTextContent("ptbr_voce_without_accent");
+    expect(within(review).getByText(
+      "Nome do produto — possível caractere repetido; verifique.",
+    )).toBeInTheDocument();
+    expect(review).not.toHaveTextContent("Mouseeee sem fio");
+    expect(review).not.toHaveTextContent("character_repeated_suspicious");
+    expect(review).not.toHaveTextContent(mouseAlert.excerpt);
     expect(screen.queryByRole("textbox", { name: "Prompt compilado" })).toBeNull();
+
+    const productField = screen.getByLabelText("Nome do produto");
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(productField, "scrollIntoView", { value: scrollIntoView, configurable: true });
+    const verifyButton = screen.getByRole("button", { name: "Verificar Nome do produto" });
+    expect(verifyButton.tagName).toBe("BUTTON");
+    expect(verifyButton.tabIndex).toBe(0);
+    expect(verifyButton.className).toContain("focus-visible:ring-2");
+    fireEvent.click(verifyButton);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+    expect(document.activeElement).toBe(productField);
+    expect(productField.className).toContain("focus:ring-2");
 
     fireEvent.click(screen.getByTestId("bench-keep-text-exactly-button"));
     await waitFor(() =>
@@ -817,6 +832,159 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
       decision: "keep_exactly",
     });
     expect(composeBodies[1].promptBase).toBe(composeBodies[0].promptBase);
+    expect((composeBodies[1].product as { name: string }).name).toBe("Mouseeee sem fio");
+  });
+
+  it("usa rótulos humanos e ação Verificar para os quatro campos sem exibir texto técnico", () => {
+    const onVerifyField = vi.fn();
+    const alerts = [
+      { field: "product.name", excerpt: "Mouseeee sem fio", reason: "raw-name-reason", ruleId: "character_repeated_suspicious" },
+      { field: "product.description", excerpt: "raw-description", reason: "raw-description-reason", ruleId: "ptbr_voce_without_accent" },
+      { field: "product.mandatoryArtworkText", excerpt: "raw-mandatory", reason: "raw-mandatory-reason", ruleId: "spacing_anomaly" },
+      { field: "promptBase", excerpt: "raw-prompt-base", reason: "raw-prompt-reason", ruleId: "punctuation_repeated" },
+    ] as const;
+    render(
+      <BenchPreflightPanel
+        status="idle"
+        compiledPrompt=""
+        finalPrompt=""
+        composerVersion=""
+        composing={false}
+        error={null}
+        textIntegrityReview={{
+          policyVersion: "48.2.5-text-integrity-v1",
+          reviewRevision: "d".repeat(64),
+          alerts: [...alerts],
+          stale: false,
+        }}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+        onKeepExactly={() => {}}
+        onVerifyField={onVerifyField}
+      />,
+    );
+
+    const cards = screen.getAllByTestId("bench-text-integrity-alert");
+    expect(cards).toHaveLength(4);
+    const expectedMessages = [
+      "Nome do produto — possível caractere repetido; verifique.",
+      "Descrição — possível erro de ortografia; verifique.",
+      "Informações obrigatórias — possível espaçamento anormal; verifique.",
+      "Prompt-base — possível pontuação duplicada; verifique.",
+    ];
+    cards.forEach((card, index) => {
+      expect(card).toHaveTextContent(expectedMessages[index]);
+      expect(card.textContent).not.toContain(alerts[index].excerpt);
+      expect(card.textContent).not.toContain(alerts[index].ruleId);
+      expect(card.textContent).not.toContain(alerts[index].reason);
+    });
+
+    for (const label of ["Nome do produto", "Descrição", "Informações obrigatórias", "Prompt-base"]) {
+      fireEvent.click(screen.getByRole("button", { name: `Verificar ${label}` }));
+    }
+    expect(onVerifyField.mock.calls).toEqual([
+      ["product.name"],
+      ["product.description"],
+      ["product.mandatoryArtworkText"],
+      ["promptBase"],
+    ]);
+  });
+
+  it("Verificar rola e move o foco aos quatro campos cobertos", async () => {
+    const reviewRevision = "e".repeat(64);
+    const alerts = [
+      {
+        field: "product.name",
+        excerpt: "Mouseeee sem fio",
+        reason: "A repeated character may be a typo.",
+        ruleId: "character_repeated_suspicious",
+      },
+      {
+        field: "product.description",
+        excerpt: "Produto para voce",
+        reason: "A spelling pattern may be a typo.",
+        ruleId: "ptbr_voce_without_accent",
+      },
+      {
+        field: "product.mandatoryArtworkText",
+        excerpt: "Lote  3",
+        reason: "A spacing pattern may be unusual.",
+        ruleId: "spacing_anomaly",
+      },
+      {
+        field: "promptBase",
+        excerpt: "Final!!",
+        reason: "A punctuation pattern may be unusual.",
+        ruleId: "punctuation_repeated",
+      },
+    ];
+    mockFetch.mockImplementation(async (url: unknown) => {
+      if (String(url).includes("/compose")) {
+        return jsonResponse(
+          {
+            error: "text_integrity_review_required",
+            textIntegrityReview: {
+              policyVersion: "48.2.5-text-integrity-v1",
+              reviewRevision,
+              alerts,
+            },
+          },
+          422,
+        );
+      }
+      return jsonResponse({ branding: BRANDING });
+    });
+
+    render(await BancadaPage());
+    fireEvent.change(screen.getByLabelText("Nome do produto"), {
+      target: { value: "Mouseeee sem fio" },
+    });
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    const review = await screen.findByTestId("bench-text-integrity-review");
+    expect(review).not.toHaveTextContent("Mouseeee sem fio");
+
+    const targets = [
+      {
+        field: "product.name",
+        label: "Nome do produto",
+        element: screen.getByLabelText("Nome do produto"),
+      },
+      {
+        field: "product.description",
+        label: "Descrição",
+        element: screen.getByLabelText("Descrição (opcional)"),
+      },
+      {
+        field: "product.mandatoryArtworkText",
+        label: "Informações obrigatórias",
+        element: screen.getByLabelText("Informações obrigatórias na arte"),
+      },
+      {
+        field: "promptBase",
+        label: "Prompt-base",
+        element: screen.getByRole("textbox", { name: "Prompt" }),
+      },
+    ];
+
+    for (const { field, label, element } of targets) {
+      const scrollIntoView = vi.fn();
+      Object.defineProperty(element, "scrollIntoView", {
+        value: scrollIntoView,
+        configurable: true,
+      });
+      const verifyButton = screen.getByRole("button", { name: `Verificar ${label}` });
+      expect(verifyButton.tagName).toBe("BUTTON");
+      expect(verifyButton.tabIndex).toBe(0);
+      expect(verifyButton.className).toContain("focus-visible:ring-2");
+      verifyButton.focus();
+      expect(document.activeElement).toBe(verifyButton);
+      fireEvent.click(verifyButton);
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+      expect(document.activeElement).toBe(element);
+      expect(element.className).toContain("focus:ring-2");
+      expect(field).toBeTruthy();
+    }
   });
 
   it.each([
@@ -1129,8 +1297,9 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
 
     const review = screen.getByTestId("bench-text-integrity-review");
     expect(review).toHaveTextContent("Revisão textual desatualizada");
-    expect(review).toHaveTextContent("promptBase");
-    expect(review).toHaveTextContent("ptbr_voce_without_accent");
+    expect(review).toHaveTextContent("Prompt-base — possível erro de ortografia; verifique.");
+    expect(review).not.toHaveTextContent("voce");
+    expect(review).not.toHaveTextContent("ptbr_voce_without_accent");
     expect(screen.getByTestId("bench-keep-text-exactly-button")).toBeInTheDocument();
   });
 

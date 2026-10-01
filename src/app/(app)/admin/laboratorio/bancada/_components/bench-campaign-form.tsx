@@ -238,6 +238,7 @@ export function BenchCampaignForm({
 
       <Input
         label="Nome do produto"
+        data-bench-text-field="product.name"
         value={value.productName}
         disabled={disabled}
         maxLength={PRODUCT_NAME_MAX}
@@ -248,6 +249,7 @@ export function BenchCampaignForm({
 
       <LabTextarea
         label="Descrição (opcional)"
+        data-bench-text-field="product.description"
         value={value.productDescription}
         disabled={disabled}
         maxLength={PRODUCT_DESCRIPTION_MAX}
@@ -375,6 +377,7 @@ export function BenchCampaignForm({
 
       <LabTextarea
         label="Informações obrigatórias na arte"
+        data-bench-text-field="product.mandatoryArtworkText"
         value={value.mandatoryArtworkText}
         disabled={disabled}
         maxLength={MANDATORY_ARTWORK_MAX}

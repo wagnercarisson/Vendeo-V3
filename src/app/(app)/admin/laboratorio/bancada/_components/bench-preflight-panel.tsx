@@ -8,6 +8,7 @@ import type {
   BenchIdentityReference,
   BenchTextIntegrityAlert,
   BenchTextIntegrityEvidence,
+  BenchTextIntegrityField,
 } from "@/lib/lab/bench/domain/schemas";
 
 import { LabTextarea } from "../../_components/lab-textarea";
@@ -66,6 +67,26 @@ export interface BenchTextIntegrityReviewView {
   stale: boolean;
 }
 
+const TEXT_FIELD_LABELS: Record<BenchTextIntegrityField, string> = {
+  "product.name": "Nome do produto",
+  "product.description": "Descrição",
+  "product.mandatoryArtworkText": "Informações obrigatórias",
+  promptBase: "Prompt-base",
+};
+
+function textIntegrityIssueLabel(ruleId: string): string {
+  if (ruleId.startsWith("ptbr_")) return "possível erro de ortografia";
+  if (ruleId === "punctuation_repeated") return "possível pontuação duplicada";
+  if (ruleId === "character_repeated_suspicious") return "possível caractere repetido";
+  if (ruleId === "spacing_anomaly") return "possível espaçamento anormal";
+  if (ruleId === "adjacent_word_repeat") return "possível palavra repetida";
+  return "possível problema de texto";
+}
+
+function textIntegrityAlertMessage(alert: BenchTextIntegrityAlert): string {
+  return `${TEXT_FIELD_LABELS[alert.field]} — ${textIntegrityIssueLabel(alert.ruleId)}; verifique.`;
+}
+
 interface BenchPreflightPanelProps {
   status: BenchPreflightStatus;
   compiledPrompt: string;
@@ -83,6 +104,7 @@ interface BenchPreflightPanelProps {
   onApprove: () => void;
   textIntegrityReview?: BenchTextIntegrityReviewView | null;
   onKeepExactly?: () => void;
+  onVerifyField?: (field: BenchTextIntegrityField) => void;
 }
 
 const STATUS_LABELS: Record<BenchPreflightStatus, string> = {
@@ -108,6 +130,7 @@ export function BenchPreflightPanel({
   onApprove,
   textIntegrityReview = null,
   onKeepExactly,
+  onVerifyField,
 }: BenchPreflightPanelProps) {
   const showCompiled = status === "composed" || status === "edited" || status === "approved";
   const canApprove =
@@ -187,13 +210,23 @@ export function BenchPreflightPanel({
                   data-testid="bench-text-integrity-alert"
                   className="rounded-md border border-border bg-bg-elevated p-3"
                 >
-                  <p className="text-xs font-semibold text-text-primary font-heading">
-                    {alert.field} · {alert.ruleId}
+                  <p className="text-sm text-text-primary font-body">
+                    {textIntegrityAlertMessage(alert)}
                   </p>
-                  <p className="mt-1 break-words font-mono text-xs text-text-secondary">
-                    {alert.excerpt}
-                  </p>
-                  <p className="mt-1 text-xs text-text-secondary font-body">{alert.reason}</p>
+                  {onVerifyField ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="mt-2 focus-visible:ring-2 focus-visible:ring-accent-blue"
+                      data-testid="bench-verify-text-field-button"
+                      aria-label={`Verificar ${TEXT_FIELD_LABELS[alert.field]}`}
+                      onClick={() => onVerifyField(alert.field)}
+                      disabled={disabled || composing}
+                    >
+                      Verificar
+                    </Button>
+                  ) : null}
                 </li>
               ))}
             </ul>
