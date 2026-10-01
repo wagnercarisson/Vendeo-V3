@@ -80,6 +80,7 @@ A especificação OpenSpec foi atualizada antes do plano e explicita essa fronte
 - `createRecordingClient` impede acessos fora da allowlist e escritas em lojas/branding; `FakeGateway` cobre execução sem provider. `architecture-guard.test.ts` verifica fronteiras estáticas do bounded context.
 - O contrato de fronteira foi estendido para rejeitar qualquer `fetch` cujo host não seja loopback, permitindo somente endpoints locais. A execução observou uma consulta de pricing em `127.0.0.1`; nenhum host remoto foi permitido.
 - Verificação: `npm.cmd test -- --run src/lib/lab/bench/__tests__/bench-boundary.contract.test.ts src/lib/ai/__tests__/architecture-guard.test.ts` — 2 arquivos, 36 testes passaram.
+- A regressão funcional que altera somente `promptBase` após `/compose` e exige stale/409 em `/runs` fica coberta no Plano 04, junto à implementação desses contratos; está especificada na change e foi adicionada explicitamente à ação e aos critérios de aceitação do Plano 04. Não foi antecipada como teste executável no Plano 01, pois a evidência textual ainda será implementada nesse plano posterior.
 
 ## Task commits
 
