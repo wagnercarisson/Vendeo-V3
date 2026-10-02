@@ -71,7 +71,7 @@ O manifesto do candidato (JSON ou Markdown estruturado versionável) congela o c
 
 ### D6 — Prompt e modelos são variáveis experimentais manuais
 
-O protocolo separa claramente código determinístico (alterações apenas em compositor, políticas, preflight e contratos necessários) de experimentação manual. Rodada de prompt: manter dados/modelo/qualidade, variar um aspecto do prompt, executar manualmente após autorização, avaliar e registrar. Comparação de modelo: congelar entradas, imagens e prompt aprovado byte a byte e variar apenas modelo, em `low`. Matriz inicial: `gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`. `medium` ou acima somente com hipótese específica escrita antes da geração. Cada run preserva usage/latência/custo e a versão de pricing aplicável.
+O protocolo separa claramente código determinístico (alterações apenas em compositor, políticas, preflight e contratos necessários) de experimentação manual. Rodada de prompt: manter dados/modelo/qualidade, variar um aspecto do prompt, executar manualmente após autorização, avaliar e registrar. Comparação de modelo: congelar entradas, imagens e prompt aprovado byte a byte e variar apenas modelo, em `low`. Matriz inicial: `gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`. Normalmente, `medium` ou acima exige hipótese específica escrita antes da geração. Se o usuário realizar manualmente uma execução exploratória sem hipótese prévia, ela SHALL ser registrada honestamente como desvio exploratório e requer aceitação humana explícita no UAT/decision record; não se cria hipótese retrospectiva, não é tratada como experimento confirmatório nem generalizada para outros casos. Cada run preserva usage/latência/custo e a versão de pricing aplicável.
 
 Não criar executor de matriz, fila, botão de batch, gerador de variantes nem avaliação automatizada. **Alternativa rejeitada:** automatizar comparação — inviabiliza checkpoints humanos e aumenta custo sem decisão explícita por geração.
 
@@ -84,6 +84,10 @@ CHECKPOINT A bloqueia qualquer chamada paga até aprovação humana dos contrato
 Estimativas de saída derivadas do calculador oficial SHALL ser identificadas como **estimativa parcial somente de saída**, vinculadas ao modelo/qualidade/tamanho e à versão local da regra. Para os presets da matriz `low`, `1024x1024`, as capturas oficiais fornecidas pelo responsável confirmam 196 tokens de saída e US$ 0,00588 somente de saída para `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst` (tarifa Standard de US$30 por milhão de tokens de saída). A estimativa exclui tokens de texto/imagem de entrada e imagens parciais em streaming; entradas adicionais são cobradas conforme usage e tarifas aplicáveis. A cobertura do pricing permanece `partial`; o valor não é custo total, fatura, teto ou orçamento garantido.
 
 Neste UAT, “revisão de orçamento” significa o usuário revisar a estimativa parcial e dar confirmação financeira explícita **para cada geração manual**, imediatamente antes dela. Não há autorização financeira global, aprovação implícita, execução automática ou batch. Estimativa disponível não satisfaz por si só a confirmação humana nem autoriza geração.
+
+#### D7b — CHECKPOINT B pode aceitar candidato com rubrica parcial explícita
+
+O UAT SHALL registrar cada critério da rubrica por run. Quando não existe evidência ou avaliação humana para um critério, seu valor permanece `pending`; não se infere aprovação nem reprovação. O usuário pode, no CHECKPOINT B, aprovar explicitamente o candidato **com limitações** mesmo que existam critérios pendentes, desde que o resumo enumere as lacunas, as limitações/follow-ups e não descreva o UAT como avaliação integral. Essa decisão humana satisfaz o gate de decisão/handoff do candidato, sem transformar os critérios pendentes em avaliados nem implicar promoção produtiva.
 
 ### D8 — Limites produtivos e fechamento
 

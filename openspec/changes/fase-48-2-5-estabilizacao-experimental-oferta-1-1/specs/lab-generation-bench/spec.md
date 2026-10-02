@@ -21,18 +21,24 @@ A bancada SHALL exigir evidência textual emitida por `/compose` e preflight de 
 
 ### Requirement: Protocolo de UAT experimental manual Oferta 1:1
 
-A bancada SHALL suportar protocolo experimental documental para Oferta 1:1, com duas lojas de teste e dois produtos visualmente diferentes; ao menos um caso com imagem principal isolada e um com principal e adicionais; comparação de modelos com entradas idênticas; avaliação humana; e registro de hipótese, variável, run ID, resultado, decisão e próximo ajuste por tentativa relevante. A matriz inicial SHALL conter `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst` em `low`; qualidade `medium` ou superior exige hipótese concreta. O sistema SHALL preservar custo, latência, usage e versão do pricing, e SHALL NOT executar gerações automaticamente.
+A bancada SHALL suportar protocolo experimental documental para Oferta 1:1, com duas lojas de teste e dois produtos visualmente diferentes; ao menos um caso com imagem principal isolada e um com principal e adicionais; comparação de modelos com entradas idênticas; avaliação humana; e registro de hipótese, variável, run ID, resultado, decisão e próximo ajuste por tentativa relevante. A matriz inicial SHALL conter `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst` em `low`; qualidade `medium` ou superior normalmente exige hipótese concreta registrada antes da geração. Uma execução `medium+` exploratória sem hipótese prévia MAY ser registrada como exceção se conduzida manualmente pelo usuário e aceita explicitamente no UAT, sem hipótese retrospectiva nem generalização. O sistema SHALL preservar custo, latência, usage e versão do pricing, e SHALL NOT executar gerações automaticamente.
 
 #### Scenario: UAT registra amostra mínima e critérios
 - **WHEN** o documento de UAT é preenchido
 - **THEN** registra duas lojas, dois produtos distintos e os dois arranjos de imagens obrigatórios
 - **AND** usa entradas idênticas entre modelos comparados
-- **AND** avalia produto, imagens, identidade, dados/textos, hierarquia, acabamento, invenções e evidências financeiras/técnicas
+- **AND** registra por run os critérios de produto, imagens, identidade, dados/textos, hierarquia, acabamento, invenções e evidências financeiras/técnicas
+- **AND** critérios sem avaliação permanecem `pending`; o usuário MAY aceitar CHECKPOINT B com limitações se aprovar explicitamente as lacunas/follow-ups, sem alegação de rubrica completa
 
 #### Scenario: Variação de qualidade exige hipótese
 - **WHEN** qualidade medium ou superior é proposta
-- **THEN** uma hipótese concreta de melhoria é registrada antes da rodada
+- **THEN** normalmente uma hipótese concreta de melhoria é registrada antes da rodada
 - **AND** a rodada permanece manual
+
+#### Scenario: Sunburst medium exploratório sem hipótese prévia
+- **WHEN** o usuário conduz manualmente uma rodada exploratória `medium+` sem hipótese prévia
+- **THEN** o UAT registra explicitamente que a hipótese estava ausente e não a inventa retrospectivamente
+- **AND** a rodada precisa ser aceita pelo usuário como exceção no CHECKPOINT B e não é generalizada para outros produtos
 
 #### Scenario: Nenhum revisor visual automático
 - **WHEN** validações técnicas objetivas terminam

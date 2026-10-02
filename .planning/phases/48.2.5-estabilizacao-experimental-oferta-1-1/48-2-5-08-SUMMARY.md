@@ -1,63 +1,84 @@
 ---
 phase: 48.2.5
 plan: 48-2-5-08
-subsystem: lab-bench-pricing
-tags: [pricing, local-readiness, checkpoint-b]
+subsystem: lab-bench-candidate
+tags: [uat, candidate, manual-generations, closeout-review]
 requires:
   - phase: 48.2.5
-    provides: CHECKPOINT A approval and local readiness evidence from Plans 07/08 Task 1
+    provides: CHECKPOINT A approval, local readiness, partial pricing rule `2026-10-bench-3`
 provides:
-  - Versioned partial output-only estimates for all three low/1024x1024 matrix presets
-  - Clear UI disclosure of additional input charges and per-generation manual financial confirmation
-  - Local readiness evidence prepared for user review before CHECKPOINT B
+  - CHECKPOINT B decision and seven user-reported manual runs registered
+  - Per-run local usage/costs, local input checksums, prompt evidence references and human-evaluation states
+  - Candidate manifest for experimental Sunburst medium, explicitly not promoted
+  - Financial reconciliation separating the user-confirmed platform total from local calculations
 affects: [lab-bench-candidate, lab-bench-run-history]
 tech-stack:
   added: []
-  patterns: [versioned-output-only-estimate, per-generation-financial-confirmation]
+  patterns: [read-only-local-run-audit, per-run-human-evaluation, exploratory-quality-exception]
 key-files:
-  created: [.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-08-SUMMARY.md]
+  created:
+    - .planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-EXPERIMENTS.md
   modified:
+    - .planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-UAT.md
+    - .planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-CANDIDATE.json
     - openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/design.md
     - openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/specs/lab-bench-candidate/spec.md
     - openspec/changes/fase-48-2-5-estabilizacao-experimental-oferta-1-1/tasks.md
-    - src/lib/lab/bench/domain/bench-pricing.ts
-    - src/app/(app)/admin/laboratorio/bancada/_components/bench-estimate-panel.tsx
-    - .planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-UAT.md
+    - .planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-CONTEXT.md
+    - .planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-EXPERIMENT-TEMPLATE.md
+    - .planning/STATE.md
+    - .planning/ROADMAP.md
 key-decisions:
-  - "Rule 2026-10-bench-3 preserves prior rules and coverage partial; each low/1024x1024 estimate is 196 output tokens / US$0.00588 only."
-  - "Input text/image charges and streaming partial images are additional; output estimate is not total, invoice, or cap."
-  - "User reviews the estimate and confirms financial authorization separately immediately before each manual generation; no global authorization or batch."
-  - "CHECKPOINT B remains pending; no provider call or paid generation was authorized or performed."
+  - "CHECKPOINT B approved with limitations/follow-ups; paid generations for this phase are closed."
+  - "Experimental candidate: gpt-image-2.5-sunburst / medium / images / Oferta 1:1, based on the Adega case only; no production activation or promotion."
+  - "The Adega medium generation was exploratory curiosity without a prior hypothesis; it is recorded as an explicit user-approved exception and not generalized."
+  - "Seven manual generations were reported by the user and reconciled with seven succeeded runs in the local Supabase database."
+  - "User-confirmed platform total is US$0.29; local calculated sum is US$0.288978; only the medium run's individual US$0.06 platform charge is confirmed."
+  - "The user explicitly accepted a partial rubric with limitations; 65 unevaluated criteria remain pending without inference."
 requirements-completed: []
 requirements-reviewed: [lab-bench-candidate, lab-bench-run-history]
 completed: 2026-10-01
-status: readiness-task-complete; awaiting-checkpoint-b
+status: plan-complete; awaiting-user-closeout-review
 ---
 
-# F48.2.5 Plan 08 — Readiness update summary
+# F48.2.5 Plan 08 — UAT and closeout handoff
 
-**Task 1 readiness is complete and ready for the user's CHECKPOINT B review. The plan remains open at the human checkpoint; no paid operation is authorized.**
+**The local readiness, human CHECKPOINT B, UAT evidence, candidate manifest, and tracking are prepared for the user's closeout review. The three reserved OpenSpec closing actions were not executed.**
 
-## Pricing rule and user-facing disclosure
+## CHECKPOINT B and runs
 
-- Added local pricing rule `2026-10-bench-3`; existing `2026-09-bench-2` and older run history remain unchanged.
-- Official calculator screenshots supplied by the user confirm 196 output tokens and US$0.00588 at the US$30/M output rate for `gpt-image-2`, `gpt-image-2.5-flare`, and `gpt-image-2.5-sunburst`, all low/1024×1024.
-- `coverage: partial` remains explicit. Estimates exclude text/image input tokens and streaming partial images; they are not total cost, invoice, or spending cap.
-- UI tells the operator to review the partial estimate and confirm finances separately for each manual generation. There is no global approval, batch, or automatic generation authorization.
+- User decision: **approved with limitations and follow-ups**; paid generations for F48.2.5 are closed.
+- Seven succeeded runs were read from local Supabase only, in read-only transactions: three controlled low comparisons for NovaTek/mouse and three controlled low comparisons plus one exploratory Sunburst medium run for Adega/energy drink.
+- Same-case prompt comparisons are verified: one unique approved-prompt MD5 per case; each run's compiled/approved/sent prompt evidence is byte-for-byte equal. Full prompts remain attached to their respective runs and are not duplicated in the candidate manifest.
+- Local input checksums document one NovaTek image and Adega primary + two additional images in order.
+- User-provided historical F48.2.4 mouse observations were recovered and cross-referenced because the same image checksum appears in those prior inputs. They remain historical context only: the earlier product/price/prompt and two-image set differ, so they are not transferred as ratings for current NovaTek runs.
+- User's visual results, per-run evaluations, missing evidence (`pending`), usage, latencies, local costs, and the human-entered input correction note are recorded in `48.2.5-EXPERIMENTS.md`, `48.2.5-UAT.md`, and the manifest.
 
-## Verification
+## Candidate and decision limits
 
-- Focused pricing/execution/UI contracts: **96 passed**.
-- Bench/API integration suites: **605 passed, 1 skipped**.
-- Typecheck, lint, production build (76 pages), strict OpenSpec validation, and `git diff --check`: passed.
-- Pure resolver confirmed all three planned presets return US$0.00588, `isEstimate: true`, `coverage: partial`, rule `2026-10-bench-3`.
-- Protected production paths and `supabase/migrations/**` remain unchanged from Base SHA `1003dc46996d2608097d1fe2027a7f24c2845cd4`.
-- No provider call, generation, `db push`, remote write, user credit, paid authorization, or global financial authorization occurred.
+- Candidate: `gpt-image-2.5-sunburst`, `medium`, protocol `images`, Oferta 1:1.
+- Sunburst medium was the best visual result **in the Adega case**: protagonist main product, additional variants present, complete approved product name with capitalization/layout flexibility, no duplicate “Vários sabores,” and good commercial hierarchy.
+- It was exploratory curiosity **without a prior hypothesis**. OpenSpec now documents this as a human-authorized exceptional exploratory run; no retrospective hypothesis is asserted, and no general superiority is inferred. Medium was tested only on this product.
+- Candidate remains documentary/experimental; no activation, production change, or promotion.
+- Unimplemented follow-ups: short guidance to encourage using additional images where possible without requiring them or inflating the prompt; packaging-text fidelity learning; evaluation by real merchants.
 
-## Human gate
+## Financial evidence
 
-CHECKPOINT B is **pending** and remains user-conducted. The user must decide whether to begin manual UAT; each individual generation requires a fresh review of its estimate and explicit financial confirmation immediately before execution. No result, evaluation, or candidate decision is inferred.
+- User-confirmed accumulated platform cost after the seventh generation: **US$0.29**.
+- Sum of local usage-based calculated run costs: **US$0.288978**; separately labeled and not represented as platform billing.
+- Individual platform charge confirmed only for Sunburst medium: **US$0.06**. Other six individual platform costs are not confirmed and are not allocated from the aggregate.
+- Provider calls by executor: **0**. No new generation, `db push`, remote read/write, customer credit, or production action occurred during this closeout work.
 
-## Next
+## Verification and boundaries
 
-Present the readiness packet for the user's CHECKPOINT B decision, then stop. Do not execute a provider call or generation.
+- Manifest: schema valid, 7 unique run IDs and 7 linked evaluations. Strict OpenSpec validation passed; tasks are **37/37**. The 65 unevaluated rubric fields remain `pending` under the user's explicit partial-rubric approval.
+- Bench/API suites: **29 passed, 1 skipped; 605 tests passed, 1 skipped**. Typecheck and lint passed. Build passed (`check:cnae` OK, 76 pages); Next reported its existing ESLint-plugin detection warning.
+- `git diff --check` passed.
+- Base SHA: `1003dc46996d2608097d1fe2027a7f24c2845cd4`; protected production paths and `supabase/migrations/**` are checked against it.
+- Human feedback from the earlier mouse campaign on the same image asset is cross-referenced as historical context; it is not transferred to current runs with different product/price/prompt/reference count.
+- `reportedCostUsd` remains null on all runs because the provider supplied no cost; the platform-confirmed US$0.06 for medium uses `platformConfirmedCostUsd`.
+- CHECKPOINT B is approved, but this does not run `/opsx-verify`, `/opsx-sync`, or `/opsx-archive`; all three remain with the responsible user.
+
+## Handoff
+
+Review the evidence and decide whether to supplement the pending visual rubric. Stop before the user's OpenSpec verification, synchronization, and archive actions.

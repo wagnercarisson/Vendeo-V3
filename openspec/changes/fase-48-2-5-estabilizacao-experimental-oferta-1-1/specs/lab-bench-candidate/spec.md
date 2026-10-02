@@ -2,7 +2,7 @@
 
 ### Requirement: Experimentação manual e controlada de prompts e modelos
 
-A estabilização SHALL conduzir experimentos manualmente na bancada: executar, avaliar, alterar uma variável, executar novamente e registrar a decisão. SHALL NOT gerar candidatas, otimizar prompts ou avaliar por IA automaticamente, nem alterar código por cada edição experimental do prompt. A matriz inicial de modelos SHALL conter `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`, todos em qualidade `low`. Comparações entre modelos SHALL usar as mesmas entradas, imagens e prompt aprovado; qualidade `medium` ou superior exige hipótese concreta. Toda geração real SHALL ser manual, precedida de autorização humana explícita e não executável por task autônoma. O registro SHALL incluir custo, latência, usage e versão de pricing. A estimativa local de saída SHALL ser rotulada como parcial e somente de saída, manter `coverage: partial`, e declarar que custos de texto/imagem de entrada são adicionais; não SHALL ser apresentada como custo total, fatura ou teto.
+A estabilização SHALL conduzir experimentos manualmente na bancada: executar, avaliar, alterar uma variável, executar novamente e registrar a decisão. SHALL NOT gerar candidatas, otimizar prompts ou avaliar por IA automaticamente, nem alterar código por cada edição experimental do prompt. A matriz inicial de modelos SHALL conter `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`, todos em qualidade `low`. Comparações entre modelos SHALL usar as mesmas entradas, imagens e prompt aprovado; qualidade `medium` ou superior normalmente exige hipótese concreta registrada antes da geração. Se o usuário realizar manualmente uma execução exploratória sem hipótese prévia, ela SHALL ser registrada como desvio exploratório e requer aceitação humana explícita no UAT/decision record; não se cria hipótese retrospectiva, não é tratada como evidência confirmatória nem generalizada para outros casos. Toda geração real SHALL ser manual, precedida de autorização humana explícita e não executável por task autônoma. O registro SHALL incluir custo, latência, usage e versão de pricing. A estimativa local de saída SHALL ser rotulada como parcial e somente de saída, manter `coverage: partial`, e declarar que custos de texto/imagem de entrada são adicionais; não SHALL ser apresentada como custo total, fatura ou teto. A rubrica humana SHALL ser registrada por critério e run; critérios sem avaliação permanecem `pending`. O usuário MAY aprovar explicitamente um candidato com limitações no CHECKPOINT B apesar de critérios `pending`, se tais lacunas e follow-ups forem declarados, sem alegar avaliação integral ou promoção.
 
 #### Scenario: Rodada de prompt muda uma variável
 - **WHEN** uma rodada manual de refinamento é iniciada
@@ -19,6 +19,16 @@ A estabilização SHALL conduzir experimentos manualmente na bancada: executar, 
 - **THEN** inclui os três modelos definidos com qualidade `low`
 - **AND** qualidade superior só é usada com hipótese concreta registrada
 
+#### Scenario: Exceção exploratória de qualidade superior
+- **WHEN** o usuário realiza manualmente uma execução `medium` ou superior sem hipótese prévia
+- **THEN** o UAT/decision record declara a ausência de hipótese e registra a aceitação humana da exceção
+- **AND** a execução não é descrita como experimento confirmatório nem generalizada para outros casos
+
+#### Scenario: CHECKPOINT B aceita rubrica parcial com limitações
+- **WHEN** há critérios da rubrica sem evidência humana para um ou mais runs
+- **THEN** cada critério permanece `pending` e as lacunas/limitações são listadas
+- **AND** o usuário pode aprovar explicitamente o candidato com limitações no CHECKPOINT B, sem alegar cobertura integral ou promover a produção
+
 #### Scenario: Execução real depende de autorização humana
 - **WHEN** uma task autônoma chega ao ponto de geração real
 - **THEN** ela para no checkpoint e não invoca provider
@@ -33,6 +43,8 @@ A estabilização SHALL conduzir experimentos manualmente na bancada: executar, 
 ### Requirement: Amostra mínima e revisão humana visual
 
 O UAT SHALL cobrir duas lojas de teste e dois produtos visualmente diferentes, incluindo ao menos um caso apenas com imagem principal e um caso com principal e adicionais. Cada comparação de modelos SHALL usar entradas idênticas e avaliações humanas registradas. A rubrica SHALL registrar separadamente: (a) nome do produto presente por inteiro e exatamente como aprovado; (b) descrição complementar com contexto/significado preservados, ainda que selecionada, resumida ou adaptada; (c) informações obrigatórias reproduzidas literalmente; (d) protagonismo visual da principal; (e) contribuição/conflito das adicionais; (f) fidelidade de identidade; (g) integridade de preços/datas/selos e demais condições comerciais; (h) ortografia/pontuação; (i) hierarquia; (j) acabamento/publicabilidade; (k) ausência de conteúdo inventado; e (l) modelo, qualidade, latência, usage e custo. O fluxo SHALL ser dados + identidade + prompt aprovado → geração → validações técnicas objetivas → revisão humana → aprovar, rejeitar, ajustar ou nova tentativa. SHALL NOT existir garantia técnica de aparição/fidelidade visual do nome, descrição ou principal, revisor visual ou score automático.
+
+Cada campo da rubrica SHALL ser informado por run; ausência de evidência/avaliação SHALL permanecer `pending`. O CHECKPOINT B MAY resultar em `approved_with_limitations` com rubrica parcial somente mediante aceitação explícita do usuário e registro claro das lacunas, sem atribuir avaliações não fornecidas.
 
 #### Scenario: Amostra mínima é satisfeita
 - **WHEN** UAT manual é registrado como completo
