@@ -3,6 +3,7 @@ import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { formatCurrencyBRL, parseCurrencyBRL } from "@/lib/formatters";
 import type { CampaignIntent } from "@/lib/campaign/types";
+import { availableIntents as resolveAvailableIntents, inferIntent as resolveIntent } from "./intent-options";
 
 /**
  * Regras puras de paridade do formulário produtivo da bancada (F48.2.3, D13).
@@ -113,12 +114,7 @@ export function inferIntent(
   originalPriceCents: number,
   discountedPriceCents: number | undefined | null,
 ): CampaignIntent {
-  const hasOriginal = originalPriceCents > 0;
-  const hasDiscounted = (discountedPriceCents ?? 0) > 0;
-
-  if (hasOriginal && hasDiscounted) return "offer";
-  if (hasDiscounted) return "spotlight";
-  return "exclusive";
+  return resolveIntent(originalPriceCents, discountedPriceCents);
 }
 
 /**
@@ -130,10 +126,7 @@ export function availableIntents(
   originalPriceCents: number,
   discountedPriceCents: number | undefined | null,
 ): CampaignIntent[] {
-  const inferred = inferIntent(originalPriceCents, discountedPriceCents);
-  if (inferred === "offer") return ["offer"];
-  if ((discountedPriceCents ?? 0) > 0) return ["offer", "spotlight"];
-  return ["spotlight", "exclusive"];
+  return resolveAvailableIntents(originalPriceCents, discountedPriceCents);
 }
 
 // ─── Validações de campos (replicado do hook/formulário produtivo) ───────────
