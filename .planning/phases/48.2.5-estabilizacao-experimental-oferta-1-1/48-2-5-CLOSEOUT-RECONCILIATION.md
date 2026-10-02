@@ -1,6 +1,6 @@
 # F48.2.5 — Reconciliação de fechamento
 
-**Data:** 2026-10-01  
+**Data:** 2026-10-02
 **Escopo:** alinhar tracking com a change arquivada sem modificar avaliações humanas, resultados de runs ou decisões de produção.
 
 ## Estado confirmado
@@ -17,7 +17,7 @@ O workflow conversacional `/gsd-verify-work 48.2.5` foi executado em 2026-10-01.
 
 Na checagem final de artefatos, o UAT experimental original permaneceu `checkpoint_b_approved_with_limitations`; o usuário confirmou prosseguir reconhecendo os **65 critérios `pending`**, sem os converter em avaliações ou aprovações. Essa limitação está registrada em `48-2-5-VERIFICATION.md` → `Acknowledged Gaps`.
 
-**Gate restante antes de avançar:** `workflow.security_enforcement` está habilitado e ainda não há `48-2-5-SECURITY.md`. O workflow GSD exige `/gsd-secure-phase 48.2.5` antes da próxima fase. O UAT conversacional está completo e a change OpenSpec está arquivada; nenhuma nova geração paga está autorizada nesta fase.
+**Gate de segurança concluído em 2026-10-02:** `48-2-5-SECURITY.md` registra revisão STRIDE retroativa, 7 ameaças fechadas e 0 abertas. O security gate está satisfeito; o UAT conversacional está completo e a change OpenSpec está arquivada. Nenhuma nova geração paga está autorizada nesta fase.
 
 ## Contadores globais consultados
 

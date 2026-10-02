@@ -34,8 +34,8 @@ O usuário validou os cinco checkpoints derivados dos oito summaries da fase. O 
 - A aprovação experimental do `gpt-image-2.5-sunburst` / `medium` vale somente para o caso Adega. Não há promoção ou ativação produtiva.
 - O CHECKPOINT B encerrou as gerações pagas da fase. Nenhuma nova geração é autorizada por esta verificação.
 
-## Gate antes de avançar
+## Gate de segurança
 
-`workflow.security_enforcement` está habilitado e não foi encontrado artefato `48-2-5-SECURITY.md`. Conforme o fluxo GSD, executar `/gsd-secure-phase 48.2.5` antes de avançar para outra fase. Este requisito não altera os resultados PASS do UAT e não converte as limitações acima em falhas técnicas.
+Revisão concluída em 2026-10-02 e registrada em `48-2-5-SECURITY.md`: STRIDE retroativo, 7 ameaças fechadas e 0 abertas. O security gate está satisfeito. Esta revisão não altera os resultados PASS do UAT nem converte as limitações acima em avaliações técnicas.
 
-**Conclusão:** verificação conversacional GSD concluída; **5/5 checkpoints passaram sem issues**. A mudança OpenSpec já está verificada/sincronizada/arquivada. A próxima transição de fase aguarda o gate de segurança requerido pela configuração do projeto.
+**Conclusão:** verificação conversacional GSD concluída; **5/5 checkpoints passaram sem issues**. A mudança OpenSpec já está verificada/sincronizada/arquivada e o security gate está satisfeito.
