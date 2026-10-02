@@ -52,7 +52,7 @@
 | 48.2.3 | ✅ Concluída, verificada, sincronizada e arquivada — Fidelidade experimental da bancada | 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; duas lojas de teste importadas localmente; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/` |
 | 48.2.4 | ✅ Concluída, verificada, sincronizada e arquivada — Experimento determinístico Oferta 1:1 | 10/10 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual (Flare low `requer ajuste`; Sunburst low `aprovado com follow-up`); gerações reais **manuais** (US$ 0,03 cada); produção intocada (`base..HEAD` vazio); pricing `2026-09-bench-2`; chave exclusiva da bancada validada; OpenSpec arquivado em `openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1/` |
 | 48.2.5 | ✅ UAT GSD e security review concluídos | 8/8 planos/summaries; 37/37 tasks; 5/5 checkpoints GSD PASS; CHECKPOINT B aprovado com limitações; security review retroativa 7/7 fechados, 0 abertos (`48-2-5-SECURITY.md`); 65 critérios `pending` reconhecidos; OpenSpec verificado/sincronizado/arquivado |
-| 48.2.6 | ◇ Em planejamento — Validação experimental Produto — intenções 1:1 | Fonte normativa: `openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/`; planos aguardam revisão; implementação, checkpoints e UAT não iniciados |
+| 48.2.6 | ◇ Em execução — Validação experimental Produto — intenções 1:1 | Plano 03 concluído (3/10 summaries); schema/snapshot validam matriz preço×intenção e validade; sem provider, produção ou migrations |
 | 48.2.2-antiga | ⏸ Descartada — Auditoria e Otimização do Prompt do Revisor | Escopo descartado/substituído em 2026-09-28; sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
@@ -188,7 +188,7 @@ Plans:
 
 **Nome:** Validação experimental Produto — intenções 1:1
 
-**Status:** Em planejamento; nenhum plano executado, checkpoint aprovado ou UAT iniciado.
+**Status:** Em execução sequencial; Planos 01–03 executados/summarized (3/10); checkpoints e UAT não iniciados.
 
 **Planejamento:** 10 planos, no limite superior orientativo do guia; a sequência mantém os gates de segurança, CHECKPOINT A, preparação documental e CHECKPOINT B como barreiras distintas, sem ampliar a change.
 
