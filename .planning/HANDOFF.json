@@ -1,47 +1,62 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-01T22:15:48-03:00",
-  "phase": "48.2.5",
-  "phase_name": "estabilizacao-experimental-oferta-1-1",
-  "phase_dir": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1",
-  "status": "security_review_pending",
-  "phase_status": "executed_openspec_archived_gsd_uat_passed_security_gate_pending",
-  "plan": "48-2-5-08",
-  "openspec_source": "fase-48-2-5-estabilizacao-experimental-oferta-1-1",
+  "timestamp": "2026-10-02T00:00:00-03:00",
+  "phase": "48.2.6",
+  "phase_name": "validacao-experimental-produto-intencoes-1-1",
+  "phase_dir": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1",
+  "status": "planning_review",
+  "phase_status": "plans_verified_execution_not_started",
+  "plan": "48-2-6-01-through-48-2-6-10",
+  "openspec_source": "fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
   "openspec_archive": {
-    "path": "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1",
-    "verified": true,
-    "synced": true,
-    "archived": true,
-    "active": false,
-    "note": "Change OpenSpec verificada, sincronizada e arquivada em 2026-10-01; oito specs delta sincronizadas/validadas."
+    "path": "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
+    "verified": false,
+    "synced": false,
+    "archived": false,
+    "active": true,
+    "note": "Change normativa ativa da F48.2.6; verify/sync/archive ainda não executados."
   },
   "gsd_verification": {
+    "phase": "48.2.5",
     "workflow": "/gsd-verify-work 48.2.5",
     "status": "complete_with_acknowledged_gaps",
     "artifact": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md",
     "uat_artifact": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-GSD-UAT.md",
     "result": "5 passed, 0 issues, 0 pending, 0 blocked, 0 skipped",
     "evidence_check": "GSD verify-work conversacional concluído. O usuário reconheceu o UAT humano original como aprovado com limitações; 65 critérios pending permanecem inalterados e são registrados como acknowledged gap.",
-    "next_action": "Executar /gsd-secure-phase 48.2.5 antes de avançar, pois workflow.security_enforcement=true e ainda não existe security artifact."
+    "next_action": "Security review concluída e verificada em 48-2-5-SECURITY.md (7/7 fechadas, 0 abertas), 2026-10-02."
+  },
+  "planning_review": {
+    "phase": "48.2.6",
+    "plans": ["48-2-6-01", "48-2-6-02", "48-2-6-03", "48-2-6-04", "48-2-6-05", "48-2-6-06", "48-2-6-07", "48-2-6-08", "48-2-6-09", "48-2-6-10"],
+    "plan_checker": "passed",
+    "execution": "not_started",
+    "implementation": "not_started",
+    "checkpoint_a": "not_started",
+    "checkpoint_b": "not_started",
+    "next_action": "Usuário revisa planos; não iniciar execução até decisão explícita."
   },
   "previous_phase": {
+    "phase": "48.2.5",
+    "phase_status": "complete_verified_synced_archived_security_verified",
+    "openspec_archive": "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1",
+    "security_review": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-SECURITY.md",
+    "security_review_status": "verified_7_closed_0_open",
+    "resolved_plans": ["48-2-5-01", "48-2-5-02", "48-2-5-03", "48-2-5-04", "48-2-5-05", "48-2-5-06", "48-2-5-07", "48-2-5-08"]
+  },
+  "prior_predecessor": {
     "phase": "48.2.4",
     "phase_status": "complete_verified_synced_archived",
     "openspec_archive": "openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1"
   },
-  "next_phase_sequence": [],
-  "resolved_plans": [
-    "48-2-5-01", "48-2-5-02", "48-2-5-03", "48-2-5-04",
-    "48-2-5-05", "48-2-5-06", "48-2-5-07", "48-2-5-08"
-  ],
+  "next_phase_sequence": ["48.2.6"],
+  "resolved_plans": [],
   "checkpoints": {
-    "checkpoint_a": "approved",
-    "checkpoint_b": "approved_with_limitations",
-    "checkpoint_b_technical": "passed",
-    "checkpoint_b_commercial": "recorded"
+    "checkpoint_a": "not_started",
+    "checkpoint_b": "not_started"
   },
   "final_state": {
+    "phase": "48.2.5",
     "uat": {
       "approved": true,
       "decision": "approved_with_limitations",
@@ -75,6 +90,17 @@
     }
   },
   "artifacts": [
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-RESEARCH.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-01-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-02-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-03-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-04-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-05-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-06-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-07-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-08-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-09-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-10-PLAN.md",
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-UAT.md",
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-EXPERIMENTS.md",
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-CANDIDATE.json",
@@ -84,15 +110,15 @@
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-CLOSEOUT-RECONCILIATION.md",
     "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/"
   ],
-  "blockers": ["Security review requerida antes de avançar: /gsd-secure-phase 48.2.5; enforcement habilitado e security artifact ausente."],
+  "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Executar /gsd-secure-phase 48.2.5 antes de avançar para outra fase",
-      "context": "workflow.security_enforcement=true e não existe 48-2-5-SECURITY.md. GSD verify-work completou 5/5 checkpoints; preservar os 65 critérios pending como limitação aceita.",
+      "action": "Revisar planos F48.2.6 antes de autorizar início de execução",
+      "context": "Plan checker passou; implementação, CHECKPOINT A/B, UAT e provider continuam não iniciados.",
       "blocking": true
     }
   ],
-  "uncommitted_files": [".planning/STATE.md", ".planning/ROADMAP.md", ".planning/HANDOFF.json", "ROADMAP.md", ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-CLOSEOUT-RECONCILIATION.md", ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md", "openspec/specs/**", "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/**"],
-  "next_action": "Executar /gsd-secure-phase 48.2.5 antes de avançar. Não iniciar nova geração paga; os paid runs desta fase estão encerrados.",
-  "context_notes": "F48.2.5: oito planos/summaries e 37 tasks OpenSpec concluídos; CHECKPOINT A aprovado para readiness e CHECKPOINT B aprovado com limitações. GSD verify-work concluído com 5/5 PASS e acknowledged gap dos 65 critérios pending, aceitos sem inferência. Sete gerações manuais; candidato documental Sunburst medium restrito ao caso Adega, sem promoção. Custo confirmado na plataforma US$0,29; cálculo local US$0,288978; provider-reported cost null nos sete runs; somente US$0,06 individualmente confirmado para medium. Produção intocada, sem db push, crédito de usuário ou chamada de provider pelo executor. OpenSpec verificado/sincronizado/arquivado. workflow.security_enforcement=true; security review necessária antes de avançar."
+  "uncommitted_files": [".planning/STATE.md", ".planning/ROADMAP.md", ".planning/HANDOFF.json", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-RESEARCH.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-*-PLAN.md"],
+  "next_action": "Revisar os planos F48.2.6; aguardar autorização explícita antes de executar. CHECKPOINT A é futuro e não autoriza geração paga.",
+  "context_notes": "F48.2.5 está concluída: oito planos/summaries, 37 tasks, UAT GSD 5/5 PASS e security review verificada 7/7 fechadas, 0 abertas em 48-2-5-SECURITY.md (2026-10-02); a antiga ação /gsd-secure-phase 48.2.5 foi resolvida. Os 65 critérios pending permanecem como limitação aceita. F48.2.6 tem dez planos aprovados pelo plan-checker e está em revisão; implementação, CHECKPOINT A/B, UAT, provider e geração não iniciados. Nenhuma aprovação operacional ou custo foi inferido."
 }

@@ -6,7 +6,7 @@
 
 **Escopo do arquivo ativo:** índice operacional do milestone. O histórico integral anterior a esta compactação está em `.planning/ROADMAP-ARCHIVE.md`.
 
-**Reconciliação F48.2.5 (2026-10-01):** denominação normativa: **Estabilização experimental Oferta 1:1**. A fase tem 8/8 planos/summaries e 37/37 tasks OpenSpec; change verificada, sincronizada e arquivada em `openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/`. `/gsd-verify-work 48.2.5` foi concluído em `48.2.5-GSD-UAT.md`: 5/5 checkpoints PASS, sem issues. Os 65 critérios do UAT experimental permanecem `pending`, reconhecidos pelo usuário como limitação e sem inferência ou promoção. `workflow.security_enforcement=true`; não há SECURITY artifact e `/gsd-secure-phase 48.2.5` é necessário antes de avançar para outra fase.
+**Reconciliação F48.2.5 (2026-10-02):** denominação normativa: **Estabilização experimental Oferta 1:1**. A fase tem 8/8 planos/summaries e 37/37 tasks OpenSpec; change verificada, sincronizada e arquivada em `openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/`. `/gsd-verify-work 48.2.5` foi concluído em `48.2.5-GSD-UAT.md`: 5/5 checkpoints PASS, sem issues. A security review retroativa está verificada em `48-2-5-SECURITY.md` (7 ameaças fechadas, 0 abertas), satisfazendo o gate `workflow.security_enforcement=true`. Os 65 critérios do UAT experimental permanecem `pending`, reconhecidos pelo usuário como limitação e sem inferência ou promoção.
 
 ## Overview
 
@@ -52,6 +52,7 @@
 | 48.2.3 | ✅ Concluída, verificada, sincronizada e arquivada — Fidelidade experimental da bancada | 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; duas lojas de teste importadas localmente; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/` |
 | 48.2.4 | ✅ Concluída, verificada, sincronizada e arquivada — Experimento determinístico Oferta 1:1 | 10/10 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual (Flare low `requer ajuste`; Sunburst low `aprovado com follow-up`); gerações reais **manuais** (US$ 0,03 cada); produção intocada (`base..HEAD` vazio); pricing `2026-09-bench-2`; chave exclusiva da bancada validada; OpenSpec arquivado em `openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1/` |
 | 48.2.5 | ✅ UAT GSD e security review concluídos | 8/8 planos/summaries; 37/37 tasks; 5/5 checkpoints GSD PASS; CHECKPOINT B aprovado com limitações; security review retroativa 7/7 fechados, 0 abertos (`48-2-5-SECURITY.md`); 65 critérios `pending` reconhecidos; OpenSpec verificado/sincronizado/arquivado |
+| 48.2.6 | ◇ Em planejamento — Validação experimental Produto — intenções 1:1 | Fonte normativa: `openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/`; planos aguardam revisão; implementação, checkpoints e UAT não iniciados |
 | 48.2.2-antiga | ⏸ Descartada — Auditoria e Otimização do Prompt do Revisor | Escopo descartado/substituído em 2026-09-28; sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
@@ -65,7 +66,7 @@
 - Demonstração pública, e-mail e signup público permanecem desativados; o beta fechado está preservado.
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
-- **F48.2.5 — fechamento e verificação:** Planos 01–08 executados/summarized; 37/37 tasks; CHECKPOINT A aprovado; CHECKPOINT B aprovado com limitações/follow-ups. Sete gerações manuais (nenhuma chamada do executor). Candidato documental Sunburst medium somente para o caso Adega, sem promoção. Total confirmado na plataforma US$0,29; cálculo local US$0,288978; `reportedCostUsd` nulo nos runs e confirmação individual separada (medium US$0,06). Os 65 critérios permanecem `pending`, reconhecidos sem inferência. OpenSpec verificado/sincronizado/arquivado e GSD UAT concluído 5/5 PASS. O gate `workflow.security_enforcement` requer `/gsd-secure-phase 48.2.5` antes de avançar.
+- **F48.2.5 — fechamento e verificação:** Planos 01–08 executados/summarized; 37/37 tasks; CHECKPOINT A aprovado; CHECKPOINT B aprovado com limitações/follow-ups. Sete gerações manuais (nenhuma chamada do executor). Candidato documental Sunburst medium somente para o caso Adega, sem promoção. Total confirmado na plataforma US$0,29; cálculo local US$0,288978; `reportedCostUsd` nulo nos runs e confirmação individual separada (medium US$0,06). Os 65 critérios permanecem `pending`, reconhecidos sem inferência. OpenSpec verificado/sincronizado/arquivado e GSD UAT concluído 5/5 PASS. Security review concluída em `48-2-5-SECURITY.md` (7 ameaças fechadas, 0 abertas), satisfazendo `workflow.security_enforcement`.
 
 - F48.2.1 (**Bancada Manual de Prompts do Diretor**) esta **concluida e arquivada**: `48-2-1-01` a `48-2-1-05`, `48-2-1-07`, `48-2-1-08` e `48-2-1-09` concluidos; `48-2-1-06` interrompido e suplantado (summary de supersessao). Programa local `860ca4fe-...` `closed` (recusa novas reservas) e experimento `c48e21b5-...` `archived` (recusa execucoes), com historico preservado. Zero runs e zero custo; sem promocao. OpenSpec `017b8799` verificado, sincronizado e arquivado em `openspec/changes/archive/2026-09-27-fase-48-2-1-otimizacao-prompts-diretor/` (commit `f55bed45`). Local-only.
 
@@ -76,7 +77,7 @@
 - F23 e F24 são pré-requisitos históricos de F25; F25 alimenta F26/F27 e a operação de F28.
 - F28 e F29 sustentam launch controls, observabilidade e readiness; F30 sustenta os gates legais.
 - A cadeia de produto segue F31.1 → F31.2 → F31.3 → F32 → F33 → F34 → F35 → F36 → F37 → F38 → F38.1/F38.2 → F38.2.1 → F39 → F40 → F41 → F42 → F43 → F45 → F46 → F47 → F48.1 → F48.2.1 → F49 → F50.
-- **Trilha do laboratório:** F48.2.1 a F48.2.4 concluídas/arquivadas; F48.2.5 com 8/8 planos/summaries, 37/37 tasks, OpenSpec arquivado e GSD UAT 5/5 PASS. CHECKPOINT B aprovado com limitações; 65 critérios `pending` reconhecidos; sete gerações encerradas; candidata documental Sunburst medium restrita à Adega, sem promoção. `/gsd-secure-phase 48.2.5` requerido antes de avançar por `workflow.security_enforcement=true`. “Refinamento experimental” era rótulo provisório. A antiga F48.2.2 (Revisor) foi descartada/substituída.
+- **Trilha do laboratório:** F48.2.1 a F48.2.4 concluídas/arquivadas; F48.2.5 com 8/8 planos/summaries, 37/37 tasks, OpenSpec arquivado, GSD UAT 5/5 PASS e security review 7/7 fechada em `48-2-5-SECURITY.md`. CHECKPOINT B aprovado com limitações; 65 critérios `pending` reconhecidos; sete gerações encerradas; candidata documental Sunburst medium restrita à Adega, sem promoção. “Refinamento experimental” era rótulo provisório. A antiga F48.2.2 (Revisor) foi descartada/substituída.
 - F50.1 depende externamente da constituição da PJ e dos dados legais reais; não bloqueia o estado concluído de F50.
 - O índice operacional de requisitos está em `.planning/REQUIREMENTS.md`; o detalhamento histórico integral está em `.planning/REQUIREMENTS-ARCHIVE.md`, no archive deste roadmap e nos artefatos das fases.
 
@@ -180,6 +181,20 @@ Plans:
 **Nota histórica:** a numeração **F48.2.3** antes designava "Promoção, Canário e Prontidão da Aprovação" (promoção de prompts testados, canário do fluxo de aprovação e rollback). Esse escopo permanece **adiado/backlog**; a antiga descrição da F48.2.3 como "Experimento determinístico Oferta 1:1" foi **deslocada para F48.2.4** (preservada, sem perda).
 
 **Backlog posterior (fora das duas fases):** Destaque; Exclusivo; outros formatos; temas recorrentes; carrossel; comparação cega ou lado a lado; avaliação automática; mobile; promoção de modelos ou pipelines para produção.
+
+## Phase 48.2.6: Validacao experimental Produto intencoes 1:1
+
+**Goal:** habilitar e validar manualmente as políticas de Oferta, Destaque e Exclusivo somente para Produto 1:1, com matriz preço × intenção e validade aplicadas no cliente/servidor, preflight revalidado e evidência documental sem promoção produtiva.
+
+**Nome:** Validação experimental Produto — intenções 1:1
+
+**Status:** Em planejamento; nenhum plano executado, checkpoint aprovado ou UAT iniciado.
+
+**Planejamento:** 10 planos, no limite superior orientativo do guia; a sequência mantém os gates de segurança, CHECKPOINT A, preparação documental e CHECKPOINT B como barreiras distintas, sem ampliar a change.
+
+**Fonte normativa:** `openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/` (proposal, design, tasks e specs).
+
+**Gates operacionais:** `workflow.security_enforcement=true`, ASVS L1 e bloqueio em ameaças high; cada plano deve conter threat model e gates de segurança. CHECKPOINT A precede qualquer teste pago. CHECKPOINT B é UAT manual conduzido pelo usuário, com confirmação financeira individual por geração; nenhuma chamada autônoma, batch ou promoção.
 
 ## F50.1 — Formalização Legal e Ativação da Demonstração
 
