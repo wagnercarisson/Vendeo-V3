@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -96,6 +97,29 @@ const COMPONENTS_DIR = "src/app/(app)/admin/laboratorio/bancada/_components";
 
 function readComponentSource(relative: string): string {
   return readFileSync(path.resolve(process.cwd(), `${COMPONENTS_DIR}/${relative}`), "utf8");
+}
+
+function ControlledBenchCampaignForm({
+  initial,
+  onChange,
+}: {
+  initial: React.ComponentProps<typeof BenchCampaignForm>["value"];
+  onChange: (value: React.ComponentProps<typeof BenchCampaignForm>["value"]) => void;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <BenchCampaignForm
+      value={value}
+      onChange={(next) => {
+        setValue(next);
+        onChange(next);
+      }}
+    />
+  );
+}
+
+function chooseNoPriceExclusiveIntent() {
+  fireEvent.click(screen.getByRole("radio", { name: "Exclusivo" }));
 }
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -716,6 +740,67 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
     expect(source).not.toContain("campaign-images");
     expect(source).not.toContain("fetch(");
   });
+
+  it("preserva a intenção ao editar preços e pede nova escolha quando fica incompatível", () => {
+    const onChange = vi.fn();
+    render(
+      <ControlledBenchCampaignForm
+        initial={{
+          ...EMPTY_BENCH_CAMPAIGN_FORM,
+          priceCents: 800,
+          campaignIntent: "spotlight",
+        }}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Preço original"), {
+      target: { value: "1000" },
+    });
+
+    const updated = onChange.mock.calls.at(-1)?.[0];
+    expect(updated).toEqual(
+      expect.objectContaining({ originalPriceCents: 1000, priceCents: 800, campaignIntent: "spotlight" }),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(/escolha uma nova intenção/i);
+    expect(screen.getByRole("radio", { name: "Oferta" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Exclusivo" })).toBeNull();
+  });
+
+  it("preserva validade ao trocar intenção e só a remove por ação explícita", () => {
+    const onChange = vi.fn();
+    const value = {
+      ...EMPTY_BENCH_CAMPAIGN_FORM,
+      priceCents: 1000,
+      campaignIntent: "offer" as const,
+      validityMode: "until-date" as const,
+      validityEndDate: "2026-10-31",
+    };
+    const { rerender } = render(<BenchCampaignForm value={value} onChange={onChange} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Destaque" }));
+    const changed = onChange.mock.calls.at(-1)?.[0];
+    expect(changed).toEqual(
+      expect.objectContaining({
+        campaignIntent: "spotlight",
+        validityMode: "until-date",
+        validityEndDate: "2026-10-31",
+      }),
+    );
+
+    rerender(<BenchCampaignForm value={changed} onChange={onChange} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/validade.*remover/i);
+    fireEvent.click(screen.getByRole("button", { name: /remover validade/i }));
+    expect(onChange.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        campaignIntent: "spotlight",
+        validityMode: "",
+        validityStartDate: "",
+        validityEndDate: "",
+        validityCustomText: "",
+      }),
+    );
+  });
 });
 
 describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
@@ -789,6 +874,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     });
 
     render(await BancadaPage());
+    chooseNoPriceExclusiveIntent();
     fireEvent.change(screen.getByLabelText("Nome do produto"), {
       target: { value: "Mouseeee sem fio" },
     });
@@ -937,6 +1023,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     });
 
     render(await BancadaPage());
+    chooseNoPriceExclusiveIntent();
     fireEvent.change(screen.getByLabelText("Nome do produto"), {
       target: { value: "Mouseeee sem fio" },
     });
@@ -1012,6 +1099,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     });
 
     render(await BancadaPage());
+    chooseNoPriceExclusiveIntent();
     fireEvent.click(screen.getByTestId("bench-compose-button"));
     await screen.findByRole("textbox", { name: "Prompt compilado" });
     fireEvent.click(screen.getByTestId("bench-approve-button"));
@@ -1078,6 +1166,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     });
 
     render(await BancadaPage());
+    chooseNoPriceExclusiveIntent();
     fireEvent.change(screen.getByLabelText("Nome do produto"), {
       target: { value: "Produto inicial" },
     });
@@ -1214,6 +1303,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     });
 
     render(await BancadaPage());
+    chooseNoPriceExclusiveIntent();
     fireEvent.change(screen.getByLabelText("Nome do produto"), {
       target: { value: "Café especial" },
     });
@@ -1352,6 +1442,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     });
 
     render(await BancadaPage());
+    chooseNoPriceExclusiveIntent();
 
     fireEvent.click(screen.getByTestId("bench-compose-button"));
     await waitFor(() =>
@@ -1419,6 +1510,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     });
 
     render(await BancadaPage());
+    chooseNoPriceExclusiveIntent();
 
     fireEvent.click(screen.getByTestId("bench-compose-button"));
     await waitFor(() =>

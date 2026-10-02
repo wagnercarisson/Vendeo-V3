@@ -2,18 +2,18 @@
 
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import type { CampaignIntent } from "@/lib/campaign/types";
+import { availableBenchIntents } from "@/lib/lab/bench/domain/intent-price-matrix";
 import {
   MANDATORY_ARTWORK_MAX,
   PRODUCT_DESCRIPTION_MAX,
   PRODUCT_NAME_MAX,
-  availableIntents,
   buildValidityDisplayText,
   cleanBadgeForIntent,
   formatPriceCents,
-  inferIntent,
   isPreserveImageContextAvailable,
   resolvePreserveImageContext,
   validateBadge,
@@ -196,10 +196,6 @@ export function BenchCampaignForm({
   /** Preços: normaliza por dígitos→centavos e re-deriva a intenção. */
   function handlePrice(field: "priceCents" | "originalPriceCents", raw: string) {
     const next: BenchCampaignFormValue = { ...value, [field]: digitsToCents(raw) };
-    const intent = inferIntent(next.originalPriceCents, next.priceCents);
-    next.campaignIntent = intent;
-    next.badge = cleanBadgeForIntent(next.badge, intent);
-    next.preserveImageContext = resolvePreserveImageContext(intent, next.preserveImageContext);
     onChange(next);
   }
 
@@ -219,7 +215,16 @@ export function BenchCampaignForm({
     validityCustomText: value.validityCustomText,
   });
 
-  const intentOptions = availableIntents(value.originalPriceCents, value.priceCents).map(
+  const compatibleIntents = availableBenchIntents(value.originalPriceCents, value.priceCents);
+  const intentCompatible = compatibleIntents.includes(value.campaignIntent);
+  const hasValidity =
+    value.validityMode !== "" ||
+    value.validityStartDate.length > 0 ||
+    value.validityEndDate.length > 0 ||
+    value.validityCustomText.length > 0;
+  const validityIncompatible = value.campaignIntent !== "offer" && hasValidity;
+
+  const intentOptions = compatibleIntents.map(
     (intent) => ({ value: intent, label: INTENT_LABELS[intent] }),
   );
 
@@ -288,6 +293,25 @@ export function BenchCampaignForm({
         value={value.campaignIntent}
         onChange={(next) => handleIntent(next as CampaignIntent)}
       />
+
+      {!intentCompatible ? (
+        <div
+          role="alert"
+          data-testid="bench-intent-price-guard"
+          className="rounded-lg border border-accent-amber/50 bg-accent-amber/10 p-3 text-sm text-text-primary font-body"
+        >
+          <p>Os preços informados não são compatíveis com a intenção atual. Escolha uma nova intenção antes de compor.</p>
+          {compatibleIntents.length > 0 ? (
+            <p className="mt-1 text-xs text-text-secondary">
+              Opções compatíveis: {compatibleIntents.map((intent) => INTENT_LABELS[intent]).join(" ou ")}.
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-text-secondary">
+              Informe um preço de venda ou remova o preço original isolado.
+            </p>
+          )}
+        </div>
+      ) : null}
 
       <LabSelect
         label="Selo promocional"
@@ -365,6 +389,32 @@ export function BenchCampaignForm({
         <p className="text-xs text-text-muted font-body">
           Exibição da validade: <span className="font-mono">{validityDisplay}</span>
         </p>
+      ) : null}
+
+      {validityIncompatible ? (
+        <div
+          role="alert"
+          data-testid="bench-validity-intent-guard"
+          className="space-y-2 rounded-lg border border-accent-amber/50 bg-accent-amber/10 p-3 text-sm text-text-primary font-body"
+        >
+          <p>A validade está preservada, mas só pode ser usada em Oferta. Remova-a explicitamente para continuar com esta intenção.</p>
+          <Button
+            type="button"
+            variant="secondary"
+            data-testid="bench-clear-validity-button"
+            onClick={() =>
+              onChange({
+                ...value,
+                validityMode: "",
+                validityStartDate: "",
+                validityEndDate: "",
+                validityCustomText: "",
+              })
+            }
+          >
+            Remover validade para continuar
+          </Button>
+        </div>
       ) : null}
 
       <CheckboxField
