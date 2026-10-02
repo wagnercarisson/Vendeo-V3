@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-01T22:56:05Z"
+last_updated: "2026-10-01T22:15:48-03:00"
 progress:
-  total_phases: 40
-  completed_phases: 37
-  total_plans: 327
-  completed_plans: 320
-  percent: 99
+  total_phases: 42
+  completed_phases: 39
+  total_plans: 334
+  completed_plans: 328
+  percent: 98
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 - Foco anterior (histórico): F48.2.3 — **Fidelidade experimental da bancada** (**CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA** em 2026-09-29; 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`).
 - Fase anterior: F48.2.2 — **Fundação da bancada de geração no Admin/Laboratório** (CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA).
 - Fase anterior: **F48.2.4 — Experimento determinístico Oferta 1:1** (**CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA** em 2026-09-30; 10/10 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados — técnico 8/8 + comercial/visual: Flare low `requer ajuste`, Sunburst low `aprovado com follow-up`; gerações reais **manuais** US$ 0,03 cada; produção intocada; pricing `2026-09-bench-2`; chave exclusiva da bancada validada). OpenSpec arquivado em `openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1/`; CONTEXT/UI-SPEC/PATTERNS/10 PLAN em `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/`.
-- Foco atual: **F48.2.5 — Estabilização experimental Oferta 1:1** (**PACOTE DE FECHAMENTO PREPARADO PARA REVISÃO HUMANA**; Planos 01–08 summarized; CHECKPOINT A aprovado para readiness; CHECKPOINT B aprovado com limitações/follow-ups após 7 gerações manuais do usuário). Gerações pagas da fase encerradas. Candidato experimental `gpt-image-2.5-sunburst` / `medium` / `images`, somente Adega e sem promoção produtiva. Rubrica parcial aceita explicitamente: 65 campos sem evidência continuam `pending`, sem falsa conclusão; tasks OpenSpec 37/37 concluídas. `/opsx-verify`, `/opsx-sync` e `/opsx-archive` aguardam o responsável.
+- F48.2.5 — **Estabilização experimental Oferta 1:1:** OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/`; 8/8 planos/summaries e 37/37 tasks. GSD verify-work conversacional concluído: `48.2.5-GSD-UAT.md`, 5/5 PASS, 0 issues. CHECKPOINT B permanece aprovado com limitações após sete gerações manuais encerradas. Candidato documental Sunburst medium restrito ao caso Adega, sem promoção. Os 65 critérios `pending` foram reconhecidos pelo usuário e permanecem inalterados. `workflow.security_enforcement` exige `/gsd-secure-phase 48.2.5` antes de avançar; ainda não há SECURITY artifact.
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
 
-Phase: 48.2.5 (estabilizacao-experimental-oferta-1-1) — **EM EXECUÇÃO** (2026-09-30)
-Plan: 8 planos; `48-2-5-01` a `48-2-5-08` executados/summarized (8/8). Plano 08 registra readiness, CHECKPOINT B, sete runs, manifesto e handoff; pacote aguarda revisão humana final.
+Phase: 48.2.5 (estabilizacao-experimental-oferta-1-1) — **GSD UAT verificado (5/5 PASS); security review pendente antes de avançar** (2026-10-01)
+Plan: 8 planos; `48-2-5-01` a `48-2-5-08` executados/summarized (8/8). Plano 08 registra readiness, CHECKPOINT B, sete runs e manifesto. GSD verify-work está registrado em `48-2-5-VERIFICATION.md`; OpenSpec verify/sync/archive concluídos. A limitação aceita permanece: 65 critérios `pending`, sem inferência.
 Checkpoints humanos: CHECKPOINT A aprovado em 2026-10-01 para readiness local; CHECKPOINT B aprovado com limitações/follow-ups em 2026-10-01. Sete gerações pagas foram manuais pelo usuário; nenhuma chamada de provider pelo executor. Gerações pagas adicionais nesta fase encerradas.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
@@ -37,7 +37,7 @@ Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conform
 **Pricing readiness experimental F48.2.5 (2026-10-01, antes do UAT pago):** nova regra local `2026-10-bench-3` preserva `2026-09-bench-2` e mantém `coverage: partial`; capturas oficiais confirmam para os três modelos `low`/`1024×1024` 196 tokens/US$0,00588 somente de saída. Texto/imagem de entrada e imagens parciais são adicionais; o valor não é total/teto. UI declara esse limite e exige confirmação financeira manual a cada geração; sem autorização global, batch ou automação. Naquele corte readiness estava concluída e nenhuma geração/provider call havia sido autorizada ou executada pelo executor; o UAT manual posterior está registrado na sequência.
 **UAT/decisão F48.2.5 (2026-10-01):** sete gerações manuais em dois casos foram recuperadas da base Supabase local: três NovaTek/mouse em low e quatro Adega/energético (três modelos low + Sunburst medium exploratório sem hipótese prévia). CHECKPOINT B **APROVADO COM LIMITAÇÕES E FOLLOW-UPS**; rubrica parcial explicitamente aceita no OpenSpec. Candidato documental: Sunburst medium para o caso Adega, melhor visual deste caso; não generalizar. Usuário confirmou total de plataforma US$0,29; cálculo local US$0,288978; provider-reported cost é null nos sete runs; US$0,06 de plataforma do medium fica no campo separado, demais sem rateio. 65 estados `pending` não foram convertidos em avaliação; tasks OpenSpec 37/37 concluídas sob essa exceção documental. Sem produção, chamada do executor, db push ou nova geração.
 **UAT Sunburst (2026-09-30):** geração manual concluída com `gpt-image-2.5-sunburst` **low** — prompt **idêntico** ao Flare (sem recomposição); **duas** referências (somente a principal teve uso visual evidente); custo local e de plataforma **US$ 0,03**; latência **18,407 s** (Flare **14,592 s**); o Sunburst **corrigiu a duplicação de pontuação** do preço; decisão **`aprovado com follow-up`**. Atribuição ao projeto **Vendeo Lab** **confirmada** no dashboard (“Last used”) após a atualização da plataforma. Registrado em `48.2.4-UAT.md` — **CHECKPOINT B comercial/visual registrado** (Flare: `requer ajuste`; Sunburst: `aprovado com follow-up`).
-Próxima ação: revisão humana do pacote de fechamento F48.2.5. Não executar `/opsx-verify`, `/opsx-sync` ou `/opsx-archive`; são ações reservadas ao responsável. Complementação de avaliações por critério pendentes, se necessária, deve permanecer humana. Não realizar nova geração paga nesta fase.
+Próximo gate antes de avançar: executar `/gsd-secure-phase 48.2.5` conforme `workflow.security_enforcement=true`. O UAT GSD passou 5/5; os 65 critérios `pending` seguem reconhecidos como limitação e qualquer complementação é humana. Não realizar nova geração paga nesta fase.
 Fase anterior: 48.2.3 (Fidelidade experimental da bancada) — **COMPLETE (verificada, sincronizada e arquivada)**.
 Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório) — **COMPLETE (verificada, sincronizada e arquivada)**.
 
@@ -75,9 +75,9 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - **OpenSpec:** verificado, **sincronizado** (9 specs principais: 4 novos + 5 atualizados) e **arquivado** em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`.
 - **Correções de UAT (sem nova fase):** chave local (`SECRET_KEY`), MIME/bucket (`store-brand-assets`/`visual-signatures`), fronteira JSONB, ordenação topológica/FKs e remoção do campo textual redundante "Oferta".
 
-## Global (mecânico — `gsd-sdk query progress`)
+## Global (mecânico — `gsd-sdk query progress`, 2026-10-01)
 
-- `total_phases: 40` / `completed_phases: 36`; `total_plans: 317`; `completed_plans (summaries): 310`; `percent: 98` (frontmatter atualizado em 2026-09-29 após a conclusão da F48.2.3).
+- `total_phases: 42` / `completed_phases: 39` (30 `Executed` + 9 `Complete`; 2 `Planned` + 1 `Pending`); `total_plans: 334`; `completed_plans (summaries): 328`; `percent: 98`.
 
 ## Accumulated Context — Decisions
 
@@ -104,7 +104,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 ## Pending Todos
 
-- **F48.2.5 — Estabilização experimental Oferta 1:1:** **PACOTE DE FECHAMENTO PARA REVISÃO**, Planos 01–08 concluídos/summarized; OpenSpec tasks 37/37. CHECKPOINT A aprovado; CHECKPOINT B aprovado com limitações/follow-ups. Sete gerações manuais do usuário registradas; paid runs da fase encerrados. Candidata documental Sunburst medium restrita ao caso Adega, sem promoção. Rubrica parcial aceita explicitamente; 65 critérios não avaliados permanecem `pending`. `/opsx-verify`, `/opsx-sync` e `/opsx-archive` aguardam o responsável.
+- **F48.2.5 — Estabilização experimental Oferta 1:1:** 8/8 planos/summaries; 37/37 tasks; OpenSpec verificado/sincronizado/arquivado; GSD UAT 5/5 PASS em `48.2.5-GSD-UAT.md`. CHECKPOINT B aprovado com limitações; 65 critérios `pending` reconhecidos e mantidos. Candidato documental Sunburst medium restrito ao caso Adega, sem promoção. `workflow.security_enforcement=true`; security review em `48-2-5-SECURITY.md` ainda pendente antes de avançar.
 
 - **F48.2.2 concluída** (8/8 planos; CP1/CP2/CP3 aprovados; UAT técnico aprovado com uma geração real controlada; produção intocada; nenhuma promoção). **OpenSpec verificado, sincronizado e arquivado** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`; 3 specs novas (`lab-generation-bench`, `lab-bench-config`, `lab-bench-branding`) e 5 sincronizadas.
 - **F48.2.3 concluída** (8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider**, custo **US$ 0**; produção intocada). **OpenSpec verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/`; 4 specs novas (`lab-bench-store-import`, `lab-bench-form-parity`, `lab-bench-experimental-briefing`, `lab-bench-prompt-preflight`) e 5 sincronizadas.
@@ -137,8 +137,8 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 ## Session Continuity
 
-- Última sessão: 2026-10-01 — UAT humano F48.2.5 registrado a partir da decisão do usuário e sete runs consultados somente na base local; CHECKPOINT B aprovado com limitações/follow-ups; manifesto/experimentos/STATE/ROADMAP preparados para revisão.
+- Última sessão: 2026-10-01 — `/gsd-verify-work 48.2.5` concluído: cinco checkpoints PASS, sem issues; acknowledged gap registra os 65 critérios `pending` aceitos. OpenSpec verificado/sincronizado/arquivado. Security review permanece necessária antes de avançar.
 - Último trabalho: NovaTek low: Flare/Image2/Sunburst; Adega low: Image2/Flare/Sunburst; Adega exploratory Sunburst medium sem hipótese prévia. Platform total user-confirmed US$0,29; calculated local US$0,288978; individual US$0,06 confirmed only medium. No executor provider calls; no new paid generation.
 - Último quick: `260929-rtl` — **concluída**. Fidelidade de `identity_state` da bancada (Tasks 1–3: import fail-closed, resolver puro, contrato/snapshot/API) + **correção de idempotência da importação** (`ensureContentAddressedObject`: precheck `exists` fail-closed; referenciado/criado/reutilizado; cleanup remove só criados; `uploadBrandingObject` removido). Testes de contrato (79), integrado local (2 importações consecutivas) e suíte lab/architecture guard verdes; produção intocada; custo **US$ 0**. Reimportação autorizada idempotente: NovaTek `visual_signature` (1 objeto reutilizado) e Adega `logo` (6 reutilizados), 0 criados, sem duplicação/órfãos.
-- Próximo trabalho: revisão do pacote de fechamento. OpenSpec `verify/sync/archive` permanecem reservados ao usuário. Rubrica parcial com 65 campos `pending` foi explicitamente aceita com limitações; nenhuma avaliação foi inventada. Nenhuma nova geração paga nesta fase.
-- Resume file: `.planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48.2.4-UAT.md` (CHECKPOINT A e B aprovados; UAT técnico 8/8 + comercial/visual registrado — Flare `requer ajuste`, Sunburst `aprovado com follow-up`; produção intocada; OpenSpec arquivado).
+- Próxima ação: executar `/gsd-secure-phase 48.2.5` antes de avançar, conforme o gate de segurança. UAT GSD completo (5/5); rubrica parcial com 65 campos `pending` foi aceita com limitações; nenhuma avaliação foi inventada. Nenhuma nova geração paga nesta fase.
+- Resume file: `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md` (GSD UAT 5/5 PASS; 65 critérios pending reconhecidos; security review pendente antes de avançar).

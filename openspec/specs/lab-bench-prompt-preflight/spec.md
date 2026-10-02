@@ -1,6 +1,6 @@
 # Lab Bench Prompt Preflight
 
-> Synced from `fase-48-2-3-fidelidade-experimental-bancada` (ADDED) and `fase-48-2-4-experimento-deterministico-oferta-1-1` (MODIFIED/ADDED).
+> Synced from `fase-48-2-3-fidelidade-experimental-bancada` (ADDED), `fase-48-2-4-experimento-deterministico-oferta-1-1` (MODIFIED/ADDED), and `fase-48-2-5-estabilizacao-experimental-oferta-1-1` (MODIFIED).
 
 ## Purpose
 
@@ -81,19 +81,47 @@ O compositor e os blocos por ele gerados SHALL NOT introduzir contexto de labora
 
 ### Requirement: Preflight com preview, edição e aprovação
 
-A bancada SHALL oferecer uma etapa explícita anterior à geração: (1) "Compor prompt"; (2) exibir o prompt compilado completo; (3) permitir edição manual do prompt compilado; (4) exigir aprovação explícita; (5) somente então habilitar o caminho de estimativa/confirmação da geração. A confirmação financeira da chamada paga SHALL permanecer separada da aprovação do prompt.
+A bancada SHALL oferecer etapa explícita anterior à geração: (1) usuário preenche dados; (2) solicita “Compor prompt”; (3) detector determinístico local verifica possíveis problemas nos textos livres abrangidos; (4) sem alertas, a composição continua; (5) com alertas, a composição para e a UI apresenta um rótulo humano para o campo e uma mensagem curta de possível problema, sem exibir o trecho detectado, o texto completo ou o `ruleId`; (6) para cada alerta, a UI oferece botão nativo “Verificar”, que rola ao campo correspondente e lhe dá foco visível, operável por teclado; (7) o usuário edita/corrige ou escolhe “Manter exatamente como informado”; (8) após decisão válida, o prompt compilado é exibido, pode ser editado e exige aprovação explícita; (9) somente então habilita estimativa e confirmação financeira. Rótulos humanos SHALL corresponder a `product.name` → “Nome do produto”, `product.description` → “Descrição”, `product.mandatoryArtworkText` → “Informações obrigatórias” e `promptBase` → “Prompt-base”. A confirmação financeira permanece separada da aprovação do prompt. A verificação textual não usa IA, não corrige automaticamente nem altera conteúdo silenciosamente; alertas são sugestões, não afirmações absolutas. `keep_exactly` permanece escolha explícita para a revisão atual.
 
-#### Scenario: Prompt compilado é exibido antes da aprovação
+#### Scenario: Composição ocorre sem alertas
 
-- **WHEN** o operador aciona "Compor prompt"
-- **THEN** o prompt compilado completo é exibido
-- **AND** pode ser editado manualmente
+- **WHEN** o usuário solicita composição e o preflight textual não aponta alertas
+- **THEN** o sistema continua a composição determinística
+- **AND** apresenta o prompt para revisão humana
 
-#### Scenario: Geração exige aprovação do prompt
+#### Scenario: Prompt compilado é editável e exige aprovação
 
-- **WHEN** o operador tenta seguir para a estimativa/confirmação
-- **THEN** a aprovação explícita do prompt é exigida antes
+- **WHEN** a revisão textual é válida e a composição foi concluída
+- **THEN** o prompt compilado completo é exibido e pode ser editado
+- **AND** a aprovação explícita do prompt é exigida antes da estimativa/execução
 - **AND** a confirmação financeira permanece um passo separado
+
+#### Scenario: Alerta interrompe a composição
+
+- **WHEN** o preflight encontra possível problema textual
+- **THEN** não compõe ainda
+- **AND** apresenta o rótulo humano do campo e uma mensagem curta de possível problema, sem mostrar trecho ou identificador técnico da regra
+- **AND** oferece “Verificar”, que move o foco visível ao campo correspondente e funciona por teclado
+- **AND** permite corrigir ou manter exatamente como informado
+
+#### Scenario: Campo sinalizado é localizado pelo operador
+
+- **WHEN** o operador aciona “Verificar” em um alerta
+- **THEN** a página rola até o campo coberto correspondente e coloca nele o foco visível
+- **AND** a ação pode ser acionada por teclado
+- **AND** nenhuma alteração ou normalização do valor ocorre
+
+#### Scenario: Decisão autoriza apenas revisão atual
+
+- **WHEN** o usuário decide manter o texto da revisão atual
+- **THEN** o conteúdo é enviado sem alteração à composição
+- **AND** qualquer alteração posterior dos campos invalida a decisão e exige nova validação
+
+#### Scenario: Nenhuma revisão textual por IA
+
+- **WHEN** os textos são validados ou liberados pelo usuário
+- **THEN** nenhuma chamada de IA ou correção automática ocorre
+- **AND** preço/validade e valores controlados permanecem fora do detector
 
 ### Requirement: Invalidação por mudança de entradas ou pós-aprovação
 

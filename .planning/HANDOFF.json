@@ -1,81 +1,98 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-30T21:26:05.487Z",
-  "phase": "48.2.4",
-  "phase_name": "experimento-deterministico-oferta-1-1",
-  "phase_dir": ".planning/phases/48.2.4-experimento-deterministico-oferta-1-1",
-  "status": "complete",
-  "phase_status": "complete_verified_synced_archived",
-  "plan": "48-2-4-10",
-  "openspec_source": "fase-48-2-4-experimento-deterministico-oferta-1-1",
+  "timestamp": "2026-10-01T22:15:48-03:00",
+  "phase": "48.2.5",
+  "phase_name": "estabilizacao-experimental-oferta-1-1",
+  "phase_dir": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1",
+  "status": "security_review_pending",
+  "phase_status": "executed_openspec_archived_gsd_uat_passed_security_gate_pending",
+  "plan": "48-2-5-08",
+  "openspec_source": "fase-48-2-5-estabilizacao-experimental-oferta-1-1",
   "openspec_archive": {
-    "path": "openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1",
+    "path": "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1",
     "verified": true,
     "synced": true,
     "archived": true,
     "active": false,
-    "note": "Change verificada, sincronizada e arquivada. /opsx-verify, /opsx-sync e /opsx-archive concluidos; 11 specs sincronizadas nas specs principais."
+    "note": "Change OpenSpec verificada, sincronizada e arquivada em 2026-10-01; oito specs delta sincronizadas/validadas."
+  },
+  "gsd_verification": {
+    "workflow": "/gsd-verify-work 48.2.5",
+    "status": "complete_with_acknowledged_gaps",
+    "artifact": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md",
+    "uat_artifact": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-GSD-UAT.md",
+    "result": "5 passed, 0 issues, 0 pending, 0 blocked, 0 skipped",
+    "evidence_check": "GSD verify-work conversacional concluído. O usuário reconheceu o UAT humano original como aprovado com limitações; 65 critérios pending permanecem inalterados e são registrados como acknowledged gap.",
+    "next_action": "Executar /gsd-secure-phase 48.2.5 antes de avançar, pois workflow.security_enforcement=true e ainda não existe security artifact."
   },
   "previous_phase": {
-    "phase": "48.2.3",
+    "phase": "48.2.4",
     "phase_status": "complete_verified_synced_archived",
-    "openspec_archive": "openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada"
+    "openspec_archive": "openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1"
   },
-  "next_phase_sequence": ["48.2.5"],
+  "next_phase_sequence": [],
   "resolved_plans": [
-    "48-2-4-01", "48-2-4-02", "48-2-4-03", "48-2-4-04", "48-2-4-05",
-    "48-2-4-06", "48-2-4-07", "48-2-4-08", "48-2-4-09", "48-2-4-10"
+    "48-2-5-01", "48-2-5-02", "48-2-5-03", "48-2-5-04",
+    "48-2-5-05", "48-2-5-06", "48-2-5-07", "48-2-5-08"
   ],
   "checkpoints": {
     "checkpoint_a": "approved",
-    "checkpoint_b": "approved",
+    "checkpoint_b": "approved_with_limitations",
     "checkpoint_b_technical": "passed",
     "checkpoint_b_commercial": "recorded"
   },
   "final_state": {
     "uat": {
       "approved": true,
+      "decision": "approved_with_limitations",
       "mode": "manual",
       "executor_provider_calls": 0,
       "executor_ai_cost_usd": 0,
-      "generations": [
-        { "model": "gpt-image-2.5-flare", "quality": "low", "decision": "requer ajuste", "latency_ms": 14592, "cost_usd": 0.03 },
-        { "model": "gpt-image-2.5-sunburst", "quality": "low", "decision": "aprovado com follow-up", "latency_ms": 18407, "cost_usd": 0.03 }
-      ],
-      "same_prompt_and_two_references": true,
-      "attribution_confirmed": "projeto separado Vendeo Lab"
+      "manual_generations": 7,
+      "paid_generations_closed_for_phase": true,
+      "candidate": "gpt-image-2.5-sunburst / medium / images — somente caso Adega; sem promoção",
+      "platform_confirmed_total_usd": 0.29,
+      "local_calculated_total_usd": 0.288978,
+      "individually_platform_confirmed_cost_usd": 0.06,
+      "rubric_pending_criteria": 65,
+      "rubric_pending_accepted_as_limitation": true
     },
-    "pricing_rule_version": "2026-09-bench-2",
+    "pricing_rule_version": "2026-10-bench-3",
     "bench_api_key_env": "OPENAI_BENCH_API_KEY",
     "prompt_sent_equals_approved": true,
     "production_untouched": true,
-    "base_sha": "f5a7fe9a27e823b64b355ec8c431d4e514d5ab99",
-    "base_head_diff": "empty",
+    "base_sha": "1003dc46996d2608097d1fe2027a7f24c2845cd4",
+    "protected_paths_unchanged": true,
     "credits_consumed": false,
     "db_push_executed": false,
     "promotion": false,
     "gates": {
       "typecheck": "ok",
-      "lint": "ok (0 warnings)",
+      "lint": "ok",
       "build": "ok",
-      "suite": "398 passed | 1 skipped; 4609 passed | 2 skipped"
+      "bench_api_suite": "605 passed | 1 skipped; 29 files passed | 1 skipped",
+      "openspec_strict_validation": "all eight affected main specs valid"
     }
   },
   "artifacts": [
-    ".planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48.2.4-UAT.md",
-    ".planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48-2-4-VERIFICATION.md",
-    ".planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48-2-4-09-SUMMARY.md",
-    ".planning/phases/48.2.4-experimento-deterministico-oferta-1-1/48-2-4-10-SUMMARY.md"
+    ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-UAT.md",
+    ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-EXPERIMENTS.md",
+    ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-CANDIDATE.json",
+    ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-GSD-UAT.md",
+    ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md",
+    ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-08-SUMMARY.md",
+    ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-CLOSEOUT-RECONCILIATION.md",
+    "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/"
   ],
-  "blockers": [],
+  "blockers": ["Security review requerida antes de avançar: /gsd-secure-phase 48.2.5; enforcement habilitado e security artifact ausente."],
   "human_actions_pending": [
     {
-      "action": "Conduzir os follow-ups da F48.2.5 (papel da imagem principal x referencias; ortografia e integridade textual; ciclos comparativos de refinamento)",
-      "context": "Encaminhados a partir do UAT da F48.2.4; qualquer chamada paga exige novo programa e nova autorizacao humana",
-      "blocking": false
+      "action": "Executar /gsd-secure-phase 48.2.5 antes de avançar para outra fase",
+      "context": "workflow.security_enforcement=true e não existe 48-2-5-SECURITY.md. GSD verify-work completou 5/5 checkpoints; preservar os 65 critérios pending como limitação aceita.",
+      "blocking": true
     }
   ],
-  "uncommitted_files": [],
-  "next_action": "Iniciar F48.2.5 - refinamento experimental Oferta 1:1 (follow-ups do UAT). A change OpenSpec da F48.2.4 esta verificada, sincronizada e arquivada em openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1. Nenhuma promocao, nenhum db push remoto, nenhuma chamada paga pendente na F48.2.4.",
-  "context_notes": "F48.2.4 CONCLUIDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (2026-09-30): 10/10 planos; CHECKPOINT A e CHECKPOINT B aprovados; UAT manual com duas geracoes reais (Flare low 'requer ajuste', 14,592 s; Sunburst low 'aprovado com follow-up', 18,407 s; US$ 0,03 cada), mesmo prompt/dados/duas referencias; cobranca confirmada no projeto separado Vendeo Lab. Producao intocada (base..HEAD vazio, BASE f5a7fe9a...); supabase/migrations limpo; nenhum db push; nenhum credito do executor; 0 chamadas ao provider pelo executor. Correcoes de UAT sem nova fase: (1) desacoplamento aprovacao x configuracao de execucao; (2) uploader principal + adicionais ordenados; (3) pricing local v2 (2026-09-bench-2) + gpt-image-2.5-sunburst; (4) chave exclusiva da bancada (OPENAI_BENCH_API_KEY). OpenSpec arquivado em openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1 (11 specs sincronizadas). Sequencia: F48.2.1 (arquivada) -> F48.2.2 (arquivada) -> F48.2.3 (arquivada) -> F48.2.4 (concluida, verificada, sincronizada e arquivada) -> F48.2.5 (follow-ups, nao iniciada)."
+  "uncommitted_files": [".planning/STATE.md", ".planning/ROADMAP.md", ".planning/HANDOFF.json", "ROADMAP.md", ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-CLOSEOUT-RECONCILIATION.md", ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md", "openspec/specs/**", "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/**"],
+  "next_action": "Executar /gsd-secure-phase 48.2.5 antes de avançar. Não iniciar nova geração paga; os paid runs desta fase estão encerrados.",
+  "context_notes": "F48.2.5: oito planos/summaries e 37 tasks OpenSpec concluídos; CHECKPOINT A aprovado para readiness e CHECKPOINT B aprovado com limitações. GSD verify-work concluído com 5/5 PASS e acknowledged gap dos 65 critérios pending, aceitos sem inferência. Sete gerações manuais; candidato documental Sunburst medium restrito ao caso Adega, sem promoção. Custo confirmado na plataforma US$0,29; cálculo local US$0,288978; provider-reported cost null nos sete runs; somente US$0,06 individualmente confirmado para medium. Produção intocada, sem db push, crédito de usuário ou chamada de provider pelo executor. OpenSpec verificado/sincronizado/arquivado. workflow.security_enforcement=true; security review necessária antes de avançar."
 }
