@@ -24,6 +24,10 @@ import {
   inferIntent as prodInferIntent,
 } from "@/components/flow/use-campaign-form";
 import { parseCurrencyBRL } from "@/lib/formatters";
+import {
+  availableIntents as authoritativeAvailableIntents,
+  inferIntent as authoritativeInferIntent,
+} from "../domain/intent-options";
 
 import {
   MAX_ADDITIONAL_IMAGES,
@@ -94,6 +98,14 @@ describe("paridade — intenção derivada dos preços", () => {
     expect(availableIntents(1000, 500)).toEqual(["offer"]);
     expect(availableIntents(0, 500)).toEqual(["offer", "spotlight"]);
     expect(availableIntents(0, 0)).toEqual(["spotlight", "exclusive"]);
+  });
+
+  it("form-rules delega à autoridade pura sem alterar a paridade produtiva", () => {
+    for (const [original, sale] of MATRIX) {
+      expect(inferIntent(original, sale)).toBe(authoritativeInferIntent(original, sale));
+      expect(availableIntents(original, sale)).toEqual(authoritativeAvailableIntents(original, sale));
+      expect(inferIntent(original, sale)).toBe(prodInferIntent(original, sale));
+    }
   });
 });
 
