@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateBenchIntentPrice } from "./intent-price-matrix";
 
 /**
  * Schemas puros do domínio da **bancada de geração** (F48.2.2, D6/D9/D13).
@@ -331,6 +332,26 @@ export const BenchRunInputSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    const intent = value.offer.campaignIntent ?? "offer";
+    const priceValidation = validateBenchIntentPrice(
+      value.product.originalPriceCents,
+      value.product.priceCents,
+      intent,
+    );
+    if (!priceValidation.valid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["offer", "campaignIntent"],
+        message: priceValidation.error,
+      });
+    }
+    if (intent !== "offer" && (value.offer.validUntil !== undefined || value.offer.validity !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["offer", "validity"],
+        message: "bench_validity_only_allowed_for_offer",
+      });
+    }
     value.references.forEach((reference, index) => {
       if (!isBenchInputReference(reference, value.runId)) {
         ctx.addIssue({
