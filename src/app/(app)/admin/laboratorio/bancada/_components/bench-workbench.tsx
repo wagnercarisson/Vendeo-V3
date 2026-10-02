@@ -37,6 +37,7 @@ import {
 import { BenchPromptEditor } from "./bench-prompt-editor";
 import { BenchStoreSelector, type BenchStoreOption } from "./bench-store-selector";
 import { buildValidityDisplayText } from "@/lib/lab/bench/domain/form-rules";
+import { validateBenchIntentPrice } from "@/lib/lab/bench/domain/intent-price-matrix";
 import type {
   BenchTextIntegrityEvidence,
   BenchTextIntegrityField,
@@ -143,6 +144,30 @@ function buildOfferPayload(campaign: BenchCampaignFormValue): BenchOfferPayload 
   };
 }
 
+function getCommercialBlockReason(campaign: BenchCampaignFormValue): string | null {
+  const priceValidation = validateBenchIntentPrice(
+    campaign.originalPriceCents,
+    campaign.priceCents,
+    campaign.campaignIntent,
+  );
+  if (!priceValidation.valid) {
+    return campaign.originalPriceCents > 0 && campaign.priceCents <= 0
+      ? "Informe um preço de venda ou remova o preço original isolado."
+      : "Escolha uma intenção compatível com os preços antes de compor ou executar.";
+  }
+
+  const hasValidity =
+    campaign.validityMode !== "" ||
+    campaign.validityStartDate.length > 0 ||
+    campaign.validityEndDate.length > 0 ||
+    campaign.validityCustomText.length > 0;
+  if (campaign.campaignIntent !== "offer" && hasValidity) {
+    return "Remova ou regularize explicitamente a validade antes de compor ou executar esta intenção.";
+  }
+
+  return null;
+}
+
 export function BenchWorkbench(props: BenchWorkbenchProps) {
   const {
     stores,
@@ -161,6 +186,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   const [campaign, setCampaign] = useState<BenchCampaignFormValue>(
     EMPTY_BENCH_CAMPAIGN_FORM,
   );
+  const commercialBlockReason = getCommercialBlockReason(campaign);
   // O editor do prompt-base é semeado pelo padrão resolvido server-side (props
   // iniciais) — sem depender de `POST /compose` (D6/D16).
   const [prompt, setPrompt] = useState(defaultPromptBase);
@@ -279,10 +305,18 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   }
 
   function handleCompose() {
+    if (commercialBlockReason) {
+      setPreflightError(commercialBlockReason);
+      return;
+    }
     void submitCompose();
   }
 
   async function submitCompose(evidenceOverride?: BenchTextIntegrityEvidence) {
+    if (commercialBlockReason) {
+      setPreflightError(commercialBlockReason);
+      return;
+    }
     const inputRevision = preflightRevisionRef.current;
     const requestId = composeRequestIdRef.current + 1;
     composeRequestIdRef.current = requestId;
@@ -409,6 +443,10 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   }
 
   function handleApprove() {
+    if (commercialBlockReason) {
+      setPreflightError(commercialBlockReason);
+      return;
+    }
     if (finalPrompt.trim().length === 0 || !textIntegrityEvidence) return;
     setPreflightStatus("approved");
   }
@@ -600,6 +638,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           promptBaseVersion={composedPromptBaseVersion}
           composing={composing}
           error={preflightError}
+          disabled={commercialBlockReason !== null}
           onCompose={handleCompose}
           onEditFinal={handleEditFinal}
           onApprove={handleApprove}
@@ -626,6 +665,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           runId={upload?.runId ?? null}
           references={upload?.references ?? []}
           operationId={upload?.operationId ?? null}
+          disabled={commercialBlockReason !== null}
           onCompleted={handleCompleted}
         />
         {(evidenceLoading || runEvidence !== null || evidenceError !== null) && (

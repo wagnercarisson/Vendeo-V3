@@ -804,6 +804,22 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
 });
 
 describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
+  it("não compõe nem solicita estimativa quando a combinação comercial é incompatível", async () => {
+    mockFetch.mockImplementation(async (url: unknown) => {
+      if (String(url).includes("/branding")) return jsonResponse({ branding: BRANDING });
+      if (String(url).includes("/compose")) return jsonResponse({ compiledPrompt: "PROMPT" });
+      if (String(url).includes("/estimate")) return jsonResponse(ESTIMATE);
+      return jsonResponse({ error: "unexpected_test_request" }, 400);
+    });
+
+    render(await BancadaPage());
+    expect(await screen.findByTestId("bench-intent-price-guard")).toHaveTextContent(/escolha/i);
+    expect(screen.getByTestId("bench-compose-button")).toBeDisabled();
+    expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
+    expect(mockFetch.mock.calls.some(([url]) => String(url).includes("/compose"))).toBe(false);
+    expect(mockFetch.mock.calls.some(([url]) => String(url).includes("/estimate"))).toBe(false);
+  });
+
   it("oferece 'Compor prompt' e 'Aprovar prompt' e mostra o estado", () => {
     render(
       <BenchPreflightPanel
@@ -1117,6 +1133,50 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
       expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt invalidado"),
     );
     expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
+  });
+
+  it("preserva a escolha incompatível e invalida o preflight ao editar preço", async () => {
+    let composeCount = 0;
+    mockFetch.mockImplementation(async (url: unknown) => {
+      if (String(url).includes("/compose")) {
+        composeCount += 1;
+        return jsonResponse({
+          compiledPrompt: "PROMPT COMERCIAL",
+          blocks: {},
+          composerVersion: COMPOSER_VERSION,
+          policyVersions: {},
+          promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
+          textIntegrityEvidence: MOCK_TEXT_INTEGRITY_EVIDENCE,
+        });
+      }
+      return jsonResponse({ branding: BRANDING });
+    });
+
+    render(await BancadaPage());
+    chooseNoPriceExclusiveIntent();
+    fireEvent.click(screen.getByTestId("bench-compose-button"));
+    await screen.findByRole("textbox", { name: "Prompt compilado" });
+    fireEvent.click(screen.getByTestId("bench-approve-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado"),
+    );
+
+    fireEvent.change(screen.getByLabelText("Preço de venda"), {
+      target: { value: "1000" },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt invalidado"),
+    );
+    expect(screen.getByTestId("bench-intent-price-guard")).toHaveTextContent(/escolha uma nova intenção/i);
+    expect(screen.queryByRole("radio", { name: "Exclusivo" })).toBeNull();
+    expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
+    expect(composeCount).toBe(1);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Destaque" }));
+    expect(screen.getByRole("radio", { name: "Destaque" })).toBeChecked();
+    expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt invalidado");
+    expect(composeCount).toBe(1);
   });
 
   it.each([
