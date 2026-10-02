@@ -10,6 +10,7 @@ import type { GenerateImageRequest } from "@/lib/image-generation/schema";
 
 import type { BenchConfig, BenchOffer, BenchProduct } from "./schemas";
 import { buildMandatoryArtworkText } from "./form-rules";
+import { validateBenchIntentPrice } from "./intent-price-matrix";
 
 /**
  * Snapshot de campanha da bancada (F48.2.2, D1/D-snapshot; F48.2.3, D14).
@@ -57,6 +58,7 @@ export function resolveBenchIntent(input: {
   const { product, offer } = input;
 
   if (offer.campaignIntent) {
+    assertBenchCommercialCompatibility(product, offer, offer.campaignIntent);
     return { intent: offer.campaignIntent, intentResolvedFrom: "explicit" };
   }
 
@@ -66,10 +68,30 @@ export function resolveBenchIntent(input: {
     product.originalPriceCents > product.priceCents;
 
   if (hasPromotionalPrice) {
+    assertBenchCommercialCompatibility(product, offer, "offer");
     return { intent: "offer", intentResolvedFrom: "inferred_from_prices" };
   }
 
+  assertBenchCommercialCompatibility(product, offer, "offer");
   return { intent: "offer", intentResolvedFrom: "explicit" };
+}
+
+function assertBenchCommercialCompatibility(
+  product: BenchProduct,
+  offer: BenchOffer,
+  intent: CampaignIntent,
+): void {
+  const validation = validateBenchIntentPrice(
+    product.originalPriceCents,
+    product.priceCents,
+    intent,
+  );
+  if (!validation.valid) {
+    throw new BenchCampaignSnapshotError(validation.error);
+  }
+  if (intent !== "offer" && (offer.validUntil !== undefined || offer.validity !== undefined)) {
+    throw new BenchCampaignSnapshotError("bench_validity_only_allowed_for_offer");
+  }
 }
 
 // ─── Snapshot ────────────────────────────────────────────────────────────────
@@ -104,6 +126,7 @@ export function buildBenchCampaignSnapshot(input: {
 }): BenchCampaignSnapshot {
   const { product, offer, config } = input;
   const resolved = resolveBenchIntent({ product, offer });
+  assertBenchCommercialCompatibility(product, offer, resolved.intent);
 
   // Texto de validade de exibição: a coluna resolvida (`validity`) tem
   // precedência sobre o legado `validUntil`.

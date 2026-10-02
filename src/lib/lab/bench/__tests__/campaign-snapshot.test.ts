@@ -97,6 +97,36 @@ describe("buildBenchCampaignSnapshot", () => {
     const second = buildBenchCampaignSnapshot({ product: PRODUCT, offer: OFFER, config: CONFIG });
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
   });
+
+  it.each([
+    [{ name: "Produto", originalPriceCents: 1000, priceCents: 500 }, "spotlight", undefined, "bench_intent_price_incompatible"],
+    [{ name: "Produto", priceCents: 500 }, "exclusive", undefined, "bench_intent_price_incompatible"],
+    [{ name: "Produto" }, "offer", undefined, "bench_intent_price_incompatible"],
+    [{ name: "Produto", originalPriceCents: 1000 }, "offer", undefined, "bench_intent_price_incompatible"],
+    [{ name: "Produto" }, "spotlight", "validity retained", "bench_validity_only_allowed_for_offer"],
+    [{ name: "Produto" }, "exclusive", "2026-10-20", "bench_validity_only_allowed_for_offer"],
+  ] as const)("does not build snapshot for incompatible inputs %j / %s", (product, campaignIntent, validity, code) => {
+    const offer: BenchOffer = {
+      campaignIntent: campaignIntent as BenchOffer["campaignIntent"],
+      ...(validity === undefined ? {} : { validity }),
+    };
+    try {
+      buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
+      throw new Error("expected snapshot construction to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BenchCampaignSnapshotError);
+      expect((error as BenchCampaignSnapshotError).message).toContain(code);
+    }
+    if (validity !== undefined) expect(offer.validity).toBe(validity);
+  });
+
+  it("preserves an explicit valid selection without inferring a replacement", () => {
+    const product: BenchProduct = { name: "Produto", priceCents: 500 };
+    const offer: BenchOffer = { campaignIntent: "spotlight" };
+    const snapshot = buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
+    expect(snapshot.intent).toBe("spotlight");
+    expect(snapshot.intentResolvedFrom).toBe("explicit");
+  });
 });
 
 // ─── Campos mínimos ──────────────────────────────────────────────────────────
