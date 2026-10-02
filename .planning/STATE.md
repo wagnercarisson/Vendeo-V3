@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-02T23:32:14.477Z"
+last_updated: "2026-10-02T23:36:38.671Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 10
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ progress:
 ## Current Position
 
 Phase: 48.2.6 (validacao-experimental-produto-intencoes-1-1) — EXECUTING
-Plan: 1 of 10
+Plan: 2 of 10
 Checkpoints humanos: CHECKPOINT A aprovado em 2026-10-01 para readiness local; CHECKPOINT B aprovado com limitações/follow-ups em 2026-10-01. Sete gerações pagas foram manuais pelo usuário; nenhuma chamada de provider pelo executor. Gerações pagas adicionais nesta fase encerradas.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
@@ -101,6 +101,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - **Execução F48.2.2 — plano `48-2-2-06` (2026-09-28):** API administrativa da bancada sob `/api/admin/laboratorio/bancada`. **7 rotas** com a ordem obrigatória `await requireAdmin()` → `assertLabEnvironment()` (403 `labEnvironmentDeniedBody`) e `assertBenchTestStore` antes de qualquer leitura com `storeId`: `GET /stores`, `GET /branding` (assets pelo signer restrito `createBenchBrandingSignedUrlForStore`, nunca pelo signer de artefatos), `GET /presets`, `GET /estimate` (resolvedor local `resolveBenchCost`; cobertura `complete`/`partial`/`missing` sem bloquear), `POST /inputs` (multipart; cria o run em **`draft`** idempotente por `operationId` **sem** ocupar o slot e persiste cada imagem sob `bench/{runId}/inputs/{index}.{ext}` com MIME/dimensões/bytes/checksum; falha de persistência remove o objeto e finaliza o draft como `failed`/`artifact_persistence_failed`, sem órfão), `POST /runs` (422 `confirmation_required` antes do parse; resolve o `draft` por `getBenchRunByOperationId` **sem criar run**; 400 `preset_not_enabled`; `setBenchRunInput` em `draft`; CAS `draft → pending` via `confirmBenchRun` → 409 `bench_run_already_active`; stream NDJSON com **um** terminal) e `GET /runs/[id]` (detalhe com config/prompt/referências/latência/usage/custo com origem e `artifacts[].signedUrl`). Verificação: `npm run typecheck` exit 0; **58 testes de contrato verdes**; 335 testes de regressão da bancada/API verdes; greps do plano conformes. **Nenhuma chamada paga** (`executeBenchRun` mockado; produção intocada). Commits `5c3ddb49`, `8de4120f`, `e8c2ac44`, `ac0b04a4`.
 
 - **Execução F48.2.2 — plano `48-2-2-07` (2026-09-28):** UI desktop da bancada. **Entrada "Bancada"** em `LAB_NAV_ITEMS` (navegação interna do laboratório; **nenhum** segundo link na nav principal — `src/app/(app)/admin/layout.tsx` intocado). **Página server** `bancada/page.tsx` (`force-dynamic`) com `getLabEnvironment()` → `<DisabledNotice reason>` no caminho bloqueado (sem acessar tabelas/storage/provider) e leitura server-side de `listBenchTestStores`/`listBenchPresets` somente no caminho habilitado. **Contêiner cliente `BenchWorkbench`** (não listado nos 12 arquivos do plano; criado por Rule 2 — a página é server component e o fluxo upload→runId→execução exige estado compartilhado): dono de `storeId`, branding, produto/oferta, prompt, preset, upload e evidências; mantém `operationId` estável por fingerprint (arquivos+loja, invalidado ao trocar de loja) e eleva `runId`/`references` do upload em `draft`. **Componentes:** seletor de loja, branding completo somente leitura (inclui **direção tipográfica**; logo/assinatura por URL assinada do signer restrito), formulário produto/oferta (validação no blur), upload multipart para `/inputs` (`lab-artifacts` sob `bench/{runId}/inputs/...`; **nunca** `campaign-images`), prompt manual (branding não concatenado), formato/modelo/qualidade com **dimensões travadas** (badges) e preset desabilitado com motivo, estimativa por cobertura (`formatCostByCoverage`), execução com "Gerar imagem" → confirmação explícita ("Confirmar geração", `confirmed: true`) → `POST /runs` com `operationId`/`runId`/`references` → stream NDJSON de **um** terminal, resultado com **download** por URL assinada e painel de evidências distinguindo usage/calculado/estimado (rótulo "Custo estimado — não é valor faturado"). **Sem** comparação lado a lado/votação e **sem** promessa de cancelamento de geração ativa (mensagem de `bench_run_already_active` orienta aguardar; recuperação automática por reconciliação). Verificação: `npm run typecheck` exit 0; `npm run lint` exit 0; **17 testes de contrato de UI verdes**. **Nenhuma chamada paga** (fetch mockado; produção intocada). Commits `70514b91`, `bbbe8d86`, `02d61517`.
+- [Phase 48.2.6]: A autoridade de inferência/opções foi extraída somente no domínio da bancada; form-rules delega e matriz deriva opções dela. — Preserva compatibilidade sem ciclo e evita matrizes divergentes, mantendo código produtivo intacto.
 
 ## Pending Todos
 
@@ -142,3 +143,9 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - Último quick: `260929-rtl` — **concluída**. Fidelidade de `identity_state` da bancada (Tasks 1–3: import fail-closed, resolver puro, contrato/snapshot/API) + **correção de idempotência da importação** (`ensureContentAddressedObject`: precheck `exists` fail-closed; referenciado/criado/reutilizado; cleanup remove só criados; `uploadBrandingObject` removido). Testes de contrato (79), integrado local (2 importações consecutivas) e suíte lab/architecture guard verdes; produção intocada; custo **US$ 0**. Reimportação autorizada idempotente: NovaTek `visual_signature` (1 objeto reutilizado) e Adega `logo` (6 reutilizados), 0 criados, sem duplicação/órfãos.
 - Próxima ação: revisar os planos da F48.2.6 antes de autorizar início da execução. Gate de segurança F48.2.5 está satisfeito; UAT GSD completo (5/5); rubrica parcial com 65 campos `pending` aceita com limitações; nenhuma avaliação foi inventada. Não iniciar geração paga sem os checkpoints da F48.2.6.
 - Resume file: `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md` (GSD UAT 5/5 PASS; 65 critérios pending reconhecidos; security review verificada, 7/7 fechados, 0 abertos em `48-2-5-SECURITY.md`).
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 48.2.6 P02 | 8 min | 2 tasks | 5 files |
