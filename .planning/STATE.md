@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-01T22:15:48-03:00"
+last_updated: "2026-10-02T23:32:14.477Z"
 progress:
-  total_phases: 42
-  completed_phases: 39
-  total_plans: 334
-  completed_plans: 328
-  percent: 98
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 10
+  completed_plans: 1
+  percent: 0
 ---
 
 # Project State
@@ -26,8 +26,8 @@ progress:
 
 ## Current Position
 
-Phase: 48.2.5 (estabilizacao-experimental-oferta-1-1) — **GSD UAT verificado (5/5 PASS); security review verificado (7/7 fechados, 0 abertos)** (2026-10-02)
-Plan: 8 planos; `48-2-5-01` a `48-2-5-08` executados/summarized (8/8). Plano 08 registra readiness, CHECKPOINT B, sete runs e manifesto. GSD verify-work está registrado em `48-2-5-VERIFICATION.md`; OpenSpec verify/sync/archive concluídos. A limitação aceita permanece: 65 critérios `pending`, sem inferência.
+Phase: 48.2.6 (validacao-experimental-produto-intencoes-1-1) — EXECUTING
+Plan: 1 of 10
 Checkpoints humanos: CHECKPOINT A aprovado em 2026-10-01 para readiness local; CHECKPOINT B aprovado com limitações/follow-ups em 2026-10-01. Sete gerações pagas foram manuais pelo usuário; nenhuma chamada de provider pelo executor. Gerações pagas adicionais nesta fase encerradas.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
