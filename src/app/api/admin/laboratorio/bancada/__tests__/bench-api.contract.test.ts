@@ -1222,7 +1222,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
   it("POST /compose com alertas ⇒ 422 e não compõe prompt nem lê branding", async () => {
     const res = await postCompose({
       ...VALID_COMPOSE_BODY,
-      product: { name: "voce!!" },
+      product: { name: "voce!!", priceCents: 1000 },
     });
     const body = await res.json();
 
@@ -1244,7 +1244,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
   it("POST /compose aceita keep_exactly apenas na revisão atual", async () => {
     const initial = await postCompose({
       ...VALID_COMPOSE_BODY,
-      product: { name: "voce!!" },
+      product: { name: "voce!!", priceCents: 1000 },
     });
     const reviewBody = await initial.json();
     const textIntegrityEvidence = {
@@ -1255,7 +1255,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
 
     const accepted = await postCompose({
       ...VALID_COMPOSE_BODY,
-      product: { name: "voce!!" },
+      product: { name: "voce!!", priceCents: 1000 },
       textIntegrityEvidence,
     });
     const acceptedBody = await accepted.json();
@@ -1268,14 +1268,14 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
   it("POST /compose recusa keep_exactly obsoleto se somente promptBase mudou", async () => {
     const initial = await postCompose({
       ...VALID_COMPOSE_BODY,
-      product: { name: "voce!!" },
+      product: { name: "voce!!", priceCents: 1000 },
     });
     const reviewBody = await initial.json();
 
     const stale = await postCompose({
       ...VALID_COMPOSE_BODY,
       promptBase: "prompt base editado após a revisão",
-      product: { name: "voce!!" },
+      product: { name: "voce!!", priceCents: 1000 },
       textIntegrityEvidence: {
         policyVersion: reviewBody.textIntegrityReview.policyVersion,
         reviewRevision: reviewBody.textIntegrityReview.reviewRevision,
@@ -1328,6 +1328,31 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("invalid_payload");
     expect(mockComposePromptBlocks).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      name: "intenção incompatível com de/por",
+      product: { name: "Produto", originalPriceCents: 1500, priceCents: 1000 },
+      offer: { campaignIntent: "exclusive" },
+      error: "bench_intent_price_incompatible",
+    },
+    {
+      name: "validade em Destaque",
+      product: { name: "Produto", priceCents: 1000 },
+      offer: { campaignIntent: "spotlight", validUntil: "até amanhã" },
+      error: "bench_validity_only_allowed_for_offer",
+    },
+  ])("POST /compose recusa $name antes de ler branding ou compor", async ({ product, offer, error }) => {
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, product, offer });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe(error);
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+    expect(mockBuildBenchCampaignSnapshot).not.toHaveBeenCalled();
+    expect(mockComposePromptBlocks).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
   });
 
   it("POST /compose expõe policyVersions, promptBaseVersion e defaultPromptBase (informativos)", async () => {
@@ -1705,6 +1730,32 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("invalid_payload");
     expect(mockReserveBenchRun).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      name: "matriz preço/intenção incompatível",
+      product: { name: "Produto", originalPriceCents: 1500, priceCents: 1000 },
+      offer: { campaignIntent: "exclusive" },
+      error: "bench_intent_price_incompatible",
+    },
+    {
+      name: "validade fora de Oferta",
+      product: { name: "Produto", priceCents: 1000 },
+      offer: { campaignIntent: "spotlight", validity: "até amanhã" },
+      error: "bench_validity_only_allowed_for_offer",
+    },
+  ])("POST /runs recusa $name antes de resolver draft ou persistir", async ({ product, offer, error }) => {
+    const res = await postRun({ ...VALID_RUN_BODY, product, offer });
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe(error);
+    expect(mockGetBenchRunByOperationId).not.toHaveBeenCalled();
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
     expect(mockConfirmBenchRun).not.toHaveBeenCalled();
     expect(mockExecuteBenchRun).not.toHaveBeenCalled();
   });
