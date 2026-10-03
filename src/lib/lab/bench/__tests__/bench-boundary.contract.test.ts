@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 
@@ -11,6 +11,15 @@ vi.hoisted(() => {
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
   process.env.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
 });
+
+const { mockResolveAiCost, blockedFetch } = vi.hoisted(() => ({
+  mockResolveAiCost: vi.fn(),
+  blockedFetch: vi.fn(),
+}));
+
+vi.mock("@/lib/ai-cost/cost-estimator", () => ({
+  resolveAiCost: (...args: unknown[]) => mockResolveAiCost(...args),
+}));
 
 import type { AiCapability } from "@/lib/ai/model-resolver";
 import type { AiInvoker } from "@/lib/ai/gateway";
@@ -81,6 +90,13 @@ const MANIFEST: BenchManifestStore[] = [{ id: STORE_ID, label: "Loja de teste A"
 const SAVED_ENV: Record<string, string | undefined> = {};
 
 beforeAll(async () => {
+  // This full-flow contract uses only the recording Supabase client. Prevent
+  // the telemetry sink from reaching any local or remote Supabase endpoint.
+  vi.stubGlobal("fetch", (...args: Parameters<typeof fetch>) => {
+    blockedFetch(...args);
+    return Promise.reject(new Error("unexpected_fetch_forbidden_in_bench_boundary_test"));
+  });
+
   SAVED_ENV.VENDEO_LAB_ENABLED = process.env.VENDEO_LAB_ENABLED;
   SAVED_ENV.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   process.env.VENDEO_LAB_ENABLED = "true";
@@ -95,6 +111,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   if (SAVED_ENV.VENDEO_LAB_ENABLED === undefined) delete process.env.VENDEO_LAB_ENABLED;
   else process.env.VENDEO_LAB_ENABLED = SAVED_ENV.VENDEO_LAB_ENABLED;
   if (SAVED_ENV.NEXT_PUBLIC_SUPABASE_URL === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -202,23 +219,24 @@ let gateway: FakeGateway;
 let sink: LabTelemetrySink;
 
 beforeEach(() => {
+  mockResolveAiCost.mockResolvedValue({
+    estimatedCostUsd: 0.0123,
+    costSource: "pricing_table",
+    pricingVersion: "offline-test-pricing",
+  });
+  blockedFetch.mockClear();
   gateway = new FakeGateway();
   sink = new LabTelemetrySink();
+});
+
+afterEach(() => {
+  expect(blockedFetch).not.toHaveBeenCalled();
 });
 
 // ─── Fluxo completo: só alvos da allowlist ───────────────────────────────────
 
 describe("fronteira da bancada — fluxo completo toca somente alvos permitidos", () => {
   it("seleção → branding → upload em draft → confirmação → execução → persistência → leitura", async () => {
-    const nativeFetch = globalThis.fetch.bind(globalThis);
-    const networkFetch = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
-      const url = input instanceof Request ? input.url : String(input);
-      const hostname = new URL(url).hostname;
-      if (!["127.0.0.1", "localhost", "::1"].includes(hostname)) {
-        return Promise.reject(new Error("remote_network_forbidden"));
-      }
-      return nativeFetch(input, init);
-    });
     const recording = createRecordingClient(seed());
     const client = recording.client;
     const preset = resolveBenchPreset("gpt-image-2-low");
@@ -333,10 +351,7 @@ describe("fronteira da bancada — fluxo completo toca somente alvos permitidos"
     expect(
       recording.accessLog.some((entry) => entry.startsWith("storage.upload:lab-artifacts:bench/")),
     ).toBe(true);
-    expect(networkFetch.mock.calls.every(([input]) => {
-      const url = input instanceof Request ? input.url : String(input);
-      return ["127.0.0.1", "localhost", "::1"].includes(new URL(url).hostname);
-    })).toBe(true);
+    expect(blockedFetch).not.toHaveBeenCalled();
   });
 });
 
