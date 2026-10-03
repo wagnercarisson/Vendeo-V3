@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -13,6 +13,15 @@ vi.hoisted(() => {
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
   process.env.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
 });
+
+const { mockResolveAiCost, blockedFetch } = vi.hoisted(() => ({
+  mockResolveAiCost: vi.fn(),
+  blockedFetch: vi.fn(),
+}));
+
+vi.mock("@/lib/ai-cost/cost-estimator", () => ({
+  resolveAiCost: (...args: unknown[]) => mockResolveAiCost(...args),
+}));
 
 import type { AiCapability, AiModelResolver } from "@/lib/ai/model-resolver";
 import type { AiInvoker } from "@/lib/ai/gateway";
@@ -577,6 +586,14 @@ let sink: LabTelemetrySink;
 let testPng: Buffer;
 
 beforeAll(async () => {
+  // The telemetry sink's cost resolver must never reach Supabase or any other
+  // network target in this contract suite. A per-test explicit fetch mock may
+  // replace this guard if a future test genuinely needs a mocked fetch.
+  vi.stubGlobal("fetch", (...args: Parameters<typeof fetch>) => {
+    blockedFetch(...args);
+    return Promise.reject(new Error("unexpected_fetch_forbidden_in_bench_execution_test"));
+  });
+
   testPng = await sharp({
     create: { width: 4, height: 4, channels: 3, background: { r: 12, g: 180, b: 40 } },
   })
@@ -585,12 +602,26 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  mockResolveAiCost.mockResolvedValue({
+    estimatedCostUsd: 0.0123,
+    costSource: "pricing_table",
+    pricingVersion: "offline-test-pricing",
+  });
+  blockedFetch.mockClear();
   fake = new FakeServiceClient();
   fake.tables.lab_bench_runs = [
     { id: RUN_ID, status: "pending", created_at: new Date().toISOString() },
   ];
   fakeGateway = new FakeGateway();
   sink = new LabTelemetrySink();
+});
+
+afterEach(() => {
+  expect(blockedFetch).not.toHaveBeenCalled();
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
 });
 
 function setup() {
@@ -634,6 +665,10 @@ describe("executeBenchRun — single-shot, custo local e erro sanitizado", () =>
     expect(fakeGateway.invocations[0].capability).toBe("campaign_image");
     // Telemetria read-only acumulada (sem generation_events).
     expect(sink.entries).toHaveLength(1);
+    expect(sink.entries[0]).toMatchObject({
+      usage: { promptTokens: 1000, completionTokens: 2000 },
+      cost: { estimatedCostUsd: 0.0123, costSource: "pricing_table" },
+    });
 
     const runUpdate = fake.updates.filter((update) => update.table === "lab_bench_runs").at(-1);
     expect(runUpdate?.values.status).toBe("succeeded");
