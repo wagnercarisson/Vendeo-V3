@@ -195,6 +195,10 @@ export function recomposeBenchPrompt(input: RecomposeBenchPromptInput): BenchPro
 
 /**
  * Exige igualdade entre o texto recomposto e o `promptCompiled` aprovado.
+ * A recomposição recebe o briefing atual derivado do snapshot server-side;
+ * portanto, os valores comerciais efetivos (preços, intenção, selo e validade)
+ * participam do texto/evidência recomposta. Alterá-los torna o preflight stale
+ * antes de persistir ou confirmar o run, mesmo sem adicionar tabela/hash de revisão.
  * Divergência ⇒ `approval_invalidated` (a execução é recusada antes da chamada
  * paga; composição idêntica prossegue).
  */

@@ -129,18 +129,29 @@ function makeOffer(overrides: Partial<BenchOffer> = {}): BenchOffer {
   return { badge: "50% OFF", validity: "até 31/12/2026", showIllustrativeNotice: true, ...overrides };
 }
 
-function makeBriefing() {
+function makeBriefing(input: {
+  product?: BenchProduct;
+  offer?: BenchOffer;
+  config?: BenchConfig;
+} = {}) {
+  const product = input.product ?? makeProduct();
+  const offer = input.offer ?? makeOffer();
+  const config = input.config ?? CONFIG;
   const snapshot = buildBenchCampaignSnapshot({
-    product: makeProduct(),
-    offer: makeOffer(),
-    config: CONFIG,
+    product,
+    offer,
+    config,
   });
-  return buildBenchExperimentalBriefing({ branding: makeBranding(), snapshot, config: CONFIG });
+  return buildBenchExperimentalBriefing({ branding: makeBranding(), snapshot, config });
 }
 
-function recompose(config: BenchConfig = CONFIG, identityReference = LOGO_REF) {
+function recompose(
+  config: BenchConfig = CONFIG,
+  identityReference = LOGO_REF,
+  campaign: { product?: BenchProduct; offer?: BenchOffer } = {},
+) {
   return recomposeBenchPrompt({
-    briefing: makeBriefing(),
+    briefing: makeBriefing({ ...campaign, config }),
     promptBase: PROMPT_BASE,
     references: [`bench/${RUN_ID}/inputs/0.png`],
     config,
@@ -182,6 +193,18 @@ describe("assertPreflightCompositionMatches", () => {
     } catch (error) {
       expect((error as BenchPreflightRevalidationError).code).toBe("approval_invalidated");
     }
+  });
+
+  it("mudança no preço comercial recompõe texto diferente e invalida a composição aprovada", () => {
+    const approved = recompose().text;
+    const changedPrice = recompose(CONFIG, LOGO_REF, {
+      product: makeProduct({ priceCents: 4590 }),
+    }).text;
+
+    expect(changedPrice).not.toBe(approved);
+    expect(() =>
+      assertPreflightCompositionMatches({ recomposed: changedPrice, promptCompiled: approved }),
+    ).toThrow(BenchPreflightRevalidationError);
   });
 });
 
