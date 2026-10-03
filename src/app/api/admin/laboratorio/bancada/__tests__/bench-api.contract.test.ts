@@ -294,12 +294,15 @@ vi.mock("@/lib/lab/bench/domain/experimental-briefing", () => ({
     mockBuildBenchExperimentalBriefing(...args),
 }));
 
-vi.mock("@/lib/lab/bench/domain/prompt-composer", () => ({
-  COMPOSER_VERSION: "test-composer-v1",
+vi.mock("@/lib/lab/bench/domain/prompt-composer", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/lab/bench/domain/prompt-composer")>();
+  return {
+  ...actual,
   PROMPT_BLOCK_LABELS: { commercial: "CONDIÇÕES COMERCIAIS" },
   composePromptBlocks: (...args: unknown[]) => mockComposePromptBlocks(...args),
   composePrompt: (...args: unknown[]) => mockComposePromptBlocks(...args).text,
-}));
+  };
+});
 
 vi.mock("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>();
@@ -807,11 +810,12 @@ beforeEach(() => {
   });
 
   mockBuildBenchCampaignSnapshot.mockImplementation(
-    (params: { product: { name: string }; offer: unknown; config: unknown }) => ({
+    (params: { product: { name: string; priceCents?: number; originalPriceCents?: number }; offer: unknown; config: unknown }) => ({
       product: { source: "manual", name: params.product.name },
-      commercial: { intent: "offer" },
+      commercial: { intent: "offer", originalPriceCents: params.product.originalPriceCents ?? null, discountedPriceCents: params.product.priceCents ?? null, badge: null, validity: null },
       intent: "offer",
       intentResolvedFrom: "explicit",
+      preserveImageContext: false,
       config: params.config,
       format: "1:1",
       locale: "pt-BR",
@@ -819,7 +823,7 @@ beforeEach(() => {
   );
 
   mockBuildBenchExperimentalBriefing.mockImplementation(
-    (params: { branding: { storeName: string; brandColor?: string } }) => ({
+    (params: { branding: { storeName: string; brandColor?: string }; snapshot: { product: { name: string }; commercial: { originalPriceCents: number | null; discountedPriceCents: number | null; badge: string | null; validity: string | null }; preserveImageContext: boolean; config: unknown } }) => ({
       storeId: STORE_ID,
       storeName: params.branding.storeName,
       segment: "mercado",
@@ -835,14 +839,14 @@ beforeEach(() => {
       product: { name: params.snapshot.product.name, description: null },
       commercial: {
         intent: "offer",
-        originalPriceText: null,
-        discountedPriceText: null,
-        badge: null,
-        validity: null,
-        preserveImageContext: false,
+        originalPriceText: params.snapshot.commercial.originalPriceCents === null ? null : `R$ ${(params.snapshot.commercial.originalPriceCents / 100).toFixed(2).replace(".", ",")}`,
+        discountedPriceText: params.snapshot.commercial.discountedPriceCents === null ? null : `R$ ${(params.snapshot.commercial.discountedPriceCents / 100).toFixed(2).replace(".", ",")}`,
+        badge: params.snapshot.commercial.badge,
+        validity: params.snapshot.commercial.validity,
+        preserveImageContext: params.snapshot.preserveImageContext,
       },
       constraints: { mandatoryArtworkText: null },
-      config: {},
+      config: params.snapshot.config,
     }),
   );
   mockComposePromptBlocks.mockReturnValue({
@@ -1209,13 +1213,15 @@ describe("contrato da API da bancada — briefing experimental", () => {
 
 describe("contrato da API da bancada — composição/preview do prompt", () => {
   it("POST /compose ⇒ 200 com prompt compilado, blocos e versão do compositor (sem IA)", async () => {
+    const composerActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/prompt-composer")>("@/lib/lab/bench/domain/prompt-composer");
+    mockComposePromptBlocks.mockImplementation((input: never) => composerActual.composePromptBlocks(input));
     const res = await postCompose();
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.compiledPrompt).toBe("prompt compilado");
+    expect(body.compiledPrompt).toContain("CONDIÇÕES COMERCIAIS");
     expect(body.blocks).toBeDefined();
-    expect(body.composerVersion).toBe("test-composer-v1");
+    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v2");
     expect(body.approved).toBe(false);
     expect(body.textIntegrityEvidence).toMatchObject({
       policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
@@ -1257,7 +1263,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     mockComposePromptBlocks.mockImplementation((input: never) => composerActual.composePromptBlocks(input));
     const res = await postCompose({
       ...VALID_COMPOSE_BODY,
-      product: { name: campaignIntent === "spotlight" ? "Mouse sem fio" : "Produto", priceCents: campaignIntent === "offer" ? 1000 : undefined, originalPriceCents: campaignIntent === "offer" ? 1500 : undefined },
+      product: { name: campaignIntent === "spotlight" ? "Mouse sem fio" : "Produto", priceCents: campaignIntent === "spotlight" ? 1999 : campaignIntent === "offer" ? 1000 : undefined, originalPriceCents: campaignIntent === "offer" ? 1500 : undefined },
       offer: { campaignIntent },
     });
     const body = await res.json();
@@ -1268,7 +1274,14 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(body.policyVersions.intencao).toBe(version);
     if (campaignIntent === "spotlight") {
       expect(body.compiledPrompt).toContain("Nome do produto obrigatório: Mouse sem fio");
+      expect(body.compiledPrompt).toMatch(/Preço de venda: R\$\s19,99/);
+      expect(body.compiledPrompt).not.toContain("Preço promocional");
+      expect(body.compiledPrompt).not.toContain("Oferta:");
       expect(body.policyVersions.intencao).toBe("48.2.6-destaque-v1");
+      expect(body.composerVersion).toBe("48.2.4-prompt-composer-v2");
+      expect(body.policyVersions.intencao).not.toBe("48.2.6-oferta-v1");
+      expect(body.compiledPrompt).toContain("Destaque: priorize a apresentação do produto; preço informado é secundário.");
+      console.info("SPOTLIGHT_COMPILED_PROMPT_VERSION:", JSON.stringify({ text: body.compiledPrompt, composerVersion: body.composerVersion, policyVersions: body.policyVersions }));
     }
     expect(mockComposePromptBlocks.mock.calls[0][0]).toMatchObject({ policyVersions: expect.objectContaining({ intencao: version }) });
     if (campaignIntent !== "offer") {
@@ -1276,6 +1289,31 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
       expect(body.policyVersions.intencao).not.toBe("oferta-v1");
     }
     expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose Oferta mantém a semântica promocional somente na política Oferta", async () => {
+    const policyActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/policies/oferta")>("@/lib/lab/bench/domain/policies/oferta");
+    const snapshotActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/campaign-snapshot")>("@/lib/lab/bench/domain/campaign-snapshot");
+    const briefingActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/experimental-briefing")>("@/lib/lab/bench/domain/experimental-briefing");
+    const composerActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/prompt-composer")>("@/lib/lab/bench/domain/prompt-composer");
+    const resolverActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies");
+    mockBuildBenchCampaignSnapshot.mockImplementation(snapshotActual.buildBenchCampaignSnapshot);
+    mockBuildBenchExperimentalBriefing.mockImplementation(briefingActual.buildBenchExperimentalBriefing);
+    mockResolveBenchPolicyIntent.mockImplementation((intent: string) => intent === "offer" ? "oferta" : intent);
+    mockResolveBenchPromptPolicies.mockImplementation((config: never) => resolverActual.resolveBenchPromptPolicies(config));
+    mockComposePromptBlocks.mockImplementation((input: never) => composerActual.composePromptBlocks(input));
+    const res = await postCompose({
+      ...VALID_COMPOSE_BODY,
+      product: { name: "Mouse sem fio", priceCents: 1999, originalPriceCents: 2999 },
+      offer: { campaignIntent: "offer" },
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.compiledPrompt).toMatch(/Preço de venda: R\$\s19,99/);
+    expect(body.compiledPrompt).toContain(policyActual.ofertaPolicy.contributions({ config: { ...VALID_COMPOSE_BODY, intencao: "oferta" } as never }).flatMap((entry) => entry.lines).find((line) => line.startsWith("Oferta: destaque o preço por")));
+    expect(body.policyVersions.intencao).toBe("48.2.6-oferta-v1");
+    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v2");
   });
 
   it("POST /compose com alertas ⇒ 422 e não compõe prompt nem lê branding", async () => {
@@ -1792,7 +1830,7 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     mockResolveBenchPolicyIntent.mockImplementation(configActual.resolveBenchPolicyIntent);
     mockResolveBenchConfig.mockImplementation((input: { intencao: string }) => input);
     mockBuildBenchCampaignSnapshot.mockImplementation((params: { config: { intencao: string } }) => ({ config: params.config }));
-    mockBuildBenchExperimentalBriefing.mockImplementation((params: { config: { intencao: string }; snapshot: never }) => ({
+    mockBuildBenchExperimentalBriefing.mockImplementation((params: { config: { intencao: string }; snapshot: { product?: { name?: string } } }) => ({
       storeId: STORE_ID,
       storeName: "Loja",
       segment: "mercado",

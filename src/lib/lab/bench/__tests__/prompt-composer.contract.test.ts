@@ -382,7 +382,7 @@ describe("núcleo do compositor — determinismo e pureza", () => {
 
   it("exporta COMPOSER_VERSION como string estática da fase", () => {
     expect(typeof COMPOSER_VERSION).toBe("string");
-    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v1");
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v2");
   });
 
   it("o módulo é puro e sem IA (fonte): sem env, rede, provider ou supabase", () => {

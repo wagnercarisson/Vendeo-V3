@@ -35,6 +35,22 @@ A política `oferta` SHALL usar a instrução concisa: “Oferta: destaque o pre
 - **THEN** nenhuma posição fixa, coordenada ou regra de layout rígida é imposta
 - **AND** o modelo permanece livre para encontrar o melhor arranjo
 
+### Requirement: Rótulo comum do preço de venda é semanticamente neutro
+
+A serialização compartilhada do valor `discountedPriceText` SHALL usar o rótulo `Preço de venda`, sem alterar o valor numérico ou as demais linhas comerciais. O compositor SHALL identificar essa alteração comum como `48.2.4-prompt-composer-v2`. O rótulo é apenas um campo de dado neutro; a interpretação promocional, quando aplicável, é responsabilidade exclusiva da política Oferta existente, cuja versão e texto SHALL permanecer inalterados.
+
+#### Scenario: Destaque com preço único não recebe semântica de promoção pelo rótulo
+- **WHEN** Destaque compõe um produto com `priceCents=1999` e sem `originalPriceCents`
+- **THEN** o prompt contém `Preço de venda: R$ 19,99`
+- **AND** o prompt não contém `Preço promocional` nem instrução/versão Oferta
+- **AND** contém a instrução e versão Destaque existentes
+
+#### Scenario: Oferta mantém a instrução promocional própria
+- **WHEN** Oferta compõe os valores comerciais
+- **THEN** a linha serializada usa `Preço de venda` com os valores numéricos preservados
+- **AND** somente a política Oferta fornece a instrução promocional existente
+- **AND** o texto e versão da política Oferta permanecem inalterados
+
 ### Requirement: Política Produto orienta o foco no produto e o uso das referências
 
 A política `produto` SHALL orientar o produto como elemento principal, preservar fidelidade de aparência, embalagem e características e usar a imagem principal como protagonista. A instrução de imagem SHALL ser exatamente: “Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.” Referências auxiliares podem representar múltiplas representações, ângulos e variantes do produto anunciado; são opcionais e não têm garantia de aparição. O contrato técnico existente de limite, ordem e transporte permanece vigente. Isso não cria suporte a produtos independentes ou combos. A política SHALL NOT proibir absolutamente múltiplas representações nem declarar orientações comerciais, que pertencem às políticas de intenção cabíveis.

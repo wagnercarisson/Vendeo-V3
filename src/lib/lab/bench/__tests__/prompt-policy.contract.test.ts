@@ -6,7 +6,7 @@ import path from "node:path";
 import { BenchConfigRegistryError } from "../domain/config-registry";
 import { buildBenchCampaignSnapshot } from "../domain/campaign-snapshot";
 import { buildBenchExperimentalBriefing } from "../domain/experimental-briefing";
-import { PROMPT_BLOCK_LABELS, composePromptBlocks } from "../domain/prompt-composer";
+import { COMPOSER_VERSION, PROMPT_BLOCK_LABELS, composePromptBlocks } from "../domain/prompt-composer";
 import type { BenchBrandingContract } from "../domain/branding-service";
 import type { BenchConfig, BenchOffer, BenchProduct } from "../domain/schemas";
 import { ofertaPolicy } from "../domain/policies/oferta";
@@ -161,6 +161,15 @@ describe("políticas — resolução explícita e versionada", () => {
 
     expect(first).toEqual(second);
     expect(composeResolved()).toBe(composeResolved());
+  });
+
+  it("versiona a serialização neutra do preço de venda sem alterar a política Oferta", () => {
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v2");
+    expect(ofertaPolicy.version).toBe("48.2.6-oferta-v1");
+    expect(ofertaPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines)).toContain(
+      "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+    );
+    expect(composeResolved()).toContain(`Preço de venda: R$${NBSP}49,90`);
   });
 
   it("versiona a orientação da imagem principal e das adicionais em produto", () => {
@@ -335,7 +344,7 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       "",
       "[CONDIÇÕES COMERCIAIS]",
       `Preço original: R$${NBSP}99,90`,
-      `Preço promocional: R$${NBSP}49,90`,
+      `Preço de venda: R$${NBSP}49,90`,
       "Selo: 50% OFF",
       "Validade: até 31/12/2026",
       "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",

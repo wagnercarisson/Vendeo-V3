@@ -27,6 +27,7 @@
 - [ ] 4.5 Atualizar orientação de auxiliares para “As imagens auxiliares enriquecem a campanha; use-as sempre que possível.”; preservar protagonismo da principal, ordem/transporte e ausência de garantia de aparição.
 - [ ] 4.6 Testar contribuições/instruções versionadas e disjuntas das três intenções, inclusão/omissão de preço e texto de política; não inferir sucesso visual do modelo; confirmar Serviço/outros formatos continuam desabilitados e fail-closed.
 - [ ] 4.7 Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar somente Produto como `48.2.6-produto-v2`, preservando literalmente a instrução de liberdade do nome.
+- [ ] 4.8 Serializar `discountedPriceText` com rótulo neutro `Preço de venda`; versionar somente o compositor como `48.2.4-prompt-composer-v2`. Provar que Destaque com preço único preserva valor sem texto/versão Oferta, enquanto a semântica promocional permanece na instrução Oferta existente e inalterada.
 
 ## 5. Evidências e validação técnica
 

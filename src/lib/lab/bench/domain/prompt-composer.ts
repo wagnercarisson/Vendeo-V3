@@ -36,7 +36,7 @@ import type { BenchPromptContribution } from "./policies/types";
  */
 
 /** Versão estática do compositor — evidência do preflight (D20). */
-export const COMPOSER_VERSION = "48.2.4-prompt-composer-v1";
+export const COMPOSER_VERSION = "48.2.4-prompt-composer-v2";
 
 // ─── Blocos canônicos (travados — D19) ───────────────────────────────────────
 
@@ -122,7 +122,7 @@ function productLines(
 function commercialLines(briefing: BenchExperimentalBriefing): string[] {
   const lines: string[] = [];
   pushLine(lines, "Preço original", briefing.commercial.originalPriceText);
-  pushLine(lines, "Preço promocional", briefing.commercial.discountedPriceText);
+  pushLine(lines, "Preço de venda", briefing.commercial.discountedPriceText);
   pushLine(lines, "Selo", briefing.commercial.badge);
   pushLine(lines, "Validade", briefing.commercial.validity);
   return lines;
