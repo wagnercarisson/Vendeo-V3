@@ -27,7 +27,7 @@ progress:
 ## Current Position
 
 Phase: 48.2.6 (validacao-experimental-produto-intencoes-1-1) — EXECUTING
-Plan: 8 of 10 (Plans through 06 completed; next: Plan 07)
+Plan: 8 of 10 (Plans 01–07 complete; next: CHECKPOINT A in Plan 08)
 Checkpoints humanos: CHECKPOINT A aprovado em 2026-10-01 para readiness local; CHECKPOINT B aprovado com limitações/follow-ups em 2026-10-01. Sete gerações pagas foram manuais pelo usuário; nenhuma chamada de provider pelo executor. Gerações pagas adicionais nesta fase encerradas.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
