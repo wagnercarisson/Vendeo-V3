@@ -11,10 +11,8 @@ import type { BenchConfig } from "./schemas";
  *
  * Módulo **puro e sem IA** — sem I/O, sem variáveis de ambiente, sem provider e
  * sem client Supabase. Apenas conteúdo **estático e versionado**, chaveado pelo
- * **recorte multidimensional** (as dimensões governadas pelo
- * `config-registry.ts`). Hoje existe **somente** o perfil Oferta 1:1; outros
- * recortes futuros podem ganhar seu próprio padrão adicionando uma entrada ao
- * registry, **sem reescrever o módulo**.
+ * recorte dimensional existente (`config-registry.ts`). As três intenções
+ * Produto 1:1 compartilham o mesmo padrão neutro.
  *
  * ## Conteúdo apenas complementar
  *
@@ -34,7 +32,7 @@ import type { BenchConfig } from "./schemas";
  * Versão estável do prompt-base padrão da fase (evidência da geração — D14).
  * Identifica o perfil Oferta 1:1 deste recorte.
  */
-export const BENCH_DEFAULT_PROMPT_BASE_VERSION = "48.2.4-oferta-1-1-v1";
+export const BENCH_DEFAULT_PROMPT_BASE_VERSION = "48.2.6-produto-1-1-v1";
 
 // ─── Tipo do padrão ──────────────────────────────────────────────────────────
 
@@ -52,17 +50,13 @@ export interface BenchDefaultPromptBase {
  * hierarquia de oferta (preço/selo/validade/textos comerciais) nem o formato
  * 1:1, que vivem nas políticas.
  */
-const OFERTA_1_1_PROMPT_BASE_CONTENT = [
-  "Acabamento profissional e refinado, com atenção ao resultado final da peça.",
-  "Composição visual coerente e equilibrada entre todos os elementos.",
-  "Evitar elementos decorativos que poluam a peça ou desviem a atenção.",
-  "Manter unidade estética: a peça deve parecer um trabalho único e bem resolvido.",
-].join("\n");
+const BENCH_DEFAULT_PROMPT_BASE_CONTENT =
+  "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.";
 
 /** Padrão do recorte Oferta 1:1 (conteúdo estático e versionado). */
 export const BENCH_DEFAULT_PROMPT_BASE: BenchDefaultPromptBase = {
   version: BENCH_DEFAULT_PROMPT_BASE_VERSION,
-  content: OFERTA_1_1_PROMPT_BASE_CONTENT,
+  content: BENCH_DEFAULT_PROMPT_BASE_CONTENT,
 };
 
 // ─── Resolução por recorte multidimensional ──────────────────────────────────
@@ -83,9 +77,12 @@ function recorteSignature(config: BenchPromptBaseConfig): string {
  * contém **apenas** o perfil Oferta 1:1 (extensível para outros recortes sem
  * reescrever o módulo).
  */
-const BENCH_PROMPT_BASE_REGISTRY: ReadonlyMap<string, BenchDefaultPromptBase> = new Map([
-  [recorteSignature(DEFAULT_BENCH_CONFIG), BENCH_DEFAULT_PROMPT_BASE],
-]);
+const BENCH_PROMPT_BASE_REGISTRY: ReadonlyMap<string, BenchDefaultPromptBase> = new Map(
+  (["oferta", "destaque", "exclusivo"] as const).map((intencao) => [
+    recorteSignature({ ...DEFAULT_BENCH_CONFIG, intencao }),
+    BENCH_DEFAULT_PROMPT_BASE,
+  ]),
+);
 
 // ─── Erro determinístico ─────────────────────────────────────────────────────
 

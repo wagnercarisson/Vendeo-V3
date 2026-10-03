@@ -124,11 +124,12 @@ describe("prompt-base — carregamento e resolução por configuração", () => 
     expect(base.version).toBe(BENCH_DEFAULT_PROMPT_BASE_VERSION);
     expect(base.content).toBe(BENCH_DEFAULT_PROMPT_BASE.content);
     expect(base.content.trim().length).toBeGreaterThan(0);
+    expect(base.content).toBe("Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.");
   });
 
   it("exporta uma versão estável da fase (string)", () => {
     expect(typeof BENCH_DEFAULT_PROMPT_BASE_VERSION).toBe("string");
-    expect(BENCH_DEFAULT_PROMPT_BASE_VERSION).toBe("48.2.4-oferta-1-1-v1");
+    expect(BENCH_DEFAULT_PROMPT_BASE_VERSION).toBe("48.2.6-produto-1-1-v1");
   });
 
   it("é chaveado pelo recorte multidimensional (ignora modelo/qualidade)", () => {
@@ -149,8 +150,15 @@ describe("prompt-base — carregamento e resolução por configuração", () => 
     expect(resolveBenchDefaultPromptBase(CONFIG)).toEqual(resolveBenchDefaultPromptBase(CONFIG));
   });
 
+  it.each(["oferta", "destaque", "exclusivo"] as const)("intenção %s resolve o mesmo objeto neutro", (intencao) => {
+    const base = resolveBenchDefaultPromptBase({ ...DEFAULT_BENCH_CONFIG, intencao });
+    expect(base).toBe(BENCH_DEFAULT_PROMPT_BASE);
+    expect(base.version).toBe(BENCH_DEFAULT_PROMPT_BASE_VERSION);
+    expect(base.content).toBe("Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.");
+  });
+
   it("recorte sem padrão falha de forma determinística", () => {
-    const unsupported = { ...DEFAULT_BENCH_CONFIG, intencao: "destaque" };
+    const unsupported = { ...DEFAULT_BENCH_CONFIG, tipoConteudo: "servico" };
 
     let error: unknown;
     try {
@@ -187,6 +195,9 @@ describe("prompt-base — conteúdo apenas complementar", () => {
 
     for (const term of [...ofertaHierarchy, ...formatoOrientations, estruturaOrientation]) {
       expect(content, `padrão não deve repetir "${term}"`).not.toContain(term);
+    }
+    for (const term of ["oferta", "destaque", "exclusivo", "preço", "preco"]) {
+      expect(content).not.toContain(term);
     }
   });
 });
