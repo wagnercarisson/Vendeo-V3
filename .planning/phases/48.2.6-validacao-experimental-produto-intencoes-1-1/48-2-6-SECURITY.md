@@ -34,4 +34,4 @@ Revisão proporcional aos limites aprovados no OpenSpec e à cadeia implementada
 
 ## Risco residual
 
-Nenhuma ameaça `high` conhecida permanece aberta neste corte; `threats_open: 0`. O destino histórico dos quatro fetches permanece não determinado e é mantido como ressalva factual, sem ser classificado como acesso remoto confirmado. Os testes corrigidos previnem nova tentativa de fetch pela cadeia de pricing desses contratos. CHECKPOINT A ainda requer aprovação humana; esta revisão não autoriza paid UAT.
+Nenhuma ameaça `high` conhecida permanece aberta neste corte; `threats_open: 0`. O destino histórico dos quatro fetches permanece não determinado e é mantido como ressalva factual, sem ser classificado como acesso remoto confirmado. Os testes corrigidos previnem nova tentativa de fetch pela cadeia de pricing desses contratos. CHECKPOINT A foi aprovado em 2026-10-03 para readiness local e documentação do Plano 09; a decisão não autoriza paid UAT, provider ou geração.

@@ -48,4 +48,4 @@ O teste amplo anterior ao isolamento reportou quatro `fetch failed` no `bench-ex
 
 ## Conclusão
 
-Todos os gates específicos do Plano 07 passaram após isolamento offline. Não há falha de teste ou ameaça `high` conhecida que bloqueie a submissão do CHECKPOINT A. Nenhum gate autoriza paid UAT; aprovação humana ainda é necessária e não equivale a autorização de gasto.
+Todos os gates específicos do Plano 07 passaram após isolamento offline. CHECKPOINT A foi aprovado em 2026-10-03 apenas para a readiness local/documentação do Plano 09. Isso não autoriza paid UAT, provider, geração, leitura remota nem o Plano 10 nesta continuação.
