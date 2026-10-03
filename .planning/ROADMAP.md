@@ -188,7 +188,7 @@ Plans:
 
 **Nome:** Validação experimental Produto — intenções 1:1
 
-**Status:** Em execução sequencial; Planos 01–05 executados/summarized (5/10); CHECKPOINT A e UAT não iniciados; nenhuma chamada/provider/geração paga.
+**Status:** Em execução sequencial; Planos 01–07 executados/summarized (7/10); gates técnicos e STRIDE registrados, CHECKPOINT A pendente; nenhuma chamada/provider/geração paga.
 
 **Planejamento:** 10 planos, no limite superior orientativo do guia; a sequência mantém os gates de segurança, CHECKPOINT A, preparação documental e CHECKPOINT B como barreiras distintas, sem ampliar a change.
 
