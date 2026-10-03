@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-03T15:45:00.000Z"
+last_updated: "2026-10-03T15:51:47.147Z"
 progress:
   total_phases: 43
   completed_phases: 39
@@ -27,7 +27,7 @@ progress:
 ## Current Position
 
 Phase: 48.2.6 (validacao-experimental-produto-intencoes-1-1) — EXECUTING
-Plan: 9 of 10 (Plans 01–08 complete; Plan 09 limited to local readiness and documentation; Plan 10 excluded from this continuation)
+Plan: 9 of 10 (Plans 01–08 complete; Plan 09 Task 1 blocked pending local Supabase status; Plan 10 excluded from this continuation)
 Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B não iniciado. Sem geração/provider nesta fase.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
@@ -145,7 +145,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - Última sessão: 2026-10-02 — security review F48.2.5 concluída: retroactive STRIDE, 7 ameaças fechadas, 0 abertas; ver `48-2-5-SECURITY.md`. UAT GSD 5/5 PASS, com acknowledged gap dos 65 critérios `pending` aceitos; OpenSpec verificado/sincronizado/arquivado.
 - Último trabalho: NovaTek low: Flare/Image2/Sunburst; Adega low: Image2/Flare/Sunburst; Adega exploratory Sunburst medium sem hipótese prévia. Platform total user-confirmed US$0,29; calculated local US$0,288978; individual US$0,06 confirmed only medium. No executor provider calls; no new paid generation.
 - Último quick: `260929-rtl` — **concluída**. Fidelidade de `identity_state` da bancada (Tasks 1–3: import fail-closed, resolver puro, contrato/snapshot/API) + **correção de idempotência da importação** (`ensureContentAddressedObject`: precheck `exists` fail-closed; referenciado/criado/reutilizado; cleanup remove só criados; `uploadBrandingObject` removido). Testes de contrato (79), integrado local (2 importações consecutivas) e suíte lab/architecture guard verdes; produção intocada; custo **US$ 0**. Reimportação autorizada idempotente: NovaTek `visual_signature` (1 objeto reutilizado) e Adega `logo` (6 reutilizados), 0 criados, sem duplicação/órfãos.
-- Próxima ação: executar somente a readiness local e documentação do Plano 09 da F48.2.6. CHECKPOINT A aprovado para esse escopo restrito; não fazer geração/provider/read remota e não iniciar Plano 10 nesta continuação.
+- Próxima ação: aguardar o responsável disponibilizar o stack Supabase local e informar; então retomar somente o Task 1 de readiness do Plano 09. `supabase status -o env` retornou exit 1 sem endpoints (causa específica não determinada); nenhum acesso remoto foi feito. CHECKPOINT A aprovado apenas para escopo local/documental; sem provider, leitura remota, geração ou Plano 10.
 - Execução 48-2-6-06 concluída em 2026-10-02: resolver de política indexado por dimensão/valor e três intenções Produto 1:1 habilitadas; prompt-base neutro idêntico por referência; testes focados 134/134, typecheck/lint verdes. Nenhuma geração/provider call executada; suíte ampliada teve bloqueios/timeout descritos em `48-2-6-06-SUMMARY.md`.
 - Resume file: `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md` (GSD UAT 5/5 PASS; 65 critérios pending reconhecidos; security review verificada, 7/7 fechados, 0 abertos em `48-2-5-SECURITY.md`).
 

@@ -4,9 +4,9 @@
   "phase": "48.2.6",
   "phase_name": "validacao-experimental-produto-intencoes-1-1",
   "phase_dir": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1",
-  "status": "plan09_local_readiness_documentation",
-  "phase_status": "plans_01_through_08_complete_checkpoint_a_approved",
-  "plan": "48-2-6-09-local-readiness-docs",
+  "status": "plan09_local_readiness_blocked",
+  "phase_status": "plans_01_through_08_complete_plan09_local_stack_unverified",
+  "plan": "48-2-6-09-task1-local-readiness",
   "openspec_source": "fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
   "openspec_archive": {
     "path": "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
@@ -30,11 +30,11 @@
     "phase": "48.2.6",
     "plans": ["48-2-6-01", "48-2-6-02", "48-2-6-03", "48-2-6-04", "48-2-6-05", "48-2-6-06", "48-2-6-07", "48-2-6-08", "48-2-6-09", "48-2-6-10"],
     "plan_checker": "passed",
-    "execution": "plans_01_through_08_complete",
+    "execution": "plans_01_through_08_complete_plan09_task1_blocked",
     "implementation": "plans_01_through_08_complete",
     "checkpoint_a": "approved_local_readiness_only",
     "checkpoint_b": "not_started",
-    "next_action": "Executar somente readiness local e documentos do Plano 09; sem provider real, leitura remota, geração paga ou Plano 10."
+    "next_action": "Aguardar o responsável disponibilizar o stack Supabase local; retomar somente o Task 1 do Plano 09, sem provider real, leitura remota, geração paga ou Plano 10."
   },
   "previous_phase": {
     "phase": "48.2.5",
@@ -109,6 +109,7 @@
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-08-PLAN.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-08-SUMMARY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-A-CHECKPOINT.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-UAT-READINESS.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-GATES.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-SECURITY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-09-PLAN.md",
@@ -122,9 +123,15 @@
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-CLOSEOUT-RECONCILIATION.md",
     "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/"
   ],
-  "blockers": [],
-  "human_actions_pending": [],
+  "blockers": ["Plan 09 local readiness: supabase status -o env returned exit 1 and no endpoints; specific cause undetermined."],
+  "human_actions_pending": [
+    {
+      "action": "Disponibilizar o stack Supabase local e informar para retomar a readiness do Plano 09",
+      "context": "CHECKPOINT A aprovado apenas para readiness local/documentos. Não iniciar UAT/runs, provider, leitura remota ou Plano 10.",
+      "blocking": true
+    }
+  ],
   "uncommitted_files": [".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-01-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-02-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-03-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-04-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-05-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-07-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-08-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-RESEARCH.md", "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/design.md", "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/proposal.md", "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/specs/lab-bench-intent-validation/spec.md", "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/tasks.md"],
-  "next_action": "Executar somente a readiness local e documentos do Plano 09; parar antes do Plano 10. Sem provider real, leitura remota ou geração paga; CHECKPOINT B continua não iniciado.",
-  "context_notes": "F48.2.6: Planos 48-2-6-01 a 48-2-6-08 concluídos e summarizados (8/10). CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B não iniciado. Plano 10 fora do escopo desta continuação. Nenhuma geração paga/provider real/leitura remota autorizada. A tentativa histórica de fetch nos testes do Plano 06 permanece com destino não determinado; os testes foram isolados por mock de pricing e guard de fetch e passaram offline. Checkpoints A/B de F48.2.5 citados em STATE são históricos e não são decisões da F48.2.6."
+  "next_action": "Aguardar o responsável disponibilizar o stack Supabase local e retomar somente o Task 1 de readiness do Plano 09. Sem provider real, leitura remota, geração paga ou Plano 10; CHECKPOINT B continua não iniciado.",
+  "context_notes": "F48.2.6: Planos 48-2-6-01 a 48-2-6-08 concluídos e summarizados (8/10). CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B não iniciado. A tentativa local supabase status -o env retornou exit 1 sem endpoints; causa específica não determinada; nenhuma leitura remota foi feita. Readiness está registrada como blocked em 48-2-6-UAT-READINESS.md. Retomar após o responsável disponibilizar stack Supabase local, somente para readiness/documentos do Plano 09. Plano 10 fora do escopo desta continuação. Nenhuma geração paga/provider real/leitura remota autorizada. A tentativa histórica de fetch nos testes do Plano 06 permanece com destino não determinado; a suíte foi corrigida para pricing determinístico e guard de fetch e reexecução passou offline. Checkpoints A/B de F48.2.5 citados em STATE são históricos e não são decisões da F48.2.6."
 }
