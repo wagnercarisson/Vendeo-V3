@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-02T00:00:00-03:00",
+  "timestamp": "2026-10-03T00:00:00-03:00",
   "phase": "48.2.6",
   "phase_name": "validacao-experimental-produto-intencoes-1-1",
   "phase_dir": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1",
-  "status": "planning_review",
-  "phase_status": "plans_verified_execution_not_started",
-  "plan": "48-2-6-01-through-48-2-6-10",
+  "status": "checkpoint_a_pending_human_decision",
+  "phase_status": "plans_01_through_07_complete_checkpoint_a_pending",
+  "plan": "48-2-6-08-checkpoint-a",
   "openspec_source": "fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
   "openspec_archive": {
     "path": "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
@@ -30,11 +30,11 @@
     "phase": "48.2.6",
     "plans": ["48-2-6-01", "48-2-6-02", "48-2-6-03", "48-2-6-04", "48-2-6-05", "48-2-6-06", "48-2-6-07", "48-2-6-08", "48-2-6-09", "48-2-6-10"],
     "plan_checker": "passed",
-    "execution": "not_started",
-    "implementation": "not_started",
-    "checkpoint_a": "not_started",
+    "execution": "plans_01_through_07_complete",
+    "implementation": "plans_01_through_07_complete",
+    "checkpoint_a": "presented_waiting_human_decision",
     "checkpoint_b": "not_started",
-    "next_action": "Usuário revisa planos; não iniciar execução até decisão explícita."
+    "next_action": "Aguardar decisão literal do usuário para CHECKPOINT A. Após aprovação, limitar a retomada à readiness local e documentos do Plano 09; sem provider, leitura remota ou geração paga."
   },
   "previous_phase": {
     "phase": "48.2.5",
@@ -50,9 +50,9 @@
     "openspec_archive": "openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1"
   },
   "next_phase_sequence": ["48.2.6"],
-  "resolved_plans": [],
+  "resolved_plans": ["48-2-6-01", "48-2-6-02", "48-2-6-03", "48-2-6-04", "48-2-6-05", "48-2-6-06", "48-2-6-07"],
   "checkpoints": {
-    "checkpoint_a": "not_started",
+    "checkpoint_a": "presented_waiting_human_decision",
     "checkpoint_b": "not_started"
   },
   "final_state": {
@@ -91,13 +91,23 @@
   },
   "artifacts": [
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-RESEARCH.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-01-BASELINE.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-01-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-01-SUMMARY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-02-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-02-SUMMARY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-03-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-03-SUMMARY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-04-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-04-SUMMARY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-05-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-05-SUMMARY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-06-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-06-SUMMARY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-07-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-07-SUMMARY.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-GATES.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-SECURITY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-08-PLAN.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-09-PLAN.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-10-PLAN.md",
@@ -113,12 +123,12 @@
   "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Revisar planos F48.2.6 antes de autorizar início de execução",
-      "context": "Plan checker passou; implementação, CHECKPOINT A/B, UAT e provider continuam não iniciados.",
+      "action": "Registrar decisão explícita no CHECKPOINT A da F48.2.6",
+      "context": "Planos 01–07 concluídos; gates e SECURITY prontos. CHECKPOINT B não iniciado. Checkpoints aprovados citados em STATE pertencem historicamente à F48.2.5.",
       "blocking": true
     }
   ],
-  "uncommitted_files": [".planning/STATE.md", ".planning/ROADMAP.md", ".planning/HANDOFF.json", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-RESEARCH.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-*-PLAN.md"],
-  "next_action": "Revisar os planos F48.2.6; aguardar autorização explícita antes de executar. CHECKPOINT A é futuro e não autoriza geração paga.",
-  "context_notes": "F48.2.5 está concluída: oito planos/summaries, 37 tasks, UAT GSD 5/5 PASS e security review verificada 7/7 fechadas, 0 abertas em 48-2-5-SECURITY.md (2026-10-02); a antiga ação /gsd-secure-phase 48.2.5 foi resolvida. Os 65 critérios pending permanecem como limitação aceita. F48.2.6 tem dez planos aprovados pelo plan-checker e está em revisão; implementação, CHECKPOINT A/B, UAT, provider e geração não iniciados. Nenhuma aprovação operacional ou custo foi inferido."
+  "uncommitted_files": [".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-01-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-02-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-03-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-04-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-05-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-07-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-08-PLAN.md", ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-RESEARCH.md", "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/design.md", "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/proposal.md", "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/specs/lab-bench-intent-validation/spec.md", "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1/tasks.md"],
+  "next_action": "Aguardar decisão explícita do usuário no CHECKPOINT A. Se aprovada, seguir somente com readiness local e documentos do Plano 09, sem provider real, leitura remota ou geração paga; CHECKPOINT B permanece não iniciado.",
+  "context_notes": "F48.2.6: Planos 48-2-6-01 a 48-2-6-07 concluídos e summarizados (7/10). CHECKPOINT A apresentado e pendente de decisão; CHECKPOINT B não iniciado. Após a aprovação solicitada pelo usuário, somente readiness local/documentos do Plano 09 estão no escopo. Não executar Planos 09–10 antes da aprovação; após ela, não executar geração/provider real nem leitura remota. A tentativa histórica de fetch nos testes do Plano 06 permanece com destino não determinado; a suíte foi corrigida para pricing determinístico e guard de fetch, e a reexecução passou offline. Checkpoints A/B de F48.2.5 em STATE são históricos e não se aplicam à F48.2.6."
 }

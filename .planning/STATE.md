@@ -5,11 +5,11 @@ milestone_name: — Lançamento Externo Controlado ◆
 status: complete
 last_updated: "2026-10-03T00:49:16.541Z"
 progress:
-  total_phases: 1
-  completed_phases: 0
-  total_plans: 10
-  completed_plans: 7
-  percent: 0
+  total_phases: 43
+  completed_phases: 39
+  total_plans: 344
+  completed_plans: 335
+  percent: 97
 ---
 
 # Project State
@@ -28,7 +28,7 @@ progress:
 
 Phase: 48.2.6 (validacao-experimental-produto-intencoes-1-1) — EXECUTING
 Plan: 8 of 10 (Plans 01–07 complete; next: CHECKPOINT A in Plan 08)
-Checkpoints humanos: CHECKPOINT A aprovado em 2026-10-01 para readiness local; CHECKPOINT B aprovado com limitações/follow-ups em 2026-10-01. Sete gerações pagas foram manuais pelo usuário; nenhuma chamada de provider pelo executor. Gerações pagas adicionais nesta fase encerradas.
+Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A foi apresentado e aguarda decisão humana explícita; CHECKPOINT B não iniciado. Nenhuma geração/provider desta fase.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
 **Correção de UAT (2026-09-30):** descoberto acoplamento indevido entre aprovação do prompt e configuração de execução. Corrigido: `preset`/`modelo`/`qualidade` **não** invalidam `promptCompiled`/`promptApproved` nem exigem nova composição — invalidam **somente** estimativa e confirmação financeira; o backend (`assertPreflightEvidenceMatches`) compara apenas a **evidência textual** (`policyVersions`/`promptBaseVersion`/`composerVersion`/`identityReference`) e valida/persiste `presetId`/`modelo`/`qualidade` como configuração de execução; testes provam o **mesmo prompt aprovado byte a byte com dois presets/modelos distintos** (sem provider). Commits `7e6220d5` (código+testes), `85dc272b` (OpenSpec), `0ed7a7ca` (planos/CONTEXT/UI-SPEC/UAT). Gates verdes: typecheck/lint/build (76/76) e suíte completa (`397 passed | 1 skipped`; `4585 passed | 2 skipped`, só a exceção externa `legal-document-versions.test.ts`).
