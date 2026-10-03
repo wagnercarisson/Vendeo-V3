@@ -5,12 +5,13 @@ A F48.2.5 estabilizou o pipeline experimental de Produto + Oferta 1:1, mas a ban
 ## What Changes
 
 - Enforce a matriz preço × intenção no formulário da bancada, schemas/validações e backend por uma única autoridade pura em `src/lib/lab/bench/domain/`; preservar exports compatíveis de `form-rules.ts` por delegação, exigir nova escolha explícita quando edição de preço invalida a intenção e manter hook/formulário produtivos intocados.
-- Habilitar políticas versionadas de Oferta, Destaque e Exclusivo somente para Produto 1:1, com combinações não suportadas fail-closed antes do provider.
+- Habilitar políticas versionadas de Oferta, Destaque e Exclusivo somente para Produto 1:1, com combinações não suportadas fail-closed antes do provider; ajustar intrafase Exclusivo para a versão `48.2.6-exclusivo-v2` com a instrução literal definida no contrato.
 - Validar validade exclusivamente em Oferta na UI e backend; incompatibilidade exige regularização explícita sem descartar validade silenciosamente.
 - Usar instruções concisas: nome completo sem alterar palavras; descrição opcional adaptável ou omitida preservando significado; informações obrigatórias integrais.
 - Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar somente a política Produto como `48.2.6-produto-v2`; manter a liberdade original de preservação do nome.
 - Usar orientação curta para imagens auxiliares, preservando os contratos técnicos existentes por referência.
 - Conduzir UAT manual das três intenções com `gpt-image-2.5-sunburst` em `medium`, registrar evidências/custos/limitações e congelar candidato documental sem promoção.
+- Preparar comparação manual da política Exclusivo v1 × v2 com os mesmos dados/imagem e Sunburst medium, preservando integralmente a tentativa v1 e aguardando revisão/autorizações humanas antes de gerar.
 
 ## Capabilities
 

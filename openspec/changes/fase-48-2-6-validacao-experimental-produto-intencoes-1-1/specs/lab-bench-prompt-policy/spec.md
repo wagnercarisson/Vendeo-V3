@@ -137,7 +137,7 @@ A composição determinística SHALL orientar português correto e natural, evit
 
 ### Requirement: Políticas Destaque e Exclusivo usam instruções comerciais concisas
 
-A política versionada Destaque SHALL usar: “Destaque: priorize a apresentação do produto; preço informado é secundário.” A política versionada Exclusivo SHALL usar: “Exclusivo: valorize a apresentação sem preço. Preserve os selos informados; não invente atributos nem alegações de exclusividade, escassez ou edição limitada.” Selo explicitamente selecionado pelo usuário é dado de entrada e não constitui alegação inventada pelo diretor; as listas/permissões de selos existentes permanecem inalteradas. As orientações SHALL NOT ser duplicadas em Produto, política geral ou prompt-base.
+A política versionada Destaque SHALL usar: “Destaque: priorize a apresentação do produto; preço informado é secundário.” A política Exclusivo `48.2.6-exclusivo-v2` SHALL usar exatamente: “Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações.” A política SHALL NOT acrescentar qualquer outra orientação ou alterar as listas/permissões de selos existentes. Selos explicitamente selecionados pelo usuário são dados de entrada. As orientações SHALL NOT ser duplicadas em Produto, política geral ou prompt-base.
 
 #### Scenario: Destaque prioriza produto e torna preço secundário
 - **WHEN** intenção é Destaque
@@ -146,9 +146,20 @@ A política versionada Destaque SHALL usar: “Destaque: priorize a apresentaç�
 
 #### Scenario: Exclusivo não cria alegações ou atributos
 - **WHEN** intenção é Exclusivo
-- **THEN** instrução corresponde exatamente ao texto conciso definido
-- **AND** não autoriza inventar exclusividade, escassez, edição limitada ou atributos
-- **AND** selo explicitamente selecionado permanece dado do usuário
+- **THEN** usa exatamente a instrução `Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações.`
+- **AND** a versão resolvida é `48.2.6-exclusivo-v2`
+- **AND** nenhum texto adicional é acrescentado pela política
+- **AND** as opções/permissões existentes de selos não são alteradas
+
+#### Scenario: Exclusivo sem selo não inventa selo
+- **WHEN** Exclusivo é composto sem selo
+- **THEN** não é inventado nem serializado um selo
+- **AND** a instrução v2 permanece literal
+
+#### Scenario: Exclusivo preserva selos permitidos
+- **WHEN** o usuário informa `Exclusivo` ou `Edição Limitada`, valores já permitidos
+- **THEN** cada selo informado é preservado na composição
+- **AND** nenhum novo valor ou permissão de selo é criado
 
 #### Scenario: Orientações são disjuntas
 - **WHEN** políticas de Produto, intenção e integridade geral são compostas

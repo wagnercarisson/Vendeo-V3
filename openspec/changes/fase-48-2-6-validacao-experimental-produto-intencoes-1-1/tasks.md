@@ -21,13 +21,14 @@
 ## 4. Políticas e prompt-base
 
 - [ ] 4.1 Habilitar apenas Produto + 1:1 com políticas versionadas Oferta, Destaque e Exclusivo nos registries/config da bancada.
-- [ ] 4.2 Manter Oferta; definir Destaque com apresentação do produto e preço secundário informado; Exclusivo com apresentação sem preço e sem alegações/atributos inventados.
+- [ ] 4.2 Manter Oferta; definir Destaque com apresentação do produto e preço secundário informado; Exclusivo v2 com a frase literal aprovada, sem alterar opções/permissões de selos.
 - [ ] 4.3 Usar o rótulo `Nome do produto obrigatório: {nome}`; preservar nome completo sem alterar palavras (capitalização, quebras de linha e arranjo livres); descrição opcional adaptável/melhorável/omitível sem mudar significado; texto obrigatório integral; manter revisão textual e `keep_exactly`. A mudança do rótulo versiona somente Produto como `48.2.6-produto-v2`.
 - [ ] 4.4 Fazer ajuste pequeno e neutro no prompt-base reutilizável, sem regra específica de intenção; atualizar golden/versões sem alterar núcleo neutro.
 - [ ] 4.5 Atualizar orientação de auxiliares para “As imagens auxiliares enriquecem a campanha; use-as sempre que possível.”; preservar protagonismo da principal, ordem/transporte e ausência de garantia de aparição.
 - [ ] 4.6 Testar contribuições/instruções versionadas e disjuntas das três intenções, inclusão/omissão de preço e texto de política; não inferir sucesso visual do modelo; confirmar Serviço/outros formatos continuam desabilitados e fail-closed.
 - [ ] 4.7 Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar somente Produto como `48.2.6-produto-v2`, preservando literalmente a instrução de liberdade do nome.
 - [ ] 4.8 Serializar `discountedPriceText` com rótulo neutro `Preço de venda`; versionar somente o compositor como `48.2.4-prompt-composer-v2`. Provar que Destaque com preço único preserva valor sem texto/versão Oferta, enquanto a semântica promocional permanece na instrução Oferta existente e inalterada.
+- [ ] 4.9 Versionar somente a política Exclusivo para `48.2.6-exclusivo-v2`; testar composição sem selo e com cada selo já permitido, incluindo `Exclusivo` e `Edição Limitada`, mantendo as opções/permissões inalteradas.
 
 ## 5. Evidências e validação técnica
 
@@ -40,6 +41,6 @@
 
 - [ ] 6.1 **CHECKPOINT A — responsável:** revisar matriz, políticas, validade exclusiva de Oferta, preservação de contratos de selos, threat model e gates antes de qualquer geração paga.
 - [ ] 6.2 Após CHECKPOINT A aprovado, usuário prepara UAT local e confirma financeiramente cada execução de forma individual; nenhuma execução é tarefa autônoma.
-- [ ] 6.3 **CHECKPOINT B — usuário:** avaliar manualmente Oferta, Destaque e Exclusivo quanto a produto/embalagem, nome, textos obrigatórios, condições comerciais, qualidade comercial, custo e latência; registrar dados ausentes como `pending`; permitir encerramento com limitações somente com aceitação explícita e lacunas/follow-ups enumerados.
+- [ ] 6.3 **CHECKPOINT B — usuário:** avaliar manualmente Oferta, Destaque e Exclusivo quanto a produto/embalagem, nome, textos obrigatórios, condições comerciais, qualidade comercial, custo e latência; para Exclusivo, preservar a tentativa/evidência v1 e comparar v1 × v2 com os mesmos dados/imagem e Sunburst medium, variando somente a política; registrar dados ausentes como `pending`; permitir encerramento com limitações somente com aceitação explícita e lacunas/follow-ups enumerados.
 - [ ] 6.4 Congelar pacote candidato documental ligado aos runs, com versões, custo/fonte, latência, avaliações, limitações e decisão humana; não promover para produção.
 - [ ] 6.5 Executor registra resultado em tracking de forma não destrutiva conforme UAT; entrega para revisão. Somente responsável executa `/opsx-verify`, `/opsx-sync` e `/opsx-archive`.

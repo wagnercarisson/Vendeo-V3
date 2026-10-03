@@ -38,7 +38,11 @@ Alternativa rejeitada: reescrever silenciosamente intenção no servidor. A esco
 
 ### D3 — Políticas curtas por intenção
 
-Registrar políticas/version para as três intenções nos registries existentes, habilitadas somente em Produto + 1:1. Instruções finais concisas estão nos deltas: Oferta destaca preço por e mantém preço de secundário; Destaque prioriza apresentação e preço informado secundário; Exclusivo valoriza apresentação sem preço e não inventa atributos/alegações. Selos mantêm exatamente listas e permissões existentes; selo escolhido pelo usuário é dado de entrada. Validade informada em Oferta continua no prompt como dado comercial; regra de aceitação por intenção é enforcement UI/backend e não explicação ao modelo. A regra geral e Produto não duplicam orientações comerciais.
+Registrar políticas/version para as três intenções nos registries existentes, habilitadas somente em Produto + 1:1. Instruções finais concisas estão nos deltas: Oferta destaca preço por e mantém preço de secundário; Destaque prioriza apresentação e preço informado secundário; Exclusivo v2 usa literalmente “Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações.” Selos mantêm exatamente listas e permissões existentes; selo escolhido pelo usuário é dado de entrada. Validade informada em Oferta continua no prompt como dado comercial; regra de aceitação por intenção é enforcement UI/backend e não explicação ao modelo. A regra geral e Produto não duplicam orientações comerciais.
+
+#### D3.1 — Ajuste intrafase Exclusivo v2 e preservação da tentativa v1
+
+A versão atual da política Exclusivo SHALL ser `48.2.6-exclusivo-v2` e conter somente a instrução literal aprovada. A evidência e a decisão do usuário sobre a primeira arte Exclusivo sob v1 permanecem preservadas, sem sobrescrever a tentativa anterior. A comparação preparada v1 × v2 muda somente a versão da política: mesmos dados, mesma imagem e `gpt-image-2.5-sunburst` `medium`. Não executar nova geração até revisão humana e confirmação financeira individual para essa tentativa.
 
 Alternativa rejeitada: ramificações no compositor neutro ou no prompt-base, que duplicariam decisões de política.
 

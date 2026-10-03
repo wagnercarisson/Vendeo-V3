@@ -25,6 +25,14 @@ A validação experimental SHALL cobrir somente Produto 1:1 e Oferta, Destaque e
 - **THEN** usa `gpt-image-2.5-sunburst` em `medium` inicialmente
 - **AND** não inclui comparação entre modelos
 
+#### Scenario: Comparação manual preserva Exclusivo v1 e varia somente a política
+- **WHEN** o usuário prepara a comparação da primeira arte Exclusivo v1 com uma tentativa v2
+- **THEN** a evidência/decisão v1 permanece imutável e preservada
+- **AND** dados, imagem e `gpt-image-2.5-sunburst` `medium` permanecem iguais
+- **AND** somente a versão/texto da política Exclusivo muda
+- **AND** nenhuma nova geração é iniciada sem revisão humana e confirmação financeira individual
+- **AND** a avaliação visual pode permanecer inconclusiva até a comparação manual efetiva
+
 #### Scenario: Encerramento com limitações é aceito sem alterar pendências
 - **WHEN** usuário aprova CHECKPOINT B apesar de critérios `pending`
 - **THEN** aceita explicitamente limitações enumeradas e follow-ups
