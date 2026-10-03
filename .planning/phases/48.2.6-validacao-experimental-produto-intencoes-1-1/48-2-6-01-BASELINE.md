@@ -3,6 +3,8 @@
 ## Identificação
 
 - **BASE_SHA:** `5fb863e91f42e5daa218f5918f0b78afa31ec0c8`
+- **Machine-readable BASE_SHA:**
+  `BASE_SHA: 5fb863e91f42e5daa218f5918f0b78afa31ec0c8`
 - **Branch:** `feature/fase-48-2-6-validacao-experimental-produto`
 - **HEAD no registro:** igual ao BASE_SHA.
 - **Working tree inicial da execução:** alterações documentais de OpenSpec/GSD revisadas pelo responsável; nenhuma alteração funcional da fase.
