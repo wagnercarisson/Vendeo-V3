@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-03T19:10:00.000Z",
+  "timestamp": "2026-10-03T19:48:25.396Z",
   "phase": "48.2.6",
   "phase_name": "validacao-experimental-produto-intencoes-1-1",
   "phase_dir": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1",
-  "status": "plan09_complete_waiting_human_review_of_produto_v2_label_and_uat",
+  "status": "plan09_complete_waiting_human_review_of_spotlight_prompt_before_generation",
   "phase_status": "plans_01_through_09_complete_plan10_not_started",
   "plan": "48-2-6-10-not-started",
   "openspec_source": "fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
@@ -128,17 +128,19 @@
     ".planning/quick/261003-ltf-f48-2-6-alterar-somente-o-r-tulo-do-nome/261003-ltf-PLAN.md",
     ".planning/quick/261003-ltf-f48-2-6-alterar-somente-o-r-tulo-do-nome/261003-ltf-SUMMARY.md",
     ".planning/quick/261003-mbr-corrigir-o-registro-uat-documental-de-of/261003-mbr-PLAN.md",
-    ".planning/quick/261003-mbr-corrigir-o-registro-uat-documental-de-of/261003-mbr-SUMMARY.md"
+    ".planning/quick/261003-mbr-corrigir-o-registro-uat-documental-de-of/261003-mbr-SUMMARY.md",
+    ".planning/quick/261003-mne-corrigir-a-resolu-o-da-inten-o-nas-rotas/261003-mne-PLAN.md",
+    ".planning/quick/261003-mne-corrigir-a-resolu-o-da-inten-o-nas-rotas/261003-mne-SUMMARY.md"
   ],
-  "blockers": ["Aguardar revisão humana do rótulo Produto v2 e registro UAT antes de qualquer nova tentativa manual."],
+  "blockers": ["Aguardar revisão humana do texto recomposto de Destaque antes de qualquer geração."],
   "human_actions_pending": [
     {
-      "action": "Revisar rótulo Produto v2 e registro UAT antes de uma nova tentativa manual",
-      "context": "Planos 01–09 completos. Comparação proposta (mesmos dados/imagem, Sunburst medium, somente rótulo) não está autorizada nem executada. Plano 10 e CHECKPOINT B permanecem não iniciados; sem provider/run/leitura remota sem autorização humana.",
+      "action": "Revisar o texto recomposto de Destaque antes de qualquer geração",
+      "context": "As rotas /compose e /runs resolvem as três intenções selecionadas. O teste local recompôs Mouse sem fio com política Destaque e versão 48.2.6-destaque-v1. Nenhum provider, geração, run ou operação de banco foi executado. Plano 10 e CHECKPOINT B permanecem não iniciados.",
       "blocking": true
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Revisão humana do rótulo Produto v2 e do UAT antes de nova tentativa manual; Plano 10 não iniciado e CHECKPOINT B not_started. Nenhum provider, imagem ou POST /runs pelo executor.",
-  "context_notes": "F48.2.6: Planos 48-2-6-01 a 48-2-6-09 concluídos e summarizados (9/10). CHECKPOINT A aprovado em 2026-10-03 apenas para readiness local/documentos; CHECKPOINT B permanece not_started e Plano 10 não iniciado. Política Produto v2 compila `Nome do produto obrigatório: {nome}`; frase de nome completo/capitalização/quebras/arranjo preservada. Correção documental quick 261003-mbr: relato do usuário para OF-A informa modelo/qualidade gpt-image-2.5-sunburst/medium, uma imagem de referência, duração 24.6 segundos, usage informado sem decomposição numérica e custo calculado local USD 0.03. USD 0.03 não é custo reportado pela plataforma, confirmado pela plataforma ou faturado. Nenhuma consulta a banco ocorreu. Observações UAT preservadas: omissão de `Mouse sem fio`, imagem fiel, frases genéricas aceitas, preço/selo/validade/textos obrigatórios presentes; resultado requer ajuste. Run ID, snapshot/linhagem, evidências de prompt/política, custo reportado/confirmado pela plataforma e detalhamento numérico exato de usage permanecem pendentes. Próxima comparação manual idêntica em dados/imagem e Sunburst medium, alterando somente o rótulo, aguarda revisão e autorização individual. Nenhum provider, geração, imagem ou run executados nesta tarefa; OpenSpec continua ativo. A tentativa histórica de fetch do Plano 06 permanece com destino não determinado; checkpoints de F48.2.5 são históricos."
+  "next_action": "Revisar o texto recomposto de Destaque para Mouse sem fio antes de qualquer geração; Plano 10 não iniciado e CHECKPOINT B not_started. Sem provider, imagem ou execução de /runs.",
+  "context_notes": "F48.2.6: Planos 48-2-6-01 a 48-2-6-09 concluídos e summarizados (9/10). CHECKPOINT A aprovado em 2026-10-03 apenas para readiness local/documentos; CHECKPOINT B permanece not_started e Plano 10 não iniciado. Política Produto v2 compila `Nome do produto obrigatório: {nome}`; frase de nome completo/capitalização/quebras/arranjo preservada. Quick 261003-mne corrige o mapeamento canônico da intenção UI nas rotas /compose e /runs: offer→oferta, spotlight→destaque, exclusive→exclusivo; `/runs` recompõe e compara evidência com a mesma configuração. Testes locais comprovam texto e versões para as três intenções; o handler `/compose` recompõe Mouse sem fio com a instrução Destaque e versão `48.2.6-destaque-v1`, sem provider. UAT relatado por usuário para NovaTek/Oferta permanece `requer ajuste`: primeira geração omitiu `Mouse sem fio`, imagem fiel, frases genéricas aceitas, preço/selo/validade/textos obrigatórios presentes; Sunburst medium, uma referência, 24.6s, usage informado e custo local calculado USD 0.03 (não confirmado/faturado pela plataforma). Run ID, evidências de prompt/política e decomposição numérica do usage pendentes. Sem geração/provider/run/banco nesta quick task. Revisão humana do texto Destaque pendente antes de qualquer geração. OpenSpec continua ativo; Plano 10 e CHECKPOINT B não iniciados. A tentativa histórica de fetch do Plano 06 permanece com destino não determinado; checkpoints F48.2.5 são históricos."
 }
