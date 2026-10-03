@@ -42,6 +42,7 @@ import {
   labEnvironmentDeniedBody,
 } from "@/lib/lab/environment-guard";
 import { loadBenchBranding } from "@/lib/lab/bench/domain/branding-service";
+import { validateBenchIntentPrice } from "@/lib/lab/bench/domain/intent-price-matrix";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 // F48.2.3 (D17/D19; spec lab-admin-api / lab-bench-prompt-preflight): composição e
@@ -115,6 +116,25 @@ export const POST = apiHandler(async (request: Request) => {
           ...(offer.success ? [] : offer.error.issues),
         ],
       },
+      { status: 400 },
+    );
+  }
+
+  const campaignIntent = offer.data.campaignIntent ?? "offer";
+  const intentPriceValidation = validateBenchIntentPrice(
+    product.data.originalPriceCents,
+    product.data.priceCents,
+    campaignIntent,
+  );
+  if (!intentPriceValidation.valid) {
+    return NextResponse.json({ error: intentPriceValidation.error }, { status: 400 });
+  }
+  if (
+    campaignIntent !== "offer" &&
+    (offer.data.validUntil !== undefined || offer.data.validity !== undefined)
+  ) {
+    return NextResponse.json(
+      { error: "bench_validity_only_allowed_for_offer" },
       { status: 400 },
     );
   }
@@ -208,12 +228,12 @@ export const POST = apiHandler(async (request: Request) => {
     throw error;
   }
 
-  const branding = await loadBenchBranding({ client: supabaseAdmin, storeId });
   const snapshot = buildBenchCampaignSnapshot({
     product: product.data,
     offer: offer.data,
     config,
   });
+  const branding = await loadBenchBranding({ client: supabaseAdmin, storeId });
   const briefing = buildBenchExperimentalBriefing({ branding, snapshot, config });
 
   // Contribuições determinísticas: políticas do recorte → branding (D8) →

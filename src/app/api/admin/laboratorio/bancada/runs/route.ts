@@ -27,6 +27,7 @@ import {
 } from "@/lib/lab/bench/domain/preflight-revalidation";
 import { resolveBenchDefaultPromptBase } from "@/lib/lab/bench/domain/prompt-base";
 import { BenchPresetError, resolveBenchPreset } from "@/lib/lab/bench/domain/preset-registry";
+import { validateBenchIntentPrice } from "@/lib/lab/bench/domain/intent-price-matrix";
 import { BenchRunInputSchema } from "@/lib/lab/bench/domain/schemas";
 import { collectBenchTextIntegrityFields } from "@/lib/lab/bench/domain/text-integrity-detector";
 import {
@@ -138,12 +139,38 @@ export const POST = apiHandler(async (request: Request) => {
 
   const parsed = BenchRunInputSchema.safeParse(raw);
   if (!parsed.success) {
+    const commercialError = parsed.error.issues.find(
+      (issue) =>
+        issue.message === "bench_intent_price_incompatible" ||
+        issue.message === "bench_validity_only_allowed_for_offer",
+    );
+    if (commercialError) {
+      return NextResponse.json({ error: commercialError.message }, { status: 400 });
+    }
     return NextResponse.json(
       { error: "invalid_payload", details: parsed.error.issues },
       { status: 400 },
     );
   }
   const input = parsed.data;
+
+  // Defesa da rota além do schema: validar pela mesma autoridade antes de
+  // consultar draft/loja, recompor ou executar qualquer efeito operacional.
+  const intent = input.offer.campaignIntent ?? "offer";
+  const intentPriceValidation = validateBenchIntentPrice(
+    input.product.originalPriceCents,
+    input.product.priceCents,
+    intent,
+  );
+  if (!intentPriceValidation.valid) {
+    return NextResponse.json({ error: intentPriceValidation.error }, { status: 400 });
+  }
+  if (intent !== "offer" && (input.offer.validUntil !== undefined || input.offer.validity !== undefined)) {
+    return NextResponse.json(
+      { error: "bench_validity_only_allowed_for_offer" },
+      { status: 400 },
+    );
+  }
 
   // A revisão textual é o primeiro gate após o parse. Até a ausência completa de
   // preflight/evidência recusa com stale antes de ler ou reservar qualquer run.
