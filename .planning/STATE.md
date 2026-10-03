@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-03T15:40:20.114Z"
+last_updated: "2026-10-03T15:45:00.000Z"
 progress:
   total_phases: 43
   completed_phases: 39
@@ -27,7 +27,7 @@ progress:
 ## Current Position
 
 Phase: 48.2.6 (validacao-experimental-produto-intencoes-1-1) — EXECUTING
-Plan: 9 of 10 (Plans 01–08 complete; Plan 09 limited to local readiness and documentation)
+Plan: 9 of 10 (Plans 01–08 complete; Plan 09 limited to local readiness and documentation; Plan 10 excluded from this continuation)
 Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B não iniciado. Sem geração/provider nesta fase.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
@@ -159,3 +159,4 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | Phase 48.2.6 P48-2-6-05 | 8 min | 2 tasks | 5 files |
 | Phase 48.2.6 P48-2-6-06 | 35 min | 2 tasks | 14 files |
 | Phase 48.2.6 P48-2-6-07 | 12 min | 2 tasks | 3 files |
+| Phase 48.2.6 P48-2-6-08 | 2 min | 1 tasks | 1 files |
