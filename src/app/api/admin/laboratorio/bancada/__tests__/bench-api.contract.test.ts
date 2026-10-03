@@ -20,6 +20,7 @@ const {
   MockBenchPresetError,
   mockListBenchConfigOptions,
   mockResolveBenchConfig,
+  mockResolveBenchPolicyIntent,
   mockResolveBenchCost,
   mockBuildBenchCampaignSnapshot,
   mockBuildBenchExperimentalBriefing,
@@ -52,6 +53,7 @@ const {
   mockListBenchArtifacts,
   mockCreateBenchArtifactSignedUrl,
   mockExecuteBenchRun,
+  mockResolveBenchPromptPoliciesActual,
   mockValidateArtifactTechnically,
   mockCreateLabTelemetryContext,
   mockSupabaseAdmin,
@@ -159,11 +161,13 @@ const {
     MockBenchPresetError,
     mockListBenchConfigOptions: vi.fn(),
     mockResolveBenchConfig: vi.fn(),
+    mockResolveBenchPolicyIntent: vi.fn((intent: string) => ({ offer: "oferta", spotlight: "destaque", exclusive: "exclusivo" })[intent]),
     mockResolveBenchCost: vi.fn(),
     mockBuildBenchCampaignSnapshot: vi.fn(),
     mockBuildBenchExperimentalBriefing: vi.fn(),
     mockComposePromptBlocks: vi.fn(),
     mockResolveBenchPromptPolicies: vi.fn(),
+    mockResolveBenchPromptPoliciesActual: vi.fn(),
     MockBenchPromptPolicyError,
     mockResolveBenchDefaultPromptBase: vi.fn(),
     MockBenchPromptBaseError,
@@ -251,7 +255,10 @@ vi.mock("@/lib/lab/bench/domain/preset-registry", () => ({
   BenchPresetError: MockBenchPresetError,
 }));
 
-vi.mock("@/lib/lab/bench/domain/config-registry", () => ({
+vi.mock("@/lib/lab/bench/domain/config-registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/lab/bench/domain/config-registry")>();
+  return {
+  ...actual,
   DEFAULT_BENCH_CONFIG: {
     pipeline: "manual-direto",
     formato: "1:1",
@@ -270,7 +277,9 @@ vi.mock("@/lib/lab/bench/domain/config-registry", () => ({
   ],
   listBenchConfigOptions: (...args: unknown[]) => mockListBenchConfigOptions(...args),
   resolveBenchConfig: (...args: unknown[]) => mockResolveBenchConfig(...args),
-}));
+  resolveBenchPolicyIntent: (...args: unknown[]) => mockResolveBenchPolicyIntent(...args),
+  };
+});
 
 vi.mock("@/lib/lab/bench/execution/bench-cost-resolver", () => ({
   resolveBenchCost: (...args: unknown[]) => mockResolveBenchCost(...args),
@@ -287,14 +296,19 @@ vi.mock("@/lib/lab/bench/domain/experimental-briefing", () => ({
 
 vi.mock("@/lib/lab/bench/domain/prompt-composer", () => ({
   COMPOSER_VERSION: "test-composer-v1",
+  PROMPT_BLOCK_LABELS: { commercial: "CONDIÇÕES COMERCIAIS" },
   composePromptBlocks: (...args: unknown[]) => mockComposePromptBlocks(...args),
   composePrompt: (...args: unknown[]) => mockComposePromptBlocks(...args).text,
 }));
 
-vi.mock("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies", () => ({
-  resolveBenchPromptPolicies: (...args: unknown[]) => mockResolveBenchPromptPolicies(...args),
-  BenchPromptPolicyError: MockBenchPromptPolicyError,
-}));
+vi.mock("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>();
+  return {
+    ...actual,
+    resolveBenchPromptPolicies: (...args: unknown[]) => mockResolveBenchPromptPolicies(...args),
+    BenchPromptPolicyError: MockBenchPromptPolicyError,
+  };
+});
 
 vi.mock("@/lib/lab/bench/domain/prompt-base", () => ({
   resolveBenchDefaultPromptBase: (...args: unknown[]) =>
@@ -1219,6 +1233,42 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(assertIdx).toBeLessThan(brandingIdx);
   });
 
+  it.each([
+    { campaignIntent: "offer", policyIntent: "oferta", version: "oferta-v1", phrase: "Oferta: destaque o preço por" },
+    { campaignIntent: "spotlight", policyIntent: "destaque", version: "destaque-v1", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
+    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "exclusivo-v1", phrase: "Exclusivo: valorize a apresentação sem preço." },
+  ])("POST /compose resolve $campaignIntent para a política $policyIntent", async ({ campaignIntent, policyIntent, version, phrase }) => {
+    const policyText = `${phrase} [${policyIntent}]`;
+    mockResolveBenchConfig.mockImplementation((input: { intencao: string }) => input);
+    mockComposePromptBlocks.mockImplementation((input: { contributions: { block: string; lines: string[] }[]; policyVersions: { intencao: string } }) => ({
+      text: [...input.contributions.flatMap(({ lines }) => lines), policyText].join("\n"),
+      blocks: {},
+      policyVersions: input.policyVersions,
+    }));
+
+    mockResolveBenchPromptPolicies.mockImplementation(() => ({
+      contributions: [{ block: "REGRAS DE CAMPANHA", lines: [policyText] }],
+      versions: { intencao: version },
+    }));
+    const res = await postCompose({
+      ...VALID_COMPOSE_BODY,
+      product: { name: "Produto", priceCents: campaignIntent === "offer" ? 1000 : undefined, originalPriceCents: campaignIntent === "offer" ? 1500 : undefined },
+      offer: { campaignIntent },
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(mockResolveBenchConfig).toHaveBeenCalledWith(expect.objectContaining({ intencao: policyIntent }));
+    expect(body.compiledPrompt).toContain(phrase);
+    expect(body.policyVersions.intencao).toBe(version);
+    expect(mockComposePromptBlocks).toHaveBeenCalledWith(expect.objectContaining({ policyVersions: { intencao: version } }));
+    if (campaignIntent !== "offer") {
+      expect(body.compiledPrompt).not.toContain("Oferta:");
+      expect(body.policyVersions.intencao).not.toBe("oferta-v1");
+    }
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
   it("POST /compose com alertas ⇒ 422 e não compõe prompt nem lê branding", async () => {
     const res = await postCompose({
       ...VALID_COMPOSE_BODY,
@@ -1720,6 +1770,89 @@ describe("contrato da API da bancada — execução com confirmação", () => {
       (call) => (call[0] as { quality: string }).quality,
     );
     expect(new Set(qualities).size).toBe(2);
+  });
+
+  it.each([
+    { campaignIntent: "offer", policyIntent: "oferta", version: "oferta-v1", phrase: "Oferta: destaque o preço por" },
+    { campaignIntent: "spotlight", policyIntent: "destaque", version: "destaque-v1", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
+    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "exclusivo-v1", phrase: "Exclusivo: valorize a apresentação sem preço." },
+  ])("POST /runs revalida $campaignIntent com política $policyIntent antes de confirmação", async ({ campaignIntent, policyIntent, version, phrase }) => {
+    const policyText = `${phrase} [${policyIntent}]`;
+    mockResolveBenchConfig.mockImplementation((input: { intencao: string }) => input);
+    mockBuildBenchCampaignSnapshot.mockImplementation((params: { config: { intencao: string } }) => ({ config: params.config }));
+    mockBuildBenchExperimentalBriefing.mockImplementation((params: { config: { intencao: string } }) => ({ config: params.config }));
+    mockRecomposeBenchPrompt.mockImplementation((params: { config: { intencao: string } }) => ({
+      text: `${policyText} [${params.config.intencao}]`,
+      blocks: {},
+      composerVersion: "test-composer-v1",
+      policyVersions: { intencao: version },
+    }));
+    mockResolveServerResolvedEvidence.mockImplementation((params: { recomposition: { policyVersions: { intencao: string } } }) => ({
+      policyVersions: params.recomposition.policyVersions,
+      promptBaseVersion: "test-prompt-base-v1",
+      composerVersion: "test-composer-v1",
+      identityReference: null,
+    }));
+
+    const bodyInput = {
+      ...VALID_RUN_BODY,
+      product: { name: "Produto", priceCents: campaignIntent === "offer" ? 1000 : undefined, originalPriceCents: campaignIntent === "offer" ? 1500 : undefined },
+      offer: { campaignIntent },
+      prompt: `${policyText} [${policyIntent}]`,
+      preflight: {
+        ...VALID_RUN_BODY.preflight,
+        promptCompiled: `${policyText} [${policyIntent}]`,
+        promptApproved: `${policyText} [${policyIntent}]`,
+        policyVersions: { intencao: version },
+        identityReference: null,
+      },
+    };
+    mockResolveBenchConfig.mockImplementation((input: { intencao: string }) => input);
+    mockExecuteBenchRun.mockResolvedValue({ status: "failed", latencyMs: 0, cost: null });
+    mockAssertPreflightCompositionMatches.mockImplementation(({ recomposed, promptCompiled }: { recomposed: string; promptCompiled: string }) => {
+      if (recomposed !== promptCompiled) throw new MockBenchPreflightRevalidationError("composition_diverged");
+    });
+    mockAssertPreflightEvidenceMatches.mockImplementation(({ approved, current }: { approved: { policyVersions: { intencao: string } }; current: { policyVersions: { intencao: string } } }) => {
+      if (approved.policyVersions.intencao !== current.policyVersions.intencao) throw new MockBenchPreflightRevalidationError("policy_versions_diverged");
+    });
+    mockAssertPreflightEvidenceMatches.mockImplementation(({ current }: { current: { policyVersions: { intencao: string } } }) => {
+      expect(current.policyVersions.intencao).toBe(version);
+      throw new MockBenchPreflightRevalidationError("stop_before_cas_for_local_contract_test");
+    });
+
+    const res = await postRun(bodyInput);
+    const responseText = await res.text();
+
+    expect(res.status).toBe(409);
+    expect(mockResolveBenchConfig).toHaveBeenCalledWith(expect.objectContaining({ intencao: policyIntent }));
+    expect(mockBuildBenchCampaignSnapshot).toHaveBeenCalledWith(expect.objectContaining({ config: expect.objectContaining({ intencao: policyIntent }) }));
+    expect(mockBuildBenchExperimentalBriefing).toHaveBeenCalledWith(expect.objectContaining({ config: expect.objectContaining({ intencao: policyIntent }) }));
+    expect(mockRecomposeBenchPrompt).toHaveBeenCalledWith(expect.objectContaining({ config: expect.objectContaining({ intencao: policyIntent }) }));
+    expect(mockResolveServerResolvedEvidence.mock.results[0].value.policyVersions.intencao).toBe(version);
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+    expect(responseText).toContain("approval_invalidated");
+    if (campaignIntent !== "offer") {
+      expect(mockRecomposeBenchPrompt.mock.results[0].value.text).not.toContain("Oferta:");
+      expect(version).not.toBe("oferta-v1");
+    }
+  });
+
+  it("recomposição local de Destaque mantém frase e versão exatas sem provider", async () => {
+    const { destaquePolicy } = await import("@/lib/lab/bench/domain/policies/destaque");
+    const policyLines = destaquePolicy.contributions({
+      config: {
+        pipeline: "manual-direto", formato: "1:1", modelo: "gpt-image-2", qualidade: "low", intencao: "destaque", tipoConteudo: "produto", estrutura: "peca-unica", tema: "nenhum",
+      },
+    });
+    expect(policyLines.flatMap((entry) => entry.lines)).toContain("Destaque: priorize a apresentação do produto; preço informado é secundário.");
+    expect(destaquePolicy.version).toBe("48.2.6-destaque-v1");
+    mockRecomposeBenchPrompt.mockReturnValue({ text: policyLines.flatMap((entry) => entry.lines).join("\n"), policyVersions: { intencao: destaquePolicy.version } });
+    const localResult = mockRecomposeBenchPrompt({ config: { intencao: "destaque" } });
+    expect(localResult.text).toBe("Destaque: priorize a apresentação do produto; preço informado é secundário.");
+    expect(localResult.policyVersions.intencao).toBe("48.2.6-destaque-v1");
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
   });
 
   it("operation_id sem draft prévio ⇒ 400 e nenhum run criado", async () => {

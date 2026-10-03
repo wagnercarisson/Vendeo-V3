@@ -6,6 +6,7 @@ import { buildBrandingPromptContributions } from "@/lib/lab/bench/domain/brandin
 import { buildBenchCampaignSnapshot } from "@/lib/lab/bench/domain/campaign-snapshot";
 import {
   DEFAULT_BENCH_CONFIG,
+  resolveBenchPolicyIntent,
   resolveBenchConfig,
 } from "@/lib/lab/bench/domain/config-registry";
 import { buildBenchExperimentalBriefing } from "@/lib/lab/bench/domain/experimental-briefing";
@@ -192,6 +193,7 @@ export const POST = apiHandler(async (request: Request) => {
   }
   const config = resolveBenchConfig({
     ...DEFAULT_BENCH_CONFIG,
+    intencao: resolveBenchPolicyIntent(campaignIntent),
     modelo: preset.model,
     qualidade: preset.quality,
   });

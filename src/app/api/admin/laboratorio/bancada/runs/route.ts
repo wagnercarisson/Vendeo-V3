@@ -10,6 +10,7 @@ import { LAB_ARTIFACT_BUCKET } from "@/lib/lab/persistence/artifact-service";
 import { buildBenchCampaignSnapshot } from "@/lib/lab/bench/domain/campaign-snapshot";
 import {
   DEFAULT_BENCH_CONFIG,
+  resolveBenchPolicyIntent,
   resolveBenchConfig,
 } from "@/lib/lab/bench/domain/config-registry";
 import {
@@ -271,6 +272,7 @@ export const POST = apiHandler(async (request: Request) => {
   // `config` — a configuração nunca é lida dele.
   const config = resolveBenchConfig({
     ...DEFAULT_BENCH_CONFIG,
+    intencao: resolveBenchPolicyIntent(intent),
     modelo: preset.model,
     qualidade: preset.quality,
   });

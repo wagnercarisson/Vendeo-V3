@@ -91,6 +91,16 @@ export const DEFAULT_BENCH_CONFIG: BenchRecorteConfig = {
   tema: "nenhum",
 };
 
+/** Maps the stable UI campaign intent contract to policy registry identifiers. */
+export function resolveBenchPolicyIntent(intent: "offer" | "spotlight" | "exclusive"):
+  BenchRecorteConfig["intencao"] {
+  switch (intent) {
+    case "offer": return "oferta";
+    case "spotlight": return "destaque";
+    case "exclusive": return "exclusivo";
+  }
+}
+
 // ─── Erro determinístico do registry ─────────────────────────────────────────
 
 export type BenchConfigRegistryErrorCode =
