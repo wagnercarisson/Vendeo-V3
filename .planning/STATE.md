@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-03T19:48:25.396Z"
+last_updated: "2026-10-03T20:10:04.769Z"
 progress:
   total_phases: 43
   completed_phases: 39
@@ -27,8 +27,8 @@ progress:
 ## Current Position
 
 Phase: 48.2.6 (validacao-experimental-produto-intencoes-1-1) — EXECUTING
-Plan: 10 of 10 (Plans 01–09 complete; Plan 10 not started pending human review of Produto v2/UAT record)
-Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B não iniciado. Correção documental quick 261003-mbr: relato do usuário para OF-A informa Sunburst medium, uma imagem de referência, 24.6 s, usage sem decomposição numérica e custo calculado local USD 0.03 (não reportado/confirmado/faturado pela plataforma); avaliação segue `requer ajuste`. Quick 261003-mne corrige as rotas para mapear `offer/spotlight/exclusive` a `oferta/destaque/exclusivo` e revalidar a política selecionada; teste local `/compose` recompõe Mouse sem fio com a frase/versão Destaque. Nenhuma geração/provider nesta quick task.
+Plan: 10 of 10 (Plans 01–09 complete; Plan 10 not started pending human review of the neutral sale-price label and compiled Spotlight text)
+Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B não iniciado. Correção documental quick 261003-mbr: relato do usuário para OF-A informa Sunburst medium, uma imagem de referência, 24.6 s, usage sem decomposição numérica e custo calculado local USD 0.03 (não reportado/confirmado/faturado pela plataforma); avaliação segue `requer ajuste`. Quick 261003-mne corrige as rotas para mapear `offer/spotlight/exclusive` a `oferta/destaque/exclusivo` e revalidar a política selecionada; teste local `/compose` recompõe Mouse sem fio com a frase/versão Destaque. Quick 261003-nkj neutraliza o rótulo comum para `Preço de venda` e versiona o compositor `48.2.4-prompt-composer-v2`; Oferta mantém sua instrução e versão. Composição local de Destaque com Mouse sem fio e preço único verificada sem provider; aguarda revisão humana antes de qualquer geração.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
 **Correção de UAT (2026-09-30):** descoberto acoplamento indevido entre aprovação do prompt e configuração de execução. Corrigido: `preset`/`modelo`/`qualidade` **não** invalidam `promptCompiled`/`promptApproved` nem exigem nova composição — invalidam **somente** estimativa e confirmação financeira; o backend (`assertPreflightEvidenceMatches`) compara apenas a **evidência textual** (`policyVersions`/`promptBaseVersion`/`composerVersion`/`identityReference`) e valida/persiste `presetId`/`modelo`/`qualidade` como configuração de execução; testes provam o **mesmo prompt aprovado byte a byte com dois presets/modelos distintos** (sem provider). Commits `7e6220d5` (código+testes), `85dc272b` (OpenSpec), `0ed7a7ca` (planos/CONTEXT/UI-SPEC/UAT). Gates verdes: typecheck/lint/build (76/76) e suíte completa (`397 passed | 1 skipped`; `4585 passed | 2 skipped`, só a exceção externa `legal-document-versions.test.ts`).
@@ -106,6 +106,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - [Phase 48.2.6]: Plan 06 habilita somente Oferta, Destaque e Exclusivo na dimensão existente de intenção, mantendo os outros valores/dimensões inalterados.
 - [Phase 48.2.6]: Resolver seleciona `registry[dimension][resolved[dimension]]`; os três recortes de intenção compartilham o mesmo objeto `BENCH_DEFAULT_PROMPT_BASE`.
 - [Quick 261003-ltf / F48.2.6]: Linha do nome compilada como `Nome do produto obrigatório: {nome}`; política Produto versionada para `48.2.6-produto-v2`, mantendo intacta a liberdade de capitalização/quebras/arranjo. Requer revisão humana antes de qualquer comparação manual.
+- [Quick 261003-nkj / F48.2.6]: Rótulo compartilhado de `discountedPriceText` é `Preço de venda`; `COMPOSER_VERSION=48.2.4-prompt-composer-v2`. Semântica promocional continua exclusivamente na instrução Oferta, inalterada.
 
 ## Pending Todos
 
@@ -144,13 +145,14 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | 261003-ltf | 2026-10-03 | Rótulo compilado do nome e política Produto v2; UAT NovaTek/Oferta requer ajuste por omissão de “Mouse sem fio”; teste focal (91), OpenSpec strict, typecheck/lint/build verdes; commit `e0bef396`; sem provider/imagem |
 | 261003-mbr | 2026-10-03 | Reconciliação documental OF-A com relato do usuário: Sunburst medium, uma referência, 24.6 s, usage sem decomposição e custo local calculado USD 0.03 (não faturado nem reportado/confirmado pela plataforma); requer ajuste; sem consulta a banco, geração ou promoção |
 | 261003-mne | 2026-10-03 | Corrigida seleção de política em `/compose` e `/runs`: `offer→oferta`, `spotlight→destaque`, `exclusive→exclusivo`; 130 testes API + spotlight específico, typecheck/lint/OpenSpec/architecture guard verdes; commits `32bf7039`, `ec8e6d35`, `1107a86d`; sem provider/run |
+| 261003-nkj | 2026-10-03 | Rótulo comum de preço alterado para `Preço de venda`; compositor v2. Spotlight com preço único compõe Mouse sem fio, `R$ 19,99`, instrução `Destaque` e versão `48.2.6-destaque-v1`, sem Oferta; 174 testes, typecheck/lint/OpenSpec strict verdes; commit `6f462716`; sem provider/imagem/run |
 
 ## Session Continuity
 
-- Última sessão: 2026-10-03 — Quick task `261003-mne` corrigiu a resolução de intenção nas rotas `/compose` e `/runs`; teste real `/compose` comprova Mouse sem fio + frase/versão Destaque. 130 contratos API, typecheck/lint, OpenSpec strict e architecture guard verdes. Sem provider, geração, run ou banco. Summary em `.planning/quick/261003-mne-corrigir-a-resolu-o-da-inten-o-nas-rotas/261003-mne-SUMMARY.md`.
+- Última sessão: 2026-10-03 — Quick task `261003-nkj` mudou o campo comercial comum para `Preço de venda`, versionou compositor v2 e validou Destaque com um preço. Teste integrado confirma `Mouse sem fio`, `R$ 19,99`, frase/versão Destaque e ausência de Oferta. 174 testes, typecheck/lint e OpenSpec strict passaram; nenhum provider/imagem/run. Summary em `.planning/quick/261003-nkj-f48-2-6-trocar-o-r-tulo-comum-de-pre-o-c/261003-nkj-SUMMARY.md`.
 - Último trabalho: NovaTek low: Flare/Image2/Sunburst; Adega low: Image2/Flare/Sunburst; Adega exploratory Sunburst medium sem hipótese prévia. Platform total user-confirmed US$0,29; calculated local US$0,288978; individual US$0,06 confirmed only medium. No executor provider calls; no new paid generation.
-- Último quick: `261003-mne` — `/compose` e `/runs` usam a intenção escolhida para resolver políticas e versões; revalidação de `/runs` usa o mesmo config. Recomposto localmente via handler `/compose`: `Nome do produto obrigatório: Mouse sem fio`, `Destaque: priorize a apresentação do produto; preço informado é secundário.`, versão `48.2.6-destaque-v1`; sem provider.
-- Próxima ação: revisão humana do texto recomposto de Destaque antes de qualquer geração. Planos 01–09 completos, Plano 10 não iniciado; CHECKPOINT B `not_started`. Nenhum provider, imagem ou execução de `/runs`.
+- Último quick: `261003-nkj` — Spotlight com um preço único usa `Preço de venda: R$ 19,99`, versão do compositor `48.2.4-prompt-composer-v2` e mantém a instrução `Destaque`/`48.2.6-destaque-v1`; nenhuma instrução/versão Oferta.
+- Próxima ação: revisão humana do trecho de prompt Destaque, incluindo rótulo `Preço de venda`, antes de qualquer geração. Planos 01–09 completos, Plano 10 não iniciado; CHECKPOINT B `not_started`. Nenhum provider, imagem ou execução de `/runs`.
 - Execução 48-2-6-06 concluída em 2026-10-02: resolver de política indexado por dimensão/valor e três intenções Produto 1:1 habilitadas; prompt-base neutro idêntico por referência; testes focados 134/134, typecheck/lint verdes. Nenhuma geração/provider call executada; suíte ampliada teve bloqueios/timeout descritos em `48-2-6-06-SUMMARY.md`.
 - Resume file: `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md` (GSD UAT 5/5 PASS; 65 critérios pending reconhecidos; security review verificada, 7/7 fechados, 0 abertos em `48-2-5-SECURITY.md`).
 

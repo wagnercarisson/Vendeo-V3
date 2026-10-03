@@ -19,7 +19,7 @@
 | Política Exclusivo | `48.2.6-exclusivo-v1` |
 | Política Produto | `48.2.6-produto-v2` |
 | Prompt-base neutro | `48.2.6-produto-1-1-v1` |
-| Compositor | `48.2.4-prompt-composer-v1` |
+| Compositor | `48.2.4-prompt-composer-v2` |
 | Pricing local | `2026-10-bench-3` |
 
 Versões de formato, estrutura, tema e integridade geral serão copiadas para cada ficha somente quando constarem de evidência real do respectivo run.

@@ -1,7 +1,7 @@
 ---
 id: 261003-nkj
 title: F48.2.6 — neutralizar rótulo comum do preço compilado
-status: planned
+status: completed
 scope: narrow-bug-fix
 files_modified:
   - src/lib/lab/bench/domain/prompt-composer.ts
