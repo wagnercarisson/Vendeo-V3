@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-03T16:50:28.221Z"
+last_updated: "2026-10-03T17:04:48.911Z"
 progress:
   total_phases: 43
   completed_phases: 39
@@ -139,12 +139,13 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | 260919-hju | 2026-09-19 | Ajuste acessível de Tom de Voz |
 | 260929-rtl | 2026-09-29 | F48.2.3: fidelidade de `identity_state` na bancada (import fail-closed + resolver puro + contrato) e **idempotência de objetos content-addressed** na importação local (referenciado/criado/reutilizado). **Concluída**: reimportação autorizada idempotente (NovaTek `visual_signature` 1 objeto reutilizado; Adega `logo` 6 reutilizados; 0 criados) e UAT local registrados |
 | 261002-tve | 2026-10-02 | Isolamento offline dos testes de execução da bancada: `resolveAiCost` determinístico e guard de fetch; 24 testes do arquivo + 162 contratos adjacentes passaram; destino da tentativa anterior permanece indeterminado |
+| 261003-jet | 2026-10-03 | Painel de políticas da bancada usa `policy.id` como key/testid; regressão simultânea Oferta/Destaque/Exclusivo. Teste focado (68), typecheck e lint verdes; commit `9e8f8e1c`; summary em `quick/261003-jet-corrigir-bench-policies-panel-para-usar/` |
 
 ## Session Continuity
 
-- Última sessão: 2026-10-02 — security review F48.2.5 concluída: retroactive STRIDE, 7 ameaças fechadas, 0 abertas; ver `48-2-5-SECURITY.md`. UAT GSD 5/5 PASS, com acknowledged gap dos 65 critérios `pending` aceitos; OpenSpec verificado/sincronizado/arquivado.
+- Última sessão: 2026-10-03 — Quick task `261003-jet` corrigiu a identidade das linhas no painel de políticas; 68 testes focados, typecheck e lint passaram. Nenhuma imagem/provider; detalhes em `.planning/quick/261003-jet-corrigir-bench-policies-panel-para-usar/261003-jet-SUMMARY.md`.
 - Último trabalho: NovaTek low: Flare/Image2/Sunburst; Adega low: Image2/Flare/Sunburst; Adega exploratory Sunburst medium sem hipótese prévia. Platform total user-confirmed US$0,29; calculated local US$0,288978; individual US$0,06 confirmed only medium. No executor provider calls; no new paid generation.
-- Último quick: `260929-rtl` — **concluída**. Fidelidade de `identity_state` da bancada (Tasks 1–3: import fail-closed, resolver puro, contrato/snapshot/API) + **correção de idempotência da importação** (`ensureContentAddressedObject`: precheck `exists` fail-closed; referenciado/criado/reutilizado; cleanup remove só criados; `uploadBrandingObject` removido). Testes de contrato (79), integrado local (2 importações consecutivas) e suíte lab/architecture guard verdes; produção intocada; custo **US$ 0**. Reimportação autorizada idempotente: NovaTek `visual_signature` (1 objeto reutilizado) e Adega `logo` (6 reutilizados), 0 criados, sem duplicação/órfãos.
+- Último quick: `261003-jet` — corrigida a key React para `policy.id`, testids distintos por política e regressão para Oferta, Destaque e Exclusivo simultâneos sem aviso de key duplicada; resumo e validações em `.planning/quick/261003-jet-corrigir-bench-policies-panel-para-usar/261003-jet-SUMMARY.md`.
 - Próxima ação: aguardar nova instrução antes de iniciar o Plano 10. Plano 09 concluiu readiness local e documentos UAT; CHECKPOINT B não iniciado. Nenhuma geração paga, provider real ou leitura remota.
 - Execução 48-2-6-06 concluída em 2026-10-02: resolver de política indexado por dimensão/valor e três intenções Produto 1:1 habilitadas; prompt-base neutro idêntico por referência; testes focados 134/134, typecheck/lint verdes. Nenhuma geração/provider call executada; suíte ampliada teve bloqueios/timeout descritos em `48-2-6-06-SUMMARY.md`.
 - Resume file: `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md` (GSD UAT 5/5 PASS; 65 critérios pending reconhecidos; security review verificada, 7/7 fechados, 0 abertos em `48-2-5-SECURITY.md`).
