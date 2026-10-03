@@ -4,8 +4,8 @@
 
 - A política Exclusivo vigente agora usa exclusivamente a instrução aprovada e `48.2.6-exclusivo-v2`.
 - Testes cobrem composição sem selo e com os selos permitidos `Exclusivo` e `Edição Limitada`; verificam instrução/versão exatas, ausência de preço e serialização apenas do selo fornecido. Opções e permissões existentes são afirmadas por teste e não foram alteradas.
-- O relato do usuário sobre Exclusivo v1 foi adicionado sem inventar slot, run ID, produto/loja ou vínculo; a evidência anterior permanece inalterada e campos desconhecidos continuam pendentes.
-- Protocolo v1 × v2 preparado, não executado: mesmos dados/imagem existentes, Sunburst medium, texto e versão da política como única variável. Qualquer geração exige revisão humana e confirmação financeira individual.
+- O relato do usuário sobre a arte Exclusivo sob `48.2.6-exclusivo-v1` foi preservado: publicável, mas diferenciação visual inconclusiva. Nenhum slot, run ID, produto/loja ou vínculo foi inventado; campos desconhecidos continuam pendentes.
+- Protocolo v1 × v2 preparado, não executado: após vincular a evidência v1 existente, mesmos dados/imagem e Sunburst medium, texto e versão da política como única variável. Qualquer geração exige revisão humana e confirmação financeira individual.
 
 ## Gatilhos e fronteiras
 

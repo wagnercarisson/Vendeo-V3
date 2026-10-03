@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-03T20:10:04.769Z"
+last_updated: "2026-10-03T21:26:36.637Z"
 progress:
   total_phases: 43
   completed_phases: 39
@@ -152,7 +152,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - Última sessão: 2026-10-03 — Quick task `261003-nkj` mudou o campo comercial comum para `Preço de venda`, versionou compositor v2 e validou Destaque com um preço. Teste integrado confirma `Mouse sem fio`, `R$ 19,99`, frase/versão Destaque e ausência de Oferta. 174 testes, typecheck/lint e OpenSpec strict passaram; nenhum provider/imagem/run. Summary em `.planning/quick/261003-nkj-f48-2-6-trocar-o-r-tulo-comum-de-pre-o-c/261003-nkj-SUMMARY.md`.
 - Último trabalho: NovaTek low: Flare/Image2/Sunburst; Adega low: Image2/Flare/Sunburst; Adega exploratory Sunburst medium sem hipótese prévia. Platform total user-confirmed US$0,29; calculated local US$0,288978; individual US$0,06 confirmed only medium. No executor provider calls; no new paid generation.
 - Último quick: `261003-nkj` — Spotlight com um preço único usa `Preço de venda: R$ 19,99`, versão do compositor `48.2.4-prompt-composer-v2` e mantém a instrução `Destaque`/`48.2.6-destaque-v1`; nenhuma instrução/versão Oferta.
-- Próxima ação: revisar o preparo do Exclusivo v2 e conduzir CHECKPOINT B manualmente, quando solicitado. Task 0 do Plano 10 concluída; Task 1 humana e Task 2 closeout não iniciadas; CHECKPOINT B `not_started`. UAT registra apenas relato do usuário: primeira arte Exclusivo v1 considerada publicável, diferenciação visual inconclusiva; linkage desconhecido permanece pending. Comparação v1 × v2 apenas preparada (mesmos dados/imagem, Sunburst medium, política como única variável), sem geração. Nenhum provider, imagem, run, banco, migration ou lifecycle OpenSpec pelo executor.
+- Próxima ação: revisar o preparo do Exclusivo v2 e conduzir CHECKPOINT B manualmente, quando solicitado. Task 0 do Plano 10 concluída; Task 1 humana e Task 2 closeout não iniciadas; CHECKPOINT B `not_started`. UAT registra apenas relato do usuário: primeira arte Exclusivo sob `48.2.6-exclusivo-v1` considerada publicável, diferenciação visual inconclusiva; linkage desconhecido permanece pending. Comparação v1 × v2 apenas preparada (mesmos dados/imagem, Sunburst medium, política como única variável), sem geração. Nenhum provider, imagem, run, banco, migration ou lifecycle OpenSpec pelo executor.
 - Execução 48-2-6-06 concluída em 2026-10-02: resolver de política indexado por dimensão/valor e três intenções Produto 1:1 habilitadas; prompt-base neutro idêntico por referência; testes focados 134/134, typecheck/lint verdes. Nenhuma geração/provider call executada; suíte ampliada teve bloqueios/timeout descritos em `48-2-6-06-SUMMARY.md`.
 - Resume file: `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md` (GSD UAT 5/5 PASS; 65 critérios pending reconhecidos; security review verificada, 7/7 fechados, 0 abertos em `48-2-5-SECURITY.md`).
 
