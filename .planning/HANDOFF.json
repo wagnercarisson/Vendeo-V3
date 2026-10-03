@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-03T18:58:49.195Z",
+  "timestamp": "2026-10-03T19:10:00.000Z",
   "phase": "48.2.6",
   "phase_name": "validacao-experimental-produto-intencoes-1-1",
   "phase_dir": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1",
@@ -126,7 +126,9 @@
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-CLOSEOUT-RECONCILIATION.md",
     "openspec/changes/archive/2026-10-01-fase-48-2-5-estabilizacao-experimental-oferta-1-1/",
     ".planning/quick/261003-ltf-f48-2-6-alterar-somente-o-r-tulo-do-nome/261003-ltf-PLAN.md",
-    ".planning/quick/261003-ltf-f48-2-6-alterar-somente-o-r-tulo-do-nome/261003-ltf-SUMMARY.md"
+    ".planning/quick/261003-ltf-f48-2-6-alterar-somente-o-r-tulo-do-nome/261003-ltf-SUMMARY.md",
+    ".planning/quick/261003-mbr-corrigir-o-registro-uat-documental-de-of/261003-mbr-PLAN.md",
+    ".planning/quick/261003-mbr-corrigir-o-registro-uat-documental-de-of/261003-mbr-SUMMARY.md"
   ],
   "blockers": ["Aguardar revisão humana do rótulo Produto v2 e registro UAT antes de qualquer nova tentativa manual."],
   "human_actions_pending": [
@@ -138,5 +140,5 @@
   ],
   "uncommitted_files": [],
   "next_action": "Revisão humana do rótulo Produto v2 e do UAT antes de nova tentativa manual; Plano 10 não iniciado e CHECKPOINT B not_started. Nenhum provider, imagem ou POST /runs pelo executor.",
-  "context_notes": "F48.2.6: Planos 48-2-6-01 a 48-2-6-09 concluídos e summarizados (9/10). CHECKPOINT A aprovado em 2026-10-03 apenas para readiness local/documentos; CHECKPOINT B permanece not_started e Plano 10 não iniciado. Política Produto v2 compila `Nome do produto obrigatório: {nome}`; frase de nome completo/capitalização/quebras/arranjo preservada. UAT registra relato do usuário para NovaTek/Oferta: primeira geração omitiu `Mouse sem fio`, imagem fiel, frases genéricas aceitas, preço/selo/validade/textos obrigatórios presentes; resultado requer ajuste. Run ID, evidências de prompt/política, snapshot, modelo/preset, custo/usage/latência não fornecidos e ficam pending. Próxima comparação manual idêntica em dados/imagem e Sunburst medium, alterando somente o rótulo, aguarda revisão e autorização individual. Nenhum provider, geração, imagem ou run executados nesta tarefa; OpenSpec continua ativo. A tentativa histórica de fetch do Plano 06 permanece com destino não determinado; checkpoints de F48.2.5 são históricos."
+  "context_notes": "F48.2.6: Planos 48-2-6-01 a 48-2-6-09 concluídos e summarizados (9/10). CHECKPOINT A aprovado em 2026-10-03 apenas para readiness local/documentos; CHECKPOINT B permanece not_started e Plano 10 não iniciado. Política Produto v2 compila `Nome do produto obrigatório: {nome}`; frase de nome completo/capitalização/quebras/arranjo preservada. Correção documental quick 261003-mbr: relato do usuário para OF-A informa modelo/qualidade gpt-image-2.5-sunburst/medium, uma imagem de referência, duração 24.6 segundos, usage informado sem decomposição numérica e custo calculado local USD 0.03. USD 0.03 não é custo reportado pela plataforma, confirmado pela plataforma ou faturado. Nenhuma consulta a banco ocorreu. Observações UAT preservadas: omissão de `Mouse sem fio`, imagem fiel, frases genéricas aceitas, preço/selo/validade/textos obrigatórios presentes; resultado requer ajuste. Run ID, snapshot/linhagem, evidências de prompt/política, custo reportado/confirmado pela plataforma e detalhamento numérico exato de usage permanecem pendentes. Próxima comparação manual idêntica em dados/imagem e Sunburst medium, alterando somente o rótulo, aguarda revisão e autorização individual. Nenhum provider, geração, imagem ou run executados nesta tarefa; OpenSpec continua ativo. A tentativa histórica de fetch do Plano 06 permanece com destino não determinado; checkpoints de F48.2.5 são históricos."
 }
