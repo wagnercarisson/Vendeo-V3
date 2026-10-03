@@ -24,11 +24,11 @@ Contratos observados: `BADGE_OPTIONS_BY_INTENT` e validação existente por inte
 
 ## Decisions
 
-### D1 — Reutilizar a matriz existente e criar enforcement compartilhado
+### D1 — Extrair a autoridade comportamental pura dentro da bancada e criar enforcement compartilhado
 
-Preservar `inferIntent` e `availableIntents` como fonte comportamental validada por paridade, extraindo/reutilizando regra pura apropriada dentro do bounded context de bancada em vez de criar outra matriz independente. Contrato: preço de e por → somente Oferta; somente por → Oferta ou Destaque; sem preço → Destaque ou Exclusivo; preço original isolado → inválido. Validar combinação após parse de schema, antes de compor e antes de reservar/persistir run. A UI não seleciona automaticamente intenção incompatível: informa incompatibilidade, limpa evidência preflight e solicita escolha explícita.
+Manter a produção intocada nesta fase, inclusive `src/components/flow/use-campaign-form.ts` e `src/components/flow/campaign-input-form.tsx`. Extrair os helpers de inferência/opções atualmente espelhados pela bancada para um módulo puro dentro de `src/lib/lab/bench/domain/`; `form-rules.ts` mantém seus exports existentes como wrappers por delegação. UI, schemas, snapshot e backend da bancada consomem uma única autoridade nesse bounded context. O contrato normativo acrescenta apenas a rejeição de preço original isolado à autoridade comportamental existente da bancada: preço de e por → somente Oferta; somente por → Oferta ou Destaque; sem preço → Destaque ou Exclusivo; preço original isolado → inválido. Testes de paridade continuam comparando os exports da bancada contra o hook produtivo, que permanece inalterado. Validar combinação após parse de schema, antes de compor e antes de reservar/persistir run. A UI não seleciona automaticamente intenção incompatível: informa incompatibilidade, limpa evidência preflight e solicita escolha explícita.
 
-Alternativa rejeitada: confiar apenas nas opções do formulário, pois API pode ser chamada diretamente. Alternativa rejeitada: alterar o formulário produtivo fora do escopo experimental.
+Alternativa rejeitada: importar `availableIntents` de `form-rules.ts` dentro da autoridade nova, pois isso preservaria a duplicação e criaria dependência circular se os exports compatíveis delegassem à autoridade. Alternativas rejeitadas: alterar o hook/formulário produtivo nesta fase ou criar uma segunda matriz independente. A implementação produtiva equivalente permanece isolada deliberadamente; possível unificação entre pipelines fica para uma fase de integração produtiva.
 
 ### D2 — Matriz integral no servidor e invalidação por revisão comercial
 

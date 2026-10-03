@@ -2,7 +2,7 @@
 
 - [ ] 1.1 Registrar baseline, confirmar arquivos protegidos e auditar schema/API, registries de política, preflight, linhagem e custo; manter produção/migrations sem alterações.
 - [ ] 1.2 Documentar contratos atuais de selos sem alterá-los; implementar validade exclusiva de Oferta na bancada, preservando formatos/validações e comportamento explícito ao trocar intenção.
-- [ ] 1.3 Mapear e reutilizar `inferIntent`/`availableIntents` e `form-rules.ts`; definir integração pura comum cliente-servidor na bancada sem duplicar matriz.
+- [ ] 1.3 Extrair inferência/opções para uma única autoridade pura em `src/lib/lab/bench/domain/`; preservar exports de `form-rules.ts` por delegação e paridade com hook produtivo intocado.
 
 ## 2. Matriz preço × intenção
 

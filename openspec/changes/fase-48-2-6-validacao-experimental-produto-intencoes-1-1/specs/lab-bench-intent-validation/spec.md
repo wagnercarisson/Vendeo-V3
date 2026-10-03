@@ -2,7 +2,7 @@
 
 ### Requirement: Matriz normativa preço × intenção na bancada Produto
 
-A bancada SHALL validar a mesma matriz no formulário, schema/domínio e backend: preço original e preço por informados SHALL permitir somente Oferta; somente preço por SHALL permitir Oferta ou Destaque; sem ambos SHALL permitir Destaque ou Exclusivo; preço original isolado SHALL ser inválido. Preços zero/ausentes SHALL contar como não informados. Uma intenção explícita incompatível SHALL ser rejeitada, nunca reinterpretada silenciosamente. Ao alterar preços de modo incompatível com a intenção atual, a UI SHALL exigir nova escolha explícita antes de compor.
+A bancada SHALL validar a mesma matriz no formulário, schema/domínio e backend usando uma única autoridade pura dentro de `src/lib/lab/bench/domain/`, sem dependências de UI, serviços ou ambiente. `form-rules.ts` SHALL manter exports existentes compatíveis delegando aos helpers extraídos; os testes SHALL preservar a paridade contra o hook produtivo, que permanece intocado nesta change. Preço original e preço por informados SHALL permitir somente Oferta; somente preço por SHALL permitir Oferta ou Destaque; sem ambos SHALL permitir Destaque ou Exclusivo; preço original isolado SHALL ser inválido. Preços zero/ausentes SHALL contar como não informados. Uma intenção explícita incompatível SHALL ser rejeitada, nunca reinterpretada silenciosamente. Ao alterar preços de modo incompatível com a intenção atual, a UI SHALL exigir nova escolha explícita antes de compor.
 
 #### Scenario: Preço de e por permite somente Oferta
 - **WHEN** preço original e preço por são informados

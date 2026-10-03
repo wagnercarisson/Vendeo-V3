@@ -4,7 +4,7 @@ A F48.2.5 estabilizou o pipeline experimental de Produto + Oferta 1:1, mas a ban
 
 ## What Changes
 
-- Enforce a matriz preço × intenção no formulário da bancada, schemas/validações e backend, reaproveitando a regra existente e exigindo nova escolha explícita quando uma edição de preço invalida a intenção atual.
+- Enforce a matriz preço × intenção no formulário da bancada, schemas/validações e backend por uma única autoridade pura em `src/lib/lab/bench/domain/`; preservar exports compatíveis de `form-rules.ts` por delegação, exigir nova escolha explícita quando edição de preço invalida a intenção e manter hook/formulário produtivos intocados.
 - Habilitar políticas versionadas de Oferta, Destaque e Exclusivo somente para Produto 1:1, com combinações não suportadas fail-closed antes do provider.
 - Validar validade exclusivamente em Oferta na UI e backend; incompatibilidade exige regularização explícita sem descartar validade silenciosamente.
 - Usar instruções concisas: nome completo sem alterar palavras; descrição opcional adaptável ou omitida preservando significado; informações obrigatórias integrais.
