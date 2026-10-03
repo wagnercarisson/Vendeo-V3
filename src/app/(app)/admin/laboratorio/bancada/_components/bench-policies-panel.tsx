@@ -80,8 +80,8 @@ export function BenchPoliciesPanel({
           <ul className="space-y-2">
             {policies.map((policy) => (
               <li
-                key={policy.dimension}
-                data-testid={`bench-policy-${policy.dimension}`}
+                key={policy.id}
+                data-testid={`bench-policy-${policy.id}`}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-bg-deep/40 px-3 py-2"
               >
                 <span className="font-heading text-sm text-text-primary">

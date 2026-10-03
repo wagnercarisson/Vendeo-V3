@@ -1982,14 +1982,46 @@ describe("contrato de UI — políticas/versões e prompt-base padrão (F48.2.4)
 
     expect(screen.getByTestId("bench-policies-panel")).toBeInTheDocument();
     expect(screen.getByText("Políticas habilitadas")).toBeInTheDocument();
-    expect(screen.getByTestId("bench-policy-intencao")).toHaveTextContent("oferta");
-    expect(screen.getByTestId("bench-policy-formato")).toHaveTextContent("1:1");
+    expect(screen.getByTestId("bench-policy-policy.intencao.oferta")).toHaveTextContent("oferta");
+    expect(screen.getByTestId("bench-policy-policy.formato.1-1")).toHaveTextContent("1:1");
     expect(screen.getByText(/policy\.intencao\.oferta/)).toBeInTheDocument();
     expect(screen.getByText(/48\.2\.6-oferta-v1/)).toBeInTheDocument();
     expect(screen.getByText("Versão do compositor")).toBeInTheDocument();
     expect(screen.getByText(COMPOSER_VERSION)).toBeInTheDocument();
     expect(screen.getByText("Prompt-base padrão")).toBeInTheDocument();
     expect(screen.getByText(BENCH_DEFAULT_PROMPT_BASE.version)).toBeInTheDocument();
+  });
+
+  it("renderiza Oferta, Destaque e Exclusivo simultaneamente sem keys duplicadas", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const policies: BenchPromptPolicyView[] = [
+      { dimension: "intencao", id: "policy.intencao.oferta", value: "Oferta", version: "v1" },
+      { dimension: "intencao", id: "policy.intencao.destaque", value: "Destaque", version: "v1" },
+      { dimension: "intencao", id: "policy.intencao.exclusivo", value: "Exclusivo", version: "v1" },
+    ];
+
+    try {
+      render(
+        <BenchPoliciesPanel
+          policies={policies}
+          composerVersion={COMPOSER_VERSION}
+          promptBaseVersion={BENCH_DEFAULT_PROMPT_BASE.version}
+        />,
+      );
+
+      const rowIds = policies.map((policy) => `bench-policy-${policy.id}`);
+      expect(new Set(rowIds).size).toBe(3);
+      for (const [index, rowId] of rowIds.entries()) {
+        const row = screen.getByTestId(rowId);
+        expect(row).toHaveTextContent(policies[index].value);
+        expect(row.textContent).toContain(policies[index].value);
+      }
+      expect(
+        consoleError.mock.calls.flat().join(" "),
+      ).not.toMatch(/same key|unique "key"|duplicate key/i);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("o painel de políticas é somente leitura e não expõe secrets", () => {
