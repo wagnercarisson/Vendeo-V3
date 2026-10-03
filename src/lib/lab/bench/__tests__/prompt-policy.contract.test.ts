@@ -10,6 +10,8 @@ import { PROMPT_BLOCK_LABELS, composePromptBlocks } from "../domain/prompt-compo
 import type { BenchBrandingContract } from "../domain/branding-service";
 import type { BenchConfig, BenchOffer, BenchProduct } from "../domain/schemas";
 import { ofertaPolicy } from "../domain/policies/oferta";
+import { destaquePolicy } from "../domain/policies/destaque";
+import { exclusivoPolicy } from "../domain/policies/exclusivo";
 import { produtoPolicy } from "../domain/policies/produto";
 import { generalIntegrityPolicy } from "../domain/policies/general-integrity";
 import { temaNenhumPolicy } from "../domain/policies/tema-nenhum";
@@ -141,6 +143,18 @@ describe("políticas — resolução explícita e versionada", () => {
     expect(resolved.contributions.length).toBeGreaterThan(0);
   });
 
+  it.each([
+    { intent: "oferta", policy: ofertaPolicy, line: "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais." },
+    { intent: "destaque", policy: destaquePolicy, line: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
+    { intent: "exclusivo", policy: exclusivoPolicy, line: "Exclusivo: valorize a apresentação sem preço. Preserve os selos informados; não invente atributos nem alegações de exclusividade, escassez ou edição limitada." },
+  ])("resolve $intent por valor habilitado", ({ intent, policy, line }) => {
+    const config = { ...CONFIG, intencao: intent } as BenchConfig;
+    const resolved = resolveBenchPromptPolicies(config);
+    expect(BENCH_PROMPT_POLICY_REGISTRY.intencao?.[intent]).toBe(policy);
+    expect(resolved.contributions.flatMap((entry) => entry.lines)).toContain(line);
+    expect(resolved.versions.intencao).toBe(policy.version);
+  });
+
   it("mesma entrada ⇒ mesma saída (determinismo)", () => {
     const first = resolveBenchPromptPolicies(CONFIG);
     const second = resolveBenchPromptPolicies(CONFIG);
@@ -151,9 +165,9 @@ describe("políticas — resolução explícita e versionada", () => {
 
   it("versiona a orientação da imagem principal e das adicionais em produto", () => {
     const lines = produtoPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines);
-    expect(produtoPolicy.version).toBe("48.2.5-produto-v3");
+    expect(produtoPolicy.version).toBe("48.2.6-produto-v1");
     expect(lines).toContain(
-      "Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.",
+      "Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.",
     );
     expect(lines.join(" ").toLowerCase()).not.toContain("garantia de aparição");
     expect(lines.join(" ").toLowerCase()).not.toContain("layout programático");
@@ -268,10 +282,10 @@ describe("políticas — atribuição exclusiva e disjunta (oferta × produto)",
     ]) {
       expect(generalLines.join(" ").toLowerCase()).not.toContain(forbiddenOwnerTerm);
     }
-    expect(productLines.join(" ")).toContain("nome do produto inteiro");
-    expect(productLines.join(" ")).toContain("contexto e significado");
-    expect(productLines.join(" ")).toContain("informações explicitamente obrigatórias");
-    expect(offerLines.join(" ")).toContain("Não inventar preço");
+    expect(productLines.join(" ")).toContain("Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.");
+    expect(productLines.join(" ")).toContain("preservando o significado");
+    expect(productLines.join(" ")).toContain("Textos obrigatórios: reprodução integral.");
+    expect(offerLines.join(" ")).toContain("Oferta: destaque o preço por");
     expect(offerLines.join(" ").toLowerCase()).not.toContain("português correto");
   });
 });
@@ -314,23 +328,17 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       "Descrição: 100% algodão",
       "Produto como elemento principal da peça.",
       "Reproduzir com fidelidade a aparência, a embalagem e as características do produto.",
-      "Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.",
-      "Usar as imagens e referências do produto como base visual, sem inventar elementos.",
-      "Exiba o nome do produto inteiro e exatamente como informado e aprovado; não abrevie, omita, parafraseie nem corrija silenciosamente.",
-      "Use a descrição como complemento. Pode selecionar, resumir ou adaptar a redação, preservando contexto e significado; não invente características, benefícios, condições ou usos.",
-      "Reproduza literalmente as informações explicitamente obrigatórias na arte.",
-      "Não represente nem invente outro produto além do informado.",
+      "Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.",
+      "Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.",
+      "Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.",
+      "Textos obrigatórios: reprodução integral.",
       "",
       "[CONDIÇÕES COMERCIAIS]",
       `Preço original: R$${NBSP}99,90`,
       `Preço promocional: R$${NBSP}49,90`,
       "Selo: 50% OFF",
       "Validade: até 31/12/2026",
-      "Hierarquia comercial: o preço promocional tem maior peso visual; o preço original entra como secundário, somente quando informado.",
-      "Selo, validade e textos comerciais com hierarquia adequada e leitura imediata.",
-      "Excelente legibilidade e acabamento comercial de alta qualidade.",
-      "Liberdade de arranjo: o modelo encontra a melhor composição, sem posições fixas.",
-      "Não inventar preço, desconto, validade nem textos comerciais; usar apenas os dados informados.",
+      "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
       "",
       "[INTENÇÃO E FORMATO]",
       "Oferta",
@@ -359,9 +367,7 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       ),
       "utf8",
     );
-    expect(source).toContain(
-      "Imagens adicionais de referência — opcionais. Podem ajudar a preservar detalhes e orientar a composição, mas nem todas necessariamente aparecerão na arte final.",
-    );
+    expect(source).toContain("Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.");
   });
 });
 
@@ -369,8 +375,6 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
 
 describe("políticas — negativos: combinações não habilitadas falham antes da chamada paga", () => {
   const disabled = [
-    { name: "Destaque", config: { ...CONFIG, intencao: "destaque" } },
-    { name: "Exclusivo", config: { ...CONFIG, intencao: "exclusivo" } },
     { name: "9:16", config: { ...CONFIG, formato: "9:16" } },
     { name: "serviço", config: { ...CONFIG, tipoConteudo: "servico" } },
     { name: "informativo", config: { ...CONFIG, tipoConteudo: "informativo" } },

@@ -52,12 +52,16 @@ describe("config-registry — primeiro recorte habilitado", () => {
     expect(resolved.qualidade).toBe("low");
   });
 
-  it("o registry é válido (fail-fast) e cada dimensão tem exatamente uma entrada habilitada", () => {
+  it("o registry é válido e habilita apenas baseline mais as três intenções de Produto", () => {
     expect(() => validateBenchConfigRegistry()).not.toThrow();
     for (const dimension of BENCH_REGISTRY_DIMENSIONS) {
       const enabled = BENCH_CONFIG_REGISTRY[dimension].filter((entry) => entry.enabled);
-      expect(enabled, `${dimension} habilitadas`).toHaveLength(1);
+      expect(enabled, `${dimension} habilitadas`).toHaveLength(
+        dimension === "intencao" ? 3 : 1,
+      );
     }
+    expect(BENCH_CONFIG_REGISTRY.intencao.filter((entry) => entry.enabled).map((entry) => entry.id))
+      .toEqual(["oferta", "destaque", "exclusivo"]);
   });
 
   it("todas as entradas desabilitadas declaram motivo", () => {
@@ -91,8 +95,6 @@ describe("config-registry — valor fora do registry é recusado", () => {
   it("lança config_registry_value_disabled com motivo para os valores futuros", () => {
     for (const [dimension, value] of [
       ["formato", "9:16"],
-      ["intencao", "destaque"],
-      ["intencao", "exclusivo"],
       ["tipoConteudo", "servico"],
       ["estrutura", "carrossel"],
     ] as const) {
@@ -110,6 +112,13 @@ describe("config-registry — valor fora do registry é recusado", () => {
       expect((error as BenchConfigRegistryError).reason).toBeTruthy();
     }
   });
+
+  it.each(["oferta", "destaque", "exclusivo"] as const)(
+    "resolve a intenção habilitada %s sem alterar outras dimensões",
+    (intencao) => {
+      expect(resolveBenchConfig(fullConfig({ intencao })).intencao).toBe(intencao);
+    },
+  );
 
   it("listBenchConfigOptions expõe habilitados e desabilitados com motivo", () => {
     const formats = listBenchConfigOptions("formato");
