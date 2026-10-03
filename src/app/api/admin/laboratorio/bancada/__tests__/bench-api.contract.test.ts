@@ -832,7 +832,7 @@ beforeEach(() => {
       },
       typographyDirection: "serif",
       brandColor: params.branding.brandColor ?? "#22C55E",
-      product: { name: "Produto", description: null },
+      product: { name: params.snapshot.product.name, description: null },
       commercial: {
         intent: "offer",
         originalPriceText: null,
@@ -1257,7 +1257,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     mockComposePromptBlocks.mockImplementation((input: never) => composerActual.composePromptBlocks(input));
     const res = await postCompose({
       ...VALID_COMPOSE_BODY,
-      product: { name: "Produto", priceCents: campaignIntent === "offer" ? 1000 : undefined, originalPriceCents: campaignIntent === "offer" ? 1500 : undefined },
+      product: { name: campaignIntent === "spotlight" ? "Mouse sem fio" : "Produto", priceCents: campaignIntent === "offer" ? 1000 : undefined, originalPriceCents: campaignIntent === "offer" ? 1500 : undefined },
       offer: { campaignIntent },
     });
     const body = await res.json();
@@ -1266,6 +1266,10 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(mockResolveBenchConfig).toHaveBeenCalledWith(expect.objectContaining({ intencao: policyIntent }));
     expect(body.compiledPrompt).toContain(phrase);
     expect(body.policyVersions.intencao).toBe(version);
+    if (campaignIntent === "spotlight") {
+      expect(body.compiledPrompt).toContain("Nome do produto obrigatório: Mouse sem fio");
+      expect(body.policyVersions.intencao).toBe("48.2.6-destaque-v1");
+    }
     expect(mockComposePromptBlocks.mock.calls[0][0]).toMatchObject({ policyVersions: expect.objectContaining({ intencao: version }) });
     if (campaignIntent !== "offer") {
       expect(body.compiledPrompt).not.toContain("Oferta:");
@@ -1795,7 +1799,7 @@ describe("contrato da API da bancada — execução com confirmação", () => {
       visualDirection: {},
       typographyDirection: null,
       brandColor: null,
-      product: { name: "Produto", description: null },
+      product: { name: params.snapshot?.product?.name ?? "Produto", description: null },
       commercial: { intent: campaignIntent === "offer" ? "offer" : campaignIntent === "spotlight" ? "spotlight" : "exclusive", originalPriceText: null, discountedPriceText: null, badge: null, validity: null, preserveImageContext: false },
       constraints: { mandatoryArtworkText: null },
       config: params.config,
