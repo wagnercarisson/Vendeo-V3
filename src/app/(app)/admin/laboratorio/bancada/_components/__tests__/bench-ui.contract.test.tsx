@@ -880,7 +880,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           composerVersion: COMPOSER_VERSION,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v1",
+            tipoConteudo: "48.2.6-produto-v2",
             geral: "48.2.5-general-integrity-v1",
           },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1109,7 +1109,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           composerVersion: COMPOSER_VERSION,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v1",
+            tipoConteudo: "48.2.6-produto-v2",
             geral: "48.2.5-general-integrity-v1",
           },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1351,7 +1351,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           compiledPrompt: "PROMPT SEM ALERTAS",
           blocks: {},
           composerVersion: COMPOSER_VERSION,
-          policyVersions: { tipoConteudo: "48.2.6-produto-v1", geral: "48.2.5-general-integrity-v1" },
+          policyVersions: { tipoConteudo: "48.2.6-produto-v2", geral: "48.2.5-general-integrity-v1" },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
           textIntegrityEvidence: {
             policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
@@ -1495,7 +1495,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             composerVersion: COMPOSER_VERSION,
             policyVersions: {
               intencao: "48.2.6-oferta-v1",
-              tipoConteudo: "48.2.6-produto-v1",
+              tipoConteudo: "48.2.6-produto-v2",
               geral: "48.2.5-general-integrity-v1",
             },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1544,7 +1544,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             composerVersion: COMPOSER_VERSION,
             policyVersions: {
               intencao: "48.2.6-oferta-v1",
-              tipoConteudo: "48.2.6-produto-v1",
+              tipoConteudo: "48.2.6-produto-v2",
               geral: "48.2.5-general-integrity-v1",
             },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1637,7 +1637,7 @@ const PREFLIGHT_EVIDENCE: BenchPreflightEvidenceView = {
   policyVersions: {
     intencao: "48.2.6-oferta-v1",
     formato: "48.2.4-formato-1-1-v1",
-    tipoConteudo: "48.2.6-produto-v1",
+    tipoConteudo: "48.2.6-produto-v2",
     estrutura: "48.2.4-peca-unica-v1",
     tema: "48.2.4-tema-nenhum-v1",
   },
@@ -1935,7 +1935,7 @@ const POLICIES: BenchPromptPolicyView[] = [
     dimension: "tipoConteudo",
     id: "policy.tipoConteudo.produto",
     value: "produto",
-    version: "48.2.6-produto-v1",
+    version: "48.2.6-produto-v2",
   },
   {
     dimension: "estrutura",
@@ -2196,7 +2196,7 @@ describe("contrato de UI — tentativas e 'Nova tentativa' (F48.2.4)", () => {
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v1",
+            tipoConteudo: "48.2.6-produto-v2",
             geral: "48.2.5-general-integrity-v1",
           },
           composerVersion: COMPOSER_VERSION,

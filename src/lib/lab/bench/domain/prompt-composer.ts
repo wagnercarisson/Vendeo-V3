@@ -108,7 +108,7 @@ function productLines(
   references: readonly string[] | undefined,
 ): string[] {
   const lines: string[] = [];
-  pushLine(lines, "Produto", briefing.product.name);
+  pushLine(lines, "Nome do produto obrigatório", briefing.product.name);
   pushLine(lines, "Descrição", briefing.product.description);
   if (briefing.commercial.preserveImageContext) {
     lines.push("Preservar imagem original: sim");

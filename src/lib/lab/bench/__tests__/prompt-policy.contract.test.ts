@@ -165,7 +165,7 @@ describe("políticas — resolução explícita e versionada", () => {
 
   it("versiona a orientação da imagem principal e das adicionais em produto", () => {
     const lines = produtoPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines);
-    expect(produtoPolicy.version).toBe("48.2.6-produto-v1");
+    expect(produtoPolicy.version).toBe("48.2.6-produto-v2");
     expect(lines).toContain(
       "Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.",
     );
@@ -324,7 +324,7 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
   it("compõe o prompt completo de forma determinística", () => {
     const golden = [
       "[PRODUTO E IMAGENS DE REFERÊNCIA]",
-      "Produto: Camiseta básica",
+      "Nome do produto obrigatório: Camiseta básica",
       "Descrição: 100% algodão",
       "Produto como elemento principal da peça.",
       "Reproduzir com fidelidade a aparência, a embalagem e as características do produto.",

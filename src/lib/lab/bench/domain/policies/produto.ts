@@ -16,7 +16,7 @@ import type { BenchPromptPolicy } from "./types";
  * exclusivamente à política `oferta`.
  */
 
-export const PRODUTO_POLICY_VERSION = "48.2.6-produto-v1";
+export const PRODUTO_POLICY_VERSION = "48.2.6-produto-v2";
 
 export const produtoPolicy: BenchPromptPolicy = {
   id: "policy.tipoConteudo.produto",
