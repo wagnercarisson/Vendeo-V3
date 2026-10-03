@@ -15,13 +15,13 @@ import type { BenchPromptContribution } from "./types";
  * Módulo **puro** — sem I/O, sem `process.env`, sem provider e sem client
  * Supabase. Percorre as dimensões do recorte (`intencao`, `formato`,
  * `tipoConteudo`, `estrutura`, `tema`) e resolve a política habilitada de cada uma
- * pelo registry. Se uma dimensão habilitada **não** possuir política implementada,
+ * por dimensão e valor pelo registry. Se uma dimensão habilitada **não** possuir política implementada,
  * a resolução lança `bench_policy_not_implemented` **antes** de qualquer chamada
  * paga (sem fallback/improvisação).
  *
  * Os valores habilitados/desabilitados são validados antes por
  * `resolveBenchConfig` (autoridade do `config-registry`): uma combinação
- * desabilitada (Destaque, Exclusivo, 9:16, serviço, informativo, tema, carrossel)
+ * desabilitada (9:16, serviço, informativo, tema, carrossel)
  * falha deterministicamente **antes** de produzir qualquer contribuição.
  */
 
@@ -73,8 +73,8 @@ export function resolveBenchPromptPolicies(
 
   for (const dimension of PROMPT_POLICY_DIMENSIONS) {
     const value = resolved[dimension];
-    const policy = registry[dimension];
-    if (!policy || policy.value !== value) {
+    const policy = registry[dimension]?.[value];
+    if (!policy || !policy.id || !policy.version || policy.dimension !== dimension || policy.value !== value) {
       throw new BenchPromptPolicyError({ dimension, value });
     }
     versions[dimension] = policy.version;

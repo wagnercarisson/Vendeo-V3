@@ -741,6 +741,11 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
     expect(source).not.toContain("fetch(");
   });
 
+  it("exibe a orientação normativa exata das imagens principal e auxiliares", () => {
+    render(<BenchImageUpload storeId={STORE_A.id} getOperationId={() => "op"} onUploaded={() => {}} />);
+    expect(screen.getByText("Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.")).toBeInTheDocument();
+  });
+
   it("preserva a intenção ao editar preços e pede nova escolha quando fica incompatível", () => {
     const onChange = vi.fn();
     render(
@@ -874,8 +879,8 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           blocks: {},
           composerVersion: COMPOSER_VERSION,
           policyVersions: {
-            intencao: "48.2.4-oferta-v1",
-            tipoConteudo: "48.2.5-produto-v3",
+            intencao: "48.2.6-oferta-v1",
+            tipoConteudo: "48.2.6-produto-v1",
             geral: "48.2.5-general-integrity-v1",
           },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1103,8 +1108,8 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           blocks: {},
           composerVersion: COMPOSER_VERSION,
           policyVersions: {
-            intencao: "48.2.4-oferta-v1",
-            tipoConteudo: "48.2.5-produto-v3",
+            intencao: "48.2.6-oferta-v1",
+            tipoConteudo: "48.2.6-produto-v1",
             geral: "48.2.5-general-integrity-v1",
           },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1346,7 +1351,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           compiledPrompt: "PROMPT SEM ALERTAS",
           blocks: {},
           composerVersion: COMPOSER_VERSION,
-          policyVersions: { tipoConteudo: "48.2.5-produto-v3", geral: "48.2.5-general-integrity-v1" },
+          policyVersions: { tipoConteudo: "48.2.6-produto-v1", geral: "48.2.5-general-integrity-v1" },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
           textIntegrityEvidence: {
             policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
@@ -1489,8 +1494,8 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             blocks: { "IDENTIDADE E DIREÇÃO VISUAL": "Loja: Aurora" },
             composerVersion: COMPOSER_VERSION,
             policyVersions: {
-              intencao: "48.2.4-oferta-v1",
-              tipoConteudo: "48.2.5-produto-v3",
+              intencao: "48.2.6-oferta-v1",
+              tipoConteudo: "48.2.6-produto-v1",
               geral: "48.2.5-general-integrity-v1",
             },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1538,8 +1543,8 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             blocks: { "IDENTIDADE E DIREÇÃO VISUAL": "Loja: Aurora" },
             composerVersion: COMPOSER_VERSION,
             policyVersions: {
-              intencao: "48.2.4-oferta-v1",
-              tipoConteudo: "48.2.5-produto-v3",
+              intencao: "48.2.6-oferta-v1",
+              tipoConteudo: "48.2.6-produto-v1",
               geral: "48.2.5-general-integrity-v1",
             },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1630,9 +1635,9 @@ const PREFLIGHT_EVIDENCE: BenchPreflightEvidenceView = {
   // `POST /runs` responde 400 por preflight-evidence ausente. A evidência é
   // **textual**: NÃO carrega `presetId`/`config` de execução (correção de UAT).
   policyVersions: {
-    intencao: "48.2.4-oferta-v1",
+    intencao: "48.2.6-oferta-v1",
     formato: "48.2.4-formato-1-1-v1",
-    tipoConteudo: "48.2.5-produto-v3",
+    tipoConteudo: "48.2.6-produto-v1",
     estrutura: "48.2.4-peca-unica-v1",
     tema: "48.2.4-tema-nenhum-v1",
   },
@@ -1918,7 +1923,7 @@ const POLICIES: BenchPromptPolicyView[] = [
     dimension: "intencao",
     id: "policy.intencao.oferta",
     value: "oferta",
-    version: "48.2.4-oferta-v1",
+    version: "48.2.6-oferta-v1",
   },
   {
     dimension: "formato",
@@ -1930,7 +1935,7 @@ const POLICIES: BenchPromptPolicyView[] = [
     dimension: "tipoConteudo",
     id: "policy.tipoConteudo.produto",
     value: "produto",
-    version: "48.2.5-produto-v3",
+    version: "48.2.6-produto-v1",
   },
   {
     dimension: "estrutura",
@@ -1980,7 +1985,7 @@ describe("contrato de UI — políticas/versões e prompt-base padrão (F48.2.4)
     expect(screen.getByTestId("bench-policy-intencao")).toHaveTextContent("oferta");
     expect(screen.getByTestId("bench-policy-formato")).toHaveTextContent("1:1");
     expect(screen.getByText(/policy\.intencao\.oferta/)).toBeInTheDocument();
-    expect(screen.getByText(/48\.2\.4-oferta-v1/)).toBeInTheDocument();
+    expect(screen.getByText(/48\.2\.6-oferta-v1/)).toBeInTheDocument();
     expect(screen.getByText("Versão do compositor")).toBeInTheDocument();
     expect(screen.getByText(COMPOSER_VERSION)).toBeInTheDocument();
     expect(screen.getByText("Prompt-base padrão")).toBeInTheDocument();
@@ -2054,7 +2059,7 @@ describe("contrato de UI — políticas/versões e prompt-base padrão (F48.2.4)
     const versions = screen.getByTestId("bench-preflight-versions");
     expect(versions).toHaveTextContent(COMPOSER_VERSION);
     expect(versions).toHaveTextContent(BENCH_DEFAULT_PROMPT_BASE.version);
-    expect(versions).toHaveTextContent("intencao:48.2.4-oferta-v1");
+    expect(versions).toHaveTextContent("intencao:48.2.6-oferta-v1");
   });
 
   it("exibe a referência canônica de identidade sem URL assinada", () => {
@@ -2158,8 +2163,8 @@ describe("contrato de UI — tentativas e 'Nova tentativa' (F48.2.4)", () => {
           promptBase: "prompt base",
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
           policyVersions: {
-            intencao: "48.2.4-oferta-v1",
-            tipoConteudo: "48.2.5-produto-v3",
+            intencao: "48.2.6-oferta-v1",
+            tipoConteudo: "48.2.6-produto-v1",
             geral: "48.2.5-general-integrity-v1",
           },
           composerVersion: COMPOSER_VERSION,

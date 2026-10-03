@@ -19,7 +19,7 @@ import type { BenchPromptPolicy } from "./types";
  * exclusivamente à política `produto`.
  */
 
-export const OFERTA_POLICY_VERSION = "48.2.4-oferta-v1";
+export const OFERTA_POLICY_VERSION = "48.2.6-oferta-v1";
 
 export const ofertaPolicy: BenchPromptPolicy = {
   id: "policy.intencao.oferta",
@@ -30,17 +30,11 @@ export const ofertaPolicy: BenchPromptPolicy = {
     return [
       {
         block: PROMPT_BLOCK_LABELS.commercial,
-        lines: [
-          "Hierarquia comercial: o preço promocional tem maior peso visual; o preço original entra como secundário, somente quando informado.",
-          "Selo, validade e textos comerciais com hierarquia adequada e leitura imediata.",
-          "Excelente legibilidade e acabamento comercial de alta qualidade.",
-          "Liberdade de arranjo: o modelo encontra a melhor composição, sem posições fixas.",
-          "Não inventar preço, desconto, validade nem textos comerciais; usar apenas os dados informados.",
-        ],
+        lines: ["Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais."],
       },
       {
         block: PROMPT_BLOCK_LABELS.intent,
-        lines: ["Oferta"],
+        lines: [],
       },
     ];
   },

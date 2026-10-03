@@ -58,8 +58,8 @@ export const BENCH_CONFIG_REGISTRY: Record<BenchRegistryDimension, readonly Benc
   ],
   intencao: [
     { id: "oferta", label: "Oferta", enabled: true },
-    { id: "destaque", label: "Destaque", enabled: false, reason: FORA_DO_RECORTE },
-    { id: "exclusivo", label: "Exclusivo", enabled: false, reason: FORA_DO_RECORTE },
+    { id: "destaque", label: "Destaque", enabled: true },
+    { id: "exclusivo", label: "Exclusivo", enabled: true },
   ],
   tipoConteudo: [
     { id: "produto", label: "Produto", enabled: true },

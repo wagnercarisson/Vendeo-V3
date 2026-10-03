@@ -63,16 +63,14 @@ function buildConfigOptions(): BenchConfigOptions {
  */
 function buildEnabledPolicies(): BenchPromptPolicyView[] {
   return PROMPT_POLICY_DIMENSIONS.flatMap((dimension) => {
-    const policy = BENCH_PROMPT_POLICY_REGISTRY[dimension];
-    if (!policy) return [];
-    return [
-      {
-        dimension,
-        id: policy.id,
-        value: policy.value,
-        version: policy.version,
-      },
-    ];
+    const policies = BENCH_PROMPT_POLICY_REGISTRY[dimension];
+    if (!policies) return [];
+    return Object.values(policies).map((policy) => ({
+      dimension,
+      id: policy.id,
+      value: policy.value,
+      version: policy.version,
+    }));
   });
 }
 

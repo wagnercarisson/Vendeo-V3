@@ -131,16 +131,18 @@ function makeBriefing(overrides: {
   branding?: Partial<BenchBrandingContract>;
   product?: Partial<BenchProduct>;
   offer?: Partial<BenchOffer>;
+  intent?: BenchConfig["intencao"];
 } = {}) {
+  const config = { ...CONFIG, intencao: overrides.intent ?? CONFIG.intencao };
   const snapshot = buildBenchCampaignSnapshot({
     product: makeProduct(overrides.product),
     offer: makeOffer(overrides.offer),
-    config: CONFIG,
+    config,
   });
   const briefing = buildBenchExperimentalBriefing({
     branding: makeBranding(overrides.branding),
     snapshot,
-    config: CONFIG,
+    config,
   });
   return { briefing, snapshot };
 }
@@ -148,7 +150,8 @@ function makeBriefing(overrides: {
 /** Destaque (não-oferta) com `preserveImageContext` ligado. */
 function spotlightBriefing() {
   return makeBriefing({
-    offer: { campaignIntent: "spotlight", badge: "", validity: "" },
+    offer: { campaignIntent: "spotlight", badge: "", validity: undefined },
+    intent: "destaque",
     product: {
       priceCents: 4990,
       originalPriceCents: undefined,
@@ -187,7 +190,8 @@ describe("núcleo do compositor — estrutura de blocos canônicos", () => {
         priceCents: undefined,
         originalPriceCents: undefined,
       },
-      offer: { badge: "", validity: "", showIllustrativeNotice: false },
+      offer: { campaignIntent: "exclusive", badge: "", validity: undefined, showIllustrativeNotice: false },
+      intent: "exclusivo",
     });
 
     const { text, blocks } = composePromptBlocks({ briefing, promptBase: "" });

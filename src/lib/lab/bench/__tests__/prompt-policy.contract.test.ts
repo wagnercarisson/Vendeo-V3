@@ -205,7 +205,7 @@ describe("políticas — linguagem natural e omissão do tema neutro", () => {
       .flatMap((contribution) => contribution.lines)
       .join("\n");
 
-    expect(intent).toContain("Oferta");
+    expect(intent).not.toContain("oferta");
     expect(intent).toContain("quadrado 1:1");
     expect(intent).toContain("peça única");
     expect(intent).not.toContain("offer");
@@ -341,7 +341,6 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
       "",
       "[INTENÇÃO E FORMATO]",
-      "Oferta",
       "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).",
       "Estrutura: peça única.",
       "",
