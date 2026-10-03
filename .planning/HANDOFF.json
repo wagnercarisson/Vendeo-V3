@@ -4,9 +4,9 @@
   "phase": "48.2.6",
   "phase_name": "validacao-experimental-produto-intencoes-1-1",
   "phase_dir": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1",
-  "status": "plan09_complete_waiting_human_review_of_neutral_spotlight_price_label",
-  "phase_status": "plans_01_through_09_complete_plan10_not_started",
-  "plan": "48-2-6-10-not-started",
+  "status": "plan10_task0_complete_waiting_checkpoint_b",
+  "phase_status": "plans_01_through_09_complete_plan10_task0_complete_task1_checkpoint_b_not_started",
+  "plan": "48-2-6-10-task0-complete-awaiting-checkpoint-b",
   "openspec_source": "fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
   "openspec_archive": {
     "path": "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
@@ -34,7 +34,7 @@
     "implementation": "plans_01_through_09_complete",
     "checkpoint_a": "approved_local_readiness_only",
     "checkpoint_b": "not_started",
-    "next_action": "Revisão humana do rótulo Produto v2 e do registro UAT NovaTek/Oferta antes de qualquer nova tentativa manual; Plano 10 permanece não iniciado."
+    "next_action": "Revisar a preparação Exclusivo v2 e, se solicitado, conduzir CHECKPOINT B manual; Task 0 concluída, Task 1 ainda não iniciada. Nenhuma geração autorizada."
   },
   "previous_phase": {
     "phase": "48.2.5",
@@ -134,15 +134,15 @@
     ".planning/quick/261003-nkj-f48-2-6-trocar-o-r-tulo-comum-de-pre-o-c/261003-nkj-PLAN.md",
     ".planning/quick/261003-nkj-f48-2-6-trocar-o-r-tulo-comum-de-pre-o-c/261003-nkj-SUMMARY.md"
   ],
-  "blockers": ["Aguardar revisão humana do prompt Destaque com rótulo comum `Preço de venda` antes de qualquer geração."],
+  "blockers": ["CHECKPOINT B aguarda avaliação manual humana; não iniciar geração sem revisão e confirmação financeira individual."],
   "human_actions_pending": [
     {
-      "action": "Revisar o prompt Destaque com o rótulo neutro `Preço de venda` antes de qualquer geração",
-      "context": "Spotlight com preço único recompõe `Preço de venda: R$ 19,99`, instrução Destaque e composer v2; Offer mantém a instrução Oferta existente. Verificado localmente sem provider. Plano 10 e CHECKPOINT B permanecem não iniciados; nenhuma geração/run foi executada.",
+      "action": "Revisar a preparação Exclusivo v2 e conduzir CHECKPOINT B manualmente quando apropriado",
+      "context": "Plan 10 Task 0 está completa. Relato do usuário da primeira arte Exclusivo v1: considerada publicável, diferenciação visual inconclusiva; linkage desconhecido permanece pending. Comparação v1 × v2 preparada, não executada. Task 1 humana/CPB e Task 2 closeout ainda não iniciadas; sem autorização ou geração.",
       "blocking": true
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Revisar localmente o prompt Destaque com `Preço de venda: R$ 19,99` e a instrução/versão Destaque antes de qualquer geração; Plano 10 não iniciado e CHECKPOINT B not_started. Sem provider, imagem ou execução de /runs.",
-  "context_notes": "F48.2.6: Planos 48-2-6-01 a 48-2-6-09 concluídos e summarizados (9/10). CHECKPOINT A aprovado em 2026-10-03 apenas para readiness local/documentos; CHECKPOINT B permanece not_started e Plano 10 não iniciado. Política Produto v2 compila `Nome do produto obrigatório: {nome}`; frase de nome completo/capitalização/quebras/arranjo preservada. Quick 261003-mne corrige o mapeamento canônico da intenção UI nas rotas /compose e /runs: offer→oferta, spotlight→destaque, exclusive→exclusivo; `/runs` recompõe e compara evidência com a mesma configuração. Quick 261003-nkj muda o campo comum `discountedPriceText` para `Preço de venda` e versiona o compositor como `48.2.4-prompt-composer-v2`; a política Oferta mantém texto/versão inalterados. Spotlight com Mouse sem fio e um preço recompõe `Preço de venda: R$ 19,99`, frase Destaque e versão `48.2.6-destaque-v1`, sem label/frase/versão Oferta; testes locais, sem provider. UAT relatado por usuário para NovaTek/Oferta permanece `requer ajuste`: primeira geração omitiu `Mouse sem fio`, imagem fiel, frases genéricas aceitas, preço/selo/validade/textos obrigatórios presentes; Sunburst medium, uma referência, 24.6s, usage informado e custo local calculado USD 0.03 (não confirmado/faturado pela plataforma). Run ID, evidências de prompt/política e decomposição numérica do usage pendentes. Sem geração/provider/run/banco nesta quick task. Revisão humana do prompt Destaque pendente antes de qualquer geração. OpenSpec continua ativo; Plano 10 e CHECKPOINT B não iniciados. A tentativa histórica de fetch do Plano 06 permanece com destino não determinado; checkpoints F48.2.5 são históricos."
+  "next_action": "Revisar a preparação documentada Exclusivo v2; Task 0 completa, aguardando gate humano CHECKPOINT B. Sem Task 1/Task 2, provider, imagem ou execução de /runs.",
+  "context_notes": "F48.2.6: Planos 01–09 permanecem completos. Plan 10 Task 0 pre-checkpoint concluída; CHECKPOINT B not_started, Task 1 humana e Task 2 closeout não iniciadas. Política Exclusivo vigente `48.2.6-exclusivo-v2`, instrução literal aprovada. UAT mantém evidência histórica v1: usuário considerou primeira arte publicável, diferenciação visual inconclusiva; nenhum slot, run ID ou metadado/linkage foi fornecido. Comparação v1 × v2 preparada (mesmos dados/imagem existentes e Sunburst medium; texto/versão de política como única variável), não executada. Sem provider, imagem, run, banco, migration ou alteração de preço/produção. OpenSpec permanece ativo; sem verify/sync/archive."
 }

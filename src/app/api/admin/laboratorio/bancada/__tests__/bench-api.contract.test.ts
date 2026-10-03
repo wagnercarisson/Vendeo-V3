@@ -1249,7 +1249,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
   it.each([
     { campaignIntent: "offer", policyIntent: "oferta", version: "48.2.6-oferta-v1", phrase: "Oferta: destaque o preço por" },
     { campaignIntent: "spotlight", policyIntent: "destaque", version: "48.2.6-destaque-v1", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
-    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v1", phrase: "Exclusivo: valorize a apresentação sem preço." },
+    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v2", phrase: "Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações." },
   ])("POST /compose resolve $campaignIntent para a política $policyIntent", async ({ campaignIntent, policyIntent, version, phrase }) => {
     const configActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/config-registry")>("@/lib/lab/bench/domain/config-registry");
     const policiesActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies");
@@ -1822,7 +1822,7 @@ describe("contrato da API da bancada — execução com confirmação", () => {
   it.each([
     { campaignIntent: "offer", policyIntent: "oferta", version: "48.2.6-oferta-v1", phrase: "Oferta: destaque o preço por" },
     { campaignIntent: "spotlight", policyIntent: "destaque", version: "48.2.6-destaque-v1", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
-    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v1", phrase: "Exclusivo: valorize a apresentação sem preço." },
+    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v2", phrase: "Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações." },
   ])("POST /runs revalida $campaignIntent com política $policyIntent antes de confirmação", async ({ campaignIntent, policyIntent, version, phrase }) => {
     const configActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/config-registry")>("@/lib/lab/bench/domain/config-registry");
     const policiesActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies");

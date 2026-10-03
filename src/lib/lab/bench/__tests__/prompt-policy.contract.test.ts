@@ -12,9 +12,11 @@ import type { BenchConfig, BenchOffer, BenchProduct } from "../domain/schemas";
 import { ofertaPolicy } from "../domain/policies/oferta";
 import { destaquePolicy } from "../domain/policies/destaque";
 import { exclusivoPolicy } from "../domain/policies/exclusivo";
+import { EXCLUSIVO_POLICY_VERSION } from "../domain/policies/exclusivo";
 import { produtoPolicy } from "../domain/policies/produto";
 import { generalIntegrityPolicy } from "../domain/policies/general-integrity";
 import { temaNenhumPolicy } from "../domain/policies/tema-nenhum";
+import { BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { BENCH_PROMPT_POLICY_REGISTRY } from "../domain/policies/registry";
 import {
   BenchPromptPolicyError,
@@ -146,7 +148,7 @@ describe("políticas — resolução explícita e versionada", () => {
   it.each([
     { intent: "oferta", policy: ofertaPolicy, line: "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais." },
     { intent: "destaque", policy: destaquePolicy, line: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
-    { intent: "exclusivo", policy: exclusivoPolicy, line: "Exclusivo: valorize a apresentação sem preço. Preserve os selos informados; não invente atributos nem alegações de exclusividade, escassez ou edição limitada." },
+    { intent: "exclusivo", policy: exclusivoPolicy, line: "Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações." },
   ])("resolve $intent por valor habilitado", ({ intent, policy, line }) => {
     const config = { ...CONFIG, intencao: intent } as BenchConfig;
     const resolved = resolveBenchPromptPolicies(config);
@@ -201,6 +203,47 @@ describe("políticas — resolução explícita e versionada", () => {
     for (const contribution of contributions) {
       expect(canonical.has(contribution.block)).toBe(true);
     }
+  });
+});
+
+describe("política Exclusivo v2 — composição e selos fornecidos", () => {
+  const instruction = "Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações.";
+  const exclusiveConfig = { ...CONFIG, intencao: "exclusivo" } as BenchConfig;
+
+  it.each([
+    { label: "sem selo", badge: undefined, serialized: undefined },
+    { label: "selo Exclusivo", badge: "Exclusivo", serialized: "Selo: Exclusivo" },
+    { label: "selo Edição Limitada", badge: "Edição Limitada", serialized: "Selo: Edição Limitada" },
+  ])("compõe v2 $label sem preço nem selo não fornecido", ({ badge, serialized }) => {
+    const snapshot = buildBenchCampaignSnapshot({
+      product: { name: "Produto de teste", priceCents: undefined, originalPriceCents: undefined, preserveImageContext: false },
+      offer: { campaignIntent: "exclusive", ...(badge ? { badge } : {}), showIllustrativeNotice: false },
+      config: exclusiveConfig,
+    });
+    const briefing = buildBenchExperimentalBriefing({ branding: makeBranding(), snapshot, config: exclusiveConfig });
+    const policies = resolveBenchPromptPolicies(exclusiveConfig);
+    const text = composePromptBlocks({ briefing, promptBase: "", contributions: policies.contributions }).text;
+
+    expect(EXCLUSIVO_POLICY_VERSION).toBe("48.2.6-exclusivo-v2");
+    expect(policies.versions.intencao).toBe("48.2.6-exclusivo-v2");
+    expect(text).toContain(instruction);
+    expect(text.split(instruction)).toHaveLength(2);
+    expect(text).not.toContain("Preço original:");
+    expect(text).not.toContain("Preço de venda:");
+    expect(text).not.toContain("Oferta:");
+    expect(text).not.toContain("Destaque:");
+    if (serialized) expect(text).toContain(serialized);
+    else expect(text).not.toContain("Selo:");
+    for (const unprovided of ["Premium", "Sob Encomenda", "Edição Limitada", "Exclusivo"]) {
+      if (badge !== unprovided) expect(text).not.toContain(`Selo: ${unprovided}`);
+    }
+  });
+
+  it("preserva as opções e permissões de selos existentes", () => {
+    expect(BADGE_OPTIONS_BY_INTENT.exclusive).toEqual([
+      "Exclusivo", "Premium", "Sob Encomenda", "Edição Limitada",
+    ]);
+    expect(exclusivoPolicy.version).toBe(EXCLUSIVO_POLICY_VERSION);
   });
 });
 

@@ -16,7 +16,7 @@
 |---|---|
 | Política Oferta | `48.2.6-oferta-v1` |
 | Política Destaque | `48.2.6-destaque-v1` |
-| Política Exclusivo | `48.2.6-exclusivo-v1` |
+| Política Exclusivo vigente | `48.2.6-exclusivo-v2` |
 | Política Produto | `48.2.6-produto-v2` |
 | Prompt-base neutro | `48.2.6-produto-1-1-v1` |
 | Compositor | `48.2.4-prompt-composer-v2` |
@@ -36,6 +36,8 @@ Versões de formato, estrutura, tema e integridade geral serão copiadas para ca
 | EX-B | `[pending]` | `[pending]` | `[pending]` | `[pending]` | `[pending]` | `pending` |
 
 Relato do usuário para NovaTek/Oferta: modelo/qualidade `gpt-image-2.5-sunburst` / `medium`, uma imagem de referência, duração 24.6 segundos, usage informado sem detalhamento numérico e custo local calculado USD 0.03. USD 0.03 é somente localmente calculado — não é custo reportado pela plataforma, confirmado pela plataforma ou faturado. O resultado omitiu “Mouse sem fio”, requer ajuste; imagem fiel, frases criativas genéricas aceitas, preço/selo/validade/textos obrigatórios presentes. Nenhuma consulta a banco foi realizada. Run ID, snapshot/linhagem, evidência de política/prompt e custo de plataforma permanecem pendentes; detalhamento numérico exato de usage não foi fornecido. Comparação proposta com mesmos dados/imagem e Sunburst medium, alterando somente o rótulo, aguarda revisão humana e não está autorizada nem executada.
+
+Relato do usuário para Exclusivo v1: primeira arte considerada publicável; diferenciação visual para a intenção permanece inconclusiva. Nenhum slot, run ID, dado/imagem vinculado ou outro metadado foi fornecido. Evidência histórica v1 preservada; linkage permanece pending. Protocolo de comparação preparado (não executado): mesmos dados e imagem existentes, `gpt-image-2.5-sunburst` `medium`, texto/versão da política Exclusivo como única variável; revisão humana e confirmação financeira individual são necessárias antes de qualquer geração.
 
 Sem inventar IDs, snapshots, prompts, resultados ou custos; campos ficam `pending` até o responsável fornecer evidência. Custo observado/estimado por run e respectiva fonte serão registrados separadamente de tarifa e usage. `partial` é somente estimativa de saída, não total ou teto.
 
