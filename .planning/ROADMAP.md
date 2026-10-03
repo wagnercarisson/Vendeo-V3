@@ -188,7 +188,7 @@ Plans:
 
 **Nome:** Validação experimental Produto — intenções 1:1
 
-**Status:** Planos 01–08 executados/summarized (8/10); CHECKPOINT A aprovado somente para readiness local/documentos; Plano 09 Task 1 bloqueado porque `supabase status -o env` retornou exit 1 sem endpoints (causa não determinada); CHECKPOINT B não iniciado; sem provider, leitura remota ou geração paga.
+**Status:** Planos 01–09 executados/summarized (9/10); CHECKPOINT A aprovado; readiness local e documentos do Plano 09 concluídos; CHECKPOINT B não iniciado; Plano 10 não iniciado nesta continuação por instrução do usuário; sem provider, leitura remota ou geração paga.
 
 **Planejamento:** 10 planos, no limite superior orientativo do guia; a sequência mantém os gates de segurança, CHECKPOINT A, preparação documental e CHECKPOINT B como barreiras distintas, sem ampliar a change.
 
