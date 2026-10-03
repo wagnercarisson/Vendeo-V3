@@ -32,16 +32,19 @@ completed: 2026-10-02
 
 ## Verification (in requested order)
 
-1. Exact-name filter, `exatamente uma chamada paga; persiste latência/usage/custo/provider/modelo/protocolo` — **1 passed**.
-2. Exact-name filter, `marca o run como running antes de invocar` — **1 passed**.
-3. The plan's literal regex filter did not select the test because its parentheses were interpreted as regex syntax (**24 skipped; no test ran**). Reran with escaped literal parentheses: `sem usage: custo estimado marcado como estimativa \(não faturado\)` — **1 passed**.
-4. Exact-name filter, `erro do provider é sanitizado antes de persistir e não há segunda chamada` — **1 passed**.
+1. `exatamente uma chamada paga; persiste latência/usage/custo/provider/modelo/protocolo` — **1 passed**.
+2. `marca o run como running antes de invocar` — **1 passed**.
+3. `sem usage: custo estimado marcado como estimativa (não faturado)` — **1 passed** with literal parentheses escaped for Vitest's regex filter.
+4. `envia exatamente o texto aprovado, sem transformação, com adapter gravador` — **1 passed**.
 5. Full `bench-execution.contract.test.ts` — **24 passed**; afterEach fetch guard passed for every test.
 6. Adjacent API, preflight and prompt-policy contract suites — **3 files, 162 passed**.
+
+An additional run of `erro do provider é sanitizado antes de persistir e não há segunda chamada` also passed; it was not one of the four timeouts reported by the Plan 06 summary.
 
 ## Scope / self-check
 
 - Only `src/lib/lab/bench/__tests__/bench-execution.contract.test.ts` changed in code.
+- Quick plan clarified the fourth affected case based on the exact test inventory; quick summary records the corrected four-case sequence.
 - Production, provider/runtime, pricing, DB and migrations were not modified.
 - `git diff --check` passed; BASE_SHA protected-boundary comparison remained empty.
 - No claim is made that the earlier unknown-target fetch was local or remote.
