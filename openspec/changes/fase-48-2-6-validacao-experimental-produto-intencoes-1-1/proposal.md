@@ -8,6 +8,7 @@ A F48.2.5 estabilizou o pipeline experimental de Produto + Oferta 1:1, mas a ban
 - Habilitar políticas versionadas de Oferta, Destaque e Exclusivo somente para Produto 1:1, com combinações não suportadas fail-closed antes do provider.
 - Validar validade exclusivamente em Oferta na UI e backend; incompatibilidade exige regularização explícita sem descartar validade silenciosamente.
 - Usar instruções concisas: nome completo sem alterar palavras; descrição opcional adaptável ou omitida preservando significado; informações obrigatórias integrais.
+- Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar somente a política Produto como `48.2.6-produto-v2`; manter a liberdade original de preservação do nome.
 - Usar orientação curta para imagens auxiliares, preservando os contratos técnicos existentes por referência.
 - Conduzir UAT manual das três intenções com `gpt-image-2.5-sunburst` em `medium`, registrar evidências/custos/limitações e congelar candidato documental sem promoção.
 

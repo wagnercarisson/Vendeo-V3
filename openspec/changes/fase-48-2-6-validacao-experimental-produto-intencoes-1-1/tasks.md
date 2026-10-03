@@ -22,10 +22,11 @@
 
 - [ ] 4.1 Habilitar apenas Produto + 1:1 com políticas versionadas Oferta, Destaque e Exclusivo nos registries/config da bancada.
 - [ ] 4.2 Manter Oferta; definir Destaque com apresentação do produto e preço secundário informado; Exclusivo com apresentação sem preço e sem alegações/atributos inventados.
-- [ ] 4.3 Usar instruções concisas: nome completo sem alterar palavras (capitalização, quebras de linha e arranjo livres); descrição opcional adaptável/melhorável/omitível sem mudar significado; texto obrigatório integral; manter revisão textual e `keep_exactly`.
+- [ ] 4.3 Usar o rótulo `Nome do produto obrigatório: {nome}`; preservar nome completo sem alterar palavras (capitalização, quebras de linha e arranjo livres); descrição opcional adaptável/melhorável/omitível sem mudar significado; texto obrigatório integral; manter revisão textual e `keep_exactly`. A mudança do rótulo versiona somente Produto como `48.2.6-produto-v2`.
 - [ ] 4.4 Fazer ajuste pequeno e neutro no prompt-base reutilizável, sem regra específica de intenção; atualizar golden/versões sem alterar núcleo neutro.
 - [ ] 4.5 Atualizar orientação de auxiliares para “As imagens auxiliares enriquecem a campanha; use-as sempre que possível.”; preservar protagonismo da principal, ordem/transporte e ausência de garantia de aparição.
 - [ ] 4.6 Testar contribuições/instruções versionadas e disjuntas das três intenções, inclusão/omissão de preço e texto de política; não inferir sucesso visual do modelo; confirmar Serviço/outros formatos continuam desabilitados e fail-closed.
+- [ ] 4.7 Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar somente Produto como `48.2.6-produto-v2`, preservando literalmente a instrução de liberdade do nome.
 
 ## 5. Evidências e validação técnica
 

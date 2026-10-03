@@ -69,6 +69,14 @@ A política `produto` SHALL orientar o produto como elemento principal, preserva
 
 A política determinística `produto` SHALL usar instruções concisas: “Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.”; “Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.”; “Textos obrigatórios: reprodução integral.” O nome SHALL manter todas as palavras/conteúdo, sem abreviar, substituir, omitir ou corrigir silenciosamente; capitalização, quebras de linha e arranjo tipográfico podem variar. A descrição serve de apoio à arte/copy e pode ser melhorada, adaptada, resumida, parcialmente utilizada ou omitida sem desvirtuar contexto/significado nem inventar atributos, benefícios ou condições. Informações obrigatórias SHALL ser reproduzidas integralmente conforme aprovadas. Após decisão `keep_exactly`, a grafia aprovada SHALL ser preservada, inclusive possíveis erros. Presença/fidelidade na imagem são critérios humanos, não garantias técnicas. Os contratos existentes de revisão textual e `keep_exactly` permanecem inalterados.
 
+O campo de nome serializado pelo compositor SHALL usar exatamente o rótulo `Nome do produto obrigatório` (linha compilada `Nome do produto obrigatório: {nome}`). Este rótulo não altera a liberdade de apresentação/capitalização da instrução de preservação acima. A versão da política Produto SHALL ser `48.2.6-produto-v2`.
+
+#### Scenario: Nome compilado recebe o rótulo obrigatório
+- **WHEN** a composição serializa o nome de produto informado
+- **THEN** a linha é exatamente `Nome do produto obrigatório: {nome}`
+- **AND** a política Produto é identificada como `48.2.6-produto-v2`
+- **AND** a instrução existente de preservar todas as palavras e permitir capitalização, quebras de linha e arranjo livres permanece inalterada
+
 #### Scenario: Nome preserva palavras e conteúdo
 - **WHEN** nome informado/aprovado é usado
 - **THEN** todas as palavras e conteúdo são preservados

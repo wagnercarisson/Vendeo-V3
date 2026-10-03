@@ -46,6 +46,10 @@ Alternativa rejeitada: ramificações no compositor neutro ou no prompt-base, qu
 
 Instruções curtas: “Nome: completo, sem alterar palavras; capitalização e arranjo livres.”; “Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.”; “Textos obrigatórios: reprodução integral.” A política Produto atualiza os requisitos existentes e mantém revisão textual/`keep_exactly`; presença/fidelidade na imagem são avaliadas por humanos. Para imagens, usar somente: “Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.” Permitir múltiplas representações, ângulos e variantes do produto anunciado, sem declarar suporte a produtos independentes/combos. Auxiliares opcionais e sem garantia de aparição. Limites, ordem e transporte ficam regidos pelos contratos técnicos existentes, sem reexplicá-los no prompt. Repetição de texto e presença de imagens são contratos distintos.
 
+#### D4.1 — Rótulo do nome compilado
+
+O compositor serializa o campo como `Nome do produto obrigatório: {nome}`. Somente `PRODUTO_POLICY_VERSION` muda para `48.2.6-produto-v2`; a frase de preservação do nome e sua liberdade de apresentação permanecem intactas, sem nova regra.
+
 ### D4a — Validade exclusiva de Oferta
 
 Manter formatos e validações atuais de validade. A validade informada em Oferta continua incluída no prompt como dado comercial. A bancada não oferece validade em Destaque/Exclusivo e backend recusa payloads com validade nessas intenções, tanto em composição como em execução. Se houver validade ao selecionar intenção incompatível, bloquear composição/execução e exigir remoção ou regularização explícita; preservar o valor até escolha explícita, sem limpeza automática. Não explicar ao modelo quais intenções aceitam validade e não modificar formulário/pipeline produtivos.

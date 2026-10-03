@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-03T17:04:48.911Z"
+last_updated: "2026-10-03T18:58:49.195Z"
 progress:
   total_phases: 43
   completed_phases: 39
@@ -27,8 +27,8 @@ progress:
 ## Current Position
 
 Phase: 48.2.6 (validacao-experimental-produto-intencoes-1-1) — EXECUTING
-Plan: 10 of 10 (Plans 01–09 complete; Plan 10 not started pending new user direction)
-Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B não iniciado. Sem geração/provider nesta fase.
+Plan: 10 of 10 (Plans 01–09 complete; Plan 10 not started pending human review of Produto v2/UAT record)
+Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B não iniciado. Relato da primeira geração manual NovaTek/Oferta registrado no UAT como `requer ajuste`; nenhuma geração/provider foi executada nesta tarefa, e metadados do run permanecem pending.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
 **Prova de produção intocada (Task 4):** `git diff base..HEAD` das fronteiras produtivas **vazio** (`base` = `f5a7fe9a27e823b64b355ec8c431d4e514d5ab99`); `supabase/migrations/**` **limpo**; nenhum `db push`. **0 chamadas ao provider pelo executor**; nenhum crédito do executor.
 **Correção de UAT (2026-09-30):** descoberto acoplamento indevido entre aprovação do prompt e configuração de execução. Corrigido: `preset`/`modelo`/`qualidade` **não** invalidam `promptCompiled`/`promptApproved` nem exigem nova composição — invalidam **somente** estimativa e confirmação financeira; o backend (`assertPreflightEvidenceMatches`) compara apenas a **evidência textual** (`policyVersions`/`promptBaseVersion`/`composerVersion`/`identityReference`) e valida/persiste `presetId`/`modelo`/`qualidade` como configuração de execução; testes provam o **mesmo prompt aprovado byte a byte com dois presets/modelos distintos** (sem provider). Commits `7e6220d5` (código+testes), `85dc272b` (OpenSpec), `0ed7a7ca` (planos/CONTEXT/UI-SPEC/UAT). Gates verdes: typecheck/lint/build (76/76) e suíte completa (`397 passed | 1 skipped`; `4585 passed | 2 skipped`, só a exceção externa `legal-document-versions.test.ts`).
@@ -105,6 +105,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - [Phase 48.2.6]: O schema de execução e snapshot reutilizam `validateBenchIntentPrice`; validade fora de Oferta falha sem mutar a entrada. — Impede dados comerciais incompatíveis antes de persistência/provider/mapeamento.
 - [Phase 48.2.6]: Plan 06 habilita somente Oferta, Destaque e Exclusivo na dimensão existente de intenção, mantendo os outros valores/dimensões inalterados.
 - [Phase 48.2.6]: Resolver seleciona `registry[dimension][resolved[dimension]]`; os três recortes de intenção compartilham o mesmo objeto `BENCH_DEFAULT_PROMPT_BASE`.
+- [Quick 261003-ltf / F48.2.6]: Linha do nome compilada como `Nome do produto obrigatório: {nome}`; política Produto versionada para `48.2.6-produto-v2`, mantendo intacta a liberdade de capitalização/quebras/arranjo. Requer revisão humana antes de qualquer comparação manual.
 
 ## Pending Todos
 
@@ -140,13 +141,14 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | 260929-rtl | 2026-09-29 | F48.2.3: fidelidade de `identity_state` na bancada (import fail-closed + resolver puro + contrato) e **idempotência de objetos content-addressed** na importação local (referenciado/criado/reutilizado). **Concluída**: reimportação autorizada idempotente (NovaTek `visual_signature` 1 objeto reutilizado; Adega `logo` 6 reutilizados; 0 criados) e UAT local registrados |
 | 261002-tve | 2026-10-02 | Isolamento offline dos testes de execução da bancada: `resolveAiCost` determinístico e guard de fetch; 24 testes do arquivo + 162 contratos adjacentes passaram; destino da tentativa anterior permanece indeterminado |
 | 261003-jet | 2026-10-03 | Painel de políticas da bancada usa `policy.id` como key/testid; regressão simultânea Oferta/Destaque/Exclusivo. Teste focado (68), typecheck e lint verdes; commit `9e8f8e1c`; summary em `quick/261003-jet-corrigir-bench-policies-panel-para-usar/` |
+| 261003-ltf | 2026-10-03 | Rótulo compilado do nome e política Produto v2; UAT NovaTek/Oferta requer ajuste por omissão de “Mouse sem fio”; teste focal (91), OpenSpec strict, typecheck/lint/build verdes; commit `e0bef396`; sem provider/imagem |
 
 ## Session Continuity
 
-- Última sessão: 2026-10-03 — Quick task `261003-jet` corrigiu a identidade das linhas no painel de políticas; 68 testes focados, typecheck e lint passaram. Nenhuma imagem/provider; detalhes em `.planning/quick/261003-jet-corrigir-bench-policies-panel-para-usar/261003-jet-SUMMARY.md`.
+- Última sessão: 2026-10-03 — Quick task `261003-ltf` mudou o rótulo compilado do nome, versionou Produto v2 e registrou a observação NovaTek/Oferta como `requer ajuste`. Gates focados, OpenSpec strict, typecheck, lint e build passaram; nenhum provider ou imagem. Summary em `.planning/quick/261003-ltf-f48-2-6-alterar-somente-o-r-tulo-do-nome/261003-ltf-SUMMARY.md`.
 - Último trabalho: NovaTek low: Flare/Image2/Sunburst; Adega low: Image2/Flare/Sunburst; Adega exploratory Sunburst medium sem hipótese prévia. Platform total user-confirmed US$0,29; calculated local US$0,288978; individual US$0,06 confirmed only medium. No executor provider calls; no new paid generation.
-- Último quick: `261003-jet` — corrigida a key React para `policy.id`, testids distintos por política e regressão para Oferta, Destaque e Exclusivo simultâneos sem aviso de key duplicada; resumo e validações em `.planning/quick/261003-jet-corrigir-bench-policies-panel-para-usar/261003-jet-SUMMARY.md`.
-- Próxima ação: aguardar nova instrução antes de iniciar o Plano 10. Plano 09 concluiu readiness local e documentos UAT; CHECKPOINT B não iniciado. Nenhuma geração paga, provider real ou leitura remota.
+- Último quick: `261003-ltf` — linha do nome compilada `Nome do produto obrigatório: {nome}`, política Produto `48.2.6-produto-v2`; relato NovaTek/Oferta requer ajuste por omissão de “Mouse sem fio”. Metadados do run permanecem pending.
+- Próxima ação: revisão humana do rótulo Produto v2 e do registro UAT NovaTek/Oferta antes de qualquer nova tentativa manual; comparação proposta aguarda autorização. Planos 01–09 completos, Plano 10 não iniciado; CHECKPOINT B `not_started`. Nenhum provider, imagem ou POST /runs pelo executor.
 - Execução 48-2-6-06 concluída em 2026-10-02: resolver de política indexado por dimensão/valor e três intenções Produto 1:1 habilitadas; prompt-base neutro idêntico por referência; testes focados 134/134, typecheck/lint verdes. Nenhuma geração/provider call executada; suíte ampliada teve bloqueios/timeout descritos em `48-2-6-06-SUMMARY.md`.
 - Resume file: `.planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md` (GSD UAT 5/5 PASS; 65 critérios pending reconhecidos; security review verificada, 7/7 fechados, 0 abertos em `48-2-5-SECURITY.md`).
 
