@@ -60,7 +60,7 @@ O compositor serializa `discountedPriceText` com o rótulo neutro `Preço de ven
 
 #### D4.3 — Direção de fundo explicitamente escolhida
 
-Todas as intenções exibem uma seleção única e obrigatória: `Fundo de estúdio`, `Cenário ambientado` ou `Manter cenário original`; nenhuma é default, inclusive em Oferta. O valor selecionado é transportado ao prompt, briefing/snapshot, preflight e validação server-side. `Manter cenário original` requer exatamente uma referência de imagem de produto; a identidade da loja é separada e não conta. Se alterar a quantidade invalidar essa seleção, a UI limpa a escolha e exige reseleção explícita. A mudança do campo e sua serialização incrementam `COMPOSER_VERSION` para `48.2.4-prompt-composer-v3`; as políticas Oferta, Destaque e geral permanecem inalteradas.
+Todas as intenções exibem uma seleção única e obrigatória: `Fundo de estúdio`, `Cenário ambientado` ou `Manter cenário original`; nenhuma é default, inclusive em Oferta. O valor selecionado é transportado ao prompt, briefing/snapshot, preflight e validação server-side. `Manter cenário original` requer exatamente uma referência de imagem de produto; a identidade da loja é separada e não conta. Se alterar a quantidade invalidar essa seleção, a UI limpa a escolha e exige reseleção explícita. O checkbox legado `preserveImageContext` não é uma segunda escolha; eventual flag booleana para o mapper é derivada apenas do background selecionado e não gera uma segunda linha de prompt. A mudança do campo e sua serialização incrementam `COMPOSER_VERSION` para `48.2.4-prompt-composer-v3`; as políticas Oferta, Destaque e geral permanecem inalteradas.
 
 #### D4.4 — Versões vigentes após ajuste intrafase
 

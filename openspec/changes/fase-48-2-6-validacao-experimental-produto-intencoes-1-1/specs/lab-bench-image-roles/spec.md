@@ -4,6 +4,8 @@
 
 O contrato de imagem SHALL pertencer a Produto, sem dependência exclusiva da intenção Oferta. A primeira imagem enviada SHALL definir a variante protagonista; orientação ao modelo: “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.” Auxiliares opcionais podem representar ângulos, múltiplas representações e variantes do mesmo produto anunciado, sem garantir aparição. Não se declara suporte a produtos independentes/combos. A regra separada de exibição única de textos obrigatórios não limita múltiplas representações em imagens. Presença/fidelidade visual são critérios humanos, não garantias técnicas. Limites, ordem principal → auxiliares → identidade e transporte SHALL seguir os contratos técnicos existentes.
 
+A seleção `backgroundDirection` SHALL ser o único controle bench de direção de fundo. O checkbox legado `preserveImageContext` SHALL NOT permanecer como escolha independente; se a flag booleana for necessária internamente para compatibilidade do snapshot, SHALL ser derivada exclusivamente de `backgroundDirection === original` e não gerar uma segunda instrução no prompt.
+
 #### Scenario: Primeira imagem enviada define a variante protagonista
 - **WHEN** tipo de conteúdo é Produto e há imagem principal
 - **THEN** a primeira imagem enviada define a variante protagonista e é orientada a aparecer maior e em primeiro plano

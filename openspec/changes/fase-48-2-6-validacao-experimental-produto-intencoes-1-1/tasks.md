@@ -30,7 +30,7 @@
 - [ ] 4.7 Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar somente Produto como `48.2.6-produto-v2`, preservando literalmente a instrução de liberdade do nome.
 - [ ] 4.8 Serializar `discountedPriceText` com rótulo neutro `Preço de venda`; versionar somente o compositor como `48.2.4-prompt-composer-v2`. Provar que Destaque com preço único preserva valor sem texto/versão Oferta, enquanto a semântica promocional permanece na instrução Oferta existente e inalterada.
 - [ ] 4.9 Versionar somente a política Exclusivo para `48.2.6-exclusivo-v3`; testar composição sem selo e com os selos permitidos `Exclusivo` e `Edição Limitada`, mantendo opções/permissões inalteradas e preservando a evidência v1.
-- [ ] 4.10 Oferecer direção de fundo de seleção única para as três intenções: Fundo de estúdio, Cenário ambientado e Manter cenário original; sem padrão automático, inclusive em Oferta.
+- [ ] 4.10 Oferecer direção de fundo de seleção única para as três intenções: Fundo de estúdio, Cenário ambientado e Manter cenário original; sem padrão automático, inclusive em Oferta. Remover o checkbox bench independente `preserveImageContext`; eventual flag interna deve derivar da direção selecionada.
 - [ ] 4.11 Invalidar direção `original` quando a quantidade mudar de exatamente uma imagem de produto; exigir reseleção explícita, excluir identidade da contagem e testar intenção × fundo, API/schema/snapshot/prompt/preflight e transições UI.
 
 ## 5. Evidências e validação técnica
