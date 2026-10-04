@@ -205,6 +205,27 @@ describe("assertPreflightCompositionMatches", () => {
       assertPreflightCompositionMatches({ recomposed: changedPrice, promptCompiled: approved }),
     ).toThrow(BenchPreflightRevalidationError);
   });
+
+  it("mudança de direção de fundo chega ao snapshot e invalida o preflight aprovado", () => {
+    const studioOffer = makeOffer({ backgroundDirection: "studio" });
+    const ambientOffer = makeOffer({ backgroundDirection: "ambient" });
+    const studioBriefing = makeBriefing({ offer: studioOffer });
+    const ambientBriefing = makeBriefing({ offer: ambientOffer });
+    const approved = recompose(CONFIG, LOGO_REF, { offer: studioOffer });
+    const current = recompose(CONFIG, LOGO_REF, { offer: ambientOffer });
+
+    expect(studioBriefing.backgroundDirection).toBe("studio");
+    expect(ambientBriefing.backgroundDirection).toBe("ambient");
+    expect(approved.text).toContain("Direção de fundo: Fundo de estúdio");
+    expect(current.text).toContain("Direção de fundo: Cenário ambientado");
+    expect(current.text).not.toBe(approved.text);
+    expect(() =>
+      assertPreflightCompositionMatches({
+        recomposed: current.text,
+        promptCompiled: approved.text,
+      }),
+    ).toThrow(BenchPreflightRevalidationError);
+  });
 });
 
 // ─── Evidência: campo a campo, sem hash persistido ───────────────────────────
