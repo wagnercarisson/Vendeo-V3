@@ -155,6 +155,13 @@ export const POST = apiHandler(async (request: Request) => {
   }
   const input = parsed.data;
 
+  if (!input.offer.backgroundDirection) {
+    return NextResponse.json({ error: "bench_background_direction_required" }, { status: 400 });
+  }
+  if (input.offer.backgroundDirection === "original" && input.references.length !== 1) {
+    return NextResponse.json({ error: "bench_original_background_requires_exactly_one_product_reference" }, { status: 400 });
+  }
+
   // Defesa da rota além do schema: validar pela mesma autoridade antes de
   // consultar draft/loja, recompor ou executar qualquer efeito operacional.
   const intent = input.offer.campaignIntent ?? "offer";

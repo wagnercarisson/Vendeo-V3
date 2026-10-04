@@ -48,6 +48,7 @@ export interface BenchProductPayload {
 }
 
 export interface BenchOfferPayload {
+  backgroundDirection?: "studio" | "ambient" | "original";
   badge?: string;
   campaignIntent?: "offer" | "spotlight" | "exclusive";
   validity?: string;

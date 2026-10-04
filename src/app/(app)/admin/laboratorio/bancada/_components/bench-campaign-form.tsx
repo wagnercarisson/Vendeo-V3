@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import { availableBenchIntents } from "@/lib/lab/bench/domain/intent-price-matrix";
+import { BENCH_BACKGROUND_LABELS } from "@/lib/lab/bench/domain/background-direction";
 import {
   MANDATORY_ARTWORK_MAX,
   PRODUCT_DESCRIPTION_MAX,
@@ -14,8 +15,6 @@ import {
   buildValidityDisplayText,
   cleanBadgeForIntent,
   formatPriceCents,
-  isPreserveImageContextAvailable,
-  resolvePreserveImageContext,
   validateBadge,
   validateDiscountedPrice,
   validateMandatoryArtworkText,
@@ -55,7 +54,7 @@ export interface BenchCampaignFormValue {
   originalPriceCents: number;
   badge: string;
   campaignIntent: CampaignIntent;
-  preserveImageContext: boolean;
+  backgroundDirection: "" | "studio" | "ambient" | "original";
   validityMode: BenchValidityMode;
   validityStartDate: string;
   validityEndDate: string;
@@ -71,7 +70,7 @@ export const EMPTY_BENCH_CAMPAIGN_FORM: BenchCampaignFormValue = {
   originalPriceCents: 0,
   badge: "",
   campaignIntent: "offer",
-  preserveImageContext: false,
+  backgroundDirection: "",
   validityMode: "",
   validityStartDate: "",
   validityEndDate: "",
@@ -84,6 +83,7 @@ interface BenchCampaignFormProps {
   value: BenchCampaignFormValue;
   onChange: (next: BenchCampaignFormValue) => void;
   disabled?: boolean;
+  productReferenceCount?: number;
 }
 
 const INTENT_LABELS: Record<CampaignIntent, string> = {
@@ -146,6 +146,7 @@ export function BenchCampaignForm({
   value,
   onChange,
   disabled = false,
+  productReferenceCount = 0,
 }: BenchCampaignFormProps) {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -204,7 +205,6 @@ export function BenchCampaignForm({
       ...value,
       campaignIntent: intent,
       badge: cleanBadgeForIntent(value.badge, intent),
-      preserveImageContext: resolvePreserveImageContext(intent, value.preserveImageContext),
     });
   }
 
@@ -294,6 +294,21 @@ export function BenchCampaignForm({
         onChange={(next) => handleIntent(next as CampaignIntent)}
       />
 
+      <LabSelect
+        label="Direção de fundo"
+        value={value.backgroundDirection}
+        disabled={disabled}
+        onChange={(event) => setField("backgroundDirection", event.target.value as BenchCampaignFormValue["backgroundDirection"])}
+      >
+        <option value="">Selecione…</option>
+        <option value="studio">{BENCH_BACKGROUND_LABELS.studio}</option>
+        <option value="ambient">{BENCH_BACKGROUND_LABELS.ambient}</option>
+        <option value="original" disabled={productReferenceCount !== 1}>{BENCH_BACKGROUND_LABELS.original}</option>
+      </LabSelect>
+      {value.backgroundDirection === "original" && productReferenceCount !== 1 ? (
+        <p role="alert" data-testid="bench-background-reference-guard">Manter cenário original exige exatamente uma imagem de produto. Faça novo upload e selecione novamente.</p>
+      ) : null}
+
       {!intentCompatible ? (
         <div
           role="alert"
@@ -328,16 +343,6 @@ export function BenchCampaignForm({
           </option>
         ))}
       </LabSelect>
-
-      {isPreserveImageContextAvailable(value.campaignIntent) ? (
-        <CheckboxField
-          id="bench-preserve-image-context"
-          label="Preservar imagem original"
-          checked={value.preserveImageContext}
-          disabled={disabled}
-          onChange={(checked) => setField("preserveImageContext", checked)}
-        />
-      ) : null}
 
       <LabSelect
         label="Validade da oferta"

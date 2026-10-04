@@ -97,6 +97,7 @@ function assertBenchCommercialCompatibility(
 // ─── Snapshot ────────────────────────────────────────────────────────────────
 
 export interface BenchCampaignSnapshot {
+  backgroundDirection: string;
   /** Produto — contrato produtivo de produto (via `buildCampaignBriefFromFlat`). */
   product: CampaignBriefProduct;
   /** Dados comerciais — contrato produtivo (intent, preços, selo, validade, aviso). */
@@ -127,6 +128,7 @@ export function buildBenchCampaignSnapshot(input: {
   const { product, offer, config } = input;
   const resolved = resolveBenchIntent({ product, offer });
   assertBenchCommercialCompatibility(product, offer, resolved.intent);
+  if (!offer.backgroundDirection) throw new BenchCampaignSnapshotError("bench_background_direction_required");
 
   // Texto de validade de exibição: a coluna resolvida (`validity`) tem
   // precedência sobre o legado `validUntil`.
@@ -155,20 +157,18 @@ export function buildBenchCampaignSnapshot(input: {
     ...(offer.badge ? { badgeText: offer.badge } : {}),
     ...(validityText ? { validity: validityText } : {}),
     ...(combinedArtworkText ? { mandatoryArtworkText: combinedArtworkText } : {}),
-    ...(typeof product.preserveImageContext === "boolean"
-      ? { preserveImageContext: product.preserveImageContext }
-      : {}),
   };
 
   const brief = buildCampaignBriefFromFlat(flat, "", "api");
   const briefSnapshot = buildCampaignBriefSnapshot(brief);
 
   return {
+    backgroundDirection: offer.backgroundDirection,
     product: brief.product,
     commercial: brief.commercial,
     intent: resolved.intent,
     intentResolvedFrom: resolved.intentResolvedFrom,
-    preserveImageContext: brief.creativeContext.preserveImageContext ?? false,
+    preserveImageContext: offer.backgroundDirection === "original",
     config,
     format: config.formato,
     locale: "pt-BR",

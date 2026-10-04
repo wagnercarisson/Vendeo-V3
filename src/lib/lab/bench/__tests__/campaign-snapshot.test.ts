@@ -39,7 +39,7 @@ const PRODUCT: BenchProduct = {
   description: "Cafeteira 30 xícaras",
 };
 
-const OFFER: BenchOffer = { validUntil: "2026-10-01" };
+const OFFER: BenchOffer = { validUntil: "2026-10-01", backgroundDirection: "studio" };
 
 // ─── Intenção resolvida ──────────────────────────────────────────────────────
 
@@ -122,7 +122,7 @@ describe("buildBenchCampaignSnapshot", () => {
 
   it("preserves an explicit valid selection without inferring a replacement", () => {
     const product: BenchProduct = { name: "Produto", priceCents: 500 };
-    const offer: BenchOffer = { campaignIntent: "spotlight" };
+    const offer: BenchOffer = { campaignIntent: "spotlight", backgroundDirection: "ambient" };
     const snapshot = buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
     expect(snapshot.intent).toBe("spotlight");
     expect(snapshot.intentResolvedFrom).toBe("explicit");

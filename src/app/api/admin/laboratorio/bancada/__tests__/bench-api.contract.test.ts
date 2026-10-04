@@ -582,7 +582,7 @@ const VALID_RUN_BODY = {
   references: [`bench/${RUN_ID}/inputs/0.png`],
   confirmed: true,
   product: VALID_RUN_PRODUCT,
-  offer: {},
+  offer: { backgroundDirection: "studio" },
   preflight: {
     promptBase: VALID_RUN_PROMPT_BASE,
     promptCompiled: "prompt compilado",
@@ -649,7 +649,7 @@ const VALID_COMPOSE_BODY = {
   storeId: STORE_ID,
   presetId: PRESET_ID,
   product: { name: "Produto", priceCents: 1000, originalPriceCents: 1500 },
-  offer: {},
+  offer: { backgroundDirection: "studio" },
   promptBase: "prompt base",
   references: [`bench/${RUN_ID}/inputs/0.png`],
 };
@@ -1213,7 +1213,11 @@ describe("contrato da API da bancada — briefing experimental", () => {
 
 describe("contrato da API da bancada — composição/preview do prompt", () => {
   it("POST /compose ⇒ 200 com prompt compilado, blocos e versão do compositor (sem IA)", async () => {
+    const snapshotActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/campaign-snapshot")>("@/lib/lab/bench/domain/campaign-snapshot");
+    const briefingActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/experimental-briefing")>("@/lib/lab/bench/domain/experimental-briefing");
     const composerActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/prompt-composer")>("@/lib/lab/bench/domain/prompt-composer");
+    mockBuildBenchCampaignSnapshot.mockImplementation(snapshotActual.buildBenchCampaignSnapshot);
+    mockBuildBenchExperimentalBriefing.mockImplementation(briefingActual.buildBenchExperimentalBriefing);
     mockComposePromptBlocks.mockImplementation((input: never) => composerActual.composePromptBlocks(input));
     const res = await postCompose();
     const body = await res.json();
@@ -1221,7 +1225,9 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(res.status).toBe(200);
     expect(body.compiledPrompt).toContain("CONDIÇÕES COMERCIAIS");
     expect(body.blocks).toBeDefined();
-    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v2");
+    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v3");
+    expect(body.compiledPrompt).toContain("Direção de fundo: Fundo de estúdio");
+    expect(body.compiledPrompt).not.toContain("Direção de fundo: studio");
     expect(body.approved).toBe(false);
     expect(body.textIntegrityEvidence).toMatchObject({
       policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
@@ -1247,9 +1253,35 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
   });
 
   it.each([
+    { name: "sem direção", offer: {} , references: [] },
+    { name: "original sem referências", offer: { backgroundDirection: "original" }, references: [] },
+    { name: "original com duas referências", offer: { backgroundDirection: "original" }, references: ["bench/a.png", "bench/b.png"] },
+  ])("POST /compose recusa $name antes de branding ou efeitos", async ({ offer, references }) => {
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, offer, references });
+    expect(res.status).toBe(400);
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+    expect(mockBuildBenchCampaignSnapshot).not.toHaveBeenCalled();
+    expect(mockComposePromptBlocks).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose aceita original com uma referência de produto; identidade é separada", async () => {
+    const snapshotActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/campaign-snapshot")>("@/lib/lab/bench/domain/campaign-snapshot");
+    const briefingActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/experimental-briefing")>("@/lib/lab/bench/domain/experimental-briefing");
+    const actual = await vi.importActual<typeof import("@/lib/lab/bench/domain/prompt-composer")>("@/lib/lab/bench/domain/prompt-composer");
+    mockBuildBenchCampaignSnapshot.mockImplementation(snapshotActual.buildBenchCampaignSnapshot);
+    mockBuildBenchExperimentalBriefing.mockImplementation(briefingActual.buildBenchExperimentalBriefing);
+    mockComposePromptBlocks.mockImplementation((input: never) => actual.composePromptBlocks(input));
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, offer: { backgroundDirection: "original" }, references: ["bench/product.png"] });
+    expect(res.status).toBe(200);
+    expect((await res.json()).compiledPrompt).toContain("Direção de fundo: Manter cenário original");
+    expect(mockLoadBenchBranding).toHaveBeenCalled();
+  });
+
+  it.each([
     { campaignIntent: "offer", policyIntent: "oferta", version: "48.2.6-oferta-v1", phrase: "Oferta: destaque o preço por" },
     { campaignIntent: "spotlight", policyIntent: "destaque", version: "48.2.6-destaque-v1", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
-    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v2", phrase: "Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações." },
+    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v3", phrase: "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações." },
   ])("POST /compose resolve $campaignIntent para a política $policyIntent", async ({ campaignIntent, policyIntent, version, phrase }) => {
     const configActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/config-registry")>("@/lib/lab/bench/domain/config-registry");
     const policiesActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies");
@@ -1264,7 +1296,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     const res = await postCompose({
       ...VALID_COMPOSE_BODY,
       product: { name: campaignIntent === "spotlight" ? "Mouse sem fio" : "Produto", priceCents: campaignIntent === "spotlight" ? 1999 : campaignIntent === "offer" ? 1000 : undefined, originalPriceCents: campaignIntent === "offer" ? 1500 : undefined },
-      offer: { campaignIntent },
+      offer: { campaignIntent, backgroundDirection: "studio" },
     });
     const body = await res.json();
 
@@ -1278,7 +1310,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
       expect(body.compiledPrompt).not.toContain("Preço promocional");
       expect(body.compiledPrompt).not.toContain("Oferta:");
       expect(body.policyVersions.intencao).toBe("48.2.6-destaque-v1");
-      expect(body.composerVersion).toBe("48.2.4-prompt-composer-v2");
+      expect(body.composerVersion).toBe("48.2.4-prompt-composer-v3");
       expect(body.policyVersions.intencao).not.toBe("48.2.6-oferta-v1");
       expect(body.compiledPrompt).toContain("Destaque: priorize a apresentação do produto; preço informado é secundário.");
       console.info("SPOTLIGHT_COMPILED_PROMPT_VERSION:", JSON.stringify({ text: body.compiledPrompt, composerVersion: body.composerVersion, policyVersions: body.policyVersions }));
@@ -1305,7 +1337,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     const res = await postCompose({
       ...VALID_COMPOSE_BODY,
       product: { name: "Mouse sem fio", priceCents: 1999, originalPriceCents: 2999 },
-      offer: { campaignIntent: "offer" },
+      offer: { campaignIntent: "offer", backgroundDirection: "studio" },
     });
     const body = await res.json();
 
@@ -1313,7 +1345,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(body.compiledPrompt).toMatch(/Preço de venda: R\$\s19,99/);
     expect(body.compiledPrompt).toContain(policyActual.ofertaPolicy.contributions({ config: { ...VALID_COMPOSE_BODY, intencao: "oferta" } as never }).flatMap((entry) => entry.lines).find((line) => line.startsWith("Oferta: destaque o preço por")));
     expect(body.policyVersions.intencao).toBe("48.2.6-oferta-v1");
-    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v2");
+    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v3");
   });
 
   it("POST /compose com alertas ⇒ 422 e não compõe prompt nem lê branding", async () => {
@@ -1638,6 +1670,26 @@ describe("contrato da API da bancada — upload multipart", () => {
 // ─── 5. Execução (/runs) ─────────────────────────────────────────────────────
 
 describe("contrato da API da bancada — execução com confirmação", () => {
+  it.each([
+    { name: "sem direção", offer: {}, references: [] },
+    { name: "original com zero referências", offer: { backgroundDirection: "original" }, references: [] },
+    { name: "original com duas referências", offer: { backgroundDirection: "original" }, references: [`bench/${RUN_ID}/inputs/0.png`, `bench/${RUN_ID}/inputs/1.png`] },
+  ])("POST /runs recusa $name antes de draft, branding ou efeitos", async ({ offer, references }) => {
+    const res = await postRun({ ...VALID_RUN_BODY, offer, references });
+    expect(res.status).toBe(400);
+    expect(mockGetBenchRunByOperationId).not.toHaveBeenCalled();
+    expect(mockLoadBenchBranding).not.toHaveBeenCalled();
+    expect(mockSetBenchRunInput).not.toHaveBeenCalled();
+    expect(mockConfirmBenchRun).not.toHaveBeenCalled();
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("POST /runs valida original com exatamente uma referência de produto, separada da identidade", async () => {
+    const res = await postRun({ ...VALID_RUN_BODY, offer: { backgroundDirection: "original" }, references: [`bench/${RUN_ID}/inputs/0.png`] });
+    expect(res.status).not.toBe(400);
+    expect(mockGetBenchRunByOperationId).toHaveBeenCalled();
+  });
+
   it("sem confirmed: true ⇒ 422 antes do parse e sem chamada paga", async () => {
     const { confirmed, ...withoutConfirmation } = VALID_RUN_BODY;
     void confirmed;
@@ -1822,7 +1874,7 @@ describe("contrato da API da bancada — execução com confirmação", () => {
   it.each([
     { campaignIntent: "offer", policyIntent: "oferta", version: "48.2.6-oferta-v1", phrase: "Oferta: destaque o preço por" },
     { campaignIntent: "spotlight", policyIntent: "destaque", version: "48.2.6-destaque-v1", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
-    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v2", phrase: "Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações." },
+    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v3", phrase: "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações." },
   ])("POST /runs revalida $campaignIntent com política $policyIntent antes de confirmação", async ({ campaignIntent, policyIntent, version, phrase }) => {
     const configActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/config-registry")>("@/lib/lab/bench/domain/config-registry");
     const policiesActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies");
@@ -1864,7 +1916,7 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     const bodyInput = {
       ...VALID_RUN_BODY,
       product: { name: "Produto", priceCents: campaignIntent === "offer" ? 1000 : undefined, originalPriceCents: campaignIntent === "offer" ? 1500 : undefined },
-      offer: { campaignIntent },
+      offer: { campaignIntent, backgroundDirection: "studio" },
       prompt: "prompt base",
       preflight: {
         ...VALID_RUN_BODY.preflight,

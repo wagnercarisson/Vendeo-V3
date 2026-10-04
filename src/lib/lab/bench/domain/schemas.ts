@@ -98,8 +98,6 @@ export const BenchProductSchema = z
     description: z.string().max(120).optional(),
     /** Informações obrigatórias na arte — mesmo limite produtivo (200). */
     mandatoryArtworkText: z.string().max(200).optional(),
-    /** Preservação da imagem original — Destaque/Exclusivo (D14). */
-    preserveImageContext: z.boolean().optional(),
   })
   .strict();
 
@@ -155,6 +153,7 @@ export type BenchTextIntegrityEvidence = z.infer<typeof BenchTextIntegrityEviden
  */
 export const BenchOfferSchema = z
   .object({
+    backgroundDirection: z.enum(["studio", "ambient", "original"]).optional(),
     validUntil: z.string().max(80).optional(),
     /** Selo promocional — opções por intenção (obrigatório em oferta). */
     badge: z.string().max(80).optional(),
@@ -351,6 +350,11 @@ export const BenchRunInputSchema = z
         path: ["offer", "validity"],
         message: "bench_validity_only_allowed_for_offer",
       });
+    }
+    if (!value.offer.backgroundDirection) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["offer", "backgroundDirection"], message: "bench_background_direction_required" });
+    } else if (value.offer.backgroundDirection === "original" && value.references.length !== 1) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["offer", "backgroundDirection"], message: "bench_original_background_requires_exactly_one_product_reference" });
     }
     value.references.forEach((reference, index) => {
       if (!isBenchInputReference(reference, value.runId)) {

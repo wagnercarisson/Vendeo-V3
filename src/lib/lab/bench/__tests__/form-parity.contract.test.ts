@@ -189,9 +189,9 @@ describe("paridade — preserveImageContext", () => {
     const product: BenchProduct = {
       name: "Cafeteira Aurora",
       priceCents: 12990,
-      preserveImageContext: true,
+
     };
-    const offer: BenchOffer = { campaignIntent: "spotlight" };
+    const offer: BenchOffer = { campaignIntent: "spotlight", backgroundDirection: "original" };
 
     const snapshot = buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
 
@@ -203,9 +203,9 @@ describe("paridade — preserveImageContext", () => {
     const product: BenchProduct = {
       name: "Cafeteira Aurora",
       priceCents: 12990,
-      preserveImageContext: true,
+
     };
-    const offer: BenchOffer = { campaignIntent: "offer" };
+    const offer: BenchOffer = { campaignIntent: "offer", backgroundDirection: "studio" };
 
     const snapshot = buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
 

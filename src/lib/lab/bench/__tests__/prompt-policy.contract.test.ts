@@ -98,12 +98,12 @@ function makeProduct(): BenchProduct {
     priceCents: 4990,
     originalPriceCents: 9990,
     mandatoryArtworkText: "Válido para retirada na loja",
-    preserveImageContext: false,
   };
 }
 
 function makeOffer(): BenchOffer {
   return {
+    backgroundDirection: "studio",
     badge: "50% OFF",
     validity: "até 31/12/2026",
     showIllustrativeNotice: true,
@@ -128,6 +128,23 @@ function composeResolved(config: BenchConfig = CONFIG, promptBase = PROMPT_BASE)
 // ─── Resolução explícita e versionada ────────────────────────────────────────
 
 describe("políticas — resolução explícita e versionada", () => {
+  it.each(["oferta", "destaque", "exclusivo"] as const)("propaga todas as três direções de fundo para %s", (intent) => {
+    const campaignIntent = intent === "oferta" ? "offer" : intent === "destaque" ? "spotlight" : "exclusive";
+    const product = intent === "oferta"
+      ? { name: "Produto", priceCents: 500, originalPriceCents: 1000 }
+      : intent === "destaque" ? { name: "Produto", priceCents: 500 } : { name: "Produto" };
+    const directions = ["studio", "ambient", "original"] as const;
+    for (const direction of directions) {
+      const config = { ...CONFIG, intencao: intent } as BenchConfig;
+      const snapshot = buildBenchCampaignSnapshot({ product, offer: { campaignIntent, backgroundDirection: direction }, config });
+      const briefing = buildBenchExperimentalBriefing({ branding: makeBranding(), snapshot, config });
+      const resolved = resolveBenchPromptPolicies(config);
+      const text = composePromptBlocks({ briefing, promptBase: "", contributions: resolved.contributions }).text;
+      expect(snapshot.backgroundDirection).toBe(direction);
+      expect(text).toContain(`Direção de fundo: ${{ studio: "Fundo de estúdio", ambient: "Cenário ambientado", original: "Manter cenário original" }[direction]}`);
+    }
+  });
+
   it("resolve as 5 dimensões habilitadas com contribuições e versões", () => {
     const resolved = resolveBenchPromptPolicies(CONFIG);
 
@@ -148,7 +165,7 @@ describe("políticas — resolução explícita e versionada", () => {
   it.each([
     { intent: "oferta", policy: ofertaPolicy, line: "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais." },
     { intent: "destaque", policy: destaquePolicy, line: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
-    { intent: "exclusivo", policy: exclusivoPolicy, line: "Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações." },
+    { intent: "exclusivo", policy: exclusivoPolicy, line: "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações." },
   ])("resolve $intent por valor habilitado", ({ intent, policy, line }) => {
     const config = { ...CONFIG, intencao: intent } as BenchConfig;
     const resolved = resolveBenchPromptPolicies(config);
@@ -166,7 +183,7 @@ describe("políticas — resolução explícita e versionada", () => {
   });
 
   it("versiona a serialização neutra do preço de venda sem alterar a política Oferta", () => {
-    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v2");
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v3");
     expect(ofertaPolicy.version).toBe("48.2.6-oferta-v1");
     expect(ofertaPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines)).toContain(
       "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
@@ -176,9 +193,9 @@ describe("políticas — resolução explícita e versionada", () => {
 
   it("versiona a orientação da imagem principal e das adicionais em produto", () => {
     const lines = produtoPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines);
-    expect(produtoPolicy.version).toBe("48.2.6-produto-v2");
+    expect(produtoPolicy.version).toBe("48.2.6-produto-v3");
     expect(lines).toContain(
-      "Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.",
+      "A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.",
     );
     expect(lines.join(" ").toLowerCase()).not.toContain("garantia de aparição");
     expect(lines.join(" ").toLowerCase()).not.toContain("layout programático");
@@ -207,7 +224,7 @@ describe("políticas — resolução explícita e versionada", () => {
 });
 
 describe("política Exclusivo v2 — composição e selos fornecidos", () => {
-  const instruction = "Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações.";
+  const instruction = "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.";
   const exclusiveConfig = { ...CONFIG, intencao: "exclusivo" } as BenchConfig;
 
   it.each([
@@ -216,16 +233,16 @@ describe("política Exclusivo v2 — composição e selos fornecidos", () => {
     { label: "selo Edição Limitada", badge: "Edição Limitada", serialized: "Selo: Edição Limitada" },
   ])("compõe v2 $label sem preço nem selo não fornecido", ({ badge, serialized }) => {
     const snapshot = buildBenchCampaignSnapshot({
-      product: { name: "Produto de teste", priceCents: undefined, originalPriceCents: undefined, preserveImageContext: false },
-      offer: { campaignIntent: "exclusive", ...(badge ? { badge } : {}), showIllustrativeNotice: false },
+      product: { name: "Produto de teste", priceCents: undefined, originalPriceCents: undefined },
+      offer: { campaignIntent: "exclusive", backgroundDirection: "studio", ...(badge ? { badge } : {}), showIllustrativeNotice: false },
       config: exclusiveConfig,
     });
     const briefing = buildBenchExperimentalBriefing({ branding: makeBranding(), snapshot, config: exclusiveConfig });
     const policies = resolveBenchPromptPolicies(exclusiveConfig);
     const text = composePromptBlocks({ briefing, promptBase: "", contributions: policies.contributions }).text;
 
-    expect(EXCLUSIVO_POLICY_VERSION).toBe("48.2.6-exclusivo-v2");
-    expect(policies.versions.intencao).toBe("48.2.6-exclusivo-v2");
+    expect(EXCLUSIVO_POLICY_VERSION).toBe("48.2.6-exclusivo-v3");
+    expect(policies.versions.intencao).toBe("48.2.6-exclusivo-v3");
     expect(text).toContain(instruction);
     expect(text.split(instruction)).toHaveLength(2);
     expect(text).not.toContain("Preço original:");
@@ -336,7 +353,7 @@ describe("políticas — atribuição exclusiva e disjunta (oferta × produto)",
     }
     expect(productLines.join(" ")).toContain("Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.");
     expect(productLines.join(" ")).toContain("preservando o significado");
-    expect(productLines.join(" ")).toContain("Textos obrigatórios: reprodução integral.");
+    expect(productLines.join(" ")).toContain("Textos obrigatórios: exiba cada texto integralmente uma única vez.");
     expect(offerLines.join(" ")).toContain("Oferta: destaque o preço por");
     expect(offerLines.join(" ").toLowerCase()).not.toContain("português correto");
   });
@@ -380,12 +397,13 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       "Descrição: 100% algodão",
       "Produto como elemento principal da peça.",
       "Reproduzir com fidelidade a aparência, a embalagem e as características do produto.",
-      "Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.",
+      "A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.",
       "Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.",
       "Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.",
-      "Textos obrigatórios: reprodução integral.",
+      "Textos obrigatórios: exiba cada texto integralmente uma única vez.",
       "",
       "[CONDIÇÕES COMERCIAIS]",
+      "Direção de fundo: Fundo de estúdio",
       `Preço original: R$${NBSP}99,90`,
       `Preço de venda: R$${NBSP}49,90`,
       "Selo: 50% OFF",
@@ -418,7 +436,7 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       ),
       "utf8",
     );
-    expect(source).toContain("Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.");
+    expect(source).toContain("A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.");
   });
 });
 

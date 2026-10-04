@@ -56,6 +56,7 @@ export interface BenchExperimentalConstraints {
 
 /** Briefing experimental estruturado — entrada do compositor (D15/D17/D19). */
 export interface BenchExperimentalBriefing {
+  backgroundDirection: string;
   storeId: string;
   storeName: string;
   segment: string;
@@ -128,6 +129,7 @@ export function buildBenchExperimentalBriefing(input: {
       : null;
 
   return {
+    backgroundDirection: snapshot.backgroundDirection,
     storeId: branding.storeId,
     storeName: branding.storeName,
     segment: branding.segment,

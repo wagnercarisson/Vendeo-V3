@@ -144,6 +144,8 @@ export const POST = apiHandler(async (request: Request) => {
   const references = Array.isArray(raw.references)
     ? raw.references.filter((entry): entry is string => typeof entry === "string")
     : [];
+  if (!offer.data.backgroundDirection) return NextResponse.json({ error: "bench_background_direction_required" }, { status: 400 });
+  if (offer.data.backgroundDirection === "original" && references.length !== 1) return NextResponse.json({ error: "bench_original_background_requires_exactly_one_product_reference" }, { status: 400 });
 
   const textIntegrityEvidenceResult =
     raw.textIntegrityEvidence === undefined

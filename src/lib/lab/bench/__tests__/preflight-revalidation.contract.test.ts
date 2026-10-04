@@ -120,13 +120,12 @@ function makeProduct(overrides: Partial<BenchProduct> = {}): BenchProduct {
     priceCents: 4990,
     originalPriceCents: 9990,
     mandatoryArtworkText: "Válido para retirada na loja",
-    preserveImageContext: false,
     ...overrides,
   };
 }
 
 function makeOffer(overrides: Partial<BenchOffer> = {}): BenchOffer {
-  return { badge: "50% OFF", validity: "até 31/12/2026", showIllustrativeNotice: true, ...overrides };
+  return { backgroundDirection: "studio", badge: "50% OFF", validity: "até 31/12/2026", showIllustrativeNotice: true, ...overrides };
 }
 
 function makeBriefing(input: {

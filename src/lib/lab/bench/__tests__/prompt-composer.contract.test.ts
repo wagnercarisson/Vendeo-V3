@@ -113,13 +113,13 @@ function makeProduct(overrides: Partial<BenchProduct> = {}): BenchProduct {
     priceCents: 4990,
     originalPriceCents: 9990,
     mandatoryArtworkText: "Válido para retirada na loja",
-    preserveImageContext: false,
     ...overrides,
   };
 }
 
 function makeOffer(overrides: Partial<BenchOffer> = {}): BenchOffer {
   return {
+    backgroundDirection: "studio",
     badge: "50% OFF",
     validity: "até 31/12/2026",
     showIllustrativeNotice: true,
@@ -147,15 +147,14 @@ function makeBriefing(overrides: {
   return { briefing, snapshot };
 }
 
-/** Destaque (não-oferta) com `preserveImageContext` ligado. */
+/** Destaque (não-oferta) com direção original explícita. */
 function spotlightBriefing() {
   return makeBriefing({
-    offer: { campaignIntent: "spotlight", badge: "", validity: undefined },
+    offer: { campaignIntent: "spotlight", backgroundDirection: "original", badge: "", validity: undefined },
     intent: "destaque",
     product: {
       priceCents: 4990,
       originalPriceCents: undefined,
-      preserveImageContext: true,
     },
   });
 }
@@ -165,6 +164,20 @@ const PROMPT_BASE = "Crie uma arte comercial clara e legível.";
 // ─── Blocos canônicos ────────────────────────────────────────────────────────
 
 describe("núcleo do compositor — estrutura de blocos canônicos", () => {
+  it.each([
+    ["offer", "studio", "Fundo de estúdio"], ["offer", "ambient", "Cenário ambientado"], ["offer", "original", "Manter cenário original"],
+    ["spotlight", "studio", "Fundo de estúdio"], ["spotlight", "ambient", "Cenário ambientado"], ["spotlight", "original", "Manter cenário original"],
+    ["exclusive", "studio", "Fundo de estúdio"], ["exclusive", "ambient", "Cenário ambientado"], ["exclusive", "original", "Manter cenário original"],
+  ] as const)("serializa a direção localizada para %s/%s", (intent, direction, label) => {
+    const product = intent === "offer" ? makeProduct() : makeProduct({ priceCents: intent === "spotlight" ? 4990 : undefined, originalPriceCents: undefined });
+    const configIntent = intent === "offer" ? "oferta" : intent === "spotlight" ? "destaque" : "exclusivo";
+    const { briefing } = makeBriefing({ product, offer: { campaignIntent: intent, backgroundDirection: direction, ...(intent === "offer" ? {} : { badge: "", validity: undefined }) }, intent: configIntent });
+    const composition = composePromptBlocks({ briefing, promptBase: "" });
+    expect(composition.text).toContain(`Direção de fundo: ${label}`);
+    expect(composition.text).not.toContain(`Direção de fundo: ${direction}`);
+    expect(composition.composerVersion).toBe("48.2.4-prompt-composer-v3");
+  });
+
   it("usa os 7 blocos canônicos na ordem travada (dados + contribuições)", () => {
     const { briefing } = makeBriefing();
     const { text, blocks } = composePromptBlocks({
@@ -196,7 +209,7 @@ describe("núcleo do compositor — estrutura de blocos canônicos", () => {
 
     const { text, blocks } = composePromptBlocks({ briefing, promptBase: "" });
 
-    expect(Object.keys(blocks)).toEqual([PROMPT_BLOCK_LABELS.product]);
+    expect(Object.keys(blocks)).toEqual([PROMPT_BLOCK_LABELS.product, PROMPT_BLOCK_LABELS.commercial]);
     for (const omitted of [
       PROMPT_BLOCK_LABELS.identity,
       PROMPT_BLOCK_LABELS.typography,
@@ -205,7 +218,7 @@ describe("núcleo do compositor — estrutura de blocos canônicos", () => {
       PROMPT_BLOCK_LABELS.promptBase,
       PROMPT_BLOCK_LABELS.constraints,
     ]) {
-      expect(text).not.toContain(`[${omitted}]`);
+      if (omitted !== PROMPT_BLOCK_LABELS.commercial) expect(text).not.toContain(`[${omitted}]`);
     }
   });
 
@@ -234,17 +247,14 @@ describe("núcleo do compositor — estrutura de blocos canônicos", () => {
     expect(occurrences).toHaveLength(1);
   });
 
-  it("reflete preserveImageContext em [PRODUTO E IMAGENS DE REFERÊNCIA] sem duplicar", () => {
+  it("representa o fundo original somente pela direção selecionada", () => {
     const { briefing } = spotlightBriefing();
     expect(briefing.commercial.preserveImageContext).toBe(true);
 
     const { blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
 
-    expect(blocks[PROMPT_BLOCK_LABELS.product]).toContain("Preservar imagem original: sim");
-    const occurrences = Object.values(blocks).filter((content) =>
-      content.includes("Preservar imagem original"),
-    );
-    expect(occurrences).toHaveLength(1);
+    expect(blocks[PROMPT_BLOCK_LABELS.commercial]).toContain("Direção de fundo: Manter cenário original");
+    expect(Object.values(blocks).join("\n")).not.toContain("Preservar imagem original: sim");
   });
 });
 
@@ -382,7 +392,7 @@ describe("núcleo do compositor — determinismo e pureza", () => {
 
   it("exporta COMPOSER_VERSION como string estática da fase", () => {
     expect(typeof COMPOSER_VERSION).toBe("string");
-    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v2");
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v3");
   });
 
   it("o módulo é puro e sem IA (fonte): sem env, rede, provider ou supabase", () => {

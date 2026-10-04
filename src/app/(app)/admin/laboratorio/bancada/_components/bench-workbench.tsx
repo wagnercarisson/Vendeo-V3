@@ -125,7 +125,6 @@ function buildProductPayload(campaign: BenchCampaignFormValue): BenchProductPayl
     ...(campaign.mandatoryArtworkText.length > 0
       ? { mandatoryArtworkText: campaign.mandatoryArtworkText }
       : {}),
-    ...(campaign.preserveImageContext ? { preserveImageContext: true } : {}),
   };
 }
 
@@ -139,12 +138,20 @@ function buildOfferPayload(campaign: BenchCampaignFormValue): BenchOfferPayload 
   return {
     ...(campaign.badge ? { badge: campaign.badge } : {}),
     campaignIntent: campaign.campaignIntent,
+    ...(campaign.backgroundDirection ? { backgroundDirection: campaign.backgroundDirection } : {}),
     ...(validity ? { validity } : {}),
     showIllustrativeNotice: campaign.showIllustrativeNotice,
   };
 }
 
-function getCommercialBlockReason(campaign: BenchCampaignFormValue): string | null {
+export function backgroundDirectionAfterUpload(
+  selected: BenchCampaignFormValue["backgroundDirection"],
+  productReferenceCount: number,
+): BenchCampaignFormValue["backgroundDirection"] {
+  return selected === "original" && productReferenceCount !== 1 ? "" : selected;
+}
+
+function getCommercialBlockReason(campaign: BenchCampaignFormValue, productReferenceCount: number): string | null {
   const priceValidation = validateBenchIntentPrice(
     campaign.originalPriceCents,
     campaign.priceCents,
@@ -164,6 +171,9 @@ function getCommercialBlockReason(campaign: BenchCampaignFormValue): string | nu
   if (campaign.campaignIntent !== "offer" && hasValidity) {
     return "Remova ou regularize explicitamente a validade antes de compor ou executar esta intenção.";
   }
+
+  if (!campaign.backgroundDirection) return "Escolha explicitamente uma direção de fundo antes de compor ou executar.";
+  if (campaign.backgroundDirection === "original" && productReferenceCount !== 1) return "Manter cenário original exige exatamente uma imagem de produto; envie as imagens e selecione novamente.";
 
   return null;
 }
@@ -186,7 +196,6 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   const [campaign, setCampaign] = useState<BenchCampaignFormValue>(
     EMPTY_BENCH_CAMPAIGN_FORM,
   );
-  const commercialBlockReason = getCommercialBlockReason(campaign);
   // O editor do prompt-base é semeado pelo padrão resolvido server-side (props
   // iniciais) — sem depender de `POST /compose` (D6/D16).
   const [prompt, setPrompt] = useState(defaultPromptBase);
@@ -198,6 +207,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   // confirmação financeira no painel de execução (correção de UAT).
   const [executionConfigRevision, setExecutionConfigRevision] = useState(0);
   const [upload, setUpload] = useState<BenchUploadResult | null>(null);
+  const commercialBlockReason = getCommercialBlockReason(campaign, upload?.references.length ?? 0);
   const [runEvidence, setRunEvidence] = useState<{
     run: BenchRunEvidence;
     artifacts: BenchArtifactView[];
@@ -298,6 +308,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   }
 
   function handleUploaded(result: BenchUploadResult) {
+    setCampaign((current) => ({ ...current, backgroundDirection: backgroundDirectionAfterUpload(current.backgroundDirection, result.references.length) }));
     setUpload(result);
     setRunEvidence(null);
     setEvidenceError(null);
@@ -611,7 +622,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           loading={brandingLoading}
           error={brandingError}
         />
-        <BenchCampaignForm value={campaign} onChange={handleCampaignChange} />
+        <BenchCampaignForm value={campaign} onChange={handleCampaignChange} productReferenceCount={upload?.references.length ?? 0} />
         <BenchImageUpload
           storeId={storeId}
           getOperationId={getOperationId}

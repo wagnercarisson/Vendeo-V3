@@ -56,6 +56,7 @@ function makeBriefing(overrides: {
   visualDirection?: Partial<BenchExperimentalVisualDirection>;
 } = {}): BenchExperimentalBriefing {
   return {
+    backgroundDirection: "studio",
     storeId: "11111111-1111-4111-8111-111111111111",
     storeName: overrides.storeName ?? "Loja Exemplo",
     segment: "moda-calcados-acessorios",

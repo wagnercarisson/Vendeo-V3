@@ -54,7 +54,7 @@ interface BenchImageUploadProps {
 export const MAX_ADDITIONAL_IMAGES = 3;
 const ACCEPTED_MIME_TYPES = "image/png,image/jpeg,image/webp";
 const ADDITIONAL_IMAGES_HELP =
-  "Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.";
+  "A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.";
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "—";

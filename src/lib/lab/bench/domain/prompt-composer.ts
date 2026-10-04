@@ -1,4 +1,5 @@
 import type { BenchExperimentalBriefing } from "./experimental-briefing";
+import { BENCH_BACKGROUND_LABELS } from "./background-direction";
 import type { BenchPromptContribution } from "./policies/types";
 
 /**
@@ -36,7 +37,7 @@ import type { BenchPromptContribution } from "./policies/types";
  */
 
 /** Versão estática do compositor — evidência do preflight (D20). */
-export const COMPOSER_VERSION = "48.2.4-prompt-composer-v2";
+export const COMPOSER_VERSION = "48.2.4-prompt-composer-v3";
 
 // ─── Blocos canônicos (travados — D19) ───────────────────────────────────────
 
@@ -110,9 +111,6 @@ function productLines(
   const lines: string[] = [];
   pushLine(lines, "Nome do produto obrigatório", briefing.product.name);
   pushLine(lines, "Descrição", briefing.product.description);
-  if (briefing.commercial.preserveImageContext) {
-    lines.push("Preservar imagem original: sim");
-  }
   if (references && references.length > 0) {
     lines.push(`Imagens de referência: ${references.length}`);
   }
@@ -121,6 +119,8 @@ function productLines(
 
 function commercialLines(briefing: BenchExperimentalBriefing): string[] {
   const lines: string[] = [];
+  const backgroundLabel = BENCH_BACKGROUND_LABELS[briefing.backgroundDirection as keyof typeof BENCH_BACKGROUND_LABELS];
+  if (backgroundLabel) pushLine(lines, "Direção de fundo", backgroundLabel);
   pushLine(lines, "Preço original", briefing.commercial.originalPriceText);
   pushLine(lines, "Preço de venda", briefing.commercial.discountedPriceText);
   pushLine(lines, "Selo", briefing.commercial.badge);

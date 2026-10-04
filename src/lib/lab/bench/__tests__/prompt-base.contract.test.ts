@@ -89,7 +89,6 @@ function makeProduct(): BenchProduct {
     priceCents: 4990,
     originalPriceCents: 9990,
     mandatoryArtworkText: "Válido para retirada na loja",
-    preserveImageContext: false,
   };
 }
 

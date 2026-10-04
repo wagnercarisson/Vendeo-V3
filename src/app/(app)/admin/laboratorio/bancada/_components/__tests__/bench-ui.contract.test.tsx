@@ -84,6 +84,7 @@ import {
   type BenchPreflightEvidenceView,
 } from "../bench-preflight-panel";
 import { BenchPromptEditor } from "../bench-prompt-editor";
+import { backgroundDirectionAfterUpload } from "../bench-workbench";
 import {
   BenchPoliciesPanel,
   type BenchPromptPolicyView,
@@ -120,6 +121,9 @@ function ControlledBenchCampaignForm({
 
 function chooseNoPriceExclusiveIntent() {
   fireEvent.click(screen.getByRole("radio", { name: "Exclusivo" }));
+  const backgroundDirection = screen.getByLabelText("Direção de fundo");
+  fireEvent.change(backgroundDirection, { target: { value: "studio" } });
+  expect(backgroundDirection).toHaveValue("studio");
 }
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -697,7 +701,27 @@ describe("contrato de UI — branding, upload, prompt e presets", () => {
 // ─── 2b. Formulário fiel, brandColor e preflight ─────────────────────────────
 
 describe("contrato de UI — formulário fiel e brandColor", () => {
-  it("exibe os campos fiéis e 'Preservar imagem original' apenas fora de Oferta", () => {
+  it("transição de uma para duas refs limpa original e exige escolha explícita; identidade não entra na contagem", () => {
+    // references contém imagens de produto; a identidade de branding é transportada separadamente.
+    const afterOneProductAndIdentity = backgroundDirectionAfterUpload("original", 1);
+    expect(afterOneProductAndIdentity).toBe("original");
+    const afterSecondProduct = backgroundDirectionAfterUpload(afterOneProductAndIdentity, 2);
+    expect(afterSecondProduct).toBe("");
+    expect(backgroundDirectionAfterUpload(afterSecondProduct, 1)).toBe("");
+
+    const onChange = vi.fn();
+    const props = { ...EMPTY_BENCH_CAMPAIGN_FORM, backgroundDirection: afterSecondProduct };
+    const { rerender } = render(<BenchCampaignForm value={props} onChange={onChange} productReferenceCount={2} />);
+    const selector = screen.getByLabelText("Direção de fundo");
+    expect(selector).toHaveValue("");
+    expect(screen.getByRole("option", { name: "Manter cenário original" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /compor/i })).toBeNull();
+    fireEvent.change(selector, { target: { value: "ambient" } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ backgroundDirection: "ambient" }));
+    rerender(<BenchCampaignForm value={{ ...props, backgroundDirection: "" }} onChange={onChange} productReferenceCount={2} />);
+    expect(screen.getByLabelText("Direção de fundo")).toHaveValue("");
+  });
+  it("exibe exatamente um seletor de direção para todas as intenções, sem padrão", () => {
     const { rerender } = render(
       <BenchCampaignForm
         value={{ ...EMPTY_BENCH_CAMPAIGN_FORM, campaignIntent: "offer" }}
@@ -715,8 +739,11 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
     expect(screen.getByText("Imagem meramente ilustrativa")).toBeInTheDocument();
     expect(screen.getByLabelText("Informações obrigatórias na arte")).toBeInTheDocument();
 
-    // Em Oferta, "Preservar imagem original" não é oferecido.
-    expect(screen.queryByText("Preservar imagem original")).toBeNull();
+    const direction = screen.getByLabelText("Direção de fundo") as HTMLSelectElement;
+    expect(direction.value).toBe("");
+    expect(direction.options).toHaveLength(4);
+    expect(screen.getAllByLabelText("Direção de fundo")).toHaveLength(1);
+    expect(screen.queryByLabelText("Preservar imagem original")).toBeNull();
 
     rerender(
       <BenchCampaignForm
@@ -724,7 +751,8 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
         onChange={() => {}}
       />,
     );
-    expect(screen.getByText("Preservar imagem original")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Direção de fundo")).toHaveLength(1);
+    expect(screen.queryByLabelText("Preservar imagem original")).toBeNull();
   });
 
   it("exibe o indicador do brandColor resolvido (somente leitura)", () => {
@@ -743,7 +771,7 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
 
   it("exibe a orientação normativa exata das imagens principal e auxiliares", () => {
     render(<BenchImageUpload storeId={STORE_A.id} getOperationId={() => "op"} onUploaded={() => {}} />);
-    expect(screen.getByText("Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.")).toBeInTheDocument();
+    expect(screen.getByText("A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.")).toBeInTheDocument();
   });
 
   it("preserva a intenção ao editar preços e pede nova escolha quando fica incompatível", () => {
@@ -880,7 +908,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           composerVersion: COMPOSER_VERSION,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v2",
+            tipoConteudo: "48.2.6-produto-v3",
             geral: "48.2.5-general-integrity-v1",
           },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1109,7 +1137,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           composerVersion: COMPOSER_VERSION,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v2",
+            tipoConteudo: "48.2.6-produto-v3",
             geral: "48.2.5-general-integrity-v1",
           },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1351,7 +1379,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           compiledPrompt: "PROMPT SEM ALERTAS",
           blocks: {},
           composerVersion: COMPOSER_VERSION,
-          policyVersions: { tipoConteudo: "48.2.6-produto-v2", geral: "48.2.5-general-integrity-v1" },
+          policyVersions: { tipoConteudo: "48.2.6-produto-v3", geral: "48.2.5-general-integrity-v1" },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
           textIntegrityEvidence: {
             policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
@@ -1495,7 +1523,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             composerVersion: COMPOSER_VERSION,
             policyVersions: {
               intencao: "48.2.6-oferta-v1",
-              tipoConteudo: "48.2.6-produto-v2",
+              tipoConteudo: "48.2.6-produto-v3",
               geral: "48.2.5-general-integrity-v1",
             },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1544,7 +1572,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             composerVersion: COMPOSER_VERSION,
             policyVersions: {
               intencao: "48.2.6-oferta-v1",
-              tipoConteudo: "48.2.6-produto-v2",
+              tipoConteudo: "48.2.6-produto-v3",
               geral: "48.2.5-general-integrity-v1",
             },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1637,7 +1665,7 @@ const PREFLIGHT_EVIDENCE: BenchPreflightEvidenceView = {
   policyVersions: {
     intencao: "48.2.6-oferta-v1",
     formato: "48.2.4-formato-1-1-v1",
-    tipoConteudo: "48.2.6-produto-v2",
+    tipoConteudo: "48.2.6-produto-v3",
     estrutura: "48.2.4-peca-unica-v1",
     tema: "48.2.4-tema-nenhum-v1",
   },
@@ -1935,7 +1963,7 @@ const POLICIES: BenchPromptPolicyView[] = [
     dimension: "tipoConteudo",
     id: "policy.tipoConteudo.produto",
     value: "produto",
-    version: "48.2.6-produto-v2",
+    version: "48.2.6-produto-v3",
   },
   {
     dimension: "estrutura",
@@ -2196,7 +2224,7 @@ describe("contrato de UI — tentativas e 'Nova tentativa' (F48.2.4)", () => {
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v2",
+            tipoConteudo: "48.2.6-produto-v3",
             geral: "48.2.5-general-integrity-v1",
           },
           composerVersion: COMPOSER_VERSION,
