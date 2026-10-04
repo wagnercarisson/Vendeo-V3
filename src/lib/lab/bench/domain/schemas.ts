@@ -84,11 +84,11 @@ export type BenchConfig = z.infer<typeof BenchConfigSchema>;
 // ─── Formulário mínimo de produto/oferta (D-snapshot) ────────────────────────
 
 /**
- * Produto — contrato FIEL ao formulário produtivo (F48.2.3, D14): nome `max(60)`
- * e descrição `max(120)` (mesmos limites do produtivo) e as **informações
- * obrigatórias na arte** `max(200)`. `preserveImageContext` é o campo
- * "Preservar imagem original" (disponível apenas em Destaque/Exclusivo e limpo ao
- * mudar para Oferta). Nenhum campo produtivo novo é inventado.
+ * Produto — contrato FIEL aos campos textuais/preços do formulário produtivo
+ * (F48.2.3, D14): nome `max(60)`, descrição `max(120)` e informações
+ * obrigatórias na arte `max(200)`. A direção de fundo experimental é um campo
+ * explícito da campanha; a flag histórica `preserveImageContext` é derivada no
+ * snapshot e não é aceita como input independente. Nenhum campo produtivo muda.
  */
 export const BenchProductSchema = z
   .object({

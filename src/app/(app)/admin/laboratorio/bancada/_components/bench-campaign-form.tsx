@@ -36,10 +36,10 @@ import { LabTextarea } from "../../_components/lab-textarea";
  *
  * Reproduz os campos e comportamentos programáticos relevantes do formulário
  * produtivo (nome 60, descrição 120, preços de/por com normalização por
- * dígitos→centavos, selo por intenção, intenção com derivação/seleção, "Preservar
- * imagem original" — exibido só em Destaque/Exclusivo e limpo ao mudar para
- * Oferta —, validade, aviso "Imagem meramente ilustrativa" e informações
- * obrigatórias na arte 200), reutilizando as regras puras de `form-rules.ts`.
+ * dígitos→centavos, selo por intenção, intenção com derivação/seleção, validade,
+ * aviso "Imagem meramente ilustrativa" e informações obrigatórias na arte 200),
+ * além da seleção única de direção de fundo da bancada. Reutiliza as regras puras
+ * de `form-rules.ts` sem adicionar ou alterar campos produtivos.
  *
  * As imagens do produto são enviadas pelo componente `BenchImageUpload`. A
  * validação é **inline no blur** (nunca só no submit). Desktop-only.

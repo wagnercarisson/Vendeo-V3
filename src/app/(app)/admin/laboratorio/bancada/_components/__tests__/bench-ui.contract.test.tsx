@@ -753,6 +753,16 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
     );
     expect(screen.getAllByLabelText("Direção de fundo")).toHaveLength(1);
     expect(screen.queryByLabelText("Preservar imagem original")).toBeNull();
+
+    rerender(
+      <BenchCampaignForm
+        value={{ ...EMPTY_BENCH_CAMPAIGN_FORM, campaignIntent: "exclusive" }}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getAllByLabelText("Direção de fundo")).toHaveLength(1);
+    expect((screen.getByLabelText("Direção de fundo") as HTMLSelectElement).value).toBe("");
+    expect(screen.queryByLabelText("Preservar imagem original")).toBeNull();
   });
 
   it("exibe o indicador do brandColor resolvido (somente leitura)", () => {
