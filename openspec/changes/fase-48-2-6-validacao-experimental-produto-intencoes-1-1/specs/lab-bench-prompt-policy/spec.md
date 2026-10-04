@@ -53,7 +53,7 @@ A serialização compartilhada do valor `discountedPriceText` SHALL usar o rótu
 
 ### Requirement: Política Produto orienta o foco no produto e o uso das referências
 
-A política `produto` SHALL orientar o produto como elemento principal, preservar fidelidade de aparência, embalagem e características e usar a imagem principal como protagonista. A instrução de imagem SHALL ser exatamente: “Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.” Referências auxiliares podem representar múltiplas representações, ângulos e variantes do produto anunciado; são opcionais e não têm garantia de aparição. O contrato técnico existente de limite, ordem e transporte permanece vigente. Isso não cria suporte a produtos independentes ou combos. A política SHALL NOT proibir absolutamente múltiplas representações nem declarar orientações comerciais, que pertencem às políticas de intenção cabíveis.
+A política `produto` SHALL orientar o produto como elemento principal, preservar fidelidade de aparência, embalagem e características e definir a primeira imagem enviada como variante protagonista. A instrução de imagem SHALL ser exatamente: “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.” Referências auxiliares podem representar múltiplas representações, ângulos e variantes do produto anunciado; são opcionais e não têm garantia de aparição. O contrato técnico existente de limite, ordem e transporte permanece vigente. Isso não cria suporte a produtos independentes ou combos. A política SHALL NOT proibir absolutamente múltiplas representações nem declarar orientações comerciais, que pertencem às políticas de intenção cabíveis.
 
 #### Scenario: Foco no produto é gerado
 - **WHEN** a política Produto contribui para o prompt
@@ -62,7 +62,7 @@ A política `produto` SHALL orientar o produto como elemento principal, preserva
 
 #### Scenario: Instrução concisa de imagem substitui a antiga
 - **WHEN** a política Produto orienta imagens
-- **THEN** usa exatamente a instrução definida neste requisito
+- **THEN** usa exatamente a instrução “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.”
 - **AND** não acrescenta proibição de duplicação de produto
 - **AND** não promete aparição de auxiliares
 
@@ -83,14 +83,14 @@ A política `produto` SHALL orientar o produto como elemento principal, preserva
 
 ### Requirement: Política Produto preserva nome, contexto da descrição e textos obrigatórios
 
-A política determinística `produto` SHALL usar instruções concisas: “Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.”; “Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.”; “Textos obrigatórios: reprodução integral.” O nome SHALL manter todas as palavras/conteúdo, sem abreviar, substituir, omitir ou corrigir silenciosamente; capitalização, quebras de linha e arranjo tipográfico podem variar. A descrição serve de apoio à arte/copy e pode ser melhorada, adaptada, resumida, parcialmente utilizada ou omitida sem desvirtuar contexto/significado nem inventar atributos, benefícios ou condições. Informações obrigatórias SHALL ser reproduzidas integralmente conforme aprovadas. Após decisão `keep_exactly`, a grafia aprovada SHALL ser preservada, inclusive possíveis erros. Presença/fidelidade na imagem são critérios humanos, não garantias técnicas. Os contratos existentes de revisão textual e `keep_exactly` permanecem inalterados.
+A política determinística `produto` SHALL usar instruções concisas: “Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.”; “Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.”; “Textos obrigatórios: exiba cada texto integralmente uma única vez.” O nome SHALL manter todas as palavras/conteúdo, sem abreviar, substituir, omitir ou corrigir silenciosamente; capitalização, quebras de linha e arranjo tipográfico podem variar. A descrição serve de apoio à arte/copy e pode ser melhorada, adaptada, resumida, parcialmente utilizada ou omitida sem desvirtuar contexto/significado nem inventar atributos, benefícios ou condições. Cada informação obrigatória SHALL ser reproduzida integralmente uma única vez conforme aprovada. Após decisão `keep_exactly`, a grafia aprovada SHALL ser preservada, inclusive possíveis erros. Presença/fidelidade na imagem são critérios humanos, não garantias técnicas. A regra de exibição única SHALL pertencer somente à política Produto; nenhuma outra política a SHALL duplicar. Os contratos existentes de revisão textual e `keep_exactly` permanecem inalterados.
 
-O campo de nome serializado pelo compositor SHALL usar exatamente o rótulo `Nome do produto obrigatório` (linha compilada `Nome do produto obrigatório: {nome}`). Este rótulo não altera a liberdade de apresentação/capitalização da instrução de preservação acima. A versão da política Produto SHALL ser `48.2.6-produto-v2`.
+O campo de nome serializado pelo compositor SHALL usar exatamente o rótulo `Nome do produto obrigatório` (linha compilada `Nome do produto obrigatório: {nome}`). Este rótulo não altera a liberdade de apresentação/capitalização da instrução de preservação acima. A versão vigente da política Produto SHALL ser `48.2.6-produto-v3`.
 
 #### Scenario: Nome compilado recebe o rótulo obrigatório
 - **WHEN** a composição serializa o nome de produto informado
 - **THEN** a linha é exatamente `Nome do produto obrigatório: {nome}`
-- **AND** a política Produto é identificada como `48.2.6-produto-v2`
+- **AND** a política Produto é identificada como `48.2.6-produto-v3`
 - **AND** a instrução existente de preservar todas as palavras e permitir capitalização, quebras de linha e arranjo livres permanece inalterada
 
 #### Scenario: Nome preserva palavras e conteúdo
@@ -137,7 +137,7 @@ A composição determinística SHALL orientar português correto e natural, evit
 
 ### Requirement: Políticas Destaque e Exclusivo usam instruções comerciais concisas
 
-A política versionada Destaque SHALL usar: “Destaque: priorize a apresentação do produto; preço informado é secundário.” A política Exclusivo `48.2.6-exclusivo-v2` SHALL usar exatamente: “Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações.” A política SHALL NOT acrescentar qualquer outra orientação ou alterar as listas/permissões de selos existentes. Selos explicitamente selecionados pelo usuário são dados de entrada. As orientações SHALL NOT ser duplicadas em Produto, política geral ou prompt-base.
+A política versionada Destaque SHALL permanecer usando: “Destaque: priorize a apresentação do produto; preço informado é secundário.” A política Exclusivo vigente `48.2.6-exclusivo-v3` SHALL usar exatamente: “Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.” A política SHALL NOT acrescentar qualquer outra orientação ou alterar as listas/permissões de selos existentes. Selos explicitamente selecionados pelo usuário são dados de entrada. As orientações SHALL NOT ser duplicadas em Produto, política geral ou prompt-base.
 
 #### Scenario: Destaque prioriza produto e torna preço secundário
 - **WHEN** intenção é Destaque
@@ -146,8 +146,8 @@ A política versionada Destaque SHALL usar: “Destaque: priorize a apresentaç�
 
 #### Scenario: Exclusivo não cria alegações ou atributos
 - **WHEN** intenção é Exclusivo
-- **THEN** usa exatamente a instrução `Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações.`
-- **AND** a versão resolvida é `48.2.6-exclusivo-v2`
+- **THEN** usa exatamente a instrução `Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.`
+- **AND** a versão resolvida é `48.2.6-exclusivo-v3`
 - **AND** nenhum texto adicional é acrescentado pela política
 - **AND** as opções/permissões existentes de selos não são alteradas
 

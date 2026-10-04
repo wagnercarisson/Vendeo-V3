@@ -17,18 +17,21 @@
 - [ ] 3.1 Vincular preflight a preço/intenção efetivos e invalidá-lo após qualquer mudança relevante ou versão de política.
 - [ ] 3.2 Testar alteração de preço/intenção após aprovação e rejeição stale antes de persistência/provider; confirmar preset/modelo/qualidade não invalidam texto por si só.
 - [ ] 3.3 Provar preservação byte a byte do prompt-base aprovado, prompt aprovado e prompt enviado em fluxos válidos.
+- [ ] 3.4 Propagar `backgroundDirection` pelo schema, snapshot, prompt e preflight/API; validar `Manter cenário original` somente com exatamente uma referência de produto, sem contar identidade.
 
 ## 4. Políticas e prompt-base
 
 - [ ] 4.1 Habilitar apenas Produto + 1:1 com políticas versionadas Oferta, Destaque e Exclusivo nos registries/config da bancada.
-- [ ] 4.2 Manter Oferta; definir Destaque com apresentação do produto e preço secundário informado; Exclusivo v2 com a frase literal aprovada, sem alterar opções/permissões de selos.
-- [ ] 4.3 Usar o rótulo `Nome do produto obrigatório: {nome}`; preservar nome completo sem alterar palavras (capitalização, quebras de linha e arranjo livres); descrição opcional adaptável/melhorável/omitível sem mudar significado; texto obrigatório integral; manter revisão textual e `keep_exactly`. A mudança do rótulo versiona somente Produto como `48.2.6-produto-v2`.
+- [ ] 4.2 Manter Oferta e Destaque; versionar Exclusivo v3 com a frase literal editorial aprovada, sem alterar opções/permissões de selos.
+- [ ] 4.3 Usar o rótulo `Nome do produto obrigatório: {nome}`; preservar nome completo sem alterar palavras (capitalização, quebras de linha e arranjo livres); descrição opcional adaptável/melhorável/omitível sem mudar significado; cada texto obrigatório integral uma única vez; manter revisão textual e `keep_exactly`. A política Produto passa a `48.2.6-produto-v3`.
 - [ ] 4.4 Fazer ajuste pequeno e neutro no prompt-base reutilizável, sem regra específica de intenção; atualizar golden/versões sem alterar núcleo neutro.
-- [ ] 4.5 Atualizar orientação de auxiliares para “As imagens auxiliares enriquecem a campanha; use-as sempre que possível.”; preservar protagonismo da principal, ordem/transporte e ausência de garantia de aparição.
+- [ ] 4.5 Orientar a primeira imagem como variante protagonista, maior e em primeiro plano; auxiliares como apoio visual secundário; preservar ordem/transporte e ausência de garantia de aparição.
 - [ ] 4.6 Testar contribuições/instruções versionadas e disjuntas das três intenções, inclusão/omissão de preço e texto de política; não inferir sucesso visual do modelo; confirmar Serviço/outros formatos continuam desabilitados e fail-closed.
 - [ ] 4.7 Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar somente Produto como `48.2.6-produto-v2`, preservando literalmente a instrução de liberdade do nome.
 - [ ] 4.8 Serializar `discountedPriceText` com rótulo neutro `Preço de venda`; versionar somente o compositor como `48.2.4-prompt-composer-v2`. Provar que Destaque com preço único preserva valor sem texto/versão Oferta, enquanto a semântica promocional permanece na instrução Oferta existente e inalterada.
-- [ ] 4.9 Versionar somente a política Exclusivo para `48.2.6-exclusivo-v2`; testar composição sem selo e com cada selo já permitido, incluindo `Exclusivo` e `Edição Limitada`, mantendo as opções/permissões inalteradas.
+- [ ] 4.9 Versionar somente a política Exclusivo para `48.2.6-exclusivo-v3`; testar composição sem selo e com os selos permitidos `Exclusivo` e `Edição Limitada`, mantendo opções/permissões inalteradas e preservando a evidência v1.
+- [ ] 4.10 Oferecer direção de fundo de seleção única para as três intenções: Fundo de estúdio, Cenário ambientado e Manter cenário original; sem padrão automático, inclusive em Oferta.
+- [ ] 4.11 Invalidar direção `original` quando a quantidade mudar de exatamente uma imagem de produto; exigir reseleção explícita, excluir identidade da contagem e testar intenção × fundo, API/schema/snapshot/prompt/preflight e transições UI.
 
 ## 5. Evidências e validação técnica
 
@@ -41,6 +44,6 @@
 
 - [ ] 6.1 **CHECKPOINT A — responsável:** revisar matriz, políticas, validade exclusiva de Oferta, preservação de contratos de selos, threat model e gates antes de qualquer geração paga.
 - [ ] 6.2 Após CHECKPOINT A aprovado, usuário prepara UAT local e confirma financeiramente cada execução de forma individual; nenhuma execução é tarefa autônoma.
-- [ ] 6.3 **CHECKPOINT B — usuário:** avaliar manualmente Oferta, Destaque e Exclusivo quanto a produto/embalagem, nome, textos obrigatórios, condições comerciais, qualidade comercial, custo e latência; para Exclusivo, preservar a tentativa/evidência v1 e comparar v1 × v2 com os mesmos dados/imagem e Sunburst medium, variando somente a política; registrar dados ausentes como `pending`; permitir encerramento com limitações somente com aceitação explícita e lacunas/follow-ups enumerados.
+- [ ] 6.3 **CHECKPOINT B — usuário:** avaliar manualmente Oferta, Destaque e Exclusivo quanto a produto/embalagem, variante protagonista/auxiliares, direção de fundo, nome, textos obrigatórios, condições comerciais, qualidade comercial, custo e latência; preservar a tentativa v1 e preparar comparação v1 × v3 com mesmos dados/imagem e Sunburst medium, mantendo direção de fundo comparável, variando somente política e registrando lacunas como `pending`; cada nova geração exige confirmação financeira individual; encerramento com limitações requer aceitação explícita e lacunas/follow-ups enumerados.
 - [ ] 6.4 Congelar pacote candidato documental ligado aos runs, com versões, custo/fonte, latência, avaliações, limitações e decisão humana; não promover para produção.
 - [ ] 6.5 Executor registra resultado em tracking de forma não destrutiva conforme UAT; entrega para revisão. Somente responsável executa `/opsx-verify`, `/opsx-sync` e `/opsx-archive`.

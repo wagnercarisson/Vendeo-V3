@@ -38,25 +38,33 @@ Alternativa rejeitada: reescrever silenciosamente intenção no servidor. A esco
 
 ### D3 — Políticas curtas por intenção
 
-Registrar políticas/version para as três intenções nos registries existentes, habilitadas somente em Produto + 1:1. Instruções finais concisas estão nos deltas: Oferta destaca preço por e mantém preço de secundário; Destaque prioriza apresentação e preço informado secundário; Exclusivo v2 usa literalmente “Exclusivo: valorize a apresentação do produto sem preço, criando uma peça de visual sofisticado com acabamento de alto padrão. Respeite os selos informados sem inventar informações.” Selos mantêm exatamente listas e permissões existentes; selo escolhido pelo usuário é dado de entrada. Validade informada em Oferta continua no prompt como dado comercial; regra de aceitação por intenção é enforcement UI/backend e não explicação ao modelo. A regra geral e Produto não duplicam orientações comerciais.
+Registrar políticas/version para as três intenções nos registries existentes, habilitadas somente em Produto + 1:1. Instruções finais concisas estão nos deltas: Oferta destaca preço por e mantém preço de secundário; Destaque prioriza apresentação e preço informado secundário; Exclusivo v3 usa literalmente “Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.” Selos mantêm exatamente listas e permissões existentes; selo escolhido pelo usuário é dado de entrada. Validade informada em Oferta continua no prompt como dado comercial; regra de aceitação por intenção é enforcement UI/backend e não explicação ao modelo. A regra geral e Produto não duplicam orientações comerciais.
 
-#### D3.1 — Ajuste intrafase Exclusivo v2 e preservação da tentativa v1
+#### D3.1 — Ajuste intrafase Exclusivo v3 e preservação da tentativa v1
 
-A versão atual da política Exclusivo SHALL ser `48.2.6-exclusivo-v2` e conter somente a instrução literal aprovada. A evidência e a decisão do usuário sobre a primeira arte Exclusivo sob v1 permanecem preservadas, sem sobrescrever a tentativa anterior. A comparação preparada v1 × v2 muda somente a versão da política: mesmos dados, mesma imagem e `gpt-image-2.5-sunburst` `medium`. Não executar nova geração até revisão humana e confirmação financeira individual para essa tentativa.
+A versão vigente da política Exclusivo SHALL ser `48.2.6-exclusivo-v3` e conter somente a instrução literal aprovada. A evidência e a decisão do usuário sobre a primeira arte Exclusivo sob `48.2.6-exclusivo-v1` permanecem preservadas, sem sobrescrever a tentativa anterior; v2 não teve tentativa visual. A comparação preparada v1 × v3 muda somente a política e SHALL reutilizar os mesmos dados/imagem existentes e `gpt-image-2.5-sunburst` `medium`. A direção de fundo precisa ser comparável e registrada; se a evidência v1 não permitir identificá-la, a limitação permanece explícita e o resultado não será tratado como comparação controlada. Não executar nova geração até revisão humana e confirmação financeira individual.
 
 Alternativa rejeitada: ramificações no compositor neutro ou no prompt-base, que duplicariam decisões de política.
 
 ### D4 — Texto literal e imagens auxiliares
 
-Instruções curtas: “Nome: completo, sem alterar palavras; capitalização e arranjo livres.”; “Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.”; “Textos obrigatórios: reprodução integral.” A política Produto atualiza os requisitos existentes e mantém revisão textual/`keep_exactly`; presença/fidelidade na imagem são avaliadas por humanos. Para imagens, usar somente: “Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.” Permitir múltiplas representações, ângulos e variantes do produto anunciado, sem declarar suporte a produtos independentes/combos. Auxiliares opcionais e sem garantia de aparição. Limites, ordem e transporte ficam regidos pelos contratos técnicos existentes, sem reexplicá-los no prompt. Repetição de texto e presença de imagens são contratos distintos.
+Instruções curtas: “Nome: completo, sem alterar palavras; capitalização e arranjo livres.”; “Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.”; “Textos obrigatórios: exiba cada texto integralmente uma única vez.” A política Produto atualiza os requisitos existentes e mantém revisão textual/`keep_exactly`; essa regra de texto obrigatório não se repete em outra política. Presença/fidelidade na imagem são avaliadas por humanos. Para imagens, usar somente: “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.” Permitir múltiplas representações, ângulos e variantes do produto anunciado, sem declarar suporte a produtos independentes/combos. Auxiliares opcionais e sem garantia de aparição. Limites, ordem e transporte ficam regidos pelos contratos técnicos existentes, sem reexplicá-los no prompt. Repetição de texto e presença de imagens são contratos distintos.
 
 #### D4.1 — Rótulo do nome compilado
 
-O compositor serializa o campo como `Nome do produto obrigatório: {nome}`. Somente `PRODUTO_POLICY_VERSION` muda para `48.2.6-produto-v2`; a frase de preservação do nome e sua liberdade de apresentação permanecem intactas, sem nova regra.
+O compositor serializa o campo como `Nome do produto obrigatório: {nome}`. A política Produto muda para `48.2.6-produto-v3`; a frase de preservação do nome e sua liberdade de apresentação permanecem intactas, sem nova regra.
 
 #### D4.2 — Rótulo neutro compartilhado para preço
 
 O compositor serializa `discountedPriceText` com o rótulo neutro `Preço de venda`, sem alterar valor ou demais linhas, e incrementa somente `COMPOSER_VERSION` para `48.2.4-prompt-composer-v2`. O rótulo não atribui semântica promocional: quando cabível, essa interpretação continua exclusivamente na instrução já existente da política Oferta. Nenhuma versão ou string de política muda.
+
+#### D4.3 — Direção de fundo explicitamente escolhida
+
+Todas as intenções exibem uma seleção única e obrigatória: `Fundo de estúdio`, `Cenário ambientado` ou `Manter cenário original`; nenhuma é default, inclusive em Oferta. O valor selecionado é transportado ao prompt, briefing/snapshot, preflight e validação server-side. `Manter cenário original` requer exatamente uma referência de imagem de produto; a identidade da loja é separada e não conta. Se alterar a quantidade invalidar essa seleção, a UI limpa a escolha e exige reseleção explícita. A mudança do campo e sua serialização incrementam `COMPOSER_VERSION` para `48.2.4-prompt-composer-v3`; as políticas Oferta, Destaque e geral permanecem inalteradas.
+
+#### D4.4 — Versões vigentes após ajuste intrafase
+
+A política Produto SHALL ser `48.2.6-produto-v3`; a política Exclusivo SHALL ser `48.2.6-exclusivo-v3`. A v1 Exclusivo e sua evidência permanecem históricas; a v2 sem tentativa visual é preservada no histórico, sem promoção nem inferência de resultado.
 
 ### D4a — Validade exclusiva de Oferta
 
@@ -73,6 +81,10 @@ Usar runs, snapshots, linhagem, versões, preflight, prompt_sent e telemetria ex
 ### D6 — Checkpoints e autoridade
 
 CHECKPOINT A revisa contratos e gates antes de qualquer teste pago. Contrato de validade está decidido: somente Oferta; selos preservam listas/permissões atuais. CHECKPOINT B é UAT manual do usuário para as três intenções e critérios previstos. Critérios sem evidência ficam `pending`; o usuário pode aprovar encerramento com limitações se enumerar lacunas/follow-ups e aceitar explicitamente, sem converter pendências em avaliações ou presumir fidelidade de arte. Cada geração manual exige confirmação financeira individual; sem autorização global/batch/autonomia. Executor implementa, testa, registra evidências, apoia UAT e atualiza tracking não destrutivamente conforme o resultado. Somente responsável do projeto executa `/opsx-verify`, `/opsx-sync` e `/opsx-archive`.
+
+#### D6.1 — Revisão humana antes de comparação manual v1 × v3
+
+O usuário revisa os gates, a saída de composição e a preparação v1 × v3 antes de qualquer geração. Não executar geração paga nem iniciar CHECKPOINT B durante Task 0. Cada tentativa posterior requer confirmação financeira individual. Se dados de direção de fundo da evidência v1 estiverem ausentes, manter isso como limitação e não descrever a comparação como controlada.
 
 ## Threat Model
 

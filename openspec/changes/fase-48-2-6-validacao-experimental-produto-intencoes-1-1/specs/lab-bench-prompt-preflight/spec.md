@@ -2,7 +2,7 @@
 
 ### Requirement: Invalidação por mudança de entradas ou pós-aprovação
 
-Qualquer alteração em dados que componham texto ou referências SHALL invalidar o prompt compilado/aprovado e exigir nova composição e aprovação. Isso inclui identidade, produto/campanha, imagens/referências, preços, validade, selos, intenção, formato/tipo de conteúdo/estrutura/tema, textos obrigatórios e prompt-base. Alterar prompt final após aprovação também invalida aprovação. Validade incompatível com Destaque/Exclusivo SHALL bloquear composição/execução até regularização explícita, sem descarte silencioso. A configuração de execução (`presetId`, modelo, qualidade) SHALL NOT invalidar prompt; alteração invalida somente estimativa e confirmação financeira.
+Qualquer alteração em dados que componham texto ou referências SHALL invalidar o prompt compilado/aprovado e exigir nova composição e aprovação. Isso inclui identidade, produto/campanha, imagens/referências, preços, validade, selos, intenção, direção de fundo, formato/tipo de conteúdo/estrutura/tema, textos obrigatórios e prompt-base. A escolha de fundo SHALL integrar briefing/snapshot, prompt e evidência revalidada por `/runs`. Alterar prompt final após aprovação também invalida aprovação. Validade incompatível com Destaque/Exclusivo SHALL bloquear composição/execução até regularização explícita, sem descarte silencioso. `Manter cenário original` SHALL exigir exatamente uma referência de imagem de produto; identidade da loja SHALL NOT entrar na contagem. Alteração da quantidade que invalide essa escolha SHALL limpar a seleção na UI e requerer nova escolha; `/compose` e `/runs` SHALL rejeitar a seleção inválida antes de persistência/CAS/provider. A configuração de execução (`presetId`, modelo, qualidade) SHALL NOT invalidar prompt; alteração invalida somente estimativa e confirmação financeira.
 
 #### Scenario: Mudança de entrada que compõe texto invalida
 - **WHEN** dado usado na composição de texto/referências muda
@@ -18,6 +18,14 @@ Qualquer alteração em dados que componham texto ou referências SHALL invalida
 - **WHEN** prompt-base muda após aprovação
 - **THEN** aprovação é invalidada
 - **AND** nova composição e aprovação são exigidas
+
+#### Scenario: Direção de fundo e quantidade de referências são revalidadas
+- **WHEN** `backgroundDirection` ou a quantidade de imagens de produto muda depois da composição/aprovação
+- **THEN** a direção escolhida é incluída na recomposição e na evidência textual atual
+- **AND** `Manter cenário original` só é aceito com exatamente uma referência de produto
+- **AND** identidade da loja não entra nessa contagem
+- **AND** uma seleção invalidada é limpa pela UI e exige nova escolha explícita
+- **AND** a API rejeita seleção inválida antes de persistência, CAS ou provider
 
 #### Scenario: Mudança de preset/modelo/qualidade não invalida o prompt
 - **WHEN** preset, modelo ou qualidade muda após aprovação

@@ -2,7 +2,7 @@
 
 ### Requirement: UAT manual de Produto 1:1 nas três intenções
 
-A validação experimental SHALL cobrir somente Produto 1:1 e Oferta, Destaque e Exclusivo, usando `gpt-image-2.5-sunburst` em `medium`, sem comparação entre modelos. CHECKPOINT A SHALL aprovar contratos, gates e segurança antes de qualquer geração paga. CHECKPOINT B SHALL ser manual pelo usuário; cada geração exige confirmação financeira individual. A rubrica humana cobre fidelidade do produto/embalagem, nome integral, textos obrigatórios, condições comerciais, qualidade comercial, custo e latência. Critérios sem evidência permanecem `pending`; o usuário pode aprovar encerramento com limitações explicitamente enumeradas e aceitas, sem alegação de rubrica completa.
+A validação experimental SHALL cobrir somente Produto 1:1 e Oferta, Destaque e Exclusivo, usando `gpt-image-2.5-sunburst` em `medium`, sem comparação entre modelos. CHECKPOINT A SHALL aprovar contratos, gates e segurança antes de qualquer geração paga. CHECKPOINT B SHALL ser manual pelo usuário; cada geração exige confirmação financeira individual. A rubrica humana cobre fidelidade do produto/embalagem, variante protagonista e referências auxiliares, direção de fundo, nome integral, textos obrigatórios uma única vez, condições comerciais, qualidade comercial, custo e latência. Critérios sem evidência permanecem `pending`; o usuário pode aprovar encerramento com limitações explicitamente enumeradas e aceitas, sem alegação de rubrica completa.
 
 #### Scenario: Checkpoint A precede chamadas pagas
 - **WHEN** execução paga é considerada
@@ -26,12 +26,13 @@ A validação experimental SHALL cobrir somente Produto 1:1 e Oferta, Destaque e
 - **AND** não inclui comparação entre modelos
 
 #### Scenario: Comparação manual preserva Exclusivo v1 e varia somente a política
-- **WHEN** o usuário prepara a comparação da primeira arte Exclusivo v1 com uma tentativa v2
+- **WHEN** o usuário prepara a comparação da primeira arte Exclusivo v1 com uma tentativa v3
 - **THEN** a evidência/decisão v1 permanece imutável e preservada
 - **AND** dados, imagem e `gpt-image-2.5-sunburst` `medium` permanecem iguais
-- **AND** somente a versão/texto da política Exclusivo muda
+- **AND** somente a política Exclusivo muda para `48.2.6-exclusivo-v3`; a direção de fundo é mantida comparável quando há evidência suficiente
 - **AND** nenhuma nova geração é iniciada sem revisão humana e confirmação financeira individual
 - **AND** a avaliação visual pode permanecer inconclusiva até a comparação manual efetiva
+- **AND** a diferença visual não é atribuída somente à política se a direção de fundo v1 não puder ser confirmada
 
 #### Scenario: Encerramento com limitações é aceito sem alterar pendências
 - **WHEN** usuário aprova CHECKPOINT B apesar de critérios `pending`

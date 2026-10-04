@@ -5,13 +5,14 @@ A F48.2.5 estabilizou o pipeline experimental de Produto + Oferta 1:1, mas a ban
 ## What Changes
 
 - Enforce a matriz preço × intenção no formulário da bancada, schemas/validações e backend por uma única autoridade pura em `src/lib/lab/bench/domain/`; preservar exports compatíveis de `form-rules.ts` por delegação, exigir nova escolha explícita quando edição de preço invalida a intenção e manter hook/formulário produtivos intocados.
-- Habilitar políticas versionadas de Oferta, Destaque e Exclusivo somente para Produto 1:1, com combinações não suportadas fail-closed antes do provider; ajustar intrafase Exclusivo para a versão `48.2.6-exclusivo-v2` com a instrução literal definida no contrato.
+- Habilitar políticas versionadas de Oferta, Destaque e Exclusivo somente para Produto 1:1, com combinações não suportadas fail-closed antes do provider; ajustar intrafase Exclusivo para `48.2.6-exclusivo-v3` com a instrução literal definida no contrato, preservando a evidência v1.
 - Validar validade exclusivamente em Oferta na UI e backend; incompatibilidade exige regularização explícita sem descartar validade silenciosamente.
-- Usar instruções concisas: nome completo sem alterar palavras; descrição opcional adaptável ou omitida preservando significado; informações obrigatórias integrais.
-- Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar somente a política Produto como `48.2.6-produto-v2`; manter a liberdade original de preservação do nome.
-- Usar orientação curta para imagens auxiliares, preservando os contratos técnicos existentes por referência.
+- Usar instruções concisas de Produto: nome completo sem alterar palavras; descrição opcional adaptável ou omitida preservando significado; cada texto obrigatório exibido integralmente uma única vez.
+- Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar a política Produto para `48.2.6-produto-v3`; manter a liberdade original de preservação do nome.
+- Orientar imagens pela primeira enviada como variante protagonista, maior/em primeiro plano, e auxiliares como apoio visual secundário, sem garantia de aparição.
+- Oferecer uma única direção de fundo nas três intenções; `Manter cenário original` exige exatamente uma imagem de produto, sem contar a identidade da loja, e escolha explícita novamente se a contagem invalidar a opção.
 - Conduzir UAT manual das três intenções com `gpt-image-2.5-sunburst` em `medium`, registrar evidências/custos/limitações e congelar candidato documental sem promoção.
-- Preparar comparação manual da política Exclusivo v1 × v2 com os mesmos dados/imagem e Sunburst medium, preservando integralmente a tentativa v1 e aguardando revisão/autorizações humanas antes de gerar.
+- Preparar comparação manual da política Exclusivo v1 × v3 com os mesmos dados/imagem, direção de fundo comparável e Sunburst medium, preservando integralmente a tentativa v1 e aguardando revisão/autorizações humanas antes de gerar.
 
 ## Capabilities
 
@@ -22,9 +23,9 @@ A F48.2.5 estabilizou o pipeline experimental de Produto + Oferta 1:1, mas a ban
 ### Modified Capabilities
 - `lab-bench-prompt-policy`: políticas versionadas das três intenções e preservação de nome/textos.
 - `lab-bench-prompt-base`: ajustes pequenos e reutilizáveis, neutros em relação à intenção.
-- `lab-bench-image-roles`: orientação simplificada de auxiliares sem garantia técnica de aparição.
+- `lab-bench-image-roles`: protagonista = primeira imagem enviada, auxiliares secundárias e direção de fundo selecionável.
 - `lab-bench-form-parity`: validade permitida somente em Oferta, sem alterar formatos/validações existentes.
-- `lab-bench-prompt-preflight`: validade, preço e intenção integram entradas comerciais revalidadas antes da execução.
+- `lab-bench-prompt-preflight`: validade, preço, intenção, direção de fundo e contagem de imagens integram entradas revalidadas antes da execução.
 - `lab-generation-bench`: políticas habilitadas, segurança experimental e protocolo UAT manual.
 
 ## Impact

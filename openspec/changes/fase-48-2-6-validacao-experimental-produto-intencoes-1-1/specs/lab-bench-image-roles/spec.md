@@ -2,11 +2,12 @@
 
 ### Requirement: Papel semântico das imagens do produto
 
-O contrato de imagem SHALL pertencer a Produto, sem dependência exclusiva da intenção Oferta. A imagem principal SHALL ser obrigatória e referência canônica; orientação ao modelo: “Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.” Auxiliares opcionais podem representar ângulos, múltiplas representações e variantes do mesmo produto anunciado, sem garantir aparição. Não se declara suporte a produtos independentes/combos. A regra separada de não redundância textual do prompt não limita múltiplas representações em imagens. Presença/fidelidade visual são critérios humanos, não garantias técnicas. Limites, ordem principal → auxiliares → identidade e transporte SHALL seguir os contratos técnicos existentes.
+O contrato de imagem SHALL pertencer a Produto, sem dependência exclusiva da intenção Oferta. A primeira imagem enviada SHALL definir a variante protagonista; orientação ao modelo: “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.” Auxiliares opcionais podem representar ângulos, múltiplas representações e variantes do mesmo produto anunciado, sem garantir aparição. Não se declara suporte a produtos independentes/combos. A regra separada de exibição única de textos obrigatórios não limita múltiplas representações em imagens. Presença/fidelidade visual são critérios humanos, não garantias técnicas. Limites, ordem principal → auxiliares → identidade e transporte SHALL seguir os contratos técnicos existentes.
 
-#### Scenario: Composição usa principal como protagonista
+#### Scenario: Primeira imagem enviada define a variante protagonista
 - **WHEN** tipo de conteúdo é Produto e há imagem principal
-- **THEN** política usa a principal como protagonista
+- **THEN** a primeira imagem enviada define a variante protagonista e é orientada a aparecer maior e em primeiro plano
+- **AND** as imagens auxiliares são orientadas como apoio visual secundário
 - **AND** presença/fidelidade é avaliada por humano sem garantia técnica
 
 #### Scenario: Auxiliares enriquecem sem competir
@@ -27,7 +28,21 @@ O contrato de imagem SHALL pertencer a Produto, sem dependência exclusiva da in
 
 #### Scenario: UI apresenta a orientação concisa
 - **WHEN** UI apresenta as imagens auxiliares
-- **THEN** exibe: “Use a imagem principal como protagonista. As imagens auxiliares enriquecem a campanha; use-as sempre que possível, sem competir com a principal.”
+- **THEN** exibe: “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.”
+
+#### Scenario: Direção de fundo única está disponível nas três intenções
+- **WHEN** o usuário configura Oferta, Destaque ou Exclusivo
+- **THEN** a bancada oferece seleção única entre `Fundo de estúdio`, `Cenário ambientado` e `Manter cenário original`
+- **AND** nenhuma opção é aplicada por padrão
+- **AND** o valor escolhido é incluído no prompt e no snapshot
+
+#### Scenario: Manter cenário original exige exatamente uma imagem de produto
+- **WHEN** `Manter cenário original` está selecionado
+- **THEN** há exatamente uma imagem de produto em `references`
+- **AND** a imagem de identidade da loja não entra na contagem de imagens de produto
+- **WHEN** a quantidade de imagens de produto deixa de ser exatamente uma
+- **THEN** a UI invalida a escolha e exige nova seleção explícita
+- **AND** API rejeita composição/execução com essa escolha inválida antes de persistência/provider
 
 ### Requirement: Não expansão da composição por imagens
 
