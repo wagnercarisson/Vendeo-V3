@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: 2026-10-05T15:00:00.000Z
+last_updated: "2026-10-05T23:51:34.066Z"
 progress:
-  total_phases: 43
+  total_phases: 44
   completed_phases: 40
-  total_plans: 344
+  total_plans: 355
   completed_plans: 338
-  percent: 98
+  percent: 95
 ---
 
 # Project State
@@ -117,6 +117,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 ## Pending Todos
 
+- **F56.1 — Contrato produtivo, modelos e fallback (PLANEJADA, aguardando revisão humana):** 11 planos em 5 waves (`.planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-01..11-PLAN.md`); CONTEXT (25 decisões travadas), UI-SPEC aprovada (6/6), PATTERNS; `gsd-plan-checker` = **VERIFICATION PASSED** (3 iterações; bloqueadores de isolamento do legado resolvidos); cobertura 27/27 REQ-IDs e 25/25 decisões. OpenSpec ativo `fase-56-1-contrato-produtivo-modelos-fallback` (0/55 tasks). **Nenhuma implementação iniciada**; sem `db push`, sem chamada paga, sem ativação. Aguarda revisão do responsável antes de executar.
 - **F48.2.5 — Estabilização experimental Oferta 1:1:** 8/8 planos/summaries; 37/37 tasks; OpenSpec verificado/sincronizado/arquivado; GSD UAT 5/5 PASS em `48.2.5-GSD-UAT.md`; security review verificada em `48-2-5-SECURITY.md` (7/7 fechados, 0 abertos). CHECKPOINT B aprovado com limitações; 65 critérios `pending` reconhecidos e mantidos. Candidato documental Sunburst medium restrito ao caso Adega, sem promoção.
 - **F48.2.6 — concluída e arquivada (2026-10-05):** 10/10 planos, UAT 5/5, CHECKPOINT B `approved_with_limitations`, 42/42 tasks; `/opsx-verify`, `/opsx-sync` e `/opsx-archive` executados; **8 specs principais sincronizados** (6 atualizados + 2 criados). Change arquivada em `openspec/changes/archive/2026-10-05-fase-48-2-6-validacao-experimental-produto-intencoes-1-1/`. Limitações/critérios UAT sem evidência permanecem `pending`, sem promoção produtiva.
 
