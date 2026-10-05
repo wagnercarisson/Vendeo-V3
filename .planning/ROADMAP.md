@@ -57,6 +57,7 @@
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
+| 56.1 | ○ Contrato produtivo, modelos e fallback | Planejada (não em execução); infraestrutura preparatória do novo fluxo Produto 1:1 — configuração de par principal/fallback, snapshot, política de falhas, resposta ao lojista e instrumentação; fluxo legado intocado |
 | — | Monetização pública / Stripe | Diferida para v1.7+, fora da numeração |
 
 ## Current State
@@ -201,6 +202,42 @@ Plans:
 **Status:** Futura — aguardando constituição da PJ; não planejada e não ativa.
 
 **Escopo futuro:** definir razão social, CNPJ, endereço e fornecedor responsável; substituir placeholders e datas; validar juridicamente Termos, Privacidade e AUP; revisar autoack de suporte; sincronizar documentos; criar/aplicar migration efetiva de publicação; ativar flags na ordem aprovada; validar e-mail, credenciais e requisitos operacionais; executar smoke test pós-corte; manter rollback documentado.
+
+## Phase 56.1: Contrato produtivo, modelos e fallback
+
+**Goal:** preparar a infraestrutura produtiva do novo fluxo de imagem Produto 1:1 — configuração administrativa auditável de um par principal e um par fallback (modelo + qualidade) restrita a um catálogo elegível fechado, contrato de snapshot imutável por operação, política explícita de falhas e fallback, resposta pública identificável sem vazar motivo interno, e instrumentação de qualidade/telemetria/custo — como componentes e testes simulados, sem ativar geração, sem debitar crédito e sem alterar o fluxo legado.
+
+**Nome:** Contrato produtivo, modelos e fallback
+
+**Status:** ○ **Planejada (não em execução).** Nenhuma implementação, migration, chamada paga ou ativação até a revisão humana dos artefatos de planejamento. A fase entra no tracking como planejada; o fluxo legado permanece intocado.
+
+**Depends on:** F46 (gateway único) e F47 (catálogo/seleção de modelos); F48.2.1–F48.2.6 (evidência experimental, insumo — não autorização de promoção). Não depende de F50.1–F55; a numeração F56 não obriga executá-las antes.
+
+**Requirements:** REQ-56.1-01, REQ-56.1-02, REQ-56.1-03, REQ-56.1-04, REQ-56.1-05, REQ-56.1-06, REQ-56.1-07, REQ-56.1-08, REQ-56.1-09, REQ-56.1-10, REQ-56.1-11, REQ-56.1-12, REQ-56.1-13, REQ-56.1-14, REQ-56.1-15, REQ-56.1-16, REQ-56.1-17, REQ-56.1-18, REQ-56.1-19, REQ-56.1-20, REQ-56.1-21, REQ-56.1-22, REQ-56.1-23, REQ-56.1-24, REQ-56.1-25, REQ-56.1-26, REQ-56.1-27
+
+**Fonte normativa:** `openspec/changes/fase-56-1-contrato-produtivo-modelos-fallback/` — `proposal.md`, `design.md` (D1–D12), `tasks.md` (55 tasks em 10 seções) e 8 specs (`image-generation-model-pair-config`, `image-generation-config-snapshot`, `image-generation-failure-policy`, `image-generation-support-reference`, `image-generation-instrumentation`, `ai-model-catalog`, `ai-model-pricing`, `ai-invocation-gateway`). `openspec validate --strict` válido.
+
+**Escopo de alto nível:**
+- configuração global auditável (RPC `SECURITY DEFINER`, motivo obrigatório, `operation_id`) de par principal/fallback `modelo + qualidade`, isolada de `ai_model_selection`;
+- catálogo elegível fechado: `gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst` em `low`/`medium`, registrados no `ai_model_catalog` sob capacidade própria `campaign_product_image` (sem vazar para capacidades legadas nem ativar geração);
+- escolha inicial registrada como decisão humana: principal `gpt-image-2.5-sunburst / medium`, fallback `gpt-image-2 / medium` — **não ativa em produção**;
+- snapshot imutável por campanha (par principal/fallback, versão UUID, origem), com nova campanha usando a versão vigente e correção reutilizando o snapshot original;
+- política de falhas: até 2 tentativas no principal + 1 no fallback, máximo 3 chamadas; `rate_limit` transitório; quota/faturamento/autenticação/conteúdo/entrada **sem** fallback; falha técnica não cobrada;
+- resposta pública `IMG-001` + referência opaca UUID v4, uma categoria genérica de falha de geração, com correlação interna segura no admin/suporte;
+- instrumentação: qualidade até o adapter, um envelope de telemetria por tentativa (modelo–qualidade–alvo–`attempt_number`), custo por par modelo–qualidade;
+- pricing fail-closed no novo fluxo (cobertura `complete` exigida na execução), cadeia do legado (`fallback_static`/`not_available`) intacta.
+
+**Fora de escopo da F56.1 (fatias posteriores):** formulário do lojista, seletor de intenção (Oferta/Destaque/Exclusivo), direção de fundo, formato 1:1, chaves de ativação por loja, geração produtiva pelo novo fluxo, aprovação/reprovação humana, cobrança por correção, revisão automática e regeneração F37. A gravação do snapshot numa campanha real, o não-débito transacional e a aplicação da política sobre geração real são integração da **F56.2**.
+
+**Fronteira de verificação F56.1 × F56.2:** os critérios que descrevem operações reais (snapshot no início de campanha, não-cobrança de falha técnica e aplicação da política de tentativas sobre geração) são entregues e verificados na F56.1 como **contrato/componente testado por simulação** (sem campanha, sem provider, sem crédito real). Os demais critérios (configuração, catálogo, fail-closed, pricing, referência, isolamento) são verificáveis integralmente na F56.1.
+
+**Checkpoint humano:** a implementação só começa após aprovação explícita do responsável sobre a escolha do par principal/fallback e as decisões técnicas — já fechadas no planejamento (capacidade `campaign_product_image`; código `IMG-001` + referência UUID v4 opaca; uma categoria pública genérica; snapshot em colunas dedicadas tipadas; gravação com pricing incompleto permitida no admin, execução exige cobertura `complete` para principal e fallback). A integração real é F56.2.
+
+**Gates operacionais:** `workflow.security_enforcement=true`, ASVS L1 e bloqueio em ameaças high; cada plano deve conter threat model. Sem `db push` remoto antes da aprovação; sem chamada paga; sem promoção. `openspec validate --strict` e `gsd-plan-checker` obrigatórios.
+
+**Planos:** diretório `.planning/phases/56.1-contrato-produtivo-modelos-e-fallback/`.
+
+**Canonical refs:** `openspec/changes/fase-56-1-contrato-produtivo-modelos-fallback/` (proposal/design/tasks/specs), `docs/alinhamento-roadmap-pos-f48-1.md` §F56, `openspec/design-system/MASTER.md`, `src/lib/ai/*`, `src/lib/ai-cost/*`, `src/app/api/admin/*`.
 
 ## Historical References
 
