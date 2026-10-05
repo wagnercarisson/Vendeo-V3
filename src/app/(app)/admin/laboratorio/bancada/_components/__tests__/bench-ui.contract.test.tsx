@@ -758,6 +758,9 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
     );
     expect(screen.getAllByLabelText("Direção de fundo")).toHaveLength(1);
     expect(screen.queryByLabelText("Preservar imagem original")).toBeNull();
+    expect(screen.queryByLabelText("Validade da oferta")).toBeNull();
+    expect(screen.queryByLabelText("Data inicial")).toBeNull();
+    expect(screen.queryByLabelText("Data final")).toBeNull();
 
     rerender(
       <BenchCampaignForm
@@ -769,6 +772,9 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
     expect(screen.getAllByLabelText("Direção de fundo")).toHaveLength(1);
     expect((screen.getByLabelText("Direção de fundo") as HTMLSelectElement).value).toBe("");
     expect(screen.queryByLabelText("Preservar imagem original")).toBeNull();
+    expect(screen.queryByLabelText("Validade da oferta")).toBeNull();
+    expect(screen.queryByLabelText("Data inicial")).toBeNull();
+    expect(screen.queryByLabelText("Data final")).toBeNull();
   });
 
   it("exibe o indicador do brandColor resolvido (somente leitura)", () => {
@@ -839,7 +845,69 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
 
     rerender(<BenchCampaignForm value={changed} onChange={onChange} />);
     expect(screen.getByRole("alert")).toHaveTextContent(/validade.*remover/i);
-    fireEvent.click(screen.getByRole("button", { name: /remover validade/i }));
+    expect(screen.queryByLabelText("Validade da oferta")).toBeNull();
+    expect(screen.queryByLabelText("Data final")).toBeNull();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Oferta" }));
+    const returnedToOffer = onChange.mock.calls.at(-1)?.[0];
+    expect(returnedToOffer).toEqual(
+      expect.objectContaining({
+        campaignIntent: "offer",
+        validityMode: "until-date",
+        validityEndDate: "2026-10-31",
+      }),
+    );
+    rerender(<BenchCampaignForm value={returnedToOffer} onChange={onChange} />);
+    expect(screen.getByLabelText("Validade da oferta")).toHaveValue("until-date");
+    expect(screen.getByLabelText("Data final")).toHaveValue("2026-10-31");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Destaque" }));
+    const changedAgain = onChange.mock.calls.at(-1)?.[0];
+    rerender(<BenchCampaignForm value={changedAgain} onChange={onChange} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/validade.*remover/i);
+    expect(screen.queryByLabelText("Validade da oferta")).toBeNull();
+  });
+
+  it("mantém campos de validade ocultos em Destaque sem validade e permite retornar a Oferta", () => {
+    const onChange = vi.fn();
+    const value = {
+      ...EMPTY_BENCH_CAMPAIGN_FORM,
+      priceCents: 1000,
+      campaignIntent: "spotlight" as const,
+    };
+    const { rerender } = render(<BenchCampaignForm value={value} onChange={onChange} />);
+
+    expect(screen.queryByLabelText("Validade da oferta")).toBeNull();
+    expect(screen.queryByTestId("bench-validity-intent-guard")).toBeNull();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Oferta" }));
+    const returnedToOffer = onChange.mock.calls.at(-1)?.[0];
+    expect(returnedToOffer).toEqual(
+      expect.objectContaining({ campaignIntent: "offer", validityMode: "" }),
+    );
+    rerender(<BenchCampaignForm value={returnedToOffer} onChange={onChange} />);
+    expect(screen.getByLabelText("Validade da oferta")).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Destaque" }));
+    rerender(<BenchCampaignForm value={onChange.mock.calls.at(-1)?.[0]} onChange={onChange} />);
+    expect(screen.queryByLabelText("Validade da oferta")).toBeNull();
+    expect(screen.queryByTestId("bench-validity-intent-guard")).toBeNull();
+  });
+
+  it("mantém visíveis o alerta e a remoção explícita até a validade ser removida", () => {
+    const onChange = vi.fn();
+    const value = {
+      ...EMPTY_BENCH_CAMPAIGN_FORM,
+      priceCents: 1000,
+      campaignIntent: "spotlight" as const,
+      validityMode: "until-date" as const,
+      validityEndDate: "2026-10-31",
+    };
+    render(<BenchCampaignForm value={value} onChange={onChange} />);
+
+    expect(screen.getByTestId("bench-validity-intent-guard")).toHaveTextContent(/validade.*remover/i);
+    expect(screen.getByRole("button", { name: "Remover validade para continuar" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remover validade para continuar" }));
     expect(onChange.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({
         campaignIntent: "spotlight",
@@ -849,6 +917,8 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
         validityCustomText: "",
       }),
     );
+    expect(screen.getByRole("button", { name: "Remover validade para continuar" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Validade da oferta")).toBeNull();
   });
 });
 

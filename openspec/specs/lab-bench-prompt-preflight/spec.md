@@ -1,6 +1,6 @@
 # Lab Bench Prompt Preflight
 
-> Synced from `fase-48-2-3-fidelidade-experimental-bancada` (ADDED), `fase-48-2-4-experimento-deterministico-oferta-1-1` (MODIFIED/ADDED), and `fase-48-2-5-estabilizacao-experimental-oferta-1-1` (MODIFIED).
+> Synced from `fase-48-2-3-fidelidade-experimental-bancada` (ADDED), `fase-48-2-4-experimento-deterministico-oferta-1-1` (MODIFIED/ADDED), `fase-48-2-5-estabilizacao-experimental-oferta-1-1` (MODIFIED) and `fase-48-2-6-validacao-experimental-produto-intencoes-1-1` (MODIFIED).
 
 ## Purpose
 
@@ -51,11 +51,11 @@ O prompt compilado SHALL usar os blocos `[IDENTIDADE E DIREÇÃO VISUAL]`, `[DIR
 - **THEN** a tipografia integra o bloco `[DIREÇÃO TIPOGRÁFICA]`
 - **AND** esse bloco integra o prompt compilado
 
-#### Scenario: preserveImageContext reflete no bloco adequado
+#### Scenario: Direção de fundo reflete no bloco adequado
 
-- **WHEN** `preserveImageContext` é aplicável (Destaque/Exclusivo)
-- **THEN** ele é refletido no bloco `[PRODUTO E IMAGENS DE REFERÊNCIA]`
-- **AND** não é duplicado em outro bloco
+- **WHEN** uma direção de fundo é selecionada
+- **THEN** a instrução da direção escolhida é refletida no bloco `[CONDIÇÕES COMERCIAIS]`
+- **AND** não é duplicada em outro bloco
 
 ### Requirement: Ausência de contexto experimental gerado pelo compositor
 
@@ -125,34 +125,53 @@ A bancada SHALL oferecer etapa explícita anterior à geração: (1) usuário pr
 
 ### Requirement: Invalidação por mudança de entradas ou pós-aprovação
 
-Qualquer alteração em dados que efetivamente **componham o texto ou as referências** SHALL invalidar o prompt compilado/aprovado e exigir nova composição e aprovação. Isso inclui loja/branding, produto/campanha, imagens/referências, condições comerciais, intenção/formato/tipo de conteúdo/estrutura/tema, textos obrigatórios e **prompt-base**. Alterar o prompt final depois da aprovação também SHALL invalidar a aprovação.
+Qualquer alteração em dados que componham texto ou referências SHALL invalidar o prompt compilado/aprovado e exigir nova composição e aprovação. Isso inclui identidade, produto/campanha, imagens/referências, preços, validade, selos, intenção, direção de fundo, formato/tipo de conteúdo/estrutura/tema, textos obrigatórios e prompt-base. A escolha de fundo SHALL integrar briefing/snapshot, prompt e evidência revalidada por `/runs`. O input `backgroundDirection` SHALL ser a fonte única; `preserveImageContext` legado SHALL NOT ser aceito como valor independente e qualquer flag booleana interna SHALL ser derivada apenas da opção `original`. Alterar prompt final após aprovação também invalida aprovação. Validade incompatível com Destaque/Exclusivo SHALL bloquear composição/execução até regularização explícita, sem descarte silencioso. `Manter cenário original` SHALL exigir exatamente uma referência de imagem de produto; identidade da loja SHALL NOT entrar na contagem. Alteração da quantidade que invalide essa escolha SHALL limpar a seleção na UI e requerer nova escolha; `/compose` e `/runs` SHALL rejeitar a seleção inválida antes de persistência/CAS/provider. A configuração de execução (`presetId`, modelo, qualidade) SHALL NOT invalidar prompt; alteração invalida somente estimativa e confirmação financeira.
 
-A **configuração de execução** (`presetId`, `modelo`, `qualidade`) SHALL NOT invalidar o prompt compilado/aprovado nem exigir nova composição: esses campos não participam da composição textual. Alterá-los SHALL invalidar **somente** a estimativa e a confirmação financeira.
+#### Scenario: Mudança de entrada que compõe texto invalida
 
-#### Scenario: Mudança de entrada que compõe o texto invalida
-
-- **WHEN** um dado usado na composição do texto/referências muda
-- **THEN** o prompt compilado/aprovado é invalidado
-- **AND** uma nova composição e aprovação é exigida
+- **WHEN** dado usado na composição de texto/referências muda
+- **THEN** prompt compilado/aprovado é invalidado
+- **AND** nova composição e aprovação são exigidas
 
 #### Scenario: Edição pós-aprovação invalida
 
-- **WHEN** o prompt final é alterado após a aprovação
-- **THEN** a aprovação é invalidada
-- **AND** o caminho de geração é bloqueado até nova aprovação
+- **WHEN** prompt final é alterado após aprovação
+- **THEN** aprovação é invalidada
+- **AND** geração fica bloqueada até nova aprovação
 
 #### Scenario: Mudança de prompt-base invalida
 
-- **WHEN** o prompt-base muda após a aprovação
-- **THEN** a aprovação é invalidada
-- **AND** uma nova composição e aprovação é exigida
+- **WHEN** prompt-base muda após aprovação
+- **THEN** aprovação é invalidada
+- **AND** nova composição e aprovação são exigidas
+
+#### Scenario: Direção de fundo e quantidade de referências são revalidadas
+
+- **WHEN** `backgroundDirection` ou a quantidade de imagens de produto muda depois da composição/aprovação
+- **THEN** a direção escolhida é incluída na recomposição e na evidência textual atual
+- **AND** `Manter cenário original` só é aceito com exatamente uma referência de produto
+- **AND** identidade da loja não entra nessa contagem
+- **AND** uma seleção invalidada é limpa pela UI e exige nova escolha explícita
+- **AND** a API rejeita seleção inválida antes de persistência, CAS ou provider
 
 #### Scenario: Mudança de preset/modelo/qualidade não invalida o prompt
 
-- **WHEN** o `presetId`, o `modelo` ou a `qualidade` muda após a aprovação
-- **THEN** o prompt compilado/aprovado permanece válido
-- **AND** somente a estimativa e a confirmação financeira são invalidadas
-- **AND** o mesmo prompt aprovado é reutilizado byte a byte
+- **WHEN** preset, modelo ou qualidade muda após aprovação
+- **THEN** prompt aprovado permanece válido
+- **AND** somente estimativa e confirmação financeira são invalidadas
+- **AND** mesmo prompt é reutilizado byte a byte
+
+#### Scenario: Validade incompatível bloqueia sem descartar o valor
+
+- **WHEN** há validade e a intenção é alterada para Destaque ou Exclusivo
+- **THEN** composição e execução são bloqueadas até regularização explícita
+- **AND** a validade não é descartada silenciosamente
+
+#### Scenario: Preflight é revalidado antes da execução
+
+- **WHEN** `/runs` recebe evidência de aprovação
+- **THEN** recompõe e compara conteúdo/versões comerciais efetivos antes da chamada paga
+- **AND** rejeita evidência ausente, divergente ou obsoleta antes de persistência/provider
 
 ### Requirement: Execução envia exatamente o texto aprovado
 

@@ -66,7 +66,7 @@ completed: 2026-10-04
 
 ## Verification
 
-- Final focused revalidation: **327 tests passed across 7 files**; typecheck, lint, build, strict OpenSpec validation and `git diff --check` passed. A prior run before the latest test updates counted 328.
+- Final focused revalidation: **329 tests passed across 7 files** (adds the validity-visibility tests); typecheck, lint, build, strict OpenSpec validation and `git diff --check` passed. Prior runs before the latest test updates counted 327 and 328.
 - Final local run records were read in Supabase local using read-only transactions with rollback. Approved/sent prompts match; inputs/order, versions, usage, latency and artifacts are recorded.
 - User-confirmed platform displays were US$0.05 and US$0.03 rounded. Precise local calculations are US$0.048863 and US$0.030974 (`bench_local_pricing`); provider-reported cost is null and no invoice was checked.
 - No executor generation/provider call, database write, migration, `db push`, production change, candidate promotion or remote push.

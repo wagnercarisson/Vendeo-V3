@@ -344,56 +344,60 @@ export function BenchCampaignForm({
         ))}
       </LabSelect>
 
-      <LabSelect
-        label="Validade da oferta"
-        value={value.validityMode}
-        disabled={disabled}
-        onChange={(event) => setField("validityMode", event.target.value as BenchValidityMode)}
-      >
-        {VALIDITY_OPTIONS.map((option) => (
-          <option key={option.value || "none"} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </LabSelect>
+      {value.campaignIntent === "offer" ? (
+        <>
+          <LabSelect
+            label="Validade da oferta"
+            value={value.validityMode}
+            disabled={disabled}
+            onChange={(event) => setField("validityMode", event.target.value as BenchValidityMode)}
+          >
+            {VALIDITY_OPTIONS.map((option) => (
+              <option key={option.value || "none"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </LabSelect>
 
-      {value.validityMode === "range" ? (
-        <Input
-          label="Data inicial"
-          type="date"
-          value={value.validityStartDate}
-          disabled={disabled}
-          error={errors.validityStartDate}
-          onChange={(event) => setField("validityStartDate", event.target.value)}
-          onBlur={() => markTouched("validityStartDate")}
-        />
-      ) : null}
+          {value.validityMode === "range" ? (
+            <Input
+              label="Data inicial"
+              type="date"
+              value={value.validityStartDate}
+              disabled={disabled}
+              error={errors.validityStartDate}
+              onChange={(event) => setField("validityStartDate", event.target.value)}
+              onBlur={() => markTouched("validityStartDate")}
+            />
+          ) : null}
 
-      {value.validityMode === "until-date" || value.validityMode === "range" ? (
-        <Input
-          label="Data final"
-          type="date"
-          value={value.validityEndDate}
-          disabled={disabled}
-          error={errors.validityEndDate}
-          onChange={(event) => setField("validityEndDate", event.target.value)}
-          onBlur={() => markTouched("validityEndDate")}
-        />
-      ) : null}
+          {value.validityMode === "until-date" || value.validityMode === "range" ? (
+            <Input
+              label="Data final"
+              type="date"
+              value={value.validityEndDate}
+              disabled={disabled}
+              error={errors.validityEndDate}
+              onChange={(event) => setField("validityEndDate", event.target.value)}
+              onBlur={() => markTouched("validityEndDate")}
+            />
+          ) : null}
 
-      {value.validityMode === "custom" ? (
-        <Input
-          label="Texto da validade"
-          value={value.validityCustomText}
-          disabled={disabled}
-          onChange={(event) => setField("validityCustomText", event.target.value)}
-        />
-      ) : null}
+          {value.validityMode === "custom" ? (
+            <Input
+              label="Texto da validade"
+              value={value.validityCustomText}
+              disabled={disabled}
+              onChange={(event) => setField("validityCustomText", event.target.value)}
+            />
+          ) : null}
 
-      {validityDisplay ? (
-        <p className="text-xs text-text-muted font-body">
-          Exibição da validade: <span className="font-mono">{validityDisplay}</span>
-        </p>
+          {validityDisplay ? (
+            <p className="text-xs text-text-muted font-body">
+              Exibição da validade: <span className="font-mono">{validityDisplay}</span>
+            </p>
+          ) : null}
+        </>
       ) : null}
 
       {validityIncompatible ? (

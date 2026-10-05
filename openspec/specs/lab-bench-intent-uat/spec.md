@@ -1,0 +1,84 @@
+# Lab Bench Intent UAT
+
+> Synced from `fase-48-2-6-validacao-experimental-produto-intencoes-1-1` (ADDED).
+
+## Purpose
+
+Define o protocolo manual de validação experimental de Produto 1:1 nas três intenções (Oferta, Destaque e Exclusivo), com evidência documental, confirmação financeira individual, tratamento honesto de lacunas `pending` e pacote candidato apenas documental, sem promoção.
+
+## Requirements
+
+### Requirement: UAT manual de Produto 1:1 nas três intenções
+
+A validação experimental SHALL cobrir somente Produto 1:1 e Oferta, Destaque e Exclusivo, usando `gpt-image-2.5-sunburst` em `medium`, sem comparação entre modelos. CHECKPOINT A SHALL aprovar contratos, gates e segurança antes de qualquer geração paga. CHECKPOINT B SHALL ser manual pelo usuário; cada geração exige confirmação financeira individual. A rubrica humana cobre fidelidade do produto/embalagem, variante protagonista e referências auxiliares, direção de fundo, nome integral, textos obrigatórios uma única vez, condições comerciais, qualidade comercial, custo e latência. Critérios sem evidência permanecem `pending`; o usuário pode aprovar encerramento com limitações explicitamente enumeradas e aceitas, sem alegação de rubrica completa.
+
+#### Scenario: Checkpoint A precede chamadas pagas
+
+- **WHEN** execução paga é considerada
+- **THEN** contratos, matriz, validade exclusiva de Oferta, preservação das permissões de selos e gates têm revisão humana explícita
+- **AND** ausência de aprovação bloqueia geração
+
+#### Scenario: UAT avalia as três intenções
+
+- **WHEN** CHECKPOINT B é preenchido
+- **THEN** registra avaliação humana separada de Oferta, Destaque e Exclusivo em Produto quadrado 1:1
+- **AND** avalia fidelidade do produto/embalagem, nome, textos obrigatórios, condições comerciais, qualidade comercial, custo e latência
+- **AND** critérios sem evidência permanecem sem aprovação e limitações são explícitas
+
+#### Scenario: Geração é individual e manual
+
+- **WHEN** um run é executado
+- **THEN** é ação manual do usuário com confirmação financeira individual
+- **AND** não há batch, autorização global ou execução autônoma
+
+#### Scenario: Sem comparação de modelos
+
+- **WHEN** UAT é conduzido
+- **THEN** usa `gpt-image-2.5-sunburst` em `medium` inicialmente
+- **AND** não inclui comparação entre modelos
+
+#### Scenario: Comparação manual documenta antes e depois sem causalidade isolada
+
+- **WHEN** o usuário prepara a comparação da primeira arte Exclusivo v1 com uma tentativa v3
+- **THEN** a evidência/decisão v1 permanece imutável e preservada
+- **AND** dados, imagem e `gpt-image-2.5-sunburst` `medium` permanecem iguais
+- **AND** o protocolo descreve a comparação como antes × depois, porque Produto, compositor e instrução de fundo também mudaram
+- **AND** o protocolo não atribui diferenças somente à política Exclusivo nem afirma ser controlado para isolá-la
+- **AND** a direção de fundo da evidência v1 permanece `pending` se não houver evidência que a estabeleça
+- **AND** nenhuma nova geração é iniciada sem revisão humana e confirmação financeira individual
+- **AND** a avaliação visual pode permanecer inconclusiva até a comparação manual efetiva
+
+#### Scenario: Observação manual sem linkage não recebe atribuição de versão
+
+- **WHEN** o usuário relata uma observação visual sem Run ID ou metadados vinculados
+- **THEN** o relato é preservado como observação manual não vinculada
+- **AND** não é atribuído a slot, política ou versão de código sem evidência
+
+#### Scenario: Encerramento com limitações é aceito sem alterar pendências
+
+- **WHEN** usuário aprova CHECKPOINT B apesar de critérios `pending`
+- **THEN** aceita explicitamente limitações enumeradas e follow-ups
+- **AND** critérios permanecem `pending` e resultado não é chamado de rubrica completa
+
+### Requirement: Pacote candidato documental sem promoção
+
+O pacote candidato SHALL ser congelado apenas como documento versionado, ligado por IDs aos runs, snapshots, linhagem, preflight, prompt aprovado/enviado e evidências existentes. Deve registrar políticas/prompt-base versionados, avaliações, limites e decisão humana, distinguindo custo por run e fonte do custo de tarifa por token; tarifas iguais por token SHALL NOT ser tratadas como garantia de custo total igual. Nenhuma tabela nova, loader/runtime produtivo, promoção ou aprovação presumida é permitida. O executor atualiza tracking de forma não destrutiva conforme o resultado. `/opsx-verify`, `/opsx-sync` e `/opsx-archive` são ações exclusivas do responsável do projeto.
+
+#### Scenario: Evidência reutiliza runs e linhagem
+
+- **WHEN** o pacote experimental é registrado
+- **THEN** referencia runs e evidências existentes sem duplicar persistência ou criar tabela
+- **AND** preserva tentativas anteriores
+
+#### Scenario: Custos e limitações são descritos honestamente
+
+- **WHEN** custos e resultados são documentados
+- **THEN** inclui custo observado/disponível, origem, usage e latência por run
+- **AND** não deduz custo total igual de tarifas iguais por token
+- **AND** não converte pendências em aprovação
+
+#### Scenario: Candidato não promove
+
+- **WHEN** pacote é congelado
+- **THEN** permanece documental e não é carregado pelo runtime nem promovido para produção
+- **AND** verify/sync/archive aguardam ação manual do responsável do projeto

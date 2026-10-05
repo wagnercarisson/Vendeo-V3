@@ -1,6 +1,6 @@
 # Lab Generation Bench
 
-> Synced from `fase-48-2-2-fundacao-bancada-geracao` (ADDED), `fase-48-2-3-fidelidade-experimental-bancada` (MODIFIED/ADDED), `fase-48-2-4-experimento-deterministico-oferta-1-1` (MODIFIED), and `fase-48-2-5-estabilizacao-experimental-oferta-1-1` (MODIFIED).
+> Synced from `fase-48-2-2-fundacao-bancada-geracao` (ADDED), `fase-48-2-3-fidelidade-experimental-bancada` (MODIFIED/ADDED), `fase-48-2-4-experimento-deterministico-oferta-1-1` (MODIFIED), `fase-48-2-5-estabilizacao-experimental-oferta-1-1` (MODIFIED) and `fase-48-2-6-validacao-experimental-produto-intencoes-1-1` (MODIFIED).
 
 ## Purpose
 
@@ -250,33 +250,47 @@ A bancada SHALL exigir evidência textual emitida por `/compose` e preflight de 
 
 ### Requirement: Protocolo de UAT experimental manual Oferta 1:1
 
-A bancada SHALL suportar protocolo experimental documental para Oferta 1:1, com duas lojas de teste e dois produtos visualmente diferentes; ao menos um caso com imagem principal isolada e um com principal e adicionais; comparação de modelos com entradas idênticas; avaliação humana; e registro de hipótese, variável, run ID, resultado, decisão e próximo ajuste por tentativa relevante. A matriz inicial SHALL conter `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst` em `low`; qualidade `medium` ou superior normalmente exige hipótese concreta registrada antes da geração. Uma execução `medium+` exploratória sem hipótese prévia MAY ser registrada como exceção se conduzida manualmente pelo usuário e aceita explicitamente no UAT, sem hipótese retrospectiva nem generalização. O sistema SHALL preservar custo, latência, usage e versão do pricing, e SHALL NOT executar gerações automaticamente.
+A bancada SHALL suportar protocolo documental restrito a Produto + quadrado 1:1 e às intenções Oferta, Destaque e Exclusivo. UAT SHALL usar `gpt-image-2.5-sunburst` em `medium`, sem comparação entre modelos. CHECKPOINT A SHALL aprovar contratos, segurança e gates antes de qualquer geração paga. CHECKPOINT B SHALL ser manual pelo usuário; cada geração exige confirmação financeira individual. O registro por tentativa inclui hipótese/variável quando aplicável, run ID, entradas, resultado, avaliação, decisão, próximo ajuste, modelo, qualidade, protocolo, pricing, usage, latência e custo disponível. A amostra mantém duas lojas de teste, dois produtos distintos e casos de imagem principal isolada e principal com auxiliares. Avaliação humana cobre fidelidade de produto/embalagem, nome, textos obrigatórios, condições comerciais, qualidade comercial, custo e latência. Evidência ausente permanece `pending`; o usuário pode aprovar encerramento com limitações se aceitar explicitamente e registrar lacunas/follow-ups, sem afirmar rubrica completa. Gerações nunca são automáticas.
 
-#### Scenario: UAT registra amostra mínima e critérios
+#### Scenario: UAT registra critérios por intenção e amostra existente
 
-- **WHEN** o documento de UAT é preenchido
-- **THEN** registra duas lojas, dois produtos distintos e os dois arranjos de imagens obrigatórios
-- **AND** usa entradas idênticas entre modelos comparados
-- **AND** registra por run os critérios de produto, imagens, identidade, dados/textos, hierarquia, acabamento, invenções e evidências financeiras/técnicas
-- **AND** critérios sem avaliação permanecem `pending`; o usuário MAY aceitar CHECKPOINT B com limitações se aprovar explicitamente as lacunas/follow-ups, sem alegação de rubrica completa
+- **WHEN** documento UAT é preenchido
+- **THEN** registra Oferta, Destaque e Exclusivo separadamente para Produto 1:1
+- **AND** inclui duas lojas, dois produtos distintos, caso de principal isolada e caso de principal com auxiliares
+- **AND** avalia produto/embalagem, nome, textos obrigatórios, condições comerciais, qualidade comercial, custo e latência
+- **AND** registra por tentativa run ID, entradas, resultado, avaliação, decisão e próximo ajuste
+- **AND** critério sem evidência permanece `pending`
 
-#### Scenario: Variação de qualidade exige hipótese
+#### Scenario: Sunburst medium sem comparação entre modelos
 
-- **WHEN** qualidade medium ou superior é proposta
-- **THEN** normalmente uma hipótese concreta de melhoria é registrada antes da rodada
-- **AND** a rodada permanece manual
+- **WHEN** protocolo de UAT é executado
+- **THEN** utiliza `gpt-image-2.5-sunburst` em `medium`
+- **AND** não compara modelos
 
-#### Scenario: Sunburst medium exploratório sem hipótese prévia
+#### Scenario: CHECKPOINT A antecede geração paga
 
-- **WHEN** o usuário conduz manualmente uma rodada exploratória `medium+` sem hipótese prévia
-- **THEN** o UAT registra explicitamente que a hipótese estava ausente e não a inventa retrospectivamente
-- **AND** a rodada precisa ser aceita pelo usuário como exceção no CHECKPOINT B e não é generalizada para outros produtos
+- **WHEN** geração paga está sendo considerada
+- **THEN** revisão humana de contratos, gates e segurança ocorre primeiro
+- **AND** sem aprovação explícita nenhuma geração paga é autorizada
 
-#### Scenario: Nenhum revisor visual automático
+#### Scenario: Cada geração exige confirmação financeira individual
 
-- **WHEN** validações técnicas objetivas terminam
-- **THEN** a saída aguarda avaliação humana
-- **AND** o sistema não cria score ou decisão visual automatizada
+- **WHEN** usuário inicia manualmente um run
+- **THEN** confirmação financeira explícita é exigida para aquele run
+- **AND** não há autorização global, batch ou geração autônoma
+
+#### Scenario: Encerramento com limitações é explícito
+
+- **WHEN** existem critérios `pending` no CHECKPOINT B
+- **THEN** permanecem `pending` e não são convertidos em avaliação
+- **AND** usuário pode aprovar encerramento com limitações enumeradas e follow-ups aceitos
+- **AND** resultado não é descrito como rubrica completa
+
+#### Scenario: Sem revisor visual automático
+
+- **WHEN** validações técnicas terminam
+- **THEN** avaliação aguarda pessoa
+- **AND** testes automatizados verificam contratos e side effects, não prometem fidelidade da arte pelo modelo
 
 ### Requirement: Identidade experimental sem efeitos produtivos
 

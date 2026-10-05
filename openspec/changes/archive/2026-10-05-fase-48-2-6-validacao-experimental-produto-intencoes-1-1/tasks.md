@@ -1,7 +1,7 @@
 ## 1. Baseline e contratos
 
 - [x] 1.1 Registrar baseline, confirmar arquivos protegidos e auditar schema/API, registries de política, preflight, linhagem e custo; manter produção/migrations sem alterações.
-- [x] 1.2 Documentar contratos atuais de selos sem alterá-los; implementar validade exclusiva de Oferta na bancada, preservando formatos/validações e comportamento explícito ao trocar intenção.
+- [x] 1.2 Documentar contratos atuais de selos sem alterá-los; implementar validade exclusiva de Oferta na bancada, mostrando seletor/campos somente em Oferta, preservando valores ao alternar intenção, bloqueando composição incompatível e cobrindo remoção explícita em testes, sem alterar formatos/validações.
 - [x] 1.3 Extrair inferência/opções para uma única autoridade pura em `src/lib/lab/bench/domain/`; preservar exports de `form-rules.ts` por delegação e paridade com hook produtivo intocado.
 
 ## 2. Matriz preço × intenção

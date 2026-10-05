@@ -1,10 +1,10 @@
 # Lab Bench Form Parity
 
-> Synced from `fase-48-2-3-fidelidade-experimental-bancada` (ADDED).
+> Synced from `fase-48-2-3-fidelidade-experimental-bancada` (ADDED) and `fase-48-2-6-validacao-experimental-produto-intencoes-1-1` (MODIFIED).
 
 ## Purpose
 
-Define a paridade programática do formulário produtivo de campanha na bancada — campos, limites, normalizações, comportamento de preço de/por, intenção, `preserveImageContext`, selo, validade e avisos — com testes explícitos de paridade e sem efeitos produtivos.
+Define a paridade programática do formulário produtivo de campanha na bancada — campos, limites, normalizações, comportamento de preço de/por, intenção, direção de fundo, selo, validade e avisos — com testes explícitos de paridade e sem efeitos produtivos.
 
 ## Requirements
 
@@ -61,27 +61,29 @@ A bancada SHALL reproduzir a intenção da campanha (`offer`/`spotlight`/`exclus
 - **WHEN** a intenção é derivada
 - **THEN** as opções selecionáveis correspondem às do produtivo
 
-### Requirement: Preservação da imagem original (preserveImageContext)
+### Requirement: Direção de fundo explícita nas três intenções
 
-A bancada SHALL reproduzir o campo "Preservar imagem original" do produtivo: exibido apenas quando a intenção não é oferta (Destaque/Exclusivo), enviado como `preserveImageContext` no payload de geração, refletido no bloco `[PRODUTO E IMAGENS DE REFERÊNCIA]` do prompt compilado (sem duplicação) e **limpo automaticamente** (resetado para falso) quando a intenção muda para Oferta, reproduzindo o comportamento produtivo.
+A bancada SHALL oferecer, em Oferta, Destaque e Exclusivo, uma seleção única e obrigatória de direção de fundo — `Fundo de estúdio` (`studio`), `Cenário ambientado` (`ambient`) ou `Manter cenário original` (`original`) — sem opção aplicada por padrão. A seleção SHALL integrar o briefing/snapshot, o prompt e a evidência revalidada. O checkbox legado `preserveImageContext` SHALL NOT permanecer como escolha independente; eventual flag booleana interna SHALL derivar exclusivamente de `backgroundDirection === original`, sem gerar segunda instrução no prompt. `Manter cenário original` SHALL ser oferecida somente quando houver exatamente uma referência de imagem de produto; a imagem de identidade da loja SHALL NOT entrar nessa contagem. Ao mudar a quantidade de imagens de produto de modo a invalidar `original`, a UI SHALL limpar a seleção e exigir nova escolha explícita; a API SHALL rejeitar a seleção inválida antes de persistência/CAS/provider.
 
-#### Scenario: Campo disponível apenas fora da oferta
+#### Scenario: Seleção única disponível nas três intenções
 
-- **WHEN** a intenção é Destaque ou Exclusivo
-- **THEN** a bancada oferece "Preservar imagem original"
-- **AND** quando a intenção é Oferta o campo não é oferecido
+- **WHEN** a intenção é Oferta, Destaque ou Exclusivo
+- **THEN** a bancada oferece seleção única entre `Fundo de estúdio`, `Cenário ambientado` e `Manter cenário original`
+- **AND** nenhuma opção é aplicada por padrão
+- **AND** a escolha integra o snapshot e o prompt
 
-#### Scenario: preserveImageContext é enviado e limpo
+#### Scenario: Original exige exatamente uma imagem de produto
 
-- **WHEN** o operador marca "Preservar imagem original"
-- **THEN** `preserveImageContext` é enviado no payload de geração
-- **AND** ao mudar a intenção para Oferta o campo é limpo (falso)
+- **WHEN** `Manter cenário original` é selecionado
+- **THEN** existe exatamente uma referência de imagem de produto
+- **AND** a imagem de identidade da loja não entra na contagem
+- **AND** a opção não é oferecida para 0 ou 2+ referências
 
-#### Scenario: preserveImageContext reflete no bloco canônico
+#### Scenario: Seleção invalidada exige nova escolha
 
-- **WHEN** `preserveImageContext` é aplicável
-- **THEN** ele é refletido no bloco `[PRODUTO E IMAGENS DE REFERÊNCIA]`
-- **AND** não é duplicado em outro bloco
+- **WHEN** a quantidade de imagens de produto deixa de ser exatamente uma e `original` estava selecionado
+- **THEN** a UI limpa a seleção e exige nova escolha explícita
+- **AND** a API rejeita a seleção inválida antes de persistência/CAS/provider
 
 ### Requirement: Selo promocional por intenção
 
@@ -99,13 +101,26 @@ A bancada SHALL oferecer o selo promocional com as mesmas opções por intençã
 
 ### Requirement: Validade da oferta fiel
 
-A bancada SHALL reproduzir os modos de validade da oferta do produtivo (data final, intervalo, "somente hoje", "enquanto durarem os estoques" e texto livre), com as mesmas validações de data e a mesma geração de texto de exibição.
+A bancada SHALL reproduzir os modos de validade e validações de data existentes, permitindo validade exclusivamente na intenção Oferta. Destaque e Exclusivo SHALL rejeitar validade no formulário e backend. Se houver validade informada ao trocar para intenção incompatível, SHALL bloquear composição e execução até remoção/regularização explícita; SHALL NOT descartar o valor silenciosamente. Formatos e validações existentes de validade permanecem inalterados. Produção permanece intocada.
 
-#### Scenario: Modos de validade disponíveis
+#### Scenario: Modos de validade disponíveis em Oferta
 
-- **WHEN** a intenção é oferta
-- **THEN** os modos de validade do produtivo estão disponíveis
-- **AND** as validações de data são aplicadas
+- **WHEN** intenção é Oferta
+- **THEN** modos atuais do produtivo estão disponíveis
+- **AND** validações de data atuais são aplicadas
+
+#### Scenario: Validade não é aceita em Destaque ou Exclusivo
+
+- **WHEN** intenção é Destaque ou Exclusivo e payload contém validade
+- **THEN** UI/backend recusam composição e execução
+- **AND** backend recusa antes de persistir execução ou chamar provider
+
+#### Scenario: Troca de intenção preserva validade até regularização
+
+- **WHEN** existe validade e usuário escolhe Destaque ou Exclusivo
+- **THEN** composição e execução ficam bloqueadas
+- **AND** valor não é descartado silenciosamente
+- **AND** usuário deve remover/regularizar explicitamente a validade
 
 ### Requirement: Avisos e informações obrigatórias
 

@@ -1,20 +1,30 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-05T00:55:25.854Z",
+  "timestamp": "2026-10-05T15:30:00.000Z",
   "phase": "48.2.6",
   "phase_name": "validacao-experimental-produto-intencoes-1-1",
   "phase_dir": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1",
-  "status": "gsd_complete_with_limitations_openspec_owner_pending",
-  "phase_status": "10_of_10_plans_complete_gsd_uat_5_of_5_checkpoint_b_approved_with_limitations_openspec_active_deferred_by_user",
-  "plan": "48-2-6-10-gsd-complete-openspec-owner-pending",
+  "status": "complete_with_limitations_verified_synced_archived",
+  "phase_status": "10_of_10_plans_complete_gsd_uat_5_of_5_checkpoint_b_approved_with_limitations_openspec_archived_2026_10_05",
+  "plan": "48-2-6-10-gsd-complete-openspec-verified-synced-archived",
   "openspec_source": "fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
   "openspec_archive": {
-    "path": "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
-    "verified": false,
-    "synced": false,
-    "archived": false,
-    "active": true,
-    "note": "Change normativa ativa da F48.2.6; por solicitação explícita do usuário, verify/sync/archive ficam reservados para execução posterior pelo responsável."
+    "path": "openspec/changes/archive/2026-10-05-fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
+    "verified": true,
+    "synced": true,
+    "archived": true,
+    "active": false,
+    "synced_specs": [
+      "lab-bench-intent-validation (created)",
+      "lab-bench-intent-uat (created)",
+      "lab-bench-form-parity (modified)",
+      "lab-bench-image-roles (modified)",
+      "lab-bench-prompt-base (modified)",
+      "lab-bench-prompt-policy (modified)",
+      "lab-bench-prompt-preflight (modified)",
+      "lab-generation-bench (modified)"
+    ],
+    "note": "F48.2.6 verificada, sincronizada (8 specs principais) e arquivada em 2026-10-05 pelo responsável; nenhum candidato promovido."
   },
   "gsd_verification": {
     "phase": "48.2.6",
@@ -24,7 +34,7 @@
     "uat_artifact": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-GSD-UAT.md",
     "result": "5 passed, 0 issues, 0 pending, 0 blocked, 0 skipped",
     "evidence_check": "GSD UAT concluído com os relatos e evidências já fornecidos pelo usuário. CHECKPOINT B aprovado com limitações; gaps técnicos de rastreabilidade continuam pending e foram aceitos, sem promoção.",
-    "next_action": "Nenhuma ação GSD pendente. O usuário fará posteriormente opsx-verify, opsx-sync e opsx-archive."
+    "next_action": "Nenhuma ação GSD pendente. OpenSpec verificado, sincronizado e arquivado em 2026-10-05 (8 specs principais sincronizados)."
   },
   "planning_review": {
     "phase": "48.2.6",
@@ -34,7 +44,7 @@
     "implementation": "plans_01_through_10_complete",
     "checkpoint_a": "approved_local_readiness_only",
     "checkpoint_b": "approved_with_limitations",
-    "next_action": "GSD reconciliado. OpenSpec verify/sync/archive permanecem ativos e foram explicitamente reservados pelo usuário para depois."
+    "next_action": "GSD reconciliado. OpenSpec verificado, sincronizado e arquivado em 2026-10-05; nenhuma operação de lifecycle pendente."
   },
   "previous_phase": {
     "phase": "48.2.5",
@@ -60,9 +70,9 @@
     "gsd_status": "complete_with_accepted_limitations",
     "plan_count": "10/10 plans and 10/10 summaries",
     "gsd_uat": "5 passed, 0 issues, 0 pending, 0 blocked, 0 skipped",
-    "focused_tests": "327 passed across 7 files in final re-run; prior execution counted 328 before latest test updates",
+    "focused_tests": "329 passed across 7 files in final re-run after validity-visibility tests; prior runs counted 327 and 328 before the latest test updates",
     "security": "6 threats closed, 0 open",
-    "openspec_status": "active; 42/42 tasks complete; task 6.5 tracking/review delivery complete; verify/sync/archive explicitly deferred to responsible owner and not executed",
+    "openspec_status": "archived_2026_10_05; 42/42 tasks complete; verified, synced and archived by responsible owner; 8 main specs synchronized",
     "candidate_promoted": false,
     "executor_provider_calls": 0,
     "new_generations": 0,
@@ -99,7 +109,7 @@
       "lint": "ok",
       "build": "ok",
       "bench_api_suite": "605 passed | 1 skipped; 29 files passed | 1 skipped",
-      "openspec_strict_validation": "all eight affected main specs valid"
+      "openspec_strict_validation": "all eight affected main specs valid and synchronized"
     }
   },
   "artifacts": [
@@ -153,14 +163,8 @@
     ".planning/quick/261003-nkj-f48-2-6-trocar-o-r-tulo-comum-de-pre-o-c/261003-nkj-SUMMARY.md"
   ],
   "blockers": [],
-  "human_actions_pending": [
-    {
-        "action": "Executar posteriormente /opsx-verify, /opsx-sync e /opsx-archive para a change F48.2.6",
-        "context": "A entrega documental da task 6.5 está concluída. Por solicitação explícita do usuário, o lifecycle OpenSpec permanece reservado ao responsável; /opsx-verify, /opsx-sync e /opsx-archive ainda não foram executados.",
-       "blocking": false
-    }
-  ],
+  "human_actions_pending": [],
   "uncommitted_files": [],
-  "next_action": "GSD finalizado. O usuário executará posteriormente o lifecycle OpenSpec F48.2.6; não fazer push remoto.",
-  "context_notes": "F48.2.6 GSD concluída: 10/10 planos/summaries, UAT 5/5, CHECKPOINT B approved_with_limitations. Runs finais `1ca08368-9a81-4671-9ca6-50032feac231` e `2fb07e0e-37cc-40d0-8a53-fa380f7eef81` conferidos localmente read-only, Produto v4/compositor v5; IDs `2a01db63...`/`da2f2321...` são históricos Produto v3/compositor v4. Valores plataforma confirmados arredondados US$0.05/US$0.03; cálculos locais `0.048863`/`0.030974`, provider-reported null, sem fatura conferida. Fidelidade produto/embalagem aprovada somente nos dois runs examinados; linkage slots, validação anterior de Destaque e run de letras pequenas permanecem pending. Revalidação final: 327 testes/7 arquivos, typecheck/lint/build/OpenSpec strict PASS; execução anterior contou 328 antes das últimas atualizações de testes. OpenSpec task 6.5 de tracking/entrega documental concluída, 42/42 tasks; change ativa até /opsx-verify, /opsx-sync e /opsx-archive do responsável, ainda não executados. Sem novas gerações, provider calls, DB writes, migrations ou push remoto."
+  "next_action": "F48.2.6 concluída, verificada, sincronizada e arquivada em 2026-10-05; commit de fechamento do tracking criado. Push remoto será executado manualmente pelo responsável com a worktree limpa.",
+  "context_notes": "F48.2.6 GSD concluída: 10/10 planos/summaries, UAT 5/5, CHECKPOINT B approved_with_limitations. Runs finais `1ca08368-9a81-4671-9ca6-50032feac231` e `2fb07e0e-37cc-40d0-8a53-fa380f7eef81` conferidos localmente read-only, Produto v4/compositor v5; IDs `2a01db63...`/`da2f2321...` são históricos Produto v3/compositor v4. Valores plataforma confirmados arredondados US$0.05/US$0.03; cálculos locais `0.048863`/`0.030974`, provider-reported null, sem fatura conferida. Fidelidade produto/embalagem aprovada somente nos dois runs examinados; linkage slots, validação anterior de Destaque e run de letras pequenas permanecem pending. Revalidação final: 329 testes/7 arquivos após os testes adicionais de visibilidade de validade, typecheck/lint/build/OpenSpec strict PASS; execuções anteriores contaram 327 e 328 antes das últimas atualizações de testes. OpenSpec task 6.5 de tracking/entrega documental concluída, 42/42 tasks; change verificada, sincronizada (8 specs principais) e arquivada em 2026-10-05 (`openspec/changes/archive/2026-10-05-fase-48-2-6-validacao-experimental-produto-intencoes-1-1/`); limitações/critérios UAT sem evidência permanecem pending, sem promoção produtiva. Sem novas gerações, provider calls, DB writes ou migrations. O commit de fechamento do tracking foi criado; o push remoto será executado manualmente pelo responsável após a worktree ficar limpa."
 }

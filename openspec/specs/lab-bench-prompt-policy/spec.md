@@ -1,6 +1,6 @@
 # Lab Bench Prompt Policy
 
-> Synced from `fase-48-2-4-experimento-deterministico-oferta-1-1` (ADDED) and `fase-48-2-5-estabilizacao-experimental-oferta-1-1` (MODIFIED).
+> Synced from `fase-48-2-4-experimento-deterministico-oferta-1-1` (ADDED), `fase-48-2-5-estabilizacao-experimental-oferta-1-1` (MODIFIED) and `fase-48-2-6-validacao-experimental-produto-intencoes-1-1` (MODIFIED/ADDED).
 
 ## Purpose
 
@@ -47,7 +47,7 @@ Cada dimensão do recorte SHALL ser governada por uma **política independente e
 
 ### Requirement: Resolução explícita e fail-closed das políticas
 
-A bancada SHALL resolver **explicitamente** as políticas habilitadas a partir da configuração multidimensional. Se uma dimensão habilitada não possuir política implementada, ou se a combinação não for suportada, a composição SHALL falhar **antes de qualquer chamada paga**, sem fallback e sem improvisação. Nesta fase SHALL habilitar somente as políticas `oferta`, `1:1`, `produto`, `peca-unica` e tema neutro `nenhum`; Destaque, Exclusivo, 9:16, serviços, informativos, temas e carrossel SHALL permanecer desabilitados.
+A bancada SHALL resolver explicitamente políticas habilitadas a partir da configuração multidimensional. Para o recorte Produto + quadrado 1:1, SHALL habilitar intenções `oferta`, `destaque` e `exclusivo`, conteúdo `produto`, formato `1:1`, estrutura `peca-unica` e tema neutro `nenhum`. Serviço, outros formatos, informativos, temas, carrossel e combinações não suportadas SHALL permanecer desabilitados com motivo. Dimensão sem política ou combinação não suportada SHALL falhar antes de qualquer chamada paga, sem fallback ou improvisação.
 
 #### Scenario: Combinação não suportada falha antes da chamada paga
 
@@ -61,115 +61,187 @@ A bancada SHALL resolver **explicitamente** as políticas habilitadas a partir d
 - **THEN** a resolução falha de forma explícita
 - **AND** nenhuma chamada paga é iniciada
 
-#### Scenario: Somente o recorte Oferta 1:1 é habilitado
+#### Scenario: Três intenções habilitadas somente em Produto 1:1
 
-- **WHEN** as políticas habilitadas são listadas
-- **THEN** somente `oferta`, `1:1`, `produto`, `peca-unica` e `nenhum` estão habilitadas
-- **AND** as demais combinações estão desabilitadas com motivo
+- **WHEN** políticas habilitadas são listadas para Produto + 1:1
+- **THEN** Oferta, Destaque e Exclusivo podem ser resolvidos com Produto, 1:1, peça única e tema neutro
+- **AND** Serviço, outros formatos e demais combinações permanecem desabilitados com motivo
 
 ### Requirement: Política Oferta orienta a hierarquia comercial sem posições fixas
 
-A política `oferta` SHALL orientar, **sem fixar posições nem coordenadas**, a **hierarquia comercial**: o preço promocional com maior importância comercial; o preço original claramente secundário **quando informado**; selo, validade e textos comerciais com hierarquia adequada; leitura imediata; excelente legibilidade; acabamento comercial de alta qualidade; liberdade para o modelo encontrar o melhor arranjo; e a proibição de inventar **preço, desconto, validade ou textos comerciais**. A política `oferta` SHALL NOT declarar orientações de produto (produto como elemento principal, fidelidade de aparência/embalagem, uso das referências, proibição de inventar produto/benefícios), que pertencem **exclusivamente** à política `produto`. A política SHALL NOT impor regras como "logo à direita", "produto centralizado" ou coordenadas rígidas.
+A política `oferta` SHALL usar a instrução concisa: “Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.” SHALL NOT impor posições fixas. Orientações próprias de Produto pertencem à política `produto`; orientações comerciais próprias de Destaque/Exclusivo pertencem às respectivas políticas, sem duplicação com Produto ou política geral. A validade informada em Oferta SHALL continuar incluída no prompt como dado comercial. A UI/backend controla as intenções que aceitam validade; nenhuma explicação dessas regras será acrescentada ao modelo.
 
-#### Scenario: Orientação comercial é gerada
+#### Scenario: Instrução comercial de Oferta é concisa
 
-- **WHEN** a política `oferta` contribui para o prompt
-- **THEN** ela orienta a hierarquia de preços, selo, validade, textos comerciais, legibilidade e acabamento comercial
-- **AND** proíbe inventar preço, desconto, validade ou textos comerciais
-- **AND** não declara orientações de produto
+- **WHEN** a política Oferta contribui para o prompt
+- **THEN** usa exatamente a instrução concisa definida neste requisito
+- **AND** validade informada continua como dado comercial do prompt
+- **AND** nenhuma explicação sobre quais intenções aceitam validade é acrescentada ao modelo
+- **AND** não duplica orientação de Produto ou das demais políticas de intenção
 
 #### Scenario: Nenhuma posição fixa é imposta
 
-- **WHEN** a política `oferta` é aplicada
+- **WHEN** a política Oferta é aplicada
 - **THEN** nenhuma posição fixa, coordenada ou regra de layout rígida é imposta
 - **AND** o modelo permanece livre para encontrar o melhor arranjo
 
+### Requirement: Rótulo comum do preço de venda é semanticamente neutro
+
+A serialização compartilhada do valor `discountedPriceText` SHALL usar o rótulo `Preço de venda`, sem alterar o valor numérico ou as demais linhas comerciais. O compositor SHALL identificar essa alteração comum como `48.2.4-prompt-composer-v2`. O rótulo é apenas um campo de dado neutro; a interpretação promocional, quando aplicável, é responsabilidade exclusiva da política Oferta existente, cuja versão e texto SHALL permanecer inalterados.
+
+#### Scenario: Destaque com preço único não recebe semântica de promoção pelo rótulo
+
+- **WHEN** Destaque compõe um produto com `priceCents=1999` e sem `originalPriceCents`
+- **THEN** o prompt contém `Preço de venda: R$ 19,99`
+- **AND** o prompt não contém `Preço promocional` nem instrução/versão Oferta
+- **AND** contém a instrução e versão Destaque existentes
+
+#### Scenario: Oferta mantém a instrução promocional própria
+
+- **WHEN** Oferta compõe os valores comerciais
+- **THEN** a linha serializada usa `Preço de venda` com os valores numéricos preservados
+- **AND** somente a política Oferta fornece a instrução promocional existente
+- **AND** o texto e versão da política Oferta permanecem inalterados
+
 ### Requirement: Política Produto orienta o foco no produto e o uso das referências
 
-A política `produto` SHALL orientar, sem fixar posições nem coordenadas, o produto como elemento principal; a fidelidade de aparência, embalagem e características; e os papéis distintos das imagens: principal obrigatória, canônica e protagonista; até três adicionais opcionais do mesmo produto como referências auxiliares. A política SHALL instruir o modelo a usar a principal como protagonista visível, mas sua aparição é critério de avaliação humana, não garantia da bancada. As adicionais podem mostrar ângulos, detalhes, embalagem ou contexto e contribuir à fidelidade/composição, mas SHALL NOT duplicar o produto, competir com a principal ou criar outro protagonista; não existe garantia de que todas apareçam na arte final. A orientação SHALL ser simples e equivalente a: “Use a imagem principal como representação obrigatória e protagonista do produto. As imagens adicionais são referências auxiliares do mesmo produto; utilize-as quando contribuírem para fidelidade ou composição, sem duplicar o produto nem competir com a imagem principal.” A política SHALL proibir inventar produto ou benefícios. Ela SHALL NOT declarar orientações comerciais, que pertencem exclusivamente à política `oferta`. As políticas `oferta` e `produto` SHALL ter propriedade exclusiva e disjunta.
+A política `produto` SHALL orientar o produto e suas referências pela quantidade de imagens do produto (identidade excluída): para uma imagem usar exatamente `Produto como elemento principal da peça. Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.` e não mencionar primeira imagem, variante ou auxiliares; para duas ou mais, orientar a primeira como variante protagonista, maior/em primeiro plano, e auxiliares como apoio secundário, junto de `Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.` exatamente uma vez; para zero, orientar somente que o produto seja o elemento principal. Referências auxiliares podem representar múltiplas representações, ângulos e variantes do produto anunciado; são opcionais e não têm garantia de aparição. O contrato técnico existente de limite, ordem e transporte permanece vigente. Isso não cria suporte a produtos independentes ou combos. A política SHALL NOT declarar orientações comerciais, que pertencem às políticas de intenção cabíveis.
 
 #### Scenario: Foco no produto é gerado
 
-- **WHEN** a política `produto` contribui para o prompt
-- **THEN** ela orienta o produto como elemento principal, a fidelidade de aparência/embalagem e o uso das referências
-- **AND** proíbe inventar produto ou benefícios
-- **AND** não declara orientações comerciais
+- **WHEN** a política Produto contribui para o prompt
+- **THEN** orienta o produto como elemento principal e não inventa atributos
 
-#### Scenario: Propriedade exclusiva entre oferta e produto
+#### Scenario: Instrução de imagem depende da quantidade de referências
 
-- **WHEN** as políticas `oferta` e `produto` compõem o prompt
-- **THEN** nenhuma orientação é emitida por ambas
-- **AND** a não-duplicação semântica é verificada por um teste golden do prompt completo e por atribuição exclusiva por política
+- **WHEN** política Produto é resolvida para zero, uma ou múltiplas imagens
+- **THEN** contribuições respeitam exatamente as frases condicionais definidas no requisito
+- **AND** uma imagem não recebe orientação de primeira imagem, variante ou auxiliares
+- **AND** duas ou mais imagens recebem protagonismo/apoio secundário e fidelidade somente uma vez
+- **AND** zero imagens não recebem alegação de fidelidade visual
+- **AND** não promete aparição de auxiliares
 
-#### Scenario: Política descreve os papéis de imagens
+#### Scenario: Variações do produto anunciado podem ser representadas
 
-- **WHEN** a política `produto` contribui para o prompt
-- **THEN** instrui o modelo a tratar a principal como obrigatória/protagonista e as adicionais como auxiliares/opcionais do mesmo produto
-- **AND** preserva fidelidade e não inventa produto/benefícios
-- **AND** a presença/fidelidade visual da principal é avaliada por humano, sem garantia técnica
+- **WHEN** imagens auxiliares mostram ângulos ou variantes do produto anunciado
+- **THEN** são aceitas como referências do mesmo produto
+- **AND** não implicam suporte a produtos independentes ou combos
 
-#### Scenario: Adicionais não concorrem com a principal
+#### Scenario: Contratos técnicos de imagem permanecem
 
-- **WHEN** existem referências auxiliares
-- **THEN** a política proíbe duplicar o produto ou criar protagonista concorrente
-- **AND** não promete que todas aparecerão visualmente
+- **WHEN** imagens são enviadas
+- **THEN** limites, ordem principal → auxiliares → identidade e transporte seguem o contrato técnico existente
+- **AND** instruções textuais não são confundidas com implementação de transporte
 
-#### Scenario: Política de produto não assume orientação comercial
+#### Scenario: Orientações comerciais pertencem às intenções
 
-- **WHEN** políticas `oferta` e `produto` são compostas
-- **THEN** preço, selo, validade e integridade comercial permanecem atribuídos a `oferta`
-- **AND** não há orientação duplicada entre as políticas
+- **WHEN** políticas Produto e de intenção são compostas
+- **THEN** Produto não emite orientações comerciais
+- **AND** cada intenção emite somente suas orientações comerciais cabíveis
 
 ### Requirement: Política Produto preserva nome, contexto da descrição e textos obrigatórios
 
-A política determinística `produto` SHALL orientar o modelo a exibir o nome do produto por inteiro e exatamente como informado e aprovado pelo usuário, sem abreviar, omitir, parafrasear ou corrigir silenciosamente. Se o usuário tiver escolhido “Manter exatamente como informado” após alertas, a grafia aprovada, inclusive possíveis erros, SHALL ser preservada. A descrição SHALL ser tratada como texto complementar: o modelo MAY selecionar, resumir ou adaptar sua redação para a peça, desde que preserve contexto e significado; SHALL NOT inventar características, benefícios, condições ou usos não informados. Informações explicitamente obrigatórias na arte SHALL ser reproduzidas literalmente. Presença e fidelidade desses conteúdos na imagem são critérios de avaliação humana, não garantia técnica da bancada.
+A política determinística `produto` SHALL usar como única instrução de nome no prompt compilado: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` Não SHALL emitir a linha redundante `Nome: completo…`. O nome SHALL manter todas as palavras, números e unidades sem abreviar, substituir, omitir ou corrigir silenciosamente; capitalização, quebras de linha e arranjo tipográfico podem variar. A descrição serve de apoio à arte/copy e pode ser melhorada, adaptada, resumida, parcialmente utilizada ou omitida sem desvirtuar contexto/significado nem inventar atributos, benefícios ou condições. Cada informação obrigatória SHALL ser reproduzida integralmente uma única vez conforme aprovada. Após decisão `keep_exactly`, a grafia aprovada SHALL ser preservada, inclusive possíveis erros. A regra de exibição única SHALL pertencer somente à política Produto; nenhuma outra política a SHALL duplicar. Os contratos existentes de revisão textual e `keep_exactly` permanecem inalterados.
 
-#### Scenario: Nome do produto é íntegro e literal
+O campo de nome e sua orientação SHALL ser serializados em uma única linha compilada: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` Se o nome trimado já terminar em `.`, o compositor SHALL manter esse ponto e não acrescentar outro separador; caso contrário, SHALL acrescentar exatamente um ponto. A versão vigente da política Produto SHALL ser `48.2.6-produto-v4`; a versão do compositor para esta serialização SHALL ser `48.2.4-prompt-composer-v5`.
 
-- **WHEN** nome informado e aprovado é usado para compor a campanha
-- **THEN** a política instrui a exibi-lo inteiro e exatamente como aprovado
-- **AND** proíbe abreviar, omitir, parafrasear ou corrigir silenciosamente
+#### Scenario: Nome compilado recebe o rótulo obrigatório
 
-#### Scenario: Nome mantido após alerta preserva grafia aprovada
+- **WHEN** a composição serializa o nome de produto informado
+- **THEN** a linha é exatamente `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` com `{nome}` substituído pelo valor de entrada
+- **AND** a política Produto é identificada como `48.2.6-produto-v4`
+- **AND** o compositor é identificado como `48.2.4-prompt-composer-v5`
+- **AND** não há outra instrução de nome redundante
 
-- **WHEN** o usuário escolhe “Manter exatamente como informado” para o nome
-- **THEN** a política usa a grafia aprovada inclusive se houver possível erro
-- **AND** não substitui o nome por uma versão corrigida
+#### Scenario: Nome terminado em ponto não duplica pontuação
 
-#### Scenario: Descrição pode ser adaptada sem mudar significado
+- **WHEN** o nome de entrada trimado termina em `.`
+- **THEN** a linha inclui o nome exatamente como informado seguido de um único ponto antes de `Inclua`
+- **AND** não produz `.. Inclua`
+- **AND** nomes sem ponto final mantêm a linha compilada aprovada sem alteração
 
-- **WHEN** a descrição alimenta a peça
-- **THEN** o modelo pode selecionar, resumir ou adaptar sua redação
-- **AND** preserva contexto e significado sem inventar características, benefícios, condições ou usos
+#### Scenario: Nome preserva palavras e conteúdo
 
-#### Scenario: Texto obrigatório é literal
+- **WHEN** nome informado/aprovado é usado
+- **THEN** todas as palavras, números, unidades e conteúdo são preservados
+- **AND** capitalização, quebras e arranjo podem variar
+- **AND** não há abreviação, substituição, omissão ou correção silenciosa
 
-- **WHEN** há informação explicitamente obrigatória na arte
-- **THEN** a política instrui reprodução literal
-- **AND** a avaliação humana verifica presença e fidelidade sem supor garantia técnica
+#### Scenario: Grafia aprovada por keep_exactly é preservada
 
-#### Scenario: Tipos textuais têm critérios separados no UAT
+- **WHEN** usuário escolhe “Manter exatamente como informado” após alerta
+- **THEN** a grafia aprovada, inclusive possíveis erros, permanece
+- **AND** não é corrigida nem substituída
+
+#### Scenario: Descrição é apoio opcional à arte e copy
+
+- **WHEN** descrição opcional é usada
+- **THEN** pode ser adaptada, melhorada, resumida, parcialmente utilizada ou omitida
+- **AND** preserva contexto/significado sem inventar atributos, benefícios ou condições
+
+#### Scenario: Informação obrigatória é reproduzida integralmente
+
+- **WHEN** há informação obrigatória aprovada
+- **THEN** seu conteúdo integral é instruído para reprodução
+- **AND** presença/fidelidade visual é avaliada por humano sem garantia técnica
+
+#### Scenario: Critérios textuais são separados
 
 - **WHEN** uma saída é avaliada
-- **THEN** nome integral/literal, descrição/contexto e texto obrigatório literal são registrados como critérios distintos
+- **THEN** nome, descrição e textos obrigatórios são critérios humanos distintos
+- **AND** ausência de evidência não é tratada como aprovação
 
 ### Requirement: Política geral de integridade do resultado visual
 
-A composição determinística SHALL orientar o conteúdo criado pelo modelo a usar português correto e natural, evitar caracteres, símbolos ou pontuação duplicados/anômalos e não corrigir silenciosamente textos de entrada. Esta orientação geral SHALL NOT definir a transformação/apresentação do nome ou da descrição do produto, nem mencionar preços, datas, selos, descontos, condições comerciais ou proibição comercial de invenção/interpretação. Nome, descrição e textos obrigatórios pertencem à política `produto`; integridade comercial pertence exclusivamente à política da intenção Oferta. As orientações SHALL ser gerais e independentes de exemplos numéricos ou strings específicas.
+A composição determinística SHALL orientar português correto e natural, evitar caracteres, símbolos ou pontuação duplicados/anômalos e não corrigir silenciosamente textos de entrada. A política geral SHALL NOT definir a transformação/apresentação de nome ou descrição nem regras comerciais. Nome, descrição e textos obrigatórios pertencem à política `produto`; as orientações comerciais cabíveis pertencem exclusivamente à política da intenção correspondente. Políticas SHALL evitar duplicação semântica entre si e manter instruções gerais independentes de exemplos específicos.
 
-#### Scenario: Resultado respeita integridade textual e comercial
+#### Scenario: Integridade geral não duplica políticas
 
-- **WHEN** o conteúdo visual é criado a partir das entradas aprovadas
-- **THEN** orienta português correto, ausência de caracteres ou pontuação duplicados e ausência de correção silenciosa
-- **AND** não duplica orientações comerciais da política Oferta
-- **AND** não duplica os contratos de nome, descrição e texto obrigatório da política `produto`
+- **WHEN** conteúdo visual é criado a partir das entradas aprovadas
+- **THEN** a política geral orienta português correto, natural e sem anomalias de caracteres/pontuação
+- **AND** não corrige silenciosamente nem duplica regras textuais de Produto ou comerciais das intenções
 
-#### Scenario: Regra não codifica exemplo específico
+#### Scenario: Política geral não contém regra comercial específica
 
-- **WHEN** a política de integridade é inspecionada
-- **THEN** suas instruções são gerais para textos, números, símbolos e pontuação
-- **AND** regras de preços, datas, selos e condições pertencem exclusivamente à política Oferta
-- **AND** não contém regra específica para um erro numérico exemplificativo
+- **WHEN** política geral é inspecionada
+- **THEN** não define preço, validade, selo ou condição comercial
+- **AND** essas instruções pertencem às políticas de intenção cabíveis
+
+### Requirement: Políticas Destaque e Exclusivo usam instruções comerciais concisas
+
+A política versionada Destaque SHALL permanecer usando: “Destaque: priorize a apresentação do produto; preço informado é secundário.” A política Exclusivo vigente `48.2.6-exclusivo-v3` SHALL usar exatamente: “Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.” A política SHALL NOT acrescentar qualquer outra orientação ou alterar as listas/permissões de selos existentes. Selos explicitamente selecionados pelo usuário são dados de entrada. As orientações SHALL NOT ser duplicadas em Produto, política geral ou prompt-base.
+
+#### Scenario: Destaque prioriza produto e torna preço secundário
+
+- **WHEN** intenção é Destaque
+- **THEN** instrução de intenção corresponde exatamente ao texto conciso definido
+- **AND** preço ausente não é inventado
+
+#### Scenario: Exclusivo não cria alegações ou atributos
+
+- **WHEN** intenção é Exclusivo
+- **THEN** usa exatamente a instrução `Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.`
+- **AND** a versão resolvida é `48.2.6-exclusivo-v3`
+- **AND** nenhum texto adicional é acrescentado pela política
+- **AND** as opções/permissões existentes de selos não são alteradas
+
+#### Scenario: Exclusivo sem selo não inventa selo
+
+- **WHEN** Exclusivo é composto sem selo
+- **THEN** não é inventado nem serializado um selo
+- **AND** a instrução v2 permanece literal
+
+#### Scenario: Exclusivo preserva selos permitidos
+
+- **WHEN** o usuário informa `Exclusivo` ou `Edição Limitada`, valores já permitidos
+- **THEN** cada selo informado é preservado na composição
+- **AND** nenhum novo valor ou permissão de selo é criado
+
+#### Scenario: Orientações são disjuntas
+
+- **WHEN** políticas de Produto, intenção e integridade geral são compostas
+- **THEN** instruções específicas de intenção aparecem somente na política da intenção
+- **AND** regra geral e política Produto não as repetem
 
 ### Requirement: Política de formato 1:1 orienta composição quadrada sem congelar layout
 
