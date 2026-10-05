@@ -177,7 +177,10 @@ export interface RecomposeBenchPromptInput {
  * mesma entrada ⇒ mesma saída.
  */
 export function recomposeBenchPrompt(input: RecomposeBenchPromptInput): BenchPromptComposition {
-  const { contributions, versions } = resolveBenchPromptPolicies(input.config);
+  const { contributions, versions } = resolveBenchPromptPolicies(input.config, undefined, {
+    briefing: input.briefing,
+    references: input.references,
+  });
   const branding = buildBrandingPromptContributions(input.briefing);
   const identity = buildIdentityDirectionContributions(input.identityReference);
 

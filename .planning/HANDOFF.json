@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-03T21:26:36.637Z",
+  "timestamp": "2026-10-05T00:55:25.854Z",
   "phase": "48.2.6",
   "phase_name": "validacao-experimental-produto-intencoes-1-1",
   "phase_dir": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1",
-  "status": "plan10_task0_complete_waiting_checkpoint_b",
-  "phase_status": "plans_01_through_09_complete_plan10_task0_complete_task1_checkpoint_b_not_started",
-  "plan": "48-2-6-10-task0-complete-awaiting-checkpoint-b",
+  "status": "gsd_complete_with_limitations_openspec_owner_pending",
+  "phase_status": "10_of_10_plans_complete_gsd_uat_5_of_5_checkpoint_b_approved_with_limitations_openspec_active_deferred_by_user",
+  "plan": "48-2-6-10-gsd-complete-openspec-owner-pending",
   "openspec_source": "fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
   "openspec_archive": {
     "path": "openspec/changes/fase-48-2-6-validacao-experimental-produto-intencoes-1-1",
@@ -14,27 +14,27 @@
     "synced": false,
     "archived": false,
     "active": true,
-    "note": "Change normativa ativa da F48.2.6; verify/sync/archive ainda não executados."
+    "note": "Change normativa ativa da F48.2.6; por solicitação explícita do usuário, verify/sync/archive ficam reservados para execução posterior pelo responsável."
   },
   "gsd_verification": {
-    "phase": "48.2.5",
-    "workflow": "/gsd-verify-work 48.2.5",
+    "phase": "48.2.6",
+    "workflow": "/gsd-verify-work 48.2.6",
     "status": "complete_with_acknowledged_gaps",
-    "artifact": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48-2-5-VERIFICATION.md",
-    "uat_artifact": ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-GSD-UAT.md",
+    "artifact": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-GSD-UAT.md",
+    "uat_artifact": ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-GSD-UAT.md",
     "result": "5 passed, 0 issues, 0 pending, 0 blocked, 0 skipped",
-    "evidence_check": "GSD verify-work conversacional concluído. O usuário reconheceu o UAT humano original como aprovado com limitações; 65 critérios pending permanecem inalterados e são registrados como acknowledged gap.",
-    "next_action": "Security review concluída e verificada em 48-2-5-SECURITY.md (7/7 fechadas, 0 abertas), 2026-10-02."
+    "evidence_check": "GSD UAT concluído com os relatos e evidências já fornecidos pelo usuário. CHECKPOINT B aprovado com limitações; gaps técnicos de rastreabilidade continuam pending e foram aceitos, sem promoção.",
+    "next_action": "Nenhuma ação GSD pendente. O usuário fará posteriormente opsx-verify, opsx-sync e opsx-archive."
   },
   "planning_review": {
     "phase": "48.2.6",
     "plans": ["48-2-6-01", "48-2-6-02", "48-2-6-03", "48-2-6-04", "48-2-6-05", "48-2-6-06", "48-2-6-07", "48-2-6-08", "48-2-6-09", "48-2-6-10"],
     "plan_checker": "passed",
-    "execution": "plans_01_through_09_complete",
-    "implementation": "plans_01_through_09_complete",
+    "execution": "plans_01_through_10_complete",
+    "implementation": "plans_01_through_10_complete",
     "checkpoint_a": "approved_local_readiness_only",
-    "checkpoint_b": "not_started",
-    "next_action": "Revisar a preparação Exclusivo v2 e, se solicitado, conduzir CHECKPOINT B manual; Task 0 concluída, Task 1 ainda não iniciada. Nenhuma geração autorizada."
+    "checkpoint_b": "approved_with_limitations",
+    "next_action": "GSD reconciliado. OpenSpec verify/sync/archive permanecem ativos e foram explicitamente reservados pelo usuário para depois."
   },
   "previous_phase": {
     "phase": "48.2.5",
@@ -49,11 +49,24 @@
     "phase_status": "complete_verified_synced_archived",
     "openspec_archive": "openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1"
   },
-  "next_phase_sequence": ["48.2.6"],
-  "resolved_plans": ["48-2-6-01", "48-2-6-02", "48-2-6-03", "48-2-6-04", "48-2-6-05", "48-2-6-06", "48-2-6-07", "48-2-6-08", "48-2-6-09"],
+  "next_phase_sequence": [],
+  "resolved_plans": ["48-2-6-01", "48-2-6-02", "48-2-6-03", "48-2-6-04", "48-2-6-05", "48-2-6-06", "48-2-6-07", "48-2-6-08", "48-2-6-09", "48-2-6-10"],
   "checkpoints": {
     "checkpoint_a": "approved_local_readiness_only",
-    "checkpoint_b": "not_started"
+    "checkpoint_b": "approved_with_limitations"
+  },
+  "current_phase_result": {
+    "phase": "48.2.6",
+    "gsd_status": "complete_with_accepted_limitations",
+    "plan_count": "10/10 plans and 10/10 summaries",
+    "gsd_uat": "5 passed, 0 issues, 0 pending, 0 blocked, 0 skipped",
+    "focused_tests": "327 passed across 7 files; prior run counted 328 before latest test updates",
+    "security": "6 threats closed, 0 open",
+    "openspec_status": "active; 41/42 tasks; verify/sync/archive explicitly deferred by user",
+    "candidate_promoted": false,
+    "executor_provider_calls": 0,
+    "new_generations": 0,
+    "remote_push": false
   },
   "final_state": {
     "phase": "48.2.5",
@@ -111,12 +124,17 @@
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-A-CHECKPOINT.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-UAT-READINESS.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-UAT.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-B-CHECKPOINT.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-CLOSEOUT.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-UAT-MANIFEST.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-09-SUMMARY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-GATES.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-SECURITY.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-09-PLAN.md",
     ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-10-PLAN.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-10-PRE-CHECKPOINT.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48-2-6-10-SUMMARY.md",
+    ".planning/phases/48.2.6-validacao-experimental-produto-intencoes-1-1/48.2.6-GSD-UAT.md",
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-UAT.md",
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-EXPERIMENTS.md",
     ".planning/phases/48.2.5-estabilizacao-experimental-oferta-1-1/48.2.5-CANDIDATE.json",
@@ -134,15 +152,15 @@
     ".planning/quick/261003-nkj-f48-2-6-trocar-o-r-tulo-comum-de-pre-o-c/261003-nkj-PLAN.md",
     ".planning/quick/261003-nkj-f48-2-6-trocar-o-r-tulo-comum-de-pre-o-c/261003-nkj-SUMMARY.md"
   ],
-  "blockers": ["CHECKPOINT B aguarda avaliação manual humana; não iniciar geração sem revisão e confirmação financeira individual."],
+  "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Revisar a preparação Exclusivo v2 e conduzir CHECKPOINT B manualmente quando apropriado",
-      "context": "Plan 10 Task 0 está completa. Relato do usuário da primeira arte Exclusivo v1: considerada publicável, diferenciação visual inconclusiva; linkage desconhecido permanece pending. Comparação v1 × v2 preparada, não executada. Task 1 humana/CPB e Task 2 closeout ainda não iniciadas; sem autorização ou geração.",
-      "blocking": true
+        "action": "Executar posteriormente /opsx-verify, /opsx-sync e /opsx-archive para a change F48.2.6",
+        "context": "Solicitação explícita do usuário para deixar o lifecycle OpenSpec pendente. GSD está completo; a change permanece ativa com task 6.5 aberta até as operações do responsável.",
+       "blocking": false
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Revisar a preparação documentada Exclusivo v2; Task 0 completa, aguardando gate humano CHECKPOINT B. Sem Task 1/Task 2, provider, imagem ou execução de /runs.",
-  "context_notes": "F48.2.6: Planos 01–09 permanecem completos. Plan 10 Task 0 pre-checkpoint concluída; CHECKPOINT B not_started, Task 1 humana e Task 2 closeout não iniciadas. Política Exclusivo vigente `48.2.6-exclusivo-v2`, instrução literal aprovada. UAT preserva o relato da primeira arte sob `48.2.6-exclusivo-v1`: considerada publicável, diferenciação visual inconclusiva; nenhum slot, run ID ou metadado/linkage foi fornecido nesta atualização. Comparação v1 × v2 preparada (mesmos dados/imagem existentes e Sunburst medium; texto/versão de política como única variável), não executada. Sem provider, imagem, run, banco, migration ou alteração de preço/produção. OpenSpec permanece ativo; sem verify/sync/archive."
+  "next_action": "GSD finalizado. O usuário executará posteriormente o lifecycle OpenSpec F48.2.6; não fazer push remoto.",
+  "context_notes": "F48.2.6 GSD concluída: 10/10 planos/summaries, UAT 5/5, CHECKPOINT B approved_with_limitations. Runs finais `1ca08368-9a81-4671-9ca6-50032feac231` e `2fb07e0e-37cc-40d0-8a53-fa380f7eef81` conferidos localmente read-only, Produto v4/compositor v5; IDs `2a01db63...`/`da2f2321...` são históricos Produto v3/compositor v4. Valores plataforma confirmados arredondados US$0.05/US$0.03; cálculos locais `0.048863`/`0.030974`, provider-reported null, sem fatura conferida. Fidelidade produto/embalagem aprovada somente nos dois runs examinados; linkage slots, validação anterior de Destaque e run de letras pequenas permanecem pending. Revalidação final: 327 testes/7 arquivos, typecheck/lint/build/OpenSpec strict PASS; execução anterior contou 328 antes das últimas atualizações de testes. OpenSpec ativa com 41/42 tasks, lifecycle reservado pelo usuário. Sem novas gerações, provider calls, DB writes, migrations ou push remoto."
 }

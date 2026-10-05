@@ -42,17 +42,39 @@ Registrar políticas/version para as três intenções nos registries existentes
 
 #### D3.1 — Ajuste intrafase Exclusivo v3 e preservação da tentativa v1
 
-A versão vigente da política Exclusivo SHALL ser `48.2.6-exclusivo-v3` e conter somente a instrução literal aprovada. A evidência e a decisão do usuário sobre a primeira arte Exclusivo sob `48.2.6-exclusivo-v1` permanecem preservadas, sem sobrescrever a tentativa anterior; v2 não teve tentativa visual. A comparação preparada v1 × v3 muda somente a política e SHALL reutilizar os mesmos dados/imagem existentes e `gpt-image-2.5-sunburst` `medium`. A direção de fundo precisa ser comparável e registrada; se a evidência v1 não permitir identificá-la, a limitação permanece explícita e o resultado não será tratado como comparação controlada. Não executar nova geração até revisão humana e confirmação financeira individual.
+A versão vigente da política Exclusivo SHALL ser `48.2.6-exclusivo-v3` e conter somente a instrução literal aprovada. A evidência e a decisão do usuário sobre a primeira arte Exclusivo sob `48.2.6-exclusivo-v1` permanecem preservadas, sem sobrescrever a tentativa anterior; v2 não teve tentativa visual. A comparação preparada v1 × v3 SHALL ser descrita como antes × depois, não controlada para isolar o efeito da política Exclusivo: a política Produto, o compositor e a instrução de fundo também mudaram desde a tentativa v1. Reutilizar os mesmos dados/imagem existentes e `gpt-image-2.5-sunburst` `medium` somente se isso for confirmado; direção de fundo v1 desconhecida permanece `pending`, sem alegação de controle. Não atribuir eventual diferença visual exclusivamente à política Exclusivo. Não executar nova geração até revisão humana e confirmação financeira individual.
 
 Alternativa rejeitada: ramificações no compositor neutro ou no prompt-base, que duplicariam decisões de política.
 
 ### D4 — Texto literal e imagens auxiliares
 
-Instruções curtas: “Nome: completo, sem alterar palavras; capitalização e arranjo livres.”; “Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.”; “Textos obrigatórios: exiba cada texto integralmente uma única vez.” A política Produto atualiza os requisitos existentes e mantém revisão textual/`keep_exactly`; essa regra de texto obrigatório não se repete em outra política. Presença/fidelidade na imagem são avaliadas por humanos. Para imagens, usar somente: “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.” Permitir múltiplas representações, ângulos e variantes do produto anunciado, sem declarar suporte a produtos independentes/combos. Auxiliares opcionais e sem garantia de aparição. Limites, ordem e transporte ficam regidos pelos contratos técnicos existentes, sem reexplicá-los no prompt. Repetição de texto e presença de imagens são contratos distintos.
+Instrução de nome única no prompt compilado: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` Não manter outra linha “Nome: completo…”; a entrada do nome permanece intacta e não é corrigida silenciosamente. Descrição continua opcional/adaptável/omitível sem alterar significado; cada texto obrigatório aparece integralmente uma única vez. Mantêm-se revisão textual/`keep_exactly` e a regra de texto obrigatório não se repete em outra política.
+
+As instruções de imagem variam pela quantidade de referências de produto, nunca incluindo a imagem de identidade nessa contagem:
+
+| Referências de produto | Instrução de imagem |
+|---|---|
+| 0 | `Produto como elemento principal da peça.` |
+| 1 | `Produto como elemento principal da peça. Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.` |
+| 2+ | `A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.` e `Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.` |
+
+Para uma imagem, não mencionar primeira imagem, variante ou imagens auxiliares; a frase completa da linha de referência é a única orientação de imagem. Para duas ou mais, manter protagonismo da primeira e apoio secundário das auxiliares, com a fidelidade descrita exatamente uma vez. Não declarar suporte a produtos independentes/combos nem garantir aparição das auxiliares. Limites, ordem e transporte ficam regidos pelos contratos técnicos existentes. Repetição de texto e presença de imagens são contratos distintos.
 
 #### D4.1 — Rótulo do nome compilado
 
-O compositor serializa o campo como `Nome do produto obrigatório: {nome}`. A política Produto muda para `48.2.6-produto-v3`; a frase de preservação do nome e sua liberdade de apresentação permanecem intactas, sem nova regra.
+O compositor serializa nome e orientação em uma linha: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` A política Produto muda para `48.2.6-produto-v4`; não há linha adicional “Nome: completo…”. A serialização preserva exatamente o valor de entrada, sem correção silenciosa.
+
+#### D4.6 — Papel de imagem condicionado à contagem
+
+A política Produto recebe a contagem das referências de produto na resolução de políticas. Com uma referência, emite apenas a instrução única de elemento principal/fidelidade aprovada; com duas ou mais, emite a orientação validada de protagonista/auxiliares e a orientação de fidelidade exatamente uma vez; com zero, emite apenas a orientação geral de elemento principal, sem alegar fidelidade a imagem ausente. A mesma contagem/referências alimenta composição e revalidação do preflight para que o prompt aprovado seja reproduzível.
+
+#### D4.7 — Versionamento e pontuação do nome no compositor
+
+A serialização do nome SHALL ser identificada por `48.2.4-prompt-composer-v5`, pois runs v4 registram um texto compilado diferente. O valor de entrada permanece literal. Ao concatenar a instrução, se o nome trimado terminar em `.`, não acrescentar outro ponto antes de `Inclua`; nomes sem ponto final mantêm exatamente a redação normal, sem alteração.
+
+#### D4.8 — Rastreabilidade histórica das versões do compositor
+
+`48.2.4-prompt-composer-v4` introduziu as frases específicas de direção de fundo. `48.2.4-prompt-composer-v5` mantém essas frases e identifica a nova serialização do nome; runs v4 registram o texto de nome anterior e não podem ser descritos como tendo usado o texto v5.
 
 #### D4.2 — Rótulo neutro compartilhado para preço
 
@@ -60,11 +82,23 @@ O compositor serializa `discountedPriceText` com o rótulo neutro `Preço de ven
 
 #### D4.3 — Direção de fundo explicitamente escolhida
 
-Todas as intenções exibem uma seleção única e obrigatória: `Fundo de estúdio`, `Cenário ambientado` ou `Manter cenário original`; nenhuma é default, inclusive em Oferta. O valor selecionado é transportado ao prompt, briefing/snapshot, preflight e validação server-side. `Manter cenário original` requer exatamente uma referência de imagem de produto; a identidade da loja é separada e não conta. Se alterar a quantidade invalidar essa seleção, a UI limpa a escolha e exige reseleção explícita. O checkbox legado `preserveImageContext` não é uma segunda escolha; eventual flag booleana para o mapper é derivada apenas do background selecionado e não gera uma segunda linha de prompt. A mudança do campo e sua serialização incrementam `COMPOSER_VERSION` para `48.2.4-prompt-composer-v3`; as políticas Oferta, Destaque e geral permanecem inalteradas.
+Todas as intenções exibem uma seleção única e obrigatória: `Fundo de estúdio`, `Cenário ambientado` ou `Manter cenário original`; nenhuma é default, inclusive em Oferta. A opção `Manter cenário original` só é renderizada quando há exatamente uma referência de imagem de produto; com 0 ou 2+ referências ela não aparece (não apenas desabilitada). Mudanças na contagem limpam uma seleção `original` invalidada e exigem reseleção explícita. Identidade da loja não conta. A seleção continua no briefing/snapshot, preflight e validação server-side. O checkbox legado `preserveImageContext` não é uma segunda escolha; eventual flag booleana interna deriva apenas da direção escolhida. O seletor mostra nomes curtos, mas somente a instrução específica da direção selecionada entra no prompt:
+
+| Direção | Instrução compilada |
+|---|---|
+| Estúdio | `Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.` |
+| Ambientado | `Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.` |
+| Original | `Mantenha o cenário da imagem enviada como base; não o substitua por outro.` |
+
+Essas frases substituem a serialização anterior de rótulo puro e foram introduzidas em `COMPOSER_VERSION=48.2.4-prompt-composer-v4`.
 
 #### D4.4 — Versões vigentes após ajuste intrafase
 
-A política Produto SHALL ser `48.2.6-produto-v3`; a política Exclusivo SHALL ser `48.2.6-exclusivo-v3`. A v1 Exclusivo e sua evidência permanecem históricas; a v2 sem tentativa visual é preservada no histórico, sem promoção nem inferência de resultado.
+A política Produto SHALL ser `48.2.6-produto-v4`; a política Exclusivo SHALL ser `48.2.6-exclusivo-v3`. A v1 Exclusivo e sua evidência permanecem históricas; a v2 sem tentativa visual é preservada no histórico, sem promoção nem inferência de resultado.
+
+#### D4.5 — Instruções específicas de direção de fundo
+
+O controle mantém rótulos curtos na UI. A serialização do prompt SHALL usar exclusivamente a frase da opção selecionada conforme a tabela de D4.3, sem incluir o rótulo isoladamente ou as frases das opções não selecionadas. Essa mudança foi versionada em `48.2.4-prompt-composer-v4`.
 
 ### D4a — Validade exclusiva de Oferta
 

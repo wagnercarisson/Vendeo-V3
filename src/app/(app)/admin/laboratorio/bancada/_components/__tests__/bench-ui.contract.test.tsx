@@ -714,18 +714,22 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
     const { rerender } = render(<BenchCampaignForm value={props} onChange={onChange} productReferenceCount={2} />);
     const selector = screen.getByLabelText("Direção de fundo");
     expect(selector).toHaveValue("");
-    expect(screen.getByRole("option", { name: "Manter cenário original" })).toBeDisabled();
+    expect(screen.queryByRole("option", { name: "Manter cenário original" })).toBeNull();
     expect(screen.queryByRole("button", { name: /compor/i })).toBeNull();
     fireEvent.change(selector, { target: { value: "ambient" } });
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ backgroundDirection: "ambient" }));
-    rerender(<BenchCampaignForm value={{ ...props, backgroundDirection: "" }} onChange={onChange} productReferenceCount={2} />);
+    rerender(<BenchCampaignForm value={{ ...props, backgroundDirection: "" }} onChange={onChange} productReferenceCount={1} />);
     expect(screen.getByLabelText("Direção de fundo")).toHaveValue("");
+    expect(screen.getByRole("option", { name: "Manter cenário original" })).toBeInTheDocument();
+    rerender(<BenchCampaignForm value={{ ...props, backgroundDirection: "" }} onChange={onChange} productReferenceCount={0} />);
+    expect(screen.queryByRole("option", { name: "Manter cenário original" })).toBeNull();
   });
   it("exibe exatamente um seletor de direção para todas as intenções, sem padrão", () => {
     const { rerender } = render(
       <BenchCampaignForm
         value={{ ...EMPTY_BENCH_CAMPAIGN_FORM, campaignIntent: "offer" }}
         onChange={() => {}}
+        productReferenceCount={1}
       />,
     );
 
@@ -749,6 +753,7 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
       <BenchCampaignForm
         value={{ ...EMPTY_BENCH_CAMPAIGN_FORM, campaignIntent: "spotlight" }}
         onChange={() => {}}
+        productReferenceCount={1}
       />,
     );
     expect(screen.getAllByLabelText("Direção de fundo")).toHaveLength(1);
@@ -758,6 +763,7 @@ describe("contrato de UI — formulário fiel e brandColor", () => {
       <BenchCampaignForm
         value={{ ...EMPTY_BENCH_CAMPAIGN_FORM, campaignIntent: "exclusive" }}
         onChange={() => {}}
+        productReferenceCount={1}
       />,
     );
     expect(screen.getAllByLabelText("Direção de fundo")).toHaveLength(1);
@@ -918,7 +924,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           composerVersion: COMPOSER_VERSION,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v3",
+            tipoConteudo: "48.2.6-produto-v4",
             geral: "48.2.5-general-integrity-v1",
           },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1147,7 +1153,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           composerVersion: COMPOSER_VERSION,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v3",
+            tipoConteudo: "48.2.6-produto-v4",
             geral: "48.2.5-general-integrity-v1",
           },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1389,7 +1395,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
           compiledPrompt: "PROMPT SEM ALERTAS",
           blocks: {},
           composerVersion: COMPOSER_VERSION,
-          policyVersions: { tipoConteudo: "48.2.6-produto-v3", geral: "48.2.5-general-integrity-v1" },
+          policyVersions: { tipoConteudo: "48.2.6-produto-v4", geral: "48.2.5-general-integrity-v1" },
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
           textIntegrityEvidence: {
             policyVersion: TEXT_INTEGRITY_POLICY_VERSION,
@@ -1533,7 +1539,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             composerVersion: COMPOSER_VERSION,
             policyVersions: {
               intencao: "48.2.6-oferta-v1",
-              tipoConteudo: "48.2.6-produto-v3",
+              tipoConteudo: "48.2.6-produto-v4",
               geral: "48.2.5-general-integrity-v1",
             },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1582,7 +1588,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
             composerVersion: COMPOSER_VERSION,
             policyVersions: {
               intencao: "48.2.6-oferta-v1",
-              tipoConteudo: "48.2.6-produto-v3",
+              tipoConteudo: "48.2.6-produto-v4",
               geral: "48.2.5-general-integrity-v1",
             },
             promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
@@ -1675,7 +1681,7 @@ const PREFLIGHT_EVIDENCE: BenchPreflightEvidenceView = {
   policyVersions: {
     intencao: "48.2.6-oferta-v1",
     formato: "48.2.4-formato-1-1-v1",
-    tipoConteudo: "48.2.6-produto-v3",
+    tipoConteudo: "48.2.6-produto-v4",
     estrutura: "48.2.4-peca-unica-v1",
     tema: "48.2.4-tema-nenhum-v1",
   },
@@ -1973,7 +1979,7 @@ const POLICIES: BenchPromptPolicyView[] = [
     dimension: "tipoConteudo",
     id: "policy.tipoConteudo.produto",
     value: "produto",
-    version: "48.2.6-produto-v3",
+    version: "48.2.6-produto-v4",
   },
   {
     dimension: "estrutura",
@@ -2234,7 +2240,7 @@ describe("contrato de UI — tentativas e 'Nova tentativa' (F48.2.4)", () => {
           promptBaseVersion: BENCH_DEFAULT_PROMPT_BASE.version,
           policyVersions: {
             intencao: "48.2.6-oferta-v1",
-            tipoConteudo: "48.2.6-produto-v3",
+            tipoConteudo: "48.2.6-produto-v4",
             geral: "48.2.5-general-integrity-v1",
           },
           composerVersion: COMPOSER_VERSION,

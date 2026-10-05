@@ -1,8 +1,9 @@
 ---
 phase: 48.2.6-validacao-experimental-produto-intencoes-1-1
-status: ready
+status: complete
 checkpoint_a: approved_local_readiness_only
 readiness_scope: local-only
+readiness_result: ready_for_manual_uat
 blocked: false
 supabase_cli_version: 2.104.0
 provider_calls: 0

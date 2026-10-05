@@ -205,7 +205,7 @@ export const POST = apiHandler(async (request: Request) => {
   // com a loja e antes de qualquer chamada paga (nenhum fallback/improvisação).
   let policies;
   try {
-    policies = resolveBenchPromptPolicies(config);
+    policies = resolveBenchPromptPolicies(config, undefined, { references });
   } catch (error) {
     if (error instanceof BenchPromptPolicyError) {
       return NextResponse.json(

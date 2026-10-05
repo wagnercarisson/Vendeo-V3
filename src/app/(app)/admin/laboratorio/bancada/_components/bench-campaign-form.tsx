@@ -303,7 +303,7 @@ export function BenchCampaignForm({
         <option value="">Selecione…</option>
         <option value="studio">{BENCH_BACKGROUND_LABELS.studio}</option>
         <option value="ambient">{BENCH_BACKGROUND_LABELS.ambient}</option>
-        <option value="original" disabled={productReferenceCount !== 1}>{BENCH_BACKGROUND_LABELS.original}</option>
+        {productReferenceCount === 1 ? <option value="original">{BENCH_BACKGROUND_LABELS.original}</option> : null}
       </LabSelect>
       {value.backgroundDirection === "original" && productReferenceCount !== 1 ? (
         <p role="alert" data-testid="bench-background-reference-guard">Manter cenário original exige exatamente uma imagem de produto. Faça novo upload e selecione novamente.</p>

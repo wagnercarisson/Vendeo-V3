@@ -110,19 +110,24 @@ function makeOffer(): BenchOffer {
   };
 }
 
-function makeBriefing(config: BenchConfig = CONFIG) {
+function makeBriefing(config: BenchConfig = CONFIG, product = makeProduct(), offer = makeOffer()) {
   const snapshot = buildBenchCampaignSnapshot({
-    product: makeProduct(),
-    offer: makeOffer(),
+    product,
+    offer,
     config,
   });
   return buildBenchExperimentalBriefing({ branding: makeBranding(), snapshot, config });
 }
 
 /** Compõe o recorte com as contribuições resolvidas das políticas. */
-function composeResolved(config: BenchConfig = CONFIG, promptBase = PROMPT_BASE): string {
-  const { contributions } = resolveBenchPromptPolicies(config);
-  return composePromptBlocks({ briefing: makeBriefing(config), promptBase, contributions }).text;
+function composeResolved(
+  config: BenchConfig = CONFIG,
+  promptBase = PROMPT_BASE,
+  references?: readonly string[],
+  product = makeProduct(),
+): string {
+  const { contributions } = resolveBenchPromptPolicies(config, undefined, { references });
+  return composePromptBlocks({ briefing: makeBriefing(config, product), promptBase, contributions, references }).text;
 }
 
 // ─── Resolução explícita e versionada ────────────────────────────────────────
@@ -141,7 +146,11 @@ describe("políticas — resolução explícita e versionada", () => {
       const resolved = resolveBenchPromptPolicies(config);
       const text = composePromptBlocks({ briefing, promptBase: "", contributions: resolved.contributions }).text;
       expect(snapshot.backgroundDirection).toBe(direction);
-      expect(text).toContain(`Direção de fundo: ${{ studio: "Fundo de estúdio", ambient: "Cenário ambientado", original: "Manter cenário original" }[direction]}`);
+      expect(text).toContain(`Direção de fundo: ${{
+        studio: "Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.",
+        ambient: "Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.",
+        original: "Mantenha o cenário da imagem enviada como base; não o substitua por outro.",
+      }[direction]}`);
     }
   });
 
@@ -183,7 +192,7 @@ describe("políticas — resolução explícita e versionada", () => {
   });
 
   it("versiona a serialização neutra do preço de venda sem alterar a política Oferta", () => {
-    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v3");
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v5");
     expect(ofertaPolicy.version).toBe("48.2.6-oferta-v1");
     expect(ofertaPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines)).toContain(
       "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
@@ -191,14 +200,76 @@ describe("políticas — resolução explícita e versionada", () => {
     expect(composeResolved()).toContain(`Preço de venda: R$${NBSP}49,90`);
   });
 
-  it("versiona a orientação da imagem principal e das adicionais em produto", () => {
-    const lines = produtoPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines);
-    expect(produtoPolicy.version).toBe("48.2.6-produto-v3");
-    expect(lines).toContain(
-      "A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.",
+  it("não duplica o ponto final de um nome e mantém a redação normal inalterada", () => {
+    const prompt = composeResolved(CONFIG, "", ["bench/product.png"], {
+      ...makeProduct(),
+      name: "Johnnie Walker.",
+    });
+
+    expect(prompt).toContain("Nome obrigatório na arte: Johnnie Walker. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.");
+    expect(prompt).not.toContain("Johnnie Walker.. Inclua");
+    expect(composeResolved(CONFIG, "", ["bench/product.png"])).toContain(
+      "Nome obrigatório na arte: Camiseta básica. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.",
     );
-    expect(lines.join(" ").toLowerCase()).not.toContain("garantia de aparição");
-    expect(lines.join(" ").toLowerCase()).not.toContain("layout programático");
+  });
+
+  it("versiona as instruções do produto conforme a contagem de imagens", () => {
+    const singleImageLines = produtoPolicy.contributions({ config: CONFIG, references: ["product-1.png"] }).flatMap((entry) => entry.lines);
+    const multiImageLines = produtoPolicy.contributions({ config: CONFIG, references: ["product-1.png", "product-2.png"] }).flatMap((entry) => entry.lines);
+    expect(produtoPolicy.version).toBe("48.2.6-produto-v4");
+    expect(singleImageLines).toContain("Produto como elemento principal da peça. Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.");
+    expect(singleImageLines.join(" ")).not.toContain("primeira imagem");
+    expect(singleImageLines.join(" ")).not.toContain("variante protagonista");
+    expect(singleImageLines.join(" ")).not.toContain("imagens auxiliares");
+    expect(multiImageLines).toContain("A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.");
+    expect(multiImageLines.filter((line) => line === "Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.")).toHaveLength(1);
+    expect(singleImageLines.join(" ").toLowerCase()).not.toContain("garantia de aparição");
+    expect(multiImageLines.join(" ").toLowerCase()).not.toContain("layout programático");
+  });
+
+  it.each([
+    { intent: "oferta" as const, campaignIntent: "offer" as const },
+    { intent: "destaque" as const, campaignIntent: "spotlight" as const },
+    { intent: "exclusivo" as const, campaignIntent: "exclusive" as const },
+  ])("compila uma e várias imagens sem duplicar instruções para $intent", ({ intent, campaignIntent }) => {
+    const config = { ...CONFIG, intencao: intent } as BenchConfig;
+    const product = {
+      ...makeProduct(),
+      name: "Johnnie Walker Black Label 750ml",
+      priceCents: intent === "exclusivo" ? undefined : 4990,
+      originalPriceCents: intent === "oferta" ? 9990 : undefined,
+    };
+    const offer = {
+      ...makeOffer(),
+      campaignIntent,
+      badge: intent === "oferta" ? "50% OFF" : "",
+      validity: intent === "oferta" ? "até 31/12/2026" : undefined,
+    };
+    const briefing = makeBriefing(config, product, offer);
+    const singleReferences = ["bench/product-1.png"];
+    const multipleReferences = [...singleReferences, "bench/product-2.png"];
+    const expectedName = "Nome obrigatório na arte: Johnnie Walker Black Label 750ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.";
+    const expectedOneImage = "Produto como elemento principal da peça. Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.";
+    const expectedMultipleImageFidelity = "Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.";
+    const expectedMultipleImageHierarchy = "A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.";
+
+    for (const references of [singleReferences, multipleReferences]) {
+      const policies = resolveBenchPromptPolicies(config, undefined, { briefing, references });
+      const composition = composePromptBlocks({ briefing, promptBase: "", references, contributions: policies.contributions, policyVersions: policies.versions });
+      expect(policies.versions.tipoConteudo).toBe("48.2.6-produto-v4");
+      expect(composition.text.split(expectedName)).toHaveLength(2);
+      expect(composition.text).not.toContain("Nome: completo");
+      expect(composition.text).not.toContain("Nome do produto obrigatório:");
+      if (references.length === 1) {
+        expect(composition.text.split(expectedOneImage)).toHaveLength(2);
+        expect(composition.text).not.toContain("primeira imagem");
+        expect(composition.text).not.toContain("variante protagonista");
+        expect(composition.text).not.toContain("imagens auxiliares");
+      } else {
+        expect(composition.text).toContain(expectedMultipleImageHierarchy);
+        expect(composition.text.split(expectedMultipleImageFidelity)).toHaveLength(2);
+      }
+    }
   });
 
   it("versiona a política geral uma vez sem adicioná-la às dimensões configuráveis", () => {
@@ -351,7 +422,7 @@ describe("políticas — atribuição exclusiva e disjunta (oferta × produto)",
     ]) {
       expect(generalLines.join(" ").toLowerCase()).not.toContain(forbiddenOwnerTerm);
     }
-    expect(productLines.join(" ")).toContain("Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.");
+    expect(productLines.join(" ")).not.toContain("Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.");
     expect(productLines.join(" ")).toContain("preservando o significado");
     expect(productLines.join(" ")).toContain("Textos obrigatórios: exiba cada texto integralmente uma única vez.");
     expect(offerLines.join(" ")).toContain("Oferta: destaque o preço por");
@@ -393,17 +464,14 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
   it("compõe o prompt completo de forma determinística", () => {
     const golden = [
       "[PRODUTO E IMAGENS DE REFERÊNCIA]",
-      "Nome do produto obrigatório: Camiseta básica",
+      "Nome obrigatório na arte: Camiseta básica. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.",
       "Descrição: 100% algodão",
       "Produto como elemento principal da peça.",
-      "Reproduzir com fidelidade a aparência, a embalagem e as características do produto.",
-      "A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.",
-      "Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.",
       "Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.",
       "Textos obrigatórios: exiba cada texto integralmente uma única vez.",
       "",
       "[CONDIÇÕES COMERCIAIS]",
-      "Direção de fundo: Fundo de estúdio",
+      "Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.",
       `Preço original: R$${NBSP}99,90`,
       `Preço de venda: R$${NBSP}49,90`,
       "Selo: 50% OFF",

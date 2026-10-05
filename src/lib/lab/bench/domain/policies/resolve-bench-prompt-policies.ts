@@ -6,7 +6,7 @@ import {
   PROMPT_POLICY_DIMENSIONS,
   type BenchPromptPolicyRegistry,
 } from "./registry";
-import type { BenchPromptContribution } from "./types";
+import type { BenchPolicyContext, BenchPromptContribution } from "./types";
 
 /**
  * Resolução explícita e **fail-closed** das políticas de dimensão (F48.2.4, D2),
@@ -63,6 +63,7 @@ export interface ResolvedBenchPromptPolicies {
 export function resolveBenchPromptPolicies(
   config: BenchConfig,
   registry: BenchPromptPolicyRegistry = BENCH_PROMPT_POLICY_REGISTRY,
+  context: Partial<Omit<BenchPolicyContext, "config">> = {},
 ): ResolvedBenchPromptPolicies {
   // Autoridade dos valores: recusa valor desconhecido/desabilitado antes de
   // resolver qualquer política.
@@ -78,7 +79,7 @@ export function resolveBenchPromptPolicies(
       throw new BenchPromptPolicyError({ dimension, value });
     }
     versions[dimension] = policy.version;
-    contributions.push(...policy.contributions({ config: resolved }));
+    contributions.push(...policy.contributions({ config: resolved, ...context }));
   }
 
   // Política linguística geral, independente das dimensões configuráveis. Tem

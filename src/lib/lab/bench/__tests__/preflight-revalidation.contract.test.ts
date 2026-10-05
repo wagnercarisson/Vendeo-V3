@@ -216,8 +216,8 @@ describe("assertPreflightCompositionMatches", () => {
 
     expect(studioBriefing.backgroundDirection).toBe("studio");
     expect(ambientBriefing.backgroundDirection).toBe("ambient");
-    expect(approved.text).toContain("Direção de fundo: Fundo de estúdio");
-    expect(current.text).toContain("Direção de fundo: Cenário ambientado");
+    expect(approved.text).toContain("Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.");
+    expect(current.text).toContain("Direção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.");
     expect(current.text).not.toBe(approved.text);
     expect(() =>
       assertPreflightCompositionMatches({

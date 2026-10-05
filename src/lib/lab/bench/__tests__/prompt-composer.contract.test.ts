@@ -165,17 +165,26 @@ const PROMPT_BASE = "Crie uma arte comercial clara e legível.";
 
 describe("núcleo do compositor — estrutura de blocos canônicos", () => {
   it.each([
-    ["offer", "studio", "Fundo de estúdio"], ["offer", "ambient", "Cenário ambientado"], ["offer", "original", "Manter cenário original"],
-    ["spotlight", "studio", "Fundo de estúdio"], ["spotlight", "ambient", "Cenário ambientado"], ["spotlight", "original", "Manter cenário original"],
-    ["exclusive", "studio", "Fundo de estúdio"], ["exclusive", "ambient", "Cenário ambientado"], ["exclusive", "original", "Manter cenário original"],
-  ] as const)("serializa a direção localizada para %s/%s", (intent, direction, label) => {
+    ["offer", "studio", "Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio."],
+    ["offer", "ambient", "Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura."],
+    ["offer", "original", "Mantenha o cenário da imagem enviada como base; não o substitua por outro."],
+    ["spotlight", "studio", "Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio."],
+    ["spotlight", "ambient", "Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura."],
+    ["spotlight", "original", "Mantenha o cenário da imagem enviada como base; não o substitua por outro."],
+    ["exclusive", "studio", "Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio."],
+    ["exclusive", "ambient", "Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura."],
+    ["exclusive", "original", "Mantenha o cenário da imagem enviada como base; não o substitua por outro."],
+  ] as const)("serializa somente a instrução da direção escolhida para %s/%s", (intent, direction, instruction) => {
     const product = intent === "offer" ? makeProduct() : makeProduct({ priceCents: intent === "spotlight" ? 4990 : undefined, originalPriceCents: undefined });
     const configIntent = intent === "offer" ? "oferta" : intent === "spotlight" ? "destaque" : "exclusivo";
     const { briefing } = makeBriefing({ product, offer: { campaignIntent: intent, backgroundDirection: direction, ...(intent === "offer" ? {} : { badge: "", validity: undefined }) }, intent: configIntent });
     const composition = composePromptBlocks({ briefing, promptBase: "" });
-    expect(composition.text).toContain(`Direção de fundo: ${label}`);
+    expect(composition.text).toContain(`Direção de fundo: ${instruction}`);
+    expect(composition.text).not.toContain("Direção de fundo: Fundo de estúdio");
+    expect(composition.text).not.toContain("Direção de fundo: Cenário ambientado");
+    expect(composition.text).not.toContain("Direção de fundo: Manter cenário original");
     expect(composition.text).not.toContain(`Direção de fundo: ${direction}`);
-    expect(composition.composerVersion).toBe("48.2.4-prompt-composer-v3");
+    expect(composition.composerVersion).toBe("48.2.4-prompt-composer-v5");
   });
 
   it("usa os 7 blocos canônicos na ordem travada (dados + contribuições)", () => {
@@ -253,7 +262,7 @@ describe("núcleo do compositor — estrutura de blocos canônicos", () => {
 
     const { blocks } = composePromptBlocks({ briefing, promptBase: PROMPT_BASE });
 
-    expect(blocks[PROMPT_BLOCK_LABELS.commercial]).toContain("Direção de fundo: Manter cenário original");
+    expect(blocks[PROMPT_BLOCK_LABELS.commercial]).toContain("Direção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.");
     expect(Object.values(blocks).join("\n")).not.toContain("Preservar imagem original: sim");
   });
 });
@@ -392,7 +401,7 @@ describe("núcleo do compositor — determinismo e pureza", () => {
 
   it("exporta COMPOSER_VERSION como string estática da fase", () => {
     expect(typeof COMPOSER_VERSION).toBe("string");
-    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v3");
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v5");
   });
 
   it("o módulo é puro e sem IA (fonte): sem env, rede, provider ou supabase", () => {

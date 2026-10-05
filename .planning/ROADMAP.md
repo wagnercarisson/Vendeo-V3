@@ -52,7 +52,7 @@
 | 48.2.3 | ✅ Concluída, verificada, sincronizada e arquivada — Fidelidade experimental da bancada | 8/8 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual **sem provider** com custo **US$ 0**; duas lojas de teste importadas localmente; produção intocada; OpenSpec arquivado em `openspec/changes/archive/2026-09-29-fase-48-2-3-fidelidade-experimental-bancada/` |
 | 48.2.4 | ✅ Concluída, verificada, sincronizada e arquivada — Experimento determinístico Oferta 1:1 | 10/10 planos; **CHECKPOINT A** e **CHECKPOINT B** aprovados; UAT manual (Flare low `requer ajuste`; Sunburst low `aprovado com follow-up`); gerações reais **manuais** (US$ 0,03 cada); produção intocada (`base..HEAD` vazio); pricing `2026-09-bench-2`; chave exclusiva da bancada validada; OpenSpec arquivado em `openspec/changes/archive/2026-09-30-fase-48-2-4-experimento-deterministico-oferta-1-1/` |
 | 48.2.5 | ✅ UAT GSD e security review concluídos | 8/8 planos/summaries; 37/37 tasks; 5/5 checkpoints GSD PASS; CHECKPOINT B aprovado com limitações; security review retroativa 7/7 fechados, 0 abertos (`48-2-5-SECURITY.md`); 65 critérios `pending` reconhecidos; OpenSpec verificado/sincronizado/arquivado |
-| 48.2.6 | ◇ Em execução — Validação experimental Produto — intenções 1:1 | Planos até 06 concluídos (6/10 summaries); políticas Oferta/Destaque/Exclusivo indexadas por valor, prompt-base compartilhado; suíte focada 134/134, typecheck/lint verdes; sem geração, provider ou migrations |
+| 48.2.6 | ✅ GSD concluída com limitações — Validação experimental Produto — intenções 1:1 | 10/10 planos/summaries; GSD UAT 5/5 pass, 0 issues; CHECKPOINT B `approved_with_limitations`; security 6/6 fechada, 0 abertas; revalidação final 327 testes focados, typecheck/lint/build/OpenSpec strict verdes; sem geração/provider do executor ou promoção. OpenSpec change permanece ativa (41/42 tasks); verify/sync/archive reservados pelo usuário para depois. |
 | 48.2.2-antiga | ⏸ Descartada — Auditoria e Otimização do Prompt do Revisor | Escopo descartado/substituído em 2026-09-28; sem artefatos mantidos; implementação não iniciada; recuperável pelo histórico do Git |
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
@@ -61,8 +61,8 @@
 
 ## Current State
 
-- F50 é a fase atual encerrada: 17/17 planos e 17/17 summaries, em 10 waves.
-- O OpenSpec da F50 está arquivado; não há execução ativa nem mudança de código decorrente deste tracking.
+- F50 permanece encerrada: 17/17 planos e 17/17 summaries, em 10 waves; OpenSpec arquivado.
+- Follow-up F48.2.6: fechamento GSD completo (10/10 planos, UAT 5/5, CHECKPOINT B aprovado com limitações); a change OpenSpec segue ativa e aguarda as operações posteriores do usuário.
 - Demonstração pública, e-mail e signup público permanecem desativados; o beta fechado está preservado.
 - F50.1 só deve ser constituída após a PJ: identidade legal, revisão/publicação dos documentos, migration efetiva, ativação ordenada e smoke test pós-corte.
 - Monetização pública / Stripe permanece iniciativa diferida e não é fase numerada.
@@ -188,7 +188,7 @@ Plans:
 
 **Nome:** Validação experimental Produto — intenções 1:1
 
-**Status:** Planos 01–09 executados/summarized (9/10); CHECKPOINT A aprovado; readiness local e documentos do Plano 09 concluídos; CHECKPOINT B não iniciado; Plano 10 não iniciado nesta continuação por instrução do usuário; sem provider, leitura remota ou geração paga.
+**Status:** GSD concluída — 10/10 planos/summaries, GSD UAT 5/5 pass e CHECKPOINT B `approved_with_limitations`; limitações aceitas e critérios sem evidência permanecem `pending`. A change OpenSpec continua ativa (41/42 tasks); verify/sync/archive não executados por solicitação explícita do usuário e ficam para o responsável. Sem novas chamadas do executor, promoção ou push remoto.
 
 **Planejamento:** 10 planos, no limite superior orientativo do guia; a sequência mantém os gates de segurança, CHECKPOINT A, preparação documental e CHECKPOINT B como barreiras distintas, sem ampliar a change.
 

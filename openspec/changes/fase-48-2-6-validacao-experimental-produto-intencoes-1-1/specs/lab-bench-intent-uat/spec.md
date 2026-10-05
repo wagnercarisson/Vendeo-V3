@@ -25,14 +25,20 @@ A validação experimental SHALL cobrir somente Produto 1:1 e Oferta, Destaque e
 - **THEN** usa `gpt-image-2.5-sunburst` em `medium` inicialmente
 - **AND** não inclui comparação entre modelos
 
-#### Scenario: Comparação manual preserva Exclusivo v1 e varia somente a política
+#### Scenario: Comparação manual documenta antes e depois sem causalidade isolada
 - **WHEN** o usuário prepara a comparação da primeira arte Exclusivo v1 com uma tentativa v3
 - **THEN** a evidência/decisão v1 permanece imutável e preservada
 - **AND** dados, imagem e `gpt-image-2.5-sunburst` `medium` permanecem iguais
-- **AND** somente a política Exclusivo muda para `48.2.6-exclusivo-v3`; a direção de fundo é mantida comparável quando há evidência suficiente
+- **AND** o protocolo descreve a comparação como antes × depois, porque Produto, compositor e instrução de fundo também mudaram
+- **AND** o protocolo não atribui diferenças somente à política Exclusivo nem afirma ser controlado para isolá-la
+- **AND** a direção de fundo da evidência v1 permanece `pending` se não houver evidência que a estabeleça
 - **AND** nenhuma nova geração é iniciada sem revisão humana e confirmação financeira individual
 - **AND** a avaliação visual pode permanecer inconclusiva até a comparação manual efetiva
-- **AND** a diferença visual não é atribuída somente à política se a direção de fundo v1 não puder ser confirmada
+
+#### Scenario: Observação manual sem linkage não recebe atribuição de versão
+- **WHEN** o usuário relata uma observação visual sem Run ID ou metadados vinculados
+- **THEN** o relato é preservado como observação manual não vinculada
+- **AND** não é atribuído a slot, política ou versão de código sem evidência
 
 #### Scenario: Encerramento com limitações é aceito sem alterar pendências
 - **WHEN** usuário aprova CHECKPOINT B apesar de critérios `pending`

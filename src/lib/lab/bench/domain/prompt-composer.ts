@@ -1,5 +1,5 @@
 import type { BenchExperimentalBriefing } from "./experimental-briefing";
-import { BENCH_BACKGROUND_LABELS } from "./background-direction";
+import { BENCH_BACKGROUND_PROMPT_INSTRUCTIONS } from "./background-direction";
 import type { BenchPromptContribution } from "./policies/types";
 
 /**
@@ -37,7 +37,7 @@ import type { BenchPromptContribution } from "./policies/types";
  */
 
 /** Versão estática do compositor — evidência do preflight (D20). */
-export const COMPOSER_VERSION = "48.2.4-prompt-composer-v3";
+export const COMPOSER_VERSION = "48.2.4-prompt-composer-v5";
 
 // ─── Blocos canônicos (travados — D19) ───────────────────────────────────────
 
@@ -109,7 +109,15 @@ function productLines(
   references: readonly string[] | undefined,
 ): string[] {
   const lines: string[] = [];
-  pushLine(lines, "Nome do produto obrigatório", briefing.product.name);
+  if (briefing.product.name?.trim()) {
+    const productName = briefing.product.name.trim();
+    const separator = productName.endsWith(".") ? "" : ".";
+    pushLine(
+      lines,
+      "Nome obrigatório na arte",
+      `${productName}${separator} Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.`,
+    );
+  }
   pushLine(lines, "Descrição", briefing.product.description);
   if (references && references.length > 0) {
     lines.push(`Imagens de referência: ${references.length}`);
@@ -119,8 +127,8 @@ function productLines(
 
 function commercialLines(briefing: BenchExperimentalBriefing): string[] {
   const lines: string[] = [];
-  const backgroundLabel = BENCH_BACKGROUND_LABELS[briefing.backgroundDirection as keyof typeof BENCH_BACKGROUND_LABELS];
-  if (backgroundLabel) pushLine(lines, "Direção de fundo", backgroundLabel);
+  const backgroundInstruction = BENCH_BACKGROUND_PROMPT_INSTRUCTIONS[briefing.backgroundDirection as keyof typeof BENCH_BACKGROUND_PROMPT_INSTRUCTIONS];
+  if (backgroundInstruction) pushLine(lines, "Direção de fundo", backgroundInstruction);
   pushLine(lines, "Preço original", briefing.commercial.originalPriceText);
   pushLine(lines, "Preço de venda", briefing.commercial.discountedPriceText);
   pushLine(lines, "Selo", briefing.commercial.badge);

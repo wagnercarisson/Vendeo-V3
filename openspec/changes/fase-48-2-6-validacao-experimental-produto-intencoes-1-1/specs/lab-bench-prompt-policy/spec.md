@@ -53,17 +53,18 @@ A serialização compartilhada do valor `discountedPriceText` SHALL usar o rótu
 
 ### Requirement: Política Produto orienta o foco no produto e o uso das referências
 
-A política `produto` SHALL orientar o produto como elemento principal, preservar fidelidade de aparência, embalagem e características e definir a primeira imagem enviada como variante protagonista. A instrução de imagem SHALL ser exatamente: “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.” Referências auxiliares podem representar múltiplas representações, ângulos e variantes do produto anunciado; são opcionais e não têm garantia de aparição. O contrato técnico existente de limite, ordem e transporte permanece vigente. Isso não cria suporte a produtos independentes ou combos. A política SHALL NOT proibir absolutamente múltiplas representações nem declarar orientações comerciais, que pertencem às políticas de intenção cabíveis.
+A política `produto` SHALL orientar o produto e suas referências pela quantidade de imagens do produto (identidade excluída): para uma imagem usar exatamente `Produto como elemento principal da peça. Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.` e não mencionar primeira imagem, variante ou auxiliares; para duas ou mais, orientar a primeira como variante protagonista, maior/em primeiro plano, e auxiliares como apoio secundário, junto de `Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.` exatamente uma vez; para zero, orientar somente que o produto seja o elemento principal. Referências auxiliares podem representar múltiplas representações, ângulos e variantes do produto anunciado; são opcionais e não têm garantia de aparição. O contrato técnico existente de limite, ordem e transporte permanece vigente. Isso não cria suporte a produtos independentes ou combos. A política SHALL NOT declarar orientações comerciais, que pertencem às políticas de intenção cabíveis.
 
 #### Scenario: Foco no produto é gerado
 - **WHEN** a política Produto contribui para o prompt
-- **THEN** orienta o produto como elemento principal e preserva aparência, embalagem e características
-- **AND** não cria atributos do produto
+- **THEN** orienta o produto como elemento principal e não inventa atributos
 
-#### Scenario: Instrução concisa de imagem substitui a antiga
-- **WHEN** a política Produto orienta imagens
-- **THEN** usa exatamente a instrução “A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.”
-- **AND** não acrescenta proibição de duplicação de produto
+#### Scenario: Instrução de imagem depende da quantidade de referências
+- **WHEN** política Produto é resolvida para zero, uma ou múltiplas imagens
+- **THEN** contribuições respeitam exatamente as frases condicionais definidas no requisito
+- **AND** uma imagem não recebe orientação de primeira imagem, variante ou auxiliares
+- **AND** duas ou mais imagens recebem protagonismo/apoio secundário e fidelidade somente uma vez
+- **AND** zero imagens não recebem alegação de fidelidade visual
 - **AND** não promete aparição de auxiliares
 
 #### Scenario: Variações do produto anunciado podem ser representadas
@@ -83,19 +84,26 @@ A política `produto` SHALL orientar o produto como elemento principal, preserva
 
 ### Requirement: Política Produto preserva nome, contexto da descrição e textos obrigatórios
 
-A política determinística `produto` SHALL usar instruções concisas: “Nome: completo, sem alterar palavras; capitalização, quebras de linha e arranjo livres.”; “Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.”; “Textos obrigatórios: exiba cada texto integralmente uma única vez.” O nome SHALL manter todas as palavras/conteúdo, sem abreviar, substituir, omitir ou corrigir silenciosamente; capitalização, quebras de linha e arranjo tipográfico podem variar. A descrição serve de apoio à arte/copy e pode ser melhorada, adaptada, resumida, parcialmente utilizada ou omitida sem desvirtuar contexto/significado nem inventar atributos, benefícios ou condições. Cada informação obrigatória SHALL ser reproduzida integralmente uma única vez conforme aprovada. Após decisão `keep_exactly`, a grafia aprovada SHALL ser preservada, inclusive possíveis erros. Presença/fidelidade na imagem são critérios humanos, não garantias técnicas. A regra de exibição única SHALL pertencer somente à política Produto; nenhuma outra política a SHALL duplicar. Os contratos existentes de revisão textual e `keep_exactly` permanecem inalterados.
+A política determinística `produto` SHALL usar como única instrução de nome no prompt compilado: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` Não SHALL emitir a linha redundante `Nome: completo…`. O nome SHALL manter todas as palavras, números e unidades sem abreviar, substituir, omitir ou corrigir silenciosamente; capitalização, quebras de linha e arranjo tipográfico podem variar. A descrição serve de apoio à arte/copy e pode ser melhorada, adaptada, resumida, parcialmente utilizada ou omitida sem desvirtuar contexto/significado nem inventar atributos, benefícios ou condições. Cada informação obrigatória SHALL ser reproduzida integralmente uma única vez conforme aprovada. Após decisão `keep_exactly`, a grafia aprovada SHALL ser preservada, inclusive possíveis erros. A regra de exibição única SHALL pertencer somente à política Produto; nenhuma outra política a SHALL duplicar. Os contratos existentes de revisão textual e `keep_exactly` permanecem inalterados.
 
-O campo de nome serializado pelo compositor SHALL usar exatamente o rótulo `Nome do produto obrigatório` (linha compilada `Nome do produto obrigatório: {nome}`). Este rótulo não altera a liberdade de apresentação/capitalização da instrução de preservação acima. A versão vigente da política Produto SHALL ser `48.2.6-produto-v3`.
+O campo de nome e sua orientação SHALL ser serializados em uma única linha compilada: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` Se o nome trimado já terminar em `.`, o compositor SHALL manter esse ponto e não acrescentar outro separador; caso contrário, SHALL acrescentar exatamente um ponto. A versão vigente da política Produto SHALL ser `48.2.6-produto-v4`; a versão do compositor para esta serialização SHALL ser `48.2.4-prompt-composer-v5`.
 
 #### Scenario: Nome compilado recebe o rótulo obrigatório
 - **WHEN** a composição serializa o nome de produto informado
-- **THEN** a linha é exatamente `Nome do produto obrigatório: {nome}`
-- **AND** a política Produto é identificada como `48.2.6-produto-v3`
-- **AND** a instrução existente de preservar todas as palavras e permitir capitalização, quebras de linha e arranjo livres permanece inalterada
+- **THEN** a linha é exatamente `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` com `{nome}` substituído pelo valor de entrada
+- **AND** a política Produto é identificada como `48.2.6-produto-v4`
+- **AND** o compositor é identificado como `48.2.4-prompt-composer-v5`
+- **AND** não há outra instrução de nome redundante
+
+#### Scenario: Nome terminado em ponto não duplica pontuação
+- **WHEN** o nome de entrada trimado termina em `.`
+- **THEN** a linha inclui o nome exatamente como informado seguido de um único ponto antes de `Inclua`
+- **AND** não produz `.. Inclua`
+- **AND** nomes sem ponto final mantêm a linha compilada aprovada sem alteração
 
 #### Scenario: Nome preserva palavras e conteúdo
 - **WHEN** nome informado/aprovado é usado
-- **THEN** todas as palavras e conteúdo são preservados
+- **THEN** todas as palavras, números, unidades e conteúdo são preservados
 - **AND** capitalização, quebras e arranjo podem variar
 - **AND** não há abreviação, substituição, omissão ou correção silenciosa
 

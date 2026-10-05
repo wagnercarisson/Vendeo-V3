@@ -1,16 +1,20 @@
-# F48.2.6 Plan 10 — preparação antes do CHECKPOINT B
+# F48.2.6 Plan 10 — evidências do CHECKPOINT B preparadas; decisão formal pendente
 
-## Task 0 concluída
+## Task 0 — validação técnica atualizada / Task 1 — evidências B preparadas
 
-- A política Exclusivo vigente agora usa exclusivamente a instrução aprovada e `48.2.6-exclusivo-v2`.
+- Políticas atuais: Produto `48.2.6-produto-v4`, Exclusivo `48.2.6-exclusivo-v3`; compositor `48.2.4-prompt-composer-v5`. O nome usa uma única instrução compilada; nome terminado em ponto não duplica pontuação e nomes comuns não mudam. Imagem: zero referências sem fidelidade; uma referência com a frase única aprovada; 2+ com protagonismo/apoio e fidelidade uma vez. A direção de fundo é explícita, sem padrão, comum às três intenções; `Manter cenário original` só aparece com exatamente uma imagem de produto (identidade excluída). A UI mantém rótulos curtos e compila somente a frase de fundo escolhida.
 - Testes cobrem composição sem selo e com os selos permitidos `Exclusivo` e `Edição Limitada`; verificam instrução/versão exatas, ausência de preço e serialização apenas do selo fornecido. Opções e permissões existentes são afirmadas por teste e não foram alteradas.
 - O relato do usuário sobre a arte Exclusivo sob `48.2.6-exclusivo-v1` foi preservado: publicável, mas diferenciação visual inconclusiva. Nenhum slot, run ID, produto/loja ou vínculo foi inventado; campos desconhecidos continuam pendentes.
-- Protocolo v1 × v2 preparado, não executado: após vincular a evidência v1 existente, mesmos dados/imagem e Sunburst medium, texto e versão da política como única variável. Qualquer geração exige revisão humana e confirmação financeira individual.
+- Correção de vínculo final: Oferta/51 Ice usa `1ca08368-9a81-4671-9ca6-50032feac231`, Produto v4/compositor v5, 3 imagens, Studio; Exclusivo/Johnnie Walker 750ml usa `2fb07e0e-37cc-40d0-8a53-fa380f7eef81`, Produto v4/compositor v5, 1 imagem, Studio. Avaliações por run do usuário incluem fidelidade de produto/embalagem aprovada somente nos testes examinados; formal B pending. IDs `2a01db63...`/`da2f2321...` permanecem históricos v3/v4, sem avaliação final atribuída.
+- O usuário confirmou que a plataforma exibiu US$0,05/US$0,03 individualmente, arredondados; cálculos locais precisos são `0.048863`/`0.030974`, `provider_reported_cost_usd=null`, nenhuma fatura conferida. Letras pequenas omitidas sem invenção ficam sem run específico; validação anterior de Destaque sem Run ID/versão comprovados; a prévia v4/v5 é separada de geração.
+- O registro Exclusivo v1 permanece exatamente limitado ao relato do usuário; a comparação v1 × v2 é histórica e v2 não teve tentativa visual. A preparação atual v1 × v3 é antes × depois, não controlada para isolar Exclusivo, porque Produto, compositor e instrução de fundo também mudaram. Dados/imagem e Sunburst medium só serão tratados como iguais se confirmados; direção de fundo v1 permanece pending sem evidência. Não atribuir diferenças somente à política Exclusivo. Nenhum metadado ausente foi inventado.
 
 ## Gatilhos e fronteiras
 
-- Gates técnicos executados nesta etapa: testes focados de política/API, typecheck, lint, build, validação strict da change OpenSpec ativa e `git diff --check` (resultados registrados no commit/retorno de execução).
-- Nenhuma chamada a provider, geração/visualização de imagem, run, acesso a banco/remote, migration ou alteração de pricing/produção foi feita.
-- Planos 01–09 continuam completos; CHECKPOINT A permanece histórico/aprovado para readiness local; CHECKPOINT B continua `not_started`.
-- Plano 10 Task 0 concluída; Task 1 (gate humano CHECKPOINT B) e Task 2 (closeout) não iniciadas. Sem SUMMARY final de Plan 10, sem closeout, sem promoção e sem lifecycle OpenSpec.
-- OpenSpec F48.2.6 permanece ativa. STATE e HANDOFF registram somente esta preparação e aguardam avaliação manual.
+- Correções efetuadas: UI não mantém `preserveImageContext` independente e não renderiza `Manter cenário original` com 0/2+ referências; esquema não aceita propriedade independente e compatibilidade do snapshot deriva da direção. Os rótulos curtos ficam na UI, somente a frase escolhida entra no prompt e o compositor atual é v5 (a serialização de fundo entrou em v4). Fixtures de UI/API e prompt refletem o contrato.
+- Gates executados: prompt-policy/composer/snapshot/preflight + architecture guard + suítes UI/API — 7 arquivos, 328 testes PASS; `npm run typecheck` PASS; `npm run lint` PASS; `npm run build` PASS (aviso preexistente do plugin ESLint Next.js); `openspec validate ... --strict` PASS; `git diff --check` PASS.
+- Cobertura de aceitação concluída: regressão de transição limpa `original` quando a contagem de referências muda, opção visível somente com uma referência, sem contar identidade; API cobre direção ausente/original inválido antes de efeitos. Composições de Produto cobrem uma/múltiplas referências nas três intenções, nome preservado, fidelidade única, orientação protagonista somente em 2+ e nome terminado em ponto sem `..`.
+- Nenhuma chamada a provider, geração/visualização de imagem ou run foi feita pelo executor. Foi feita somente consulta read-only à base Supabase local para os dois runs finais; sem leituras remotas, escrita, migration ou alteração de pricing/produção.
+- Planos 01–09 continuam completos; CHECKPOINT A permanece histórico/aprovado para readiness local. Evidências de CHECKPOINT B estão preparadas, mas a decisão formal permanece `pending` e não aprovada.
+- Plano 10 Task 0 concluída tecnicamente; 7 arquivos/328 testes PASS; typecheck, lint, build, OpenSpec strict e diff-check PASS. Task 1 tem evidências e avaliações por run registradas, mas aguarda decisão formal do usuário; Task 2 não iniciada. Sem SUMMARY final de Plan 10, sem closeout, sem promoção e sem lifecycle OpenSpec.
+- OpenSpec F48.2.6 permanece ativa. STATE e HANDOFF registram evidências locais read-only e aguardam decisão formal do usuário.

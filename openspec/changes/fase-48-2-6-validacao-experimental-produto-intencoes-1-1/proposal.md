@@ -7,12 +7,13 @@ A F48.2.5 estabilizou o pipeline experimental de Produto + Oferta 1:1, mas a ban
 - Enforce a matriz preço × intenção no formulário da bancada, schemas/validações e backend por uma única autoridade pura em `src/lib/lab/bench/domain/`; preservar exports compatíveis de `form-rules.ts` por delegação, exigir nova escolha explícita quando edição de preço invalida a intenção e manter hook/formulário produtivos intocados.
 - Habilitar políticas versionadas de Oferta, Destaque e Exclusivo somente para Produto 1:1, com combinações não suportadas fail-closed antes do provider; ajustar intrafase Exclusivo para `48.2.6-exclusivo-v3` com a instrução literal definida no contrato, preservando a evidência v1.
 - Validar validade exclusivamente em Oferta na UI e backend; incompatibilidade exige regularização explícita sem descartar validade silenciosamente.
-- Usar instruções concisas de Produto: nome completo sem alterar palavras; descrição opcional adaptável ou omitida preservando significado; cada texto obrigatório exibido integralmente uma única vez.
-- Serializar o nome como `Nome do produto obrigatório: {nome}` e versionar a política Produto para `48.2.6-produto-v3`; manter a liberdade original de preservação do nome.
-- Orientar imagens pela primeira enviada como variante protagonista, maior/em primeiro plano, e auxiliares como apoio visual secundário, sem garantia de aparição.
+- Serializar o nome em uma única instrução compilada: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.`; remover orientação de nome redundante e versionar Produto como `48.2.6-produto-v4`, preservando a entrada sem correção silenciosa.
+- Versionar também a serialização do nome no compositor como `48.2.4-prompt-composer-v5`, distinguindo-a de runs v4; evitar ponto duplicado quando o nome termina em ponto, sem alterar a entrada nem a saída para nomes comuns.
+- Para exatamente uma imagem de produto, usar somente “Produto como elemento principal da peça. Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.” Para duas ou mais, manter a instrução de protagonismo da primeira e apoio secundário das auxiliares, com a instrução de fidelidade uma única vez.
 - Oferecer uma única direção de fundo nas três intenções; `Manter cenário original` exige exatamente uma imagem de produto, sem contar a identidade da loja, e escolha explícita novamente se a contagem invalidar a opção.
 - Conduzir UAT manual das três intenções com `gpt-image-2.5-sunburst` em `medium`, registrar evidências/custos/limitações e congelar candidato documental sem promoção.
-- Preparar comparação manual da política Exclusivo v1 × v3 com os mesmos dados/imagem, direção de fundo comparável e Sunburst medium, preservando integralmente a tentativa v1 e aguardando revisão/autorizações humanas antes de gerar.
+- Preservar Exclusivo v1 e registrar v1 × v3 como comparação antes × depois, não controlada para isolar o efeito Exclusivo: Produto, compositor e a instrução de fundo também mudaram. Reutilizar dados/imagem se confirmados, manter metadados desconhecidos pendentes e aguardar revisão/autorizações humanas antes de gerar.
+- Compilar uma frase curta e específica para a opção de fundo escolhida, mantendo os rótulos curtos no seletor; a versão vigente do compositor é `48.2.4-prompt-composer-v5` após o novo texto compilado do nome.
 
 ## Capabilities
 

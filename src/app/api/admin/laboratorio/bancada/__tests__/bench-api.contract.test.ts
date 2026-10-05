@@ -1225,8 +1225,8 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(res.status).toBe(200);
     expect(body.compiledPrompt).toContain("CONDIÇÕES COMERCIAIS");
     expect(body.blocks).toBeDefined();
-    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v3");
-    expect(body.compiledPrompt).toContain("Direção de fundo: Fundo de estúdio");
+    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v5");
+    expect(body.compiledPrompt).toContain("Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.");
     expect(body.compiledPrompt).not.toContain("Direção de fundo: studio");
     expect(body.approved).toBe(false);
     expect(body.textIntegrityEvidence).toMatchObject({
@@ -1274,7 +1274,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     mockComposePromptBlocks.mockImplementation((input: never) => actual.composePromptBlocks(input));
     const res = await postCompose({ ...VALID_COMPOSE_BODY, offer: { backgroundDirection: "original" }, references: ["bench/product.png"] });
     expect(res.status).toBe(200);
-    expect((await res.json()).compiledPrompt).toContain("Direção de fundo: Manter cenário original");
+    expect((await res.json()).compiledPrompt).toContain("Direção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.");
     expect(mockLoadBenchBranding).toHaveBeenCalled();
   });
 
@@ -1305,12 +1305,12 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(body.compiledPrompt).toContain(phrase);
     expect(body.policyVersions.intencao).toBe(version);
     if (campaignIntent === "spotlight") {
-      expect(body.compiledPrompt).toContain("Nome do produto obrigatório: Mouse sem fio");
+      expect(body.compiledPrompt).toContain("Nome obrigatório na arte: Mouse sem fio. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.");
       expect(body.compiledPrompt).toMatch(/Preço de venda: R\$\s19,99/);
       expect(body.compiledPrompt).not.toContain("Preço promocional");
       expect(body.compiledPrompt).not.toContain("Oferta:");
       expect(body.policyVersions.intencao).toBe("48.2.6-destaque-v1");
-      expect(body.composerVersion).toBe("48.2.4-prompt-composer-v3");
+      expect(body.composerVersion).toBe("48.2.4-prompt-composer-v5");
       expect(body.policyVersions.intencao).not.toBe("48.2.6-oferta-v1");
       expect(body.compiledPrompt).toContain("Destaque: priorize a apresentação do produto; preço informado é secundário.");
       console.info("SPOTLIGHT_COMPILED_PROMPT_VERSION:", JSON.stringify({ text: body.compiledPrompt, composerVersion: body.composerVersion, policyVersions: body.policyVersions }));
@@ -1345,7 +1345,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(body.compiledPrompt).toMatch(/Preço de venda: R\$\s19,99/);
     expect(body.compiledPrompt).toContain(policyActual.ofertaPolicy.contributions({ config: { ...VALID_COMPOSE_BODY, intencao: "oferta" } as never }).flatMap((entry) => entry.lines).find((line) => line.startsWith("Oferta: destaque o preço por")));
     expect(body.policyVersions.intencao).toBe("48.2.6-oferta-v1");
-    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v3");
+    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v5");
   });
 
   it("POST /compose com alertas ⇒ 422 e não compõe prompt nem lê branding", async () => {
