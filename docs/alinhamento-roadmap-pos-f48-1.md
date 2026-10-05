@@ -1,12 +1,12 @@
 # Alinhamento — Roadmap pós-F48.1
 
-**Status:** diretriz de planejamento atualizada em 2026-09-28 (realinhamento da F48.2.2/F48.2.3); a numeração F50–F55 foi reordenada após a conclusão da F49 e deve ser confirmada no planejamento de cada fase.
+**Status:** diretriz de planejamento reconciliada em 2026-10-05. F48.1 e F48.2.1–F48.2.6 foram concluídas; F48.2.7 fica reservada, não iniciada, para novos testes com escopo próprio. F56.x é a proposta de incorporação produtiva, ainda sem fase ativa ou promoção.
 
-**Fonte ativa da F48.1:** `openspec/changes/fase-48-1-laboratorio-ia-minimo/` — não alterada por este documento.
+**Fonte operacional do estado concluído:** `.planning/ROADMAP.md` e os artefatos OpenSpec/GSD arquivados de cada fatia. Este documento registra direção futura; não substitui a especificação nem inicia fases.
 
 ## 1. Decisão central
 
-A F48 completa não deve ser construída como uma única fase. Ela passa a ser um **programa incremental de experimentação e governança de IA**, dividido em fatias F48.x e intercalado com fases que entregam valor direto ao usuário.
+A F48 não deve ser construída como uma única fase. É um **programa incremental de experimentação e governança de IA**, dividido em fatias F48.x e intercalado com fases que entregam valor direto ao usuário. A bancada permanece disponível para adaptações, testes e validações de novos escopos; cada nova fatia exige decisão e escopo próprios.
 
 O limite operacional recomendado é de duas trilhas simultâneas:
 
@@ -21,29 +21,34 @@ Não manter duas fases simultâneas quando ambas alterarem o pipeline de geraç�
 F46/F47 concluídas
         │
         ▼
-F48.1 — bancada mínima e isolada
+F48.1 — laboratório mínimo (concluída)
         │
-        ├── F48.2 — qualidade e otimização dos prompts (guarda-chuva)
-        │       ├── F48.2.1 — bancada manual de prompts do Diretor (concluída)
-        │       ├── F48.2.2 — fundação da bancada de geração no Admin/Laboratório (realinhada em 2026-09-28)
-        │       └── F48.2.3 — experimento determinístico Oferta 1:1
-        │           └── (antiga F48.2.2 — auditoria do prompt do Revisor — descartada/substituída em 2026-09-28)
-        ├── F48.3 — avaliação humana mais madura
-        ├── F48.4 — preços versionados e monitoramento
-        ├── F48.5 — descoberta e alertas de modelos
-        └── F48.6 — homologação e promoção controlada
+        ▼
+F48.2.1 — bancada manual de prompts do Diretor (concluída)
+        ▼
+F48.2.2 — fundação da bancada de geração (concluída)
+        ▼
+F48.2.3 — fidelidade experimental da bancada (concluída)
+        ▼
+F48.2.4 — experimento determinístico Oferta 1:1 (concluída)
+        ▼
+F48.2.5 — estabilização experimental Oferta 1:1 (concluída)
+        ▼
+F48.2.6 — validação experimental Produto/intenções 1:1 (concluída)
+        ├── F48.2.7 — reserva para novos testes, se houver escopo aprovado
+        └── F56.1 → F56.2 → F56.3 — incorporação produtiva proposta
 
-Em paralelo, uma fase principal de produto por vez:
-F49 concluída → demonstração gratuita → landing + funil → SEO → serviços → informativas → 9:16 → carrossel
+F48.3–F48.6: frentes futuras de governança, não executadas nesta cadeia.
+F49–F55 e demais entregas de produto: sequenciamento próprio, sem execução concorrente sobre o mesmo pipeline.
 ```
 
-A F48.1 vem antes da otimização ampla de prompts porque fornece repetibilidade, comparação lado a lado e registro. Isso não significa construir todo o laboratório antes de testar prompts: **a bancada mínima vem primeiro; o primeiro caso real dela é justamente comparar um prompt atual com uma variante inserida manualmente**. A F48.2.1 entrega a **bancada manual funcional** (não ciclos automáticos nem variantes vencedoras); os testes reais de candidatas ocorrem em **sessões manuais posteriores**, conduzidas pelo usuário e pelo assistente. A avaliação avançada só amadurece depois que surgirem experimentos reais.
+A F48.1 forneceu a base isolada. As fatias F48.2.1–F48.2.6 ampliaram e validaram a bancada sem modificar o fluxo produtivo. Seus resultados orientam a F56, mas não equivalem à promoção de prompts, modelos ou políticas. Novos experimentos permanecem possíveis na F48.2.7 reservada, sem reabrir retroativamente as fatias concluídas.
 
 ## 3. Programa F48 — IA em fatias
 
 ### F48.1 — Laboratório mínimo de IA
 
-**Situação:** em planejamento/execução em outra frente.
+**Situação:** concluída.
 
 **Papel:** bancada local, isolada e pequena para comparar baseline × candidato com prompt, modelo e cenário congelados.
 
@@ -55,17 +60,20 @@ A F48.1 vem antes da otimização ampla de prompts porque fornece repetibilidade
 
 ### F48.2 — Qualidade e otimização dos prompts (guarda-chuva)
 
-**Prioridade:** alta; pode acompanhar uma fase principal sem alterar produção.
+**Situação:** F48.2.1–F48.2.6 concluídas; F48.2.7 reservada e não iniciada. A bancada permanece isolada da produção.
 
 A F48.2 é um **guarda-chuva** dividido em fatias sequenciais:
 
-- **F48.2.1 — Bancada manual de prompts do Diretor (concluída):** entrega uma **bancada manual funcional** para testes dos três prompts do Diretor (`offer`/`spotlight`/`exclusive`, 1:1) — diagnóstico das evidências da F37, matriz de nove cenários, suporte aos três prompts, rubrica humana e comparação cega, orçamento com autorização/revogação efetiva, arquivamento seguro e encerramento operacional. **Não** entrega ciclos automáticos nem variantes vencedoras: a candidata é inserida manualmente e a regra de vitória é **consultiva**. Os testes reais de candidatas são **sessões manuais posteriores** conduzidas pelo usuário.
-- **F48.2.2 — Fundação da bancada de geração no Admin/Laboratório (realinhada em 2026-09-28):** bancada interna, desktop e restrita à área administrativa/laboratório, capaz de realizar gerações reais e mensuráveis, separadas do fluxo de produção — loja real, branding persistido como fonte de verdade, imagens reais do produto, prompt manual, seleção de modelo/qualidade (presets iniciais `gpt-image-2 low/medium` e `gpt-image-2.5-flare low/medium`), resultado com download e registro isolado (referências, prompt enviado, modelo/qualidade/parâmetros, status/erros, latência, usage e custo real/estimado com origem). Não consome créditos do lojista, não interfere na produção e não exige mobile. É a **próxima fase a planejar**; a fonte da verdade OpenSpec será criada no planejamento.
-- **F48.2.3 — Experimento determinístico Oferta 1:1:** usa a bancada validada na F48.2.2 para testar o novo pipeline de campanha Oferta 1:1 — dados reais, montagem determinística do prompt, branding persistido como contrato obrigatório (sem reinterpretar a marca), hierarquia comercial orientada sem posições fixas, composição livre do modelo, visualização/edição/aprovação humana do prompt, armazenamento do prompt montado e do enviado, resultado/avaliação/ajuste/nova geração e histórico das tentativas. Depende da F48.2.2.
-- **Backlog posterior (fora das duas fases):** Destaque; Exclusivo; outros formatos; temas recorrentes; carrossel; comparação cega ou lado a lado; avaliação automática; mobile; promoção de modelos ou pipelines para produção.
-- **Histórico:** a numeração **F48.2.2** antes designava a *Auditoria e Otimização do Prompt do Revisor* (modo `reviewer`, corpus desenvolvimento × holdout, avaliação cega). Esse escopo foi **descartado/substituído** em 2026-09-28 (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git). A numeração **F48.2.3** antes designava *Promoção, Canário e Prontidão da Aprovação*; esse escopo fica **adiado/backlog** e não é o da nova F48.2.3.
+- **F48.2.1 — Bancada manual de prompts do Diretor:** ambiente manual, isolado e sujeito à decisão humana, sem escolha automática de vencedores ou promoção.
+- **F48.2.2 — Fundação da bancada de geração no Admin/Laboratório:** gerações reais e mensuráveis com loja, branding, imagens e modelo/qualidade, sem créditos do lojista nem impacto produtivo.
+- **F48.2.3 — Fidelidade experimental da bancada:** importação e resolução confiáveis de identidade/branding, paridade do formulário e preflight do briefing, ainda sem promoção.
+- **F48.2.4 — Experimento determinístico Oferta 1:1:** composição versionada do prompt, execução manual e avaliação humana de campanhas Oferta no formato quadrado.
+- **F48.2.5 — Estabilização experimental Oferta 1:1:** refinamentos e validação controlada, com limitações UAT mantidas como pendentes e sem promoção.
+- **F48.2.6 — Validação experimental Produto — intenções 1:1:** Oferta, Destaque e Exclusivo; direção de fundo Estúdio/Ambientado/Original; políticas e compositor versionados; UAT aprovado com limitações, sem alterar produção.
+- **F48.2.7 — Ponte experimental reservada, não iniciada:** poderá adaptar a bancada e validar novos produtos, formatos, modelos ou outros escopos concretos antes de incorporação produtiva. Não é fase ativa nem autorização antecipada para geração paga; escopo, custo, critérios e checkpoints dependerão de aprovação própria.
+- **Histórico:** a numeração **F48.2.2** antes designava a *Auditoria e Otimização do Prompt do Revisor*, descartada/substituída em 2026-09-28 sem implementação. A **F48.2.3** foi descrita, em momentos anteriores, como *Promoção, Canário e Prontidão da Aprovação* e depois como *Experimento Oferta 1:1*. A execução efetiva da F48.2.3 foi **Fidelidade experimental da bancada**; o experimento Oferta ocorreu na **F48.2.4**. As descrições antigas não são planos ativos.
 
-**Fronteira com F48.6:** a promoção dos **prompts efetivamente testados e aprovados**, o canário do fluxo de aprovação e o rollback desses prompts/flag pertenciam à **antiga F48.2.3** (hoje **adiada/backlog**, não renumerada); a homologação e a promoção **geral** de modelos, providers e capabilities permanecem na **F48.6 — Homologação e promoção controlada**.
+**Fronteira com F56 e F48.6:** a incorporação produtiva específica do fluxo Produto 1:1 testado na bancada, com ativação controlada e rollback, é proposta para a **F56**. A F48.2.7 pode produzir novas evidências, mas não promove resultados. A homologação geral e governança de modelos, providers e capabilities continuam como frente futura da **F48.6**, cujo escopo deve ser reconciliado quando planejado.
 
 O **conhecimento de modelos** (dossiê por modelo) permanece nas fatias já numeradas: preços em F48.4; descoberta, lifecycle e dossiê documental em F48.5. Cada modelo já cadastrado ou candidato deve ter um dossiê com:
 
@@ -82,7 +90,7 @@ O dossiê deve se relacionar ao catálogo existente da F47 (`ai_model_catalog`),
 
 Datas distintas devem preservar a semântica real: `discovered_at`, `researched_at`, `pricing_checked_at`, `tested_at` e `approved_at`. O `validated_at` técnico do catálogo não deve significar homologação empírica.
 
-**Primeira aplicação:** revisar os prompts de Diretor (e, quando retomada, do Revisor) com base nos guides oficiais dos modelos atualmente usados, criar baseline e testar mudanças isoladas no laboratório. A revisão do prompt do Revisor foi **descartada/substituída** (ver F48.2.2).
+**Aplicações futuras:** novas hipóteses de prompt, modelo ou produto podem ser avaliadas na bancada, inclusive pela F48.2.7 reservada, quando houver caso e autorização específicos. A antiga auditoria do prompt do Revisor não foi executada como F48.2.2.
 
 **Saída:** recomendações aprovadas ou rejeitadas com evidência; não uma reescrita geral baseada apenas em opinião.
 
@@ -104,7 +112,7 @@ Evoluir somente quando os primeiros experimentos mostrarem necessidade de mais r
 
 Um assistente pode organizar evidências e apontar inconsistências para a pessoa avaliadora, mas não aprovar, reprovar ou promover o candidato.
 
-**Escopo separado:** o atual `campaign_image_review` de produção deve ser auditado em mudança própria caso se decida restringi-lo a verificações factuais/técnicas. Alterá-lo afeta retries, custo e comportamento produtivo; não deve ser embutido silenciosamente no laboratório.
+**Escopo separado:** o novo fluxo produtivo proposto na F56 não terá revisão automática de qualidade. O atual `campaign_image_review` de produção deve ser tratado explicitamente na integração, pois afeta retries, custo e comportamento; não se presume desligamento retroativo do fluxo legado.
 
 ### F48.4 — Pricing versionado e monitoramento
 
@@ -154,7 +162,7 @@ discovered → research_pending → candidate → tested → approved/rejected
 
 A promoção deve consumir o catálogo e a seleção administrativa da F47, preservando o gateway da F46 como ponto único de execução.
 
-**Fronteira com F48.2.3:** a F48.6 trata da homologação e promoção **geral** de modelos, providers e capabilities. A promoção dos **prompts efetivamente testados e aprovados**, o canário do fluxo de aprovação e o rollback desses prompts/flag são escopo exclusivo da **F48.2.3**, sem antecipar a homologação geral de modelos.
+**Fronteira com F56:** a F48.6 permanece uma proposta de homologação e promoção **geral** de modelos, providers e capabilities. A incorporação específica do fluxo Produto 1:1, suas configurações, seu canário e seu rollback são propostos para a F56; isso não equivale a concluir antecipadamente a F48.6.
 
 **Não inclui:** promoção ou rollback decididos autonomamente por IA.
 
@@ -333,6 +341,18 @@ As decisões abaixo orientam a F50 e o início da operação, mas não transform
 
 **Dependência:** 9:16 e persistência de múltiplos artefatos já compreendidas.
 
+### F56 — Incorporação produtiva dos aprendizados da F48 (proposta, não iniciada)
+
+**Objetivo:** levar ao fluxo produtivo Produto 1:1 os contratos validados na bancada, em fatias pequenas e verificáveis. Os resultados experimentais da F48.2.6 são insumo, não autorização automática de promoção. A F48.2.7 permanece disponível para novos testes quando surgir uma hipótese concreta; não é pré-requisito obrigatório de toda fatia F56.
+
+**F56.1 — Contrato produtivo, modelos e fallback.** Preparar seleção administrativa dos pares modelo–qualidade testados (`gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`, em `low`/`medium`), com um par principal global para o novo fluxo e um par de fallback configurável, sem escolha por intenção. Adaptar a execução produtiva para respeitar a qualidade escolhida, registrar versões, telemetria e custos, e congelar o fluxo/modelo/qualidade aplicáveis à campanha para que mudanças posteriores do admin não alterem suas correções. Duas falhas técnicas elegíveis consecutivas no principal, ou falha explícita de capacidade/indisponibilidade do modelo, podem acionar o fallback; falhas de entrada, autorização, segurança ou conta não se tornam automaticamente falhas de modelo. Definir e testar essa classificação antes da ativação.
+
+**F56.2 — Novo fluxo de geração Produto 1:1.** Incorporar seleção explícita de Oferta/Destaque/Exclusivo e Estúdio/Ambientado/Manter cenário original; a opção Original só aparece com exatamente uma imagem de produto. Preservar nome completo, referências, briefing, identidade, textos obrigatórios e contratos comerciais validados na bancada. Usar duas chaves de ativação controlada — lojas de teste e todas as lojas — com rollback, sem mudar campanhas legadas. O novo fluxo não terá revisor automático. **Primeira entrega:** gerar, disponibilizar e permitir baixar/utilizar a arte diretamente, sem aprovar/reprovar; cobrança e falhas seguem o contrato da geração inicial, sem antecipar correções gratuitas.
+
+**F56.3 — Aprovação, reprovação e nova composição.** Apenas campanhas criadas já sob esta fatia entram no gate de aprovação; nenhuma campanha anterior perde retroativamente o download. A pessoa aprova a arte e encerra definitivamente o ciclo, ou a reprova informando o motivo. A reprovação retorna ao formulário com briefing, dados comerciais, referências, intenção, fundo e configuração da geração preservados; uma instrução de correção orienta a nova composição, sem trocar silenciosamente a intenção original. Defeitos visuais e texto incorreto são motivos normais de reprovação, avaliados pelo usuário, não por revisor automático. Uma campanha paga inclui a arte original e até **quatro** novas artes entregues após reprovação; o limite interno deve ser configurável no admin, começando em quatro correções, e **não aparece como contador na interface**. Abrir o formulário, enviar instrução ou sofrer falha técnica sem nova arte utilizável não consome correção nem gera cobrança adicional ao lojista. Esgotadas as correções, oferecer aprovação da arte atual, contato com suporte ou início de nova campanha paga. Artes pendentes/reprovadas não têm download autorizado: a proteção deve ser aplicada no servidor; bloquear o botão direito é apenas dissuasão visual, não garantia contra cópias ou capturas de tela.
+
+**Fronteiras:** F56.1–F56.3 exigem propostas, specs, planos e validações próprios antes de execução. Não reativar automaticamente a regeneração da F37, não aplicar revisão automática ao novo fluxo e não promover todos os modelos ou formatos apenas porque participaram da bancada. Cada correção usa o contrato e a configuração registrados na campanha original; o fallback técnico ocorre dentro da tentativa de geração e não consome a cota de correções do lojista.
+
 ## 5. Frentes preparatórias sem fase grande imediata
 
 ### Internacionalização
@@ -376,26 +396,22 @@ A F51.2 entrega a fundação técnica e a otimização das páginas públicas ex
 
 ## 6. Plano de encaixe recomendado
 
-| Ordem | Trilha principal | Trilha secundária segura | Resultado esperado |
+| Situação / precedência | Trilha principal | Trilha secundária segura | Resultado esperado |
 |---|---|---|---|
-| 0 | **F48.1 — laboratório mínimo** | Inventários somente leitura | Bancada utilizável sem tocar produção |
-| 1 | **F49 — orientação contextual** — concluída | **F48.2.1 — bancada manual de prompts do Diretor** (concluída) + inventário i18n/storage | Bancada manual funcional; campos e revisão mais compreensíveis |
-| 2 | **F50 — demonstração gratuita** | Pesquisa documental F48.2, sem alteração concorrente do ledger | Oferta limitada, mensurável e juridicamente comunicável |
-| 3 | **F51.1 — landing + instrumentação do funil** | Pesquisa de i18n ou storage, sem migração | Aquisição e ativação mensuráveis nos modos fechado e aberto |
-| 4 | **F51.2 — fundação SEO** | Pesquisa de i18n ou storage, sem migração | Descoberta orgânica e indexabilidade alinhadas à landing validada |
-| 5 | **F52 — serviços** | **F48.2.2 — bancada de geração no Admin/Laboratório** → **F48.2.3 — Experimento Oferta 1:1** | Novo caso de uso e evidência real da bancada |
-| 6 | **F53 — informativas** | **F48.4 — pricing** | Segundo caso de uso e custos versionados |
-| 7 | **F54 — 9:16** | **F48.5 — descoberta/alertas** | Novo formato e vigilância de providers |
-| 8 | **F55 — carrossel MVP** | **F48.6 — homologação**, se os pré-requisitos existirem | Formato multipágina controlado e processo seguro de promoção |
-| posterior prioritário | **Abstração + piloto de storage externo** | Apenas pesquisa leve na outra trilha | Redução de custo/risco após medir e estabilizar o beta |
-| posterior | Fundação i18n ou migração total de storage | Apenas pesquisa leve na outra trilha | Expansão guiada por demanda, dados e resultado do piloto |
+| Concluída | **F48.1 → F48.2.1 → F48.2.2 → F48.2.3 → F48.2.4 → F48.2.5 → F48.2.6** | Outras entregas já realizadas, conforme roadmap operacional | Evidência experimental isolada, sem promoção produtiva |
+| Próxima trilha proposta | **F56.1 — contrato produtivo/modelos/fallback** | Pesquisa ou documentação sem alteração do pipeline | Configuração e execução preparadas, ainda sem virada geral |
+| Após validar F56.1 | **F56.2 — geração Produto 1:1** | Pesquisa leve; sem segunda mudança produtiva de geração | Piloto controlado e entrega direta sem aprovação |
+| Após validar F56.2 | **F56.3 — aprovação e correção** | Pesquisa leve; sem mudança concorrente de crédito/artefatos | Gate humano e novas composições com limite interno |
+| Sob demanda | **F48.2.7 — ponte experimental reservada** | Não executar em paralelo com F56 se ambas alterarem o mesmo contrato/pipeline | Evidência para hipótese nova, com escopo e autorização próprios |
+| Outras frentes | **F50.1, F51.1–F55, F48.3–F48.6, i18n e storage** | Conforme dependências, risco e capacidade reais | Sequência específica definida no planejamento de cada frente |
 
-Essa é uma ordem de planejamento, não um compromisso de calendário. A próxima fase deve ser confirmada conforme aprendizado da anterior.
+Essa é uma ordem de dependência da proposta F56, não um calendário nem a ativação de uma fase. A numeração F56 não obriga executar F50.1–F55 antes dela; essas frentes têm gates próprios no roadmap operacional. A próxima fase concreta deve ser confirmada antes de sua proposta OpenSpec.
 
 ## 7. Paralelismo seguro e conflitos
 
 ### Combinações seguras
 
+- F56.x + pesquisa documental da F48.2.7 ou de modelos, sem segunda alteração produtiva do pipeline;
 - demonstração gratuita + pesquisa documental de modelos, sem segunda migration extensa;
 - landing/funil ou SEO + inventário de internacionalização ou storage;
 - serviços + testes controlados de prompt;
@@ -405,6 +421,9 @@ Essa é uma ordem de planejamento, não um compromisso de calendário. A próxim
 
 ### Combinações a evitar
 
+- F56.1, F56.2 e F56.3 executadas como uma fase única ou simultaneamente sobre o pipeline;
+- F48.2.7 e F56.x mudando em paralelo os mesmos prompts, modelos, schemas ou contratos de geração;
+- aprovação/correção F56.3 em paralelo com mudança no ledger de créditos ou no armazenamento de artes;
 - laboratório e carrossel alterando simultaneamente o pipeline de geração;
 - laboratório e migração de storage;
 - internacionalização total e redesign amplo de UI;
@@ -420,6 +439,10 @@ Uma fase/fatia só deve começar quando responder “sim” ao gate corresponden
 
 | Escopo | Gate mínimo |
 |---|---|
+| F48.2.7, se necessária | Hipótese e escopo novos, orçamento/autorizações, critérios e fronteira com produção definidos; não reabrir fatias concluídas |
+| F56.1 | Contrato de seleção principal/fallback, qualidade, classificação de falhas elegíveis, telemetria/custo e configuração por campanha definidos |
+| F56.2 | F56.1 validada; intenções/fundos/1:1 e preservação de referências especificados; chaves de teste/geral, rollback e entrega direta sem revisão automática testáveis |
+| F56.3 | F56.2 validada; estados de aprovação, briefing preservado, limite interno configurável, cobrança, falhas sem consumo e bloqueio server-side de download especificados |
 | Novo modelo | Dossiê, preço verificado, guide lido e capability definida |
 | Mudança de prompt | Baseline congelado, hipótese única e cenários representativos |
 | Homologação | Evidência técnica + avaliação humana + rollback |
@@ -442,7 +465,6 @@ As faixas abaixo servem apenas para comparar porte; devem ser refeitas no planej
 | Escopo | Faixa indicativa |
 |---|---:|
 | F48.1 mínima | 5–8 dias |
-| Programa F48 completo | 20–35 dias |
 | Demonstração gratuita + legal/transição | 7–12 dias |
 | F51.1 — landing + instrumentação do funil | 6–10 dias |
 | F51.2 — fundação SEO | 3–6 dias |
@@ -475,4 +497,7 @@ As faixas abaixo servem apenas para comparar porte; devem ser refeitas no planej
 14. A F50 e o beta fechado permanecem no Supabase; backup externo restaurável é gate de convite, não sinônimo de migração imediata do storage.
 15. Após estabilização do beta e resolução das pendências de constituição/conformidade, abstração e piloto de storage externo passam a ser prioridade, com Cloudflare R2 como candidato e não como decisão irreversível.
 16. Conta ativa não expira por inatividade ou ausência de saldo; encerramento voluntário é fluxo distinto, com janela de 30 dias e retenção legal mínima segregada.
+17. F48.1–F48.2.6 estão concluídas e não promoveram o fluxo à produção. F48.2.7 fica reservada, não iniciada, para novos testes delimitados; F48.3–F48.6 continuam frentes futuras independentes.
+18. A incorporação produtiva proposta será fatiada em F56.1 (modelos/contrato), F56.2 (geração e entrega direta) e F56.3 (aprovação/correção), sem revisor automático no novo fluxo e sem alterar retroativamente campanhas legadas.
+19. Uma campanha aprovada encerra seu ciclo. Na futura F56.3, a campanha paga poderá entregar a arte original e até quatro correções concluídas, sem contador visível; falhas técnicas não consomem correções nem criam nova cobrança ao lojista. A proteção de download é server-side, não depende de bloquear o botão direito.
 17. O produto admite imagens de pessoas e menores quando houver direitos e autorizações aplicáveis, com responsabilidade contratual do usuário, proteção do melhor interesse do menor e mecanismos de bloqueio/remoção para abuso.
