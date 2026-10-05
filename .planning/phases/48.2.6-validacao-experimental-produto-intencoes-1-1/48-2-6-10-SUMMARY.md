@@ -82,8 +82,8 @@ completed: 2026-10-04
 ## GSD Closeout and OpenSpec Follow-up
 
 - CHECKPOINT B is `approved_with_limitations`; this does not promote a candidate or convert pending criteria into passes.
-- GSD UAT and phase tracking are complete; phase completeness is 10/10 plans and 10/10 summaries. The OpenSpec change remains active at 41/42 tasks; the user reserved verify/sync/archive for a later manual closeout.
-- No further user input is required before those requested closure operations; accepted limitations remain explicit.
+- GSD UAT and phase tracking are complete; phase completeness is 10/10 plans and 10/10 summaries. OpenSpec task 6.5's tracking-and-review delivery is documented and complete; all 42/42 tasks are complete. The change remains active pending the responsible owner's `/opsx-verify`, `/opsx-sync` and `/opsx-archive`, which have not been executed.
+- The decision remains `approved_with_limitations`; accepted UAT gaps stay explicit and pending. The responsible owner retains the reserved OpenSpec lifecycle operations.
 
 ---
 *Phase: 48.2.6-validacao-experimental-produto-intencoes-1-1*

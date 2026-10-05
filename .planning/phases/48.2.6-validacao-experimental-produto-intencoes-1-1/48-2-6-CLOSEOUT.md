@@ -35,5 +35,6 @@ Os IDs anteriores `2a01db63-bac6-4c42-852c-46a4f5e854d3` (Oferta) e `da2f2321-c7
 ## Verificações de fechamento
 
 - GSD UAT (`48.2.6-GSD-UAT.md`): concluído, 5/5 pass, 0 issues; limitações aceitas permanecem descritas sem converter gaps em passes.
-- OpenSpec permanece ativo. `opsx-verify`, `opsx-sync` e `opsx-archive` foram explicitamente reservados pelo usuário para execução posterior e não fazem parte deste closeout GSD.
+- A entrega documental da tarefa OpenSpec 6.5 está concluída: STATE, ROADMAP, HANDOFF, UAT e este closeout registram `approved_with_limitations` e as pendências aceitas; a tarefa está marcada como concluída.
+- OpenSpec permanece ativo. `/opsx-verify`, `/opsx-sync` e `/opsx-archive` foram explicitamente reservados ao responsável para execução posterior e não foram executados nesta reconciliação.
 - STATE/ROADMAP/HANDOFF: reconciliação GSD concluída; o único follow-up operacional é o lifecycle OpenSpec reservado pelo usuário.

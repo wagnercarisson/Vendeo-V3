@@ -9,7 +9,7 @@ updated: 2026-10-05
 
 ## Estado
 
-- **Task 0 — estado local 2026-10-04:** testes focados de política/composer/snapshot/preflight, architecture guard e contratos UI/API = 7 arquivos, 328 testes PASS; typecheck/lint/build/OpenSpec strict/diff-check PASS. Produto é `48.2.6-produto-v4`; compositor vigente `48.2.4-prompt-composer-v5`. Nome único testado com e sem ponto final; instruções de imagem variam por contagem e foram testadas nas três intenções. Isso não altera slots/candidatos nem atribui versão a relatos manuais.
+- **Task 0 — reexecução final 2026-10-04:** testes focados de política/composer/snapshot/preflight, architecture guard e contratos UI/API = 7 arquivos, 327 testes PASS; typecheck/lint/build/OpenSpec strict/diff-check PASS. A contagem de 328 corresponde a uma execução anterior, antes das últimas atualizações dos testes. Produto é `48.2.6-produto-v4`; compositor vigente `48.2.4-prompt-composer-v5`. Nome único testado com e sem ponto final; instruções de imagem variam por contagem e foram testadas nas três intenções. Isso não altera slots/candidatos nem atribui versão a relatos manuais.
 - **CHECKPOINT B:** `approved_with_limitations` por decisão explícita do usuário. As avaliações dos dois runs finais são aprovadas para este UAT; limitações e pendências permanecem listadas abaixo. Nenhum teste técnico da Task 0 permanece pendente.
 
 - **Natureza:** documental; sem loader, runtime ou integração produtiva.

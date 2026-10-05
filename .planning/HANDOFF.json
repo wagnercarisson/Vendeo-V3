@@ -60,9 +60,9 @@
     "gsd_status": "complete_with_accepted_limitations",
     "plan_count": "10/10 plans and 10/10 summaries",
     "gsd_uat": "5 passed, 0 issues, 0 pending, 0 blocked, 0 skipped",
-    "focused_tests": "327 passed across 7 files; prior run counted 328 before latest test updates",
+    "focused_tests": "327 passed across 7 files in final re-run; prior execution counted 328 before latest test updates",
     "security": "6 threats closed, 0 open",
-    "openspec_status": "active; 41/42 tasks; verify/sync/archive explicitly deferred by user",
+    "openspec_status": "active; 42/42 tasks complete; task 6.5 tracking/review delivery complete; verify/sync/archive explicitly deferred to responsible owner and not executed",
     "candidate_promoted": false,
     "executor_provider_calls": 0,
     "new_generations": 0,
@@ -156,11 +156,11 @@
   "human_actions_pending": [
     {
         "action": "Executar posteriormente /opsx-verify, /opsx-sync e /opsx-archive para a change F48.2.6",
-        "context": "Solicitação explícita do usuário para deixar o lifecycle OpenSpec pendente. GSD está completo; a change permanece ativa com task 6.5 aberta até as operações do responsável.",
+        "context": "A entrega documental da task 6.5 está concluída. Por solicitação explícita do usuário, o lifecycle OpenSpec permanece reservado ao responsável; /opsx-verify, /opsx-sync e /opsx-archive ainda não foram executados.",
        "blocking": false
     }
   ],
   "uncommitted_files": [],
   "next_action": "GSD finalizado. O usuário executará posteriormente o lifecycle OpenSpec F48.2.6; não fazer push remoto.",
-  "context_notes": "F48.2.6 GSD concluída: 10/10 planos/summaries, UAT 5/5, CHECKPOINT B approved_with_limitations. Runs finais `1ca08368-9a81-4671-9ca6-50032feac231` e `2fb07e0e-37cc-40d0-8a53-fa380f7eef81` conferidos localmente read-only, Produto v4/compositor v5; IDs `2a01db63...`/`da2f2321...` são históricos Produto v3/compositor v4. Valores plataforma confirmados arredondados US$0.05/US$0.03; cálculos locais `0.048863`/`0.030974`, provider-reported null, sem fatura conferida. Fidelidade produto/embalagem aprovada somente nos dois runs examinados; linkage slots, validação anterior de Destaque e run de letras pequenas permanecem pending. Revalidação final: 327 testes/7 arquivos, typecheck/lint/build/OpenSpec strict PASS; execução anterior contou 328 antes das últimas atualizações de testes. OpenSpec ativa com 41/42 tasks, lifecycle reservado pelo usuário. Sem novas gerações, provider calls, DB writes, migrations ou push remoto."
+  "context_notes": "F48.2.6 GSD concluída: 10/10 planos/summaries, UAT 5/5, CHECKPOINT B approved_with_limitations. Runs finais `1ca08368-9a81-4671-9ca6-50032feac231` e `2fb07e0e-37cc-40d0-8a53-fa380f7eef81` conferidos localmente read-only, Produto v4/compositor v5; IDs `2a01db63...`/`da2f2321...` são históricos Produto v3/compositor v4. Valores plataforma confirmados arredondados US$0.05/US$0.03; cálculos locais `0.048863`/`0.030974`, provider-reported null, sem fatura conferida. Fidelidade produto/embalagem aprovada somente nos dois runs examinados; linkage slots, validação anterior de Destaque e run de letras pequenas permanecem pending. Revalidação final: 327 testes/7 arquivos, typecheck/lint/build/OpenSpec strict PASS; execução anterior contou 328 antes das últimas atualizações de testes. OpenSpec task 6.5 de tracking/entrega documental concluída, 42/42 tasks; change ativa até /opsx-verify, /opsx-sync e /opsx-archive do responsável, ainda não executados. Sem novas gerações, provider calls, DB writes, migrations ou push remoto."
 }
