@@ -89,7 +89,7 @@ Cada task foi commitada atomicamente (TDD: RED → GREEN; Task 3 = testes comple
 4. **Task 2: Schema Zod e rota admin GET/PUT auditada (GREEN)** - `743d306d` (feat)
 5. **Task 3: Idempotência, isolamento e invalidação pós-gravação** - `5bc88e2c` (test)
 
-**Plan metadata:** `(a registrar)` (docs: complete plan)
+**Plan metadata:** `cb1cff22` (docs: complete plan — SUMMARY/STATE/ROADMAP/REQUIREMENTS)
 
 ## Files Created/Modified
 
