@@ -97,6 +97,49 @@ export interface CostResolution {
 }
 
 /**
+ * F56.1 (D-09): cobertura de pricing de um par `modelo + qualidade`.
+ * `complete` = todos os componentes obrigatórios presentes; `partial` = parte
+ * presente; `missing` = nenhum pricing. A ausência NUNCA é mascarada por valor
+ * inventado nem tratada como completa.
+ */
+export type ImagePairPricingCoverage = "complete" | "partial" | "missing";
+
+/** F56.1 (D-09): componente de custo exigido por um par de imagem do novo fluxo. */
+export type ImagePairPricingComponent = "image_unit";
+
+/** Status de um componente de custo de um par `modelo + qualidade` (D-09). */
+export interface ImagePairPricingComponentStatus {
+  component: ImagePairPricingComponent;
+  provider: string;
+  model: string;
+  quality: string;
+  available: boolean;
+  source: "table" | "missing";
+}
+
+/** Cobertura de um par `modelo + qualidade` (D-09). */
+export interface ImagePairTargetPricingStatus {
+  model: string;
+  quality: string;
+  components: ImagePairPricingComponentStatus[];
+  missingComponents: ImagePairPricingComponent[];
+  pricingCoverage: ImagePairPricingCoverage;
+}
+
+/**
+ * F56.1 (D-09/D-10/D-24): cobertura do par principal + fallback do novo fluxo,
+ * com os componentes ausentes explicitados. Cobertura incompleta é fail-closed
+ * para a execução (o par não é executável). Aditivo — não altera `CostResolution`
+ * nem `COST_SOURCES`.
+ */
+export interface ImagePairCapacityPricingStatus {
+  primary: ImagePairTargetPricingStatus;
+  fallback: ImagePairTargetPricingStatus;
+  missingComponents: ImagePairPricingComponent[];
+  pricingCoverage: ImagePairPricingCoverage;
+}
+
+/**
  * Padrão de exposição de usage dos serviços de IA (D7/D12):
  * callback opcional `onCall?: (info: AiCallInfo) => void`.
  */

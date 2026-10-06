@@ -56,6 +56,13 @@ interface PricingRow {
 }
 
 /**
+ * Colunas do select legado (D8). Mantidas como constante para garantir que a
+ * query SEM qualidade seja byte a byte a legada (F56.1 — D-08, isolamento).
+ */
+const LEGACY_PRICING_COLUMNS =
+  "id, provider, model, input_token_usd_per_1m, output_token_usd_per_1m, cached_input_token_usd_per_1m, image_unit_usd, image_token_usd_per_1m";
+
+/**
  * Mapper linha → ModelPricing (snake→camel). Valida "ao menos uma dimensão"
  * (espelha o CHECK chk_ai_model_pricing_at_least_one_price): linha com todas as
  * 5 dimensões nulas → null (linha inválida — nunca retorna um ModelPricing vazio).
@@ -83,20 +90,37 @@ export class AiModelPricingService {
   async getModelPricing({
     provider,
     model,
+    quality,
   }: {
     provider: string;
     model: string;
+    quality?: string;
   }): Promise<{ pricing: ModelPricing; versionId: string } | null> {
     try {
-      const { data, error } = await this.client
+      // F56.1 (D-08): `quality` é uma dimensão ADITIVA.
+      //   - Omitido → coluna `quality` não é selecionada, a query é byte a byte a
+      //     legada (inclui o bootstrap de código `code_default`) — fluxo legado intacto.
+      //   - Informado → seleciona `quality`, filtra `.eq("quality", quality)` e NUNCA
+      //     usa `DEFAULT_AI_MODEL_PRICING` (o custo por qualidade precisa ser explícito
+      //     — D-09/D-10): sem linha vigente de qualidade, retorna null (cobertura missing).
+      const columns: string =
+        quality === undefined ? LEGACY_PRICING_COLUMNS : `${LEGACY_PRICING_COLUMNS}, quality`;
+
+      const vigenteQuery = this.client
         .from("ai_model_pricing")
-        .select(
-          "id, provider, model, input_token_usd_per_1m, output_token_usd_per_1m, cached_input_token_usd_per_1m, image_unit_usd, image_token_usd_per_1m",
-        )
+        .select(columns)
         .eq("provider", provider)
         .eq("model", model)
-        .is("effective_until", null) // vigente = effective_until IS NULL (não existe coluna is_current — D8)
-        .maybeSingle();
+        .is("effective_until", null); // vigente = effective_until IS NULL (não existe coluna is_current — D8)
+
+      const response =
+        quality === undefined
+          ? await vigenteQuery.maybeSingle()
+          : await vigenteQuery.eq("quality", quality).maybeSingle();
+      // `quality` é uma coluna nova (F56.1, ainda fora dos tipos gerados do Supabase):
+      // o parser de select do client não a reconhece, então o cast é feito via `unknown`.
+      const data = response.data as unknown as PricingRow | null;
+      const error = response.error;
 
       if (error) {
         console.error("[ai-model-pricing] getModelPricing error (best-effort):", error.message);
@@ -104,12 +128,15 @@ export class AiModelPricingService {
       }
 
       if (data) {
-        const pricing = mapRowToModelPricing(data as PricingRow);
+        const pricing = mapRowToModelPricing(data);
         if (!pricing) return null; // linha inválida (violação defensiva do CHECK at_least_one_price)
         return { pricing, versionId: data.id };
       }
 
-      // Sem linha vigente → bootstrap de código (D8)
+      // Sem linha vigente:
+      //   - com qualidade → null (sem inventar valor — D-09/D-10).
+      //   - sem qualidade → bootstrap de código (D8, fail-open do fluxo legado).
+      if (quality !== undefined) return null;
       const defaultPricing = DEFAULT_AI_MODEL_PRICING[normalizeModel(model)];
       if (!defaultPricing || Object.keys(defaultPricing).length === 0) return null;
       return { pricing: defaultPricing, versionId: "code_default" };
@@ -126,6 +153,7 @@ const serviceSingleton = new AiModelPricingService();
 export async function getModelPricing(params: {
   provider: string;
   model: string;
+  quality?: string;
 }): Promise<{ pricing: ModelPricing; versionId: string } | null> {
   return serviceSingleton.getModelPricing(params);
 }
