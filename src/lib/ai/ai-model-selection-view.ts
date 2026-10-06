@@ -1,6 +1,6 @@
 import "server-only";
 import {
-  ALL_CAPABILITIES,
+  LEGACY_SELECTION_CAPABILITIES,
   CAPABILITY_SEGMENTS,
   MODEL_REGISTRY,
 } from "./model-registry";
@@ -77,7 +77,11 @@ export async function buildAiModelSelectionView(dependencies: {
     catalogService: { getCatalogMap: async () => catalogMap },
   });
 
-  const capabilities = await Promise.all(ALL_CAPABILITIES.map(async (capability) => {
+  // A seleção LEGADA oferece apenas as 11 capacidades legadas
+  // (`LEGACY_SELECTION_CAPABILITIES`), nunca `ALL_CAPABILITIES`: a capacidade
+  // nova `campaign_product_image` e os modelos `gpt-image-2.5-*` não vazam para
+  // a tela/fluxo legado (F56.1, D-07).
+  const capabilities = await Promise.all(LEGACY_SELECTION_CAPABILITIES.map(async (capability) => {
     const defaultConfig = MODEL_REGISTRY[capability];
     const selection = selectionMap.get(capability) ?? null;
     const effective = await resolver.resolveWithSource(capability);

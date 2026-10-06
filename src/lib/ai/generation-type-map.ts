@@ -7,8 +7,10 @@ import type { AiCapability } from "./model-resolver";
  * É o **único** ponto que traduz uma capacidade do registry para um literal
  * válido do CHECK `chk_generation_events_type`. `campaign_image_edit` não possui
  * literal próprio no enum: pertence à mesma etapa de imagem do fallback
- * (`campaign_image`). A capacidade/protocolo originais permanecem no `metadata`
- * do evento (o sink grava `capability`/`protocol`).
+ * (`campaign_image`). A nova capacidade `campaign_product_image` (F56.1, D-11)
+ * reutiliza o literal de imagem existente — não cria tipo de evento novo (o
+ * CHECK do banco não é alterado). A capacidade/protocolo originais permanecem
+ * no `metadata` do evento (o sink grava `capability`/`protocol`).
  */
 export const CAPABILITY_GENERATION_TYPE: Record<AiCapability, GenerationEventType> = {
   campaign_copy: "campaign_copy",
@@ -22,4 +24,5 @@ export const CAPABILITY_GENERATION_TYPE: Record<AiCapability, GenerationEventTyp
   campaign_image: "campaign_image",
   campaign_image_edit: "campaign_image",
   visual_signature_image: "visual_signature_image",
+  campaign_product_image: "campaign_image",
 };

@@ -11,7 +11,11 @@
  * reabrir o gateway**.
  */
 
-/** Union das 11 capacidades de IA (D1). */
+/**
+ * Union das capacidades de IA (D1). As 11 legadas + `campaign_product_image`,
+ * a capacidade própria do novo fluxo Produto 1:1 (F56.1, D-10/D-11), declarada
+ * sem ativar geração.
+ */
 export type AiCapability =
   | "campaign_copy"
   | "campaign_correction_analysis"
@@ -23,7 +27,8 @@ export type AiCapability =
   | "visual_signature_validation"
   | "campaign_image"
   | "campaign_image_edit"
-  | "visual_signature_image";
+  | "visual_signature_image"
+  | "campaign_product_image";
 
 /** Protocolo de wire de cada alvo (primary e fallback declaram o próprio). */
 export type AiProtocol = "chat-completions" | "responses" | "images" | "gemini";

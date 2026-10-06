@@ -52,6 +52,9 @@ export const CAPABILITY_PROTOCOLS: Record<AiCapability, readonly AiProtocol[]> =
   campaign_image: ["responses"],
   campaign_image_edit: ["images"],
   visual_signature_image: ["responses"],
+  // Capacidade própria do novo fluxo Produto 1:1 (F56.1, D-10/D-11) — declarada
+  // nos mapas sem ativar geração e sem entrar na seleção legada.
+  campaign_product_image: ["images"],
 };
 
 /** Segmento canônico de cada capacidade (fonte única — validação fail-fast). */
@@ -67,10 +70,38 @@ export const CAPABILITY_SEGMENTS: Record<AiCapability, AiSegment> = {
   campaign_image: "image",
   campaign_image_edit: "image",
   visual_signature_image: "image",
+  campaign_product_image: "image",
 };
 
-/** Conjunto canônico das 11 capacidades (validação de mapas injetados). */
+/**
+ * Conjunto canônico das capacidades do registry (validação de mapas injetados).
+ * Deriva de `CAPABILITY_SEGMENTS` e, portanto, passa a conter 12 entradas — as
+ * 11 legadas + `campaign_product_image` (F56.1, D-11). NÃO congelar em 11.
+ */
 export const ALL_CAPABILITIES = Object.keys(CAPABILITY_SEGMENTS) as AiCapability[];
+
+/**
+ * Allowlist EXPLÍCITA e congelada das 11 capacidades **legadas** oferecidas pela
+ * seleção administrativa legada (F56.1, D-07). A tela/view legada itera ESTA
+ * lista (não `ALL_CAPABILITIES`) para impedir que a nova capacidade
+ * `campaign_product_image` e os modelos `gpt-image-2.5-*` vazem para o fluxo
+ * legado (cenário "Nova capacidade não vaza para a seleção legada").
+ */
+export const LEGACY_SELECTION_CAPABILITIES = [
+  "campaign_copy",
+  "campaign_correction_analysis",
+  "brand_profile_text",
+  "campaign_spec",
+  "campaign_input_validation",
+  "campaign_image_review",
+  "brand_profile_vision",
+  "visual_signature_validation",
+  "campaign_image",
+  "campaign_image_edit",
+  "visual_signature_image",
+] as const satisfies readonly AiCapability[];
+
+export type LegacySelectionCapability = (typeof LEGACY_SELECTION_CAPABILITIES)[number];
 
 /**
  * Registry inicial — defaults idênticos aos valores efetivos pré-F46 (design
@@ -133,6 +164,16 @@ export const MODEL_REGISTRY: Record<AiCapability, AiModelConfig> = {
     segment: "image",
     primary: { provider: "openai", model: "gpt-5.5", protocol: "responses" },
   },
+  // Default declarativo mínimo para satisfazer `validateRegistry`/tipos (F56.1,
+  // D-11). O único modelo com protocolo `images` na allowlist produtiva hoje é
+  // `gpt-image-2`; os modelos `gpt-image-2.5-*` NÃO entram na allowlist
+  // produtiva. Este default NUNCA é servido pela resolução do novo fluxo — a
+  // resolução é fail-closed (ver `PersistedModelResolver`).
+  campaign_product_image: {
+    capability: "campaign_product_image",
+    segment: "image",
+    primary: { provider: "openai", model: "gpt-image-2", protocol: "images" },
+  },
 };
 
 function assertValidTarget(
@@ -194,10 +235,11 @@ export function validateModelConfig(config: AiModelConfig): void {
 }
 
 /**
- * Valida um mapa completo de registry (fail-fast): exatamente as 11
- * capacidades, cada chave corresponde a `config.capability` e cada
- * configuração passa por `validateModelConfig`. Rejeita mapas injetados
- * estruturalmente inconsistentes (chave trocada, capacidade ausente/extra).
+ * Valida um mapa completo de registry (fail-fast): todas as capacidades de
+ * `ALL_CAPABILITIES` (12 após a F56.1), cada chave corresponde a
+ * `config.capability` e cada configuração passa por `validateModelConfig`.
+ * Rejeita mapas injetados estruturalmente inconsistentes (chave trocada,
+ * capacidade ausente/extra).
  */
 export function validateRegistry(registry: Record<string, AiModelConfig>): void {
   const keys = Object.keys(registry);
