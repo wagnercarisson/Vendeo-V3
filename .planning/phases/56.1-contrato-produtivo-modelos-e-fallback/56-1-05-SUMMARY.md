@@ -91,6 +91,28 @@ Cada task foi commitada atomicamente:
 
 None - plan executed exactly as written.
 
+## Correção pós-revisão humana (fail-closed na correlação)
+
+**O que mudou:** `matchesSnapshotReference` foi reescrita para ser **fail-closed** em identificadores insuficientes/ausentes.
+
+- Antes: a função rejeitava apenas ids **divergentes**; uma tentativa com `runId`/`traceId` **ausente** era aceita quando o snapshot definia aquele id — podendo associar telemetria não identificada à campanha errada.
+- Depois: (1) se o snapshot não define `runId` **nem** `traceId`, retorna `false` (sem identificador suficiente não há correlação segura); (2) **cada** identificador definido no snapshot exige presença **e** igualdade estrita na tentativa (`attempt.runId !== snapshot.runId` cobre ausência e divergência); (3) só correlaciona quando todos os identificadores definidos estão presentes e iguais.
+
+**Por que:** achado de revisão humana — a correlação podia atribuir telemetria não identificada à campanha; D-14 exige correlação confiável por run/trace.
+
+**Testes adicionados** (no `describe` de correlação, arquivo `image-generation-config-snapshot.test.ts`):
+- snapshot com `runId`+`traceId`: tentativa **sem `runId`** NÃO é correlacionada;
+- snapshot com `runId`+`traceId`: tentativa **sem `traceId`** NÃO é correlacionada;
+- snapshot com `runId`+`traceId`: tentativa com ambos presentes e iguais É correlacionada (regressão);
+- snapshot com **apenas `runId`**: tentativa sem `runId` NÃO correlaciona; com `runId` igual correlaciona;
+- snapshot **sem `runId` nem `traceId`**: nenhuma tentativa é correlacionada.
+
+O teste de ids divergentes permanece verde. Nenhuma outra função/signatura/export foi alterada; sem I/O, banco, provider ou ativação.
+
+**Gates:** `npx vitest run src/lib/ai/__tests__/image-generation-config-snapshot.test.ts` → **21 testes verdes** (16 originais + 5 novos); `npm run typecheck` exit 0; `npm run lint` exit 0.
+
+**Commits:** `1c311715` (fix: código + testes fail-closed); nota de SUMMARY neste commit docs.
+
 ## Issues Encountered
 
 None. `npm test -- src/lib/ai/__tests__/image-generation-config-snapshot.test.ts` (16 testes), `npm run typecheck`, `npm run lint` e `architecture-guard.test.ts` (21 testes) verdes. Nenhum import de banco/provider; `git diff` das fronteiras legadas vazio.
