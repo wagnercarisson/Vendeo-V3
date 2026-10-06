@@ -2,8 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   ELIGIBLE_IMAGE_GENERATION_FAILURE_CLASSES,
+  IMAGE_GENERATION_ATTEMPT_PLAN,
+  MAX_FALLBACK_IMAGE_GENERATION_ATTEMPTS,
+  MAX_IMAGE_GENERATION_ATTEMPTS,
+  MAX_PRIMARY_IMAGE_GENERATION_ATTEMPTS,
   classifyImageGenerationFailure,
   nextImageGenerationAttempt,
+  planImageGenerationAttempts,
+  type ImageGenerationAttemptState,
+  type ImageGenerationFailureClassification,
+  type ImageGenerationNextAttempt,
 } from "../image-generation-failure-policy";
 import { AiInvocationError } from "../types";
 
@@ -257,3 +265,166 @@ describe("máquina de política — teto de tentativas e fallback (F56.1 D-16)",
     expect(decision.action).toBe("retry_primary");
   });
 });
+
+// ─── Suíte completa (simulada, sem provider) ─────────────────────────────────
+//
+// A aplicação desta política sobre uma **geração real** é integração da
+// **F56.2**; aqui a operação é percorrida com falhas simuladas para provar as
+// invariantes de teto (T-56.1-19) e a não cobrança da falha técnica
+// (T-56.1-20 / D-17).
+
+const ALL_FAILURE_CLASSES: readonly ImageGenerationFailureClassification[] = Object.freeze([
+  { category: "rate_limit", eligibleForFallback: true },
+  { category: "timeout", eligibleForFallback: true },
+  { category: "network", eligibleForFallback: true },
+  { category: "provider_error", eligibleForFallback: true },
+  { category: "availability", eligibleForFallback: true },
+  { category: "quota", eligibleForFallback: false },
+  { category: "billing", eligibleForFallback: false },
+  { category: "auth", eligibleForFallback: false },
+  { category: "content", eligibleForFallback: false },
+  { category: "input", eligibleForFallback: false },
+]);
+
+interface SimulatedCall {
+  readonly target: string;
+  readonly attemptNumber: number;
+}
+
+/** Percorre a operação aplicando falhas simuladas até o encerramento. */
+function simulateOperation(failures: readonly ImageGenerationFailureClassification[]): {
+  calls: SimulatedCall[];
+  terminal: ImageGenerationNextAttempt;
+} {
+  const calls: SimulatedCall[] = [];
+  let state: ImageGenerationAttemptState = { target: "primary", attemptNumber: 1 };
+  let index = 0;
+
+  for (;;) {
+    calls.push({ target: state.target, attemptNumber: state.attemptNumber });
+    const failure = failures[Math.min(index, failures.length - 1)];
+    const decision = nextImageGenerationAttempt(state, failure);
+    if (decision.terminal) return { calls, terminal: decision };
+    state = {
+      target: decision.nextTarget as ImageGenerationAttemptState["target"],
+      attemptNumber: decision.nextAttemptNumber as number,
+    };
+    index += 1;
+    if (index > MAX_IMAGE_GENERATION_ATTEMPTS + 1) {
+      throw new Error("máquina de política não encerrou dentro do teto");
+    }
+  }
+}
+
+describe("política de execução — invariantes de teto e não cobrança (F56.1 D-16/D-17)", () => {
+  it("o plano máximo codifica 2 principal + 1 fallback = 3 chamadas (T-56.1-19)", () => {
+    expect(planImageGenerationAttempts()).toBe(IMAGE_GENERATION_ATTEMPT_PLAN);
+    expect(planImageGenerationAttempts()).toHaveLength(MAX_IMAGE_GENERATION_ATTEMPTS);
+    expect(
+      IMAGE_GENERATION_ATTEMPT_PLAN.filter((step) => step.target === "primary"),
+    ).toHaveLength(MAX_PRIMARY_IMAGE_GENERATION_ATTEMPTS);
+    expect(
+      IMAGE_GENERATION_ATTEMPT_PLAN.filter((step) => step.target === "fallback"),
+    ).toHaveLength(MAX_FALLBACK_IMAGE_GENERATION_ATTEMPTS);
+  });
+
+  it("esgota o principal em 2 tentativas, usa o fallback e encerra no teto de 3", () => {
+    const providerError: ImageGenerationFailureClassification = {
+      category: "provider_error",
+      eligibleForFallback: true,
+    };
+    const { calls, terminal } = simulateOperation([providerError, providerError, providerError]);
+
+    expect(calls).toEqual([
+      { target: "primary", attemptNumber: 1 },
+      { target: "primary", attemptNumber: 2 },
+      { target: "fallback", attemptNumber: 3 },
+    ]);
+    expect(terminal.action).toBe("stop");
+  });
+
+  it("rate_limit repete no principal e, persistindo, cai no fallback", () => {
+    const rateLimit: ImageGenerationFailureClassification = {
+      category: "rate_limit",
+      eligibleForFallback: true,
+    };
+    const { calls } = simulateOperation([rateLimit, rateLimit, rateLimit]);
+    expect(calls).toEqual([
+      { target: "primary", attemptNumber: 1 },
+      { target: "primary", attemptNumber: 2 },
+      { target: "fallback", attemptNumber: 3 },
+    ]);
+  });
+
+  it("disponibilidade aciona o fallback sem repetir o principal", () => {
+    const availability: ImageGenerationFailureClassification = {
+      category: "availability",
+      eligibleForFallback: true,
+    };
+    const { calls } = simulateOperation([availability, availability]);
+    expect(calls).toEqual([
+      { target: "primary", attemptNumber: 1 },
+      { target: "fallback", attemptNumber: 2 },
+    ]);
+  });
+
+  it("quota/faturamento encerram imediatamente, sem fallback", () => {
+    for (const category of ["quota", "billing"] as const) {
+      const { calls } = simulateOperation([{ category, eligibleForFallback: false }]);
+      expect(calls).toEqual([{ target: "primary", attemptNumber: 1 }]);
+    }
+  });
+
+  it("falha de entrada/autorização/segurança não vira falha de modelo e não usa fallback", () => {
+    for (const category of ["auth", "content", "input"] as const) {
+      const decision = nextImageGenerationAttempt(
+        { target: "primary", attemptNumber: 1 },
+        { category, eligibleForFallback: false },
+      );
+      expect(decision.action).toBe("stop");
+      expect(decision.nextTarget).toBeUndefined();
+    }
+  });
+
+  it("nenhuma combinação de falhas gera mais de 2 principal, 1 fallback ou 3 chamadas", () => {
+    for (const [first, second, third] of product3(ALL_FAILURE_CLASSES)) {
+      const { calls, terminal } = simulateOperation([first, second, third]);
+      const primary = calls.filter((call) => call.target === "primary").length;
+      const fallback = calls.filter((call) => call.target === "fallback").length;
+      expect(primary).toBeLessThanOrEqual(MAX_PRIMARY_IMAGE_GENERATION_ATTEMPTS);
+      expect(fallback).toBeLessThanOrEqual(MAX_FALLBACK_IMAGE_GENERATION_ATTEMPTS);
+      expect(calls.length).toBeLessThanOrEqual(MAX_IMAGE_GENERATION_ATTEMPTS);
+      expect(terminal.terminal).toBe(true);
+    }
+  });
+
+  it("toda falha técnica encerra com charged=false e consumedCredit=false (D-17)", () => {
+    for (const failure of ALL_FAILURE_CLASSES) {
+      const { terminal } = simulateOperation([failure]);
+      expect(terminal.charged).toBe(false);
+      expect(terminal.consumedCredit).toBe(false);
+    }
+  });
+
+  it("a tentativa de fallback pertence à mesma operação (não é operação separada do lojista)", () => {
+    const decision = nextImageGenerationAttempt(
+      { target: "primary", attemptNumber: 2 },
+      { category: "provider_error", eligibleForFallback: true },
+    );
+    expect(decision.action).toBe("go_fallback");
+    expect(decision.terminal).toBe(false);
+    expect(decision.charged).toBe(false);
+    expect(decision.consumedCredit).toBe(false);
+  });
+});
+
+/** Produto cartesiano de ordem 3 (determinístico, sem dependências externas). */
+function product3<T>(items: readonly T[]): Array<[T, T, T]> {
+  const out: Array<[T, T, T]> = [];
+  for (const a of items) {
+    for (const b of items) {
+      for (const c of items) out.push([a, b, c]);
+    }
+  }
+  return out;
+}
