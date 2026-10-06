@@ -57,7 +57,7 @@
 | 49 | ✅ Ativação e Orientação Contextual de Campos | Concluída |
 | 50 | ✅ Demonstração Gratuita e Validade dos Créditos | Concluída; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura — Formalização Legal e Ativação da Demonstração | Aguardando constituição da PJ; não planejada, não ativa e não bloqueante para o estado concluído |
-| 56.1 | ○ Contrato produtivo, modelos e fallback | Planejada (não em execução); infraestrutura preparatória do novo fluxo Produto 1:1 — configuração de par principal/fallback, snapshot, política de falhas, resposta ao lojista e instrumentação; fluxo legado intocado |
+| 56.1 | ◐ Contrato produtivo, modelos e fallback | Em execução (1/11 planos); infraestrutura preparatória do novo fluxo Produto 1:1 — configuração de par principal/fallback, snapshot, política de falhas, resposta ao lojista e instrumentação; fluxo legado intocado. Plano 01: contratos de par/capacidade `campaign_product_image`/taxonomia quota-billing/envelope/barreira fail-closed (95 testes, typecheck e lint verdes) |
 | — | Monetização pública / Stripe | Diferida para v1.7+, fora da numeração |
 
 ## Current State
