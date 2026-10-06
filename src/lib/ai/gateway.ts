@@ -102,6 +102,12 @@ export class AiGateway {
         usageMeta: result.usageMeta,
         durationMs: Date.now() - startedAt,
         providerReportedCostUsd: result.providerReportedCostUsd,
+        // F56.1 (D-21) — campos ADITIVOS por tentativa: a qualidade do request, o
+        // alvo recebido e o número da tentativa. Não alteram o legado nem a
+        // invariante de um envelope por tentativa real.
+        quality: request.quality,
+        target,
+        attemptNumber: telemetry.attemptNumber,
       });
       return result;
     } catch (err) {
@@ -120,6 +126,11 @@ export class AiGateway {
           : err instanceof Error
             ? err.name
             : "unknown",
+        // F56.1 (D-21) — os mesmos campos aditivos também no caminho de falha/
+        // timeout, de modo que cada envelope seja correlacionável por tentativa.
+        quality: request.quality,
+        target,
+        attemptNumber: telemetry.attemptNumber,
       });
       if (isInvocationError) throw normalized;
       throw err;
