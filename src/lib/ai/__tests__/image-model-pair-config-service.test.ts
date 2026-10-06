@@ -137,7 +137,7 @@ describe("ImageModelPairConfigService — leitura server-only e cache curto (D-0
     resolveSecond({ data: { ...VALID_ROW, config_version_id: "fresh" }, error: null });
 
     await expect(freshRead).resolves.toMatchObject({ config_version_id: "fresh" });
-    expect(maybeSingle).toHaveBeenCalledTimes(3); // 2 leituras + releitura pós-invalidação
+    expect(maybeSingle).toHaveBeenCalledTimes(2); // leitura antiga + leitura nova pós-invalidação
   });
 
   it("falha de leitura é fail-closed: erro tipado, nunca null silencioso", async () => {
