@@ -133,6 +133,63 @@ describe("image-generation-support-reference — resposta pública IMG-001 + UUI
   });
 });
 
+describe("image-generation-support-reference — não revelação entre causas (F56.1 D-18/D-19)", () => {
+  const CAUSES = ["quota", "billing", "auth", "rate_limit"] as const;
+
+  it("quota/faturamento/auth/rate limit compartilham o mesmo código e a mesma mensagem públicas", () => {
+    const results = CAUSES.map((internalCategory) =>
+      buildPublicGenerationFailure(baseDiagnosis({ internalCategory })),
+    );
+
+    for (const result of results) {
+      expect(result.code).toBe(PUBLIC_GENERATION_FAILURE_CODE);
+      expect(result.message).toBe(results[0].message);
+    }
+  });
+
+  it("a mensagem pública não contém os termos proibidos para nenhuma causa", () => {
+    for (const internalCategory of CAUSES) {
+      const messageLower = buildPublicGenerationFailure(
+        baseDiagnosis({ internalCategory }),
+      ).message.toLowerCase();
+
+      for (const term of FORBIDDEN_PUBLIC_TERMS) {
+        expect(messageLower).not.toContain(term);
+      }
+    }
+  });
+
+  it("a referência é estável quando reapresentada e única entre ocorrências", () => {
+    const stable = generateSupportReference();
+
+    expect(buildPublicGenerationFailure(baseDiagnosis({ reference: stable })).reference).toBe(stable);
+    expect(buildPublicGenerationFailure(baseDiagnosis()).reference).not.toBe(
+      buildPublicGenerationFailure(baseDiagnosis()).reference,
+    );
+  });
+
+  it("o registro persistido não vaza motivo interno nem texto cru (mensagem/erro)", async () => {
+    const { client, rows } = createFakeSupabase();
+    const repository = new SupabaseImageGenerationDiagnosisRepository(client);
+
+    await repository.recordDiagnosis(
+      baseDiagnosis({
+        internalCategory: "billing",
+        normalizedError:
+          "billing_hard_limit_reached sk-verysecret123456 https://api.stripe.com/v1/charges",
+      }),
+    );
+
+    const row = rows[0];
+    const persistedMessageLower = String(row.message_public).toLowerCase();
+    for (const term of FORBIDDEN_PUBLIC_TERMS) {
+      expect(persistedMessageLower).not.toContain(term);
+    }
+    expect(String(row.normalized_error)).not.toContain("sk-verysecret123456");
+    expect(String(row.normalized_error)).not.toContain("api.stripe.com");
+  });
+});
+
 describe("image-generation-diagnosis-repository — persistência sanitizada (F56.1 D-19)", () => {
   it("recordDiagnosis grava campos sanitizados e devolve a referência", async () => {
     const { client, rows } = createFakeSupabase();
