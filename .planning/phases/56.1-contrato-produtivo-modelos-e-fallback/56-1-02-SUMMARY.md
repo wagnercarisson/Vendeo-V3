@@ -70,7 +70,7 @@ O reset/lint rodaram **exclusivamente** na instância Supabase descartável e co
 - Container DB: `supabase_db_vendeo-f561-isolated` — imagem `public.ecr.aws/supabase/postgres:17.6.1.075`
 - Volume: `supabase_db_vendeo-f561-isolated`
 - DB URL local: `postgresql://postgres:postgres@127.0.0.1:55322/postgres`
-- Junction: `<isolated>/supabase/migrations` -> `C:\Projetos\Vendeo V3\supabase\migrations` (pointer somente-leitura)
+- Junction: `<isolated>/supabase/migrations` -> `C:\Projetos\Vendeo V3\supabase\migrations` (apenas um ponteiro; a junção NÃO impõe permissão de leitura nem torna os arquivos somente-leitura — o isolamento comprovado é o de projeto/container/volume/portas. Não editar nem remover arquivos pela rota da junção.)
 
 **`supabase status --workdir ...` (saída):** DB URL `postgresql://postgres:postgres@127.0.0.1:55322/postgres`; serviços parados com sufixo `vendeo-f561-isolated`; "supabase local development setup is running".
 
