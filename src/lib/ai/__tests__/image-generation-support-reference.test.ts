@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  GENERIC_FAILURE_ERROR_CODE,
+  NORMALIZED_FAILURE_ERROR_CODES,
   PUBLIC_GENERATION_FAILURE_CODE,
   buildPublicGenerationFailure,
   generateSupportReference,
   isSupportReference,
+  normalizeDiagnosisErrorCode,
   sanitizeDiagnosisText,
+  toInternalDiagnosis,
   type ImageGenerationDiagnosisInput,
 } from "../image-generation-support-reference";
 import { SupabaseImageGenerationDiagnosisRepository } from "../image-generation-diagnosis-repository";
@@ -185,20 +189,80 @@ describe("image-generation-support-reference — não revelação entre causas (
     for (const term of FORBIDDEN_PUBLIC_TERMS) {
       expect(persistedMessageLower).not.toContain(term);
     }
+    // `normalized_error` persistido é SEMPRE um código do conjunto fechado.
+    expect(NORMALIZED_FAILURE_ERROR_CODES).toContain(row.normalized_error);
+    expect(row.normalized_error).toBe(GENERIC_FAILURE_ERROR_CODE);
+    expect(String(row.normalized_error)).not.toContain("billing_hard_limit_reached");
     expect(String(row.normalized_error)).not.toContain("sk-verysecret123456");
     expect(String(row.normalized_error)).not.toContain("api.stripe.com");
   });
 });
 
-describe("image-generation-diagnosis-repository — persistência sanitizada (F56.1 D-19)", () => {
-  it("recordDiagnosis grava campos sanitizados e devolve a referência", async () => {
+describe("image-generation-support-reference — conjunto fechado de códigos de erro (F56.1 D-19)", () => {
+  it("expõe exatamente o conjunto fechado alinhado a AiInvocationErrorKind + genérico", () => {
+    expect([...NORMALIZED_FAILURE_ERROR_CODES]).toEqual([
+      "timeout",
+      "auth",
+      "rate_limit",
+      "capability",
+      "network",
+      "content_filter",
+      "provider_error",
+      "quota",
+      "billing",
+      "unknown_provider_error",
+    ]);
+    expect(GENERIC_FAILURE_ERROR_CODE).toBe("unknown_provider_error");
+    expect(Object.isFrozen(NORMALIZED_FAILURE_ERROR_CODES)).toBe(true);
+  });
+
+  it("normaliza código conhecido inalterado e qualquer desconhecido para o genérico", () => {
+    for (const code of NORMALIZED_FAILURE_ERROR_CODES) {
+      expect(normalizeDiagnosisErrorCode(code)).toBe(code);
+    }
+
+    const arbitrary =
+      "Error: invalid_api_key sk-abc123 https://api.openai.com/v1/error at Object.<anonymous>";
+    const normalized = normalizeDiagnosisErrorCode(arbitrary);
+
+    expect(normalized).toBe(GENERIC_FAILURE_ERROR_CODE);
+    expect(normalized).not.toBe(arbitrary);
+    expect(normalized).not.toContain("invalid_api_key");
+    expect(normalized).not.toContain("sk-abc123");
+    expect(normalized).not.toContain("api.openai.com");
+    expect(normalized).not.toContain("Object.<anonymous>");
+  });
+
+  it("devolve o genérico para null/undefined/vazio", () => {
+    expect(normalizeDiagnosisErrorCode(null)).toBe(GENERIC_FAILURE_ERROR_CODE);
+    expect(normalizeDiagnosisErrorCode(undefined)).toBe(GENERIC_FAILURE_ERROR_CODE);
+    expect(normalizeDiagnosisErrorCode("")).toBe(GENERIC_FAILURE_ERROR_CODE);
+  });
+
+  it("toInternalDiagnosis reduz o erro a um código do conjunto fechado", () => {
+    const diagnosis = toInternalDiagnosis(
+      baseDiagnosis({ normalizedError: "raw sk-abc123 https://provider/api" }),
+      generateSupportReference(),
+    );
+
+    expect(NORMALIZED_FAILURE_ERROR_CODES).toContain(diagnosis.normalizedError);
+    expect(diagnosis.normalizedError).toBe(GENERIC_FAILURE_ERROR_CODE);
+    expect(diagnosis.normalizedError).not.toContain("raw");
+    expect(diagnosis.normalizedError).not.toContain("sk-abc123");
+    expect(diagnosis.normalizedError).not.toContain("provider/api");
+  });
+});
+
+describe("image-generation-diagnosis-repository — persistência de código fechado (F56.1 D-19)", () => {
+  const ARBITRARY_PROVIDER_MESSAGE =
+    "Error: invalid_api_key sk-abc123 https://api.openai.com/v1/error at Object.<anonymous>";
+
+  it("recordDiagnosis grava o código fechado e devolve a referência", async () => {
     const { client, rows } = createFakeSupabase();
     const repository = new SupabaseImageGenerationDiagnosisRepository(client);
 
     const result = await repository.recordDiagnosis(
-      baseDiagnosis({
-        normalizedError: "Bearer supersecret sk-abcd1234efgh5678 https://api.openai.com/v1",
-      }),
+      baseDiagnosis({ normalizedError: ARBITRARY_PROVIDER_MESSAGE }),
     );
 
     expect(result.reference).toMatch(UUID_V4);
@@ -207,10 +271,27 @@ describe("image-generation-diagnosis-repository — persistência sanitizada (F5
     expect(row.reference).toBe(result.reference);
     expect(row.code).toBe("IMG-001");
     expect(row.internal_category).toBe("provider_error");
-    expect(row.normalized_error as string).not.toContain("sk-abcd1234efgh5678");
+
+    // Mensagem arbitrária do provider NÃO é persistida como texto cru: vira código fechado.
+    expect(NORMALIZED_FAILURE_ERROR_CODES).toContain(row.normalized_error);
+    expect(row.normalized_error).toBe(GENERIC_FAILURE_ERROR_CODE);
+    expect(row.normalized_error as string).not.toBe(ARBITRARY_PROVIDER_MESSAGE);
+    expect(row.normalized_error as string).not.toContain("invalid_api_key");
+    expect(row.normalized_error as string).not.toContain("sk-abc123");
     expect(row.normalized_error as string).not.toContain("api.openai.com");
-    expect(row.message_public as string).not.toContain("sk-abcd1234efgh5678");
+    expect(row.normalized_error as string).not.toContain("Object.<anonymous>");
+
+    expect(row.message_public as string).not.toContain("sk-abc123");
     expect(row.message_public as string).not.toContain("api.openai.com");
+  });
+
+  it("faz round-trip de um código conhecido do conjunto fechado sem alterá-lo", async () => {
+    const { client, rows } = createFakeSupabase();
+    const repository = new SupabaseImageGenerationDiagnosisRepository(client);
+
+    await repository.recordDiagnosis(baseDiagnosis({ normalizedError: "rate_limit" }));
+
+    expect(rows[0].normalized_error).toBe("rate_limit");
   });
 
   it("findByReference recupera o diagnóstico interno pela referência UUID", async () => {

@@ -5,6 +5,7 @@ import {
   PUBLIC_GENERATION_FAILURE_CODE,
   buildPublicGenerationFailure,
   generateSupportReference,
+  normalizeDiagnosisErrorCode,
   sanitizeDiagnosisText,
   type ImageGenerationDiagnosisInput,
   type ImageGenerationFailureTarget,
@@ -23,8 +24,9 @@ import {
  * Segue o **seam de client injetável** de `ai-model-selection-service.ts`: o
  * cliente Supabase é recebido no construtor, permitindo que testes de
  * durabilidade construam clientes/instâncias independentes. O `normalized_error`
- * e a `message_public` são **sanitizados ANTES de persistir** (nunca gravar texto
- * cru/chave/URL). Nenhuma chamada de provider.
+ * é reduzido a um **código do conjunto fechado** (`normalizeDiagnosisErrorCode`)
+ * e a `message_public` é sanitizada ANTES de persistir — nunca gravar texto
+ * cru/chave/URL. Nenhuma chamada de provider.
  */
 
 /** Resultado da gravação: a referência opaca que o lojista recebe. */
@@ -99,8 +101,9 @@ export class SupabaseImageGenerationDiagnosisRepository
       quality: input.quality ?? null,
       target: input.target ?? null,
       attempt_number: input.attemptNumber ?? null,
-      // Sanitização ANTES de persistir (D-19): sem chave/URL/texto cru do provider.
-      normalized_error: sanitizeDiagnosisText(input.normalizedError),
+      // Código do conjunto fechado ANTES de persistir (D-19): nunca grava o texto
+      // cru do provider — entrada desconhecida vira `unknown_provider_error`.
+      normalized_error: normalizeDiagnosisErrorCode(input.normalizedError),
       run_id: input.runId ?? null,
       trace_id: input.traceId ?? null,
       message_public: sanitizeDiagnosisText(publicFailure.message),

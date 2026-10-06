@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
 import { SupabaseImageGenerationDiagnosisRepository } from "../image-generation-diagnosis-repository";
-import { generateSupportReference } from "../image-generation-support-reference";
+import {
+  GENERIC_FAILURE_ERROR_CODE,
+  NORMALIZED_FAILURE_ERROR_CODES,
+  generateSupportReference,
+} from "../image-generation-support-reference";
 
 /**
  * Prova de DURABILIDADE cross-instance do diagnóstico de falha (F56.1, D-26).
@@ -90,7 +94,7 @@ describeDurability(
       expect(recovered?.traceId).toBe("trace-durabilidade-1");
     });
 
-    it("persiste o erro sanitizado (sem chave/URL crua) recuperável pela nova instância", async () => {
+    it("persiste o erro como código do conjunto fechado (sem texto cru) recuperável pela nova instância", async () => {
       const repositoryA = new SupabaseImageGenerationDiagnosisRepository(createIsolatedClient());
       const reference = generateSupportReference();
 
@@ -108,11 +112,63 @@ describeDurability(
       const recovered = await repositoryB.findByReference(reference);
 
       expect(recovered).not.toBeNull();
+      expect(NORMALIZED_FAILURE_ERROR_CODES).toContain(recovered?.normalizedError);
+      expect(recovered?.normalizedError).toBe(GENERIC_FAILURE_ERROR_CODE);
       expect(recovered?.normalizedError).not.toContain("sk-abcd1234efgh5678");
       expect(recovered?.normalizedError).not.toContain("api.openai.com");
+      expect(recovered?.normalizedError).not.toContain("invalid api key");
       expect(recovered?.internalCategory).toBe("auth");
       expect(recovered?.target).toBe("fallback");
       expect(recovered?.attemptNumber).toBe(3);
+    });
+
+    it("não persiste texto cru: mensagem arbitrária do provider vira unknown_provider_error", async () => {
+      const repositoryA = new SupabaseImageGenerationDiagnosisRepository(createIsolatedClient());
+      const reference = generateSupportReference();
+      const rawMessage =
+        "Error: invalid_api_key sk-abc123 https://api.openai.com/v1/error at Object.<anonymous>";
+
+      await repositoryA.recordDiagnosis({
+        reference,
+        internalCategory: "provider_error",
+        model: "gpt-image-2.5-sunburst",
+        quality: "medium",
+        target: "primary",
+        attemptNumber: 1,
+        normalizedError: rawMessage,
+      });
+
+      const repositoryB = new SupabaseImageGenerationDiagnosisRepository(createIsolatedClient());
+      const recovered = await repositoryB.findByReference(reference);
+
+      expect(recovered).not.toBeNull();
+      expect(recovered?.normalizedError).toBe(GENERIC_FAILURE_ERROR_CODE);
+      expect(recovered?.normalizedError).not.toBe(rawMessage);
+      expect(recovered?.normalizedError).not.toContain("invalid_api_key");
+      expect(recovered?.normalizedError).not.toContain("sk-abc123");
+      expect(recovered?.normalizedError).not.toContain("api.openai.com");
+      expect(recovered?.normalizedError).not.toContain("Object.<anonymous>");
+    });
+
+    it("faz round-trip de um código conhecido do conjunto fechado inalterado", async () => {
+      const repositoryA = new SupabaseImageGenerationDiagnosisRepository(createIsolatedClient());
+      const reference = generateSupportReference();
+
+      await repositoryA.recordDiagnosis({
+        reference,
+        internalCategory: "rate_limit",
+        model: "gpt-image-2.5-sunburst",
+        quality: "medium",
+        target: "primary",
+        attemptNumber: 1,
+        normalizedError: "rate_limit",
+      });
+
+      const repositoryB = new SupabaseImageGenerationDiagnosisRepository(createIsolatedClient());
+      const recovered = await repositoryB.findByReference(reference);
+
+      expect(recovered).not.toBeNull();
+      expect(recovered?.normalizedError).toBe("rate_limit");
     });
 
     it("retorna null para referência inexistente consultando a tabela durável", async () => {

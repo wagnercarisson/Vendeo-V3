@@ -36,7 +36,7 @@ const DIAGNOSIS = {
   quality: "medium",
   target: "primary" as const,
   attemptNumber: 1,
-  normalizedError: "insufficient_quota",
+  normalizedError: "quota",
 };
 
 async function getDiagnosis(

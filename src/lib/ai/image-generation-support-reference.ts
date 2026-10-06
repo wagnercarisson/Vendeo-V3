@@ -28,6 +28,38 @@ import { sanitizeAiErrorMessage } from "./types";
 export const PUBLIC_GENERATION_FAILURE_CODE = "IMG-001" as const;
 
 /**
+ * Conjunto FECHADO de códigos de erro normalizados do diagnóstico interno (D-19).
+ *
+ * Alinhado a `AiInvocationErrorKind` (`types.ts`) mais a categoria genérica
+ * `unknown_provider_error`. É a ÚNICA forma permitida de persistir o
+ * `normalized_error`: qualquer valor fora deste conjunto NÃO é gravado — é
+ * reduzido a `GENERIC_FAILURE_ERROR_CODE`. Isso impede que o texto cru do
+ * provider (chave, URL, stack, mensagem) seja persistido/exibido.
+ */
+export const NORMALIZED_FAILURE_ERROR_CODES = Object.freeze([
+  "timeout",
+  "auth",
+  "rate_limit",
+  "capability",
+  "network",
+  "content_filter",
+  "provider_error",
+  "quota",
+  "billing",
+  "unknown_provider_error",
+] as const);
+
+/** Código de erro normalizado pertencente ao conjunto fechado. */
+export type NormalizedFailureErrorCode = (typeof NORMALIZED_FAILURE_ERROR_CODES)[number];
+
+/** Valor genérico aplicado a qualquer entrada desconhecida (nunca revela a entrada crua). */
+export const GENERIC_FAILURE_ERROR_CODE = "unknown_provider_error" as const;
+
+const NORMALIZED_FAILURE_ERROR_CODE_SET: ReadonlySet<string> = new Set(
+  NORMALIZED_FAILURE_ERROR_CODES,
+);
+
+/**
  * Mensagem pública genérica em PT-BR (D-19). Deliberadamente NÃO menciona quota,
  * saldo, faturamento, autenticação ou rate limit, e não contém chave/URL/stack
  * nem texto cru do provider.
@@ -101,8 +133,8 @@ export function buildPublicGenerationFailure(
 }
 
 /**
- * Sanitiza um texto do diagnóstico (erro normalizado / mensagem pública) antes de
- * persistir: remove bearer, chaves `sk`/`AIza` e URLs (D-19).
+ * Sanitiza um texto do diagnóstico (mensagem pública) antes de persistir: remove
+ * bearer, chaves `sk`/`AIza` e URLs (D-19). Continua usada para `message_public`.
  */
 export function sanitizeDiagnosisText(value: string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
@@ -110,8 +142,26 @@ export function sanitizeDiagnosisText(value: string | null | undefined): string 
 }
 
 /**
+ * Normaliza o erro do diagnóstico para um código do conjunto FECHADO (D-19).
+ *
+ * Retorna o próprio `value` **se e somente se** ele já for um dos códigos de
+ * `NORMALIZED_FAILURE_ERROR_CODES`; caso contrário devolve
+ * `GENERIC_FAILURE_ERROR_CODE` (`unknown_provider_error`). NUNCA retorna nem
+ * incorpora a entrada crua — é impossível persistir texto/chave/URL/stack do
+ * provider por este caminho.
+ */
+export function normalizeDiagnosisErrorCode(
+  value: string | null | undefined,
+): NormalizedFailureErrorCode {
+  if (typeof value === "string" && NORMALIZED_FAILURE_ERROR_CODE_SET.has(value)) {
+    return value as NormalizedFailureErrorCode;
+  }
+  return GENERIC_FAILURE_ERROR_CODE;
+}
+
+/**
  * Materializa o diagnóstico interno (com referência definida) a partir de uma
- * entrada, sanitizando o erro normalizado antes da persistência (D-19).
+ * entrada, normalizando o erro para um código do conjunto fechado (D-19).
  */
 export function toInternalDiagnosis(
   diagnosis: ImageGenerationDiagnosisInput,
@@ -124,7 +174,7 @@ export function toInternalDiagnosis(
     quality: diagnosis.quality,
     target: diagnosis.target,
     attemptNumber: diagnosis.attemptNumber,
-    normalizedError: sanitizeDiagnosisText(diagnosis.normalizedError) ?? "",
+    normalizedError: normalizeDiagnosisErrorCode(diagnosis.normalizedError),
     ...(diagnosis.runId !== undefined ? { runId: diagnosis.runId } : {}),
     ...(diagnosis.traceId !== undefined ? { traceId: diagnosis.traceId } : {}),
   };
