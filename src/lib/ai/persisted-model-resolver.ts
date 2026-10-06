@@ -24,6 +24,29 @@ export interface PersistedModelResolverDependencies {
   catalogService?: { getCatalogMap(): Promise<AiModelCatalogMap> };
 }
 
+/** Código determinístico da barreira fail-closed do novo fluxo (F56.1, D-06/D-08). */
+export const NEW_FLOW_IMAGE_MODEL_PAIR_CONFIG_REQUIRED =
+  "new_flow_image_model_pair_config_required" as const;
+
+/**
+ * Lançado quando a capacidade própria do novo fluxo (`campaign_product_image`) é
+ * resolvida por um caminho **genérico** — isto é, sem a configuração explícita
+ * do novo fluxo. O default do `MODEL_REGISTRY` existe apenas para satisfazer
+ * `validateRegistry`/tipos e NUNCA é servido (fail-closed, D-06/D-08). A
+ * resolução legítima usa o resolver dedicado do novo fluxo (plano 09), que lê
+ * `image_model_pair_config`.
+ */
+export class AiNewFlowConfigRequiredError extends Error {
+  readonly code = NEW_FLOW_IMAGE_MODEL_PAIR_CONFIG_REQUIRED;
+  readonly capability: AiCapability;
+
+  constructor(capability: AiCapability = "campaign_product_image") {
+    super(`${NEW_FLOW_IMAGE_MODEL_PAIR_CONFIG_REQUIRED}:${capability}`);
+    this.name = "AiNewFlowConfigRequiredError";
+    this.capability = capability;
+  }
+}
+
 function isSupportedProviderProtocol(provider: string, protocol: string): boolean {
   if (provider === "gemini") return protocol === "gemini";
   return provider === "openai" && ["chat-completions", "responses", "images"].includes(protocol);
@@ -112,6 +135,14 @@ export class PersistedModelResolver implements AiModelResolver {
   }
 
   async resolveWithSource(capability: AiCapability): Promise<{ config: AiModelConfig; source: "selection" | "default" }> {
+    // Barreira fail-closed (F56.1, D-06/D-08): a capacidade própria do novo fluxo
+    // NÃO é servida pelo fallback fail-open ao registry. Sem configuração
+    // explícita do novo fluxo, a resolução falha de forma determinística e nunca
+    // retorna o default `gpt-image-2`.
+    if (capability === "campaign_product_image") {
+      throw new AiNewFlowConfigRequiredError(capability);
+    }
+
     const fallback = await this.registry.resolve(capability);
     if (!ALL_CAPABILITIES.includes(capability)) return { config: fallback, source: "default" };
 
