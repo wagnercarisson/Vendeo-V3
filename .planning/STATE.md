@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: complete
-last_updated: "2026-10-05T23:51:34.066Z"
+last_updated: "2026-10-06T00:38:04.613Z"
 progress:
-  total_phases: 44
-  completed_phases: 40
-  total_plans: 355
-  completed_plans: 338
-  percent: 95
+  total_phases: 2
+  completed_phases: 1
+  total_plans: 21
+  completed_plans: 11
+  percent: 50
 ---
 
 # Project State
@@ -27,9 +27,9 @@ progress:
 
 ## Current Position
 
-Phase: 56.1 — PLANNING (planned, NOT in execution). Registered in ROADMAP.md as `## Phase 56.1: Contrato produtivo, modelos e fallback`; phase dir `.planning/phases/56.1-contrato-produtivo-modelos-e-fallback/`. OpenSpec active change `fase-56-1-contrato-produtivo-modelos-fallback`. No implementation, migration, paid call or activation until human review of the planning artifacts.
+Phase: 56.1 (Contrato produtivo, modelos e fallback) — EXECUTING
 Phase (última concluída): 48.2.6 — COMPLETE, verified, synced and archived (2026-10-05); no active OpenSpec change
-Plan: 10 of 10 complete; GSD UAT 5/5 pass; CHECKPOINT B approved_with_limitations; OpenSpec archived
+Plan: 2 of 11
 Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B agora está `approved_with_limitations` por decisão explícita do usuário. Correção documental quick 261003-mbr: relato do usuário para OF-A informa Sunburst medium, uma imagem de referência, 24.6 s, usage sem decomposição numérica e custo calculado local USD 0.03 (não reportado/confirmado/faturado pela plataforma); avaliação segue `requer ajuste`. Quick 261003-mne corrige as rotas para mapear `offer/spotlight/exclusive` a `oferta/destaque/exclusivo` e revalidar a política selecionada; teste local `/compose` recompõe Mouse sem fio com a frase/versão Destaque. Quick 261003-nkj neutraliza o rótulo comum para `Preço de venda` e versiona o compositor `48.2.4-prompt-composer-v2`; Oferta mantém sua instrução e versão. Plan 10 Task 0 inclui Produto v4/compositor v5. Os runs finais corretos são `1ca08368-9a81-4671-9ca6-50032feac231` (Oferta/51 Ice) e `2fb07e0e-37cc-40d0-8a53-fa380f7eef81` (Exclusivo/Johnnie Walker), ambos Produto v4/compositor v5 e prompt compiled/approved/sent idênticos. IDs `2a01db63...`/`da2f2321...` permanecem históricos Produto v3/compositor v4 e não recebem avaliação final. O usuário confirmou valores arredondados exibidos na plataforma (US$0,05/US$0,03); cálculos locais precisos `0.048863`/`0.030974`, provider-reported null, sem fatura conferida. Fidelidade de produto/embalagem aprovada apenas nos testes examinados; letras pequenas sem run específico pending; validação anterior de Destaque sem Run ID/versões pending; prévia v4/v5 separada de geração. v1×v3 continua antes×depois não controlada para isolar Exclusivo.
 UAT complementar informado pelo usuário: a plataforma exibiu individualmente US$0,05 e US$0,03 arredondados para os runs finais; os valores continuam distintos dos cálculos locais precisos (`0.048863`/`0.030974`) e não comprovam fatura. Fidelidade de produto/embalagem foi aprovada nos dois testes finais examinados. O relato de letras muito pequenas omitidas sem invenção fica sem atribuição a run específico. Destaque já havia sido validado visualmente em testes anteriores, mas run/version da validação permanecem pending; a prévia Produto v4/compositor v5 foi checada separadamente e não é geração.
 Fase anterior 48.2.4: 10/10 planos em 7 ondas; CHECKPOINT A/B aprovados, conforme histórico e summaries da fase anterior.
@@ -114,6 +114,10 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - [Phase 48.2.6]: Resolver seleciona `registry[dimension][resolved[dimension]]`; os três recortes de intenção compartilham o mesmo objeto `BENCH_DEFAULT_PROMPT_BASE`.
 - [Quick 261003-ltf / F48.2.6]: Linha do nome compilada como `Nome do produto obrigatório: {nome}`; política Produto versionada para `48.2.6-produto-v2`, mantendo intacta a liberdade de capitalização/quebras/arranjo. Requer revisão humana antes de qualquer comparação manual.
 - [Quick 261003-nkj / F48.2.6]: Rótulo compartilhado de `discountedPriceText` é `Preço de venda`; `COMPOSER_VERSION=48.2.4-prompt-composer-v2`. Semântica promocional continua exclusivamente na instrução Oferta, inalterada.
+- [Phase ?]: F56.1-01: default declarativo de campaign_product_image existe so para validateRegistry/tipos e nunca e servido (fail-closed via AiNewFlowConfigRequiredError).
+- [Phase ?]: F56.1-01: isolamento da selecao legada por allowlist explicita LEGACY_SELECTION_CAPABILITIES (11 legadas), iterada pela view em vez de ALL_CAPABILITIES.
+- [Phase ?]: F56.1-01: campaign_product_image reutiliza o literal de evento campaign_image; CHECK chk_generation_events_type intocado.
+- [Phase ?]: F56.1-01: deteccao de quota/billing antes do ramo 429 generico, preservando rate_limit retryable=true.
 
 ## Pending Todos
 
@@ -176,3 +180,4 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | Phase 48.2.6 P48-2-6-06 | 35 min | 2 tasks | 14 files |
 | Phase 48.2.6 P48-2-6-07 | 12 min | 2 tasks | 3 files |
 | Phase 48.2.6 P48-2-6-08 | 2 min | 1 tasks | 1 files |
+| Phase 56.1 P01 | 5 min | 5 tasks | 15 files |
