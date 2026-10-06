@@ -2,7 +2,7 @@
 
 **Status operacional:** a **F56.1 — Contrato produtivo, modelos e fallback** está com **COBERTURA CONCLUÍDA** (11/11 planos GSD; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; verificada/sincronizada/arquivada em 2026-10-06 em `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`), com os 27 REQ-IDs mapeados dos 8 specs OpenSpec da change agora arquivada.
 
-**Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs ativos (abaixo).
+**Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs ativos (abaixo). A **F56.2a — Preparação não operacional do Produto 1:1** foi registrada no ROADMAP em 2026-10-06 (recorte da F56.2 reconciliada) e possui 19 REQ-IDs ativos (abaixo); depende da F56.1 e é pré-requisito da F56.2b1.
 
 Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, tabelas e estados legados foram preservados integralmente em [`REQUIREMENTS-ARCHIVE.md`](./REQUIREMENTS-ARCHIVE.md) e não devem ser interpretados como pendências atuais.
 
@@ -18,6 +18,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | F50: demonstração gratuita e validade dos créditos | `.planning/phases/50-demonstracao-gratuita-validade-creditos/`, `50-VERIFICATION.md`, summaries e `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/` |
 | F50.1: formalização legal e ativação | Futura; fonte de planejamento será um novo plano/OpenSpec quando a fase for formalmente constituída |
 | F56.1: contrato produtivo, modelos e fallback | Ativos abaixo; fonte `openspec/changes/fase-56-1-contrato-produtivo-modelos-fallback/` |
+| F56.2a: preparação não operacional do Produto 1:1 | Ativos abaixo; fonte `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` |
 | Monetização pública / Stripe | Iniciativa diferida para v1.7+, fora da numeração e sem requisitos ativos |
 
 ## F56.1 — Cobertura concluída (Contrato produtivo, modelos e fallback)
@@ -54,9 +55,35 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | REQ-56.1-26 | Cobertura de pricing ciente de qualidade para os pares elegíveis | ai-model-pricing |
 | REQ-56.1-27 | Envelope de telemetria registra o par modelo–qualidade | ai-invocation-gateway |
 
+## F56.2a — Requisitos ativos (Preparação não operacional do Produto 1:1)
+
+**Fonte (ativa):** `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` (5 specs: 3 novas + 2 deltas). **Status:** PLANEJAMENTO — recorte da F56.2 reconciliada (`RECONCILIATION.md`), dependente da F56.1 e pré-requisito da F56.2b1. Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura. Fatia **inativa**: nenhuma rota/provider/crédito/entrega/download.
+
+| REQ-ID | Requirement (OpenSpec) | Spec |
+|--------|------------------------|------|
+| REQ-56.2a-01 | Estrutura das duas chaves de ativação, desligadas por padrão | product-1-1-flow-activation |
+| REQ-56.2a-02 | Decisão server-side pura e fail-closed | product-1-1-flow-activation |
+| REQ-56.2a-03 | Precedência determinística entre as chaves (geral prevalece) | product-1-1-flow-activation |
+| REQ-56.2a-04 | Barreira de não-ativação nesta fatia | product-1-1-flow-activation |
+| REQ-56.2a-05 | Contratos de seleção explícita de intenção | product-1-1-intent-background-selection |
+| REQ-56.2a-06 | Contratos e componentes de direção de fundo | product-1-1-intent-background-selection |
+| REQ-56.2a-07 | "Manter cenário original" exige exatamente uma imagem de produto (identidade não conta) | product-1-1-intent-background-selection |
+| REQ-56.2a-08 | Validação de seleção como erro de campo (nunca `IMG-001`) | product-1-1-intent-background-selection |
+| REQ-56.2a-09 | Componentes inativos não expostos ao lojista | product-1-1-intent-background-selection |
+| REQ-56.2a-10 | Incorporação versionada e congelada dos prompts e regras aprovados (Produto v4/compositor v5) | product-1-1-prompt-composition |
+| REQ-56.2a-11 | Conteúdo obrigatório do prompt | product-1-1-prompt-composition |
+| REQ-56.2a-12 | Sem troca silenciosa da intenção | product-1-1-prompt-composition |
+| REQ-56.2a-13 | Equivalência com a bancada aprovada (F48.2.6) | product-1-1-prompt-composition |
+| REQ-56.2a-14 | Bancada não é dependência de runtime | product-1-1-prompt-composition |
+| REQ-56.2a-15 | Estrutura append-only de operações/tentativas vinculada à campanha e ao snapshot original | image-generation-config-snapshot |
+| REQ-56.2a-16 | Contrato de reuso do snapshot original | image-generation-config-snapshot |
+| REQ-56.2a-17 | Não sobrescrever o run/trace histórico | image-generation-config-snapshot |
+| REQ-56.2a-18 | Registro das duas chaves de ativação com default fail-closed | feature-flag-control |
+| REQ-56.2a-19 | Alteração auditável das chaves pela RPC existente | feature-flag-control |
+
 ## Regras Operacionais
 
-- Os únicos REQ-IDs ativos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`), com cobertura concluída (11/11 planos; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; verificada/sincronizada/arquivada em 2026-10-06). Nenhum REQ-ID ativo da F56.2 (não iniciada).
+- Os REQ-IDs ativos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06) e os da **F56.2a** (`REQ-56.2a-01`..`REQ-56.2a-19`, em planejamento desde 2026-10-06). Nenhum REQ-ID ativo da F56.2b1/F56.2b2/F56.3 (não planejadas).
 - Novos REQ-IDs só devem ser adicionados quando uma nova fase for formalmente planejada, com fonte em OpenSpec e plano aprovado.
 - Para uma fase concluída, consultar o OpenSpec arquivado, `VERIFICATION.md`, `SUMMARY.md`, contexto e planos da fase.
 - Em caso de divergência histórica, OpenSpec arquivado + `VERIFICATION.md`/`SUMMARY.md` da fase prevalecem sobre este archive e sobre registros antigos.
