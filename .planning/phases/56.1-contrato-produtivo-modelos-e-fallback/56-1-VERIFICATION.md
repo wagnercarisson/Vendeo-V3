@@ -138,7 +138,7 @@ status: complete-local-human-approved
 | 9.1 Fronteira produtiva sem mudança de comportamento | UAT §4; `new-flow-isolation.contract.test.ts` |
 | 9.2 Novo fluxo não gera campanha/ativa geração | UAT §6; `new-flow-isolation.contract.test.ts` (item f) |
 | 9.3 typecheck/lint/build/suíte local | UAT §2 (todos EXIT 0) |
-| 9.4 `openspec validate --strict` + GSD | UAT §2 (`--changes --strict` válido); **GSD/OpenSpec verification lifecycle NOT run** — parado antes de verify/sync/archive por instrução do responsável (task OpenSpec 9.4 permanece `[ ]`) |
+| 9.4 `openspec validate --strict` + GSD | UAT §2 (`--changes --strict` válido); **GSD `verify-work` executado e aprovado (10/10)** — ver `56.1-GSD-UAT.md`; o **lifecycle OpenSpec** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) permanece como etapa **POSTERIOR** (não executada) |
 | 9.5 UAT local sem provider + ausência de `db push` | UAT §1/§3 |
 | 9.6 Atualizar STATE/ROADMAP | **Responsabilidade do orquestrador** (não modificado por este plano) |
 
@@ -161,7 +161,7 @@ status: complete-local-human-approved
 | `npm run build` | EXIT 0 (78/78 páginas) |
 | Suíte relevante `src/lib/ai` + `src/lib/ai-cost` + `src/app/api/admin` | 894 passed / 7 skipped |
 | `npm test -- src/lib/ai/__tests__/new-flow-isolation.contract.test.ts` | 7/7 verdes |
-| `openspec validate <change> --strict` / `--changes --strict` | válido, EXIT 0 (validação de conteúdo; o **lifecycle** verify/sync/archive **NÃO** foi executado) |
+| `openspec validate <change> --strict` / `--changes --strict` | válido, EXIT 0 (validação de conteúdo). GSD `verify-work` executado e aprovado (10/10) — ver `56.1-GSD-UAT.md`. O **lifecycle** verify/sync/archive **NÃO** foi executado (etapa posterior) |
 | `supabase db lint --local --fail-on error` | EXIT 0 |
 | Teste REAL da RPC na instância isolada | UAT §1 (gravação + auditoria única + idempotência) |
 
@@ -216,9 +216,11 @@ Fonte detalhada: `.planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56
 - Instância isolada `vendeo-f561-isolated`; a stack compartilhada `Vendeo_V3` **não** foi tocada.
 - **Nenhum `supabase db push`** (nem remoto, nem `--linked`); **nenhuma chamada a provider**; **nenhuma geração paga**; **nenhuma ativação/promoção**; histórico de auditoria **preservado**.
 
-### 6.4 Lifecycle OpenSpec e verificação GSD — NÃO executados
+### 6.4 Verificação GSD executada; lifecycle OpenSpec permanece POSTERIOR
 
-Por **instrução do responsável**, houve **STOP antes** do lifecycle OpenSpec (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) e do passo de verificação da fase GSD. O que **foi** executado é apenas `openspec validate --strict` (validação de conteúdo, EXIT 0). O par é registrado como **aprovado no escopo preparatório/local**; a task OpenSpec **9.4 permanece `[ ]`** exatamente por registrar que o lifecycle **não** rodou.
+O **GSD `verify-work` foi executado e aprovado (10/10)**, registrado no artefato `.planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-GSD-UAT.md` (fonte: aprovação humana do responsável + gates automatizados). A task OpenSpec **9.4 está `[x]`**.
+
+O **lifecycle OpenSpec** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) **NÃO** foi executado e permanece como etapa **POSTERIOR** (por instrução do responsável). O que **foi** executado do lado OpenSpec é apenas `openspec validate --strict` (validação de conteúdo, EXIT 0). O par permanece **aprovado no escopo preparatório/local**.
 
 ---
 

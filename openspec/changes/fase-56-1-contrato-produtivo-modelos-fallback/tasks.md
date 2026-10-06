@@ -4,7 +4,7 @@
 
 > **Fronteira F56.1 × F56.2.** A F56.1 entrega **componentes e testes simulados**: contratos, serviços, validações, taxonomia e instrumentação exercitados com providers/falhas simulados, **sem campanha real**. A **integração transacional** — gravação do snapshot no início de uma operação real de campanha, garantia de não-débito do lojista e execução da política de tentativas sobre uma geração real — ocorre na **F56.2**. Nenhuma task desta fase executa geração, debita crédito ou grava snapshot de campanha real.
 
-> **Nota de reconciliação (UAT humano APROVADO, escopo preparatório/local).** As tasks abaixo foram marcadas `[x]` **somente** com base em evidência do escopo local/preparatório. A **aplicação real do snapshot numa campanha**, o **enforcement real de não-cobrança** e a **execução da política de tentativas sobre geração real** permanecem **F56.2** e **NÃO** são marcados como concluídos. O lifecycle OpenSpec (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) e o passo de verificação GSD **NÃO** foram executados (parada por instrução do responsável antes de verify/sync/archive) — ver task 9.4.
+> **Nota de reconciliação (UAT humano APROVADO, escopo preparatório/local).** As tasks abaixo foram marcadas `[x]` **somente** com base em evidência do escopo local/preparatório. A **aplicação real do snapshot numa campanha**, o **enforcement real de não-cobrança** e a **execução da política de tentativas sobre geração real** permanecem **F56.2** e **NÃO** são marcados como concluídos. O passo de **verificação GSD** (`verify-work`) **foi executado** (10/10 — ver `56.1-GSD-UAT.md`). O **lifecycle OpenSpec** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) permanece como etapa **POSTERIOR** e **NÃO** foi executado (parada por instrução do responsável antes de verify/sync/archive) — ver task 9.4.
 
 ## 1. Preparação e contratos
 
@@ -82,7 +82,7 @@
 - [x] 9.1 Verificar fronteira produtiva: caminhos legados (seleção, registry, pipeline, revisão automática, regeneração F37) sem mudança de comportamento
 - [x] 9.2 Confirmar que o novo fluxo não gera campanha nem ativa geração nesta fase
 - [x] 9.3 Rodar typecheck, lint, build e a suíte de testes local (nenhuma chamada paga)
-- [ ] 9.4 Rodar `openspec validate --strict` e GSD de verificação da fase — `openspec validate --strict` PASS; **GSD/OpenSpec verification lifecycle NOT run** (parado antes de verify/sync/archive por instrução do responsável).
+- [x] 9.4 Rodar `openspec validate --strict` e GSD de verificação da fase — `openspec validate --strict` PASS; GSD `verify-work` executado (10/10) — ver `56.1-GSD-UAT.md`; lifecycle OpenSpec `/opsx-verify → /opsx-sync → /opsx-archive` permanece como etapa POSTERIOR (não executada).
 - [x] 9.5 Registrar evidência de UAT local sem provider e confirmar ausência de `db push`/alteração de produção
 - [x] 9.6 Atualizar `.planning/STATE.md`/`.planning/ROADMAP.md` com o resultado e o checkpoint humano
 
