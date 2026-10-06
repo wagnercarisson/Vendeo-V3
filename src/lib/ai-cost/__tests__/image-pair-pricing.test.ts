@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: {} as any,
@@ -14,6 +14,8 @@ import {
   resolveImagePairCost,
 } from "../image-pair-pricing";
 import { ImageModelPairNotEligibleError, type ImageModelPairConfig } from "@/lib/ai/image-model-pair";
+import { COST_SOURCES } from "../types";
+import { resolveAiCost } from "../cost-estimator";
 
 const UUID = "11111111-1111-4111-8111-111111111111";
 
@@ -350,5 +352,108 @@ describe("resolveImagePairCoverage / assertImagePairExecutable (D-09/D-10)", () 
     now += 6_000; // TTL expirado
     await service.resolveCoverage(pairConfig());
     expect(getReads()).toBe(4); // re-leitura após o TTL
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 3 — coexistência de linhas e não-regressão do fluxo legado (D-08/D-10)
+// ---------------------------------------------------------------------------
+describe("coexistência de linhas com e sem qualidade (D-08)", () => {
+  it("query sem qualidade escolhe a linha legada (quality IS NULL) e a query com qualidade escolhe a específica", async () => {
+    const { client } = fakePricingClient([
+      row({ model: "gpt-image-2", quality: null, image_unit_usd: 0.03 }),
+      row({ model: "gpt-image-2", quality: "medium", image_unit_usd: 0.04 }),
+    ]);
+    const service = new AiModelPricingService(client as never);
+
+    const legacy = await service.getModelPricing({ provider: "openai", model: "gpt-image-2" });
+    expect(legacy).toEqual({ pricing: { imageUnitCostUsd: 0.03 }, versionId: UUID });
+
+    const withQuality = await service.getModelPricing({ provider: "openai", model: "gpt-image-2", quality: "medium" });
+    expect(withQuality).toEqual({ pricing: { imageUnitCostUsd: 0.04 }, versionId: UUID });
+  });
+
+  it("resolveImagePairCost usa o pricing específico por qualidade, não a linha legada coexistente", async () => {
+    const { client } = fakePricingClient([
+      row({ model: "gpt-image-2.5-sunburst", quality: null, image_unit_usd: 0.03 }),
+      row({ model: "gpt-image-2.5-sunburst", quality: "medium", image_unit_usd: 0.06 }),
+      row({ model: "gpt-image-2", quality: null, image_unit_usd: 0.03 }),
+      row({ model: "gpt-image-2", quality: "medium", image_unit_usd: 0.04 }),
+    ]);
+    const service = new ImagePairPricingService(client as never);
+
+    const cost = await service.resolveCost(pairConfig());
+
+    expect(cost.primary.costUsd).toBe(0.06);
+    expect(cost.fallback.costUsd).toBe(0.04);
+  });
+});
+
+describe("não-regressão da cadeia legada resolveAiCost (D-10)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("COST_SOURCES preserva exatamente a cadeia original (5 fontes)", () => {
+    expect(COST_SOURCES).toEqual([
+      "provider_reported",
+      "pricing_table",
+      "fallback_static",
+      "manual_unknown",
+      "not_available",
+    ]);
+  });
+
+  it("provider_reported tem precedência e não consulta o pricing", async () => {
+    const spy = vi.spyOn(AiModelPricingService.prototype, "getModelPricing");
+
+    const result = await resolveAiCost({ provider: "openai", model: "gpt-4o", providerReportedCostUsd: 0.42 });
+
+    expect(result).toEqual({
+      estimatedCostUsd: 0.42,
+      providerReportedCostUsd: 0.42,
+      costSource: "provider_reported",
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("manual_unknown é preservado", async () => {
+    const result = await resolveAiCost({ provider: "openai", model: "gpt-4o", manualCostUsd: 0.2 });
+
+    expect(result.costSource).toBe("manual_unknown");
+    expect(result.estimatedCostUsd).toBe(0.2);
+  });
+
+  it("pricing_table preserva code_default no caminho legado (sem usage, imagem)", async () => {
+    vi.spyOn(AiModelPricingService.prototype, "getModelPricing").mockResolvedValue({
+      pricing: { imageUnitCostUsd: 0.04 },
+      versionId: "code_default",
+    });
+
+    const result = await resolveAiCost({ provider: "openai", model: "gpt-image-2" });
+
+    expect(result.costSource).toBe("pricing_table");
+    expect(result.pricingVersion).toBe("code_default");
+    expect(result.estimatedCostUsd).toBe(0.04);
+  });
+
+  it("sem pricing e com fallback habilitado → fallback_static (default 0.15)", async () => {
+    vi.spyOn(AiModelPricingService.prototype, "getModelPricing").mockResolvedValue(null);
+
+    const result = await resolveAiCost({ provider: "unknown", model: "no-such-model" });
+
+    expect(result.costSource).toBe("fallback_static");
+    expect(result.estimatedCostUsd).toBe(0.15);
+  });
+
+  it("sem pricing e fallback desabilitado → not_available (custo NULL)", async () => {
+    vi.spyOn(AiModelPricingService.prototype, "getModelPricing").mockResolvedValue(null);
+    vi.stubEnv("VENDEO_AI_FALLBACK_COST_USD", "none");
+
+    const result = await resolveAiCost({ provider: "unknown", model: "no-such-model" });
+
+    expect(result.costSource).toBe("not_available");
+    expect(result.estimatedCostUsd).toBeNull();
   });
 });
