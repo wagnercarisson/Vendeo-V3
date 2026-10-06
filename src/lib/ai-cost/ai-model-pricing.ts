@@ -57,7 +57,12 @@ interface PricingRow {
 
 /**
  * Colunas do select legado (D8). Mantidas como constante para garantir que a
- * query SEM qualidade seja byte a byte a legada (F56.1 — D-08, isolamento).
+ * leitura SEM qualidade continue selecionando exatamente as mesmas dimensões de
+ * preço do fluxo legado (F56.1 — D-08, isolamento). O filtro adicional
+ * `quality IS NULL` (ver `getModelPricing`) NÃO altera o conjunto de colunas —
+ * apenas desambigua a coluna aditiva `quality` para selecionar a linha vigente
+ * legada (a migration F56.1 admite uma linha vigente NULL e outra com valor para
+ * o mesmo `(provider, model)`).
  */
 const LEGACY_PRICING_COLUMNS =
   "id, provider, model, input_token_usd_per_1m, output_token_usd_per_1m, cached_input_token_usd_per_1m, image_unit_usd, image_token_usd_per_1m";
@@ -98,8 +103,13 @@ export class AiModelPricingService {
   }): Promise<{ pricing: ModelPricing; versionId: string } | null> {
     try {
       // F56.1 (D-08): `quality` é uma dimensão ADITIVA.
-      //   - Omitido → coluna `quality` não é selecionada, a query é byte a byte a
-      //     legada (inclui o bootstrap de código `code_default`) — fluxo legado intacto.
+      //   - Omitido → comportamento legado preservado: seleciona as colunas legadas
+      //     (inclui o bootstrap de código `code_default`) e filtra `quality IS NULL`
+      //     para escolher a linha vigente legada. O filtro é NECESSÁRIO: a migration
+      //     F56.1 admite DUAS linhas vigentes para o mesmo `(provider, model)` (uma
+      //     com `quality IS NULL` e outra com `quality` preenchida); sem ele, o
+      //     `maybeSingle()` pode retornar erro de cardinalidade (PGRST116) e o
+      //     bootstrap `code_default` seria perdido.
       //   - Informado → seleciona `quality`, filtra `.eq("quality", quality)` e NUNCA
       //     usa `DEFAULT_AI_MODEL_PRICING` (o custo por qualidade precisa ser explícito
       //     — D-09/D-10): sem linha vigente de qualidade, retorna null (cobertura missing).
@@ -115,7 +125,7 @@ export class AiModelPricingService {
 
       const response =
         quality === undefined
-          ? await vigenteQuery.maybeSingle()
+          ? await vigenteQuery.is("quality", null).maybeSingle() // desambigua a linha legada (quality IS NULL)
           : await vigenteQuery.eq("quality", quality).maybeSingle();
       // `quality` é uma coluna nova (F56.1, ainda fora dos tipos gerados do Supabase):
       // o parser de select do client não a reconhece, então o cast é feito via `unknown`.

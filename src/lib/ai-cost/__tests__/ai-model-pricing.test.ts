@@ -12,7 +12,7 @@ import {
 
 const UUID = "11111111-1111-4111-8111-111111111111";
 
-// Cadeia mock: from("ai_model_pricing").select(...).eq(provider).eq(model).is("effective_until", null).maybeSingle()
+// Cadeia mock: from("ai_model_pricing").select(...).eq(provider).eq(model).is("effective_until", null).is("quality", null).maybeSingle()
 const mockMaybeSingle = vi.fn();
 const mockIs = vi.fn();
 const mockEq = vi.fn();
@@ -27,9 +27,10 @@ beforeEach(() => {
   service = new AiModelPricingService(mockClient as any);
   mockFrom.mockReturnValue({ select: mockSelect });
   mockSelect.mockReturnValue({ eq: mockEq });
-  // Cadeia: .eq(provider).eq(model).is("effective_until", null).maybeSingle()
+  // Cadeia: .eq(provider).eq(model).is("effective_until", null).is("quality", null).maybeSingle()
+  // O nó devolvido por `.is` aceita outro `.is` (filtro `quality IS NULL`) e o terminal `maybeSingle`.
   mockEq.mockImplementation(() => ({ eq: mockEq, is: mockIs }));
-  mockIs.mockReturnValue({ maybeSingle: mockMaybeSingle });
+  mockIs.mockReturnValue({ is: mockIs, maybeSingle: mockMaybeSingle });
   mockMaybeSingle.mockResolvedValue({ data: null, error: null });
 });
 
@@ -68,6 +69,9 @@ describe("AiModelPricingService.getModelPricing (D8)", () => {
 
     expect(result?.versionId).toBe("code_default");
     expect(mockIs).toHaveBeenCalledWith("effective_until", null);
+    // Regressão F56.1: a leitura legada também filtra `quality IS NULL` para desambiguar
+    // a linha vigente (a migration admite NULL + valor vigentes para o mesmo provider/model).
+    expect(mockIs).toHaveBeenCalledWith("quality", null);
     expect(mockEq).toHaveBeenCalledTimes(2); // provider + model
     expect(mockMaybeSingle).toHaveBeenCalledTimes(1);
   });

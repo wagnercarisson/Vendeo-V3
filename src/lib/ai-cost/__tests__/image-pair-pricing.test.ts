@@ -19,7 +19,7 @@ import { resolveAiCost } from "../cost-estimator";
 
 const UUID = "11111111-1111-4111-8111-111111111111";
 
-/** Colunas legadas do select de getModelPricing — a query sem qualidade deve ser idêntica. */
+/** Colunas legadas do select de getModelPricing — o caminho sem qualidade preserva esse conjunto. */
 const LEGACY_COLUMNS =
   "id, provider, model, input_token_usd_per_1m, output_token_usd_per_1m, cached_input_token_usd_per_1m, image_unit_usd, image_token_usd_per_1m";
 
@@ -67,15 +67,20 @@ describe("getModelPricing — dimensão de qualidade aditiva (D-08)", () => {
     service = new AiModelPricingService({ from: mockFrom } as any);
     mockFrom.mockReturnValue({ select: mockSelect });
     mockSelect.mockReturnValue({ eq: mockEq });
-    // Cadeia sem qualidade: .eq(provider).eq(model).is("effective_until", null).maybeSingle()
-    // Cadeia com qualidade: ...is(...).eq("quality", q).maybeSingle()
+    // Cadeia sem qualidade: .eq(provider).eq(model).is("effective_until", null).is("quality", null).maybeSingle()
+    // Cadeia com qualidade: ...is("effective_until", null).eq("quality", q).maybeSingle()
     mockEq.mockImplementation(() => ({ eq: mockEq, is: mockIs }));
-    mockIs.mockReturnValue({ eq: mockQualityEq, maybeSingle: mockMaybeSingle });
+    mockIs.mockImplementation((column: string) => {
+      // O primeiro `.is` ("effective_until") devolve o nó que aceita tanto o `.is`
+      // seguinte ("quality") quanto o `.eq("quality", q)` do caminho com qualidade.
+      if (column === "quality") return { maybeSingle: mockMaybeSingle };
+      return { eq: mockQualityEq, is: mockIs, maybeSingle: mockMaybeSingle };
+    });
     mockQualityEq.mockReturnValue({ maybeSingle: mockMaybeSingle });
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
   });
 
-  it("sem quality → query byte a byte a legada (select legado e nenhum .eq('quality'))", async () => {
+  it("sem quality → comportamento legado preservado (select legado, NÃO filtra por valor e aplica quality IS NULL)", async () => {
     mockMaybeSingle.mockResolvedValue({
       data: row({ model: "gpt-4o", input_token_usd_per_1m: 2.5, output_token_usd_per_1m: 10 }),
       error: null,
@@ -86,6 +91,9 @@ describe("getModelPricing — dimensão de qualidade aditiva (D-08)", () => {
     expect(mockSelect).toHaveBeenCalledWith(LEGACY_COLUMNS);
     expect(mockEq).toHaveBeenCalledTimes(2);
     expect(mockIs).toHaveBeenCalledWith("effective_until", null);
+    // O filtro `quality IS NULL` é REQUERIDO para desambiguar a linha legada da coluna
+    // aditiva `quality` (a migration F56.1 admite NULL + valor vigentes simultâneos).
+    expect(mockIs).toHaveBeenCalledWith("quality", null);
     expect(mockQualityEq).not.toHaveBeenCalled();
     expect(mockMaybeSingle).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
@@ -147,31 +155,64 @@ describe("getModelPricing — dimensão de qualidade aditiva (D-08)", () => {
 // Task 2 — cobertura por par e fail-closed do novo fluxo (D-09/D-10/D-22/D-24)
 // ---------------------------------------------------------------------------
 
-/** Fake em memória do client Supabase — sem provider/banco/rede. */
+/**
+ * Fake em memória do client Supabase — sem provider/banco/rede.
+ *
+ * Fidelidade de cardinalidade (espelha o `maybeSingle()` real / PGRST116):
+ *   - SEM filtro de `quality` aplicado → considera TODAS as linhas vigentes do
+ *     `(provider, model)`. Mais de uma → `{ data: null, error }` (erro de
+ *     cardinalidade "multiple rows"); exatamente uma → devolve a linha.
+ *   - COM filtro `quality IS NULL` → devolve apenas a linha `quality IS NULL`.
+ *   - COM filtro `quality = valor` → devolve apenas a linha de mesma qualidade.
+ * Isso é o que prova que a query legada PRECISA do `quality IS NULL` para não
+ * estourar a cardinalidade quando coexistem linha NULL e linha com valor.
+ */
 function fakePricingClient(rows: PricingRowFixture[]) {
   let reads = 0;
+  const CARDINALITY_ERROR = {
+    message: "JSON object requested, multiple (or no) rows returned (PGRST116)",
+  };
   const client = {
     from: () => ({
       select: () => {
         const filters: Record<string, unknown> = {};
+        let qualityFilterApplied = false;
+        let qualityFilterValue: string | null = null;
         const builder: any = {
           eq: (column: string, value: unknown) => {
-            filters[column] = value;
+            if (column === "quality") {
+              qualityFilterApplied = true;
+              qualityFilterValue = value as string | null;
+            } else {
+              filters[column] = value;
+            }
             return builder;
           },
           is: (column: string, value: unknown) => {
-            filters[column] = value;
+            if (column === "quality") {
+              qualityFilterApplied = true;
+              qualityFilterValue = value as string | null;
+            } else {
+              filters[column] = value;
+            }
             return builder;
           },
           maybeSingle: async () => {
             reads += 1;
-            const found = rows.find(
+            const forProviderModel = rows.filter(
               (candidate) =>
-                candidate.provider === filters.provider &&
-                candidate.model === filters.model &&
-                (candidate.quality ?? null) === ((filters.quality as string | undefined) ?? null),
+                candidate.provider === filters.provider && candidate.model === filters.model,
             );
-            return { data: found ?? null, error: null };
+            const matched = qualityFilterApplied
+              ? forProviderModel.filter(
+                  (candidate) => (candidate.quality ?? null) === qualityFilterValue,
+                )
+              : forProviderModel;
+
+            // `maybeSingle()` exige <= 1 linha; sem filtro de qualidade, a coexistência
+            // NULL + valor faz o Supabase retornar erro de cardinalidade.
+            if (matched.length > 1) return { data: null, error: CARDINALITY_ERROR };
+            return { data: matched[0] ?? null, error: null };
           },
         };
         return builder;
@@ -359,18 +400,103 @@ describe("resolveImagePairCoverage / assertImagePairExecutable (D-09/D-10)", () 
 // Task 3 — coexistência de linhas e não-regressão do fluxo legado (D-08/D-10)
 // ---------------------------------------------------------------------------
 describe("coexistência de linhas com e sem qualidade (D-08)", () => {
-  it("query sem qualidade escolhe a linha legada (quality IS NULL) e a query com qualidade escolhe a específica", async () => {
+  it("query sem qualidade escolhe deterministicamente a linha legada (quality IS NULL) e a query com qualidade escolhe a específica", async () => {
+    // Duas linhas vigentes para o MESMO (provider, model): uma NULL e uma 'medium'.
     const { client } = fakePricingClient([
       row({ model: "gpt-image-2", quality: null, image_unit_usd: 0.03 }),
       row({ model: "gpt-image-2", quality: "medium", image_unit_usd: 0.04 }),
     ]);
     const service = new AiModelPricingService(client as never);
 
+    // O filtro `quality IS NULL` garante a seleção da linha legada (sem erro de
+    // cardinalidade e sem vazar o preço da linha com qualidade).
     const legacy = await service.getModelPricing({ provider: "openai", model: "gpt-image-2" });
     expect(legacy).toEqual({ pricing: { imageUnitCostUsd: 0.03 }, versionId: UUID });
 
     const withQuality = await service.getModelPricing({ provider: "openai", model: "gpt-image-2", quality: "medium" });
     expect(withQuality).toEqual({ pricing: { imageUnitCostUsd: 0.04 }, versionId: UUID });
+  });
+
+  it("[guarda de fidelidade] o fake modela a cardinalidade: sem o filtro quality IS NULL, duas linhas vigentes → erro", async () => {
+    // Consulta CRUA (sem o `.is("quality", null)` que o serviço adiciona) para provar
+    // que o fake reproduz o comportamento do Supabase: `maybeSingle()` com 2 linhas
+    // vigentes retorna erro de cardinalidade (e o serviço cairia no caminho de erro).
+    const { client } = fakePricingClient([
+      row({ model: "gpt-image-2", quality: null, image_unit_usd: 0.03 }),
+      row({ model: "gpt-image-2", quality: "medium", image_unit_usd: 0.04 }),
+    ]);
+
+    const response = await (client as any)
+      .from("ai_model_pricing")
+      .select("id")
+      .eq("provider", "openai")
+      .eq("model", "gpt-image-2")
+      .is("effective_until", null)
+      .maybeSingle();
+
+    expect(response.data).toBeNull();
+    expect(response.error).toMatchObject({ message: expect.stringContaining("multiple") });
+  });
+
+  it("sem o filtro quality IS NULL o serviço retornaria null (erro de cardinalidade) — o filtro é o que preserva a seleção legada", async () => {
+    // Cenário de regressão controlado: injetamos um client cuja consulta SEM o filtro
+    // de qualidade reporta erro de cardinalidade. O serviço, ao aplicar `quality IS NULL`,
+    // seleciona a linha NULL e NÃO cai no erro — provando que o filtro é necessário.
+    const rows = [
+      row({ model: "gpt-image-2", quality: null, image_unit_usd: 0.03 }),
+      row({ model: "gpt-image-2", quality: "medium", image_unit_usd: 0.04 }),
+    ];
+    const client = {
+      from: () => ({
+        select: () => {
+          const filters: Record<string, unknown> = {};
+          let qualityFilterApplied = false;
+          let qualityFilterValue: string | null = null;
+          const builder: any = {
+            eq: (column: string, value: unknown) => {
+              if (column === "quality") {
+                qualityFilterApplied = true;
+                qualityFilterValue = value as string | null;
+              } else {
+                filters[column] = value;
+              }
+              return builder;
+            },
+            is: (column: string, value: unknown) => {
+              if (column === "quality") {
+                qualityFilterApplied = true;
+                qualityFilterValue = value as string | null;
+              } else {
+                filters[column] = value;
+              }
+              return builder;
+            },
+            maybeSingle: async () => {
+              const forProviderModel = rows.filter(
+                (candidate) =>
+                  candidate.provider === filters.provider && candidate.model === filters.model,
+              );
+              if (!qualityFilterApplied) {
+                return {
+                  data: null,
+                  error: { message: "JSON object requested, multiple (or no) rows returned" },
+                };
+              }
+              const matched = forProviderModel.filter(
+                (candidate) => (candidate.quality ?? null) === qualityFilterValue,
+              );
+              return { data: matched[0] ?? null, error: null };
+            },
+          };
+          return builder;
+        },
+      }),
+    };
+
+    const service = new AiModelPricingService(client as never);
+    const legacy = await service.getModelPricing({ provider: "openai", model: "gpt-image-2" });
+
+    expect(legacy).toEqual({ pricing: { imageUnitCostUsd: 0.03 }, versionId: UUID });
   });
 
   it("resolveImagePairCost usa o pricing específico por qualidade, não a linha legada coexistente", async () => {
