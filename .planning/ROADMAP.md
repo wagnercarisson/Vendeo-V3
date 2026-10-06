@@ -209,7 +209,7 @@ Plans:
 
 **Nome:** Contrato produtivo, modelos e fallback
 
-**Status:** ○ **Planejada (não em execução).** Nenhuma implementação, migration, chamada paga ou ativação até a revisão humana dos artefatos de planejamento. A fase entra no tracking como planejada; o fluxo legado permanece intocado.
+**Status:** ◐ **Em execução desde 2026-10-06** — 1/11 planos GSD concluídos (Plano 01: contratos de par/capacidade/taxonomia/envelope/barreira fail-closed; 95 testes, typecheck/lint verdes; OpenSpec 0/55 tasks). Sem `db push`, sem chamada paga e sem ativação; fluxo legado intocado. Plano 02 (migration local-only) aguarda instância Supabase descartável comprovadamente isolada.
 
 **Depends on:** F46 (gateway único) e F47 (catálogo/seleção de modelos); F48.2.1–F48.2.6 (evidência experimental, insumo — não autorização de promoção). Não depende de F50.1–F55; a numeração F56 não obriga executá-las antes.
 
