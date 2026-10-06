@@ -275,7 +275,7 @@ Plans:
 
 **Checkpoint humano:** a implementação só começa após aprovação explícita do responsável sobre os planos. Nesta fatia a chave permanece ineficaz.
 
-**Planos:** diretório `.planning/phases/56.2-preparacao-nao-operacional-produto-1-1/` (token GSD `56.2`; rótulo funcional **F56.2a**). **Tokens reservados para as fatias seguintes (não reutilizar `56.2`):** F56.2b1 = `56.3`, F56.2b2 = `56.4` (a reservar/registrar quando cada fatia for formalmente planejada).
+**Planos:** diretório `.planning/phases/56.2-preparacao-nao-operacional-produto-1-1/` (token GSD `56.2`; rótulo funcional **F56.2a**). **Tokens reservados para as fatias seguintes (não reutilizar `56.2`; resolução testada no tooling):** F56.2b1 = `56.2.1`, F56.2b2 = `56.2.2`. **`56.3` NÃO é reservado** — preserva o significado já existente de **aprovação/reprovação/correção (F56.3)**.
 
 **Plans:** 6 plans
 
