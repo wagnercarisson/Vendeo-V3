@@ -81,8 +81,41 @@ FOR EACH ROW
 EXECUTE FUNCTION public.trg_image_generation_config_snapshots_immutable_fn();
 
 -- =============================================================================
+-- 2. Dimensão de qualidade no pricing + índices parciais de vigência (D-08)
+-- =============================================================================
+-- Aditiva: `quality` nullable, sem impor NOT NULL (as linhas legadas permanecem
+-- NULL e seguem regidas pela unicidade vigente `(provider, model)`).
+ALTER TABLE public.ai_model_pricing
+ADD COLUMN IF NOT EXISTS quality TEXT;
+
+ALTER TABLE public.ai_model_pricing
+DROP CONSTRAINT IF EXISTS chk_ai_model_pricing_quality;
+ALTER TABLE public.ai_model_pricing
+ADD CONSTRAINT chk_ai_model_pricing_quality
+CHECK (quality IS NULL OR quality IN ('low', 'medium'));
+
+-- Substitui a unicidade vigente única por duas parcialidades distintas: linhas sem
+-- qualidade continuam por `(provider, model)`; linhas com qualidade por
+-- `(provider, model, quality)`. Assim uma linha vigente com e outra sem qualidade
+-- para o mesmo `(provider, model)` coexistem sem violar unicidade.
+DROP INDEX IF EXISTS uq_ai_model_pricing_vigente;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ai_model_pricing_vigente_no_quality
+  ON public.ai_model_pricing (provider, model)
+  WHERE effective_until IS NULL AND quality IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ai_model_pricing_vigente_with_quality
+  ON public.ai_model_pricing (provider, model, quality)
+  WHERE effective_until IS NULL AND quality IS NOT NULL;
+
+-- =============================================================================
 -- REVERT (ordem reversa; executar manualmente se necessário)
 -- =============================================================================
+-- ALTER TABLE public.ai_model_pricing DROP CONSTRAINT IF EXISTS chk_ai_model_pricing_quality;
+-- DROP INDEX IF EXISTS public.uq_ai_model_pricing_vigente_with_quality;
+-- DROP INDEX IF EXISTS public.uq_ai_model_pricing_vigente_no_quality;
+-- ALTER TABLE public.ai_model_pricing DROP COLUMN IF EXISTS quality;
+-- CREATE UNIQUE INDEX IF NOT EXISTS uq_ai_model_pricing_vigente ON public.ai_model_pricing (provider, model) WHERE effective_until IS NULL;
 -- DROP TRIGGER IF EXISTS trg_image_generation_config_snapshots_immutable ON public.image_generation_config_snapshots;
 -- DROP FUNCTION IF EXISTS public.trg_image_generation_config_snapshots_immutable_fn();
 -- DROP TABLE IF EXISTS public.image_generation_config_snapshots;
