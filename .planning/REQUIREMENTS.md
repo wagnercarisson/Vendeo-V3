@@ -22,7 +22,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 
 ## F56.1 — Requisitos ativos (Contrato produtivo, modelos e fallback)
 
-**Fonte:** `openspec/changes/fase-56-1-contrato-produtivo-modelos-fallback/` (8 specs). **Status:** em execução desde 2026-10-06 (9/11 planos GSD; OpenSpec 0/55 tasks). Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura.
+**Fonte:** `openspec/changes/fase-56-1-contrato-produtivo-modelos-fallback/` (8 specs). **Status:** em execução desde 2026-10-06 (10/11 planos GSD; OpenSpec 0/55 tasks). Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura.
 
 | REQ-ID | Requirement (OpenSpec) | Spec |
 |--------|------------------------|------|
