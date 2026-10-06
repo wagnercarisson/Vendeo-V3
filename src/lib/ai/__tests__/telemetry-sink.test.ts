@@ -52,8 +52,8 @@ beforeEach(() => {
 });
 
 describe("CAPABILITY_GENERATION_TYPE — mapa canônico (D10)", () => {
-  it("cobre exatamente as 11 capacidades", () => {
-    expect(Object.keys(CAPABILITY_GENERATION_TYPE)).toHaveLength(11);
+  it("cobre exatamente as 12 capacidades", () => {
+    expect(Object.keys(CAPABILITY_GENERATION_TYPE)).toHaveLength(12);
     expect(Object.keys(CAPABILITY_GENERATION_TYPE).sort()).toEqual([...ALL_CAPABILITIES].sort());
   });
 

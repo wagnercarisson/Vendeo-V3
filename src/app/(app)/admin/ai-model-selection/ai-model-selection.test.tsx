@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MODEL_REGISTRY } from "@/lib/ai/model-registry";
-import { ALL_CAPABILITIES } from "@/lib/ai/model-registry";
+import { LEGACY_SELECTION_CAPABILITIES } from "@/lib/ai/model-registry";
 import type { AiModelSelectionViewModel } from "@/lib/ai/ai-model-selection-view";
 import type { CapacityPricingStatus } from "@/lib/ai-cost/model-capability-pricing";
 import { AiModelSelectionForm } from "./form";
@@ -28,7 +28,7 @@ const VIEW = {
 const mockFetch = vi.fn();
 const FULL_VIEW = {
   ...VIEW,
-  capabilities: ALL_CAPABILITIES.map((capability) => {
+  capabilities: LEGACY_SELECTION_CAPABILITIES.map((capability) => {
     const config = MODEL_REGISTRY[capability];
     return {
       capability,
@@ -138,9 +138,11 @@ describe("AiModelSelectionForm", () => {
     expect(within(fallbackSelect).getAllByRole("option", { name: /gemini-3\.1-flash-lite/ })).toHaveLength(1);
   });
 
-  it("renderiza as 11 capacidades do registry", () => {
+  it("renderiza as 11 capacidades legadas (sem campaign_product_image)", () => {
     render(<AiModelSelectionForm view={FULL_VIEW} />);
-    for (const capability of ALL_CAPABILITIES) expect(screen.getByText(capability)).toBeInTheDocument();
+    for (const capability of LEGACY_SELECTION_CAPABILITIES)
+      expect(screen.getByText(capability)).toBeInTheDocument();
+    expect(screen.queryByText("campaign_product_image")).not.toBeInTheDocument();
   });
 
   it("recalcula o aviso de pricing quando o primary em edição muda", () => {

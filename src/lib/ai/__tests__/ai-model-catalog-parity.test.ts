@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  ALL_CAPABILITIES,
+  LEGACY_SELECTION_CAPABILITIES,
   CAPABILITY_PROTOCOLS,
   CAPABILITY_SEGMENTS,
   MODEL_REGISTRY,
@@ -43,7 +43,7 @@ const map = new Map(catalog.map((row) => [catalogTupleKey(row.capability, row.pr
 describe("registry × catalog parity", () => {
   it("contém exatamente os 12 seeds e todos os defaults primary/fallback", () => {
     expect(catalog).toHaveLength(12);
-    for (const capability of ALL_CAPABILITIES) {
+    for (const capability of LEGACY_SELECTION_CAPABILITIES) {
       const config = MODEL_REGISTRY[capability];
       for (const target of [config.primary, config.fallback].filter(Boolean)) {
         expect(map.has(catalogTupleKey(capability, target!.provider, target!.model, target!.protocol))).toBe(true);

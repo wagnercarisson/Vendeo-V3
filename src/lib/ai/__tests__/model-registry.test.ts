@@ -23,12 +23,13 @@ const EXPECTED_CAPABILITIES: AiCapability[] = [
   "campaign_image",
   "campaign_image_edit",
   "visual_signature_image",
+  "campaign_product_image",
 ];
 
-describe("ModelRegistry — resolução das 11 capacidades (D1)", () => {
+describe("ModelRegistry — resolução das 12 capacidades (D1)", () => {
   const registry = new ModelRegistry();
 
-  it("resolve as 11 capacidades com capability/segment/primary consistentes", async () => {
+  it("resolve as 12 capacidades com capability/segment/primary consistentes", async () => {
     for (const capability of EXPECTED_CAPABILITIES) {
       const config = await registry.resolve(capability);
       expect(config.capability).toBe(capability);
@@ -51,6 +52,7 @@ describe("ModelRegistry — resolução das 11 capacidades (D1)", () => {
       campaign_image: { segment: "image", model: "gpt-5.5", protocol: "responses" },
       campaign_image_edit: { segment: "image", model: "gpt-image-2", protocol: "images" },
       visual_signature_image: { segment: "image", model: "gpt-5.5", protocol: "responses" },
+      campaign_product_image: { segment: "image", model: "gpt-image-2", protocol: "images" },
     };
 
     for (const capability of EXPECTED_CAPABILITIES) {
@@ -94,9 +96,9 @@ describe("ModelRegistry — resolução das 11 capacidades (D1)", () => {
     expect(config.primary.protocol).toBe("responses");
   });
 
-  it("listCapabilities() retorna exatamente as 11 capacidades", () => {
+  it("listCapabilities() retorna exatamente as 12 capacidades", () => {
     const capabilities = registry.listCapabilities();
-    expect(capabilities).toHaveLength(11);
+    expect(capabilities).toHaveLength(12);
     expect([...capabilities].sort()).toEqual([...EXPECTED_CAPABILITIES].sort());
   });
 
@@ -133,12 +135,13 @@ describe("ModelRegistry — allowlist e validação de alvos (D1)", () => {
     expect(CAPABILITY_PROTOCOLS.campaign_copy).toEqual(["chat-completions", "gemini"]);
   });
 
-  it("CAPABILITY_SEGMENTS cobre as 11 capacidades com o segmento canônico", () => {
+  it("CAPABILITY_SEGMENTS cobre as 12 capacidades com o segmento canônico", () => {
     expect(Object.keys(CAPABILITY_SEGMENTS).sort()).toEqual([...EXPECTED_CAPABILITIES].sort());
     expect(CAPABILITY_SEGMENTS.campaign_copy).toBe("text");
     expect(CAPABILITY_SEGMENTS.campaign_image_review).toBe("vision");
     expect(CAPABILITY_SEGMENTS.campaign_image).toBe("image");
-    expect(ALL_CAPABILITIES).toHaveLength(11);
+    expect(CAPABILITY_SEGMENTS.campaign_product_image).toBe("image");
+    expect(ALL_CAPABILITIES).toHaveLength(12);
   });
 
   it("aceita o registry default (nenhuma configuração inválida)", () => {
@@ -262,7 +265,7 @@ describe("ModelRegistry — allowlist e validação de alvos (D1)", () => {
     );
   });
 
-  it("validateRegistry rejeita registry sem as 11 capacidades", () => {
+  it("validateRegistry rejeita registry sem as 12 capacidades", () => {
     const { campaign_copy: _omit, ...partial } = MODEL_REGISTRY;
     expect(() => validateRegistry(partial as Record<string, AiModelConfig>)).toThrow(
       /sem capacidades obrigatórias: campaign_copy/,

@@ -125,6 +125,6 @@ describe("PersistedModelResolver", () => {
 
   it("lista as capacidades do registry sem consultar o banco", () => {
     const resolver = resolverFor(null, []);
-    expect(resolver.listCapabilities()).toHaveLength(11);
+    expect(resolver.listCapabilities()).toHaveLength(12);
   });
 });
