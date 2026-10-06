@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ELIGIBLE_IMAGE_GENERATION_FAILURE_CLASSES,
   classifyImageGenerationFailure,
+  nextImageGenerationAttempt,
 } from "../image-generation-failure-policy";
 import { AiInvocationError } from "../types";
 
@@ -160,5 +161,99 @@ describe("classificação de falhas — sinais explícitos antes do 429 genéric
       expect(result.eligibleForFallback).toBe(false);
       expect(ELIGIBLE_IMAGE_GENERATION_FAILURE_CLASSES).not.toContain(result.category);
     }
+  });
+});
+
+const PRIMARY_1 = { target: "primary", attemptNumber: 1 } as const;
+const PRIMARY_2 = { target: "primary", attemptNumber: 2 } as const;
+const FALLBACK_3 = { target: "fallback", attemptNumber: 3 } as const;
+
+const eligibleError = (kind: "rate_limit" | "timeout" | "network" | "provider_error") =>
+  classifyImageGenerationFailure(
+    new AiInvocationError({
+      kind,
+      retryable: true,
+      httpStatus: kind === "provider_error" ? 500 : undefined,
+      message: kind,
+    }),
+  );
+
+describe("máquina de política — teto de tentativas e fallback (F56.1 D-16)", () => {
+  it("primeira falha elegível no principal → segunda tentativa no principal", () => {
+    const decision = nextImageGenerationAttempt(PRIMARY_1, eligibleError("timeout"));
+    expect(decision).toEqual({
+      action: "retry_primary",
+      terminal: false,
+      charged: false,
+      consumedCredit: false,
+      nextTarget: "primary",
+      nextAttemptNumber: 2,
+    });
+  });
+
+  it("esgotadas as duas tentativas no principal → uma tentativa no fallback", () => {
+    const decision = nextImageGenerationAttempt(PRIMARY_2, eligibleError("provider_error"));
+    expect(decision.action).toBe("go_fallback");
+    expect(decision.nextTarget).toBe("fallback");
+    expect(decision.nextAttemptNumber).toBe(3);
+    expect(decision.terminal).toBe(false);
+  });
+
+  it("rate_limit repete uma vez no principal e, persistindo, aciona o fallback", () => {
+    const rateLimit = eligibleError("rate_limit");
+    expect(nextImageGenerationAttempt(PRIMARY_1, rateLimit).action).toBe("retry_primary");
+    expect(nextImageGenerationAttempt(PRIMARY_2, rateLimit).action).toBe("go_fallback");
+  });
+
+  it("disponibilidade/capacidade aciona o fallback direto, sem repetir o principal", () => {
+    const availability = classifyImageGenerationFailure({ message: "The model is overloaded" });
+    const decision = nextImageGenerationAttempt(PRIMARY_1, availability);
+    expect(decision.action).toBe("go_fallback");
+    expect(decision.nextTarget).toBe("fallback");
+    expect(decision.nextAttemptNumber).toBe(2);
+  });
+
+  it("quota/billing/auth/content/input nunca acionam fallback", () => {
+    const failures = [
+      classifyImageGenerationFailure(new AiInvocationError({ kind: "quota", retryable: false, message: "quota" })),
+      classifyImageGenerationFailure(new AiInvocationError({ kind: "billing", retryable: false, message: "billing" })),
+      classifyImageGenerationFailure(new AiInvocationError({ kind: "auth", retryable: false, message: "auth" })),
+      classifyImageGenerationFailure(new AiInvocationError({ kind: "content_filter", retryable: false, message: "content" })),
+      classifyImageGenerationFailure({ code: "invalid_request_error", message: "validation failed" }),
+    ];
+    for (const failure of failures) {
+      const decision = nextImageGenerationAttempt(PRIMARY_1, failure);
+      expect(decision.action).toBe("stop");
+      expect(decision.terminal).toBe(true);
+    }
+  });
+
+  it("ao atingir o teto de 3 chamadas, nenhuma nova tentativa é feita", () => {
+    const decision = nextImageGenerationAttempt(FALLBACK_3, eligibleError("network"));
+    expect(decision).toEqual({
+      action: "stop",
+      terminal: true,
+      charged: false,
+      consumedCredit: false,
+    });
+  });
+
+  it("falha técnica encerra com charged=false e consumedCredit=false (D-17)", () => {
+    for (const failure of [
+      eligibleError("network"),
+      classifyImageGenerationFailure(new AiInvocationError({ kind: "quota", retryable: false, message: "quota" })),
+    ]) {
+      const decision = nextImageGenerationAttempt(FALLBACK_3, failure);
+      expect(decision.charged).toBe(false);
+      expect(decision.consumedCredit).toBe(false);
+    }
+  });
+
+  it("aceita a classificação diretamente, sem recorrer ao erro cru", () => {
+    const decision = nextImageGenerationAttempt(PRIMARY_1, {
+      category: "rate_limit",
+      eligibleForFallback: true,
+    });
+    expect(decision.action).toBe("retry_primary");
   });
 });
