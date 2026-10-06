@@ -62,6 +62,48 @@ completed: 2026-10-06
 
 **Resposta pública não reveladora (IMG-001 + referência UUID v4) e correlação durável referência→diagnóstico em tabela imutável, com prova cross-instance na instância Supabase isolada**
 
+## Correção pós-revisão humana
+
+Uma revisão humana encontrou uma lacuna de contrato: `normalized_error` era gravado como
+`sanitizeDiagnosisText(input.normalizedError)`, que removia bearer/chave/URL mas **preservava o
+restante do texto cru do provider** — violando o requisito de que o campo NÃO persista texto cru
+(D-19). Correção RESTRITA, sem alterar arquitetura/tabela/RLS/trigger/rota (a prova de durabilidade
+já feita permanece válida).
+
+**Código (fonte da verdade do conjunto fechado):**
+
+- `NORMALIZED_FAILURE_ERROR_CODES` — conjunto **fechado** e congelado (alinhado a
+  `AiInvocationErrorKind` + genérico):
+  `["timeout","auth","rate_limit","capability","network","content_filter","provider_error","quota","billing","unknown_provider_error"]`.
+- `NormalizedFailureErrorCode` — tipo derivado do conjunto.
+- `GENERIC_FAILURE_ERROR_CODE = "unknown_provider_error"`.
+- `normalizeDiagnosisErrorCode(value)` — devolve `value` **se e somente se** pertencer ao conjunto;
+  caso contrário devolve o genérico. **Nunca retorna nem incorpora a entrada crua.**
+- `image-generation-diagnosis-repository.ts` grava
+  `normalized_error: normalizeDiagnosisErrorCode(input.normalizedError)`; `toInternalDiagnosis`
+  faz o mesmo. `message_public` continua sanitizado por `sanitizeDiagnosisText` (inalterado).
+
+**Testes (adicionados/atualizados):**
+
+- Mensagem arbitrária `"Error: invalid_api_key sk-abc123 https://api.openai.com/v1/error at Object.<anonymous>"`
+  como `normalizedError` NÃO é persistida/retornada: grava/retorna `unknown_provider_error` e não
+  contém a mensagem crua, a chave (`sk-abc123`) nem a URL.
+- Código conhecido `"rate_limit"` faz round-trip inalterado (fake e instância isolada).
+- Conjunto fechado/`normalizeDiagnosisErrorCode`/`toInternalDiagnosis` cobertos por unidade.
+
+**Revalidação (instância isolada `vendeo-f561-isolated`, 55321/55322):**
+
+- `npm test -- <3 suítes>` → **3 arquivos / 33 testes passed** (EXIT 0); durabilidade executou de
+  fato (`--reporter=verbose` → **6 passed, 0 skipped**).
+- `npm run typecheck` → **EXIT 0**; `npm run lint` → **EXIT 0**.
+- `select reference, internal_category, normalized_error` na tabela isolada: as linhas novas são
+  SOMENTE códigos do conjunto fechado (`rate_limit`, `unknown_provider_error`). Nenhum texto cru.
+  (Linhas antigas sanitizadas da execução original permanecem — trigger de imutabilidade bloqueia
+  UPDATE/DELETE; instância descartável.)
+- Migration NÃO alterada (nenhum reset necessário).
+
+**Commit da correção:** `132a65d6` (fix).
+
 ## Performance
 
 - **Duration:** 4 min
