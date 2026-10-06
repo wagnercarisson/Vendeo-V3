@@ -183,3 +183,121 @@ export function classifyImageGenerationFailure(
   // 11. Default seguro: falha desconhecida não é tratada como falha de modelo.
   return nonEligible("input");
 }
+
+// ─── Política de execução (máquina de tentativas) ────────────────────────────
+
+/** Alvo do par no novo fluxo (principal/fallback) — mesmo literal do envelope (D-21). */
+export type ImageGenerationAttemptTarget = "primary" | "fallback";
+
+/** Tetos da política (D-16): até 2 no principal + até 1 no fallback = até 3 chamadas. */
+export const MAX_IMAGE_GENERATION_ATTEMPTS = 3;
+export const MAX_PRIMARY_IMAGE_GENERATION_ATTEMPTS = 2;
+export const MAX_FALLBACK_IMAGE_GENERATION_ATTEMPTS = 1;
+
+/** Próxima ação da operação após uma falha classificada. */
+export type ImageGenerationAttemptAction = "retry_primary" | "go_fallback" | "stop";
+
+/** Estado da tentativa que acabou de falhar (alvo atual + número 1-based). */
+export interface ImageGenerationAttemptState {
+  readonly target: ImageGenerationAttemptTarget;
+  readonly attemptNumber: number;
+}
+
+/**
+ * Resultado puro da máquina de política. `charged`/`consumedCredit` são **sempre**
+ * `false`: falha técnica não debita o lojista (D-17). A regra é **simulada**
+ * nesta fase; o **enforcement transacional** sobre o ledger de créditos é da
+ * **F56.2**.
+ */
+export interface ImageGenerationNextAttempt {
+  readonly action: ImageGenerationAttemptAction;
+  /** `true` quando a operação encerra (nenhuma nova tentativa). */
+  readonly terminal: boolean;
+  /** Alvo da próxima tentativa (ausente em `stop`). */
+  readonly nextTarget?: ImageGenerationAttemptTarget;
+  /** Número da próxima tentativa real, 1-based (ausente em `stop`). */
+  readonly nextAttemptNumber?: number;
+  /** D-17: falha técnica nunca cobra o lojista (regra simulada; enforcement = F56.2). */
+  readonly charged: false;
+  readonly consumedCredit: false;
+}
+
+/**
+ * Plano máximo de tentativas da operação — invariante de teto (T-56.1-19):
+ * até 2 no principal e até 1 no fallback, totalizando até 3 chamadas.
+ */
+export const IMAGE_GENERATION_ATTEMPT_PLAN: readonly ImageGenerationAttemptState[] = Object.freeze([
+  Object.freeze({ target: "primary" as const, attemptNumber: 1 }),
+  Object.freeze({ target: "primary" as const, attemptNumber: 2 }),
+  Object.freeze({ target: "fallback" as const, attemptNumber: 3 }),
+]);
+
+/** Retorna o plano máximo de tentativas da operação (2 principal + 1 fallback). */
+export function planImageGenerationAttempts(): readonly ImageGenerationAttemptState[] {
+  return IMAGE_GENERATION_ATTEMPT_PLAN;
+}
+
+function isFailureClassification(
+  value: ImageGenerationFailureClassification | AiInvocationError | ImageGenerationFailureLike,
+): value is ImageGenerationFailureClassification {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "category" in value &&
+    "eligibleForFallback" in value
+  );
+}
+
+function stopAttempt(): ImageGenerationNextAttempt {
+  return Object.freeze({ action: "stop", terminal: true, charged: false, consumedCredit: false });
+}
+
+function continueAttempt(
+  action: "retry_primary" | "go_fallback",
+  nextTarget: ImageGenerationAttemptTarget,
+  nextAttemptNumber: number,
+): ImageGenerationNextAttempt {
+  return Object.freeze({
+    action,
+    terminal: false,
+    charged: false,
+    consumedCredit: false,
+    nextTarget,
+    nextAttemptNumber,
+  });
+}
+
+/**
+ * Dado o estado da tentativa que falhou e a classificação da falha, devolve a
+ * **próxima ação** da operação (D-16):
+ *
+ *  - falha **não elegível** (quota/billing/auth/content/input) → `stop`;
+ *  - teto global de 3 chamadas atingido → `stop`;
+ *  - fallback já utilizado → `stop`;
+ *  - **disponibilidade/capacidade** explícita no principal → `go_fallback`
+ *    direto, sem repetição inútil;
+ *  - demais falhas elegíveis no principal → `retry_primary` (1ª tentativa) e
+ *    `go_fallback` (2ª tentativa), cobrindo `rate_limit` transitório.
+ */
+export function nextImageGenerationAttempt(
+  state: ImageGenerationAttemptState,
+  failure: ImageGenerationFailureClassification | AiInvocationError | ImageGenerationFailureLike,
+): ImageGenerationNextAttempt {
+  const classification = isFailureClassification(failure)
+    ? failure
+    : classifyImageGenerationFailure(failure);
+
+  if (!classification.eligibleForFallback) return stopAttempt();
+  if (state.attemptNumber >= MAX_IMAGE_GENERATION_ATTEMPTS) return stopAttempt();
+  if (state.target === "fallback") return stopAttempt();
+
+  // state.target === "primary"
+  if (classification.category === "availability") {
+    // Disponibilidade/capacidade explícita não gasta repetição inútil no principal.
+    return continueAttempt("go_fallback", "fallback", state.attemptNumber + 1);
+  }
+  if (state.attemptNumber < MAX_PRIMARY_IMAGE_GENERATION_ATTEMPTS) {
+    return continueAttempt("retry_primary", "primary", state.attemptNumber + 1);
+  }
+  return continueAttempt("go_fallback", "fallback", state.attemptNumber + 1);
+}
