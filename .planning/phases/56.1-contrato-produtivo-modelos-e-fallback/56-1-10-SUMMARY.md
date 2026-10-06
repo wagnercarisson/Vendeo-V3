@@ -123,3 +123,45 @@ None - nenhuma configuração externa. Nenhuma chamada a provider, nenhuma opera
 ---
 *Phase: 56.1-contrato-produtivo-modelos-e-fallback*
 *Completed: 2026-10-06*
+
+## Correção pós-revisão humana
+
+Revisão humana encontrou uma divergência entre o formulário entregue e a UI-SPEC: o aviso âmbar usava `const coverage = view.pricing;` — a cobertura do par **vigente** (estático) —, portanto **não** acompanhava o par sendo **rascunhado**. A UI-SPEC L165 ("Live pricing coverage for each drafted pair (warn only)") e L322 ("recompute coverage per drafted pair as selects change") exigem que o aviso reflita o rascunho (principal + fallback) e seja recomputado ao vivo quando um seletor muda, sem bloquear o Save (D-24).
+
+### Causa raiz
+
+`view.pricing` é a cobertura agregada do par **persistido**. Ao trocar modelo/qualidade nos seletores, o estado local (`draft`) muda mas o aviso permanecia com a cobertura do par vigente — um aviso desatualizado e potencialmente enganoso (ex.: mostrar "Completa" para um par em rascunho sem cobertura, ou alertar para um par já corrigido).
+
+### Suporte aditivo na view (`src/lib/ai/image-model-pair-config-view.ts`, plano 08)
+
+- Novo campo `targetCoverageByPair: Record<string, ImagePairTargetPricingStatus>` em `ImageModelPairConfigView`, chaveado por `${model}|${quality}` e computado server-side para **todos** os pares elegíveis (3 modelos × 2 qualidades = 6 combinações).
+- Resolvedor injetável `ImageModelPairTargetCoverageResolver` (novo), com default `getImagePairPricingService().resolveTargetCoverage({ model, quality })` (método já público em `image-pair-pricing.ts`) — espelhando o padrão do `pricingResolver` existente, permitindo fakes em testes.
+- Estado vazio → `{}`; leitura falha de um par omite a chave (o cliente trata "desconhecido" sem inferir `complete`).
+- **Estritamente aditivo**: `pricing`, `pricingCoverage`, `resolveImagePairCoverage`/`resolveImagePairConfig` e o comportamento do serviço do plano 08 ficaram inalterados. Nenhuma chamada adicional de rede no cliente — o mapa vem pronto do servidor.
+
+### Mudança no formulário (`src/app/(app)/admin/image-model-pair/form.tsx`)
+
+- Nova função pura `draftedCoverage(view, draft)` que deriva a cobertura do par em rascunho a partir de `view.targetCoverageByPair`: `complete` somente quando **ambos** (principal e fallback) estão completos; `missing` somente quando ambos estão ausentes; caso contrário `partial`; `missingComponents` = união deduplicada. Par desconhecido → `null` (nunca renderiza `complete` falso).
+- `const coverage = view.pricing;` → `const coverage = draftedCoverage(view, draft);`; a copy exata da UI-SPEC foi preservada (`Cobertura de pricing {status}: faltam {componentes}. Você pode salvar, mas a execução exige cobertura completa para principal e fallback.`).
+- O aviso é recomputado a cada `onChange` de seletor (o mesmo `edit()` que já reseta idempotência) e **não** desabilita `Salvar configuração` (D-24). Banner, motivo, `operationId`/fingerprint, sucesso/erro intactos.
+
+### Teste novo (`src/app/(app)/admin/image-model-pair/__tests__/image-model-pair.test.tsx`)
+
+- `atualiza o aviso de cobertura conforme o par em rascunho muda nos seletores`: semeia `targetCoverageByPair` com o par inicial completo (sem aviso) e `gpt-image-2.5-flare|low` `missing`; muda o par principal para esse par → aviso "Parcial" + "faltam image_unit"; volta ao par completo → aviso desaparece; em todos os passos `Salvar configuração` permanece habilitado.
+- Testes de cobertura `partial`/`missing` migrados de `view.pricing` para `view.targetCoverageByPair`; `EMPTY_VIEW`/`CONFIGURED_VIEW` receberam o novo campo.
+- View do plano 08: asserção `targetCoverageByPair === {}` no estado vazio e novo teste "expõe o mapa de cobertura de TODOS os pares elegíveis (aditivo)" (6 chaves, resolvedor chamado 6×).
+
+### Verificação
+
+- `npx vitest run image-model-pair` → 4 arquivos / **62 testes verdes** (UI 10, serviço/view 20, rota 21, demais).
+- `npm run typecheck` → OK (exit 0); `npm run lint` → OK (exit 0).
+- Nenhuma chamada real de provider/rede/banco; nenhum comando Supabase; nenhuma ativação.
+
+### Commits da correção
+
+| Commit | Tipo | Conteúdo |
+|---|---|---|
+| `fec6e328` | fix | Correção atômica: view aditiva + form (cobertura ao vivo) + testes + wording do PLAN |
+| docs | docs | Registro desta seção no SUMMARY (hash no relatório de execução) |
+
+---
