@@ -253,7 +253,7 @@ Plans:
 
 **Requirements:** REQ-56.2a-01, REQ-56.2a-02, REQ-56.2a-03, REQ-56.2a-04, REQ-56.2a-05, REQ-56.2a-06, REQ-56.2a-07, REQ-56.2a-08, REQ-56.2a-09, REQ-56.2a-10, REQ-56.2a-11, REQ-56.2a-12, REQ-56.2a-13, REQ-56.2a-14, REQ-56.2a-15, REQ-56.2a-16, REQ-56.2a-17, REQ-56.2a-18, REQ-56.2a-19
 
-**Fonte normativa (ativa):** `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` — `proposal.md`, `design.md` (A-D1…A-D7), `tasks.md` (27 tasks em 6 seções) e 5 specs (`product-1-1-flow-activation`, `product-1-1-intent-background-selection`, `product-1-1-prompt-composition` [novas]; `image-generation-config-snapshot`, `feature-flag-control` [deltas aditivos]).
+**Fonte normativa (ativa):** `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` — `proposal.md`, `design.md` (A-D1…A-D7), `tasks.md` (31 tasks em 6 seções; o design.md citava "27", mas o tasks.md real tem 31 checkboxes) e 5 specs (`product-1-1-flow-activation`, `product-1-1-intent-background-selection`, `product-1-1-prompt-composition` [novas]; `image-generation-config-snapshot`, `feature-flag-control` [deltas aditivos]).
 
 **Reconciliação:** substitui parte da change `fase-56-2-novo-fluxo-geracao-produto-1-1` (relocada para `openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/`; ver `RECONCILIATION.md`). A change original é preservada e marcada como substituída; não é descartada silenciosamente.
 
@@ -287,7 +287,7 @@ Plans:
 - [ ] 56-2-05-PLAN.md — Testes transversais de não-ativação/não-exposição + não-regressão do legado + gates e `openspec validate --strict`.
 - [ ] 56-2-06-PLAN.md — Validação [BLOCKING] das migrations em instância isolada + UAT sem provider + checkpoint humano + tracking.
 
-**Ondas:** Onda 1 paralela — `56-2-01`, `56-2-02`, `56-2-03`; Onda 2 — `56-2-04` (depende de `56-2-01`; migrations serializadas); Onda 3 — `56-2-05`; Onda 4 — `56-2-06` (verificação final, `autonomous: false` por checkpoint).
+**Ondas:** Onda 1 paralela — `56-2-01`, `56-2-02`; Onda 2 — `56-2-03` (depende de `56-2-02`; importa a fonte única de direção de fundo) e `56-2-04` (depende de `56-2-01`; migrations serializadas); Onda 3 — `56-2-05` (depende de `56-2-01`..`56-2-04`); Onda 4 — `56-2-06` (depende de `56-2-05`; verificação final, `autonomous: false` por checkpoint).
 
 **Canonical refs:** `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` (proposal/design/tasks/specs), `openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/RECONCILIATION.md`, `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`, `openspec/design-system/MASTER.md`, `src/lib/feature-flags/*`, `src/lib/lab/bench/domain/*`, `src/lib/ai/image-generation-config-snapshot.ts`, `supabase/migrations/*`.
 
