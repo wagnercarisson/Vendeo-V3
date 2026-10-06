@@ -1,6 +1,6 @@
 # Requirements: Vendeo V3
 
-**Status operacional:** existem requisitos ativos da **F56.1 — Contrato produtivo, modelos e fallback** (em execução desde 2026-10-06; 6/11 planos GSD), mapeados dos 8 specs OpenSpec da change `fase-56-1-contrato-produtivo-modelos-fallback`.
+**Status operacional:** existem requisitos ativos da **F56.1 — Contrato produtivo, modelos e fallback** (em execução desde 2026-10-06; 9/11 planos GSD), mapeados dos 8 specs OpenSpec da change `fase-56-1-contrato-produtivo-modelos-fallback`.
 
 **Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs ativos (abaixo).
 
@@ -22,7 +22,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 
 ## F56.1 — Requisitos ativos (Contrato produtivo, modelos e fallback)
 
-**Fonte:** `openspec/changes/fase-56-1-contrato-produtivo-modelos-fallback/` (8 specs). **Status:** em execução desde 2026-10-06 (7/11 planos GSD; OpenSpec 0/55 tasks). Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura.
+**Fonte:** `openspec/changes/fase-56-1-contrato-produtivo-modelos-fallback/` (8 specs). **Status:** em execução desde 2026-10-06 (9/11 planos GSD; OpenSpec 0/55 tasks). Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura.
 
 | REQ-ID | Requirement (OpenSpec) | Spec |
 |--------|------------------------|------|
