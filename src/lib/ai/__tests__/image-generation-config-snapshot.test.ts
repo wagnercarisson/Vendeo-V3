@@ -237,6 +237,58 @@ describe("image-generation-config-snapshot — correlação run/trace com a tele
     expect(correlated).toHaveLength(1);
     expect(correlated[0]?.attemptNumber).toBe(1);
   });
+
+  it("NÃO correlaciona tentativa sem runId quando o snapshot exige runId (fail-closed)", () => {
+    const attempts = [{ traceId: "trace-1", attemptNumber: 1, target: "primary" as const }];
+
+    expect(correlateSnapshotWithTelemetry(snapshot, attempts)).toEqual([]);
+  });
+
+  it("NÃO correlaciona tentativa sem traceId quando o snapshot exige traceId (fail-closed)", () => {
+    const attempts = [{ runId: "run-1", attemptNumber: 1, target: "primary" as const }];
+
+    expect(correlateSnapshotWithTelemetry(snapshot, attempts)).toEqual([]);
+  });
+
+  it("correlaciona tentativa com run e trace presentes e iguais (regressão)", () => {
+    const attempts = [
+      { runId: "run-1", traceId: "trace-1", attemptNumber: 1, target: "primary" as const },
+    ];
+
+    expect(correlateSnapshotWithTelemetry(snapshot, attempts)).toHaveLength(1);
+  });
+
+  it("snapshot com apenas runId exige runId presente e igual na tentativa", () => {
+    const runOnlySnapshot = buildImageGenerationConfigSnapshot(PAIR_CONFIG, {
+      campaignId: "camp-1",
+      origin: "human_decision",
+      configVersionId: "cfg-v1",
+      runId: "run-1",
+      now: FIXED_NOW,
+    });
+
+    const semRunId = [{ traceId: "trace-1", attemptNumber: 1, target: "primary" as const }];
+    expect(correlateSnapshotWithTelemetry(runOnlySnapshot, semRunId)).toEqual([]);
+
+    const comRunId = [{ runId: "run-1", attemptNumber: 1, target: "primary" as const }];
+    expect(correlateSnapshotWithTelemetry(runOnlySnapshot, comRunId)).toHaveLength(1);
+  });
+
+  it("snapshot sem runId e sem traceId NÃO correlaciona nenhuma tentativa (fail-closed)", () => {
+    const bareSnapshot = buildImageGenerationConfigSnapshot(PAIR_CONFIG, {
+      campaignId: "camp-1",
+      origin: "human_decision",
+      configVersionId: "cfg-v1",
+      now: FIXED_NOW,
+    });
+
+    const attempts = [
+      { runId: "run-1", traceId: "trace-1", attemptNumber: 1, target: "primary" as const },
+      { attemptNumber: 2, target: "fallback" as const },
+    ];
+
+    expect(correlateSnapshotWithTelemetry(bareSnapshot, attempts)).toEqual([]);
+  });
 });
 
 describe("image-generation-config-snapshot — tolerância a operações legadas (F56.1 D-14)", () => {

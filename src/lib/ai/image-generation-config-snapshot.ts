@@ -249,20 +249,30 @@ export function resolveSnapshotPairForTarget(
   return { model: snapshot.primaryModel, quality: snapshot.primaryQuality };
 }
 
+/**
+ * Correlação **fail-closed** por identificador de operação (D-14): a tentativa só
+ * é atribuída ao snapshot quando **todos** os identificadores definidos no
+ * snapshot estão presentes e estritamente iguais na tentativa. Um identificador
+ * ausente na tentativa (ou divergente) rejeita a correlação — nunca se associa
+ * telemetria não identificada a uma campanha. Quando o snapshot não define
+ * `runId` nem `traceId`, não há identificador suficiente para correlacionar com
+ * segurança e nenhuma tentativa é aceita.
+ */
 function matchesSnapshotReference(
   snapshot: ImageGenerationConfigSnapshot,
   attempt: ImageGenerationTelemetryAttempt,
 ): boolean {
-  if (snapshot.runId !== undefined && attempt.runId !== undefined && attempt.runId !== snapshot.runId) {
-    return false;
-  }
-  if (
-    snapshot.traceId !== undefined &&
-    attempt.traceId !== undefined &&
-    attempt.traceId !== snapshot.traceId
-  ) {
-    return false;
-  }
+  const snapshotDefinesRunId = snapshot.runId !== undefined;
+  const snapshotDefinesTraceId = snapshot.traceId !== undefined;
+
+  // Sem nenhum identificador no snapshot não há correlação segura possível.
+  if (!snapshotDefinesRunId && !snapshotDefinesTraceId) return false;
+
+  // Cada identificador definido exige presença E igualdade estrita na tentativa:
+  // ausência (`undefined`) ou divergência falham via `!==`.
+  if (snapshotDefinesRunId && attempt.runId !== snapshot.runId) return false;
+  if (snapshotDefinesTraceId && attempt.traceId !== snapshot.traceId) return false;
+
   return true;
 }
 
