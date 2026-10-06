@@ -2,7 +2,7 @@
 phase: 56.1-contrato-produtivo-modelos-e-fallback
 plan: 11
 verified: 2026-10-06
-status: verified-pending-human-checkpoint
+status: complete-local-human-approved
 ---
 
 # Phase 56.1 — Verificação da fase (Plano 11)
@@ -88,7 +88,7 @@ status: verified-pending-human-checkpoint
 | 4.1 Tela admin do par | `src/app/(app)/admin/image-model-pair/page.tsx`+`form.tsx`; `layout.tsx` (link aditivo) |
 | 4.2 Catálogo/par/origem/aviso não-ativa | `page.tsx`+`form.tsx`; teste `image-model-pair.test.tsx` |
 | 4.3 Cobertura de pricing sem bloquear salvar | `form.tsx` (banner âmbar warn-not-block); teste de UI |
-| 4.4 Testes de seleção/motivo/restrição | `image-model-pair.test.tsx` (9 testes) |
+| 4.4 Testes de seleção/motivo/restrição | `image-model-pair.test.tsx` (10 testes) |
 
 ### Seção 5 — Snapshot (componente; integração real F56.2)
 | Task | Evidência |
@@ -138,14 +138,14 @@ status: verified-pending-human-checkpoint
 | 9.1 Fronteira produtiva sem mudança de comportamento | UAT §4; `new-flow-isolation.contract.test.ts` |
 | 9.2 Novo fluxo não gera campanha/ativa geração | UAT §6; `new-flow-isolation.contract.test.ts` (item f) |
 | 9.3 typecheck/lint/build/suíte local | UAT §2 (todos EXIT 0) |
-| 9.4 `openspec validate --strict` + GSD | UAT §2 (`--changes --strict` válido) |
+| 9.4 `openspec validate --strict` + GSD | UAT §2 (`--changes --strict` válido); **GSD/OpenSpec verification lifecycle NOT run** — parado antes de verify/sync/archive por instrução do responsável (task OpenSpec 9.4 permanece `[ ]`) |
 | 9.5 UAT local sem provider + ausência de `db push` | UAT §1/§3 |
 | 9.6 Atualizar STATE/ROADMAP | **Responsabilidade do orquestrador** (não modificado por este plano) |
 
 ### Seção 10 — Checkpoint final
 | Task | Evidência |
 |---|---|
-| 10.1 Revisão humana antes de ativação em F56.2 | Task 5 (`checkpoint:human-verify`) — **aguardando decisão humana** |
+| 10.1 Revisão humana antes de ativação em F56.2 | Task 5 (`checkpoint:human-verify`) — **APROVADO** no escopo preparatório/local (§6) |
 | 10.2 Par permanece decisão do responsável, não promoção | `INITIAL_IMAGE_MODEL_PAIR` (`active:false`); UAT §5 |
 
 **Cobertura:** 55/55 tasks OpenSpec com evidência — **completa**.
@@ -161,7 +161,7 @@ status: verified-pending-human-checkpoint
 | `npm run build` | EXIT 0 (78/78 páginas) |
 | Suíte relevante `src/lib/ai` + `src/lib/ai-cost` + `src/app/api/admin` | 894 passed / 7 skipped |
 | `npm test -- src/lib/ai/__tests__/new-flow-isolation.contract.test.ts` | 7/7 verdes |
-| `openspec validate <change> --strict` / `--changes --strict` | válido, EXIT 0 |
+| `openspec validate <change> --strict` / `--changes --strict` | válido, EXIT 0 (validação de conteúdo; o **lifecycle** verify/sync/archive **NÃO** foi executado) |
 | `supabase db lint --local --fail-on error` | EXIT 0 |
 | Teste REAL da RPC na instância isolada | UAT §1 (gravação + auditoria única + idempotência) |
 
@@ -184,7 +184,41 @@ Fonte detalhada: `.planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56
 - ✅ **Nenhuma chamada paga** a provider; **0 crédito** consumido (UAT §6).
 - ✅ **Fluxo legado intocado** exceto as mudanças declarativas e revisadas (UAT §4).
 - ✅ `.planning/STATE.md` e `.planning/ROADMAP.md` **não** modificados por este plano (ownership do orquestrador).
-- ⏳ **Checkpoint humano final (Task 5)** apresentado; aprovação pendente.
+- ✅ **Checkpoint humano final (Task 5) APROVADO** pelo responsável no **escopo preparatório/local** (ver §6).
+
+---
+
+## 6. UAT Humano (revisão do responsável) — APROVADO (escopo preparatório/local)
+
+**Aprovação:** o responsável **APROVOU** o UAT humano da F56.1 no **escopo preparatório/local**, com base na evidência abaixo, executada na instância descartável/isolada `vendeo-f561-isolated` (REST `http://127.0.0.1:55321` / DB `55322`). A aprovação cobre a infraestrutura preparatória e a configuração auditável do par; **não** cobre promoção/ativação produtiva nem a integração transacional (F56.2).
+
+### 6.1 Evidência observada (instância isolada)
+
+- Motivo vazio é **bloqueado** no formulário da UI.
+- **Salvar** pela tela admin **funcionou**.
+- Teste humano: salvou o par primário `gpt-image-2.5-flare`/`medium` + fallback `gpt-image-2`/`medium` (motivo "Teste"), gerando versão de configuração `f314d801-87be-479c-9c01-4d574b9d892f`, `operation_id` `600af8d0-090a-4419-807d-0282afb60afd`, com **EXATAMENTE UMA** linha em `admin_audit_log` (`action='image_model_pair_config_update'`).
+- O **aviso de não-ativa em produção** e a **cobertura de pricing `missing`/`partial`** foram exibidos corretamente.
+- A **operação de teste foi preservada** na história (nenhuma linha de auditoria apagada/alterada).
+- Em seguida, o responsável **RESTAUROU** o par inicial Sunburst/medium + `gpt-image-2`/`medium` (motivo "teste"), gerando versão `b3fa7b83-a0aa-48db-8f02-9bcbdd32bbe8`, `operation_id` `ce191171-ea5d-4381-840b-07ad860a6c1d`, com **EXATAMENTE UMA** linha de auditoria.
+
+### 6.2 Versões da instância isolada
+
+| Operação | `operation_id` | `config_version_id` | Linhas de auditoria |
+|---|---|---|---|
+| Teste humano do par Flare (`gpt-image-2.5-flare`/`medium` + `gpt-image-2`/`medium`, motivo "Teste") | `600af8d0-090a-4419-807d-0282afb60afd` | `f314d801-87be-479c-9c01-4d574b9d892f` | **1** |
+| Restauração do par inicial (`gpt-image-2.5-sunburst`/`medium` + `gpt-image-2`/`medium`, motivo "teste") | `ce191171-ea5d-4381-840b-07ad860a6c1d` | `b3fa7b83-a0aa-48db-8f02-9bcbdd32bbe8` | **1** |
+
+**Linha vigente (instância isolada):** primário `gpt-image-2.5-sunburst`/`medium`, fallback `gpt-image-2`/`medium`, `config_version_id` `b3fa7b83-a0aa-48db-8f02-9bcbdd32bbe8`. Histórico de auditoria preservado (4 linhas: `5958d23c`→`c949372c`, `884e9260`→`cca10e2f`, `600af8d0`→`f314d801`, `ce191171`→`b3fa7b83`).
+
+### 6.3 Não-promoção + ausência de mutações proibidas
+
+- O teste do par `gpt-image-2.5-flare`/`medium` **NÃO é promoção** de Flare; foi revertido ao par inicial aprovado. A escolha do par **permanece decisão humana** do responsável.
+- Instância isolada `vendeo-f561-isolated`; a stack compartilhada `Vendeo_V3` **não** foi tocada.
+- **Nenhum `supabase db push`** (nem remoto, nem `--linked`); **nenhuma chamada a provider**; **nenhuma geração paga**; **nenhuma ativação/promoção**; histórico de auditoria **preservado**.
+
+### 6.4 Lifecycle OpenSpec e verificação GSD — NÃO executados
+
+Por **instrução do responsável**, houve **STOP antes** do lifecycle OpenSpec (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) e do passo de verificação da fase GSD. O que **foi** executado é apenas `openspec validate --strict` (validação de conteúdo, EXIT 0). O par é registrado como **aprovado no escopo preparatório/local**; a task OpenSpec **9.4 permanece `[ ]`** exatamente por registrar que o lifecycle **não** rodou.
 
 ---
 

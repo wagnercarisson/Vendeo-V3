@@ -108,9 +108,19 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 
-- F56.1 pronta para o **checkpoint humano final (Task 5)** — aprovação pendente.
+- F56.1 com o **checkpoint humano final (Task 5) APROVADO** no escopo preparatório/local — ver "UAT Humano" abaixo.
 - Nenhuma ativação, `db push`, promoção ou geração paga foi executada.
 - A integração transacional (snapshot real, não-débito, política sobre geração real) é da **F56.2**.
+
+## UAT Humano
+
+O responsável **APROVOU** o UAT humano da F56.1 no **escopo preparatório/local** (instância descartável/isolada `vendeo-f561-isolated`, REST `55321` / DB `55322`).
+
+- **Teste humano do par Flare:** salvou primário `gpt-image-2.5-flare`/`medium` + fallback `gpt-image-2`/`medium` (motivo "Teste") → versão `f314d801-87be-479c-9c01-4d574b9d892f`, `operation_id` `600af8d0-090a-4419-807d-0282afb60afd`, com **exatamente 1** linha de auditoria (`action='image_model_pair_config_update'`).
+- **Restauração do par inicial:** primário `gpt-image-2.5-sunburst`/`medium` + fallback `gpt-image-2`/`medium` (motivo "teste") → versão `b3fa7b83-a0aa-48db-8f02-9bcbdd32bbe8`, `operation_id` `ce191171-ea5d-4381-840b-07ad860a6c1d`, com **exatamente 1** linha de auditoria.
+- **Não é promoção:** o teste do par Flare foi revertido ao par inicial aprovado; a escolha do par **permanece decisão humana** do responsável, não promoção/ativação.
+- Histórico de auditoria **preservado** (4 linhas: `5958d23c`→`c949372c`, `884e9260`→`cca10e2f`, `600af8d0`→`f314d801`, `ce191171`→`b3fa7b83`). Nenhum `db push`, provider, geração paga ou ativação.
+- O lifecycle OpenSpec (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) e o passo de verificação GSD **NÃO** foram executados (parada por instrução do responsável antes de verify/sync/archive).
 
 ---
 
