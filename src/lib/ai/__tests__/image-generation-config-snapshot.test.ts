@@ -5,8 +5,11 @@ import {
   ImageGenerationConfigMissingError,
   ImageGenerationConfigOriginInvalidError,
   buildImageGenerationConfigSnapshot,
+  correlateSnapshotWithTelemetry,
+  isLegacyOperationWithoutSnapshot,
   resolveConfigForCorrection,
   resolveConfigForNewCampaign,
+  resolveSnapshotPairForTarget,
   type CurrentImageGenerationConfig,
 } from "../image-generation-config-snapshot";
 import type { ImageModelPairConfig } from "../image-model-pair";
@@ -105,5 +108,146 @@ describe("image-generation-config-snapshot — resolução por tipo de operaçã
 
     expect(corrected).toBe(original);
     expect(corrected?.configVersionId).toBe("cfg-v1");
+  });
+});
+
+describe("image-generation-config-snapshot — imutabilidade lógica (F56.1 D-13)", () => {
+  it("alterar a configuração vigente depois não modifica um snapshot já montado", () => {
+    const current: CurrentImageGenerationConfig = {
+      primary: { model: "gpt-image-2.5-sunburst", quality: "medium" },
+      fallback: { model: "gpt-image-2", quality: "medium" },
+      origin: "selection",
+      configVersionId: "cfg-v1",
+    };
+
+    const snapshot = resolveConfigForNewCampaign(current, "camp-1", { now: FIXED_NOW });
+
+    // A fonte muda depois de o snapshot ter sido montado.
+    current.primary.model = "gpt-image-2";
+    current.configVersionId = "cfg-v2";
+
+    expect(snapshot.primaryModel).toBe("gpt-image-2.5-sunburst");
+    expect(snapshot.configVersionId).toBe("cfg-v1");
+  });
+
+  it("o snapshot retornado é congelado (imutável)", () => {
+    const snapshot = resolveConfigForNewCampaign(
+      { ...PAIR_CONFIG, origin: "human_decision", configVersionId: "cfg-v1" },
+      "camp-1",
+      { now: FIXED_NOW },
+    );
+
+    expect(Object.isFrozen(snapshot)).toBe(true);
+  });
+
+  it("nova campanha após mudança do admin usa a vigente e não altera snapshots anteriores", () => {
+    const before: CurrentImageGenerationConfig = {
+      primary: { model: "gpt-image-2.5-sunburst", quality: "medium" },
+      fallback: { model: "gpt-image-2", quality: "medium" },
+      origin: "selection",
+      configVersionId: "cfg-v1",
+    };
+    const snapshotBefore = resolveConfigForNewCampaign(before, "camp-A", { now: FIXED_NOW });
+
+    const after: CurrentImageGenerationConfig = {
+      primary: { model: "gpt-image-2", quality: "low" },
+      fallback: { model: "gpt-image-2", quality: "medium" },
+      origin: "selection",
+      configVersionId: "cfg-v2",
+    };
+    const snapshotAfter = resolveConfigForNewCampaign(after, "camp-B", { now: FIXED_NOW });
+
+    expect(snapshotAfter.primaryModel).toBe("gpt-image-2");
+    expect(snapshotAfter.primaryQuality).toBe("low");
+    expect(snapshotAfter.configVersionId).toBe("cfg-v2");
+    expect(snapshotBefore.primaryModel).toBe("gpt-image-2.5-sunburst");
+    expect(snapshotBefore.configVersionId).toBe("cfg-v1");
+  });
+
+  it("correção da mesma campanha reutiliza o snapshot original e NÃO adota a vigente", () => {
+    const original = resolveConfigForNewCampaign(
+      { ...PAIR_CONFIG, origin: "human_decision", configVersionId: "cfg-v1" },
+      "camp-A",
+      { now: FIXED_NOW },
+    );
+
+    const changedVigente: CurrentImageGenerationConfig = {
+      primary: { model: "gpt-image-2", quality: "low" },
+      fallback: { model: "gpt-image-2", quality: "low" },
+      origin: "selection",
+      configVersionId: "cfg-v2",
+    };
+
+    const corrected = resolveConfigForCorrection(original);
+
+    expect(corrected).toBe(original);
+    expect(corrected?.primaryModel).toBe("gpt-image-2.5-sunburst");
+    expect(corrected?.primaryModel).not.toBe(changedVigente.primary.model);
+    expect(corrected?.configVersionId).toBe("cfg-v1");
+    // A configuração vigente permanece intacta para novas campanhas.
+    expect(changedVigente.primary.model).toBe("gpt-image-2");
+  });
+});
+
+describe("image-generation-config-snapshot — correlação run/trace com a telemetria (F56.1 D-14)", () => {
+  const snapshot = buildImageGenerationConfigSnapshot(PAIR_CONFIG, {
+    campaignId: "camp-1",
+    origin: "human_decision",
+    configVersionId: "cfg-v1",
+    runId: "run-1",
+    traceId: "trace-1",
+    now: FIXED_NOW,
+  });
+
+  it("reconstrói o par modelo–qualidade por tentativa a partir do snapshot", () => {
+    const attempts = [
+      { runId: "run-1", traceId: "trace-1", attemptNumber: 1, target: "primary" as const },
+      { runId: "run-1", traceId: "trace-1", attemptNumber: 2, target: "primary" as const },
+      { runId: "run-1", traceId: "trace-1", attemptNumber: 3, target: "fallback" as const },
+    ];
+
+    const correlated = correlateSnapshotWithTelemetry(snapshot, attempts);
+
+    expect(correlated).toEqual([
+      { attemptNumber: 1, target: "primary", model: "gpt-image-2.5-sunburst", quality: "medium" },
+      { attemptNumber: 2, target: "primary", model: "gpt-image-2.5-sunburst", quality: "medium" },
+      { attemptNumber: 3, target: "fallback", model: "gpt-image-2", quality: "medium" },
+    ]);
+  });
+
+  it("resolve o par congelado do alvo a partir do snapshot", () => {
+    expect(resolveSnapshotPairForTarget(snapshot, "primary")).toEqual({
+      model: "gpt-image-2.5-sunburst",
+      quality: "medium",
+    });
+    expect(resolveSnapshotPairForTarget(snapshot, "fallback")).toEqual({
+      model: "gpt-image-2",
+      quality: "medium",
+    });
+  });
+
+  it("descarta tentativas de outro run/trace (correlação pelo par de operação)", () => {
+    const attempts = [
+      { runId: "run-1", traceId: "trace-1", attemptNumber: 1, target: "primary" as const },
+      { runId: "run-outro", traceId: "trace-1", attemptNumber: 1, target: "primary" as const },
+    ];
+
+    const correlated = correlateSnapshotWithTelemetry(snapshot, attempts);
+
+    expect(correlated).toHaveLength(1);
+    expect(correlated[0]?.attemptNumber).toBe(1);
+  });
+});
+
+describe("image-generation-config-snapshot — tolerância a operações legadas (F56.1 D-14)", () => {
+  it("operação legada sem snapshot não gera erro e é tratada como estado esperado", () => {
+    expect(() => resolveConfigForCorrection(undefined)).not.toThrow();
+    expect(resolveConfigForCorrection(undefined)).toBeNull();
+    expect(resolveConfigForCorrection(null)).toBeNull();
+  });
+
+  it("reconhece a ausência de snapshot como operação legada", () => {
+    expect(isLegacyOperationWithoutSnapshot(null)).toBe(true);
+    expect(isLegacyOperationWithoutSnapshot(undefined)).toBe(true);
   });
 });
