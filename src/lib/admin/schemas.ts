@@ -2,6 +2,10 @@ import { z } from "zod";
 import { OPERATION_KEYS } from "@/lib/credit/types";
 import { ECONOMIC_PARAMETER_KEYS } from "@/lib/economic/types";
 import {
+  ELIGIBLE_IMAGE_QUALITIES,
+  isEligibleImageModel,
+} from "@/lib/ai/image-model-pair";
+import {
   CreateLabEvaluationInputSchema,
   CreateLabExperimentInputSchema,
 } from "@/lib/lab/domain/schemas";
@@ -157,6 +161,53 @@ export const AiModelSelectionResetSchema = z
     operationId: z.string().uuid(),
   })
   .strict();
+
+/**
+ * Body de PUT /api/admin/image-model-pair (F56.1, D-02/D-04).
+ * Configuração do par principal/fallback do novo fluxo Produto 1:1: par
+ * `modelo + qualidade` restrito ao catálogo elegível FECHADO
+ * (`ELIGIBLE_IMAGE_MODELS`/`ELIGIBLE_IMAGE_QUALITIES` do plano 01), `reason`
+ * obrigatório (auditoria) e `operationId` UUID (idempotência). `.strict()`
+ * recusa campos desconhecidos; o `superRefine` valida os modelos contra a lista
+ * elegível e rejeita par principal idêntico ao fallback (D-02). A gravação
+ * ocorre apenas pela RPC auditada — nunca por mutação direta (D-04).
+ */
+export const ImageModelPairConfigUpdateSchema = z
+  .object({
+    primaryModel: z.string().trim().min(1),
+    primaryQuality: z.enum(ELIGIBLE_IMAGE_QUALITIES),
+    fallbackModel: z.string().trim().min(1),
+    fallbackQuality: z.enum(ELIGIBLE_IMAGE_QUALITIES),
+    reason: z.string().trim().min(1),
+    operationId: z.string().uuid(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (!isEligibleImageModel(value.primaryModel)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["primaryModel"],
+        message: "modelo fora do catálogo elegível",
+      });
+    }
+    if (!isEligibleImageModel(value.fallbackModel)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["fallbackModel"],
+        message: "modelo fora do catálogo elegível",
+      });
+    }
+    if (
+      value.primaryModel === value.fallbackModel &&
+      value.primaryQuality === value.fallbackQuality
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["fallbackModel"],
+        message: "par principal e fallback devem ser distintos",
+      });
+    }
+  });
 
 /** Segmentos econômicos da entrega (D9) — mesmo enum do service (sem server-only). */
 export const OPERATION_RUN_SEGMENTS = [
