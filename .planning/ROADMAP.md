@@ -247,7 +247,7 @@ Plans:
 
 **Nome:** Preparação não operacional do Produto 1:1
 
-**Status:** ◆ **Planejada** — artefatos de planejamento em geração. Nenhuma implementação, migration remota, `db push`, chamada paga, commit de código ou deploy antes da aprovação do responsável. A chave **não** encaminha campanhas reais nesta fatia.
+**Status:** ◆ **Planejada (6 planos criados)** — aguardando aprovação do responsável antes da execução. Nenhuma implementação, migration remota, `db push`, chamada paga, commit de código ou deploy antes da aprovação do responsável. A chave **não** encaminha campanhas reais nesta fatia.
 
 **Depends on:** F56.1 (contrato produtivo, modelos e fallback — infraestrutura preparatória); F46 (gateway único) e F47 (catálogo); evidência experimental F48.2.1–F48.2.6 como insumo (não é autorização de promoção). É pré-requisito declarado da F56.2b1. Não depende de F50.1–F55.
 
@@ -276,6 +276,18 @@ Plans:
 **Checkpoint humano:** a implementação só começa após aprovação explícita do responsável sobre os planos. Nesta fatia a chave permanece ineficaz.
 
 **Planos:** diretório `.planning/phases/56.2-preparacao-nao-operacional-produto-1-1/` (token GSD `56.2`; rótulo funcional **F56.2a**). **Tokens reservados para as fatias seguintes (não reutilizar `56.2`):** F56.2b1 = `56.3`, F56.2b2 = `56.4` (a reservar/registrar quando cada fatia for formalmente planejada).
+
+**Plans:** 6 plans
+
+Plans:
+- [ ] 56-2-01-PLAN.md — Chaves de ativação em `feature_flags` (desligadas) + decisão server-side fail-closed com precedência + migration local do seed.
+- [ ] 56-2-02-PLAN.md — Domínio puro e componentes apresentacionais inativos de seleção de intenção/fundo (regra de Original, erro de campo, não-exposição).
+- [ ] 56-2-03-PLAN.md — Módulo produtivo de composição versionada e congelada (Produto v4/compositor v5) com testes de equivalência à bancada F48.2.6.
+- [ ] 56-2-04-PLAN.md — Migration local append-only de operações/tentativas + repositório server-only + contrato de reuso do snapshot original.
+- [ ] 56-2-05-PLAN.md — Testes transversais de não-ativação/não-exposição + não-regressão do legado + gates e `openspec validate --strict`.
+- [ ] 56-2-06-PLAN.md — Validação [BLOCKING] das migrations em instância isolada + UAT sem provider + checkpoint humano + tracking.
+
+**Ondas:** Onda 1 paralela — `56-2-01`, `56-2-02`, `56-2-03`; Onda 2 — `56-2-04` (depende de `56-2-01`; migrations serializadas); Onda 3 — `56-2-05`; Onda 4 — `56-2-06` (verificação final, `autonomous: false` por checkpoint).
 
 **Canonical refs:** `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` (proposal/design/tasks/specs), `openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/RECONCILIATION.md`, `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`, `openspec/design-system/MASTER.md`, `src/lib/feature-flags/*`, `src/lib/lab/bench/domain/*`, `src/lib/ai/image-generation-config-snapshot.ts`, `supabase/migrations/*`.
 
