@@ -14,7 +14,7 @@ provides:
   - "Tela admin única do par de modelos do novo fluxo (page server force-dynamic + form cliente) com aviso permanente de não-ativa, catálogo elegível, par vigente/origem/versão e cobertura de pricing por par"
   - "Formulário auditável restrito ao catálogo elegível (modelo+qualidade), motivo obrigatório, idempotência por operationId e cobertura warn-not-block"
   - "Link de navegação aditivo 'Par de modelos (novo fluxo)' em (app)/admin/layout.tsx"
-  - "Suíte de UI (9 testes) com API mockada provando banner permanente, catálogo, motivo, cobertura e feedback"
+  - "Suíte de UI (10 testes) com API mockada provando banner permanente, catálogo, motivo, cobertura e feedback"
 affects: [56.1-11, F56.2]
 
 # Tech tracking
@@ -66,7 +66,7 @@ completed: 2026-10-06
 - `page.tsx` server com `export const dynamic = "force-dynamic"` chamando `buildImageModelPairConfigView()`: header (região A), aviso âmbar não-dismissível (região B), par vigente com origem/versão/autor/timestamps/motivo e cobertura por par (região C, com Empty State quando não há configuração e ErrorState na falha de leitura), catálogo elegível somente leitura (região D) e o formulário cliente (região E).
 - `form.tsx` client com seletores de modelo+qualidade para par principal e fallback restritos ao catálogo elegível (3 modelos × `low`/`medium`), motivo obrigatório com erro inline `role="alert"` (`Motivo obrigatório`), idempotência por fingerprint (`operationId` estável no retry, renovado ao editar), PUT para `/api/admin/image-model-pair`, aviso âmbar de cobertura `partial`/`missing` que não desabilita o Salvar e feedback de sucesso `Configuração salva com auditoria.` com ícone `Check`.
 - `layout.tsx` recebeu exatamente UM link aditivo (`Par de modelos (novo fluxo)` → `/admin/image-model-pair`), sem reordenar/remover links existentes nem alterar `requireAdmin`/redirect.
-- Suíte de UI com 9 testes (API mockada via `vi.fn`, nenhuma chamada real) provando: banner permanente no estado vazio e após o sucesso, restrição ao catálogo nos dois pares, bloqueio por motivo vazio, cobertura parcial/ausente sem bloquear o Salvar, erro inline `role="alert"` e ausência de controles destrutivos.
+- Suíte de UI com 10 testes (API mockada via `vi.fn`, nenhuma chamada real) provando: banner permanente no estado vazio e após o sucesso, restrição ao catálogo nos dois pares, bloqueio por motivo vazio, cobertura parcial/ausente sem bloquear o Salvar, erro inline `role="alert"` e ausência de controles destrutivos.
 
 ## Task Commits
 
@@ -82,7 +82,7 @@ Cada task foi commitada atomicamente:
 
 - `src/app/(app)/admin/image-model-pair/page.tsx` - Página server (`force-dynamic`) que monta a view e renderiza header/aviso/cartões/catálogo/form.
 - `src/app/(app)/admin/image-model-pair/form.tsx` - Componente cliente com o aviso permanente (região B) e o formulário auditável (região E) restrito ao catálogo elegível.
-- `src/app/(app)/admin/image-model-pair/__tests__/image-model-pair.test.tsx` - Suíte de UI (9 testes) com API mockada.
+- `src/app/(app)/admin/image-model-pair/__tests__/image-model-pair.test.tsx` - Suíte de UI (10 testes) com API mockada.
 - `src/app/(app)/admin/layout.tsx` - Link de navegação aditivo para a tela do par.
 
 ## Decisions Made
@@ -116,7 +116,7 @@ None - nenhuma configuração externa. Nenhuma chamada a provider, nenhuma opera
 
 - Arquivos criados verificados em disco: `image-model-pair/page.tsx`, `image-model-pair/form.tsx`, `image-model-pair/__tests__/image-model-pair.test.tsx` — todos FOUND.
 - Commits verificados em `git log`: `1492143b`, `1d3874d2`, `1d57b6b3` — todos presentes.
-- `npm test -- "src/app/(app)/admin/image-model-pair/__tests__/image-model-pair.test.tsx"` = 1 arquivo / 9 testes verdes.
+- `npm test -- "src/app/(app)/admin/image-model-pair/__tests__/image-model-pair.test.tsx"` = 1 arquivo / 10 testes verdes.
 - `npm run typecheck` e `npm run lint` = exit 0.
 - `git diff` de `layout.tsx` limitado ao link aditivo.
 
