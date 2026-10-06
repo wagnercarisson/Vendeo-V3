@@ -9,6 +9,12 @@ import {
   isEligibleImageModel,
   isEligibleImageQuality,
 } from "../image-model-pair";
+import {
+  AiInvocationError,
+  normalizeAiError,
+  type AiCallEnvelope,
+  type AiInvocationErrorKind,
+} from "../types";
 
 describe("image-model-pair — catálogo elegível fechado (F56.1 D-02)", () => {
   it("congela exatamente os três modelos elegíveis", () => {
@@ -80,5 +86,65 @@ describe("image-model-pair — escolha inicial como decisão humana (F56.1 D-03)
     expect(INITIAL_IMAGE_MODEL_PAIR.origin).toBe("human_decision");
     expect(INITIAL_IMAGE_MODEL_PAIR.active).toBe(false);
     expect(INITIAL_IMAGE_MODEL_PAIR.production).toBe(false);
+  });
+});
+
+describe("normalizeAiError — taxonomia quota/billing e envelope (F56.1 D-15/D-21)", () => {
+  const kindOf = (err: unknown): AiInvocationErrorKind | undefined =>
+    err instanceof AiInvocationError ? err.kind : undefined;
+  const retryableOf = (err: unknown): boolean | undefined =>
+    err instanceof AiInvocationError ? err.retryable : undefined;
+
+  it("code insufficient_quota normaliza para kind quota, retryable=false", () => {
+    const err = normalizeAiError({
+      code: "insufficient_quota",
+      message: "You exceeded your current quota",
+    });
+    expect(kindOf(err)).toBe("quota");
+    expect(retryableOf(err)).toBe(false);
+  });
+
+  it("code billing_hard_limit_reached normaliza para kind billing, retryable=false", () => {
+    const err = normalizeAiError({
+      code: "billing_hard_limit_reached",
+      message: "Billing hard limit reached",
+    });
+    expect(kindOf(err)).toBe("billing");
+    expect(retryableOf(err)).toBe(false);
+  });
+
+  it("sinal de faturamento na mensagem normaliza para kind billing", () => {
+    const err = normalizeAiError({
+      code: "account_deactivated",
+      message: "Your account is deactivated due to billing",
+    });
+    expect(kindOf(err)).toBe("billing");
+    expect(retryableOf(err)).toBe(false);
+  });
+
+  it("429 genérico sem sinal de quota/faturamento permanece rate_limit retryable=true", () => {
+    const err = normalizeAiError({ status: 429, message: "Too many requests, slow down" });
+    expect(kindOf(err)).toBe("rate_limit");
+    expect(retryableOf(err)).toBe(true);
+  });
+
+  it("envelope aceita quality/target/attemptNumber sem quebrar os campos existentes", () => {
+    const envelope: AiCallEnvelope = {
+      capability: "campaign_product_image",
+      protocol: "images",
+      status: "success",
+      provider: "openai",
+      model: "gpt-image-2",
+      durationMs: 1234,
+      quality: "medium",
+      target: "primary",
+      attemptNumber: 2,
+    };
+    expect(envelope.quality).toBe("medium");
+    expect(envelope.target).toBe("primary");
+    expect(envelope.attemptNumber).toBe(2);
+    expect(envelope.provider).toBe("openai");
+    expect(envelope.model).toBe("gpt-image-2");
+    expect(envelope.status).toBe("success");
   });
 });
