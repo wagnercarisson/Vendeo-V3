@@ -48,7 +48,34 @@ REVOKE ALL ON TABLE public.image_model_pair_config FROM PUBLIC, anon, authentica
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.image_model_pair_config TO service_role;
 
 -- =============================================================================
--- 3. RPC administrativa auditada e idempotente
+-- 3. Registro idempotente do catálogo elegível (capacidade própria do novo fluxo)
+-- =============================================================================
+-- Capacidade fechada `campaign_product_image` (D-11). Os modelos elegíveis são
+-- registrados apenas sob esta capacidade nova; a linha legada de `gpt-image-2`
+-- em `campaign_image_edit` (F47) permanece intocada e NÃO é duplicada.
+INSERT INTO public.ai_model_catalog (
+  capability, segment, provider, model, protocol, label, status, source_note, validated_at
+) VALUES (
+  'campaign_product_image', 'image', 'openai', 'gpt-image-2', 'images', 'GPT Image 2', 'active', 'F56.1 eligible new-flow pair', now()
+)
+ON CONFLICT (capability, provider, model, protocol) DO NOTHING;
+
+INSERT INTO public.ai_model_catalog (
+  capability, segment, provider, model, protocol, label, status, source_note, validated_at
+) VALUES (
+  'campaign_product_image', 'image', 'openai', 'gpt-image-2.5-flare', 'images', 'GPT Image 2.5 Flare', 'active', 'F56.1 eligible new-flow pair', now()
+)
+ON CONFLICT (capability, provider, model, protocol) DO NOTHING;
+
+INSERT INTO public.ai_model_catalog (
+  capability, segment, provider, model, protocol, label, status, source_note, validated_at
+) VALUES (
+  'campaign_product_image', 'image', 'openai', 'gpt-image-2.5-sunburst', 'images', 'GPT Image 2.5 Sunburst', 'active', 'F56.1 eligible new-flow pair', now()
+)
+ON CONFLICT (capability, provider, model, protocol) DO NOTHING;
+
+-- =============================================================================
+-- 4. RPC administrativa auditada e idempotente
 -- =============================================================================
 CREATE OR REPLACE FUNCTION public.admin_set_image_model_pair_config(
   p_actor_id UUID,
@@ -147,7 +174,7 @@ REVOKE EXECUTE ON FUNCTION public.admin_set_image_model_pair_config(UUID, TEXT, 
 GRANT EXECUTE ON FUNCTION public.admin_set_image_model_pair_config(UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID) TO service_role;
 
 -- =============================================================================
--- 4. Auditoria F56.1 (preserva TODOS os valores já aceitos)
+-- 5. Auditoria F56.1 (preserva TODOS os valores já aceitos)
 -- =============================================================================
 ALTER TABLE public.admin_audit_log DROP CONSTRAINT IF EXISTS admin_audit_log_action_check;
 ALTER TABLE public.admin_audit_log ADD CONSTRAINT admin_audit_log_action_check CHECK (action IN (
@@ -186,3 +213,8 @@ ALTER TABLE public.admin_audit_log ADD CONSTRAINT admin_audit_log_target_type_ch
 -- REVOKE EXECUTE ON FUNCTION public.admin_set_image_model_pair_config(UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID) FROM service_role;
 -- DROP FUNCTION IF EXISTS public.admin_set_image_model_pair_config(UUID, TEXT, TEXT, TEXT, TEXT, TEXT, UUID);
 -- DROP TABLE IF EXISTS public.image_model_pair_config;
+-- DELETE FROM public.ai_model_catalog
+--   WHERE capability = 'campaign_product_image'
+--     AND provider = 'openai'
+--     AND model IN ('gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst')
+--     AND protocol = 'images';
