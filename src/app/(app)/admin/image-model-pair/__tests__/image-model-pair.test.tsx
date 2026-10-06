@@ -3,7 +3,11 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ImageModelPairConfigView } from "@/lib/ai/image-model-pair-config-view";
-import type { ImagePairCapacityPricingStatus, ImagePairPricingCoverage } from "@/lib/ai-cost/types";
+import type {
+  ImagePairCapacityPricingStatus,
+  ImagePairPricingCoverage,
+  ImagePairTargetPricingStatus,
+} from "@/lib/ai-cost/types";
 import { ImageModelPairConfigForm, ImageModelPairInactiveBanner } from "../form";
 
 const ELIGIBLE_MODELS = ["gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst"];
@@ -38,6 +42,23 @@ function pricingStatus(coverage: ImagePairPricingCoverage): ImagePairCapacityPri
   };
 }
 
+/**
+ * Mapa de cobertura por par elegível (6 combinações). Por padrão todos os pares
+ * estão `complete`; `overrides` ajusta pares específicos por chave `${model}|${quality}`.
+ */
+function targetCoverageMap(
+  overrides: Partial<Record<string, ImagePairPricingCoverage>> = {},
+): Record<string, ImagePairTargetPricingStatus> {
+  const map: Record<string, ImagePairTargetPricingStatus> = {};
+  for (const model of ELIGIBLE_MODELS) {
+    for (const quality of ELIGIBLE_QUALITIES) {
+      const key = `${model}|${quality}`;
+      map[key] = pairStatus(model, quality, overrides[key] ?? "complete");
+    }
+  }
+  return map;
+}
+
 const EMPTY_VIEW: ImageModelPairConfigView = {
   eligibleModels: ELIGIBLE_MODELS,
   eligibleQualities: ELIGIBLE_QUALITIES,
@@ -52,6 +73,7 @@ const EMPTY_VIEW: ImageModelPairConfigView = {
   productionActive: false,
   pricingCoverage: null,
   pricing: null,
+  targetCoverageByPair: {},
   readError: null,
 };
 
@@ -70,6 +92,7 @@ const CONFIGURED_VIEW: ImageModelPairConfigView = {
   reason: "Definição inicial aprovada",
   pricingCoverage: "complete",
   pricing: pricingStatus("complete"),
+  targetCoverageByPair: targetCoverageMap(),
 };
 
 const mockFetch = vi.fn();
@@ -167,10 +190,16 @@ describe("ImageModelPairConfigForm", () => {
     expect(JSON.parse(String(mockFetch.mock.calls[2][1].body)).operationId).not.toBe(first.operationId);
   });
 
-  it("exibe a cobertura parcial como aviso âmbar sem desabilitar o Salvar", () => {
+  it("exibe a cobertura parcial do par em rascunho como aviso âmbar sem desabilitar o Salvar", () => {
     render(
       <ImageModelPairConfigForm
-        view={{ ...CONFIGURED_VIEW, pricingCoverage: "partial", pricing: pricingStatus("partial") }}
+        view={{
+          ...CONFIGURED_VIEW,
+          targetCoverageByPair: targetCoverageMap({
+            "gpt-image-2.5-sunburst|medium": "partial",
+            "gpt-image-2|medium": "partial",
+          }),
+        }}
       />,
     );
     expect(screen.getByText(/Cobertura de pricing Parcial/)).toBeInTheDocument();
@@ -178,13 +207,53 @@ describe("ImageModelPairConfigForm", () => {
     expect(screen.getByRole("button", { name: "Salvar configuração" })).toBeEnabled();
   });
 
-  it("exibe a cobertura ausente como aviso âmbar sem desabilitar o Salvar", () => {
+  it("exibe a cobertura ausente do par em rascunho como aviso âmbar sem desabilitar o Salvar", () => {
     render(
       <ImageModelPairConfigForm
-        view={{ ...CONFIGURED_VIEW, pricingCoverage: "missing", pricing: pricingStatus("missing") }}
+        view={{
+          ...CONFIGURED_VIEW,
+          targetCoverageByPair: targetCoverageMap({
+            "gpt-image-2.5-sunburst|medium": "missing",
+            "gpt-image-2|medium": "missing",
+          }),
+        }}
       />,
     );
     expect(screen.getByText(/Cobertura de pricing Ausente/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar configuração" })).toBeEnabled();
+  });
+
+  it("atualiza o aviso de cobertura conforme o par em rascunho muda nos seletores", () => {
+    render(
+      <ImageModelPairConfigForm
+        view={{
+          ...CONFIGURED_VIEW,
+          targetCoverageByPair: targetCoverageMap({ "gpt-image-2.5-flare|low": "missing" }),
+        }}
+      />,
+    );
+
+    // Par inicial (vigente) completo → sem aviso; Salvar habilitado (warn-not-block).
+    expect(screen.queryByText(/Cobertura de pricing/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar configuração" })).toBeEnabled();
+
+    const primary = screen.getByRole("group", { name: "Par principal" });
+
+    // Muda o par principal para um par sem cobertura → o aviso segue o rascunho.
+    fireEvent.change(within(primary).getByLabelText("Modelo"), {
+      target: { value: "gpt-image-2.5-flare" },
+    });
+    fireEvent.change(within(primary).getByLabelText("Qualidade"), { target: { value: "low" } });
+    expect(screen.getByText(/Cobertura de pricing Parcial/)).toBeInTheDocument();
+    expect(screen.getByText(/faltam image_unit/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar configuração" })).toBeEnabled();
+
+    // Volta a um par completo → o aviso desaparece; Salvar continua habilitado.
+    fireEvent.change(within(primary).getByLabelText("Modelo"), {
+      target: { value: "gpt-image-2.5-sunburst" },
+    });
+    fireEvent.change(within(primary).getByLabelText("Qualidade"), { target: { value: "medium" } });
+    expect(screen.queryByText(/Cobertura de pricing/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar configuração" })).toBeEnabled();
   });
 

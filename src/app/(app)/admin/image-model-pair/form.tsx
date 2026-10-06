@@ -62,6 +62,36 @@ function coverageLabel(coverage: ImagePairPricingCoverage): string {
   return "Ausente";
 }
 
+type DraftedCoverage = {
+  status: ImagePairPricingCoverage;
+  missingComponents: string[];
+};
+
+/**
+ * Cobertura agregada do par em RASCUNHO (principal + fallback), recomputada a
+ * partir de `view.targetCoverageByPair` a cada mudança de seletor (UI-SPEC L322).
+ * `complete` só quando AMBOS os pares em rascunho estão completos; `missing` só
+ * quando ambos estão ausentes; caso contrário `partial`. Cobertura desconhecida
+ * (par ausente do mapa) → `null`, para nunca renderizar um `complete` falso.
+ */
+function draftedCoverage(view: ImageModelPairConfigView, draft: Draft): DraftedCoverage | null {
+  const primary = view.targetCoverageByPair[`${draft.primaryModel}|${draft.primaryQuality}`];
+  const fallback = view.targetCoverageByPair[`${draft.fallbackModel}|${draft.fallbackQuality}`];
+  if (!primary || !fallback) return null;
+
+  const status: ImagePairPricingCoverage =
+    primary.pricingCoverage === "complete" && fallback.pricingCoverage === "complete"
+      ? "complete"
+      : primary.pricingCoverage === "missing" && fallback.pricingCoverage === "missing"
+        ? "missing"
+        : "partial";
+
+  return {
+    status,
+    missingComponents: [...new Set([...primary.missingComponents, ...fallback.missingComponents])],
+  };
+}
+
 function makeDraft(view: ImageModelPairConfigView): Draft {
   const primary = view.current?.primary ?? INITIAL_IMAGE_MODEL_PAIR.primary;
   const fallback = view.current?.fallback ?? INITIAL_IMAGE_MODEL_PAIR.fallback;
@@ -98,8 +128,9 @@ function saveErrorMessage(raw: string | undefined): string {
  * Formulário cliente (região E) da configuração do par principal/fallback.
  * Restrito ao catálogo elegível, com motivo obrigatório, idempotência por
  * fingerprint (`operationId` estável até edição) e feedback auditável. A
- * cobertura de pricing incompleta é exibida como aviso âmbar que **não**
- * desabilita o salvamento (D-24).
+ * cobertura de pricing incompleta do par em rascunho é exibida como aviso âmbar
+ * que **não** desabilita o salvamento (D-24) e é recomputada a cada mudança de
+ * seletor a partir de `view.targetCoverageByPair` (UI-SPEC L322).
  */
 export function ImageModelPairConfigForm({ view }: { view: ImageModelPairConfigView }) {
   const [draft, setDraft] = useState<Draft>(() => makeDraft(view));
@@ -171,8 +202,8 @@ export function ImageModelPairConfigForm({ view }: { view: ImageModelPairConfigV
     }
   }
 
-  const coverage = view.pricing;
-  const incomplete = coverage !== null && coverage.pricingCoverage !== "complete";
+  const coverage = draftedCoverage(view, draft);
+  const incomplete = coverage !== null && coverage.status !== "complete";
   const coverageWarningId = "pair-coverage-warning";
   const describedBy = incomplete ? coverageWarningId : undefined;
 
@@ -190,7 +221,7 @@ export function ImageModelPairConfigForm({ view }: { view: ImageModelPairConfigV
         >
           <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
-            Cobertura de pricing {coverageLabel(coverage.pricingCoverage)}: faltam{" "}
+            Cobertura de pricing {coverageLabel(coverage.status)}: faltam{" "}
             {coverage.missingComponents.join(", ")}. Você pode salvar, mas a execução exige cobertura
             completa para principal e fallback.
           </span>

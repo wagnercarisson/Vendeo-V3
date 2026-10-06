@@ -4,6 +4,7 @@ import {
   ELIGIBLE_IMAGE_QUALITIES,
   isEligibleImageModel,
   isEligibleImageQuality,
+  type ImageModelPair,
   type ImageModelPairConfig,
   type ImagePairConfigOrigin,
   type ImageQuality,
@@ -13,10 +14,11 @@ import {
   resolveImageModelPairConfigOrigin,
   type ImageModelPairConfigRow,
 } from "./image-model-pair-config-service";
-import { resolveImagePairCoverage } from "@/lib/ai-cost/image-pair-pricing";
+import { getImagePairPricingService, resolveImagePairCoverage } from "@/lib/ai-cost/image-pair-pricing";
 import type {
   ImagePairCapacityPricingStatus,
   ImagePairPricingCoverage,
+  ImagePairTargetPricingStatus,
 } from "@/lib/ai-cost/types";
 
 /**
@@ -36,6 +38,16 @@ import type {
 export type ImageModelPairConfigPricingResolver = (
   pair: ImageModelPairConfig,
 ) => Promise<ImagePairCapacityPricingStatus>;
+
+/**
+ * Resolvedor de cobertura de UM par `modelo + qualidade` injetável (default:
+ * `getImagePairPricingService().resolveTargetCoverage`). Alimenta o mapa
+ * `targetCoverageByPair` que permite ao cliente recomputar a cobertura do par
+ * em rascunho sem chamadas de rede adicionais (UI-SPEC L322).
+ */
+export type ImageModelPairTargetCoverageResolver = (
+  pair: ImageModelPair,
+) => Promise<ImagePairTargetPricingStatus>;
 
 export interface ImageModelPairConfigView {
   /** Catálogo elegível fechado de modelos (D-02). */
@@ -61,6 +73,12 @@ export interface ImageModelPairConfigView {
   pricingCoverage: ImagePairPricingCoverage | null;
   /** Cobertura detalhada por par (principal e fallback). */
   pricing: ImagePairCapacityPricingStatus | null;
+  /**
+   * Cobertura de pricing de TODOS os pares elegíveis (`${model}|${quality}`),
+   * para o formulário recomputar a cobertura do par em rascunho ao vivo. Estado
+   * vazio → `{}`. Aditivo (não altera `pricing` nem a resolução de execução).
+   */
+  targetCoverageByPair: Record<string, ImagePairTargetPricingStatus>;
   /** Mensagem de falha de leitura (a view não lança). */
   readError: string | null;
 }
@@ -80,6 +98,7 @@ function emptyView(readError: string | null = null): ImageModelPairConfigView {
     productionActive: false,
     pricingCoverage: null,
     pricing: null,
+    targetCoverageByPair: {},
     readError,
   };
 }
@@ -101,19 +120,52 @@ function isEligiblePair(pair: ImageModelPairConfig): boolean {
 }
 
 /**
- * Monta o view model admin. Dependências injetáveis: o serviço de leitura e o
- * resolvedor de pricing (default: `resolveImagePairCoverage` do plano 04). Não
- * lança no estado vazio, em divergência nem em falha de leitura.
+ * Cobertura de TODOS os pares elegíveis (3 modelos × 2 qualidades), chaveada por
+ * `${model}|${quality}`. Tolerante por design: um par cuja leitura falhe é
+ * omitido do mapa (o cliente trata cobertura desconhecida sem inferir `complete`).
+ */
+async function buildTargetCoverageByPair(
+  resolver: ImageModelPairTargetCoverageResolver,
+): Promise<Record<string, ImagePairTargetPricingStatus>> {
+  const entries = await Promise.all(
+    ELIGIBLE_IMAGE_MODELS.flatMap((model) =>
+      ELIGIBLE_IMAGE_QUALITIES.map(
+        async (quality): Promise<[string, ImagePairTargetPricingStatus] | null> => {
+          try {
+            const status = await resolver({ model, quality });
+            return [`${model}|${quality}`, status];
+          } catch {
+            return null;
+          }
+        },
+      ),
+    ),
+  );
+
+  return Object.fromEntries(
+    entries.filter((entry): entry is [string, ImagePairTargetPricingStatus] => entry !== null),
+  );
+}
+
+/**
+ * Monta o view model admin. Dependências injetáveis: o serviço de leitura e os
+ * resolvedores de pricing (default: `resolveImagePairCoverage` para o par vigente
+ * e `getImagePairPricingService().resolveTargetCoverage` para o mapa por par).
+ * Não lança no estado vazio, em divergência nem em falha de leitura.
  */
 export async function buildImageModelPairConfigView(
   dependencies: {
     service?: Pick<ImageModelPairConfigServiceLike, "getImageModelPairConfig">;
     pricingResolver?: ImageModelPairConfigPricingResolver;
+    targetCoverageResolver?: ImageModelPairTargetCoverageResolver;
   } = {},
 ): Promise<ImageModelPairConfigView> {
   const service = dependencies.service ?? imageModelPairConfigService;
   const pricingResolver =
     dependencies.pricingResolver ?? ((pair: ImageModelPairConfig) => resolveImagePairCoverage(pair));
+  const targetCoverageResolver =
+    dependencies.targetCoverageResolver ??
+    ((pair: ImageModelPair) => getImagePairPricingService().resolveTargetCoverage(pair));
 
   let row: ImageModelPairConfigRow | null;
   try {
@@ -132,6 +184,8 @@ export async function buildImageModelPairConfigView(
     pricing = await pricingResolver(current);
   }
 
+  const targetCoverageByPair = await buildTargetCoverageByPair(targetCoverageResolver);
+
   return {
     eligibleModels: ELIGIBLE_IMAGE_MODELS,
     eligibleQualities: ELIGIBLE_IMAGE_QUALITIES,
@@ -146,6 +200,7 @@ export async function buildImageModelPairConfigView(
     productionActive: false,
     pricingCoverage: pricing?.pricingCoverage ?? null,
     pricing,
+    targetCoverageByPair,
     readError: null,
   };
 }

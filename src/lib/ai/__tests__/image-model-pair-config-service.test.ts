@@ -236,6 +236,7 @@ describe("buildImageModelPairConfigView — view admin (D-09/D-23)", () => {
     expect(view.origin).toBeNull();
     expect(view.configVersionId).toBeNull();
     expect(view.pricing).toBeNull();
+    expect(view.targetCoverageByPair).toEqual({});
     expect(view.eligibleModels).toEqual([
       "gpt-image-2",
       "gpt-image-2.5-flare",
@@ -264,6 +265,41 @@ describe("buildImageModelPairConfigView — view admin (D-09/D-23)", () => {
     expect(view.pricing?.primary.pricingCoverage).toBe("complete");
     expect(view.pricing?.fallback.pricingCoverage).toBe("missing");
     expect(view.productionActive).toBe(false);
+  });
+
+  it("expõe o mapa de cobertura de TODOS os pares elegíveis (aditivo, UI-SPEC L322)", async () => {
+    const fake = fakeServiceClient({ row: VALID_ROW });
+    const service = new ImageModelPairConfigService(fake.client as never);
+    const targetCoverageResolver = vi.fn(
+      async ({ model, quality }: { model: string; quality: string }) => ({
+        model,
+        quality,
+        components: [],
+        missingComponents: [],
+        pricingCoverage: "complete" as const,
+      }),
+    );
+
+    const view = await buildImageModelPairConfigView({
+      service,
+      pricingResolver: async () => coverage("complete", "complete"),
+      targetCoverageResolver,
+    });
+
+    expect(targetCoverageResolver).toHaveBeenCalledTimes(6);
+    expect(Object.keys(view.targetCoverageByPair).sort()).toEqual(
+      [
+        "gpt-image-2|low",
+        "gpt-image-2|medium",
+        "gpt-image-2.5-flare|low",
+        "gpt-image-2.5-flare|medium",
+        "gpt-image-2.5-sunburst|low",
+        "gpt-image-2.5-sunburst|medium",
+      ].sort(),
+    );
+    expect(view.targetCoverageByPair["gpt-image-2.5-sunburst|medium"]?.pricingCoverage).toBe(
+      "complete",
+    );
   });
 
   it("config divergente não lança e não calcula pricing (par inelegível)", async () => {
