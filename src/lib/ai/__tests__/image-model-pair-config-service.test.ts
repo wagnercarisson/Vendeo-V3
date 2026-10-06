@@ -302,4 +302,39 @@ describe("isolamento server-only (D-05)", () => {
     expect(service).toMatch(/^import "server-only";/m);
     expect(view).toMatch(/^import "server-only";/m);
   });
+
+  it("o serviço e a view não importam o fluxo legado de seleção (D-07)", () => {
+    const service = readFileSync(
+      path.resolve(process.cwd(), "src/lib/ai/image-model-pair-config-service.ts"),
+      "utf8",
+    );
+    const view = readFileSync(
+      path.resolve(process.cwd(), "src/lib/ai/image-model-pair-config-view.ts"),
+      "utf8",
+    );
+    expect(service).not.toMatch(/ai-model-selection/);
+    expect(view).not.toMatch(/ai-model-selection/);
+  });
+});
+
+describe("gravação auditada — invalidação vê a versão nova (D-05)", () => {
+  it("após a gravação (invalidate) a leitura seguinte retorna a nova versão", async () => {
+    let current: ImageModelPairConfigRow | null = VALID_ROW;
+    const maybeSingle = vi.fn(async () => ({ data: current, error: null }));
+    const client = {
+      from: vi.fn(() => ({ select: () => ({ eq: () => ({ maybeSingle }) }) })),
+    };
+    const service = new ImageModelPairConfigService(client as never);
+
+    const before = await service.resolveImageModelPairConfig();
+    expect(before.configVersionId).toBe(VALID_ROW.config_version_id);
+
+    // Simula a gravação auditada: nova versão persistida + invalidação do cache.
+    current = { ...VALID_ROW, config_version_id: "55555555-5555-4555-8555-555555555555" };
+    service.invalidateImageModelPairConfigCache();
+
+    const after = await service.resolveImageModelPairConfig();
+    expect(after.configVersionId).toBe("55555555-5555-4555-8555-555555555555");
+    expect(maybeSingle).toHaveBeenCalledTimes(2);
+  });
 });

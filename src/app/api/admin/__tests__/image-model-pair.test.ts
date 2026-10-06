@@ -217,3 +217,41 @@ describe("PUT — sem mutação direta pelo query builder (D-04)", () => {
     expect(source).not.toMatch(/\.update\(/);
   });
 });
+
+describe("PUT — idempotência por operation_id (D-04)", () => {
+  it("reenvio com o mesmo operationId retorna o mesmo resultado, sem duplicar estado", async () => {
+    const idempotent = { ...RPC_RESULT, idempotent: true };
+    mockRpc.mockResolvedValue({ data: idempotent, error: null });
+
+    const first = await put(VALID_BODY);
+    const second = await put(VALID_BODY);
+    const firstBody = await first.json();
+    const secondBody = await second.json();
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(secondBody.config).toEqual(firstBody.config);
+    expect(mockRpc).toHaveBeenCalledTimes(2);
+    for (const call of mockRpc.mock.calls) {
+      expect((call[1] as { p_operation_id: string }).p_operation_id).toBe(OPERATION_ID);
+    }
+  });
+
+  it("403 para não-admin sem chamar a RPC nem invalidar o cache", async () => {
+    mockRequireAdmin.mockRejectedValue(new ForbiddenError());
+
+    const res = await put(VALID_BODY);
+
+    expect(res.status).toBe(403);
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockInvalidate).not.toHaveBeenCalled();
+  });
+
+  it("par fora do catálogo mantém a config vigente (RPC não é chamada)", async () => {
+    const res = await put({ ...VALID_BODY, fallbackModel: "dall-e-3" });
+
+    expect(res.status).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockInvalidate).not.toHaveBeenCalled();
+  });
+});
