@@ -226,3 +226,13 @@ O **lifecycle OpenSpec** (`/opsx-verify` → `/opsx-sync` → `/opsx-archive`) *
 
 *Phase: 56.1-contrato-produtivo-modelos-e-fallback — Plano 11*
 *Verificado: 2026-10-06*
+
+---
+
+## 7. Fechamento do lifecycle OpenSpec (2026-10-06, POSTERIOR ao UAT humano)
+
+- **`/opsx-verify`** (este relatório de verificação), **`/opsx-sync`** e **`/opsx-archive`** foram executados em **2026-10-06**, **APÓS** a aprovação do UAT humano no escopo preparatório/local.
+- A change foi arquivada em **`openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`**; **nenhuma change OpenSpec permanece ativa**.
+- **Specs principais sincronizados:** **3 atualizadas** — `ai-invocation-gateway`, `ai-model-catalog`, `ai-model-pricing`; **5 criadas** — `image-generation-model-pair-config`, `image-generation-config-snapshot`, `image-generation-failure-policy`, `image-generation-support-reference`, `image-generation-instrumentation`.
+- O texto "etapa posterior"/"lifecycle POSTERIOR (não executada)" presente no artefato arquivado é **histórico** e **intencionalmente não editado** (o archive reflete o estado no momento da execução do Plano 11); este adendo registra a execução subsequente do lifecycle.
+- Sem provider, sem `db push`, sem ativação e sem promoção nesta etapa. **F56.2 NÃO iniciada.**

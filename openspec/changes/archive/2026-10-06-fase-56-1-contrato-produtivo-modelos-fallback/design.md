@@ -117,12 +117,12 @@ A tela administrativa de configuração SHALL exibir a cobertura de pricing (`co
 5. Deploy do código aditivo; o fluxo legado permanece o default até a ativação em F56.2/F56.3.
 6. **Rollback:** desabilitar/remover o consumo novo e reverter a migration (colunas/tabelas aditivas) sem tocar dados de campanhas; o legado não depende das novas estruturas.
 
-## Open Questions
+## Open Questions — Resolvidas
 
-Somente detalhes de implementação ainda não fechados. Eles **não** reabrem D1–D11 e não autorizam caminhos incompatíveis com as decisões acima.
+As questões abertas abaixo foram **fechadas** pelo responsável em 2026-10-05 e estão registradas em `.planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-CONTEXT.md` (decisões `D-01`..`D-26`). Elas **não** reabrem D1–D12 e não autorizam caminhos incompatíveis com as decisões acima. Este bloco existe apenas como referência; a fonte vinculante é o CONTEXT.
 
-- Identificador/nome da **capacidade própria do novo fluxo** usada para registrar os modelos elegíveis (D10) — a existência da capacidade já está decidida; falta apenas o nome literal.
-- Formato literal (namespace/tamanho) do código público e do token de referência — a **forma** já está decidida em D6 (token opaco aleatório, conjunto mínimo de categorias públicas).
-- Enumeração exata das categorias públicas voltadas ao usuário (a restrição de D6 — não particionar por quota/faturamento/auth/rate limit — já está fechada).
-- Meio de persistência do snapshot (colunas dedicadas vs. JSONB), mantendo D4.
-- Granularidade exata do gate de pricing fail-closed (na gravação da configuração, na ativação F56.2 ou na execução), mantendo D9.
+- **Identificador/nome da capacidade própria do novo fluxo** (D10) — fechado como **`campaign_product_image`** (protocolo `images`), distinta de `campaign_image`/`campaign_image_edit`. Fonte: CONTEXT **D-11** (`56.1-CONTEXT.md:38`).
+- **Formato literal (namespace/tamanho) do código público e do token de referência** — fechado como código público único **`IMG-001`** e referência opaca em **UUID v4**. Fonte: CONTEXT **D-18** (`56.1-CONTEXT.md:51`).
+- **Enumeração exata das categorias públicas voltadas ao usuário** — fechada como **uma única categoria pública genérica de falha de geração** nesta fatia, sem particionar por quota/faturamento/auth/rate limit. Fonte: CONTEXT **D-18** (`56.1-CONTEXT.md:51`).
+- **Meio de persistência do snapshot** — fechado em **colunas dedicadas e tipadas** (não JSONB), imutáveis por trigger, mantendo D4. Fonte: CONTEXT **D-12** (`56.1-CONTEXT.md:41`).
+- **Granularidade do gate de pricing fail-closed** — fechado em: o admin **pode** gravar com pricing incompleto (apenas exibe o aviso); o bloqueio fail-closed é da **execução**, exigindo `complete` para principal **e** fallback antes de reservar crédito/chamar o provider. O preflight real é da **F56.2**; a F56.1 entrega e testa o **componente**. Fonte: CONTEXT **D-23/D-24** (`56.1-CONTEXT.md:61-62`), mantendo D9.
