@@ -129,6 +129,14 @@ export interface AiCallEnvelope extends AiCallInfo {
    * resultado **HTTP**; a classificação de domínio é aditiva.
    */
   metadata?: Record<string, unknown>;
+  // F56.1 (D-21) — campos aditivos por tentativa de geração de imagem do novo
+  // fluxo. Não alteram os campos existentes nem o "um envelope por tentativa".
+  /** Qualidade efetivamente usada na tentativa (`low`/`medium`). */
+  quality?: string;
+  /** Alvo da tentativa no novo fluxo (principal/fallback). */
+  target?: "primary" | "fallback";
+  /** Número da tentativa real na operação (1-based). */
+  attemptNumber?: number;
 }
 
 /** Destino de emissão de envelopes (sink injetável — o gateway não persiste). */
@@ -174,7 +182,11 @@ export type AiInvocationErrorKind =
   | "capability"
   | "network"
   | "content_filter"
-  | "provider_error";
+  | "provider_error"
+  // F56.1 (D-15): quota esgotada e erro de faturamento do provider são
+  // distintos de `rate_limit` transitório — não elegíveis ao fallback.
+  | "quota"
+  | "billing";
 
 export interface AiInvocationErrorParams {
   kind: AiInvocationErrorKind;
@@ -278,6 +290,22 @@ const NETWORK_SIGNALS = [
 ] as const;
 
 /**
+ * Sinais explícitos de **quota esgotada** do provider (F56.1, D-15). Verificados
+ * ANTES do ramo genérico de 429 — quota não é rate limit transitório.
+ */
+const QUOTA_SIGNALS = ["insufficient_quota", "quota_exceeded"] as const;
+
+/**
+ * Sinais explícitos de **erro de faturamento** do provider (F56.1, D-15).
+ * Verificados ANTES do ramo genérico de 429.
+ */
+const BILLING_SIGNALS = [
+  "billing_hard_limit_reached",
+  "account_deactivated",
+  "billing",
+] as const;
+
+/**
  * Normaliza um erro HTTP/provider em `AiInvocationError` (D4.1).
  *
  * **Erros de parsing do domínio** (`MalformedResponseError`) **NÃO** são
@@ -326,6 +354,35 @@ export function normalizeAiError(err: unknown): AiInvocationError | Error {
   if (hasCapabilitySignal) {
     return new AiInvocationError({
       kind: "capability",
+      httpStatus,
+      retryable: false,
+      code,
+      message: sanitizeAiErrorMessage(rawMessage),
+    });
+  }
+
+  // F56.1 (D-15): quota esgotada e faturamento são classificados ANTES do ramo
+  // genérico de 429 (ambos costumam vir como 429) e NÃO são retryable — não
+  // devem acionar fallback. O 429 genérico abaixo permanece `rate_limit`.
+  const hasQuotaSignal = QUOTA_SIGNALS.some(
+    (signal) => message.includes(signal) || codeLower.includes(signal),
+  );
+  if (hasQuotaSignal) {
+    return new AiInvocationError({
+      kind: "quota",
+      httpStatus,
+      retryable: false,
+      code,
+      message: sanitizeAiErrorMessage(rawMessage),
+    });
+  }
+
+  const hasBillingSignal = BILLING_SIGNALS.some(
+    (signal) => message.includes(signal) || codeLower.includes(signal),
+  );
+  if (hasBillingSignal) {
+    return new AiInvocationError({
+      kind: "billing",
       httpStatus,
       retryable: false,
       code,
