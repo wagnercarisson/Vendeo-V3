@@ -1,5 +1,56 @@
 {
   "version": "1.0",
+  "root_snapshot_note": "Historical F56.1 snapshot fields: root phase/phase_name/phase_dir/status/phase_status/plan/openspec_source/openspec_archive, GSD/planning review blocks, resolved_plans/checkpoints/current_phase_result, and the root artifacts list. Current F56.2a state is in current_phase and the closeout fields at the bottom.",
+  "current_phase": {
+    "phase": "56.2",
+    "functional_label": "F56.2a — Preparação não operacional do Produto 1:1",
+    "updated_at": "2026-10-07",
+    "status": "closed_locally_pending_formal_verification_sync_archive",
+    "plan_count": "6/6",
+    "summary_count": "6/6",
+    "plan_summary_inventory": [
+      "56-2-01-PLAN.md ↔ 56-2-01-SUMMARY.md",
+      "56-2-02-PLAN.md ↔ 56-2-02-SUMMARY.md",
+      "56-2-03-PLAN.md ↔ 56-2-03-SUMMARY.md",
+      "56-2-04-PLAN.md ↔ 56-2-04-SUMMARY.md",
+      "56-2-05-PLAN.md ↔ 56-2-05-SUMMARY.md",
+      "56-2-06-PLAN.md ↔ 56-2-06-SUMMARY.md"
+    ],
+    "openspec_tasks": "31/31",
+    "human_checkpoint": "approved_on_2026-10-07",
+    "local_close_accepted": true,
+    "documentary_gates": {
+      "openspec_validate_strict": "passed",
+      "git_diff_check": "passed",
+      "json_parse": "passed",
+      "plan_summary_inventory": "6/6"
+    },
+    "final_reset": {
+      "exit_code": 1,
+      "http_status": 502,
+      "cause": "unknown",
+      "treated_as_success": false,
+      "repeated": false,
+      "postconditions": "Confirmed later by read-only query: migrations present; feature flags false; registered fixtures absent; expected schema/RLS/triggers/grants present."
+    },
+    "infrastructure_followup": "Investigate the unknown HTTP 502 cause before relying on the reset procedure in F56.2b1.",
+    "openspec_lifecycle": {
+      "verified": false,
+      "synced": false,
+      "archived": false
+    },
+    "artifacts": [
+      ".planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56-2-06-PLAN.md",
+      ".planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56-2-06-SUMMARY.md",
+      ".planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56-2-VERIFICATION.md",
+      ".planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56.2-UAT.md",
+      ".planning/STATE.md",
+      ".planning/ROADMAP.md",
+      ".planning/HANDOFF.json",
+      "openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/tasks.md"
+    ],
+    "next_action": "Stop for review. Keep F56.2b1 gated on investigating the reset HTTP 502. No database operation, provider, activation, formal verify/sync/archive, or push."
+  },
   "timestamp": "2026-10-06T20:00:34.516Z",
   "phase": "56.1",
   "phase_name": "contrato-produtivo-modelos-e-fallback",
@@ -36,9 +87,9 @@
     "evidence_check": "GSD verify-work 10/10 PASS; UAT humano local aprovado na instancia isolada vendeo-f561-isolated; 55/55 tasks OpenSpec.",
     "next_action": "Nenhuma acao GSD pendente. Lifecycle OpenSpec concluido em 2026-10-06."
   },
-  "next_phase": "56.2",
-  "next_phase_started": true,
-  "next_phase_note": "F56.2a (preparacao nao operacional) em execucao; Plano 01 ativo apos gate isolado aprovado e tentativa de recuperacao explicitamente autorizada. F56.2b1/b2 continuam futuras; integracao transacional, provider e ativacao nao iniciados.",
+  "next_phase": "F56.2b1",
+  "next_phase_started": false,
+  "next_phase_note": "F56.2a está fechada localmente com 6/6 planos/summaries e OpenSpec 31/31; não está formalmente verificada/sincronizada/arquivada. Investigar o reset final exit 1/HTTP 502 de causa desconhecida antes de depender do procedimento na F56.2b1. Provider e ativação permanecem futuros.",
   "planning_review": {
     "phase": "56.1",
     "plans": ["56-1-01", "56-1-02", "56-1-03", "56-1-04", "56-1-05", "56-1-06", "56-1-07", "56-1-08", "56-1-09", "56-1-10", "56-1-11"],
@@ -221,9 +272,9 @@
     ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-GSD-UAT.md",
     "openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback"
   ],
-  "blockers": ["Reset final isolado executado após checkpoint aprovado e preflight completo; exit 1 com HTTP 502 após listar migrations aplicadas. Pós-condições não verificadas; interrompido conforme fail-stop. Não executar novo DB command até diagnóstico/autorização explícita."],
-  "human_actions_pending": ["Diagnosticar/autorizar a resposta ao reset final exit 1/HTTP 502 antes de qualquer novo comando DB. O checkpoint UAT humano já foi aprovado; não repetir integração."],
+  "blockers": ["Anomalia de infraestrutura: reset final isolado exit 1/HTTP 502, causa/upstream desconhecido. Pós-condições foram confirmadas por SELECT e aceitas para fechamento LOCAL; investigar antes de depender do procedimento na F56.2b1."],
+  "human_actions_pending": ["Investigar a causa desconhecida do exit 1/HTTP 502 antes de depender do procedimento de reset na F56.2b1."],
   "uncommitted_files": [],
-  "next_action": "Checkpoint humano UAT aprovado. Task 4 reset final F56.2a falhou (exit 1/HTTP 502) após listar migrations; pós-condições não consultadas. Aguardar diagnóstico/autorização antes de qualquer novo comando DB; não repetir integração, não fazer sync/archive/push/ativação.",
-  "context_notes": "F56.1 fechada e preservada. F56.2a Planos 01-05 concluidos. Plano 06 Task1: 106 migrations copiadas/hash-verificadas; reset/lint/schema checks passaram. Task2: integração real 6/6; checkpoint UAT explicitamente aprovado. Task4 final reset foi executado depois de preflight completo e retornou exit 1 com `Error status 502: An invalid response was received from the upstream server` após listar migrations aplicadas e mensagem `Restarting containers...`. Nenhuma consulta pós-reset foi executada; flags false/fixtures ausentes não estão confirmadas. Fail-stop: aguardar diagnóstico/autorização antes de novo DB command. Vector estava running/count 219 no preflight; estado pós-reset desconhecido, nenhuma ação direta no Vector. Sem db push/provider/paid calls/ativação. F56.2b1/b2 e F56.3 futuras."
+  "next_action": "Fechamento local documental concluído; apresentar para revisão. Manter reset exit 1/HTTP 502 explicitamente como anomalia desconhecida, aceita apenas para fechamento local; investigar antes da F56.2b1. Não executar verify/sync/archive, ativação, db push ou novo comando DB.",
+  "context_notes": "F56.1 permanece como histórico concluído. F56.2a: 6/6 planos e summaries, OpenSpec 31/31, fechamento local aceito, ainda não verificada/sincronizada/arquivada. Plano 06: integração isolada 6/6, checkpoint UAT aprovado e gates documentais passados. Reset final retornou exit 1/HTTP 502 após listar migrations e iniciar Restarting containers; causa/upstream desconhecido, e exit code não deve ser apresentado como sucesso. Consulta somente leitura posterior confirmou migrations F56.2a, flags false, ausência de auth-user/store/campaign/snapshot/operation fixtures (SELECT result 2|2|t|0|0|0|0|0|0|0|t|t|t|t|f|f|t|t), relation/RLS/triggers/grants esperados; responsável aceitou as pós-condições para fechamento LOCAL. Não repetir reset nem executar novo comando DB. Anomalia de infraestrutura pendente para investigação antes de depender do procedimento em F56.2b1. Vector teve docker_logs Network unreachable; nenhum restart/removal direto. Task 6.6 reconciliada com strict/diff-check; sem verify/sync/archive, db push/provider/chamada paga/ativação."
 }
