@@ -37,8 +37,8 @@
     "next_action": "Nenhuma acao GSD pendente. Lifecycle OpenSpec concluido em 2026-10-06."
   },
   "next_phase": "56.2",
-  "next_phase_started": false,
-  "next_phase_note": "F56.2 (integracao transacional do novo fluxo) NAO iniciada. Nenhum REQ-ID ativo da F56.2; nenhum plano/OpenSpec da F56.2 criado.",
+  "next_phase_started": true,
+  "next_phase_note": "F56.2a (preparacao nao operacional) em execucao; Plano 01 ativo apos gate isolado aprovado e tentativa de recuperacao explicitamente autorizada. F56.2b1/b2 continuam futuras; integracao transacional, provider e ativacao nao iniciados.",
   "planning_review": {
     "phase": "56.1",
     "plans": ["56-1-01", "56-1-02", "56-1-03", "56-1-04", "56-1-05", "56-1-06", "56-1-07", "56-1-08", "56-1-09", "56-1-10", "56-1-11"],
@@ -224,6 +224,6 @@
   "blockers": [],
   "human_actions_pending": [],
   "uncommitted_files": [],
-  "next_action": "F56.1 concluida, verificada, sincronizada e arquivada em 2026-10-06; tracking reconciliado. F56.2 NAO iniciada. Push remoto (se houver) e executado manualmente pelo responsavel.",
-  "context_notes": "F56.1 (Contrato produtivo, modelos e fallback) fechada: 11/11 planos e summaries; UAT humano local/preparatorio aprovado na instancia isolada vendeo-f561-isolated; GSD verify-work 10/10 PASS (56.1-GSD-UAT.md); OpenSpec 55/55 tasks. Lifecycle executado em 2026-10-06 APOS o UAT: /opsx-verify -> /opsx-sync -> /opsx-archive; change arquivada em openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/; 3 specs principais atualizadas (ai-invocation-gateway, ai-model-catalog, ai-model-pricing) + 5 criadas (image-generation-model-pair-config, image-generation-config-snapshot, image-generation-failure-policy, image-generation-support-reference, image-generation-instrumentation). Sem provider, sem db push, sem ativacao e sem promocao. F56.2 NAO iniciada (nenhum REQ-ID ativo). F48.2.6 e anteriores preservados em history."
+  "next_action": "Executar o restante do Plano 01 da F56.2a, validar gates locais sem DB reset/lint/push nem provider, criar SUMMARY/commitar e pausar para aprovacao antes do proximo plano.",
+  "context_notes": "F56.1 (Contrato produtivo, modelos e fallback) fechada: 11/11 planos e summaries; UAT humano local/preparatorio aprovado na instancia isolada vendeo-f561-isolated; GSD verify-work 10/10 PASS (56.1-GSD-UAT.md); OpenSpec 55/55 tasks. Lifecycle executado em 2026-10-06 APOS o UAT: /opsx-verify -> /opsx-sync -> /opsx-archive; change arquivada em openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/; 3 specs principais atualizadas (ai-invocation-gateway, ai-model-catalog, ai-model-pricing) + 5 criadas (image-generation-model-pair-config, image-generation-config-snapshot, image-generation-failure-policy, image-generation-support-reference, image-generation-instrumentation). Sem provider, sem db push, sem ativacao e sem promocao. F56.2a em execucao na instancia vendeo-f562a-isolated; start local e API loopback ativos; DB/Auth/Kong/PostgREST essenciais verificados; Vector observado Restarting; ainda sem DB reset/lint/push, provider ou ativacao. F56.2b1/b2 e F56.3 permanecem futuras. F48.2.6 e anteriores preservados em history."
 }
