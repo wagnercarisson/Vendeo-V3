@@ -68,8 +68,8 @@ completed: 2026-10-07
 - Froze the approved prompt-base content/version and independent productive policy types/registry.
 - Copied Product v4, all three intent policies, 1:1 format, and general integrity v48.2.5. Added the baseline `peca-unica` and `tema=nenhum` policy identities/versions in the product-owned registry.
 - Implemented a pure deterministic composer with canonical blocks and returned `composerVersion`, `promptBaseVersion`, and all `policyVersions`.
-- Equivalence tests compare exact text, block objects, and policy-version objects for all **9 combinations** of three intentions × three background directions, including product name with numeral/unit and two references.
-- Validation: `npm run typecheck`, `npm run lint`, and `npm run build` exit 0; focused Vitest **14/14 passed**; runtime source search found no `lab/bench` imports; `git diff --name-only 335bfb70..HEAD -- src/lib/lab/bench/**` was empty.
+- Equivalence tests compare exact text, block objects, and policy-version objects for all **9 combinations** of three intentions × three background directions, including product name with numeral/unit and two references. The productive composer receives the prompt-base content imported from the bench in the comparison, with an explicit assertion that the Product-owned frozen content/version is equal to the bench copy.
+- Validation: `npm run typecheck`, `npm run lint`, and `npm run build` exit 0; focused Vitest **15/15 passed**; runtime source search found no `lab/bench` imports; `git diff --name-only 335bfb70..HEAD -- src/lib/lab/bench/**` was empty.
 - No DB operations, migrations, provider calls, activation, or production wiring occurred.
 
 ## Task Commits
@@ -77,7 +77,7 @@ completed: 2026-10-07
 1. **Task 1a: frozen prompt base and policy contracts** — `d6a42efb`
 2. **Task 1b: frozen policy set and complete registry** — `1412ed62`
 3. **Task 2: Product prompt composer** — `e335ab5d`
-4. **Task 3: contract and F48.2.6 equivalence tests** — `9d9ed737`
+4. **Task 3: contract and F48.2.6 equivalence tests** — `9d9ed737`, `f4fbec72` (explicit frozen prompt-base comparison requested after plan review)
 
 **Plan adjustment:** full baseline additions for general integrity, structure, and theme were approved and plan-checked (`441eacab`).
 
