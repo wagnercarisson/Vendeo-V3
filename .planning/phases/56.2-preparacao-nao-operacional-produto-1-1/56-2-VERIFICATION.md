@@ -1,6 +1,6 @@
 # F56.2a — Verificação local (em andamento)
 
-> Registro parcial do Plano 06. O checkpoint humano permanece pendente; não registrar `human_checkpoint: approved` até a decisão explícita do responsável.
+> Registro do Plano 06. O checkpoint humano foi explicitamente aprovado em 2026-10-07; a Task 4 reset final falhou e o estado pós-reset está desconhecido.
 
 ## Identidade e preparação de migrations
 
@@ -20,10 +20,10 @@
 
 ## Vector e limites ainda pendentes
 
-- Vector permaneceu `restarting`; contadores observados neste trecho: `173` antes do reset, `177` antes do lint anterior à cópia, `179` na sondagem que detectou o workdir vazio, `186` antes do reset com migrations, `188` antes do schema-check/lint, `198` no preflight da integração e `199` na consulta de IDs pós-teste. Nenhum comando explícito de restart/stop/start/remoção/rename do Vector foi emitido; o `db reset` mostrou somente a mensagem genérica `Restarting containers...`.
+- Vector foi observado `restarting` nos gates anteriores (173–199) e `running`/count `219` no preflight final. O reset emitiu `Restarting containers...`; não executei comando direto de restart/stop/remoção/rename e não consultei estado posterior ao erro 502.
 - A sondagem após o primeiro reset (quando o workdir não continha migrations) encontrou `public.feature_flags` ausente e a execução foi interrompida. Essa tentativa não é contada como validação do schema. Após a cópia autorizada, reset/lint e consulta de schema acima passaram.
-- Nenhum `db push`, provider/chamada paga, ativação, remoção de linha ou reset final foi executado.
-- Estado: `in_progress`; integração local concluída; checkpoint humano ainda não executado/aprovado.
+- Nenhum `db push`, provider/chamada paga ou ativação ocorreu. Não houve `DELETE` individual de evidências. O reset final foi tentado após aprovação do checkpoint, mas falhou conforme a seção Task 4 abaixo.
+- Estado: `in_progress`; integração local concluída; checkpoint humano aprovado; falha Task 4 aguarda diagnóstico.
 
 ## Task 2 — integração real e UAT local
 
@@ -36,6 +36,13 @@
   4. Campaign A e snapshot B existentes, ambos pertencentes a campaigns existentes distintas, rejeitados com `image_generation_operations_snapshot_campaign_mismatch`; nenhum registro criado para o operation_id rejeitado.
   5. Catálogo PostgreSQL confirmou `service_role` SELECT/INSERT=true e UPDATE/DELETE=false; tentativas REST de mutation foram rejeitadas; tentativas SQL diretas como owner atingiram `image_generation_operations_immutable`, foram revertidas por savepoint e a linha permaneceu igual.
   6. As duas flags começaram `false`, foram temporariamente ligadas apenas na instância isolada para confirmar a decisão `new_flow` (sem chamar rota/geração/provider) e restauradas para `false` em `finally`; leitura posterior confirmou ambas false.
-- IDs sintéticos retidos na instância descartável até o reset final autorizado após checkpoint: store `6297665d-4095-4e24-867d-dda4a90c1f97`; campaign A `755b2872-9610-4bb3-98ca-1e777c9c80b5`; campaign B `6d1512ce-72d6-4bdc-b561-ce59bd90adf6`; snapshot A `872d03cb-0d54-4929-8b33-ef647fba8e4f`; snapshot B `95ed3e8c-ef0a-405d-a005-a7a82b74d58f`; operação válida row `4f847f46-19ee-461b-9ad9-488283b4ae91`, operation_id `2a5a76fe-74fd-46c2-9fa5-2808ec830419`.
+- IDs sintéticos pré-reset registrados: store `6297665d-4095-4e24-867d-dda4a90c1f97`; campaign A `755b2872-9610-4bb3-98ca-1e777c9c80b5`; campaign B `6d1512ce-72d6-4bdc-b561-ce59bd90adf6`; snapshot A `872d03cb-0d54-4929-8b33-ef647fba8e4f`; snapshot B `95ed3e8c-ef0a-405d-a005-a7a82b74d58f`; operação válida row `4f847f46-19ee-461b-9ad9-488283b4ae91`, operation_id `2a5a76fe-74fd-46c2-9fa5-2808ec830419`. Presença/ausência após a tentativa de reset final não verificada.
 - As alterações UPDATE/DELETE de teste foram revertidas; nenhuma linha de evidência foi removida. Flags verificadas false ao final. Sem `db push`, provider, chamada paga, encaminhamento real ou ativação.
-- `human_checkpoint: pending`; não executar Task 4/reset final nem registrar aprovação até decisão explícita do responsável.
+- `human_checkpoint: approved` por decisão explícita do responsável em 2026-10-07. O reset final foi tentado, mas a query pós-reset não pôde ser executada após exit 1; flags/fixtures pós-reset permanecem desconhecidas.
+
+## Task 4 — reset final após checkpoint humano
+
+- Preflight completo imediatamente antes do reset final: **PASS**; workdir/project_id/API/portas/mappings, serviços exigidos F56.2a e F56.1, volumes/redes e ausência de Vendeo_V3/Mailpit aprovados.
+- Vector no preflight: `running`, restart count `219`. O comando emitiu a mensagem genérica `Restarting containers...`; nenhum comando direto de restart/remoção/rename do Vector foi executado.
+- Comando: `supabase db reset --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --local --no-seed` — **exit 1** com `Error status 502: An invalid response was received from the upstream server`, depois de listar ambas as migrations F56.2a como aplicadas.
+- Fail-stop aplicado: nenhuma consulta pós-reset e nenhum outro comando DB executado. Flags/fixtures após essa tentativa são desconhecidas; não considerar Task 4/fechamento local concluídos até diagnóstico, nova autorização e verificação posterior.
