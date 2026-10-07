@@ -74,3 +74,10 @@ Instância descartável (workdir/project_id e registro de preflight):
 - Anomalia Vector: observado `Restarting`, count `122` na primeira reavaliação pós-autorização e `128` no preflight imediatamente antes do `db lint` (após registro histórico de `13`). Nenhum restart, remoção, rename ou outra intervenção foi tentada.
 - Interpretação aplicada para este plano e orientação ao Plano 06: Vector saudável **não** é critério obrigatório; os serviços exigidos são DB, PostgREST, Auth e Kong F56.2a, além dos gates de identidade/isolamento e preservação F56.1. Vector fica registrado como anomalia não bloqueante enquanto não houver evidência de impacto em serviço exigido. Repetir o preflight antes de cada comando DB; parar se algum serviço exigido falhar ou se o próprio comando falhar.
 - Comando executado após preflight aprovado: `supabase db lint --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --local --fail-on error`; exit `0`; `No schema errors found`. Nenhum `db reset`/`db push` executado.
+
+## Plano 04 — revalidação da consistência campanha/snapshot (2026-10-07)
+
+- O preflight completo imediatamente anterior ao `db lint` passou novamente: BASE_SHA `335bfb70` existente/ancestor; project_id `vendeo-f562a-isolated`; API loopback `http://127.0.0.1:56321`; portas `[56320, 56321, 56322, 56323, 56324, 56327, 56329]` únicas/em faixa/sem conflito; serviços exigidos F56.2a e F56.1 em execução/saudáveis conforme o gate; volumes/redes presentes; nenhum Vendeo_V3/Mailpit ativo.
+- Vector permaneceu `restarting`, restart count `147`. Registro como anomalia observacional; nenhuma tentativa de restart/remoção/rename. Não bloqueou porque DB/PostgREST/Auth/Kong exigidos passaram.
+- Status CLI capturado em memória; somente URL loopback e disponibilidades booleanas foram emitidas. Nenhum valor de credencial foi impresso.
+- Após o gate: `supabase db lint --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --local --fail-on error`; exit `0`; `No schema errors found`. Nenhum reset ou push remoto executado.

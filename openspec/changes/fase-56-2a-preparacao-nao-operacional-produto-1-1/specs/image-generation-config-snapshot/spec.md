@@ -6,7 +6,7 @@
 
 ### Requirement: Estrutura append-only de operações/tentativas vinculada à campanha e ao snapshot original
 
-O sistema SHALL manter uma relação **append-only** própria para operações/tentativas do novo fluxo, vinculada à **campanha** e ao **snapshot original** da configuração. Cada operação SHALL acrescentar registros sem reescrever os anteriores.
+O sistema SHALL manter uma relação **append-only** própria para operações/tentativas do novo fluxo, vinculada à **campanha** e ao **snapshot original** da configuração. O snapshot referenciado SHALL pertencer à mesma campanha informada na operação. Cada operação SHALL acrescentar registros sem reescrever os anteriores.
 
 #### Scenario: Operação registrada append-only
 
@@ -18,7 +18,16 @@ O sistema SHALL manter uma relação **append-only** própria para operações/t
 
 - **WHEN** uma operação é registrada
 - **THEN** ela referencia a campanha e o snapshot original
+- **AND** o snapshot original pertence à mesma campanha
 - **AND** a correlação com o par modelo–qualidade é preservada
+
+#### Scenario: Rejeitar snapshot de outra campanha
+
+- **GIVEN** a campanha A e o snapshot original existente da campanha B
+- **WHEN** uma tentativa associa a campanha A ao snapshot da campanha B
+- **THEN** a inserção é rejeitada com `image_generation_operations_snapshot_campaign_mismatch`
+- **AND** nenhum registro de operação é criado
+- **AND** os FKs individuais continuam rejeitando separadamente IDs de campanha ou snapshot inexistentes
 
 ### Requirement: Contrato de reuso do snapshot original
 
