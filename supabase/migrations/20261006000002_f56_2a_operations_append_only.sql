@@ -24,6 +24,46 @@ CREATE TABLE IF NOT EXISTS public.image_generation_operations (
 CREATE INDEX IF NOT EXISTS idx_image_generation_operations_campaign_operation
   ON public.image_generation_operations (campaign_id, operation_id);
 
+-- Both references are independently protected by foreign keys, and the snapshot
+-- must also belong to the same campaign as the operation. Keep this validation
+-- local to the new relation; do not alter the original snapshot row/schema.
+CREATE OR REPLACE FUNCTION public.trg_image_generation_operations_snapshot_campaign_fn()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Leave missing IDs to their respective FK constraints so each FK keeps its
+  -- own deterministic failure. Reject only when both referenced rows exist but
+  -- the snapshot belongs to a different campaign.
+  IF EXISTS (
+       SELECT 1
+       FROM public.campaigns AS campaign_row
+       WHERE campaign_row.id = NEW.campaign_id
+     )
+     AND EXISTS (
+       SELECT 1
+       FROM public.image_generation_config_snapshots AS snapshot_row
+       WHERE snapshot_row.id = NEW.snapshot_original_id
+     )
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.image_generation_config_snapshots AS snapshot_row
+       WHERE snapshot_row.id = NEW.snapshot_original_id
+         AND snapshot_row.campaign_id = NEW.campaign_id
+     ) THEN
+    RAISE EXCEPTION 'image_generation_operations_snapshot_campaign_mismatch';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_image_generation_operations_snapshot_campaign
+BEFORE INSERT ON public.image_generation_operations
+FOR EACH ROW
+EXECUTE FUNCTION public.trg_image_generation_operations_snapshot_campaign_fn();
+
 ALTER TABLE public.image_generation_operations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role can read/insert image generation operations"
@@ -53,6 +93,9 @@ EXECUTE FUNCTION public.trg_image_generation_operations_immutable_fn();
 -- =============================================================================
 -- REVERT (ordem reversa; executar manualmente apenas na instância local isolada)
 -- =============================================================================
+-- DROP TRIGGER IF EXISTS trg_image_generation_operations_snapshot_campaign
+--   ON public.image_generation_operations;
+-- DROP FUNCTION IF EXISTS public.trg_image_generation_operations_snapshot_campaign_fn();
 -- DROP TRIGGER IF EXISTS trg_image_generation_operations_immutable
 --   ON public.image_generation_operations;
 -- DROP FUNCTION IF EXISTS public.trg_image_generation_operations_immutable_fn();
