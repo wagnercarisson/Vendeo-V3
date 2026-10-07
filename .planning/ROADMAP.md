@@ -247,13 +247,13 @@ Plans:
 
 **Nome:** Preparação não operacional do Produto 1:1
 
-**Status:** ◐ **Fechada localmente — 6/6 planos com summaries; OpenSpec 31/31; ainda não verificada/sincronizada/arquivada.** Checkpoint humano aprovado. O reset final retornou exit 1/HTTP 502 de causa desconhecida, não sucesso; consulta somente leitura posterior confirmou migrations, flags `false`, ausência das fixtures e schema esperado. Responsável aceitou as pós-condições para fechamento local. A anomalia de infraestrutura deve ser investigada antes de depender do procedimento na F56.2b1. Gates documentais strict e diff check passaram. Sem lifecycle OpenSpec, `db push`, ativação ou novo comando DB. Vector `restarting`/unhealthy, contagem 247 na consulta, `docker_logs Network unreachable`; nenhuma ação direta.
+**Status:** ✅ **Concluída, verificada, sincronizada e arquivada — 6/6 planos/summaries; OpenSpec 31/31; UAT 4 pass + 1 N/A; segurança 20/20.** Checkpoint humano aprovado. As cinco specs principais foram sincronizadas (2 atualizadas + 3 criadas). Archive: `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/`. O reset final retornou exit 1/HTTP 502 de causa desconhecida, não sucesso; consulta somente leitura posterior confirmou migrations, flags `false`, ausência das fixtures e schema esperado. A anomalia de infraestrutura deve ser investigada antes de depender do procedimento na F56.2b1. Gates documentais strict e diff check passaram. Sem `db push`, ativação ou novo comando DB neste fechamento. Vector `restarting`/unhealthy, contagem 247 na consulta, `docker_logs Network unreachable`; nenhuma ação direta.
 
 **Depends on:** F56.1 (contrato produtivo, modelos e fallback — infraestrutura preparatória); F46 (gateway único) e F47 (catálogo); evidência experimental F48.2.1–F48.2.6 como insumo (não é autorização de promoção). É pré-requisito declarado da F56.2b1. Não depende de F50.1–F55.
 
 **Requirements:** REQ-56.2a-01, REQ-56.2a-02, REQ-56.2a-03, REQ-56.2a-04, REQ-56.2a-05, REQ-56.2a-06, REQ-56.2a-07, REQ-56.2a-08, REQ-56.2a-09, REQ-56.2a-10, REQ-56.2a-11, REQ-56.2a-12, REQ-56.2a-13, REQ-56.2a-14, REQ-56.2a-15, REQ-56.2a-16, REQ-56.2a-17, REQ-56.2a-18, REQ-56.2a-19
 
-**Fonte normativa (ativa):** `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` — `proposal.md`, `design.md` (A-D1…A-D7), `tasks.md` (31 tasks em 6 seções; o design.md citava "27", mas o tasks.md real tem 31 checkboxes) e 5 specs (`product-1-1-flow-activation`, `product-1-1-intent-background-selection`, `product-1-1-prompt-composition` [novas]; `image-generation-config-snapshot`, `feature-flag-control` [deltas aditivos]).
+**Fonte normativa (arquivada):** `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/` — `proposal.md`, `design.md` (A-D1…A-D7), `tasks.md` (31 tasks em 6 seções; o design.md citava "27", mas o tasks.md real tem 31 checkboxes) e 5 specs (`product-1-1-flow-activation`, `product-1-1-intent-background-selection`, `product-1-1-prompt-composition` [principais criadas]; `image-generation-config-snapshot`, `feature-flag-control` [principais atualizadas a partir dos deltas]). O reset final exit 1/HTTP 502 permanece warning operacional de causa desconhecida, não sucesso; investigar antes de depender do procedimento na F56.2b1.
 
 **Reconciliação:** substitui parte da change `fase-56-2-novo-fluxo-geracao-produto-1-1` (relocada para `openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/`; ver `RECONCILIATION.md`). A change original é preservada e marcada como substituída; não é descartada silenciosamente.
 
@@ -285,13 +285,13 @@ Plans:
 - [x] 56-2-03-PLAN.md — **Concluído**; summary `56-2-03-SUMMARY.md` — Módulo produtivo de composição versionada (Produto v4/compositor v5), equivalente em texto/blocos/todas as versões à bancada F48.2.6.
 - [x] 56-2-04-PLAN.md — Concluído; summary `56-2-04-SUMMARY.md` — Migration local append-only de operações/tentativas + repositório server-only + contrato de reuso do snapshot original.
 - [x] 56-2-05-PLAN.md — Concluído; summary `56-2-05-SUMMARY.md` — Testes transversais de não-ativação/não-exposição + não-regressão do legado + gates e `openspec validate --strict`.
-- [x] 56-2-06-PLAN.md — Fechado localmente; summary `56-2-06-SUMMARY.md` — Validação isolada, integração 6/6, UAT/checkpoint e tracking; reset final exit 1/HTTP 502 mantido como anomalia de infraestrutura.
+- [x] 56-2-06-PLAN.md — Concluído; summary `56-2-06-SUMMARY.md` — Validação isolada, integração 6/6, UAT/checkpoint e tracking; reset final exit 1/HTTP 502 mantido como anomalia de infraestrutura.
 
-**Inventário:** 6/6 planos têm summary correspondente. OpenSpec tasks 31/31 concluídas. O lifecycle formal (verify/sync/archive) permanece não executado.
+**Inventário:** 6/6 planos têm summary correspondente. OpenSpec tasks 31/31 concluídas. Lifecycle formal concluído: verificada, sincronizada e arquivada; UAT 4 pass + 1 N/A; segurança 20/20 fechada, 0 abertas. Warning do reset exit 1/HTTP 502 preservado para investigação antes da F56.2b1.
 
 **Ondas:** Onda 1 paralela — `56-2-01`, `56-2-02`; Onda 2 — `56-2-03` (depende de `56-2-02`; importa a fonte única de direção de fundo) e `56-2-04` (depende de `56-2-01`; migrations serializadas); Onda 3 — `56-2-05` (depende de `56-2-01`..`56-2-04`); Onda 4 — `56-2-06` (depende de `56-2-05`; verificação final, `autonomous: false` por checkpoint).
 
-**Canonical refs:** `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` (proposal/design/tasks/specs), `openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/RECONCILIATION.md`, `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`, `openspec/design-system/MASTER.md`, `src/lib/feature-flags/*`, `src/lib/lab/bench/domain/*`, `src/lib/ai/image-generation-config-snapshot.ts`, `supabase/migrations/*`.
+**Canonical refs:** `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/` (proposal/design/tasks/specs), `openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/RECONCILIATION.md`, `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`, `openspec/design-system/MASTER.md`, `src/lib/feature-flags/*`, `src/lib/lab/bench/domain/*`, `src/lib/ai/image-generation-config-snapshot.ts`, `supabase/migrations/*`.
 
 ## Historical References
 
