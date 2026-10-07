@@ -14,7 +14,7 @@ import {
   COMPOSER_VERSION,
   composeProductPrompt,
 } from "../prompt-composition";
-import { PROMPT_BASE_VERSION } from "../prompt-base";
+import { PROMPT_BASE_CONTENT, PROMPT_BASE_VERSION } from "../prompt-base";
 import type { ProductPromptCompositionBriefing } from "../policies/types";
 
 const BASE_CONFIG: BenchConfig = {
@@ -124,6 +124,11 @@ function makeBenchCase(
 }
 
 describe("F48.2.6 → Product 1:1 frozen prompt equivalence", () => {
+  it("uses the Product-owned prompt base with the exact frozen bench content", () => {
+    expect(PROMPT_BASE_CONTENT).toBe(BENCH_DEFAULT_PROMPT_BASE.content);
+    expect(PROMPT_BASE_VERSION).toBe(BENCH_DEFAULT_PROMPT_BASE.version);
+  });
+
   it.each(
     INTENTS.flatMap((intent) =>
       DIRECTIONS.map((direction) => [intent, direction] as const),
