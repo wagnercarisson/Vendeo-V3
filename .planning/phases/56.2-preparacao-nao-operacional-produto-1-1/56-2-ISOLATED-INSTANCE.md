@@ -31,7 +31,7 @@ Instância descartável (workdir/project_id e registro de preflight):
 - Inspeção read-only subsequente: `docker inspect 5d0330b2982ae7f8be3e054db13ad4ff06024c1b2eedae6e7111f4616b57289a` retornou `no such object`; `docker ps -a` não lista containers F56.2a. O container conflitante desapareceu sem intervenção nesta recuperação; nenhuma operação `docker rename` ocorreu. Nenhum container foi removido manualmente pelo executor.
 - Autorização de recuperação: instrução explícita do responsável em 2026-10-07; permite exatamente uma tentativa adicional, somente após confirmar o ID conflitante ausente e sem rename. Não é retry automático nem autorização para tentativa em cascata.
 - recovery_attempt_number: `2`
-- recovery_start_invocations: `0` (pendente da nova execução autorizada)
+- recovery_start_invocations: `1`
 - recovery_authorized_at: `2026-10-07T13:43:52-03:00`
 - recovery_attempt_limit: `1`
 - recovery_authorization: explícita no pedido do responsável em 2026-10-07; tentativa adicional somente para resolver o conflito já desaparecido, sem retry automático
@@ -40,8 +40,8 @@ Instância descartável (workdir/project_id e registro de preflight):
 - conflict_inspection_result: `docker inspect` retornou `no such object`; `docker ps -a` sem containers F56.2a
 - rename_performed: `false`
 - recovery_prestart_gate: `passed`
-- recovery_start_exit_code: `pending`
-- recovery_poststart_gate: `pending`
+- recovery_start_exit_code: `0`
+- recovery_poststart_gate: `passed`
 - recovery_prestart_timestamp: `2026-10-07T14:06:15-03:00`
 - recovery_prestart_project_id: `vendeo-f562a-isolated`
 - recovery_configured_ports: `[56320, 56321, 56322, 56323, 56324, 56327, 56329]`; únicas, no intervalo e livres; sem conflito com F56.1
@@ -51,5 +51,15 @@ Instância descartável (workdir/project_id e registro de preflight):
 - recovery_conflict_id_absent: `true` (confirmed absent again with `docker ps -a --no-trunc` immediately before start)
 - recovery_F56_2a_before_start: nenhum container, volume ou rede; nenhum rename
 - recovery_backup_sha256_unchanged: `9FC88FF7A76927EA1E6034E3B05E775DC7296230450B42A44F2FC0010F024AF2`
+- recovery_started_at: `2026-10-07T17:07:30.782Z` (criação do primeiro container DB dedicada; o timestamp exato da invocação CLI não foi exposto)
+- recovery_status_command: `supabase status --workdir <workdir> -o env`; exit `0`; stdout/stderr mantidos em memória e não registrados
+- recovery_project_id: `vendeo-f562a-isolated` (exato na config)
+- recovery_api_url: `http://127.0.0.1:56321` (loopback)
+- recovery_required_containers: DB `running, healthy`; PostgREST `running`; Auth `running, healthy`; Kong `running, healthy`
+- recovery_other_container_state: Vector `Restarting (0)`, restart count `13` na inspeção; Mailpit ausente/inativo (único serviço excluído); nenhum container Vendeo_V3 ativo
+- recovery_network_volume: rede `supabase_network_vendeo-f562a-isolated` presente; volume `supabase_db_vendeo-f562a-isolated` presente
+- recovery_F56_1_after_start: DB/Auth/Kong `running, healthy`; PostgREST `running`; volume/rede presentes; prova de conteúdo mantém os valores baseline registrados acima
+- recovery_space_after_start: C: `18.95 GiB`; G: `48.68 GiB`
+- recovery_SERVICE_ROLE_KEY: disponível localmente; valor não persistido
 - Estado após a falha: C: `19.16 GiB` livres; G: `48.71 GiB` livres; F56.1 DB/Auth/Kong `running, healthy`, PostgREST `running`; volume e rede F56.1 presentes e inalterados
 - Backup pré-mudança permanece intacto em G:, SHA-256 ainda `9FC88FF7A76927EA1E6034E3B05E775DC7296230450B42A44F2FC0010F024AF2`
