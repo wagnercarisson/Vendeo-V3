@@ -73,6 +73,7 @@ CREATE POLICY "Service role can read/insert image generation operations"
   USING (true) WITH CHECK (true);
 
 REVOKE ALL ON TABLE public.image_generation_operations FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.image_generation_operations FROM service_role;
 GRANT SELECT, INSERT ON TABLE public.image_generation_operations TO service_role;
 
 CREATE OR REPLACE FUNCTION public.trg_image_generation_operations_immutable_fn()
