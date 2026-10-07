@@ -12,6 +12,10 @@ export const CAMPAIGN_GENERATION_ENABLED_KEY = "campaign_generation_enabled";
 export const VISUAL_SIGNATURE_GENERATION_ENABLED_KEY =
   "visual_signature_generation_enabled";
 export const CAMPAIGN_APPROVAL_ENABLED_KEY = "campaign_approval_enabled";
+export const PRODUCT_1_1_TEST_STORES_ENABLED_KEY =
+  "product_1_1_test_stores_enabled";
+export const PRODUCT_1_1_ALL_STORES_ENABLED_KEY =
+  "product_1_1_all_stores_enabled";
 
 // Ordem canônica de exibição na tela "Controles operacionais".
 export const ALL_FEATURE_FLAG_KEYS = [
@@ -20,6 +24,8 @@ export const ALL_FEATURE_FLAG_KEYS = [
   CAMPAIGN_GENERATION_ENABLED_KEY,
   VISUAL_SIGNATURE_GENERATION_ENABLED_KEY,
   CAMPAIGN_APPROVAL_ENABLED_KEY,
+  PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
+  PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
 ];
 
 // Env vars emergenciais opcionais (fail-safe de infra) — nunca são a decisão
@@ -157,6 +163,16 @@ export class FeatureFlagService {
   isCampaignApprovalEnabled(): Promise<boolean> {
     return this.readFlag(CAMPAIGN_APPROVAL_ENABLED_KEY, false);
   }
+
+  /** F56.2a: chave de preparação, fail-closed e sem envOverride (D-01/D-02). */
+  isProductOneToOneTestStoresEnabled(): Promise<boolean> {
+    return this.readFlag(PRODUCT_1_1_TEST_STORES_ENABLED_KEY, false);
+  }
+
+  /** F56.2a: chave global de preparação, fail-closed e sem envOverride. */
+  isProductOneToOneAllStoresEnabled(): Promise<boolean> {
+    return this.readFlag(PRODUCT_1_1_ALL_STORES_ENABLED_KEY, false);
+  }
 }
 
 export async function isForceBriefVisionCheckEnabled(): Promise<boolean> {
@@ -177,4 +193,12 @@ export async function isVisualSignatureGenerationEnabled(): Promise<boolean> {
 
 export async function isCampaignApprovalEnabled(): Promise<boolean> {
   return new FeatureFlagService().isCampaignApprovalEnabled();
+}
+
+export async function isProductOneToOneTestStoresEnabled(): Promise<boolean> {
+  return new FeatureFlagService().isProductOneToOneTestStoresEnabled();
+}
+
+export async function isProductOneToOneAllStoresEnabled(): Promise<boolean> {
+  return new FeatureFlagService().isProductOneToOneAllStoresEnabled();
 }

@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { FeatureFlagService } from "../feature-flag-service";
+import {
+  ALL_FEATURE_FLAG_KEYS,
+  FeatureFlagService,
+  PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
+  PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
+} from "../feature-flag-service";
 
 vi.mock("server-only", () => ({}));
 
@@ -13,11 +18,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.VENDEO_FORCE_BRIEF_VISION_CHECK;
   delete process.env.VENDEO_CAPTCHA_ENABLED;
+  delete process.env.VENDEO_PRODUCT_1_1_TEST_STORES_ENABLED;
+  delete process.env.VENDEO_PRODUCT_1_1_ALL_STORES_ENABLED;
 });
 
 afterEach(() => {
   delete process.env.VENDEO_FORCE_BRIEF_VISION_CHECK;
   delete process.env.VENDEO_CAPTCHA_ENABLED;
+  delete process.env.VENDEO_PRODUCT_1_1_TEST_STORES_ENABLED;
+  delete process.env.VENDEO_PRODUCT_1_1_ALL_STORES_ENABLED;
 });
 
 describe("FeatureFlagService — leitura da flag (F43 D5)", () => {
@@ -290,5 +299,74 @@ describe("FeatureFlagService — isCampaignApprovalEnabled (F37.1 D1, fail-close
     // sem VENDEO_CAPTCHA_ENABLED/VENDEO_FORCE_BRIEF_VISION_CHECK envolvidas
     expect(process.env.VENDEO_CAPTCHA_ENABLED).toBeUndefined();
     expect(process.env.VENDEO_FORCE_BRIEF_VISION_CHECK).toBeUndefined();
+  });
+});
+
+describe("FeatureFlagService — chaves Produto 1:1 F56.2a (fail-closed)", () => {
+  function mockFlag(enabled: boolean | null, shouldThrow = false) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== "feature_flags") return {};
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn(() => {
+              if (shouldThrow) return Promise.reject(new Error("db unavailable"));
+              return Promise.resolve({
+                data: enabled === null ? null : { enabled },
+                error: null,
+              });
+            }),
+          })),
+        })),
+      };
+    });
+  }
+
+  it("registra as duas chaves ao final da ordem canônica", () => {
+    expect(ALL_FEATURE_FLAG_KEYS.slice(-2)).toEqual([
+      PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
+      PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
+    ]);
+  });
+
+  it("retorna false quando as linhas das duas chaves não existem", async () => {
+    mockFlag(null);
+    const service = new FeatureFlagService();
+
+    await expect(service.isProductOneToOneTestStoresEnabled()).resolves.toBe(false);
+    await expect(service.isProductOneToOneAllStoresEnabled()).resolves.toBe(false);
+  });
+
+  it("retorna false quando a leitura das duas chaves lança exceção", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFlag(null, true);
+    const service = new FeatureFlagService();
+
+    await expect(service.isProductOneToOneTestStoresEnabled()).resolves.toBe(false);
+    await expect(service.isProductOneToOneAllStoresEnabled()).resolves.toBe(false);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("ignora env vars emergenciais: false na tabela permanece false", async () => {
+    process.env.VENDEO_PRODUCT_1_1_TEST_STORES_ENABLED = "true";
+    process.env.VENDEO_PRODUCT_1_1_ALL_STORES_ENABLED = "true";
+    mockFlag(false);
+    const service = new FeatureFlagService();
+
+    await expect(service.isProductOneToOneTestStoresEnabled()).resolves.toBe(false);
+    await expect(service.isProductOneToOneAllStoresEnabled()).resolves.toBe(false);
+  });
+
+  it("preserva os fallbacks das flags preexistentes", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFlag(null);
+    const service = new FeatureFlagService();
+
+    await expect(service.isCampaignApprovalEnabled()).resolves.toBe(false);
+    await expect(service.isCampaignGenerationEnabled()).resolves.toBe(true);
+    await expect(service.isVisualSignatureGenerationEnabled()).resolves.toBe(true);
+    await expect(service.isForceBriefVisionCheckEnabled()).resolves.toBe(false);
+    warnSpy.mockRestore();
   });
 });

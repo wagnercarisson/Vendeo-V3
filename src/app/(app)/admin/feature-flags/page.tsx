@@ -12,6 +12,10 @@ const FLAG_LABELS: Record<string, string> = {
     "Captcha (Turnstile) em login, cadastro e recuperação de senha",
   campaign_generation_enabled: "Geração de campanhas",
   visual_signature_generation_enabled: "Geração de assinatura visual",
+  product_1_1_test_stores_enabled:
+    "Produto 1:1 — habilitar lojas de teste (preparação inativa)",
+  product_1_1_all_stores_enabled:
+    "Produto 1:1 — habilitar todas as lojas (preparação inativa)",
 };
 
 interface FlagRow {
