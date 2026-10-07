@@ -56,7 +56,7 @@ Alternativa considerada: reaproveitar o domínio da bancada como dependência de
 
 ### A-D5 — Estrutura append-only de operações/tentativas + contrato de reuso do snapshot
 
-SHALL existir uma relação append-only própria de operações/tentativas, vinculada à **campanha** e ao **snapshot original da mesma campanha**; uma tentativa que combine dois IDs existentes de campanhas distintas SHALL ser rejeitada no INSERT. A validação de pertencimento SHALL ser somente leitura e não modificar a tabela/snapshot original. A relação não sobrescreve o `run_id`/`trace_id` do snapshot único (ressalva registrada na F56.1). O contrato `resolveConfigForCorrection` (reuso do snapshot original) SHALL ser preservado e testado. A **persistência operacional** dessas estruturas em geração real é da F56.2b1; a F56.2a entrega a estrutura e o contrato.
+SHALL existir uma relação append-only própria de operações/tentativas, vinculada à **campanha** e ao **snapshot original da mesma campanha**; uma tentativa que combine dois IDs existentes de campanhas distintas SHALL ser rejeitada no INSERT. A validação de pertencimento SHALL ser somente leitura e não modificar a tabela/snapshot original. O papel `service_role` SHALL ter somente SELECT/INSERT, e triggers devem rejeitar qualquer UPDATE/DELETE mesmo em execução direta como owner. A relação não sobrescreve o `run_id`/`trace_id` do snapshot único (ressalva registrada na F56.1). O contrato `resolveConfigForCorrection` (reuso do snapshot original) SHALL ser preservado e testado. A **persistência operacional** dessas estruturas em geração real é da F56.2b1; a F56.2a entrega a estrutura e o contrato.
 
 Alternativa considerada: reutilizar `generation_events` — rejeitada por não expressar tentativa/operação do novo fluxo nem correlação com o snapshot.
 
@@ -75,6 +75,7 @@ Testes/migrações/resets SHALL rodar apenas em instância Supabase descartável
 - **[Acoplamento produção↔laboratório]** → módulo próprio; bancada não é dependência de runtime.
 - **[Sobrescrita do histórico em correção futura]** → append-only + snapshot imutável + invariante testado.
 - **[Associação cruzada campanha/snapshot]** → trigger `BEFORE INSERT` na nova relação rejeita o vínculo quando ambos os IDs existem mas o snapshot pertence a outra campanha; FKs continuam tratando IDs inexistentes separadamente.
+- **[Mutação de histórico por privilégios padrão]** → `REVOKE ALL` explícito de `service_role`, grant SELECT/INSERT restrito e teste real dos triggers UPDATE/DELETE executados por conexão owner dentro de savepoints revertidos.
 - **[Regressão no legado]** → mudanças aditivas/inativas; `git diff` dos caminhos legados.
 
 ## Migration Plan

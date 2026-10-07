@@ -39,10 +39,10 @@
 
 ## 5. Estruturas de snapshot e histórico append-only
 
-- [ ] 5.1 Criar a relação append-only de operações/tentativas vinculada à campanha e a um snapshot original pertencente à mesma campanha; rejeitar associação cruzada de IDs existentes
+- [ ] 5.1 Criar a relação append-only de operações/tentativas vinculada à campanha e a um snapshot original pertencente à mesma campanha; rejeitar associação cruzada de IDs existentes e limitar `service_role` a SELECT/INSERT
 - [ ] 5.2 Implementar/validar o contrato de reuso do snapshot original (sem implementar a F56.3)
 - [ ] 5.3 Garantir que o run/trace histórico do snapshot único não é sobrescrito
-- [ ] 5.4 Cobrir com testes estruturais: append-only, pertencimento campanha-snapshot, FKs independentes, não sobrescrita, correlação por tentativa; incluir na integração real da seção 6 a rejeição de dois IDs válidos de campanhas diferentes
+- [ ] 5.4 Cobrir com testes estruturais: append-only, pertencimento campanha-snapshot, FKs independentes, privilégios sem UPDATE/DELETE, triggers imutáveis, não sobrescrita e correlação por tentativa; incluir na integração real da seção 6 os casos de IDs válidos cruzados e tentativas UPDATE/DELETE
 
 ## 6. Verificação e checkpoint
 

@@ -6,7 +6,7 @@
 
 ### Requirement: Estrutura append-only de operações/tentativas vinculada à campanha e ao snapshot original
 
-O sistema SHALL manter uma relação **append-only** própria para operações/tentativas do novo fluxo, vinculada à **campanha** e ao **snapshot original** da configuração. O snapshot referenciado SHALL pertencer à mesma campanha informada na operação. Cada operação SHALL acrescentar registros sem reescrever os anteriores.
+O sistema SHALL manter uma relação **append-only** própria para operações/tentativas do novo fluxo, vinculada à **campanha** e ao **snapshot original** da configuração. O snapshot referenciado SHALL pertencer à mesma campanha informada na operação. Cada operação SHALL acrescentar registros sem reescrever os anteriores. `service_role` SHALL ter somente SELECT/INSERT, e qualquer UPDATE/DELETE SHALL ser rejeitado.
 
 #### Scenario: Operação registrada append-only
 
@@ -28,6 +28,14 @@ O sistema SHALL manter uma relação **append-only** própria para operações/t
 - **THEN** a inserção é rejeitada com `image_generation_operations_snapshot_campaign_mismatch`
 - **AND** nenhum registro de operação é criado
 - **AND** os FKs individuais continuam rejeitando separadamente IDs de campanha ou snapshot inexistentes
+
+#### Scenario: Rejeitar alteração e remoção de tentativas existentes
+
+- **GIVEN** uma operação/tentativa já registrada
+- **WHEN** qualquer papel tenta atualizá-la ou removê-la
+- **THEN** `service_role` não possui privilégio UPDATE/DELETE
+- **AND** uma tentativa SQL direta de UPDATE/DELETE é rejeitada com `image_generation_operations_immutable`
+- **AND** a linha histórica permanece inalterada
 
 ### Requirement: Contrato de reuso do snapshot original
 

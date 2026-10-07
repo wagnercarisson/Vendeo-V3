@@ -36,6 +36,7 @@ Instância descartável (workdir/project_id e registro de preflight):
 - recovery_attempt_limit: `1`
 - recovery_authorization: explícita no pedido do responsável em 2026-10-07; tentativa adicional somente para resolver o conflito já desaparecido, sem retry automático
 - recovery_start_command: `supabase start --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --exclude mailpit`
+- recovery_mailpit_exclusion_only: `true`
 - conflicting_container_id: `5d0330b2982ae7f8be3e054db13ad4ff06024c1b2eedae6e7111f4616b57289a`
 - conflict_inspection_result: `docker inspect` retornou `no such object`; `docker ps -a` sem containers F56.2a
 - rename_performed: `false`
@@ -81,3 +82,15 @@ Instância descartável (workdir/project_id e registro de preflight):
 - Vector permaneceu `restarting`, restart count `147`. Registro como anomalia observacional; nenhuma tentativa de restart/remoção/rename. Não bloqueou porque DB/PostgREST/Auth/Kong exigidos passaram.
 - Status CLI capturado em memória; somente URL loopback e disponibilidades booleanas foram emitidas. Nenhum valor de credencial foi impresso.
 - Após o gate: `supabase db lint --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --local --fail-on error`; exit `0`; `No schema errors found`. Nenhum reset ou push remoto executado.
+
+## Plano 06 — migrations isoladas, schema e integração (2026-10-07)
+
+- A primeira execução de `db reset --local --no-seed` no workdir sem migrations retornou exit 0, mas uma sondagem subsequente encontrou `public.feature_flags` ausente. A execução foi interrompida; nenhum lint/integration foi considerado válido nesse estado.
+- Após autorização do responsável, o destino exato `C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated\supabase\migrations` foi confirmado ausente, com parent `supabase` existente; não era junction/reparse point. Copiados somente os `*.sql` de `C:\Projetos\Vendeo V3\supabase\migrations`: **106** arquivos; source revision `599521634f6af0100d47a685f74b9276660e5642`; listas de nomes e SHA-256 por arquivo comparadas e idênticas; nenhum overwrite, nenhum arquivo extra e `supabase\config.toml` preservado.
+- Preflight completo imediatamente antes do reset revisado: PASS; `project_id` exato, API loopback, portas/mappings, serviços exigidos, F56.1 volumes/redes e ausência de Vendeo_V3/Mailpit aprovados.
+- `supabase db reset --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --local --no-seed`: exit `0`; stdout confirma aplicação de todas as migrations, incluindo `20261006000001` e `20261006000002`.
+- Preflight repetido antes da consulta de schema e antes do lint. A consulta de catálogo confirmou ambas as versões registradas, flags existentes/false, tabela/RLS/triggers presentes, e `service_role` SELECT/INSERT true e UPDATE/DELETE false.
+- `supabase db lint --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --local --fail-on error`: exit `0`; warnings de PL/pgSQL existentes em três funções legadas, nenhum erro.
+- Integração real: runner passou preflight imediatamente antes de executar; 6/6 testes passaram (insert válido; duas FKs inválidas separadas; association cross-campaign rejeitada; grants e triggers UPDATE/DELETE; flags true→decision-only→false). Fixtures e operation válida estão listadas em `56-2-VERIFICATION.md`/`56.2-UAT.md`; preservar até checkpoint e reset final autorizado.
+- Vector `Restarting`, último count observado `199` (também 186/188/198 durante gates deste plano); nenhum comando explícito de restart/stop/start/remoção/rename emitido. Não é critério de saúde exigido.
+- Nenhum `db push`, provider/chamada paga ou reset final após a integração. `human_checkpoint` permanece pending.
