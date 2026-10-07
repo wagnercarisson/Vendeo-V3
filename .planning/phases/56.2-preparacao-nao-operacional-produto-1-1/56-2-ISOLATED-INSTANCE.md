@@ -24,13 +24,32 @@ Instância descartável (workdir/project_id e registro de preflight):
 - F56.1 antes do start: DB/Auth/Kong `running, healthy`; PostgREST `running`; volume `supabase_db_vendeo-f561-isolated` presente; rede `supabase_network_vendeo-f561-isolated` presente
 - Prova de conteúdo F56.1 (somente leitura): versão do par `b3fa7b83-a0aa-48db-8f02-9bcbdd32bbe8`; principal `gpt-image-2.5-sunburst / medium`; fallback `gpt-image-2 / medium`; 4 auditorias de `image_model_pair_config_update`; 0 diagnósticos
 - Backup lógico pré-mudança F56.1 (fora do repositório): `G:\F56.1-Docker-Move-Backup-20261007\f561-postgres-pre-move.dump`; SHA-256 `9FC88FF7A76927EA1E6034E3B05E775DC7296230450B42A44F2FC0010F024AF2`; `pg_restore --list` exit 0; manter intacto até comparação pós-mudança
-- F56.2a antes do start: nenhum serviço ativo, nenhum volume/rede; containers parados existentes `supabase_inbucket_vendeo-f562a-isolated` e `supabase_vector_vendeo-f562a-isolated` preservados, não remover
-- Comando executado uma única vez: `supabase start --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --exclude mailpit`
-- start_timestamp: `2026-10-07` (horário local; tentativa única)
-- start_invocations: `1`
-- start_exit_code: `nonzero` (o shell informou falha, mas não expôs o código numérico)
-- mailpit_exclusion_only: `true`
-- Post-start gate: `blocked`; sem API loopback/status aprovado e sem serviços F56.2a ativos após a tentativa
-- Erro: `failed to create docker container: Conflict. The container name "/supabase_vector_vendeo-f562a-isolated" is already in use by container "5d0330b2982ae7f8be3e054db13ad4ff06024c1b2eedae6e7111f4616b57289a". You have to remove (or rename) that container to be able to reuse that name.` Nenhum container foi removido manualmente; nenhuma segunda tentativa será feita.
+- F56.2a antes do primeiro start: nenhum serviço ativo, nenhum volume/rede; containers parados `supabase_inbucket_vendeo-f562a-isolated` e `supabase_vector_vendeo-f562a-isolated` preservados, não remover
+- initial_start_command: `supabase start --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --exclude mailpit`
+- Tentativa 1: initial command acima; `start_invocations: 1`; `initial_start_exit_code: nonzero_numeric_unavailable` (a ferramenta informou falha, mas não expôs código numérico); mailpit-only; poststart gate: `blocked`
+- Erro da tentativa 1: `failed to create docker container: Conflict. The container name "/supabase_vector_vendeo-f562a-isolated" is already in use by container "5d0330b2982ae7f8be3e054db13ad4ff06024c1b2eedae6e7111f4616b57289a". You have to remove (or rename) that container to be able to reuse that name.`
+- Inspeção read-only subsequente: `docker inspect 5d0330b2982ae7f8be3e054db13ad4ff06024c1b2eedae6e7111f4616b57289a` retornou `no such object`; `docker ps -a` não lista containers F56.2a. O container conflitante desapareceu sem intervenção nesta recuperação; nenhuma operação `docker rename` ocorreu. Nenhum container foi removido manualmente pelo executor.
+- Autorização de recuperação: instrução explícita do responsável em 2026-10-07; permite exatamente uma tentativa adicional, somente após confirmar o ID conflitante ausente e sem rename. Não é retry automático nem autorização para tentativa em cascata.
+- recovery_attempt_number: `2`
+- recovery_start_invocations: `0` (pendente da nova execução autorizada)
+- recovery_authorized_at: `2026-10-07T13:43:52-03:00`
+- recovery_attempt_limit: `1`
+- recovery_authorization: explícita no pedido do responsável em 2026-10-07; tentativa adicional somente para resolver o conflito já desaparecido, sem retry automático
+- recovery_start_command: `supabase start --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --exclude mailpit`
+- conflicting_container_id: `5d0330b2982ae7f8be3e054db13ad4ff06024c1b2eedae6e7111f4616b57289a`
+- conflict_inspection_result: `docker inspect` retornou `no such object`; `docker ps -a` sem containers F56.2a
+- rename_performed: `false`
+- recovery_prestart_gate: `passed`
+- recovery_start_exit_code: `pending`
+- recovery_poststart_gate: `pending`
+- recovery_prestart_timestamp: `2026-10-07T14:06:15-03:00`
+- recovery_prestart_project_id: `vendeo-f562a-isolated`
+- recovery_configured_ports: `[56320, 56321, 56322, 56323, 56324, 56327, 56329]`; únicas, no intervalo e livres; sem conflito com F56.1
+- recovery_C_free: `19.11 GiB`
+- recovery_G_free: `48.71 GiB`
+- recovery_F56_1: DB/Auth/Kong `running, healthy`; PostgREST `running`; volume e rede presentes
+- recovery_conflict_id_absent: `true` (confirmed absent again with `docker ps -a --no-trunc` immediately before start)
+- recovery_F56_2a_before_start: nenhum container, volume ou rede; nenhum rename
+- recovery_backup_sha256_unchanged: `9FC88FF7A76927EA1E6034E3B05E775DC7296230450B42A44F2FC0010F024AF2`
 - Estado após a falha: C: `19.16 GiB` livres; G: `48.71 GiB` livres; F56.1 DB/Auth/Kong `running, healthy`, PostgREST `running`; volume e rede F56.1 presentes e inalterados
 - Backup pré-mudança permanece intacto em G:, SHA-256 ainda `9FC88FF7A76927EA1E6034E3B05E775DC7296230450B42A44F2FC0010F024AF2`
