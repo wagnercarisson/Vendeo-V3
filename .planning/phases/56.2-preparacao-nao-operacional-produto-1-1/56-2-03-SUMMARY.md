@@ -47,6 +47,7 @@ patterns-established:
 requirements-completed: [REQ-56.2a-10, REQ-56.2a-11, REQ-56.2a-12, REQ-56.2a-13, REQ-56.2a-14]
 
 # Metrics
+duration: 39m
 completed: 2026-10-07
 ---
 
@@ -56,9 +57,9 @@ completed: 2026-10-07
 
 ## Performance
 
-- **Duration:** ~30 minutes
+- **Duration:** ~39 minutes
 - **Started:** 2026-10-07T15:03:20-03:00
-- **Completed:** 2026-10-07T15:33:37-03:00
+- **Completed:** 2026-10-07T15:42:04-03:00
 - **Tasks:** 4/4 (Task 1a, 1b, 2, and 3)
 - **Files modified:** 12 created files
 
@@ -68,7 +69,7 @@ completed: 2026-10-07
 - Copied Product v4, all three intent policies, 1:1 format, and general integrity v48.2.5. Added the baseline `peca-unica` and `tema=nenhum` policy identities/versions in the product-owned registry.
 - Implemented a pure deterministic composer with canonical blocks and returned `composerVersion`, `promptBaseVersion`, and all `policyVersions`.
 - Equivalence tests compare exact text, block objects, and policy-version objects for all **9 combinations** of three intentions × three background directions, including product name with numeral/unit and two references.
-- Validation: `npm run typecheck` exit 0; `npm run lint` exit 0; focused Vitest **14/14 passed**; runtime source search found no `lab/bench` imports; `git diff --name-only 335bfb70..HEAD -- src/lib/lab/bench/**` was empty.
+- Validation: `npm run typecheck`, `npm run lint`, and `npm run build` exit 0; focused Vitest **14/14 passed**; runtime source search found no `lab/bench` imports; `git diff --name-only 335bfb70..HEAD -- src/lib/lab/bench/**` was empty.
 - No DB operations, migrations, provider calls, activation, or production wiring occurred.
 
 ## Task Commits
