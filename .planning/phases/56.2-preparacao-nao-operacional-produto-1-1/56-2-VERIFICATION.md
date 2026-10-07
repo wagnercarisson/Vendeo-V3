@@ -1,6 +1,6 @@
 # F56.2a — Verificação local (fechamento aceito; anomalia de infraestrutura registrada)
 
-> Registro do Plano 06. O checkpoint humano foi aprovado e o responsável aceitou o fechamento LOCAL da F56.2a com base nas pós-condições confirmadas somente por leitura. O reset final retornou exit 1/HTTP 502 de causa desconhecida; este resultado não é sucesso. A anomalia de infraestrutura permanece pendente de investigação antes de depender do procedimento na F56.2b1.
+> Registro do Plano 06. O checkpoint humano foi aprovado e o responsável aceitou o fechamento local da F56.2a com base nas pós-condições confirmadas somente por leitura. A change OpenSpec foi depois verificada, sincronizada e arquivada. O reset final retornou exit 1/HTTP 502 de causa desconhecida; este resultado não é sucesso. A anomalia de infraestrutura permanece pendente de investigação antes de depender do procedimento na F56.2b1.
 
 ## Identidade e preparação de migrations
 

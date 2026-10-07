@@ -11,7 +11,7 @@ requires:
 provides:
   - isolated integration evidence and human-approved local UAT
   - locally accepted F56.2a close with read-only post-reset evidence and an explicitly retained reset anomaly
-  - reconciled Plan 06 and OpenSpec 31/31 tracking without OpenSpec lifecycle completion
+  - formally verified, synced, and archived F56.2a with OpenSpec 31/31 tracking
 affects: [56.2b1]
 
 # Tech tracking
@@ -34,7 +34,7 @@ key-files:
 key-decisions:
   - "The responsible owner accepted the read-only confirmed postconditions for LOCAL closure; this does not change or mask the final reset exit 1 / HTTP 502."
   - "The upstream cause of the final reset failure is unknown. Do not retry; investigate the infrastructure anomaly before relying on this procedure in F56.2b1."
-  - "OpenSpec tasks are reconciled 31/31, but the phase remains not formally verified, synced, or archived."
+  - "F56.2a OpenSpec lifecycle completed: verified, synced, archived; 5 main specs synchronized (2 updated, 3 created)."
 
 requirements-completed: [REQ-56.2a-04]
 
@@ -47,7 +47,7 @@ openspec-tasks: 31/31
 
 # Plan 06: Isolated integration, local UAT, and documentary close
 
-**F56.2a is closed locally by explicit owner acceptance of the postconditions confirmed by read-only inspection. The final reset's exit 1 / HTTP 502 remains an unresolved infrastructure anomaly, not a successful reset.**
+**F56.2a is formally verified, synced, and archived after the owner-approved local close. The final reset's exit 1 / HTTP 502 remains an unresolved infrastructure anomaly, not a successful reset.**
 
 ## Accomplishments
 
@@ -71,11 +71,11 @@ openspec-tasks: 31/31
 ## Explicit limitation and current status
 
 - The final reset's **exit 1 / HTTP 502 remains a failure of the command with unknown cause**. The later read-only observations confirm the expected database postconditions; they do not convert the reset into success.
-- Local F56.2a closure is accepted and tracking is reconciled. This is **not** formal phase verification and does not mean OpenSpec was verified, synced, or archived.
+- Local F56.2a closure was accepted and tracking reconciled; OpenSpec was subsequently verified, synced, and archived. The 502 warning remains unresolved and is not treated as a successful reset.
 - Investigate the 502 before depending on the reset procedure in F56.2b1. No further database command or reset is authorized by this summary.
 
 ## Next phase readiness
 
 - F56.2a is locally closed; keep the flow inactive.
 - F56.2b1 remains gated on investigation of the unknown infrastructure cause of the final reset HTTP 502.
-- No formal verify, sync, archive, activation, provider call, remote database operation, `db push`, or code push was performed as part of this documentary close.
+- OpenSpec `/opsx-verify`, `/opsx-sync`, and `/opsx-archive` completed for F56.2a. No activation, provider call, remote database operation, `db push`, or push was performed as part of this closeout.

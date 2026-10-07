@@ -2,7 +2,7 @@
 
 **Status operacional:** a **F56.1 — Contrato produtivo, modelos e fallback** está com **COBERTURA CONCLUÍDA** (11/11 planos GSD; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; verificada/sincronizada/arquivada em 2026-10-06 em `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`), com os 27 REQ-IDs mapeados dos 8 specs OpenSpec da change agora arquivada.
 
-**Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs ativos (abaixo). A **F56.2a — Preparação não operacional do Produto 1:1** foi registrada no ROADMAP em 2026-10-06 (recorte da F56.2 reconciliada) e possui 19 REQ-IDs ativos (abaixo); depende da F56.1 e é pré-requisito da F56.2b1.
+**Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs; a **F56.2a — Preparação não operacional do Produto 1:1** foi verificada, sincronizada e arquivada em 2026-10-07 com cobertura concluída (19 REQ-IDs; 6/6 planos, 31/31 tasks; UAT 4 pass + 1 N/A; segurança 20/20). F56.2b1 e F56.2b2 permanecem ativas/futuras, sem cobertura concluída atribuída nesta atualização; F56.2b1 mantém como pré-requisito investigar o warning HTTP 502 da F56.2a.
 
 Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, tabelas e estados legados foram preservados integralmente em [`REQUIREMENTS-ARCHIVE.md`](./REQUIREMENTS-ARCHIVE.md) e não devem ser interpretados como pendências atuais.
 
@@ -18,7 +18,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | F50: demonstração gratuita e validade dos créditos | `.planning/phases/50-demonstracao-gratuita-validade-creditos/`, `50-VERIFICATION.md`, summaries e `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/` |
 | F50.1: formalização legal e ativação | Futura; fonte de planejamento será um novo plano/OpenSpec quando a fase for formalmente constituída |
 | F56.1: contrato produtivo, modelos e fallback | Ativos abaixo; fonte `openspec/changes/fase-56-1-contrato-produtivo-modelos-fallback/` |
-| F56.2a: preparação não operacional do Produto 1:1 | Ativos abaixo; fonte `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` |
+| F56.2a: preparação não operacional do Produto 1:1 | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/` |
 | Monetização pública / Stripe | Iniciativa diferida para v1.7+, fora da numeração e sem requisitos ativos |
 
 ## F56.1 — Cobertura concluída (Contrato produtivo, modelos e fallback)
@@ -55,9 +55,9 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | REQ-56.1-26 | Cobertura de pricing ciente de qualidade para os pares elegíveis | ai-model-pricing |
 | REQ-56.1-27 | Envelope de telemetria registra o par modelo–qualidade | ai-invocation-gateway |
 
-## F56.2a — Requisitos ativos (Preparação não operacional do Produto 1:1)
+## F56.2a — Cobertura concluída (Preparação não operacional do Produto 1:1)
 
-**Fonte (ativa):** `openspec/changes/fase-56-2a-preparacao-nao-operacional-produto-1-1/` (5 specs: 3 novas + 2 deltas). **Status:** PLANEJAMENTO — recorte da F56.2 reconciliada (`RECONCILIATION.md`), dependente da F56.1 e pré-requisito da F56.2b1. Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura. Fatia **inativa**: nenhuma rota/provider/crédito/entrega/download.
+**Fonte arquivada:** `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/` (5 specs principais sincronizadas: 2 atualizadas + 3 criadas). **Status:** COBERTURA CONCLUÍDA — 6/6 planos e summaries; 31/31 tasks OpenSpec; UAT 4 pass + 1 N/A; segurança 20/20 ameaças fechadas, 0 abertas; change verificada, sincronizada e arquivada em 2026-10-07. A anomalia do reset final (exit 1 / HTTP 502, causa desconhecida) permanece warning operacional, não sucesso de reset, e deve ser investigada antes de depender do procedimento na F56.2b1. F56.2a permaneceu inativa: sem rota/provider/crédito/entrega/download real.
 
 | REQ-ID | Requirement (OpenSpec) | Spec |
 |--------|------------------------|------|
@@ -83,7 +83,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 
 ## Regras Operacionais
 
-- Os REQ-IDs ativos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06) e os da **F56.2a** (`REQ-56.2a-01`..`REQ-56.2a-19`, em planejamento desde 2026-10-06). Nenhum REQ-ID ativo da F56.2b1/F56.2b2/F56.3 (não planejadas).
+- Os REQ-IDs cobertos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06) e os da F56.2a (`REQ-56.2a-01`..`REQ-56.2a-19`, cobertura concluída em 2026-10-07). A F56.2b1 e a F56.2b2 permanecem mudanças ativas/futuras, com requisitos próprios ainda não marcados como cobertura concluída; F56.3 permanece futura.
 - Novos REQ-IDs só devem ser adicionados quando uma nova fase for formalmente planejada, com fonte em OpenSpec e plano aprovado.
 - Para uma fase concluída, consultar o OpenSpec arquivado, `VERIFICATION.md`, `SUMMARY.md`, contexto e planos da fase.
 - Em caso de divergência histórica, OpenSpec arquivado + `VERIFICATION.md`/`SUMMARY.md` da fase prevalecem sobre este archive e sobre registros antigos.

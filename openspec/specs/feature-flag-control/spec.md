@@ -1,6 +1,7 @@
 # Feature Flag Control
 
 > Synced from `fase-43-revisao-brief-pre-geracao` (ADDED), then `fase-37-1-approval-gate-candidata-unica` (ADDED — flag `campaign_approval_enabled`, D1).
+> Extended by `fase-56-2a-preparacao-nao-operacional-produto-1-1` with inactive Product 1:1 activation keys.
 
 ## Purpose
 
@@ -8,9 +9,33 @@ Infraestrutura de flags administrativas na tabela **`feature_flags`** (NÃO env 
 
 ## Requirements
 
-### Requirement: Flag campaign_approval_enabled
+### Requirement: Product 1:1 activation keys default fail-closed
 
-> Added by `fase-37-1-approval-gate-candidata-unica` (D1, padrão F43/QCW).
+O sistema SHALL registrar em `feature_flags` as duas chaves de ativação do novo fluxo Produto 1:1 — lojas com `is_test_store = true` e todas as lojas — com default **desligado** e leitura server-side.
+
+#### Scenario: Default desligado mantém o legado
+
+- **WHEN** as chaves nunca foram configuradas
+- **THEN** o novo fluxo permanece desligado
+- **AND** o fluxo legado é usado
+
+#### Scenario: Falha de leitura mantém o legado
+
+- **WHEN** a leitura da chave falha
+- **THEN** o fluxo legado é mantido
+- **AND** o novo fluxo não é ativado por omissão
+
+### Requirement: Product 1:1 activation key changes are auditable through the existing RPC
+
+The system MUST allow Product 1:1 activation keys to be changed through the existing audited administrative RPC (`admin_update_feature_flag`), recording the actor, reason, and `operation_id` without creating parallel infrastructure.
+
+#### Scenario: Alteração registrada em auditoria
+
+- **WHEN** um admin altera uma chave de ativação com motivo
+- **THEN** a alteração é registrada em auditoria com autor e timestamp
+- **AND** a leitura seguinte observa o novo estado sem deploy
+
+### Requirement: Flag campaign_approval_enabled
 
 O sistema SHALL adicionar a flag **`campaign_approval_enabled`** à infraestrutura `feature_flags` (F37 D1, padrão F43/QCW):
 

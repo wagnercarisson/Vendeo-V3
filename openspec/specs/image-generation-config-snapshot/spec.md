@@ -1,12 +1,72 @@
 # Image Generation Config Snapshot
 
 > Synced from `fase-56-1-contrato-produtivo-modelos-fallback` (ADDED).
+> Extended by `fase-56-2a-preparacao-nao-operacional-produto-1-1` with append-only operation history and snapshot reuse contracts.
 
 ## Purpose
 
 Contrato de snapshot **imutável** da configuração de geração (par principal/fallback, versão e origem) registrado por operação, garantindo reprodutibilidade e impedindo que alterações posteriores no admin reescrevam o histórico de campanhas e correções.
 
 ## Requirements
+
+### Requirement: Estrutura append-only de operações/tentativas vinculada à campanha e ao snapshot original
+
+O sistema SHALL manter uma relação **append-only** própria para operações/tentativas do novo fluxo, vinculada à **campanha** e ao **snapshot original** da configuração. O snapshot referenciado SHALL pertencer à mesma campanha informada na operação. Cada operação SHALL acrescentar registros sem reescrever os anteriores. `service_role` SHALL ter somente SELECT/INSERT, e qualquer UPDATE/DELETE SHALL ser rejeitado.
+
+#### Scenario: Operação registrada append-only
+
+- **WHEN** uma operação/tentativa é registrada
+- **THEN** ela é acrescentada à relação
+- **AND** os registros anteriores permanecem inalterados
+
+#### Scenario: Vínculo com o snapshot original
+
+- **WHEN** uma operação é registrada
+- **THEN** ela referencia a campanha e o snapshot original
+- **AND** o snapshot original pertence à mesma campanha
+- **AND** a correlação com o par modelo–qualidade é preservada
+
+#### Scenario: Rejeitar snapshot de outra campanha
+
+- **GIVEN** a campanha A e o snapshot original existente da campanha B
+- **WHEN** uma tentativa associa a campanha A ao snapshot da campanha B
+- **THEN** a inserção é rejeitada com `image_generation_operations_snapshot_campaign_mismatch`
+- **AND** nenhum registro de operação é criado
+- **AND** os FKs individuais continuam rejeitando separadamente IDs de campanha ou snapshot inexistentes
+
+#### Scenario: Rejeitar alteração e remoção de tentativas existentes
+
+- **GIVEN** uma operação/tentativa já registrada
+- **WHEN** qualquer papel tenta atualizá-la ou removê-la
+- **THEN** `service_role` não possui privilégio UPDATE/DELETE
+- **AND** uma tentativa SQL direta de UPDATE/DELETE é rejeitada com `image_generation_operations_immutable`
+- **AND** a linha histórica permanece inalterada
+
+### Requirement: Contrato de reuso do snapshot original
+
+O sistema SHALL preservar o contrato pelo qual nova geração/correção da **mesma** campanha reutiliza o snapshot **original**, independentemente da configuração vigente. (Contrato arquitetural; a execução da correção é da F56.3.)
+
+#### Scenario: Correção reutiliza o snapshot original
+
+- **WHEN** uma correção da mesma campanha é considerada
+- **THEN** o contrato resolve o snapshot original
+- **AND** não adota a configuração vigente
+
+### Requirement: Não sobrescrever o run/trace histórico
+
+A estrutura SHALL NOT sobrescrever o `run_id`/`trace_id` histórico do snapshot único; a correlação de cada geração/tentativa SHALL ser preservada na relação append-only.
+
+#### Scenario: Gerações sucessivas preservam a referência histórica
+
+- **WHEN** a mesma campanha passa por mais de uma geração
+- **THEN** cada geração/tentativa é registrada append-only
+- **AND** a referência histórica anterior não é sobrescrita
+
+#### Scenario: Correlação por tentativa permanece reconstruível
+
+- **WHEN** as tentativas de uma campanha são inspecionadas
+- **THEN** é possível reconstruir o par modelo–qualidade e o alvo de cada tentativa
+- **AND** a correlação usa os identificadores de operação preservados
 
 ### Requirement: Snapshot imutável da configuração por campanha
 
