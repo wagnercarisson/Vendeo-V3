@@ -21,14 +21,22 @@ export async function resolveProductOneToOneFlow(
   service: FeatureFlagService = new FeatureFlagService(),
 ): Promise<ProductOneToOneFlow> {
   try {
-    const [testStoresEnabled, allStoresEnabled] = await Promise.all([
-      service.isProductOneToOneTestStoresEnabled(),
-      service.isProductOneToOneAllStoresEnabled(),
-    ]);
+    const flags = await service.readProductOneToOneFlags();
+
+    if (
+      flags.testStoresStatus !== "valid" ||
+      flags.allStoresStatus !== "valid"
+    ) {
+      return decideProductFlow({
+        testStoresEnabled: false,
+        allStoresEnabled: false,
+        isTestStore: input.isTestStore,
+      });
+    }
 
     return decideProductFlow({
-      testStoresEnabled,
-      allStoresEnabled,
+      testStoresEnabled: flags.testStoresEnabled,
+      allStoresEnabled: flags.allStoresEnabled,
       isTestStore: input.isTestStore,
     });
   } catch {

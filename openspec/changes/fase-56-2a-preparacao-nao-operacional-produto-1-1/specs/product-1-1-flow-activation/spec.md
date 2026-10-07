@@ -36,6 +36,20 @@ A função de decisão SHALL ser server-side e testável isoladamente. Chave aus
 - **THEN** a decisão resulta no fluxo legado
 - **AND** o novo fluxo não é ativado por omissão
 
+#### Scenario: Chave geral true com falha na chave de lojas de teste
+
+- **WHEN** a leitura de `product_1_1_test_stores_enabled` falha ou a chave está ausente/tem valor inválido
+- **AND** `product_1_1_all_stores_enabled` está `true`
+- **THEN** a decisão resulta no fluxo legado
+- **AND** nenhuma chave parcialmente lida ativa o novo fluxo
+
+#### Scenario: Chave de lojas de teste true com falha na chave geral
+
+- **WHEN** a leitura de `product_1_1_all_stores_enabled` falha ou a chave está ausente/tem valor inválido
+- **AND** `product_1_1_test_stores_enabled` está `true`
+- **THEN** a decisão resulta no fluxo legado
+- **AND** nenhuma chave parcialmente lida ativa o novo fluxo
+
 #### Scenario: Cliente não decide o fluxo
 
 - **WHEN** a decisão é calculada

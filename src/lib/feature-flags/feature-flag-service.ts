@@ -17,6 +17,19 @@ export const PRODUCT_1_1_TEST_STORES_ENABLED_KEY =
 export const PRODUCT_1_1_ALL_STORES_ENABLED_KEY =
   "product_1_1_all_stores_enabled";
 
+export type ProductOneToOneFlagReadStatus =
+  | "valid"
+  | "error"
+  | "missing"
+  | "invalid";
+
+export interface ProductOneToOneFlagsRead {
+  readonly testStoresEnabled: boolean;
+  readonly allStoresEnabled: boolean;
+  readonly testStoresStatus: ProductOneToOneFlagReadStatus;
+  readonly allStoresStatus: ProductOneToOneFlagReadStatus;
+}
+
 // Ordem canônica de exibição na tela "Controles operacionais".
 export const ALL_FEATURE_FLAG_KEYS = [
   FORCE_BRIEF_VISION_CHECK_KEY,
@@ -172,6 +185,59 @@ export class FeatureFlagService {
   /** F56.2a: chave global de preparação, fail-closed e sem envOverride. */
   isProductOneToOneAllStoresEnabled(): Promise<boolean> {
     return this.readFlag(PRODUCT_1_1_ALL_STORES_ENABLED_KEY, false);
+  }
+
+  /**
+   * Reads both new-flow flags while preserving the distinction between a valid
+   * false value and an unavailable/malformed row. The resolver must fail closed
+   * for the entire pair if either status is not `valid`.
+   */
+  async readProductOneToOneFlags(): Promise<ProductOneToOneFlagsRead> {
+    const [testStores, allStores] = await Promise.all([
+      this.readProductOneToOneFlagState(PRODUCT_1_1_TEST_STORES_ENABLED_KEY),
+      this.readProductOneToOneFlagState(PRODUCT_1_1_ALL_STORES_ENABLED_KEY),
+    ]);
+
+    return Object.freeze({
+      testStoresEnabled: testStores.enabled,
+      allStoresEnabled: allStores.enabled,
+      testStoresStatus: testStores.status,
+      allStoresStatus: allStores.status,
+    });
+  }
+
+  private async readProductOneToOneFlagState(
+    key: string,
+  ): Promise<{ enabled: boolean; status: ProductOneToOneFlagReadStatus }> {
+    try {
+      const { data, error } = await this.client
+        .from("feature_flags")
+        .select("enabled")
+        .eq("key", key)
+        .maybeSingle();
+
+      if (error) {
+        console.warn(
+          `[feature-flag] ${key} read error — failing closed: ${error.message}`,
+        );
+        return { enabled: false, status: "error" };
+      }
+      if (data === null) {
+        console.warn(`[feature-flag] ${key} not found — failing closed`);
+        return { enabled: false, status: "missing" };
+      }
+      if (typeof data.enabled !== "boolean") {
+        console.warn(`[feature-flag] ${key} invalid enabled value — failing closed`);
+        return { enabled: false, status: "invalid" };
+      }
+
+      return { enabled: data.enabled, status: "valid" };
+    } catch (err) {
+      console.warn(
+        `[feature-flag] ${key} read exception — failing closed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return { enabled: false, status: "error" };
+    }
   }
 }
 
