@@ -63,3 +63,14 @@ Instância descartável (workdir/project_id e registro de preflight):
 - recovery_SERVICE_ROLE_KEY: disponível localmente; valor não persistido
 - Estado após a falha: C: `19.16 GiB` livres; G: `48.71 GiB` livres; F56.1 DB/Auth/Kong `running, healthy`, PostgREST `running`; volume e rede F56.1 presentes e inalterados
 - Backup pré-mudança permanece intacto em G:, SHA-256 ainda `9FC88FF7A76927EA1E6034E3B05E775DC7296230450B42A44F2FC0010F024AF2`
+
+## Plano 04 — preflight do `db lint` (2026-10-07)
+
+- BASE_SHA `335bfb70`: commit existente e ancestor de HEAD.
+- Preflight imediatamente anterior ao comando: **PASS**. O `project_id` foi confirmado exatamente como `vendeo-f562a-isolated`; API loopback `http://127.0.0.1:56321`; portas configuradas `[56320, 56321, 56322, 56323, 56324, 56327, 56329]`, únicas e exclusivas, sem conflito de mapeamento/listener.
+- F56.2a: DB/Auth/Kong `running, healthy`; PostgREST `running`; volume e rede dedicados presentes. Mailpit excluído/inativo; nenhum Vendeo_V3 ativo.
+- F56.1: DB/Auth/Kong `running, healthy`; PostgREST `running`; volume e rede F56.1 presentes. Nenhum reset/operação foi dirigido à F56.1.
+- Status CLI foi capturado em memória e filtrado; somente API URL e disponibilidade booleana das chaves foram derivadas/registradas. Nenhum valor de credencial foi emitido.
+- Anomalia Vector: observado `Restarting`, count `122` na primeira reavaliação pós-autorização e `128` no preflight imediatamente antes do `db lint` (após registro histórico de `13`). Nenhum restart, remoção, rename ou outra intervenção foi tentada.
+- Interpretação aplicada para este plano e orientação ao Plano 06: Vector saudável **não** é critério obrigatório; os serviços exigidos são DB, PostgREST, Auth e Kong F56.2a, além dos gates de identidade/isolamento e preservação F56.1. Vector fica registrado como anomalia não bloqueante enquanto não houver evidência de impacto em serviço exigido. Repetir o preflight antes de cada comando DB; parar se algum serviço exigido falhar ou se o próprio comando falhar.
+- Comando executado após preflight aprovado: `supabase db lint --workdir "C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f562a-isolated" --local --fail-on error`; exit `0`; `No schema errors found`. Nenhum `db reset`/`db push` executado.
