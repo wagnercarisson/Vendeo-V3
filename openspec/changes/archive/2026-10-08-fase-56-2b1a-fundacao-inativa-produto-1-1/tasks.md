@@ -31,7 +31,7 @@
 - [x] 4.2 Implementar reserva temporária e criação do estado na mesma transação Postgres; falha reverte ambas — RPC `product_1_1_reserve_credit_operation` (insert-first + `reserve_credit` + `credit_reservation_missing_tx`)
 - [x] 4.3 Demonstrar `reserved` reduz saldo disponível temporariamente; `delivered` finaliza consumo; `refunded` restaura saldo — provas Postgres
 - [x] 4.4 Implementar idempotência/concorrência, reconciliação excepcional e bloqueio de estorno após `delivered` — provas Postgres (concorrência equivalente/distinta; `delivered_not_refundable`); reconciliação **adia** a resolução
-- [x] 4.5 **Bloqueada até gate 1.3/1.4 aprovado:** executar testes reais isolados: rollback, interrupção após reserva/upload, concorrência mesma/distinta identidade e worker × reconciliador — Plano 05, Postgres real **17/17**
+- [x] 4.5 **Bloqueada até gate 1.3/1.4 aprovado:** executar testes reais isolados: rollback, interrupção após reserva/upload, concorrência mesma/distinta identidade e worker × reconciliador — Plano 05, Postgres real **20/20** (final; 17/17 era snapshot histórico)
 - [x] 4.6 Consultar Postgres para provar ledger/saldo coerentes e ausência de dedução órfã após falha transacional — `56.2.1-05-TRANSACTION-EVIDENCE.md` §4/§7
 - [x] 4.7 Rodar typecheck/lint/build e testes locais sem provider; registrar ausência de operação remota/paga — `56.2.1-VERIFICATION.md` §1
 

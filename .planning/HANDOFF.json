@@ -1,65 +1,65 @@
 {
   "version": "1.0",
-  "root_snapshot_note": "Historical F56.1 snapshot fields: root phase/phase_name/phase_dir/status/phase_status/plan/openspec_source/openspec_archive, GSD/planning review blocks, resolved_plans/checkpoints/current_phase_result, and the root artifacts list. Current F56.2a state is in current_phase and the closeout fields at the bottom.",
+  "root_snapshot_note": "Historical F56.1 snapshot fields: root phase/phase_name/phase_dir/status/phase_status/plan/openspec_source/openspec_archive, GSD/planning review blocks, resolved_plans/checkpoints/current_phase_result, and the root artifacts list. Current F56.2b1a state is in current_phase and the closeout fields at the bottom.",
   "current_phase": {
-    "phase": "56.2",
-    "functional_label": "F56.2a — Preparação não operacional do Produto 1:1",
-    "updated_at": "2026-10-07",
+    "phase": "56.2.1",
+    "functional_label": "F56.2b1a — Fundação inativa do Produto 1:1",
+    "updated_at": "2026-10-08",
     "status": "complete_verified_synced_archived",
     "plan_count": "6/6",
     "summary_count": "6/6",
     "plan_summary_inventory": [
-      "56-2-01-PLAN.md ↔ 56-2-01-SUMMARY.md",
-      "56-2-02-PLAN.md ↔ 56-2-02-SUMMARY.md",
-      "56-2-03-PLAN.md ↔ 56-2-03-SUMMARY.md",
-      "56-2-04-PLAN.md ↔ 56-2-04-SUMMARY.md",
-      "56-2-05-PLAN.md ↔ 56-2-05-SUMMARY.md",
-      "56-2-06-PLAN.md ↔ 56-2-06-SUMMARY.md"
+      "56.2.1-01-PLAN.md ↔ 56.2.1-01-SUMMARY.md",
+      "56.2.1-02-PLAN.md ↔ 56.2.1-02-SUMMARY.md",
+      "56.2.1-03-PLAN.md ↔ 56.2.1-03-SUMMARY.md",
+      "56.2.1-04-PLAN.md ↔ 56.2.1-04-SUMMARY.md",
+      "56.2.1-05-PLAN.md ↔ 56.2.1-05-SUMMARY.md",
+      "56.2.1-06-PLAN.md ↔ 56.2.1-06-SUMMARY.md"
     ],
-    "openspec_tasks": "31/31",
-    "uat": "4_pass_1_not_applicable",
-    "security": "20_of_20_closed_0_open",
-    "human_checkpoint": "approved_on_2026-10-07",
-    "local_close_accepted": true,
+    "openspec_tasks": "23/23 (task 1.4 = N/A — gate aprovado)",
+    "uat": "human_approved_and_reconfirmed",
+    "security": "14_of_14_closed_0_open",
+    "human_checkpoint": "approved_and_reconfirmed_2026-10-08",
+    "final_snapshot": {
+      "contracts": "152/152",
+      "postgres": "20/20",
+      "gate": "12/12",
+      "independent_scoped_check": "128/128 (src/lib/product-1-1 + tests/database; escopo distinto, identificado separadamente)"
+    },
     "documentary_gates": {
       "openspec_validate_strict": "passed",
       "git_diff_check": "passed",
       "json_parse": "passed",
       "plan_summary_inventory": "6/6"
     },
-    "final_reset": {
-      "exit_code": 1,
-      "http_status": 502,
-      "cause": "unknown",
-      "treated_as_success": false,
-      "repeated": false,
-      "postconditions": "Confirmed later by read-only query: migrations present; feature flags false; registered fixtures absent; expected schema/RLS/triggers/grants present."
-    },
-    "infrastructure_followup": "Investigate the unknown HTTP 502 cause before relying on the reset procedure in F56.2b1.",
     "openspec_lifecycle": {
       "verified": true,
       "synced": true,
       "archived": true,
-      "archive_path": "openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1",
+      "archive_path": "openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1",
       "synced_specs": [
-        "feature-flag-control (updated)",
-        "image-generation-config-snapshot (updated)",
-        "product-1-1-flow-activation (created)",
-        "product-1-1-intent-background-selection (created)",
-        "product-1-1-prompt-composition (created)"
+        "product-1-1-flow-activation (updated: 2 requirements adicionados)",
+        "product-1-1-campaign-credit-billing (created: 3 requirements)"
       ]
     },
+    "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation",
     "artifacts": [
-      ".planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56-2-06-PLAN.md",
-      ".planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56-2-06-SUMMARY.md",
-      ".planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56-2-VERIFICATION.md",
-      ".planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56.2-UAT.md",
+      ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-VERIFICATION.md",
+      ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-UAT.md",
+      ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-06-SUMMARY.md",
       ".planning/STATE.md",
       ".planning/ROADMAP.md",
       ".planning/HANDOFF.json",
-      "openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/tasks.md"
+      "openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1/tasks.md"
     ],
-    "next_action": "F56.2a verified, synced, and archived. Keep F56.2b1 gated on investigating the reset HTTP 502; F56.2b1 and F56.2b2 remain active/future. No push."
+    "previous_local_phase": {
+      "phase": "56.2a",
+      "status": "complete_verified_synced_archived",
+      "archive_path": "openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1",
+      "openspec_tasks": "31/31",
+      "final_reset": "exit_1_http_502_unknown_cause_not_success_not_repeated"
+    },
+    "next_action": "F56.2b1a verified, synced, and archived. Keep F56.2b1b gated on F56.2b1a closeout (done) and the F56.2a reset HTTP 502 investigation; F56.2b1b and F56.2b2 remain future. No push. This approval does not authorize activation, db push, provider, reset, or starting b1b/b2."
   },
   "timestamp": "2026-10-06T20:00:34.516Z",
   "phase": "56.1",
@@ -97,9 +97,9 @@
     "evidence_check": "GSD verify-work 10/10 PASS; UAT humano local aprovado na instancia isolada vendeo-f561-isolated; 55/55 tasks OpenSpec.",
     "next_action": "Nenhuma acao GSD pendente. Lifecycle OpenSpec concluido em 2026-10-06."
   },
-  "next_phase": "F56.2b1",
+  "next_phase": "F56.2b1b",
   "next_phase_started": false,
-  "next_phase_note": "F56.2a verificada/sincronizada/arquivada com 6/6 planos/summaries, OpenSpec 31/31, UAT 4 pass + 1 N/A e segurança 20/20; archive em openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1. Warning do reset final exit 1/HTTP 502 de causa desconhecida permanece: investigar antes de depender do procedimento na F56.2b1. F56.2b1/b2 continuam ativas/futuras. Provider e ativação permanecem futuros.",
+  "next_phase_note": "F56.2b1a concluída/verificada/sincronizada/arquivada em 2026-10-08 (6/6 planos/summaries, OpenSpec 23/23 com 1.4 N/A, UAT humano aprovado/reconfirmado, segurança 14/14, snapshot final contratos 152/152 / Postgres 20/20 / gate 12/12; verificação independente de escopo distinto 128/128). Archive em openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1. F56.2b1b integra formulário/geração/uso da operação atômica/download e depende do fechamento da b1a (feito) e permanece futura; F56.2b2 (copy recuperável e piloto) também futura. Warning do reset F56.2a exit 1/HTTP 502 de causa desconhecida permanece: investigar antes de depender do procedimento. Provider e ativação permanecem futuros.",
   "planning_review": {
     "phase": "56.1",
     "plans": ["56-1-01", "56-1-02", "56-1-03", "56-1-04", "56-1-05", "56-1-06", "56-1-07", "56-1-08", "56-1-09", "56-1-10", "56-1-11"],
@@ -282,9 +282,9 @@
     ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-GSD-UAT.md",
     "openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback"
   ],
-  "blockers": ["Warning operacional: reset final isolado F56.2a exit 1/HTTP 502, causa/upstream desconhecido. Não é sucesso; pós-condições foram confirmadas por SELECT e aceitas para fechamento. Investigar antes de depender do procedimento na F56.2b1."],
-  "human_actions_pending": ["Investigar a causa desconhecida do exit 1/HTTP 502 antes de depender do procedimento de reset na F56.2b1."],
+  "blockers": ["Warning operacional: reset final isolado F56.2a exit 1/HTTP 502, causa/upstream desconhecido. Não é sucesso; pós-condições foram confirmadas por SELECT e aceitas para fechamento. Investigar antes de depender do procedimento de reset em b1b/b2. Nenhum bloqueio para a b1a (já arquivada)."],
+  "human_actions_pending": ["Investigar a causa desconhecida do exit 1/HTTP 502 antes de depender do procedimento de reset em b1b/b2."],
   "uncommitted_files": [],
-  "next_action": "F56.2a verified/synced/archived and tracking reconciled. F56.2b1 and F56.2b2 remain active/future; investigate the F56.2a reset HTTP 502 before relying on the procedure in F56.2b1. No push.",
-  "context_notes": "F56.1 permanece como histórico concluído. F56.2a: 6/6 planos e summaries, OpenSpec 31/31, UAT 4 pass + 1 N/A, segurança 20/20 fechada, verificada/sincronizada/arquivada no archive 2026-10-07; cinco specs principais sincronizadas (2 atualizadas + 3 criadas). Plano 06: integração isolada 6/6, checkpoint UAT aprovado e gates documentais passados. Reset final retornou exit 1/HTTP 502 após listar migrations e iniciar Restarting containers; causa/upstream desconhecido, e exit code não deve ser apresentado como sucesso. Consulta somente leitura posterior confirmou migrations F56.2a, flags false, ausência de fixtures e relation/RLS/triggers/grants esperados; responsável aceitou as pós-condições para fechamento. Não repetir reset nem executar novo comando DB. Warning de infraestrutura pendente para investigação antes de depender do procedimento em F56.2b1. Vector teve docker_logs Network unreachable; nenhum restart/removal direto. UAT registrado como 4 pass + 1 N/A; segurança 20/20 fechada. F56.2b1/b2 permanecem ativas/futuras. Sem db push/provider/chamada paga/ativação."
+  "next_action": "F56.2b1a verified/synced/archived and tracking reconciled. F56.2b1b and F56.2b2 remain future; investigate the F56.2a reset HTTP 502 before relying on the procedure. No push. Approval does not authorize activation, db push, provider, reset, or starting b1b/b2.",
+  "context_notes": "F56.1 permanece como histórico concluído. F56.2a: 6/6 planos e summaries, OpenSpec 31/31, UAT 4 pass + 1 N/A, segurança 20/20, verificada/sincronizada/arquivada no archive 2026-10-07. F56.2b1a (GSD 56.2.1): 6/6 planos e summaries; OpenSpec 23/23 com task 1.4 N/A (gate APPROVED 12/12); UAT humano aprovado em 2026-10-08T21:00:22Z e reconfirmado; segurança 14/14 fechadas, 0 abertas; snapshot final contratos 152/152 / Postgres 20/20 / gate 12/12 (verificação independente de escopo distinto 128/128); lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído e change arquivada em openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1. Specs principais sincronizadas: product-1-1-flow-activation (2 requirements adicionados) e product-1-1-campaign-credit-billing (criado, 3 requirements). Stage off; flags false; nenhuma concessão habilitadora; sem db push/reset/provider/chamada paga/ativação. Reset final F56.2a retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não deve ser apresentado como sucesso; não repetir reset nem executar novo comando DB como parte deste fechamento. b1b/b2 não iniciados. Esta aprovação não autoriza ativação, db push, provider, reset nem início de b1b/b2."
 }
