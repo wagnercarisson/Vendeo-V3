@@ -1,6 +1,6 @@
 # Product 1:1 Copy Recovery
 
-> F56.2b2 — ação de nova tentativa sobre a entrega não bloqueante da F56.2b1.
+> F56.2b2 — ação de nova tentativa sobre a entrega não bloqueante da F56.2b1b.
 
 ## ADDED Requirements
 

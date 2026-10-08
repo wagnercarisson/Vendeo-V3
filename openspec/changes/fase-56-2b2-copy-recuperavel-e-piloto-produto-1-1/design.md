@@ -1,8 +1,8 @@
 ## Context
 
-Esta change é a **F56.2b2**, última fatia da F56.2. **Depende da F56.2b1** (núcleo ponta a ponta) e, transitivamente, da F56.2a. A F56.2b1 (proposta, 0 tasks) define a copy **não bloqueante** com o estado de falha persistido, mas **sem** ação de nova tentativa. A F56.2b2 adiciona a ação, conclui testes integrados/E2E e faz o piloto controlado.
+Esta change é a **F56.2b2**, última fatia da F56.2. **Depende da F56.2b1b** (núcleo ponta a ponta) e, transitivamente, da b1a e da F56.2a (concluída e arquivada em 2026-10-07). A b1b define a copy **não bloqueante** com o estado de falha persistido, mas **sem** ação de nova tentativa. A F56.2b2 adiciona a ação, conclui testes integrados/E2E e faz o piloto controlado.
 
-Estado relevante: a F56.2b1 define a máquina de estados durável de crédito (`reserved → art_uploaded → delivered | refunded`), artefato 1024×1024 e download condicionado a `delivered`. A copy já é desacoplada da entrega; falta a recuperação de copy pós-falha.
+Estado relevante: b1a define autorização e máquina atômica temporária de crédito (`reserved → art_uploaded → delivered | refunded`); b1b integra artefato 1024×1024 e download condicionado a `delivered`. A copy já é desacoplada da entrega; falta a recuperação de copy pós-falha.
 
 ## Goals / Non-Goals
 
@@ -22,7 +22,7 @@ Estado relevante: a F56.2b1 define a máquina de estados durável de crédito (`
 
 ### B2-D1 — Ação condicional ao estado pendente/falha
 
-A ação SHALL ser exposta **somente** quando a copy estiver pendente/falha (estado persistido pela F56.2b1).
+A ação SHALL ser exposta **somente** quando a copy estiver pendente/falha (estado persistido pela F56.2b1b).
 
 ### B2-D2 — Autenticação e ownership
 
@@ -38,11 +38,11 @@ A ação SHALL ser protegida contra cliques duplicados e repetição abusiva (ch
 
 ### B2-D5 — Testes integrados/E2E
 
-O fluxo completo (core da F56.2b1 + ação de copy) SHALL ser coberto por testes integrados/E2E locais, sem chamada paga por CI, incluindo sucesso da nova tentativa, falha persistente, ausência de ownership e clique duplicado.
+O fluxo completo (core da F56.2b1a + b1b + ação de copy) SHALL ser coberto por testes integrados/E2E locais, sem chamada paga por CI, incluindo sucesso da nova tentativa, falha persistente, ausência de ownership e clique duplicado.
 
 ### B2-D6 — Piloto controlado e gate de lojas de teste
 
-O piloto SHALL rodar **no ambiente isolado autorizado** (execução no Supabase descartável autorizado, **antes** de migration remota/deploy), em **loja de teste** (`is_test_store=true`), usando a **autorização temporária de piloto** definida na F56.2b1 (escopo restrito ao ambiente isolado e à geração paga aprovada), com **autorização humana específica** e **pricing completo**. A **habilitação de lojas de teste** para uso real só SHALL ser avaliada **após** a validação do piloto, com a autorização posterior de escopo de lojas de teste. Migration remota, deploy e abertura geral permanecem decisões posteriores e autorizadas separadamente.
+O piloto SHALL rodar **no ambiente isolado autorizado** (execução no Supabase descartável autorizado, **antes** de migration remota/deploy), em **loja de teste** (`is_test_store=true`), usando autorização independente temporária de estágio `piloto isolado` definida na b1a (escopo restrito ao ambiente isolado e à geração paga aprovada), com **autorização humana específica** e **pricing completo**. A progressão autorizada é `off → piloto isolado → lojas de teste → todas as lojas`; a API administrativa recusa avanços não autorizados e o roteador revalida autorização a cada decisão. As duas flags administrativas sozinhas nunca ativam o fluxo. A **habilitação de lojas de teste** para uso real só SHALL ser avaliada **após** validação documentada do piloto e concessão independente do estágio `lojas de teste`. Migration remota, deploy e abertura geral permanecem decisões posteriores e autorizadas separadamente.
 
 ### B2-D7 — F56.3 separada
 

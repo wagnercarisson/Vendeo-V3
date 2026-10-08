@@ -1,8 +1,8 @@
 ## Why
 
-A **F56.2b1** fecha o núcleo ponta a ponta (roteamento, geração, snapshot/histórico, crédito transacional, arte 1024×1024 e download), com a copy **não bloqueante** e seu estado de falha **persistido**, mas **sem** ação de nova tentativa. A **F56.2b2** acrescenta o botão **"Tentar gerar copy novamente"** com seus controles de segurança e custo, conclui os **testes integrados/E2E** e realiza o **piloto controlado**. Só após essa validação se avalia **habilitar lojas de teste**. A **F56.3** (aprovação/correção) continua separada.
+A **F56.2b1a** entrega a fundação inativa; a **F56.2b1b** fecha o núcleo ponta a ponta (roteamento, geração, snapshot/histórico, crédito transacional, arte 1024×1024 e download), com copy **não bloqueante** e falha persistida, mas **sem** retry. A **F56.2b2** acrescenta o botão **"Tentar gerar copy novamente"**, conclui os **testes integrados/E2E** e realiza o **piloto controlado**. Só após validação do piloto se avalia habilitar lojas de teste. A **F56.3** (aprovação/correção) continua separada.
 
-Ela **depende da F56.2b1**.
+Ela depende da **F56.2b1b — Núcleo entregável, ainda desligado** (e transitivamente da b1a e da F56.2a).
 
 ## What Changes
 
@@ -11,7 +11,7 @@ Ela **depende da F56.2b1**.
 - **Escopo restrito:** a ação tenta **somente os textos**, **não** altera/regera a imagem e **não** consome crédito adicional do lojista.
 - **Proteção e custo:** proteção contra cliques duplicados e repetição abusiva; registro do **custo interno** da chamada (sem convertê-lo em crédito do lojista).
 - **Testes integrados/E2E** do fluxo completo (core + ação de copy).
-- **Piloto controlado** em loja de teste, **no ambiente isolado autorizado** (antes de migration remota/deploy), com autorização humana específica e pricing completo; só então avaliar habilitar lojas de teste.
+- **Piloto controlado** em loja de teste, **no ambiente isolado autorizado** (antes de migration remota/deploy), com autorização humana específica e pricing completo, usando progressão autorizada `off → piloto isolado → lojas de teste → todas as lojas`; só depois validar o piloto pode ser concedida autorização independente para estágio de lojas de teste. As flags nunca bastam isoladamente.
 
 **BREAKING:** nenhuma.
 
@@ -19,7 +19,7 @@ Ela **depende da F56.2b1**.
 
 ### Modified Capabilities
 
-- `product-1-1-copy-recovery`: acrescenta a ação condicional de nova tentativa de copy, com autenticação/ownership, somente textos, sem novo crédito, proteção contra repetição e custo interno (depende da F56.2b1).
+- `product-1-1-copy-recovery`: acrescenta a ação condicional de nova tentativa de copy, com autenticação/ownership, somente textos, sem novo crédito, proteção contra repetição e custo interno (depende da F56.2b1b).
 - `product-1-1-flow-activation`: condiciona a habilitação de lojas de teste à validação do piloto controlado.
 
 ## Critérios de Aceite Verificáveis
@@ -34,7 +34,7 @@ Ela **depende da F56.2b1**.
 
 ## Dependência explícita
 
-Depende da **F56.2b1** (núcleo ponta a ponta) e, transitivamente, da **F56.2a**. Não duplica requisitos: a F56.2b1 especifica o core e o estado de falha da copy; a F56.2b2 especifica a ação de nova tentativa, os testes integrados e o piloto.
+Depende da **F56.2b1b** (núcleo ponta a ponta) e, transitivamente, da **F56.2b1a** e da **F56.2a**. A b1b especifica o core e o estado de falha da copy; a b2 especifica a ação de nova tentativa, os testes integrados e o piloto.
 
 ## Fronteira com a F56.3
 
@@ -54,7 +54,7 @@ Esta proposta **para para revisão humana antes de qualquer implementação**. N
 
 - **Banco (migration [BLOCKING])**: estado/contadores para proteção contra repetição da ação e associação do custo interno.
 - **Código novo**: rota/handler da ação de nova tentativa de copy com auth/ownership e anti-repetição; UI do botão condicional.
-- **Código alterado (aditivo)**: fluxo de copy do novo fluxo (F56.2b1) para suportar a nova tentativa.
+- **Código alterado (aditivo)**: fluxo de copy do novo fluxo (F56.2b1b) para suportar a nova tentativa.
 - **Design**: `openspec/design-system/MASTER.md` (dark OLED, sem emojis, sem light mode).
 - **Reconciliação**: integra a change original relocada (`openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/`; ver `RECONCILIATION.md`).
 - **Validação**: typecheck, lint, build, testes integrados/E2E locais e `openspec validate --strict`; sem chamada paga.
