@@ -10,11 +10,12 @@ import {
   SupabaseStageAuthorizationRepository,
   type StageAuthorizationRepository,
 } from "./stage-authorization-repository";
-import type { ProductFlowScope } from "./types";
+import type { ProductFlowEnvironment, ProductFlowScope } from "./types";
 
 export interface ResolveProductFlowAuthorizationInput {
   readonly requestedScope: ProductFlowScope;
   readonly expectedInstanceIdentity: string;
+  readonly expectedEnvironment: ProductFlowEnvironment;
   readonly nowMs?: number;
 }
 
@@ -43,6 +44,7 @@ export async function resolveProductFlowAuthorization(
       nowMs: input.nowMs ?? Date.now(),
       requestedScope: input.requestedScope,
       expectedInstanceIdentity: input.expectedInstanceIdentity,
+      expectedEnvironment: input.expectedEnvironment,
       authorization: deriveCurrentAuthorization(
         events,
         input.requestedScope,

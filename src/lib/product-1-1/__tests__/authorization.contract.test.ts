@@ -24,14 +24,16 @@ import { ForbiddenError } from "@/lib/auth/errors";
 import type { FeatureFlagService } from "@/lib/feature-flags/feature-flag-service";
 import {
   decideProductFlowAuthorization,
+  STAGE_ENVIRONMENT_COMPATIBILITY,
+  STAGE_SCOPE_COMPATIBILITY,
   type AuthorizationFlagsRead,
+  type DecideProductFlowAuthorizationInput,
 } from "../authorization/authorization-decision";
 import { deriveCurrentAuthorization } from "../authorization/derive";
 import { resolveProductFlowAuthorization } from "../authorization/authorization-service";
 import type { StageAuthorizationRepository } from "../authorization/stage-authorization-repository";
 import type {
   CurrentStageAuthorization,
-  ProductFlowScope,
   StageAuthorizationEvent,
 } from "../authorization/types";
 
@@ -75,6 +77,26 @@ function event(over: Partial<StageAuthorizationEvent> = {}): StageAuthorizationE
   };
 }
 
+function decide(over: Partial<DecideProductFlowAuthorizationInput> = {}) {
+  return decideProductFlowAuthorization({
+    nowMs: 0,
+    requestedScope: "all_stores",
+    expectedInstanceIdentity: INSTANCE,
+    expectedEnvironment: "isolated",
+    authorization: authz(),
+    flags: flags(),
+    ...over,
+  });
+}
+
+const ENABLING_BODY = {
+  stage: "all_stores",
+  scope: "all_stores",
+  instanceIdentity: INSTANCE,
+  reason: "tentativa de ativação",
+  operationId: OPERATION_ID,
+};
+
 function postStage(body: unknown) {
   return import("@/app/api/admin/product-flow-authorizations/route").then(({ POST }) =>
     POST(
@@ -107,41 +129,29 @@ beforeEach(() => {
 });
 
 describe("F56.2b1a — decisão pura de autorização (fail-closed)", () => {
-  const scope: ProductFlowScope = "all_stores";
-
   it("exige a flag aplicável ao escopo; a flag de teste não habilita o escopo geral", () => {
     expect(
-      decideProductFlowAuthorization({
-        nowMs: 0,
+      decide({
         requestedScope: "all_stores",
-        expectedInstanceIdentity: INSTANCE,
-        authorization: authz({ scope: "all_stores", stage: "all_stores" }),
         flags: flags({ testStoresEnabled: true, allStoresEnabled: false }),
       }),
     ).toEqual({ allowed: false, code: "flag_not_applicable_off" });
   });
 
   it("a flag geral prevalece sem eliminar a autorização (D-03)", () => {
-    const decision = decideProductFlowAuthorization({
-      nowMs: 0,
-      requestedScope: "test_stores",
-      expectedInstanceIdentity: INSTANCE,
-      authorization: authz({ scope: "test_stores", stage: "test_stores" }),
-      flags: flags({ testStoresEnabled: false, allStoresEnabled: true }),
-    });
-    expect(decision).toEqual({
-      allowed: true,
-      stage: "test_stores",
-      usedGeneralPrecedence: true,
-    });
+    expect(
+      decide({
+        requestedScope: "test_stores",
+        authorization: authz({ scope: "test_stores", stage: "test_stores" }),
+        flags: flags({ testStoresEnabled: false, allStoresEnabled: true }),
+      }),
+    ).toEqual({ allowed: true, stage: "test_stores", usedGeneralPrecedence: true });
   });
 
   it("flag de teste ligada habilita o escopo de teste", () => {
     expect(
-      decideProductFlowAuthorization({
-        nowMs: 0,
+      decide({
         requestedScope: "test_stores",
-        expectedInstanceIdentity: INSTANCE,
         authorization: authz({ scope: "test_stores", stage: "test_stores" }),
         flags: flags({ testStoresEnabled: true, allStoresEnabled: false }),
       }),
@@ -149,57 +159,33 @@ describe("F56.2b1a — decisão pura de autorização (fail-closed)", () => {
   });
 
   it("leitura parcial (status não válido) falha fechada", () => {
-    expect(
-      decideProductFlowAuthorization({
-        nowMs: 0,
-        requestedScope: scope,
-        expectedInstanceIdentity: INSTANCE,
-        authorization: authz(),
-        flags: flags({ allStoresStatus: "missing" }),
-      }),
-    ).toEqual({ allowed: false, code: "flags_unavailable" });
+    expect(decide({ flags: flags({ allStoresStatus: "missing" }) })).toEqual({
+      allowed: false,
+      code: "flags_unavailable",
+    });
   });
 
   it("sem autorização → missing_authorization", () => {
-    expect(
-      decideProductFlowAuthorization({
-        nowMs: 0,
-        requestedScope: scope,
-        expectedInstanceIdentity: INSTANCE,
-        authorization: null,
-        flags: flags({ allStoresEnabled: true }),
-      }),
-    ).toEqual({ allowed: false, code: "missing_authorization" });
+    expect(decide({ authorization: null, flags: flags({ allStoresEnabled: true }) })).toEqual({
+      allowed: false,
+      code: "missing_authorization",
+    });
   });
 
   it("estado operacional off nunca habilita (stage_not_enabling)", () => {
-    expect(
-      decideProductFlowAuthorization({
-        nowMs: 0,
-        requestedScope: scope,
-        expectedInstanceIdentity: INSTANCE,
-        authorization: authz({ stage: "off" }),
-        flags: flags({ allStoresEnabled: true }),
-      }),
-    ).toEqual({ allowed: false, code: "stage_not_enabling" });
+    expect(decide({ authorization: authz({ stage: "off" }), flags: flags({ allStoresEnabled: true }) })).toEqual(
+      { allowed: false, code: "stage_not_enabling" },
+    );
   });
 
   it("mismatch de instância e de escopo negam", () => {
     expect(
-      decideProductFlowAuthorization({
-        nowMs: 0,
-        requestedScope: scope,
-        expectedInstanceIdentity: INSTANCE,
-        authorization: authz({ instanceIdentity: "outra-instancia" }),
-        flags: flags({ allStoresEnabled: true }),
-      }),
+      decide({ authorization: authz({ instanceIdentity: "outra" }), flags: flags({ allStoresEnabled: true }) }),
     ).toEqual({ allowed: false, code: "instance_mismatch" });
 
     expect(
-      decideProductFlowAuthorization({
-        nowMs: 0,
+      decide({
         requestedScope: "test_stores",
-        expectedInstanceIdentity: INSTANCE,
         authorization: authz({ scope: "all_stores" }),
         flags: flags({ allStoresEnabled: true }),
       }),
@@ -208,31 +194,20 @@ describe("F56.2b1a — decisão pura de autorização (fail-closed)", () => {
 
   it("expiração e revogação negam", () => {
     expect(
-      decideProductFlowAuthorization({
-        nowMs: 100,
-        requestedScope: scope,
-        expectedInstanceIdentity: INSTANCE,
-        authorization: authz({ expiresAtMs: 100 }),
-        flags: flags({ allStoresEnabled: true }),
-      }),
+      decide({ nowMs: 100, authorization: authz({ expiresAtMs: 100 }), flags: flags({ allStoresEnabled: true }) }),
     ).toEqual({ allowed: false, code: "expired" });
 
     expect(
-      decideProductFlowAuthorization({
-        nowMs: 0,
-        requestedScope: scope,
-        expectedInstanceIdentity: INSTANCE,
-        authorization: authz({ revokedAtMs: 5 }),
-        flags: flags({ allStoresEnabled: true }),
-      }),
+      decide({ authorization: authz({ revokedAtMs: 5 }), flags: flags({ allStoresEnabled: true }) }),
     ).toEqual({ allowed: false, code: "revoked" });
   });
 
   it("nenhum parâmetro extra do cliente força a autorização", () => {
     const input = {
       nowMs: 0,
-      requestedScope: scope,
+      requestedScope: "all_stores",
       expectedInstanceIdentity: INSTANCE,
+      expectedEnvironment: "isolated",
       authorization: authz({ stage: "off" }),
       flags: flags({ allStoresEnabled: false }),
       clientRequestedAllow: true,
@@ -241,6 +216,73 @@ describe("F56.2b1a — decisão pura de autorização (fail-closed)", () => {
       allowed: false,
       code: "stage_not_enabling",
     });
+  });
+});
+
+describe("F56.2b1a — matriz estágio × escopo × ambiente", () => {
+  it("piloto isolado não autoriza o escopo geral (all_stores)", () => {
+    expect(
+      decide({
+        requestedScope: "all_stores",
+        authorization: authz({ stage: "isolated_pilot", scope: "all_stores" }),
+        flags: flags({ allStoresEnabled: true }),
+      }),
+    ).toEqual({ allowed: false, code: "stage_scope_mismatch" });
+  });
+
+  it("piloto isolado não autoriza o ambiente operacional", () => {
+    expect(
+      decide({
+        requestedScope: "test_stores",
+        expectedEnvironment: "operational",
+        authorization: authz({ stage: "isolated_pilot", scope: "test_stores" }),
+        flags: flags({ testStoresEnabled: true }),
+      }),
+    ).toEqual({ allowed: false, code: "stage_environment_mismatch" });
+  });
+
+  it("piloto isolado autoriza lojas de teste no ambiente isolado", () => {
+    expect(
+      decide({
+        requestedScope: "test_stores",
+        expectedEnvironment: "isolated",
+        authorization: authz({ stage: "isolated_pilot", scope: "test_stores" }),
+        flags: flags({ testStoresEnabled: true }),
+      }),
+    ).toEqual({ allowed: true, stage: "isolated_pilot", usedGeneralPrecedence: false });
+  });
+
+  it("test_stores não autoriza all_stores; all_stores autoriza all_stores", () => {
+    expect(
+      decide({
+        authorization: authz({ stage: "test_stores", scope: "all_stores" }),
+        flags: flags({ allStoresEnabled: true }),
+      }),
+    ).toEqual({ allowed: false, code: "stage_scope_mismatch" });
+
+    expect(
+      decide({
+        authorization: authz({ stage: "all_stores", scope: "all_stores" }),
+        flags: flags({ allStoresEnabled: true }),
+      }),
+    ).toEqual({ allowed: true, stage: "all_stores", usedGeneralPrecedence: false });
+  });
+
+  it("all_stores é compatível com o ambiente isolado (teste controlado)", () => {
+    expect(
+      decide({
+        expectedEnvironment: "isolated",
+        authorization: authz({ stage: "all_stores", scope: "all_stores" }),
+        flags: flags({ allStoresEnabled: true }),
+      }),
+    ).toEqual({ allowed: true, stage: "all_stores", usedGeneralPrecedence: false });
+  });
+
+  it("a matriz é fechada e determinística", () => {
+    expect(STAGE_SCOPE_COMPATIBILITY.isolated_pilot).toEqual(["test_stores"]);
+    expect(STAGE_SCOPE_COMPATIBILITY.all_stores).toEqual(["all_stores"]);
+    expect(STAGE_ENVIRONMENT_COMPATIBILITY.isolated_pilot).toEqual(["isolated"]);
+    expect(STAGE_ENVIRONMENT_COMPATIBILITY.all_stores).toEqual(["isolated", "operational"]);
   });
 });
 
@@ -292,7 +334,12 @@ describe("F56.2b1a — serviço server-side fail-closed", () => {
 
     await expect(
       resolveProductFlowAuthorization(
-        { requestedScope: "all_stores", expectedInstanceIdentity: INSTANCE, nowMs: 10 },
+        {
+          requestedScope: "all_stores",
+          expectedInstanceIdentity: INSTANCE,
+          expectedEnvironment: "isolated",
+          nowMs: 10,
+        },
         flagsStub,
         repoStub,
       ),
@@ -307,7 +354,11 @@ describe("F56.2b1a — serviço server-side fail-closed", () => {
 
     await expect(
       resolveProductFlowAuthorization(
-        { requestedScope: "all_stores", expectedInstanceIdentity: INSTANCE },
+        {
+          requestedScope: "all_stores",
+          expectedInstanceIdentity: INSTANCE,
+          expectedEnvironment: "isolated",
+        },
         flagsStub,
         repoStub,
       ),
@@ -322,7 +373,11 @@ describe("F56.2b1a — serviço server-side fail-closed", () => {
 
     await expect(
       resolveProductFlowAuthorization(
-        { requestedScope: "all_stores", expectedInstanceIdentity: INSTANCE },
+        {
+          requestedScope: "all_stores",
+          expectedInstanceIdentity: INSTANCE,
+          expectedEnvironment: "isolated",
+        },
         flagsStub,
         repoStub,
       ),
@@ -335,13 +390,7 @@ describe("F56.2b1a — API admin de autorização (superfície)", () => {
     mockRequireAdmin.mockRejectedValueOnce(
       new ForbiddenError("Acesso restrito a administradores"),
     );
-    const res = await postStage({
-      stage: "all_stores",
-      scope: "all_stores",
-      instanceIdentity: INSTANCE,
-      reason: "x",
-      operationId: OPERATION_ID,
-    });
+    const res = await postStage(ENABLING_BODY);
     expect(res.status).toBe(403);
     expect(mockRpc).not.toHaveBeenCalled();
   });
@@ -352,13 +401,7 @@ describe("F56.2b1a — API admin de autorização (superfície)", () => {
       error: null,
     });
 
-    const res = await postStage({
-      stage: "all_stores",
-      scope: "all_stores",
-      instanceIdentity: INSTANCE,
-      reason: "tentativa de ativação",
-      operationId: OPERATION_ID,
-    });
+    const res = await postStage(ENABLING_BODY);
 
     expect(res.status).toBe(403);
     const body = await res.json();
@@ -374,34 +417,69 @@ describe("F56.2b1a — API admin de autorização (superfície)", () => {
     });
   });
 
-  it("mantém o estado operacional off em uma concessão permitida (stage off)", async () => {
+  it("repetir uma recusa mantém 403 (replay preserva o resultado)", async () => {
+    const refusalReplay = {
+      data: {
+        success: true,
+        idempotent: true,
+        granted: false,
+        refused: true,
+        reason: "operational_activation_blocked_in_b1a",
+        stage: "all_stores",
+        scope: "all_stores",
+      },
+      error: null,
+    };
+    mockRpc.mockResolvedValue(refusalReplay);
+
+    const first = await postStage(ENABLING_BODY);
+    expect(first.status).toBe(403);
+
+    mockRpc.mockResolvedValue(refusalReplay);
+    const second = await postStage(ENABLING_BODY);
+    expect(second.status).toBe(403);
+    const body = await second.json();
+    expect(body.refused).toBe(true);
+    expect(body.granted).toBe(false);
+  });
+
+  it("concessão off e sua repetição mantêm o mesmo resultado", async () => {
+    const offBody = { ...ENABLING_BODY, stage: "off", reason: "manter desligado" };
+
     mockRpc.mockResolvedValue({
-      data: { success: true, granted: true, refused: false, stage: "off" },
+      data: { success: true, idempotent: false, granted: true, refused: false, stage: "off" },
       error: null,
     });
+    const first = await postStage(offBody);
+    expect(first.status).toBe(200);
+    expect((await first.json()).granted).toBe(true);
 
-    const res = await postStage({
-      stage: "off",
-      scope: "all_stores",
-      instanceIdentity: INSTANCE,
-      reason: "manter desligado",
-      operationId: OPERATION_ID,
+    mockRpc.mockResolvedValue({
+      data: { success: true, idempotent: true, granted: true, refused: false, stage: "off" },
+      error: null,
     });
-
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    const second = await postStage(offBody);
+    expect(second.status).toBe(200);
+    const body = await second.json();
     expect(body.granted).toBe(true);
-    expect(body.stage).toBe("off");
+    expect(body.idempotent).toBe(true);
+  });
+
+  it("resposta ausente/inválida da RPC não vira sucesso (502)", async () => {
+    mockRpc.mockResolvedValue({
+      data: { success: true, idempotent: true, event_type: "refused" },
+      error: null,
+    });
+    const legacy = await postStage(ENABLING_BODY);
+    expect(legacy.status).toBe(502);
+
+    mockRpc.mockResolvedValue({ data: {}, error: null });
+    const empty = await postStage(ENABLING_BODY);
+    expect(empty.status).toBe(502);
   });
 
   it("motivo ausente → 400 sem chamar a RPC", async () => {
-    const res = await postStage({
-      stage: "all_stores",
-      scope: "all_stores",
-      instanceIdentity: INSTANCE,
-      reason: "",
-      operationId: OPERATION_ID,
-    });
+    const res = await postStage({ ...ENABLING_BODY, reason: "" });
     expect(res.status).toBe(400);
     expect(mockRpc).not.toHaveBeenCalled();
   });

@@ -27,6 +27,17 @@ export const PRODUCT_FLOW_SCOPES = Object.freeze([
   "all_stores",
 ] as const satisfies readonly ProductFlowScope[]);
 
+/**
+ * Ambiente em que a autorização é revalidada. O piloto isolado só é válido no
+ * ambiente isolado; nunca autoriza lojas operacionais.
+ */
+export type ProductFlowEnvironment = "isolated" | "operational";
+
+export const PRODUCT_FLOW_ENVIRONMENTS = Object.freeze([
+  "isolated",
+  "operational",
+] as const satisfies readonly ProductFlowEnvironment[]);
+
 export type StageAuthorizationEventType = "granted" | "revoked" | "refused";
 
 /** Evento append-only do histórico de autorizações. */

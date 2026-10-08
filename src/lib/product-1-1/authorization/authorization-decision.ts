@@ -1,5 +1,6 @@
 import type {
   CurrentStageAuthorization,
+  ProductFlowEnvironment,
   ProductFlowScope,
   ProductFlowStage,
 } from "./types";
@@ -15,6 +16,45 @@ export function isEnablingStage(stage: ProductFlowStage): boolean {
   return stage !== "off";
 }
 
+/**
+ * Matriz estágio × escopo. Combinações fora da lista são inválidas e negam
+ * acesso. O piloto isolado só vale para lojas de teste — nunca para o escopo
+ * geral (`all_stores`).
+ */
+export const STAGE_SCOPE_COMPATIBILITY: Readonly<
+  Record<ProductFlowStage, readonly ProductFlowScope[]>
+> = Object.freeze({
+  off: [],
+  isolated_pilot: ["test_stores"],
+  test_stores: ["test_stores"],
+  all_stores: ["all_stores"],
+});
+
+/**
+ * Matriz estágio × ambiente. O piloto isolado nunca autoriza o ambiente
+ * operacional; os demais estágios podem ser exercitados em ambos os ambientes.
+ */
+export const STAGE_ENVIRONMENT_COMPATIBILITY: Readonly<
+  Record<ProductFlowStage, readonly ProductFlowEnvironment[]>
+> = Object.freeze({
+  off: [],
+  isolated_pilot: ["isolated"],
+  test_stores: ["isolated", "operational"],
+  all_stores: ["isolated", "operational"],
+});
+
+/** Estágio habilitador é compatível com o escopo E o ambiente informados. */
+export function isStageCompatible(
+  stage: ProductFlowStage,
+  scope: ProductFlowScope,
+  environment: ProductFlowEnvironment,
+): boolean {
+  return (
+    STAGE_SCOPE_COMPATIBILITY[stage].includes(scope) &&
+    STAGE_ENVIRONMENT_COMPATIBILITY[stage].includes(environment)
+  );
+}
+
 export type AuthorizationDenialCode =
   | "read_failure"
   | "flags_unavailable"
@@ -22,6 +62,8 @@ export type AuthorizationDenialCode =
   | "stage_not_enabling"
   | "instance_mismatch"
   | "scope_mismatch"
+  | "stage_scope_mismatch"
+  | "stage_environment_mismatch"
   | "revoked"
   | "expired"
   | "flag_not_applicable_off";
@@ -45,6 +87,7 @@ export interface DecideProductFlowAuthorizationInput {
   readonly nowMs: number;
   readonly requestedScope: ProductFlowScope;
   readonly expectedInstanceIdentity: string;
+  readonly expectedEnvironment: ProductFlowEnvironment;
   readonly authorization: CurrentStageAuthorization | null;
   readonly flags: AuthorizationFlagsRead;
 }
@@ -81,6 +124,18 @@ export function decideProductFlowAuthorization(
 
   if (authorization.scope !== input.requestedScope) {
     return { allowed: false, code: "scope_mismatch" };
+  }
+
+  if (!STAGE_SCOPE_COMPATIBILITY[authorization.stage].includes(authorization.scope)) {
+    return { allowed: false, code: "stage_scope_mismatch" };
+  }
+
+  if (
+    !STAGE_ENVIRONMENT_COMPATIBILITY[authorization.stage].includes(
+      input.expectedEnvironment,
+    )
+  ) {
+    return { allowed: false, code: "stage_environment_mismatch" };
   }
 
   if (authorization.revokedAtMs !== null) {
