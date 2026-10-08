@@ -29,7 +29,7 @@
     --font-body: 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg-deep); color: var(--text-primary); font-family: var(--font-body); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; overflow-x: hidden; background: var(--bg-deep); color: var(--text-primary); font-family: var(--font-body); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
   h1, h2, h3 { font-family: var(--font-heading); margin: 0; }
   p { margin: 0; }
   a { color: inherit; }
@@ -46,7 +46,7 @@
   .site-header { width: 100%; max-width: 64rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 24px; }
   .brand { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
 
-  section.block { width: 100%; max-width: 64rem; margin: 0 auto; padding: 48px 24px; }
+  section.block { width: 100%; max-width: 64rem; margin: 0 auto; padding: 32px 24px; }
 
   .h-display { font-size: 1.875rem; font-weight: 700; line-height: 1.15; max-width: 42rem; }
   .h-section { font-size: 1.5rem; font-weight: 600; line-height: 1.2; }
@@ -78,6 +78,29 @@
   .tile { display: flex; flex-direction: column; gap: 6px; }
   .tile-label { font-family: var(--font-heading); font-size: 0.8125rem; font-weight: 600; }
   .tile-approach { font-size: 0.75rem; color: var(--text-muted); }
+
+  /* Faixa horizontal demonstrativa (mobile) — overflow restrito à faixa */
+  .demo-strip { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+  .demo-strip > .tile { flex: 0 0 82%; scroll-snap-align: start; }
+  .demo-strip:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 4px; border-radius: 12px; }
+  .swipe-hint { margin-top: 8px; color: var(--text-muted); font-size: 0.75rem; }
+
+  /* Resumo compacto da entrada (transformação) */
+  .summary-card { background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px; }
+  .summary-kicker { font-family: var(--font-heading); font-size: 0.75rem; font-weight: 600; color: var(--accent-green); }
+  .summary-list { margin: 8px 0 0; display: grid; gap: 6px; }
+  .summary-list > div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  .summary-list > div:last-child { border-bottom: none; }
+  .summary-list dt { color: var(--text-muted); font-size: 0.8125rem; margin: 0; }
+  .summary-list dd { color: var(--text-primary); font-size: 0.8125rem; margin: 0; }
+
+  /* Animação mínima de entrada dos conjuntos demonstrativos (progressiva) */
+  .has-js .demo-set:not(.is-visible) { opacity: 0; transform: translateY(8px); }
+  .has-js .demo-set.is-visible { opacity: 1; transform: none; transition: opacity 200ms ease, transform 200ms ease; }
+  @media (prefers-reduced-motion: reduce) {
+    .has-js .demo-set:not(.is-visible) { opacity: 1; transform: none; }
+    .has-js .demo-set.is-visible { transition: none; }
+  }
 
   .card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
   .distinction { color: var(--text-secondary); }
@@ -115,6 +138,10 @@
   .footer-nav button:hover { color: var(--text-primary); }
 
   @media (min-width: 640px) {
+    section.block { padding: 48px 24px; }
+    .demo-strip { display: grid; grid-template-columns: repeat(3, 1fr); overflow: visible; padding-bottom: 0; }
+    .demo-strip > .tile { flex: initial; }
+    .swipe-hint { display: none; }
     .h-display { font-size: 3rem; line-height: 1.1; }
     .h-section { font-size: 1.875rem; }
     .lead { font-size: 1.125rem; }
@@ -127,6 +154,7 @@
     .site-footer-inner { flex-direction: row; align-items: center; justify-content: space-between; }
   }
 </style>
+<script>if ("IntersectionObserver" in window) { document.documentElement.classList.add("has-js"); }</script>
 </head>
 <body>
   <div class="candidate-banner">CANDIDATA VISUAL — não é produção</div>
@@ -136,6 +164,7 @@
     Protótipo estático autônomo (fora de <code>src/</code>), abrível via <code>file://</code>. Simule <strong>mobile</strong> e <strong>desktop</strong> redimensionando a janela (breakpoint 640px).
     Itens marcados <strong>(demo)</strong> representam destinos reais (ex.: <code>/login</code>, <code>/termos</code>) e <strong>não navegam</strong> neste protótipo. O CTA de aquisição aponta para <code>#acesso</code> (representação do formulário).
     Texto do CTA principal em <strong>escuro</strong> sobre verde (nunca branco sobre verde). Sem geração ao vivo, sem envio de formulário, sem autenticação.
+    Nos conjuntos demonstrativos, use a <strong>faixa horizontal</strong> no mobile (deslize; o overflow fica restrito à faixa). Sem JS, tudo permanece visível; a animação mínima de entrada respeita <code>prefers-reduced-motion</code>.
   </div>
 
   <div class="page">
@@ -165,8 +194,15 @@
     <section class="block">
       <h2 class="h-section">Da informação à campanha, sem complicação</h2>
       <div class="grid-2" style="margin-top: 24px;">
-        <div class="ph">ANTES 1:1 — produto / oferta / preço (informação simples)</div>
-        <div class="ph">DEPOIS 1:1 — campanha pronta (resultado)</div>
+        <div class="summary-card">
+          <span class="summary-kicker">Entrada</span>
+          <dl class="summary-list">
+            <div><dt>Produto</dt><dd>…</dd></div>
+            <div><dt>Preço</dt><dd>R$ …</dd></div>
+            <div><dt>Detalhes</dt><dd>…</dd></div>
+          </dl>
+        </div>
+        <div class="ph">DEPOIS 1:1 — campanha completa (sem recorte)</div>
       </div>
       <ol class="steps-compact">
         <li><span class="n">1</span><span class="t">Você informa o básico</span><div class="d">Produto, oferta, preço e alguns detalhes da sua loja.</div></li>
@@ -180,19 +216,22 @@
     <section class="block">
       <h2 class="h-section">Escolha como apresentar seu produto.</h2>
       <p class="support">Estúdio, ambientado ou mantendo o fundo original.</p>
-      <div class="grid-tiles" style="margin-top: 24px;">
-        <div class="tile">
-          <div class="ph">Campanha 1:1 — mesmo produto</div>
-          <span class="tile-label">Estúdio</span>
+      <div class="demo-set">
+        <div class="demo-strip" tabindex="0" role="group" aria-label="Apresentação do produto — deslize para ver as três campanhas">
+          <div class="tile">
+            <div class="ph">Campanha 1:1 — mesmo produto</div>
+            <span class="tile-label">Estúdio</span>
+          </div>
+          <div class="tile">
+            <div class="ph">Campanha 1:1 — mesmo produto</div>
+            <span class="tile-label">Ambientado</span>
+          </div>
+          <div class="tile">
+            <div class="ph">Campanha 1:1 — mesmo produto</div>
+            <span class="tile-label">Fundo original</span>
+          </div>
         </div>
-        <div class="tile">
-          <div class="ph">Campanha 1:1 — mesmo produto</div>
-          <span class="tile-label">Ambientado</span>
-        </div>
-        <div class="tile">
-          <div class="ph">Campanha 1:1 — mesmo produto</div>
-          <span class="tile-label">Fundo original</span>
-        </div>
+        <p class="swipe-hint">‹ deslize para ver as 3 ›</p>
       </div>
       <p class="support small">Mesma abordagem e informações equivalentes — muda a apresentação.</p>
     </section>
@@ -215,19 +254,22 @@
     <section class="block">
       <h2 class="h-section-sm">Uma campanha para cada jeito de divulgar.</h2>
       <p class="support">Mostre uma oferta, valorize um produto ou apresente algo especial.</p>
-      <div class="grid-tiles" style="margin-top: 16px;">
-        <div class="tile">
-          <div class="ph">Campanha 1:1 — mesmo produto</div>
-          <span class="tile-label">Oferta</span>
+      <div class="demo-set">
+        <div class="demo-strip" tabindex="0" role="group" aria-label="Abordagens de divulgação — deslize para ver as três campanhas">
+          <div class="tile">
+            <div class="ph">Campanha 1:1 — mesmo produto</div>
+            <span class="tile-label">Oferta</span>
+          </div>
+          <div class="tile">
+            <div class="ph">Campanha 1:1 — mesmo produto</div>
+            <span class="tile-label">Destaque</span>
+          </div>
+          <div class="tile">
+            <div class="ph">Campanha 1:1 — mesmo produto</div>
+            <span class="tile-label">Exclusivo</span>
+          </div>
         </div>
-        <div class="tile">
-          <div class="ph">Campanha 1:1 — mesmo produto</div>
-          <span class="tile-label">Destaque</span>
-        </div>
-        <div class="tile">
-          <div class="ph">Campanha 1:1 — mesmo produto</div>
-          <span class="tile-label">Exclusivo</span>
-        </div>
+        <p class="swipe-hint">‹ deslize para ver as 3 ›</p>
       </div>
     </section>
 
@@ -330,5 +372,19 @@
       </div>
     </footer>
   </div>
+  <script>
+    (function () {
+      if (!("IntersectionObserver" in window)) { return; }
+      var sets = Array.prototype.slice.call(document.querySelectorAll(".demo-set"));
+      if (!sets.length) { return; }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) { entry.target.classList.add("is-visible"); io.unobserve(entry.target); }
+        });
+      }, { threshold: 0.15 });
+      sets.forEach(function (s) { io.observe(s); });
+      setTimeout(function () { sets.forEach(function (s) { s.classList.add("is-visible"); }); }, 2500);
+    })();
+  </script>
 </body>
 </html>
