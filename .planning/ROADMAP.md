@@ -313,14 +313,14 @@ Plans:
 - landing curta com blocos de **função única** na ordem: hero; transformação e simplicidade; variações visuais; identidade e controle; oferta; FAQ/CTA final/rodapé legal ("Como funciona" absorvido pela transformação; "Novidades" em posição secundária/rodapé);
 - headline e subheadline aprovadas + distinção "Você define como quer apresentar. O Vendeo prepara a campanha.";
 - **contrato de imagens** por função/proporção/requisito (hero=qualidade; transformação=simplicidade; variações=flexibilidade; identidade=coerência), com placeholders substituíveis sem refazer layout; exemplos finais exigem seleção e aprovação humana;
-- conteúdo demonstrativo **estático** (sem API de geração, sem arte ao vivo, sem geração paga);
+- conteúdo demonstrativo **estático** (a landing não chama a API de geração em runtime; sem arte ao vivo); os **exemplos finais** são produzidos por **geração humana** no laboratório, com **autorização específica**, fora da execução automática (o executor apenas anexa os exemplos aprovados);
 - oferta em **componente independente** (mensagem curta "28 dias gratuitos e até 20 créditos"; mecânica em secundário/FAQ; **sem** implementar concessões/calendário/saldo/expiração);
 - **todos** os CTAs de aquisição (hero, oferta, final) via `publicSignupEnabled`/`getLaunchConfig()` server-side; "Entrar" secundário;
 - preservação de acessibilidade, semântica, links legais e estados do formulário.
 
 **Fora de escopo:** instrumentação de funil / linha de base / rastreamento; implementação da oferta; SEO técnico (F51.2); i18n; pagamentos/checkout/planos; deploy/ativação pública; qualquer alteração de código F56, ledger, migrations, crédito, onboarding, telas autenticadas, APIs de geração, autenticação/elegibilidade e contrato do `POST /api/access-requests`.
 
-**Gates operacionais:** `workflow.security_enforcement=true` (ASVS L1, bloqueio em high) — cada plano contém threat model; **checkpoint humano obrigatório** (candidata visual mobile/desktop + copy + mapa/função das imagens) **antes** da implementação; exemplos finais exigem nova aprovação humana antes do acabamento/validação final. Sem `db push`, sem provider/chamada paga, sem ativação de flag. `openspec validate --strict` e `gsd-plan-checker` obrigatórios.
+**Gates operacionais:** `workflow.security_enforcement=true` (ASVS L1, bloqueio em high) — cada plano contém threat model; **checkpoint humano obrigatório** (candidata visual mobile/desktop + copy + mapa/função das imagens) **antes** da implementação; exemplos finais exigem nova aprovação humana antes do acabamento/validação final; **revalidação** (typecheck/lint/build/testes + revisão visual dos dois modos) **após** a troca dos exemplos finais. Sem `db push`, sem ativação de flag e **sem geração autônoma do agente/landing**; a geração dos exemplos finais é **humana** (laboratório, autorização específica). `openspec validate --strict` e `gsd-plan-checker` obrigatórios.
 
 **Fonte normativa (ativa):** `openspec/changes/fase-51-1-landing-visual-produto/` — `proposal.md`, `design.md` (D1–D10), `tasks.md` (33 tasks em 7 seções) e specs `landing-conversion-experience` / `access-request-history`. `openspec/changes/fase-51-1-landing-visual-produto/specs/access-request-history/spec.md` é o delta MODIFIED da capacidade principal `access-request-history`.
 
