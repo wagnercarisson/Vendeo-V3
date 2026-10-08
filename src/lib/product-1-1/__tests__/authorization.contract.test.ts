@@ -593,6 +593,33 @@ describe("F56.2b1a — API admin de autorização (superfície)", () => {
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
+  it("erro reconhecido devolve SÓ o código permitido — conteúdo sensível não chega à resposta (IN-02)", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "missing_reason: SECRET=supersecreto token=abcd1234" },
+    });
+    const res = await postStage(ENABLING_BODY);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("missing_reason");
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("SECRET");
+    expect(serialized).not.toContain("supersecreto");
+    expect(serialized).not.toContain("abcd1234");
+  });
+
+  it("erro desconhecido devolve código genérico, sem mensagem do banco (IN-02)", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "permission denied for table product_flow_stage_authorizations" },
+    });
+    const res = await postStage(ENABLING_BODY);
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe("authorization_internal_error");
+    expect(JSON.stringify(body)).not.toContain("permission denied");
+  });
+
   it("GET exige requireAdmin", async () => {
     mockRequireAdmin.mockRejectedValueOnce(
       new ForbiddenError("Acesso restrito a administradores"),

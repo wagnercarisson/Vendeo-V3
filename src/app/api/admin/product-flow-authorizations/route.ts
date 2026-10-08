@@ -105,15 +105,17 @@ export const POST = apiHandler(async (request: Request) => {
 
   if (error) {
     const message = error.message ?? "";
-    const isBadRequest = BAD_REQUEST_CODES.some((code) => message.includes(code));
-    if (!isBadRequest) {
-      // Erro bruto do banco NÃO é ecoado ao cliente (IN-02).
+    // Devolve SOMENTE o código permitido — NUNCA a mensagem original do banco
+    // (que pode carregar contexto sensível). Erro bruto fica só no log (IN-02).
+    const matchedCode = BAD_REQUEST_CODES.find((code) => message.includes(code));
+    if (!matchedCode) {
       console.error("[product-flow-authorizations] grant rpc failed:", message);
+      return NextResponse.json(
+        { error: "authorization_internal_error" },
+        { status: 500 },
+      );
     }
-    return NextResponse.json(
-      { error: isBadRequest ? message : "authorization_internal_error" },
-      { status: isBadRequest ? 400 : 500 },
-    );
+    return NextResponse.json({ error: matchedCode }, { status: 400 });
   }
 
   const result = (data ?? {}) as Record<string, unknown>;
