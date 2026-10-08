@@ -95,6 +95,15 @@ describe("F56.2b1a — migration product_flow_stage_authorizations (contrato est
     expect(activeSql).toMatch(/'granted', false/);
   });
 
+  it("preserva o resultado original no replay idempotente (recusa e concessão off)", () => {
+    expect(activeSql).toMatch(/IF v_existing_type = 'refused'/);
+    expect((activeSql.match(/'granted', false/g) ?? []).length).toBe(2);
+    expect((activeSql.match(/'granted', true/g) ?? []).length).toBe(2);
+    expect((activeSql.match(/'refused', true/g) ?? []).length).toBe(2);
+    expect((activeSql.match(/'refused', false/g) ?? []).length).toBe(2);
+    expect((activeSql.match(/'revoked', true/g) ?? []).length).toBe(2);
+  });
+
   it("restringe EXECUTE das RPCs a service_role", () => {
     expect(activeSql).toMatch(
       /REVOKE EXECUTE ON FUNCTION public\.admin_grant_product_flow_stage_authorization\([^)]*\)\s+FROM PUBLIC, anon, authenticated/,

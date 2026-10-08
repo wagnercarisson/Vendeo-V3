@@ -115,9 +115,17 @@ export const POST = apiHandler(async (request: Request) => {
     );
   }
 
-  return NextResponse.json({
-    granted: true,
-    idempotent: result.idempotent === true,
-    stage: result.stage,
-  });
+  if (result.granted === true) {
+    return NextResponse.json({
+      granted: true,
+      idempotent: result.idempotent === true,
+      stage: result.stage,
+    });
+  }
+
+  // Replay/ resposta ausente ou inválida NUNCA é tratada como sucesso.
+  return NextResponse.json(
+    { error: "authorization_rpc_invalid_response" },
+    { status: 502 },
+  );
 });

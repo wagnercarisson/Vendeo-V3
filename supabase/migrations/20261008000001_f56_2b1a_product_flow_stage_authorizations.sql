@@ -98,8 +98,10 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_existing  TEXT;
-  v_enabling  BOOLEAN;
+  v_existing_type  TEXT;
+  v_existing_stage TEXT;
+  v_existing_scope TEXT;
+  v_enabling       BOOLEAN;
 BEGIN
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
@@ -108,12 +110,21 @@ BEGIN
   IF p_scope IS NULL OR p_scope NOT IN ('test_stores', 'all_stores') THEN RAISE EXCEPTION 'invalid_scope'; END IF;
   IF p_stage IS NULL OR p_stage NOT IN ('off', 'isolated_pilot', 'test_stores', 'all_stores') THEN RAISE EXCEPTION 'invalid_stage'; END IF;
 
-  -- Idempotência por operation_id.
-  SELECT event_type INTO v_existing
+  -- Idempotência por operation_id: o replay PRESERVA o resultado original.
+  SELECT event_type, stage, scope INTO v_existing_type, v_existing_stage, v_existing_scope
   FROM public.product_flow_stage_authorizations
   WHERE operation_id = p_operation_id;
   IF FOUND THEN
-    RETURN jsonb_build_object('success', true, 'idempotent', true, 'event_type', v_existing);
+    IF v_existing_type = 'refused' THEN
+      RETURN jsonb_build_object(
+        'success', true, 'idempotent', true, 'granted', false, 'refused', true,
+        'reason', 'operational_activation_blocked_in_b1a', 'stage', v_existing_stage, 'scope', v_existing_scope
+      );
+    END IF;
+    RETURN jsonb_build_object(
+      'success', true, 'idempotent', true, 'granted', true, 'refused', false,
+      'stage', 'off', 'scope', v_existing_scope
+    );
   END IF;
 
   -- Nesta change TODO estágio habilitador é recusado de forma explícita e
@@ -166,7 +177,8 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_existing TEXT;
+  v_existing_type  TEXT;
+  v_existing_scope TEXT;
 BEGIN
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
@@ -174,11 +186,11 @@ BEGIN
   IF p_instance_identity IS NULL OR btrim(p_instance_identity) = '' THEN RAISE EXCEPTION 'missing_instance_identity'; END IF;
   IF p_scope IS NULL OR p_scope NOT IN ('test_stores', 'all_stores') THEN RAISE EXCEPTION 'invalid_scope'; END IF;
 
-  SELECT event_type INTO v_existing
+  SELECT event_type, scope INTO v_existing_type, v_existing_scope
   FROM public.product_flow_stage_authorizations
   WHERE operation_id = p_operation_id;
   IF FOUND THEN
-    RETURN jsonb_build_object('success', true, 'idempotent', true, 'event_type', v_existing);
+    RETURN jsonb_build_object('success', true, 'idempotent', true, 'revoked', true, 'stage', 'off', 'scope', v_existing_scope);
   END IF;
 
   INSERT INTO public.product_flow_stage_authorizations (
