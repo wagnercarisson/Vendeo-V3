@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import {
   CreditOperationError,
   type CreditOperationErrorCode,
+  type CreditOperationReconciliationReport,
   type CreditOperationState,
   type CreditOperationStatus,
 } from "./types";
@@ -148,14 +149,34 @@ export class ProductOneToOneCreditOperationClient {
     return mapState(data);
   }
 
-  async reconcile(timeoutMinutes = 30): Promise<number> {
+  async reconcile(
+    timeoutMinutes = 30,
+  ): Promise<CreditOperationReconciliationReport> {
     const { data, error } = await this.client.rpc(
       "product_1_1_reconcile_campaign_credit_operations",
       { p_timeout_minutes: timeoutMinutes },
     );
     if (error) throw mapError(error.message);
+
     const record = (data ?? {}) as Record<string, unknown>;
-    return Number(record.reconciled ?? 0);
+    const deferredRaw = Array.isArray(record.deferred) ? record.deferred : [];
+
+    return Object.freeze({
+      resolved: Number(record.resolved ?? 0),
+      deferredCount: Number(record.deferred_count ?? 0),
+      deferred: Object.freeze(
+        deferredRaw.map((item) => {
+          const row = (item ?? {}) as Record<string, unknown>;
+          return Object.freeze({
+            campaignId: String(row.campaign_id ?? ""),
+            operationId: String(row.operation_id ?? ""),
+            status: row.status as CreditOperationStatus,
+            amount: Number(row.amount ?? 0),
+            hasCreditTx: row.has_credit_tx === true,
+          });
+        }),
+      ),
+    });
   }
 
   private async invoke(

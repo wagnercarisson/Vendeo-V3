@@ -68,8 +68,9 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_existing public.product_1_1_campaign_credit_operations%ROWTYPE;
-  v_tx_id    UUID;
+  v_existing    public.product_1_1_campaign_credit_operations%ROWTYPE;
+  v_tx_id       UUID;
+  v_inserted_id UUID;
 BEGIN
   IF p_store_id IS NULL THEN RAISE EXCEPTION 'missing_store_id'; END IF;
   IF p_campaign_id IS NULL THEN RAISE EXCEPTION 'missing_campaign_id'; END IF;
@@ -101,8 +102,37 @@ BEGIN
     RAISE EXCEPTION 'operation_identity_conflict';
   END IF;
 
-  -- Reserva TEMPORÁRIA no ledger existente. Qualquer exceção aqui aborta a
-  -- transação inteira: nenhuma linha de operação é criada e o saldo não muda.
+  -- Concorrência: insere a operação PRIMEIRO pela identidade única. Só o
+  -- VENCEDOR da corrida reserva no ledger; o PERDEDOR aguarda o commit e devolve
+  -- a MESMA operação — sem cobrança duplicada nem erro incidental de unicidade.
+  INSERT INTO public.product_1_1_campaign_credit_operations (
+    campaign_id, operation_id, store_id, amount, status, credit_tx_id
+  ) VALUES (
+    p_campaign_id, p_operation_id, p_store_id, p_amount, 'reserved', NULL
+  )
+  ON CONFLICT (campaign_id, operation_id) DO NOTHING
+  RETURNING id INTO v_inserted_id;
+
+  IF v_inserted_id IS NULL THEN
+    -- Perdemos a corrida: outra reserva equivalente venceu. Devolve a MESMA
+    -- operação (idempotente), validando a identidade.
+    SELECT * INTO v_existing
+    FROM public.product_1_1_campaign_credit_operations
+    WHERE campaign_id = p_campaign_id AND operation_id = p_operation_id;
+    IF NOT FOUND THEN RAISE EXCEPTION 'operation_not_found'; END IF;
+    IF v_existing.store_id <> p_store_id OR v_existing.amount <> p_amount THEN
+      RAISE EXCEPTION 'operation_identity_conflict';
+    END IF;
+    RETURN jsonb_build_object(
+      'success', true, 'idempotent', true, 'status', v_existing.status,
+      'campaign_id', v_existing.campaign_id, 'operation_id', v_existing.operation_id,
+      'amount', v_existing.amount, 'credit_tx_id', v_existing.credit_tx_id,
+      'refund_tx_id', v_existing.refund_tx_id
+    );
+  END IF;
+
+  -- Vencedor: reserva TEMPORÁRIA no ledger (mesma transação). Qualquer exceção
+  -- aqui aborta TUDO (a linha de operação some e o saldo não muda).
   -- Idempotência do ledger vinculada à identidade COMPOSTA (campanha + operação).
   v_tx_id := public.reserve_credit(
     p_store_id,
@@ -115,11 +145,9 @@ BEGIN
   -- Sem transação de reserva válida NÃO há estado: falha atômica (rollback total).
   IF v_tx_id IS NULL THEN RAISE EXCEPTION 'credit_reservation_missing_tx'; END IF;
 
-  INSERT INTO public.product_1_1_campaign_credit_operations (
-    campaign_id, operation_id, store_id, amount, status, credit_tx_id
-  ) VALUES (
-    p_campaign_id, p_operation_id, p_store_id, p_amount, 'reserved', v_tx_id
-  );
+  UPDATE public.product_1_1_campaign_credit_operations
+     SET credit_tx_id = v_tx_id, updated_at = now()
+   WHERE id = v_inserted_id;
 
   RETURN jsonb_build_object(
     'success', true, 'idempotent', false, 'status', 'reserved',
@@ -309,7 +337,7 @@ END;
 $$;
 
 -- =============================================================================
--- 7. Reconciliação excepcional (apenas estados incompletos antigos)
+-- 7. Reconciliação que ADIA a resolução (sem evidência suficiente)
 -- =============================================================================
 CREATE OR REPLACE FUNCTION public.product_1_1_reconcile_campaign_credit_operations(
   p_timeout_minutes INTEGER DEFAULT 30
@@ -321,35 +349,33 @@ SET search_path = ''
 AS $$
 DECLARE
   v_row      public.product_1_1_campaign_credit_operations%ROWTYPE;
-  v_refund_id UUID;
+  v_deferred JSONB := '[]'::jsonb;
   v_count    INTEGER := 0;
 BEGIN
   IF p_timeout_minutes IS NULL OR p_timeout_minutes <= 0 THEN RAISE EXCEPTION 'invalid_timeout'; END IF;
 
-  -- Estorno excepcional SOMENTE de `reserved` SEM arte e COM transação válida,
-  -- mais antigos que o timeout. NUNCA estorna `art_uploaded` (tem arte) nem
-  -- operações com evidência ambígua (sem `credit_tx_id`) — essas exigem decisão
-  -- manual, não timeout.
+  -- ADIA a resolução. `reserved` NÃO prova ausência de arte: o upload pode ter
+  -- ocorrido antes da falha em registrar `art_uploaded`. Sem evidência
+  -- suficiente, a reconciliação NÃO estorna operações incompletas — apenas as
+  -- expõe como candidatas para decisão EXPLÍCITA (refund manual). Nunca chama
+  -- `refund_credit` automaticamente por timeout.
   FOR v_row IN
     SELECT * FROM public.product_1_1_campaign_credit_operations
-    WHERE status = 'reserved'
-      AND credit_tx_id IS NOT NULL
+    WHERE status IN ('reserved', 'art_uploaded')
       AND updated_at < now() - make_interval(mins => p_timeout_minutes)
     FOR UPDATE
   LOOP
-    v_refund_id := public.refund_credit(
-      v_row.credit_tx_id,
-      'reconcile_timeout',
-      'p1_1_refund_' || v_row.campaign_id::text || '_' || v_row.operation_id::text,
-      '{}'::jsonb
+    v_deferred := v_deferred || jsonb_build_object(
+      'campaign_id', v_row.campaign_id, 'operation_id', v_row.operation_id,
+      'status', v_row.status, 'amount', v_row.amount,
+      'has_credit_tx', (v_row.credit_tx_id IS NOT NULL)
     );
-    UPDATE public.product_1_1_campaign_credit_operations
-       SET status = 'refunded', refund_tx_id = v_refund_id, updated_at = now()
-     WHERE id = v_row.id;
     v_count := v_count + 1;
   END LOOP;
 
-  RETURN jsonb_build_object('success', true, 'reconciled', v_count);
+  RETURN jsonb_build_object(
+    'success', true, 'resolved', 0, 'deferred_count', v_count, 'deferred', v_deferred
+  );
 END;
 $$;
 

@@ -49,3 +49,22 @@ export class CreditOperationError extends Error {
     this.name = "CreditOperationError";
   }
 }
+
+export interface DeferredCreditOperation {
+  readonly campaignId: string;
+  readonly operationId: string;
+  readonly status: CreditOperationStatus;
+  readonly amount: number;
+  readonly hasCreditTx: boolean;
+}
+
+/**
+ * Relatório de reconciliação. Por desenho, a reconciliação ADIA a resolução
+ * (sem evidência suficiente não estorna): `resolved` é 0 e `deferred` lista as
+ * operações incompletas para decisão explícita.
+ */
+export interface CreditOperationReconciliationReport {
+  readonly resolved: number;
+  readonly deferredCount: number;
+  readonly deferred: readonly DeferredCreditOperation[];
+}

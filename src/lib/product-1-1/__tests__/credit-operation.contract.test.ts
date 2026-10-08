@@ -90,10 +90,20 @@ describe("F56.2b1a — migration product_1_1_campaign_credit (contrato estático
     ).toBe(6);
   });
 
-  it("reserva executa reserve_credit e insere `reserved` na MESMA função (atomicidade)", () => {
+  it("reserva reserva no ledger e grava o estado `reserved` na MESMA função (atomicidade)", () => {
     expect(activeSql).toMatch(/v_tx_id := public\.reserve_credit\(/);
     expect(activeSql).toMatch(/INSERT INTO public\.product_1_1_campaign_credit_operations/);
-    expect(activeSql).toMatch(/'reserved', v_tx_id/);
+    expect(activeSql).toMatch(/ON CONFLICT \(campaign_id, operation_id\) DO NOTHING/);
+    expect(activeSql).toMatch(/SET credit_tx_id = v_tx_id/);
+  });
+
+  it("reservas concorrentes equivalentes devolvem a MESMA operação (sem erro de unicidade)", () => {
+    expect(activeSql).toMatch(
+      /ON CONFLICT \(campaign_id, operation_id\) DO NOTHING[\s\S]*RETURNING id INTO v_inserted_id/,
+    );
+    expect(activeSql).toMatch(/IF v_inserted_id IS NULL THEN/);
+    // Perdedor da corrida devolve a mesma operação, idempotente.
+    expect(activeSql).toMatch(/'idempotent', true, 'status', v_existing\.status/);
   });
 
   it("transições fazem CAS no banco e o estorno usa refund_credit", () => {
@@ -108,13 +118,17 @@ describe("F56.2b1a — migration product_1_1_campaign_credit (contrato estático
     expect(activeSql).toMatch(/status = 'delivered' THEN[\s\S]*idempotent', true, 'status', 'delivered'/);
   });
 
-  it("reconciliação NÃO estorna operações com arte nem evidência ambígua (só `reserved` com tx)", () => {
-    expect(activeSql).toMatch(
-      /WHERE status = 'reserved'[\s\S]*credit_tx_id IS NOT NULL[\s\S]*make_interval\(mins => p_timeout_minutes\)/,
+  it("reconciliação ADIA a resolução: não estorna por timeout e expõe candidatas", () => {
+    expect(activeSql).toMatch(/'resolved', 0/);
+    expect(activeSql).toMatch(/'deferred_count', v_count/);
+    expect(activeSql).toMatch(/status IN \('reserved', 'art_uploaded'\)/);
+    // `reserved` NÃO é equiparado a ausência de arte; sem evidência, adia.
+    expect(sql).toMatch(/NÃO prova ausência de arte/);
+    // A reconciliação NÃO chama refund_credit automaticamente.
+    const reconcileBlock = activeSql.slice(
+      activeSql.indexOf("product_1_1_reconcile_campaign_credit_operations"),
     );
-    // Não pode depender apenas do timeout para estornar `art_uploaded`.
-    expect(activeSql).not.toMatch(/status IN \('reserved', 'art_uploaded'\)/);
-    expect(sql).toMatch(/NUNCA estorna `art_uploaded`/);
+    expect(reconcileBlock).not.toMatch(/public\.refund_credit\(/);
   });
 
   it("leitura distingue reserved (temporário) de delivered (definitivo)", () => {
@@ -237,11 +251,33 @@ describe("F56.2b1a — cliente fino de operação de crédito (simulado)", () =>
     ).rejects.toBeInstanceOf(CreditOperationError);
   });
 
-  it("get retorna null quando a operação não existe; reconcile retorna contagem", async () => {
+  it("get retorna null quando a operação não existe; reconcile adia (relatório)", async () => {
     m.rpc.mockResolvedValueOnce({ data: null, error: null });
     expect(await new ProductOneToOneCreditOperationClient().get("camp-1", "op-1")).toBeNull();
 
-    m.rpc.mockResolvedValueOnce({ data: { success: true, reconciled: 2 }, error: null });
-    expect(await new ProductOneToOneCreditOperationClient().reconcile(15)).toBe(2);
+    m.rpc.mockResolvedValueOnce({
+      data: {
+        success: true,
+        resolved: 0,
+        deferred_count: 1,
+        deferred: [
+          { campaign_id: "c", operation_id: "o", status: "art_uploaded", amount: 1, has_credit_tx: true },
+        ],
+      },
+      error: null,
+    });
+
+    const report = await new ProductOneToOneCreditOperationClient().reconcile(15);
+    expect(m.rpc).toHaveBeenLastCalledWith("product_1_1_reconcile_campaign_credit_operations", {
+      p_timeout_minutes: 15,
+    });
+    expect(report.resolved).toBe(0);
+    expect(report.deferredCount).toBe(1);
+    expect(report.deferred[0]).toMatchObject({
+      campaignId: "c",
+      operationId: "o",
+      status: "art_uploaded",
+      hasCreditTx: true,
+    });
   });
 });
