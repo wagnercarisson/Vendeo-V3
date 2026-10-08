@@ -20,6 +20,8 @@ let emptyStoreId: string;
 let campaignId: string;
 let otherCampaignId: string;
 let emptyCampaignId: string;
+let campaign2OfStoreId: string;
+let actorId = "";
 
 const retainedOperations: Array<{ campaign: string; operation: string }> = [];
 
@@ -40,6 +42,7 @@ async function createStore(name: string): Promise<string> {
     email_confirm: true,
   });
   if (error || !data.user) throw new Error(`fixture_auth_failed:${error?.message}`);
+  if (!actorId) actorId = data.user.id;
   return insertFixture("stores", {
     user_id: data.user.id,
     name,
@@ -98,6 +101,11 @@ async function callJson(
     rows: Array<{ r: Record<string, unknown> }>;
   };
   return result.rows[0].r;
+}
+
+async function rows<T>(sql: string, params: unknown[] = [], client: PgClient = pg): Promise<T[]> {
+  const result = (await client.query(sql, params as never[])) as { rows: T[] };
+  return result.rows;
 }
 
 function reserve(store: string, campaign: string, operation: string, amount = 1, client: PgClient = pg) {
@@ -203,6 +211,13 @@ beforeAll(async () => {
     status: "ready",
     product_name: "Fixture empty",
     storage_path: `${emptyStoreId}/fixture/out.jpg`,
+  });
+  // Segunda campanha da MESMA loja (para a colisão campanha×operação).
+  campaign2OfStoreId = await insertFixture("campaigns", {
+    store_id: storeId,
+    status: "ready",
+    product_name: "Fixture same store 2",
+    storage_path: `${storeId}/fixture2/out.jpg`,
   });
 
   await setCredits(storeId, 100);
@@ -384,6 +399,141 @@ describe("F56.2b1a — operação de crédito Produto 1:1 (Postgres isolado real
     expect(await availableCredits(storeId)).toBe(beforeBalance + 1);
   });
 
+  it("colisão campanha×operação: mesmo store, duas campanhas com o MESMO operation_id → transações distintas", async () => {
+    const operation = randomUUID();
+    retainedOperations.push({ campaign: campaignId, operation });
+    retainedOperations.push({ campaign: campaign2OfStoreId, operation });
+    const beforeDeductions = await deductionCount(storeId);
+
+    await reserve(storeId, campaignId, operation);
+    await reserve(storeId, campaign2OfStoreId, operation);
+
+    expect(await operationRow(campaignId, operation)).not.toBeNull();
+    expect(await operationRow(campaign2OfStoreId, operation)).not.toBeNull();
+    // Identidades distintas no ledger (chave composta campanha+operação) → 2 deduções.
+    expect(await deductionCount(storeId)).toBe(beforeDeductions + 2);
+    const keys = await rows<{ idempotency_key: string }>(
+      "SELECT idempotency_key FROM public.credit_transactions WHERE store_id = $1 AND idempotency_key IN ($2, $3)",
+      [
+        storeId,
+        `p1_1_reserve_${campaignId}_${operation}`,
+        `p1_1_reserve_${campaign2OfStoreId}_${operation}`,
+      ],
+    );
+    expect(keys).toHaveLength(2);
+  });
+
+  it("replay de `deliver` é idempotente (sem novo consumo)", async () => {
+    const operation = randomUUID();
+    retainedOperations.push({ campaign: campaignId, operation });
+    await reserve(storeId, campaignId, operation);
+    await markArt(campaignId, operation);
+
+    const first = await deliver(campaignId, operation);
+    expect(first).toMatchObject({ status: "delivered", idempotent: false });
+    const second = await deliver(campaignId, operation);
+    expect(second).toMatchObject({ status: "delivered", idempotent: true });
+    expect((await operationRow(campaignId, operation))?.status).toBe("delivered");
+  });
+
+  it("corrida entrega×estorno concorrentes: um único efeito terminal", async () => {
+    const operation = randomUUID();
+    retainedOperations.push({ campaign: campaignId, operation });
+    await reserve(storeId, campaignId, operation);
+    await markArt(campaignId, operation);
+
+    const results = await Promise.allSettled([
+      deliver(campaignId, operation, pg),
+      refund(campaignId, operation, "race", pg2),
+    ]);
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+
+    const row = await operationRow(campaignId, operation);
+    expect(["delivered", "refunded"]).toContain(row?.status);
+  });
+
+  it("corrida worker×reconciliador: estorno explícito único, reconciliação não duplica", async () => {
+    const operation = randomUUID();
+    retainedOperations.push({ campaign: campaignId, operation });
+    await reserve(storeId, campaignId, operation);
+    await pg.query(
+      "UPDATE public.product_1_1_campaign_credit_operations SET updated_at = now() - interval '2 hours' WHERE campaign_id = $1 AND operation_id = $2",
+      [campaignId, operation],
+    );
+    const beforeBalance = await availableCredits(storeId);
+
+    const [worker, reconciler] = await Promise.allSettled([
+      refund(campaignId, operation, "worker", pg),
+      reconcile(30, pg2),
+    ]);
+    expect(worker.status).toBe("fulfilled");
+    expect(reconciler.status).toBe("fulfilled");
+
+    expect((await operationRow(campaignId, operation))?.status).toBe("refunded");
+    // A reserva é restaurada EXATAMENTE uma vez (reconciliação não duplica).
+    expect(await availableCredits(storeId)).toBe(beforeBalance + 1);
+  });
+
+  it("RPCs de autorização: comportamento real sem conceder estágio habilitador", async () => {
+    const instance = "vendeo-f562a-isolated";
+    const offOperation = randomUUID();
+
+    const grantedOff = await callJson(
+      "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+      [actorId, "off", "test_stores", instance, "manter desligado", offOperation],
+    );
+    expect(grantedOff).toMatchObject({ success: true, granted: true, stage: "off" });
+
+    const enablingOperation = randomUUID();
+    const refused = await callJson(
+      "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+      [actorId, "all_stores", "all_stores", instance, "tentativa habilitadora", enablingOperation],
+    );
+    expect(refused).toMatchObject({
+      success: true,
+      granted: false,
+      refused: true,
+      reason: "operational_activation_blocked_in_b1a",
+    });
+
+    // Evento `refused` auditado; NENHUMA concessão habilitadora.
+    const events = await rows<{ event_type: string; stage: string }>(
+      "SELECT event_type, stage FROM public.product_flow_stage_authorizations WHERE operation_id IN ($1, $2)",
+      [offOperation, enablingOperation],
+    );
+    expect(events).toHaveLength(2);
+    expect(events.map((e) => e.event_type).sort()).toEqual(["granted", "refused"]);
+    const enablingGrants = await rows<{ n: number }>(
+      "SELECT count(*)::int AS n FROM public.product_flow_stage_authorizations WHERE event_type = 'granted' AND stage <> 'off'",
+    );
+    expect(enablingGrants[0].n).toBe(0);
+
+    // Mesmo operation_id com conteúdo diferente → conflito, sem nova concessão.
+    const conflict = await callJson(
+      "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+      [actorId, "all_stores", "all_stores", instance, "outro conteudo", offOperation],
+    );
+    expect(conflict).toMatchObject({ success: false, conflict: true, reason: "operation_id_conflict" });
+
+    // Replay equivalente preserva o resultado original.
+    const replay = await callJson(
+      "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+      [actorId, "off", "test_stores", instance, "manter desligado", offOperation],
+    );
+    expect(replay).toMatchObject({ granted: true, idempotent: true });
+
+    // Revogação: comportamento real.
+    const revokeOperation = randomUUID();
+    const revoked = await callJson(
+      "SELECT public.admin_revoke_product_flow_stage_authorization($1, $2, $3, $4, $5) AS r",
+      [actorId, "test_stores", instance, "revogacao de teste", revokeOperation],
+    );
+    expect(revoked).toMatchObject({ success: true, revoked: true, stage: "off" });
+  });
+
   it("as fixtures append-only permanecem retidas no target isolado (sem DELETE individual)", async () => {
     expect(retainedOperations.length).toBeGreaterThan(0);
     for (const { campaign, operation } of retainedOperations) {
@@ -393,6 +543,12 @@ describe("F56.2b1a — operação de crédito Produto 1:1 (Postgres isolado real
       "SELECT count(*)::int AS n FROM public.product_1_1_campaign_credit_operations",
     );
     expect(rows[0].n).toBeGreaterThanOrEqual(retainedOperations.length);
+
+    // Fixtures de autorização também retidas (auditadas, append-only).
+    const authCount = await pg.query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM public.product_flow_stage_authorizations",
+    );
+    expect(authCount.rows[0].n).toBeGreaterThanOrEqual(3);
   });
 
   it("privilégios mínimos: RPC só para service_role; ledger append-only bloqueia UPDATE real", async () => {
