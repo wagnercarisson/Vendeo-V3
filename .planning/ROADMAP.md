@@ -319,7 +319,7 @@ Plans:
 
 Plans:
 - [x] 56.2.1-01-PLAN.md — Diagnóstico read-only do HTTP 502 e gate verificável de identidade/isolation/serviços/schema; registra serviços obrigatórios, exclusões intencionais (Analytics) e execução elevada (bloqueia migrations/testes transacionais) — **Concluído (2026-10-08): gate `56.2.1-01-GATE.md` APPROVED (12/12); checkpoint humano aprovado (`vendeo-f562a-isolated`, API 127.0.0.1:56321, DB 56322); summary `56.2.1-01-SUMMARY.md`; sem migrations/testes transacionais/reset/provider/ativação**
-- [ ] 56.2.1-02-PLAN.md — Autorização independente auditável e decisão fail-closed, stage operacional off
+- [x] 56.2.1-02-PLAN.md — Autorização independente auditável e decisão fail-closed, stage operacional off — **Concluído (2026-10-08): migration local-only append-only + RPCs auditadas (recusa estágio habilitador); decisão pura fail-closed + serviço + API admin (requireAdmin); exceção estreita à guarda F56.2a (só a rota autorizada importa authorization); summary `56.2.1-02-SUMMARY.md`; migration NÃO aplicada; sem testes transacionais**
 - [ ] 56.2.1-03-PLAN.md — Guard de campos exclusivos do novo fluxo conectado antes de `GenerateImageRequestSchema.safeParse` (route.ts:180) e da reserva, compatibilidade legada
 - [ ] 56.2.1-04-PLAN.md — Reserva temporária, estado durável e transições financeiras atômicas em funções SQL/RPC
 - [ ] 56.2.1-05-PLAN.md — Migrations b1a copiadas com hash para o workdir isolado e aplicadas via `npx --no-install supabase --workdir` (--local); testes Postgres reais gated (rollback, concorrência, ledger/saldo)
