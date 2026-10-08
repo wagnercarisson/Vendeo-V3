@@ -10,7 +10,7 @@
 - [x] 1.1 Identificar instância descartável e registrar sua identidade/isolation boundary — `56.2.1-01-GATE.md` §2
 - [x] 1.2 Diagnosticar somente leitura serviços, rotas e logs sanitizados da anomalia exit 1 / HTTP 502; sem presunção de causa e sem reset — `56.2.1-01-GATE.md` §1
 - [x] 1.3 Registrar gate verificável de serviços/conectividade, schema, flags false e fixtures ausentes — `56.2.1-01-GATE.md` (APPROVED 12/12)
-- [ ] 1.4 Se inconclusivo, propor instância nova e validar identidade, serviços e schema antes de testar transação — **NÃO ACIONADA: gate 1.3 APPROVED (12/12) em 2026-10-08; nenhuma instância nova foi necessária (sem execução a inventar).**
+- [x] 1.4 Se inconclusivo, propor instância nova e validar identidade, serviços e schema antes de testar transação — **N/A — gate 1.3 APPROVED (12/12) em 2026-10-08; nenhuma instância nova criada; alternativa condicional NÃO executada (avaliação concluída, sem inventar execução).**
 
 ## 2. Autorização e decisão de roteamento, sem ativação
 - [x] 2.1 Criar armazenamento dedicado com stage/scope/instance/grantor/timestamps/expiry/revocation/reason/operation_id e histórico append-only — migration `20261008000001` + `stage-authorization-repository.ts`
