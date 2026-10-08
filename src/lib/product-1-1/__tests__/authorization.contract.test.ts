@@ -20,6 +20,8 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
+vi.mock("@/lib/auth/csrf", () => ({ requireSameOrigin: vi.fn() }));
+
 import { ForbiddenError } from "@/lib/auth/errors";
 import type { FeatureFlagService } from "@/lib/feature-flags/feature-flag-service";
 import {
@@ -73,6 +75,7 @@ function event(over: Partial<StageAuthorizationEvent> = {}): StageAuthorizationE
     operationId: OPERATION_ID,
     expiresAtMs: null,
     createdAtMs: 1,
+    seq: 1,
     ...over,
   };
 }
@@ -319,6 +322,39 @@ describe("F56.2b1a — derivação do histórico append-only", () => {
       INSTANCE,
     );
     expect(current).toMatchObject({ stage: "all_stores", scope: "all_stores" });
+  });
+
+  it("empate no mesmo milissegundo é desempatado por `seq` (ordem autoritativa)", () => {
+    const revokedAfterGrant = deriveCurrentAuthorization(
+      [
+        event({ eventType: "granted", stage: "all_stores", createdAtMs: 5, seq: 1 }),
+        event({ eventType: "revoked", stage: "off", createdAtMs: 5, seq: 2 }),
+      ],
+      "all_stores",
+      INSTANCE,
+    );
+    expect(revokedAfterGrant).toMatchObject({ stage: "off", revokedAtMs: 5 });
+
+    const grantAfterRevoke = deriveCurrentAuthorization(
+      [
+        event({ eventType: "revoked", stage: "off", createdAtMs: 5, seq: 1 }),
+        event({ eventType: "granted", stage: "all_stores", createdAtMs: 5, seq: 2 }),
+      ],
+      "all_stores",
+      INSTANCE,
+    );
+    expect(grantAfterRevoke).toMatchObject({ stage: "all_stores", revokedAtMs: null });
+
+    // Entrada fora de ordem: `seq` determina a ordem autoritativa.
+    const outOfOrder = deriveCurrentAuthorization(
+      [
+        event({ eventType: "revoked", stage: "off", createdAtMs: 5, seq: 2 }),
+        event({ eventType: "granted", stage: "all_stores", createdAtMs: 5, seq: 1 }),
+      ],
+      "all_stores",
+      INSTANCE,
+    );
+    expect(outOfOrder).toMatchObject({ stage: "off", revokedAtMs: 5 });
   });
 });
 

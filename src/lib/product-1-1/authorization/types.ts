@@ -51,6 +51,8 @@ export interface StageAuthorizationEvent {
   readonly operationId: string;
   readonly expiresAtMs: number | null;
   readonly createdAtMs: number;
+  /** Ordem autoritativa de inserção (desempate determinístico de timestamps). */
+  readonly seq: number;
 }
 
 /** Estado corrente derivado do histórico (nunca persistido como UPDATE). */

@@ -74,6 +74,15 @@ describe("F56.2b1a — migration product_1_1_campaign_credit (contrato estático
     expect(activeSql).toMatch(/p_amount <> 1 THEN RAISE EXCEPTION 'invalid_credit_amount'/);
   });
 
+  it("escrita direta NÃO é concedida à service_role (WR-04)", () => {
+    expect(activeSql).toMatch(
+      /GRANT SELECT ON TABLE public\.product_1_1_campaign_credit_operations TO service_role/,
+    );
+    expect(activeSql).not.toMatch(
+      /GRANT[^;]*\b(INSERT|UPDATE|DELETE)\b[^;]*ON TABLE public\.product_1_1_campaign_credit_operations/,
+    );
+  });
+
   it("define RPCs SECURITY DEFINER com search_path vazio e privilégios mínimos", () => {
     expect(activeSql).toMatch(
       /CREATE OR REPLACE FUNCTION public\.product_1_1_reserve_credit_operation/,

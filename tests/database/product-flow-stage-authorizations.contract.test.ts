@@ -69,6 +69,12 @@ describe("F56.2b1a — migration product_flow_stage_authorizations (contrato est
     );
   });
 
+  it("idempotência sob corrida (WR-01) e ordem determinística por `seq` (WR-05)", () => {
+    expect(activeSql).toMatch(/seq\s+BIGINT GENERATED ALWAYS AS IDENTITY/);
+    expect((activeSql.match(/ON CONFLICT \(operation_id\) DO NOTHING/g) ?? []).length).toBe(2);
+    expect((activeSql.match(/RETURNING id INTO v_inserted_id/g) ?? []).length).toBe(2);
+  });
+
   it("proíbe UPDATE/DELETE por trigger de imutabilidade", () => {
     expect(activeSql).toMatch(
       /CREATE TRIGGER trg_product_flow_stage_authorizations_immutable[\s\S]*BEFORE UPDATE OR DELETE/,
@@ -101,22 +107,22 @@ describe("F56.2b1a — migration product_flow_stage_authorizations (contrato est
 
   it("preserva o resultado original no replay idempotente (recusa e concessão off)", () => {
     expect(activeSql).toMatch(/IF v_existing_type = 'refused'/);
-    expect((activeSql.match(/'granted', false/g) ?? []).length).toBe(2);
-    expect((activeSql.match(/'granted', true/g) ?? []).length).toBe(2);
-    expect((activeSql.match(/'refused', true/g) ?? []).length).toBe(2);
-    expect((activeSql.match(/'refused', false/g) ?? []).length).toBe(2);
-    expect((activeSql.match(/'revoked', true/g) ?? []).length).toBe(2);
+    expect((activeSql.match(/'granted', false/g) ?? []).length).toBe(3);
+    expect((activeSql.match(/'granted', true/g) ?? []).length).toBe(3);
+    expect((activeSql.match(/'refused', true/g) ?? []).length).toBe(3);
+    expect((activeSql.match(/'refused', false/g) ?? []).length).toBe(3);
+    expect((activeSql.match(/'revoked', true/g) ?? []).length).toBe(3);
   });
 
   it("vincula a idempotência à identidade da solicitação (conflito sem nova escrita)", () => {
     expect((activeSql.match(/operation_id_conflict/g) ?? []).length).toBeGreaterThanOrEqual(2);
-    expect((activeSql.match(/'conflict', true/g) ?? []).length).toBe(2);
+    expect((activeSql.match(/'conflict', true/g) ?? []).length).toBe(4);
     expect(activeSql).toMatch(/v_expected_event := CASE WHEN v_enabling THEN 'refused' ELSE 'granted' END/);
-    expect(activeSql).toMatch(/v_existing_stage = p_stage/);
-    expect((activeSql.match(/v_existing_scope = p_scope/g) ?? []).length).toBe(2);
-    expect((activeSql.match(/v_existing_instance = btrim\(p_instance_identity\)/g) ?? []).length).toBe(2);
-    expect((activeSql.match(/v_existing_actor IS NOT DISTINCT FROM p_actor_id/g) ?? []).length).toBe(2);
-    expect((activeSql.match(/v_existing_reason = btrim\(p_reason\)/g) ?? []).length).toBe(2);
+    expect(activeSql).toMatch(/v_existing_stage = v_stored_stage/);
+    expect((activeSql.match(/v_existing_scope = p_scope/g) ?? []).length).toBe(4);
+    expect((activeSql.match(/v_existing_instance = btrim\(p_instance_identity\)/g) ?? []).length).toBe(4);
+    expect((activeSql.match(/v_existing_actor IS NOT DISTINCT FROM p_actor_id/g) ?? []).length).toBe(4);
+    expect((activeSql.match(/v_existing_reason = btrim\(p_reason\)/g) ?? []).length).toBe(4);
   });
 
   it("restringe EXECUTE das RPCs a service_role", () => {

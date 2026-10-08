@@ -48,9 +48,11 @@ CREATE POLICY "Service role manages product 1.1 campaign credit operations"
   ON public.product_1_1_campaign_credit_operations FOR ALL TO service_role
   USING (true) WITH CHECK (true);
 
+-- Escrita SOMENTE pelas RPCs SECURITY DEFINER: service_role recebe apenas SELECT
+-- (nenhuma escrita direta — não contorna atomicidade/CAS).
 REVOKE ALL ON TABLE public.product_1_1_campaign_credit_operations FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.product_1_1_campaign_credit_operations FROM service_role;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.product_1_1_campaign_credit_operations TO service_role;
+GRANT SELECT ON TABLE public.product_1_1_campaign_credit_operations TO service_role;
 
 -- =============================================================================
 -- 2. Reserva atômica: reserve_credit + estado `reserved` na MESMA transação

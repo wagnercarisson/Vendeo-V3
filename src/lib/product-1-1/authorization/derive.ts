@@ -12,8 +12,9 @@ import type {
  * - `granted` define o estágio vigente;
  * - `revoked` retorna o escopo para `off` (registrando o instante da revogação).
  *
- * O histórico assume ordenação ascendente por `createdAtMs`; a função também
- * ordena defensivamente. Não realiza I/O.
+ * O histórico é ordenado por `createdAtMs` e, para empates no mesmo milissegundo,
+ * por `seq` (ordem autoritativa de inserção) — desempate determinístico. Não
+ * realiza I/O.
  */
 export function deriveCurrentAuthorization(
   events: readonly StageAuthorizationEvent[],
@@ -23,7 +24,7 @@ export function deriveCurrentAuthorization(
   const relevant = events
     .filter((event) => event.scope === scope && event.instanceIdentity === instanceIdentity)
     .slice()
-    .sort((a, b) => a.createdAtMs - b.createdAtMs);
+    .sort((a, b) => a.createdAtMs - b.createdAtMs || a.seq - b.seq);
 
   let current: CurrentStageAuthorization | null = null;
 

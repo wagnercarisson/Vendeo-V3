@@ -182,13 +182,15 @@ beforeAll(async () => {
   await pg2.connect();
 
   const migrations = await pg.query<{ version: string }>(
-    "SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ($1, $2, $3) ORDER BY version",
-    ["20261008000001", "20261008000002", "20261008000003"],
+    "SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ($1, $2, $3, $4, $5) ORDER BY version",
+    ["20261008000001", "20261008000002", "20261008000003", "20261008000004", "20261008000005"],
   );
   expect(migrations.rows.map((row) => row.version)).toEqual([
     "20261008000001",
     "20261008000002",
     "20261008000003",
+    "20261008000004",
+    "20261008000005",
   ]);
 
   const token = randomUUID();
@@ -563,6 +565,96 @@ describe("F56.2b1a — operação de crédito Produto 1:1 (Postgres isolado real
     expect(refused).toMatchObject({ granted: false, refused: true });
   });
 
+  it("RPCs de autorização: equivalentes concorrentes devolvem a MESMA operação; divergentes retornam conflito (WR-01)", async () => {
+    const equivalent = randomUUID();
+    const [a, b] = await Promise.all([
+      callJson(
+        "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+        [actorId, "off", "test_stores", "vendeo-f562a-isolated", "equiv", equivalent],
+        pg,
+      ),
+      callJson(
+        "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+        [actorId, "off", "test_stores", "vendeo-f562a-isolated", "equiv", equivalent],
+        pg2,
+      ),
+    ]);
+    expect(a).toMatchObject({ granted: true });
+    expect(b).toMatchObject({ granted: true });
+    const equivalentRows = await rows<{ n: number }>(
+      "SELECT count(*)::int AS n FROM public.product_flow_stage_authorizations WHERE operation_id = $1",
+      [equivalent],
+    );
+    expect(equivalentRows[0].n).toBe(1);
+
+    // Divergente: mesmo operation_id, conteúdo diferente → um vence, o outro conflita.
+    const divergent = randomUUID();
+    const [c, d] = await Promise.all([
+      callJson(
+        "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+        [actorId, "off", "test_stores", "vendeo-f562a-isolated", "conteudo A", divergent],
+        pg,
+      ),
+      callJson(
+        "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+        [actorId, "off", "test_stores", "vendeo-f562a-isolated", "conteudo B", divergent],
+        pg2,
+      ),
+    ]);
+    const winners = [c, d].filter((r) => r.granted === true);
+    const conflicts = [c, d].filter((r) => r.conflict === true);
+    expect(winners).toHaveLength(1);
+    expect(conflicts).toHaveLength(1);
+    const divergentRows = await rows<{ n: number }>(
+      "SELECT count(*)::int AS n FROM public.product_flow_stage_authorizations WHERE operation_id = $1",
+      [divergent],
+    );
+    expect(divergentRows[0].n).toBe(1);
+  });
+
+  it("tabela financeira: escrita direta recusada e RPCs (reserva/entrega/estorno/reconciliação) intactas (WR-04)", async () => {
+    const { error } = await supabase.from("product_1_1_campaign_credit_operations").insert({
+      campaign_id: campaignId,
+      operation_id: randomUUID(),
+      store_id: storeId,
+      amount: 1,
+      status: "reserved",
+    });
+    expect(error).not.toBeNull();
+
+    const op = randomUUID();
+    retainedOperations.push({ campaign: campaignId, operation: op });
+    expect(await reserve(storeId, campaignId, op)).toMatchObject({ status: "reserved" });
+    await markArt(campaignId, op);
+    expect(await deliver(campaignId, op)).toMatchObject({ status: "delivered" });
+
+    const opRefund = randomUUID();
+    retainedOperations.push({ campaign: campaignId, operation: opRefund });
+    await reserve(storeId, campaignId, opRefund);
+    expect(await refund(campaignId, opRefund)).toMatchObject({ status: "refunded" });
+
+    expect(await reconcile(30)).toMatchObject({ resolved: 0 });
+  });
+
+  it("ordem determinística no mesmo milissegundo via `seq` (WR-05)", async () => {
+    const opA = randomUUID();
+    const opB = randomUUID();
+    const sameTime = new Date().toISOString();
+    await pg.query(
+      `INSERT INTO public.product_flow_stage_authorizations
+         (event_type, stage, scope, instance_identity, granted_by, reason, operation_id, created_at)
+       VALUES
+         ('granted', 'off', 'test_stores', $1, $2, 'ordem-a', $3, $4),
+         ('revoked', 'off', 'test_stores', $1, $2, 'ordem-b', $5, $4)`,
+      ["vendeo-f562a-isolated", actorId, opA, sameTime, opB],
+    );
+    const ordered = await rows<{ operation_id: string }>(
+      "SELECT operation_id FROM public.product_flow_stage_authorizations WHERE operation_id IN ($1, $2) ORDER BY created_at, seq",
+      [opA, opB],
+    );
+    expect(ordered.map((r) => r.operation_id)).toEqual([opA, opB]);
+  });
+
   it("as fixtures append-only permanecem retidas no target isolado (sem DELETE individual)", async () => {
     expect(retainedOperations.length).toBeGreaterThan(0);
     for (const { campaign, operation } of retainedOperations) {
@@ -591,7 +683,7 @@ describe("F56.2b1a — operação de crédito Produto 1:1 (Postgres isolado real
          has_function_privilege('anon', 'public.product_1_1_reserve_credit_operation(uuid,uuid,uuid,integer,jsonb)', 'EXECUTE') AS anon_exec,
          has_table_privilege('service_role', 'public.product_1_1_campaign_credit_operations', 'UPDATE') AS table_update`,
     );
-    expect(rows[0]).toEqual({ reserve_exec: true, anon_exec: false, table_update: true });
+    expect(rows[0]).toEqual({ reserve_exec: true, anon_exec: false, table_update: false });
 
     // O ledger é append-only: um UPDATE real é bloqueado por trigger.
     await pg.query("BEGIN");

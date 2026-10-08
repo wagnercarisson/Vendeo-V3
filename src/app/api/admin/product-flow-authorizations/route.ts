@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import {
   GrantStageAuthorizationRequestSchema,
@@ -70,6 +71,7 @@ export const GET = apiHandler(async (request: Request) => {
 
 export const POST = apiHandler(async (request: Request) => {
   const admin = await requireAdmin();
+  requireSameOrigin(request);
 
   let body;
   try {

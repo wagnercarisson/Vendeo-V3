@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 const SELECT_COLUMNS =
-  "event_type, stage, scope, instance_identity, granted_by, reason, operation_id, expires_at, created_at";
+  "event_type, stage, scope, instance_identity, granted_by, reason, operation_id, expires_at, created_at, seq";
 
 export interface StageAuthorizationQuery {
   readonly scope: ProductFlowScope;
@@ -31,6 +31,7 @@ interface StageAuthorizationRow {
   operation_id: string;
   expires_at: string | null;
   created_at: string;
+  seq: number;
 }
 
 function parseTimestamp(value: string | null): number | null {
@@ -50,6 +51,7 @@ function mapRow(row: StageAuthorizationRow): StageAuthorizationEvent {
     operationId: row.operation_id,
     expiresAtMs: parseTimestamp(row.expires_at),
     createdAtMs: parseTimestamp(row.created_at) ?? 0,
+    seq: Number(row.seq),
   });
 }
 
@@ -67,7 +69,8 @@ export class SupabaseStageAuthorizationRepository
       .select(SELECT_COLUMNS)
       .eq("scope", query.scope)
       .eq("instance_identity", query.instanceIdentity)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .order("seq", { ascending: true });
 
     if (error) {
       throw new Error(error.message);
