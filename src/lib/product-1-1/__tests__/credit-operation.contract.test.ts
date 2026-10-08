@@ -41,7 +41,37 @@ describe("F56.2b1a — migration product_1_1_campaign_credit (contrato estático
     expect(activeSql).toMatch(
       /status IN \('reserved', 'art_uploaded', 'delivered', 'refunded'\)/,
     );
-    expect(activeSql).toMatch(/CHECK \(amount > 0\)/);
+    expect(activeSql).toMatch(/CHECK \(amount = 1\)/);
+  });
+
+  it("falha atomicamente quando não há transação de reserva válida", () => {
+    expect(activeSql).toMatch(
+      /IF v_tx_id IS NULL THEN RAISE EXCEPTION 'credit_reservation_missing_tx'/,
+    );
+    // O estorno também recusa reserva sem transação (evidência ambígua).
+    expect(activeSql).toMatch(
+      /IF v_row\.credit_tx_id IS NULL THEN RAISE EXCEPTION 'credit_reservation_missing_tx'/,
+    );
+  });
+
+  it("usa a identidade COMPOSTA (campanha + operação) no ledger", () => {
+    expect(activeSql).toMatch(
+      /'p1_1_reserve_' \|\| p_campaign_id::text \|\| '_' \|\| p_operation_id::text/,
+    );
+    expect(activeSql).toMatch(
+      /'p1_1_refund_' \|\| p_campaign_id::text \|\| '_' \|\| p_operation_id::text/,
+    );
+  });
+
+  it("valida campanha ↔ loja antes de reservar", () => {
+    expect(activeSql).toMatch(/RAISE EXCEPTION 'campaign_store_mismatch'/);
+    expect(activeSql).toMatch(
+      /FROM public\.campaigns[\s\S]*WHERE id = p_campaign_id AND store_id = p_store_id/,
+    );
+  });
+
+  it("fixa um único crédito por entrega", () => {
+    expect(activeSql).toMatch(/p_amount <> 1 THEN RAISE EXCEPTION 'invalid_credit_amount'/);
   });
 
   it("define RPCs SECURITY DEFINER com search_path vazio e privilégios mínimos", () => {
@@ -78,10 +108,13 @@ describe("F56.2b1a — migration product_1_1_campaign_credit (contrato estático
     expect(activeSql).toMatch(/status = 'delivered' THEN[\s\S]*idempotent', true, 'status', 'delivered'/);
   });
 
-  it("reconciliação é restrita a estados incompletos antigos", () => {
+  it("reconciliação NÃO estorna operações com arte nem evidência ambígua (só `reserved` com tx)", () => {
     expect(activeSql).toMatch(
-      /WHERE status IN \('reserved', 'art_uploaded'\)[\s\S]*make_interval\(mins => p_timeout_minutes\)/,
+      /WHERE status = 'reserved'[\s\S]*credit_tx_id IS NOT NULL[\s\S]*make_interval\(mins => p_timeout_minutes\)/,
     );
+    // Não pode depender apenas do timeout para estornar `art_uploaded`.
+    expect(activeSql).not.toMatch(/status IN \('reserved', 'art_uploaded'\)/);
+    expect(sql).toMatch(/NUNCA estorna `art_uploaded`/);
   });
 
   it("leitura distingue reserved (temporário) de delivered (definitivo)", () => {
@@ -96,7 +129,7 @@ function state(over: Record<string, unknown> = {}) {
     status: "reserved",
     campaign_id: "camp-1",
     operation_id: "op-1",
-    amount: 3,
+    amount: 1,
     credit_tx_id: "tx-1",
     refund_tx_id: null,
     ...over,
@@ -108,26 +141,25 @@ beforeEach(() => {
 });
 
 describe("F56.2b1a — cliente fino de operação de crédito (simulado)", () => {
-  it("reserve invoca a RPC correta e mapeia o estado temporário", async () => {
+  it("reserve invoca a RPC com UM crédito fixo e mapeia o estado temporário", async () => {
     m.rpc.mockResolvedValue({ data: state(), error: null });
 
     const result = await new ProductOneToOneCreditOperationClient().reserve({
       storeId: "store-1",
       campaignId: "camp-1",
       operationId: "op-1",
-      amount: 3,
     });
 
     expect(m.rpc).toHaveBeenCalledWith("product_1_1_reserve_credit_operation", {
       p_store_id: "store-1",
       p_campaign_id: "camp-1",
       p_operation_id: "op-1",
-      p_amount: 3,
+      p_amount: 1,
       p_metadata: {},
     });
     expect(result).toMatchObject({
       status: "reserved",
-      amount: 3,
+      amount: 1,
       creditTxId: "tx-1",
       consumedDefinitive: false,
     });
@@ -175,9 +207,27 @@ describe("F56.2b1a — cliente fino de operação de crédito (simulado)", () =>
         storeId: "store-1",
         campaignId: "camp-1",
         operationId: "op-1",
-        amount: 3,
       }),
     ).rejects.toMatchObject({ code: "credit_reservation_failed" });
+  });
+
+  it("mapeia erros de identidade/entrega: campanha↔loja, crédito fixo e reserva sem tx", async () => {
+    const cases = [
+      ["campaign_store_mismatch", "campaign_store_mismatch"],
+      ["invalid_credit_amount", "invalid_credit_amount"],
+      ["credit_reservation_missing_tx", "credit_reservation_missing_tx"],
+    ] as const;
+
+    for (const [message, code] of cases) {
+      m.rpc.mockResolvedValueOnce({ data: null, error: { message } });
+      await expect(
+        new ProductOneToOneCreditOperationClient().reserve({
+          storeId: "store-1",
+          campaignId: "camp-1",
+          operationId: "op-1",
+        }),
+      ).rejects.toMatchObject({ code });
+    }
   });
 
   it("resposta vazia/ inválida lança erro (nunca sucesso enganoso)", async () => {

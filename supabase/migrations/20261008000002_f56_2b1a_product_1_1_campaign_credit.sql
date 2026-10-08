@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS public.product_1_1_campaign_credit_operations (
   refund_tx_id  UUID,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT chk_p1_1_campaign_credit_operations_amount CHECK (amount > 0),
+  -- Um único crédito por entrega.
+  CONSTRAINT chk_p1_1_campaign_credit_operations_amount CHECK (amount = 1),
   CONSTRAINT uq_p1_1_campaign_credit_operations_identity UNIQUE (campaign_id, operation_id)
 );
 
@@ -73,7 +74,16 @@ BEGIN
   IF p_store_id IS NULL THEN RAISE EXCEPTION 'missing_store_id'; END IF;
   IF p_campaign_id IS NULL THEN RAISE EXCEPTION 'missing_campaign_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
-  IF p_amount IS NULL OR p_amount <= 0 THEN RAISE EXCEPTION 'invalid_amount'; END IF;
+  -- Um único crédito por entrega.
+  IF p_amount IS NULL OR p_amount <> 1 THEN RAISE EXCEPTION 'invalid_credit_amount'; END IF;
+
+  -- A campanha precisa pertencer à loja informada (identidade confiável).
+  IF NOT EXISTS (
+    SELECT 1 FROM public.campaigns
+    WHERE id = p_campaign_id AND store_id = p_store_id
+  ) THEN
+    RAISE EXCEPTION 'campaign_store_mismatch';
+  END IF;
 
   SELECT * INTO v_existing
   FROM public.product_1_1_campaign_credit_operations
@@ -93,13 +103,17 @@ BEGIN
 
   -- Reserva TEMPORÁRIA no ledger existente. Qualquer exceção aqui aborta a
   -- transação inteira: nenhuma linha de operação é criada e o saldo não muda.
+  -- Idempotência do ledger vinculada à identidade COMPOSTA (campanha + operação).
   v_tx_id := public.reserve_credit(
     p_store_id,
     p_amount,
     p_campaign_id,
-    'p1_1_reserve_' || p_operation_id::text,
+    'p1_1_reserve_' || p_campaign_id::text || '_' || p_operation_id::text,
     COALESCE(p_metadata, '{}'::jsonb)
   );
+
+  -- Sem transação de reserva válida NÃO há estado: falha atômica (rollback total).
+  IF v_tx_id IS NULL THEN RAISE EXCEPTION 'credit_reservation_missing_tx'; END IF;
 
   INSERT INTO public.product_1_1_campaign_credit_operations (
     campaign_id, operation_id, store_id, amount, status, credit_tx_id
@@ -240,12 +254,15 @@ BEGIN
   IF v_row.status = 'delivered' THEN RAISE EXCEPTION 'delivered_not_refundable'; END IF;
 
   IF v_row.status NOT IN ('reserved', 'art_uploaded') THEN RAISE EXCEPTION 'invalid_transition'; END IF;
+  -- Evidência de reserva ausente é ambígua: NÃO estorna.
+  IF v_row.credit_tx_id IS NULL THEN RAISE EXCEPTION 'credit_reservation_missing_tx'; END IF;
 
   -- Restaura a reserva no ledger existente (mesma transação).
+  -- Idempotência do ledger vinculada à identidade COMPOSTA (campanha + operação).
   v_refund_id := public.refund_credit(
     v_row.credit_tx_id,
     COALESCE(NULLIF(btrim(p_reason), ''), 'refund'),
-    'p1_1_refund_' || p_operation_id::text,
+    'p1_1_refund_' || p_campaign_id::text || '_' || p_operation_id::text,
     '{}'::jsonb
   );
 
@@ -309,17 +326,21 @@ DECLARE
 BEGIN
   IF p_timeout_minutes IS NULL OR p_timeout_minutes <= 0 THEN RAISE EXCEPTION 'invalid_timeout'; END IF;
 
-  -- Estorno excepcional SOMENTE de reserved/art_uploaded mais antigos que o timeout.
+  -- Estorno excepcional SOMENTE de `reserved` SEM arte e COM transação válida,
+  -- mais antigos que o timeout. NUNCA estorna `art_uploaded` (tem arte) nem
+  -- operações com evidência ambígua (sem `credit_tx_id`) — essas exigem decisão
+  -- manual, não timeout.
   FOR v_row IN
     SELECT * FROM public.product_1_1_campaign_credit_operations
-    WHERE status IN ('reserved', 'art_uploaded')
+    WHERE status = 'reserved'
+      AND credit_tx_id IS NOT NULL
       AND updated_at < now() - make_interval(mins => p_timeout_minutes)
     FOR UPDATE
   LOOP
     v_refund_id := public.refund_credit(
       v_row.credit_tx_id,
       'reconcile_timeout',
-      'p1_1_refund_' || v_row.operation_id::text,
+      'p1_1_refund_' || v_row.campaign_id::text || '_' || v_row.operation_id::text,
       '{}'::jsonb
     );
     UPDATE public.product_1_1_campaign_credit_operations

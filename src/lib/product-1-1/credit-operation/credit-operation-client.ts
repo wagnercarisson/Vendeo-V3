@@ -21,13 +21,18 @@ const KNOWN_CODES: readonly CreditOperationErrorCode[] = [
   "missing_store_id",
   "missing_campaign_id",
   "missing_operation_id",
-  "invalid_amount",
+  "invalid_credit_amount",
   "invalid_timeout",
+  "campaign_store_mismatch",
+  "credit_reservation_missing_tx",
   "operation_identity_conflict",
   "operation_not_found",
   "invalid_transition",
   "delivered_not_refundable",
 ];
+
+/** Um único crédito por entrega (fixado). */
+export const PRODUCT_ONE_TO_ONE_CREDITS_PER_DELIVERY = 1;
 
 const CREDIT_LEDGER_FAILURE_HINTS = [
   "saldo_insuficiente",
@@ -42,7 +47,6 @@ export interface ReserveCreditOperationInput {
   readonly storeId: string;
   readonly campaignId: string;
   readonly operationId: string;
-  readonly amount: number;
   readonly metadata?: Record<string, unknown>;
 }
 
@@ -93,7 +97,8 @@ export class ProductOneToOneCreditOperationClient {
       p_store_id: input.storeId,
       p_campaign_id: input.campaignId,
       p_operation_id: input.operationId,
-      p_amount: input.amount,
+      // Um único crédito por entrega (fixado; o RPC recusa qualquer outro valor).
+      p_amount: PRODUCT_ONE_TO_ONE_CREDITS_PER_DELIVERY,
       p_metadata: input.metadata ?? {},
     });
   }
