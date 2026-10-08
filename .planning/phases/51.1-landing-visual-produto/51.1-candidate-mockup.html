@@ -94,10 +94,10 @@
   .summary-list dt { color: var(--text-muted); font-size: 0.8125rem; margin: 0; }
   .summary-list dd { color: var(--text-primary); font-size: 0.8125rem; margin: 0; }
 
-  /* Animação mínima de entrada dos conjuntos demonstrativos (progressiva, uma vez).
-     Os conjuntos ficam VISÍVEIS por padrão; a animação só é aplicada ao entrar. */
-  @keyframes setReveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  .demo-set.is-revealing { animation: setReveal 200ms ease; }
+  /* Animação de entrada dos conjuntos demonstrativos (apenas transform; uma vez ao entrar).
+     Sem variação de opacidade e sem afetar layout; conjuntos visíveis por padrão. */
+  @keyframes setReveal { from { transform: translateY(16px); } to { transform: translateY(0); } }
+  .demo-set.is-revealing { animation: setReveal 280ms ease-out; }
   @media (prefers-reduced-motion: reduce) {
     .demo-set.is-revealing { animation: none; }
   }
