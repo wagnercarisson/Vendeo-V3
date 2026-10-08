@@ -98,10 +98,14 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_existing_type  TEXT;
-  v_existing_stage TEXT;
-  v_existing_scope TEXT;
-  v_enabling       BOOLEAN;
+  v_existing_type     TEXT;
+  v_existing_stage    TEXT;
+  v_existing_scope    TEXT;
+  v_existing_instance TEXT;
+  v_existing_actor    UUID;
+  v_existing_reason   TEXT;
+  v_enabling          BOOLEAN;
+  v_expected_event    TEXT;
 BEGIN
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
@@ -110,26 +114,43 @@ BEGIN
   IF p_scope IS NULL OR p_scope NOT IN ('test_stores', 'all_stores') THEN RAISE EXCEPTION 'invalid_scope'; END IF;
   IF p_stage IS NULL OR p_stage NOT IN ('off', 'isolated_pilot', 'test_stores', 'all_stores') THEN RAISE EXCEPTION 'invalid_stage'; END IF;
 
-  -- Idempotência por operation_id: o replay PRESERVA o resultado original.
-  SELECT event_type, stage, scope INTO v_existing_type, v_existing_stage, v_existing_scope
+  v_enabling := p_stage <> 'off';
+  v_expected_event := CASE WHEN v_enabling THEN 'refused' ELSE 'granted' END;
+
+  -- Idempotência VINCULADA à identidade da solicitação (ação + actor + estágio +
+  -- escopo + instância + motivo). Replay equivalente preserva o resultado;
+  -- conteúdo diferente é CONFLITO (sem nova escrita e sem sucesso enganoso).
+  SELECT event_type, stage, scope, instance_identity, granted_by, reason
+    INTO v_existing_type, v_existing_stage, v_existing_scope, v_existing_instance, v_existing_actor, v_existing_reason
   FROM public.product_flow_stage_authorizations
   WHERE operation_id = p_operation_id;
   IF FOUND THEN
-    IF v_existing_type = 'refused' THEN
+    IF v_existing_type = v_expected_event
+       AND v_existing_stage = p_stage
+       AND v_existing_scope = p_scope
+       AND v_existing_instance = btrim(p_instance_identity)
+       AND v_existing_actor IS NOT DISTINCT FROM p_actor_id
+       AND v_existing_reason = btrim(p_reason) THEN
+      IF v_existing_type = 'refused' THEN
+        RETURN jsonb_build_object(
+          'success', true, 'idempotent', true, 'granted', false, 'refused', true,
+          'reason', 'operational_activation_blocked_in_b1a', 'stage', v_existing_stage, 'scope', v_existing_scope
+        );
+      END IF;
       RETURN jsonb_build_object(
-        'success', true, 'idempotent', true, 'granted', false, 'refused', true,
-        'reason', 'operational_activation_blocked_in_b1a', 'stage', v_existing_stage, 'scope', v_existing_scope
+        'success', true, 'idempotent', true, 'granted', true, 'refused', false,
+        'stage', 'off', 'scope', v_existing_scope
       );
     END IF;
+
     RETURN jsonb_build_object(
-      'success', true, 'idempotent', true, 'granted', true, 'refused', false,
-      'stage', 'off', 'scope', v_existing_scope
+      'success', false, 'conflict', true, 'reason', 'operation_id_conflict',
+      'operation_id', p_operation_id, 'event_type', v_existing_type
     );
   END IF;
 
   -- Nesta change TODO estágio habilitador é recusado de forma explícita e
   -- auditada; o estado operacional permanece `off`.
-  v_enabling := p_stage <> 'off';
   IF v_enabling THEN
     INSERT INTO public.product_flow_stage_authorizations (
       event_type, stage, scope, instance_identity, granted_by, reason, operation_id, expires_at
@@ -177,8 +198,11 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_existing_type  TEXT;
-  v_existing_scope TEXT;
+  v_existing_type     TEXT;
+  v_existing_scope    TEXT;
+  v_existing_instance TEXT;
+  v_existing_actor    UUID;
+  v_existing_reason   TEXT;
 BEGIN
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
@@ -186,11 +210,25 @@ BEGIN
   IF p_instance_identity IS NULL OR btrim(p_instance_identity) = '' THEN RAISE EXCEPTION 'missing_instance_identity'; END IF;
   IF p_scope IS NULL OR p_scope NOT IN ('test_stores', 'all_stores') THEN RAISE EXCEPTION 'invalid_scope'; END IF;
 
-  SELECT event_type, scope INTO v_existing_type, v_existing_scope
+  -- Idempotência vinculada à identidade da solicitação (revogação): replay
+  -- equivalente preserva o resultado; conteúdo diferente é CONFLITO.
+  SELECT event_type, scope, instance_identity, granted_by, reason
+    INTO v_existing_type, v_existing_scope, v_existing_instance, v_existing_actor, v_existing_reason
   FROM public.product_flow_stage_authorizations
   WHERE operation_id = p_operation_id;
   IF FOUND THEN
-    RETURN jsonb_build_object('success', true, 'idempotent', true, 'revoked', true, 'stage', 'off', 'scope', v_existing_scope);
+    IF v_existing_type = 'revoked'
+       AND v_existing_scope = p_scope
+       AND v_existing_instance = btrim(p_instance_identity)
+       AND v_existing_actor IS NOT DISTINCT FROM p_actor_id
+       AND v_existing_reason = btrim(p_reason) THEN
+      RETURN jsonb_build_object('success', true, 'idempotent', true, 'revoked', true, 'stage', 'off', 'scope', v_existing_scope);
+    END IF;
+
+    RETURN jsonb_build_object(
+      'success', false, 'conflict', true, 'reason', 'operation_id_conflict',
+      'operation_id', p_operation_id, 'event_type', v_existing_type
+    );
   END IF;
 
   INSERT INTO public.product_flow_stage_authorizations (

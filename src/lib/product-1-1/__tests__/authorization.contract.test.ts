@@ -97,6 +97,8 @@ const ENABLING_BODY = {
   operationId: OPERATION_ID,
 };
 
+const OFF_BODY = { ...ENABLING_BODY, stage: "off", reason: "manter desligado" };
+
 function postStage(body: unknown) {
   return import("@/app/api/admin/product-flow-authorizations/route").then(({ POST }) =>
     POST(
@@ -444,25 +446,85 @@ describe("F56.2b1a — API admin de autorização (superfície)", () => {
   });
 
   it("concessão off e sua repetição mantêm o mesmo resultado", async () => {
-    const offBody = { ...ENABLING_BODY, stage: "off", reason: "manter desligado" };
-
     mockRpc.mockResolvedValue({
-      data: { success: true, idempotent: false, granted: true, refused: false, stage: "off" },
+      data: { success: true, idempotent: false, granted: true, refused: false, stage: "off", scope: "all_stores" },
       error: null,
     });
-    const first = await postStage(offBody);
+    const first = await postStage(OFF_BODY);
     expect(first.status).toBe(200);
     expect((await first.json()).granted).toBe(true);
 
     mockRpc.mockResolvedValue({
-      data: { success: true, idempotent: true, granted: true, refused: false, stage: "off" },
+      data: { success: true, idempotent: true, granted: true, refused: false, stage: "off", scope: "all_stores" },
       error: null,
     });
-    const second = await postStage(offBody);
+    const second = await postStage(OFF_BODY);
     expect(second.status).toBe(200);
     const body = await second.json();
     expect(body.granted).toBe(true);
     expect(body.idempotent).toBe(true);
+    expect(body.stage).toBe("off");
+  });
+
+  it("operation_id reutilizado com conteúdo diferente retorna 409 conflito (sem sucesso)", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        success: false,
+        conflict: true,
+        reason: "operation_id_conflict",
+        operation_id: OPERATION_ID,
+        event_type: "granted",
+      },
+      error: null,
+    });
+
+    const res = await postStage(OFF_BODY);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.conflict).toBe(true);
+    expect(body.error).toBe("operation_id_conflict");
+  });
+
+  it("colisão concessão × revogação retorna 409 conflito", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        success: false,
+        conflict: true,
+        reason: "operation_id_conflict",
+        operation_id: OPERATION_ID,
+        event_type: "revoked",
+      },
+      error: null,
+    });
+
+    const res = await postStage(ENABLING_BODY);
+    expect(res.status).toBe(409);
+  });
+
+  it("resposta {granted:true} incompleta retorna erro (502)", async () => {
+    mockRpc.mockResolvedValue({ data: { granted: true }, error: null });
+    const res = await postStage(OFF_BODY);
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("authorization_rpc_inconsistent_response");
+  });
+
+  it("sucesso de concessão contraditório (stage ≠ off) retorna erro (502)", async () => {
+    mockRpc.mockResolvedValue({
+      data: { success: true, granted: true, refused: false, stage: "all_stores", scope: "all_stores" },
+      error: null,
+    });
+    const res = await postStage(OFF_BODY);
+    expect(res.status).toBe(502);
+  });
+
+  it("sucesso de concessão com escopo divergente da solicitação retorna erro (502)", async () => {
+    mockRpc.mockResolvedValue({
+      data: { success: true, granted: true, refused: false, stage: "off", scope: "test_stores" },
+      error: null,
+    });
+    const res = await postStage(OFF_BODY);
+    expect(res.status).toBe(502);
   });
 
   it("resposta ausente/inválida da RPC não vira sucesso (502)", async () => {

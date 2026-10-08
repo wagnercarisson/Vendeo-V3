@@ -103,27 +103,59 @@ export const POST = apiHandler(async (request: Request) => {
 
   const result = (data ?? {}) as Record<string, unknown>;
 
+  // Conflito de identidade: mesmo operation_id com conteúdo diferente.
+  if (result.conflict === true) {
+    return NextResponse.json(
+      { error: "operation_id_conflict", conflict: true, operationId: body.operationId },
+      { status: 409 },
+    );
+  }
+
+  // Recusa: consistente apenas quando a solicitação era habilitadora.
   if (result.refused === true) {
+    if (body.stage === "off") {
+      return NextResponse.json(
+        { error: "authorization_rpc_inconsistent_response" },
+        { status: 502 },
+      );
+    }
     return NextResponse.json(
       {
         error: "operational_activation_blocked_in_b1a",
         granted: false,
         refused: true,
         stage: result.stage,
+        scope: result.scope,
       },
       { status: 403 },
     );
   }
 
+  // Sucesso de concessão: exige envelope consistente com stage=off e a solicitação.
   if (result.granted === true) {
+    const consistentGrant =
+      result.success === true &&
+      result.refused === false &&
+      result.stage === "off" &&
+      body.stage === "off" &&
+      result.scope === body.scope;
+
+    if (!consistentGrant) {
+      return NextResponse.json(
+        { error: "authorization_rpc_inconsistent_response" },
+        { status: 502 },
+      );
+    }
+
     return NextResponse.json({
       granted: true,
       idempotent: result.idempotent === true,
-      stage: result.stage,
+      stage: "off",
+      scope: result.scope,
     });
   }
 
-  // Replay/ resposta ausente ou inválida NUNCA é tratada como sucesso.
+  // Resposta ausente/inválida NUNCA é tratada como sucesso.
   return NextResponse.json(
     { error: "authorization_rpc_invalid_response" },
     { status: 502 },
