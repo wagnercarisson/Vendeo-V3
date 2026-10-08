@@ -9,12 +9,13 @@ Esta mudança substitui, para esta entrega, partes do antigo escopo F51.1 (linha
 - Reescrever a landing pública como página curta, visual e orientada à conversão, em português, mobile-first, com blocos não redundantes:
   1. **Hero** — promessa + campanha protagonista + CTA.
   2. **Transformação e simplicidade** — informações preenchidas → campanha recebida e conferida → download para publicação.
-  3. **Variações visuais** — estúdio, ambientado ou fundo original.
+  3. **Apresentação do produto** — estúdio, ambientado ou fundo original (mesma abordagem comercial; isola a diferença de apresentação visual).
   4. **Identidade e controle** — bloco compacto, sustentado por exemplos; o usuário confere e decide o que publicar.
-  5. **Oferta independente** — comunicação comercial isolada e atualizável.
-  6. **FAQ, CTA final e rodapé legal** — Novidades em posição secundária/footer.
+  5. **Abordagens de divulgação** — oferta, destaque, exclusivo (mesmo cenário e identidade da loja; diferentes formas de comunicar o produto).
+  6. **Oferta independente** — comunicação comercial isolada e atualizável.
+  7. **FAQ, CTA final e rodapé legal** — Novidades em posição secundária/footer.
 - Adotar a headline e subheadline aprovadas e a distinção "Você define como quer apresentar. O Vendeo prepara a campanha."
-- Definir, antes dos exemplos finais, a **função, proporção e requisito** de cada imagem (hero prova qualidade; transformação prova simplicidade; variações provam flexibilidade; identidade prova coerência), permitindo troca simples de campanhas sem refazer o layout.
+- Definir, antes dos exemplos finais, a **função, proporção e requisito** de cada imagem (hero prova qualidade; transformação prova simplicidade; apresentação prova flexibilidade visual; identidade prova coerência; abordagens provam diferentes formas de comunicar), permitindo troca simples de campanhas sem refazer o layout.
 - Empregar conteúdo demonstrativo predefinido e placeholders; os exemplos finais exigem seleção e aprovação humana. Sem geração ao vivo, sem conexão à API de geração e sem gerações pagas.
 - Reutilizar `publicSignupEnabled`/`getLaunchConfig()` em **todos** os CTAs de aquisição (hero, oferta e final): flag off → "Solicitar acesso free" + formulário atual; flag on → cadastros existentes; "Entrar" é ação secundária para quem já tem conta.
 - Comunicar a oferta (28 dias gratuitos e até 20 créditos; 5 iniciais + 5 nos dias 7, 14 e 21; acúmulo; máximo 20; grátis restantes vencem ao fim do período) em componente independente, **sem** implementar concessões, calendário, saldo, expiração, notificações ou contabilidade.

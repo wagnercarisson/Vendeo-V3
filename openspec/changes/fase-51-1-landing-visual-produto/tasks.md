@@ -4,7 +4,7 @@
 
 ## 1. Candidata, teste de compreensão e checkpoint
 
-- [ ] 1.1 Produzir a candidata da composição visual (mobile e desktop), a copy e o mapa/função das imagens (hero=qualidade; transformação=simplicidade; variações=flexibilidade; identidade=coerência), usando placeholders quando necessário
+- [ ] 1.1 Produzir a candidata da composição visual (mobile e desktop), a copy e o mapa/função das imagens (hero=qualidade; transformação=simplicidade; apresentação=flexibilidade visual; identidade=coerência; abordagens=diferentes formas de comunicar), usando placeholders quando necessário
 - [ ] 1.2 Registrar o teste de compreensão: verificar que o visitante entende o produto após hero e transformação
 - [ ] 1.3 Apresentar a candidata ao responsável e obter aprovação de composição, copy e função das imagens antes de implementar
 - [ ] 1.4 Registrar a fronteira de arquivos (src/app/page.tsx, src/components/landing/*, assets, testes) e justificar previamente qualquer necessidade de tocar layout global, globals.css, design system ou dependências
@@ -12,10 +12,11 @@
 
 ## 2. Estrutura e narrativa da página
 
-- [ ] 2.1 Reestruturar `src/app/page.tsx` com os blocos na ordem: hero, transformação, variações, identidade e controle, oferta, FAQ/CTA final/rodapé
+- [ ] 2.1 Reestruturar `src/app/page.tsx` com os blocos na ordem: hero, transformação, apresentação do produto, identidade e controle, abordagens de divulgação, oferta, FAQ/CTA final/rodapé
 - [ ] 2.2 Implementar o hero com promessa, campanha protagonista e CTA, garantindo mensagem e CTA visíveis no mobile
 - [ ] 2.3 Implementar o bloco de transformação (informações preenchidas → campanha conferida → download), absorvendo "Como funciona" sem bloco duplicado
-- [ ] 2.4 Implementar o bloco de variações ("Escolha como apresentar seu produto." / "Estúdio, ambientado ou mantendo o fundo original.") com oferta/destaque/exclusivo nos exemplos
+- [ ] 2.4 Implementar o bloco de apresentação do produto ("Escolha como apresentar seu produto." / "Estúdio, ambientado ou mantendo o fundo original.") com três campanhas do mesmo produto (estúdio, ambientado, fundo original), mantendo a mesma abordagem comercial e informações equivalentes para isolar a diferença de apresentação
+- [ ] 2.4b Implementar o bloco de abordagens de divulgação ("Uma campanha para cada jeito de divulgar." / "Mostre uma oferta, valorize um produto ou apresente algo especial.") com três campanhas do mesmo produto (oferta, destaque, exclusivo), mantendo o mesmo cenário e a identidade da loja, variando as informações necessárias; peso editorial menor; sem cartões explicativos extras nem CTAs
 - [ ] 2.5 Implementar o bloco compacto de identidade e controle, sustentado por exemplos, deixando claro que o usuário confere e decide o que publicar
 - [ ] 2.6 Mover "Novidades" para posição secundária/rodapé e montar FAQ + CTA final + rodapé legal
 
@@ -55,3 +56,4 @@
 - [ ] 7.2 Reconciliar tracking (STATE/ROADMAP/REQUIREMENTS) no fluxo GSD desta frente, sem sobrescrever a F56 nem artefatos históricos
 - [ ] 7.3 Rodar `openspec validate fase-51-1-landing-visual-produto --strict` e registrar o resultado
 - [ ] 7.4 Submeter a F51.1 à revisão humana; não antecipar instrumentação de funil, oferta implementada ou SEO (F51.2)
+- [ ] 7.5 (Critério de aceite) O bloco de abordagens de divulgação só SHALL permanecer na entrega final se as campanhas demonstrarem diferenças comerciais claras e acrescentarem prova nova; sendo redundantes ou apenas estéticas, reapresentar enxugamento/remoção para aprovação humana

@@ -2,16 +2,17 @@
 
 ### Requirement: Estrutura da landing com blocos de função única
 
-A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL ser uma página curta, visual e orientada à conversão, em português e mobile-first, composta por blocos em que cada um responde a uma pergunta distinta, na ordem: hero; transformação e simplicidade; variações visuais; identidade e controle; oferta; FAQ, CTA final e rodapé legal.
+A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL ser uma página curta, visual e orientada à conversão, em português e mobile-first, composta por blocos em que cada um responde a uma pergunta distinta, na ordem: hero; transformação e simplicidade; apresentação do produto; identidade e controle; abordagens de divulgação; oferta de teste gratuito; FAQ, CTA final e rodapé legal.
 
 - Nenhum bloco principal SHALL repetir a função de outro.
+- A apresentação do produto (prova de flexibilidade visual) e as abordagens de divulgação (prova de diferentes formas de comunicar o produto) SHALL ocupar blocos distintos, com funções distintas.
 - "Como funciona" SHALL ser absorvido pelo bloco de transformação, não reimplementado como bloco separado.
 - A seção "Novidades" SHALL ocupar posição secundária ou o rodapé.
 
 #### Scenario: Página renderiza os blocos na ordem e sem duplicação
 
 - **WHEN** a landing é renderizada
-- **THEN** os blocos hero, transformação, variações, identidade e controle, oferta, FAQ/CTA final/rodapé aparecem nessa ordem
+- **THEN** os blocos hero, transformação, apresentação do produto, identidade e controle, abordagens de divulgação, oferta de teste gratuito, FAQ/CTA final/rodapé aparecem nessa ordem
 - **AND** não existe um bloco separado "Como funciona" duplicando a transformação
 - **AND** "Novidades" aparece em posição secundária ou no rodapé
 
@@ -45,8 +46,9 @@ A landing SHALL definir, antes da seleção dos exemplos definitivos, a função
 
 - **Hero:** provar qualidade (campanha protagonista; proporção estável).
 - **Transformação:** provar simplicidade (informações simples → campanha).
-- **Variações:** provar flexibilidade (apresentações distintas do mesmo produto).
+- **Apresentação do produto:** provar flexibilidade visual (estúdio/ambientado/fundo original, com a mesma abordagem).
 - **Identidade:** provar coerência de marca com exemplos.
+- **Abordagens de divulgação:** provar diferentes formas de comunicar o produto (oferta/destaque/exclusivo, com o mesmo cenário e identidade).
 
 Imagens que não acrescentem uma prova SHALL ser eliminadas. Exemplos finais SHALL ser selecionados e aprovados por humano antes da conclusão da entrega; placeholders SHALL poder apoiar a aprovação visual. A landing SHALL NOT inventar depoimentos, resultados comerciais ou provas de identidade.
 

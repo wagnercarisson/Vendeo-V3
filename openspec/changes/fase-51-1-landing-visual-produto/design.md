@@ -35,8 +35,9 @@ Cada bloco responde a uma pergunta distinta e tem uma função visual única:
 |---|---|---|
 | Hero | "O que é isso e por que devo me importar?" | Promessa + campanha protagonista + CTA |
 | Transformação | "É fácil de usar?" | Prova de simplicidade (informações → campanha → download) |
-| Variações | "Consigo deixar do meu jeito?" | Prova de flexibilidade (estúdio/ambientado/original) |
+| Apresentação do produto | "Consigo escolher como apresentar meu produto?" | Prova de flexibilidade visual (estúdio/ambientado/fundo original), mesma abordagem nos exemplos |
 | Identidade e controle | "Fica com a cara da minha loja? Eu mando?" | Prova de coerência + controle do usuário |
+| Abordagens de divulgação | "Como comunico meu produto?" | Prova de diferentes formas de comunicar (oferta/destaque/exclusivo), mesmo cenário e identidade |
 | Oferta | "Quanto custa começar?" | Comunicação comercial isolada |
 | FAQ + CTA final | "Ainda tenho dúvidas?" | Objeções + conversão + rodapé legal |
 
@@ -48,7 +49,8 @@ Antes de escolher os exemplos definitivos, cada imagem é especificada por sua f
 
 - **Hero** — prova **qualidade**; 1 campanha protagonista; proporção estável (recomendado 1:1), sem empurrar CTA para longe no mobile.
 - **Transformação** — prova **simplicidade**; composição "antes/depois" (informações simples → campanha).
-- **Variações** — prova **flexibilidade**; conjunto de campanhas do mesmo produto em apresentações distintas.
+- **Apresentação do produto** — prova **flexibilidade visual**; três campanhas do mesmo produto (estúdio, ambientado, fundo original), mantendo a mesma abordagem comercial e informações equivalentes, para isolar a diferença de apresentação.
+- **Abordagens de divulgação** — prova **diferentes formas de comunicar**; três campanhas do mesmo produto (oferta, destaque, exclusivo), mantendo o mesmo cenário e a identidade da loja, variando as informações necessárias; peso editorial menor (título curto, apoio e três exemplos).
 - **Identidade** — prova **coerência de marca** com exemplos; **não** fabricar prova de identidade.
 
 Exemplos finais obtidos posteriormente no app/laboratório e aprovados por humano. Placeholders podem apoiar a aprovação visual, mas a entrega só é concluída após aprovação dos exemplos finais. Alternativa considerada: usar imagens genéricas de banco — rejeitada porque não prova o produto e viola "não inventar provas".
