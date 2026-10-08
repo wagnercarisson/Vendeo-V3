@@ -35,8 +35,15 @@ import type { GenerationEventType } from "@/lib/visual-signature/types";
 import { requireLegalClearance } from "@/lib/legal/clearance";
 import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
 import { ProductEventService } from "@/lib/product-events/service";
+import { detectExclusiveNewFlowFields } from "@/lib/product-1-1/submission/exclusive-fields";
+import { assertSubmissionEligible } from "@/lib/product-1-1/submission/assert-submission-eligible";
+import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
+import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 
 export const runtime = "nodejs";
+
+const STORE_ID_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
@@ -174,6 +181,61 @@ export const POST = apiHandler(async (request: NextRequest) => {
       },
       { status: 413 }
     );
+  }
+
+  // ── Pre-stream: Guard de submissão Produto 1:1 (F56.2b1a, Plano 03) ──
+  // Detecta campos EXCLUSIVOS do novo fluxo no corpo bruto ANTES do parse
+  // estrito e de QUALQUER reserva de crédito. Payload legado (sem campos
+  // exclusivos) segue o caminho anterior SEM consultas adicionais. A decisão de
+  // elegibilidade é server-side fail-closed (Plano 02): escopo vem de
+  // `stores.is_test_store`, instância/ambiente da configuração server-side —
+  // nunca do payload. O cliente não declara autorização.
+  if (detectExclusiveNewFlowFields(body).length > 0) {
+    const rawStoreId = typeof body.storeId === "string" ? body.storeId : "";
+    if (!STORE_ID_UUID_RE.test(rawStoreId)) {
+      return Response.json(
+        {
+          error: {
+            code: "new_flow_ineligible",
+            message: "Payload do novo fluxo inválido: storeId ausente ou inválido.",
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    // Identificação e propriedade da loja ANTES de consultar a autorização.
+    const guardUser = await requireApiUser();
+    const guardStore = await requireOwnership(rawStoreId, guardUser.userId);
+
+    let eligibilityDecision: Awaited<
+      ReturnType<typeof resolveProductFlowAuthorization>
+    >;
+    try {
+      eligibilityDecision = await resolveProductFlowAuthorization(
+        resolveEligibilityContext(guardStore),
+      );
+    } catch {
+      eligibilityDecision = { allowed: false, code: "read_failure" };
+    }
+
+    const guard = assertSubmissionEligible(body, eligibilityDecision);
+    if (guard.kind === "refused") {
+      console.warn(
+        `[generate-image] new_flow_ineligible — fields=${guard.fields.join(",")}`,
+      );
+      return Response.json(
+        {
+          error: {
+            code: "new_flow_ineligible",
+            message:
+              "Este payload usa recursos do novo fluxo indisponíveis para esta loja.",
+            fields: guard.fields,
+          },
+        },
+        { status: 403 },
+      );
+    }
   }
 
   // ── Pre-stream: Validate full request schema ─────────────────────
