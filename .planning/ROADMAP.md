@@ -318,7 +318,7 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
-- [ ] 56.2.1-01-PLAN.md — Diagnóstico read-only do HTTP 502 e gate verificável de identidade/isolation/serviços/schema; registra serviços obrigatórios, exclusões intencionais (Analytics) e execução elevada (bloqueia migrations/testes transacionais)
+- [ ] 56.2.1-01-PLAN.md — Diagnóstico read-only do HTTP 502 e gate verificável de identidade/isolation/serviços/schema; registra serviços obrigatórios, exclusões intencionais (Analytics) e execução elevada (bloqueia migrations/testes transacionais) — **Em execução (2026-10-08): Tasks 1–2 concluídas; gate `56.2.1-01-GATE.md` APPROVED (12/12); PARADO no checkpoint humano (Task 3); sem migrations/testes transacionais/reset/provider/ativação**
 - [ ] 56.2.1-02-PLAN.md — Autorização independente auditável e decisão fail-closed, stage operacional off
 - [ ] 56.2.1-03-PLAN.md — Guard de campos exclusivos do novo fluxo conectado antes de `GenerateImageRequestSchema.safeParse` (route.ts:180) e da reserva, compatibilidade legada
 - [ ] 56.2.1-04-PLAN.md — Reserva temporária, estado durável e transições financeiras atômicas em funções SQL/RPC
