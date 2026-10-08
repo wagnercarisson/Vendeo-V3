@@ -275,7 +275,7 @@ Plans:
 
 **Checkpoint humano:** o checkpoint bloqueante final do Plano 06 foi aprovado em 2026-10-07 e registrado no UAT. A autorização da recuperação/start não ativou o fluxo; nesta fatia as chaves permanecem ineficazes.
 
-**Planos:** diretório `.planning/phases/56.2-preparacao-nao-operacional-produto-1-1/` (token GSD `56.2`; rótulo funcional **F56.2a**). **Tokens reservados para as fatias seguintes (não reutilizar `56.2`; resolução testada no tooling):** F56.2b1 = `56.2.1`, F56.2b2 = `56.2.2`. **`56.3` NÃO é reservado** — preserva o significado já existente de **aprovação/reprovação/correção (F56.3)**.
+**Planos:** diretório `.planning/phases/56.2-preparacao-nao-operacional-produto-1-1/` (token GSD `56.2`; rótulo funcional **F56.2a**). A primeira fase registrada após a b1a/b1b foi **F56.2b1a = `56.2.1`**; planejamento concluído e aguardando revisão humana. A numeração aprovada para b1b/b2 não está registrada como fases GSD nesta etapa. `56.3` permanece reservado à aprovação/reprovação/correção.
 
 **Plans:** 6 plans
 
@@ -310,3 +310,17 @@ Plans:
 - Este arquivo é o tracking compacto ativo; não contém planos, métricas históricas, listas transitórias ou grafos duplicados.
 - Ao iniciar nova fase, consultar o índice acima, `.planning/STATE.md`, os artefatos históricos e os requisitos antes de atualizar o milestone.
 - Ao concluir uma fase, registrar apenas status e referência curta no índice; preservar detalhes no diretório da fase, summary/verificação e archive apropriado.
+
+### Phase 56.2.1: F56.2b1a — Fundação inativa do Produto 1:1
+
+**Goal:** Entregar fundação durável e auditável de autorização independente, compatibilidade de payload e crédito transacional Produto 1:1, verificada somente em ambiente descartável isolado e mantendo o estágio operacional `off`, sem formulário, geração, provider ou novo download.
+**Requirements**: REQ-56.2b1a-01..07 (ver `.planning/REQUIREMENTS.md` §F56.2b1a); rastreabilidade também nas tasks/specs da change OpenSpec b1a.
+**Plans:** 6 plans
+
+Plans:
+- [ ] 56.2.1-01-PLAN.md — Diagnóstico read-only do HTTP 502 e gate verificável de identidade/isolation/serviços/schema; registra serviços obrigatórios, exclusões intencionais (Analytics) e execução elevada (bloqueia migrations/testes transacionais)
+- [ ] 56.2.1-02-PLAN.md — Autorização independente auditável e decisão fail-closed, stage operacional off
+- [ ] 56.2.1-03-PLAN.md — Guard de campos exclusivos do novo fluxo conectado antes de `GenerateImageRequestSchema.safeParse` (route.ts:180) e da reserva, compatibilidade legada
+- [ ] 56.2.1-04-PLAN.md — Reserva temporária, estado durável e transições financeiras atômicas em funções SQL/RPC
+- [ ] 56.2.1-05-PLAN.md — Migrations b1a copiadas com hash para o workdir isolado e aplicadas via `npx --no-install supabase --workdir` (--local); testes Postgres reais gated (rollback, concorrência, ledger/saldo)
+- [ ] 56.2.1-06-PLAN.md — Gates, rastreabilidade e revisão humana da fundação inativa

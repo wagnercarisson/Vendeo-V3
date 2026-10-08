@@ -2,7 +2,7 @@
 
 **Status operacional:** a **F56.1 — Contrato produtivo, modelos e fallback** está com **COBERTURA CONCLUÍDA** (11/11 planos GSD; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; verificada/sincronizada/arquivada em 2026-10-06 em `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`), com os 27 REQ-IDs mapeados dos 8 specs OpenSpec da change agora arquivada.
 
-**Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs; a **F56.2a — Preparação não operacional do Produto 1:1** foi verificada, sincronizada e arquivada em 2026-10-07 com cobertura concluída (19 REQ-IDs; 6/6 planos, 31/31 tasks; UAT 4 pass + 1 N/A; segurança 20/20). F56.2b1 e F56.2b2 permanecem ativas/futuras, sem cobertura concluída atribuída nesta atualização; F56.2b1 mantém como pré-requisito investigar o warning HTTP 502 da F56.2a.
+**Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs; a **F56.2a — Preparação não operacional do Produto 1:1** foi verificada, sincronizada e arquivada em 2026-10-07 com cobertura concluída (19 REQ-IDs; 6/6 planos, 31/31 tasks; UAT 4 pass + 1 N/A; segurança 20/20). **F56.2b1a** está planejada em GSD `56.2.1`, com 7 REQ-IDs mapeados abaixo e planos aguardando revisão humana; sua primeira etapa depende da investigação read-only/gate HTTP 502. F56.2b1b e F56.2b2 permanecem fora do planejamento atual e sem cobertura atribuída.
 
 Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, tabelas e estados legados foram preservados integralmente em [`REQUIREMENTS-ARCHIVE.md`](./REQUIREMENTS-ARCHIVE.md) e não devem ser interpretados como pendências atuais.
 
@@ -81,9 +81,23 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | REQ-56.2a-18 | Registro das duas chaves de ativação com default fail-closed | feature-flag-control |
 | REQ-56.2a-19 | Alteração auditável das chaves pela RPC existente | feature-flag-control |
 
+## F56.2b1a — Cobertura planejada (Fundação inativa)
+
+**Fonte normativa:** `openspec/changes/fase-56-2b1a-fundacao-inativa-produto-1-1/`. Estes REQ-IDs são rastreabilidade planejada, ainda não cobertura concluída. Plano 01 exige diagnóstico read-only do HTTP 502 e checkpoint humano antes de qualquer aplicação local de migrations ou teste transacional.
+
+| REQ-ID | Requirement (OpenSpec) | Spec / origem | Plano(s) |
+|--------|------------------------|---------------|----------|
+| REQ-56.2b1a-01 | Diagnóstico somente leitura e gate verificável de identidade, isolamento, serviços e schema | Proposal critérios 1; design A1; tasks 1.1–1.4 | 56.2.1-01 |
+| REQ-56.2b1a-02 | Autorização independente server-side, auditada e validada junto à flag aplicável após leituras válidas de ambas | product-1-1-flow-activation — Autorização independente e flags aplicáveis | 56.2.1-02 |
+| REQ-56.2b1a-03 | Concessão operacional habilitadora bloqueada em b1a; testes de estágios por fixtures/harness sem ativação | product-1-1-flow-activation — Concessão operacional bloqueada nesta change | 56.2.1-02 |
+| REQ-56.2b1a-04 | Payload incompatível recusado antes de crédito, preservando compatibilidade legada | Proposal critério 4; design A3; tasks 3.1–3.3 | 56.2.1-03 |
+| REQ-56.2b1a-05 | Reserva reduz saldo temporariamente; `delivered` finaliza consumo e `refunded` restaura a reserva | product-1-1-campaign-credit-billing — Reserva temporária e cobrança final | 56.2.1-04, 56.2.1-05 |
+| REQ-56.2b1a-06 | Transições CAS/idempotentes, concorrência por identidade e terminalidade de `delivered` | product-1-1-campaign-credit-billing — Concorrência e transições CAS | 56.2.1-04, 56.2.1-05 |
+| REQ-56.2b1a-07 | Prova Postgres real de atomicidade/rollback/concorrência após gate aprovado; migrations b1a somente na instância local aprovada, sem `db push` | product-1-1-campaign-credit-billing — Testes Postgres reais; design A1/A5; tasks 4.5–4.6 | 56.2.1-01, 56.2.1-05 |
+
 ## Regras Operacionais
 
-- Os REQ-IDs cobertos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06) e os da F56.2a (`REQ-56.2a-01`..`REQ-56.2a-19`, cobertura concluída em 2026-10-07). A F56.2b1 e a F56.2b2 permanecem mudanças ativas/futuras, com requisitos próprios ainda não marcados como cobertura concluída; F56.3 permanece futura.
+- Os REQ-IDs cobertos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06) e os da F56.2a (`REQ-56.2a-01`..`REQ-56.2a-19`, cobertura concluída em 2026-10-07). F56.2b1a tem 7 REQ-IDs planejados, nenhum marcado como cobertura concluída; b1b e b2 permanecem fora do planejamento atual; F56.3 permanece futura.
 - Novos REQ-IDs só devem ser adicionados quando uma nova fase for formalmente planejada, com fonte em OpenSpec e plano aprovado.
 - Para uma fase concluída, consultar o OpenSpec arquivado, `VERIFICATION.md`, `SUMMARY.md`, contexto e planos da fase.
 - Em caso de divergência histórica, OpenSpec arquivado + `VERIFICATION.md`/`SUMMARY.md` da fase prevalecem sobre este archive e sobre registros antigos.

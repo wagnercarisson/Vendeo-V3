@@ -5,11 +5,11 @@ milestone_name: — Lançamento Externo Controlado ◆
 status: executing
 last_updated: "2026-10-07T21:21:39.000Z"
 progress:
-  total_phases: 45
+  total_phases: 46
   completed_phases: 41
-  total_plans: 361
+  total_plans: 367
   completed_plans: 354
-  percent: 98
+  percent: 96
 ---
 
 # Project State
@@ -27,8 +27,9 @@ progress:
 
 ## Current Position
 
-Phase: 56.2 / F56.2a — **VERIFIED, SYNCED, ARCHIVED**
-Phase **F56.2a — Preparação não operacional do Produto 1:1** — **6/6 planos/summaries; OpenSpec 31/31; UAT 4 pass + 1 N/A; segurança 20/20 fechadas, 0 abertas**. Verificada, sincronizada e arquivada em `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/`. Warning preservado: reset final isolado retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não é sucesso e não foi repetido. Consulta somente leitura posterior confirmou migrations F56.2a, flags `false`, fixtures registradas ausentes e schema esperado; checkpoint humano aprovado. Investigar o warning antes de depender do procedimento na F56.2b1. Sem `db push`, provider/chamada paga, ativação ou alteração de produção. F56.2b1/b2 permanecem ativas/futuras; b1 segue condicionada à investigação do 502.
+Phase: 56.2.1 / F56.2b1a — **PLANNING COMPLETE; HUMAN REVIEW PENDING**
+Última fase concluída: **F56.2a — Preparação não operacional do Produto 1:1** — **6/6 planos/summaries; OpenSpec 31/31; UAT 4 pass + 1 N/A; segurança 20/20 fechadas, 0 abertas**. Verificada, sincronizada e arquivada em `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/`. Warning preservado: reset final isolado retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não é sucesso e não foi repetido. Consulta somente leitura posterior confirmou migrations F56.2a, flags `false`, fixtures registradas ausentes e schema esperado; checkpoint humano aprovado.
+**F56.2b1a / GSD 56.2.1:** change OpenSpec commitada; 6 planos em 4 waves e `56.2.1-CONTEXT.md` criados para revisão humana. Plano 01 é diagnóstico read-only HTTP 502 + gate de identidade/isolamento/serviços/schema; registra serviços obrigatórios (Postgres/db e API admin de autorização), exclusões intencionais (Analytics desabilitado) e execução elevada (CLI Supabase/Docker), e inclui checkpoint humano antes de migrations/testes transacionais. Plano 05 copia as migrations com hash para o workdir isolado e aplica via `--workdir` antes dos testes Postgres reais. Nenhuma execução/implementação iniciada. Não foram registrados fases/diretórios/artefatos GSD de b1b ou b2. Sem `db push`, provider/chamada paga, ativação ou alteração de produção.
 Phase (última concluída): F56.2a — 6/6 planos/summaries, UAT 4 pass + 1 N/A, segurança 20/20, OpenSpec 31/31; formalmente verificada/sincronizada/arquivada em 2026-10-07. Archive `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/`; cinco specs principais sincronizadas (2 atualizadas + 3 criadas). Warning do reset final exit 1/HTTP 502 permanece registrado e deve ser investigado antes de depender do procedimento na F56.2b1.
 Plans: 6/6 completos com summaries — `.planning/phases/56.2-preparacao-nao-operacional-produto-1-1/56-2-01..06-SUMMARY.md`. OpenSpec tasks 31/31; UAT 4 pass + 1 N/A; segurança 20/20 ameaças fechadas, 0 abertas. F56.2a verificada/sincronizada/arquivada; b1/b2 permanecem ativas/futuras. Sem novo comando DB para este fechamento documental.
 Checkpoints históricos: F48.2.5 A/B foram aprovados em 2026-10-01 (B com limitações/follow-ups); não são decisões da F48.2.6. F48.2.6 CHECKPOINT A aprovado em 2026-10-03 somente para readiness local/documentos do Plano 09; CHECKPOINT B agora está `approved_with_limitations` por decisão explícita do usuário. Correção documental quick 261003-mbr: relato do usuário para OF-A informa Sunburst medium, uma imagem de referência, 24.6 s, usage sem decomposição numérica e custo calculado local USD 0.03 (não reportado/confirmado/faturado pela plataforma); avaliação segue `requer ajuste`. Quick 261003-mne corrige as rotas para mapear `offer/spotlight/exclusive` a `oferta/destaque/exclusivo` e revalidar a política selecionada; teste local `/compose` recompõe Mouse sem fio com a frase/versão Destaque. Quick 261003-nkj neutraliza o rótulo comum para `Preço de venda` e versiona o compositor `48.2.4-prompt-composer-v2`; Oferta mantém sua instrução e versão. Plan 10 Task 0 inclui Produto v4/compositor v5. Os runs finais corretos são `1ca08368-9a81-4671-9ca6-50032feac231` (Oferta/51 Ice) e `2fb07e0e-37cc-40d0-8a53-fa380f7eef81` (Exclusivo/Johnnie Walker), ambos Produto v4/compositor v5 e prompt compiled/approved/sent idênticos. IDs `2a01db63...`/`da2f2321...` permanecem históricos Produto v3/compositor v4 e não recebem avaliação final. O usuário confirmou valores arredondados exibidos na plataforma (US$0,05/US$0,03); cálculos locais precisos `0.048863`/`0.030974`, provider-reported null, sem fatura conferida. Fidelidade de produto/embalagem aprovada apenas nos testes examinados; letras pequenas sem run específico pending; validação anterior de Destaque sem Run ID/versões pending; prévia v4/v5 separada de geração. v1×v3 continua antes×depois não controlada para isolar Exclusivo.
