@@ -7,19 +7,32 @@ import { describe, expect, it } from "vitest";
 // NÃO abre conexão de banco nem aplica a migration; apenas inspeciona o SQL.
 const MIGRATIONS_DIR = path.resolve(process.cwd(), "supabase", "migrations");
 
-const migrationFile = readdirSync(MIGRATIONS_DIR).find((name) =>
-  name.endsWith("product_flow_stage_authorizations.sql"),
-);
-
-if (!migrationFile) {
-  throw new Error("migration *product_flow_stage_authorizations.sql não encontrada");
+function readMigrationByVersion(prefix: string): string {
+  const matches = readdirSync(MIGRATIONS_DIR).filter((name) => name.startsWith(prefix));
+  if (matches.length !== 1) {
+    throw new Error(
+      `esperada exatamente 1 migration iniciando por '${prefix}', encontradas ${matches.length}`,
+    );
+  }
+  return readFileSync(path.join(MIGRATIONS_DIR, matches[0]), "utf8");
 }
 
-const sql = readFileSync(path.join(MIGRATIONS_DIR, migrationFile), "utf8");
+function activeLinesOf(source: string): string {
+  return source
+    .split(/\r?\n/)
+    .filter((line) => !line.trimStart().startsWith("--") && line.trim().length > 0)
+    .join("\n");
+}
+
+// Resolução EXPLÍCITA por versão (evita ambiguidade por sufixo): 001 = estrutura
+// inicial; 004 = correção autoritativa de concorrência/ordem (WR-01/WR-05).
+const sql = readMigrationByVersion("20261008000001");
+const fixSql = readMigrationByVersion("20261008000004");
 const activeLines = sql
   .split(/\r?\n/)
   .filter((line) => !line.trimStart().startsWith("--") && line.trim().length > 0);
 const activeSql = activeLines.join("\n");
+const fixActiveSql = activeLinesOf(fixSql);
 
 describe("F56.2b1a — migration product_flow_stage_authorizations (contrato estático)", () => {
   it("é local-only e não contém comando mutável remoto", () => {
@@ -69,10 +82,13 @@ describe("F56.2b1a — migration product_flow_stage_authorizations (contrato est
     );
   });
 
-  it("idempotência sob corrida (WR-01) e ordem determinística por `seq` (WR-05)", () => {
-    expect(activeSql).toMatch(/seq\s+BIGINT GENERATED ALWAYS AS IDENTITY/);
-    expect((activeSql.match(/ON CONFLICT \(operation_id\) DO NOTHING/g) ?? []).length).toBe(2);
-    expect((activeSql.match(/RETURNING id INTO v_inserted_id/g) ?? []).length).toBe(2);
+  it("correção AUTORITATIVA de concorrência/ordem na migration 004; 001 = estrutura inicial (WR-01/WR-05/WR-06)", () => {
+    expect(fixActiveSql).toMatch(/seq\s+BIGINT GENERATED ALWAYS AS IDENTITY/);
+    expect((fixActiveSql.match(/ON CONFLICT \(operation_id\) DO NOTHING/g) ?? []).length).toBe(2);
+    expect((fixActiveSql.match(/RETURNING id INTO v_inserted_id/g) ?? []).length).toBe(2);
+    // Estrutura inicial permanece ancorada na 001 (resolução por versão explícita).
+    expect(activeSql).toMatch(/CREATE TABLE IF NOT EXISTS public\.product_flow_stage_authorizations/);
+    expect(activeSql).toMatch(/GRANT SELECT ON TABLE public\.product_flow_stage_authorizations TO service_role/);
   });
 
   it("proíbe UPDATE/DELETE por trigger de imutabilidade", () => {

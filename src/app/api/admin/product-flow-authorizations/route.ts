@@ -9,6 +9,7 @@ import {
   StageAuthorizationQuerySchema,
 } from "@/lib/product-1-1/authorization/schemas";
 import { SupabaseStageAuthorizationRepository } from "@/lib/product-1-1/authorization/stage-authorization-repository";
+import { resolveCanonicalInstanceIdentity } from "@/lib/product-1-1/authorization/instance-identity";
 
 /**
  * Superfície administrativa da autorização independente de estágio do Produto
@@ -43,7 +44,6 @@ export const GET = apiHandler(async (request: Request) => {
   const url = new URL(request.url);
   const parsed = StageAuthorizationQuerySchema.safeParse({
     scope: url.searchParams.get("scope") ?? "",
-    instanceIdentity: url.searchParams.get("instanceIdentity") ?? "",
   });
 
   if (!parsed.success) {
@@ -54,16 +54,21 @@ export const GET = apiHandler(async (request: Request) => {
   }
 
   try {
-    const events = await new SupabaseStageAuthorizationRepository().listEvents(parsed.data);
+    // Identidade canônica derivada EXCLUSIVAMENTE no servidor (nunca do cliente).
+    const instanceIdentity = resolveCanonicalInstanceIdentity();
+    const events = await new SupabaseStageAuthorizationRepository().listEvents({
+      scope: parsed.data.scope,
+      instanceIdentity,
+    });
     return NextResponse.json({ events });
   } catch (error) {
+    // Erro bruto do banco NÃO é ecoado ao cliente (IN-02).
+    console.error(
+      "[product-flow-authorizations] read failed:",
+      error instanceof Error ? error.message : String(error),
+    );
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Falha ao ler as autorizações de estágio",
-      },
+      { error: "authorization_read_failed" },
       { status: 503 },
     );
   }
@@ -83,13 +88,16 @@ export const POST = apiHandler(async (request: Request) => {
     return NextResponse.json({ error: "Corpo da requisição inválido" }, { status: 400 });
   }
 
+  // Identidade canônica derivada no servidor (nunca aceita do payload).
+  const instanceIdentity = resolveCanonicalInstanceIdentity();
+
   const { data, error } = await supabaseAdmin.rpc(
     "admin_grant_product_flow_stage_authorization",
     {
       p_actor_id: admin.userId,
       p_stage: body.stage,
       p_scope: body.scope,
-      p_instance_identity: body.instanceIdentity,
+      p_instance_identity: instanceIdentity,
       p_reason: body.reason,
       p_operation_id: body.operationId,
     },
@@ -97,9 +105,14 @@ export const POST = apiHandler(async (request: Request) => {
 
   if (error) {
     const message = error.message ?? "";
+    const isBadRequest = BAD_REQUEST_CODES.some((code) => message.includes(code));
+    if (!isBadRequest) {
+      // Erro bruto do banco NÃO é ecoado ao cliente (IN-02).
+      console.error("[product-flow-authorizations] grant rpc failed:", message);
+    }
     return NextResponse.json(
-      { error: message },
-      { status: BAD_REQUEST_CODES.some((code) => message.includes(code)) ? 400 : 500 },
+      { error: isBadRequest ? message : "authorization_internal_error" },
+      { status: isBadRequest ? 400 : 500 },
     );
   }
 

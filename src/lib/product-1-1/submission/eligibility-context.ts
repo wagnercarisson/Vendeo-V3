@@ -2,6 +2,7 @@ import type {
   ProductFlowEnvironment,
   ProductFlowScope,
 } from "@/lib/product-1-1/authorization/types";
+import { resolveCanonicalInstanceIdentity } from "@/lib/product-1-1/authorization/instance-identity";
 
 /**
  * F56.2b1a — Contexto de elegibilidade derivado SOMENTE de fontes server-side.
@@ -23,28 +24,17 @@ const LOOPBACK_HOSTNAMES = new Set(["127.0.0.1", "localhost", "::1", "0.0.0.0"])
 export function resolveEligibilityContext(store: {
   readonly is_test_store: boolean;
 }): ProductFlowEligibilityContext {
+  // Identidade canônica compartilhada (server-only, fail-closed, mesma fonte do admin).
+  const expectedInstanceIdentity = resolveCanonicalInstanceIdentity();
+
   const rawUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
-
-  if (rawUrl.trim() === "") {
-    throw new Error("product_flow_instance_config_missing");
-  }
-
-  let url: URL;
-  try {
-    url = new URL(rawUrl);
-  } catch {
-    throw new Error("product_flow_instance_config_invalid");
-  }
-
-  if (!url.host) {
-    throw new Error("product_flow_instance_config_invalid");
-  }
+  const hostname = new URL(rawUrl).hostname;
 
   return Object.freeze({
     requestedScope: store.is_test_store === true ? "test_stores" : "all_stores",
-    expectedInstanceIdentity: url.host,
-    expectedEnvironment: LOOPBACK_HOSTNAMES.has(url.hostname)
+    expectedInstanceIdentity,
+    expectedEnvironment: LOOPBACK_HOSTNAMES.has(hostname)
       ? "isolated"
       : "operational",
   });

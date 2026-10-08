@@ -22,6 +22,10 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/auth/csrf", () => ({ requireSameOrigin: vi.fn() }));
 
+vi.mock("@/lib/product-1-1/authorization/instance-identity", () => ({
+  resolveCanonicalInstanceIdentity: () => "canon.test:1234",
+}));
+
 import { ForbiddenError } from "@/lib/auth/errors";
 import type { FeatureFlagService } from "@/lib/feature-flags/feature-flag-service";
 import {
@@ -95,12 +99,13 @@ function decide(over: Partial<DecideProductFlowAuthorizationInput> = {}) {
 const ENABLING_BODY = {
   stage: "all_stores",
   scope: "all_stores",
-  instanceIdentity: INSTANCE,
   reason: "tentativa de ativação",
   operationId: OPERATION_ID,
 };
 
 const OFF_BODY = { ...ENABLING_BODY, stage: "off", reason: "manter desligado" };
+
+const CANONICAL_IDENTITY = "canon.test:1234";
 
 function postStage(body: unknown) {
   return import("@/app/api/admin/product-flow-authorizations/route").then(({ POST }) =>
@@ -121,7 +126,7 @@ function getStage() {
     GET(
       new NextRequest(
         new Request(
-          `http://localhost/api/admin/product-flow-authorizations?scope=all_stores&instanceIdentity=${INSTANCE}`,
+          `http://localhost/api/admin/product-flow-authorizations?scope=all_stores`,
         ),
       ),
     ),
@@ -449,7 +454,7 @@ describe("F56.2b1a — API admin de autorização (superfície)", () => {
       p_actor_id: "admin-1",
       p_stage: "all_stores",
       p_scope: "all_stores",
-      p_instance_identity: INSTANCE,
+      p_instance_identity: CANONICAL_IDENTITY,
       p_reason: "tentativa de ativação",
       p_operation_id: OPERATION_ID,
     });
@@ -578,6 +583,12 @@ describe("F56.2b1a — API admin de autorização (superfície)", () => {
 
   it("motivo ausente → 400 sem chamar a RPC", async () => {
     const res = await postStage({ ...ENABLING_BODY, reason: "" });
+    expect(res.status).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("rejeita `instanceIdentity` no corpo (schema estrito; identidade é server-side)", async () => {
+    const res = await postStage({ ...ENABLING_BODY, instanceIdentity: "forged-instance" });
     expect(res.status).toBe(400);
     expect(mockRpc).not.toHaveBeenCalled();
   });
