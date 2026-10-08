@@ -55,9 +55,11 @@ CREATE POLICY "Service role can read/insert product flow stage authorizations"
   USING (true) WITH CHECK (true);
 
 -- Append-only: somente SELECT/INSERT; UPDATE/DELETE revogados da própria service_role.
+-- Escrita SOMENTE pelas RPCs SECURITY DEFINER: service_role recebe apenas SELECT
+-- (nenhum INSERT/UPDATE/DELETE direto — evita contornar a recusa de estágio).
 REVOKE ALL ON TABLE public.product_flow_stage_authorizations FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.product_flow_stage_authorizations FROM service_role;
-GRANT SELECT, INSERT ON TABLE public.product_flow_stage_authorizations TO service_role;
+GRANT SELECT ON TABLE public.product_flow_stage_authorizations TO service_role;
 
 -- =============================================================================
 -- 3. Trigger de imutabilidade (append-only)

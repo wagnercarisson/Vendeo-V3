@@ -182,12 +182,13 @@ beforeAll(async () => {
   await pg2.connect();
 
   const migrations = await pg.query<{ version: string }>(
-    "SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ($1, $2) ORDER BY version",
-    ["20261008000001", "20261008000002"],
+    "SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ($1, $2, $3) ORDER BY version",
+    ["20261008000001", "20261008000002", "20261008000003"],
   );
   expect(migrations.rows.map((row) => row.version)).toEqual([
     "20261008000001",
     "20261008000002",
+    "20261008000003",
   ]);
 
   const token = randomUUID();
@@ -532,6 +533,34 @@ describe("F56.2b1a — operação de crédito Produto 1:1 (Postgres isolado real
       [actorId, "test_stores", instance, "revogacao de teste", revokeOperation],
     );
     expect(revoked).toMatchObject({ success: true, revoked: true, stage: "off" });
+  });
+
+  it("escrita direta em product_flow_stage_authorizations é recusada; a RPC é o único caminho", async () => {
+    const { error } = await supabase.from("product_flow_stage_authorizations").insert({
+      event_type: "granted",
+      stage: "off",
+      scope: "test_stores",
+      instance_identity: "vendeo-f562a-isolated",
+      granted_by: actorId,
+      reason: "direct write attempt",
+      operation_id: randomUUID(),
+    });
+    expect(error).not.toBeNull();
+
+    // A RPC SECURITY DEFINER continua funcionando (off concedido; habilitação recusada).
+    const offOperation = randomUUID();
+    const grantedOff = await callJson(
+      "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+      [actorId, "off", "test_stores", "vendeo-f562a-isolated", "rpc continua", offOperation],
+    );
+    expect(grantedOff).toMatchObject({ granted: true, stage: "off" });
+
+    const enablingOperation = randomUUID();
+    const refused = await callJson(
+      "SELECT public.admin_grant_product_flow_stage_authorization($1, $2, $3, $4, $5, $6) AS r",
+      [actorId, "all_stores", "all_stores", "vendeo-f562a-isolated", "recusa continua", enablingOperation],
+    );
+    expect(refused).toMatchObject({ granted: false, refused: true });
   });
 
   it("as fixtures append-only permanecem retidas no target isolado (sem DELETE individual)", async () => {

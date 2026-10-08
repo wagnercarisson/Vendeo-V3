@@ -50,7 +50,7 @@ describe("F56.2b1a — migration product_flow_stage_authorizations (contrato est
     expect(activeSql).toMatch(/UNIQUE \(operation_id\)/);
   });
 
-  it("habilita RLS e restringe a service_role a SELECT/INSERT (append-only)", () => {
+  it("habilita RLS e restringe a service_role a SELECT (escrita SOMENTE por RPC)", () => {
     expect(activeSql).toMatch(
       /ALTER TABLE public\.product_flow_stage_authorizations ENABLE ROW LEVEL SECURITY/,
     );
@@ -61,7 +61,11 @@ describe("F56.2b1a — migration product_flow_stage_authorizations (contrato est
       /REVOKE ALL ON TABLE public\.product_flow_stage_authorizations FROM service_role/,
     );
     expect(activeSql).toMatch(
-      /GRANT SELECT, INSERT ON TABLE public\.product_flow_stage_authorizations TO service_role/,
+      /GRANT SELECT ON TABLE public\.product_flow_stage_authorizations TO service_role/,
+    );
+    // Nenhuma escrita direta é concedida — só as RPCs SECURITY DEFINER escrevem.
+    expect(activeSql).not.toMatch(
+      /GRANT[^;]*\b(INSERT|UPDATE|DELETE)\b[^;]*ON TABLE public\.product_flow_stage_authorizations/,
     );
   });
 
