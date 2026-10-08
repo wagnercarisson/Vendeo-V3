@@ -16,6 +16,16 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // `scripts/gsd/**` contém o validador de gate e seu teste em `node:test`
+    // (executado via `node --test`), incompatível com o runner do Vitest.
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/cypress/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*',
+      'scripts/gsd/**',
+    ],
   },
   resolve: {
     alias: {
