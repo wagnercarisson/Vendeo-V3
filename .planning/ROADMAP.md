@@ -330,7 +330,7 @@ Plans:
 
 ### Phase 56.2.2: F56.2b1b — Núcleo entregável do Produto 1:1
 
-**Status:** ⏳ **Registrada (2026-10-09); UI-SPEC aprovada pelo `gsd-ui-checker` (6/6) e por revisão humana (2026-10-09, com o título uniformizado à redação de `tasks.md` §5.3).** **Planejamento concluído — 10 planos em 5 ondas; revisões do responsável aplicadas (F1–F8/O1–O6 + contratos C1–C5); `gsd-plan-checker` VERIFICATION PASSED (0 blockers); aguardando nova revisão/aprovação humana dos planos; implementação não iniciada (0/38 tasks).** Change OpenSpec **ativa** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` (11 specs). b1a (`56.2.1`) arquivada; flags `false`; autorização `off`; nenhuma loja habilitada. b2 (`56.2.3`) e F56.3 não iniciados.
+**Status:** ⏳ **Registrada (2026-10-09); UI-SPEC aprovada pelo `gsd-ui-checker` (6/6) e por revisão humana (2026-10-09, com o título uniformizado à redação de `tasks.md` §5.3).** **Planejamento concluído — 10 planos em 5 ondas; revisões do responsável aplicadas (F1–F8/O1–O6 + contratos C1–C5 + reconciliações I1–I3); `gsd-plan-checker` VERIFICATION PASSED (0 blockers); aguardando nova revisão/aprovação humana dos planos; implementação não iniciada (0/38 tasks).** Change OpenSpec **ativa** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` (11 specs). b1a (`56.2.1`) arquivada; flags `false`; autorização `off`; nenhuma loja habilitada. b2 (`56.2.3`) e F56.3 não iniciados.
 
 **Goal:** Conectar formulário elegível, geração no ciclo da requisição, snapshot, reserva/entrega atômica (operação da b1a) e download condicionado a `delivered`, mantendo flags/autorização `off`, sem habilitar lojas, sem aprovação/reprovação (F56.3) e sem execução durável (diferida).
 
