@@ -23,6 +23,7 @@ interface HeroSectionProps {
 export function HeroSection({ publicSignupEnabled }: HeroSectionProps) {
   return (
     <section
+      aria-labelledby="hero-heading"
       data-public-signup-enabled={String(publicSignupEnabled)}
       className="mx-auto w-full max-w-5xl px-6 pt-16 pb-12 sm:pt-24"
     >
@@ -33,7 +34,10 @@ export function HeroSection({ publicSignupEnabled }: HeroSectionProps) {
               Beta fechado — acesso liberado por convite. Solicite seu acesso free.
             </p>
           ) : null}
-          <h1 className="mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl">
+          <h1
+            id="hero-heading"
+            className="mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl"
+          >
             {HEADLINE}
           </h1>
           <p className="mt-5 max-w-xl text-base text-text-secondary sm:text-lg">
