@@ -36,3 +36,5 @@ backup.sql
 backup.sql.gz
 backup.sql.enc
 backup-manifest.json
+
+node_modules.shared-link/
