@@ -352,7 +352,7 @@ Plans:
 - [ ] 56.2.2-03-PLAN.md — Início de tentativa atômico no Postgres (migration local-only + cliente RPC): duas requisições não chamam o provider duas vezes. (REQ-56.2.2-05)
 - [ ] 56.2.2-04-PLAN.md — Orquestração no ciclo da requisição (NDJSON), roteamento de aceitação, reserva/entrega/estorno b1a e reenvio-consulta. (REQ-56.2.2-01, -04, -06, -07)
 - [ ] 56.2.2-05-PLAN.md — Arte 1024×1024 real em bucket privado, caminho imutável (`upsert:false`) e leitura assinada. (REQ-56.2.2-10)
-- [ ] 56.2.2-06-PLAN.md — Estados de resultado (desconhecido âmbar; falha confirmada × refund), portão de download só após `delivered` e campanha persistida. (REQ-56.2.2-07, -09, -10)
+- [ ] 56.2.2-06-PLAN.md — Estados de resultado (desconhecido âmbar; falha confirmada × refund) conectados às fontes (terminal `unknown` ao vivo + operação persistida), portão de download só após `delivered` e campanha persistida. (REQ-56.2.2-06, -07, -09, -10)
 - [ ] 56.2.2-07-PLAN.md — Resolução administrativa auditada (migration + RPC + rota + UI), gate de evidência fail-closed, lista sem execução automática. (REQ-56.2.2-08)
 - [ ] 56.2.2-08-PLAN.md — Copy não bloqueante (sem retry), instrumentação por tentativa e diagnóstico durável `IMG-001`. (REQ-56.2.2-11, -12)
 - [ ] 56.2.2-09-PLAN.md — Harness isolado com Postgres/Storage reais: concorrência (uma chamada), crédito, download-antes-de-delivered e resolução auditada; sem suítes skipped. (REQ-56.2.2-13)
