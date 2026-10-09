@@ -330,7 +330,7 @@ Plans:
 
 ### Phase 56.2.2: F56.2b1b — Núcleo entregável do Produto 1:1
 
-**Status:** ⏳ **Registrada (2026-10-09); UI-SPEC aprovada pelo `gsd-ui-checker` (6/6) e por revisão humana (2026-10-09, com o título uniformizado à redação de `tasks.md` §5.3).** **Planejamento em andamento — aguardando revisão dos planos; implementação não iniciada.** Change OpenSpec **ativa** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` (11 specs; **0/38 tasks**); nenhum plano GSD criado. b1a (`56.2.1`) arquivada; flags `false`; autorização `off`; nenhuma loja habilitada. **UI-SPEC (`56.2.2-UI-SPEC.md`) é pré-requisito** dos planos dos controles conectados. b2 (`56.2.3`) e F56.3 não iniciados.
+**Status:** ⏳ **Registrada (2026-10-09); UI-SPEC aprovada pelo `gsd-ui-checker` (6/6) e por revisão humana (2026-10-09, com o título uniformizado à redação de `tasks.md` §5.3).** **Planejamento concluído — 10 planos em 5 ondas; aguardando revisão humana dos planos; implementação não iniciada (0/38 tasks).** Change OpenSpec **ativa** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` (11 specs). b1a (`56.2.1`) arquivada; flags `false`; autorização `off`; nenhuma loja habilitada. b2 (`56.2.3`) e F56.3 não iniciados.
 
 **Goal:** Conectar formulário elegível, geração no ciclo da requisição, snapshot, reserva/entrega atômica (operação da b1a) e download condicionado a `delivered`, mantendo flags/autorização `off`, sem habilitar lojas, sem aprovação/reprovação (F56.3) e sem execução durável (diferida).
 
@@ -342,9 +342,22 @@ Plans:
 
 **Provas exigidas no planejamento:** concorrência sem chamada duplicada ao provider; resolução administrativa atomicamente auditada; Storage privado sem download antes de `delivered`; testes reais isolados sem suítes integralmente skipped. Se ultrapassar 10 planos, o executor deve parar e propor sequenciamento — sem retirar segurança ou testes fundamentais.
 
-**Plans:** 0 plans (planejamento bloqueado pela UI-SPEC)
+**Plans:** 10 plans
+
+**Ondas (desbloqueio):** Onda 1 — `56.2.2-01` (elegibilidade UI), `56.2.2-02` (snapshot/preflight/histórico), `56.2.2-03` (início de tentativa atômico/migration), `56.2.2-05` (arte 1024×1024); Onda 2 — `56.2.2-04` (orquestração/roteamento/reenvio; depende de 01/02/03/05); Onda 3 — `56.2.2-06` (estados de resultado + portão de download), `56.2.2-07` (resolução administrativa auditada), `56.2.2-08` (copy/instrumentação); Onda 4 — `56.2.2-09` (harness isolado Postgres/Storage reais; `autonomous: false`); Onda 5 — `56.2.2-10` (validação/fechamento + checkpoint humano; `autonomous: false`).
 
 Plans:
-- (nenhum) — `/gsd-ui-phase 56.2.2` produz `56.2.2-UI-SPEC.md`; `/gsd-plan-phase 56.2.2` só após aprovação humana da UI-SPEC.
+- [ ] 56.2.2-01-PLAN.md — Elegibilidade: formulário elegível (Direção de fundo), gating de payload legado e regra Original. (REQ-56.2.2-01)
+- [ ] 56.2.2-02-PLAN.md — Snapshot congelado antes de reserva/provider; preflight fail-closed (pricing complete para principal e fallback); histórico append-only. (REQ-56.2.2-02, -03)
+- [ ] 56.2.2-03-PLAN.md — Início de tentativa atômico no Postgres (migration local-only + cliente RPC): duas requisições não chamam o provider duas vezes. (REQ-56.2.2-05)
+- [ ] 56.2.2-04-PLAN.md — Orquestração no ciclo da requisição (NDJSON), roteamento de aceitação, reserva/entrega/estorno b1a e reenvio-consulta. (REQ-56.2.2-01, -04, -06, -07)
+- [ ] 56.2.2-05-PLAN.md — Arte 1024×1024 real em bucket privado, caminho imutável (`upsert:false`) e leitura assinada. (REQ-56.2.2-10)
+- [ ] 56.2.2-06-PLAN.md — Estados de resultado (desconhecido âmbar; falha confirmada × refund), portão de download só após `delivered` e campanha persistida. (REQ-56.2.2-07, -09, -10)
+- [ ] 56.2.2-07-PLAN.md — Resolução administrativa auditada (migration + RPC + rota + UI), gate de evidência fail-closed, lista sem execução automática. (REQ-56.2.2-08)
+- [ ] 56.2.2-08-PLAN.md — Copy não bloqueante (sem retry), instrumentação por tentativa e diagnóstico durável `IMG-001`. (REQ-56.2.2-11, -12)
+- [ ] 56.2.2-09-PLAN.md — Harness isolado com Postgres/Storage reais: concorrência (uma chamada), crédito, download-antes-de-delivered e resolução auditada; sem suítes skipped. (REQ-56.2.2-13)
+- [ ] 56.2.2-10-PLAN.md — Validação (gates, flags `off`, `openspec validate --strict`, rastreabilidade) e checkpoint humano. (REQ-56.2.2-09, -13)
+
+**Nota de planejamento:** 10 planos = limite máximo orientativo; nenhuma segurança/instrumentação/teste fundamental foi removida para reduzir a contagem. Migrations b1b são LOCAL-ONLY e só podem ser aplicadas na instância isolada descartável (`vendeo-f562a-isolated`) via `migration up --local` — nunca `db push` remoto.
 
 **Canonical refs:** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` (proposal/design/tasks/11 specs/`TRACEABILITY.md`), `openspec/design-system/MASTER.md`, `src/app/api/campaign/generate-image/route.ts`, `src/lib/product-1-1/**`, `supabase/migrations/20261008000001`/`000002`/`000003`/`000004`/`000005` (b1a, arquivada).
