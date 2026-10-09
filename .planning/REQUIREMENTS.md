@@ -2,7 +2,7 @@
 
 **Status operacional:** a **F56.1 — Contrato produtivo, modelos e fallback** está com **COBERTURA CONCLUÍDA** (11/11 planos GSD; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; verificada/sincronizada/arquivada em 2026-10-06 em `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`), com os 27 REQ-IDs mapeados dos 8 specs OpenSpec da change agora arquivada.
 
-**Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs; a **F56.2a — Preparação não operacional do Produto 1:1** foi verificada, sincronizada e arquivada em 2026-10-07 com cobertura concluída (19 REQ-IDs; 6/6 planos, 31/31 tasks; UAT 4 pass + 1 N/A; segurança 20/20). **F56.2b1a — Fundação inativa do Produto 1:1** (GSD `56.2.1`) foi verificada, sincronizada e arquivada em **2026-10-08** com cobertura concluída (7 REQ-IDs; 6/6 planos, 23/23 tasks OpenSpec com 1.4 N/A; UAT humano aprovado/reconfirmado; segurança 14/14; snapshot final contratos 152/152 / Postgres 20/20 / gate 12/12). F56.2b1b e F56.2b2 permanecem fora do planejamento atual e sem cobertura atribuída.
+**Estado atual:** F50 — Demonstração Gratuita e Validade dos Créditos — está concluída (17/17 planos, 17/17 summaries, 10 waves). F50.1 — Formalização Legal e Ativação da Demonstração — é futura, não ativa, ainda não planejada e aguarda a constituição da PJ. F50.1 ainda não possui REQ-IDs. F56.1 foi formalmente registrada no ROADMAP em 2026-10-05 e possui 27 REQ-IDs; a **F56.2a — Preparação não operacional do Produto 1:1** foi verificada, sincronizada e arquivada em 2026-10-07 com cobertura concluída (19 REQ-IDs; 6/6 planos, 31/31 tasks; UAT 4 pass + 1 N/A; segurança 20/20). **F56.2b1a — Fundação inativa do Produto 1:1** (GSD `56.2.1`) foi verificada, sincronizada e arquivada em **2026-10-08** com cobertura concluída (7 REQ-IDs; 6/6 planos, 23/23 tasks OpenSpec com 1.4 N/A; UAT humano aprovado/reconfirmado; segurança 14/14; snapshot final contratos 152/152 / Postgres 20/20 / gate 12/12). **F56.2b1b — Núcleo entregável do Produto 1:1** (GSD `56.2.2`) foi **registrada (2026-10-09)** e está em **preparação documental** (11 specs; 0/38 tasks; implementação não iniciada); cobertura **pendente até o planejamento/execução**. F56.2b2 permanece fora do planejamento atual e sem cobertura atribuída.
 
 Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, tabelas e estados legados foram preservados integralmente em [`REQUIREMENTS-ARCHIVE.md`](./REQUIREMENTS-ARCHIVE.md) e não devem ser interpretados como pendências atuais.
 
@@ -20,6 +20,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | F56.1: contrato produtivo, modelos e fallback | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` |
 | F56.2a: preparação não operacional do Produto 1:1 | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/` |
 | F56.2b1a: fundação inativa do Produto 1:1 | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1/` |
+| F56.2b1b: núcleo entregável do Produto 1:1 | Registrada como GSD `56.2.2` (2026-10-09); em preparação documental (UI-SPEC pendente); fonte **ativa** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` |
 | Monetização pública / Stripe | Iniciativa diferida para v1.7+, fora da numeração e sem requisitos ativos |
 
 ## F56.1 — Cobertura concluída (Contrato produtivo, modelos e fallback)
@@ -96,9 +97,29 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | REQ-56.2b1a-06 | Transições CAS/idempotentes, concorrência por identidade e terminalidade de `delivered` | product-1-1-campaign-credit-billing — Concorrência e transições CAS | 56.2.1-04, 56.2.1-05 |
 | REQ-56.2b1a-07 | Prova Postgres real de atomicidade/rollback/concorrência após gate aprovado; migrations b1a somente na instância local aprovada, sem `db push` | product-1-1-campaign-credit-billing — Testes Postgres reais; design A1/A5; tasks 4.5–4.6 | 56.2.1-01, 56.2.1-05 |
 
+## F56.2b1b — Em planejamento (Núcleo entregável do Produto 1:1)
+
+**Fonte (ativa):** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` (proposal, design B1B-D1..D12, tasks §0–§7, 11 specs e `TRACEABILITY.md`). **Status:** REGISTRADA em 2026-10-09 como GSD `56.2.2`; **preparação documental** (UI-SPEC pendente); **implementação não iniciada** — 0/38 tasks; nenhum plano GSD; cobertura **pendente**. Flags `false`; autorização `off`; nenhuma loja habilitada. Os REQ-IDs abaixo estão **planejados/atribuídos** e só passam a "cobertura concluída" após planejamento, execução, verificação e sincronização. Rastreabilidade detalhada por requisito OpenSpec em `TRACEABILITY.md`.
+
+| REQ-ID | Requirement (OpenSpec) | Spec / origem | Tasks |
+|--------|------------------------|---------------|-------|
+| REQ-56.2.2-01 | Elegibilidade server-side; sem controles/campos em `off`; POST revalida e recusa antes de crédito; legado intacto | product-1-1-flow-activation; product-1-1-intent-background-selection | §1.1–1.6 |
+| REQ-56.2.2-02 | Snapshot congelado antes da reserva/provider; tentativas append-only reconstruíveis | image-generation-config-snapshot; product-1-1-generation-orchestration | §2.1–2.2 |
+| REQ-56.2.2-03 | Preflight exige pricing `complete` (principal `sunburst/medium` + fallback `image-2/medium`); política 2+1; sem revisor automático | product-1-1-generation-orchestration; image-generation-failure-policy; image-generation-model-pair-config | §2.3–2.5 |
+| REQ-56.2.2-04 | Reserva temporária reduz saldo; só `delivered` consome e libera download; um crédito por entrega; sem cobrança por tentativa técnica | product-1-1-campaign-credit-billing | §3.3 |
+| REQ-56.2.2-05 | Duas requisições simultâneas não chamam o provider duas vezes (início de tentativa atômico no Postgres, sem fila/cron/worker) | product-1-1-generation-orchestration | §3.1 |
+| REQ-56.2.2-06 | Reenvio apenas consulta; recupera arte salva; resultado desconhecido não chama o modelo; não inicia tentativa/geração/cobrança | product-1-1-generation-orchestration; product-1-1-campaign-credit-billing; product-1-1-artifact-delivery | §3.2 |
+| REQ-56.2.2-07 | Falha confirmada → `refunded` uma vez; resultado desconhecido sem repetição cega nem estorno por timeout; UI sem "Gerar novamente" | image-generation-failure-policy; product-1-1-campaign-credit-billing; product-1-1-flow-activation | §5.1–5.3 |
+| REQ-56.2.2-08 | Resolução por administrador autorizado, motivo obrigatório e auditoria atômica (entregar ou estornar uma vez); lista de pendências sem re-queue/chamada automática | product-1-1-generation-orchestration; product-1-1-campaign-credit-billing | §5.4 |
+| REQ-56.2.2-09 | Campanha concluída persistida/recuperável ao retornar; sem retomada de processamento | product-1-1-flow-activation | §0, §6.4, §7.4 |
+| REQ-56.2.2-10 | Arte 1024×1024 em Storage privado, caminho imutável; download só após `delivered`; legado preservado | product-1-1-artifact-delivery | §3.4–3.7 |
+| REQ-56.2.2-11 | Copy não bloqueante; sem retry; estados persistidos; cancelamentos separados | product-1-1-copy-recovery | §4.1–4.2 |
+| REQ-56.2.2-12 | Instrumentação, custo por tentativa, `IMG-001` + diagnóstico durável sem expor motivo interno | image-generation-instrumentation; image-generation-support-reference | §4.3–4.4 |
+| REQ-56.2.2-13 | Testes isolados (provider simulado + Postgres/Storage reais), sem bypass de autorização; flags/autorização `off`, nenhuma loja, sem `db push`/deploy/chamada paga | Proposal critérios 12–13 | §6.1–6.4, §7.1–7.4 |
+
 ## Regras Operacionais
 
-- Os REQ-IDs cobertos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06), os da F56.2a (`REQ-56.2a-01`..`REQ-56.2a-19`, cobertura concluída em 2026-10-07) e os da F56.2b1a (`REQ-56.2b1a-01`..`REQ-56.2b1a-07`, cobertura concluída em 2026-10-08). b1b e b2 permanecem fora do planejamento atual; F56.3 permanece futura.
+- Os REQ-IDs cobertos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06), os da F56.2a (`REQ-56.2a-01`..`REQ-56.2a-19`, cobertura concluída em 2026-10-07) e os da F56.2b1a (`REQ-56.2b1a-01`..`REQ-56.2b1a-07`, cobertura concluída em 2026-10-08). A **F56.2b1b** (`REQ-56.2.2-01`..`REQ-56.2.2-13`, ver §F56.2b1b abaixo) foi registrada em 2026-10-09 e está em **preparação documental** — cobertura **pendente** até o planejamento/execução (0/38 tasks). F56.2b2 permanece fora do planejamento atual; F56.3 permanece futura.
 - Novos REQ-IDs só devem ser adicionados quando uma nova fase for formalmente planejada, com fonte em OpenSpec e plano aprovado.
 - Para uma fase concluída, consultar o OpenSpec arquivado, `VERIFICATION.md`, `SUMMARY.md`, contexto e planos da fase.
 - Em caso de divergência histórica, OpenSpec arquivado + `VERIFICATION.md`/`SUMMARY.md` da fase prevalecem sobre este archive e sobre registros antigos.
