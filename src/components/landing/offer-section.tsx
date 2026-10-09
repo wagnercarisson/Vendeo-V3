@@ -20,6 +20,7 @@ interface OfferSectionProps {
 export function OfferSection({ publicSignupEnabled }: OfferSectionProps) {
   return (
     <section
+      data-offer-block
       aria-labelledby="oferta-heading"
       className="mx-auto w-full max-w-5xl px-6 py-8 sm:py-12"
     >
@@ -39,7 +40,10 @@ export function OfferSection({ publicSignupEnabled }: OfferSectionProps) {
           <AcquisitionCta publicSignupEnabled={publicSignupEnabled} />
         </div>
 
-        <details className="mt-6 rounded-lg border border-border bg-bg-deep/40 p-4 text-sm text-text-muted">
+        <details
+          data-offer-mechanics
+          className="mt-6 rounded-lg border border-border bg-bg-deep/40 p-4 text-sm text-text-muted"
+        >
           <summary className="cursor-pointer font-medium text-text-secondary">
             Como funcionam os créditos do teste gratuito
           </summary>
@@ -56,6 +60,9 @@ export function OfferSection({ publicSignupEnabled }: OfferSectionProps) {
               Os créditos acumulam, inclusive as parcelas liberadas durante sua
               ausência, e os créditos gratuitos restantes vencem ao final do
               período.
+            </p>
+            <p>
+              No beta fechado, solicitar acesso não inicia o período da oferta.
             </p>
           </div>
         </details>
