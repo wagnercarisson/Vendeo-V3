@@ -329,8 +329,8 @@ Plans:
 **Planos:** diretório `.planning/phases/51.1-landing-visual-produto/`.
 
 Plans:
-- [ ] 51-1-01-PLAN.md — Candidata visual (mobile + desktop) + **protótipo estático avaliável** (`51.1-candidate-mockup.html`, fora de `src/`, D-17) + copy aprovada + mapa/função das imagens + teste de compreensão + fronteira de arquivos; **CHECKPOINT HUMANO BLOQUEANTE** (`autonomous: false`; inclui a pausa para briefings/exemplos finais). Wave 1.
-- [ ] 51-1-02-PLAN.md — Primitivas compartilhadas ANTES dos blocos: `acquisition-cta.tsx` (CTA por flag, texto escuro sobre verde — D-19) e `campaign-image.tsx` (proporção fixa). Wave 2.
+- [x] 51-1-01-PLAN.md — Candidata visual (mobile + desktop) + **protótipo estático avaliável** (`51.1-candidate-mockup.html`, fora de `src/`, D-17) + copy aprovada + mapa/função das imagens + teste de compreensão + fronteira de arquivos; **CHECKPOINT HUMANO BLOQUEANTE** (`autonomous: false`; inclui a pausa para briefings/exemplos finais). Wave 1.
+- [x] 51-1-02-PLAN.md — Primitivas compartilhadas ANTES dos blocos: `acquisition-cta.tsx` (CTA por flag, texto escuro sobre verde — D-19) e `campaign-image.tsx` (proporção fixa). Wave 2.
 - [ ] 51-1-03-PLAN.md — Blocos de seção consumindo as primitivas: hero, transformação (absorve "Como funciona"), variações, identidade/controle, FAQ/CTA final. Wave 3.
 - [ ] 51-1-04-PLAN.md — Componente independente da oferta (mensagem curta; mecânica só em secundário/FAQ) consumido pela página; encaminha `publicSignupEnabled` ao CTA. Wave 4.
 - [ ] 51-1-05-PLAN.md — Religação de `src/app/page.tsx` + redução/limpeza das seções absorvidas e do formulário por flag (remove o prop `entries`; override local de contraste no submit — D-19). Wave 5.
