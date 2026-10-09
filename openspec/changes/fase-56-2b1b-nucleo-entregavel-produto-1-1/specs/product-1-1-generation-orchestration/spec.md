@@ -140,7 +140,7 @@ Cada tentativa SHALL registrar modelo/qualidade/alvo/número/run-trace/resultado
 
 ### Requirement: Limitação aceita da b1b e gate obrigatório antes da b2
 
-Na entrega **inativa** da b1b, quando **não** existir **fonte operacional comprovada** de que a execução **encerrou**, um claim `in_progress` residual SHALL permanecer **bloqueado** para resolução administrativa — **sem estorno**, **sem nova geração** e **sem retomada/continuidade**. A b1b SHALL NOT declarar **recuperabilidade completa**. Testes com **evidência simulada** (harness/**fake**) SHALL NOT ser considerados prova de uma **fonte operacional** de encerramento. Esta limitação é um **risco explicitamente aceito apenas** para a entrega inativa da b1b. A viabilização do piloto/habilitação da **b2** SHALL ser precedida por um **gate obrigatório (bloqueante)**: comprovar uma **fonte operacional** de evidência de encerramento (ou substrato durável) **ou** confirmar/ajustar o **plano e os limites efetivos** de execução. Enquanto o gate não for satisfeito, a b2 SHALL NOT ser habilitada. Plano contratado informado: **Vercel Hobby / Supabase Free**; os **limites efetivos de execução permanecem não verificados**.
+Na entrega **inativa** da b1b, quando **não** existir **fonte operacional comprovada** de que a execução **encerrou**, um claim `in_progress` residual SHALL permanecer **bloqueado** para resolução administrativa — **sem estorno**, **sem nova geração** e **sem retomada/continuidade**. A b1b SHALL NOT declarar **recuperabilidade completa**. Testes com **evidência simulada** (harness/**fake**) SHALL NOT ser considerados prova de uma **fonte operacional** de encerramento. Esta limitação é um **risco explicitamente aceito apenas** para a entrega inativa da b1b. O piloto/habilitação de lojas na **b2** SHALL permanecer **bloqueado** até comprovar uma **estratégia operacional segura de resolução de claims residuais**; a confirmação do **plano e dos limites** da plataforma pode **sustentar** essa estratégia, mas, **isoladamente, SHALL NOT satisfazer o gate**. **Evidência simulada SHALL NOT substituir comprovação operacional.** A **b1b inativa** pode ser concluída mantendo a limitação documentada; o bloqueio recai sobre **piloto/habilitação**, sem impedir a **preparação documental da b2**. Plano contratado informado: **Vercel Hobby / Supabase Free**; os **limites efetivos de execução permanecem não verificados**.
 
 #### Scenario: Claim residual sem evidência permanece bloqueado
 
@@ -156,6 +156,8 @@ Na entrega **inativa** da b1b, quando **não** existir **fonte operacional compr
 
 #### Scenario: Gate obrigatório antes da b2
 
-- **WHEN** se pretende planejar, pilotar ou habilitar a b2
-- **THEN** o gate de encerramento e de plano/limites precisa estar comprovadamente satisfeito
-- **AND** a b2 não é habilitada sem o gate
+- **WHEN** se pretende pilotar ou habilitar lojas na b2
+- **THEN** uma estratégia operacional segura de resolução de claims residuais precisa estar comprovada
+- **AND** confirmar plano/limites, isoladamente, não satisfaz o gate
+- **AND** evidência simulada não substitui comprovação operacional
+- **AND** a b2 não é habilitada sem o gate (a preparação documental da b2 não é impedida)
