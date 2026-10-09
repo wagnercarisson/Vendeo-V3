@@ -61,3 +61,4 @@
 - [ ] 7.2 Confirmar flags/autorização `off`, nenhuma loja habilitada e sem `db push`/deploy/migration remota
 - [ ] 7.3 Validar `openspec validate --strict` e matriz de rastreabilidade
 - [ ] 7.4 Revisão humana separada da b1b; não antecipar b2/F56.3; apresentar lacunas e estimativa final de planos
+- [ ] 7.5 **GATE OBRIGATÓRIO (b2, BLOQUEANTE — não é sugestão futura):** antes do piloto/habilitação da b2, comprovar **fonte operacional** de evidência de encerramento (ou substrato durável) **e/ou** confirmar/ajustar **plano e limites efetivos** (Vercel Hobby / Supabase Free informados; limites **não verificados**). Enquanto não satisfeito, a b2 permanece bloqueada. A b1b inativa mantém o risco **explicitamente aceito**: claim `in_progress` residual sem evidência permanece **bloqueado** (sem estorno, sem nova geração, sem retomada); evidência simulada **não** conta como fonte operacional; recuperabilidade completa **não** é declarada.

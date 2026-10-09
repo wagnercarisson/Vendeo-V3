@@ -137,3 +137,25 @@ Cada tentativa SHALL registrar modelo/qualidade/alvo/número/run-trace/resultado
 
 - **WHEN** geração falha operacionalmente
 - **THEN** diagnóstico recuperável por referência é persistido e mensagem pública sanitizada
+
+### Requirement: Limitação aceita da b1b e gate obrigatório antes da b2
+
+Na entrega **inativa** da b1b, quando **não** existir **fonte operacional comprovada** de que a execução **encerrou**, um claim `in_progress` residual SHALL permanecer **bloqueado** para resolução administrativa — **sem estorno**, **sem nova geração** e **sem retomada/continuidade**. A b1b SHALL NOT declarar **recuperabilidade completa**. Testes com **evidência simulada** (harness/**fake**) SHALL NOT ser considerados prova de uma **fonte operacional** de encerramento. Esta limitação é um **risco explicitamente aceito apenas** para a entrega inativa da b1b. A viabilização do piloto/habilitação da **b2** SHALL ser precedida por um **gate obrigatório (bloqueante)**: comprovar uma **fonte operacional** de evidência de encerramento (ou substrato durável) **ou** confirmar/ajustar o **plano e os limites efetivos** de execução. Enquanto o gate não for satisfeito, a b2 SHALL NOT ser habilitada. Plano contratado informado: **Vercel Hobby / Supabase Free**; os **limites efetivos de execução permanecem não verificados**.
+
+#### Scenario: Claim residual sem evidência permanece bloqueado
+
+- **WHEN** existe claim `in_progress` residual e não há fonte operacional comprovada de encerramento
+- **THEN** a resolução administrativa permanece bloqueada
+- **AND** não ocorre estorno, nova geração nem retomada
+
+#### Scenario: Evidência simulada não é prova operacional
+
+- **WHEN** a única evidência de encerramento provém de harness/fake
+- **THEN** isso não é aceito como fonte operacional de encerramento
+- **AND** o claim residual permanece bloqueado
+
+#### Scenario: Gate obrigatório antes da b2
+
+- **WHEN** se pretende planejar, pilotar ou habilitar a b2
+- **THEN** o gate de encerramento e de plano/limites precisa estar comprovadamente satisfeito
+- **AND** a b2 não é habilitada sem o gate

@@ -69,6 +69,12 @@ Implementar e testar o ramo, mas manter as duas flags e autorização em `off`; 
 
 Duas requisições simultâneas SHALL NOT chamar o provider duas vezes para a mesma operação. A reserva financeira idempotente da b1a, **isoladamente, NÃO garante isso**. SHALL existir um **controle atômico de início de tentativa no Postgres** — por exemplo CAS/`INSERT ... ON CONFLICT` sobre `(campaign_id, operation_id, attempt_seq)` ou um lock por operação — que permita **um único início de tentativa por vez**, **sem** fila, cron ou worker. Quem perde a corrida **aguarda/consulta** a operação e **NÃO** dispara nova chamada. O teto 2+1 é contado na **operação inteira** (persistido), não por reenvio.
 
+### B1B-D13 — Limitação aceita (b1b inativa) e gate obrigatório antes da b2
+
+Não existe, no escopo aprovado, **fonte operacional comprovada** de que uma execução encerrou. Consequentemente, um claim `in_progress` residual (fail-closed do I2, quando a persistência do resultado desconhecido falha) permanece **bloqueado** para resolução administrativa: **sem estorno**, **sem nova geração** e **sem retomada**. A b1b **NÃO** declara **recuperabilidade completa**; testes com **evidência simulada** (harness/fake) **NÃO** são prova de uma fonte operacional de encerramento. Esta limitação é um **risco explicitamente aceito apenas** para a entrega **inativa** da b1b.
+
+**GATE OBRIGATÓRIO (bloqueante) antes do piloto/habilitação da b2 — não é sugestão futura:** a b2 SÓ pode prosseguir após (i) comprovar uma **fonte operacional** de evidência de encerramento (ou adotar substrato durável) **ou** (ii) confirmar/ajustar o **plano e os limites efetivos** de execução. Plano contratado **informado** pelo responsável: **Vercel Hobby / Supabase Free**; os **limites efetivos permanecem NÃO verificados** (o `[FALTANTE]` do D6.1 deixa de indicar plano desconhecido e passa a indicar limites não verificados). Enquanto o gate não for satisfeito, a b2 permanece bloqueada.
+
 ## Diferido (referência, não requisito)
 
 A execução durável independente da requisição/navegador — fila/outbox de geração, cron/dispatcher e worker, claim/lease/heartbeat/fencing, continuidade após fechar a página, retomada automática e a prova executável da candidata A — **não** pertence a esta fatia. Fica preservada como **referência DIFERIDA** em `D6.1-DURABLE-EXECUTION-INVESTIGATION.md`, a ser retomada **quando houver Vercel Pro**, mediante **nova investigação**, **sem presumir solução aprovada**.

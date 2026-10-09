@@ -72,6 +72,7 @@ A b1b salva a campanha concluída, persistida e recuperável ao retornar ao apli
 
 ## Dependências e fronteiras
 
+- **Limitação aceita (somente na entrega inativa da b1b) + GATE obrigatório da b2:** não há, no escopo aprovado, **fonte operacional comprovada** de encerramento; claims `in_progress` residuais permanecem **bloqueados** para resolução (**sem estorno**, **sem nova geração**, **sem retomada**); a b1b **não** declara **recuperabilidade completa** e **evidência simulada não é prova operacional**. Antes do piloto/habilitação da **b2**, um **gate bloqueante** exige comprovar a fonte operacional de encerramento (ou substrato durável) **e/ou** confirmar plano/limites (Vercel Hobby / Supabase Free **informados**; limites **não verificados**).
 - Depende da F56.2b1a fechada e verificada separadamente; reutiliza sua RPC transacional, identidade canônica server-side, escrita RPC-only e idempotência.
 - Preserva o par principal `gpt-image-2.5-sunburst / medium`, fallback `gpt-image-2 / medium` e a política de até 2+1 tentativas.
 - F56.2b2 permanece responsável por retry de copy, E2E completo, piloto controlado pago e **autorização habilitadora**.
