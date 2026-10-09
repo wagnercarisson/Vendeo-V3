@@ -53,7 +53,11 @@ export function RevealOnView({
   }, []);
 
   return (
-    <div ref={ref} className={`${className} ${revealed ? styles.reveal : ""}`.trim()}>
+    <div
+      ref={ref}
+      data-reveal={revealed ? "on" : "off"}
+      className={`${className} ${revealed ? styles.reveal : ""}`.trim()}
+    >
       {children}
     </div>
   );
