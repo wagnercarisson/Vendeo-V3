@@ -58,16 +58,22 @@ export function FaqFinalCtaSection({
         Perguntas frequentes
       </h2>
 
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+      <ul className="mt-6 grid gap-3 sm:grid-cols-2">
         {FAQ.map((item) => (
           <li
             key={item.question}
-            className="rounded-xl border border-border bg-bg-surface p-5"
+            className="rounded-xl border border-border bg-bg-surface"
           >
-            <h3 className="font-heading text-base font-semibold text-text-primary">
-              {item.question}
-            </h3>
-            <p className="mt-2 text-sm text-text-secondary">{item.answer}</p>
+            <details>
+              <summary className="min-h-[44px] cursor-pointer rounded-xl px-5 py-3 focus-visible:ring-2 focus-visible:ring-accent-green focus-visible:outline-none">
+                <h3 className="inline font-heading text-base font-semibold text-text-primary">
+                  {item.question}
+                </h3>
+              </summary>
+              <p className="px-5 pb-4 text-sm text-text-secondary">
+                {item.answer}
+              </p>
+            </details>
           </li>
         ))}
       </ul>
@@ -78,13 +84,13 @@ export function FaqFinalCtaSection({
 
       <nav
         aria-label="Links legais"
-        className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-text-muted"
+        className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-text-secondary"
       >
         {LEGAL_LINKS.map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className="transition-colors hover:text-text-primary"
+            className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
           >
             {link.label}
           </Link>

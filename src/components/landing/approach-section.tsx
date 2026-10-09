@@ -1,4 +1,5 @@
 import { CampaignImage } from "./campaign-image";
+import { RevealOnView } from "./reveal-on-view";
 
 /**
  * Communication-approach block (block 5 of the landing).
@@ -37,23 +38,25 @@ export function ApproachSection() {
         Mostre uma oferta, valorize um produto ou apresente algo especial.
       </p>
 
-      <ul
-        tabIndex={0}
-        aria-label="Abordagens de divulgação: oferta, destaque e exclusivo"
-        className="mt-6 flex gap-4 overflow-x-auto rounded-lg pb-2 focus-visible:ring-2 focus-visible:ring-accent-green focus:outline-none [scroll-snap-type:x_mandatory] sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0"
-      >
-        {APPROACHES.map((item) => (
-          <li
-            key={item.label}
-            className="min-w-[78%] [scroll-snap-align:start] sm:min-w-0"
-          >
-            <CampaignImage alt={item.alt} />
-            <h3 className="mt-3 font-heading text-base font-semibold text-text-primary">
-              {item.label}
-            </h3>
-          </li>
-        ))}
-      </ul>
+      <RevealOnView>
+        <ul
+          tabIndex={0}
+          aria-label="Abordagens de divulgação: oferta, destaque e exclusivo"
+          className="mt-6 flex gap-4 overflow-x-auto rounded-lg pb-2 focus-visible:ring-2 focus-visible:ring-accent-green focus:outline-none [scroll-snap-type:x_mandatory] sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0"
+        >
+          {APPROACHES.map((item) => (
+            <li
+              key={item.label}
+              className="min-w-[78%] [scroll-snap-align:start] sm:min-w-0"
+            >
+              <CampaignImage alt={item.alt} />
+              <h3 className="mt-3 font-heading text-base font-semibold text-text-primary">
+                {item.label}
+              </h3>
+            </li>
+          ))}
+        </ul>
+      </RevealOnView>
     </section>
   );
 }

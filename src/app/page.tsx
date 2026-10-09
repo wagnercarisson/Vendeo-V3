@@ -32,7 +32,7 @@ export default async function Home() {
         </span>
         <Link
           href="/login"
-          className="rounded-lg border border-border-light px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-accent-green hover:text-text-primary"
+          className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-border-light px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-accent-green hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
         >
           Entrar
         </Link>
@@ -55,28 +55,40 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-text-muted sm:flex-row">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-text-secondary sm:flex-row">
           <span className="font-heading font-semibold text-text-secondary">
             Vendeo
           </span>
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            <Link href="/termos" className="transition-colors hover:text-text-primary">
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <Link
+              href="/termos"
+              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
+            >
               Termos de Uso
             </Link>
-            <Link href="/privacidade" className="transition-colors hover:text-text-primary">
+            <Link
+              href="/privacidade"
+              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
+            >
               Política de Privacidade
             </Link>
-            <Link href="/uso-aceitavel" className="transition-colors hover:text-text-primary">
+            <Link
+              href="/uso-aceitavel"
+              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
+            >
               Uso Aceitável
             </Link>
             <NovidadesLink variant="footer" entries={recentEntries} />
             <Link
               href={`mailto:${process.env.SUPPORT_EMAIL ?? "suporte@vendeo.tech"}`}
-              className="transition-colors hover:text-text-primary"
+              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
             >
               Contato
             </Link>
-            <Link href="/login" className="transition-colors hover:text-text-primary">
+            <Link
+              href="/login"
+              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
+            >
               Entrar
             </Link>
           </nav>

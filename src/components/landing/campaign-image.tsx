@@ -42,7 +42,7 @@ export function CampaignImage({
       ) : (
         <div
           aria-hidden="true"
-          className="h-full w-full animate-pulse bg-bg-elevated"
+          className="h-full w-full bg-bg-elevated"
         />
       )}
     </div>
