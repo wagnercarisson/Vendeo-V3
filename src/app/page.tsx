@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccessRequestSection } from "@/components/landing/access-request-section";
-import { HowItWorksSection } from "@/components/landing/how-it-works-section";
-import { WhatVendeoCreatesSection } from "@/components/landing/what-vendeo-creates-section";
+import { HeroSection } from "@/components/landing/hero-section";
+import { TransformationSection } from "@/components/landing/transformation-section";
+import { VariationsSection } from "@/components/landing/variations-section";
+import { IdentityControlSection } from "@/components/landing/identity-control-section";
+import { ApproachSection } from "@/components/landing/approach-section";
+import { OfferSection } from "@/components/landing/offer-section";
+import { FaqFinalCtaSection } from "@/components/landing/faq-final-cta-section";
 import { NovidadesLink } from "@/components/landing/novidades-link";
 import { getAllEntries } from "@/lib/changelog/get-changelog";
 import { getLaunchConfig } from "@/lib/launch-config/config";
@@ -33,15 +38,20 @@ export default async function Home() {
         </Link>
       </header>
 
-      {/* Hero + form (estado de envio gerenciado no client) */}
-      <AccessRequestSection
-        entries={recentEntries}
-        publicSignupEnabled={publicSignupEnabled}
-      />
+      {/* Fixed block order: hero → transformação → apresentação → identidade →
+          abordagens → oferta → FAQ/CTA final */}
+      <main className="flex flex-1 flex-col">
+        <HeroSection publicSignupEnabled={publicSignupEnabled} />
+        <TransformationSection />
+        <VariationsSection />
+        <IdentityControlSection />
+        <ApproachSection />
+        <OfferSection publicSignupEnabled={publicSignupEnabled} />
+        <FaqFinalCtaSection publicSignupEnabled={publicSignupEnabled} />
 
-      {/* Capacidades do app + fluxo do produto (conteúdo estático público) */}
-      <WhatVendeoCreatesSection />
-      <HowItWorksSection />
+        {/* Form section — flag off only (retorna null com a flag ligada) */}
+        <AccessRequestSection publicSignupEnabled={publicSignupEnabled} />
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border">
