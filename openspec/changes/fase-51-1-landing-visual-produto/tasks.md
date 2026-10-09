@@ -51,7 +51,7 @@
 - [ ] 6.6 Validar manualmente mobile e desktop nos modos flag off/on, sem ativar signup público
 - [x] 6.7 Registrar o teste de compreensão: visitante entende o produto após hero e transformação
 
-> **Nota (6.5):** `npx vitest run src/components/landing/__tests__` = 4 arquivos / 26 testes verdes; `npm run lint` exit 0. O `typecheck` da branch mantém **apenas exceções externas pré-existentes** fora da F51.1 (baseline poluída por `node_modules.shared-link` e erros prévios de `ssl`/`searchParams`) — **nenhum erro nos arquivos da F51.1**; o `build` depende das envs do `.env.example` presentes.
+> **Nota (6.5):** `npx vitest run src/components/landing/__tests__` = **6 arquivos / 32 testes verdes** (inclui os novos testes de FAQ inicialmente fechada e de `RevealOnView`: disparo único, movimento reduzido, ausência de `IntersectionObserver`); `npm run lint` exit 0. O `typecheck` foi corrigido excluindo a junção `node_modules.*` (`node_modules.shared-link`), que injetava ~5.569 arquivos e produzia erros **espúrios** de `searchParams`; após a exclusão, **resta apenas o erro real pré-existente `ssl`/`pg`** fora da F51.1 (`image-generation-operations-repository.integration.test.ts`) — **nenhum erro na F51.1**. O `build` depende das envs do `.env.example`. **O gate completo ainda NÃO está aprovado** (typecheck/build não fecham verdes por causas externas à F51.1).
 
 ## 7. Fechamento
 
