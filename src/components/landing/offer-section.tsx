@@ -49,7 +49,7 @@ export function OfferSection({ publicSignupEnabled }: OfferSectionProps) {
           </summary>
           <div className="mt-3 space-y-2">
             <p>
-              O período de 28 dias começa após concluir o onboarding, a
+              O período de 28 dias começa após concluir o cadastro e a
               configuração inicial da sua loja.
             </p>
             <p>
