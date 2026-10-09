@@ -330,7 +330,7 @@ Plans:
 
 ### Phase 56.2.2: F56.2b1b — Núcleo entregável do Produto 1:1
 
-**Status:** ⏳ **Registrada (2026-10-09); preparação documental em andamento — UI-SPEC pendente.** Change OpenSpec **ativa** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` (11 specs; **0/38 tasks**); nenhum plano GSD criado; implementação não iniciada. b1a (`56.2.1`) arquivada; flags `false`; autorização `off`; nenhuma loja habilitada. **UI-SPEC (`56.2.2-UI-SPEC.md`) é pré-requisito** dos planos dos controles conectados; `/gsd-plan-phase 56.2.2` somente após aprovação humana da UI-SPEC. b2 (`56.2.3`) e F56.3 não iniciados.
+**Status:** ⏳ **Registrada (2026-10-09); UI-SPEC revisada (após revisão humana) e aprovada pelo `gsd-ui-checker` (6/6).** **Aprovação humana da UI-SPEC pendente; planejamento pendente; implementação não iniciada.** Change OpenSpec **ativa** `openspec/changes/fase-56-2b1b-nucleo-entregavel-produto-1-1/` (11 specs; **0/38 tasks**); nenhum plano GSD criado. b1a (`56.2.1`) arquivada; flags `false`; autorização `off`; nenhuma loja habilitada. **UI-SPEC (`56.2.2-UI-SPEC.md`) é pré-requisito** dos planos dos controles conectados; `/gsd-plan-phase 56.2.2` somente após **aprovação humana** da UI-SPEC. b2 (`56.2.3`) e F56.3 não iniciados.
 
 **Goal:** Conectar formulário elegível, geração no ciclo da requisição, snapshot, reserva/entrega atômica (operação da b1a) e download condicionado a `delivered`, mantendo flags/autorização `off`, sem habilitar lojas, sem aprovação/reprovação (F56.3) e sem execução durável (diferida).
 
