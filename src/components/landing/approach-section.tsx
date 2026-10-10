@@ -17,9 +17,21 @@ import { RevealOnView } from "./reveal-on-view";
  */
 
 const APPROACHES = [
-  { label: "Oferta", alt: "Exemplo de campanha para oferta" },
-  { label: "Destaque", alt: "Exemplo de campanha para destaque" },
-  { label: "Exclusivo", alt: "Exemplo de campanha para exclusivo" },
+  {
+    label: "Oferta",
+    src: "/landing/abordagens-oferta.webp",
+    alt: "Exemplo de campanha para oferta",
+  },
+  {
+    label: "Destaque",
+    src: "/landing/abordagens-destaque.webp",
+    alt: "Exemplo de campanha para destaque",
+  },
+  {
+    label: "Exclusivo",
+    src: "/landing/abordagens-exclusivo.webp",
+    alt: "Exemplo de campanha para exclusivo",
+  },
 ];
 
 export function ApproachSection() {
@@ -49,7 +61,7 @@ export function ApproachSection() {
               key={item.label}
               className="min-w-[78%] [scroll-snap-align:start] sm:min-w-0"
             >
-              <CampaignImage alt={item.alt} />
+              <CampaignImage src={item.src} alt={item.alt} contain />
               <h3 className="mt-3 font-heading text-base font-semibold text-text-primary">
                 {item.label}
               </h3>
