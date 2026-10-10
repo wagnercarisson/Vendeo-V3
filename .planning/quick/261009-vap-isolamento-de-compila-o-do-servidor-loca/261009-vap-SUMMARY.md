@@ -17,6 +17,12 @@ hash antes de atender tráfego**; divergência de hash ou ausência indevida abo
 Alteração aplicada em `start-web.mjs` (git-ignored), com `node --check` OK; **sem reinício agora** —
 o processo em execução segue com o comportamento validado até o próximo restart.
 
+Guard de recuperação pendente: antes de criar/sobrescrever o snapshot, se o marcador `.sha256`
+existir (execução anterior sem restauração verificada), o inicializador valida a integridade do
+backup e **aborta sem sobrescrever nem apagar o backup**, exibindo o comando de recuperação; só
+após restauração comprovada e remoção do marcador uma nova execução é permitida. O `.sha256` é
+removido apenas na restauração bem-sucedida, funcionando como marcador de pendência.
+
 ## Pendente
 
 - Conferência visual do logo renderizado na interface (a evidência atual cobre API e banco).
