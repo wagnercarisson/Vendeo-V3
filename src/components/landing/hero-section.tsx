@@ -52,7 +52,11 @@ export function HeroSection({ publicSignupEnabled }: HeroSectionProps) {
           </div>
         </div>
         <div className="mx-auto w-full max-w-sm sm:mx-0 sm:max-w-none">
-          <CampaignImage alt="Campanha de produto demonstrativa" />
+          <CampaignImage
+            src="/landing/hero-oferta-cafe.webp"
+            alt="Campanha de oferta de café da Mercearia Tio João"
+            contain
+          />
         </div>
       </div>
     </section>
