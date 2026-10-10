@@ -25,7 +25,7 @@ A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL ser u
 
 A landing SHALL comunicar a transformação de informações simples em campanha pronta, usando a headline "O que seu negócio quer divulgar vira uma campanha pronta para publicar." e a subheadline "Você informa o básico. O Vendeo prepara a campanha completa — com arte e texto — pronta para publicar."
 
-- A distinção entre escolha do usuário e preparação pelo sistema SHALL ser preservada ("Você define como quer apresentar. O Vendeo prepara a campanha.").
+- A narrativa SHALL deixar claro que o usuário escolhe como apresentar e que o Vendeo prepara a campanha, **sem exigir que uma string literal específica apareça integralmente** (o hero usa "Você define como quer apresentar."; a preparação pelo sistema fica na subheadline e no bloco de identidade).
 - Nenhum bloco SHALL exigir conhecimento de termos internos (por exemplo `briefing`, `intenção`, `F56`) para compreender o benefício.
 - A landing SHALL NOT explicar regras internas de inferência nem sugerir que a intenção seja sempre uma seleção explícita do usuário.
 
@@ -33,7 +33,7 @@ A landing SHALL comunicar a transformação de informações simples em campanha
 
 - **WHEN** a landing é renderizada
 - **THEN** a headline e a subheadline aprovadas são exibidas
-- **AND** a distinção "Você define como quer apresentar. O Vendeo prepara a campanha." é apresentada
+- **AND** a narrativa deixa claro que o usuário escolhe como apresentar e que o Vendeo prepara a campanha (sem exigir a string antiga na íntegra)
 
 #### Scenario: Sem termos internos expostos
 

@@ -88,7 +88,7 @@ Manter hierarquia de headings, landmarks, links legais (`/termos`, `/privacidade
 
 ### D8 — Linguagem sem termos internos
 
-Nenhum bloco pode exigir termos internos (`briefing`, `intenção`, `F56`) para compreender o benefício. Não explicar regras internas de inferência nem sugerir que a intenção seja sempre escolha explícita. Preservar "Você define como quer apresentar. O Vendeo prepara a campanha."
+Nenhum bloco pode exigir termos internos (`briefing`, `intenção`, `F56`) para compreender o benefício. Não explicar regras internas de inferência nem sugerir que a intenção seja sempre escolha explícita. A narrativa deixa claro que o usuário escolhe como apresentar e que o Vendeo prepara a campanha — sem exigir uma string literal específica na íntegra (hero: "Você define como quer apresentar."; identidade: apoio de marca).
 
 ### D9 — Checkpoint humano antes da implementação
 

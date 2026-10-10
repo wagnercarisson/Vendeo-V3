@@ -21,7 +21,7 @@
     --font-body: 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg-deep); color: var(--text-primary); font-family: var(--font-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; background: var(--bg-surface); color: var(--text-primary); font-family: var(--font-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
   h1, h2, h3 { font-family: var(--font-heading); margin: 0; }
   p { margin: 0; }
   a { color: inherit; text-decoration: none; }
@@ -37,7 +37,7 @@
   html[data-mode="on"] .off-only { display: none !important; }
 
   .site-header { width: 100%; max-width: 64rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 24px; }
-  .brand { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; }
+  .brand-logo { height: 24px; width: auto; display: block; }
   .btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 16px; border: 1px solid var(--border-light); border-radius: 8px; color: var(--text-secondary); font-size: 0.875rem; }
 
   section.block { width: 100%; max-width: 64rem; margin: 0 auto; padding: 32px 24px; }
@@ -48,7 +48,7 @@
   /* Hero */
   .hero { padding: 64px 24px 48px; }
   .hero-grid { display: grid; gap: 40px; align-items: center; }
-  .pill { display: inline-block; border: 1px solid var(--border-light); background: var(--bg-surface); color: var(--accent-amber); border-radius: 9999px; padding: 6px 16px; font-size: 0.75rem; font-weight: 500; }
+  .pill { display: inline-block; border: 1px solid var(--border-light); background: var(--bg-deep); color: var(--accent-amber); border-radius: 9999px; padding: 6px 16px; font-size: 0.75rem; font-weight: 500; }
   h1 { margin-top: 20px; font-weight: 700; font-size: 1.875rem; line-height: 1.15; }
   .sub { margin-top: 20px; color: var(--text-secondary); font-size: 1rem; max-width: 36rem; }
   .distinction { margin-top: 16px; color: var(--text-secondary); }
@@ -56,12 +56,12 @@
   .cta { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px 24px; border-radius: 8px; background: #22C55E; color: #020617; font-family: var(--font-heading); font-weight: 600; }
 
-  .frame { aspect-ratio: 1 / 1; width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-surface); display: flex; align-items: center; justify-content: center; }
+  .frame { aspect-ratio: 1 / 1; width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-deep); display: flex; align-items: center; justify-content: center; }
   .frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .frame.skeleton { color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 12px; }
   .media-sm { margin: 0 auto; width: 100%; max-width: 24rem; }
 
-  .summary-card { background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px; }
+  .summary-card { background: var(--bg-deep); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px; }
   .summary-kicker { font-family: var(--font-heading); font-size: 0.75rem; font-weight: 600; color: var(--accent-green); }
   .summary-list { margin: 8px 0 0; display: grid; gap: 6px; }
   .summary-list > div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
@@ -85,18 +85,18 @@
   .identity-grid { margin-top: 24px; display: grid; gap: 24px; align-items: center; }
   .identity-media { margin: 0 auto; width: 100%; max-width: 20rem; }
 
-  .offer-card { border: 1px solid var(--border); border-radius: 16px; background: var(--bg-surface); padding: 24px; }
+  .offer-card { border: 1px solid var(--border); border-radius: 16px; background: var(--bg-deep); padding: 24px; }
   .offer-main { margin-top: 12px; font-family: var(--font-heading); font-weight: 600; font-size: 1.125rem; color: var(--text-secondary); max-width: 36rem; }
-  details.mechanics { margin-top: 24px; border: 1px solid var(--border); border-radius: 8px; background: rgba(2,6,23,0.4); padding: 16px; font-size: 0.875rem; color: var(--text-secondary); }
+  details.mechanics { margin-top: 24px; border: 1px solid var(--border); border-radius: 8px; background: rgba(15,23,42,0.4); padding: 16px; font-size: 0.875rem; color: var(--text-secondary); }
   details.mechanics summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
   details.mechanics p { margin-top: 8px; }
 
   .faq { margin-top: 24px; display: grid; gap: 12px; }
-  .faq details { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-surface); }
+  .faq details { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-deep); }
   .faq summary { min-height: 44px; display: flex; align-items: center; padding: 12px 20px; cursor: pointer; font-family: var(--font-heading); font-weight: 600; }
   .faq p { padding: 0 20px 16px; color: var(--text-secondary); font-size: 0.875rem; }
 
-  .form-card { max-width: 28rem; margin: 0 auto; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-surface); padding: 32px; }
+  .form-card { max-width: 28rem; margin: 0 auto; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-deep); padding: 32px; }
   .form-card p { color: var(--text-secondary); font-size: 0.875rem; }
 
   .site-footer { border-top: 1px solid var(--border); margin-top: 24px; }
@@ -141,7 +141,7 @@
   </div>
 
   <header class="site-header">
-    <span class="brand">Vendeo</span>
+    <img class="brand-logo" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
     <a class="btn-secondary" href="#">Entrar</a>
   </header>
 
@@ -266,7 +266,7 @@
     <section class="block">
       <h2>Perguntas frequentes</h2>
       <div class="faq">
-        <details><summary>Para quem o Vendeo foi desenvolvido?</summary><p>Para lojistas que querem divulgar produtos e ofertas nas redes sociais com campanhas profissionais, sem precisar saber design ou marketing.</p></details>
+        <details><summary>Para quem o Vendeo foi desenvolvido?</summary><p>Para lojistas que querem divulgar produtos e ofertas nas redes sociais com campanhas profissionais.</p></details>
         <details><summary>Preciso saber design ou marketing?</summary><p>Não. Você informa o básico, e o Vendeo entrega a campanha completa — com arte e texto — para você conferir, baixar e publicar.</p></details>
         <details><summary>Preciso fornecer informações pessoais?</summary><p>Sim. Solicitamos informações para seu acesso e contato, além de dados da sua loja para personalizar as campanhas com a identidade do seu negócio. Você pode consultar os detalhes na Política de Privacidade.</p></details>
         <details><summary>Preciso informar cartão de crédito?</summary><p>Não. O teste gratuito não exige cartão de crédito.</p></details>
@@ -292,10 +292,15 @@
 
   <footer class="site-footer">
     <div class="site-footer-inner">
-      <span class="brand">Vendeo</span>
+      <img class="brand-logo" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
       <nav class="footer-nav">
         <span>Termos de Uso</span><span>Política de Privacidade</span><span>Uso Aceitável</span><span>Novidades</span><span>Contato</span><span>Entrar</span>
       </nav>
+    </div>
+    <div style="max-width:64rem;margin:0 auto;padding:0 24px 32px;">
+      <p style="font-size:0.75rem;color:var(--text-secondary);text-align:center;">
+        As campanhas apresentadas nesta página são exemplos demonstrativos do Vendeo e não representam ofertas reais de produtos ou serviços.
+      </p>
     </div>
   </footer>
 
