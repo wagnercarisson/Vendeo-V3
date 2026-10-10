@@ -10,8 +10,8 @@
     },
     {
       "id": "345508d7-59c6-48b8-adbd-8fdea74a909e",
-      "label": "Floricultura Dona Flor",
-      "notes": "Loja demonstrativa local renomeada de Padaria/Mercearia; identidade da floricultura realinhada. Mesmo store ID, sem duplicacao."
+      "label": "Pet Shop Bicho Fofo",
+      "notes": "Loja demonstrativa local renomeada de Padaria/Mercearia/Floricultura; perfil do pet shop synced confirmado. Mesmo store ID, sem duplicacao."
     }
   ],
   "notes": "Manifesto/allowlist local das lojas de teste da bancada de geração (F48.2.2, D4). Preencher com { \"id\": \"<uuid da loja no Supabase LOCAL>\", \"label\": \"Loja de teste A\", \"notes\": \"...\" } antes do UAT autorizado (plano 08). Uma loja só é elegível se estiver neste manifesto E existir no Supabase local; lojas fora do manifesto são recusadas sem iniciar geração e nenhuma sincronização remota é feita."
