@@ -8,6 +8,20 @@ code_commit: 82f26e9c
 
 # Quick 261009-vap — Isolamento de compilação do servidor local do laboratório
 
+## Proteção do `next-env.d.ts` (complemento pós-revisão)
+
+O inicializador foi reforçado: além do snapshot em memória, grava backup recuperável em disco
+(`next-env.d.ts.snapshot` + `.sha256` sob o lab) e, após `app.prepare()`, restaura e **verifica o
+hash antes de atender tráfego**; divergência de hash ou ausência indevida aborta o startup
+(`process.exit(1)`) em vez de servir. Isso cobre interrupção abrupta em que o `finally` não roda.
+Alteração aplicada em `start-web.mjs` (git-ignored), com `node --check` OK; **sem reinício agora** —
+o processo em execução segue com o comportamento validado até o próximo restart.
+
+## Pendente
+
+- Conferência visual do logo renderizado na interface (a evidência atual cobre API e banco).
+  Programada para o próximo ciclo, sem reinício agora.
+
 ## Resultado
 
 O servidor Next.js do laboratório (`http://127.0.0.1:3002`) passou a compilar em um diretório
