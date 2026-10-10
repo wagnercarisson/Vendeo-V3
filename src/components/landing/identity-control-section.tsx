@@ -30,6 +30,7 @@ export function IdentityControlSection() {
             src="/landing/identidade-floricultura.webp"
             alt="Campanha de buquê de rosas da Floricultura Dona Flor"
             contain
+            loading="lazy"
           />
         </div>
         <div>

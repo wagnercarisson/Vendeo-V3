@@ -58,7 +58,7 @@ export function TransformationSection() {
 
       <div className="mt-6 grid items-center gap-6 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         {/* ENTRY — compact text summary + provided-photo thumbnail */}
-        <div className="rounded-xl border border-border bg-bg-surface p-5">
+        <div className="rounded-xl border border-border bg-bg-deep p-5">
           <span className="font-heading text-xs font-semibold uppercase tracking-wide text-accent-green">
             Entrada
           </span>
@@ -83,6 +83,7 @@ export function TransformationSection() {
               alt="Foto da ração Confiance Premium de 15 kg enviada para criar a campanha"
               width={112}
               height={103}
+              loading="lazy"
               className="h-auto w-[112px] rounded-lg border border-border-light"
             />
             <figcaption className="mt-2 text-xs text-text-muted">
@@ -105,6 +106,7 @@ export function TransformationSection() {
             src="/landing/transformacao-petshop.webp"
             alt="Campanha da Pet Shop Bicho Fofo para ração Confiance Premium de 15 kg por R$ 114,90"
             contain
+            loading="lazy"
           />
         </div>
       </div>

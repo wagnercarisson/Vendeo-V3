@@ -61,7 +61,7 @@ export function ApproachSection() {
               key={item.label}
               className="min-w-[78%] [scroll-snap-align:start] sm:min-w-0"
             >
-              <CampaignImage src={item.src} alt={item.alt} contain />
+              <CampaignImage src={item.src} alt={item.alt} contain loading="lazy" />
               <h3 className="mt-3 font-heading text-base font-semibold text-text-primary">
                 {item.label}
               </h3>

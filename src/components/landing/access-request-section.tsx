@@ -28,7 +28,7 @@ export function AccessRequestSection({
 
   return (
     <section id="acesso" className="mx-auto w-full max-w-5xl px-6 pb-20">
-      <div className="mx-auto max-w-md rounded-2xl border border-border bg-bg-surface p-8">
+      <div className="mx-auto max-w-md rounded-2xl border border-border bg-bg-deep p-8">
         {submitted ? (
           <div role="status" className="text-center">
             <h2 className="font-heading text-xl font-semibold">

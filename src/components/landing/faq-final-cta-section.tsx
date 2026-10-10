@@ -15,7 +15,7 @@ const FAQ = [
   {
     question: "Para quem o Vendeo foi desenvolvido?",
     answer:
-      "Para lojistas que querem divulgar produtos e ofertas nas redes sociais com campanhas profissionais, sem precisar saber design ou marketing.",
+      "Para lojistas que querem divulgar produtos e ofertas nas redes sociais com campanhas profissionais.",
   },
   {
     question: "Preciso saber design ou marketing?",
@@ -62,7 +62,7 @@ export function FaqFinalCtaSection({
         {FAQ.map((item) => (
           <li
             key={item.question}
-            className="rounded-xl border border-border bg-bg-surface"
+            className="rounded-xl border border-border bg-bg-deep"
           >
             <details>
               <summary className="min-h-[44px] cursor-pointer rounded-xl px-5 py-3 focus-visible:ring-2 focus-visible:ring-accent-green focus-visible:outline-none">
@@ -78,7 +78,7 @@ export function FaqFinalCtaSection({
         ))}
       </ul>
 
-      <div className="mt-10 rounded-2xl border border-border bg-bg-surface p-8 text-center">
+      <div className="mt-10 rounded-2xl border border-border bg-bg-deep p-8 text-center">
         <AcquisitionCta publicSignupEnabled={publicSignupEnabled} />
       </div>
 

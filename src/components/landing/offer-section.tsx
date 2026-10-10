@@ -24,7 +24,7 @@ export function OfferSection({ publicSignupEnabled }: OfferSectionProps) {
       aria-labelledby="oferta-heading"
       className="mx-auto w-full max-w-5xl px-6 py-8 sm:py-12"
     >
-      <div className="rounded-2xl border border-border bg-bg-surface p-6 sm:p-8">
+      <div className="rounded-2xl border border-border bg-bg-deep p-6 sm:p-8">
         <h2
           id="oferta-heading"
           className="font-heading text-2xl font-bold text-text-primary sm:text-3xl"
@@ -42,7 +42,7 @@ export function OfferSection({ publicSignupEnabled }: OfferSectionProps) {
 
         <details
           data-offer-mechanics
-          className="mt-6 rounded-lg border border-border bg-bg-deep/40 p-4 text-sm text-text-secondary"
+          className="mt-6 rounded-lg border border-border bg-bg-surface/40 p-4 text-sm text-text-secondary"
         >
           <summary className="flex min-h-[44px] cursor-pointer items-center rounded font-medium text-text-secondary focus-visible:ring-2 focus-visible:ring-accent-green focus-visible:outline-none">
             Como funcionam os créditos do teste gratuito?

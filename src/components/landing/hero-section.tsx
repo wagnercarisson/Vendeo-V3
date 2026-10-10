@@ -30,7 +30,7 @@ export function HeroSection({ publicSignupEnabled }: HeroSectionProps) {
       <div className="grid items-center gap-10 sm:grid-cols-2">
         <div className="text-center sm:text-left">
           {!publicSignupEnabled ? (
-            <p className="inline-block rounded-full border border-border-light bg-bg-surface px-4 py-1.5 text-xs font-medium text-accent-amber">
+            <p className="inline-block rounded-full border border-border-light bg-bg-deep px-4 py-1.5 text-xs font-medium text-accent-amber">
               Beta fechado — acesso liberado por convite. Solicite seu acesso free.
             </p>
           ) : null}
@@ -55,6 +55,7 @@ export function HeroSection({ publicSignupEnabled }: HeroSectionProps) {
             src="/landing/hero-oferta-cafe.webp"
             alt="Campanha de oferta de café da Mercearia Tio João"
             contain
+            loading="eager"
           />
         </div>
       </div>

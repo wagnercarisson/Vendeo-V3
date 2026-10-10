@@ -24,12 +24,16 @@ export default async function Home() {
   const { publicSignupEnabled } = await getLaunchConfig();
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg-deep font-body text-text-primary">
+    <div className="flex min-h-screen flex-col bg-bg-surface font-body text-text-primary">
       {/* Header */}
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
-        <span className="font-heading text-xl font-bold tracking-tight">
-          Vendeo
-        </span>
+        <img
+          src="/landing/vendeo-logo-dark.webp"
+          alt="Vendeo"
+          width={384}
+          height={82}
+          className="h-6 w-auto sm:h-7"
+        />
         <Link
           href="/login"
           className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-border-light px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-accent-green hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
@@ -56,9 +60,14 @@ export default async function Home() {
       {/* Footer */}
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-text-secondary sm:flex-row">
-          <span className="font-heading font-semibold text-text-secondary">
-            Vendeo
-          </span>
+          <img
+            src="/landing/vendeo-logo-dark.webp"
+            alt="Vendeo"
+            width={384}
+            height={82}
+            loading="lazy"
+            className="h-6 w-auto"
+          />
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             <Link
               href="/termos"
@@ -92,6 +101,12 @@ export default async function Home() {
               Entrar
             </Link>
           </nav>
+        </div>
+        <div className="mx-auto w-full max-w-5xl px-6 pb-8">
+          <p className="text-center text-xs text-text-secondary">
+            As campanhas apresentadas nesta página são exemplos demonstrativos do
+            Vendeo e não representam ofertas reais de produtos ou serviços.
+          </p>
         </div>
       </footer>
     </div>

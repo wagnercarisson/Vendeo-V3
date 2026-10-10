@@ -174,6 +174,32 @@ describe("Landing page — composição e copy (flag off)", () => {
       .getAllByRole("link", { name: "Solicitar acesso free" })
       .forEach((cta) => expect(cta).not.toHaveAttribute("href", "/login"));
   });
+
+  it("carrega o hero sem lazy e as imagens abaixo dele com lazy (dimensões estáveis)", async () => {
+    const { container } = render(await Home());
+
+    const hero = container.querySelector(
+      'img[alt="Campanha de oferta de café da Mercearia Tio João"]',
+    );
+    expect(hero).not.toBeNull();
+    expect(hero).toHaveAttribute("loading", "eager");
+
+    expect(
+      container.querySelectorAll('img[loading="eager"]').length,
+    ).toBe(1);
+    expect(
+      container.querySelectorAll('img[loading="lazy"]').length,
+    ).toBeGreaterThanOrEqual(6);
+  });
+
+  it("usa o logo (imagem, alt 'Vendeo') no cabeçalho e no rodapé", async () => {
+    const { container } = render(await Home());
+    const logos = container.querySelectorAll('img[alt="Vendeo"]');
+    expect(logos.length).toBeGreaterThanOrEqual(2);
+    logos.forEach((logo) => {
+      expect(logo).toHaveAttribute("src", "/landing/vendeo-logo-dark.webp");
+    });
+  });
 });
 
 describe("Landing page — ambos os modos da flag para hero/oferta/final", () => {

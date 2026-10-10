@@ -20,6 +20,7 @@ interface CampaignImageProps {
   alt: string;
   className?: string;
   contain?: boolean;
+  loading?: "eager" | "lazy";
 }
 
 export function CampaignImage({
@@ -27,16 +28,18 @@ export function CampaignImage({
   alt,
   className = "",
   contain = false,
+  loading = "lazy",
 }: CampaignImageProps) {
   return (
     <div
       data-campaign-image
-      className={`aspect-square w-full overflow-hidden rounded-lg border border-border-light bg-bg-surface ${className}`}
+      className={`aspect-square w-full overflow-hidden rounded-lg border border-border-light bg-bg-deep ${className}`}
     >
       {src ? (
         <img
           src={src}
           alt={alt}
+          loading={loading}
           className={`h-full w-full ${contain ? "object-contain" : "object-cover"}`}
         />
       ) : (
