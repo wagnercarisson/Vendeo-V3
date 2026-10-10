@@ -29,7 +29,7 @@ vi.mock('@/lib/brand-assets/color-probe', () => ({
   LOOSE_MATCH_DELTA_E: 25,
 }));
 
-import { NoopAiTelemetrySink } from '@/lib/ai';
+import { NoopAiTelemetrySink, AiInvocationError } from '@/lib/ai';
 import type { AiInvoker, AiTelemetryContext, TokenUsage } from '@/lib/ai';
 
 const mockProbe = {
@@ -200,5 +200,243 @@ describe('BrandDirectorService.analyze onCall (F38.1/F46-04, D7/D9/D11)', () => 
         storeData: basicStoreData,
       })
     ).rejects.toThrow(/AiTelemetryContext/);
+  });
+});
+
+// ── F-quick: classificação de recusa/truncamento/vazio/JSON ────────────────
+describe('BrandDirectorService.analyze — classificação de resposta (F-quick)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.OPENAI_API_KEY = 'test-key';
+    (process.env as Record<string, string>).NODE_ENV = 'test';
+    mockProbeColors.mockResolvedValue(mockProbe);
+    mockFindClosestProbeCluster.mockReturnValue({ cluster: { hex: '#CC0000' }, deltaE: 0 });
+  });
+
+  afterEach(() => {
+    delete process.env.OPENAI_API_KEY;
+    (process.env as Record<string, string>).NODE_ENV = 'test';
+  });
+
+  function visionInvoker(result: { content?: string | null; finishReason?: string; refusal?: string }): AiInvoker {
+    return {
+      invoke: vi.fn(async () => ({
+        content: result.content ?? undefined,
+        model: 'gpt-4o',
+        finishReason: result.finishReason,
+        refusal: result.refusal,
+      })) as unknown as AiInvoker['invoke'],
+      hasFallback: vi.fn(async () => false),
+    };
+  }
+
+  function rejectingInvoker(err: unknown): AiInvoker {
+    return {
+      invoke: vi.fn(async () => {
+        throw err;
+      }) as unknown as AiInvoker['invoke'],
+      hasFallback: vi.fn(async () => false),
+    };
+  }
+
+  async function analyzeExpectError(invoker: AiInvoker): Promise<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    errorType: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    providerKind?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    deterministicPreserved: boolean;
+  }> {
+    const { BrandDirectorService, BrandDirectorAnalysisError } = await import('../brand-director');
+    const service = new BrandDirectorService(invoker);
+    const err = await service
+      .analyze({
+        logoBuffer: Buffer.from('fake-png'),
+        logoMimeType: 'image/png',
+        storeData: basicStoreData,
+        telemetry: TELEMETRY,
+      })
+      .then(() => null)
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(BrandDirectorAnalysisError);
+    return {
+      errorType: err.metadata.errorType,
+      providerKind: err.metadata.providerKind,
+      deterministicPreserved: err.deterministicResult !== null,
+    };
+  }
+
+  it('JSON válido e completo resolve', async () => {
+    const { BrandDirectorService } = await import('../brand-director');
+    const service = new BrandDirectorService(visionInvoker({ content: visionJson(), finishReason: 'stop' }));
+    const result = await service.analyze({
+      logoBuffer: Buffer.from('fake-png'),
+      logoMimeType: 'image/png',
+      storeData: basicStoreData,
+      telemetry: TELEMETRY,
+    });
+    expect(result.visual_style).toBe('Moderno');
+  });
+
+  it('content vazio "" → empty_content', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: '', finishReason: 'stop' }));
+    expect(info.errorType).toBe('empty_content');
+    expect(info.deterministicPreserved).toBe(true);
+  });
+
+  it('content null (sem finishReason) → empty_content', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: null }));
+    expect(info.errorType).toBe('empty_content');
+  });
+
+  it('recusa explícita + content null → refused (prioridade sobre vazio)', async () => {
+    const info = await analyzeExpectError(
+      visionInvoker({ content: null, refusal: 'não posso ajudar', finishReason: 'stop' }),
+    );
+    expect(info.errorType).toBe('refused');
+  });
+
+  it('recusa + finish_reason=length → refused (recusa tem prioridade)', async () => {
+    const info = await analyzeExpectError(
+      visionInvoker({ content: '', refusal: 'recusado', finishReason: 'length' }),
+    );
+    expect(info.errorType).toBe('refused');
+  });
+
+  it('finish_reason=length + content vazio → truncated_response (prioridade sobre vazio)', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: '', finishReason: 'length' }));
+    expect(info.errorType).toBe('truncated_response');
+  });
+
+  it('finish_reason=content_filter → refused', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: '{}', finishReason: 'content_filter' }));
+    expect(info.errorType).toBe('refused');
+  });
+
+  it('JSON malformado → invalid_json', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: '{"a":', finishReason: 'stop' }));
+    expect(info.errorType).toBe('invalid_json');
+  });
+
+  it('JSON null → invalid_json_shape (sem TypeError)', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: 'null', finishReason: 'stop' }));
+    expect(info.errorType).toBe('invalid_json_shape');
+  });
+
+  it('JSON array → invalid_json_shape', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: '[]', finishReason: 'stop' }));
+    expect(info.errorType).toBe('invalid_json_shape');
+  });
+
+  it('JSON primitivo → invalid_json_shape', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: '5', finishReason: 'stop' }));
+    expect(info.errorType).toBe('invalid_json_shape');
+  });
+
+  it('objeto JSON válido sem campos críticos → incomplete_response', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: '{"logo_colors_detected":[]}', finishReason: 'stop' }));
+    expect(info.errorType).toBe('incomplete_response');
+  });
+
+  it('erro de transporte (AiInvocationError) → api_error com providerKind preservado', async () => {
+    const info = await analyzeExpectError(
+      rejectingInvoker(new AiInvocationError({ kind: 'network', retryable: true, message: 'fetch failed' })),
+    );
+    expect(info.errorType).toBe('api_error');
+    expect(info.providerKind).toBe('network');
+  });
+
+  it('sucesso: exatamente UMA chamada ao invoker e nunca aciona fallback', async () => {
+    const { BrandDirectorService } = await import('../brand-director');
+    const invoke = vi.fn(async () => ({ content: visionJson(), model: 'gpt-4o', finishReason: 'stop' }));
+    const hasFallback = vi.fn(async () => false);
+    const invoker = { invoke: invoke as unknown as AiInvoker['invoke'], hasFallback } as AiInvoker;
+    const service = new BrandDirectorService(invoker);
+
+    await service.analyze({
+      logoBuffer: Buffer.from('fake-png'),
+      logoMimeType: 'image/png',
+      storeData: basicStoreData,
+      telemetry: TELEMETRY,
+    });
+
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(hasFallback).not.toHaveBeenCalled();
+  });
+
+  it('falha (JSON inválido): também exatamente UMA invocação — sem fallback automático', async () => {
+    const { BrandDirectorService } = await import('../brand-director');
+    const invoke = vi.fn(async () => ({ content: '{"a":', model: 'gpt-4o', finishReason: 'stop' }));
+    const hasFallback = vi.fn(async () => false);
+    const invoker = { invoke: invoke as unknown as AiInvoker['invoke'], hasFallback } as AiInvoker;
+    const service = new BrandDirectorService(invoker);
+
+    await service
+      .analyze({
+        logoBuffer: Buffer.from('fake-png'),
+        logoMimeType: 'image/png',
+        storeData: basicStoreData,
+        telemetry: TELEMETRY,
+      })
+      .catch(() => {});
+
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(hasFallback).not.toHaveBeenCalled();
+  });
+
+  it('logs sanitizados: não contêm conteúdo bruto nem texto de recusa', async () => {
+    const SECRET_CONTENT = 'CONTEUDO-BRUTO-SEGREDO';
+    const REFUSAL_TEXT = 'RECUSA-TEXTUAL-EXPLICITA';
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { BrandDirectorService } = await import('../brand-director');
+      const service = new BrandDirectorService(
+        visionInvoker({ content: SECRET_CONTENT, refusal: REFUSAL_TEXT, finishReason: 'stop' }),
+      );
+      await service
+        .analyze({
+          logoBuffer: Buffer.from('fake-png'),
+          logoMimeType: 'image/png',
+          storeData: basicStoreData,
+          telemetry: TELEMETRY,
+        })
+        .catch(() => {});
+
+      const logged = [...errorSpy.mock.calls, ...logSpy.mock.calls].flat().map(String).join(' ');
+      expect(logged).not.toContain(SECRET_CONTENT);
+      expect(logged).not.toContain(REFUSAL_TEXT);
+      expect(logged).toContain('refused');
+    } finally {
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+    }
+  });
+
+  it('logs sanitizados: objeto bruto não é logado (regressão do "Full raw")', async () => {
+    const MARKER = 'MARCADOR-INTERNO-NAO-DEVE-LOGAR';
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { BrandDirectorService } = await import('../brand-director');
+      const service = new BrandDirectorService(
+        visionInvoker({ content: JSON.stringify({ visual_style: '', segredo: MARKER }), finishReason: 'stop' }),
+      );
+      await service
+        .analyze({
+          logoBuffer: Buffer.from('fake-png'),
+          logoMimeType: 'image/png',
+          storeData: basicStoreData,
+          telemetry: TELEMETRY,
+        })
+        .catch(() => {});
+
+      const logged = [...errorSpy.mock.calls, ...logSpy.mock.calls].flat().map(String).join(' ');
+      expect(logged).not.toContain(MARKER);
+      expect(logged).toContain('incomplete_response');
+    } finally {
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+    }
   });
 });

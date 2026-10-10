@@ -105,6 +105,20 @@ export interface AiInvocationResult {
   usage?: TokenUsage;
   usageMeta?: AiInvocationUsageMeta;
   providerReportedCostUsd?: number;
+  /**
+   * Motivo de término reportado pelo protocolo de chat-completions (ex.: `stop`,
+   * `length`, `content_filter`). Campo **aditivo e opcional** — preserva a
+   * distinção entre resposta completa, truncada e recusa sem alterar os
+   * consumidores existentes (que simplesmente o ignoram). Não entra no
+   * `AiCallEnvelope`/telemetria.
+   */
+  finishReason?: string;
+  /**
+   * Texto de recusa explícita do provider (chat-completions `message.refusal`),
+   * quando houver. **Aditivo e opcional** — permite distinguir recusa de
+   * conteúdo vazio/JSON inválido na camada de domínio.
+   */
+  refusal?: string;
 }
 
 /**

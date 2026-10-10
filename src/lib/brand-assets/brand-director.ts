@@ -2,8 +2,8 @@ import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { BrandDirectorResult, ColorCluster, ColorProbeResult } from './types';
 import { probeColors, deltaE, hexToLab, rgbToHex, findClosestProbeCluster, isLightNeutral, STRONG_MATCH_DELTA_E, ACCEPTABLE_MATCH_DELTA_E, LOOSE_MATCH_DELTA_E } from './color-probe';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
-import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
-import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from '@/lib/ai';
+import { defaultAiGateway, withOnCallTelemetry, AiInvocationError } from '@/lib/ai';
+import type { AiInvocationRequest, AiInvocationResult, AiInvoker, AiTelemetryContext } from '@/lib/ai';
 
 /** Espelha o default do registry para `brand_profile_vision` (F46 D1). */
 const DEFAULT_VISION_MODEL = 'gpt-4o';
@@ -15,12 +15,26 @@ export interface DeterministicColorResult {
   inferred_accent_color: string;
 }
 
+export interface BrandDirectorAnalysisMetadata {
+  provider: string;
+  model: string;
+  elapsedMs: number;
+  errorType: string;
+  /**
+   * F-quick: `kind` normalizado (`AiInvocationError.kind`) quando a falha for de
+   * transporte/API do provider. Aditivo e opcional — distingue falha de provider
+   * de falha de interpretação **sem** reclassificar eventos históricos (que
+   * permanecem com `errorType: 'api_error'`).
+   */
+  providerKind?: string;
+}
+
 export class BrandDirectorAnalysisError extends Error {
-  public readonly metadata: { provider: string; model: string; elapsedMs: number; errorType: string };
+  public readonly metadata: BrandDirectorAnalysisMetadata;
   public readonly deterministicResult: DeterministicColorResult | null;
   constructor(
     message: string,
-    metadata: { provider: string; model: string; elapsedMs: number; errorType: string },
+    metadata: BrandDirectorAnalysisMetadata,
     deterministicResult?: DeterministicColorResult | null,
   ) {
     super(message);
@@ -288,6 +302,67 @@ export class BrandDirectorService {
     return { result, warnings, scorePenalty };
   }
 
+  /**
+   * Valida e interpreta a resposta de visão **antes** do `JSON.parse`,
+   * classificando a falha na camada correta com prioridade definida:
+   * recusa → truncamento → conteúdo vazio → JSON inválido → formato inválido.
+   *
+   * Loga apenas diagnóstico **sanitizado** (`errorType`, `finishReason`,
+   * presença de recusa, comprimento do conteúdo) — nunca o conteúdo, prompt ou
+   * imagem. Lança `BrandDirectorAnalysisError` com o `errorType` específico.
+   */
+  private parseVisionResponse(
+    result: AiInvocationResult,
+    ctx: { model: string; elapsedMs: number; deterministicResult: DeterministicColorResult },
+  ): { raw: Record<string, unknown>; contentLength: number } {
+    const { model, elapsedMs, deterministicResult } = ctx;
+    const content = result.content ?? '';
+    const finishReason = result.finishReason;
+    const refusalPresent = typeof result.refusal === 'string' && result.refusal.trim().length > 0;
+
+    const fail = (errorType: string, message: string): never => {
+      console.error(
+        `[BrandDirector] analysis failed: type=${errorType}, elapsed=${elapsedMs}ms, finishReason=${finishReason ?? 'unknown'}, refusal=${refusalPresent}, contentLength=${content.length}`,
+      );
+      throw new BrandDirectorAnalysisError(
+        message,
+        { provider: 'openai', model, elapsedMs, errorType },
+        deterministicResult,
+      );
+    };
+
+    // 1. Recusa explícita tem prioridade — mesmo com `content` nulo/vazio.
+    if (refusalPresent || finishReason === 'content_filter') {
+      return fail('refused', 'A análise visual foi recusada pelo provedor.');
+    }
+
+    // 2. Truncamento — a resposta não foi concluída (prioridade sobre vazio).
+    if (finishReason === 'length') {
+      return fail('truncated_response', 'A análise visual foi truncada antes de concluir.');
+    }
+
+    // 3. Conteúdo ausente/vazio.
+    if (content.trim().length === 0) {
+      return fail('empty_content', 'A análise visual retornou conteúdo vazio.');
+    }
+
+    // 4. JSON malformado.
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      return fail('invalid_json', 'A análise visual retornou JSON inválido.');
+    }
+
+    // 5. JSON válido, mas não um objeto de perfil (null/array/primitivo) —
+    //    erro controlado, sem `TypeError` posterior no acesso a campos.
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return fail('invalid_json_shape', 'A análise visual retornou um formato inesperado.');
+    }
+
+    return { raw: parsed as Record<string, unknown>, contentLength: content.length };
+  }
+
   async analyze(params: {
     logoBuffer: Buffer;
     logoMimeType: string;
@@ -423,18 +498,20 @@ export class BrandDirectorService {
       );
 
       const elapsedMs = Date.now() - startTime;
-      const rawContent = gatewayResult.content ?? '{}';
-
-      const raw = JSON.parse(rawContent);
+      const { raw, contentLength } = this.parseVisionResponse(gatewayResult, {
+        model,
+        elapsedMs,
+        deterministicResult,
+      });
 
       const CRITICAL_FIELDS = ['visual_style', 'visual_tone', 'brand_personality', 'campaign_guidelines'] as const;
       const emptyFields = CRITICAL_FIELDS.filter(f => !raw[f] || !String(raw[f]).trim());
 
-      console.log(`[BrandDirector] OpenAI vision response: success=true, elapsed=${elapsedMs}ms, emptyFields=${emptyFields.length > 0 ? `[${emptyFields.join(', ')}]` : 'none'}, rawKeys=${Object.keys(raw).join(',')}`);
+      console.log(`[BrandDirector] OpenAI vision response: success=true, elapsed=${elapsedMs}ms, finishReason=${gatewayResult.finishReason ?? 'unknown'}, emptyFields=${emptyFields.length > 0 ? `[${emptyFields.join(', ')}]` : 'none'}`);
 
       if (emptyFields.length > 0) {
-        const errorMsg = `GPT returned incomplete JSON: empty fields [${emptyFields.join(', ')}]. Raw keys: ${Object.keys(raw).join(',')}`;
-        console.error(`[BrandDirector] ${errorMsg}. Full raw: ${JSON.stringify(raw).slice(0, 500)}`);
+        const errorMsg = `GPT returned incomplete JSON: empty fields [${emptyFields.join(', ')}].`;
+        console.error(`[BrandDirector] analysis failed: type=incomplete_response, elapsed=${elapsedMs}ms, emptyFields=${emptyFields.length}, contentLength=${contentLength}`);
         throw new BrandDirectorAnalysisError(
           errorMsg,
           { provider: 'openai', model, elapsedMs, errorType: 'incomplete_response' },
@@ -452,16 +529,16 @@ export class BrandDirectorService {
       const elapsedMs = Date.now() - startTime;
 
       if (err instanceof BrandDirectorAnalysisError) {
-        console.error(`[BrandDirector] analysis failed: type=${err.metadata.errorType}, elapsed=${elapsedMs}ms, msg=${err.message}`);
+        console.error(`[BrandDirector] analysis failed: type=${err.metadata.errorType}, elapsed=${elapsedMs}ms, providerKind=${err.metadata.providerKind ?? 'n/a'}`);
         throw err;
       }
 
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error(`[BrandDirector] unexpected error: elapsed=${elapsedMs}ms, msg=${errorMessage}`);
+      const providerKind = err instanceof AiInvocationError ? err.kind : undefined;
+      console.error(`[BrandDirector] unexpected error: elapsed=${elapsedMs}ms, type=api_error, providerKind=${providerKind ?? 'unknown'}`);
 
       throw new BrandDirectorAnalysisError(
-        errorMessage,
-        { provider: 'openai', model, elapsedMs, errorType: 'api_error' },
+        err instanceof AiInvocationError ? err.message : 'Falha inesperada na análise visual.',
+        { provider: 'openai', model, elapsedMs, errorType: 'api_error', providerKind },
         deterministicResult,
       );
     }

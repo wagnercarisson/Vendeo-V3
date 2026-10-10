@@ -516,10 +516,13 @@ async function handleLogoRealign(
 
     // Don't update store state on failure — preserve existing state
     locks.delete(id);
+    // F-quick: expõe apenas o código classificado (sem a mensagem interna do
+    // provider). `message` permanece a fonte pública para a UI.
+    const errorCode = err instanceof BrandDirectorAnalysisError ? err.metadata.errorType : 'unexpected_error';
     return NextResponse.json({
       success: false,
       message: 'Não foi possível atualizar a direção visual. O perfil anterior foi mantido.',
-      error: err instanceof Error ? err.message : 'Erro interno',
+      error: errorCode,
     });
   }
 }

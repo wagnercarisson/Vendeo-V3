@@ -38,11 +38,11 @@ vi.mock('@/lib/brand-assets/brand-director', () => ({
   BrandDirectorAnalysisError: class extends Error {
     deterministicResult: any;
     metadata: any;
-    constructor(msg: string) {
+    constructor(msg: string, metadata: any = {}) {
       super(msg);
       this.name = 'BrandDirectorAnalysisError';
       this.deterministicResult = null;
-      this.metadata = {};
+      this.metadata = metadata;
     }
   },
 }));
@@ -574,6 +574,54 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
     expect(body.profile).toHaveProperty('visual_style');
     expect(body.profile).toHaveProperty('visual_tone');
     expect(body.profile).toHaveProperty('brand_personality');
+  });
+
+  it('logo path falha de análise → 200 success:false, error sanitizado (errorType), message pública (F-quick)', async () => {
+    const mod = await import('@/lib/brand-assets/brand-director');
+    mockBrandDirectorAnalyze.mockRejectedValue(
+      new mod.BrandDirectorAnalysisError('Unexpected end of JSON input', {
+        provider: 'openai',
+        model: 'gpt-4o',
+        elapsedMs: 5,
+        errorType: 'invalid_json',
+      }),
+    );
+    const updateCalls: any[] = [];
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockLogoStore, error: null });
+      if (table === 'store_brand_assets') return makeChain({ data: mockLogoAsset, error: null });
+      if (table === 'store_brand_profiles') {
+        const chain = makeChain({ data: null, error: null });
+        chain.update = vi.fn((d: any) => {
+          updateCalls.push(d);
+          return chain;
+        });
+        chain.insert = vi.fn(() => {
+          const ic = makeChain({ data: mockProfile, error: null });
+          ic.select = vi.fn(() => {
+            const sc = makeChain({ data: mockProfile, error: null });
+            sc.single = vi.fn(() => Promise.resolve({ data: mockProfile, error: null }));
+            return sc;
+          });
+          return ic;
+        });
+        return chain;
+      }
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(false);
+    expect(body.message).toBe('Não foi possível atualizar a direção visual. O perfil anterior foi mantido.');
+    expect(body.error).toBe('invalid_json');
+    expect(body.error).not.toContain('JSON input');
+    // perfil anterior preservado: nenhum update de status (não marca outdated)
+    expect(updateCalls).toEqual([]);
   });
 });
 

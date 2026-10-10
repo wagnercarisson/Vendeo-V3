@@ -38,12 +38,21 @@ export class ChatCompletionsAdapter implements AiAdapter {
     const response = await openai.chat.completions.create(params as never, {
       signal: request.signal,
     });
-    const content = response.choices?.[0]?.message?.content ?? "";
+    const choice = response.choices?.[0];
+    const content = choice?.message?.content ?? "";
+    const refusal = choice?.message?.refusal ?? undefined;
+    const finishReason = choice?.finish_reason ?? undefined;
 
     return {
       content,
       model: target.model,
       usage: normalizeChatUsage(response.usage),
+      // Aditivo: preserva o motivo de término e a recusa explícita do protocolo
+      // para que o domínio distinga resposta completa, truncada, recusa e vazio.
+      // `content` mantém o comportamento anterior (`""` quando ausente) para não
+      // alterar consumidores existentes.
+      finishReason: finishReason ?? undefined,
+      refusal: refusal ?? undefined,
     };
   }
 }

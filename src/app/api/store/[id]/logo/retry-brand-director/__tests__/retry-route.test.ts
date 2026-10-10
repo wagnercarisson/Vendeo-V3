@@ -32,8 +32,12 @@ vi.mock('@/lib/brand-assets/brand-director', () => ({
   },
   BrandDirectorAnalysisError: class extends Error {
     deterministicResult = null;
-    metadata = {};
-    constructor(message: string) { super(message); this.name = 'BrandDirectorAnalysisError'; }
+    metadata: Record<string, unknown>;
+    constructor(message: string, metadata: Record<string, unknown> = {}) {
+      super(message);
+      this.name = 'BrandDirectorAnalysisError';
+      this.metadata = metadata;
+    }
   },
 }));
 
@@ -395,5 +399,81 @@ describe('POST /api/store/[id]/logo/retry-brand-director', () => {
 
     const restoreUpdate = updateCalls.find(c => c.status === 'synced');
     expect(restoreUpdate).toBeDefined();
+  });
+
+  it('BrandDirectorAnalysisError → mensagem pública (sem texto técnico) + diagnostic (F-quick)', async () => {
+    const mod = await import('@/lib/brand-assets/brand-director');
+    mockBrandDirectorAnalyze.mockRejectedValue(
+      new mod.BrandDirectorAnalysisError('Unexpected end of JSON input', {
+        provider: 'openai',
+        model: 'gpt-4o',
+        elapsedMs: 5,
+        errorType: 'invalid_json',
+      }),
+    );
+
+    const storeChain = makeChain(mockStore);
+    const assetChain = makeChain(mockActiveAsset);
+    const profileChain = makeChain(mockFailedProfile);
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return storeChain;
+      if (table === 'store_brand_assets') return assetChain;
+      if (table === 'store_brand_profiles') {
+        const chain = makeChain(null);
+        chain.order = vi.fn(() => chain);
+        chain.limit = vi.fn(() => profileChain);
+        chain.eq = vi.fn(() => chain);
+        chain.maybeSingle = vi.fn()
+          .mockResolvedValueOnce(mockFailedProfile)
+          .mockResolvedValueOnce(null);
+        return chain;
+      }
+      return makeChain(null);
+    });
+
+    const { POST } = await import('../route');
+    const response = await POST(createRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(false);
+    expect(body.retry).toBe(true);
+    expect(body.error).toBe('Não foi possível interpretar a análise do logotipo. Tente novamente.');
+    expect(body.error).not.toContain('JSON input');
+    expect(body.diagnostic.errorType).toBe('invalid_json');
+  });
+
+  it('falha preserva perfil anterior: nenhum update de status (não marca outdated) (F-quick)', async () => {
+    mockBrandDirectorAnalyze.mockRejectedValue(new Error('boom'));
+
+    const updateCalls: unknown[] = [];
+    const storeChain = makeChain(mockStore);
+    const assetChain = makeChain(mockActiveAsset);
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return storeChain;
+      if (table === 'store_brand_assets') return assetChain;
+      if (table === 'store_brand_profiles') {
+        const chain = makeChain(null);
+        const profileChain = makeChain(mockFailedProfile);
+        chain.order = vi.fn(() => chain);
+        chain.limit = vi.fn(() => profileChain);
+        chain.eq = vi.fn(() => chain);
+        chain.maybeSingle = vi.fn().mockResolvedValue({ data: mockSyncedProfile, error: null });
+        chain.update = vi.fn((data: unknown) => {
+          updateCalls.push(data);
+          return chain;
+        });
+        return chain;
+      }
+      return makeChain(null);
+    });
+
+    const { POST } = await import('../route');
+    const response = await POST(createRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(response.status).toBe(200);
+    expect(updateCalls).toEqual([]);
   });
 });
