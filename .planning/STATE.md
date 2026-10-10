@@ -195,6 +195,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 | ID | Date | Summary |
 |---|---|---|
+| 261010-hry | 2026-10-10 | Autorizada chave da bancada tambem em OPENAI_API_KEY somente no inicializador local do laboratorio; sintaxe/assertivas aprovadas, sem provider; reinicio pelo usuario pendente. Registro em quick/261010-hry-habilitar-chave-da-bancada-para-analise-. |
 | 260924-jv4 | 2026-09-24 | Compactação de STATE e archive integral |
 | 260924-jl2 | 2026-09-24 | Compactação de AGENTS.md |
 | 260924-il3 | 2026-09-24 | Alinhamento documental F50/F50.1 |
