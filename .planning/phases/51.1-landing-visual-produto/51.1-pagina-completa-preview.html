@@ -37,7 +37,8 @@
   html[data-mode="on"] .off-only { display: none !important; }
 
   .site-header { width: 100%; max-width: 64rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 24px; }
-  .brand-logo { height: 24px; width: auto; display: block; }
+  .brand-logo { height: 24px; width: auto; display: block; align-self: center; }
+  .brand-logo--header { height: 32px; }
   .btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 16px; border: 1px solid var(--border-light); border-radius: 8px; color: var(--text-secondary); font-size: 0.875rem; }
 
   section.block { width: 100%; max-width: 64rem; margin: 0 auto; padding: 32px 24px; }
@@ -70,6 +71,10 @@
   .summary-list dd { color: var(--text-primary); font-size: 0.8125rem; min-width: 0; word-break: break-word; text-align: right; }
 
   .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .transform-grid { margin-top: 24px; display: grid; grid-template-columns: 1fr; gap: 16px; align-items: center; }
+  .transform-arrow { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+  .transform-arrow svg { width: 24px; height: 24px; }
+  .arrow-right { display: none; }
   .steps { list-style: none; padding: 0; margin: 24px 0 0; }
   .steps li { padding: 10px 0; border-bottom: 1px solid var(--border); }
   .steps li:last-child { border-bottom: none; }
@@ -100,7 +105,7 @@
   .form-card p { color: var(--text-secondary); font-size: 0.875rem; }
 
   .site-footer { border-top: 1px solid var(--border); margin-top: 24px; }
-  .site-footer-inner { max-width: 64rem; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; padding: 32px 24px; color: var(--text-secondary); font-size: 0.875rem; }
+  .site-footer-inner { max-width: 64rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 24px; color: var(--text-secondary); font-size: 0.875rem; }
   .footer-nav { display: flex; flex-wrap: wrap; gap: 8px 16px; }
   .footer-nav span { display: inline-flex; align-items: center; min-height: 44px; }
 
@@ -118,6 +123,10 @@
     .cta { flex-direction: row; justify-content: flex-start; }
     .media-sm { margin: 0; max-width: none; }
     .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
+    .transform-grid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+    .brand-logo--header { height: 40px; }
+    .arrow-down { display: none; }
+    .arrow-right { display: block; }
     .strip { display: grid; grid-template-columns: repeat(3, 1fr); overflow: visible; padding-bottom: 0; }
     .strip > li { flex: initial; }
     .swipe { display: none; }
@@ -172,7 +181,7 @@
     <!-- 2. Transformação e simplicidade -->
     <section class="block">
       <h2>Da informação à campanha, sem complicação</h2>
-      <div class="grid-2" style="margin-top:24px;">
+      <div class="transform-grid">
         <div class="summary-card">
           <span class="summary-kicker">Entrada</span>
           <dl class="summary-list">
@@ -186,6 +195,10 @@
             <figcaption style="margin-top:8px;font-size:0.75rem;color:var(--text-muted);">Foto enviada</figcaption>
           </figure>
         </div>
+        <div class="transform-arrow" aria-hidden="true">
+          <svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+          <svg class="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </div>
         <div class="frame"><img src="../../../public/landing/transformacao-petshop.webp" alt="Campanha da Pet Shop Bicho Fofo para ração Confiance Premium de 15 kg por R$ 114,90" /></div>
       </div>
       <ol class="steps">
@@ -194,6 +207,13 @@
         <li><span class="n">3</span><span class="t">Você confere</span><div class="d">Revisa a campanha e decide antes de publicar.</div></li>
         <li><span class="n">4</span><span class="t">Basta baixar para publicar</span><div class="d">Sua campanha está pronta para as redes sociais.</div></li>
       </ol>
+      <div style="margin-top:32px;display:flex;justify-content:center;">
+        <a class="btn-primary off-only" href="#acesso">Solicitar acesso free</a>
+        <span class="on-only" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+          <a class="btn-primary" href="#">Continuar com Google</a>
+          <a class="btn-secondary" href="#">Continuar com email</a>
+        </span>
+      </div>
     </section>
 
     <!-- 3. Apresentação do produto -->
@@ -221,6 +241,13 @@
         <div>
           <p class="support">Sua marca, suas cores e o estilo da sua loja presentes na campanha.</p>
           <p class="support" style="font-size:0.875rem;">Você confere cada campanha e decide o que publicar.</p>
+          <div style="margin-top:24px;display:flex;align-items:flex-start;">
+            <a class="btn-primary off-only" href="#acesso">Solicitar acesso free</a>
+            <span class="on-only" style="display:flex;gap:12px;flex-wrap:wrap;">
+              <a class="btn-primary" href="#">Continuar com Google</a>
+              <a class="btn-secondary" href="#">Continuar com email</a>
+            </span>
+          </div>
         </div>
       </div>
     </section>
@@ -262,7 +289,7 @@
       </div>
     </section>
 
-    <!-- 7. FAQ + CTA final + rodapé legal -->
+    <!-- 7. FAQ + rodapé legal -->
     <section class="block">
       <h2>Perguntas frequentes</h2>
       <div class="faq">
@@ -270,13 +297,6 @@
         <details><summary>Preciso saber design ou marketing?</summary><p>Não. Você informa o básico, e o Vendeo entrega a campanha completa — com arte e texto — para você conferir, baixar e publicar.</p></details>
         <details><summary>Preciso fornecer informações pessoais?</summary><p>Sim. Solicitamos informações para seu acesso e contato, além de dados da sua loja para personalizar as campanhas com a identidade do seu negócio. Você pode consultar os detalhes na Política de Privacidade.</p></details>
         <details><summary>Preciso informar cartão de crédito?</summary><p>Não. O teste gratuito não exige cartão de crédito.</p></details>
-      </div>
-      <div class="offer-card" style="margin-top:32px;text-align:center;">
-        <a class="btn-primary off-only" href="#acesso">Solicitar acesso free</a>
-        <span class="on-only" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-          <a class="btn-primary" href="#">Continuar com Google</a>
-          <a class="btn-secondary" href="#">Continuar com email</a>
-        </span>
       </div>
     </section>
 
@@ -292,7 +312,7 @@
 
   <footer class="site-footer">
     <div class="site-footer-inner">
-      <img class="brand-logo" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
+    <img class="brand-logo brand-logo--header" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
       <nav class="footer-nav">
         <span>Termos de Uso</span><span>Política de Privacidade</span><span>Uso Aceitável</span><span>Novidades</span><span>Contato</span><span>Entrar</span>
       </nav>

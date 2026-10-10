@@ -13,11 +13,11 @@ Esta mudança substitui, para esta entrega, partes do antigo escopo F51.1 (linha
   4. **Identidade e controle** — bloco compacto, sustentado por exemplos; o usuário confere e decide o que publicar.
   5. **Abordagens de divulgação** — oferta, destaque, exclusivo (mesmo cenário e identidade da loja; diferentes formas de comunicar o produto).
   6. **Oferta independente** — comunicação comercial isolada e atualizável.
-  7. **FAQ, CTA final e rodapé legal** — Novidades em posição secundária/footer.
+  7. **FAQ e rodapé legal** — Novidades em posição secundária/footer.
 - Adotar a headline e subheadline aprovadas e a narrativa "o usuário escolhe como apresentar; o Vendeo prepara a campanha" (hero: "Você define como quer apresentar."), sem exigir a string antiga na íntegra.
 - Definir, antes dos exemplos finais, a **função, proporção e requisito** de cada imagem (hero prova qualidade; transformação prova simplicidade; apresentação prova flexibilidade visual; identidade prova coerência; abordagens provam diferentes formas de comunicar), permitindo troca simples de campanhas sem refazer o layout.
 - Empregar conteúdo demonstrativo predefinido e placeholders; os exemplos finais exigem seleção e aprovação humana. Sem geração ao vivo, sem conexão à API de geração e sem gerações pagas.
-- Reutilizar `publicSignupEnabled`/`getLaunchConfig()` em **todos** os CTAs de aquisição (hero, oferta e final): flag off → "Solicitar acesso free" + formulário atual; flag on → cadastros existentes; "Entrar" é ação secundária para quem já tem conta.
+- Reutilizar `publicSignupEnabled`/`getLaunchConfig()` em **todos** os CTAs de aquisição (hero, transformação, identidade e oferta): flag off → "Solicitar acesso free" + formulário atual; flag on → cadastros existentes; "Entrar" é ação secundária para quem já tem conta.
 - Comunicar a oferta (28 dias gratuitos e até 20 créditos; 5 iniciais + 5 nos dias 7, 14 e 21; acúmulo; máximo 20; grátis restantes vencem ao fim do período) em componente independente, **sem** implementar concessões, calendário, saldo, expiração, notificações ou contabilidade.
 - Preservar estrutura semântica, acessibilidade, estados do formulário e links legais existentes.
 
@@ -31,7 +31,7 @@ Esta mudança substitui, para esta entrega, partes do antigo escopo F51.1 (linha
 
 ### Modified Capabilities
 
-- `access-request-history`: o requisito de CTA da landing conforme a flag passa a cobrir **todos** os CTAs de aquisição da página renovada (hero, oferta e final), preservando integralmente o contrato de `publicSignupEnabled`, o formulário e o `POST /api/access-requests`.
+- `access-request-history`: o requisito de CTA da landing conforme a flag passa a cobrir **todos** os CTAs de aquisição da página renovada (hero, transformação, identidade e oferta), preservando integralmente o contrato de `publicSignupEnabled`, o formulário e o `POST /api/access-requests`.
 
 ## Divergências e reconciliação
 

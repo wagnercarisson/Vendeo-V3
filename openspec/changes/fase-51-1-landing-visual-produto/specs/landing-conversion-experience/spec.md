@@ -2,7 +2,7 @@
 
 ### Requirement: Estrutura da landing com blocos de função única
 
-A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL ser uma página curta, visual e orientada à conversão, em português e mobile-first, composta por blocos em que cada um responde a uma pergunta distinta, na ordem: hero; transformação e simplicidade; apresentação do produto; identidade e controle; abordagens de divulgação; oferta de teste gratuito; FAQ, CTA final e rodapé legal.
+A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL ser uma página curta, visual e orientada à conversão, em português e mobile-first, composta por blocos em que cada um responde a uma pergunta distinta, na ordem: hero; transformação e simplicidade; apresentação do produto; identidade e controle; abordagens de divulgação; oferta de teste gratuito; FAQ e rodapé legal.
 
 - Nenhum bloco principal SHALL repetir a função de outro.
 - A apresentação do produto (prova de flexibilidade visual) e as abordagens de divulgação (prova de diferentes formas de comunicar o produto) SHALL ocupar blocos distintos, com funções distintas.
@@ -12,7 +12,7 @@ A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL ser u
 #### Scenario: Página renderiza os blocos na ordem e sem duplicação
 
 - **WHEN** a landing é renderizada
-- **THEN** os blocos hero, transformação, apresentação do produto, identidade e controle, abordagens de divulgação, oferta de teste gratuito, FAQ/CTA final/rodapé aparecem nessa ordem
+- **THEN** os blocos hero, transformação, apresentação do produto, identidade e controle, abordagens de divulgação, oferta de teste gratuito, FAQ/rodapé aparecem nessa ordem
 - **AND** não existe um bloco separado "Como funciona" duplicando a transformação
 - **AND** "Novidades" aparece em posição secundária ou no rodapé
 
@@ -117,7 +117,7 @@ A landing SHALL exibir a oferta em componente independente e facilmente atualiz�
 
 ### Requirement: Controles de acesso e ações secundárias
 
-A landing SHALL reutilizar `publicSignupEnabled`/`getLaunchConfig()` em todos os CTAs de aquisição, incluindo os dos blocos de oferta e final. "Entrar" SHALL ser ação secundária, destinada a quem já possui conta, e SHALL NOT ser usada como ação universal de aquisição.
+A landing SHALL reutilizar `publicSignupEnabled`/`getLaunchConfig()` em todos os CTAs de aquisição, incluindo os dos blocos de transformação, identidade e oferta. "Entrar" SHALL ser ação secundária, destinada a quem já possui conta, e SHALL NOT ser usada como ação universal de aquisição.
 
 #### Scenario: Ação "Entrar" é secundária
 
@@ -125,12 +125,12 @@ A landing SHALL reutilizar `publicSignupEnabled`/`getLaunchConfig()` em todos os
 - **THEN** "Entrar" aparece como ação secundária
 - **AND** a ação principal de aquisição segue o modo da flag
 
-#### Scenario: Oferta e CTA final respeitam a flag
+#### Scenario: Transformação, identidade e oferta respeitam a flag
 
 - **WHEN** a flag de signup público está desligada
-- **THEN** os CTAs de aquisição da oferta e do final direcionam para a solicitação de acesso
+- **THEN** os CTAs de aquisição da transformação, da identidade e da oferta direcionam para a solicitação de acesso
 - **WHEN** a flag de signup público está ligada
-- **THEN** os CTAs de aquisição da oferta e do final direcionam para os caminhos de cadastro existentes
+- **THEN** os CTAs de aquisição da transformação, da identidade e da oferta direcionam para os caminhos de cadastro existentes
 
 ### Requirement: Acessibilidade e preservação de links e estados existentes
 

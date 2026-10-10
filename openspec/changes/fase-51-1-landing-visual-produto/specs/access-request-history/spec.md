@@ -2,7 +2,7 @@
 
 ### Requirement: CTA da landing conforme a flag
 
-A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL apresentar **todos** os CTAs de aquisição — inclusive os dos blocos de oferta e final, além do hero — conforme `VENDEO_PUBLIC_SIGNUP_ENABLED` — D4/D5:
+A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL apresentar **todos** os CTAs de aquisição — inclusive os dos blocos de transformação, identidade e oferta, além do hero — conforme `VENDEO_PUBLIC_SIGNUP_ENABLED` — D4/D5:
 
 - **Flag on:** CTA principal "Continuar com Google" (→ `signInWithOAuth('google')`) + CTA secundário "Continuar com email" (→ `/signup`).
 - **Flag off (estado atual):** "Solicitar acesso free" + formulário de solicitação, comportamento idêntico ao atual.
@@ -20,8 +20,8 @@ A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL apres
 - **WHEN** `VENDEO_PUBLIC_SIGNUP_ENABLED` está desligado (default)
 - **THEN** a landing exibe "Solicitar acesso free" + formulário de solicitação (comportamento atual idêntico)
 
-#### Scenario: CTAs de oferta e final respeitam a flag
+#### Scenario: CTAs de transformação, identidade e oferta respeitam a flag
 
 - **WHEN** a landing renovada é renderizada
-- **THEN** os CTAs de aquisição do hero, da oferta e do bloco final obedecem ao mesmo modo da flag
+- **THEN** os CTAs de aquisição do hero, da transformação, da identidade e da oferta obedecem ao mesmo modo da flag
 - **AND** o contrato do `POST /api/access-requests` permanece inalterado

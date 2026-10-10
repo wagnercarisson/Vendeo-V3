@@ -13,13 +13,13 @@
 
 ## 2. Estrutura e narrativa da página
 
-- [x] 2.1 Reestruturar `src/app/page.tsx` com os blocos na ordem: hero, transformação, apresentação do produto, identidade e controle, abordagens de divulgação, oferta, FAQ/CTA final/rodapé
+- [x] 2.1 Reestruturar `src/app/page.tsx` com os blocos na ordem: hero, transformação, apresentação do produto, identidade e controle, abordagens de divulgação, oferta, FAQ/rodapé
 - [x] 2.2 Implementar o hero com promessa, campanha protagonista e CTA, garantindo mensagem e CTA visíveis no mobile
 - [x] 2.3 Implementar o bloco de transformação (informações preenchidas → campanha conferida → download), absorvendo "Como funciona" sem bloco duplicado
 - [x] 2.4 Implementar o bloco de apresentação do produto ("Escolha como apresentar seu produto." / "Estúdio, ambientado ou mantendo o fundo original.") com três campanhas do mesmo produto (estúdio, ambientado, fundo original), mantendo a mesma abordagem comercial e informações equivalentes para isolar a diferença de apresentação
 - [x] 2.4b Implementar o bloco de abordagens de divulgação ("Uma campanha para cada jeito de divulgar." / "Mostre uma oferta, valorize um produto ou apresente algo especial.") com três campanhas do mesmo produto (oferta, destaque, exclusivo), mantendo o mesmo cenário e a identidade da loja, variando as informações necessárias; peso editorial menor; sem cartões explicativos extras nem CTAs
 - [x] 2.5 Implementar o bloco compacto de identidade e controle, sustentado por exemplos, deixando claro que o usuário confere e decide o que publicar
-- [x] 2.6 Mover "Novidades" para posição secundária/rodapé e montar FAQ + CTA final + rodapé legal
+- [x] 2.6 Mover "Novidades" para posição secundária/rodapé e montar FAQ + rodapé legal
 
 ## 3. Imagens e assets
 
@@ -32,7 +32,7 @@
 
 - [x] 4.1 Criar componente independente da oferta com a mensagem principal curta "Experimente o Vendeo em sua loja: 28 dias gratuitos e até 20 créditos." e a mecânica (início após onboarding, 5 + 5 nos dias 7/14/21, acúmulo, máximo 20, vencimento do gratuito restante) obrigatoriamente em informação secundária/FAQ
 - [x] 4.2 Garantir que a oferta não promete 20 campanhas/uso ilimitado e que, no beta fechado, solicitar acesso não inicia o período
-- [x] 4.3 Reutilizar `publicSignupEnabled`/`getLaunchConfig()` em todos os CTAs de aquisição (hero, oferta, final), mantendo "Entrar" como ação secundária
+- [x] 4.3 Reutilizar `publicSignupEnabled`/`getLaunchConfig()` em todos os CTAs de aquisição (hero, transformação, identidade, oferta), mantendo "Entrar" como ação secundária
 - [x] 4.4 Preservar o formulário de solicitação e o contrato do `POST /api/access-requests` (flag off) e os caminhos de cadastro existentes (flag on)
 
 ## 5. Acessibilidade e preservação
@@ -44,7 +44,7 @@
 ## 6. Testes e validação
 
 - [x] 6.1 Estender/atualizar testes da landing cobrindo ordem dos blocos, headline/subheadline, ausência de termos internos e ausência de bloco "Como funciona" duplicado
-- [x] 6.2 Cobrir CTAs nos dois modos da flag (off → solicitação; on → Google/email), incluindo oferta e final, e "Entrar" secundário
+- [x] 6.2 Cobrir CTAs nos dois modos da flag (off → solicitação; on → Google/email), incluindo transformação, identidade e oferta, e "Entrar" secundário
 - [x] 6.3 Cobrir o componente de oferta (condições exibidas, sem promessa de ilimitado, beta fechado não inicia período)
 - [x] 6.4 Garantir que nenhum teste/chamada invoca a API de geração
 - [x] 6.5 Rodar typecheck, lint, build e a suíte relevante

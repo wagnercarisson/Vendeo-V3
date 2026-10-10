@@ -39,7 +39,7 @@ Cada bloco responde a uma pergunta distinta e tem uma função visual única:
 | Identidade e controle | "Fica com a cara da minha loja? Eu mando?" | Prova de coerência + controle do usuário |
 | Abordagens de divulgação | "Como comunico meu produto?" | Prova de diferentes formas de comunicar (oferta/destaque/exclusivo), mesmo cenário e identidade |
 | Oferta | "Quanto custa começar?" | Comunicação comercial isolada |
-| FAQ + CTA final | "Ainda tenho dúvidas?" | Objeções + conversão + rodapé legal |
+| FAQ + rodapé legal | "Ainda tenho dúvidas?" | Objeções + rodapé legal |
 
 "Como funciona" não é reimplementado como bloco próprio: é absorvido pela transformação. Alternativa considerada: manter "Como funciona" + "O Vendeo pode criar" e adicionar a transformação — rejeitada porque gera repetição e aparência de seções empilhadas.
 
@@ -61,7 +61,7 @@ A transformação usa conteúdo demonstrativo predefinido. A landing **não** ch
 
 ### D4 — CTAs respeitam `publicSignupEnabled` sem alterar contrato
 
-Todos os CTAs de aquisição (hero, oferta e final) usam o valor server-side de `getLaunchConfig().publicSignupEnabled`:
+Todos os CTAs de aquisição (hero, transformação, identidade e oferta) usam o valor server-side de `getLaunchConfig().publicSignupEnabled`:
 
 - **flag off:** "Solicitar acesso free" → formulário atual (`AccessRequestForm`), contrato do `POST /api/access-requests` preservado.
 - **flag on:** caminhos de cadastro existentes ("Continuar com Google" principal + "Continuar com email" → `/signup`).
