@@ -1,4 +1,5 @@
 import { resolveBenchConfig } from "../config-registry";
+import { BENCH_BACKGROUND_DIRECTION_VERSION } from "../background-direction";
 import type { BenchConfig } from "../schemas";
 import { generalIntegrityPolicy } from "./general-integrity";
 import {
@@ -86,6 +87,10 @@ export function resolveBenchPromptPolicies(
   // versão própria para invalidar o preflight sem criar uma nova dimensão.
   contributions.push(...generalIntegrityPolicy.contributions());
   versions.geral = generalIntegrityPolicy.version;
+
+  // Conteúdo estático de direção de fundo (serializado pelo núcleo): versão
+  // própria registrada na mesma evidência de versões, sem nova dimensão/política.
+  versions.fundo = BENCH_BACKGROUND_DIRECTION_VERSION;
 
   return { contributions, versions };
 }

@@ -1,7 +1,7 @@
 import { PROMPT_BLOCK_LABELS } from "../prompt-composer";
 import type { BenchPromptPolicy } from "./types";
 
-export const DESTAQUE_POLICY_VERSION = "48.2.6-destaque-v1";
+export const DESTAQUE_POLICY_VERSION = "48.2.6-destaque-v2";
 
 export const destaquePolicy: BenchPromptPolicy = {
   id: "policy.intencao.destaque",
@@ -11,7 +11,10 @@ export const destaquePolicy: BenchPromptPolicy = {
   contributions() {
     return [{
       block: PROMPT_BLOCK_LABELS.commercial,
-      lines: ["Destaque: priorize a apresentação do produto; preço informado é secundário."],
+      lines: [
+        "Destaque: priorize a apresentação do produto; preço informado é secundário.",
+        "Respeite a direção de fundo.",
+      ],
     }];
   },
 };

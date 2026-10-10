@@ -37,7 +37,15 @@ import type { BenchPromptContribution } from "./policies/types";
  */
 
 /** Versão estática do compositor — evidência do preflight (D20). */
-export const COMPOSER_VERSION = "48.2.4-prompt-composer-v5";
+export const COMPOSER_VERSION = "48.2.4-prompt-composer-v6";
+
+/**
+ * Orientação fixa da instrução de nome. Fica separada da lógica de composição
+ * (que apenas interpola o nome dinâmico) para ser serializada em linha própria,
+ * abaixo da linha `Nome obrigatório na arte: "<nome>"`.
+ */
+const NAME_ARTWORK_GUIDANCE =
+  "Inclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.";
 
 // ─── Blocos canônicos (travados — D19) ───────────────────────────────────────
 
@@ -111,12 +119,8 @@ function productLines(
   const lines: string[] = [];
   if (briefing.product.name?.trim()) {
     const productName = briefing.product.name.trim();
-    const separator = productName.endsWith(".") ? "" : ".";
-    pushLine(
-      lines,
-      "Nome obrigatório na arte",
-      `${productName}${separator} Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.`,
-    );
+    pushLine(lines, "Nome obrigatório na arte", `"${productName}"`);
+    lines.push(NAME_ARTWORK_GUIDANCE);
   }
   pushLine(lines, "Descrição", briefing.product.description);
   if (references && references.length > 0) {
