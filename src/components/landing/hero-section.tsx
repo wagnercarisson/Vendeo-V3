@@ -44,8 +44,7 @@ export function HeroSection({ publicSignupEnabled }: HeroSectionProps) {
             {SUBHEADLINE}
           </p>
           <p className="mt-4 max-w-xl text-base text-text-secondary">
-            Você define como quer apresentar.{" "}
-            <span className="text-accent-green">O Vendeo prepara a campanha.</span>
+            Você define como quer apresentar.
           </p>
           <div className="mt-8">
             <AcquisitionCta publicSignupEnabled={publicSignupEnabled} />

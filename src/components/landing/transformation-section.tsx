@@ -21,7 +21,7 @@ const STEPS = [
   {
     number: 1,
     title: "Você informa o básico",
-    description: "Produto, oferta, preço e alguns detalhes da sua loja.",
+    description: "Produto, oferta, preço e alguns detalhes da campanha.",
   },
   {
     number: 2,

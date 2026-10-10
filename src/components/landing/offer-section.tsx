@@ -45,7 +45,7 @@ export function OfferSection({ publicSignupEnabled }: OfferSectionProps) {
           className="mt-6 rounded-lg border border-border bg-bg-deep/40 p-4 text-sm text-text-secondary"
         >
           <summary className="flex min-h-[44px] cursor-pointer items-center rounded font-medium text-text-secondary focus-visible:ring-2 focus-visible:ring-accent-green focus-visible:outline-none">
-            Como funcionam os créditos do teste gratuito
+            Como funcionam os créditos do teste gratuito?
           </summary>
           <div className="mt-3 space-y-2">
             <p>

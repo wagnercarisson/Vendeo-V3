@@ -13,9 +13,9 @@ import { AcquisitionCta } from "./acquisition-cta";
 
 const FAQ = [
   {
-    question: "Como funciona o teste gratuito?",
+    question: "Para quem o Vendeo foi desenvolvido?",
     answer:
-      "Após concluir o cadastro e a configuração inicial da sua loja, começam seus 28 dias de teste. Você recebe 5 créditos iniciais e mais 5 a cada sete dias, até completar 20 créditos concedidos no período. Os créditos não utilizados acumulam, e as liberações continuam mesmo que você não acesse toda semana. Os créditos gratuitos restantes vencem ao final dos 28 dias. Solicitar acesso não inicia esse prazo. Durante o beta fechado, não há venda de créditos.",
+      "Para lojistas que querem divulgar produtos e ofertas nas redes sociais com campanhas profissionais, sem precisar saber design ou marketing.",
   },
   {
     question: "Preciso saber design ou marketing?",

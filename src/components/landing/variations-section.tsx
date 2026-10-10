@@ -47,6 +47,10 @@ export function VariationsSection() {
       <p className="mt-3 max-w-xl text-base text-text-secondary">
         Estúdio, ambientado ou mantendo o fundo original.
       </p>
+      <p className="mt-3 max-w-xl text-base text-text-secondary">
+        Você escolhe o cenário. O Vendeo apresenta seu produto com a identidade
+        da sua loja.
+      </p>
 
       <RevealOnView>
         <ul

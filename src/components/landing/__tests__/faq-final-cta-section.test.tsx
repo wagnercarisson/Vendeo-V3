@@ -26,7 +26,7 @@ describe("FaqFinalCtaSection", () => {
     render(<FaqFinalCtaSection publicSignupEnabled={false} />);
 
     expect(
-      screen.getByText("Como funciona o teste gratuito?"),
+      screen.getByText("Para quem o Vendeo foi desenvolvido?"),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Preciso informar cartão de crédito?"),

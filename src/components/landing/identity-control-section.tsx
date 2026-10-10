@@ -5,14 +5,11 @@ import { CampaignImage } from "./campaign-image";
  *
  * Compact block proving brand coherence and user control, supported by a single
  * 1:1 example only — no fabricated testimonials, commercial results or identity
- * proofs. Preserves the approved distinction line with the single green
- * emphasis span on the "O Vendeo prepara a campanha." half only. Server
- * component (no props): it does not read the flag.
+ * proofs. Server component (no props): it does not read the flag.
  */
 
-const DISTINCTION = "Você define como quer apresentar. O Vendeo prepara a campanha.";
-const DISTINCTION_EMPHASIS = "O Vendeo prepara a campanha.";
-const DISTINCTION_LEAD = DISTINCTION.replace(DISTINCTION_EMPHASIS, "");
+const BRAND_LINE =
+  "Sua marca, suas cores e o estilo da sua loja presentes na campanha.";
 
 export function IdentityControlSection() {
   return (
@@ -36,10 +33,7 @@ export function IdentityControlSection() {
           />
         </div>
         <div>
-          <p className="text-base text-text-secondary">
-            {DISTINCTION_LEAD}
-            <span className="text-accent-green">{DISTINCTION_EMPHASIS}</span>
-          </p>
+          <p className="text-base text-text-secondary">{BRAND_LINE}</p>
           <p className="mt-3 text-sm text-text-secondary">
             Você confere cada campanha e decide o que publicar.
           </p>

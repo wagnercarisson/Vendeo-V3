@@ -56,8 +56,7 @@ const HEADLINE =
   "O que seu negócio quer divulgar vira uma campanha pronta para publicar.";
 const SUBHEADLINE =
   "Você informa o básico. O Vendeo prepara a campanha completa — com arte e texto — pronta para publicar.";
-const DISTINCTION =
-  "Você define como quer apresentar. O Vendeo prepara a campanha.";
+const HERO_DISTINCTION = "Você define como quer apresentar.";
 
 // Seven approved blocks, in the fixed delivery order.
 const BLOCK_HEADINGS = [
@@ -95,7 +94,7 @@ describe("Landing page — composição e copy (flag off)", () => {
       screen.getByRole("heading", { level: 1, name: HEADLINE }),
     ).toBeInTheDocument();
     expect(screen.getByText(SUBHEADLINE)).toBeInTheDocument();
-    expect(text).toContain(DISTINCTION);
+    expect(text).toContain(HERO_DISTINCTION);
   });
 
   it("apresenta os sete blocos na ordem fixa aprovada", async () => {
