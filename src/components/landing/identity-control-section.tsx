@@ -44,10 +44,7 @@ export function IdentityControlSection({
             Você confere cada campanha e decide o que publicar.
           </p>
           <div className="mt-6">
-            <AcquisitionCta
-              publicSignupEnabled={publicSignupEnabled}
-              align="start"
-            />
+            <AcquisitionCta publicSignupEnabled={publicSignupEnabled} />
           </div>
         </div>
       </div>
