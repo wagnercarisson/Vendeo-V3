@@ -29,7 +29,11 @@ export function IdentityControlSection() {
 
       <div className="mt-6 grid items-center gap-6 sm:grid-cols-2">
         <div className="mx-auto w-full max-w-xs sm:mx-0 sm:max-w-none">
-          <CampaignImage alt="Exemplo de campanha que preserva a identidade da loja" />
+          <CampaignImage
+            src="/landing/identidade-floricultura.webp"
+            alt="Campanha de buquê de rosas da Floricultura Dona Flor"
+            contain
+          />
         </div>
         <div>
           <p className="text-base text-text-secondary">
