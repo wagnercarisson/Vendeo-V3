@@ -77,8 +77,10 @@
   .transform-arrow { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
   .transform-arrow svg { width: 24px; height: 24px; }
   .arrow-right { display: none; }
-  .steps { list-style: none; padding: 0; margin: 24px 0 0; display: grid; grid-template-columns: 1fr; gap: 16px; }
-  .steps li { display: flex; gap: 12px; }
+  .steps { list-style: none; padding: 0; margin: 24px 0 0; }
+  .steps li { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .steps li:last-child { border-bottom: none; }
+  .steps .row { display: flex; align-items: baseline; gap: 8px; }
   .steps .n { color: var(--accent-green); font-family: var(--font-heading); font-size: 0.875rem; font-weight: 700; }
   .steps .t { font-family: var(--font-heading); font-size: 1rem; font-weight: 600; }
   .steps .d { margin-top: 4px; color: var(--text-secondary); font-size: 0.875rem; }
@@ -126,7 +128,6 @@
     .media-sm { margin: 0; max-width: none; }
     .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
     .transform-grid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
-    .steps { grid-template-columns: 1fr 1fr; }
     .brand-logo--header { height: 44px; }
     .arrow-down { display: none; }
     .arrow-right { display: block; }
@@ -204,10 +205,10 @@
         <div class="frame"><img src="../../../public/landing/transformacao-petshop.webp" alt="Campanha da Pet Shop Bicho Fofo para ração Confiance Premium de 15 kg por R$ 114,90" /></div>
       </div>
       <ol class="steps">
-        <li><span class="n">1</span><span class="t">Você informa o básico</span><div class="d">Produto, oferta, preço e alguns detalhes da campanha.</div></li>
-        <li><span class="n">2</span><span class="t">O Vendeo prepara a campanha</span><div class="d">O Vendeo cria a arte e o texto a partir dessas informações.</div></li>
-        <li><span class="n">3</span><span class="t">Você confere</span><div class="d">Revisa a campanha e decide antes de publicar.</div></li>
-        <li><span class="n">4</span><span class="t">Basta baixar para publicar</span><div class="d">Sua campanha está pronta para as redes sociais.</div></li>
+        <li><div class="row"><span class="n">1</span><span class="t">Você informa o básico</span></div><div class="d">Produto, oferta, preço e alguns detalhes da campanha.</div></li>
+        <li><div class="row"><span class="n">2</span><span class="t">O Vendeo prepara a campanha</span></div><div class="d">O Vendeo cria a arte e o texto a partir dessas informações.</div></li>
+        <li><div class="row"><span class="n">3</span><span class="t">Você confere</span></div><div class="d">Revisa a campanha e decide antes de publicar.</div></li>
+        <li><div class="row"><span class="n">4</span><span class="t">Basta baixar para publicar</span></div><div class="d">Sua campanha está pronta para as redes sociais.</div></li>
       </ol>
       <div class="acq acq--center off-only">
         <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
