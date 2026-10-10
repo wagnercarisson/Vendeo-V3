@@ -1,3 +1,4 @@
+import { AcquisitionCta } from "./acquisition-cta";
 import { CampaignImage } from "./campaign-image";
 
 /**
@@ -11,7 +12,11 @@ import { CampaignImage } from "./campaign-image";
 const BRAND_LINE =
   "Sua marca, suas cores e o estilo da sua loja presentes na campanha.";
 
-export function IdentityControlSection() {
+export function IdentityControlSection({
+  publicSignupEnabled,
+}: {
+  publicSignupEnabled: boolean;
+}) {
   return (
     <section
       aria-labelledby="identidade-controle-heading"
@@ -38,6 +43,12 @@ export function IdentityControlSection() {
           <p className="mt-3 text-sm text-text-secondary">
             Você confere cada campanha e decide o que publicar.
           </p>
+          <div className="mt-6">
+            <AcquisitionCta
+              publicSignupEnabled={publicSignupEnabled}
+              align="start"
+            />
+          </div>
         </div>
       </div>
     </section>

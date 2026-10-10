@@ -1,3 +1,5 @@
+import { ArrowDown, ArrowRight } from "lucide-react";
+import { AcquisitionCta } from "./acquisition-cta";
 import { CampaignImage } from "./campaign-image";
 
 /**
@@ -7,10 +9,12 @@ import { CampaignImage } from "./campaign-image";
  * compact text summary (product / description / price / selected badge) PLUS a
  * small thumbnail of the photo the user provided (a plain proportional <img>
  * inside the card — NOT a large square panel, modal, zoom or extra animation);
- * the RESULT is a single, complete 1:1 `CampaignImage` rendered with `contain`
- * (never cropped). Entry↔result correspondence is preserved. This block
- * absorbs the old process section, so no separate process heading exists here.
- * Server component (no props).
+ * a decorative arrow (right on desktop, down on mobile) points to the RESULT,
+ * a single complete 1:1 `CampaignImage` rendered with `contain` (never
+ * cropped). Entry↔result correspondence is preserved. The block closes with
+ * the shared acquisition CTA (same flag value passed from `page.tsx`). This
+ * block absorbs the old process section, so no separate process heading exists
+ * here. Server component receiving only `publicSignupEnabled`.
  */
 
 const ENTRY_SUMMARY = [
@@ -43,7 +47,11 @@ const STEPS = [
   },
 ];
 
-export function TransformationSection() {
+export function TransformationSection({
+  publicSignupEnabled,
+}: {
+  publicSignupEnabled: boolean;
+}) {
   return (
     <section
       aria-labelledby="transformacao-heading"
@@ -92,12 +100,13 @@ export function TransformationSection() {
           </figure>
         </div>
 
-        {/* Process arrow */}
+        {/* Decorative process arrow: down on mobile, right on desktop */}
         <div
           aria-hidden="true"
-          className="hidden text-center font-heading text-2xl text-text-muted sm:block"
+          className="flex items-center justify-center text-text-muted"
         >
-          →
+          <ArrowDown className="h-6 w-6 sm:hidden" />
+          <ArrowRight className="hidden h-6 w-6 sm:block" />
         </div>
 
         {/* RESULT — complete 1:1 campaign, never cropped */}
@@ -129,6 +138,11 @@ export function TransformationSection() {
           </li>
         ))}
       </ol>
+
+      {/* Shared acquisition CTA (same flag value as hero/offer/identity) */}
+      <div className="mt-8">
+        <AcquisitionCta publicSignupEnabled={publicSignupEnabled} />
+      </div>
     </section>
   );
 }

@@ -1,14 +1,12 @@
 import Link from "next/link";
-import { AcquisitionCta } from "./acquisition-cta";
 
 /**
- * FAQ + final CTA + legal links block (block 7 of the landing).
+ * FAQ + legal links block (block 7 of the landing).
  *
- * Server component: the single flag value `publicSignupEnabled` is read once in
- * `page.tsx` and passed down. The final acquisition CTA is provided by the
- * shared `AcquisitionCta` primitive (dark text on green, D-19) — no green CTA
- * markup is hand-rolled here. The legal links reuse the copy used today. No
- * emojis, no internal terms, only approved capabilities.
+ * Server component (no props): the acquisition CTA moved to the end of the
+ * transformation block and to the identity block (both consume the single
+ * `publicSignupEnabled` value from `page.tsx`). This block only renders the FAQ
+ * and the legal links — no acquisition CTA here. No emojis, no internal terms.
  */
 
 const FAQ = [
@@ -39,13 +37,7 @@ const LEGAL_LINKS = [
   { href: "/uso-aceitavel", label: "Uso Aceitável" },
 ];
 
-interface FaqFinalCtaSectionProps {
-  publicSignupEnabled: boolean;
-}
-
-export function FaqFinalCtaSection({
-  publicSignupEnabled,
-}: FaqFinalCtaSectionProps) {
+export function FaqFinalCtaSection() {
   return (
     <section
       aria-labelledby="perguntas-frequentes-heading"
@@ -77,10 +69,6 @@ export function FaqFinalCtaSection({
           </li>
         ))}
       </ul>
-
-      <div className="mt-10 rounded-2xl border border-border bg-bg-deep p-8 text-center">
-        <AcquisitionCta publicSignupEnabled={publicSignupEnabled} />
-      </div>
 
       <nav
         aria-label="Links legais"

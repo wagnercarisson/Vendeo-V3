@@ -33,19 +33,23 @@ vi.mock("../access-request-form", () => ({
 
 import { AccessRequestSection } from "../access-request-section";
 import { HeroSection } from "../hero-section";
+import { TransformationSection } from "../transformation-section";
+import { IdentityControlSection } from "../identity-control-section";
 import { OfferSection } from "../offer-section";
-import { FaqFinalCtaSection } from "../faq-final-cta-section";
 
 /**
- * Renders the full set of acquisition-CTA blocks (hero, offer, final) plus the
- * reduced flag-gated form section, so both flag modes are asserted end to end.
+ * Renders the full set of acquisition-CTA blocks (hero, transformação,
+ * identidade, oferta) plus the reduced flag-gated form section, so both flag
+ * modes are asserted end to end. The acquisition CTA was removed from the FAQ
+ * block (it moved to the end of the transformation and to the identity block).
  */
 function renderAcquisitionTree(publicSignupEnabled: boolean) {
   return render(
     <>
       <HeroSection publicSignupEnabled={publicSignupEnabled} />
+      <TransformationSection publicSignupEnabled={publicSignupEnabled} />
+      <IdentityControlSection publicSignupEnabled={publicSignupEnabled} />
       <OfferSection publicSignupEnabled={publicSignupEnabled} />
-      <FaqFinalCtaSection publicSignupEnabled={publicSignupEnabled} />
       <AccessRequestSection publicSignupEnabled={publicSignupEnabled} />
     </>,
   );
@@ -78,12 +82,12 @@ describe("Teste 10b - AccessRequestSection flag on", () => {
   });
 });
 
-describe("Teste 10c - CTAs de aquisição nos dois modos da flag (hero, oferta e final)", () => {
-  it("flag off: hero, oferta e final renderizam 'Solicitar acesso free' → #acesso e o formulário presente", () => {
+describe("Teste 10c - CTAs de aquisição nos dois modos da flag (hero, transformação, identidade e oferta)", () => {
+  it("flag off: hero, transformação, identidade e oferta renderizam 'Solicitar acesso free' → #acesso e o formulário presente", () => {
     const { container } = renderAcquisitionTree(false);
 
     const ctas = screen.getAllByRole("link", { name: "Solicitar acesso free" });
-    expect(ctas).toHaveLength(3);
+    expect(ctas).toHaveLength(4);
     ctas.forEach((cta) => expect(cta).toHaveAttribute("href", "#acesso"));
 
     expect(screen.getByTestId("access-request-form")).toBeInTheDocument();
@@ -93,15 +97,15 @@ describe("Teste 10c - CTAs de aquisição nos dois modos da flag (hero, oferta e
     ).not.toBeInTheDocument();
   });
 
-  it("flag on: hero, oferta e final renderizam Google + 'Continuar com email' → /signup e sem formulário", () => {
+  it("flag on: hero, transformação, identidade e oferta renderizam Google + 'Continuar com email' → /signup e sem formulário", () => {
     renderAcquisitionTree(true);
 
     const google = screen.getAllByRole("button", { name: "Continuar com Google" });
-    expect(google).toHaveLength(3);
+    expect(google).toHaveLength(4);
     google.forEach((button) => expect(button).toHaveAttribute("data-variant", "solid"));
 
     const emailLinks = screen.getAllByRole("link", { name: "Continuar com email" });
-    expect(emailLinks).toHaveLength(3);
+    expect(emailLinks).toHaveLength(4);
     emailLinks.forEach((link) => expect(link).toHaveAttribute("href", "/signup"));
 
     expect(screen.queryByTestId("access-request-form")).not.toBeInTheDocument();

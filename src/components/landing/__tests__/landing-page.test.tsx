@@ -138,11 +138,11 @@ describe("Landing page — composição e copy (flag off)", () => {
     expect(container.querySelectorAll("[data-auto-advance]").length).toBe(0);
   });
 
-  it("flag off: hero/oferta/final renderizam 'Solicitar acesso free' → #acesso com texto escuro (D-19) e o formulário presente", async () => {
+  it("flag off: hero/transformação/identidade/oferta renderizam 'Solicitar acesso free' → #acesso com texto escuro (D-19) e o formulário presente", async () => {
     const { container } = render(await Home());
 
     const ctas = screen.getAllByRole("link", { name: "Solicitar acesso free" });
-    expect(ctas).toHaveLength(3);
+    expect(ctas).toHaveLength(4);
     ctas.forEach((cta) => {
       expect(cta).toHaveAttribute("href", "#acesso");
       expect(cta.className).toContain("text-bg-deep");
@@ -200,22 +200,46 @@ describe("Landing page — composição e copy (flag off)", () => {
       expect(logo).toHaveAttribute("src", "/landing/vendeo-logo-dark.webp");
     });
   });
+
+  it("CTA de aquisição na transformação e na identidade; ausente após a FAQ; seta decorativa na transformação", async () => {
+    const { container } = render(await Home());
+
+    // Four acquisition CTAs: hero, transformação, identidade, oferta.
+    expect(container.querySelectorAll('a[href="#acesso"]').length).toBe(4);
+
+    const faqSection = container.querySelector(
+      'section[aria-labelledby="perguntas-frequentes-heading"]',
+    );
+    expect(faqSection).not.toBeNull();
+    expect(
+      (faqSection as HTMLElement).querySelector('a[href="#acesso"]'),
+    ).toBeNull();
+
+    const transformSection = container.querySelector(
+      'section[aria-labelledby="transformacao-heading"]',
+    );
+    expect(
+      (transformSection as HTMLElement).querySelector(
+        '[aria-hidden="true"] svg',
+      ),
+    ).not.toBeNull();
+  });
 });
 
 describe("Landing page — ambos os modos da flag para hero/oferta/final", () => {
-  it("flag on: hero/oferta/final renderizam Google + 'Continuar com email' → /signup e o formulário ausente", async () => {
+  it("flag on: hero/transformação/identidade/oferta renderizam Google + 'Continuar com email' → /signup e o formulário ausente", async () => {
     setFlag(true);
     const { container } = render(await Home());
 
     const google = screen.getAllByRole("button", { name: "Continuar com Google" });
-    expect(google).toHaveLength(3);
+    expect(google).toHaveLength(4);
     google.forEach((button) => {
       expect(button).toHaveAttribute("data-variant", "solid");
       expect(button).toHaveAttribute("data-fullwidth", "true");
     });
 
     const emailLinks = screen.getAllByRole("link", { name: "Continuar com email" });
-    expect(emailLinks).toHaveLength(3);
+    expect(emailLinks).toHaveLength(4);
     emailLinks.forEach((link) => expect(link).toHaveAttribute("href", "/signup"));
 
     expect(container.querySelector("#acesso")).toBeNull();

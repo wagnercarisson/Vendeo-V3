@@ -18,13 +18,19 @@ import { GoogleButton } from "@/components/auth/google-button";
  */
 interface AcquisitionCtaProps {
   publicSignupEnabled: boolean;
+  align?: "center" | "start";
 }
 
-export function AcquisitionCta({ publicSignupEnabled }: AcquisitionCtaProps) {
+export function AcquisitionCta({
+  publicSignupEnabled,
+  align = "center",
+}: AcquisitionCtaProps) {
   return (
     <div
       data-public-signup-enabled={String(publicSignupEnabled)}
-      className="flex flex-col items-center justify-center gap-3"
+      className={`flex flex-col gap-3 ${
+        align === "start" ? "items-start" : "items-center justify-center"
+      }`}
     >
       {publicSignupEnabled ? (
         <>

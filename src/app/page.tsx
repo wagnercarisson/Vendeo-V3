@@ -32,7 +32,7 @@ export default async function Home() {
           alt="Vendeo"
           width={384}
           height={82}
-          className="h-6 w-auto sm:h-7"
+          className="h-8 w-auto sm:h-10"
         />
         <Link
           href="/login"
@@ -46,12 +46,12 @@ export default async function Home() {
           abordagens → oferta → FAQ/CTA final */}
       <main className="flex flex-1 flex-col">
         <HeroSection publicSignupEnabled={publicSignupEnabled} />
-        <TransformationSection />
+        <TransformationSection publicSignupEnabled={publicSignupEnabled} />
         <VariationsSection />
-        <IdentityControlSection />
+        <IdentityControlSection publicSignupEnabled={publicSignupEnabled} />
         <ApproachSection />
         <OfferSection publicSignupEnabled={publicSignupEnabled} />
-        <FaqFinalCtaSection publicSignupEnabled={publicSignupEnabled} />
+        <FaqFinalCtaSection />
 
         {/* Form section — flag off only (retorna null com a flag ligada) */}
         <AccessRequestSection publicSignupEnabled={publicSignupEnabled} />
@@ -66,7 +66,7 @@ export default async function Home() {
             width={384}
             height={82}
             loading="lazy"
-            className="h-6 w-auto"
+            className="h-6 w-auto shrink-0 self-center"
           />
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             <Link
