@@ -39,7 +39,7 @@
   .site-header { width: 100%; max-width: 64rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 24px; }
   .brand-logo { height: 24px; width: auto; display: block; align-self: center; }
   .brand-logo--header { height: 32px; }
-  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 16px; border: 1px solid var(--border-light); border-radius: 8px; color: var(--text-secondary); font-size: 0.875rem; }
+  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 8px 16px; border: 1px solid var(--border-light); border-radius: 8px; color: var(--text-secondary); font-size: 0.875rem; }
 
   section.block { width: 100%; max-width: 64rem; margin: 0 auto; padding: 32px 24px; }
   h2 { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
@@ -54,8 +54,9 @@
   .sub { margin-top: 20px; color: var(--text-secondary); font-size: 1rem; max-width: 36rem; }
   .distinction { margin-top: 16px; color: var(--text-secondary); }
   .accent { color: var(--accent-green); }
-  .cta { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-  .btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px 24px; border-radius: 8px; background: #22C55E; color: #020617; font-family: var(--font-heading); font-weight: 600; }
+  .acq { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .btn-block { width: 100%; max-width: 24rem; }
+  .btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; border-radius: 8px; background: #22C55E; color: #020617; font-family: var(--font-heading); font-weight: 600; }
 
   .frame { aspect-ratio: 1 / 1; width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-deep); display: flex; align-items: center; justify-content: center; }
   .frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -120,7 +121,7 @@
     .hero-grid { grid-template-columns: 1fr 1fr; }
     h1 { font-size: 3rem; }
     .sub { font-size: 1.125rem; }
-    .cta { flex-direction: row; justify-content: flex-start; }
+    .acq { align-items: flex-start; }
     .media-sm { margin: 0; max-width: none; }
     .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
     .transform-grid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
@@ -150,7 +151,7 @@
   </div>
 
   <header class="site-header">
-    <img class="brand-logo" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
+    <img class="brand-logo brand-logo--header" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
     <a class="btn-secondary" href="#">Entrar</a>
   </header>
 
@@ -163,13 +164,12 @@
           <h1>O que seu negócio quer divulgar vira uma campanha pronta para publicar.</h1>
           <p class="sub">Você informa o básico. O Vendeo prepara a campanha completa — com arte e texto — pronta para publicar.</p>
           <p class="distinction">Você define como quer apresentar.</p>
-          <div class="cta">
-            <a class="btn-primary off-only" href="#acesso">Solicitar acesso free</a>
-            <span class="on-only" style="display:flex;gap:12px;flex-wrap:wrap;">
-              <a class="btn-primary" href="#">Continuar com Google</a>
-              <a class="btn-secondary" href="#">Continuar com email</a>
-            </span>
-            <a class="btn-secondary" href="#">Entrar</a>
+          <div class="acq off-only">
+            <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
+          </div>
+          <div class="acq on-only">
+            <a class="btn-block btn-primary" href="#">Continuar com Google</a>
+            <a class="btn-block btn-secondary" href="#">Continuar com email</a>
           </div>
         </div>
         <div class="media-sm">
@@ -207,12 +207,12 @@
         <li><span class="n">3</span><span class="t">Você confere</span><div class="d">Revisa a campanha e decide antes de publicar.</div></li>
         <li><span class="n">4</span><span class="t">Basta baixar para publicar</span><div class="d">Sua campanha está pronta para as redes sociais.</div></li>
       </ol>
-      <div style="margin-top:32px;display:flex;justify-content:center;">
-        <a class="btn-primary off-only" href="#acesso">Solicitar acesso free</a>
-        <span class="on-only" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
-          <a class="btn-primary" href="#">Continuar com Google</a>
-          <a class="btn-secondary" href="#">Continuar com email</a>
-        </span>
+      <div class="acq off-only">
+        <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
+      </div>
+      <div class="acq on-only">
+        <a class="btn-block btn-primary" href="#">Continuar com Google</a>
+        <a class="btn-block btn-secondary" href="#">Continuar com email</a>
       </div>
     </section>
 
@@ -241,12 +241,12 @@
         <div>
           <p class="support">Sua marca, suas cores e o estilo da sua loja presentes na campanha.</p>
           <p class="support" style="font-size:0.875rem;">Você confere cada campanha e decide o que publicar.</p>
-          <div style="margin-top:24px;display:flex;align-items:flex-start;">
-            <a class="btn-primary off-only" href="#acesso">Solicitar acesso free</a>
-            <span class="on-only" style="display:flex;gap:12px;flex-wrap:wrap;">
-              <a class="btn-primary" href="#">Continuar com Google</a>
-              <a class="btn-secondary" href="#">Continuar com email</a>
-            </span>
+          <div class="acq off-only">
+            <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
+          </div>
+          <div class="acq on-only">
+            <a class="btn-block btn-primary" href="#">Continuar com Google</a>
+            <a class="btn-block btn-secondary" href="#">Continuar com email</a>
           </div>
         </div>
       </div>
@@ -271,13 +271,12 @@
       <div class="offer-card">
         <h2>Teste gratuitamente, sem cartão de crédito</h2>
         <p class="offer-main">Experimente o Vendeo em sua loja: 28 dias gratuitos e até 20 créditos.</p>
-        <div class="cta" style="align-items:flex-start;">
-          <a class="btn-primary off-only" href="#acesso">Solicitar acesso free</a>
-          <span class="on-only" style="display:flex;gap:12px;flex-wrap:wrap;">
-            <a class="btn-primary" href="#">Continuar com Google</a>
-            <a class="btn-secondary" href="#">Continuar com email</a>
-          </span>
-          <a class="btn-secondary" href="#">Entrar</a>
+        <div class="acq off-only">
+          <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
+        </div>
+        <div class="acq on-only">
+          <a class="btn-block btn-primary" href="#">Continuar com Google</a>
+          <a class="btn-block btn-secondary" href="#">Continuar com email</a>
         </div>
         <details class="mechanics">
           <summary>Como funcionam os créditos do teste gratuito?</summary>
@@ -312,7 +311,7 @@
 
   <footer class="site-footer">
     <div class="site-footer-inner">
-    <img class="brand-logo brand-logo--header" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
+      <img class="brand-logo" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
       <nav class="footer-nav">
         <span>Termos de Uso</span><span>Política de Privacidade</span><span>Uso Aceitável</span><span>Novidades</span><span>Contato</span><span>Entrar</span>
       </nav>
