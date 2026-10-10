@@ -1,9 +1,23 @@
 // @vitest-environment node
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-async function getRedirects() {
+const SENTINEL = "VENDEO_LAB_ISOLATED_DIST";
+const LAB_DIST_DIR = "supabase/.temp/landing-lab/.next-web";
+const LAB_TSCONFIG = "tsconfig.landing-lab.json";
+
+type LoadedConfig = {
+  distDir?: string;
+  typescript?: { tsconfigPath?: string };
+  redirects?: () => Promise<unknown>;
+};
+
+async function loadConfig(): Promise<LoadedConfig> {
+  vi.resetModules();
   const mod = await import("../../next.config");
-  const config: { redirects?: () => Promise<unknown> } = mod.default || mod;
+  return (mod.default || mod) as LoadedConfig;
+}
+
+async function getRedirects(config: LoadedConfig) {
   const fn = config.redirects;
   if (typeof fn !== "function") throw new Error("redirects is not a function");
   const result = await fn();
@@ -15,42 +29,77 @@ async function getRedirects() {
   }>;
 }
 
-describe("next.config.ts redirects", () => {
-  it("has 4 redirect entries", async () => {
-    const redirects = await getRedirects();
-    expect(redirects).toHaveLength(4);
+const ORIGINAL_SENTINEL = process.env[SENTINEL];
+
+afterEach(() => {
+  if (ORIGINAL_SENTINEL === undefined) delete process.env[SENTINEL];
+  else process.env[SENTINEL] = ORIGINAL_SENTINEL;
+});
+
+describe("next.config.ts — distDir isolado do laboratório", () => {
+  beforeEach(() => {
+    delete process.env[SENTINEL];
   });
 
-  it("does not redirect / (landing pública)", async () => {
-    const redirects = await getRedirects();
+  it("sem sentinel mantém comportamento padrão (sem distDir/tsconfig custom)", async () => {
+    const config = await loadConfig();
+    expect(config.distDir).toBeUndefined();
+    expect(config.typescript?.tsconfigPath).toBeUndefined();
+  });
+
+  it("com sentinel ativa distDir e tsconfig dedicados", async () => {
+    process.env[SENTINEL] = "true";
+    const config = await loadConfig();
+    expect(config.distDir).toBe(LAB_DIST_DIR);
+    expect(config.typescript?.tsconfigPath).toBe(LAB_TSCONFIG);
+  });
+
+  it("sentinel com valor diferente não ativa o modo isolado", async () => {
+    process.env[SENTINEL] = "1";
+    const config = await loadConfig();
+    expect(config.distDir).toBeUndefined();
+    expect(config.typescript?.tsconfigPath).toBeUndefined();
+  });
+});
+
+describe("next.config.ts redirects", () => {
+  beforeEach(() => {
+    delete process.env[SENTINEL];
+  });
+
+  it("tem 4 redirects independentes do modo do laboratório", async () => {
+    const config = await loadConfig();
+    expect(await getRedirects(config)).toHaveLength(4);
+  });
+
+  it("não redireciona / (landing pública)", async () => {
+    const config = await loadConfig();
+    const redirects = await getRedirects(config);
     expect(redirects.find((r) => r.source === "/")).toBeUndefined();
   });
 
-  it("redirects /minhas-campanhas to /campanhas with 301", async () => {
-    const redirects = await getRedirects();
-    const r = redirects.find((r) => r.source === "/minhas-campanhas")!;
-    expect(r.destination).toBe("/campanhas");
-    expect(r.statusCode).toBe(301);
+  it("redirects canônicos com 301", async () => {
+    const config = await loadConfig();
+    const redirects = await getRedirects(config);
+    const expected: Array<[string, string]> = [
+      ["/minhas-campanhas", "/campanhas"],
+      ["/campanha/:id", "/campanhas/:id"],
+      ["/store", "/loja"],
+      ["/campaign/preview", "/campanhas/nova"],
+    ];
+    for (const [source, destination] of expected) {
+      const r = redirects.find((entry) => entry.source === source);
+      expect(r, `redirect ausente: ${source}`).toBeDefined();
+      expect(r!.destination).toBe(destination);
+      expect(r!.statusCode).toBe(301);
+    }
   });
 
-  it("redirects /campanha/:id to /campanhas/:id with 301", async () => {
-    const redirects = await getRedirects();
-    const r = redirects.find((r) => r.source === "/campanha/:id")!;
-    expect(r.destination).toBe("/campanhas/:id");
-    expect(r.statusCode).toBe(301);
-  });
-
-  it("redirects /store to /loja with 301", async () => {
-    const redirects = await getRedirects();
-    const r = redirects.find((r) => r.source === "/store")!;
-    expect(r.destination).toBe("/loja");
-    expect(r.statusCode).toBe(301);
-  });
-
-  it("redirects /campaign/preview to /campanhas/nova with 301", async () => {
-    const redirects = await getRedirects();
-    const r = redirects.find((r) => r.source === "/campaign/preview")!;
-    expect(r.destination).toBe("/campanhas/nova");
-    expect(r.statusCode).toBe(301);
+  it("mantém os mesmos 4 redirects no modo isolado do laboratório", async () => {
+    process.env[SENTINEL] = "true";
+    const config = await loadConfig();
+    const redirects = await getRedirects(config);
+    expect(redirects).toHaveLength(4);
+    expect(config.distDir).toBe(LAB_DIST_DIR);
   });
 });
