@@ -7,6 +7,7 @@ import { BenchConfigRegistryError } from "../domain/config-registry";
 import { buildBenchCampaignSnapshot } from "../domain/campaign-snapshot";
 import { buildBenchExperimentalBriefing } from "../domain/experimental-briefing";
 import { COMPOSER_VERSION, PROMPT_BLOCK_LABELS, composePromptBlocks } from "../domain/prompt-composer";
+import { BENCH_BACKGROUND_DIRECTION_VERSION } from "../domain/background-direction";
 import type { BenchBrandingContract } from "../domain/branding-service";
 import type { BenchConfig, BenchOffer, BenchProduct } from "../domain/schemas";
 import { ofertaPolicy } from "../domain/policies/oferta";
@@ -149,7 +150,7 @@ describe("políticas — resolução explícita e versionada", () => {
       expect(text).toContain(`Direção de fundo: ${{
         studio: "Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.",
         ambient: "Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.",
-        original: "Mantenha o cenário da imagem enviada como base; não o substitua por outro.",
+        original: "Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.",
       }[direction]}`);
     }
   });
@@ -164,11 +165,13 @@ describe("políticas — resolução explícita e versionada", () => {
       "estrutura",
       "tema",
       "geral",
+      "fundo",
     ]);
     for (const version of Object.values(resolved.versions)) {
       expect(version.length).toBeGreaterThan(0);
     }
     expect(resolved.contributions.length).toBeGreaterThan(0);
+    expect(resolved.versions.fundo).toBe(BENCH_BACKGROUND_DIRECTION_VERSION);
   });
 
   it.each([
@@ -181,6 +184,10 @@ describe("políticas — resolução explícita e versionada", () => {
     expect(BENCH_PROMPT_POLICY_REGISTRY.intencao?.[intent]).toBe(policy);
     expect(resolved.contributions.flatMap((entry) => entry.lines)).toContain(line);
     expect(resolved.versions.intencao).toBe(policy.version);
+    const directionLines = resolved.contributions
+      .flatMap((entry) => entry.lines)
+      .filter((entryLine) => entryLine === "Respeite a direção de fundo.");
+    expect(directionLines).toHaveLength(1);
   });
 
   it("mesma entrada ⇒ mesma saída (determinismo)", () => {
@@ -192,24 +199,26 @@ describe("políticas — resolução explícita e versionada", () => {
   });
 
   it("versiona a serialização neutra do preço de venda sem alterar a política Oferta", () => {
-    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v5");
-    expect(ofertaPolicy.version).toBe("48.2.6-oferta-v1");
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v6");
+    expect(ofertaPolicy.version).toBe("48.2.6-oferta-v2");
     expect(ofertaPolicy.contributions({ config: CONFIG }).flatMap((entry) => entry.lines)).toContain(
       "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
     );
     expect(composeResolved()).toContain(`Preço de venda: R$${NBSP}49,90`);
   });
 
-  it("não duplica o ponto final de um nome e mantém a redação normal inalterada", () => {
+  it("serializa o nome entre aspas em linha própria e preserva a pontuação informada", () => {
+    const guidance = "Inclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.";
     const prompt = composeResolved(CONFIG, "", ["bench/product.png"], {
       ...makeProduct(),
       name: "Johnnie Walker.",
     });
 
-    expect(prompt).toContain("Nome obrigatório na arte: Johnnie Walker. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.");
-    expect(prompt).not.toContain("Johnnie Walker.. Inclua");
+    expect(prompt).toContain(`Nome obrigatório na arte: "Johnnie Walker."\n${guidance}`);
+    expect(prompt).not.toContain("Johnnie Walker..");
+    expect(prompt).not.toContain('Johnnie Walker.".');
     expect(composeResolved(CONFIG, "", ["bench/product.png"])).toContain(
-      "Nome obrigatório na arte: Camiseta básica. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.",
+      `Nome obrigatório na arte: "Camiseta básica"\n${guidance}`,
     );
   });
 
@@ -248,7 +257,8 @@ describe("políticas — resolução explícita e versionada", () => {
     const briefing = makeBriefing(config, product, offer);
     const singleReferences = ["bench/product-1.png"];
     const multipleReferences = [...singleReferences, "bench/product-2.png"];
-    const expectedName = "Nome obrigatório na arte: Johnnie Walker Black Label 750ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.";
+    const expectedName = 'Nome obrigatório na arte: "Johnnie Walker Black Label 750ml"';
+    const expectedNameGuidance = "Inclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.";
     const expectedOneImage = "Produto como elemento principal da peça. Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.";
     const expectedMultipleImageFidelity = "Reproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.";
     const expectedMultipleImageHierarchy = "A primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.";
@@ -258,6 +268,7 @@ describe("políticas — resolução explícita e versionada", () => {
       const composition = composePromptBlocks({ briefing, promptBase: "", references, contributions: policies.contributions, policyVersions: policies.versions });
       expect(policies.versions.tipoConteudo).toBe("48.2.6-produto-v4");
       expect(composition.text.split(expectedName)).toHaveLength(2);
+      expect(composition.text.split(expectedNameGuidance)).toHaveLength(2);
       expect(composition.text).not.toContain("Nome: completo");
       expect(composition.text).not.toContain("Nome do produto obrigatório:");
       if (references.length === 1) {
@@ -294,7 +305,7 @@ describe("políticas — resolução explícita e versionada", () => {
   });
 });
 
-describe("política Exclusivo v2 — composição e selos fornecidos", () => {
+describe("política Exclusivo v4 — composição e selos fornecidos", () => {
   const instruction = "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.";
   const exclusiveConfig = { ...CONFIG, intencao: "exclusivo" } as BenchConfig;
 
@@ -302,7 +313,7 @@ describe("política Exclusivo v2 — composição e selos fornecidos", () => {
     { label: "sem selo", badge: undefined, serialized: undefined },
     { label: "selo Exclusivo", badge: "Exclusivo", serialized: "Selo: Exclusivo" },
     { label: "selo Edição Limitada", badge: "Edição Limitada", serialized: "Selo: Edição Limitada" },
-  ])("compõe v2 $label sem preço nem selo não fornecido", ({ badge, serialized }) => {
+  ])("compõe v4 $label sem preço nem selo não fornecido", ({ badge, serialized }) => {
     const snapshot = buildBenchCampaignSnapshot({
       product: { name: "Produto de teste", priceCents: undefined, originalPriceCents: undefined },
       offer: { campaignIntent: "exclusive", backgroundDirection: "studio", ...(badge ? { badge } : {}), showIllustrativeNotice: false },
@@ -312,10 +323,11 @@ describe("política Exclusivo v2 — composição e selos fornecidos", () => {
     const policies = resolveBenchPromptPolicies(exclusiveConfig);
     const text = composePromptBlocks({ briefing, promptBase: "", contributions: policies.contributions }).text;
 
-    expect(EXCLUSIVO_POLICY_VERSION).toBe("48.2.6-exclusivo-v3");
-    expect(policies.versions.intencao).toBe("48.2.6-exclusivo-v3");
+    expect(EXCLUSIVO_POLICY_VERSION).toBe("48.2.6-exclusivo-v4");
+    expect(policies.versions.intencao).toBe("48.2.6-exclusivo-v4");
     expect(text).toContain(instruction);
     expect(text.split(instruction)).toHaveLength(2);
+    expect(text.split("Respeite a direção de fundo.")).toHaveLength(2);
     expect(text).not.toContain("Preço original:");
     expect(text).not.toContain("Preço de venda:");
     expect(text).not.toContain("Oferta:");
@@ -464,7 +476,8 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
   it("compõe o prompt completo de forma determinística", () => {
     const golden = [
       "[PRODUTO E IMAGENS DE REFERÊNCIA]",
-      "Nome obrigatório na arte: Camiseta básica. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.",
+      'Nome obrigatório na arte: "Camiseta básica"',
+      "Inclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.",
       "Descrição: 100% algodão",
       "Produto como elemento principal da peça.",
       "Descrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.",
@@ -477,6 +490,7 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
       "Selo: 50% OFF",
       "Validade: até 31/12/2026",
       "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+      "Respeite a direção de fundo.",
       "",
       "[INTENÇÃO E FORMATO]",
       "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).",

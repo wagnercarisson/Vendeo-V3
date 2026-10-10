@@ -1225,7 +1225,7 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(res.status).toBe(200);
     expect(body.compiledPrompt).toContain("CONDIÇÕES COMERCIAIS");
     expect(body.blocks).toBeDefined();
-    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v5");
+    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v6");
     expect(body.compiledPrompt).toContain("Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.");
     expect(body.compiledPrompt).not.toContain("Direção de fundo: studio");
     expect(body.approved).toBe(false);
@@ -1274,14 +1274,14 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     mockComposePromptBlocks.mockImplementation((input: never) => actual.composePromptBlocks(input));
     const res = await postCompose({ ...VALID_COMPOSE_BODY, offer: { backgroundDirection: "original" }, references: ["bench/product.png"] });
     expect(res.status).toBe(200);
-    expect((await res.json()).compiledPrompt).toContain("Direção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.");
+    expect((await res.json()).compiledPrompt).toContain("Direção de fundo: Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.");
     expect(mockLoadBenchBranding).toHaveBeenCalled();
   });
 
   it.each([
-    { campaignIntent: "offer", policyIntent: "oferta", version: "48.2.6-oferta-v1", phrase: "Oferta: destaque o preço por" },
-    { campaignIntent: "spotlight", policyIntent: "destaque", version: "48.2.6-destaque-v1", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
-    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v3", phrase: "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações." },
+    { campaignIntent: "offer", policyIntent: "oferta", version: "48.2.6-oferta-v2", phrase: "Oferta: destaque o preço por" },
+    { campaignIntent: "spotlight", policyIntent: "destaque", version: "48.2.6-destaque-v2", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
+    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v4", phrase: "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações." },
   ])("POST /compose resolve $campaignIntent para a política $policyIntent", async ({ campaignIntent, policyIntent, version, phrase }) => {
     const configActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/config-registry")>("@/lib/lab/bench/domain/config-registry");
     const policiesActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies");
@@ -1305,13 +1305,13 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(body.compiledPrompt).toContain(phrase);
     expect(body.policyVersions.intencao).toBe(version);
     if (campaignIntent === "spotlight") {
-      expect(body.compiledPrompt).toContain("Nome obrigatório na arte: Mouse sem fio. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.");
+      expect(body.compiledPrompt).toContain('Nome obrigatório na arte: "Mouse sem fio"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.');
       expect(body.compiledPrompt).toMatch(/Preço de venda: R\$\s19,99/);
       expect(body.compiledPrompt).not.toContain("Preço promocional");
       expect(body.compiledPrompt).not.toContain("Oferta:");
-      expect(body.policyVersions.intencao).toBe("48.2.6-destaque-v1");
-      expect(body.composerVersion).toBe("48.2.4-prompt-composer-v5");
-      expect(body.policyVersions.intencao).not.toBe("48.2.6-oferta-v1");
+      expect(body.policyVersions.intencao).toBe("48.2.6-destaque-v2");
+      expect(body.composerVersion).toBe("48.2.4-prompt-composer-v6");
+      expect(body.policyVersions.intencao).not.toBe("48.2.6-oferta-v2");
       expect(body.compiledPrompt).toContain("Destaque: priorize a apresentação do produto; preço informado é secundário.");
       console.info("SPOTLIGHT_COMPILED_PROMPT_VERSION:", JSON.stringify({ text: body.compiledPrompt, composerVersion: body.composerVersion, policyVersions: body.policyVersions }));
     }
@@ -1344,8 +1344,8 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
     expect(res.status).toBe(200);
     expect(body.compiledPrompt).toMatch(/Preço de venda: R\$\s19,99/);
     expect(body.compiledPrompt).toContain(policyActual.ofertaPolicy.contributions({ config: { ...VALID_COMPOSE_BODY, intencao: "oferta" } as never }).flatMap((entry) => entry.lines).find((line) => line.startsWith("Oferta: destaque o preço por")));
-    expect(body.policyVersions.intencao).toBe("48.2.6-oferta-v1");
-    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v5");
+    expect(body.policyVersions.intencao).toBe("48.2.6-oferta-v2");
+    expect(body.composerVersion).toBe("48.2.4-prompt-composer-v6");
   });
 
   it("POST /compose com alertas ⇒ 422 e não compõe prompt nem lê branding", async () => {
@@ -1872,9 +1872,9 @@ describe("contrato da API da bancada — execução com confirmação", () => {
   });
 
   it.each([
-    { campaignIntent: "offer", policyIntent: "oferta", version: "48.2.6-oferta-v1", phrase: "Oferta: destaque o preço por" },
-    { campaignIntent: "spotlight", policyIntent: "destaque", version: "48.2.6-destaque-v1", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
-    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v3", phrase: "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações." },
+    { campaignIntent: "offer", policyIntent: "oferta", version: "48.2.6-oferta-v2", phrase: "Oferta: destaque o preço por" },
+    { campaignIntent: "spotlight", policyIntent: "destaque", version: "48.2.6-destaque-v2", phrase: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
+    { campaignIntent: "exclusive", policyIntent: "exclusivo", version: "48.2.6-exclusivo-v4", phrase: "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações." },
   ])("POST /runs revalida $campaignIntent com política $policyIntent antes de confirmação", async ({ campaignIntent, policyIntent, version, phrase }) => {
     const configActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/config-registry")>("@/lib/lab/bench/domain/config-registry");
     const policiesActual = await vi.importActual<typeof import("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies")>("@/lib/lab/bench/domain/policies/resolve-bench-prompt-policies");
@@ -1956,7 +1956,7 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     if (campaignIntent !== "offer") {
       const composition = mockRecomposeBenchPrompt.mock.results[0].value;
       expect(composition.text).not.toContain("Oferta:");
-      expect(composition.policyVersions.intencao).not.toBe("48.2.6-oferta-v1");
+      expect(composition.policyVersions.intencao).not.toBe("48.2.6-oferta-v2");
     }
   });
 
@@ -1972,7 +1972,7 @@ describe("contrato da API da bancada — execução com confirmação", () => {
       policyVersions: policies.versions,
     } as never);
     expect(localResult.text).toContain("Destaque: priorize a apresentação do produto; preço informado é secundário.");
-    expect(localResult.policyVersions.intencao).toBe("48.2.6-destaque-v1");
+    expect(localResult.policyVersions.intencao).toBe("48.2.6-destaque-v2");
     expect(mockExecuteBenchRun).not.toHaveBeenCalled();
   });
 
