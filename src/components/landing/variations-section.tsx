@@ -15,13 +15,19 @@ import { RevealOnView } from "./reveal-on-view";
  */
 
 const PRESENTATIONS = [
-  { label: "Estúdio", alt: "Campanha de produto apresentada em estúdio" },
+  {
+    label: "Estúdio",
+    src: "/landing/apresentacao-estudio.webp",
+    alt: "Campanha de produto apresentada em estúdio",
+  },
   {
     label: "Ambientado",
+    src: "/landing/apresentacao-ambientado.webp",
     alt: "Campanha de produto apresentada ambientada em cenário de loja",
   },
   {
     label: "Fundo original",
+    src: "/landing/apresentacao-fundo-original.webp",
     alt: "Campanha de produto mantendo o fundo original",
   },
 ];
@@ -53,7 +59,7 @@ export function VariationsSection() {
               key={item.label}
               className="min-w-[78%] [scroll-snap-align:start] sm:min-w-0"
             >
-              <CampaignImage alt={item.alt} />
+              <CampaignImage src={item.src} alt={item.alt} contain />
               <h3 className="mt-3 font-heading text-base font-semibold text-text-primary">
                 {item.label}
               </h3>
