@@ -38,7 +38,7 @@
 
   .site-header { width: 100%; max-width: 64rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 24px; }
   .brand-logo { height: 24px; width: auto; display: block; align-self: center; }
-  .brand-logo--header { height: 32px; }
+  .brand-logo--header { height: 36px; }
   .btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 8px 16px; border: 1px solid var(--border-light); border-radius: 8px; color: var(--text-secondary); font-size: 0.875rem; }
 
   section.block { width: 100%; max-width: 64rem; margin: 0 auto; padding: 32px 24px; }
@@ -55,6 +55,7 @@
   .distinction { margin-top: 16px; color: var(--text-secondary); }
   .accent { color: var(--accent-green); }
   .acq { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .acq--center { align-items: center; }
   .btn-block { width: 100%; max-width: 24rem; }
   .btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; border-radius: 8px; background: #22C55E; color: #020617; font-family: var(--font-heading); font-weight: 600; }
 
@@ -68,7 +69,7 @@
   .summary-list { margin: 8px 0 0; display: grid; gap: 6px; }
   .summary-list > div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
   .summary-list > div:last-child { border-bottom: none; }
-  .summary-list dt { color: var(--text-muted); font-size: 0.8125rem; }
+  .summary-list dt { color: var(--text-secondary); font-size: 0.8125rem; }
   .summary-list dd { color: var(--text-primary); font-size: 0.8125rem; min-width: 0; word-break: break-word; text-align: right; }
 
   .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -76,12 +77,11 @@
   .transform-arrow { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
   .transform-arrow svg { width: 24px; height: 24px; }
   .arrow-right { display: none; }
-  .steps { list-style: none; padding: 0; margin: 24px 0 0; }
-  .steps li { padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .steps li:last-child { border-bottom: none; }
-  .steps .n { color: var(--accent-green); font-family: var(--font-heading); font-weight: 700; margin-right: 8px; }
-  .steps .t { font-family: var(--font-heading); font-weight: 600; }
-  .steps .d { color: var(--text-secondary); font-size: 0.875rem; }
+  .steps { list-style: none; padding: 0; margin: 24px 0 0; display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .steps li { display: flex; gap: 12px; }
+  .steps .n { color: var(--accent-green); font-family: var(--font-heading); font-size: 0.875rem; font-weight: 700; }
+  .steps .t { font-family: var(--font-heading); font-size: 1rem; font-weight: 600; }
+  .steps .d { margin-top: 4px; color: var(--text-secondary); font-size: 0.875rem; }
 
   .strip { margin-top: 24px; display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; padding-bottom: 8px; border-radius: 12px; }
   .strip > li { flex: 0 0 78%; scroll-snap-align: start; list-style: none; }
@@ -122,10 +122,12 @@
     h1 { font-size: 3rem; }
     .sub { font-size: 1.125rem; }
     .acq { align-items: flex-start; }
+    .acq--center { align-items: center; }
     .media-sm { margin: 0; max-width: none; }
     .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
     .transform-grid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
-    .brand-logo--header { height: 40px; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .brand-logo--header { height: 44px; }
     .arrow-down { display: none; }
     .arrow-right { display: block; }
     .strip { display: grid; grid-template-columns: repeat(3, 1fr); overflow: visible; padding-bottom: 0; }
@@ -192,7 +194,7 @@
           </dl>
           <figure style="margin:16px 0 0;">
             <img src="../../../public/landing/transformacao-produto-racao.webp" alt="Foto da ração Confiance Premium de 15 kg enviada para criar a campanha" width="112" height="103" style="width:112px;height:auto;border-radius:8px;border:1px solid var(--border-light);" />
-            <figcaption style="margin-top:8px;font-size:0.75rem;color:var(--text-muted);">Foto enviada</figcaption>
+            <figcaption style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);">Foto enviada</figcaption>
           </figure>
         </div>
         <div class="transform-arrow" aria-hidden="true">
@@ -207,10 +209,10 @@
         <li><span class="n">3</span><span class="t">Você confere</span><div class="d">Revisa a campanha e decide antes de publicar.</div></li>
         <li><span class="n">4</span><span class="t">Basta baixar para publicar</span><div class="d">Sua campanha está pronta para as redes sociais.</div></li>
       </ol>
-      <div class="acq off-only">
+      <div class="acq acq--center off-only">
         <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
       </div>
-      <div class="acq on-only">
+      <div class="acq acq--center on-only">
         <a class="btn-block btn-primary" href="#">Continuar com Google</a>
         <a class="btn-block btn-secondary" href="#">Continuar com email</a>
       </div>
@@ -271,10 +273,10 @@
       <div class="offer-card">
         <h2>Teste gratuitamente, sem cartão de crédito</h2>
         <p class="offer-main">Experimente o Vendeo em sua loja: 28 dias gratuitos e até 20 créditos.</p>
-        <div class="acq off-only">
+        <div class="acq acq--center off-only">
           <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
         </div>
-        <div class="acq on-only">
+        <div class="acq acq--center on-only">
           <a class="btn-block btn-primary" href="#">Continuar com Google</a>
           <a class="btn-block btn-secondary" href="#">Continuar com email</a>
         </div>

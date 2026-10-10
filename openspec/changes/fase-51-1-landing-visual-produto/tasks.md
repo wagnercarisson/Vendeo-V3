@@ -25,8 +25,8 @@
 
 - [x] 3.1 Criar/ajustar os componentes de imagem com proporções estáveis e placeholders substituíveis sem refazer layout
 - [x] 3.2 Remover imagens sem função de prova; garantir que apenas campanhas protagonizam e que interface/texto são apoio
-- [ ] 3.3 Selecionar/gerar no laboratório com **geração humana especificamente autorizada** (fora da execução automática; o agente, a landing e os testes **não** geram nem chamam provider) e submeter os exemplos finais à aprovação humana
-- [ ] 3.4 Substituir placeholders pelos exemplos aprovados, sem fabricar depoimentos, resultados comerciais ou provas de identidade
+- [x] 3.3 As artes de demonstração foram **selecionadas/geradas por geração humana autorizada** (fora da execução automática; o agente, a landing e os testes **não** geram nem chamam provider) e **aprovadas individualmente** pelo responsável, bloco a bloco (hero, apresentação, abordagens, identidade e transformação — esta com dados + miniatura). **Nota:** aprovação **por arte**, distinta da **aprovação final da página** (ainda pendente).
+- [x] 3.4 Placeholders de arte **substituídos** pelas artes aprovadas na landing, sem fabricar depoimentos, resultados comerciais ou provas de identidade. **Nota:** não restam placeholders de arte; a aprovação final da página permanece pendente (Plano 08).
 
 ## 4. Oferta e controles de acesso
 
@@ -51,7 +51,7 @@
 - [ ] 6.6 Validar manualmente mobile e desktop nos modos flag off/on, sem ativar signup público
 - [x] 6.7 Registrar o teste de compreensão: visitante entende o produto após hero e transformação
 
-> **Nota (6.5):** `npx vitest run src/components/landing/__tests__` = **6 arquivos / 32 testes verdes** (inclui os novos testes de FAQ inicialmente fechada e de `RevealOnView`: disparo único, movimento reduzido, ausência de `IntersectionObserver`); `npm run lint` exit 0. O `typecheck` foi corrigido excluindo a junção `node_modules.*` (`node_modules.shared-link`), que injetava ~5.569 arquivos e produzia erros **espúrios** de `searchParams`; após a exclusão, **resta apenas o erro real pré-existente `ssl`/`pg`** fora da F51.1 (`image-generation-operations-repository.integration.test.ts`) — **nenhum erro na F51.1**. O `build` depende das envs do `.env.example`. **O gate completo ainda NÃO está aprovado** (typecheck/build não fecham verdes por causas externas à F51.1).
+> **Nota (6.5):** `npx vitest run src/components/landing/__tests__` = **6 arquivos / 35 testes verdes** (cobre ordem/copy, ausência de termos internos, CTAs nos 2 modos em hero/transformação/identidade/oferta, ausência de CTA após a FAQ, seta decorativa, FAQ fechada por padrão, `RevealOnView` — disparo único/reduced-motion/sem `IntersectionObserver` — e a distinção de carregamento hero(`eager`)/demais(`lazy`)); `npm run lint` exit 0. O `typecheck` foi corrigido excluindo a junção `node_modules.*` (`node_modules.shared-link`), que injetava ~5.569 arquivos e produzia erros **espúrios** de `searchParams`; após a exclusão, **resta apenas o erro real pré-existente `ssl`/`pg`** fora da F51.1 (`image-generation-operations-repository.integration.test.ts`) — **nenhum erro na F51.1**. O `build` compila e passa o type/lint do Next, mas **falha na coleta de páginas por env ausente** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`). **O gate completo ainda NÃO está aprovado** (typecheck/build não fecham verdes por causas externas à F51.1).
 
 ## 7. Fechamento
 
