@@ -76,7 +76,7 @@ export function TransformationSection({
                 key={item.label}
                 className="flex items-baseline justify-between gap-4"
               >
-                <dt className="shrink-0 text-sm text-text-muted">
+                <dt className="shrink-0 text-sm text-text-secondary">
                   {item.label}
                 </dt>
                 <dd className="min-w-0 break-words text-right text-sm font-medium text-text-primary">
@@ -94,7 +94,7 @@ export function TransformationSection({
               loading="lazy"
               className="h-auto w-[112px] rounded-lg border border-border-light"
             />
-            <figcaption className="mt-2 text-xs text-text-muted">
+            <figcaption className="mt-2 text-xs text-text-secondary">
               Foto enviada
             </figcaption>
           </figure>
@@ -139,9 +139,12 @@ export function TransformationSection({
         ))}
       </ol>
 
-      {/* Shared acquisition CTA (same flag value as hero/offer/identity) */}
+      {/* Shared acquisition CTA (same flag value as hero/offer/identity) — centered */}
       <div className="mt-8">
-        <AcquisitionCta publicSignupEnabled={publicSignupEnabled} />
+        <AcquisitionCta
+          publicSignupEnabled={publicSignupEnabled}
+          align="center"
+        />
       </div>
     </section>
   );

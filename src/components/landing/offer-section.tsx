@@ -37,7 +37,10 @@ export function OfferSection({ publicSignupEnabled }: OfferSectionProps) {
         </p>
 
         <div className="mt-6">
-          <AcquisitionCta publicSignupEnabled={publicSignupEnabled} />
+          <AcquisitionCta
+            publicSignupEnabled={publicSignupEnabled}
+            align="center"
+          />
         </div>
 
         <details

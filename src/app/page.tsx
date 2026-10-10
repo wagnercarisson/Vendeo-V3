@@ -32,7 +32,7 @@ export default async function Home() {
           alt="Vendeo"
           width={384}
           height={82}
-          className="h-8 w-auto sm:h-10"
+          className="h-9 w-auto sm:h-11"
         />
         <Link
           href="/login"

@@ -11,8 +11,9 @@ import { GoogleButton } from "@/components/auth/google-button";
  * ONCE and passes it down. This component never reads env vars or flags itself,
  * and it never renders the secondary "Entrar" action (that belongs to the
  * header only — never duplicated here). Acquisition buttons use a consistent
- * min-height (48px), centered content and spacing; alignment is centered on
- * mobile and starts (left) on desktop, following the block copy.
+ * min-height (48px, enforced locally with `!important` to override
+ * GoogleButton's inline 44px), centered content and spacing; alignment is
+ * explicit per instance via the `align` prop.
  *
  * D-19 contrast correction: the green primary surface uses DARK text
  * (`text-bg-deep` / `#020617`, ≈8.8:1). White-on-green would be ≈2.1:1 and is
@@ -22,17 +23,31 @@ import { GoogleButton } from "@/components/auth/google-button";
  */
 interface AcquisitionCtaProps {
   publicSignupEnabled: boolean;
+  /**
+   * Explicit per-instance alignment (no fragile selectors):
+   * - "responsive" (default): centered on mobile, start/left on desktop.
+   * - "center": centered on both mobile and desktop.
+   */
+  align?: "responsive" | "center";
 }
 
-export function AcquisitionCta({ publicSignupEnabled }: AcquisitionCtaProps) {
+export function AcquisitionCta({
+  publicSignupEnabled,
+  align = "responsive",
+}: AcquisitionCtaProps) {
+  const alignment =
+    align === "center"
+      ? "items-center justify-center"
+      : "items-center justify-center sm:items-start sm:justify-start";
+
   return (
     <div
       data-public-signup-enabled={String(publicSignupEnabled)}
-      className="flex flex-col items-center justify-center gap-3 sm:items-start sm:justify-start"
+      className={`flex flex-col gap-3 ${alignment}`}
     >
       {publicSignupEnabled ? (
         <>
-          <div className="w-full max-w-sm [&_button]:min-h-[48px]">
+          <div className="w-full max-w-sm [&_button]:!min-h-[48px]">
             <GoogleButton variant="solid" fullWidth />
           </div>
           <Link
