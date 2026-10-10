@@ -121,20 +121,23 @@ export function TransformationSection({
       </div>
 
       {/* Compact steps (no separate cards) — absorbs the old process section */}
-      <ol className="mt-8 grid gap-4 sm:grid-cols-2">
+      <ol className="mt-8">
         {STEPS.map((step) => (
-          <li key={step.number} className="flex gap-3">
-            <span className="font-heading text-sm font-semibold text-accent-green">
-              {step.number}
-            </span>
-            <div>
+          <li
+            key={step.number}
+            className="border-b border-border py-2.5 last:border-b-0"
+          >
+            <div className="flex items-baseline gap-2">
+              <span className="font-heading text-sm font-semibold text-accent-green">
+                {step.number}
+              </span>
               <h3 className="font-heading text-base font-semibold text-text-primary">
                 {step.title}
               </h3>
-              <p className="mt-1 text-sm text-text-secondary">
-                {step.description}
-              </p>
             </div>
+            <p className="mt-1 text-sm text-text-secondary">
+              {step.description}
+            </p>
           </li>
         ))}
       </ol>
