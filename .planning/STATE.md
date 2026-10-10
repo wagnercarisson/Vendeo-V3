@@ -195,6 +195,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 | ID | Date | Summary |
 |---|---|---|
+| 261010-lnu | 2026-10-10 | Atualizado manifesto para Floricultura Dona Flor no mesmo ID local 345508d7-59c6-48b8-adbd-8fdea74a909e; perfil synced confirmado; sem duplicacao/banco/provider. |
 | 261010-kec | 2026-10-10 | Atualizado label da entrada 345508d7-59c6-48b8-adbd-8fdea74a909e para Mercearia Tio Joao; perfil local synced confirmado; sem duplicacao, banco/provider/F51/F56 intocados. |
 | 261010-rsp | 2026-10-10 | Análise de identidade visual (`brand_profile_vision`) diagnosticável: campos aditivos `finishReason`/`refusal`; classificação por prioridade (recusa → truncamento → vazio → JSON inválido → formato) sem `TypeError`; log de conteúdo bruto removido (diagnóstico sanitizado + `providerKind` em falha de transporte); mensagens públicas nas rotas retry/realign com status HTTP preservado. Typecheck limpo 0 (baseline 0), lint 0, focalizados 56/56, suíte completa 19 arquivos/20 testes falhando idêntico ao baseline (pré-existentes). **Causa da resposta real ainda depende de confirmação humana.** Sem provider/restart/F51/F56. `quick/261010-rsp-analise-resposta-vazia-recusa-json/` |
 | 261010-hye | 2026-10-10 | Padaria da Esquina local adicionada ao manifesto da bancada; ID 345508d7-59c6-48b8-adbd-8fdea74a909e; JSON e 9 testes aprovados; sem escrita em banco/provider. |
