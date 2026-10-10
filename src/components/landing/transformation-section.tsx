@@ -3,18 +3,21 @@ import { CampaignImage } from "./campaign-image";
 /**
  * Transformation block (block 2 of the landing).
  *
- * Proves simplicity with a 2-panel before/after: the ENTRY is a compact text
- * summary (product / price / details) — never a square image or a
- * `CampaignImage` — and the RESULT is a single, complete 1:1 `CampaignImage`
- * (rendered with `contain`, so the campaign is never cropped). Entry↔result
- * correspondence is preserved. This block absorbs the old process section, so
- * no separate process heading exists here. Server component (no props).
+ * Proves simplicity with an information→campaign comparison: the ENTRY is a
+ * compact text summary (product / description / price / selected badge) PLUS a
+ * small thumbnail of the photo the user provided (a plain proportional <img>
+ * inside the card — NOT a large square panel, modal, zoom or extra animation);
+ * the RESULT is a single, complete 1:1 `CampaignImage` rendered with `contain`
+ * (never cropped). Entry↔result correspondence is preserved. This block
+ * absorbs the old process section, so no separate process heading exists here.
+ * Server component (no props).
  */
 
 const ENTRY_SUMMARY = [
-  { label: "Produto", value: "Nome do produto" },
-  { label: "Preço", value: "Preço da oferta" },
-  { label: "Detalhes", value: "Informações da sua loja" },
+  { label: "Produto", value: "Ração Confiance 15 kg Premium" },
+  { label: "Descrição", value: "Alimento completo para cães adultos" },
+  { label: "Preço", value: "R$ 114,90" },
+  { label: "Selo selecionado", value: "Lançamento" },
 ];
 
 const STEPS = [
@@ -54,7 +57,7 @@ export function TransformationSection() {
       </h2>
 
       <div className="mt-6 grid items-center gap-6 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-        {/* ENTRY — compact text summary, not an image */}
+        {/* ENTRY — compact text summary + provided-photo thumbnail */}
         <div className="rounded-xl border border-border bg-bg-surface p-5">
           <span className="font-heading text-xs font-semibold uppercase tracking-wide text-accent-green">
             Entrada
@@ -65,13 +68,27 @@ export function TransformationSection() {
                 key={item.label}
                 className="flex items-baseline justify-between gap-4"
               >
-                <dt className="text-sm text-text-muted">{item.label}</dt>
-                <dd className="text-sm font-medium text-text-primary">
+                <dt className="shrink-0 text-sm text-text-muted">
+                  {item.label}
+                </dt>
+                <dd className="min-w-0 break-words text-right text-sm font-medium text-text-primary">
                   {item.value}
                 </dd>
               </div>
             ))}
           </dl>
+          <figure className="mt-4">
+            <img
+              src="/landing/transformacao-produto-racao.webp"
+              alt="Foto da ração Confiance Premium de 15 kg enviada para criar a campanha"
+              width={112}
+              height={103}
+              className="h-auto w-[112px] rounded-lg border border-border-light"
+            />
+            <figcaption className="mt-2 text-xs text-text-muted">
+              Foto enviada
+            </figcaption>
+          </figure>
         </div>
 
         {/* Process arrow */}
@@ -85,7 +102,8 @@ export function TransformationSection() {
         {/* RESULT — complete 1:1 campaign, never cropped */}
         <div className="mx-auto w-full max-w-xs sm:mx-0 sm:max-w-none">
           <CampaignImage
-            alt="Campanha completa gerada a partir das informações informadas"
+            src="/landing/transformacao-petshop.webp"
+            alt="Campanha da Pet Shop Bicho Fofo para ração Confiance Premium de 15 kg por R$ 114,90"
             contain
           />
         </div>

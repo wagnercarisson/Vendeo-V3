@@ -67,7 +67,7 @@
   .summary-list > div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
   .summary-list > div:last-child { border-bottom: none; }
   .summary-list dt { color: var(--text-muted); font-size: 0.8125rem; }
-  .summary-list dd { color: var(--text-primary); font-size: 0.8125rem; }
+  .summary-list dd { color: var(--text-primary); font-size: 0.8125rem; min-width: 0; word-break: break-word; text-align: right; }
 
   .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
   .steps { list-style: none; padding: 0; margin: 24px 0 0; }
@@ -137,8 +137,7 @@
   </div>
   <div class="legend">
     Abra via <code>file://</code>. Redimensione a janela (breakpoint 640px) para <strong>mobile</strong> e <strong>desktop</strong>.
-    Alterne a chave acima para revisar os <strong>dois modos</strong>. Imagens aprovadas: hero, apresentação, abordagens e identidade (1:1, <code>object-fit: contain</code>, sem recorte).
-    <strong>Placeholders</strong> restantes: resultado da transformação (arte pendente). Conteúdo demonstrativo — a Floricultura/Mercearia não são clientes reais.
+    Alterne a chave acima para revisar os <strong>dois modos</strong>. Artes de demonstração: hero, transformação (entrada + miniatura + campanha), apresentação, abordagens e identidade (1:1, <code>object-fit: contain</code>, sem recorte). Conteúdo demonstrativo — as lojas citadas <strong>não</strong> são clientes reais e não há garantia de fidelidade pixel a pixel.
   </div>
 
   <header class="site-header">
@@ -177,12 +176,17 @@
         <div class="summary-card">
           <span class="summary-kicker">Entrada</span>
           <dl class="summary-list">
-            <div><dt>Produto</dt><dd>…</dd></div>
-            <div><dt>Preço</dt><dd>R$ …</dd></div>
-            <div><dt>Detalhes</dt><dd>…</dd></div>
+            <div><dt>Produto</dt><dd>Ração Confiance 15 kg Premium</dd></div>
+            <div><dt>Descrição</dt><dd>Alimento completo para cães adultos</dd></div>
+            <div><dt>Preço</dt><dd>R$ 114,90</dd></div>
+            <div><dt>Selo selecionado</dt><dd>Lançamento</dd></div>
           </dl>
+          <figure style="margin:16px 0 0;">
+            <img src="../../../public/landing/transformacao-produto-racao.webp" alt="Foto da ração Confiance Premium de 15 kg enviada para criar a campanha" width="112" height="103" style="width:112px;height:auto;border-radius:8px;border:1px solid var(--border-light);" />
+            <figcaption style="margin-top:8px;font-size:0.75rem;color:var(--text-muted);">Foto enviada</figcaption>
+          </figure>
         </div>
-        <div class="frame skeleton">DEPOIS 1:1 — campanha completa (placeholder — arte pendente)</div>
+        <div class="frame"><img src="../../../public/landing/transformacao-petshop.webp" alt="Campanha da Pet Shop Bicho Fofo para ração Confiance Premium de 15 kg por R$ 114,90" /></div>
       </div>
       <ol class="steps">
         <li><span class="n">1</span><span class="t">Você informa o básico</span><div class="d">Produto, oferta, preço e alguns detalhes da campanha.</div></li>
