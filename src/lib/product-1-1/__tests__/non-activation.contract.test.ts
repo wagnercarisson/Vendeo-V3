@@ -8,6 +8,8 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import type { FeatureFlagService } from "@/lib/feature-flags/feature-flag-service";
 import { resolveProductOneToOneFlow } from "../feature-flow-decision-service";
+import { buildCampaignGenerationBody } from "@/components/flow/use-campaign-form";
+import { detectExclusiveNewFlowFields } from "../submission/exclusive-fields";
 
 const SOURCE_ROOT = path.resolve(process.cwd(), "src");
 const PRODUCT_MODULE_ROOTS = [
@@ -25,6 +27,19 @@ const AUTHORIZED_ADMIN_AUTHORIZATION_ROUTE =
 const AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE =
   "src/app/api/campaign/generate-image/route.ts";
 
+// F56.2b1b (Plano 01 — reconciliação G-NA): o formulário elegível do Produto 1:1
+// introduz importadores legados (fora de src/lib|components/product-1-1). SÓ
+// pares EXPLÍCITOS importador+módulo — nunca `@/lib/product-1-1/**` genérico. As
+// duas exceções b1a acima permanecem intactas. Esta tarefa é a ÚNICA gravação da
+// G-NA na onda 1 (ordem da fase: 01 → 04 → 06 → 07, sequencial).
+const AUTHORIZED_CAMPANHAS_NOVA_PAGE = "src/app/(app)/campanhas/nova/page.tsx";
+const AUTHORIZED_FLOW_BACKGROUND_DIRECTION_SELECTOR =
+  "src/components/flow/background-direction-selector.tsx";
+const AUTHORIZED_FLOW_CAMPAIGN_INPUT_FORM =
+  "src/components/flow/campaign-input-form.tsx";
+const AUTHORIZED_FLOW_USE_CAMPAIGN_FORM =
+  "src/components/flow/use-campaign-form.ts";
+
 interface AuthorizedImportRule {
   readonly prefixes: readonly string[];
   readonly exact?: readonly string[];
@@ -39,6 +54,32 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
   [AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE]: {
     prefixes: ["@/lib/product-1-1/submission/"],
     exact: ["@/lib/product-1-1/authorization/authorization-service"],
+  },
+  // Plano 01 — pares EXATOS (sem prefixo amplo).
+  [AUTHORIZED_CAMPANHAS_NOVA_PAGE]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/authorization/authorization-service",
+      "@/lib/product-1-1/submission/eligibility-context",
+    ],
+  },
+  [AUTHORIZED_FLOW_BACKGROUND_DIRECTION_SELECTOR]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/background-direction"],
+  },
+  [AUTHORIZED_FLOW_CAMPAIGN_INPUT_FORM]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/selection-validation",
+      "@/lib/product-1-1/background-direction",
+    ],
+  },
+  [AUTHORIZED_FLOW_USE_CAMPAIGN_FORM]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/selection-validation",
+      "@/lib/product-1-1/background-direction",
+    ],
   },
 });
 const SIDE_EFFECT_IMPORT_RE =
@@ -262,5 +303,211 @@ describe("Product 1:1 — exceções estreitas de importação (Planos 56.2.1-02
         campaignForbidden,
       ),
     ).toBe(true);
+  });
+});
+
+describe("Product 1:1 — reconciliação G-NA (Plano 01, F56.2b1b)", () => {
+  it("nova/page.tsx: permite SOMENTE os dois módulos exatos e recusa módulo indevido", () => {
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_CAMPANHAS_NOVA_PAGE,
+        "@/lib/product-1-1/authorization/authorization-service",
+      ),
+    ).toBe(true);
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_CAMPANHAS_NOVA_PAGE,
+        "@/lib/product-1-1/submission/eligibility-context",
+      ),
+    ).toBe(true);
+    for (const specifier of [
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/pending/pending-operations-repository",
+      "@/lib/product-1-1/selection-validation",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPANHAS_NOVA_PAGE, specifier),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("flow: permite selection-validation + background-direction; recusa módulo indevido", () => {
+    for (const importer of [
+      AUTHORIZED_FLOW_CAMPAIGN_INPUT_FORM,
+      AUTHORIZED_FLOW_USE_CAMPAIGN_FORM,
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(importer, "@/lib/product-1-1/selection-validation"),
+      ).toBe(true);
+      expect(
+        isAuthorizedAdminAuthorizationImport(importer, "@/lib/product-1-1/background-direction"),
+      ).toBe(true);
+      expect(
+        isAuthorizedAdminAuthorizationImport(importer, "@/lib/product-1-1/orchestration/x"),
+      ).toBe(false);
+    }
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_FLOW_BACKGROUND_DIRECTION_SELECTOR,
+        "@/lib/product-1-1/background-direction",
+      ),
+    ).toBe(true);
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_FLOW_BACKGROUND_DIRECTION_SELECTOR,
+        "@/lib/product-1-1/selection-validation",
+      ),
+    ).toBe(false);
+  });
+
+  it("o mapa NÃO contém prefixo amplo de product-1-1/**", () => {
+    for (const [importer, rule] of Object.entries(AUTHORIZED_PRODUCT_FLOW_IMPORTS)) {
+      for (const prefix of rule.prefixes) {
+        expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/");
+        expect(prefix.endsWith("/product-1-1/"), `${importer}::${prefix}`).toBe(false);
+      }
+      for (const exact of rule.exact ?? []) {
+        expect(exact, `${importer}::${exact}`).not.toBe("@/lib/product-1-1/");
+      }
+    }
+  });
+
+  it("negativos: importador NÃO autorizado + módulo liberado ⇒ violação", () => {
+    const source =
+      'import { countProductImages } from "@/lib/product-1-1/selection-validation";';
+    expect(hasUnauthorizedProductFlowImport("src/components/flow/other.tsx", source)).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport("src/app/(app)/campanhas/nova/other.tsx", source),
+    ).toBe(true);
+  });
+
+  it("negativos: importador autorizado + módulo NÃO listado ⇒ violação", () => {
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_FLOW_USE_CAMPAIGN_FORM,
+        'import { x } from "@/lib/product-1-1/orchestration/generation-orchestrator";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_FLOW_USE_CAMPAIGN_FORM,
+        'import { x } from "@/lib/product-1-1/pending/pending-operations-repository";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPANHAS_NOVA_PAGE,
+        'import { x } from "@/lib/product-1-1/selection-validation";',
+      ),
+    ).toBe(true);
+  });
+
+  it("positivos: importador autorizado + módulos listados ⇒ sem violação", () => {
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_FLOW_USE_CAMPAIGN_FORM,
+        'import { countProductImages } from "@/lib/product-1-1/selection-validation";\n' +
+          'import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";',
+      ),
+    ).toBe(false);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPANHAS_NOVA_PAGE,
+        'import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";\n' +
+          'import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";',
+      ),
+    ).toBe(false);
+  });
+
+  it("os quatro importadores do Plano 01 refletem exatamente os pares autorizados", () => {
+    for (const importer of [
+      AUTHORIZED_CAMPANHAS_NOVA_PAGE,
+      AUTHORIZED_FLOW_BACKGROUND_DIRECTION_SELECTOR,
+      AUTHORIZED_FLOW_CAMPAIGN_INPUT_FORM,
+      AUTHORIZED_FLOW_USE_CAMPAIGN_FORM,
+    ]) {
+      const source = readFileSync(path.resolve(process.cwd(), importer), "utf8");
+      expect(
+        hasUnauthorizedProductFlowImport(importer, source),
+        `${importer} importa módulo Produto 1:1 não autorizado`,
+      ).toBe(false);
+    }
+  });
+});
+
+describe("Product 1:1 — provas comportamentais de `off` (Plano 01, F56.2b1b)", () => {
+  it("payload legado: o detector de campos exclusivos NÃO dispara", () => {
+    expect(detectExclusiveNewFlowFields({ productName: "X", campaignIntent: "offer" })).toEqual([]);
+    expect(detectExclusiveNewFlowFields({})).toEqual([]);
+  });
+
+  it("buildCampaignGenerationBody NÃO inclui campos exclusivos quando inelegível", () => {
+    const fields = {
+      productName: "Produto Teste",
+      description: "",
+      originalPriceCents: 10000,
+      discountedPriceCents: 1990,
+      badge: "Oferta",
+      campaignIntent: "offer" as const,
+      preserveImageContext: false,
+      productImages: [],
+      mandatoryArtworkText: "",
+      showIllustrativeNotice: false,
+      mandatoryArtworkTextFree: "",
+      validityMode: "" as const,
+      validityStartDate: "",
+      validityEndDate: "",
+      validityCustomText: "",
+      backgroundDirection: "studio" as const,
+    };
+    const prepared = [
+      {
+        id: "p1",
+        role: "primary" as const,
+        source: "upload" as const,
+        mimeType: "image/jpeg" as const,
+        dataUrl: "data:image/png;base64,AAAA",
+      },
+    ];
+
+    const body = buildCampaignGenerationBody(fields, prepared, "store-1");
+    expect(body).not.toHaveProperty("backgroundDirection");
+    expect(body).not.toHaveProperty("campaignId");
+    expect(body).not.toHaveProperty("operationId");
+
+    const explicitOff = buildCampaignGenerationBody(fields, prepared, "store-1", {
+      eligible: false,
+    });
+    expect(explicitOff).not.toHaveProperty("backgroundDirection");
+    expect(explicitOff).not.toHaveProperty("campaignId");
+    expect(explicitOff).not.toHaveProperty("operationId");
+  });
+
+  it("controle exclusivo em `off`: prova de RENDER (jsdom) referenciada no contrato do Plano 01", () => {
+    const contractPath = path.resolve(
+      process.cwd(),
+      "src/lib/product-1-1/__tests__/intent-background-selection.contract.test.ts",
+    );
+    const source = readFileSync(contractPath, "utf8");
+    expect(source).toMatch(/@vitest-environment jsdom/);
+    // ponteiro para a região B (controle exclusivo) e a asserção de ausência em `off`.
+    expect(source).toMatch(/flow-background-direction-selector/);
+    expect(source).toMatch(/queryByTestId|queryByText/);
+  });
+
+  it("o caminho legado/elegível do Plano 01 não alcança provider/gateway do novo fluxo", () => {
+    const forbiddenImports =
+      /@\/lib\/product-1-1\/(?:orchestration|artifact|pending|credit-operation)\//;
+    for (const file of [
+      AUTHORIZED_CAMPANHAS_NOVA_PAGE,
+      AUTHORIZED_FLOW_BACKGROUND_DIRECTION_SELECTOR,
+      AUTHORIZED_FLOW_CAMPAIGN_INPUT_FORM,
+      AUTHORIZED_FLOW_USE_CAMPAIGN_FORM,
+    ]) {
+      const source = readFileSync(path.resolve(process.cwd(), file), "utf8");
+      expect(source, file).not.toMatch(forbiddenImports);
+      expect(source, file).not.toMatch(/createNewFlowImageGateway/);
+    }
   });
 });
