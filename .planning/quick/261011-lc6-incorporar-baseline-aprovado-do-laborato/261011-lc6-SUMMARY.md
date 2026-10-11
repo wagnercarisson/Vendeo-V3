@@ -57,7 +57,7 @@ Incorporar na **cópia produtiva** `src/lib/product-1-1` o baseline do laborató
 | Testes focados afetados (equivalência + contrato) | **17/17 passed** |
 | `src/lib/product-1-1` (10 arquivos) | **118/119** — única falha é `legacy-frontier.guard` (**pré-existente**, ver abaixo) |
 | `npx openspec validate --changes --strict` | 2/2 passed |
-| `npx openspec validate --specs --strict` | editei 4 specs → **as 4 passam**; 75 specs não relacionadas falham (pré-existente) |
+| `npx openspec validate --specs --strict` | editei **3 specs** → **as 3 passam**; 75 specs não relacionadas falham (pré-existente) |
 | `npm run typecheck` | limpo (baseline 0) |
 | `npm run lint` | limpo (exit 0) |
 | `npm run build` | `✓` (check:cnae + next build OK) |
