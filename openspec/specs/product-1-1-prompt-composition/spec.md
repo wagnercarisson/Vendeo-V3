@@ -8,7 +8,7 @@ Specify deterministic, versioned production prompt composition for the Product 1
 
 ### Requirement: Incorporação versionada e congelada dos prompts e regras aprovados
 
-O novo fluxo SHALL compor o prompt por um **módulo produtivo próprio** que incorpora os prompts/regras aprovados na bancada F48.2.6 — Produto v4, compositor v5 e as três intenções — com versões fixadas e registráveis. O módulo SHALL NOT ler configuração mutável da bancada em tempo de execução.
+O novo fluxo SHALL compor o prompt por um **módulo produtivo próprio** que incorpora os prompts/regras aprovados na bancada F48.2.6 na forma do **baseline aprovado do laboratório** (quick 261009-u3h, aprovado pelo responsável em 2026-10-11) — Produto v4, compositor v6, Oferta v2, Destaque v2, Exclusivo v4 e direção de fundo versionada (`policyVersions.fundo`) — com versões fixadas e registráveis. O módulo SHALL NOT ler configuração mutável da bancada em tempo de execução.
 
 #### Scenario: Prompt vem de versão fixada
 
@@ -60,15 +60,16 @@ A composição SHALL NOT alterar silenciosamente a intenção escolhida.
 - **THEN** a intenção usada é exatamente a selecionada
 - **AND** nenhum fallback de intenção ocorre sem ação explícita
 
-### Requirement: Equivalência com a bancada aprovada
+### Requirement: Equivalência com o baseline aprovado da bancada
 
-O módulo produtivo SHALL ser validado por **testes de equivalência** contra as políticas/prompts aprovados da bancada F48.2.6 nos casos representativos, sem alterar as políticas da bancada.
+O módulo produtivo SHALL ser validado por **testes de equivalência** contra um **baseline aprovado congelado** da bancada F48.2.6 (fixture imutável das nove combinações: 3 intenções × 3 direções de fundo), sem depender da bancada mutável em tempo de execução. A atualização do baseline SHALL ser um ato explícito e rastreável — preservando o baseline anterior e sua origem — e SHALL NOT copiar mudanças experimentais não aprovadas da bancada.
 
 #### Scenario: Equivalência nos casos representativos
 
-- **WHEN** a composição produtiva é comparada com a composição aprovada da bancada nos casos representativos
-- **THEN** os resultados são equivalentes
-- **AND** as políticas da bancada permanecem inalteradas
+- **WHEN** a composição produtiva é comparada com o baseline aprovado congelado nos casos representativos (as nove combinações)
+- **THEN** os resultados são equivalentes em texto, blocos e versões
+- **AND** o baseline preserva o registro do baseline anterior e sua origem
+- **AND** as políticas da bancada não são dependência de runtime do fluxo produtivo
 
 ### Requirement: Bancada não é dependência de runtime
 

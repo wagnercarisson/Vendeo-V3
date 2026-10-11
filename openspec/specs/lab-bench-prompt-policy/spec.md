@@ -69,7 +69,7 @@ A bancada SHALL resolver explicitamente políticas habilitadas a partir da confi
 
 ### Requirement: Política Oferta orienta a hierarquia comercial sem posições fixas
 
-A política `oferta` SHALL usar a instrução concisa: “Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.” SHALL NOT impor posições fixas. Orientações próprias de Produto pertencem à política `produto`; orientações comerciais próprias de Destaque/Exclusivo pertencem às respectivas políticas, sem duplicação com Produto ou política geral. A validade informada em Oferta SHALL continuar incluída no prompt como dado comercial. A UI/backend controla as intenções que aceitam validade; nenhuma explicação dessas regras será acrescentada ao modelo.
+A política `oferta` SHALL usar a instrução concisa: “Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.” A política SHALL também acrescentar a linha `Respeite a direção de fundo.` e ser identificada como `48.2.6-oferta-v2`. SHALL NOT impor posições fixas. Orientações próprias de Produto pertencem à política `produto`; orientações comerciais próprias de Destaque/Exclusivo pertencem às respectivas políticas, sem duplicação com Produto ou política geral. A validade informada em Oferta SHALL continuar incluída no prompt como dado comercial. A UI/backend controla as intenções que aceitam validade; nenhuma explicação dessas regras será acrescentada ao modelo.
 
 #### Scenario: Instrução comercial de Oferta é concisa
 
@@ -141,24 +141,24 @@ A política `produto` SHALL orientar o produto e suas referências pela quantida
 
 ### Requirement: Política Produto preserva nome, contexto da descrição e textos obrigatórios
 
-A política determinística `produto` SHALL usar como única instrução de nome no prompt compilado: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` Não SHALL emitir a linha redundante `Nome: completo…`. O nome SHALL manter todas as palavras, números e unidades sem abreviar, substituir, omitir ou corrigir silenciosamente; capitalização, quebras de linha e arranjo tipográfico podem variar. A descrição serve de apoio à arte/copy e pode ser melhorada, adaptada, resumida, parcialmente utilizada ou omitida sem desvirtuar contexto/significado nem inventar atributos, benefícios ou condições. Cada informação obrigatória SHALL ser reproduzida integralmente uma única vez conforme aprovada. Após decisão `keep_exactly`, a grafia aprovada SHALL ser preservada, inclusive possíveis erros. A regra de exibição única SHALL pertencer somente à política Produto; nenhuma outra política a SHALL duplicar. Os contratos existentes de revisão textual e `keep_exactly` permanecem inalterados.
+A política determinística `produto` SHALL serializar a instrução de nome no prompt compilado em duas linhas: `Nome obrigatório na arte: "{nome}"` e, na linha seguinte, `Inclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.` Não SHALL emitir a linha redundante `Nome: completo…`. O nome SHALL manter todas as palavras, números e unidades sem abreviar, substituir, omitir ou corrigir silenciosamente; capitalização, quebras de linha e arranjo tipográfico podem variar. A descrição serve de apoio à arte/copy e pode ser melhorada, adaptada, resumida, parcialmente utilizada ou omitida sem desvirtuar contexto/significado nem inventar atributos, benefícios ou condições. Cada informação obrigatória SHALL ser reproduzida integralmente uma única vez conforme aprovada. Após decisão `keep_exactly`, a grafia aprovada SHALL ser preservada, inclusive possíveis erros. A regra de exibição única SHALL pertencer somente à política Produto; nenhuma outra política a SHALL duplicar. Os contratos existentes de revisão textual e `keep_exactly` permanecem inalterados.
 
-O campo de nome e sua orientação SHALL ser serializados em uma única linha compilada: `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` Se o nome trimado já terminar em `.`, o compositor SHALL manter esse ponto e não acrescentar outro separador; caso contrário, SHALL acrescentar exatamente um ponto. A versão vigente da política Produto SHALL ser `48.2.6-produto-v4`; a versão do compositor para esta serialização SHALL ser `48.2.4-prompt-composer-v5`.
+O campo de nome e sua orientação SHALL ser serializados em duas linhas compiladas: `Nome obrigatório na arte: "{nome}"` e, na linha seguinte, `Inclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.` O compositor SHALL NOT acrescentar ponto automático: a pontuação do nome informado é preservada exatamente como está. A versão vigente da política Produto SHALL ser `48.2.6-produto-v4`; a versão do compositor para esta serialização SHALL ser `48.2.4-prompt-composer-v6`.
 
 #### Scenario: Nome compilado recebe o rótulo obrigatório
 
 - **WHEN** a composição serializa o nome de produto informado
-- **THEN** a linha é exatamente `Nome obrigatório na arte: {nome}. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.` com `{nome}` substituído pelo valor de entrada
+- **THEN** as linhas são exatamente `Nome obrigatório na arte: "{nome}"` seguida de `Inclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.` com `{nome}` substituído pelo valor de entrada
 - **AND** a política Produto é identificada como `48.2.6-produto-v4`
-- **AND** o compositor é identificado como `48.2.4-prompt-composer-v5`
+- **AND** o compositor é identificado como `48.2.4-prompt-composer-v6`
 - **AND** não há outra instrução de nome redundante
 
-#### Scenario: Nome terminado em ponto não duplica pontuação
+#### Scenario: Pontuação do nome é preservada sem ponto automático
 
-- **WHEN** o nome de entrada trimado termina em `.`
-- **THEN** a linha inclui o nome exatamente como informado seguido de um único ponto antes de `Inclua`
-- **AND** não produz `.. Inclua`
-- **AND** nomes sem ponto final mantêm a linha compilada aprovada sem alteração
+- **WHEN** o nome de entrada é serializado entre aspas
+- **THEN** a pontuação informada é preservada exatamente como está
+- **AND** nenhum ponto automático é acrescentado ao final do nome
+- **AND** nomes com ou sem ponto final são serializados entre aspas sem alteração do conteúdo
 
 #### Scenario: Nome preserva palavras e conteúdo
 
@@ -209,7 +209,7 @@ A composição determinística SHALL orientar português correto e natural, evit
 
 ### Requirement: Políticas Destaque e Exclusivo usam instruções comerciais concisas
 
-A política versionada Destaque SHALL permanecer usando: “Destaque: priorize a apresentação do produto; preço informado é secundário.” A política Exclusivo vigente `48.2.6-exclusivo-v3` SHALL usar exatamente: “Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.” A política SHALL NOT acrescentar qualquer outra orientação ou alterar as listas/permissões de selos existentes. Selos explicitamente selecionados pelo usuário são dados de entrada. As orientações SHALL NOT ser duplicadas em Produto, política geral ou prompt-base.
+A política versionada Destaque `48.2.6-destaque-v2` SHALL usar: “Destaque: priorize a apresentação do produto; preço informado é secundário.” A política Exclusivo vigente `48.2.6-exclusivo-v4` SHALL usar exatamente: “Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.” As políticas Destaque e Exclusivo SHALL acrescentar a linha `Respeite a direção de fundo.` A política SHALL NOT acrescentar qualquer outra orientação ou alterar as listas/permissões de selos existentes. Selos explicitamente selecionados pelo usuário são dados de entrada. As orientações SHALL NOT ser duplicadas em Produto, política geral ou prompt-base.
 
 #### Scenario: Destaque prioriza produto e torna preço secundário
 
@@ -221,8 +221,8 @@ A política versionada Destaque SHALL permanecer usando: “Destaque: priorize a
 
 - **WHEN** intenção é Exclusivo
 - **THEN** usa exatamente a instrução `Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.`
-- **AND** a versão resolvida é `48.2.6-exclusivo-v3`
-- **AND** nenhum texto adicional é acrescentado pela política
+- **AND** a versão resolvida é `48.2.6-exclusivo-v4`
+- **AND** nenhum texto adicional é acrescentado pela política além de `Respeite a direção de fundo.`
 - **AND** as opções/permissões existentes de selos não são alteradas
 
 #### Scenario: Exclusivo sem selo não inventa selo
