@@ -103,9 +103,12 @@ export default async function Home() {
           </nav>
         </div>
         <div className="mx-auto w-full max-w-5xl px-6 pb-8">
-          <p className="text-center text-xs text-text-secondary">
-            As campanhas apresentadas nesta página são exemplos demonstrativos do
-            Vendeo e não representam ofertas reais de produtos ou serviços.
+          <p className="mx-auto max-w-3xl text-center text-xs text-text-secondary">
+            As lojas e campanhas apresentadas são exemplos demonstrativos e não
+            representam lojas reais nem ofertas comerciais válidas. As marcas de
+            produtos pertencem aos respectivos titulares. O Vendeo não possui
+            vínculo, parceria, patrocínio ou endosso das marcas ou dos
+            fabricantes utilizados para ilustrar as campanhas.
           </p>
         </div>
       </footer>
