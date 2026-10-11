@@ -13,6 +13,8 @@ approval:
 commits:
   - 66608889  # código produtivo + testes + fixture
   - 18696229  # specs OpenSpec + referências b1b
+  - 16081124  # correção must_haves (v6) + contagem de specs
+  - 415d609b  # reconciliação da legacy-frontier guard
 ---
 
 # Quick Summary — 261011-lc6
@@ -54,16 +56,29 @@ Incorporar na **cópia produtiva** `src/lib/product-1-1` o baseline do laborató
 
 | Gate | Resultado |
 |---|---|
+| `legacy-frontier.guard` (reconciliada) | **9/9 passed** |
 | Testes focados afetados (equivalência + contrato) | **17/17 passed** |
-| `src/lib/product-1-1` (10 arquivos) | **118/119** — única falha é `legacy-frontier.guard` (**pré-existente**, ver abaixo) |
+| `src/lib/product-1-1` (10 arquivos) | **124/124 passed** |
 | `npx openspec validate --changes --strict` | 2/2 passed |
 | `npx openspec validate --specs --strict` | editei **3 specs** → **as 3 passam**; 75 specs não relacionadas falham (pré-existente) |
-| `npm run typecheck` | limpo (baseline 0) |
+| `npm run typecheck` | limpo (exit 0) |
 | `npm run lint` | limpo (exit 0) |
 | `npm run build` | `✓` (check:cnae + next build OK) |
-| Suíte completa `vitest run` | 5079 passed / **20 failed** / 61 skipped (5160) |
+| Suíte completa `vitest run` | 5085 passed / **19 failed** / 61 skipped (5165) |
 
-**As 20 falhas da suíte completa são pré-existentes e não foram introduzidas por esta quick:** 14 no laboratório (`intent-schema` 5, `prompt-base` 3, `branding-service` 3, `form-parity` 2, `run-history` 1 — `bench_background_direction_required`/`bench_intent_price_incompatible`), 5 não relacionadas (DB/date/provider: `use-campaign-form-validity`, `legal-document-versions`, `ai-image-generator`, `openai-provider`, `image-generation-service`) e 1 `legacy-frontier.guard` (a fronteira F56.2a detecta alterações de commits anteriores — lab `u3h` e `src/lib/ai` — **antes** desta quick; `src/lib/product-1-1/**` não é caminho de fronteira). **Nenhuma falha nova**; nenhuma cobertura reduzida.
+**As 19 falhas da suíte completa são pré-existentes e não foram introduzidas por esta quick:** 14 no laboratório (`intent-schema` 5, `prompt-base` 3, `branding-service` 3, `form-parity` 2, `run-history` 1 — `bench_background_direction_required`/`bench_intent_price_incompatible`) e 5 não relacionadas (DB/date/provider: `use-campaign-form-validity`, `legal-document-versions`, `ai-image-generator`, `openai-provider`, `image-generation-service`). **Nenhuma falha nova**; nenhuma cobertura reduzida. A suíte completa **não é declarada verde**.
+
+## Reconciliação da `legacy-frontier.guard` (problema pré-existente)
+
+- A guarda acusava mudanças de fronteira **anteriores** a esta quick: 8 arquivos de `src/lib/lab/bench/**` (quick `261009-u3h`, commits `99017f35`/`b7ab7b1b`) e 4 de `src/lib/ai/**` (quick `261010-rsp`, commit `6c2ebdb7`), além da rota `generate-image` (`6d341964`, F56.2.1-03). A incorporação produtiva (`src/lib/product-1-1/**`) não é caminho de fronteira.
+- Reconciliação **estreita** (aprovada pelo responsável em 2026-10-11), sem excluir diretórios nem trocar o `BASE_SHA`:
+  - mantém `BASE_SHA` e `LEGACY_FRONTIER_PATHS`;
+  - exige o **conjunto exato** dos 13 caminhos autorizados (qualquer caminho extra ou ausente falha);
+  - registra **autorização e commit de origem** por entrada;
+  - para os **12 arquivos adicionais**, compara o **conteúdo atual com o do commit aprovado** — o caminho autorizado não vira autorização permanente para modificá-lo;
+  - preserva as verificações específicas da rota (mudança aditiva e guard antes do parse/reserva);
+  - adiciona **testes negativos** (caminho extra e alteração de conteúdo em caminho autorizado são rejeitados).
+- Se houver reescrita de histórico (rebase/squash), a proveniência deverá ser reconciliada explicitamente.
 
 ## Limites respeitados
 
