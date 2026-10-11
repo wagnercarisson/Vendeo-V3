@@ -1,12 +1,11 @@
-import Link from "next/link";
-
 /**
- * FAQ + legal links block (block 7 of the landing).
+ * FAQ block (block 7 of the landing).
  *
  * Server component (no props): the acquisition CTA moved to the end of the
  * transformation block and to the identity block (both consume the single
- * `publicSignupEnabled` value from `page.tsx`). This block only renders the FAQ
- * and the legal links — no acquisition CTA here. No emojis, no internal terms.
+ * `publicSignupEnabled` value from `page.tsx`). This block renders ONLY the FAQ
+ * — the legal links live in the page FOOTER (single source, no duplication).
+ * No acquisition CTA here. No emojis, no internal terms.
  */
 
 const FAQ = [
@@ -29,12 +28,6 @@ const FAQ = [
     question: "Preciso informar cartão de crédito?",
     answer: "Não. O teste gratuito não exige cartão de crédito.",
   },
-];
-
-const LEGAL_LINKS = [
-  { href: "/termos", label: "Termos de Uso" },
-  { href: "/privacidade", label: "Política de Privacidade" },
-  { href: "/uso-aceitavel", label: "Uso Aceitável" },
 ];
 
 export function FaqFinalCtaSection() {
@@ -69,21 +62,6 @@ export function FaqFinalCtaSection() {
           </li>
         ))}
       </ul>
-
-      <nav
-        aria-label="Links legais"
-        className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-text-secondary"
-      >
-        {LEGAL_LINKS.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-          >
-            {link.label}
-          </Link>
-        ))}
-      </nav>
     </section>
   );
 }

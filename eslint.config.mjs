@@ -20,6 +20,6 @@ export default [
     },
   },
   {
-    ignores: [".next/", "node_modules/", "dist/"],
+    ignores: [".next/", "node_modules/", "dist/", "supabase/.temp/"],
   },
 ];
