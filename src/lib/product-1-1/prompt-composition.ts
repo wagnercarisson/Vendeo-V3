@@ -10,7 +10,15 @@ import {
 } from "./policies/types";
 import { resolveProductOneToOnePromptPolicies } from "./policies/registry";
 
-export const COMPOSER_VERSION = "48.2.4-prompt-composer-v5";
+export const COMPOSER_VERSION = "48.2.4-prompt-composer-v6";
+
+/**
+ * Orientação fixa da instrução de nome. Fica separada da lógica de composição
+ * (que apenas interpola o nome dinâmico) para ser serializada em linha própria,
+ * abaixo da linha `Nome obrigatório na arte: "<nome>"`.
+ */
+const NAME_ARTWORK_GUIDANCE =
+  "Inclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.";
 
 export const PROMPT_BLOCK_LABELS = PRODUCT_PROMPT_BLOCK_LABELS;
 export type PromptBlockLabel = ProductPromptBlockLabel;
@@ -60,12 +68,8 @@ function productLines(
   const lines: string[] = [];
   if (briefing.product.name.trim()) {
     const name = briefing.product.name.trim();
-    const separator = name.endsWith(".") ? "" : ".";
-    pushLine(
-      lines,
-      "Nome obrigatório na arte",
-      `${name}${separator} Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.`,
-    );
+    pushLine(lines, "Nome obrigatório na arte", `"${name}"`);
+    lines.push(NAME_ARTWORK_GUIDANCE);
   }
   pushLine(lines, "Descrição", briefing.product.description);
   if (references && references.length > 0) {

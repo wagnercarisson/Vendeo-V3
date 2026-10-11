@@ -1,4 +1,5 @@
 import type { ProductOneToOneIntent } from "../intent-selection";
+import { PRODUCT_1_1_BACKGROUND_DIRECTION_VERSION } from "../background-direction";
 import { destaquePolicy } from "./destaque";
 import { exclusivoPolicy } from "./exclusivo";
 import { formato11Policy } from "./formato-1-1";
@@ -139,6 +140,11 @@ export function resolveProductOneToOnePromptPolicies(
   // F48.2.5 applies this non-dimensional policy once to every valid composition.
   contributions.push(...productOneToOneGeneralIntegrityPolicy.contributions());
   versions.geral = GENERAL_INTEGRITY_POLICY_VERSION;
+
+  // Conteúdo estático de direção de fundo: versão própria registrada na mesma
+  // evidência de versões, sem nova dimensão/política (incorporado do baseline
+  // aprovado do laboratório — quick 261009-u3h).
+  versions.fundo = PRODUCT_1_1_BACKGROUND_DIRECTION_VERSION;
 
   return { contributions, versions };
 }

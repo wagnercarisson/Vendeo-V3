@@ -1,9 +1,15 @@
 {
-  "sourceCommit": "8f0b3fb0cb7fb3c9aecbe2c82abfc96ab50efd3f",
-  "provenance": "Frozen pre-change bench baseline that passed the lab×prod equivalence test (10/10) before quick 261009-u3h.",
+  "sourceCommit": "99017f35451366b05f51099bfe02143f1d49d206",
+  "provenance": "Frozen approved lab baseline from quick 261009-u3h (domain commit 99017f35; lab domain/** byte-identical to that commit at generation time). Approved by the responsible owner on 2026-10-11 for incorporation into the Product 1:1 productive copy.",
+  "approvedBy": "responsável (owner)",
+  "approvedOn": "2026-10-11",
+  "previousBaseline": {
+    "sourceCommit": "8f0b3fb0cb7fb3c9aecbe2c82abfc96ab50efd3f",
+    "provenance": "Frozen pre-change bench baseline that passed the lab×prod equivalence test (10/10) before quick 261009-u3h."
+  },
   "promptBase": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
   "promptBaseVersion": "48.2.6-produto-1-1-v1",
-  "composerVersion": "48.2.4-prompt-composer-v5",
+  "composerVersion": "48.2.4-prompt-composer-v6",
   "references": [
     "approved/product-main.png",
     "approved/product-alt.png"
@@ -43,7 +49,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais."
+            "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -81,21 +88,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-oferta-v1",
+          "intencao": "48.2.6-oferta-v2",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     },
@@ -133,7 +141,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais."
+            "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -171,21 +180,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-oferta-v1",
+          "intencao": "48.2.6-oferta-v2",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     },
@@ -223,7 +233,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais."
+            "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -261,21 +272,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.\nPreço original: R$ 99,90\nPreço de venda: R$ 49,90\nSelo: 50% OFF\nValidade: até 31/12/2026\nOferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-oferta-v1",
+          "intencao": "48.2.6-oferta-v2",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     },
@@ -313,7 +325,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Destaque: priorize a apresentação do produto; preço informado é secundário."
+            "Destaque: priorize a apresentação do produto; preço informado é secundário.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -347,21 +360,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-destaque-v1",
+          "intencao": "48.2.6-destaque-v2",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     },
@@ -399,7 +413,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Destaque: priorize a apresentação do produto; preço informado é secundário."
+            "Destaque: priorize a apresentação do produto; preço informado é secundário.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -433,21 +448,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-destaque-v1",
+          "intencao": "48.2.6-destaque-v2",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     },
@@ -485,7 +501,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Destaque: priorize a apresentação do produto; preço informado é secundário."
+            "Destaque: priorize a apresentação do produto; preço informado é secundário.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -519,21 +536,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.\nPreço de venda: R$ 49,90\nDestaque: priorize a apresentação do produto; preço informado é secundário.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-destaque-v1",
+          "intencao": "48.2.6-destaque-v2",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     },
@@ -571,7 +589,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações."
+            "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -605,21 +624,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-exclusivo-v3",
+          "intencao": "48.2.6-exclusivo-v4",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     },
@@ -657,7 +677,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações."
+            "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -691,21 +712,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-exclusivo-v3",
+          "intencao": "48.2.6-exclusivo-v4",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     },
@@ -743,7 +765,8 @@
         {
           "block": "CONDIÇÕES COMERCIAIS",
           "lines": [
-            "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações."
+            "Exclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.",
+            "Respeite a direção de fundo."
           ]
         },
         {
@@ -777,21 +800,22 @@
         }
       ],
       "expected": {
-        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
+        "text": "[PRODUTO E IMAGENS DE REFERÊNCIA]\nNome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.\n\n[CONDIÇÕES COMERCIAIS]\nDireção de fundo: Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\nRespeite a direção de fundo.\n\n[INTENÇÃO E FORMATO]\nFormato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.\n\n[INSTRUÇÕES DO PROMPT-BASE]\nCrie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.\n\n[RESTRIÇÕES E TEXTOS OBRIGATÓRIOS]\nInformações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada.",
         "blocks": {
-          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: Johnnie Walker Black Label 750 ml. Inclua todas as palavras, números e unidades; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
-          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.",
+          "PRODUTO E IMAGENS DE REFERÊNCIA": "Nome obrigatório na arte: \"Johnnie Walker Black Label 750 ml\"\nInclua todas as palavras, números e unidades - nenhuma informação do nome deve ser omitida, as aspas não fazem parte do nome; capitalização, quebras de linha e arranjo livres.\nDescrição: Whisky escocês\nImagens de referência: 2\nA primeira imagem enviada define a variante protagonista: apresente-a maior e em primeiro plano; use as imagens auxiliares como apoio visual secundário.\nReproduza com fidelidade o produto da imagem enviada, incluindo aparência e embalagem.\nDescrição: opcional; pode ser adaptada, melhorada ou omitida, preservando o significado.\nTextos obrigatórios: exiba cada texto integralmente uma única vez.",
+          "CONDIÇÕES COMERCIAIS": "Direção de fundo: Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.\nExclusivo: apresente o produto sem preço em uma composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais. Respeite os selos informados sem inventar informações.\nRespeite a direção de fundo.",
           "INTENÇÃO E FORMATO": "Formato: quadrado 1:1, com composição quadrada e equilibrada (sem congelar o layout).\nEstrutura: peça única.",
           "INSTRUÇÕES DO PROMPT-BASE": "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
           "RESTRIÇÕES E TEXTOS OBRIGATÓRIOS": "Informações obrigatórias na arte: Válido para retirada na loja\nUse português correto e natural.\nEvite caracteres, símbolos ou pontuação duplicados ou anômalos.\nNão corrija silenciosamente os textos de entrada."
         },
         "policyVersions": {
-          "intencao": "48.2.6-exclusivo-v3",
+          "intencao": "48.2.6-exclusivo-v4",
           "formato": "48.2.4-formato-1-1-v1",
           "tipoConteudo": "48.2.6-produto-v4",
           "estrutura": "48.2.4-peca-unica-v1",
           "tema": "48.2.4-tema-nenhum-v1",
-          "geral": "48.2.5-general-integrity-v1"
+          "geral": "48.2.5-general-integrity-v1",
+          "fundo": "48.2.6-background-direction-v1"
         }
       }
     }

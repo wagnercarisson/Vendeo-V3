@@ -7,6 +7,14 @@ export const PRODUCT_1_1_BACKGROUND_LABELS = Object.freeze({
 export type ProductOneToOneBackgroundDirection =
   keyof typeof PRODUCT_1_1_BACKGROUND_LABELS;
 
+/**
+ * Versão do conteúdo de direção de fundo. Incorporada do baseline aprovado do
+ * laboratório (quick 261009-u3h) e exposta em `policyVersions.fundo` como
+ * evidência — sem schema/migration (mesmo record já persistido).
+ */
+export const PRODUCT_1_1_BACKGROUND_DIRECTION_VERSION =
+  "48.2.6-background-direction-v1";
+
 /** Frozen prompt instructions; copied from the validated bench values. */
 export const PRODUCT_1_1_BACKGROUND_PROMPT_INSTRUCTIONS = Object.freeze({
   studio:
@@ -14,7 +22,7 @@ export const PRODUCT_1_1_BACKGROUND_PROMPT_INSTRUCTIONS = Object.freeze({
   ambient:
     "Crie um cenário ambientado coerente com o produto e a marca, sem prejudicar a leitura.",
   original:
-    "Mantenha o cenário da imagem enviada como base; não o substitua por outro.",
+    "Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.",
 } as const satisfies Record<ProductOneToOneBackgroundDirection, string>);
 
 export interface ProductOneToOneBackgroundSelection {

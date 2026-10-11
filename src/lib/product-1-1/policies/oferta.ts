@@ -1,6 +1,6 @@
 import { PRODUCT_PROMPT_BLOCK_LABELS, type ProductPromptPolicy } from "./types";
 
-export const OFERTA_POLICY_VERSION = "48.2.6-oferta-v1";
+export const OFERTA_POLICY_VERSION = "48.2.6-oferta-v2";
 
 export const ofertaPolicy: ProductPromptPolicy = {
   id: "policy.intencao.oferta",
@@ -13,6 +13,7 @@ export const ofertaPolicy: ProductPromptPolicy = {
         block: PRODUCT_PROMPT_BLOCK_LABELS.commercial,
         lines: [
           "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais.",
+          "Respeite a direção de fundo.",
         ],
       },
       { block: PRODUCT_PROMPT_BLOCK_LABELS.intent, lines: [] },

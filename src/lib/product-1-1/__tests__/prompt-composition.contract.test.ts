@@ -41,7 +41,7 @@ const BRIEFING: ProductPromptCompositionBriefing = {
 
 describe("Product 1:1 prompt composition contract", () => {
   it("exposes the fixed versions and canonical block order", () => {
-    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v5");
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v6");
     expect(PROMPT_BASE_VERSION).toBe("48.2.6-produto-1-1-v1");
     expect(Object.values(PROMPT_BLOCK_LABELS)).toHaveLength(7);
     expect(PROMPT_BLOCK_ORDER).toEqual(Object.values(PROMPT_BLOCK_LABELS));
@@ -84,12 +84,13 @@ describe("Product 1:1 prompt composition contract", () => {
     expect(composed.promptBaseVersion).toBe(PROMPT_BASE_VERSION);
     expect(composed.policyVersions).toEqual(policyResolution.versions);
     expect(composed.policyVersions).toEqual({
-      intencao: "48.2.6-oferta-v1",
+      intencao: "48.2.6-oferta-v2",
       formato: "48.2.4-formato-1-1-v1",
       tipoConteudo: "48.2.6-produto-v4",
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
       geral: GENERAL_INTEGRITY_POLICY_VERSION,
+      fundo: "48.2.6-background-direction-v1",
     });
 
     for (const line of PRODUCT_1_1_GENERAL_INTEGRITY_LINES) {
@@ -123,7 +124,7 @@ describe("Product 1:1 prompt composition contract", () => {
     const second = composeProductPrompt(input);
 
     expect(first).toEqual(second);
-    expect(first.text).toContain("Direção de fundo: Mantenha o cenário da imagem enviada como base; não o substitua por outro.");
+    expect(first.text).toContain("Direção de fundo: Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.");
     expect(first.blocks[PROMPT_BLOCK_LABELS.identity]).toBeUndefined();
     expect(first.blocks[PROMPT_BLOCK_LABELS.typography]).toBeUndefined();
   });
