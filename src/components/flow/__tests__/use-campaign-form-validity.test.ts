@@ -143,6 +143,19 @@ describe("helpers de data (formatDateInput/parseDateInput/isValidDateInput — d
 });
 
 describe("teste 8: validade no body (endDate ISO nunca enviado)", () => {
+  // date-bomb (pré-existente): o bloco usa a data final "2026-09-30" e o relógio
+  // real já a ultrapassou. Congela SOMENTE `Date` (mesmo padrão do bloco D2/D5
+  // abaixo) para manter deterministicidade sem alterar asserções — setTimeout
+  // segue real para `waitFor`.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-20T12:00:00"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("offer + until-date → body.validity='até 30/09/2026' sem validityEndDate/StartDate", async () => {
     sessionStorage.setItem("campaign_draft_image", VALID_DATA_URL);
     const fetchMock = vi.fn().mockResolvedValue(

@@ -6,6 +6,7 @@ import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaig
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
 import { CampaignBriefReview } from "./campaign-brief-review";
+import { BackgroundDirectionSelector } from "./background-direction-selector";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
@@ -35,6 +36,11 @@ import {
 import { CreditCta } from "@/components/credit/credit-cta";
 import { useOperationCosts } from "@/hooks/use-operation-costs";
 import { ErrorState } from "@/components/ui/error-state";
+import {
+  countProductImages,
+  ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE,
+  validateOriginalBackground,
+} from "@/lib/product-1-1/selection-validation";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
 interface CampaignInputFormProps {
@@ -51,7 +57,7 @@ interface CampaignInputFormProps {
   onReviewModeChange?: (active: boolean) => void;
 }
 
-export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, onReviewModeChange }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, eligible = false, onReviewModeChange }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -81,7 +87,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     enterReview,
     exitReview,
     confirmReview,
-  } = useCampaignForm(storeId);
+  } = useCampaignForm(storeId, { eligible });
 
   // F43 (D7): notifica o pai quando a revisão entra/sai — permite ao
   // campaign-page-client esconder o StoreIdentityBlock da página (evita o
@@ -234,6 +240,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         removeImage={removeImage}
         balance={balance}
         supportEmail={supportEmail}
+        eligible={eligible}
       />
     </div>
   );
@@ -256,6 +263,7 @@ interface FormContentProps {
   removeImage: (id: string) => void;
   balance?: number | null;
   supportEmail?: string;
+  eligible: boolean;
 }
 
 function IntentSelector({
@@ -327,6 +335,7 @@ function FormContent({
   removeImage,
   balance,
   supportEmail,
+  eligible,
 }: FormContentProps) {
   const { costs, status: costStatus } = useOperationCosts();
 
@@ -360,6 +369,22 @@ function FormContent({
   );
   const hasBadgeError = Boolean(touched.badge && fieldErrors.badge);
   const isOfferIntent = fields.campaignIntent === "offer";
+
+  // F56.2b1b (REQ-56.2.2-01): regra `Original exige exatamente uma imagem de
+  // produto`. Erro de campo derivado (reavaliado quando direção/imagens mudam),
+  // exibido sob o campo de imagens — nunca `IMG-001`.
+  const productImageCount = countProductImages({
+    productImages: fields.productImages,
+    identityImages: [],
+  });
+  const originalRuleError =
+    eligible &&
+    fields.backgroundDirection === "original" &&
+    !validateOriginalBackground({ productImageCount }).valid
+      ? ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE
+      : null;
+  const imageFieldError =
+    originalRuleError ?? (touched.productImages ? fieldErrors.productImages ?? null : null);
 
   // F49 (D9): estado intermediário "só preço anterior" — usado apenas para o
   // tom neutro (amber) do feedback; não cria validação nem bloqueia o avanço.
@@ -480,7 +505,7 @@ function FormContent({
 
       <CampaignImageUpload
         productImages={fields.productImages}
-        error={touched.productImages ? fieldErrors.productImages ?? null : null}
+        error={imageFieldError}
         onAdd={addImage}
         onRemove={removeImage}
       />
@@ -667,6 +692,17 @@ function FormContent({
         }
         disabled={isSubmitting}
       />
+
+      {/* F56.2b1b (B1B-D1): região B — controle EXCLUSIVO do novo fluxo,
+          montado SOMENTE sob elegibilidade server-side. Em `off` não é montado e
+          a região A (intenção legada) acima permanece intacta. */}
+      {eligible && (
+        <BackgroundDirectionSelector
+          value={fields.backgroundDirection ?? "studio"}
+          onChange={(direction) => setField("backgroundDirection", direction)}
+          disabled={isSubmitting}
+        />
+      )}
 
       {fields.campaignIntent !== "offer" && (
         <label className="flex items-start gap-3 cursor-pointer">

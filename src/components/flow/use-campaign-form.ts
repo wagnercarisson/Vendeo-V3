@@ -9,6 +9,12 @@ import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
+import {
+  countProductImages,
+  ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE,
+  validateOriginalBackground,
+} from "@/lib/product-1-1/selection-validation";
+import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -132,6 +138,12 @@ export interface CampaignFormFields {
   validityStartDate: string;
   validityEndDate: string;
   validityCustomText: string;
+  /**
+   * F56.2b1b (B1B-D1): direção de fundo do novo fluxo Produto 1:1. Campo
+   * EXCLUSIVO — só viaja no payload sob elegibilidade server-side. Opcional para
+   * preservar rascunhos/consumidores legados; na ausência assume-se `studio`.
+   */
+  backgroundDirection?: ProductOneToOneBackgroundDirection;
 }
 
 export type FieldErrors = Partial<
@@ -150,7 +162,8 @@ export type FieldErrors = Partial<
     | "validityMode"
     | "validityStartDate"
     | "validityEndDate"
-    | "validityCustomText",
+    | "validityCustomText"
+    | "backgroundDirection",
     string
   >
 >;
@@ -212,6 +225,7 @@ const EMPTY_FIELDS: CampaignFormFields = {
   validityStartDate: "",
   validityEndDate: "",
   validityCustomText: "",
+  backgroundDirection: "studio",
 };
 
 function validateProductName(value: string): string | null {
@@ -295,8 +309,22 @@ function validateField(
       return validateOriginalPrice(fields.originalPriceCents, fields.discountedPriceCents ?? 0);
     case "badge":
       return validateBadge(fields.badge, fields);
-    case "productImages":
+    case "productImages": {
+      // F56.2b1b (REQ-56.2.2-01): a direção `Original` exige exatamente uma
+      // imagem de produto (a imagem de identidade NÃO conta). Erro de campo —
+      // nunca `IMG-001`. Precede a obrigatoriedade para que a copy da regra
+      // apareça quando a violação existe.
+      if (fields.backgroundDirection === "original") {
+        const productImageCount = countProductImages({
+          productImages: fields.productImages,
+          identityImages: [],
+        });
+        if (!validateOriginalBackground({ productImageCount }).valid) {
+          return ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE;
+        }
+      }
       return validateImage(fields.productImages[0]?.file ?? null);
+    }
     case "validityStartDate":
       return validateValidityStartDate(fields);
     case "validityEndDate":
@@ -459,6 +487,66 @@ export async function prepareCampaignImages(
   return prepared;
 }
 
+/**
+ * F56.2b1b (C3 — identidade origem/transporte): par de identidade do novo fluxo
+ * Produto 1:1. NASCE no formulário (origem) e é transportado no corpo do POST.
+ */
+export interface DraftIdentity {
+  readonly campaignId: string;
+  readonly operationId: string;
+}
+
+export interface DraftIdentityState {
+  readonly fingerprint: string;
+  readonly identity: DraftIdentity;
+}
+
+/**
+ * Fingerprint estável do rascunho elegível — só os campos que definem a
+ * submissão (o `dataUrl` das imagens entra no lugar do `File`, que não
+ * serializa). Duas construções do MESMO rascunho produzem o MESMO fingerprint.
+ */
+export function buildEligibleDraftFingerprint(
+  fields: CampaignFormFields,
+  preparedImages: readonly PreparedCampaignImage[],
+): string {
+  return JSON.stringify([
+    "product-1-1",
+    fields.productName,
+    fields.description,
+    fields.originalPriceCents,
+    fields.discountedPriceCents ?? null,
+    fields.badge,
+    fields.campaignIntent,
+    fields.backgroundDirection ?? "studio",
+    preparedImages.map((image) => image.dataUrl),
+  ]);
+}
+
+/**
+ * Conserva a identidade para o MESMO fingerprint (duas submissões ⇒ mesma
+ * identidade) e gera uma NOVA identidade quando o fingerprint muda. Reusa o
+ * padrão `operationFingerprint` de `admin/image-model-pair/form.tsx`. `generate`
+ * é injetável para testes determinísticos.
+ */
+export function resolveDraftIdentity(
+  fingerprint: string,
+  previous: DraftIdentityState | null,
+  generate: () => string = () => crypto.randomUUID(),
+): DraftIdentityState {
+  if (previous && previous.fingerprint === fingerprint) {
+    return previous;
+  }
+
+  return {
+    fingerprint,
+    identity: Object.freeze({
+      campaignId: generate(),
+      operationId: generate(),
+    }),
+  };
+}
+
 // F43 (D4): single source of truth do body de geração — mesmo shape do body atual
 // de handleSubmit, usando os MESMOS derivados que a revisão exibe. Lógica XOR de
 // imagens reproduzida: com auxiliares → productImages[] (SEM id de cliente);
@@ -471,6 +559,17 @@ export function buildCampaignGenerationBody(
     inputValidationOverride?: {
       productImageCheck: "brief_review_confirmed" | "user_confirmed_continue";
     };
+    /**
+     * F56.2b1b (B1B-D1): quando `true`, o payload passa a incluir o campo
+     * exclusivo `backgroundDirection`. Em `off` (ausente/false) a saída é
+     * byte-compatível com o legado (nenhuma chave nova é adicionada).
+     */
+    eligible?: boolean;
+    /**
+     * F56.2b1b (C3): identidade estável do rascunho — só é transportada sob
+     * elegibilidade. Nunca é enviada quando inelegível.
+     */
+    identity?: DraftIdentity;
   }
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -510,10 +609,24 @@ export function buildCampaignGenerationBody(
     body.inputValidationOverride = options.inputValidationOverride;
   }
 
+  // F56.2b1b: campos EXCLUSIVOS só sob elegibilidade — em `off` a saída acima é
+  // byte-compatível com o legado (mesmas chaves, mesma ordem).
+  if (options?.eligible) {
+    body.backgroundDirection = fields.backgroundDirection ?? "studio";
+    if (options.identity) {
+      body.campaignId = options.identity.campaignId;
+      body.operationId = options.identity.operationId;
+    }
+  }
+
   return body;
 }
 
-export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
+export function useCampaignForm(
+  storeId?: string,
+  options?: { eligible?: boolean },
+): UseCampaignFormReturn {
+  const eligible = options?.eligible === true;
   const [fields, setFields] = useState<CampaignFormFields>(EMPTY_FIELDS);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<keyof CampaignFormFields, boolean>>({
@@ -532,6 +645,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     validityStartDate: false,
     validityEndDate: false,
     validityCustomText: false,
+    backgroundDirection: false,
   });
   const [rawOriginalPrice, setRawOriginalPrice] = useState("");
   const [rawDiscountedPrice, setRawDiscountedPrice] = useState("");
@@ -552,6 +666,9 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
   // brief_review_confirmed) — o retry pós-falha reutiliza EXATAMENTE essa
   // tentativa, sem contornar o gate de revisão nem reativar a validação vision.
   const confirmedBodyRef = useRef<Record<string, unknown> | null>(null);
+  // F56.2b1b (C3): identidade estável do rascunho elegível — conservada entre
+  // submissões do MESMO fingerprint; regenerada só em reset/sucesso.
+  const draftIdentityRef = useRef<DraftIdentityState | null>(null);
   const router = useRouter();
   const { saveFormState, restoreFormState, clearFormState } = useInputPreservation<CampaignFormFields>();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -948,6 +1065,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         validityStartDate: true,
         validityEndDate: true,
         validityCustomText: true,
+        backgroundDirection: true,
       });
       setIsSubmitting(false);
       return;
@@ -981,9 +1099,22 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         throw new Error("Imagem do produto é obrigatória");
       }
 
+      // F56.2b1b (C3): sob elegibilidade, deriva/conserva a identidade do
+      // rascunho (fingerprint) e a transporta no corpo; em `off` nada é enviado.
+      const draftIdentity = eligible
+        ? resolveDraftIdentity(
+            buildEligibleDraftFingerprint(frozenFields, resolvedImages),
+            draftIdentityRef.current,
+          )
+        : null;
+      if (draftIdentity) draftIdentityRef.current = draftIdentity;
+
       // Caminho legado (sem revisão): nenhum inputValidationOverride — o override
       // só entra no caminho confirmado da revisão (43-03).
-      const body = buildCampaignGenerationBody(frozenFields, resolvedImages, storeId);
+      const body = buildCampaignGenerationBody(frozenFields, resolvedImages, storeId, {
+        eligible,
+        identity: draftIdentity?.identity,
+      });
 
       await consumeStream(body, abortController);
     } catch (err) {
@@ -991,13 +1122,14 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
       setSubmitError(message);
       setIsSubmitting(false);
     }
-  }, [fields, imagePreviewUrl, restoredImageDataUrl, storeId, router, onPhaseChange]);
+  }, [fields, imagePreviewUrl, restoredImageDataUrl, storeId, router, onPhaseChange, eligible]);
 
   const resetSubmit = useCallback(() => {
     setSubmitError(null);
     setFieldErrors({});
     setPhases([]);
     confirmedBodyRef.current = null;
+    draftIdentityRef.current = null;
     setFields(EMPTY_FIELDS);
     setRawOriginalPrice("");
     setRawDiscountedPrice("");
@@ -1134,6 +1266,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
         validityStartDate: true,
         validityEndDate: true,
         validityCustomText: true,
+        backgroundDirection: true,
       });
       return false;
     }
@@ -1210,8 +1343,19 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     if (!storeId || !preparedImages) return;
     const frozenFields = { ...fields };
     const frozenPrepared = preparedImages.map((p) => ({ ...p }));
+    // F56.2b1b (C3): a identidade do snapshot revisado é resolvida APÓS o
+    // congelamento (fingerprint estável) e transportada sob elegibilidade.
+    const draftIdentity = eligible
+      ? resolveDraftIdentity(
+          buildEligibleDraftFingerprint(frozenFields, frozenPrepared),
+          draftIdentityRef.current,
+        )
+      : null;
+    if (draftIdentity) draftIdentityRef.current = draftIdentity;
     const body = buildCampaignGenerationBody(frozenFields, frozenPrepared, storeId, {
       inputValidationOverride: { productImageCheck: "brief_review_confirmed" },
+      eligible,
+      identity: draftIdentity?.identity,
     });
     // F43 (mini-fix): guarda o body confirmado para o retry pós-falha repetir a
     // MESMA tentativa (não reativar a validação vision via handleSubmit legado).
@@ -1223,7 +1367,7 @@ export function useCampaignForm(storeId?: string): UseCampaignFormReturn {
     setPendingConflict(null);
     setPhases([]);
     await consumeStream(body, new AbortController());
-  }, [storeId, preparedImages, fields]);
+  }, [storeId, preparedImages, fields, eligible]);
 
   // F43 (mini-fix): "Tentar novamente" pós-falha — reutiliza o ÚLTIMO body
   // confirmado (snapshot revisado + brief_review_confirmed) em vez do caminho
