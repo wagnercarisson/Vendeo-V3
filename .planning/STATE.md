@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: executing
-last_updated: "2026-10-11T23:13:24.713Z"
+last_updated: "2026-10-11T23:51:48.710Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 37
-  completed_plans: 27
+  completed_plans: 28
   percent: 60
 ---
 
@@ -27,8 +27,8 @@ progress:
 
 ## Current Position
 
-Phase: 56.2.2 (F56.2b1b - Nucleo entregavel do Produto 1:1) — EXECUTING (PARADA na onda 1 / Plano 01 — checkpoint humano)
-Plan: 1 of 10 — **EXECUÇÃO PARADA antes da 1ª edição**: o executor detectou conflito com as guardas F56.2a (`non-activation` = G-NA e `legacy-frontier` = G-LF) não previsto nos planos originais; por decisão do responsável (2026-10-11) foi feita **reconciliação SOMENTE de planejamento** (CONTEXT/PATTERNS/planos), **sem** runtime/guardas/migrations/provider/ativação. Os Planos 01/04/06/07 ganharam tarefa de reconciliação de guarda (G-NA: 01→04→06→07; G-LF: 04→06); matriz e responsável/ordem em `56.2.2-PATTERNS.md §Reconciliação de guardas F56.2a`. Aguardando revisão/aprovação humana do diff documental antes de retomar a execução. **Aceite humano excepcional (2026-10-11):** o Plano 06 mantém **5 tarefas / 14 arquivos** (inclui a Task 5 de reconciliação das guardas) como **exceção aceita conscientemente** — o aviso do plan-checker **permanece registrado** e o plano **NÃO** é declarado dentro do limite; **sem ampliação de escopo**. **Execução:** validar por tarefa e **PARAR após o Plano 06** para revisão humana antes do Plano 07; ordem das guardas preservada (G-NA 01→04→06→07; G-LF 04→06). **Ondas normalizadas por dependência (2026-10-11):** 10 planos em **6 ondas** — Onda 1: `01/02/03/05`; Onda 2: `04`; Onda 3: `06/08`; Onda 4: `07`; Onda 5: `09`; Onda 6: `10` (nenhum plano criado/dividido).
+Phase: 56.2.2 (F56.2b1b - Nucleo entregavel do Produto 1:1) — EXECUTING (Onda 1; Plano 01 concluído)
+Plan: 2 of 10 — **Plano 01 (`56.2.2-01`) EXECUTADO e commitado (2026-10-11):** borda visível elegível do Produto 1:1 — elegibilidade server-side fail-closed; seletor `Direção de fundo` (Estúdio/Ambientado/Original) montado só sob elegibilidade; payload legado byte-compatível em `off`; regra `Original exige exatamente uma imagem de produto` como erro de campo; identidade C3 (`campaignId`/`operationId`) estável por fingerprint; guarda **G-NA reconciliada** (pares exatos importador+módulo). 4/4 tarefas; `56.2.2-01-SUMMARY.md`; commits `2a4e08b6`, `60a49b23`, `1c2dc1c7`, `ec7c30bf`, `7332fe80`. Flags `false`, autorização `off`, sem `db push`/provider/ativação. **Contexto da reconciliação de guardas F56.2a (anterior, mantido):** o executor detectou conflito com as guardas F56.2a (`non-activation` = G-NA e `legacy-frontier` = G-LF) não previsto nos planos originais; por decisão do responsável (2026-10-11) foi feita **reconciliação SOMENTE de planejamento** (CONTEXT/PATTERNS/planos), **sem** runtime/guardas/migrations/provider/ativação. Os Planos 01/04/06/07 ganharam tarefa de reconciliação de guarda (G-NA: 01→04→06→07; G-LF: 04→06); matriz e responsável/ordem em `56.2.2-PATTERNS.md §Reconciliação de guardas F56.2a`. **Aceite humano excepcional (2026-10-11):** o Plano 06 mantém **5 tarefas / 14 arquivos** (inclui a Task 5 de reconciliação das guardas) como **exceção aceita conscientemente** — o aviso do plan-checker **permanece registrado** e o plano **NÃO** é declarado dentro do limite; **sem ampliação de escopo**. **Execução:** validar por tarefa e **PARAR após o Plano 06** para revisão humana antes do Plano 07; ordem das guardas preservada (G-NA 01→04→06→07; G-LF 04→06). **Ondas normalizadas por dependência (2026-10-11):** 10 planos em **6 ondas** — Onda 1: `01/02/03/05`; Onda 2: `04`; Onda 3: `06/08`; Onda 4: `07`; Onda 5: `09`; Onda 6: `10` (nenhum plano criado/dividido).
 Fase anterior (concluída): 56.2.1 / F56.2b1a — **CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (2026-10-08) como fundação inativa; UAT humano aprovado/reconfirmado; lifecycle OpenSpec concluído; b1b/b2 permanecem não implementados**
 Última fase concluída: **F56.2a — Preparação não operacional do Produto 1:1** — **6/6 planos/summaries; OpenSpec 31/31; UAT 4 pass + 1 N/A; segurança 20/20 fechadas, 0 abertas**. Verificada, sincronizada e arquivada em `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/`. Warning preservado: reset final isolado retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não é sucesso e não foi repetido. Consulta somente leitura posterior confirmou migrations F56.2a, flags `false`, fixtures registradas ausentes e schema esperado; checkpoint humano aprovado.
 **F56.2b1a / GSD 56.2.1:** change OpenSpec commitada; 6 planos em 4 waves e `56.2.1-CONTEXT.md` criados para revisão humana. Plano 01 é diagnóstico read-only HTTP 502 + gate de identidade/isolamento/serviços/schema; registra serviços obrigatórios (Postgres/db e API admin de autorização), exclusões intencionais (Analytics desabilitado) e execução elevada (CLI Supabase/Docker), e inclui checkpoint humano antes de migrations/testes transacionais. Plano 05 copia as migrations com hash para o workdir isolado e aplica via `--workdir` antes dos testes Postgres reais. Nenhuma execução/implementação iniciada. Não foram registrados fases/diretórios/artefatos GSD de b1b ou b2. Sem `db push`, provider/chamada paga, ativação ou alteração de produção.
@@ -159,6 +159,7 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - [Phase 56.1 / Plano 10]: o aviso ambar de nao-ativa (regiao B) e um componente exportado em form.tsx e renderizado pela pagina como irmao do formulario, mantendo uma unica instancia nao-dismissivel presente no estado vazio e no sucesso (provado por teste) (D-23/T-56.1-32).
 - [Phase 56.1 / Plano 10]: a tela admin exibe catalogo elegivel, par vigente/origem/versao e cobertura de pricing por par; a cobertura partial/missing e aviso ambar warn-not-block que NAO desabilita `Salvar configuracao` (D-24) e nenhum controle destrutivo/reset e renderizado (D-12).
 - [Phase 56.1 / Plano 10]: o formulario cliente restringe modelo+qualidade ao catalogo elegivel (3 modelos x low/medium), exige motivo (`Motivo obrigatorio`, role=alert) e envia PUT com `operationId` estavel por fingerprint (reuso no retry, renovacao na edicao) (D-02/T-56.1-31/T-56.1-33).
+- [Phase ?]: Plano 01 (56.2.2): elegibilidade do novo fluxo Produto 1:1 decidida server-side (resolveProductFlowAuthorization fail-closed) e propagada por booleano; seletor exclusivo Direcao de fundo montado so sob elegibilidade; payload legado byte-compativel em off; identidade C3 (campaignId/operationId) estavel por fingerprint; G-NA reconciliada com pares exatos importador+modulo.
 
 ## Pending Todos
 
@@ -257,3 +258,4 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | Phase 56.1 P03 | 3 min | 3 tasks | 1 files |
 | Phase 56.2 P04 | 20m | 3 tasks | 4 files |
 | Phase 56.2 P05 | 6m | 3 tasks | 2 files |
+| Phase 56.2.2 P01 | 35min | 4 tasks | 9 files |

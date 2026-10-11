@@ -342,12 +342,12 @@ Plans:
 
 **Provas exigidas no planejamento:** concorrência sem chamada duplicada ao provider; resolução administrativa atomicamente auditada; Storage privado sem download antes de `delivered`; testes reais isolados sem suítes integralmente skipped. Se ultrapassar 10 planos, o executor deve parar e propor sequenciamento — sem retirar segurança ou testes fundamentais.
 
-**Plans:** 10 plans
+**Plans:** 1/10 plans executed
 
 **Ondas (desbloqueio):** Onda 1 — `56.2.2-01` (elegibilidade UI), `56.2.2-02` (snapshot/preflight/histórico), `56.2.2-03` (início de tentativa atômico/migration), `56.2.2-05` (arte 1024×1024); Onda 2 — `56.2.2-04` (orquestração/roteamento/reenvio; depende de 01/02/03/05); Onda 3 — `56.2.2-06` (estados de resultado + portão de download), `56.2.2-08` (copy/instrumentação; depende de 04); Onda 4 — `56.2.2-07` (resolução administrativa auditada; depende de 03/04/05/06); Onda 5 — `56.2.2-09` (harness isolado Postgres/Storage reais; depende de 02–08; `autonomous: false`); Onda 6 — `56.2.2-10` (validação/fechamento + checkpoint humano; depende de 01–09; `autonomous: false`). *Ondas normalizadas por dependência estrutural (2026-10-11): 10 planos em 6 ondas; a execução permanece sequencial e há parada humana após o Plano 06, antes do Plano 07.*
 
 Plans:
-- [ ] 56.2.2-01-PLAN.md — Elegibilidade: formulário elegível (Direção de fundo), gating de payload legado e regra Original. (REQ-56.2.2-01)
+- [x] 56.2.2-01-PLAN.md — Elegibilidade: formulário elegível (Direção de fundo), gating de payload legado e regra Original. (REQ-56.2.2-01)
 - [ ] 56.2.2-02-PLAN.md — Snapshot congelado antes de reserva/provider; preflight fail-closed (pricing complete para principal e fallback); histórico append-only. (REQ-56.2.2-02, -03)
 - [ ] 56.2.2-03-PLAN.md — Início de tentativa atômico no Postgres (migration local-only + cliente RPC): duas requisições não chamam o provider duas vezes. (REQ-56.2.2-05)
 - [ ] 56.2.2-04-PLAN.md — Orquestração no ciclo da requisição (NDJSON), roteamento de aceitação, reserva/entrega/estorno b1a e reenvio-consulta. (REQ-56.2.2-01, -04, -06, -07)
