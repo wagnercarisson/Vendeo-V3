@@ -82,9 +82,9 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | REQ-56.2a-18 | Registro das duas chaves de ativação com default fail-closed | feature-flag-control |
 | REQ-56.2a-19 | Alteração auditável das chaves pela RPC existente | feature-flag-control |
 
-## F51.1 — Em execução (Landing visual de produto) — Plano 08 pendente de validação e aprovação
+## F51.1 — Em execução (Landing visual de produto) — Plano 08 parcial (aprovação visual registrada; conclusão técnica pendente)
 
-**Fonte (ativa):** `openspec/changes/fase-51-1-landing-visual-produto/` — `proposal.md`, `design.md` (D1–D10), `tasks.md` (33 tasks em 7 seções) e specs `landing-conversion-experience` (ADDED) e `access-request-history` (MODIFIED). **Status:** EM EXECUÇÃO — Plano 08 pendente de validação e aprovação; frente paralela deste worktree (`escopo/landing`), registrada em 2026-10-08; `openspec validate --strict` válido. Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura. Esta frente **não** altera os REQ-IDs da F56.
+**Fonte (ativa):** `openspec/changes/fase-51-1-landing-visual-produto/` — `proposal.md`, `design.md` (D1–D10), `tasks.md` (33 tasks em 7 seções) e specs `landing-conversion-experience` (ADDED) e `access-request-history` (MODIFIED). **Status:** EM EXECUÇÃO — frente paralela deste worktree (`escopo/landing`), registrada em 2026-10-08; Planos 01–07 concluídos; Plano 08 **parcial** (artes anexadas + **aprovação visual** da landing local registrada; **conclusão técnica** pendente: mobile/2 modos, 2ª aprovação, gates externos `typecheck`/`build`, OpenSpec archive); `openspec validate --strict` válido. Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura. Esta frente **não** altera os REQ-IDs da F56.
 
 | REQ-ID | Requirement (OpenSpec) | Spec |
 |--------|------------------------|------|
@@ -102,7 +102,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 ## Regras Operacionais
 
 - Os REQ-IDs cobertos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06) e os da F56.2a (`REQ-56.2a-01`..`REQ-56.2a-19`, cobertura concluída em 2026-10-07). A F56.2b1 e a F56.2b2 permanecem mudanças ativas/futuras, com requisitos próprios ainda não marcados como cobertura concluída; F56.3 permanece futura.
-- Os REQ-IDs da **F51.1** (`REQ-51.1-01`..`REQ-51.1-10`) estão **em execução — Plano 08 pendente de validação e aprovação** (frente paralela, 2026-10-08). Não há cobertura final concluída e eles **não** alteram IDs, conteúdos ou status dos requisitos da F56.
+- Os REQ-IDs da **F51.1** (`REQ-51.1-01`..`REQ-51.1-10`) estão **em execução — Plano 08 parcial** (artes anexadas e **aprovação visual** da landing local registrada; **conclusão técnica/final pendente**: mobile/2 modos, 2ª aprovação, gates externos e OpenSpec archive) (frente paralela, 2026-10-08). Não há cobertura final concluída e eles **não** alteram IDs, conteúdos ou status dos requisitos da F56.
 - Novos REQ-IDs só devem ser adicionados quando uma nova fase for formalmente planejada, com fonte em OpenSpec e plano aprovado.
 - Para uma fase concluída, consultar o OpenSpec arquivado, `VERIFICATION.md`, `SUMMARY.md`, contexto e planos da fase.
 - Em caso de divergência histórica, OpenSpec arquivado + `VERIFICATION.md`/`SUMMARY.md` da fase prevalecem sobre este archive e sobre registros antigos.
