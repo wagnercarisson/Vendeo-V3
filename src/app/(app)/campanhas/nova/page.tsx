@@ -9,6 +9,8 @@ import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 import { LegalClearanceGate } from "@/components/legal/legal-clearance-gate";
 import { getStoreReadiness } from "@/lib/store-readiness";
 import { resolveStoreIdentity, validateIdentityReference } from "@/lib/store-identity-service";
+import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
+import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
 export default async function NovaCampanhaPage() {
@@ -63,9 +65,22 @@ export default async function NovaCampanhaPage() {
     console.error(`[nova] resolveStoreIdentity error — ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // F56.2b1b (B1B-D1): a elegibilidade do novo fluxo Produto 1:1 é decidida
+  // SOMENTE no servidor (flags válidas + flag aplicável + autorização vigente),
+  // fail-closed: qualquer exceção de leitura ⇒ `eligible=false`. O cliente
+  // recebe apenas o booleano e nunca declara elegibilidade.
+  let eligible = false;
+  try {
+    const decision = await resolveProductFlowAuthorization(resolveEligibilityContext(store));
+    eligible = decision.allowed === true;
+  } catch (err) {
+    console.error(`[nova] resolveProductFlowAuthorization error — ${err instanceof Error ? err.message : String(err)}`);
+    eligible = false;
+  }
+
   return (
     <main>
-      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} />
+      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} />
     </main>
   );
 }

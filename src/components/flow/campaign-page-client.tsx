@@ -14,9 +14,15 @@ interface CampaignPageClientProps {
   supportEmail?: string;
   generationPaused?: boolean;
   identity?: StoreIdentitySnapshot | null;
+  /**
+   * F56.2b1b (B1B-D1): elegibilidade do novo fluxo Produto 1:1 decidida
+   * server-side. O cliente apenas repassa o booleano ao formulário — nunca
+   * declara elegibilidade. Ausente ⇒ `false` (fail-closed).
+   */
+  eligible?: boolean;
 }
 
-export function CampaignPageClient({ store, balance, supportEmail, generationPaused, identity }: CampaignPageClientProps) {
+export function CampaignPageClient({ store, balance, supportEmail, generationPaused, identity, eligible = false }: CampaignPageClientProps) {
   const [isReviewActive, setIsReviewActive] = useState(false);
   useLayoutEffect(() => {
     try {
@@ -58,7 +64,7 @@ export function CampaignPageClient({ store, balance, supportEmail, generationPau
         Informe os dados do produto e da oferta
       </p>
 
-      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} store={store as { name: string; segment: string; brand_color: string; id: string }} identity={identity} onReviewModeChange={setIsReviewActive} />
+      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} store={store as { name: string; segment: string; brand_color: string; id: string }} identity={identity} eligible={eligible} onReviewModeChange={setIsReviewActive} />
     </div>
   );
 }

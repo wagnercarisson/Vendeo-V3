@@ -43,6 +43,11 @@ interface CampaignInputFormProps {
   supportEmail?: string;
   store?: { name: string; segment: string; brand_color: string; id: string };
   identity?: StoreIdentitySnapshot | null;
+  /**
+   * F56.2b1b (B1B-D1): elegibilidade do novo fluxo Produto 1:1, decidida
+   * server-side e apenas propagada pelo cliente. Ausente ⇒ `false`.
+   */
+  eligible?: boolean;
   onReviewModeChange?: (active: boolean) => void;
 }
 
