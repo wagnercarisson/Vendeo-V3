@@ -3,7 +3,7 @@ phase: 51.1-landing-visual-produto
 plan: 08
 subsystem: ui
 tags: [landing, assets, uat, approval, partial]
-status: partial
+status: complete
 
 # Dependency graph
 requires:
@@ -45,18 +45,19 @@ duration: multi-session (2026-10-10)
 completed: null
 ---
 
-# Phase 51.1 / Plan 08: attach examples + revalidation + SECOND approval — PARTIAL
+# Phase 51.1 / Plan 08: attach examples + revalidation + SECOND approval — COMPLETE (branch)
 
-**Approved demonstration arts attached (hero, apresentação, abordagens, identidade, transformação); human approval of the LOCAL landing registered (visual). Plan 08 is NOT technically closed: external `typecheck`/`build` gates and mobile/both-flag-mode confirmations remain pending.**
+**Approved demonstration arts attached; human approval of the LOCAL landing registered (visual: mobile + desktop, both flag modes). Plan 08 is COMPLETE on the branch — `build` is GREEN and `typecheck` is accepted as an explicit EXTERNAL exception (`ssl`/`pg`, F56). Publication is POSTPONED until F56 is completed/integrated.**
 
 ## Status (honest)
 
-- **Art incorporation:** DONE — all landing image slots now hold the individually-approved arts (no art placeholders remain).
-- **Human approval (visual):** REGISTERED — responsible declared approval of the local landing in this conversation (desktop evidenced; see `51.1-UAT.md`).
+- **Art incorporation:** DONE — all landing image slots hold the individually-approved arts (no art placeholders remain).
+- **Human approval (visual):** REGISTERED — responsible approved the local landing on **mobile AND desktop, in BOTH flag modes** (see `51.1-UAT.md`).
 - **Asset license:** DECLARATION by the responsible (has license + authorizes use of the presented assets). Internal only — **NOT** an independent legal verification and **NOT** in the public footer.
-- **Technical completion:** NOT closed — `npm run typecheck` keeps the pre-existing **external** `ssl`/`pg` error (F56, out of scope); `npm run build` requires env (available via local `.env.local`).
-- **Second approval / mobile / both flag modes:** PENDING confirmation (asked).
-- **OpenSpec archive:** NOT executed (closure criteria not fully satisfied).
+- **Build:** GREEN — `npm run build` exits 0 (using the local `.env.local`).
+- **Typecheck:** ACCEPTED EXTERNAL EXCEPTION — pre-existing `ssl`/`pg` error in the F56 integration test; **NOT** marked approved; fix is F56's responsibility.
+- **OpenSpec:** change archived (specs synced) with the accepted exception recorded.
+- **Publication:** POSTPONED until F56 is completed/integrated, with revalidation of the integrated version.
 
 ## What was delivered across the Plan 08 rounds
 
@@ -74,11 +75,18 @@ completed: null
 
 ## Pendencies (real)
 
-1. **Mobile + both flag modes** visual confirmation (human).
-2. **Second human approval** of the delivered page.
-3. **typecheck/build** full green (external blockers).
-4. **OpenSpec verify/sync/archive** — only when closure criteria are satisfied.
+1. **Publication** — postponed until F56 is completed/integrated; revalidate the integrated version (checklist below).
+2. **External `ssl`/`pg` typecheck exception** — owned by F56 (coordinate the upstream fix `92059829`); **NOT** part of F51.1 and **NOT** marked approved.
+
+## Publication checklist (after F56 is completed/integrated)
+
+- [ ] Confirm F56 (F56.2b1/b2) completed and integrated on the target base.
+- [ ] Resolve/replace the external `ssl`/`pg` typecheck error (F56-owned) so `typecheck` is green.
+- [ ] Re-run `npm run typecheck`, `npm run lint`, `npm run build` and the landing suite on the INTEGRATED version.
+- [ ] Re-run the visual review (mobile + desktop, both flag modes) on the integrated version.
+- [ ] Confirm `openspec` change archived and specs synced; no residual active F51.1 change.
+- [ ] Only then deploy/publish the landing.
 
 ---
 *Phase: 51.1-landing-visual-produto*
-*Plan 08 status: PARTIAL — not closed*
+*Plan 08 status: COMPLETE on the local branch (typecheck external exception accepted) — NOT published*
