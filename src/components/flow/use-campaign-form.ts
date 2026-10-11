@@ -502,25 +502,25 @@ export interface DraftIdentityState {
 }
 
 /**
- * Fingerprint estável do rascunho elegível — só os campos que definem a
- * submissão (o `dataUrl` das imagens entra no lugar do `File`, que não
- * serializa). Duas construções do MESMO rascunho produzem o MESMO fingerprint.
+ * Fingerprint estável do rascunho elegível — derivado do CONTEÚDO EFETIVO da
+ * submissão, ou seja, do MESMO body que `buildCampaignGenerationBody` produz com
+ * `eligible: true` (validade, texto obrigatório, `preserveImageContext`, imagens
+ * e direção de fundo inclusos; o `dataUrl` entra no lugar do `File`, que não
+ * serializa). É chamado SEM `identity` e SEM `inputValidationOverride` — assim o
+ * fingerprint contém exatamente o que o servidor recebe, MENOS os UUIDs
+ * (`campaignId`/`operationId`) e MENOS o artefato de revisão (que, se incluído,
+ * mudaria a identidade ao entrar em revisão sem alterar o conteúdo). Duas
+ * construções do MESMO rascunho produzem o MESMO fingerprint; qualquer campo
+ * efetivo alterado (inclusive validade/texto obrigatório) gera fingerprint novo.
  */
 export function buildEligibleDraftFingerprint(
   fields: CampaignFormFields,
   preparedImages: readonly PreparedCampaignImage[],
+  storeId: string,
 ): string {
-  return JSON.stringify([
-    "product-1-1",
-    fields.productName,
-    fields.description,
-    fields.originalPriceCents,
-    fields.discountedPriceCents ?? null,
-    fields.badge,
-    fields.campaignIntent,
-    fields.backgroundDirection ?? "studio",
-    preparedImages.map((image) => image.dataUrl),
-  ]);
+  return JSON.stringify(
+    buildCampaignGenerationBody(fields, [...preparedImages], storeId, { eligible: true }),
+  );
 }
 
 /**
@@ -1103,7 +1103,7 @@ export function useCampaignForm(
       // rascunho (fingerprint) e a transporta no corpo; em `off` nada é enviado.
       const draftIdentity = eligible
         ? resolveDraftIdentity(
-            buildEligibleDraftFingerprint(frozenFields, resolvedImages),
+            buildEligibleDraftFingerprint(frozenFields, resolvedImages, storeId),
             draftIdentityRef.current,
           )
         : null;
@@ -1347,7 +1347,7 @@ export function useCampaignForm(
     // congelamento (fingerprint estável) e transportada sob elegibilidade.
     const draftIdentity = eligible
       ? resolveDraftIdentity(
-          buildEligibleDraftFingerprint(frozenFields, frozenPrepared),
+          buildEligibleDraftFingerprint(frozenFields, frozenPrepared, storeId),
           draftIdentityRef.current,
         )
       : null;

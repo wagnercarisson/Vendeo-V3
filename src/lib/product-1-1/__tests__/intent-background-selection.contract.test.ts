@@ -218,7 +218,7 @@ describe("F56.2b1b — C3 identidade (origem/transporte no formulário)", () => 
   it("MESMO fingerprint conserva a identidade (duas construções ⇒ identidade idêntica)", () => {
     const fields = legacyOfferFields();
     const images = singlePreparedImage();
-    const fingerprint = buildEligibleDraftFingerprint(fields, images);
+    const fingerprint = buildEligibleDraftFingerprint(fields, images, "store-1");
 
     const generator = makeGenerator();
     const state1 = resolveDraftIdentity(fingerprint, null, generator);
@@ -254,14 +254,15 @@ describe("F56.2b1b — C3 identidade (origem/transporte no formulário)", () => 
   it("fingerprint muda quando o rascunho elegível muda", () => {
     const base = legacyOfferFields();
     const images = singlePreparedImage();
-    const fp1 = buildEligibleDraftFingerprint(base, images);
+    const fp1 = buildEligibleDraftFingerprint(base, images, "store-1");
     const fp2 = buildEligibleDraftFingerprint(
       legacyOfferFields({ backgroundDirection: "ambient" }),
       images,
+      "store-1",
     );
     expect(fp1).not.toBe(fp2);
     // mesma entrada ⇒ mesmo fingerprint (estável).
-    expect(buildEligibleDraftFingerprint(base, images)).toBe(fp1);
+    expect(buildEligibleDraftFingerprint(base, images, "store-1")).toBe(fp1);
   });
 
   it("payload inelegível NÃO transporta identidade (mesmo com identity fornecida)", () => {
@@ -275,6 +276,93 @@ describe("F56.2b1b — C3 identidade (origem/transporte no formulário)", () => 
     expect(body).not.toHaveProperty("campaignId");
     expect(body).not.toHaveProperty("operationId");
     expect(body).not.toHaveProperty("backgroundDirection");
+  });
+});
+
+describe("F56.2b1b — F1 fingerprint = conteúdo efetivo da submissão (sem identidade/revisão)", () => {
+  const STORE = "store-1";
+
+  it("mudar a validade muda o fingerprint/identidade", () => {
+    const images = singlePreparedImage();
+    const fpBase = buildEligibleDraftFingerprint(legacyOfferFields(), images, STORE);
+    const fpValidity = buildEligibleDraftFingerprint(
+      legacyOfferFields({ validityMode: "today" }),
+      images,
+      STORE,
+    );
+    expect(fpValidity).not.toBe(fpBase);
+
+    const generator = makeGenerator();
+    const a = resolveDraftIdentity(fpBase, null, generator);
+    const b = resolveDraftIdentity(fpValidity, a, generator);
+    expect(b.identity.campaignId).not.toBe(a.identity.campaignId);
+    expect(b.identity.operationId).not.toBe(a.identity.operationId);
+  });
+
+  it("mudar texto obrigatório (mandatoryArtworkTextFree/description) muda a identidade", () => {
+    const images = singlePreparedImage();
+    const fpBase = buildEligibleDraftFingerprint(legacyOfferFields(), images, STORE);
+
+    const withNotice = legacyOfferFields({
+      showIllustrativeNotice: true,
+      mandatoryArtworkTextFree: "beba com moderação",
+    });
+    expect(buildEligibleDraftFingerprint(withNotice, images, STORE)).not.toBe(fpBase);
+
+    const withDescription = legacyOfferFields({ description: "Descrição comercial" });
+    const fpDescription = buildEligibleDraftFingerprint(withDescription, images, STORE);
+    expect(fpDescription).not.toBe(fpBase);
+
+    const generator = makeGenerator();
+    const a = resolveDraftIdentity(fpBase, null, generator);
+    const b = resolveDraftIdentity(fpDescription, a, generator);
+    expect(b.identity).not.toEqual(a.identity);
+  });
+
+  it("mudar/adicionar imagem de referência muda a identidade", () => {
+    const base = legacyOfferFields();
+    const single = singlePreparedImage();
+    const two: PreparedCampaignImage[] = [
+      ...single,
+      {
+        id: "p2",
+        role: "reference",
+        source: "upload",
+        mimeType: "image/jpeg",
+        dataUrl: "data:image/png;base64,BBBB",
+      },
+    ];
+    const fpSingle = buildEligibleDraftFingerprint(base, single, STORE);
+    const fpTwo = buildEligibleDraftFingerprint(base, two, STORE);
+    expect(fpTwo).not.toBe(fpSingle);
+
+    const generator = makeGenerator();
+    const a = resolveDraftIdentity(fpSingle, null, generator);
+    const b = resolveDraftIdentity(fpTwo, a, generator);
+    expect(b.identity.campaignId).not.toBe(a.identity.campaignId);
+    expect(b.identity.operationId).not.toBe(a.identity.operationId);
+  });
+
+  it("conteúdo idêntico ⇒ identidade idêntica e UUIDs NÃO entram no fingerprint", () => {
+    const fields = legacyOfferFields({ validityMode: "today" });
+    const images = singlePreparedImage();
+    const fp1 = buildEligibleDraftFingerprint(fields, images, STORE);
+    const fp2 = buildEligibleDraftFingerprint(fields, images, STORE);
+    expect(fp2).toBe(fp1);
+
+    const generator = makeGenerator();
+    const state = resolveDraftIdentity(fp1, null, generator);
+    // duas construções do MESMO conteúdo ⇒ MESMOS ids (o gerador não é reusado).
+    const unusedGenerator = vi.fn(makeGenerator());
+    const sameContentAgain = resolveDraftIdentity(fp2, state, unusedGenerator);
+    expect(sameContentAgain.identity).toEqual(state.identity);
+    expect(unusedGenerator).not.toHaveBeenCalled();
+
+    // a identidade (UUIDs) NUNCA aparece dentro da string do fingerprint.
+    expect(fp1).not.toContain(state.identity.campaignId);
+    expect(fp1).not.toContain(state.identity.operationId);
+    expect(fp1).not.toContain("campaignId");
+    expect(fp1).not.toContain("operationId");
   });
 });
 
