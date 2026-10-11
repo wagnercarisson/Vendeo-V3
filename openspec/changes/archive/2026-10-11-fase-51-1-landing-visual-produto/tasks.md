@@ -48,15 +48,15 @@
 - [x] 6.3 Cobrir o componente de oferta (condições exibidas, sem promessa de ilimitado, beta fechado não inicia período)
 - [x] 6.4 Garantir que nenhum teste/chamada invoca a API de geração
 - [x] 6.5 Rodar typecheck, lint, build e a suíte relevante
-- [ ] 6.6 Validar manualmente mobile e desktop nos modos flag off/on, sem ativar signup público
+- [x] 6.6 Validar manualmente mobile e desktop nos modos flag off/on, sem ativar signup público — **aprovado** (mobile+desktop, ambos os modos; visual)
 - [x] 6.7 Registrar o teste de compreensão: visitante entende o produto após hero e transformação
 
-> **Nota (6.5):** `npx vitest run src/components/landing/__tests__` = **6 arquivos / 35 testes verdes** (cobre ordem/copy, ausência de termos internos, CTAs nos 2 modos em hero/transformação/identidade/oferta, ausência de CTA após a FAQ, seta decorativa, FAQ fechada por padrão, `RevealOnView` — disparo único/reduced-motion/sem `IntersectionObserver` — e a distinção de carregamento hero(`eager`)/demais(`lazy`)); `npm run lint` exit 0. O `typecheck` foi corrigido excluindo a junção `node_modules.*` (`node_modules.shared-link`), que injetava ~5.569 arquivos e produzia erros **espúrios** de `searchParams`; após a exclusão, **resta apenas o erro real pré-existente `ssl`/`pg`** fora da F51.1 (`image-generation-operations-repository.integration.test.ts`) — **nenhum erro na F51.1**. O `build` compila e passa o type/lint do Next, mas **falha na coleta de páginas por env ausente** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`). **O gate completo ainda NÃO está aprovado** (typecheck/build não fecham verdes por causas externas à F51.1).
+> **Nota (6.5):** `npx vitest run src/components/landing/__tests__` = **6 arquivos / 35 testes verdes** (cobre ordem/copy, ausência de termos internos, CTAs nos 2 modos em hero/transformação/identidade/oferta, ausência de CTA/links legais após a FAQ, seta decorativa, FAQ fechada por padrão, `RevealOnView` — disparo único/reduced-motion/sem `IntersectionObserver` — e a distinção de carregamento hero(`eager`)/demais(`lazy`)); `npm run lint` exit 0 (o diretório temporário `supabase/.temp/` — backup de `.next` — foi excluído do lint, preservando-o recuperável). O `typecheck` foi corrigido excluindo a junção `node_modules.*` (`node_modules.shared-link`); após a exclusão, **resta apenas o erro real pré-existente `ssl`/`pg`** fora da F51.1 (`image-generation-operations-repository.integration.test.ts`) — **nenhum erro na F51.1**. **`npm run build` = exit 0** (build completo verde com `.env.local`). **Exceção aceita (decisão humana):** o erro `ssl`/`pg` (F56) é tratado como **EXCEÇÃO EXTERNA**; **`typecheck` NÃO é marcado como aprovado**; a correção fica sob responsabilidade da F56. **Distinção:** esta fase está **concluída na BRANCH local** e **NÃO publicada** — a publicação fica adiada até a conclusão/integração da F56, com revalidação da versão integrada.
 
 ## 7. Fechamento
 
-- [ ] 7.1 Confirmar aprovação humana dos exemplos finais e da experiência pública (sem exigir geração ou rastreamento end-to-end)
-- [ ] 7.2 Reconciliar tracking (STATE/ROADMAP/REQUIREMENTS) no fluxo GSD desta frente, sem sobrescrever a F56 nem artefatos históricos
-- [ ] 7.3 Rodar `openspec validate fase-51-1-landing-visual-produto --strict` e registrar o resultado
-- [ ] 7.4 Submeter a F51.1 à revisão humana; não antecipar instrumentação de funil, oferta implementada ou SEO (F51.2)
-- [ ] 7.5 (Critério de aceite) O bloco de abordagens de divulgação só SHALL permanecer na entrega final se as campanhas demonstrarem diferenças comerciais claras e acrescentarem prova nova; sendo redundantes ou apenas estéticas, reapresentar enxugamento/remoção para aprovação humana
+- [x] 7.1 Aprovação humana dos exemplos finais e da experiência pública confirmada (mobile+desktop, ambos os modos; visual)
+- [x] 7.2 Tracking reconciliado (STATE/ROADMAP/REQUIREMENTS) no escopo F51.1, sem sobrescrever a F56 nem artefatos históricos
+- [x] 7.3 `openspec validate fase-51-1-landing-visual-produto --strict` executado — **válido** (registrado)
+- [x] 7.4 F51.1 submetida à revisão humana; funil, oferta implementada e SEO (F51.2) não antecipados
+- [x] 7.5 (Critério de aceite) O bloco de abordagens permanece: as campanhas demonstram diferenças comerciais e acrescentam prova nova (aprovado pelo responsável)
