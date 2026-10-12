@@ -99,6 +99,37 @@ describe("F56.2b1b — migration 20261009000002 pending_resolution (contrato est
     expect(activeSql).toMatch(/RAISE EXCEPTION 'operation_in_progress'/);
   });
 
+  it("F1 — REVALIDA `execution_ended` SOB A TRAVA: o valor autoritativo é DERIVADO do estado travado, nunca da evidência (stale)", () => {
+    // Derivação SOB a trava (após `FOR UPDATE` e o `EXISTS` de claim `in_progress`).
+    expect(activeSql).toMatch(/v_execution_ended := NOT v_in_progress/);
+    // O valor da EVIDÊNCIA não governa a decisão: não há atribuição stale.
+    expect(activeSql).not.toMatch(
+      /v_execution_ended := \(p_evidence->>'execution_ended'\)::boolean/,
+    );
+    // Ordem: trava C4 → EXISTS `in_progress` → derivação sob a trava → recusa.
+    const lockIdx = activeSql.indexOf("FOR UPDATE");
+    const inProgressIdx = activeSql.indexOf("status = 'in_progress'");
+    const derivedIdx = activeSql.indexOf("v_execution_ended := NOT v_in_progress");
+    const raiseIdx = activeSql.indexOf("operation_in_progress");
+    expect(lockIdx).toBeGreaterThan(-1);
+    expect(inProgressIdx).toBeGreaterThan(lockIdx);
+    expect(derivedIdx).toBeGreaterThan(inProgressIdx);
+    expect(raiseIdx).toBeGreaterThan(derivedIdx);
+  });
+
+  it("F2(b) — a equivalência do replay inclui `actor_id` e o `reason` (TRIM) ⇒ divergência de administrador/motivo ⇒ conflito", () => {
+    expect(activeSql).toMatch(/v_existing_actor = p_actor_id/);
+    expect(activeSql).toMatch(/v_existing_reason = btrim\(p_reason\)/);
+  });
+
+  it("F2(c) — a checagem de idempotência do audit ocorre DEPOIS da trava (replays concorrentes serializam) e usa o índice único parcial", () => {
+    const lockIdx = activeSql.indexOf("FOR UPDATE");
+    const auditIdx = activeSql.indexOf("FROM public.admin_audit_log");
+    expect(lockIdx).toBeGreaterThan(-1);
+    expect(auditIdx).toBeGreaterThan(lockIdx);
+    expect(sql).toMatch(/idx_admin_audit_log_operation/);
+  });
+
   it("F5 — conflito de conteúdo devolve `operation_identity_conflict` (nunca sucesso enganoso)", () => {
     expect(activeSql).toMatch(/reason', 'operation_identity_conflict'/);
   });
@@ -314,8 +345,22 @@ describe("F56.2b1b — serviço resolvePendingOperation (F5/C4/E1, simulado)", (
     };
   }
 
+  /** Envelope VÁLIDO e COERENTE da RPC (identidade + status terminal — F3). */
+  function envelope(overrides: Record<string, unknown> = {}) {
+    return {
+      success: true,
+      idempotent: false,
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      action: "deliver_existing_art",
+      status: "delivered",
+      art_kind: "integral",
+      ...overrides,
+    };
+  }
+
   it("deliver_existing_art com arte íntegra: invoca SOMENTE a RPC auditada com evidência server-derived", async () => {
-    const client = fakeRpcClient({ success: true, idempotent: false, status: "delivered", action: "deliver_existing_art", art_kind: "integral" });
+    const client = fakeRpcClient(envelope());
     const repository = fakeRepository({ record: record(), probe: { kind: "integral" } });
     const result = await resolvePendingOperation(
       { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "arte existente", resolutionOperationId: RESOLUTION_ID },
@@ -331,7 +376,9 @@ describe("F56.2b1b — serviço resolvePendingOperation (F5/C4/E1, simulado)", (
   });
 
   it("refund_once com ausência confirmada e execução encerrada: invoca a RPC", async () => {
-    const client = fakeRpcClient({ success: true, idempotent: false, status: "refunded", action: "refund_once", art_kind: "absent" });
+    const client = fakeRpcClient(
+      envelope({ action: "refund_once", status: "refunded", art_kind: "absent" }),
+    );
     const repository = fakeRepository({ record: record(), probe: { kind: "absent" } });
     const result = await resolvePendingOperation(
       { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "ausência confirmada", resolutionOperationId: RESOLUTION_ID },
@@ -385,15 +432,155 @@ describe("F56.2b1b — serviço resolvePendingOperation (F5/C4/E1, simulado)", (
     expect(client.rpc).not.toHaveBeenCalled();
   });
 
-  it("F5: operação terminal RECUSA antes de qualquer efeito", async () => {
-    const client = fakeRpcClient({ success: true });
+  it("F1: tentativa que INICIOU entre a leitura e a trava ⇒ a RPC REVALIDA sob a trava e RECUSA (`operation_in_progress`), nunca resolve ativo", async () => {
+    // O serviço observou o estado SEM claim ativo (stale) e envia
+    // `execution_ended:true`; a RPC, sob a trava, encontra o claim `in_progress`
+    // e recusa. O serviço NUNCA converte a recusa em sucesso.
+    const client = fakeRpcClient({ success: false, reason: "operation_in_progress" });
+    const repository = fakeRepository({ record: record({ processing: false }), probe: { kind: "integral" } });
     await expect(
       resolvePendingOperation(
         { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "x", resolutionOperationId: RESOLUTION_ID },
+        { client, repository },
+      ),
+    ).rejects.toMatchObject({ code: "operation_in_progress" });
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    // A evidência enviada carrega o valor STALE (`true`), provando que a recusa
+    // veio da REVALIDAÇÃO SOB A TRAVA na RPC — a evidência NÃO é a autoridade.
+    expect(client.rpc.mock.calls[0][1].p_evidence).toMatchObject({ execution_ended: true });
+  });
+
+  it("F2(a): replay EQUIVALENTE após `delivered` é IDEMPOTENTE (a RPC decide; o serviço não recusa terminal)", async () => {
+    const client = fakeRpcClient(envelope({ idempotent: true }));
+    const result = await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "replay", resolutionOperationId: RESOLUTION_ID },
+      { client, repository: fakeRepository({ record: record({ status: "delivered", terminal: true }), probe: { kind: "integral" } }) },
+    );
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(result.idempotent).toBe(true);
+    expect(result.status).toBe("delivered");
+  });
+
+  it("F2(a): replay EQUIVALENTE após `refunded` é IDEMPOTENTE", async () => {
+    const client = fakeRpcClient(
+      envelope({ idempotent: true, action: "refund_once", status: "refunded", art_kind: "absent" }),
+    );
+    const result = await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "replay", resolutionOperationId: RESOLUTION_ID },
+      { client, repository: fakeRepository({ record: record({ status: "refunded", terminal: true }), probe: { kind: "absent" } }) },
+    );
+    expect(result.idempotent).toBe(true);
+    expect(result.status).toBe("refunded");
+  });
+
+  it("F2(a): replay DIVERGENTE (mesmo `resolution_operation_id`) ⇒ CONFLITO `operation_identity_conflict`", async () => {
+    const client = fakeRpcClient({ success: false, reason: "operation_identity_conflict" });
+    await expect(
+      resolvePendingOperation(
+        { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "motivo divergente", resolutionOperationId: RESOLUTION_ID },
         { client, repository: fakeRepository({ record: record({ status: "delivered", terminal: true }), probe: { kind: "integral" } }) },
       ),
+    ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+  });
+
+  it("F2(a): terminal de AÇÃO divergente ⇒ `operation_terminal` (delegado à RPC, sem efeito local)", async () => {
+    const client = fakeRpcClient({ success: false, reason: "operation_terminal" });
+    await expect(
+      resolvePendingOperation(
+        { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "x", resolutionOperationId: RESOLUTION_ID },
+        { client, repository: fakeRepository({ record: record({ status: "delivered", terminal: true }), probe: { kind: "absent" } }) },
+      ),
     ).rejects.toMatchObject({ code: "operation_terminal" });
-    expect(client.rpc).not.toHaveBeenCalled();
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("F2(c): replay concorrente EQUIVALENTE ⇒ EXATAMENTE um efeito e uma auditoria (serializados)", async () => {
+    // Fake stateful que simula a trava `FOR UPDATE` + o índice único de auditoria.
+    const audits = new Map<string, Record<string, unknown>>();
+    let effects = 0;
+    let lock: Promise<void> = Promise.resolve();
+    const rpc = vi.fn(async (_fn: string, params: Record<string, unknown>) => {
+      const prev = lock;
+      let release!: () => void;
+      lock = new Promise<void>((resolve) => (release = resolve));
+      await prev; // SERIALIZA como o `FOR UPDATE` (C4)
+      try {
+        const key = String(params.p_resolution_operation_id);
+        const existing = audits.get(key);
+        if (existing) {
+          if (
+            existing.campaign_id === params.p_campaign_id &&
+            existing.action === params.p_action &&
+            existing.actor_id === params.p_actor_id &&
+            existing.reason === params.p_reason
+          ) {
+            return { data: { ...existing, idempotent: true }, error: null };
+          }
+          return { data: { success: false, reason: "operation_identity_conflict" }, error: null };
+        }
+        effects += 1;
+        const stored = {
+          success: true,
+          idempotent: false,
+          campaign_id: params.p_campaign_id,
+          operation_id: params.p_operation_id,
+          action: params.p_action,
+          status: params.p_action === "deliver_existing_art" ? "delivered" : "refunded",
+          art_kind: (params.p_evidence as { art_kind: string }).art_kind,
+          actor_id: params.p_actor_id,
+          reason: params.p_reason,
+        };
+        audits.set(key, stored);
+        return { data: stored, error: null };
+      } finally {
+        release();
+      }
+    });
+    const client = { rpc } as unknown as SupabaseClient;
+    const input = {
+      actorId: ACTOR_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      action: "deliver_existing_art" as const,
+      reason: "replay concorrente",
+      resolutionOperationId: RESOLUTION_ID,
+    };
+    const [a, b] = await Promise.all([
+      resolvePendingOperation(input, { client, repository: fakeRepository({ record: record(), probe: { kind: "integral" } }) }),
+      resolvePendingOperation(input, { client, repository: fakeRepository({ record: record(), probe: { kind: "integral" } }) }),
+    ]);
+    expect(effects).toBe(1);
+    expect(audits.size).toBe(1);
+    expect([a.idempotent, b.idempotent].filter(Boolean)).toHaveLength(1);
+  });
+
+  it("F3: envelope AUSENTE/INCOMPLETO/CONTRADITÓRIO ⇒ FAIL CLOSED (`invalid_response`), nunca sucesso", async () => {
+    const badEnvelopes: unknown[] = [
+      null,
+      {},
+      { campaign_id: CAMPAIGN_ID }, // sem `success`
+      { success: undefined, status: "delivered" },
+      envelope({ success: false, reason: undefined }), // `success:false` sem motivo ⇒ unknown
+      envelope({ campaign_id: "99999999-9999-4999-8999-999999999999" }), // identidade divergente
+      envelope({ operation_id: "99999999-9999-4999-8999-999999999999" }),
+      envelope({ action: "refund_once" }), // ação divergente do pedido
+      envelope({ status: "refunded" }), // status incoerente com a ação (pedido = deliver)
+    ];
+    for (const bad of badEnvelopes) {
+      const client = fakeRpcClient(bad);
+      await expect(
+        resolvePendingOperation(
+          { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "x", resolutionOperationId: RESOLUTION_ID },
+          { client, repository: fakeRepository({ record: record(), probe: { kind: "integral" } }) },
+        ),
+      ).rejects.toBeInstanceOf(Error);
+    }
+    // Um envelope bem-formado é aceito (controle).
+    const ok = await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "x", resolutionOperationId: RESOLUTION_ID },
+      { client: fakeRpcClient(envelope()), repository: fakeRepository({ record: record(), probe: { kind: "integral" } }) },
+    );
+    expect(ok.status).toBe("delivered");
   });
 
   it("F5: conflito divergente da RPC é propagado como `operation_identity_conflict`", async () => {
@@ -461,6 +648,7 @@ describe("F56.2b1b — schema e rota admin de resolução (estático)", () => {
     expect(resolutionErrorStatus({ code: "operation_in_progress" })).toBe(409);
     expect(resolutionErrorStatus({ code: "execution_not_ended" })).toBe(409);
     expect(resolutionErrorStatus({ code: "operation_identity_conflict" })).toBe(409);
+    expect(resolutionErrorStatus({ code: "invalid_response" })).toBe(500);
     expect(resolutionErrorStatus({ code: "unknown" })).toBe(500);
   });
 });
