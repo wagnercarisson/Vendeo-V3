@@ -360,7 +360,7 @@ Plans:
 
 **Nome:** Fundação SEO / descoberta orgânica (F51.2 — fatia técnica/local; sucede a F51.1 e reutiliza sua mensagem e hierarquia já validadas)
 
-**Status:** ○ **PLANEJADA — não iniciada; aguardando revisão conjunta dos planos antes da execução.** A **preparação técnica** (a) é validada na branch; a **ativação/validação pública** (b) depende da integração/publicação conjunta com a F56 e de autorização. Nenhuma configuração externa, deploy, envio de sitemap ou fechamento OpenSpec (verify/sync/archive) foi executada nesta etapa. Direção de índice: `noindex` é o padrão da raiz e a home é a **única exceção** explícita, indexável somente sob **produção confirmada (`VERCEL_ENV === "production"`) e origem canônica validada**.
+**Status:** ◑ **EXECUÇÃO DOS 8/8 PLANOS CONCLUÍDA NA BRANCH (preparação validada; aguardando verificação conjunta).** A **preparação técnica** (a) foi validada na branch (suíte relevante, `lint`, `build`, smoke compilado por ambiente, `openspec validate --strict` e fronteira por commit-base); a **ativação/validação pública** (b) depende da integração/publicação conjunta com a F56 e de autorização. `typecheck` permanece **não aprovado** enquanto a exceção externa `ssl`/`pg` (F56) persistir. Nenhuma configuração externa, deploy, envio de sitemap ou fechamento OpenSpec (verify/sync/archive) foi executada nesta etapa. Direção de índice: `noindex` é o padrão da raiz e a home é a **única exceção** explícita, indexável somente sob **produção confirmada (`VERCEL_ENV === "production"`) e origem canônica validada**.
 
 **Frente paralela:** branch `escopo/landing`. Esta fase é aditiva/local e não altera o tracking, o estado nem os artefatos da F56 (`56.1`, `56.2a`, `56.2b1a/b1b/b2`); não substitui nem pausa a F56 — a posição global ativa permanece F56.2a.
 
@@ -393,7 +393,7 @@ Plans:
 
 **Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans executed
 Plans:
 **Wave 1**
 
@@ -416,7 +416,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 51.2-08-PLAN.md — Reconciliação A9 (gatilho do rodapé, integração real), smoke test compilado por ambiente, fronteira por commit-base e fechamento (wave 5)
+- [x] 51.2-08-PLAN.md — Reconciliação A9 (gatilho do rodapé, integração real), smoke test compilado por ambiente, fronteira por commit-base e fechamento (wave 5)
 
 ## Historical References
 
