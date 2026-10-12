@@ -585,6 +585,28 @@ export async function drainCopyTask(
     }
   };
 
+  /**
+   * Terminal `failed`: a DECISÃO depende do DESFECHO da PRÓPRIA escrita —
+   * nunca se declara `failed` sem inspecionar o settle/envelope devolvido por
+   * `recordState("failed")`.
+   *   * `timeout`/`error` ⇒ incerteza LOCAL do CHAMADOR ⇒ `unconfirmed`
+   *     (resolve-se por RE-LEITURA; nunca por um 2º write);
+   *   * envelope cujo estado PERSISTIDO é `completed` ⇒ a transição para
+   *     `failed` foi RECUSADA (terminal PROTEGIDO) ⇒ o terminal PERSISTIDO
+   *     prevalece (`completed`), nunca um `failed` enganoso;
+   *   * caso contrário ⇒ o terminal `failed` foi aplicado/persistido.
+   */
+  const settleFailTerminal = async (): Promise<DrainCopyTaskResult> => {
+    const settle = await recordState("failed");
+    if (settle.kind === "timeout" || settle.kind === "error") {
+      return { state: "unconfirmed", canceled: false };
+    }
+    if (settle.result.state === "completed") {
+      return { state: "completed", canceled: false };
+    }
+    return { state: "failed", canceled: false };
+  };
+
   await recordState("pending");
 
   const aborted = new Promise<{ canceled: boolean }>((resolve) => {
@@ -639,14 +661,16 @@ export async function drainCopyTask(
       // Incerteza LOCAL do CHAMADOR (timeout): NADA é afirmado; re-ler resolve.
       return { state: "unconfirmed", canceled: false };
     }
-    // `error`/`conflict`/`rejected`/`invalid_content`: o texto NÃO foi persistido
-    // ⇒ o terminal verdadeiro é `failed` (nunca `completed` enganoso).
-    await recordState("failed");
-    return { state: "failed", canceled: false };
+    // `error`/`conflict`/`rejected`/`invalid_content`: o texto NÃO foi persistido.
+    // O desfecho da escrita do `failed`, porém, é INSPECIONADO: timeout/erro ⇒
+    // incerteza LOCAL (`unconfirmed`); recusa por `completed` JÁ persistido ⇒ o
+    // terminal persistido prevalece; caso contrário ⇒ `failed` (nunca `completed`
+    // enganoso).
+    return await settleFailTerminal();
   }
 
   // Task resolvida SEM `commit` (nenhum texto entregável): C2 proíbe persistir
-  // `completed` sem conteúdo ⇒ o terminal verdadeiro é `failed`.
-  await recordState("failed");
-  return { state: "failed", canceled: false };
+  // `completed` sem conteúdo ⇒ o terminal é decidido pelo DESFECHO da escrita de
+  // `failed` (timeout/erro ⇒ `unconfirmed`; `completed` JÁ persistido prevalece).
+  return await settleFailTerminal();
 }

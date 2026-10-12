@@ -539,3 +539,157 @@ describe("P2 — timeout LOCAL (A1): incerteza resolvida por RE-LEITURA, sem 2º
     expect(delivery).toEqual({ state: "pending", copyText: null, copyPayload: null });
   });
 });
+
+// ---------------------------------------------------------------------------
+// 5. Terminal `failed`: o drenador INSPECIONA o DESFECHO da escrita
+//    (reconciliação P2) — nunca declara `failed` CEGO. Cobre os DOIS caminhos
+//    que antes faziam `await recordState("failed")` e imediatamente
+//    `return { state: "failed" }`:
+//      (A) commit tentado e NÃO provado (`error`/`conflict`/`rejected`/…);
+//      (B) task resolvida SEM `commit` (nenhum texto entregável, C2).
+//    Em AMBOS: `timeout`/`error` ⇒ `unconfirmed` (incerteza LOCAL do CHAMADOR);
+//    recusa porque um `completed` JÁ está PERSISTIDO ⇒ `completed` (o terminal
+//    persistido PREVALECE); caso contrário ⇒ `failed`.
+// ---------------------------------------------------------------------------
+
+const HANG = (): Promise<CopyStateTransitionResult> => new Promise<CopyStateTransitionResult>(() => {});
+const APPLIED = (state: CopyState): CopyStateTransitionResult => ({
+  applied: true,
+  outcome: "applied",
+  state,
+});
+// `completed` JÁ persistido ⇒ a transição pedida é RECUSADA (terminal protegido).
+const REJECTED_COMPLETED: CopyStateTransitionResult = {
+  applied: false,
+  outcome: "rejected",
+  state: "completed",
+};
+
+/** Store com o desfecho de CADA estado CONTROLADO pelo teste. */
+function scriptedStore(handlers: {
+  pending?: () => Promise<CopyStateTransitionResult>;
+  completed?: () => Promise<CopyStateTransitionResult>;
+  failed?: () => Promise<CopyStateTransitionResult>;
+}): CopyStateStore {
+  return {
+    recordCopyState(input) {
+      if (input.state === "pending") {
+        return handlers.pending?.() ?? Promise.resolve(APPLIED("pending"));
+      }
+      if (input.state === "completed") {
+        return handlers.completed?.() ?? Promise.resolve(APPLIED("completed"));
+      }
+      return handlers.failed?.() ?? Promise.resolve(APPLIED("failed"));
+    },
+    async recordCancellation() {
+      return { applied: true, state: "failed", canceled: true };
+    },
+  };
+}
+
+describe("P2 (reconciliação) — task resolvida SEM `commit` (C2): decisão pelo desfecho da escrita `failed`", () => {
+  it("(i) TIMEOUT da escrita de `failed` ⇒ `unconfirmed` (incerteza LOCAL, nunca `failed` cego)", async () => {
+    const store = scriptedStore({ failed: () => HANG() });
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async () => {},
+      },
+      store,
+      { persistenceBudgetMs: 5 },
+    );
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
+  });
+
+  it("(ii) ERROR da escrita de `failed` ⇒ `unconfirmed` (incerteza LOCAL)", async () => {
+    const store = scriptedStore({
+      failed: () => Promise.reject(new Error("product_1_1_apply_copy_state_rpc_failed")),
+    });
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async () => {},
+      },
+      store,
+    );
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
+  });
+
+  it("(iii) RECUSA porque um `completed` JÁ persistido ⇒ o terminal persistido prevalece (`completed`)", async () => {
+    const store = scriptedStore({ failed: () => Promise.resolve(REJECTED_COMPLETED) });
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async () => {},
+      },
+      store,
+    );
+    expect(result).toEqual({ state: "completed", canceled: false });
+  });
+});
+
+describe("P2 (reconciliação) — commit tentado e NÃO provado: mesma decisão pelo desfecho da escrita `failed`", () => {
+  it("(i) `completed` com ERROR + `failed` com TIMEOUT ⇒ `unconfirmed`", async () => {
+    const store = scriptedStore({
+      completed: () => Promise.reject(new Error("product_1_1_apply_copy_state_rpc_failed")),
+      failed: () => HANG(),
+    });
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async ({ commit }) => {
+          await commit({ copyText: "texto" });
+        },
+      },
+      store,
+      { persistenceBudgetMs: 5 },
+    );
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
+  });
+
+  it("(ii) `completed` com ERROR + `failed` com ERROR ⇒ `unconfirmed`", async () => {
+    const store = scriptedStore({
+      completed: () => Promise.reject(new Error("product_1_1_apply_copy_state_rpc_failed")),
+      failed: () => Promise.reject(new Error("product_1_1_apply_copy_state_rpc_failed")),
+    });
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async ({ commit }) => {
+          await commit({ copyText: "texto" });
+        },
+      },
+      store,
+    );
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
+  });
+
+  it("(iii) `completed` REJEITADO (já persistido) + `failed` REJEITADO ⇒ `completed` (terminal persistido prevalece)", async () => {
+    const store = scriptedStore({
+      completed: () => Promise.resolve(REJECTED_COMPLETED),
+      failed: () => Promise.resolve(REJECTED_COMPLETED),
+    });
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async ({ commit }) => {
+          await commit({ copyText: "texto" });
+        },
+      },
+      store,
+    );
+    expect(result).toEqual({ state: "completed", canceled: false });
+  });
+});
