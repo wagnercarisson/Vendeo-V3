@@ -24,6 +24,12 @@ const BASE_SHA_RECORD = path.resolve(
 //  - a rota generate-image mantém as verificações específicas (aditiva + guard
 //    antes do parse/reserva).
 const AUTHORIZED_ROUTE_FILE = "src/app/api/campaign/generate-image/route.ts";
+// F56.2b1b (Plano 06 — reconciliação G-LF): a rota de download passa a carregar o
+// portão do novo fluxo (aditivo). Tem entrada AUTORIZADA própria (autorização +
+// commit de origem) e prova de preservação do ramo legado — NÃO entra na
+// comparação de conteúdo dos 12 caminhos adicionais (que permanece inalterada).
+const AUTHORIZED_DOWNLOAD_ROUTE_FILE =
+  "src/app/api/campaign/[id]/download/route.ts";
 
 interface AuthorizedFrontierChange {
   readonly path: string;
@@ -37,6 +43,12 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
     path: AUTHORIZED_ROUTE_FILE,
     authorization: "F56.2.1-03 (exceção estreita aprovada — guard de submissão)",
     commit: "6d341964",
+  },
+  {
+    path: AUTHORIZED_DOWNLOAD_ROUTE_FILE,
+    authorization:
+      "F56.2b1b Plano 06 (portão de download do novo fluxo — ramo legado preservado)",
+    commit: "e3fb664e",
   },
   {
     path: "src/lib/lab/bench/domain/background-direction.ts",
@@ -101,7 +113,9 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
 ];
 
 const ADDITIONAL_AUTHORIZED_FILES = AUTHORIZED_FRONTIER_CHANGES.filter(
-  (entry) => entry.path !== AUTHORIZED_ROUTE_FILE,
+  (entry) =>
+    entry.path !== AUTHORIZED_ROUTE_FILE &&
+    entry.path !== AUTHORIZED_DOWNLOAD_ROUTE_FILE,
 );
 
 const LEGACY_FRONTIER_PATHS = [
@@ -294,6 +308,49 @@ describe("legacy-frontier guard — F56.2a", () => {
     expect(source.match(/creditService\.reserveCredit\(/g)?.length).toBe(1);
     // Resposta de validação legada (400 com details/fieldErrors) preservada.
     expect(source).toMatch(/details: parsed\.error\.flatten\(\)\.fieldErrors/);
+  });
+
+  it("a rota de download evolui para o portão do novo fluxo preservando o ramo legado", () => {
+    const diff = git([
+      "diff",
+      "--unified=0",
+      `${BASE_SHA}..HEAD`,
+      "--",
+      AUTHORIZED_DOWNLOAD_ROUTE_FILE,
+    ]);
+    const lines = diff.split(/\r?\n/);
+    const removed = lines.filter((l) => l.startsWith("-") && !l.startsWith("---"));
+    const added = lines.filter((l) => l.startsWith("+") && !l.startsWith("+++"));
+
+    // (i) Nenhuma linha existente removida/alterada: o ramo legado (F37 +
+    // storage privado) é preservado byte a byte.
+    expect(removed).toEqual([]);
+
+    const addedText = added.join("\n");
+    // O ramo novo é ADITIVO: importa o portão, a arte e o cliente de operação.
+    expect(addedText).toMatch(/download-gate/);
+    expect(addedText).toMatch(/artifact\/artifact-store/);
+    expect(addedText).toMatch(/orchestration\/attempt-start-client/);
+    expect(addedText).toMatch(/decideNewFlowDownload/);
+
+    const source = readFileSync(
+      path.resolve(REPOSITORY_ROOT, AUTHORIZED_DOWNLOAD_ROUTE_FILE),
+      "utf8",
+    );
+    // (ii) O ramo legado (F37 + storage privado) permanece presente.
+    expect(source).toMatch(/await isCampaignApprovalEnabled\(\)/);
+    expect(source).toMatch(/isDeliveryReleased\(/);
+    expect(source).toMatch(/from\("campaign-images"\)\s*\.download\(/);
+    // (iii) Fail-closed: a URL assinada só é gerada APÓS o portão liberar e a
+    // recusa retorna ANTES de assinar; o ramo novo precede o gate legado da F37.
+    const decisionIdx = source.indexOf("decideNewFlowDownload(");
+    const rejectIdx = source.indexOf("decision.allowed");
+    const signIdx = source.indexOf("getSignedArtifactUrl(");
+    const f37Idx = source.indexOf("await isCampaignApprovalEnabled()");
+    expect(decisionIdx).toBeGreaterThan(-1);
+    expect(rejectIdx).toBeGreaterThan(decisionIdx);
+    expect(signIdx).toBeGreaterThan(rejectIdx);
+    expect(source.indexOf("getCampaignOperation(")).toBeLessThan(f37Idx);
   });
 });
 

@@ -44,6 +44,16 @@ const AUTHORIZED_FLOW_CAMPAIGN_INPUT_FORM =
 const AUTHORIZED_FLOW_USE_CAMPAIGN_FORM =
   "src/components/flow/use-campaign-form.ts";
 
+// F56.2b1b (Plano 06 — reconciliação G-NA): a rota de download do novo fluxo e a
+// página persistida `campanhas/[id]` introduzem importadores legados. SÓ pares
+// EXPLÍCITOS importador+módulo — nunca `@/lib/product-1-1/**` genérico.
+// `src/lib/campaign/display.ts` NÃO importa `product-1-1` (união de estado local)
+// — provado por teste NEGATIVO.
+const AUTHORIZED_CAMPAIGN_DOWNLOAD_ROUTE =
+  "src/app/api/campaign/[id]/download/route.ts";
+const AUTHORIZED_CAMPANHAS_ID_PAGE = "src/app/(app)/campanhas/[id]/page.tsx";
+const NO_PRODUCT_FLOW_IMPORT_MODULE = "src/lib/campaign/display.ts";
+
 interface AuthorizedImportRule {
   readonly prefixes: readonly string[];
   readonly exact?: readonly string[];
@@ -94,6 +104,23 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     exact: [
       "@/lib/product-1-1/selection-validation",
       "@/lib/product-1-1/background-direction",
+    ],
+  },
+  // Plano 06 — rota de download do novo fluxo (portão) e página persistida
+  // `campanhas/[id]`. Pares EXATOS (sem prefixo amplo).
+  [AUTHORIZED_CAMPAIGN_DOWNLOAD_ROUTE]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/artifact/download-gate",
+      "@/lib/product-1-1/artifact/artifact-store",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+    ],
+  },
+  [AUTHORIZED_CAMPANHAS_ID_PAGE]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/artifact/artifact-store",
     ],
   },
 });
@@ -612,6 +639,100 @@ describe("Product 1:1 — reconciliação G-NA (Plano 04, F56.2b1b)", () => {
   });
 
   it("nenhum prefixo amplo de product-1-1/** foi adicionado", () => {
+    for (const [importer, rule] of Object.entries(AUTHORIZED_PRODUCT_FLOW_IMPORTS)) {
+      for (const prefix of rule.prefixes) {
+        expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/");
+        expect(prefix.endsWith("/product-1-1/"), `${importer}::${prefix}`).toBe(false);
+      }
+    }
+  });
+});
+
+describe("Product 1:1 — reconciliação G-NA (Plano 06, F56.2b1b)", () => {
+  it("rota de download: autoriza SOMENTE os pares exatos do portão", () => {
+    for (const specifier of [
+      "@/lib/product-1-1/artifact/download-gate",
+      "@/lib/product-1-1/artifact/artifact-store",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPAIGN_DOWNLOAD_ROUTE, specifier),
+        specifier,
+      ).toBe(true);
+    }
+    for (const specifier of [
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/orchestration/resend-query",
+      "@/lib/product-1-1/pending/pending-operations-repository",
+      "@/lib/product-1-1/artifact",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPAIGN_DOWNLOAD_ROUTE, specifier),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("campanhas/[id]/page.tsx: autoriza SOMENTE attempt-start-client + artifact-store", () => {
+    for (const specifier of [
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/artifact/artifact-store",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPANHAS_ID_PAGE, specifier),
+        specifier,
+      ).toBe(true);
+    }
+    for (const specifier of [
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/artifact/download-gate",
+      "@/lib/product-1-1/submission/eligibility-context",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPANHAS_ID_PAGE, specifier),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("os importadores do Plano 06 refletem EXATAMENTE os pares autorizados", () => {
+    for (const importer of [
+      AUTHORIZED_CAMPAIGN_DOWNLOAD_ROUTE,
+      AUTHORIZED_CAMPANHAS_ID_PAGE,
+    ]) {
+      const source = readFileSync(path.resolve(process.cwd(), importer), "utf8");
+      expect(
+        hasUnauthorizedProductFlowImport(importer, source),
+        `${importer} importa módulo Produto 1:1 não autorizado`,
+      ).toBe(false);
+    }
+  });
+
+  it("NEGATIVO: display.ts NÃO importa product-1-1 (união de estado local)", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), NO_PRODUCT_FLOW_IMPORT_MODULE),
+      "utf8",
+    );
+    expect(collectProductFlowImports(source)).toEqual([]);
+    expect(source).not.toMatch(/from\s+["'][^"']*product-1-1/);
+  });
+
+  it("negativos preservados: importador indevido e módulo indevido continuam violação", () => {
+    expect(
+      hasUnauthorizedProductFlowImport(
+        "src/app/api/campaign/other/route.ts",
+        'import { decideNewFlowDownload } from "@/lib/product-1-1/artifact/download-gate";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPAIGN_DOWNLOAD_ROUTE,
+        'import { x } from "@/lib/product-1-1/orchestration/generation-orchestrator";',
+      ),
+    ).toBe(true);
+  });
+
+  it("nenhum prefixo amplo de product-1-1/** foi adicionado (Plano 06)", () => {
     for (const [importer, rule] of Object.entries(AUTHORIZED_PRODUCT_FLOW_IMPORTS)) {
       for (const prefix of rule.prefixes) {
         expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/");
