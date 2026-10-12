@@ -52,6 +52,15 @@ function restoredImage(id: string, role: "primary" | "reference") {
   return { id, role, source: "upload" as const, mimeType: "image/jpeg", dataUrl: VALID_DATA_URL };
 }
 
+/** Imagem com `File` válido (passa em `validateImage` quando a regra Original não aplica). */
+function validImageFile(name: string): File {
+  return new File([new Uint8Array([1, 2, 3])], name, { type: "image/png" });
+}
+
+function fileImage(id: string, role: "primary" | "reference", name: string) {
+  return { id, role, source: "upload" as const, mimeType: "image/png", file: validImageFile(name) };
+}
+
 /** Preenche os campos comerciais válidos (offer). */
 function fillValidOffer(result: { current: ReturnType<typeof useCampaignForm> }) {
   result.current.setField("productName", "Produto Teste");
@@ -223,5 +232,68 @@ describe("F2 — regra Original gated por elegibilidade (hook real)", () => {
     expect(body).not.toHaveProperty("backgroundDirection");
     expect(body).not.toHaveProperty("campaignId");
     expect(body).not.toHaveProperty("operationId");
+  });
+});
+
+describe("F2 — handleBlur usa `eligible` FRESCO (dep array [fields, eligible])", () => {
+  it("eligible true → false SEM mudar fields ⇒ o erro Original é limpo no próximo blur", async () => {
+    const { result, rerender } = renderHook(
+      ({ eligible }: { eligible: boolean }) => useCampaignForm("store-1", { eligible }),
+      { initialProps: { eligible: true } }
+    );
+
+    await act(async () => {
+      result.current.setField("productName", "Produto Teste");
+      result.current.setField("backgroundDirection", "original");
+      // 2 imagens de produto (File válidos) ⇒ inválido para Original sob elegibilidade.
+      result.current.setField("productImages", [
+        fileImage("p1", "primary", "a.png"),
+        fileImage("p2", "reference", "b.png"),
+      ]);
+    });
+
+    // eligible:true ⇒ a regra Original aplica e o erro é setado.
+    await act(async () => {
+      result.current.handleBlur("productImages");
+    });
+    expect(result.current.fieldErrors.productImages).toBe(MESSAGE);
+
+    // rerender com eligible:false SEM tocar em `fields`/`productImages`.
+    // O callback deve usar o `eligible` NOVO — se a dep fosse só `[fields]`,
+    // o closure memoizado reteria `eligible:true` (stale) e o erro continuaria.
+    rerender({ eligible: false });
+    await act(async () => {
+      result.current.handleBlur("productImages");
+    });
+    expect(result.current.fieldErrors.productImages).toBeUndefined();
+  });
+
+  it("eligible false → true SEM mudar fields ⇒ a regra Original passa a aplicar no blur", async () => {
+    const { result, rerender } = renderHook(
+      ({ eligible }: { eligible: boolean }) => useCampaignForm("store-1", { eligible }),
+      { initialProps: { eligible: false } }
+    );
+
+    await act(async () => {
+      result.current.setField("productName", "Produto Teste");
+      result.current.setField("backgroundDirection", "original");
+      result.current.setField("productImages", [
+        fileImage("p1", "primary", "a.png"),
+        fileImage("p2", "reference", "b.png"),
+      ]);
+    });
+
+    // eligible:false ⇒ a regra Original NÃO é avaliada; as imagens são válidas.
+    await act(async () => {
+      result.current.handleBlur("productImages");
+    });
+    expect(result.current.fieldErrors.productImages).toBeUndefined();
+
+    // rerender com eligible:true SEM tocar em `fields` ⇒ a regra passa a aplicar.
+    rerender({ eligible: true });
+    await act(async () => {
+      result.current.handleBlur("productImages");
+    });
+    expect(result.current.fieldErrors.productImages).toBe(MESSAGE);
   });
 });

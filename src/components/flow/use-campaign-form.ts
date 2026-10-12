@@ -880,7 +880,7 @@ export function useCampaignForm(
         return next;
       });
     },
-    [fields]
+    [fields, eligible]
   );
 
   const handlePriceOriginalChange = useCallback(
