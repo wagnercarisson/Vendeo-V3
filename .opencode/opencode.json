@@ -1,9 +1,6 @@
 {
   "$schema": "https://opencode.ai",
-  "plugins": [
-    ".opencode/plugins/graphify.js",
-    "opencode-openai-codex-auth"
-  ],
+  "plugins": [],
   "workspace": {
     "ignore": [
       "**/node_modules/**",
@@ -13,16 +10,14 @@
       "**/storage-backup/**"
     ]
   },
-  "model": "openai/gpt-6-luna",
+  "model": "opencode/deepseek-v4-flas-vision-exp",
   "provider": {
-    "openai": {
-      "options": {
-        "authMethod": "oauth-codex"
-      },
+    "opencode": {
+      "options": {},
       "models": {
-        "gpt-5.6-luna-fast": {
+        "DeepSeek V4 Flash Vision Exp": {
           "options": {
-            "reasoningEffort": "low"
+            "reasoningEffort": "high"
           }
         }
       }
