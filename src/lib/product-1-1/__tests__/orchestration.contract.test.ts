@@ -503,3 +503,175 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(gatewaySource).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Task 3 — reenvio = consulta (query-only): estado persistido verbatim (F4),
+// desconhecido PERSISTIDO (C1) e Storage tipado (C2). Sem mutação/provider.
+// ---------------------------------------------------------------------------
+
+async function buildQueryHarness() {
+  const { queryProductOneToOneOperation } = await import(
+    "../orchestration/resend-query"
+  );
+
+  const calls = {
+    getCampaignOperation: 0,
+    listAttempts: 0,
+    probeArtifact: 0,
+    getSignedArtifactUrl: 0,
+  };
+  let operation: CampaignOperationState | null = await baseExisting({
+    status: "delivered",
+    terminal: true,
+    consumedDefinitive: true,
+  });
+  let artifactKind: "integral" | "absent" | "invalid" | "indeterminate" = "integral";
+
+  const deps = {
+    getCampaignOperation: async () => {
+      calls.getCampaignOperation += 1;
+      return operation;
+    },
+    listAttempts: async () => {
+      calls.listAttempts += 1;
+      return [{ attemptNumber: 1, target: "primary" as const }];
+    },
+    probeArtifact: async (): Promise<{ kind: typeof artifactKind; storagePath?: string }> => {
+      calls.probeArtifact += 1;
+      return artifactKind === "integral"
+        ? {
+            kind: "integral",
+            storagePath: `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`,
+          }
+        : { kind: artifactKind };
+    },
+    getSignedArtifactUrl: async () => {
+      calls.getSignedArtifactUrl += 1;
+      return "https://signed.example/art-1024.jpg";
+    },
+  };
+
+  return {
+    deps,
+    calls,
+    setOperation(state: CampaignOperationState | null) {
+      operation = state;
+    },
+    setArtifactKind(kind: typeof artifactKind) {
+      artifactKind = kind;
+    },
+    query: (input?: { storeId?: string }) =>
+      queryProductOneToOneOperation(
+        {
+          storeId: input?.storeId ?? STORE_ID,
+          campaignId: CAMPAIGN_ID,
+          operationId: OPERATION_ID,
+        },
+        deps as never,
+      ),
+  };
+}
+
+describe("F56.2b1b — reenvio somente consulta (Plano 04)", () => {
+  it("arte salva + `delivered` ⇒ estado `delivered` COM arte/URL", async () => {
+    const harness = await buildQueryHarness();
+    const view = await harness.query();
+    expect(view).toMatchObject({
+      state: "delivered",
+      artifactKind: "integral",
+      artifactUrl: "https://signed.example/art-1024.jpg",
+    });
+    expect(harness.calls.getSignedArtifactUrl).toBe(1);
+  });
+
+  it("F4: arte salva + `reserved` ⇒ estado `reserved` SEM arte/URL", async () => {
+    const harness = await buildQueryHarness();
+    harness.setOperation(await baseExisting({ status: "reserved" }));
+    const view = await harness.query();
+    expect(view).toMatchObject({ state: "reserved", artifactUrl: null, artifactKind: "integral" });
+    expect(harness.calls.getSignedArtifactUrl).toBe(0);
+  });
+
+  it("F4: arte salva + `art_uploaded` ⇒ estado `art_uploaded` SEM arte/URL", async () => {
+    const harness = await buildQueryHarness();
+    harness.setOperation(await baseExisting({ status: "art_uploaded" }));
+    const view = await harness.query();
+    expect(view).toMatchObject({ state: "art_uploaded", artifactUrl: null });
+    expect(harness.calls.getSignedArtifactUrl).toBe(0);
+  });
+
+  it("F4: `refunded` ⇒ estado `refunded` SEM arte", async () => {
+    const harness = await buildQueryHarness();
+    harness.setOperation(await baseExisting({ status: "refunded", terminal: true }));
+    const view = await harness.query();
+    expect(view).toMatchObject({ state: "refunded", artifactUrl: null });
+  });
+
+  it("C1: desconhecido PERSISTIDO ⇒ estado `unknown` (sem dedução de tempo) e sem arte", async () => {
+    const harness = await buildQueryHarness();
+    harness.setOperation(
+      await baseExisting({ unknown: true, outcome: "unknown", supportReference: "ref-1" }),
+    );
+    const view = await harness.query();
+    expect(view).toMatchObject({ state: "unknown", unknown: true, artifactUrl: null });
+    expect(harness.calls.getSignedArtifactUrl).toBe(0);
+  });
+
+  it("C1/I2: precedência terminal — `delivered` prevalece sobre o marcador `unknown`", async () => {
+    const harness = await buildQueryHarness();
+    harness.setOperation(
+      await baseExisting({
+        status: "delivered",
+        terminal: true,
+        consumedDefinitive: true,
+        unknown: true,
+      }),
+    );
+    const view = await harness.query();
+    expect(view).toMatchObject({ state: "delivered" });
+  });
+
+  it("C2: `indeterminate`/`absent`/`invalid` NÃO expõem arte nem promovem o estado", async () => {
+    for (const kind of ["indeterminate", "absent", "invalid"] as const) {
+      const harness = await buildQueryHarness();
+      harness.setArtifactKind(kind);
+      const view = await harness.query();
+      expect(view).toMatchObject({ state: "delivered", artifactUrl: null, artifactKind: kind });
+      expect(harness.calls.getSignedArtifactUrl).toBe(0);
+    }
+  });
+
+  it("F6: operação inexistente ⇒ `null` (nenhum efeito)", async () => {
+    const harness = await buildQueryHarness();
+    harness.setOperation(null);
+    const view = await harness.query();
+    expect(view).toBeNull();
+    expect(harness.calls.probeArtifact).toBe(0);
+  });
+
+  it("F6: identidade divergente ⇒ `null`", async () => {
+    const harness = await buildQueryHarness();
+    harness.setOperation(await baseExisting({ operationId: "other-operation-id" }));
+    const view = await harness.query();
+    expect(view).toBeNull();
+  });
+
+  it("query-only: o módulo NÃO contém caminho de mutação/provider", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/product-1-1/orchestration/resend-query.ts"),
+      "utf8",
+    );
+    for (const forbidden of [
+      ".reserve(",
+      ".deliver(",
+      ".refund(",
+      ".acquire(",
+      "recordOperationOutcome",
+      "createNewFlowImageGateway",
+      "persistProductOneToOneSnapshot",
+      "storeArtifact",
+    ]) {
+      expect(source, forbidden).not.toContain(forbidden);
+    }
+  });
+});
