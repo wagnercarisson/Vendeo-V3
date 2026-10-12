@@ -48,6 +48,7 @@ export type PendingResolutionErrorCode =
   | "execution_not_ended"
   | "delivered_not_refundable"
   | "operation_identity_conflict"
+  | "invalid_response"
   | "unknown";
 
 /** Erro tipado da resolução de pendência (fail-closed). */
@@ -76,6 +77,9 @@ const KNOWN_CODES: readonly PendingResolutionErrorCode[] = [
   "execution_not_ended",
   "delivered_not_refundable",
   "operation_identity_conflict",
+  // Envelope inválido/incompleto/contraditório devolvido pela RPC (F3): NUNCA é
+  // sucesso; mapeia para 500 (fail-closed), sem expor detalhe interno.
+  "invalid_response",
 ];
 
 /** Códigos que mapeiam para 400 Bad Request. */
@@ -165,6 +169,13 @@ export async function listPendingOperations(
  * Deriva a evidência server-side e resolve a pendência pela RPC auditada.
  * `invalid`/`indeterminate` BLOQUEIAM; `refund_once` exige `absent` CONFIRMADO;
  * um claim `in_progress` sem evidência de encerramento BLOQUEIA (E1/D13).
+ *
+ * F1 — a decisão de claim ativo é da RPC, derivada SOB A TRAVA; o serviço envia
+ * a evidência apenas como fast-path NÃO-autoritativo.
+ * F2(a) — operação TERMINAL não é recusada aqui: a RPC decide IDEMPOTENTE
+ * (replay equivalente) × CONFLITO (divergente).
+ * F3 — o envelope da RPC é validado (identidade + `status` terminal coerente);
+ * incompleto/contraditório ⇒ FAIL CLOSED (`invalid_response`).
  */
 export async function resolvePendingOperation(
   input: ResolvePendingInput,
@@ -198,31 +209,38 @@ export async function resolvePendingOperation(
   );
   const artKind = probe.kind;
 
-  // F5 — operação terminal não é resolvível (nenhum efeito novo).
-  if (state.terminal) throw new PendingOperationResolutionError("operation_terminal");
-
   // F5/C2 — indeterminado/inválido BLOQUEIA qualquer ação (sem refund/deliver).
+  // Fast-path NÃO-autoritativo: a RPC revalida a mesma regra.
   if (artKind === "invalid" || artKind === "indeterminate") {
     throw new PendingOperationResolutionError("insufficient_evidence");
   }
 
+  // F2(a) — operação TERMINAL NÃO é recusada antecipadamente: um replay
+  // EQUIVALENTE (mesmo conteúdo) precisa alcançar a RPC e resolver IDEMPOTENTE
+  // (um efeito/uma auditoria); um replay DIVERGENTE resolve CONFLITO
+  // (`operation_identity_conflict`); um terminal de AÇÃO divergente resolve
+  // `operation_terminal`. A RPC é a AUTORIDADE (idempotente × conflito).
   // E1/D13 — execução ativa (claim `in_progress`, inclusive o RESIDUAL) BLOQUEIA
   // enquanto não houver evidência server-side de ENCERRAMENTO. Sem fonte
   // operacional comprovada, `execution_ended` é `false` e a resolução permanece
   // BLOQUEADA (fail-closed, sem transição parcial). Idade/timeout NÃO é evidência.
+  // Os pré-checks abaixo são apenas um FAST-PATH NÃO-autoritativo (a RPC deriva o
+  // estado SOB A TRAVA); ficam restritos a operações NÃO terminais para que o
+  // replay terminal alcance a decisão idempotente/conflito da RPC.
   const executionEnded = !state.processing;
-  if (state.processing && !executionEnded) {
-    throw new PendingOperationResolutionError("operation_in_progress");
-  }
-
-  if (input.action === "deliver_existing_art" && artKind !== "integral") {
-    throw new PendingOperationResolutionError("insufficient_evidence");
-  }
-  if (input.action === "refund_once" && artKind !== "absent") {
-    throw new PendingOperationResolutionError("insufficient_evidence");
-  }
-  if (input.action === "refund_once" && !executionEnded) {
-    throw new PendingOperationResolutionError("execution_not_ended");
+  if (!state.terminal) {
+    if (state.processing) {
+      throw new PendingOperationResolutionError("operation_in_progress");
+    }
+    if (input.action === "deliver_existing_art" && artKind !== "integral") {
+      throw new PendingOperationResolutionError("insufficient_evidence");
+    }
+    if (input.action === "refund_once" && artKind !== "absent") {
+      throw new PendingOperationResolutionError("insufficient_evidence");
+    }
+    if (input.action === "refund_once" && !executionEnded) {
+      throw new PendingOperationResolutionError("execution_not_ended");
+    }
   }
 
   const evidence: ServerDerivedEvidence = Object.freeze({
@@ -242,22 +260,42 @@ export async function resolvePendingOperation(
   });
   if (error) throw mapRpcError(error.message);
 
-  const record = (data ?? {}) as Record<string, unknown>;
-  if (record.success === false) {
-    const reason = typeof record.reason === "string" ? record.reason : "unknown_error";
-    throw new PendingOperationResolutionError(
-      (KNOWN_CODES.includes(reason as PendingResolutionErrorCode)
-        ? reason
-        : "unknown") as PendingResolutionErrorCode,
-      reason,
-    );
+  // F3 — o envelope da RPC DEVE ser EXPLÍCITO e COERENTE (`success === true`,
+  // identidade igual à requisição e `status` TERMINAL coerente com a ação). Um
+  // envelope AUSENTE/INCOMPLETO/CONTRADITÓRIO (ex.: `{}`, `null`, sem `success`,
+  // identidade divergente, `status` incoerente) NUNCA vira sucesso: FAIL CLOSED
+  // (`invalid_response`).
+  const record = (data ?? null) as Record<string, unknown> | null;
+  if (!record || record.success !== true) {
+    // `success === false` explícito: propaga o MOTIVO tipado da RPC (idempotente
+    // × conflito × terminal × in_progress, etc.).
+    if (record && record.success === false) {
+      const reason = typeof record.reason === "string" ? record.reason : "unknown_error";
+      throw new PendingOperationResolutionError(
+        (KNOWN_CODES.includes(reason as PendingResolutionErrorCode)
+          ? reason
+          : "unknown") as PendingResolutionErrorCode,
+        reason,
+      );
+    }
+    throw new PendingOperationResolutionError("invalid_response", "invalid_response_envelope");
+  }
+
+  const expectedStatus = input.action === "deliver_existing_art" ? "delivered" : "refunded";
+  if (
+    String(record.campaign_id) !== input.campaignId ||
+    String(record.operation_id) !== input.operationId ||
+    record.action !== input.action ||
+    record.status !== expectedStatus
+  ) {
+    throw new PendingOperationResolutionError("invalid_response", "invalid_response_envelope");
   }
 
   return Object.freeze({
-    campaignId: String(record.campaign_id ?? input.campaignId),
-    operationId: String(record.operation_id ?? input.operationId),
+    campaignId: input.campaignId,
+    operationId: input.operationId,
     action: input.action,
-    status: String(record.status ?? ""),
+    status: expectedStatus,
     artifactKind: artKind,
     idempotent: record.idempotent === true,
   });
