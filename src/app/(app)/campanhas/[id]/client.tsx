@@ -13,7 +13,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
-import type { CampaignPageProps } from "@/lib/campaign/display";
+import type { CampaignPageProps, NewFlowCopyView } from "@/lib/campaign/display";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +54,7 @@ export default function CampaignPageClient(props: CampaignPageProps) {
         />
 
         {props.newFlow.state === "running" && <GeneratingView />}
-        {props.newFlow.state === "delivered" && <ReadyView {...props} />}
+        {props.newFlow.state === "delivered" && <NewFlowDeliveredView {...props} />}
         {props.newFlow.state === "refunded" && <NewFlowFailureView />}
         {props.newFlow.state === "unknown" && (
           <UnknownResultPanel
@@ -439,6 +439,125 @@ function RegeneratingView() {
         Aguarde: a nova versão aparecerá para aprovação.
       </p>
     </div>
+  );
+}
+
+// F56.2b1b (P3) — campanha do NOVO fluxo entregue (`delivered`): a ARTE é exibida
+// e, quando a copy do NOVO FLUXO está disponível (lida POR OPERAÇÃO), os textos
+// completos (título/legenda/hashtags/CTA) são exibidos. Falha/cancelamento da copy
+// ⇒ feedback SEGURO (âmbar) — nunca sucesso falso, nunca bloqueia a arte e SEM
+// ação de retry ("Gerar novamente"). NÃO inicia geração/cobrança.
+function NewFlowDeliveredView(props: CampaignPageProps) {
+  return (
+    <div className="space-y-6">
+      {props.imageUrl && (
+        <img
+          src={props.imageUrl}
+          alt={props.productName || "Campanha"}
+          className="w-full rounded-xl shadow-md"
+        />
+      )}
+
+      <p className="text-sm text-text-muted font-body">
+        Criada em {new Date(props.createdAt).toLocaleDateString("pt-BR")}
+      </p>
+
+      <NewFlowCopyPanel copy={props.newFlow?.copy ?? null} />
+
+      <Button
+        variant="primary"
+        size="md"
+        onClick={() => {
+          window.location.href = props.downloadUrl;
+        }}
+      >
+        <Download className="h-4 w-4" />
+        Baixar Original
+      </Button>
+      <p className="text-xs text-text-muted">
+        Use apenas materiais que você tem autorização para divulgar. Revise textos,
+        preços e imagens antes de publicar: a IA pode cometer erros.
+      </p>
+    </div>
+  );
+}
+
+// F56.2b1b (P3) — painel da copy do NOVO FLUXO. `delivered` ⇒ textos completos;
+// `failed`/`canceled` ⇒ feedback seguro (âmbar); `pending`/ausente ⇒ nada (a arte
+// continua exibida). Somente LEITURA — nunca gera/regenera/retenta.
+function NewFlowCopyPanel({ copy }: { copy: NewFlowCopyView | null }) {
+  if (!copy) return null;
+
+  if (copy.state === "failed" || copy.state === "canceled") {
+    return (
+      <Card>
+        <div className="p-4">
+          <p className="text-sm text-accent-amber font-body">
+            {copy.state === "canceled"
+              ? "A geração do texto demorou mais que o esperado e foi interrompida. A arte está pronta para uso."
+              : "Não foi possível gerar o texto desta campanha. A arte está pronta para uso."}
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (copy.state === "pending") return null;
+
+  const hasText = Boolean(
+    copy.title || copy.caption || copy.hashtags.length > 0 || copy.ctaPost,
+  );
+  if (!hasText) return null;
+
+  return (
+    <Card>
+      <div className="p-4">
+        <h2 className="mb-4 text-xl font-semibold text-text-primary font-heading">
+          Kit de Publicação
+        </h2>
+        <div className="space-y-3">
+          {copy.title && (
+            <div className="flex items-start gap-2">
+              <p className="flex-1 text-lg font-semibold text-text-primary font-heading">
+                {copy.title}
+              </p>
+              <CopyButton text={copy.title} label="título" />
+            </div>
+          )}
+          {copy.caption && (
+            <div className="flex items-start gap-2">
+              <p className="flex-1 text-lg text-text-primary font-body">
+                {copy.caption}
+              </p>
+              <CopyButton text={copy.caption} label="caption" />
+            </div>
+          )}
+          {copy.hashtags.length > 0 && (
+            <div className="flex items-start gap-2">
+              <div className="flex flex-1 flex-wrap gap-2">
+                {copy.hashtags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-accent-green/10 px-3 py-1 text-sm text-accent-green font-body"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <CopyButton text={copy.hashtags.join(" ")} label="hashtags" />
+            </div>
+          )}
+          {copy.ctaPost && (
+            <div className="flex items-start gap-2">
+              <p className="flex-1 font-semibold text-accent-green font-heading">
+                {copy.ctaPost}
+              </p>
+              <CopyButton text={copy.ctaPost} label="Chamada" />
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }
 

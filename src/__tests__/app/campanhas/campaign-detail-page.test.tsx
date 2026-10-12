@@ -27,13 +27,17 @@ vi.mock("@/lib/auth/store-ownership", () => ({
   getCurrentStore: mockGetCurrentStore,
 }));
 
-vi.mock("@/lib/campaign/display", () => ({
-  getCampaignForDisplay: mockGetCampaignForDisplay,
-  generateSignedPreviewUrl: mockGenerateSignedPreviewUrl,
-  mapCampaignToProps: mockMapCampaignToProps,
-  computeApprovalState: vi.fn(() => ({ status: "not_enabled" })),
-  getActiveCandidateArtVersion: vi.fn(() => null),
-}));
+vi.mock("@/lib/campaign/display", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/campaign/display")>();
+  return {
+    ...actual,
+    getCampaignForDisplay: mockGetCampaignForDisplay,
+    generateSignedPreviewUrl: mockGenerateSignedPreviewUrl,
+    mapCampaignToProps: mockMapCampaignToProps,
+    computeApprovalState: vi.fn(() => ({ status: "not_enabled" })),
+    getActiveCandidateArtVersion: vi.fn(() => null),
+  };
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn().mockResolvedValue({}),

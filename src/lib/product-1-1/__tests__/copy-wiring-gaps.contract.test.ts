@@ -553,3 +553,31 @@ describe("Plano 08 (correção) — wiring da ROTA (Gap 1)", () => {
     expect(orchestratorSource).toContain("createDurableAttemptEnvelopeSink");
   });
 });
+
+describe("Plano 08 (correção P3) — a copy do novo fluxo é lida POR OPERAÇÃO e exibida", () => {
+  const pageSource = readFileSync(
+    path.resolve(process.cwd(), "src/app/(app)/campanhas/[id]/page.tsx"),
+    "utf8",
+  );
+  const clientSource = readFileSync(
+    path.resolve(process.cwd(), "src/app/(app)/campanhas/[id]/client.tsx"),
+    "utf8",
+  );
+
+  it("a página lê a copy POR OPERAÇÃO (readCopyDelivery/readCopyCancellation) e mapeia para exibição", () => {
+    expect(pageSource).toContain("readCopyDelivery");
+    expect(pageSource).toContain("readCopyCancellation");
+    expect(pageSource).toContain("operationId: newFlowOperation.operationId");
+    expect(pageSource).toContain("mapNewFlowCopy");
+    // Somente leitura: nunca inicia geração/cobrança a partir da página.
+    expect(pageSource).not.toMatch(/generate-image|reserveCredit|runProductOneToOneGeneration/);
+  });
+
+  it("o client exibe os textos/copy e NUNCA oferece retry (`Gerar novamente`)", () => {
+    expect(clientSource).toContain("NewFlowCopyPanel");
+    expect(clientSource).toContain("Kit de Publicação");
+    // Retry NÃO existe como texto de AÇÃO renderizado (o termo só pode aparecer
+    // em comentários explicando a ausência).
+    expect(clientSource).not.toMatch(/>\s*Gerar novamente/);
+  });
+});

@@ -124,6 +124,10 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     exact: [
       "@/lib/product-1-1/orchestration/attempt-start-client",
       "@/lib/product-1-1/artifact/artifact-store",
+      // Plano 08 (correção de integração — P3): a página lê a copy do NOVO FLUXO
+      // POR OPERAÇÃO (`readCopyDelivery`/`readCopyCancellation`) — somente leitura
+      // (nunca gera/regenera/cobra). Par EXATO, sem prefixo amplo.
+      "@/lib/product-1-1/copy/copy-state",
     ],
   },
 });
@@ -678,10 +682,12 @@ describe("Product 1:1 — reconciliação G-NA (Plano 06, F56.2b1b)", () => {
     }
   });
 
-  it("campanhas/[id]/page.tsx: autoriza SOMENTE attempt-start-client + artifact-store", () => {
+  it("campanhas/[id]/page.tsx: autoriza SOMENTE attempt-start-client + artifact-store + copy/copy-state", () => {
     for (const specifier of [
       "@/lib/product-1-1/orchestration/attempt-start-client",
       "@/lib/product-1-1/artifact/artifact-store",
+      // Plano 08 (P3): leitura da copy do novo fluxo POR OPERAÇÃO (somente leitura).
+      "@/lib/product-1-1/copy/copy-state",
     ]) {
       expect(
         isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPANHAS_ID_PAGE, specifier),

@@ -21,7 +21,7 @@ vi.mock("@/components/campaign/campaign-approval-view", () => ({
 }));
 
 import CampaignPageClient from "../client";
-import { mapNewFlowDisplayState } from "@/lib/campaign/display";
+import { mapNewFlowCopy, mapNewFlowDisplayState } from "@/lib/campaign/display";
 import type { CampaignPageProps } from "@/lib/campaign/display";
 
 // ---------------------------------------------------------------------------
@@ -192,5 +192,139 @@ describe("CampaignPageClient — visão persistida do novo fluxo", () => {
     // Legacy `ready` permanece no ReadyView (sem `newFlow`).
     expect(screen.getByText("Baixar Original")).toBeInTheDocument();
     expect(screen.queryByText(/Não foi possível confirmar/)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F56.2b1b (Plano 08 — correção P3): a copy do NOVO FLUXO é exibida POR OPERAÇÃO.
+// `delivered` mostra os textos completos; `failed`/`canceled` mostram feedback
+// SEGURO (âmbar) — nunca sucesso falso, nunca bloqueia a arte, sem retry.
+// ---------------------------------------------------------------------------
+
+describe("mapNewFlowCopy — copy do novo fluxo (P3)", () => {
+  it("`completed` ⇒ textos completos (título/legenda/hashtags/CTA)", () => {
+    expect(
+      mapNewFlowCopy(
+        {
+          state: "completed",
+          copyText: "Legenda",
+          copyPayload: {
+            title: "Oferta",
+            caption: "Legenda",
+            hashtags: ["#promo"],
+            cta_post: "Aproveite!",
+          },
+        },
+        false,
+      ),
+    ).toEqual({
+      state: "delivered",
+      title: "Oferta",
+      caption: "Legenda",
+      hashtags: ["#promo"],
+      ctaPost: "Aproveite!",
+    });
+  });
+
+  it("`failed` sem cancelamento ⇒ `failed`; com cancelamento ⇒ `canceled`", () => {
+    const record = { state: "failed" as const, copyText: null, copyPayload: null };
+    expect(mapNewFlowCopy(record, false)).toMatchObject({ state: "failed" });
+    expect(mapNewFlowCopy(record, true)).toMatchObject({ state: "canceled" });
+  });
+
+  it("sem registro ⇒ `null` (sem superfície de copy)", () => {
+    expect(mapNewFlowCopy(null, false)).toBeNull();
+  });
+});
+
+describe("CampaignPageClient — copy do novo fluxo na campanha entregue (P3)", () => {
+  it("`delivered` com copy entregue ⇒ mostra os textos completos SEM `Gerar novamente`", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        caption=""
+        hashtags={[]}
+        ctaPost=""
+        newFlow={{
+          state: "delivered",
+          operationId: OPERATION_ID,
+          copy: {
+            state: "delivered",
+            title: "Oferta Especial",
+            caption: "Legenda nova da campanha",
+            hashtags: ["#promo"],
+            ctaPost: "Aproveite!",
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Oferta Especial")).toBeInTheDocument();
+    expect(screen.getByText("Legenda nova da campanha")).toBeInTheDocument();
+    expect(screen.getByText("#promo")).toBeInTheDocument();
+    expect(screen.getByText("Aproveite!")).toBeInTheDocument();
+    // A arte continua exibida e o download permanece.
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    expect(screen.getByText("Baixar Original")).toBeInTheDocument();
+    for (const forbidden of FORBIDDEN) {
+      expect(screen.queryByText(forbidden)).toBeNull();
+    }
+  });
+
+  it("`delivered` com copy FALHOU ⇒ feedback seguro (âmbar), arte visível, sem retry", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={{
+          state: "delivered",
+          operationId: OPERATION_ID,
+          copy: { state: "failed", caption: "", hashtags: [], ctaPost: "" },
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText("Não foi possível gerar o texto desta campanha. A arte está pronta para uso."),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    for (const forbidden of FORBIDDEN) {
+      expect(screen.queryByText(forbidden)).toBeNull();
+    }
+  });
+
+  it("`delivered` com copy CANCELADA ⇒ feedback seguro (âmbar) e arte visível", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={{
+          state: "delivered",
+          operationId: OPERATION_ID,
+          copy: { state: "canceled", caption: "", hashtags: [], ctaPost: "" },
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "A geração do texto demorou mais que o esperado e foi interrompida. A arte está pronta para uso.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    for (const forbidden of FORBIDDEN) {
+      expect(screen.queryByText(forbidden)).toBeNull();
+    }
+  });
+
+  it("`delivered` sem informação de copy ⇒ sem painel de copy e arte visível (sem sucesso falso)", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={{ state: "delivered", operationId: OPERATION_ID }}
+      />,
+    );
+
+    expect(screen.queryByText("Kit de Publicação")).toBeNull();
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    expect(screen.getByText("Baixar Original")).toBeInTheDocument();
   });
 });

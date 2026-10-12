@@ -45,6 +45,13 @@ export interface CampaignPageProps {
     /** Identidade da operação para a consulta query-only (`Verificar novamente`). */
     operationId?: string | null;
     supportEmail?: string;
+    /**
+     * F56.2b1b — copy do NOVO FLUXO recuperada POR OPERAÇÃO
+     * (`readCopyDelivery`/`readCopyCancellation`). `null`/ausente ⇒ sem informação
+     * de copy (a arte é exibida; nenhuma promessa de sucesso). `delivered` mostra
+     * os textos completos; `failed`/`canceled` mostram feedback seguro (âmbar).
+     */
+    copy?: NewFlowCopyView | null;
   };
   /** F37.1 (D2/decisão 3): estado de aprovação + candidata ativa (pending/regenerating). */
   approval?: {
@@ -98,6 +105,72 @@ export function mapNewFlowDisplayState(
   return "running";
 }
 
+
+/**
+ * F56.2b1b — visão da copy entregue pelo NOVO FLUXO (por operação). `display.ts`
+ * NÃO importa `product-1-1` (G-NA): o tipo é ESTRUTURAL e a página passa o
+ * registro lido de `product_1_1_copy_state`.
+ *
+ * - `delivered` ⇒ textos completos (título/legenda/hashtags/CTA) disponíveis;
+ * - `failed`/`canceled` ⇒ feedback SEGURO (âmbar), nunca sucesso falso;
+ * - `pending` ⇒ ainda gerando (sem superfície de retry);
+ * - `null` ⇒ sem informação de copy.
+ */
+export type NewFlowCopyState = "delivered" | "failed" | "canceled" | "pending";
+
+export interface NewFlowCopyView {
+  readonly state: NewFlowCopyState;
+  readonly title?: string;
+  readonly caption: string;
+  readonly hashtags: string[];
+  readonly ctaPost: string;
+}
+
+/** Registro ESTRUTURAL lido de `product_1_1_copy_state` (sem importar product-1-1). */
+export interface NewFlowCopyRecord {
+  readonly state: "pending" | "completed" | "failed";
+  readonly copyText: string | null;
+  readonly copyPayload: Record<string, unknown> | null;
+}
+
+/**
+ * Mapeia o registro persistido da copy (por operação) para a visão exibida.
+ * NUNCA inventa sucesso: `completed` exibe os textos; `failed` distingue
+ * `canceled` (cancelamento registrado separadamente) de falha; `pending` aguarda.
+ */
+export function mapNewFlowCopy(
+  record: NewFlowCopyRecord | null,
+  canceled: boolean,
+): NewFlowCopyView | null {
+  if (!record) return null;
+
+  if (record.state === "completed") {
+    const payload = record.copyPayload ?? {};
+    const caption =
+      typeof payload.caption === "string" ? payload.caption : (record.copyText ?? "");
+    const hashtags = Array.isArray(payload.hashtags)
+      ? (payload.hashtags.filter((tag) => typeof tag === "string") as string[])
+      : [];
+    return {
+      state: "delivered",
+      ...(typeof payload.title === "string" ? { title: payload.title } : {}),
+      caption,
+      hashtags,
+      ctaPost: typeof payload.cta_post === "string" ? payload.cta_post : "",
+    };
+  }
+
+  if (record.state === "failed") {
+    return {
+      state: canceled ? "canceled" : "failed",
+      caption: "",
+      hashtags: [],
+      ctaPost: "",
+    };
+  }
+
+  return { state: "pending", caption: "", hashtags: [], ctaPost: "" };
+}
 
 export async function getCampaignForDisplay(id: string): Promise<CampaignRecord | null> {
   if (!UUID_V4_REGEX.test(id)) {

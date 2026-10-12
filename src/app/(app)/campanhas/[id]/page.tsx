@@ -14,9 +14,14 @@ import {
   computeApprovalState,
   getActiveCandidateArtVersion,
   mapNewFlowDisplayState,
+  mapNewFlowCopy,
 } from "@/lib/campaign/display";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
+import {
+  readCopyDelivery,
+  readCopyCancellation,
+} from "@/lib/product-1-1/copy/copy-state";
 import CampaignPageClient from "./client";
 
 interface PageProps {
@@ -85,6 +90,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   }
 
   if (newFlowState && newFlowOperation) {
+    let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
     if (newFlowState === "delivered") {
       try {
         const artifactStore = new ProductOneToOneArtifactStore();
@@ -99,12 +105,33 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       } catch {
         // Melhor esforço: sem arte íntegra a página não promete recuperação.
       }
+
+      // F56.2b1b (P3) — a copy entregue é lida POR OPERAÇÃO (nunca dos campos
+      // legados de `campaigns`) e exibida na campanha. A leitura é SOMENTE
+      // leitura: NUNCA inicia geração/cobrança. Falha de leitura ⇒ sem informação
+      // de copy (a arte continua exibida; nenhuma promessa falsa).
+      try {
+        const delivery = await readCopyDelivery(supabaseAdmin, {
+          campaignId: id,
+          operationId: newFlowOperation.operationId,
+        });
+        const cancellation = delivery
+          ? await readCopyCancellation(supabaseAdmin, {
+              campaignId: id,
+              operationId: newFlowOperation.operationId,
+            })
+          : null;
+        newFlowCopy = mapNewFlowCopy(delivery, cancellation !== null);
+      } catch {
+        newFlowCopy = null;
+      }
     }
     props.newFlow = {
       state: newFlowState,
       supportReference: newFlowOperation.supportReference ?? null,
       operationId: newFlowOperation.operationId,
       supportEmail: process.env.SUPPORT_EMAIL,
+      copy: newFlowCopy,
     };
     return <CampaignPageClient {...props} />;
   }
