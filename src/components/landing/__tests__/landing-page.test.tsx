@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { getAllEntries } from "@/lib/changelog/get-changelog";
+import type { ChangelogEntry } from "@/lib/changelog/types";
 
 /**
  * Composition / copy / flag-mode test for the public landing server page.
@@ -18,6 +20,52 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const flagMock = vi.hoisted(() => ({ publicSignupEnabled: false }));
 
+// Fixture determinística do changelog (mesmo padrão do changelog-announcement.test.tsx
+// e do antigo teste legado A9). Apenas a FONTE DE DADOS é mockada — `ChangelogList` e
+// `NovidadesLink` NÃO são mockados, para exercitar o componente real (títulos e estado
+// vazio reais) e não fabricar o resultado pelo mock.
+const { FIXTURE_ENTRIES } = vi.hoisted(() => {
+  function makeEntry(
+    overrides: Partial<ChangelogEntry["frontmatter"]> = {},
+  ): ChangelogEntry {
+    return {
+      frontmatter: {
+        id: "entry-1",
+        title: "Título de teste",
+        date: "2026-07-31",
+        category: "feature",
+        importance: "minor",
+        announcement: "none",
+        ...overrides,
+      },
+      body: "## O que mudou\n\nConteúdo da novidade.",
+      slug: "2026-07-31-entry",
+    };
+  }
+  return {
+    FIXTURE_ENTRIES: [
+      makeEntry({
+        id: "e1",
+        title: "Primeira novidade",
+        date: "2026-08-14",
+        importance: "major",
+      }),
+      makeEntry({
+        id: "e2",
+        title: "Segunda novidade",
+        date: "2026-08-10",
+        category: "improvement",
+      }),
+      makeEntry({
+        id: "e3",
+        title: "Terceira novidade",
+        date: "2026-08-05",
+        category: "fix",
+      }),
+    ],
+  };
+});
+
 vi.mock("@/lib/launch-config/config", () => ({
   getLaunchConfig: vi.fn(async () => ({
     publicSignupEnabled: flagMock.publicSignupEnabled,
@@ -25,11 +73,7 @@ vi.mock("@/lib/launch-config/config", () => ({
 }));
 
 vi.mock("@/lib/changelog/get-changelog", () => ({
-  getAllEntries: vi.fn(async () => []),
-}));
-
-vi.mock("@/components/changelog/changelog-list", () => ({
-  ChangelogList: () => <span data-testid="changelog-list" />,
+  getAllEntries: vi.fn(async () => FIXTURE_ENTRIES),
 }));
 
 vi.mock("@/components/auth/google-button", () => ({
@@ -76,8 +120,19 @@ function setFlag(value: boolean) {
   flagMock.publicSignupEnabled = value;
 }
 
+// Gatilho VÁLIDO na landing atual (ground truth): `Novidades` existe SOMENTE no
+// rodapé (`NovidadesLink variant="footer"`, botão dentro de `footer nav`). O helper
+// do antigo A9 — que buscava o botão dentro de `#acesso` — é OBSOLETO e NÃO é
+// preservado: o formulário não renderiza mais `Novidades`.
+function getFooterNovidades(container: HTMLElement): HTMLElement {
+  const footer = container.querySelector("footer");
+  if (!footer) throw new Error("footer ausente");
+  return within(footer as HTMLElement).getByRole("button", { name: "Novidades" });
+}
+
 beforeEach(() => {
   setFlag(false);
+  vi.mocked(getAllEntries).mockResolvedValue(FIXTURE_ENTRIES);
 });
 
 afterEach(() => {
@@ -125,6 +180,57 @@ describe("Landing page — composição e copy (flag off)", () => {
     const footer = container.querySelector("footer");
     expect(footer).not.toBeNull();
     expect(within(footer as HTMLElement).getByText("Novidades")).toBeInTheDocument();
+  });
+
+  // 4 interações válidas de Novidades migradas do antigo A9 (C2 — migrate-then-delete),
+  // com o gatilho do RODAPÉ e os componentes reais (títulos/estado vazio reais).
+  it("abre o diálogo de Novidades pelo gatilho do rodapé com os títulos reais do fixture", async () => {
+    const { container } = render(await Home());
+    fireEvent.click(getFooterNovidades(container));
+
+    const dialog = screen.getByRole("dialog", { name: "Novidades" });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("Primeira novidade")).toBeInTheDocument();
+    expect(within(dialog).getByText("Segunda novidade")).toBeInTheDocument();
+    expect(within(dialog).getByText("Terceira novidade")).toBeInTheDocument();
+  });
+
+  it("fecha o diálogo pelo botão 'Fechar novidades' e devolve o foco ao gatilho do rodapé", async () => {
+    const { container } = render(await Home());
+    const trigger = getFooterNovidades(container);
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Fechar novidades" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+    });
+  });
+
+  it("fecha o diálogo de Novidades com a tecla Escape", async () => {
+    const { container } = render(await Home());
+    fireEvent.click(getFooterNovidades(container));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("mostra o estado vazio real do changelog no diálogo quando não há entradas", async () => {
+    vi.mocked(getAllEntries).mockResolvedValue([]);
+    const { container } = render(await Home());
+
+    fireEvent.click(getFooterNovidades(container));
+
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText("Nenhuma novidade por enquanto."),
+    ).toBeInTheDocument();
   });
 
   it("torna as faixas de demonstração focáveis por teclado e sem auto-advance", async () => {
