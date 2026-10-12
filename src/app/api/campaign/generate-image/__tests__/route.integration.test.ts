@@ -9,6 +9,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
+import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
+
 vi.mock("server-only", () => ({}));
 
 const h = vi.hoisted(() => {
@@ -115,6 +117,7 @@ vi.mock("@/lib/product-1-1/snapshot/persist-snapshot", () => ({
 }));
 
 vi.mock("@/lib/product-1-1/prompt-composition", () => ({
+  PROMPT_BLOCK_LABELS: { identity: "IDENTIDADE E DIREÇÃO VISUAL" },
   composeProductPrompt: vi.fn(() => ({
     text: "prompt-composicao",
     blocks: {},
@@ -321,12 +324,26 @@ const EMPTY_CAMPAIGN_QUERY = {
   })),
 };
 
+// (gap 4) A identidade é resolvida SERVER-SIDE dentro do novo fluxo: a loja é
+// lida via supabaseAdmin antes de `resolveStoreIdentity`.
+const STORES_QUERY = {
+  select: vi.fn(() => ({
+    eq: vi.fn(() => ({
+      single: vi.fn(async () => ({
+        data: { id: STORE_ID, name: "Loja Teste", segment: "outros" },
+        error: null,
+      })),
+    })),
+  })),
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   h.diagnoses.clear();
 
   h.mockFrom.mockImplementation((table: string) => {
     if (table === "campaigns") return EMPTY_CAMPAIGN_QUERY;
+    if (table === "stores") return STORES_QUERY;
     return {};
   });
   h.mockRpc.mockImplementation(async (fn: string) => {
@@ -374,6 +391,26 @@ beforeEach(() => {
   });
   h.recordGenerationAttempt.mockResolvedValue(undefined);
   h.inputValidationValidate.mockResolvedValue({ classification: "ok" });
+
+  // (gap 4) identidade resolvida server-side dentro do novo fluxo.
+  (resolveStoreIdentity as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    storeName: "Loja Teste",
+    storeSegment: "outros",
+    brandColor: "#000000",
+    identityState: "text_only",
+    signature: { url: null, type: null },
+  });
+  (validateIdentityReference as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    storeName: "Loja Teste",
+    storeSegment: "outros",
+    brandColor: "#000000",
+    identityState: "text_only",
+    signature: { url: null, type: null },
+  });
+  (buildCampaignBrief as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    store: { name: "Loja Teste", segment: "outros" },
+    identity: { state: "text_only", imageUrl: null, directive: "Direção de identidade." },
+  });
 });
 
 describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integração)", () => {
@@ -391,6 +428,12 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     const terminal = terminalOf(parseEvents(await res.text()));
     // Não é o erro de CAMPO da regra Original (a imagem única foi contada).
     expect(terminal).toMatchObject({ type: "result" });
+    // (gap 1) A imagem ÚNICA entra no pipeline REAL: o gateway recebe o dataUrl.
+    expect(h.gatewayInvoke).toHaveBeenCalled();
+    expect(
+      (h.gatewayInvoke.mock.calls[0][1] as { productImagesDataUrls?: string[] })
+        .productImagesDataUrls,
+    ).toEqual(["data:image/jpeg;base64,single"]);
   });
 
   it("(achado 3) reenvio com operação EXISTENTE ⇒ SOMENTE consulta (zero InputValidation/recordGenerationAttempt/createCampaign)", async () => {
@@ -428,6 +471,7 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     // 1ª leitura (pré-criação) ⇒ ausente; 2ª leitura (pós-corrida) ⇒ mesma loja.
     let readCount = 0;
     h.mockFrom.mockImplementation((table: string) => {
+      if (table === "stores") return STORES_QUERY;
       if (table === "campaigns") {
         return {
           select: vi.fn(() => ({
@@ -568,5 +612,80 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     ).findByReference(reference);
     expect(diagnosis).toBeTruthy();
     expect(diagnosis).toMatchObject({ reference, internalCategory: "preflight_failed" });
+  });
+
+  it("(gap 3) timeout/abort ⇒ `unknown` com diagnóstico durável recuperável por `findByReference`", async () => {
+    h.gatewayInvoke.mockRejectedValue(Object.assign(new Error("timeout"), { name: "AbortError" }));
+
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    const terminal = terminalOf(parseEvents(await res.text()));
+    expect(terminal).toMatchObject({ type: "unknown" });
+    const reference = terminal.reference as string;
+    expect(typeof reference).toBe("string");
+
+    const { SupabaseImageGenerationDiagnosisRepository } = await import(
+      "@/lib/ai/image-generation-diagnosis-repository"
+    );
+    const diagnosis = await new SupabaseImageGenerationDiagnosisRepository(
+      {} as never,
+    ).findByReference(reference);
+    expect(diagnosis).toBeTruthy();
+    expect(diagnosis).toMatchObject({ reference, internalCategory: "generation_unknown" });
+  });
+
+  it("(gap 3) pendência (arte PRESENTE) ⇒ `unknown` com diagnóstico durável recuperável por `findByReference`", async () => {
+    h.storeArtifact.mockRejectedValueOnce(
+      Object.assign(new Error("artifact_metadata_persist_failed"), {
+        code: "artifact_metadata_persist_failed",
+      }),
+    );
+    h.probeArtifact.mockResolvedValue({ kind: "integral" });
+
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    const terminal = terminalOf(parseEvents(await res.text()));
+    expect(terminal).toMatchObject({ type: "unknown" });
+    const reference = terminal.reference as string;
+
+    const { SupabaseImageGenerationDiagnosisRepository } = await import(
+      "@/lib/ai/image-generation-diagnosis-repository"
+    );
+    const diagnosis = await new SupabaseImageGenerationDiagnosisRepository(
+      {} as never,
+    ).findByReference(reference);
+    expect(diagnosis).toBeTruthy();
+    expect(diagnosis).toMatchObject({ reference, internalCategory: "artifact_store_failed" });
+  });
+
+  it("(gap 4) identidade SERVER-SIDE vai ao gateway como `identityImageUrl` e é congelada no snapshot", async () => {
+    const serverIdentity = {
+      storeName: "Loja Teste",
+      storeSegment: "outros",
+      brandColor: "#111111",
+      identityState: "logo",
+      signature: { url: "https://signed.example/logo.png", type: "logo" },
+    };
+    (resolveStoreIdentity as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(serverIdentity);
+    (validateIdentityReference as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      serverIdentity,
+    );
+
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    const terminal = terminalOf(parseEvents(await res.text()));
+    expect(terminal).toMatchObject({ type: "result" });
+
+    expect(h.gatewayInvoke).toHaveBeenCalled();
+    const request = h.gatewayInvoke.mock.calls[0][1] as { identityImageUrl?: string };
+    expect(request.identityImageUrl).toBe("https://signed.example/logo.png");
+
+    expect(h.createCampaign).toHaveBeenCalledWith(
+      STORE_ID,
+      expect.objectContaining({
+        identitySnapshot: expect.objectContaining({ storeName: "Loja Teste" }),
+      }),
+      CAMPAIGN_ID,
+    );
   });
 });

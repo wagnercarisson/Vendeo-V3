@@ -41,8 +41,10 @@ import { assertSubmissionEligible } from "@/lib/product-1-1/submission/assert-su
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 import { NewFlowGenerateImageRequestSchema } from "@/lib/image-generation/schema";
-import { runProductOneToOneGeneration } from "@/lib/product-1-1/orchestration/generation-orchestrator";
-import { readProductOneToOneOperation } from "@/lib/product-1-1/orchestration/generation-orchestrator";
+import {
+  runProductOneToOneGeneration,
+  readProductOneToOneOperation,
+} from "@/lib/product-1-1/orchestration/generation-orchestrator";
 import { validateOriginalBackground, countProductImages, ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE } from "@/lib/product-1-1/selection-validation";
 import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
 
@@ -50,6 +52,53 @@ export const runtime = "nodejs";
 
 const STORE_ID_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ─── F56.2.2-04 (correção de integração): fingerprint de conteúdo congelado ───
+// Fonte ÚNICA de comparação para o reuso idempotente da campanha do novo fluxo:
+// serialização estável (chaves ordenadas) do snapshot de briefing + das seleções
+// de conteúdo (hash de cada imagem + papel + índice), SEM os campos voláteis
+// (`id` aleatório por imagem). Detecta divergência de preço/texto/imagem/identidade.
+const FROZEN_CONTENT_REFERENCES_KEY = "frozenContentReferences" as const;
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+      a.localeCompare(b),
+    );
+    return `{${entries
+      .map(([key, inner]) => `${JSON.stringify(key)}:${stableStringify(inner)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
+/** Remove o `id` volátil (uuid por chamada) das imagens do snapshot congelado. */
+function canonicalFrozenSnapshot(
+  snapshot: Record<string, unknown>,
+): Record<string, unknown> {
+  const media = snapshot.media as { images?: unknown } | undefined;
+  const images =
+    media && Array.isArray(media.images)
+      ? (media.images as Record<string, unknown>[]).map((image) => ({
+          role: image.role ?? null,
+          source: image.source ?? null,
+          mimeType: image.mimeType ?? null,
+          provided: image.provided ?? null,
+        }))
+      : [];
+  return { ...snapshot, media: { ...(media ?? {}), images } };
+}
+
+/** Hash estável do conteúdo congelado (snapshot canônico + seleções de conteúdo). */
+function computeFrozenContentHash(
+  snapshot: Record<string, unknown>,
+  references: readonly unknown[],
+): string {
+  return createHash("sha256")
+    .update(stableStringify({ snapshot: canonicalFrozenSnapshot(snapshot), references }))
+    .digest("hex");
+}
 
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
@@ -297,7 +346,37 @@ export const POST = apiHandler(async (request: NextRequest) => {
           : null;
       const contentId = (dataUrl: string): string =>
         createHash("sha256").update(dataUrl).digest("hex");
-      const newFlowProductImages = newFlow.productImages ?? [];
+      // (achado 1 / gap 1) Normaliza AMBOS os transportes UMA única vez numa lista
+      // CANÔNICA de imagens de produto: `productImages[]` quando presente, senão
+      // uma imagem sintética `{ role: "primary", dataUrl: productImageDataUrl }`.
+      // ESTA lista é a ÚNICA fonte para: (a) contagem da regra Original, (b)
+      // `referenceSelections` (hash de conteúdo + papel + índice), (c) `references`,
+      // (d) briefing/evidência congelados e (e) `productImagesDataUrls` do gateway.
+      // Nenhum caminho usa `productImages ?? []` isoladamente.
+      const newFlowProductImages: ReadonlyArray<{
+        role: "primary" | "variation" | "combo_item" | "reference";
+        source: "upload" | "camera";
+        mimeType: string;
+        dataUrl: string;
+      }> =
+        newFlow.productImages && newFlow.productImages.length > 0
+          ? newFlow.productImages.map((image) => ({
+              role: image.role,
+              source: image.source,
+              mimeType: image.mimeType,
+              dataUrl: image.dataUrl,
+            }))
+          : typeof newFlow.productImageDataUrl === "string" &&
+              newFlow.productImageDataUrl.length > 0
+            ? [
+                {
+                  role: "primary" as const,
+                  source: "upload" as const,
+                  mimeType: mimeTypeFromDataUrl(newFlow.productImageDataUrl),
+                  dataUrl: newFlow.productImageDataUrl,
+                },
+              ]
+            : [];
       const newFlowBriefing = {
         backgroundDirection: newFlowBackgroundDirection,
         product: {
@@ -331,12 +410,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         backgroundDirection: newFlowBackgroundDirection,
         references: newFlowReferenceSelections.map((selection) => selection.id),
         referenceSelections: newFlowReferenceSelections,
-        productImagesDataUrls:
-          newFlowProductImages.length > 0
-            ? newFlowProductImages.map((image) => image.dataUrl)
-            : newFlow.productImageDataUrl
-              ? [newFlow.productImageDataUrl]
-              : [],
+        productImagesDataUrls: newFlowProductImages.map((image) => image.dataUrl),
         runId: operationRunId,
         traceId,
       };
@@ -348,22 +422,16 @@ export const POST = apiHandler(async (request: NextRequest) => {
       }
 
       // (2) Regra Original revalidada server-side — erro de CAMPO, nunca IMG-001.
-      // (achado 1) Normaliza AMBOS os formatos de transporte (`productImages[]`
-      // XOR `productImageDataUrl`): o formulário envia a data URL única quando há
-      // exatamente UMA imagem — esse caso (1 imagem) é ACEITO. Imagens de
-      // identidade continuam excluídas da contagem.
+      // (achado 1 / gap 1) A contagem usa a lista CANÔNICA já normalizada
+      // (`productImages[]` XOR `productImageDataUrl`); o formulário envia a data URL
+      // única quando há exatamente UMA imagem — esse caso (1 imagem) é ACEITO.
+      // Imagens de identidade continuam excluídas da contagem.
       if (newFlowBackgroundDirection === "original") {
         const normalizedProductImages = newFlowProductImages;
-        const productImageCount =
-          normalizedProductImages.length > 0
-            ? countProductImages({
-                productImages: normalizedProductImages,
-                identityImages: [],
-              })
-            : typeof newFlow.productImageDataUrl === "string" &&
-                newFlow.productImageDataUrl.length > 0
-              ? 1
-              : 0;
+        const productImageCount = countProductImages({
+          productImages: normalizedProductImages,
+          identityImages: [],
+        });
         const originalValidation = validateOriginalBackground({ productImageCount });
         if (!originalValidation.valid) {
           return Response.json(
@@ -466,8 +534,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
         }
       }
       const newFlowPrimaryDataUrl =
-        (newFlow.productImages ?? []).find((image) => image.role === "primary")
-          ?.dataUrl ?? newFlow.productImageDataUrl;
+        newFlowProductImages.find((image) => image.role === "primary")?.dataUrl ??
+        newFlow.productImageDataUrl;
       if (!newFlow.inputValidationOverride?.productImageCheck && newFlowPrimaryDataUrl) {
         try {
           const newFlowValidation = await new InputValidationService().validate(
@@ -508,13 +576,87 @@ export const POST = apiHandler(async (request: NextRequest) => {
         }
       }
 
-      // (4) C3/F6 — campanha IDEMPOTENTE por `campaignId` do corpo (nunca uma
-      // segunda campanha; conteúdo/loja divergente ⇒ conflito).
+      // (4) F56.2.2-04 (gap 4) — IDENTIDADE resolvida SERVER-SIDE (NUNCA do
+      // cliente): leitura da loja + `resolveStoreIdentity` + `validateIdentityReference`
+      // (contratos EXISTENTES). Congelada em `identitySnapshot`, carregada ao gateway
+      // como `identityImageUrl` e materializada como direção de identidade.
+      let newFlowIdentitySnapshot: Awaited<ReturnType<typeof validateIdentityReference>>;
+      let newFlowIdentityDirective: string | null = null;
+      try {
+        const { data: newFlowStore, error: newFlowStoreError } = await supabaseAdmin
+          .from("stores")
+          .select("id, name, logo_url, segment, brand_color, subsegment, tone_of_voice, positioning, short_description, slogan, identity_state")
+          .eq("id", newFlowStoreId)
+          .single();
+        if (newFlowStoreError || !newFlowStore) {
+          return Response.json(
+            { error: { message: "Loja não encontrada." } },
+            { status: 404 },
+          );
+        }
+        const resolvedNewFlowIdentity = await resolveStoreIdentity(newFlowStore);
+        newFlowIdentitySnapshot = await validateIdentityReference(resolvedNewFlowIdentity);
+        const newFlowIdentityContext = await buildCampaignBrief(
+          newFlowIdentitySnapshot,
+          newFlow as unknown as CampaignInput,
+        );
+        newFlowIdentityDirective = newFlowIdentityContext?.identity?.directive ?? null;
+      } catch (err) {
+        console.error(
+          `[generate-image] new_flow resolveStoreIdentity error — ${err instanceof Error ? err.message : String(err)}`,
+        );
+        return Response.json(
+          { error: { message: "Erro ao resolver identidade da loja." } },
+          { status: 500 },
+        );
+      }
+
+      // (4b) gap 4(d) — a identidade entra nas SELEÇÕES congeladas com um id
+      // ESTÁVEL de conteúdo (descritor de identidade; NUNCA a URL assinada
+      // rotativa), para que mudanças de identidade alterem o binding.
+      const newFlowIdentityImageUrl = newFlowIdentitySnapshot?.signature?.url ?? null;
+      const newFlowIdentityReference = newFlowIdentityImageUrl
+        ? {
+            kind: "identity" as const,
+            id: contentId(
+              stableStringify({
+                state: newFlowIdentitySnapshot?.identityState ?? "text_only",
+                signatureType: newFlowIdentitySnapshot?.signature?.type ?? null,
+                storeName: newFlowIdentitySnapshot?.storeName ?? null,
+                brandColor: newFlowIdentitySnapshot?.brandColor ?? null,
+              }),
+            ),
+            role: "identity",
+            index: newFlowProductImages.length,
+          }
+        : null;
+      const newFlowEvidenceReferenceSelections = [
+        ...newFlowReferenceSelections,
+        ...(newFlowIdentityReference ? [newFlowIdentityReference] : []),
+      ];
+
+      // (4c) gap 2 — fingerprint do conteúdo congelado (snapshot canônico + seleções
+      // por CONTEÚDO). Fonte ÚNICA da comparação de reuso da campanha.
+      const newFlowFrozenSnapshot = buildCampaignBriefSnapshot(
+        buildCampaignBriefFromFlat(newFlow, newFlowStoreId),
+      ) as unknown as Record<string, unknown>;
+      const newFlowFrozenContentHash = computeFrozenContentHash(
+        newFlowFrozenSnapshot,
+        newFlowEvidenceReferenceSelections,
+      );
+
+      // (5) C3/F6 — campanha IDEMPOTENTE por `campaignId` do corpo (nunca uma
+      // segunda campanha; loja E CONTEÚDO divergentes ⇒ conflito). O reuso compara
+      // a loja E o conteúdo congelado persistido (`input_snapshot`), não só a loja.
       const existingNewFlowCampaign = await supabaseAdmin
         .from("campaigns")
-        .select("id, store_id")
+        .select("id, store_id, input_snapshot")
         .eq("id", newFlow.campaignId)
-        .maybeSingle<{ id: string; store_id: string }>();
+        .maybeSingle<{
+          id: string;
+          store_id: string;
+          input_snapshot: Record<string, unknown> | null;
+        }>();
       if (existingNewFlowCampaign.error) {
         console.error(
           `[generate-image] new_flow campaign read error — ${existingNewFlowCampaign.error.message}`,
@@ -538,18 +680,48 @@ export const POST = apiHandler(async (request: NextRequest) => {
           { status: 409 },
         );
       }
+      if (existingNewFlowCampaign.data) {
+        // gap 2 (a) — MESMA campanha/loja: compara o conteúdo congelado persistido
+        // ao conteúdo submetido; divergência ⇒ `operation_identity_conflict`.
+        const storedSnapshots = existingNewFlowCampaign.data.input_snapshot ?? null;
+        if (storedSnapshots) {
+          const storedReferences = Array.isArray(
+            storedSnapshots[FROZEN_CONTENT_REFERENCES_KEY],
+          )
+            ? (storedSnapshots[FROZEN_CONTENT_REFERENCES_KEY] as unknown[])
+            : [];
+          const storedBriefSnapshot = { ...storedSnapshots };
+          delete storedBriefSnapshot[FROZEN_CONTENT_REFERENCES_KEY];
+          if (
+            computeFrozenContentHash(storedBriefSnapshot, storedReferences) !==
+            newFlowFrozenContentHash
+          ) {
+            return Response.json(
+              {
+                error: {
+                  code: "operation_identity_conflict",
+                  message: "Conteúdo de campanha divergente.",
+                },
+              },
+              { status: 409 },
+            );
+          }
+        }
+      }
       if (!existingNewFlowCampaign.data) {
         try {
-          const newFlowBrief = buildCampaignBriefFromFlat(newFlow, newFlowStoreId);
           await createCampaign(
             newFlowStoreId,
             {
               productName: newFlow.productName,
-              inputSnapshot: buildCampaignBriefSnapshot(newFlowBrief) as unknown as Record<
+              inputSnapshot: {
+                ...newFlowFrozenSnapshot,
+                [FROZEN_CONTENT_REFERENCES_KEY]: newFlowEvidenceReferenceSelections,
+              } as unknown as Record<string, unknown>,
+              identitySnapshot: newFlowIdentitySnapshot as unknown as Record<
                 string,
                 unknown
               >,
-              identitySnapshot: undefined,
               operationRunId,
             },
             newFlow.campaignId,
@@ -558,19 +730,48 @@ export const POST = apiHandler(async (request: NextRequest) => {
           console.error(
             `[generate-image] new_flow campaign create error — ${err instanceof Error ? err.message : String(err)}`,
           );
-          // (achado 3) Corrida de criação: RE-LÊ a campanha. Se agora existe com
-          // a MESMA loja ⇒ REUSA (idempotente, sem 409); divergente/ausente ⇒
-          // conflito de identidade.
+          // (achado 3) Corrida de criação: RE-LÊ a campanha. Mesma loja E mesmo
+          // conteúdo ⇒ REUSA (idempotente, sem 409); divergente/ausente ⇒ conflito.
           const racedNewFlowCampaign = await supabaseAdmin
             .from("campaigns")
-            .select("id, store_id")
+            .select("id, store_id, input_snapshot")
             .eq("id", newFlow.campaignId)
-            .maybeSingle<{ id: string; store_id: string }>();
+            .maybeSingle<{
+              id: string;
+              store_id: string;
+              input_snapshot: Record<string, unknown> | null;
+            }>();
           if (
             racedNewFlowCampaign.data &&
             racedNewFlowCampaign.data.store_id === newFlowStoreId
           ) {
-            // Reuso idempotente: a corrida já registrou a MESMA campanha/loja.
+            // gap 2 (b) — a corrida vencedora só é reusada sob conteúdo EQUIVALENTE.
+            const racedSnapshot = racedNewFlowCampaign.data.input_snapshot ?? null;
+            let racedContentMatches = true;
+            if (racedSnapshot) {
+              const racedReferences = Array.isArray(
+                racedSnapshot[FROZEN_CONTENT_REFERENCES_KEY],
+              )
+                ? (racedSnapshot[FROZEN_CONTENT_REFERENCES_KEY] as unknown[])
+                : [];
+              const racedBriefSnapshot = { ...racedSnapshot };
+              delete racedBriefSnapshot[FROZEN_CONTENT_REFERENCES_KEY];
+              racedContentMatches =
+                computeFrozenContentHash(racedBriefSnapshot, racedReferences) ===
+                newFlowFrozenContentHash;
+            }
+            if (!racedContentMatches) {
+              return Response.json(
+                {
+                  error: {
+                    code: "operation_identity_conflict",
+                    message: "Erro ao registrar a campanha.",
+                  },
+                },
+                { status: 409 },
+              );
+            }
+            // Reuso idempotente: a corrida registrou a MESMA campanha/loja/conteúdo.
           } else {
             return Response.json(
               {
@@ -586,10 +787,17 @@ export const POST = apiHandler(async (request: NextRequest) => {
       }
       await recordGenerationAttempt(newFlowStoreId, newFlowUser.userId);
 
-      // (5) Delegação ao orquestrador NDJSON (snapshot → reserva → tentativa →
-      // política 2+1 → arte → delivered), preservando a identidade da operação e
-      // o conteúdo congelado COMPLETO (briefing íntegro + seleções por conteúdo).
-      return await runProductOneToOneGeneration(newFlowOrchestrationInput);
+      // (6) Delegação ao orquestrador NDJSON (snapshot → reserva → tentativa →
+      // política 2+1 → arte → delivered), preservando a identidade da operação, o
+      // conteúdo congelado COMPLETO (briefing íntegro + seleções por conteúdo) e a
+      // IDENTIDADE VISUAL server-side (gap 4: `identityImageUrl` + direção).
+      return await runProductOneToOneGeneration({
+        ...newFlowOrchestrationInput,
+        references: newFlowEvidenceReferenceSelections.map((selection) => selection.id),
+        referenceSelections: newFlowEvidenceReferenceSelections,
+        identityImageUrl: newFlowIdentityImageUrl ?? undefined,
+        identityDirective: newFlowIdentityDirective ?? undefined,
+      });
     }
   }
 

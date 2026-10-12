@@ -1796,7 +1796,11 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
   };
 
   function setupNewFlowMocks(options?: {
-    existingCampaign?: { id: string; store_id: string } | null;
+    existingCampaign?: {
+      id: string;
+      store_id: string;
+      input_snapshot?: Record<string, unknown> | null;
+    } | null;
   }) {
     mockStoreFrom.mockImplementation((table: string) => {
       if (table === 'stores') {
@@ -1971,6 +1975,195 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     expect(body.error.code).toBe('operation_identity_conflict');
     expect(createCampaign).not.toHaveBeenCalled();
     expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  // ── F56.2.2-04 (correção de integração): gaps 1/2/4 ────────────────────────
+
+  it('gap 1: imagem ÚNICA via productImageDataUrl entra nas referências (não vazio) e no gateway', async () => {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+    const body: Record<string, unknown> = {
+      ...VALID_NEW_FLOW_BODY,
+      productImageDataUrl: 'data:image/jpeg;base64,single',
+    };
+    delete body.productImages;
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+
+    const input = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(input.referenceSelections).toHaveLength(1);
+    expect(input.referenceSelections[0]).toMatchObject({
+      kind: 'product',
+      role: 'primary',
+      index: 0,
+    });
+    expect(typeof input.referenceSelections[0].id).toBe('string');
+    expect(input.references).toHaveLength(1);
+    expect(input.productImagesDataUrls).toEqual(['data:image/jpeg;base64,single']);
+  });
+
+  it('gap 1: mudar o CONTEÚDO da imagem única muda o id de conteúdo congelado (fingerprint)', async () => {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+    const bodyA: Record<string, unknown> = {
+      ...VALID_NEW_FLOW_BODY,
+      productImageDataUrl: 'data:image/jpeg;base64,AAA',
+    };
+    delete bodyA.productImages;
+    await (await POST(makeRequest(bodyA))).text();
+
+    setupNewFlowMocks();
+    const bodyB: Record<string, unknown> = {
+      ...VALID_NEW_FLOW_BODY,
+      productImageDataUrl: 'data:image/jpeg;base64,BBB',
+    };
+    delete bodyB.productImages;
+    await (await POST(makeRequest(bodyB))).text();
+
+    const idA = (mockRunProductOneToOneGeneration.mock.calls[0][0] as any)
+      .referenceSelections[0].id;
+    const idB = (mockRunProductOneToOneGeneration.mock.calls[1][0] as any)
+      .referenceSelections[0].id;
+    expect(idA).not.toBe(idB);
+    // A imagem também viaja no gateway (binding de conteúdo real).
+    expect(
+      (mockRunProductOneToOneGeneration.mock.calls[0][0] as any).productImagesDataUrls,
+    ).toEqual(['data:image/jpeg;base64,AAA']);
+  });
+
+  async function createAndCaptureSnapshot(
+    body: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+    await (await POST(makeRequest(body))).text();
+    const snapshot = (createCampaign as any).mock.calls[0][1].inputSnapshot as Record<
+      string,
+      unknown
+    >;
+    (createCampaign as any).mockClear();
+    mockRunProductOneToOneGeneration.mockClear();
+    return snapshot;
+  }
+
+  it('gap 2: MESMA campanha/loja com PREÇO divergente ⇒ 409 operation_identity_conflict', async () => {
+    const storedSnapshot = await createAndCaptureSnapshot(VALID_NEW_FLOW_BODY);
+    setupNewFlowMocks({
+      existingCampaign: {
+        id: NEW_FLOW_CAMPAIGN_ID,
+        store_id: STORE_ID,
+        input_snapshot: storedSnapshot,
+      },
+    });
+    const { POST } = await import('../route');
+    const res = await POST(
+      makeRequest({ ...VALID_NEW_FLOW_BODY, discountedPriceCents: 2990 }),
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error.code).toBe('operation_identity_conflict');
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('gap 2: MESMA campanha/loja com TEXTO divergente ⇒ 409 operation_identity_conflict', async () => {
+    const storedSnapshot = await createAndCaptureSnapshot(VALID_NEW_FLOW_BODY);
+    setupNewFlowMocks({
+      existingCampaign: {
+        id: NEW_FLOW_CAMPAIGN_ID,
+        store_id: STORE_ID,
+        input_snapshot: storedSnapshot,
+      },
+    });
+    const { POST } = await import('../route');
+    const res = await POST(
+      makeRequest({ ...VALID_NEW_FLOW_BODY, productName: 'Produto Diferente' }),
+    );
+    expect(res.status).toBe(409);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('gap 2: MESMA campanha/loja com IMAGEM divergente ⇒ 409 operation_identity_conflict', async () => {
+    const storedSnapshot = await createAndCaptureSnapshot(VALID_NEW_FLOW_BODY);
+    setupNewFlowMocks({
+      existingCampaign: {
+        id: NEW_FLOW_CAMPAIGN_ID,
+        store_id: STORE_ID,
+        input_snapshot: storedSnapshot,
+      },
+    });
+    const { POST } = await import('../route');
+    const res = await POST(
+      makeRequest({
+        ...VALID_NEW_FLOW_BODY,
+        productImages: [
+          {
+            role: 'primary',
+            source: 'upload',
+            mimeType: 'image/jpeg',
+            dataUrl: 'data:image/jpeg;base64,OUTRA_IMAGEM',
+          },
+        ],
+      }),
+    );
+    expect(res.status).toBe(409);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('gap 2: MESMA campanha/loja com conteúdo IDÊNTICO ⇒ REUSA (sem 2ª campanha)', async () => {
+    const storedSnapshot = await createAndCaptureSnapshot(VALID_NEW_FLOW_BODY);
+    setupNewFlowMocks({
+      existingCampaign: {
+        id: NEW_FLOW_CAMPAIGN_ID,
+        store_id: STORE_ID,
+        input_snapshot: storedSnapshot,
+      },
+    });
+    (createCampaign as any).mockClear();
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
+  });
+
+  it('gap 4: identidade resolvida SERVER-SIDE é congelada no snapshot e enviada ao gateway; identidade do CLIENTE é rejeitada', async () => {
+    setupNewFlowMocks();
+    const serverIdentity = {
+      storeName: 'Loja Teste',
+      storeSegment: 'outros',
+      brandColor: '#111111',
+      identityState: 'logo',
+      signature: { url: 'https://signed.example/logo.png', type: 'logo' },
+    };
+    (resolveStoreIdentity as any).mockResolvedValue(serverIdentity);
+    (validateIdentityReference as any).mockResolvedValue(serverIdentity);
+
+    const { POST } = await import('../route');
+    // Identidade enviada pelo CLIENTE ⇒ rejeitada (contrato de identidade legada).
+    const resClient = await POST(
+      makeRequest({ ...VALID_NEW_FLOW_BODY, storeLogoUrl: 'https://evil.example/x.png' }),
+    );
+    expect(resClient.status).toBe(400);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+
+    // Sem identidade do cliente ⇒ a identidade do SERVIDOR é usada.
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+
+    const createArgs = (createCampaign as any).mock.calls[0][1];
+    expect(createArgs.identitySnapshot).not.toBeNull();
+    expect(createArgs.identitySnapshot).toMatchObject({ storeName: 'Loja Teste' });
+    // resolveStoreIdentity recebeu a LOJA do servidor, nunca valores do cliente.
+    expect(resolveStoreIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ id: STORE_ID }),
+    );
+    const input = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(input.identityImageUrl).toBe('https://signed.example/logo.png');
+    // A identidade também entra nas seleções congeladas (binding por identidade).
+    expect(
+      input.referenceSelections.some((selection: any) => selection.kind === 'identity'),
+    ).toBe(true);
   });
 });
 
