@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { dataUrlToCampaignImage } from "@/lib/campaign/persistence";
 import {
   ProductOneToOneArtifactUploadError,
+  type ArtifactProbe,
   type ProductOneToOneArtifactRef,
 } from "./types";
 
@@ -23,7 +24,15 @@ const BUCKET = "campaign-images";
 const ARTIFACT_TABLE = "product_1_1_campaign_artifacts";
 const ARTIFACT_SELECT_COLUMNS = "storage_path, width, height, mime_type";
 const ARTIFACT_SIZE = 1024;
+const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
 const SUPPORTED_INPUT_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+/**
+ * Prefixo EXCLUSIVO do novo fluxo (`{storeId}/{campaignId}/product-1-1/{operationId}/art-1024.jpg`)
+ * — usado para RECUSAR assinatura de path arbitrário do cliente (T-56.2.2-05-03).
+ */
+const NEW_FLOW_PATH_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/product-1-1\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/art-1024\.jpg$/i;
 
 /** Caminho determinístico e exclusivo do novo fluxo (T-56.2.2-05-03). */
 export function artifactStoragePath(
@@ -88,6 +97,35 @@ function mapUploadError(error: {
     "artifact_upload_failed",
     error?.message ?? "artifact_upload_failed",
   );
+}
+
+/** Distingue AUSÊNCIA CONFIRMADA de erro/indisponibilidade do Storage (C2). */
+function isAbsenceError(error: unknown): boolean {
+  if (error === null || typeof error !== "object") return false;
+  const record = error as { message?: unknown; statusCode?: unknown };
+  if (String(record.statusCode ?? "") === "404") return true;
+  const text = String(record.message ?? "").toLowerCase();
+  return (
+    text.includes("not found") ||
+    text.includes("does not exist") ||
+    text.includes("no such")
+  );
+}
+
+/** Normaliza o payload de download (Blob/ArrayBuffer/Uint8Array/string) para Buffer. */
+async function toBuffer(payload: unknown): Promise<Buffer> {
+  if (Buffer.isBuffer(payload)) return payload;
+  if (payload instanceof Uint8Array) return Buffer.from(payload);
+  if (typeof payload === "string") return Buffer.from(payload, "binary");
+  if (
+    payload !== null &&
+    typeof payload === "object" &&
+    typeof (payload as { arrayBuffer?: unknown }).arrayBuffer === "function"
+  ) {
+    const buffer = await (payload as Blob).arrayBuffer();
+    return Buffer.from(buffer);
+  }
+  throw new Error("unsupported_download_payload");
 }
 
 export interface StoreArtifactInput {
@@ -214,6 +252,120 @@ export class ProductOneToOneArtifactStore {
       width: Number(row.width ?? 0),
       height: Number(row.height ?? 0),
       mimeType: String(row.mime_type ?? ""),
+    });
+  }
+
+  /**
+   * I3 — leitura ASSINADA do bucket privado. É SEPARADA do probe e só deve ser
+   * chamada pelo portão de download (Plano 06) APÓS `delivered`. Nunca é chamada
+   * por `probeArtifact` nem por caminho de investigação. O TTL é do servidor
+   * (não vem do cliente) e o path precisa pertencer ao novo fluxo.
+   */
+  async getSignedArtifactUrl(
+    storagePath: string,
+    ttlSeconds: number = DEFAULT_SIGNED_URL_TTL_SECONDS,
+  ): Promise<string> {
+    if (!NEW_FLOW_PATH_RE.test(storagePath)) {
+      throw new ProductOneToOneArtifactUploadError(
+        "artifact_invalid_path",
+        `refusing to sign non-new-flow path: ${storagePath}`,
+      );
+    }
+
+    const { data, error } = await this.client.storage
+      .from(BUCKET)
+      .createSignedUrl(storagePath, ttlSeconds);
+    if (error) {
+      throw new ProductOneToOneArtifactUploadError(
+        "artifact_sign_failed",
+        errorMessage(error),
+      );
+    }
+
+    return data.signedUrl;
+  }
+
+  /**
+   * C2 — verifica a integridade por CONTEÚDO do artefato e devolve um resultado
+   * TIPADO (`integral` | `absent` | `invalid` | `indeterminate`), nunca um `null`
+   * ambíguo. Usa o caminho DETERMINÍSTICO do novo fluxo mesmo quando a linha de
+   * `product_1_1_campaign_artifacts` está ausente (upload-ok + metadata-fail ⇒
+   * `integral`, permitindo investigar/recuperar a arte SEM regenerar).
+   *
+   * I3 — o probe NUNCA assina URL: devolve apenas evidência/metadados.
+   */
+  async probeArtifact(input: {
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+  }): Promise<ArtifactProbe> {
+    const storagePath = artifactStoragePath(
+      input.storeId,
+      input.campaignId,
+      input.operationId,
+    );
+
+    // Meta persistida é OPCIONAL (C2): uma falha de leitura não governa ausência.
+    let metadata: ProductOneToOneArtifactRef | null = null;
+    try {
+      metadata = await this.getArtifactMetadata(input.campaignId, input.operationId);
+    } catch {
+      metadata = null;
+    }
+
+    // Baixa os bytes do objeto do bucket PRIVADO — o probe NUNCA assina (I3).
+    const { data, error } = await this.client.storage
+      .from(BUCKET)
+      .download(storagePath);
+
+    if (error) {
+      // Ausência CONFIRMADA ≠ erro/instabilidade do Storage (nunca colapsam).
+      return isAbsenceError(error) ? { kind: "absent" } : { kind: "indeterminate" };
+    }
+    if (!data) {
+      return { kind: "indeterminate" };
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await toBuffer(data);
+    } catch {
+      return { kind: "indeterminate" };
+    }
+
+    // Integridade por CONTEÚDO (não apenas existência/size > 0).
+    let dimensions: { width: number; height: number };
+    try {
+      dimensions = await decodeDimensions(buffer);
+    } catch {
+      return { kind: "invalid" };
+    }
+
+    const expectedWidth = metadata?.width ?? ARTIFACT_SIZE;
+    const expectedHeight = metadata?.height ?? ARTIFACT_SIZE;
+    if (
+      dimensions.width !== ARTIFACT_SIZE ||
+      dimensions.height !== ARTIFACT_SIZE ||
+      dimensions.width !== expectedWidth ||
+      dimensions.height !== expectedHeight
+    ) {
+      return { kind: "invalid" };
+    }
+
+    const ref: ProductOneToOneArtifactRef = Object.freeze({
+      storagePath,
+      width: dimensions.width,
+      height: dimensions.height,
+      mimeType: metadata?.mimeType ?? "image/jpeg",
+    });
+
+    return Object.freeze({
+      kind: "integral",
+      ref,
+      width: ref.width,
+      height: ref.height,
+      mimeType: ref.mimeType,
+      storagePath,
     });
   }
 }
