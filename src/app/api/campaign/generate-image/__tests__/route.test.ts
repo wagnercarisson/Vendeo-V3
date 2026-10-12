@@ -268,16 +268,19 @@ vi.mock('@/lib/economic/economic-parameter-service', () => ({
 // mockado (a geração roda no ciclo da requisição; a rota apenas delega) e a
 // decisão de elegibilidade/autorização é injetada (fail-closed) para permitir o
 // cenário `allowed`.
-const { mockRunProductOneToOneGeneration } = vi.hoisted(() => ({
+const { mockRunProductOneToOneGeneration, mockReadProductOneToOneOperation } = vi.hoisted(() => ({
   mockRunProductOneToOneGeneration: vi.fn(async (_input?: unknown, _deps?: unknown) =>
     new Response('{"type":"result"}\n', {
       status: 200,
       headers: { "Content-Type": "application/x-ndjson" },
     }),
   ),
+  // F6/I1 (achado 3): leitura query-only do estado persistido da operação.
+  mockReadProductOneToOneOperation: vi.fn(async (_campaignId?: unknown) => null as unknown),
 }));
 vi.mock('@/lib/product-1-1/orchestration/generation-orchestrator', () => ({
   runProductOneToOneGeneration: mockRunProductOneToOneGeneration,
+  readProductOneToOneOperation: mockReadProductOneToOneOperation,
 }));
 
 const { mockResolveProductFlowAuthorization } = vi.hoisted(() => ({
@@ -390,6 +393,7 @@ async function setupSuccessMocks() {
 beforeEach(() => {
   vi.clearAllMocks();
   capturedEvents.length = 0;
+  mockReadProductOneToOneOperation.mockResolvedValue(null);
   mockHasFallback.mockResolvedValue(true);
   mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
   mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);

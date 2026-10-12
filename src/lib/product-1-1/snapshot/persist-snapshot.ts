@@ -54,7 +54,16 @@ const EVIDENCE_COLUMNS =
 /** Referência/seleção congelada no snapshot (imagem de produto/identidade/referência). */
 export interface ProductOneToOneEvidenceReference {
   readonly kind: "product" | "identity" | "reference";
+  /**
+   * Identificador ESTÁVEL de CONTEÚDO da imagem (ex.: SHA-256 do `dataUrl`) —
+   * nunca apenas o papel. Mudança no conteúdo muda este id (correção de
+   * integração do Plano 04: o binding de conteúdo precisa detectar troca de imagem).
+   */
   readonly id: string;
+  /** Papel/identidade visual da imagem (ex.: `primary`, `reference`). */
+  readonly role?: string;
+  /** Posição ORDEM na submissão (preserva a ordem congelada). */
+  readonly index?: number;
   readonly storagePath?: string;
 }
 

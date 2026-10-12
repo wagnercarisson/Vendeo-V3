@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextRequest } from "next/server";
 import { GenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS, MAX_PRODUCT_IMAGE_BASE64_SIZE, MAX_PRODUCT_IMAGES_AGGREGATE_BASE64_SIZE } from "@/lib/image-generation/config";
@@ -41,6 +42,7 @@ import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibil
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 import { NewFlowGenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import { runProductOneToOneGeneration } from "@/lib/product-1-1/orchestration/generation-orchestrator";
+import { readProductOneToOneOperation } from "@/lib/product-1-1/orchestration/generation-orchestrator";
 import { validateOriginalBackground, countProductImages, ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE } from "@/lib/product-1-1/selection-validation";
 import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
 
@@ -265,12 +267,103 @@ export const POST = apiHandler(async (request: NextRequest) => {
       const newFlowBackgroundDirection: ProductOneToOneBackgroundDirection =
         newFlow.backgroundDirection;
 
+      // (F6/I1 — achado 3) Reenvio = SOMENTE consulta. Reconhece uma operação JÁ
+      // EXISTENTE para `campaignId` ANTES de qualquer checagem pré-reserva,
+      // `InputValidationService`, `recordGenerationAttempt` ou `createCampaign`.
+      // Quando existe, delega ao orquestrador, que faz o curto-circuito
+      // somente-leitura e devolve o estado persistido verbatim.
+      let existingNewFlowOperation: Awaited<
+        ReturnType<typeof readProductOneToOneOperation>
+      >;
+      try {
+        existingNewFlowOperation = await readProductOneToOneOperation(newFlow.campaignId);
+      } catch {
+        // Fail-closed: falha de leitura NÃO é tratada como "operação ausente".
+        return Response.json(
+          { error: { message: "Não foi possível verificar o estado da operação." } },
+          { status: 502 },
+        );
+      }
+
+      // (achado 2) Congelamento COMPLETO do conteúdo submetido: `briefingText` é
+      // a serialização estável do briefing ÍNTEGRO (produto, intenção comercial,
+      // preço original/venda, selo, validade, texto obrigatório, direção de fundo)
+      // e as seleções identificam cada imagem por CONTEÚDO (hash estável do
+      // `dataUrl`) + papel + ÍNDICE de ordem. Qualquer mudança de conteúdo/preço/
+      // selo/validade/texto altera a evidência congelada / fingerprint.
+      const priceText = (cents: number | undefined): string | null =>
+        typeof cents === "number"
+          ? `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`
+          : null;
+      const contentId = (dataUrl: string): string =>
+        createHash("sha256").update(dataUrl).digest("hex");
+      const newFlowProductImages = newFlow.productImages ?? [];
+      const newFlowBriefing = {
+        backgroundDirection: newFlowBackgroundDirection,
+        product: {
+          name: newFlow.productName,
+          description: newFlow.description ?? null,
+        },
+        commercial: {
+          intent: newFlow.campaignIntent,
+          originalPriceText: priceText(newFlow.originalPriceCents),
+          discountedPriceText: priceText(newFlow.discountedPriceCents),
+          badge: newFlow.badgeText ?? null,
+          validity: newFlow.validity ?? null,
+        },
+        constraints: {
+          mandatoryArtworkText: newFlow.mandatoryArtworkText ?? null,
+        },
+      };
+      const newFlowReferenceSelections = newFlowProductImages.map((image, index) => ({
+        kind: image.role === "primary" ? ("product" as const) : ("reference" as const),
+        id: contentId(image.dataUrl),
+        role: image.role,
+        index,
+      }));
+      const newFlowOrchestrationInput = {
+        campaignId: newFlow.campaignId,
+        operationId: newFlow.operationId,
+        storeId: newFlow.storeId,
+        briefing: newFlowBriefing,
+        briefingText: JSON.stringify(newFlowBriefing),
+        campaignIntent: newFlow.campaignIntent,
+        backgroundDirection: newFlowBackgroundDirection,
+        references: newFlowReferenceSelections.map((selection) => selection.id),
+        referenceSelections: newFlowReferenceSelections,
+        productImagesDataUrls:
+          newFlowProductImages.length > 0
+            ? newFlowProductImages.map((image) => image.dataUrl)
+            : newFlow.productImageDataUrl
+              ? [newFlow.productImageDataUrl]
+              : [],
+        runId: operationRunId,
+        traceId,
+      };
+
+      if (existingNewFlowOperation) {
+        // Operação existe ⇒ NENHUMA checagem pré-reserva, validação de entrada,
+        // registro de tentativa ou criação de campanha roda.
+        return await runProductOneToOneGeneration(newFlowOrchestrationInput);
+      }
+
       // (2) Regra Original revalidada server-side — erro de CAMPO, nunca IMG-001.
+      // (achado 1) Normaliza AMBOS os formatos de transporte (`productImages[]`
+      // XOR `productImageDataUrl`): o formulário envia a data URL única quando há
+      // exatamente UMA imagem — esse caso (1 imagem) é ACEITO. Imagens de
+      // identidade continuam excluídas da contagem.
       if (newFlowBackgroundDirection === "original") {
-        const productImageCount = countProductImages({
-          productImages: newFlow.productImages ?? [],
-          identityImages: [],
-        });
+        const normalizedProductImages = newFlowProductImages;
+        const productImageCount =
+          normalizedProductImages.length > 0
+            ? countProductImages({
+                productImages: normalizedProductImages,
+                identityImages: [],
+              })
+            : typeof newFlow.productImageDataUrl === "string" &&
+                newFlow.productImageDataUrl.length > 0
+              ? 1
+              : 0;
         const originalValidation = validateOriginalBackground({ productImageCount });
         if (!originalValidation.valid) {
           return Response.json(
@@ -465,70 +558,38 @@ export const POST = apiHandler(async (request: NextRequest) => {
           console.error(
             `[generate-image] new_flow campaign create error — ${err instanceof Error ? err.message : String(err)}`,
           );
-          return Response.json(
-            {
-              error: {
-                code: "operation_identity_conflict",
-                message: "Erro ao registrar a campanha.",
+          // (achado 3) Corrida de criação: RE-LÊ a campanha. Se agora existe com
+          // a MESMA loja ⇒ REUSA (idempotente, sem 409); divergente/ausente ⇒
+          // conflito de identidade.
+          const racedNewFlowCampaign = await supabaseAdmin
+            .from("campaigns")
+            .select("id, store_id")
+            .eq("id", newFlow.campaignId)
+            .maybeSingle<{ id: string; store_id: string }>();
+          if (
+            racedNewFlowCampaign.data &&
+            racedNewFlowCampaign.data.store_id === newFlowStoreId
+          ) {
+            // Reuso idempotente: a corrida já registrou a MESMA campanha/loja.
+          } else {
+            return Response.json(
+              {
+                error: {
+                  code: "operation_identity_conflict",
+                  message: "Erro ao registrar a campanha.",
+                },
               },
-            },
-            { status: 409 },
-          );
+              { status: 409 },
+            );
+          }
         }
       }
       await recordGenerationAttempt(newFlowStoreId, newFlowUser.userId);
 
       // (5) Delegação ao orquestrador NDJSON (snapshot → reserva → tentativa →
-      // política 2+1 → arte → delivered), preservando a identidade da operação.
-      const priceText = (cents: number | undefined): string | null =>
-        typeof cents === "number"
-          ? `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`
-          : null;
-      const newFlowBriefing = {
-        backgroundDirection: newFlowBackgroundDirection,
-        product: {
-          name: newFlow.productName,
-          description: newFlow.description ?? null,
-        },
-        commercial: {
-          intent: newFlow.campaignIntent,
-          originalPriceText: priceText(newFlow.originalPriceCents),
-          discountedPriceText: priceText(newFlow.discountedPriceCents),
-          badge: newFlow.badgeText ?? null,
-          validity: newFlow.validity ?? null,
-        },
-        constraints: {
-          mandatoryArtworkText: newFlow.mandatoryArtworkText ?? null,
-        },
-      };
-      const newFlowProductImages = newFlow.productImages ?? [];
-      return await runProductOneToOneGeneration({
-        campaignId: newFlow.campaignId,
-        operationId: newFlow.operationId,
-        storeId: newFlowStoreId,
-        briefing: newFlowBriefing,
-        briefingText: JSON.stringify({
-          productName: newFlow.productName,
-          description: newFlow.description ?? null,
-          campaignIntent: newFlow.campaignIntent,
-          backgroundDirection: newFlowBackgroundDirection,
-        }),
-        campaignIntent: newFlow.campaignIntent,
-        backgroundDirection: newFlowBackgroundDirection,
-        references: newFlowProductImages.map((image) => image.role),
-        referenceSelections: newFlowProductImages.map((image) => ({
-          kind: image.role === "primary" ? "product" : "reference",
-          id: image.role,
-        })),
-        productImagesDataUrls:
-          newFlowProductImages.length > 0
-            ? newFlowProductImages.map((image) => image.dataUrl)
-            : newFlow.productImageDataUrl
-              ? [newFlow.productImageDataUrl]
-              : [],
-        runId: operationRunId,
-        traceId,
-      });
+      // política 2+1 → arte → delivered), preservando a identidade da operação e
+      // o conteúdo congelado COMPLETO (briefing íntegro + seleções por conteúdo).
+      return await runProductOneToOneGeneration(newFlowOrchestrationInput);
     }
   }
 
