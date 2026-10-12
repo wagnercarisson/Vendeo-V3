@@ -53,6 +53,28 @@ describe("compose-share-image — garantias estáticas (sem IA, sem rede, sem ca
 });
 
 /**
+ * O asset final é **versionado no repositório** — por isso as asserções abaixo
+ * são **obrigatórias e incondicionais**: o teste deve FALHAR se o arquivo
+ * estiver ausente, não for PNG ou não for exatamente 1200×630. Nenhuma parte
+ * desta verificação pode ser mascarada por `skipIf`; apenas a recomposição a
+ * partir das fontes pessoais locais (fora do repositório) é condicional.
+ */
+const FINAL_ASSET_PATH = path.resolve(HERE, "../../../public/seo/vendeo-og-1200x630.png");
+
+describe("compose-share-image — asset final versionado (asserções obrigatórias)", () => {
+  it("existe em public/seo/vendeo-og-1200x630.png (falha se ausente)", () => {
+    expect(existsSync(FINAL_ASSET_PATH)).toBe(true);
+  });
+
+  it("é PNG e exatamente 1200×630", async () => {
+    const metadata = await sharp(FINAL_ASSET_PATH).metadata();
+    expect(metadata.format).toBe("png");
+    expect(metadata.width).toBe(1200);
+    expect(metadata.height).toBe(630);
+  });
+});
+
+/**
  * As fontes locais são pessoais e ficam fora do repositório — por isso a
  * recomposição real é **condicional**. As asserções estáticas acima permanecem
  * sempre ativas.
