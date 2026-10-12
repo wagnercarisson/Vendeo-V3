@@ -330,3 +330,188 @@ describe("Task 1 — storeArtifact (upload imutável + registro persistido)", ()
     expect(await store.getArtifactMetadata(CAMPAIGN_ID, OPERATION_ID)).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Task 2 — probeArtifact (integridade por CONTEÚDO, C2/I3) + assinatura SEPARADA.
+// ---------------------------------------------------------------------------
+
+async function artifactJpeg(size = 1024): Promise<Buffer> {
+  return sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 3,
+      background: { r: 5, g: 60, b: 120 },
+    },
+  })
+    .jpeg()
+    .toBuffer();
+}
+
+const DETERMINISTIC_PATH = artifactStoragePath(STORE_ID, CAMPAIGN_ID, OPERATION_ID);
+
+describe("Task 2 — probeArtifact (resultados TIPADOS, C2; SEM assinatura, I3)", () => {
+  it("integral: baixa, decodifica o CONTEÚDO e devolve metadados sem assinar", async () => {
+    const handles = createFakeClient({
+      download: { data: await artifactJpeg(1024), error: null },
+      metadata: {
+        storage_path: DETERMINISTIC_PATH,
+        width: 1024,
+        height: 1024,
+        mime_type: "image/jpeg",
+      },
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const probe = await store.probeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+
+    expect(probe.kind).toBe("integral");
+    if (probe.kind === "integral") {
+      expect(probe.width).toBe(1024);
+      expect(probe.height).toBe(1024);
+      expect(probe.mimeType).toBe("image/jpeg");
+      expect(probe.storagePath).toBe(DETERMINISTIC_PATH);
+      expect(probe.ref).toMatchObject({
+        storagePath: DETERMINISTIC_PATH,
+        width: 1024,
+        height: 1024,
+        mimeType: "image/jpeg",
+      });
+    }
+
+    // Caminho determinístico do novo fluxo.
+    expect(handles.downloads).toEqual([DETERMINISTIC_PATH]);
+
+    // I3 — ZERO assinatura no probe.
+    expect(handles.signed).toHaveLength(0);
+  });
+
+  it("C2: upload-ok + metadata-fail (sem linha) mas objeto íntegro ⇒ integral (sem regenerar)", async () => {
+    const handles = createFakeClient({
+      download: { data: await artifactJpeg(1024), error: null },
+      metadata: null,
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const probe = await store.probeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+
+    expect(probe.kind).toBe("integral");
+    if (probe.kind === "integral") {
+      expect(probe.ref.storagePath).toBe(DETERMINISTIC_PATH);
+      expect(probe.ref.width).toBe(1024);
+      expect(probe.ref.mimeType).toBe("image/jpeg");
+    }
+    expect(handles.signed).toHaveLength(0);
+  });
+
+  it("absent: ausência CONFIRMADA (404 no caminho determinístico)", async () => {
+    const handles = createFakeClient({
+      download: { data: null, error: { message: "Object not found", statusCode: "404" } },
+      metadata: null,
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const probe = await store.probeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+
+    expect(probe.kind).toBe("absent");
+    expect(handles.downloads).toEqual([DETERMINISTIC_PATH]);
+    expect(handles.signed).toHaveLength(0);
+  });
+
+  it("invalid: objeto PRESENTE mas não decodifica como imagem 1:1", async () => {
+    const handles = createFakeClient({
+      download: { data: Buffer.from("not-an-image-at-all"), error: null },
+      metadata: null,
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const probe = await store.probeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+
+    expect(probe.kind).toBe("invalid");
+    expect(handles.signed).toHaveLength(0);
+  });
+
+  it("invalid: dimensões divergentes do persistido/esperado", async () => {
+    const handles = createFakeClient({
+      download: { data: await artifactJpeg(512), error: null },
+      metadata: {
+        storage_path: DETERMINISTIC_PATH,
+        width: 1024,
+        height: 1024,
+        mime_type: "image/jpeg",
+      },
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const probe = await store.probeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+
+    expect(probe.kind).toBe("invalid");
+  });
+
+  it("indeterminate: erro/indisponibilidade do Storage ⇒ NUNCA absent, nunca null", async () => {
+    const handles = createFakeClient({
+      download: {
+        data: null,
+        error: { message: "storage unavailable / timeout", statusCode: "503" },
+      },
+      metadata: null,
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const probe = await store.probeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+
+    expect(probe.kind).toBe("indeterminate");
+    expect(probe.kind).not.toBe("absent");
+    expect(handles.signed).toHaveLength(0);
+  });
+
+  it("os quatro casos são DISTINTOS entre si (nunca colapsam em null)", async () => {
+    const statuses = new Set(["integral", "absent", "invalid", "indeterminate"]);
+    expect(statuses.size).toBe(4);
+  });
+});
+
+describe("Task 2 — getSignedArtifactUrl (assinatura SEPARADA, portão do Plano 06)", () => {
+  it("usa o bucket privado com TTL do servidor (3600 por padrão)", async () => {
+    const handles = createFakeClient();
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const url = await store.getSignedArtifactUrl(DETERMINISTIC_PATH);
+    expect(url).toBe(`signed://${DETERMINISTIC_PATH}`);
+    expect(handles.signed).toEqual([{ path: DETERMINISTIC_PATH, ttl: 3600 }]);
+  });
+
+  it("RECUSA assinar path fora do prefixo do novo fluxo (não aceita path arbitrário do cliente)", async () => {
+    const handles = createFakeClient();
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    await expect(
+      store.getSignedArtifactUrl(`${STORE_ID}/${CAMPAIGN_ID}.jpg`),
+    ).rejects.toMatchObject({ code: "artifact_invalid_path" });
+    expect(handles.signed).toHaveLength(0);
+  });
+});
