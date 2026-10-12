@@ -1103,6 +1103,26 @@ export function useCampaignForm(
       });
       setIsSubmitting(false);
     } catch (err) {
+      // F56.2b1b (Plano 06 — correção) — Submissão do NOVO fluxo JÁ ENVIADA: uma
+      // interrupção da LEITURA (`reader.read()` rejeitado / `AbortError`) é tratada
+      // como RESULTADO DESCONHECIDO (Superfície 3), SEM afirmar cancelamento e SEM
+      // oferecer nova geração. A identidade recupera o `lastOperationId`/
+      // `lastCampaignId` observados no stream e, quando NENHUM evento chegou, cai
+      // para o `campaignId`/`operationId` do corpo ENVIADO. O comportamento legado
+      // (não novo fluxo) permanece intacto abaixo.
+      if (eligible) {
+        setUnknownResult({
+          supportReference: null,
+          operationId:
+            lastOperationId ??
+            (typeof body.operationId === "string" ? body.operationId : null),
+          campaignId:
+            lastCampaignId ??
+            (typeof body.campaignId === "string" ? body.campaignId : null),
+        });
+        setIsSubmitting(false);
+        return;
+      }
       if (err instanceof DOMException && err.name === "AbortError") {
         setSubmitError("A geração foi cancelada. Tente novamente.");
       } else {
