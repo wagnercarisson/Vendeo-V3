@@ -1,14 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Loader2, AlertCircle, ChevronDown, ChevronRight, Minus } from "lucide-react";
+import { Check, X, Loader2, AlertCircle, AlertTriangle, ChevronDown, ChevronRight, Minus } from "lucide-react";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
+
+/**
+ * F56.2b1b (UI-SPEC §Surface 2/§Copywriting) — mensagens EXATAS dos estados de
+ * resultado. O estado `unknown` é ÂMBAR (atenção/incerteza) e NUNCA vermelho
+ * (vermelho é reservado à FALHA CONFIRMADA). Nunca promete continuidade/retomada.
+ */
+export const GENERATION_STATE_MESSAGES = {
+  running: "Gerando a campanha...",
+  done: "Campanha gerada.",
+  failure: "A geração falhou.",
+  unknown: "Não foi possível confirmar a conclusão desta geração",
+} as const;
 
 interface GenerationProgressProps {
   phases: GenerationPhaseEvent[];
   currentPhase?: string;
   error?: string | null;
   onRetry?: () => void;
+  /**
+   * F56.2b1b: distingue o estado `unknown` (âmbar) da falha confirmada
+   * (`error`, vermelho). `running` é o estado padrão (informativo/azul).
+   */
+  variant?: "running" | "unknown";
 }
 
 const PHASE_LABELS: Record<string, { label: string; running: string }> = {
@@ -61,10 +78,10 @@ function buildPhaseStatus(phases: GenerationPhaseEvent[]): { phase: string; stat
     }));
 }
 
-export function GenerationProgress({ phases, error, onRetry }: GenerationProgressProps) {
+export function GenerationProgress({ phases, error, onRetry, variant = "running" }: GenerationProgressProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const latestPhase = phases.length > 0 ? phases[phases.length - 1] : null;
-  const currentMessage = latestPhase?.message || "Preparando...";
+  const currentMessage = latestPhase?.message || GENERATION_STATE_MESSAGES.running;
 
   const phaseOrder = ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
 
@@ -88,7 +105,7 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
                     status === "complete"
                       ? "bg-accent-green/20 text-accent-green"
                       : status === "running"
-                        ? "bg-accent-green/10 text-accent-green"
+                        ? "bg-accent-blue/10 text-accent-blue"
                         : status === "failed"
                           ? "bg-red-900/20 text-accent-red"
                           : status === "skipped"
@@ -109,7 +126,7 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
                     status === "complete"
                       ? "text-accent-green"
                       : status === "running"
-                        ? "text-accent-green"
+                        ? "text-accent-blue"
                         : status === "failed"
                           ? "text-accent-red"
                           : status === "skipped"
@@ -139,6 +156,24 @@ export function GenerationProgress({ phases, error, onRetry }: GenerationProgres
         <p className="text-center text-text-primary text-sm font-body mt-4">
           {currentMessage}
         </p>
+
+        {/* Unknown result — âmbar (atenção/incerteza), NUNCA vermelho */}
+        {variant === "unknown" && (
+          <div
+            role="alert"
+            className="mt-4 rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-3"
+          >
+            <div className="flex items-start gap-2">
+              <AlertTriangle
+                className="w-4 h-4 text-accent-amber shrink-0 mt-0.5"
+                aria-hidden="true"
+              />
+              <p className="text-accent-amber text-sm font-body">
+                {GENERATION_STATE_MESSAGES.unknown}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Error display */}
         {error && (
