@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, render, screen, act, waitFor } from "@testing-library/react";
+import { renderHook, render, screen, act, waitFor, fireEvent } from "@testing-library/react";
 import { useCampaignForm } from "../use-campaign-form";
 import { UnknownResultPanel } from "../unknown-result-panel";
 
@@ -41,6 +41,13 @@ function createNdjsonResponse(events: Record<string, unknown>[]): Response {
     }),
     { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
   );
+}
+
+function jsonResponse(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 const DRAFT = {
@@ -161,5 +168,97 @@ describe("UnknownResultPanel — Superfície 3 (render)", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Referência de suporte: IMG-001-abc/)).toBeInTheDocument();
     expect(screen.queryByText(/Gerar novamente/)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F56.2b1b — Plano 06 (correção): "Verificar novamente" CONSOME o estado devolvido
+// pela consulta — `refunded` não deixa o usuário preso; `delivered` navega;
+// pendente mantém o painel; HTTP não-OK ⇒ feedback seguro (sem terminal falso).
+// ---------------------------------------------------------------------------
+
+describe("UnknownResultPanel — reverificação consome o estado devolvido (correção)", () => {
+  it("`refunded` ⇒ notifica o pai (`onResolved('refunded')`) e exibe o terminal persistido", async () => {
+    const onResolved = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ operation: { state: "refunded" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <UnknownResultPanel
+        campaignId={CAMPAIGN_ID}
+        operationId={OPERATION_ID}
+        onResolved={onResolved}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Verificar novamente"));
+
+    await waitFor(() => expect(onResolved).toHaveBeenCalledWith("refunded"));
+    expect(
+      await screen.findByText("A geração falhou e o crédito foi devolvido."),
+    ).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+    // Somente consulta — nunca inicia geração/cobrança.
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/campaign/generation-status");
+  });
+
+  it("`delivered` ⇒ navega para a página da campanha", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse({ operation: { state: "delivered" } })),
+    );
+
+    render(<UnknownResultPanel campaignId={CAMPAIGN_ID} operationId={OPERATION_ID} />);
+    fireEvent.click(screen.getByText("Verificar novamente"));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(`/campanhas/${CAMPAIGN_ID}`),
+    );
+  });
+
+  it("pendente (`reserved`) ⇒ mantém o painel (sem navegar, sem terminal)", async () => {
+    const onResolved = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse({ operation: { state: "reserved" } })),
+    );
+
+    render(
+      <UnknownResultPanel
+        campaignId={CAMPAIGN_ID}
+        operationId={OPERATION_ID}
+        onResolved={onResolved}
+      />,
+    );
+    fireEvent.click(screen.getByText("Verificar novamente"));
+
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    expect(onResolved).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Não foi possível confirmar a conclusão desta geração"),
+    ).toBeInTheDocument();
+  });
+
+  it("HTTP não-OK ⇒ feedback seguro, sem terminal falso", async () => {
+    const onResolved = vi.fn();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("nope", { status: 500 })));
+
+    render(
+      <UnknownResultPanel
+        campaignId={CAMPAIGN_ID}
+        operationId={OPERATION_ID}
+        onResolved={onResolved}
+      />,
+    );
+    fireEvent.click(screen.getByText("Verificar novamente"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Não foi possível verificar agora. Tente novamente."),
+      ).toBeInTheDocument(),
+    );
+    expect(onResolved).not.toHaveBeenCalled();
+    expect(screen.queryByText(/crédito foi devolvido/)).toBeNull();
   });
 });

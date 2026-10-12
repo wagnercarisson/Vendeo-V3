@@ -16,7 +16,17 @@ import { Button } from "@/components/ui/button";
  *
  * A referência de suporte é OPACA (`IMG-001` + referência) — nunca revela a
  * causa interna.
+ *
+ * F56.2b1b (Plano 06 — correção) — "Verificar novamente" CONSOME o estado
+ * devolvido pela consulta: `delivered` ⇒ navega para a campanha; `refunded` ⇒
+ * exibe o terminal PERSISTIDO (falha + crédito devolvido) e notifica o pai
+ * (`onResolved`) para limpar/atualizar o estado — o usuário nunca fica preso na
+ * Superfície 3; pendente (`reserved`/`art_uploaded`) ou desconhecido ⇒ mantém o
+ * painel; resposta HTTP NÃO-OK ⇒ feedback seguro (sem terminal falso). NUNCA
+ * inicia geração/ cobrança.
  */
+
+export type UnknownResolution = "delivered" | "refunded";
 
 interface UnknownResultPanelProps {
   /** Referência opaca de suporte (`IMG-001 ...`) — exibida em JetBrains Mono. */
@@ -26,6 +36,13 @@ interface UnknownResultPanelProps {
   /** Identidade da operação para a consulta query-only. */
   campaignId?: string | null;
   operationId?: string | null;
+  /**
+   * F56.2b1b (Plano 06 — correção): notifica o PAI da resolução consumida do
+   * `generation-status`. Em `refunded` o pai DEVE limpar/atualizar o estado
+   * (`unknownResult`) para não prender o usuário; em `delivered` a navegação já
+   * leva à página da campanha.
+   */
+  onResolved?: (outcome: UnknownResolution) => void;
 }
 
 export function UnknownResultPanel({
@@ -33,10 +50,12 @@ export function UnknownResultPanel({
   supportEmail,
   campaignId,
   operationId,
+  onResolved,
 }: UnknownResultPanelProps) {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
   const [recheckMessage, setRecheckMessage] = useState<string | null>(null);
+  const [resolved, setResolved] = useState<UnknownResolution | null>(null);
 
   const canQueryOperation = Boolean(campaignId && operationId);
 
@@ -54,14 +73,29 @@ export function UnknownResultPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaignId, operationId }),
       });
+      // F56.2b1b (correção) — HTTP NÃO-OK ⇒ feedback SEGURO: nunca um terminal
+      // falso. Mantém o painel na Superfície 3.
+      if (!res.ok) {
+        setRecheckMessage("Não foi possível verificar agora. Tente novamente.");
+        return;
+      }
       const data = await res.json().catch(() => null);
-      // Se a arte salva existir (delivered + integral), recupera-a indo à página
-      // da campanha; caso contrário reexibe o estado persistido. Nunca inicia
+      // Consome o estado PERSISTIDO devolvido pela consulta. Nunca inicia
       // tentativa/geração/cobrança.
-      if (data?.operation?.state === "delivered") {
+      const state = data?.operation?.state;
+      if (state === "delivered") {
+        onResolved?.("delivered");
         router.push(`/campanhas/${campaignId}`);
         return;
       }
+      if (state === "refunded") {
+        // Terminal PERSISTIDO (falha + crédito devolvido): notifica o pai (limpa/
+        // atualiza o estado) e exibe o terminal — o usuário não fica preso.
+        onResolved?.("refunded");
+        setResolved("refunded");
+        return;
+      }
+      // Pendente (`reserved`/`art_uploaded`) ou desconhecido ⇒ mantém o painel.
       router.refresh();
     } catch {
       setRecheckMessage("Não foi possível verificar agora. Tente novamente.");
@@ -69,6 +103,30 @@ export function UnknownResultPanel({
       setChecking(false);
     }
   };
+
+  if (resolved === "refunded") {
+    return (
+      <div
+        role="alert"
+        className="w-full rounded-lg border border-accent-red/30 bg-accent-red/10 px-4 py-4"
+      >
+        <div className="flex items-start gap-3">
+          <AlertTriangle
+            className="h-5 w-5 text-accent-red shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
+          <div className="flex-1 space-y-1">
+            <p className="font-heading text-sm font-semibold text-accent-red">
+              A geração falhou.
+            </p>
+            <p className="text-xs text-accent-red/90 font-body">
+              A geração falhou e o crédito foi devolvido.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
