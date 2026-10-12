@@ -1,7 +1,20 @@
 // @vitest-environment node
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { ProductOneToOnePendingResolutionSchema } from "@/lib/admin/schemas";
+import {
+  resolutionErrorStatus,
+  resolvePendingOperation,
+} from "../pending/resolve-pending-operation";
+import {
+  SupabasePendingOperationsRepository,
+} from "../pending/pending-operations-repository";
 
 // ---------------------------------------------------------------------------
 // F56.2b1b — Plano 07: resolução administrativa auditada de pendências
@@ -145,5 +158,307 @@ describe("F56.2b1b — migration 20261009000002 pending_resolution (contrato est
     expect(sql).toMatch(/evid[êe]ncia simulada/i);
     expect(sql).toMatch(/GATE/i);
     expect(sql).toMatch(/b2/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 2 — repositório/serviço/rota/schema (simulado, sem banco/provider)
+// ---------------------------------------------------------------------------
+
+const STORE_ID = "11111111-1111-4111-8111-111111111111";
+const CAMPAIGN_ID = "22222222-2222-4222-8222-222222222222";
+const OPERATION_ID = "33333333-3333-4333-8333-333333333333";
+const ACTOR_ID = "44444444-4444-4444-8444-444444444444";
+const RESOLUTION_ID = "55555555-5555-4555-8555-555555555555";
+
+interface FakeBuilder {
+  select: ReturnType<typeof vi.fn>;
+}
+
+/** Builder Supabase fake mínimo (select/eq/order/maybeSingle/in). */
+function createFakeClient(tables: {
+  credit?: Record<string, unknown> | null;
+  creditList?: Record<string, unknown>[];
+  claims?: Record<string, unknown>[];
+  outcome?: Record<string, unknown> | null;
+}) {
+  const storage = {
+    from: vi.fn(() => ({
+      download: vi.fn(async () => ({ data: null, error: { message: "Object not found", statusCode: "404" } })),
+      upload: vi.fn(async () => ({ data: null, error: null })),
+      createSignedUrl: vi.fn(async (p: string) => ({ data: { signedUrl: `signed://${p}` }, error: null })),
+    })),
+  };
+
+  const from = vi.fn((table: string) => {
+    const rowsFor = () => {
+      if (table === "product_1_1_campaign_credit_operations") {
+        return tables.creditList ?? (tables.credit ? [tables.credit] : []);
+      }
+      if (table === "product_1_1_generation_attempt_claims") return tables.claims ?? [];
+      if (table === "product_1_1_generation_outcomes") {
+        return tables.outcome ? [tables.outcome] : [];
+      }
+      return [];
+    };
+    const chain: Record<string, unknown> = {};
+    const self = () => chain;
+    chain.select = vi.fn(self);
+    chain.eq = vi.fn(self);
+    chain.in = vi.fn(self);
+    chain.order = vi.fn(self);
+    chain.limit = vi.fn(self);
+    chain.maybeSingle = vi.fn(async () => ({ data: rowsFor()[0] ?? null, error: null }));
+    chain.then = (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
+      Promise.resolve({ data: rowsFor(), error: null }).then(resolve);
+    return chain;
+  });
+
+  return { from, storage, rpc: vi.fn() } as unknown as SupabaseClient & {
+    rpc: ReturnType<typeof vi.fn>;
+  };
+}
+
+function record(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    campaignId: CAMPAIGN_ID,
+    operationId: OPERATION_ID,
+    storeId: STORE_ID,
+    status: "reserved",
+    amount: 1,
+    terminal: false,
+    unknown: false,
+    processing: false,
+    supportReference: null,
+    createdAt: "2026-10-12T00:00:00.000Z",
+    updatedAt: "2026-10-12T00:00:00.000Z",
+    latestAttemptAt: null,
+    ...overrides,
+  };
+}
+
+function fakeRepository(input: {
+  record?: ReturnType<typeof record> | null;
+  probe?: { kind: "integral" } | { kind: "absent" } | { kind: "invalid" } | { kind: "indeterminate" };
+}) {
+  return {
+    findPendingOperation: vi.fn(async () => input.record ?? null),
+    probeArtifact: vi.fn(async () =>
+      input.probe && input.probe.kind === "integral"
+        ? {
+            kind: "integral" as const,
+            ref: { storagePath: "p", width: 1024, height: 1024, mimeType: "image/jpeg" },
+            width: 1024,
+            height: 1024,
+            mimeType: "image/jpeg",
+            storagePath: "p",
+          }
+        : input.probe ?? { kind: "indeterminate" as const },
+    ),
+  };
+}
+
+describe("F56.2b1b — repositório de pendências (I2/I3, simulado)", () => {
+  it("I2: estado TERMINAL prevalece sobre `outcome='unknown'` histórico", async () => {
+    const client = createFakeClient({
+      credit: { campaign_id: CAMPAIGN_ID, operation_id: OPERATION_ID, store_id: STORE_ID, amount: 1, status: "delivered", created_at: "x", updated_at: "y" },
+      outcome: { outcome: "unknown", support_reference: "IMG-001-abc" },
+    }) as unknown as SupabaseClient;
+    const repo = new SupabasePendingOperationsRepository(client);
+    const found = await repo.findPendingOperation(CAMPAIGN_ID, OPERATION_ID);
+    expect(found?.status).toBe("delivered");
+    expect(found?.terminal).toBe(true);
+    expect(found?.unknown).toBe(false);
+    expect(found?.supportReference).toBeNull();
+  });
+
+  it("deriva `processing` de um claim `in_progress` residual e a última tentativa", async () => {
+    const client = createFakeClient({
+      credit: { campaign_id: CAMPAIGN_ID, operation_id: OPERATION_ID, store_id: STORE_ID, amount: 1, status: "reserved", created_at: "x", updated_at: "y" },
+      claims: [
+        { status: "in_progress", attempt_number: 2, updated_at: "2026-10-12T10:00:00.000Z" },
+        { status: "failed", attempt_number: 1, updated_at: "2026-10-12T09:00:00.000Z" },
+      ],
+    }) as unknown as SupabaseClient;
+    const repo = new SupabasePendingOperationsRepository(client);
+    const found = await repo.findPendingOperation(CAMPAIGN_ID, OPERATION_ID);
+    expect(found?.processing).toBe(true);
+    expect(found?.latestAttemptAt).toBe("2026-10-12T10:00:00.000Z");
+  });
+
+  it("`findPendingOperation` devolve null quando a operação não existe", async () => {
+    const client = createFakeClient({ credit: null }) as unknown as SupabaseClient;
+    const repo = new SupabasePendingOperationsRepository(client);
+    await expect(repo.findPendingOperation(CAMPAIGN_ID, OPERATION_ID)).resolves.toBeNull();
+  });
+
+  it("I3: a derivação de evidência NÃO assina URL (usa o probe tipado)", async () => {
+    const client = createFakeClient({
+      credit: { campaign_id: CAMPAIGN_ID, operation_id: OPERATION_ID, store_id: STORE_ID, amount: 1, status: "reserved", created_at: "x", updated_at: "y" },
+    }) as unknown as SupabaseClient;
+    const repo = new SupabasePendingOperationsRepository(client);
+    const probe = await repo.probeArtifact(STORE_ID, CAMPAIGN_ID, OPERATION_ID);
+    expect(["integral", "absent", "invalid", "indeterminate"]).toContain(probe.kind);
+    const storageFrom = (client.storage.from as unknown as ReturnType<typeof vi.fn>);
+    const signed = (storageFrom.mock.results[0]?.value as { createSignedUrl: ReturnType<typeof vi.fn> }).createSignedUrl;
+    expect(signed).not.toHaveBeenCalled();
+  });
+});
+
+describe("F56.2b1b — serviço resolvePendingOperation (F5/C4/E1, simulado)", () => {
+  function fakeRpcClient(result: unknown) {
+    return { rpc: vi.fn(async () => ({ data: result, error: null })) } as unknown as SupabaseClient & {
+      rpc: ReturnType<typeof vi.fn>;
+    };
+  }
+
+  it("deliver_existing_art com arte íntegra: invoca SOMENTE a RPC auditada com evidência server-derived", async () => {
+    const client = fakeRpcClient({ success: true, idempotent: false, status: "delivered", action: "deliver_existing_art", art_kind: "integral" });
+    const repository = fakeRepository({ record: record(), probe: { kind: "integral" } });
+    const result = await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "arte existente", resolutionOperationId: RESOLUTION_ID },
+      { client, repository },
+    );
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    const [fn, params] = client.rpc.mock.calls[0];
+    expect(fn).toBe("admin_resolve_product_1_1_pending");
+    expect(params.p_evidence).toMatchObject({ origin: "server-derived", art_kind: "integral", execution_ended: true });
+    expect(params.p_action).toBe("deliver_existing_art");
+    expect(params.p_resolution_operation_id).toBe(RESOLUTION_ID);
+    expect(result.status).toBe("delivered");
+  });
+
+  it("refund_once com ausência confirmada e execução encerrada: invoca a RPC", async () => {
+    const client = fakeRpcClient({ success: true, idempotent: false, status: "refunded", action: "refund_once", art_kind: "absent" });
+    const repository = fakeRepository({ record: record(), probe: { kind: "absent" } });
+    const result = await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "ausência confirmada", resolutionOperationId: RESOLUTION_ID },
+      { client, repository },
+    );
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(client.rpc.mock.calls[0][1].p_evidence).toMatchObject({ art_kind: "absent", execution_ended: true });
+    expect(result.status).toBe("refunded");
+  });
+
+  it("E1/D13: claim `in_progress` residual BLOQUEIA sem evidência de encerramento (RPC NÃO chamada)", async () => {
+    const client = fakeRpcClient({ success: true });
+    const repository = fakeRepository({ record: record({ processing: true, unknown: true }), probe: { kind: "absent" } });
+    await expect(
+      resolvePendingOperation(
+        { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "tentativa", resolutionOperationId: RESOLUTION_ID },
+        { client, repository },
+      ),
+    ).rejects.toMatchObject({ code: "operation_in_progress" });
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it("F5/C2: evidência `invalid`/`indeterminate` BLOQUEIA (sem refund/deliver)", async () => {
+    for (const kind of ["invalid", "indeterminate"] as const) {
+      const client = fakeRpcClient({ success: true });
+      const repository = fakeRepository({ record: record(), probe: { kind } });
+      await expect(
+        resolvePendingOperation(
+          { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "x", resolutionOperationId: RESOLUTION_ID },
+          { client, repository },
+        ),
+      ).rejects.toMatchObject({ code: "insufficient_evidence" });
+      expect(client.rpc).not.toHaveBeenCalled();
+    }
+  });
+
+  it("F5: deliver sem arte íntegra e refund sem `absent` RECUSAM", async () => {
+    const client = fakeRpcClient({ success: true });
+    await expect(
+      resolvePendingOperation(
+        { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "x", resolutionOperationId: RESOLUTION_ID },
+        { client, repository: fakeRepository({ record: record(), probe: { kind: "absent" } }) },
+      ),
+    ).rejects.toMatchObject({ code: "insufficient_evidence" });
+    await expect(
+      resolvePendingOperation(
+        { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "x", resolutionOperationId: RESOLUTION_ID },
+        { client, repository: fakeRepository({ record: record(), probe: { kind: "integral" } }) },
+      ),
+    ).rejects.toMatchObject({ code: "insufficient_evidence" });
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it("F5: operação terminal RECUSA antes de qualquer efeito", async () => {
+    const client = fakeRpcClient({ success: true });
+    await expect(
+      resolvePendingOperation(
+        { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "x", resolutionOperationId: RESOLUTION_ID },
+        { client, repository: fakeRepository({ record: record({ status: "delivered", terminal: true }), probe: { kind: "integral" } }) },
+      ),
+    ).rejects.toMatchObject({ code: "operation_terminal" });
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it("F5: conflito divergente da RPC é propagado como `operation_identity_conflict`", async () => {
+    const client = { rpc: vi.fn(async () => ({ data: null, error: { message: "operation_identity_conflict" } })) } as unknown as SupabaseClient;
+    await expect(
+      resolvePendingOperation(
+        { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "x", resolutionOperationId: RESOLUTION_ID },
+        { client, repository: fakeRepository({ record: record(), probe: { kind: "integral" } }) },
+      ),
+    ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+  });
+});
+
+describe("F56.2b1b — schema e rota admin de resolução (estático)", () => {
+  it("schema `.strict()` aceita o corpo válido e REJEITA evidência declarada pelo cliente", () => {
+    const valid = {
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      action: "deliver_existing_art",
+      resolutionOperationId: RESOLUTION_ID,
+      reason: "motivo",
+    };
+    expect(ProductOneToOnePendingResolutionSchema.safeParse(valid).success).toBe(true);
+    expect(
+      ProductOneToOnePendingResolutionSchema.safeParse({ ...valid, art_kind: "integral" }).success,
+    ).toBe(false);
+    expect(
+      ProductOneToOnePendingResolutionSchema.safeParse({ ...valid, execution_ended: true }).success,
+    ).toBe(false);
+    expect(
+      ProductOneToOnePendingResolutionSchema.safeParse({ ...valid, reason: "   " }).success,
+    ).toBe(false);
+    expect(
+      ProductOneToOnePendingResolutionSchema.safeParse({ ...valid, action: "generate_new" }).success,
+    ).toBe(false);
+  });
+
+  it("rota admin: GET lista (requireAdmin) e POST resolution (requireAdmin + requireSameOrigin + schema + serviço)", () => {
+    const routeSource = readFileSync(
+      path.resolve(process.cwd(), "src/app/api/admin/product-1-1-pending/route.ts"),
+      "utf8",
+    );
+    expect(routeSource).toMatch(/requireAdmin/);
+    expect(routeSource).toMatch(/requireSameOrigin/);
+    expect(routeSource).toMatch(/apiHandler/);
+    expect(routeSource).toMatch(/ProductOneToOnePendingResolutionSchema/);
+    expect(routeSource).toMatch(/resolvePendingOperation/);
+    expect(routeSource).toMatch(/export const GET/);
+    expect(routeSource).toMatch(/export const POST/);
+  });
+
+  it("I3 (estático): repositório/serviço NÃO chamam `createSignedUrl`/`getSignedArtifactUrl`", () => {
+    for (const file of [
+      "src/lib/product-1-1/pending/pending-operations-repository.ts",
+      "src/lib/product-1-1/pending/resolve-pending-operation.ts",
+    ]) {
+      const source = readFileSync(path.resolve(process.cwd(), file), "utf8");
+      expect(source, file).not.toMatch(/createSignedUrl|getSignedArtifactUrl/);
+    }
+  });
+
+  it("mapeia códigos→status HTTP (400/404/409/500)", () => {
+    expect(resolutionErrorStatus({ code: "insufficient_evidence" })).toBe(400);
+    expect(resolutionErrorStatus({ code: "operation_not_found" })).toBe(404);
+    expect(resolutionErrorStatus({ code: "operation_in_progress" })).toBe(409);
+    expect(resolutionErrorStatus({ code: "execution_not_ended" })).toBe(409);
+    expect(resolutionErrorStatus({ code: "operation_identity_conflict" })).toBe(409);
+    expect(resolutionErrorStatus({ code: "unknown" })).toBe(500);
   });
 });
