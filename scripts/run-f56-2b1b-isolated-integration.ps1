@@ -363,11 +363,16 @@ if ($RunSuites) {
   $databaseUrl = $null
 
   $suiteList = if ($Suites.Count -gt 0) { $Suites } else { $defaultSuites }
+  $overallExit = 0
   try {
-    $testOutput = @(& npx vitest run @suiteList 2>&1)
-    $testExit = $LASTEXITCODE
-    Write-SanitizedLines -Lines $testOutput
-    if ($testExit -ne 0) { exit $testExit }
+    foreach ($suite in $suiteList) {
+      Write-Output "# running suite: $suite"
+      $testOutput = @(& npx vitest run $suite 2>&1)
+      $suiteExit = $LASTEXITCODE
+      Write-SanitizedLines -Lines $testOutput
+      if ($suiteExit -ne 0) { $overallExit = $suiteExit }
+    }
+    if ($overallExit -ne 0) { exit $overallExit }
   } finally {
     Remove-Item Env:F562A_ISOLATED_SUPABASE_URL -ErrorAction SilentlyContinue
     Remove-Item Env:F562A_ISOLATED_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue
