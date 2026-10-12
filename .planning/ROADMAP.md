@@ -393,27 +393,30 @@ Plans:
 
 **Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
 
-**Plans:** 8 plans in 4 waves
+**Plans:** 8 plans in 5 waves
 Plans:
 **Wave 1**
 
-- [ ] 51.2-01-PLAN.md — Auditoria, fronteira, decisões e preparação do C2 (wave 1, checkpoint C2)
-- [ ] 51.2-02-PLAN.md — Helpers puros de SEO (`src/lib/seo/*`) + testes unitários (wave 1)
+- [ ] 51.2-01-PLAN.md — Auditoria, fronteira, decisões, commit-base e preparação do C2 (wave 1, checkpoint C2)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 51.2-03-PLAN.md — `metadataBase`, default noindex da raiz, metadata e compartilhamento da home (wave 2)
+- [ ] 51.2-02-PLAN.md — Helpers puros de SEO (`src/lib/seo/*`) + testes unitários (wave 2; depende de `51.2-01`)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 51.2-04-PLAN.md — `robots.txt` (`src/app/robots.ts`) e `sitemap.xml` (`src/app/sitemap.ts`) (wave 3; depende de `51.2-03` para o assert consolidado fail-closed)
-- [ ] 51.2-05-PLAN.md — Política de indexação por rota + `headers()` (`X-Robots-Tag`) (wave 3; depende de `51.2-03` para o default `noindex` da raiz)
-- [ ] 51.2-06-PLAN.md — Imagem de compartilhamento institucional + C1 (wave 3, checkpoint C1)
-- [ ] 51.2-07-PLAN.md — Diagnóstico de performance + baseline do Search Console + `VERCEL_ENV` + C3 (wave 3)
+- [ ] 51.2-03-PLAN.md — `metadataBase`, default noindex da raiz, metadata/compartilhamento da home + diagnóstico observável (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 51.2-08-PLAN.md — Testes, validação da preparação e fechamento (wave 4)
+- [ ] 51.2-04-PLAN.md — `robots.txt` e `sitemap.xml` + assert consolidado fail-closed (wave 4)
+- [ ] 51.2-05-PLAN.md — Política de indexação por rota + `headers()` (`X-Robots-Tag`) (wave 4)
+- [ ] 51.2-06-PLAN.md — Imagem de compartilhamento (teste do asset final obrigatório) + C1 (wave 4, checkpoint C1)
+- [ ] 51.2-07-PLAN.md — Diagnóstico de performance + baseline do Search Console + `VERCEL_ENV` + C3 (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 51.2-08-PLAN.md — Reconciliação A9 (gatilho do rodapé, integração real), smoke test compilado por ambiente, fronteira por commit-base e fechamento (wave 5)
 
 ## Historical References
 
