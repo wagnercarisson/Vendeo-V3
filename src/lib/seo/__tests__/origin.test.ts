@@ -200,7 +200,7 @@ describe("resolveCanonicalOrigin — local", () => {
   });
 
   it("build local (NODE_ENV=production) sem VERCEL_ENV → indexable false", () => {
-    process.env.NODE_ENV = "production";
+    process.env = { ...process.env, NODE_ENV: "production" };
     const result = resolveCanonicalOrigin();
     expect(result.indexable).toBe(false);
   });

@@ -71,7 +71,7 @@ describe("isIndexableEnvironment — fail-closed", () => {
   });
 
   it("false em build local com NODE_ENV=production e VERCEL_ENV ausente", () => {
-    process.env.NODE_ENV = "production";
+    process.env = { ...process.env, NODE_ENV: "production" };
     expect(isIndexableEnvironment()).toBe(false);
   });
 
