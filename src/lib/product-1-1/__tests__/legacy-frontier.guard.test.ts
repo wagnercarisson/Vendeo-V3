@@ -211,7 +211,7 @@ describe("legacy-frontier guard — F56.2a", () => {
     expect(mismatches).toEqual([]);
   });
 
-  it("a rota generate-image aceita SOMENTE a mudança aditiva aprovada", () => {
+  it("a rota generate-image evolui para o wiring b1b preservando o fluxo legado", () => {
     const diff = git([
       "diff",
       "--unified=0",
@@ -223,25 +223,43 @@ describe("legacy-frontier guard — F56.2a", () => {
     const removed = lines.filter((l) => l.startsWith("-") && !l.startsWith("---"));
     const added = lines.filter((l) => l.startsWith("+") && !l.startsWith("+++"));
 
-    // Nenhuma linha existente removida/alterada: o fluxo legado é preservado.
+    // (i) Nenhuma linha existente removida/alterada: o fluxo legado é preservado
+    // byte a byte (prova concreta de preservação do comportamento legado).
     expect(removed).toEqual([]);
 
     const addedText = added.join("\n");
-    // As adições incluem os imports do guard.
+    // Os imports do guard b1a continuam presentes.
     expect(addedText).toMatch(/\+import \{ detectExclusiveNewFlowFields \}/);
     expect(addedText).toMatch(/\+import \{ assertSubmissionEligible \}/);
     expect(addedText).toMatch(/\+import \{ resolveEligibilityContext \}/);
     expect(addedText).toMatch(/\+import \{ resolveProductFlowAuthorization \}/);
+    // As adições do wiring b1b (roteamento de aceitação + revalidação server-side).
+    expect(addedText).toMatch(/\+import \{ runProductOneToOneGeneration \}/);
+    expect(addedText).toMatch(/\+import \{ NewFlowGenerateImageRequestSchema \}/);
 
-    // As adições NÃO tocam o parse estrito, a resposta de validação legada nem a reserva.
-    for (const forbidden of [
-      "safeParse(",
-      "fieldErrors",
-      "reserveCredit(",
-      "Dados de entrada inválidos",
-    ]) {
-      expect(added.some((l) => l.includes(forbidden)), forbidden).toBe(false);
-    }
+    // (ii) As linhas adicionadas ANTES do índice do guard NÃO contêm `safeParse(`/
+    // `fieldErrors` — as adições do novo ramo ficam confinadas ao caminho `allowed`.
+    const guardAddedIdx = added.findIndex((l) =>
+      l.includes("detectExclusiveNewFlowFields(body)"),
+    );
+    expect(guardAddedIdx).toBeGreaterThan(-1);
+    const beforeGuard = added.slice(0, guardAddedIdx).join("\n");
+    expect(beforeGuard).not.toMatch(/safeParse\(/);
+    expect(beforeGuard).not.toMatch(/fieldErrors/);
+
+    // (iii) O novo tratamento `allowed` é ADITIVO dentro do bloco do guard
+    // existente — depois do guard e ANTES do `safeParse` legado e da reserva.
+    const source = readFileSync(path.resolve(REPOSITORY_ROOT, AUTHORIZED_ROUTE_FILE), "utf8");
+    const guardIdx = source.indexOf("detectExclusiveNewFlowFields(body)");
+    const allowedIdx = source.indexOf('guard.kind === "allowed"');
+    const legacySafeParseIdx = source.indexOf("GenerateImageRequestSchema.safeParse(body)");
+    const reserveIdx = source.indexOf("creditService.reserveCredit(");
+    expect(guardIdx).toBeGreaterThan(-1);
+    expect(allowedIdx).toBeGreaterThan(guardIdx);
+    expect(legacySafeParseIdx).toBeGreaterThan(allowedIdx);
+    expect(reserveIdx).toBeGreaterThan(legacySafeParseIdx);
+    // O wiring b1b é realmente efetivado (não apenas autorizado no comentário).
+    expect(source).toMatch(/return await runProductOneToOneGeneration\(/);
   });
 
   it("o guard roda ANTES do safeParse e da reserva, preservando o fluxo legado", () => {

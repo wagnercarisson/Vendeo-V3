@@ -26,6 +26,10 @@ const AUTHORIZED_ADMIN_AUTHORIZATION_ROUTE =
   "src/app/api/admin/product-flow-authorizations/route.ts";
 const AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE =
   "src/app/api/campaign/generate-image/route.ts";
+// F56.2b1b (Plano 04 — reconciliação G-NA): a rota de status do reenvio
+// (query-only) importa SOMENTE o módulo exato `orchestration/resend-query`.
+const AUTHORIZED_CAMPAIGN_GENERATION_STATUS_ROUTE =
+  "src/app/api/campaign/generation-status/route.ts";
 
 // F56.2b1b (Plano 01 — reconciliação G-NA): o formulário elegível do Produto 1:1
 // introduz importadores legados (fora de src/lib|components/product-1-1). SÓ
@@ -53,7 +57,18 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
   },
   [AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE]: {
     prefixes: ["@/lib/product-1-1/submission/"],
-    exact: ["@/lib/product-1-1/authorization/authorization-service"],
+    exact: [
+      "@/lib/product-1-1/authorization/authorization-service",
+      // Plano 04 — wiring do núcleo entregável na rota existente.
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/selection-validation",
+      "@/lib/product-1-1/background-direction",
+    ],
+  },
+  // Plano 04 — rota de status do reenvio (query-only).
+  [AUTHORIZED_CAMPAIGN_GENERATION_STATUS_ROUTE]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/orchestration/resend-query"],
   },
   // Plano 01 — pares EXATOS (sem prefixo amplo).
   [AUTHORIZED_CAMPANHAS_NOVA_PAGE]: {
@@ -508,6 +523,100 @@ describe("Product 1:1 — provas comportamentais de `off` (Plano 01, F56.2b1b)",
       const source = readFileSync(path.resolve(process.cwd(), file), "utf8");
       expect(source, file).not.toMatch(forbiddenImports);
       expect(source, file).not.toMatch(/createNewFlowImageGateway/);
+    }
+  });
+});
+
+describe("Product 1:1 — reconciliação G-NA (Plano 04, F56.2b1b)", () => {
+  it("generate-image: autoriza generation-orchestrator + selection-validation + background-direction (sem perder submission/** e authorization-service)", () => {
+    for (const specifier of [
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/selection-validation",
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/submission/exclusive-fields",
+      "@/lib/product-1-1/authorization/authorization-service",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE, specifier),
+        specifier,
+      ).toBe(true);
+    }
+    for (const specifier of [
+      "@/lib/product-1-1/orchestration/resend-query",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/pending/pending-operations-repository",
+      "@/lib/product-1-1/artifact/artifact-store",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE, specifier),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("generation-status: autoriza SOMENTE orchestration/resend-query", () => {
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_CAMPAIGN_GENERATION_STATUS_ROUTE,
+        "@/lib/product-1-1/orchestration/resend-query",
+      ),
+    ).toBe(true);
+    for (const specifier of [
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/selection-validation",
+      "@/lib/product-1-1/submission/exclusive-fields",
+      "@/lib/product-1-1/authorization/authorization-service",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(
+          AUTHORIZED_CAMPAIGN_GENERATION_STATUS_ROUTE,
+          specifier,
+        ),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("as rotas do Plano 04 importam EXATAMENTE os pares autorizados", () => {
+    for (const importer of [
+      AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE,
+      AUTHORIZED_CAMPAIGN_GENERATION_STATUS_ROUTE,
+    ]) {
+      const source = readFileSync(path.resolve(process.cwd(), importer), "utf8");
+      expect(
+        hasUnauthorizedProductFlowImport(importer, source),
+        `${importer} importa módulo Produto 1:1 não autorizado`,
+      ).toBe(false);
+    }
+  });
+
+  it("negativos preservados: importador indevido e módulo indevido continuam violação", () => {
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPAIGN_GENERATION_STATUS_ROUTE,
+        'import { x } from "@/lib/product-1-1/orchestration/generation-orchestrator";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        "src/app/api/campaign/other/route.ts",
+        'import { x } from "@/lib/product-1-1/orchestration/resend-query";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE,
+        'import { x } from "@/lib/product-1-1/orchestration/resend-query";',
+      ),
+    ).toBe(true);
+  });
+
+  it("nenhum prefixo amplo de product-1-1/** foi adicionado", () => {
+    for (const [importer, rule] of Object.entries(AUTHORIZED_PRODUCT_FLOW_IMPORTS)) {
+      for (const prefix of rule.prefixes) {
+        expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/");
+        expect(prefix.endsWith("/product-1-1/"), `${importer}::${prefix}`).toBe(false);
+      }
     }
   });
 });
