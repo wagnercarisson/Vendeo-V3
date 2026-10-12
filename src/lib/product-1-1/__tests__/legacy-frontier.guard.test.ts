@@ -234,7 +234,20 @@ describe("legacy-frontier guard — F56.2a", () => {
     expect(addedText).toMatch(/\+import \{ resolveEligibilityContext \}/);
     expect(addedText).toMatch(/\+import \{ resolveProductFlowAuthorization \}/);
     // As adições do wiring b1b (roteamento de aceitação + revalidação server-side).
-    expect(addedText).toMatch(/\+import \{ runProductOneToOneGeneration \}/);
+    // O import do orquestrador é reconhecido por MÓDULO + SÍMBOLOS (não por uma
+    // formatação específica): os dois símbolos consumidos pela rota e o specifier
+    // do módulo, num ÚNICO import consolidado (sem import duplicado do módulo).
+    expect(addedText).toMatch(
+      /import\s*\{[^}]*\brunProductOneToOneGeneration\b[^}]*\breadProductOneToOneOperation\b[^}]*\}\s*from\s*"@\/lib\/product-1-1\/orchestration\/generation-orchestrator"/,
+    );
+    expect(
+      (
+        addedText.match(
+          /from\s*"@\/lib\/product-1-1\/orchestration\/generation-orchestrator"/g,
+        ) ?? []
+      ).length,
+      "import do módulo do orquestrador deve ser ÚNICO (consolidado)",
+    ).toBe(1);
     expect(addedText).toMatch(/\+import \{ NewFlowGenerateImageRequestSchema \}/);
 
     // (ii) As linhas adicionadas ANTES do índice do guard NÃO contêm `safeParse(`/
