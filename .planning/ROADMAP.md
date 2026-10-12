@@ -393,11 +393,11 @@ Plans:
 
 **Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
 
-**Plans:** 8 plans in 5 waves
+**Plans:** 1/8 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 51.2-01-PLAN.md — Auditoria, fronteira, decisões, commit-base e preparação do C2 (wave 1, checkpoint C2)
+- [x] 51.2-01-PLAN.md — Auditoria, fronteira, decisões, commit-base e preparação do C2 (wave 1, checkpoint C2)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
