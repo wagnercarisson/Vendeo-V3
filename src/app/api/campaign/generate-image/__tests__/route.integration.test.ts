@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
+import { resolveIdentityImageAsDataUrl } from "@/lib/store-identity/identity-image";
 
 vi.mock("server-only", () => ({}));
 
@@ -206,6 +207,10 @@ vi.mock("@/lib/store-identity-service", () => ({
   resolveStoreIdentity: vi.fn(),
   validateIdentityReference: vi.fn(),
   buildCampaignBrief: vi.fn(),
+}));
+// B1 — conversão da URL assinada de identidade → data URL aceito pelo adapter.
+vi.mock("@/lib/store-identity/identity-image", () => ({
+  resolveIdentityImageAsDataUrl: vi.fn(),
 }));
 vi.mock("@/lib/economic/economic-parameter-service", () => ({
   EconomicParameterService: vi.fn(function () {
@@ -411,6 +416,8 @@ beforeEach(() => {
     store: { name: "Loja Teste", segment: "outros" },
     identity: { state: "text_only", imageUrl: null, directive: "Direção de identidade." },
   });
+  // B1 — por padrão a identidade NÃO é convertida (text-only).
+  (resolveIdentityImageAsDataUrl as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 });
 
 describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integração)", () => {
@@ -670,6 +677,14 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     (validateIdentityReference as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
       serverIdentity,
     );
+    // B1 — a identidade é convertida ao `data URL` ACEITO pelo adapter (a URL
+    // assinada rotativa NUNCA vai ao gateway).
+    (resolveIdentityImageAsDataUrl as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      dataUrl: "data:image/png;base64,LOGO",
+      contentId: "content-id-logo",
+      mimeType: "image/png",
+      byteLength: 3,
+    });
 
     const { POST } = await import("../route");
     const res = await POST(makeRequest(VALID_BODY));
@@ -678,7 +693,7 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
 
     expect(h.gatewayInvoke).toHaveBeenCalled();
     const request = h.gatewayInvoke.mock.calls[0][1] as { identityImageUrl?: string };
-    expect(request.identityImageUrl).toBe("https://signed.example/logo.png");
+    expect(request.identityImageUrl).toBe("data:image/png;base64,LOGO");
 
     expect(h.createCampaign).toHaveBeenCalledWith(
       STORE_ID,

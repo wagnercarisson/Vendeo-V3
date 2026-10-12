@@ -10,6 +10,7 @@ import { InputValidationService } from "@/lib/image-generation/services/input-va
 import { isForceBriefVisionCheckEnabled, isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
+import { resolveIdentityImageAsDataUrl } from "@/lib/store-identity/identity-image";
 import { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot, mimeTypeFromDataUrl } from "@/lib/campaign/brief";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { requireApiUser } from "@/lib/auth/require-user";
@@ -582,6 +583,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // como `identityImageUrl` e materializada como direção de identidade.
       let newFlowIdentitySnapshot: Awaited<ReturnType<typeof validateIdentityReference>>;
       let newFlowIdentityDirective: string | null = null;
+      // B1 — identidade convertida ao formato ACEITO pelo adapter do novo fluxo
+      // (`data:image/png|jpeg|webp;base64,...`). NUNCA a URL assinada rotativa.
+      let newFlowIdentityImage: Awaited<
+        ReturnType<typeof resolveIdentityImageAsDataUrl>
+      > = null;
       try {
         const { data: newFlowStore, error: newFlowStoreError } = await supabaseAdmin
           .from("stores")
@@ -596,8 +602,25 @@ export const POST = apiHandler(async (request: NextRequest) => {
         }
         const resolvedNewFlowIdentity = await resolveStoreIdentity(newFlowStore);
         newFlowIdentitySnapshot = await validateIdentityReference(resolvedNewFlowIdentity);
+        // B1 — `resolveStoreIdentity` entrega uma URL ASSINADA rotativa (HTTPS);
+        // o adapter (`UpstreamImagesAdapter.dataUrlToFile`) aceita SOMENTE
+        // `data:image/png|jpeg|webp;base64,...`. Baixamos de uma fonte CONFIÁVEL
+        // (a própria URL assinada server-side) com LIMITES (timeout/teto de
+        // bytes/whitelist de content-type) e convertemos para `data URL` ANTES da
+        // reserva; a URL bruta NUNCA é repassada ao gateway. Falha/limite excedido
+        // ⇒ SEM imagem de identidade (text-only), consistente com
+        // `validateIdentityReference` anulando a URL.
+        newFlowIdentityImage = await resolveIdentityImageAsDataUrl(
+          newFlowIdentitySnapshot?.signature?.url ?? null,
+        );
+        const newFlowEffectiveIdentitySnapshot = newFlowIdentityImage
+          ? newFlowIdentitySnapshot
+          : {
+              ...newFlowIdentitySnapshot,
+              signature: { ...newFlowIdentitySnapshot.signature, url: null },
+            };
         const newFlowIdentityContext = await buildCampaignBrief(
-          newFlowIdentitySnapshot,
+          newFlowEffectiveIdentitySnapshot,
           newFlow as unknown as CampaignInput,
         );
         newFlowIdentityDirective = newFlowIdentityContext?.identity?.directive ?? null;
@@ -795,7 +818,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         ...newFlowOrchestrationInput,
         references: newFlowEvidenceReferenceSelections.map((selection) => selection.id),
         referenceSelections: newFlowEvidenceReferenceSelections,
-        identityImageUrl: newFlowIdentityImageUrl ?? undefined,
+        identityImageUrl: newFlowIdentityImage?.dataUrl ?? undefined,
         identityDirective: newFlowIdentityDirective ?? undefined,
       });
     }

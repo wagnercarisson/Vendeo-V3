@@ -26,6 +26,12 @@ vi.mock('@/lib/store-identity-service', () => ({
   buildCampaignBrief: vi.fn(),
 }));
 
+// B1 — a rota converte a URL assinada de identidade em `data URL` (formato
+// aceito pelo adapter do novo fluxo) via este módulo; mockado por padrão (null).
+vi.mock('@/lib/store-identity/identity-image', () => ({
+  resolveIdentityImageAsDataUrl: vi.fn(),
+}));
+
 vi.mock('@/lib/campaign/persistence', () => ({
   createCampaign: vi.fn(),
   dataUrlToCampaignImage: vi.fn(),
@@ -294,6 +300,7 @@ vi.mock('@/lib/product-1-1/submission/eligibility-context', () => ({
 }));
 
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from '@/lib/store-identity-service';
+import { resolveIdentityImageAsDataUrl } from '@/lib/store-identity/identity-image';
 import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from '@/lib/campaign/persistence';
 import { transcodeToJpeg } from '@/lib/campaign/image-processor';
 import { requireLegalClearance } from '@/lib/legal/clearance';
@@ -397,6 +404,8 @@ beforeEach(() => {
   mockHasFallback.mockResolvedValue(true);
   mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
   mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+  // B1 — por padrão a identidade NÃO é convertida (text-only) nos testes legados.
+  (resolveIdentityImageAsDataUrl as any).mockResolvedValue(null);
   mockGetCost.mockResolvedValue({
     operationKey: "campaign_generation",
     costCredits: 1,
@@ -2138,6 +2147,13 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     };
     (resolveStoreIdentity as any).mockResolvedValue(serverIdentity);
     (validateIdentityReference as any).mockResolvedValue(serverIdentity);
+    // B1 — a identidade é convertida ao `data URL` ACEITO pelo adapter.
+    (resolveIdentityImageAsDataUrl as any).mockResolvedValue({
+      dataUrl: 'data:image/png;base64,LOGO',
+      contentId: 'content-id-logo',
+      mimeType: 'image/png',
+      byteLength: 3,
+    });
 
     const { POST } = await import('../route');
     // Identidade enviada pelo CLIENTE ⇒ rejeitada (contrato de identidade legada).

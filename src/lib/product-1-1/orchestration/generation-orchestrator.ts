@@ -95,8 +95,11 @@ export interface ProductOneToOneGenerationInput {
   readonly productImagesDataUrls?: readonly string[];
   /**
    * Identidade visual resolvida SERVER-SIDE pela rota (nunca do cliente): imagem
-   * canônica de identidade (URL assinada) enviada ao gateway como
-   * `identityImageUrl` (correção de integração do Plano 04, gap 4).
+   * canônica de identidade em `data URL` (`data:image/png|jpeg|webp;base64,...`)
+   * — o único formato aceito por `UpstreamImagesAdapter.dataUrlToFile` — enviada
+   * ao gateway como `identityImageUrl`. A rota converte a URL assinada rotativa
+   * (B1) e congela o id de CONTEÚDO (SHA-256 dos bytes) + a direção textual na
+   * evidência (B2). Correção de integração do Plano 04, gap 4.
    */
   readonly identityImageUrl?: string;
   /**
