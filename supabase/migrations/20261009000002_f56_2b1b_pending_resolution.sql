@@ -95,6 +95,8 @@ AS $$
 DECLARE
   v_credit          public.product_1_1_campaign_credit_operations%ROWTYPE;
   v_existing        JSONB;
+  v_existing_actor  UUID;
+  v_existing_reason TEXT;
   v_art_kind        TEXT;
   v_execution_ended BOOLEAN;
   v_in_progress     BOOLEAN;
@@ -121,33 +123,20 @@ BEGIN
   IF v_art_kind IS NULL OR v_art_kind NOT IN ('integral','absent','invalid','indeterminate') THEN
     RAISE EXCEPTION 'invalid_evidence';
   END IF;
+  -- F1 — `execution_ended` vindo do cliente/evidência tem apenas a FORMA
+  -- validada; o valor NUNCA é confiado para a decisão de claim ativo. O valor
+  -- AUTORITATIVO é DERIVADO sob a trava (`v_execution_ended := NOT v_in_progress`,
+  -- logo após o `EXISTS` de claim `in_progress`), do estado TRAVADO, imediatamente
+  -- antes da decisão — uma tentativa que INICIOU entre a leitura do serviço e a
+  -- trava é observada sob a trava e BLOQUEIA a resolução.
   IF jsonb_typeof(p_evidence->'execution_ended') <> 'boolean' THEN
     RAISE EXCEPTION 'invalid_evidence';
   END IF;
-  v_execution_ended := (p_evidence->>'execution_ended')::boolean;
 
   -- F5/C2 — INDETERMINADO/INVÁLIDO BLOQUEIA qualquer ação (sem refund/deliver):
   -- ausência e erro NUNCA colapsam; a RPC nunca infere arte de falha de leitura.
   IF v_art_kind IN ('invalid','indeterminate') THEN
     RAISE EXCEPTION 'insufficient_evidence';
-  END IF;
-
-  -- F5 — idempotência/conflito por `resolution_operation_id` (mesma ação):
-  -- replay EQUIVALENTE ⇒ reuso idempotente (exatamente um efeito e uma
-  -- auditoria); MESMO id com conteúdo DIVERGENTE ⇒ CONFLITO (nunca sucesso
-  -- enganoso).
-  SELECT metadata INTO v_existing
-  FROM public.admin_audit_log
-  WHERE operation_id = p_resolution_operation_id
-    AND action = 'product_1_1_pending_resolution';
-  IF FOUND THEN
-    IF (v_existing->>'campaign_id') = p_campaign_id::text
-       AND (v_existing->>'operation_id') = p_operation_id::text
-       AND (v_existing->>'action') = p_action
-       AND (v_existing->>'art_kind') = v_art_kind THEN
-      RETURN COALESCE(v_existing, '{}'::jsonb) || jsonb_build_object('idempotent', true);
-    END IF;
-    RETURN jsonb_build_object('success', false, 'reason', 'operation_identity_conflict');
   END IF;
 
   -- C4 — TRAVA comum por operação: a MESMA linha de operação de crédito que a
@@ -158,6 +147,31 @@ BEGIN
   FOR UPDATE;
 
   IF NOT FOUND THEN RAISE EXCEPTION 'operation_not_found'; END IF;
+
+  -- F5/F2(c) — idempotência/conflito por `resolution_operation_id` (mesma ação)
+  -- AVALIADA SOB A TRAVA (C4): replays concorrentes SERIALIZAM na linha travada e
+  -- o índice único parcial `idx_admin_audit_log_operation` (sobre `operation_id`,
+  -- definido em 20260718000001) garante UMA única auditoria/efeito. Replay
+  -- EQUIVALENTE ⇒ reuso idempotente (exatamente um efeito e uma auditoria); MESMO
+  -- id com conteúdo DIVERGENTE ⇒ CONFLITO (nunca sucesso enganoso).
+  -- F2(b) — a equivalência inclui `actor_id` e o `reason` (TRIM): divergência de
+  -- administrador/motivo para o MESMO `resolution_operation_id` ⇒ conflito.
+  SELECT metadata, actor_id, btrim(reason)
+    INTO v_existing, v_existing_actor, v_existing_reason
+  FROM public.admin_audit_log
+  WHERE operation_id = p_resolution_operation_id
+    AND action = 'product_1_1_pending_resolution';
+  IF FOUND THEN
+    IF (v_existing->>'campaign_id') = p_campaign_id::text
+       AND (v_existing->>'operation_id') = p_operation_id::text
+       AND (v_existing->>'action') = p_action
+       AND (v_existing->>'art_kind') = v_art_kind
+       AND v_existing_actor = p_actor_id
+       AND v_existing_reason = btrim(p_reason) THEN
+      RETURN COALESCE(v_existing, '{}'::jsonb) || jsonb_build_object('idempotent', true);
+    END IF;
+    RETURN jsonb_build_object('success', false, 'reason', 'operation_identity_conflict');
+  END IF;
 
   -- F5 — REVALIDAÇÃO do estado da operação imediatamente antes da transição.
   -- Terminal equivalente ⇒ idempotente; terminal divergente ⇒ recusa.
@@ -177,15 +191,22 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'reason', 'operation_terminal');
   END IF;
 
-  -- E1 — guarda de execução ativa × evidência de ENCERRAMENTO: um claim
-  -- `in_progress` recusa a resolução ENQUANTO não houver evidência server-side de
-  -- ENCERRAMENTO. A idade/timeout NÃO conta como evidência (fail-closed).
+  -- E1/F1 — guarda de execução ativa REVALIDADA SOB A TRAVA: `execution_ended`
+  -- NUNCA é lido da evidência (pré-lock/stale) — é DERIVADO do estado TRAVADO
+  -- logo após o `EXISTS`. Um claim `in_progress` sob a trava ⇒ execução NÃO
+  -- encerrada ⇒ RECUSA fail-closed (`operation_in_progress`), SOBREPONDO qualquer
+  -- evidência stale `execution_ended:true`. A idade/timeout NÃO conta como
+  -- evidência (D13). A finalização do claim residual (`abandoned`) permanece
+  -- disponível apenas para quando uma fonte OPERACIONAL de encerramento for
+  -- definida (GATE da b2) — no escopo aprovado (b1b), a resolução é BLOQUEADA.
   SELECT EXISTS (
     SELECT 1 FROM public.product_1_1_generation_attempt_claims
     WHERE campaign_id = p_campaign_id
       AND operation_id = p_operation_id
       AND status = 'in_progress'
   ) INTO v_in_progress;
+
+  v_execution_ended := NOT v_in_progress;
 
   IF v_in_progress AND NOT v_execution_ended THEN
     RAISE EXCEPTION 'operation_in_progress';
