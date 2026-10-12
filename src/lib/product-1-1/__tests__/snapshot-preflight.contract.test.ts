@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,8 +7,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   INITIAL_IMAGE_MODEL_PAIR,
   type ImageModelPair,
+  type ImageModelPairConfig,
 } from "@/lib/ai/image-model-pair";
 import type { CurrentImageGenerationConfig } from "@/lib/ai/image-generation-config-snapshot";
+import { ImagePairPricingIncompleteError } from "@/lib/ai-cost/image-pair-pricing";
+import { ImageModelPairConfigMissingError } from "@/lib/ai/image-model-pair-config-service";
+import type {
+  ImagePairCapacityPricingStatus,
+  ImagePairTargetPricingStatus,
+} from "@/lib/ai-cost/types";
 
 vi.mock("server-only", () => ({}));
 
@@ -450,5 +457,176 @@ describe("F56.2b1b — snapshot congelado + evidência congelada (Plano 02)", ()
         buildProductOneToOneFrozenEvidence({ ...baseEvidence, briefing: "briefing B" }),
       ),
     ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 2 — preflight fail-closed (config resolvida UMA vez + pricing complete).
+// ---------------------------------------------------------------------------
+
+function targetCoverage(pair: ImageModelPair): ImagePairTargetPricingStatus {
+  return {
+    model: pair.model,
+    quality: pair.quality,
+    components: [
+      {
+        component: "image_unit",
+        provider: "openai",
+        model: pair.model,
+        quality: pair.quality,
+        available: true,
+        source: "table",
+      },
+    ],
+    missingComponents: [],
+    pricingCoverage: "complete",
+  };
+}
+
+function completeCoverage(pair: ImageModelPairConfig): ImagePairCapacityPricingStatus {
+  return {
+    primary: targetCoverage(pair.primary),
+    fallback: targetCoverage(pair.fallback),
+    missingComponents: [],
+    pricingCoverage: "complete",
+  };
+}
+
+async function loadPreflightModule() {
+  return import("../orchestration/preflight");
+}
+
+const NEW_FLOW_MODULE_FILES = [
+  "src/lib/product-1-1/snapshot/persist-snapshot.ts",
+  "src/lib/product-1-1/orchestration/preflight.ts",
+  "src/lib/product-1-1/orchestration/attempt-history.ts",
+];
+
+describe("F56.2b1b — preflight fail-closed (Plano 02)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("caminho feliz: devolve a config resolvida + pricing complete, resolve UMA vez (F3) e não toca DB", async () => {
+    const { runNewFlowPreflight } = await loadPreflightModule();
+    const config = initialConfig();
+    let resolveConfigCalls = 0;
+
+    const result = await runNewFlowPreflight({
+      campaignId: "camp-1",
+      resolveConfig: async () => {
+        resolveConfigCalls += 1;
+        return config;
+      },
+      assertExecutable: async (pair) => completeCoverage(pair),
+      resolveFrozenEvidenceState: async () => ({ kind: "no_snapshot" }),
+    });
+
+    expect(resolveConfigCalls).toBe(1);
+    expect(result.config).toBe(config);
+    expect(result.pricing.pricingCoverage).toBe("complete");
+    expect(result.pricing.primary.model).toBe("gpt-image-2.5-sunburst");
+    expect(result.pricing.fallback.model).toBe("gpt-image-2");
+    expect(m.from).not.toHaveBeenCalled();
+  });
+
+  it("pricing incompleto em principal/fallback ⇒ ImagePairPricingIncompleteError", async () => {
+    const { runNewFlowPreflight } = await loadPreflightModule();
+    const config = initialConfig();
+
+    await expect(
+      runNewFlowPreflight({
+        campaignId: "camp-1",
+        resolveConfig: async () => config,
+        assertExecutable: async () => {
+          throw new ImagePairPricingIncompleteError(completeCoverage(config));
+        },
+        resolveFrozenEvidenceState: async () => ({ kind: "no_snapshot" }),
+      }),
+    ).rejects.toBeInstanceOf(ImagePairPricingIncompleteError);
+  });
+
+  it("config ausente falha fechado (nunca default), sem tocar pricing", async () => {
+    const { runNewFlowPreflight } = await loadPreflightModule();
+    let assertCalls = 0;
+
+    await expect(
+      runNewFlowPreflight({
+        campaignId: "camp-1",
+        resolveConfig: async () => {
+          throw new ImageModelPairConfigMissingError();
+        },
+        assertExecutable: async (pair) => {
+          assertCalls += 1;
+          return completeCoverage(pair);
+        },
+      }),
+    ).rejects.toBeInstanceOf(ImageModelPairConfigMissingError);
+    expect(assertCalls).toBe(0);
+  });
+
+  it("snapshot de novo fluxo sem evidência congelada ⇒ bloqueio fail-closed (sem reserva/provider)", async () => {
+    const { runNewFlowPreflight, NewFlowPreflightError } = await loadPreflightModule();
+    let assertCalls = 0;
+
+    await expect(
+      runNewFlowPreflight({
+        campaignId: "camp-1",
+        resolveConfig: async () => initialConfig(),
+        assertExecutable: async (pair) => {
+          assertCalls += 1;
+          return completeCoverage(pair);
+        },
+        resolveFrozenEvidenceState: async () => ({
+          kind: "evidence_missing",
+          snapshotOriginalId: "snap-1",
+        }),
+      }),
+    ).rejects.toMatchObject({ code: "frozen_evidence_missing" });
+    expect(assertCalls).toBe(0);
+    void NewFlowPreflightError;
+  });
+
+  it("snapshot de novo fluxo COM evidência congelada (replay) prossegue", async () => {
+    const { runNewFlowPreflight } = await loadPreflightModule();
+
+    const result = await runNewFlowPreflight({
+      campaignId: "camp-1",
+      resolveConfig: async () => initialConfig(),
+      assertExecutable: async (pair) => completeCoverage(pair),
+      resolveFrozenEvidenceState: async () => ({
+        kind: "evidence_present",
+        snapshotOriginalId: "snap-1",
+      }),
+    });
+
+    expect(result.pricing.pricingCoverage).toBe("complete");
+  });
+
+  it("C5: o preflight NÃO constrói nem persiste snapshot/evidência (zero insert)", async () => {
+    const { runNewFlowPreflight } = await loadPreflightModule();
+    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+    void persistProductOneToOneSnapshot;
+
+    await runNewFlowPreflight({
+      campaignId: "camp-1",
+      resolveConfig: async () => initialConfig(),
+      assertExecutable: async (pair) => completeCoverage(pair),
+      resolveFrozenEvidenceState: async () => ({ kind: "no_snapshot" }),
+    });
+
+    expect(m.from).not.toHaveBeenCalled();
+  });
+
+  it("asserção negativa: nenhum módulo do novo fluxo invoca revisor automático de imagem", () => {
+    const forbidden = ["image-review-service", "campaign-image-reviewer"];
+    for (const relative of NEW_FLOW_MODULE_FILES) {
+      const absolute = path.resolve(process.cwd(), relative);
+      if (!existsSync(absolute)) continue;
+      const source = readFileSync(absolute, "utf8");
+      for (const needle of forbidden) {
+        expect(source).not.toContain(needle);
+      }
+    }
   });
 });
