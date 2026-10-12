@@ -64,6 +64,16 @@ import {
   type AttemptEnvelope,
   type AttemptEnvelopeResult,
 } from "./instrumentation";
+import {
+  COPY_BUDGET_MS,
+  createCopyBudgetSignal,
+  drainCopyTask,
+  recordCancellation,
+  recordCopyState,
+  type CopyBudgetSignal,
+  type CopyState,
+  type CopyStateStore,
+} from "../copy/copy-state";
 
 /**
  * F56.2b1b (B1B-D2/D4/D5/D12, C1/C5/I1/I2, F1–F8) — orquestrador NDJSON do novo
@@ -189,6 +199,33 @@ export interface TelemetryContextInput {
   readonly traceId?: string;
 }
 
+/**
+ * F8 — operações da copy (não bloqueante) drenadas DENTRO do ciclo da
+ * requisição. Injetável para teste puro; o default usa o client Supabase
+ * (`product_1_1_copy_state` / `product_1_1_copy_cancellations`).
+ */
+export interface ProductOneToOneCopyOps {
+  /** Task da copy; recebe o sinal do orçamento para cooperar com o cancelamento. */
+  readonly runCopy: (input: {
+    campaignId: string;
+    operationId: string;
+    signal: AbortSignal;
+  }) => Promise<void>;
+  readonly budgetMs?: number;
+  readonly recordCopyState?: (input: {
+    campaignId: string;
+    operationId: string;
+    state: CopyState;
+  }) => Promise<void>;
+  readonly recordCancellation?: (input: {
+    campaignId: string;
+    operationId: string;
+    reason: string;
+  }) => Promise<void>;
+  /** Orçamento injetável (testes fornecem um AbortSignal determinístico). */
+  readonly makeBudgetSignal?: (budgetMs: number) => CopyBudgetSignal;
+}
+
 export interface ProductOneToOneGenerationDeps {
   readonly runPreflight?: (input: { campaignId: string }) => Promise<NewFlowPreflightResult>;
   readonly buildSnapshot?: (
@@ -219,6 +256,8 @@ export interface ProductOneToOneGenerationDeps {
    * default é no-op. Cada tentativa real chama o sink EXATAMENTE uma vez.
    */
   readonly onAttemptEnvelope?: (envelope: AttemptEnvelope) => void | Promise<void>;
+  /** F8 — copy não bloqueante drenada no ciclo da requisição (opcional). */
+  readonly copy?: ProductOneToOneCopyOps;
   readonly client?: SupabaseClient;
 }
 
@@ -362,6 +401,7 @@ export async function runProductOneToOneGeneration(
     ((diagnosis: ImageGenerationDiagnosisInput) =>
       new SupabaseImageGenerationDiagnosisRepository(client).recordDiagnosis(diagnosis));
   const onAttemptEnvelope = deps.onAttemptEnvelope;
+  const copyOps = deps.copy;
   const recordAttemptCall =
     deps.recordAttempt ??
     ((call: RecordAttemptCall) =>
@@ -623,6 +663,37 @@ export async function runProductOneToOneGeneration(
           quality: params.quality,
         });
       };
+
+      // ── F8 — copy NÃO bloqueante drenada no ciclo da requisição ────────
+      // A copy roda em PARALELO com a imagem; seu estado é persistido e ela é
+      // DRENADA com orçamento (CANCELADA se exceder) ANTES de encerrar o stream —
+      // nunca deixa task órfã. A falha da copy NÃO bloqueia `delivered` nem
+      // reverte a reserva de crédito, e NÃO existe retry nesta fase.
+      let copyDrain: Promise<void> | null = null;
+      if (copyOps) {
+        const copyStore: CopyStateStore = {
+          recordCopyState: copyOps.recordCopyState ?? ((i) => recordCopyState(client, i)),
+          recordCancellation:
+            copyOps.recordCancellation ?? ((i) => recordCancellation(client, i)),
+        };
+        const budgetMs = Math.max(
+          0,
+          Math.min(copyOps.budgetMs ?? COPY_BUDGET_MS, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS),
+        );
+        const budget = (copyOps.makeBudgetSignal ?? createCopyBudgetSignal)(budgetMs);
+        copyDrain = drainCopyTask(
+          {
+            campaignId,
+            operationId,
+            signal: budget.signal,
+            run: (signal) => copyOps.runCopy({ campaignId, operationId, signal }),
+          },
+          copyStore,
+        ).then(
+          () => budget.dispose(),
+          () => budget.dispose(),
+        );
+      }
 
       try {
         emit({ type: "phase", phase: "orchestration", status: "running" });
@@ -1006,6 +1077,15 @@ export async function runProductOneToOneGeneration(
         });
       } finally {
         clearTimeout(timeoutId);
+        // F8 — drena a copy DENTRO do ciclo: aguarda/cancela ANTES de encerrar
+        // (nunca deixa task órfã após a resposta). Best-effort: nunca bloqueia.
+        if (copyDrain) {
+          try {
+            await copyDrain;
+          } catch {
+            // ignore — o estado da copy é best-effort e nunca bloqueia a entrega.
+          }
+        }
         try {
           controller.close();
         } catch {

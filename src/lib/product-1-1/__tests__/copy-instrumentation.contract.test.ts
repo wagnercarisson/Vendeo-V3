@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiInvoker } from "@/lib/ai/gateway";
 import type { AiInvocationRequest, AiInvocationResult, AiTelemetryContext } from "@/lib/ai/types";
 import type {
@@ -14,6 +15,15 @@ import type {
 } from "@/lib/ai/image-generation-config-snapshot";
 import type { ImageModelPairConfig } from "@/lib/ai/image-model-pair";
 
+import {
+  COPY_CANCELLATION_REASON,
+  createCopyBudgetSignal,
+  drainCopyTask,
+  readCopyState,
+  recordCancellation,
+  recordCopyState,
+  type CopyState,
+} from "../copy/copy-state";
 import {
   buildAttemptTelemetry,
   emitAttemptEnvelope,
@@ -26,11 +36,26 @@ import type { ProductPromptCompositionBriefing } from "../policies/types";
 import type { ProductOneToOneArtifactRef } from "../artifact/types";
 
 // ---------------------------------------------------------------------------
-// F56.2b1b — Plano 08 (Task 2): envelope/custo por tentativa + diagnóstico
-// durável `IMG-001` (REQ-56.2.2-12). Contract test estático + simulado: SEM
-// banco, SEM provider, SEM crédito. Provider SIMULADO.
+// F56.2b1b — Plano 08: estado da copy não bloqueante (F8) + instrumentação por
+// tentativa e diagnóstico durável `IMG-001` (REQ-11/REQ-12). Contract test
+// estático + simulado: SEM banco, SEM provider, SEM crédito. Provider SIMULADO.
 // ---------------------------------------------------------------------------
 
+const PHASE_DIR = path.resolve(
+  process.cwd(),
+  ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1",
+);
+void PHASE_DIR;
+
+const MIGRATIONS_DIR = path.resolve(process.cwd(), "supabase", "migrations");
+const MIGRATION_FILE = "20261009000005_f56_2b1b_copy_state.sql";
+const migrationPath = path.join(MIGRATIONS_DIR, MIGRATION_FILE);
+const migrationSql = readFileSync(migrationPath, "utf8");
+
+const COPY_STATE_SOURCE = readFileSync(
+  path.resolve(process.cwd(), "src/lib/product-1-1/copy/copy-state.ts"),
+  "utf8",
+);
 const INSTRUMENTATION_SOURCE = readFileSync(
   path.resolve(process.cwd(), "src/lib/product-1-1/orchestration/instrumentation.ts"),
   "utf8",
@@ -79,7 +104,219 @@ const BRIEFING: ProductPromptCompositionBriefing = {
 };
 
 // ---------------------------------------------------------------------------
-// Envelope/custo por tentativa + sequência reconstruível
+// Task 1(a) — migration LOCAL-ONLY do estado/cancelamento da copy
+// ---------------------------------------------------------------------------
+
+describe("Plano 08 — migration do estado da copy (F8)", () => {
+  it("cria a tabela de estado com identidade por operação e estados persistidos", () => {
+    expect(migrationSql).toContain("public.product_1_1_copy_state");
+    expect(migrationSql).toContain("state IN ('pending', 'completed', 'failed')");
+    expect(migrationSql).toContain("UNIQUE (campaign_id, operation_id)");
+    expect(migrationSql).toContain("updated_at");
+  });
+
+  it("registra o cancelamento SEPARADAMENTE (tabela própria, imutável)", () => {
+    expect(migrationSql).toContain("public.product_1_1_copy_cancellations");
+    expect(migrationSql).toContain("reason       TEXT NOT NULL");
+    expect(migrationSql).toMatch(/trg_product_1_1_copy_cancellations_immutable/);
+  });
+
+  it("é LOCAL-ONLY/autorada (cabeçalho explícito) com RLS + REVERT", () => {
+    expect(migrationSql).toContain("LOCAL-ONLY");
+    expect(migrationSql).toContain("apenas AUTORADA");
+    expect(migrationSql).toContain("Plano 09");
+    expect(migrationSql).toContain("ENABLE ROW LEVEL SECURITY");
+    expect(migrationSql).toContain("REVERT");
+    // Estado corrente é mutável (UPDATE); cancelamento é append-only (SELECT/INSERT).
+    expect(migrationSql).toContain(
+      "GRANT SELECT, INSERT, UPDATE ON TABLE public.product_1_1_copy_state TO service_role;",
+    );
+    expect(migrationSql).toContain(
+      "GRANT SELECT, INSERT ON TABLE public.product_1_1_copy_cancellations TO service_role;",
+    );
+  });
+
+  it("NÃO aplica remoto (sem db push / mutação remota no corpo ativo)", () => {
+    const active = migrationSql
+      .split(/\r?\n/)
+      .filter((line) => !line.trimStart().startsWith("--"))
+      .join("\n");
+    expect(active).not.toMatch(/db push/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 1(b) — persistência do estado/cancelamento (registro separado)
+// ---------------------------------------------------------------------------
+
+interface FakeEvents {
+  events: Array<{ table: string; op: string; payload?: unknown }>;
+}
+
+function makeFakeSupabase(
+  selectResponse: { data: { state: CopyState } | null; error: null } = {
+    data: null,
+    error: null,
+  },
+): FakeEvents & { client: SupabaseClient } {
+  const events: FakeEvents["events"] = [];
+  function from(table: string) {
+    return {
+      upsert(payload: unknown) {
+        events.push({ table, op: "upsert", payload });
+        return Promise.resolve({ error: null });
+      },
+      insert(payload: unknown) {
+        events.push({ table, op: "insert", payload });
+        return Promise.resolve({ error: null });
+      },
+      select() {
+        const chain = {
+          eq() {
+            return chain;
+          },
+          maybeSingle() {
+            return Promise.resolve(selectResponse);
+          },
+        };
+        return chain;
+      },
+    };
+  }
+  return { events, client: { from } as unknown as SupabaseClient };
+}
+
+describe("Plano 08 — persistência do estado da copy (F8)", () => {
+  it("recordCopyState faz UPSERT na tabela dedicada (identidade por operação)", async () => {
+    const { client, events } = makeFakeSupabase();
+    await recordCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, state: "pending" });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].table).toBe("product_1_1_copy_state");
+    expect(events[0].op).toBe("upsert");
+    expect(events[0].payload).toMatchObject({
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      state: "pending",
+    });
+  });
+
+  it("readCopyState recupera o estado persistido", async () => {
+    const { client } = makeFakeSupabase({ data: { state: "completed" }, error: null });
+    await expect(
+      readCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID }),
+    ).resolves.toBe("completed");
+  });
+
+  it("recordCancellation grava numa tabela SEPARADA (nunca no estado da copy)", async () => {
+    const { client, events } = makeFakeSupabase();
+    await recordCancellation(client, {
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      reason: "cancelled_by_owner",
+    });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].table).toBe("product_1_1_copy_cancellations");
+    expect(events[0].op).toBe("insert");
+    expect(events[0].payload).toMatchObject({ reason: "cancelled_by_owner" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 1(c) — drenagem no ciclo da requisição com orçamento (sem órfã)
+// ---------------------------------------------------------------------------
+
+function makeDrainStore() {
+  const stateCalls: CopyState[] = [];
+  const cancelCalls: string[] = [];
+  const store = {
+    async recordCopyState(input: { state: CopyState }) {
+      stateCalls.push(input.state);
+    },
+    async recordCancellation(input: { reason: string }) {
+      cancelCalls.push(input.reason);
+    },
+  };
+  return { store, stateCalls, cancelCalls };
+}
+
+describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
+  it("sucesso ⇒ persiste pending → completed, SEM cancelamento", async () => {
+    const { store, stateCalls, cancelCalls } = makeDrainStore();
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async () => {},
+      },
+      store,
+    );
+
+    expect(result).toEqual({ state: "completed", canceled: false });
+    expect(stateCalls).toEqual(["pending", "completed"]);
+    expect(cancelCalls).toEqual([]);
+  });
+
+  it("falha (não cancelada) ⇒ persiste failed e NÃO registra cancelamento", async () => {
+    const { store, stateCalls, cancelCalls } = makeDrainStore();
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async () => {
+          throw new Error("copy_director_failed");
+        },
+      },
+      store,
+    );
+
+    expect(result).toEqual({ state: "failed", canceled: false });
+    expect(stateCalls).toEqual(["pending", "failed"]);
+    expect(cancelCalls).toEqual([]);
+  });
+
+  it("orçamento esgotado ⇒ CANCELA, persiste failed determinístico e registra cancelamento SEPARADO", async () => {
+    const { store, stateCalls, cancelCalls } = makeDrainStore();
+    const budget = createCopyBudgetSignal(0);
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: budget.signal,
+        run: (signal) =>
+          new Promise<void>((_resolve, reject) => {
+            if (signal.aborted) {
+              reject(new DOMException("aborted", "AbortError"));
+              return;
+            }
+            signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), {
+              once: true,
+            });
+          }),
+      },
+      store,
+    );
+    budget.dispose();
+
+    expect(result).toEqual({ state: "failed", canceled: true });
+    expect(stateCalls).toEqual(["pending", "failed"]);
+    expect(cancelCalls).toEqual([COPY_CANCELLATION_REASON]);
+  });
+
+  it("NÃO existe ação/endpoint de retry (source)", () => {
+    // Nenhuma AÇÃO/função de retry exportada nesta fatia (a palavra pode aparecer
+    // em comentários explicando que o retry pertence à b2).
+    expect(COPY_STATE_SOURCE).not.toMatch(/export\s+(?:async\s+)?(?:function\s+)?\w*[Rr]etry/);
+    expect(COPY_STATE_SOURCE).not.toMatch(/\bretry\s*\(/);
+    expect(ORCHESTRATOR_SOURCE).not.toMatch(/copyRetry|retryCopy|copy\/retry|retry\s*\(/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 2(a) — envelope/custo por tentativa + sequência reconstruível
 // ---------------------------------------------------------------------------
 
 describe("Plano 08 — envelope por tentativa (REQ-12)", () => {
@@ -161,7 +398,7 @@ describe("Plano 08 — envelope por tentativa (REQ-12)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Diagnóstico durável correlacionado a IMG-001
+// Task 2(b) — diagnóstico durável correlacionado a IMG-001
 // ---------------------------------------------------------------------------
 
 describe("Plano 08 — diagnóstico durável (REQ-12)", () => {
@@ -189,6 +426,7 @@ describe("Plano 08 — diagnóstico durável (REQ-12)", () => {
     expect(records[0]).toMatchObject({
       reference: "66666666-6666-4666-8666-666666666666",
       internalCategory: "generation_failed",
+      // Texto cru/chave/URL NUNCA persistido — reduzido ao conjunto fechado.
       normalizedError: "unknown_provider_error",
       target: "primary",
       attemptNumber: 3,
@@ -231,7 +469,7 @@ describe("Plano 08 — diagnóstico durável (REQ-12)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Orquestrador (provider SIMULADO) — UM envelope por tentativa real
+// Orquestrador (provider SIMULADO) — copy não bloqueia delivered + envelopes
 // ---------------------------------------------------------------------------
 
 interface OrchestratorHarness {
@@ -244,6 +482,8 @@ interface OrchestratorHarness {
     providerCalls: number;
   };
   readonly envelopes: AttemptEnvelope[];
+  readonly copyStates: CopyState[];
+  readonly copyCancellations: string[];
   setProviderSequence(seq: Array<AiInvocationResult | Error>): void;
 }
 
@@ -267,6 +507,8 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
   let providerIndex = 0;
   let providerCalls = 0;
   const envelopes: AttemptEnvelope[] = [];
+  const copyStates: CopyState[] = [];
+  const copyCancellations: string[] = [];
   let currentTarget: AttemptTarget = "primary";
 
   const baseState = (overrides: Partial<CampaignOperationState> = {}): CampaignOperationState =>
@@ -392,6 +634,8 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
       },
     },
     envelopes,
+    copyStates,
+    copyCancellations,
     setProviderSequence(seq) {
       providerSequence = seq;
       providerIndex = 0;
@@ -412,6 +656,72 @@ async function runOrchestrator(harness: OrchestratorHarness) {
   return { response, events, terminal: events.at(-1) };
 }
 
+describe("Plano 08 — copy não bloqueia delivered (F8)", () => {
+  it("falha da copy NÃO impede `delivered` (terminal result) e persiste failed", async () => {
+    const harness = await buildOrchestratorHarness();
+    harness.setProviderSequence([{ imageBase64: "AAAA", mimeType: "image/png", model: "m" }]);
+    (harness.deps as Record<string, unknown>).copy = {
+      runCopy: async () => {
+        throw new Error("copy_director_failed");
+      },
+      recordCopyState: async (input: { state: CopyState }) => {
+        harness.copyStates.push(input.state);
+      },
+      recordCancellation: async (input: { reason: string }) => {
+        harness.copyCancellations.push(input.reason);
+      },
+    };
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(terminal).toMatchObject({ type: "result" });
+    expect(harness.calls.deliver).toHaveBeenCalledTimes(1);
+    expect(harness.copyStates).toEqual(["pending", "failed"]);
+    expect(harness.copyCancellations).toEqual([]);
+  });
+
+  it("copy LENTA além do orçamento é CANCELADA/persistida e ainda entrega a imagem (sem órfã)", async () => {
+    const harness = await buildOrchestratorHarness();
+    harness.setProviderSequence([{ imageBase64: "AAAA", mimeType: "image/png", model: "m" }]);
+    let budgetController: AbortController | undefined;
+    (harness.deps as Record<string, unknown>).copy = {
+      makeBudgetSignal: () => {
+        budgetController = new AbortController();
+        return { signal: budgetController.signal, dispose: () => {} };
+      },
+      runCopy: ({ signal }: { signal: AbortSignal }) =>
+        new Promise<void>((_resolve, reject) => {
+          if (signal.aborted) {
+            reject(new DOMException("aborted", "AbortError"));
+            return;
+          }
+          signal.addEventListener(
+            "abort",
+            () => reject(new DOMException("aborted", "AbortError")),
+            { once: true },
+          );
+          // Simula o orçamento estourando logo após a copy iniciar (determinístico).
+          queueMicrotask(() => budgetController?.abort());
+        }),
+      recordCopyState: async (input: { state: CopyState }) => {
+        harness.copyStates.push(input.state);
+      },
+      recordCancellation: async (input: { reason: string }) => {
+        harness.copyCancellations.push(input.reason);
+      },
+    };
+
+    const { terminal } = await runOrchestrator(harness);
+
+    // A entrega da imagem é independente do estado da copy.
+    expect(terminal).toMatchObject({ type: "result" });
+    expect(harness.calls.deliver).toHaveBeenCalledTimes(1);
+    // A copy foi cancelada (orçamento) e o estado foi persistido ANTES de encerrar.
+    expect(harness.copyStates).toEqual(["pending", "failed"]);
+    expect(harness.copyCancellations).toEqual([COPY_CANCELLATION_REASON]);
+  });
+});
+
 describe("Plano 08 — envelope por tentativa no orquestrador (REQ-12)", () => {
   it("cada tentativa real emite exatamente um envelope; a sequência é reconstruível", async () => {
     const harness = await buildOrchestratorHarness();
@@ -426,6 +736,7 @@ describe("Plano 08 — envelope por tentativa no orquestrador (REQ-12)", () => {
 
     expect(terminal).toMatchObject({ type: "result" });
     expect(harness.calls.providerCalls).toBe(3);
+    // UM envelope por tentativa real (2 principal + 1 fallback).
     expect(harness.envelopes).toHaveLength(3);
     expect(harness.envelopes.map((e) => e.target)).toEqual(["primary", "primary", "fallback"]);
     expect(harness.envelopes.map((e) => e.attemptNumber)).toEqual([1, 2, 3]);
@@ -454,10 +765,17 @@ describe("Plano 08 — envelope por tentativa no orquestrador (REQ-12)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Guarda estática de wiring
+// Guardas estáticas de wiring
 // ---------------------------------------------------------------------------
 
-describe("Plano 08 — wiring estático (instrumentação)", () => {
+describe("Plano 08 — wiring estático", () => {
+  it("o orquestrador drena a copy no ciclo da requisição (orçamento/cancelamento)", () => {
+    expect(ORCHESTRATOR_SOURCE).toContain("drainCopyTask");
+    expect(ORCHESTRATOR_SOURCE).toContain("COPY_BUDGET_MS");
+    expect(ORCHESTRATOR_SOURCE).toContain("recordCancellation");
+    expect(ORCHESTRATOR_SOURCE).toContain("await copyDrain");
+  });
+
   it("o orquestrador emite envelope por tentativa e persiste o diagnóstico durável centralizado", () => {
     expect(ORCHESTRATOR_SOURCE).toContain("emitAttemptEnvelope");
     expect(ORCHESTRATOR_SOURCE).toContain("recordFailureDiagnosis");
