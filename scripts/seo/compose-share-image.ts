@@ -15,8 +15,10 @@
  *  - determinístico: sem aleatoriedade, sem relógio de parede, sem rede, sem IA,
  *    sem chamada paga e sem dependência nova;
  *  - preserva a proporção do logo (`fit: "contain"`, sem deformação nem recorte);
- *  - fundo na paleta do design system (superfície/deep + acento verde), sem
- *    light mode, sem emojis e sem tipografia nova;
+ *  - fundo uniforme `#0F172A` (superfície da landing) em todo o canvas, o mesmo
+ *    fundo dos ativos oficiais de logo — sem moldura mais escura e sem faixa de
+ *    acento, para que o logo se funda sem caixa visível; sem light mode, sem
+ *    emojis e sem tipografia nova;
  *  - afirma 1200×630 via `sharp(...).metadata()` antes de gravar.
  *
  * Uso:
@@ -36,31 +38,24 @@ export const SHARE_IMAGE_HEIGHT = 630;
 
 /** Paleta do design system aplicada à composição (D-11 / MASTER.md). */
 export const COLORS = {
-  /** `--bg-surface` — superfície aprovada da landing. */
+  /**
+   * `--bg-surface` — superfície aprovada da landing (`#0F172A`). Usada como
+   * preenchimento **uniforme** de todo o canvas, pois é também o fundo dos
+   * ativos oficiais de logo: o logo se funde sem caixa visível.
+   */
   surface: "#0F172A",
-  /** `--bg-deep` — camada profunda (painel interno). */
-  deep: "#020617",
-  /** `--accent-green` — acento verde. */
-  accent: "#22C55E",
 } as const;
 
 /** Caminho público de saída padrão do asset final. */
 export const DEFAULT_OUT_PATH = "public/seo/vendeo-og-1200x630.png";
 
-/** Caixa máxima reservada ao logo (bounding box). Preserva proporção via `contain`. */
+/**
+ * Caixa máxima reservada ao logo (bounding box). Preserva proporção via
+ * `contain` e deixa margens amplas em relação ao canvas (150px laterais e
+ * ~155px verticais), sem moldura nem faixa ao redor.
+ */
 const LOGO_BOX_WIDTH = 900;
 const LOGO_BOX_HEIGHT = 320;
-
-/**
- * Painel de superfície interno (centralizado verticalmente no canvas). Usa
- * `#0F172A`, o mesmo fundo dos ativos oficiais de logo, para que o logo se
- * funda ao painel sem caixa visível.
- */
-const PANEL_WIDTH = 1120;
-const PANEL_HEIGHT = 470;
-
-/** Altura da faixa de acento no topo do canvas. */
-const ACCENT_BAND_HEIGHT = 6;
 
 export interface ComposeOptions {
   /** Fonte local do logo horizontal (dark). Recebida por CLI/env — nunca literal. */
@@ -141,47 +136,17 @@ export async function composeShareImage(
       ? options.outPath
       : DEFAULT_OUT_PATH;
 
-  const accentBand = await sharp({
-    create: {
-      width: SHARE_IMAGE_WIDTH,
-      height: ACCENT_BAND_HEIGHT,
-      channels: 4,
-      background: COLORS.accent,
-    },
-  })
-    .png()
-    .toBuffer();
-
-  const surfacePanel = await sharp({
-    create: {
-      width: PANEL_WIDTH,
-      height: PANEL_HEIGHT,
-      channels: 4,
-      background: COLORS.surface,
-    },
-  })
-    .png()
-    .toBuffer();
-
   const logoLayer = await buildLogoLayer(primaryLogo);
-
-  const canvasCenterY = Math.floor(SHARE_IMAGE_HEIGHT / 2);
-  const panelTop = canvasCenterY - Math.floor(PANEL_HEIGHT / 2);
-  const panelLeft = Math.floor((SHARE_IMAGE_WIDTH - PANEL_WIDTH) / 2);
 
   const composed = await sharp({
     create: {
       width: SHARE_IMAGE_WIDTH,
       height: SHARE_IMAGE_HEIGHT,
       channels: 4,
-      background: COLORS.deep,
+      background: COLORS.surface,
     },
   })
-    .composite([
-      { input: accentBand, top: 0, left: 0 },
-      { input: surfacePanel, top: panelTop, left: panelLeft },
-      { input: logoLayer, gravity: "centre" },
-    ])
+    .composite([{ input: logoLayer, gravity: "centre" }])
     .png()
     .toBuffer();
 
