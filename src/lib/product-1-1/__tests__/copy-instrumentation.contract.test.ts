@@ -412,7 +412,7 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
     expect(cancelCalls).toEqual([COPY_CANCELLATION_REASON]);
   });
 
-  it("Gap 3: escritas de persistência têm orçamento PRÓPRIO (store pendurado não prende o drenador)", async () => {
+  it("Gap 3/P2: escritas de persistência têm orçamento PRÓPRIO (store pendurado não prende o drenador) e persistência NÃO provada não vira `completed`", async () => {
     const store = {
       async recordCopyState() {
         // Escrita que NUNCA resolve — o teto das escritas deve liberar o drenador.
@@ -435,9 +435,119 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       store,
       { persistenceBudgetMs: 5 },
     );
-    // Determinístico apesar da escrita pendurada.
-    expect(result).toEqual({ state: "completed", canceled: false });
+    // Determinístico apesar da escrita pendurada — e NUNCA `completed` sem
+    // persistência PROVADA (a escrita do texto pendurou ⇒ timeout).
+    expect(result).toEqual({ state: "failed", canceled: false });
     expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
+  it("P2(a): FALHA de persistência do texto ⇒ NÃO declara `completed`", async () => {
+    const attempts: CopyState[] = [];
+    const store = {
+      async recordCopyState(input: { state: CopyState }) {
+        attempts.push(input.state);
+        if (input.state === "completed") {
+          throw new Error("product_1_1_copy_state_upsert_failed");
+        }
+      },
+      async recordCancellation() {},
+    };
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async ({ commit }) => {
+          await commit({ copyText: "texto" });
+        },
+      },
+      store,
+    );
+
+    expect(result).toEqual({ state: "failed", canceled: false });
+    // A tentativa de persistir o texto ocorreu, mas falhou — e o estado final é
+    // `failed`, nunca `completed` (sem sucesso enganoso).
+    expect(attempts).toEqual(["pending", "completed", "failed"]);
+  });
+
+  it("P2(b): escrita do texto que PENDURA ⇒ NÃO declara `completed` e o drenador é LIMITADO", async () => {
+    const attempts: CopyState[] = [];
+    const store = {
+      async recordCopyState(input: { state: CopyState }) {
+        attempts.push(input.state);
+        if (input.state === "completed") {
+          // Pendura SOMENTE a escrita do texto além do teto.
+          await new Promise<void>(() => {});
+        }
+      },
+      async recordCancellation() {},
+    };
+    const started = Date.now();
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async ({ commit }) => {
+          await commit({ copyText: "texto" });
+        },
+      },
+      store,
+      { persistenceBudgetMs: 5 },
+    );
+
+    // Persistência não provada (timeout) ⇒ `failed`, e o drenador retorna no teto.
+    expect(result).toEqual({ state: "failed", canceled: false });
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
+  it("P2(c): escrita de store ATRASADA que resolve APÓS o cancelamento NÃO sobrescreve o estado final", async () => {
+    let persisted: CopyState | null = null;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const store = {
+      async recordCopyState(input: { state: CopyState }) {
+        // A escrita do texto é ATRASADA: só resolve quando liberada (depois do
+        // cancelamento). Não é um `commit` tardio da task — é uma escrita de
+        // STORE em voo que resolve após o settle.
+        if (input.state === "completed") {
+          await gate;
+        }
+        persisted = input.state;
+      },
+      async recordCancellation() {},
+    };
+    const controller = new AbortController();
+
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: controller.signal,
+        run: async ({ commit }) => {
+          void commit({ copyText: "tarde demais" });
+          // Cancela logo após disparar a escrita (orçamento esgotado), ignorando
+          // o abort — a escrita do store permanece EM VOO.
+          queueMicrotask(() => controller.abort());
+          await new Promise<void>(() => {});
+        },
+      },
+      store,
+      { persistenceBudgetMs: 5 },
+    );
+
+    expect(result).toEqual({ state: "failed", canceled: true });
+    // A escrita atrasada ainda não resolveu ⇒ nada a sobrescreveu ainda.
+    expect(persisted).toBe("pending");
+
+    // Liberamos a escrita atrasada: ela grava `completed`, mas a escrita do estado
+    // SETTLED (`failed`) está SERIALIZADA depois e, portanto, prevalece — uma
+    // escrita em voo NUNCA é a última a gravar após o settle.
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(persisted).toBe("failed");
   });
 
   it("NÃO existe ação/endpoint de retry (source)", () => {

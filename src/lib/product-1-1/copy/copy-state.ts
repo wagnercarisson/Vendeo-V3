@@ -186,6 +186,29 @@ export async function recordCancellation(
   }
 }
 
+/**
+ * Lê o CANCELAMENTO registrado para a operação (`null` quando não houve). Permite
+ * à campanha distinguir `failed` de `canceled` no feedback seguro — nunca confunde
+ * cancelamento por orçamento com falha de geração.
+ */
+export async function readCopyCancellation(
+  client: SupabaseClient,
+  input: { campaignId: string; operationId: string },
+): Promise<{ reason: string } | null> {
+  const { data, error } = await client
+    .from(COPY_CANCELLATION_TABLE)
+    .select("reason")
+    .eq("campaign_id", input.campaignId)
+    .eq("operation_id", input.operationId)
+    .limit(1)
+    .maybeSingle<{ reason: string }>();
+
+  if (error) {
+    throw new Error(`product_1_1_copy_cancellation_read_failed:${error.message}`);
+  }
+  return data ?? null;
+}
+
 /** Store Supabase-backed com client injetado (default de produção). */
 export function createSupabaseCopyStateStore(client: SupabaseClient): CopyStateStore {
   return {
@@ -261,33 +284,43 @@ export interface DrainCopyTaskOptions {
 }
 
 /**
+ * Resultado PROVADO de uma escrita de store: `success` (a escrita resolveu),
+ * `error` (a escrita rejeitou) ou `timeout` (o teto esgotou antes de resolver).
+ * O drenador SÓ confirma `completed` quando a escrita que o estabelece retorna
+ * `success` (persistência PROVADA) — `error`/`timeout` NUNCA contam como sucesso.
+ */
+export type RecordOutcome = "success" | "error" | "timeout";
+
+/**
  * Executa uma escrita de store com ORÇAMENTO PRÓPRIO (gap 3): nunca prende o
  * drenador além de `budgetMs`, e nunca dispara rejeição não tratada se a escrita
- * pendurar e resolver/rejeitar depois do teto.
+ * pendurar e resolver/rejeitar depois do teto. Distingue sucesso × erro × timeout
+ * (correção de integração: a confirmação de `completed` depende de persistência
+ * PROVADA, nunca de uma escrita apenas DISPARADA).
  */
 function boundedRecord(
   action: () => Promise<void>,
   budgetMs: number,
   timers: NonNullable<DrainCopyTaskOptions["timers"]>,
-): Promise<void> {
-  return new Promise<void>((resolve) => {
+): Promise<RecordOutcome> {
+  return new Promise<RecordOutcome>((resolve) => {
     let settled = false;
-    const finish = () => {
+    const finish = (outcome: RecordOutcome) => {
       if (settled) return;
       settled = true;
-      resolve();
+      resolve(outcome);
     };
-    const id = timers.setTimeout(finish, Math.max(0, budgetMs));
+    const id = timers.setTimeout(() => finish("timeout"), Math.max(0, budgetMs));
     Promise.resolve()
       .then(action)
       .then(
         () => {
           timers.clearTimeout(id);
-          finish();
+          finish("success");
         },
         () => {
           timers.clearTimeout(id);
-          finish();
+          finish("error");
         },
       );
   });
@@ -300,15 +333,27 @@ function boundedRecord(
  *  2. corre a task até o orçamento esgotar OU até terminar;
  *  3. a task persiste o TEXTO entregue via `commit` (latch: uma conclusão tardia
  *     após o cancelamento nunca persiste);
- *  4. ao terminar sem `commit` → persiste `completed` (estado, sem texto);
+ *  4. `completed` é confirmado SOMENTE com persistência PROVADA — uma escrita que
+ *     rejeita (`error`) ou que pendura além do teto (`timeout`) NUNCA declara
+ *     `completed`;
  *  5. ao falhar → persiste `failed` (sem cancelamento);
  *  6. ao CANCELAR (orçamento esgotado) → persiste `failed` DETERMINISTICAMENTE e
  *     registra o cancelamento SEPARADO — sem órfã, sem retry.
  *
- * O `Promise.race` encerra a ESPERA, e o ORÇAMENTO das escritas
- * (`persistenceBudgetMs`) garante que nem uma escrita pendurada nem uma
- * conclusão tardia da task prendem/poluem o resultado. A ausência de órfã NÃO é
- * declarada apenas pelo `race`: o `commit` latChado bloqueia persistência tardia.
+ * Correção de integração (reconciliação do Plano 08):
+ *  - o latch só marca `committed` APÓS a escrita do texto resolver com sucesso
+ *    (antes, o latch confirmava `completed` apenas com a escrita DISPARADA — o
+ *    drenador podia declarar `completed` sem o texto persistido);
+ *  - TODAS as escritas de estado são SERIALIZADAS numa fila; assim a escrita do
+ *    estado SETTLED (final/cancelado) é aplicada DEPOIS de qualquer escrita em
+ *    voo — uma escrita de store atrasada que resolve após o cancelamento NUNCA é
+ *    a última a gravar (não sobrescreve o estado final/cancelado);
+ *  - o orçamento das escritas (`persistenceBudgetMs`) mantém o drenador limitado
+ *    mesmo quando uma escrita pendura (o drenador retorna no teto).
+ *
+ * O `Promise.race` encerra a ESPERA e o `commit` latChado bloqueia persistência
+ * tardia da task; a fila serializada impede que uma escrita em voo sobrescreva o
+ * estado já settled.
  */
 export async function drainCopyTask(
   input: DrainCopyTaskInput,
@@ -318,109 +363,126 @@ export async function drainCopyTask(
   const budgetMs = options.persistenceBudgetMs ?? COPY_PERSISTENCE_BUDGET_MS;
   const timers = options.timers ?? { setTimeout, clearTimeout };
 
-  // Latch: após o settle, qualquer `commit` (tardio) é um NO-OP determinístico.
-  const latch = { settled: false, committed: false };
+  // Latch: `settled` encerra o drenador; `attempted` marca que a task tentou
+  // persistir o texto; `committed` só é `true` com persistência PROVADA.
+  const latch = { settled: false, committed: false, attempted: false };
 
-  const commit: CopyCommit = async (delivery) => {
-    if (latch.settled || latch.committed) return;
-    latch.committed = true;
-    await boundedRecord(
-      () =>
-        store.recordCopyState({
-          campaignId: input.campaignId,
-          operationId: input.operationId,
-          state: "completed",
-          copyText: delivery.copyText,
-          copyPayload: delivery.payload ?? null,
-        }),
-      budgetMs,
-      timers,
+  // Fila SERIALIZADA de escritas: cada escrita só roda após a anterior resolver
+  // (mesmo se rejeitar). Garante que a escrita do estado settled é a ÚLTIMA
+  // aplicada, mesmo com uma escrita em voo que resolve atrasada.
+  let writeChain: Promise<unknown> = Promise.resolve();
+  const schedule = (action: () => Promise<void>): Promise<void> => {
+    const run = writeChain.then(action);
+    writeChain = run.then(
+      () => undefined,
+      () => undefined,
     );
+    return run;
   };
 
-  await boundedRecord(
-    () =>
-      store.recordCopyState({
-        campaignId: input.campaignId,
-        operationId: input.operationId,
-        state: "pending",
-      }),
-    budgetMs,
-    timers,
-  );
-
-  const aborted = new Promise<DrainCopyTaskResult & { committed: boolean }>((resolve) => {
-    if (input.signal.aborted) {
-      resolve({ state: "failed", canceled: true, committed: false });
-      return;
-    }
-    input.signal.addEventListener(
-      "abort",
-      () => resolve({ state: "failed", canceled: true, committed: false }),
-      { once: true },
-    );
-  });
-
-  const ran: Promise<DrainCopyTaskResult & { committed: boolean }> = input
-    .run({ signal: input.signal, commit })
-    .then(
-      () => ({
-        // Uma task que commitou o texto É bem-sucedida, mesmo se resolver depois.
-        state: "completed" as const,
-        canceled: false,
-        committed: latch.committed,
-      }),
-      () => ({
-        // Falha/abort: se o commit já ocorreu, o texto prevalece; senão `failed`.
-        state: latch.committed ? ("completed" as const) : ("failed" as const),
-        canceled: !latch.committed && input.signal.aborted,
-        committed: latch.committed,
-      }),
-    );
-
-  const result = await Promise.race([ran, aborted]);
-
-  // Settle: a partir daqui, `commit` tardio é NO-OP (nunca sobrescreve o estado
-  // cancelado nem escreve `completed` após o cancelamento registrado).
-  latch.settled = true;
-
-  if (result.state === "completed") {
-    if (!latch.committed) {
-      await boundedRecord(
-        () =>
+  const recordState = (
+    state: CopyState,
+    extra?: Pick<RecordCopyStateInput, "copyText" | "copyPayload">,
+  ): Promise<RecordOutcome> =>
+    boundedRecord(
+      () =>
+        schedule(() =>
           store.recordCopyState({
             campaignId: input.campaignId,
             operationId: input.operationId,
-            state: "completed",
+            state,
+            ...(extra ?? {}),
           }),
-        budgetMs,
-        timers,
-      );
-    }
-  } else {
-    await boundedRecord(
-      () =>
-        store.recordCopyState({
-          campaignId: input.campaignId,
-          operationId: input.operationId,
-          state: "failed",
-        }),
+        ),
       budgetMs,
       timers,
     );
-    if (result.canceled) {
-      await boundedRecord(
-        () =>
+
+  const recordCancellationBounded = (): Promise<RecordOutcome> =>
+    boundedRecord(
+      () =>
+        schedule(() =>
           store.recordCancellation({
             campaignId: input.campaignId,
             operationId: input.operationId,
             reason: COPY_CANCELLATION_REASON,
           }),
-        budgetMs,
-        timers,
-      );
+        ),
+      budgetMs,
+      timers,
+    );
+
+  const commit: CopyCommit = async (delivery) => {
+    // NO-OP determinístico: após o settle, ou após uma tentativa de commit.
+    if (latch.settled || latch.attempted) return;
+    latch.attempted = true;
+    const outcome = await recordState("completed", {
+      copyText: delivery.copyText,
+      copyPayload: delivery.payload ?? null,
+    });
+    // Só PROVA a conclusão com a escrita bem-sucedida — erro/timeout NUNCA conta.
+    if (outcome === "success") {
+      latch.committed = true;
     }
+  };
+
+  await recordState("pending");
+
+  const aborted = new Promise<{ canceled: boolean }>((resolve) => {
+    if (input.signal.aborted) {
+      resolve({ canceled: true });
+      return;
+    }
+    input.signal.addEventListener("abort", () => resolve({ canceled: true }), { once: true });
+  });
+
+  const ran: Promise<{ state: "completed" | "failed"; canceled: boolean }> = input
+    .run({ signal: input.signal, commit })
+    .then(
+      () => ({
+        // Task resolvida: commit PROVADO ⇒ completed; commit tentado e NÃO provado
+        // (erro/timeout) ⇒ failed (nunca `completed` sem persistência); sem commit
+        // ⇒ o drenador persiste `completed` abaixo (persistência provada).
+        state: latch.committed
+          ? ("completed" as const)
+          : latch.attempted
+            ? ("failed" as const)
+            : ("completed" as const),
+        canceled: false,
+      }),
+      () => ({
+        state: latch.committed ? ("completed" as const) : ("failed" as const),
+        canceled: !latch.committed && input.signal.aborted,
+      }),
+    );
+
+  const winner = await Promise.race([
+    ran.then((value) => ({ kind: "ran" as const, ...value })),
+    aborted.then((value) => ({ kind: "aborted" as const, state: "failed" as const, ...value })),
+  ]);
+
+  // Settle: a partir daqui, `commit` tardio é NO-OP (nunca sobrescreve o estado
+  // cancelado nem escreve `completed` após o cancelamento registrado).
+  latch.settled = true;
+
+  if (winner.state === "completed") {
+    if (latch.committed) {
+      // Texto já persistido com PROVA — exatamente um registro `completed`.
+      return { state: "completed", canceled: false };
+    }
+    // Task concluída sem `commit`: o drenador persiste `completed`, mas SÓ o
+    // confirma se a escrita suceder; caso contrário, degrada para `failed`.
+    const outcome = await recordState("completed");
+    if (outcome === "success") {
+      return { state: "completed", canceled: false };
+    }
+    await recordState("failed");
+    return { state: "failed", canceled: false };
   }
 
-  return { state: result.state, canceled: result.canceled };
+  await recordState("failed");
+  if (winner.canceled) {
+    await recordCancellationBounded();
+  }
+  return { state: winner.state, canceled: winner.canceled };
 }
