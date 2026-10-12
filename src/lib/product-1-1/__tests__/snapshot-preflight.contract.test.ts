@@ -66,6 +66,21 @@ describe("F56.2b1b — migration 20261009000003 frozen_evidence (contrato estát
     );
   });
 
+  it("F3: rejeita evidência cujo campaign_id diverge do snapshot (trigger BEFORE INSERT)", () => {
+    expect(activeSql).toMatch(
+      /CREATE TRIGGER trg_product_1_1_frozen_evidence_snapshot_campaign\s+BEFORE INSERT ON public\.product_1_1_snapshot_frozen_evidence/,
+    );
+    expect(activeSql).toMatch(
+      /RAISE EXCEPTION 'product_1_1_snapshot_frozen_evidence_snapshot_campaign_mismatch'/,
+    );
+    expect(sql).toMatch(
+      /DROP TRIGGER IF EXISTS trg_product_1_1_frozen_evidence_snapshot_campaign/,
+    );
+    expect(sql).toMatch(
+      /DROP FUNCTION IF EXISTS public\.trg_product_1_1_frozen_evidence_snapshot_campaign_fn/,
+    );
+  });
+
   it("concede apenas SELECT/INSERT à service_role (sem escrita destrutiva)", () => {
     expect(activeSql).toMatch(
       /GRANT SELECT, INSERT ON TABLE public\.product_1_1_snapshot_frozen_evidence TO service_role/,
@@ -107,7 +122,15 @@ interface FakeClient {
   insertCalls: { table: string; row: FakeRow }[];
 }
 
-function createFakeClient(options: { failEvidenceInsert?: boolean } = {}): FakeClient {
+function createFakeClient(
+  options: {
+    failEvidenceInsert?: boolean;
+    /** F1: primeira inserção de snapshot falha por concorrência (UNIQUE). */
+    raceSnapshotInsert?: "matching" | "divergent";
+    /** F1: primeira inserção de evidência falha por concorrência (UNIQUE). */
+    raceEvidenceInsert?: "matching" | "divergent";
+  } = {},
+): FakeClient {
   const tables: Record<string, FakeRow[]> = {
     image_generation_config_snapshots: [],
     product_1_1_snapshot_frozen_evidence: [],
@@ -115,6 +138,8 @@ function createFakeClient(options: { failEvidenceInsert?: boolean } = {}): FakeC
   };
   const insertCalls: { table: string; row: FakeRow }[] = [];
   let seq = 0;
+  let snapshotRaceCount = 0;
+  let evidenceRaceCount = 0;
 
   function from(table: string): FakeBuilder {
     const state: {
@@ -126,6 +151,36 @@ function createFakeClient(options: { failEvidenceInsert?: boolean } = {}): FakeC
 
     const resolveResult = (): FakeResult => {
       if (state.mode === "insert" && state.payload) {
+        if (
+          table === "image_generation_config_snapshots" &&
+          options.raceSnapshotInsert &&
+          snapshotRaceCount === 0
+        ) {
+          // Simula TOCTOU: o vencedor grava a linha entre a pré-consulta e o insert;
+          // o perdedor recebe uma violação de UNIQUE e deve re-consultar.
+          snapshotRaceCount += 1;
+          seq += 1;
+          const seed: FakeRow = { id: `${table}-${seq}`, ...state.payload };
+          if (options.raceSnapshotInsert === "divergent") {
+            seed.primary_model = "divergent-model";
+          }
+          tables[table] = [...(tables[table] ?? []), seed];
+          return { data: null, error: { message: "duplicate key value violates unique constraint" } };
+        }
+        if (
+          table === "product_1_1_snapshot_frozen_evidence" &&
+          options.raceEvidenceInsert &&
+          evidenceRaceCount === 0
+        ) {
+          evidenceRaceCount += 1;
+          seq += 1;
+          const seed: FakeRow = { id: `${table}-${seq}`, ...state.payload };
+          if (options.raceEvidenceInsert === "divergent") {
+            seed.briefing = "divergent-briefing";
+          }
+          tables[table] = [...(tables[table] ?? []), seed];
+          return { data: null, error: { message: "duplicate key value violates unique constraint" } };
+        }
         if (
           table === "product_1_1_snapshot_frozen_evidence" &&
           options.failEvidenceInsert
@@ -461,6 +516,127 @@ describe("F56.2b1b — snapshot congelado + evidência congelada (Plano 02)", ()
 });
 
 // ---------------------------------------------------------------------------
+// F1/F2 — persistência à prova de corrida + reparo de estado parcial.
+// ---------------------------------------------------------------------------
+
+describe("F56.2b1b — F1/F2 persistência à prova de corrida e reparo (Plano 02)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function buildPair(operationId = "op-1") {
+    const { buildProductOneToOneSnapshot, buildProductOneToOneFrozenEvidence } =
+      await loadPersistModule();
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), {
+      campaignId: "camp-1",
+    });
+    const evidence = buildProductOneToOneFrozenEvidence({
+      campaignId: "camp-1",
+      operationId,
+      campaignIntent: "offer",
+      backgroundDirection: "studio",
+      briefing: "Briefing congelado",
+      referenceSelections: [{ kind: "product", id: "img-1" }],
+      baseVersion: "48.2.6-produto-1-1-v1",
+      composerVersion: "48.2.4-prompt-composer-v6",
+      policyVersions: { fundo: "48.2.6-background-direction-v1" },
+    });
+    return { snapshot, evidence };
+  }
+
+  function frozenSnapshotRow() {
+    return {
+      id: "snap-frozen",
+      campaign_id: "camp-1",
+      primary_model: "gpt-image-2.5-sunburst",
+      primary_quality: "medium",
+      fallback_model: "gpt-image-2",
+      fallback_quality: "medium",
+      config_version_id: "11111111-1111-4111-8111-111111111111",
+      origin: "human_decision",
+    };
+  }
+
+  it("F1: corrida no insert do snapshot ⇒ o perdedor REUSA a linha vencedora equivalente (sem erro)", async () => {
+    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+    const client = createFakeClient({ raceSnapshotInsert: "matching" });
+    const { snapshot, evidence } = await buildPair();
+
+    const result = await persistProductOneToOneSnapshot(asClient(client), snapshot, evidence);
+
+    expect(result.reused).toBe(true);
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
+  });
+
+  it("F1: corrida no insert da evidência ⇒ o perdedor REUSA a linha vencedora equivalente (sem erro)", async () => {
+    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+    const client = createFakeClient({ raceEvidenceInsert: "matching" });
+    const { snapshot, evidence } = await buildPair();
+
+    const result = await persistProductOneToOneSnapshot(asClient(client), snapshot, evidence);
+
+    expect(result.reused).toBe(true);
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
+  });
+
+  it("F1: corrida no snapshot com conteúdo divergente ⇒ operation_identity_conflict (sem 2ª linha)", async () => {
+    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+    const client = createFakeClient({ raceSnapshotInsert: "divergent" });
+    const { snapshot, evidence } = await buildPair();
+
+    await expect(
+      persistProductOneToOneSnapshot(asClient(client), snapshot, evidence),
+    ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(0);
+  });
+
+  it("F1: corrida na evidência com conteúdo divergente ⇒ operation_identity_conflict (sem 2ª evidência)", async () => {
+    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+    const client = createFakeClient({ raceEvidenceInsert: "divergent" });
+    const { snapshot, evidence } = await buildPair();
+
+    await expect(
+      persistProductOneToOneSnapshot(asClient(client), snapshot, evidence),
+    ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
+  });
+
+  it("F2: snapshot congelado SEM evidência é REPARADO sem substituir o snapshot (mesmo id, reused)", async () => {
+    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+    const client = createFakeClient();
+    const { snapshot, evidence } = await buildPair();
+
+    client.tables.image_generation_config_snapshots = [frozenSnapshotRow()];
+
+    const result = await persistProductOneToOneSnapshot(asClient(client), snapshot, evidence);
+
+    expect(result.snapshotOriginalId).toBe("snap-frozen");
+    expect(result.reused).toBe(true);
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
+    expect(
+      client.tables.product_1_1_snapshot_frozen_evidence[0].snapshot_original_id,
+    ).toBe("snap-frozen");
+  });
+
+  it("F2: reparo com evidência divergente ⇒ operation_identity_conflict (snapshot preservado)", async () => {
+    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+    const client = createFakeClient({ raceEvidenceInsert: "divergent" });
+    const { snapshot, evidence } = await buildPair();
+
+    client.tables.image_generation_config_snapshots = [frozenSnapshotRow()];
+
+    await expect(
+      persistProductOneToOneSnapshot(asClient(client), snapshot, evidence),
+    ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Task 2 — preflight fail-closed (config resolvida UMA vez + pricing complete).
 // ---------------------------------------------------------------------------
 
@@ -653,14 +829,18 @@ describe("F56.2b1b — histórico append-only por tentativa (Plano 02)", () => {
       campaignId: "camp-1",
     });
 
-    const result = await recordAttempt(asClient(client), {
-      campaignId: "camp-1",
-      snapshotOriginalId: "snap-1",
-      operationId: "op-1",
-      attemptNumber: 1,
-      target: "primary",
-      snapshot,
-    });
+    const result = await recordAttempt(
+      asClient(client),
+      {
+        campaignId: "camp-1",
+        snapshotOriginalId: "snap-1",
+        operationId: "op-1",
+        attemptNumber: 1,
+        target: "primary",
+        snapshot,
+      },
+      { resolveOperationState: async () => null },
+    );
 
     expect(client.insertCalls[0]).toMatchObject({
       table: "image_generation_operations",
@@ -686,14 +866,18 @@ describe("F56.2b1b — histórico append-only por tentativa (Plano 02)", () => {
       campaignId: "camp-1",
     });
 
-    await recordAttempt(asClient(client), {
-      campaignId: "camp-1",
-      snapshotOriginalId: "snap-1",
-      operationId: "op-1",
-      attemptNumber: 2,
-      target: "fallback",
-      snapshot,
-    });
+    await recordAttempt(
+      asClient(client),
+      {
+        campaignId: "camp-1",
+        snapshotOriginalId: "snap-1",
+        operationId: "op-1",
+        attemptNumber: 2,
+        target: "fallback",
+        snapshot,
+      },
+      { resolveOperationState: async () => null },
+    );
 
     expect(client.insertCalls[0].row).toMatchObject({
       target: "fallback",
@@ -740,6 +924,97 @@ describe("F56.2b1b — histórico append-only por tentativa (Plano 02)", () => {
     });
 
     for (const state of ["reserved", "art_uploaded"] as const) {
+      const client = createFakeClient();
+      await recordAttempt(
+        asClient(client),
+        {
+          campaignId: "camp-1",
+          snapshotOriginalId: "snap-1",
+          operationId: "op-1",
+          attemptNumber: 1,
+          target: "primary",
+          snapshot,
+        },
+        { resolveOperationState: async () => state },
+      );
+      expect(client.insertCalls).toHaveLength(1);
+    }
+  });
+
+  it("F4: recordAttempt BLOQUEIA sem o leitor obrigatório de estado (sem gravar)", async () => {
+    const { buildProductOneToOneSnapshot } = await loadPersistModule();
+    const { recordAttempt, AttemptHistoryStateError } = await loadAttemptHistoryModule();
+
+    const client = createFakeClient();
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), { campaignId: "camp-1" });
+
+    await expect(
+      recordAttempt(asClient(client), {
+        campaignId: "camp-1",
+        snapshotOriginalId: "snap-1",
+        operationId: "op-1",
+        attemptNumber: 1,
+        target: "primary",
+        snapshot,
+      }),
+    ).rejects.toBeInstanceOf(AttemptHistoryStateError);
+    expect(client.insertCalls).toHaveLength(0);
+  });
+
+  it("F4: falha na leitura de estado BLOQUEIA (propaga, sem gravar)", async () => {
+    const { buildProductOneToOneSnapshot } = await loadPersistModule();
+    const { recordAttempt } = await loadAttemptHistoryModule();
+
+    const client = createFakeClient();
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), { campaignId: "camp-1" });
+
+    await expect(
+      recordAttempt(
+        asClient(client),
+        {
+          campaignId: "camp-1",
+          snapshotOriginalId: "snap-1",
+          operationId: "op-1",
+          attemptNumber: 1,
+          target: "primary",
+          snapshot,
+        },
+        {
+          resolveOperationState: async () => {
+            throw new Error("state_read_boom");
+          },
+        },
+      ),
+    ).rejects.toThrow("state_read_boom");
+    expect(client.insertCalls).toHaveLength(0);
+  });
+
+  it("F4: leitura delivered/refunded/unknown ⇒ bloqueia; reserved/null ⇒ prossegue e grava", async () => {
+    const { buildProductOneToOneSnapshot } = await loadPersistModule();
+    const { recordAttempt, AttemptHistoryError } = await loadAttemptHistoryModule();
+
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), { campaignId: "camp-1" });
+
+    for (const state of ["delivered", "refunded", "unknown"] as const) {
+      const client = createFakeClient();
+      await expect(
+        recordAttempt(
+          asClient(client),
+          {
+            campaignId: "camp-1",
+            snapshotOriginalId: "snap-1",
+            operationId: "op-1",
+            attemptNumber: 1,
+            target: "primary",
+            snapshot,
+          },
+          { resolveOperationState: async () => state },
+        ),
+      ).rejects.toBeInstanceOf(AttemptHistoryError);
+      expect(client.insertCalls).toHaveLength(0);
+    }
+
+    for (const state of ["reserved", null] as const) {
       const client = createFakeClient();
       await recordAttempt(
         asClient(client),

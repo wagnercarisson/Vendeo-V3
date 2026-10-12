@@ -10,7 +10,9 @@
 -- (intent, background direction, images) and the composition versions
 -- (base/composer/policies), plus the persisted operation association
 -- (`campaign_id` + `operation_id`, contract C3 / F6). It is immutable by trigger
--- (UPDATE/DELETE rejected) and readable/writable only by `service_role`.
+-- (UPDATE/DELETE rejected) and readable/writable only by `service_role`. A
+-- `BEFORE INSERT` trigger enforces that the evidence's `campaign_id` matches the
+-- campaign of the referenced snapshot (F3).
 --
 -- Reuse boundary: does NOT alter `campaigns`, `image_generation_config_snapshots`
 -- or any legacy table/column; it only REFERENCES the existing snapshot relation.
@@ -50,6 +52,48 @@ BEFORE UPDATE OR DELETE ON public.product_1_1_snapshot_frozen_evidence
 FOR EACH ROW
 EXECUTE FUNCTION public.trg_product_1_1_frozen_evidence_immutable_fn();
 
+-- Campaign<->snapshot link (F3): both references are independently protected by
+-- foreign keys, but the evidence must belong to the SAME campaign as the snapshot
+-- it freezes. Mirrors `trg_image_generation_operations_snapshot_campaign`
+-- (migration 20261006000002). Keep this validation local to the new relation; do
+-- not alter the snapshot row/schema.
+CREATE OR REPLACE FUNCTION public.trg_product_1_1_frozen_evidence_snapshot_campaign_fn()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Leave missing IDs to their respective FK constraints so each FK keeps its
+  -- own deterministic failure. Reject only when both referenced rows exist but
+  -- the snapshot belongs to a different campaign than the evidence.
+  IF EXISTS (
+       SELECT 1
+       FROM public.campaigns AS campaign_row
+       WHERE campaign_row.id = NEW.campaign_id
+     )
+     AND EXISTS (
+       SELECT 1
+       FROM public.image_generation_config_snapshots AS snapshot_row
+       WHERE snapshot_row.id = NEW.snapshot_original_id
+     )
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.image_generation_config_snapshots AS snapshot_row
+       WHERE snapshot_row.id = NEW.snapshot_original_id
+         AND snapshot_row.campaign_id = NEW.campaign_id
+     ) THEN
+    RAISE EXCEPTION 'product_1_1_snapshot_frozen_evidence_snapshot_campaign_mismatch';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_product_1_1_frozen_evidence_snapshot_campaign
+BEFORE INSERT ON public.product_1_1_snapshot_frozen_evidence
+FOR EACH ROW
+EXECUTE FUNCTION public.trg_product_1_1_frozen_evidence_snapshot_campaign_fn();
+
 ALTER TABLE public.product_1_1_snapshot_frozen_evidence ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role can read/insert product 1:1 frozen evidence"
@@ -65,6 +109,9 @@ GRANT SELECT, INSERT ON TABLE public.product_1_1_snapshot_frozen_evidence TO ser
 -- =============================================================================
 -- REVERT (reverse order; run manually only on the isolated local instance)
 -- =============================================================================
+-- DROP TRIGGER IF EXISTS trg_product_1_1_frozen_evidence_snapshot_campaign
+--   ON public.product_1_1_snapshot_frozen_evidence;
+-- DROP FUNCTION IF EXISTS public.trg_product_1_1_frozen_evidence_snapshot_campaign_fn();
 -- DROP TRIGGER IF EXISTS trg_product_1_1_frozen_evidence_immutable
 --   ON public.product_1_1_snapshot_frozen_evidence;
 -- DROP FUNCTION IF EXISTS public.trg_product_1_1_frozen_evidence_immutable_fn();

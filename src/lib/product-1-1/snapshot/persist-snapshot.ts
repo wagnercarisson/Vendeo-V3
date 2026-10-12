@@ -312,14 +312,54 @@ async function insertEvidenceRow(
   if (error) throw new Error(error.message);
 }
 
-async function insertEvidence(
+/**
+ * Resolve (or repair) a evidência de forma à prova de corrida (F1/F2).
+ *
+ * Pré-consulta `(campaign_id, operation_id)`: se existir, exige equivalência.
+ * Caso contrário, TENTA o insert; em falha (UNIQUE por concorrência) RE-CONSULTA
+ * e reusa a linha vencedora SOMENTE sob equivalência (reparo de estado parcial
+ * NÃO substitui o snapshot: apenas completa a evidência ausente). Conteúdo
+ * divergente ⇒ `operation_identity_conflict`; ausência persistente ⇒
+ * `frozen_evidence_persist_failed`.
+ */
+async function ensureEvidence(
   client: SupabaseClient,
   snapshotOriginalId: string,
   evidence: ProductOneToOneFrozenEvidence,
-): Promise<void> {
+): Promise<"inserted" | "reused"> {
+  const existingEvidence = await findEvidenceByIdentity(
+    client,
+    evidence.campaignId,
+    evidence.operationId,
+  );
+  if (existingEvidence) {
+    if (!evidenceMatches(existingEvidence, evidence)) {
+      throw new ProductOneToOneSnapshotPersistError(
+        "operation_identity_conflict",
+        "evidence_divergent",
+      );
+    }
+    return "reused";
+  }
+
   try {
     await insertEvidenceRow(client, snapshotOriginalId, evidence);
+    return "inserted";
   } catch (error) {
+    const racedEvidence = await findEvidenceByIdentity(
+      client,
+      evidence.campaignId,
+      evidence.operationId,
+    );
+    if (racedEvidence) {
+      if (!evidenceMatches(racedEvidence, evidence)) {
+        throw new ProductOneToOneSnapshotPersistError(
+          "operation_identity_conflict",
+          "evidence_divergent",
+        );
+      }
+      return "reused";
+    }
     throw new ProductOneToOneSnapshotPersistError(
       "frozen_evidence_persist_failed",
       error instanceof Error ? error.message : "unknown",
@@ -329,9 +369,19 @@ async function insertEvidence(
 
 /**
  * Persiste o snapshot e a evidência congelada com a MESMA identidade explícita
- * (F6/C3). Falha do insert da evidência é tipada e bloqueia a operação. A MESMA
- * identidade é idempotente; conteúdo divergente para a mesma identidade é
- * recusado sem gravar.
+ * (F6/C3). Falha do insert da evidência é tipada e bloqueia a operação.
+ *
+ * F1 — à prova de corrida: os DOIS inserts (snapshot e evidência) TENTAM gravar
+ * e, em falha por concorrência (UNIQUE), RE-CONSULTAM a identidade. Reusa a
+ * linha vencedora SOMENTE quando equivalente; divergência ⇒
+ * `operation_identity_conflict`; ausência persistente ⇒ `snapshot_persist_failed`
+ * (snapshot) / `frozen_evidence_persist_failed` (evidência).
+ *
+ * F2 — recuperação controlada de pré-reserva: um snapshot congelado SEM evidência
+ * (estado parcial de uma chamada anterior) é REPARADO aqui inserindo a evidência
+ * para o MESMO `snapshot_original_id` — nunca substituindo o snapshot congelado —
+ * devolvendo `{ snapshotOriginalId, reused: true }`. Conteúdo divergente no reparo
+ * ⇒ `operation_identity_conflict`.
  */
 export async function persistProductOneToOneSnapshot(
   client: SupabaseClient,
@@ -345,6 +395,10 @@ export async function persistProductOneToOneSnapshot(
     );
   }
 
+  // --- Snapshot: pré-consulta + insert à prova de corrida (F1). ---
+  let snapshotOriginalId: string;
+  let snapshotReused: boolean;
+
   const existingSnapshot = await findSnapshotByCampaign(client, snapshot.campaignId);
   if (existingSnapshot) {
     if (!snapshotMatches(existingSnapshot, snapshot)) {
@@ -353,27 +407,38 @@ export async function persistProductOneToOneSnapshot(
         "snapshot_divergent",
       );
     }
-
-    const existingEvidence = await findEvidenceByIdentity(
-      client,
-      evidence.campaignId,
-      evidence.operationId,
-    );
-    if (existingEvidence) {
-      if (!evidenceMatches(existingEvidence, evidence)) {
+    snapshotOriginalId = existingSnapshot.id;
+    snapshotReused = true;
+  } else {
+    try {
+      snapshotOriginalId = await insertSnapshot(client, snapshot);
+      snapshotReused = false;
+    } catch (error) {
+      // Corrida: outra requisição pode ter vencido o UNIQUE. Re-consulta.
+      const racedSnapshot = await findSnapshotByCampaign(client, snapshot.campaignId);
+      if (!racedSnapshot) {
+        if (error instanceof ProductOneToOneSnapshotPersistError) throw error;
         throw new ProductOneToOneSnapshotPersistError(
-          "operation_identity_conflict",
-          "evidence_divergent",
+          "snapshot_persist_failed",
+          error instanceof Error ? error.message : "unknown",
         );
       }
-      return { snapshotOriginalId: existingSnapshot.id, reused: true };
+      if (!snapshotMatches(racedSnapshot, snapshot)) {
+        throw new ProductOneToOneSnapshotPersistError(
+          "operation_identity_conflict",
+          "snapshot_divergent",
+        );
+      }
+      snapshotOriginalId = racedSnapshot.id;
+      snapshotReused = true;
     }
-
-    await insertEvidence(client, existingSnapshot.id, evidence);
-    return { snapshotOriginalId: existingSnapshot.id, reused: true };
   }
 
-  const snapshotOriginalId = await insertSnapshot(client, snapshot);
-  await insertEvidence(client, snapshotOriginalId, evidence);
-  return { snapshotOriginalId, reused: false };
+  // --- Evidência: pré-consulta + insert à prova de corrida + reparo (F1/F2). ---
+  const evidenceOutcome = await ensureEvidence(client, snapshotOriginalId, evidence);
+
+  return {
+    snapshotOriginalId,
+    reused: snapshotReused || evidenceOutcome === "reused",
+  };
 }

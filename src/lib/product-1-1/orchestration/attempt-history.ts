@@ -62,6 +62,24 @@ export class AttemptHistoryError extends Error {
   }
 }
 
+/**
+ * Erro tipado F4: a leitura do estado da operação é OBRIGATÓRIA e não pôde ser
+ * realizada (dependency ausente) — a tentativa é BLOQUEADA antes de qualquer
+ * insert. (Uma FALHA na própria leitura propaga o erro original, também sem gravar.)
+ */
+export class AttemptHistoryStateError extends Error {
+  readonly code = "attempt_operation_state_unavailable" as const;
+
+  constructor(detail?: string) {
+    super(
+      detail
+        ? `attempt_operation_state_unavailable:${detail}`
+        : "attempt_operation_state_unavailable",
+    );
+    this.name = "AttemptHistoryStateError";
+  }
+}
+
 export interface RecordAttemptInput {
   readonly campaignId: string;
   readonly snapshotOriginalId: string;
@@ -76,8 +94,11 @@ export interface RecordAttemptInput {
 
 export interface RecordAttemptDeps {
   /**
-   * Resolve o estado vigente da operação. Quando TERMINAL ou INCERTO, a tentativa
-   * é recusada sem gravar. `null` = operação inexistente (nova) — prossegue.
+   * Resolve o estado vigente da operação — OBRIGATÓRIO (F4). Quando TERMINAL ou
+   * INCERTO, a tentativa é recusada sem gravar. `null` = operação inexistente
+   * (nova) — prossegue. A ausência deste leitor BLOQUEIA (`AttemptHistoryStateError`);
+   * uma falha da leitura também BLOQUEIA (o erro propaga, sem gravar). O leitor
+   * mandatório é fornecido pelo chamador/orquestrador (Plano 04).
    */
   readonly resolveOperationState?: (input: {
     campaignId: string;
@@ -94,21 +115,28 @@ function isClosedState(state: AttemptOperationState): boolean {
 
 /**
  * Registra uma tentativa append-only, com o par modelo/qualidade do alvo
- * reconstruído do snapshot. Recusa operação terminal/incerta (F6) sem gravar.
+ * reconstruído do snapshot. F4: a leitura do estado da operação é OBRIGATÓRIA —
+ * sem o leitor, BLOQUEIA (`AttemptHistoryStateError`) antes de qualquer insert;
+ * falha da leitura BLOQUEIA (propaga, sem gravar). Recusa operação terminal/incerta
+ * (F6) sem gravar. Somente `reserved`/`art_uploaded`/`null` (inexistente) prosseguem.
  */
 export async function recordAttempt(
   client: SupabaseClient,
   input: RecordAttemptInput,
   deps: RecordAttemptDeps = {},
 ): Promise<RecordImageGenerationOperationResult> {
-  if (deps.resolveOperationState) {
-    const state = await deps.resolveOperationState({
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-    });
-    if (state !== null && isClosedState(state)) {
-      throw new AttemptHistoryError(state);
-    }
+  const resolveOperationState = deps.resolveOperationState;
+  if (!resolveOperationState) {
+    throw new AttemptHistoryStateError("missing_resolver");
+  }
+
+  // Falha da leitura propaga (bloqueia) — nenhum insert é executado.
+  const state = await resolveOperationState({
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+  });
+  if (state !== null && isClosedState(state)) {
+    throw new AttemptHistoryError(state);
   }
 
   const pair = resolveSnapshotPairForTarget(input.snapshot, input.target);
