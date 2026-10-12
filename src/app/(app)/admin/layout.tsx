@@ -56,6 +56,9 @@ export default async function AdminLayout({
         <Link href="/admin/image-model-pair" className="font-medium hover:text-primary">
           Par de modelos (novo fluxo)
         </Link>
+        <Link href="/admin/product-1-1-pending" className="font-medium hover:text-primary">
+          Pendências Produto 1:1
+        </Link>
         <Link href="/admin/campaign-reports" className="font-medium hover:text-primary">
           Relatos de correção
         </Link>
