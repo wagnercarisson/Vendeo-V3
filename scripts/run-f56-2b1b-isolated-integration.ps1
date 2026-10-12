@@ -35,7 +35,9 @@ $defaultSuites = @(
   "src/lib/product-1-1/__tests__/artifact-download.integration.test.ts",
   "src/lib/product-1-1/__tests__/pending-resolution.integration.test.ts",
   "src/lib/product-1-1/__tests__/persisted-campaign.integration.test.ts",
-  "src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts"
+  "src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts",
+  "src/lib/product-1-1/__tests__/copy-state.integration.test.ts",
+  "src/lib/product-1-1/__tests__/concurrent-route-submission.integration.test.ts"
 )
 $script:SecretsToRedact = @()
 
