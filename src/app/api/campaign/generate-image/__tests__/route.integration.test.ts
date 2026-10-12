@@ -703,4 +703,59 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
       CAMPAIGN_ID,
     );
   });
+
+  it("(I2) a identidade PERSISTIDA é a EFETIVAMENTE usada: sem imagem ⇒ sem assinatura (text-only); com imagem ⇒ com assinatura", async () => {
+    const serverIdentity = {
+      storeName: "Loja Teste",
+      storeSegment: "outros",
+      brandColor: "#111111",
+      identityState: "logo",
+      signature: { url: "https://signed.example/logo.png", type: "logo" },
+    };
+    (resolveStoreIdentity as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(serverIdentity);
+    (validateIdentityReference as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      serverIdentity,
+    );
+
+    // (a) Conversão FALHA (sem imagem) ⇒ composição text-only ⇒ persistido SEM assinatura.
+    (resolveIdentityImageAsDataUrl as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    const { POST } = await import("../route");
+    const resA = await POST(makeRequest(VALID_BODY));
+    expect(terminalOf(parseEvents(await resA.text()))).toMatchObject({ type: "result" });
+
+    const persistedA = (
+      h.createCampaign.mock.calls.at(-1)![1] as {
+        identitySnapshot: { signature: { url: string | null } };
+      }
+    ).identitySnapshot;
+    expect(persistedA.signature.url).toBeNull();
+    // O gateway também não recebe imagem ⇒ TUDO concorda (text-only).
+    expect(
+      (h.gatewayInvoke.mock.calls.at(-1)![1] as { identityImageUrl?: string }).identityImageUrl,
+    ).toBeUndefined();
+
+    h.createCampaign.mockClear();
+    h.gatewayInvoke.mockClear();
+
+    // (b) Conversão OK ⇒ persistido CARREGA a identidade efetiva (data URL no gateway).
+    (resolveIdentityImageAsDataUrl as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      dataUrl: "data:image/png;base64,LOGO",
+      contentId: "content-id-logo",
+      mimeType: "image/png",
+      byteLength: 3,
+    });
+    const { POST: POST2 } = await import("../route");
+    const resB = await POST2(makeRequest(VALID_BODY));
+    expect(terminalOf(parseEvents(await resB.text()))).toMatchObject({ type: "result" });
+
+    const persistedB = (
+      h.createCampaign.mock.calls.at(-1)![1] as {
+        identitySnapshot: { signature: { url: string | null } };
+      }
+    ).identitySnapshot;
+    expect(persistedB.signature.url).toBe("https://signed.example/logo.png");
+    expect(
+      (h.gatewayInvoke.mock.calls.at(-1)![1] as { identityImageUrl?: string }).identityImageUrl,
+    ).toBe("data:image/png;base64,LOGO");
+  });
 });

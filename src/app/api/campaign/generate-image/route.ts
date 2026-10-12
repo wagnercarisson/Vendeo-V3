@@ -582,6 +582,15 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // (contratos EXISTENTES). Congelada em `identitySnapshot`, carregada ao gateway
       // como `identityImageUrl` e materializada como direção de identidade.
       let newFlowIdentitySnapshot: Awaited<ReturnType<typeof validateIdentityReference>>;
+      // B1/I2 — identidade EFETIVAMENTE usada (com a imagem REMOVIDA quando a
+      // conversão para data URL falha). É ESTA snapshot que precisa AGREE em todos
+      // os pontos: composição (text-only quando sem imagem), requisição ao gateway,
+      // referências congeladas E o snapshot PERSISTIDO (`createCampaign`). Persistir
+      // a ORIGINAL (com assinatura) enquanto a composição roda text-only quebra o
+      // acordo entre passado/persistido e efetivamente usado.
+      let newFlowEffectiveIdentitySnapshot: Awaited<
+        ReturnType<typeof validateIdentityReference>
+      >;
       let newFlowIdentityDirective: string | null = null;
       // B1 — identidade convertida ao formato ACEITO pelo adapter do novo fluxo
       // (`data:image/png|jpeg|webp;base64,...`). NUNCA a URL assinada rotativa.
@@ -613,7 +622,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         newFlowIdentityImage = await resolveIdentityImageAsDataUrl(
           newFlowIdentitySnapshot?.signature?.url ?? null,
         );
-        const newFlowEffectiveIdentitySnapshot = newFlowIdentityImage
+        newFlowEffectiveIdentitySnapshot = newFlowIdentityImage
           ? newFlowIdentitySnapshot
           : {
               ...newFlowIdentitySnapshot,
@@ -741,7 +750,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 ...newFlowFrozenSnapshot,
                 [FROZEN_CONTENT_REFERENCES_KEY]: newFlowEvidenceReferenceSelections,
               } as unknown as Record<string, unknown>,
-              identitySnapshot: newFlowIdentitySnapshot as unknown as Record<
+              // I2 — persiste a identidade EFETIVAMENTE usada (imagem REMOVIDA
+              // quando a conversão falhou) para que snapshot persistido, prompt/
+              // composição, referências congeladas e requisição ao gateway
+              // concordem. NUNCA a original com assinatura.
+              identitySnapshot: newFlowEffectiveIdentitySnapshot as unknown as Record<
                 string,
                 unknown
               >,

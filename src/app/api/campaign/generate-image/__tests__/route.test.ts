@@ -2290,5 +2290,39 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     expect(createCampaign).not.toHaveBeenCalled();
     expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
   });
+
+  // ── I2 — persiste a identidade EFETIVAMENTE usada (agrees com composição/gateway) ──
+
+  it('I2: conversão FALHA (sem imagem) ⇒ persistido SEM assinatura (text-only); conversão OK ⇒ persistido CARREGA a identidade efetiva', async () => {
+    // (a) Conversão FALHA ⇒ composição text-only. O snapshot PERSISTIDO não pode
+    //     carregar a assinatura (senão divergiria do que foi realmente usado).
+    setupNewFlowMocks();
+    mockIdentityResolution({ directive: 'Dir', image: null });
+    const { POST } = await import('../route');
+    await (await POST(makeRequest(VALID_NEW_FLOW_BODY))).text();
+
+    const persistedWithoutImage = (createCampaign as any).mock.calls[0][1]
+      .identitySnapshot as { signature: { url: string | null } };
+    expect(persistedWithoutImage).not.toBeNull();
+    expect(persistedWithoutImage.signature.url).toBeNull();
+    // O gateway também NÃO recebe imagem ⇒ snapshot/prompt/gateway CONCORDAM.
+    const inputWithoutImage = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(inputWithoutImage.identityImageUrl).toBeUndefined();
+
+    (createCampaign as any).mockClear();
+    mockRunProductOneToOneGeneration.mockClear();
+
+    // (b) Conversão OK ⇒ o snapshot PERSISTIDO carrega a identidade EFETIVA.
+    setupNewFlowMocks();
+    mockIdentityResolution({ directive: 'Dir', image: IMAGE_A });
+    const { POST: POST2 } = await import('../route');
+    await (await POST2(makeRequest(VALID_NEW_FLOW_BODY))).text();
+
+    const persistedWithImage = (createCampaign as any).mock.calls[0][1]
+      .identitySnapshot as { signature: { url: string | null } };
+    expect(persistedWithImage.signature.url).toBe('https://signed.example/logo-a.png');
+    const inputWithImage = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
+    expect(inputWithImage.identityImageUrl).toBe('data:image/png;base64,AAA');
+  });
 });
 
