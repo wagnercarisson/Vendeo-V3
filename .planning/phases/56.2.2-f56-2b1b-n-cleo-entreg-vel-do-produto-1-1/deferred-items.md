@@ -15,7 +15,6 @@ apenas as 6 suítes de integração da b1b, que passam 44/44 com 0 skipped).
 | `src/lib/lab/bench/__tests__/form-parity.contract.test.ts` | 2 falhas | idem |
 | `src/lib/lab/bench/__tests__/run-history.contract.test.ts` | 1 falha | idem |
 | `src/lib/legal/__tests__/legal-document-versions.test.ts` | 1 falha | arquivo `openspec/changes/.../terms-of-service-v1-5.md` ausente |
-| `src/__tests__/api/campaign-page-server.test.tsx` | 3 falhas | mock de `@/lib/campaign/display` sem `mapNewFlowDisplayState` (arquivo do Plano 06) |
 | `src/lib/visual-signature/__tests__/ai-image-generator.test.ts` | timeout | teste aguarda provider; timeout de 5s |
 | `src/lib/image-generation/providers/__tests__/openai-provider.test.ts` | timeout | idem |
 | `src/lib/image-generation/services/__tests__/image-generation-service.test.ts` | timeout | idem |
@@ -24,3 +23,27 @@ apenas as 6 suítes de integração da b1b, que passam 44/44 com 0 skipped).
 > Nenhuma dessas falhas é causada pelas mudanças do Plano 09 (novos arquivos de teste de
 > integração + runner + evidência). Não foram corrigidas (boundary de escopo). Encaminhar
 > ao responsável/verificação da fase se aplicável.
+
+## Reconciliação (Plano 10 — Task 3, checkpoint, 2026-10-12)
+
+**Correção de classificação — NÃO era pré-existente.** A entrada
+`src/__tests__/api/campaign-page-server.test.tsx` (3 falhas) constava como "pré-existente";
+a investigação contra a baseline provou que é uma **REGRESSÃO DE TESTE ORIGINADA NA FASE
+(Plano 06)** — o `vi.mock("@/lib/campaign/display")` não fornecia os exports
+`mapNewFlowDisplayState`/`mapNewFlowCopy` que a página
+`src/app/(app)/campanhas/[id]/page.tsx` passou a importar no Plano 06. **CORRIGIDO** (mock
+parcial via `importOriginal`, mesmo padrão de `campaign-detail-page.test.tsx`) **sem alterar
+asserções** e sem tocar produção/migration/flag/provider. O arquivo agora passa **5/5**
+(commit `51f6c2b6`). Por isso a linha foi **removida** da tabela de pré-existentes acima.
+
+**Confirmação das demais (pré-existentes à fase) — evidência contra a baseline `50152297`**
+(commit imediatamente anterior ao primeiro commit de código do Plano 01 = `2a4e08b6`):
+
+- `git diff 50152297..HEAD -- src/lib/lab/bench src/lib/visual-signature src/lib/image-generation/providers src/lib/image-generation/services src/lib/legal` = **vazio** — a fase **NÃO** tocou nenhum desses caminhos (nenhum está nos 102 arquivos alterados pela fase).
+- Últimos commits que tocaram cada área **predate a baseline**: lab/bench `b7ab7b1b` (2026-10-09), legal `198f299e` (2026-09-23), visual-signature `83b0bb37` (2026-09-21), image-generation/providers `31e1c667` (2026-09-14), image-generation/services `f4f43147` (2026-09-16) — **nenhum** no range `50152297..HEAD`.
+- Sintomas reconfirmados por reexecução direta: lab/bench **14** (`backgroundDirection` obrigatório), legal **1** (`ENOENT .../fase-50-.../terms-of-service-v1-5.md` — change da fase 50), provider **3** (`Error: Test timed out in 5000ms`).
+
+**Totais da suíte após o fix (reconciliados):** `npm test` → **18 falhas / 5542 passed /
+115 skipped** (Test Files: 25 failed / 438 passed / 2 skipped de 465). As 18 falhas restantes
+são todas **pré-existentes** (14 lab/bench + 3 provider/timeout + 1 legal) e **NÃO** são
+declaradas verdes.
