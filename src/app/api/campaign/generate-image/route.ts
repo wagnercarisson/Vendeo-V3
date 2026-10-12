@@ -97,8 +97,18 @@ function computeFrozenContentHash(
   snapshot: Record<string, unknown>,
   references: readonly unknown[],
 ): string {
+  // Correção (Rule 1): normaliza via JSON round-trip ANTES do hash estável. O
+  // snapshot montado em memória carrega campos `undefined` (ex. `description`,
+  // `badgeText`) que o JSONB PERSISTIDO NÃO carrega (JSON descarta `undefined`).
+  // Sem a normalização, o MESMO conteúdo submetido produz dois hashes diferentes
+  // (memória × persistido) e o reuso idempotente da corrida falha com um
+  // `operation_identity_conflict` ENGANOSO. O round-trip alinha a representação
+  // hasheada à representação persistida.
+  const normalized = JSON.parse(
+    JSON.stringify({ snapshot: canonicalFrozenSnapshot(snapshot), references }),
+  ) as { snapshot: Record<string, unknown>; references: readonly unknown[] };
   return createHash("sha256")
-    .update(stableStringify({ snapshot: canonicalFrozenSnapshot(snapshot), references }))
+    .update(stableStringify(normalized))
     .digest("hex");
 }
 
