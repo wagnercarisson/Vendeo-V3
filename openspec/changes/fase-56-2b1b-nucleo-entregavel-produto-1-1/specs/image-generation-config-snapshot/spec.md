@@ -41,3 +41,30 @@ O snapshot SHALL congelar, de forma imutável: o briefing, as referências/sele�
 - **WHEN** a execução ocorre após o congelamento
 - **THEN** ela não relê configuração mutável da bancada/admin
 - **AND** usa exclusivamente o snapshot congelado
+
+### Requirement: Persistência idempotente, tolerante a corrida e com reparo de estado parcial
+
+A persistência do snapshot e da sua evidência congelada SHALL ser idempotente e tolerante a corrida: tentativas de inserção concorrentes para a MESMA identidade SHALL reutilizar a linha vencedora somente quando o conteúdo for equivalente. Um estado parcial (snapshot congelado sem a sua evidência) SHALL ser reparado na próxima chamada de persistência, antes da reserva, inserindo a evidência para o MESMO snapshot congelado, sem substituí-lo. Conteúdo divergente para a mesma identidade SHALL ser recusado como conflito e nada SHALL ser gravado. O vínculo entre a evidência e a campanha do snapshot SHALL ser imposto pelo banco.
+
+#### Scenario: Corrida reutiliza a linha vencedora equivalente
+
+- **WHEN** duas persistências concorrentes usam a MESMA identidade e o MESMO conteúdo
+- **THEN** ao final existem exatamente um snapshot e uma evidência
+- **AND** a persistência perdedora reutiliza a linha vencedora sem erro
+
+#### Scenario: Estado parcial é reparado sem substituir o snapshot congelado
+
+- **WHEN** existe um snapshot congelado sem a sua evidência e a persistência é chamada novamente antes da reserva
+- **THEN** a evidência ausente é inserida para o MESMO snapshot congelado
+- **AND** o snapshot congelado não é substituído
+
+#### Scenario: Conteúdo divergente é recusado
+
+- **WHEN** a persistência encontra conteúdo divergente para a mesma identidade
+- **THEN** a operação é recusada como conflito de identidade
+- **AND** nada é gravado
+
+#### Scenario: Vínculo campanha-snapshot imposto pelo banco
+
+- **WHEN** uma evidência é inserida com `campaign_id` diferente da campanha do snapshot referenciado
+- **THEN** o banco rejeita a inserção
