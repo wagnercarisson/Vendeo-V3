@@ -7,7 +7,13 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
 import { createNewFlowImageGateway } from "@/lib/ai/upstream-images-runtime";
 import type { AiInvoker } from "@/lib/ai/gateway";
-import type { AiInvocationRequest, AiTelemetryContext } from "@/lib/ai/types";
+import type {
+  AiCallEnvelope,
+  AiEnvelopeInternalCost,
+  AiInvocationRequest,
+  AiTelemetryContext,
+} from "@/lib/ai/types";
+import { withOnCallTelemetry } from "@/lib/ai/telemetry-sink";
 import type { ImageModelPairConfig } from "@/lib/ai/image-model-pair";
 import type {
   CurrentImageGenerationConfig,
@@ -59,14 +65,10 @@ import type {
 } from "../policies/types";
 import {
   buildAttemptTelemetry,
-  emitAttemptEnvelope,
-  createDurableAttemptEnvelopeSink,
   defaultResolveAttemptCost,
   attemptCostForTarget,
   recordFailureDiagnosis,
   type AttemptCostResolver,
-  type AttemptEnvelope,
-  type AttemptEnvelopeResult,
 } from "./instrumentation";
 import {
   COPY_BUDGET_MS,
@@ -106,6 +108,13 @@ import { getLaunchConfig } from "@/lib/launch-config/config";
  */
 
 const NEW_FLOW_CAPABILITY = "campaign_product_image" as const;
+
+/**
+ * P1 (Opção A) — origem INTERNA auditável do custo do NOVO FLUXO (`modelo +
+ * qualidade` + versão/origem). Vai a `metadata.internal_cost_origin` no evento
+ * persistido pelo sink ÚNICO; o `cost_source` permanece `pricing_table`.
+ */
+const NEW_FLOW_INTERNAL_COST_ORIGIN = "new_flow_pair_pricing" as const;
 
 export interface ProductOneToOneGenerationInput {
   readonly campaignId: string;
@@ -221,6 +230,11 @@ export interface TelemetryContextInput {
   readonly creditValueBrlAtGeneration?: number | null;
   readonly runId?: string;
   readonly traceId?: string;
+  /**
+   * P1 (Opção A) — custo INTERNO do NOVO FLUXO (modelo+qualidade+versão+origem)
+   * resolvido pela pricing do par. Entra no contexto do sink ÚNICO.
+   */
+  readonly internalCost?: AiEnvelopeInternalCost;
 }
 
 /**
@@ -283,10 +297,12 @@ export interface ProductOneToOneGenerationDeps {
     input: ImageGenerationDiagnosisInput,
   ) => Promise<{ reference: string }>;
   /**
-   * Envelope por tentativa (instrumentação). Injetável para teste puro; o
-   * default é no-op. Cada tentativa real chama o sink EXATAMENTE uma vez.
+   * Envelope por tentativa (instrumentação) — observador de TESTE. Recebe o
+   * envelope REAL emitido pelo gateway (1 por tentativa real) via
+   * `withOnCallTelemetry`; o default é ausente (produção persiste pelo sink
+   * ÚNICO). Injetável para teste puro.
    */
-  readonly onAttemptEnvelope?: (envelope: AttemptEnvelope) => void | Promise<void>;
+  readonly onAttemptEnvelope?: (envelope: AiCallEnvelope) => void | Promise<void>;
   /** F8 — copy não bloqueante drenada no ciclo da requisição (opcional). */
   readonly copy?: ProductOneToOneCopyOps;
   /**
@@ -307,10 +323,11 @@ export interface ProductOneToOneGenerationDeps {
 type NdjsonEvent = Record<string, unknown>;
 
 function defaultTelemetry(input: TelemetryContextInput): AiTelemetryContext {
-  // Gap 4 — o custo interno por tentativa NÃO vem mais desta telemetria (que
-  // seria a resolução legada sem qualidade): o orquestrador o resolve pela
-  // pricing do NOVO FLUXO (`modelo + qualidade` + versão/origem). O sink desta
-  // telemetria é no-op; o ENVELOPE por tentativa é o registro persistido.
+  // P1 (Opção A) — o envelope REAL do gateway é persistido pelo sink ÚNICO
+  // (`DefaultAiTelemetrySink`, default do `createDefaultTelemetryContext`), com o
+  // custo interno do NOVO FLUXO (`modelo + qualidade` + versão/origem) no
+  // contexto — origem `pricing_table`, NUNCA `provider_reported`. Sem reconstrução
+  // zero-duration e sem duplicar registros (1 envelope do gateway ⇒ 1 registro).
   return buildAttemptTelemetry({
     operationRunId: input.runId ?? input.campaignId,
     traceId: input.traceId ?? input.campaignId,
@@ -319,6 +336,7 @@ function defaultTelemetry(input: TelemetryContextInput): AiTelemetryContext {
     attemptNumber: input.attemptNumber,
     usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
     creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
+    ...(input.internalCost ? { internalCost: input.internalCost } : {}),
   });
 }
 
@@ -471,19 +489,8 @@ export async function runProductOneToOneGeneration(
           { invoker: deps.copyInvoker },
         )
       : undefined);
-  // Gap 4 — custo interno por tentativa pela pricing do NOVO FLUXO.
+  // Gap 4 / P1 — custo interno por tentativa pela pricing do NOVO FLUXO.
   const resolveAttemptCost = deps.resolveAttemptCost ?? defaultResolveAttemptCost;
-  // Gap 4 — destino PERSISTENTE default do envelope por tentativa (reusa o sink
-  // único da camada de IA; nunca escreve generation_events diretamente).
-  const attemptEnvelopeSink =
-    onAttemptEnvelope !== undefined
-      ? { emit: onAttemptEnvelope }
-      : createDurableAttemptEnvelopeSink({
-          operationRunId: input.runId ?? input.campaignId,
-          traceId: input.traceId ?? input.campaignId,
-          storeId: input.storeId,
-          campaignId: input.campaignId,
-        });
   const recordAttemptCall =
     deps.recordAttempt ??
     ((call: RecordAttemptCall) =>
@@ -966,68 +973,64 @@ export async function runProductOneToOneGeneration(
             return;
           }
 
-          // ── Instrumentação por tentativa (REQ-12): UM envelope por tentativa
-          // real (modelo/qualidade/alvo/attempt_number/run/trace/resultado +
-          // custo interno por par). A sequência é reconstruível (primary×fallback).
-          // Gap 4 — o custo interno vem da pricing do NOVO FLUXO (`modelo +
-          // qualidade` + versão/origem) — a MESMA validada no preflight — e a
-          // emissão é AGUARDADA (sink PERSISTENTE default).
-          let internalCostUsd: number | null = null;
-          let internalCostVersionId: string | null = null;
-          let internalCostSource: string | null = null;
+          // ── Instrumentação por tentativa (REQ-12 / P1 — Opção A): o gateway
+          // emite UM envelope REAL por tentativa (usage/durationMs/status/model/
+          // quality reais). O custo INTERNO do par (`modelo + qualidade` +
+          // versão/origem — a MESMA pricing validada no preflight) acompanha o
+          // contexto de telemetria como `internalCost`; o sink ÚNICO o grava com
+          // origem `pricing_table` (NUNCA `provider_reported`), persistindo o
+          // envelope REAL — SEM reconstrução zero-duration e SEM duplicar registros.
+          const attemptPair = snapshotPairForTarget(snapshot, target);
+          let internalCost: AiEnvelopeInternalCost = {
+            estimatedCostUsd: null,
+            pricingVersion: null,
+            origin: NEW_FLOW_INTERNAL_COST_ORIGIN,
+            source: null,
+            model: attemptPair.model,
+            quality: attemptPair.quality,
+          };
           try {
             const resolution = await resolveAttemptCost({
               primary: { model: snapshot.primaryModel, quality: snapshot.primaryQuality },
               fallback: { model: snapshot.fallbackModel, quality: snapshot.fallbackQuality },
             });
             const attemptCost = attemptCostForTarget(resolution, target);
-            internalCostUsd = attemptCost.costUsd;
-            internalCostVersionId = attemptCost.versionId;
-            internalCostSource = attemptCost.costSource;
+            internalCost = {
+              estimatedCostUsd: attemptCost.costUsd,
+              pricingVersion: attemptCost.versionId,
+              origin: NEW_FLOW_INTERNAL_COST_ORIGIN,
+              source: attemptCost.costSource,
+              model: attemptPair.model,
+              quality: attemptPair.quality,
+            };
           } catch {
-            // Fail-open: sem pricing resolvido ⇒ custo `null` (nunca inventado);
-            // a geração NÃO é bloqueada pela observabilidade.
+            // Fail-open da PRICING nunca vira fallback legado: mantém
+            // `internalCost` PRESENTE (com valor ausente) ⇒ o sink o sinaliza
+            // explicitamente (`not_available` + metadata), sem mislabel e sem a
+            // cadeia legada.
           }
-          const emitAttempt = async (result: AttemptEnvelopeResult): Promise<void> => {
-            await emitAttemptEnvelope(
-              {
-                snapshot,
-                attemptNumber,
-                target,
-                result,
-                internalCostUsd,
-                internalCostVersionId,
-                internalCostSource,
-                runId: input.runId,
-                traceId: input.traceId,
-              },
-              attemptEnvelopeSink,
-            );
-          };
 
           // Chamada ao provider (uma tentativa por invocação).
           let imageDataUrl: string | undefined;
           let failure: unknown;
           try {
-            const telemetry = deps.createTelemetry
-              ? deps.createTelemetry({
-                  campaignId,
-                  storeId,
-                  attemptNumber,
-                  usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
-                  creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
-                  runId: input.runId,
-                  traceId: input.traceId,
-                })
-              : defaultTelemetry({
-                  campaignId,
-                  storeId,
-                  attemptNumber,
-                  usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
-                  creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
-                  runId: input.runId,
-                  traceId: input.traceId,
-                });
+            const telemetryInput: TelemetryContextInput = {
+              campaignId,
+              storeId,
+              attemptNumber,
+              usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
+              creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
+              runId: input.runId,
+              traceId: input.traceId,
+              internalCost,
+            };
+            const baseTelemetry = deps.createTelemetry
+              ? deps.createTelemetry(telemetryInput)
+              : defaultTelemetry(telemetryInput);
+            // Observador de TESTE: recebe o envelope REAL do gateway (1/tentativa).
+            const telemetry = onAttemptEnvelope
+              ? withOnCallTelemetry(baseTelemetry, onAttemptEnvelope)
+              : baseTelemetry;
             const request: AiInvocationRequest = {
               ...providerImageRequest(input),
               prompt: composition.text,
@@ -1047,7 +1050,8 @@ export async function runProductOneToOneGeneration(
 
           if (imageDataUrl !== undefined) {
             // ── (7) sucesso: finaliza o claim, grava a arte, entrega ─────
-            await emitAttempt("success");
+            // P1 (Opção A): o envelope REAL de sucesso já foi persistido pelo
+            // sink ÚNICO durante `gateway.invoke` (SEM reconstrução/duplicação).
             try {
               await attempts.finish({
                 campaignId,
@@ -1104,7 +1108,8 @@ export async function runProductOneToOneGeneration(
 
           // ── Resultado DESCONHECIDO (timeout/abort) ──────────────────────
           if (isUnknownResult(failure, controllerAbort.signal.aborted)) {
-            await emitAttempt("timeout");
+            // P1 (Opção A): o envelope REAL (timeout/abort) já foi persistido
+            // pelo sink ÚNICO durante `gateway.invoke`.
             const reference = newSupportReference();
             const persisted = await markUnknownOutcome(reference);
             // Gap 3 — diagnóstico durável correlacionado à MESMA referência
@@ -1144,7 +1149,8 @@ export async function runProductOneToOneGeneration(
           }
 
           // ── Falha CONFIRMADA: finaliza o claim e decide a próxima ação ──
-          await emitAttempt("failed");
+          // P1 (Opção A): o envelope REAL de falha já foi persistido pelo sink
+          // ÚNICO durante `gateway.invoke`.
           try {
             await attempts.finish({ campaignId, operationId, attemptNumber, status: "failed" });
           } catch {

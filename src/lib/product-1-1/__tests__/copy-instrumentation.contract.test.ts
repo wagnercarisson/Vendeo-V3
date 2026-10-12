@@ -8,7 +8,13 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiInvoker } from "@/lib/ai/gateway";
-import type { AiInvocationRequest, AiInvocationResult, AiTelemetryContext } from "@/lib/ai/types";
+import type {
+  AiCallEnvelope,
+  AiEnvelopeInternalCost,
+  AiInvocationRequest,
+  AiInvocationResult,
+  AiTelemetryContext,
+} from "@/lib/ai/types";
 import type {
   ImageGenerationConfigSnapshot,
   CurrentImageGenerationConfig,
@@ -27,10 +33,8 @@ import {
 } from "../copy/copy-state";
 import {
   buildAttemptTelemetry,
-  emitAttemptEnvelope,
   reconstructAttemptSequence,
   recordFailureDiagnosis,
-  type AttemptEnvelope,
 } from "../orchestration/instrumentation";
 import type { CampaignOperationState, AttemptTarget } from "../orchestration/attempt-start-types";
 import type { ProductPromptCompositionBriefing } from "../policies/types";
@@ -560,83 +564,37 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Task 2(a) — envelope/custo por tentativa + sequência reconstruível
+// Task 2(a) — envelope REAL por tentativa + sequência reconstruível (P1)
 // ---------------------------------------------------------------------------
 
-describe("Plano 08 — envelope por tentativa (REQ-12)", () => {
-  it("emitAttemptEnvelope resolve o par do SNAPSHOT (modelo/qualidade/alvo/attempt_number)", async () => {
-    const emitted: AttemptEnvelope[] = [];
-    const envelope = await emitAttemptEnvelope(
-      {
-        snapshot: SNAPSHOT,
-        attemptNumber: 2,
+/** Envelope REAL do gateway (modelo/qualidade/alvo/attempt_number reais). */
+function gatewayEnvelope(overrides: Partial<AiCallEnvelope> = {}): AiCallEnvelope {
+  return {
+    capability: "campaign_product_image",
+    protocol: "images",
+    status: "success",
+    provider: "openai",
+    model: SNAPSHOT.primaryModel,
+    durationMs: 12,
+    quality: SNAPSHOT.primaryQuality,
+    target: "primary",
+    attemptNumber: 1,
+    ...overrides,
+  };
+}
+
+describe("Plano 08 — envelope por tentativa REAL do gateway (REQ-12 / P1)", () => {
+  it("P1: a sequência principal (×2) + fallback (×1) é reconstruível a partir dos envelopes REAIS", () => {
+    const envelopes: AiCallEnvelope[] = [
+      gatewayEnvelope({ attemptNumber: 1, target: "primary", status: "failed" }),
+      gatewayEnvelope({ attemptNumber: 2, target: "primary", status: "failed" }),
+      gatewayEnvelope({
+        attemptNumber: 3,
         target: "fallback",
-        result: "success",
-        internalCostUsd: 0.03,
-        runId: "run-1",
-        traceId: "trace-1",
-      },
-      { emit: (e) => {
-          emitted.push(e);
-        } },
-    );
-
-    expect(envelope).toMatchObject({
-      attemptNumber: 2,
-      target: "fallback",
-      model: "gpt-image-2",
-      quality: "medium",
-      result: "success",
-      internalCostUsd: 0.03,
-    });
-    expect(emitted).toEqual([envelope]);
-  });
-
-  it("Gap 4: a emissão AGUARDA o sink e uma falha do sink NÃO vira rejeição não tratada", async () => {
-    let resolved = false;
-    const envelope = await emitAttemptEnvelope(
-      {
-        snapshot: SNAPSHOT,
-        attemptNumber: 1,
-        target: "primary",
-        result: "success",
-      },
-      {
-        emit: async () => {
-          await new Promise((r) => setTimeout(r, 5));
-          resolved = true;
-          throw new Error("sink_down");
-        },
-      },
-    );
-    // A emissão foi AGUARDADA (o sink completou) e a falha foi contida.
-    expect(resolved).toBe(true);
-    expect(envelope.internalCostUsd).toBeNull();
-  });
-
-  it("custo ausente nunca vira valor inventado (null)", async () => {
-    const envelope = await emitAttemptEnvelope({
-      snapshot: SNAPSHOT,
-      attemptNumber: 1,
-      target: "primary",
-      result: "failed",
-    });
-    expect(envelope.internalCostUsd).toBeNull();
-  });
-
-  it("a sequência principal (×2) + fallback (×1) é reconstruível", async () => {
-    const envelopes: AttemptEnvelope[] = await Promise.all(
-      [1, 2, 3].map((n, index) =>
-        emitAttemptEnvelope({
-          snapshot: SNAPSHOT,
-          attemptNumber: n,
-          target: index < 2 ? "primary" : "fallback",
-          result: index < 2 ? "failed" : "success",
-          runId: "run-1",
-          traceId: "trace-1",
-        }),
-      ),
-    );
+        status: "success",
+        model: SNAPSHOT.fallbackModel,
+      }),
+    ];
 
     const sequence = reconstructAttemptSequence(SNAPSHOT, envelopes);
     expect(sequence).toEqual([
@@ -646,26 +604,43 @@ describe("Plano 08 — envelope por tentativa (REQ-12)", () => {
     ]);
   });
 
-  it("buildAttemptTelemetry REUSA o caminho existente (createDefaultTelemetryContext)", () => {
+  it("P1: buildAttemptTelemetry REUSA o caminho existente e propaga `internalCost` no contexto", () => {
+    const internalCost: AiEnvelopeInternalCost = {
+      estimatedCostUsd: 0.041,
+      pricingVersion: "pricing-ver-1",
+      origin: "new_flow_pair_pricing",
+      source: "pricing_table",
+      model: SNAPSHOT.primaryModel,
+      quality: SNAPSHOT.primaryQuality,
+    };
     const context = buildAttemptTelemetry({
       operationRunId: "run-1",
       traceId: "trace-1",
       storeId: STORE_ID,
       campaignId: CAMPAIGN_ID,
       attemptNumber: 1,
+      internalCost,
     });
-    expect(context).toMatchObject({ campaignId: CAMPAIGN_ID, attemptNumber: 1 });
+    expect(context).toMatchObject({
+      campaignId: CAMPAIGN_ID,
+      attemptNumber: 1,
+      internalCost,
+    });
     expect(typeof context.sink.emit).toBe("function");
   });
 
-  it("a instrumentação do novo fluxo NÃO usa a resolução legada sem qualidade (`resolveAiCost`)", () => {
+  it("P1: a instrumentação NÃO reconstrói o envelope (sem `emitAttemptEnvelope`/`createDurableAttemptEnvelopeSink`)", () => {
     expect(INSTRUMENTATION_SOURCE).toContain("createDefaultTelemetryContext");
-    expect(INSTRUMENTATION_SOURCE).not.toMatch(/resolveAiCost\s*\(/);
-    // Gap 4 — o custo interno vem da pricing do NOVO FLUXO (modelo + qualidade).
+    // Custo do NOVO FLUXO (modelo + qualidade + versão + origem) — nunca a
+    // resolução legada sem qualidade.
     expect(INSTRUMENTATION_SOURCE).toContain("resolveImagePairCost");
     expect(INSTRUMENTATION_SOURCE).toContain("defaultResolveAttemptCost");
-    // Destino persistente do envelope reutiliza o caminho existente (AiCostTracker).
-    expect(INSTRUMENTATION_SOURCE).toContain("createDurableAttemptEnvelopeSink");
+    expect(INSTRUMENTATION_SOURCE).not.toMatch(/resolveAiCost\s*\(/);
+    // P1 (Opção A): a reconstrução zero-duration foi REMOVIDA do novo fluxo; o
+    // envelope REAL do gateway é persistido pelo sink ÚNICO via `internalCost`.
+    expect(INSTRUMENTATION_SOURCE).toContain("internalCost");
+    expect(INSTRUMENTATION_SOURCE).not.toContain("createDurableAttemptEnvelopeSink");
+    expect(INSTRUMENTATION_SOURCE).not.toContain("emitAttemptEnvelope");
   });
 });
 
@@ -753,7 +728,7 @@ interface OrchestratorHarness {
     refund: ReturnType<typeof vi.fn>;
     providerCalls: number;
   };
-  readonly envelopes: AttemptEnvelope[];
+  readonly envelopes: AiCallEnvelope[];
   readonly copyStates: CopyState[];
   readonly copyCancellations: string[];
   setProviderSequence(seq: Array<AiInvocationResult | Error>): void;
@@ -778,7 +753,7 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
   let providerSequence: Array<AiInvocationResult | Error> = [];
   let providerIndex = 0;
   let providerCalls = 0;
-  const envelopes: AttemptEnvelope[] = [];
+  const envelopes: AiCallEnvelope[] = [];
   const copyStates: CopyState[] = [];
   const copyCancellations: string[] = [];
   let currentTarget: AttemptTarget = "primary";
@@ -805,7 +780,7 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
   const refund = vi.fn(async () => baseState({ status: "refunded", terminal: true }));
 
   const createGateway = vi.fn((_pair: ImageModelPairConfig): AiInvoker => ({
-    async invoke(_capability, request): Promise<AiInvocationResult> {
+    async invoke(_capability, request, telemetry, target = "primary"): Promise<AiInvocationResult> {
       providerCalls += 1;
       const next = providerSequence[providerIndex] ?? {
         imageBase64: "AAAA",
@@ -813,8 +788,38 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
         model: "gpt-image-2.5-sunburst",
       };
       providerIndex += 1;
-      void request;
-      if (next instanceof Error) throw next;
+      // Simula fielmente o `AiGateway`: emite EXATAMENTE UM envelope REAL por
+      // tentativa (sucesso/falha/timeout) ao sink da telemetria — durationMs/
+      // usage/model/quality/status reais.
+      const model =
+        target === "fallback" ? SNAPSHOT.fallbackModel : SNAPSHOT.primaryModel;
+      if (next instanceof Error) {
+        await telemetry.sink.emit({
+          capability: "campaign_product_image",
+          protocol: "images",
+          status: "failed",
+          provider: "openai",
+          model,
+          durationMs: 7,
+          errorType: "provider_error",
+          quality: request.quality,
+          target,
+          attemptNumber: telemetry.attemptNumber,
+        });
+        throw next;
+      }
+      await telemetry.sink.emit({
+        capability: "campaign_product_image",
+        protocol: "images",
+        status: "success",
+        provider: "openai",
+        model: next.model ?? model,
+        usage: { promptTokens: 10, completionTokens: 20 },
+        durationMs: 12,
+        quality: request.quality,
+        target,
+        attemptNumber: telemetry.attemptNumber,
+      });
       return next;
     },
     async hasFallback() {
@@ -879,19 +884,19 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
       probeArtifact: vi.fn(async () => ({ kind: "absent" as const })),
     } as never,
     createGateway,
-    createTelemetry: (): AiTelemetryContext => ({
+    createTelemetry: (input: { attemptNumber: number }): AiTelemetryContext => ({
       operationRunId: "run-1",
       operationRunType: "campaign_delivery",
       traceId: "trace-1",
       storeId: STORE_ID,
       campaignId: CAMPAIGN_ID,
-      attemptNumber: 1,
+      attemptNumber: input.attemptNumber,
       sink: { emit: async () => {} },
     }),
     recordAttempt: vi.fn(async () => ({ id: "op-row-1", operationId: OPERATION_ID })),
     recordDiagnosis: vi.fn(async () => ({ reference: "ref-test" })),
     generateSupportReference: () => "66666666-6666-4666-8666-666666666666",
-    onAttemptEnvelope: (envelope: AttemptEnvelope) => {
+    onAttemptEnvelope: (envelope: AiCallEnvelope) => {
       envelopes.push(envelope);
     },
   };
@@ -994,8 +999,8 @@ describe("Plano 08 — copy não bloqueia delivered (F8)", () => {
   });
 });
 
-describe("Plano 08 — envelope por tentativa no orquestrador (REQ-12)", () => {
-  it("cada tentativa real emite exatamente um envelope; a sequência é reconstruível", async () => {
+describe("Plano 08 — envelope por tentativa no orquestrador (REQ-12 / P1)", () => {
+  it("cada tentativa real emite exatamente um envelope REAL; a sequência é reconstruível", async () => {
     const harness = await buildOrchestratorHarness();
     const providerError = () => Object.assign(new Error("provider down"), { kind: "provider_error" });
     harness.setProviderSequence([
@@ -1008,11 +1013,13 @@ describe("Plano 08 — envelope por tentativa no orquestrador (REQ-12)", () => {
 
     expect(terminal).toMatchObject({ type: "result" });
     expect(harness.calls.providerCalls).toBe(3);
-    // UM envelope por tentativa real (2 principal + 1 fallback).
+    // UM envelope REAL por tentativa real (2 principal + 1 fallback), emitido
+    // pelo gateway e observado via `withOnCallTelemetry` — sem reconstrução.
     expect(harness.envelopes).toHaveLength(3);
     expect(harness.envelopes.map((e) => e.target)).toEqual(["primary", "primary", "fallback"]);
     expect(harness.envelopes.map((e) => e.attemptNumber)).toEqual([1, 2, 3]);
-    expect(harness.envelopes.map((e) => e.result)).toEqual(["failed", "failed", "success"]);
+    expect(harness.envelopes.map((e) => e.status)).toEqual(["failed", "failed", "success"]);
+    expect(harness.envelopes[0].quality).toBe(SNAPSHOT.primaryQuality);
 
     const sequence = reconstructAttemptSequence(SNAPSHOT, harness.envelopes);
     expect(sequence).toHaveLength(3);
@@ -1048,8 +1055,13 @@ describe("Plano 08 — wiring estático", () => {
     expect(ORCHESTRATOR_SOURCE).toContain("await copyDrain");
   });
 
-  it("o orquestrador emite envelope por tentativa e persiste o diagnóstico durável centralizado", () => {
-    expect(ORCHESTRATOR_SOURCE).toContain("emitAttemptEnvelope");
+  it("o orquestrador persiste o envelope REAL (via sink) e o diagnóstico durável centralizado", () => {
+    // P1 (Opção A): o envelope REAL do gateway é persistido pelo sink ÚNICO
+    // (observado em teste via `withOnCallTelemetry`) — sem reconstrução.
+    expect(ORCHESTRATOR_SOURCE).toContain("withOnCallTelemetry");
+    expect(ORCHESTRATOR_SOURCE).toContain("internalCost");
+    expect(ORCHESTRATOR_SOURCE).not.toContain("emitAttemptEnvelope");
+    expect(ORCHESTRATOR_SOURCE).not.toContain("createDurableAttemptEnvelopeSink");
     expect(ORCHESTRATOR_SOURCE).toContain("recordFailureDiagnosis");
     expect(ORCHESTRATOR_SOURCE).not.toContain("toInternalDiagnosis(");
   });

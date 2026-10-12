@@ -153,6 +153,33 @@ export interface AiCallEnvelope extends AiCallInfo {
   attemptNumber?: number;
 }
 
+/**
+ * F56.2b1b (P1 — Opção A) — custo INTERNO do NOVO FLUXO já resolvido FORA de
+ * `resolveAiCost` (pricing do par `modelo + qualidade` + versão/origem,
+ * `@/lib/ai-cost/image-pair-pricing`). **ADITIVO** ao contrato de telemetria.
+ *
+ * Semântica: quando o contexto do `DefaultAiTelemetrySink` o traz, o sink usa
+ * ESTE custo com origem `pricing_table` + `pricing_version` (NUNCA
+ * `provider_reported`) e VALIDA `model`/`quality` contra o envelope REAL. Um
+ * custo ausente/inválido NUNCA vira `pricing_table` nem cai silenciosamente na
+ * cadeia legada — é sinalizado explicitamente. Quando o contexto NÃO o traz, a
+ * cadeia legada de `resolveAiCost` permanece intacta.
+ */
+export interface AiEnvelopeInternalCost {
+  /** Custo interno (USD) do par; `null` quando a pricing não o resolveu. */
+  estimatedCostUsd: number | null;
+  /** `versionId` da linha vigente de `ai_model_pricing` | `'code_default'` | null. */
+  pricingVersion: string | null;
+  /** Origem INTERNA auditável (ex.: `'new_flow_pair_pricing'`) — vai a metadata. */
+  origin: string | null;
+  /** Origem do preço do par (`'pricing_table'` | `'code_default'`) | null. */
+  source: string | null;
+  /** Modelo do par usado na tentativa (VALIDADO contra `envelope.model`). */
+  model: string;
+  /** Qualidade do par usada na tentativa (VALIDADA contra `envelope.quality`). */
+  quality: string;
+}
+
 /** Destino de emissão de envelopes (sink injetável — o gateway não persiste). */
 export interface AiTelemetrySink {
   emit(envelope: AiCallEnvelope): void | Promise<void>;

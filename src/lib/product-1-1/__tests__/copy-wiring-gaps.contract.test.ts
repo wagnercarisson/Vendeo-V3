@@ -8,7 +8,12 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiInvoker } from "@/lib/ai/gateway";
-import type { AiInvocationResult, AiTelemetryContext } from "@/lib/ai/types";
+import type {
+  AiCallEnvelope,
+  AiEnvelopeInternalCost,
+  AiInvocationResult,
+  AiTelemetryContext,
+} from "@/lib/ai/types";
 import type {
   ImageGenerationConfigSnapshot,
   CurrentImageGenerationConfig,
@@ -21,7 +26,6 @@ import type {
 } from "../orchestration/attempt-start-types";
 import type { ProductPromptCompositionBriefing } from "../policies/types";
 import type { ProductOneToOneArtifactRef } from "../artifact/types";
-import type { AttemptEnvelope } from "../orchestration/instrumentation";
 
 // ---------------------------------------------------------------------------
 // Reconciliação dos 4 gaps de integração do Plano 08 — testes de ROTA +
@@ -135,13 +139,14 @@ function makeRecordingClient(): { client: SupabaseClient; events: RecordedEvent[
 interface Harness {
   deps: Record<string, unknown>;
   events: RecordedEvent[];
-  envelopes: AttemptEnvelope[];
+  envelopes: AiCallEnvelope[];
+  telemetryInputs: Array<{ attemptNumber: number; internalCost?: AiEnvelopeInternalCost }>;
   copyCalls: () => number;
   setProviderSequence(seq: Array<AiInvocationResult | Error>): void;
   setExistingOperation(state: CampaignOperationState | null): void;
   setRacedOperation(state: CampaignOperationState | null): void;
   setAcquireSequence(seq: Array<{ acquired: boolean; reason: string | null }>): void;
-  setEnvelopeSink(sink: (envelope: AttemptEnvelope) => void | Promise<void>): void;
+  setEnvelopeSink(sink: (envelope: AiCallEnvelope) => void | Promise<void>): void;
 }
 
 function baseState(overrides: Partial<CampaignOperationState> = {}): CampaignOperationState {
@@ -172,7 +177,8 @@ function buildHarness(): Harness {
   let operationReads = 0;
   let copyCallCount = 0;
   let currentTarget: AttemptTarget = "primary";
-  const envelopes: AttemptEnvelope[] = [];
+  const envelopes: AiCallEnvelope[] = [];
+  const telemetryInputs: Array<{ attemptNumber: number; internalCost?: AiEnvelopeInternalCost }> = [];
 
   // Copy SIMULADA (provider): o runner DEFAULT REAL é usado; só o provider é fake.
   const copyInvoker: AiInvoker = {
@@ -194,14 +200,43 @@ function buildHarness(): Harness {
   };
 
   const createGateway = vi.fn((_pair: ImageModelPairConfig): AiInvoker => ({
-    async invoke(): Promise<AiInvocationResult> {
+    async invoke(_capability, request, telemetry, target = "primary"): Promise<AiInvocationResult> {
       const next = providerSequence[providerIndex] ?? {
         imageBase64: "AAAA",
         mimeType: "image/png",
         model: "gpt-image-2.5-sunburst",
       };
       providerIndex += 1;
-      if (next instanceof Error) throw next;
+      // Simula fielmente o `AiGateway`: UM envelope REAL por tentativa.
+      const model =
+        target === "fallback" ? SNAPSHOT.fallbackModel : SNAPSHOT.primaryModel;
+      if (next instanceof Error) {
+        await telemetry.sink.emit({
+          capability: "campaign_product_image",
+          protocol: "images",
+          status: "failed",
+          provider: "openai",
+          model,
+          durationMs: 7,
+          errorType: "provider_error",
+          quality: request.quality,
+          target,
+          attemptNumber: telemetry.attemptNumber,
+        });
+        throw next;
+      }
+      await telemetry.sink.emit({
+        capability: "campaign_product_image",
+        protocol: "images",
+        status: "success",
+        provider: "openai",
+        model: next.model ?? model,
+        usage: { promptTokens: 10, completionTokens: 20 },
+        durationMs: 12,
+        quality: request.quality,
+        target,
+        attemptNumber: telemetry.attemptNumber,
+      });
       return next;
     },
     async hasFallback() {
@@ -275,21 +310,30 @@ function buildHarness(): Harness {
       probeArtifact: vi.fn(async () => ({ kind: "absent" as const })),
     },
     createGateway,
-    createTelemetry: (): AiTelemetryContext => ({
-      operationRunId: "run-1",
-      operationRunType: "campaign_delivery",
-      traceId: "trace-1",
-      storeId: STORE_ID,
-      campaignId: CAMPAIGN_ID,
-      attemptNumber: 1,
-      sink: { emit: async () => {} },
-    }),
+    createTelemetry: (input: {
+      attemptNumber: number;
+      internalCost?: AiEnvelopeInternalCost;
+    }): AiTelemetryContext => {
+      telemetryInputs.push({
+        attemptNumber: input.attemptNumber,
+        ...(input.internalCost ? { internalCost: input.internalCost } : {}),
+      });
+      return {
+        operationRunId: "run-1",
+        operationRunType: "campaign_delivery",
+        traceId: "trace-1",
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        attemptNumber: input.attemptNumber,
+        sink: { emit: async () => {} },
+      };
+    },
     recordAttempt: vi.fn(async () => ({ id: "op-row-1", operationId: OPERATION_ID })),
     recordDiagnosis: vi.fn(async () => ({ reference: "ref-test" })),
     generateSupportReference: () => "66666666-6666-4666-8666-666666666666",
     copyInvoker, // copy DEFAULT real + provider SIMULADO (não fornecemos deps.copy)
     copyDirectorEnabled: true,
-    onAttemptEnvelope: (envelope: AttemptEnvelope) => {
+    onAttemptEnvelope: (envelope: AiCallEnvelope) => {
       envelopes.push(envelope);
     },
     // pricing do NOVO FLUXO SIMULADA (modelo+qualidade+versão+origem).
@@ -315,6 +359,7 @@ function buildHarness(): Harness {
     deps,
     events,
     envelopes,
+    telemetryInputs,
     copyCalls: () => copyCallCount,
     setProviderSequence(seq) {
       providerSequence = seq;
@@ -360,7 +405,7 @@ describe("Plano 08 (correção) — copy DEFAULT real conectada ao fluxo produti
       { imageBase64: "AAAA", mimeType: "image/png", model: "gpt-image-2.5-sunburst" },
     ]);
     // Usa o sink de envelope de captura (padrão do harness).
-    harness.deps.onAttemptEnvelope = (envelope: AttemptEnvelope) => {
+    harness.deps.onAttemptEnvelope = (envelope: AiCallEnvelope) => {
       harness.envelopes.push(envelope);
     };
 
@@ -480,31 +525,45 @@ describe("Plano 08 (correção) — conclusão tardia da copy não persiste (Gap
   });
 });
 
-describe("Plano 08 (correção) — custo interno pela pricing do NOVO FLUXO (Gap 4)", () => {
-  it("o custo registrado no envelope vem de modelo+qualidade (+versão/origem), não da resolução legada", async () => {
+describe("Plano 08 (correção/P1) — custo interno pela pricing do NOVO FLUXO (Gap 4)", () => {
+  it("P1: o custo interno (modelo+qualidade+versão+origem) entra no contexto do sink; o envelope REAL preserva usage/duration", async () => {
     const harness = buildHarness();
     harness.setProviderSequence([
       { imageBase64: "AAAA", mimeType: "image/png", model: "gpt-image-2.5-sunburst" },
     ]);
-    harness.deps.onAttemptEnvelope = (envelope: AttemptEnvelope) => {
+    harness.deps.onAttemptEnvelope = (envelope: AiCallEnvelope) => {
       harness.envelopes.push(envelope);
     };
 
     const { terminal } = await runOrchestrator(harness);
 
     expect(terminal).toMatchObject({ type: "result" });
+
+    // O custo interno do NOVO FLUXO (modelo+qualidade+versão+origem) acompanha o
+    // contexto de telemetria — origem `pricing_table`, NUNCA `provider_reported`.
+    expect(harness.telemetryInputs).toHaveLength(1);
+    expect(harness.telemetryInputs[0].internalCost).toEqual({
+      estimatedCostUsd: 0.041,
+      pricingVersion: "pricing-ver-1",
+      origin: "new_flow_pair_pricing",
+      source: "pricing_table",
+      model: SNAPSHOT.primaryModel,
+      quality: SNAPSHOT.primaryQuality,
+    });
+
+    // O envelope observado é o REAL do gateway (usage/duration/status reais).
     expect(harness.envelopes).toHaveLength(1);
     expect(harness.envelopes[0]).toMatchObject({
       target: "primary",
       model: SNAPSHOT.primaryModel,
       quality: SNAPSHOT.primaryQuality,
-      internalCostUsd: 0.041,
-      internalCostVersionId: "pricing-ver-1",
-      internalCostSource: "pricing_table",
+      status: "success",
+      durationMs: 12,
+      usage: { promptTokens: 10, completionTokens: 20 },
     });
   });
 
-  it("Gap 4: a emissão do envelope é AGUARDADA e um sink FALHO não vira rejeição não tratada", async () => {
+  it("P1: o observador é chamado APÓS o sink e uma falha best-effort NÃO gera rejeição não tratada", async () => {
     const harness = buildHarness();
     harness.setProviderSequence([
       { imageBase64: "AAAA", mimeType: "image/png", model: "gpt-image-2.5-sunburst" },
@@ -518,8 +577,8 @@ describe("Plano 08 (correção) — custo interno pela pricing do NOVO FLUXO (Ga
 
     const { terminal } = await runOrchestrator(harness);
 
-    // O terminal foi emitido APÓS o sink completar (emissão AGUARDADA) e a falha
-    // do sink NÃO interrompeu a geração nem gerou rejeição não tratada.
+    // O envelope REAL foi persistido e o observador best-effort falhou SEM
+    // interromper a geração nem gerar rejeição não tratada.
     expect(terminal).toMatchObject({ type: "result" });
     expect(sinkCompleted).toBe(true);
   });
@@ -548,9 +607,13 @@ describe("Plano 08 (correção) — wiring da ROTA (Gap 1)", () => {
     expect(orchestratorSource).toContain("deps.copy ??");
     // Gap 2 — a copy inicia APÓS a aquisição vencedora.
     expect(orchestratorSource).toContain("startCopy()");
-    // Gap 4 — custo do novo fluxo + destino persistente do envelope.
+    // P1 (Opção A) — custo do novo fluxo no contexto do sink + envelope REAL
+    // (sem reconstrução `createDurableAttemptEnvelopeSink`).
     expect(orchestratorSource).toContain("resolveAttemptCost");
-    expect(orchestratorSource).toContain("createDurableAttemptEnvelopeSink");
+    expect(orchestratorSource).toContain("internalCost");
+    expect(orchestratorSource).toContain("withOnCallTelemetry");
+    expect(orchestratorSource).not.toContain("createDurableAttemptEnvelopeSink");
+    expect(orchestratorSource).not.toContain("emitAttemptEnvelope");
   });
 });
 

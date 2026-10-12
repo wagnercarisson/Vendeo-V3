@@ -1,8 +1,13 @@
 import { resolveAiCost } from "@/lib/ai-cost/cost-estimator";
 import { AiCostTracker } from "@/lib/ai-cost/tracker";
-import type { AiCallInfo, AiCostEvent, CostResolution, OperationRunType } from "@/lib/ai-cost/types";
+import type { AiCostEvent, CostResolution, OperationRunType } from "@/lib/ai-cost/types";
 import { CAPABILITY_GENERATION_TYPE } from "./generation-type-map";
-import type { AiCallEnvelope, AiTelemetryContext, AiTelemetrySink } from "./types";
+import type {
+  AiCallEnvelope,
+  AiEnvelopeInternalCost,
+  AiTelemetryContext,
+  AiTelemetrySink,
+} from "./types";
 
 /**
  * Sink de telemetria (F46, D3/D9/D10).
@@ -45,6 +50,16 @@ export interface AiTelemetrySinkContext {
    * `resolveAiCost`** (correção de revisão 46-02/46-03 C).
    */
   onCostResolved?: (cost: CostResolution) => void;
+  /**
+   * F56.2b1b (P1 — Opção A) — custo INTERNO do NOVO FLUXO já resolvido
+   * (modelo + qualidade + versão + origem, `@/lib/ai-cost/image-pair-pricing`).
+   * Quando presente, o sink usa ESTE custo (origem `pricing_table` +
+   * `pricing_version`) — NUNCA `provider_reported` — e VALIDA `model`/`quality`
+   * contra o envelope REAL; um valor ausente/inválido é sinalizado
+   * explicitamente (nunca mislabelado, nunca cai na cadeia legada). Ausente ⇒ a
+   * cadeia legada de `resolveAiCost` permanece byte-idêntica. **ADITIVO.**
+   */
+  internalCost?: AiEnvelopeInternalCost;
 }
 
 /** Sink padrão de produção: resolve custo e grava call-level (fail-open). */
@@ -57,16 +72,41 @@ export class DefaultAiTelemetrySink implements AiTelemetrySink {
   async emit(envelope: AiCallEnvelope): Promise<void> {
     try {
       const generationType = CAPABILITY_GENERATION_TYPE[envelope.capability];
-      const cost = await resolveAiCost({
-        provider: envelope.provider,
-        model: envelope.model,
-        usage: envelope.usage,
-        providerReportedCostUsd: envelope.providerReportedCostUsd,
-        // A tool image_generation só conta quando o envelope declara o uso REAL
-        // (usageMeta.imageGenerationTool) — nunca inferida do protocolo responses.
-        imageGenerationTool: envelope.usageMeta?.imageGenerationTool === true,
-        generationType,
-      });
+      const internal = this.context.internalCost;
+
+      let cost: CostResolution;
+      let internalInvalidReason: string | null = null;
+      if (internal) {
+        // P1 (Opção A): custo INTERNO já resolvido. A origem é `pricing_table`
+        // (nunca `provider_reported`) — o envelope REAL carrega usage/durationMs/
+        // status/model/quality reais do gateway.
+        const resolution = resolveInternalCost(internal, envelope);
+        if (resolution.valid) {
+          cost = resolution.cost;
+        } else {
+          // NUNCA mislabelar como `pricing_table` nem cair SILENCIOSAMENTE na
+          // cadeia legada: custo honestamente DESCONHECIDO (`not_available`) +
+          // motivo explícito em metadata.
+          internalInvalidReason = resolution.reason;
+          console.warn(
+            `[AiTelemetrySink] internalCost inválido (${resolution.reason}); ` +
+              "registrando custo como not_available (sem fallback legado).",
+          );
+          cost = { estimatedCostUsd: null, costSource: "not_available" };
+        }
+      } else {
+        // Cadeia legada INTACTA (byte-idêntica) quando `internalCost` está ausente.
+        cost = await resolveAiCost({
+          provider: envelope.provider,
+          model: envelope.model,
+          usage: envelope.usage,
+          providerReportedCostUsd: envelope.providerReportedCostUsd,
+          // A tool image_generation só conta quando o envelope declara o uso REAL
+          // (usageMeta.imageGenerationTool) — nunca inferida do protocolo responses.
+          imageGenerationTool: envelope.usageMeta?.imageGenerationTool === true,
+          generationType,
+        });
+      }
 
       // Acumulação no caller usa exatamente esta resolução (sem 2ª chamada).
       this.context.onCostResolved?.(cost);
@@ -83,7 +123,10 @@ export class DefaultAiTelemetrySink implements AiTelemetrySink {
         generationType,
         provider: envelope.provider,
         model: envelope.model,
-        attemptNumber: this.context.attemptNumber ?? 1,
+        // P1 (Opção A): preserva o `attemptNumber` do envelope REAL (o gateway já
+        // o preenche); fallback ao contexto do sink. Para flows legados os dois
+        // coincidem (o gateway semeia `envelope.attemptNumber` do contexto).
+        attemptNumber: envelope.attemptNumber ?? this.context.attemptNumber ?? 1,
         durationMs: envelope.durationMs,
         status: envelope.status,
         errorType: envelope.errorType ?? null,
@@ -92,7 +135,7 @@ export class DefaultAiTelemetrySink implements AiTelemetrySink {
         // F38.2.1 (D3): snapshot do run propagado às chamadas filhas — só valores.
         usdBrlRateAtGeneration: this.context.usdBrlRateAtGeneration ?? null,
         creditValueBrlAtGeneration: this.context.creditValueBrlAtGeneration ?? null,
-        metadata: buildCallMetadata(envelope, cost),
+        metadata: buildCallMetadata(envelope, cost, internal, internalInvalidReason),
       };
 
       await this.tracker.record(event);
@@ -103,6 +146,52 @@ export class DefaultAiTelemetrySink implements AiTelemetrySink {
 }
 
 /**
+ * Resolve o custo INTERNO do novo fluxo a partir do envelope REAL (P1 — Opção A).
+ *
+ * Só é VÁLIDO quando:
+ *  - o `model` e o `quality` do custo INTERNO são IGUAIS aos do envelope REAL
+ *    (a chamada real) — mismatch ⇒ inválido (nunca associar modelo/qualidade
+ *    divergentes);
+ *  - o valor é FINITO e NÃO-NEGATIVO;
+ *  - `pricingVersion` e `origin` estão presentes (não vazios).
+ *
+ * Inválido/ausente NUNCA vira `pricing_table` nem cai na cadeia legada — é
+ * devolvido como `{ valid: false, reason }` para o chamador gravar
+ * `not_available` + motivo explícito em metadata.
+ */
+function resolveInternalCost(
+  internal: AiEnvelopeInternalCost,
+  envelope: AiCallEnvelope,
+): { valid: true; cost: CostResolution } | { valid: false; reason: string } {
+  if (internal.model !== envelope.model) {
+    return { valid: false, reason: "model_mismatch" };
+  }
+  if (internal.quality !== envelope.quality) {
+    return { valid: false, reason: "quality_mismatch" };
+  }
+
+  const usd = internal.estimatedCostUsd;
+  if (typeof usd !== "number" || !Number.isFinite(usd) || usd < 0) {
+    return { valid: false, reason: "invalid_cost_value" };
+  }
+  if (internal.pricingVersion == null || internal.pricingVersion === "") {
+    return { valid: false, reason: "missing_pricing_version" };
+  }
+  if (internal.origin == null || internal.origin === "") {
+    return { valid: false, reason: "missing_origin" };
+  }
+
+  return {
+    valid: true,
+    cost: {
+      estimatedCostUsd: usd,
+      costSource: "pricing_table",
+      pricingVersion: internal.pricingVersion,
+    },
+  };
+}
+
+/**
  * Metadata call-level para auditoria (preserva o contrato do `buildCallMetadata`
  * legado): usage bruto sanitizado + flags do caminho + componentes da fórmula de
  * estimativa + capability/protocol originais.
@@ -110,6 +199,8 @@ export class DefaultAiTelemetrySink implements AiTelemetrySink {
 function buildCallMetadata(
   envelope: AiCallEnvelope,
   cost: CostResolution,
+  internal?: AiEnvelopeInternalCost,
+  internalInvalidReason?: string | null,
 ): Record<string, unknown> {
   const usageMeta = envelope.usageMeta
     ? {
@@ -143,6 +234,24 @@ function buildCallMetadata(
     protocol: envelope.protocol,
     ...(usageMeta ?? {}),
     ...(formula ?? {}),
+    // P1 (Opção A): origem INTERNA auditável do NOVO FLUXO — acrescentada DEPOIS
+    // do spread de `envelope.metadata` (o caller não pode forjar estas chaves).
+    // Ausente ⇒ metadata legada byte-idêntica.
+    ...(internal
+      ? {
+          internal_cost_origin: internal.origin,
+          internal_cost_source: internal.source,
+          internal_cost_version_id: internal.pricingVersion,
+          internal_cost_model: internal.model,
+          internal_cost_quality: internal.quality,
+          ...(internalInvalidReason != null
+            ? {
+                internal_cost_invalid: true,
+                internal_cost_invalid_reason: internalInvalidReason,
+              }
+            : {}),
+        }
+      : {}),
   };
 }
 
@@ -204,11 +313,13 @@ export function createDefaultTelemetryContext(
  * Adaptador fino de compatibilidade: mantém o `onCall` legado (que recebe o
  * **envelope já produzido** pelo gateway) SEM conduzir a telemetria de produção
  * (D9/D11). O envelope continua indo ao sink original; o `onCall` é best-effort
- * e nunca bloqueia a geração.
+ * e nunca bloqueia a geração. O callback recebe o `AiCallEnvelope` COMPLETO
+ * (aditivo a `AiCallInfo`) — observadores que tipam `AiCallInfo` continuam
+ * compatíveis (o envelope o estende).
  */
 export function withOnCallTelemetry(
   telemetry: AiTelemetryContext,
-  onCall?: (info: AiCallInfo) => void | Promise<void>,
+  onCall?: (envelope: AiCallEnvelope) => void | Promise<void>,
 ): AiTelemetryContext {
   if (!onCall) return telemetry;
   return {

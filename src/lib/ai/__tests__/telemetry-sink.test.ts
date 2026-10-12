@@ -26,7 +26,7 @@ import {
 import { withDomainOutcome } from "../domain-outcome";
 import { CAPABILITY_GENERATION_TYPE } from "../generation-type-map";
 import { ALL_CAPABILITIES } from "../model-registry";
-import type { AiCallEnvelope, AiTelemetryContext } from "../types";
+import type { AiCallEnvelope, AiEnvelopeInternalCost, AiTelemetryContext } from "../types";
 
 const context: AiTelemetrySinkContext = {
   operationRunId: "run-1",
@@ -251,6 +251,146 @@ describe("DefaultAiTelemetrySink — persistência best-effort (D3/D9)", () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("DefaultAiTelemetrySink — custo INTERNO do novo fluxo (P1, Opção A)", () => {
+  const realEnvelope: AiCallEnvelope = {
+    capability: "campaign_product_image",
+    protocol: "images",
+    status: "success",
+    provider: "openai",
+    model: "gpt-image-2.5-sunburst",
+    quality: "medium",
+    durationMs: 987,
+    usage: { promptTokens: 10, completionTokens: 20 },
+  };
+
+  const validInternal: AiEnvelopeInternalCost = {
+    estimatedCostUsd: 0.041,
+    pricingVersion: "pricing-ver-1",
+    origin: "new_flow_pair_pricing",
+    source: "pricing_table",
+    model: "gpt-image-2.5-sunburst",
+    quality: "medium",
+  };
+
+  const sinkWith = (internalCost: AiEnvelopeInternalCost) =>
+    new DefaultAiTelemetrySink({ ...context, internalCost }, { record: mockRecord } as never);
+
+  it("VALID ⇒ cost_source='pricing_table' + provider_reported NULL + usage/duration REAIS + metadata interna", async () => {
+    const sink = sinkWith(validInternal);
+
+    await sink.emit(realEnvelope);
+
+    // O custo interno NUNCA passa por `resolveAiCost` (nunca `provider_reported`).
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    expect(mockRecord).toHaveBeenCalledTimes(1);
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.cost).toEqual({
+      estimatedCostUsd: 0.041,
+      costSource: "pricing_table",
+      pricingVersion: "pricing-ver-1",
+    });
+    // `provider_reported_cost_usd` fica NULL (a propriedade não é definida).
+    expect(event.cost.providerReportedCostUsd).toBeUndefined();
+    // Preserva usage/durationMs REAIS do envelope do gateway.
+    expect(event.tokens).toEqual({ promptTokens: 10, completionTokens: 20 });
+    expect(event.durationMs).toBe(987);
+    expect(event.status).toBe("success");
+    expect(event.metadata).toMatchObject({
+      internal_cost_origin: "new_flow_pair_pricing",
+      internal_cost_source: "pricing_table",
+      internal_cost_version_id: "pricing-ver-1",
+      internal_cost_model: "gpt-image-2.5-sunburst",
+      internal_cost_quality: "medium",
+    });
+  });
+
+  it("MODEL mismatch ⇒ INVALID (não mislabela `pricing_table` nem cai na cadeia legada)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await sinkWith({ ...validInternal, model: "outro-modelo" }).emit(realEnvelope);
+
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.cost).toEqual({ estimatedCostUsd: null, costSource: "not_available" });
+    expect(event.metadata).toMatchObject({
+      internal_cost_invalid: true,
+      internal_cost_invalid_reason: "model_mismatch",
+    });
+    warn.mockRestore();
+  });
+
+  it("QUALITY mismatch ⇒ INVALID", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await sinkWith({ ...validInternal, quality: "high" }).emit(realEnvelope);
+
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.cost).toEqual({ estimatedCostUsd: null, costSource: "not_available" });
+    expect(event.metadata).toMatchObject({ internal_cost_invalid_reason: "quality_mismatch" });
+    warn.mockRestore();
+  });
+
+  it("NÃO-FINITO (NaN) ⇒ INVALID", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await sinkWith({ ...validInternal, estimatedCostUsd: Number.NaN }).emit(realEnvelope);
+
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.cost).toEqual({ estimatedCostUsd: null, costSource: "not_available" });
+    expect(event.metadata).toMatchObject({ internal_cost_invalid_reason: "invalid_cost_value" });
+    warn.mockRestore();
+  });
+
+  it("NEGATIVO ⇒ INVALID", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await sinkWith({ ...validInternal, estimatedCostUsd: -0.01 }).emit(realEnvelope);
+
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.cost).toEqual({ estimatedCostUsd: null, costSource: "not_available" });
+    expect(event.metadata).toMatchObject({ internal_cost_invalid_reason: "invalid_cost_value" });
+    warn.mockRestore();
+  });
+
+  it("AUSENTE (null) ⇒ INVALID — NUNCA `pricing_table` NEM fallback legado silencioso", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await sinkWith({ ...validInternal, estimatedCostUsd: null, pricingVersion: null }).emit(
+      realEnvelope,
+    );
+
+    // Nem `pricing_table` (mislabel) nem a cadeia legada (`resolveAiCost`).
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.cost).toEqual({ estimatedCostUsd: null, costSource: "not_available" });
+    expect(event.metadata).toMatchObject({
+      internal_cost_invalid: true,
+      internal_cost_invalid_reason: "invalid_cost_value",
+    });
+    warn.mockRestore();
+  });
+
+  it("SEM pricingVersion ⇒ INVALID (reason missing_pricing_version)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await sinkWith({ ...validInternal, pricingVersion: null }).emit(realEnvelope);
+
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    expect(mockRecord.mock.calls[0][0].metadata).toMatchObject({
+      internal_cost_invalid_reason: "missing_pricing_version",
+    });
+    warn.mockRestore();
+  });
+
+  it("SEM origin ⇒ INVALID (reason missing_origin)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await sinkWith({ ...validInternal, origin: null }).emit(realEnvelope);
+
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    expect(mockRecord.mock.calls[0][0].metadata).toMatchObject({
+      internal_cost_invalid_reason: "missing_origin",
+    });
+    warn.mockRestore();
   });
 });
 
