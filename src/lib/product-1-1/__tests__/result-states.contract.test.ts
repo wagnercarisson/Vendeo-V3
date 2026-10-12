@@ -319,3 +319,52 @@ describe("rota download — preservação do ramo legado (source)", () => {
     expect(source.indexOf("getCampaignOperation(")).toBeLessThan(f37Idx);
   });
 });
+
+describe("estados de resultado da UI — Surface 2/3 (âmbar ≠ falha)", () => {
+  const progressSource = readFileSync(
+    path.resolve(process.cwd(), "src/components/flow/generation-progress.tsx"),
+    "utf8",
+  );
+  const panelSource = readFileSync(
+    path.resolve(process.cwd(), "src/components/flow/unknown-result-panel.tsx"),
+    "utf8",
+  );
+
+  it("GenerationProgress: variant `unknown` âmbar com AlertTriangle, distinto da falha vermelha", () => {
+    expect(progressSource).toMatch(/variant/);
+    expect(progressSource).toMatch(/accent-amber/);
+    expect(progressSource).toMatch(/AlertTriangle/);
+    expect(progressSource).toMatch(/accent-blue/);
+    expect(progressSource).toMatch(/accent-red/);
+    expect(progressSource).toContain("Não foi possível confirmar a conclusão desta geração");
+    expect(progressSource).not.toContain("Gerar novamente");
+  });
+
+  it("GenerationProgress: mensagens de estado exatas (running/done/failure)", () => {
+    expect(progressSource).toContain("Gerando a campanha...");
+    expect(progressSource).toContain("Campanha gerada.");
+    expect(progressSource).toContain("A geração falhou.");
+  });
+
+  it("UnknownResultPanel: título/corpo exatos, âmbar, referência em mono e sem 'Gerar novamente'", () => {
+    expect(panelSource).toContain(
+      "Não foi possível confirmar a conclusão desta geração",
+    );
+    expect(panelSource).toContain(
+      "Você pode verificar novamente ou falar com o suporte. Verificar novamente não inicia outra geração nem cobra outro crédito.",
+    );
+    expect(panelSource).toContain("Referência de suporte:");
+    expect(panelSource).toContain("Verificar novamente");
+    expect(panelSource).toContain("Falar com o suporte");
+    expect(panelSource).toContain("font-mono");
+    expect(panelSource).toMatch(/accent-amber/);
+    expect(panelSource).toMatch(/AlertTriangle/);
+    expect(panelSource).toMatch(/role="alert"/);
+    expect(panelSource).not.toContain("Gerar novamente");
+  });
+
+  it("UnknownResultPanel: 'Verificar novamente' consulta a rota de status (query-only), sem gerar", () => {
+    expect(panelSource).toContain("/api/campaign/generation-status");
+    expect(panelSource).not.toMatch(/generate-image/);
+  });
+});
