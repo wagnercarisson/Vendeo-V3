@@ -380,8 +380,17 @@ Plans:
 
 **Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
 
+**Plans:** 8 plans in 4 waves
+
 Plans:
-- (a preencher na etapa de planejamento — ver `.planning/phases/51.2-fundacao-seo-descoberta-organica/`)
+- [ ] 51.2-01-PLAN.md — Auditoria, fronteira, decisões e preparação do C2 (wave 1, checkpoint C2)
+- [ ] 51.2-02-PLAN.md — Helpers puros de SEO (`src/lib/seo/*`) + testes unitários (wave 1)
+- [ ] 51.2-03-PLAN.md — `metadataBase`, default noindex da raiz, metadata e compartilhamento da home (wave 2)
+- [ ] 51.2-04-PLAN.md — `robots.txt` (`src/app/robots.ts`) e `sitemap.xml` (`src/app/sitemap.ts`) (wave 2)
+- [ ] 51.2-05-PLAN.md — Política de indexação por rota + `headers()` (`X-Robots-Tag`) (wave 2)
+- [ ] 51.2-06-PLAN.md — Imagem de compartilhamento institucional + C1 (wave 3, checkpoint C1)
+- [ ] 51.2-07-PLAN.md — Diagnóstico de performance + baseline do Search Console + `VERCEL_ENV` + C3 (wave 3)
+- [ ] 51.2-08-PLAN.md — Testes, validação da preparação e fechamento (wave 4)
 
 ## Historical References
 
