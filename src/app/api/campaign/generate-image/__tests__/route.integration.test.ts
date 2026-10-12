@@ -277,6 +277,43 @@ const STORE_ID = "00000000-0000-0000-0000-000000000001";
 const USER_ID = "00000000-0000-0000-0000-000000000002";
 const CAMPAIGN_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OPERATION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+// CR-01 — loja de OUTRO tenant (dona da campanha da vítima).
+const OTHER_STORE_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+
+/**
+ * CR-01 — query mockada de `campaigns` para o cenário cross-tenant: a campanha do
+ * par `(campaignId, operationId)` submetido pertence a `storeId` (OUTRO tenant).
+ */
+function crossTenantCampaignsQuery(storeId: string) {
+  return {
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        maybeSingle: vi.fn(async () => ({
+          data: { id: CAMPAIGN_ID, store_id: storeId, input_snapshot: null },
+          error: null,
+        })),
+      })),
+    })),
+  };
+}
+
+/** CR-01 — estado persistido da operação da VÍTIMA (tenant B). */
+function victimOperation(overrides: Record<string, unknown>) {
+  return {
+    campaignId: CAMPAIGN_ID,
+    operationId: OPERATION_ID,
+    status: "delivered",
+    amount: 1,
+    creditTxId: "tx-victim",
+    refundTxId: null,
+    consumedDefinitive: true,
+    terminal: true,
+    unknown: false,
+    outcome: null,
+    supportReference: null,
+    ...overrides,
+  };
+}
 
 const VALID_BODY = {
   storeId: STORE_ID,
@@ -757,5 +794,99 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     expect(
       (h.gatewayInvoke.mock.calls.at(-1)![1] as { identityImageUrl?: string }).identityImageUrl,
     ).toBe("data:image/png;base64,LOGO");
+  });
+
+  // ── CR-01 — IDOR: binding campanha↔loja ANTES do curto-circuito ────────────
+  // Um chamador autenticado dono da loja A NÃO pode usar o par (campaignId,
+  // operationId) de OUTRO tenant (campanha da loja B) para ler o estado da
+  // operação — em QUALQUER estado. A resposta é 409 `operation_identity_conflict`,
+  // SEM disclosure de estado/`supportReference` e com ZERO efeitos.
+  it.each([
+    [
+      "delivered",
+      victimOperation({ status: "delivered", terminal: true, supportReference: null }),
+    ],
+    [
+      "refunded",
+      victimOperation({
+        status: "refunded",
+        terminal: true,
+        refundTxId: "rf-victim",
+        supportReference: null,
+      }),
+    ],
+    [
+      "unknown",
+      victimOperation({
+        status: "reserved",
+        terminal: false,
+        consumedDefinitive: false,
+        unknown: true,
+        supportReference: "IMG-001-VICTIM",
+      }),
+    ],
+    [
+      "in-progress",
+      victimOperation({
+        status: "reserved",
+        terminal: false,
+        consumedDefinitive: false,
+        unknown: false,
+        supportReference: null,
+      }),
+    ],
+  ])(
+    "(CR-01) cross-tenant %s ⇒ 409 operation_identity_conflict, sem disclosure e ZERO efeitos",
+    async (_label, operation) => {
+      h.mockFrom.mockImplementation((table: string) => {
+        if (table === "stores") return STORES_QUERY;
+        if (table === "campaigns") return crossTenantCampaignsQuery(OTHER_STORE_ID);
+        return {};
+      });
+      // A operação da vítima EXISTE — sem o binding, o fluxo a retornaria.
+      h.getCampaignOperation.mockResolvedValue(operation);
+
+      const { POST } = await import("../route");
+      const res = await POST(makeRequest(VALID_BODY));
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as { error?: { code?: string; message?: string } };
+      expect(body.error?.code).toBe("operation_identity_conflict");
+
+      // SEM disclosure do estado da operação/`supportReference` do outro tenant.
+      const serialized = JSON.stringify(body);
+      expect(serialized).not.toContain("IMG-001-VICTIM");
+      expect(serialized).not.toContain(OPERATION_ID);
+      expect(serialized).not.toContain("operationId");
+      // A operação da vítima NUNCA é lida (bloqueio ANTES do curto-circuito).
+      expect(h.getCampaignOperation).not.toHaveBeenCalled();
+
+      // ZERO efeitos (nada de reserva/entrega/estorno/provider/registro de tentativa/campanha).
+      expect(h.creditReserve).not.toHaveBeenCalled();
+      expect(h.creditDeliver).not.toHaveBeenCalled();
+      expect(h.creditRefund).not.toHaveBeenCalled();
+      expect(h.gatewayInvoke).not.toHaveBeenCalled();
+      expect(h.recordOperationOutcome).not.toHaveBeenCalled();
+      expect(h.recordGenerationAttempt).not.toHaveBeenCalled();
+      expect(h.createCampaign).not.toHaveBeenCalled();
+    },
+  );
+
+  it("(CR-01) campanha da MESMA loja com operação existente ⇒ curto-circuito preservado (consulta)", async () => {
+    // Regressão: o binding NÃO pode bloquear a operação legítima da MESMA loja.
+    h.mockFrom.mockImplementation((table: string) => {
+      if (table === "stores") return STORES_QUERY;
+      if (table === "campaigns") return crossTenantCampaignsQuery(STORE_ID);
+      return {};
+    });
+    h.getCampaignOperation.mockResolvedValue(
+      victimOperation({ status: "delivered", terminal: true }),
+    );
+
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    // Curto-circuito somente-leitura: delega ao orquestrador, sem escrita.
+    expect(h.createCampaign).not.toHaveBeenCalled();
+    expect(h.recordGenerationAttempt).not.toHaveBeenCalled();
   });
 });

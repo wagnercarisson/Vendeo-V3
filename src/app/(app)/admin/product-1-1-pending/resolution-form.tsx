@@ -67,6 +67,23 @@ function artifactLabel(kind: PendingArtifactKind): string {
 }
 
 /**
+ * IN-08: rótulo do crédito DERIVADO do estado. "Reserva temporária" só descreve
+ * uma operação ainda NÃO liquidada; um estado terminal (`delivered`/`refunded`)
+ * não é uma reserva temporária (wording enganoso em linha terminal).
+ */
+function creditReservationLabel(item: PendingOperationItem): string {
+  if (item.status === "delivered") return "Crédito consumido";
+  if (item.status === "refunded") return "Crédito estornado";
+  if (item.terminal) return "Operação encerrada";
+  return "Reserva temporária";
+}
+
+/** WR-01: chave estável de UMA pendência (seleção da lista + remount do form). */
+export function pendingItemKey(item: PendingOperationItem): string {
+  return `${item.campaignId}:${item.operationId}`;
+}
+
+/**
  * Distingue os estados bloqueados (E1/D13) sem prometer continuidade:
  * - "Processando": operação ativa/claim `in_progress` sem evidência de encerramento.
  * - "Não foi possível confirmar o estado": evidência indeterminada/desconhecida.
@@ -104,8 +121,16 @@ export function PendingReadOnlyNotice() {
   );
 }
 
-/** Lista SOMENTE-LEITURA das pendências (uma linha por operação). */
-export function PendingOperationsList({ operations }: { operations: PendingOperationItem[] }) {
+/** Lista das pendências (uma linha por operação; selecionável quando `onSelect`). */
+export function PendingOperationsList({
+  operations,
+  selectedKey,
+  onSelect,
+}: {
+  operations: PendingOperationItem[];
+  selectedKey?: string | null;
+  onSelect?: (key: string) => void;
+}) {
   if (operations.length === 0) {
     return (
       <Card className="p-6">
@@ -121,8 +146,13 @@ export function PendingOperationsList({ operations }: { operations: PendingOpera
     <div className="grid max-w-5xl gap-4">
       {operations.map((item) => {
         const blocked = pendingStateLabel(item);
+        const key = pendingItemKey(item);
+        const isSelected = selectedKey === key;
         return (
-          <Card key={`${item.campaignId}:${item.operationId}`} className="space-y-3 p-5">
+          <Card
+            key={key}
+            className={`space-y-3 p-5${isSelected ? " ring-2 ring-accent-blue" : ""}`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <code className="font-mono text-xs text-text-primary">{item.campaignId}</code>
               <Badge variant={item.terminal ? "ready" : "generating"}>
@@ -132,7 +162,9 @@ export function PendingOperationsList({ operations }: { operations: PendingOpera
             <dl className="grid gap-3 text-xs sm:grid-cols-2">
               <div>
                 <dt className="font-semibold uppercase tracking-wider text-text-muted">Crédito</dt>
-                <dd className="mt-1 text-text-secondary">Reserva temporária · {item.amount}</dd>
+                <dd className="mt-1 text-text-secondary">
+                  {creditReservationLabel(item)} · {item.amount}
+                </dd>
               </div>
               <div>
                 <dt className="font-semibold uppercase tracking-wider text-text-muted">Arte</dt>
@@ -167,9 +199,51 @@ export function PendingOperationsList({ operations }: { operations: PendingOpera
                 {blocked}
               </p>
             )}
+            {onSelect && (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant={isSelected ? "secondary" : "ghost"}
+                  aria-pressed={isSelected}
+                  onClick={() => onSelect(key)}
+                >
+                  {isSelected ? "Selecionada para resolução" : "Selecionar para resolver"}
+                </Button>
+              </div>
+            )}
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * WR-01 — painel de resolução com SELEÇÃO: lista TODAS as pendências
+ * (selecionáveis) e resolve a SELECIONADA. Qualquer pendência pode ser resolvida,
+ * não apenas a primeira. O `key` do formulário é a identidade da operação, então
+ * trocar a seleção reinicializa o rascunho.
+ */
+export function PendingResolutionPanel({
+  operations,
+}: {
+  operations: PendingOperationItem[];
+}) {
+  const [selectedKey, setSelectedKey] = useState<string>(() =>
+    operations.length > 0 ? pendingItemKey(operations[0]) : "",
+  );
+  const selected =
+    operations.find((item) => pendingItemKey(item) === selectedKey) ?? operations[0] ?? null;
+  if (!selected) return null;
+
+  return (
+    <div className="space-y-6">
+      <PendingOperationsList
+        operations={operations}
+        selectedKey={pendingItemKey(selected)}
+        onSelect={setSelectedKey}
+      />
+      <ResolutionForm key={pendingItemKey(selected)} item={selected} />
     </div>
   );
 }

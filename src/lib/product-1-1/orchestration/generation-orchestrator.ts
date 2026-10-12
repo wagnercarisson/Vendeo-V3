@@ -1,6 +1,5 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -1113,7 +1112,9 @@ export async function runProductOneToOneGeneration(
             // P1 (Opção A): o envelope REAL (timeout/abort) já foi persistido
             // pelo sink ÚNICO durante `gateway.invoke`.
             const reference = newSupportReference();
-            const persisted = await markUnknownOutcome(reference);
+            // WR-02: renomeado para NÃO sombrear o `persisted` externo (resultado da
+            // persistência do snapshot, `:863`) — significados distintos.
+            const markerPersisted = await markUnknownOutcome(reference);
             // Gap 3 — diagnóstico durável correlacionado à MESMA referência
             // emitida (recuperável por `findByReference`), em AMBOS os caminhos
             // de pendência (unknown persistido OU residual).
@@ -1125,7 +1126,7 @@ export async function runProductOneToOneGeneration(
               model: snapshotPairForTarget(snapshot, target).model,
               quality: snapshotPairForTarget(snapshot, target).quality,
             });
-            if (persisted) {
+            if (markerPersisted) {
               // Achado 5(b) — o `unknown` persistiu: FINALIZA o claim com um
               // status TERMINAL dedicado (`abandoned`) para que NÃO permaneça
               // `in_progress` (o contrato exige residual apenas quando a

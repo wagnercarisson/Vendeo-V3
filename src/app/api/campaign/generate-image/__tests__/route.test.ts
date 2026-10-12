@@ -1954,6 +1954,52 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
   });
 
+  it('WR-04: conflito do novo fluxo PRESERVA suggestedProductName (paridade legada)', async () => {
+    setupNewFlowMocks();
+    mockInputValidationValidate.mockResolvedValueOnce({
+      classification: 'conflict',
+      suggestedProductName: 'Sugestão do modelo',
+    } as any);
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.reason).toBe('product_image_conflict');
+    // A ação corretiva "Usar <sugestão>" do caminho legado permanece disponível.
+    expect(body.suggestedProductName).toBe('Sugestão do modelo');
+  });
+
+  it('WR-04: strong_conflict também PRESERVA suggestedProductName', async () => {
+    setupNewFlowMocks();
+    mockInputValidationValidate.mockResolvedValueOnce({
+      classification: 'strong_conflict',
+      suggestedProductName: 'Sugestão forte',
+    } as any);
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.reason).toBe('product_image_strong_conflict');
+    expect(body.suggestedProductName).toBe('Sugestão forte');
+  });
+
+  it('WR-04: low-confidence NÃO inclui suggestedProductName (paridade legada)', async () => {
+    setupNewFlowMocks();
+    mockInputValidationValidate.mockResolvedValueOnce({
+      classification: 'low-confidence',
+      suggestedProductName: 'Ignorada',
+    } as any);
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.reason).toBe('product_image_low_confidence');
+    expect(body.suggestedProductName).toBeUndefined();
+  });
+
   it('guard refused ⇒ 403 e NENHUM efeito do novo fluxo', async () => {
     setupNewFlowMocks();
     mockResolveProductFlowAuthorization.mockResolvedValueOnce({ allowed: false, code: 'stage_off' } as any);

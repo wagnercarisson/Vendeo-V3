@@ -7,7 +7,7 @@ import {
 import {
   PendingOperationsList,
   PendingReadOnlyNotice,
-  ResolutionForm,
+  PendingResolutionPanel,
   type PendingOperationItem,
 } from "./resolution-form";
 
@@ -71,7 +71,9 @@ export default async function AdminProductOneToOnePendingPage() {
       {/* Região B — aviso permanente de somente-leitura */}
       <PendingReadOnlyNotice />
 
-      {/* Região C — lista de pendências (ou estado vazio / erro de leitura) */}
+      {/* Regiões C+D — lista de pendências + painel de resolução (client). A
+          lista é SELECIONÁVEL e o formulário resolve a pendência SELECIONADA:
+          QUALQUER pendência pode ser resolvida (WR-01), não apenas a primeira. */}
       <section aria-labelledby="pending-list-heading" className="space-y-3">
         <h2
           id="pending-list-heading"
@@ -86,13 +88,12 @@ export default async function AdminProductOneToOnePendingPage() {
               description="Recarregue a página."
             />
           </Card>
-        ) : (
+        ) : operations.length === 0 ? (
           <PendingOperationsList operations={operations} />
+        ) : (
+          <PendingResolutionPanel operations={operations} />
         )}
       </section>
-
-      {/* Região D — painel de resolução (client) */}
-      {operations.length > 0 && <ResolutionForm item={operations[0]} />}
     </div>
   );
 }

@@ -327,6 +327,51 @@ export const POST = apiHandler(async (request: NextRequest) => {
       const newFlow = newFlowParsed.data;
       const newFlowBackgroundDirection: ProductOneToOneBackgroundDirection =
         newFlow.backgroundDirection;
+      // Loja AUTORIZADA do pedido (`rawStoreId === newFlow.storeId`, já validada por
+      // `requireOwnership` acima). Usada pelo binding campanha↔loja (CR-01) ANTES de
+      // qualquer leitura/retorno da operação.
+      const newFlowStoreId = newFlow.storeId;
+
+      // (CR-01) Binding campanha↔loja ANTES de qualquer leitura/retorno da operação.
+      // A identidade `(campaignId, operationId)` NUNCA pode ser aceita para a campanha
+      // de OUTRA loja. Fail-closed: falha de LEITURA da campanha BLOQUEIA (sem
+      // disclosure de estado/`supportReference` e sem efeitos); campanha EXISTENTE de
+      // loja divergente ⇒ `operation_identity_conflict` 409 ANTES de ler a operação.
+      // Só prossegue quando a campanha está AUSENTE (campanha nova) ou pertence à loja
+      // AUTORIZADA. Este MESMO registro é reusado adiante para o check de conteúdo
+      // idempotente (nenhuma leitura duplicada de `campaigns`).
+      const existingNewFlowCampaign = await supabaseAdmin
+        .from("campaigns")
+        .select("id, store_id, input_snapshot")
+        .eq("id", newFlow.campaignId)
+        .maybeSingle<{
+          id: string;
+          store_id: string;
+          input_snapshot: Record<string, unknown> | null;
+        }>();
+      if (existingNewFlowCampaign.error) {
+        console.error(
+          `[generate-image] new_flow campaign read error — ${existingNewFlowCampaign.error.message}`,
+        );
+        return Response.json(
+          { error: { message: "Erro ao verificar a campanha." } },
+          { status: 500 },
+        );
+      }
+      if (
+        existingNewFlowCampaign.data &&
+        existingNewFlowCampaign.data.store_id !== newFlowStoreId
+      ) {
+        return Response.json(
+          {
+            error: {
+              code: "operation_identity_conflict",
+              message: "Identidade de campanha divergente.",
+            },
+          },
+          { status: 409 },
+        );
+      }
 
       // (F6/I1 — achado 3) Reenvio = SOMENTE consulta. Reconhece uma operação JÁ
       // EXISTENTE para `campaignId` ANTES de qualquer checagem pré-reserva,
@@ -464,7 +509,6 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // (rawStoreId === newFlow.storeId); legal/readiness/rate limit/saldo/custo
       // e validação de entrada rodam aqui.
       const newFlowUser = guardUser;
-      const newFlowStoreId = newFlow.storeId;
       const newFlowClearance = await requireLegalClearance({
         storeId: newFlowStoreId,
         userId: newFlowUser.userId,
@@ -566,11 +610,21 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 : newFlowValidation.classification === "strong_conflict"
                   ? "product_image_strong_conflict"
                   : "product_image_conflict";
+            // WR-04 — paridade legada: preserva a ação corretiva "Usar <sugestão>".
+            // O caminho legado só inclui `suggestedProductName` em conflict/
+            // strong_conflict (NUNCA em low-confidence); o novo fluxo espelha esse
+            // contrato para não perder a correção de um clique.
+            const newFlowIsConflict =
+              newFlowValidation.classification === "conflict" ||
+              newFlowValidation.classification === "strong_conflict";
             return Response.json(
               {
                 status: "needs_user_action",
                 reason,
                 message: "O nome do produto digitado não corresponde à imagem enviada.",
+                ...(newFlowIsConflict
+                  ? { suggestedProductName: newFlowValidation.suggestedProductName }
+                  : {}),
               },
               { status: 409 },
             );
@@ -708,40 +762,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
       );
 
       // (5) C3/F6 — campanha IDEMPOTENTE por `campaignId` do corpo (nunca uma
-      // segunda campanha; loja E CONTEÚDO divergentes ⇒ conflito). O reuso compara
-      // a loja E o conteúdo congelado persistido (`input_snapshot`), não só a loja.
-      const existingNewFlowCampaign = await supabaseAdmin
-        .from("campaigns")
-        .select("id, store_id, input_snapshot")
-        .eq("id", newFlow.campaignId)
-        .maybeSingle<{
-          id: string;
-          store_id: string;
-          input_snapshot: Record<string, unknown> | null;
-        }>();
-      if (existingNewFlowCampaign.error) {
-        console.error(
-          `[generate-image] new_flow campaign read error — ${existingNewFlowCampaign.error.message}`,
-        );
-        return Response.json(
-          { error: { message: "Erro ao verificar a campanha." } },
-          { status: 500 },
-        );
-      }
-      if (
-        existingNewFlowCampaign.data &&
-        existingNewFlowCampaign.data.store_id !== newFlowStoreId
-      ) {
-        return Response.json(
-          {
-            error: {
-              code: "operation_identity_conflict",
-              message: "Identidade de campanha divergente.",
-            },
-          },
-          { status: 409 },
-        );
-      }
+      // segunda campanha; loja E CONTEÚDO divergentes ⇒ conflito). O binding
+      // campanha↔loja JÁ foi verificado no início do ramo (CR-01, fail-closed);
+      // aqui o reuso compara o conteúdo congelado persistido (`input_snapshot`) ao
+      // submetido — a loja NÃO é re-lida.
       if (existingNewFlowCampaign.data) {
         // gap 2 (a) — MESMA campanha/loja: compara o conteúdo congelado persistido
         // ao conteúdo submetido; divergência ⇒ `operation_identity_conflict`.

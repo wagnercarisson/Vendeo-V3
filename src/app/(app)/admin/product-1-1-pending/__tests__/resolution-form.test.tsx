@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   PendingOperationsList,
   PendingReadOnlyNotice,
+  PendingResolutionPanel,
   ResolutionForm,
   type PendingOperationItem,
 } from "../resolution-form";
@@ -157,6 +158,73 @@ describe("ProductOneToOne pending — Superfície 4 (lista/resolução)", () => 
       screen.queryByRole("button", { name: /re-?queue|reprocessar|reset|excluir|apagar/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Gerar novamente/i)).not.toBeInTheDocument();
+  });
+
+  // ── WR-01 — qualquer pendência deve ser resolvível (não só a primeira) ─────
+
+  it("WR-01: o painel permite SELECIONAR e resolver a SEGUNDA pendência", async () => {
+    const first = item({
+      campaignId: "22222222-2222-4222-8222-222222222222",
+      operationId: "33333333-3333-4333-8333-333333333333",
+      artifactKind: "integral",
+    });
+    const second = item({
+      campaignId: "99999999-9999-4999-8999-999999999999",
+      operationId: "88888888-8888-4888-8888-888888888888",
+      artifactKind: "integral",
+    });
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ resolution: { status: "delivered" } }),
+    });
+
+    render(<PendingResolutionPanel operations={[first, second]} />);
+
+    // AMBAS as pendências são visíveis (antes só a primeira era acionável).
+    expect(screen.getByText(first.campaignId)).toBeInTheDocument();
+    expect(screen.getByText(second.campaignId)).toBeInTheDocument();
+
+    // Seleciona a SEGUNDA pendência.
+    const selectButtons = screen.getAllByRole("button", { name: /Selecionar para resolver/ });
+    expect(selectButtons).toHaveLength(1);
+    fireEvent.click(selectButtons[0]);
+
+    fireEvent.change(screen.getByLabelText("Motivo da resolução"), {
+      target: { value: "resolver a segunda" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Resolver pendência" }));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(String(mockFetch.mock.calls[0][1].body));
+    // A resolução é da SEGUNDA pendência (identidade correta).
+    expect(body.campaignId).toBe(second.campaignId);
+    expect(body.operationId).toBe(second.operationId);
+  });
+
+  // ── IN-08 — o rótulo do crédito deriva do estado (não é sempre "reserva") ──
+
+  it("IN-08: linha NÃO-terminal ⇒ 'Reserva temporária'", () => {
+    render(
+      <PendingOperationsList operations={[item({ status: "reserved", terminal: false })]} />,
+    );
+    expect(screen.getByText(/Reserva temporária · 1/)).toBeInTheDocument();
+  });
+
+  it("IN-08: linha terminal 'delivered' NÃO é rotulada como reserva temporária", () => {
+    render(
+      <PendingOperationsList operations={[item({ status: "delivered", terminal: true })]} />,
+    );
+    expect(screen.getByText(/Crédito consumido · 1/)).toBeInTheDocument();
+    expect(screen.queryByText(/Reserva temporária/)).not.toBeInTheDocument();
+  });
+
+  it("IN-08: linha terminal 'refunded' ⇒ 'Crédito estornado'", () => {
+    render(
+      <PendingOperationsList operations={[item({ status: "refunded", terminal: true })]} />,
+    );
+    expect(screen.getByText(/Crédito estornado · 1/)).toBeInTheDocument();
+    expect(screen.queryByText(/Reserva temporária/)).not.toBeInTheDocument();
   });
 });
 

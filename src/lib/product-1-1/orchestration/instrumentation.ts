@@ -77,6 +77,11 @@ export const UNKNOWN_RESULT_INTERNAL_CATEGORY = "generation_unknown" as const;
  * tentativas da MESMA operação entram e cada uma recebe o par modelo–qualidade do
  * seu alvo — principal × fallback ficam distinguíveis.
  *
+ * IN-06: função de CONTRATO/TESTE-ONLY — nenhum módulo de runtime a consome; é
+ * exercitada por `copy-instrumentation.contract.test.ts`. NÃO remover: documenta
+ * a capacidade de correlação (e o binding `runId`/`traceId` do snapshot) até que um
+ * consumidor de leitura a utilize.
+ *
  * Os envelopes do gateway NÃO carregam `runId`/`traceId` (não fazem parte do
  * contrato de telemetria de wire); a correlação usa a identidade do PRÓPRIO
  * snapshot observado (mesma operação), preservando o fail-closed de

@@ -72,7 +72,6 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     imagePreviewUrl,
     isSubmitting,
     submitError,
-    setSubmitError,
     retrySubmit,
     pendingConflict,
     handleConflictContinue,

@@ -278,9 +278,9 @@ function ReadyView(props: CampaignPageProps) {
               {currentCopy.hashtags.length > 0 && (
                 <div className="flex items-start gap-2">
                   <div className="flex flex-1 flex-wrap gap-2">
-                    {currentCopy.hashtags.map((tag) => (
+                    {currentCopy.hashtags.map((tag, index) => (
                       <span
-                        key={tag}
+                        key={`${tag}-${index}`}
                         className="rounded-full bg-accent-green/10 px-3 py-1 text-sm text-accent-green font-body"
                       >
                         {tag}
@@ -535,9 +535,9 @@ function NewFlowCopyPanel({ copy }: { copy: NewFlowCopyView | null }) {
           {copy.hashtags.length > 0 && (
             <div className="flex items-start gap-2">
               <div className="flex flex-1 flex-wrap gap-2">
-                {copy.hashtags.map((tag) => (
+                {copy.hashtags.map((tag, index) => (
                   <span
-                    key={tag}
+                    key={`${tag}-${index}`}
                     className="rounded-full bg-accent-green/10 px-3 py-1 text-sm text-accent-green font-body"
                   >
                     {tag}

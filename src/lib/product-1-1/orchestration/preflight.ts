@@ -207,6 +207,13 @@ export async function runNewFlowPreflight(
     frozenEvidence = state;
   }
 
+  // IN-04: `frozenEvidence` é uma SUPERFÍCIE DE CONTRATO/TESTE — o orquestrador
+  // NÃO a consome para decidir efeitos; o reparo de `repairable` é aplicado
+  // incondicionalmente por `persistProductOneToOneSnapshot` (o caminho CORRETO) e o
+  // fail-closed de `corrupt` é reforçado pela própria RPC. A classificação existe
+  // para o contrato de preflight (`snapshot-preflight.contract.test.ts`) — não é um
+  // bug de comportamento, apenas uma saída não consumida em runtime.
+
   const pairConfig: ImageModelPairConfig = {
     primary: config.primary,
     fallback: config.fallback,
