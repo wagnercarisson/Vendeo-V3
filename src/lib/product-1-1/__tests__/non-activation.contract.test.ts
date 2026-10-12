@@ -73,6 +73,9 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/orchestration/generation-orchestrator",
       "@/lib/product-1-1/selection-validation",
       "@/lib/product-1-1/background-direction",
+      // Plano 08 (correção de integração — gap 1): a rota fornece o contexto
+      // server-side da copy DEFAULT (tipo) para o orquestrador gerar copy.
+      "@/lib/product-1-1/copy/default-copy-runner",
     ],
   },
   // Plano 04 — rota de status do reenvio (query-only).
@@ -562,6 +565,8 @@ describe("Product 1:1 — reconciliação G-NA (Plano 04, F56.2b1b)", () => {
       "@/lib/product-1-1/background-direction",
       "@/lib/product-1-1/submission/exclusive-fields",
       "@/lib/product-1-1/authorization/authorization-service",
+      // Plano 08 (correção de integração — gap 1): contexto server-side da copy.
+      "@/lib/product-1-1/copy/default-copy-runner",
     ]) {
       expect(
         isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE, specifier),

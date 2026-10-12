@@ -60,7 +60,11 @@ import type {
 import {
   buildAttemptTelemetry,
   emitAttemptEnvelope,
+  createDurableAttemptEnvelopeSink,
+  defaultResolveAttemptCost,
+  attemptCostForTarget,
   recordFailureDiagnosis,
+  type AttemptCostResolver,
   type AttemptEnvelope,
   type AttemptEnvelopeResult,
 } from "./instrumentation";
@@ -71,9 +75,15 @@ import {
   recordCancellation,
   recordCopyState,
   type CopyBudgetSignal,
+  type CopyCommit,
   type CopyState,
   type CopyStateStore,
 } from "../copy/copy-state";
+import {
+  createDefaultProductOneToOneCopyOps,
+  type ProductOneToOneCopyContext,
+} from "../copy/default-copy-runner";
+import { getLaunchConfig } from "@/lib/launch-config/config";
 
 /**
  * F56.2b1b (B1B-D2/D4/D5/D12, C1/C5/I1/I2, F1–F8) — orquestrador NDJSON do novo
@@ -123,6 +133,18 @@ export interface ProductOneToOneGenerationInput {
    * contribuição de prompt no bloco `PROMPT_BLOCK_LABELS.identity`.
    */
   readonly identityDirective?: string;
+  /**
+   * Gap 1 — contexto server-side (loja) para a copy DEFAULT do novo fluxo. Fica
+   * ausente em chamadas que não geram copy; quando presente, o orquestrador
+   * conecta a corrida produtiva EXISTENTE (`CopyDirectorService`) como default.
+   */
+  readonly copyContext?: ProductOneToOneCopyContext;
+  /**
+   * F46-04 (D3) — snapshot econômico resolvido UMA vez pela rota e propagado às
+   * chamadas filhas (copy + telemetria por tentativa). Nunca fallback silencioso.
+   */
+  readonly usdBrlRateAtGeneration?: number | null;
+  readonly creditValueBrlAtGeneration?: number | null;
   readonly promptBase?: string;
   readonly runId?: string;
   readonly traceId?: string;
@@ -195,27 +217,36 @@ export interface TelemetryContextInput {
   readonly campaignId: string;
   readonly storeId: string;
   readonly attemptNumber: number;
+  readonly usdBrlRateAtGeneration?: number | null;
+  readonly creditValueBrlAtGeneration?: number | null;
   readonly runId?: string;
   readonly traceId?: string;
 }
 
 /**
  * F8 — operações da copy (não bloqueante) drenadas DENTRO do ciclo da
- * requisição. Injetável para teste puro; o default usa o client Supabase
- * (`product_1_1_copy_state` / `product_1_1_copy_cancellations`).
+ * requisição. Injetável para teste puro; o default conecta a corrida produtiva
+ * EXISTENTE (`createDefaultProductOneToOneCopyOps`) e persiste em
+ * `product_1_1_copy_state` / `product_1_1_copy_cancellations`.
  */
 export interface ProductOneToOneCopyOps {
-  /** Task da copy; recebe o sinal do orçamento para cooperar com o cancelamento. */
+  /**
+   * Task da copy; recebe o sinal do orçamento (para cooperar com o cancelamento)
+   * e o `commit` (latch) que persiste o TEXTO entregue.
+   */
   readonly runCopy: (input: {
     campaignId: string;
     operationId: string;
     signal: AbortSignal;
+    commit: CopyCommit;
   }) => Promise<void>;
   readonly budgetMs?: number;
   readonly recordCopyState?: (input: {
     campaignId: string;
     operationId: string;
     state: CopyState;
+    copyText?: string | null;
+    copyPayload?: Record<string, unknown> | null;
   }) => Promise<void>;
   readonly recordCancellation?: (input: {
     campaignId: string;
@@ -258,25 +289,36 @@ export interface ProductOneToOneGenerationDeps {
   readonly onAttemptEnvelope?: (envelope: AttemptEnvelope) => void | Promise<void>;
   /** F8 — copy não bloqueante drenada no ciclo da requisição (opcional). */
   readonly copy?: ProductOneToOneCopyOps;
+  /**
+   * Gap 1 — invocador SIMULADO/injetável da copy default (testes). Default de
+   * produção = gateway padrão (`defaultAiGateway`).
+   */
+  readonly copyInvoker?: AiInvoker;
+  /** Gap 1 — habilita o `CopyDirectorService` na copy default (default: flag). */
+  readonly copyDirectorEnabled?: boolean;
+  /**
+   * Gap 4 — resolvedor do custo INTERNO por tentativa do novo fluxo
+   * (`modelo + qualidade` + versão/origem). Default = pricing do novo fluxo.
+   */
+  readonly resolveAttemptCost?: AttemptCostResolver;
   readonly client?: SupabaseClient;
 }
 
 type NdjsonEvent = Record<string, unknown>;
 
-function defaultTelemetry(
-  input: TelemetryContextInput,
-  onInternalCost?: (costUsd: number | null) => void,
-): AiTelemetryContext {
-  // REUSE do caminho existente de telemetria/custo (`createDefaultTelemetryContext`
-  // → `resolveAiCost`/`AiCostTracker`) SEM alterar a cadeia legada. O custo
-  // interno por par é apenas exposto ao orquestrador (nunca cobrança adicional).
+function defaultTelemetry(input: TelemetryContextInput): AiTelemetryContext {
+  // Gap 4 — o custo interno por tentativa NÃO vem mais desta telemetria (que
+  // seria a resolução legada sem qualidade): o orquestrador o resolve pela
+  // pricing do NOVO FLUXO (`modelo + qualidade` + versão/origem). O sink desta
+  // telemetria é no-op; o ENVELOPE por tentativa é o registro persistido.
   return buildAttemptTelemetry({
     operationRunId: input.runId ?? input.campaignId,
     traceId: input.traceId ?? input.campaignId,
     storeId: input.storeId,
     campaignId: input.campaignId,
     attemptNumber: input.attemptNumber,
-    onInternalCostResolved: onInternalCost,
+    usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
+    creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
   });
 }
 
@@ -401,7 +443,47 @@ export async function runProductOneToOneGeneration(
     ((diagnosis: ImageGenerationDiagnosisInput) =>
       new SupabaseImageGenerationDiagnosisRepository(client).recordDiagnosis(diagnosis));
   const onAttemptEnvelope = deps.onAttemptEnvelope;
-  const copyOps = deps.copy;
+  // Gap 1 — a copy DEFAULT conecta a corrida produtiva EXISTENTE quando o
+  // contexto server-side (loja) e/ou um invocador injetado estão disponíveis; a
+  // rota NÃO fornece `deps.copy`, então a execução normal GERA copy.
+  const copyDirectorEnabled =
+    deps.copyDirectorEnabled ?? getLaunchConfig().copyDirectorEnabled;
+  const copyOps: ProductOneToOneCopyOps | undefined =
+    deps.copy ??
+    (input.copyContext || deps.copyInvoker
+      ? createDefaultProductOneToOneCopyOps(
+          {
+            campaignId: input.campaignId,
+            operationId: input.operationId,
+            storeId: input.storeId,
+            briefing: input.briefing,
+            copyContext:
+              input.copyContext ?? {
+                storeName: input.briefing.product.name,
+                segment: "outros",
+              },
+            copyDirectorEnabled,
+            usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
+            creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
+            runId: input.runId,
+            traceId: input.traceId,
+          },
+          { invoker: deps.copyInvoker },
+        )
+      : undefined);
+  // Gap 4 — custo interno por tentativa pela pricing do NOVO FLUXO.
+  const resolveAttemptCost = deps.resolveAttemptCost ?? defaultResolveAttemptCost;
+  // Gap 4 — destino PERSISTENTE default do envelope por tentativa (reusa o sink
+  // único da camada de IA; nunca escreve generation_events diretamente).
+  const attemptEnvelopeSink =
+    onAttemptEnvelope !== undefined
+      ? { emit: onAttemptEnvelope }
+      : createDurableAttemptEnvelopeSink({
+          operationRunId: input.runId ?? input.campaignId,
+          traceId: input.traceId ?? input.campaignId,
+          storeId: input.storeId,
+          campaignId: input.campaignId,
+        });
   const recordAttemptCall =
     deps.recordAttempt ??
     ((call: RecordAttemptCall) =>
@@ -665,12 +747,16 @@ export async function runProductOneToOneGeneration(
       };
 
       // ── F8 — copy NÃO bloqueante drenada no ciclo da requisição ────────
-      // A copy roda em PARALELO com a imagem; seu estado é persistido e ela é
+      // GAP 2 — a copy SÓ inicia APÓS as condições de execução valerem e a
+      // tentativa ser ADQUIRIDA como VENCEDORA (depois do curto-circuito
+      // `operação existe`, do preflight e de um `acquire` vencedor). Reenvio e
+      // corrida PERDIDA ⇒ ZERO chamadas à copy. O estado é persistido e a copy é
       // DRENADA com orçamento (CANCELADA se exceder) ANTES de encerrar o stream —
       // nunca deixa task órfã. A falha da copy NÃO bloqueia `delivered` nem
       // reverte a reserva de crédito, e NÃO existe retry nesta fase.
       let copyDrain: Promise<void> | null = null;
-      if (copyOps) {
+      const startCopy = (): void => {
+        if (copyDrain !== null || !copyOps) return;
         const copyStore: CopyStateStore = {
           recordCopyState: copyOps.recordCopyState ?? ((i) => recordCopyState(client, i)),
           recordCancellation:
@@ -686,14 +772,15 @@ export async function runProductOneToOneGeneration(
             campaignId,
             operationId,
             signal: budget.signal,
-            run: (signal) => copyOps.runCopy({ campaignId, operationId, signal }),
+            run: ({ signal, commit }) =>
+              copyOps.runCopy({ campaignId, operationId, signal, commit }),
           },
           copyStore,
         ).then(
           () => budget.dispose(),
           () => budget.dispose(),
         );
-      }
+      };
 
       try {
         emit({ type: "phase", phase: "orchestration", status: "running" });
@@ -845,6 +932,10 @@ export async function runProductOneToOneGeneration(
             return;
           }
 
+          // GAP 2 — a tentativa foi ADQUIRIDA como vencedora: só AGORA a copy é
+          // iniciada (nunca no reenvio `operação existe`, nem na corrida perdida).
+          startCopy();
+
           // Histórico append-only da tentativa (mesma identidade/par do snapshot).
           try {
             await recordAttemptCall({
@@ -878,23 +969,41 @@ export async function runProductOneToOneGeneration(
           // ── Instrumentação por tentativa (REQ-12): UM envelope por tentativa
           // real (modelo/qualidade/alvo/attempt_number/run/trace/resultado +
           // custo interno por par). A sequência é reconstruível (primary×fallback).
-          const attemptEnvelopeSink = onAttemptEnvelope
-            ? { emit: onAttemptEnvelope }
-            : undefined;
+          // Gap 4 — o custo interno vem da pricing do NOVO FLUXO (`modelo +
+          // qualidade` + versão/origem) — a MESMA validada no preflight — e a
+          // emissão é AGUARDADA (sink PERSISTENTE default).
           let internalCostUsd: number | null = null;
-          const emitAttempt = (result: AttemptEnvelopeResult) =>
-            emitAttemptEnvelope(
+          let internalCostVersionId: string | null = null;
+          let internalCostSource: string | null = null;
+          try {
+            const resolution = await resolveAttemptCost({
+              primary: { model: snapshot.primaryModel, quality: snapshot.primaryQuality },
+              fallback: { model: snapshot.fallbackModel, quality: snapshot.fallbackQuality },
+            });
+            const attemptCost = attemptCostForTarget(resolution, target);
+            internalCostUsd = attemptCost.costUsd;
+            internalCostVersionId = attemptCost.versionId;
+            internalCostSource = attemptCost.costSource;
+          } catch {
+            // Fail-open: sem pricing resolvido ⇒ custo `null` (nunca inventado);
+            // a geração NÃO é bloqueada pela observabilidade.
+          }
+          const emitAttempt = async (result: AttemptEnvelopeResult): Promise<void> => {
+            await emitAttemptEnvelope(
               {
                 snapshot,
                 attemptNumber,
                 target,
                 result,
                 internalCostUsd,
+                internalCostVersionId,
+                internalCostSource,
                 runId: input.runId,
                 traceId: input.traceId,
               },
               attemptEnvelopeSink,
             );
+          };
 
           // Chamada ao provider (uma tentativa por invocação).
           let imageDataUrl: string | undefined;
@@ -905,21 +1014,20 @@ export async function runProductOneToOneGeneration(
                   campaignId,
                   storeId,
                   attemptNumber,
+                  usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
+                  creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
                   runId: input.runId,
                   traceId: input.traceId,
                 })
-              : defaultTelemetry(
-                  {
-                    campaignId,
-                    storeId,
-                    attemptNumber,
-                    runId: input.runId,
-                    traceId: input.traceId,
-                  },
-                  (usd) => {
-                    internalCostUsd = usd;
-                  },
-                );
+              : defaultTelemetry({
+                  campaignId,
+                  storeId,
+                  attemptNumber,
+                  usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
+                  creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
+                  runId: input.runId,
+                  traceId: input.traceId,
+                });
             const request: AiInvocationRequest = {
               ...providerImageRequest(input),
               prompt: composition.text,
@@ -939,7 +1047,7 @@ export async function runProductOneToOneGeneration(
 
           if (imageDataUrl !== undefined) {
             // ── (7) sucesso: finaliza o claim, grava a arte, entrega ─────
-            emitAttempt("success");
+            await emitAttempt("success");
             try {
               await attempts.finish({
                 campaignId,
@@ -996,7 +1104,7 @@ export async function runProductOneToOneGeneration(
 
           // ── Resultado DESCONHECIDO (timeout/abort) ──────────────────────
           if (isUnknownResult(failure, controllerAbort.signal.aborted)) {
-            emitAttempt("timeout");
+            await emitAttempt("timeout");
             const reference = newSupportReference();
             const persisted = await markUnknownOutcome(reference);
             // Gap 3 — diagnóstico durável correlacionado à MESMA referência
@@ -1036,7 +1144,7 @@ export async function runProductOneToOneGeneration(
           }
 
           // ── Falha CONFIRMADA: finaliza o claim e decide a próxima ação ──
-          emitAttempt("failed");
+          await emitAttempt("failed");
           try {
             await attempts.finish({ campaignId, operationId, attemptNumber, status: "failed" });
           } catch {

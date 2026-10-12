@@ -19,6 +19,7 @@ import {
   COPY_CANCELLATION_REASON,
   createCopyBudgetSignal,
   drainCopyTask,
+  readCopyDelivery,
   readCopyState,
   recordCancellation,
   recordCopyState,
@@ -115,6 +116,11 @@ describe("Plano 08 — migration do estado da copy (F8)", () => {
     expect(migrationSql).toContain("updated_at");
   });
 
+  it("Gap 1: persiste o TEXTO/PAYLOAD entregues (copy_text/copy_payload)", () => {
+    expect(migrationSql).toContain("copy_text    TEXT");
+    expect(migrationSql).toContain("copy_payload JSONB");
+  });
+
   it("registra o cancelamento SEPARADAMENTE (tabela própria, imutável)", () => {
     expect(migrationSql).toContain("public.product_1_1_copy_cancellations");
     expect(migrationSql).toContain("reason       TEXT NOT NULL");
@@ -208,6 +214,41 @@ describe("Plano 08 — persistência do estado da copy (F8)", () => {
     ).resolves.toBe("completed");
   });
 
+  it("Gap 1: readCopyDelivery recupera o TEXTO/PAYLOAD entregues", async () => {
+    const client = {
+      from() {
+        return {
+          select() {
+            const chain = {
+              eq() {
+                return chain;
+              },
+              maybeSingle() {
+                return Promise.resolve({
+                  data: {
+                    state: "completed",
+                    copy_text: "Legenda da campanha",
+                    copy_payload: { caption: "Legenda da campanha" },
+                  },
+                  error: null,
+                });
+              },
+            };
+            return chain;
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+
+    await expect(
+      readCopyDelivery(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID }),
+    ).resolves.toEqual({
+      state: "completed",
+      copyText: "Legenda da campanha",
+      copyPayload: { caption: "Legenda da campanha" },
+    });
+  });
+
   it("recordCancellation grava numa tabela SEPARADA (nunca no estado da copy)", async () => {
     const { client, events } = makeFakeSupabase();
     await recordCancellation(client, {
@@ -286,7 +327,7 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
         signal: budget.signal,
-        run: (signal) =>
+        run: ({ signal }) =>
           new Promise<void>((_resolve, reject) => {
             if (signal.aborted) {
               reject(new DOMException("aborted", "AbortError"));
@@ -306,6 +347,99 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
     expect(cancelCalls).toEqual([COPY_CANCELLATION_REASON]);
   });
 
+  it("Gap 1: o texto entregue é persistido via `commit` (estado `completed` + copyText)", async () => {
+    const deliveries: Array<{ state: CopyState; copyText?: string | null }> = [];
+    const store = {
+      async recordCopyState(input: { state: CopyState; copyText?: string | null }) {
+        deliveries.push({ state: input.state, copyText: input.copyText });
+      },
+      async recordCancellation() {},
+    };
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async ({ commit }) => {
+          await commit({ copyText: "Legenda da campanha", payload: { caption: "Legenda da campanha" } });
+        },
+      },
+      store,
+    );
+
+    expect(result).toEqual({ state: "completed", canceled: false });
+    expect(deliveries).toEqual([
+      { state: "pending", copyText: undefined },
+      { state: "completed", copyText: "Legenda da campanha" },
+    ]);
+  });
+
+  it("Gap 3: task que IGNORA o abort ⇒ drain retorna determinístico (canceled) e a conclusão TARDIA não persiste nada", async () => {
+    const { store, stateCalls, cancelCalls } = makeDrainStore();
+    const budget = createCopyBudgetSignal(0);
+    let lateCommit: (() => Promise<void>) | undefined;
+    let releaseLate: (() => void) | undefined;
+    const lateGate = new Promise<void>((resolve) => {
+      releaseLate = resolve;
+    });
+
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: budget.signal,
+        // IGNORA o abort: continua rodando ALÉM do orçamento.
+        run: async ({ commit }) => {
+          await lateGate;
+          lateCommit = () => commit({ copyText: "tarde demais" });
+        },
+      },
+      store,
+      { persistenceBudgetMs: 100 },
+    );
+    budget.dispose();
+
+    // O drenador retornou determinístico como CANCELADO, mesmo com a task viva.
+    expect(result).toEqual({ state: "failed", canceled: true });
+    expect(stateCalls).toEqual(["pending", "failed"]);
+    expect(cancelCalls).toEqual([COPY_CANCELLATION_REASON]);
+
+    // A conclusão TARDIA tenta persistir, mas o latch bloqueia: nada é escrito.
+    releaseLate?.();
+    await new Promise((r) => setTimeout(r, 10));
+    await lateCommit?.();
+    expect(stateCalls).toEqual(["pending", "failed"]);
+    expect(cancelCalls).toEqual([COPY_CANCELLATION_REASON]);
+  });
+
+  it("Gap 3: escritas de persistência têm orçamento PRÓPRIO (store pendurado não prende o drenador)", async () => {
+    const store = {
+      async recordCopyState() {
+        // Escrita que NUNCA resolve — o teto das escritas deve liberar o drenador.
+        await new Promise<void>(() => {});
+      },
+      async recordCancellation() {
+        await new Promise<void>(() => {});
+      },
+    };
+    const started = Date.now();
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async ({ commit }) => {
+          await commit({ copyText: "texto" });
+        },
+      },
+      store,
+      { persistenceBudgetMs: 5 },
+    );
+    // Determinístico apesar da escrita pendurada.
+    expect(result).toEqual({ state: "completed", canceled: false });
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
   it("NÃO existe ação/endpoint de retry (source)", () => {
     // Nenhuma AÇÃO/função de retry exportada nesta fatia (a palavra pode aparecer
     // em comentários explicando que o retry pertence à b2).
@@ -320,9 +454,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
 // ---------------------------------------------------------------------------
 
 describe("Plano 08 — envelope por tentativa (REQ-12)", () => {
-  it("emitAttemptEnvelope resolve o par do SNAPSHOT (modelo/qualidade/alvo/attempt_number)", () => {
+  it("emitAttemptEnvelope resolve o par do SNAPSHOT (modelo/qualidade/alvo/attempt_number)", async () => {
     const emitted: AttemptEnvelope[] = [];
-    const envelope = emitAttemptEnvelope(
+    const envelope = await emitAttemptEnvelope(
       {
         snapshot: SNAPSHOT,
         attemptNumber: 2,
@@ -348,8 +482,30 @@ describe("Plano 08 — envelope por tentativa (REQ-12)", () => {
     expect(emitted).toEqual([envelope]);
   });
 
-  it("custo ausente nunca vira valor inventado (null)", () => {
-    const envelope = emitAttemptEnvelope({
+  it("Gap 4: a emissão AGUARDA o sink e uma falha do sink NÃO vira rejeição não tratada", async () => {
+    let resolved = false;
+    const envelope = await emitAttemptEnvelope(
+      {
+        snapshot: SNAPSHOT,
+        attemptNumber: 1,
+        target: "primary",
+        result: "success",
+      },
+      {
+        emit: async () => {
+          await new Promise((r) => setTimeout(r, 5));
+          resolved = true;
+          throw new Error("sink_down");
+        },
+      },
+    );
+    // A emissão foi AGUARDADA (o sink completou) e a falha foi contida.
+    expect(resolved).toBe(true);
+    expect(envelope.internalCostUsd).toBeNull();
+  });
+
+  it("custo ausente nunca vira valor inventado (null)", async () => {
+    const envelope = await emitAttemptEnvelope({
       snapshot: SNAPSHOT,
       attemptNumber: 1,
       target: "primary",
@@ -358,16 +514,18 @@ describe("Plano 08 — envelope por tentativa (REQ-12)", () => {
     expect(envelope.internalCostUsd).toBeNull();
   });
 
-  it("a sequência principal (×2) + fallback (×1) é reconstruível", () => {
-    const envelopes: AttemptEnvelope[] = [1, 2, 3].map((n, index) =>
-      emitAttemptEnvelope({
-        snapshot: SNAPSHOT,
-        attemptNumber: n,
-        target: index < 2 ? "primary" : "fallback",
-        result: index < 2 ? "failed" : "success",
-        runId: "run-1",
-        traceId: "trace-1",
-      }),
+  it("a sequência principal (×2) + fallback (×1) é reconstruível", async () => {
+    const envelopes: AttemptEnvelope[] = await Promise.all(
+      [1, 2, 3].map((n, index) =>
+        emitAttemptEnvelope({
+          snapshot: SNAPSHOT,
+          attemptNumber: n,
+          target: index < 2 ? "primary" : "fallback",
+          result: index < 2 ? "failed" : "success",
+          runId: "run-1",
+          traceId: "trace-1",
+        }),
+      ),
     );
 
     const sequence = reconstructAttemptSequence(SNAPSHOT, envelopes);
@@ -390,10 +548,14 @@ describe("Plano 08 — envelope por tentativa (REQ-12)", () => {
     expect(typeof context.sink.emit).toBe("function");
   });
 
-  it("a instrumentação NÃO altera a cadeia legada de custo (resolveAiCost/AiCostTracker.record)", () => {
+  it("a instrumentação do novo fluxo NÃO usa a resolução legada sem qualidade (`resolveAiCost`)", () => {
     expect(INSTRUMENTATION_SOURCE).toContain("createDefaultTelemetryContext");
     expect(INSTRUMENTATION_SOURCE).not.toMatch(/resolveAiCost\s*\(/);
-    expect(INSTRUMENTATION_SOURCE).not.toMatch(/(?:new\s+AiCostTracker\(\)[\s\S]{0,60}?\.record\s*\(|\btracker\.record\s*\()/);
+    // Gap 4 — o custo interno vem da pricing do NOVO FLUXO (modelo + qualidade).
+    expect(INSTRUMENTATION_SOURCE).toContain("resolveImagePairCost");
+    expect(INSTRUMENTATION_SOURCE).toContain("defaultResolveAttemptCost");
+    // Destino persistente do envelope reutiliza o caminho existente (AiCostTracker).
+    expect(INSTRUMENTATION_SOURCE).toContain("createDurableAttemptEnvelopeSink");
   });
 });
 

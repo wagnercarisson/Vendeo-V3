@@ -11,8 +11,10 @@
 -- `campaign_id` + `operation_id`):
 --
 --   1. `public.product_1_1_copy_state` — estado CORRENTE da copy
---      (`pending`/`completed`/`failed`) com `updated_at`. É MUTÁVEL (UPSERT do
---      estado corrente), logo `service_role` recebe SELECT/INSERT/UPDATE.
+--      (`pending`/`completed`/`failed`) com `updated_at`, MAIS o TEXTO/PAYLOAD
+--      ENTREGUES (`copy_text`/`copy_payload`) para que a campanha possa lê-los
+--      (correção de integração — gap 1). É MUTÁVEL (UPSERT do estado corrente),
+--      logo `service_role` recebe SELECT/INSERT/UPDATE.
 --   2. `public.product_1_1_copy_cancellations` — CANCELAMENTO registrado
 --      SEPARADAMENTE do estado da copy (append-only/IMUTÁVEL): um cancelamento
 --      pelo orçamento de espera NUNCA é confundido com falha de geração nem com
@@ -30,6 +32,12 @@ CREATE TABLE IF NOT EXISTS public.product_1_1_copy_state (
   campaign_id  UUID NOT NULL REFERENCES public.campaigns(id),
   operation_id UUID NOT NULL,
   state        TEXT NOT NULL CHECK (state IN ('pending', 'completed', 'failed')),
+  -- Gap 1 (correção de integração): o TEXTO entregue pela copy é persistido (não
+  -- só o estado), para que a campanha possa lê-lo. `copy_text` = texto principal
+  -- entregue (`caption`); `copy_payload` = payload estruturado (título, legenda,
+  -- hashtags, CTA). Ambos NULL enquanto não houver entrega (`pending`/`failed`).
+  copy_text    TEXT,
+  copy_payload JSONB,
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT uq_p1_1_copy_state_op UNIQUE (campaign_id, operation_id)

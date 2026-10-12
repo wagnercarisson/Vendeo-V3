@@ -9,12 +9,22 @@ import {
   type ImageModelTarget,
   type ImageQuality,
 } from "@/lib/ai/image-generation-config-snapshot";
-import { createDefaultTelemetryContext } from "@/lib/ai/telemetry-sink";
+import type { ImageModelPairConfig } from "@/lib/ai/image-model-pair";
+import {
+  createDefaultTelemetryContext,
+  DefaultAiTelemetrySink,
+  NoopAiTelemetrySink,
+} from "@/lib/ai/telemetry-sink";
 import {
   toInternalDiagnosis,
   type ImageGenerationDiagnosisInput,
 } from "@/lib/ai/image-generation-support-reference";
-import type { AiTelemetryContext } from "@/lib/ai/types";
+import {
+  resolveImagePairCost,
+  type ImagePairAttemptCost,
+  type ImagePairCostResolution,
+} from "@/lib/ai-cost/image-pair-pricing";
+import type { AiCallEnvelope, AiTelemetryContext } from "@/lib/ai/types";
 
 /**
  * F56.2b1b — Instrumentação por tentativa + diagnóstico durável do Produto 1:1
@@ -67,6 +77,13 @@ export interface AttemptEnvelope {
   readonly quality: ImageQuality;
   readonly result: AttemptEnvelopeResult;
   readonly internalCostUsd: number | null;
+  /**
+   * Gap 4 — versão/origem do pricing do NOVO FLUXO (`modelo + qualidade`) que
+   * produziu `internalCostUsd` (a MESMA pricing validada no preflight). `null`
+   * quando o custo não foi resolvido.
+   */
+  readonly internalCostVersionId?: string | null;
+  readonly internalCostSource?: string | null;
   readonly runId?: string;
   readonly traceId?: string;
 }
@@ -77,24 +94,29 @@ export interface EmitAttemptEnvelopeInput {
   readonly target: ImageModelTarget;
   readonly result: AttemptEnvelopeResult;
   readonly internalCostUsd?: number | null;
+  readonly internalCostVersionId?: string | null;
+  readonly internalCostSource?: string | null;
   readonly runId?: string;
   readonly traceId?: string;
 }
 
-/** Destino observável do envelope por tentativa (injetável; default no-op). */
+/** Destino observável do envelope por tentativa (injetável). */
 export interface AttemptEnvelopeSink {
   emit(envelope: AttemptEnvelope): void | Promise<void>;
 }
 
 /**
- * Constrói (e opcionalmente emite) UM envelope da tentativa real. O par
+ * Constrói (e emite, AGUARDANDO) UM envelope da tentativa real. O par
  * modelo–qualidade é reconstruído do snapshot congelado pelo alvo
  * (`resolveSnapshotPairForTarget`) — nunca de um valor do cliente.
+ *
+ * Gap 4 — a emissão ao sink é AGUARDADA e uma falha do sink NUNCA vira rejeição
+ * não tratada (best-effort: a geração não é bloqueada pela observabilidade).
  */
-export function emitAttemptEnvelope(
+export async function emitAttemptEnvelope(
   input: EmitAttemptEnvelopeInput,
   sink?: AttemptEnvelopeSink,
-): AttemptEnvelope {
+): Promise<AttemptEnvelope> {
   const pair = resolveSnapshotPairForTarget(input.snapshot, input.target);
   const envelope: AttemptEnvelope = Object.freeze({
     attemptNumber: input.attemptNumber,
@@ -104,11 +126,78 @@ export function emitAttemptEnvelope(
     result: input.result,
     internalCostUsd:
       typeof input.internalCostUsd === "number" ? input.internalCostUsd : null,
+    internalCostVersionId: input.internalCostVersionId ?? null,
+    internalCostSource: input.internalCostSource ?? null,
     ...(input.runId !== undefined ? { runId: input.runId } : {}),
     ...(input.traceId !== undefined ? { traceId: input.traceId } : {}),
   });
-  void sink?.emit(envelope);
+  if (sink) {
+    try {
+      await sink.emit(envelope);
+    } catch {
+      // Best-effort: um sink defeituoso nunca bloqueia a geração NEM gera
+      // rejeição não tratada.
+    }
+  }
   return envelope;
+}
+
+/** Contexto do destino PERSISTENTE do envelope por tentativa (novo fluxo). */
+export interface AttemptEnvelopeSinkContext {
+  readonly operationRunId: string;
+  readonly traceId: string;
+  readonly storeId: string;
+  readonly campaignId: string;
+}
+
+/**
+ * Gap 4 — destino PERSISTENTE DEFAULT do envelope por tentativa. REUSA o sink
+ * ÚNICO da camada de IA (`DefaultAiTelemetrySink` de `src/lib/ai/telemetry-sink`,
+ * que faz `resolveAiCost` + `AiCostTracker.record` DENTRO da fronteira `src/lib/ai/**`)
+ * — o orquestrador NUNCA escreve `generation_events` diretamente (gate de
+ * arquitetura F46-06). No novo fluxo, o envelope por tentativa É o registro (o
+ * sink do gateway é no-op ⇒ UM registro por tentativa, sem duplicar). O custo
+ * interno resolvido pela pricing do NOVO FLUXO (`modelo + qualidade`) acompanha
+ * o envelope como `providerReportedCostUsd` (o caminho de entrada de um custo
+ * resolvido externamente pelo sink único); a versão/origem vão no `metadata`.
+ */
+export function createDurableAttemptEnvelopeSink(
+  context: AttemptEnvelopeSinkContext,
+): AttemptEnvelopeSink {
+  return {
+    async emit(envelope: AttemptEnvelope): Promise<void> {
+      const sink = new DefaultAiTelemetrySink({
+        operationRunId: context.operationRunId,
+        operationRunType: "campaign_delivery",
+        traceId: context.traceId,
+        storeId: context.storeId,
+        campaignId: context.campaignId,
+        attemptNumber: envelope.attemptNumber,
+      });
+      const callEnvelope: AiCallEnvelope = {
+        capability: "campaign_product_image",
+        protocol: "images",
+        status: envelope.result,
+        provider: "openai",
+        model: envelope.model,
+        durationMs: 0,
+        ...(envelope.internalCostUsd !== null
+          ? { providerReportedCostUsd: envelope.internalCostUsd }
+          : {}),
+        quality: envelope.quality,
+        target: envelope.target,
+        attemptNumber: envelope.attemptNumber,
+        metadata: {
+          product_1_1_attempt_envelope: true,
+          quality: envelope.quality,
+          target: envelope.target,
+          internal_cost_version_id: envelope.internalCostVersionId ?? null,
+          internal_cost_source: envelope.internalCostSource ?? null,
+        },
+      };
+      await sink.emit(callEnvelope);
+    },
+  };
 }
 
 /**
@@ -136,15 +225,47 @@ export interface AttemptTelemetryInput {
   readonly storeId: string;
   readonly campaignId: string;
   readonly attemptNumber: number;
-  /** Recebe o custo interno resolvido pela cadeia EXISTENTE (por tentativa). */
-  readonly onInternalCostResolved?: (costUsd: number | null) => void;
+  /**
+   * F46-04 (D3) — snapshot econômico propagado; sem ele a apuração cai no
+   * fallback silencioso. Obrigatório no contrato (nullable apenas quando o
+   * chamador realmente não tem o valor).
+   */
+  readonly usdBrlRateAtGeneration?: number | null;
+  readonly creditValueBrlAtGeneration?: number | null;
 }
 
 /**
- * Contexto de telemetria por tentativa usando o caminho EXISTENTE
- * (`createDefaultTelemetryContext` + `DefaultAiTelemetrySink` → `resolveAiCost`
- * + `AiCostTracker`). A cadeia de resolução de custo legada NÃO é alterada; o
- * custo resolvido é apenas exposto ao chamador (interno, sem cobrança).
+ * Resolvedor do custo INTERNO por tentativa do NOVO FLUXO (`modelo + qualidade`,
+ * com versão/origem do pricing) — a MESMA pricing validada no preflight
+ * (`@/lib/ai-cost/image-pair-pricing`). Injetável (testes usam um fake).
+ */
+export type AttemptCostResolver = (
+  config: ImageModelPairConfig,
+) => Promise<ImagePairCostResolution>;
+
+/** Default: pricing do novo fluxo (`ImagePairPricingService`). */
+export async function defaultResolveAttemptCost(
+  config: ImageModelPairConfig,
+): Promise<ImagePairCostResolution> {
+  return resolveImagePairCost(config);
+}
+
+/** Seleciona o custo do alvo a partir da resolução do par (novo fluxo). */
+export function attemptCostForTarget(
+  resolution: ImagePairCostResolution,
+  target: ImageModelTarget,
+): ImagePairAttemptCost {
+  return target === "fallback" ? resolution.fallback : resolution.primary;
+}
+
+/**
+ * Gap 4 — contexto de telemetria por tentativa do novo fluxo. O sink do gateway
+ * é NO-OP: no novo fluxo o ENVELOPE por tentativa (persistido em
+ * `generation_events` via `createDurableAttemptEnvelopeSink`) É o registro, com
+ * o custo interno resolvido pela pricing do novo fluxo (`modelo + qualidade` +
+ * versão/origem) — SEM depender da resolução legada (`resolveAiCost`) que
+ * ignora a qualidade e SEM duplicar registros. A cadeia legada de custo
+ * permanece INTACTA para os consumidores do fluxo legado.
  */
 export function buildAttemptTelemetry(input: AttemptTelemetryInput): AiTelemetryContext {
   return createDefaultTelemetryContext({
@@ -154,11 +275,10 @@ export function buildAttemptTelemetry(input: AttemptTelemetryInput): AiTelemetry
     storeId: input.storeId,
     campaignId: input.campaignId,
     attemptNumber: input.attemptNumber,
-    onCostResolved: (cost) => {
-      input.onInternalCostResolved?.(
-        typeof cost.estimatedCostUsd === "number" ? cost.estimatedCostUsd : null,
-      );
-    },
+    // F46-04 (D3): snapshot econômico propagado (nunca fallback silencioso).
+    usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
+    creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
+    sink: new NoopAiTelemetrySink(),
   });
 }
 

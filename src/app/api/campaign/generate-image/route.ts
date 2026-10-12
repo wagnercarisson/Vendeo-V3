@@ -46,6 +46,7 @@ import {
   runProductOneToOneGeneration,
   readProductOneToOneOperation,
 } from "@/lib/product-1-1/orchestration/generation-orchestrator";
+import type { ProductOneToOneCopyContext } from "@/lib/product-1-1/copy/default-copy-runner";
 import { validateOriginalBackground, countProductImages, ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE } from "@/lib/product-1-1/selection-validation";
 import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
 
@@ -597,6 +598,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
       let newFlowIdentityImage: Awaited<
         ReturnType<typeof resolveIdentityImageAsDataUrl>
       > = null;
+      // Gap 1 — contexto server-side (loja) para a copy DEFAULT do novo fluxo.
+      let newFlowCopyContext: ProductOneToOneCopyContext | undefined;
       try {
         const { data: newFlowStore, error: newFlowStoreError } = await supabaseAdmin
           .from("stores")
@@ -633,6 +636,23 @@ export const POST = apiHandler(async (request: NextRequest) => {
           newFlow as unknown as CampaignInput,
         );
         newFlowIdentityDirective = newFlowIdentityContext?.identity?.directive ?? null;
+        // Gap 1 — a copy DEFAULT do novo fluxo usa a loja resolvida server-side
+        // (nunca dados do cliente) + o comercial já validado.
+        newFlowCopyContext = {
+          storeName: newFlowStore.name,
+          segment: newFlowStore.segment,
+          toneOfVoice: newFlowStore.tone_of_voice ?? undefined,
+          positioning: newFlowStore.positioning ?? undefined,
+          shortDescription: newFlowStore.short_description ?? undefined,
+          slogan: newFlowStore.slogan ?? undefined,
+          brandPersonality:
+            newFlowIdentityContext?.brandProfile?.brand_personality ?? undefined,
+          campaignGuidelines:
+            newFlowIdentityContext?.brandProfile?.campaign_guidelines ?? undefined,
+          badgeText: newFlow.badgeText ?? undefined,
+          originalPriceCents: newFlow.originalPriceCents,
+          discountedPriceCents: newFlow.discountedPriceCents,
+        };
       } catch (err) {
         console.error(
           `[generate-image] new_flow resolveStoreIdentity error — ${err instanceof Error ? err.message : String(err)}`,
@@ -827,12 +847,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // política 2+1 → arte → delivered), preservando a identidade da operação, o
       // conteúdo congelado COMPLETO (briefing íntegro + seleções por conteúdo) e a
       // IDENTIDADE VISUAL server-side (gap 4: `identityImageUrl` + direção).
+      // Gap 1 — `copyContext` (loja, resolvida server-side) habilita a copy
+      // DEFAULT do novo fluxo (corrida produtiva EXISTENTE); o orquestrador
+      // conecta o serviço de copy e persiste o texto entregue.
       return await runProductOneToOneGeneration({
         ...newFlowOrchestrationInput,
         references: newFlowEvidenceReferenceSelections.map((selection) => selection.id),
         referenceSelections: newFlowEvidenceReferenceSelections,
         identityImageUrl: newFlowIdentityImage?.dataUrl ?? undefined,
         identityDirective: newFlowIdentityDirective ?? undefined,
+        copyContext: newFlowCopyContext,
+        // F46-04 (D3) — snapshot econômico do run propagado (copy + tentativas).
+        usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+        creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
       });
     }
   }
