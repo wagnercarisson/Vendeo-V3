@@ -2175,11 +2175,120 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
       expect.objectContaining({ id: STORE_ID }),
     );
     const input = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
-    expect(input.identityImageUrl).toBe('https://signed.example/logo.png');
-    // A identidade também entra nas seleções congeladas (binding por identidade).
-    expect(
-      input.referenceSelections.some((selection: any) => selection.kind === 'identity'),
-    ).toBe(true);
+    // B1 — o gateway NUNCA recebe a URL assinada rotativa: recebe o data URL.
+    expect(input.identityImageUrl).toBe('data:image/png;base64,LOGO');
+    expect(resolveIdentityImageAsDataUrl).toHaveBeenCalledWith(
+      'https://signed.example/logo.png',
+    );
+    // A identidade também entra nas seleções congeladas (binding por CONTEÚDO).
+    const identitySelection = input.referenceSelections.find(
+      (selection: any) => selection.kind === 'identity',
+    );
+    expect(identitySelection).toBeTruthy();
+    expect(identitySelection.id).toBe('content-id-logo');
+  });
+
+  // ── B2 — o binding identifica a IDENTIDADE REALMENTE usada ─────────────────
+
+  const IDENTITY_SERVER = {
+    storeName: 'Loja Teste',
+    storeSegment: 'outros',
+    brandColor: '#111111',
+    identityState: 'logo',
+    signature: { url: 'https://signed.example/logo-a.png', type: 'logo' },
+  };
+
+  function mockIdentityResolution(opts: {
+    identity?: Record<string, unknown>;
+    directive: string;
+    image: Record<string, unknown> | null;
+  }) {
+    (resolveStoreIdentity as any).mockResolvedValue(opts.identity ?? IDENTITY_SERVER);
+    (validateIdentityReference as any).mockResolvedValue(opts.identity ?? IDENTITY_SERVER);
+    (buildCampaignBrief as any).mockResolvedValue({
+      store: { name: 'Loja Teste', segment: 'outros' },
+      identity: { directive: opts.directive },
+    });
+    (resolveIdentityImageAsDataUrl as any).mockResolvedValue(opts.image);
+  }
+
+  async function captureIdentitySnapshot(opts: {
+    identity?: Record<string, unknown>;
+    directive: string;
+    image: Record<string, unknown> | null;
+  }): Promise<Record<string, unknown>> {
+    setupNewFlowMocks();
+    mockIdentityResolution(opts);
+    const { POST } = await import('../route');
+    await (await POST(makeRequest(VALID_NEW_FLOW_BODY))).text();
+    const snapshot = (createCampaign as any).mock.calls[0][1].inputSnapshot as Record<
+      string,
+      unknown
+    >;
+    (createCampaign as any).mockClear();
+    mockRunProductOneToOneGeneration.mockClear();
+    return snapshot;
+  }
+
+  const IMAGE_A = {
+    dataUrl: 'data:image/png;base64,AAA',
+    contentId: 'cid-AAA',
+    mimeType: 'image/png',
+    byteLength: 3,
+  };
+
+  it('B2 (i): MESMOS descritores de identidade mas BYTES de logo DIFERENTES ⇒ 409 (binding por conteúdo)', async () => {
+    const stored = await captureIdentitySnapshot({ directive: 'Dir', image: IMAGE_A });
+    setupNewFlowMocks({
+      existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: stored },
+    });
+    mockIdentityResolution({
+      directive: 'Dir',
+      image: { ...IMAGE_A, dataUrl: 'data:image/png;base64,BBB', contentId: 'cid-BBB' },
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error.code).toBe('operation_identity_conflict');
+    expect(createCampaign).not.toHaveBeenCalled();
+  });
+
+  it('B2 (ii): MESMA imagem mas identityDirective DIFERENTE ⇒ 409 (diretriz congelada)', async () => {
+    const stored = await captureIdentitySnapshot({ directive: 'Direção A', image: IMAGE_A });
+    setupNewFlowMocks({
+      existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: stored },
+    });
+    mockIdentityResolution({ directive: 'Direção B', image: IMAGE_A });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    expect(createCampaign).not.toHaveBeenCalled();
+  });
+
+  it('B2 (iii): ROTAÇÃO da URL assinada com os MESMOS bytes ⇒ MESMO binding (reusa, sem 2ª campanha)', async () => {
+    const stored = await captureIdentitySnapshot({ directive: 'Dir', image: IMAGE_A });
+    setupNewFlowMocks({
+      existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: stored },
+    });
+    (createCampaign as any).mockClear();
+    // URL assinada rotacionada (bytes/conteúdo IDÊNTICOS).
+    mockIdentityResolution({
+      identity: {
+        ...IDENTITY_SERVER,
+        signature: { url: 'https://signed.example/logo-b.png', type: 'logo' },
+      },
+      directive: 'Dir',
+      image: IMAGE_A,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
   });
 });
 

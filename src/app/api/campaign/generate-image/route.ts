@@ -634,23 +634,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
         );
       }
 
-      // (4b) gap 4(d) — a identidade entra nas SELEÇÕES congeladas com um id
-      // ESTÁVEL de conteúdo (descritor de identidade; NUNCA a URL assinada
-      // rotativa), para que mudanças de identidade alterem o binding.
-      const newFlowIdentityImageUrl = newFlowIdentitySnapshot?.signature?.url ?? null;
-      const newFlowIdentityReference = newFlowIdentityImageUrl
+      // (4b) gap 4(d) / B2 — a identidade entra nas SELEÇÕES congeladas com um id
+      // ESTÁVEL de CONTEÚDO (SHA-256 dos BYTES baixados da imagem de identidade;
+      // NUNCA a URL assinada rotativa). Rotacionar a URL com os MESMOS bytes
+      // mantém o binding; um logo DIFERENTE (bytes distintos) muda o binding. A
+      // DIREÇÃO de identidade textual REALMENTE enviada ao modelo também é
+      // congelada — mudá-la altera a evidência/fingerprint.
+      const newFlowIdentityReference = newFlowIdentityImage
         ? {
             kind: "identity" as const,
-            id: contentId(
-              stableStringify({
-                state: newFlowIdentitySnapshot?.identityState ?? "text_only",
-                signatureType: newFlowIdentitySnapshot?.signature?.type ?? null,
-                storeName: newFlowIdentitySnapshot?.storeName ?? null,
-                brandColor: newFlowIdentitySnapshot?.brandColor ?? null,
-              }),
-            ),
+            id: newFlowIdentityImage.contentId,
             role: "identity",
             index: newFlowProductImages.length,
+            directive: newFlowIdentityDirective ?? null,
           }
         : null;
       const newFlowEvidenceReferenceSelections = [
@@ -658,11 +654,15 @@ export const POST = apiHandler(async (request: NextRequest) => {
         ...(newFlowIdentityReference ? [newFlowIdentityReference] : []),
       ];
 
-      // (4c) gap 2 — fingerprint do conteúdo congelado (snapshot canônico + seleções
-      // por CONTEÚDO). Fonte ÚNICA da comparação de reuso da campanha.
-      const newFlowFrozenSnapshot = buildCampaignBriefSnapshot(
-        buildCampaignBriefFromFlat(newFlow, newFlowStoreId),
-      ) as unknown as Record<string, unknown>;
+      // (4c) gap 2 / B2 — fingerprint do conteúdo congelado (snapshot canônico +
+      // seleções por CONTEÚDO + a direção de identidade textual efetivamente
+      // enviada). Fonte ÚNICA da comparação de reuso da campanha.
+      const newFlowFrozenSnapshot = {
+        ...(buildCampaignBriefSnapshot(
+          buildCampaignBriefFromFlat(newFlow, newFlowStoreId),
+        ) as unknown as Record<string, unknown>),
+        identityDirective: newFlowIdentityDirective ?? null,
+      };
       const newFlowFrozenContentHash = computeFrozenContentHash(
         newFlowFrozenSnapshot,
         newFlowEvidenceReferenceSelections,
