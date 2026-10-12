@@ -342,13 +342,13 @@ Plans:
 
 **Provas exigidas no planejamento:** concorrência sem chamada duplicada ao provider; resolução administrativa atomicamente auditada; Storage privado sem download antes de `delivered`; testes reais isolados sem suítes integralmente skipped. Se ultrapassar 10 planos, o executor deve parar e propor sequenciamento — sem retirar segurança ou testes fundamentais.
 
-**Plans:** 1/10 plans executed
+**Plans:** 2/10 plans executed
 
 **Ondas (desbloqueio):** Onda 1 — `56.2.2-01` (elegibilidade UI), `56.2.2-02` (snapshot/preflight/histórico), `56.2.2-03` (início de tentativa atômico/migration), `56.2.2-05` (arte 1024×1024); Onda 2 — `56.2.2-04` (orquestração/roteamento/reenvio; depende de 01/02/03/05); Onda 3 — `56.2.2-06` (estados de resultado + portão de download), `56.2.2-08` (copy/instrumentação; depende de 04); Onda 4 — `56.2.2-07` (resolução administrativa auditada; depende de 03/04/05/06); Onda 5 — `56.2.2-09` (harness isolado Postgres/Storage reais; depende de 02–08; `autonomous: false`); Onda 6 — `56.2.2-10` (validação/fechamento + checkpoint humano; depende de 01–09; `autonomous: false`). *Ondas normalizadas por dependência estrutural (2026-10-11): 10 planos em 6 ondas; a execução permanece sequencial e há parada humana após o Plano 06, antes do Plano 07.*
 
 Plans:
 - [x] 56.2.2-01-PLAN.md — Elegibilidade: formulário elegível (Direção de fundo), gating de payload legado e regra Original. (REQ-56.2.2-01)
-- [ ] 56.2.2-02-PLAN.md — Snapshot congelado antes de reserva/provider; preflight fail-closed (pricing complete para principal e fallback); histórico append-only. (REQ-56.2.2-02, -03)
+- [x] 56.2.2-02-PLAN.md — Snapshot congelado antes de reserva/provider; preflight fail-closed (pricing complete para principal e fallback); histórico append-only. (REQ-56.2.2-02, -03) — **Concluído (2026-10-12):** snapshot + evidência congelada (briefing/referências/versões de composição) com identidade `campaign_id`+`operation_id` explícita (F6/C3) e idempotência; preflight fail-closed resolve a config UMA vez (F3) e exige pricing `complete` para principal/fallback (não persiste snapshot — C5); histórico append-only reconstruível que recusa operação terminal/incerta (F6). 3/3 tarefas; `56.2.2-02-SUMMARY.md`; contratos 25/25; `src/lib/product-1-1` 179/179; typecheck 0. Migration `20261009000003` **apenas autorada (LOCAL-ONLY), NÃO aplicada**; flags `false`; autorização `off`; sem `db push`/provider/ativação. Cobertura `REQ-56.2.2-02`/`-03` **PARCIAL** (concluem com a ligação do Plano 04).
 - [ ] 56.2.2-03-PLAN.md — Início de tentativa atômico no Postgres (migration local-only + cliente RPC): duas requisições não chamam o provider duas vezes. (REQ-56.2.2-05)
 - [ ] 56.2.2-04-PLAN.md — Orquestração no ciclo da requisição (NDJSON), roteamento de aceitação, reserva/entrega/estorno b1a e reenvio-consulta. (REQ-56.2.2-01, -04, -06, -07)
 - [ ] 56.2.2-05-PLAN.md — Arte 1024×1024 real em bucket privado, caminho imutável (`upsert:false`) e leitura assinada. (REQ-56.2.2-10)
