@@ -68,3 +68,42 @@ A persistência do snapshot e da sua evidência congelada SHALL ser idempotente 
 
 - **WHEN** uma evidência é inserida com `campaign_id` diferente da campanha do snapshot referenciado
 - **THEN** o banco rejeita a inserção
+
+### Requirement: Binding de conteúdo persistido para recuperação de pré-reserva
+
+A persistência SHALL gravar o snapshot e um binding de conteúdo (o `content_fingerprint` do conteúdo congelado) de forma ATÔMICA, de modo que nunca exista snapshot sem binding — o único estado parcial possível SHALL ser snapshot+binding sem evidência. O binding SHALL ser a fonte de comparação PERSISTIDA da recuperação: um estado parcial (snapshot+binding sem evidência) SHALL ser classificado como reparável pelo preflight, sem bloquear a entrada, e SHALL ser reparado antes da reserva, inserindo a evidência para o MESMO snapshot congelado. Conteúdo divergente no reparo (fingerprint recalculado diferente do fingerprint persistido) SHALL ser recusado como conflito de identidade. Nenhuma reserva nem chamada ao provider SHALL ocorrer antes de a evidência congelada estar completa. O vínculo entre o binding e a campanha do snapshot SHALL ser imposto pelo banco.
+
+#### Scenario: Escrita atômica do snapshot e do binding de conteúdo
+
+- **WHEN** o snapshot é persistido para a mesma identidade (campanha + operação)
+- **THEN** o snapshot e o binding de conteúdo são gravados na MESMA transação
+- **AND** nunca existe snapshot sem binding
+
+#### Scenario: Estado parcial reparável é reconhecido sem bloquear a entrada
+
+- **WHEN** um snapshot+binding existe sem a sua evidência e uma nova entrada é considerada
+- **THEN** o preflight classifica o estado como reparável
+- **AND** não bloqueia a entrada, exigindo o reparo antes da reserva
+
+#### Scenario: Reparo com conteúdo equivalente preserva o snapshot congelado
+
+- **WHEN** a evidência ausente é reenviada com conteúdo EQUIVALENTE (fingerprint igual ao persistido) e persistida antes da reserva
+- **THEN** a evidência é inserida para o MESMO snapshot congelado
+- **AND** o snapshot congelado não é substituído
+
+#### Scenario: Conteúdo divergente no reparo é recusado
+
+- **WHEN** a evidência ausente é reenviada com conteúdo DIVERGENTE do fingerprint persistido no binding
+- **THEN** a operação é recusada como conflito de identidade
+- **AND** nada é gravado e o snapshot congelado permanece
+
+#### Scenario: Sem reserva ou provider antes da evidência completa
+
+- **WHEN** a evidência congelada não está completa
+- **THEN** nenhuma reserva de crédito é feita
+- **AND** nenhuma chamada ao provider é feita
+
+#### Scenario: Vínculo do binding imposto pelo banco
+
+- **WHEN** um binding é inserido com `campaign_id` diferente da campanha do snapshot referenciado
+- **THEN** o banco rejeita a inserção
