@@ -99,6 +99,7 @@
 **Planos:** diretorio `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
 
 Plans:
+
 - [x] 48-2-1-01-PLAN.md — Dominio, migration local e programa (`lab_prompt_programs`, `campaign_intent`/`program_id`/`rubric`, orcamento atomico, `DIRECTOR_PROMPTS`).
 - [x] 48-2-1-02-PLAN.md — Diagnostico versionado da F37 e matriz de nove cenarios (Checkpoint humano 1; aprovado com diagnosticVersion 3).
 - [x] 48-2-1-03-PLAN.md — Execucao do Diretor por tipo de campanha e harness (uma chamada `campaign_image`; settle/release de orcamento).
@@ -118,6 +119,7 @@ Plans:
 **Restricoes transversais:** `prompts/` intocado byte a byte; migration local-only (sem `db push` remoto); exatamente uma chamada `campaign_image` por run; toda execucao paga exigiria programa `authorized` e reserva atomica (saldo = `budget_usd - consumed - reserved`).
 
 **Excecao preexistente (externa a F48.2.1):** `src/lib/legal/__tests__/legal-document-versions.test.ts` falha com `ENOENT` (caminho antigo da F50, change arquivada). O gate fail-closed do Plano 09 aceita a suite completa somente com essa excecao exata (1 arquivo / 1 teste) e a registra como follow-up externo.
+
 ## F48.2.2 — Fundação da bancada de geração no Admin/Laboratório
 
 **Status:** **Concluída, verificada, sincronizada e arquivada** (2026-09-28) — 8/8 planos concluídos (`48-2-2-01` a `48-2-2-08`), com **CHECKPOINT 1**, **CHECKPOINT 2** e **CHECKPOINT 3 aprovados**. UAT local aprovado com **uma** geração real controlada (run `f6148ea6-...`, `gpt-image-2.5-flare`, `images`, `low`, `1024x1024`, `succeeded`; custo **calculado** US$ 0,014592 — provider reportado `null`; UI US$ 0,01). Produção intocada (`base..HEAD` vazio). OpenSpec **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`. A antiga F48.2.2 (**Auditoria e Otimização do Prompt do Revisor**) foi **descartada/substituída** (implementação não iniciada; sem artefatos mantidos; recuperável pelo histórico do Git).
@@ -125,6 +127,7 @@ Plans:
 **Plans:** 8 plans
 
 Plans:
+
 - [x] 48-2-2-01-PLAN.md — Bounded context `src/lib/lab/bench/**`, contratos de isolamento, registry de dimensões e **SPIKE BLOQUEANTE de modelos/presets (CHECKPOINT 1)**.
 - [x] 48-2-2-02-PLAN.md — Persistência local-first: DDL fora de `supabase/migrations/`, bootstrap local com REVERT, guard de path `bench/{runId}/...` e serviços de run/artefato.
 - [x] 48-2-2-03-PLAN.md — Lojas de teste via manifesto local, contrato completo de branding (inclui `typography_direction`) e snapshot de campanha produto/oferta com intenção resolvida.
@@ -141,6 +144,7 @@ Plans:
 **Objetivo:** construir uma bancada interna, desktop e restrita à área administrativa/laboratório, capaz de realizar gerações reais e mensuráveis, separadas do fluxo de produção.
 
 **Escopo de alto nível:**
+
 - operar dentro da área Admin/Laboratório, com acesso restrito;
 - selecionar uma loja real e carregar integralmente o branding persistido (logo/assinatura, nome, paleta, tokens seguros, direção tipográfica, estilo visual, tom, personalidade, posicionamento e diretrizes);
 - receber imagens reais do produto; permitir prompt manual nesta primeira fase; permitir seleção de modelo e qualidade;
@@ -160,6 +164,7 @@ Plans:
 **Objetivo:** permitir que a bancada experimente com a identidade **real** das lojas de teste, sem jamais consultar produção durante a operação normal.
 
 **Escopo de alto nível:**
+
 - **importação explícita e unidirecional** da identidade das lojas de teste do Supabase remoto para o ambiente local;
 - comando **local** (não botão); **nenhuma** consulta remota durante a operação normal do laboratório;
 - **não copiar** campanhas, produtos, ofertas, imagens de campanha, usuários, créditos, billing ou histórico operacional;
@@ -175,6 +180,7 @@ Plans:
 **Objetivo:** usar a bancada validada para testar o novo pipeline de campanha Oferta 1:1.
 
 **Escopo de alto nível:**
+
 - dados reais da campanha;
 - montagem determinística e orientada do prompt de Oferta 1:1;
 - branding persistido como contrato obrigatório, sem reinterpretar ou recriar a direção da marca;
@@ -222,6 +228,7 @@ Plans:
 **Fonte normativa (arquivada):** `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` — `proposal.md`, `design.md` (D1–D12), `tasks.md` (55 tasks em 10 seções) e 8 specs (`image-generation-model-pair-config`, `image-generation-config-snapshot`, `image-generation-failure-policy`, `image-generation-support-reference`, `image-generation-instrumentation`, `ai-model-catalog`, `ai-model-pricing`, `ai-invocation-gateway`). `openspec validate --strict` válido.
 
 **Escopo de alto nível:**
+
 - configuração global auditável (RPC `SECURITY DEFINER`, motivo obrigatório, `operation_id`) de par principal/fallback `modelo + qualidade`, isolada de `ai_model_selection`;
 - catálogo elegível fechado: `gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst` em `low`/`medium`, registrados no `ai_model_catalog` sob capacidade própria `campaign_product_image` (sem vazar para capacidades legadas nem ativar geração);
 - escolha inicial registrada como decisão humana: principal `gpt-image-2.5-sunburst / medium`, fallback `gpt-image-2 / medium` — **não ativa em produção**;
@@ -260,11 +267,13 @@ Plans:
 **Reconciliação:** substitui parte da change `fase-56-2-novo-fluxo-geracao-produto-1-1` (relocada para `openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/`; ver `RECONCILIATION.md`). A change original é preservada e marcada como substituída; não é descartada silenciosamente.
 
 **Decisões fechadas pelo responsável (2026-10-06):**
+
 - Nomes literais das chaves: `product_1_1_test_stores_enabled` (lojas com `is_test_store=true`) e `product_1_1_all_stores_enabled` (todas as lojas); ambas desligadas por padrão e alteráveis pela RPC auditada existente `admin_update_feature_flag`. Precedência: a chave **geral prevalece**.
 - Seleção: **domínio puro + componentes React apresentacionais, sem wiring**, não montados no fluxo do lojista; a regra "Original exige exatamente uma imagem de produto (identidade não conta)" vive no domínio como **erro de campo** (nunca `IMG-001`).
 - UI-SPEC: **pular nesta fatia** (`--skip-ui`) — os componentes não serão montados; seguir `openspec/design-system/MASTER.md`; criar UI-SPEC na F56.2b1, quando a interface for conectada e visível.
 
 **Escopo de alto nível:**
+
 - registro das duas chaves em `feature_flags` (default desligado) + função pura/server-side de decisão fail-closed com precedência da chave geral;
 - domínio de seleção explícita de intenção (Oferta/Destaque/Exclusivo) e direção de fundo (Estúdio/Ambientado/Original) + componentes apresentacionais inativos; regra de Original e erro de campo; teste de não-exposição ao lojista;
 - módulo produtivo versionado e congelado (Produto v4/compositor v5/três intenções/fundo escolhido), sem leitura de configuração mutável da bancada em runtime; testes de **equivalência** com a bancada F48.2.6 aprovada;
@@ -282,6 +291,7 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
+
 - [x] 56-2-01-PLAN.md — **Concluído**; summary `56-2-01-SUMMARY.md` — Chaves de ativação em `feature_flags` (desligadas) + decisão server-side fail-closed com precedência + migration local-only (não aplicada).
 - [x] 56-2-02-PLAN.md — **Concluído**; summary `56-2-02-SUMMARY.md` — Domínio puro e componentes apresentacionais inativos de seleção de intenção/fundo (regra de Original, erro de campo, não-exposição).
 - [x] 56-2-03-PLAN.md — **Concluído**; summary `56-2-03-SUMMARY.md` — Módulo produtivo de composição versionada (Produto v4/compositor v5), equivalente em texto/blocos/todas as versões à bancada F48.2.6.
@@ -310,6 +320,7 @@ Plans:
 **Requirements:** REQ-51.1-01, REQ-51.1-02, REQ-51.1-03, REQ-51.1-04, REQ-51.1-05, REQ-51.1-06, REQ-51.1-07, REQ-51.1-08, REQ-51.1-09, REQ-51.1-10
 
 **Escopo de alto nível:**
+
 - landing curta com blocos de **função única** na ordem: hero; transformação e simplicidade; variações visuais; identidade e controle; oferta; FAQ/CTA final/rodapé legal ("Como funciona" absorvido pela transformação; "Novidades" em posição secundária/rodapé);
 - headline e subheadline aprovadas + distinção "Você define como quer apresentar. O Vendeo prepara a campanha.";
 - **candidata visual avaliável** mobile/desktop: além de texto/tabelas/ASCII, um **protótipo estático** (`51.1-candidate-mockup.html`, fora de `src/`, tokens do `MASTER.md`/UI-SPEC, abrível no navegador) para aprovar aparência/hierarquia/acabamento (D-17);
@@ -329,6 +340,7 @@ Plans:
 **Planos:** diretório `.planning/phases/51.1-landing-visual-produto/`.
 
 Plans:
+
 - [x] 51-1-01-PLAN.md — Candidata visual (mobile + desktop) + **protótipo estático avaliável** (`51.1-candidate-mockup.html`, fora de `src/`, D-17) + copy aprovada + mapa/função das imagens + teste de compreensão + fronteira de arquivos; **CHECKPOINT HUMANO BLOQUEANTE** (`autonomous: false`; inclui a pausa para briefings/exemplos finais). Wave 1.
 - [x] 51-1-02-PLAN.md — Primitivas compartilhadas ANTES dos blocos: `acquisition-cta.tsx` (CTA por flag, texto escuro sobre verde — D-19) e `campaign-image.tsx` (proporção fixa). Wave 2.
 - [x] 51-1-03-PLAN.md — Blocos de seção consumindo as primitivas: hero, transformação (absorve "Como funciona"), variações, identidade/controle, abordagens de divulgação, FAQ/CTA final. Wave 3. **CONCLUÍDO 2026-10-09** (commits `96de0f29`, `340f1396`, `0179dec6`).
@@ -357,6 +369,7 @@ Plans:
 **Requirements:** REQ-51.2-01, REQ-51.2-02, REQ-51.2-03, REQ-51.2-04, REQ-51.2-05, REQ-51.2-06, REQ-51.2-07, REQ-51.2-08, REQ-51.2-09, REQ-51.2-10, REQ-51.2-11, REQ-51.2-12, REQ-51.2-13, REQ-51.2-14, REQ-51.2-15, REQ-51.2-16, REQ-51.2-17, REQ-51.2-18
 
 **Escopo de alto nível:**
+
 - helpers puros em `src/lib/seo/*`: `resolveCanonicalOrigin()` (produção valida `NEXT_PUBLIC_SITE_URL` — `https`, host exatamente `vendeo.tech`, sem `www`/caminho/query/fragmento; preview/local usa `VERCEL_URL` ou `http://localhost:3000`), resultado explícito (`origin`/`status`/`indexable`/`diagnostic`) **sem lançar exceção** e **sem emitir URL divergente**; `isIndexableEnvironment()` fail-closed; constantes de política de indexação e matriz de `X-Robots-Tag`;
 - `metadataBase` e default `robots: noindex, nofollow` na raiz (`src/app/layout.tsx`), preservando `manifest`/`icons`/`appleWebApp`/`viewport`;
 - metadata aprovada da home (título/descrição) **sem** alterar H1 nem conteúdo visível; `alternates.canonical` + Open Graph/Twitter com URL absoluta;
@@ -381,15 +394,25 @@ Plans:
 **Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
 
 **Plans:** 8 plans in 4 waves
+Plans:
+**Wave 1**
 
-Plans:
 - [ ] 51.2-01-PLAN.md — Auditoria, fronteira, decisões e preparação do C2 (wave 1, checkpoint C2)
 - [ ] 51.2-02-PLAN.md — Helpers puros de SEO (`src/lib/seo/*`) + testes unitários (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 51.2-03-PLAN.md — `metadataBase`, default noindex da raiz, metadata e compartilhamento da home (wave 2)
-- [ ] 51.2-04-PLAN.md — `robots.txt` (`src/app/robots.ts`) e `sitemap.xml` (`src/app/sitemap.ts`) (wave 2)
-- [ ] 51.2-05-PLAN.md — Política de indexação por rota + `headers()` (`X-Robots-Tag`) (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 51.2-04-PLAN.md — `robots.txt` (`src/app/robots.ts`) e `sitemap.xml` (`src/app/sitemap.ts`) (wave 3; depende de `51.2-03` para o assert consolidado fail-closed)
+- [ ] 51.2-05-PLAN.md — Política de indexação por rota + `headers()` (`X-Robots-Tag`) (wave 3; depende de `51.2-03` para o default `noindex` da raiz)
 - [ ] 51.2-06-PLAN.md — Imagem de compartilhamento institucional + C1 (wave 3, checkpoint C1)
 - [ ] 51.2-07-PLAN.md — Diagnóstico de performance + baseline do Search Console + `VERCEL_ENV` + C3 (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 51.2-08-PLAN.md — Testes, validação da preparação e fechamento (wave 4)
 
 ## Historical References
