@@ -30,6 +30,10 @@ import {
   recordCancellation,
   recordCopyState,
   type CopyState,
+  type CopyStateStore,
+  type CopyStateTransitionResult,
+  type RecordCopyStateInput,
+  type RecordCancellationInput,
 } from "../copy/copy-state";
 import {
   buildAttemptTelemetry,
@@ -137,12 +141,19 @@ describe("Plano 08 — migration do estado da copy (F8)", () => {
     expect(migrationSql).toContain("Plano 09");
     expect(migrationSql).toContain("ENABLE ROW LEVEL SECURITY");
     expect(migrationSql).toContain("REVERT");
-    // Estado corrente é mutável (UPDATE); cancelamento é append-only (SELECT/INSERT).
+    // P2 (A2) — RPC-only writes: `service_role` fica com SELECT only; as mutações
+    // passam pelas RPCs condicionais (nunca por Upsert/Insert direto).
     expect(migrationSql).toContain(
-      "GRANT SELECT, INSERT, UPDATE ON TABLE public.product_1_1_copy_state TO service_role;",
+      "GRANT SELECT ON TABLE public.product_1_1_copy_state TO service_role;",
     );
     expect(migrationSql).toContain(
-      "GRANT SELECT, INSERT ON TABLE public.product_1_1_copy_cancellations TO service_role;",
+      "GRANT SELECT ON TABLE public.product_1_1_copy_cancellations TO service_role;",
+    );
+    expect(migrationSql).toContain(
+      "REVOKE INSERT, UPDATE, DELETE ON TABLE public.product_1_1_copy_state FROM service_role;",
+    );
+    expect(migrationSql).toContain(
+      "REVOKE INSERT, UPDATE, DELETE ON TABLE public.product_1_1_copy_cancellations FROM service_role;",
     );
   });
 
@@ -172,14 +183,6 @@ function makeFakeSupabase(
   const events: FakeEvents["events"] = [];
   function from(table: string) {
     return {
-      upsert(payload: unknown) {
-        events.push({ table, op: "upsert", payload });
-        return Promise.resolve({ error: null });
-      },
-      insert(payload: unknown) {
-        events.push({ table, op: "insert", payload });
-        return Promise.resolve({ error: null });
-      },
       select() {
         const chain = {
           eq() {
@@ -193,21 +196,39 @@ function makeFakeSupabase(
       },
     };
   }
-  return { events, client: { from } as unknown as SupabaseClient };
+  // P2 — RPCs condicionais (`service_role` NÃO escreve direto nas tabelas).
+  const client = {
+    from,
+    rpc(name: string, params: Record<string, unknown>) {
+      events.push({ table: name, op: "rpc", payload: params });
+      const state = (params.p_state as CopyState | undefined) ?? null;
+      if (name === "product_1_1_cancel_copy") {
+        return Promise.resolve({
+          data: { applied: true, state: "failed", canceled: true },
+          error: null,
+        });
+      }
+      return Promise.resolve({
+        data: { applied: true, outcome: "applied", state },
+        error: null,
+      });
+    },
+  } as unknown as SupabaseClient;
+  return { events, client };
 }
 
 describe("Plano 08 — persistência do estado da copy (F8)", () => {
-  it("recordCopyState faz UPSERT na tabela dedicada (identidade por operação)", async () => {
+  it("P2: recordCopyState chama a RPC condicional (RPC-only writes; sem Upsert direto)", async () => {
     const { client, events } = makeFakeSupabase();
     await recordCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, state: "pending" });
 
     expect(events).toHaveLength(1);
-    expect(events[0].table).toBe("product_1_1_copy_state");
-    expect(events[0].op).toBe("upsert");
+    expect(events[0].table).toBe("product_1_1_apply_copy_state");
+    expect(events[0].op).toBe("rpc");
     expect(events[0].payload).toMatchObject({
-      campaign_id: CAMPAIGN_ID,
-      operation_id: OPERATION_ID,
-      state: "pending",
+      p_campaign_id: CAMPAIGN_ID,
+      p_operation_id: OPERATION_ID,
+      p_state: "pending",
     });
   });
 
@@ -253,7 +274,7 @@ describe("Plano 08 — persistência do estado da copy (F8)", () => {
     });
   });
 
-  it("recordCancellation grava numa tabela SEPARADA (nunca no estado da copy)", async () => {
+  it("P2: recordCancellation chama a RPC ATÔMICA (terminal failed + motivo numa transação)", async () => {
     const { client, events } = makeFakeSupabase();
     await recordCancellation(client, {
       campaignId: CAMPAIGN_ID,
@@ -262,9 +283,9 @@ describe("Plano 08 — persistência do estado da copy (F8)", () => {
     });
 
     expect(events).toHaveLength(1);
-    expect(events[0].table).toBe("product_1_1_copy_cancellations");
-    expect(events[0].op).toBe("insert");
-    expect(events[0].payload).toMatchObject({ reason: "cancelled_by_owner" });
+    expect(events[0].table).toBe("product_1_1_cancel_copy");
+    expect(events[0].op).toBe("rpc");
+    expect(events[0].payload).toMatchObject({ p_reason: "cancelled_by_owner" });
   });
 });
 
@@ -272,23 +293,109 @@ describe("Plano 08 — persistência do estado da copy (F8)", () => {
 // Task 1(c) — drenagem no ciclo da requisição com orçamento (sem órfã)
 // ---------------------------------------------------------------------------
 
-function makeDrainStore() {
+interface CasRow {
+  state: CopyState;
+  copyText: string | null;
+  copyPayload: Record<string, unknown> | null;
+}
+
+/**
+ * Simulador FIEL das RPCs condicionais (`product_1_1_apply_copy_state` /
+ * `product_1_1_cancel_copy`): transição CONDICIONAL + terminal PROTEGIDO +
+ * replay por CONTEÚDO + `invalid_content` (C2). Prova o comportamento do
+ * DRENADOR; as RPCs reais (SQL) são provadas por asserções estáticas e pela
+ * suíte de integração isolada do Plano 09.
+ */
+function makeCasStore() {
+  let row: CasRow | null = null;
   const stateCalls: CopyState[] = [];
   const cancelCalls: string[] = [];
-  const store = {
-    async recordCopyState(input: { state: CopyState }) {
+
+  const apply = (
+    state: CopyState,
+    copyText: string | null = null,
+    copyPayload: Record<string, unknown> | null = null,
+  ): CopyStateTransitionResult => {
+    // C2 — `completed` exige conteúdo entregável.
+    if (state === "completed" && (copyText === null || copyText.trim() === "")) {
+      return { applied: false, outcome: "invalid_content", state: null };
+    }
+    if (row === null) {
+      row = { state, copyText, copyPayload };
+      return { applied: true, outcome: "applied", state };
+    }
+    const terminal = row.state === "completed" || row.state === "failed";
+    if (terminal) {
+      if (row.state === state) {
+        const equivalent =
+          row.copyText === copyText &&
+          JSON.stringify(row.copyPayload) === JSON.stringify(copyPayload);
+        return equivalent
+          ? { applied: false, outcome: "idempotent", state }
+          : { applied: false, outcome: "conflict", state };
+      }
+      return { applied: false, outcome: "rejected", state: row.state };
+    }
+    if (row.state === state) {
+      return { applied: false, outcome: "idempotent", state };
+    }
+    row = { state, copyText, copyPayload };
+    return { applied: true, outcome: "applied", state };
+  };
+
+  const store: CopyStateStore = {
+    async recordCopyState(input) {
       stateCalls.push(input.state);
+      return apply(input.state, input.copyText ?? null, input.copyPayload ?? null);
     },
-    async recordCancellation(input: { reason: string }) {
+    async recordCancellation(input) {
       cancelCalls.push(input.reason);
+      const res = apply("failed");
+      if (res.state === "failed") {
+        return { applied: res.applied, state: "failed", canceled: true };
+      }
+      return { applied: res.applied, state: res.state, canceled: false };
     },
   };
-  return { store, stateCalls, cancelCalls };
+  return { store, stateCalls, cancelCalls, getRow: () => row };
+}
+
+/** Envolve o simulador CAS registrando os textos entregues (`commit`). */
+function makeDeliveryRecordingStore() {
+  const deliveries: Array<{ state: CopyState; copyText?: string | null }> = [];
+  const inner = makeCasStore();
+  const store: CopyStateStore = {
+    async recordCopyState(input) {
+      deliveries.push({ state: input.state, copyText: input.copyText });
+      return inner.store.recordCopyState(input);
+    },
+    recordCancellation: inner.store.recordCancellation,
+  };
+  return { store, deliveries };
 }
 
 describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
-  it("sucesso ⇒ persiste pending → completed, SEM cancelamento", async () => {
-    const { store, stateCalls, cancelCalls } = makeDrainStore();
+  it("sucesso (commit provado) ⇒ persiste pending → completed, SEM cancelamento", async () => {
+    const { store, stateCalls, cancelCalls } = makeCasStore();
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        signal: new AbortController().signal,
+        run: async ({ commit }) => {
+          await commit({ copyText: "Legenda", payload: { caption: "Legenda" } });
+        },
+      },
+      store,
+    );
+
+    expect(result).toEqual({ state: "completed", canceled: false });
+    expect(stateCalls).toEqual(["pending", "completed"]);
+    expect(cancelCalls).toEqual([]);
+  });
+
+  it("C2: task resolvida SEM `commit` (sem texto entregável) ⇒ NUNCA persiste `completed`", async () => {
+    const { store, stateCalls, getRow } = makeCasStore();
     const result = await drainCopyTask(
       {
         campaignId: CAMPAIGN_ID,
@@ -299,13 +406,13 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       store,
     );
 
-    expect(result).toEqual({ state: "completed", canceled: false });
-    expect(stateCalls).toEqual(["pending", "completed"]);
-    expect(cancelCalls).toEqual([]);
+    expect(result).toEqual({ state: "failed", canceled: false });
+    expect(stateCalls).toEqual(["pending", "failed"]);
+    expect(getRow()?.state).toBe("failed");
   });
 
   it("falha (não cancelada) ⇒ persiste failed e NÃO registra cancelamento", async () => {
-    const { store, stateCalls, cancelCalls } = makeDrainStore();
+    const { store, stateCalls, cancelCalls } = makeCasStore();
     const result = await drainCopyTask(
       {
         campaignId: CAMPAIGN_ID,
@@ -323,8 +430,8 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
     expect(cancelCalls).toEqual([]);
   });
 
-  it("orçamento esgotado ⇒ CANCELA, persiste failed determinístico e registra cancelamento SEPARADO", async () => {
-    const { store, stateCalls, cancelCalls } = makeDrainStore();
+  it("orçamento esgotado ⇒ CANCELA atomicamente (`failed` + motivo numa ÚNICA chamada RPC)", async () => {
+    const { store, stateCalls, cancelCalls, getRow } = makeCasStore();
     const budget = createCopyBudgetSignal(0);
     const result = await drainCopyTask(
       {
@@ -347,18 +454,15 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
     budget.dispose();
 
     expect(result).toEqual({ state: "failed", canceled: true });
-    expect(stateCalls).toEqual(["pending", "failed"]);
+    // ATÔMICO: o drenador NÃO faz um write separado de `failed` — o terminal
+    // `failed` é aplicado DENTRO do cancelamento.
+    expect(stateCalls).toEqual(["pending"]);
     expect(cancelCalls).toEqual([COPY_CANCELLATION_REASON]);
+    expect(getRow()?.state).toBe("failed");
   });
 
   it("Gap 1: o texto entregue é persistido via `commit` (estado `completed` + copyText)", async () => {
-    const deliveries: Array<{ state: CopyState; copyText?: string | null }> = [];
-    const store = {
-      async recordCopyState(input: { state: CopyState; copyText?: string | null }) {
-        deliveries.push({ state: input.state, copyText: input.copyText });
-      },
-      async recordCancellation() {},
-    };
+    const { store, deliveries } = makeDeliveryRecordingStore();
     const result = await drainCopyTask(
       {
         campaignId: CAMPAIGN_ID,
@@ -379,7 +483,7 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
   });
 
   it("Gap 3: task que IGNORA o abort ⇒ drain retorna determinístico (canceled) e a conclusão TARDIA não persiste nada", async () => {
-    const { store, stateCalls, cancelCalls } = makeDrainStore();
+    const { store, stateCalls, cancelCalls } = makeCasStore();
     const budget = createCopyBudgetSignal(0);
     let lateCommit: (() => Promise<void>) | undefined;
     let releaseLate: (() => void) | undefined;
@@ -405,25 +509,27 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
 
     // O drenador retornou determinístico como CANCELADO, mesmo com a task viva.
     expect(result).toEqual({ state: "failed", canceled: true });
-    expect(stateCalls).toEqual(["pending", "failed"]);
+    expect(stateCalls).toEqual(["pending"]);
     expect(cancelCalls).toEqual([COPY_CANCELLATION_REASON]);
 
     // A conclusão TARDIA tenta persistir, mas o latch bloqueia: nada é escrito.
     releaseLate?.();
     await new Promise((r) => setTimeout(r, 10));
     await lateCommit?.();
-    expect(stateCalls).toEqual(["pending", "failed"]);
+    expect(stateCalls).toEqual(["pending"]);
     expect(cancelCalls).toEqual([COPY_CANCELLATION_REASON]);
   });
 
-  it("Gap 3/P2: escritas de persistência têm orçamento PRÓPRIO (store pendurado não prende o drenador) e persistência NÃO provada não vira `completed`", async () => {
-    const store = {
+  it("Gap 3/P2: escritas de persistência têm orçamento PRÓPRIO (store pendurado não prende o drenador) e persistência NÃO provada vira `unconfirmed` (incerteza LOCAL)", async () => {
+    const store: CopyStateStore = {
       async recordCopyState() {
         // Escrita que NUNCA resolve — o teto das escritas deve liberar o drenador.
         await new Promise<void>(() => {});
+        return { applied: true, outcome: "applied", state: "pending" };
       },
       async recordCancellation() {
         await new Promise<void>(() => {});
+        return { applied: true, state: "failed", canceled: true };
       },
     };
     const started = Date.now();
@@ -440,21 +546,23 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       { persistenceBudgetMs: 5 },
     );
     // Determinístico apesar da escrita pendurada — e NUNCA `completed` sem
-    // persistência PROVADA (a escrita do texto pendurou ⇒ timeout).
-    expect(result).toEqual({ state: "failed", canceled: false });
+    // persistência PROVADA: incerteza LOCAL ⇒ `unconfirmed` (A1 — re-ler resolve).
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 
-  it("P2(a): FALHA de persistência do texto ⇒ NÃO declara `completed`", async () => {
+  it("P2(a): FALHA de persistência do texto ⇒ NÃO declara `completed` (terminal `failed`)", async () => {
     const attempts: CopyState[] = [];
-    const store = {
-      async recordCopyState(input: { state: CopyState }) {
+    const inner = makeCasStore();
+    const store: CopyStateStore = {
+      async recordCopyState(input) {
         attempts.push(input.state);
         if (input.state === "completed") {
-          throw new Error("product_1_1_copy_state_upsert_failed");
+          throw new Error("product_1_1_apply_copy_state_rpc_failed");
         }
+        return inner.store.recordCopyState(input);
       },
-      async recordCancellation() {},
+      recordCancellation: inner.store.recordCancellation,
     };
     const result = await drainCopyTask(
       {
@@ -474,17 +582,19 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
     expect(attempts).toEqual(["pending", "completed", "failed"]);
   });
 
-  it("P2(b): escrita do texto que PENDURA ⇒ NÃO declara `completed` e o drenador é LIMITADO", async () => {
+  it("P2(b): escrita do texto que PENDURA ⇒ `unconfirmed` (nunca `completed`) e o drenador é LIMITADO", async () => {
     const attempts: CopyState[] = [];
-    const store = {
-      async recordCopyState(input: { state: CopyState }) {
+    const inner = makeCasStore();
+    const store: CopyStateStore = {
+      async recordCopyState(input) {
         attempts.push(input.state);
         if (input.state === "completed") {
           // Pendura SOMENTE a escrita do texto além do teto.
           await new Promise<void>(() => {});
         }
+        return inner.store.recordCopyState(input);
       },
-      async recordCancellation() {},
+      recordCancellation: inner.store.recordCancellation,
     };
     const started = Date.now();
     const result = await drainCopyTask(
@@ -500,28 +610,29 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       { persistenceBudgetMs: 5 },
     );
 
-    // Persistência não provada (timeout) ⇒ `failed`, e o drenador retorna no teto.
-    expect(result).toEqual({ state: "failed", canceled: false });
+    // Persistência não provada (timeout) ⇒ incerteza LOCAL (`unconfirmed`) e o
+    // drenador retorna no teto (A1: resolve-se por RE-LEITURA, nunca por 2º write).
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 
-  it("P2(c): escrita de store ATRASADA que resolve APÓS o cancelamento NÃO sobrescreve o estado final", async () => {
-    let persisted: CopyState | null = null;
+  it("P2(c): escrita ATRASADA que resolve APÓS o cancelamento NÃO sobrescreve o estado final (CAS no BANCO)", async () => {
+    const inner = makeCasStore();
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const store = {
-      async recordCopyState(input: { state: CopyState }) {
+    const store: CopyStateStore = {
+      async recordCopyState(input) {
         // A escrita do texto é ATRASADA: só resolve quando liberada (depois do
-        // cancelamento). Não é um `commit` tardio da task — é uma escrita de
-        // STORE em voo que resolve após o settle.
+        // cancelamento). Não é um `commit` tardio da task — é uma escrita em voo
+        // que resolve após o settle.
         if (input.state === "completed") {
           await gate;
         }
-        persisted = input.state;
+        return inner.store.recordCopyState(input);
       },
-      async recordCancellation() {},
+      recordCancellation: inner.store.recordCancellation,
     };
     const controller = new AbortController();
 
@@ -533,7 +644,7 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
         run: async ({ commit }) => {
           void commit({ copyText: "tarde demais" });
           // Cancela logo após disparar a escrita (orçamento esgotado), ignorando
-          // o abort — a escrita do store permanece EM VOO.
+          // o abort — a escrita permanece EM VOO.
           queueMicrotask(() => controller.abort());
           await new Promise<void>(() => {});
         },
@@ -543,16 +654,16 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
     );
 
     expect(result).toEqual({ state: "failed", canceled: true });
-    // A escrita atrasada ainda não resolveu ⇒ nada a sobrescreveu ainda.
-    expect(persisted).toBe("pending");
+    // A escrita atrasada ainda não resolveu ⇒ o cancelamento já persistiu `failed`.
+    expect(inner.getRow()?.state).toBe("failed");
 
-    // Liberamos a escrita atrasada: ela grava `completed`, mas a escrita do estado
-    // SETTLED (`failed`) está SERIALIZADA depois e, portanto, prevalece — uma
-    // escrita em voo NUNCA é a última a gravar após o settle.
+    // Liberamos a escrita atrasada: o BANCO rejeita a transição para `completed`
+    // (terminal PROTEGIDO) — uma escrita em voo NUNCA sobrescreve o estado final.
     release();
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(persisted).toBe("failed");
+    expect(inner.getRow()?.state).toBe("failed");
   });
+
 
   it("NÃO existe ação/endpoint de retry (source)", () => {
     // Nenhuma AÇÃO/função de retry exportada nesta fatia (a palavra pode aparecer
@@ -937,15 +1048,18 @@ describe("Plano 08 — copy não bloqueia delivered (F8)", () => {
   it("falha da copy NÃO impede `delivered` (terminal result) e persiste failed", async () => {
     const harness = await buildOrchestratorHarness();
     harness.setProviderSequence([{ imageBase64: "AAAA", mimeType: "image/png", model: "m" }]);
+    const cas = makeCasStore();
     (harness.deps as Record<string, unknown>).copy = {
       runCopy: async () => {
         throw new Error("copy_director_failed");
       },
-      recordCopyState: async (input: { state: CopyState }) => {
+      recordCopyState: async (input: RecordCopyStateInput) => {
         harness.copyStates.push(input.state);
+        return cas.store.recordCopyState(input);
       },
-      recordCancellation: async (input: { reason: string }) => {
+      recordCancellation: async (input: RecordCancellationInput) => {
         harness.copyCancellations.push(input.reason);
+        return cas.store.recordCancellation(input);
       },
     };
 
@@ -961,6 +1075,7 @@ describe("Plano 08 — copy não bloqueia delivered (F8)", () => {
     const harness = await buildOrchestratorHarness();
     harness.setProviderSequence([{ imageBase64: "AAAA", mimeType: "image/png", model: "m" }]);
     let budgetController: AbortController | undefined;
+    const cas = makeCasStore();
     (harness.deps as Record<string, unknown>).copy = {
       makeBudgetSignal: () => {
         budgetController = new AbortController();
@@ -980,11 +1095,13 @@ describe("Plano 08 — copy não bloqueia delivered (F8)", () => {
           // Simula o orçamento estourando logo após a copy iniciar (determinístico).
           queueMicrotask(() => budgetController?.abort());
         }),
-      recordCopyState: async (input: { state: CopyState }) => {
+      recordCopyState: async (input: RecordCopyStateInput) => {
         harness.copyStates.push(input.state);
+        return cas.store.recordCopyState(input);
       },
-      recordCancellation: async (input: { reason: string }) => {
+      recordCancellation: async (input: RecordCancellationInput) => {
         harness.copyCancellations.push(input.reason);
+        return cas.store.recordCancellation(input);
       },
     };
 
@@ -993,8 +1110,9 @@ describe("Plano 08 — copy não bloqueia delivered (F8)", () => {
     // A entrega da imagem é independente do estado da copy.
     expect(terminal).toMatchObject({ type: "result" });
     expect(harness.calls.deliver).toHaveBeenCalledTimes(1);
-    // A copy foi cancelada (orçamento) e o estado foi persistido ANTES de encerrar.
-    expect(harness.copyStates).toEqual(["pending", "failed"]);
+    // O cancelamento é ATÔMICO: o terminal `failed` é aplicado DENTRO de
+    // `product_1_1_cancel_copy` (sem write separado de estado).
+    expect(harness.copyStates).toEqual(["pending"]);
     expect(harness.copyCancellations).toEqual([COPY_CANCELLATION_REASON]);
   });
 });

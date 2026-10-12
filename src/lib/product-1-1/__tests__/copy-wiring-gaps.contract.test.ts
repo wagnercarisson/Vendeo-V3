@@ -105,6 +105,38 @@ interface RecordedEvent {
 
 function makeRecordingClient(): { client: SupabaseClient; events: RecordedEvent[] } {
   const events: RecordedEvent[] = [];
+  // P2 — simulador CAS das RPCs condicionais (transição/terminal/replay) para
+  // registrar os eventos do NOVO caminho RPC-only.
+  const rows = new Map<string, { state: string; copyText: string | null; copyPayload: unknown }>();
+  const apply = (params: Record<string, unknown>) => {
+    const key = `${params.p_campaign_id}:${params.p_operation_id}`;
+    const state = String(params.p_state);
+    const copyText = (params.p_copy_text as string | null) ?? null;
+    const copyPayload = params.p_copy_payload ?? null;
+    if (state === "completed" && (copyText === null || copyText.trim() === "")) {
+      return { applied: false, outcome: "invalid_content", state: null };
+    }
+    const row = rows.get(key);
+    if (!row) {
+      rows.set(key, { state, copyText, copyPayload });
+      return { applied: true, outcome: "applied", state };
+    }
+    const terminal = row.state === "completed" || row.state === "failed";
+    if (terminal) {
+      if (row.state === state) {
+        const eq =
+          row.copyText === copyText &&
+          JSON.stringify(row.copyPayload) === JSON.stringify(copyPayload);
+        return eq
+          ? { applied: false, outcome: "idempotent", state }
+          : { applied: false, outcome: "conflict", state };
+      }
+      return { applied: false, outcome: "rejected", state: row.state };
+    }
+    if (row.state === state) return { applied: false, outcome: "idempotent", state };
+    rows.set(key, { state, copyText, copyPayload });
+    return { applied: true, outcome: "applied", state };
+  };
   const chain = () => {
     const c = {
       eq() {
@@ -119,18 +151,27 @@ function makeRecordingClient(): { client: SupabaseClient; events: RecordedEvent[
   const client = {
     from(table: string) {
       return {
-        upsert(payload: Record<string, unknown>) {
-          events.push({ table, op: "upsert", payload });
-          return Promise.resolve({ error: null });
-        },
-        insert(payload: Record<string, unknown>) {
-          events.push({ table, op: "insert", payload });
-          return Promise.resolve({ error: null });
-        },
         select() {
           return chain();
         },
       };
+    },
+    rpc(name: string, params: Record<string, unknown>) {
+      events.push({ table: name, op: "rpc", payload: params });
+      if (name === "product_1_1_cancel_copy") {
+        const res = apply({ ...params, p_state: "failed", p_copy_text: null, p_copy_payload: null });
+        if (res.state === "failed") {
+          return Promise.resolve({
+            data: { applied: res.applied, state: "failed", canceled: true },
+            error: null,
+          });
+        }
+        return Promise.resolve({
+          data: { applied: res.applied, state: res.state, canceled: false },
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: apply(params), error: null });
     },
   } as unknown as SupabaseClient;
   return { client, events };
@@ -414,15 +455,16 @@ describe("Plano 08 (correção) — copy DEFAULT real conectada ao fluxo produti
     expect(terminal).toMatchObject({ type: "result" });
     expect(harness.copyCalls()).toBe(1);
 
-    const copyUpserts = harness.events.filter(
-      (event) => event.table === "product_1_1_copy_state" && event.op === "upsert",
+    // P2 — a persistência passa pela RPC condicional (RPC-only writes).
+    const copyRpcs = harness.events.filter(
+      (event) => event.table === "product_1_1_apply_copy_state" && event.op === "rpc",
     );
-    const states = copyUpserts.map((event) => event.payload.state);
+    const states = copyRpcs.map((event) => event.payload.p_state);
     expect(states).toEqual(["pending", "completed"]);
 
-    const completed = copyUpserts.find((event) => event.payload.state === "completed");
-    expect(completed?.payload.copy_text).toBe("Legenda simulada da campanha");
-    expect(completed?.payload.copy_payload).toMatchObject({
+    const completed = copyRpcs.find((event) => event.payload.p_state === "completed");
+    expect(completed?.payload.p_copy_text).toBe("Legenda simulada da campanha");
+    expect(completed?.payload.p_copy_payload).toMatchObject({
       caption: "Legenda simulada da campanha",
     });
   });
@@ -438,7 +480,7 @@ describe("Plano 08 (correção) — copy DEFAULT real conectada ao fluxo produti
     expect(terminal).toMatchObject({ type: "result" });
     expect(harness.copyCalls()).toBe(0);
     expect(
-      harness.events.filter((event) => event.table === "product_1_1_copy_state"),
+      harness.events.filter((event) => event.table === "product_1_1_apply_copy_state"),
     ).toHaveLength(0);
   });
 
@@ -454,7 +496,7 @@ describe("Plano 08 (correção) — copy DEFAULT real conectada ao fluxo produti
     expect(terminal).toMatchObject({ type: "error", code: "operation_in_progress" });
     expect(harness.copyCalls()).toBe(0);
     expect(
-      harness.events.filter((event) => event.table === "product_1_1_copy_state"),
+      harness.events.filter((event) => event.table === "product_1_1_apply_copy_state"),
     ).toHaveLength(0);
   });
 });
@@ -473,6 +515,25 @@ describe("Plano 08 (correção) — conclusão tardia da copy não persiste (Gap
     });
 
     // Aqui injetamos uma copy que IGNORA o abort para provar o latch do drenador.
+    const rows = new Map<string, { state: string; copyText: string | null }>();
+    const applyCas = (state: string, copyText: string | null) => {
+      if (state === "completed" && (copyText === null || copyText.trim() === "")) {
+        return { applied: false, outcome: "invalid_content", state: null };
+      }
+      const row = rows.get("op");
+      if (!row) {
+        rows.set("op", { state, copyText });
+        return { applied: true, outcome: "applied", state };
+      }
+      const terminal = row.state === "completed" || row.state === "failed";
+      if (terminal) {
+        if (row.state === state) return { applied: false, outcome: "idempotent", state };
+        return { applied: false, outcome: "rejected", state: row.state };
+      }
+      if (row.state === state) return { applied: false, outcome: "idempotent", state };
+      rows.set("op", { state, copyText });
+      return { applied: true, outcome: "applied", state };
+    };
     harness.deps.copy = {
       makeBudgetSignal: () => {
         budgetController = new AbortController();
@@ -484,33 +545,40 @@ describe("Plano 08 (correção) — conclusão tardia da copy não persiste (Gap
         await lateGate;
         lateCommit = () => commit({ copyText: "tarde demais" });
       },
-      recordCopyState: (input: { campaignId: string; operationId: string; state: string; copyText?: string | null }) => {
+      recordCopyState: (input: { state: string; copyText?: string | null }) => {
         harness.events.push({
-          table: "product_1_1_copy_state",
-          op: "upsert",
+          table: "product_1_1_apply_copy_state",
+          op: "rpc",
           payload: input as unknown as Record<string, unknown>,
         });
-        return Promise.resolve();
+        return Promise.resolve(applyCas(input.state, input.copyText ?? null));
       },
       recordCancellation: (input: { reason: string }) => {
         harness.events.push({
-          table: "product_1_1_copy_cancellations",
-          op: "insert",
+          table: "product_1_1_cancel_copy",
+          op: "rpc",
           payload: input as unknown as Record<string, unknown>,
         });
-        return Promise.resolve();
+        const res = applyCas("failed", null);
+        return Promise.resolve(
+          res.state === "failed"
+            ? { applied: res.applied, state: "failed", canceled: true }
+            : { applied: res.applied, state: res.state, canceled: false },
+        );
       },
     };
 
     const { terminal } = await runOrchestrator(harness);
     expect(terminal).toMatchObject({ type: "result" });
 
+    // O cancelamento é ATÔMICO: o terminal `failed` é aplicado DENTRO de
+    // `product_1_1_cancel_copy` (sem write separado de estado).
     const statesAfterDrain = harness.events
-      .filter((e) => e.table === "product_1_1_copy_state")
+      .filter((e) => e.table === "product_1_1_apply_copy_state")
       .map((e) => e.payload.state);
-    expect(statesAfterDrain).toEqual(["pending", "failed"]);
+    expect(statesAfterDrain).toEqual(["pending"]);
     expect(
-      harness.events.filter((e) => e.table === "product_1_1_copy_cancellations"),
+      harness.events.filter((e) => e.table === "product_1_1_cancel_copy"),
     ).toHaveLength(1);
 
     // A conclusão TARDIA tenta persistir, mas o latch bloqueia: nada muda.
@@ -519,9 +587,9 @@ describe("Plano 08 (correção) — conclusão tardia da copy não persiste (Gap
     await lateCommit?.();
     expect(
       harness.events
-        .filter((e) => e.table === "product_1_1_copy_state")
+        .filter((e) => e.table === "product_1_1_apply_copy_state")
         .map((e) => e.payload.state),
-    ).toEqual(["pending", "failed"]);
+    ).toEqual(["pending"]);
   });
 });
 

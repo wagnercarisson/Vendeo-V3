@@ -16,22 +16,40 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *  - **Gap 1** — o TEXTO entregue pela copy (não só o estado) é persistido
  *    (`copy_text`/`copy_payload`) e recuperável, via `commit(...)` no drenador;
  *  - **Gap 3** — `drainCopyTask` NÃO declara ausência de órfã com base apenas em
- *    `Promise.race`: o commit é LATChado (uma conclusão tardia após o
- *    cancelamento NUNCA persiste/substitui o estado cancelado) e as escritas de
- *    persistência têm orçamento próprio (`COPY_PERSISTENCE_BUDGET_MS`).
+ *    `Promise.race`: as escritas de persistência têm orçamento próprio
+ *    (`COPY_PERSISTENCE_BUDGET_MS`).
+ *
+ * P2 (transição/ordem NO BANCO — reconciliado). A garantia de ORDEM/TRANSIÇÃO
+ * NÃO vive mais numa fila EM MEMÓRIA (`writeChain`), que morria com o
+ * processo/request: cada escrita é uma transição CONDICIONAL no banco via
+ * `product_1_1_apply_copy_state` (terminal PROTEGIDO + replay vinculado a
+ * CONTEÚDO; a corrida de primeira escrita é resolvida por RE-LEITURA sob trava).
+ * O cancelamento usa `product_1_1_cancel_copy` (terminal `failed` + motivo numa
+ * ÚNICA transação). Ambas as RPCs são `SECURITY DEFINER` e `service_role` tem
+ * SELECT ONLY nas tabelas — um write direto é NEGADO.
+ *
+ *  - **A1** — "não confirmado" é incerteza LOCAL do CHAMADOR (`timeout`), NÃO um
+ *    fato persistido: resolve-se por RE-LEITURA (`readCopyDelivery`), NUNCA por
+ *    um segundo write de confirmação. O `state` PERSISTIDO é AUTORITATIVO.
+ *  - **A3** — replay terminal EQUIVALENTE ⇒ `idempotent`; conteúdo DIVERGENTE ⇒
+ *    `conflict` (o persistido permanece inalterado).
+ *  - **C2** — `completed` EXIGE conteúdo ENTREGÁVEL: a RPC devolve
+ *    `invalid_content` (nunca persiste `completed` sem texto). O cliente VALIDA
+ *    o envelope e FALHA FECHADO.
  *
  * Invariantes:
  *  - falha/cancelamento da copy NUNCA bloqueia a entrega da imagem e NUNCA
  *    reverte a reserva de crédito;
- *  - CANCELAMENTO é registrado SEPARADamente do estado da copy
+ *  - CANCELAMENTO é registrado SEPARADAMENTE do estado da copy
  *    (`public.product_1_1_copy_cancellations`) e nunca é confundido com falha
  *    de geração;
  *  - NÃO existe ação/endpoint de retry nesta fatia (retry pertence à b2) —
  *    nenhuma retomada automática é prometida.
  *
- * Este módulo define apenas os contratos e o drenador determinístico; a
- * correção de persistência vive no Postgres/PostgREST e o client é injetável
- * (seam testável, espelhando `image-generation-diagnosis-repository.ts`).
+ * Este módulo define os contratos (RPCs + validação de envelope + drenador
+ * determinístico); a correção de persistência vive no Postgres/PostgREST e o
+ * client é injetável (seam testável, espelhando
+ * `image-generation-diagnosis-repository.ts`).
  */
 
 /** Estados persistidos da copy (nunca inferidos; sempre persistidos). */
@@ -42,8 +60,8 @@ export const COPY_BUDGET_MS = 30_000;
 
 /**
  * Orçamento PADRÃO (ms) das ESCRITAS de estado da copy. Uma escrita de store que
- * pendurar NÃO pode prender o drenador além deste teto (gap 3 — as escritas
- * `safeRecord` têm orçamento próprio, distinto do orçamento da task).
+ * pendurar NÃO pode prender o drenador além deste teto (gap 3 — as escritas de
+ * persistência têm orçamento próprio, distinto do orçamento da task).
  */
 export const COPY_PERSISTENCE_BUDGET_MS = 5_000;
 
@@ -52,6 +70,10 @@ export const COPY_CANCELLATION_REASON = "copy_budget_exceeded" as const;
 
 export const COPY_STATE_TABLE = "product_1_1_copy_state" as const;
 export const COPY_CANCELLATION_TABLE = "product_1_1_copy_cancellations" as const;
+
+/** RPCs condicionais (RPC-only writes; `service_role` não escreve direto). */
+export const APPLY_COPY_STATE_RPC = "product_1_1_apply_copy_state" as const;
+export const CANCEL_COPY_RPC = "product_1_1_cancel_copy" as const;
 
 /** Texto/payload ENTREGUE pela copy, persistido junto do estado `completed`. */
 export interface CopyDelivery {
@@ -83,6 +105,36 @@ export interface RecordCancellationInput {
   readonly reason: string;
 }
 
+/**
+ * P2 — desfecho da transição CONDICIONAL (`product_1_1_apply_copy_state`).
+ *   * `applied`         — transição/criação efetivada;
+ *   * `idempotent`      — replay EQUIVALENTE (nenhuma escrita);
+ *   * `conflict`        — MESMO terminal, conteúdo DIVERGENTE (persistido inalterado);
+ *   * `rejected`        — terminal protegido / escrita não-terminal tardia;
+ *   * `invalid_content` — `completed` sem texto entregável (C2).
+ */
+export type CopyStateOutcome =
+  | "applied"
+  | "idempotent"
+  | "conflict"
+  | "rejected"
+  | "invalid_content";
+
+/** Envelope devolvido por `product_1_1_apply_copy_state` (validado, fail-closed). */
+export interface CopyStateTransitionResult {
+  readonly applied: boolean;
+  readonly outcome: CopyStateOutcome;
+  /** Estado PERSISTIDO após a operação (`null` apenas em `invalid_content`). */
+  readonly state: CopyState | null;
+}
+
+/** Envelope devolvido por `product_1_1_cancel_copy` (validado, fail-closed). */
+export interface CopyCancellationResult {
+  readonly applied: boolean;
+  readonly state: CopyState | null;
+  readonly canceled: boolean;
+}
+
 /** Modelo de leitura do estado + texto/payload entregues. */
 export interface CopyDeliveryRecord {
   readonly state: CopyState;
@@ -92,30 +144,109 @@ export interface CopyDeliveryRecord {
 
 /** Seam de persistência do estado da copy (injetável; default Supabase). */
 export interface CopyStateStore {
-  recordCopyState(input: RecordCopyStateInput): Promise<void>;
-  recordCancellation(input: RecordCancellationInput): Promise<void>;
+  /** Aplica a transição condicional e devolve o envelope VALIDADO (fail-closed). */
+  recordCopyState(input: RecordCopyStateInput): Promise<CopyStateTransitionResult>;
+  /** Aplica o terminal `failed` + registra o motivo numa ÚNICA transação. */
+  recordCancellation(input: RecordCancellationInput): Promise<CopyCancellationResult>;
 }
 
-/** UPSERT do estado CORRENTE da copy (uma linha por operação). */
+const COPY_STATES: readonly CopyState[] = ["pending", "completed", "failed"];
+const COPY_STATE_OUTCOMES: readonly CopyStateOutcome[] = [
+  "applied",
+  "idempotent",
+  "conflict",
+  "rejected",
+  "invalid_content",
+];
+
+function isCopyState(value: unknown): value is CopyState {
+  return typeof value === "string" && (COPY_STATES as readonly string[]).includes(value);
+}
+
+/**
+ * C2 — VALIDA o envelope da RPC e FALHA FECHADO. Um retorno ausente, de tipo
+ * errado ou CONTRADITÓRIO (ex.: `applied:true` com `outcome != 'applied'`, ou
+ * `applied:true` sem `state`) NUNCA é tratado como persistência confirmada: o
+ * cliente lança e o drenador NÃO declara sucesso.
+ */
+function parseCopyStateEnvelope(raw: unknown): CopyStateTransitionResult {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("product_1_1_apply_copy_state_invalid_envelope");
+  }
+  const envelope = raw as Record<string, unknown>;
+  const applied = envelope.applied;
+  const outcome = envelope.outcome;
+  const state = envelope.state;
+
+  if (typeof applied !== "boolean") {
+    throw new Error("product_1_1_apply_copy_state_invalid_envelope");
+  }
+  if (
+    typeof outcome !== "string" ||
+    !(COPY_STATE_OUTCOMES as readonly string[]).includes(outcome)
+  ) {
+    throw new Error("product_1_1_apply_copy_state_invalid_envelope");
+  }
+  if (state !== null && state !== undefined && !isCopyState(state)) {
+    throw new Error("product_1_1_apply_copy_state_invalid_envelope");
+  }
+  const normalizedState: CopyState | null = isCopyState(state) ? state : null;
+
+  // Coerência aplicado × desfecho. Contradição ⇒ falha fechada.
+  if (applied) {
+    if (outcome !== "applied" || normalizedState === null) {
+      throw new Error("product_1_1_apply_copy_state_incoherent_envelope");
+    }
+  } else if (outcome === "applied") {
+    throw new Error("product_1_1_apply_copy_state_incoherent_envelope");
+  }
+
+  return { applied, outcome: outcome as CopyStateOutcome, state: normalizedState };
+}
+
+/** Valida o envelope de `product_1_1_cancel_copy` (fail-closed). */
+function parseCopyCancellationEnvelope(raw: unknown): CopyCancellationResult {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("product_1_1_cancel_copy_invalid_envelope");
+  }
+  const envelope = raw as Record<string, unknown>;
+  const applied = envelope.applied;
+  const canceled = envelope.canceled;
+  const state = envelope.state;
+
+  if (typeof applied !== "boolean" || typeof canceled !== "boolean") {
+    throw new Error("product_1_1_cancel_copy_invalid_envelope");
+  }
+  if (state !== null && state !== undefined && !isCopyState(state)) {
+    throw new Error("product_1_1_cancel_copy_invalid_envelope");
+  }
+  // Coerência: `canceled:true` só é válido com estado terminal `failed`.
+  if (canceled && state !== "failed") {
+    throw new Error("product_1_1_cancel_copy_incoherent_envelope");
+  }
+
+  return { applied, canceled, state: isCopyState(state) ? state : null };
+}
+
+/**
+ * P2 — aplica a transição CONDICIONAL via RPC e valida o envelope (fail-closed).
+ * O cliente NUNCA afirma persistência a partir de um envelope inválido.
+ */
 export async function recordCopyState(
   client: SupabaseClient,
   input: RecordCopyStateInput,
-): Promise<void> {
-  const { error } = await client.from(COPY_STATE_TABLE).upsert(
-    {
-      campaign_id: input.campaignId,
-      operation_id: input.operationId,
-      state: input.state,
-      // Gap 1 — o texto/payload entregue acompanha o estado `completed`.
-      ...(input.copyText !== undefined ? { copy_text: input.copyText } : {}),
-      ...(input.copyPayload !== undefined ? { copy_payload: input.copyPayload } : {}),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "campaign_id,operation_id" },
-  );
+): Promise<CopyStateTransitionResult> {
+  const { data, error } = await client.rpc(APPLY_COPY_STATE_RPC, {
+    p_campaign_id: input.campaignId,
+    p_operation_id: input.operationId,
+    p_state: input.state,
+    p_copy_text: input.copyText ?? null,
+    p_copy_payload: input.copyPayload ?? null,
+  });
   if (error) {
-    throw new Error(`product_1_1_copy_state_upsert_failed:${error.message}`);
+    throw new Error(`product_1_1_apply_copy_state_rpc_failed:${error.message}`);
   }
+  return parseCopyStateEnvelope(data);
 }
 
 /** Lê o estado persistido da copy (`null` quando ainda não existe linha). */
@@ -139,7 +270,9 @@ export async function readCopyState(
 /**
  * Gap 1 — lê o estado E o texto/payload ENTREGUES pela copy (`null` quando não
  * existe linha). Permite à campanha recuperar o texto entregue, não apenas o
- * estado.
+ * estado. O `state` PERSISTIDO é AUTORITATIVO (A1) — NÃO existe campo
+ * `confirmation`: uma incerteza LOCAL (timeout) é resolvida por ESTA RE-LEITURA,
+ * NUNCA por um segundo write.
  */
 export async function readCopyDelivery(
   client: SupabaseClient,
@@ -168,22 +301,23 @@ export async function readCopyDelivery(
 }
 
 /**
- * Registra o CANCELAMENTO separadamente do estado da copy (tabela própria,
- * append-only). Nunca é confundido com `state = 'failed'` nem com falha de
- * geração.
+ * P2 — CANCELAMENTO ATÔMICO via RPC: aplica o terminal `failed` E registra o
+ * motivo numa ÚNICA transação; RECUSA cancelar sobre um `completed` persistido
+ * (`canceled:false`). O envelope é validado (fail-closed).
  */
 export async function recordCancellation(
   client: SupabaseClient,
   input: RecordCancellationInput,
-): Promise<void> {
-  const { error } = await client.from(COPY_CANCELLATION_TABLE).insert({
-    campaign_id: input.campaignId,
-    operation_id: input.operationId,
-    reason: input.reason,
+): Promise<CopyCancellationResult> {
+  const { data, error } = await client.rpc(CANCEL_COPY_RPC, {
+    p_campaign_id: input.campaignId,
+    p_operation_id: input.operationId,
+    p_reason: input.reason,
   });
   if (error) {
-    throw new Error(`product_1_1_copy_cancellation_insert_failed:${error.message}`);
+    throw new Error(`product_1_1_cancel_copy_rpc_failed:${error.message}`);
   }
+  return parseCopyCancellationEnvelope(data);
 }
 
 /**
@@ -244,10 +378,19 @@ export function createCopyBudgetSignal(
   };
 }
 
-/** Resultado determinístico da drenagem da copy. */
+/**
+ * Resultado determinístico da drenagem da copy.
+ *   * `completed`   — o estado `completed` foi PROVADO persistido (apply/idempotent);
+ *   * `failed`      — o estado `failed` foi PROVADO persistido (falha/cancelamento);
+ *   * `unconfirmed` — INCERTEZA LOCAL do CHAMADOR (timeout): NADA é afirmado sobre
+ *     a persistência — resolve-se por RE-LEITURA (`readCopyDelivery`), NUNCA por um
+ *     segundo write (A1). NÃO é persistido.
+ */
+export type CopyDrainState = "completed" | "failed" | "unconfirmed";
+
 export interface DrainCopyTaskResult {
-  readonly state: "completed" | "failed";
-  /** `true` quando o orçamento esgotou e a copy foi CANCELADA. */
+  readonly state: CopyDrainState;
+  /** `true` quando o orçamento esgotou e a copy foi CANCELADA (`canceled:true`). */
   readonly canceled: boolean;
 }
 
@@ -284,43 +427,59 @@ export interface DrainCopyTaskOptions {
 }
 
 /**
- * Resultado PROVADO de uma escrita de store: `success` (a escrita resolveu),
- * `error` (a escrita rejeitou) ou `timeout` (o teto esgotou antes de resolver).
- * O drenador SÓ confirma `completed` quando a escrita que o estabelece retorna
- * `success` (persistência PROVADA) — `error`/`timeout` NUNCA contam como sucesso.
+ * Desfecho de uma escrita de store com orçamento próprio: o envelope VALIDADO
+ * (`result`), uma rejeição (`error`) ou o teto esgotado (`timeout`). O drenador
+ * SÓ confirma um terminal quando o envelope PROVA o estado pedido — `error` e
+ * `timeout` NUNCA contam como sucesso.
  */
-export type RecordOutcome = "success" | "error" | "timeout";
+type RecordSettle =
+  | { readonly kind: "result"; readonly result: CopyStateTransitionResult }
+  | { readonly kind: "error" }
+  | { readonly kind: "timeout" };
+
+/**
+ * C2 — `true` somente quando o envelope PROVA o estado pedido: `applied` (a
+ * transição aconteceu) ou `idempotent` (o persistido JÁ é esse estado). `conflict`,
+ * `rejected`, `invalid_content`, `error` e `timeout` NUNCA confirmam.
+ */
+function confirmsPersistedState(settle: RecordSettle, expected: CopyState): boolean {
+  return (
+    settle.kind === "result" &&
+    settle.result.state === expected &&
+    (settle.result.outcome === "applied" || settle.result.outcome === "idempotent")
+  );
+}
 
 /**
  * Executa uma escrita de store com ORÇAMENTO PRÓPRIO (gap 3): nunca prende o
  * drenador além de `budgetMs`, e nunca dispara rejeição não tratada se a escrita
- * pendurar e resolver/rejeitar depois do teto. Distingue sucesso × erro × timeout
- * (correção de integração: a confirmação de `completed` depende de persistência
- * PROVADA, nunca de uma escrita apenas DISPARADA).
+ * pendurar e resolver/rejeitar depois do teto. Distingue o envelope devolvido
+ * (persistência) de erro/timeout — a confirmação de terminal depende de
+ * persistência PROVADA, nunca de uma escrita apenas DISPARADA.
  */
 function boundedRecord(
-  action: () => Promise<void>,
+  action: () => Promise<CopyStateTransitionResult>,
   budgetMs: number,
   timers: NonNullable<DrainCopyTaskOptions["timers"]>,
-): Promise<RecordOutcome> {
-  return new Promise<RecordOutcome>((resolve) => {
+): Promise<RecordSettle> {
+  return new Promise<RecordSettle>((resolve) => {
     let settled = false;
-    const finish = (outcome: RecordOutcome) => {
+    const finish = (outcome: RecordSettle) => {
       if (settled) return;
       settled = true;
       resolve(outcome);
     };
-    const id = timers.setTimeout(() => finish("timeout"), Math.max(0, budgetMs));
+    const id = timers.setTimeout(() => finish({ kind: "timeout" }), Math.max(0, budgetMs));
     Promise.resolve()
       .then(action)
       .then(
-        () => {
+        (result) => {
           timers.clearTimeout(id);
-          finish("success");
+          finish({ kind: "result", result });
         },
         () => {
           timers.clearTimeout(id);
-          finish("error");
+          finish({ kind: "error" });
         },
       );
   });
@@ -329,31 +488,25 @@ function boundedRecord(
 /**
  * Drena a task da copy DENTRO do ciclo da requisição (F8):
  *
- *  1. persiste `pending`;
+ *  1. aplica `pending` (transição condicional; a corrida de primeira escrita é
+ *     resolvida pelo BANCO — C1);
  *  2. corre a task até o orçamento esgotar OU até terminar;
- *  3. a task persiste o TEXTO entregue via `commit` (latch: uma conclusão tardia
- *     após o cancelamento nunca persiste);
- *  4. `completed` é confirmado SOMENTE com persistência PROVADA — uma escrita que
- *     rejeita (`error`) ou que pendura além do teto (`timeout`) NUNCA declara
- *     `completed`;
- *  5. ao falhar → persiste `failed` (sem cancelamento);
- *  6. ao CANCELAR (orçamento esgotado) → persiste `failed` DETERMINISTICAMENTE e
- *     registra o cancelamento SEPARADO — sem órfã, sem retry.
+ *  3. a task persiste o TEXTO entregue via `commit` (transição CONDICIONAL);
+ *  4. `completed` só é afirmado com a RPC PROVANDO o estado (`applied`/
+ *     `idempotent`) — `conflict`/`rejected`/`invalid_content`/`error`/`timeout`
+ *     NUNCA declaram `completed` (C2: nunca `completed` sem texto entregável);
+ *  5. ao CANCELAR (orçamento esgotado) → `product_1_1_cancel_copy` aplica o
+ *     terminal `failed` E registra o motivo numa ÚNICA transação; se um
+ *     `completed` já estiver PERSISTIDO, o cancelamento é RECUSADO e o estado
+ *     persistido prevalece;
+ *  6. `timeout` de escrita ⇒ o drenador devolve `"unconfirmed"` (incerteza LOCAL
+ *     do CHAMADOR) — sem segundo write; resolve-se por RE-LEITURA.
  *
- * Correção de integração (reconciliação do Plano 08):
- *  - o latch só marca `committed` APÓS a escrita do texto resolver com sucesso
- *    (antes, o latch confirmava `completed` apenas com a escrita DISPARADA — o
- *    drenador podia declarar `completed` sem o texto persistido);
- *  - TODAS as escritas de estado são SERIALIZADAS numa fila; assim a escrita do
- *    estado SETTLED (final/cancelado) é aplicada DEPOIS de qualquer escrita em
- *    voo — uma escrita de store atrasada que resolve após o cancelamento NUNCA é
- *    a última a gravar (não sobrescreve o estado final/cancelado);
- *  - o orçamento das escritas (`persistenceBudgetMs`) mantém o drenador limitado
- *    mesmo quando uma escrita pendura (o drenador retorna no teto).
- *
- * O `Promise.race` encerra a ESPERA e o `commit` latChado bloqueia persistência
- * tardia da task; a fila serializada impede que uma escrita em voo sobrescreva o
- * estado já settled.
+ * A ORDEM/TRANSIÇÃO é imposta pelo BANCO (transição condicional + terminal
+ * protegido); o drenador NÃO depende de uma fila em memória para garanti-la.
+ * Cada escrita tem orçamento próprio, então o drenador nunca é preso por uma
+ * escrita que pendura. Sem retry; a copy nunca bloqueia a arte nem reverte a
+ * reserva.
  */
 export async function drainCopyTask(
   input: DrainCopyTaskInput,
@@ -364,64 +517,70 @@ export async function drainCopyTask(
   const timers = options.timers ?? { setTimeout, clearTimeout };
 
   // Latch: `settled` encerra o drenador; `attempted` marca que a task tentou
-  // persistir o texto; `committed` só é `true` com persistência PROVADA.
-  const latch = { settled: false, committed: false, attempted: false };
-
-  // Fila SERIALIZADA de escritas: cada escrita só roda após a anterior resolver
-  // (mesmo se rejeitar). Garante que a escrita do estado settled é a ÚLTIMA
-  // aplicada, mesmo com uma escrita em voo que resolve atrasada.
-  let writeChain: Promise<unknown> = Promise.resolve();
-  const schedule = (action: () => Promise<void>): Promise<void> => {
-    const run = writeChain.then(action);
-    writeChain = run.then(
-      () => undefined,
-      () => undefined,
-    );
-    return run;
-  };
+  // persistir o texto; `committed` só é `true` com o estado PROVADO persistido.
+  const latch: {
+    settled: boolean;
+    attempted: boolean;
+    committed: boolean;
+    commitSettle: RecordSettle | null;
+  } = { settled: false, attempted: false, committed: false, commitSettle: null };
 
   const recordState = (
     state: CopyState,
     extra?: Pick<RecordCopyStateInput, "copyText" | "copyPayload">,
-  ): Promise<RecordOutcome> =>
+  ): Promise<RecordSettle> =>
     boundedRecord(
       () =>
-        schedule(() =>
-          store.recordCopyState({
-            campaignId: input.campaignId,
-            operationId: input.operationId,
-            state,
-            ...(extra ?? {}),
-          }),
-        ),
+        store.recordCopyState({
+          campaignId: input.campaignId,
+          operationId: input.operationId,
+          state,
+          ...(extra ?? {}),
+        }),
       budgetMs,
       timers,
     );
 
-  const recordCancellationBounded = (): Promise<RecordOutcome> =>
-    boundedRecord(
-      () =>
-        schedule(() =>
+  const cancelBounded = (): Promise<RecordSettle | { kind: "cancel"; result: CopyCancellationResult }> =>
+    new Promise((resolve) => {
+      let settled = false;
+      const finish = (value: RecordSettle | { kind: "cancel"; result: CopyCancellationResult }) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+      const id = timers.setTimeout(() => finish({ kind: "timeout" }), Math.max(0, budgetMs));
+      Promise.resolve()
+        .then(() =>
           store.recordCancellation({
             campaignId: input.campaignId,
             operationId: input.operationId,
             reason: COPY_CANCELLATION_REASON,
           }),
-        ),
-      budgetMs,
-      timers,
-    );
+        )
+        .then(
+          (result) => {
+            timers.clearTimeout(id);
+            finish({ kind: "cancel", result });
+          },
+          () => {
+            timers.clearTimeout(id);
+            finish({ kind: "error" });
+          },
+        );
+    });
 
   const commit: CopyCommit = async (delivery) => {
     // NO-OP determinístico: após o settle, ou após uma tentativa de commit.
     if (latch.settled || latch.attempted) return;
     latch.attempted = true;
-    const outcome = await recordState("completed", {
+    const settle = await recordState("completed", {
       copyText: delivery.copyText,
       copyPayload: delivery.payload ?? null,
     });
-    // Só PROVA a conclusão com a escrita bem-sucedida — erro/timeout NUNCA conta.
-    if (outcome === "success") {
+    latch.commitSettle = settle;
+    // Só PROVA a conclusão quando a RPC confirma o estado `completed` persistido.
+    if (confirmsPersistedState(settle, "completed")) {
       latch.committed = true;
     }
   };
@@ -436,53 +595,58 @@ export async function drainCopyTask(
     input.signal.addEventListener("abort", () => resolve({ canceled: true }), { once: true });
   });
 
-  const ran: Promise<{ state: "completed" | "failed"; canceled: boolean }> = input
-    .run({ signal: input.signal, commit })
-    .then(
-      () => ({
-        // Task resolvida: commit PROVADO ⇒ completed; commit tentado e NÃO provado
-        // (erro/timeout) ⇒ failed (nunca `completed` sem persistência); sem commit
-        // ⇒ o drenador persiste `completed` abaixo (persistência provada).
-        state: latch.committed
-          ? ("completed" as const)
-          : latch.attempted
-            ? ("failed" as const)
-            : ("completed" as const),
-        canceled: false,
-      }),
-      () => ({
-        state: latch.committed ? ("completed" as const) : ("failed" as const),
-        canceled: !latch.committed && input.signal.aborted,
-      }),
-    );
+  const ran = input.run({ signal: input.signal, commit }).then(
+    (): { resolved: true; canceled: false } => ({ resolved: true, canceled: false }),
+    // Task rejeitada: `canceled` só quando o orçamento (sinal) abortou.
+    (): { resolved: false; canceled: boolean } => ({
+      resolved: false,
+      canceled: input.signal.aborted,
+    }),
+  );
 
   const winner = await Promise.race([
     ran.then((value) => ({ kind: "ran" as const, ...value })),
-    aborted.then((value) => ({ kind: "aborted" as const, state: "failed" as const, ...value })),
+    aborted.then(() => ({ kind: "aborted" as const, resolved: false as const, canceled: true })),
   ]);
 
   // Settle: a partir daqui, `commit` tardio é NO-OP (nunca sobrescreve o estado
   // cancelado nem escreve `completed` após o cancelamento registrado).
   latch.settled = true;
 
-  if (winner.state === "completed") {
-    if (latch.committed) {
-      // Texto já persistido com PROVA — exatamente um registro `completed`.
-      return { state: "completed", canceled: false };
+  // O BANCO é autoritativo: um `completed` PROVADO persistido é a verdade.
+  if (latch.committed) {
+    return { state: "completed", canceled: false };
+  }
+
+  if (winner.canceled) {
+    // Orçamento esgotado ⇒ CANCELA atomicamente (terminal `failed` + motivo numa
+    // ÚNICA transação). Se um `completed` já estiver PERSISTIDO, o cancelamento é
+    // recusado e o estado persistido prevalece.
+    const settle = await cancelBounded();
+    if (settle.kind === "cancel") {
+      if (!settle.result.canceled && settle.result.state === "completed") {
+        return { state: "completed", canceled: false };
+      }
+      return { state: "failed", canceled: true };
     }
-    // Task concluída sem `commit`: o drenador persiste `completed`, mas SÓ o
-    // confirma se a escrita suceder; caso contrário, degrada para `failed`.
-    const outcome = await recordState("completed");
-    if (outcome === "success") {
-      return { state: "completed", canceled: false };
+    // Incerteza LOCAL sobre o cancelamento: sem segundo write; re-ler resolve.
+    return { state: "unconfirmed", canceled: true };
+  }
+
+  if (latch.attempted) {
+    // Commit tentado e NÃO provado pelo envelope.
+    if (latch.commitSettle?.kind === "timeout") {
+      // Incerteza LOCAL do CHAMADOR (timeout): NADA é afirmado; re-ler resolve.
+      return { state: "unconfirmed", canceled: false };
     }
+    // `error`/`conflict`/`rejected`/`invalid_content`: o texto NÃO foi persistido
+    // ⇒ o terminal verdadeiro é `failed` (nunca `completed` enganoso).
     await recordState("failed");
     return { state: "failed", canceled: false };
   }
 
+  // Task resolvida SEM `commit` (nenhum texto entregável): C2 proíbe persistir
+  // `completed` sem conteúdo ⇒ o terminal verdadeiro é `failed`.
   await recordState("failed");
-  if (winner.canceled) {
-    await recordCancellationBounded();
-  }
-  return { state: winner.state, canceled: winner.canceled };
+  return { state: "failed", canceled: false };
 }

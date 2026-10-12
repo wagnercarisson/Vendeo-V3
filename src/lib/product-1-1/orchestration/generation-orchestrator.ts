@@ -80,6 +80,8 @@ import {
   type CopyCommit,
   type CopyState,
   type CopyStateStore,
+  type CopyStateTransitionResult,
+  type CopyCancellationResult,
 } from "../copy/copy-state";
 import {
   createDefaultProductOneToOneCopyOps,
@@ -261,12 +263,12 @@ export interface ProductOneToOneCopyOps {
     state: CopyState;
     copyText?: string | null;
     copyPayload?: Record<string, unknown> | null;
-  }) => Promise<void>;
+  }) => Promise<CopyStateTransitionResult>;
   readonly recordCancellation?: (input: {
     campaignId: string;
     operationId: string;
     reason: string;
-  }) => Promise<void>;
+  }) => Promise<CopyCancellationResult>;
   /** Orçamento injetável (testes fornecem um AbortSignal determinístico). */
   readonly makeBudgetSignal?: (budgetMs: number) => CopyBudgetSignal;
 }
