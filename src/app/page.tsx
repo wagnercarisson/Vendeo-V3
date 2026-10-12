@@ -11,11 +11,56 @@ import { FaqFinalCtaSection } from "@/components/landing/faq-final-cta-section";
 import { NovidadesLink } from "@/components/landing/novidades-link";
 import { getAllEntries } from "@/lib/changelog/get-changelog";
 import { getLaunchConfig } from "@/lib/launch-config/config";
+import {
+  HOME_TITLE,
+  HOME_DESCRIPTION,
+  SHARE_IMAGE_PATH,
+  SHARE_IMAGE_WIDTH,
+  SHARE_IMAGE_HEIGHT,
+  SHARE_IMAGE_ALT,
+} from "@/lib/seo/home-metadata";
+import { isIndexableEnvironment } from "@/lib/seo/environment";
+import {
+  INDEX_ROBOTS,
+  NOINDEX_ROBOTS,
+  HOME_CANONICAL_PATH,
+} from "@/lib/seo/indexation-policy";
+
+/**
+ * Metadata aprovada da home (D-04/D-05). `index, follow` somente sob produção
+ * confirmada + origem canônica validada (D-03/D-06); caso contrário `noindex`
+ * explícito — a home é a única exceção à raiz. As URLs (canonical/OG/Twitter)
+ * são resolvidas contra o `metadataBase` da raiz.
+ */
+const indexable = isIndexableEnvironment();
 
 export const metadata: Metadata = {
-  title: "Vendeo — Campanhas profissionais para sua loja",
-  description:
-    "O Vendeo transforma a oferta da sua loja em campanhas profissionais para redes sociais. Acesso liberado por convite em beta fechado — solicite seu acesso free.",
+  title: HOME_TITLE,
+  description: HOME_DESCRIPTION,
+  alternates: { canonical: HOME_CANONICAL_PATH },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: "Vendeo",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    url: HOME_CANONICAL_PATH,
+    images: [
+      {
+        url: SHARE_IMAGE_PATH,
+        width: SHARE_IMAGE_WIDTH,
+        height: SHARE_IMAGE_HEIGHT,
+        alt: SHARE_IMAGE_ALT,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    images: [SHARE_IMAGE_PATH],
+  },
+  robots: indexable ? INDEX_ROBOTS : NOINDEX_ROBOTS,
 };
 
 export default async function Home() {
