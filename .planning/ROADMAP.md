@@ -342,6 +342,47 @@ Plans:
 
 **Canonical refs:** `openspec/changes/fase-51-1-landing-visual-produto/`, `openspec/design-system/MASTER.md`, `docs/alinhamento-roadmap-pos-f48-1.md` §F51.1/§F51.2 (escopo antigo, reconciliado no `proposal.md`), `src/app/page.tsx`, `src/components/landing/*`, `src/lib/launch-config/*`, `src/app/api/access-requests/*`.
 
+## Phase 51.2: Fundação SEO / descoberta orgânica
+
+**Goal:** Preparar a base técnica de descoberta orgânica — origem canônica validada (`https://vendeo.tech`, sem `www`), `metadataBase` e URLs absolutas, metadata da home e de compartilhamento, política explícita de indexação (`index`/`noindex`) por rota e por ambiente com **fail-closed**, `robots.txt` e `sitemap.xml` restritos a URLs canônicas realmente indexáveis, e tratamento de documentos legais/versões Markdown/APIs — **sem** alterar a landing aprovada na F51.1 (H1, copy visível, layout, campanhas, logos, CTAs), **sem** tocar código da F56/autenticação/`middleware.ts`, **sem** configuração externa (DNS/Vercel/Supabase/Search Console), **sem** deploy e **sem** prometer indexação, tráfego ou posição no Google.
+
+**Nome:** Fundação SEO / descoberta orgânica (F51.2 — fatia técnica/local; sucede a F51.1 e reutiliza sua mensagem e hierarquia já validadas)
+
+**Status:** ○ **PLANEJADA — não iniciada; aguardando revisão conjunta dos planos antes da execução.** A **preparação técnica** (a) é validada na branch; a **ativação/validação pública** (b) depende da integração/publicação conjunta com a F56 e de autorização. Nenhuma configuração externa, deploy, envio de sitemap ou fechamento OpenSpec (verify/sync/archive) foi executada nesta etapa. Direção de índice: `noindex` é o padrão da raiz e a home é a **única exceção** explícita, indexável somente sob **produção confirmada (`VERCEL_ENV === "production"`) e origem canônica validada**.
+
+**Frente paralela:** branch `escopo/landing`. Esta fase é aditiva/local e não altera o tracking, o estado nem os artefatos da F56 (`56.1`, `56.2a`, `56.2b1a/b1b/b2`); não substitui nem pausa a F56 — a posição global ativa permanece F56.2a.
+
+**Depends on:** F51.1 concluída na branch (landing aprovada como base da metadata da home — sem reabrir o escopo visual). As dependências externas (canonicalização `www` → apex/HTTPS na Vercel/DNS, exposição de `VERCEL_ENV`, acesso ao Search Console) são **operacionais externas** e ficam registradas como pendência, não implementadas aqui.
+
+**Requirements:** REQ-51.2-01, REQ-51.2-02, REQ-51.2-03, REQ-51.2-04, REQ-51.2-05, REQ-51.2-06, REQ-51.2-07, REQ-51.2-08, REQ-51.2-09, REQ-51.2-10, REQ-51.2-11, REQ-51.2-12, REQ-51.2-13, REQ-51.2-14, REQ-51.2-15, REQ-51.2-16, REQ-51.2-17, REQ-51.2-18
+
+**Escopo de alto nível:**
+- helpers puros em `src/lib/seo/*`: `resolveCanonicalOrigin()` (produção valida `NEXT_PUBLIC_SITE_URL` — `https`, host exatamente `vendeo.tech`, sem `www`/caminho/query/fragmento; preview/local usa `VERCEL_URL` ou `http://localhost:3000`), resultado explícito (`origin`/`status`/`indexable`/`diagnostic`) **sem lançar exceção** e **sem emitir URL divergente**; `isIndexableEnvironment()` fail-closed; constantes de política de indexação e matriz de `X-Robots-Tag`;
+- `metadataBase` e default `robots: noindex, nofollow` na raiz (`src/app/layout.tsx`), preservando `manifest`/`icons`/`appleWebApp`/`viewport`;
+- metadata aprovada da home (título/descrição) **sem** alterar H1 nem conteúdo visível; `alternates.canonical` + Open Graph/Twitter com URL absoluta;
+- `index, follow` na home **somente** sob a condição combinada (produção confirmada + origem validada); caso contrário herda `noindex`;
+- `src/app/robots.ts` (permissivo fora de produção — **sem** `Disallow` que impeça a leitura do `noindex`) e `src/app/sitemap.ts` (só `${origin}/` sob a condição combinada; vazio caso contrário);
+- `headers()` em `next.config.ts` com `X-Robots-Tag: noindex` para `/auth/:path*`, `/api/:path*`, `/docs/:path*` e regra global `noindex` fora de produção;
+- política por rota: `/login`..`/update-password`, `(app)/**` (incl. `/novidades`), `/admin/**`, `/termos`, `/privacidade`, `/uso-aceitavel` → `noindex` e fora do sitemap, sem alterar autenticação;
+- imagem de compartilhamento institucional (composição determinística/local com `sharp`, sem IA/pago; **C1** aprovação visual antes da incorporação);
+- diagnóstico de performance (sem alterar a landing) e procedimento de baseline do Search Console; **sem** configuração externa nem envio de sitemap;
+- testes de metadata/canonical/robots/sitemap/política por ambiente e rota (incl. herança do `noindex` default, a exceção da home e produção com origem inválida cobrindo os três resultados), reconciliação do teste legado A9 (**C2**) e reexecução de lint/build/typecheck/`openspec validate --strict`.
+
+**Fora de escopo:** instrumentação de conversão/funil; implementação da oferta/créditos; autenticação; banco/migrations; qualquer alteração de código F56; conteúdo editorial/blog/novas páginas; dados estruturados (JSON-LD); alterações comerciais da landing (H1/copy visível/layout/campanhas/logos/CTAs); **alterações de performance que afetem a landing ou componentes compartilhados sem aprovação separada (C3)**; deploy/ativação pública; alteração de DNS/Vercel/Supabase/Search Console; envio de sitemap.
+
+**Checkpoints humanos:** **C1** aprovação visual da imagem de compartilhamento antes da incorporação final; **C2** confirmação para reconciliar o teste legado A9 (após comparação de cobertura); **C3** aprovação para qualquer ampliação de escopo (nova rota, conteúdo editorial, dados estruturados, alteração de performance na landing, configuração externa).
+
+**Gates operacionais:** `workflow.security_enforcement=true` (ASVS L1, bloqueio em high) — cada plano contém threat model; **C1/C2/C3** preservados; **superfície visual congelada** (H1, copy, layout, campanhas, logos, CTAs, tokens/`globals.css`) registrada no CONTEXT/planos (sem UI-SPEC dedicado — a fatia não altera a UI visível); **sem `db push`**, sem ativação de flag, **sem chamadas pagas/IA** (imagem por composição determinística). `openspec validate fase-51-2-fundacao-seo-descoberta-organica --strict` e `gsd-plan-checker` obrigatórios. `typecheck`: exceção externa `ssl`/`pg` (F56) mantida como **não aprovada** enquanto persistir (a F56 não é corrigida implicitamente).
+
+**Fonte normativa (ativa):** `openspec/changes/fase-51-2-fundacao-seo-descoberta-organica/` — `proposal.md`, `design.md` (D1–D15), `tasks.md` (9 seções) e specs `seo-discovery-foundation` (ADDED), `organic-discovery-readiness` (ADDED) e `route-redirects` (MODIFIED + ADDED).
+
+**Canonical refs:** `openspec/changes/fase-51-2-fundacao-seo-descoberta-organica/`, `openspec/design-system/MASTER.md`, `src/app/layout.tsx`, `src/app/page.tsx`, `next.config.ts`, `src/lib/supabase/site-url.ts`, `src/app/robots.ts`/`src/app/sitemap.ts` (novos), `src/lib/seo/*` (novos), `docs/alinhamento-roadmap-pos-f48-1.md` §F51.2 (escopo original, reconciliado no `proposal.md`).
+
+**Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
+
+Plans:
+- (a preencher na etapa de planejamento — ver `.planning/phases/51.2-fundacao-seo-descoberta-organica/`)
+
 ## Historical References
 
 - Cópia integral exata do roadmap anterior: `.planning/ROADMAP-ARCHIVE.md`.
