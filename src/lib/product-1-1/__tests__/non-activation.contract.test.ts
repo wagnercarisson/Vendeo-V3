@@ -54,6 +54,21 @@ const AUTHORIZED_CAMPAIGN_DOWNLOAD_ROUTE =
 const AUTHORIZED_CAMPANHAS_ID_PAGE = "src/app/(app)/campanhas/[id]/page.tsx";
 const NO_PRODUCT_FLOW_IMPORT_MODULE = "src/lib/campaign/display.ts";
 
+// F56.2b1b (Plano 07 — reconciliação G-NA, ÚLTIMO escritor da sequência
+// 01 → 04 → 06 → 07): as superfícies admin de resolução introduzem importadores
+// legados. SÓ pares EXPLÍCITOS importador+módulo — nunca `@/lib/product-1-1/**`
+// genérico nem `pending/**` por prefixo. O `resolution-form.tsx` é CLIENT
+// component: NÃO importa `product-1-1` (tipos inline por props). `schemas.ts` e
+// `(app)/admin/layout.tsx` NÃO importam `product-1-1` (negativos).
+const AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE =
+  "src/app/api/admin/product-1-1-pending/route.ts";
+const AUTHORIZED_ADMIN_PRODUCT_PENDING_PAGE =
+  "src/app/(app)/admin/product-1-1-pending/page.tsx";
+const AUTHORIZED_ADMIN_PRODUCT_PENDING_FORM =
+  "src/app/(app)/admin/product-1-1-pending/resolution-form.tsx";
+const NO_PRODUCT_FLOW_IMPORT_ADMIN_SCHEMAS = "src/lib/admin/schemas.ts";
+const NO_PRODUCT_FLOW_IMPORT_ADMIN_LAYOUT = "src/app/(app)/admin/layout.tsx";
+
 interface AuthorizedImportRule {
   readonly prefixes: readonly string[];
   readonly exact?: readonly string[];
@@ -129,6 +144,22 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       // (nunca gera/regenera/cobra). Par EXATO, sem prefixo amplo.
       "@/lib/product-1-1/copy/copy-state",
     ],
+  },
+  // Plano 07 — superfícies admin de resolução de pendências. Pares EXPLÍCITOS
+  // (sem prefixo `pending/**` genérico). A rota importa SOMENTE o serviço de
+  // resolução; a página importa SOMENTE o repositório de pendências; o formulário
+  // client NÃO importa `product-1-1` (regra vazia explícita).
+  [AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/pending/resolve-pending-operation"],
+  },
+  [AUTHORIZED_ADMIN_PRODUCT_PENDING_PAGE]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/pending/pending-operations-repository"],
+  },
+  [AUTHORIZED_ADMIN_PRODUCT_PENDING_FORM]: {
+    prefixes: [],
+    exact: [],
   },
 });
 const SIDE_EFFECT_IMPORT_RE =
@@ -747,6 +778,118 @@ describe("Product 1:1 — reconciliação G-NA (Plano 06, F56.2b1b)", () => {
     for (const [importer, rule] of Object.entries(AUTHORIZED_PRODUCT_FLOW_IMPORTS)) {
       for (const prefix of rule.prefixes) {
         expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/");
+        expect(prefix.endsWith("/product-1-1/"), `${importer}::${prefix}`).toBe(false);
+      }
+    }
+  });
+});
+
+describe("Product 1:1 — reconciliação G-NA (Plano 07 — fim da sequência, F56.2b1b)", () => {
+  it("rota admin de pendências: autoriza SOMENTE `pending/resolve-pending-operation`", () => {
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE,
+        "@/lib/product-1-1/pending/resolve-pending-operation",
+      ),
+    ).toBe(true);
+    for (const specifier of [
+      "@/lib/product-1-1/pending/pending-operations-repository",
+      "@/lib/product-1-1/pending",
+      "@/lib/product-1-1/pending/**",
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/artifact/artifact-store",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE, specifier),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("página admin de pendências: autoriza SOMENTE `pending/pending-operations-repository`", () => {
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_ADMIN_PRODUCT_PENDING_PAGE,
+        "@/lib/product-1-1/pending/pending-operations-repository",
+      ),
+    ).toBe(true);
+    for (const specifier of [
+      "@/lib/product-1-1/pending/resolve-pending-operation",
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/artifact/artifact-store",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_ADMIN_PRODUCT_PENDING_PAGE, specifier),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("formulário de resolução (CLIENT): NÃO autoriza NENHUM import `product-1-1` (nem `pending/**` genérico)", () => {
+    for (const specifier of [
+      "@/lib/product-1-1/pending/pending-operations-repository",
+      "@/lib/product-1-1/pending/resolve-pending-operation",
+      "@/lib/product-1-1/pending/repository",
+      "@/lib/product-1-1/artifact/artifact-store",
+      "@/lib/product-1-1/pending/**",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(AUTHORIZED_ADMIN_PRODUCT_PENDING_FORM, specifier),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("os importadores do Plano 07 refletem EXATAMENTE os pares autorizados", () => {
+    for (const importer of [
+      AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE,
+      AUTHORIZED_ADMIN_PRODUCT_PENDING_PAGE,
+    ]) {
+      const source = readFileSync(path.resolve(process.cwd(), importer), "utf8");
+      expect(
+        hasUnauthorizedProductFlowImport(importer, source),
+        `${importer} importa módulo Produto 1:1 não autorizado`,
+      ).toBe(false);
+    }
+  });
+
+  it("NEGATIVO: o formulário client NÃO importa `product-1-1`", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), AUTHORIZED_ADMIN_PRODUCT_PENDING_FORM),
+      "utf8",
+    );
+    expect(collectProductFlowImports(source)).toEqual([]);
+    expect(source).not.toMatch(/from\s+["'][^"']*product-1-1/);
+  });
+
+  it("NEGATIVO: `admin/schemas.ts` e `(app)/admin/layout.tsx` NÃO importam `product-1-1`", () => {
+    for (const file of [NO_PRODUCT_FLOW_IMPORT_ADMIN_SCHEMAS, NO_PRODUCT_FLOW_IMPORT_ADMIN_LAYOUT]) {
+      const source = readFileSync(path.resolve(process.cwd(), file), "utf8");
+      expect(collectProductFlowImports(source), file).toEqual([]);
+      expect(source, file).not.toMatch(/from\s+["'][^"']*product-1-1/);
+    }
+  });
+
+  it("negativos preservados: importador indevido e módulo indevido continuam violação", () => {
+    expect(
+      hasUnauthorizedProductFlowImport(
+        "src/app/api/admin/other/route.ts",
+        'import { resolvePendingOperation } from "@/lib/product-1-1/pending/resolve-pending-operation";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE,
+        'import { x } from "@/lib/product-1-1/pending/pending-operations-repository";',
+      ),
+    ).toBe(true);
+  });
+
+  it("nenhum prefixo amplo de product-1-1/** (nem `pending/**`) foi adicionado (Plano 07)", () => {
+    for (const [importer, rule] of Object.entries(AUTHORIZED_PRODUCT_FLOW_IMPORTS)) {
+      for (const prefix of rule.prefixes) {
+        expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/");
+        expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/pending/");
         expect(prefix.endsWith("/product-1-1/"), `${importer}::${prefix}`).toBe(false);
       }
     }
