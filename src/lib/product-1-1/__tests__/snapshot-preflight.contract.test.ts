@@ -630,3 +630,159 @@ describe("F56.2b1b — preflight fail-closed (Plano 02)", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Task 3 — histórico append-only por tentativa (reconstruível por par/alvo).
+// ---------------------------------------------------------------------------
+
+async function loadAttemptHistoryModule() {
+  return import("../orchestration/attempt-history");
+}
+
+describe("F56.2b1b — histórico append-only por tentativa (Plano 02)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("recordAttempt grava a tentativa com o par modelo/qualidade do alvo e devolve {id, operationId}", async () => {
+    const { buildProductOneToOneSnapshot } = await loadPersistModule();
+    const { recordAttempt } = await loadAttemptHistoryModule();
+
+    const client = createFakeClient();
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), {
+      campaignId: "camp-1",
+    });
+
+    const result = await recordAttempt(asClient(client), {
+      campaignId: "camp-1",
+      snapshotOriginalId: "snap-1",
+      operationId: "op-1",
+      attemptNumber: 1,
+      target: "primary",
+      snapshot,
+    });
+
+    expect(client.insertCalls[0]).toMatchObject({
+      table: "image_generation_operations",
+      row: {
+        campaign_id: "camp-1",
+        snapshot_original_id: "snap-1",
+        operation_id: "op-1",
+        attempt_number: 1,
+        target: "primary",
+        model: "gpt-image-2.5-sunburst",
+        quality: "medium",
+      },
+    });
+    expect(result).toMatchObject({ id: expect.any(String), operationId: "op-1" });
+  });
+
+  it("recordAttempt usa o par do fallback quando o alvo é fallback", async () => {
+    const { buildProductOneToOneSnapshot } = await loadPersistModule();
+    const { recordAttempt } = await loadAttemptHistoryModule();
+
+    const client = createFakeClient();
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), {
+      campaignId: "camp-1",
+    });
+
+    await recordAttempt(asClient(client), {
+      campaignId: "camp-1",
+      snapshotOriginalId: "snap-1",
+      operationId: "op-1",
+      attemptNumber: 2,
+      target: "fallback",
+      snapshot,
+    });
+
+    expect(client.insertCalls[0].row).toMatchObject({
+      target: "fallback",
+      model: "gpt-image-2",
+      quality: "medium",
+    });
+  });
+
+  it("F6: recordAttempt RECUSA operação terminal/incerta (erro tipado, sem insert)", async () => {
+    const { buildProductOneToOneSnapshot } = await loadPersistModule();
+    const { recordAttempt, AttemptHistoryError } = await loadAttemptHistoryModule();
+
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), {
+      campaignId: "camp-1",
+    });
+    const closedStates = ["delivered", "refunded", "unknown"] as const;
+
+    for (const state of closedStates) {
+      const client = createFakeClient();
+      await expect(
+        recordAttempt(
+          asClient(client),
+          {
+            campaignId: "camp-1",
+            snapshotOriginalId: "snap-1",
+            operationId: "op-1",
+            attemptNumber: 1,
+            target: "primary",
+            snapshot,
+          },
+          { resolveOperationState: async () => state },
+        ),
+      ).rejects.toBeInstanceOf(AttemptHistoryError);
+      expect(client.insertCalls).toHaveLength(0);
+    }
+  });
+
+  it("F6: recordAttempt prossegue quando a operação NÃO está encerrada (reserved/art_uploaded)", async () => {
+    const { buildProductOneToOneSnapshot } = await loadPersistModule();
+    const { recordAttempt } = await loadAttemptHistoryModule();
+
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), {
+      campaignId: "camp-1",
+    });
+
+    for (const state of ["reserved", "art_uploaded"] as const) {
+      const client = createFakeClient();
+      await recordAttempt(
+        asClient(client),
+        {
+          campaignId: "camp-1",
+          snapshotOriginalId: "snap-1",
+          operationId: "op-1",
+          attemptNumber: 1,
+          target: "primary",
+          snapshot,
+        },
+        { resolveOperationState: async () => state },
+      );
+      expect(client.insertCalls).toHaveLength(1);
+    }
+  });
+
+  it("listAttempts preserva a ordem por attempt_number e não colapsa tentativas", async () => {
+    const { listAttempts } = await loadAttemptHistoryModule();
+
+    const client = createFakeClient();
+    client.tables.image_generation_operations = [
+      { id: "row-2", campaign_id: "camp-1", operation_id: "op-1", attempt_number: 2, target: "fallback", model: "gpt-image-2", quality: "medium", snapshot_original_id: "snap-1", run_id: null, trace_id: null, created_at: "t2" },
+      { id: "row-1", campaign_id: "camp-1", operation_id: "op-1", attempt_number: 1, target: "primary", model: "gpt-image-2.5-sunburst", quality: "medium", snapshot_original_id: "snap-1", run_id: null, trace_id: null, created_at: "t1" },
+      { id: "row-other", campaign_id: "camp-1", operation_id: "op-2", attempt_number: 1, target: "primary", model: "gpt-image-2", quality: "medium", snapshot_original_id: "snap-1", run_id: null, trace_id: null, created_at: "t1" },
+    ];
+
+    const attempts = await listAttempts(asClient(client), {
+      campaignId: "camp-1",
+      operationId: "op-1",
+    });
+
+    expect(attempts.map((attempt) => attempt.attemptNumber)).toEqual([1, 2]);
+    expect(attempts.map((attempt) => attempt.target)).toEqual(["primary", "fallback"]);
+  });
+
+  it("não executa UPDATE/DELETE (append-only) no módulo", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/lib/product-1-1/orchestration/attempt-history.ts"),
+      "utf8",
+    );
+    expect(source).not.toMatch(/\.update\(/);
+    expect(source).not.toMatch(/\.delete\(/);
+    expect(source).toMatch(/recordOperation/);
+  });
+});
