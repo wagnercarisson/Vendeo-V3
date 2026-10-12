@@ -296,10 +296,30 @@ function validateValidityStartDate(fields: CampaignFormFields, todayISO: string 
   return null;
 }
 
+/**
+ * F56.2b1b (REQ-56.2.2-01): regra `Original exige exatamente uma imagem de
+ * produto` (a imagem de identidade NÃO conta). Só é avaliada sob elegibilidade —
+ * em `off` o fluxo legado permanece intocado. Retorna a copy EXATA do erro de
+ * campo ou `null`.
+ */
+function validateOriginalDirectionCount(fields: CampaignFormFields): string | null {
+  if (fields.backgroundDirection !== "original") return null;
+  const productImageCount = countProductImages({
+    productImages: fields.productImages,
+    identityImages: [],
+  });
+  if (!validateOriginalBackground({ productImageCount }).valid) {
+    return ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE;
+  }
+  return null;
+}
+
 function validateField(
   field: keyof CampaignFormFields,
-  fields: CampaignFormFields
+  fields: CampaignFormFields,
+  options?: { eligible?: boolean }
 ): string | null {
+  const eligible = options?.eligible === true;
   switch (field) {
     case "productName":
       return validateProductName(fields.productName);
@@ -313,15 +333,11 @@ function validateField(
       // F56.2b1b (REQ-56.2.2-01): a direção `Original` exige exatamente uma
       // imagem de produto (a imagem de identidade NÃO conta). Erro de campo —
       // nunca `IMG-001`. Precede a obrigatoriedade para que a copy da regra
-      // apareça quando a violação existe.
-      if (fields.backgroundDirection === "original") {
-        const productImageCount = countProductImages({
-          productImages: fields.productImages,
-          identityImages: [],
-        });
-        if (!validateOriginalBackground({ productImageCount }).valid) {
-          return ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE;
-        }
+      // apareça quando a violação existe. GATED em `eligible`: em `off` (fluxo
+      // legado) a regra NÃO é avaliada.
+      if (eligible) {
+        const originalError = validateOriginalDirectionCount(fields);
+        if (originalError) return originalError;
       }
       return validateImage(fields.productImages[0]?.file ?? null);
     }
@@ -853,7 +869,7 @@ export function useCampaignForm(
   const handleBlur = useCallback(
     (field: keyof CampaignFormFields) => {
       setTouched((prev) => ({ ...prev, [field]: true }));
-      const error = validateField(field, fields);
+      const error = validateField(field, fields, { eligible });
       setFieldErrors((prev) => {
         const next = { ...prev };
         if (error) {
@@ -1038,10 +1054,17 @@ export function useCampaignForm(
     ];
 
     for (const field of allFields) {
-      // productImages restaurado de draft tem dataUrl (File não serializa) — skip
-      // da validação quando há dataUrl utilizável na primary ou restaurada.
-      if (field === "productImages" && (!!fields.productImages[0]?.dataUrl || !!restoredImageDataUrl)) continue;
-      const error = validateField(field, fields);
+      // Imagem restaurada de draft tem dataUrl (File não serializa): pula APENAS
+      // a obrigatoriedade de arquivo do `validateImage`. Sob elegibilidade a
+      // regra `Original` AINDA é avaliada — nunca é pulada junto.
+      if (field === "productImages" && (!!fields.productImages[0]?.dataUrl || !!restoredImageDataUrl)) {
+        if (eligible) {
+          const originalError = validateOriginalDirectionCount(fields);
+          if (originalError) errors[field] = originalError;
+        }
+        continue;
+      }
+      const error = validateField(field, fields, { eligible });
       if (error) {
         errors[field] = error;
       }
@@ -1245,8 +1268,17 @@ export function useCampaignForm(
         "validityCustomText",
       ];
       for (const field of allFields) {
-        if (field === "productImages" && (!!fields.productImages[0]?.dataUrl || !!restoredImageDataUrl)) continue;
-        const error = validateField(field, fields);
+        // Imagem restaurada de draft tem dataUrl (File não serializa): pula
+        // APENAS a obrigatoriedade de arquivo do `validateImage`. Sob
+        // elegibilidade a regra `Original` AINDA é avaliada.
+        if (field === "productImages" && (!!fields.productImages[0]?.dataUrl || !!restoredImageDataUrl)) {
+          if (eligible) {
+            const originalError = validateOriginalDirectionCount(fields);
+            if (originalError) errors[field] = originalError;
+          }
+          continue;
+        }
+        const error = validateField(field, fields, { eligible });
         if (error) errors[field] = error;
       }
       setFieldErrors(errors);
