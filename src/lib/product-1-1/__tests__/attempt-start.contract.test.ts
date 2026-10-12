@@ -42,7 +42,7 @@ describe("F56.2b1b — migration 20261009000001 atomic_attempt_start (contrato e
       /CONSTRAINT uq_p1_1_attempt_claim_seq UNIQUE \(campaign_id, operation_id, attempt_number\)/,
     );
     expect(activeSql).toMatch(/target IN \('primary','fallback'\)/);
-    expect(activeSql).toMatch(/status IN \('in_progress','done','failed'\)/);
+    expect(activeSql).toMatch(/status IN \('in_progress','done','failed','abandoned'\)/);
   });
 
   it("garante UM único início por vez via índice único parcial `in_progress`", () => {

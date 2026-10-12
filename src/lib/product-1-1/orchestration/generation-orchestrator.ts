@@ -13,10 +13,17 @@ import type {
   CurrentImageGenerationConfig,
   ImageGenerationConfigSnapshot,
 } from "@/lib/ai/image-generation-config-snapshot";
-import { generateSupportReference } from "@/lib/ai/image-generation-support-reference";
+import {
+  generateSupportReference,
+  buildPublicGenerationFailure,
+  toInternalDiagnosis,
+  type ImageGenerationDiagnosisInput,
+} from "@/lib/ai/image-generation-support-reference";
+import { SupabaseImageGenerationDiagnosisRepository } from "@/lib/ai/image-generation-diagnosis-repository";
 import {
   classifyImageGenerationFailure,
   nextImageGenerationAttempt,
+  type ImageGenerationFailureClass,
 } from "@/lib/ai/image-generation-failure-policy";
 
 import { runNewFlowPreflight, type NewFlowPreflightResult } from "./preflight";
@@ -34,7 +41,7 @@ import {
 import { ProductOneToOneCreditOperationClient } from "../credit-operation/credit-operation-client";
 import type { CreditOperationState } from "../credit-operation/types";
 import { ProductOneToOneArtifactStore } from "../artifact/artifact-store";
-import type { ProductOneToOneArtifactRef } from "../artifact/types";
+import type { ProductOneToOneArtifactRef, ArtifactProbe } from "../artifact/types";
 import {
   buildProductOneToOneSnapshot,
   buildProductOneToOneFrozenEvidence,
@@ -121,7 +128,7 @@ export interface ProductOneToOneAttemptOps {
     campaignId: string;
     operationId: string;
     attemptNumber: number;
-    status: "done" | "failed";
+    status: "done" | "failed" | "abandoned";
   }): Promise<unknown>;
   recordOperationOutcome(input: {
     campaignId: string;
@@ -139,6 +146,16 @@ export interface ProductOneToOneArtifactOps {
     operationId: string;
     imageDataUrl: string;
   }): Promise<ProductOneToOneArtifactRef>;
+  /**
+   * C2/I3 — sonda TIPADA da arte (nunca `null` ambíguo, nunca assina URL). Usada
+   * para decidir se um estorno é autorizado: só ausência CONFIRMADA (`absent`/
+   * `invalid`) autoriza estorno; `integral`/`indeterminate` NUNCA (achado 4).
+   */
+  probeArtifact(input: {
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+  }): Promise<ArtifactProbe>;
 }
 
 export interface TelemetryContextInput {
@@ -166,6 +183,14 @@ export interface ProductOneToOneGenerationDeps {
   readonly createTelemetry?: (input: TelemetryContextInput) => AiTelemetryContext;
   readonly recordAttempt?: (call: RecordAttemptCall) => Promise<unknown>;
   readonly generateSupportReference?: () => string;
+  /**
+   * Persistência do diagnóstico durável correlacionado à referência (achado 6).
+   * Injetável para teste puro; o default usa
+   * `SupabaseImageGenerationDiagnosisRepository`.
+   */
+  readonly recordDiagnosis?: (
+    input: ImageGenerationDiagnosisInput,
+  ) => Promise<{ reference: string }>;
   readonly client?: SupabaseClient;
 }
 
@@ -203,15 +228,56 @@ function isUnknownResult(error: unknown, aborted: boolean): boolean {
   return classification.category === "timeout" || classification.category === "network";
 }
 
-async function getOperationState(
+/**
+ * Achado 5(a) — a leitura do estado da operação PROPAGA falhas: uma falha de
+ * leitura NUNCA é convertida em "operação ausente" (`null`). Os chamadores devem
+ * bloquear fail-closed (a leitura obrigatória do histórico BLOQUEIA; o caminho de
+ * corrida emite um terminal fail-closed) — jamais tratar falha como ausência.
+ */
+async function readOperationState(
   attempts: ProductOneToOneAttemptOps,
   campaignId: string,
 ): Promise<CampaignOperationState | null> {
-  try {
-    return await attempts.getCampaignOperation(campaignId);
-  } catch {
-    return null;
-  }
+  return attempts.getCampaignOperation(campaignId);
+}
+
+/**
+ * Leitura (query-only) do estado persistido da operação para uma campanha.
+ * Usado pela rota de aceitação para reconhecer uma operação JÁ EXISTENTE antes
+ * de qualquer efeito (achado 3). PROPAGA falhas de leitura (achado 5a) — o
+ * chamador decide o bloqueio fail-closed. `null` = operação inexistente (nova).
+ */
+export async function readProductOneToOneOperation(
+  campaignId: string,
+  attempts: ProductOneToOneAttemptOps = new ProductOneToOneAttemptStartClient() as ProductOneToOneAttemptOps,
+): Promise<CampaignOperationState | null> {
+  return attempts.getCampaignOperation(campaignId);
+}
+
+/** Mapeia a classe de falha da política para o código normalizado FECHADO (D-19). */
+const DIAGNOSIS_ERROR_BY_FAILURE_CLASS: Readonly<
+  Record<ImageGenerationFailureClass, string>
+> = Object.freeze({
+  rate_limit: "rate_limit",
+  timeout: "timeout",
+  network: "network",
+  provider_error: "provider_error",
+  availability: "unknown_provider_error",
+  quota: "quota",
+  billing: "billing",
+  auth: "auth",
+  content: "content_filter",
+  input: "unknown_provider_error",
+});
+
+/** Par modelo/qualidade do alvo a partir do snapshot congelado (diagnóstico/telemetria). */
+function snapshotPairForTarget(
+  snapshot: ImageGenerationConfigSnapshot,
+  target: AttemptTarget,
+): { model: string; quality: string } {
+  return target === "fallback"
+    ? { model: snapshot.fallbackModel, quality: snapshot.fallbackQuality }
+    : { model: snapshot.primaryModel, quality: snapshot.primaryQuality };
 }
 
 function providerImageRequest(input: ProductOneToOneGenerationInput): AiInvocationRequest {
@@ -247,12 +313,16 @@ export async function runProductOneToOneGeneration(
   const createGateway = deps.createGateway ?? createNewFlowImageGateway;
   const createTelemetry = deps.createTelemetry ?? defaultTelemetry;
   const newSupportReference = deps.generateSupportReference ?? generateSupportReference;
+  const recordDiagnosis =
+    deps.recordDiagnosis ??
+    ((diagnosis: ImageGenerationDiagnosisInput) =>
+      new SupabaseImageGenerationDiagnosisRepository(client).recordDiagnosis(diagnosis));
   const recordAttemptCall =
     deps.recordAttempt ??
     ((call: RecordAttemptCall) =>
       recordAttempt(client, call as RecordAttemptInput, {
         resolveOperationState: ({ campaignId }) =>
-          getOperationState(attempts, campaignId).then(operationStateForHistory),
+          readOperationState(attempts, campaignId).then(operationStateForHistory),
       }));
 
   const { campaignId, operationId, storeId } = input;
@@ -317,12 +387,130 @@ export async function runProductOneToOneGeneration(
         }
       };
 
-      const refundOnce = async (reason: string): Promise<void> => {
+      // ── Diagnóstico durável + terminal público `IMG-001` (achado 6) ──────
+      // Falha OPERACIONAL ⇒ código público `IMG-001` + referência opaca +
+      // diagnóstico durável persistido (best-effort; nunca impede o terminal).
+      // Os contratos de CAMPO (400) e AUTORIZAÇÃO (403) vivem na ROTA e NÃO são
+      // `IMG-001` — o orquestrador só emite falhas operacionais.
+      const emitOperationalFailure = async (params: {
+        internalCategory: string;
+        normalizedError: string;
+        httpStatus?: number;
+        target?: AttemptTarget;
+        attemptNumber?: number;
+        model?: string;
+        quality?: string;
+        refunded?: boolean;
+      }): Promise<void> => {
+        const diagnosis: ImageGenerationDiagnosisInput = {
+          internalCategory: params.internalCategory,
+          model: params.model ?? "",
+          quality: params.quality ?? "",
+          target: params.target ?? "primary",
+          attemptNumber: params.attemptNumber ?? 1,
+          normalizedError: params.normalizedError,
+          runId: input.runId,
+          traceId: input.traceId,
+        };
+        const publicFailure = buildPublicGenerationFailure(diagnosis);
         try {
-          await credit.refund(campaignId, operationId, reason);
+          await recordDiagnosis(toInternalDiagnosis(diagnosis, publicFailure.reference));
         } catch {
-          // Estorno é best-effort na saída; a operação permanece não reexecutável.
+          // Best-effort durável: a falha do diagnóstico nunca bloqueia o terminal.
         }
+        emitTerminal({
+          type: "error",
+          code: publicFailure.code,
+          reference: publicFailure.reference,
+          message: params.refunded
+            ? `${publicFailure.message} Crédito estornado.`
+            : publicFailure.message,
+          httpStatus: params.httpStatus ?? 502,
+          retryable: false,
+        });
+      };
+
+      // ── Estorno SÓ com ausência de arte COMPROVADA (achado 4) ───────────
+      const probeArtifactKind = async (): Promise<ArtifactProbe["kind"] | null> => {
+        try {
+          const probe = await artifact.probeArtifact({
+            storeId,
+            campaignId,
+            operationId,
+          });
+          return probe.kind;
+        } catch {
+          // Leitura indeterminada ⇒ ausência NÃO comprovada.
+          return null;
+        }
+      };
+
+      // `refundOnce` NÃO engole o resultado: devolve `true` SOMENTE quando o
+      // cliente confirma `refunded` (nunca afirmar "estornado" sem confirmação).
+      const refundOnce = async (reason: string): Promise<boolean> => {
+        try {
+          const state = await credit.refund(campaignId, operationId, reason);
+          return state.status === "refunded";
+        } catch {
+          return false;
+        }
+      };
+
+      // Persiste o marcador `unknown` (durável). `true` quando persistiu.
+      const markUnknownOutcome = async (reference: string): Promise<boolean> => {
+        try {
+          await attempts.recordOperationOutcome({
+            campaignId,
+            operationId,
+            outcome: "unknown",
+            supportReference: reference,
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      };
+
+      // Terminal de pendência (resultado desconhecido): persiste o marcador e
+      // emite `unknown`. NUNCA estorna e NUNCA repete.
+      const emitUnknownPending = async (): Promise<void> => {
+        const reference = newSupportReference();
+        await markUnknownOutcome(reference);
+        emitTerminal({ type: "unknown", reference });
+      };
+
+      // Falha confirmada (sem arte entregue): só estorna com AUSÊNCIA COMPROVADA
+      // (`absent`/`invalid`); objeto presente (`integral`) ou ausência NÃO
+      // comprovada (`indeterminate`/leitura falha) ⇒ pendente, sem estorno.
+      const settleConfirmedFailure = async (params: {
+        internalCategory: string;
+        normalizedError: string;
+        target: AttemptTarget;
+        attemptNumber: number;
+        model: string;
+        quality: string;
+        reason: string;
+      }): Promise<void> => {
+        const kind = await probeArtifactKind();
+        if (kind === "integral" || kind === "indeterminate" || kind === null) {
+          await emitUnknownPending();
+          return;
+        }
+        // Ausência CONFIRMADA (absent/invalid) + falha confirmada ⇒ estorno ÚNICO.
+        const refunded = await refundOnce(params.reason);
+        if (refunded) {
+          await emitOperationalFailure({
+            internalCategory: params.internalCategory,
+            normalizedError: params.normalizedError,
+            target: params.target,
+            attemptNumber: params.attemptNumber,
+            model: params.model,
+            quality: params.quality,
+            refunded: true,
+          });
+          return;
+        }
+        await emitUnknownPending();
       };
 
       try {
@@ -334,12 +522,9 @@ export async function runProductOneToOneGeneration(
         try {
           existing = await attempts.getCampaignOperation(campaignId);
         } catch {
-          emitTerminal({
-            type: "error",
-            code: "operation_read_failed",
-            message: "Não foi possível verificar o estado da operação.",
-            httpStatus: 502,
-            retryable: false,
+          await emitOperationalFailure({
+            internalCategory: "operation_read_failed",
+            normalizedError: "unknown_provider_error",
           });
           return;
         }
@@ -363,12 +548,9 @@ export async function runProductOneToOneGeneration(
         try {
           preflight = await runPreflight({ campaignId });
         } catch {
-          emitTerminal({
-            type: "error",
-            code: "preflight_failed",
-            message: "Não foi possível iniciar a geração.",
-            httpStatus: 502,
-            retryable: false,
+          await emitOperationalFailure({
+            internalCategory: "preflight_failed",
+            normalizedError: "unknown_provider_error",
           });
           return;
         }
@@ -403,12 +585,9 @@ export async function runProductOneToOneGeneration(
         try {
           persisted = await persistSnapshot(snapshot, evidence);
         } catch {
-          emitTerminal({
-            type: "error",
-            code: "snapshot_persist_failed",
-            message: "Não foi possível congelar a configuração da campanha.",
-            httpStatus: 502,
-            retryable: false,
+          await emitOperationalFailure({
+            internalCategory: "snapshot_persist_failed",
+            normalizedError: "unknown_provider_error",
           });
           return;
         }
@@ -417,12 +596,9 @@ export async function runProductOneToOneGeneration(
         try {
           await credit.reserve({ storeId, campaignId, operationId });
         } catch {
-          emitTerminal({
-            type: "error",
-            code: "reserve_failed",
-            message: "Não foi possível reservar créditos.",
-            httpStatus: 402,
-            retryable: false,
+          await emitOperationalFailure({
+            internalCategory: "reserve_failed",
+            normalizedError: "unknown_provider_error",
           });
           return;
         }
@@ -447,19 +623,31 @@ export async function runProductOneToOneGeneration(
               attemptNumber,
             });
           } catch {
-            emitTerminal({
-              type: "error",
-              code: "attempt_start_failed",
-              message: "Não foi possível iniciar a tentativa.",
-              httpStatus: 502,
-              retryable: false,
+            await emitOperationalFailure({
+              internalCategory: "attempt_start_failed",
+              normalizedError: "unknown_provider_error",
+              target,
+              attemptNumber,
+              model: snapshotPairForTarget(snapshot, target).model,
+              quality: snapshotPairForTarget(snapshot, target).quality,
             });
             return;
           }
 
           if (!acquired.acquired) {
             // Corrida perdida — NUNCA chama o provider; consulta e encerra.
-            const raced = await getOperationState(attempts, campaignId);
+            // Achado 5(a) — falha de LEITURA ⇒ terminal fail-closed, JAMAIS
+            // tratada como "operação ausente".
+            let raced: CampaignOperationState | null;
+            try {
+              raced = await readOperationState(attempts, campaignId);
+            } catch {
+              await emitOperationalFailure({
+                internalCategory: "operation_read_failed",
+                normalizedError: "unknown_provider_error",
+              });
+              return;
+            }
             if (raced && raced.operationId === operationId) {
               emitExistingOperation(raced);
             } else {
@@ -492,13 +680,14 @@ export async function runProductOneToOneGeneration(
             } catch {
               // ignore
             }
-            await refundOnce("attempt_history_failed");
-            emitTerminal({
-              type: "error",
-              code: "generation_failed",
-              message: "Falha na geração da campanha. Crédito estornado.",
-              httpStatus: 502,
-              retryable: false,
+            await settleConfirmedFailure({
+              internalCategory: "attempt_history_failed",
+              normalizedError: "unknown_provider_error",
+              target,
+              attemptNumber,
+              model: snapshotPairForTarget(snapshot, target).model,
+              quality: snapshotPairForTarget(snapshot, target).quality,
+              reason: "attempt_history_failed",
             });
             return;
           }
@@ -552,13 +741,18 @@ export async function runProductOneToOneGeneration(
                 imageDataUrl,
               });
             } catch {
-              await refundOnce("artifact_upload_failed");
-              emitTerminal({
-                type: "error",
-                code: "generation_failed",
-                message: "Falha ao salvar a arte. Crédito estornado.",
-                httpStatus: 502,
-                retryable: false,
+              // Achado 4 — NÃO estornar cegamente: reexaminar a arte. Objeto
+              // presente (`integral`) ou ausência não comprovada
+              // (`indeterminate`/leitura falha) ⇒ pendente, SEM estorno; só
+              // ausência COMPROVADA autoriza o estorno único.
+              await settleConfirmedFailure({
+                internalCategory: "artifact_store_failed",
+                normalizedError: "unknown_provider_error",
+                target,
+                attemptNumber,
+                model: snapshotPairForTarget(snapshot, target).model,
+                quality: snapshotPairForTarget(snapshot, target).quality,
+                reason: "artifact_upload_failed",
               });
               return;
             }
@@ -567,12 +761,13 @@ export async function runProductOneToOneGeneration(
               await credit.markArtUploaded(campaignId, operationId);
               await credit.deliver(campaignId, operationId);
             } catch {
-              emitTerminal({
-                type: "error",
-                code: "delivery_failed",
-                message: "Falha ao entregar a campanha.",
-                httpStatus: 502,
-                retryable: false,
+              await emitOperationalFailure({
+                internalCategory: "delivery_failed",
+                normalizedError: "unknown_provider_error",
+                target,
+                attemptNumber,
+                model: snapshotPairForTarget(snapshot, target).model,
+                quality: snapshotPairForTarget(snapshot, target).quality,
               });
               return;
             }
@@ -584,20 +779,28 @@ export async function runProductOneToOneGeneration(
           // ── Resultado DESCONHECIDO (timeout/abort) ──────────────────────
           if (isUnknownResult(failure, controllerAbort.signal.aborted)) {
             const reference = newSupportReference();
-            try {
-              await attempts.recordOperationOutcome({
-                campaignId,
-                operationId,
-                outcome: "unknown",
-                supportReference: reference,
-              });
-            } catch {
-              // I2 — fail-closed: NÃO finaliza o claim, NÃO estorna e NÃO
-              // reexecuta. O claim `in_progress` residual permanece bloqueado
-              // para resolução exclusiva do Plano 07 (sob a trava C4).
-              emitTerminal({ type: "unknown", reference });
-              return;
+            const persisted = await markUnknownOutcome(reference);
+            if (persisted) {
+              // Achado 5(b) — o `unknown` persistiu: FINALIZA o claim com um
+              // status TERMINAL dedicado (`abandoned`) para que NÃO permaneça
+              // `in_progress` (o contrato exige residual apenas quando a
+              // persistência do `unknown` FALHA). Mantém o marcador `unknown`
+              // persistido, então novas tentativas continuam RECUSADAS.
+              try {
+                await attempts.finish({
+                  campaignId,
+                  operationId,
+                  attemptNumber,
+                  status: "abandoned",
+                });
+              } catch {
+                // Fail-closed: se a finalização FALHA, o claim permanece
+                // `in_progress` residual (pendente) e SOMENTE o Plano 07 o
+                // resolve; NÃO estorna e NÃO repete.
+              }
             }
+            // I2 — quando a persistência do `unknown` FALHA, o claim `in_progress`
+            // residual permanece bloqueado para resolução exclusiva do Plano 07.
             emitTerminal({ type: "unknown", reference });
             return;
           }
@@ -611,10 +814,10 @@ export async function runProductOneToOneGeneration(
           if (failure === null || failure === undefined) {
             failure = new Error("generation_failed");
           }
-          const next = nextImageGenerationAttempt(
-            { target, attemptNumber },
-            failure as Parameters<typeof nextImageGenerationAttempt>[1],
+          const classification = classifyImageGenerationFailure(
+            failure as Parameters<typeof classifyImageGenerationFailure>[0],
           );
+          const next = nextImageGenerationAttempt({ target, attemptNumber }, classification);
           if (
             !next.terminal &&
             next.nextTarget !== undefined &&
@@ -625,23 +828,21 @@ export async function runProductOneToOneGeneration(
             continue;
           }
 
-          await refundOnce("generation_failed");
-          emitTerminal({
-            type: "error",
-            code: "generation_failed",
-            message: "Falha na geração da campanha. Crédito estornado.",
-            httpStatus: 502,
-            retryable: false,
+          await settleConfirmedFailure({
+            internalCategory: "generation_failed",
+            normalizedError: DIAGNOSIS_ERROR_BY_FAILURE_CLASS[classification.category],
+            target,
+            attemptNumber,
+            model: snapshotPairForTarget(snapshot, target).model,
+            quality: snapshotPairForTarget(snapshot, target).quality,
+            reason: "generation_failed",
           });
           return;
         }
       } catch {
-        emitTerminal({
-          type: "error",
-          code: "internal_error",
-          message: "Erro interno ao gerar a campanha.",
-          httpStatus: 500,
-          retryable: false,
+        await emitOperationalFailure({
+          internalCategory: "internal_error",
+          normalizedError: "unknown_provider_error",
         });
       } finally {
         clearTimeout(timeoutId);

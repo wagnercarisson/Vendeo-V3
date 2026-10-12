@@ -7,7 +7,12 @@
  * observáveis pelo serviço cliente.
  */
 
-export type AttemptClaimStatus = "in_progress" | "done" | "failed";
+// `abandoned` (F56.2b1b, correção de integração do Plano 04): status TERMINAL
+// dedicado do claim quando o resultado é DESCONHECIDO persistido com sucesso —
+// distinto de `done`/`failed`; NÃO implica falha confirmada nem estorno, e o
+// marcador `unknown` persistido mantém novas tentativas recusadas. É o MESMO
+// status terminal usado pela resolução administrativa do Plano 07.
+export type AttemptClaimStatus = "in_progress" | "done" | "failed" | "abandoned";
 export type AttemptTarget = "primary" | "fallback";
 export type GenerationOutcome = "unknown" | "failed";
 
@@ -109,7 +114,8 @@ export interface FinishAttemptInput {
   readonly campaignId: string;
   readonly operationId: string;
   readonly attemptNumber: number;
-  readonly status: "done" | "failed";
+  /** `abandoned` finaliza o claim de resultado desconhecido (Plano 04 / Plano 07). */
+  readonly status: "done" | "failed" | "abandoned";
 }
 
 export interface RecordOperationOutcomeInput {

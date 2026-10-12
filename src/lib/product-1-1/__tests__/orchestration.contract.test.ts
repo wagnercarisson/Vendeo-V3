@@ -90,11 +90,17 @@ interface Harness {
     recordOutcome: ReturnType<typeof vi.fn>;
     persist: ReturnType<typeof vi.fn>;
     storeArtifact: ReturnType<typeof vi.fn>;
+    probeArtifact: ReturnType<typeof vi.fn>;
     recordAttempt: ReturnType<typeof vi.fn>;
+    recordDiagnosis: ReturnType<typeof vi.fn>;
+    diagnosisRecords: Record<string, unknown>[];
     gatewayPairs: ImageModelPairConfig[];
     gatewayRequests: AiInvocationRequest[];
   };
   setExistingOperation(state: CampaignOperationState | null): void;
+  setReadOperationFailure(fail: boolean): void;
+  setArtifactKind(kind: "integral" | "absent" | "invalid" | "indeterminate"): void;
+  setProbeFailure(fail: boolean): void;
   setProviderResult(result: AiInvocationResult | Error): void;
   setProviderSequence(seq: Array<AiInvocationResult | Error>): void;
   setAcquireSequence(seq: Array<{ acquired: boolean; reason: string | null }>): void;
@@ -124,6 +130,7 @@ async function baseExisting(
 async function buildHarness(): Promise<Harness> {
   const order: string[] = [];
   let existingOperation: CampaignOperationState | null = null;
+  let readOperationFailure = false;
   let providerSequence: Array<AiInvocationResult | Error> = [];
   let providerIndex = 0;
   let acquireIndex = 0;
@@ -193,7 +200,10 @@ async function buildHarness(): Promise<Harness> {
       idempotent: false,
     };
   });
-  const getCampaignOperation = vi.fn(async () => existingOperation);
+  const getCampaignOperation = vi.fn(async () => {
+    if (readOperationFailure) throw new Error("operation_read_failed");
+    return existingOperation;
+  });
 
   const persist = vi.fn(async () => {
     order.push("persist");
@@ -209,6 +219,39 @@ async function buildHarness(): Promise<Harness> {
       mimeType: "image/jpeg",
     });
   });
+
+  let artifactKind:
+    | "integral"
+    | "absent"
+    | "invalid"
+    | "indeterminate" = "absent";
+  let probeFailure = false;
+  const probeArtifact = vi.fn(async () => {
+    order.push(`probe:${artifactKind}`);
+    if (probeFailure) throw new Error("probe_read_failed");
+    return artifactKind === "integral"
+      ? {
+          kind: "integral" as const,
+          ref: { storagePath: "x", width: 1024, height: 1024, mimeType: "image/jpeg" },
+          width: 1024,
+          height: 1024,
+          mimeType: "image/jpeg",
+          storagePath: `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`,
+        }
+      : { kind: artifactKind };
+  });
+
+  const diagnosisRecords: Record<string, unknown>[] = [];
+  const recordDiagnosis = vi.fn(
+    async (input: Record<string, unknown> & { reference?: string }) => {
+      order.push("recordDiagnosis");
+      const reference =
+        (input.reference as string | undefined) ??
+        `ref-${diagnosisRecords.length + 1}`;
+      diagnosisRecords.push({ ...input, reference });
+      return { reference };
+    },
+  );
 
   const recordAttempt = vi.fn(async () => {
     order.push("recordAttempt");
@@ -262,7 +305,7 @@ async function buildHarness(): Promise<Harness> {
       recordOperationOutcome: recordOutcome,
       getCampaignOperation,
     } as never,
-    artifact: { storeArtifact } as never,
+    artifact: { storeArtifact, probeArtifact } as never,
     createGateway,
     createTelemetry: (): AiTelemetryContext => ({
       operationRunId: "run-1",
@@ -274,6 +317,7 @@ async function buildHarness(): Promise<Harness> {
       sink: { emit: async () => {} },
     }),
     recordAttempt,
+    recordDiagnosis,
     generateSupportReference: () => "66666666-6666-4666-8666-666666666666",
   };
 
@@ -293,12 +337,24 @@ async function buildHarness(): Promise<Harness> {
       recordOutcome,
       persist,
       storeArtifact,
+      probeArtifact,
       recordAttempt,
+      recordDiagnosis,
+      diagnosisRecords,
       gatewayPairs,
       gatewayRequests,
     },
     setExistingOperation(state) {
       existingOperation = state;
+    },
+    setReadOperationFailure(fail) {
+      readOperationFailure = fail;
+    },
+    setArtifactKind(kind) {
+      artifactKind = kind;
+    },
+    setProbeFailure(fail) {
+      probeFailure = fail;
     },
     setProviderResult(result) {
       providerSequence = [result];
@@ -447,7 +503,7 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(request.productImagesDataUrls).toEqual(["data:image/png;base64,primary"]);
   });
 
-  it("falha confirmada sem arte ⇒ `refund` exatamente UMA vez e terminal `error`", async () => {
+  it("falha confirmada + ausência COMPROVADA ⇒ `refund` exatamente UMA vez e terminal `IMG-001` (estornado) com diagnóstico durável", async () => {
     const harness = await buildHarness();
     harness.setProviderSequence([
       Object.assign(new Error("content policy violation"), { code: "content_policy" }),
@@ -455,8 +511,107 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
 
     const { terminal } = await runOrchestrator(harness);
 
+    // (achado 4) A ausência é COMPROVADA (probe default `absent`) antes do estorno.
+    expect(harness.calls.probeArtifact).toHaveBeenCalled();
     expect(harness.calls.refund).toHaveBeenCalledTimes(1);
-    expect(terminal).toMatchObject({ type: "error", code: "generation_failed" });
+    expect(terminal).toMatchObject({ type: "error", code: "IMG-001" });
+    expect(String((terminal as Record<string, unknown>).message)).toContain("estornado");
+    // (achado 6) Diagnóstico durável persistido e correlacionável à referência pública.
+    expect(harness.calls.recordDiagnosis).toHaveBeenCalledTimes(1);
+    const reference = (terminal as Record<string, unknown>).reference as string;
+    expect(
+      harness.calls.diagnosisRecords.some((record) => record.reference === reference),
+    ).toBe(true);
+  });
+
+  it("achado 4: `storeArtifact` falha com OBJETO PRESENTE (`integral`) ⇒ NÃO estorna e terminal `unknown` (pendente)", async () => {
+    const harness = await buildHarness();
+    harness.setArtifactKind("integral");
+    harness.calls.storeArtifact.mockRejectedValueOnce(
+      Object.assign(new Error("artifact_metadata_persist_failed"), {
+        code: "artifact_metadata_persist_failed",
+      }),
+    );
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(harness.calls.probeArtifact).toHaveBeenCalled();
+    expect(harness.calls.refund).not.toHaveBeenCalled();
+    expect(terminal).toMatchObject({ type: "unknown" });
+  });
+
+  it("achado 4: `storeArtifact` falha com ausência INDETERMINADA ⇒ NÃO estorna e terminal `unknown`", async () => {
+    const harness = await buildHarness();
+    harness.setArtifactKind("indeterminate");
+    harness.calls.storeArtifact.mockRejectedValueOnce(
+      new Error("artifact_upload_failed"),
+    );
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(harness.calls.refund).not.toHaveBeenCalled();
+    expect(terminal).toMatchObject({ type: "unknown" });
+  });
+
+  it("achado 4: estorno NÃO confirmado ⇒ NUNCA afirma `estornado` (terminal `unknown`)", async () => {
+    const harness = await buildHarness();
+    harness.setProviderSequence([Object.assign(new Error("provider down"), { code: "provider_error" })]);
+    harness.setRefundFailure(true);
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(harness.calls.refund).toHaveBeenCalledTimes(1);
+    expect(terminal).toMatchObject({ type: "unknown" });
+    expect(String((terminal as Record<string, unknown>).message ?? "")).not.toContain("estornado");
+  });
+
+  it("achado 5(b): `unknown` PERSISTIDO com sucesso ⇒ claim FINALIZADO (`abandoned`), não `in_progress`", async () => {
+    const harness = await buildHarness();
+    harness.setProviderSequence([Object.assign(new Error("timeout"), { name: "AbortError" })]);
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(harness.calls.recordOutcome).toHaveBeenCalledTimes(1);
+    expect(harness.calls.finish).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "abandoned" }),
+    );
+    expect(harness.calls.refund).not.toHaveBeenCalled();
+    expect(terminal).toMatchObject({ type: "unknown" });
+  });
+
+  it("achado 5(a): falha de LEITURA da operação BLOQUEIA fail-closed (zero persist/reserve/provider, `IMG-001`)", async () => {
+    const harness = await buildHarness();
+    harness.setReadOperationFailure(true);
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(terminal).toMatchObject({ type: "error", code: "IMG-001" });
+    expect(harness.calls.persist).not.toHaveBeenCalled();
+    expect(harness.calls.reserve).not.toHaveBeenCalled();
+    expect(harness.calls.acquire).not.toHaveBeenCalled();
+    expect(harness.calls.providerCalls).toBe(0);
+    expect(harness.calls.recordDiagnosis).toHaveBeenCalledTimes(1);
+  });
+
+  it("achado 6: falha operacional (preflight) ⇒ `IMG-001` + referência, diagnóstico persistido e recuperável por referência", async () => {
+    const harness = await buildHarness();
+    (harness.deps as unknown as { runPreflight: () => Promise<never> }).runPreflight =
+      async () => {
+        throw new Error("preflight_unavailable");
+      };
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(terminal).toMatchObject({ type: "error", code: "IMG-001" });
+    const reference = (terminal as Record<string, unknown>).reference as string;
+    expect(typeof reference).toBe("string");
+    expect(reference.length).toBeGreaterThan(0);
+    const stored = harness.calls.diagnosisRecords.find(
+      (record) => record.reference === reference,
+    );
+    expect(stored).toBeDefined();
+    expect(stored).toMatchObject({ internalCategory: "preflight_failed" });
+    expect(harness.calls.reserve).not.toHaveBeenCalled();
   });
 
   it("C1: timeout/abort ⇒ `recordOperationOutcome('unknown')` ANTES do terminal, SEM refund e SEM nova tentativa", async () => {

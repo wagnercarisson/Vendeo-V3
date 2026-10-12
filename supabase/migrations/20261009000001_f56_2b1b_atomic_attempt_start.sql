@@ -26,7 +26,10 @@
 --        operation is `art_uploaded` (`operation_art_uploaded`). A `fallback`
 --        may start on the 2nd call on explicit unavailability, NEVER by a fixed
 --        `attempt_seq = 3` position.
---      - `product_1_1_finish_attempt` — CAS `in_progress -> done|failed`.
+--      - `product_1_1_finish_attempt` — CAS `in_progress -> done|failed|abandoned`
+--        (`abandoned` = status terminal dedicado do resultado desconhecido
+--        persistido, correção de integração do Plano 04 — NÃO implica falha/
+--        estorno e o marcador `unknown` mantém novas tentativas recusadas).
 --      - `product_1_1_get_campaign_operation_by_campaign` — reads the credit
 --        operation AND the persisted unknown outcome (I2 terminal precedence).
 --      - `product_1_1_record_generation_outcome` — writes the persisted unknown
@@ -50,7 +53,7 @@ CREATE TABLE IF NOT EXISTS public.product_1_1_generation_attempt_claims (
   target         TEXT NOT NULL CHECK (target IN ('primary','fallback')),
   status         TEXT NOT NULL DEFAULT 'in_progress'
                  CONSTRAINT ck_p1_1_attempt_claim_status
-                 CHECK (status IN ('in_progress','done','failed')),
+                 CHECK (status IN ('in_progress','done','failed','abandoned')),
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT uq_p1_1_attempt_claim_seq UNIQUE (campaign_id, operation_id, attempt_number)
@@ -292,7 +295,7 @@ BEGIN
   IF p_campaign_id IS NULL THEN RAISE EXCEPTION 'missing_campaign_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
   IF p_attempt_number IS NULL THEN RAISE EXCEPTION 'missing_attempt_number'; END IF;
-  IF p_status IS NULL OR p_status NOT IN ('done','failed') THEN
+  IF p_status IS NULL OR p_status NOT IN ('done','failed','abandoned') THEN
     RAISE EXCEPTION 'invalid_status';
   END IF;
 

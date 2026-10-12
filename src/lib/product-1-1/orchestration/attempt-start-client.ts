@@ -68,6 +68,7 @@ const CLAIM_STATUSES: readonly AttemptClaimStatus[] = [
   "in_progress",
   "done",
   "failed",
+  "abandoned",
 ];
 
 const CREDIT_STATUSES: readonly CreditOperationStatus[] = [
