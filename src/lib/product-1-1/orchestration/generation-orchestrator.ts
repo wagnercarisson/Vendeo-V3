@@ -16,7 +16,6 @@ import type {
 import {
   generateSupportReference,
   buildPublicGenerationFailure,
-  toInternalDiagnosis,
   type ImageGenerationDiagnosisInput,
 } from "@/lib/ai/image-generation-support-reference";
 import { SupabaseImageGenerationDiagnosisRepository } from "@/lib/ai/image-generation-diagnosis-repository";
@@ -58,6 +57,13 @@ import type {
   ProductPromptCompositionBriefing,
   PromptPolicyContribution,
 } from "../policies/types";
+import {
+  buildAttemptTelemetry,
+  emitAttemptEnvelope,
+  recordFailureDiagnosis,
+  type AttemptEnvelope,
+  type AttemptEnvelopeResult,
+} from "./instrumentation";
 
 /**
  * F56.2b1b (B1B-D2/D4/D5/D12, C1/C5/I1/I2, F1–F8) — orquestrador NDJSON do novo
@@ -208,21 +214,31 @@ export interface ProductOneToOneGenerationDeps {
   readonly recordDiagnosis?: (
     input: ImageGenerationDiagnosisInput,
   ) => Promise<{ reference: string }>;
+  /**
+   * Envelope por tentativa (instrumentação). Injetável para teste puro; o
+   * default é no-op. Cada tentativa real chama o sink EXATAMENTE uma vez.
+   */
+  readonly onAttemptEnvelope?: (envelope: AttemptEnvelope) => void | Promise<void>;
   readonly client?: SupabaseClient;
 }
 
 type NdjsonEvent = Record<string, unknown>;
 
-function defaultTelemetry(input: TelemetryContextInput): AiTelemetryContext {
-  return {
+function defaultTelemetry(
+  input: TelemetryContextInput,
+  onInternalCost?: (costUsd: number | null) => void,
+): AiTelemetryContext {
+  // REUSE do caminho existente de telemetria/custo (`createDefaultTelemetryContext`
+  // → `resolveAiCost`/`AiCostTracker`) SEM alterar a cadeia legada. O custo
+  // interno por par é apenas exposto ao orquestrador (nunca cobrança adicional).
+  return buildAttemptTelemetry({
     operationRunId: input.runId ?? input.campaignId,
-    operationRunType: "campaign_delivery",
     traceId: input.traceId ?? input.campaignId,
     storeId: input.storeId,
     campaignId: input.campaignId,
     attemptNumber: input.attemptNumber,
-    sink: { emit: async () => {} },
-  };
+    onInternalCostResolved: onInternalCost,
+  });
 }
 
 function operationStateForHistory(state: CampaignOperationState | null): AttemptOperationState | null {
@@ -340,12 +356,12 @@ export async function runProductOneToOneGeneration(
   const artifact =
     deps.artifact ?? (new ProductOneToOneArtifactStore() as ProductOneToOneArtifactOps);
   const createGateway = deps.createGateway ?? createNewFlowImageGateway;
-  const createTelemetry = deps.createTelemetry ?? defaultTelemetry;
   const newSupportReference = deps.generateSupportReference ?? generateSupportReference;
   const recordDiagnosis =
     deps.recordDiagnosis ??
     ((diagnosis: ImageGenerationDiagnosisInput) =>
       new SupabaseImageGenerationDiagnosisRepository(client).recordDiagnosis(diagnosis));
+  const onAttemptEnvelope = deps.onAttemptEnvelope;
   const recordAttemptCall =
     deps.recordAttempt ??
     ((call: RecordAttemptCall) =>
@@ -442,11 +458,19 @@ export async function runProductOneToOneGeneration(
           traceId: input.traceId,
         };
         const publicFailure = buildPublicGenerationFailure(diagnosis);
-        try {
-          await recordDiagnosis(toInternalDiagnosis(diagnosis, publicFailure.reference));
-        } catch {
-          // Best-effort durável: a falha do diagnóstico nunca bloqueia o terminal.
-        }
+        // REUSE do diagnóstico durável centralizado (`instrumentation.ts`):
+        // best-effort, nunca bloqueia o terminal público `IMG-001`.
+        await recordFailureDiagnosis(recordDiagnosis, {
+          reference: publicFailure.reference,
+          category: params.internalCategory,
+          normalizedError: params.normalizedError,
+          model: params.model,
+          quality: params.quality,
+          target: params.target,
+          attemptNumber: params.attemptNumber,
+          runId: input.runId,
+          traceId: input.traceId,
+        });
         emitTerminal({
           type: "error",
           code: publicFailure.code,
@@ -514,21 +538,18 @@ export async function runProductOneToOneGeneration(
           quality?: string;
         },
       ): Promise<void> => {
-        const diagnosis: ImageGenerationDiagnosisInput = {
-          internalCategory: params.internalCategory,
-          model: params.model ?? "",
-          quality: params.quality ?? "",
-          target: params.target ?? "primary",
-          attemptNumber: params.attemptNumber ?? 1,
+        // REUSE do diagnóstico durável centralizado (`instrumentation.ts`).
+        await recordFailureDiagnosis(recordDiagnosis, {
+          reference,
+          category: params.internalCategory,
           normalizedError: params.normalizedError,
+          model: params.model,
+          quality: params.quality,
+          target: params.target,
+          attemptNumber: params.attemptNumber,
           runId: input.runId,
           traceId: input.traceId,
-        };
-        try {
-          await recordDiagnosis(toInternalDiagnosis(diagnosis, reference));
-        } catch {
-          // Best-effort durável: a falha do diagnóstico nunca bloqueia o terminal.
-        }
+        });
       };
 
       // Terminal de pendência (resultado desconhecido): persiste o marcador,
@@ -783,17 +804,51 @@ export async function runProductOneToOneGeneration(
             return;
           }
 
+          // ── Instrumentação por tentativa (REQ-12): UM envelope por tentativa
+          // real (modelo/qualidade/alvo/attempt_number/run/trace/resultado +
+          // custo interno por par). A sequência é reconstruível (primary×fallback).
+          const attemptEnvelopeSink = onAttemptEnvelope
+            ? { emit: onAttemptEnvelope }
+            : undefined;
+          let internalCostUsd: number | null = null;
+          const emitAttempt = (result: AttemptEnvelopeResult) =>
+            emitAttemptEnvelope(
+              {
+                snapshot,
+                attemptNumber,
+                target,
+                result,
+                internalCostUsd,
+                runId: input.runId,
+                traceId: input.traceId,
+              },
+              attemptEnvelopeSink,
+            );
+
           // Chamada ao provider (uma tentativa por invocação).
           let imageDataUrl: string | undefined;
           let failure: unknown;
           try {
-            const telemetry = createTelemetry({
-              campaignId,
-              storeId,
-              attemptNumber,
-              runId: input.runId,
-              traceId: input.traceId,
-            });
+            const telemetry = deps.createTelemetry
+              ? deps.createTelemetry({
+                  campaignId,
+                  storeId,
+                  attemptNumber,
+                  runId: input.runId,
+                  traceId: input.traceId,
+                })
+              : defaultTelemetry(
+                  {
+                    campaignId,
+                    storeId,
+                    attemptNumber,
+                    runId: input.runId,
+                    traceId: input.traceId,
+                  },
+                  (usd) => {
+                    internalCostUsd = usd;
+                  },
+                );
             const request: AiInvocationRequest = {
               ...providerImageRequest(input),
               prompt: composition.text,
@@ -813,6 +868,7 @@ export async function runProductOneToOneGeneration(
 
           if (imageDataUrl !== undefined) {
             // ── (7) sucesso: finaliza o claim, grava a arte, entrega ─────
+            emitAttempt("success");
             try {
               await attempts.finish({
                 campaignId,
@@ -869,6 +925,7 @@ export async function runProductOneToOneGeneration(
 
           // ── Resultado DESCONHECIDO (timeout/abort) ──────────────────────
           if (isUnknownResult(failure, controllerAbort.signal.aborted)) {
+            emitAttempt("timeout");
             const reference = newSupportReference();
             const persisted = await markUnknownOutcome(reference);
             // Gap 3 — diagnóstico durável correlacionado à MESMA referência
@@ -908,6 +965,7 @@ export async function runProductOneToOneGeneration(
           }
 
           // ── Falha CONFIRMADA: finaliza o claim e decide a próxima ação ──
+          emitAttempt("failed");
           try {
             await attempts.finish({ campaignId, operationId, attemptNumber, status: "failed" });
           } catch {
