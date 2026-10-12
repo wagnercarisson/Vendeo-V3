@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { listArtVersions } from "@/lib/campaign/persistence";
+import { classifyCampaignFlow } from "@/lib/campaign/new-flow-marker";
 import { isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
@@ -60,6 +61,29 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   };
   const newFlowOperation = await loadNewFlowOperation();
   const newFlowState = mapNewFlowDisplayState(newFlowOperation);
+
+  // F56.2b1b (Plano 06 — correção) — CLASSIFICAÇÃO PERSISTIDA. O fluxo da campanha
+  // é decidido pela informação PERSISTIDA (`campaigns.input_snapshot.
+  // frozenContentReferences`), NUNCA pelo resultado da leitura da operação. Marcador
+  // PRESENTE ⇒ campanha do NOVO fluxo: se a operação não puder ser lida (RPC
+  // ausente/erro), FALHA FECHADA — superfície segura de resultado DESCONHECIDO —
+  // NUNCA as telas legadas (`StaleView`/`ErrorView`) de regeneração nem o gate F37.
+  // Marcador AUSENTE ⇒ LEGADO PROVADO (caminho abaixo preservado). INDETERMINADA ⇒
+  // fail-closed.
+  const flowClassification = classifyCampaignFlow(campaign.input_snapshot);
+  if (
+    flowClassification === "indeterminate" ||
+    (flowClassification === "new_flow" && !newFlowState)
+  ) {
+    props.newFlow = {
+      state: "unknown",
+      supportReference: null,
+      operationId: null,
+      supportEmail: process.env.SUPPORT_EMAIL,
+    };
+    return <CampaignPageClient {...props} />;
+  }
+
   if (newFlowState && newFlowOperation) {
     if (newFlowState === "delivered") {
       try {

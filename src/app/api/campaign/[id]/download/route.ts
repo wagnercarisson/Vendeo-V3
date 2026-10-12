@@ -5,6 +5,7 @@ import { requireOwnership } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { notFound } from "@/lib/api-error-response";
 import { getCampaign, listArtVersions } from "@/lib/campaign/persistence";
+import { classifyCampaignFlow } from "@/lib/campaign/new-flow-marker";
 import { computeApprovalState, isDeliveryReleased } from "@/lib/campaign/display";
 import { isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
@@ -50,6 +51,22 @@ export const GET = apiHandler(async (
     }
   };
   const newFlowOperation = await loadNewFlowOperation();
+
+  // F56.2b1b (Plano 06 — correção) — CLASSIFICAÇÃO PERSISTIDA. O fluxo da campanha
+  // é decidido pela informação PERSISTIDA (`campaigns.input_snapshot.
+  // frozenContentReferences`), NUNCA pelo resultado da leitura da operação. Marcador
+  // PRESENTE ⇒ campanha do NOVO fluxo: se a operação não puder ser lida (RPC
+  // ausente/erro) OU estiver ausente, FALHA FECHADA — sem download e sem URL
+  // assinada — jamais caindo no ramo legado. Marcador AUSENTE ⇒ LEGADO PROVADO
+  // (ramo abaixo preservado byte a byte). Classificação INDETERMINADA ⇒ fail-closed.
+  const flowClassification = classifyCampaignFlow(campaign.input_snapshot);
+  if (
+    flowClassification === "indeterminate" ||
+    (flowClassification === "new_flow" && !newFlowOperation)
+  ) {
+    return NextResponse.json({ error: "Download not available" }, { status: 503 });
+  }
+
   if (newFlowOperation) {
     const artifactStore = new ProductOneToOneArtifactStore();
     const probe = await artifactStore.probeArtifact({

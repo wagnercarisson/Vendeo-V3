@@ -295,6 +295,73 @@ describe("GET /api/campaign/[id]/download — portão do novo fluxo (I3 fail-clo
   });
 });
 
+describe("GET /api/campaign/[id]/download — classificação PERSISTIDA do fluxo (correção)", () => {
+  it("(a) marcador PERSISTIDO presente + leitura da operação FALHA ⇒ fail-closed 503 (sem legado, sem assinatura)", async () => {
+    mockGetCampaign.mockResolvedValue({
+      id: CAMPAIGN_ID,
+      store_id: STORE_ID,
+      storage_path: `${STORE_ID}/${CAMPAIGN_ID}.jpg`,
+      product_name: "Produto Teste",
+      created_at: "2026-01-01T00:00:00.000Z",
+      // Marcador do NOVO fluxo PERSISTIDO no input_snapshot (chave presente).
+      input_snapshot: { frozenContentReferences: [] },
+    });
+    // RPC ausente/erro: NÃO pode ser tratada como "operação ausente".
+    mockGetCampaignOperation.mockRejectedValue(new Error("function does not exist"));
+
+    const res = await callRoute();
+
+    expect(res.status).toBe(503);
+    expect(mockProbeArtifact).not.toHaveBeenCalled();
+    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    // NUNCA cai no ramo legado.
+    expect(mockStorageDownload).not.toHaveBeenCalled();
+  });
+
+  it("(b) LEGADO PROVADO (marcador AUSENTE) + leitura da operação falha ⇒ legado ainda servido", async () => {
+    mockGetCampaign.mockResolvedValue({
+      id: CAMPAIGN_ID,
+      store_id: STORE_ID,
+      storage_path: `${STORE_ID}/${CAMPAIGN_ID}.jpg`,
+      product_name: "Produto Teste",
+      created_at: "2026-01-01T00:00:00.000Z",
+      // Snapshot legado SEM o marcador do novo fluxo.
+      input_snapshot: { productName: "Produto Teste" },
+    });
+    mockGetCampaignOperation.mockRejectedValue(new Error("RPC missing"));
+
+    const res = await callRoute();
+
+    expect(res.status).toBe(200);
+    expect(mockStorageDownload).toHaveBeenCalledWith(`${STORE_ID}/${CAMPAIGN_ID}.jpg`);
+    expect(res.headers.get("Content-Disposition")).toContain("attachment");
+    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+  });
+
+  it("(c) marcador presente + operação LEGÍVEL ⇒ o portão do novo fluxo GOVERNA", async () => {
+    mockGetCampaign.mockResolvedValue({
+      id: CAMPAIGN_ID,
+      store_id: STORE_ID,
+      storage_path: `${STORE_ID}/${CAMPAIGN_ID}.jpg`,
+      product_name: "Produto Teste",
+      created_at: "2026-01-01T00:00:00.000Z",
+      input_snapshot: { frozenContentReferences: [] },
+    });
+    mockGetCampaignOperation.mockResolvedValue({
+      operationId: OPERATION_ID,
+      status: "art_uploaded",
+      unknown: false,
+      terminal: false,
+    });
+
+    const res = await callRoute();
+
+    expect(res.status).toBe(403);
+    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockStorageDownload).not.toHaveBeenCalled();
+  });
+});
+
 describe("rota download — preservação do ramo legado (source)", () => {
   const source = readFileSync(ROUTE_ABS, "utf8");
 
