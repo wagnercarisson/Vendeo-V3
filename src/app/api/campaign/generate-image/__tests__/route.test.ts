@@ -264,10 +264,39 @@ vi.mock('@/lib/economic/economic-parameter-service', () => ({
   }),
 }));
 
+// F56.2b1b (Plano 04): roteamento de aceitação do novo fluxo. O orquestrador é
+// mockado (a geração roda no ciclo da requisição; a rota apenas delega) e a
+// decisão de elegibilidade/autorização é injetada (fail-closed) para permitir o
+// cenário `allowed`.
+const { mockRunProductOneToOneGeneration } = vi.hoisted(() => ({
+  mockRunProductOneToOneGeneration: vi.fn(async (_input?: unknown, _deps?: unknown) =>
+    new Response('{"type":"result"}\n', {
+      status: 200,
+      headers: { "Content-Type": "application/x-ndjson" },
+    }),
+  ),
+}));
+vi.mock('@/lib/product-1-1/orchestration/generation-orchestrator', () => ({
+  runProductOneToOneGeneration: mockRunProductOneToOneGeneration,
+}));
+
+const { mockResolveProductFlowAuthorization } = vi.hoisted(() => ({
+  mockResolveProductFlowAuthorization: vi.fn(async () => ({ allowed: true })),
+}));
+vi.mock('@/lib/product-1-1/authorization/authorization-service', () => ({
+  resolveProductFlowAuthorization: mockResolveProductFlowAuthorization,
+}));
+vi.mock('@/lib/product-1-1/submission/eligibility-context', () => ({
+  resolveEligibilityContext: vi.fn((store: unknown) => store),
+}));
+
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from '@/lib/store-identity-service';
 import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from '@/lib/campaign/persistence';
 import { transcodeToJpeg } from '@/lib/campaign/image-processor';
+import { requireLegalClearance } from '@/lib/legal/clearance';
+import { requireOwnership } from '@/lib/auth/store-ownership';
 import { InputValidationService } from '@/lib/image-generation/services/input-validation-service';
+import { GenerateImageRequestSchema, NewFlowGenerateImageRequestSchema } from '@/lib/image-generation/schema';
 
 const STORE_ID = '00000000-0000-0000-0000-000000000001';
 const USER_ID = '00000000-0000-0000-0000-000000000002';
@@ -1741,3 +1770,203 @@ describe('generate-image v1 (F37.1)', () => {
     }
   });
 });
+
+// ── F56.2b1b (Plano 04): roteamento de aceitação do novo fluxo ──────────────
+describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', () => {
+  const NEW_FLOW_CAMPAIGN_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const NEW_FLOW_OPERATION_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const OTHER_STORE_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+  const VALID_NEW_FLOW_BODY = {
+    storeId: STORE_ID,
+    productName: 'Produto Novo',
+    discountedPriceCents: 1990,
+    badgeText: 'Oferta',
+    campaignIntent: 'offer',
+    backgroundDirection: 'studio',
+    campaignId: NEW_FLOW_CAMPAIGN_ID,
+    operationId: NEW_FLOW_OPERATION_ID,
+    productImages: [
+      { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+    ],
+  };
+
+  function setupNewFlowMocks(options?: {
+    existingCampaign?: { id: string; store_id: string } | null;
+  }) {
+    mockStoreFrom.mockImplementation((table: string) => {
+      if (table === 'stores') {
+        return { select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: { id: STORE_ID, name: 'Loja Teste', segment: 'outros' }, error: null })) })) })) };
+      }
+      if (table === 'campaigns') {
+        return { select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: vi.fn(() => Promise.resolve({ data: options?.existingCampaign ?? null, error: null })) })) })) };
+      }
+      return {};
+    });
+    (resolveStoreIdentity as any).mockResolvedValue({ storeName: 'Loja Teste', storeSegment: 'outros', brandColor: '#000000' });
+    (validateIdentityReference as any).mockResolvedValue({ storeName: 'Loja Teste', storeSegment: 'outros', brandColor: '#000000' });
+    (buildCampaignBrief as any).mockResolvedValue({ store: { name: 'Loja Teste', segment: 'outros' } });
+    (requireLegalClearance as any).mockResolvedValue({ ok: true });
+    (requireOwnership as any).mockResolvedValue(undefined);
+    mockResolveProductFlowAuthorization.mockResolvedValue({ allowed: true });
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: {}, resetTime: null });
+    mockRecordGenerationAttempt.mockResolvedValue(undefined);
+    mockGetCost.mockResolvedValue({ operationKey: 'campaign_generation', costCredits: 1, enabled: true, source: 'table' });
+    mockGetBalance.mockResolvedValue(10);
+    mockInputValidationValidate.mockResolvedValue({ classification: 'ok' });
+    (createCampaign as any).mockResolvedValue({ id: NEW_FLOW_CAMPAIGN_ID, storagePath: `${STORE_ID}/${NEW_FLOW_CAMPAIGN_ID}.jpg` });
+  }
+
+  it('allowed: delega ao orquestrador com a identidade do corpo (campaignId/operationId) e NÃO cai no schema legado', async () => {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+
+    expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
+    expect(mockRunProductOneToOneGeneration.mock.calls[0][0]).toMatchObject({
+      campaignId: NEW_FLOW_CAMPAIGN_ID,
+      operationId: NEW_FLOW_OPERATION_ID,
+      storeId: STORE_ID,
+      campaignIntent: 'offer',
+      backgroundDirection: 'studio',
+    });
+    expect(createCampaign).toHaveBeenCalledTimes(1);
+    // O schema legado estrito rejeita `backgroundDirection`; o do novo fluxo aceita.
+    expect(GenerateImageRequestSchema.safeParse(VALID_NEW_FLOW_BODY).success).toBe(false);
+    expect(NewFlowGenerateImageRequestSchema.safeParse(VALID_NEW_FLOW_BODY).success).toBe(true);
+  });
+
+  it('F2: backgroundDirection inválido ⇒ 400 (schema estrito do novo fluxo), sem reserva/provider', async () => {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({ ...VALID_NEW_FLOW_BODY, backgroundDirection: 'fundo' }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('new_flow_invalid');
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('C3: campaignId/operationId ausentes ⇒ 400 (schema estrito)', async () => {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+    const withoutIdentity: Record<string, unknown> = { ...VALID_NEW_FLOW_BODY };
+    delete withoutIdentity.campaignId;
+    delete withoutIdentity.operationId;
+    const res = await POST(makeRequest(withoutIdentity));
+    expect(res.status).toBe(400);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('F2: regra Original com ≠1 imagem de produto ⇒ 400 de campo, nunca IMG-001', async () => {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest({
+      ...VALID_NEW_FLOW_BODY,
+      backgroundDirection: 'original',
+      productImages: [
+        { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,p' },
+        { role: 'reference', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,r' },
+      ],
+    }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('original_background_requires_exactly_one_product_image');
+    expect(JSON.stringify(body)).not.toContain('IMG-001');
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('F2: sem ownership ⇒ 403 (guard b1a), sem reserva/provider', async () => {
+    setupNewFlowMocks();
+    const { ForbiddenError } = await import('@/lib/auth/errors');
+    (requireOwnership as any).mockRejectedValueOnce(new ForbiddenError('Loja não pertence ao usuário'));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(403);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('F2: pendência legal ⇒ 403, sem reserva/provider', async () => {
+    setupNewFlowMocks();
+    (requireLegalClearance as any).mockResolvedValueOnce({ ok: false, reason: 'doc_pending', requiredDocuments: ['x'] });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(403);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('F2: readiness ⇒ 412, sem reserva/provider', async () => {
+    setupNewFlowMocks();
+    mockRpc.mockResolvedValueOnce({ data: { ready: false, missing: [{ item: 'brand_profile', reason: 'sem marca' }] }, error: null });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(412);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('F2: rate limit ⇒ 429, sem reserva/provider', async () => {
+    setupNewFlowMocks();
+    mockCheckRateLimit.mockResolvedValueOnce({ allowed: false, reason: 'hourly_limit_exceeded', resetTime: new Date(Date.now() + 3600000).toISOString() });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(429);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('F2: saldo insuficiente ⇒ 402, sem reserva/provider', async () => {
+    setupNewFlowMocks();
+    mockGetBalance.mockResolvedValueOnce(0);
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(402);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('F2: conflito de entrada (imagem≠nome) ⇒ 409, sem reserva/provider', async () => {
+    setupNewFlowMocks();
+    mockInputValidationValidate.mockResolvedValueOnce({ classification: 'conflict', suggestedProductName: 'Outro' } as any);
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('guard refused ⇒ 403 e NENHUM efeito do novo fluxo', async () => {
+    setupNewFlowMocks();
+    mockResolveProductFlowAuthorization.mockResolvedValueOnce({ allowed: false, code: 'stage_off' } as any);
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error.code).toBe('new_flow_ineligible');
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('C3: MESMA identidade já persistida para a MESMA loja ⇒ reusa (NÃO cria 2ª campanha)', async () => {
+    setupNewFlowMocks({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID } });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
+  });
+
+  it('C3: MESMA identidade com loja DIVERGENTE ⇒ 409 operation_identity_conflict (sem 2ª campanha)', async () => {
+    setupNewFlowMocks({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: OTHER_STORE_ID } });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error.code).toBe('operation_identity_conflict');
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+});
+

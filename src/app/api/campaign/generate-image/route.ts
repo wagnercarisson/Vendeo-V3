@@ -39,6 +39,10 @@ import { detectExclusiveNewFlowFields } from "@/lib/product-1-1/submission/exclu
 import { assertSubmissionEligible } from "@/lib/product-1-1/submission/assert-submission-eligible";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
+import { NewFlowGenerateImageRequestSchema } from "@/lib/image-generation/schema";
+import { runProductOneToOneGeneration } from "@/lib/product-1-1/orchestration/generation-orchestrator";
+import { validateOriginalBackground, countProductImages, ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE } from "@/lib/product-1-1/selection-validation";
+import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
 
 export const runtime = "nodejs";
 
@@ -235,6 +239,296 @@ export const POST = apiHandler(async (request: NextRequest) => {
         },
         { status: 403 },
       );
+    }
+    if (guard.kind === "allowed") {
+      // ── F56.2b1b: roteamento de aceitação do novo fluxo (aditivo, b1b) ──
+      // (1) Schema ESTRITO PRÓPRIO do novo fluxo (campos legados +
+      // backgroundDirection + identidade C3). O schema legado permanece intacto.
+      const newFlowSchema = NewFlowGenerateImageRequestSchema;
+      const newFlowParsed = newFlowSchema.safeParse(body);
+      if (!newFlowParsed.success) {
+        console.log(
+          "[generate-image] new_flow_validation_fail — schema estrito do novo fluxo",
+        );
+        return Response.json(
+          {
+            error: {
+              code: "new_flow_invalid",
+              message: "Dados do novo fluxo inválidos para geração.",
+              details: newFlowParsed.error.flatten().fieldErrors,
+            },
+          },
+          { status: 400 },
+        );
+      }
+      const newFlow = newFlowParsed.data;
+      const newFlowBackgroundDirection: ProductOneToOneBackgroundDirection =
+        newFlow.backgroundDirection;
+
+      // (2) Regra Original revalidada server-side — erro de CAMPO, nunca IMG-001.
+      if (newFlowBackgroundDirection === "original") {
+        const productImageCount = countProductImages({
+          productImages: newFlow.productImages ?? [],
+          identityImages: [],
+        });
+        const originalValidation = validateOriginalBackground({ productImageCount });
+        if (!originalValidation.valid) {
+          return Response.json(
+            {
+              error: {
+                code: originalValidation.error,
+                message: ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE,
+                fields: ["backgroundDirection"],
+              },
+            },
+            { status: 400 },
+          );
+        }
+      }
+
+      // (3) F2 — MESMAS checagens pré-reserva do caminho legado, na MESMA ordem,
+      // ANTES de crédito/provider. Ownership já foi validado no guard b1a acima
+      // (rawStoreId === newFlow.storeId); legal/readiness/rate limit/saldo/custo
+      // e validação de entrada rodam aqui.
+      const newFlowUser = guardUser;
+      const newFlowStoreId = newFlow.storeId;
+      const newFlowClearance = await requireLegalClearance({
+        storeId: newFlowStoreId,
+        userId: newFlowUser.userId,
+        capability: "content_generation",
+      });
+      if (!newFlowClearance.ok) {
+        return Response.json(
+          {
+            error: "Ação bloqueada por pendência legal.",
+            reason: newFlowClearance.reason,
+            requiredDocuments: newFlowClearance.requiredDocuments,
+            acceptUrl: "/legal/reaccept",
+          },
+          { status: 403 },
+        );
+      }
+      const newFlowReadiness = await getStoreReadiness(newFlowStoreId);
+      if (!newFlowReadiness.ready) {
+        return Response.json(
+          {
+            error: {
+              message: "Loja não está pronta para gerar campanhas.",
+              reasons: newFlowReadiness.missing.map((m) => m.reason),
+              missing: newFlowReadiness.missing.map((m) => m.item),
+            },
+          },
+          { status: 412 },
+        );
+      }
+      const newFlowRateLimit = await checkRateLimit(newFlowStoreId, {
+        rateLimitEnabled: config.rateLimitEnabled,
+      });
+      if (!newFlowRateLimit.allowed) {
+        return Response.json(
+          {
+            error: "rate_limit_exceeded",
+            retryAfter: newFlowRateLimit.resetTime ?? "1 hour",
+          },
+          { status: 429 },
+        );
+      }
+      let newFlowCost: OperationCostResolution;
+      try {
+        newFlowCost = await new OperationCostService().getCost("campaign_generation");
+      } catch (err) {
+        if (err instanceof OperationCostUnavailableError) {
+          return Response.json(
+            {
+              error: "operation_cost_unavailable",
+              operationKey: "campaign_generation",
+              message:
+                "Serviço indisponível no momento. Tente novamente em alguns instantes.",
+            },
+            { status: 503 },
+          );
+        }
+        throw err;
+      }
+      if (!newFlowCost.enabled) {
+        return Response.json(
+          { error: "operation_disabled", operationKey: newFlowCost.operationKey },
+          { status: 503 },
+        );
+      }
+      if (config.creditsChargingEnabled) {
+        const newFlowBalance = await new CreditService(supabaseAdmin).getBalance(
+          newFlowStoreId,
+        );
+        if (newFlowBalance < newFlowCost.costCredits) {
+          return Response.json(
+            {
+              error: {
+                message:
+                  "Saldo insuficiente. São necessários créditos para gerar uma campanha.",
+              },
+            },
+            { status: 402 },
+          );
+        }
+      }
+      const newFlowPrimaryDataUrl =
+        (newFlow.productImages ?? []).find((image) => image.role === "primary")
+          ?.dataUrl ?? newFlow.productImageDataUrl;
+      if (!newFlow.inputValidationOverride?.productImageCheck && newFlowPrimaryDataUrl) {
+        try {
+          const newFlowValidation = await new InputValidationService().validate(
+            newFlow.productName,
+            newFlowPrimaryDataUrl,
+            undefined,
+          );
+          if (
+            newFlowValidation.classification === "conflict" ||
+            newFlowValidation.classification === "strong_conflict" ||
+            newFlowValidation.classification === "low-confidence"
+          ) {
+            const reason =
+              newFlowValidation.classification === "low-confidence"
+                ? "product_image_low_confidence"
+                : newFlowValidation.classification === "strong_conflict"
+                  ? "product_image_strong_conflict"
+                  : "product_image_conflict";
+            return Response.json(
+              {
+                status: "needs_user_action",
+                reason,
+                message: "O nome do produto digitado não corresponde à imagem enviada.",
+              },
+              { status: 409 },
+            );
+          }
+        } catch {
+          return Response.json(
+            {
+              status: "needs_user_action",
+              reason: "product_image_low_confidence",
+              message:
+                "Não foi possível confirmar se o nome do produto corresponde à imagem.",
+            },
+            { status: 409 },
+          );
+        }
+      }
+
+      // (4) C3/F6 — campanha IDEMPOTENTE por `campaignId` do corpo (nunca uma
+      // segunda campanha; conteúdo/loja divergente ⇒ conflito).
+      const existingNewFlowCampaign = await supabaseAdmin
+        .from("campaigns")
+        .select("id, store_id")
+        .eq("id", newFlow.campaignId)
+        .maybeSingle<{ id: string; store_id: string }>();
+      if (existingNewFlowCampaign.error) {
+        console.error(
+          `[generate-image] new_flow campaign read error — ${existingNewFlowCampaign.error.message}`,
+        );
+        return Response.json(
+          { error: { message: "Erro ao verificar a campanha." } },
+          { status: 500 },
+        );
+      }
+      if (
+        existingNewFlowCampaign.data &&
+        existingNewFlowCampaign.data.store_id !== newFlowStoreId
+      ) {
+        return Response.json(
+          {
+            error: {
+              code: "operation_identity_conflict",
+              message: "Identidade de campanha divergente.",
+            },
+          },
+          { status: 409 },
+        );
+      }
+      if (!existingNewFlowCampaign.data) {
+        try {
+          const newFlowBrief = buildCampaignBriefFromFlat(newFlow, newFlowStoreId);
+          await createCampaign(
+            newFlowStoreId,
+            {
+              productName: newFlow.productName,
+              inputSnapshot: buildCampaignBriefSnapshot(newFlowBrief) as unknown as Record<
+                string,
+                unknown
+              >,
+              identitySnapshot: undefined,
+              operationRunId,
+            },
+            newFlow.campaignId,
+          );
+        } catch (err) {
+          console.error(
+            `[generate-image] new_flow campaign create error — ${err instanceof Error ? err.message : String(err)}`,
+          );
+          return Response.json(
+            {
+              error: {
+                code: "operation_identity_conflict",
+                message: "Erro ao registrar a campanha.",
+              },
+            },
+            { status: 409 },
+          );
+        }
+      }
+      await recordGenerationAttempt(newFlowStoreId, newFlowUser.userId);
+
+      // (5) Delegação ao orquestrador NDJSON (snapshot → reserva → tentativa →
+      // política 2+1 → arte → delivered), preservando a identidade da operação.
+      const priceText = (cents: number | undefined): string | null =>
+        typeof cents === "number"
+          ? `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`
+          : null;
+      const newFlowBriefing = {
+        backgroundDirection: newFlowBackgroundDirection,
+        product: {
+          name: newFlow.productName,
+          description: newFlow.description ?? null,
+        },
+        commercial: {
+          intent: newFlow.campaignIntent,
+          originalPriceText: priceText(newFlow.originalPriceCents),
+          discountedPriceText: priceText(newFlow.discountedPriceCents),
+          badge: newFlow.badgeText ?? null,
+          validity: newFlow.validity ?? null,
+        },
+        constraints: {
+          mandatoryArtworkText: newFlow.mandatoryArtworkText ?? null,
+        },
+      };
+      const newFlowProductImages = newFlow.productImages ?? [];
+      return await runProductOneToOneGeneration({
+        campaignId: newFlow.campaignId,
+        operationId: newFlow.operationId,
+        storeId: newFlowStoreId,
+        briefing: newFlowBriefing,
+        briefingText: JSON.stringify({
+          productName: newFlow.productName,
+          description: newFlow.description ?? null,
+          campaignIntent: newFlow.campaignIntent,
+          backgroundDirection: newFlowBackgroundDirection,
+        }),
+        campaignIntent: newFlow.campaignIntent,
+        backgroundDirection: newFlowBackgroundDirection,
+        references: newFlowProductImages.map((image) => image.role),
+        referenceSelections: newFlowProductImages.map((image) => ({
+          kind: image.role === "primary" ? "product" : "reference",
+          id: image.role,
+        })),
+        productImagesDataUrls:
+          newFlowProductImages.length > 0
+            ? newFlowProductImages.map((image) => image.dataUrl)
+            : newFlow.productImageDataUrl
+              ? [newFlow.productImageDataUrl]
+              : [],
+        runId: operationRunId,
+        traceId,
+      });
     }
   }
 

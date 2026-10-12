@@ -75,6 +75,34 @@ export const GenerateImageRequestSchema = z.object({
 
 export type GenerateImageRequest = z.infer<typeof GenerateImageRequestSchema>;
 
+// ─── New Flow (Produto 1:1) Request ───────────────────────────────────────
+// F56.2b1b (C3/F6): o corpo do novo fluxo carrega os campos legados aplicáveis
+// MAIS `backgroundDirection` e a IDENTIDADE (`campaignId` + `operationId`)
+// gerada pelo formulário. É um schema ESTRITO PRÓPRIO — o schema legado
+// (`GenerateImageRequestSchema`, também estrito) REJEITA `backgroundDirection`
+// e permanece intocado.
+export const NewFlowGenerateImageRequestSchema = GenerateImageRequestSchema.extend({
+  backgroundDirection: z.enum(["studio", "ambient", "original"]),
+  campaignId: z.string().uuid(),
+  operationId: z.string().uuid(),
+});
+
+export type NewFlowGenerateImageRequest = z.infer<
+  typeof NewFlowGenerateImageRequestSchema
+>;
+
+// ─── Generation Status Request (query-only) ───────────────────────────────
+// F56.2b1b (F6/D2): o reenvio consulta SOMENTE a operação existente pela
+// identidade `campaignId + operationId` — nenhuma mutação/geração.
+export const GenerationStatusRequestSchema = z
+  .object({
+    campaignId: z.string().uuid(),
+    operationId: z.string().uuid(),
+  })
+  .strict();
+
+export type GenerationStatusRequest = z.infer<typeof GenerationStatusRequestSchema>;
+
 // ─── Success Response (200) ───────────────────────────────────────────────
 // Normal success or auto-fix success.
 
