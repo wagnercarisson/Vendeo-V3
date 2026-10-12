@@ -214,9 +214,9 @@ function Assert-IsolatedPreflight {
   }
 }
 
-function Write-SanitizedLines {
+function Get-SanitizedLines {
   param([object[]]$Lines)
-  foreach ($entry in $Lines) {
+  $result = foreach ($entry in $Lines) {
     $line = [string]$entry
     foreach ($secret in $script:SecretsToRedact) {
       if ($secret) { $line = $line.Replace($secret, '[REDACTED]') }
@@ -224,6 +224,14 @@ function Write-SanitizedLines {
     $line = [regex]::Replace($line, '(?i)(SERVICE_ROLE_KEY|ANON_KEY|DB_URL|POSTGRES_PASSWORD|JWT_SECRET)\s*[=:]\s*\S+', '$1=[REDACTED]')
     $line = [regex]::Replace($line, '(?i)postgres(?:ql)?://\S+', '[DATABASE_URL_REDACTED]')
     $line = [regex]::Replace($line, '(?i)Bearer\s+\S+', 'Bearer [REDACTED]')
+    $line
+  }
+  return @($result)
+}
+
+function Write-SanitizedLines {
+  param([object[]]$Lines)
+  foreach ($line in Get-SanitizedLines -Lines $Lines) {
     Write-Output $line
   }
 }
@@ -371,8 +379,23 @@ if ($RunSuites) {
       Write-Output "# running suite: $suite"
       $testOutput = @(& npx vitest run $suite 2>&1)
       $suiteExit = $LASTEXITCODE
-      Write-SanitizedLines -Lines $testOutput
+      $sanitized = @(Get-SanitizedLines -Lines $testOutput)
+      foreach ($line in $sanitized) { Write-Output $line }
       if ($suiteExit -ne 0) { $overallExit = $suiteExit }
+
+      # T-56.2.2-09-02 — gate POR SUÍTE: executados > 0 E skipped = 0. Um arquivo
+      # de teste INTEIRAMENTE pulado NÃO falha no vitest (exit 0); sem esta
+      # checagem, uma "suíte verde por skipped" passaria. O validador é puro
+      # (sem banco) e recebe a saída JÁ SANITIZADA (sem segredos).
+      $coveragePath = Join-Path ([System.IO.Path]::GetTempPath()) `
+        ("f562b-suite-coverage-" + [guid]::NewGuid().ToString('N') + ".txt")
+      try {
+        Set-Content -LiteralPath $coveragePath -Value ($sanitized -join "`n") -Encoding UTF8
+        & npx --no-install tsx scripts/verify/f56-2-2-suite-skip-guard.ts --suite $suite --output-file $coveragePath
+        if ($LASTEXITCODE -ne 0) { $overallExit = 1 }
+      } finally {
+        Remove-Item -LiteralPath $coveragePath -ErrorAction SilentlyContinue
+      }
     }
     if ($overallExit -ne 0) { exit $overallExit }
   } finally {
