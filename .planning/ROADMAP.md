@@ -393,7 +393,7 @@ Plans:
 
 **Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
 
-**Plans:** 4/8 plans executed
+**Plans:** 5/8 plans executed
 Plans:
 **Wave 1**
 
@@ -410,7 +410,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 51.2-04-PLAN.md — `robots.txt` e `sitemap.xml` + assert consolidado fail-closed (wave 4)
-- [ ] 51.2-05-PLAN.md — Política de indexação por rota + `headers()` (`X-Robots-Tag`) (wave 4)
+- [x] 51.2-05-PLAN.md — Política de indexação por rota + `headers()` (`X-Robots-Tag`) (wave 4)
 - [ ] 51.2-06-PLAN.md — Imagem de compartilhamento (teste do asset final obrigatório) + C1 (wave 4, checkpoint C1)
 - [ ] 51.2-07-PLAN.md — Diagnóstico de performance + baseline do Search Console + `VERCEL_ENV` + C3 (wave 4)
 
