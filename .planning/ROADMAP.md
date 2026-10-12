@@ -393,7 +393,7 @@ Plans:
 
 **Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
 
-**Plans:** 2/8 plans executed
+**Plans:** 3/8 plans executed
 Plans:
 **Wave 1**
 
@@ -405,7 +405,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 51.2-03-PLAN.md — `metadataBase`, default noindex da raiz, metadata/compartilhamento da home + diagnóstico observável (wave 3)
+- [x] 51.2-03-PLAN.md — `metadataBase`, default noindex da raiz, metadata/compartilhamento da home + diagnóstico observável (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
