@@ -1,0 +1,332 @@
+// @vitest-environment node
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import sharp from "sharp";
+
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  ProductOneToOneArtifactStore,
+  artifactStoragePath,
+  resizeToJpeg1024,
+} from "../artifact/artifact-store";
+
+// ---------------------------------------------------------------------------
+// F56.2b1b — Plano 05: arte real 1024×1024 do novo fluxo (F7, pipeline PRÓPRIO
+// `resizeToJpeg1024`, dimensões DECODIFICADAS dos bytes), registro imutável
+// `product_1_1_campaign_artifacts` (migration LOCAL-ONLY, apenas AUTORADA) e
+// resultados TIPADOS da operação. Contract test estático + simulado, sem banco,
+// sem provider, sem crédito e SEM assinatura no probe (I3).
+// ---------------------------------------------------------------------------
+
+const MIGRATIONS_DIR = path.resolve(process.cwd(), "supabase", "migrations");
+const MIGRATION_FILE = "20261009000004_f56_2b1b_campaign_artifacts.sql";
+const migrationPath = path.join(MIGRATIONS_DIR, MIGRATION_FILE);
+
+const sql = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+const activeLines = sql
+  .split(/\r?\n/)
+  .filter((line) => !line.trimStart().startsWith("--") && line.trim().length > 0);
+const activeSql = activeLines.join("\n");
+
+const IMAGE_PROCESSOR_PATH = path.resolve(
+  process.cwd(),
+  "src",
+  "lib",
+  "campaign",
+  "image-processor.ts",
+);
+
+const STORE_ID = "11111111-1111-4111-8111-111111111111";
+const CAMPAIGN_ID = "22222222-2222-4222-8222-222222222222";
+const OPERATION_ID = "33333333-3333-4333-8333-333333333333";
+
+async function jpegDataUrl(width: number, height: number): Promise<string> {
+  const png = await sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 24, g: 160, b: 72 },
+    },
+  })
+    .png()
+    .toBuffer();
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
+
+interface FakeHandles {
+  client: SupabaseClient;
+  uploads: { path: string; buffer: Buffer; options: Record<string, unknown> }[];
+  inserts: { table: string; row: Record<string, unknown> }[];
+  downloads: string[];
+  signed: { path: string; ttl: number }[];
+}
+
+function createFakeClient(
+  overrides: {
+    uploadError?: unknown;
+    download?: { data: unknown; error: unknown };
+    insertError?: unknown;
+    metadata?: Record<string, unknown> | null;
+  } = {},
+): FakeHandles {
+  const uploads: FakeHandles["uploads"] = [];
+  const inserts: FakeHandles["inserts"] = [];
+  const downloads: FakeHandles["downloads"] = [];
+  const signed: FakeHandles["signed"] = [];
+
+  const storageFrom = vi.fn(() => ({
+    upload: vi.fn(async (p: string, b: Buffer, o: Record<string, unknown>) => {
+      uploads.push({ path: p, buffer: b, options: o });
+      return overrides.uploadError
+        ? { data: null, error: overrides.uploadError }
+        : { data: { path: p }, error: null };
+    }),
+    download: vi.fn(async (p: string) => {
+      downloads.push(p);
+      return (
+        overrides.download ?? {
+          data: null,
+          error: { message: "Object not found", statusCode: "404" },
+        }
+      );
+    }),
+    createSignedUrl: vi.fn(async (p: string, ttl: number) => {
+      signed.push({ path: p, ttl });
+      return { data: { signedUrl: `signed://${p}` }, error: null };
+    }),
+  }));
+
+  const tableFrom = vi.fn((table: string) => ({
+    insert: vi.fn(async (row: Record<string, unknown>) => {
+      inserts.push({ table, row });
+      return { error: overrides.insertError ?? null };
+    }),
+    select: vi.fn(() => {
+      const chain = {
+        eq: vi.fn(() => chain),
+        maybeSingle: vi.fn(async () => ({
+          data: overrides.metadata ?? null,
+          error: null,
+        })),
+      };
+      return chain;
+    }),
+  }));
+
+  const client = {
+    storage: { from: storageFrom },
+    from: tableFrom,
+  } as unknown as SupabaseClient;
+
+  return { client, uploads, inserts, downloads, signed };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+// Migration 20261009000004 — contrato estático (LOCAL-ONLY, tabela imutável).
+// ---------------------------------------------------------------------------
+
+describe("F56.2b1b — migration 20261009000004 campaign_artifacts (contrato estático)", () => {
+  it("é LOCAL-ONLY, sem comando mutável remoto e com bloco REVERT", () => {
+    expect(activeLines.filter((l) => /db push/i.test(l))).toEqual([]);
+    expect(sql).toMatch(/LOCAL-ONLY/);
+    expect(sql).toMatch(/REVERT/);
+  });
+
+  it("cria product_1_1_campaign_artifacts com UNIQUE por operação e CHECKs de dimensão", () => {
+    expect(activeSql).toMatch(
+      /CREATE TABLE IF NOT EXISTS public\.product_1_1_campaign_artifacts/,
+    );
+    expect(activeSql).toMatch(/campaign_id\s+UUID NOT NULL REFERENCES public\.campaigns\(id\)/);
+    expect(activeSql).toMatch(/storage_path\s+TEXT NOT NULL UNIQUE/);
+    expect(activeSql).toMatch(/CHECK \(width BETWEEN 1 AND 8192\)/);
+    expect(activeSql).toMatch(/CHECK \(height BETWEEN 1 AND 8192\)/);
+    expect(activeSql).toMatch(/mime_type\s+TEXT NOT NULL/);
+    expect(activeSql).toMatch(
+      /CONSTRAINT uq_p1_1_artifact_op UNIQUE \(campaign_id, operation_id\)/,
+    );
+  });
+
+  it("é imutável (trigger BEFORE UPDATE OR DELETE) e RLS service_role só SELECT/INSERT", () => {
+    expect(activeSql).toMatch(
+      /RAISE EXCEPTION 'product_1_1_campaign_artifacts_immutable'/,
+    );
+    expect(activeSql).toMatch(
+      /BEFORE UPDATE OR DELETE ON public\.product_1_1_campaign_artifacts/,
+    );
+    expect(activeSql).toMatch(
+      /ALTER TABLE public\.product_1_1_campaign_artifacts ENABLE ROW LEVEL SECURITY/,
+    );
+    expect(activeSql).toMatch(
+      /REVOKE ALL ON TABLE public\.product_1_1_campaign_artifacts FROM PUBLIC, anon, authenticated/,
+    );
+    expect(activeSql).toMatch(
+      /GRANT SELECT, INSERT ON TABLE public\.product_1_1_campaign_artifacts TO service_role/,
+    );
+    expect(activeSql).not.toMatch(
+      /GRANT[^;]*\b(UPDATE|DELETE)\b[^;]*ON TABLE public\.product_1_1_campaign_artifacts/,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F7 — pipeline PRÓPRIO 1024×1024 (dimensões decodificadas dos BYTES).
+// ---------------------------------------------------------------------------
+
+describe("F7 — resizeToJpeg1024 (pipeline próprio, dimensões reais)", () => {
+  it("produz um JPEG 1:1 1024×1024 decodificado dos BYTES (não literal)", async () => {
+    const png = await sharp({
+      create: {
+        width: 640,
+        height: 480,
+        channels: 3,
+        background: { r: 10, g: 90, b: 200 },
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const output = await resizeToJpeg1024(png, "image/png");
+    expect(output.mimeType).toBe("image/jpeg");
+
+    const metadata = await sharp(output.buffer).metadata();
+    expect(metadata.format).toBe("jpeg");
+    expect(metadata.width).toBe(1024);
+    expect(metadata.height).toBe(1024);
+  });
+
+  it("recusa formato de entrada não suportado", async () => {
+    const png = await sharp({
+      create: { width: 8, height: 8, channels: 3, background: { r: 0, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+    await expect(resizeToJpeg1024(png, "image/gif")).rejects.toThrow(/Unsupported image format/);
+  });
+
+  it("o helper legado image-processor.ts permanece 1080×1080 (não alterado)", () => {
+    const source = readFileSync(IMAGE_PROCESSOR_PATH, "utf8");
+    expect(source).toMatch(/resize\(1080, 1080/);
+    expect(source).not.toMatch(/1024/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// storeArtifact — upload imutável + persistência das dimensões DECODIFICADAS.
+// ---------------------------------------------------------------------------
+
+describe("Task 1 — storeArtifact (upload imutável + registro persistido)", () => {
+  it("sobe com upsert:false e persiste as dimensões DECODIFICADAS dos BYTES", async () => {
+    const handles = createFakeClient();
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const ref = await store.storeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      imageDataUrl: await jpegDataUrl(512, 512),
+    });
+
+    expect(ref.storagePath).toBe(artifactStoragePath(STORE_ID, CAMPAIGN_ID, OPERATION_ID));
+    expect(ref.width).toBe(1024);
+    expect(ref.height).toBe(1024);
+    expect(ref.mimeType).toBe("image/jpeg");
+
+    // O path é exclusivo do novo fluxo e distinto do legado `${storeId}/${campaignId}.jpg`.
+    expect(ref.storagePath).toBe(`${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`);
+    expect(ref.storagePath).not.toBe(`${STORE_ID}/${CAMPAIGN_ID}.jpg`);
+
+    // Upload imutável (upsert:false) e Content-Type de JPEG.
+    expect(handles.uploads).toHaveLength(1);
+    expect(handles.uploads[0].path).toBe(ref.storagePath);
+    expect(handles.uploads[0].options).toEqual({ contentType: "image/jpeg", upsert: false });
+
+    // O buffer efetivamente enviado decodifica como 1024×1024 (asserção real).
+    const uploaded = await sharp(handles.uploads[0].buffer).metadata();
+    expect(uploaded.width).toBe(1024);
+    expect(uploaded.height).toBe(1024);
+
+    // Registro imutável com dimensões decodificadas.
+    expect(handles.inserts).toHaveLength(1);
+    expect(handles.inserts[0].table).toBe("product_1_1_campaign_artifacts");
+    expect(handles.inserts[0].row).toMatchObject({
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      storage_path: ref.storagePath,
+      width: 1024,
+      height: 1024,
+      mime_type: "image/jpeg",
+    });
+
+    // storeArtifact NUNCA assina (I3).
+    expect(handles.signed).toHaveLength(0);
+  });
+
+  it("conflito de path (objeto existente) ⇒ erro tipado, sem sobrescrever", async () => {
+    const handles = createFakeClient({
+      uploadError: { message: "The resource already exists", statusCode: "409" },
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    await expect(
+      store.storeArtifact({
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        imageDataUrl: await jpegDataUrl(256, 256),
+      }),
+    ).rejects.toMatchObject({ code: "artifact_path_conflict" });
+
+    expect(handles.uploads[0].options.upsert).toBe(false);
+    expect(handles.inserts).toHaveLength(0);
+  });
+
+  it("falha ao persistir metadados ⇒ erro tipado artifact_metadata_persist_failed", async () => {
+    const handles = createFakeClient({ insertError: { message: "insert failed" } });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    await expect(
+      store.storeArtifact({
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        imageDataUrl: await jpegDataUrl(256, 256),
+      }),
+    ).rejects.toMatchObject({ code: "artifact_metadata_persist_failed" });
+  });
+
+  it("getArtifactMetadata recupera EXATAMENTE os valores persistidos", async () => {
+    const handles = createFakeClient({
+      metadata: {
+        storage_path: `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`,
+        width: 1024,
+        height: 1024,
+        mime_type: "image/jpeg",
+      },
+    });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    const ref = await store.getArtifactMetadata(CAMPAIGN_ID, OPERATION_ID);
+    expect(ref).toEqual({
+      storagePath: `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`,
+      width: 1024,
+      height: 1024,
+      mimeType: "image/jpeg",
+    });
+  });
+
+  it("getArtifactMetadata devolve null quando não há registro", async () => {
+    const handles = createFakeClient({ metadata: null });
+    const store = new ProductOneToOneArtifactStore(handles.client);
+
+    expect(await store.getArtifactMetadata(CAMPAIGN_ID, OPERATION_ID)).toBeNull();
+  });
+});
