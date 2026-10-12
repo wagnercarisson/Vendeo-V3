@@ -308,7 +308,7 @@ describe("rota download — preservação do ramo legado (source)", () => {
   it("o ramo novo é aditivo e fail-closed: assina SOMENTE após `decideNewFlowDownload`", () => {
     const decisionIdx = source.indexOf("decideNewFlowDownload(");
     const signIdx = source.indexOf("getSignedArtifactUrl(");
-    const f37Idx = source.indexOf("isCampaignApprovalEnabled");
+    const f37Idx = source.indexOf("await isCampaignApprovalEnabled()");
     const rejectIdx = source.indexOf("decision.allowed");
 
     expect(decisionIdx).toBeGreaterThan(-1);
