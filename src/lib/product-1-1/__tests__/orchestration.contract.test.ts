@@ -122,10 +122,6 @@ async function baseExisting(
 }
 
 async function buildHarness(): Promise<Harness> {
-  const { runProductOneToOneGeneration } = await import(
-    "../orchestration/generation-orchestrator"
-  );
-
   const order: string[] = [];
   let existingOperation: CampaignOperationState | null = null;
   let providerSequence: Array<AiInvocationResult | Error> = [];
@@ -322,7 +318,7 @@ async function buildHarness(): Promise<Harness> {
     setRefundFailure(fail) {
       refundFailure = fail;
     },
-  } as Harness & { run: typeof runProductOneToOneGeneration };
+  } as Harness;
 }
 
 async function runOrchestrator(harness: Harness) {
