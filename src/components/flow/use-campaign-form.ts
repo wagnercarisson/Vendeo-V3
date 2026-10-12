@@ -174,6 +174,17 @@ export interface PendingConflict {
   body: Record<string, unknown>;
 }
 
+/**
+ * F56.2b1b (Plano 06, C1/F8) — estado de RESULTADO DESCONHECIDO do envio ao vivo.
+ * Carrega a identidade da operação para a consulta query-only (`Verificar
+ * novamente`) — NUNCA dispara nova geração.
+ */
+export interface UnknownResultState {
+  supportReference: string | null;
+  operationId: string | null;
+  campaignId: string | null;
+}
+
 export interface UseCampaignFormReturn {
   fields: CampaignFormFields;
   fieldErrors: FieldErrors;
@@ -207,6 +218,12 @@ export interface UseCampaignFormReturn {
   enterReview: () => Promise<boolean>;
   exitReview: () => void;
   confirmReview: () => Promise<void>;
+  /**
+   * F56.2b1b (Plano 06, C1/F8): resultado desconhecido consumido do terminal
+   * NDJSON (ou de um stream sem terminal — fail-safe). `null` quando não há.
+   */
+  unknownResult: UnknownResultState | null;
+  resetUnknownResult: () => void;
 }
 
 const EMPTY_FIELDS: CampaignFormFields = {
@@ -670,6 +687,8 @@ export function useCampaignForm(
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
   const [phases, setPhases] = useState<GenerationPhaseEvent[]>([]);
+  // F56.2b1b (Plano 06, C1/F8): resultado desconhecido do envio ao vivo.
+  const [unknownResult, setUnknownResult] = useState<UnknownResultState | null>(null);
   // F43 (D2/D3): estado da revisão do brief em tela intermediária (não modal).
   const [reviewMode, setReviewMode] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -968,6 +987,94 @@ export function useCampaignForm(
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let lastOperationId: string | null = null;
+    let lastCampaignId: string | null = null;
+
+    // F56.2b1b (Plano 06, C1/F8): consome UMA linha do NDJSON e devolve `true`
+    // quando um evento TERMINAL foi tratado (o chamador encerra o loop). O
+    // terminal é exatamente um de `result` | `error` | `unknown`; qualquer evento
+    // terminal de TIPO DESCONHECIDO (ex.: corrida perdida) é tratado como
+    // desconhecido — fail-safe, nunca como sucesso. Nunca deixa `isSubmitting`
+    // preso sem feedback.
+    const consumeLine = (line: string): boolean => {
+      if (!line.trim()) return false;
+      let event: Record<string, unknown>;
+      try {
+        event = JSON.parse(line);
+      } catch {
+        return false;
+      }
+
+      if (typeof event.operationId === "string") lastOperationId = event.operationId;
+      if (typeof event.campaignId === "string") lastCampaignId = event.campaignId;
+
+      if (event.type === "phase") {
+        const phaseEvent: GenerationPhaseEvent = {
+          phase: event.phase as GenerationPhaseEvent["phase"],
+          status: event.status as GenerationPhaseEvent["status"],
+          message: event.message as string | undefined,
+          detail: event.detail as string | undefined,
+        };
+        onPhaseChange(phaseEvent);
+        return false;
+      }
+
+      if (event.type === "result" && "campaignId" in event) {
+        const result = event as { campaignId: string; campaignUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } } };
+
+        if (result.inputCorrections?.productName) {
+          const correction = result.inputCorrections.productName;
+          setFields((prev) => ({ ...prev, productName: correction.to }));
+        }
+
+        // Navigate to campaign page — draft data preserved in sessionStorage
+        router.push(result.campaignUrl);
+        return true;
+      }
+
+      if (event.type === "error") {
+        const errorEvent = event as { code: string; message: string; requiresUserAction?: boolean };
+        if (errorEvent.code === "generated_product_mismatch") {
+          setSubmitError(errorEvent.message || "A imagem gerada não corresponde ao produto.");
+        } else {
+          setSubmitError(errorEvent.message || "Erro ao gerar imagem.");
+        }
+        setIsSubmitting(false);
+        return true;
+      }
+
+      if (event.type === "unknown") {
+        // Resultado DESCONHECIDO: NUNCA sucesso, NUNCA navegação, NUNCA retry.
+        setUnknownResult({
+          supportReference:
+            typeof event.reference === "string"
+              ? event.reference
+              : typeof event.supportReference === "string"
+                ? event.supportReference
+                : null,
+          operationId:
+            typeof event.operationId === "string" ? event.operationId : lastOperationId,
+          campaignId: typeof event.campaignId === "string" ? event.campaignId : lastCampaignId,
+        });
+        setIsSubmitting(false);
+        return true;
+      }
+
+      if (typeof event.type === "string") {
+        // Terminal de corrida perdida / evento terminal de tipo desconhecido:
+        // mesmo tratamento do desconhecido (consulta/aguarda), sem nova geração.
+        setUnknownResult({
+          supportReference:
+            typeof event.supportReference === "string" ? event.supportReference : null,
+          operationId: lastOperationId,
+          campaignId: lastCampaignId,
+        });
+        setIsSubmitting(false);
+        return true;
+      }
+
+      return false;
+    };
 
     try {
       while (true) {
@@ -979,45 +1086,22 @@ export function useCampaignForm(
         buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (!line.trim()) continue;
-          let event: Record<string, unknown>;
-          try {
-            event = JSON.parse(line);
-          } catch {
-            continue;
-          }
-
-          if (event.type === "phase") {
-            const phaseEvent: GenerationPhaseEvent = {
-              phase: event.phase as GenerationPhaseEvent["phase"],
-              status: event.status as GenerationPhaseEvent["status"],
-              message: event.message as string | undefined,
-              detail: event.detail as string | undefined,
-            };
-            onPhaseChange(phaseEvent);
-          } else if (event.type === "result" && "campaignId" in event) {
-            const result = event as { campaignId: string; campaignUrl: string; inputCorrections?: { productName: { from: string; to: string; reason: string } } };
-
-            if (result.inputCorrections?.productName) {
-              const correction = result.inputCorrections.productName;
-              setFields((prev) => ({ ...prev, productName: correction.to }));
-            }
-
-            // Navigate to campaign page — draft data preserved in sessionStorage
-            router.push(result.campaignUrl);
-            return;
-          } else if (event.type === "error") {
-            const errorEvent = event as { code: string; message: string; requiresUserAction?: boolean };
-            if (errorEvent.code === "generated_product_mismatch") {
-              setSubmitError(errorEvent.message || "A imagem gerada não corresponde ao produto.");
-            } else {
-              setSubmitError(errorEvent.message || "Erro ao gerar imagem.");
-            }
-            setIsSubmitting(false);
-            return;
-          }
+          if (consumeLine(line)) return;
         }
       }
+
+      // O chunk final pode chegar sem `\n` — processa a linha remanescente.
+      if (consumeLine(buffer)) return;
+
+      // F8 — o stream fechou SEM evento terminal (`result`|`error`|`unknown`):
+      // fail-safe — trata como DESCONHECIDO (nunca sucesso), limpa o envio e
+      // exibe a Superfície 3. NUNCA permanece preso em `isSubmitting`.
+      setUnknownResult({
+        supportReference: null,
+        operationId: lastOperationId,
+        campaignId: lastCampaignId,
+      });
+      setIsSubmitting(false);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         setSubmitError("A geração foi cancelada. Tente novamente.");
@@ -1034,6 +1118,7 @@ export function useCampaignForm(
     setFieldErrors({});
     setPendingConflict(null);
     setPhases([]);
+    setUnknownResult(null);
 
     const errors: FieldErrors = {};
     const allFields: (keyof CampaignFormFields)[] = [
@@ -1151,6 +1236,7 @@ export function useCampaignForm(
     setSubmitError(null);
     setFieldErrors({});
     setPhases([]);
+    setUnknownResult(null);
     confirmedBodyRef.current = null;
     draftIdentityRef.current = null;
     setFields(EMPTY_FIELDS);
@@ -1398,6 +1484,7 @@ export function useCampaignForm(
     setFieldErrors({});
     setPendingConflict(null);
     setPhases([]);
+    setUnknownResult(null);
     await consumeStream(body, new AbortController());
   }, [storeId, preparedImages, fields, eligible]);
 
@@ -1415,8 +1502,15 @@ export function useCampaignForm(
     setSubmitError(null);
     setPendingConflict(null);
     setPhases([]);
+    setUnknownResult(null);
     await consumeStream(body, new AbortController());
   }, [handleSubmit]);
+
+  // F56.2b1b (Plano 06, C1/F8): limpa o estado de resultado desconhecido (ação
+  // do consumidor — nunca inicia geração).
+  const resetUnknownResult = useCallback(() => {
+    setUnknownResult(null);
+  }, []);
 
   return {
     fields,
@@ -1451,6 +1545,8 @@ export function useCampaignForm(
     enterReview,
     exitReview,
     confirmReview,
+    unknownResult,
+    resetUnknownResult,
   };
 }
 

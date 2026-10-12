@@ -5,6 +5,7 @@ import { useCampaignForm, inferIntent } from "./use-campaign-form";
 import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
 import { GenerationProgress } from "./generation-progress";
+import { UnknownResultPanel } from "./unknown-result-panel";
 import { CampaignBriefReview } from "./campaign-brief-review";
 import { BackgroundDirectionSelector } from "./background-direction-selector";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
@@ -87,6 +88,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     enterReview,
     exitReview,
     confirmReview,
+    unknownResult,
   } = useCampaignForm(storeId, { eligible });
 
   // F43 (D7): notifica o pai quando a revisão entra/sai — permite ao
@@ -120,6 +122,22 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         onBack={exitReview}
         onConfirm={confirmReview}
       />
+    );
+  }
+
+  // F56.2b1b (Plano 06, C1/F8 / UI-SPEC §Surface 3): resultado DESCONHECIDO —
+  // âmbar, sem ação de regeneração. A única ação é "Verificar novamente"
+  // (query-only). Nunca permanece preso em `isSubmitting` sem feedback.
+  if (unknownResult) {
+    return (
+      <div className="space-y-4">
+        <UnknownResultPanel
+          supportReference={unknownResult.supportReference}
+          supportEmail={supportEmail}
+          campaignId={unknownResult.campaignId}
+          operationId={unknownResult.operationId}
+        />
+      </div>
     );
   }
 
