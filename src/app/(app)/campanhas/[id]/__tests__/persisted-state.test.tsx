@@ -328,3 +328,87 @@ describe("CampaignPageClient — copy do novo fluxo na campanha entregue (P3)", 
     expect(screen.getByText("Baixar Original")).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// F56.2b1b (Plano 08 — P3): integração PAGE → CLIENT. O que a página mapeia do
+// registro PERSISTIDO (`mapNewFlowCopy`) é exatamente o que o client renderiza —
+// prova fim-a-fim da superfície (textos completos; falha/cancelamento ⇒ feedback
+// SEGURO âmbar; arte SEMPRE visível; SEM retry).
+// ---------------------------------------------------------------------------
+
+describe("P3 — PAGE → CLIENT: cópia persistida mapeada e exibida", () => {
+  it("`completed` ⇒ textos completos, arte visível e SEM retry", () => {
+    const copy = mapNewFlowCopy(
+      {
+        state: "completed",
+        copyText: "Legenda",
+        copyPayload: {
+          title: "Oferta",
+          caption: "Legenda",
+          hashtags: ["#promo"],
+          cta_post: "Aproveite!",
+        },
+      },
+      false,
+    );
+
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={{ state: "delivered", operationId: OPERATION_ID, copy }}
+      />,
+    );
+
+    expect(screen.getByText("Kit de Publicação")).toBeInTheDocument();
+    expect(screen.getByText("Oferta")).toBeInTheDocument();
+    expect(screen.getByText("Legenda")).toBeInTheDocument();
+    expect(screen.getByText("#promo")).toBeInTheDocument();
+    expect(screen.getByText("Aproveite!")).toBeInTheDocument();
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    for (const forbidden of FORBIDDEN) {
+      expect(screen.queryByText(forbidden)).toBeNull();
+    }
+  });
+
+  it("`failed` ⇒ feedback SEGURO (âmbar), arte visível e SEM retry", () => {
+    const copy = mapNewFlowCopy({ state: "failed", copyText: null, copyPayload: null }, false);
+
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={{ state: "delivered", operationId: OPERATION_ID, copy }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Não foi possível gerar o texto desta campanha. A arte está pronta para uso.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    for (const forbidden of FORBIDDEN) {
+      expect(screen.queryByText(forbidden)).toBeNull();
+    }
+  });
+
+  it("`canceled` (falha + cancelamento) ⇒ feedback SEGURO (âmbar), arte visível e SEM retry", () => {
+    const copy = mapNewFlowCopy({ state: "failed", copyText: null, copyPayload: null }, true);
+
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={{ state: "delivered", operationId: OPERATION_ID, copy }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "A geração do texto demorou mais que o esperado e foi interrompida. A arte está pronta para uso.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    for (const forbidden of FORBIDDEN) {
+      expect(screen.queryByText(forbidden)).toBeNull();
+    }
+  });
+});
