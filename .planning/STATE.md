@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: executing
-last_updated: "2026-10-12T17:53:04.000Z"
+last_updated: "2026-10-12T17:55:03.000Z"
 progress:
   total_phases: 46
   completed_phases: 41
   total_plans: 367
-  completed_plans: 359
+  completed_plans: 360
   percent: 97
 ---
 
