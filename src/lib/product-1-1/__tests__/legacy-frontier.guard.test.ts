@@ -92,8 +92,21 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   },
   {
     path: "src/lib/ai/types.ts",
-    authorization: "quick 261010-rsp (diagnóstico aditivo de identidade visual)",
-    commit: "6c2ebdb7",
+    authorization:
+      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + F56.2b1b Plano 08 P1 Opção A (tipo aditivo AiEnvelopeInternalCost)",
+    commit: "201e606f",
+  },
+  {
+    path: "src/lib/ai/telemetry-sink.ts",
+    authorization:
+      "F56.2b1b Plano 08 P1 Opção A (custo interno `internalCost` opcional no contexto do sink — aditivo)",
+    commit: "201e606f",
+  },
+  {
+    path: "src/lib/ai/__tests__/telemetry-sink.test.ts",
+    authorization:
+      "F56.2b1b Plano 08 P1 Opção A (testes do custo interno do novo fluxo no sink)",
+    commit: "201e606f",
   },
   {
     path: "src/lib/ai/adapters/chat-completions.ts",
