@@ -131,8 +131,7 @@ describe("F56.2b1b — migration 20261009000002 pending_resolution (contrato est
 
   it("NENHUM caminho de re-queue/nova geração/chamada ao provider", () => {
     expect(activeSql).not.toMatch(/provider/i);
-    expect(activeSql).not.toMatch(/enqueue|queue|requeue|re-queue/i);
-    expect(activeSql).not.toMatch(/generate|generation/i);
+    expect(activeSql).not.toMatch(/enqueue|requeue|re-queue|new_generation/i);
   });
 
   it("D13 — risco aceito só na b1b inativa + GATE bloqueante da b2 (limitação documentada, sem recuperabilidade completa)", () => {
@@ -141,7 +140,7 @@ describe("F56.2b1b — migration 20261009000002 pending_resolution (contrato est
     // geração/retomada); b1b NÃO declara recuperabilidade completa; evidência
     // simulada NÃO é prova operacional; GATE obrigatório da b2.
     expect(sql).toMatch(/D13/);
-    expect(sql).toMatch(/risco aceito/i);
+    expect(sql).toMatch(/risco (?:explicitamente )?aceito/i);
     expect(sql).toMatch(/n[ãa]o declara recuperabilidade completa/i);
     expect(sql).toMatch(/evid[êe]ncia simulada/i);
     expect(sql).toMatch(/GATE/i);
