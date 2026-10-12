@@ -85,6 +85,7 @@ export type AttemptStartErrorCode =
   | "invalid_transition"
   | "operation_terminal"
   | "operation_unknown"
+  | "operation_identity_conflict"
   | "unknown";
 
 export class AttemptStartError extends Error {

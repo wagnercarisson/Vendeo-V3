@@ -28,6 +28,11 @@ import {
  * corrida é quem recebe `acquired: true`; o perdedor (`acquired: false`, com
  * qualquer motivo, inclusive `operation_terminal`/`operation_unknown`) NÃO deve
  * prosseguir para a geração.
+ *
+ * F3 — envelope FECHADO (fail-closed): o cliente NUNCA aceita sucesso implícito.
+ * `{acquired:true}` exige a identidade/alvo/tentativa EXATOS da requisição;
+ * `finish`/`recordOperationOutcome` exigem `success:true` EXPLÍCITO e
+ * correspondência com a requisição; replay divergente ⇒ `operation_identity_conflict`.
  */
 
 const KNOWN_CODES: readonly AttemptStartErrorCode[] = [
@@ -43,6 +48,7 @@ const KNOWN_CODES: readonly AttemptStartErrorCode[] = [
   "invalid_transition",
   "operation_terminal",
   "operation_unknown",
+  "operation_identity_conflict",
 ];
 
 const ATTEMPT_REASONS: readonly AttemptStartReason[] = [
@@ -88,7 +94,7 @@ function asRecord(data: unknown): Record<string, unknown> {
   return data as Record<string, unknown>;
 }
 
-function mapAcquire(data: unknown): AttemptStartResult {
+function mapAcquire(data: unknown, input: AcquireAttemptInput): AttemptStartResult {
   const record = asRecord(data);
   const acquired = record.acquired;
   if (typeof acquired !== "boolean") {
@@ -96,14 +102,29 @@ function mapAcquire(data: unknown): AttemptStartResult {
   }
 
   if (acquired) {
+    // F3 — envelope FECHADO: `{acquired:true}` só é válido quando carrega a
+    // identidade/alvo/tentativa EXATOS da requisição e `reason === null`.
+    const campaignId = (record.campaign_id as string | undefined) ?? null;
+    const operationId = (record.operation_id as string | undefined) ?? null;
+    const attemptNumber =
+      record.attempt_number == null ? null : Number(record.attempt_number);
+    const target = (record.target as AttemptTarget | undefined) ?? null;
+    if (
+      record.reason !== null ||
+      campaignId !== input.campaignId ||
+      operationId !== input.operationId ||
+      attemptNumber !== input.attemptNumber ||
+      target !== input.target
+    ) {
+      throw new AttemptStartError("unknown", "incomplete_acquire_envelope");
+    }
     return Object.freeze({
       acquired: true,
       reason: null,
-      campaignId: (record.campaign_id as string | undefined) ?? null,
-      operationId: (record.operation_id as string | undefined) ?? null,
-      attemptNumber:
-        record.attempt_number == null ? null : Number(record.attempt_number),
-      target: (record.target as AttemptTarget | undefined) ?? null,
+      campaignId,
+      operationId,
+      attemptNumber,
+      target,
     });
   }
 
@@ -124,8 +145,12 @@ function mapAcquire(data: unknown): AttemptStartResult {
   });
 }
 
-function mapFinish(data: unknown): AttemptFinishResult {
+function mapFinish(data: unknown, input: FinishAttemptInput): AttemptFinishResult {
   const record = asRecord(data);
+  // F3 — sucesso EXPLÍCITO: ausência de `success:true` NÃO é sucesso.
+  if (record.success !== true) {
+    throw new AttemptStartError("unknown", "incomplete_finish_envelope");
+  }
   const status = record.status;
   if (
     typeof status !== "string" ||
@@ -133,35 +158,69 @@ function mapFinish(data: unknown): AttemptFinishResult {
   ) {
     throw new AttemptStartError("unknown", "invalid_rpc_status");
   }
+  const campaignId = String(record.campaign_id ?? "");
+  const operationId = String(record.operation_id ?? "");
+  const attemptNumber = Number(record.attempt_number ?? 0);
+  // F3 — o resultado DEVE corresponder à requisição (mesma identidade/estado).
+  if (
+    campaignId !== input.campaignId ||
+    operationId !== input.operationId ||
+    attemptNumber !== input.attemptNumber ||
+    status !== input.status
+  ) {
+    throw new AttemptStartError("unknown", "incomplete_finish_envelope");
+  }
   return Object.freeze({
-    campaignId: String(record.campaign_id ?? ""),
-    operationId: String(record.operation_id ?? ""),
-    attemptNumber: Number(record.attempt_number ?? 0),
+    campaignId,
+    operationId,
+    attemptNumber,
     target: (record.target as AttemptTarget | undefined) ?? null,
     status: status as AttemptClaimStatus,
     idempotent: record.idempotent === true,
   });
 }
 
-function mapOutcome(data: unknown): RecordOutcomeResult {
+function mapOutcome(
+  data: unknown,
+  input: RecordOperationOutcomeInput,
+): RecordOutcomeResult {
   const record = asRecord(data);
   if (record.success === false) {
     const reason = record.reason;
     if (reason === "operation_terminal") {
       throw new AttemptStartError("operation_terminal", "operation_terminal");
     }
+    if (reason === "operation_identity_conflict") {
+      throw new AttemptStartError(
+        "operation_identity_conflict",
+        "operation_identity_conflict",
+      );
+    }
     throw new AttemptStartError(
       "unknown",
       typeof reason === "string" ? reason : "record_outcome_failed",
     );
   }
+  // F3 — sucesso EXPLÍCITO (não basta "não-false") + correspondência com a requisição.
+  if (record.success !== true) {
+    throw new AttemptStartError("unknown", "incomplete_outcome_envelope");
+  }
   const outcome = record.outcome;
   if (typeof outcome !== "string" || !OUTCOMES.includes(outcome as GenerationOutcome)) {
     throw new AttemptStartError("unknown", "invalid_rpc_outcome");
   }
+  const campaignId = String(record.campaign_id ?? "");
+  const operationId = String(record.operation_id ?? "");
+  if (
+    campaignId !== input.campaignId ||
+    operationId !== input.operationId ||
+    (outcome as GenerationOutcome) !== input.outcome
+  ) {
+    throw new AttemptStartError("unknown", "incomplete_outcome_envelope");
+  }
   return Object.freeze({
-    campaignId: String(record.campaign_id ?? ""),
-    operationId: String(record.operation_id ?? ""),
+    campaignId,
+    operationId,
     outcome: outcome as GenerationOutcome,
     supportReference: (record.support_reference as string | null | undefined) ?? null,
     idempotent: record.idempotent === true,
@@ -213,7 +272,7 @@ export class ProductOneToOneAttemptStartClient {
       },
     );
     if (error) throw mapError(error.message);
-    return mapAcquire(data);
+    return mapAcquire(data, input);
   }
 
   /** Finaliza o claim (CAS `in_progress -> done|failed`). */
@@ -225,7 +284,7 @@ export class ProductOneToOneAttemptStartClient {
       p_status: input.status,
     });
     if (error) throw mapError(error.message);
-    return mapFinish(data);
+    return mapFinish(data, input);
   }
 
   /** Grava o resultado persistido (`unknown`/`failed`); idempotente. */
@@ -242,7 +301,7 @@ export class ProductOneToOneAttemptStartClient {
       },
     );
     if (error) throw mapError(error.message);
-    return mapOutcome(data);
+    return mapOutcome(data, input);
   }
 
   /**

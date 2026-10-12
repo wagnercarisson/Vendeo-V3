@@ -92,6 +92,27 @@ describe("F56.2b1b — migration 20261009000001 atomic_attempt_start (contrato e
     expect(activeSql).not.toMatch(/attempt_seq BETWEEN 1 AND 3/);
   });
 
+  it("F1: exige sequência (`out_of_sequence`) e transições de estado prévio (`fallback_before_primary`/`primary_after_fallback`/`attempt_already_completed`/`operation_art_uploaded`)", () => {
+    // Sequência: attempt_number = nº de claims + 1.
+    expect(activeSql).toMatch(/v_expected_number := v_total_count \+ 1/);
+    expect(activeSql).toMatch(/p_attempt_number <> v_expected_number/);
+    expect(activeSql).toMatch(/reason', 'out_of_sequence'/);
+    // Primeira tentativa DEVE ser `primary`; fallback exige primary anterior.
+    expect(activeSql).toMatch(/v_primary_count < 1/);
+    expect(activeSql).toMatch(/reason', 'fallback_before_primary'/);
+    // Nenhum `primary` depois de um `fallback`.
+    expect(activeSql).toMatch(/v_fallback_count > 0/);
+    expect(activeSql).toMatch(/reason', 'primary_after_fallback'/);
+    // Estado prévio: claim `done` ou operação `art_uploaded` recusam nova tentativa.
+    expect(activeSql).toMatch(/status = 'done'[\s\S]*?reason', 'attempt_already_completed'/);
+    expect(activeSql).toMatch(/v_credit\.status = 'art_uploaded'[\s\S]*?reason', 'operation_art_uploaded'/);
+  });
+
+  it("F2: replay DIVERGENTE do outcome recusa `operation_identity_conflict` (compara o outcome persistido)", () => {
+    expect(activeSql).toMatch(/v_row\.outcome = p_outcome/);
+    expect(activeSql).toMatch(/reason', 'operation_identity_conflict'/);
+  });
+
   it("F6/C1: recusa `operation_terminal` (prevalece, I2) antes de `operation_unknown`", () => {
     expect(activeSql).toMatch(/reason', 'operation_terminal'/);
     expect(activeSql).toMatch(/reason', 'operation_unknown'/);
@@ -237,19 +258,38 @@ function createFakeRpcClient(
       if (hasUnknown) {
         return Promise.resolve({ data: { acquired: false, reason: "operation_unknown" }, error: null });
       }
+      if (credit.status === "art_uploaded") {
+        return Promise.resolve({ data: { acquired: false, reason: "operation_art_uploaded" }, error: null });
+      }
       const rel = claims.filter(
         (c) => c.campaign_id === campaignId && c.operation_id === operationId,
       );
+      if (rel.some((c) => c.status === "done")) {
+        return Promise.resolve({ data: { acquired: false, reason: "attempt_already_completed" }, error: null });
+      }
       const primary = rel.filter((c) => c.target === "primary").length;
       const fallback = rel.filter((c) => c.target === "fallback").length;
+      // F1 — numeração SEQUENCIAL: attempt_number = nº de claims + 1.
+      if (attemptNumber !== rel.length + 1) {
+        return Promise.resolve({ data: { acquired: false, reason: "out_of_sequence" }, error: null });
+      }
       if (rel.length >= 3) {
         return Promise.resolve({ data: { acquired: false, reason: "attempt_limit_reached" }, error: null });
       }
-      if (target === "primary" && primary >= 2) {
-        return Promise.resolve({ data: { acquired: false, reason: "attempt_limit_reached" }, error: null });
-      }
-      if (target === "fallback" && fallback >= 1) {
-        return Promise.resolve({ data: { acquired: false, reason: "attempt_limit_reached" }, error: null });
+      if (target === "primary") {
+        if (fallback > 0) {
+          return Promise.resolve({ data: { acquired: false, reason: "primary_after_fallback" }, error: null });
+        }
+        if (primary >= 2) {
+          return Promise.resolve({ data: { acquired: false, reason: "attempt_limit_reached" }, error: null });
+        }
+      } else if (target === "fallback") {
+        if (primary < 1) {
+          return Promise.resolve({ data: { acquired: false, reason: "fallback_before_primary" }, error: null });
+        }
+        if (fallback >= 1) {
+          return Promise.resolve({ data: { acquired: false, reason: "attempt_limit_reached" }, error: null });
+        }
       }
       if (rel.some((c) => c.attempt_number === attemptNumber)) {
         return Promise.resolve({ data: { acquired: false, reason: "already_started" }, error: null });
@@ -313,15 +353,23 @@ function createFakeRpcClient(
         (o) => o.campaign_id === campaignId && o.operation_id === operationId,
       );
       if (existing) {
+        const requested = params.p_outcome as FakeOutcome;
+        // F2 — equivalente ⇒ reuso idempotente; DIVERGENTE ⇒ conflito (nunca sucesso).
+        if (existing.outcome === requested) {
+          return Promise.resolve({
+            data: {
+              success: true,
+              idempotent: true,
+              campaign_id: campaignId,
+              operation_id: operationId,
+              outcome: existing.outcome,
+              support_reference: existing.support_reference,
+            },
+            error: null,
+          });
+        }
         return Promise.resolve({
-          data: {
-            success: true,
-            idempotent: true,
-            campaign_id: campaignId,
-            operation_id: operationId,
-            outcome: existing.outcome,
-            support_reference: existing.support_reference,
-          },
+          data: { success: false, reason: "operation_identity_conflict" },
           error: null,
         });
       }
@@ -449,20 +497,73 @@ describe("F56.2b1b — cliente fino de início de tentativa (simulado)", () => {
     expect(providerCall).not.toHaveBeenCalled();
   });
 
-  it("acquire: perdedor `already_started` NÃO lança", async () => {
+  it("F1: attempt_number NÃO sequencial ⇒ `out_of_sequence` (não lança)", async () => {
+    const fake = createFakeRpcClient({ credits: [creditSeed()] });
+    const result = await new ProductOneToOneAttemptStartClient(fake.client).acquire({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      target: "primary",
+      attemptNumber: 2,
+    });
+    expect(result).toMatchObject({ acquired: false, reason: "out_of_sequence" });
+    expect(fake.claims).toHaveLength(0);
+  });
+
+  it("F1: `fallback` como PRIMEIRA chamada ⇒ `fallback_before_primary`", async () => {
+    const fake = createFakeRpcClient({ credits: [creditSeed()] });
+    const result = await new ProductOneToOneAttemptStartClient(fake.client).acquire({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      target: "fallback",
+      attemptNumber: 1,
+    });
+    expect(result).toMatchObject({ acquired: false, reason: "fallback_before_primary" });
+    expect(fake.claims).toHaveLength(0);
+  });
+
+  it("F1: `primary` DEPOIS de um `fallback` ⇒ `primary_after_fallback`", async () => {
     const fake = createFakeRpcClient({
       credits: [creditSeed()],
       claims: [
         { campaign_id: "camp-1", operation_id: "op-1", attempt_number: 1, target: "primary", status: "failed" },
+        { campaign_id: "camp-1", operation_id: "op-1", attempt_number: 2, target: "fallback", status: "failed" },
       ],
     });
     const result = await new ProductOneToOneAttemptStartClient(fake.client).acquire({
       campaignId: "camp-1",
       operationId: "op-1",
       target: "primary",
+      attemptNumber: 3,
+    });
+    expect(result).toMatchObject({ acquired: false, reason: "primary_after_fallback" });
+  });
+
+  it("F1: nova tentativa após uma tentativa `done` ⇒ `attempt_already_completed`", async () => {
+    const fake = createFakeRpcClient({
+      credits: [creditSeed()],
+      claims: [
+        { campaign_id: "camp-1", operation_id: "op-1", attempt_number: 1, target: "primary", status: "done" },
+      ],
+    });
+    const result = await new ProductOneToOneAttemptStartClient(fake.client).acquire({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      target: "primary",
+      attemptNumber: 2,
+    });
+    expect(result).toMatchObject({ acquired: false, reason: "attempt_already_completed" });
+  });
+
+  it("F1: operação de crédito `art_uploaded` ⇒ `operation_art_uploaded`", async () => {
+    const fake = createFakeRpcClient({ credits: [creditSeed({ status: "art_uploaded" })] });
+    const result = await new ProductOneToOneAttemptStartClient(fake.client).acquire({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      target: "primary",
       attemptNumber: 1,
     });
-    expect(result).toMatchObject({ acquired: false, reason: "already_started" });
+    expect(result).toMatchObject({ acquired: false, reason: "operation_art_uploaded" });
+    expect(fake.claims).toHaveLength(0);
   });
 
   it("F1: fallback aceito JÁ na 2ª chamada e teto por alvo respeitado", async () => {
@@ -481,10 +582,11 @@ describe("F56.2b1b — cliente fino de início de tentativa (simulado)", () => {
     });
     expect(fallbackFirst.acquired).toBe(true);
 
+    // Teto por ALVO (sem claim `done`): 2 primaries ⇒ 3ª `primary` recusada.
     const primaryFake = createFakeRpcClient({
       credits: [creditSeed()],
       claims: [
-        { campaign_id: "camp-1", operation_id: "op-1", attempt_number: 1, target: "primary", status: "done" },
+        { campaign_id: "camp-1", operation_id: "op-1", attempt_number: 1, target: "primary", status: "failed" },
         { campaign_id: "camp-1", operation_id: "op-1", attempt_number: 2, target: "primary", status: "failed" },
       ],
     });
@@ -634,6 +736,109 @@ describe("F56.2b1b — cliente fino de início de tentativa (simulado)", () => {
     await expect(
       bad.acquire({ campaignId: "camp-1", operationId: "op-1", target: "primary", attemptNumber: 1 }),
     ).rejects.toMatchObject({ code: "unknown" });
+  });
+
+  it("F2: replay DIVERGENTE do outcome ⇒ erro tipado `operation_identity_conflict` (nunca sucesso)", async () => {
+    const fake = createFakeRpcClient({
+      credits: [creditSeed()],
+      outcomes: [
+        { campaign_id: "camp-1", operation_id: "op-1", outcome: "failed", support_reference: null },
+      ],
+    });
+    const client = new ProductOneToOneAttemptStartClient(fake.client);
+    await expect(
+      client.recordOperationOutcome({ campaignId: "camp-1", operationId: "op-1", outcome: "unknown" }),
+    ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+    expect(fake.outcomes).toHaveLength(1);
+    expect(fake.outcomes[0].outcome).toBe("failed");
+  });
+
+  it("F2: replay EQUIVALENTE do outcome ⇒ sucesso idempotente (uma linha)", async () => {
+    const fake = createFakeRpcClient({ credits: [creditSeed()] });
+    const client = new ProductOneToOneAttemptStartClient(fake.client);
+    const first = await client.recordOperationOutcome({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      outcome: "unknown",
+      supportReference: "IMG-1",
+    });
+    expect(first.idempotent).toBe(false);
+    const again = await client.recordOperationOutcome({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      outcome: "unknown",
+      supportReference: "IMG-1",
+    });
+    expect(again.idempotent).toBe(true);
+    expect(fake.outcomes).toHaveLength(1);
+  });
+
+  it("F3: `{acquired:true}` sem identidade/alvo/tentativa ⇒ lança `incomplete_acquire_envelope`", async () => {
+    const client = new ProductOneToOneAttemptStartClient({
+      rpc: async () => ({ data: { acquired: true, reason: null }, error: null }),
+    } as unknown as SupabaseClient);
+    await expect(
+      client.acquire({ campaignId: "camp-1", operationId: "op-1", target: "primary", attemptNumber: 1 }),
+    ).rejects.toMatchObject({ code: "unknown", message: "incomplete_acquire_envelope" });
+  });
+
+  it("F3: `{acquired:true}` com identidade/alvo DIVERGENTES ⇒ lança", async () => {
+    const client = new ProductOneToOneAttemptStartClient({
+      rpc: async () => ({
+        data: {
+          acquired: true,
+          reason: null,
+          campaign_id: "camp-1",
+          operation_id: "op-1",
+          attempt_number: 1,
+          target: "fallback",
+        },
+        error: null,
+      }),
+    } as unknown as SupabaseClient);
+    await expect(
+      client.acquire({ campaignId: "camp-1", operationId: "op-1", target: "primary", attemptNumber: 1 }),
+    ).rejects.toMatchObject({ code: "unknown", message: "incomplete_acquire_envelope" });
+  });
+
+  it("F3: finish sem `success:true` explícito ⇒ lança `incomplete_finish_envelope`", async () => {
+    const client = new ProductOneToOneAttemptStartClient({
+      rpc: async () => ({
+        data: {
+          status: "done",
+          campaign_id: "camp-1",
+          operation_id: "op-1",
+          attempt_number: 1,
+          target: "primary",
+        },
+        error: null,
+      }),
+    } as unknown as SupabaseClient);
+    await expect(
+      client.finish({ campaignId: "camp-1", operationId: "op-1", attemptNumber: 1, status: "done" }),
+    ).rejects.toMatchObject({ code: "unknown", message: "incomplete_finish_envelope" });
+  });
+
+  it("F3: recordOperationOutcome sem `success:true` explícito ou com outcome divergente ⇒ lança", async () => {
+    const noSuccess = new ProductOneToOneAttemptStartClient({
+      rpc: async () => ({
+        data: { outcome: "unknown", campaign_id: "camp-1", operation_id: "op-1" },
+        error: null,
+      }),
+    } as unknown as SupabaseClient);
+    await expect(
+      noSuccess.recordOperationOutcome({ campaignId: "camp-1", operationId: "op-1", outcome: "unknown" }),
+    ).rejects.toMatchObject({ code: "unknown", message: "incomplete_outcome_envelope" });
+
+    const mismatched = new ProductOneToOneAttemptStartClient({
+      rpc: async () => ({
+        data: { success: true, outcome: "failed", campaign_id: "camp-1", operation_id: "op-1" },
+        error: null,
+      }),
+    } as unknown as SupabaseClient);
+    await expect(
+      mismatched.recordOperationOutcome({ campaignId: "camp-1", operationId: "op-1", outcome: "unknown" }),
+    ).rejects.toMatchObject({ code: "unknown", message: "incomplete_outcome_envelope" });
   });
 
   it("é RPC-only: sem query builder direto nem provider; tipado por (target, attemptNumber)", () => {
