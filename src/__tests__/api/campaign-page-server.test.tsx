@@ -23,13 +23,21 @@ vi.mock("@/lib/campaign/correction-reports", () => ({
   getCorrectionReport: mockGetCorrectionReport,
 }));
 
-vi.mock("@/lib/campaign/display", () => ({
-  getCampaignForDisplay: mockGetCampaignForDisplay,
-  generateSignedPreviewUrl: mockGenerateSignedPreviewUrl,
-  mapCampaignToProps: mockMapCampaignToProps,
-  computeApprovalState: mockComputeApprovalState,
-  getActiveCandidateArtVersion: mockGetActiveCandidateArtVersion,
-}));
+// F56.2b1b (Plano 06) — a página importa também `mapNewFlowDisplayState` e
+// `mapNewFlowCopy`. Mock PARCIAL via `importOriginal` (mesmo padrão de
+// `campaign-detail-page.test.tsx`): preserva as exportações reais e substitui
+// apenas as funções exercitadas pelas asserções deste arquivo.
+vi.mock("@/lib/campaign/display", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/campaign/display")>();
+  return {
+    ...actual,
+    getCampaignForDisplay: mockGetCampaignForDisplay,
+    generateSignedPreviewUrl: mockGenerateSignedPreviewUrl,
+    mapCampaignToProps: mockMapCampaignToProps,
+    computeApprovalState: mockComputeApprovalState,
+    getActiveCandidateArtVersion: mockGetActiveCandidateArtVersion,
+  };
+});
 
 vi.mock("@/lib/campaign/persistence", () => ({
   listArtVersions: mockListArtVersions,
