@@ -393,7 +393,7 @@ Plans:
 
 **Planos:** diretório `.planning/phases/51.2-fundacao-seo-descoberta-organica/`.
 
-**Plans:** 1/8 plans executed
+**Plans:** 2/8 plans executed
 Plans:
 **Wave 1**
 
@@ -401,7 +401,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 51.2-02-PLAN.md — Helpers puros de SEO (`src/lib/seo/*`) + testes unitários (wave 2; depende de `51.2-01`)
+- [x] 51.2-02-PLAN.md — Helpers puros de SEO (`src/lib/seo/*`) + testes unitários (wave 2; depende de `51.2-01`)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
