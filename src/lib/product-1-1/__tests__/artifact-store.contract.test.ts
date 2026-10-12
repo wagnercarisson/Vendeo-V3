@@ -70,6 +70,7 @@ function createFakeClient(
   overrides: {
     uploadError?: unknown;
     download?: { data: unknown; error: unknown };
+    downloadThrows?: unknown;
     insertError?: unknown;
     metadata?: Record<string, unknown> | null;
   } = {},
@@ -88,6 +89,9 @@ function createFakeClient(
     }),
     download: vi.fn(async (p: string) => {
       downloads.push(p);
+      if (overrides.downloadThrows !== undefined) {
+        throw overrides.downloadThrows;
+      }
       return (
         overrides.download ?? {
           data: null,
@@ -492,6 +496,166 @@ describe("Task 2 — probeArtifact (resultados TIPADOS, C2; SEM assinatura, I3)"
   it("os quatro casos são DISTINTOS entre si (nunca colapsam em null)", async () => {
     const statuses = new Set(["integral", "absent", "invalid", "indeterminate"]);
     expect(statuses.size).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F1 (correção 05) — a leitura de HEADER não prova integridade. Dimensões
+// 1024×1024 no header (metadata) NÃO bastam: é preciso o formato REAL dos bytes
+// + decode COMPLETO (truncado/não-jpeg ⇒ invalid, nunca integral) + mimeType
+// derivado do CONTEÚDO (nunca do path `.jpg`/do `mime_type` persistido).
+// ---------------------------------------------------------------------------
+
+/** PNG REAL de 1024×1024 (formato diferente servido no path `.jpg`). */
+async function artifactPng(size = 1024): Promise<Buffer> {
+  return sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 3,
+      background: { r: 5, g: 60, b: 120 },
+    },
+  })
+    .png()
+    .toBuffer();
+}
+
+async function probeWithDownload(
+  overrides: Parameters<typeof createFakeClient>[0],
+): Promise<{ handles: FakeHandles; probe: Awaited<ReturnType<ProductOneToOneArtifactStore["probeArtifact"]>> }> {
+  const handles = createFakeClient(overrides);
+  const store = new ProductOneToOneArtifactStore(handles.client);
+  const probe = await store.probeArtifact({
+    storeId: STORE_ID,
+    campaignId: CAMPAIGN_ID,
+    operationId: OPERATION_ID,
+  });
+  return { handles, probe };
+}
+
+const INTEGRAL_METADATA = {
+  storage_path: DETERMINISTIC_PATH,
+  width: 1024,
+  height: 1024,
+  mime_type: "image/jpeg",
+};
+
+describe("F1 — integridade por CONTEÚDO (formato real + decode completo 1024×1024)", () => {
+  it.each([300, 500, 1000])(
+    "invalid: JPEG TRUNCADO (%i bytes) no path esperado NUNCA é integral",
+    async (cutAt) => {
+      const full = await artifactJpeg(1024);
+      // O header de um JPEG truncado ainda reporta 1024×1024 (metadata ok)…
+      const headerOnly = await sharp(full.subarray(0, cutAt)).metadata();
+      expect(headerOnly.width).toBe(1024);
+      expect(headerOnly.height).toBe(1024);
+
+      const truncated = full.subarray(0, cutAt);
+      const { handles, probe } = await probeWithDownload({
+        download: { data: truncated, error: null },
+        metadata: INTEGRAL_METADATA,
+      });
+
+      // …mas o decode COMPLETO falha ⇒ invalid (nunca integral).
+      expect(probe.kind).toBe("invalid");
+      expect(probe.kind).not.toBe("integral");
+      expect(handles.signed).toHaveLength(0);
+    },
+  );
+
+  it("invalid: objeto de OUTRO formato (PNG real) no path `.jpg` ⇒ não é integral e nunca declara image/jpeg a partir do path", async () => {
+    const png = await artifactPng(1024);
+    const { handles, probe } = await probeWithDownload({
+      download: { data: png, error: null },
+      metadata: INTEGRAL_METADATA,
+    });
+
+    expect(probe.kind).toBe("invalid");
+    expect(probe.kind).not.toBe("integral");
+    // O path termina em `.jpg`, mas o formato REAL dos bytes é png ⇒ não integral.
+    expect(handles.downloads).toEqual([DETERMINISTIC_PATH]);
+    expect(handles.signed).toHaveLength(0);
+  });
+
+  it("integral: JPEG 1024×1024 válido com decode COMPLETO ⇒ mimeType derivado do CONTEÚDO (não do path/metadata)", async () => {
+    const { handles, probe } = await probeWithDownload({
+      download: { data: await artifactJpeg(1024), error: null },
+      // metadata declara um mime_type ERRADO (image/png): o retorno deve derivar do conteúdo.
+      metadata: { ...INTEGRAL_METADATA, mime_type: "image/png" },
+    });
+
+    expect(probe.kind).toBe("integral");
+    if (probe.kind === "integral") {
+      expect(probe.mimeType).toBe("image/jpeg");
+      expect(probe.ref.mimeType).toBe("image/jpeg");
+      expect(probe.width).toBe(1024);
+      expect(probe.height).toBe(1024);
+    }
+    expect(handles.signed).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F2 (correção 05) — ausência só é CONFIRMADA com prova OBJETO-específica no
+// bucket esperado; TUDO o mais é `indeterminate` (nunca colapsa com absent).
+// ---------------------------------------------------------------------------
+
+describe("F2 — ausência CONFIRMADA vs indeterminado (nunca colapsam)", () => {
+  it("absent: 404 cuja mensagem identifica o OBJETO como ausente", async () => {
+    const { probe } = await probeWithDownload({
+      download: { data: null, error: { message: "Object not found", statusCode: "404" } },
+      metadata: null,
+    });
+    expect(probe.kind).toBe("absent");
+  });
+
+  it("indeterminate: 404 GENÉRICO/ambíguo (sem especificidade do objeto)", async () => {
+    const { probe } = await probeWithDownload({
+      download: { data: null, error: { message: "Not found", statusCode: "404" } },
+      metadata: null,
+    });
+    expect(probe.kind).toBe("indeterminate");
+    expect(probe.kind).not.toBe("absent");
+  });
+
+  it("indeterminate: 404 que indica o BUCKET (não o objeto)", async () => {
+    const { probe } = await probeWithDownload({
+      download: { data: null, error: { message: "Bucket not found", statusCode: "404" } },
+      metadata: null,
+    });
+    expect(probe.kind).toBe("indeterminate");
+    expect(probe.kind).not.toBe("absent");
+  });
+
+  const NON_ABSENCE_ERRORS: [string, { message: string; statusCode: string }][] = [
+    ["401 Unauthorized", { message: "Unauthorized", statusCode: "401" }],
+    ["403 Forbidden", { message: "Forbidden", statusCode: "403" }],
+    ["JWT/auth", { message: "invalid JWT: signature verification failed", statusCode: "400" }],
+    ["5xx", { message: "storage unavailable / timeout", statusCode: "503" }],
+    ["network/sem status", { message: "fetch failed: socket hang up", statusCode: "" }],
+  ];
+
+  it.each(NON_ABSENCE_ERRORS)("indeterminate: erro de %s", async (_label, error) => {
+    const { probe } = await probeWithDownload({ download: { data: null, error }, metadata: null });
+    expect(probe.kind).toBe("indeterminate");
+    expect(probe.kind).not.toBe("absent");
+  });
+
+  it("indeterminate: download() LANÇA (exceção) — nunca absent", async () => {
+    const { probe } = await probeWithDownload({
+      downloadThrows: new Error("socket hang up"),
+      metadata: null,
+    });
+    expect(probe.kind).toBe("indeterminate");
+    expect(probe.kind).not.toBe("absent");
+  });
+
+  it("indeterminate: !data sem erro", async () => {
+    const { probe } = await probeWithDownload({
+      download: { data: null, error: null },
+      metadata: null,
+    });
+    expect(probe.kind).toBe("indeterminate");
   });
 });
 

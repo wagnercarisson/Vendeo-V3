@@ -24,6 +24,7 @@ const BUCKET = "campaign-images";
 const ARTIFACT_TABLE = "product_1_1_campaign_artifacts";
 const ARTIFACT_SELECT_COLUMNS = "storage_path, width, height, mime_type";
 const ARTIFACT_SIZE = 1024;
+const ARTIFACT_MIME_TYPE = "image/jpeg" as const;
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
 const SUPPORTED_INPUT_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
@@ -69,16 +70,42 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** DECODIFICA as dimensões dos BYTES do arquivo (F7 — não é valor declarado). */
-async function decodeDimensions(
-  buffer: Buffer,
-): Promise<{ width: number; height: number }> {
+/** Dimensões + mimeType VERIFICADOS por conteúdo (nunca declarados). */
+interface VerifiedArtifact {
+  readonly width: number;
+  readonly height: number;
+  readonly mimeType: typeof ARTIFACT_MIME_TYPE;
+}
+
+/**
+ * F1 — verifica a integridade por CONTEÚDO (não apenas o header/metadados):
+ * (a) o formato REAL dos bytes precisa ser `jpeg` (NÃO o `mime_type` persistido
+ *     nem a extensão `.jpg` do caminho);
+ * (b) força um decode COMPLETO de pixels (`raw()`) — entrada truncada/incompleta
+ *     LANÇA (ex.: `VipsJpeg: premature end of JPEG image`), ao contrário de
+ *     `metadata()`, que lê só o header e reportaria 1024×1024 mesmo truncado;
+ * (c) exige `width === 1024 && height === 1024` (dimensões decodificadas).
+ *
+ * Qualquer falha ⇒ lança; o chamador classifica como `invalid` (probe) ou
+ * `artifact_dimension_mismatch` (storeArtifact). O `mimeType` devolvido é
+ * derivado do formato DECODIFICADO (`image/jpeg`), nunca do path/metadados.
+ */
+async function verifyJpeg1024(buffer: Buffer): Promise<VerifiedArtifact> {
   const metadata = await sharp(buffer).metadata();
-  const { width, height } = metadata;
-  if (typeof width !== "number" || typeof height !== "number") {
-    throw new Error("undecodable_image_dimensions");
+  if (metadata.format !== "jpeg") {
+    throw new Error(`artifact_format_not_jpeg: ${String(metadata.format)}`);
   }
-  return { width, height };
+
+  // Decode COMPLETO (raw) — não apenas o header. Truncamento/incompletude lança aqui.
+  const decoded = await sharp(buffer, { failOn: "error" })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width, height } = decoded.info;
+  if (width !== ARTIFACT_SIZE || height !== ARTIFACT_SIZE) {
+    throw new Error(`artifact_dimension_mismatch: ${width}x${height}`);
+  }
+
+  return { width, height, mimeType: ARTIFACT_MIME_TYPE };
 }
 
 function mapUploadError(error: {
@@ -99,17 +126,22 @@ function mapUploadError(error: {
   );
 }
 
-/** Distingue AUSÊNCIA CONFIRMADA de erro/indisponibilidade do Storage (C2). */
+/**
+ * F2 — ausência só é CONFIRMADA quando o OBJETO é PROVADO ausente no bucket
+ * esperado. Somente `statusCode === 404` cuja mensagem identifica o OBJETO como
+ * ausente (`object not found` / `object does not exist`) qualifica — e a
+ * mensagem NÃO pode indicar o bucket. Tudo o mais (404 genérico/ambíguo,
+ * bucket-not-found, 401/403/auth, 5xx, rede/timeout, mensagem vazia) é
+ * `indeterminate`: NUNCA colapsa com `absent` (evita autorizar estorno sem prova).
+ */
 function isAbsenceError(error: unknown): boolean {
   if (error === null || typeof error !== "object") return false;
   const record = error as { message?: unknown; statusCode?: unknown };
-  if (String(record.statusCode ?? "") === "404") return true;
+  if (String(record.statusCode ?? "") !== "404") return false;
   const text = String(record.message ?? "").toLowerCase();
-  return (
-    text.includes("not found") ||
-    text.includes("does not exist") ||
-    text.includes("no such")
-  );
+  // 404 cuja mensagem indica o BUCKET (não o objeto) não prova ausência do objeto.
+  if (text.includes("bucket")) return false;
+  return /object not found/i.test(text) || /object does not exist/i.test(text);
 }
 
 /** Normaliza o payload de download (Blob/ArrayBuffer/Uint8Array/string) para Buffer. */
@@ -168,20 +200,15 @@ export class ProductOneToOneArtifactStore {
       );
     }
 
-    // (c) DECODIFICA as dimensões do buffer resultante (fail-closed se ≠ 1024×1024).
-    let dimensions: { width: number; height: number };
+    // (c) Verifica o buffer resultante por CONTEÚDO: formato real JPEG + decode
+    //     COMPLETO de pixels + 1024×1024 (fail-closed em truncado/não-jpeg/dimensão).
+    let verified: VerifiedArtifact;
     try {
-      dimensions = await decodeDimensions(jpeg.buffer);
+      verified = await verifyJpeg1024(jpeg.buffer);
     } catch (error) {
       throw new ProductOneToOneArtifactUploadError(
         "artifact_dimension_mismatch",
         errorMessage(error),
-      );
-    }
-    if (dimensions.width !== ARTIFACT_SIZE || dimensions.height !== ARTIFACT_SIZE) {
-      throw new ProductOneToOneArtifactUploadError(
-        "artifact_dimension_mismatch",
-        `expected ${ARTIFACT_SIZE}x${ARTIFACT_SIZE}, got ${dimensions.width}x${dimensions.height}`,
       );
     }
 
@@ -201,9 +228,9 @@ export class ProductOneToOneArtifactStore {
     // (e) Persiste o registro imutável com as dimensões DECODIFICADAS.
     const ref: ProductOneToOneArtifactRef = Object.freeze({
       storagePath,
-      width: dimensions.width,
-      height: dimensions.height,
-      mimeType: "image/jpeg",
+      width: verified.width,
+      height: verified.height,
+      mimeType: verified.mimeType,
     });
 
     const { error: insertError } = await this.client.from(ARTIFACT_TABLE).insert({
@@ -314,9 +341,17 @@ export class ProductOneToOneArtifactStore {
     }
 
     // Baixa os bytes do objeto do bucket PRIVADO — o probe NUNCA assina (I3).
-    const { data, error } = await this.client.storage
-      .from(BUCKET)
-      .download(storagePath);
+    // F2 — uma EXCEÇÃO do `download()` (rede/socket/abort) é `indeterminate`,
+    //      NUNCA `absent`: ausência precisa ser PROVADA, não inferida de falha.
+    let data: unknown;
+    let error: unknown;
+    try {
+      ({ data, error } = await this.client.storage
+        .from(BUCKET)
+        .download(storagePath));
+    } catch {
+      return { kind: "indeterminate" };
+    }
 
     if (error) {
       // Ausência CONFIRMADA ≠ erro/instabilidade do Storage (nunca colapsam).
@@ -333,30 +368,29 @@ export class ProductOneToOneArtifactStore {
       return { kind: "indeterminate" };
     }
 
-    // Integridade por CONTEÚDO (não apenas existência/size > 0).
-    let dimensions: { width: number; height: number };
+    // Integridade por CONTEÚDO (F1): formato REAL dos bytes + decode COMPLETO
+    // (truncado/não-jpeg/dimensão divergente ⇒ `invalid`), NUNCA integral.
+    let verified: VerifiedArtifact;
     try {
-      dimensions = await decodeDimensions(buffer);
+      verified = await verifyJpeg1024(buffer);
     } catch {
       return { kind: "invalid" };
     }
 
+    // Consistência com o metadado persistido (quando presente): divergência ⇒ invalid.
     const expectedWidth = metadata?.width ?? ARTIFACT_SIZE;
     const expectedHeight = metadata?.height ?? ARTIFACT_SIZE;
-    if (
-      dimensions.width !== ARTIFACT_SIZE ||
-      dimensions.height !== ARTIFACT_SIZE ||
-      dimensions.width !== expectedWidth ||
-      dimensions.height !== expectedHeight
-    ) {
+    if (verified.width !== expectedWidth || verified.height !== expectedHeight) {
       return { kind: "invalid" };
     }
 
+    // O `mimeType` é derivado do CONTEÚDO DECODIFICADO (image/jpeg) — nunca do
+    // path `.jpg` nem do `mime_type` persistido.
     const ref: ProductOneToOneArtifactRef = Object.freeze({
       storagePath,
-      width: dimensions.width,
-      height: dimensions.height,
-      mimeType: metadata?.mimeType ?? "image/jpeg",
+      width: verified.width,
+      height: verified.height,
+      mimeType: verified.mimeType,
     });
 
     return Object.freeze({
