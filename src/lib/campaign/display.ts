@@ -33,6 +33,19 @@ export interface CampaignPageProps {
   downloadUrl: string;
   campaignId: string;
   isPublicationCopyEdited: boolean;
+  /**
+   * F56.2b1b (B1B-D7 / REQ-56.2.2-09): estado do NOVO fluxo Product 1:1, derivado
+   * da OPERAÇÃO PERSISTIDA (`getCampaignOperation`) — nunca de `campaign.status`.
+   * Presente ⇒ a página renderiza SOMENTE as superfícies do novo fluxo (nunca
+   * `StaleView`/`ErrorView`). Ausente ⇒ campanha legada (caminho atual).
+   */
+  newFlow?: {
+    state: NewFlowDisplayState;
+    supportReference?: string | null;
+    /** Identidade da operação para a consulta query-only (`Verificar novamente`). */
+    operationId?: string | null;
+    supportEmail?: string;
+  };
   /** F37.1 (D2/decisão 3): estado de aprovação + candidata ativa (pending/regenerating). */
   approval?: {
     state: ApprovalDisplayState;
@@ -44,6 +57,47 @@ export interface CampaignPageProps {
     hasOpportunity?: boolean;
   };
 }
+
+/**
+ * F56.2b1b — estado do novo fluxo derivado do ESTADO PERSISTIDO da operação.
+ * A união de `status` é declarada AQUI (local) — `display.ts` NÃO importa
+ * `product-1-1` (G-NA); a página passa `operation.status` estruturalmente.
+ */
+export type NewFlowDisplayState = "running" | "delivered" | "refunded" | "unknown";
+
+export interface NewFlowOperationSnapshot {
+  readonly status: "reserved" | "art_uploaded" | "delivered" | "refunded";
+  /** `true` quando o resultado desconhecido está PERSISTIDO (C1). */
+  readonly unknown: boolean;
+  readonly supportReference?: string | null;
+}
+
+/**
+ * Deriva o estado de exibição do novo fluxo a partir da OPERAÇÃO PERSISTIDA.
+ *
+ * - `null` (operação ausente) ⇒ `null` (campanha legada).
+ * - I2 — precedência TERMINAL: `delivered`/`refunded` PREVALECEM, MESMO quando o
+ *   marcador histórico `unknown === true` existe (a linha de
+ *   `product_1_1_generation_outcomes` é imutável).
+ * - SÓ para operação NÃO terminal: `unknown === true` (persistido) ⇒ `"unknown"`.
+ * - `reserved`/`art_uploaded` sem `unknown` persistido ⇒ `"running"` ("Processando").
+ *
+ * C1 — NUNCA infere `unknown` por dedução de tempo (`elapsedMs`) nem por posição
+ * no teto/orçamento: a única origem é o registro persistido.
+ */
+export function mapNewFlowDisplayState(
+  operation: NewFlowOperationSnapshot | null,
+): NewFlowDisplayState | null {
+  if (!operation) return null;
+
+  if (operation.status === "delivered") return "delivered";
+  if (operation.status === "refunded") return "refunded";
+
+  if (operation.unknown === true) return "unknown";
+
+  return "running";
+}
+
 
 export async function getCampaignForDisplay(id: string): Promise<CampaignRecord | null> {
   if (!UUID_V4_REGEX.test(id)) {

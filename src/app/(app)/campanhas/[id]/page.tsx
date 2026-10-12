@@ -12,7 +12,10 @@ import {
   mapCampaignToProps,
   computeApprovalState,
   getActiveCandidateArtVersion,
+  mapNewFlowDisplayState,
 } from "@/lib/campaign/display";
+import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
+import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
 import CampaignPageClient from "./client";
 
 interface PageProps {
@@ -38,6 +41,49 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   }
 
   let props = mapCampaignToProps(campaign, id);
+
+  // F56.2b1b (Plano 06, B1B-D7 / C1 / I2 / E1) — campanha do NOVO fluxo: o
+  // estado exibido deriva da OPERAÇÃO PERSISTIDA (`getCampaignOperation`), NUNCA
+  // de `campaign.status`. A leitura só REFLETE o estado persistido — não retoma
+  // nem controla processamento. `delivered`/`refunded` (terminal) PREVALECEM
+  // sobre o marcador histórico `unknown`; `unknown` só governa operação não
+  // terminal. Campanhas legadas (operação `null`) seguem no caminho atual
+  // byte-compatível (aprovação F37 + `computeDisplayStatus`).
+  const loadNewFlowOperation = async () => {
+    try {
+      return await new ProductOneToOneAttemptStartClient().getCampaignOperation(id);
+    } catch {
+      // Leitura indisponível (fundação INATIVA / RPC ausente no ambiente): nunca
+      // tratar como campanha nova — o caminho legado permanece intacto.
+      return null;
+    }
+  };
+  const newFlowOperation = await loadNewFlowOperation();
+  const newFlowState = mapNewFlowDisplayState(newFlowOperation);
+  if (newFlowState && newFlowOperation) {
+    if (newFlowState === "delivered") {
+      try {
+        const artifactStore = new ProductOneToOneArtifactStore();
+        const probe = await artifactStore.probeArtifact({
+          storeId: campaign.store_id,
+          campaignId: id,
+          operationId: newFlowOperation.operationId,
+        });
+        if (probe.kind === "integral") {
+          props.imageUrl = await artifactStore.getSignedArtifactUrl(probe.storagePath);
+        }
+      } catch {
+        // Melhor esforço: sem arte íntegra a página não promete recuperação.
+      }
+    }
+    props.newFlow = {
+      state: newFlowState,
+      supportReference: newFlowOperation.supportReference ?? null,
+      operationId: newFlowOperation.operationId,
+      supportEmail: process.env.SUPPORT_EMAIL,
+    };
+    return <CampaignPageClient {...props} />;
+  }
 
   if (campaign.status === "ready" && campaign.storage_path) {
     const signedUrl = await generateSignedPreviewUrl(campaign.storage_path);

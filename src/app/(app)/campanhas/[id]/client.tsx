@@ -19,24 +19,54 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import CampaignApprovalView from "@/components/campaign/campaign-approval-view";
+import { UnknownResultPanel } from "@/components/flow/unknown-result-panel";
 
 export default function CampaignPageClient(props: CampaignPageProps) {
   const router = useRouter();
 
+  const isNewFlowRunning = props.newFlow?.state === "running";
+
   useEffect(() => {
-    if (props.displayStatus !== "generating") return;
+    if (props.displayStatus !== "generating" && !isNewFlowRunning) return;
 
     const interval = setInterval(() => {
       router.refresh();
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [props.displayStatus, router]);
+  }, [props.displayStatus, isNewFlowRunning, router]);
 
   const breadcrumbs = [
     { label: "Campanhas", href: "/campanhas" },
     { label: props.productName || "Campanha" },
   ];
+
+  // F56.2b1b (Plano 06, B1B-D7 / REQ-56.2.2-09): campanha do NOVO fluxo — o
+  // estado exibido deriva da OPERAÇÃO PERSISTIDA (props.newFlow) e NUNCA cai nas
+  // telas legadas (`StaleView`/`ErrorView`) nem expõe ação de regeneração. O poll
+  // apenas reflete o estado persistido (não retoma/controla execução).
+  if (props.newFlow) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <PageHeader
+          title={props.productName || "Campanha"}
+          breadcrumbs={breadcrumbs}
+        />
+
+        {props.newFlow.state === "running" && <GeneratingView />}
+        {props.newFlow.state === "delivered" && <ReadyView {...props} />}
+        {props.newFlow.state === "refunded" && <NewFlowFailureView />}
+        {props.newFlow.state === "unknown" && (
+          <UnknownResultPanel
+            supportReference={props.newFlow.supportReference ?? null}
+            supportEmail={props.newFlow.supportEmail}
+            campaignId={props.campaignId}
+            operationId={props.newFlow.operationId ?? null}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -408,6 +438,24 @@ function RegeneratingView() {
       <p className="text-sm text-text-muted font-body">
         Aguarde: a nova versão aparecerá para aprovação.
       </p>
+    </div>
+  );
+}
+
+// F56.2b1b (Plano 06, REQ-56.2.2-07): falha CONFIRMADA do novo fluxo (operação
+// persistida como `refunded`). A copy "o crédito foi devolvido" aparece SOMENTE
+// aqui — nunca em `running`/`delivered`/`unknown` (desconhecido NÃO estorna por
+// timeout). Sem promessa de retomada; nova tentativa exige NOVA campanha.
+function NewFlowFailureView() {
+  const router = useRouter();
+  return (
+    <div className="flex flex-col items-center justify-center space-y-4 p-12">
+      <p className="text-lg text-accent-red font-body">
+        A geração falhou e o crédito foi devolvido.
+      </p>
+      <Button variant="primary" onClick={() => router.push("/campanhas/nova")}>
+        Criar Nova Campanha
+      </Button>
     </div>
   );
 }
