@@ -614,6 +614,45 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(harness.calls.reserve).not.toHaveBeenCalled();
   });
 
+  it("gap 3: caminho PENDENTE (storeArtifact falha com arte PRESENTE) ⇒ diagnóstico durável recuperável pela MESMA referência emitida", async () => {
+    const harness = await buildHarness();
+    harness.setArtifactKind("integral");
+    harness.calls.storeArtifact.mockRejectedValueOnce(
+      Object.assign(new Error("artifact_metadata_persist_failed"), {
+        code: "artifact_metadata_persist_failed",
+      }),
+    );
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(terminal).toMatchObject({ type: "unknown" });
+    const reference = (terminal as Record<string, unknown>).reference as string;
+    expect(typeof reference).toBe("string");
+    expect(reference.length).toBeGreaterThan(0);
+    expect(harness.calls.recordDiagnosis).toHaveBeenCalled();
+    expect(
+      harness.calls.diagnosisRecords.some((record) => record.reference === reference),
+    ).toBe(true);
+  });
+
+  it("gap 3: caminho TIMEOUT/abort (`unknown`) ⇒ diagnóstico durável recuperável pela MESMA referência emitida", async () => {
+    const harness = await buildHarness();
+    harness.setProviderSequence([
+      Object.assign(new Error("timeout"), { name: "AbortError" }),
+    ]);
+
+    const { terminal } = await runOrchestrator(harness);
+
+    expect(terminal).toMatchObject({ type: "unknown" });
+    const reference = (terminal as Record<string, unknown>).reference as string;
+    expect(typeof reference).toBe("string");
+    expect(reference.length).toBeGreaterThan(0);
+    expect(harness.calls.recordDiagnosis).toHaveBeenCalled();
+    expect(
+      harness.calls.diagnosisRecords.some((record) => record.reference === reference),
+    ).toBe(true);
+  });
+
   it("C1: timeout/abort ⇒ `recordOperationOutcome('unknown')` ANTES do terminal, SEM refund e SEM nova tentativa", async () => {
     const harness = await buildHarness();
     harness.setProviderSequence([Object.assign(new Error("aborted"), { name: "AbortError" })]);

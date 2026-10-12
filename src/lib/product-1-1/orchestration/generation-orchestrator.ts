@@ -50,11 +50,14 @@ import {
   type ProductOneToOneEvidenceReference,
   type BuildProductOneToOneSnapshotContext,
 } from "../snapshot/persist-snapshot";
-import { composeProductPrompt } from "../prompt-composition";
+import { composeProductPrompt, PROMPT_BLOCK_LABELS } from "../prompt-composition";
 import { PRODUCT_1_1_PROMPT_BASE } from "../prompt-base";
 import type { ProductOneToOneBackgroundDirection } from "../background-direction";
 import type { ProductOneToOneIntent } from "../intent-selection";
-import type { ProductPromptCompositionBriefing } from "../policies/types";
+import type {
+  ProductPromptCompositionBriefing,
+  PromptPolicyContribution,
+} from "../policies/types";
 
 /**
  * F56.2b1b (B1B-D2/D4/D5/D12, C1/C5/I1/I2, F1–F8) — orquestrador NDJSON do novo
@@ -90,6 +93,17 @@ export interface ProductOneToOneGenerationInput {
   readonly references?: readonly string[];
   readonly referenceSelections?: readonly ProductOneToOneEvidenceReference[];
   readonly productImagesDataUrls?: readonly string[];
+  /**
+   * Identidade visual resolvida SERVER-SIDE pela rota (nunca do cliente): imagem
+   * canônica de identidade (URL assinada) enviada ao gateway como
+   * `identityImageUrl` (correção de integração do Plano 04, gap 4).
+   */
+  readonly identityImageUrl?: string;
+  /**
+   * Direção de identidade (derivada de `buildCampaignBrief`) materializada como
+   * contribuição de prompt no bloco `PROMPT_BLOCK_LABELS.identity`.
+   */
+  readonly identityDirective?: string;
   readonly promptBase?: string;
   readonly runId?: string;
   readonly traceId?: string;
@@ -287,7 +301,19 @@ function providerImageRequest(input: ProductOneToOneGenerationInput): AiInvocati
   return {
     prompt: "",
     ...(productImagesDataUrls ? { productImagesDataUrls } : {}),
+    // F56.2.2-04 (gap 4): a identidade visual resolvida server-side acompanha a
+    // requisição como `identityImageUrl` (mesmo campo consumido pelos adapters).
+    ...(input.identityImageUrl ? { identityImageUrl: input.identityImageUrl } : {}),
   };
+}
+
+/** Contribuições de identidade para o bloco `PROMPT_BLOCK_LABELS.identity`. */
+function identityContributions(
+  input: ProductOneToOneGenerationInput,
+): readonly PromptPolicyContribution[] {
+  const directive = input.identityDirective?.trim();
+  if (!directive) return [];
+  return [{ block: PROMPT_BLOCK_LABELS.identity, lines: [directive] }];
 }
 
 /**
@@ -471,11 +497,58 @@ export async function runProductOneToOneGeneration(
         }
       };
 
-      // Terminal de pendência (resultado desconhecido): persiste o marcador e
-      // emite `unknown`. NUNCA estorna e NUNCA repete.
-      const emitUnknownPending = async (): Promise<void> => {
+      // Terminal de pendência (resultado desconhecido): persiste o marcador,
+      // persiste o diagnóstico durável correlacionado à MESMA referência emitida
+      // (achado 6 / gap 3) e emite `unknown`. NUNCA estorna e NUNCA repete.
+      const recordPendingDiagnosis = async (
+        reference: string,
+        params: {
+          internalCategory: string;
+          normalizedError: string;
+          target?: AttemptTarget;
+          attemptNumber?: number;
+          model?: string;
+          quality?: string;
+        },
+      ): Promise<void> => {
+        const diagnosis: ImageGenerationDiagnosisInput = {
+          internalCategory: params.internalCategory,
+          model: params.model ?? "",
+          quality: params.quality ?? "",
+          target: params.target ?? "primary",
+          attemptNumber: params.attemptNumber ?? 1,
+          normalizedError: params.normalizedError,
+          runId: input.runId,
+          traceId: input.traceId,
+        };
+        try {
+          await recordDiagnosis(toInternalDiagnosis(diagnosis, reference));
+        } catch {
+          // Best-effort durável: a falha do diagnóstico nunca bloqueia o terminal.
+        }
+      };
+
+      // Terminal de pendência (resultado desconhecido): persiste o marcador,
+      // persiste o diagnóstico durável (gap 3) e emite `unknown`. NUNCA estorna e
+      // NUNCA repete.
+      const emitUnknownPending = async (params?: {
+        internalCategory?: string;
+        normalizedError?: string;
+        target?: AttemptTarget;
+        attemptNumber?: number;
+        model?: string;
+        quality?: string;
+      }): Promise<void> => {
         const reference = newSupportReference();
         await markUnknownOutcome(reference);
+        await recordPendingDiagnosis(reference, {
+          internalCategory: params?.internalCategory ?? "generation_unknown",
+          normalizedError: params?.normalizedError ?? "unknown_provider_error",
+          target: params?.target,
+          attemptNumber: params?.attemptNumber,
+          model: params?.model,
+          quality: params?.quality,
+        });
         emitTerminal({ type: "unknown", reference });
       };
 
@@ -493,7 +566,14 @@ export async function runProductOneToOneGeneration(
       }): Promise<void> => {
         const kind = await probeArtifactKind();
         if (kind === "integral" || kind === "indeterminate" || kind === null) {
-          await emitUnknownPending();
+          await emitUnknownPending({
+            internalCategory: params.internalCategory,
+            normalizedError: params.normalizedError,
+            target: params.target,
+            attemptNumber: params.attemptNumber,
+            model: params.model,
+            quality: params.quality,
+          });
           return;
         }
         // Ausência CONFIRMADA (absent/invalid) + falha confirmada ⇒ estorno ÚNICO.
@@ -510,7 +590,14 @@ export async function runProductOneToOneGeneration(
           });
           return;
         }
-        await emitUnknownPending();
+        await emitUnknownPending({
+          internalCategory: params.internalCategory,
+          normalizedError: params.normalizedError,
+          target: params.target,
+          attemptNumber: params.attemptNumber,
+          model: params.model,
+          quality: params.quality,
+        });
       };
 
       try {
@@ -560,6 +647,7 @@ export async function runProductOneToOneGeneration(
           briefing: input.briefing,
           promptBase: input.promptBase ?? PRODUCT_1_1_PROMPT_BASE.content,
           references: input.references,
+          contributions: identityContributions(input),
         });
         const snapshot = buildSnapshot(preflight.config, {
           campaignId,
@@ -780,6 +868,17 @@ export async function runProductOneToOneGeneration(
           if (isUnknownResult(failure, controllerAbort.signal.aborted)) {
             const reference = newSupportReference();
             const persisted = await markUnknownOutcome(reference);
+            // Gap 3 — diagnóstico durável correlacionado à MESMA referência
+            // emitida (recuperável por `findByReference`), em AMBOS os caminhos
+            // de pendência (unknown persistido OU residual).
+            await recordPendingDiagnosis(reference, {
+              internalCategory: "generation_unknown",
+              normalizedError: "timeout",
+              target,
+              attemptNumber,
+              model: snapshotPairForTarget(snapshot, target).model,
+              quality: snapshotPairForTarget(snapshot, target).quality,
+            });
             if (persisted) {
               // Achado 5(b) — o `unknown` persistiu: FINALIZA o claim com um
               // status TERMINAL dedicado (`abandoned`) para que NÃO permaneça
