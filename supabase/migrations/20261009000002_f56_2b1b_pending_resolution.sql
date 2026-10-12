@@ -29,6 +29,20 @@
 --   transição. Iniciar tentativa e resolver financeiramente serializam nesta
 --   linha; contar claims isoladamente NÃO fecharia a corrida.
 --
+-- F2 — PROTEÇÃO GLOBAL da identidade de resolução: `resolution_operation_id` é
+--   ÚNICO em TODO o `admin_audit_log` (índice único parcial sobre `operation_id`,
+--   independente de `action`). A trava C4 (por operação de crédito) NÃO protege
+--   essa identidade quando o MESMO `resolution_operation_id` é reapresentado em
+--   OUTRA campanha/operação: as duas requisições travariam linhas DIFERENTES,
+--   ambas achariam nenhuma auditoria e uma cairia em `unique_violation` (500) no
+--   INSERT. Por isso o RPC toma, ANTES da trava C4 e de QUALQUER efeito
+--   financeiro, uma trava ADVISORY de transação NAMESPACED e determinística sobre
+--   a identidade (`pg_advisory_xact_lock(hashtext('p1_1_pending_resolution:' ||
+--   resolution_operation_id::text))`) e detecta a colisão INDEPENDENTE de
+--   `action` (a consulta a `admin_audit_log` filtra SOMENTE por `operation_id`).
+--   Reuso equivalente ⇒ idempotente; qualquer outro conteúdo/ação ⇒
+--   `operation_identity_conflict`, SEM efeito financeiro parcial.
+--
 -- E1 — claim `in_progress` residual (fail-closed I2 do Plano 04) e evidência de
 --   ENCERRAMENTO: enquanto houver claim `in_progress` e NÃO houver evidência
 --   server-side de ENCERRAMENTO da execução, a resolução é RECUSADA
@@ -95,6 +109,7 @@ AS $$
 DECLARE
   v_credit          public.product_1_1_campaign_credit_operations%ROWTYPE;
   v_existing        JSONB;
+  v_existing_action TEXT;
   v_existing_actor  UUID;
   v_existing_reason TEXT;
   v_art_kind        TEXT;
@@ -139,6 +154,16 @@ BEGIN
     RAISE EXCEPTION 'insufficient_evidence';
   END IF;
 
+  -- F2 — PROTEÇÃO GLOBAL da identidade de resolução ANTES de qualquer efeito
+  -- financeiro: `resolution_operation_id` é ÚNICO no audit log INTEIRO
+  -- (independente de `action` e de campanha/operação). A trava C4 abaixo só
+  -- serializa a MESMA operação de crédito; duas resoluções do MESMO
+  -- `resolution_operation_id` em operações DIFERENTES travariam linhas
+  -- diferentes. Esta trava ADVISORY de transação (namespaced e determinística)
+  -- fecha a corrida global: a colisão é detectada pela consulta action-independente
+  -- abaixo, ANTES da transição, nunca como `unique_violation` no INSERT do audit.
+  PERFORM pg_advisory_xact_lock(hashtext('p1_1_pending_resolution:' || p_resolution_operation_id::text));
+
   -- C4 — TRAVA comum por operação: a MESMA linha de operação de crédito que a
   -- aquisição de tentativa (Plano 03) trava, ANTES de qualquer verificação.
   SELECT * INTO v_credit
@@ -148,21 +173,24 @@ BEGIN
 
   IF NOT FOUND THEN RAISE EXCEPTION 'operation_not_found'; END IF;
 
-  -- F5/F2(c) — idempotência/conflito por `resolution_operation_id` (mesma ação)
-  -- AVALIADA SOB A TRAVA (C4): replays concorrentes SERIALIZAM na linha travada e
-  -- o índice único parcial `idx_admin_audit_log_operation` (sobre `operation_id`,
-  -- definido em 20260718000001) garante UMA única auditoria/efeito. Replay
-  -- EQUIVALENTE ⇒ reuso idempotente (exatamente um efeito e uma auditoria); MESMO
-  -- id com conteúdo DIVERGENTE ⇒ CONFLITO (nunca sucesso enganoso).
+  -- F5/F2(c) — idempotência/conflito por `resolution_operation_id` AVALIADA SOB
+  -- AS TRAVAS (advisory global + C4): replays concorrentes SERIALIZAM (mesmo em
+  -- campanhas/operações DIFERENTES, pela trava advisory) e o índice único parcial
+  -- `idx_admin_audit_log_operation` (sobre `operation_id`, definido em
+  -- 20260718000001) garante UMA única auditoria/efeito. A consulta filtra SOMENTE
+  -- por `operation_id` (INDEPENDENTE de `action`): um id JÁ USADO por OUTRA ação
+  -- administrativa também é reconhecido. Replay EQUIVALENTE ⇒ reuso idempotente
+  -- (exatamente um efeito e uma auditoria); qualquer outro conteúdo/ação ⇒
+  -- CONFLITO (nunca sucesso enganoso).
   -- F2(b) — a equivalência inclui `actor_id` e o `reason` (TRIM): divergência de
   -- administrador/motivo para o MESMO `resolution_operation_id` ⇒ conflito.
-  SELECT metadata, actor_id, btrim(reason)
-    INTO v_existing, v_existing_actor, v_existing_reason
+  SELECT metadata, action, actor_id, btrim(reason)
+    INTO v_existing, v_existing_action, v_existing_actor, v_existing_reason
   FROM public.admin_audit_log
-  WHERE operation_id = p_resolution_operation_id
-    AND action = 'product_1_1_pending_resolution';
+  WHERE operation_id = p_resolution_operation_id;
   IF FOUND THEN
-    IF (v_existing->>'campaign_id') = p_campaign_id::text
+    IF v_existing_action = 'product_1_1_pending_resolution'
+       AND (v_existing->>'campaign_id') = p_campaign_id::text
        AND (v_existing->>'operation_id') = p_operation_id::text
        AND (v_existing->>'action') = p_action
        AND (v_existing->>'art_kind') = v_art_kind
@@ -255,13 +283,22 @@ BEGIN
     'reason', btrim(p_reason)
   );
 
-  -- Auditoria na MESMA transação (evidências + transição atômicas).
-  INSERT INTO public.admin_audit_log (
-    actor_id, action, target_type, target_id, reason, operation_id, metadata
-  ) VALUES (
-    p_actor_id, 'product_1_1_pending_resolution', 'campaign', p_campaign_id,
-    btrim(p_reason), p_resolution_operation_id, v_result
-  );
+  -- Auditoria na MESMA transação (evidências + transição atômicas). DEFESA EM
+  -- PROFUNDIDADE (F2): com a trava advisory global + a checagem action-independente
+  -- acima, uma colisão de identidade já foi detectada ANTES de qualquer efeito; se
+  -- ainda assim o índice único parcial `idx_admin_audit_log_operation` disparar, o
+  -- CONFLITO é devolvido e a transação INTEIRA é ABORTADA — NENHUM efeito
+  -- financeiro parcial permanece (o RAISE reverte deliver/refund/claim residual).
+  BEGIN
+    INSERT INTO public.admin_audit_log (
+      actor_id, action, target_type, target_id, reason, operation_id, metadata
+    ) VALUES (
+      p_actor_id, 'product_1_1_pending_resolution', 'campaign', p_campaign_id,
+      btrim(p_reason), p_resolution_operation_id, v_result
+    );
+  EXCEPTION WHEN unique_violation THEN
+    RAISE EXCEPTION 'operation_identity_conflict';
+  END;
 
   RETURN v_result;
 END;

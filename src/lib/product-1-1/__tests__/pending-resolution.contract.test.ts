@@ -62,11 +62,39 @@ describe("F56.2b1b — migration 20261009000002 pending_resolution (contrato est
   it("guarda motivo/ator/operação e idempotência por `resolution_operation_id` via `admin_audit_log`", () => {
     expect(activeSql).toMatch(/RAISE EXCEPTION 'missing_reason'/);
     expect(activeSql).toMatch(/RAISE EXCEPTION 'missing_actor_id'/);
+    // F2 — a colisão é detectada de forma INDEPENDENTE de `action`: a consulta a
+    // `admin_audit_log` filtra SOMENTE por `operation_id` (sem `action =`).
     expect(activeSql).toMatch(
-      /FROM public\.admin_audit_log[\s\S]*?operation_id = p_resolution_operation_id[\s\S]*?action = 'product_1_1_pending_resolution'/,
+      /FROM public\.admin_audit_log\s+WHERE operation_id = p_resolution_operation_id;/,
     );
+    expect(activeSql).not.toMatch(/operation_id = p_resolution_operation_id\s+AND action =/);
     expect(activeSql).toMatch(
       /INSERT INTO public\.admin_audit_log[\s\S]*?'product_1_1_pending_resolution'/,
+    );
+  });
+
+  it("F2 — protege a identidade GLOBAL de `resolution_operation_id` com trava ADVISORY de transação, ANTES da trava C4 e de qualquer efeito", () => {
+    // Trava advisory namespaced e determinística sobre a identidade de resolução.
+    expect(activeSql).toMatch(
+      /PERFORM pg_advisory_xact_lock\(hashtext\('p1_1_pending_resolution:' \|\| p_resolution_operation_id::text\)\);/,
+    );
+    // Ordem: guardas de evidência → advisory global → trava C4 (FOR UPDATE).
+    const advisoryIdx = activeSql.indexOf("pg_advisory_xact_lock");
+    const forUpdateIdx = activeSql.indexOf("FOR UPDATE");
+    expect(advisoryIdx).toBeGreaterThan(-1);
+    expect(forUpdateIdx).toBeGreaterThan(advisoryIdx);
+  });
+
+  it("F2 — colisão INDEPENDENTE de `action`: id já usado por OUTRA ação ou conteúdo divergente ⇒ `operation_identity_conflict`", () => {
+    // A checagem exige que a ação existente seja `product_1_1_pending_resolution`
+    // E que TODO o conteúdo seja equivalente; caso contrário ⇒ conflito.
+    expect(activeSql).toMatch(/v_existing_action = 'product_1_1_pending_resolution'/);
+    expect(activeSql).toMatch(/reason', 'operation_identity_conflict'/);
+    // Belt-and-suspenders: `unique_violation` no INSERT do audit ⇒ conflito
+    // (transação abortada — nenhum efeito financeiro parcial permanece).
+    expect(activeSql).toMatch(/EXCEPTION WHEN unique_violation THEN/);
+    expect(activeSql).toMatch(
+      /EXCEPTION WHEN unique_violation THEN\s+RAISE EXCEPTION 'operation_identity_conflict';/,
     );
   });
 
@@ -552,6 +580,229 @@ describe("F56.2b1b — serviço resolvePendingOperation (F5/C4/E1, simulado)", (
     expect(effects).toBe(1);
     expect(audits.size).toBe(1);
     expect([a.idempotent, b.idempotent].filter(Boolean)).toHaveLength(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // F2 — proteção da identidade GLOBAL de `resolution_operation_id` (d/e/f)
+  // Modela a trava ADVISORY global + a colisão INDEPENDENTE de `action` da
+  // migration: a MESMA identidade serializa mesmo em campanhas/operações
+  // DIFERENTES e nunca cai em `unique_violation`/efeito parcial.
+  // -------------------------------------------------------------------------
+
+  function repoByCampaign(
+    records: Record<string, PendingOperationState>,
+    probe:
+      | { kind: "integral" }
+      | { kind: "absent" }
+      | { kind: "invalid" }
+      | { kind: "indeterminate" } = { kind: "integral" },
+  ) {
+    return {
+      findPendingOperation: vi.fn(async (campaignId: string) => records[campaignId] ?? null),
+      listPendingOperations: vi.fn(async () => []),
+      probeArtifact: vi.fn(async () =>
+        probe.kind === "integral"
+          ? {
+              kind: "integral" as const,
+              ref: { storagePath: "p", width: 1024, height: 1024, mimeType: "image/jpeg" },
+              width: 1024,
+              height: 1024,
+              mimeType: "image/jpeg",
+              storagePath: "p",
+            }
+          : probe,
+      ),
+    };
+  }
+
+  /** Fake stateful da RPC: trava advisory GLOBAL por identidade + colisão action-independente. */
+  function createGlobalIdentityRpc(
+    seed: Array<{ key: string; audit: Record<string, unknown> }> = [],
+  ) {
+    // `audit` = linha de `admin_audit_log` (action fixa 'product_1_1_pending_resolution');
+    // `result` = envelope de `metadata` devolvido pela RPC (action = p_action).
+    interface Stored {
+      action: string;
+      campaign_id: unknown;
+      operation_id: unknown;
+      actor_id: unknown;
+      reason: unknown;
+      art_kind: unknown;
+      result: Record<string, unknown>;
+    }
+    const audits = new Map<string, Stored>();
+    for (const item of seed) {
+      audits.set(item.key, {
+        action: String(item.audit.action),
+        campaign_id: item.audit.campaign_id,
+        operation_id: item.audit.operation_id,
+        actor_id: item.audit.actor_id,
+        reason: item.audit.reason,
+        art_kind: item.audit.art_kind,
+        result: item.audit,
+      });
+    }
+    let effects = 0;
+    const tail = new Map<string, Promise<void>>();
+    const acquire = async (key: string) => {
+      const prev = tail.get(key) ?? Promise.resolve();
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      tail.set(
+        key,
+        prev.then(() => gate),
+      );
+      await prev;
+      return release;
+    };
+    const rpc = vi.fn(async (_fn: string, params: Record<string, unknown>) => {
+      const key = String(params.p_resolution_operation_id);
+      const release = await acquire(key); // trava advisory GLOBAL (namespaced)
+      try {
+        const existing = audits.get(key);
+        if (existing) {
+          if (
+            existing.action === "product_1_1_pending_resolution" &&
+            existing.campaign_id === params.p_campaign_id &&
+            existing.operation_id === params.p_operation_id &&
+            existing.actor_id === params.p_actor_id &&
+            existing.reason === params.p_reason &&
+            existing.art_kind === (params.p_evidence as { art_kind: string }).art_kind
+          ) {
+            return { data: { ...existing.result, idempotent: true }, error: null };
+          }
+          return { data: { success: false, reason: "operation_identity_conflict" }, error: null };
+        }
+        effects += 1;
+        const result = {
+          success: true,
+          idempotent: false,
+          campaign_id: params.p_campaign_id,
+          operation_id: params.p_operation_id,
+          action: params.p_action,
+          status: params.p_action === "deliver_existing_art" ? "delivered" : "refunded",
+          art_kind: (params.p_evidence as { art_kind: string }).art_kind,
+          reason: params.p_reason,
+        };
+        audits.set(key, {
+          action: "product_1_1_pending_resolution",
+          campaign_id: params.p_campaign_id,
+          operation_id: params.p_operation_id,
+          actor_id: params.p_actor_id,
+          reason: params.p_reason,
+          art_kind: (params.p_evidence as { art_kind: string }).art_kind,
+          result,
+        });
+        return { data: result, error: null };
+      } finally {
+        release();
+      }
+    });
+    return { rpc, effects: () => effects, audits };
+  }
+
+  it("F2(d) — MESMO `resolution_operation_id` em OPERAÇÕES DIFERENTES (simultâneo) ⇒ `operation_identity_conflict` (nunca unique_violation/500), SEM efeito parcial duplicado", async () => {
+    const CAMPAIGN_B = "66666666-6666-4666-8666-666666666666";
+    const OPERATION_B = "77777777-7777-4777-8777-777777777777";
+    const { rpc, effects, audits } = createGlobalIdentityRpc();
+    const client = { rpc } as unknown as SupabaseClient;
+    const repository = repoByCampaign({
+      [CAMPAIGN_ID]: record(),
+      [CAMPAIGN_B]: record({ campaignId: CAMPAIGN_B, operationId: OPERATION_B }),
+    });
+    const results = await Promise.allSettled([
+      resolvePendingOperation(
+        {
+          actorId: ACTOR_ID,
+          campaignId: CAMPAIGN_ID,
+          operationId: OPERATION_ID,
+          action: "deliver_existing_art",
+          reason: "res A",
+          resolutionOperationId: RESOLUTION_ID,
+        },
+        { client, repository },
+      ),
+      resolvePendingOperation(
+        {
+          actorId: ACTOR_ID,
+          campaignId: CAMPAIGN_B,
+          operationId: OPERATION_B,
+          action: "deliver_existing_art",
+          reason: "res B",
+          resolutionOperationId: RESOLUTION_ID,
+        },
+        { client, repository },
+      ),
+    ]);
+    // UMA única resolução efetiva e UMA auditoria; a segunda resolve CONFLITO
+    // tipado (nunca um erro de banco/efeito parcial).
+    expect(effects()).toBe(1);
+    expect(audits.size).toBe(1);
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
+      code: "operation_identity_conflict",
+    });
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+  });
+
+  it("F2(e) — `resolution_operation_id` JÁ USADO POR OUTRA ação administrativa ⇒ `operation_identity_conflict` (checagem action-independente), SEM efeito", async () => {
+    const { rpc, effects } = createGlobalIdentityRpc([
+      {
+        key: RESOLUTION_ID,
+        audit: {
+          action: "credit_grant",
+          campaign_id: CAMPAIGN_ID,
+          operation_id: OPERATION_ID,
+          actor_id: ACTOR_ID,
+          reason: "outra ação administrativa",
+          art_kind: "integral",
+        },
+      },
+    ]);
+    const client = { rpc } as unknown as SupabaseClient;
+    await expect(
+      resolvePendingOperation(
+        {
+          actorId: ACTOR_ID,
+          campaignId: CAMPAIGN_ID,
+          operationId: OPERATION_ID,
+          action: "deliver_existing_art",
+          reason: "res",
+          resolutionOperationId: RESOLUTION_ID,
+        },
+        { client, repository: fakeRepository({ record: record(), probe: { kind: "integral" } }) },
+      ),
+    ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+    expect(effects()).toBe(0);
+  });
+
+  it("F2(f) — replay EQUIVALENTE (mesma identidade/conteúdo) reusa IDEMPOTENTE: UMA única auditoria/efeito (checagem action-independente)", async () => {
+    const { rpc, effects, audits } = createGlobalIdentityRpc();
+    const client = { rpc } as unknown as SupabaseClient;
+    const input = {
+      actorId: ACTOR_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      action: "deliver_existing_art" as const,
+      reason: "replay equivalente",
+      resolutionOperationId: RESOLUTION_ID,
+    };
+    const first = await resolvePendingOperation(input, {
+      client,
+      repository: fakeRepository({ record: record(), probe: { kind: "integral" } }),
+    });
+    const second = await resolvePendingOperation(input, {
+      client,
+      repository: fakeRepository({
+        record: record({ status: "delivered", terminal: true }),
+        probe: { kind: "integral" },
+      }),
+    });
+    expect(first.idempotent).toBe(false);
+    expect(second.idempotent).toBe(true);
+    expect(effects()).toBe(1);
+    expect(audits.size).toBe(1);
   });
 
   it("F3: envelope AUSENTE/INCOMPLETO/CONTRADITÓRIO ⇒ FAIL CLOSED (`invalid_response`), nunca sucesso", async () => {
