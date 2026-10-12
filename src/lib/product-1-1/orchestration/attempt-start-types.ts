@@ -17,7 +17,12 @@ export type AttemptStartReason =
   | "already_started"
   | "attempt_limit_reached"
   | "operation_terminal"
-  | "operation_unknown";
+  | "operation_unknown"
+  | "operation_art_uploaded"
+  | "attempt_already_completed"
+  | "out_of_sequence"
+  | "fallback_before_primary"
+  | "primary_after_fallback";
 
 export interface AttemptStartResult {
   readonly acquired: boolean;

@@ -16,10 +16,16 @@
 --   2. RPCs (`SECURITY DEFINER SET search_path = ''`):
 --      - `product_1_1_acquire_attempt_start` — takes the SHARED `FOR UPDATE`
 --        lock on the credit-operation line (C4, the SAME row the Plan 07
---        financial resolution locks), then derives PER-TARGET counters from the
---        persisted claims (`primary` <= 2, `fallback` <= 1, total <= 3) and the
---        permitted transitions (F1) — a `fallback` may start on the 2nd call on
---        explicit unavailability, NEVER by a fixed `attempt_seq = 3` position.
+--        financial resolution locks), then enforces the PERMITTED SEQUENCE and
+--        PREVIOUS STATE before deriving PER-TARGET counters from the persisted
+--        claims (`primary` <= 2, `fallback` <= 1, total <= 3): `attempt_number`
+--        MUST be `claims_count + 1` (`out_of_sequence`), the FIRST attempt MUST
+--        be `primary` (`fallback_before_primary`), no `primary` after a
+--        `fallback` (`primary_after_fallback`), and a new attempt is refused
+--        after a `done` claim (`attempt_already_completed`) or once the credit
+--        operation is `art_uploaded` (`operation_art_uploaded`). A `fallback`
+--        may start on the 2nd call on explicit unavailability, NEVER by a fixed
+--        `attempt_seq = 3` position.
 --      - `product_1_1_finish_attempt` — CAS `in_progress -> done|failed`.
 --      - `product_1_1_get_campaign_operation_by_campaign` — reads the credit
 --        operation AND the persisted unknown outcome (I2 terminal precedence).
@@ -129,12 +135,14 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_credit         public.product_1_1_campaign_credit_operations%ROWTYPE;
-  v_primary_count  INTEGER;
-  v_fallback_count INTEGER;
-  v_total_count    INTEGER;
-  v_unknown_exists BOOLEAN;
-  v_inserted_id    UUID;
+  v_credit          public.product_1_1_campaign_credit_operations%ROWTYPE;
+  v_primary_count   INTEGER;
+  v_fallback_count  INTEGER;
+  v_total_count     INTEGER;
+  v_expected_number INTEGER;
+  v_unknown_exists  BOOLEAN;
+  v_done_exists     BOOLEAN;
+  v_inserted_id     UUID;
 BEGIN
   IF p_campaign_id IS NULL THEN RAISE EXCEPTION 'missing_campaign_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
@@ -176,6 +184,24 @@ BEGIN
     RETURN jsonb_build_object('acquired', false, 'reason', 'operation_unknown');
   END IF;
 
+  -- F1 — GUARDA DE ESTADO PRÉVIO: a arte já subiu (`art_uploaded`) ⇒ a operação
+  -- aguarda entrega; NÃO faz sentido iniciar nova tentativa.
+  IF v_credit.status = 'art_uploaded' THEN
+    RETURN jsonb_build_object('acquired', false, 'reason', 'operation_art_uploaded');
+  END IF;
+
+  -- F1 — GUARDA DE ESTADO PRÉVIO: uma tentativa JÁ CONCLUÍDA (`done`) ⇒ não
+  -- reiniciar (a conclusão é terminal para novas tentativas).
+  SELECT EXISTS (
+    SELECT 1 FROM public.product_1_1_generation_attempt_claims
+    WHERE campaign_id = p_campaign_id
+      AND operation_id = p_operation_id
+      AND status = 'done'
+  ) INTO v_done_exists;
+  IF v_done_exists THEN
+    RETURN jsonb_build_object('acquired', false, 'reason', 'attempt_already_completed');
+  END IF;
+
   -- F1 — contadores POR ALVO derivados dos claims persistidos.
   SELECT
     COUNT(*) FILTER (WHERE target = 'primary'),
@@ -185,19 +211,35 @@ BEGIN
   FROM public.product_1_1_generation_attempt_claims
   WHERE campaign_id = p_campaign_id AND operation_id = p_operation_id;
 
+  -- F1 — NUMERAÇÃO SEQUENCIAL: `attempt_number` DEVE ser o nº de claims + 1.
+  -- (Impede reordenar/pular posições; `attempt_seq` fixo de posição não existe.)
+  v_expected_number := v_total_count + 1;
+  IF p_attempt_number <> v_expected_number THEN
+    RETURN jsonb_build_object('acquired', false, 'reason', 'out_of_sequence');
+  END IF;
+
   IF v_total_count >= 3 THEN
     RETURN jsonb_build_object('acquired', false, 'reason', 'attempt_limit_reached');
   END IF;
 
   -- F1 — TRANSIÇÕES permitidas por alvo (nunca por posição fixa `attempt_seq=3`):
-  --   primary  -> primary  enquanto `primary` < 2
-  --   primary  -> fallback enquanto `fallback` = 0 (aceito JÁ na 2ª chamada)
-  --   fallback -> nada (o fallback é o último alvo)
+  --   (0 claims) -> primary  com attempt_number = 1
+  --   primary    -> primary  enquanto `primary` < 2 E nenhum `fallback`
+  --   primary    -> fallback enquanto `primary` >= 1 E `fallback` = 0 (aceito JÁ na 2ª chamada)
+  --   fallback   -> nada (o fallback é o último alvo; nenhum `primary` depois dele)
   IF p_target = 'primary' THEN
+    -- Nenhum `primary` depois de um `fallback`.
+    IF v_fallback_count > 0 THEN
+      RETURN jsonb_build_object('acquired', false, 'reason', 'primary_after_fallback');
+    END IF;
     IF v_primary_count >= 2 THEN
       RETURN jsonb_build_object('acquired', false, 'reason', 'attempt_limit_reached');
     END IF;
   ELSIF p_target = 'fallback' THEN
+    -- O `fallback` exige pelo menos um `primary` anterior.
+    IF v_primary_count < 1 THEN
+      RETURN jsonb_build_object('acquired', false, 'reason', 'fallback_before_primary');
+    END IF;
     IF v_fallback_count >= 1 THEN
       RETURN jsonb_build_object('acquired', false, 'reason', 'attempt_limit_reached');
     END IF;

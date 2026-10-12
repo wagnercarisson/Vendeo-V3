@@ -51,6 +51,11 @@ const ATTEMPT_REASONS: readonly AttemptStartReason[] = [
   "attempt_limit_reached",
   "operation_terminal",
   "operation_unknown",
+  "operation_art_uploaded",
+  "attempt_already_completed",
+  "out_of_sequence",
+  "fallback_before_primary",
+  "primary_after_fallback",
 ];
 
 const CLAIM_STATUSES: readonly AttemptClaimStatus[] = [
