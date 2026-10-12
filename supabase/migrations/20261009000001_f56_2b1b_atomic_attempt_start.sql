@@ -30,7 +30,9 @@
 --      - `product_1_1_get_campaign_operation_by_campaign` — reads the credit
 --        operation AND the persisted unknown outcome (I2 terminal precedence).
 --      - `product_1_1_record_generation_outcome` — writes the persisted unknown
---        result under the SAME `FOR UPDATE` lock (idempotent via ON CONFLICT).
+--        result under the SAME `FOR UPDATE` lock; an equivalent replay is
+--        idempotent, a DIVERGENT replay (persisted outcome <> requested) is
+--        refused with `operation_identity_conflict` (never a misleading success).
 --
 -- Reuse boundary: does NOT alter `credit_transactions`, `credit_balances` or
 -- `product_1_1_campaign_credit_operations`; it only reads the credit-operation
@@ -430,8 +432,23 @@ BEGIN
   FROM public.product_1_1_generation_outcomes
   WHERE campaign_id = p_campaign_id AND operation_id = p_operation_id;
 
+  -- F2 — replay DIVERGENTE NUNCA é sucesso enganoso: se o insert conflitou
+  -- (`v_inserted_id IS NULL`), COMPARA o `outcome` PERSISTIDO ao solicitado.
+  --   equivalente ⇒ reuso idempotente (`{success:true, idempotent:true}`)
+  --   divergente  ⇒ `{success:false, reason:'operation_identity_conflict'}`
+  IF v_inserted_id IS NULL THEN
+    IF v_row.outcome = p_outcome THEN
+      RETURN jsonb_build_object(
+        'success', true, 'idempotent', true,
+        'campaign_id', v_row.campaign_id, 'operation_id', v_row.operation_id,
+        'outcome', v_row.outcome, 'support_reference', v_row.support_reference
+      );
+    END IF;
+    RETURN jsonb_build_object('success', false, 'reason', 'operation_identity_conflict');
+  END IF;
+
   RETURN jsonb_build_object(
-    'success', true, 'idempotent', (v_inserted_id IS NULL),
+    'success', true, 'idempotent', false,
     'campaign_id', v_row.campaign_id, 'operation_id', v_row.operation_id,
     'outcome', v_row.outcome, 'support_reference', v_row.support_reference
   );
