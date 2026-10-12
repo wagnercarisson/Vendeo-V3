@@ -31,6 +31,13 @@ import type { ImagePairCapacityPricingStatus } from "@/lib/ai-cost/types";
  * closed), nunca um default silencioso, e a cobertura de pricing incompleta de
  * QUALQUER par (principal ou fallback) bloqueia a execução sem reserva/provider.
  *
+ * F2 — recuperação de pré-reserva: quando `campaignId` é informado, o preflight
+ * classifica a evidência congelada do snapshot existente. `repairable` (snapshot+
+ * binding sem evidência) NÃO lança — é devolvido em `frozenEvidence` para o
+ * orquestrador reparar ANTES de reservar/chamar provider; `corrupt` (snapshot sem
+ * binding) é fail-closed. A reserva/provider permanecem bloqueados até a
+ * evidência estar completa (garantido pelo passo de persistência/reparo).
+ *
  * O fluxo NÃO invoca revisor automático de imagem — a decisão de arte é
  * programática (spec `product-1-1-generation-orchestration/spec.md:134`).
  *
@@ -40,12 +47,25 @@ import type { ImagePairCapacityPricingStatus } from "@/lib/ai-cost/types";
 
 const SNAPSHOT_TABLE = "image_generation_config_snapshots";
 const EVIDENCE_TABLE = "product_1_1_snapshot_frozen_evidence";
+const BINDING_TABLE = "product_1_1_snapshot_content_binding";
 
-/** Estado da evidência congelada de um snapshot de novo fluxo existente (C3/F6). */
+/**
+ * Estado da evidência congelada de um snapshot de novo fluxo existente (C3/F6/F2).
+ *
+ * F2 — o preflight DISTINGUE um estado PARCIAL REPARÁVEL de um estado CORROMPIDO
+ * não executável:
+ * - `no_snapshot`: nenhum snapshot para a campanha (nova entrada).
+ * - `complete`: snapshot + evidência congelada presentes (replay ok).
+ * - `repairable`: snapshot + binding presentes, mas evidência AUSENTE (estado
+ *   parcial de uma chamada anterior) — o orquestrador DEVE reparar (persistir a
+ *   evidência para o MESMO snapshot) ANTES de reservar/chamar provider.
+ * - `corrupt`: snapshot SEM binding — estado não executável ⇒ fail-closed.
+ */
 export type SnapshotFrozenEvidenceState =
   | { readonly kind: "no_snapshot" }
-  | { readonly kind: "evidence_present"; readonly snapshotOriginalId: string }
-  | { readonly kind: "evidence_missing"; readonly snapshotOriginalId: string };
+  | { readonly kind: "complete"; readonly snapshotOriginalId: string }
+  | { readonly kind: "repairable"; readonly snapshotOriginalId: string }
+  | { readonly kind: "corrupt"; readonly snapshotOriginalId: string };
 
 export interface NewFlowPreflightDeps {
   readonly campaignId?: string;
@@ -68,12 +88,20 @@ export interface NewFlowPreflightResult {
   readonly config: CurrentImageGenerationConfig;
   readonly pricing: ImagePairCapacityPricingStatus;
   readonly attemptCost?: ImagePairCostResolution;
+  /**
+   * F2 — estado da evidência congelada do snapshot existente (quando `campaignId`
+   * é informado). `repairable` NÃO é erro: sinaliza ao orquestrador que ele DEVE
+   * reparar (persistir a evidência para o MESMO snapshot) ANTES de reservar/chamar
+   * provider. Reserva/provider permanecem bloqueados até a evidência estar completa.
+   */
+  readonly frozenEvidence?: SnapshotFrozenEvidenceState;
 }
 
 export type NewFlowPreflightErrorCode =
-  | "frozen_evidence_missing"
+  | "frozen_evidence_corrupt"
   | "snapshot_read_failed"
-  | "evidence_read_failed";
+  | "evidence_read_failed"
+  | "binding_read_failed";
 
 /** Erro tipado do preflight — bloqueia sem reserva/provider. */
 export class NewFlowPreflightError extends Error {
@@ -127,17 +155,36 @@ async function defaultResolveFrozenEvidenceState(
   if (evidenceError) {
     throw new NewFlowPreflightError("evidence_read_failed", evidenceError.message);
   }
+  if (evidence) return { kind: "complete", snapshotOriginalId: snapshot.id };
 
-  return evidence
-    ? { kind: "evidence_present", snapshotOriginalId: snapshot.id }
-    : { kind: "evidence_missing", snapshotOriginalId: snapshot.id };
+  // F2 — sem evidência: o binding persistido (fonte de comparação do reparo)
+  // distingue o estado PARCIAL REPARÁVEL do estado CORROMPIDO (snapshot sem binding).
+  const { data: binding, error: bindingError } = await (
+    supabaseAdmin as unknown as SupabaseClient
+  )
+    .from(BINDING_TABLE)
+    .select("snapshot_original_id")
+    .eq("snapshot_original_id", snapshot.id)
+    .maybeSingle<{ snapshot_original_id: string }>();
+  if (bindingError) {
+    throw new NewFlowPreflightError("binding_read_failed", bindingError.message);
+  }
+
+  return binding
+    ? { kind: "repairable", snapshotOriginalId: snapshot.id }
+    : { kind: "corrupt", snapshotOriginalId: snapshot.id };
 }
 
 /**
  * Executa o preflight fail-closed: resolve a configuração UMA vez (F3), valida o
- * par contra o catálogo elegível, bloqueia quando a evidência congelada de um
- * snapshot existente está ausente e exige pricing `complete` para principal e
- * fallback. Não constrói/persiste snapshot nem toca reserva/provider.
+ * par contra o catálogo elegível, classifica a evidência congelada de um snapshot
+ * existente e exige pricing `complete` para principal e fallback. Não constrói/
+ * persiste snapshot nem toca reserva/provider.
+ *
+ * F2 — o estado `repairable` (snapshot+binding sem evidência) NÃO lança: é
+ * devolvido em `frozenEvidence` para o orquestrador reparar ANTES de reservar/
+ * chamar provider. O estado `corrupt` (snapshot SEM binding) é fail-closed. Falhas
+ * de leitura permanecem fatais (`NewFlowPreflightError`).
  */
 export async function runNewFlowPreflight(
   deps: NewFlowPreflightDeps = {},
@@ -147,13 +194,17 @@ export async function runNewFlowPreflight(
   assertEligibleModelPair(config.primary);
   assertEligibleModelPair(config.fallback);
 
+  let frozenEvidence: SnapshotFrozenEvidenceState | undefined;
   if (deps.campaignId) {
     const resolveFrozenEvidenceState =
       deps.resolveFrozenEvidenceState ?? defaultResolveFrozenEvidenceState;
     const state = await resolveFrozenEvidenceState(deps.campaignId);
-    if (state.kind === "evidence_missing") {
-      throw new NewFlowPreflightError("frozen_evidence_missing", state.snapshotOriginalId);
+    // F2 — corrompido (snapshot sem binding) ⇒ fail-closed, sem reserva/provider.
+    // `repairable` NÃO lança: o orquestrador repara antes de reservar/chamar provider.
+    if (state.kind === "corrupt") {
+      throw new NewFlowPreflightError("frozen_evidence_corrupt", state.snapshotOriginalId);
     }
+    frozenEvidence = state;
   }
 
   const pairConfig: ImageModelPairConfig = {
@@ -165,8 +216,10 @@ export async function runNewFlowPreflight(
   const pricing = await assertExecutable(pairConfig);
 
   if (!deps.resolveCost) {
-    return { config, pricing };
+    return frozenEvidence ? { config, pricing, frozenEvidence } : { config, pricing };
   }
   const attemptCost = await deps.resolveCost(pairConfig);
-  return { config, pricing, attemptCost };
+  return frozenEvidence
+    ? { config, pricing, attemptCost, frozenEvidence }
+    : { config, pricing, attemptCost };
 }

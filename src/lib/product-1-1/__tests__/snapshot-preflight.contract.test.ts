@@ -89,6 +89,64 @@ describe("F56.2b1b — migration 20261009000003 frozen_evidence (contrato estát
       /GRANT[^;]*\b(UPDATE|DELETE|TRUNCATE)\b[^;]*ON TABLE public\.product_1_1_snapshot_frozen_evidence/,
     );
   });
+
+  it("F2: cria a relação de content binding (fingerprint) com identidade (campaign_id, operation_id)", () => {
+    expect(activeSql).toMatch(
+      /CREATE TABLE IF NOT EXISTS public\.product_1_1_snapshot_content_binding/,
+    );
+    expect(activeSql).toMatch(
+      /snapshot_original_id\s+UUID PRIMARY KEY REFERENCES public\.image_generation_config_snapshots\(id\)/,
+    );
+    expect(activeSql).toMatch(/content_fingerprint\s+TEXT NOT NULL/);
+    expect(activeSql).toMatch(
+      /CONSTRAINT uq_p1_1_snapshot_content_binding_identity UNIQUE \(campaign_id, operation_id\)/,
+    );
+  });
+
+  it("F2: torna o content binding imutável por trigger (UPDATE/DELETE recusados)", () => {
+    expect(activeSql).toMatch(
+      /RAISE EXCEPTION 'product_1_1_snapshot_content_binding_immutable'/,
+    );
+  });
+
+  it("F3 (binding): rejeita binding cujo campaign_id diverge do snapshot (BEFORE INSERT)", () => {
+    expect(activeSql).toMatch(
+      /CREATE TRIGGER trg_product_1_1_snapshot_content_binding_snapshot_campaign\s+BEFORE INSERT ON public\.product_1_1_snapshot_content_binding/,
+    );
+    expect(activeSql).toMatch(
+      /RAISE EXCEPTION 'product_1_1_snapshot_content_binding_snapshot_campaign_mismatch'/,
+    );
+    expect(sql).toMatch(
+      /DROP TRIGGER IF EXISTS trg_product_1_1_snapshot_content_binding_snapshot_campaign/,
+    );
+    expect(sql).toMatch(
+      /DROP FUNCTION IF EXISTS public\.trg_product_1_1_snapshot_content_binding_snapshot_campaign_fn/,
+    );
+  });
+
+  it("F2: define o RPC atômico snapshot+binding (SECURITY DEFINER, search_path vazio, REVERT)", () => {
+    expect(activeSql).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.product_1_1_persist_snapshot_with_binding/,
+    );
+    expect(activeSql).toMatch(/SECURITY DEFINER/);
+    expect(activeSql).toMatch(/SET search_path = ''/);
+    expect(activeSql).toMatch(/RAISE EXCEPTION 'operation_identity_conflict'/);
+    expect(activeSql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.product_1_1_persist_snapshot_with_binding/,
+    );
+    expect(sql).toMatch(
+      /DROP FUNCTION IF EXISTS public\.product_1_1_persist_snapshot_with_binding/,
+    );
+  });
+
+  it("F2: concede apenas SELECT/INSERT ao service_role no content binding", () => {
+    expect(activeSql).toMatch(
+      /GRANT SELECT, INSERT ON TABLE public\.product_1_1_snapshot_content_binding TO service_role/,
+    );
+    expect(activeSql).not.toMatch(
+      /GRANT[^;]*\b(UPDATE|DELETE|TRUNCATE)\b[^;]*ON TABLE public\.product_1_1_snapshot_content_binding/,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -118,28 +176,32 @@ type FakeRow = Record<string, unknown>;
 
 interface FakeClient {
   from(table: string): FakeBuilder;
+  rpc(name: string, params?: Record<string, unknown>): Promise<FakeResult>;
   tables: Record<string, FakeRow[]>;
   insertCalls: { table: string; row: FakeRow }[];
+  rpcCalls: { name: string; params: Record<string, unknown> }[];
 }
 
 function createFakeClient(
   options: {
     failEvidenceInsert?: boolean;
-    /** F1: primeira inserção de snapshot falha por concorrência (UNIQUE). */
-    raceSnapshotInsert?: "matching" | "divergent";
+    /** F2 E2E: a PRIMEIRA inserção da evidência falha (estado parcial); depois passa. */
+    failFirstEvidenceInsert?: boolean;
     /** F1: primeira inserção de evidência falha por concorrência (UNIQUE). */
     raceEvidenceInsert?: "matching" | "divergent";
   } = {},
 ): FakeClient {
   const tables: Record<string, FakeRow[]> = {
     image_generation_config_snapshots: [],
+    product_1_1_snapshot_content_binding: [],
     product_1_1_snapshot_frozen_evidence: [],
     image_generation_operations: [],
   };
   const insertCalls: { table: string; row: FakeRow }[] = [];
+  const rpcCalls: { name: string; params: Record<string, unknown> }[] = [];
   let seq = 0;
-  let snapshotRaceCount = 0;
   let evidenceRaceCount = 0;
+  let evidenceFailRemaining = options.failFirstEvidenceInsert ? 1 : 0;
 
   function from(table: string): FakeBuilder {
     const state: {
@@ -151,22 +213,6 @@ function createFakeClient(
 
     const resolveResult = (): FakeResult => {
       if (state.mode === "insert" && state.payload) {
-        if (
-          table === "image_generation_config_snapshots" &&
-          options.raceSnapshotInsert &&
-          snapshotRaceCount === 0
-        ) {
-          // Simula TOCTOU: o vencedor grava a linha entre a pré-consulta e o insert;
-          // o perdedor recebe uma violação de UNIQUE e deve re-consultar.
-          snapshotRaceCount += 1;
-          seq += 1;
-          const seed: FakeRow = { id: `${table}-${seq}`, ...state.payload };
-          if (options.raceSnapshotInsert === "divergent") {
-            seed.primary_model = "divergent-model";
-          }
-          tables[table] = [...(tables[table] ?? []), seed];
-          return { data: null, error: { message: "duplicate key value violates unique constraint" } };
-        }
         if (
           table === "product_1_1_snapshot_frozen_evidence" &&
           options.raceEvidenceInsert &&
@@ -180,6 +226,14 @@ function createFakeClient(
           }
           tables[table] = [...(tables[table] ?? []), seed];
           return { data: null, error: { message: "duplicate key value violates unique constraint" } };
+        }
+        if (
+          table === "product_1_1_snapshot_frozen_evidence" &&
+          evidenceFailRemaining > 0
+        ) {
+          // F2 E2E: estado parcial (snapshot+binding sem evidência) na 1ª tentativa.
+          evidenceFailRemaining -= 1;
+          return { data: null, error: { message: "evidence_insert_failed" } };
         }
         if (
           table === "product_1_1_snapshot_frozen_evidence" &&
@@ -242,11 +296,127 @@ function createFakeClient(
     return builder;
   }
 
-  return { from, tables, insertCalls };
+  // F2 — simula o RPC atômico `product_1_1_persist_snapshot_with_binding` com a
+  // MESMA semântica do Postgres: idempotente por `campaign_id`; binding único por
+  // `(campaign_id, operation_id)` e por snapshot; divergência de fingerprint /
+  // par ⇒ `operation_identity_conflict`.
+  function rpc(name: string, params: Record<string, unknown> = {}): Promise<FakeResult> {
+    rpcCalls.push({ name, params });
+    if (name !== "product_1_1_persist_snapshot_with_binding") {
+      return Promise.resolve({ data: null, error: { message: `unknown_rpc:${name}` } });
+    }
+
+    const campaignId = params.p_campaign_id as string;
+    const operationId = params.p_operation_id as string;
+    const fingerprint = params.p_content_fingerprint as string;
+    const snapshots = tables.image_generation_config_snapshots;
+    const bindings = tables.product_1_1_snapshot_content_binding;
+
+    let snap = snapshots.find((s) => s.campaign_id === campaignId);
+    if (!snap) {
+      seq += 1;
+      snap = {
+        id: `snapshot-${seq}`,
+        campaign_id: campaignId,
+        primary_model: params.p_primary_model,
+        primary_quality: params.p_primary_quality,
+        fallback_model: params.p_fallback_model,
+        fallback_quality: params.p_fallback_quality,
+        config_version_id: params.p_config_version_id,
+        origin: params.p_origin,
+        run_id: params.p_run_id,
+        trace_id: params.p_trace_id,
+      };
+      snapshots.push(snap);
+    } else if (
+      snap.primary_model !== params.p_primary_model ||
+      snap.primary_quality !== params.p_primary_quality ||
+      snap.fallback_model !== params.p_fallback_model ||
+      snap.fallback_quality !== params.p_fallback_quality ||
+      snap.config_version_id !== params.p_config_version_id ||
+      snap.origin !== params.p_origin
+    ) {
+      return Promise.resolve({
+        data: null,
+        error: { message: "operation_identity_conflict:snapshot_divergent" },
+      });
+    }
+
+    const byIdentity = bindings.find(
+      (b) => b.campaign_id === campaignId && b.operation_id === operationId,
+    );
+    if (byIdentity) {
+      if (
+        byIdentity.snapshot_original_id !== snap.id ||
+        byIdentity.content_fingerprint !== fingerprint
+      ) {
+        return Promise.resolve({
+          data: null,
+          error: { message: "operation_identity_conflict:content_fingerprint_divergent" },
+        });
+      }
+      return Promise.resolve({
+        data: [
+          {
+            snapshot_original_id: byIdentity.snapshot_original_id,
+            reused: true,
+            content_fingerprint: byIdentity.content_fingerprint,
+          },
+        ],
+        error: null,
+      });
+    }
+
+    const bySnapshot = bindings.find((b) => b.snapshot_original_id === snap.id);
+    if (bySnapshot) {
+      return Promise.resolve({
+        data: null,
+        error: { message: "operation_identity_conflict:binding_identity_conflict" },
+      });
+    }
+
+    bindings.push({
+      snapshot_original_id: snap.id,
+      campaign_id: campaignId,
+      operation_id: operationId,
+      content_fingerprint: fingerprint,
+    });
+    return Promise.resolve({
+      data: [{ snapshot_original_id: snap.id, reused: false, content_fingerprint: fingerprint }],
+      error: null,
+    });
+  }
+
+  return { from, rpc, tables, insertCalls, rpcCalls };
 }
 
 function asClient(fake: FakeClient): SupabaseClient {
   return fake as unknown as SupabaseClient;
+}
+
+/**
+ * F2 — leitor REAL do estado da evidência congelada sobre o fake client (espelha o
+ * default server-side de `preflight.ts`): classifica `no_snapshot` / `complete` /
+ * `repairable` (snapshot+binding, sem evidência) / `corrupt` (snapshot sem binding).
+ */
+function makeFrozenEvidenceReader(client: FakeClient) {
+  return async (campaignId: string) => {
+    const snap = client.tables.image_generation_config_snapshots.find(
+      (row) => row.campaign_id === campaignId,
+    );
+    if (!snap) return { kind: "no_snapshot" as const };
+    const snapshotOriginalId = String(snap.id);
+    const evidence = client.tables.product_1_1_snapshot_frozen_evidence.find(
+      (row) => row.snapshot_original_id === snap?.id,
+    );
+    if (evidence) return { kind: "complete" as const, snapshotOriginalId };
+    const binding = client.tables.product_1_1_snapshot_content_binding.find(
+      (row) => row.snapshot_original_id === snap?.id,
+    );
+    return binding
+      ? { kind: "repairable" as const, snapshotOriginalId }
+      : { kind: "corrupt" as const, snapshotOriginalId };
+  };
 }
 
 function initialConfig(
@@ -353,19 +523,23 @@ describe("F56.2b1b — snapshot congelado + evidência congelada (Plano 02)", ()
       evidence,
     );
 
-    expect(client.insertCalls[0]).toMatchObject({
-      table: "image_generation_config_snapshots",
-      row: {
-        campaign_id: "camp-1",
-        primary_model: "gpt-image-2.5-sunburst",
-        primary_quality: "medium",
-        fallback_model: "gpt-image-2",
-        fallback_quality: "medium",
-        config_version_id: "11111111-1111-4111-8111-111111111111",
-        origin: "human_decision",
-      },
+    // F2 — snapshot + binding via RPC ATÔMICO (idempotente por campaign_id).
+    expect(client.rpcCalls[0].name).toBe("product_1_1_persist_snapshot_with_binding");
+    expect(client.rpcCalls[0].params).toMatchObject({
+      p_campaign_id: "camp-1",
+      p_primary_model: "gpt-image-2.5-sunburst",
+      p_primary_quality: "medium",
+      p_fallback_model: "gpt-image-2",
+      p_fallback_quality: "medium",
+      p_config_version_id: "11111111-1111-4111-8111-111111111111",
+      p_origin: "human_decision",
+      p_operation_id: "op-1",
+      p_content_fingerprint: expect.any(String),
     });
-    expect(client.insertCalls[1]).toMatchObject({
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    // Evidência: insert direto com a MESMA identidade e o snapshot id do binding.
+    expect(client.insertCalls[0]).toMatchObject({
       table: "product_1_1_snapshot_frozen_evidence",
       row: {
         snapshot_original_id: result.snapshotOriginalId,
@@ -470,10 +644,14 @@ describe("F56.2b1b — snapshot congelado + evidência congelada (Plano 02)", ()
     });
 
     const first = await persistProductOneToOneSnapshot(asClient(client), snapshot, evidence);
-    expect(client.insertCalls).toHaveLength(2);
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
 
     const second = await persistProductOneToOneSnapshot(asClient(client), snapshot, evidence);
-    expect(client.insertCalls).toHaveLength(2);
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
     expect(second.snapshotOriginalId).toBe(first.snapshotOriginalId);
     expect(second.reused).toBe(true);
   });
@@ -512,6 +690,9 @@ describe("F56.2b1b — snapshot congelado + evidência congelada (Plano 02)", ()
         buildProductOneToOneFrozenEvidence({ ...baseEvidence, briefing: "briefing B" }),
       ),
     ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
   });
 });
 
@@ -557,16 +738,24 @@ describe("F56.2b1b — F1/F2 persistência à prova de corrida e reparo (Plano 0
     };
   }
 
-  it("F1: corrida no insert do snapshot ⇒ o perdedor REUSA a linha vencedora equivalente (sem erro)", async () => {
+  it("F1 (snapshot): snapshot vencedor já gravado ⇒ a persistência REUSA a linha equivalente (sem 2ª linha)", async () => {
     const { persistProductOneToOneSnapshot } = await loadPersistModule();
-    const client = createFakeClient({ raceSnapshotInsert: "matching" });
+    const client = createFakeClient();
     const { snapshot, evidence } = await buildPair();
+
+    // O vencedor da corrida já gravou o snapshot (mesma identidade/conteúdo);
+    // o RPC atômico o reusa — sem segunda linha e sem erro.
+    client.tables.image_generation_config_snapshots = [frozenSnapshotRow()];
 
     const result = await persistProductOneToOneSnapshot(asClient(client), snapshot, evidence);
 
-    expect(result.reused).toBe(true);
+    expect(result.snapshotOriginalId).toBe("snap-frozen");
     expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
     expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding[0].snapshot_original_id).toBe(
+      "snap-frozen",
+    );
   });
 
   it("F1: corrida no insert da evidência ⇒ o perdedor REUSA a linha vencedora equivalente (sem erro)", async () => {
@@ -581,15 +770,20 @@ describe("F56.2b1b — F1/F2 persistência à prova de corrida e reparo (Plano 0
     expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
   });
 
-  it("F1: corrida no snapshot com conteúdo divergente ⇒ operation_identity_conflict (sem 2ª linha)", async () => {
+  it("F1 (snapshot): snapshot vencedor DIVERGENTE ⇒ operation_identity_conflict (sem 2ª linha)", async () => {
     const { persistProductOneToOneSnapshot } = await loadPersistModule();
-    const client = createFakeClient({ raceSnapshotInsert: "divergent" });
+    const client = createFakeClient();
     const { snapshot, evidence } = await buildPair();
+
+    client.tables.image_generation_config_snapshots = [
+      { ...frozenSnapshotRow(), primary_model: "modelo-divergente" },
+    ];
 
     await expect(
       persistProductOneToOneSnapshot(asClient(client), snapshot, evidence),
     ).rejects.toMatchObject({ code: "operation_identity_conflict" });
     expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(0);
     expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(0);
   });
 
@@ -604,35 +798,71 @@ describe("F56.2b1b — F1/F2 persistência à prova de corrida e reparo (Plano 0
     expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
   });
 
-  it("F2: snapshot congelado SEM evidência é REPARADO sem substituir o snapshot (mesmo id, reused)", async () => {
-    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+  it("F2: snapshot+binding SEM evidência é REPARADO sem substituir o snapshot (mesmo id, reused)", async () => {
+    const { persistProductOneToOneSnapshot, computeContentFingerprint } =
+      await loadPersistModule();
     const client = createFakeClient();
     const { snapshot, evidence } = await buildPair();
 
     client.tables.image_generation_config_snapshots = [frozenSnapshotRow()];
+    client.tables.product_1_1_snapshot_content_binding = [
+      {
+        snapshot_original_id: "snap-frozen",
+        campaign_id: "camp-1",
+        operation_id: "op-1",
+        content_fingerprint: computeContentFingerprint(evidence),
+      },
+    ];
 
     const result = await persistProductOneToOneSnapshot(asClient(client), snapshot, evidence);
 
     expect(result.snapshotOriginalId).toBe("snap-frozen");
     expect(result.reused).toBe(true);
     expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
     expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
     expect(
       client.tables.product_1_1_snapshot_frozen_evidence[0].snapshot_original_id,
     ).toBe("snap-frozen");
   });
 
-  it("F2: reparo com evidência divergente ⇒ operation_identity_conflict (snapshot preservado)", async () => {
-    const { persistProductOneToOneSnapshot } = await loadPersistModule();
-    const client = createFakeClient({ raceEvidenceInsert: "divergent" });
+  it("F2: reparo com conteúdo DIVERGENTE ⇒ operation_identity_conflict (snapshot preservado, sem evidência)", async () => {
+    const {
+      persistProductOneToOneSnapshot,
+      buildProductOneToOneFrozenEvidence,
+      computeContentFingerprint,
+    } = await loadPersistModule();
+    const client = createFakeClient();
     const { snapshot, evidence } = await buildPair();
 
     client.tables.image_generation_config_snapshots = [frozenSnapshotRow()];
+    client.tables.product_1_1_snapshot_content_binding = [
+      {
+        snapshot_original_id: "snap-frozen",
+        campaign_id: "camp-1",
+        operation_id: "op-1",
+        content_fingerprint: computeContentFingerprint(evidence),
+      },
+    ];
+
+    const divergent = buildProductOneToOneFrozenEvidence({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      campaignIntent: "offer",
+      backgroundDirection: "studio",
+      briefing: "briefing divergente",
+      referenceSelections: [{ kind: "product", id: "img-1" }],
+      baseVersion: "48.2.6-produto-1-1-v1",
+      composerVersion: "48.2.4-prompt-composer-v6",
+      policyVersions: { fundo: "48.2.6-background-direction-v1" },
+    });
 
     await expect(
-      persistProductOneToOneSnapshot(asClient(client), snapshot, evidence),
+      persistProductOneToOneSnapshot(asClient(client), snapshot, divergent),
     ).rejects.toMatchObject({ code: "operation_identity_conflict" });
     expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(0);
   });
 });
 
@@ -741,7 +971,30 @@ describe("F56.2b1b — preflight fail-closed (Plano 02)", () => {
     expect(assertCalls).toBe(0);
   });
 
-  it("snapshot de novo fluxo sem evidência congelada ⇒ bloqueio fail-closed (sem reserva/provider)", async () => {
+  it("F2: estado PARCIAL REPARÁVEL (snapshot+binding, sem evidência) NÃO lança; devolve `repairable`", async () => {
+    const { runNewFlowPreflight } = await loadPreflightModule();
+    let assertCalls = 0;
+
+    const result = await runNewFlowPreflight({
+      campaignId: "camp-1",
+      resolveConfig: async () => initialConfig(),
+      assertExecutable: async (pair) => {
+        assertCalls += 1;
+        return completeCoverage(pair);
+      },
+      resolveFrozenEvidenceState: async () => ({
+        kind: "repairable",
+        snapshotOriginalId: "snap-1",
+      }),
+    });
+
+    // Não lança: o orquestrador repara ANTES de reservar/chamar provider.
+    expect(result.frozenEvidence).toEqual({ kind: "repairable", snapshotOriginalId: "snap-1" });
+    expect(assertCalls).toBe(1);
+    expect(result.pricing.pricingCoverage).toBe("complete");
+  });
+
+  it("F2: estado CORROMPIDO (snapshot SEM binding) ⇒ fail-closed, sem reserva/provider", async () => {
     const { runNewFlowPreflight, NewFlowPreflightError } = await loadPreflightModule();
     let assertCalls = 0;
 
@@ -754,16 +1007,16 @@ describe("F56.2b1b — preflight fail-closed (Plano 02)", () => {
           return completeCoverage(pair);
         },
         resolveFrozenEvidenceState: async () => ({
-          kind: "evidence_missing",
+          kind: "corrupt",
           snapshotOriginalId: "snap-1",
         }),
       }),
-    ).rejects.toMatchObject({ code: "frozen_evidence_missing" });
+    ).rejects.toMatchObject({ code: "frozen_evidence_corrupt" });
     expect(assertCalls).toBe(0);
     void NewFlowPreflightError;
   });
 
-  it("snapshot de novo fluxo COM evidência congelada (replay) prossegue", async () => {
+  it("snapshot de novo fluxo COM evidência congelada (replay `complete`) prossegue", async () => {
     const { runNewFlowPreflight } = await loadPreflightModule();
 
     const result = await runNewFlowPreflight({
@@ -771,12 +1024,13 @@ describe("F56.2b1b — preflight fail-closed (Plano 02)", () => {
       resolveConfig: async () => initialConfig(),
       assertExecutable: async (pair) => completeCoverage(pair),
       resolveFrozenEvidenceState: async () => ({
-        kind: "evidence_present",
+        kind: "complete",
         snapshotOriginalId: "snap-1",
       }),
     });
 
     expect(result.pricing.pricingCoverage).toBe("complete");
+    expect(result.frozenEvidence).toEqual({ kind: "complete", snapshotOriginalId: "snap-1" });
   });
 
   it("C5: o preflight NÃO constrói nem persiste snapshot/evidência (zero insert)", async () => {
@@ -804,6 +1058,134 @@ describe("F56.2b1b — preflight fail-closed (Plano 02)", () => {
         expect(source).not.toContain(needle);
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F2 E2E — falha da evidência → nova entrada → preflight `repairable` → reparo
+// seguro no MESMO snapshot; sem reserve/provider enquanto a evidência incompleta.
+// Exercita os componentes REAIS (persist-snapshot + preflight) com fakes injetados.
+// ---------------------------------------------------------------------------
+
+describe("F56.2b1b — F2 E2E: reparo controlado com content binding persistido", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function buildPair() {
+    const { buildProductOneToOneSnapshot, buildProductOneToOneFrozenEvidence } =
+      await loadPersistModule();
+    const snapshot = buildProductOneToOneSnapshot(initialConfig(), { campaignId: "camp-1" });
+    const evidence = buildProductOneToOneFrozenEvidence({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      campaignIntent: "offer",
+      backgroundDirection: "studio",
+      briefing: "Briefing congelado",
+      referenceSelections: [{ kind: "product", id: "img-1" }],
+      baseVersion: "48.2.6-produto-1-1-v1",
+      composerVersion: "48.2.4-prompt-composer-v6",
+      policyVersions: { fundo: "48.2.6-background-direction-v1" },
+    });
+    return { snapshot, evidence };
+  }
+
+  it("falha da evidência → preflight `repairable` → reparo equivalente (mesmo snapshot, reused) → sem reserve/provider antes de completar", async () => {
+    const { persistProductOneToOneSnapshot } = await loadPersistModule();
+    const { runNewFlowPreflight } = await loadPreflightModule();
+
+    const client = createFakeClient({ failFirstEvidenceInsert: true });
+    const { snapshot, evidence } = await buildPair();
+
+    const reserve = vi.fn(async () => "reserved");
+    const provider = vi.fn(async () => "provider");
+
+    // --- 1) 1ª chamada: RPC grava snapshot+binding; o insert da evidência FALHA. ---
+    await expect(
+      persistProductOneToOneSnapshot(asClient(client), snapshot, evidence),
+    ).rejects.toMatchObject({ code: "frozen_evidence_persist_failed" });
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(0);
+
+    const partialSnapshotId = String(client.tables.image_generation_config_snapshots[0].id);
+
+    // --- 2) Nova entrada: o preflight devolve `repairable` (NÃO lança). ---
+    const preflight = await runNewFlowPreflight({
+      campaignId: "camp-1",
+      resolveConfig: async () => initialConfig(),
+      assertExecutable: async (pair) => completeCoverage(pair),
+      resolveFrozenEvidenceState: makeFrozenEvidenceReader(client),
+    });
+    expect(preflight.frozenEvidence).toEqual({
+      kind: "repairable",
+      snapshotOriginalId: partialSnapshotId,
+    });
+
+    // Guarda de ordem (contrato do orquestrador): NÃO reservar/chamar provider
+    // enquanto a evidência congelada estiver incompleta.
+    const beforeRepair = await makeFrozenEvidenceReader(client)("camp-1");
+    if (beforeRepair.kind === "complete") {
+      await reserve();
+      await provider();
+    }
+    expect(reserve).not.toHaveBeenCalled();
+    expect(provider).not.toHaveBeenCalled();
+
+    // --- 3) Reparo com conteúdo EQUIVALENTE ⇒ MESMO snapshot, reused:true. ---
+    const repaired = await persistProductOneToOneSnapshot(asClient(client), snapshot, evidence);
+    expect(repaired.snapshotOriginalId).toBe(partialSnapshotId);
+    expect(repaired.reused).toBe(true);
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence[0].snapshot_original_id).toBe(
+      partialSnapshotId,
+    );
+
+    // Agora sim: evidência completa ⇒ o fluxo pode reservar/chamar provider.
+    const afterRepair = await makeFrozenEvidenceReader(client)("camp-1");
+    if (afterRepair.kind === "complete") {
+      await reserve();
+      await provider();
+    }
+    expect(reserve).toHaveBeenCalledTimes(1);
+    expect(provider).toHaveBeenCalledTimes(1);
+  });
+
+  it("divergência no reparo (fingerprint do binding) ⇒ operation_identity_conflict, sem evidência e snapshot inalterado", async () => {
+    const { persistProductOneToOneSnapshot, buildProductOneToOneFrozenEvidence } =
+      await loadPersistModule();
+
+    const client = createFakeClient({ failFirstEvidenceInsert: true });
+    const { snapshot, evidence } = await buildPair();
+
+    // Estado parcial: snapshot+binding persistidos, evidência ausente.
+    await expect(
+      persistProductOneToOneSnapshot(asClient(client), snapshot, evidence),
+    ).rejects.toMatchObject({ code: "frozen_evidence_persist_failed" });
+    const snapshotId = client.tables.image_generation_config_snapshots[0].id;
+
+    const divergent = buildProductOneToOneFrozenEvidence({
+      campaignId: "camp-1",
+      operationId: "op-1",
+      campaignIntent: "offer",
+      backgroundDirection: "studio",
+      briefing: "briefing DIVERGENTE",
+      referenceSelections: [{ kind: "product", id: "img-1" }],
+      baseVersion: "48.2.6-produto-1-1-v1",
+      composerVersion: "48.2.4-prompt-composer-v6",
+      policyVersions: { fundo: "48.2.6-background-direction-v1" },
+    });
+
+    await expect(
+      persistProductOneToOneSnapshot(asClient(client), snapshot, divergent),
+    ).rejects.toMatchObject({ code: "operation_identity_conflict" });
+
+    expect(client.tables.image_generation_config_snapshots).toHaveLength(1);
+    expect(client.tables.image_generation_config_snapshots[0].id).toBe(snapshotId);
+    expect(client.tables.product_1_1_snapshot_content_binding).toHaveLength(1);
+    expect(client.tables.product_1_1_snapshot_frozen_evidence).toHaveLength(0);
   });
 });
 

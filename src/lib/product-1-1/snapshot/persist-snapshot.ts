@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -27,17 +28,25 @@ import type { ProductOneToOneIntent } from "@/lib/product-1-1/intent-selection";
  * (reusa snapshot/evidência); conteúdo divergente para a mesma identidade é
  * recusado (`operation_identity_conflict`) sem gravar.
  *
+ * F2 — recuperação controlada de pré-reserva com "content binding" (fonte de
+ * comparação PERSISTIDA): o snapshot e o binding (fingerprint do conteúdo
+ * congelado) são gravados ATOMICAMENTE pelo RPC
+ * `product_1_1_persist_snapshot_with_binding` — garantindo que NUNCA exista
+ * "snapshot sem binding" (só é possível "snapshot+binding sem evidência"). Um
+ * estado parcial (binding existe, evidência ausente) é REPARADO inserindo a
+ * evidência para o MESMO `snapshot_original_id`; o fingerprint recalculado é
+ * comparado ao fingerprint persistido no binding — divergência ⇒
+ * `operation_identity_conflict`. O snapshot congelado NUNCA é substituído.
+ *
  * Fronteira (LOCAL-ONLY): a migration `20261009000003` é apenas AUTORADA neste
  * plano; é aplicada somente na instância isolada no Plano 09. Nenhum efeito
  * financeiro/provider ocorre aqui — o client é injetável e o módulo não chama
  * provider.
  */
 
-const SNAPSHOT_TABLE = "image_generation_config_snapshots";
 const EVIDENCE_TABLE = "product_1_1_snapshot_frozen_evidence";
-
-const SNAPSHOT_COLUMNS =
-  "id, campaign_id, primary_model, primary_quality, fallback_model, fallback_quality, config_version_id, origin";
+const PERSIST_SNAPSHOT_WITH_BINDING_RPC =
+  "product_1_1_persist_snapshot_with_binding";
 
 const EVIDENCE_COLUMNS =
   "id, snapshot_original_id, campaign_id, operation_id, campaign_intent, background_direction, briefing, reference_selections, base_version, composer_version, policy_versions";
@@ -108,17 +117,6 @@ export class ProductOneToOneSnapshotPersistError extends Error {
 export interface PersistProductOneToOneSnapshotResult {
   readonly snapshotOriginalId: string;
   readonly reused: boolean;
-}
-
-interface SnapshotRow {
-  id: string;
-  campaign_id: string;
-  primary_model: string;
-  primary_quality: string;
-  fallback_model: string;
-  fallback_quality: string;
-  config_version_id: string;
-  origin: string;
 }
 
 interface EvidenceRow {
@@ -193,19 +191,40 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
-function snapshotMatches(
-  row: SnapshotRow,
-  snapshot: ImageGenerationConfigSnapshot,
-): boolean {
-  return (
-    row.campaign_id === snapshot.campaignId &&
-    row.primary_model === snapshot.primaryModel &&
-    row.primary_quality === snapshot.primaryQuality &&
-    row.fallback_model === snapshot.fallbackModel &&
-    row.fallback_quality === snapshot.fallbackQuality &&
-    row.config_version_id === snapshot.configVersionId &&
-    row.origin === snapshot.origin
-  );
+/**
+ * F2 — fingerprint estável do conteúdo CONGELADO (a fonte de comparação
+ * PERSISTIDA no binding `product_1_1_snapshot_content_binding`). Cobre exatamente
+ * os campos congelados que definem a identidade do conteúdo: `campaignIntent`,
+ * `backgroundDirection`, `briefing`, `referenceSelections`, `baseVersion`,
+ * `composerVersion` e `policyVersions`. Determinístico: o MESMO conteúdo produz o
+ * MESMO fingerprint (serialização estável + SHA-256), permitindo comparar o
+ * conteúdo recebido em um reparo contra o conteúdo originalmente congelado.
+ *
+ * A identidade `(campaignId, operationId)` fica FORA do fingerprint: ela é a
+ * chave do binding (comparada separadamente), não o conteúdo.
+ */
+export function computeContentFingerprint(
+  content: Pick<
+    ProductOneToOneFrozenEvidence,
+    | "campaignIntent"
+    | "backgroundDirection"
+    | "briefing"
+    | "referenceSelections"
+    | "baseVersion"
+    | "composerVersion"
+    | "policyVersions"
+  >,
+): string {
+  const payload = {
+    campaignIntent: content.campaignIntent,
+    backgroundDirection: content.backgroundDirection,
+    briefing: content.briefing,
+    referenceSelections: content.referenceSelections,
+    baseVersion: content.baseVersion,
+    composerVersion: content.composerVersion,
+    policyVersions: content.policyVersions,
+  };
+  return createHash("sha256").update(stableJson(payload)).digest("hex");
 }
 
 function evidenceMatches(
@@ -225,21 +244,6 @@ function evidenceMatches(
   );
 }
 
-async function findSnapshotByCampaign(
-  client: SupabaseClient,
-  campaignId: string,
-): Promise<SnapshotRow | null> {
-  const { data, error } = await client
-    .from(SNAPSHOT_TABLE)
-    .select(SNAPSHOT_COLUMNS)
-    .eq("campaign_id", campaignId)
-    .maybeSingle<SnapshotRow>();
-  if (error) {
-    throw new ProductOneToOneSnapshotPersistError("snapshot_read_failed", error.message);
-  }
-  return data ?? null;
-}
-
 async function findEvidenceByIdentity(
   client: SupabaseClient,
   campaignId: string,
@@ -255,37 +259,6 @@ async function findEvidenceByIdentity(
     throw new ProductOneToOneSnapshotPersistError("evidence_read_failed", error.message);
   }
   return data ?? null;
-}
-
-async function insertSnapshot(
-  client: SupabaseClient,
-  snapshot: ImageGenerationConfigSnapshot,
-): Promise<string> {
-  const { data, error } = await client
-    .from(SNAPSHOT_TABLE)
-    .insert({
-      campaign_id: snapshot.campaignId,
-      primary_model: snapshot.primaryModel,
-      primary_quality: snapshot.primaryQuality,
-      fallback_model: snapshot.fallbackModel,
-      fallback_quality: snapshot.fallbackQuality,
-      config_version_id: snapshot.configVersionId,
-      origin: snapshot.origin,
-      run_id: snapshot.runId ?? null,
-      trace_id: snapshot.traceId ?? null,
-    })
-    .select("id")
-    .single<{ id: string }>();
-  if (error) {
-    throw new ProductOneToOneSnapshotPersistError("snapshot_persist_failed", error.message);
-  }
-  if (!data) {
-    throw new ProductOneToOneSnapshotPersistError(
-      "snapshot_persist_failed",
-      "missing_insert_result",
-    );
-  }
-  return data.id;
 }
 
 async function insertEvidenceRow(
@@ -367,21 +340,90 @@ async function ensureEvidence(
   }
 }
 
+interface PersistSnapshotWithBindingRow {
+  snapshot_original_id: string;
+  reused: boolean;
+  content_fingerprint: string;
+}
+
+function mapPersistRpcError(message: string | undefined | null): ProductOneToOneSnapshotPersistError {
+  const text = message ?? "";
+  if (text.includes("operation_identity_conflict")) {
+    return new ProductOneToOneSnapshotPersistError("operation_identity_conflict", text);
+  }
+  return new ProductOneToOneSnapshotPersistError("snapshot_persist_failed", text || "unknown");
+}
+
 /**
- * Persiste o snapshot e a evidência congelada com a MESMA identidade explícita
- * (F6/C3). Falha do insert da evidência é tipada e bloqueia a operação.
+ * F2 — grava o snapshot e o binding ATOMICAMENTE (única transação no Postgres) via
+ * RPC `product_1_1_persist_snapshot_with_binding`, garantindo que NUNCA exista
+ * "snapshot sem binding". Idempotente: reusa snapshot/binding existentes SOMENTE
+ * sob equivalência (`operation_identity_conflict` em divergência). Devolve o
+ * `snapshot_original_id` e o `content_fingerprint` PERSISTIDO (fonte de comparação
+ * do reparo). Defesa em profundidade: o fingerprint retornado DEVE ser igual ao
+ * fingerprint calculado do conteúdo recebido.
+ */
+async function persistSnapshotWithBinding(
+  client: SupabaseClient,
+  snapshot: ImageGenerationConfigSnapshot,
+  operationId: string,
+  contentFingerprint: string,
+): Promise<PersistSnapshotWithBindingRow> {
+  const { data, error } = await client.rpc(PERSIST_SNAPSHOT_WITH_BINDING_RPC, {
+    p_campaign_id: snapshot.campaignId,
+    p_primary_model: snapshot.primaryModel,
+    p_primary_quality: snapshot.primaryQuality,
+    p_fallback_model: snapshot.fallbackModel,
+    p_fallback_quality: snapshot.fallbackQuality,
+    p_config_version_id: snapshot.configVersionId,
+    p_origin: snapshot.origin,
+    p_operation_id: operationId,
+    p_content_fingerprint: contentFingerprint,
+    p_run_id: snapshot.runId ?? null,
+    p_trace_id: snapshot.traceId ?? null,
+  });
+  if (error) throw mapPersistRpcError(error.message);
+
+  // PostgREST devolve SETOF como array; toleramos também um objeto único.
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | PersistSnapshotWithBindingRow
+    | null
+    | undefined;
+  if (!row || typeof row.snapshot_original_id !== "string" || row.snapshot_original_id === "") {
+    throw new ProductOneToOneSnapshotPersistError("snapshot_persist_failed", "missing_rpc_result");
+  }
+
+  // Defesa em profundidade (F2): o conteúdo PERSISTIDO deve ser o recebido.
+  if (row.content_fingerprint !== contentFingerprint) {
+    throw new ProductOneToOneSnapshotPersistError(
+      "operation_identity_conflict",
+      "content_fingerprint_divergent",
+    );
+  }
+
+  return row;
+}
+
+/**
+ * Persiste o snapshot + binding (atômico, via RPC) e a evidência congelada com a
+ * MESMA identidade explícita (F6/C3). Falha do insert da evidência é tipada e
+ * bloqueia a operação.
  *
- * F1 — à prova de corrida: os DOIS inserts (snapshot e evidência) TENTAM gravar
- * e, em falha por concorrência (UNIQUE), RE-CONSULTAM a identidade. Reusa a
- * linha vencedora SOMENTE quando equivalente; divergência ⇒
- * `operation_identity_conflict`; ausência persistente ⇒ `snapshot_persist_failed`
- * (snapshot) / `frozen_evidence_persist_failed` (evidência).
+ * F2 — escrita atômica: o snapshot e o binding (fingerprint do conteúdo congelado)
+ * são gravados numa ÚNICA transação pelo RPC; assim o único estado parcial possível
+ * é "snapshot+binding SEM evidência" (NUNCA "snapshot sem binding").
  *
- * F2 — recuperação controlada de pré-reserva: um snapshot congelado SEM evidência
- * (estado parcial de uma chamada anterior) é REPARADO aqui inserindo a evidência
- * para o MESMO `snapshot_original_id` — nunca substituindo o snapshot congelado —
- * devolvendo `{ snapshotOriginalId, reused: true }`. Conteúdo divergente no reparo
- * ⇒ `operation_identity_conflict`.
+ * F2 — recuperação controlada de pré-reserva: quando a evidência está ausente mas o
+ * binding existe, o conteúdo recebido é comparado (fingerprint recalculado ×
+ * fingerprint PERSISTIDO) e a evidência é inserida para o MESMO
+ * `snapshot_original_id` — nunca substituindo o snapshot congelado — devolvendo
+ * `{ snapshotOriginalId: <mesmo>, reused: true }`. Conteúdo divergente no reparo ⇒
+ * `operation_identity_conflict`.
+ *
+ * F1 — à prova de corrida na evidência: pré-consulta + insert; em falha por
+ * concorrência (UNIQUE), RE-CONSULTA e reusa SOMENTE sob equivalência; divergência
+ * ⇒ `operation_identity_conflict`; ausência persistente ⇒
+ * `frozen_evidence_persist_failed`.
  */
 export async function persistProductOneToOneSnapshot(
   client: SupabaseClient,
@@ -395,50 +437,22 @@ export async function persistProductOneToOneSnapshot(
     );
   }
 
-  // --- Snapshot: pré-consulta + insert à prova de corrida (F1). ---
-  let snapshotOriginalId: string;
-  let snapshotReused: boolean;
+  const contentFingerprint = computeContentFingerprint(evidence);
 
-  const existingSnapshot = await findSnapshotByCampaign(client, snapshot.campaignId);
-  if (existingSnapshot) {
-    if (!snapshotMatches(existingSnapshot, snapshot)) {
-      throw new ProductOneToOneSnapshotPersistError(
-        "operation_identity_conflict",
-        "snapshot_divergent",
-      );
-    }
-    snapshotOriginalId = existingSnapshot.id;
-    snapshotReused = true;
-  } else {
-    try {
-      snapshotOriginalId = await insertSnapshot(client, snapshot);
-      snapshotReused = false;
-    } catch (error) {
-      // Corrida: outra requisição pode ter vencido o UNIQUE. Re-consulta.
-      const racedSnapshot = await findSnapshotByCampaign(client, snapshot.campaignId);
-      if (!racedSnapshot) {
-        if (error instanceof ProductOneToOneSnapshotPersistError) throw error;
-        throw new ProductOneToOneSnapshotPersistError(
-          "snapshot_persist_failed",
-          error instanceof Error ? error.message : "unknown",
-        );
-      }
-      if (!snapshotMatches(racedSnapshot, snapshot)) {
-        throw new ProductOneToOneSnapshotPersistError(
-          "operation_identity_conflict",
-          "snapshot_divergent",
-        );
-      }
-      snapshotOriginalId = racedSnapshot.id;
-      snapshotReused = true;
-    }
-  }
+  // --- Snapshot + binding: escrita atômica e idempotente (F2). ---
+  const bindingRow = await persistSnapshotWithBinding(
+    client,
+    snapshot,
+    evidence.operationId,
+    contentFingerprint,
+  );
+  const snapshotOriginalId = bindingRow.snapshot_original_id;
 
   // --- Evidência: pré-consulta + insert à prova de corrida + reparo (F1/F2). ---
   const evidenceOutcome = await ensureEvidence(client, snapshotOriginalId, evidence);
 
   return {
     snapshotOriginalId,
-    reused: snapshotReused || evidenceOutcome === "reused",
+    reused: bindingRow.reused || evidenceOutcome === "reused",
   };
 }
