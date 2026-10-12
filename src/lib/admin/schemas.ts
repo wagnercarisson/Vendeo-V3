@@ -396,3 +396,27 @@ export const LabProgramUpdateRequestSchema = z
   .strict();
 
 export type LabProgramUpdateRequest = z.infer<typeof LabProgramUpdateRequestSchema>;
+
+/**
+ * Body de POST /api/admin/product-1-1-pending (F56.2.2, Plano 07 — B1B-D5).
+ * Resolução administrativa auditada de uma pendência do Produto 1:1: identidade
+ * `campaignId + operationId`, `action` restrita a
+ * `deliver_existing_art | refund_once`, `resolutionOperationId` UUID (idempotência
+ * por conteúdo) e `reason` obrigatório (auditoria). `.strict()` REJEITA qualquer
+ * campo desconhecido — em especial a EVIDÊNCIA NÃO pode ser declarada pelo
+ * cliente (`art_kind`/`execution_ended` são DERIVADOS server-side, F5). A gravação
+ * ocorre apenas pela RPC auditada — nunca por mutação direta.
+ */
+export const ProductOneToOnePendingResolutionSchema = z
+  .object({
+    campaignId: z.string().uuid(),
+    operationId: z.string().uuid(),
+    action: z.enum(["deliver_existing_art", "refund_once"]),
+    resolutionOperationId: z.string().uuid(),
+    reason: z.string().trim().min(1),
+  })
+  .strict();
+
+export type ProductOneToOnePendingResolution = z.infer<
+  typeof ProductOneToOnePendingResolutionSchema
+>;

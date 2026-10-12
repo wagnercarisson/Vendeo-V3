@@ -14,6 +14,7 @@ import {
 } from "../pending/resolve-pending-operation";
 import {
   SupabasePendingOperationsRepository,
+  type PendingOperationState,
 } from "../pending/pending-operations-repository";
 
 // ---------------------------------------------------------------------------
@@ -219,7 +220,7 @@ function createFakeClient(tables: {
   };
 }
 
-function record(overrides: Partial<Record<string, unknown>> = {}) {
+function record(overrides: Partial<PendingOperationState> = {}): PendingOperationState {
   return {
     campaignId: CAMPAIGN_ID,
     operationId: OPERATION_ID,
@@ -238,11 +239,12 @@ function record(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 function fakeRepository(input: {
-  record?: ReturnType<typeof record> | null;
+  record?: PendingOperationState | null;
   probe?: { kind: "integral" } | { kind: "absent" } | { kind: "invalid" } | { kind: "indeterminate" };
 }) {
   return {
     findPendingOperation: vi.fn(async () => input.record ?? null),
+    listPendingOperations: vi.fn(async () => []),
     probeArtifact: vi.fn(async () =>
       input.probe && input.probe.kind === "integral"
         ? {
