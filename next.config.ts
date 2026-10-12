@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
+import { buildRobotsHeaders } from "./src/lib/seo/robots-headers";
+import { isProductionConfirmed } from "./src/lib/seo/environment";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return buildRobotsHeaders({ productionConfirmed: isProductionConfirmed() });
+  },
   async redirects() {
     return [
       {
