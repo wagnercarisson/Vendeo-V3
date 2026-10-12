@@ -540,31 +540,25 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
     });
 
     it("(I2) snapshot persistido concorda com o efetivamente usado (text-only × com identidade)", async () => {
-      // Sem identidade ⇒ referências sem assinatura de identidade.
+      // C3 (complemento) — tentativa ÚNICA, DETERMINÍSTICA. O retry genérico foi
+      // REMOVIDO: uma regressão real na 1ª tentativa NÃO pode ser mascarada por um
+      // `continue` silencioso. Qualquer non-`result` REAL falha a prova.
       const image = await jpeg1024DataUrl();
-      let terminal: Record<string, unknown> = {};
-      let attempts = 0;
-      // Tolerância a falha de infra transitória: reexecuta até um terminal REAL.
-      while (attempts < 4) {
-        attempts += 1;
-        const campaignTextOnly = await createCampaign(ctx.supabase, storeId);
-        const opTextOnly = randomUUID();
-        const captured: AiInvocationRequest[] = [];
-        const response = await runProductOneToOneGeneration(input(campaignTextOnly, opTextOnly), deps({
-          createGateway: () => gatewayCapturing(captured, async () => ({ imageBase64: image.split(",")[1], mimeType: "image/jpeg" })),
-        }));
-        terminal = terminalEvent(await readNdjson(response));
-        if (terminal.type !== "result") continue;
-
-        expect(captured[0].identityImageUrl).toBeUndefined();
-        const textOnly = await ctx.pg.query<{ reference_selections: unknown }>(
-          "SELECT reference_selections FROM public.product_1_1_snapshot_frozen_evidence WHERE campaign_id = $1 AND operation_id = $2",
-          [campaignTextOnly, opTextOnly],
-        );
-        expect(textOnly.rows[0].reference_selections).toEqual([]);
-        break;
-      }
+      const campaignTextOnly = await createCampaign(ctx.supabase, storeId);
+      const opTextOnly = randomUUID();
+      const captured: AiInvocationRequest[] = [];
+      const response = await runProductOneToOneGeneration(input(campaignTextOnly, opTextOnly), deps({
+        createGateway: () => gatewayCapturing(captured, async () => ({ imageBase64: image.split(",")[1], mimeType: "image/jpeg" })),
+      }));
+      const terminal = terminalEvent(await readNdjson(response));
       expect(terminal.type).toBe("result");
+
+      expect(captured[0].identityImageUrl).toBeUndefined();
+      const textOnly = await ctx.pg.query<{ reference_selections: unknown }>(
+        "SELECT reference_selections FROM public.product_1_1_snapshot_frozen_evidence WHERE campaign_id = $1 AND operation_id = $2",
+        [campaignTextOnly, opTextOnly],
+      );
+      expect(textOnly.rows[0].reference_selections).toEqual([]);
     }, 60_000);
   });
 });

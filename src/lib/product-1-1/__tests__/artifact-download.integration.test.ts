@@ -2,11 +2,55 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
+import { NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+// Complemento C2 — a prova do download exercita a ROTA REAL
+// (`src/app/api/campaign/[id]/download/route.ts`). `supabaseAdmin` é um Proxy
+// dinâmico sobre o cliente ISOLADO real (definido em `beforeAll`), de modo que a
+// rota/`getCampaign`/`ProductOneToOneArtifactStore`/`AttemptStartClient` falem
+// com o Postgres/Storage isolados. Apenas auth/ownership e a flag de aprovação
+// são mockados (o resto é código real).
+const h = vi.hoisted(() => ({
+  admin: {} as Record<string, unknown>,
+  requireOwnership: vi.fn(),
+  requireApiUser: vi.fn(),
+}));
 
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/supabase/server", () => ({
+  supabaseAdmin: new Proxy(
+    {},
+    {
+      get: (_target, prop) => {
+        const inner = h.admin as Record<string | symbol, unknown>;
+        const value = inner[prop];
+        return typeof value === "function"
+          ? (value as (...args: unknown[]) => unknown).bind(inner)
+          : value;
+      },
+    },
+  ),
+  createServerClient: vi.fn(),
+}));
+vi.mock("@/lib/auth/require-user", () => ({
+  requireApiUser: h.requireApiUser,
+  requireUser: h.requireApiUser,
+  UnauthorizedError: class UnauthorizedError extends Error {},
+}));
+vi.mock("@/lib/auth/store-ownership", () => ({
+  requireOwnership: h.requireOwnership,
+  getCurrentStore: vi.fn(),
+  requireAuthorizedStore: vi.fn(),
+}));
+vi.mock("@/lib/feature-flags/feature-flag-service", () => ({
+  isCampaignApprovalEnabled: vi.fn(async () => false),
+  isForceBriefVisionCheckEnabled: vi.fn(async () => false),
+  FORCE_BRIEF_VISION_CHECK_KEY: "force_brief_vision_check",
+  FeatureFlagService: vi.fn(),
+}));
+
+import { StoreNotFoundError } from "@/lib/auth/errors";
 import {
   ProductOneToOneArtifactStore,
   artifactStoragePath,
@@ -18,8 +62,12 @@ import {
   createCampaign,
   createIsolatedContext,
   createTestStore,
+  deliverCredit,
   jpeg1024DataUrl,
+  markArtUploaded,
   pngDataUrl,
+  reserveCredit,
+  setCredits,
   type IsolatedContext,
 } from "./integration-harness";
 
@@ -69,6 +117,11 @@ describe("F56.2b1b — artifact download / Storage real", () => {
     ctx = await createIsolatedContext();
     const store = await createTestStore(ctx.supabase);
     storeId = store.storeId;
+    await setCredits(ctx.pg, storeId, 10);
+    // A rota REAL fala com o Postgres/Storage ISOLADOS via `supabaseAdmin`.
+    h.admin = ctx.supabase as unknown as Record<string, unknown>;
+    h.requireApiUser.mockResolvedValue({ userId: "00000000-0000-4000-8000-0000000000aa" });
+    h.requireOwnership.mockResolvedValue({ id: storeId });
   }, 60_000);
 
   afterAll(async () => {
@@ -232,4 +285,59 @@ describe("F56.2b1b — artifact download / Storage real", () => {
     const probe = await store.probeArtifact({ storeId, campaignId: campaign, operationId });
     expect(probe.kind).toBe("indeterminate");
   });
+
+  it("C2 — a ROTA REAL `/api/campaign/[id]/download` só libera com `delivered`+`integral` (403/sem assinatura vs 302/uma assinatura) e aplica OWNERSHIP", async () => {
+    const campaignId = randomUUID();
+    const operationId = randomUUID();
+
+    // Campanha do NOVO fluxo (marcador PERSISTIDO `frozenContentReferences` presente).
+    const { error: insertError } = await ctx.supabase.from("campaigns").insert({
+      id: campaignId,
+      store_id: storeId,
+      status: "ready",
+      product_name: "Produto rota",
+      storage_path: `${storeId}/${campaignId}.jpg`,
+      input_snapshot: { frozenContentReferences: [] },
+    });
+    expect(insertError).toBeNull();
+
+    // Operação PERSISTIDA (`art_uploaded`) + arte ÍNTEGRA no Storage real.
+    await reserveCredit(ctx.pg, storeId, campaignId, operationId);
+    await markArtUploaded(ctx.pg, campaignId, operationId);
+    await new ProductOneToOneArtifactStore(ctx.supabase).storeArtifact({
+      storeId,
+      campaignId,
+      operationId,
+      imageDataUrl: await jpeg1024DataUrl(),
+    });
+
+    // Contador de ASSINATURA no Storage subjacente usado pela rota.
+    const counters = { signed: 0 };
+    h.admin = countingSigner(ctx.supabase, counters) as unknown as Record<string, unknown>;
+    h.requireOwnership.mockResolvedValue({ id: storeId });
+
+    const { GET } = await import("@/app/api/campaign/[id]/download/route");
+    const call = () =>
+      GET(new NextRequest(`http://localhost/api/campaign/${campaignId}/download`), {
+        params: Promise.resolve({ id: campaignId }),
+      });
+
+    // ANTES de `delivered` (objeto presente, operação `art_uploaded`) ⇒ 403 + ZERO assinaturas.
+    const blocked = await call();
+    expect(blocked.status).toBe(403);
+    expect(counters.signed).toBe(0);
+
+    // APÓS `delivered` + arte ÍNTEGRA ⇒ 302 + EXATAMENTE UMA URL assinada.
+    await deliverCredit(ctx.pg, campaignId, operationId);
+    const allowed = await call();
+    expect(allowed.status).toBe(302);
+    expect(String(allowed.headers.get("location"))).toContain("token=");
+    expect(counters.signed).toBe(1);
+
+    // OWNERSHIP: `requireOwnership` recusando ⇒ 404 (nunca 302; nenhuma nova assinatura).
+    h.requireOwnership.mockRejectedValueOnce(new StoreNotFoundError("not owner"));
+    const foreign = await call();
+    expect(foreign.status).toBe(404);
+    expect(counters.signed).toBe(1);
+  }, 90_000);
 });

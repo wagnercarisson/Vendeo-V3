@@ -280,8 +280,11 @@ describe("F56.2b1b — persisted campaign / frozen evidence (Postgres/Storage re
     }
   }, 60_000);
 
-  it("C3 — duas submissões COMPLETAS com a MESMA identidade ⇒ uma campanha/um snapshot/sem reserva duplicada", async () => {
-    const campaign = await createCampaign(ctx.supabase, storeId);
+  it("C3 — duas submissões COMPLETAS CONCORRENTES com a MESMA identidade ⇒ UMA campanha/UM snapshot/UM evidence/UMA dedução", async () => {
+    // Store DEDICADA: `deductionCount` conta SOMENTE as deduções desta operação.
+    const store = await createTestStore(ctx.supabase);
+    await setCredits(ctx.pg, store.storeId, 10);
+    const campaign = await createCampaign(ctx.supabase, store.storeId);
     const operationId = randomUUID();
     const image = await jpeg1024DataUrl();
     let providerCalls = 0;
@@ -291,24 +294,34 @@ describe("F56.2b1b — persisted campaign / frozen evidence (Postgres/Storage re
         return { imageBase64: image.split(",")[1], mimeType: "image/jpeg" };
       },
     } as unknown as AiInvoker;
-    const input = {
+    const submissionInput = {
       campaignId: campaign,
       operationId,
-      storeId,
+      storeId: store.storeId,
       briefing,
       briefingText: "briefing",
       campaignIntent: "offer" as const,
       backgroundDirection: "studio" as const,
     };
 
-    const first = await runProductOneToOneGeneration(input, deps({ createGateway: () => gateway }));
-    expect(terminalEvent(await readNdjson(first)).type).toBe("result");
-    // Segunda submissão COMPLETA com a MESMA identidade ⇒ somente consulta.
-    const second = await runProductOneToOneGeneration(input, deps({ createGateway: () => gateway }));
-    const secondTerminal = terminalEvent(await readNdjson(second));
-    expect(secondTerminal.type).toBe("result");
+    // DUAS submissões COMPLETAS e SIMULTÂNEAS com a MESMA identidade.
+    const [first, second] = await Promise.all([
+      runProductOneToOneGeneration(submissionInput, deps({ createGateway: () => gateway })),
+      runProductOneToOneGeneration(submissionInput, deps({ createGateway: () => gateway })),
+    ]);
+    const terminals = [await readNdjson(first), await readNdjson(second)].map(terminalEvent);
+    // Ao menos uma ENTREGOU; nenhuma abre uma segunda operação.
+    expect(terminals.some((terminal) => terminal.type === "result")).toBe(true);
+    // Uma ÚNICA chamada ao provider (a corrida perdedora NÃO chama).
     expect(providerCalls).toBe(1);
 
+    // EXATAMENTE UMA campanha.
+    const campaigns = await ctx.pg.query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM public.campaigns WHERE id = $1",
+      [campaign],
+    );
+    expect(campaigns.rows[0].n).toBe(1);
+    // UM snapshot + UMA evidência congelada.
     const snapshots = await ctx.pg.query<{ n: number }>(
       "SELECT count(*)::int AS n FROM public.image_generation_config_snapshots WHERE campaign_id = $1",
       [campaign],
@@ -319,12 +332,13 @@ describe("F56.2b1b — persisted campaign / frozen evidence (Postgres/Storage re
       [campaign],
     );
     expect(evidences.rows[0].n).toBe(1);
+    // UMA operação de crédito e EXATAMENTE UMA dedução (sem reserva duplicada).
     const creditOps = await ctx.pg.query<{ n: number }>(
       "SELECT count(*)::int AS n FROM public.product_1_1_campaign_credit_operations WHERE campaign_id = $1 AND operation_id = $2",
       [campaign, operationId],
     );
     expect(creditOps.rows[0].n).toBe(1);
-    expect(await deductionCount(ctx.pg, storeId)).toBeGreaterThanOrEqual(1);
+    expect(await deductionCount(ctx.pg, store.storeId)).toBe(1);
 
     // Conteúdo DIVERGENTE para a mesma identidade ⇒ conflito (nada gravado).
     const divergent = evidenceFor(campaign, operationId, "briefing DIFERENTE");
