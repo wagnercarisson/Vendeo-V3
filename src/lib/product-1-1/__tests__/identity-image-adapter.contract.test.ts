@@ -181,3 +181,106 @@ describe("B1 — limites de download da identidade (fallback text-only)", () => 
     expect(resolved).toBeNull();
   });
 });
+
+describe("B1 — teto EFETIVO por bytes REALMENTE lidos (stream em chunks)", () => {
+  /**
+   * Cria um `Response` com corpo CHUNKED controlado (produzido sob demanda, sem
+   * buffer prévio) e `Content-Length` OPCIONAL (ausente/incorreto). O `onCancel`
+   * registra se o reader foi CANCELADO (a leitura parou em vez de bufferizar o
+   * corpo INTEIRO antes de checar o teto).
+   */
+  function streamedResponse(opts: {
+    totalChunks: number;
+    chunkSize: number;
+    contentType?: string;
+    declaredLength?: string | null;
+    onCancel: () => void;
+  }): Response {
+    let produced = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (produced >= opts.totalChunks) {
+          controller.close();
+          return;
+        }
+        produced += 1;
+        // Conteúdo irrelevante — só o TAMANHO (chunkSize) importa.
+        controller.enqueue(new Uint8Array(opts.chunkSize).fill(0x41));
+      },
+      cancel() {
+        opts.onCancel();
+      },
+    });
+    const headers: Record<string, string> = {
+      "content-type": opts.contentType ?? "image/png",
+    };
+    if (opts.declaredLength != null) headers["content-length"] = opts.declaredLength;
+    return new Response(stream, { status: 200, headers });
+  }
+
+  it("SEM `Content-Length` e corpo MAIOR que o teto ⇒ null e o body é CANCELADO (não bufferiza tudo)", async () => {
+    let cancelled = false;
+    const fetchFn = vi.fn(async () =>
+      streamedResponse({
+        totalChunks: 1024,
+        chunkSize: 8,
+        declaredLength: null,
+        onCancel: () => {
+          cancelled = true;
+        },
+      }),
+    );
+    const resolved = await resolveIdentityImageAsDataUrl("https://x.example/logo.png", {
+      fetchFn: fetchFn as unknown as typeof fetch,
+      maxBytes: 16,
+    });
+    expect(resolved).toBeNull();
+    // O reader foi CANCELADO assim que o teto de bytes REAIS foi excedido.
+    expect(cancelled).toBe(true);
+  });
+
+  it("`Content-Length` SUBdeclarado (pequeno) mas corpo REAL maior ⇒ null (rejeita pela sobrecarga REAL)", async () => {
+    let cancelled = false;
+    const fetchFn = vi.fn(async () =>
+      streamedResponse({
+        totalChunks: 512,
+        chunkSize: 8,
+        declaredLength: "8", // ≤ maxBytes ⇒ o fast-path declarado NÃO rejeita
+        onCancel: () => {
+          cancelled = true;
+        },
+      }),
+    );
+    const resolved = await resolveIdentityImageAsDataUrl("https://x.example/logo.png", {
+      fetchFn: fetchFn as unknown as typeof fetch,
+      maxBytes: 16,
+    });
+    expect(resolved).toBeNull();
+    expect(cancelled).toBe(true);
+  });
+
+  it("`Content-Length` SUPERdeclarado (grande) mas corpo REAL pequeno/dentro do teto ⇒ ACEITA (não confia só no declarado)", async () => {
+    let cancelled = false;
+    const fetchFn = vi.fn(async () =>
+      streamedResponse({
+        totalChunks: 2,
+        chunkSize: 4, // 8 bytes REAIS
+        declaredLength: "100", // declarado "grande" (errado), mas ≤ maxBytes
+        onCancel: () => {
+          cancelled = true;
+        },
+      }),
+    );
+    const resolved = await resolveIdentityImageAsDataUrl("https://x.example/logo.png", {
+      fetchFn: fetchFn as unknown as typeof fetch,
+      maxBytes: 128,
+    });
+    expect(resolved).not.toBeNull();
+    expect(resolved!.byteLength).toBe(8);
+    expect(resolved!.dataUrl).toBe(
+      `data:image/png;base64,${Buffer.alloc(8, 0x41).toString("base64")}`,
+    );
+    // O corpo foi lido até o FIM (sem cancelamento) — dentro do teto.
+    expect(cancelled).toBe(false);
+  });
+});

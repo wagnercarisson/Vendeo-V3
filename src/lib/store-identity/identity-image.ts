@@ -18,7 +18,11 @@ import { createHash } from "node:crypto";
  *
  * Segurança/limites (falha ⇒ `null` ⇒ sem imagem de identidade, text-only):
  * - timeout de download;
- * - teto de bytes (por `content-length` e por tamanho efetivo);
+ * - teto de bytes EFETIVO: o corpo é lido em CHUNKS (`response.body.getReader()`)
+ *   e o reader é CANCELADO assim que o número de bytes REALMENTE recebidos
+ *   excede o teto — nunca confia apenas no `content-length` declarado (que pode
+ *   estar ausente ou INCORRETO); o `content-length` permanece apenas como
+ *   fast-path de rejeição;
  * - whitelist de `content-type` `image/png|jpeg|webp`.
  *
  * Nenhuma chamada a provider/IA: apenas `fetch` de leitura.
@@ -94,7 +98,41 @@ export async function resolveIdentityImageAsDataUrl(
     const declaredLength = Number(response.headers.get("content-length"));
     if (Number.isFinite(declaredLength) && declaredLength > maxBytes) return null;
 
-    const buffer = Buffer.from(await response.arrayBuffer());
+    // Teto EFETIVO — lê o corpo em CHUNKS e CANCELA o reader assim que o número
+    // de bytes REALMENTE recebidos excede o teto. `arrayBuffer()` bufferizaria o
+    // corpo INTEIRO antes da checagem (memória ilimitada sem `content-length`
+    // confiável); aqui a leitura para no primeiro chunk que estoura o teto.
+    // O `content-length` declarado NÃO é a única guarda (é só o fast-path acima).
+    const reader = response.body?.getReader();
+    if (!reader) return null;
+
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value || value.byteLength === 0) continue;
+        totalBytes += value.byteLength;
+        if (totalBytes > maxBytes) {
+          // Estourou o teto pelos bytes REAIS ⇒ cancela (não bufferiza o resto).
+          await reader.cancel().catch(() => undefined);
+          return null;
+        }
+        chunks.push(value);
+      }
+    } catch {
+      // Falha de leitura (inclui abort por timeout) ⇒ cancela e cai para text-only.
+      await reader.cancel().catch(() => undefined);
+      return null;
+    }
+
+    if (totalBytes === 0) return null;
+
+    const buffer = Buffer.concat(
+      chunks.map((chunk) => Buffer.from(chunk)),
+      totalBytes,
+    );
     if (buffer.byteLength === 0 || buffer.byteLength > maxBytes) return null;
 
     return {
