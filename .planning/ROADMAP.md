@@ -364,7 +364,7 @@ Plans:
 
 ### Phase 56.2.3: F56.2b2a — Recuperação de copy do Produto 1:1
 
-**Status:** ✓ **PLANEJADO (2026-10-13; em reconciliação de contrato)** — fase GSD criada a partir da base OpenSpec **B2.1** (`fase-56-2b2a-recuperacao-de-copy-produto-1-1`); **5 planos** em **reconciliação** após 7 lacunas funcionais apontadas pelo responsável (a base OpenSpec foi atualizada onde houve mudança de contrato; critérios 11–17). **Revisão humana dos planos PENDENTE**; **sem implementação**. O responsável **autorizou o planejamento** em 2026-10-13. A **UI-SPEC permanece com aprovação humana PENDENTE** (`reviewed_at: null`); **nenhuma aprovação é presumida** — a decisão explícita será registrada **após a reconciliação**.
+**Status:** ✓ **PLANEJADO (2026-10-13; reconciliação de contrato CONCLUÍDA, aguardando verificação final)** — fase GSD criada a partir da base OpenSpec **B2.1** (`fase-56-2b2a-recuperacao-de-copy-produto-1-1`); **6 planos** após a **reconciliação** das **7 lacunas funcionais** apontadas pelo responsável (base OpenSpec atualizada onde houve mudança de contrato — critérios 11–17; novo plano `56.2.3-06` de aquisição atômica + migração de dados). **Revisão humana dos planos PENDENTE**; **sem implementação**. O responsável **autorizou o planejamento** em 2026-10-13. A **UI-SPEC permanece com aprovação humana PENDENTE** (`reviewed_at: null`); **nenhuma aprovação é presumida** — a decisão explícita será registrada **após a verificação final**.
 
 **Goal:** Acrescentar a **recuperação de copy** (falha de entrega) sobre a entrega não bloqueante da b1b: política de 3 tentativas automáticas (30s/5s/30s/10s/30s) + até 3 manuais (máx. 6 por entrega), tentativas identificadas (`attempt_seq`+`attempt_token`), histórico preservado, proteção contra conclusão atrasada (`stale_attempt`), anti-duplicação, somente os textos (`campaign_copy`, sem regenerar/alterar a imagem e sem novo crédito), autenticação/ownership e UI da ação manual condicional — tudo **dentro do ciclo da requisição**, **sem** execução durável (fila/worker/cron/outbox), **sem** ativação (chaves `false`, autorização `off`) e **sem** antecipar B2.2/B2.3 ou a F56.3.
 
@@ -374,20 +374,22 @@ Plans:
 
 **Fora de escopo / diferido:** regeneração/estorno de imagem, D13 e aviso de crédito estornado (**B2.2**); autorização estreita, teste real e preview (**B2.3**); aprovação/reprovação/correção e edição livre (**F56.3**); execução durável (fila/worker/cron/outbox/retomada automática) — diferida; reuso do botão legado `Regenerar`/`Tentar Novamente` da campanha inteira.
 
-**Provas exigidas no planejamento:** contrato (política 30s/5s/10s, teto de 6, clique manual, `stale_attempt`, terminal não sobrescrito, falha definitiva, anti-duplicação, independência copy×imagem); Postgres isolado (transições condicionais e proteção de terminal; instância descartável); navegador com **provider simulado** (nenhuma chamada paga); migration **LOCAL-ONLY** (autorada; aplicada só na instância isolada, nunca `db push` remoto). Estimativa **4–5 planos**; se exceder 8–10, parar e propor ajuste sem retirar segurança/testes.
+**Provas exigidas no planejamento:** contrato (política 30s/5s/10s, teto de 6, clique manual, `stale_attempt`, terminal não sobrescrito, falha definitiva, anti-duplicação, independência copy×imagem); **Postgres isolado pela ROTA REAL** (aquisição/concorrência, limites separados auto × manual, esperas server-side, fallback=tentativa própria, tentativa inicial); **migração/backfill** com **fixtures anteriores à B2.1** e **imutabilidade restaurada**; navegador com **provider simulado** (nenhuma chamada paga); migration **LOCAL-ONLY** (autorada; aplicada só na instância isolada, nunca `db push` remoto). Estimativa reconciliada: **6 planos** (dentro do teto ≤8–10); se exceder, parar e propor ajuste sem retirar segurança/testes.
 
-**Plans:** 5 plans
+**Plans:** 6 plans
 
 Plans:
 **Wave 1** *(sem dependências)*
-- [ ] 56.2.3-01-PLAN.md — Identidade de tentativa (schema LOCAL-ONLY autorado) + camada de estado (`copy-state.ts`) + contrato (REQ-56.2.3-07, -01)
+- [ ] 56.2.3-01-PLAN.md — Fundação: identidade/lease da tentativa + `copy-state.ts`/drenador identificado + contrato (REQ-56.2.3-07, -01, -03)
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 56.2.3-02-PLAN.md — Política pura (30s/5s/10s, teto 6) + serviço server-only + schema Zod (REQ-56.2.3-06, -03, -02, -08, -05, -09)
+- [ ] 56.2.3-06-PLAN.md — Aquisição atômica (RPC sob trava C4) + migração de dados (backfill transacional) + cliente server-only (REQ-56.2.3-07, -06, -03, -04)
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 56.2.3-03-PLAN.md — Rota autenticada/ownership + guardas G-NA/G-LF (REQ-56.2.3-04, -05, -08, -01, -10, -03)
+- [ ] 56.2.3-02-PLAN.md — Política (30s/5s/10s, teto 6) + serviço server-only + fallback=tentativa própria + wiring da tentativa inicial (REQ-56.2.3-06, -03, -02, -08, -05, -09, -01)
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 56.2.3-04-PLAN.md — UI da recuperação (7 estados, CTA manual, esperas) (REQ-56.2.3-02, -03, -01, -10, -06, -08)
+- [ ] 56.2.3-03-PLAN.md — Rota + barreira de não-ativação/identidade + ownership + G-NA (REQ-56.2.3-04, -05, -08, -01, -10, -03, -07)
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 56.2.3-05-PLAN.md — [BLOCKING] Harness isolado + Postgres isolado + gates/rastreabilidade + checkpoint humano (REQ-56.2.3-01..10)
+- [ ] 56.2.3-04-PLAN.md — UI (7 estados, lease/espera server-side, agenda da 2ª automática, CTA manual) (REQ-56.2.3-02, -03, -01, -10, -06, -08, -07)
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 56.2.3-05-PLAN.md — [BLOCKING] Verificação pela rota real + backfill + gates/rastreabilidade + checkpoint humano (REQ-56.2.3-01..10)
 
 **Canonical refs:** `openspec/changes/fase-56-2b2a-recuperacao-de-copy-produto-1-1/` (proposal, design B2A-D1..D6, spec `product-1-1-copy-recovery`, tasks §1–§5, UI-SPEC, RECONCILIATION), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/campaign-preview.md`, `src/lib/product-1-1/copy/copy-state.ts`, `src/app/(app)/campanhas/[id]/client.tsx`, `src/components/flow/generation-progress.tsx`, `supabase/migrations/20261009000005_f56_2b1b_copy_state.sql` (b1b, LOCAL-ONLY).
