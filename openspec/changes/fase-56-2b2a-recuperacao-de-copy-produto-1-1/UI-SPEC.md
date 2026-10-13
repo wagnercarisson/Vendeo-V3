@@ -31,9 +31,10 @@ oferecida **somente** quando a copy está pendente/falha). A entrega da imagem n
 **In scope (this contract covers):**
 
 1. A **superfície de copy** no resultado persistido (`/campanhas/[id]`), com os estados
-   **pendente / tentando / falha (auto esgotada) / concluída**.
-2. A **ação manual de recuperação** (até 3 tentativas manuais; 6 no total por entrega), com
-   **contador visível** e **anti-duplicação**.
+   `ativa` / `aguardando` / `interrompida` / `falha` (auto esgotada) / `falha definitiva` /
+   `concluída` (**sucesso absoluto**).
+2. A **ação manual de recuperação** (**limite de 3 manuais, independente das automáticas**; total
+   ≤ 6 por entrega), com **contador visível** e **anti-duplicação**.
 3. Feedback **seguro** (sem motivo interno) e a distinção explícita de que a recuperação
    **não** regenera a imagem nem consome outro crédito.
 4. A condição **sem retomada automática** (fechar o navegador interrompe o ciclo; retomada manual).
@@ -153,33 +154,38 @@ bloco de copy abaixo/junto da arte. **Não** cria rota nova.
 
 | Estado | Badge | Cor | Feedback | Ação |
 |--------|-------|-----|----------|------|
-| `ativa` (tentativa em andamento) | `Gerando os textos...` / `Tentando novamente...` | blue | spinner + `Loader2` | botão `disabled` (anti-clique) |
-| `aguardando` (espera 5s/10s antes da próxima automática) | `Nova tentativa em {n}s` | blue | `Clock` + contagem regressiva | botão `disabled` durante a espera (a automática seguirá) |
-| `interrompida` (persistido pendente/falha **sem** tentativa ativa nem espera agendada — típico ao **retornar**) | `Recuperação interrompida` | amber | `AlertTriangle` + texto seguro | **`Gerar os textos novamente`** habilitado (se ainda há manual) — **nunca** spinner |
+| `ativa` (tentativa em andamento **confirmada pelo servidor**) | `Gerando os textos...` / `Tentando novamente...` | blue | spinner + `Loader2` | botão `disabled` (anti-clique); **outra aba apenas acompanha** |
+| `aguardando` (espera 5s/10s antes da próxima automática) | `Nova tentativa em {n}s` | blue | `Clock` + contagem regressiva | botão `disabled` durante a espera; indicador **da aba que agendou** |
+| `interrompida` (**sem** tentativa ativa confirmada **pelo servidor**) | `Recuperação interrompida` | amber | `AlertTriangle` + texto seguro | **`Gerar os textos novamente`** habilitado (se ainda há manual) — **nunca** spinner |
 | `falha` (automáticas esgotadas) | `Não conseguimos gerar os textos` | amber | `AlertTriangle` + texto seguro | **`Gerar os textos novamente`** habilitado (se ainda há manual) |
 | `falha definitiva` | `Não dá para tentar automaticamente` | amber | `ShieldAlert` + texto seguro | CTA manual + **suporte** (sem nova automática) |
-| `concluída` | `Textos prontos` | green | `Check` + texto entregue | nenhuma ação de recuperação |
+| `concluída` (sucesso — **absoluto**) | `Textos prontos` | green | `Check` + texto entregue | **nenhuma** ação de recuperação |
+
+> **Precedência:** `concluída` é **absoluta** (remove toda a recuperação); depois `falha definitiva` >
+> `falha` > `interrompida` > `ativa`/`aguardando`. Nenhum estado de falha precede `concluída`.
 
 **Ciclo automático, esperas e interrupção (anti-spinner-preso e anti-duplicação):**
 
-- **Tentativa ativa × ciclo interrompido.** O estado é **persistido no servidor**; a UI **não**
-  infere por tempo. A distinção vem da **sessão** que dirige a requisição:
-  - **sessão iniciadora** (o cliente tem requisição em voo ou espera agendada) → `ativa`/`aguardando`;
-  - **carregamento novo** (retorno, reload, outra aba) **sem** requisição em voo nem espera
-    agendada sobre um persistido pendente/falha → **`interrompida`**.
-- **Precedência no retorno (obrigatória):** `falha definitiva` (classificação definitiva) **>**
-  `falha` (3 automáticas esgotadas) **>** `interrompida` (transitória/pendente sem sessão) **>**
-  (`ativa`/`aguardando` só com sessão). Retornar após esgotar as automáticas **mantém** o contador
-  `3 de 3`, e a **falha definitiva preserva a oferta de suporte** — nenhuma delas regride para
-  `interrompida`.
-- **Nunca spinner preso:** `interrompida` **não** é spinner; oferece a **ação manual** (respeitando
-  o teto de 6). Fechar o navegador interrompe o ciclo; **não** há retomada automática.
-- **Nunca duplicar:** em `ativa`/`aguardando` o botão é `disabled`; clique duplo/reload/reenvio **não**
-  criam tentativa extra. Uma nova carga vira `interrompida` (não `ativa`) e permite **uma** tentativa
-  por clique.
-- **Esperas explícitas:** após falha **transitória**, a UI mostra `aguardando` com contagem
-  regressiva (5s na 1ª espera, 10s na 2ª) e emite a próxima tentativa **automática** ao fim da
-  contagem — **apenas na sessão iniciadora** (sem continuidade se o navegador fechar).
+- **A fonte da verdade é o SERVIDOR, não a sessão local.** O estado é **persistido no servidor**; a UI
+  **não** infere por tempo **nem** pela ausência de requisição local. Ao carregar (retorno, reload ou
+  **outra aba**), a UI **consulta o servidor** se há **tentativa ativa**:
+  - **tentativa ativa confirmada pelo servidor** → `ativa`/`aguardando`: a nova aba **apenas acompanha**,
+    **sem iniciar outra chamada**;
+  - **sem tentativa ativa confirmada** → classifica por sucesso/falha/limite (precedência abaixo).
+  **Ausência de sessão local NÃO autoriza** nova tentativa: a autorização é **server-side**.
+- **Precedência (obrigatória):** `concluída` (copy entregue — **absoluta**, remove a recuperação) **>**
+  `falha definitiva` **>** `falha` (3 automáticas esgotadas) **>** `interrompida` (transitória/pendente
+  sem tentativa ativa) **>** `ativa`/`aguardando` (tentativa ativa confirmada pelo servidor).
+  Retornar após esgotar as automáticas **mantém** o contador `3 de 3`; a **falha definitiva preserva o
+  suporte**.
+- **Nunca spinner preso:** `interrompida` **não** é spinner; oferece a **ação manual** (teto de **3
+  manuais**). Fechar o navegador interrompe o ciclo; **não** há retomada automática.
+- **Nunca duplicar:** em `ativa`/`aguardando` o botão é `disabled`; outra aba/reload com tentativa ativa
+  confirmada **apenas acompanha**. Sem tentativa ativa, a ação manual permite **uma** tentativa por
+  clique; tentativas concorrentes são **serializadas pelo servidor**.
+- **Esperas explícitas:** após falha **transitória**, a aba que dirige a requisição mostra `aguardando`
+  com contagem regressiva (5s na 1ª espera, 10s na 2ª) e emite a próxima tentativa **automática** ao
+  fim da contagem — **sem continuidade** se o navegador fechar.
 - **Saída antecipada (falha não repetível):** se a classificação for **definitiva** (configuração/
   permissão), a UI **pula as esperas** e vai direto para `falha definitiva` com **ação manual +
   suporte**, sem repetição automática cega.
@@ -187,17 +193,21 @@ bloco de copy abaixo/junto da arte. **Não** cria rota nova.
 **Regras duras:**
 
 - A recuperação **só** aparece quando a copy está **pendente/falha**; copy **concluída encerra** — o
-  botão **não** é renderizado em `concluída` (B2A-D1).
+  botão **não** é renderizado em `concluída` (B2A-D1). **Sucesso prevalece** sobre qualquer falha
+  anterior e **remove toda ação de recuperação**.
 - **Nunca regenera/altera a imagem**; a arte `delivered` permanece visível e baixável durante toda
   a recuperação (`Falha de copy não bloqueia arte entregue`).
 - **Nunca** consome crédito adicional; nunca cria nova campanha.
 - **Sem retomada automática:** se o navegador fechar, o ciclo automático **para**; ao retornar, a UI
-  mostra **`interrompida`** (não um spinner) e a retomada é **manual**. Proibido texto como “pode
-  fechar a página”, “continuaremos” ou “retomaremos”.
+  mostra o que o **servidor** reporta (`interrompida` quando não há tentativa ativa; `ativa` se houver,
+  apenas acompanhando) e a retomada é **manual**. Proibido texto como “pode fechar a página”,
+  “continuaremos” ou “retomaremos”.
 - **Anti-duplicação:** enquanto `ativa`/`aguardando`, o botão fica `disabled`; clique duplo/reload/
   reenvio **não** duplica tentativa nem reinicia contador (estado é server-side).
-- **Limite:** `concluída` encerra; ao esgotar **6 tentativas** (3 automáticas + 3 manuais), o botão
-  passa a `disabled` e exibe a ajuda de suporte; **não** há 7ª tentativa.
+- **Limite:** `concluída` encerra. O **limite manual é 3, independente de quantas automáticas
+  ocorreram** — total ≤ **6** (3 automáticas + 3 manuais quando todas as automáticas rodam; menos se
+  houver saída antecipada). Esgotadas as manuais, o botão passa a `disabled` e exibe a ajuda de
+  suporte; **não** há nova tentativa.
 - **Feedback seguro:** nunca revelar motivo interno; usar mensagem comercial curta.
 
 ---
@@ -206,17 +216,17 @@ bloco de copy abaixo/junto da arte. **Não** cria rota nova.
 
 | Estado | Comportamento |
 |--------|---------------|
-| Carregamento da página | Lê o **estado persistido**; nunca infere por tempo. **Precedência:** (1) classificação **definitiva** persistida ⇒ `falha definitiva` (CTA + **suporte**); (2) senão, **3 automáticas esgotadas** ⇒ `falha` (contador `3 de 3`); (3) senão, **sem** requisição em voo nem espera agendada ⇒ `interrompida`; (4) requisição em voo ⇒ `ativa`; (5) espera agendada ⇒ `aguardando`. |
-| `ativa` | Spinner + `Loader2`; botão `disabled`; sem clique concorrente. |
-| `aguardando` | Contagem regressiva (5s/10s) + `Clock`; botão `disabled`; ao fim, a **automática** segue (**só** na sessão iniciadora). |
+| Carregamento da página | Consulta o **servidor** (autoridade); **não** infere por tempo nem pela sessão local. **Precedência:** (1) **copy entregue** ⇒ `concluída` (remove toda ação de recuperação); (2) classificação **definitiva** ⇒ `falha definitiva` (CTA + **suporte**); (3) senão, **3 automáticas esgotadas** ⇒ `falha` (`3 de 3`); (4) senão, **sem tentativa ativa confirmada** ⇒ `interrompida`; (5) **tentativa ativa confirmada** ⇒ `ativa`/`aguardando` (**outra aba só acompanha**). |
+| `ativa` | Spinner + `Loader2`; botão `disabled`; outra aba/reload **apenas acompanha** (sem nova chamada). |
+| `aguardando` | Contagem regressiva (5s/10s) + `Clock`; botão `disabled`; indicador **da aba que agendou**; tentativas concorrentes **serializadas pelo servidor**. |
 | `interrompida` | **Sem spinner**; badge amber + `Gerar os textos novamente` habilitado (se há manual); retomada **manual**. |
 | `falha` (auto esgotada) | Amber + CTA manual; contador `Tentativas automáticas: 3 de 3`. |
 | `falha definitiva` | Amber + CTA manual + suporte; **sem** esperas nem nova automática; saída antecipada. |
-| Clique manual | Envia **uma** tentativa; contador manual 1→2→3; **não** reinicia o ciclo automático. |
-| Limite manual atingido | Botão `disabled`; mensagem de suporte. |
-| `concluída` | Rende o texto entregue; sem CTA de recuperação. |
+| Clique manual | Envia **uma** tentativa; contador manual 1→2→3 (**limite 3 independente das automáticas**); **não** reinicia o ciclo automático. |
+| Limite manual atingido (3) | Botão `disabled`; mensagem de suporte. |
+| `concluída` | Sucesso **absoluto**: rende o texto entregue, prevalece sobre qualquer falha anterior e **remove** o CTA de recuperação. |
 | Erro de rede/validação | Inline error (`accent-red`, `role="alert"`), sem alterar o estado persistido. |
-| Reconexão/reload | Re-lê o persistido com a **mesma precedência** do carregamento (`falha definitiva` > `falha` > `interrompida` > `ativa`/`aguardando` com sessão); nunca promete continuidade. |
+| Reconexão/reload | Consulta o **servidor** com a **mesma precedência** (`concluída` > `falha definitiva` > `falha` > `interrompida` > `ativa`/`aguardando`); com tentativa ativa confirmada, apenas acompanha; nunca promete continuidade. |
 | Reduced motion | Transições 150–300ms; `motion-safe:`/`motion-reduce:`; spinner é a única animação contínua. |
 
 ---
@@ -238,13 +248,14 @@ PT-BR, linguagem comercial simples, **sem emojis, sem jargão técnico** (MASTER
 | Badge `interrompida` | `Recuperação interrompida` |
 | Badge `falha definitiva` | `Não dá para tentar automaticamente` |
 | Contador (auto) | `Tentativas automáticas: {n} de 3` |
-| Contador (manual) | `Tentativas manuais: {m} de 3` |
+| Contador (manual) | `Tentativas manuais: {m} de 3` (**3 máx., independente das automáticas**) |
 | CTA manual | `Gerar os textos novamente` |
 | Aviso de escopo | `Isso gera apenas os textos. A imagem da campanha não muda e nenhum crédito adicional é usado.` |
-| Limite atingido | `Você atingiu o limite de tentativas. Fale com o suporte para continuar.` |
+| Limite manual atingido (3) | `Você atingiu o limite de tentativas. Fale com o suporte para continuar.` |
 | Ajuda de suporte | `Falar com o suporte` |
 | Erro de acionamento | `Não foi possível tentar novamente agora. Tente de novo em instantes.` |
 | Sem retomada (nota) | (não renderizar promessa de continuidade) |
+| Sucesso | `Textos prontos.` — **prevalece** sobre falhas anteriores e **remove** a recuperação |
 
 ---
 
@@ -301,10 +312,12 @@ primitivos existentes em `src/components/ui/*`.
 | Elemento de UI | Requisito / Decisão |
 |----------------|---------------------|
 | CTA manual só em pendente/falha; copy concluída encerra | `Ação de nova tentativa somente no estado pendente/falha` (B2A-D1) |
-| Contador + limite 6 (3+3), clique = 1 tentativa | `Política de recuperação de copy por tentativas` (B2A-D2) |
+| **Sucesso absoluto** (`concluída` precede falhas/interrupção; remove a recuperação) | `Ação de nova tentativa somente no estado pendente/falha` + `Copy entregue encerra a recuperação` (B2A-D1) |
+| Contador + **limite manual 3, independente das automáticas**; clique = 1 tentativa | `Política de recuperação de copy por tentativas` (B2A-D2) |
 | Esperas 5s/10s (`aguardando`) + contagem regressiva | `Política de recuperação de copy por tentativas` (B2A-D2) |
 | Saída antecipada (`falha definitiva`) sem repetição automática | `Política de recuperação de copy por tentativas` (falhas definitivas) |
 | Anti-duplicação (disabled em `ativa`/`aguardando`) | `Anti-duplicação e contabilização de chamadas` |
+| **Tentativa ativa confirmada pelo servidor; outra aba só acompanha** (ausência de sessão local não autoriza) | `Tentativas identificadas, histórico preservado…` + `Sem retomada após fechar o navegador` (B2A-D3/D4) |
 | `interrompida` ≠ `ativa` (não prender spinner; retomada manual) | `Sem retomada após fechar o navegador` (B2A-D3) |
 | Feedback seguro sem motivo interno | `Estados persistidos e feedback seguro` |
 | Aviso “não muda a imagem / sem novo crédito” | `A recuperação tenta somente os textos e não regenera a imagem` |
@@ -339,6 +352,9 @@ Registradas, não bloqueiam. Upstream não respondeu; usam defaults sensatos:
 
 **Checker (`gsd-ui-checker`, 2026-10-13):** 1º passe **BLOCKED** (Dim 1 — precedência `interrompida` ×
 `falha` × `falha definitiva`); corrigido. 2º passe **APPROVED** (6/6 PASS; 2 FLAGs tratados).
+3º passe (após **2 precisões humanas**: outra aba não comprova interrupção — confirmação de tentativa
+ativa **pelo servidor**; sucesso com **precedência absoluta** e **limite manual 3 independente das
+automáticas**) **APPROVED** (6/6 PASS, **sem regressão**).
 
 **Revisão humana:** **PENDENTE** (`reviewed_at: null`). O `status` só se torna aprovado após o
 sign-off humano. Nenhum plano, implementação ou registro GSD foi iniciado a partir deste documento.
