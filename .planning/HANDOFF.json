@@ -42,6 +42,14 @@
         "pre_existing_failures": "18 mantidas como divida separada (nao verdes)"
       }
     },
+    "nyquist_validation": {
+      "status": "not_executed",
+      "reason": "workflow.nyquist_validation=false",
+      "config_preserved": true,
+      "approved": false,
+      "implementation_failure": false,
+      "note": "O /gsd-validate-phase 56.2.2 encerrou no gate de configuracao (nyquist_validation=false). NAO e aprovacao nem falha da implementacao; a configuracao foi preservada."
+    },
     "documentary_gates": {
       "openspec_validate_strict": "passed",
       "git_diff_check": "passed",
