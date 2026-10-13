@@ -29,6 +29,7 @@
 - [ ] 2.12 Garantir que a **imagem `delivered`/terminal financeiro** não encerre nem bloqueie a recuperação de **textos** (terminais financeiro × copy **separados**)
 - [ ] 2.13 Encerrar **atomicamente** a tentativa **expirada** (`pending` com lease vencido, `stale_attempt`) e adquirir a **próxima** na MESMA transação, rejeitando conclusão atrasada
 - [ ] 2.14 Validar **server-side** as **transições de `mode`**: sem automática após falha **definitiva** ou após início **manual**; `mode` no corpo não reabre o ciclo
+- [ ] 2.15 Exigir `request_token` na **API de acionamento** (ausência ⇒ `missing_request_token`, sem aquisição/IA); a tentativa **inicial interna** gera o próprio token
 
 ## 3. Anti-duplicação, histórico e segurança
 
@@ -46,6 +47,7 @@
 - [ ] 3.12 Fechar a **idempotência do MESMO acionamento** (reenvio atrasado não adquire nova tentativa nem consome slot); identidade do cliente é **condição validada** (dedupe), nunca autoridade/vencedor
 - [ ] 3.13 Atribuir a **tentativa histórica** da b1b ao contador **automático** (`attempt_seq = 1`, `kind='auto'`) no backfill
 - [ ] 3.14 Explicitar **quem agenda** a 2ª automática (a aba que dirige); `reload`/outra aba **não** retomam automaticamente
+- [ ] 3.15 Fechar a **ligação da aba iniciadora → página de resultado** (handle de condução client-side, efêmero por aba)
 
 ## 4. Testes (contrato, Postgres isolado, navegador)
 
@@ -55,6 +57,8 @@
 - [ ] 4.4 Rodar typecheck, lint, build e suíte local (nenhuma chamada paga)
 - [ ] 4.5 Provar, no **Postgres isolado**, a concorrência **pela rota real**, os **limites separados** (auto × manual), as **esperas**, o **fallback** e a **tentativa inicial**
 - [ ] 4.6 Provar a **migração/backfill** com **fixtures anteriores à B2.1** e a **imutabilidade restaurada**
+- [ ] 4.7 Provar o **fluxo iniciadora → resultado → espera → 2ª automática** e que `reload`/outra aba apenas acompanham
+- [ ] 4.8 Provar a **migração pelo CLI** (versão registrada em `schema_migrations`), **separada da execução recorrente**, com re-execução **idempotente** e prova em **instância recriada**
 
 ## 5. Checkpoint final
 

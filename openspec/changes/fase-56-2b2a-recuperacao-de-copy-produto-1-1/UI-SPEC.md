@@ -376,6 +376,11 @@ Ajustes de contrato (fonte: `proposal.md` critérios 11–17; `design.md` B2A-D2
 7. **Reenvio atrasado não reinicia nem sobe contador.** Um reenvio do MESMO acionamento **não** cria nova tentativa; o contador só avança quando o servidor **adquire** uma tentativa.
 8. **Quem agenda é explícito.** Só a **aba que dirige** mantém o ciclo; `reload`/outra aba **apenas acompanham** e **não** retomam automaticamente a partir da espera persistida.
 
+### Refinamentos de execução (3ª rodada — 2026-10-13)
+
+9. **Ligação iniciadora→resultado.** A aba que **inicia** a geração registra um **handle de condução** (client-side, efêmero, por aba) lido pela página de resultado; sem ele, `reload`/outra aba **apenas acompanham**. O fluxo **geração → resultado → espera → 2ª automática** é dirigido por esse handle.
+10. **Token de acionamento obrigatório.** A UI **envia** um `requestToken` estável por acionamento; ausência é **recusada** pelo servidor (sem IA). O contador só avança quando o servidor **adquire** uma tentativa.
+
 ## Checker / Review Status
 
 - [x] Dimension 1 Copywriting — PASS (FLAG resolvido: label `Textos prontos.` unificado)

@@ -60,6 +60,8 @@ Classificação `transient × definitive` vem do **estado/envelope server-side**
 
 **Quem agenda (critério explícito).** Apenas a **aba que dirige** o acionamento mantém o ciclo; **outra aba** e o **`reload`** **apenas acompanham** o estado do servidor e **NÃO** retomam automaticamente a partir da espera persistida. Nenhuma página carregada reivindica o ciclo por conta própria.
 
+**Ligação iniciadora→resultado (mecanismo).** A aba que **inicia** a geração registra um **handle de condução** client-side e **efêmero, por aba** (ex.: registro em memória do módulo, perdido no `reload`), lido pela página de resultado; o fluxo **geração inicial → resultado → espera → 2ª automática** é dirigido por esse handle. `reload`/outra aba **não** o possuem ⇒ **apenas acompanham** (retomada manual).
+
 ### B2A-D4 — Tentativas identificadas, histórico preservado e proteção contra conclusão atrasada
 
 Direção de schema **fixada antes do planejamento** (sem questão aberta):
@@ -76,6 +78,8 @@ Direção de schema **fixada antes do planejamento** (sem questão aberta):
 - **Terminais separados (financeiro × copy):** o terminal **financeiro** (`delivered`/`refunded`) **≠** o terminal da **copy**; a imagem `delivered` **NÃO** encerra a recuperação de textos e a aquisição **não** recusa por terminal financeiro.
 - **Idempotência do MESMO acionamento:** um **reenvio atrasado** (mesmo acionamento) **não** adquire nova tentativa nem consome slot; a identidade enviada pelo cliente é **condição validada** (dedupe) — nunca **autoridade** nem escolha do **vencedor**.
 - **Backfill e contadores:** a tentativa **histórica** da b1b entra no contador **automático** (`attempt_seq = 1`, `kind='auto'`); os leitores/testes afetados pelas novas assinaturas são **reconciliados**.
+- **Identidade do acionamento obrigatória na API:** a API de acionamento **exige** `request_token` (UUID); **ausência ⇒ recusada** (`missing_request_token`), sem aquisição nem IA. A tentativa **inicial interna** (drenagem no ciclo da b1b) gera o **próprio** token server-side.
+- **Backfill aplicado pelo CLI:** a migration de backfill é aplicada **pelo CLI** (`migration up --local`), **registrando a versão** em `supabase_migrations.schema_migrations`; a **prova de migração** é **separada** da execução **recorrente** das suítes; com a versão **já aplicada**, a re-execução é **idempotente** (a migração é **pulada**) e a prova de backfill exige **instância recriada** (fixtures **antes** da migração).
 
 *Alternativa rejeitada (decisão fechada):* tabela append-only separada + projeção (custo maior sem ganho).
 
@@ -109,7 +113,7 @@ A recuperação SHALL exigir **autenticação** e **ownership** da campanha/loja
 ## Migration Plan
 
 1. Implementar **aquisição atômica**, identidade de tentativa/histórico/anti-duplicação e a política (**cada chamada efetiva = uma tentativa**); typecheck/lint/build/testes locais.
-2. Migrar **dados existentes** da b1b transacionalmente (preservando o vínculo da mesma tentativa e **restaurando a imutabilidade**), com **fixtures inseridas ANTES da migração** e a tentativa histórica atribuída ao contador **automático**.
+2. Migrar **dados existentes** da b1b transacionalmente (preservando o vínculo da mesma tentativa e **restaurando a imutabilidade**), **aplicada pelo CLI** (`migration up --local`, registrando a versão), com **fixtures inseridas ANTES da migração** em **instância recriada** e a tentativa histórica atribuída ao contador **automático**.
 3. Rodar testes de contrato, **Postgres isolado** (incluindo **concorrência pela ROTA real**, limites separados, esperas, fallback e tentativa inicial) e navegador (**provider simulado**); **nenhuma chamada paga**.
 4. **Checkpoint humano** desta fatia; submeter B2.1 à revisão.
 

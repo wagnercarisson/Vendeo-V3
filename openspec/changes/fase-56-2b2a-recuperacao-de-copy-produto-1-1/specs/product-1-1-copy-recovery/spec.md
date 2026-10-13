@@ -58,6 +58,13 @@ O estado `pending` SHALL NOT, por si só, comprovar **execução ativa**: o serv
 - **AND** **não** retoma automaticamente o ciclo a partir da espera persistida
 - **AND** somente a aba que **dirige** o acionamento mantém o ciclo
 
+#### Scenario: Ligação da aba iniciadora com o ciclo
+
+- **WHEN** uma geração é iniciada
+- **THEN** a aba **iniciadora** registra um **handle de condução** (client-side, efêmero, por aba) lido pela página de resultado
+- **AND** o fluxo **geração inicial → resultado → espera → 2ª automática** é dirigido por esse handle
+- **AND** `reload`/outra aba, sem o handle, **apenas acompanham** (retomada manual)
+
 #### Scenario: Espera verificada pelo servidor
 
 - **WHEN** o estado persistido indica espera entre tentativas automáticas (5s/10s)
@@ -228,6 +235,13 @@ Cada tentativa SHALL ter **identidade** própria (sequência + token) e SHALL se
 - **THEN** ela é atribuída ao contador **automático** (`attempt_seq = 1`, `kind='auto'`)
 - **AND** as tentativas subsequentes respeitam o teto restante (5)
 
+#### Scenario: Backfill aplicado pelo CLI registra a versão
+
+- **WHEN** a migration de backfill é aplicada
+- **THEN** ela é aplicada **pelo CLI** (`migration up --local`), **registrando a versão** em `supabase_migrations.schema_migrations`
+- **AND** a **prova de migração** é **separada** da execução **recorrente** das suítes
+- **AND** uma **re-execução** com a versão já aplicada é **idempotente** (a migração é **pulada**), e a prova de backfill exige **instância recriada** (fixtures inseridas **antes** da migração)
+
 ### Requirement: Anti-duplicação e contabilização de chamadas
 
 Cliques duplicados, reload e reenvio SHALL NOT duplicar chamadas nem reiniciar contadores. As chamadas técnicas/fallback SHALL ser **contabilizadas no limite**, sem tentativas escondidas. Cada **chamada efetiva** SHALL corresponder a **uma** tentativa identificada. A **idempotência** SHALL valer para o **MESMO acionamento** ao **longo do tempo** (reenvio atrasado), não apenas para chamadas **simultâneas**: um reenvio do mesmo acionamento SHALL NOT adquirir uma **nova** tentativa nem consumir outro slot. A identidade enviada pelo cliente SHALL funcionar como **condição validada** (dedupe) — **nunca** como **autoridade** nem como escolha do **vencedor**.
@@ -243,6 +257,13 @@ Cliques duplicados, reload e reenvio SHALL NOT duplicar chamadas nem reiniciar c
 - **WHEN** um reenvio do MESMO acionamento chega **depois** de a tentativa anterior já ter falhado
 - **THEN** o reenvio **não** adquire uma **nova** tentativa nem consome outro slot
 - **AND** a identidade enviada pelo cliente é usada apenas como **condição validada** (dedupe), sem autorizar nem escolher o vencedor
+
+#### Scenario: Acionamento sem identidade é recusado
+
+- **WHEN** a API de acionamento recebe uma requisição **sem** a identidade de acionamento (`request_token`)
+- **THEN** a requisição é **recusada** (`missing_request_token`)
+- **AND** nenhuma aquisição de tentativa nem chamada de IA é executada
+- **AND** a tentativa **inicial interna** (drenagem no ciclo da b1b) pode gerar o **próprio** token server-side
 
 #### Scenario: Chamada técnica/fallback contabilizada
 

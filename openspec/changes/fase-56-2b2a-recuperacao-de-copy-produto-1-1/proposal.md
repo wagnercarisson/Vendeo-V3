@@ -59,6 +59,14 @@ Os critérios 18–23 tornam executáveis garantias já combinadas (**sem novas 
 22. A tentativa **histórica** da b1b entra no contador **automático**; as provas inserem **fixtures ANTES** da migração.
 23. **Quem agenda** a 2ª automática é **explícito**; `reload`/outra aba **não** retomam automaticamente (apenas acompanham).
 
+### Refinamentos de execução (3ª rodada — 2026-10-13)
+
+Critérios 24–26 (**sem novas decisões de produto**), dobrados nos **mesmos 10 requirements**:
+
+24. A **API de acionamento exige** a identidade do acionamento (`request_token`); **ausência é recusada** (`missing_request_token`) sem aquisição/IA; a tentativa **inicial interna** gera o **próprio** token.
+25. A migration de backfill é aplicada **pelo CLI** (`migration up --local`), **registrando a versão**; a **prova de migração** é **separada** da execução **recorrente** das suítes; re-execução **idempotente** (skip) e prova com **instância recriada**.
+26. A **ligação da aba iniciadora → página de resultado** é **explícita** (handle de condução por aba); prova: **geração → resultado → espera → 2ª automática**; `reload`/outra aba apenas acompanham.
+
 ## Dependência explícita
 
 Depende da **F56.2b1b** (arquivada em 2026-10-12) e, transitivamente, da **F56.2b1a** e da **F56.2a**. É a **primeira** das três fatias aprovadas; **não** depende de B2.2/B2.3.
