@@ -56,7 +56,7 @@ A mensagem pública SHALL NOT conter saldo, quota, faturamento da conta do provi
 
 ### Requirement: Correlação segura no admin/suporte
 
-A referência de atendimento SHALL permitir que o admin/suporte recupere o **diagnóstico interno** correspondente (categoria interna, provider/modelo/qualidade, tentativa, erro normalizado e run/trace), de forma segura e precisa, sem exigir que o lojista informe qualquer detalhe técnico.
+A referência de atendimento SHALL permitir que o admin/suporte recupere o **diagnóstico interno** correspondente (categoria interna, provider/modelo/qualidade, tentativa, erro normalizado e run/trace), de forma segura e precisa, sem exigir que o lojista informe qualquer detalhe técnico. Na b1b, o diagnóstico SHALL também cobrir operações pendentes/limitadas e tentativas com resultado desconhecido, distinguindo-as de falhas confirmadas.
 
 #### Scenario: Suporte correlaciona a referência
 
@@ -70,6 +70,12 @@ A referência de atendimento SHALL permitir que o admin/suporte recupere o **dia
 - **THEN** o admin/suporte consegue distinguir o tipo de falha internamente
 - **AND** essa distinção não é exposta na mensagem pública
 
+#### Scenario: Resultado desconhecido é correlacionável
+
+- **WHEN** a operação está pendente por resultado desconhecido
+- **THEN** o suporte recupera o diagnóstico da tentativa afetada
+- **AND** distingue resultado desconhecido de falha confirmada
+
 ### Requirement: Referência não é credencial nem dado sensível
 
 A referência de atendimento SHALL ser opaca e SHALL NOT conter dados sensíveis, identificadores de conta, credenciais ou detalhes internos decodificáveis pelo lojista. Seu uso SHALL ser restrito à correlação interna.
@@ -79,3 +85,13 @@ A referência de atendimento SHALL ser opaca e SHALL NOT conter dados sensíveis
 - **WHEN** a referência de atendimento é apresentada ao lojista
 - **THEN** ela não expõe identificadores de conta, chaves ou o motivo interno
 - **AND** ela só tem utilidade para a correlação interna no admin/suporte
+
+### Requirement: Diagnóstico durável correlacionado a IMG-001
+
+Falha operacional real SHALL persistir diagnóstico correlacionado à referência opaca `IMG-001`, recuperável em nova requisição e visível somente a suporte/admin autorizado, sem expor o motivo interno ao lojista.
+
+#### Scenario: Diagnóstico recuperável
+
+- **WHEN** o suporte consulta a referência
+- **THEN** recupera categoria, par, alvo, tentativa, erro normalizado e run/trace
+- **AND** o lojista não recebe o motivo interno

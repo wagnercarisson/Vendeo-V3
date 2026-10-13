@@ -26,7 +26,7 @@ O novo fluxo de imagem SHALL propagar a `qualidade` do par configurado até o ad
 
 ### Requirement: Observabilidade por tentativa (modelo–qualidade)
 
-Cada tentativa real SHALL emitir exatamente um envelope de telemetria contendo o `modelo` e a `qualidade` efetivamente usados na tentativa, além do alvo (principal/fallback) e do `attempt_number`. A observabilidade SHALL permitir reconstruir a sequência de tentativas da operação.
+Cada tentativa real SHALL emitir exatamente um envelope de telemetria contendo o `modelo` e a `qualidade` efetivamente usados na tentativa, além do alvo (principal/fallback) e do `attempt_number`. A observabilidade SHALL permitir reconstruir a sequência de tentativas da operação. Na b1b, cada tentativa nova SHALL também registrar `run`/`trace`, resultado e custo interno por par, contribuindo para o diagnóstico durável, sem alterar a contabilidade do fluxo legado.
 
 #### Scenario: Envelope registra modelo e qualidade
 
@@ -42,7 +42,7 @@ Cada tentativa real SHALL emitir exatamente um envelope de telemetria contendo o
 
 ### Requirement: Cálculo de custo por par modelo–qualidade
 
-O custo resolvido para uma tentativa SHALL considerar o par `modelo + qualidade`. Quando houver pricing específico por qualidade, ele SHALL ser usado; quando não houver, a cobertura SHALL ser explicitamente sinalizada como parcial ou ausente, sem inventar valores e sem alterar a cadeia de resolução do fluxo legado. Para o **novo fluxo**, cobertura incompleta SHALL ser **fail-closed** (o par não é executável); para o **fluxo legado**, a cadeia existente permanece intacta.
+O custo resolvido para uma tentativa SHALL considerar o par `modelo + qualidade`. Quando houver pricing específico por qualidade, ele SHALL ser usado; quando não houver, a cobertura SHALL ser explicitamente sinalizada como parcial ou ausente, sem inventar valores e sem alterar a cadeia de resolução do fluxo legado. Para o **novo fluxo**, cobertura incompleta SHALL ser **fail-closed** (o par não é executável); para o **fluxo legado**, a cadeia existente permanece intacta. Na b1b, o custo interno por tentativa SHALL ser registrado sem convertê-lo em cobrança adicional ao lojista.
 
 #### Scenario: Custo por qualidade quando disponível
 
@@ -67,3 +67,9 @@ O custo resolvido para uma tentativa SHALL considerar o par `modelo + qualidade`
 - **WHEN** uma chamada do fluxo legado é resolvida
 - **THEN** a presença da dimensão de qualidade não altera o resultado
 - **AND** a cadeia de resolução de custo existente permanece intacta
+
+#### Scenario: Custo interno não vira cobrança
+
+- **WHEN** múltiplas tentativas técnicas ocorrem
+- **THEN** o custo interno de cada tentativa é registrado
+- **AND** nenhuma cobrança adicional é gerada ao lojista
