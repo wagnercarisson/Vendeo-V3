@@ -19,7 +19,7 @@ Recuperação de **copy** (falha de entrega): política 3 automáticas + 3 manua
 
 ## Requisitos (specs)
 
-- `product-1-1-copy-recovery` — MODIFIED (2) + ADDED (7), idênticos à base reconciliada.
+- `product-1-1-copy-recovery` — MODIFIED (2) + ADDED (8) = 10 requirements normativos em `specs/product-1-1-copy-recovery/spec.md`, idênticos à base reconciliada. *(Erratum documental 2026-10-13: a contagem anterior dizia "ADDED (7)"; corrigida para "ADDED (8)" sem qualquer mudança de escopo ou de requisitos.)*
 
 ## Fora de escopo / não duplicação
 
