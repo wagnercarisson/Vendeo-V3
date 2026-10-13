@@ -18,11 +18,14 @@ const BASE_SHA_RECORD = path.resolve(
 // src/lib/ai da rsp), SEM excluir diretórios nem trocar o BASE_SHA:
 //  - o conjunto de caminhos alterados deve ser EXATAMENTE o conjunto autorizado;
 //  - cada caminho autorizado carrega autorização + commit de origem;
-//  - os 12 caminhos adicionais têm o CONTEÚDO comparado ao commit aprovado, de
+//  - os caminhos adicionais têm o CONTEÚDO comparado ao commit aprovado, de
 //    modo que a autorização do caminho NÃO vira autorização permanente para
 //    modificá-lo;
 //  - a rota generate-image mantém as verificações específicas (aditiva + guard
-//    antes do parse/reserva).
+//    antes do parse/reserva);
+//  - a quick 261013-hxm acrescentou os caminhos lab/bench tocados pela correção
+//    test-only das fixtures + alinhamento do snapshot do laboratório, com
+//    autorização e commit por entrada.
 const AUTHORIZED_ROUTE_FILE = "src/app/api/campaign/generate-image/route.ts";
 // F56.2b1b (Plano 06 — reconciliação G-LF): a rota de download passa a carregar o
 // portão do novo fluxo (aditivo). Tem entrada AUTORIZADA própria (autorização +
@@ -122,6 +125,48 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
     path: "src/lib/ai/__tests__/ai-invocation-result-additive.contract.test.ts",
     authorization: "quick 261010-rsp (contrato aditivo)",
     commit: "6c2ebdb7",
+  },
+  {
+    path: "src/lib/lab/bench/domain/__tests__/intent-schema.contract.test.ts",
+    authorization:
+      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
+    commit: "e13732a2",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/branding-service.test.ts",
+    authorization:
+      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
+    commit: "e13732a2",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/prompt-base.contract.test.ts",
+    authorization:
+      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
+    commit: "e13732a2",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/form-parity.contract.test.ts",
+    authorization:
+      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
+    commit: "e13732a2",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/run-history.contract.test.ts",
+    authorization:
+      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
+    commit: "e13732a2",
+  },
+  {
+    path: "src/lib/lab/bench/domain/campaign-snapshot.ts",
+    authorization:
+      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
+    commit: "af28dc7e",
+  },
+  {
+    path: "src/lib/lab/bench/__tests__/campaign-snapshot.test.ts",
+    authorization:
+      "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
+    commit: "af28dc7e",
   },
 ];
 
