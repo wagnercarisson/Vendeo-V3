@@ -62,10 +62,11 @@ exclusivamente de `backgroundDirection` (mapper legado intocado); 3 timeouts iso
 determinísticos do resolvedor de modelo; teste legal apontando para o archive da F50. Commits
 `e13732a2`, `af28dc7e`, `f3c96912`, `08e6f0f2`.
 
-**Resultado da suíte completa após a correção:** `5589 passed / 1 failed / 115 skipped`. A única
-falha de teste é a **guarda congelada `legacy-frontier`**, que sinaliza 7 caminhos
-`src/lib/lab/bench/**` alterados como não autorizados — **a guarda não foi afrouxada** (decisão
-pendente do responsável, registrada no SUMMARY do quick). Os demais arquivos que não executam
-dependem do runner isolado (ausência de ambiente), não de falha de implementação.
+**Resultado da suíte completa após a correção:** `5590 passed / 0 failed / 115 skipped`. A guarda
+congelada `legacy-frontier`, que sinalizava 7 caminhos `src/lib/lab/bench/**`, foi **reconciliada com
+autorização explícita do responsável** (recorte 5, `afe4cdbf`), preservando `BASE_SHA`,
+`LEGACY_FRONTIER_PATHS`, a comparação de conteúdo com o commit aprovado e os testes negativos. Os
+arquivos que não executam dependem do runner isolado (ausência de ambiente), não de falha de
+implementação.
 
 

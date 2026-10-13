@@ -1,7 +1,7 @@
 ---
 id: 261013-hxm
 title: Corrigir as 18 falhas investigadas após o fechamento da F56.2b1b
-status: complete-with-followups
+status: complete
 date: 2026-10-13
 branch: feature/fase-56-1-contrato-produtivo-modelos-e-fallback
 scope: post-b1b-test-failures-burndown
@@ -16,10 +16,12 @@ prompt, composer, política, versão, baseline aprovado, mapper legado ou runtim
 **Nada de b2/b1b, banco, migrations, provider pago, instalação, ativação, deploy, push ou lifecycle
 OpenSpec.** As alterações ambientais de `.opencode/**` foram preservadas (não tocadas).
 
-Duas pendências fora do escopo apareceram na validação ampla — **nenhuma é falha de implementação das
-correções** (ver §Pendências): (a) a guarda congelada `legacy-frontier` sinaliza os caminhos `lab/bench`
-alterados; (b) o `build` não conclui o export estático das páginas legais por o Supabase isolado
-(`127.0.0.1:56321`) aceitar TCP mas não responder ao REST.
+Fora do escopo, a validação ampla levantou: (a) a guarda congelada `legacy-frontier` sinalizava os
+caminhos `lab/bench` alterados — **resolvida com autorização explícita do responsável** (recorte 5,
+`afe4cdbf`, sem afrouxar `BASE_SHA`/`LEGACY_FRONTIER_PATHS`/comparação de conteúdo/testes negativos);
+(b) o `build` não conclui o export estático das páginas legais por o Supabase isolado
+(`127.0.0.1:56321`) aceitar TCP mas não responder ao REST — **ambiental**, fora do import graph
+alterado (ver §Pendências).
 
 ## Causas (confirmadas por reprodução antes de editar)
 
@@ -44,6 +46,7 @@ alterados; (b) o `build` não conclui o export estático das páginas legais por
 | 2. Consistência do snapshot | `af28dc7e` | `domain/campaign-snapshot.ts`, `campaign-snapshot.test.ts` |
 | 3. Timeouts de provider/resolver | `f3c96912` | `visual-signature/__tests__/ai-image-generator.test.ts`, `image-generation/providers/__tests__/openai-provider.test.ts`, `image-generation/services/__tests__/image-generation-service.test.ts` |
 | 4. Teste legal | `08e6f0f2` | `legal/__tests__/legal-document-versions.test.ts` |
+| 5. Reconciliação da guarda congelada | `afe4cdbf` | `product-1-1/__tests__/legacy-frontier.guard.test.ts` (7 caminhos `lab/bench` autorizados + commit) |
 
 ### Detalhe por recorte
 - **1:** `backgroundDirection` explícita por cenário (`"studio"` nas fixtures de oferta; `"studio"` no
@@ -63,6 +66,9 @@ alterados; (b) o `build` não conclui o export estático das páginas legais por
   modelo efetivo. Sem elevar timeout, sem retries, sem conexão real.
 - **4:** caminho passa a `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending/`;
   verificações de não publicação e separação dos gates legais preservadas.
+- **5:** reconciliação **autorizada** da guarda `legacy-frontier` (ver §Pendências item 1) — apenas os 7
+  caminhos `lab/bench`, com commit por entrada, sem afrouxar `BASE_SHA`, `LEGACY_FRONTIER_PATHS`,
+  comparação de conteúdo e testes negativos.
 
 ## Resultados reais
 
@@ -71,38 +77,28 @@ alterados; (b) o `build` não conclui o export estático das páginas legais por
     arquivos) após o recorte 2 (inclui `campaign/brief-mapper` e `campaign/brief`).
   - 3 testes de timeout → **65 passed / 0 failed** em **0,7s** (sem timeout).
   - `src/lib/legal` → **39 passed / 0 failed** (8 arquivos).
-- **Suíte completa (`npx vitest run`):** `Tests 1 failed | 5589 passed | 115 skipped (5705)`;
-  `Test Files 17 failed | 447 passed | 2 skipped (466)`.
-  - A **única** falha de teste real é a guarda congelada `legacy-frontier` (§Pendências).
-  - Os outros **16 arquivos** falham **apenas na coleta** por ausência do runner isolado
-    (`isolated_integration_requires_runner_and_redacted_preflight` / `[ ... ]`) — **ausência de
+- **Suíte completa (`npx vitest run`), após o recorte 5:** `Tests 5590 passed | 0 failed | 115 skipped
+  (5705)`; `Test Files 16 failed | 448 passed | 2 skipped (466)`.
+  - **Nenhuma falha de teste.** Os **16 arquivos** falham **apenas na coleta** por ausência do runner
+    isolado (`isolated_integration_requires_runner_and_redacted_preflight` / `[ ... ]`) — **ausência de
     ambiente**, não falha de implementação; não executáveis sem autorização.
+  - Guarda `legacy-frontier` **10/10** após a reconciliação autorizada.
 - **Typecheck:** `tsc -p tsconfig.typecheck.json --noEmit` → **exit 0**.
 - **Lint:** `eslint .` → **exit 0**.
 - **Build:** `check:cnae` OK e `Compiled successfully`; falha no **export estático** de
   `/(marketing)/termos`, `/privacidade`, `/uso-aceitavel` (timeout >60s, 3 tentativas) → exit 1.
   **Ambiental** (ver §Pendências). O `build` constatou que não havia `next dev` ativo na mesma `.next`.
 
-## Pendências (não resolvidas — exigem decisão do responsável)
+## Pendências
 
-1. **Guarda congelada `legacy-frontier` (`src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts`).**
-   Falha em `expect(extra).toEqual([])` (linha 224) porque `src/lib/lab/bench/**` é caminho de
-   fronteira e o conjunto autorizado (`AUTHORIZED_FRONTIER_CHANGES`) não reconhece os 7 caminhos
-   alterados neste quick:
-   - `src/lib/lab/bench/__tests__/branding-service.test.ts`
-   - `src/lib/lab/bench/__tests__/campaign-snapshot.test.ts`
-   - `src/lib/lab/bench/__tests__/form-parity.contract.test.ts`
-   - `src/lib/lab/bench/__tests__/prompt-base.contract.test.ts`
-   - `src/lib/lab/bench/__tests__/run-history.contract.test.ts`
-   - `src/lib/lab/bench/domain/__tests__/intent-schema.contract.test.ts`
-   - `src/lib/lab/bench/domain/campaign-snapshot.ts`
-
-   **A guarda NÃO foi afrouxada** (conforme o escopo). Reconciliação mínima proposta, **não aplicada**,
-   aguardando aprovação: acrescentar 7 entradas em `AUTHORIZED_FRONTIER_CHANGES` com
-   `authorization: "quick 261013-hxm (correção test-only pós-F56.2b1b)"` e `commit` correspondente
-   (`e13732a2` para as 5 fixtures; `af28dc7e` para `campaign-snapshot.ts` e `campaign-snapshot.test.ts`),
-   mantendo `BASE_SHA` e `LEGACY_FRONTIER_PATHS`. Alternativa: excluir os arquivos de teste do escopo da
-   guarda — decisão do responsável.
+1. **Guarda congelada `legacy-frontier` — RESOLVIDA (recorte 5, `afe4cdbf`).**
+   A guarda sinalizava 7 caminhos `src/lib/lab/bench/**` alterados como não autorizados
+   (`expect(extra).toEqual([])`, linha 224). Com **autorização explícita do responsável**, foram
+   acrescentadas exatamente 7 entradas em `AUTHORIZED_FRONTIER_CHANGES`, vinculadas aos commits de
+   origem e com a descrição `"quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório"`:
+   `e13732a2` para as 5 fixtures e `af28dc7e` para `domain/campaign-snapshot.ts` e
+   `campaign-snapshot.test.ts`. **Preservados** `BASE_SHA`, `LEGACY_FRONTIER_PATHS`, a comparação de
+   conteúdo com o commit aprovado e os testes negativos. Guarda **10/10**.
 
 2. **Build bloqueado por ambiente.** As páginas `/(marketing)/termos|privacidade|uso-aceitavel` chamam
    `getCurrentVersion()` → `supabaseAdmin` em tempo de export estático. `.env.local` aponta para o
