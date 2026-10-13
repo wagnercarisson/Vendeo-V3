@@ -65,6 +65,13 @@ describe("AiImageGenerator — attemptNumber por tentativa (F46-04)", () => {
 
     const generator = new AiImageGenerator({
       promptLoader: { load: () => "prompt" } as never,
+      // Seam determinístico: evita o `defaultAiGateway` (que consultaria o
+      // `defaultAiModelResolver`/Supabase). O teste verifica apenas a telemetria
+      // repassada ao validador.
+      invoker: {
+        invoke: vi.fn().mockResolvedValue({ imageBase64: "aGVsbG8=", model: "gpt-image-2" }),
+        hasFallback: vi.fn().mockResolvedValue(false),
+      } as never,
     });
 
     await generator.generate({

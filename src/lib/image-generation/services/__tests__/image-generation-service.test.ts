@@ -19,6 +19,27 @@ import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import { ILLUSTRATIVE_NOTICE_TEXT } from '@/lib/campaign/constants';
 import { AiInvocationError } from '@/lib/ai';
 
+// Isola a resolução de catálogo/seleção: `generateImage` consulta
+// `defaultAiModelResolver` (Supabase) para o modelo efetivo. Mock determinístico
+// — sem banco/rede — preservando os demais exports reais do módulo.
+vi.mock('@/lib/ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai')>();
+  return {
+    ...actual,
+    defaultAiModelResolver: {
+      resolve: vi.fn(async (capability: string) => ({
+        capability,
+        segment: 'image',
+        primary:
+          capability === 'campaign_image_edit'
+            ? { provider: 'openai', model: 'gpt-image-2', protocol: 'images' }
+            : { provider: 'openai', model: 'gpt-5.5', protocol: 'responses' },
+      })),
+      listCapabilities: vi.fn(() => []),
+    },
+  };
+});
+
 // Mock prompt-loader module to avoid file system reads in buildPromptVariables
 // The PromptLoader injected via constructor already overrides the default,
 // but buildPromptVariables indirectly uses promptLoader through other methods.

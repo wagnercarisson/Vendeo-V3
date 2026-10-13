@@ -13,6 +13,27 @@ import type { ImageProviderInput } from '../types';
 import { AiGateway, ModelRegistry, AiInvocationError } from '@/lib/ai';
 import type { AiCallEnvelope, AiInvoker, AiTelemetryContext } from '@/lib/ai';
 
+// Isola a resolução de catálogo/seleção: o provider consulta
+// `defaultAiModelResolver` (Supabase) no fallback. Mock determinístico — sem
+// banco/rede — preservando os demais exports reais do módulo.
+vi.mock('@/lib/ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai')>();
+  return {
+    ...actual,
+    defaultAiModelResolver: {
+      resolve: vi.fn(async (capability: string) => ({
+        capability,
+        segment: 'image',
+        primary:
+          capability === 'campaign_image_edit'
+            ? { provider: 'openai', model: 'gpt-image-2', protocol: 'images' }
+            : { provider: 'openai', model: 'gpt-5.5', protocol: 'responses' },
+      })),
+      listCapabilities: vi.fn(() => []),
+    },
+  };
+});
+
 /**
  * F46-05: o provider delega à camada única (gateway). Os testes injetam um
  * `AiInvoker` fake (seam) e assertam a capacidade/alvo/request — o adapter
