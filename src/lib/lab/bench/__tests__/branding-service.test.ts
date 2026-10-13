@@ -607,6 +607,7 @@ const BRIEFING_PRODUCT: BenchProduct = {
 const BRIEFING_OFFER: BenchOffer = {
   badge: "OFERTA",
   validity: "até 01/10/2026",
+  backgroundDirection: "studio",
 };
 
 describe("buildBenchExperimentalBriefing — briefing estruturado", () => {

@@ -382,8 +382,8 @@ describe("duplicateBenchRunInputs — cópia, imutabilidade e isolamento por pat
       presetId: "gpt-image-2-low",
       prompt: "prompt",
       confirmed: true as const,
-      product: { name: "Produto" },
-      offer: {},
+      product: { name: "Produto", originalPriceCents: 1000, priceCents: 500 },
+      offer: { campaignIntent: "offer" as const, backgroundDirection: "studio" as const },
     };
 
     // Referências sob o prefixo do PRÓPRIO run: aceitas.

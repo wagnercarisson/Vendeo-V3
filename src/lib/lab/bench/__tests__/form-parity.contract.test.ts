@@ -357,7 +357,7 @@ describe("sem efeitos produtivos", () => {
 
   it("montar o snapshot não produz campos de efeito produtivo", () => {
     const product: BenchProduct = { name: "Cafeteira Aurora", priceCents: 12990 };
-    const offer: BenchOffer = {};
+    const offer: BenchOffer = { backgroundDirection: "studio" };
 
     const snapshot = buildBenchCampaignSnapshot({ product, offer, config: CONFIG });
     const serialized = JSON.stringify(snapshot);

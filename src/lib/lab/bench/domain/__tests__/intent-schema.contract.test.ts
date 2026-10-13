@@ -27,7 +27,7 @@ describe("bench intent schema domain refinements", () => {
       BenchRunInputSchema.safeParse({
         ...baseRun,
         product,
-        offer: { campaignIntent },
+        offer: { campaignIntent, backgroundDirection: "studio" },
       }).success,
     ).toBe(valid);
   });

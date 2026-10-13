@@ -97,6 +97,7 @@ function makeOffer(): BenchOffer {
     badge: "50% OFF",
     validity: "até 31/12/2026",
     showIllustrativeNotice: true,
+    backgroundDirection: "studio",
   };
 }
 
