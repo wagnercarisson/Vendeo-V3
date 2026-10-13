@@ -57,4 +57,6 @@ deltas foram removidos. A investigação read-only permanece preservada como ref
 investigação, **sem presumir solução aprovada**.
 
 Nenhum requisito ativo foi removido sem decisão. As changes b1a (arquivada) e b1b (ativa) substituem a
-change agregadora; b1b não SHALL ser sincronizada nem arquivada enquanto a revisão humana estiver pendente.
+change agregadora; a **revisão humana da b1b terminou** (checkpoint aprovado em `56.2.2-UAT.md`,
+`status: approved`, 9/9, 2026-10-12). A b1b **não** foi sincronizada nem arquivada **por ausência de
+autorização específica** para o lifecycle (verify/sync/archive) — **não** por revisão pendente.
