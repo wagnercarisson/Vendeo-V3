@@ -37,7 +37,7 @@
       "signed_off_at": "2026-10-12",
       "scope": "entrega INATIVA da b1b (exclusivo)",
       "preserved": {
-        "wr03": "pendente (forward-only; migrations 20261009000003/04/05 sem DROP TRIGGER IF EXISTS)",
+        "wr03": "ENCERRADO - hipotese NAO APLICAVEL ao Supabase CLI v2.104.0 (atomicidade POR ARQUIVO: SQL + INSERT da versao no MESMO batch, implicitamente transacional); NAO e corrigido - nenhuma alteracao SQL necessaria; limites: NAO atomico pelo conjunto (uma transacao por arquivo) e execucao MANUAL fora do CLI NAO coberta. Fontes: pkg/migration/file.go ExecBatch, pkg/migration/apply.go ApplyMigrations (v2.104.0)",
         "d13": "GATE bloqueante do piloto/habilitacao da b2",
         "pre_existing_failures": "18 mantidas como divida separada (nao verdes)"
       }
