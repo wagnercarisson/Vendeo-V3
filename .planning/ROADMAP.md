@@ -364,7 +364,7 @@ Plans:
 
 ### Phase 56.2.3: F56.2b2a — Recuperação de copy do Produto 1:1
 
-**Status:** ◆ **PLANEJAMENTO EM ANDAMENTO (2026-10-13)** — fase GSD registrada a partir da base OpenSpec **B2.1** (`fase-56-2b2a-recuperacao-de-copy-produto-1-1`); plano(s) em geração. Revisão humana dos planos **PENDENTE**; **sem implementação**. Aprovação humana da base e aceite da UI-SPEC registrados pelo responsável em 2026-10-13 (a UI-SPEC permanece com `reviewed_at` de sign-off formal pendente, rastreado).
+**Status:** ✓ **PLANEJADO (2026-10-13)** — fase GSD criada a partir da base OpenSpec **B2.1** (`fase-56-2b2a-recuperacao-de-copy-produto-1-1`); **5 planos** criados e verificados (`gsd-plan-checker`: **0 blockers**; 2 warnings/3 info de baixo impacto registrados). **Revisão humana dos planos PENDENTE**; **sem implementação**. Aprovação humana da base e aceite da UI-SPEC registrados pelo responsável em 2026-10-13 (a UI-SPEC mantém `reviewed_at` de sign-off formal pendente, rastreado).
 
 **Goal:** Acrescentar a **recuperação de copy** (falha de entrega) sobre a entrega não bloqueante da b1b: política de 3 tentativas automáticas (30s/5s/30s/10s/30s) + até 3 manuais (máx. 6 por entrega), tentativas identificadas (`attempt_seq`+`attempt_token`), histórico preservado, proteção contra conclusão atrasada (`stale_attempt`), anti-duplicação, somente os textos (`campaign_copy`, sem regenerar/alterar a imagem e sem novo crédito), autenticação/ownership e UI da ação manual condicional — tudo **dentro do ciclo da requisição**, **sem** execução durável (fila/worker/cron/outbox), **sem** ativação (chaves `false`, autorização `off`) e **sem** antecipar B2.2/B2.3 ou a F56.3.
 
@@ -379,10 +379,15 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
+**Wave 1** *(sem dependências)*
 - [ ] 56.2.3-01-PLAN.md — Identidade de tentativa (schema LOCAL-ONLY autorado) + camada de estado (`copy-state.ts`) + contrato (REQ-56.2.3-07, -01)
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 56.2.3-02-PLAN.md — Política pura (30s/5s/10s, teto 6) + serviço server-only + schema Zod (REQ-56.2.3-06, -03, -02, -08, -05, -09)
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 56.2.3-03-PLAN.md — Rota autenticada/ownership + guardas G-NA/G-LF (REQ-56.2.3-04, -05, -08, -01, -10, -03)
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 56.2.3-04-PLAN.md — UI da recuperação (7 estados, CTA manual, esperas) (REQ-56.2.3-02, -03, -01, -10, -06, -08)
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 56.2.3-05-PLAN.md — [BLOCKING] Harness isolado + Postgres isolado + gates/rastreabilidade + checkpoint humano (REQ-56.2.3-01..10)
 
 **Canonical refs:** `openspec/changes/fase-56-2b2a-recuperacao-de-copy-produto-1-1/` (proposal, design B2A-D1..D6, spec `product-1-1-copy-recovery`, tasks §1–§5, UI-SPEC, RECONCILIATION), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/campaign-preview.md`, `src/lib/product-1-1/copy/copy-state.ts`, `src/app/(app)/campanhas/[id]/client.tsx`, `src/components/flow/generation-progress.tsx`, `supabase/migrations/20261009000005_f56_2b1b_copy_state.sql` (b1b, LOCAL-ONLY).
