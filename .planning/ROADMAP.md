@@ -384,7 +384,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 56.2.3-06-PLAN.md — Aquisição atômica (RPC sob trava C4) + migração de dados (backfill transacional) + cliente server-only (REQ-56.2.3-07, -06, -03, -04)
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 56.2.3-02-PLAN.md — Política (30s/5s/10s, teto 6) + serviço server-only + fallback=tentativa própria + wiring da tentativa inicial (REQ-56.2.3-06, -03, -02, -08, -05, -09, -01)
+- [ ] 56.2.3-02-PLAN.md — Política (30s/5s/10s, teto 6) + serviço server-only + **sem fallback dentro da tentativa** (fallback = tentativa seguinte) + wiring da tentativa inicial (REQ-56.2.3-06, -03, -02, -08, -05, -09, -01)
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 56.2.3-03-PLAN.md — Rota + barreira de não-ativação/identidade + ownership + G-NA (REQ-56.2.3-04, -05, -08, -01, -10, -03, -07)
 **Wave 5** *(blocked on Wave 4 completion)*
