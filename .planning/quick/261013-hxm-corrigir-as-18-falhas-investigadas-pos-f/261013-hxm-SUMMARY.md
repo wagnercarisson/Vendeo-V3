@@ -21,7 +21,7 @@ caminhos `lab/bench` alterados — **resolvida com autorização explícita do r
 `afe4cdbf`, sem afrouxar `BASE_SHA`/`LEGACY_FRONTIER_PATHS`/comparação de conteúdo/testes negativos);
 (b) o `build` não conclui o export estático das páginas legais por o Supabase isolado
 (`127.0.0.1:56321`) aceitar TCP mas não responder ao REST — **ambiental**, fora do import graph
-alterado (ver §Pendências).
+alterado — **recuperado e encerrado** (ver §Pendências item 2).
 
 ## Causas (confirmadas por reprodução antes de editar)
 
@@ -85,9 +85,11 @@ alterado (ver §Pendências).
   - Guarda `legacy-frontier` **10/10** após a reconciliação autorizada.
 - **Typecheck:** `tsc -p tsconfig.typecheck.json --noEmit` → **exit 0**.
 - **Lint:** `eslint .` → **exit 0**.
-- **Build:** `check:cnae` OK e `Compiled successfully`; falha no **export estático** de
-  `/(marketing)/termos`, `/privacidade`, `/uso-aceitavel` (timeout >60s, 3 tentativas) → exit 1.
-  **Ambiental** (ver §Pendências). O `build` constatou que não havia `next dev` ativo na mesma `.next`.
+- **Build (final):** `npm run build` → **exit 0**; `/termos`, `/privacidade`, `/uso-aceitavel`
+  prerenderizadas como **estáticas (○)**; demais rotas geradas. Sem `next dev` na mesma `.next`.
+- **Integrações (final, runner com gate `-SkipApply -RunSuites`):** **exit 0** — **8/8 suítes / 54
+  passed / 0 failed / 0 skipped** (provider simulado), `suite_coverage_guard: OK` por suíte.
+  `pending migrations = 0`; SHA-256 e identidade conferidos; **nenhuma migration aplicada**.
 
 ## Pendências
 
@@ -100,11 +102,17 @@ alterado (ver §Pendências).
    `campaign-snapshot.test.ts`. **Preservados** `BASE_SHA`, `LEGACY_FRONTIER_PATHS`, a comparação de
    conteúdo com o commit aprovado e os testes negativos. Guarda **10/10**.
 
-2. **Build bloqueado por ambiente.** As páginas `/(marketing)/termos|privacidade|uso-aceitavel` chamam
-   `getCurrentVersion()` → `supabaseAdmin` em tempo de export estático. `.env.local` aponta para o
-   Supabase **isolado** `http://127.0.0.1:56321`, cujo REST **aceita TCP mas não responde** (probe REST
-   → timeout). Nenhum arquivo alterado por este quick participa desse caminho de import. Corrigir exige
-   o stack isolado operacional (banco) — fora do escopo autorizado. Não é regressão das correções.
+2. **Build/integrações bloqueados por ambiente — RESOLVIDO (engine recuperado + gates revalidados).**
+   A causa imediata: o engine Docker Desktop (WSL2) parou (`exit status 1` do bootstrap) mantendo
+   forwards vpnkit órfãos em `56321/56322/56323` (TCP conecta, HTTP pendura). Recuperação autorizada:
+   Quit/relança **gracioso** do Docker Desktop (sem `wsl --shutdown`/reboot/reparo), preservando o
+   disco (`G:\DockerDesktopData-F56.2a\DockerDesktopWSL`) e os volumes. Após subir, o Postgres fez
+   **crash recovery** (fsync) e o Auth saiu do loop sozinho. **Final validado:** `npm run build`
+   **exit 0**; runner com gate **PASS**; `pending migrations = 0`; integrações **54/54** (8 suítes,
+   0 skipped) sem aplicar migrations. **A causa interna da falha inicial do Docker (bootstrap WSL)
+   permanece NÃO esclarecida** — registrada a recuperação, sem inferir a causa-raiz. Nenhum arquivo
+   alterado por este quick participa do caminho de build. Detalhes em
+   `.planning/debug/isolated-rest-unavailable.md`.
 
 ## Reprodução dos comandos
 
