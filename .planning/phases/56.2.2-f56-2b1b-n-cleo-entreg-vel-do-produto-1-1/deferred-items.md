@@ -47,3 +47,25 @@ asserções** e sem tocar produção/migration/flag/provider. O arquivo agora pa
 115 skipped** (Test Files: 25 failed / 438 passed / 2 skipped de 465). As 18 falhas restantes
 são todas **pré-existentes** (14 lab/bench + 3 provider/timeout + 1 legal) e **NÃO** são
 declaradas verdes.
+
+## Reconciliação posterior (quick 261013-hxm, 2026-10-13) — as 18 falhas acima foram corrigidas
+
+> **Nota de tracking.** Esta seção é **aditiva**; a evidência histórica do fechamento da b1b
+> acima permanece íntegra e **não foi reescrita**.
+
+As 18 falhas **pré-existentes** registradas na tabela original (14 lab/bench de
+`backgroundDirection` + 3 provider/timeout + 1 legal) foram investigadas e **corrigidas** na
+quick `261013-hxm` (`.planning/quick/261013-hxm-corrigir-as-18-falhas-investigadas-pos-f/`,
+PLAN + SUMMARY): 13 fixtures do laboratório com `backgroundDirection` explícita; snapshot do
+laboratório derivando `preserveImageContext` (snapshot e `briefSnapshot.creativeContext`)
+exclusivamente de `backgroundDirection` (mapper legado intocado); 3 timeouts isolados com mocks
+determinísticos do resolvedor de modelo; teste legal apontando para o archive da F50. Commits
+`e13732a2`, `af28dc7e`, `f3c96912`, `08e6f0f2`.
+
+**Resultado da suíte completa após a correção:** `5589 passed / 1 failed / 115 skipped`. A única
+falha de teste é a **guarda congelada `legacy-frontier`**, que sinaliza 7 caminhos
+`src/lib/lab/bench/**` alterados como não autorizados — **a guarda não foi afrouxada** (decisão
+pendente do responsável, registrada no SUMMARY do quick). Os demais arquivos que não executam
+dependem do runner isolado (ausência de ambiente), não de falha de implementação.
+
+
