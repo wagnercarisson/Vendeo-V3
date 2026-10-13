@@ -1,6 +1,6 @@
 # Reconciliação — B2.3 (Autorização estreita e teste real local)
 
-> Fatia **B2.3** da divisão aprovada da F56.2b2. Deriva da change agregadora `fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1` (**substituída documentalmente; NÃO implementada**). Matriz global em `.../fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1/SUPERSEDED.md`.
+> Fatia **B2.3** da divisão aprovada da F56.2b2. Deriva da change agregadora `fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1` (**substituída documentalmente; NÃO implementada**; movida para o histórico documental em `openspec/history/`). Matriz global em `openspec/history/fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1/SUPERSEDED.md`.
 
 ## Responsabilidade desta fatia
 

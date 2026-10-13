@@ -1,6 +1,6 @@
 # Reconciliação — B2.2 (Recuperação de imagem, estorno e D13)
 
-> Fatia **B2.2** da divisão aprovada da F56.2b2. Deriva da change agregadora `fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1` (**substituída documentalmente; NÃO implementada**). Matriz global em `.../fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1/SUPERSEDED.md`.
+> Fatia **B2.2** da divisão aprovada da F56.2b2. Deriva da change agregadora `fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1` (**substituída documentalmente; NÃO implementada**; movida para o histórico documental em `openspec/history/`). Matriz global em `openspec/history/fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1/SUPERSEDED.md`.
 
 ## Responsabilidade desta fatia
 

@@ -1,5 +1,7 @@
 # SUBSTITUÍDA DOCUMENTALMENTE — divisão aprovada da F56.2b2
 
+> **Localização:** histórico documental em `openspec/history/fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1/` — **fora** de `openspec/changes/` e, portanto, **fora das changes ativas**. Não é change ativa nem entrega concluída.
+
 > **Estado da change agregadora:** **substituída documentalmente** pela divisão aprovada em três bases independentes. **NÃO** é tratada como **implementada** e **NÃO** deve ser sincronizada/arquivada como concluída. Este documento **não** altera archives nem specs principais.
 
 ## Decisão aprovada
