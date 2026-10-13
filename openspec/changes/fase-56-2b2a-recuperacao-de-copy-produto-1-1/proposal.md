@@ -36,6 +36,18 @@ A change agregadora `fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1` é **sub
 9. A recuperação é **independente do estado da imagem** e funciona com a imagem já `delivered`.
 10. **Nenhuma chamada paga** em CI; validação **local-primeiro** com **provider simulado**.
 
+### Refinamentos de contrato (reconciliação 2026-10-13)
+
+Os critérios 11–17 **fecham lacunas funcionais de execução** sem alterar o recorte B2.1. Eles **não** criam novos requirements: são **dobrados** nos 10 requirements normativos existentes do spec `product-1-1-copy-recovery` (a contagem **2 MODIFIED + 8 ADDED = 10** permanece) e nos REQ-IDs `REQ-56.2.3-01..10`.
+
+11. A **aquisição de tentativa é atômica no servidor** (sob trava estável da operação) e ocorre **antes de qualquer chamada ao provider** (inclusive fallback); requisições concorrentes ⇒ **exatamente uma** tentativa adquirida e a perdedora **apenas acompanha**.
+12. **Cada chamada efetiva** de provider (primária **ou** fallback) é uma **tentativa identificada** que segue a política; **não** existe **fallback escondido** nem tentativa fora do contador.
+13. `pending` **não** comprova **execução ativa**: o servidor distingue tentativa **ativa** de **interrompida** e as esperas (5s/10s) são verificadas **server-side** (anti-spinner-preso).
+14. A recuperação respeita a **elegibilidade/não-ativação** e a **identidade do novo fluxo**: campanha do novo fluxo, `operationId` correspondente; com o fluxo **`off`**, nega **sem chamada de IA**; `mode`/sequência/token do cliente são **solicitações**, nunca autoridade.
+15. A **migração dos registros** existentes da b1b é **transacional**, preserva o **vínculo da mesma tentativa** (estado↔cancelamento) e **restaura a imutabilidade** do cancelamento ao final; provada com **fixtures anteriores à B2.1**.
+16. A **tentativa inicial** (drenagem da copy no ciclo da requisição da b1b) é integrada ao modelo de identidade/contabilização/classificação da falha.
+17. As **provas de integração** cobrem **concorrência pela rota real**, **limites separados** (auto × manual), **esperas**, **fallback** e **tentativa inicial** (Postgres isolado; provider simulado; nenhuma chamada paga).
+
 ## Dependência explícita
 
 Depende da **F56.2b1b** (arquivada em 2026-10-12) e, transitivamente, da **F56.2b1a** e da **F56.2a**. É a **primeira** das três fatias aprovadas; **não** depende de B2.2/B2.3.

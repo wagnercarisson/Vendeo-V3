@@ -23,6 +23,9 @@
 - [ ] 2.6 Limitar a **3 tentativas manuais** (6 no total); cada clique inicia **uma** tentativa e não reinicia o ciclo automático
 - [ ] 2.7 Encerrar as tentativas no sucesso; não repetir cegamente falhas **definitivas** (configuração/permissão)
 - [ ] 2.8 Garantir que a recuperação só é oferecida com a copy **pendente/falha**; copy **entregue encerra**
+- [ ] 2.9 Implementar a **aquisição atômica** da tentativa (RPC condicional sob a trava da operação: tentativa **ativa**, próximo `attempt_seq`, **limites** 3+3=6, entrega **já `completed`**, **vencedor**) **antes** de qualquer chamada ao provider; perdedoras apenas acompanham
+- [ ] 2.10 Integrar a **tentativa inicial** (drenagem da copy no ciclo da requisição) ao modelo de identidade (`attempt_seq`+`attempt_token`), contabilização e **classificação** da falha
+- [ ] 2.11 Garantir que **cada chamada efetiva** (primária/fallback) seja **uma tentativa identificada** que segue a política; **sem** fallback escondido
 
 ## 3. Anti-duplicação, histórico e segurança
 
@@ -34,6 +37,9 @@
 - [ ] 3.6 Exigir autenticação e verificação de **ownership**; negar sem chamada de IA
 - [ ] 3.7 Garantir a **independência do estado da imagem** (recuperação de copy com imagem `delivered`)
 - [ ] 3.8 Exibir a ação manual condicional conforme `openspec/design-system/MASTER.md` (dark OLED, sem emojis, sem light mode) e `openspec/design-system/pages/campaign-preview.md`
+- [ ] 3.9 Garantir que `pending` **não** comprove execução ativa: **posse/lease** da tentativa; **interrompida ≠ ativa**; **esperas (5s/10s) verificadas server-side** (anti-spinner-preso)
+- [ ] 3.10 Implementar a **barreira de não-ativação e identidade**: campanha do **novo fluxo**, `operationId` correspondente, **elegibilidade/autorização** respeitada; com o fluxo **`off`**, negar **sem chamada de IA**; `mode`/sequência/token do cliente são **solicitações**, nunca autoridade
+- [ ] 3.11 Implementar a **migração transacional** dos registros existentes da b1b (preservar o **vínculo da mesma tentativa** estado↔cancelamento e **restaurar a imutabilidade**), provada com **fixtures anteriores à B2.1**
 
 ## 4. Testes (contrato, Postgres isolado, navegador)
 
@@ -41,6 +47,8 @@
 - [ ] 4.2 Cobrir em **Postgres isolado** as transições condicionais e a proteção de terminal (instância descartável; nenhuma migration remota)
 - [ ] 4.3 Cobrir no **navegador** com **provider simulado** (nenhuma chamada paga)
 - [ ] 4.4 Rodar typecheck, lint, build e suíte local (nenhuma chamada paga)
+- [ ] 4.5 Provar, no **Postgres isolado**, a concorrência **pela rota real**, os **limites separados** (auto × manual), as **esperas**, o **fallback** e a **tentativa inicial**
+- [ ] 4.6 Provar a **migração/backfill** com **fixtures anteriores à B2.1** e a **imutabilidade restaurada**
 
 ## 5. Checkpoint final
 

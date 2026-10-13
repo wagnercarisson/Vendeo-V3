@@ -21,6 +21,10 @@ Recuperação de **copy** (falha de entrega): política 3 automáticas + 3 manua
 
 - `product-1-1-copy-recovery` — MODIFIED (2) + ADDED (8) = 10 requirements normativos em `specs/product-1-1-copy-recovery/spec.md`, idênticos à base reconciliada. *(Erratum documental 2026-10-13: a contagem anterior dizia "ADDED (7)"; corrigida para "ADDED (8)" sem qualquer mudança de escopo ou de requisitos.)*
 
+### Refinamentos de contrato (reconciliação 2026-10-13)
+
+Os **7 pontos** de reconciliação de execução — (1) wiring da tentativa inicial; (2) aquisição **atômica**; (3) **cada chamada efetiva = uma tentativa identificada** (sem fallback escondido); (4) **migração de dados** dos registros b1b; (5) `pending` **não** comprova atividade (ativa × interrompida; esperas server-side); (6) **barreira de não-ativação/identidade**; (7) **provas de integração pela rota real** e agenda da 2ª automática — foram **dobrados nos 10 requirements existentes** (proposal critérios 11–17; design B2A-D2..D5; spec: cenários acrescentados; tasks §2.9–§2.11, §3.9–§3.11, §4.5–§4.6). **NÃO** há novos requirements nem alteração da contagem (2 MODIFIED + 8 ADDED). Ajuste **de contrato** feito na base antes do replanejamento, conforme orientação do responsável.
+
 ## Fora de escopo / não duplicação
 
 - **B2.2** detém o gatilho de falha final, estorno e D13; **B2.3** detém autorização/teste real e a validação local-primeiro como requisito de fluxo.
