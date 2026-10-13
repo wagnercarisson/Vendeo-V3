@@ -45,6 +45,8 @@ Classificação `transient × definitive` vem do **estado/envelope server-side**
 
 **Cada chamada efetiva é uma tentativa — sem fallback escondido.** A recuperação **NÃO** executa uma chamada de fallback **dentro da mesma tentativa/acionamento (clique)**: cada chamada efetiva de provider é uma **tentativa identificada própria**, adquirida pelo servidor **antes** da chamada, e segue **integralmente** esta política — **contadores, limites e esperas**. Quando aplicável, um alvo de **fallback** é usado na **tentativa seguinte governada pela política** (após a espera), **não** como segunda chamada oculta dentro do mesmo acionamento. A **aquisição** da tentativa (ver B2A-D4) é decidida pelo **servidor**, sob trava, **antes** de qualquer chamada ao provider.
 
+**Transições de `mode` validadas server-side.** **NÃO** há tentativa **automática** após uma falha **definitiva** nem após o início da recuperação **manual**; alterar o `mode` no corpo da requisição **não** reabre o ciclo automático; apenas o acionamento **manual** (dentro do limite) permanece.
+
 ### B2A-D3 — Como a política cabe no ciclo de execução (sem execução durável)
 
 1. A **1ª tentativa** ocorre no dreno da copy da requisição original (`COPY_BUDGET_MS`).
@@ -55,6 +57,8 @@ Classificação `transient × definitive` vem do **estado/envelope server-side**
 *Direção:* **requisições separadas** pelo modelo de tentativas identificadas — **não** por afirmação sobre limites da plataforma (que permanecem **não verificados**).
 
 **Esperas e atividade são decididas pelo SERVIDOR.** A UI não infere espera nem atividade por tempo; o estado persistido (com **posse/lease** da tentativa — B2A-D4) determina se há tentativa **ativa** ou **interrompida**. Quem **agenda** a próxima automática é o **estado do servidor**: após falha transitória, a UI apresenta `aguardando` com a contagem reportada pelo servidor e emite a próxima tentativa automática ao fim dela; se o servidor **não comprovar atividade** (ex.: requisição encerrada sem gravação final), a tentativa é **interrompida** e a retomada é **manual** (sem spinner preso).
+
+**Quem agenda (critério explícito).** Apenas a **aba que dirige** o acionamento mantém o ciclo; **outra aba** e o **`reload`** **apenas acompanham** o estado do servidor e **NÃO** retomam automaticamente a partir da espera persistida. Nenhuma página carregada reivindica o ciclo por conta própria.
 
 ### B2A-D4 — Tentativas identificadas, histórico preservado e proteção contra conclusão atrasada
 
@@ -67,7 +71,11 @@ Direção de schema **fixada antes do planejamento** (sem questão aberta):
 - **Compatibilidade:** `readCopyState`/`readCopyDelivery` leem a linha de **maior `attempt_seq`** (tentativa única da b1b ≡ `attempt_seq = 1`); o contrato de envelope e o terminal protegido são preservados.
 - **Aquisição atômica por RPC:** uma RPC condicional (`SECURITY DEFINER`, sob a **trava da operação**) decide a aquisição — tentativa **ativa**, próximo `attempt_seq`, **limites** (3 automáticas + 3 manuais = 6) e entrega **já `completed`** — e devolve o **vencedor**; requisições **perdedoras** apenas **acompanham** (não iniciam chamada). A aquisição ocorre **antes** de qualquer chamada ao provider (inclusive fallback).
 - **`pending` exige atividade comprovada:** a linha corrente carrega **posse/lease** (token + marca temporal); `pending` **sem** atividade comprovada é **interrompida**, **não** ativa (evita spinner preso). A conclusão atrasada de tentativa superada continua **rejeitada** (`stale_attempt`).
-- **Migração de dados:** registros existentes da b1b (estado e cancelamento) são migrados **transacionalmente** para o modelo por tentativa, preservando o **vínculo da MESMA tentativa** (tokens derivados da MESMA tentativa) e **restaurando a imutabilidade** do cancelamento ao final; provado com **fixtures anteriores à B2.1**.
+- **Migração de dados:** registros existentes da b1b (estado e cancelamento) são migrados **transacionalmente** para o modelo por tentativa, preservando o **vínculo da MESMA tentativa** (tokens derivados da MESMA tentativa) e **restaurando a imutabilidade** do cancelamento ao final; provado com **fixtures anteriores à B2.1** (inseridas **ANTES** da migração).
+- **Tentativa expirada:** uma corrente `pending` com **lease vencido** é encerrada **atomicamente** (terminal, `stale_attempt`) e a **próxima** é adquirida na **MESMA** transação; a conclusão atrasada da expirada é rejeitada (protege contra "pending preso" e contra escrita tardia). *Não basta afirmar "nunca sobra pending": a falha de persistência é tratada por este encerramento atômico.*
+- **Terminais separados (financeiro × copy):** o terminal **financeiro** (`delivered`/`refunded`) **≠** o terminal da **copy**; a imagem `delivered` **NÃO** encerra a recuperação de textos e a aquisição **não** recusa por terminal financeiro.
+- **Idempotência do MESMO acionamento:** um **reenvio atrasado** (mesmo acionamento) **não** adquire nova tentativa nem consome slot; a identidade enviada pelo cliente é **condição validada** (dedupe) — nunca **autoridade** nem escolha do **vencedor**.
+- **Backfill e contadores:** a tentativa **histórica** da b1b entra no contador **automático** (`attempt_seq = 1`, `kind='auto'`); os leitores/testes afetados pelas novas assinaturas são **reconciliados**.
 
 *Alternativa rejeitada (decisão fechada):* tabela append-only separada + projeção (custo maior sem ganho).
 
@@ -93,11 +101,15 @@ A recuperação SHALL exigir **autenticação** e **ownership** da campanha/loja
 - **[Spinner preso por `pending` órfão]** → `pending` exige **atividade comprovada** (posse/lease); tentativa **interrompida** é distinta de **ativa** e oferece retomada manual.
 - **[Fallback escondido / teto burlado]** → **cada chamada efetiva = tentativa identificada**; **aquisição atômica** antes do provider.
 - **[Backfill quebrando imutabilidade/vínculo]** → migração **transacional** com restauração da imutabilidade, provada com **fixtures anteriores à B2.1**.
+- **[Recuperação bloqueada por imagem entregue]** → **terminais separados**; a aquisição **não** recusa por `delivered`/`refunded`.
+- **[Reenvio atrasado consumindo slot]** → idempotência do **mesmo acionamento**; identidade do cliente como **condição validada**.
+- **[Ciclo automático reaberto por `mode`]** → validação **server-side** das transições de `mode`.
+- **[Tentativa expirada presa]** → encerramento **atômico** da tentativa expirada + aquisição da próxima.
 
 ## Migration Plan
 
 1. Implementar **aquisição atômica**, identidade de tentativa/histórico/anti-duplicação e a política (**cada chamada efetiva = uma tentativa**); typecheck/lint/build/testes locais.
-2. Migrar **dados existentes** da b1b transacionalmente (preservando o vínculo da mesma tentativa e **restaurando a imutabilidade**), provado com **fixtures anteriores à B2.1**.
+2. Migrar **dados existentes** da b1b transacionalmente (preservando o vínculo da mesma tentativa e **restaurando a imutabilidade**), com **fixtures inseridas ANTES da migração** e a tentativa histórica atribuída ao contador **automático**.
 3. Rodar testes de contrato, **Postgres isolado** (incluindo **concorrência pela ROTA real**, limites separados, esperas, fallback e tentativa inicial) e navegador (**provider simulado**); **nenhuma chamada paga**.
 4. **Checkpoint humano** desta fatia; submeter B2.1 à revisão.
 

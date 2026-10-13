@@ -26,6 +26,9 @@
 - [ ] 2.9 Implementar a **aquisição atômica** da tentativa (RPC condicional sob a trava da operação: tentativa **ativa**, próximo `attempt_seq`, **limites** 3+3=6, entrega **já `completed`**, **vencedor**) **antes** de qualquer chamada ao provider; perdedoras apenas acompanham
 - [ ] 2.10 Integrar a **tentativa inicial** (drenagem da copy no ciclo da requisição) ao modelo de identidade (`attempt_seq`+`attempt_token`), contabilização e **classificação** da falha
 - [ ] 2.11 Garantir que **cada chamada efetiva** (primária/fallback) seja **uma tentativa identificada** que segue a política; **sem** fallback escondido
+- [ ] 2.12 Garantir que a **imagem `delivered`/terminal financeiro** não encerre nem bloqueie a recuperação de **textos** (terminais financeiro × copy **separados**)
+- [ ] 2.13 Encerrar **atomicamente** a tentativa **expirada** (`pending` com lease vencido, `stale_attempt`) e adquirir a **próxima** na MESMA transação, rejeitando conclusão atrasada
+- [ ] 2.14 Validar **server-side** as **transições de `mode`**: sem automática após falha **definitiva** ou após início **manual**; `mode` no corpo não reabre o ciclo
 
 ## 3. Anti-duplicação, histórico e segurança
 
@@ -40,6 +43,9 @@
 - [ ] 3.9 Garantir que `pending` **não** comprove execução ativa: **posse/lease** da tentativa; **interrompida ≠ ativa**; **esperas (5s/10s) verificadas server-side** (anti-spinner-preso)
 - [ ] 3.10 Implementar a **barreira de não-ativação e identidade**: campanha do **novo fluxo**, `operationId` correspondente, **elegibilidade/autorização** respeitada; com o fluxo **`off`**, negar **sem chamada de IA**; `mode`/sequência/token do cliente são **solicitações**, nunca autoridade
 - [ ] 3.11 Implementar a **migração transacional** dos registros existentes da b1b (preservar o **vínculo da mesma tentativa** estado↔cancelamento e **restaurar a imutabilidade**), provada com **fixtures anteriores à B2.1**
+- [ ] 3.12 Fechar a **idempotência do MESMO acionamento** (reenvio atrasado não adquire nova tentativa nem consome slot); identidade do cliente é **condição validada** (dedupe), nunca autoridade/vencedor
+- [ ] 3.13 Atribuir a **tentativa histórica** da b1b ao contador **automático** (`attempt_seq = 1`, `kind='auto'`) no backfill
+- [ ] 3.14 Explicitar **quem agenda** a 2ª automática (a aba que dirige); `reload`/outra aba **não** retomam automaticamente
 
 ## 4. Testes (contrato, Postgres isolado, navegador)
 

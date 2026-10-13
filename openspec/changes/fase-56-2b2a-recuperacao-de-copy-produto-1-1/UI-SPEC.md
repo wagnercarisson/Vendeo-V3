@@ -369,6 +369,13 @@ Ajustes de contrato (fonte: `proposal.md` critérios 11–17; `design.md` B2A-D2
 3. **Precedência inalterada** (`concluída` > `ativa`/`aguardando` > `indeterminada` > `falha definitiva` > `falha` > `interrompida`); a decisão de "ativa" passa a exigir **atividade comprovada** pelo servidor.
 4. **Nenhum novo estado/token** de UI; sem novo design token, light mode ou emoji.
 
+### Refinamentos de execução (2ª rodada — 2026-10-13)
+
+5. **Imagem `delivered` não é "concluída" da copy.** O painel de copy continua oferecendo recuperação com a imagem entregue (terminais **separados**); `concluída` refere-se **ao texto**, não à imagem.
+6. **Tentativa expirada = `interrompida`.** `pending` com **lease vencido** é exibida como `interrompida` (sem spinner) e a próxima tentativa é adquirida atomicamente pelo servidor; nunca "spinner preso".
+7. **Reenvio atrasado não reinicia nem sobe contador.** Um reenvio do MESMO acionamento **não** cria nova tentativa; o contador só avança quando o servidor **adquire** uma tentativa.
+8. **Quem agenda é explícito.** Só a **aba que dirige** mantém o ciclo; `reload`/outra aba **apenas acompanham** e **não** retomam automaticamente a partir da espera persistida.
+
 ## Checker / Review Status
 
 - [x] Dimension 1 Copywriting — PASS (FLAG resolvido: label `Textos prontos.` unificado)

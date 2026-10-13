@@ -48,6 +48,17 @@ Os critérios 11–17 **fecham lacunas funcionais de execução** sem alterar o 
 16. A **tentativa inicial** (drenagem da copy no ciclo da requisição da b1b) é integrada ao modelo de identidade/contabilização/classificação da falha.
 17. As **provas de integração** cobrem **concorrência pela rota real**, **limites separados** (auto × manual), **esperas**, **fallback** e **tentativa inicial** (Postgres isolado; provider simulado; nenhuma chamada paga).
 
+### Refinamentos de execução (reconciliação 2026-10-13, 2ª rodada)
+
+Os critérios 18–23 tornam executáveis garantias já combinadas (**sem novas decisões de produto**), dobradas nos **mesmos 10 requirements** (contagem inalterada) e nos `REQ-56.2.3-01..10`.
+
+18. A imagem `delivered`/terminal **financeiro** **NÃO** encerra nem bloqueia a recuperação de **textos** (terminais **separados**); a aquisição **não** recusa por terminal financeiro.
+19. Uma tentativa **expirada** (`pending` com **lease vencido**) é encerrada **atomicamente** (`stale_attempt`) e a **próxima** é adquirida na **mesma** transação, rejeitando a conclusão **atrasada**.
+20. **Idempotência do MESMO acionamento** ao longo do tempo (reenvio atrasado) **não** adquire nova tentativa nem consome slot; a identidade do cliente é **condição validada**, nunca autoridade/vencedor.
+21. **Transições de `mode`** validadas **server-side**: sem automática após falha **definitiva** ou após início **manual**; `mode` no corpo **não** reabre o ciclo.
+22. A tentativa **histórica** da b1b entra no contador **automático**; as provas inserem **fixtures ANTES** da migração.
+23. **Quem agenda** a 2ª automática é **explícito**; `reload`/outra aba **não** retomam automaticamente (apenas acompanham).
+
 ## Dependência explícita
 
 Depende da **F56.2b1b** (arquivada em 2026-10-12) e, transitivamente, da **F56.2b1a** e da **F56.2a**. É a **primeira** das três fatias aprovadas; **não** depende de B2.2/B2.3.

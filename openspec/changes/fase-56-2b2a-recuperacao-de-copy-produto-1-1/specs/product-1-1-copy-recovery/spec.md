@@ -51,6 +51,13 @@ O estado `pending` SHALL NOT, por si só, comprovar **execução ativa**: o serv
 - **AND** a UI não mantém spinner e oferece retomada **manual**
 - **AND** nenhuma espera automática é tomada como em curso
 
+#### Scenario: Outra aba apenas acompanha
+
+- **WHEN** uma segunda aba/`reload` abre enquanto há uma espera automática persistida
+- **THEN** ela **apenas acompanha** o estado do servidor
+- **AND** **não** retoma automaticamente o ciclo a partir da espera persistida
+- **AND** somente a aba que **dirige** o acionamento mantém o ciclo
+
 #### Scenario: Espera verificada pelo servidor
 
 - **WHEN** o estado persistido indica espera entre tentativas automáticas (5s/10s)
@@ -119,7 +126,7 @@ A recuperação SHALL tentar **apenas** os textos (`campaign_copy`), SHALL NOT a
 
 A recuperação SHALL seguir: 1ª tentativa até **30 segundos**; em falha **transitória**, esperar **5 segundos** e 2ª tentativa até **30 segundos**; em nova falha **transitória**, esperar **10 segundos** e 3ª tentativa até **30 segundos**; após falhar nas três, SHALL ofertar **ação manual e suporte**. SHALL ser permitido no máximo **3 tentativas manuais** adicionais, totalizando **6 tentativas por entrega**. Cada clique manual SHALL iniciar **somente uma** tentativa e SHALL NOT reiniciar o ciclo automático. O sucesso SHALL encerrar as tentativas. Falhas **definitivas** de configuração/permissão SHALL NOT receber repetição cega.
 
-A aquisição de cada tentativa SHALL ser decidida **atomicamente pelo servidor**, sob uma **trava estável da operação**, **antes de qualquer chamada ao provider** (inclusive fallback): o servidor decide se há tentativa **ativa**, o próximo `attempt_seq`, os **limites** (3 automáticas + 3 manuais = 6) e se a entrega **já obteve sucesso**. Requisições concorrentes SHALL resultar em **exatamente uma** tentativa adquirida; as requisições **perdedoras** SHALL apenas acompanhar. **Cada chamada efetiva de provider** (primária **ou** fallback) SHALL ocupar **uma única** tentativa identificada e seguir esta política (orçamento/esperas/limites); **NÃO** SHALL existir **fallback escondido** dentro de um acionamento.
+A aquisição de cada tentativa SHALL ser decidida **atomicamente pelo servidor**, sob uma **trava estável da operação**, **antes de qualquer chamada ao provider** (inclusive fallback): o servidor decide se há tentativa **ativa**, o próximo `attempt_seq`, os **limites** (3 automáticas + 3 manuais = 6) e se a entrega **já obteve sucesso**. Requisições concorrentes SHALL resultar em **exatamente uma** tentativa adquirida; as requisições **perdedoras** SHALL apenas acompanhar. **Cada chamada efetiva de provider** (primária **ou** fallback) SHALL ocupar **uma única** tentativa identificada e seguir esta política (orçamento/esperas/limites); **NÃO** SHALL existir **fallback escondido** dentro de um acionamento. As **transições de `mode`** SHALL ser validadas **server-side**: **NÃO** SHALL haver nova tentativa **automática** após uma falha **definitiva** nem após o início da recuperação **manual**; alterar o `mode` no corpo da requisição SHALL NOT reabrir o ciclo **automático**.
 
 #### Scenario: Ciclo automático com esperas
 
@@ -172,9 +179,16 @@ A aquisição de cada tentativa SHALL ser decidida **atomicamente pelo servidor*
 - **AND** cada chamada efetiva corresponde a **uma** tentativa identificada e é **contabilizada** (nenhuma oculta)
 - **AND** a decisão de adquirir a tentativa ocorre **antes** da chamada ao provider
 
+#### Scenario: Modo automático não é reaberto
+
+- **WHEN** houve uma falha **definitiva** ou o lojista migrou para a recuperação **manual**
+- **THEN** o servidor **recusa** nova tentativa **automática**
+- **AND** alterar o `mode` no corpo da requisição **não** reabre o ciclo automático
+- **AND** apenas o acionamento **manual** (dentro do limite) permanece disponível
+
 ### Requirement: Tentativas identificadas, histórico preservado e proteção contra conclusão atrasada
 
-Cada tentativa SHALL ter **identidade** própria (sequência + token) e SHALL ser registrada **sem sobrescrever** tentativas anteriores. A conclusão/terminal **atrasado** de uma tentativa **superada** SHALL ser **rejeitado** e SHALL NOT sobrescrever o estado persistido. Linhas terminais (`completed`/`failed`) SHALL NOT ser reabertas nem sobrescritas. A persistência SHALL preservar o **histórico** das tentativas. A **migração de registros existentes** (produzidos pela b1b) SHALL preservar o **vínculo da MESMA tentativa** entre estado e cancelamento e SHALL **restaurar a proteção de imutabilidade** ao final da migração.
+Cada tentativa SHALL ter **identidade** própria (sequência + token) e SHALL ser registrada **sem sobrescrever** tentativas anteriores. A conclusão/terminal **atrasado** de uma tentativa **superada** SHALL ser **rejeitado** e SHALL NOT sobrescrever o estado persistido. Linhas terminais (`completed`/`failed`) SHALL NOT ser reabertas nem sobrescritas. A persistência SHALL preservar o **histórico** das tentativas. A **migração de registros existentes** (produzidos pela b1b) SHALL preservar o **vínculo da MESMA tentativa** entre estado e cancelamento e SHALL **restaurar a proteção de imutabilidade** ao final da migração. Uma tentativa **expirada** (`pending` com posse/**lease** vencido) SHALL ser encerrada **atomicamente** e a **próxima** tentativa adquirida na **mesma** transação, preservando o histórico e rejeitando a conclusão **atrasada** da tentativa expirada (`stale_attempt`). A tentativa **histórica** da b1b SHALL ser atribuída ao contador **automático** (`attempt_seq = 1`, `kind='auto'`).
 
 #### Scenario: Histórico preservado
 
@@ -201,15 +215,34 @@ Cada tentativa SHALL ter **identidade** própria (sequência + token) e SHALL se
 - **AND** a proteção de **imutabilidade** do cancelamento é **restaurada** ao final da migração
 - **AND** um `UPDATE`/`DELETE` posterior no cancelamento é **negado**
 
+#### Scenario: Tentativa expirada é encerrada e a próxima é adquirida
+
+- **WHEN** a tentativa corrente está `pending` com o **lease vencido**
+- **THEN** o servidor encerra essa tentativa **atomicamente** (terminal, `stale_attempt`) e adquire a **próxima** na MESMA transação
+- **AND** a conclusão **atrasada** da tentativa expirada é **rejeitada**
+- **AND** o histórico é preservado
+
+#### Scenario: Tentativa histórica conta como automática
+
+- **WHEN** existe a tentativa histórica da b1b para a entrega
+- **THEN** ela é atribuída ao contador **automático** (`attempt_seq = 1`, `kind='auto'`)
+- **AND** as tentativas subsequentes respeitam o teto restante (5)
+
 ### Requirement: Anti-duplicação e contabilização de chamadas
 
-Cliques duplicados, reload e reenvio SHALL NOT duplicar chamadas nem reiniciar contadores. As chamadas técnicas/fallback SHALL ser **contabilizadas no limite**, sem tentativas escondidas. Cada **chamada efetiva** SHALL corresponder a **uma** tentativa identificada.
+Cliques duplicados, reload e reenvio SHALL NOT duplicar chamadas nem reiniciar contadores. As chamadas técnicas/fallback SHALL ser **contabilizadas no limite**, sem tentativas escondidas. Cada **chamada efetiva** SHALL corresponder a **uma** tentativa identificada. A **idempotência** SHALL valer para o **MESMO acionamento** ao **longo do tempo** (reenvio atrasado), não apenas para chamadas **simultâneas**: um reenvio do mesmo acionamento SHALL NOT adquirir uma **nova** tentativa nem consumir outro slot. A identidade enviada pelo cliente SHALL funcionar como **condição validada** (dedupe) — **nunca** como **autoridade** nem como escolha do **vencedor**.
 
 #### Scenario: Clique duplo e reload não duplicam
 
 - **WHEN** a mesma recuperação é acionada duas vezes (clique duplo/reload/reenvio)
 - **THEN** apenas uma execução efetiva ocorre
 - **AND** nenhum contador é reiniciado
+
+#### Scenario: Reenvio atrasado não adquire nova tentativa
+
+- **WHEN** um reenvio do MESMO acionamento chega **depois** de a tentativa anterior já ter falhado
+- **THEN** o reenvio **não** adquire uma **nova** tentativa nem consome outro slot
+- **AND** a identidade enviada pelo cliente é usada apenas como **condição validada** (dedupe), sem autorizar nem escolher o vencedor
 
 #### Scenario: Chamada técnica/fallback contabilizada
 
@@ -229,10 +262,16 @@ A recuperação SHALL registrar o **custo interno** da chamada, sem convertê-lo
 
 ### Requirement: Recuperação de copy independente do estado da imagem
 
-A recuperação de copy SHALL funcionar com a imagem já `delivered` e SHALL NOT tocar a operação financeira nem a arte.
+A recuperação de copy SHALL funcionar com a imagem já `delivered` e SHALL NOT tocar a operação financeira nem a arte. O **terminal financeiro** da imagem (`delivered`/`refunded`) **NÃO** é o terminal da **copy**: uma imagem `delivered` (ou operação financeira terminal) SHALL NOT encerrar nem bloquear a recuperação dos **textos**, e a aquisição de tentativa SHALL NOT recusar por o crédito/operação estar `delivered`/`refunded`.
 
 #### Scenario: Copy recuperada com imagem entregue
 
 - **WHEN** a imagem está `delivered` e a copy está pendente/falha
 - **THEN** a recuperação de copy é executada
 - **AND** a operação financeira e a arte permanecem inalteradas
+
+#### Scenario: Imagem delivered não bloqueia a recuperação
+
+- **WHEN** a operação financeira está terminal (`delivered`/`refunded`) e a copy está pendente/falha
+- **THEN** a aquisição de tentativa de recuperação é **admitida** (não recusada por `operation_terminal`)
+- **AND** apenas o **terminal da copy** (`completed`) encerra a recuperação
