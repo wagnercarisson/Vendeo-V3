@@ -376,6 +376,13 @@ Plans:
 
 **Provas exigidas no planejamento:** contrato (política 30s/5s/10s, teto de 6, clique manual, `stale_attempt`, terminal não sobrescrito, falha definitiva, anti-duplicação, independência copy×imagem); Postgres isolado (transições condicionais e proteção de terminal; instância descartável); navegador com **provider simulado** (nenhuma chamada paga); migration **LOCAL-ONLY** (autorada; aplicada só na instância isolada, nunca `db push` remoto). Estimativa **4–5 planos**; se exceder 8–10, parar e propor ajuste sem retirar segurança/testes.
 
-**Plans:** _pendente_ (planejamento em andamento)
+**Plans:** 5 plans
+
+Plans:
+- [ ] 56.2.3-01-PLAN.md — Identidade de tentativa (schema LOCAL-ONLY autorado) + camada de estado (`copy-state.ts`) + contrato (REQ-56.2.3-07, -01)
+- [ ] 56.2.3-02-PLAN.md — Política pura (30s/5s/10s, teto 6) + serviço server-only + schema Zod (REQ-56.2.3-06, -03, -02, -08, -05, -09)
+- [ ] 56.2.3-03-PLAN.md — Rota autenticada/ownership + guardas G-NA/G-LF (REQ-56.2.3-04, -05, -08, -01, -10, -03)
+- [ ] 56.2.3-04-PLAN.md — UI da recuperação (7 estados, CTA manual, esperas) (REQ-56.2.3-02, -03, -01, -10, -06, -08)
+- [ ] 56.2.3-05-PLAN.md — [BLOCKING] Harness isolado + Postgres isolado + gates/rastreabilidade + checkpoint humano (REQ-56.2.3-01..10)
 
 **Canonical refs:** `openspec/changes/fase-56-2b2a-recuperacao-de-copy-produto-1-1/` (proposal, design B2A-D1..D6, spec `product-1-1-copy-recovery`, tasks §1–§5, UI-SPEC, RECONCILIATION), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/campaign-preview.md`, `src/lib/product-1-1/copy/copy-state.ts`, `src/app/(app)/campanhas/[id]/client.tsx`, `src/components/flow/generation-progress.tsx`, `supabase/migrations/20261009000005_f56_2b1b_copy_state.sql` (b1b, LOCAL-ONLY).
