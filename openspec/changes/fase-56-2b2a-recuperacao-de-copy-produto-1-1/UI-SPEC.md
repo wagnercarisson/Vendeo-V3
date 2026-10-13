@@ -365,7 +365,7 @@ Registradas, não bloqueiam. Upstream não respondeu; usam defaults sensatos:
 Ajustes de contrato (fonte: `proposal.md` critérios 11–17; `design.md` B2A-D2..D5; `spec.md` cenários novos). **NÃO** alteram o status de aprovação deste documento (`reviewed_at` permanece `null`).
 
 1. **Atividade decidida pelo SERVIDOR (posse/lease).** `interrompida` ≠ `ativa`: `pending` sem atividade comprovada **não** mantém spinner e oferece retomada manual. A contagem de espera (5s/10s) é **reportada pelo servidor** — a interface apenas reflete.
-2. **Cada chamada efetiva = uma tentativa contada.** A chamada de **fallback** é uma tentativa identificada própria e aparece nos contadores (não é escondida). O teto (automáticas 3 + manuais 3 = 6) incide sobre **chamadas efetivas**.
+2. **Sem fallback dentro da mesma tentativa.** A recuperação **NÃO** executa uma chamada de fallback dentro do mesmo acionamento/tentativa: cada chamada efetiva de provider é uma **tentativa identificada própria** e aparece nos contadores; o alvo de fallback, quando aplicável, é a **tentativa seguinte** (governada pela política). O teto (automáticas 3 + manuais 3 = 6) incide sobre **chamadas efetivas**.
 3. **Precedência inalterada** (`concluída` > `ativa`/`aguardando` > `indeterminada` > `falha definitiva` > `falha` > `interrompida`); a decisão de "ativa" passa a exigir **atividade comprovada** pelo servidor.
 4. **Nenhum novo estado/token** de UI; sem novo design token, light mode ou emoji.
 

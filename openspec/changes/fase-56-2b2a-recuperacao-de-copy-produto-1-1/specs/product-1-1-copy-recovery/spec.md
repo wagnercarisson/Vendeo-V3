@@ -166,9 +166,10 @@ A aquisição de cada tentativa SHALL ser decidida **atomicamente pelo servidor*
 
 #### Scenario: Fallback é tentativa própria
 
-- **WHEN** a produção da copy faria uma chamada de fallback após uma falha transitória da primária
-- **THEN** a chamada de fallback ocupa **uma tentativa identificada própria** e segue a política (orçamento/esperas/limites)
-- **AND** nenhuma chamada efetiva fica **oculta** do contador
+- **WHEN** a produção da copy sofreria uma falha transitória na primária
+- **THEN** **NENHUMA** segunda chamada é executada **dentro da MESMA tentativa/acionamento**
+- **AND** a tentativa **seguinte** (que PODE usar um alvo de fallback) é **adquirida** e segue a política — **contadores, limites e esperas**
+- **AND** cada chamada efetiva corresponde a **uma** tentativa identificada e é **contabilizada** (nenhuma oculta)
 - **AND** a decisão de adquirir a tentativa ocorre **antes** da chamada ao provider
 
 ### Requirement: Tentativas identificadas, histórico preservado e proteção contra conclusão atrasada

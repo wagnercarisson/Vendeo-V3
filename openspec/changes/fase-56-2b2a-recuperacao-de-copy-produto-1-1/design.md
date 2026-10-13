@@ -43,7 +43,7 @@ Copy **entregue** (estado `completed` **com conteúdo entregável**) **encerra**
 
 Classificação `transient × definitive` vem do **estado/envelope server-side**, nunca do cliente.
 
-**Cada chamada efetiva é uma tentativa.** A chamada de **fallback** NÃO é escondida dentro de um acionamento: cada chamada efetiva de provider (primária **ou** fallback) ocupa **uma tentativa identificada própria** e segue esta política (orçamento/esperas/limites). A **aquisição** da tentativa (ver B2A-D4) é decidida pelo **servidor**, sob trava, **antes** de qualquer chamada ao provider.
+**Cada chamada efetiva é uma tentativa — sem fallback escondido.** A recuperação **NÃO** executa uma chamada de fallback **dentro da mesma tentativa/acionamento (clique)**: cada chamada efetiva de provider é uma **tentativa identificada própria**, adquirida pelo servidor **antes** da chamada, e segue **integralmente** esta política — **contadores, limites e esperas**. Quando aplicável, um alvo de **fallback** é usado na **tentativa seguinte governada pela política** (após a espera), **não** como segunda chamada oculta dentro do mesmo acionamento. A **aquisição** da tentativa (ver B2A-D4) é decidida pelo **servidor**, sob trava, **antes** de qualquer chamada ao provider.
 
 ### B2A-D3 — Como a política cabe no ciclo de execução (sem execução durável)
 
