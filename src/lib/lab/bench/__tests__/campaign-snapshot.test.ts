@@ -129,6 +129,41 @@ describe("buildBenchCampaignSnapshot", () => {
   });
 });
 
+// ─── preserveImageContext derivado da direção de fundo ──────────────────────
+
+describe("buildBenchCampaignSnapshot — preserveImageContext pela direção de fundo", () => {
+  const DIRECTIONS = ["studio", "ambient", "original"] as const;
+
+  // Intenções aplicáveis com preços compatíveis (offer exige promoção; spotlight
+  // e exclusive aceitam preço único/sem preço).
+  const INTENTS: Array<{ intent: BenchOffer["campaignIntent"]; product: BenchProduct }> = [
+    {
+      intent: "offer",
+      product: { name: "Cafeteira Aurora", originalPriceCents: 19990, priceCents: 12990 },
+    },
+    { intent: "spotlight", product: { name: "Cafeteira Aurora", priceCents: 12990 } },
+    { intent: "exclusive", product: { name: "Cafeteira Aurora" } },
+  ];
+
+  it.each(INTENTS)(
+    "$intent: snapshot e briefSnapshot alinhados em Studio/Ambientado/Original",
+    ({ intent, product }) => {
+      for (const backgroundDirection of DIRECTIONS) {
+        const snapshot = buildBenchCampaignSnapshot({
+          product,
+          offer: { campaignIntent: intent, backgroundDirection },
+          config: CONFIG,
+        });
+
+        const expected = backgroundDirection === "original";
+        expect(snapshot.backgroundDirection).toBe(backgroundDirection);
+        expect(snapshot.preserveImageContext).toBe(expected);
+        expect(snapshot.briefSnapshot.creativeContext.preserveImageContext).toBe(expected);
+      }
+    },
+  );
+});
+
 // ─── Campos mínimos ──────────────────────────────────────────────────────────
 
 describe("assertBenchCampaignSnapshot", () => {

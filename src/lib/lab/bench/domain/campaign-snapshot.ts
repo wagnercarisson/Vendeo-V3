@@ -159,8 +159,21 @@ export function buildBenchCampaignSnapshot(input: {
     ...(combinedArtworkText ? { mandatoryArtworkText: combinedArtworkText } : {}),
   };
 
+  const preserveImageContext = offer.backgroundDirection === "original";
+
   const brief = buildCampaignBriefFromFlat(flat, "", "api");
-  const briefSnapshot = buildCampaignBriefSnapshot(brief);
+  // D14: a preservação da imagem original é derivada EXCLUSIVAMENTE da direção
+  // de fundo da bancada. O mapper legado compartilhado (`buildCampaignBriefFromFlat`)
+  // não conhece `backgroundDirection` e fixa `false` para oferta; alinhamos o
+  // snapshot contratual ao valor derivado aqui, sem alterar o mapper.
+  const builtBriefSnapshot = buildCampaignBriefSnapshot(brief);
+  const briefSnapshot: CampaignBriefSnapshot = {
+    ...builtBriefSnapshot,
+    creativeContext: {
+      ...builtBriefSnapshot.creativeContext,
+      preserveImageContext,
+    },
+  };
 
   return {
     backgroundDirection: offer.backgroundDirection,
@@ -168,7 +181,7 @@ export function buildBenchCampaignSnapshot(input: {
     commercial: brief.commercial,
     intent: resolved.intent,
     intentResolvedFrom: resolved.intentResolvedFrom,
-    preserveImageContext: offer.backgroundDirection === "original",
+    preserveImageContext,
     config,
     format: config.formato,
     locale: "pt-BR",
