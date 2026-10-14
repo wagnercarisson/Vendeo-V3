@@ -54,6 +54,13 @@ const AUTHORIZED_CAMPAIGN_DOWNLOAD_ROUTE =
 const AUTHORIZED_CAMPANHAS_ID_PAGE = "src/app/(app)/campanhas/[id]/page.tsx";
 const NO_PRODUCT_FLOW_IMPORT_MODULE = "src/lib/campaign/display.ts";
 
+// F56.2b2a (Plano 03 — reconciliação G-NA): a rota AUTENTICADA da recuperação
+// de copy introduz importadores legados. SÓ pares EXPLÍCITOS importador+módulo —
+// nunca `@/lib/product-1-1/**` genérico. `AUTHORIZED_CAMPANHAS_ID_PAGE` permanece
+// INALTERADO (a página usa apenas o módulo já autorizado `copy/copy-state`).
+const AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE =
+  "src/app/api/campaign/[id]/copy-recovery/route.ts";
+
 // F56.2b1b (Plano 07 — reconciliação G-NA, ÚLTIMO escritor da sequência
 // 01 → 04 → 06 → 07): as superfícies admin de resolução introduzem importadores
 // legados. SÓ pares EXPLÍCITOS importador+módulo — nunca `@/lib/product-1-1/**`
@@ -143,6 +150,20 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       // POR OPERAÇÃO (`readCopyDelivery`/`readCopyCancellation`) — somente leitura
       // (nunca gera/regenera/cobra). Par EXATO, sem prefixo amplo.
       "@/lib/product-1-1/copy/copy-state",
+    ],
+  },
+  // Plano 03 (F56.2b2a) — rota AUTENTICADA da recuperação de copy (GET
+  // query-only + POST de UMA tentativa) com a BARREIRA DE NÃO-ATIVAÇÃO/IDENTIDADE.
+  // Pares EXATOS refletindo os imports REAIS da rota (sem prefixo amplo).
+  [AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/copy/copy-recovery",
+      "@/lib/product-1-1/copy/recovery-schemas",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/authorization/authorization-service",
+      // Barreira de não-ativação: contexto canônico de elegibilidade (server-only).
+      "@/lib/product-1-1/submission/eligibility-context",
     ],
   },
   // Plano 07 — superfícies admin de resolução de pendências. Pares EXPLÍCITOS
@@ -893,5 +914,110 @@ describe("Product 1:1 — reconciliação G-NA (Plano 07 — fim da sequência, 
         expect(prefix.endsWith("/product-1-1/"), `${importer}::${prefix}`).toBe(false);
       }
     }
+  });
+});
+
+describe("Product 1:1 — reconciliação G-NA (Plano 03 — F56.2b2a rota da recuperação)", () => {
+  it("rota copy-recovery: autoriza SOMENTE os pares exatos (sem prefixo amplo)", () => {
+    for (const specifier of [
+      "@/lib/product-1-1/copy/copy-recovery",
+      "@/lib/product-1-1/copy/recovery-schemas",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/authorization/authorization-service",
+      "@/lib/product-1-1/submission/eligibility-context",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(
+          AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE,
+          specifier,
+        ),
+        specifier,
+      ).toBe(true);
+    }
+    for (const specifier of [
+      "@/lib/product-1-1/copy/copy-state",
+      "@/lib/product-1-1/artifact/artifact-store",
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(
+          AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE,
+          specifier,
+        ),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("o importador do Plano 03 reflete EXATAMENTE os pares autorizados", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE),
+      "utf8",
+    );
+    expect(
+      hasUnauthorizedProductFlowImport(AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE, source),
+      `${AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE} importa módulo Produto 1:1 não autorizado`,
+    ).toBe(false);
+  });
+
+  it("negativos preservados: importador indevido e módulo indevido continuam violação", () => {
+    expect(
+      hasUnauthorizedProductFlowImport(
+        "src/app/api/campaign/other/route.ts",
+        'import { x } from "@/lib/product-1-1/copy/copy-recovery";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE,
+        'import { x } from "@/lib/product-1-1/copy/copy-state";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE,
+        'import { x } from "@/lib/product-1-1/orchestration/generation-orchestrator";',
+      ),
+    ).toBe(true);
+  });
+
+  it("nenhum prefixo amplo de product-1-1/** foi adicionado (Plano 03)", () => {
+    for (const [importer, rule] of Object.entries(AUTHORIZED_PRODUCT_FLOW_IMPORTS)) {
+      for (const prefix of rule.prefixes) {
+        expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/");
+        expect(prefix.endsWith("/product-1-1/"), `${importer}::${prefix}`).toBe(false);
+      }
+    }
+  });
+
+  it("AUTHORIZED_CAMPANHAS_ID_PAGE permanece INALTERADO (só o módulo já autorizado `copy/copy-state`)", () => {
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_CAMPANHAS_ID_PAGE,
+        "@/lib/product-1-1/copy/copy-state",
+      ),
+    ).toBe(true);
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_CAMPANHAS_ID_PAGE,
+        "@/lib/product-1-1/copy/copy-recovery",
+      ),
+    ).toBe(false);
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_CAMPANHAS_ID_PAGE,
+        "@/lib/product-1-1/copy/recovery-schemas",
+      ),
+    ).toBe(false);
+  });
+
+  it("NEGATIVO: display.ts NÃO importa product-1-1 (G-NA preservada)", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), NO_PRODUCT_FLOW_IMPORT_MODULE),
+      "utf8",
+    );
+    expect(collectProductFlowImports(source)).toEqual([]);
+    expect(source).not.toMatch(/from\s+["'][^"']*product-1-1/);
   });
 });
