@@ -38,7 +38,17 @@ interface CancelEnvelope {
   applied: boolean;
   state: string | null;
   canceled: boolean;
+  outcome?: string;
 }
+
+/**
+ * B2.1 (Plano 05) — reconciliação: as RPCs passam a EXIGIR a identidade da
+ * tentativa (`p_attempt_seq` + `p_attempt_token`). Os testes b1b operam UMA
+ * tentativa por operação, logo a identidade default é `attempt_seq = 1` com um
+ * token ESTÁVEL por par — SEM enfraquecer nenhuma asserção existente.
+ */
+const ATTEMPT_SEQ = 1;
+const ATTEMPT_TOKEN = "11111111-1111-4111-8111-111111111111";
 
 async function applyCopy(
   client: PgClient,
@@ -47,12 +57,14 @@ async function applyCopy(
   state: string,
   copyText: string | null = null,
   copyPayload: Record<string, unknown> | null = null,
+  attemptSeq: number = ATTEMPT_SEQ,
+  attemptToken: string = ATTEMPT_TOKEN,
 ): Promise<ApplyEnvelope> {
   const payloadParam = copyPayload === null ? null : JSON.stringify(copyPayload);
   return pgCallJson<ApplyEnvelope>(
     client,
-    "SELECT public.product_1_1_apply_copy_state($1, $2, $3, $4, $5::jsonb) AS r",
-    [campaignId, operationId, state, copyText, payloadParam],
+    "SELECT public.product_1_1_apply_copy_state($1::uuid, $2::uuid, $3::text, $4::int, $5::uuid, $6::text, $7::jsonb) AS r",
+    [campaignId, operationId, state, attemptSeq, attemptToken, copyText, payloadParam],
   );
 }
 
@@ -61,11 +73,15 @@ async function cancelCopy(
   campaignId: string,
   operationId: string,
   reason: string,
+  attemptSeq: number = ATTEMPT_SEQ,
+  attemptToken: string = ATTEMPT_TOKEN,
+  copyPayload: Record<string, unknown> | null = null,
 ): Promise<CancelEnvelope> {
+  const payloadParam = copyPayload === null ? null : JSON.stringify(copyPayload);
   return pgCallJson<CancelEnvelope>(
     client,
-    "SELECT public.product_1_1_cancel_copy($1, $2, $3) AS r",
-    [campaignId, operationId, reason],
+    "SELECT public.product_1_1_cancel_copy($1::uuid, $2::uuid, $3::text, $4::int, $5::uuid, $6::jsonb) AS r",
+    [campaignId, operationId, reason, attemptSeq, attemptToken, payloadParam],
   );
 }
 
@@ -328,8 +344,8 @@ describe("F56.2b1b — copy state (Postgres real)", () => {
       try {
         await ctx.pg.query("SET LOCAL ROLE service_role");
         const envelope = (await ctx.pg.query(
-          "SELECT public.product_1_1_apply_copy_state($1, $2, 'failed', NULL, NULL) AS r",
-          [campaign, operation],
+          "SELECT public.product_1_1_apply_copy_state($1::uuid, $2::uuid, 'failed', 1, $3::uuid, NULL, NULL) AS r",
+          [campaign, operation, ATTEMPT_TOKEN],
         )) as { rows: Array<{ r: ApplyEnvelope }> };
         return envelope.rows[0].r;
       } finally {
@@ -379,8 +395,8 @@ describe("F56.2b1b — copy state (Postgres real)", () => {
       const rpcErr = await deniedUnderRole(
         ctx.pg,
         role,
-        "SELECT public.product_1_1_apply_copy_state($1, $2, 'failed', NULL, NULL)",
-        [campaign, operation],
+        "SELECT public.product_1_1_apply_copy_state($1::uuid, $2::uuid, 'failed', 1, $3::uuid, NULL, NULL)",
+        [campaign, operation, ATTEMPT_TOKEN],
       );
       expect(rpcErr).toBeInstanceOf(Error);
     }
