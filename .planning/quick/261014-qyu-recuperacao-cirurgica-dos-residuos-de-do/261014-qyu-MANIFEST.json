@@ -1,0 +1,57 @@
+{
+  "backup": "C:\\Users\\wagne\\AppData\\Local\\Temp\\opencode\\stash-pop-recovery-261014-qyu",
+  "head": "2109d59a691a6a4329d168505bedab938206787d",
+  "files": [
+    {
+      "path": ".planning/phases/4.4-store-visual-signature-generation-consistency/4.4-CONTEXT.md",
+      "blob": "ac4b03690c69e976e0a0c72fd312b6f3f07b96e2",
+      "sha256": "3D2DD372207E1AB2FEFD1AD45547204D35188A0B64488D0E9F1E301517408D2E",
+      "revision": "6b525361c6086040c3179a5eda0469b71570b87b^3"
+    },
+    {
+      "path": ".planning/phases/4.4-store-visual-signature-generation-consistency/4.4-PLAN.md",
+      "blob": "dea72f1237f5b41e9cea02d6a756eb904ce05742",
+      "sha256": "551E8D0D048C431DA648415FBC9B08E0FB83DF3745F93FC6C795B42012D01CAE",
+      "revision": "6b525361c6086040c3179a5eda0469b71570b87b"
+    },
+    {
+      "path": ".planning/phases/4.4-store-visual-signature-generation-consistency/4.4-UI-SPEC.md",
+      "blob": "66b0d0d95e63f61d015d0fe09f2768ed9258bf3c",
+      "sha256": "0276EA07356D171A222D1F8A455DBA123C7347C1288E210D7AA19782FCDD33C4",
+      "revision": "6b525361c6086040c3179a5eda0469b71570b87b^3"
+    },
+    {
+      "path": "openspec/changes/phase-4-4-store-visual-signature-generation-consistency/design.md",
+      "blob": "1442c4cd41084652837c282dd04feb9d96f2229d",
+      "sha256": "87DC64871B2BA0C858B44BCB795C4A853F769D2D64173C41D9C7703FA048A931",
+      "revision": "6b525361c6086040c3179a5eda0469b71570b87b"
+    },
+    {
+      "path": "openspec/changes/phase-4-4-store-visual-signature-generation-consistency/tasks.md",
+      "blob": "02e3925f208bf15a43858f71967326f9072bd619",
+      "sha256": "22DE7A3973438D78A45C51CC523E849BA4A18886B375ED509FB9EC658B127BAB",
+      "revision": "6b525361c6086040c3179a5eda0469b71570b87b"
+    },
+    {
+      "path": "prompts/visual-signature-description.md",
+      "blob": "6971677ed49485e68035e24516a6ad2d91a5615e",
+      "sha256": "0DC795271E1C05B5C7166F0BC1E1A9C708999671C26C19355919B04E309AB8AF",
+      "revision": "6b525361c6086040c3179a5eda0469b71570b87b^3"
+    },
+    {
+      "path": "docs/alinhamento-fase-44-temas-de-campanhas",
+      "blob": "72d9a70db13f68209c46e3aa3844e9c205840e32",
+      "sha256": "35A87D0FC706646505BC3BF660921512F5E877FDA0BADF8352002C8AB93461E5",
+      "revision": "18c1723dfa78449d3263e7d2429efb37dc4b75ab^3"
+    }
+  ],
+  "environment": {
+    ".opencode/opencode.json": "F634FEE69F3BC71AF34535907200585C782DE6FF750713BB1D661C062BB6C74F",
+    ".opencode/plugins/graphify.js": "478EFD532A038C8665B2660CDB5F1F4A562CECE3525A12933D6686419D7EFE06"
+  },
+  "stash": [
+    "6b525361c6086040c3179a5eda0469b71570b87b On feature/phase-4-4-store-visual-signature-generation-consistency: backup fase 4.4 renderer failed antes de reset"
+  ],
+  "index_unchanged": true,
+  "f44_content_unchanged": true
+}
