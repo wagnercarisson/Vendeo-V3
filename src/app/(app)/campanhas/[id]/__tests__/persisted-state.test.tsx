@@ -256,6 +256,11 @@ describe("mapNewFlowCopy — copy do novo fluxo (P3)", () => {
 // `interrompida` permanece p/ `pending` sem lease.
 // ---------------------------------------------------------------------------
 describe("mapNewFlowCopyRecovery — precedência da recuperação (correções pós-revisão)", () => {
+  const deliveredCopy = {
+    state: "completed" as const,
+    copyText: "Legenda",
+    copyPayload: { caption: "Legenda", hashtags: ["#promo"], cta_post: "Aproveite!" },
+  };
   const failedCopy = { state: "failed" as const, copyText: null, copyPayload: null };
 
   function record(
@@ -272,6 +277,27 @@ describe("mapNewFlowCopyRecovery — precedência da recuperação (correções 
       ...overrides,
     };
   }
+
+  it("(FIX 3) entrega `completed` + sumário INDISPONÍVEL ⇒ `concluida` (textos prevalecem)", () => {
+    expect(mapNewFlowCopyRecovery(null, deliveredCopy)).toEqual({
+      state: "concluida",
+      autoAttempts: 0,
+      manualAttempts: 0,
+      waitRemainingMs: 0,
+      canRetry: false,
+    });
+  });
+
+  it("(FIX 3) sumário INDISPONÍVEL + entrega NÃO entregue ⇒ `indeterminada` (canRetry false)", () => {
+    expect(mapNewFlowCopyRecovery(null, failedCopy)).toMatchObject({
+      state: "indeterminada",
+      canRetry: false,
+    });
+    expect(mapNewFlowCopyRecovery(null, null)).toMatchObject({
+      state: "indeterminada",
+      canRetry: false,
+    });
+  });
 
   it("(FIX 1) `failed` transitório + espera VENCIDA (wait 0) + automáticas restantes ⇒ `aguardando` 0", () => {
     expect(

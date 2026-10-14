@@ -379,4 +379,27 @@ describe("campanhas/[id]/page — sumário da recuperação de copy (B2.1 / Plan
       canRetry: false,
     });
   });
+
+  it("(FIX 3) sumário REJEITA, mas a copy está ENTREGUE ⇒ `concluida` (textos prevalecem)", async () => {
+    deliveredCampaign();
+    mockReadCopyDelivery.mockResolvedValue({
+      state: "completed",
+      copyText: "Legenda da campanha",
+      copyPayload: { caption: "Legenda da campanha", hashtags: ["#promo"], cta_post: "Aproveite!" },
+    });
+    mockReadCopyRecoverySummary.mockRejectedValue(
+      new Error("product_1_1_copy_state_attempts_read_failed"),
+    );
+
+    const el = await renderPage();
+
+    expect(el.props.newFlow?.state).toBe("delivered");
+    // A entrega `completed` tem PRECEDÊNCIA ABSOLUTA sobre a indisponibilidade do
+    // sumário — a superfície de recuperação é removida (canRetry false).
+    expect(el.props.newFlow?.recovery).toMatchObject({
+      state: "concluida",
+      canRetry: false,
+    });
+    expect(el.props.newFlow?.copy).toMatchObject({ state: "delivered" });
+  });
 });

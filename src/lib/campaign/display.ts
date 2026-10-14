@@ -254,13 +254,16 @@ function copyRecoveryView(
  *   `falha` > `interrompida`.
  *
  * Regras:
+ *  - copy comprovadamente ENTREGUE (entrega `completed`) ⇒ `concluida` com
+ *    PRECEDÊNCIA MÁXIMA — prevalece ATÉ sobre `record === null` (textos entregues
+ *    são exibidos; nenhuma recuperação permanece; `canRetry = false`);
  *  - `record === null` (LEITURA INDISPONÍVEL / fail-closed) ⇒ `indeterminada`
  *    (`canRetry = false`) — não comprova ausência de tentativa;
  *  - `attemptSeq === 0` OU `state === null` (SEM tentativa) ⇒ `null` = SEM
  *    superfície (nenhum painel, NENHUM CTA; `canRetry = false`) — distinto de
  *    `indeterminada` (leitura INDISPONÍVEL);
- *  - copy entregue (`completed` — no registro ou na entrega) ⇒ `concluida`
- *    (sucesso ABSOLUTO; `canRetry = false`);
+ *  - copy entregue no registro (`completed`) ⇒ `concluida` (sucesso ABSOLUTO;
+ *    `canRetry = false`);
  *  - `attemptActive === true` (LEASE do servidor) ⇒ `ativa` (`canRetry = false`);
  *  - `failed` transitório + automáticas restantes ⇒ `aguardando` (`canRetry =
  *    false`): `waitRemainingMs > 0` = contagem regressiva; `waitRemainingMs === 0`
@@ -277,6 +280,20 @@ export function mapNewFlowCopyRecovery(
   record: NewFlowCopyRecoveryRecord | null,
   delivery: NewFlowCopyRecord | null,
 ): NewFlowCopyRecoveryView | null {
+  // 0. `concluída` — sucesso ABSOLUTO com PRECEDÊNCIA MÁXIMA: a copy
+  //    comprovadamente ENTREGUE (entrega `completed`, com textos legíveis)
+  //    prevalece ATÉ sobre um sumário INDISPONÍVEL (`record === null`) — os
+  //    textos lidos são exibidos e nenhuma superfície de recuperação permanece.
+  if (delivery?.state === "completed") {
+    return copyRecoveryView(
+      "concluida",
+      record ? clampAttempts(record.autoAttempts, COPY_RECOVERY_AUTO_LIMIT) : 0,
+      record ? clampAttempts(record.manualAttempts, COPY_RECOVERY_MANUAL_LIMIT) : 0,
+      0,
+      false,
+    );
+  }
+
   // Leitura INDISPONÍVEL (fail-closed) ⇒ indeterminada; NÃO habilita nova chamada.
   if (record === null) {
     return copyRecoveryView("indeterminada", 0, 0, 0, false);
@@ -291,9 +308,10 @@ export function mapNewFlowCopyRecovery(
   const manualAttempts = clampAttempts(record.manualAttempts, COPY_RECOVERY_MANUAL_LIMIT);
   const manualAvailable = manualAttempts < COPY_RECOVERY_MANUAL_LIMIT;
 
-  // 1. `concluída` — sucesso ABSOLUTO (remove toda ação de recuperação). A copy
-  // entregue (registro `completed` OU entrega entregável) prevalece sobre falhas.
-  if (record.state === "completed" || delivery?.state === "completed") {
+  // 1. `concluída` — sucesso ABSOLUTO (remove toda ação de recuperação). O registro
+  //    `completed` prevalece sobre falhas (a entrega `completed` já foi tratada no
+  //    passo 0, com precedência máxima).
+  if (record.state === "completed") {
     return copyRecoveryView("concluida", autoAttempts, manualAttempts, 0, false);
   }
 
