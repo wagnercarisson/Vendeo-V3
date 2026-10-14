@@ -13,9 +13,11 @@ import {
   recordCancellation,
   recordCopyState,
   type CopyDeliveryRecord,
+  type CopyFailureClass,
   type CopyState,
   type CopyStateStore,
 } from "./copy-state";
+import { isRetryableError } from "@/lib/copy/errors";
 import {
   ProductOneToOneCopyAcquisitionClient,
   ProductOneToOneCopyAcquisitionError,
@@ -187,6 +189,36 @@ function readRecoveryFailureClass(
   return typeof failureClass === "string" ? failureClass : null;
 }
 
+/**
+ * Correção pós-revisão (2026-10-14) — classificador PURO da falha da copy.
+ *
+ * O dreno classificava via `isRetryableError` (erros de DOMÍNIO de copy
+ * apenas). O gateway NORMALIZA a falha do provider num `AiInvocationError`
+ * (network/timeout/transiente) que carrega o campo `retryable` decidido UMA vez
+ * na normalização — e que `isRetryableError` NÃO reconhece (não é um erro de
+ * domínio de copy). Sem este classificador, uma falha transitória do gateway
+ * era lida como DEFINITIVA e o ciclo automático era encerrado indevidamente.
+ *
+ * Regra: quando o erro expõe um campo `retryable` BOOLEAN (contrato normalizado
+ * do gateway — duck-typing, sem importar o interno do gateway só para
+ * `instanceof`), a decisão é `retryable ? "transient" : "definitive"`. Fora
+ * disso, cai na classificação de DOMÍNIO existente (`isRetryableError`) — a
+ * fronteira dos erros de parsing/domínio de copy permanece INTACTA.
+ *
+ * É OPCIONAL no dreno: o default do `copy-state.ts` (Plano 01) permanece
+ * inalterado; o serviço/orquestrador passam EXPLICITAMENTE este classificador.
+ */
+export function classifyCopyFailure(error: unknown): CopyFailureClass {
+  const retryable =
+    error !== null && typeof error === "object"
+      ? (error as { retryable?: unknown }).retryable
+      : undefined;
+  if (typeof retryable === "boolean") {
+    return retryable ? "transient" : "definitive";
+  }
+  return isRetryableError(error) ? "transient" : "definitive";
+}
+
 export class ProductOneToOneCopyRecoveryClient {
   constructor(
     private readonly client: SupabaseClient = supabaseAdmin,
@@ -301,6 +333,11 @@ export class ProductOneToOneCopyRecoveryClient {
           attemptToken: acquired.attemptToken,
           recoveryKind: input.mode,
           signal: budget.signal,
+          // Correção pós-revisão (2026-10-14) — classifica a falha NORMALIZADA do
+          // gateway (`AiInvocationError.retryable`) além dos erros de domínio de
+          // copy; sem isto, uma falha transitória do gateway era lida como
+          // definitiva e encerrava o ciclo automático indevidamente.
+          classifyFailure: classifyCopyFailure,
           run: ({ signal, commit }) =>
             runner.runCopy({ campaignId: input.campaignId, operationId: input.operationId, signal, commit }),
         },

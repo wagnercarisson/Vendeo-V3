@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { NetworkError } from "@/lib/copy/errors";
+import { NetworkError, ProviderRateLimitError } from "@/lib/copy/errors";
 
 import {
   COPY_LEASE_TTL_MS,
@@ -34,6 +34,7 @@ import { CopyRecoveryRequestSchema } from "../copy/recovery-schemas";
 import {
   ProductOneToOneCopyRecoveryClient,
   ProductOneToOneCopyRecoveryError,
+  classifyCopyFailure,
 } from "../copy/copy-recovery";
 import {
   COPY_RECOVERY_AUTO_LIMIT,
@@ -45,7 +46,15 @@ import {
   nextCopyRecoveryAttempt,
 } from "../copy/copy-recovery-policy";
 import type { DefaultProductOneToOneCopyRunnerInput } from "../copy/default-copy-runner";
+import { AiGateway } from "@/lib/ai/gateway";
 import type { AiInvoker } from "@/lib/ai/gateway";
+import type { AiModelConfig, AiModelResolver, AiProtocol } from "@/lib/ai/model-resolver";
+import { AiInvocationError } from "@/lib/ai/types";
+import type {
+  AiAdapter,
+  AiAdapterRegistry,
+  AiTelemetryContext,
+} from "@/lib/ai/types";
 
 // ---------------------------------------------------------------------------
 // F56.2b2a — B2.1 / Plano 01: identidade POR TENTATIVA + posse/lease +
@@ -2018,5 +2027,120 @@ describe("B2.1 — Plano 03: UMA chamada por tentativa + fallback = TENTATIVA SE
       }),
     ).rejects.toBeInstanceOf(ProductOneToOneCopyRecoveryError);
     expect(provider2.calls()).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (f) F56.2b2a — correção pós-revisão (2026-10-14): classificador do erro
+//     NORMALIZADO do gateway (`AiInvocationError.retryable`) + alvo fallback
+//     SÓ quando disponível (`hasFallback("campaign_copy")`).
+// ---------------------------------------------------------------------------
+
+/** Telemetria mínima com sink no-op (nunca toca Supabase/persistência real). */
+function noopTelemetry(): AiTelemetryContext {
+  return {
+    operationRunId: "run-1",
+    operationRunType: "campaign_delivery",
+    traceId: "trace-1",
+    storeId: STORE_ID,
+    sink: { emit: () => {} },
+  };
+}
+
+/**
+ * Gateway REAL (`AiGateway`) com resolver FAKE + adapter FAKE — espelha os
+ * fixtures de `src/lib/ai/__tests__/gateway.test.ts`. O caminho VIVO serviço →
+ * runner → `CopyDirectorService` → gateway → adapter é exercitado, provando que
+ * a falha NORMALIZADA é classificada server-side.
+ */
+function makeRealCopyGateway(invoke: AiAdapter["invoke"]): AiGateway {
+  const config: AiModelConfig = {
+    capability: "campaign_copy",
+    segment: "text",
+    primary: { provider: "openai", model: "gpt-4o", protocol: "chat-completions" },
+    fallback: { provider: "gemini", model: "gemini-3.1-flash-lite", protocol: "gemini" },
+  };
+  const resolver: AiModelResolver = {
+    resolve: async () => config,
+    listCapabilities: () => [config.capability],
+  };
+  const primary: AiAdapter = { protocol: "chat-completions", invoke };
+  const registry: AiAdapterRegistry = {
+    get: (protocol: AiProtocol) => (protocol === "chat-completions" ? primary : undefined),
+  };
+  return new AiGateway(resolver, registry);
+}
+
+describe("B2.1 — pós-revisão: classifyCopyFailure (erro normalizado do gateway × domínio)", () => {
+  it("AiInvocationError normalizado: retryable:true ⇒ transient; retryable:false ⇒ definitive", () => {
+    expect(
+      classifyCopyFailure(new AiInvocationError({ kind: "network", retryable: true, message: "x" })),
+    ).toBe("transient");
+    expect(
+      classifyCopyFailure(new AiInvocationError({ kind: "timeout", retryable: true, message: "x" })),
+    ).toBe("transient");
+    expect(
+      classifyCopyFailure(
+        new AiInvocationError({ kind: "content_filter", retryable: false, message: "x" }),
+      ),
+    ).toBe("definitive");
+    // Sem fallback configurado o gateway lança ANTES do provider (capability,
+    // retryable:false) ⇒ definitivo (não consome o ciclo automático).
+    expect(
+      classifyCopyFailure(
+        new AiInvocationError({ kind: "capability", retryable: false, message: "x" }),
+      ),
+    ).toBe("definitive");
+  });
+
+  it("fallback de DOMÍNIO preservado: NetworkError/ProviderRateLimitError ⇒ transient; Error genérico ⇒ definitive", () => {
+    expect(classifyCopyFailure(new NetworkError())).toBe("transient");
+    expect(classifyCopyFailure(new ProviderRateLimitError())).toBe("transient");
+    expect(classifyCopyFailure(new Error("sem retryable"))).toBe("definitive");
+    // Um `retryable` NÃO-boolean não sequestra a decisão (duck-type estrito).
+    expect(classifyCopyFailure({ retryable: "yes" })).toBe("definitive");
+  });
+});
+
+describe("B2.1 — pós-revisão: gateway REAL (adapter que lança) classifica via classificador", () => {
+  async function driveGateway(db: CopyAttemptDb, gateway: AiGateway): Promise<void> {
+    const { client } = makeRecordingClient(db, () => winner(1, TOKEN_A));
+    const recovery = new ProductOneToOneCopyRecoveryClient(client);
+    await recovery.recoverCopyAttempt({
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      mode: "auto",
+      requestToken: REQUEST_TOKEN,
+      runner: runnerInput,
+      runnerDeps: { invoker: gateway, createTelemetry: noopTelemetry },
+    });
+  }
+
+  it("AiInvocationError retryable:true do gateway real ⇒ copy_payload.recovery.failureClass = transient", async () => {
+    const db = new CopyAttemptDb();
+    const gateway = makeRealCopyGateway(async () => {
+      throw new AiInvocationError({ kind: "network", retryable: true, message: "transiente" });
+    });
+    await driveGateway(db, gateway);
+    const row = db.rowsArray().find((r) => r.attempt_seq === 1);
+    expect(row?.state).toBe("failed");
+    expect(recoveryFailureClass(row)).toBe("transient");
+    expect(recoveryWait(row)).toBe(COPY_RECOVERY_WAITS_MS.after1);
+  });
+
+  it("AiInvocationError retryable:false do gateway real ⇒ copy_payload.recovery.failureClass = definitive", async () => {
+    const db = new CopyAttemptDb();
+    const gateway = makeRealCopyGateway(async () => {
+      throw new AiInvocationError({
+        kind: "content_filter",
+        retryable: false,
+        message: "definitiva",
+      });
+    });
+    await driveGateway(db, gateway);
+    const row = db.rowsArray().find((r) => r.attempt_seq === 1);
+    expect(row?.state).toBe("failed");
+    expect(recoveryFailureClass(row)).toBe("definitive");
+    expect(recoveryWait(row)).toBeNull();
   });
 });

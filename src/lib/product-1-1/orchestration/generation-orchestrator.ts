@@ -90,6 +90,7 @@ import {
   ProductOneToOneCopyAcquisitionClient,
   type CopyAcquisitionResult,
 } from "../copy/copy-acquisition-client";
+import { classifyCopyFailure } from "../copy/copy-recovery";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 
 /**
@@ -838,6 +839,11 @@ export async function runProductOneToOneGeneration(
             attemptToken: acquired.attemptToken,
             recoveryKind: "auto",
             signal: budget.signal,
+            // Correção pós-revisão (2026-10-14) — a tentativa INICIAL classifica
+            // a falha NORMALIZADA do gateway (`AiInvocationError.retryable`) do
+            // mesmo modo que o serviço de recuperação: uma falha transitória do
+            // gateway não é lida como definitiva.
+            classifyFailure: classifyCopyFailure,
             run: ({ signal, commit }) =>
               ops.runCopy({ campaignId, operationId, signal, commit }),
           },
