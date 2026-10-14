@@ -21,8 +21,16 @@ vi.mock("@/components/campaign/campaign-approval-view", () => ({
 }));
 
 import CampaignPageClient from "../client";
-import { mapNewFlowCopy, mapNewFlowDisplayState } from "@/lib/campaign/display";
-import type { CampaignPageProps, NewFlowCopyRecoveryView } from "@/lib/campaign/display";
+import {
+  mapNewFlowCopy,
+  mapNewFlowDisplayState,
+  mapNewFlowCopyRecovery,
+} from "@/lib/campaign/display";
+import type {
+  CampaignPageProps,
+  NewFlowCopyRecoveryRecord,
+  NewFlowCopyRecoveryView,
+} from "@/lib/campaign/display";
 import {
   registerCopyRecoveryDrivingHandle,
   clearCopyRecoveryDrivingHandle,
@@ -238,6 +246,55 @@ describe("mapNewFlowCopy — copy do novo fluxo (P3)", () => {
 
   it("sem registro ⇒ `null` (sem superfície de copy)", () => {
     expect(mapNewFlowCopy(null, false)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F56.2b2a (Plano 04 — correção pós-revisão): precedência do SUMÁRIO da recuperação.
+// (FIX 1) `failed` transitório com automáticas restantes e espera JÁ VENCIDA
+// (`waitRemainingMs === 0`) ⇒ `aguardando` (pronta agora), NÃO `interrompida`;
+// `interrompida` permanece p/ `pending` sem lease.
+// ---------------------------------------------------------------------------
+describe("mapNewFlowCopyRecovery — precedência da recuperação (correções pós-revisão)", () => {
+  const failedCopy = { state: "failed" as const, copyText: null, copyPayload: null };
+
+  function record(
+    overrides: Partial<NewFlowCopyRecoveryRecord> = {},
+  ): NewFlowCopyRecoveryRecord {
+    return {
+      state: "failed",
+      attemptSeq: 1,
+      attemptActive: false,
+      waitRemainingMs: 0,
+      autoAttempts: 1,
+      manualAttempts: 0,
+      definitive: false,
+      ...overrides,
+    };
+  }
+
+  it("(FIX 1) `failed` transitório + espera VENCIDA (wait 0) + automáticas restantes ⇒ `aguardando` 0", () => {
+    expect(
+      mapNewFlowCopyRecovery(record({ waitRemainingMs: 0, autoAttempts: 1 }), failedCopy),
+    ).toMatchObject({ state: "aguardando", waitRemainingMs: 0, canRetry: false });
+  });
+
+  it("(FIX 1) `pending` SEM lease ⇒ `interrompida` (sem espera transitória)", () => {
+    expect(
+      mapNewFlowCopyRecovery(
+        record({ state: "pending", attemptSeq: 1, waitRemainingMs: 0 }),
+        failedCopy,
+      ),
+    ).toMatchObject({ state: "interrompida", canRetry: true });
+  });
+
+  it("precedência preservada: `completed` no registro ⇒ `concluida`; sem tentativa ⇒ `null`", () => {
+    expect(
+      mapNewFlowCopyRecovery(record({ state: "completed" }), failedCopy),
+    ).toMatchObject({ state: "concluida", canRetry: false });
+    expect(
+      mapNewFlowCopyRecovery(record({ attemptSeq: 0, state: null }), failedCopy),
+    ).toBeNull();
   });
 });
 
@@ -469,11 +526,11 @@ describe("CampaignPageClient — superfície de recuperação de copy (B2.1 / Pl
     clearCopyRecoveryDrivingHandle();
   });
 
-  function renderRecovery(
+  function recoveryElement(
     view: NewFlowCopyRecoveryView | null,
     extra: Partial<NonNullable<CampaignPageProps["newFlow"]>> = {},
   ) {
-    return render(
+    return (
       <CampaignPageClient
         {...BASE_PROPS}
         newFlow={{
@@ -482,8 +539,15 @@ describe("CampaignPageClient — superfície de recuperação de copy (B2.1 / Pl
           recovery: view,
           ...extra,
         }}
-      />,
+      />
     );
+  }
+
+  function renderRecovery(
+    view: NewFlowCopyRecoveryView | null,
+    extra: Partial<NonNullable<CampaignPageProps["newFlow"]>> = {},
+  ) {
+    return render(recoveryElement(view, extra));
   }
 
   it("`concluída` ⇒ remove TODA ação de recuperação e exibe o texto entregue", () => {
@@ -668,5 +732,84 @@ describe("CampaignPageClient — superfície de recuperação de copy (B2.1 / Pl
         screen.getByText("Não foi possível tentar novamente agora. Tente de novo em instantes."),
       ).toBeInTheDocument(),
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // F56.2b2a (correção pós-revisão) — emissão ancorada no AVANÇO PERSISTIDO.
+  // -------------------------------------------------------------------------
+
+  it("(FIX 1) 2ª falha RÁPIDA → 10s → 3ª automática: exatamente 2 POSTs com tokens DISTINTOS (T2≠T3)", async () => {
+    registerCopyRecoveryDrivingHandle({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID });
+    vi.useFakeTimers();
+
+    const { rerender } = render(
+      recoveryElement(
+        recoveryView({ state: "aguardando", autoAttempts: 1, waitRemainingMs: 5000, canRetry: false }),
+      ),
+    );
+
+    // A superfície NUNCA sai de `aguardando` (falha rápida): sem spinner/`ativa`.
+    expect(screen.getByText(/Nova tentativa em 5s/)).toBeInTheDocument();
+    expect(document.querySelector(".animate-spin")).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(copyRecoveryCalls()).toHaveLength(1);
+
+    // Servidor avançou para a 2ª espera (10s, auto=2) — o poll refletiria isso.
+    rerender(
+      recoveryElement(
+        recoveryView({ state: "aguardando", autoAttempts: 2, waitRemainingMs: 10000, canRetry: false }),
+      ),
+    );
+    expect(screen.getByText(/Nova tentativa em 10s/)).toBeInTheDocument();
+    expect(document.querySelector(".animate-spin")).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(10000);
+    });
+    expect(copyRecoveryCalls()).toHaveLength(2);
+
+    // Servidor concluiu: acompanha o sucesso e NÃO emite mais nada.
+    rerender(
+      recoveryElement(
+        recoveryView({ state: "concluida", autoAttempts: 2, canRetry: false }),
+        { copy: { state: "delivered", caption: "Legenda nova", hashtags: [], ctaPost: "" } },
+      ),
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(20000);
+    });
+
+    const bodies = copyRecoveryCalls().map(([, init]) =>
+      JSON.parse(String((init as RequestInit).body)),
+    );
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0].mode).toBe("auto_retry");
+    expect(bodies[1].mode).toBe("auto_retry");
+    expect(bodies[0].operationId).toBe(OPERATION_ID);
+    // Critério 27: cada NOVA automática gera token PRÓPRIO (T2≠T3).
+    expect(bodies[0].requestToken).not.toBe(bodies[1].requestToken);
+    // Teto automático respeitado: só 2 automáticas emitidas pela UI.
+    expect(copyRecoveryCalls()).toHaveLength(2);
+  });
+
+  it("(FIX 1) espera JÁ VENCIDA na chegada (aba dirigente) ⇒ UMA auto_retry imediata com token novo", async () => {
+    registerCopyRecoveryDrivingHandle({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID });
+    renderRecovery(
+      recoveryView({ state: "aguardando", autoAttempts: 1, waitRemainingMs: 0, canRetry: false }),
+    );
+
+    await waitFor(() => expect(copyRecoveryCalls()).toHaveLength(1));
+    const body = JSON.parse(String((copyRecoveryCalls()[0][1] as RequestInit).body));
+    expect(body.mode).toBe("auto_retry");
+    expect(body.operationId).toBe(OPERATION_ID);
+    expect(typeof body.requestToken).toBe("string");
+    expect(body.requestToken.length).toBeGreaterThan(0);
+
+    // UMA única emissão no MESMO episódio persistido (não duplica).
+    await act(async () => {});
+    expect(copyRecoveryCalls()).toHaveLength(1);
   });
 });

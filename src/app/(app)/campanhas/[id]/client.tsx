@@ -481,16 +481,26 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
     [props.campaignId, operationId],
   );
 
+  const waitKey = `${recovery?.state ?? ""}|${recovery?.autoAttempts ?? -1}|${recovery?.waitRemainingMs ?? 0}`;
   const [remainingMs, setRemainingMs] = useState(recovery?.waitRemainingMs ?? 0);
+  const [trackedWaitKey, setTrackedWaitKey] = useState(waitKey);
   const [actionError, setActionError] = useState<string | null>(null);
-  // Guarda de NÃO-duplicação do acionamento automático: dispara UMA vez por
-  // episódio de `aguardando` (re-armado quando o estado deixa de aguardar).
-  const autoEmittedRef = useRef(false);
+  // Guarda de NÃO-duplicação do acionamento automático ANCORADA no AVANÇO
+  // PERSISTIDO: memoriza o `autoAttempts` para o qual a última automática foi
+  // emitida. Re-arma AUTOMATICAMENTE quando o servidor avança o contador — cobre
+  // a falha RÁPIDA (o novo `aguardando` nem chega a renderizar `ativa`) e a
+  // chegada com a espera já vencida — e evita duplicar dentro do MESMO episódio.
+  const lastEmittedAutoRef = useRef<number | null>(null);
 
-  // A espera REPORTADA pelo servidor é a AUTORIDADE — re-sincroniza no poll.
-  useEffect(() => {
+  // A espera REPORTADA pelo servidor é a AUTORIDADE. Ajuste DURANTE O RENDER
+  // (padrão React): quando o servidor reporta um NOVO episódio de espera
+  // (estado/autoAttempts/waitRemainingMs mudam), a contagem é re-sincronizada
+  // ANTES do commit — assim o efeito de emissão NUNCA vê um `remainingMs === 0`
+  // herdado do episódio anterior (evita a próxima automática disparar cedo).
+  if (waitKey !== trackedWaitKey) {
+    setTrackedWaitKey(waitKey);
     setRemainingMs(recovery?.waitRemainingMs ?? 0);
-  }, [recovery?.state, recovery?.waitRemainingMs]);
+  }
 
   // Contador local apenas REFLETE o que o servidor reportou (não infere espera).
   useEffect(() => {
@@ -539,23 +549,20 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
     [operationId, props.campaignId, router],
   );
 
-  // Re-arma a guarda quando o estado deixa de aguardar (o poll reflete o novo
-  // estado do servidor — `ativa`/`concluída`/etc).
-  useEffect(() => {
-    if (recovery?.state !== "aguardando") autoEmittedRef.current = false;
-  }, [recovery?.state]);
-
   // AGENDA da próxima AUTOMÁTICA: SOMENTE a aba INICIADORA (`isDriving === true`)
   // emite `mode: "auto_retry"` ao fim da contagem REPORTADA, com `requestToken`
-  // NOVO por acionamento. `reload`/outra aba apenas ACOMPANHA.
+  // NOVO por acionamento. A guarda é ancorada no `autoAttempts` PERSISTIDO: cada
+  // avanço do servidor re-arma a emissão (inclusive a falha rápida e a chegada com
+  // espera vencida); o MESMO `autoAttempts` não emite duas vezes. `reload`/outra
+  // aba (sem handle) apenas ACOMPANHA.
   useEffect(() => {
     if (recovery?.state !== "aguardando") return;
     if (!isDriving) return;
     if (remainingMs > 0) return;
-    if (autoEmittedRef.current) return;
-    autoEmittedRef.current = true;
+    if (lastEmittedAutoRef.current === recovery.autoAttempts) return;
+    lastEmittedAutoRef.current = recovery.autoAttempts;
     void emitAttempt("auto_retry");
-  }, [recovery?.state, remainingMs, isDriving, emitAttempt]);
+  }, [recovery?.state, recovery?.autoAttempts, remainingMs, isDriving, emitAttempt]);
 
   const showRecovery = recovery !== null && recovery.state !== "concluida";
 

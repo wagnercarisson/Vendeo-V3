@@ -262,8 +262,10 @@ function copyRecoveryView(
  *  - copy entregue (`completed` — no registro ou na entrega) ⇒ `concluida`
  *    (sucesso ABSOLUTO; `canRetry = false`);
  *  - `attemptActive === true` (LEASE do servidor) ⇒ `ativa` (`canRetry = false`);
- *  - `failed` transitório + `waitRemainingMs > 0` + automáticas restantes ⇒
- *    `aguardando` (`canRetry = false`);
+ *  - `failed` transitório + automáticas restantes ⇒ `aguardando` (`canRetry =
+ *    false`): `waitRemainingMs > 0` = contagem regressiva; `waitRemainingMs === 0`
+ *    = espera JÁ VENCIDA (pronta para a próxima automática — a aba dirigente emite
+ *    imediatamente ao chegar);
  *  - `definitive === true` ⇒ `falha_definitiva` (`canRetry = manual restante`);
  *  - `failed` com automáticas esgotadas ⇒ `falha` (`canRetry = manual restante`);
  *  - `pending` SEM lease vigente ⇒ `interrompida` (`canRetry = manual restante`);
@@ -300,19 +302,22 @@ export function mapNewFlowCopyRecovery(
     return copyRecoveryView("ativa", autoAttempts, manualAttempts, record.waitRemainingMs, false);
   }
 
-  // 3. `aguardando` — falha transitória com espera REPORTADA pelo servidor e
-  //    automáticas restantes (a UI apenas reflete o restante; não infere espera).
+  // 3. `aguardando` — falha transitória com automáticas restantes. A UI apenas
+  //    REFLETE a espera reportada pelo servidor (nunca infere por tempo):
+  //    `waitRemainingMs > 0` ⇒ contagem regressiva; `waitRemainingMs === 0` ⇒ a
+  //    espera JÁ VENCEU (ex.: chegada após o prazo) — pronta para a próxima
+  //    automática (a aba dirigente emite IMEDIATAMENTE). `interrompida` permanece
+  //    reservada a `pending` sem lease (sem espera transitória).
   if (
     record.state === "failed" &&
     record.definitive !== true &&
-    record.waitRemainingMs > 0 &&
     autoAttempts < COPY_RECOVERY_AUTO_LIMIT
   ) {
     return copyRecoveryView(
       "aguardando",
       autoAttempts,
       manualAttempts,
-      record.waitRemainingMs,
+      Math.max(0, record.waitRemainingMs),
       false,
     );
   }
