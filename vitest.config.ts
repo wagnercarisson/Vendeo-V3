@@ -18,6 +18,8 @@ export default defineConfig({
     environment: 'node',
     // `scripts/gsd/**` contém o validador de gate e seu teste em `node:test`
     // (executado via `node --test`), incompatível com o runner do Vitest.
+    // `scripts/f56-2b2a/**` contém o guard puro de prontidão de fixtures e seu
+    // teste negativo em `node:test` (mesmo motivo; rodar com `node --test`).
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -25,6 +27,7 @@ export default defineConfig({
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*',
       'scripts/gsd/**',
+      'scripts/f56-2b2a/**',
     ],
   },
   resolve: {
