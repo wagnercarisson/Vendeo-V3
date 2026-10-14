@@ -22,6 +22,7 @@ import {
   recordCopyState,
   type CopyState,
   type CopyStateStore,
+  type CopyStateTransitionResult,
   type CopyCommit,
 } from "../copy/copy-state";
 
@@ -850,6 +851,14 @@ describe("B2.1 — drenador IDENTIFICADO que CLASSIFICA a falha server-side", ()
     return { store: storeFor(client), events };
   }
 
+  /** Store com envelope FIXO para o apply (o desfecho exato sob prova). */
+  function fixedEnvelopeStore(result: CopyStateTransitionResult): CopyStateStore {
+    return {
+      recordCopyState: async () => result,
+      recordCancellation: async () => ({ applied: false, state: null, canceled: false }),
+    };
+  }
+
   it("TODA escrita (pending/failed) carrega attemptSeq/attemptToken", async () => {
     const db = new CopyAttemptDb();
     const { store, events } = drainEvents(db);
@@ -1058,5 +1067,163 @@ describe("B2.1 — drenador IDENTIFICADO que CLASSIFICA a falha server-side", ()
     await (capturedCommit as CopyCommit | null)?.({ copyText: "tarde demais" });
     const appliesAfter = events.filter((e) => e.name === "product_1_1_apply_copy_state").length;
     expect(appliesAfter).toBe(appliesBefore);
+  });
+
+  // Revisão 2026-10-14 (2ª rodada) — MESMO problema do sucesso indevido já
+  // corrigido no cancel (918c7161), agora no caminho terminal NÃO-cancelado:
+  // `settleFailTerminal` só declara `failed` quando o envelope CONFIRMA o
+  // persistido (`applied`/`idempotent` — `confirmsPersistedState`); recusas ou
+  // `state: null` ⇒ incerteza LOCAL (`unconfirmed`), nunca falha confirmada.
+  it("drain (não-cancel): recusa `stale_attempt` (corrente `pending`) ⇒ {unconfirmed, canceled:false}, NÃO failed", async () => {
+    const db = new CopyAttemptDb();
+    // Corrente: tentativa 2 `pending` (outro dono). O dreno roda a tentativa 1 SUPERADA.
+    db.seed({
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      attempt_seq: 2,
+      attempt_token: TOKEN_B,
+      state: "pending",
+      copy_text: null,
+      copy_payload: null,
+      lease_at: iso(NOW),
+      request_token: null,
+      updated_at: iso(NOW),
+      created_at: iso(NOW),
+    });
+    const { client, events } = makeRecordingClient(db);
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+        recoveryKind: "auto",
+        signal: new AbortController().signal,
+        run: async () => {
+          throw new NetworkError();
+        },
+      },
+      storeFor(client),
+    );
+    // RECUSA (`stale_attempt`, estado corrente `pending`): NADA é afirmado — a
+    // RE-LEITURA resolve; nunca um `failed` enganoso.
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
+    // Caminho NÃO-cancelado: nenhum cancel; exatamente 2 escritas (pending + failed).
+    expect(events.filter((e) => e.name === "product_1_1_cancel_copy")).toHaveLength(0);
+    expect(events.filter((e) => e.name === "product_1_1_apply_copy_state")).toHaveLength(2);
+    // O persistido da corrente (seq 2 `pending`) NÃO foi tocado.
+    await expect(
+      readCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID }),
+    ).resolves.toBe("pending");
+  });
+
+  it("drain (não-cancel): recusa `invalid_content` com `state: null` ⇒ unconfirmed (NUNCA failed)", async () => {
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+        recoveryKind: "auto",
+        signal: new AbortController().signal,
+        run: async () => {
+          throw new NetworkError();
+        },
+      },
+      fixedEnvelopeStore({ applied: false, outcome: "invalid_content", state: null }),
+    );
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
+  });
+
+  it("drain (não-cancel): recusa `conflict` com estado `failed` ⇒ unconfirmed (recusa NUNCA confirma falha)", async () => {
+    const db = new CopyAttemptDb();
+    // Mesma seq com token DIVERGENTE (outro dono já terminal `failed`): a
+    // escrita do dreno é RECUSADA (`conflict`) e o persistido NÃO muda.
+    db.seed({
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      attempt_seq: 1,
+      attempt_token: TOKEN_B,
+      state: "failed",
+      copy_text: null,
+      copy_payload: { other: true },
+      lease_at: null,
+      request_token: null,
+      updated_at: iso(NOW),
+      created_at: iso(NOW),
+    });
+    const { client } = makeRecordingClient(db);
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+        recoveryKind: "auto",
+        signal: new AbortController().signal,
+        run: async () => {
+          throw new NetworkError();
+        },
+      },
+      storeFor(client),
+    );
+    // `conflict` NÃO é `applied`/`idempotent`: recusa nunca confirma falha.
+    expect(result).toEqual({ state: "unconfirmed", canceled: false });
+  });
+
+  it("drain (não-cancel): apply `applied` com estado `failed` ⇒ {failed, canceled:false} (positivo preservado)", async () => {
+    const db = new CopyAttemptDb();
+    const { store } = drainEvents(db);
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+        recoveryKind: "auto",
+        signal: new AbortController().signal,
+        run: async () => {
+          throw new NetworkError();
+        },
+      },
+      store,
+    );
+    expect(result).toEqual({ state: "failed", canceled: false });
+  });
+
+  it("drain (não-cancel): replay `idempotent` com estado `failed` ⇒ {failed, canceled:false} (positivo preservado)", async () => {
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+        recoveryKind: "auto",
+        signal: new AbortController().signal,
+        run: async () => {
+          throw new NetworkError();
+        },
+      },
+      fixedEnvelopeStore({ applied: false, outcome: "idempotent", state: "failed" }),
+    );
+    expect(result).toEqual({ state: "failed", canceled: false });
+  });
+
+  it("drain (não-cancel): envelope com estado persistido `completed` ⇒ {completed, canceled:false} (terminal protegido preservado)", async () => {
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+        recoveryKind: "auto",
+        signal: new AbortController().signal,
+        run: async () => {
+          throw new NetworkError();
+        },
+      },
+      fixedEnvelopeStore({ applied: false, outcome: "rejected", state: "completed" }),
+    );
+    expect(result).toEqual({ state: "completed", canceled: false });
   });
 });

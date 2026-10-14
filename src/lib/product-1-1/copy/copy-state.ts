@@ -910,7 +910,10 @@ export async function drainCopyTask(
    *   * envelope cujo estado PERSISTIDO é `completed` ⇒ a transição para
    *     `failed` foi RECUSADA (terminal PROTEGIDO) ⇒ o terminal PERSISTIDO
    *     prevalece (`completed`), nunca um `failed` enganoso;
-   *   * caso contrário ⇒ o terminal `failed` foi aplicado/persistido.
+   *   * `failed` é declarado SOMENTE quando o envelope CONFIRMA o `failed`
+   *     persistido (`applied`/`idempotent` — `confirmsPersistedState`); recusas
+   *     (`stale_attempt`/`conflict`/`rejected`) ou `state: null` geram
+   *     incerteza LOCAL (`unconfirmed`), nunca uma falha confirmada.
    */
   const settleFailTerminal = async (
     failureClass: CopyFailureClass,
@@ -924,7 +927,10 @@ export async function drainCopyTask(
     if (settle.result.state === "completed") {
       return { state: "completed", canceled: false };
     }
-    return { state: "failed", canceled: false };
+    if (confirmsPersistedState(settle, "failed")) {
+      return { state: "failed", canceled: false };
+    }
+    return { state: "unconfirmed", canceled: false };
   };
 
   await recordState("pending");
