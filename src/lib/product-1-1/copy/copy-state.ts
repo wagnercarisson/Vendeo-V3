@@ -179,7 +179,12 @@ export interface CopyCancellationResult {
   readonly applied: boolean;
   readonly state: CopyState | null;
   readonly canceled: boolean;
-  /** B2A-D4 — `'stale_attempt'` quando o cancelamento foi recusado por tentativa superada. */
+  /**
+   * Desfecho do `apply` interno quando presente (opcional — conjunto completo
+   * `applied|idempotent|conflict|rejected|invalid_content|stale_attempt`).
+   * `canceled:true` só é coerente com `applied`/`idempotent`; ausente ⇒
+   * compatibilidade b1b.
+   */
   readonly outcome?: CopyStateOutcome;
 }
 
@@ -296,18 +301,27 @@ function parseCopyCancellationEnvelope(raw: unknown): CopyCancellationResult {
   if (state !== null && state !== undefined && !isCopyState(state)) {
     throw new Error("product_1_1_cancel_copy_invalid_envelope");
   }
-  // B2A-D4 — o envelope pode trazer um `outcome` opcional; o ÚNICO desfecho de
-  // recusa do cancelamento é `'stale_attempt'` (tentativa superada). Qualquer
-  // outro valor (desconhecido/contraditório) falha FECHADO (regras inalteradas).
-  if (outcome !== undefined && outcome !== "stale_attempt") {
+  // B2A-D4 + correção da revisão (2026-10-14) — o envelope pode trazer um
+  // `outcome` OPCIONAL do CONJUNTO COMPLETO de desfechos conhecidos
+  // (`applied|idempotent|conflict|rejected|invalid_content|stale_attempt`).
+  // String DESCONHECIDA falha FECHADO.
+  if (
+    outcome !== undefined &&
+    !(COPY_STATE_OUTCOMES as readonly string[]).includes(outcome as string)
+  ) {
     throw new Error("product_1_1_cancel_copy_incoherent_envelope");
   }
   // Coerência: `canceled:true` só é válido com estado terminal `failed`.
   if (canceled && state !== "failed") {
     throw new Error("product_1_1_cancel_copy_incoherent_envelope");
   }
-  // `stale_attempt` implica recusa (`canceled:false`).
-  if (outcome === "stale_attempt" && canceled) {
+  // Coerência (fail-closed): `canceled:true` SÓ é válido com desfecho
+  // EFETIVAMENTE aplicado (`applied`) ou replayado como equivalente
+  // (`idempotent`). `canceled:true` com `conflict`/`rejected`/
+  // `invalid_content`/`stale_attempt` é CONTRADIÇÃO ⇒ lança (o cancelamento não
+  // pode declarar sucesso indevido). `outcome` AUSENTE + `canceled:true` +
+  // `failed` permanece VÁLIDO (compatibilidade b1b).
+  if (canceled && outcome !== undefined && outcome !== "applied" && outcome !== "idempotent") {
     throw new Error("product_1_1_cancel_copy_incoherent_envelope");
   }
 
@@ -315,7 +329,7 @@ function parseCopyCancellationEnvelope(raw: unknown): CopyCancellationResult {
     applied,
     canceled,
     state: isCopyState(state) ? state : null,
-    ...(outcome === "stale_attempt" ? { outcome: "stale_attempt" as const } : {}),
+    ...(outcome !== undefined ? { outcome: outcome as CopyStateOutcome } : {}),
   };
 }
 
@@ -403,8 +417,13 @@ export async function readCopyDelivery(
 
 /**
  * P2 — CANCELAMENTO ATÔMICO via RPC: aplica o terminal `failed` E registra o
- * motivo numa ÚNICA transação; RECUSA cancelar sobre um `completed` persistido
- * (`canceled:false`). O envelope é validado (fail-closed).
+ * motivo numa ÚNICA transação — o registro e a resposta `canceled:true` só
+ * acontecem quando o `apply` interno aplicou (`applied`) ou replayou o terminal
+ * equivalente (`idempotent`); em QUALQUER recusa (`stale_attempt`/`conflict`/
+ * `rejected`) o envelope devolve `canceled:false` e NENHUM registro é inserido
+ * (nunca declarar cancelamento indevido). Um `completed` persistido continua
+ * recusando o cancelamento (`canceled:false`). O envelope é validado
+ * (fail-closed).
  */
 export async function recordCancellation(
   client: SupabaseClient,
@@ -774,9 +793,14 @@ function boundedRecord(
  *     `idempotent`) — `conflict`/`rejected`/`invalid_content`/`error`/`timeout`
  *     NUNCA declaram `completed` (C2: nunca `completed` sem texto entregável);
  *  5. ao CANCELAR (orçamento esgotado) → `product_1_1_cancel_copy` aplica o
- *     terminal `failed` E registra o motivo numa ÚNICA transação; se um
+ *     terminal `failed` E registra o motivo numa ÚNICA transação; o cancelamento
+ *     só é CONFIRMADO (`canceled:true`) quando o `apply` interno aplicou
+ *     (`applied`) ou replayou o terminal equivalente (`idempotent`); se um
  *     `completed` já estiver PERSISTIDO, o cancelamento é RECUSADO e o estado
- *     persistido prevalece;
+ *     persistido prevalece; QUALQUER outra recusa (tentativa superada,
+ *     token/conteúdo divergente, terminal protegido) NÃO declara `failed` nem
+ *     cancelamento confirmado — vira `unconfirmed` (o persistido não mudou; a
+ *     re-leitura resolve);
  *  6. `timeout` de escrita ⇒ o drenador devolve `"unconfirmed"` (incerteza LOCAL
  *     do CHAMADOR) — sem segundo write; resolve-se por RE-LEITURA.
  *
@@ -950,14 +974,25 @@ export async function drainCopyTask(
 
   if (winner.canceled) {
     // Orçamento esgotado ⇒ CANCELA atomicamente (terminal `failed` + motivo numa
-    // ÚNICA transação). Se um `completed` já estiver PERSISTIDO, o cancelamento é
-    // recusado e o estado persistido prevalece.
+    // ÚNICA transação). A confirmação depende do DESFECHO do cancelamento
+    // (correção da revisão 2026-10-14): NUNCA se declara `failed` nem
+    // cancelamento confirmado sem que o envelope o PROVE.
     const settle = await cancelBounded();
     if (settle.kind === "cancel") {
-      if (!settle.result.canceled && settle.result.state === "completed") {
+      // `canceled:true` ⇒ a RPC registrou o terminal `failed` (applied ou
+      // replay idempotente equivalente): único caminho que confirma a falha.
+      if (settle.result.canceled) {
+        return { state: "failed", canceled: true };
+      }
+      // Recusa com `completed` PERSISTIDO ⇒ o estado persistido prevalece.
+      if (settle.result.state === "completed") {
         return { state: "completed", canceled: false };
       }
-      return { state: "failed", canceled: true };
+      // QUALQUER outra recusa (`stale_attempt`/`conflict`/`rejected`/estado
+      // desconhecido): o cancelamento NÃO se aplicou e o estado PERSISTIDO
+      // permanece intocado ⇒ NADA é afirmado (`unconfirmed`); a RE-LEITURA (A1)
+      // resolve — nunca um `failed` falso nem um cancelamento não confirmado.
+      return { state: "unconfirmed", canceled: true };
     }
     // Incerteza LOCAL sobre o cancelamento: sem segundo write; re-ler resolve.
     return { state: "unconfirmed", canceled: true };

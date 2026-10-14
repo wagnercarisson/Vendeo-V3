@@ -132,6 +132,17 @@ describe("B2.1 — migration por tentativa (SQL estático, SEM comentários)", (
     expect(ACTIVE_SQL).toContain("SECURITY DEFINER");
     expect(ACTIVE_SQL).toContain("SET search_path = ''");
   });
+
+  it("cancel REGISTRA somente em applied/idempotent — recusa não declara sucesso (revisão 2026-10-14)", () => {
+    // Gate do registro pelo DESFECHO do apply (não pelo estado observado).
+    expect(ACTIVE_SQL).toContain("IF v_outcome IN ('applied','idempotent') THEN");
+    // Early-return explícito do `stale_attempt` (recusa sem registro) preservado.
+    expect(ACTIVE_SQL).toContain("IF v_outcome = 'stale_attempt' THEN");
+    // Recusa (conflict/rejected/invalid_content): canceled:false + desfecho, SEM insert.
+    expect(ACTIVE_SQL).toContain("'canceled', false, 'outcome', v_outcome");
+    // Sucesso: canceled:true também carrega o desfecho observado.
+    expect(ACTIVE_SQL).toContain("'canceled', true, 'outcome', v_outcome");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -297,11 +308,16 @@ class CopyAttemptDb {
     if (apply.outcome === "stale_attempt") {
       return { applied: false, state: apply.state, canceled: false, outcome: "stale_attempt" };
     }
-    if (apply.state === "failed") {
+    // CORREÇÃO DA REVISÃO (2026-10-14) — espelha o gate da SQL: o registro e a
+    // resposta `canceled:true` SÓ acontecem quando o `apply` interno aplicou
+    // (`applied`) ou replayou o terminal equivalente (`idempotent`). Qualquer
+    // outro desfecho (`conflict`/`rejected`/`invalid_content`) é RECUSA: nenhum
+    // cancellation é registrado e `canceled:false` é devolvido.
+    if (apply.outcome === "applied" || apply.outcome === "idempotent") {
       this.cancellations += 1;
-      return { applied: apply.applied, state: "failed", canceled: true };
+      return { applied: apply.applied, state: "failed", canceled: true, outcome: apply.outcome };
     }
-    return { applied: apply.applied, state: apply.state, canceled: false };
+    return { applied: false, state: apply.state, canceled: false, outcome: apply.outcome };
   }
 }
 
@@ -486,6 +502,53 @@ describe("B2.1 — parseCopyStateEnvelope aceita stale_attempt / falha fechado e
       }),
     ).rejects.toThrow(/product_1_1_cancel_copy/);
   });
+
+  // Correção da revisão (2026-10-14) — coerência `canceled:true` × desfecho.
+  it("cancel: `canceled:true` + desfecho de RECUSA (conflict) ⇒ contradição ⇒ LANÇA", async () => {
+    await expect(
+      recordCancellation(clientRpc({ applied: false, state: "failed", canceled: true, outcome: "conflict" }), {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        reason: "r",
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+      }),
+    ).rejects.toThrow(/product_1_1_cancel_copy_incoherent_envelope/);
+  });
+
+  it("cancel: `outcome` desconhecido falha FECHADO; `canceled:true`+`idempotent` é aceito", async () => {
+    await expect(
+      recordCancellation(clientRpc({ applied: false, state: "failed", canceled: false, outcome: "bogus" }), {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        reason: "r",
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+      }),
+    ).rejects.toThrow(/product_1_1_cancel_copy_incoherent_envelope/);
+
+    await expect(
+      recordCancellation(clientRpc({ applied: false, state: "failed", canceled: true, outcome: "idempotent" }), {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        reason: "r",
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+      }),
+    ).resolves.toEqual({ applied: false, state: "failed", canceled: true, outcome: "idempotent" });
+  });
+
+  it("cancel: `canceled:true` SEM `outcome` + `failed` permanece VÁLIDO (compatibilidade b1b)", async () => {
+    await expect(
+      recordCancellation(clientRpc({ applied: true, state: "failed", canceled: true }), {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        reason: "r",
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+      }),
+    ).resolves.toEqual({ applied: true, state: "failed", canceled: true });
+  });
 });
 
 describe("B2.1 — comportamento do store simulado (tentativa)", () => {
@@ -579,6 +642,54 @@ describe("B2.1 — comportamento do store simulado (tentativa)", () => {
       await store.recordCancellation({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, reason: "r", attemptSeq: 1, attemptToken: TOKEN_A }),
     ).toMatchObject({ canceled: false, state: "completed" });
     expect(db.cancellations).toBe(0);
+  });
+
+  // Correção da revisão (2026-10-14) — o cancelamento NÃO pode declarar sucesso
+  // indevido quando o `apply` interno RECUSA (mesmo com estado observado
+  // `failed`): sem registro de cancelamento e `canceled:false`.
+  it("cancel onde apply devolve `conflict` com estado `failed` ⇒ canceled:false, SEM registro", async () => {
+    const db = new CopyAttemptDb();
+    const { client } = makeRecordingClient(db);
+    const store = storeFor(client);
+    await store.recordCopyState({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, attemptSeq: 1, attemptToken: TOKEN_A, state: "pending" });
+    // Terminal `failed` persistido com payload DEFINITIVO.
+    await store.recordCopyState({
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      attemptSeq: 1,
+      attemptToken: TOKEN_A,
+      state: "failed",
+      copyPayload: { recovery: { kind: "auto", failureClass: "definitive", nextWaitMs: null } },
+    });
+    // Cancel traz payload DIVERGENTE ⇒ apply `conflict` sobre `failed` ⇒ RECUSA.
+    const res = await store.recordCancellation({
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      reason: "r",
+      attemptSeq: 1,
+      attemptToken: TOKEN_A,
+      copyPayload: { recovery: { kind: "auto", failureClass: "transient", nextWaitMs: 5000 } },
+    });
+    expect(res).toEqual({ applied: false, state: "failed", canceled: false, outcome: "conflict" });
+    expect(db.cancellations).toBe(0);
+    // O persistido NÃO muda (payload definitivo intacto).
+    const { client: reader } = makeRecordingClient(db);
+    await expect(readCopyDelivery(reader, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID })).resolves.toMatchObject({
+      state: "failed",
+      copyPayload: { recovery: { failureClass: "definitive" } },
+    });
+  });
+
+  it("cancel em tentativa SUPERADA (`stale_attempt`) ⇒ canceled:false, SEM registro, persistido intocado", async () => {
+    const db = new CopyAttemptDb();
+    const { client } = makeRecordingClient(db);
+    const store = storeFor(client);
+    await store.recordCopyState({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, attemptSeq: 2, attemptToken: TOKEN_B, state: "pending" });
+    const res = await store.recordCancellation({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, reason: "r", attemptSeq: 1, attemptToken: TOKEN_A });
+    expect(res).toMatchObject({ canceled: false, outcome: "stale_attempt" });
+    expect(db.cancellations).toBe(0);
+    // A corrente (seq 2) permanece `pending` — o cancelamento recusado não a altera.
+    await expect(readCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID })).resolves.toBe("pending");
   });
 });
 
@@ -845,6 +956,59 @@ describe("B2.1 — drenador IDENTIFICADO que CLASSIFICA a falha server-side", ()
     expect(cancels[0]?.params.p_copy_payload).toMatchObject({
       recovery: { kind: "auto", failureClass: "transient", nextWaitMs: COPY_RECOVERY_WAITS_MS.after1 },
     });
+  });
+
+  // Correção da revisão (2026-10-14) — recusa do cancelamento NUNCA declara
+  // `failed` nem cancelamento confirmado: `unconfirmed` + re-leitura (A1) resolve.
+  it("drain: recusa `stale_attempt` (corrente `pending`) ⇒ {unconfirmed, canceled:true}, NÃO failed", async () => {
+    const db = new CopyAttemptDb();
+    // Corrente: tentativa 2 `pending` (outro dono). O dreno roda a tentativa 1 SUPERADA.
+    db.seed({
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      attempt_seq: 2,
+      attempt_token: TOKEN_B,
+      state: "pending",
+      copy_text: null,
+      copy_payload: null,
+      lease_at: iso(NOW),
+      request_token: null,
+      updated_at: iso(NOW),
+      created_at: iso(NOW),
+    });
+    const { client, events } = makeRecordingClient(db);
+    const budget = createCopyBudgetSignal(0);
+    const result = await drainCopyTask(
+      {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: TOKEN_A,
+        recoveryKind: "auto",
+        signal: budget.signal,
+        run: ({ signal }) =>
+          new Promise<void>((_resolve, reject) => {
+            const abort = () => reject(new DOMException("aborted", "AbortError"));
+            if (signal.aborted) {
+              abort();
+              return;
+            }
+            signal.addEventListener("abort", abort, { once: true });
+          }),
+      },
+      storeFor(client),
+    );
+    budget.dispose();
+
+    // NUNCA `failed`+`canceled:true` sobre recusa: nada é afirmado (A1 resolve).
+    expect(result).toEqual({ state: "unconfirmed", canceled: true });
+    // O cancelamento recusado NÃO registrou nada.
+    expect(db.cancellations).toBe(0);
+    // O persistido da corrente (seq 2 `pending`) NÃO foi tocado.
+    await expect(readCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID })).resolves.toBe("pending");
+    // Houve exatamente UMA chamada de cancel (sem segundo write — A1).
+    const cancels = events.filter((e) => e.name === "product_1_1_cancel_copy");
+    expect(cancels).toHaveLength(1);
   });
 
   it("conclusão TARDIA após o settle NÃO persiste (latch preservado)", async () => {

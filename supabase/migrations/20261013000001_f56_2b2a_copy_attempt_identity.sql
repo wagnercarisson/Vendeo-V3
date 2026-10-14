@@ -293,7 +293,15 @@ $$;
 -- 3.2 — Cancelamento ATÔMICO POR TENTATIVA: aplica o terminal `failed` (carregando
 -- o payload de recuperação) E registra o motivo numa ÚNICA transação. EXIGE
 -- identidade; RECUSA tentativa SUPERADA (`stale_attempt`) e `completed` persistido
--- (`canceled:false`). A assinatura AMPLIADA (6 args) obriga DROP da antiga (3 args).
+-- (`canceled:false`). CORREÇÃO DA REVISÃO (2026-10-14): o registro do motivo e a
+-- resposta `canceled:true` SÓ acontecem quando o `apply` interno EFETIVAMENTE
+-- aplicou a transição (`applied`) OU a replayou como equivalente (`idempotent`);
+-- qualquer outro desfecho (`conflict` — token/conteúdo terminal DIVERGENTE;
+-- `rejected` — terminal protegido; `invalid_content`) é uma RECUSA: NENHUM
+-- cancellation é inserido e o envelope NÃO declara `canceled:true` (o
+-- cancelamento não pode declarar sucesso indevido). O estado PERSISTIDO não é
+-- tocado pelas recusas (garantido pelo `apply`). A assinatura AMPLIADA (6 args)
+-- obriga DROP da antiga (3 args).
 DROP FUNCTION IF EXISTS public.product_1_1_cancel_copy(UUID, UUID, TEXT);
 
 CREATE OR REPLACE FUNCTION public.product_1_1_cancel_copy(
@@ -333,21 +341,30 @@ BEGIN
 
   -- (2) Tentativa SUPERADA ⇒ cancelamento NÃO se aplica (recusa), devolve
   --     `stale_attempt` com `canceled:false`. O persistido da corrente NÃO muda.
+  --     (Early-return EXPLÍCITO preservado — recusa nunca registra.)
   IF v_outcome = 'stale_attempt' THEN
     RETURN jsonb_build_object('applied', false, 'state', v_state, 'canceled', false, 'outcome', 'stale_attempt');
   END IF;
 
-  -- (3) O cancelamento só é registrado quando o estado terminal OBSERVADO é
-  --     `failed` (nunca sobre um `completed` persistido). Idempotente pelo UNIQUE.
-  IF v_state = 'failed' THEN
+  -- (3) CORREÇÃO DA REVISÃO (2026-10-14) — o cancelamento só é REGISTRADO e só
+  --     declara `canceled:true` quando o `apply` interno EFETIVAMENTE aplicou a
+  --     transição para `failed` (`applied`, primeira transição) OU a replayou
+  --     como EQUIVALENTE (`idempotent`, repetição do mesmo terminal). Qualquer
+  --     outro desfecho (`conflict` — token ou conteúdo terminal DIVERGENTE;
+  --     `rejected` — terminal protegido; `invalid_content`) é uma RECUSA:
+  --     NENHUM registro de cancelamento é inserido e o envelope NÃO declara
+  --     sucesso. O estado PERSISTIDO não é tocado pela recusa (garantido pelo
+  --     `apply`). Idempotente pelo UNIQUE.
+  IF v_outcome IN ('applied','idempotent') THEN
     INSERT INTO public.product_1_1_copy_cancellations (campaign_id, operation_id, reason)
     VALUES (p_campaign_id, p_operation_id, p_reason)
     ON CONFLICT (campaign_id, operation_id) DO NOTHING;
-    RETURN jsonb_build_object('applied', v_applied, 'state', 'failed', 'canceled', true);
+    RETURN jsonb_build_object('applied', v_applied, 'state', 'failed', 'canceled', true, 'outcome', v_outcome);
   END IF;
 
-  -- Já `completed` persistido (ou estado indisponível) ⇒ NÃO cancela.
-  RETURN jsonb_build_object('applied', v_applied, 'state', v_state, 'canceled', false);
+  -- RECUSA (`conflict`/`rejected`/`invalid_content`) ⇒ NÃO registra, NÃO
+  -- declara cancelamento; devolve o estado/desfecho observados no `apply`.
+  RETURN jsonb_build_object('applied', false, 'state', v_state, 'canceled', false, 'outcome', v_outcome);
 END;
 $$;
 
