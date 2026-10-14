@@ -1319,9 +1319,13 @@ describe("B2.1 — Plano 06: migration de aquisição atômica (SQL estático)",
 });
 
 describe("B2.1 — Plano 06: backfill transacional (SQL estático)", () => {
-  it("é transacional e restaura a imutabilidade do cancelamento", () => {
-    expect(backfillMigrationSql).toMatch(/\bbegin;/i);
-    expect(backfillMigrationSql).toMatch(/\bcommit;/i);
+  it("é transacional (CLI-controlada) e restaura a imutabilidade do cancelamento", () => {
+    // A atomicidade é da TRANSAÇÃO DE BATCH da CLI (SQL + registro de versão
+    // juntos); NÃO há `BEGIN;`/`COMMIT;` explícito no arquivo (um `COMMIT;`
+    // interno separaria o dado do registro de versão). O `BEGIN` do plpgsql
+    // (dentro de `$$ ... $$`, sem `;` sozinho na linha) NÃO conta.
+    expect(backfillMigrationSql).not.toMatch(/^\s*begin\s*;/im);
+    expect(backfillMigrationSql).not.toMatch(/^\s*commit\s*;/im);
     expect(BACKFILL_ACTIVE_SQL).toContain(
       "DISABLE TRIGGER trg_product_1_1_copy_cancellations_immutable",
     );
@@ -1386,8 +1390,10 @@ describe("B2.1 — Plano 06: cliente de aquisição (envelope FECHADO, RPC simul
     expect(ACQUIRE_COPY_ATTEMPT_RPC).toBe("product_1_1_acquire_copy_attempt");
     const { client, events } = acquisitionClient(() => ({
       acquired: true,
+      reason: null,
       attempt_seq: 1,
       attempt_token: TOKEN_A,
+      mode: "auto",
     }));
     await client.acquire({ ...base, mode: "auto" });
     expect(events[0].name).toBe(ACQUIRE_COPY_ATTEMPT_RPC);
@@ -1419,8 +1425,10 @@ describe("B2.1 — Plano 06: cliente de aquisição (envelope FECHADO, RPC simul
     // expiredClosed ausente ⇒ false; reenvio envia o request_token.
     const withToken = acquisitionClient(() => ({
       acquired: true,
+      reason: null,
       attempt_seq: 1,
       attempt_token: TOKEN_A,
+      mode: "manual",
     }));
     await expect(
       withToken.client.acquire({ ...base, mode: "manual", requestToken: TOKEN_A }),
@@ -1514,6 +1522,64 @@ describe("B2.1 — Plano 06: cliente de aquisição (envelope FECHADO, RPC simul
       reason: "wait_not_elapsed",
       waitRemainingMs: 4200,
     });
+  });
+
+  it("VENCEDOR contraditório: reason não-nulo OU mode ausente/divergente ⇒ lança", async () => {
+    // vencedor com `reason` NÃO-nulo (contradiz um vencedor) ⇒ lança.
+    await expect(
+      acquisitionClient(() => ({
+        acquired: true,
+        reason: "attempt_limit_reached",
+        attempt_seq: 1,
+        attempt_token: TOKEN_A,
+        mode: "auto",
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    // vencedor SEM `mode` ⇒ lança (não há mais sucesso implícito por omissão).
+    await expect(
+      acquisitionClient(() => ({
+        acquired: true,
+        reason: null,
+        attempt_seq: 1,
+        attempt_token: TOKEN_A,
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    // vencedor com `mode` DIVERGENTE do solicitado ⇒ lança.
+    await expect(
+      acquisitionClient(() => ({
+        acquired: true,
+        reason: null,
+        attempt_seq: 1,
+        attempt_token: TOKEN_A,
+        mode: "manual",
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+  });
+
+  it("perdedor com campo OBRIGATÓRIO ausente/inválido ⇒ lança (envelope fechado)", async () => {
+    // `already_acquired` SEM `attempt_seq` ⇒ lança.
+    await expect(
+      acquisitionClient(() => ({
+        acquired: false,
+        reason: "already_acquired",
+        attempt_token: TOKEN_B,
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    // `already_acquired` SEM `attempt_token` ⇒ lança.
+    await expect(
+      acquisitionClient(() => ({
+        acquired: false,
+        reason: "already_acquired",
+        attempt_seq: 2,
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    // `wait_not_elapsed` SEM `wait_remaining_ms` ⇒ lança.
+    await expect(
+      acquisitionClient(() => ({
+        acquired: false,
+        reason: "wait_not_elapsed",
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
   });
 
   it("motivo DESCONHECIDO/ausente (incl. operation_terminal) NUNCA é aceito", async () => {

@@ -15,8 +15,10 @@ import { supabaseAdmin } from "@/lib/supabase/server";
  * ACOMPANHA e NÃO deve iniciar chamada ao provider.
  *
  * Envelope FECHADO (fail-closed): o cliente NUNCA aceita sucesso implícito.
- * `{acquired:true}` exige `attempt_seq` (1..6) e `attempt_token` não-vazio;
- * código de recusa desconhecido/ausente NUNCA é vencedor. TERMINAIS SEPARADOS:
+ * `{acquired:true}` exige `attempt_seq` (1..6), `attempt_token` não-vazio, `mode`
+ * presente e igual ao solicitado (∈ {auto,manual}) e `reason` ausente/NULL (um
+ * `reason` não-nulo CONTRADIZ um vencedor); código de recusa desconhecido/ausente
+ * NUNCA é vencedor. TERMINAIS SEPARADOS:
  * NÃO há `operation_terminal` — o terminal FINANCEIRO (`delivered`/`refunded`)
  * não encerra a recuperação de textos; só a copy `completed` encerra.
  */
@@ -115,18 +117,24 @@ function mapAcquire(
   }
 
   if (acquired) {
-    // Envelope FECHADO: o vencedor EXIGE `attempt_seq` (1..6) e `attempt_token`
-    // não-vazio. Contradição/ausência ⇒ LANÇA (NUNCA vencedor implícito).
+    // Envelope FECHADO: o vencedor EXIGE `attempt_seq` (1..6), `attempt_token`
+    // não-vazio, `mode` PRESENTE/validado (∈ {auto,manual} e igual ao solicitado)
+    // e `reason` ausente/NULL. Contradição/ausência ⇒ LANÇA (NUNCA vencedor
+    // implícito): um `reason` não-nulo contradiz um vencedor.
     const attemptSeq = Number(record.attempt_seq);
     const attemptToken = record.attempt_token;
     const rawMode = record.mode;
+    const reason = record.reason;
+    const modeValid = rawMode === "auto" || rawMode === "manual";
     if (
       !Number.isInteger(attemptSeq) ||
       attemptSeq < 1 ||
       attemptSeq > 6 ||
       typeof attemptToken !== "string" ||
       attemptToken.length === 0 ||
-      (rawMode !== undefined && rawMode !== input.mode)
+      !(reason === undefined || reason === null) ||
+      !modeValid ||
+      rawMode !== input.mode
     ) {
       throw new ProductOneToOneCopyAcquisitionError(
         "unknown",
@@ -137,9 +145,9 @@ function mapAcquire(
       acquired: true,
       attemptSeq,
       attemptToken,
-      // O servidor só adquire com o `mode` solicitado; o retorno é a solicitação
-      // confirmada (o próprio servidor validou a transição de `mode`).
-      mode: input.mode,
+      // O servidor só adquire com o `mode` solicitado; o retorno é o `mode`
+      // validado (presente no envelope e igual à solicitação).
+      mode: rawMode as CopyAcquisitionMode,
       expiredClosed: record.expired_closed === true,
     });
   }
@@ -164,15 +172,37 @@ function mapAcquire(
   } = { acquired: false, reason: reason as CopyAcquisitionReason };
 
   if (reason === "already_acquired") {
-    // Dedupe do MESMO acionamento: devolve a identidade EXISTENTE.
+    // Dedupe do MESMO acionamento: a identidade EXISTENTE é OBRIGATÓRIA
+    // (`attempt_seq` 1..6 + `attempt_token` não-vazio); ausência/invalidade ⇒
+    // envelope fechado (NUNCA omite silenciosamente).
     const seq = Number(record.attempt_seq);
     const token = record.attempt_token;
-    if (Number.isInteger(seq) && seq >= 1 && seq <= 6) result.attemptSeq = seq;
-    if (typeof token === "string" && token.length > 0) result.attemptToken = token;
+    if (
+      !Number.isInteger(seq) ||
+      seq < 1 ||
+      seq > 6 ||
+      typeof token !== "string" ||
+      token.length === 0
+    ) {
+      throw new ProductOneToOneCopyAcquisitionError(
+        "unknown",
+        "copy_acquisition_invalid_envelope",
+      );
+    }
+    result.attemptSeq = seq;
+    result.attemptToken = token;
   }
   if (reason === "wait_not_elapsed") {
+    // A espera restante é OBRIGATÓRIA: número finito ≥ 0; ausência/invalidade ⇒
+    // envelope fechado.
     const wait = Number(record.wait_remaining_ms);
-    if (Number.isFinite(wait)) result.waitRemainingMs = wait;
+    if (!Number.isFinite(wait) || wait < 0) {
+      throw new ProductOneToOneCopyAcquisitionError(
+        "unknown",
+        "copy_acquisition_invalid_envelope",
+      );
+    }
+    result.waitRemainingMs = wait;
   }
 
   return Object.freeze(result);
