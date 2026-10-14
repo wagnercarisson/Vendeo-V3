@@ -80,6 +80,13 @@ export interface DefaultProductOneToOneCopyRunnerDeps {
     runId?: string;
     traceId?: string;
   }) => AiTelemetryContext;
+  /**
+   * F56.2b2a (B2.1 / lacuna 3) — alvo EXPLÍCITO do provider desta tentativa,
+   * decidido SERVER-SIDE (`primary` na 1ª tentativa; `fallback` na tentativa
+   * seguinte, após a espera da política). Cada tentativa faz UMA chamada ao
+   * provider com o alvo informado.
+   */
+  readonly target?: "primary" | "fallback";
 }
 
 /** Contrato estrutural consumido pelo orquestrador (`ProductOneToOneCopyOps`). */
@@ -172,7 +179,11 @@ export function createDefaultProductOneToOneCopyOps(
     });
 
     try {
-      const result = await service.generateCopy(copyInput, { signal, telemetry });
+      const result = await service.generateCopy(copyInput, {
+        signal,
+        telemetry,
+        target: deps.target ?? "primary",
+      });
       return deliveryFromResult(result);
     } catch (err) {
       if (isRetryableError(err) && (await service.hasFallback())) {

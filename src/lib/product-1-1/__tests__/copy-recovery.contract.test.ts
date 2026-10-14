@@ -30,6 +30,7 @@ import {
   ProductOneToOneCopyAcquisitionClient,
   type CopyAcquisitionResult,
 } from "../copy/copy-acquisition-client";
+import { CopyRecoveryRequestSchema } from "../copy/recovery-schemas";
 
 // ---------------------------------------------------------------------------
 // F56.2b2a — B2.1 / Plano 01: identidade POR TENTATIVA + posse/lease +
@@ -1643,5 +1644,62 @@ describe("B2.1 — Plano 06: cliente de aquisição (envelope FECHADO, RPC simul
         mode: "auto",
       }),
     ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (d) F56.2b2a — B2.1 / Plano 02: schema ESTRITO da ação explícita
+//     (`requestToken` OBRIGATÓRIO; campos desconhecidos rejeitados).
+// ---------------------------------------------------------------------------
+
+describe("B2.1 — Plano 02: recovery schema (Zod .strict() com requestToken obrigatório)", () => {
+  const REQUEST_TOKEN = "5e8d2b1a-0c4f-4a1b-9c3f-3b0f6c1a7d2e";
+
+  const valid = {
+    operationId: OPERATION_ID,
+    mode: "auto_retry" as const,
+    attemptSeq: 2,
+    attemptToken: TOKEN_A,
+    requestToken: REQUEST_TOKEN,
+  };
+
+  it("ACEITA o corpo válido (operationId/mode/attemptSeq/attemptToken/requestToken)", () => {
+    expect(CopyRecoveryRequestSchema.safeParse(valid).success).toBe(true);
+    expect(
+      CopyRecoveryRequestSchema.safeParse({ ...valid, mode: "manual" }).success,
+    ).toBe(true);
+  });
+
+  it("REJEITA a AUSÊNCIA de requestToken (OBRIGATÓRIO — sem .optional())", () => {
+    const { requestToken: _omit, ...withoutToken } = valid;
+    void _omit;
+    const result = CopyRecoveryRequestSchema.safeParse(withoutToken);
+    expect(result.success).toBe(false);
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, requestToken: undefined }).success).toBe(
+      false,
+    );
+  });
+
+  it("REJEITA campo DESCONHECIDO (.strict())", () => {
+    expect(
+      CopyRecoveryRequestSchema.safeParse({ ...valid, extra: "nope" }).success,
+    ).toBe(false);
+  });
+
+  it("REJEITA mode fora de auto_retry/manual", () => {
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, mode: "auto" }).success).toBe(false);
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, mode: "manual_x" }).success).toBe(false);
+  });
+
+  it("REJEITA attemptSeq fora de 1..6", () => {
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, attemptSeq: 0 }).success).toBe(false);
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, attemptSeq: 7 }).success).toBe(false);
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, attemptSeq: 1.5 }).success).toBe(false);
+  });
+
+  it("REJEITA requestToken NÃO-uuid", () => {
+    expect(
+      CopyRecoveryRequestSchema.safeParse({ ...valid, requestToken: "not-a-uuid" }).success,
+    ).toBe(false);
   });
 });
