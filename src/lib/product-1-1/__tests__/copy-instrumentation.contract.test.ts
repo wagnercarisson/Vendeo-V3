@@ -78,6 +78,8 @@ const CAMPAIGN_ID = "11111111-1111-4111-8111-111111111111";
 const OPERATION_ID = "22222222-2222-4222-8222-222222222222";
 const STORE_ID = "33333333-3333-4333-8333-333333333333";
 const SNAPSHOT_ID = "44444444-4444-4444-8444-444444444444";
+// B2A-D4 — identidade da TENTATIVA nos contratos alterados (UUID v4 fixo).
+const ATTEMPT_TOKEN = "3b0f6c1a-7d2e-4a1b-9c3f-5e8d2b1a0c4f";
 
 const CONFIG: CurrentImageGenerationConfig = {
   primary: { model: "gpt-image-2.5-sunburst", quality: "medium" },
@@ -188,6 +190,14 @@ function makeFakeSupabase(
           eq() {
             return chain;
           },
+          // B2A-D4 — `readCopyState`/`readCopyDelivery` leem a MAIOR `attempt_seq`
+          // via `.order("attempt_seq", { ascending: false }).limit(1)`.
+          order() {
+            return chain;
+          },
+          limit() {
+            return chain;
+          },
           maybeSingle() {
             return Promise.resolve(selectResponse);
           },
@@ -220,7 +230,7 @@ function makeFakeSupabase(
 describe("Plano 08 — persistência do estado da copy (F8)", () => {
   it("P2: recordCopyState chama a RPC condicional (RPC-only writes; sem Upsert direto)", async () => {
     const { client, events } = makeFakeSupabase();
-    await recordCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, state: "pending" });
+    await recordCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, attemptSeq: 1, attemptToken: ATTEMPT_TOKEN, state: "pending" });
 
     expect(events).toHaveLength(1);
     expect(events[0].table).toBe("product_1_1_apply_copy_state");
@@ -246,6 +256,13 @@ describe("Plano 08 — persistência do estado da copy (F8)", () => {
           select() {
             const chain = {
               eq() {
+                return chain;
+              },
+              // B2A-D4 — leitura da MAIOR `attempt_seq` via `.order(...).limit(1)`.
+              order() {
+                return chain;
+              },
+              limit() {
                 return chain;
               },
               maybeSingle() {
@@ -280,6 +297,8 @@ describe("Plano 08 — persistência do estado da copy (F8)", () => {
       campaignId: CAMPAIGN_ID,
       operationId: OPERATION_ID,
       reason: "cancelled_by_owner",
+      attemptSeq: 1,
+      attemptToken: ATTEMPT_TOKEN,
     });
 
     expect(events).toHaveLength(1);
@@ -381,6 +400,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "Legenda", payload: { caption: "Legenda" } });
@@ -400,6 +422,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async () => {},
       },
@@ -417,6 +442,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async () => {
           throw new Error("copy_director_failed");
@@ -437,6 +465,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: budget.signal,
         run: ({ signal }) =>
           new Promise<void>((_resolve, reject) => {
@@ -467,6 +498,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "Legenda da campanha", payload: { caption: "Legenda da campanha" } });
@@ -495,6 +529,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: budget.signal,
         // IGNORA o abort: continua rodando ALÉM do orçamento.
         run: async ({ commit }) => {
@@ -537,6 +574,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "texto" });
@@ -568,6 +608,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "texto" });
@@ -601,6 +644,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "texto" });
@@ -640,6 +686,9 @@ describe("Plano 08 — drenagem da copy com orçamento (F8)", () => {
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: controller.signal,
         run: async ({ commit }) => {
           void commit({ copyText: "tarde demais" });

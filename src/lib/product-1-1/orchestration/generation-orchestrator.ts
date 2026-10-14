@@ -256,6 +256,15 @@ export interface ProductOneToOneCopyOps {
     commit: CopyCommit;
   }) => Promise<void>;
   readonly budgetMs?: number;
+  /**
+   * B2A-D4 / Plano 01 — identidade PROVISÓRIA da 1ª tentativa (drenagem no
+   * ciclo). No wave 1 o default é `attempt_seq = 1` + token gerado (a b1b
+   * equivale a uma única tentativa). Esta identidade é SUBSTITUÍDA pelo wiring
+   * de aquisição do Plano 02 (server-autoritativa); NUNCA tratar o default como
+   * autoridade. PROIBIDO neste plano: instanciar a aquisição (existe só no
+   * Plano 06).
+   */
+  readonly initialAttempt?: { readonly attemptSeq: number; readonly attemptToken: string };
   readonly recordCopyState?: (input: {
     campaignId: string;
     operationId: string;
@@ -775,10 +784,20 @@ export async function runProductOneToOneGeneration(
           Math.min(copyOps.budgetMs ?? COPY_BUDGET_MS, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS),
         );
         const budget = (copyOps.makeBudgetSignal ?? createCopyBudgetSignal)(budgetMs);
+        // B2A-D4 / Plano 01 — identidade da 1ª tentativa (provisória no wave 1;
+        // o default equivale à b1b `attempt_seq = 1`; SUBSTITUÍDA pelo wiring de
+        // aquisição do Plano 02). NUNCA é tratada como server-autoritativa aqui.
+        const copyIdentity = copyOps.initialAttempt ?? {
+          attemptSeq: 1,
+          attemptToken: crypto.randomUUID(),
+        };
         copyDrain = drainCopyTask(
           {
             campaignId,
             operationId,
+            attemptSeq: copyIdentity.attemptSeq,
+            attemptToken: copyIdentity.attemptToken,
+            recoveryKind: "auto",
             signal: budget.signal,
             run: ({ signal, commit }) =>
               copyOps.runCopy({ campaignId, operationId, signal, commit }),

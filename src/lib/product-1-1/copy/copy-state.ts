@@ -2,6 +2,8 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isRetryableError } from "@/lib/copy/errors";
+
 /**
  * F56.2b1b — Estado da copy não bloqueante do Produto 1:1 (Plano 08, F8 /
  * REQ-56.2.2-11).
@@ -55,8 +57,34 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /** Estados persistidos da copy (nunca inferidos; sempre persistidos). */
 export type CopyState = "pending" | "completed" | "failed";
 
+/**
+ * B2A-D4 — classificação SERVER-SIDE da falha (persistida no
+ * `copy_payload.recovery.failureClass`): `transient` admite nova tentativa
+ * (2ª/3ª automática ou manual); `definitive` encerra o ciclo automático.
+ */
+export type CopyFailureClass = "transient" | "definitive";
+
+/** B2A-D4 — origem da tentativa: automática (no ciclo/política) ou manual (clique). */
+export type CopyRecoveryKind = "auto" | "manual";
+
 /** Orçamento PADRÃO (ms) da copy dentro do ciclo da requisição. */
 export const COPY_BUDGET_MS = 30_000;
+
+/**
+ * B2A-D4 — TTL do LEASE/posse da tentativa (ms). MAIOR que `COPY_BUDGET_MS`
+ * (dispensa heartbeat dentro do orçamento): `pending` com `lease_at` dentro
+ * deste teto é ATIVA; sem lease vigente é INTERROMPIDA (nunca spinner preso).
+ */
+export const COPY_LEASE_TTL_MS = 45_000;
+
+/**
+ * FONTE ÚNICA das ESPERAS de recuperação (5s/10s). Vive AQUI (ao lado de
+ * `COPY_BUDGET_MS`): o dreno as consome LOCALMENTE (self-contained no wave 1) e
+ * a política do Plano 02 as REUTILIZA importando deste módulo — sem definição
+ * duplicada e sem ciclo `copy-state ↔ copy-recovery-policy`. `nextWaitMs` é
+ * derivado pelo dreno no `copy_payload.recovery`.
+ */
+export const COPY_RECOVERY_WAITS_MS = Object.freeze({ after1: 5_000, after2: 10_000 });
 
 /**
  * Orçamento PADRÃO (ms) das ESCRITAS de estado da copy. Uma escrita de store que
@@ -91,6 +119,12 @@ export interface RecordCopyStateInput {
   readonly operationId: string;
   readonly state: CopyState;
   /**
+   * B2A-D4 — identidade da TENTATIVA (dono). TODA escrita carrega
+   * `attemptSeq`+`attemptToken`; tentativa superada é recusada (`stale_attempt`).
+   */
+  readonly attemptSeq: number;
+  readonly attemptToken: string;
+  /**
    * Gap 1 — texto entregue (persistido em `copy_text`). Ausente quando o estado
    * é `pending`/`failed` (não há texto entregue).
    */
@@ -103,6 +137,15 @@ export interface RecordCancellationInput {
   readonly campaignId: string;
   readonly operationId: string;
   readonly reason: string;
+  /** B2A-D4 — identidade da TENTATIVA cancelada (exigida pela RPC). */
+  readonly attemptSeq: number;
+  readonly attemptToken: string;
+  /**
+   * Correção aprovada — payload de recuperação persistido NO terminal `failed`
+   * do cancelamento (`copy_payload.recovery`); ausente/`null` preserva o
+   * comportamento b1b (payload intacto na transição).
+   */
+  readonly copyPayload?: Record<string, unknown> | null;
 }
 
 /**
@@ -111,14 +154,17 @@ export interface RecordCancellationInput {
  *   * `idempotent`      — replay EQUIVALENTE (nenhuma escrita);
  *   * `conflict`        — MESMO terminal, conteúdo DIVERGENTE (persistido inalterado);
  *   * `rejected`        — terminal protegido / escrita não-terminal tardia;
- *   * `invalid_content` — `completed` sem texto entregável (C2).
+ *   * `invalid_content` — `completed` sem texto entregável (C2);
+ *   * `stale_attempt`   — B2A-D4: tentativa SUPERADA (conclusão atrasada) — o
+ *     estado PERSISTIDO da tentativa corrente NÃO muda.
  */
 export type CopyStateOutcome =
   | "applied"
   | "idempotent"
   | "conflict"
   | "rejected"
-  | "invalid_content";
+  | "invalid_content"
+  | "stale_attempt";
 
 /** Envelope devolvido por `product_1_1_apply_copy_state` (validado, fail-closed). */
 export interface CopyStateTransitionResult {
@@ -133,6 +179,8 @@ export interface CopyCancellationResult {
   readonly applied: boolean;
   readonly state: CopyState | null;
   readonly canceled: boolean;
+  /** B2A-D4 — `'stale_attempt'` quando o cancelamento foi recusado por tentativa superada. */
+  readonly outcome?: CopyStateOutcome;
 }
 
 /** Modelo de leitura do estado + texto/payload entregues. */
@@ -140,6 +188,32 @@ export interface CopyDeliveryRecord {
   readonly state: CopyState;
   readonly copyText: string | null;
   readonly copyPayload: Record<string, unknown> | null;
+}
+
+/** B2A-D4 — linha de HISTÓRICO por tentativa (nenhuma sobrescrita). */
+export interface CopyAttemptRecord {
+  readonly attemptSeq: number;
+  readonly attemptToken: string | null;
+  readonly state: CopyState;
+  readonly copyText: string | null;
+  readonly copyPayload: Record<string, unknown> | null;
+  /** ISO da posse/lease (`null` quando ausente/interrompida). */
+  readonly leaseAt: string | null;
+  /** Token do acionamento (gravado só pela aquisição); `null` no histórico b1b. */
+  readonly requestToken: string | null;
+  readonly updatedAt: string;
+  readonly createdAt: string;
+}
+
+/** Sumário READ-ONLY da recuperação (fonte SSR da página; dentro da G-NA). */
+export interface CopyRecoverySummary {
+  readonly attemptSeq: number;
+  readonly state: CopyState | null;
+  readonly attemptActive: boolean;
+  readonly waitRemainingMs: number;
+  readonly autoAttempts: number;
+  readonly manualAttempts: number;
+  readonly definitive: boolean;
 }
 
 /** Seam de persistência do estado da copy (injetável; default Supabase). */
@@ -157,6 +231,7 @@ const COPY_STATE_OUTCOMES: readonly CopyStateOutcome[] = [
   "conflict",
   "rejected",
   "invalid_content",
+  "stale_attempt",
 ];
 
 function isCopyState(value: unknown): value is CopyState {
@@ -213,6 +288,7 @@ function parseCopyCancellationEnvelope(raw: unknown): CopyCancellationResult {
   const applied = envelope.applied;
   const canceled = envelope.canceled;
   const state = envelope.state;
+  const outcome = envelope.outcome;
 
   if (typeof applied !== "boolean" || typeof canceled !== "boolean") {
     throw new Error("product_1_1_cancel_copy_invalid_envelope");
@@ -220,12 +296,27 @@ function parseCopyCancellationEnvelope(raw: unknown): CopyCancellationResult {
   if (state !== null && state !== undefined && !isCopyState(state)) {
     throw new Error("product_1_1_cancel_copy_invalid_envelope");
   }
+  // B2A-D4 — o envelope pode trazer um `outcome` opcional; o ÚNICO desfecho de
+  // recusa do cancelamento é `'stale_attempt'` (tentativa superada). Qualquer
+  // outro valor (desconhecido/contraditório) falha FECHADO (regras inalteradas).
+  if (outcome !== undefined && outcome !== "stale_attempt") {
+    throw new Error("product_1_1_cancel_copy_incoherent_envelope");
+  }
   // Coerência: `canceled:true` só é válido com estado terminal `failed`.
   if (canceled && state !== "failed") {
     throw new Error("product_1_1_cancel_copy_incoherent_envelope");
   }
+  // `stale_attempt` implica recusa (`canceled:false`).
+  if (outcome === "stale_attempt" && canceled) {
+    throw new Error("product_1_1_cancel_copy_incoherent_envelope");
+  }
 
-  return { applied, canceled, state: isCopyState(state) ? state : null };
+  return {
+    applied,
+    canceled,
+    state: isCopyState(state) ? state : null,
+    ...(outcome === "stale_attempt" ? { outcome: "stale_attempt" as const } : {}),
+  };
 }
 
 /**
@@ -240,6 +331,8 @@ export async function recordCopyState(
     p_campaign_id: input.campaignId,
     p_operation_id: input.operationId,
     p_state: input.state,
+    p_attempt_seq: input.attemptSeq,
+    p_attempt_token: input.attemptToken,
     p_copy_text: input.copyText ?? null,
     p_copy_payload: input.copyPayload ?? null,
   });
@@ -249,7 +342,11 @@ export async function recordCopyState(
   return parseCopyStateEnvelope(data);
 }
 
-/** Lê o estado persistido da copy (`null` quando ainda não existe linha). */
+/**
+ * Lê o estado persistido da copy (`null` quando ainda não existe linha).
+ * B2A-D4 — a tentativa CORRENTE é a de MAIOR `attempt_seq` (compatibilidade: a
+ * tentativa única da b1b equivale a `attempt_seq = 1`).
+ */
 export async function readCopyState(
   client: SupabaseClient,
   input: { campaignId: string; operationId: string },
@@ -259,6 +356,8 @@ export async function readCopyState(
     .select("state")
     .eq("campaign_id", input.campaignId)
     .eq("operation_id", input.operationId)
+    .order("attempt_seq", { ascending: false })
+    .limit(1)
     .maybeSingle<{ state: CopyState }>();
 
   if (error) {
@@ -283,6 +382,8 @@ export async function readCopyDelivery(
     .select("state, copy_text, copy_payload")
     .eq("campaign_id", input.campaignId)
     .eq("operation_id", input.operationId)
+    .order("attempt_seq", { ascending: false })
+    .limit(1)
     .maybeSingle<{
       state: CopyState;
       copy_text: string | null;
@@ -313,6 +414,9 @@ export async function recordCancellation(
     p_campaign_id: input.campaignId,
     p_operation_id: input.operationId,
     p_reason: input.reason,
+    p_attempt_seq: input.attemptSeq,
+    p_attempt_token: input.attemptToken,
+    p_copy_payload: input.copyPayload ?? null,
   });
   if (error) {
     throw new Error(`product_1_1_cancel_copy_rpc_failed:${error.message}`);
@@ -341,6 +445,134 @@ export async function readCopyCancellation(
     throw new Error(`product_1_1_copy_cancellation_read_failed:${error.message}`);
   }
   return data ?? null;
+}
+
+/**
+ * `copy_payload.recovery` tipado (NUNCA inventa estado). Retorna `null` quando
+ * ausente/malformado.
+ */
+function readRecovery(
+  copyPayload: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (copyPayload === null || typeof copyPayload !== "object") return null;
+  const recovery = (copyPayload as Record<string, unknown>).recovery;
+  if (recovery === null || typeof recovery !== "object") return null;
+  return recovery as Record<string, unknown>;
+}
+
+/**
+ * B2A-D4 — lê o HISTÓRICO de tentativas (uma linha por `attempt_seq`), ordenado
+ * CRESCENTE. As linhas NÃO são sobrescritas nem apagadas (histórico
+ * reconstruível). Espelha `attempt-history.ts` (`listAttempts`). `leaseAt` e
+ * `requestToken` são nullable (a coluna `request_token` é escrita só pela RPC de
+ * aquisição — Plano 06).
+ */
+export async function readCopyAttempts(
+  client: SupabaseClient,
+  input: { campaignId: string; operationId: string },
+): Promise<readonly CopyAttemptRecord[]> {
+  const { data, error } = await client
+    .from(COPY_STATE_TABLE)
+    .select(
+      "attempt_seq, attempt_token, state, copy_text, copy_payload, lease_at, request_token, updated_at, created_at",
+    )
+    .eq("campaign_id", input.campaignId)
+    .eq("operation_id", input.operationId)
+    .order("attempt_seq", { ascending: true });
+
+  if (error) {
+    throw new Error(`product_1_1_copy_state_attempts_read_failed:${error.message}`);
+  }
+  const rows = (data ?? []) as ReadonlyArray<{
+    attempt_seq: number;
+    attempt_token: string | null;
+    state: CopyState;
+    copy_text: string | null;
+    copy_payload: Record<string, unknown> | null;
+    lease_at: string | null;
+    request_token: string | null;
+    updated_at: string;
+    created_at: string;
+  }>;
+  return rows.map((row) => ({
+    attemptSeq: row.attempt_seq,
+    attemptToken: row.attempt_token ?? null,
+    state: row.state,
+    copyText: row.copy_text ?? null,
+    copyPayload: row.copy_payload ?? null,
+    leaseAt: row.lease_at ?? null,
+    requestToken: row.request_token ?? null,
+    updatedAt: row.updated_at,
+    createdAt: row.created_at,
+  }));
+}
+
+/**
+ * B2A-D4 — sumário READ-ONLY da recuperação derivado das linhas de
+ * `readCopyAttempts` (SEM mutação; SEM importar `copy/copy-recovery` — o leitor
+ * vive na camada JÁ AUTORIZADA para a página, dentro da G-NA). Deriva a
+ * posse/lease (ATIVA × INTERROMPIDA) e a ESPERA decidida SERVER-SIDE. QUALQUER
+ * falha de leitura NÃO inventa estado: o chamador (página) aplica fail-closed.
+ */
+export async function readCopyRecoverySummary(
+  client: SupabaseClient,
+  input: { campaignId: string; operationId: string; nowMs?: number },
+): Promise<CopyRecoverySummary> {
+  const attempts = await readCopyAttempts(client, {
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+  });
+  const nowMs = input.nowMs ?? Date.now();
+
+  if (attempts.length === 0) {
+    return {
+      attemptSeq: 0,
+      state: null,
+      attemptActive: false,
+      waitRemainingMs: 0,
+      autoAttempts: 0,
+      manualAttempts: 0,
+      definitive: false,
+    };
+  }
+
+  // A tentativa CORRENTE é a ÚLTIMA (MAIOR `attempt_seq`).
+  const current = attempts[attempts.length - 1] as CopyAttemptRecord;
+  const recovery = readRecovery(current.copyPayload);
+
+  // ATIVA = `pending` COM posse VIGENTE (lease fresco). `pending` sem lease
+  // vigente é INTERROMPIDA — nunca fica como spinner ativo.
+  const attemptActive =
+    current.state === "pending" &&
+    current.leaseAt !== null &&
+    nowMs - Date.parse(current.leaseAt) < COPY_LEASE_TTL_MS;
+
+  // ESPERA decidida SERVER-SIDE: `updated_at` + `recovery.nextWaitMs` (gravado
+  // pelo Plano 02 / derivado pelo dreno). A UI apenas reflete o RESTANTE.
+  const nextWaitMs = Number(recovery?.nextWaitMs ?? 0);
+  const waitRemainingMs = Math.max(0, Date.parse(current.updatedAt) + nextWaitMs - nowMs);
+
+  let autoAttempts = 0;
+  let manualAttempts = 0;
+  for (const attempt of attempts) {
+    const kind = readRecovery(attempt.copyPayload)?.kind;
+    if (kind === "auto") autoAttempts += 1;
+    else if (kind === "manual") manualAttempts += 1;
+  }
+
+  const definitive =
+    current.state === "failed" &&
+    readRecovery(current.copyPayload)?.failureClass === "definitive";
+
+  return {
+    attemptSeq: current.attemptSeq,
+    state: current.state,
+    attemptActive,
+    waitRemainingMs,
+    autoAttempts,
+    manualAttempts,
+    definitive,
+  };
 }
 
 /** Store Supabase-backed com client injetado (default de produção). */
@@ -407,13 +639,59 @@ export interface DrainCopyTaskRunContext {
 export interface DrainCopyTaskInput {
   readonly campaignId: string;
   readonly operationId: string;
+  /** B2A-D4 — identidade da TENTATIVA (dono). TODA escrita do dreno a carrega. */
+  readonly attemptSeq: number;
+  readonly attemptToken: string;
+  /** B2A-D4 — origem da tentativa (automática/manual) persistida no `recovery`. */
+  readonly recoveryKind: CopyRecoveryKind;
   /** Abortado quando o orçamento esgotar. */
   readonly signal: AbortSignal;
+  /**
+   * B2A-D4 — classificação SERVER-SIDE da falha. Default: `isRetryableError`
+   * (transitória × definitiva). Nenhum dado do cliente é autoridade.
+   */
+  readonly classifyFailure?: (error: unknown) => CopyFailureClass;
   /**
    * A task da copy; recebe o sinal (para cooperar com o cancelamento) e o
    * `commit` (para persistir o texto entregue de forma latChada).
    */
   readonly run: (context: DrainCopyTaskRunContext) => Promise<void>;
+}
+
+/**
+ * B2A-D4 — ESPERA derivada do dreno: transitória AUTOMÁTICA usa a FONTE ÚNICA
+ * (`after1` na 1ª, `after2` na 2ª; ≥3ª e manual ⇒ sem espera; definitiva ⇒ sem
+ * espera). A política do Plano 02 reutiliza `COPY_RECOVERY_WAITS_MS`.
+ */
+function deriveNextWaitMs(
+  kind: CopyRecoveryKind,
+  attemptSeq: number,
+  failureClass: CopyFailureClass,
+): number | null {
+  if (failureClass === "definitive") return null;
+  if (kind !== "auto") return null;
+  if (attemptSeq <= 1) return COPY_RECOVERY_WAITS_MS.after1;
+  if (attemptSeq === 2) return COPY_RECOVERY_WAITS_MS.after2;
+  return null;
+}
+
+/**
+ * B2A-D4 — payload de recuperação SERVER-SIDE persistido no terminal `failed`
+ * (`copy_payload.recovery`). Classifica a falha e deriva a espera LOCALMENTE
+ * (self-contained: nenhuma referência ao Plano 02/wave 3).
+ */
+function recoveryPayload(
+  kind: CopyRecoveryKind,
+  attemptSeq: number,
+  failureClass: CopyFailureClass,
+): Record<string, unknown> {
+  return {
+    recovery: {
+      kind,
+      failureClass,
+      nextWaitMs: deriveNextWaitMs(kind, attemptSeq, failureClass),
+    },
+  };
 }
 
 export interface DrainCopyTaskOptions {
@@ -515,6 +793,11 @@ export async function drainCopyTask(
 ): Promise<DrainCopyTaskResult> {
   const budgetMs = options.persistenceBudgetMs ?? COPY_PERSISTENCE_BUDGET_MS;
   const timers = options.timers ?? { setTimeout, clearTimeout };
+  // B2A-D4 — classificação SERVER-SIDE da falha (nenhum dado do cliente é
+  // autoridade): default decide por `isRetryableError` (transitória × definitiva).
+  const classifyFailure =
+    input.classifyFailure ??
+    ((err: unknown): CopyFailureClass => (isRetryableError(err) ? "transient" : "definitive"));
 
   // Latch: `settled` encerra o drenador; `attempted` marca que a task tentou
   // persistir o texto; `committed` só é `true` com o estado PROVADO persistido.
@@ -534,6 +817,8 @@ export async function drainCopyTask(
         store.recordCopyState({
           campaignId: input.campaignId,
           operationId: input.operationId,
+          attemptSeq: input.attemptSeq,
+          attemptToken: input.attemptToken,
           state,
           ...(extra ?? {}),
         }),
@@ -556,6 +841,12 @@ export async function drainCopyTask(
             campaignId: input.campaignId,
             operationId: input.operationId,
             reason: COPY_CANCELLATION_REASON,
+            attemptSeq: input.attemptSeq,
+            attemptToken: input.attemptToken,
+            // Correção aprovada — o terminal `failed` do cancelamento por
+            // orçamento esgotado carrega a recuperação (transitória; espera
+            // derivada da tentativa/origem).
+            copyPayload: recoveryPayload(input.recoveryKind, input.attemptSeq, "transient"),
           }),
         )
         .then(
@@ -588,7 +879,8 @@ export async function drainCopyTask(
   /**
    * Terminal `failed`: a DECISÃO depende do DESFECHO da PRÓPRIA escrita —
    * nunca se declara `failed` sem inspecionar o settle/envelope devolvido por
-   * `recordState("failed")`.
+   * `recordState("failed")`. A escrita carrega `copy_payload.recovery`
+   * (classificação SERVER-SIDE + espera derivada — B2A-D4 / correção aprovada).
    *   * `timeout`/`error` ⇒ incerteza LOCAL do CHAMADOR ⇒ `unconfirmed`
    *     (resolve-se por RE-LEITURA; nunca por um 2º write);
    *   * envelope cujo estado PERSISTIDO é `completed` ⇒ a transição para
@@ -596,8 +888,12 @@ export async function drainCopyTask(
    *     prevalece (`completed`), nunca um `failed` enganoso;
    *   * caso contrário ⇒ o terminal `failed` foi aplicado/persistido.
    */
-  const settleFailTerminal = async (): Promise<DrainCopyTaskResult> => {
-    const settle = await recordState("failed");
+  const settleFailTerminal = async (
+    failureClass: CopyFailureClass,
+  ): Promise<DrainCopyTaskResult> => {
+    const settle = await recordState("failed", {
+      copyPayload: recoveryPayload(input.recoveryKind, input.attemptSeq, failureClass),
+    });
     if (settle.kind === "timeout" || settle.kind === "error") {
       return { state: "unconfirmed", canceled: false };
     }
@@ -617,13 +913,18 @@ export async function drainCopyTask(
     input.signal.addEventListener("abort", () => resolve({ canceled: true }), { once: true });
   });
 
+  // B2A-D4 — CAPTURA o erro da task para CLASSIFICAR a falha server-side (lacuna
+  // 1). Nenhum dado do cliente é autoridade.
+  let taskError: unknown;
+  let taskFailed = false;
   const ran = input.run({ signal: input.signal, commit }).then(
     (): { resolved: true; canceled: false } => ({ resolved: true, canceled: false }),
     // Task rejeitada: `canceled` só quando o orçamento (sinal) abortou.
-    (): { resolved: false; canceled: boolean } => ({
-      resolved: false,
-      canceled: input.signal.aborted,
-    }),
+    (error: unknown): { resolved: false; canceled: boolean } => {
+      taskError = error;
+      taskFailed = true;
+      return { resolved: false, canceled: input.signal.aborted };
+    },
   );
 
   const winner = await Promise.race([
@@ -639,6 +940,13 @@ export async function drainCopyTask(
   if (latch.committed) {
     return { state: "completed", canceled: false };
   }
+
+  // Classificação server-side do terminal `failed` NÃO-cancelado: erro capturado
+  // da task ⇒ `classifyFailure`; sem erro (task resolveu sem entregar texto /
+  // escrita falhou) ⇒ transitória (o dreno não prova uma falha definitiva).
+  const settleFailureClass: CopyFailureClass = taskFailed
+    ? classifyFailure(taskError)
+    : "transient";
 
   if (winner.canceled) {
     // Orçamento esgotado ⇒ CANCELA atomicamente (terminal `failed` + motivo numa
@@ -666,11 +974,11 @@ export async function drainCopyTask(
     // incerteza LOCAL (`unconfirmed`); recusa por `completed` JÁ persistido ⇒ o
     // terminal persistido prevalece; caso contrário ⇒ `failed` (nunca `completed`
     // enganoso).
-    return await settleFailTerminal();
+    return await settleFailTerminal(settleFailureClass);
   }
 
   // Task resolvida SEM `commit` (nenhum texto entregável): C2 proíbe persistir
   // `completed` sem conteúdo ⇒ o terminal é decidido pelo DESFECHO da escrita de
   // `failed` (timeout/erro ⇒ `unconfirmed`; `completed` JÁ persistido prevalece).
-  return await settleFailTerminal();
+  return await settleFailTerminal(settleFailureClass);
 }

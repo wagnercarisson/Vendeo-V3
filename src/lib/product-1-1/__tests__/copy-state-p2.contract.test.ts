@@ -38,6 +38,9 @@ const ACTIVE_SQL = migrationSql
 
 const CAMPAIGN_ID = "11111111-1111-4111-8111-111111111111";
 const OPERATION_ID = "22222222-2222-4222-8222-222222222222";
+// B2A-D4 — identidade da TENTATIVA usada nos contratos alterados (UUID v4 fixo;
+// `attempt_seq = 1` ≡ a tentativa única da b1b, compatibilidade preservada).
+const ATTEMPT_TOKEN = "3b0f6c1a-7d2e-4a1b-9c3f-5e8d2b1a0c4f";
 
 // ---------------------------------------------------------------------------
 // 1. Asserções ESTÁTICAS do SQL (RPCs + grants + zero colunas novas)
@@ -391,7 +394,14 @@ describe("P2 — o cliente valida o envelope e falha fechado", () => {
   it("aceita um envelope COERENTE de apply_copy_state", async () => {
     const client = clientWithRpcResponse({ data: VALID_TRANSITION, error: null });
     await expect(
-      recordCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, state: "completed", copyText: "t" }),
+      recordCopyState(client, {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        state: "completed",
+        copyText: "t",
+      }),
     ).resolves.toEqual(VALID_TRANSITION);
   });
 
@@ -410,7 +420,14 @@ describe("P2 — o cliente valida o envelope e falha fechado", () => {
     for (const data of invalid) {
       const client = clientWithRpcResponse({ data, error: null });
       await expect(
-        recordCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, state: "completed", copyText: "t" }),
+        recordCopyState(client, {
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        state: "completed",
+        copyText: "t",
+      }),
       ).rejects.toThrow(/product_1_1_apply_copy_state/);
     }
   });
@@ -418,7 +435,7 @@ describe("P2 — o cliente valida o envelope e falha fechado", () => {
   it("erro de RPC ⇒ lança (fail-closed)", async () => {
     const client = clientWithRpcResponse({ data: null, error: { message: "boom" } });
     await expect(
-      recordCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, state: "pending" }),
+      recordCopyState(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, attemptSeq: 1, attemptToken: ATTEMPT_TOKEN, state: "pending" }),
     ).rejects.toThrow(/product_1_1_apply_copy_state_rpc_failed/);
   });
 
@@ -428,13 +445,13 @@ describe("P2 — o cliente valida o envelope e falha fechado", () => {
       error: null,
     });
     await expect(
-      recordCancellation(ok, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, reason: "r" }),
+      recordCancellation(ok, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, reason: "r", attemptSeq: 1, attemptToken: ATTEMPT_TOKEN }),
     ).resolves.toEqual({ applied: true, state: "failed", canceled: true });
 
     for (const data of [null, { applied: true, state: "pending", canceled: true }, { applied: true, canceled: true }]) {
       const client = clientWithRpcResponse({ data, error: null });
       await expect(
-        recordCancellation(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, reason: "r" }),
+        recordCancellation(client, { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, reason: "r", attemptSeq: 1, attemptToken: ATTEMPT_TOKEN }),
       ).rejects.toThrow(/product_1_1_cancel_copy/);
     }
   });
@@ -447,6 +464,14 @@ describe("P2 — o cliente valida o envelope e falha fechado", () => {
 function readClientWith(row: SimRow | null): SupabaseClient {
   const chain = {
     eq() {
+      return chain;
+    },
+    // B2A-D4 — `readCopyDelivery`/`readCopyState` agora leem a MAIOR
+    // `attempt_seq` via `.order("attempt_seq", { ascending: false }).limit(1)`.
+    order() {
+      return chain;
+    },
+    limit() {
       return chain;
     },
     maybeSingle() {
@@ -503,6 +528,9 @@ describe("P2 — timeout LOCAL (A1): incerteza resolvida por RE-LEITURA, sem 2º
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "texto real", payload: { caption: "texto real" } });
@@ -594,6 +622,9 @@ describe("P2 (reconciliação) — task resolvida SEM `commit` (C2): decisão pe
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async () => {},
       },
@@ -611,6 +642,9 @@ describe("P2 (reconciliação) — task resolvida SEM `commit` (C2): decisão pe
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async () => {},
       },
@@ -625,6 +659,9 @@ describe("P2 (reconciliação) — task resolvida SEM `commit` (C2): decisão pe
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async () => {},
       },
@@ -644,6 +681,9 @@ describe("P2 (reconciliação) — commit tentado e NÃO provado: mesma decisão
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "texto" });
@@ -664,6 +704,9 @@ describe("P2 (reconciliação) — commit tentado e NÃO provado: mesma decisão
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "texto" });
@@ -683,6 +726,9 @@ describe("P2 (reconciliação) — commit tentado e NÃO provado: mesma decisão
       {
         campaignId: CAMPAIGN_ID,
         operationId: OPERATION_ID,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        recoveryKind: "auto",
         signal: new AbortController().signal,
         run: async ({ commit }) => {
           await commit({ copyText: "texto" });
