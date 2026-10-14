@@ -86,6 +86,10 @@ import {
   createDefaultProductOneToOneCopyOps,
   type ProductOneToOneCopyContext,
 } from "../copy/default-copy-runner";
+import {
+  ProductOneToOneCopyAcquisitionClient,
+  type CopyAcquisitionResult,
+} from "../copy/copy-acquisition-client";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 
 /**
@@ -257,14 +261,26 @@ export interface ProductOneToOneCopyOps {
   }) => Promise<void>;
   readonly budgetMs?: number;
   /**
-   * B2A-D4 / Plano 01 — identidade PROVISÓRIA da 1ª tentativa (drenagem no
-   * ciclo). No wave 1 o default é `attempt_seq = 1` + token gerado (a b1b
-   * equivale a uma única tentativa). Esta identidade é SUBSTITUÍDA pelo wiring
-   * de aquisição do Plano 02 (server-autoritativa); NUNCA tratar o default como
-   * autoridade. PROIBIDO neste plano: instanciar a aquisição (existe só no
-   * Plano 06).
+   * B2A-D4 / Plano 01 — identidade PROVISÓRIA (legado b1b). SUBSTITUÍDA pelo
+   * wiring de aquisição do Plano 02 (`acquireAttempt`): a identidade da tentativa
+   * inicial agora é SERVER-AUTORITATIVA e NUNCA é lida deste campo. Mantido apenas
+   * para compatibilidade estrutural.
    */
   readonly initialAttempt?: { readonly attemptSeq: number; readonly attemptToken: string };
+  /**
+   * F56.2b2a (Plano 02 / lacuna 1) — aquisição da IDENTIDADE da tentativa INICIAL
+   * (server-autoritativa). Default:
+   * `new ProductOneToOneCopyAcquisitionClient(client).acquire`. VENCEDOR ⇒ o dreno
+   * usa a identidade DEVOLVIDA (`attempt_seq`/`attempt_token`); PERDEDOR ⇒ a copy
+   * apenas ACOMPANHA (ZERO chamadas ao provider), preservando o curto-circuito de
+   * reenvio/corrida perdida (Gap 2).
+   */
+  readonly acquireAttempt?: (input: {
+    campaignId: string;
+    operationId: string;
+    mode: "auto" | "manual";
+    requestToken?: string;
+  }) => Promise<CopyAcquisitionResult>;
   readonly recordCopyState?: (input: {
     campaignId: string;
     operationId: string;
@@ -772,35 +788,58 @@ export async function runProductOneToOneGeneration(
       // nunca deixa task órfã. A falha da copy NÃO bloqueia `delivered` nem
       // reverte a reserva de crédito, e NÃO existe retry nesta fase.
       let copyDrain: Promise<void> | null = null;
-      const startCopy = (): void => {
+      // F56.2b2a (Plano 02 / lacuna 1) — a TENTATIVA INICIAL nasce IDENTIFICADA:
+      // `startCopy` ADQUIRE a identidade (server-autoritativa) ANTES do dreno e
+      // propaga `attempt_seq`/`attempt_token` a TODA escrita (`recordCopyState`/
+      // `recordCancellation`). O VENCEDOR drena; o PERDEDOR (reenvio, corrida
+      // perdida, reentrância) apenas ACOMPANHA — ZERO chamadas ao provider e
+      // nenhum estado novo (Gap 2 preservado). Uma tentativa malsucedida é
+      // SEMPRE encerrada num terminal identificado (`failed`/`stale_attempt`);
+      // NUNCA sobra tentativa `pending` órfã e o drenador NÃO faz retry interno.
+      const startCopy = async (): Promise<void> => {
         if (copyDrain !== null || !copyOps) return;
+        const ops = copyOps;
+        const acquireAttempt =
+          ops.acquireAttempt ??
+          ((acquireInput) =>
+            new ProductOneToOneCopyAcquisitionClient(client).acquire(acquireInput));
+        // O token do ACIONAMENTO inicial é gerado SERVER-SIDE (o cliente não o
+        // escolhe); o serviço de recuperação NÃO sintetiza este token.
+        const requestToken = crypto.randomUUID();
+        let acquired: CopyAcquisitionResult;
+        try {
+          acquired = await acquireAttempt({
+            campaignId,
+            operationId,
+            mode: "auto",
+            requestToken,
+          });
+        } catch {
+          // Aquisição fail-closed ⇒ a copy apenas NÃO inicia (best-effort); a
+          // arte/entrega NUNCA é bloqueada pela copy.
+          return;
+        }
+        if (!acquired.acquired) return; // PERDEDOR: ZERO chamadas, nenhum estado.
         const copyStore: CopyStateStore = {
-          recordCopyState: copyOps.recordCopyState ?? ((i) => recordCopyState(client, i)),
+          recordCopyState: ops.recordCopyState ?? ((i) => recordCopyState(client, i)),
           recordCancellation:
-            copyOps.recordCancellation ?? ((i) => recordCancellation(client, i)),
+            ops.recordCancellation ?? ((i) => recordCancellation(client, i)),
         };
         const budgetMs = Math.max(
           0,
-          Math.min(copyOps.budgetMs ?? COPY_BUDGET_MS, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS),
+          Math.min(ops.budgetMs ?? COPY_BUDGET_MS, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS),
         );
-        const budget = (copyOps.makeBudgetSignal ?? createCopyBudgetSignal)(budgetMs);
-        // B2A-D4 / Plano 01 — identidade da 1ª tentativa (provisória no wave 1;
-        // o default equivale à b1b `attempt_seq = 1`; SUBSTITUÍDA pelo wiring de
-        // aquisição do Plano 02). NUNCA é tratada como server-autoritativa aqui.
-        const copyIdentity = copyOps.initialAttempt ?? {
-          attemptSeq: 1,
-          attemptToken: crypto.randomUUID(),
-        };
+        const budget = (ops.makeBudgetSignal ?? createCopyBudgetSignal)(budgetMs);
         copyDrain = drainCopyTask(
           {
             campaignId,
             operationId,
-            attemptSeq: copyIdentity.attemptSeq,
-            attemptToken: copyIdentity.attemptToken,
+            attemptSeq: acquired.attemptSeq,
+            attemptToken: acquired.attemptToken,
             recoveryKind: "auto",
             signal: budget.signal,
             run: ({ signal, commit }) =>
-              copyOps.runCopy({ campaignId, operationId, signal, commit }),
+              ops.runCopy({ campaignId, operationId, signal, commit }),
           },
           copyStore,
         ).then(
@@ -961,7 +1000,9 @@ export async function runProductOneToOneGeneration(
 
           // GAP 2 — a tentativa foi ADQUIRIDA como vencedora: só AGORA a copy é
           // iniciada (nunca no reenvio `operação existe`, nem na corrida perdida).
-          startCopy();
+          // A tentativa inicial da copy é ADQUIRIDA (identidade server-side) ANTES
+          // do dreno; perdedora ⇒ acompanha com ZERO chamadas.
+          await startCopy();
 
           // Histórico append-only da tentativa (mesma identidade/par do snapshot).
           try {

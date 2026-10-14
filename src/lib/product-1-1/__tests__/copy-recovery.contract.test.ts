@@ -31,6 +31,21 @@ import {
   type CopyAcquisitionResult,
 } from "../copy/copy-acquisition-client";
 import { CopyRecoveryRequestSchema } from "../copy/recovery-schemas";
+import {
+  ProductOneToOneCopyRecoveryClient,
+  ProductOneToOneCopyRecoveryError,
+} from "../copy/copy-recovery";
+import {
+  COPY_RECOVERY_AUTO_LIMIT,
+  COPY_RECOVERY_MANUAL_LIMIT,
+  COPY_RECOVERY_TOTAL_LIMIT,
+  canRequestManualCopyRecovery,
+  classifyCopyRecoveryFailure,
+  copyRecoveryWaitMs,
+  nextCopyRecoveryAttempt,
+} from "../copy/copy-recovery-policy";
+import type { DefaultProductOneToOneCopyRunnerInput } from "../copy/default-copy-runner";
+import type { AiInvoker } from "@/lib/ai/gateway";
 
 // ---------------------------------------------------------------------------
 // F56.2b2a — B2.1 / Plano 01: identidade POR TENTATIVA + posse/lease +
@@ -376,7 +391,10 @@ interface RecordedEvent {
   params: Record<string, unknown>;
 }
 
-function makeRecordingClient(db: CopyAttemptDb): { client: SupabaseClient; events: RecordedEvent[] } {
+function makeRecordingClient(
+  db: CopyAttemptDb,
+  acquireResponder?: (params: Record<string, unknown>) => unknown,
+): { client: SupabaseClient; events: RecordedEvent[] } {
   const events: RecordedEvent[] = [];
   const makeQueryChain = () => {
     const filters: Record<string, unknown> = {};
@@ -424,6 +442,18 @@ function makeRecordingClient(db: CopyAttemptDb): { client: SupabaseClient; event
     },
     rpc(name: string, params: Record<string, unknown>) {
       events.push({ name, params });
+      if (name === "product_1_1_acquire_copy_attempt") {
+        const data = acquireResponder
+          ? acquireResponder(params)
+          : {
+              acquired: true,
+              reason: null,
+              attempt_seq: 1,
+              attempt_token: TOKEN_A,
+              mode: params.p_mode,
+            };
+        return Promise.resolve({ data, error: null });
+      }
       if (name === "product_1_1_apply_copy_state") {
         return Promise.resolve({ data: db.applyRpc(params), error: null });
       }
@@ -1701,5 +1731,292 @@ describe("B2.1 — Plano 02: recovery schema (Zod .strict() com requestToken obr
     expect(
       CopyRecoveryRequestSchema.safeParse({ ...valid, requestToken: "not-a-uuid" }).success,
     ).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (e) F56.2b2a — B2.1 / Plano 02/03: POLÍTICA pura (limites/esperas/classificação)
+//     + SERVIÇO (UMA chamada por tentativa; fallback = TENTATIVA SEGUINTE;
+//     tentativa inicial identificada) — provider SIMULADO (nenhuma chamada paga).
+// ---------------------------------------------------------------------------
+
+const REQUEST_TOKEN = "3b0f6c1a-7d2e-4a1b-9c3f-5e8d2b1a0c4f";
+const STORE_ID = "33333333-3333-4333-8333-333333333333";
+
+const runnerInput: DefaultProductOneToOneCopyRunnerInput = {
+  campaignId: CAMPAIGN_ID,
+  operationId: OPERATION_ID,
+  storeId: STORE_ID,
+  briefing: {
+    product: { name: "Produto Teste", description: null },
+    commercial: { intent: "offer", discountedPriceText: "R$ 19,90" },
+  },
+  copyContext: { storeName: "Loja Teste", segment: "outros", discountedPriceCents: 1990 },
+  copyDirectorEnabled: true,
+};
+
+function recoveryFailureClass(row: AttemptRow | undefined): unknown {
+  return (row?.copy_payload?.recovery as Record<string, unknown> | undefined)?.failureClass;
+}
+function recoveryKind(row: AttemptRow | undefined): unknown {
+  return (row?.copy_payload?.recovery as Record<string, unknown> | undefined)?.kind;
+}
+function recoveryWait(row: AttemptRow | undefined): unknown {
+  return (row?.copy_payload?.recovery as Record<string, unknown> | undefined)?.nextWaitMs;
+}
+
+interface CopyProviderSim {
+  readonly invoker: AiInvoker;
+  readonly targets: Array<string | undefined>;
+  readonly calls: () => number;
+  setSequence(seq: Array<"ok" | Error>): void;
+}
+
+function makeCopyProviderSim(): CopyProviderSim {
+  let seq: Array<"ok" | Error> = [];
+  let index = 0;
+  const targets: Array<string | undefined> = [];
+  let calls = 0;
+  const invoker: AiInvoker = {
+    async invoke(_capability, _request, _telemetry, target) {
+      calls += 1;
+      targets.push(target);
+      const next = seq[index] ?? "ok";
+      index += 1;
+      if (next instanceof Error) throw next;
+      return {
+        content: JSON.stringify({
+          title: "Oferta Especial",
+          caption: "Legenda simulada",
+          hashtags: [],
+          cta_post: "Aproveite!",
+        }),
+        model: "gpt-4o",
+      };
+    },
+    async hasFallback() {
+      return true;
+    },
+  };
+  return {
+    invoker,
+    targets,
+    calls: () => calls,
+    setSequence(s) {
+      seq = s;
+      index = 0;
+    },
+  };
+}
+
+const winner = (seq: number, token: string) => ({
+  acquired: true,
+  reason: null,
+  attempt_seq: seq,
+  attempt_token: token,
+  mode: "auto",
+});
+
+async function runRecover(params: {
+  db: CopyAttemptDb;
+  provider: CopyProviderSim;
+  acquireResponder: (p: Record<string, unknown>) => unknown;
+  requestToken?: string;
+  mode?: "auto" | "manual";
+}) {
+  const { client, events } = makeRecordingClient(params.db, params.acquireResponder);
+  const recovery = new ProductOneToOneCopyRecoveryClient(client);
+  const result = await recovery.recoverCopyAttempt({
+    campaignId: CAMPAIGN_ID,
+    operationId: OPERATION_ID,
+    mode: params.mode ?? "auto",
+    requestToken: params.requestToken ?? REQUEST_TOKEN,
+    runner: runnerInput,
+    runnerDeps: { invoker: params.provider.invoker },
+  });
+  return { result, events };
+}
+
+describe("B2.1 — Plano 02: política pura (limites separados, esperas, classificação)", () => {
+  it("limites: 3 automáticas + 3 manuais = teto 6 (independentes)", () => {
+    expect(COPY_RECOVERY_AUTO_LIMIT).toBe(3);
+    expect(COPY_RECOVERY_MANUAL_LIMIT).toBe(3);
+    expect(COPY_RECOVERY_TOTAL_LIMIT).toBe(6);
+  });
+
+  it("esperas: 5s após a 1ª, 10s após a 2ª (FONTE ÚNICA); manuais/≥3ª sem espera", () => {
+    expect(copyRecoveryWaitMs("auto", 1)).toBe(COPY_RECOVERY_WAITS_MS.after1);
+    expect(copyRecoveryWaitMs("auto", 2)).toBe(COPY_RECOVERY_WAITS_MS.after2);
+    expect(copyRecoveryWaitMs("auto", 3)).toBeNull();
+    expect(copyRecoveryWaitMs("manual", 1)).toBeNull();
+  });
+
+  it("transitória avança para a próxima automática com a espera; 3ª esgotada ⇒ manual+suporte", () => {
+    const d1 = classifyCopyRecoveryFailure({ retryable: true, attemptSeq: 1, kind: "auto" });
+    expect(d1).toMatchObject({
+      failureClass: "transient",
+      action: "next_auto",
+      nextAttemptSeq: 2,
+      nextWaitMs: COPY_RECOVERY_WAITS_MS.after1,
+    });
+    const d2 = classifyCopyRecoveryFailure({ retryable: true, attemptSeq: 2, kind: "auto" });
+    expect(d2).toMatchObject({ action: "next_auto", nextAttemptSeq: 3, nextWaitMs: COPY_RECOVERY_WAITS_MS.after2 });
+    const d3 = classifyCopyRecoveryFailure({ retryable: true, attemptSeq: 3, kind: "auto" });
+    expect(d3).toMatchObject({ action: "manual_with_support", nextWaitMs: null });
+  });
+
+  it("DEFINITIVA ⇒ saída antecipada (sem esperas/nova automática); MANUAL não reinicia o ciclo", () => {
+    const definitive = classifyCopyRecoveryFailure({ retryable: false, attemptSeq: 1, kind: "auto" });
+    expect(definitive).toMatchObject({ failureClass: "definitive", action: "definitive_exit", nextWaitMs: null, nextAttemptSeq: null });
+    const manual = classifyCopyRecoveryFailure({ retryable: true, attemptSeq: 4, kind: "manual" });
+    expect(manual).toMatchObject({ action: "manual_with_support", nextKind: null, nextWaitMs: null });
+  });
+
+  it("gatekeepers: recusam por entregue/ativa/espera/limites; clique manual independente", () => {
+    const base = { copyDelivered: false, attemptActive: false, waitElapsed: true, autoAttempts: 0, manualAttempts: 0 };
+    expect(nextCopyRecoveryAttempt(base)).toBeNull();
+    expect(nextCopyRecoveryAttempt({ ...base, copyDelivered: true })).toBe("already_delivered");
+    expect(nextCopyRecoveryAttempt({ ...base, attemptActive: true })).toBe("attempt_active");
+    expect(nextCopyRecoveryAttempt({ ...base, waitElapsed: false })).toBe("wait_not_elapsed");
+    expect(nextCopyRecoveryAttempt({ ...base, autoAttempts: 3 })).toBe("attempt_limit_reached");
+    expect(nextCopyRecoveryAttempt({ ...base, autoAttempts: 3, manualAttempts: 3 })).toBe("attempt_limit_reached");
+    expect(canRequestManualCopyRecovery(base)).toBe(true);
+    expect(canRequestManualCopyRecovery({ ...base, manualAttempts: 3 })).toBe(false);
+    expect(canRequestManualCopyRecovery({ ...base, autoAttempts: 3, manualAttempts: 3 })).toBe(false);
+    expect(canRequestManualCopyRecovery({ ...base, copyDelivered: true })).toBe(false);
+  });
+
+  it("FONTE ÚNICA: a política importa/re-exporta COPY_RECOVERY_WAITS_MS de copy-state.ts (sem literais/sem ciclo)", () => {
+    const policySource = readFileSync(
+      path.resolve(process.cwd(), "src/lib/product-1-1/copy/copy-recovery-policy.ts"),
+      "utf8",
+    );
+    expect(policySource).toMatch(/COPY_RECOVERY_WAITS_MS/);
+    expect(policySource).toMatch(/from\s+["']\.\/copy-state["']/);
+    expect(policySource).not.toMatch(/after1:\s*5_000/);
+    expect(policySource).not.toMatch(/after2:\s*10_000/);
+    // copy-state.ts é a FONTE ÚNICA e NÃO importa a política (sem ciclo).
+    expect(copyStateSource).toMatch(/COPY_RECOVERY_WAITS_MS\s*=\s*Object\.freeze\(/);
+    expect(copyStateSource).not.toMatch(/from\s+["'][^"']*copy-recovery-policy["']/);
+  });
+});
+
+describe("B2.1 — Plano 03: UMA chamada por tentativa + fallback = TENTATIVA SEGUINTE", () => {
+  it("cada tentativa adquirida dispara EXATAMENTE UMA chamada ao provider; fallback é a tentativa seguinte", async () => {
+    const db = new CopyAttemptDb();
+    const provider = makeCopyProviderSim();
+    provider.setSequence([new NetworkError(), "ok"]);
+
+    // 1ª tentativa (primária, transitória).
+    const first = await runRecover({
+      db,
+      provider,
+      acquireResponder: () => winner(1, TOKEN_A),
+    });
+    expect(first.result.outcome).toBe("acquired_failed");
+    expect(provider.calls()).toBe(1);
+    expect(provider.targets).toEqual(["primary"]);
+    const row1 = db.rowsArray().find((r) => r.attempt_seq === 1);
+    expect(row1?.state).toBe("failed");
+    expect(recoveryFailureClass(row1)).toBe("transient");
+    expect(recoveryWait(row1)).toBe(COPY_RECOVERY_WAITS_MS.after1);
+
+    // 2ª tentativa (fallback) — NOVA aquisição/identidade, UMA chamada.
+    const second = await runRecover({
+      db,
+      provider,
+      acquireResponder: () => winner(2, TOKEN_B),
+      requestToken: TOKEN_B,
+    });
+    expect(second.result.outcome).toBe("acquired_completed");
+    expect(provider.calls()).toBe(2); // UMA por tentativa — sem fallback interno
+    expect(provider.targets).toEqual(["primary", "fallback"]);
+    expect(db.rowsArray().map((r) => r.attempt_seq).sort()).toEqual([1, 2]);
+    expect(db.rowsArray().find((r) => r.attempt_seq === 2)?.state).toBe("completed");
+  });
+
+  it("tentativa inicial: VENCEDOR persiste identidade + recovery.kind auto; PERDEDOR ⇒ ZERO chamadas/estado", async () => {
+    // VENCEDOR.
+    const db = new CopyAttemptDb();
+    const provider = makeCopyProviderSim();
+    provider.setSequence([new NetworkError()]);
+    const won = await runRecover({ db, provider, acquireResponder: () => winner(1, TOKEN_A) });
+    expect(won.result.acquired).toBe(true);
+    const row = db.rowsArray().find((r) => r.attempt_seq === 1);
+    expect(row?.attempt_token).toBe(TOKEN_A);
+    expect(recoveryKind(row)).toBe("auto");
+    for (const ev of won.events) {
+      if (ev.name === "product_1_1_apply_copy_state") {
+        expect(ev.params.p_attempt_seq).toBe(1);
+        expect(ev.params.p_attempt_token).toBe(TOKEN_A);
+      }
+    }
+
+    // PERDEDOR — apenas acompanha.
+    const db2 = new CopyAttemptDb();
+    const provider2 = makeCopyProviderSim();
+    const lost = await runRecover({
+      db: db2,
+      provider: provider2,
+      acquireResponder: () => ({ acquired: false, reason: "attempt_in_progress" }),
+    });
+    expect(lost.result.acquired).toBe(false);
+    expect(lost.result.reason).toBe("attempt_in_progress");
+    expect(provider2.calls()).toBe(0);
+    expect(db2.rowsArray()).toHaveLength(0);
+    expect(lost.events.filter((e) => e.name === "product_1_1_apply_copy_state")).toHaveLength(0);
+  });
+
+  it("fechamento determinístico: falha ⇒ `failed` (sem pending órfão); conclusão atrasada ⇒ stale_attempt", async () => {
+    const db = new CopyAttemptDb();
+    const provider = makeCopyProviderSim();
+    provider.setSequence([new NetworkError()]);
+    await runRecover({ db, provider, acquireResponder: () => winner(1, TOKEN_A) });
+    expect(db.rowsArray().every((r) => r.state !== "pending")).toBe(true);
+
+    // Tentativa 2 concluída; a tentativa 1 (superada) tenta concluir depois.
+    await runRecover({ db, provider: makeCopyProviderSim(), acquireResponder: () => winner(2, TOKEN_B), requestToken: TOKEN_B });
+    const late = await recordCopyState(makeRecordingClient(db).client, {
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      attemptSeq: 1,
+      attemptToken: TOKEN_A,
+      state: "completed",
+      copyText: "tarde demais",
+    });
+    expect(late.outcome).toBe("stale_attempt");
+    expect(db.rowsArray().find((r) => r.attempt_seq === 2)?.state).toBe("completed");
+  });
+
+  it("aquisição fail-closed: ausência de requestToken ⇒ missing_request_token; envelope vazio ⇒ erro (nunca vencedor)", async () => {
+    const provider = makeCopyProviderSim();
+    const { client } = makeRecordingClient(new CopyAttemptDb(), () => winner(1, TOKEN_A));
+    const recovery = new ProductOneToOneCopyRecoveryClient(client);
+    await expect(
+      recovery.recoverCopyAttempt({
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        mode: "auto",
+        requestToken: undefined,
+        runner: runnerInput,
+        runnerDeps: { invoker: provider.invoker },
+      }),
+    ).rejects.toMatchObject({ code: "missing_request_token" });
+    expect(provider.calls()).toBe(0);
+
+    const provider2 = makeCopyProviderSim();
+    const { client: client2 } = makeRecordingClient(new CopyAttemptDb(), () => null);
+    const recovery2 = new ProductOneToOneCopyRecoveryClient(client2);
+    await expect(
+      recovery2.recoverCopyAttempt({
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        mode: "auto",
+        requestToken: REQUEST_TOKEN,
+        runner: runnerInput,
+        runnerDeps: { invoker: provider2.invoker },
+      }),
+    ).rejects.toBeInstanceOf(ProductOneToOneCopyRecoveryError);
+    expect(provider2.calls()).toBe(0);
   });
 });

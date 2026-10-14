@@ -1099,6 +1099,14 @@ describe("Plano 08 — copy não bloqueia delivered (F8)", () => {
     harness.setProviderSequence([{ imageBase64: "AAAA", mimeType: "image/png", model: "m" }]);
     const cas = makeCasStore();
     (harness.deps as Record<string, unknown>).copy = {
+      // F56.2b2a (Plano 02) — tentativa INICIAL identificada: a aquisição é
+      // injetada como VENCEDORA (o mock `supabaseAdmin={}` não implementa `rpc`).
+      acquireAttempt: async () => ({
+        acquired: true as const,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        mode: "auto" as const,
+      }),
       runCopy: async () => {
         throw new Error("copy_director_failed");
       },
@@ -1126,6 +1134,14 @@ describe("Plano 08 — copy não bloqueia delivered (F8)", () => {
     let budgetController: AbortController | undefined;
     const cas = makeCasStore();
     (harness.deps as Record<string, unknown>).copy = {
+      // F56.2b2a (Plano 02) — tentativa INICIAL identificada (aquisição vencedora
+      // injetada; `supabaseAdmin={}` não implementa `rpc`).
+      acquireAttempt: async () => ({
+        acquired: true as const,
+        attemptSeq: 1,
+        attemptToken: ATTEMPT_TOKEN,
+        mode: "auto" as const,
+      }),
       makeBudgetSignal: () => {
         budgetController = new AbortController();
         return { signal: budgetController.signal, dispose: () => {} };

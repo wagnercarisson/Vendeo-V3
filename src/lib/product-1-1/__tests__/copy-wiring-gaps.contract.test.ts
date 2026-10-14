@@ -41,6 +41,8 @@ const CAMPAIGN_ID = "11111111-1111-4111-8111-111111111111";
 const OPERATION_ID = "22222222-2222-4222-8222-222222222222";
 const STORE_ID = "33333333-3333-4333-8333-333333333333";
 const SNAPSHOT_ID = "44444444-4444-4444-8444-444444444444";
+// F56.2b2a (Plano 02) — token server-side do vencedor da aquisição da tentativa.
+const COPY_ACQUIRE_ATTEMPT_TOKEN = "3b0f6c1a-7d2e-4a1b-9c3f-5e8d2b1a0c4f";
 
 const CONFIG: CurrentImageGenerationConfig = {
   primary: { model: "gpt-image-2.5-sunburst", quality: "medium" },
@@ -158,6 +160,21 @@ function makeRecordingClient(): { client: SupabaseClient; events: RecordedEvent[
     },
     rpc(name: string, params: Record<string, unknown>) {
       events.push({ table: name, op: "rpc", payload: params });
+      if (name === "product_1_1_acquire_copy_attempt") {
+        // F56.2b2a (Plano 02) — a tentativa INICIAL da copy é ADQUIRIDA antes do
+        // dreno. O envelope FECHADO (Plano 06) exige `mode` (igual ao solicitado)
+        // + `reason:null`; devolvemos o VENCEDOR (caminho default de sucesso).
+        return Promise.resolve({
+          data: {
+            acquired: true,
+            reason: null,
+            attempt_seq: 1,
+            attempt_token: COPY_ACQUIRE_ATTEMPT_TOKEN,
+            mode: params.p_mode,
+          },
+          error: null,
+        });
+      }
       if (name === "product_1_1_cancel_copy") {
         const res = apply({ ...params, p_state: "failed", p_copy_text: null, p_copy_payload: null });
         if (res.state === "failed") {

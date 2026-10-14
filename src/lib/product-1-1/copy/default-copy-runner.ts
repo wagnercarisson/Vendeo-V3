@@ -2,7 +2,6 @@ import "server-only";
 
 import { CopyDirectorService } from "@/lib/copy/copy-director-service";
 import { buildCommercialFrame, buildDeterministicCopy } from "@/lib/copy/mapper";
-import { isRetryableError } from "@/lib/copy/errors";
 import type { CopyDirectorInput, CopyDirectorResult } from "@/lib/copy/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import { createDefaultTelemetryContext } from "@/lib/ai/telemetry-sink";
@@ -178,24 +177,16 @@ export function createDefaultProductOneToOneCopyOps(
       traceId: input.traceId,
     });
 
-    try {
-      const result = await service.generateCopy(copyInput, {
-        signal,
-        telemetry,
-        target: deps.target ?? "primary",
-      });
-      return deliveryFromResult(result);
-    } catch (err) {
-      if (isRetryableError(err) && (await service.hasFallback())) {
-        const result = await service.generateCopy(copyInput, {
-          signal,
-          telemetry,
-          target: "fallback",
-        });
-        return deliveryFromResult(result);
-      }
-      throw err;
-    }
+    // F56.2b2a (lacuna 3) — EXATAMENTE UMA chamada ao provider por tentativa: o
+    // alvo é EXPLÍCITO e decidido SERVER-SIDE; NÃO existe fallback INTERNO
+    // dentro do MESMO acionamento. O alvo de fallback, quando aplicável, é a
+    // TENTATIVA SEGUINTE (adquirida após a espera da política).
+    const result = await service.generateCopy(copyInput, {
+      signal,
+      telemetry,
+      target: deps.target ?? "primary",
+    });
+    return deliveryFromResult(result);
   };
 
   return {
