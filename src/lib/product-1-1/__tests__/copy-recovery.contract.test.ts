@@ -1582,6 +1582,48 @@ describe("B2.1 — Plano 06: cliente de aquisição (envelope FECHADO, RPC simul
     ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
   });
 
+  // Revisão 3ª rodada — TIPO ESTRITO: `Number(...)` coagiria `null`/booleans a
+  // 0/1 (e aceitaria strings numéricas). O envelope fechado exige o TIPO
+  // NUMÉRICO CRU antes de validar inteiro/faixa.
+  it("tipo NÃO-numérico em attempt_seq (vencedor) ⇒ lança (sem coerção)", async () => {
+    for (const bad of [null, true, false, "1"] as const) {
+      await expect(
+        acquisitionClient(() => ({
+          acquired: true,
+          reason: null,
+          attempt_seq: bad,
+          attempt_token: TOKEN_A,
+          mode: "auto",
+        })).client.acquire({ ...base, mode: "auto" }),
+      ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    }
+  });
+
+  it("`already_acquired` com attempt_seq NÃO-numérico ⇒ lança (sem coerção)", async () => {
+    for (const bad of [null, true, "1"] as const) {
+      await expect(
+        acquisitionClient(() => ({
+          acquired: false,
+          reason: "already_acquired",
+          attempt_seq: bad,
+          attempt_token: TOKEN_B,
+        })).client.acquire({ ...base, mode: "auto" }),
+      ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    }
+  });
+
+  it("`wait_not_elapsed` com wait_remaining_ms NÃO-numérico ⇒ lança (sem coerção)", async () => {
+    for (const bad of [null, false, true, "5"] as const) {
+      await expect(
+        acquisitionClient(() => ({
+          acquired: false,
+          reason: "wait_not_elapsed",
+          wait_remaining_ms: bad,
+        })).client.acquire({ ...base, mode: "auto" }),
+      ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    }
+  });
+
   it("motivo DESCONHECIDO/ausente (incl. operation_terminal) NUNCA é aceito", async () => {
     await expect(
       acquisitionClient(() => ({

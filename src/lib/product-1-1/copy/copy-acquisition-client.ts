@@ -121,12 +121,16 @@ function mapAcquire(
     // não-vazio, `mode` PRESENTE/validado (∈ {auto,manual} e igual ao solicitado)
     // e `reason` ausente/NULL. Contradição/ausência ⇒ LANÇA (NUNCA vencedor
     // implícito): um `reason` não-nulo contradiz um vencedor.
-    const attemptSeq = Number(record.attempt_seq);
+    // TIPO ESTRITO ANTES da conversão: `Number(...)` coagiria `null`/booleans a
+    // 0/1 (aceitando-os indevidamente) — exigimos o tipo NUMÉRICO RAF de
+    // `attempt_seq` antes de validar inteiro/faixa.
+    const attemptSeq = record.attempt_seq;
     const attemptToken = record.attempt_token;
     const rawMode = record.mode;
     const reason = record.reason;
     const modeValid = rawMode === "auto" || rawMode === "manual";
     if (
+      typeof attemptSeq !== "number" ||
       !Number.isInteger(attemptSeq) ||
       attemptSeq < 1 ||
       attemptSeq > 6 ||
@@ -175,9 +179,10 @@ function mapAcquire(
     // Dedupe do MESMO acionamento: a identidade EXISTENTE é OBRIGATÓRIA
     // (`attempt_seq` 1..6 + `attempt_token` não-vazio); ausência/invalidade ⇒
     // envelope fechado (NUNCA omite silenciosamente).
-    const seq = Number(record.attempt_seq);
+    const seq = record.attempt_seq;
     const token = record.attempt_token;
     if (
+      typeof seq !== "number" ||
       !Number.isInteger(seq) ||
       seq < 1 ||
       seq > 6 ||
@@ -195,8 +200,8 @@ function mapAcquire(
   if (reason === "wait_not_elapsed") {
     // A espera restante é OBRIGATÓRIA: número finito ≥ 0; ausência/invalidade ⇒
     // envelope fechado.
-    const wait = Number(record.wait_remaining_ms);
-    if (!Number.isFinite(wait) || wait < 0) {
+    const wait = record.wait_remaining_ms;
+    if (typeof wait !== "number" || !Number.isFinite(wait) || wait < 0) {
       throw new ProductOneToOneCopyAcquisitionError(
         "unknown",
         "copy_acquisition_invalid_envelope",
