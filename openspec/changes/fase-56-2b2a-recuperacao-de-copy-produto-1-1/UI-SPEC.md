@@ -1,10 +1,10 @@
 ---
 phase: B2.1
 change: fase-56-2b2a-recuperacao-de-copy-produto-1-1
-status: checker-passed-pending-human-approval
+status: approved
 created: 2026-10-13
 checker_reviewed_at: 2026-10-13
-reviewed_at: null
+reviewed_at: 2026-10-13
 shadcn_initialized: false
 preset: none
 ---
@@ -399,5 +399,4 @@ automáticas**) **APPROVED** (6/6 PASS, **sem regressão**).
 falhas/esgotamento; nova linha **`indeterminada`** para falha de consulta ao servidor, que não
 comprova ausência nem habilita chamada) **APPROVED** (6/6 PASS, **sem regressão**).
 
-**Revisão humana:** **PENDENTE** (`reviewed_at: null`). O `status` só se torna aprovado após o
-sign-off humano. Nenhum plano, implementação ou registro GSD foi iniciado a partir deste documento.
+**Revisão humana: APROVADA (2026-10-13, `reviewed_at`).** O responsável aprovou **este contrato de UI**, junto com a **base** e o **planejamento** da B2.1. **Distinção de checkpoints:** esta é a aprovação do **CONTRATO de UI** (**pré-implementação**); a validação do **resultado implementado** ocorre no **UAT do Plano 05** — uma aprovação **posterior e distinta**. Nenhuma implementação foi iniciada a partir deste documento.
