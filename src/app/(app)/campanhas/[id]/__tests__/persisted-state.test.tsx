@@ -445,7 +445,9 @@ function recoveryView(
 }
 
 function fetchMock() {
-  return vi.mocked(globalThis.fetch);
+  // Mock sem a tipagem de `Response` (o teste injeta objetos parciais via
+  // `vi.stubGlobal`); evita casts repetidos no corpo dos casos.
+  return globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
 }
 
 function copyRecoveryCalls() {
