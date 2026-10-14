@@ -1,13 +1,296 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+
+// ---------------------------------------------------------------------------
+// Plano 03 — dublês CONTROLADOS da rota (`[id]/copy-recovery`): auth/ownership/
+// getCampaign/não-ativação + um provider SIMULADO com contador. A LÓGICA da
+// recuperação (`copy-recovery`/`copy-state`/`default-copy-runner`) permanece REAL
+// contra estes dublês; nenhum crédito/artefato é tocado (nenhuma chamada paga).
+// ---------------------------------------------------------------------------
+const routeHarness = vi.hoisted(() => {
+  interface Row {
+    campaign_id: string;
+    operation_id: string;
+    attempt_seq: number;
+    attempt_token: string | null;
+    state: string;
+    copy_text: string | null;
+    copy_payload: Record<string, unknown> | null;
+    lease_at: string | null;
+    request_token: string | null;
+    updated_at: string;
+    created_at: string;
+  }
+
+  const NOW = 1_780_000_000_000;
+  const iso = (ms: number): string => new Date(ms).toISOString();
+
+  const state = {
+    rows: [] as Row[],
+    acquireResponder: null as null | ((params: Record<string, unknown>) => unknown),
+    providerCalls: 0,
+    providerSequence: [] as Array<"ok" | Error>,
+    providerIndex: 0,
+    authUser: { userId: "user-1" } as unknown,
+    authError: null as unknown,
+    ownershipResult: {
+      name: "Loja Teste",
+      segment: "outros",
+      tone_of_voice: null,
+      positioning: null,
+      short_description: null,
+      slogan: null,
+      is_test_store: true,
+    } as unknown,
+    ownershipError: null as unknown,
+    campaign: null as unknown,
+    flow: "new_flow" as string,
+    authDecision: { allowed: true } as unknown,
+    authThrows: false,
+    operation: null as unknown,
+    sameOriginThrows: false,
+    creditOrArtifactCalls: 0,
+  };
+
+  function applyRpc(params: Record<string, unknown>) {
+    const campaignId = String(params.p_campaign_id);
+    const operationId = String(params.p_operation_id);
+    const st = params.p_state as string;
+    const seq = params.p_attempt_seq as number;
+    const token = params.p_attempt_token as string;
+    const copyText = (params.p_copy_text as string | null) ?? null;
+    const copyPayload = (params.p_copy_payload as Record<string, unknown> | null) ?? null;
+
+    if (st === "completed" && (copyText === null || copyText.trim() === "")) {
+      return { applied: false, outcome: "invalid_content", state: null };
+    }
+
+    const forOp = state.rows.filter(
+      (r) => r.campaign_id === campaignId && r.operation_id === operationId,
+    );
+    const maxSeq = forOp.length > 0 ? Math.max(...forOp.map((r) => r.attempt_seq)) : 0;
+    if (seq < maxSeq) {
+      return {
+        applied: false,
+        outcome: "stale_attempt",
+        state: forOp.find((r) => r.attempt_seq === maxSeq)?.state ?? null,
+      };
+    }
+    const completedExists = forOp.some((r) => r.state === "completed");
+    const cur = forOp.find((r) => r.attempt_seq === seq);
+    if (completedExists && !(cur && cur.state === "completed" && seq === maxSeq)) {
+      return { applied: false, outcome: "rejected", state: "completed" };
+    }
+    if (!cur) {
+      state.rows.push({
+        campaign_id: campaignId,
+        operation_id: operationId,
+        attempt_seq: seq,
+        attempt_token: token,
+        state: st,
+        copy_text: copyText,
+        copy_payload: copyPayload,
+        lease_at: st === "pending" ? iso(NOW) : null,
+        request_token: null,
+        updated_at: iso(NOW),
+        created_at: iso(NOW),
+      });
+      return { applied: true, outcome: "applied", state: st };
+    }
+    if (cur.attempt_token !== token) {
+      return { applied: false, outcome: "conflict", state: cur.state };
+    }
+    const terminal = cur.state === "completed" || cur.state === "failed";
+    if (terminal) {
+      if (cur.state === st) {
+        const eq =
+          (cur.copy_text ?? null) === copyText &&
+          JSON.stringify(cur.copy_payload ?? null) === JSON.stringify(copyPayload);
+        return eq
+          ? { applied: false, outcome: "idempotent", state: cur.state }
+          : { applied: false, outcome: "conflict", state: cur.state };
+      }
+      return { applied: false, outcome: "rejected", state: cur.state };
+    }
+    if (cur.state === st) return { applied: false, outcome: "idempotent", state: cur.state };
+    cur.state = st;
+    cur.copy_text = copyText;
+    cur.copy_payload = copyPayload;
+    cur.updated_at = iso(NOW + 1);
+    return { applied: true, outcome: "applied", state: st };
+  }
+
+  const client = {
+    from() {
+      const filters: Record<string, unknown> = {};
+      let asc = true;
+      let lim: number | undefined;
+      const chain: Record<string, unknown> = {
+        select() {
+          return chain;
+        },
+        eq(col: string, val: unknown) {
+          filters[col] = val;
+          return chain;
+        },
+        order(_col: string, opts?: { ascending?: boolean }) {
+          asc = opts ? opts.ascending !== false : true;
+          return chain;
+        },
+        limit(n: number) {
+          lim = n;
+          return chain;
+        },
+        maybeSingle() {
+          return Promise.resolve({ data: pick()[0] ?? null, error: null });
+        },
+        then(onFulfilled?: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) {
+          return Promise.resolve({ data: pick(), error: null }).then(onFulfilled, onRejected);
+        },
+      };
+      function pick(): Row[] {
+        const rows = state.rows.filter(
+          (r) => r.campaign_id === filters.campaign_id && r.operation_id === filters.operation_id,
+        );
+        rows.sort((a, b) => (asc ? a.attempt_seq - b.attempt_seq : b.attempt_seq - a.attempt_seq));
+        return typeof lim === "number" ? rows.slice(0, lim) : rows;
+      }
+      return chain;
+    },
+    rpc(name: string, params: Record<string, unknown>) {
+      if (name === "product_1_1_acquire_copy_attempt") {
+        const data = state.acquireResponder
+          ? state.acquireResponder(params)
+          : { acquired: false, reason: "attempt_limit_reached" };
+        return Promise.resolve({ data, error: null });
+      }
+      if (name === "product_1_1_apply_copy_state") {
+        return Promise.resolve({ data: applyRpc(params), error: null });
+      }
+      if (name === "product_1_1_cancel_copy") {
+        const res = applyRpc({
+          ...params,
+          p_state: "failed",
+          p_copy_text: null,
+          p_copy_payload: null,
+        });
+        if (res.state === "failed") {
+          return Promise.resolve({
+            data: { applied: res.applied, state: "failed", canceled: true, outcome: res.outcome },
+            error: null,
+          });
+        }
+        return Promise.resolve({
+          data: { applied: res.applied, state: res.state, canceled: false, outcome: res.outcome },
+          error: null,
+        });
+      }
+      if (/credit|artifact|deliver|refund|reserve|estorno/i.test(name)) {
+        state.creditOrArtifactCalls += 1;
+      }
+      return Promise.resolve({ data: null, error: { message: `unknown rpc ${name}` } });
+    },
+  };
+
+  const providerGateway = {
+    async invoke(): Promise<{ content: string; model: string }> {
+      state.providerCalls += 1;
+      const next = state.providerSequence[state.providerIndex] ?? "ok";
+      state.providerIndex += 1;
+      if (next instanceof Error) throw next;
+      return {
+        content: JSON.stringify({
+          title: "Oferta Especial",
+          caption: "Legenda simulada",
+          hashtags: [],
+          cta_post: "Aproveite!",
+        }),
+        model: "gpt-4o",
+      };
+    },
+    async hasFallback(): Promise<boolean> {
+      return false;
+    },
+  };
+
+  return { state, client, providerGateway, iso, NOW };
+});
+
+vi.mock("@/lib/supabase/server", () => ({
+  supabaseAdmin: routeHarness.client,
+  createServerClient: vi.fn(),
+}));
+
+vi.mock("@/lib/ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/ai")>();
+  return { ...actual, defaultAiGateway: routeHarness.providerGateway };
+});
+
+vi.mock("@/lib/auth/csrf", () => ({
+  requireSameOrigin: (): void => {
+    if (routeHarness.state.sameOriginThrows) throw new Error("cross_origin");
+  },
+}));
+
+vi.mock("@/lib/auth/require-user", () => ({
+  requireApiUser: async (): Promise<unknown> => {
+    if (routeHarness.state.authError) throw routeHarness.state.authError;
+    return routeHarness.state.authUser;
+  },
+  requireUser: async (): Promise<unknown> => routeHarness.state.authUser,
+}));
+
+vi.mock("@/lib/auth/store-ownership", () => ({
+  requireOwnership: async (): Promise<unknown> => {
+    if (routeHarness.state.ownershipError) throw routeHarness.state.ownershipError;
+    return routeHarness.state.ownershipResult;
+  },
+}));
+
+vi.mock("@/lib/campaign/persistence", () => ({
+  getCampaign: async (): Promise<unknown> => routeHarness.state.campaign,
+  listArtVersions: async (): Promise<unknown[]> => [],
+}));
+
+vi.mock("@/lib/campaign/new-flow-marker", () => ({
+  classifyCampaignFlow: (): string => routeHarness.state.flow,
+}));
+
+vi.mock("@/lib/product-1-1/authorization/authorization-service", () => ({
+  resolveProductFlowAuthorization: async (): Promise<unknown> => {
+    if (routeHarness.state.authThrows) throw new Error("read_failure");
+    return routeHarness.state.authDecision;
+  },
+}));
+
+vi.mock("@/lib/product-1-1/submission/eligibility-context", () => ({
+  resolveEligibilityContext: (): unknown => ({
+    requestedScope: "test_stores",
+    expectedInstanceIdentity: "test-instance",
+    expectedEnvironment: "isolated",
+  }),
+}));
+
+vi.mock("@/lib/product-1-1/orchestration/attempt-start-client", () => ({
+  ProductOneToOneAttemptStartClient: class {
+    async getCampaignOperation(): Promise<unknown> {
+      return routeHarness.state.operation;
+    }
+  },
+}));
+
+vi.mock("@/lib/launch-config/config", () => ({
+  getLaunchConfig: (): { copyDirectorEnabled: boolean } => ({ copyDirectorEnabled: true }),
+}));
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NetworkError, ProviderRateLimitError } from "@/lib/copy/errors";
+import { ForbiddenError, UnauthorizedError } from "@/lib/auth/errors";
 
 import {
   COPY_LEASE_TTL_MS,
@@ -2227,5 +2510,420 @@ describe("B2.1 — pós-revisão: alvo fallback SÓ quando disponível (hasFallb
       expect(provider.targets).toEqual(["primary"]);
       expect(provider.calls()).toBe(1);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (g) F56.2b2a — B2.1 / Plano 03: CONTRATO DA ROTA AUTENTICADA
+//     (`src/app/api/campaign/[id]/copy-recovery/route.ts`).
+//     Dublês controlados de auth/ownership/getCampaign/não-ativação + provider
+//     SIMULADO com contador; a lógica da recuperação permanece REAL. Nenhuma
+//     chamada paga, nenhum crédito/artefato, nenhuma migration aplicada.
+// ---------------------------------------------------------------------------
+
+const ROUTE_FILE = "src/app/api/campaign/[id]/copy-recovery/route.ts";
+const ROUTE_REQUEST_TOKEN = "5e8d2b1a-0c4f-4a1b-9c3f-3b0f6c1a7d2e";
+const DIVERGENT_OPERATION_ID = "99999999-9999-4999-8999-999999999999";
+
+const validRouteBody = () => ({
+  operationId: OPERATION_ID,
+  mode: "auto_retry" as const,
+  attemptSeq: 1,
+  attemptToken: TOKEN_A,
+  requestToken: ROUTE_REQUEST_TOKEN,
+});
+
+function newFlowCampaign() {
+  return {
+    id: CAMPAIGN_ID,
+    store_id: STORE_ID,
+    product_name: "Produto Teste",
+    input_snapshot: {
+      frozenContentReferences: [],
+      product: { name: "Produto Teste" },
+      commercial: { intent: "offer", discountedPriceCents: 1990 },
+    },
+  };
+}
+
+function persistedOperation() {
+  return {
+    campaignId: CAMPAIGN_ID,
+    operationId: OPERATION_ID,
+    status: "delivered",
+    terminal: true,
+    unknown: false,
+  };
+}
+
+function resetRouteHarness(): void {
+  const s = routeHarness.state;
+  s.rows = [];
+  s.acquireResponder = null;
+  s.providerCalls = 0;
+  s.providerSequence = [];
+  s.providerIndex = 0;
+  s.authUser = { userId: "user-1" };
+  s.authError = null;
+  s.ownershipError = null;
+  s.campaign = newFlowCampaign();
+  s.flow = "new_flow";
+  s.authDecision = { allowed: true };
+  s.authThrows = false;
+  s.operation = persistedOperation();
+  s.sameOriginThrows = false;
+  s.creditOrArtifactCalls = 0;
+}
+
+function postRequest(id: string, body: unknown): NextRequest {
+  return new NextRequest(
+    new Request(`http://localhost/api/campaign/${id}/copy-recovery`, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
+function getRequest(id: string): NextRequest {
+  return new NextRequest(
+    new Request(`http://localhost/api/campaign/${id}/copy-recovery`, { method: "GET" }),
+  );
+}
+
+async function importRoute() {
+  return import("@/app/api/campaign/[id]/copy-recovery/route");
+}
+
+async function callPost(id: string, body: unknown) {
+  const { POST } = await importRoute();
+  return POST(postRequest(id, body), { params: Promise.resolve({ id }) });
+}
+
+async function callGet(id: string) {
+  const { GET } = await importRoute();
+  return GET(getRequest(id), { params: Promise.resolve({ id }) });
+}
+
+describe("B2.1 — Plano 03: rota copy-recovery — auth/ownership SEM IA", () => {
+  beforeEach(() => resetRouteHarness());
+
+  it("SEM autenticação ⇒ negada (401) ANTES de qualquer IA", async () => {
+    routeHarness.state.authError = new UnauthorizedError();
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(res.status).toBe(401);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("SEM ownership ⇒ negada (403) e contador do provider == 0 (nenhuma chamada de IA)", async () => {
+    routeHarness.state.ownershipError = new ForbiddenError();
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(res.status).toBe(403);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("`id` não-UUID ⇒ 404; campanha ausente ⇒ 404 (sem IA)", async () => {
+    const bad = await callPost("not-a-uuid", validRouteBody());
+    expect(bad.status).toBe(404);
+    routeHarness.state.campaign = null;
+    const missing = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(missing.status).toBe(404);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("CSRF: mesma origem exigida no POST (nega antes da IA)", async () => {
+    routeHarness.state.sameOriginThrows = true;
+    await expect(callPost(CAMPAIGN_ID, validRouteBody())).rejects.toThrow("cross_origin");
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+});
+
+describe("B2.1 — Plano 03: rota copy-recovery — barreira de não-ativação/identidade", () => {
+  beforeEach(() => resetRouteHarness());
+
+  it("fluxo `legacy` ⇒ negado (403) SEM IA", async () => {
+    routeHarness.state.flow = "legacy";
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(res.status).toBe(403);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("fluxo `indeterminate` ⇒ negado (fail-closed) SEM IA", async () => {
+    routeHarness.state.flow = "indeterminate";
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(res.status).toBe(409);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("autorização `off`/`read_failure` ⇒ negado SEM IA (contador == 0)", async () => {
+    routeHarness.state.authDecision = { allowed: false, code: "flag_not_applicable_off" };
+    const off = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(off.status).toBe(403);
+
+    resetRouteHarness();
+    routeHarness.state.authThrows = true; // resolveProductFlowAuthorization lança (read_failure)
+    const thrown = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(thrown.status).toBe(403);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("`operationId` divergente da operação persistida ⇒ 409 SEM IA", async () => {
+    const res = await callPost(CAMPAIGN_ID, {
+      ...validRouteBody(),
+      operationId: DIVERGENT_OPERATION_ID,
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error?: { code?: string } };
+    expect(body.error?.code).toBe("operation_identity_conflict");
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("operação persistida ausente ⇒ 409 (identidade não comprovada) SEM IA", async () => {
+    routeHarness.state.operation = null;
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(res.status).toBe(409);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+});
+
+describe("B2.1 — Plano 03: rota copy-recovery — corpo inválido (.strict()) sem IA", () => {
+  beforeEach(() => resetRouteHarness());
+
+  it("campo desconhecido / mode inválido / attemptSeq fora de 1..6 / attemptToken vazio / requestToken ausente ⇒ 400 + fieldErrors e contador 0", async () => {
+    const invalidBodies: unknown[] = [
+      { ...validRouteBody(), extra: "nope" },
+      { ...validRouteBody(), mode: "auto" },
+      { ...validRouteBody(), attemptSeq: 0 },
+      { ...validRouteBody(), attemptSeq: 7 },
+      { ...validRouteBody(), attemptToken: "" },
+      (() => {
+        const { requestToken: _omit, ...without } = validRouteBody();
+        void _omit;
+        return without;
+      })(),
+    ];
+
+    for (const body of invalidBodies) {
+      const res = await callPost(CAMPAIGN_ID, body);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      const payload = (await res.json()) as {
+        error?: { details?: Record<string, unknown> };
+      };
+      expect(payload.error?.details).toBeTruthy();
+    }
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+});
+
+describe("B2.1 — Plano 03: rota copy-recovery — GET query-only", () => {
+  beforeEach(() => resetRouteHarness());
+
+  it("devolve o estado persistido (sem linhas ⇒ estado vazio) e NÃO incrementa o provider", async () => {
+    const res = await callGet(CAMPAIGN_ID);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      recovery: { attemptSeq: number; state: string | null };
+    };
+    expect(body.recovery.attemptSeq).toBe(0);
+    expect(body.recovery.state).toBeNull();
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("tentativa `completed` persistida ⇒ GET devolve `completed` VERBATIM (nenhuma tentativa iniciada)", async () => {
+    routeHarness.state.rows = [
+      {
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        attempt_seq: 1,
+        attempt_token: TOKEN_A,
+        state: "completed",
+        copy_text: "Legenda final",
+        copy_payload: { caption: "Legenda final" },
+        lease_at: null,
+        request_token: null,
+        updated_at: routeHarness.iso(routeHarness.NOW),
+        created_at: routeHarness.iso(routeHarness.NOW),
+      },
+    ];
+    const res = await callGet(CAMPAIGN_ID);
+    const body = (await res.json()) as {
+      recovery: { state: string | null; copyDelivery: { copyText: string } | null };
+    };
+    expect(body.recovery.state).toBe("completed");
+    expect(body.recovery.copyDelivery?.copyText).toBe("Legenda final");
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("`pending` com lease VIGENTE ⇒ `attemptActive` true (ATIVA) — nunca inicia tentativa", async () => {
+    const freshLease = new Date(Date.now() - 1000).toISOString();
+    routeHarness.state.rows = [
+      {
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        attempt_seq: 1,
+        attempt_token: TOKEN_A,
+        state: "pending",
+        copy_text: null,
+        copy_payload: null,
+        lease_at: freshLease,
+        request_token: null,
+        updated_at: freshLease,
+        created_at: freshLease,
+      },
+    ];
+    const res = await callGet(CAMPAIGN_ID);
+    const body = (await res.json()) as { recovery: { attemptActive: boolean } };
+    expect(body.recovery.attemptActive).toBe(true);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+});
+
+describe("B2.1 — Plano 03: rota copy-recovery — POST UMA tentativa (anti-duplicação)", () => {
+  beforeEach(() => resetRouteHarness());
+
+  it("VENCEDOR: executa EXATAMENTE UMA tentativa (contador == 1) e devolve o estado resultante", async () => {
+    routeHarness.state.acquireResponder = () => ({
+      acquired: true,
+      reason: null,
+      attempt_seq: 1,
+      attempt_token: TOKEN_A,
+      mode: "auto",
+    });
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      recovery: { outcome: string; acquired: boolean; state: { state: string | null } };
+    };
+    expect(body.recovery.acquired).toBe(true);
+    expect(body.recovery.outcome).toBe("acquired_completed");
+    expect(body.recovery.state.state).toBe("completed");
+    expect(routeHarness.state.providerCalls).toBe(1);
+  });
+
+  it("tentativa JÁ ativa ⇒ ACOMPANHAMENTO e contador == 1 (nenhuma segunda chamada)", async () => {
+    // Primeira tentativa falha TRANSITÓRIA ⇒ estado `failed` (não terminal para a entrega).
+    routeHarness.state.acquireResponder = () => ({
+      acquired: true,
+      reason: null,
+      attempt_seq: 1,
+      attempt_token: TOKEN_A,
+      mode: "auto",
+    });
+    routeHarness.state.providerSequence = [new NetworkError()];
+    const first = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(first.status).toBe(200);
+    expect(routeHarness.state.providerCalls).toBe(1);
+
+    // Segunda chamada: a tentativa está ATIVA ⇒ perdedora apenas acompanha.
+    routeHarness.state.acquireResponder = () => ({
+      acquired: false,
+      reason: "attempt_in_progress",
+    });
+    const second = await callPost(CAMPAIGN_ID, validRouteBody());
+    const body = (await second.json()) as {
+      recovery: { outcome: string; acquired: boolean; reason: string | null };
+    };
+    expect(body.recovery.outcome).toBe("accompanied");
+    expect(body.recovery.acquired).toBe(false);
+    expect(body.recovery.reason).toBe("attempt_in_progress");
+    expect(routeHarness.state.providerCalls).toBe(1);
+  });
+
+  it("`wait_not_elapsed` ⇒ ACOMPANHAMENTO com waitRemainingMs e contador inalterado (0)", async () => {
+    routeHarness.state.acquireResponder = () => ({
+      acquired: false,
+      reason: "wait_not_elapsed",
+      wait_remaining_ms: 4200,
+    });
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    const body = (await res.json()) as {
+      recovery: { outcome: string; waitRemainingMs: number | null };
+    };
+    expect(body.recovery.outcome).toBe("accompanied");
+    expect(body.recovery.waitRemainingMs).toBe(4200);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("MESMO `requestToken` reenviado ⇒ `already_acquired` (identidade existente, sem nova chamada)", async () => {
+    routeHarness.state.acquireResponder = () => ({
+      acquired: false,
+      reason: "already_acquired",
+      attempt_seq: 2,
+      attempt_token: TOKEN_B,
+    });
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    const body = (await res.json()) as {
+      recovery: { outcome: string; reason: string | null; attemptSeq: number | null };
+    };
+    expect(body.recovery.outcome).toBe("accompanied");
+    expect(body.recovery.reason).toBe("already_acquired");
+    expect(body.recovery.attemptSeq).toBe(2);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("`auto_retry` após fechamento automático ⇒ `automatic_closed` (sem nova chamada)", async () => {
+    routeHarness.state.acquireResponder = () => ({
+      acquired: false,
+      reason: "automatic_closed",
+    });
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    const body = (await res.json()) as {
+      recovery: { outcome: string; reason: string | null };
+    };
+    expect(body.recovery.outcome).toBe("accompanied");
+    expect(body.recovery.reason).toBe("automatic_closed");
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("copy `completed` com conteúdo ⇒ RECUSADA (encerrada), sem iniciar tentativa", async () => {
+    routeHarness.state.rows = [
+      {
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        attempt_seq: 1,
+        attempt_token: TOKEN_A,
+        state: "completed",
+        copy_text: "Já entregue",
+        copy_payload: { caption: "Já entregue" },
+        lease_at: null,
+        request_token: null,
+        updated_at: routeHarness.iso(routeHarness.NOW),
+        created_at: routeHarness.iso(routeHarness.NOW),
+      },
+    ];
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    const body = (await res.json()) as {
+      recovery: { outcome: string; acquired: boolean; reason: string | null };
+    };
+    expect(body.recovery.acquired).toBe(false);
+    expect(body.recovery.outcome).toBe("accompanied");
+    expect(body.recovery.reason).toBe("attempt_already_completed");
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+});
+
+describe("B2.1 — Plano 03: rota copy-recovery — escopo SOMENTE-textos (sem crédito/artefato)", () => {
+  beforeEach(() => resetRouteHarness());
+
+  it("nenhuma função de crédito/artefato é chamada durante uma tentativa bem-sucedida", async () => {
+    routeHarness.state.acquireResponder = () => ({
+      acquired: true,
+      reason: null,
+      attempt_seq: 1,
+      attempt_token: TOKEN_A,
+      mode: "auto",
+    });
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(res.status).toBe(200);
+    expect(routeHarness.state.creditOrArtifactCalls).toBe(0);
+  });
+
+  it("a rota NÃO importa/chama crédito nem artefacto (operação financeira intocada)", () => {
+    const source = readFileSync(path.resolve(process.cwd(), ROUTE_FILE), "utf8");
+    expect(source).not.toMatch(/credit-operation|credit-service|artifact\//);
+    expect(source).not.toMatch(/\.reserve\(|\.deliver\(|\.refund\(|reserveCredit/);
+    // Somente textos: usa o serviço de recuperação (campaign_copy).
+    expect(source).toContain("recoverCopyAttempt");
+    expect(source).toContain("readCopyRecoveryState");
   });
 });
