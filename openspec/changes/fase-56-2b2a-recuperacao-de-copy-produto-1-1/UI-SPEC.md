@@ -379,7 +379,7 @@ Ajustes de contrato (fonte: `proposal.md` critérios 11–17; `design.md` B2A-D2
 ### Refinamentos de execução (3ª rodada — 2026-10-13)
 
 9. **Ligação iniciadora→resultado.** A aba que **inicia** a geração registra um **handle de condução** (client-side, efêmero, por aba) lido pela página de resultado; sem ele, `reload`/outra aba **apenas acompanham**. O fluxo **geração → resultado → espera → 2ª automática** é dirigido por esse handle.
-10. **Token de acionamento obrigatório.** A UI **envia** um `requestToken` estável por acionamento; ausência é **recusada** pelo servidor (sem IA). O contador só avança quando o servidor **adquire** uma tentativa.
+10. **Token de acionamento por tentativa.** A UI **envia** um `requestToken` **por acionamento** (uma tentativa): cada **nova** automática/clique gera **token próprio**; só o **reenvio do MESMO acionamento** reutiliza o token. Ausência é **recusada** pelo servidor (sem IA). O contador só avança quando o servidor **adquire** uma tentativa.
 
 ## Checker / Review Status
 

@@ -64,8 +64,13 @@ Os critérios 18–23 tornam executáveis garantias já combinadas (**sem novas 
 Critérios 24–26 (**sem novas decisões de produto**), dobrados nos **mesmos 10 requirements**:
 
 24. A **API de acionamento exige** a identidade do acionamento (`request_token`); **ausência é recusada** (`missing_request_token`) sem aquisição/IA; a tentativa **inicial interna** gera o **próprio** token.
-25. A migration de backfill é aplicada **pelo CLI** (`migration up --local`), **registrando a versão**; a **prova de migração** é **separada** da execução **recorrente** das suítes; re-execução **idempotente** (skip) e prova com **instância recriada**.
+25. A migration de backfill é aplicada **pelo CLI** (`migration up --local`), **registrando a versão**; a **prova de migração** é **separada** da execução **recorrente** das suítes; **SEM RESET** — se a `0003` **ainda não** estiver aplicada, provar na **instância ATUAL**; se **já** estiver aplicada, **parar** e solicitar uma **instância de prova SEPARADA** (sem destruir a existente).
 26. A **ligação da aba iniciadora → página de resultado** é **explícita** (handle de condução por aba); prova: **geração → resultado → espera → 2ª automática**; `reload`/outra aba apenas acompanham.
+
+### Refinamentos de execução (4ª rodada — 2026-10-13)
+
+27. O `request_token` identifica **um acionamento (uma tentativa)**: cada **nova** tentativa (automáticas 2 e 3; cliques manuais) recebe **token próprio**; **somente** o **reenvio do MESMO acionamento** reutiliza o token (`already_acquired`, sem dupla contagem). O **handle** identifica **aba/ciclo**, **não** impõe um token único.
+28. O ciclo completo de **3 tentativas automáticas** é provado (T1≠T2≠T3), incluindo **reenvios** do mesmo acionamento **sem duplicação**.
 
 ## Dependência explícita
 

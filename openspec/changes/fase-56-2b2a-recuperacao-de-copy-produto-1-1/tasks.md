@@ -58,7 +58,8 @@
 - [ ] 4.5 Provar, no **Postgres isolado**, a concorrência **pela rota real**, os **limites separados** (auto × manual), as **esperas**, o **fallback** e a **tentativa inicial**
 - [ ] 4.6 Provar a **migração/backfill** com **fixtures anteriores à B2.1** e a **imutabilidade restaurada**
 - [ ] 4.7 Provar o **fluxo iniciadora → resultado → espera → 2ª automática** e que `reload`/outra aba apenas acompanham
-- [ ] 4.8 Provar a **migração pelo CLI** (versão registrada em `schema_migrations`), **separada da execução recorrente**, com re-execução **idempotente** e prova em **instância recriada**
+- [ ] 4.8 Provar a **migração pelo CLI** (versão registrada em `schema_migrations`), **separada da execução recorrente**, **SEM RESET** — se a versão ainda **não** estiver aplicada, provar na instância **atual**; se **já** estiver aplicada, **parar** e solicitar uma **instância de prova separada**
+- [ ] 4.9 Provar o **ciclo de 3 automáticas** (token **próprio** em cada: T1≠T2≠T3) e **reenvios** do mesmo acionamento **sem duplicação**
 
 ## 5. Checkpoint final
 

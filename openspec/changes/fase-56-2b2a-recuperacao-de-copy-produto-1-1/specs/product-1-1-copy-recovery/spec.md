@@ -240,11 +240,14 @@ Cada tentativa SHALL ter **identidade** própria (sequência + token) e SHALL se
 - **WHEN** a migration de backfill é aplicada
 - **THEN** ela é aplicada **pelo CLI** (`migration up --local`), **registrando a versão** em `supabase_migrations.schema_migrations`
 - **AND** a **prova de migração** é **separada** da execução **recorrente** das suítes
-- **AND** uma **re-execução** com a versão já aplicada é **idempotente** (a migração é **pulada**), e a prova de backfill exige **instância recriada** (fixtures inseridas **antes** da migração)
+- **AND** se a `0003` **ainda não** estiver aplicada, as fixtures são preparadas e a migração é provada na **instância ATUAL**, **SEM RESET**
+- **AND** se a `0003` **já** estiver aplicada, o executor **PARA** e solicita uma **instância de prova SEPARADA**, **sem destruir** a existente
 
 ### Requirement: Anti-duplicação e contabilização de chamadas
 
 Cliques duplicados, reload e reenvio SHALL NOT duplicar chamadas nem reiniciar contadores. As chamadas técnicas/fallback SHALL ser **contabilizadas no limite**, sem tentativas escondidas. Cada **chamada efetiva** SHALL corresponder a **uma** tentativa identificada. A **idempotência** SHALL valer para o **MESMO acionamento** ao **longo do tempo** (reenvio atrasado), não apenas para chamadas **simultâneas**: um reenvio do mesmo acionamento SHALL NOT adquirir uma **nova** tentativa nem consumir outro slot. A identidade enviada pelo cliente SHALL funcionar como **condição validada** (dedupe) — **nunca** como **autoridade** nem como escolha do **vencedor**.
+
+A identidade de acionamento (`request_token`) SHALL identificar **um acionamento (uma tentativa)**: cada **nova** tentativa — as **automáticas 2 e 3** e cada **clique manual** — SHALL receber um **token próprio**; **somente** o **reenvio do MESMO acionamento** SHALL reutilizar o token (⇒ `already_acquired`, sem dupla contagem). O **handle de condução** da aba SHALL identificar o **ciclo/aba**, **nunca** impor um único token a todas as tentativas.
 
 #### Scenario: Clique duplo e reload não duplicam
 
@@ -254,9 +257,16 @@ Cliques duplicados, reload e reenvio SHALL NOT duplicar chamadas nem reiniciar c
 
 #### Scenario: Reenvio atrasado não adquire nova tentativa
 
-- **WHEN** um reenvio do MESMO acionamento chega **depois** de a tentativa anterior já ter falhado
+- **WHEN** um reenvio do MESMO acionamento (mesmo `request_token`) chega **depois** de a tentativa anterior já ter falhado
 - **THEN** o reenvio **não** adquire uma **nova** tentativa nem consome outro slot
 - **AND** a identidade enviada pelo cliente é usada apenas como **condição validada** (dedupe), sem autorizar nem escolher o vencedor
+
+#### Scenario: Cada automática recebe token próprio
+
+- **WHEN** o ciclo automático avança da 1ª para a 2ª e a 3ª tentativa
+- **THEN** **cada** tentativa recebe um **token próprio** (diferente das demais)
+- **AND** **somente** o reenvio do **mesmo** acionamento reutiliza o token (⇒ `already_acquired`)
+- **AND** nenhuma automática é bloqueada por reutilizar o token de uma tentativa anterior
 
 #### Scenario: Acionamento sem identidade é recusado
 
