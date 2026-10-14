@@ -812,4 +812,41 @@ describe("CampaignPageClient — superfície de recuperação de copy (B2.1 / Pl
     await act(async () => {});
     expect(copyRecoveryCalls()).toHaveLength(1);
   });
+
+  it("(FIX 2) outra aba (SEM handle) ACOMPANHA a recuperação ativa: poll reflete `concluida` e ZERO POSTs", async () => {
+    // Sem `registerCopyRecoveryDrivingHandle` ⇒ `isDriving === false` (reload/outra aba).
+    vi.useFakeTimers();
+    const { rerender } = render(
+      recoveryElement(
+        recoveryView({ state: "ativa", autoAttempts: 1, canRetry: false }),
+        { copy: { state: "pending", caption: "", hashtags: [], ctaPost: "" } },
+      ),
+    );
+
+    // Imagem já `delivered` + recuperação `ativa` ⇒ o poll ACOMPANHA mesmo sem `running`.
+    expect(document.querySelector(".animate-spin")).toBeTruthy();
+    expect(mockRefresh).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+
+    // Servidor concluiu: o poll reflete a atualização (textos exibidos).
+    rerender(
+      recoveryElement(
+        recoveryView({ state: "concluida", autoAttempts: 1, canRetry: false }),
+        { copy: { state: "delivered", caption: "Legenda nova da campanha", hashtags: [], ctaPost: "" } },
+      ),
+    );
+    expect(screen.getByText("Legenda nova da campanha")).toBeInTheDocument();
+    expect(screen.queryByText("Gerando os textos...")).toBeNull();
+
+    // `concluida` encerra o acompanhamento e NENHUM POST é emitido pela aba.
+    await act(async () => {
+      vi.advanceTimersByTime(20000);
+    });
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    expect(copyRecoveryCalls()).toHaveLength(0);
+  });
 });

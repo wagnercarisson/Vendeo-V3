@@ -41,15 +41,31 @@ export default function CampaignPageClient(props: CampaignPageProps) {
 
   const isNewFlowRunning = props.newFlow?.state === "running";
 
+  // F56.2b2a (correção pós-revisão) — a recuperação ATIVA/EM ESPERA também exige
+  // ACOMPANHAMENTO: outra aba (ou reload) precisa refletir o avanço do servidor
+  // mesmo com a imagem já `delivered` (sem `generating`/`running`). O poll apenas
+  // REFLETE o estado persistido (`router.refresh()`); NUNCA inicia chamadas — uma
+  // aba que não dirige jamais emite requisição. `indeterminada` NÃO entra (evita
+  // loop ilimitado); `concluida` encerra o acompanhamento.
+  const recoveryNeedsAccompaniment =
+    props.newFlow?.recovery != null &&
+    (props.newFlow.recovery.state === "ativa" ||
+      props.newFlow.recovery.state === "aguardando");
+
   useEffect(() => {
-    if (props.displayStatus !== "generating" && !isNewFlowRunning) return;
+    if (
+      props.displayStatus !== "generating" &&
+      !isNewFlowRunning &&
+      !recoveryNeedsAccompaniment
+    )
+      return;
 
     const interval = setInterval(() => {
       router.refresh();
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [props.displayStatus, isNewFlowRunning, router]);
+  }, [props.displayStatus, isNewFlowRunning, recoveryNeedsAccompaniment, router]);
 
   const breadcrumbs = [
     { label: "Campanhas", href: "/campanhas" },
