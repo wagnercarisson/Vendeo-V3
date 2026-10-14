@@ -569,16 +569,19 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
   // emite `mode: "auto_retry"` ao fim da contagem REPORTADA, com `requestToken`
   // NOVO por acionamento. A guarda é ancorada no `autoAttempts` PERSISTIDO: cada
   // avanço do servidor re-arma a emissão (inclusive a falha rápida e a chegada com
-  // espera vencida); o MESMO `autoAttempts` não emite duas vezes. `reload`/outra
-  // aba (sem handle) apenas ACOMPANHA.
+  // espera vencida); o MESMO `autoAttempts` não emite duas vezes. Após QUALQUER
+  // início MANUAL (`manualAttempts > 0`) o ciclo automático está FECHADO e NENHUMA
+  // automática é agendada (belt-and-braces). `reload`/outra aba (sem handle) apenas
+  // ACOMPANHA.
   useEffect(() => {
     if (recovery?.state !== "aguardando") return;
     if (!isDriving) return;
     if (remainingMs > 0) return;
+    if (recovery.manualAttempts !== 0) return;
     if (lastEmittedAutoRef.current === recovery.autoAttempts) return;
     lastEmittedAutoRef.current = recovery.autoAttempts;
     void emitAttempt("auto_retry");
-  }, [recovery?.state, recovery?.autoAttempts, remainingMs, isDriving, emitAttempt]);
+  }, [recovery?.state, recovery?.autoAttempts, recovery?.manualAttempts, remainingMs, isDriving, emitAttempt]);
 
   const showRecovery = recovery !== null && recovery.state !== "concluida";
 

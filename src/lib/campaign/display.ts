@@ -265,10 +265,15 @@ function copyRecoveryView(
  *  - copy entregue no registro (`completed`) ⇒ `concluida` (sucesso ABSOLUTO;
  *    `canRetry = false`);
  *  - `attemptActive === true` (LEASE do servidor) ⇒ `ativa` (`canRetry = false`);
- *  - `failed` transitório + automáticas restantes ⇒ `aguardando` (`canRetry =
- *    false`): `waitRemainingMs > 0` = contagem regressiva; `waitRemainingMs === 0`
- *    = espera JÁ VENCIDA (pronta para a próxima automática — a aba dirigente emite
- *    imediatamente ao chegar);
+ *  - `failed` transitório + automáticas restantes + `manualAttempts === 0`
+ *    (ciclo AUTOMÁTICO ABERTO — só antes de qualquer início MANUAL) ⇒ `aguardando`:
+ *    `waitRemainingMs > 0` = contagem regressiva (CTA MANUAL `disabled` —
+ *    anti-duplicação); `waitRemainingMs === 0` = espera JÁ VENCIDA ⇒
+ *    `canRetry = manual restante` (a aba dirigente emite a próxima automática
+ *    imediatamente; reload/outra aba oferece a retomada MANUAL);
+ *  - após QUALQUER início MANUAL (`manualAttempts > 0`) NENHUMA nova automática é
+ *    agendada: o ciclo automático está FECHADO ⇒ `interrompida` (`canRetry =
+ *    manual restante`, retomada MANUAL);
  *  - `definitive === true` ⇒ `falha_definitiva` (`canRetry = manual restante`);
  *  - `failed` com automáticas esgotadas ⇒ `falha` (`canRetry = manual restante`);
  *  - `pending` SEM lease vigente ⇒ `interrompida` (`canRetry = manual restante`);
@@ -320,23 +325,27 @@ export function mapNewFlowCopyRecovery(
     return copyRecoveryView("ativa", autoAttempts, manualAttempts, record.waitRemainingMs, false);
   }
 
-  // 3. `aguardando` — falha transitória com automáticas restantes. A UI apenas
-  //    REFLETE a espera reportada pelo servidor (nunca infere por tempo):
-  //    `waitRemainingMs > 0` ⇒ contagem regressiva; `waitRemainingMs === 0` ⇒ a
-  //    espera JÁ VENCEU (ex.: chegada após o prazo) — pronta para a próxima
-  //    automática (a aba dirigente emite IMEDIATAMENTE). `interrompida` permanece
-  //    reservada a `pending` sem lease (sem espera transitória).
+  // 3. `aguardando` — falha transitória com automáticas restantes e SEM nenhuma
+  //    tentativa MANUAL iniciada (o ciclo AUTOMÁTICO só está ABERTO antes de
+  //    qualquer início MANUAL). A UI apenas REFLETE a espera reportada pelo
+  //    servidor (nunca infere por tempo): `waitRemainingMs > 0` ⇒ contagem
+  //    regressiva com o CTA MANUAL `disabled` (anti-duplicação); `waitRemainingMs
+  //    === 0` ⇒ espera JÁ VENCIDA (ex.: chegada após o prazo) ⇒ libera o CTA
+  //    MANUAL (`canRetry = manual restante`) — a aba dirigente emite IMEDIATAMENTE
+  //    a próxima automática. Após QUALQUER início MANUAL o ciclo automático está
+  //    FECHADO: não mapeia aqui e cai em `interrompida` (retomada MANUAL).
   if (
     record.state === "failed" &&
     record.definitive !== true &&
-    autoAttempts < COPY_RECOVERY_AUTO_LIMIT
+    autoAttempts < COPY_RECOVERY_AUTO_LIMIT &&
+    manualAttempts === 0
   ) {
     return copyRecoveryView(
       "aguardando",
       autoAttempts,
       manualAttempts,
       Math.max(0, record.waitRemainingMs),
-      false,
+      record.waitRemainingMs <= 0 && manualAvailable,
     );
   }
 

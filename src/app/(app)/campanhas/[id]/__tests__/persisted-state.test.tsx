@@ -250,10 +250,11 @@ describe("mapNewFlowCopy — copy do novo fluxo (P3)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// F56.2b2a (Plano 04 — correção pós-revisão): precedência do SUMÁRIO da recuperação.
-// (FIX 1) `failed` transitório com automáticas restantes e espera JÁ VENCIDA
-// (`waitRemainingMs === 0`) ⇒ `aguardando` (pronta agora), NÃO `interrompida`;
-// `interrompida` permanece p/ `pending` sem lease.
+// F56.2b2a (Plano 04 — correção pós-revisão + correção da regra `aguardando`):
+// precedência do SUMÁRIO da recuperação. O ciclo AUTOMÁTICO só está ABERTO antes
+// de QUALQUER início MANUAL (`manualAttempts === 0`): com o CTA MANUAL liberado
+// apenas quando a espera venceu (`waitRemainingMs === 0`); após um início MANUAL
+// não se agenda nova automática e o estado cai em `interrompida`.
 // ---------------------------------------------------------------------------
 describe("mapNewFlowCopyRecovery — precedência da recuperação (correções pós-revisão)", () => {
   const deliveredCopy = {
@@ -299,10 +300,31 @@ describe("mapNewFlowCopyRecovery — precedência da recuperação (correções 
     });
   });
 
-  it("(FIX 1) `failed` transitório + espera VENCIDA (wait 0) + automáticas restantes ⇒ `aguardando` 0", () => {
+  it("(correção aguardando) `failed` transitório + espera VENCIDA (wait 0) + automáticas restantes + SEM manual ⇒ `aguardando` com CTA MANUAL LIBERADO (reload/outra aba)", () => {
     expect(
       mapNewFlowCopyRecovery(record({ waitRemainingMs: 0, autoAttempts: 1 }), failedCopy),
-    ).toMatchObject({ state: "aguardando", waitRemainingMs: 0, canRetry: false });
+    ).toMatchObject({ state: "aguardando", waitRemainingMs: 0, canRetry: true });
+  });
+
+  it("(correção aguardando) enquanto a espera CORRE (wait > 0) ⇒ `aguardando` com `canRetry === false` (CTA disabled, anti-duplicação)", () => {
+    expect(
+      mapNewFlowCopyRecovery(record({ waitRemainingMs: 5000, autoAttempts: 1 }), failedCopy),
+    ).toMatchObject({ state: "aguardando", waitRemainingMs: 5000, canRetry: false });
+  });
+
+  it("(correção aguardando) MANUAL já iniciado (`manualAttempts > 0`) ⇒ NÃO é `aguardando`; cai em `interrompida` com manual restante", () => {
+    const view = mapNewFlowCopyRecovery(
+      record({
+        state: "failed",
+        definitive: false,
+        waitRemainingMs: 0,
+        autoAttempts: 1,
+        manualAttempts: 1,
+      }),
+      failedCopy,
+    );
+    expect(view).toMatchObject({ state: "interrompida", canRetry: true });
+    expect(view?.state).not.toBe("aguardando");
   });
 
   it("(FIX 1) `pending` SEM lease ⇒ `interrompida` (sem espera transitória)", () => {
@@ -655,6 +677,76 @@ describe("CampaignPageClient — superfície de recuperação de copy (B2.1 / Pl
 
     await act(async () => {
       vi.advanceTimersByTime(5000);
+    });
+
+    expect(copyRecoveryCalls()).toHaveLength(0);
+  });
+
+  it("(correção aguardando) reload/outra aba com espera VENCIDA e SEM tentativa ativa ⇒ CTA MANUAL HABILITADO e ZERO automáticas", async () => {
+    // Sem `registerCopyRecoveryDrivingHandle` ⇒ `isDriving === false` (reload/outra aba).
+    vi.useFakeTimers();
+    renderRecovery(
+      recoveryView({
+        state: "aguardando",
+        autoAttempts: 1,
+        manualAttempts: 0,
+        waitRemainingMs: 0,
+        canRetry: true,
+      }),
+    );
+
+    // A espera já venceu: o CTA MANUAL fica LIBERADO (ninguém agenda a próxima
+    // automática fora da aba dirigente).
+    expect(screen.getByRole("button", { name: CTA })).toBeEnabled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(20000);
+    });
+
+    // Aba não-dirigente NUNCA emite automática.
+    expect(copyRecoveryCalls()).toHaveLength(0);
+  });
+
+  it("(correção aguardando) `aguardando` na aba DIRIGENTE com manual já iniciado ⇒ guarda extra NÃO emite automática (ciclo fechado)", async () => {
+    registerCopyRecoveryDrivingHandle({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID });
+    vi.useFakeTimers();
+    renderRecovery(
+      recoveryView({
+        state: "aguardando",
+        autoAttempts: 1,
+        manualAttempts: 1,
+        waitRemainingMs: 0,
+        canRetry: true,
+      }),
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(20000);
+    });
+
+    // belt-and-braces: após um início MANUAL nenhuma automática é agendada.
+    expect(copyRecoveryCalls()).toHaveLength(0);
+  });
+
+  it("(correção aguardando) 1ª MANUAL falhou após interrupção (manualAttempts > 0, wait vencida) ⇒ `interrompida` com CTA habilitado; nenhuma automática", async () => {
+    vi.useFakeTimers();
+    renderRecovery(
+      recoveryView({
+        state: "interrompida",
+        autoAttempts: 1,
+        manualAttempts: 1,
+        waitRemainingMs: 0,
+        canRetry: true,
+      }),
+    );
+
+    expect(
+      screen.getByText("A recuperação foi interrompida. Você pode tentar novamente."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: CTA })).toBeEnabled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(20000);
     });
 
     expect(copyRecoveryCalls()).toHaveLength(0);
