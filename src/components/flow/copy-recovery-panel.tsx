@@ -25,7 +25,9 @@ import type { NewFlowCopyRecoveryState } from "@/lib/campaign/display";
  *
  * Regras duras: a falha de copy é SEMPRE amber (nunca vermelho); `interrompida`
  * NUNCA usa spinner; a CTA fica `disabled` + `aria-disabled="true"` em
- * `ativa`/`aguardando`/`indeterminada` e no limite manual; NÃO se promete
+ * `ativa`/`indeterminada` e no limite manual — em `aguardando` o CTA depende de
+ * `canRetry` (disabled enquanto a espera reportada corre; habilitado quando a
+ * espera venceu e ainda há manual restante); NÃO se promete
  * continuidade/retomada automática.
  */
 
@@ -79,7 +81,9 @@ interface StatePresentation {
   readonly tone: Tone;
   readonly badge: string;
   readonly feedback: string;
-  /** `true` quando o estado bloqueia o CTA (`ativa`/`aguardando`/`indeterminada`). */
+  /** `true` quando o estado bloqueia o CTA incondicionalmente (`ativa`/`indeterminada`).
+   *  `aguardando` NÃO bloqueia por si: o CTA segue `canRetry` (liberado quando a
+   *  espera reportada venceu). `concluida` não expõe ação. */
   readonly blocked: boolean;
   readonly showSpinner: boolean;
 }
@@ -110,7 +114,7 @@ function presentState(
         tone: "blue",
         badge: "Nova tentativa em andamento",
         feedback: `Nova tentativa em ${secondsRemaining}s...`,
-        blocked: true,
+        blocked: false,
         showSpinner: false,
       };
     case "indeterminada":
