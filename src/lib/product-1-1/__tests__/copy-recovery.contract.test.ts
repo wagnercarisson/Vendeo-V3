@@ -1781,7 +1781,7 @@ interface CopyProviderSim {
   setSequence(seq: Array<"ok" | Error>): void;
 }
 
-function makeCopyProviderSim(): CopyProviderSim {
+function makeCopyProviderSim(hasFallback = true): CopyProviderSim {
   let seq: Array<"ok" | Error> = [];
   let index = 0;
   const targets: Array<string | undefined> = [];
@@ -1804,7 +1804,7 @@ function makeCopyProviderSim(): CopyProviderSim {
       };
     },
     async hasFallback() {
-      return true;
+      return hasFallback;
     },
   };
   return {
@@ -2142,5 +2142,90 @@ describe("B2.1 — pós-revisão: gateway REAL (adapter que lança) classifica v
     expect(row?.state).toBe("failed");
     expect(recoveryFailureClass(row)).toBe("definitive");
     expect(recoveryWait(row)).toBeNull();
+  });
+});
+
+describe("B2.1 — pós-revisão: alvo fallback SÓ quando disponível (hasFallback campaign_copy)", () => {
+  function seedTransientPrevious(db: CopyAttemptDb): void {
+    db.seed({
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      attempt_seq: 1,
+      attempt_token: TOKEN_A,
+      state: "failed",
+      copy_text: null,
+      copy_payload: {
+        recovery: {
+          kind: "auto",
+          failureClass: "transient",
+          nextWaitMs: COPY_RECOVERY_WAITS_MS.after1,
+        },
+      },
+      lease_at: null,
+      request_token: null,
+      updated_at: iso(NOW),
+      created_at: iso(NOW),
+    });
+  }
+
+  it("anterior TRANSIENT + hasFallback:true ⇒ alvo fallback (UMA chamada)", async () => {
+    const db = new CopyAttemptDb();
+    seedTransientPrevious(db);
+    const provider = makeCopyProviderSim(true);
+    const res = await runRecover({
+      db,
+      provider,
+      acquireResponder: () => winner(2, TOKEN_B),
+      requestToken: TOKEN_B,
+    });
+    expect(res.result.acquired).toBe(true);
+    expect(provider.targets).toEqual(["fallback"]);
+    expect(provider.calls()).toBe(1);
+  });
+
+  it("anterior TRANSIENT + hasFallback:false ⇒ REPETE no primary (UMA chamada; sem tentativa desperdiçada)", async () => {
+    const db = new CopyAttemptDb();
+    seedTransientPrevious(db);
+    const provider = makeCopyProviderSim(false);
+    const res = await runRecover({
+      db,
+      provider,
+      acquireResponder: () => winner(2, TOKEN_B),
+      requestToken: TOKEN_B,
+    });
+    expect(res.result.acquired).toBe(true);
+    // Sem fallback o gateway REJEITARIA antes do provider: o resolver cai no
+    // primary e AINDA invoca o provider (uma tentativa útil).
+    expect(provider.targets).toEqual(["primary"]);
+    expect(provider.calls()).toBe(1);
+    expect(db.rowsArray().find((r) => r.attempt_seq === 2)?.state).toBe("completed");
+  });
+
+  it("anterior NÃO-transient ⇒ primary independentemente da disponibilidade (UMA chamada)", async () => {
+    for (const hasFallback of [true, false] as const) {
+      const db = new CopyAttemptDb();
+      db.seed({
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        attempt_seq: 1,
+        attempt_token: TOKEN_A,
+        state: "failed",
+        copy_text: null,
+        copy_payload: { recovery: { kind: "auto", failureClass: "definitive", nextWaitMs: null } },
+        lease_at: null,
+        request_token: null,
+        updated_at: iso(NOW),
+        created_at: iso(NOW),
+      });
+      const provider = makeCopyProviderSim(hasFallback);
+      await runRecover({
+        db,
+        provider,
+        acquireResponder: () => winner(2, TOKEN_B),
+        requestToken: TOKEN_B,
+      });
+      expect(provider.targets).toEqual(["primary"]);
+      expect(provider.calls()).toBe(1);
+    }
   });
 });

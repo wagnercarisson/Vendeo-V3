@@ -18,6 +18,7 @@ import {
   type CopyStateStore,
 } from "./copy-state";
 import { isRetryableError } from "@/lib/copy/errors";
+import { defaultAiGateway } from "@/lib/ai";
 import {
   ProductOneToOneCopyAcquisitionClient,
   ProductOneToOneCopyAcquisitionError,
@@ -371,8 +372,9 @@ export class ProductOneToOneCopyRecoveryClient {
 
   /**
    * Alvo EXPLÍCITO desta tentativa (SERVER-SIDE): `primary` na 1ª; `fallback`
-   * quando a tentativa ANTERIOR falhou TRANSITÓRIA (fallback = TENTATIVA
-   * SEGUINTE, nunca uma segunda chamada dentro do mesmo acionamento).
+   * quando a tentativa ANTERIOR falhou TRANSITÓRIA **e** o fallback está
+   * DISPONÍVEL (correção pós-revisão 2026-10-14); senão `primary` (fallback =
+   * TENTATIVA SEGUINTE, nunca uma segunda chamada dentro do mesmo acionamento).
    */
   private async resolveTarget(
     input: RecoverCopyAttemptInput,
@@ -384,8 +386,19 @@ export class ProductOneToOneCopyRecoveryClient {
       operationId: input.operationId,
     });
     const previous = attempts.find((attempt) => attempt.attemptSeq === attemptSeq - 1);
-    return readRecoveryFailureClass(previous?.copyPayload ?? null) === "transient"
-      ? "fallback"
-      : "primary";
+    const previousTransient =
+      readRecoveryFailureClass(previous?.copyPayload ?? null) === "transient";
+    if (!previousTransient) return "primary";
+    // Correção pós-revisão (2026-10-14) — o alvo `fallback` só é escolhido quando
+    // a tentativa ANTERIOR falhou TRANSITÓRIA **E** o fallback está de fato
+    // DISPONÍVEL (configurado e distinto do primary), consultado pelo MESMO seam
+    // do invocador (`AiInvoker.hasFallback("campaign_copy")`). Sem fallback
+    // configurado, o gateway REJEITA antes da chamada ao provider
+    // (`AiInvocationError {kind:"capability", retryable:false}`) e a tentativa
+    // seria consumida inutilmente; sem disponibilidade, REPETE no primary (MESMA
+    // espera, MESMOS limites) — EXATAMENTE UMA chamada ao provider por tentativa.
+    const invoker = input.runnerDeps?.invoker ?? defaultAiGateway;
+    const fallbackAvailable = await invoker.hasFallback("campaign_copy");
+    return fallbackAvailable ? "fallback" : "primary";
   }
 }
