@@ -63,6 +63,39 @@ function emptyRecoveryState(): CopyRecoveryStateView {
 }
 
 /**
+ * Resultado DISCRIMINADO da leitura da operação persistida. `absent` SOMENTE
+ * quando o cliente devolve `null`/`undefined` (operação genuinamente inexistente);
+ * `error` quando a leitura LANÇA (RPC ausente/falha). NUNCA tratar `error` como
+ * `absent` — falha de leitura ≠ campanha nova.
+ */
+type CampaignOperationLoad =
+  | { status: "found"; operation: CampaignOperation }
+  | { status: "absent" }
+  | { status: "error" };
+
+/** Operação persistida (não-nula) derivada do próprio cliente autorizado. */
+type CampaignOperation = NonNullable<
+  Awaited<
+    ReturnType<
+      InstanceType<typeof ProductOneToOneAttemptStartClient>["getCampaignOperation"]
+    >
+  >
+>;
+
+/** Feedback SEGURO e fechado para indisponibilidade de leitura (nunca 200 vazio). */
+function recoveryUnavailable(status: number): NextResponse {
+  return NextResponse.json(
+    {
+      error: {
+        code: "recovery_unavailable",
+        message: "Recuperação indisponível.",
+      },
+    },
+    { status },
+  );
+}
+
+/**
  * Runner input resolvido SERVER-SIDE (briefing/contexto/pricing) a partir do
  * snapshot PERSISTIDO da campanha + da loja AUTORIZADA. O snapshot é
  * ESTRUTURAL — nenhuma verdade do cliente é aceita aqui.
@@ -149,16 +182,26 @@ export const GET = apiHandler(
 
     await requireOwnership(campaign.store_id, user.userId);
 
-    const operation = await loadCampaignOperation(id);
-    if (!operation) {
+    const load = await loadCampaignOperation(id);
+    if (load.status === "error") {
+      // Falha de LEITURA da operação (≠ ausência): indisponível, nunca 200 vazio.
+      return recoveryUnavailable(503);
+    }
+    if (load.status === "absent") {
       // Sem operação persistida do novo fluxo: nenhum estado inventado.
       return NextResponse.json({ recovery: emptyRecoveryState() });
     }
 
-    const state = await new ProductOneToOneCopyRecoveryClient().readCopyRecoveryState({
-      campaignId: id,
-      operationId: operation.operationId,
-    });
+    let state: CopyRecoveryStateView;
+    try {
+      state = await new ProductOneToOneCopyRecoveryClient().readCopyRecoveryState({
+        campaignId: id,
+        operationId: load.operation.operationId,
+      });
+    } catch {
+      // Leitura do ESTADO indisponível: mesmo 503 seguro (nunca 500 passthrough).
+      return recoveryUnavailable(503);
+    }
     return NextResponse.json({ recovery: state });
   },
 );
@@ -228,10 +271,15 @@ export const POST = apiHandler(
       );
     }
 
-    const operation = await loadCampaignOperation(id);
+    const load = await loadCampaignOperation(id);
+    if (load.status === "error") {
+      // Falha de LEITURA da identidade persistida (≠ ausência): indisponível
+      // (503) ANTES de qualquer aquisição/IA. NUNCA confundir com ausência.
+      return recoveryUnavailable(503);
+    }
     // Sem operação persistida OU `operationId` divergente ⇒ conflito de
     // identidade (o `operationId` do cliente NUNCA é autoridade).
-    if (!operation || operation.operationId !== recoveryRequest.operationId) {
+    if (load.status === "absent" || load.operation.operationId !== recoveryRequest.operationId) {
       return NextResponse.json(
         {
           error: {
@@ -262,7 +310,7 @@ export const POST = apiHandler(
 
     const runner = buildCopyRunnerInput({
       campaignId: id,
-      operationId: operation.operationId,
+      operationId: load.operation.operationId,
       storeId: campaign.store_id,
       productName: campaign.product_name,
       inputSnapshot: campaign.input_snapshot,
@@ -272,7 +320,7 @@ export const POST = apiHandler(
     try {
       const result = await new ProductOneToOneCopyRecoveryClient().recoverCopyAttempt({
         campaignId: id,
-        operationId: operation.operationId,
+        operationId: load.operation.operationId,
         mode: toAcquisitionMode(recoveryRequest.mode),
         requestToken: recoveryRequest.requestToken,
         runner,
@@ -291,12 +339,19 @@ export const POST = apiHandler(
   },
 );
 
-async function loadCampaignOperation(campaignId: string) {
+async function loadCampaignOperation(
+  campaignId: string,
+): Promise<CampaignOperationLoad> {
   try {
-    return await new ProductOneToOneAttemptStartClient().getCampaignOperation(campaignId);
+    const operation =
+      await new ProductOneToOneAttemptStartClient().getCampaignOperation(campaignId);
+    if (operation === null || operation === undefined) {
+      return { status: "absent" };
+    }
+    return { status: "found", operation };
   } catch {
-    // Leitura indisponível (fundação INATIVA / RPC ausente): NUNCA trata como
-    // campanha nova — fail-closed (sem identidade persistida não há recuperação).
-    return null;
+    // Leitura INDISPONÍVEL (fundação INATIVA / RPC ausente/falha): NUNCA tratar
+    // como campanha nova — `error` é distinto de `absent` e falha FECHADO.
+    return { status: "error" };
   }
 }

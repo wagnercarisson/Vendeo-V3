@@ -53,6 +53,8 @@ const routeHarness = vi.hoisted(() => {
     authDecision: { allowed: true } as unknown,
     authThrows: false,
     operation: null as unknown,
+    operationThrows: false,
+    stateReadThrows: false,
     sameOriginThrows: false,
     creditOrArtifactCalls: 0,
   };
@@ -147,9 +149,18 @@ const routeHarness = vi.hoisted(() => {
           return chain;
         },
         maybeSingle() {
+          if (state.stateReadThrows) {
+            return Promise.reject(new Error("copy_state_read_failure"));
+          }
           return Promise.resolve({ data: pick()[0] ?? null, error: null });
         },
         then(onFulfilled?: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) {
+          if (state.stateReadThrows) {
+            return Promise.reject(new Error("copy_state_read_failure")).then(
+              onFulfilled,
+              onRejected,
+            );
+          }
           return Promise.resolve({ data: pick(), error: null }).then(onFulfilled, onRejected);
         },
       };
@@ -279,6 +290,9 @@ vi.mock("@/lib/product-1-1/submission/eligibility-context", () => ({
 vi.mock("@/lib/product-1-1/orchestration/attempt-start-client", () => ({
   ProductOneToOneAttemptStartClient: class {
     async getCampaignOperation(): Promise<unknown> {
+      if (routeHarness.state.operationThrows) {
+        throw new Error("campaign_operation_read_failure");
+      }
       return routeHarness.state.operation;
     }
   },
@@ -2571,6 +2585,8 @@ function resetRouteHarness(): void {
   s.authDecision = { allowed: true };
   s.authThrows = false;
   s.operation = persistedOperation();
+  s.operationThrows = false;
+  s.stateReadThrows = false;
   s.sameOriginThrows = false;
   s.creditOrArtifactCalls = 0;
 }
@@ -2684,6 +2700,17 @@ describe("B2.1 — Plano 03: rota copy-recovery — barreira de não-ativação/
     expect(res.status).toBe(409);
     expect(routeHarness.state.providerCalls).toBe(0);
   });
+
+  it("LEITURA da operação REJEITADA ⇒ 503 seguro ANTES de qualquer aquisição/IA (provider == 0)", async () => {
+    routeHarness.state.operationThrows = true;
+    const res = await callPost(CAMPAIGN_ID, validRouteBody());
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error?: { code?: string } };
+    expect(body.error?.code).toBe("recovery_unavailable");
+    expect(routeHarness.state.providerCalls).toBe(0);
+    // Nenhuma aquisição chegou a ser tentada (nenhuma linha criada).
+    expect(routeHarness.state.rows.length).toBe(0);
+  });
 });
 
 describe("B2.1 — Plano 03: rota copy-recovery — corpo inválido (.strict()) sem IA", () => {
@@ -2774,6 +2801,44 @@ describe("B2.1 — Plano 03: rota copy-recovery — GET query-only", () => {
     const res = await callGet(CAMPAIGN_ID);
     const body = (await res.json()) as { recovery: { attemptActive: boolean } };
     expect(body.recovery.attemptActive).toBe(true);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("LEITURA da operação REJEITADA ⇒ 503 seguro, SEM `recovery` vazio e SEM IA (provider == 0)", async () => {
+    routeHarness.state.operationThrows = true;
+    const res = await callGet(CAMPAIGN_ID);
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as {
+      recovery?: unknown;
+      error?: { code?: string };
+    };
+    expect(body.recovery).toBeUndefined();
+    expect(body.error?.code).toBe("recovery_unavailable");
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("ausência GENUÍNA (cliente devolve null) ⇒ 200 com estado vazio (comportamento legítimo preservado)", async () => {
+    routeHarness.state.operation = null;
+    const res = await callGet(CAMPAIGN_ID);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      recovery: { attemptSeq: number; state: string | null };
+    };
+    expect(body.recovery.attemptSeq).toBe(0);
+    expect(body.recovery.state).toBeNull();
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("leitura do ESTADO persistido REJEITADA ⇒ 503 seguro (nunca 500 passthrough)", async () => {
+    routeHarness.state.stateReadThrows = true;
+    const res = await callGet(CAMPAIGN_ID);
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as {
+      recovery?: unknown;
+      error?: { code?: string };
+    };
+    expect(body.recovery).toBeUndefined();
+    expect(body.error?.code).toBe("recovery_unavailable");
     expect(routeHarness.state.providerCalls).toBe(0);
   });
 });
