@@ -32,12 +32,15 @@
 --      colunas `NOT NULL`/UNIQUE. O gate por desfecho (`applied`/`idempotent`) e
 --      o repasse de `p_copy_payload` ao `apply` são PRESERVADOS.
 --
--- Toda a migração de dados vive num ÚNICO `BEGIN; ... COMMIT;` explícito.
+-- A migração de dados roda ATÔMICA e unicamente sob a TRANSAÇÃO DE BATCH
+-- controlada pela CLI do Supabase (o SQL da migração E o registro de versão em
+-- `supabase_migrations.schema_migrations` são gravados no MESMO batch). NÃO há
+-- `BEGIN;`/`COMMIT;` explícito NESTE arquivo por decisão deliberada: um `COMMIT;`
+-- interno encerraria a transação ANTES do registro de versão, podendo separar o
+-- dado aplicado do histórico de migrações. A CLI é a DONA da transação.
 --
 -- NÃO há `DELETE` em massa; nenhum histórico é apagado. Fronteira de reuso: NÃO
 -- altera `campaigns` nem qualquer tabela/coluna legada; apenas REFERENCIA.
-
-begin;
 
 -- =============================================================================
 -- 1. Backfill de `product_1_1_copy_state` (vinculo por par + contador automático)
@@ -226,8 +229,6 @@ REVOKE ALL ON TABLE public.product_1_1_copy_cancellations FROM PUBLIC, anon, aut
 REVOKE ALL ON TABLE public.product_1_1_copy_cancellations FROM service_role;
 REVOKE INSERT, UPDATE, DELETE ON TABLE public.product_1_1_copy_cancellations FROM service_role;
 GRANT SELECT ON TABLE public.product_1_1_copy_cancellations TO service_role;
-
-commit;
 
 -- =============================================================================
 -- REVERT (executar manualmente apenas na instância local isolada). Restaura a
