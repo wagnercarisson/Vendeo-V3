@@ -176,8 +176,30 @@ BEGIN
     RETURN jsonb_build_object('applied', false, 'outcome', 'invalid_content', 'state', NULL);
   END IF;
 
-  -- TRAVA por operação: serializa as transições DESTA operação (todas as
-  -- tentativas concorrentes sob a MESMA trava).
+  -- CORREÇÃO DA REVISÃO (2026-10-14) — TRAVA ESTÁVEL COMPARTILHADA POR
+  -- OPERAÇÃO, na ORDEM FIXA e IDÊNTICA em aquisição (Plano 06)/apply/cancel:
+  --   (1) advisory por operação (`pg_advisory_xact_lock` — transacional: vive
+  --       até o COMMIT da MESMA transação; é sempre tomada, com ou sem linha de
+  --       crédito, garantindo serialização em ambos os casos);
+  --   (2) linha C4 de crédito `product_1_1_campaign_credit_operations`
+  --       (`FOR UPDATE`, QUANDO existe — a ausência é legítima: a operação pode
+  --       ainda não ter linha de crédito; a advisory já serializou);
+  --   (3) linhas de `product_1_1_copy_state` (`FOR UPDATE`).
+  -- A ORDEM IDÊNTICA proíbe deadlock e serializa a conclusão ATRASADA de uma
+  -- tentativa × a expiração de lease/criação da próxima (aquisição) sobre a
+  -- MESMA trava. O `product_1_1_cancel_copy` HERDA esta trava via chamada
+  -- interna ao `apply` (a advisory é transacional — vale até o commit do
+  -- próprio cancel).
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_campaign_id::text || ':' || p_operation_id::text, 0));
+
+  -- (2) Linha C4 de crédito quando existe (sem linha: segue — serialização já
+  --     garantida pela advisory no passo 1).
+  PERFORM 1 FROM public.product_1_1_campaign_credit_operations
+    WHERE campaign_id = p_campaign_id AND operation_id = p_operation_id
+    FOR UPDATE;
+
+  -- (3) TRAVA por operação nas linhas de copy_state: serializa as transições
+  --     DESTA operação (todas as tentativas concorrentes sob a MESMA trava).
   PERFORM 1 FROM public.product_1_1_copy_state
     WHERE campaign_id = p_campaign_id AND operation_id = p_operation_id
     FOR UPDATE;
@@ -332,6 +354,9 @@ BEGIN
   -- (1) Aplica o terminal `failed` sob a MESMA transação, reusando a proteção
   --     terminal/stale/completed da RPC condicional. O payload de recuperação é
   --     repassado (quando ausente, o `failed` preserva o comportamento b1b).
+  --     TRAVA: o cancel HERDA a trava estável compartilhada do `apply`
+  --     (advisory → C4 → copy_state) — a `pg_advisory_xact_lock` é
+  --     transacional: vale até o COMMIT desta mesma transação de cancel.
   v_apply   := public.product_1_1_apply_copy_state(
     p_campaign_id, p_operation_id, 'failed', p_attempt_seq, p_attempt_token,
     NULL, p_copy_payload);

@@ -107,6 +107,28 @@ describe("B2.1 — migration por tentativa (SQL estático, SEM comentários)", (
     expect(ACTIVE_SQL).toContain("CASE WHEN p_state = 'pending' THEN now() ELSE NULL END");
   });
 
+  // Correção da revisão (2026-10-14) — transições e aquisição compartilham a
+  // MESMA trava estável por operação, na MESMA ordem fixa (advisory → C4 →
+  // copy_state). Asserções POSICIONAIS no SQL ATIVO (sem comentários).
+  it("trava estável COMPARTILHADA: advisory → C4 → copy_state na ordem fixa", () => {
+    const advisoryIdx = ACTIVE_SQL.indexOf(
+      "pg_advisory_xact_lock(hashtextextended(p_campaign_id::text || ':' || p_operation_id::text, 0))",
+    );
+    const creditIdx = ACTIVE_SQL.indexOf(
+      "PERFORM 1 FROM public.product_1_1_campaign_credit_operations",
+    );
+    const copyLockIdx = ACTIVE_SQL.search(
+      /PERFORM 1 FROM public\.product_1_1_copy_state[\s\S]{0,160}?FOR UPDATE/,
+    );
+    // Presentes no RPC de transição (apply).
+    expect(advisoryIdx).toBeGreaterThanOrEqual(0);
+    expect(creditIdx).toBeGreaterThanOrEqual(0);
+    expect(copyLockIdx).toBeGreaterThanOrEqual(0);
+    // ORDEM FIXA: (1) advisory, (2) linha C4 de crédito, (3) copy_state FOR UPDATE.
+    expect(advisoryIdx).toBeLessThan(creditIdx);
+    expect(creditIdx).toBeLessThan(copyLockIdx);
+  });
+
   it("terminal PROTEGIDO por tentativa derivado + replay NULL-safe preservado", () => {
     expect(ACTIVE_SQL).toContain("v_terminal := v_row.state IN ('completed','failed');");
     expect(ACTIVE_SQL).toContain("IS NOT DISTINCT FROM");
