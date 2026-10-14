@@ -51,6 +51,7 @@ $dedicatedPorts = 56320..56329
 $b2aPrefix = "20261013"
 $dbContainer = "supabase_db_vendeo-f562a-isolated"
 $backfillName = "20261013000003_f56_2b2a_copy_state_backfill.sql"
+$readinessGuard = Join-Path $PSScriptRoot "f56-2b2a\fixture-readiness.mjs"
 $allowedPending = @(
   "20261009000001_f56_2b1b_atomic_attempt_start",
   "20261009000002_f56_2b1b_pending_resolution",
@@ -271,9 +272,59 @@ function Write-SanitizedLines {
 
 # Executa SQL no Postgres isolado (somente leitura/fixtures locais). Devolve as
 # linhas (modo -t -A). Segredos NÃO passam por aqui (nenhuma URL/credencial).
+#
+# FAIL-CLOSED: `ON_ERROR_STOP=1` (psql PARA no 1º erro de SQL); stdout+stderr
+# capturados e o exit code de psql é CHECADO. Qualquer exit != 0 ⇒ `throw`
+# (o harness NUNCA continua após um erro de SQL). NÃO há descarte de saída.
 function Invoke-IsolatedSql {
   param([Parameter(Mandatory = $true)][string]$Sql)
-  return @(& docker exec $dbContainer psql -U postgres -d postgres -t -A -c $Sql 2>&1)
+  $output = @(& docker exec $dbContainer psql -U postgres -d postgres -t -A -v ON_ERROR_STOP=1 -c $Sql 2>&1)
+  $exit = $LASTEXITCODE
+  if ($exit -ne 0) {
+    $detail = ($output | ForEach-Object { [string]$_ }) -join ' '
+    throw "isolated SQL failed (psql exit $exit): $detail"
+  }
+  return $output
+}
+
+# Converte a saída "TOTAL|NULLS" de uma contagem agregada em observação de fixture.
+function Convert-CountPair {
+  param([string]$Raw)
+  $parts = @($Raw -split '\|')
+  $total = 0
+  $nulls = 0
+  if ($parts.Count -ge 1) { [void][int]::TryParse(($parts[0]).Trim(), [ref]$total) }
+  if ($parts.Count -ge 2) { [void][int]::TryParse(($parts[1]).Trim(), [ref]$nulls) }
+  return [pscustomobject]@{
+    present = ($total -gt 0)
+    nullIdentity = ($total -gt 0 -and $total -eq $nulls)
+  }
+}
+
+# GATE de PRONTIDÃO fail-closed ANTES de restaurar/aplicar a `0003`: delega a
+# decisão ao guard PURO `scripts/f56-2b2a/fixture-readiness.mjs` (o mesmo coberto
+# pelo teste negativo em `node:test`). Exige AMBAS as fixtures presentes com
+# identidade NULL. Se o guard bloquear ⇒ `throw` (HALT antes de qualquer
+# `migration up`). NÃO aplica nada.
+function Assert-FixtureReadiness {
+  param(
+    [Parameter(Mandatory = $true)][string]$CampaignId,
+    [Parameter(Mandatory = $true)][string]$OperationId
+  )
+  $stateCounts = Get-ProofScalar -Sql "SELECT count(*) || '|' || count(*) FILTER (WHERE attempt_seq IS NULL AND attempt_token IS NULL) FROM public.product_1_1_copy_state WHERE campaign_id='$CampaignId' AND operation_id='$OperationId'"
+  $cancelCounts = Get-ProofScalar -Sql "SELECT count(*) || '|' || count(*) FILTER (WHERE attempt_seq IS NULL AND attempt_token IS NULL) FROM public.product_1_1_copy_cancellations WHERE campaign_id='$CampaignId' AND operation_id='$OperationId'"
+  $payload = [pscustomobject]@{
+    campaignPresent = $true
+    stateFixture = (Convert-CountPair -Raw $stateCounts)
+    cancellationFixture = (Convert-CountPair -Raw $cancelCounts)
+  } | ConvertTo-Json -Compress -Depth 4
+  $guardOut = @($payload | & node $readinessGuard 2>&1)
+  $guardExit = $LASTEXITCODE
+  $guardText = ($guardOut | ForEach-Object { [string]$_ }) -join ' '
+  Write-Output "# fixture readiness guard: exit $guardExit :: $guardText"
+  if ($guardExit -ne 0) {
+    throw "HALT: fixture readiness failed before 0003 (guard exit $guardExit)"
+  }
 }
 
 # Primeiro valor escalar de uma consulta ('' quando vazio). Força ARRAY antes de
@@ -453,16 +504,31 @@ if ($MigrationProof -and -not $SkipApply) {
   Write-Output "# proof: 0003 NOT previously applied (fixtures may be inserted in the old shape)"
 
   # 7.1 FIXTURES b1b no formato ANTIGO (attempt_seq/attempt_token NULL), reusando
-  #     uma campanha existente (FK) e um operation_id novo.
+  #     uma campanha existente (FK) e um operation_id novo. Cada INSERT captura o
+  #     RETURNING e ASSERE que afetou exatamente 1 linha (ON_ERROR_STOP + exit code
+  #     em `Invoke-IsolatedSql` garantem que um erro de SQL HALTA).
   $fixtureCampaignRows = @(Invoke-IsolatedSql -Sql "SELECT id FROM public.campaigns ORDER BY id LIMIT 1" | Where-Object { $_ -and $_.Trim() -ne '' })
-  $fixtureCampaign = if ($fixtureCampaignRows.Count -gt 0) { $fixtureCampaignRows[0].Trim() } else { $null }
-  if (-not $fixtureCampaign) { Write-Output "# PROOF FAIL: no campaign available for fixture"; $script:proofOk = $false }
+  if ($fixtureCampaignRows.Count -eq 0) {
+    throw "HALT: no campaign fixture available for the backfill fixtures (precondition before 0003)"
+  }
+  $fixtureCampaign = $fixtureCampaignRows[0].Trim()
   $fixtureOperation = [guid]::NewGuid().ToString()
   # Payload construído por `jsonb_build_object` (SEM aspas duplas literais — evita
   # qualquer mangling de quoting entre PowerShell e a CLI/psql).
-  Invoke-IsolatedSql -Sql "INSERT INTO public.product_1_1_copy_state (campaign_id, operation_id, state, copy_text, copy_payload, updated_at, created_at) VALUES ('$fixtureCampaign', '$fixtureOperation', 'failed', NULL, jsonb_build_object('title','T','caption','C','hashtags', jsonb_build_array('#a')), now(), now())" | Out-Null
-  Invoke-IsolatedSql -Sql "INSERT INTO public.product_1_1_copy_cancellations (campaign_id, operation_id, reason) VALUES ('$fixtureCampaign', '$fixtureOperation', 'copy_budget_exceeded')" | Out-Null
+  $stateInserted = @(Invoke-IsolatedSql -Sql "INSERT INTO public.product_1_1_copy_state (campaign_id, operation_id, state, copy_text, copy_payload, updated_at, created_at) VALUES ('$fixtureCampaign', '$fixtureOperation', 'failed', NULL, jsonb_build_object('title','T','caption','C','hashtags', jsonb_build_array('#a')), now(), now()) RETURNING campaign_id" | Where-Object { $_ -and $_.Trim() -ne '' })
+  if ($stateInserted.Count -ne 1) {
+    throw "HALT: copy_state fixture INSERT did not affect exactly 1 row (got $($stateInserted.Count))"
+  }
+  $cancelInserted = @(Invoke-IsolatedSql -Sql "INSERT INTO public.product_1_1_copy_cancellations (campaign_id, operation_id, reason) VALUES ('$fixtureCampaign', '$fixtureOperation', 'copy_budget_exceeded') RETURNING campaign_id" | Where-Object { $_ -and $_.Trim() -ne '' })
+  if ($cancelInserted.Count -ne 1) {
+    throw "HALT: copy_cancellations fixture INSERT did not affect exactly 1 row (got $($cancelInserted.Count))"
+  }
   Write-Output "# proof: b1b fixtures inserted (attempt_seq/attempt_token NULL) campaign=$fixtureCampaign operation=$fixtureOperation"
+
+  # 7.1b GATE de PRONTIDÃO (fail-closed): AMBAS as fixtures DEVEM existir com
+  #      identidade NULL. Se qualquer uma faltar/NÃO for NULL ⇒ HALT ANTES de
+  #      restaurar/aplicar a `0003`.
+  Assert-FixtureReadiness -CampaignId $fixtureCampaign -OperationId $fixtureOperation
 
   # 7.2 RESTAURA a `0003` em `supabase/migrations`.
   if (Test-Path -LiteralPath $backfillDeferred) {
@@ -475,7 +541,10 @@ if ($MigrationProof -and -not $SkipApply) {
   $proofApply = @(& npx --no-install supabase --workdir $workdir migration up --local 2>&1)
   $proofExit = $LASTEXITCODE
   Write-SanitizedLines -Lines $proofApply
-  Assert-Proof ($proofExit -eq 0) "0003 migration up --local exit 0"
+  if ($proofExit -ne 0) {
+    throw "HALT: migration up --local FAILED for 0003 (exit $proofExit)"
+  }
+  Write-Output "# proof: 0003 migration up --local exit 0"
 
   $registered = @((Invoke-IsolatedSql -Sql "SELECT version FROM supabase_migrations.schema_migrations WHERE version='20261013000003'") | Where-Object { $_ -and $_.Trim() -ne '' })
   Assert-Proof ($registered.Count -eq 1) "0003 registered in schema_migrations"
@@ -497,6 +566,8 @@ if ($MigrationProof -and -not $SkipApply) {
   Assert-Proof ($cancelNotNull -eq '2') "cancellation attempt_seq/attempt_token NOT NULL"
 
   # Imutabilidade RESTAURADA: um UPDATE direto no cancelamento é NEGADO.
+  # NOTA DELIBERADA: aqui um exit != 0 é o RESULTADO ESPERADO (probe negativo);
+  # NÃO é erro de harness, portanto NÃO se aplica o throw-fail-closed.
   $immUpdate = @(& docker exec $dbContainer psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "UPDATE public.product_1_1_copy_cancellations SET reason='x' WHERE campaign_id='$fixtureCampaign' AND operation_id='$fixtureOperation'" 2>&1)
   $immUpdateExit = $LASTEXITCODE
   $immUpdateText = ($immUpdate -join ' ')
@@ -506,7 +577,10 @@ if ($MigrationProof -and -not $SkipApply) {
   $reapply = @(& npx --no-install supabase --workdir $workdir migration up --local 2>&1)
   $reapplyExit = $LASTEXITCODE
   Write-SanitizedLines -Lines $reapply
-  Assert-Proof ($reapplyExit -eq 0) "idempotent re-run exit 0 (0003 skipped)"
+  if ($reapplyExit -ne 0) {
+    throw "HALT: idempotent re-run of migration up --local FAILED (exit $reapplyExit)"
+  }
+  Write-Output "# proof: idempotent re-run exit 0 (0003 skipped)"
 
   $regCount = Get-ProofScalar -Sql "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version='20261013000003'"
   Assert-Proof ($regCount -eq '1') "0003 registered exactly once after idempotent re-run"
