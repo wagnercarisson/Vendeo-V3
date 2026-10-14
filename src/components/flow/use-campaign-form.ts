@@ -15,6 +15,7 @@ import {
   validateOriginalBackground,
 } from "@/lib/product-1-1/selection-validation";
 import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
+import { registerCopyRecoveryDrivingHandle } from "@/lib/campaign/copy-recovery-driving";
 
 function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<{ file: File; dataUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -1025,6 +1026,24 @@ export function useCampaignForm(
         if (result.inputCorrections?.productName) {
           const correction = result.inputCorrections.productName;
           setFields((prev) => ({ ...prev, productName: correction.to }));
+        }
+
+        // F56.2b2a (B2.1 / Plano 04) — LIGAÇÃO iniciadora→resultado: a aba que
+        // INICIA a geração elegível registra o HANDLE DE CONDUÇÃO (memória do
+        // módulo, por aba) com a MESMA identidade transportada
+        // (`campaignId`/`operationId`). O handle NÃO carrega `requestToken` (cada
+        // NOVA tentativa gera o próprio token no ponto de emissão). Aditivo: não
+        // altera streaming/erros/desconhecido.
+        if (eligible) {
+          const handleOperationId =
+            lastOperationId ??
+            (typeof body.operationId === "string" ? body.operationId : null);
+          if (handleOperationId) {
+            registerCopyRecoveryDrivingHandle({
+              campaignId: result.campaignId,
+              operationId: handleOperationId,
+            });
+          }
         }
 
         // Navigate to campaign page — draft data preserved in sessionStorage

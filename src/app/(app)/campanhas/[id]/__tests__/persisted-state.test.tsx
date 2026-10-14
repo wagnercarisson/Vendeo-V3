@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 const mockPush = vi.fn();
 const mockRefresh = vi.fn();
@@ -22,7 +22,11 @@ vi.mock("@/components/campaign/campaign-approval-view", () => ({
 
 import CampaignPageClient from "../client";
 import { mapNewFlowCopy, mapNewFlowDisplayState } from "@/lib/campaign/display";
-import type { CampaignPageProps } from "@/lib/campaign/display";
+import type { CampaignPageProps, NewFlowCopyRecoveryView } from "@/lib/campaign/display";
+import {
+  registerCopyRecoveryDrivingHandle,
+  clearCopyRecoveryDrivingHandle,
+} from "@/lib/campaign/copy-recovery-driving";
 
 // ---------------------------------------------------------------------------
 // F56.2b1b — Plano 06: visão PERSISTIDA conectada à operação do novo fluxo.
@@ -410,5 +414,257 @@ describe("P3 — PAGE → CLIENT: cópia persistida mapeada e exibida", () => {
     for (const forbidden of FORBIDDEN) {
       expect(screen.queryByText(forbidden)).toBeNull();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F56.2b2a (B2.1 / Plano 04 — UI-SPEC §Surface): a superfície de RECUPERAÇÃO de
+// copy na campanha entregue. Os 7 estados, a CTA secundária condicional, os
+// contadores, a espera REPORTADA pelo servidor e a agenda da 2ª automática
+// SOMENTE na aba INICIADORA (handle de condução). Provider simulado; sem chamada
+// paga; a arte `delivered` permanece visível/baixável durante a recuperação.
+// ---------------------------------------------------------------------------
+
+const SCOPE_NOTICE =
+  "Isso gera apenas os textos. A imagem da campanha não muda e nenhum crédito adicional é usado.";
+const LIMIT_MESSAGE =
+  "Você atingiu o limite de tentativas. Fale com o suporte para continuar.";
+const CTA = "Gerar os textos novamente";
+
+function recoveryView(
+  overrides: Partial<NewFlowCopyRecoveryView> = {},
+): NewFlowCopyRecoveryView {
+  return {
+    state: "falha",
+    autoAttempts: 3,
+    manualAttempts: 0,
+    waitRemainingMs: 0,
+    canRetry: true,
+    ...overrides,
+  };
+}
+
+function fetchMock() {
+  return vi.mocked(globalThis.fetch);
+}
+
+function copyRecoveryCalls() {
+  return fetchMock().mock.calls.filter(([url]) =>
+    String(url).includes(`/api/campaign/${CAMPAIGN_ID}/copy-recovery`),
+  );
+}
+
+describe("CampaignPageClient — superfície de recuperação de copy (B2.1 / Plano 04)", () => {
+  beforeEach(() => {
+    clearCopyRecoveryDrivingHandle();
+    const mock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal("fetch", mock);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    clearCopyRecoveryDrivingHandle();
+  });
+
+  function renderRecovery(
+    view: NewFlowCopyRecoveryView | null,
+    extra: Partial<NonNullable<CampaignPageProps["newFlow"]>> = {},
+  ) {
+    return render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        newFlow={{
+          state: "delivered",
+          operationId: OPERATION_ID,
+          recovery: view,
+          ...extra,
+        }}
+      />,
+    );
+  }
+
+  it("`concluída` ⇒ remove TODA ação de recuperação e exibe o texto entregue", () => {
+    renderRecovery(recoveryView({ state: "concluida", canRetry: false }), {
+      copy: {
+        state: "delivered",
+        title: "Oferta",
+        caption: "Legenda nova da campanha",
+        hashtags: [],
+        ctaPost: "",
+      },
+    });
+
+    expect(screen.queryByText(CTA)).toBeNull();
+    expect(screen.queryByText("Copy da campanha")).toBeNull();
+    expect(screen.getByText("Legenda nova da campanha")).toBeInTheDocument();
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    expect(screen.getByText("Baixar Original")).toBeInTheDocument();
+  });
+
+  it("SEM tentativa (`recovery` null) ⇒ SEM painel e SEM CTA", () => {
+    renderRecovery(null);
+
+    expect(screen.queryByText("Copy da campanha")).toBeNull();
+    expect(screen.queryByText(CTA)).toBeNull();
+    expect(screen.queryByText(SCOPE_NOTICE)).toBeNull();
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+  });
+
+  it("`ativa` ⇒ spinner + CTA `disabled` + `aria-disabled`, arte visível", () => {
+    renderRecovery(recoveryView({ state: "ativa", canRetry: false, autoAttempts: 1 }));
+
+    expect(screen.getAllByText("Gerando os textos...").length).toBeGreaterThan(0);
+    expect(document.querySelector(".animate-spin")).toBeTruthy();
+    const button = screen.getByRole("button", { name: CTA });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByAltText("Produto Teste")).toBeInTheDocument();
+    expect(screen.getByText("Baixar Original")).toBeInTheDocument();
+  });
+
+  it("`aguardando` NA ABA DIRIGENTE ⇒ contagem reportada + disabled + emite a 2ª automática com token NOVO ao fim", async () => {
+    registerCopyRecoveryDrivingHandle({
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+    vi.useFakeTimers();
+    renderRecovery(
+      recoveryView({ state: "aguardando", autoAttempts: 1, waitRemainingMs: 5000, canRetry: false }),
+    );
+
+    // A contagem REPORTADA pelo servidor é exibida (5s) e o botão está disabled.
+    expect(screen.getByText(/Nova tentativa em 5s/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: CTA })).toBeDisabled();
+    expect(copyRecoveryCalls()).toHaveLength(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    const calls = copyRecoveryCalls();
+    expect(calls).toHaveLength(1);
+    const body = JSON.parse(String((calls[0][1] as RequestInit).body));
+    expect(body.mode).toBe("auto_retry");
+    expect(body.operationId).toBe(OPERATION_ID);
+    expect(typeof body.requestToken).toBe("string");
+    expect(body.requestToken.length).toBeGreaterThan(0);
+  });
+
+  it("`aguardando` NA ABA NÃO-DIRIGENTE (sem handle) ⇒ apenas ACOMPANHA (não emite)", async () => {
+    // SEM `registerCopyRecoveryDrivingHandle` ⇒ `isDriving === false` (reload/outra aba).
+    vi.useFakeTimers();
+    renderRecovery(
+      recoveryView({ state: "aguardando", autoAttempts: 1, waitRemainingMs: 5000, canRetry: false }),
+    );
+
+    expect(screen.getByText(/Nova tentativa em 5s/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: CTA })).toBeDisabled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    expect(copyRecoveryCalls()).toHaveLength(0);
+  });
+
+  it("`indeterminada` ⇒ sem spinner, CTA `disabled`, `Verificar novamente` (query-only) sem nova chamada", () => {
+    renderRecovery(recoveryView({ state: "indeterminada", canRetry: false }));
+
+    expect(
+      screen.getByText("Não foi possível verificar agora. Tente novamente em instantes."),
+    ).toBeInTheDocument();
+    expect(document.querySelector(".animate-spin")).toBeNull();
+    const button = screen.getByRole("button", { name: CTA });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Verificar novamente" }));
+
+    // Re-verificação é query-only: nenhuma chamada ao endpoint de recuperação.
+    expect(copyRecoveryCalls()).toHaveLength(0);
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("`falha`/`falha definitiva`/`interrompida` ⇒ CTA condicional; `interrompida` SEM spinner", () => {
+    const { unmount: u1 } = renderRecovery(
+      recoveryView({ state: "falha", autoAttempts: 3, manualAttempts: 0, canRetry: true }),
+    );
+    expect(screen.getByText("Não conseguimos gerar os textos desta campanha.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: CTA })).toBeEnabled();
+    u1();
+
+    const { unmount: u2 } = renderRecovery(
+      recoveryView({
+        state: "falha_definitiva",
+        canRetry: true,
+        manualAttempts: 0,
+      }),
+      { supportEmail: "suporte@vendeo.test" },
+    );
+    expect(screen.getByText("Não foi possível gerar os textos automaticamente.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: CTA })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Falar com o suporte" })).toBeInTheDocument();
+    u2();
+
+    renderRecovery(recoveryView({ state: "interrompida", canRetry: true, manualAttempts: 0 }));
+    expect(screen.getByText("A recuperação foi interrompida. Você pode tentar novamente.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: CTA })).toBeEnabled();
+    // `interrompida` NUNCA usa spinner.
+    expect(document.querySelector(".animate-spin")).toBeNull();
+  });
+
+  it("contadores em JetBrains Mono + aviso de escopo presentes", () => {
+    renderRecovery(recoveryView({ state: "falha", autoAttempts: 3, manualAttempts: 1, canRetry: true }));
+
+    expect(screen.getByText("Tentativas automáticas: 3 de 3")).toBeInTheDocument();
+    expect(screen.getByText("Tentativas manuais: 1 de 3")).toBeInTheDocument();
+    const scope = screen.getByText(SCOPE_NOTICE);
+    expect(scope).toBeInTheDocument();
+    expect(scope.className).toContain("font-body");
+  });
+
+  it("limite manual atingido ⇒ CTA `disabled` + mensagem de suporte", () => {
+    renderRecovery(
+      recoveryView({ state: "falha", manualAttempts: 3, canRetry: false }),
+      { supportEmail: "suporte@vendeo.test" },
+    );
+
+    const button = screen.getByRole("button", { name: CTA });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText(LIMIT_MESSAGE)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Falar com o suporte" })).toBeInTheDocument();
+  });
+
+  it("clique manual ⇒ UMA requisição `manual`; dois cliques ⇒ tokens DISTINTOS (por acionamento)", async () => {
+    renderRecovery(recoveryView({ state: "interrompida", canRetry: true, manualAttempts: 0 }));
+
+    const button = screen.getByRole("button", { name: CTA });
+    fireEvent.click(button);
+    await waitFor(() => expect(copyRecoveryCalls()).toHaveLength(1));
+    fireEvent.click(button);
+    await waitFor(() => expect(copyRecoveryCalls()).toHaveLength(2));
+
+    const bodies = copyRecoveryCalls().map(([, init]) =>
+      JSON.parse(String((init as RequestInit).body)),
+    );
+    expect(bodies[0].mode).toBe("manual");
+    expect(bodies[1].mode).toBe("manual");
+    expect(bodies[0].operationId).toBe(OPERATION_ID);
+    expect(bodies[0].requestToken).not.toBe(bodies[1].requestToken);
+  });
+
+  it("erro de rede na ação manual ⇒ feedback SEGURO (sem terminal falso)", async () => {
+    fetchMock().mockResolvedValue({ ok: false, json: async () => ({}) });
+    renderRecovery(recoveryView({ state: "interrompida", canRetry: true, manualAttempts: 0 }));
+
+    fireEvent.click(screen.getByRole("button", { name: CTA }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Não foi possível tentar novamente agora. Tente de novo em instantes."),
+      ).toBeInTheDocument(),
+    );
   });
 });

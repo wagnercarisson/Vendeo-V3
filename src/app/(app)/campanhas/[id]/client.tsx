@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Pencil,
@@ -20,6 +20,21 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import CampaignApprovalView from "@/components/campaign/campaign-approval-view";
 import { UnknownResultPanel } from "@/components/flow/unknown-result-panel";
+import { CopyRecoveryPanel } from "@/components/flow/copy-recovery-panel";
+import { isDrivingCopyRecovery } from "@/lib/campaign/copy-recovery-driving";
+
+/**
+ * F56.2b2a (B2.1 / Plano 04) — `requestToken` POR ACIONAMENTO (critério 27):
+ * cada NOVA tentativa (automática 2ª/3ª ou clique manual) gera um token PRÓPRIO;
+ * o reenvio do MESMO acionamento é o único que reutiliza (não implementado aqui —
+ * um clique = um acionamento).
+ */
+function newRequestToken(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 export default function CampaignPageClient(props: CampaignPageProps) {
   const router = useRouter();
@@ -447,7 +462,103 @@ function RegeneratingView() {
 // completos (título/legenda/hashtags/CTA) são exibidos. Falha/cancelamento da copy
 // ⇒ feedback SEGURO (âmbar) — nunca sucesso falso, nunca bloqueia a arte e SEM
 // ação de retry ("Gerar novamente"). NÃO inicia geração/cobrança.
+//
+// F56.2b2a (B2.1 / Plano 04) — a superfície de RECUPERAÇÃO de copy é composta
+// sobre a MESMA entrega: o `CopyRecoveryPanel` é renderizado SOMENTE quando a view
+// mapeada é não-nula E a copy está pendente/falha (a `concluída` remove a
+// recuperação e o texto entregue continua no `NewFlowCopyPanel`). O poll de 5s
+// segue preservado (apenas REFLETE o estado do servidor — não retoma/controla).
 function NewFlowDeliveredView(props: CampaignPageProps) {
+  const router = useRouter();
+  const operationId = props.newFlow?.operationId ?? null;
+  const recovery = props.newFlow?.recovery ?? null;
+
+  // `isDriving` derivado do HANDLE DE CONDUÇÃO lido no mount: `true` SOMENTE na
+  // aba INICIADORA, DENTRO do ciclo da geração daquela aba; `reload`/outra aba
+  // (SEM handle) ⇒ `false` ⇒ apenas ACOMPANHA (retomada MANUAL).
+  const isDriving = useMemo(
+    () => isDrivingCopyRecovery(props.campaignId, operationId),
+    [props.campaignId, operationId],
+  );
+
+  const [remainingMs, setRemainingMs] = useState(recovery?.waitRemainingMs ?? 0);
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Guarda de NÃO-duplicação do acionamento automático: dispara UMA vez por
+  // episódio de `aguardando` (re-armado quando o estado deixa de aguardar).
+  const autoEmittedRef = useRef(false);
+
+  // A espera REPORTADA pelo servidor é a AUTORIDADE — re-sincroniza no poll.
+  useEffect(() => {
+    setRemainingMs(recovery?.waitRemainingMs ?? 0);
+  }, [recovery?.state, recovery?.waitRemainingMs]);
+
+  // Contador local apenas REFLETE o que o servidor reportou (não infere espera).
+  useEffect(() => {
+    if (recovery?.state !== "aguardando") return;
+    const id = setInterval(() => {
+      setRemainingMs((prev) => (prev > 0 ? Math.max(0, prev - 1000) : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [recovery?.state]);
+
+  const emitAttempt = useCallback(
+    async (mode: "manual" | "auto_retry") => {
+      if (!operationId) return;
+      try {
+        const res = await fetch(
+          `/api/campaign/${props.campaignId}/copy-recovery`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode,
+              operationId,
+              requestToken: newRequestToken(),
+            }),
+          },
+        );
+        if (!res.ok) {
+          // HTTP NÃO-OK ⇒ feedback SEGURO (sem terminal falso nem motivo interno).
+          if (mode === "manual") {
+            setActionError(
+              "Não foi possível tentar novamente agora. Tente de novo em instantes.",
+            );
+          }
+          return;
+        }
+        setActionError(null);
+        router.refresh();
+      } catch {
+        if (mode === "manual") {
+          setActionError(
+            "Não foi possível tentar novamente agora. Tente de novo em instantes.",
+          );
+        }
+      }
+    },
+    [operationId, props.campaignId, router],
+  );
+
+  // Re-arma a guarda quando o estado deixa de aguardar (o poll reflete o novo
+  // estado do servidor — `ativa`/`concluída`/etc).
+  useEffect(() => {
+    if (recovery?.state !== "aguardando") autoEmittedRef.current = false;
+  }, [recovery?.state]);
+
+  // AGENDA da próxima AUTOMÁTICA: SOMENTE a aba INICIADORA (`isDriving === true`)
+  // emite `mode: "auto_retry"` ao fim da contagem REPORTADA, com `requestToken`
+  // NOVO por acionamento. `reload`/outra aba apenas ACOMPANHA.
+  useEffect(() => {
+    if (recovery?.state !== "aguardando") return;
+    if (!isDriving) return;
+    if (remainingMs > 0) return;
+    if (autoEmittedRef.current) return;
+    autoEmittedRef.current = true;
+    void emitAttempt("auto_retry");
+  }, [recovery?.state, remainingMs, isDriving, emitAttempt]);
+
+  const showRecovery = recovery !== null && recovery.state !== "concluida";
+
   return (
     <div className="space-y-6">
       {props.imageUrl && (
@@ -462,7 +573,31 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
         Criada em {new Date(props.createdAt).toLocaleDateString("pt-BR")}
       </p>
 
-      <NewFlowCopyPanel copy={props.newFlow?.copy ?? null} />
+      {showRecovery && recovery ? (
+        <>
+          <CopyRecoveryPanel
+            state={recovery.state}
+            autoAttempts={recovery.autoAttempts}
+            manualAttempts={recovery.manualAttempts}
+            waitRemainingMs={
+              recovery.state === "aguardando" ? remainingMs : recovery.waitRemainingMs
+            }
+            canRetry={recovery.canRetry}
+            onRecover={() => {
+              void emitAttempt("manual");
+            }}
+            onVerify={() => router.refresh()}
+            supportEmail={props.newFlow?.supportEmail}
+          />
+          {actionError && (
+            <p role="alert" className="text-sm text-accent-red font-body">
+              {actionError}
+            </p>
+          )}
+        </>
+      ) : (
+        <NewFlowCopyPanel copy={props.newFlow?.copy ?? null} />
+      )}
 
       <Button
         variant="primary"
