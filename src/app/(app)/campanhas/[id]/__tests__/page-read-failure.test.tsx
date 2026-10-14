@@ -78,13 +78,19 @@ vi.mock("@/lib/product-1-1/artifact/artifact-store", () => ({
 
 // Plano 08 (correção P3): a página lê a copy do NOVO FLUXO POR OPERAÇÃO
 // (`readCopyDelivery`/`readCopyCancellation`) — somente leitura.
-const { mockReadCopyDelivery, mockReadCopyCancellation } = vi.hoisted(() => ({
-  mockReadCopyDelivery: vi.fn(),
-  mockReadCopyCancellation: vi.fn(),
-}));
+// Plano 04 (F56.2b2a): a página também lê o SUMÁRIO read-only da recuperação
+// (`readCopyRecoverySummary`). O factory DEVE exportá-lo — sem isso, o
+// `try/catch` de fail-closed MASCARARIA a ausência (cobertura ilusória).
+const { mockReadCopyDelivery, mockReadCopyCancellation, mockReadCopyRecoverySummary } =
+  vi.hoisted(() => ({
+    mockReadCopyDelivery: vi.fn(),
+    mockReadCopyCancellation: vi.fn(),
+    mockReadCopyRecoverySummary: vi.fn(),
+  }));
 vi.mock("@/lib/product-1-1/copy/copy-state", () => ({
   readCopyDelivery: mockReadCopyDelivery,
   readCopyCancellation: mockReadCopyCancellation,
+  readCopyRecoverySummary: mockReadCopyRecoverySummary,
 }));
 
 // O client é mockado: a página devolve `<CampaignPageClient {...props} />` e o
@@ -130,11 +136,21 @@ function campaignRecord(overrides: Record<string, unknown> = {}) {
 }
 
 async function renderPage(): Promise<{
-  props: { newFlow?: { state: string; copy?: unknown } };
+  props: {
+    newFlow?: {
+      state: string;
+      copy?: unknown;
+      recovery?: unknown;
+    };
+  };
 }> {
   return (await CampaignDetailPage({
     params: Promise.resolve({ id: CAMPAIGN_ID }),
-  })) as unknown as { props: { newFlow?: { state: string; copy?: unknown } } };
+  })) as unknown as {
+    props: {
+      newFlow?: { state: string; copy?: unknown; recovery?: unknown };
+    };
+  };
 }
 
 beforeEach(() => {
@@ -145,6 +161,17 @@ beforeEach(() => {
   mockGenerateSignedPreviewUrl.mockResolvedValue("https://signed.example/x.jpg");
   mockReadCopyDelivery.mockResolvedValue(null);
   mockReadCopyCancellation.mockResolvedValue(null);
+  // Plano 04 — SEM tentativa por padrão (sumário vazio) ⇒ SEM superfície de
+  // recuperação (o mapeamento devolve `null`).
+  mockReadCopyRecoverySummary.mockResolvedValue({
+    attemptSeq: 0,
+    state: null,
+    attemptActive: false,
+    waitRemainingMs: 0,
+    autoAttempts: 0,
+    manualAttempts: 0,
+    definitive: false,
+  });
 });
 
 describe("campanhas/[id]/page — classificação PERSISTIDA do fluxo (correção)", () => {
@@ -289,5 +316,67 @@ describe("campanhas/[id]/page — copy do NOVO fluxo POR OPERAÇÃO (P3)", () =>
 
     expect(el.props.newFlow?.copy ?? null).toBeNull();
     expect(el.props.newFlow?.state).toBe("delivered");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F56.2b2a (Plano 04): a página lê o SUMÁRIO read-only da recuperação
+// (`readCopyRecoverySummary`) DENTRO do bloco `delivered` e mapeia via
+// `mapNewFlowCopyRecovery`. A cobertura NÃO pode depender do `try/catch`: um caso
+// prova a leitura REAL refletida em `props.newFlow.recovery`; outro prova o
+// fail-closed `indeterminada` quando a leitura REJEITA.
+// ---------------------------------------------------------------------------
+
+describe("campanhas/[id]/page — sumário da recuperação de copy (B2.1 / Plano 04)", () => {
+  it("SEM tentativa (attemptSeq 0/state null) ⇒ SEM superfície (`recovery` null)", async () => {
+    deliveredCampaign();
+
+    const el = await renderPage();
+
+    expect(el.props.newFlow?.state).toBe("delivered");
+    expect(el.props.newFlow?.recovery ?? null).toBeNull();
+    // A leitura real do sumário acontece (por operação) — não é mascarada.
+    expect(mockReadCopyRecoverySummary).toHaveBeenCalledWith(expect.anything(), {
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+  });
+
+  it("tentativa com espera REPORTADA pelo servidor ⇒ `aguardando` refletindo `waitRemainingMs`/contadores", async () => {
+    deliveredCampaign();
+    mockReadCopyRecoverySummary.mockResolvedValue({
+      attemptSeq: 1,
+      state: "failed",
+      attemptActive: false,
+      waitRemainingMs: 5000,
+      autoAttempts: 1,
+      manualAttempts: 0,
+      definitive: false,
+    });
+
+    const el = await renderPage();
+
+    expect(el.props.newFlow?.recovery).toEqual({
+      state: "aguardando",
+      autoAttempts: 1,
+      manualAttempts: 0,
+      waitRemainingMs: 5000,
+      canRetry: false,
+    });
+  });
+
+  it("leitura do sumário REJEITA ⇒ `indeterminada` (arte exibida, `canRetry` false)", async () => {
+    deliveredCampaign();
+    mockReadCopyRecoverySummary.mockRejectedValue(
+      new Error("product_1_1_copy_state_attempts_read_failed"),
+    );
+
+    const el = await renderPage();
+
+    expect(el.props.newFlow?.state).toBe("delivered");
+    expect(el.props.newFlow?.recovery).toMatchObject({
+      state: "indeterminada",
+      canRetry: false,
+    });
   });
 });

@@ -15,12 +15,18 @@ import {
   getActiveCandidateArtVersion,
   mapNewFlowDisplayState,
   mapNewFlowCopy,
+  mapNewFlowCopyRecovery,
+} from "@/lib/campaign/display";
+import type {
+  NewFlowCopyRecoveryRecord,
+  NewFlowCopyRecoveryView,
 } from "@/lib/campaign/display";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
 import {
   readCopyDelivery,
   readCopyCancellation,
+  readCopyRecoverySummary,
 } from "@/lib/product-1-1/copy/copy-state";
 import CampaignPageClient from "./client";
 
@@ -91,6 +97,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 
   if (newFlowState && newFlowOperation) {
     let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
+    let newFlowRecovery: NewFlowCopyRecoveryView | null = null;
     if (newFlowState === "delivered") {
       try {
         const artifactStore = new ProductOneToOneArtifactStore();
@@ -110,8 +117,9 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       // legados de `campaigns`) e exibida na campanha. A leitura é SOMENTE
       // leitura: NUNCA inicia geração/cobrança. Falha de leitura ⇒ sem informação
       // de copy (a arte continua exibida; nenhuma promessa falsa).
+      let delivery: Awaited<ReturnType<typeof readCopyDelivery>> = null;
       try {
-        const delivery = await readCopyDelivery(supabaseAdmin, {
+        delivery = await readCopyDelivery(supabaseAdmin, {
           campaignId: id,
           operationId: newFlowOperation.operationId,
         });
@@ -124,6 +132,33 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         newFlowCopy = mapNewFlowCopy(delivery, cancellation !== null);
       } catch {
         newFlowCopy = null;
+        delivery = null;
+      }
+
+      // F56.2b2a (B2.1 / Plano 04) — SUMÁRIO read-only da RECUPERAÇÃO de copy,
+      // lido pelo módulo JÁ AUTORIZADO da página (`copy/copy-state`), AO LADO das
+      // leituras acima e DENTRO do bloco `delivered` (o gate permanece). A leitura
+      // é SOMENTE leitura (nunca inicia geração/cobrança). Fail-closed: leitura
+      // indisponível ⇒ `indeterminada` (não comprova ausência de tentativa, a arte
+      // continua exibida, nenhuma promessa falsa). Sem tentativa
+      // (`attemptSeq === 0`/`state === null`) ⇒ SEM superfície de recuperação.
+      try {
+        const summary = await readCopyRecoverySummary(supabaseAdmin, {
+          campaignId: id,
+          operationId: newFlowOperation.operationId,
+        });
+        const recoveryRecord: NewFlowCopyRecoveryRecord = {
+          state: summary.state,
+          attemptSeq: summary.attemptSeq,
+          attemptActive: summary.attemptActive,
+          waitRemainingMs: summary.waitRemainingMs,
+          autoAttempts: summary.autoAttempts,
+          manualAttempts: summary.manualAttempts,
+          definitive: summary.definitive,
+        };
+        newFlowRecovery = mapNewFlowCopyRecovery(recoveryRecord, delivery);
+      } catch {
+        newFlowRecovery = mapNewFlowCopyRecovery(null, delivery);
       }
     }
     props.newFlow = {
@@ -132,6 +167,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       operationId: newFlowOperation.operationId,
       supportEmail: process.env.SUPPORT_EMAIL,
       copy: newFlowCopy,
+      recovery: newFlowRecovery,
     };
     return <CampaignPageClient {...props} />;
   }

@@ -52,6 +52,14 @@ export interface CampaignPageProps {
      * os textos completos; `failed`/`canceled` mostram feedback seguro (âmbar).
      */
     copy?: NewFlowCopyView | null;
+    /**
+     * F56.2b2a (B2.1 / Plano 04) — superfície de RECUPERAÇÃO de copy derivada do
+     * SUMÁRIO read-only (`readCopyRecoverySummary`) e mapeada por
+     * `mapNewFlowCopyRecovery`. `null` ⇒ SEM superfície (sem tentativa:
+     * `attemptSeq === 0`/`state === null`) — nenhum painel/CTA. Leitura
+     * indisponível ⇒ `indeterminada` (nunca autoriza nova chamada).
+     */
+    recovery?: NewFlowCopyRecoveryView | null;
   };
   /** F37.1 (D2/decisão 3): estado de aprovação + candidata ativa (pending/regenerating). */
   approval?: {
@@ -170,6 +178,159 @@ export function mapNewFlowCopy(
   }
 
   return { state: "pending", caption: "", hashtags: [], ctaPost: "" };
+}
+
+/**
+ * F56.2b2a (B2.1 / Plano 04) — estado LOCAL da recuperação de copy. A união é
+ * declarada AQUI (LOCAL): `display.ts` NÃO importa `product-1-1` (G-NA); a página
+ * passa o registro estrutural lido do sumário (`readCopyRecoverySummary`).
+ *
+ * Precedência OBRIGATÓRIA (UI-SPEC §Surface): `concluída` > `ativa`/`aguardando` >
+ * `indeterminada` > `falha definitiva` > `falha` > `interrompida`.
+ */
+export type NewFlowCopyRecoveryState =
+  | "concluida"
+  | "ativa"
+  | "aguardando"
+  | "indeterminada"
+  | "falha_definitiva"
+  | "falha"
+  | "interrompida";
+
+/** Visão exibida da superfície de recuperação (sem importar `product-1-1`). */
+export interface NewFlowCopyRecoveryView {
+  readonly state: NewFlowCopyRecoveryState;
+  /** Contador de tentativas AUTOMÁTICAS (0..3). */
+  readonly autoAttempts: number;
+  /** Contador de tentativas MANUAIS (0..3) — limite INDEPENDENTE das automáticas. */
+  readonly manualAttempts: number;
+  /** Espera REPORTADA pelo servidor (ms) antes da próxima automática. */
+  readonly waitRemainingMs: number;
+  /** Habilita o CTA manual (estado permite + há manual restante). */
+  readonly canRetry: boolean;
+}
+
+/**
+ * Registro ESTRUTURAL da recuperação (lido do sumário `readCopyRecoverySummary`
+ * — Plano 01). `state` é NULLABLE: alinhado ao sumário quando NÃO há tentativa.
+ */
+export interface NewFlowCopyRecoveryRecord {
+  readonly state: "pending" | "completed" | "failed" | null;
+  readonly attemptSeq: number;
+  /** Tentativa ATIVA confirmada pelo SERVIDOR (LEASE vigente). */
+  readonly attemptActive: boolean;
+  /** Espera REPORTADA pelo servidor (ms) — a UI NÃO infere por tempo local. */
+  readonly waitRemainingMs: number;
+  readonly autoAttempts: number;
+  readonly manualAttempts: number;
+  /** Falha DEFINITIVA (configuração/permissão) — saída antecipada, sem esperas. */
+  readonly definitive: boolean;
+}
+
+/** Limite de tentativas automáticas e manuais (teto 3 + 3 = 6 por entrega). */
+const COPY_RECOVERY_AUTO_LIMIT = 3 as const;
+const COPY_RECOVERY_MANUAL_LIMIT = 3 as const;
+
+function clampAttempts(value: number, limit: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.min(limit, Math.floor(value));
+}
+
+function copyRecoveryView(
+  state: NewFlowCopyRecoveryState,
+  autoAttempts: number,
+  manualAttempts: number,
+  waitRemainingMs: number,
+  canRetry: boolean,
+): NewFlowCopyRecoveryView {
+  return { state, autoAttempts, manualAttempts, waitRemainingMs, canRetry };
+}
+
+/**
+ * Mapeia o sumário persistido da recuperação (+ a entrega da copy) para a visão
+ * exibida, aplicando a PRECEDÊNCIA OBRIGATÓRIA da UI-SPEC:
+ *
+ *   `concluída` > `ativa`/`aguardando` > `indeterminada` > `falha definitiva` >
+ *   `falha` > `interrompida`.
+ *
+ * Regras:
+ *  - `record === null` (LEITURA INDISPONÍVEL / fail-closed) ⇒ `indeterminada`
+ *    (`canRetry = false`) — não comprova ausência de tentativa;
+ *  - `attemptSeq === 0` OU `state === null` (SEM tentativa) ⇒ `null` = SEM
+ *    superfície (nenhum painel, NENHUM CTA; `canRetry = false`) — distinto de
+ *    `indeterminada` (leitura INDISPONÍVEL);
+ *  - copy entregue (`completed` — no registro ou na entrega) ⇒ `concluida`
+ *    (sucesso ABSOLUTO; `canRetry = false`);
+ *  - `attemptActive === true` (LEASE do servidor) ⇒ `ativa` (`canRetry = false`);
+ *  - `failed` transitório + `waitRemainingMs > 0` + automáticas restantes ⇒
+ *    `aguardando` (`canRetry = false`);
+ *  - `definitive === true` ⇒ `falha_definitiva` (`canRetry = manual restante`);
+ *  - `failed` com automáticas esgotadas ⇒ `falha` (`canRetry = manual restante`);
+ *  - `pending` SEM lease vigente ⇒ `interrompida` (`canRetry = manual restante`);
+ *  - demais ⇒ `interrompida` (sem tentativa ativa confirmada ⇒ pode tentar).
+ *
+ * `null`/indisponibilidade NUNCA autoriza nova tentativa (autorização server-side).
+ */
+export function mapNewFlowCopyRecovery(
+  record: NewFlowCopyRecoveryRecord | null,
+  delivery: NewFlowCopyRecord | null,
+): NewFlowCopyRecoveryView | null {
+  // Leitura INDISPONÍVEL (fail-closed) ⇒ indeterminada; NÃO habilita nova chamada.
+  if (record === null) {
+    return copyRecoveryView("indeterminada", 0, 0, 0, false);
+  }
+
+  // SEM tentativa (sumário sem linhas) ⇒ SEM superfície de recuperação.
+  if (record.attemptSeq === 0 || record.state === null) {
+    return null;
+  }
+
+  const autoAttempts = clampAttempts(record.autoAttempts, COPY_RECOVERY_AUTO_LIMIT);
+  const manualAttempts = clampAttempts(record.manualAttempts, COPY_RECOVERY_MANUAL_LIMIT);
+  const manualAvailable = manualAttempts < COPY_RECOVERY_MANUAL_LIMIT;
+
+  // 1. `concluída` — sucesso ABSOLUTO (remove toda ação de recuperação). A copy
+  // entregue (registro `completed` OU entrega entregável) prevalece sobre falhas.
+  if (record.state === "completed" || delivery?.state === "completed") {
+    return copyRecoveryView("concluida", autoAttempts, manualAttempts, 0, false);
+  }
+
+  // 2. `ativa` — tentativa ATIVA confirmada pelo SERVIDOR (LEASE vigente).
+  if (record.attemptActive === true) {
+    return copyRecoveryView("ativa", autoAttempts, manualAttempts, record.waitRemainingMs, false);
+  }
+
+  // 3. `aguardando` — falha transitória com espera REPORTADA pelo servidor e
+  //    automáticas restantes (a UI apenas reflete o restante; não infere espera).
+  if (
+    record.state === "failed" &&
+    record.definitive !== true &&
+    record.waitRemainingMs > 0 &&
+    autoAttempts < COPY_RECOVERY_AUTO_LIMIT
+  ) {
+    return copyRecoveryView(
+      "aguardando",
+      autoAttempts,
+      manualAttempts,
+      record.waitRemainingMs,
+      false,
+    );
+  }
+
+  // 4. `falha definitiva` — saída antecipada (sem esperas nem nova automática).
+  if (record.definitive === true) {
+    return copyRecoveryView("falha_definitiva", autoAttempts, manualAttempts, 0, manualAvailable);
+  }
+
+  // 5. `falha` — automáticas esgotadas.
+  if (record.state === "failed" && autoAttempts >= COPY_RECOVERY_AUTO_LIMIT) {
+    return copyRecoveryView("falha", autoAttempts, manualAttempts, 0, manualAvailable);
+  }
+
+  // 6. `interrompida` — SEM tentativa ativa confirmada (`pending` sem lease, ou
+  //    falha transitória sem espera agendada): pode tentar (manual restante).
+  //    NUNCA spinner.
+  return copyRecoveryView("interrompida", autoAttempts, manualAttempts, 0, manualAvailable);
 }
 
 export async function getCampaignForDisplay(id: string): Promise<CampaignRecord | null> {
