@@ -25,6 +25,11 @@ import {
   type CopyStateTransitionResult,
   type CopyCommit,
 } from "../copy/copy-state";
+import {
+  ACQUIRE_COPY_ATTEMPT_RPC,
+  ProductOneToOneCopyAcquisitionClient,
+  type CopyAcquisitionResult,
+} from "../copy/copy-acquisition-client";
 
 // ---------------------------------------------------------------------------
 // F56.2b2a — B2.1 / Plano 01: identidade POR TENTATIVA + posse/lease +
@@ -50,6 +55,27 @@ const ACTIVE_SQL = migrationSql
   .split(/\r?\n/)
   .filter((line) => !line.trimStart().startsWith("--"))
   .join("\n");
+
+// Plano 06 — aquisição atômica + backfill transacional (SQL estático).
+const stripSqlComments = (sql: string): string =>
+  sql
+    .split(/\r?\n/)
+    .filter((line) => !line.trimStart().startsWith("--"))
+    .join("\n");
+
+const ACQUIRE_MIGRATION_FILE = "20261013000002_f56_2b2a_copy_acquire_attempt.sql";
+const acquireMigrationSql = readFileSync(
+  path.join(MIGRATIONS_DIR, ACQUIRE_MIGRATION_FILE),
+  "utf8",
+);
+const ACQUIRE_ACTIVE_SQL = stripSqlComments(acquireMigrationSql);
+
+const BACKFILL_MIGRATION_FILE = "20261013000003_f56_2b2a_copy_state_backfill.sql";
+const backfillMigrationSql = readFileSync(
+  path.join(MIGRATIONS_DIR, BACKFILL_MIGRATION_FILE),
+  "utf8",
+);
+const BACKFILL_ACTIVE_SQL = stripSqlComments(backfillMigrationSql);
 
 const COPY_STATE_FILE = path.resolve(
   process.cwd(),
@@ -1225,5 +1251,289 @@ describe("B2.1 — drenador IDENTIFICADO que CLASSIFICA a falha server-side", ()
       fixedEnvelopeStore({ applied: false, outcome: "rejected", state: "completed" }),
     );
     expect(result).toEqual({ state: "completed", canceled: false });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (c) F56.2b2a — B2.1 / Plano 06: AQUISIÇÃO ATÔMICA (SQL estático) + BACKFILL
+//     transacional (SQL estático) + comportamento do cliente (RPC SIMULADA).
+// ---------------------------------------------------------------------------
+
+describe("B2.1 — Plano 06: migration de aquisição atômica (SQL estático)", () => {
+  it("declara LOCAL-ONLY e a RPC SECURITY DEFINER sob a trava compartilhada", () => {
+    expect(acquireMigrationSql).toContain("LOCAL-ONLY");
+    expect(acquireMigrationSql).toContain("migration up --local");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("product_1_1_acquire_copy_attempt");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("FOR UPDATE");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("pg_advisory_xact_lock");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("product_1_1_campaign_credit_operations");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("p_request_token");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("SECURITY DEFINER");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("SET search_path = ''");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("gen_random_uuid()");
+  });
+
+  it("ordem FIXA da trava compartilhada: advisory → C4 → copy_state FOR UPDATE", () => {
+    const advisoryIdx = ACQUIRE_ACTIVE_SQL.indexOf(
+      "pg_advisory_xact_lock(hashtextextended(p_campaign_id::text || ':' || p_operation_id::text, 0))",
+    );
+    const creditIdx = ACQUIRE_ACTIVE_SQL.indexOf(
+      "PERFORM 1 FROM public.product_1_1_campaign_credit_operations",
+    );
+    const copyLockIdx = ACQUIRE_ACTIVE_SQL.search(
+      /PERFORM 1 FROM public\.product_1_1_copy_state[\s\S]{0,160}?FOR UPDATE/,
+    );
+    expect(advisoryIdx).toBeGreaterThanOrEqual(0);
+    expect(creditIdx).toBeGreaterThanOrEqual(0);
+    expect(copyLockIdx).toBeGreaterThanOrEqual(0);
+    expect(advisoryIdx).toBeLessThan(creditIdx);
+    expect(creditIdx).toBeLessThan(copyLockIdx);
+  });
+
+  it("devolve os motivos de recusa + marcadores de expiração/lease (terminais separados)", () => {
+    for (const reason of [
+      "attempt_in_progress",
+      "attempt_already_completed",
+      "wait_not_elapsed",
+      "attempt_limit_reached",
+      "already_acquired",
+      "automatic_closed",
+    ]) {
+      expect(ACQUIRE_ACTIVE_SQL).toContain(`'${reason}'`);
+    }
+    expect(ACQUIRE_ACTIVE_SQL).toContain("staleAttempt");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("{recovery,staleAttempt}");
+    expect(ACQUIRE_ACTIVE_SQL).toContain("lease_at");
+    // Terminais SEPARADOS: a aquisição NÃO devolve `operation_terminal`.
+    expect(ACQUIRE_ACTIVE_SQL).not.toContain("'operation_terminal'");
+  });
+
+  it("RPC-only A2: GRANT EXECUTE apenas para service_role", () => {
+    expect(ACQUIRE_ACTIVE_SQL).toContain(
+      "GRANT EXECUTE ON FUNCTION public.product_1_1_acquire_copy_attempt(UUID, UUID, TEXT, UUID)",
+    );
+    expect(ACQUIRE_ACTIVE_SQL).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.product_1_1_acquire_copy_attempt\(UUID, UUID, TEXT, UUID\)[\s\S]*?TO service_role;/,
+    );
+  });
+});
+
+describe("B2.1 — Plano 06: backfill transacional (SQL estático)", () => {
+  it("é transacional e restaura a imutabilidade do cancelamento", () => {
+    expect(backfillMigrationSql).toMatch(/\bbegin;/i);
+    expect(backfillMigrationSql).toMatch(/\bcommit;/i);
+    expect(BACKFILL_ACTIVE_SQL).toContain(
+      "DISABLE TRIGGER trg_product_1_1_copy_cancellations_immutable",
+    );
+    expect(BACKFILL_ACTIVE_SQL).toContain(
+      "ENABLE TRIGGER trg_product_1_1_copy_cancellations_immutable",
+    );
+  });
+
+  it("atribui a tentativa histórica ao contador AUTOMÁTICO (aditivo, sem apagar)", () => {
+    expect(BACKFILL_ACTIVE_SQL).toContain(
+      "jsonb_build_object('recovery', jsonb_build_object('kind', 'auto'))",
+    );
+    // Nenhum DELETE em massa do histórico.
+    expect(BACKFILL_ACTIVE_SQL).not.toMatch(/\bDELETE\s+FROM\b/i);
+  });
+
+  it("vincula o token do cancelamento ao token do estado da MESMA tentativa", () => {
+    expect(BACKFILL_ACTIVE_SQL).toContain("gen_random_uuid() AS token");
+    expect(BACKFILL_ACTIVE_SQL).toMatch(
+      /FROM public\.product_1_1_copy_state cs[\s\S]*?cs\.campaign_id = cc\.campaign_id[\s\S]*?cs\.operation_id = cc\.operation_id/,
+    );
+  });
+
+  it("troca a UNIQUE por tentativa, aplica NOT NULL e RECRIA o cancel (novo ON CONFLICT)", () => {
+    expect(BACKFILL_ACTIVE_SQL).toContain("SET NOT NULL");
+    expect(BACKFILL_ACTIVE_SQL).toContain("UNIQUE (campaign_id, operation_id, attempt_seq)");
+    expect(BACKFILL_ACTIVE_SQL).toContain(
+      "DROP FUNCTION IF EXISTS public.product_1_1_cancel_copy",
+    );
+    expect(BACKFILL_ACTIVE_SQL).toContain(
+      "ON CONFLICT (campaign_id, operation_id, attempt_seq) DO NOTHING",
+    );
+    expect(BACKFILL_ACTIVE_SQL).toContain(
+      "(campaign_id, operation_id, attempt_seq, attempt_token, reason)",
+    );
+    expect(BACKFILL_ACTIVE_SQL).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.product_1_1_cancel_copy\(UUID, UUID, TEXT, INTEGER, UUID, JSONB\)[\s\S]*?TO service_role;/,
+    );
+    // Gate por desfecho + repasse do payload de recuperação preservados.
+    expect(BACKFILL_ACTIVE_SQL).toContain("IF v_outcome IN ('applied','idempotent') THEN");
+    expect(BACKFILL_ACTIVE_SQL).toContain("p_copy_payload");
+  });
+});
+
+describe("B2.1 — Plano 06: cliente de aquisição (envelope FECHADO, RPC simulada)", () => {
+  function acquisitionClient(
+    responder: (params: Record<string, unknown>) => unknown,
+  ): { client: ProductOneToOneCopyAcquisitionClient; events: RecordedEvent[] } {
+    const events: RecordedEvent[] = [];
+    const raw = {
+      rpc(name: string, params: Record<string, unknown>) {
+        events.push({ name, params });
+        return Promise.resolve({ data: responder(params), error: null });
+      },
+    } as unknown as SupabaseClient;
+    return { client: new ProductOneToOneCopyAcquisitionClient(raw), events };
+  }
+
+  const base = { campaignId: CAMPAIGN_ID, operationId: OPERATION_ID } as const;
+
+  it("exporta a constante da RPC e envia p_request_token (null quando ausente)", async () => {
+    expect(ACQUIRE_COPY_ATTEMPT_RPC).toBe("product_1_1_acquire_copy_attempt");
+    const { client, events } = acquisitionClient(() => ({
+      acquired: true,
+      attempt_seq: 1,
+      attempt_token: TOKEN_A,
+    }));
+    await client.acquire({ ...base, mode: "auto" });
+    expect(events[0].name).toBe(ACQUIRE_COPY_ATTEMPT_RPC);
+    expect(events[0].params).toMatchObject({
+      p_campaign_id: CAMPAIGN_ID,
+      p_operation_id: OPERATION_ID,
+      p_mode: "auto",
+      p_request_token: null,
+    });
+  });
+
+  it("VENCEDOR: acquired:true + attempt_seq/token server-side (+ expiredClosed)", async () => {
+    const { client } = acquisitionClient(() => ({
+      acquired: true,
+      reason: null,
+      attempt_seq: 2,
+      attempt_token: TOKEN_B,
+      mode: "auto",
+      expired_closed: true,
+    }));
+    await expect(client.acquire({ ...base, mode: "auto" })).resolves.toEqual({
+      acquired: true,
+      attemptSeq: 2,
+      attemptToken: TOKEN_B,
+      mode: "auto",
+      expiredClosed: true,
+    });
+
+    // expiredClosed ausente ⇒ false; reenvio envia o request_token.
+    const withToken = acquisitionClient(() => ({
+      acquired: true,
+      attempt_seq: 1,
+      attempt_token: TOKEN_A,
+    }));
+    await expect(
+      withToken.client.acquire({ ...base, mode: "manual", requestToken: TOKEN_A }),
+    ).resolves.toEqual({
+      acquired: true,
+      attemptSeq: 1,
+      attemptToken: TOKEN_A,
+      mode: "manual",
+      expiredClosed: false,
+    });
+    expect(withToken.events[0].params.p_request_token).toBe(TOKEN_A);
+  });
+
+  it("resposta VAZIA/contraditória NUNCA é vencedor (lança)", async () => {
+    await expect(
+      acquisitionClient(() => null).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/empty_rpc_response/);
+    await expect(
+      acquisitionClient(() => ({
+        acquired: true,
+        attempt_seq: 9,
+        attempt_token: TOKEN_A,
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    await expect(
+      acquisitionClient(() => ({
+        acquired: true,
+        attempt_seq: 1,
+        attempt_token: "",
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    await expect(
+      acquisitionClient(() => ({ acquired: true })).client.acquire({
+        ...base,
+        mode: "auto",
+      }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+  });
+
+  it("cada motivo de PERDA apenas acompanha (sem iniciar chamada)", async () => {
+    const losers: Array<{ payload: Record<string, unknown>; expected: CopyAcquisitionResult }> = [
+      {
+        payload: { acquired: false, reason: "attempt_in_progress" },
+        expected: { acquired: false, reason: "attempt_in_progress" },
+      },
+      {
+        payload: { acquired: false, reason: "attempt_already_completed" },
+        expected: { acquired: false, reason: "attempt_already_completed" },
+      },
+      {
+        payload: { acquired: false, reason: "attempt_limit_reached" },
+        expected: { acquired: false, reason: "attempt_limit_reached" },
+      },
+      {
+        payload: { acquired: false, reason: "automatic_closed" },
+        expected: { acquired: false, reason: "automatic_closed" },
+      },
+    ];
+    for (const { payload, expected } of losers) {
+      await expect(
+        acquisitionClient(() => payload).client.acquire({ ...base, mode: "auto" }),
+      ).resolves.toEqual(expected);
+    }
+  });
+
+  it("already_acquired devolve a identidade EXISTENTE (reenvio atrasado, sem novo slot)", async () => {
+    const { client } = acquisitionClient(() => ({
+      acquired: false,
+      reason: "already_acquired",
+      attempt_seq: 2,
+      attempt_token: TOKEN_B,
+    }));
+    await expect(
+      client.acquire({ ...base, mode: "auto", requestToken: TOKEN_B }),
+    ).resolves.toEqual({
+      acquired: false,
+      reason: "already_acquired",
+      attemptSeq: 2,
+      attemptToken: TOKEN_B,
+    });
+  });
+
+  it("wait_not_elapsed expõe waitRemainingMs (espera server-side)", async () => {
+    const { client } = acquisitionClient(() => ({
+      acquired: false,
+      reason: "wait_not_elapsed",
+      wait_remaining_ms: 4200,
+    }));
+    await expect(client.acquire({ ...base, mode: "auto" })).resolves.toEqual({
+      acquired: false,
+      reason: "wait_not_elapsed",
+      waitRemainingMs: 4200,
+    });
+  });
+
+  it("motivo DESCONHECIDO/ausente (incl. operation_terminal) NUNCA é aceito", async () => {
+    await expect(
+      acquisitionClient(() => ({
+        acquired: false,
+        reason: "operation_terminal",
+      })).client.acquire({ ...base, mode: "auto" }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    await expect(
+      acquisitionClient(() => ({ acquired: false, reason: "bogus" })).client.acquire({
+        ...base,
+        mode: "auto",
+      }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
+    await expect(
+      acquisitionClient(() => ({ acquired: false })).client.acquire({
+        ...base,
+        mode: "auto",
+      }),
+    ).rejects.toThrow(/copy_acquisition_invalid_envelope/);
   });
 });
