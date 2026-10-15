@@ -29,6 +29,7 @@ const h = vi.hoisted(() => {
     creditMarkArtUploaded: vi.fn(),
     creditDeliver: vi.fn(),
     creditRefund: vi.fn(),
+    creditCloseFailedOperation: vi.fn(),
     storeArtifact: vi.fn(),
     probeArtifact: vi.fn(),
     gatewayInvoke: vi.fn(),
@@ -69,6 +70,7 @@ vi.mock("@/lib/product-1-1/credit-operation/credit-operation-client", () => ({
     markArtUploaded = h.creditMarkArtUploaded;
     deliver = h.creditDeliver;
     refund = h.creditRefund;
+    closeFailedOperation = h.creditCloseFailedOperation;
   },
 }));
 
@@ -412,6 +414,14 @@ beforeEach(() => {
   h.creditMarkArtUploaded.mockResolvedValue({ status: "art_uploaded" });
   h.creditDeliver.mockResolvedValue({ status: "delivered" });
   h.creditRefund.mockResolvedValue({ status: "refunded" });
+  h.creditCloseFailedOperation.mockResolvedValue({
+    success: true,
+    idempotent: false,
+    status: "refunded",
+    campaign_id: CAMPAIGN_ID,
+    operation_id: OPERATION_ID,
+    action: "close_failed_operation",
+  });
 
   h.storeArtifact.mockResolvedValue({
     storagePath: `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`,
@@ -567,27 +577,35 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     expect(h.creditRefund).not.toHaveBeenCalled();
   });
 
-  it("(achado 4) estorno CONFIRMADO (`refunded`) ⇒ apenas então a copy `estornado`", async () => {
+  it("(achado 4) encerramento CONFIRMADO (`refunded`) via PF ⇒ apenas então a copy `estornado`", async () => {
     h.gatewayInvoke.mockRejectedValue(
       Object.assign(new Error("provider down"), { code: "provider_error" }),
     );
     h.probeArtifact.mockResolvedValue({ kind: "absent" });
-    h.creditRefund.mockResolvedValue({ status: "refunded" });
+    h.creditCloseFailedOperation.mockResolvedValue({
+      success: true,
+      idempotent: false,
+      status: "refunded",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      action: "close_failed_operation",
+    });
 
     const { POST } = await import("../route");
     const res = await POST(makeRequest(VALID_BODY));
     const terminal = terminalOf(parseEvents(await res.text()));
     expect(terminal).toMatchObject({ type: "error", code: "IMG-001" });
     expect(String(terminal.message)).toContain("estornado");
-    expect(h.creditRefund).toHaveBeenCalledTimes(1);
+    expect(h.creditCloseFailedOperation).toHaveBeenCalledTimes(1);
+    expect(h.creditRefund).not.toHaveBeenCalled();
   });
 
-  it("(achado 4) estorno NÃO confirmado ⇒ NUNCA afirma `estornado`", async () => {
+  it("(achado 4) encerramento NÃO confirmado ⇒ NUNCA afirma `estornado`", async () => {
     h.gatewayInvoke.mockRejectedValue(
       Object.assign(new Error("provider down"), { code: "provider_error" }),
     );
     h.probeArtifact.mockResolvedValue({ kind: "absent" });
-    h.creditRefund.mockRejectedValue(new Error("refund_failed"));
+    h.creditCloseFailedOperation.mockRejectedValue(new Error("close_failed"));
 
     const { POST } = await import("../route");
     const res = await POST(makeRequest(VALID_BODY));

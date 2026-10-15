@@ -320,6 +320,7 @@ function buildHarness(): Harness {
       markArtUploaded: vi.fn(async () => baseState({ status: "art_uploaded" })),
       deliver: vi.fn(async () => baseState({ status: "delivered", terminal: true, consumedDefinitive: true })),
       refund: vi.fn(async () => baseState({ status: "refunded", terminal: true })),
+      closeFailedOperation: vi.fn(async () => baseState({ status: "refunded", terminal: true })),
     },
     attempts: {
       acquire: vi.fn(async (input: { target: AttemptTarget; attemptNumber: number }) => {

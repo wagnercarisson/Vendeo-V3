@@ -886,6 +886,7 @@ interface OrchestratorHarness {
   readonly calls: {
     deliver: ReturnType<typeof vi.fn>;
     refund: ReturnType<typeof vi.fn>;
+    closeFailedOperation: ReturnType<typeof vi.fn>;
     providerCalls: number;
   };
   readonly envelopes: AiCallEnvelope[];
@@ -938,6 +939,9 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
     baseState({ status: "delivered", terminal: true, consumedDefinitive: true }),
   );
   const refund = vi.fn(async () => baseState({ status: "refunded", terminal: true }));
+  const closeFailedOperation = vi.fn(async () =>
+    baseState({ status: "refunded", terminal: true }),
+  );
 
   const createGateway = vi.fn((_pair: ImageModelPairConfig): AiInvoker => ({
     async invoke(_capability, request, telemetry, target = "primary"): Promise<AiInvocationResult> {
@@ -1004,6 +1008,7 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
       markArtUploaded: vi.fn(async () => baseState({ status: "art_uploaded" })),
       deliver,
       refund,
+      closeFailedOperation,
     } as never,
     attempts: {
       acquire: vi.fn(async (input: { target: AttemptTarget; attemptNumber: number }) => {
@@ -1066,6 +1071,7 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
     calls: {
       deliver,
       refund,
+      closeFailedOperation,
       get providerCalls() {
         return providerCalls;
       },
@@ -1218,7 +1224,8 @@ describe("Plano 08 — envelope por tentativa no orquestrador (REQ-12 / P1)", ()
     const { terminal } = await runOrchestrator(harness);
 
     expect(terminal).toMatchObject({ type: "error", code: "IMG-001" });
-    expect(harness.calls.refund).toHaveBeenCalledTimes(1);
+    expect(harness.calls.closeFailedOperation).toHaveBeenCalledTimes(1);
+    expect(harness.calls.refund).not.toHaveBeenCalled();
     const recordDiagnosis = (harness.deps as Record<string, unknown>).recordDiagnosis as ReturnType<
       typeof vi.fn
     >;

@@ -185,6 +185,18 @@ export interface ProductOneToOneCreditOps {
   markArtUploaded(campaignId: string, operationId: string): Promise<CreditOperationState>;
   deliver(campaignId: string, operationId: string): Promise<CreditOperationState>;
   refund(campaignId: string, operationId: string, reason?: string): Promise<CreditOperationState>;
+  /**
+   * C3 (F56.2b2b) — encerramento local por falha FINAL (predicado PF) sob a trava
+   * C4. Forma ÚNICA OBJETO com o tipo REAL da sonda (`ArtifactProbe["kind"]`),
+   * idêntica no cliente, nos fakes e no call site. Somente o ponto de DECISÃO
+   * TERMINAL a utiliza.
+   */
+  closeFailedOperation(input: {
+    campaignId: string;
+    operationId: string;
+    artKind: ArtifactProbe["kind"];
+    reason?: string;
+  }): Promise<CreditOperationState>;
 }
 
 export interface ProductOneToOneAttemptOps {
@@ -654,17 +666,6 @@ export async function runProductOneToOneGeneration(
         }
       };
 
-      // `refundOnce` NÃO engole o resultado: devolve `true` SOMENTE quando o
-      // cliente confirma `refunded` (nunca afirmar "estornado" sem confirmação).
-      const refundOnce = async (reason: string): Promise<boolean> => {
-        try {
-          const state = await credit.refund(campaignId, operationId, reason);
-          return state.status === "refunded";
-        } catch {
-          return false;
-        }
-      };
-
       // Persiste o marcador `unknown` (durável). `true` quando persistiu.
       const markUnknownOutcome = async (reference: string): Promise<boolean> => {
         try {
@@ -732,9 +733,34 @@ export async function runProductOneToOneGeneration(
         emitTerminal({ type: "unknown", reference });
       };
 
-      // Falha confirmada (sem arte entregue): só estorna com AUSÊNCIA COMPROVADA
-      // (`absent`/`invalid`); objeto presente (`integral`) ou ausência NÃO
-      // comprovada (`indeterminate`/leitura falha) ⇒ pendente, sem estorno.
+      // Terminal de pendência AUTORIZADA (sem tentar gravar marcador): preserva um
+      // marcador `failed` JÁ persistido (imutável) e roteia à resolução autorizada
+      // SEM reescrever `unknown` (evita o caminho que grava `unknown`). Nunca estorna.
+      const emitAuthorizedPending = async (params?: {
+        internalCategory?: string;
+        normalizedError?: string;
+        target?: AttemptTarget;
+        attemptNumber?: number;
+        model?: string;
+        quality?: string;
+      }): Promise<void> => {
+        const reference = newSupportReference();
+        await recordPendingDiagnosis(reference, {
+          internalCategory: params?.internalCategory ?? "generation_unknown",
+          normalizedError: params?.normalizedError ?? "unknown_provider_error",
+          target: params?.target,
+          attemptNumber: params?.attemptNumber,
+          model: params?.model,
+          quality: params?.quality,
+        });
+        emitTerminal({ type: "unknown", reference });
+      };
+
+      // Falha confirmada (sem arte entregue): só ENCERRA (PF) pela RPC do Plano 01
+      // quando a AUSÊNCIA está COMPROVADA, o marcador `failed` JÁ foi persistido e o
+      // caminho é a DECISÃO TERMINAL. `integral`/`invalid`/`indeterminate`/leitura
+      // falha ⇒ pendência (NUNCA estorna). `invalid` (objeto PRESENTE mas não
+      // íntegro) NUNCA é tratado como ausência.
       const settleConfirmedFailure = async (params: {
         internalCategory: string;
         normalizedError: string;
@@ -743,22 +769,64 @@ export async function runProductOneToOneGeneration(
         model: string;
         quality: string;
         reason: string;
+        /** `true` SOMENTE no ponto de decisão terminal (~1245, `generation_failed`). */
+        allowPfClosure: boolean;
+        /** `true` quando `outcome='failed'` foi persistido COM SUCESSO (item 4a). */
+        failedMarkerPersisted: boolean;
       }): Promise<void> => {
         const kind = await probeArtifactKind();
-        if (kind === "integral" || kind === "indeterminate" || kind === null) {
-          await emitUnknownPending({
-            internalCategory: params.internalCategory,
-            normalizedError: params.normalizedError,
-            target: params.target,
-            attemptNumber: params.attemptNumber,
-            model: params.model,
-            quality: params.quality,
-          });
+        // Quando o marcador `failed` JÁ foi persistido, NÃO reescrever `unknown`
+        // (roteia à resolução autorizada sem o caminho que grava `unknown`).
+        const emitPending = (): Promise<void> =>
+          params.failedMarkerPersisted
+            ? emitAuthorizedPending({
+                internalCategory: params.internalCategory,
+                normalizedError: params.normalizedError,
+                target: params.target,
+                attemptNumber: params.attemptNumber,
+                model: params.model,
+                quality: params.quality,
+              })
+            : emitUnknownPending({
+                internalCategory: params.internalCategory,
+                normalizedError: params.normalizedError,
+                target: params.target,
+                attemptNumber: params.attemptNumber,
+                model: params.model,
+                quality: params.quality,
+              });
+
+        if (kind !== "absent") {
+          // `integral`/`invalid`/`indeterminate`/`null` ⇒ ausência NÃO comprovada.
+          await emitPending();
           return;
         }
-        // Ausência CONFIRMADA (absent/invalid) + falha confirmada ⇒ estorno ÚNICO.
-        const refunded = await refundOnce(params.reason);
-        if (refunded) {
+
+        // Ausência CONFIRMADA — o encerramento PF só é apresentado no caminho
+        // terminal E com `failed` persistido. Os chamadores não-terminais
+        // (`attempt_history_failed`/`artifact_store_failed`) NUNCA fecham: o
+        // automático não abandona claim e a RPC exige `failed` gravado.
+        if (!params.allowPfClosure || !params.failedMarkerPersisted) {
+          await emitPending();
+          return;
+        }
+
+        let closed = false;
+        try {
+          const state = await credit.closeFailedOperation({
+            campaignId,
+            operationId,
+            artKind: kind,
+            reason: params.reason,
+          });
+          // Só confirma o encerramento com `refunded` CONFIRMADO.
+          closed = state.status === "refunded";
+        } catch {
+          // Recusa do PF (`operation_terminal`/`operation_in_progress`/
+          // `finality_not_recorded`/`absent_not_confirmed`) ⇒ SEM estorno.
+          closed = false;
+        }
+        if (closed) {
           await emitOperationalFailure({
             internalCategory: params.internalCategory,
             normalizedError: params.normalizedError,
@@ -770,14 +838,7 @@ export async function runProductOneToOneGeneration(
           });
           return;
         }
-        await emitUnknownPending({
-          internalCategory: params.internalCategory,
-          normalizedError: params.normalizedError,
-          target: params.target,
-          attemptNumber: params.attemptNumber,
-          model: params.model,
-          quality: params.quality,
-        });
+        await emitPending();
       };
 
       // ── F8 — copy NÃO bloqueante drenada no ciclo da requisição ────────
@@ -1036,6 +1097,9 @@ export async function runProductOneToOneGeneration(
               model: snapshotPairForTarget(snapshot, target).model,
               quality: snapshotPairForTarget(snapshot, target).quality,
               reason: "attempt_history_failed",
+              // C2 — chamador NÃO-terminal: inconclusivo, NUNCA fecha/estorna.
+              allowPfClosure: false,
+              failedMarkerPersisted: false,
             });
             return;
           }
@@ -1150,6 +1214,9 @@ export async function runProductOneToOneGeneration(
                 model: snapshotPairForTarget(snapshot, target).model,
                 quality: snapshotPairForTarget(snapshot, target).quality,
                 reason: "artifact_upload_failed",
+                // C2 — chamador NÃO-terminal: inconclusivo, NUNCA fecha/estorna.
+                allowPfClosure: false,
+                failedMarkerPersisted: false,
               });
               return;
             }
@@ -1242,6 +1309,26 @@ export async function runProductOneToOneGeneration(
             continue;
           }
 
+          // ── PONTO DE DECISÃO TERMINAL (~1245): ÚNICA gravação de `failed` ──
+          // C2 — a janela principal→fallback acima (`continue`) NÃO grava o
+          // marcador: retry/fallback pendente NÃO satisfaz o PF. SÓ aqui (quando a
+          // política NÃO produz próxima tentativa) o marcador `outcome='failed'` é
+          // gravado (item 4a). Falha de gravação OU `unknown` imutável
+          // pré-existente ⇒ permanece INCONCLUSIVO: NÃO fecha (a RPC exige
+          // `failed` persistido) e roteia à resolução autorizada, SEM sobrescrever
+          // o marcador.
+          let failedMarkerPersisted = false;
+          try {
+            await attempts.recordOperationOutcome({
+              campaignId,
+              operationId,
+              outcome: "failed",
+            });
+            failedMarkerPersisted = true;
+          } catch {
+            failedMarkerPersisted = false;
+          }
+
           await settleConfirmedFailure({
             internalCategory: "generation_failed",
             normalizedError: DIAGNOSIS_ERROR_BY_FAILURE_CLASS[classification.category],
@@ -1250,6 +1337,8 @@ export async function runProductOneToOneGeneration(
             model: snapshotPairForTarget(snapshot, target).model,
             quality: snapshotPairForTarget(snapshot, target).quality,
             reason: "generation_failed",
+            allowPfClosure: true,
+            failedMarkerPersisted,
           });
           return;
         }

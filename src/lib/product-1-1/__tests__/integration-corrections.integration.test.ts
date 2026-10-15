@@ -180,6 +180,7 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
           markArtUploaded: (c, o) => credit.markArtUploaded(c, o),
           deliver: (c, o) => credit.deliver(c, o),
           refund: (c, o, r) => credit.refund(c, o, r),
+          closeFailedOperation: (i) => credit.closeFailedOperation(i),
         },
         createGateway: () => {
           providerCalls += 1;
@@ -260,6 +261,7 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
             refundCalls += 1;
             return realCredit.refund(c, o, r);
           },
+          closeFailedOperation: (i) => realCredit.closeFailedOperation(i),
         },
         createGateway: () => abortGateway,
       }),
@@ -291,6 +293,7 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
               refundCalls += 1;
               return realCredit.refund(c, o, r);
             },
+            closeFailedOperation: (i) => realCredit.closeFailedOperation(i),
           },
           artifact: {
             storeArtifact: async () => {

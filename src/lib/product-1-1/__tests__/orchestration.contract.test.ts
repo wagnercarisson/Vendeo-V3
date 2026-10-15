@@ -85,6 +85,7 @@ interface Harness {
     markArtUploaded: ReturnType<typeof vi.fn>;
     deliver: ReturnType<typeof vi.fn>;
     refund: ReturnType<typeof vi.fn>;
+    closeFailedOperation: ReturnType<typeof vi.fn>;
     acquire: ReturnType<typeof vi.fn>;
     finish: ReturnType<typeof vi.fn>;
     recordOutcome: ReturnType<typeof vi.fn>;
@@ -106,6 +107,7 @@ interface Harness {
   setAcquireSequence(seq: Array<{ acquired: boolean; reason: string | null }>): void;
   setRecordOutcomeFailure(fail: boolean): void;
   setRefundFailure(fail: boolean): void;
+  setCloseFailure(fail: boolean): void;
 }
 
 async function baseExisting(
@@ -137,6 +139,7 @@ async function buildHarness(): Promise<Harness> {
   let acquireSequence: Array<{ acquired: boolean; reason: string | null }> = [];
   let recordOutcomeFailure = false;
   let refundFailure = false;
+  let closeFailure = false;
   let providerCalls = 0;
   const gatewayPairs: ImageModelPairConfig[] = [];
   const gatewayRequests: AiInvocationRequest[] = [];
@@ -157,6 +160,11 @@ async function buildHarness(): Promise<Harness> {
   const refund = vi.fn(async () => {
     order.push("refund");
     if (refundFailure) throw new Error("refund_failed");
+    return await baseExisting({ status: "refunded", terminal: true });
+  });
+  const closeFailedOperation = vi.fn(async () => {
+    order.push("closeFailedOperation");
+    if (closeFailure) throw new Error("close_failed");
     return await baseExisting({ status: "refunded", terminal: true });
   });
 
@@ -298,6 +306,7 @@ async function buildHarness(): Promise<Harness> {
       markArtUploaded,
       deliver,
       refund,
+      closeFailedOperation,
     } as never,
     attempts: {
       acquire,
@@ -332,6 +341,7 @@ async function buildHarness(): Promise<Harness> {
       markArtUploaded,
       deliver,
       refund,
+      closeFailedOperation,
       acquire,
       finish,
       recordOutcome,
@@ -373,6 +383,9 @@ async function buildHarness(): Promise<Harness> {
     },
     setRefundFailure(fail) {
       refundFailure = fail;
+    },
+    setCloseFailure(fail) {
+      closeFailure = fail;
     },
   } as Harness;
 }
@@ -503,7 +516,7 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(request.productImagesDataUrls).toEqual(["data:image/png;base64,primary"]);
   });
 
-  it("falha confirmada + ausência COMPROVADA ⇒ `refund` exatamente UMA vez e terminal `IMG-001` (estornado) com diagnóstico durável", async () => {
+  it("falha confirmada + ausência COMPROVADA ⇒ `closeFailedOperation` (PF) UMA vez e terminal `IMG-001` (estornado) com diagnóstico durável", async () => {
     const harness = await buildHarness();
     harness.setProviderSequence([
       Object.assign(new Error("content policy violation"), { code: "content_policy" }),
@@ -511,9 +524,20 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
 
     const { terminal } = await runOrchestrator(harness);
 
-    // (achado 4) A ausência é COMPROVADA (probe default `absent`) antes do estorno.
+    // (achado 4) A ausência é COMPROVADA (probe default `absent`) antes do encerramento.
     expect(harness.calls.probeArtifact).toHaveBeenCalled();
-    expect(harness.calls.refund).toHaveBeenCalledTimes(1);
+    // Ponto terminal grava `failed` (4a) e encerra via PF — nunca `refund` cru.
+    expect(harness.calls.recordOutcome).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "failed" }),
+    );
+    expect(harness.calls.closeFailedOperation).toHaveBeenCalledTimes(1);
+    expect(harness.calls.closeFailedOperation).toHaveBeenCalledWith({
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      artKind: "absent",
+      reason: "generation_failed",
+    });
+    expect(harness.calls.refund).not.toHaveBeenCalled();
     expect(terminal).toMatchObject({ type: "error", code: "IMG-001" });
     expect(String((terminal as Record<string, unknown>).message)).toContain("estornado");
     // (achado 6) Diagnóstico durável persistido e correlacionável à referência pública.
@@ -553,14 +577,15 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(terminal).toMatchObject({ type: "unknown" });
   });
 
-  it("achado 4: estorno NÃO confirmado ⇒ NUNCA afirma `estornado` (terminal `unknown`)", async () => {
+  it("achado 4: encerramento NÃO confirmado ⇒ NUNCA afirma `estornado` (terminal `unknown`)", async () => {
     const harness = await buildHarness();
     harness.setProviderSequence([Object.assign(new Error("provider down"), { code: "provider_error" })]);
-    harness.setRefundFailure(true);
+    harness.setCloseFailure(true);
 
     const { terminal } = await runOrchestrator(harness);
 
-    expect(harness.calls.refund).toHaveBeenCalledTimes(1);
+    expect(harness.calls.closeFailedOperation).toHaveBeenCalledTimes(1);
+    expect(harness.calls.refund).not.toHaveBeenCalled();
     expect(terminal).toMatchObject({ type: "unknown" });
     expect(String((terminal as Record<string, unknown>).message ?? "")).not.toContain("estornado");
   });

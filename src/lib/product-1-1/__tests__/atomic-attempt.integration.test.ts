@@ -363,6 +363,7 @@ describe("F56.2b1b — atomic attempt start (Postgres real / provider simulado)"
         markArtUploaded: (c, o) => credit.markArtUploaded(c, o),
         deliver: (c, o) => credit.deliver(c, o),
         refund: (c, o, r) => credit.refund(c, o, r),
+        closeFailedOperation: (i) => credit.closeFailedOperation(i),
       },
       attempts: {
         acquire: async (input) => {
@@ -452,6 +453,7 @@ describe("F56.2b1b — atomic attempt start (Postgres real / provider simulado)"
           refundCalls += 1;
           return realCredit.refund(c, o, r);
         },
+        closeFailedOperation: (i) => realCredit.closeFailedOperation(i),
       },
       createGateway: () => abortGateway,
       artifact: {

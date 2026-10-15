@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import type { ArtifactProbe } from "../artifact/types";
 import {
   CreditOperationError,
   type CreditOperationErrorCode,
@@ -30,6 +31,10 @@ const KNOWN_CODES: readonly CreditOperationErrorCode[] = [
   "operation_not_found",
   "invalid_transition",
   "delivered_not_refundable",
+  "operation_terminal",
+  "finality_not_recorded",
+  "operation_in_progress",
+  "absent_not_confirmed",
 ];
 
 /** Um único crédito por entrega (fixado). */
@@ -90,6 +95,56 @@ function mapState(data: unknown): CreditOperationState {
   });
 }
 
+/** Ação do envelope único de encerramento por falha final (Plano 01, C3). */
+const CLOSE_FAILED_ACTION = "close_failed_operation" as const;
+
+/**
+ * C3 — parser FECHADO e COM IDENTIDADE do envelope de
+ * `product_1_1_close_failed_operation`. Exige `success === true` EXPLÍCITO e
+ * correspondência EXATA de `campaign_id`/`operation_id`/`action`; nunca aceita
+ * sucesso implícito nem identidade divergente (fail-closed).
+ */
+function parseClosedEnvelope(
+  data: unknown,
+  input: { readonly campaignId: string; readonly operationId: string },
+): CreditOperationState {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    throw new CreditOperationError("unknown", "empty_close_envelope");
+  }
+  const record = data as Record<string, unknown>;
+  if (record.success !== true) {
+    throw new CreditOperationError("unknown", "incomplete_close_envelope");
+  }
+  const status = record.status;
+  if (
+    status !== "reserved" &&
+    status !== "art_uploaded" &&
+    status !== "delivered" &&
+    status !== "refunded"
+  ) {
+    throw new CreditOperationError("unknown", "invalid_rpc_status");
+  }
+  const campaignId = String(record.campaign_id ?? "");
+  const operationId = String(record.operation_id ?? "");
+  if (
+    campaignId !== input.campaignId ||
+    operationId !== input.operationId ||
+    record.action !== CLOSE_FAILED_ACTION
+  ) {
+    throw new CreditOperationError("unknown", "incomplete_close_envelope");
+  }
+  return Object.freeze({
+    campaignId,
+    operationId,
+    status: status as CreditOperationStatus,
+    amount: Number(record.amount ?? 0),
+    creditTxId: (record.credit_tx_id as string | null) ?? null,
+    refundTxId: (record.refund_tx_id as string | null) ?? null,
+    idempotent: record.idempotent === true,
+    consumedDefinitive: status === "delivered",
+  });
+}
+
 export class ProductOneToOneCreditOperationClient {
   constructor(private readonly client: SupabaseClient = supabaseAdmin) {}
 
@@ -134,6 +189,30 @@ export class ProductOneToOneCreditOperationClient {
       p_operation_id: operationId,
       p_reason: reason,
     });
+  }
+
+  /**
+   * C3 — encerramento local por falha FINAL (predicado PF) via a RPC do Plano 01.
+   * O `artKind` é o tipo REAL da sonda (nunca um literal fixo). Envelope FECHADO
+   * COM IDENTIDADE (exige `success === true` explícito + `campaign_id`/
+   * `operation_id`/`action` exatos). Recusas de PF são mapeadas para erros
+   * tipados: `delivered_not_refundable`/`operation_terminal`/
+   * `finality_not_recorded`/`operation_in_progress`/`absent_not_confirmed`.
+   */
+  async closeFailedOperation(input: {
+    campaignId: string;
+    operationId: string;
+    artKind: ArtifactProbe["kind"];
+    reason?: string;
+  }): Promise<CreditOperationState> {
+    const { data, error } = await this.client.rpc("product_1_1_close_failed_operation", {
+      p_campaign_id: input.campaignId,
+      p_operation_id: input.operationId,
+      p_art_kind: input.artKind,
+      p_reason: input.reason ?? CLOSE_FAILED_ACTION,
+    });
+    if (error) throw mapError(error.message);
+    return parseClosedEnvelope(data, input);
   }
 
   async get(

@@ -37,6 +37,10 @@ export type CreditOperationErrorCode =
   | "operation_not_found"
   | "invalid_transition"
   | "delivered_not_refundable"
+  | "operation_terminal"
+  | "finality_not_recorded"
+  | "operation_in_progress"
+  | "absent_not_confirmed"
   | "credit_reservation_failed"
   | "unknown";
 
