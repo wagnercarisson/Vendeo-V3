@@ -476,15 +476,17 @@ describe("F56.2b2b — Camada 1: contrato do cliente `closeFailedOperation` (cli
     });
   });
 
-  it("`success` ausente/falso, identidade ou ação divergentes ⇒ LANÇA (fail-closed)", async () => {
-    const bad = [
+  it("`success`/`idempotent` ausentes ou inválidos, identidade ou ação divergentes ⇒ LANÇA (fail-closed)", async () => {
+    const bad: unknown[] = [
       { status: "refunded", campaign_id: CAMPAIGN_ID, operation_id: OPERATION_ID, action: "close_failed_operation" },
       successEnvelope({ success: false }),
+      successEnvelope({ idempotent: "false" }),
+      successEnvelope({ idempotent: undefined }),
       successEnvelope({ operation_id: "99999999-9999-4999-8999-999999999999" }),
       successEnvelope({ campaign_id: "99999999-9999-4999-8999-999999999999" }),
       successEnvelope({ action: "refund" }),
-      successEnvelope({ status: "weird" }),
       null,
+      "not-an-object",
     ];
     for (const data of bad) {
       const { client } = clientWithRpc({ data });
@@ -495,6 +497,19 @@ describe("F56.2b2b — Camada 1: contrato do cliente `closeFailedOperation` (cli
           artKind: "absent",
         }),
       ).rejects.toBeInstanceOf(CreditOperationError);
+    }
+  });
+
+  it("status CONTRADITÓRIO (não `refunded`) ⇒ LANÇA `unexpected_close_status`", async () => {
+    for (const status of ["reserved", "art_uploaded", "delivered", "weird"]) {
+      const { client } = clientWithRpc({ data: successEnvelope({ status }) });
+      await expect(
+        new ProductOneToOneCreditOperationClient(client).closeFailedOperation({
+          campaignId: CAMPAIGN_ID,
+          operationId: OPERATION_ID,
+          artKind: "absent",
+        }),
+      ).rejects.toMatchObject({ code: "unexpected_close_status" });
     }
   });
 

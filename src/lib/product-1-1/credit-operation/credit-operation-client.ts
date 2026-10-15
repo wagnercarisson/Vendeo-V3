@@ -100,29 +100,28 @@ const CLOSE_FAILED_ACTION = "close_failed_operation" as const;
 
 /**
  * C3 — parser FECHADO e COM IDENTIDADE do envelope de
- * `product_1_1_close_failed_operation`. Exige `success === true` EXPLÍCITO e
- * correspondência EXATA de `campaign_id`/`operation_id`/`action`; nunca aceita
- * sucesso implícito nem identidade divergente (fail-closed).
+ * `product_1_1_close_failed_operation`. Exige `success === true` EXPLÍCITO,
+ * `idempotent` BOOLEANO explícito e correspondência EXATA de
+ * `campaign_id`/`operation_id`/`action`. Além disso, esta RPC SÓ pode confirmar
+ * sucesso com `status === 'refunded'` — qualquer outro status é CONTRADITÓRIO e
+ * falha fechado (nunca aceita sucesso implícito, identidade divergente nem
+ * status incoerente).
  */
 function parseClosedEnvelope(
   data: unknown,
   input: { readonly campaignId: string; readonly operationId: string },
 ): CreditOperationState {
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
-    throw new CreditOperationError("unknown", "empty_close_envelope");
+    throw new CreditOperationError("invalid_close_envelope", "empty_close_envelope");
   }
   const record = data as Record<string, unknown>;
-  if (record.success !== true) {
-    throw new CreditOperationError("unknown", "incomplete_close_envelope");
+  if (record.success !== true || typeof record.idempotent !== "boolean") {
+    throw new CreditOperationError("invalid_close_envelope", "incomplete_close_envelope");
   }
-  const status = record.status;
-  if (
-    status !== "reserved" &&
-    status !== "art_uploaded" &&
-    status !== "delivered" &&
-    status !== "refunded"
-  ) {
-    throw new CreditOperationError("unknown", "invalid_rpc_status");
+  // A RPC de encerramento SÓ confirma sucesso com `refunded` (nunca `reserved`/
+  // `art_uploaded`/`delivered`/desconhecido): status contraditório ⇒ fail-closed.
+  if (record.status !== "refunded") {
+    throw new CreditOperationError("unexpected_close_status", "unexpected_close_status");
   }
   const campaignId = String(record.campaign_id ?? "");
   const operationId = String(record.operation_id ?? "");
@@ -131,17 +130,17 @@ function parseClosedEnvelope(
     operationId !== input.operationId ||
     record.action !== CLOSE_FAILED_ACTION
   ) {
-    throw new CreditOperationError("unknown", "incomplete_close_envelope");
+    throw new CreditOperationError("invalid_close_envelope", "incomplete_close_envelope");
   }
   return Object.freeze({
     campaignId,
     operationId,
-    status: status as CreditOperationStatus,
+    status: "refunded",
     amount: Number(record.amount ?? 0),
     creditTxId: (record.credit_tx_id as string | null) ?? null,
     refundTxId: (record.refund_tx_id as string | null) ?? null,
-    idempotent: record.idempotent === true,
-    consumedDefinitive: status === "delivered",
+    idempotent: record.idempotent,
+    consumedDefinitive: false,
   });
 }
 

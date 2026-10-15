@@ -41,6 +41,8 @@ export type CreditOperationErrorCode =
   | "finality_not_recorded"
   | "operation_in_progress"
   | "absent_not_confirmed"
+  | "invalid_close_envelope"
+  | "unexpected_close_status"
   | "credit_reservation_failed"
   | "unknown";
 
