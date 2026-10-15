@@ -364,7 +364,7 @@ Plans:
 
 ### Phase 56.2.3: F56.2b2a — Recuperação de copy do Produto 1:1
 
-**Status:** ✓ **PLANEJADO, VERIFICADO E APROVADO (2026-10-13)** — fase GSD criada a partir da base OpenSpec **B2.1** (`fase-56-2b2a-recuperacao-de-copy-produto-1-1`); **6 planos** após **4 rodadas** de reconciliação/correção (7 lacunas; 6 inconsistências; 3 ajustes; 2 bloqueios) e **verificação** `gsd-plan-checker` **VERIFICATION PASSED (0 blockers, 0 warnings)**. Base OpenSpec **valid** (strict; **10 requirements**, **40 cenários**). **APROVADO pelo responsável em 2026-10-13:** **base + UI-SPEC + planejamento** da B2.1. **Distinção de checkpoints:** a **UI-SPEC** é a aprovação do **CONTRATO** (**antes** da implementação); o **UAT do Plano 05** é a validação do **RESULTADO implementado** (**posterior e distinta**). **Aguardando a decisão do responsável sobre o início da execução**; **sem implementação** até então. Fontes: `openspec/changes/fase-56-2b2a-recuperacao-de-copy-produto-1-1/` (critérios 11–28; design B2A-D1..D6).
+**Status:** ✓ **COMPLETE (2026-10-15) — B2.1 INATIVA, 6/6 planos; UAT humano APROVADO (escopo inativo); review HIGH/MEDIUM resolvidos (7dee0866); security 69/69; backfill PASS (prova limpa em instância separada); Nyquist não executado por configuração; D13 = gate da fatia de imagem/habilitação; lifecycle OpenSpec NÃO executado (conduzido pelo responsável).** *(Histórico de planejamento:)* **PLANEJADO, VERIFICADO E APROVADO (2026-10-13)** — fase GSD criada a partir da base OpenSpec **B2.1** (`fase-56-2b2a-recuperacao-de-copy-produto-1-1`); **6 planos** após **4 rodadas** de reconciliação/correção (7 lacunas; 6 inconsistências; 3 ajustes; 2 bloqueios) e **verificação** `gsd-plan-checker` **VERIFICATION PASSED (0 blockers, 0 warnings)**. Base OpenSpec **valid** (strict; **10 requirements**, **40 cenários**). **APROVADO pelo responsável em 2026-10-13:** **base + UI-SPEC + planejamento** da B2.1. **Distinção de checkpoints:** a **UI-SPEC** é a aprovação do **CONTRATO** (**antes** da implementação); o **UAT do Plano 05** é a validação do **RESULTADO implementado** (**posterior e distinta**). **Aguardando a decisão do responsável sobre o início da execução**; **sem implementação** até então. Fontes: `openspec/changes/fase-56-2b2a-recuperacao-de-copy-produto-1-1/` (critérios 11–28; design B2A-D1..D6).
 
 **Goal:** Acrescentar a **recuperação de copy** (falha de entrega) sobre a entrega não bloqueante da b1b: política de 3 tentativas automáticas (30s/5s/30s/10s/30s) + até 3 manuais (máx. 6 por entrega), tentativas identificadas (`attempt_seq`+`attempt_token`), histórico preservado, proteção contra conclusão atrasada (`stale_attempt`), anti-duplicação, somente os textos (`campaign_copy`, sem regenerar/alterar a imagem e sem novo crédito), autenticação/ownership e UI da ação manual condicional — tudo **dentro do ciclo da requisição**, **sem** execução durável (fila/worker/cron/outbox), **sem** ativação (chaves `false`, autorização `off`) e **sem** antecipar B2.2/B2.3 ou a F56.3.
 
@@ -376,20 +376,20 @@ Plans:
 
 **Provas exigidas no planejamento:** contrato (política 30s/5s/10s, teto de 6, clique manual, `stale_attempt`, terminal não sobrescrito, falha definitiva, anti-duplicação, independência copy×imagem); **Postgres isolado pela ROTA REAL** (aquisição/concorrência, limites separados auto × manual, esperas server-side, fallback=tentativa própria, tentativa inicial); **migração/backfill** com **fixtures anteriores à B2.1** e **imutabilidade restaurada**; navegador com **provider simulado** (nenhuma chamada paga); migration **LOCAL-ONLY** (autorada; aplicada só na instância isolada, nunca `db push` remoto). Estimativa reconciliada: **6 planos** (dentro do teto ≤8–10); se exceder, parar e propor ajuste sem retirar segurança/testes.
 
-**Plans:** 6 plans
+**Plans:** 6/6 plans complete
 
 Plans:
 **Wave 1** *(sem dependências)*
-- [ ] 56.2.3-01-PLAN.md — Fundação: identidade/lease da tentativa + `copy-state.ts`/drenador identificado + contrato (REQ-56.2.3-07, -01, -03)
+- [x] 56.2.3-01-PLAN.md — Fundação: identidade/lease da tentativa + `copy-state.ts`/drenador identificado + contrato (REQ-56.2.3-07, -01, -03)
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 56.2.3-06-PLAN.md — Aquisição atômica (RPC sob trava C4) + migração de dados (backfill transacional) + cliente server-only (REQ-56.2.3-07, -06, -03, -04)
+- [x] 56.2.3-06-PLAN.md — Aquisição atômica (RPC sob trava C4) + migração de dados (backfill transacional) + cliente server-only (REQ-56.2.3-07, -06, -03, -04)
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 56.2.3-02-PLAN.md — Política (30s/5s/10s, teto 6) + serviço server-only + **sem fallback dentro da tentativa** (fallback = tentativa seguinte) + wiring da tentativa inicial (REQ-56.2.3-06, -03, -02, -08, -05, -09, -01)
+- [x] 56.2.3-02-PLAN.md — Política (30s/5s/10s, teto 6) + serviço server-only + **sem fallback dentro da tentativa** (fallback = tentativa seguinte) + wiring da tentativa inicial (REQ-56.2.3-06, -03, -02, -08, -05, -09, -01)
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 56.2.3-03-PLAN.md — Rota + barreira de não-ativação/identidade + ownership + G-NA (REQ-56.2.3-04, -05, -08, -01, -10, -03, -07)
+- [x] 56.2.3-03-PLAN.md — Rota + barreira de não-ativação/identidade + ownership + G-NA (REQ-56.2.3-04, -05, -08, -01, -10, -03, -07)
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 56.2.3-04-PLAN.md — UI (7 estados, lease/espera server-side, agenda da 2ª automática, CTA manual) (REQ-56.2.3-02, -03, -01, -10, -06, -08, -07)
+- [x] 56.2.3-04-PLAN.md — UI (7 estados, lease/espera server-side, agenda da 2ª automática, CTA manual) (REQ-56.2.3-02, -03, -01, -10, -06, -08, -07)
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 56.2.3-05-PLAN.md — [BLOCKING] Verificação pela rota real + backfill + gates/rastreabilidade + checkpoint humano (REQ-56.2.3-01..10)
+- [x] 56.2.3-05-PLAN.md — [BLOCKING] Verificação pela rota real + backfill + gates/rastreabilidade + checkpoint humano (REQ-56.2.3-01..10)
 
 **Canonical refs:** `openspec/changes/fase-56-2b2a-recuperacao-de-copy-produto-1-1/` (proposal, design B2A-D1..D6, spec `product-1-1-copy-recovery`, tasks §1–§5, UI-SPEC, RECONCILIATION), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/campaign-preview.md`, `src/lib/product-1-1/copy/copy-state.ts`, `src/app/(app)/campanhas/[id]/client.tsx`, `src/components/flow/generation-progress.tsx`, `supabase/migrations/20261009000005_f56_2b1b_copy_state.sql` (b1b, LOCAL-ONLY).
