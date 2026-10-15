@@ -27,6 +27,38 @@ const VALID_DATA_URL = "data:image/jpeg;base64,QUJD";
 const mockPush = vi.fn();
 const mockRefresh = vi.fn();
 
+// P1 — `persist-snapshot.ts`/`attempt-start-client` são `server-only`.
+vi.mock("server-only", () => ({}));
+
+// Fake do cliente Supabase admin: o leitor de direção de fundo da EVIDÊNCIA
+// CONGELADA (somente-leitura) consulta `product_1_1_snapshot_frozen_evidence`.
+const { mockSupabaseAdmin, mockEvidence } = vi.hoisted(() => {
+  const state: { row: unknown; error: { message: string } | null } = {
+    row: null,
+    error: null,
+  };
+  const builder = {
+    from: () => builder,
+    select: () => builder,
+    eq: () => builder,
+    maybeSingle: async () => ({ data: state.row, error: state.error }),
+  };
+  return { mockSupabaseAdmin: builder, mockEvidence: state };
+});
+
+// O `operationId` da operação PERSISTIDA é resolvido SERVER-SIDE (nunca do
+// cliente) — mockado no cliente fino.
+const { mockGetCampaignOperation } = vi.hoisted(() => ({
+  mockGetCampaignOperation: vi.fn(),
+}));
+vi.mock("@/lib/product-1-1/orchestration/attempt-start-client", () => ({
+  ProductOneToOneAttemptStartClient: class {
+    getCampaignOperation(campaignId: string) {
+      return mockGetCampaignOperation(campaignId);
+    }
+  },
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
   useSearchParams: () => new URLSearchParams(),
@@ -89,7 +121,7 @@ vi.mock("@/lib/credit/credit-service", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: vi.fn(async () => ({})),
-  supabaseAdmin: {},
+  supabaseAdmin: mockSupabaseAdmin,
 }));
 vi.mock("@/lib/launch-config/config", () => ({
   getLaunchConfig: () => ({ generationPaused: false }),
@@ -133,7 +165,13 @@ import {
 } from "@/components/flow/refunded-panel";
 import { mapRestoredForm } from "@/lib/campaign/display";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
-import { useCampaignForm } from "@/components/flow/use-campaign-form";
+import { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot } from "@/lib/campaign/brief";
+import type { GenerateImageRequest } from "@/lib/image-generation/schema";
+import {
+  BACKGROUND_DIRECTION_REQUIRED_ERROR,
+  BACKGROUND_DIRECTION_UNRESOLVED_NOTICE,
+  useCampaignForm,
+} from "@/components/flow/use-campaign-form";
 
 const STORE = {
   id: STORE_ID,
@@ -164,13 +202,38 @@ const INPUT_SNAPSHOT: Record<string, unknown> = {
   frozenContentReferences: [{ kind: "product", id: "c1", role: "primary", index: 0 }],
 };
 
-function restoreFor(campaignId: string): CampaignFormRestore {
+function restoreFor(
+  campaignId: string,
+  direction?: "studio" | "original" | "ambient",
+): CampaignFormRestore {
   const restore = mapRestoredForm({
     campaignId,
     inputSnapshot: INPUT_SNAPSHOT,
+    ...(direction ? { backgroundDirection: direction } : {}),
   });
   if (!restore) throw new Error("fixture: mapRestoredForm retornou null");
   return restore;
+}
+
+// P1 — snapshot REAL produzido pelos builders canônicos (`buildCampaignBriefFromFlat`
+// + `buildCampaignBriefSnapshot`): NÃO contém direção de fundo — ela vive na
+// EVIDÊNCIA CONGELADA (lida server-side).
+const BRIEF_INPUT = {
+  storeId: STORE_ID,
+  productName: "Tênis Runner Pro",
+  description: "Leve e confortável",
+  originalPriceCents: 29990,
+  discountedPriceCents: 19990,
+  badgeText: "Promoção",
+  campaignIntent: "offer",
+  validity: "somente hoje",
+  mandatoryArtworkText: "Imagem ilustrativa",
+} as unknown as GenerateImageRequest;
+
+function realSnapshot(): Record<string, unknown> {
+  return buildCampaignBriefSnapshot(
+    buildCampaignBriefFromFlat(BRIEF_INPUT, STORE_ID),
+  ) as unknown as Record<string, unknown>;
 }
 
 function campaignRecord(overrides: Record<string, unknown> = {}) {
@@ -226,6 +289,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   sessionStorage.clear();
   mockGetCampaignForDisplay.mockResolvedValue(campaignRecord());
+  mockEvidence.row = null;
+  mockEvidence.error = null;
+  mockGetCampaignOperation.mockResolvedValue({
+    campaignId: SOURCE_CAMPAIGN_ID,
+    operationId: SOURCE_OPERATION_ID,
+    status: "refunded",
+  });
 });
 
 afterEach(() => {
@@ -381,10 +451,13 @@ describe("Cadeia REAL — restauração/predraça do formulário (3)(4)(7)(9)", 
     expect(result.current.fields.validityMode).toBe("custom");
     expect(result.current.fields.validityCustomText).toBe("somente hoje");
     expect(result.current.fields.mandatoryArtworkTextFree).toBe("Imagem ilustrativa");
-    // DIREÇÃO DE FUNDO: PENDENTE — a fonte persistida é
-    // `product_1_1_snapshot_frozen_evidence.background_direction` (NÃO está em
-    // `input_snapshot`); a correção exige leitura nova + atualização de G-NA
-    // (ampliação de escopo) — sinalizada para reconciliação ANTES de implementar.
+    // P1 — fonte da direção AUSENTE (sem evidência) ⇒ NÃO pré-seleciona `studio`:
+    // a direção fica indefinida e exige escolha EXPLÍCITA.
+    expect(result.current.fields.backgroundDirection).toBeUndefined();
+    expect(result.current.backgroundDirectionRequired).toBe(true);
+    expect(result.current.backgroundDirectionNotice).toBe(
+      BACKGROUND_DIRECTION_UNRESOLVED_NOTICE,
+    );
   });
 
   it("(4) SEM rascunho E SEM snapshot ⇒ SEM promessa falsa (campos vazios, sem aviso)", () => {
@@ -475,7 +548,7 @@ describe("(8) submissão a partir do formulário restaurado gera NOVOS IDs", () 
     const { result } = renderHook(() =>
       useCampaignForm(STORE_ID, {
         eligible: true,
-        restoredForm: restoreFor(SOURCE_CAMPAIGN_ID),
+        restoredForm: restoreFor(SOURCE_CAMPAIGN_ID, "original"),
       }),
     );
 
@@ -506,7 +579,103 @@ describe("(8) submissão a partir do formulário restaurado gera NOVOS IDs", () 
     // NUNCA reusa a identidade da campanha/operação estornada.
     expect(body.campaignId).not.toBe(SOURCE_CAMPAIGN_ID);
     expect(body.operationId).not.toBe(SOURCE_OPERATION_ID);
+    // P1 (iv) — a direção RESTAURADA da evidência congelada está no CORPO.
+    expect((body as { backgroundDirection?: string }).backgroundDirection).toBe("original");
     // O snapshot transportado NÃO carrega `operationId` (nunca reabre a operação).
-    expect(restoreFor(SOURCE_CAMPAIGN_ID)).not.toHaveProperty("operationId");
+    expect(restoreFor(SOURCE_CAMPAIGN_ID, "original")).not.toHaveProperty("operationId");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1 (correção 2026-10-15) — DIREÇÃO DE FUNDO da EVIDÊNCIA CONGELADA:
+// (i) builders REAIS + evidência congelada ⇒ Original/Ambientado/Estúdio na
+// cadeia COMPLETA; (ii) fonte ausente ⇒ aviso + escolha OBRIGATÓRIA (sem geração);
+// (iii) ownership divergente ⇒ nada recuperado; (iv)/(v) novos IDs + campos.
+// ---------------------------------------------------------------------------
+describe("P1 — direção de fundo da evidência congelada (i)(ii)(iii)", () => {
+  it("(i) builders REAIS + evidência congelada ⇒ Original/Ambientado/Estúdio restaurados na cadeia REAL", async () => {
+    for (const direction of ["original", "ambient", "studio"] as const) {
+      mockGetCampaignForDisplay.mockResolvedValue(
+        campaignRecord({ input_snapshot: realSnapshot() }),
+      );
+      mockGetCampaignOperation.mockResolvedValue({
+        campaignId: SOURCE_CAMPAIGN_ID,
+        operationId: SOURCE_OPERATION_ID,
+        status: "refunded",
+      });
+      // EVIDÊNCIA CONGELADA (fonte da direção) — lida SERVER-SIDE.
+      mockEvidence.row = {
+        campaign_id: SOURCE_CAMPAIGN_ID,
+        operation_id: SOURCE_OPERATION_ID,
+        background_direction: direction,
+      };
+
+      const props = await renderNova(SOURCE_CAMPAIGN_ID);
+
+      // A direção foi resolvida a partir da evidência (não de `input_snapshot`).
+      expect(props.restoredForm?.backgroundDirection).toBe(direction);
+      expect(props.restoredForm?.backgroundDirectionUnresolved).toBeFalsy();
+
+      // A CADEIA COMPLETA (page → CampaignPageClient → CampaignInputForm →
+      // useCampaignForm) reflete a direção escolhida no seletor.
+      const { unmount } = renderChain(props.restoredForm);
+      const label =
+        direction === "original" ? "Original" : direction === "ambient" ? "Ambientado" : "Estúdio";
+      expect(screen.getByRole("radio", { name: label })).toBeChecked();
+      expect(screen.getByLabelText(/Nome do Produto/)).toHaveValue("Tênis Runner Pro");
+      expect(screen.queryByText(BACKGROUND_DIRECTION_UNRESOLVED_NOTICE)).toBeNull();
+      unmount();
+    }
+  });
+
+  it("(ii) evidência AUSENTE ⇒ aviso + escolha OBRIGATÓRIA (submissão bloqueada), SEM geração", async () => {
+    mockGetCampaignForDisplay.mockResolvedValue(
+      campaignRecord({ input_snapshot: realSnapshot() }),
+    );
+    mockEvidence.row = null; // fonte ausente ⇒ fail-closed
+
+    const props = await renderNova(SOURCE_CAMPAIGN_ID);
+    expect(props.restoredForm?.backgroundDirectionUnresolved).toBe(true);
+    expect(props.restoredForm?.backgroundDirection).toBeUndefined();
+
+    const mockFetch = vi.fn();
+    vi.stubGlobal("fetch", mockFetch);
+
+    // UI: aviso honesto + avanço BLOQUEADO (não há `studio` silencioso).
+    renderChain(props.restoredForm);
+    expect(screen.getByText(BACKGROUND_DIRECTION_UNRESOLVED_NOTICE)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Revisar e gerar/ })).toBeDisabled();
+
+    // Hook REAL: `enterReview` retorna `false` e marca o erro de escolha.
+    const { result } = renderHook(() =>
+      useCampaignForm(STORE_ID, { eligible: true, restoredForm: props.restoredForm }),
+    );
+    await waitFor(() => expect(result.current.backgroundDirectionRequired).toBe(true));
+    await act(async () => {
+      const ok = await result.current.enterReview();
+      expect(ok).toBe(false);
+    });
+    expect(result.current.fieldErrors.backgroundDirection).toBe(
+      BACKGROUND_DIRECTION_REQUIRED_ERROR,
+    );
+    // NENHUMA geração foi disparada.
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("(iii) ownership divergente ⇒ nenhum dado recuperado (direção nem consultada)", async () => {
+    mockGetCampaignForDisplay.mockResolvedValue(
+      campaignRecord({ store_id: "99999999-9999-4999-8999-999999999999" }),
+    );
+    mockEvidence.row = {
+      campaign_id: SOURCE_CAMPAIGN_ID,
+      operation_id: SOURCE_OPERATION_ID,
+      background_direction: "original",
+    };
+
+    const props = await renderNova(SOURCE_CAMPAIGN_ID);
+
+    expect(props.restoredForm).toBeNull();
+    // Sem ownership, a operação/evidência NÃO é consultada.
+    expect(mockGetCampaignOperation).not.toHaveBeenCalled();
   });
 });
