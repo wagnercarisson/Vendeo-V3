@@ -20,7 +20,7 @@ import type { NewFlowCopyRecoveryState } from "@/lib/campaign/display";
  * Componente client PRESENTACIONAL (G-NA): NÃO importa `product-1-1`; recebe a
  * view e os callbacks por props (como `resolution-form.tsx` da b1b). Renderiza os
  * 7 estados com badge/ícone/cor EXATOS da UI-SPEC, a CTA secundária condicional
- * `Gerar os textos novamente`, os contadores auto/manual (JetBrains Mono 12px), a
+ * `Gerar os textos novamente`, sem expor os contadores internos auto/manual, a
  * contagem REPORTADA pelo servidor (`aguardando`) e o aviso de escopo.
  *
  * Regras duras: a falha de copy é SEMPRE amber (nunca vermelho); `interrompida`
@@ -49,7 +49,9 @@ const MANUAL_LIMIT = 3;
 const SCOPE_NOTICE =
   "Isso gera apenas os textos. A imagem da campanha não muda e nenhum crédito adicional é usado.";
 const MANUAL_LIMIT_MESSAGE =
-  "Você atingiu o limite de tentativas. Fale com o suporte para continuar.";
+  "Infelizmente, não foi possível gerar os textos. Por favor, entre em contato com o suporte.";
+const RECOVERY_FAILURE_MESSAGE =
+  "Não conseguimos gerar os textos automaticamente. Você pode tentar novamente ou entrar em contato com o suporte.";
 
 type Tone = "green" | "blue" | "amber";
 
@@ -79,7 +81,7 @@ const feedbackTextClasses: Record<Tone, string> = {
 
 interface StatePresentation {
   readonly tone: Tone;
-  readonly badge: string;
+  readonly badge: string | null;
   readonly feedback: string;
   /** `true` quando o estado bloqueia o CTA incondicionalmente (`ativa`/`indeterminada`).
    *  `aguardando` NÃO bloqueia por si: o CTA segue `canRetry` (liberado quando a
@@ -128,24 +130,24 @@ function presentState(
     case "falha_definitiva":
       return {
         tone: "amber",
-        badge: "Não dá para tentar automaticamente",
-        feedback: "Não foi possível gerar os textos automaticamente.",
+        badge: null,
+        feedback: RECOVERY_FAILURE_MESSAGE,
         blocked: false,
         showSpinner: false,
       };
     case "falha":
       return {
         tone: "amber",
-        badge: "Não conseguimos gerar os textos",
-        feedback: "Não conseguimos gerar os textos desta campanha.",
+        badge: null,
+        feedback: RECOVERY_FAILURE_MESSAGE,
         blocked: false,
         showSpinner: false,
       };
     case "interrompida":
       return {
         tone: "amber",
-        badge: "Recuperação interrompida",
-        feedback: "A recuperação foi interrompida. Você pode tentar novamente.",
+        badge: null,
+        feedback: RECOVERY_FAILURE_MESSAGE,
         blocked: false,
         showSpinner: false,
       };
@@ -163,7 +165,6 @@ function StateIcon({ state, tone }: { state: NewFlowCopyRecoveryState; tone: Ton
 
 export function CopyRecoveryPanel({
   state,
-  autoAttempts,
   manualAttempts,
   waitRemainingMs,
   canRetry,
@@ -174,10 +175,12 @@ export function CopyRecoveryPanel({
   const secondsRemaining = Math.max(0, Math.ceil(waitRemainingMs / 1000));
   const presentation = presentState(state, secondsRemaining);
   const manualLimitReached = manualAttempts >= MANUAL_LIMIT;
+  const finalFailure = manualLimitReached &&
+    (state === "falha" || state === "falha_definitiva" || state === "interrompida");
   // CTA desabilitado em estados bloqueantes OU no limite manual / sem permissão.
   const ctaDisabled = presentation.blocked || !canRetry || manualLimitReached;
   const showSupport = Boolean(
-    supportEmail && (manualLimitReached || state === "falha_definitiva"),
+    supportEmail && (manualLimitReached || state === "falha_definitiva" || canRetry),
   );
 
   return (
@@ -190,11 +193,11 @@ export function CopyRecoveryPanel({
           >
             Copy da campanha
           </h2>
-          <span
+          {presentation.badge && <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium font-heading ${badgeClasses[presentation.tone]}`}
           >
             {presentation.badge}
-          </span>
+          </span>}
         </div>
 
         <div
@@ -208,7 +211,7 @@ export function CopyRecoveryPanel({
               <p
                 className={`text-sm font-body ${feedbackTextClasses[presentation.tone]}`}
               >
-                {presentation.feedback}
+                {finalFailure ? MANUAL_LIMIT_MESSAGE : presentation.feedback}
               </p>
 
               {state === "aguardando" && (
@@ -224,21 +227,10 @@ export function CopyRecoveryPanel({
           </div>
         </div>
 
-        <p className="font-mono text-xs text-text-secondary">
-          Tentativas automáticas: {autoAttempts} de {MANUAL_LIMIT}
-        </p>
-        <p className="font-mono text-xs text-text-secondary">
-          Tentativas manuais: {manualAttempts} de {MANUAL_LIMIT}
-        </p>
-
         <p className="text-sm text-text-muted font-body">{SCOPE_NOTICE}</p>
 
-        {manualLimitReached && (
-          <p className="text-sm text-accent-amber font-body">{MANUAL_LIMIT_MESSAGE}</p>
-        )}
-
         <div className="flex flex-wrap gap-2">
-          <Button
+          {!manualLimitReached && <Button
             variant="secondary"
             size="sm"
             onClick={onRecover}
@@ -248,7 +240,7 @@ export function CopyRecoveryPanel({
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
             Gerar os textos novamente
-          </Button>
+          </Button>}
 
           {state === "indeterminada" && onVerify && (
             <Button variant="ghost" size="sm" onClick={onVerify}>
