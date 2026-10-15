@@ -7,6 +7,10 @@ import { CampaignInputForm } from "./campaign-input-form";
 import { ErrorState } from "@/components/ui/error-state";
 import { AlertTriangle } from "lucide-react";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
+import type { CampaignFormRestore } from "@/lib/campaign/display";
+import { DRAFT_KEY, IMAGE_DRAFT_KEY } from "@/hooks/use-input-preservation";
+
+const PREVIEW_KEY = "campaign_preview";
 
 interface CampaignPageClientProps {
   store: Store;
@@ -20,17 +24,45 @@ interface CampaignPageClientProps {
    * declara elegibilidade. Ausente ⇒ `false` (fail-closed).
    */
   eligible?: boolean;
+  /**
+   * F56.2b2b (C4 / B2B-D9): snapshot ESTRUTURAL do formulário restaurado,
+   * resolvido SERVER-SIDE com ownership em `/campanhas/nova` (elo 1 da cadeia).
+   * Repassado ao `CampaignInputForm` (elo 2). SEM import `product-1-1` (G-NA).
+   */
+  restoredForm?: CampaignFormRestore | null;
 }
 
-export function CampaignPageClient({ store, balance, supportEmail, generationPaused, identity, eligible = false }: CampaignPageClientProps) {
+export function CampaignPageClient({ store, balance, supportEmail, generationPaused, identity, eligible = false, restoredForm = null }: CampaignPageClientProps) {
   const [isReviewActive, setIsReviewActive] = useState(false);
+  // F56.2b2b (C4 / B2B-D9) — mount-clear ESCOPADO. Remove SOMENTE as chaves
+  // LEGADAS GLOBAIS (`campaign_draft`/`campaign_draft_image`/`campaign_preview`) e
+  // as chaves ESCOPADAS de campanhas NÃO-alvo (`campaign_draft:*`/
+  // `campaign_draft_image:*`). NUNCA remove as chaves escopadas da campanha-ALVO
+  // (`campaign_draft:<campaignId>`/`campaign_draft_image:<campaignId>`): o rascunho
+  // da campanha-alvo sobrevive ao clear (o texto vem do SERVIDOR e a imagem data
+  // URL da chave escopada da campanha-alvo).
   useLayoutEffect(() => {
     try {
-      sessionStorage.removeItem("campaign_draft");
-      sessionStorage.removeItem("campaign_draft_image");
-      sessionStorage.removeItem("campaign_preview");
+      const targetScope = restoredForm?.campaignId ?? null;
+      const targetDraftKey = targetScope ? `${DRAFT_KEY}:${targetScope}` : null;
+      const targetImageKey = targetScope ? `${IMAGE_DRAFT_KEY}:${targetScope}` : null;
+      const keys: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i += 1) {
+        const key = sessionStorage.key(i);
+        if (!key) continue;
+        const isLegacy =
+          key === DRAFT_KEY || key === IMAGE_DRAFT_KEY || key === PREVIEW_KEY;
+        const isScopedDraft =
+          key.startsWith(`${DRAFT_KEY}:`) || key.startsWith(`${IMAGE_DRAFT_KEY}:`);
+        if (isLegacy) {
+          keys.push(key);
+        } else if (isScopedDraft && key !== targetDraftKey && key !== targetImageKey) {
+          keys.push(key);
+        }
+      }
+      for (const key of keys) sessionStorage.removeItem(key);
     } catch { /* ignore */ }
-  }, []);
+  }, [restoredForm?.campaignId]);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -64,7 +96,7 @@ export function CampaignPageClient({ store, balance, supportEmail, generationPau
         Informe os dados do produto e da oferta
       </p>
 
-      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} store={store as { name: string; segment: string; brand_color: string; id: string }} identity={identity} eligible={eligible} onReviewModeChange={setIsReviewActive} />
+      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} store={store as { name: string; segment: string; brand_color: string; id: string }} identity={identity} eligible={eligible} restoredForm={restoredForm} onReviewModeChange={setIsReviewActive} />
     </div>
   );
 }

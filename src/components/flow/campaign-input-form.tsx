@@ -43,6 +43,7 @@ import {
   validateOriginalBackground,
 } from "@/lib/product-1-1/selection-validation";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
+import type { CampaignFormRestore } from "@/lib/campaign/display";
 
 interface CampaignInputFormProps {
   storeId?: string;
@@ -55,10 +56,16 @@ interface CampaignInputFormProps {
    * server-side e apenas propagada pelo cliente. Ausente ⇒ `false`.
    */
   eligible?: boolean;
+  /**
+   * F56.2b2b (C4 / B2B-D9): snapshot ESTRUTURAL do formulário restaurado,
+   * resolvido SERVER-SIDE com ownership em `/campanhas/nova` e repassado por
+   * PROP (elo da cadeia) até `useCampaignForm`. SEM import `product-1-1` (G-NA).
+   */
+  restoredForm?: CampaignFormRestore | null;
   onReviewModeChange?: (active: boolean) => void;
 }
 
-export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, eligible = false, onReviewModeChange }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, eligible = false, restoredForm = null, onReviewModeChange }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -89,7 +96,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     confirmReview,
     unknownResult,
     resetUnknownResult,
-  } = useCampaignForm(storeId, { eligible });
+    restorationNotice,
+  } = useCampaignForm(storeId, { eligible, restoredForm });
 
   // F56.2b1b (Plano 06 — correção): resultado TERMINAL resolvido pelo painel de
   // resultado desconhecido ("Verificar novamente"). Em `refunded`, o estado do
@@ -280,6 +288,23 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             >
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+
+      {restorationNotice && (
+        <div
+          role="status"
+          className="w-full rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-3"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle
+              className="h-4 w-4 text-accent-amber shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
+            <p className="text-xs text-accent-amber/90 font-body">
+              {restorationNotice}
+            </p>
           </div>
         </div>
       )}

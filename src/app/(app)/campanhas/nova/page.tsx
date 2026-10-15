@@ -11,9 +11,15 @@ import { getStoreReadiness } from "@/lib/store-readiness";
 import { resolveStoreIdentity, validateIdentityReference } from "@/lib/store-identity-service";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
+import { getCampaignForDisplay, mapRestoredForm } from "@/lib/campaign/display";
+import type { CampaignFormRestore } from "@/lib/campaign/display";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
-export default async function NovaCampanhaPage() {
+interface NovaCampanhaPageProps {
+  searchParams?: Promise<{ restoreFrom?: string | string[] }>;
+}
+
+export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPageProps = {}) {
   const user = await requirePageUser();
   const store = await getCurrentStore(user.userId);
 
@@ -78,9 +84,39 @@ export default async function NovaCampanhaPage() {
     eligible = false;
   }
 
+  // F56.2b2b (C4 / B2B-D9) — TRANSPORTE AUTENTICADO COM OWNERSHIP da origem. A
+  // CTA do `RefundedPanel` navega para `/campanhas/nova?restoreFrom=<campaignId>`.
+  // O snapshot é resolvido SERVER-SIDE REUSANDO os helpers já usados por
+  // `campanhas/[id]/page.tsx` (`requirePageUser` + `getCurrentStore` +
+  // `getCampaignForDisplay`) com ownership verificado (`campaign.store_id ===
+  // store.id`) — SEM módulo novo. FAIL-CLOSED: origem ausente/não-possuída/
+  // indisponível ⇒ `null` (sem promessa falsa). O CLIENTE NUNCA fornece o snapshot;
+  // NUNCA inicia geração/cobrança.
+  let restoredForm: CampaignFormRestore | null = null;
+  if (searchParams) {
+    const resolved = await searchParams;
+    const restoreFrom =
+      typeof resolved?.restoreFrom === "string" ? resolved.restoreFrom : null;
+    if (restoreFrom) {
+      try {
+        const campaign = await getCampaignForDisplay(restoreFrom);
+        if (campaign && campaign.store_id === store.id) {
+          restoredForm = mapRestoredForm({
+            campaignId: campaign.id,
+            inputSnapshot: campaign.input_snapshot,
+            identitySnapshot: campaign.identity_snapshot,
+          });
+        }
+      } catch (err) {
+        console.error(`[nova] restoredForm resolve error — ${err instanceof Error ? err.message : String(err)}`);
+        restoredForm = null;
+      }
+    }
+  }
+
   return (
     <main>
-      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} />
+      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} restoredForm={restoredForm} />
     </main>
   );
 }
