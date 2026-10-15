@@ -19,6 +19,7 @@
 //
 // Contrato (exportado):
 //   evaluateFixtureReadiness(input) -> { ready, mayApplyBackfillMigration, failures }
+//   parseReturnedUuid(lines)        -> { ok, uuid, reason }  (check do `RETURNING`)
 // CLI: lê o JSON do stdin, imprime JSON e sai 0 (pronto) ou 1 (bloqueado).
 //
 // Como rodar o teste negativo (sem DB):
@@ -43,6 +44,41 @@ import path from "node:path";
 
 function isTrue(value) {
   return value === true;
+}
+
+/**
+ * F56.2b2a — Plano 05 (correção do check de `RETURNING`).
+ *
+ * Ao rodar `psql -c "INSERT ... RETURNING <uuid_col>"` NÃO se pode contar TODAS as
+ * linhas de saída: o psql também imprime a TAG DE COMANDO (`INSERT 0 1`). Contar
+ * linhas cruas confundiria o status do comando com uma linha de DADOS, e uma
+ * fixture "ausente" poderia passar como presente (ou vice-versa). Este helper
+ * valida EXPLICITAMENTE o UUID devolvido (ignorando qualquer tag/ruído) — o
+ * harness (`scripts/run-f56-2b2a-f562b-proof.ps1`) aplica o MESMO critério ao
+ * inserir as fixtures de backfill. Preferir ainda `psql -q` para que a tag não
+ * seja sequer emitida.
+ */
+export const RETURNED_UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Extrai o ÚNICO UUID devolvido por um `INSERT ... RETURNING`, IGNORANDO a tag de
+ * comando (`INSERT 0 1`) e linhas vazias. Falha se não houver exatamente um UUID.
+ * @param {string|string[]} lines saída do psql (uma string ou lista de linhas)
+ * @returns {{ ok: boolean, uuid: string|null, reason: string }}
+ */
+export function parseReturnedUuid(lines) {
+  const list = Array.isArray(lines) ? lines : [lines];
+  const uuids = list
+    .map((line) => String(line ?? "").trim())
+    .filter((line) => RETURNED_UUID_PATTERN.test(line));
+  if (uuids.length === 1) {
+    return { ok: true, uuid: uuids[0], reason: "single_returned_uuid" };
+  }
+  if (uuids.length === 0) {
+    return { ok: false, uuid: null, reason: "no_returned_uuid" };
+  }
+  return { ok: false, uuid: null, reason: "multiple_returned_uuids" };
 }
 
 /**

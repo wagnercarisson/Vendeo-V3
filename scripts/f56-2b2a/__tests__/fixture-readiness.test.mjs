@@ -19,7 +19,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-import { evaluateFixtureReadiness, renderReadiness } from "../fixture-readiness.mjs";
+import { evaluateFixtureReadiness, renderReadiness, parseReturnedUuid } from "../fixture-readiness.mjs";
 
 const GUARD = path.resolve(fileURLToPath(import.meta.url), "..", "..", "fixture-readiness.mjs");
 
@@ -135,4 +135,43 @@ test("CLI do guard: fixture faltando => exit NAO-ZERO (harness faz throw antes d
   });
   assert.notEqual(run.status, 0);
   assert.equal(JSON.parse(run.stdout).mayApplyBackfillMigration, false);
+});
+
+// ---------------------------------------------------------------------------
+// Correção do check de `RETURNING` (Plano 05 / prova f562b): a tag de comando
+// (`INSERT 0 1`) NÃO pode ser confundida com uma linha de DADOS.
+// ---------------------------------------------------------------------------
+
+const SAMPLE_UUID = "69978ee0-88fd-420f-a207-d690f1249c17";
+
+test("parseReturnedUuid: UUID + tag de comando => 1 UUID (tag ignorada)", () => {
+  const res = parseReturnedUuid([SAMPLE_UUID, "INSERT 0 1"]);
+  assert.equal(res.ok, true);
+  assert.equal(res.uuid, SAMPLE_UUID);
+  assert.equal(res.reason, "single_returned_uuid");
+});
+
+test("parseReturnedUuid: somente a tag de comando => 0 UUID (bloqueia)", () => {
+  const res = parseReturnedUuid(["INSERT 0 1"]);
+  assert.equal(res.ok, false);
+  assert.equal(res.uuid, null);
+  assert.equal(res.reason, "no_returned_uuid");
+});
+
+test("parseReturnedUuid: saida vazia => 0 UUID (bloqueia)", () => {
+  const res = parseReturnedUuid([""]);
+  assert.equal(res.ok, false);
+  assert.equal(res.reason, "no_returned_uuid");
+});
+
+test("parseReturnedUuid: MAIS de um UUID => bloqueia (nunca escolher arbitrario)", () => {
+  const res = parseReturnedUuid([SAMPLE_UUID, "11111111-2222-3333-4444-555555555555"]);
+  assert.equal(res.ok, false);
+  assert.equal(res.reason, "multiple_returned_uuids");
+});
+
+test("parseReturnedUuid: aceita string unica (linha) sem tag", () => {
+  const res = parseReturnedUuid(SAMPLE_UUID);
+  assert.equal(res.ok, true);
+  assert.equal(res.uuid, SAMPLE_UUID);
 });
