@@ -39,7 +39,7 @@ Na entrega **inativa** da b1b, quando **não** existir **fonte operacional compr
 
 ### Requirement: Recuperação server-side de operação sem delivered
 
-A orquestração SHALL oferecer uma **recuperação server-side** para operações **não terminais** (`reserved`/`art_uploaded`), **dentro do ciclo da requisição**, **sem** fila/worker/cron e **sem** retomada de geração. A recuperação SHALL usar a sonda **tipada** de arte: `integral` → concluir a entrega; `invalid`/`indeterminate` → reverificar e dar feedback honesto. Operação não terminal **e** arte ausente são **necessárias, mas NÃO suficientes** para encerrar: essa é **também** a situação normal durante a geração, e **consulta/reload durante a geração normal NÃO SHALL encerrar nem estornar**. O **encerramento local com estorno único** SHALL exigir o **gatilho persistido de falha FINAL para a operação, sem retry/fallback pendente**: **(a)** `outcome = 'failed'` de operação **ou** estado persistido que prove que **nenhuma tentativa adicional pode ser iniciada**; **e (b)** **nenhum** claim `in_progress`; **e (c)** arte `absent` confirmada — **sem** exigir marcador `generation_outcomes` pré-salvo e **sem** encerramento externo do provider. **Um `failed` de tentativa com retry/fallback ainda pendente SHALL NOT ser gatilho** (o orquestrador grava `failed` antes de decidir a próxima tentativa). **Sem sinal de finalidade** (nenhum claim persistido, `in_progress`/`abandoned`/`unknown`, retry/fallback pendente, ou finalidade não provável), o encerramento SHALL ser **explicitamente autorizado e auditado** (motivo + evidência), registrando a resolução (idempotente); o encerramento SHALL ocorrer sob a **mesma trava** da linha de crédito e transitar a operação para **terminal**, **impedindo atomicamente** tentativa posterior. A recuperação financeira SHALL limitar-se a operações **não terminais**; `delivered` não estorna e `refunded` SHALL NOT retornar a `delivered`. A autorização de recuperação/gratuidade SHALL decorrer do **estado server-side**, nunca de alegação do cliente.
+A orquestração SHALL oferecer uma **recuperação server-side** para operações **não terminais** (`reserved`/`art_uploaded`), **dentro do ciclo da requisição**, **sem** fila/worker/cron e **sem** retomada de geração. A recuperação SHALL usar a sonda **tipada** de arte: `integral` → concluir a entrega; `invalid`/`indeterminate` → reverificar e dar feedback honesto. Operação não terminal **e** arte ausente são **necessárias, mas NÃO suficientes** para encerrar: essa é **também** a situação normal durante a geração, e **consulta/reload durante a geração normal NÃO SHALL encerrar nem estornar**. O **encerramento local com estorno único** SHALL exigir o **gatilho persistido de falha FINAL para a operação, sem retry/fallback pendente**: **(a)** `outcome = 'failed'` de operação **gravado com sucesso** no ponto de decisão terminal; **e (b)** **nenhum** claim `in_progress`; **e (c)** arte `absent` confirmada — **sem** exigir marcador `generation_outcomes` pré-salvo (ele é gravado no **ponto de decisão terminal**, não antes) e **sem** encerramento externo do provider. **(a) exige gravação bem-sucedida**: se o marcador não puder ser gravado (erro) **ou** já existir um `unknown` imutável, **não** se trata como sucesso automático nem se sobrescreve — encaminha à **resolução autorizada**. **Um `failed` de tentativa com retry/fallback ainda pendente SHALL NOT ser gatilho** (o orquestrador grava `failed` antes de decidir a próxima tentativa). **Sem sinal de finalidade** (nenhum claim persistido, `in_progress`/`abandoned`/`unknown`, retry/fallback pendente, ou finalidade não provável), o encerramento SHALL ser **explicitamente autorizado e auditado** (motivo + evidência), registrando a resolução (idempotente); o encerramento SHALL ocorrer sob a **mesma trava** da linha de crédito e transitar a operação para **terminal**, **impedindo atomicamente** tentativa posterior. **O gatilho automático exige ausência de `in_progress` e SHALL NOT abandonar claim algum**; **finalizar um claim `in_progress` como `abandoned` pertence EXCLUSIVAMENTE ao encerramento autorizado**, sob a mesma trava, **com proteção contra o resultado atrasado**. A recuperação financeira SHALL limitar-se a operações **não terminais**; `delivered` não estorna e `refunded` SHALL NOT retornar a `delivered`. A autorização de recuperação/gratuidade SHALL decorrer do **estado server-side**, nunca de alegação do cliente.
 
 #### Scenario: Recuperação dentro do ciclo e sem worker
 
@@ -53,6 +53,32 @@ A orquestração SHALL oferecer uma **recuperação server-side** para operaçõ
 - **WHEN** a sonda confirma `absent` **e** há **falha FINAL da operação** (sem retry/fallback pendente) **e** nenhum claim `in_progress`
 - **THEN** a operação é encerrada localmente como `refunded` uma única vez
 - **AND** os dados do formulário são preservados para nova submissão
+
+#### Scenario: Marcador de falha final (4a) no ponto de decisão
+
+- **WHEN** a política não produz próxima tentativa e o orquestrador **grava `outcome='failed'` com sucesso** (marcador não pré-salvo)
+- **AND** não há claim `in_progress` e a sonda confirma `absent`
+- **THEN** o predicado PF é satisfeito e a operação é encerrada localmente como `refunded` uma única vez
+
+#### Scenario: Marcador não gravado vai para resolução autorizada
+
+- **WHEN** a gravação de `outcome='failed'` **falha** **ou** já existe um `unknown` **imutável**
+- **THEN** o caso SHALL NOT ser tratado como sucesso automático nem sobrescrever o marcador
+- **AND** a operação permanece **não terminal** e o caso é encaminhado à **resolução autorizada**
+
+#### Scenario: Abandono de claim `in_progress` é exclusivo do caminho autorizado
+
+- **WHEN** existe um claim `in_progress` e não há sinal de finalidade
+- **THEN** o gatilho automático **não** o abandona (PF exige ausência de `in_progress`)
+- **AND** somente o encerramento **autorizado** pode finalizá-lo como `abandoned`, sob a trava
+- **AND** um resultado atrasado da chamada em voo **não** sobrescreve o estado terminal
+
+#### Scenario: Formulário restaurado com limites honestos
+
+- **WHEN** o estorno é persistido e confirmado
+- **THEN** os **campos preenchidos** são restaurados a partir do estado persistido server-side (`input_snapshot`/`identitySnapshot`)
+- **AND** a mensagem aprovada é exibida
+- **AND** **não** se promete restauração de **imagem**/referências (client-only)
 
 #### Scenario: Retry ou fallback pendente não estorna
 

@@ -11,8 +11,8 @@ A change agregadora `fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1` é **sub
 - **Recuperação de arte no Storage privado:** arte **íntegra existente** → **recuperar e concluir** a entrega **sem regenerar**; limitada a operações **não terminais** (`reserved`/`art_uploaded`).
 - **Encerramento local com estorno confirmado (substitui D13):** com **ausência de arte confirmada** **e** **falha FINAL para a operação, sem retry/fallback pendente**, **encerrar a operação LOCALMENTE** com **estorno UMA vez** (`refunded`) — **sem** depender de encerramento externo do provider e **sem** exigir o marcador `generation_outcomes` pré-salvo.
 - **Ausência de arte não demonstra falha sozinha.** Operação não terminal + arte ausente são **necessárias, mas NÃO suficientes**; **consulta/reload durante a geração normal NÃO estorna**.
-- **Gatilho server-side persistido de falha FINAL:** `outcome = 'failed'` de operação **ou** estado persistido que prove que **nenhuma tentativa adicional pode ser iniciada**; **nenhum** claim `in_progress`; arte `absent` confirmada. **`failed` de tentativa com retry/fallback pendente NÃO estorna.**
-- **Sem sinal de finalidade:** encerramento local **explicitamente autorizado e auditado** (motivo + evidência), registrando a resolução (append-only, idempotente); o cliente **só solicita**, nunca autoriza.
+- **Gatilho server-side persistido de falha FINAL:** predicado **PF** (aprovado): operação **não terminal** **e** arte `absent` **confirmada** **e** **nenhum** claim `in_progress` **e** **finalidade persistida (4a)** — `outcome='failed'` **gravado com sucesso** no **ponto de decisão terminal** (reuso da RPC/tabela existentes). **`failed` de tentativa com retry/fallback pendente NÃO estorna** (a janela principal→fallback não satisfaz PF). **Se o marcador não puder ser gravado** (erro ou `unknown` imutável pré-existente), **não** se força PF nem se sobrescreve: encaminha à resolução autorizada.
+- **Sem sinal de finalidade:** encerramento local **explicitamente autorizado e auditado** (motivo + evidência), **reutilizando a resolução administrativa existente** `admin_resolve_product_1_1_pending` (administrador autorizado; ação `refund_once`); o cliente **só solicita**, nunca autoriza; **sem** exigir encerramento externo do provider.
 - **Atomicidade:** o encerramento (automático ou autorizado) ocorre sob a **mesma trava** da linha de crédito usada por `acquire_attempt_start` e transita para terminal, **impedindo atomicamente** qualquer tentativa posterior.
 - **Estorno único confirmado, formulário preservado e mensagem aprovada.** Somente **após o estorno persistido confirmado**, exibir exatamente: **“Não conseguimos concluir a comunicação desta geração. Seus dados foram preservados e o crédito foi estornado. Você pode gerar novamente.”** Se o estorno **não** puder ser confirmado, **não** anunciar crédito. **Erro/indisponibilidade** do Storage **não** é ausência confirmada.
 - **`delivered` nunca estorna; `refunded` não volta a `delivered`.** Resultado/imagem **atrasada** de operação `refunded` **não** reabre cobrança, **não** sobrescreve estado e **não** libera a nova campanha; a nova submissão é **geração nova com cobrança normal**.
@@ -32,7 +32,7 @@ A change agregadora `fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1` é **sub
 
 1. **Arte íntegra** no Storage privado → **recuperar e concluir** a entrega, **sem regenerar**.
 2. **Operação não terminal + arte ausente** são **necessárias, mas NÃO suficientes** para estorno; **consulta/reload durante a geração normal NÃO estorna**.
-3. O encerramento local exige **falha FINAL para a operação, sem retry/fallback pendente** + **nenhum** claim `in_progress` + arte `absent` confirmada; **`failed` de tentativa com retry/fallback pendente não estorna**.
+3. O encerramento local exige o **predicado PF** (operação não terminal + arte `absent` confirmada + **nenhum** claim `in_progress` + **finalidade persistida (4a)**: marcador `outcome='failed'` **gravado com sucesso** no ponto de decisão); **`failed` de tentativa com retry/fallback pendente não estorna**, a **janela principal→fallback** não autoriza estorno, e **sem marcador gravado não há PF** (vai para resolução autorizada).
 4. **Sem sinal de finalidade** → encerramento local **explicitamente autorizado e auditado**; o cliente sozinho **não** autoriza estorno.
 5. O encerramento ocorre sob a **mesma trava** da linha de crédito e **impede atomicamente** qualquer tentativa posterior (`operation_terminal`).
 6. **Ausência confirmada + gatilho** → **estornar uma única vez**, encerrar como `refunded` e devolver o **formulário preenchido** com os dados preservados.
@@ -41,8 +41,12 @@ A change agregadora `fase-56-2b2-copy-recuperavel-e-piloto-produto-1-1` é **sub
 9. **`delivered` nunca é estornado**; **`refunded` não retorna a `delivered`**, mesmo com imagem atrasada.
 10. **Corrida entrega × estorno** e **estorno idempotente**: no máximo um efeito de ledger.
 11. Resultado atrasado de `refunded` **não** reabre cobrança, **não** sobrescreve e **não** libera a nova campanha; nova submissão é **geração nova com cobrança normal**.
-12. **Provas exigidas aprovadas:** corrida entrega×estorno; estorno idempotente; resultado atrasado; falha de Storage/banco; formulário restaurado; **geração normal sem arte não estorna**; **principal falhou/fallback pendente não estorna**; **falha final sem marcador prévio encerra e estorna uma vez**; **sem sinal de finalidade exige autorização auditada**; **encerramento impede tentativa posterior**.
-13. **D13 não é declarado resolvido**: o gate permanece até implementação e **comprovação**; **evidência simulada não satisfaz** o gate; o **archive da b1b não é reescrito**.
+12. **Provas exigidas aprovadas em duas camadas** (Precisão D): **Camada 1** — falhas raras por **simulação controlada** (harness/fake) exercitam o controle de fluxo; **Camada 2** — **efeitos reais** comprovados em **Postgres/Storage locais** (instância isolada): corrida entrega×estorno; estorno idempotente; resultado atrasado; falha de Storage/banco; formulário restaurado; **geração normal sem arte não estorna**; **principal falhou/fallback pendente não estorna**; **falha final (PF) encerra e estorna uma vez**; **sem sinal de finalidade exige autorização auditada**; **encerramento impede tentativa posterior**. **Teste com provider real/ativação reservado à B2.3.**
+13. **D13 NÃO é declarado resolvido**: o gate permanece até **implementação e comprovação dos efeitos** (Camada 2); **simular a falha não substitui comprovar os efeitos**; o **archive da b1b não é reescrito**.
+14. **Formulário restaurado com honestidade:** restauram-se os **campos preenchidos** (fonte server-side `input_snapshot`/`identitySnapshot`); **não** se promete restauração de **imagem**/referências (client-only); a mensagem exata só aparece após estorno **persistido e confirmado**.
+15. **Marcador de falha final (4a) — regra única:** o encerramento automático exige `outcome='failed'` **gravado com sucesso**; **(4b) retirada** (recusas isoladas **não** comprovam falha final). Se o marcador **não** puder ser gravado (erro de escrita ou `unknown` imutável pré-existente), **não** há sucesso nem sobrescrita: encaminha à **resolução autorizada e auditada**.
+16. **Abandono de claim só no caminho autorizado:** PF exige ausência de `in_progress`, portanto **não** abandona claim; **abandonar um claim `in_progress` pertence exclusivamente** à resolução autorizada, sob a trava, **com proteção contra o resultado atrasado**.
+17. **Escopo e infraestrutura:** **nenhuma** fila/worker/cron/outbox/subsistema novo; estimativa **5–7 planos** (teto 8–10).
 
 ## Dependência explícita
 
@@ -62,9 +66,16 @@ Aprovação, reprovação, correção, contador e bloqueio server-side de downlo
 
 **5–7 planos** (abaixo do limite de 8–10). Se exceder, **parar** e propor ajuste sem retirar segurança nem testes.
 
+## Reconciliação desta rodada (2026-10-15)
+
+- **Precisão A** (predicado de falha final), **B** (resolução autorizada/D13), **C** (experiência/formulário restaurado) e **D** (validação em duas camadas/gate) estão **fechadas** em `design.md` (B2B-D3, D4, D8, D9) e `RECONCILIATION.md` §3.
+- **Decisão resolvida (aprovada 2026-10-15):** **A-1** — adotada **(4a)** como regra única; **(4b) retirada**; ver `RECONCILIATION.md` §5.
+- **UI-SPEC** para formulário restaurado, mensagem e ações: `UI-SPEC.md` **APROVADO** (2026-10-15) como contrato pré-implementação, no escopo INATIVO.
+- **Resíduo separado:** sign-off de segurança da **B2.1** permanece **PENDENTE** (não corrigido aqui) — `RECONCILIATION.md` §7.
+
 ## Checkpoint Humano
 
-Esta proposta **para para revisão humana antes de qualquer implementação**. Nenhum código, migration, `db push`, chamada paga, commit, `sync`/`archive` ou planejamento/execução GSD antes da aprovação do responsável.
+**APROVADA (2026-10-15, escopo INATIVO).** O responsável aprovou a **base reconciliada** (precisões A–D e decisão **A-1 = 4a**) e a **UI-SPEC** da B2.2 como **contrato pré-implementação**, **exclusivamente no escopo INATIVO**. Nenhuma implementação, GSD, migration/`db push`, chamada paga, ativação ou B2.3 foi iniciada. A **validação do resultado implementado** é um checkpoint **posterior e distinto** (UAT da B2.2). O sign-off pendente da **B2.1** permanece **separado**.
 
 ## Impact
 

@@ -6,7 +6,7 @@
 
 ### Requirement: Falha confirmada e resultado desconhecido
 
-Falha **confirmada** sem arte utilizável SHALL gerar `refunded` **uma vez**. Resultado **desconhecido** (ex.: timeout) SHALL deixar a operação **pendente/limitada**, sem estorno baseado apenas em timeout e sem nova chamada cega, e **sem retomada** — nem automática, nem por reenvio do lojista. Timeout ou estado `reserved` isolados SHALL NOT autorizar estorno. A operação SHALL ser resolvida por **recuperação server-side** que consulta o Storage privado: **arte íntegra** → conclusão da entrega sem regenerar. Operação não terminal **e** arte ausente são **necessárias, mas NÃO suficientes** para estorno — essa é **também** a situação normal durante a geração; **consulta/reload durante a geração normal SHALL NOT autorizar estorno**. O **gatilho** que autoriza o **encerramento LOCAL** com `refunded` **uma única vez** (sem encerramento externo do provider e **sem** exigir o marcador `generation_outcomes` pré-salvo) SHALL ser: **(a)** **falha FINAL para a operação, sem retry/fallback pendente** — persistida como `outcome = 'failed'` de operação **ou** estado persistido que prove que **nenhuma tentativa adicional pode ser iniciada**; **(b)** **nenhum** claim `in_progress` para a operação; **e (c)** arte `absent` confirmada com operação não terminal. Um claim `failed` de uma tentativa que **ainda admite retry/fallback SHALL NOT** ser gatilho (o orquestrador grava `failed` e só depois decide a próxima tentativa). A recuperação financeira SHALL limitar-se a operações **não terminais** (`reserved`/`art_uploaded`); `delivered` e `refunded` são **terminais**, e `refunded` SHALL NOT retornar a `delivered`. **Sem sinal de finalidade** (nenhum claim persistido, `in_progress`/`abandoned`/`unknown`, retry/fallback pendente ou finalidade não provável), o encerramento local SHALL ser **explicitamente autorizado e auditado** (motivo obrigatório + evidência), registrando a resolução (append-only, idempotente); **nunca** se infere erro da mera ausência. Quando o resultado permanecer **indeterminado**, a resolução SHALL ocorrer por **administrador autorizado**, com **motivo obrigatório** e **registro auditável das evidências e da transição** (sem dois aprovadores nesta versão), **sem re-queue** e **sem nova geração administrativa**. A “fila de atendimento” é **somente lista de pendências, sem execução automática**.
+Falha **confirmada** sem arte utilizável SHALL gerar `refunded` **uma vez**. Resultado **desconhecido** (ex.: timeout) SHALL deixar a operação **pendente/limitada**, sem estorno baseado apenas em timeout e sem nova chamada cega, e **sem retomada** — nem automática, nem por reenvio do lojista. Timeout ou estado `reserved` isolados SHALL NOT autorizar estorno. A operação SHALL ser resolvida por **recuperação server-side** que consulta o Storage privado: **arte íntegra** → conclusão da entrega sem regenerar. Operação não terminal **e** arte ausente são **necessárias, mas NÃO suficientes** para estorno — essa é **também** a situação normal durante a geração; **consulta/reload durante a geração normal SHALL NOT autorizar estorno**. O **gatilho** que autoriza o **encerramento LOCAL** com `refunded` **uma única vez** (sem encerramento externo do provider e **sem** exigir o marcador `generation_outcomes` **pré-salvo** — ele é gravado no **ponto de decisão terminal**, não antes) SHALL ser: **(a)** **falha FINAL para a operação, sem retry/fallback pendente** — persistida como `outcome = 'failed'` de operação **gravado com sucesso** no ponto de decisão terminal; **(b)** **nenhum** claim `in_progress` para a operação; **e (c)** arte `absent` confirmada com operação não terminal. Recusas isoladas (`primary_after_fallback`/`attempt_already_completed`/`attempt_limit_reached`/`attempt_number` máximo) SHALL NOT ser gatilho: **não comprovam, sozinhas, falha final da operação**. Se o marcador `outcome='failed'` **não puder ser gravado** (erro de escrita) **ou** já existir um `unknown` **imutável**, o encerramento SHALL NOT ser tratado como sucesso automático **nem** sobrescrever o marcador: a operação permanece **não terminal** e o caso SHALL ser encaminhado à **resolução autorizada** (abaixo). Um claim `failed` de uma tentativa que **ainda admite retry/fallback SHALL NOT** ser gatilho (o orquestrador grava `failed` e só depois decide a próxima tentativa). A recuperação financeira SHALL limitar-se a operações **não terminais** (`reserved`/`art_uploaded`); `delivered` e `refunded` são **terminais**, e `refunded` SHALL NOT retornar a `delivered`. **Sem sinal de finalidade** (nenhum claim persistido, `in_progress`/`abandoned`/`unknown`, retry/fallback pendente ou finalidade não provável), o encerramento local SHALL ser **explicitamente autorizado e auditado** (motivo obrigatório + evidência), registrando a resolução (append-only, idempotente); **nunca** se infere erro da mera ausência. Quando o resultado permanecer **indeterminado**, a resolução SHALL ocorrer por **administrador autorizado**, com **motivo obrigatório** e **registro auditável das evidências e da transição** (sem dois aprovadores nesta versão), **sem re-queue** e **sem nova geração administrativa**. A “fila de atendimento” é **somente lista de pendências, sem execução automática**.
 
 #### Scenario: Falha confirmada estorna uma vez
 
@@ -17,7 +17,7 @@ Falha **confirmada** sem arte utilizável SHALL gerar `refunded` **uma vez**. Re
 #### Scenario: Exceção reconhecida pelo gatilho persistido estorna uma vez
 
 - **WHEN** a operação é não terminal e a arte está `absent` confirmada
-- **AND** a falha é **FINAL para a operação** (`outcome = 'failed'` de operação, ou nenhuma tentativa adicional possível), **sem retry/fallback pendente**
+- **AND** a falha é **FINAL para a operação** (`outcome = 'failed'` de operação **gravado com sucesso** no ponto de decisão terminal), **sem retry/fallback pendente**
 - **AND** não há claim `in_progress` para a operação
 - **THEN** a operação transita para `refunded` uma única vez
 - **AND** a operação é encerrada localmente como `refunded`
@@ -50,7 +50,7 @@ Falha **confirmada** sem arte utilizável SHALL gerar `refunded` **uma vez**. Re
 
 ### Requirement: Encerramento local com estorno confirmado
 
-O encerramento de uma operação sem arte SHALL ser **local** ao servidor e SHALL NOT depender de comprovar que o provider encerrou **nem** de o marcador `generation_outcomes` já estar gravado. Operação não terminal **e** arte ausente são **necessárias, mas NÃO suficientes** para o encerramento. O encerramento SHALL exigir o **gatilho persistido** de **falha FINAL para a operação, sem retry/fallback pendente**: **(a)** `outcome = 'failed'` de operação **ou** estado persistido que prove que **nenhuma tentativa adicional pode ser iniciada**; **e (b)** **nenhum** claim `in_progress` para a operação; **e (c)** arte `absent` confirmada com operação não terminal. **Sem sinal de finalidade** (nenhum claim persistido, `in_progress`/`abandoned`/`unknown`, retry/fallback pendente, ou finalidade não provável), o encerramento SHALL ser **explicitamente autorizado e auditado** (motivo obrigatório + evidência), registrando a resolução (append-only, idempotente). O encerramento (automático ou autorizado) SHALL ocorrer sob a **mesma trava** da linha de crédito e transitar a operação para **terminal**, de modo que **qualquer tentativa posterior seja impedida atomicamente**. O estorno SHALL ser persistido antes de qualquer anúncio. A recuperação financeira SHALL limitar-se a operações **não terminais**; `refunded` SHALL NOT retornar a `delivered`.
+O encerramento de uma operação sem arte SHALL ser **local** ao servidor e SHALL NOT depender de comprovar que o provider encerrou **nem** de o marcador `generation_outcomes` já estar gravado. Operação não terminal **e** arte ausente são **necessárias, mas NÃO suficientes** para o encerramento. O encerramento SHALL exigir o **gatilho persistido** de **falha FINAL para a operação, sem retry/fallback pendente**: **(a)** `outcome = 'failed'` de operação **gravado com sucesso** no ponto de decisão terminal; **e (b)** **nenhum** claim `in_progress` para a operação; **e (c)** arte `absent` confirmada com operação não terminal. **(a) exige gravação bem-sucedida do marcador**: se o marcador não puder ser gravado (erro) ou já existir um `unknown` imutável, **não** se trata como sucesso automático nem se sobrescreve — o caso SHALL ser encaminhado à resolução autorizada. Recusas isoladas (`primary_after_fallback`/`attempt_already_completed`/`attempt_limit_reached`) SHALL NOT ser gatilho. **Sem sinal de finalidade** (nenhum claim persistido, `in_progress`/`abandoned`/`unknown`, retry/fallback pendente, ou finalidade não provável), o encerramento SHALL ser **explicitamente autorizado e auditado** (motivo obrigatório + evidência), registrando a resolução (append-only, idempotente). O encerramento (automático ou autorizado) SHALL ocorrer sob a **mesma trava** da linha de crédito e transitar a operação para **terminal**, de modo que **qualquer tentativa posterior seja impedida atomicamente**. **O gatilho automático exige ausência de `in_progress` e SHALL NOT abandonar claim algum**; **finalizar um claim `in_progress` como `abandoned` pertence EXCLUSIVAMENTE ao encerramento autorizado**, sob a mesma trava, **com proteção contra o resultado atrasado**. O estorno SHALL ser persistido antes de qualquer anúncio. A recuperação financeira SHALL limitar-se a operações **não terminais**; `refunded` SHALL NOT retornar a `delivered`.
 
 #### Scenario: Geração normal não estorna
 
@@ -58,13 +58,26 @@ O encerramento de uma operação sem arte SHALL ser **local** ao servidor e SHAL
 - **THEN** consulta/reload não encerra nem estorna
 - **AND** a geração continua
 
-#### Scenario: Falha final sem marcador prévio
+#### Scenario: Falha final com marcador gravado no ponto de decisão
 
-- **WHEN** o marcador `generation_outcomes` não foi salvo, mas a finalidade da falha é provável server-side (nenhuma tentativa adicional possível)
+- **WHEN** o marcador `generation_outcomes` **não** foi pré-salvo, mas o orquestrador **grava `outcome='failed'` com sucesso** no ponto de decisão terminal (sem próxima tentativa)
 - **AND** não há claim `in_progress` e a sonda confirma `absent`
-- **THEN** a recuperação reconhece a exceção pelo **gatilho persistido**
+- **THEN** a recuperação reconhece a exceção pelo **gatilho persistido (4a)**
 - **AND** encerra localmente com estorno confirmado uma vez
 - **AND** a decisão é server-side, não confiando apenas no cliente
+
+#### Scenario: Marcador não gravado vai para resolução autorizada
+
+- **WHEN** a gravação de `outcome='failed'` **falha** (erro de escrita) **ou** já existe um `unknown` **imutável** para a operação
+- **THEN** o caso SHALL NOT ser tratado como sucesso automático nem sobrescrever o marcador existente
+- **AND** a operação permanece **não terminal**
+- **AND** o caso SHALL ser encaminhado à **resolução autorizada e auditada** (`refund_once`)
+
+#### Scenario: Recusas isoladas não comprovam falha final
+
+- **WHEN** o único sinal é uma recusa de `acquire` (`primary_after_fallback`/`attempt_already_completed`/`attempt_limit_reached`) ou o `attempt_number` máximo de tentativa, **sem** marcador `outcome='failed'`
+- **THEN** o predicado PF **não** é satisfeito
+- **AND** nenhum encerramento nem estorno automático ocorre
 
 #### Scenario: Sem sinal de finalidade exige autorização auditada
 
@@ -91,6 +104,23 @@ O encerramento de uma operação sem arte SHALL ser **local** ao servidor e SHAL
 - **WHEN** não existe fonte externa comprovando o encerramento do provider
 - **THEN** a operação não fica indefinidamente bloqueada por esse motivo
 - **AND** o encerramento local com estorno confirmado é aplicado quando o gatilho persistido está presente
+
+#### Scenario: Janela principal→fallback não satisfaz o gatilho
+
+- **WHEN** o `primary` falhou (claim `failed`) e a próxima tentativa (retry/fallback) **ainda pode ser iniciada**
+- **AND** **nenhum** marcador `outcome='failed'` foi gravado (a decisão terminal ainda não ocorreu)
+- **THEN** o predicado PF **não** é satisfeito
+- **AND** nenhum encerramento nem estorno automático ocorre
+
+#### Scenario: Resolução autorizada reutiliza a resolução administrativa existente
+
+- **WHEN** não há sinal de finalidade persistido (nenhum claim, `in_progress`/`abandoned`/`unknown`, ou finalidade não provável)
+- **THEN** o encerramento SHALL ser **explicitamente autorizado e auditado** por **administrador autorizado** (motivo obrigatório + evidência server-derived)
+- **AND** SHALL reutilizar `admin_resolve_product_1_1_pending` (ação `refund_once`; `invalid`/`indeterminate` bloqueiam)
+- **AND** **somente** neste caminho autorizado o claim `in_progress` SHALL ser finalizado como `abandoned` na **mesma transação sob a trava** (o gatilho automático **não** abandona claim)
+- **AND** um resultado **atrasado** da chamada já iniciada SHALL NOT sobrescrever o estado terminal (`finish` recusa `invalid_transition`; `deliver` recusado a partir de `refunded`)
+- **AND** **nenhuma** confirmação de encerramento externo do provider é exigida
+- **AND** o cliente **não** autoriza o estorno
 
 #### Scenario: Recuperação financeira não toca operação terminal
 
@@ -137,6 +167,13 @@ Uma resposta/imagem **atrasada** de operação `refunded` SHALL NOT reabrir cobr
 - **THEN** a nova submissão é uma operação nova
 - **AND** a cobrança é normal
 - **AND** a operação estornada não libera nem bloqueia a nova campanha
+
+#### Scenario: Chamada em voo neutralizada pelo encerramento
+
+- **WHEN** uma chamada ao provider já iniciada retorna após o encerramento `refunded`
+- **THEN** `recordOperationOutcome` devolve `operation_terminal`
+- **AND** a entrega só transita `art_uploaded → delivered` (recusada a partir de `refunded`)
+- **AND** o estado terminal `refunded` não é sobrescrito nem reabre cobrança
 
 ### Requirement: Falha de Storage/banco não autoriza estorno nem anúncio de crédito
 
