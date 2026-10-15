@@ -19,15 +19,23 @@ const BACKGROUND_DIRECTION_OPTIONS: ReadonlyArray<{
 ];
 
 interface BackgroundDirectionSelectorProps {
-  value: ProductOneToOneBackgroundDirection;
+  /**
+   * F56.2b2b (P1): valor PODE estar AUSENTE (`undefined`/`null`) quando a fonte
+   * não foi resolvida — nesse caso NENHUMA opção aparece marcada (nunca `studio`
+   * silencioso). O usuário precisa escolher explicitamente.
+   */
+  value?: ProductOneToOneBackgroundDirection | null;
   onChange: (direction: ProductOneToOneBackgroundDirection) => void;
   disabled?: boolean;
+  /** F56.2b2b (P1): erro de campo exibido sob o seletor (escolha obrigatória). */
+  error?: string | null;
 }
 
 export function BackgroundDirectionSelector({
   value,
   onChange,
   disabled = false,
+  error = null,
 }: BackgroundDirectionSelectorProps) {
   return (
     <fieldset className="space-y-2" data-testid="flow-background-direction-selector">
@@ -51,6 +59,7 @@ export function BackgroundDirectionSelector({
               checked={value === option.value}
               onChange={() => onChange(option.value)}
               disabled={disabled}
+              aria-invalid={error ? true : undefined}
               className="h-4 w-4 accent-accent-green"
             />
             <span className="text-text-primary text-sm font-body flex-1">
@@ -59,6 +68,11 @@ export function BackgroundDirectionSelector({
           </label>
         ))}
       </div>
+      {error && (
+        <p role="alert" className="text-accent-red text-xs font-body">
+          {error}
+        </p>
+      )}
     </fieldset>
   );
 }

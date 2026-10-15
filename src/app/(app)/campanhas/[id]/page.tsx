@@ -25,6 +25,7 @@ import type {
 } from "@/lib/campaign/display";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
+import { readProductOneToOneBackgroundDirection } from "@/lib/product-1-1/snapshot/persist-snapshot";
 import {
   readCopyDelivery,
   readCopyCancellation,
@@ -108,10 +109,19 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     let restoredForm: CampaignFormRestore | null = null;
     if (newFlowState === "refunded") {
       try {
+        // P1 — a direção de fundo vive na EVIDÊNCIA CONGELADA (não em
+        // `input_snapshot`). A leitura é SOMENTE-leitura e usa o `operationId`
+        // RESOLVIDO NO SERVIDOR; ausência/erro ⇒ `null` (fail-closed ⇒ o formulário
+        // exige escolha explícita — NUNCA `studio` silencioso).
+        const backgroundDirection = await readProductOneToOneBackgroundDirection(
+          supabaseAdmin,
+          { campaignId: id, operationId: newFlowOperation.operationId },
+        );
         restoredForm = mapRestoredForm({
           campaignId: id,
           inputSnapshot: campaign.input_snapshot,
           identitySnapshot: campaign.identity_snapshot,
+          backgroundDirection,
         });
       } catch {
         restoredForm = null;

@@ -270,6 +270,32 @@ async function findEvidenceByIdentity(
   return data ?? null;
 }
 
+/**
+ * F56.2b2b (P1) — leitor SOMENTE-LEITURA da direção de fundo da EVIDÊNCIA
+ * CONGELADA (`product_1_1_snapshot_frozen_evidence.background_direction`).
+ *
+ * A identidade (`campaignId` + `operationId`) é resolvida SERVER-SIDE — o
+ * `operationId` NUNCA é aceito como autoridade do cliente. Ausência/erro ⇒ `null`
+ * (fail-closed) — NUNCA um default silencioso (`studio`). Reusa o leitor existente
+ * da evidência (`findEvidenceByIdentity`); a operação é PURAMENTE de leitura (não
+ * grava, não inicia geração/cobrança).
+ */
+export async function readProductOneToOneBackgroundDirection(
+  client: SupabaseClient,
+  input: { readonly campaignId: string; readonly operationId: string },
+): Promise<ProductOneToOneBackgroundDirection | null> {
+  try {
+    const row = await findEvidenceByIdentity(client, input.campaignId, input.operationId);
+    const value = row?.background_direction;
+    if (value === "studio" || value === "original" || value === "ambient") {
+      return value;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function insertEvidenceRow(
   client: SupabaseClient,
   snapshotOriginalId: string,

@@ -97,6 +97,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     unknownResult,
     resetUnknownResult,
     restorationNotice,
+    backgroundDirectionNotice,
+    backgroundDirectionRequired,
   } = useCampaignForm(storeId, { eligible, restoredForm });
 
   // F56.2b1b (Plano 06 — correção): resultado TERMINAL resolvido pelo painel de
@@ -309,6 +311,23 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         </div>
       )}
 
+      {backgroundDirectionNotice && (
+        <div
+          role="alert"
+          className="w-full rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-3"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle
+              className="h-4 w-4 text-accent-amber shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
+            <p className="text-xs text-accent-amber/90 font-body">
+              {backgroundDirectionNotice}
+            </p>
+          </div>
+        </div>
+      )}
+
       <FormContent
         fields={fields}
         fieldErrors={fieldErrors}
@@ -327,6 +346,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         balance={balance}
         supportEmail={supportEmail}
         eligible={eligible}
+        backgroundDirectionRequired={backgroundDirectionRequired}
       />
     </div>
   );
@@ -350,6 +370,8 @@ interface FormContentProps {
   balance?: number | null;
   supportEmail?: string;
   eligible: boolean;
+  /** F56.2b2b (P1): direção de fundo exige escolha explícita — bloqueia o avanço. */
+  backgroundDirectionRequired?: boolean;
 }
 
 function IntentSelector({
@@ -422,6 +444,7 @@ function FormContent({
   balance,
   supportEmail,
   eligible,
+  backgroundDirectionRequired = false,
 }: FormContentProps) {
   const { costs, status: costStatus } = useOperationCosts();
 
@@ -490,7 +513,8 @@ function FormContent({
     costUnavailable ||
     costDisabled ||
     insufficientBalance ||
-    balance === null;
+    balance === null ||
+    backgroundDirectionRequired;
 
   return (
     <form
@@ -784,9 +808,12 @@ function FormContent({
           a região A (intenção legada) acima permanece intacta. */}
       {eligible && (
         <BackgroundDirectionSelector
-          value={fields.backgroundDirection ?? "studio"}
+          value={fields.backgroundDirection}
           onChange={(direction) => setField("backgroundDirection", direction)}
           disabled={isSubmitting}
+          error={
+            touched.backgroundDirection ? (fieldErrors.backgroundDirection ?? null) : null
+          }
         />
       )}
 

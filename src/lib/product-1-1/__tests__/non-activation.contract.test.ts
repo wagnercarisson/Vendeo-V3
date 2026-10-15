@@ -118,6 +118,10 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     exact: [
       "@/lib/product-1-1/authorization/authorization-service",
       "@/lib/product-1-1/submission/eligibility-context",
+      // P1 (correção 2026-10-15) — o `operationId` da operação PERSISTIDA é
+      // resolvido SERVER-SIDE e a direção de fundo é lida da EVIDÊNCIA CONGELADA.
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/snapshot/persist-snapshot",
     ],
   },
   [AUTHORIZED_FLOW_BACKGROUND_DIRECTION_SELECTOR]: {
@@ -157,6 +161,10 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       // POR OPERAÇÃO (`readCopyDelivery`/`readCopyCancellation`) — somente leitura
       // (nunca gera/regenera/cobra). Par EXATO, sem prefixo amplo.
       "@/lib/product-1-1/copy/copy-state",
+      // P1 (correção 2026-10-15) — leitura SOMENTE-leitura da direção de fundo da
+      // EVIDÊNCIA CONGELADA (`operationId` resolvido server-side do estado
+      // persistido). Par EXATO, sem prefixo amplo.
+      "@/lib/product-1-1/snapshot/persist-snapshot",
     ],
   },
   // Plano 03 (F56.2b2a) — rota AUTENTICADA da recuperação de copy (GET
@@ -620,7 +628,6 @@ describe("Product 1:1 — provas comportamentais de `off` (Plano 01, F56.2b1b)",
     const forbiddenImports =
       /@\/lib\/product-1-1\/(?:orchestration|artifact|pending|credit-operation)\//;
     for (const file of [
-      AUTHORIZED_CAMPANHAS_NOVA_PAGE,
       AUTHORIZED_FLOW_BACKGROUND_DIRECTION_SELECTOR,
       AUTHORIZED_FLOW_CAMPAIGN_INPUT_FORM,
       AUTHORIZED_FLOW_USE_CAMPAIGN_FORM,
@@ -629,6 +636,19 @@ describe("Product 1:1 — provas comportamentais de `off` (Plano 01, F56.2b1b)",
       expect(source, file).not.toMatch(forbiddenImports);
       expect(source, file).not.toMatch(/createNewFlowImageGateway/);
     }
+    // P1 (correção 2026-10-15) — a `nova/page.tsx` ganha a EXCEÇÃO EXATA
+    // `orchestration/attempt-start-client` (resolve o `operationId` da operação
+    // PERSISTIDA server-side para ler a direção da evidência congelada). Continua
+    // NÃO alcançando o orquestrador/provider/gateway: `orchestration/**` segue
+    // proibido EXCETO o módulo exato autorizado.
+    const novaSource = readFileSync(
+      path.resolve(process.cwd(), AUTHORIZED_CAMPANHAS_NOVA_PAGE),
+      "utf8",
+    );
+    expect(novaSource).not.toMatch(
+      /@\/lib\/product-1-1\/(?:orchestration\/(?!attempt-start-client)|artifact|pending|credit-operation)\//,
+    );
+    expect(novaSource).not.toMatch(/createNewFlowImageGateway/);
   });
 });
 

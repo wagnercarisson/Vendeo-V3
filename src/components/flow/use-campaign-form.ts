@@ -103,6 +103,19 @@ function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<
 
 export type ValidityMode = "" | "until-date" | "range" | "today" | "stock" | "custom";
 
+/**
+ * F56.2b2b (P1) — copy do aviso quando a direção de fundo NÃO pôde ser
+ * recuperada da evidência congelada. Honesto sobre a limitação; exige escolha.
+ */
+export const BACKGROUND_DIRECTION_UNRESOLVED_NOTICE =
+  "Não conseguimos recuperar a direção de fundo desta campanha. Escolha novamente para continuar.";
+
+/**
+ * F56.2b2b (P1) — erro de campo exibido quando a submissão é bloqueada por falta
+ * de escolha EXPLÍCITA da direção de fundo.
+ */
+export const BACKGROUND_DIRECTION_REQUIRED_ERROR = "Escolha a direção de fundo";
+
 // F41 (D3/D5): item de imagem do produto no estado do form.
 // `id` é INTERNO da UI (chave de lista/preview) — NUNCA entra no body (D2/D5).
 export interface CampaignProductFormImage {
@@ -233,6 +246,18 @@ export interface UseCampaignFormReturn {
    * há restauração server-side. NUNCA promete restauração de imagem.
    */
   restorationNotice: string | null;
+  /**
+   * F56.2b2b (P1): aviso HONESTO quando a direção de fundo NÃO pôde ser
+   * resolvida da evidência congelada — o usuário precisa escolhê-la novamente.
+   * `null` quando resolvida/escolhida.
+   */
+  backgroundDirectionNotice: string | null;
+  /**
+   * F56.2b2b (P1): `true` quando a direção de fundo precisa ser escolhida
+   * EXPLICITAMENTE (fonte ausente/indisponível) — BLOQUEIA a submissão até a
+   * escolha; NUNCA deixa `studio` pré-selecionado funcionar como confirmação.
+   */
+  backgroundDirectionRequired: boolean;
 }
 
 const EMPTY_FIELDS: CampaignFormFields = {
@@ -703,6 +728,9 @@ export function useCampaignForm(
   // `operationId`): a nova submissão gera NOVOS ids.
   const restoredForm = options?.restoredForm ?? null;
   const draftScope = restoredForm?.campaignId ?? null;
+  // P1 — fonte ausente/indisponível ⇒ a direção exige escolha EXPLÍCITA (nunca
+  // `studio` silencioso).
+  const backgroundDirectionUnresolved = restoredForm?.backgroundDirectionUnresolved === true;
   const [fields, setFields] = useState<CampaignFormFields>(EMPTY_FIELDS);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<keyof CampaignFormFields, boolean>>({
@@ -789,7 +817,15 @@ export function useCampaignForm(
       // SEM rascunho escopado + snapshot server-side ⇒ reidrata os CAMPOS
       // PREENCHIDOS do SERVIDOR (fonte da verdade dos textos).
       const hydrated = restoredFormToFields(restoredForm);
-      setFields((prev) => ({ ...prev, ...hydrated }));
+      setFields((prev) => ({
+        ...prev,
+        ...hydrated,
+        // P1 — fonte ausente/indisponível: NÃO pré-seleciona `studio`; deixa a
+        // direção INDEFINIDA para exigir escolha explícita.
+        ...(restoredForm.backgroundDirectionUnresolved
+          ? { backgroundDirection: undefined }
+          : {}),
+      }));
       if ((restoredForm.originalPriceCents ?? 0) > 0) {
         setRawOriginalPrice(String(restoredForm.originalPriceCents));
       }
@@ -1450,6 +1486,15 @@ export function useCampaignForm(
     badgeValid &&
     hasUsableImage;
 
+  // P1 — gate da direção de fundo: só exige escolha sob elegibilidade, quando a
+  // fonte NÃO foi resolvida e o usuário ainda não escolheu. NUNCA `studio` como
+  // confirmação silenciosa.
+  const backgroundDirectionRequired =
+    eligible && backgroundDirectionUnresolved && !fields.backgroundDirection;
+  const backgroundDirectionNotice = backgroundDirectionRequired
+    ? BACKGROUND_DIRECTION_UNRESOLVED_NOTICE
+    : null;
+
   // F43 (D2/D3): entra em revisão somente com form válido; roda a preparação das
   // imagens (compressão + normalização) com estado curto "Preparando imagens...".
   const enterReview = useCallback(async (): Promise<boolean> => {
@@ -1485,6 +1530,11 @@ export function useCampaignForm(
         const error = validateField(field, fields, { eligible });
         if (error) errors[field] = error;
       }
+      // P1 — a direção de fundo exige escolha EXPLÍCITA quando a fonte não foi
+      // resolvida; a submissão fica bloqueada até a escolha.
+      if (backgroundDirectionRequired) {
+        errors.backgroundDirection = BACKGROUND_DIRECTION_REQUIRED_ERROR;
+      }
       setFieldErrors(errors);
       setTouched({
         productName: true,
@@ -1504,6 +1554,17 @@ export function useCampaignForm(
         validityCustomText: true,
         backgroundDirection: true,
       });
+      return false;
+    }
+
+    // P1 — gate EXPLÍCITO da direção de fundo: mesmo com o restante válido, a
+    // submissão é BLOQUEADA até o usuário escolher (fonte ausente/indisponível).
+    if (backgroundDirectionRequired) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        backgroundDirection: BACKGROUND_DIRECTION_REQUIRED_ERROR,
+      }));
+      setTouched((prev) => ({ ...prev, backgroundDirection: true }));
       return false;
     }
 
@@ -1563,7 +1624,7 @@ export function useCampaignForm(
       setPreparing(false);
       return false;
     }
-  }, [isValid, fields, storeId, restoredImageDataUrl, hasUsableImage]);
+  }, [isValid, fields, storeId, restoredImageDataUrl, hasUsableImage, backgroundDirectionRequired]);
 
   // F43 (D2): "Voltar e editar" — preserva fields/touched/fieldErrors (nada perdido).
   const exitReview = useCallback(() => {
@@ -1666,6 +1727,8 @@ export function useCampaignForm(
     unknownResult,
     resetUnknownResult,
     restorationNotice,
+    backgroundDirectionNotice,
+    backgroundDirectionRequired,
   };
 }
 

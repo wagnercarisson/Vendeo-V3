@@ -3,7 +3,7 @@ import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { requireLegalClearance } from "@/lib/legal/clearance";
 import { CreditService } from "@/lib/credit/credit-service";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, supabaseAdmin } from "@/lib/supabase/server";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 import { LegalClearanceGate } from "@/components/legal/legal-clearance-gate";
@@ -11,6 +11,8 @@ import { getStoreReadiness } from "@/lib/store-readiness";
 import { resolveStoreIdentity, validateIdentityReference } from "@/lib/store-identity-service";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
+import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
+import { readProductOneToOneBackgroundDirection } from "@/lib/product-1-1/snapshot/persist-snapshot";
 import { getCampaignForDisplay, mapRestoredForm } from "@/lib/campaign/display";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
@@ -101,10 +103,32 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
       try {
         const campaign = await getCampaignForDisplay(restoreFrom);
         if (campaign && campaign.store_id === store.id) {
+          // P1 — a direção de fundo vive na EVIDÊNCIA CONGELADA. O `operationId` é
+          // resolvido SERVER-SIDE a partir da operação PERSISTIDA da campanha-origem
+          // (`getCampaignOperation`) — NUNCA aceito do cliente. Ausência/erro ⇒
+          // `null` (fail-closed ⇒ o formulário exige escolha explícita; NUNCA
+          // `studio` silencioso).
+          let backgroundDirection: Awaited<
+            ReturnType<typeof readProductOneToOneBackgroundDirection>
+          > = null;
+          try {
+            const operation = await new ProductOneToOneAttemptStartClient().getCampaignOperation(
+              restoreFrom,
+            );
+            if (operation) {
+              backgroundDirection = await readProductOneToOneBackgroundDirection(supabaseAdmin, {
+                campaignId: restoreFrom,
+                operationId: operation.operationId,
+              });
+            }
+          } catch {
+            backgroundDirection = null;
+          }
           restoredForm = mapRestoredForm({
             campaignId: campaign.id,
             inputSnapshot: campaign.input_snapshot,
             identitySnapshot: campaign.identity_snapshot,
+            backgroundDirection,
           });
         }
       } catch (err) {

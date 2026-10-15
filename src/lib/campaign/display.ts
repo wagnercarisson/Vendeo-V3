@@ -404,6 +404,12 @@ export interface CampaignFormRestore {
   readonly validityDisplayText?: string;
   readonly mandatoryArtworkTextFree: string;
   readonly backgroundDirection?: RestoredBackgroundDirection;
+  /**
+   * F56.2b2b (P1) — `true` SOMENTE quando a direção de fundo NÃO pôde ser
+   * resolvida (fonte ausente/indisponível): o formulário AVISA e BLOQUEIA a
+   * submissão até escolha EXPLÍCITA. NUNCA cai em `studio` silencioso.
+   */
+  readonly backgroundDirectionUnresolved?: boolean;
   readonly identityDirective?: string | null;
   readonly referenceSelections: ReadonlyArray<unknown>;
   /** LIMITAÇÃO HONESTA: a imagem do produto/referências é client-only. */
@@ -414,6 +420,13 @@ export interface RestorableSnapshotInput {
   readonly campaignId: string;
   readonly inputSnapshot: Record<string, unknown> | null | undefined;
   readonly identitySnapshot?: Record<string, unknown> | null;
+  /**
+   * F56.2b2b (P1) — direção de fundo ESTRUTURAL já resolvida SERVER-SIDE a partir
+   * da EVIDÊNCIA CONGELADA (`readProductOneToOneBackgroundDirection`). `null`/
+   * ausente ⇒ `backgroundDirectionUnresolved` (exige escolha explícita). `display.ts`
+   * NÃO importa `product-1-1` (G-NA): a direção entra estruturalmente.
+   */
+  readonly backgroundDirection?: RestoredBackgroundDirection | null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -475,11 +488,15 @@ export function mapRestoredForm(
   const mandatoryArtworkTextFree =
     typeof legalNotice?.text === "string" ? legalNotice.text : "";
   const backgroundDirection =
-    snap.backgroundDirection === "studio" ||
-    snap.backgroundDirection === "original" ||
-    snap.backgroundDirection === "ambient"
-      ? (snap.backgroundDirection as RestoredBackgroundDirection)
-      : undefined;
+    input.backgroundDirection === "studio" ||
+    input.backgroundDirection === "original" ||
+    input.backgroundDirection === "ambient"
+      ? input.backgroundDirection
+      : snap.backgroundDirection === "studio" ||
+          snap.backgroundDirection === "original" ||
+          snap.backgroundDirection === "ambient"
+        ? (snap.backgroundDirection as RestoredBackgroundDirection)
+        : undefined;
   const identityDirective =
     typeof snap.identityDirective === "string" ? snap.identityDirective : null;
   const referenceSelections = Array.isArray(snap.frozenContentReferences)
@@ -497,7 +514,9 @@ export function mapRestoredForm(
     preserveImageContext,
     ...(validityDisplayText !== undefined ? { validityDisplayText } : {}),
     mandatoryArtworkTextFree,
-    ...(backgroundDirection !== undefined ? { backgroundDirection } : {}),
+    ...(backgroundDirection !== undefined
+      ? { backgroundDirection }
+      : { backgroundDirectionUnresolved: true }),
     identityDirective,
     referenceSelections,
     imageRestoreLimited: true,
