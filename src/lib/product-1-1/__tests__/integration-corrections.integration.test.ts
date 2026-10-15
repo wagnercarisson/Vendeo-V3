@@ -42,6 +42,12 @@ import {
  * F56.2b1b — Plano 09 / Task 4: provas REAIS das correções de integração do
  * Plano 04 (achados 4/5/6) e dos gaps 1/3/4, mais as correções B1/B2/I1/I2 na
  * instância isolada. Provider SIMULADO; Postgres/Storage reais.
+ *
+ * B2.2 (F56.2b2b, Plano 07 — reconciliação 2026-10-15): o caminho NÃO-terminal
+ * `artifact_store_failed` passou a encerrar como PENDÊNCIA (`unknown`), SEM
+ * estorno inline — consequência CONTRATUAL aprovada no Plano 03, NÃO uma falha
+ * pré-existente. As provas do caminho TERMINAL (PF completo ⇒ estorno confirmado
+ * + IMG-001) permanecem em `recovery-seams.integration.test.ts` (SEAM (b)).
  */
 
 const PRIMARY = { model: "gpt-image-2.5-sunburst", quality: "medium" } as const;
@@ -134,6 +140,27 @@ function integralProbe(campaignId: string, operationId: string): ArtifactProbe {
     mimeType: "image/jpeg",
     storagePath,
   };
+}
+
+/** Conta estornos no ledger da loja (efeito REAL de estorno). */
+async function refundLedgerCount(store: string): Promise<number> {
+  const { rows } = await ctx.pg.query<{ n: number }>(
+    "SELECT count(*)::int AS n FROM public.credit_transactions WHERE store_id = $1 AND type = 'refund'",
+    [store],
+  );
+  return rows[0].n;
+}
+
+/** Linha do marcador de outcome (pendência `unknown`/`failed`) da operação. */
+async function outcomeRow(
+  campaign: string,
+  operation: string,
+): Promise<{ outcome: string; support_reference: string | null } | null> {
+  const { rows } = await ctx.pg.query<{ outcome: string; support_reference: string | null }>(
+    "SELECT outcome, support_reference FROM public.product_1_1_generation_outcomes WHERE campaign_id = $1 AND operation_id = $2",
+    [campaign, operation],
+  );
+  return rows[0] ?? null;
 }
 
 describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
@@ -312,11 +339,16 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
     }
   }, 90_000);
 
-  it("(achado 4) `storeArtifact` falha com ausência CONFIRMADA ⇒ estorno ÚNICO (`refunded`)", async () => {
+  it("(achado 4 — B2.2) `storeArtifact` falha com arte AUSENTE no caminho NÃO-terminal ⇒ pendência (`unknown`), SEM estorno, marcador persistido", async () => {
+    // Mudança CONTRATUAL da B2.2: `artifact_store_failed` é NÃO-terminal
+    // (`allowPfClosure:false`) ⇒ NENHUM encerramento PF/estorno inline; só a
+    // pendência é emitida e persistida. O fechamento PF com estorno confirmado +
+    // IMG-001 é provado no caminho TERMINAL (`recovery-seams` SEAM (b)) — cobertura
+    // PRESERVADA, não substituída.
     const campaign = await createCampaign(ctx.supabase, storeId);
     const operationId = randomUUID();
-    const realCredit = new ProductOneToOneCreditOperationClient(ctx.supabase);
     const image = await jpeg1024DataUrl();
+    const refundBefore = await refundLedgerCount(storeId);
     const response = await runProductOneToOneGeneration(
       input(campaign, operationId),
       deps({
@@ -331,18 +363,28 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
       }),
     );
     const terminal = terminalEvent(await readNdjson(response));
-    expect(terminal.type).toBe("error");
-    expect(terminal.code).toBe("IMG-001");
-    expect(String(terminal.message)).toContain("estornado");
-    expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("refunded");
-    void realCredit;
+    // Terminal de PENDÊNCIA — nunca `error`/`IMG-001` neste caminho.
+    expect(terminal.type).toBe("unknown");
+    const reference = String(terminal.reference);
+    expect(reference).toBeTruthy();
+
+    // Operação NÃO terminal (reservada) e NENHUM estorno no ledger.
+    expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("reserved");
+    expect(await refundLedgerCount(storeId)).toBe(refundBefore);
+
+    // Marcador de pendência PERSISTIDO (`outcome='unknown'`) correlacionado à MESMA
+    // referência emitida.
+    const outcome = await outcomeRow(campaign, operationId);
+    expect(outcome?.outcome).toBe("unknown");
+    expect(outcome?.support_reference).toBe(reference);
   }, 60_000);
 
-  it("(achado 6 / gap 3) diagnóstico durável recuperável por `findByReference` numa NOVA instância", async () => {
+  it("(achado 6 / gap 3 — B2.2) diagnóstico durável recuperável por `findByReference` (pendência não-terminal)", async () => {
     const campaign = await createCampaign(ctx.supabase, storeId);
     const operationId = randomUUID();
     const image = await jpeg1024DataUrl();
-    // Falha operacional: provider OK, mas ausência de arte confirmada ⇒ IMG-001 + diagnóstico.
+    // Falha operacional (arte ausente) no caminho NÃO-terminal ⇒ pendência `unknown`
+    // COM diagnóstico durável correlacionado à MESMA referência emitida (achado 6).
     const response = await runProductOneToOneGeneration(
       input(campaign, operationId),
       deps({
@@ -357,9 +399,12 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
       }),
     );
     const terminal = terminalEvent(await readNdjson(response));
-    expect(terminal.code).toBe("IMG-001");
+    expect(terminal.type).toBe("unknown");
     const reference = String(terminal.reference);
+    expect(reference).toBeTruthy();
 
+    // NOVA instância do repositório ⇒ consulta por referência recupera o diagnóstico
+    // durável correspondente.
     const freshRepository = new SupabaseImageGenerationDiagnosisRepository(ctx.supabase);
     const diagnosis = await freshRepository.findByReference(reference);
     expect(diagnosis).not.toBeNull();
