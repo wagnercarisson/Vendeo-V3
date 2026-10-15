@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import CampaignApprovalView from "@/components/campaign/campaign-approval-view";
 import { UnknownResultPanel } from "@/components/flow/unknown-result-panel";
+import { RefundedPanel } from "@/components/flow/refunded-panel";
 import { CopyRecoveryPanel } from "@/components/flow/copy-recovery-panel";
 import { isDrivingCopyRecovery } from "@/lib/campaign/copy-recovery-driving";
 
@@ -107,7 +108,14 @@ export default function CampaignPageClient(props: CampaignPageProps) {
 
         {props.newFlow.state === "running" && <GeneratingView />}
         {props.newFlow.state === "delivered" && <NewFlowDeliveredView {...props} />}
-        {props.newFlow.state === "refunded" && <NewFlowFailureView />}
+        {props.newFlow.state === "refunded" && (
+          <RefundedPanel
+            campaignId={props.campaignId}
+            supportEmail={props.newFlow.supportEmail}
+            confirmed
+            restoredForm={props.newFlow.restoredForm ?? null}
+          />
+        )}
         {props.newFlow.state === "unknown" && (
           <UnknownResultPanel
             supportReference={props.newFlow.supportReference ?? null}
@@ -760,24 +768,11 @@ function NewFlowCopyPanel({ copy }: { copy: NewFlowCopyView | null }) {
   );
 }
 
-// F56.2b1b (Plano 06, REQ-56.2.2-07): falha CONFIRMADA do novo fluxo (operação
-// persistida como `refunded`). A copy "o crédito foi devolvido" aparece SOMENTE
-// aqui — nunca em `running`/`delivered`/`unknown` (desconhecido NÃO estorna por
-// timeout). Sem promessa de retomada; nova tentativa exige NOVA campanha.
-function NewFlowFailureView() {
-  const router = useRouter();
-  return (
-    <div className="flex flex-col items-center justify-center space-y-4 p-12">
-      <p className="text-lg text-accent-red font-body">
-        A geração falhou e o crédito foi devolvido.
-      </p>
-      <Button variant="primary" onClick={() => router.push("/campanhas/nova")}>
-        Criar Nova Campanha
-      </Button>
-    </div>
-  );
-}
-
+// F56.2b1b (Plano 06, REQ-56.2.2-07) → F56.2b2b (B2.2 / B2B-D5): a falha
+// CONFIRMADA do novo fluxo (operação persistida como `refunded`) é exibida pelo
+// `RefundedPanel` (mensagem EXATA + nota de escopo + CTA de nova geração com os
+// dados restaurados). `NewFlowFailureView` foi substituído — a copy antiga
+// ("A geração falhou e o crédito foi devolvido.") NÃO é mais usada.
 function StaleView({
   onNewCampaign,
 }: {

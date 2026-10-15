@@ -147,7 +147,7 @@ describe("CampaignPageClient — visão persistida do novo fluxo", () => {
     }
   });
 
-  it("`refunded` ⇒ mostra 'A geração falhou e o crédito foi devolvido.'", () => {
+  it("`refunded` ⇒ RefundedPanel com a mensagem EXATA + CTA de nova geração", () => {
     render(
       <CampaignPageClient
         {...BASE_PROPS}
@@ -157,7 +157,12 @@ describe("CampaignPageClient — visão persistida do novo fluxo", () => {
     );
 
     expect(
-      screen.getByText("A geração falhou e o crédito foi devolvido."),
+      screen.getByText(
+        "Não conseguimos concluir a comunicação desta geração. Seus dados foram preservados e o crédito foi estornado. Você pode gerar novamente.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Gerar novamente com meus dados/ }),
     ).toBeInTheDocument();
     for (const forbidden of FORBIDDEN) {
       expect(screen.queryByText(forbidden)).toBeNull();
