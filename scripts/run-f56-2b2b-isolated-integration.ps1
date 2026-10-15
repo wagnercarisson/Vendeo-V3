@@ -369,12 +369,27 @@ Write-Output "# pending migrations enumerated: $($pending.Count)"
 $pending | ForEach-Object { Write-Output "  pending: $_" }
 
 # --- 3b. ASSERT do HISTÓRICO ESPERADO (fail-closed): as 8 anteriores JÁ aplicadas
-#         e as pendentes EXATAMENTE as 3 B2.2. Divergência ⇒ HALT. ---
+#         e as pendentes EXATAMENTE as 3 B2.2. Divergência ⇒ HALT.
+#
+#         NO CAMINHO DE APLICAÇÃO (sem -SkipApply) o esperado é o estado PRÉ-
+#         aplicação: as 3 B2.2 AINDA pendentes (qualquer B2.2 já aplicada ⇒
+#         divergência). NO CAMINHO DE EXECUÇÃO DAS SUÍTES (-SkipApply) o estado
+#         PÓS-aplicação é legítimo: as 11 anteriores/novas já aplicadas ⇒ 0
+#         pendentes; mas o conjunto dos 3 B2.2 NUNCA pode estar PARCIAL (alguns
+#         aplicados e outros pendentes). ---
 $priorMissing = @($expectedAppliedPrior | Where-Object { $appliedVersions -notcontains $_ })
 $b2bAlreadyApplied = @($expectedPendingB2b | Where-Object { $appliedVersions -contains $_ })
 $pendingNotB2b = @($pending | Where-Object { $expectedPendingB2b -notcontains $_ })
 $b2bNotPending = @($expectedPendingB2b | Where-Object { $pending -notcontains $_ })
-$divergence = ($priorMissing.Count -gt 0) -or ($b2bAlreadyApplied.Count -gt 0) -or ($pendingNotB2b.Count -gt 0) -or ($b2bNotPending.Count -gt 0)
+$b2bPartial = ($b2bAlreadyApplied.Count -gt 0) -and ($b2bAlreadyApplied.Count -lt $expectedPendingB2b.Count)
+if ($SkipApply) {
+  # Pós-aplicação: exige as 8 anteriores; pendentes ⊆ 3 B2.2; conjunto NÃO parcial.
+  $divergence = ($priorMissing.Count -gt 0) -or ($pendingNotB2b.Count -gt 0) -or $b2bPartial
+} else {
+  # Pré-aplicação: exige as 8 anteriores; pendentes == EXATAMENTE as 3 B2.2
+  # (nenhuma B2.2 já aplicada).
+  $divergence = ($priorMissing.Count -gt 0) -or ($b2bAlreadyApplied.Count -gt 0) -or ($pendingNotB2b.Count -gt 0) -or ($b2bNotPending.Count -gt 0)
+}
 if ($divergence) {
   [pscustomobject]@{
     Gate = 'HALT_HISTORY_DIVERGENCE'
@@ -388,7 +403,7 @@ if ($divergence) {
   } | ConvertTo-Json -Depth 6
   exit 5
 }
-Write-Output "# assert OK: 8 prior dependencies applied; pending == exactly the 3 B2.2"
+Write-Output "# assert OK: 8 prior dependencies applied; pending=$($pending.Count) (allowed set: 3 B2.2)"
 
 if ($SkipApply -and $pending.Count -gt 0) { Write-Output "# -SkipApply set; not applying." }
 
