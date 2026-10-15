@@ -5,7 +5,7 @@
     "phase": "56.2.3",
     "functional_label": "F56.2b2a — B2.1 Recuperação de copy do Produto 1:1",
     "updated_at": "2026-10-15",
-    "status": "complete_inactive_uat_approved_openspec_lifecycle_pending",
+    "status": "complete_inactive_uat_approved_openspec_verified_synced_archived",
     "plan_count": "6/6",
     "summary_count": "6/6",
     "plan_summary_inventory": [
@@ -16,8 +16,8 @@
       "56.2.3-05-PLAN.md ↔ 56.2.3-05-SUMMARY.md",
       "56.2.3-06-PLAN.md ↔ 56.2.3-06-SUMMARY.md"
     ],
-    "openspec_change": "fase-56-2b2a-recuperacao-de-copy-produto-1-1 (change NOMEADA — lifecycle PENDENTE: verify/sync/archive NÃO executados; conduzido pelo responsável)",
-    "openspec_tasks": "not_reconciled_in_this_closeout (lifecycle pending)",
+    "openspec_change": "fase-56-2b2a-recuperacao-de-copy-produto-1-1 (ARQUIVADA em openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/; verificada e sincronizada — spec principal product-1-1-copy-recovery)",
+    "openspec_tasks": "46/46 (reconciled item a item com evidencia; nenhum N/A)",
     "uat": "human_approved_2026-10-15_inactive_scope_only",
     "human_checkpoint": "approved",
     "security": {
@@ -57,11 +57,12 @@
       "isolated_integration": "copy-recovery 23/23 + copy-state 8/8 (0 skipped)"
     },
     "openspec_lifecycle": {
-      "verified": false,
-      "synced": false,
-      "archived": false,
-      "status": "pending",
-      "note": "owner-driven; NÃO executado"
+      "verified": true,
+      "synced": true,
+      "archived": true,
+      "status": "done",
+      "archive_path": "openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1",
+      "note": "/opsx-verify -> /opsx-sync (spec principal product-1-1-copy-recovery sincronizada) -> /opsx-archive concluidos; 46/46 tasks."
     },
     "gate_blocking_b2": {
       "id": "D13",
@@ -86,6 +87,7 @@
       "scripts/f56-2b2a/prepare-campaign-fixture.ts",
       "scripts/f56-2b2a/fixture-readiness.mjs"
     ],
+    "next_action": "Manter a 56.2.3 como fase atual concluida (entrega INATIVA) com a change ARQUIVADA em openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/. Proxima acao: revisar e realinhar a base B2.2 (recuperacao de imagem/estorno/D13) — SEM iniciar planejamento ou execucao automaticamente; B2.2/B2.3/F56.3 nao iniciados.",
     "previous_local_phase": {
     "phase": "56.2.2",
     "functional_label": "F56.2b1b — Núcleo entregável do Produto 1:1",
@@ -269,7 +271,7 @@
   },
   "next_phase": "B2.2 (próxima fatia; número GSD a definir)",
   "next_phase_started": false,
-  "next_phase_note": "B2.1 (GSD 56.2.3 / F56.2b2a — Recuperação de copy do Produto 1:1) CONCLUÍDA como entrega INATIVA: 6/6 planos/summaries (2026-10-15); UAT humano APROVADO (56.2.3-UAT.md, `[x] approved`, 2026-10-15) EXCLUSIVAMENTE no escopo inativo (cenários visuais + \"VALIDADO POR TESTE AUTOMATIZADO COM ERRO SIMULADO\" para falhas raras incl. `indeterminada`; a janela de 30s foi SOMENTE da fixture, não prova humana dos tempos 5s/10s). Code review (56.2.3-REVIEW.md): HIGH CR-01 + MEDIUM WR-01 RESOLVIDOS em `7dee0866`; WR-02/WR-03 (LOW) = dívida NÃO-BLOQUEANTE. Security (56.2.3-SECURITY.md): 69/69 fechados, 0 abertos (sign-off PENDENTE). Backfill: prova ao vivo LIMPA PASS na instância separada `vendeo-f562b-isolated`; 1ª tentativa (f562a) preservada como histórico. Nyquist NÃO executado por configuração (`workflow.nyquist_validation=false`; preservada; não é aprovação nem falha de implementação). OpenSpec lifecycle (verify/sync/archive) NÃO executado — PENDENTE e conduzido pelo responsável. GATE D13 bloqueia a próxima fatia (imagem/habilitação — B2.2). B2.2/B2.3/F56.3 NÃO iniciados; flags `false`/sem habilitação; sem push/deploy. A aprovação NÃO autoriza ativação, db push, provider, reset ou GSD.",
+  "next_phase_note": "B2.1 (GSD 56.2.3 / F56.2b2a — Recuperação de copy do Produto 1:1) CONCLUÍDA como entrega INATIVA: 6/6 planos/summaries (2026-10-15); UAT humano APROVADO (56.2.3-UAT.md, `[x] approved`, 2026-10-15) EXCLUSIVAMENTE no escopo inativo (cenários visuais + \"VALIDADO POR TESTE AUTOMATIZADO COM ERRO SIMULADO\" para falhas raras incl. `indeterminada`; a janela de 30s foi SOMENTE da fixture, não prova humana dos tempos 5s/10s). Code review (56.2.3-REVIEW.md): HIGH CR-01 + MEDIUM WR-01 RESOLVIDOS em `7dee0866`; WR-02/WR-03 (LOW) = dívida NÃO-BLOQUEANTE. Security (56.2.3-SECURITY.md): 69/69 fechados, 0 abertos (sign-off PENDENTE). Backfill: prova ao vivo LIMPA PASS na instância separada `vendeo-f562b-isolated`; 1ª tentativa (f562a) preservada como histórico. Nyquist NÃO executado por configuração (`workflow.nyquist_validation=false`; preservada; não é aprovação nem falha de implementação). OpenSpec lifecycle (verify/sync/archive) CONCLUÍDO em 2026-10-15 (verify -> sync -> archive; 46/46 tasks; change ARQUIVADA em openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/). GATE D13 bloqueia a próxima fatia (imagem/habilitação — B2.2). B2.2/B2.3/F56.3 NÃO iniciados; flags `false`/sem habilitação; sem push/deploy. A aprovação NÃO autoriza ativação, db push, provider, reset ou GSD.",
   "planning_review": {
     "phase": "56.1",
     "plans": ["56-1-01", "56-1-02", "56-1-03", "56-1-04", "56-1-05", "56-1-06", "56-1-07", "56-1-08", "56-1-09", "56-1-10", "56-1-11"],
@@ -455,6 +457,6 @@
   "blockers": ["Warning operacional: reset final isolado F56.2a exit 1/HTTP 502, causa/upstream desconhecido. Não é sucesso; pós-condições foram confirmadas por SELECT e aceitas para fechamento. Investigar antes de depender do procedimento de reset em b1b/b2. Nenhum bloqueio para a b1a (já arquivada)."],
   "human_actions_pending": ["Investigar a causa desconhecida do exit 1/HTTP 502 antes de depender do procedimento de reset em b1b/b2."],
   "uncommitted_files": [],
-  "next_action": "B2.1 (GSD 56.2.3 / F56.2b2a) complete as an INACTIVE deliverable (6/6 planos/summaries; UAT humano aprovado 2026-10-15 no escopo inativo; review HIGH/MEDIUM resolvidos + LOWs dívida; security 69/69; backfill clean PASS na instância separada com o incidente f562a preservado; Nyquist não executado por configuração). OpenSpec lifecycle (verify/sync/archive) PENDENTE e conduzido pelo responsável. PENDING: o GATE D13 da próxima fatia (imagem/habilitação — B2.2). B2.2/B2.3/F56.3 NÃO iniciados. No push. Approval does not authorize activation, db push, provider, reset, or starting B2.2/F56.3.",
+  "next_action": "B2.1 (GSD 56.2.3 / F56.2b2a) complete as an INACTIVE deliverable (6/6 planos/summaries; UAT humano aprovado 2026-10-15 no escopo inativo; review HIGH/MEDIUM resolvidos + LOWs dívida; security 69/69; backfill clean PASS na instância separada com o incidente f562a preservado; Nyquist não executado por configuração). OpenSpec lifecycle (verify/sync/archive) CONCLUÍDO em 2026-10-15 (46/46 tasks; change ARQUIVADA em openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/). PENDING: o GATE D13 da próxima fatia (imagem/habilitação — B2.2). B2.2/B2.3/F56.3 NÃO iniciados. No push. Approval does not authorize activation, db push, provider, reset, or starting B2.2/F56.3. Proxima acao: revisar e realinhar a base B2.2, sem iniciar planejamento ou execucao automaticamente.",
   "context_notes": "F56.1 permanece como histórico concluído. F56.2a: 6/6 planos e summaries, OpenSpec 31/31, UAT 4 pass + 1 N/A, segurança 20/20, verificada/sincronizada/arquivada no archive 2026-10-07. F56.2b1a (GSD 56.2.1): 6/6 planos e summaries; OpenSpec 23/23 com task 1.4 N/A (gate APPROVED 12/12); UAT humano aprovado em 2026-10-08T21:00:22Z e reconfirmado; segurança 14/14 fechadas, 0 abertas; snapshot final contratos 152/152 / Postgres 20/20 / gate 12/12 (verificação independente de escopo distinto 128/128); lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído e change arquivada em openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1. F56.2b1b (GSD 56.2.2): 10/10 planos e summaries; OpenSpec 39/39 com task 7.5 N/A (GATE BLOQUEANTE da b2, documentado — não exercido na b1b inativa) e task 7.4 DONE (revisão humana); UAT humano aprovado em 2026-10-12 (9/9 pass, 0 issues) com escopo EXCLUSIVO da entrega INATIVA da b1b; 18 falhas pré-existentes (lab/bench 14, provider/timeout 3, legal 1) confirmadas contra a baseline 50152297 e mantidas como dívida SEPARADA (não declaradas verdes); 3 asserções test-only da fase corrigidas (commit 51f6c2b6). Stage off; flags false; nenhuma concessão habilitadora; sem db push/reset/deploy/provider/chamada paga/ativação; migrations b1b somente na instância isolada. b1b sincronizada e ARQUIVADA em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/ (lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído); o GATE bloqueante da b2 (estratégia operacional de resolução de claims residuais) permanece PENDENTE. A revisão de segurança formal está CONCLUÍDA (56.2.2-SECURITY.md, verified, 48/48; sign-off humano 2026-10-12, entrega INATIVA). b2 (56.2.3)/F56.3 não iniciados. Reset final F56.2a retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não deve ser apresentado como sucesso; não repetir reset nem executar novo comando DB como parte deste fechamento. Esta aprovação não autoriza ativação, db push, provider, reset nem início de b2/F56.3."
 }
