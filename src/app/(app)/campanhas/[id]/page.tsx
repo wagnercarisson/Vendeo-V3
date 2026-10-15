@@ -16,8 +16,10 @@ import {
   mapNewFlowDisplayState,
   mapNewFlowCopy,
   mapNewFlowCopyRecovery,
+  mapRestoredForm,
 } from "@/lib/campaign/display";
 import type {
+  CampaignFormRestore,
   NewFlowCopyRecoveryRecord,
   NewFlowCopyRecoveryView,
 } from "@/lib/campaign/display";
@@ -98,6 +100,23 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   if (newFlowState && newFlowOperation) {
     let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
     let newFlowRecovery: NewFlowCopyRecoveryView | null = null;
+    // F56.2b2b (B2.2 / C4 / B2B-D9) — no ramo `refunded`, lê o snapshot
+    // restaurado SERVER-SIDE (SOMENTE-leitura) para o formulário restaurado.
+    // Fail-closed: leitura indisponível ⇒ `null` (sem promessa falsa). NÃO inicia
+    // geração/cobrança. `display.ts` (G-NA) resolve estruturalmente — sem import
+    // de `product-1-1`.
+    let restoredForm: CampaignFormRestore | null = null;
+    if (newFlowState === "refunded") {
+      try {
+        restoredForm = mapRestoredForm({
+          campaignId: id,
+          inputSnapshot: campaign.input_snapshot,
+          identitySnapshot: campaign.identity_snapshot,
+        });
+      } catch {
+        restoredForm = null;
+      }
+    }
     if (newFlowState === "delivered") {
       try {
         const artifactStore = new ProductOneToOneArtifactStore();
@@ -168,6 +187,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       supportEmail: process.env.SUPPORT_EMAIL,
       copy: newFlowCopy,
       recovery: newFlowRecovery,
+      restoredForm,
     };
     return <CampaignPageClient {...props} />;
   }

@@ -3,6 +3,7 @@ import { createServerClient, supabaseAdmin } from "@/lib/supabase/server";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
 import type {
   CampaignArtVersion,
+  CampaignIntent,
   CampaignRecord,
   CampaignStatus,
 } from "./types";
@@ -60,6 +61,13 @@ export interface CampaignPageProps {
      * indisponível ⇒ `indeterminada` (nunca autoriza nova chamada).
      */
     recovery?: NewFlowCopyRecoveryView | null;
+    /**
+     * F56.2b2b (B2.2 / C4 / B2B-D9) — snapshot ESTRUTURAL do formulário
+     * restaurado, resolvido SERVER-SIDE no ramo `refunded` (SOMENTE-leitura,
+     * fail-closed). `null`/ausente ⇒ sem promessa de preservação de dados. A
+     * origem chega a `/campanhas/nova` pelo canal autenticado (`restoreFrom`).
+     */
+    restoredForm?: CampaignFormRestore | null;
   };
   /** F37.1 (D2/decisão 3): estado de aprovação + candidata ativa (pending/regenerating). */
   approval?: {
@@ -371,6 +379,129 @@ export function mapNewFlowCopyRecovery(
   //    falha transitória sem espera agendada): pode tentar (manual restante).
   //    NUNCA spinner.
   return copyRecoveryView("interrompida", autoAttempts, manualAttempts, 0, manualAvailable);
+}
+
+/**
+ * F56.2b2b (B2.2 / C4 / B2B-D9) — snapshot ESTRUTURAL do formulário restaurado.
+ * `display.ts` NÃO importa `product-1-1` (G-NA): o tipo é LOCAL e a página passa
+ * o `input_snapshot`/`identity_snapshot` de `campaigns` estruturalmente.
+ *
+ * A imagem do produto/referências é CLIENT-ONLY ⇒ `imageRestoreLimited` é sempre
+ * `true` — NUNCA prometemos restauração de imagem.
+ */
+export type RestoredBackgroundDirection = "studio" | "original" | "ambient";
+
+export interface CampaignFormRestore {
+  /** Campanha-ORIGEM (usada para escopar o rascunho; NUNCA a operação estornada). */
+  readonly campaignId: string;
+  readonly productName: string;
+  readonly description: string;
+  readonly originalPriceCents: number;
+  readonly discountedPriceCents?: number;
+  readonly badge: string;
+  readonly campaignIntent: CampaignIntent;
+  readonly preserveImageContext: boolean;
+  readonly validityDisplayText?: string;
+  readonly mandatoryArtworkTextFree: string;
+  readonly backgroundDirection?: RestoredBackgroundDirection;
+  readonly identityDirective?: string | null;
+  readonly referenceSelections: ReadonlyArray<unknown>;
+  /** LIMITAÇÃO HONESTA: a imagem do produto/referências é client-only. */
+  readonly imageRestoreLimited: true;
+}
+
+export interface RestorableSnapshotInput {
+  readonly campaignId: string;
+  readonly inputSnapshot: Record<string, unknown> | null | undefined;
+  readonly identitySnapshot?: Record<string, unknown> | null;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+const RESTORABLE_INTENTS: readonly CampaignIntent[] = [
+  "offer",
+  "spotlight",
+  "exclusive",
+];
+
+/**
+ * Mapeia o snapshot PERSISTIDO da campanha (`input_snapshot` + `identity_snapshot`)
+ * para a visão ESTRUTURAL do formulário restaurado — MESMO padrão puro de
+ * `mapNewFlowDisplayState`/`mapNewFlowCopyRecovery`.
+ *
+ * Fail-closed: snapshot ausente/malformado OU sem produto nomeado ⇒ `null` (nunca
+ * autoriza promessa falsa de restauração). Não inicia geração/cobrança.
+ */
+export function mapRestoredForm(
+  input: RestorableSnapshotInput,
+): CampaignFormRestore | null {
+  const snap = asRecord(input.inputSnapshot);
+  if (!snap) return null;
+
+  const product = asRecord(snap.product);
+  const name = typeof product?.name === "string" ? product.name : "";
+  if (!name.trim()) return null;
+
+  const commercial = asRecord(snap.commercial) ?? {};
+  const creative = asRecord(snap.creativeContext) ?? {};
+  const validity = asRecord(commercial.validity);
+  const legalNotice = asRecord(commercial.legalNotice);
+
+  const intent =
+    typeof commercial.intent === "string" &&
+    RESTORABLE_INTENTS.includes(commercial.intent as CampaignIntent)
+      ? (commercial.intent as CampaignIntent)
+      : "offer";
+
+  const originalPriceCents =
+    typeof commercial.originalPriceCents === "number"
+      ? commercial.originalPriceCents
+      : 0;
+  const discountedPriceCents =
+    typeof commercial.discountedPriceCents === "number"
+      ? commercial.discountedPriceCents
+      : undefined;
+  const badge =
+    typeof commercial.badgeText === "string" ? commercial.badgeText : "";
+  const description =
+    typeof product?.description === "string" ? product.description : "";
+  const preserveImageContext = creative.preserveImageContext === true;
+  const validityDisplayText =
+    typeof validity?.displayText === "string" ? validity.displayText : undefined;
+  const mandatoryArtworkTextFree =
+    typeof legalNotice?.text === "string" ? legalNotice.text : "";
+  const backgroundDirection =
+    snap.backgroundDirection === "studio" ||
+    snap.backgroundDirection === "original" ||
+    snap.backgroundDirection === "ambient"
+      ? (snap.backgroundDirection as RestoredBackgroundDirection)
+      : undefined;
+  const identityDirective =
+    typeof snap.identityDirective === "string" ? snap.identityDirective : null;
+  const referenceSelections = Array.isArray(snap.frozenContentReferences)
+    ? (snap.frozenContentReferences as unknown[])
+    : [];
+
+  return {
+    campaignId: input.campaignId,
+    productName: name,
+    description,
+    originalPriceCents,
+    ...(discountedPriceCents !== undefined ? { discountedPriceCents } : {}),
+    badge,
+    campaignIntent: intent,
+    preserveImageContext,
+    ...(validityDisplayText !== undefined ? { validityDisplayText } : {}),
+    mandatoryArtworkTextFree,
+    ...(backgroundDirection !== undefined ? { backgroundDirection } : {}),
+    identityDirective,
+    referenceSelections,
+    imageRestoreLimited: true,
+  };
 }
 
 export async function getCampaignForDisplay(id: string): Promise<CampaignRecord | null> {

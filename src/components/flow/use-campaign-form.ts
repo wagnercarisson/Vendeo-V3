@@ -7,6 +7,7 @@ import { formatCurrencyBRL } from "@/lib/formatters";
 import { useInputPreservation } from "@/hooks/use-input-preservation";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
+import type { CampaignFormRestore } from "@/lib/campaign/display";
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import {
@@ -225,6 +226,13 @@ export interface UseCampaignFormReturn {
    */
   unknownResult: UnknownResultState | null;
   resetUnknownResult: () => void;
+  /**
+   * F56.2b2b (B2B-D9): aviso HONESTO de limitação quando os campos foram
+   * restaurados do SERVIDOR (sem rascunho escopado) — a imagem do produto/
+   * referências (client-only) pode precisar ser re-adicionada. `null` quando não
+   * há restauração server-side. NUNCA promete restauração de imagem.
+   */
+  restorationNotice: string | null;
 }
 
 const EMPTY_FIELDS: CampaignFormFields = {
@@ -656,11 +664,45 @@ export function buildCampaignGenerationBody(
   return body;
 }
 
+/**
+ * F56.2b2b (B2B-D9) — aplica o snapshot ESTRUTURAL restaurado (`CampaignFormRestore`,
+ * server-side) sobre os campos do formulário. NUNCA toca `productImages` (a imagem
+ * é client-only — o aviso honesto é exibido pelo consumidor).
+ */
+function restoredFormToFields(
+  restored: CampaignFormRestore,
+): Partial<CampaignFormFields> {
+  const fields: Partial<CampaignFormFields> = {
+    productName: restored.productName,
+    description: restored.description,
+    originalPriceCents: restored.originalPriceCents,
+    discountedPriceCents: restored.discountedPriceCents,
+    badge: restored.badge,
+    campaignIntent: restored.campaignIntent,
+    preserveImageContext: restored.preserveImageContext,
+    mandatoryArtworkTextFree: restored.mandatoryArtworkTextFree,
+    mandatoryArtworkText: restored.mandatoryArtworkTextFree,
+  };
+  if (restored.validityDisplayText) {
+    fields.validityMode = "custom";
+    fields.validityCustomText = restored.validityDisplayText;
+  }
+  if (restored.backgroundDirection) {
+    fields.backgroundDirection = restored.backgroundDirection;
+  }
+  return fields;
+}
+
 export function useCampaignForm(
   storeId?: string,
-  options?: { eligible?: boolean },
+  options?: { eligible?: boolean; restoredForm?: CampaignFormRestore | null },
 ): UseCampaignFormReturn {
   const eligible = options?.eligible === true;
+  // F56.2b2b (C4 / B2B-D9): snapshot server-side + escopo do rascunho pela
+  // campanha-ORIGEM. `restoredForm` NUNCA carrega a operação estornada (sem
+  // `operationId`): a nova submissão gera NOVOS ids.
+  const restoredForm = options?.restoredForm ?? null;
+  const draftScope = restoredForm?.campaignId ?? null;
   const [fields, setFields] = useState<CampaignFormFields>(EMPTY_FIELDS);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<keyof CampaignFormFields, boolean>>({
@@ -709,16 +751,27 @@ export function useCampaignForm(
   const { saveFormState, restoreFormState, clearFormState } = useInputPreservation<CampaignFormFields>();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userChangedIntent = useRef(false);
-  const IMAGE_DRAFT_KEY = "campaign_draft_image";
+  const imageDraftKey = draftScope
+    ? `campaign_draft_image:${draftScope}`
+    : "campaign_draft_image";
   const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);
+  // F56.2b2b (B2B-D9): aviso HONESTO de que a imagem do produto/referências
+  // (client-only) pode precisar ser re-adicionada quando o texto foi restaurado
+  // do SERVIDOR (sem rascunho escopado). NUNCA promete restauração de imagem.
+  const [restorationNotice, setRestorationNotice] = useState<string | null>(null);
 
-  // Restore form state from sessionStorage on mount
+  // Restore form state from sessionStorage (ESCOPADO à campanha) on mount; se NÃO
+  // houver rascunho escopado E houver snapshot server-side (`restoredForm`),
+  // reidrata os CAMPOS PREENCHIDOS do SERVIDOR e AVISA sobre a imagem (client-only).
   useEffect(() => {
-    const saved = restoreFormState();
+    const saved = restoreFormState(draftScope);
+    let hadSavedProductImages = false;
+
     if (saved) {
       // File can't be serialized — restore productImages with dataUrl only
       const legacy = saved as Partial<CampaignFormFields> & { imageFile?: File | null; mandatoryArtworkText?: string };
       const { imageFile: _legacyImageFile, mandatoryArtworkText: legacyNotice, productImages: savedImages, ...rest } = legacy;
+      hadSavedProductImages = Array.isArray(savedImages) && savedImages.length > 0;
       const restored = {
         ...rest,
         mandatoryArtworkTextFree: rest.mandatoryArtworkTextFree ?? legacyNotice ?? "",
@@ -732,34 +785,60 @@ export function useCampaignForm(
       if ((saved.discountedPriceCents ?? 0) > 0) {
         setRawDiscountedPrice(String(saved.discountedPriceCents));
       }
-      // Restore image data URL from separate key
-      try {
-        const savedImageDataUrl = sessionStorage.getItem(IMAGE_DRAFT_KEY);
-        if (savedImageDataUrl) {
-          setRestoredImageDataUrl(savedImageDataUrl);
-          // F41 (D3): migração de draft legado — sem productImages utilizável +
-          // dataUrl presente → productImages de 1 elemento (primary)
-          if (!(Array.isArray(savedImages) && savedImages.length > 0)) {
-            setFields((prev) => {
-              if (prev.productImages.length > 0) return prev;
-              return {
-                ...prev,
-                productImages: [
-                  {
-                    id: crypto.randomUUID(),
-                    role: "primary",
-                    source: "upload",
-                    mimeType: "image/jpeg",
-                    dataUrl: savedImageDataUrl,
-                  },
-                ],
-              };
-            });
-          }
-        }
-      } catch {
-        // ignore
+    } else if (restoredForm) {
+      // SEM rascunho escopado + snapshot server-side ⇒ reidrata os CAMPOS
+      // PREENCHIDOS do SERVIDOR (fonte da verdade dos textos).
+      const hydrated = restoredFormToFields(restoredForm);
+      setFields((prev) => ({ ...prev, ...hydrated }));
+      if ((restoredForm.originalPriceCents ?? 0) > 0) {
+        setRawOriginalPrice(String(restoredForm.originalPriceCents));
       }
+      if ((restoredForm.discountedPriceCents ?? 0) > 0) {
+        setRawDiscountedPrice(String(restoredForm.discountedPriceCents));
+      }
+    } else {
+      return;
+    }
+
+    // Restore the image data URL ONLY from the SCOPED key of the TARGET campaign
+    // (`campaign_draft_image:<campaignId>`). A chave de OUTRA campanha é IGNORADA.
+    let restoredImage = false;
+    try {
+      const savedImageDataUrl = sessionStorage.getItem(imageDraftKey);
+      if (savedImageDataUrl) {
+        setRestoredImageDataUrl(savedImageDataUrl);
+        restoredImage = true;
+        // F41 (D3): migração de draft legado — sem productImages utilizável +
+        // dataUrl presente → productImages de 1 elemento (primary)
+        if (!hadSavedProductImages) {
+          setFields((prev) => {
+            if (prev.productImages.length > 0) return prev;
+            return {
+              ...prev,
+              productImages: [
+                {
+                  id: crypto.randomUUID(),
+                  role: "primary",
+                  source: "upload",
+                  mimeType: "image/jpeg",
+                  dataUrl: savedImageDataUrl,
+                },
+              ],
+            };
+          });
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // F56.2b2b (B2B-D9) — AVISO HONESTO: sem a imagem escopada da campanha-alvo, a
+    // imagem do produto/referências (client-only) pode precisar ser re-adicionada.
+    // NUNCA prometemos restauração de imagem.
+    if (!restoredImage) {
+      setRestorationNotice(
+        "Seus dados preenchidos foram mantidos. A imagem do produto pode precisar ser adicionada novamente.",
+      );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -771,7 +850,7 @@ export function useCampaignForm(
     autoSaveTimer.current = setTimeout(() => {
       const hasData = fields.productName || (fields.discountedPriceCents ?? 0) > 0 || fields.badge || fields.productImages.length > 0;
       if (hasData) {
-        saveFormState(fields);
+        saveFormState(fields, draftScope);
       }
     }, 500);
 
@@ -780,7 +859,7 @@ export function useCampaignForm(
         clearTimeout(autoSaveTimer.current);
       }
     };
-  }, [fields, saveFormState]);
+  }, [fields, saveFormState, draftScope]);
 
   // Intent inference — observe price changes to auto-detect campaign intent
   useEffect(() => {
@@ -849,7 +928,7 @@ export function useCampaignForm(
       const reader = new FileReader();
       reader.onloadend = () => {
         try {
-          sessionStorage.setItem(IMAGE_DRAFT_KEY, reader.result as string);
+          sessionStorage.setItem(imageDraftKey, reader.result as string);
         } catch {
           // storage full or unavailable
         }
@@ -866,7 +945,7 @@ export function useCampaignForm(
 
     prevImageFileRef.current = currentFile;
     lastRestoredUrlRef.current = restoredImageDataUrl;
-  }, [fields.productImages, restoredImageDataUrl]);
+  }, [fields.productImages, restoredImageDataUrl, imageDraftKey]);
 
   const setField = useCallback(
     (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => {
@@ -1282,14 +1361,14 @@ export function useCampaignForm(
     setRawOriginalPrice("");
     setRawDiscountedPrice("");
     setRestoredImageDataUrl(null);
-    clearFormState();
-    try { sessionStorage.removeItem(IMAGE_DRAFT_KEY); } catch { /* ignore */ }
+    clearFormState(draftScope);
+    try { sessionStorage.removeItem(imageDraftKey); } catch { /* ignore */ }
     if (imagePreviewUrl) {
       URL.revokeObjectURL(imagePreviewUrl);
       objectUrlRef.current = null;
     }
     sessionStorage.removeItem("campaign_preview");
-  }, [imagePreviewUrl, clearFormState]);
+  }, [imagePreviewUrl, clearFormState, draftScope, imageDraftKey]);
 
   const handleConflictContinue = useCallback(async () => {
     if (!pendingConflict || !storeId) return;
@@ -1586,6 +1665,7 @@ export function useCampaignForm(
     confirmReview,
     unknownResult,
     resetUnknownResult,
+    restorationNotice,
   };
 }
 
