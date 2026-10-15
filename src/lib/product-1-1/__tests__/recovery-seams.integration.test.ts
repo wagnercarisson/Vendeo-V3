@@ -295,7 +295,7 @@ describe("F56.2b2b — Camada 2 / SEAM (c): página REAL → formulário REAL �
         restoredForm: restored,
       }),
     );
-    fireEvent.click(screen.getByRole("button", { name: /Gerar novamente com meus dados/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Voltar aos dados da campanha/ }));
     expect(nav.push).toHaveBeenCalledWith(`/campanhas/nova?restoreFrom=${campaign}`);
     cta.unmount();
 

@@ -177,7 +177,7 @@ describe("CampaignPageClient — visão persistida do novo fluxo", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Gerar novamente com meus dados/ }),
+      screen.getByRole("button", { name: /Voltar aos dados da campanha/ }),
     ).toBeInTheDocument();
     for (const forbidden of FORBIDDEN) {
       expect(screen.queryByText(forbidden)).toBeNull();
@@ -200,7 +200,7 @@ describe("CampaignPageClient — visão persistida do novo fluxo", () => {
       screen.queryByText(/Seus dados foram preservados/),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: /Gerar novamente com meus dados/ }),
+      screen.queryByRole("button", { name: /Voltar aos dados da campanha/ }),
     ).toBeNull();
     expect(
       screen.getByRole("button", { name: "Verificar novamente" }),

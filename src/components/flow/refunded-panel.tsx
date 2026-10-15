@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { AlertTriangle, LifeBuoy, RotateCcw } from "lucide-react";
+import { AlertTriangle, LifeBuoy, RefreshCw, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
 
@@ -15,7 +15,7 @@ import type { CampaignFormRestore } from "@/lib/campaign/display";
  *   `reserved`/`art_uploaded`/`delivered`/desconhecido.
  * - Sem confirmação (`confirmed !== true`): feedback HONESTO (âmbar), SEM anunciar
  *   crédito devolvido (`UNCONFIRMED_MESSAGE`) e apenas re-verificação query-only.
- * - A CTA `Gerar novamente com meus dados` navega para
+ * - A CTA `Voltar aos dados da campanha` navega para
  *   `/campanhas/nova?restoreFrom=<campaignId>` — é uma NOVA geração (cobrança
  *   normal), NUNCA a reabertura da operação estornada.
  * - A nota de escopo (`SCOPE_NOTE`) só é exibida quando o snapshot server-side foi
@@ -98,6 +98,7 @@ export function RefundedPanel({
                 size="sm"
                 onClick={() => router.refresh()}
               >
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 Verificar novamente
               </Button>
             </div>
@@ -135,6 +136,7 @@ export function RefundedPanel({
 
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="md" onClick={() => router.refresh()}>
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
             Verificar novamente
           </Button>
           {supportEmail && (
@@ -196,7 +198,7 @@ export function RefundedPanel({
           }
         >
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
-          Gerar novamente com meus dados
+          Voltar aos dados da campanha
         </Button>
         {supportEmail && (
           <Button

@@ -29,7 +29,7 @@ submissão. Nada de recuperação de copy (B2.1) nem autorização/teste real (B
 correção (F56.3).
 
 **Âncora visual primária:** o painel de **falha confirmada com estorno**, com a **mensagem exata** e a CTA
-**`Gerar novamente com meus dados`**. A arte entregue (quando houver) permanece **inalterada**.
+**`Voltar aos dados da campanha`**. A arte entregue (quando houver) permanece **inalterada**.
 
 **In scope (this contract covers):**
 
@@ -138,7 +138,7 @@ Reuso do MASTER §3. Sem novo tamanho/peso.
   ├─ A. Ícone de atenção + mensagem aprovada         (Open Sans 16px)
   ├─ B. Nota de escopo: imagem pode precisar ser     (Open Sans 14px, text-secondary)
   │     re-adicionada (referências/imagens client-only)
-  ├─ C. CTA primária "Gerar novamente com meus dados"
+  ├─ C. CTA primária "Voltar aos dados da campanha"
   └─ D. Ajuda de suporte (secundário)                (quando aplicável)
 ```
 
@@ -188,7 +188,7 @@ PT-BR, linguagem comercial simples, **sem emojis, sem jargão técnico** (MASTER
 |----------|------|
 | Mensagem de estorno (exata) | `Não conseguimos concluir a comunicação desta geração. Seus dados foram preservados e o crédito foi estornado. Você pode gerar novamente.` |
 | Nota de escopo (imagem) | `Seus dados preenchidos foram mantidos. A imagem do produto pode precisar ser adicionada novamente.` |
-| CTA primária | `Gerar novamente com meus dados` |
+| CTA primária | `Voltar aos dados da campanha` |
 | Aviso de nova geração | `Esta é uma nova geração e será cobrada normalmente.` |
 | Ajuda de suporte | `Falar com o suporte` |
 | Estorno não confirmado | `Não foi possível confirmar o estorno agora. Tente novamente em instantes.` |
@@ -209,7 +209,9 @@ Reuso de primitivos; criar apenas compostos finos de tela.
 | Restauração de formulário | reuse | `use-campaign-form.ts` + `use-input-preservation.ts` (sem novo mecanismo) |
 
 Ícones (lucide, `aria-hidden` quando decorativos): `AlertTriangle`/`ShieldAlert` (falha confirmada),
-`RotateCcw` (nova geração), `LifeBuoy`/`Mail` (suporte). **Sem emoji.**
+`RotateCcw` (voltar aos dados da campanha), `RefreshCw` (Verificar novamente), `LifeBuoy`/`Mail` (suporte). **Sem emoji.**
+
+**Ajuste aprovado durante o UAT (2026-10-15):** no `RefundedPanel`, `Verificar novamente` usa `RefreshCw` antes do texto, `h-4 w-4` e `aria-hidden="true"`, sem animação contínua. Mantém `router.refresh()` (somente consulta, sem geração/cobrança). Padronização gradual nos componentes tocados, sem refatoração global nesta fatia.
 
 ---
 
@@ -241,7 +243,7 @@ primitivos existentes em `src/components/ui/*`. Nenhum registry de terceiros é 
 | Elemento de UI | Requisito / Decisão |
 |----------------|---------------------|
 | Mensagem exata só em `refunded` confirmado | `Estorno idempotente e corrida entrega × estorno` + B2B-D5 |
-| CTA `Gerar novamente com meus dados` (nova submissão) | `Resultado atrasado de operação estornada não reabre nem libera` (nova geração) + B2B-D9 |
+| CTA `Voltar aos dados da campanha` (nova submissão) | `Resultado atrasado de operação estornada não reabre nem libera` (nova geração) + B2B-D9 |
 | Restauração dos campos preenchidos (server-side) | `Recuperação server-side de operação sem delivered` + B2B-D9 |
 | Nota de escopo (imagem pode precisar ser re-adicionada) | B2B-D9 (limitação honesta) |
 | Sem anúncio de crédito sem confirmação | `Falha de Storage/banco não autoriza estorno nem anúncio de crédito` + B2B-D5 |

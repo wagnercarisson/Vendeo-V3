@@ -322,7 +322,7 @@ describe("RefundedPanel — mensagem exata só com estorno confirmado (1) e ambe
     expect(screen.getByText(REFUNDED_SCOPE_NOTE)).toBeInTheDocument();
     expect(screen.getByText(REFUNDED_NEW_GENERATION_NOTICE)).toBeInTheDocument();
 
-    const cta = screen.getByRole("button", { name: /Gerar novamente com meus dados/ });
+    const cta = screen.getByRole("button", { name: /Voltar aos dados da campanha/ });
     expect(cta).toBeInTheDocument();
     expect(screen.getByRole("button", { name: REFUNDED_SUPPORT_CTA })).toBeInTheDocument();
 
@@ -343,9 +343,15 @@ describe("RefundedPanel — mensagem exata só com estorno confirmado (1) e ambe
     expect(screen.queryByText(REFUNDED_SCOPE_NOTE)).toBeNull();
     expect(screen.queryByText(REFUNDED_NEW_GENERATION_NOTICE)).toBeNull();
     expect(
-      screen.queryByRole("button", { name: /Gerar novamente com meus dados/ }),
+      screen.queryByRole("button", { name: /Voltar aos dados da campanha/ }),
     ).toBeNull();
-    expect(screen.getByRole("button", { name: "Verificar novamente" })).toBeInTheDocument();
+    const verifyButton = screen.getByRole("button", { name: "Verificar novamente" });
+    const refreshIcon = verifyButton.querySelector("svg");
+    expect(refreshIcon).toHaveClass("lucide-refresh-cw", "h-4", "w-4");
+    expect(refreshIcon).toHaveAttribute("aria-hidden", "true");
+    expect(verifyButton.firstElementChild).toBe(refreshIcon);
+    verifyButton.click();
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
     expect(mockPush).not.toHaveBeenCalled();
   });
 
@@ -363,7 +369,13 @@ describe("RefundedPanel — mensagem exata só com estorno confirmado (1) e ambe
     expect(screen.queryByText(/crédito foi estornado/)).toBeNull();
     expect(screen.queryByText(REFUNDED_NEW_GENERATION_NOTICE)).toBeNull();
     // Re-verificação é query-only (refresh) — nunca inicia geração.
-    expect(screen.getByRole("button", { name: "Verificar novamente" })).toBeInTheDocument();
+    const verifyButton = screen.getByRole("button", { name: "Verificar novamente" });
+    const refreshIcon = verifyButton.querySelector("svg");
+    expect(refreshIcon).toHaveClass("lucide-refresh-cw", "h-4", "w-4");
+    expect(refreshIcon).toHaveAttribute("aria-hidden", "true");
+    expect(verifyButton.firstElementChild).toBe(refreshIcon);
+    verifyButton.click();
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
     expect(mockPush).not.toHaveBeenCalled();
   });
 
