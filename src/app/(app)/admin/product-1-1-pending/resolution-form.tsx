@@ -87,9 +87,22 @@ export function pendingItemKey(item: PendingOperationItem): string {
  * Distingue os estados bloqueados (E1/D13) sem prometer continuidade:
  * - "Processando": operação ativa/claim `in_progress` sem evidência de encerramento.
  * - "Não foi possível confirmar o estado": evidência indeterminada/desconhecida.
+ *
+ * C1-iii (B2B-D4) — na tela ADMIN (caminho autorizado), uma operação `processing`
+ * com AUSÊNCIA CONFIRMADA permite a ação EXISTENTE (`refund_once`) COM CONFIRMAÇÃO
+ * (o claim residual é abandonado sob a trava); SEM ausência confirmada permanece
+ * bloqueada.
  */
+export function authorizedAbandonAvailable(item: PendingOperationItem): boolean {
+  return item.processing && !item.terminal && item.artifactKind === "absent";
+}
+
 export function pendingStateLabel(item: PendingOperationItem): string | null {
-  if (item.processing && !item.terminal) return "Processando";
+  if (item.processing && !item.terminal) {
+    return authorizedAbandonAvailable(item)
+      ? "Processando — resolução autorizada disponível (confirme para abandonar o claim e estornar)"
+      : "Processando";
+  }
   if (item.artifactKind === "indeterminate" || item.unknown) {
     return "Não foi possível confirmar o estado";
   }
@@ -263,9 +276,13 @@ function enabledActions(item: PendingOperationItem): {
   deliver: boolean;
   refund: boolean;
 } {
-  const resolvable = !item.processing && !item.terminal;
+  // C1-iii — a ação AUTORIZADA (tela admin) permite ESTORNAR uma operação
+  // `processing` com ausência confirmada (abandono do residual sob a trava, COM
+  // CONFIRMAÇÃO). Entregar arte continua exigindo operação NÃO `processing`.
+  const abandonAuthorized = authorizedAbandonAvailable(item);
+  const resolvable = (!item.processing && !item.terminal) || abandonAuthorized;
   return {
-    deliver: resolvable && item.artifactKind === "integral",
+    deliver: !item.processing && !item.terminal && item.artifactKind === "integral",
     refund: resolvable && item.artifactKind === "absent",
   };
 }
@@ -291,7 +308,9 @@ export function ResolutionForm({ item }: { item: PendingOperationItem }) {
   });
 
   const blocked = pendingStateLabel(item);
-  const canSubmit = Boolean(draft.action) && !blocked && !draft.loading;
+  // C1-iii — submissão permitida SOMENTE quando uma ação está habilitada (inclui
+  // a ação AUTORIZADA de `processing`+`absent`); `blocked` é apenas o aviso.
+  const canSubmit = Boolean(draft.action) && !draft.loading && (enabled.deliver || enabled.refund);
 
   function edit(update: Partial<Draft>) {
     setDraft((previous) => ({

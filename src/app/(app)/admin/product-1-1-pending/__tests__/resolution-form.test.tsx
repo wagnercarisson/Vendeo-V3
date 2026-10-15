@@ -103,6 +103,25 @@ describe("ProductOneToOne pending — Superfície 4 (lista/resolução)", () => 
     ).not.toBeInTheDocument();
   });
 
+  it("C1-iii/D4: `processing` COM ausência confirmada ⇒ a ação EXISTENTE (estornar) é habilitada COM CONFIRMAÇÃO", () => {
+    render(
+      <ResolutionForm
+        item={item({ processing: true, status: "reserved", artifactKind: "absent" })}
+      />,
+    );
+    expect(
+      screen.getByText(/Processando — resolução autorizada disponível/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Estornar uma vez" })).not.toBeDisabled();
+  });
+
+  it("C1-iii: `processing` SEM ausência confirmada permanece BLOQUEADO (nenhuma ação habilitada)", () => {
+    render(<ResolutionForm item={item({ processing: true, artifactKind: "integral" })} />);
+    expect(screen.getByText("Processando")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Estornar uma vez" })).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Entregar arte existente" })).toBeDisabled();
+  });
+
   it("envio somente com `motivo`: sem motivo exibe `Motivo obrigatório` e NÃO chama a API", () => {
     render(<ResolutionForm item={item({ artifactKind: "integral" })} />);
     fireEvent.click(screen.getByRole("button", { name: "Resolver pendência" }));

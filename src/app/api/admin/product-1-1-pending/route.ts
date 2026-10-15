@@ -89,6 +89,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
       action: body.action,
       reason: body.reason,
       resolutionOperationId: body.resolutionOperationId,
+      // C1 (B2B-D4) — caminho AUTORIZADO/auditado: o operador admin autenticado
+      // (após `requireAdmin` + `requireSameOrigin`) AUTORIZA explicitamente o
+      // abandono do claim `in_progress` residual. Este é o ÚNICO invocador que
+      // fornece o sinal; qualquer outro omite-o (default `false`).
+      authorizeAbandon: true,
     });
     return NextResponse.json({ resolution });
   } catch (error) {
