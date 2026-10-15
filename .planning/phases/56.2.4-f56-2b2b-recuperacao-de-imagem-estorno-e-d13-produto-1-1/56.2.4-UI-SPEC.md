@@ -42,7 +42,7 @@ correção (F56.3).
 
 - Recuperação **de copy** e seus estados — **B2.1** (arquivada).
 - **Superfície administrativa** de resolução de pendência (`/api/admin/product-1-1-pending`): já existe na
-  b1b; esta fatia a **estende no backend** (motivo/evidência/auditoria), **sem** novo desenho de tela.
+  b1b; esta fatia a **estende no backend** (motivo/evidência/auditoria), **sem** novo desenho de tela. **Exceção mínima (adendo 2026-10-15, `RECONCILIATION.md` §10.1):** a fatia **habilita funcionalmente a ação EXISTENTE** da tela admin para uma operação `processing` **no caminho autorizado** (com confirmação e auditoria) — **não** cria tela nem novo componente visual. O contrato visual desta fatia (superfície do lojista, §Surface) permanece **inalterado**.
 - Autorização estreita, teste real e preview — **B2.3**.
 - Aprovação/reprovação/correção, edição livre e bloqueio de download de artes pendentes — **F56.3**.
 - Novo design token, light mode, biblioteca de componentes ou **emoji**.

@@ -121,3 +121,15 @@ Rollback: desabilitar a recuperação não afeta o core; **rollback de deploy n�
 
 - **A-1 — resolvida (2026-10-15):** adotada **(4a)** como **regra única** (gravar `outcome='failed'` no ponto de decisão terminal, reusando RPC/tabela existentes); **(4b) retirada**. Aprovação humana registrada; ver `RECONCILIATION.md` §5.
 - Nenhuma questão aberta de escopo (financeiro apenas em operações não terminais) nem de schema.
+
+## Nota de integração (2026-10-15)
+
+Cinco **costuras de integração** foram reconciliadas após revisão humana (detalhe em `RECONCILIATION.md` §10). Elas **não** criam requirements nem decisões novas; apenas garantem que as decisões **B2B-D3/D4/D5/D8/D9** estejam **ligadas** de ponta a ponta:
+
+1. **D4 alcançável:** alterar, **só** para o caminho autorizado, (i) o fast-path do serviço (`resolve-pending-operation.ts`), (ii) a RPC `admin_resolve_product_1_1_pending` (`operation_in_progress` **e** `execution_not_ended`) e (iii) o gate da tela admin (`resolution-form.tsx`) — habilitação **funcional mínima**, sem redesenho. Gatilho = marca autorizada explícita; `execution_ended` é só validado quanto à forma.
+2. **D3 completo nos caminhos terminais:** dos **três** chamadores de `settleConfirmedFailure`, só o ponto de decisão terminal grava `outcome='failed'`; os outros permanecem **inconclusivos** → resolução autorizada; nunca sobrescrever `failed`/`unknown` imutável.
+3. **D3 envelope/interface:** encerramento devolve **envelope único com identidade**; `ProductOneToOneCreditOps` ganha `closeFailedOperation` (fakes/ordem de tarefas alinhados).
+4. **D9/D5 restauração:** transporte autenticado com ownership até `/campanhas/nova`; rascunho **escopado à campanha**; **novos** IDs de campanha/operação (nova submissão).
+5. **D8 provas por seam:** Camada 2 atravessa tela→serviço/RPC, orquestrador→marcador, CTA→formulário→nova identidade; provider simulado, banco/Storage locais.
+
+**D13 permanece NÃO resolvido; o archive da b1b não é reescrito.**

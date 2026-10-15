@@ -140,3 +140,35 @@ A segurança da **B2.1** (`56.2.3-SECURITY.md`) está **`SECURED` com 0/69 amea�
 - **O que esta aprovação cobre:** contrato/proposta/design/specs/tasks (todas as precisões) e o contrato de UI (pré-implementação).
 - **O que ela NÃO cobre:** implementação, GSD, migration/`db push`, ativação, provider pago, **B2.3** e **F56.3**. A **validação do resultado implementado** é checkpoint **posterior e distinto** (UAT da B2.2).
 - **Separado:** o sign-off de segurança pendente da **B2.1** (§7) permanece **fora** desta fatia.
+
+## 10. Adendo de reconciliação de integração (2026-10-15) — cinco costuras
+
+> **Natureza:** **coerência de implementação**, não mudança de escopo. Estas cinco costuras **não** criam novos requirements (seguem os **11** normativos), **não** criam novo REQ-ID e **não** declaram D13 resolvido. Elas fecham ligações entre componentes que o planejamento inicial tratava como isolados (mesma classe de problema da B2.1: peças verdes e uma ligação entre elas incompleta). Cada item mapeia uma decisão **já aprovada**.
+
+### 10.1 — A resolução administrativa precisa ser ALCANÇÁVEL (B2B-D4)
+
+Três bloqueios existentes impedem o caminho autorizado; devem ser alterados **exclusivamente** para ele, com confirmação e auditoria:
+
+1. **Fast-path do serviço** `src/lib/product-1-1/pending/resolve-pending-operation.ts:~230-243`: hoje `state.processing` ⇒ `operation_in_progress` (e `!executionEnded` ⇒ `execution_not_ended`).
+2. **RPC** `admin_resolve_product_1_1_pending` (`20261009000002:~230-257`): recusa `operation_in_progress` (linha ~240) **e** mantém `execution_not_ended` no ramo de estorno (linha ~257). Contornar apenas `operation_in_progress` **não basta**.
+3. **Tela admin** `src/app/(app)/admin/product-1-1-pending/resolution-form.tsx:~262-270` (`resolvable = !item.processing && !item.terminal`) e o rótulo/estado (`~92`, `~412`, `~460`): hoje o suporte **não consegue acionar** a resolução de uma operação `processing`.
+
+**Ajuste:** a ação autorizada (marca explícita `authorized_abandon`) é o gatilho — **nunca** `execution_ended` (que permanece apenas validaded quanto à forma; o valor autoritativo é derivado sob a trava). A alteração da tela é **funcional mínima** (habilitar a ação EXISTENTE sob a nova condição autorizada, com confirmação), **não** um redesenho; o contrato de UI da B2.2 (superfície do lojista, `UI-SPEC.md`) permanece inalterado.
+
+### 10.2 — O marcador de falha final não cobre todos os caminhos (B2B-D3)
+
+`src/lib/product-1-1/orchestration/generation-orchestrator.ts` chama `settleConfirmedFailure` em **três** pontos: `~1031` (`attempt_history_failed`), `~1145` (`artifact_store_failed`) e `~1245` (`generation_failed`, decidido após `nextImageGenerationAttempt`, quando a política **não** produz próxima tentativa). **Somente** o ponto de decisão terminal (`~1245`) grava `outcome='failed'`; os outros dois **permanecem inconclusivos** (PF exige marcador gravado) e seguem à **resolução autorizada**. Se `outcome='failed'` **já** estiver persistido e a sonda for inconclusiva (`invalid`/`indeterminate`), **não** sobrescrever o marcador **imutável** com `unknown`.
+
+### 10.3 — Envelope único e contrato de interface (B2B-D3)
+
+A RPC de encerramento local deve devolver um **envelope único** com **identidade** (`campaign_id`, `operation_id`, `action`, `status`, `success`, `idempotent`), espelhando `product_1_1_refund_campaign_credit_operation` (`20261008000002:~277-280`, `~303-305`) e a resolução auditada. A interface `ProductOneToOneCreditOps` (`generation-orchestrator.ts:~179-188`) ganha `closeFailedOperation(...)`; orquestrador, fakes e testes alinhados; a ordem das tarefas garante que o método exista **antes** do primeiro typecheck que o utiliza.
+
+### 10.4 — Transporte e precedência do formulário restaurado (B2B-D9/D5)
+
+O snapshot restaurado precisa chegar a `/campanhas/nova` por **transporte autenticado com ownership** (a página nova — `src/app/(app)/campanhas/nova/page.tsx` — hoje não recebe origem). A precedência de rascunho (`sessionStorage` `campaign_draft`/`campaign_draft_image`, hoje **chave global única** em `use-input-preservation.ts`/`use-campaign-form.ts`) deve ser **escopada à campanha correta**, sem restaurar rascunho de **outra** campanha. A restauração gera **novos** IDs de campanha/operação (nova submissão), **sem** reusar a operação estornada.
+
+### 10.5 — Provas atravessando as costuras reais (B2B-D8)
+
+A **Camada 2** deve provar pelos seams reais: **(a)** tela administrativa → serviço/RPC → **abandono + estorno**; **(b)** **orquestrador real** → **marcador** → **encerramento**; **(c)** **CTA** → **formulário preenchido** → **nova identidade de submissão**. Provider **simulado**; Postgres/Storage **locais**. Preservar um snapshot no banco **não** comprova que o clique na CTA restaura o formulário.
+
+**Nenhum item acima altera os 11 requirements, o gate D13 (que permanece **NÃO resolvido**) ou o archive da b1b.**
