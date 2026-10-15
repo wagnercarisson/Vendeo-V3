@@ -61,6 +61,13 @@ const NO_PRODUCT_FLOW_IMPORT_MODULE = "src/lib/campaign/display.ts";
 const AUTHORIZED_CAMPAIGN_COPY_RECOVERY_ROUTE =
   "src/app/api/campaign/[id]/copy-recovery/route.ts";
 
+// F56.2b2b (Plano 02 — reconciliação G-NA): a rota AUTENTICADA da recuperação de
+// imagem introduz importadores legados. SÓ pares EXPLÍCITOS importador+módulo —
+// nunca `@/lib/product-1-1/**` genérico. `AUTHORIZED_CAMPANHAS_ID_PAGE` permanece
+// INALTERADO (a rota de recuperação de imagem não toca a página).
+const AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE =
+  "src/app/api/campaign/[id]/image-recovery/route.ts";
+
 // F56.2b1b (Plano 07 — reconciliação G-NA, ÚLTIMO escritor da sequência
 // 01 → 04 → 06 → 07): as superfícies admin de resolução introduzem importadores
 // legados. SÓ pares EXPLÍCITOS importador+módulo — nunca `@/lib/product-1-1/**`
@@ -163,6 +170,18 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/orchestration/attempt-start-client",
       "@/lib/product-1-1/authorization/authorization-service",
       // Barreira de não-ativação: contexto canônico de elegibilidade (server-only).
+      "@/lib/product-1-1/submission/eligibility-context",
+    ],
+  },
+  // Plano 02 (F56.2b2b) — rota AUTENTICADA da recuperação de IMAGEM (GET
+  // query-only + POST que delega ao serviço de recuperação). Pares EXATOS
+  // refletindo os imports REAIS da rota (sem prefixo amplo).
+  [AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/artifact/artifact-recovery",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/authorization/authorization-service",
       "@/lib/product-1-1/submission/eligibility-context",
     ],
   },
@@ -1008,6 +1027,98 @@ describe("Product 1:1 — reconciliação G-NA (Plano 03 — F56.2b2a rota da re
       isAuthorizedAdminAuthorizationImport(
         AUTHORIZED_CAMPANHAS_ID_PAGE,
         "@/lib/product-1-1/copy/recovery-schemas",
+      ),
+    ).toBe(false);
+  });
+
+  it("NEGATIVO: display.ts NÃO importa product-1-1 (G-NA preservada)", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), NO_PRODUCT_FLOW_IMPORT_MODULE),
+      "utf8",
+    );
+    expect(collectProductFlowImports(source)).toEqual([]);
+    expect(source).not.toMatch(/from\s+["'][^"']*product-1-1/);
+  });
+});
+
+describe("Product 1:1 — reconciliação G-NA (Plano 02 — F56.2b2b rota da recuperação de imagem)", () => {
+  it("rota image-recovery: autoriza SOMENTE os pares exatos (sem prefixo amplo)", () => {
+    for (const specifier of [
+      "@/lib/product-1-1/artifact/artifact-recovery",
+      "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/authorization/authorization-service",
+      "@/lib/product-1-1/submission/eligibility-context",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(
+          AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE,
+          specifier,
+        ),
+        specifier,
+      ).toBe(true);
+    }
+    for (const specifier of [
+      "@/lib/product-1-1/artifact/artifact-store",
+      "@/lib/product-1-1/credit-operation/credit-operation-client",
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(
+          AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE,
+          specifier,
+        ),
+        specifier,
+      ).toBe(false);
+    }
+  });
+
+  it("o importador do Plano 02 reflete EXATAMENTE os pares autorizados", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE),
+      "utf8",
+    );
+    expect(
+      hasUnauthorizedProductFlowImport(AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE, source),
+      `${AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE} importa módulo Produto 1:1 não autorizado`,
+    ).toBe(false);
+  });
+
+  it("negativos preservados: importador indevido e módulo indevido continuam violação", () => {
+    expect(
+      hasUnauthorizedProductFlowImport(
+        "src/app/api/campaign/other/route.ts",
+        'import { x } from "@/lib/product-1-1/artifact/artifact-recovery";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE,
+        'import { x } from "@/lib/product-1-1/orchestration/generation-orchestrator";',
+      ),
+    ).toBe(true);
+    expect(
+      hasUnauthorizedProductFlowImport(
+        AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE,
+        'import { x } from "@/lib/product-1-1/artifact/artifact-store";',
+      ),
+    ).toBe(true);
+  });
+
+  it("nenhum prefixo amplo de product-1-1/** foi adicionado (Plano 02)", () => {
+    for (const [importer, rule] of Object.entries(AUTHORIZED_PRODUCT_FLOW_IMPORTS)) {
+      for (const prefix of rule.prefixes) {
+        expect(prefix, `${importer}::${prefix}`).not.toBe("@/lib/product-1-1/");
+        expect(prefix.endsWith("/product-1-1/"), `${importer}::${prefix}`).toBe(false);
+      }
+    }
+  });
+
+  it("AUTHORIZED_CAMPANHAS_ID_PAGE permanece INALTERADO (sem `artifact-recovery`)", () => {
+    expect(
+      isAuthorizedAdminAuthorizationImport(
+        AUTHORIZED_CAMPANHAS_ID_PAGE,
+        "@/lib/product-1-1/artifact/artifact-recovery",
       ),
     ).toBe(false);
   });
