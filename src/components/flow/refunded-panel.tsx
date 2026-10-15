@@ -36,6 +36,15 @@ export const REFUNDED_UNCONFIRMED_MESSAGE =
   "Não foi possível confirmar o estorno agora. Tente novamente em instantes.";
 export const REFUNDED_ACTION_ERROR_MESSAGE =
   "Não foi possível abrir o formulário agora. Tente de novo em instantes.";
+/**
+ * Estorno CONFIRMADO, mas SEM restauração de dados disponível (`restoredForm`
+ * nulo). Informa o estorno separadamente da impossibilidade de recuperar os dados
+ * — NUNCA promete formulário preenchido.
+ */
+export const REFUNDED_CONFIRMED_UNAVAILABLE_MESSAGE =
+  "O crédito desta geração foi estornado.";
+export const REFUNDED_DATA_UNAVAILABLE_NOTICE =
+  "Não foi possível recuperar os dados preenchidos agora.";
 
 interface RefundedPanelProps {
   /** Identidade da campanha estornada — vira a origem `restoreFrom` da CTA. */
@@ -65,30 +74,81 @@ export function RefundedPanel({
 }: RefundedPanelProps) {
   const router = useRouter();
 
-  // Estorno NÃO confirmado: amber honesto — SEM anunciar crédito devolvido.
-  if (!confirmed) {
-    return (
-      <div
-        role="alert"
-        className="w-full rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-4 motion-safe:transition-colors motion-reduce:transition-none"
-      >
-        <div className="flex items-start gap-3">
-          <AlertTriangle
-            className="h-5 w-5 text-accent-amber shrink-0 mt-0.5"
-            aria-hidden="true"
-          />
-          <div className="flex-1 space-y-3">
-            <p className="text-sm text-accent-amber font-body">
-              {REFUNDED_UNCONFIRMED_MESSAGE}
-            </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => router.refresh()}
-            >
-              Verificar novamente
-            </Button>
+  // Estorno CONFIRMADO, mas SEM restauração de dados disponível: informa o estorno
+  // separadamente da impossibilidade de recuperar os dados — SEM prometer
+  // "dados preservados" nem "gerar novamente com meus dados". Oferece reverificação.
+  if (!confirmed || restoredForm === null) {
+    if (!confirmed) {
+      return (
+        <div
+          role="alert"
+          className="w-full rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-4 motion-safe:transition-colors motion-reduce:transition-none"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle
+              className="h-5 w-5 text-accent-amber shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
+            <div className="flex-1 space-y-3">
+              <p className="text-sm text-accent-amber font-body">
+                {REFUNDED_UNCONFIRMED_MESSAGE}
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.refresh()}
+              >
+                Verificar novamente
+              </Button>
+            </div>
           </div>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-4 motion-safe:transition-opacity motion-reduce:transition-none">
+        <div
+          role="alert"
+          className="w-full rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-4 py-4"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle
+              className="h-5 w-5 text-accent-amber shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
+            <div className="flex-1 space-y-3">
+              <p className="text-base text-text-primary font-body">
+                {REFUNDED_CONFIRMED_UNAVAILABLE_MESSAGE}
+              </p>
+              <p className="text-sm text-text-secondary font-body">
+                {REFUNDED_DATA_UNAVAILABLE_NOTICE}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {actionError && (
+          <p role="alert" className="text-sm text-accent-red font-body">
+            {actionError}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" size="md" onClick={() => router.refresh()}>
+            Verificar novamente
+          </Button>
+          {supportEmail && (
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => {
+                window.location.href = `mailto:${supportEmail}`;
+              }}
+            >
+              <LifeBuoy className="h-4 w-4" aria-hidden="true" />
+              {REFUNDED_SUPPORT_CTA}
+            </Button>
+          )}
         </div>
       </div>
     );

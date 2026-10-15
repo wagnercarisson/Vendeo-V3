@@ -123,6 +123,8 @@ import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 import { RefundedPanel } from "@/components/flow/refunded-panel";
 import {
   REFUNDED_ACTION_ERROR_MESSAGE,
+  REFUNDED_CONFIRMED_UNAVAILABLE_MESSAGE,
+  REFUNDED_DATA_UNAVAILABLE_NOTICE,
   REFUNDED_EXACT_MESSAGE,
   REFUNDED_NEW_GENERATION_NOTICE,
   REFUNDED_SCOPE_NOTE,
@@ -261,11 +263,20 @@ describe("RefundedPanel — mensagem exata só com estorno confirmado (1) e ambe
     );
   });
 
-  it("(1b) snapshot indisponível ⇒ NÃO promete preservação de dados (nota de escopo omitida)", () => {
+  it("(1b) estorno CONFIRMADO sem restauração ⇒ informa o estorno SEPARADAMENTE, sem prometer dados/CTA", () => {
     render(<RefundedPanel campaignId={SOURCE_CAMPAIGN_ID} confirmed restoredForm={null} />);
 
-    expect(screen.getByText(REFUNDED_EXACT_MESSAGE)).toBeInTheDocument();
+    expect(screen.getByText(REFUNDED_CONFIRMED_UNAVAILABLE_MESSAGE)).toBeInTheDocument();
+    expect(screen.getByText(REFUNDED_DATA_UNAVAILABLE_NOTICE)).toBeInTheDocument();
+    // NÃO promete "dados preservados" nem "gerar novamente com meus dados".
+    expect(screen.queryByText(REFUNDED_EXACT_MESSAGE)).toBeNull();
     expect(screen.queryByText(REFUNDED_SCOPE_NOTE)).toBeNull();
+    expect(screen.queryByText(REFUNDED_NEW_GENERATION_NOTICE)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Gerar novamente com meus dados/ }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Verificar novamente" })).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it("(2) NÃO confirmado ⇒ amber honesto, SEM anunciar crédito devolvido", () => {
@@ -355,6 +366,27 @@ describe("Cadeia REAL — restauração/predraça do formulário (3)(4)(7)(9)", 
     expect(screen.getByText(REFUNDED_SCOPE_NOTE)).toBeInTheDocument();
   });
 
+  it("(3b) CAMPOS retidos APÓS os efeitos do formulário (intenção, preços, selo, validade, texto obrigatório)", () => {
+    const restored = restoreFor(SOURCE_CAMPAIGN_ID);
+    const { result } = renderHook(() =>
+      useCampaignForm(STORE_ID, { eligible: true, restoredForm: restored }),
+    );
+
+    // Assert no ESTADO do formulário após a hidratação (não apenas na prop recebida).
+    expect(result.current.fields.productName).toBe("Tênis Runner Pro");
+    expect(result.current.fields.campaignIntent).toBe("offer");
+    expect(result.current.fields.originalPriceCents).toBe(29990);
+    expect(result.current.fields.discountedPriceCents).toBe(19990);
+    expect(result.current.fields.badge).toBe("Promoção");
+    expect(result.current.fields.validityMode).toBe("custom");
+    expect(result.current.fields.validityCustomText).toBe("somente hoje");
+    expect(result.current.fields.mandatoryArtworkTextFree).toBe("Imagem ilustrativa");
+    // DIREÇÃO DE FUNDO: PENDENTE — a fonte persistida é
+    // `product_1_1_snapshot_frozen_evidence.background_direction` (NÃO está em
+    // `input_snapshot`); a correção exige leitura nova + atualização de G-NA
+    // (ampliação de escopo) — sinalizada para reconciliação ANTES de implementar.
+  });
+
   it("(4) SEM rascunho E SEM snapshot ⇒ SEM promessa falsa (campos vazios, sem aviso)", () => {
     renderChain(null);
 
@@ -382,7 +414,11 @@ describe("Cadeia REAL — restauração/predraça do formulário (3)(4)(7)(9)", 
     expect(screen.queryByDisplayValue("Produto de OUTRA campanha")).toBeNull();
   });
 
-  it("(9) mount-clear NÃO derruba o rascunho/imagem da campanha-ALVO (texto+imagem sobrevivem)", () => {
+  it("(9) mount-clear remove SOMENTE chaves legadas e PRESERVA rascunhos de OUTRAS campanhas", () => {
+    // Chaves LEGADAS GLOBAIS (a remover) + escopadas de ALVO e de OUTRA campanha.
+    sessionStorage.setItem("campaign_draft", JSON.stringify({ productName: "legado" }));
+    sessionStorage.setItem("campaign_draft_image", VALID_DATA_URL);
+    sessionStorage.setItem("campaign_preview", "preview");
     sessionStorage.setItem(
       `campaign_draft:${SOURCE_CAMPAIGN_ID}`,
       JSON.stringify({
@@ -410,8 +446,12 @@ describe("Cadeia REAL — restauração/predraça do formulário (3)(4)(7)(9)", 
     expect(sessionStorage.getItem(`campaign_draft_image:${SOURCE_CAMPAIGN_ID}`)).toBe(
       VALID_DATA_URL,
     );
-    // A chave de campanha NÃO-alvo foi removida pelo mount-clear escopado.
-    expect(sessionStorage.getItem(`campaign_draft:${OTHER_CAMPAIGN_ID}`)).toBeNull();
+    // IGNORAR um rascunho alheio NÃO significa apagá-lo: a OUTRA campanha é PRESERVADA.
+    expect(sessionStorage.getItem(`campaign_draft:${OTHER_CAMPAIGN_ID}`)).not.toBeNull();
+    // As chaves LEGADAS GLOBAIS são removidas pelo mount-clear.
+    expect(sessionStorage.getItem("campaign_draft")).toBeNull();
+    expect(sessionStorage.getItem("campaign_draft_image")).toBeNull();
+    expect(sessionStorage.getItem("campaign_preview")).toBeNull();
     // Sem aviso de imagem: a imagem da campanha-alvo foi restaurada.
     expect(screen.queryByText(REFUNDED_SCOPE_NOTE)).toBeNull();
   });

@@ -34,35 +34,18 @@ interface CampaignPageClientProps {
 
 export function CampaignPageClient({ store, balance, supportEmail, generationPaused, identity, eligible = false, restoredForm = null }: CampaignPageClientProps) {
   const [isReviewActive, setIsReviewActive] = useState(false);
-  // F56.2b2b (C4 / B2B-D9) — mount-clear ESCOPADO. Remove SOMENTE as chaves
-  // LEGADAS GLOBAIS (`campaign_draft`/`campaign_draft_image`/`campaign_preview`) e
-  // as chaves ESCOPADAS de campanhas NÃO-alvo (`campaign_draft:*`/
-  // `campaign_draft_image:*`). NUNCA remove as chaves escopadas da campanha-ALVO
-  // (`campaign_draft:<campaignId>`/`campaign_draft_image:<campaignId>`): o rascunho
-  // da campanha-alvo sobrevive ao clear (o texto vem do SERVIDOR e a imagem data
-  // URL da chave escopada da campanha-alvo).
+  // F56.2b2b (C4 / B2B-D9) — mount-clear SOMENTE das chaves LEGADAS GLOBAIS
+  // (`campaign_draft`/`campaign_draft_image`/`campaign_preview`). Os rascunhos
+  // ESCOPADOS de QUALQUER campanha (`campaign_draft:*`/`campaign_draft_image:*`)
+  // são PRESERVADOS: IGNORAR um rascunho alheio NÃO significa apagá-lo. A seleção
+  // do rascunho CORRETO é feita pelo escopo da campanha em `useCampaignForm`.
   useLayoutEffect(() => {
     try {
-      const targetScope = restoredForm?.campaignId ?? null;
-      const targetDraftKey = targetScope ? `${DRAFT_KEY}:${targetScope}` : null;
-      const targetImageKey = targetScope ? `${IMAGE_DRAFT_KEY}:${targetScope}` : null;
-      const keys: string[] = [];
-      for (let i = 0; i < sessionStorage.length; i += 1) {
-        const key = sessionStorage.key(i);
-        if (!key) continue;
-        const isLegacy =
-          key === DRAFT_KEY || key === IMAGE_DRAFT_KEY || key === PREVIEW_KEY;
-        const isScopedDraft =
-          key.startsWith(`${DRAFT_KEY}:`) || key.startsWith(`${IMAGE_DRAFT_KEY}:`);
-        if (isLegacy) {
-          keys.push(key);
-        } else if (isScopedDraft && key !== targetDraftKey && key !== targetImageKey) {
-          keys.push(key);
-        }
-      }
-      for (const key of keys) sessionStorage.removeItem(key);
+      sessionStorage.removeItem(DRAFT_KEY);
+      sessionStorage.removeItem(IMAGE_DRAFT_KEY);
+      sessionStorage.removeItem(PREVIEW_KEY);
     } catch { /* ignore */ }
-  }, [restoredForm?.campaignId]);
+  }, []);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">

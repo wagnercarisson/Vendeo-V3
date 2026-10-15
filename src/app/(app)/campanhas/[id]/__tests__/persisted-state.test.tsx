@@ -147,12 +147,27 @@ describe("CampaignPageClient — visão persistida do novo fluxo", () => {
     }
   });
 
-  it("`refunded` ⇒ RefundedPanel com a mensagem EXATA + CTA de nova geração", () => {
+  it("`refunded` ⇒ RefundedPanel com a mensagem EXATA + CTA de nova geração (restauração disponível)", () => {
     render(
       <CampaignPageClient
         {...BASE_PROPS}
         imageUrl={null}
-        newFlow={{ state: "refunded", operationId: OPERATION_ID }}
+        newFlow={{
+          state: "refunded",
+          operationId: OPERATION_ID,
+          restoredForm: {
+            campaignId: CAMPAIGN_ID,
+            productName: "Produto Teste",
+            description: "",
+            originalPriceCents: 0,
+            badge: "",
+            campaignIntent: "offer",
+            preserveImageContext: false,
+            mandatoryArtworkTextFree: "",
+            referenceSelections: [],
+            imageRestoreLimited: true,
+          },
+        }}
       />,
     );
 
@@ -167,6 +182,29 @@ describe("CampaignPageClient — visão persistida do novo fluxo", () => {
     for (const forbidden of FORBIDDEN) {
       expect(screen.queryByText(forbidden)).toBeNull();
     }
+  });
+
+  it("`refunded` SEM restauração disponível ⇒ informa o estorno SEPARADAMENTE, sem prometer dados preservados", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        imageUrl={null}
+        newFlow={{ state: "refunded", operationId: OPERATION_ID }}
+      />,
+    );
+
+    expect(
+      screen.getByText("O crédito desta geração foi estornado."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Seus dados foram preservados/),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Gerar novamente com meus dados/ }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Verificar novamente" }),
+    ).toBeInTheDocument();
   });
 
   it("`running` ⇒ processamento neutro, SEM promessa de continuidade nem devolução", () => {
