@@ -34,7 +34,7 @@ oferecida **somente** quando a copy está pendente/falha). A entrega da imagem n
    `concluída` (**sucesso absoluto**) / `ativa` / `aguardando` / `indeterminada` / `falha definitiva`
    / `falha` (auto esgotada) / `interrompida`.
 2. A **ação manual de recuperação** (**limite de 3 manuais, independente das automáticas**; total
-   ≤ 6 por entrega), com **contador visível** e **anti-duplicação**.
+   ≤ 6 por entrega), com **contadores apenas internos, não exibidos ao lojista**, e **anti-duplicação**.
 3. Feedback **seguro** (sem motivo interno) e a distinção explícita de que a recuperação
    **não** regenera a imagem nem consome outro crédito.
 4. A condição **sem retomada automática** (fechar o navegador interrompe o ciclo; retomada manual).
@@ -76,7 +76,7 @@ oferecida **somente** quando a copy está pendente/falha). A entrega da imagem n
 - Atenção/falha de copy: **amber** (`accent-amber`) para “não conseguimos gerar os textos” —
   falha de copy **não** é falha da campanha e **não** bloqueia a arte.
 - Spinner: `Loader2` (`animate-spin`), usado só no estado `ativa` (tentativa em voo).
-- Contador/IDs: `JetBrains Mono` 12px.
+- IDs e contagem de espera: `JetBrains Mono` 12px; contadores de tentativas não são exibidos.
 
 ---
 
@@ -109,7 +109,7 @@ Reuso do MASTER §3 e da UI-SPEC da b1b. Sem novo tamanho/peso.
 | Label/Caption | 12px (`text-xs`) | 500, uppercase, `tracking-wider` | 1.2 | Poppins |
 | Título de card | 14px (`text-sm`) | 500 | 1.2 | Poppins |
 | Heading de seção | 20px (`text-xl`) | 600 | 1.2 | Poppins |
-| Contador/IDs (`Tentativa 4 de 6`) | 12px (`text-xs`) | 500 | 1.4 | JetBrains Mono |
+| IDs e contagem de espera (não tentativas) | 12px (`text-xs`) | 500 | 1.4 | JetBrains Mono |
 
 ---
 
@@ -144,7 +144,7 @@ bloco de copy abaixo/junto da arte. **Não** cria rota nova.
   ├─ A. Eyebrow "Copy da campanha" + estado atual   (badge)
   ├─ B. Texto entregue (quando concluída)           (Open Sans 14px; somente leitura nesta fatia)
   ├─ C. Feedback seguro (sem motivo interno)         (Open Sans 14px)
-  ├─ D. Contador de tentativas                        (JetBrains Mono 12px)
+  ├─ D. Contadores de tentativas apenas internos      (não renderizar)
   ├─ E. Ação manual "Gerar os textos novamente"       (secondary/outline; condicional)
   ├─ F. Aviso de escopo                               (não regenera imagem; sem novo crédito)
   └─ G. Ajuda de suporte (quando o limite é atingido)
@@ -158,9 +158,9 @@ bloco de copy abaixo/junto da arte. **Não** cria rota nova.
 | `ativa` (tentativa em andamento **confirmada pelo servidor**) | `Gerando os textos...` / `Tentando novamente...` | blue | spinner + `Loader2` | botão `disabled`; **outra aba acompanha** |
 | `aguardando` (espera 5s/10s antes da próxima automática) | `Nova tentativa em {n}s` | blue | `Clock` + contagem regressiva | botão `disabled`; indicador **da aba que agendou** |
 | `indeterminada` (**falha na consulta ao servidor**) | `Não foi possível verificar agora` | amber | `AlertTriangle` + texto seguro | botão `disabled` (**não** habilita nova chamada) |
-| `falha definitiva` | `Não dá para tentar automaticamente` | amber | `ShieldAlert` + texto seguro | CTA manual + **suporte** (sem nova automática) |
-| `falha` (automáticas esgotadas) | `Não conseguimos gerar os textos` | amber | `AlertTriangle` + texto seguro | **`Gerar os textos novamente`** habilitado (se ainda há manual) |
-| `interrompida` (**sem** tentativa ativa confirmada **pelo servidor**) | `Recuperação interrompida` | amber | `AlertTriangle` + texto seguro | **`Gerar os textos novamente`** habilitado (se ainda há manual) — **nunca** spinner |
+| `falha definitiva` | Sem badge redundante | amber | `ShieldAlert` + mensagem única de falha | CTA manual + **suporte** (sem nova automática) |
+| `falha` (automáticas esgotadas) | Sem badge redundante | amber | `AlertTriangle` + mensagem única de falha | **`Gerar os textos novamente`** habilitado (se ainda há manual) |
+| `interrompida` (**sem** tentativa ativa confirmada **pelo servidor**) | Sem badge redundante | amber | `AlertTriangle` + mensagem única de falha | **`Gerar os textos novamente`** habilitado (se ainda há manual) — **nunca** spinner |
 
 > **Precedência (regra simples):** **entregou → encerra** (`concluída`, absoluta, remove a recuperação);
 > **está executando → acompanha** (`ativa`/`aguardando` — ação **desabilitada**, **mesmo após falhas
@@ -184,7 +184,7 @@ bloco de copy abaixo/junto da arte. **Não** cria rota nova.
   `ativa`/`aguardando` (tentativa ativa/agendada confirmada — ação **desabilitada**) **>**
   `indeterminada` (consulta falhou — ação **desabilitada**) **>** `falha definitiva` **>** `falha`
   (3 automáticas esgotadas) **>** `interrompida`. Retornar após esgotar as automáticas **mantém** o
-  contador `3 de 3`; a **falha definitiva preserva o suporte**; **nenhum estado habilita o botão
+  contador interno (não renderizado); a **falha definitiva preserva o suporte**; **nenhum estado habilita o botão
   enquanto houver tentativa ativa**.
 - **Nunca spinner preso:** `interrompida` **não** é spinner; oferece a **ação manual** (teto de **3
   manuais**). Fechar o navegador interrompe o ciclo; **não** há retomada automática.
@@ -228,14 +228,14 @@ bloco de copy abaixo/junto da arte. **Não** cria rota nova.
 
 | Estado | Comportamento |
 |--------|---------------|
-| Carregamento da página | Consulta o **servidor** (autoridade); **não** infere por tempo nem pela sessão local. **Precedência:** (1) **copy entregue** ⇒ `concluída` (remove toda ação de recuperação); (2) **tentativa ativa/agendada confirmada** ⇒ `ativa`/`aguardando` (botão `disabled`; **outra aba só acompanha**) — **mesmo após falhas/esgotamento**; (3) **consulta falhou** ⇒ `indeterminada` (botão `disabled`, não habilita chamada); (4) senão, classificação **definitiva** ⇒ `falha definitiva` (CTA + **suporte**); (5) senão, **3 automáticas esgotadas** ⇒ `falha` (`3 de 3`); (6) senão, **sem tentativa ativa** ⇒ `interrompida`. |
+| Carregamento da página | Consulta o **servidor** (autoridade); **não** infere por tempo nem pela sessão local. **Precedência:** (1) **copy entregue** ⇒ `concluída` (remove toda ação de recuperação); (2) **tentativa ativa/agendada confirmada** ⇒ `ativa`/`aguardando` (botão bloqueado enquanto ativa/espera correndo; espera vencida pode liberar manual; **outra aba só acompanha**); (3) **consulta falhou** ⇒ `indeterminada` (botão `disabled`); (4) senão, classificação definitiva/falha/interrupção com mensagem única e CTA se houver manual; **contadores internos, não exibidos**. |
 | `ativa` | Spinner + `Loader2`; botão `disabled`; outra aba/reload **apenas acompanha** (sem nova chamada), mesmo após falhas/esgotamento. |
 | `aguardando` | Contagem regressiva (5s/10s) + `Clock`; botão `disabled`; indicador **da aba que agendou**; tentativas concorrentes **serializadas pelo servidor**. |
 | `indeterminada` | Sem spinner; badge amber + re-verificação segura; botão `disabled`; **não** comprova ausência de tentativa nem habilita nova chamada. |
-| `interrompida` | **Sem spinner**; badge amber + `Gerar os textos novamente` habilitado (se há manual); retomada **manual**. |
-| `falha` (auto esgotada) | Amber + CTA manual; contador `Tentativas automáticas: 3 de 3`. |
+| `interrompida` | **Sem spinner**; mensagem única amber + `Gerar os textos novamente` habilitado (se há manual); retomada **manual**. |
+| `falha` (auto esgotada) | Amber + mensagem única + CTA manual; contadores não são exibidos. |
 | `falha definitiva` | Amber + CTA manual + suporte; **sem** esperas nem nova automática; saída antecipada. |
-| Clique manual | Envia **uma** tentativa; contador manual 1→2→3 (**limite 3 independente das automáticas**); **não** reinicia o ciclo automático. |
+| Clique manual | Envia **uma** tentativa; contador interno manual 1→2→3 (**limite 3 independente das automáticas**, sem exibição); **não** reinicia o ciclo automático. |
 | Limite manual atingido (3) | Botão `disabled`; mensagem de suporte. |
 | `concluída` | Sucesso **absoluto**: rende o texto entregue, prevalece sobre qualquer falha anterior e **remove** o CTA de recuperação. |
 | Erro de rede/validação | Inline error (`accent-red`, `role="alert"`), sem alterar o estado persistido. |
@@ -246,6 +246,14 @@ bloco de copy abaixo/junto da arte. **Não** cria rota nova.
 
 ## Copywriting Contract
 
+### Precisão do UAT — espera vencida sem condução automática
+
+- O sumário persistido pode reportar `aguardando` com espera zero, mas isso não prova geração em andamento.
+- Sem handle da aba dirigente (reload/outra aba), **espera vencida confirmada pelo servidor** é apresentada como retomada manual (`interrompida` na apresentação), com a mensagem única de falha e CTA conforme permissão/limite internos; não renderizar “Nova tentativa em andamento”, “Nova tentativa em 0s” nem timer.
+- Nesse caso o polling termina. Enquanto a espera ainda corre, acompanhar até a confirmação server-side do vencimento; tentativa realmente ativa continua acompanhada.
+- A aba dirigente preserva a emissão automática e seu acompanhamento. Nenhuma nova identidade/autoridade é criada na UI.
+- No novo fluxo, o estado da operação/copy prevalece sobre o status legado da campanha para decidir polling.
+
 PT-BR, linguagem comercial simples, **sem emojis, sem jargão técnico** (MASTER §1).
 
 | Elemento | Copy |
@@ -254,19 +262,19 @@ PT-BR, linguagem comercial simples, **sem emojis, sem jargão técnico** (MASTER
 | Estado `ativa` (automática) | `Gerando os textos...` / `Tentando novamente...` |
 | Estado `ativa` (manual) | `Gerando os textos novamente...` |
 | Estado `aguardando` (5s/10s) | `Nova tentativa em {n}s...` |
-| Estado `interrompida` | `A recuperação foi interrompida. Você pode tentar novamente.` |
-| Estado `falha` (auto esgotada) | `Não conseguimos gerar os textos desta campanha.` |
-| Estado `falha definitiva` | `Não foi possível gerar os textos automaticamente.` |
+| Estado `interrompida` | `Não conseguimos gerar os textos automaticamente. Você pode tentar novamente ou entrar em contato com o suporte.` |
+| Estado `falha` (auto esgotada) | `Não conseguimos gerar os textos automaticamente. Você pode tentar novamente ou entrar em contato com o suporte.` |
+| Estado `falha definitiva` | `Não conseguimos gerar os textos automaticamente. Você pode tentar novamente ou entrar em contato com o suporte.` |
 | Estado `indeterminada` | `Não foi possível verificar agora. Tente novamente em instantes.` |
 | Estado `concluída` | `Textos prontos.` |
-| Badge `interrompida` | `Recuperação interrompida` |
+| Badge `interrompida` | Não renderizar badge redundante com a mensagem de falha |
 | Badge `indeterminada` | `Não foi possível verificar agora` |
-| Badge `falha definitiva` | `Não dá para tentar automaticamente` |
-| Contador (auto) | `Tentativas automáticas: {n} de 3` |
-| Contador (manual) | `Tentativas manuais: {m} de 3` (**3 máx., independente das automáticas**) |
+| Badge `falha definitiva` | Não renderizar badge redundante com a mensagem de falha |
+| Contador (auto) | Apenas interno; não renderizar |
+| Contador (manual) | Apenas interno; não renderizar (**3 máx., independente das automáticas**) |
 | CTA manual | `Gerar os textos novamente` |
 | Aviso de escopo | `Isso gera apenas os textos. A imagem da campanha não muda e nenhum crédito adicional é usado.` |
-| Limite manual atingido (3) | `Você atingiu o limite de tentativas. Fale com o suporte para continuar.` |
+| Limite manual atingido (3), sem tentativa ativa | `Infelizmente, não foi possível gerar os textos. Por favor, entre em contato com o suporte.` — substitui a mensagem anterior; remover CTA de nova tentativa, manter suporte |
 | Ajuda de suporte | `Falar com o suporte` |
 | Erro de acionamento | `Não foi possível tentar novamente agora. Tente de novo em instantes.` |
 | Ação de re-verificação (`indeterminada`) | `Verificar novamente` (query-only) |
@@ -281,12 +289,12 @@ Reuso de primitivos; criar apenas compostos finos de tela.
 
 | Component | Kind | Source / Notes |
 |-----------|------|----------------|
-| `Button` | reuse | `src/components/ui/button.tsx` (`secondary` para o CTA manual; `disabled`/`aria-disabled` em `ativa`/`aguardando`/limite) |
+| `Button` | reuse | `src/components/ui/button.tsx` (`secondary` manual; disabled em ativa/indeterminada/espera correndo; CTA removido no limite manual) |
 | `Card` | reuse | `src/components/ui/card.tsx` para o painel de copy |
-| `Badge` | reuse | `src/components/ui/badge.tsx` (blue=`ativa`/`aguardando`, amber=`interrompida`/`falha`/`falha definitiva`/`indeterminada`, green=`concluída`) |
+| `Badge` | reuse | `src/components/ui/badge.tsx` (blue=ativa/aguardando, amber=indeterminada, green=concluída; sem badge redundante em falhas/interrupção) |
 | `Alert`/banner | reuse | classes de banner MASTER (`rounded-lg border ... p-3 text-xs`) |
-| `CopyStatusPanel` | screen-local | badge + texto seguro + contador + CTA manual + aviso |
-| Contador de tentativas | screen-local | JetBrains Mono 12px |
+| `CopyStatusPanel` | screen-local | texto seguro único + CTA manual condicional + suporte + aviso; contadores internos |
+| Contador de tentativas | interno | não renderizar |
 
 Ícones (lucide, `aria-hidden` quando decorativos): `Loader2` (`ativa`), `Clock` (`aguardando`),
 `AlertTriangle` (`indeterminada`/`interrompida`/`falha`), `ShieldAlert` (`falha definitiva`), `Check` (`concluída`),
@@ -300,14 +308,14 @@ Reuso de primitivos; criar apenas compostos finos de tela.
 - Estado com **ícone + texto** (não apenas cor): `interrompida`, `falha` e `falha definitiva`
   diferem por **ícone** (`AlertTriangle` vs. `ShieldAlert`) **e** copy; `indeterminada` usa
   `AlertTriangle` com copy própria de verificação.
-- **CTA desabilitado** (padrão único): `disabled` **e** `aria-disabled="true"` quando `ativa`,
-  `aguardando`, `indeterminada` ou limite atingido; `cursor-not-allowed`.
+- **CTA desabilitado**: `disabled` **e** `aria-disabled="true"` quando ativa,
+  aguardando com espera ainda correndo ou indeterminada; no limite manual, remover a CTA.
 - **Contagem regressiva:** o número do `aguardando` usa `role="timer"` / `aria-live="off"` (não
   anunciar a cada segundo); apenas a **mudança de estado** é anunciada via `aria-live="polite"`.
 - `aria-live="polite"` no feedback de estado (transições), nunca na contagem por segundo.
 - Alvos ≥44px; HTML semântico (`<section aria-labelledby>`).
 - `prefers-reduced-motion` respeitado.
-- Contador e IDs em JetBrains Mono, texto selecionável.
+- IDs e contagem de espera em JetBrains Mono; contadores de tentativas não renderizados.
 
 ---
 
@@ -330,7 +338,7 @@ primitivos existentes em `src/components/ui/*`.
 |----------------|---------------------|
 | CTA manual só em pendente/falha; copy concluída encerra | `Ação de nova tentativa somente no estado pendente/falha` (B2A-D1) |
 | **Sucesso absoluto** (`concluída` precede falhas/interrupção; remove a recuperação) | `Ação de nova tentativa somente no estado pendente/falha` + `Copy entregue encerra a recuperação` (B2A-D1) |
-| Contador + **limite manual 3, independente das automáticas**; clique = 1 tentativa | `Política de recuperação de copy por tentativas` (B2A-D2) |
+| Contador interno + **limite manual 3, independente das automáticas**; clique = 1 tentativa; sem números para o lojista | `Política de recuperação de copy por tentativas` (B2A-D2) |
 | Esperas 5s/10s (`aguardando`) + contagem regressiva | `Política de recuperação de copy por tentativas` (B2A-D2) |
 | Saída antecipada (`falha definitiva`) sem repetição automática | `Política de recuperação de copy por tentativas` (falhas definitivas) |
 | Anti-duplicação (disabled em `ativa`/`aguardando`) | `Anti-duplicação e contabilização de chamadas` |
@@ -365,7 +373,7 @@ Registradas, não bloqueiam. Upstream não respondeu; usam defaults sensatos:
 Ajustes de contrato (fonte: `proposal.md` critérios 11–17; `design.md` B2A-D2..D5; `spec.md` cenários novos). **NÃO** alteram o status de aprovação deste documento (`reviewed_at` permanece `null`).
 
 1. **Atividade decidida pelo SERVIDOR (posse/lease).** `interrompida` ≠ `ativa`: `pending` sem atividade comprovada **não** mantém spinner e oferece retomada manual. A contagem de espera (5s/10s) é **reportada pelo servidor** — a interface apenas reflete.
-2. **Sem fallback dentro da mesma tentativa.** A recuperação **NÃO** executa uma chamada de fallback dentro do mesmo acionamento/tentativa: cada chamada efetiva de provider é uma **tentativa identificada própria** e aparece nos contadores; o alvo de fallback, quando aplicável, é a **tentativa seguinte** (governada pela política). O teto (automáticas 3 + manuais 3 = 6) incide sobre **chamadas efetivas**.
+2. **Sem fallback dentro da mesma tentativa.** A recuperação **NÃO** executa uma chamada de fallback dentro do mesmo acionamento/tentativa: cada chamada efetiva de provider é uma **tentativa identificada própria** e é contabilizada internamente, sem contador visível; o alvo de fallback, quando aplicável, é a **tentativa seguinte** (governada pela política). O teto (automáticas 3 + manuais 3 = 6) incide sobre **chamadas efetivas**.
 3. **Precedência inalterada** (`concluída` > `ativa`/`aguardando` > `indeterminada` > `falha definitiva` > `falha` > `interrompida`); a decisão de "ativa" passa a exigir **atividade comprovada** pelo servidor.
 4. **Nenhum novo estado/token** de UI; sem novo design token, light mode ou emoji.
 
