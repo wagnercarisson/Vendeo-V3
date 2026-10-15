@@ -139,7 +139,9 @@ describe("NovaCampanhaPage — redirect mantido", () => {
       "@/app/(app)/campanhas/nova/page"
     );
 
-    await expect(NovaCampanhaPage()).rejects.toThrow("NEXT_CONTROL");
+    await expect(
+      NovaCampanhaPage({ searchParams: Promise.resolve({}) }),
+    ).rejects.toThrow("NEXT_CONTROL");
     expect(mockRedirect).toHaveBeenCalledWith("/loja");
   });
 
@@ -157,7 +159,9 @@ describe("NovaCampanhaPage — redirect mantido", () => {
       "@/app/(app)/campanhas/nova/page"
     );
 
-    await expect(NovaCampanhaPage()).rejects.toThrow("NEXT_CONTROL");
+    await expect(
+      NovaCampanhaPage({ searchParams: Promise.resolve({}) }),
+    ).rejects.toThrow("NEXT_CONTROL");
     expect(mockRedirect).toHaveBeenCalledWith(
       "/loja?tab=dados&fiscal=pending&returnTo=%2Fcampanhas%2Fnova",
     );
@@ -177,7 +181,9 @@ describe("NovaCampanhaPage — redirect mantido", () => {
       "@/app/(app)/campanhas/nova/page"
     );
 
-    await expect(NovaCampanhaPage()).rejects.toThrow("NEXT_CONTROL");
+    await expect(
+      NovaCampanhaPage({ searchParams: Promise.resolve({}) }),
+    ).rejects.toThrow("NEXT_CONTROL");
     expect(mockRedirect).toHaveBeenCalledWith(
       "/loja?tab=direcao-visual&message=needs-visual-direction&returnTo=%2Fcampanhas%2Fnova",
     );
@@ -200,7 +206,9 @@ describe("NovaCampanhaPage — redirect mantido", () => {
       "@/app/(app)/campanhas/nova/page"
     );
 
-    await expect(NovaCampanhaPage()).rejects.toThrow("NEXT_CONTROL");
+    await expect(
+      NovaCampanhaPage({ searchParams: Promise.resolve({}) }),
+    ).rejects.toThrow("NEXT_CONTROL");
     expect(mockRedirect).toHaveBeenCalledWith(
       "/loja?tab=dados&fiscal=pending&returnTo=%2Fcampanhas%2Fnova",
     );

@@ -18,10 +18,10 @@ import type { CampaignFormRestore } from "@/lib/campaign/display";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
 interface NovaCampanhaPageProps {
-  searchParams?: Promise<{ restoreFrom?: string | string[] }>;
+  searchParams: Promise<{ restoreFrom?: string | string[] }>;
 }
 
-export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPageProps = {}) {
+export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPageProps) {
   const user = await requirePageUser();
   const store = await getCurrentStore(user.userId);
 
