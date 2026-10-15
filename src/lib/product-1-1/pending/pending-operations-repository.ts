@@ -62,6 +62,8 @@ export interface PendingOperationState {
   readonly terminal: boolean;
   /** Marcador de resultado desconhecido; só governa operação NÃO terminal. */
   readonly unknown: boolean;
+  /** Marcador de falha FINAL persistida; só governa operação NÃO terminal (PF). */
+  readonly failed: boolean;
   /** E1 — claim `in_progress` presente (execução ativa ou residual). */
   readonly processing: boolean;
   readonly supportReference: string | null;
@@ -148,6 +150,8 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     // I2 — precedência terminal: o marcador `unknown` só governa operação NÃO
     // terminal (a linha histórica é imutável, não governa o estado terminal).
     const unknown = outcome?.outcome === "unknown" && !terminal;
+    // P2 — falha FINAL persistida (`failed`) só governa operação NÃO terminal.
+    const failed = outcome?.outcome === "failed" && !terminal;
     const processing = claims.some((claim) => claim.status === "in_progress");
     const latestAttemptAt = claims.length > 0 ? (claims[0].updated_at ?? null) : null;
 
@@ -159,6 +163,7 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
       amount: Number(row.amount ?? 0),
       terminal,
       unknown,
+      failed,
       processing,
       // P2 — a referência de suporte é exposta para QUALQUER marcador PERSISTIDO
       // NÃO terminal (`unknown` OU `failed`), sem alterar o significado de `unknown`.

@@ -130,6 +130,16 @@ export interface ResolvePendingInput {
   readonly action: PendingResolutionAction;
   readonly reason: string;
   readonly resolutionOperationId: string;
+  /**
+   * C1 (B2B-D4) — SINAL EXPLÍCITO de autorização do abandono do claim
+   * `in_progress` residual. Default `false` (comportamento de hoje). Fornecido
+   * SOMENTE pela rota admin autorizada/auditada (`requireAdmin` +
+   * `requireSameOrigin`) — NUNCA inferido do cliente nem default-verdadeiro.
+   * Sem o sinal, `processing` ⇒ `operation_in_progress` (RPC não chamada). Com o
+   * sinal, a evidência carrega `authorized_abandon: true`; a autoridade FINAL
+   * permanece na RPC sob a trava.
+   */
+  readonly authorizeAbandon?: boolean;
 }
 
 export interface ResolvePendingDependencies {
@@ -151,6 +161,8 @@ interface ServerDerivedEvidence {
   readonly origin: "server-derived";
   readonly art_kind: ArtifactProbe["kind"];
   readonly execution_ended: boolean;
+  /** B2B-D4 — marca de abandono AUTORIZADO (só no caminho autorizado/auditado). */
+  readonly authorized_abandon?: boolean;
 }
 
 /**
@@ -228,8 +240,13 @@ export async function resolvePendingOperation(
   // estado SOB A TRAVA); ficam restritos a operações NÃO terminais para que o
   // replay terminal alcance a decisão idempotente/conflito da RPC.
   const executionEnded = !state.processing;
+  // C1-i — o SINAL EXPLÍCITO de autorização (`authorizeAbandon`) abre o caminho
+  // AUTORIZADO/auditado. SEM o sinal (default `false`), o comportamento de HOJE é
+  // PRESERVADO byte-a-byte (`processing` ⇒ `operation_in_progress`, RPC não
+  // chamada). A AUTORIDADE final continua sendo a RPC sob a trava.
+  const authorizedAbandon = input.authorizeAbandon === true;
   if (!state.terminal) {
-    if (state.processing) {
+    if (state.processing && !authorizedAbandon) {
       throw new PendingOperationResolutionError("operation_in_progress");
     }
     if (input.action === "deliver_existing_art" && artKind !== "integral") {
@@ -238,7 +255,7 @@ export async function resolvePendingOperation(
     if (input.action === "refund_once" && artKind !== "absent") {
       throw new PendingOperationResolutionError("insufficient_evidence");
     }
-    if (input.action === "refund_once" && !executionEnded) {
+    if (input.action === "refund_once" && !executionEnded && !authorizedAbandon) {
       throw new PendingOperationResolutionError("execution_not_ended");
     }
   }
@@ -247,6 +264,8 @@ export async function resolvePendingOperation(
     origin: "server-derived",
     art_kind: artKind,
     execution_ended: executionEnded,
+    // A marca só é emitida no caminho AUTORIZADO; nunca inferida do cliente.
+    ...(authorizedAbandon ? { authorized_abandon: true } : {}),
   });
 
   const { data, error } = await client.rpc("admin_resolve_product_1_1_pending", {

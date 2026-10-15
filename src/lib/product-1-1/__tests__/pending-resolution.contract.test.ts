@@ -288,6 +288,7 @@ function record(overrides: Partial<PendingOperationState> = {}): PendingOperatio
     amount: 1,
     terminal: false,
     unknown: false,
+    failed: false,
     processing: false,
     supportReference: null,
     createdAt: "2026-10-12T00:00:00.000Z",
@@ -427,6 +428,42 @@ describe("F56.2b1b — serviço resolvePendingOperation (F5/C4/E1, simulado)", (
       ),
     ).rejects.toMatchObject({ code: "operation_in_progress" });
     expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it("C1: claim `in_progress` COM `authorizeAbandon:true` ⇒ ALCANÇA a RPC com `authorized_abandon:true`", async () => {
+    const client = fakeRpcClient(
+      envelope({ action: "refund_once", status: "refunded", art_kind: "absent" }),
+    );
+    const repository = fakeRepository({ record: record({ processing: true }), probe: { kind: "absent" } });
+    const result = await resolvePendingOperation(
+      {
+        actorId: ACTOR_ID,
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        action: "refund_once",
+        reason: "abandono autorizado",
+        resolutionOperationId: RESOLUTION_ID,
+        authorizeAbandon: true,
+      },
+      { client, repository },
+    );
+    expect(client.rpc).toHaveBeenCalledTimes(1);
+    expect(client.rpc.mock.calls[0][1].p_evidence).toMatchObject({
+      origin: "server-derived",
+      art_kind: "absent",
+      authorized_abandon: true,
+    });
+    expect(result.status).toBe("refunded");
+  });
+
+  it("C1: SEM `authorizeAbandon` a evidência NÃO contém a marca (comportamento de hoje)", async () => {
+    const client = fakeRpcClient(envelope());
+    const repository = fakeRepository({ record: record(), probe: { kind: "integral" } });
+    await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "x", resolutionOperationId: RESOLUTION_ID },
+      { client, repository },
+    );
+    expect(client.rpc.mock.calls[0][1].p_evidence).not.toHaveProperty("authorized_abandon");
   });
 
   it("F5/C2: evidência `invalid`/`indeterminate` BLOQUEIA (sem refund/deliver)", async () => {
