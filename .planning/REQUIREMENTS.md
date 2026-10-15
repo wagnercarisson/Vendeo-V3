@@ -137,9 +137,29 @@ Os 10 REQ-IDs abaixo derivam dos **10 requirements normativos** do spec `product
 | REQ-56.2.3-09 | Registro de custo interno sem crédito ao lojista | ADDED | 7 | §3.5 |
 | REQ-56.2.3-10 | Recuperação de copy independente do estado da imagem (`delivered`), sem tocar operação financeira/arte | ADDED | 9 | §3.7, §4.1 |
 
+## F56.2b2b — Planejamento (B2.2 — Recuperação de imagem, estorno e D13 do Produto 1:1; INATIVA)
+
+**Fonte:** `openspec/changes/fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/` (base aprovada em `b2edfb5b`) — proposal (17 critérios de aceite), design **B2B-D1..D9** (decisão **A-1 = 4a**), tres specs (`product-1-1-artifact-delivery` 1 MODIFIED + 2 ADDED; `product-1-1-campaign-credit-billing` 1 MODIFIED + 4 ADDED; `product-1-1-generation-orchestration` 1 MODIFIED + 2 ADDED = **11 requirements**), tasks §1–§6 e **UI-SPEC APROVADA**. **Status:** **PLANEJADA (2026-10-15)** na fase GSD **`56.2.4`** (7 planos, 4 waves; `gsd-plan-checker` **VERIFICATION PASSED / 0 blockers** apos revisao) — **aguardando revisao humana antes da execucao**; nenhuma implementacao/migration aplicada/ativacao/provider pago/B2.3/F56.3. Depende da F56.2b1b (arquivada em 2026-10-12) e, de forma **nao funcional**, de B2.1 (`56.2.3`). **D13 NAO e declarado resolvido** — gate bloqueante preservado ate implementacao e comprovacao (Camada 2); sem reescrever o archive da b1b.
+
+Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (nao dos criterios do proposal) e estao vinculados aos **17 criterios de aceite verificaveis** do proposal.
+
+| REQ-ID | Requirement (OpenSpec B2.2) | Spec / Tipo | Criterios de aceite | Tasks |
+|--------|-----------------------------|-------------|---------------------|-------|
+| REQ-56.2.4-01 | Sem entrega sem arte íntegra e reenvio recupera arte salva | artifact-delivery MODIFIED | 1, 2, 8 | §2.1–§2.4 |
+| REQ-56.2.4-02 | Recuperação da arte no Storage privado | artifact-delivery ADDED | 1, 8, 9 | §2.1–§2.3 |
+| REQ-56.2.4-03 | Recuperação não regenera a imagem | artifact-delivery ADDED | 1 | §2.2 |
+| REQ-56.2.4-04 | Falha confirmada e resultado desconhecido | credit-billing MODIFIED | 2, 3, 4, 8 | §3.1–§3.3 |
+| REQ-56.2.4-05 | Encerramento local com estorno confirmado | credit-billing ADDED | 3, 4, 5, 15, 16 | §3.2–§3.7 |
+| REQ-56.2.4-06 | Estorno idempotente e corrida entrega × estorno | credit-billing ADDED | 10 | §4.1–§4.2 |
+| REQ-56.2.4-07 | Resultado atrasado de operação estornada não reabre nem libera | credit-billing ADDED | 9, 11 | §4.5, §4.6 |
+| REQ-56.2.4-08 | Falha de Storage/banco não autoriza estorno nem anúncio de crédito | credit-billing ADDED | 8 | §2.4, §4.3 |
+| REQ-56.2.4-09 | Limitação aceita da b1b e gate obrigatório antes da b2 | generation-orchestration MODIFIED | 12, 13, 17 | §6.1, §6.2 |
+| REQ-56.2.4-10 | Recuperação server-side de operação sem delivered | generation-orchestration ADDED | 2, 3, 5, 6, 7, 14 | §3.x, §4.1–§4.7 |
+| REQ-56.2.4-11 | Resultado atrasado não libera nem sobrescreve | generation-orchestration ADDED | 11 | §3.7, §4.6 |
+
 ## Regras Operacionais
 
-- Os REQ-IDs cobertos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06), os da F56.2a (`REQ-56.2a-01`..`REQ-56.2a-19`, cobertura concluída em 2026-10-07) e os da F56.2b1a (`REQ-56.2b1a-01`..`REQ-56.2b1a-07`, cobertura concluída em 2026-10-08). A **F56.2b1b** (`REQ-56.2.2-01`..`REQ-56.2.2-13`, ver §F56.2b1b acima) foi **concluída** e tem **cobertura concluída** em 2026-10-12 (10/10 planos; 39/39 tasks OpenSpec com 7.5 N/A; verificada/sincronizada/arquivada). A **F56.2b2** foi dividida em B2.1/B2.2/B2.3; a **B2.1** (GSD `56.2.3`, `REQ-56.2.3-01..10`, ver §F56.2b2a) foi **concluída (INATIVA) em 2026-10-15**, **verificada, sincronizada e arquivada** (46/46 tasks) com **cobertura concluída** (6/6 planos; UAT humano aprovado no escopo inativo; review HIGH/MEDIUM resolvidos; security 69/69); B2.2/B2.3 permanecem fora do planejamento atual (não iniciadas); F56.3 permanece futura.
+- Os REQ-IDs cobertos são os da F56.1 (`REQ-56.1-01`..`REQ-56.1-27`, cobertura concluída em 2026-10-06), os da F56.2a (`REQ-56.2a-01`..`REQ-56.2a-19`, cobertura concluída em 2026-10-07) e os da F56.2b1a (`REQ-56.2b1a-01`..`REQ-56.2b1a-07`, cobertura concluída em 2026-10-08). A **F56.2b1b** (`REQ-56.2.2-01`..`REQ-56.2.2-13`, ver §F56.2b1b acima) foi **concluída** e tem **cobertura concluída** em 2026-10-12 (10/10 planos; 39/39 tasks OpenSpec com 7.5 N/A; verificada/sincronizada/arquivada). A **F56.2b2** foi dividida em B2.1/B2.2/B2.3; a **B2.1** (GSD `56.2.3`, `REQ-56.2.3-01..10`, ver §F56.2b2a) foi **concluída (INATIVA) em 2026-10-15**, **verificada, sincronizada e arquivada** (46/46 tasks) com **cobertura concluída** (6/6 planos; UAT humano aprovado no escopo inativo; review HIGH/MEDIUM resolvidos; security 69/69); a **B2.2** (GSD `56.2.4`, `REQ-56.2.4-01..11`, ver §F56.2b2b) foi **PLANEJADA em 2026-10-15** (7 planos, 4 waves; `gsd-plan-checker` 0 blockers após revisão) e **aguarda revisão humana antes da execução** — entrega **INATIVA** (imagem/estorno/D13); a **B2.3** permanece **não iniciada**; F56.3 permanece futura.
 - Novos REQ-IDs só devem ser adicionados quando uma nova fase for formalmente planejada, com fonte em OpenSpec e plano aprovado.
 - Para uma fase concluída, consultar o OpenSpec arquivado, `VERIFICATION.md`, `SUMMARY.md`, contexto e planos da fase.
 - Em caso de divergência histórica, OpenSpec arquivado + `VERIFICATION.md`/`SUMMARY.md` da fase prevalecem sobre este archive e sobre registros antigos.

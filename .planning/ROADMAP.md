@@ -414,7 +414,7 @@ Plans:
 - [ ] 56.2.4-01-PLAN.md — [BLOCKING migration] Encerramento PF sob a trava C4 + estorno idempotente (migration LOCAL-ONLY apenas autorada) + contrato (REQ-56.2.4-05, -06)
 - [ ] 56.2.4-02-PLAN.md — Recuperação de arte no Storage privado sem regenerar (serviço + rota onde o lojista apenas solicita) + G-NA (REQ-56.2.4-01, -02, -03, -10)
 **Wave 2**
-- [ ] 56.2.4-03-PLAN.md — Gatilho PF (4a) no ponto de decisão terminal + cliente de encerramento + Camada 1 (simulação) (REQ-56.2.4-04, -05, -06, -07, -09, -10, -11)
+- [ ] 56.2.4-03-PLAN.md — Gatilho PF (4a) no ponto de decisão terminal + cliente de encerramento + Camada 1 (simulação) (REQ-56.2.4-04, -05, -06, -07, -10, -11)
 - [ ] 56.2.4-04-PLAN.md — Encerramento autorizado e auditado (abandono de claim exclusivo do caminho autorizado) + migration LOCAL-ONLY (REQ-56.2.4-05, -08)
 - [ ] 56.2.4-05-PLAN.md — UI `refunded` (mensagem exata) + formulário restaurado server-side + prova de render (REQ-56.2.4-07, -08, -10)
 **Wave 3**

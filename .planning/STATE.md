@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: executing
-last_updated: "2026-10-15T16:06:25.437Z"
+last_updated: "2026-10-15T17:14:24.634Z"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
-  total_plans: 43
+  total_plans: 50
   completed_plans: 43
-  percent: 83
+  percent: 71
 ---
 
 # Project State
@@ -27,6 +27,7 @@ progress:
 
 ## Current Position
 
+- **VIGENTE (2026-10-15) — GSD `56.2.4` / F56.2b2b — B2.2 Recuperação de imagem, estorno e D13 do Produto 1:1: PLANEJADA — 7 planos em 4 waves.** Fase registrada no ROADMAP a partir da base OpenSpec **aprovada** (`openspec/changes/fase-56-2b2b-...`, commit `b2edfb5b`; checkpoint humano de **contrato + UI-SPEC** aprovado em 2026-10-15 no **escopo INATIVO**). `CONTEXT` (ponte) + `PATTERNS` + **UI-SPEC preservada (cópia byte-idêntica)** + 7 PLAN criados; `gsd-plan-checker` **VERIFICATION PASSED / 0 blockers** (revisão: blocker do ordenamento CAS×PF do Plano 01 + 2 warnings corrigidos). 11 REQ-IDs `REQ-56.2.4-01..11` (11 requirements normativos × 17 critérios do proposal). Provas em **duas camadas** (Camada 1 simulação → Plano 03; Camada 2 efeitos reais isolados a–j → Plano 06); migrations **LOCAL-ONLY**; **D13 NÃO declarado resolvido** (evidência registrada sem resolução); dois stops humanos (revisão de autorizações no Plano 06; checkpoint final no Plano 07). **AGUARDANDO revisão humana dos planos antes da execução.** Sem implementação/migration aplicada/ativação/provider pago/B2.3/F56.3; sign-off pendente da B2.1 permanece separado.
 - **VIGENTE (2026-10-15) — GSD `56.2.3` / F56.2b2a — B2.1 Recuperação de copy do Produto 1:1: CONCLUÍDA como entrega INATIVA — 6/6 planos/summaries.** Checkpoint humano **APROVADO** (`56.2.3-UAT.md`, `[x] approved`, 2026-10-15) **EXCLUSIVAMENTE no escopo inativo** (cenários visuais + **"VALIDADO POR TESTE AUTOMATIZADO COM ERRO SIMULADO"** para falhas raras incl. `indeterminada`; a janela de 30s foi **SOMENTE da fixture**, não prova humana dos tempos 5s/10s). **Code review** (`56.2.3-REVIEW.md`): HIGH CR-01 + MEDIUM WR-01 **RESOLVIDOS** em `7dee0866`; WR-02/WR-03 (LOW) = **dívida NÃO-BLOQUEANTE**. **Security** (`56.2.3-SECURITY.md`): **69/69 fechados, 0 abertos** (sign-off **PENDENTE**). **Backfill:** prova ao vivo LIMPA **PASS** na instância separada `vendeo-f562b-isolated`; incidente da 1ª execução (`f562a`) **preservado como histórico**. **Nyquist** NÃO executado por configuração (`workflow.nyquist_validation=false`). **D13** = gate operacional da próxima fatia (imagem/habilitação — B2.2). **Lifecycle OpenSpec CONCLUÍDO (2026-10-15):** `/opsx-verify` → `/opsx-sync` (spec principal `product-1-1-copy-recovery` sincronizada) → `/opsx-archive`; change **ARQUIVADA** em `openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/`; **46/46 tasks**. **B2.2/B2.3/F56.3 NÃO iniciados.** Sem push/deploy; flags `false`/sem habilitação.
 - **Escopo dos contadores (esclarecimento; NADA foi recalculado):** o front-matter `completed_phases 5/6` e `completed_plans 43/43` são uma base **ESCOPADA** (os diretórios de fase/planos **REGISTRADOS no milestone**, que **JÁ incluíam a base do 56.2.3** antes do último commit) — **NÃO** são totais globais recalculados; nenhum contador foi recalculado ou incrementado neste fechamento.
 
