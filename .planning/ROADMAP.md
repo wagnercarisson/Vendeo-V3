@@ -408,9 +408,18 @@ Plans:
 
 **Provas exigidas no planejamento (duas camadas — Precisão D):** **Camada 1** — falhas raras por **simulação controlada** (harness/fake: falha de `storeArtifact`, sonda `indeterminate`, falha de gravação do marcador) provando **controle de fluxo**; **Camada 2** — **efeitos reais** em **Postgres/Storage locais** (instância isolada e descartável, repontada) comprovando: corrida **entrega × estorno**; **estorno idempotente**; **resultado atrasado**; **falha de Storage/banco**; **formulário restaurado**; **geração normal sem arte (claim `in_progress`) → consulta/reload NÃO estorna**; **principal falhou/fallback pendente NÃO estorna** (janela principal→fallback); **falha final (PF) → encerra e estorna uma vez** (decisão server-side); **sem sinal de finalidade → exige encerramento autorizado e auditado**; **encerramento impede atomicamente tentativa posterior** (`operation_terminal`). **Nenhuma** falha provocada em provider **pago** (reservado à B2.3). Gates locais: typecheck, lint, build e suíte local **sem chamada paga**; `openspec validate --strict`; `git diff --check`. Migration **LOCAL-ONLY** (autorada; aplicada só na instância isolada, nunca `db push` remoto). **Checkpoint humano antes do fechamento e revisão das autorizações antes de qualquer operação de banco.**
 
-**Plans:** 0 plans (planejamento em andamento — aguardando revisão humana)
+**Plans:** 7 plans em 4 waves (aguardando revisão humana dos planos)
 
-Plans:
-- [ ] TBD (run /gsd-plan-phase 56.2.4 to break down)
+**Wave 1**
+- [ ] 56.2.4-01-PLAN.md — [BLOCKING migration] Encerramento PF sob a trava C4 + estorno idempotente (migration LOCAL-ONLY apenas autorada) + contrato (REQ-56.2.4-05, -06)
+- [ ] 56.2.4-02-PLAN.md — Recuperação de arte no Storage privado sem regenerar (serviço + rota onde o lojista apenas solicita) + G-NA (REQ-56.2.4-01, -02, -03, -10)
+**Wave 2**
+- [ ] 56.2.4-03-PLAN.md — Gatilho PF (4a) no ponto de decisão terminal + cliente de encerramento + Camada 1 (simulação) (REQ-56.2.4-04, -05, -06, -07, -09, -10, -11)
+- [ ] 56.2.4-04-PLAN.md — Encerramento autorizado e auditado (abandono de claim exclusivo do caminho autorizado) + migration LOCAL-ONLY (REQ-56.2.4-05, -08)
+- [ ] 56.2.4-05-PLAN.md — UI `refunded` (mensagem exata) + formulário restaurado server-side + prova de render (REQ-56.2.4-07, -08, -10)
+**Wave 3**
+- [ ] 56.2.4-06-PLAN.md — [BLOCKING] Revisão de autorizações + harness isolado + aplicação LOCAL-ONLY + Camada 2 (efeitos reais a-j) (REQ-56.2.4-01..08, -10, -11)
+**Wave 4**
+- [ ] 56.2.4-07-PLAN.md — Gates + evidência do gate D13 (não resolvido) + checkpoint humano STOP (REQ-56.2.4-01..11)
 
 **Canonical refs:** `openspec/changes/fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/` (proposal, design B2B-D1..D9, specs `product-1-1-artifact-delivery` / `product-1-1-campaign-credit-billing` / `product-1-1-generation-orchestration`, tasks §1–§6, UI-SPEC, RECONCILIATION), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/campaign-preview.md`, `src/lib/product-1-1/orchestration/generation-orchestrator.ts`, `src/lib/product-1-1/pending/resolve-pending-operation.ts`, `src/app/api/admin/product-1-1-pending/route.ts`, `src/app/(app)/campanhas/[id]/client.tsx`, `src/components/flow/use-campaign-form.ts`, `src/hooks/use-input-preservation.ts`, `supabase/migrations/20261009000002_*` (resolução auditada, b1b LOCAL-ONLY), `supabase/migrations/20261009000005_f56_2b1b_copy_state.sql` (b1b, LOCAL-ONLY), `scripts/run-f56-2b1b-isolated-integration.ps1` (harness de prova isolado).
