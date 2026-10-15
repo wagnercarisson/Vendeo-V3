@@ -39,17 +39,34 @@ interface FixtureCase {
   readonly label: string;
   readonly restorable: boolean;
   readonly direction: Direction | null;
+  /**
+   * Selo PERSISTIDO desde a origem. Deve pertencer a `BADGE_OPTIONS_OFFER`
+   * (`src/lib/constants.ts`). O `-23%` dos casos históricos NÃO pertence às
+   * opções do formulário — registrado como erro de preparação; NÃO convertido.
+   */
+  readonly badgeText: string;
 }
 
 const CASES: readonly FixtureCase[] = [
-  { key: "refunded-original", label: "UAT B2.2 - refunded original", restorable: true, direction: "original" },
-  { key: "refunded-ambient", label: "UAT B2.2 - refunded ambient", restorable: true, direction: "ambient" },
-  { key: "refunded-unavailable", label: "UAT B2.2 - refunded unavailable", restorable: false, direction: null },
-  { key: "refunded-no-direction", label: "UAT B2.2 - refunded no-direction", restorable: true, direction: null },
+  // Casos HISTÓRICOS (já criados; preservados). `badgeText="-23%"` foi um erro
+  // de preparação (não é opção do formulário) — mantido só como registro.
+  { key: "refunded-original", label: "UAT B2.2 - refunded original", restorable: true, direction: "original", badgeText: "-23%" },
+  { key: "refunded-ambient", label: "UAT B2.2 - refunded ambient", restorable: true, direction: "ambient", badgeText: "-23%" },
+  { key: "refunded-unavailable", label: "UAT B2.2 - refunded unavailable", restorable: false, direction: null, badgeText: "-23%" },
+  { key: "refunded-no-direction", label: "UAT B2.2 - refunded no-direction", restorable: true, direction: null, badgeText: "-23%" },
+  // Fixture ADICIONAL autorizada: mesmo perfil da `refunded-original`, mas com o
+  // selo CORRETO desde a origem (`Promoção` é a 1ª opção de `BADGE_OPTIONS_OFFER`).
+  {
+    key: "refunded-badge-promocao",
+    label: "UAT B2.2 - refunded badge promocao",
+    restorable: true,
+    direction: "original",
+    badgeText: "Promoção",
+  },
 ];
 
 /** Snapshot RESTAURÁVEL (produto nomeado + comercial completo) — marcador do novo fluxo presente. */
-function restorableSnapshot(): Record<string, unknown> {
+function restorableSnapshot(badgeText: string): Record<string, unknown> {
   return {
     frozenContentReferences: [],
     product: { name: "Produto UAT B2.2", description: "Descricao de teste local" },
@@ -57,7 +74,7 @@ function restorableSnapshot(): Record<string, unknown> {
       intent: "offer",
       originalPriceCents: 12990,
       discountedPriceCents: 9990,
-      badgeText: "-23%",
+      badgeText,
       validity: { displayText: "Valida ate 31/10" },
       legalNotice: { text: "Imagem ilustrativa" },
     },
@@ -141,17 +158,26 @@ async function main(): Promise<void> {
       [storeId],
     );
     const initialBalance = Number(balanceRow.rows[0]?.balance ?? 0);
-    const topUp = Math.max(0, CASES.length - initialBalance);
 
     const campaignsBefore = (
       await ctx.pg.query<{ n: number }>("SELECT count(*)::int AS n FROM public.campaigns WHERE store_id=$1", [storeId])
     ).rows[0]?.n ?? 0;
+
+    // Detecção de duplicatas: só as fixtures AUSENTES são criadas; as existentes
+    // são preservadas integralmente (nenhuma escrita).
+    const existingRows = await ctx.pg.query<{ id: string; product_name: string }>(
+      "SELECT id, product_name FROM public.campaigns WHERE store_id=$1 AND product_name = ANY($2::text[])",
+      [storeId, CASES.map((c) => c.label)],
+    );
+    const existingIds = new Map(existingRows.rows.map((row) => [row.product_name, row.id]));
 
     const plan = CASES.map((c) => ({
       key: c.key,
       label: c.label,
       restorable: c.restorable,
       direction: c.direction,
+      badgeText: c.badgeText,
+      exists: existingIds.has(c.label),
       effects: [
         "campaigns(+1)",
         "credit_operations: reserved->refunded",
@@ -160,6 +186,8 @@ async function main(): Promise<void> {
         ...(c.direction ? ["snapshot_frozen_evidence: +1"] : []),
       ],
     }));
+    const newCases = plan.filter((c) => !c.exists);
+    const topUp = Math.max(0, newCases.length - initialBalance);
 
     if (!apply) {
       process.stdout.write(
@@ -173,6 +201,7 @@ async function main(): Promise<void> {
             bucketPrivate: bucket.data.public === false,
             initialBalance,
             syntheticTopUp: topUp,
+            newCaseCount: newCases.length,
             campaignsBefore,
             cases: plan,
           },
@@ -213,6 +242,7 @@ async function main(): Promise<void> {
           campaignId,
           operationId: op.rows[0]?.operation_id ?? null,
           status: op.rows[0]?.status ?? null,
+          badgeText: fixture.badgeText,
           url: `${APP_URL}/campanhas/${campaignId}`,
           restoreUrl: `${APP_URL}/campanhas/nova?restoreFrom=${campaignId}`,
         });
@@ -222,7 +252,7 @@ async function main(): Promise<void> {
       const campaignId = await createCampaign(ctx.supabase, storeId, fixture.label);
       await ctx.pg.query("UPDATE public.campaigns SET input_snapshot=$2::jsonb WHERE id=$1 AND store_id=$3", [
         campaignId,
-        JSON.stringify(fixture.restorable ? restorableSnapshot() : unrestorableSnapshot()),
+        JSON.stringify(fixture.restorable ? restorableSnapshot(fixture.badgeText) : unrestorableSnapshot()),
         storeId,
       ]);
 
@@ -257,6 +287,7 @@ async function main(): Promise<void> {
         status: closed.status,
         direction: fixture.direction,
         restorable: fixture.restorable,
+        badgeText: fixture.badgeText,
         url: `${APP_URL}/campanhas/${campaignId}`,
         restoreUrl: `${APP_URL}/campanhas/nova?restoreFrom=${campaignId}`,
       });
