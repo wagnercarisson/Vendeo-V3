@@ -3,8 +3,34 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 
+// O backend ISOLADO REAL é injetado nos mocks (nunca rede/produção). O serviço
+// REAL fala com o Postgres isolado via `supabaseAdmin` (Proxy) e a ROTA REAL usa
+// o MESMO cliente.
+const h = vi.hoisted(() => ({ client: null as unknown as Record<string | symbol, unknown> }));
+const mockPushAdmin = vi.hoisted(() => ({ userId: "00000000-0000-4000-8000-0000000000ad" }));
+
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+vi.mock("@/lib/supabase/server", () => {
+  const proxy = new Proxy(
+    {},
+    {
+      get: (_target, prop) => {
+        const inner = h.client;
+        if (!inner) return undefined;
+        const value = inner[prop];
+        return typeof value === "function"
+          ? (value as (...args: unknown[]) => unknown).bind(inner)
+          : value;
+      },
+    },
+  );
+  return { supabaseAdmin: proxy, createServerClient: vi.fn(async () => proxy) };
+});
+// Auth/CSRF SIMULADOS (não há sessão real no teste). O backend é REAL/ISOLADO.
+vi.mock("@/lib/admin/require-admin", () => ({
+  requireAdmin: vi.fn(async () => ({ userId: mockPushAdmin.userId })),
+}));
+vi.mock("@/lib/auth/csrf", () => ({ requireSameOrigin: vi.fn() }));
 
 import { ProductOneToOneArtifactStore, artifactStoragePath } from "../artifact/artifact-store";
 import { ProductOneToOneAttemptStartClient } from "../orchestration/attempt-start-client";
@@ -13,6 +39,8 @@ import {
   PendingOperationResolutionError,
   resolvePendingOperation,
 } from "../pending/resolve-pending-operation";
+import { NextRequest } from "next/server";
+import { POST as adminPendingPost } from "@/app/api/admin/product-1-1-pending/route";
 import {
   closeIsolatedContext,
   createAuthUser,
@@ -66,6 +94,11 @@ describe("F56.2b1b — pending resolution (Postgres real)", () => {
     storeId = store.storeId;
     await setCredits(ctx.pg, storeId, 30);
     actorId = await createAuthUser(ctx.supabase);
+    // A ROTA REAL (e o serviço REAL por ela invocado) falam com o Postgres
+    // ISOLADO via `supabaseAdmin` (Proxy). O actor autenticado simulado é o MESMO
+    // usuário criado no isolado (a auditoria referencia `auth.users`).
+    h.client = ctx.supabase as unknown as Record<string | symbol, unknown>;
+    mockPushAdmin.userId = actorId;
   }, 60_000);
 
   afterAll(async () => {
@@ -450,5 +483,91 @@ describe("F56.2b1b — pending resolution (Postgres real)", () => {
       }),
     ).rejects.toBeInstanceOf(PendingOperationResolutionError);
     expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("reserved");
+  }, 90_000);
+
+  it("ROTA REAL `POST /api/admin/product-1-1-pending` (auth/CSRF simulados, backend isolado) ⇒ `abandoned` + `refunded` + 1 auditoria", async () => {
+    const campaign = await createCampaign(ctx.supabase, storeId);
+    const operationId = randomUUID();
+    await reserveCredit(ctx.pg, storeId, campaign, operationId);
+    // Residual `in_progress`: a execução NÃO foi encerrada.
+    await new ProductOneToOneAttemptStartClient(ctx.supabase).acquire({
+      campaignId: campaign,
+      operationId,
+      target: "primary",
+      attemptNumber: 1,
+    });
+
+    const resolutionOperationId = randomUUID();
+    const request = new NextRequest("http://localhost/api/admin/product-1-1-pending", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://localhost", host: "localhost" },
+      body: JSON.stringify({
+        campaignId: campaign,
+        operationId,
+        action: "refund_once",
+        resolutionOperationId,
+        reason: "abandono autorizado via rota admin",
+      }),
+    });
+
+    const response = await adminPendingPost(request);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { resolution?: { status?: string } };
+    expect(body.resolution).toMatchObject({ status: "refunded" });
+
+    // EFEITOS reais no Postgres isolado: operação terminal + claim abandonado.
+    expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("refunded");
+    const { rows: claims } = await ctx.pg.query<{ status: string }>(
+      "SELECT status FROM public.product_1_1_generation_attempt_claims WHERE campaign_id = $1 AND operation_id = $2",
+      [campaign, operationId],
+    );
+    expect(claims.some((claim) => claim.status === "abandoned")).toBe(true);
+    // Auditoria ÚNICA na MESMA transação.
+    expect(await auditRows(resolutionOperationId)).toHaveLength(1);
+    expect((await auditRows(resolutionOperationId))[0].action).toBe(
+      "product_1_1_pending_resolution",
+    );
+  }, 90_000);
+
+  it("ROTA REAL recusa corpo com campos EXTRAS (a requisição NÃO pode fornecer a autorização) ⇒ 400 Zod `.strict()` sem efeito", async () => {
+    const campaign = await createCampaign(ctx.supabase, storeId);
+    const operationId = randomUUID();
+    await reserveCredit(ctx.pg, storeId, campaign, operationId);
+    await new ProductOneToOneAttemptStartClient(ctx.supabase).acquire({
+      campaignId: campaign,
+      operationId,
+      target: "primary",
+      attemptNumber: 1,
+    });
+
+    const request = new NextRequest("http://localhost/api/admin/product-1-1-pending", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://localhost", host: "localhost" },
+      body: JSON.stringify({
+        campaignId: campaign,
+        operationId,
+        action: "refund_once",
+        resolutionOperationId: randomUUID(),
+        reason: "tentando auto-autorizar",
+        // Campos que o CLIENTE tentaria injetar para fornecer a autorização/evidência:
+        authorizeAbandon: true,
+        evidence: { origin: "server-derived", art_kind: "absent", execution_ended: true },
+        art_kind: "absent",
+        execution_ended: true,
+      }),
+    });
+
+    const response = await adminPendingPost(request);
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error?: { code?: string } };
+    expect(body.error?.code).toBe("invalid_body");
+
+    // NENHUM efeito: a operação permanece NÃO terminal e o claim segue ativo.
+    expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("reserved");
+    const { rows: claims } = await ctx.pg.query<{ status: string }>(
+      "SELECT status FROM public.product_1_1_generation_attempt_claims WHERE campaign_id = $1 AND operation_id = $2",
+      [campaign, operationId],
+    );
+    expect(claims.some((claim) => claim.status === "in_progress")).toBe(true);
   }, 90_000);
 });
