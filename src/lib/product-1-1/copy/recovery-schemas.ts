@@ -9,6 +9,13 @@ import { z } from "zod";
  * SERVER-SIDE e usa o `requestToken` apenas como CONDIÇÃO de dedupe do MESMO
  * acionamento (`already_acquired`); ele nunca escolhe o vencedor.
  *
+ * A IDENTIDADE DE ACIONAMENTO (tentativa) é EXCLUSIVAMENTE SERVER-SIDE. O
+ * `attemptSeq`/`attemptToken` do cliente, QUANDO PRESENTES, são SOLICITAÇÕES —
+ * NUNCA autoridade: o serviço os ignora e resolve a identidade corrente pela
+ * aquisição atômica. Por isso o corpo REAL emitido pela UI
+ * (`{ mode, operationId, requestToken }`) NÃO os carrega (CR-01): o schema
+ * ACEITA a ausência, mas ainda VALIDA os campos quando enviados.
+ *
  * A identidade de acionamento (`requestToken`) é OBRIGATÓRIA (critério 24):
  * ausência ⇒ recusa (`missing_request_token`), SEM aquisição nem IA. A tentativa
  * INICIAL interna (drenagem no ciclo do orquestrador) é a ÚNICA que gera o
@@ -20,8 +27,10 @@ export const CopyRecoveryRequestSchema = z
   .object({
     operationId: z.string().uuid(),
     mode: z.enum(["auto_retry", "manual"]),
-    attemptSeq: z.number().int().min(1).max(6),
-    attemptToken: z.string().min(1),
+    // OPCIONAIS — a UI nunca os envia (a identidade é server-side); quando
+    // enviados, ainda são VALIDADOS (1..6 / não-vazio). Ausência aceita.
+    attemptSeq: z.number().int().min(1).max(6).optional(),
+    attemptToken: z.string().min(1).optional(),
     // OBRIGATÓRIO — SEM `.optional()`: a ausência é recusada antes de qualquer
     // aquisição/provider (o serviço devolve `missing_request_token`).
     requestToken: z.string().uuid(),

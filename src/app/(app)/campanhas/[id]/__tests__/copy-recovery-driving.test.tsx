@@ -26,6 +26,7 @@ import {
   registerCopyRecoveryDrivingHandle,
   clearCopyRecoveryDrivingHandle,
 } from "@/lib/campaign/copy-recovery-driving";
+import { CopyRecoveryRequestSchema } from "@/lib/product-1-1/copy/recovery-schemas";
 
 /**
  * F56.2b2a (B2.1 / Plano 04-05) — PROVA browser/render do FLUXO
@@ -231,5 +232,21 @@ describe("copy-recovery-driving — só a aba iniciadora emite a 2ª automática
     await act(async () => {});
     // UMA única emissão no MESMO episódio persistido (não duplica).
     expect(copyRecoveryCalls()).toHaveLength(1);
+  });
+
+  // CR-01 — o corpo REAL emitido pela aba dirigente (o que o `fetch` recebeu)
+  // DEVE satisfazer o schema REAL da rota (o mesmo que valida o POST). Não se
+  // re-testa um payload construído à mão.
+  it("(CR-01) o corpo REAL `auto_retry` emitido satisfaz `CopyRecoveryRequestSchema`", async () => {
+    registerCopyRecoveryDrivingHandle({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID });
+    renderRecovery(
+      recoveryView({ autoAttempts: 1, manualAttempts: 0, waitRemainingMs: 0, canRetry: false }),
+    );
+
+    await waitFor(() => expect(copyRecoveryCalls()).toHaveLength(1));
+    const raw = JSON.parse(
+      String((copyRecoveryCalls()[0][1] as RequestInit).body),
+    );
+    expect(CopyRecoveryRequestSchema.safeParse(raw).success).toBe(true);
   });
 });

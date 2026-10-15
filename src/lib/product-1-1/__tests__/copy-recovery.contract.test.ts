@@ -2038,6 +2038,36 @@ describe("B2.1 — Plano 02: recovery schema (Zod .strict() com requestToken obr
       CopyRecoveryRequestSchema.safeParse({ ...valid, requestToken: "not-a-uuid" }).success,
     ).toBe(false);
   });
+
+  // CR-01 — o corpo REAL emitido pela UI NÃO contém attemptSeq/attemptToken
+  // (identidade é server-side); a AUSÊNCIA é ACEITA.
+  it("ACEITA o corpo REAL mínimo do emissor (operationId/mode/requestToken, SEM attemptSeq/attemptToken)", () => {
+    expect(
+      CopyRecoveryRequestSchema.safeParse({
+        operationId: OPERATION_ID,
+        mode: "manual",
+        requestToken: REQUEST_TOKEN,
+      }).success,
+    ).toBe(true);
+    expect(
+      CopyRecoveryRequestSchema.safeParse({
+        operationId: OPERATION_ID,
+        mode: "auto_retry",
+        requestToken: REQUEST_TOKEN,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("VALIDA attemptSeq/attemptToken QUANDO presentes (opcionais, mas nunca inválidos)", () => {
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, attemptSeq: undefined }).success).toBe(
+      true,
+    );
+    expect(
+      CopyRecoveryRequestSchema.safeParse({ ...valid, attemptToken: undefined }).success,
+    ).toBe(true);
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, attemptSeq: 0 }).success).toBe(false);
+    expect(CopyRecoveryRequestSchema.safeParse({ ...valid, attemptToken: "" }).success).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -2990,5 +3020,71 @@ describe("B2.1 — Plano 03: rota copy-recovery — escopo SOMENTE-textos (sem c
     // Somente textos: usa o serviço de recuperação (campaign_copy).
     expect(source).toContain("recoverCopyAttempt");
     expect(source).toContain("readCopyRecoveryState");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CR-01 — regressão: o corpo REAL emitido por client.tsx (`emitAttempt`) NÃO
+// carrega `attemptSeq`/`attemptToken` (a identidade é server-side). A rota DEVE
+// aceitá-lo (não 400) e prosseguir sob autorização/provider SIMULADOS. Os testes
+// acima seguem usando os corpos ricos; NENHUM foi enfraquecido.
+// ---------------------------------------------------------------------------
+describe("B2.1 — Plano 03 (CR-01): corpo REAL mínimo do emissor (sem attemptSeq/attemptToken)", () => {
+  beforeEach(() => resetRouteHarness());
+
+  // EXATAMENTE o que a UI envia (modo + operationId + requestToken).
+  const realEmitterBody = () => ({
+    mode: "manual" as const,
+    operationId: OPERATION_ID,
+    requestToken: ROUTE_REQUEST_TOKEN,
+  });
+
+  it("VENCEDOR simulado: corpo real mínimo NÃO retorna 400; prossegue e devolve 200 (UMA tentativa)", async () => {
+    routeHarness.state.acquireResponder = () => ({
+      acquired: true,
+      reason: null,
+      attempt_seq: 1,
+      attempt_token: TOKEN_A,
+      mode: "manual",
+    });
+    const res = await callPost(CAMPAIGN_ID, realEmitterBody());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      recovery: { outcome: string; acquired: boolean; state: { state: string | null } };
+    };
+    expect(body.recovery.acquired).toBe(true);
+    expect(body.recovery.outcome).toBe("acquired_completed");
+    expect(body.recovery.state.state).toBe("completed");
+    expect(routeHarness.state.providerCalls).toBe(1);
+  });
+
+  it("PERDEDOR simulado: corpo real mínimo NÃO retorna 400; responde ACOMPANHAMENTO", async () => {
+    routeHarness.state.acquireResponder = () => ({
+      acquired: false,
+      reason: "wait_not_elapsed",
+      wait_remaining_ms: 3000,
+    });
+    const res = await callPost(CAMPAIGN_ID, realEmitterBody());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      recovery: { outcome: string; waitRemainingMs: number | null };
+    };
+    expect(body.recovery.outcome).toBe("accompanied");
+    expect(body.recovery.waitRemainingMs).toBe(3000);
+    expect(routeHarness.state.providerCalls).toBe(0);
+  });
+
+  it("corpo real mínimo com `auto_retry` (aba dirigente) também NÃO retorna 400", async () => {
+    routeHarness.state.acquireResponder = () => ({
+      acquired: false,
+      reason: "attempt_in_progress",
+    });
+    const res = await callPost(CAMPAIGN_ID, { ...realEmitterBody(), mode: "auto_retry" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      recovery: { outcome: string; reason: string | null };
+    };
+    expect(body.recovery.outcome).toBe("accompanied");
+    expect(body.recovery.reason).toBe("attempt_in_progress");
   });
 });

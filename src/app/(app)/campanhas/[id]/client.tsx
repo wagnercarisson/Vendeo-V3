@@ -28,33 +28,54 @@ import { isDrivingCopyRecovery } from "@/lib/campaign/copy-recovery-driving";
  * cada NOVA tentativa (automática 2ª/3ª ou clique manual) gera um token PRÓPRIO;
  * o reenvio do MESMO acionamento é o único que reutiliza (não implementado aqui —
  * um clique = um acionamento).
+ *
+ * WR-01 — o token DEVE satisfazer `z.string().uuid()` no servidor. Preferimos
+ * `crypto.randomUUID()`; na sua ausência geramos um UUID v4 VÁLIDO a partir de
+ * `crypto.getRandomValues` (bits de versão/variante fixados). SEM fonte
+ * criptográfica devolvemos `null` (sentinela) e o CHAMADOR NÃO envia o POST.
  */
-function newRequestToken(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+function newRequestToken(): string | null {
+  if (typeof crypto === "undefined") return null;
+  if (typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
-  return `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  if (typeof crypto.getRandomValues === "function") {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    // RFC 4122 v4: nibble de versão = 4; bits de variante = 10xx.
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  return null;
 }
 
 export default function CampaignPageClient(props: CampaignPageProps) {
   const router = useRouter();
 
   const isNewFlowRunning = props.newFlow?.state === "running";
+  const isLegacyGenerating = !props.newFlow && props.displayStatus === "generating";
+  const recovery = props.newFlow?.recovery;
+  const drivesAutomaticRecovery =
+    isDrivingCopyRecovery(props.campaignId, props.newFlow?.operationId) &&
+    recovery?.manualAttempts === 0;
 
   // F56.2b2a (correção pós-revisão) — a recuperação ATIVA/EM ESPERA também exige
   // ACOMPANHAMENTO: outra aba (ou reload) precisa refletir o avanço do servidor
   // mesmo com a imagem já `delivered` (sem `generating`/`running`). O poll apenas
   // REFLETE o estado persistido (`router.refresh()`); NUNCA inicia chamadas — uma
   // aba que não dirige jamais emite requisição. `indeterminada` NÃO entra (evita
-  // loop ilimitado); `concluida` encerra o acompanhamento.
+  // loop ilimitado); `concluida` encerra o acompanhamento. Espera que o servidor
+  // confirmou vencida, SEM aba dirigente, encerra o poll: só resta ação manual.
   const recoveryNeedsAccompaniment =
-    props.newFlow?.recovery != null &&
-    (props.newFlow.recovery.state === "ativa" ||
-      props.newFlow.recovery.state === "aguardando");
+    recovery != null &&
+    (recovery.state === "ativa" ||
+      (recovery.state === "aguardando" &&
+        (recovery.waitRemainingMs > 0 || drivesAutomaticRecovery)));
 
   useEffect(() => {
     if (
-      props.displayStatus !== "generating" &&
+      !isLegacyGenerating &&
       !isNewFlowRunning &&
       !recoveryNeedsAccompaniment
     )
@@ -65,7 +86,7 @@ export default function CampaignPageClient(props: CampaignPageProps) {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [props.displayStatus, isNewFlowRunning, recoveryNeedsAccompaniment, router]);
+  }, [isLegacyGenerating, isNewFlowRunning, recoveryNeedsAccompaniment, router]);
 
   const breadcrumbs = [
     { label: "Campanhas", href: "/campanhas" },
@@ -497,6 +518,12 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
     [props.campaignId, operationId],
   );
 
+  // A espera persistida pode estar vencida mesmo após reload/outra aba. Sem
+  // condução automática, apresentar retomada MANUAL, sem prometer geração/0s.
+  // Usa a confirmação do SERVIDOR, não apenas o relógio local da contagem.
+  const manualRecoveryReady = recovery?.state === "aguardando" &&
+    recovery.waitRemainingMs <= 0 && (!isDriving || recovery.manualAttempts > 0);
+
   const waitKey = `${recovery?.state ?? ""}|${recovery?.autoAttempts ?? -1}|${recovery?.waitRemainingMs ?? 0}`;
   const [remainingMs, setRemainingMs] = useState(recovery?.waitRemainingMs ?? 0);
   const [trackedWaitKey, setTrackedWaitKey] = useState(waitKey);
@@ -530,6 +557,17 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
   const emitAttempt = useCallback(
     async (mode: "manual" | "auto_retry") => {
       if (!operationId) return;
+      // WR-01 — SEM fonte criptográfica para um UUID válido: NÃO emitir o POST.
+      // MANUAL ⇒ feedback SEGURO; AUTOMÁTICA ⇒ simplesmente não emite.
+      const requestToken = newRequestToken();
+      if (requestToken === null) {
+        if (mode === "manual") {
+          setActionError(
+            "Não foi possível tentar novamente agora. Tente de novo em instantes.",
+          );
+        }
+        return;
+      }
       try {
         const res = await fetch(
           `/api/campaign/${props.campaignId}/copy-recovery`,
@@ -539,7 +577,7 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
             body: JSON.stringify({
               mode,
               operationId,
-              requestToken: newRequestToken(),
+              requestToken,
             }),
           },
         );
@@ -602,7 +640,7 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
       {showRecovery && recovery ? (
         <>
           <CopyRecoveryPanel
-            state={recovery.state}
+            state={manualRecoveryReady ? "interrompida" : recovery.state}
             autoAttempts={recovery.autoAttempts}
             manualAttempts={recovery.manualAttempts}
             waitRemainingMs={
