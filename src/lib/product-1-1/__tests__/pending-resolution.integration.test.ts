@@ -344,4 +344,111 @@ describe("F56.2b1b — pending resolution (Postgres real)", () => {
     // Nada foi entregue/estornado: a limitação da b1b permanece BLOQUEADA.
     expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("reserved");
   }, 60_000);
+
+  it("B2.2 (i)/(j) + SEAM (a) — abandono AUTORIZADO do residual `in_progress`: marca → serviço → RPC → `abandoned`+`refunded`; terminal não sobrescrito", async () => {
+    const campaign = await createCampaign(ctx.supabase, storeId);
+    const operationId = randomUUID();
+    await reserveCredit(ctx.pg, storeId, campaign, operationId);
+    await new ProductOneToOneAttemptStartClient(ctx.supabase).acquire({
+      campaignId: campaign,
+      operationId,
+      target: "primary",
+      attemptNumber: 1,
+    });
+
+    // SEM a marca de autorização ⇒ bloqueio de HOJE preservado (RPC não é chamada).
+    await expect(
+      resolve({
+        actorId,
+        campaignId: campaign,
+        operationId,
+        action: "refund_once",
+        reason: "sem marca",
+        resolutionOperationId: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ code: "operation_in_progress" });
+    expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("reserved");
+
+    // COM a marca AUTORIZADA (caminho admin/auditado) ⇒ abandona o residual + estorna,
+    // na MESMA transação sob a trava.
+    const resolutionOperationId = randomUUID();
+    const authorized = await resolve({
+      actorId,
+      campaignId: campaign,
+      operationId,
+      action: "refund_once",
+      reason: "abandono autorizado",
+      resolutionOperationId,
+      authorizeAbandon: true,
+    });
+    expect(authorized).toMatchObject({ status: "refunded", idempotent: false });
+    expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("refunded");
+    const { rows: claims } = await ctx.pg.query<{ status: string }>(
+      "SELECT status FROM public.product_1_1_generation_attempt_claims WHERE campaign_id = $1 AND operation_id = $2",
+      [campaign, operationId],
+    );
+    expect(claims.some((claim) => claim.status === "abandoned")).toBe(true);
+
+    // Replay EQUIVALENTE ⇒ idempotente (uma única auditoria/um único efeito).
+    const replay = await resolve({
+      actorId,
+      campaignId: campaign,
+      operationId,
+      action: "refund_once",
+      reason: "abandono autorizado",
+      resolutionOperationId,
+      authorizeAbandon: true,
+    });
+    expect(replay).toMatchObject({ status: "refunded", idempotent: true });
+    expect(await auditRows(resolutionOperationId)).toHaveLength(1);
+
+    // (j) Resultado ATRASADO: `finish` recusa (claim já `abandoned`) e o terminal
+    // NÃO é sobrescrito.
+    let caught: unknown;
+    try {
+      await new ProductOneToOneAttemptStartClient(ctx.supabase).finish({
+        campaignId: campaign,
+        operationId,
+        attemptNumber: 1,
+        status: "failed",
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    expect(String((caught as Error).message)).toContain("invalid_transition");
+    expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("refunded");
+  }, 90_000);
+
+  it("B2.2 — `invalid`/`indeterminate` CONTINUAM bloqueando o abandono autorizado (sem estorno)", async () => {
+    const campaign = await createCampaign(ctx.supabase, storeId);
+    const operationId = randomUUID();
+    await reserveCredit(ctx.pg, storeId, campaign, operationId);
+    await new ProductOneToOneAttemptStartClient(ctx.supabase).acquire({
+      campaignId: campaign,
+      operationId,
+      target: "primary",
+      attemptNumber: 1,
+    });
+    // Objeto PRESENTE mas não íntegro (PNG no path `.jpg`) ⇒ `invalid` ⇒ bloqueia
+    // MESMO com a marca autorizada.
+    const path = artifactStoragePath(storeId, campaign, operationId);
+    const png = await sharp({ create: { width: 1024, height: 1024, channels: 3, background: { r: 7, g: 7, b: 7 } } })
+      .png()
+      .toBuffer();
+    await ctx.supabase.storage.from("campaign-images").upload(path, png, { contentType: "image/png", upsert: true });
+
+    await expect(
+      resolve({
+        actorId,
+        campaignId: campaign,
+        operationId,
+        action: "refund_once",
+        reason: "abandono sobre inválido",
+        resolutionOperationId: randomUUID(),
+        authorizeAbandon: true,
+      }),
+    ).rejects.toBeInstanceOf(PendingOperationResolutionError);
+    expect((await creditOperationRow(ctx.pg, campaign, operationId))?.status).toBe("reserved");
+  }, 90_000);
 });
