@@ -718,6 +718,29 @@ function restoredFormToFields(
   return fields;
 }
 
+/** P1 — direção de fundo como união local (sem import `product-1-1` indevido aqui). */
+function isValidBackgroundDirection(
+  value: unknown,
+): value is ProductOneToOneBackgroundDirection {
+  return value === "studio" || value === "original" || value === "ambient";
+}
+
+/**
+ * P1 — resolve a direção de fundo na HIDRATAÇÃO, com OU sem rascunho escopado:
+ *  (a) direção VÁLIDA do rascunho correto ⇒ preservar;
+ *  (b) senão, a direção RECUPERADA do SERVIDOR;
+ *  (c) nenhuma fonte válida ⇒ `undefined` (exige escolha EXPLÍCITA).
+ * NUNCA usa o valor inicial `studio` do formulário como prova de escolha.
+ */
+function resolveHydratedBackgroundDirection(
+  savedDirection: unknown,
+  serverDirection: ProductOneToOneBackgroundDirection | null | undefined,
+): ProductOneToOneBackgroundDirection | undefined {
+  if (isValidBackgroundDirection(savedDirection)) return savedDirection;
+  if (isValidBackgroundDirection(serverDirection)) return serverDirection;
+  return undefined;
+}
+
 export function useCampaignForm(
   storeId?: string,
   options?: { eligible?: boolean; restoredForm?: CampaignFormRestore | null },
@@ -806,7 +829,21 @@ export function useCampaignForm(
         mandatoryArtworkText: rest.mandatoryArtworkTextFree ?? legacyNotice ?? "",
         productImages: Array.isArray(savedImages) && savedImages.length > 0 ? savedImages : [],
       };
-      setFields((prev) => ({ ...prev, ...restored }));
+      // P1 — a MESMA regra de direção vale COM rascunho: (a) direção válida do
+      // rascunho escopado ⇒ preservar; (b) senão, a direção RECUPERADA do SERVIDOR;
+      // (c) nenhuma fonte válida ⇒ INDEFINIDA (exige escolha) — NUNCA o `studio`
+      // inicial do formulário como prova de escolha.
+      const resolvedDirection = restoredForm
+        ? resolveHydratedBackgroundDirection(
+            saved.backgroundDirection,
+            restoredForm.backgroundDirection,
+          )
+        : undefined;
+      setFields((prev) => ({
+        ...prev,
+        ...restored,
+        ...(restoredForm ? { backgroundDirection: resolvedDirection } : {}),
+      }));
       if (saved.originalPriceCents > 0) {
         setRawOriginalPrice(String(saved.originalPriceCents));
       }
@@ -815,16 +852,17 @@ export function useCampaignForm(
       }
     } else if (restoredForm) {
       // SEM rascunho escopado + snapshot server-side ⇒ reidrata os CAMPOS
-      // PREENCHIDOS do SERVIDOR (fonte da verdade dos textos).
+      // PREENCHIDOS do SERVIDOR (fonte da verdade dos textos) e aplica a MESMA
+      // regra de direção (recuperada ou INDEFINIDA para exigir escolha).
       const hydrated = restoredFormToFields(restoredForm);
+      const resolvedDirection = resolveHydratedBackgroundDirection(
+        undefined,
+        restoredForm.backgroundDirection,
+      );
       setFields((prev) => ({
         ...prev,
         ...hydrated,
-        // P1 — fonte ausente/indisponível: NÃO pré-seleciona `studio`; deixa a
-        // direção INDEFINIDA para exigir escolha explícita.
-        ...(restoredForm.backgroundDirectionUnresolved
-          ? { backgroundDirection: undefined }
-          : {}),
+        backgroundDirection: resolvedDirection,
       }));
       if ((restoredForm.originalPriceCents ?? 0) > 0) {
         setRawOriginalPrice(String(restoredForm.originalPriceCents));

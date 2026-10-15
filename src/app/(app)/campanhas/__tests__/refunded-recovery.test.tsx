@@ -460,6 +460,60 @@ describe("Cadeia REAL — restauração/predraça do formulário (3)(4)(7)(9)", 
     );
   });
 
+  it("(3c) rascunho SEM direção + evidência Original/Ambientado ⇒ usa a direção RECUPERADA do servidor", () => {
+    for (const direction of ["original", "ambient"] as const) {
+      sessionStorage.clear();
+      sessionStorage.setItem(
+        `campaign_draft:${SOURCE_CAMPAIGN_ID}`,
+        JSON.stringify({
+          productName: "Rascunho sem direção",
+          campaignIntent: "offer",
+          originalPriceCents: 10000,
+          discountedPriceCents: 9000,
+          badge: "Promoção",
+          productImages: [],
+        }),
+      );
+      const { result } = renderHook(() =>
+        useCampaignForm(STORE_ID, {
+          eligible: true,
+          restoredForm: restoreFor(SOURCE_CAMPAIGN_ID, direction),
+        }),
+      );
+      // Direção RECUPERADA do SERVIDOR (o rascunho não a tinha) — não `studio`.
+      expect(result.current.fields.backgroundDirection).toBe(direction);
+      expect(result.current.backgroundDirectionRequired).toBe(false);
+      // Demais campos do rascunho preservados.
+      expect(result.current.fields.productName).toBe("Rascunho sem direção");
+      expect(result.current.fields.badge).toBe("Promoção");
+    }
+  });
+
+  it("(3d) rascunho SEM direção + evidência INDISPONÍVEL ⇒ sem seleção + escolha OBRIGATÓRIA", () => {
+    sessionStorage.setItem(
+      `campaign_draft:${SOURCE_CAMPAIGN_ID}`,
+      JSON.stringify({
+        productName: "Rascunho sem direção",
+        campaignIntent: "offer",
+        originalPriceCents: 10000,
+        discountedPriceCents: 9000,
+        badge: "Promoção",
+        productImages: [],
+      }),
+    );
+    const { result } = renderHook(() =>
+      useCampaignForm(STORE_ID, {
+        eligible: true,
+        restoredForm: restoreFor(SOURCE_CAMPAIGN_ID), // evidência indisponível
+      }),
+    );
+    // NUNCA o `studio` inicial do formulário como prova de escolha.
+    expect(result.current.fields.backgroundDirection).toBeUndefined();
+    expect(result.current.backgroundDirectionRequired).toBe(true);
+    // O rascunho do produto ainda é preservado.
+    expect(result.current.fields.productName).toBe("Rascunho sem direção");
+  });
+
   it("(4) SEM rascunho E SEM snapshot ⇒ SEM promessa falsa (campos vazios, sem aviso)", () => {
     renderChain(null);
 
