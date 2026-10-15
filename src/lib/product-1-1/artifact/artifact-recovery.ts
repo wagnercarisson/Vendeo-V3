@@ -4,7 +4,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { ProductOneToOneArtifactStore } from "./artifact-store";
 import type { ArtifactProbe, ProductOneToOneArtifactRef } from "./types";
-import { ProductOneToOneCreditOperationClient } from "@/lib/product-1-1/credit-operation/credit-operation-client";
 import type { CreditOperationStatus } from "@/lib/product-1-1/credit-operation/types";
 
 /**
@@ -22,8 +21,15 @@ import type { CreditOperationStatus } from "@/lib/product-1-1/credit-operation/t
  *                       estorna (o encerramento é governado pelo predicado PF no
  *                       orquestrador, Plano 03).
  *
- * Escopo financeiro LIMITADO a operações NÃO terminais: se a operação estiver
- * `delivered`/`refunded`, nenhum efeito de ledger é aplicado (`operation_terminal`).
+ * FRONTEIRA ENDURECIDA (confirmação de resultado):
+ *   - leitura de crédito AUSENTE ⇒ NÃO muta (não há identidade de crédito provada);
+ *   - a leitura precisa ser `success === true`, com `campaign_id`/`operation_id`
+ *     EXATOS da requisição e `status` esperado — caso contrário LANÇA (fail-closed);
+ *   - só `reserved`/`art_uploaded` prosseguem; `delivered`/`refunded` ⇒ terminal;
+ *   - `markArtUploaded` precisa confirmar `art_uploaded`; só então `deliver` roda;
+ *   - a entrega só é ANUNCIADA quando `deliver` confirma `success === true` e
+ *     `status === 'delivered'` (com identidade exata).
+ *
  * A assinatura de URL (`getSignedArtifactUrl`) NUNCA é chamada aqui — ela é
  * SEPARADA e só ocorre no portão de download após `delivered`.
  */
@@ -45,6 +51,29 @@ export interface ArtifactRecoveryResult {
   readonly ref: ProductOneToOneArtifactRef | null;
 }
 
+/** Estado de crédito VALIDADO (identidade + status conferidos contra a requisição). */
+export interface ValidatedCreditState {
+  readonly campaignId: string;
+  readonly operationId: string;
+  readonly status: CreditOperationStatus;
+}
+
+/** Erros de fronteira da recuperação (resposta financeira contraditória ⇒ fail-closed). */
+export type ArtifactRecoveryErrorCode =
+  | "invalid_credit_response"
+  | "credit_identity_mismatch"
+  | "credit_status_unexpected";
+
+export class ArtifactRecoveryError extends Error {
+  constructor(
+    public readonly code: ArtifactRecoveryErrorCode,
+    message?: string,
+  ) {
+    super(message ?? code);
+    this.name = "ArtifactRecoveryError";
+  }
+}
+
 /** Porta da sonda tipada (satisfeita por `ProductOneToOneArtifactStore`). */
 export interface ArtifactRecoveryProbe {
   probeArtifact(input: {
@@ -54,20 +83,14 @@ export interface ArtifactRecoveryProbe {
   }): Promise<ArtifactProbe>;
 }
 
-/** Porta do cliente de crédito (subconjunto de `ProductOneToOneCreditOperationClient`). */
+/** Porta do cliente de crédito ESTRITO (validação fechada de identidade/status). */
 export interface ArtifactRecoveryCreditOps {
-  get(
-    campaignId: string,
-    operationId: string,
-  ): Promise<{ readonly status: CreditOperationStatus } | null>;
+  get(campaignId: string, operationId: string): Promise<ValidatedCreditState | null>;
   markArtUploaded(
     campaignId: string,
     operationId: string,
-  ): Promise<{ readonly status: CreditOperationStatus }>;
-  deliver(
-    campaignId: string,
-    operationId: string,
-  ): Promise<{ readonly status: CreditOperationStatus }>;
+  ): Promise<ValidatedCreditState>;
+  deliver(campaignId: string, operationId: string): Promise<ValidatedCreditState>;
 }
 
 export interface ArtifactRecoveryDeps {
@@ -81,6 +104,121 @@ export interface RecoverDeliveryInput {
   readonly operationId: string;
 }
 
+const CREDIT_STATUSES: readonly CreditOperationStatus[] = [
+  "reserved",
+  "art_uploaded",
+  "delivered",
+  "refunded",
+];
+
+const GET_RPC = "product_1_1_get_campaign_credit_operation";
+const MARK_UPLOADED_RPC = "product_1_1_mark_campaign_credit_art_uploaded";
+const DELIVER_RPC = "product_1_1_deliver_campaign_credit_operation";
+
+/**
+ * Cliente de crédito ESTRITO e LOCAL à recuperação. NÃO altera o cliente
+ * compartilhado (`ProductOneToOneCreditOperationClient`), cujos consumidores
+ * (orquestrador/testes) preservam o comportamento legado. Aqui cada resposta é
+ * validada: `success === true` explícito, identidade EXATA e status esperado.
+ */
+class StrictProductOneToOneCreditOps implements ArtifactRecoveryCreditOps {
+  constructor(private readonly client: SupabaseClient) {}
+
+  async get(
+    campaignId: string,
+    operationId: string,
+  ): Promise<ValidatedCreditState | null> {
+    const { data, error } = await this.client.rpc(GET_RPC, {
+      p_campaign_id: campaignId,
+      p_operation_id: operationId,
+    });
+    if (error) {
+      throw new ArtifactRecoveryError(
+        "invalid_credit_response",
+        error.message ?? "credit_read_error",
+      );
+    }
+    // Operação genuinamente AUSENTE (o RPC devolve NULL) — distinta de resposta inválida.
+    if (data === null || data === undefined) return null;
+    return this.validate(data, campaignId, operationId);
+  }
+
+  async markArtUploaded(
+    campaignId: string,
+    operationId: string,
+  ): Promise<ValidatedCreditState> {
+    return this.invoke(MARK_UPLOADED_RPC, campaignId, operationId, "art_uploaded");
+  }
+
+  async deliver(
+    campaignId: string,
+    operationId: string,
+  ): Promise<ValidatedCreditState> {
+    return this.invoke(DELIVER_RPC, campaignId, operationId, "delivered");
+  }
+
+  private async invoke(
+    fn: string,
+    campaignId: string,
+    operationId: string,
+    expected: CreditOperationStatus,
+  ): Promise<ValidatedCreditState> {
+    const { data, error } = await this.client.rpc(fn, {
+      p_campaign_id: campaignId,
+      p_operation_id: operationId,
+    });
+    if (error) {
+      throw new ArtifactRecoveryError(
+        "invalid_credit_response",
+        error.message ?? "credit_rpc_error",
+      );
+    }
+    return this.validate(data, campaignId, operationId, expected);
+  }
+
+  private validate(
+    data: unknown,
+    campaignId: string,
+    operationId: string,
+    expected?: CreditOperationStatus,
+  ): ValidatedCreditState {
+    if (data === null || typeof data !== "object" || Array.isArray(data)) {
+      throw new ArtifactRecoveryError("invalid_credit_response", "empty_credit_response");
+    }
+    const record = data as Record<string, unknown>;
+    // Suporte EXPLÍCITO: ausência de `success:true` NUNCA é sucesso.
+    if (record.success !== true) {
+      throw new ArtifactRecoveryError("invalid_credit_response", "missing_success");
+    }
+    const status = record.status;
+    if (
+      typeof status !== "string" ||
+      !CREDIT_STATUSES.includes(status as CreditOperationStatus)
+    ) {
+      throw new ArtifactRecoveryError("credit_status_unexpected", "invalid_credit_status");
+    }
+    const returnedCampaign = String(record.campaign_id ?? "");
+    const returnedOperation = String(record.operation_id ?? "");
+    if (returnedCampaign !== campaignId || returnedOperation !== operationId) {
+      throw new ArtifactRecoveryError(
+        "credit_identity_mismatch",
+        "credit_identity_mismatch",
+      );
+    }
+    if (expected !== undefined && status !== expected) {
+      throw new ArtifactRecoveryError(
+        "credit_status_unexpected",
+        `expected_${expected}`,
+      );
+    }
+    return Object.freeze({
+      campaignId: returnedCampaign,
+      operationId: returnedOperation,
+      status: status as CreditOperationStatus,
+    });
+  }
+}
+
 export class ProductOneToOneArtifactRecovery {
   private readonly artifacts: ArtifactRecoveryProbe;
   private readonly credit: ArtifactRecoveryCreditOps;
@@ -90,7 +228,7 @@ export class ProductOneToOneArtifactRecovery {
     deps: ArtifactRecoveryDeps = {},
   ) {
     this.artifacts = deps.artifacts ?? new ProductOneToOneArtifactStore(client);
-    this.credit = deps.credit ?? new ProductOneToOneCreditOperationClient(client);
+    this.credit = deps.credit ?? new StrictProductOneToOneCreditOps(client);
   }
 
   /**
@@ -125,21 +263,31 @@ export class ProductOneToOneArtifactRecovery {
       });
     }
 
-    // `integral`: recuperar arte EXISTENTE e CONCLUIR a entrega SEM regenerar.
-    // Escopo financeiro LIMITADO a operações NÃO terminais.
+    // `integral` — a leitura de crédito é a FRONTEIRA: sem identidade de crédito
+    // válida NÃO há mutação. Ausente ⇒ `unresolved` (NÃO prossegue).
     const current = await this.credit.get(input.campaignId, input.operationId);
-    const currentStatus = current?.status ?? null;
-    if (currentStatus === "delivered" || currentStatus === "refunded") {
-      // Terminal: NENHUM efeito de ledger (refunded NÃO retorna a delivered).
+    if (current === null) {
       return Object.freeze({
-        outcome: "operation_terminal" as const,
+        outcome: "unresolved" as const,
         kind: "integral" as const,
-        status: currentStatus,
+        status: null,
         ref: probe.ref,
       });
     }
 
-    // `reserved → art_uploaded → delivered` (idempotente quando já `art_uploaded`).
+    // Terminal: NENHUM efeito de ledger (`refunded` NÃO retorna a `delivered`).
+    if (current.status === "delivered" || current.status === "refunded") {
+      return Object.freeze({
+        outcome: "operation_terminal" as const,
+        kind: "integral" as const,
+        status: current.status,
+        ref: probe.ref,
+      });
+    }
+
+    // Só `reserved`/`art_uploaded` chegam aqui (o leitor estrito garante o union).
+    // `markArtUploaded` precisa CONFIRMAR `art_uploaded`; uma falha aqui impede o
+    // `deliver` (a entrega NÃO é anunciada sem confirmação válida).
     await this.credit.markArtUploaded(input.campaignId, input.operationId);
     const delivered = await this.credit.deliver(input.campaignId, input.operationId);
 
