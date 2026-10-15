@@ -24,7 +24,7 @@ import {
   creditOperationRow,
   markArtUploaded,
   deliverCredit,
-  refundCredit,
+  pgCallJson,
   reserveCredit,
   setCredits,
   type IsolatedContext,
@@ -143,8 +143,9 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
     actorId = store.userId;
   }, 60_000);
 
-  it("(a) corrida entrega×estorno: `delivered` vence; estorno só na ausência; no máximo UM efeito de ledger", async () => {
-    // Arte presente + entrega vence: o encerramento PF recusa `delivered`.
+  it("(a) corrida entrega×FECHAMENTO PF em CONEXÕES INDEPENDENTES: exatamente UM vencedor; ledger coerente", async () => {
+    // Arte presente + entrega vence: o encerramento PF recusa `delivered`
+    // (`delivered` vence / estorno só na ausência).
     const campaign = await createCampaign(ctx.supabase, storeId);
     const operation = randomUUID();
     await reserveCredit(ctx.pg, storeId, campaign, operation);
@@ -157,21 +158,45 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
     expect(delivered?.status).toBe("delivered");
     expect(delivered?.refund_tx_id).toBeNull();
 
-    // Corrida REAL entrega×estorno: exatamente UM dos dois vence; nunca ambos.
+    // CORRIDA REAL: o FECHAMENTO PF (`product_1_1_close_failed_operation`) × a
+    // ENTREGA (`product_1_1_deliver_campaign_credit_operation`) sobre a MESMA
+    // operação em `art_uploaded`, com o marcador `failed` JÁ gravado e SEM claim
+    // `in_progress`. As duas pontas rodam em CONEXÕES INDEPENDENTES (`ctx.pg` ×
+    // `ctx.pg2`) — concorrência real, não serialização na mesma conexão.
     const raceCampaign = await createCampaign(ctx.supabase, storeId);
     const raceOp = randomUUID();
     await reserveCredit(ctx.pg, storeId, raceCampaign, raceOp);
     await markArtUploaded(ctx.pg, raceCampaign, raceOp);
+    await recordFailed(raceCampaign, raceOp, "IMG-RACE-A");
+
+    const refundBefore = await refundLedgerCount(storeId);
     const settled = await Promise.allSettled([
       deliverCredit(ctx.pg, raceCampaign, raceOp),
-      refundCredit(ctx.pg, raceCampaign, raceOp, "race"),
+      pgCallJson(
+        ctx.pg2,
+        "SELECT public.product_1_1_close_failed_operation($1, $2, 'absent', $3) AS r",
+        [raceCampaign, raceOp, "race"],
+      ),
     ]);
-    expect(settled.filter((s) => s.status === "fulfilled").length).toBeGreaterThanOrEqual(1);
+    const fulfilled = settled.filter((s) => s.status === "fulfilled");
+    const rejected = settled.filter((s) => s.status === "rejected");
+    // EXATAMENTE UM vencedor — nunca ambos, nunca nenhum.
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+
     const final = await creditOperationRow(ctx.pg, raceCampaign, raceOp);
-    expect(["delivered", "refunded"]).toContain(final?.status);
-    // Terminais são mutuamente exclusivos: `refunded` tem refund_tx; `delivered` não.
-    if (final?.status === "refunded") expect(final.refund_tx_id).not.toBeNull();
-    else expect(final?.refund_tx_id).toBeNull();
+    const refundAfter = await refundLedgerCount(storeId);
+    if (final?.status === "delivered") {
+      // A ENTREGA venceu ⇒ NENHUM estorno aplicado (refund_tx nulo, ledger intacto).
+      expect(final.refund_tx_id).toBeNull();
+      expect(refundAfter).toBe(refundBefore);
+    } else if (final?.status === "refunded") {
+      // O FECHAMENTO PF venceu ⇒ estorno ÚNICO e coerente (refund_tx + 1 ledger).
+      expect(final.refund_tx_id).not.toBeNull();
+      expect(refundAfter).toBe(refundBefore + 1);
+    } else {
+      throw new Error(`race_terminal_not_expected:${String(final?.status)}`);
+    }
   }, 90_000);
 
   it("(b) estorno idempotente: 2ª chamada `idempotent:true`, sem segundo efeito de ledger", async () => {
