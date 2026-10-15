@@ -736,16 +736,21 @@ export async function runProductOneToOneGeneration(
       // Terminal de pendência AUTORIZADA (sem tentar gravar marcador): preserva um
       // marcador `failed` JÁ persistido (imutável) e roteia à resolução autorizada
       // SEM reescrever `unknown` (evita o caminho que grava `unknown`). Nunca estorna.
-      const emitAuthorizedPending = async (params?: {
-        internalCategory?: string;
-        normalizedError?: string;
-        target?: AttemptTarget;
-        attemptNumber?: number;
-        model?: string;
-        quality?: string;
-      }): Promise<void> => {
-        const reference = newSupportReference();
-        await recordPendingDiagnosis(reference, {
+      // P3 — usa a REFERÊNCIA CANÔNICA (persistida) quando fornecida; só gera uma
+      // nova se não houver (marcador ANTIGO sem referência — sem sobrescrever).
+      const emitAuthorizedPending = async (
+        params?: {
+          internalCategory?: string;
+          normalizedError?: string;
+          target?: AttemptTarget;
+          attemptNumber?: number;
+          model?: string;
+          quality?: string;
+        },
+        reference?: string,
+      ): Promise<void> => {
+        const resolvedReference = reference ?? newSupportReference();
+        await recordPendingDiagnosis(resolvedReference, {
           internalCategory: params?.internalCategory ?? "generation_unknown",
           normalizedError: params?.normalizedError ?? "unknown_provider_error",
           target: params?.target,
@@ -753,7 +758,7 @@ export async function runProductOneToOneGeneration(
           model: params?.model,
           quality: params?.quality,
         });
-        emitTerminal({ type: "unknown", reference });
+        emitTerminal({ type: "unknown", reference: resolvedReference });
       };
 
       // Falha confirmada (sem arte entregue): só ENCERRA (PF) pela RPC do Plano 01
@@ -773,20 +778,26 @@ export async function runProductOneToOneGeneration(
         allowPfClosure: boolean;
         /** `true` quando `outcome='failed'` foi persistido COM SUCESSO (item 4a). */
         failedMarkerPersisted: boolean;
+        /** P3 — referência de suporte CANÔNICA (persistida) para a pendência. */
+        reference?: string;
       }): Promise<void> => {
         const kind = await probeArtifactKind();
         // Quando o marcador `failed` JÁ foi persistido, NÃO reescrever `unknown`
-        // (roteia à resolução autorizada sem o caminho que grava `unknown`).
+        // (roteia à resolução autorizada sem o caminho que grava `unknown`) e usa a
+        // REFERÊNCIA CANÔNICA persistida (P3 — preserva a correlação do diagnóstico).
         const emitPending = (): Promise<void> =>
           params.failedMarkerPersisted
-            ? emitAuthorizedPending({
-                internalCategory: params.internalCategory,
-                normalizedError: params.normalizedError,
-                target: params.target,
-                attemptNumber: params.attemptNumber,
-                model: params.model,
-                quality: params.quality,
-              })
+            ? emitAuthorizedPending(
+                {
+                  internalCategory: params.internalCategory,
+                  normalizedError: params.normalizedError,
+                  target: params.target,
+                  attemptNumber: params.attemptNumber,
+                  model: params.model,
+                  quality: params.quality,
+                },
+                params.reference,
+              )
             : emitUnknownPending({
                 internalCategory: params.internalCategory,
                 normalizedError: params.normalizedError,
@@ -1318,13 +1329,20 @@ export async function runProductOneToOneGeneration(
           // `failed` persistido) e roteia à resolução autorizada, SEM sobrescrever
           // o marcador.
           let failedMarkerPersisted = false;
+          // P3 — referência de suporte CANÔNICA: gerada ANTES da gravação e
+          // persistida no marcador `failed`; em replay IDEMPOTENTE prevalece a
+          // referência JÁ persistida (o RPC devolve a linha existente).
+          const supportReference = newSupportReference();
+          let canonicalReference: string | null = supportReference;
           try {
-            await attempts.recordOperationOutcome({
+            const recorded = (await attempts.recordOperationOutcome({
               campaignId,
               operationId,
               outcome: "failed",
-            });
+              supportReference,
+            })) as { supportReference?: string | null } | null | undefined;
             failedMarkerPersisted = true;
+            canonicalReference = recorded?.supportReference ?? supportReference;
           } catch {
             failedMarkerPersisted = false;
           }
@@ -1339,6 +1357,7 @@ export async function runProductOneToOneGeneration(
             reason: "generation_failed",
             allowPfClosure: true,
             failedMarkerPersisted,
+            reference: canonicalReference ?? undefined,
           });
           return;
         }

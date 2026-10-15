@@ -99,6 +99,8 @@ interface Layer1Harness {
   >[1];
   readonly closeCalls: Array<Record<string, unknown>>;
   readonly recordOutcomes: string[];
+  readonly recordOutcomeReferences: Array<string | null>;
+  readonly diagnosisRefs: string[];
   readonly refundCalls: number;
   setProviderSequence(seq: Array<AiInvocationResult | Error>): void;
   setArtifactKind(kind: ArtifactKind): void;
@@ -107,12 +109,16 @@ interface Layer1Harness {
   setCloseThrows(fail: boolean): void;
   setRecordAttemptThrows(fail: boolean): void;
   setAcquireSequence(seq: Array<{ acquired: boolean; reason: string | null }>): void;
+  setReplayMarkerReference(ref: string | null): void;
 }
 
 async function buildHarness(): Promise<Layer1Harness> {
   const order: string[] = [];
   const closeCalls: Array<Record<string, unknown>> = [];
   const recordOutcomes: string[] = [];
+  const recordOutcomeReferences: Array<string | null> = [];
+  const diagnosisRefs: string[] = [];
+  let replayMarkerReference: string | null | undefined = undefined;
   let refundCalls = 0;
   let providerSequence: Array<AiInvocationResult | Error> = [];
   let providerIndex = 0;
@@ -157,11 +163,22 @@ async function buildHarness(): Promise<Layer1Harness> {
       };
     }),
     finish: vi.fn(async () => ({ success: true })),
-    recordOperationOutcome: vi.fn(async (input: { outcome: "unknown" | "failed" }) => {
-      recordOutcomes.push(input.outcome);
-      if (markerWriteThrows) throw new Error("marker_write_failed");
-      return { success: true, outcome: input.outcome };
-    }),
+    recordOperationOutcome: vi.fn(
+      async (input: { outcome: "unknown" | "failed"; supportReference?: string | null }) => {
+        recordOutcomes.push(input.outcome);
+        if (input.outcome === "failed") {
+          recordOutcomeReferences.push(input.supportReference ?? null);
+        }
+        if (markerWriteThrows) throw new Error("marker_write_failed");
+        // Replay idempotente (P3): a referência PERSISTIDA prevalece; quando
+        // não há replay configurado, devolve a referência solicitada.
+        const persisted =
+          replayMarkerReference === undefined
+            ? (input.supportReference ?? null)
+            : replayMarkerReference;
+        return { success: true, outcome: input.outcome, supportReference: persisted };
+      },
+    ),
     getCampaignOperation: vi.fn(async () => null),
   };
 
@@ -239,9 +256,10 @@ async function buildHarness(): Promise<Layer1Harness> {
       if (recordAttemptThrows) throw new Error("attempt_history_failed");
       return { id: "op-row-1", operationId: OPERATION_ID };
     }),
-    recordDiagnosis: vi.fn(async (input: { reference?: string }) => ({
-      reference: input.reference ?? "ref",
-    })),
+    recordDiagnosis: vi.fn(async (input: { reference?: string }) => {
+      if (typeof input.reference === "string") diagnosisRefs.push(input.reference);
+      return { reference: input.reference ?? "ref" };
+    }),
     generateSupportReference: () => "66666666-6666-4666-8666-666666666666",
   } as Parameters<
     typeof import("../orchestration/generation-orchestrator").runProductOneToOneGeneration
@@ -251,6 +269,8 @@ async function buildHarness(): Promise<Layer1Harness> {
     deps,
     closeCalls,
     recordOutcomes,
+    recordOutcomeReferences,
+    diagnosisRefs,
     get refundCalls() {
       return refundCalls;
     },
@@ -276,6 +296,9 @@ async function buildHarness(): Promise<Layer1Harness> {
     setAcquireSequence(seq) {
       acquireSequence = seq;
       acquireIndex = 0;
+    },
+    setReplayMarkerReference(ref) {
+      replayMarkerReference = ref;
     },
   } as Layer1Harness;
 }
@@ -440,6 +463,50 @@ describe("F56.2b2b — Camada 1: PF (4a) completo e janela principal→fallback"
     expect(harness.refundCalls).toBe(0);
     expect(terminal).toMatchObject({ type: "unknown" });
     expect(String(terminal.message ?? "")).not.toContain("estornado");
+  });
+});
+
+describe("F56.2b2b — Camada 1: referência canônica (marcador ↔ diagnóstico ↔ retorno)", () => {
+  it("`failed` persistido + encerramento inconclusivo ⇒ stream e diagnóstico usam a MESMA referência canônica", async () => {
+    const harness = await buildHarness();
+    harness.setArtifactKind("indeterminate"); // ausência NÃO confirmada ⇒ pendência
+    harness.setProviderSequence([TERMINAL_FAILURE()]);
+
+    const { terminal } = await run(harness);
+
+    // A gravação do marcador recebeu a referência canônica (gerada ANTES).
+    expect(harness.recordOutcomeReferences).toHaveLength(1);
+    const canonical = harness.recordOutcomeReferences[0];
+    expect(typeof canonical).toBe("string");
+    expect(terminal).toMatchObject({ type: "unknown" });
+    expect(terminal.reference).toBe(canonical);
+    expect(harness.diagnosisRefs).toContain(canonical);
+  });
+
+  it("replay IDEMPOTENTE ⇒ prevalece a referência JÁ persistida (nunca divergente)", async () => {
+    const harness = await buildHarness();
+    harness.setArtifactKind("indeterminate");
+    harness.setProviderSequence([TERMINAL_FAILURE()]);
+    harness.setReplayMarkerReference("IMG-PERSISTED");
+
+    const { terminal } = await run(harness);
+
+    expect(terminal).toMatchObject({ type: "unknown", reference: "IMG-PERSISTED" });
+    expect(harness.diagnosisRefs).toContain("IMG-PERSISTED");
+  });
+
+  it("marcador ANTIGO sem referência ⇒ tratamento seguro (gera referência para a pendência, sem sobrescrever)", async () => {
+    const harness = await buildHarness();
+    harness.setArtifactKind("indeterminate");
+    harness.setProviderSequence([TERMINAL_FAILURE()]);
+    harness.setReplayMarkerReference(null);
+
+    const { terminal } = await run(harness);
+
+    expect(terminal.type).toBe("unknown");
+    expect(typeof terminal.reference).toBe("string");
+    expect((terminal.reference as string).length).toBeGreaterThan(0);
+    expect(harness.diagnosisRefs).toContain(terminal.reference);
   });
 });
 

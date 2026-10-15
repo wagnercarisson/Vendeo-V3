@@ -160,7 +160,9 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
       terminal,
       unknown,
       processing,
-      supportReference: unknown ? (outcome?.support_reference ?? null) : null,
+      // P2 — a referência de suporte é exposta para QUALQUER marcador PERSISTIDO
+      // NÃO terminal (`unknown` OU `failed`), sem alterar o significado de `unknown`.
+      supportReference: !terminal ? (outcome?.support_reference ?? null) : null,
       createdAt: row.created_at ?? null,
       updatedAt: row.updated_at ?? null,
       latestAttemptAt,

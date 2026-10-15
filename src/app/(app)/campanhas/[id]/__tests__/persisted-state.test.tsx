@@ -111,6 +111,24 @@ describe("mapNewFlowDisplayState — deriva do estado PERSISTIDO (C1/I2/E1)", ()
       mapNewFlowDisplayState({ status: "art_uploaded", unknown: true }),
     ).toBe("unknown");
   });
+
+  it("P2 — `reserved`/`art_uploaded` COM `outcome='failed'` PERSISTIDO ⇒ `unknown` (pendência, nunca geração ativa)", () => {
+    expect(
+      mapNewFlowDisplayState({ status: "reserved", unknown: false, outcome: "failed" }),
+    ).toBe("unknown");
+    expect(
+      mapNewFlowDisplayState({ status: "art_uploaded", unknown: false, outcome: "failed" }),
+    ).toBe("unknown");
+  });
+
+  it("P2 — terminal PREVALECE mesmo com `outcome='failed'` persistido", () => {
+    expect(
+      mapNewFlowDisplayState({ status: "delivered", unknown: false, outcome: "failed" }),
+    ).toBe("delivered");
+    expect(
+      mapNewFlowDisplayState({ status: "refunded", unknown: false, outcome: "failed" }),
+    ).toBe("refunded");
+  });
 });
 
 describe("CampaignPageClient — visão persistida do novo fluxo", () => {

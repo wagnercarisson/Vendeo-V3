@@ -399,6 +399,9 @@ function createFakeRpcClient(
         (o) => o.campaign_id === credit.campaign_id && o.operation_id === credit.operation_id,
       );
       const unknownRaw = oc?.outcome === "unknown";
+      // P2 (migration 20261015000003) — expõe o `outcome` PERSISTIDO
+      // (`unknown`/`failed`) enquanto NÃO terminal; terminal zera (precedência).
+      const exposeOutcome = oc !== undefined && !terminal;
       return Promise.resolve({
         data: {
           success: true,
@@ -411,8 +414,8 @@ function createFakeRpcClient(
           consumed_definitive: credit.status === "delivered",
           terminal,
           unknown: unknownRaw && !terminal,
-          outcome: unknownRaw && !terminal ? "unknown" : null,
-          support_reference: unknownRaw && !terminal ? (oc?.support_reference ?? null) : null,
+          outcome: exposeOutcome ? (oc?.outcome ?? null) : null,
+          support_reference: exposeOutcome ? (oc?.support_reference ?? null) : null,
         },
         error: null,
       });
@@ -689,6 +692,40 @@ describe("F56.2b1b — cliente fino de início de tentativa (simulado)", () => {
       unknown: true,
       outcome: "unknown",
       supportReference: "IMG-123",
+    });
+  });
+
+  it("P2: getCampaignOperation expõe `outcome='failed'` PERSISTIDO quando NÃO terminal (parser NÃO descarta)", async () => {
+    const fake = createFakeRpcClient({
+      credits: [creditSeed()],
+      outcomes: [
+        { campaign_id: "camp-1", operation_id: "op-1", outcome: "failed", support_reference: "IMG-FAIL" },
+      ],
+    });
+    const state = await new ProductOneToOneAttemptStartClient(fake.client).getCampaignOperation("camp-1");
+    expect(state).toMatchObject({
+      status: "reserved",
+      terminal: false,
+      unknown: false,
+      outcome: "failed",
+      supportReference: "IMG-FAIL",
+    });
+  });
+
+  it("P2: precedência TERMINAL — `failed` persistido + `delivered` ⇒ outcome/supportReference nulos", async () => {
+    const fake = createFakeRpcClient({
+      credits: [creditSeed({ status: "delivered" })],
+      outcomes: [
+        { campaign_id: "camp-1", operation_id: "op-1", outcome: "failed", support_reference: "IMG-FAIL" },
+      ],
+    });
+    const state = await new ProductOneToOneAttemptStartClient(fake.client).getCampaignOperation("camp-1");
+    expect(state).toMatchObject({
+      status: "delivered",
+      terminal: true,
+      unknown: false,
+      outcome: null,
+      supportReference: null,
     });
   });
 

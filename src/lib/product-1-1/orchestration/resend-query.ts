@@ -97,8 +97,12 @@ export async function queryProductOneToOneOperation(
 
   // F4/C1 — estado VERBATIM: `unknown` SÓ governa operação NÃO terminal; a
   // precedência terminal (`delivered`/`refunded`) é aplicada na leitura.
-  const state: ProductOneToOneOperationState =
-    operation.unknown && !operation.terminal ? "unknown" : operation.status;
+  // P2 (F56.2b2b) — `outcome='failed'` NÃO terminal é PENDÊNCIA de resolução
+  // (nunca geração ativa).
+  const pending =
+    !operation.terminal &&
+    (operation.unknown === true || operation.outcome === "failed");
+  const state: ProductOneToOneOperationState = pending ? "unknown" : operation.status;
 
   const attempts = await listOperationAttempts({
     campaignId: input.campaignId,

@@ -84,6 +84,12 @@ export interface NewFlowOperationSnapshot {
   readonly status: "reserved" | "art_uploaded" | "delivered" | "refunded";
   /** `true` quando o resultado desconhecido está PERSISTIDO (C1). */
   readonly unknown: boolean;
+  /**
+   * P2 (F56.2b2b) — marcador PERSISTIDO de finalidade: `'unknown'`/`'failed'`
+   * enquanto a operação é NÃO terminal. `'failed'` NUNCA é geração ativa —
+   * significa pendência de resolução. Terminal ⇒ nulo (precedência).
+   */
+  readonly outcome?: "unknown" | "failed" | null;
   readonly supportReference?: string | null;
 }
 
@@ -92,10 +98,12 @@ export interface NewFlowOperationSnapshot {
  *
  * - `null` (operação ausente) ⇒ `null` (campanha legada).
  * - I2 — precedência TERMINAL: `delivered`/`refunded` PREVALECEM, MESMO quando o
- *   marcador histórico `unknown === true` existe (a linha de
- *   `product_1_1_generation_outcomes` é imutável).
- * - SÓ para operação NÃO terminal: `unknown === true` (persistido) ⇒ `"unknown"`.
- * - `reserved`/`art_uploaded` sem `unknown` persistido ⇒ `"running"` ("Processando").
+ *   marcador histórico existe (a linha de `product_1_1_generation_outcomes` é
+ *   imutável).
+ * - SÓ para operação NÃO terminal: `unknown === true` (persistido) OU
+ *   `outcome === "failed"` (falha FINAL persistida) ⇒ `"unknown"` (PENDÊNCIA de
+ *   resolução) — NUNCA geração ativa.
+ * - `reserved`/`art_uploaded` sem marcador persistido ⇒ `"running"` ("Processando").
  *
  * C1 — NUNCA infere `unknown` por dedução de tempo (`elapsedMs`) nem por posição
  * no teto/orçamento: a única origem é o registro persistido.
@@ -108,7 +116,7 @@ export function mapNewFlowDisplayState(
   if (operation.status === "delivered") return "delivered";
   if (operation.status === "refunded") return "refunded";
 
-  if (operation.unknown === true) return "unknown";
+  if (operation.unknown === true || operation.outcome === "failed") return "unknown";
 
   return "running";
 }
