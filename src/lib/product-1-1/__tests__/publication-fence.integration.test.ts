@@ -118,6 +118,7 @@ function genDeps(overrides: Partial<ProductOneToOneGenerationDeps> = {}): Produc
 
 let ctx: IsolatedContext;
 let storeId: string;
+let actorId: string;
 
 async function begin(campaign: string, operation: string) {
   return pgCallJson<{ acquired: boolean; token: string | null; publication_state: string }>(
@@ -198,6 +199,7 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
     ctx = await createIsolatedContext();
     const store = await createTestStore(ctx.supabase);
     storeId = store.storeId;
+    actorId = store.userId;
     await setCredits(ctx.pg, storeId, 40);
   }, 60_000);
 
@@ -250,7 +252,7 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
     // Admin NÃO autorizado para o inconclusivo: bloqueado.
     await expect(
       pgCallJson(ctx.pg, "SELECT public.admin_resolve_product_1_1_pending($1,$2,$3,$4,$5,$6,$7::jsonb) AS r", [
-        randomUUID(),
+        actorId,
         campaign,
         op,
         "refund_once",
@@ -266,7 +268,7 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
       ctx.pg,
       "SELECT public.admin_resolve_product_1_1_pending($1,$2,$3,$4,$5,$6,$7::jsonb) AS r",
       [
-        randomUUID(),
+        actorId,
         campaign,
         op,
         "refund_once",
@@ -347,6 +349,7 @@ describe("F56.2b2b — Camada 2: BARREIRA pós-upload/pré-`mark` (orquestrador 
     ctx = await createIsolatedContext();
     const store = await createTestStore(ctx.supabase);
     storeId = store.storeId;
+    actorId = store.userId;
     await setCredits(ctx.pg, storeId, 40);
   }, 60_000);
 
@@ -438,7 +441,7 @@ describe("F56.2b2b — Camada 2: BARREIRA pós-upload/pré-`mark` (orquestrador 
         ctx.pg2,
         "SELECT public.admin_resolve_product_1_1_pending($1,$2,$3,$4,$5,$6,$7::jsonb) AS r",
         [
-          randomUUID(),
+          actorId,
           campaign,
           op,
           "refund_once",
