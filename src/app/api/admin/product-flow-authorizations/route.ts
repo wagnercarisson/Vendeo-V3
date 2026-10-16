@@ -148,14 +148,24 @@ export const POST = apiHandler(async (request: Request) => {
     );
   }
 
-  // Sucesso de concessão: exige envelope consistente com stage=off e a solicitação.
+  // Sucesso de concessão: exige envelope consistente com a solicitação.
+  // Casos aceitos (F56.2b2c): (a) concessão legada `off`; (b) via ESCREITA estreita
+  // `isolated_pilot` + `test_stores`. Qualquer outro estágio habilitador é recusado
+  // (403 pelo ramo `refused` acima) — a barreira global é preservada.
   if (result.granted === true) {
+    const isLegacyOffGrant =
+      body.stage === "off" &&
+      result.stage === "off" &&
+      result.scope === body.scope;
+    const isNarrowPilotGrant =
+      body.stage === "isolated_pilot" &&
+      result.stage === "isolated_pilot" &&
+      body.scope === "test_stores" &&
+      result.scope === "test_stores";
     const consistentGrant =
       result.success === true &&
       result.refused === false &&
-      result.stage === "off" &&
-      body.stage === "off" &&
-      result.scope === body.scope;
+      (isLegacyOffGrant || isNarrowPilotGrant);
 
     if (!consistentGrant) {
       return NextResponse.json(
@@ -167,7 +177,7 @@ export const POST = apiHandler(async (request: Request) => {
     return NextResponse.json({
       granted: true,
       idempotent: result.idempotent === true,
-      stage: "off",
+      stage: isNarrowPilotGrant ? "isolated_pilot" : "off",
       scope: result.scope,
     });
   }
