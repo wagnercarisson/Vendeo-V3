@@ -41,7 +41,7 @@ export interface PilotSpendRepositoryPort {
   endPaidCall(input: {
     callId: string;
     ownerToken: string;
-    actualEstimatedUsd: number;
+    actualEstimatedUsd: number | null;
   }): Promise<Record<string, unknown>>;
   markUnknown(input: {
     callId: string;
@@ -101,7 +101,7 @@ export class SupabasePilotSpendRepository implements PilotSpendRepositoryPort {
   endPaidCall(input: {
     callId: string;
     ownerToken: string;
-    actualEstimatedUsd: number;
+    actualEstimatedUsd: number | null;
   }): Promise<Record<string, unknown>> {
     return this.rpc("product_1_1_pilot_end_paid_call", {
       p_call_id: input.callId,

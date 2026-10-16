@@ -134,6 +134,7 @@ DECLARE
   v_row      public.product_1_1_pilot_paid_calls%ROWTYPE;
   v_found    BOOLEAN;
   v_unknown  BOOLEAN;
+  v_same_stream BOOLEAN;
   v_other    BOOLEAN;
 BEGIN
   IF p_call_id IS NULL THEN RAISE EXCEPTION 'missing_call_id'; END IF;
@@ -141,6 +142,9 @@ BEGIN
        'image_primary','image_retry','image_fallback','copy_initial','copy_auto','copy_manual')
   THEN RAISE EXCEPTION 'invalid_call_kind'; END IF;
   IF p_estimated_usd IS NULL OR p_estimated_usd < 0 THEN RAISE EXCEPTION 'invalid_estimated_usd'; END IF;
+
+  -- Trava comum do piloto (serializa aquisição com a instalação do bloqueio global).
+  PERFORM pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'));
 
   SELECT * INTO v_state FROM public.product_1_1_pilot_spend_state WHERE id = TRUE FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'pilot_state_missing'; END IF;
@@ -174,6 +178,18 @@ BEGIN
   SELECT EXISTS (SELECT 1 FROM public.product_1_1_pilot_paid_calls WHERE state = 'unknown')
     INTO v_unknown;
   IF v_unknown THEN RAISE EXCEPTION 'pilot_requires_reconciliation'; END IF;
+
+  -- Mesma campanha / MESMO FLUXO: uma NOVA chamada do mesmo fluxo (imagem↔imagem,
+  -- copy↔copy) com um registro `in_flight` ainda não resolvido é RECUSADA — fecha a
+  -- janela de uma chamada travada (ex.: falha ao marcar `unknown`). Preserva a
+  -- concorrência por DESIGN imagem×copy (fluxos distintos).
+  SELECT EXISTS (
+    SELECT 1 FROM public.product_1_1_pilot_paid_calls
+    WHERE state = 'in_flight' AND campaign_id = p_campaign_id
+      AND ((p_kind LIKE 'image%' AND kind LIKE 'image%')
+        OR (p_kind LIKE 'copy%' AND kind LIKE 'copy%'))
+  ) INTO v_same_stream;
+  IF v_same_stream THEN RAISE EXCEPTION 'pilot_stream_busy'; END IF;
 
   -- Concorrência LEGÍTIMA: `in_flight` de OUTRA campanha bloqueia nova campanha;
   -- a MESMA campanha (imagem×copy) é permitida.
@@ -222,22 +238,38 @@ DECLARE
   v_row public.product_1_1_pilot_paid_calls%ROWTYPE;
   v_diff NUMERIC;
 BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'));
   SELECT * INTO v_row FROM public.product_1_1_pilot_paid_calls WHERE call_id = p_call_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'call_not_found'; END IF;
-  IF v_row.owner_token <> p_owner_token THEN RAISE EXCEPTION 'not_owner'; END IF;
+  IF v_row.owner_token IS DISTINCT FROM p_owner_token THEN RAISE EXCEPTION 'not_owner'; END IF;
   IF v_row.state = 'released' THEN
     RETURN jsonb_build_object('success', true, 'idempotent', true, 'state', 'released', 'call_id', p_call_id);
   END IF;
+  -- Resultado TARDIO de chamada RECONCILIADA: preserva a disposição auditada e a
+  -- estimativa; NÃO recalcula o acumulado nem reabre a chamada.
+  IF v_row.state = 'stale' THEN
+    RETURN jsonb_build_object('success', true, 'idempotent', true, 'state', 'stale', 'call_id', p_call_id);
+  END IF;
   IF v_row.state = 'unknown' THEN RAISE EXCEPTION 'call_is_unknown'; END IF;
+  IF p_actual_estimated_usd IS NOT NULL AND p_actual_estimated_usd < 0 THEN
+    RAISE EXCEPTION 'invalid_estimated_usd';
+  END IF;
 
-  v_diff := COALESCE(p_actual_estimated_usd, v_row.estimated_usd) - v_row.estimated_usd;
-  UPDATE public.product_1_1_pilot_paid_calls
-     SET state = 'released', estimated_usd = COALESCE(p_actual_estimated_usd, estimated_usd), updated_at = now()
-   WHERE call_id = p_call_id;
-  IF v_diff <> 0 THEN
-    UPDATE public.product_1_1_pilot_spend_state
-       SET spent_usd = GREATEST(spent_usd + v_diff, 0), updated_at = now()
-     WHERE id = TRUE;
+  -- Estimativa real: NULL ⇒ MANTÉM a estimativa anterior (nunca zera a contabilidade).
+  IF p_actual_estimated_usd IS NULL THEN
+    UPDATE public.product_1_1_pilot_paid_calls
+       SET state = 'released', updated_at = now()
+     WHERE call_id = p_call_id;
+  ELSE
+    v_diff := p_actual_estimated_usd - v_row.estimated_usd;
+    UPDATE public.product_1_1_pilot_paid_calls
+       SET state = 'released', estimated_usd = p_actual_estimated_usd, updated_at = now()
+     WHERE call_id = p_call_id;
+    IF v_diff <> 0 THEN
+      UPDATE public.product_1_1_pilot_spend_state
+         SET spent_usd = GREATEST(spent_usd + v_diff, 0), updated_at = now()
+       WHERE id = TRUE;
+    END IF;
   END IF;
 
   RETURN jsonb_build_object('success', true, 'idempotent', false, 'state', 'released', 'call_id', p_call_id);
@@ -260,9 +292,10 @@ AS $$
 DECLARE
   v_row public.product_1_1_pilot_paid_calls%ROWTYPE;
 BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'));
   SELECT * INTO v_row FROM public.product_1_1_pilot_paid_calls WHERE call_id = p_call_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'call_not_found'; END IF;
-  IF v_row.owner_token <> p_owner_token THEN RAISE EXCEPTION 'not_owner'; END IF;
+  IF v_row.owner_token IS DISTINCT FROM p_owner_token THEN RAISE EXCEPTION 'not_owner'; END IF;
   IF v_row.state = 'unknown' THEN
     RETURN jsonb_build_object('success', true, 'idempotent', true, 'state', 'unknown', 'call_id', p_call_id);
   END IF;
@@ -300,6 +333,8 @@ BEGIN
   IF p_decision IS NULL OR p_decision NOT IN ('keep_accounted_release') THEN
     RAISE EXCEPTION 'invalid_decision';
   END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'));
 
   SELECT * INTO v_row FROM public.product_1_1_pilot_paid_calls WHERE call_id = p_call_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'call_not_found'; END IF;

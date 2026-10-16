@@ -11,6 +11,7 @@ import { getLaunchConfig } from "@/lib/launch-config/config";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
+import { resolvePilotSpendGate } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import {
   ProductOneToOneCopyRecoveryClient,
@@ -324,6 +325,10 @@ export const POST = apiHandler(
         mode: toAcquisitionMode(recoveryRequest.mode),
         requestToken: recoveryRequest.requestToken,
         runner,
+        // F56.2b2c (B2.3) — conexão server-side OBRIGATÓRIA do gate de gasto do
+        // piloto (null ⇒ piloto INATIVO; preserva o legado). A estimativa da copy
+        // é decisão humana aprovada (Plan 04); ausente ⇒ a chamada é BLOQUEADA.
+        runnerDeps: { pilotSpend: (await resolvePilotSpendGate()) ?? undefined },
       });
       return NextResponse.json({ recovery: result });
     } catch (error) {

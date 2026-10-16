@@ -8,10 +8,11 @@ import { createDefaultTelemetryContext } from "@/lib/ai/telemetry-sink";
 import { defaultAiGateway } from "@/lib/ai";
 import type { AiInvoker } from "@/lib/ai/gateway";
 import type { AiTelemetryContext } from "@/lib/ai/types";
-import type {
-  PilotPaidCallHandle,
-  PilotPaidCallKind,
-  PilotSpendGate,
+import {
+  isUnknownPilotOutcome,
+  type PilotPaidCallHandle,
+  type PilotPaidCallKind,
+  type PilotSpendGate,
 } from "@/lib/product-1-1/pilot/spend-control";
 
 import type { CopyCommit, CopyDelivery } from "./copy-state";
@@ -98,8 +99,14 @@ export interface DefaultProductOneToOneCopyRunnerDeps {
   readonly pilotSpend?: PilotSpendGate;
   /** Kind da chamada de copy (`copy_initial` default; `copy_auto`/`copy_manual` na recuperação). */
   readonly callKind?: PilotPaidCallKind;
-  /** Estimativa conservadora (USD) da chamada de copy (default 0). */
+  /**
+   * Estimativa conservadora (USD) da chamada de copy. OBRIGATÓRIA quando o gate do
+   * piloto está ARMADO (`pilotSpend` presente): ausência ⇒ a chamada é BLOQUEADA
+   * (nunca contabilizada como US$ 0).
+   */
   readonly estimatedUsd?: number;
+  /** Sequência real da tentativa (default 0) — contabilidade por chamada. */
+  readonly attemptSeq?: number;
 }
 
 /** Contrato estrutural consumido pelo orquestrador (`ProductOneToOneCopyOps`). */
@@ -194,15 +201,20 @@ export function createDefaultProductOneToOneCopyOps(
     // F56.2b2c (B2.3) — gate de gasto do piloto POR CHAMADA (INATIVO se ausente).
     const pilotSpend = deps.pilotSpend;
     const callKind: PilotPaidCallKind = deps.callKind ?? "copy_initial";
-    const estimatedUsd = deps.estimatedUsd ?? 0;
+    const attemptSeq = deps.attemptSeq ?? 0;
     let pilotHandle: PilotPaidCallHandle | undefined;
     if (pilotSpend) {
+      // Estimativa OBRIGATÓRIA quando armado: ausência NÃO vira chamada gratuita.
+      const estimatedUsd = deps.estimatedUsd;
+      if (!Number.isFinite(estimatedUsd) || (estimatedUsd as number) < 0) {
+        throw new Error("pilot_spend_blocked:estimate_required");
+      }
       const decision = await pilotSpend.beginPaidCall({
         campaignId: input.campaignId,
         operationId: input.operationId,
         kind: callKind,
-        attemptSeq: 0,
-        estimatedUsd,
+        attemptSeq,
+        estimatedUsd: estimatedUsd as number,
       });
       if (!decision.acquired) {
         throw new Error(`pilot_spend_blocked:${decision.reason}`);
@@ -221,17 +233,16 @@ export function createDefaultProductOneToOneCopyOps(
         target: deps.target ?? "primary",
       });
       if (pilotSpend && pilotHandle) {
-        await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: estimatedUsd });
+        await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: deps.estimatedUsd });
       }
       return deliveryFromResult(result);
     } catch (error) {
       if (pilotSpend && pilotHandle) {
-        const aborted =
-          signal.aborted || (error instanceof Error && error.name === "AbortError");
-        if (aborted) {
-          await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_abort" });
+        if (signal.aborted || isUnknownPilotOutcome(error)) {
+          // Resultado DESCONHECIDO ⇒ marca `unknown` (bloqueia novas chamadas).
+          await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_unknown" });
         } else {
-          await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: estimatedUsd });
+          await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: deps.estimatedUsd });
         }
       }
       throw error;

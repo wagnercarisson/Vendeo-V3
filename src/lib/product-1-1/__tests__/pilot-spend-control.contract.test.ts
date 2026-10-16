@@ -34,7 +34,17 @@ class FakeRepo implements PilotSpendRepositoryPort {
   }
   async beginPaidCall(input: PilotBeginPaidCallInput): Promise<Record<string, unknown>> {
     this.beginCalls.push(input);
-    return this.beginBehavior(input);
+    const raw = await this.beginBehavior(input);
+    // Injeta a IDENTIDADE a partir do input (o envelope real SEMPRE a contém);
+    // um teste específico sobrescreve para provar que divergência ⇒ falha fechada.
+    return {
+      call_id: input.callId,
+      campaign_id: input.campaignId,
+      operation_id: input.operationId,
+      kind: input.kind,
+      attempt_seq: input.attemptSeq,
+      ...raw,
+    };
   }
   async endPaidCall(input: { callId: string; ownerToken: string }): Promise<Record<string, unknown>> {
     this.endCalls.push({ callId: input.callId, ownerToken: input.ownerToken });
@@ -121,6 +131,18 @@ describe("F56.2b2c — gate por chamada (tri-state)", () => {
   it("envelope sem `success:true` ⇒ falha fechada (blocked/read_failure)", async () => {
     const repo = new FakeRepo();
     repo.beginBehavior = async () => ({ outcome: "acquired" });
+    const decision = await makeControl(repo).beginPaidCall({ ...BASE, kind: "image_primary" });
+    expect(decision).toEqual({ acquired: false, outcome: "blocked", reason: "read_failure" });
+  });
+
+  it("envelope com IDENTIDADE divergente ⇒ falha fechada (não autoriza)", async () => {
+    const repo = new FakeRepo();
+    // sobrescreve a identidade injetada com um `call_id` errado.
+    repo.beginBehavior = async () => ({
+      success: true,
+      outcome: "acquired",
+      call_id: "outro-call-id",
+    });
     const decision = await makeControl(repo).beginPaidCall({ ...BASE, kind: "image_primary" });
     expect(decision).toEqual({ acquired: false, outcome: "blocked", reason: "read_failure" });
   });

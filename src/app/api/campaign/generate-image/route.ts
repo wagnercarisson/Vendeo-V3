@@ -41,6 +41,7 @@ import { detectExclusiveNewFlowFields } from "@/lib/product-1-1/submission/exclu
 import { assertSubmissionEligible } from "@/lib/product-1-1/submission/assert-submission-eligible";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
+import { resolvePilotSpendGate } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
 import { NewFlowGenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import {
   runProductOneToOneGeneration,
@@ -475,7 +476,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
       if (existingNewFlowOperation) {
         // Operação existe ⇒ NENHUMA checagem pré-reserva, validação de entrada,
         // registro de tentativa ou criação de campanha roda.
-        return await runProductOneToOneGeneration(newFlowOrchestrationInput);
+        return await runProductOneToOneGeneration(newFlowOrchestrationInput, {
+          pilotSpend: (await resolvePilotSpendGate()) ?? undefined,
+        });
       }
 
       // (2) Regra Original revalidada server-side — erro de CAMPO, nunca IMG-001.
@@ -884,17 +887,22 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // Gap 1 — `copyContext` (loja, resolvida server-side) habilita a copy
       // DEFAULT do novo fluxo (corrida produtiva EXISTENTE); o orquestrador
       // conecta o serviço de copy e persiste o texto entregue.
-      return await runProductOneToOneGeneration({
-        ...newFlowOrchestrationInput,
-        references: newFlowEvidenceReferenceSelections.map((selection) => selection.id),
-        referenceSelections: newFlowEvidenceReferenceSelections,
-        identityImageUrl: newFlowIdentityImage?.dataUrl ?? undefined,
-        identityDirective: newFlowIdentityDirective ?? undefined,
-        copyContext: newFlowCopyContext,
-        // F46-04 (D3) — snapshot econômico do run propagado (copy + tentativas).
-        usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
-        creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
-      });
+      return await runProductOneToOneGeneration(
+        {
+          ...newFlowOrchestrationInput,
+          references: newFlowEvidenceReferenceSelections.map((selection) => selection.id),
+          referenceSelections: newFlowEvidenceReferenceSelections,
+          identityImageUrl: newFlowIdentityImage?.dataUrl ?? undefined,
+          identityDirective: newFlowIdentityDirective ?? undefined,
+          copyContext: newFlowCopyContext,
+          // F46-04 (D3) — snapshot econômico do run propagado (copy + tentativas).
+          usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+          creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+        },
+        // F56.2b2c (B2.3) — conexão server-side OBRIGATÓRIA do gate de gasto do
+        // piloto (null ⇒ piloto INATIVO; preserva o legado).
+        { pilotSpend: (await resolvePilotSpendGate()) ?? undefined },
+      );
     }
   }
 

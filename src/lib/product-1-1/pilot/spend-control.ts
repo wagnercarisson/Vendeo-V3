@@ -40,8 +40,11 @@ export type PilotStopReason =
   | "pilot_cap_not_configured"
   | "pilot_requires_reconciliation"
   | "pilot_busy"
+  | "pilot_stream_busy"
   | "pilot_cap_reached"
   | "invalid_call_kind"
+  | "invalid_estimated_usd"
+  | "estimate_required"
   | "operation_identity_conflict"
   | "existing_in_flight"
   | "closed"
@@ -67,7 +70,7 @@ export interface PilotSpendGate {
   }): Promise<PilotPaidCallDecision>;
   endPaidCall(input: {
     readonly handle: PilotPaidCallHandle;
-    readonly actualEstimatedUsd?: number;
+    readonly actualEstimatedUsd?: number | null;
   }): Promise<void>;
   markUnknown(input: {
     readonly handle: PilotPaidCallHandle;
@@ -80,8 +83,10 @@ const STOP_REASONS: readonly PilotStopReason[] = [
   "pilot_cap_not_configured",
   "pilot_requires_reconciliation",
   "pilot_busy",
+  "pilot_stream_busy",
   "pilot_cap_reached",
   "invalid_call_kind",
+  "invalid_estimated_usd",
 ];
 
 function classifyStop(message: string): PilotStopReason {
@@ -97,19 +102,28 @@ export interface PilotSpendControlDeps {
   readonly repository?: PilotSpendRepositoryPort;
   /** Gerador de ids (testes podem fixar). */
   readonly newId?: () => string;
-  /** Estimativa padrão (USD) quando o chamador não informa (conservadora). */
-  readonly defaultEstimatedUsd?: number;
+}
+
+/**
+ * Classifica um erro como RESULTADO DESCONHECIDO (exige reconciliação): abort/timeout
+ * (inclui `AiInvocationError { kind: "timeout" }` e sinais de timeout do gateway).
+ */
+export function isUnknownPilotOutcome(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const e = error as { name?: unknown; kind?: unknown; message?: unknown };
+  if (e.name === "AbortError") return true;
+  if (e.kind === "timeout") return true;
+  const message = typeof e.message === "string" ? e.message.toLowerCase() : "";
+  return message.includes("timeout") || message.includes("timed out");
 }
 
 export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
   private readonly repository: PilotSpendRepositoryPort;
   private readonly generateId: () => string;
-  private readonly defaultEstimatedUsd: number;
 
   constructor(deps: PilotSpendControlDeps = {}) {
     this.repository = deps.repository ?? new SupabasePilotSpendRepository();
     this.generateId = deps.newId ?? newId;
-    this.defaultEstimatedUsd = deps.defaultEstimatedUsd ?? 0;
   }
 
   async beginPaidCall(input: {
@@ -119,6 +133,10 @@ export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
     attemptSeq: number;
     estimatedUsd: number;
   }): Promise<PilotPaidCallDecision> {
+    // Estimativa OBRIGATÓRIA e conservadora: ausência/inválida NÃO vira chamada gratuita.
+    if (!Number.isFinite(input.estimatedUsd) || input.estimatedUsd < 0) {
+      return { acquired: false, outcome: "blocked", reason: "estimate_required" };
+    }
     const callId = this.generateId();
     const ownerToken = this.generateId();
     let data: Record<string, unknown>;
@@ -129,7 +147,7 @@ export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
         callId,
         kind: input.kind,
         attemptSeq: input.attemptSeq,
-        estimatedUsd: input.estimatedUsd ?? this.defaultEstimatedUsd,
+        estimatedUsd: input.estimatedUsd,
         ownerToken,
       });
     } catch (error) {
@@ -137,18 +155,24 @@ export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
       return { acquired: false, outcome: "blocked", reason: classifyStop(message) };
     }
 
-    // Envelope FECHADO: sucesso exige `success === true` explícito.
-    if (data.success !== true) {
+    // Envelope FECHADO COM IDENTIDADE: sucesso exige `success === true` E correspondência
+    // EXATA de `call_id`/`campaign_id`/`operation_id`/`kind`/`attempt_seq`.
+    const identityMatches =
+      data.call_id === callId &&
+      data.campaign_id === input.campaignId &&
+      data.operation_id === input.operationId &&
+      data.kind === input.kind &&
+      data.attempt_seq === input.attemptSeq;
+    if (data.success !== true || !identityMatches) {
       return { acquired: false, outcome: "blocked", reason: "read_failure" };
     }
-    const outcome = data.outcome;
-    if (outcome === "acquired") {
+    if (data.outcome === "acquired") {
       return { acquired: true, handle: { callId, ownerToken, kind: input.kind } };
     }
-    if (outcome === "existing_in_flight") {
+    if (data.outcome === "existing_in_flight") {
       return { acquired: false, outcome: "existing_in_flight", reason: "existing_in_flight" };
     }
-    if (outcome === "closed") {
+    if (data.outcome === "closed") {
       return { acquired: false, outcome: "closed", reason: "closed" };
     }
     return { acquired: false, outcome: "blocked", reason: "read_failure" };
@@ -156,29 +180,28 @@ export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
 
   async endPaidCall(input: {
     handle: PilotPaidCallHandle;
-    actualEstimatedUsd?: number;
+    actualEstimatedUsd?: number | null;
   }): Promise<void> {
-    try {
-      await this.repository.endPaidCall({
-        callId: input.handle.callId,
-        ownerToken: input.handle.ownerToken,
-        actualEstimatedUsd: input.actualEstimatedUsd ?? this.defaultEstimatedUsd,
-      });
-    } catch {
-      // Encerrar é best-effort; uma falha de encerramento NÃO autoriza nova chamada.
-    }
+    // `actualEstimatedUsd` OMITIDO/null ⇒ passa `null` (a RPC mantém a estimativa
+    // anterior; NUNCA zera). Falha PROPAGADA (não engolida).
+    await this.repository.endPaidCall({
+      callId: input.handle.callId,
+      ownerToken: input.handle.ownerToken,
+      actualEstimatedUsd:
+        typeof input.actualEstimatedUsd === "number" && Number.isFinite(input.actualEstimatedUsd)
+          ? input.actualEstimatedUsd
+          : null,
+    });
   }
 
   async markUnknown(input: { handle: PilotPaidCallHandle; reason: string }): Promise<void> {
-    try {
-      await this.repository.markUnknown({
-        callId: input.handle.callId,
-        ownerToken: input.handle.ownerToken,
-        reason: input.reason,
-      });
-    } catch {
-      // Mantém `in_flight`; a estimativa segue contabilizada.
-    }
+    // Falha PROPAGADA: deixar `in_flight` silenciosamente permitiria novas chamadas da
+    // MESMA campanha — o consumidor deve falhar-fechado.
+    await this.repository.markUnknown({
+      callId: input.handle.callId,
+      ownerToken: input.handle.ownerToken,
+      reason: input.reason,
+    });
   }
 
   /** Define o teto (decisão humana) — exposto para a superfície administrativa. */

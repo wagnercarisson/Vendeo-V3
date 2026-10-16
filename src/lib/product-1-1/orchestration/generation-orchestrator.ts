@@ -14,10 +14,11 @@ import type {
 } from "@/lib/ai/types";
 import { withOnCallTelemetry } from "@/lib/ai/telemetry-sink";
 import type { ImageModelPairConfig } from "@/lib/ai/image-model-pair";
-import type {
-  PilotPaidCallHandle,
-  PilotPaidCallKind,
-  PilotSpendGate,
+import {
+  isUnknownPilotOutcome,
+  type PilotPaidCallHandle,
+  type PilotPaidCallKind,
+  type PilotSpendGate,
 } from "@/lib/product-1-1/pilot/spend-control";
 import type {
   CurrentImageGenerationConfig,
@@ -1242,9 +1243,14 @@ export async function runProductOneToOneGeneration(
                 : attemptNumber === 1
                   ? "image_primary"
                   : "image_retry";
-            const pilotEstimatedUsd = internalCost.estimatedCostUsd ?? 0;
+            const pilotEstimatedUsd = internalCost.estimatedCostUsd;
             let pilotHandle: PilotPaidCallHandle | undefined;
             if (pilotSpend) {
+              // Estimativa OBRIGATÓRIA quando armado: ausência de preço NÃO vira
+              // chamada gratuita (pricing `complete` garante valor real).
+              if (typeof pilotEstimatedUsd !== "number" || !Number.isFinite(pilotEstimatedUsd) || pilotEstimatedUsd < 0) {
+                throw new Error("pilot_spend_blocked:estimate_required");
+              }
               const decision = await pilotSpend.beginPaidCall({
                 campaignId,
                 operationId,
@@ -1269,11 +1275,8 @@ export async function runProductOneToOneGeneration(
               }
             } catch (invokeError) {
               if (pilotSpend && pilotHandle) {
-                const aborted =
-                  controllerAbort.signal.aborted ||
-                  (invokeError instanceof Error && invokeError.name === "AbortError");
-                if (aborted) {
-                  await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_abort" });
+                if (controllerAbort.signal.aborted || isUnknownPilotOutcome(invokeError)) {
+                  await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_unknown" });
                 } else {
                   await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: pilotEstimatedUsd });
                 }

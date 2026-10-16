@@ -105,6 +105,9 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       // Plano 08 (correção de integração — gap 1): a rota fornece o contexto
       // server-side da copy DEFAULT (tipo) para o orquestrador gerar copy.
       "@/lib/product-1-1/copy/default-copy-runner",
+      // F56.2b2c (B2.3) — conexão server-side do gate de gasto do piloto
+      // (INATIVO quando o piloto não está autorizado). Par EXATO, sem prefixo.
+      "@/lib/product-1-1/pilot/resolve-pilot-spend-gate",
     ],
   },
   // Plano 04 — rota de status do reenvio (query-only).
@@ -179,6 +182,9 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/authorization/authorization-service",
       // Barreira de não-ativação: contexto canônico de elegibilidade (server-only).
       "@/lib/product-1-1/submission/eligibility-context",
+      // F56.2b2c (B2.3) — conexão server-side do gate de gasto do piloto
+      // (INATIVO quando o piloto não está autorizado). Par EXATO, sem prefixo.
+      "@/lib/product-1-1/pilot/resolve-pilot-spend-gate",
     ],
   },
   // Plano 02 (F56.2b2b) — rota AUTENTICADA da recuperação de IMAGEM (GET
