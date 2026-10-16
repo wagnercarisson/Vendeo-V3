@@ -77,8 +77,28 @@ describe("F56.2b2b — publication-fence: MIGRATION (forward-only)", () => {
     expect(activeSql).toMatch(/NOT v_authorized_abandon/);
   });
 
-  it("NÃO edita as migrations 20261015* (forward-only): cada uma preserva o conteúdo original", () => {
-    for (const prev of PREV_MIGRATIONS) {
+  it("FECHA os caminhos antigos (2 args), protege o estorno e restringe a exceção", () => {
+    // Assinaturas antigas de 2 args DROPADAS (sem bypass do fence).
+    expect(activeSql).toMatch(/DROP FUNCTION IF EXISTS public\.product_1_1_mark_campaign_credit_art_uploaded\(UUID, UUID\)/);
+    expect(activeSql).toMatch(/DROP FUNCTION IF EXISTS public\.product_1_1_deliver_campaign_credit_operation\(UUID, UUID\)/);
+    expect(activeSql).toMatch(/DROP FUNCTION IF EXISTS public\.product_1_1_close_failed_operation\(UUID, UUID, TEXT, TEXT\)/);
+    // Estorno recriado com guarda de fence.
+    expect(activeSql).toMatch(/refund_campaign_credit_operation[\s\S]*?publication_state IN \('in_flight','result_unknown'\)[\s\S]*?publication_in_progress/);
+    // PF COMPLETO: epoch observado + bloqueio de `published`.
+    expect(activeSql).toMatch(/p_observed_epoch INTEGER/);
+    expect(activeSql).toMatch(/p_observed_epoch IS DISTINCT FROM v_credit\.state_epoch[\s\S]*?evidence_stale/);
+    expect(activeSql).toMatch(/publication_state IN \('in_flight','result_unknown','published'\)[\s\S]*?publication_in_progress/);
+    // Exceção RESTRITA à marca própria (`authorized_publication_closure`); `published` nunca estorna.
+    expect(activeSql).toMatch(/authorized_publication_closure/);
+    expect(activeSql).toMatch(/publication_active_art/);
+    // Token OBRIGATÓRIO e do dono (não nulo) no mark/deliver.
+    expect(activeSql).toMatch(/p_publication_token IS NULL OR v_row\.publication_token IS NULL/);
+    expect(activeSql).toMatch(/publication_not_owner/);
+    // `abort` tem replay idempotente.
+    expect(activeSql).toMatch(/publication_state = 'failed_before_upload'[\s\S]*?'idempotent', true/);
+  });
+
+  it("NÃO edita as migrations 20261015* (forward-only): cada uma preserva o conteúdo original", () => {    for (const prev of PREV_MIGRATIONS) {
       const src = readFileSync(path.resolve(process.cwd(), prev), "utf8");
       expect(src).toMatch(/^-- F56\.2b2b/);
       expect(src).not.toMatch(/publication_fence/);

@@ -361,6 +361,7 @@ describe("F56.2b1b — atomic attempt start (Postgres real / provider simulado)"
           return credit.reserve(input);
         },
         beginPublication: (c, o) => credit.beginPublication(c, o),
+        getPublicationEpoch: (c, o) => credit.getPublicationEpoch(c, o),
         abortPublication: (c, o, t, p) => credit.abortPublication(c, o, t, p),
         markResultUnknown: (c, o, t) => credit.markResultUnknown(c, o, t),
         markArtUploaded: (c, o, t) => credit.markArtUploaded(c, o, t),
@@ -451,6 +452,7 @@ describe("F56.2b1b — atomic attempt start (Postgres real / provider simulado)"
       credit: {
         reserve: (input) => realCredit.reserve(input),
         beginPublication: (c, o) => realCredit.beginPublication(c, o),
+        getPublicationEpoch: (c, o) => realCredit.getPublicationEpoch(c, o),
         abortPublication: (c, o, t, p) => realCredit.abortPublication(c, o, t, p),
         markResultUnknown: (c, o, t) => realCredit.markResultUnknown(c, o, t),
         markArtUploaded: (c, o, t) => realCredit.markArtUploaded(c, o, t),

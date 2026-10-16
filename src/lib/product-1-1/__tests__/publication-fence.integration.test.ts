@@ -78,6 +78,13 @@ async function refundLedgerCount(): Promise<number> {
   );
   return rows[0].n;
 }
+async function currentEpoch(campaign: string, operation: string): Promise<number> {
+  const { rows } = await ctx.pg.query<{ state_epoch: number }>(
+    "SELECT state_epoch FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 AND operation_id=$2",
+    [campaign, operation],
+  );
+  return rows[0]?.state_epoch ?? 0;
+}
 async function recordFailed(campaign: string, operation: string): Promise<void> {
   await pgCallJson(
     ctx.pg,
@@ -143,13 +150,14 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
     // Automático/PF: bloqueado enquanto o fence está ativo.
     await recordFailed(campaign, op);
     await expect(
-      pgCallJson(ctx.pg, "SELECT public.product_1_1_close_failed_operation($1::uuid,$2::uuid,'absent',$3::text) AS r", [
+      pgCallJson(ctx.pg, "SELECT public.product_1_1_close_failed_operation($1::uuid,$2::uuid,'absent',$3::integer,$4::text) AS r", [
         campaign,
         op,
+        await currentEpoch(campaign, op),
         "generation_failed",
       ]),
     ).rejects.toThrow(/publication_in_progress/);
-    // Admin NÃO autorizado: bloqueado.
+    // Admin NÃO autorizado para o inconclusivo: bloqueado.
     await expect(
       pgCallJson(ctx.pg, "SELECT public.admin_resolve_product_1_1_pending($1,$2,$3,$4,$5,$6,$7::jsonb) AS r", [
         randomUUID(),
@@ -158,12 +166,12 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
         "refund_once",
         "inconclusivo",
         randomUUID(),
-        JSON.stringify(evidence({ state_epoch: 0 })),
+        JSON.stringify(evidence({ state_epoch: await currentEpoch(campaign, op) })),
       ]),
     ).rejects.toThrow(/publication_in_progress|evidence_stale/);
     expect(await refundLedgerCount()).toBe(refundBefore);
 
-    // EXCEÇÃO ADMINISTRATIVA autorizada/auditada ⇒ TERMINAL (não reabre).
+    // EXCEÇÃO ADMINISTRATIVA (marca PRÓPRIA) ⇒ TERMINAL (não reabre).
     const closed = await pgCallJson<{ success: boolean; status: string }>(
       ctx.pg,
       "SELECT public.admin_resolve_product_1_1_pending($1,$2,$3,$4,$5,$6,$7::jsonb) AS r",
@@ -174,7 +182,7 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
         "refund_once",
         "inconclusivo autorizado",
         randomUUID(),
-        JSON.stringify(evidence({ state_epoch: 0, authorized_abandon: true })),
+        JSON.stringify(evidence({ authorized_publication_closure: true })),
       ],
     );
     expect(closed).toMatchObject({ success: true, status: "refunded" });
@@ -182,7 +190,6 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
     // Resultado tardio NÃO reabre.
     await expect(mark(campaign, op, token)).rejects.toThrow(/publication_not_owner|invalid_transition/);
   }, 90_000);
-
   it("(C1-c) metadados falham (result_unknown) ⇒ confirm_existing_art entrega SEM novo upload", async () => {
     const campaign = await createCampaign(ctx.supabase, storeId);
     const op = randomUUID();

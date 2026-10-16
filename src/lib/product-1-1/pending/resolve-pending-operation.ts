@@ -132,14 +132,16 @@ export interface ResolvePendingInput {
   readonly resolutionOperationId: string;
   /**
    * C1 (B2B-D4) — SINAL EXPLÍCITO de autorização do abandono do claim
-   * `in_progress` residual. Default `false` (comportamento de hoje). Fornecido
-   * SOMENTE pela rota admin autorizada/auditada (`requireAdmin` +
-   * `requireSameOrigin`) — NUNCA inferido do cliente nem default-verdadeiro.
-   * Sem o sinal, `processing` ⇒ `operation_in_progress` (RPC não chamada). Com o
-   * sinal, a evidência carrega `authorized_abandon: true`; a autoridade FINAL
-   * permanece na RPC sob a trava.
+   * `in_progress` residual (default `false`).
    */
   readonly authorizeAbandon?: boolean;
+  /**
+   * Recorte 1 (Plano 08) — SINAL EXPLÍCITO de autorização para encerrar uma
+   * publicação REALMENTE INCONCLUSIVA (`in_flight`/`result_unknown`). NÃO
+   * desabilita a proteção de ausência obsoleta (`none`/`failed_before_upload`
+   * ainda exigem epoch fresco) nem permite estornar `published`. Default `false`.
+   */
+  readonly authorizePublicationClosure?: boolean;
 }
 
 export interface ResolvePendingDependencies {
@@ -167,6 +169,8 @@ interface ServerDerivedEvidence {
   readonly publication_state: string;
   /** B2B-D4 — marca de abandono AUTORIZADO (só no caminho autorizado/auditado). */
   readonly authorized_abandon?: boolean;
+  /** Recorte 1 — autorização RESTRITA ao inconclusivo (marca própria e auditada). */
+  readonly authorized_publication_closure?: boolean;
 }
 
 /**
@@ -272,6 +276,7 @@ export async function resolvePendingOperation(
     publication_state: state.publicationState,
     // A marca só é emitida no caminho AUTORIZADO; nunca inferida do cliente.
     ...(authorizedAbandon ? { authorized_abandon: true } : {}),
+    ...(input.authorizePublicationClosure === true ? { authorized_publication_closure: true } : {}),
   });
 
   const { data, error } = await client.rpc("admin_resolve_product_1_1_pending", {

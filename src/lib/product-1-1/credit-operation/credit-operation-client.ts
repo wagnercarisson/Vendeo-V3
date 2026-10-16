@@ -273,16 +273,31 @@ export class ProductOneToOneCreditOperationClient {
     campaignId: string;
     operationId: string;
     artKind: ArtifactProbe["kind"];
+    /** Frescor observado ANTES da sonda. Ausente ⇒ o cliente lê o epoch corrente. */
+    observedEpoch?: number;
     reason?: string;
   }): Promise<CreditOperationState> {
+    const observedEpoch =
+      input.observedEpoch ?? (await this.getPublicationEpoch(input.campaignId, input.operationId).catch(() => 0));
     const { data, error } = await this.client.rpc("product_1_1_close_failed_operation", {
       p_campaign_id: input.campaignId,
       p_operation_id: input.operationId,
       p_art_kind: input.artKind,
+      p_observed_epoch: observedEpoch,
       p_reason: input.reason ?? CLOSE_FAILED_ACTION,
     });
     if (error) throw mapError(error.message);
     return parseClosedEnvelope(data, input);
+  }
+
+  /** Recorte 1 — frescor da publicação, capturado ANTES da sonda. */
+  async getPublicationEpoch(campaignId: string, operationId: string): Promise<number> {
+    const { data, error } = await this.client.rpc("product_1_1_get_publication_epoch", {
+      p_campaign_id: campaignId,
+      p_operation_id: operationId,
+    });
+    if (error) throw mapError(error.message);
+    return Number(data ?? 0);
   }
 
   async get(

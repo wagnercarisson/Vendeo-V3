@@ -94,6 +94,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // abandono do claim `in_progress` residual. Este é o ÚNICO invocador que
       // fornece o sinal; qualquer outro omite-o (default `false`).
       authorizeAbandon: true,
+      // Recorte 1 — exceção RESTRITA ao inconclusivo: o operador admin autoriza
+      // encerrar `in_flight`/`result_unknown` (nunca `published`; não desabilita o
+      // frescor). Marcado na evidência e auditado.
+      authorizePublicationClosure: true,
     });
     return NextResponse.json({ resolution });
   } catch (error) {

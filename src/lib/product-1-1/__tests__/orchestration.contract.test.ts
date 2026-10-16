@@ -304,6 +304,7 @@ async function buildHarness(): Promise<Harness> {
     credit: {
       reserve,
       beginPublication: vi.fn(async () => ({ acquired: true, token: "pub-token", publicationState: "in_flight" })),
+      getPublicationEpoch: vi.fn(async () => 0),
       abortPublication: vi.fn(async () => ({ success: true })),
       markResultUnknown: vi.fn(async () => ({ success: true })),
       markArtUploaded,
@@ -538,6 +539,7 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
       campaignId: CAMPAIGN_ID,
       operationId: OPERATION_ID,
       artKind: "absent",
+      observedEpoch: 0,
       reason: "generation_failed",
     });
     expect(harness.calls.refund).not.toHaveBeenCalled();

@@ -216,8 +216,11 @@ export interface ProductOneToOneCreditOps {
     campaignId: string;
     operationId: string;
     artKind: ArtifactProbe["kind"];
+    observedEpoch?: number;
     reason?: string;
   }): Promise<CreditOperationState>;
+  /** Recorte 1 — frescor da publicação (capturado ANTES da sonda). */
+  getPublicationEpoch(campaignId: string, operationId: string): Promise<number>;
 }
 
 export interface ProductOneToOneAttemptOps {
@@ -802,6 +805,10 @@ export async function runProductOneToOneGeneration(
         /** P3 — referência de suporte CANÔNICA (persistida) para a pendência. */
         reference?: string;
       }): Promise<void> => {
+        // FRESCOR: capturado ANTES da sonda (comparado sob a trava na RPC).
+        const observedEpoch = await credit
+          .getPublicationEpoch(campaignId, operationId)
+          .catch(() => -1);
         const kind = await probeArtifactKind();
         // Quando o marcador `failed` JÁ foi persistido, NÃO reescrever `unknown`
         // (roteia à resolução autorizada sem o caminho que grava `unknown`) e usa a
@@ -849,6 +856,7 @@ export async function runProductOneToOneGeneration(
             campaignId,
             operationId,
             artKind: kind,
+            observedEpoch,
             reason: params.reason,
           });
           // Só confirma o encerramento com `refunded` CONFIRMADO.

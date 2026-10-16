@@ -134,6 +134,7 @@ async function buildHarness(): Promise<Layer1Harness> {
   const credit = {
     reserve: vi.fn(async () => baseOp({ status: "reserved" })),
     beginPublication: vi.fn(async () => ({ acquired: true, token: "pub-token", publicationState: "in_flight" })),
+    getPublicationEpoch: vi.fn(async () => 0),
     abortPublication: vi.fn(async () => ({ success: true })),
     markResultUnknown: vi.fn(async () => ({ success: true })),
     markArtUploaded: vi.fn(async () => baseOp({ status: "art_uploaded" })),
@@ -416,6 +417,7 @@ describe("F56.2b2b — Camada 1: PF (4a) completo e janela principal→fallback"
       campaignId: CAMPAIGN_ID,
       operationId: OPERATION_ID,
       artKind: "absent",
+      observedEpoch: 0,
       reason: "generation_failed",
     });
     expect(harness.refundCalls).toBe(0);
@@ -535,6 +537,7 @@ describe("F56.2b2b — Camada 1: contrato do cliente `closeFailedOperation` (cli
       campaignId: CAMPAIGN_ID,
       operationId: OPERATION_ID,
       artKind: "absent",
+      observedEpoch: 0,
       reason: "generation_failed",
     });
     expect(state).toMatchObject({ status: "refunded", campaignId: CAMPAIGN_ID, operationId: OPERATION_ID });
@@ -542,6 +545,7 @@ describe("F56.2b2b — Camada 1: contrato do cliente `closeFailedOperation` (cli
       p_campaign_id: CAMPAIGN_ID,
       p_operation_id: OPERATION_ID,
       p_art_kind: "absent",
+      p_observed_epoch: 0,
       p_reason: "generation_failed",
     });
   });
@@ -565,6 +569,7 @@ describe("F56.2b2b — Camada 1: contrato do cliente `closeFailedOperation` (cli
           campaignId: CAMPAIGN_ID,
           operationId: OPERATION_ID,
           artKind: "absent",
+          observedEpoch: 0,
         }),
       ).rejects.toBeInstanceOf(CreditOperationError);
     }
@@ -578,6 +583,7 @@ describe("F56.2b2b — Camada 1: contrato do cliente `closeFailedOperation` (cli
           campaignId: CAMPAIGN_ID,
           operationId: OPERATION_ID,
           artKind: "absent",
+          observedEpoch: 0,
         }),
       ).rejects.toMatchObject({ code: "unexpected_close_status" });
     }
@@ -597,6 +603,7 @@ describe("F56.2b2b — Camada 1: contrato do cliente `closeFailedOperation` (cli
           campaignId: CAMPAIGN_ID,
           operationId: OPERATION_ID,
           artKind: "absent",
+          observedEpoch: 0,
         }),
       ).rejects.toMatchObject({ code });
     }
