@@ -467,7 +467,7 @@ if ($RunSuites) {
   try {
     foreach ($suite in $suiteList) {
       Write-Output "# running suite: $suite"
-      $testOutput = @(& npx vitest run $suite 2>&1)
+      $testOutput = @(& npx --no-install vitest run $suite 2>&1)
       $suiteExit = $LASTEXITCODE
       $sanitized = @(Get-SanitizedLines -Lines $testOutput)
       foreach ($line in $sanitized) { Write-Output $line }

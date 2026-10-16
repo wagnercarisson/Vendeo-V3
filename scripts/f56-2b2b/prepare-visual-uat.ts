@@ -236,12 +236,28 @@ async function main(): Promise<void> {
           "SELECT operation_id,status FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 ORDER BY created_at DESC LIMIT 1",
           [campaignId],
         );
+        const outcome = await ctx.pg.query<{ outcome: string }>(
+          "SELECT outcome FROM public.product_1_1_generation_outcomes WHERE campaign_id=$1 ORDER BY created_at DESC LIMIT 1",
+          [campaignId],
+        );
+        const status = op.rows[0]?.status ?? null;
+        // Pós-condições COMPLETAS: uma fixture existente SÓ é declarada pronta se
+        // estiver TERMINAL e coerente (`refunded` + outcome `failed`). Estado
+        // PARCIAL ⇒ ABORTA EXPLÍCITO (nunca `skipped` por nome); sem reparo silencioso.
+        if (status !== "refunded" || outcome.rows[0]?.outcome !== "failed") {
+          throw new Error(
+            `fixture_partial_state:${fixture.key}:campaign=${campaignId}:status=${String(status)}:outcome=${String(
+              outcome.rows[0]?.outcome ?? null,
+            )}:no cleanup/rollback performed; inspecione a fixture local antes de repetir`,
+          );
+        }
         results.push({
           key: fixture.key,
           skipped: true,
+          validated: true,
           campaignId,
           operationId: op.rows[0]?.operation_id ?? null,
-          status: op.rows[0]?.status ?? null,
+          status,
           badgeText: fixture.badgeText,
           url: `${APP_URL}/campanhas/${campaignId}`,
           restoreUrl: `${APP_URL}/campanhas/nova?restoreFrom=${campaignId}`,

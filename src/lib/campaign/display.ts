@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient, supabaseAdmin } from "@/lib/supabase/server";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
+import { ILLUSTRATIVE_NOTICE_TEXT } from "./constants";
 import type {
   CampaignArtVersion,
   CampaignIntent,
@@ -9,6 +10,16 @@ import type {
 } from "./types";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Recorte 3 (Plano 10) — remove APENAS o prefixo canônico do aviso ilustrativo
+ * (`ILLUSTRATIVE_NOTICE_TEXT`) quando presente, preservando o TEXTO LIVRE. Evita
+ * duplicar o aviso no reenvio do formulário restaurado.
+ */
+function stripIllustrativeNoticePrefix(text: string): string {
+  if (!text.startsWith(ILLUSTRATIVE_NOTICE_TEXT)) return text;
+  return text.slice(ILLUSTRATIVE_NOTICE_TEXT.length).replace(/^\r?\n/, "");
+}
 
 // F37.1 (D2): estado de aprovação da campanha — derivado de campaign_art_versions
 // + campaigns (single source). `regenerating` deriva do marcador
@@ -486,7 +497,9 @@ export function mapRestoredForm(
   const validityDisplayText =
     typeof validity?.displayText === "string" ? validity.displayText : undefined;
   const mandatoryArtworkTextFree =
-    typeof legalNotice?.text === "string" ? legalNotice.text : "";
+    typeof legalNotice?.text === "string"
+      ? stripIllustrativeNoticePrefix(legalNotice.text)
+      : "";
   const backgroundDirection =
     input.backgroundDirection === "studio" ||
     input.backgroundDirection === "original" ||

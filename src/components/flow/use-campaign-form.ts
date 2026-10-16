@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { formatCurrencyBRL } from "@/lib/formatters";
-import { useInputPreservation } from "@/hooks/use-input-preservation";
+import { useInputPreservation, scopedDraftKey, scopedImageDraftKey } from "@/hooks/use-input-preservation";
 import type { GenerationPhaseEvent } from "@/lib/image-generation/schema";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
@@ -752,7 +752,7 @@ export function useCampaignForm(
   // campanha-ORIGEM. `restoredForm` NUNCA carrega a operação estornada (sem
   // `operationId`): a nova submissão gera NOVOS ids.
   const restoredForm = options?.restoredForm ?? null;
-  const draftScope = restoredForm?.campaignId ?? null;
+  const [draftScope, setDraftScope] = useState<string | null>(restoredForm?.campaignId ?? null);
   // P1 — fonte ausente/indisponível ⇒ a direção exige escolha EXPLÍCITA (nunca
   // `studio` silencioso).
   const backgroundDirectionUnresolved = restoredForm?.backgroundDirectionUnresolved === true;
@@ -807,6 +807,29 @@ export function useCampaignForm(
   const imageDraftKey = draftScope
     ? `campaign_draft_image:${draftScope}`
     : "campaign_draft_image";
+
+  /**
+   * Recorte 3 (Plano 10): associa o rascunho+imagem à IDENTIDADE efetivamente
+   * enviada. Ao conhecer o `campaignId` do envio (via stream), MIGRA o rascunho
+   * atual (escopo anterior/global) para o escopo do envio, de modo que uma futura
+   * restauração DAQUELE id encontre os dados (imagem é client-only). NÃO toca nos
+   * rascunhos escopados de OUTRAS campanhas.
+   */
+  const adoptDraftScope = useCallback(
+    (newId: string | null) => {
+      if (!newId || newId === draftScope) return;
+      try {
+        const savedDraft = sessionStorage.getItem(scopedDraftKey(draftScope));
+        if (savedDraft) sessionStorage.setItem(scopedDraftKey(newId), savedDraft);
+        const savedImage = sessionStorage.getItem(imageDraftKey);
+        if (savedImage) sessionStorage.setItem(scopedImageDraftKey(newId), savedImage);
+      } catch {
+        /* storage indisponível */
+      }
+      setDraftScope(newId);
+    },
+    [draftScope, imageDraftKey],
+  );
   const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);
   // F56.2b2b (B2B-D9): aviso HONESTO de que a imagem do produto/referências
   // (client-only) pode precisar ser re-adicionada quando o texto foi restaurado
@@ -846,6 +869,9 @@ export function useCampaignForm(
         ...restored,
         ...(restoredForm ? { backgroundDirection: resolvedDirection } : {}),
       }));
+      // Recorte 3 (Plano 10): a intenção HIDRATADA é uma SELEÇÃO EXPLÍCITA — evita
+      // que a inferência por preço a sobrescreva no primeiro ciclo.
+      userChangedIntent.current = true;
       if (saved.originalPriceCents > 0) {
         setRawOriginalPrice(String(saved.originalPriceCents));
       }
@@ -866,6 +892,8 @@ export function useCampaignForm(
         ...hydrated,
         backgroundDirection: resolvedDirection,
       }));
+      // Recorte 3 (Plano 10): intenção hidratada do SERVIDOR = seleção explícita.
+      userChangedIntent.current = true;
       if ((restoredForm.originalPriceCents ?? 0) > 0) {
         setRawOriginalPrice(String(restoredForm.originalPriceCents));
       }
@@ -1162,7 +1190,11 @@ export function useCampaignForm(
       }
 
       if (typeof event.operationId === "string") lastOperationId = event.operationId;
-      if (typeof event.campaignId === "string") lastCampaignId = event.campaignId;
+      if (typeof event.campaignId === "string") {
+        lastCampaignId = event.campaignId;
+        // Recorte 3 (Plano 10): associa o rascunho à identidade efetivamente enviada.
+        adoptDraftScope(event.campaignId);
+      }
 
       if (event.type === "phase") {
         const phaseEvent: GenerationPhaseEvent = {
