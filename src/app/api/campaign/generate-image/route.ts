@@ -41,7 +41,7 @@ import { detectExclusiveNewFlowFields } from "@/lib/product-1-1/submission/exclu
 import { assertSubmissionEligible } from "@/lib/product-1-1/submission/assert-submission-eligible";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
-import { resolvePilotSpendGate } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
+import { resolvePilotSpendGate, resolvePilotCopyEstimatedUsd } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
 import { NewFlowGenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import {
   runProductOneToOneGeneration,
@@ -276,6 +276,24 @@ export const POST = apiHandler(async (request: NextRequest) => {
     const guardUser = await requireApiUser();
     const guardStore = await requireOwnership(rawStoreId, guardUser.userId);
 
+    // F56.2b2c (B2.3) — resolução server-side do gate de gasto do piloto ANTES de
+    // qualquer efeito. `blocked` (INCERTEZA) ⇒ IMPEDE o caminho novo (não retira a
+    // proteção); `inactive` ⇒ segue sem gate (legado/inerte preservado).
+    const pilotGate = await resolvePilotSpendGate({ store: guardStore });
+    if (pilotGate.kind === "blocked") {
+      return Response.json(
+        {
+          error: {
+            code: "new_flow_ineligible",
+            message: "Novo fluxo indisponível (verificação de autorização indisponível).",
+          },
+        },
+        { status: 503 },
+      );
+    }
+    const pilotSpendDep = pilotGate.kind === "armed" ? pilotGate.gate : undefined;
+    const pilotCopyEstimatedUsd = resolvePilotCopyEstimatedUsd();
+
     let eligibilityDecision: Awaited<
       ReturnType<typeof resolveProductFlowAuthorization>
     >;
@@ -477,7 +495,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
         // Operação existe ⇒ NENHUMA checagem pré-reserva, validação de entrada,
         // registro de tentativa ou criação de campanha roda.
         return await runProductOneToOneGeneration(newFlowOrchestrationInput, {
-          pilotSpend: (await resolvePilotSpendGate()) ?? undefined,
+          pilotSpend: pilotSpendDep,
+          pilotCopyEstimatedUsd,
         });
       }
 
@@ -901,7 +920,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         },
         // F56.2b2c (B2.3) — conexão server-side OBRIGATÓRIA do gate de gasto do
         // piloto (null ⇒ piloto INATIVO; preserva o legado).
-        { pilotSpend: (await resolvePilotSpendGate()) ?? undefined },
+        { pilotSpend: pilotSpendDep, pilotCopyEstimatedUsd },
       );
     }
   }

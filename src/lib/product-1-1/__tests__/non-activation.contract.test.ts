@@ -215,6 +215,17 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     prefixes: [],
     exact: [],
   },
+  // F56.2b2c (B2.3) — o resolver server-side do gate de gasto do piloto é um
+  // módulo `product-1-1` que importa PARES EXATOS de autorização/elegibilidade e
+  // o próprio gate. (Consumido EXCLUSIVAMENTE pelas duas rotas acima.)
+  ["src/lib/product-1-1/pilot/resolve-pilot-spend-gate.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/authorization/authorization-service",
+      "@/lib/product-1-1/submission/eligibility-context",
+      "@/lib/product-1-1/pilot/spend-control",
+    ],
+  },
 });
 const SIDE_EFFECT_IMPORT_RE =
   /(?:from\s*|import\s*\(\s*)["'][^"']*(?:\/api\/campaign|\/adapters?(?:\/|$)|\/gateway(?:\/|$)|provider|\/credit(?:\/|$)|delivery|download|image-generation-operations-repository|prompt-composition)[^"']*["']/i;

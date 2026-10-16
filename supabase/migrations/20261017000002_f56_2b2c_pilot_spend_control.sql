@@ -27,11 +27,23 @@ CREATE TABLE IF NOT EXISTS public.product_1_1_pilot_spend_state (
   cap_reason       TEXT,
   cap_operation_id UUID,
   cap_set_at       TIMESTAMPTZ,
+  blocked_reason   TEXT,
+  blocked_at       TIMESTAMPTZ,
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 INSERT INTO public.product_1_1_pilot_spend_state (id, cap_usd, spent_usd)
 VALUES (TRUE, NULL, 0)
 ON CONFLICT (id) DO NOTHING;
+
+-- Auditoria APPEND-ONLY das operações de configuração do teto (idempotência por
+-- `operation_id` independente do valor vigente).
+CREATE TABLE IF NOT EXISTS public.product_1_1_pilot_cap_audit (
+  operation_id UUID PRIMARY KEY,
+  actor_id     UUID NOT NULL,
+  cap_usd      NUMERIC NOT NULL CHECK (cap_usd >= 0),
+  reason       TEXT NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- =============================================================================
 -- 2. Ledger de chamadas pagas (contabilidade POR CHAMADA)
@@ -61,12 +73,16 @@ CREATE INDEX IF NOT EXISTS idx_p1_1_pilot_calls_unknown
 -- RLS: leitura por service_role; escrita SOMENTE por RPC SECURITY DEFINER.
 ALTER TABLE public.product_1_1_pilot_spend_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_1_1_pilot_paid_calls ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_1_1_pilot_cap_audit ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.product_1_1_pilot_spend_state FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.product_1_1_pilot_paid_calls FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.product_1_1_pilot_cap_audit FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.product_1_1_pilot_spend_state FROM service_role;
 REVOKE ALL ON TABLE public.product_1_1_pilot_paid_calls FROM service_role;
+REVOKE ALL ON TABLE public.product_1_1_pilot_cap_audit FROM service_role;
 GRANT SELECT ON TABLE public.product_1_1_pilot_spend_state TO service_role;
 GRANT SELECT ON TABLE public.product_1_1_pilot_paid_calls TO service_role;
+GRANT SELECT ON TABLE public.product_1_1_pilot_cap_audit TO service_role;
 
 -- =============================================================================
 -- 3. RPC: definir o teto (auditável; idempotente por operation_id)
@@ -83,7 +99,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_state public.product_1_1_pilot_spend_state%ROWTYPE;
+  v_audit public.product_1_1_pilot_cap_audit%ROWTYPE;
 BEGIN
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
@@ -91,13 +107,25 @@ BEGIN
   IF p_cap_usd IS NULL THEN RAISE EXCEPTION 'invalid_cap_usd'; END IF;
   IF p_cap_usd < 0 THEN RAISE EXCEPTION 'invalid_cap_usd'; END IF;
 
-  SELECT * INTO v_state FROM public.product_1_1_pilot_spend_state WHERE id = TRUE FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'pilot_state_missing'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'));
 
-  -- Idempotência por operation_id (replay equivalente não audita de novo).
-  IF v_state.cap_operation_id IS NOT DISTINCT FROM p_operation_id THEN
-    RETURN jsonb_build_object('success', true, 'idempotent', true, 'cap_usd', v_state.cap_usd);
+  -- Idempotência por `operation_id` via auditoria append-only: replay EQUIVALENTE
+  -- devolve o MESMO resultado e NÃO reaplica o teto (mesmo após outra operação);
+  -- conteúdo DIVERGENTE com o mesmo `operation_id` é CONFLITO.
+  SELECT * INTO v_audit FROM public.product_1_1_pilot_cap_audit WHERE operation_id = p_operation_id;
+  IF FOUND THEN
+    IF v_audit.cap_usd = p_cap_usd
+       AND v_audit.actor_id = p_actor_id
+       AND v_audit.reason = btrim(p_reason) THEN
+      RETURN jsonb_build_object('success', true, 'idempotent', true, 'cap_usd', v_audit.cap_usd);
+    END IF;
+    RETURN jsonb_build_object(
+      'success', false, 'conflict', true, 'reason', 'operation_id_conflict', 'operation_id', p_operation_id
+    );
   END IF;
+
+  INSERT INTO public.product_1_1_pilot_cap_audit (operation_id, actor_id, cap_usd, reason)
+  VALUES (p_operation_id, p_actor_id, p_cap_usd, btrim(p_reason));
 
   UPDATE public.product_1_1_pilot_spend_state
      SET cap_usd = p_cap_usd,
@@ -173,6 +201,10 @@ BEGIN
 
   -- Configuração inicial fail-closed.
   IF v_state.cap_usd IS NULL THEN RAISE EXCEPTION 'pilot_cap_not_configured'; END IF;
+
+  -- Bloqueio GLOBAL do piloto (instalado quando `mark_unknown` não pôde persistir):
+  -- recusa QUALQUER nova chamada até reconciliação explícita.
+  IF v_state.blocked_reason IS NOT NULL THEN RAISE EXCEPTION 'pilot_globally_blocked'; END IF;
 
   -- Resultado desconhecido em QUALQUER campanha bloqueia TODAS as novas chamadas.
   SELECT EXISTS (SELECT 1 FROM public.product_1_1_pilot_paid_calls WHERE state = 'unknown')
@@ -349,7 +381,34 @@ BEGIN
      SET state = 'stale', resolved_by = p_actor_id, resolution_reason = btrim(p_reason), updated_at = now()
    WHERE call_id = p_call_id;
 
+  -- A reconciliação explícita também REMOVE o bloqueio global (instalado quando
+  -- `mark_unknown` não pôde persistir).
+  UPDATE public.product_1_1_pilot_spend_state
+     SET blocked_reason = NULL, blocked_at = NULL, updated_at = now()
+   WHERE id = TRUE;
+
   RETURN jsonb_build_object('success', true, 'idempotent', false, 'state', 'stale', 'call_id', p_call_id);
+END;
+$$;
+
+-- =============================================================================
+-- 8. RPC: bloqueio GLOBAL do piloto (rede de segurança quando `mark_unknown` falha)
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.product_1_1_pilot_block_global(p_reason TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_reason IS NULL OR btrim(p_reason) = '' THEN RAISE EXCEPTION 'missing_reason'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'));
+  UPDATE public.product_1_1_pilot_spend_state
+     SET blocked_reason = COALESCE(blocked_reason, btrim(p_reason)),
+         blocked_at = COALESCE(blocked_at, now()),
+         updated_at = now()
+   WHERE id = TRUE;
+  RETURN jsonb_build_object('success', true, 'blocked', true);
 END;
 $$;
 
@@ -359,19 +418,23 @@ REVOKE ALL ON FUNCTION public.product_1_1_pilot_begin_paid_call(UUID, UUID, UUID
 REVOKE ALL ON FUNCTION public.product_1_1_pilot_end_paid_call(UUID, UUID, NUMERIC) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.product_1_1_pilot_mark_unknown(UUID, UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.product_1_1_pilot_reconcile_unknown(UUID, UUID, TEXT, TEXT, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.product_1_1_pilot_block_global(TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_set_cap(UUID, NUMERIC, TEXT, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_begin_paid_call(UUID, UUID, UUID, TEXT, INTEGER, NUMERIC, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_end_paid_call(UUID, UUID, NUMERIC) TO service_role;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_mark_unknown(UUID, UUID, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_reconcile_unknown(UUID, UUID, TEXT, TEXT, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_block_global(TEXT) TO service_role;
 
 -- =============================================================================
 -- REVERT (executar manualmente apenas na instância local, se autorizado)
 -- =============================================================================
+-- DROP FUNCTION IF EXISTS public.product_1_1_pilot_block_global(TEXT);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_reconcile_unknown(UUID, UUID, TEXT, TEXT, UUID);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_mark_unknown(UUID, UUID, TEXT);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_end_paid_call(UUID, UUID, NUMERIC);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_begin_paid_call(UUID, UUID, UUID, TEXT, INTEGER, NUMERIC, UUID);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_set_cap(UUID, NUMERIC, TEXT, UUID);
+-- DROP TABLE IF EXISTS public.product_1_1_pilot_cap_audit;
 -- DROP TABLE IF EXISTS public.product_1_1_pilot_paid_calls;
 -- DROP TABLE IF EXISTS public.product_1_1_pilot_spend_state;

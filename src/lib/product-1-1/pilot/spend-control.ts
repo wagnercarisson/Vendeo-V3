@@ -39,6 +39,7 @@ export const PILOT_COPY_CALL_LIMIT = 6;
 export type PilotStopReason =
   | "pilot_cap_not_configured"
   | "pilot_requires_reconciliation"
+  | "pilot_globally_blocked"
   | "pilot_busy"
   | "pilot_stream_busy"
   | "pilot_cap_reached"
@@ -84,6 +85,7 @@ const STOP_REASONS: readonly PilotStopReason[] = [
   "pilot_requires_reconciliation",
   "pilot_busy",
   "pilot_stream_busy",
+  "pilot_globally_blocked",
   "pilot_cap_reached",
   "invalid_call_kind",
   "invalid_estimated_usd",
@@ -110,11 +112,25 @@ export interface PilotSpendControlDeps {
  */
 export function isUnknownPilotOutcome(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
-  const e = error as { name?: unknown; kind?: unknown; message?: unknown };
+  const e = error as { name?: unknown; kind?: unknown; code?: unknown; message?: unknown };
   if (e.name === "AbortError") return true;
-  if (e.kind === "timeout") return true;
+  if (e.kind === "timeout" || e.kind === "network") return true;
+  const code = typeof e.code === "string" ? e.code : "";
   const message = typeof e.message === "string" ? e.message.toLowerCase() : "";
-  return message.includes("timeout") || message.includes("timed out");
+  const haystack = `${code} ${message}`.toLowerCase();
+  const signals = [
+    "timeout",
+    "timed out",
+    "etimedout",
+    "econnreset",
+    "econnrefused",
+    "eai_again",
+    "socket hang up",
+    "fetch failed",
+    "network",
+    "aborterror",
+  ];
+  return signals.some((signal) => haystack.includes(signal));
 }
 
 export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
@@ -195,13 +211,22 @@ export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
   }
 
   async markUnknown(input: { handle: PilotPaidCallHandle; reason: string }): Promise<void> {
-    // Falha PROPAGADA: deixar `in_flight` silenciosamente permitiria novas chamadas da
-    // MESMA campanha — o consumidor deve falhar-fechado.
-    await this.repository.markUnknown({
-      callId: input.handle.callId,
-      ownerToken: input.handle.ownerToken,
-      reason: input.reason,
-    });
+    // Falha PROPAGADA + REDE DE SEGURANÇA: se não for possível marcar `unknown`,
+    // instala um BLOQUEIO GLOBAL (recusa QUALQUER nova chamada, inclusive de outra
+    // campanha/stream) — fechando a janela da chamada travada. Se o bloqueio global
+    // também falhar, propaga (o consumidor deve abortar o fluxo).
+    try {
+      await this.repository.markUnknown({
+        callId: input.handle.callId,
+        ownerToken: input.handle.ownerToken,
+        reason: input.reason,
+      });
+    } catch (error) {
+      await this.repository.blockGlobal({
+        reason: `mark_unknown_failed:${input.reason}`,
+      });
+      void error;
+    }
   }
 
   /** Define o teto (decisão humana) — exposto para a superfície administrativa. */

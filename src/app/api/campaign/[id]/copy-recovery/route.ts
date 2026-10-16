@@ -11,7 +11,7 @@ import { getLaunchConfig } from "@/lib/launch-config/config";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
-import { resolvePilotSpendGate } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
+import { resolvePilotSpendGate, resolvePilotCopyEstimatedUsd } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import {
   ProductOneToOneCopyRecoveryClient,
@@ -318,6 +318,16 @@ export const POST = apiHandler(
       store,
     });
 
+    // F56.2b2c (B2.3) — resolução server-side do gate de gasto do piloto.
+    // `blocked` (INCERTEZA) ⇒ IMPEDE a chamada (não retira a proteção).
+    const pilotGate = await resolvePilotSpendGate({ store });
+    if (pilotGate.kind === "blocked") {
+      return NextResponse.json(
+        { error: { code: "new_flow_ineligible", message: "Recuperação indisponível." } },
+        { status: 503 },
+      );
+    }
+
     try {
       const result = await new ProductOneToOneCopyRecoveryClient().recoverCopyAttempt({
         campaignId: id,
@@ -326,9 +336,12 @@ export const POST = apiHandler(
         requestToken: recoveryRequest.requestToken,
         runner,
         // F56.2b2c (B2.3) — conexão server-side OBRIGATÓRIA do gate de gasto do
-        // piloto (null ⇒ piloto INATIVO; preserva o legado). A estimativa da copy
-        // é decisão humana aprovada (Plan 04); ausente ⇒ a chamada é BLOQUEADA.
-        runnerDeps: { pilotSpend: (await resolvePilotSpendGate()) ?? undefined },
+        // piloto (INDEFINIDO ⇒ piloto INATIVO; preserva o legado). A estimativa da
+        // copy é decisão humana aprovada; ausente ⇒ a chamada é BLOQUEADA.
+        runnerDeps: {
+          pilotSpend: pilotGate.kind === "armed" ? pilotGate.gate : undefined,
+          estimatedUsd: resolvePilotCopyEstimatedUsd(),
+        },
       });
       return NextResponse.json({ recovery: result });
     } catch (error) {

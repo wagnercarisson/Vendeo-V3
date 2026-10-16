@@ -49,6 +49,7 @@ class StatefulFakeRepo implements PilotSpendRepositoryPort {
   }
 
   async beginPaidCall(input: PilotBeginPaidCallInput): Promise<Record<string, unknown>> {
+    if (this.blocked) throw new Error("pilot_globally_blocked");
     const id = {
       call_id: input.callId,
       campaign_id: input.campaignId,
@@ -112,18 +113,26 @@ class StatefulFakeRepo implements PilotSpendRepositoryPort {
   }
 
   async markUnknown(input: { callId: string; ownerToken: string }): Promise<Record<string, unknown>> {
+    if (this.markUnknownFails) throw new Error("db_down");
     const c = this.calls.get(input.callId);
     if (!c) throw new Error("call_not_found");
     if (c.owner !== input.ownerToken) throw new Error("not_owner");
     c.state = "unknown";
     return { success: true, state: "unknown" };
   }
+  markUnknownFails = false;
 
   async reconcileUnknown(input: { callId: string }): Promise<Record<string, unknown>> {
     const c = this.calls.get(input.callId);
     if (!c) throw new Error("call_not_found");
     c.state = "stale";
     return { success: true, state: "stale" };
+  }
+
+  blocked = false;
+  async blockGlobal(): Promise<Record<string, unknown>> {
+    this.blocked = true;
+    return { success: true, blocked: true };
   }
 }
 
@@ -221,6 +230,19 @@ describe("F56.2b2c — protocolo do serviço com RPC simulada COM ESTADO", () =>
       reason: "estimate_required",
     });
   });
+
+  it("falha de markUnknown instala BLOQUEIO GLOBAL (nenhuma nova chamada, qualquer campanha)", async () => {
+    const repo = new StatefulFakeRepo();
+    repo.setCap({ capUsd: 10 });
+    const c = control(repo);
+    const img = await c.beginPaidCall({ ...BASE, kind: "image_primary", estimatedUsd: 0.3 });
+    const handle = (img as { handle: PilotPaidCallHandle }).handle;
+    repo.markUnknownFails = true;
+    await c.markUnknown({ handle, reason: "timeout" });
+    expect(repo.blocked).toBe(true);
+    const other = await c.beginPaidCall({ campaignId: "camp-b", operationId: "op-b", attemptSeq: 1, kind: "copy_initial", estimatedUsd: 0.1 });
+    expect(other).toEqual({ acquired: false, outcome: "blocked", reason: "pilot_globally_blocked" });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -300,6 +322,24 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
       invoke: vi.fn(async () => {
         const err = new Error("timed out");
         (err as unknown as { kind: string }).kind = "timeout";
+        throw err;
+      }),
+      hasFallback: vi.fn(async () => false),
+    } as unknown as AiInvoker;
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, estimatedUsd: 0.05 });
+    await expect(
+      ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
+    ).rejects.toThrow();
+    expect(gate.unknown).toHaveBeenCalledTimes(1);
+    expect(gate.end).not.toHaveBeenCalled();
+  });
+
+  it("falha de REDE (ECONNRESET) ⇒ markUnknown (não encerra como conhecido)", async () => {
+    const gate = spyGate({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "copy_auto" } });
+    const invoker: AiInvoker = {
+      invoke: vi.fn(async () => {
+        const err = new Error("read ECONNRESET");
+        (err as unknown as { code: string }).code = "ECONNRESET";
         throw err;
       }),
       hasFallback: vi.fn(async () => false),

@@ -54,6 +54,9 @@ class FakeRepo implements PilotSpendRepositoryPort {
     this.markUnknownCalls.push({ callId: input.callId });
     return { success: true, state: "unknown" };
   }
+  async blockGlobal(): Promise<Record<string, unknown>> {
+    return { success: true, blocked: true };
+  }
   async reconcileUnknown(): Promise<Record<string, unknown>> {
     return { success: true, state: "stale" };
   }

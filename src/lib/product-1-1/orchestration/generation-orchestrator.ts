@@ -395,6 +395,11 @@ export interface ProductOneToOneGenerationDeps {
    * desconhecido (timeout/abort) chama `markUnknown` (bloqueia novas chamadas).
    */
   readonly pilotSpend?: PilotSpendGate;
+  /**
+   * F56.2b2c (B2.3) — estimativa aprovada (USD) da CALL DE COPY (decisão humana,
+   * Plan 04). Sem valor, a copy é BLOQUEADA quando o gate está armado.
+   */
+  readonly pilotCopyEstimatedUsd?: number;
 }
 
 type NdjsonEvent = Record<string, unknown>;
@@ -563,7 +568,13 @@ export async function runProductOneToOneGeneration(
             runId: input.runId,
             traceId: input.traceId,
           },
-          { invoker: deps.copyInvoker, pilotSpend: deps.pilotSpend, callKind: "copy_initial" },
+          {
+            invoker: deps.copyInvoker,
+            pilotSpend: deps.pilotSpend,
+            callKind: "copy_initial",
+            attemptSeq: 1,
+            estimatedUsd: deps.pilotCopyEstimatedUsd,
+          },
         )
       : undefined);
   // Gap 4 / P1 — custo interno por tentativa pela pricing do NOVO FLUXO.
