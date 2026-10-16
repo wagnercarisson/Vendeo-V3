@@ -26,6 +26,7 @@ import {
   pgCallJson,
   reserveCredit,
 } from "../../src/lib/product-1-1/__tests__/integration-harness";
+import { isNewFlowCampaign } from "../../src/lib/campaign/new-flow-marker";
 import { validateFixturePostconditions } from "./fixture-postconditions";
 
 const PREFLIGHT_TOKEN = "vendeo-f562a-isolated:56321:56322";
@@ -238,8 +239,9 @@ async function main(): Promise<void> {
           status: string;
           credit_tx_id: string | null;
           refund_tx_id: string | null;
+          store_id: string;
         }>(
-          "SELECT operation_id,status,credit_tx_id,refund_tx_id FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 ORDER BY created_at DESC LIMIT 1",
+          "SELECT operation_id,status,credit_tx_id,refund_tx_id,store_id FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 ORDER BY created_at DESC LIMIT 1",
           [campaignId],
         );
         const row = op.rows[0];
@@ -256,19 +258,56 @@ async function main(): Promise<void> {
               [campaignId, operationId],
             )
           : null;
+        // Referências de ledger: EXISTEM e pertencem à MESMA loja (o refund é `refund`).
+        const creditTx = row?.credit_tx_id
+          ? await ctx.pg.query<{ store_id: string }>(
+              "SELECT store_id FROM public.credit_transactions WHERE id=$1",
+              [row.credit_tx_id],
+            )
+          : null;
+        const refundTx = row?.refund_tx_id
+          ? await ctx.pg.query<{ store_id: string; type: string }>(
+              "SELECT store_id,type FROM public.credit_transactions WHERE id=$1",
+              [row.refund_tx_id],
+            )
+          : null;
+        // Snapshot PERSISTIDO: marcador do novo fluxo + restaurável esperado.
+        const snapshotRow = await ctx.pg.query<{ input_snapshot: unknown }>(
+          "SELECT input_snapshot FROM public.campaigns WHERE id=$1",
+          [campaignId],
+        );
+        const inputSnapshot = (snapshotRow.rows[0]?.input_snapshot ?? null) as Record<
+          string,
+          unknown
+        > | null;
+        const snapshotHasNewFlowMarker = isNewFlowCampaign(inputSnapshot);
+        const productName =
+          inputSnapshot && typeof inputSnapshot.product === "object" && inputSnapshot.product !== null
+            ? (inputSnapshot.product as Record<string, unknown>).name
+            : null;
+        const snapshotIsRestorable = typeof productName === "string" && productName.trim().length > 0;
 
-        // Validador PURO: terminal coerente + MESMA operação + ledger + evidência.
+        // Validador PURO: terminal coerente + MESMA operação + ledger/loja + snapshot + evidência.
         const validation = validateFixturePostconditions({
           key: fixture.key,
           campaignId,
           operationId,
+          storeId,
           status: row?.status ?? null,
-          creditTxId: row?.credit_tx_id ?? null,
-          refundTxId: row?.refund_tx_id ?? null,
           outcome: outcome?.rows[0]?.outcome ?? null,
           outcomeOperationId: outcome?.rows[0]?.operation_id ?? null,
+          creditTxId: row?.credit_tx_id ?? null,
+          creditTxExists: (creditTx?.rows.length ?? 0) > 0,
+          creditTxStoreId: creditTx?.rows[0]?.store_id ?? null,
+          refundTxId: row?.refund_tx_id ?? null,
+          refundTxExists: (refundTx?.rows.length ?? 0) > 0,
+          refundTxStoreId: refundTx?.rows[0]?.store_id ?? null,
+          refundTxType: refundTx?.rows[0]?.type ?? null,
           evidenceDirection: evidence?.rows[0]?.background_direction ?? null,
           expectedDirection: fixture.direction,
+          snapshotHasNewFlowMarker,
+          snapshotIsRestorable,
+          expectedRestorable: fixture.restorable,
         });
         if (!validation.ok) {
           throw new Error(

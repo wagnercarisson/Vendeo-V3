@@ -179,4 +179,51 @@ describe("F56.2b2b — Plano 10: intenção/selo hidratados preservados", () => 
       }
     }
   });
+
+  it("o 1º evento do stream NÃO sobrescreve o snapshot B recém-salvo (dados antigos de A permanecem em A)", async () => {
+    const A = RESTORED.campaignId;
+    const OLD_DRAFT = { ...DRAFT, productName: "Antigo" };
+    sessionStorage.setItem(`campaign_draft:${A}`, JSON.stringify(OLD_DRAFT));
+    sessionStorage.setItem(`campaign_draft_image:${A}`, VALID_DATA_URL);
+    const captured: { campaignId?: string } = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: unknown, init?: RequestInit) => {
+        const parsed = JSON.parse(String(init?.body ?? "{}")) as { campaignId?: string };
+        captured.campaignId = parsed.campaignId;
+        // 1º evento do stream IDENTIFICA B — a adoção legada miraria este escopo.
+        return ndjson([
+          { type: "phase", phase: "orchestration", status: "running", campaignId: parsed.campaignId, operationId: "op" },
+        ]);
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useCampaignForm("11111111-1111-4111-8111-111111111111", { eligible: true, restoredForm: RESTORED }),
+    );
+    await waitFor(() => expect(result.current.fields.productName).toBe("Antigo"));
+    act(() => {
+      result.current.setField("productName", "Novo");
+    });
+    await waitFor(() => expect(result.current.fields.productName).toBe("Novo"));
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    const B = captured.campaignId ?? "";
+    expect(B).toMatch(UUID_V4);
+    expect(B).not.toBe(A);
+    // B mantém EXATAMENTE os dados enviados (não o rascunho ANTIGO de A).
+    const bDraft = JSON.parse(sessionStorage.getItem(`campaign_draft:${B}`) ?? "{}") as {
+      productName?: string;
+    };
+    expect(bDraft.productName).toBe("Novo");
+    expect(sessionStorage.getItem(`campaign_draft_image:${B}`)).toBe(VALID_DATA_URL);
+    // A permanece intacta.
+    const aDraft = JSON.parse(sessionStorage.getItem(`campaign_draft:${A}`) ?? "{}") as {
+      productName?: string;
+    };
+    expect(aDraft.productName).toBe("Antigo");
+    expect(sessionStorage.getItem(`campaign_draft_image:${A}`)).toBe(VALID_DATA_URL);
+  });
 });

@@ -801,6 +801,10 @@ export function useCampaignForm(
   // F56.2b1b (C3): identidade estável do rascunho elegível — conservada entre
   // submissões do MESMO fingerprint; regenerada só em reset/sucesso.
   const draftIdentityRef = useRef<DraftIdentityState | null>(null);
+  // Recorte 3 (Plano 10): `true` quando o snapshot/imagem JÁ foram persistidos sob a
+  // identidade do envio ANTES da requisição — impede que a adoção legada (closure
+  // do escopo ANTIGO) sobrescreva B com o rascunho antigo no 1º evento do stream.
+  const prePersistedIdentityRef = useRef(false);
   const router = useRouter();
   const { saveFormState, restoreFormState, clearFormState } = useInputPreservation<CampaignFormFields>();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -846,6 +850,7 @@ export function useCampaignForm(
       } catch {
         /* storage indisponível */
       }
+      prePersistedIdentityRef.current = true;
       setDraftScope((prev) => (prev === id ? prev : id));
     },
     [],
@@ -1212,8 +1217,8 @@ export function useCampaignForm(
       if (typeof event.operationId === "string") lastOperationId = event.operationId;
       if (typeof event.campaignId === "string") {
         lastCampaignId = event.campaignId;
-        // Recorte 3 (Plano 10): associa o rascunho à identidade efetivamente enviada.
-        adoptDraftScope(event.campaignId);
+        // Adoção LEGADA só quando a identidade NÃO foi persistida antes do envio.
+        if (!prePersistedIdentityRef.current) adoptDraftScope(event.campaignId);
       }
 
       if (event.type === "phase") {
@@ -1379,6 +1384,8 @@ export function useCampaignForm(
     setPendingConflict(null);
     setPhases([]);
     setUnknownResult(null);
+    // Recorte 3 (Plano 10): nova submissão ⇒ ainda NÃO pré-persistida.
+    prePersistedIdentityRef.current = false;
 
     const errors: FieldErrors = {};
     const allFields: (keyof CampaignFormFields)[] = [
@@ -1506,6 +1513,7 @@ export function useCampaignForm(
     setPhases([]);
     setUnknownResult(null);
     confirmedBodyRef.current = null;
+    prePersistedIdentityRef.current = false;
     draftIdentityRef.current = null;
     setFields(EMPTY_FIELDS);
     setRawOriginalPrice("");
@@ -1752,6 +1760,7 @@ export function useCampaignForm(
   // com inputValidationOverride.productImageCheck = "brief_review_confirmed".
   const confirmReview = useCallback(async (): Promise<void> => {
     if (!storeId || !preparedImages) return;
+    prePersistedIdentityRef.current = false;
     const frozenFields = { ...fields };
     const frozenPrepared = preparedImages.map((p) => ({ ...p }));
     // F56.2b1b (C3): a identidade do snapshot revisado é resolvida APÓS o

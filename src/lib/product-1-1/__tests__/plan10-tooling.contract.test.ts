@@ -17,13 +17,22 @@ const COMPLETE = {
   key: "refunded-original",
   campaignId: "c",
   operationId: "op",
+  storeId: "store",
   status: "refunded",
-  creditTxId: "tx",
-  refundTxId: "rf",
   outcome: "failed",
   outcomeOperationId: "op",
+  creditTxId: "ct",
+  creditTxExists: true,
+  creditTxStoreId: "store",
+  refundTxId: "rt",
+  refundTxExists: true,
+  refundTxStoreId: "store",
+  refundTxType: "refund",
   evidenceDirection: "original",
   expectedDirection: "original" as const,
+  snapshotHasNewFlowMarker: true,
+  snapshotIsRestorable: true,
+  expectedRestorable: true,
 };
 
 describe("F56.2b2b — Plano 10: TOOLING (runner / fixture)", () => {
@@ -32,9 +41,11 @@ describe("F56.2b2b — Plano 10: TOOLING (runner / fixture)", () => {
     expect(activeRunner).not.toMatch(/npx vitest run \$suite/);
   });
 
-  it("o script usa o VALIDADOR puro e ABORTA em estado parcial (nunca valida por nome)", () => {
+  it("o script coleta LEDGER/LOJA/SNAPSHOT e usa o VALIDADOR puro (aborta em parcial)", () => {
     expect(fixture).toMatch(/validateFixturePostconditions/);
     expect(fixture).toMatch(/fixture_partial_state/);
+    expect(fixture).toMatch(/credit_transactions/);
+    expect(fixture).toMatch(/isNewFlowCampaign/);
     expect(fixture).toMatch(/expectedDirection: fixture\.direction/);
   });
 });
@@ -54,20 +65,32 @@ describe("F56.2b2b — Plano 10: validador de pós-condições (comportamental)"
     ).toEqual({ ok: true });
   });
 
-  it("rejeita cada desvio de pós-condição", () => {
+  it("RECUSA referência inexistente/divergente, efeito incompatível e snapshot incompleto", () => {
     const cases: Array<[Record<string, unknown>, string]> = [
+      // Terminal / mesma operação.
       [{ status: "reserved" }, "status=reserved"],
       [{ outcome: "unknown" }, "outcome=unknown"],
       [{ outcomeOperationId: "other" }, "outcome_operation_mismatch"],
-      [{ creditTxId: null }, "missing_credit_tx"],
-      [{ refundTxId: null }, "missing_refund_tx"],
+      // Ledger da reserva: existe e é da MESMA loja.
+      [{ creditTxId: null }, "credit_tx_mismatch"],
+      [{ creditTxExists: false }, "credit_tx_mismatch"],
+      [{ creditTxStoreId: "other-store" }, "credit_tx_mismatch"],
+      // Ledger do estorno: existe, MESMA loja e tipo `refund`.
+      [{ refundTxId: null }, "refund_tx_mismatch"],
+      [{ refundTxExists: false }, "refund_tx_mismatch"],
+      [{ refundTxStoreId: "other-store" }, "refund_tx_mismatch"],
+      [{ refundTxType: "deduction" }, "refund_tx_mismatch"],
+      // Snapshot esperado do cenário.
+      [{ snapshotHasNewFlowMarker: false }, "snapshot_marker_missing"],
+      [{ snapshotIsRestorable: false }, "snapshot_restorable=false"],
+      // Evidência congelada.
       [{ evidenceDirection: "ambient" }, "direction=ambient"],
       [{ evidenceDirection: "studio", expectedDirection: null }, "unexpected_evidence=studio"],
     ];
     for (const [override, reason] of cases) {
       const result = validateFixturePostconditions({ ...COMPLETE, ...override } as never);
-      expect(result.ok).toBe(false);
-      expect(result.reason).toBe(reason);
+      expect(result.ok, JSON.stringify(override)).toBe(false);
+      expect(result.reason, JSON.stringify(override)).toBe(reason);
     }
   });
 });
