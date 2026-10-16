@@ -25,7 +25,11 @@
 | **Nova infraestrutura** | — | **Nenhuma** fila/worker/cron/outbox/subsistema (proibido sem decisão explícita) |
 | **Escopo / estimativa** | 5–7 planos | **Preservados** (5–7; teto 8–10) |
 
+> **Nota (2026-10-16):** a linha **UI-SPEC** acima registra o estado da rodada documental de 2026-10-15. A **UI-SPEC foi aprovada** como **contrato pré-implementação** em 2026-10-15 (§9); a **validação da implementação** é checkpoint **posterior e distinto** (UAT `approved_with_limitations`). O estado implementado está no §11.
+
 ## 3. Precisões fechadas
+
+> **Nota (2026-10-16):** as observações de **"código atual (inspecionado)"** nesta seção descrevem o estado **pré-implementação** (2026-10-15) e permanecem como **histórico**; onde dizem "hoje o orquestrador só grava `unknown`" / "hoje a RPC recusa `operation_in_progress` sempre", essas condições foram **superadas pela implementação** — ver §11.
 
 ### Precisão A — Reconhecimento de falha final (predicado server-side)
 
@@ -172,3 +176,44 @@ O snapshot restaurado precisa chegar a `/campanhas/nova` por **transporte autent
 A **Camada 2** deve provar pelos seams reais: **(a)** tela administrativa → serviço/RPC → **abandono + estorno**; **(b)** **orquestrador real** → **marcador** → **encerramento**; **(c)** **CTA** → **formulário preenchido** → **nova identidade de submissão**. Provider **simulado**; Postgres/Storage **locais**. Preservar um snapshot no banco **não** comprova que o clique na CTA restaura o formulário.
 
 **Nenhum item acima altera os 11 requirements, o gate D13 (que permanece **NÃO resolvido**) ou o archive da b1b.**
+
+## 11. Adendo de implementação (2026-10-16)
+
+> **Natureza:** reconcilição **exclusivamente documental** do estado **implementado e comprovado** da B2.2 (GSD `56.2.4`, **10/10 planos**; checkpoint humano **`approved_with_limitations`**, escopo **INATIVO/local**). **Não** cria requirements, **não** altera o gate D13 (**NÃO resolvido**) e **não** executa lifecycle OpenSpec (`sync`/`archive`).
+
+### 11.1 O que foi implementado e comprovado
+
+- **Recuperação de arte (B2B-D1)** — `src/lib/product-1-1/artifact/artifact-recovery.ts`: `integral` ⇒ recupera e conclui a entrega sem regenerar (`confirm_existing_art`, sem novo upload); `invalid`/`indeterminate` ⇒ `unresolved` (nunca ausência); `absent` ⇒ devolvido (não fecha/estorna); terminais ⇒ `operation_terminal`.
+- **PF + encerramento local (B2B-D3/D6)** — `supabase/migrations/20261015000001` (`product_1_1_close_failed_operation`, sob a trava C4) + `generation-orchestrator.ts` (marcador `outcome='failed'` **só** no ponto de decisão terminal, `:1384-1422`; `settleConfirmedFailure`, `:797-892`). **Retry/fallback pendente NÃO estorna.**
+- **Resolução autorizada e auditada (B2B-D4)** — `pending/resolve-pending-operation.ts` + `20261015000002` (`authorized_abandon` condiciona **ambos** os `RAISE`; claim `in_progress` residual finalizado como `abandoned` **na mesma transação sob a trava**); tela admin com habilitação funcional mínima.
+- **Estorno confirmado, formulário e mensagem (B2B-D5/D9)** — `src/components/flow/refunded-panel.tsx` (mensagem exata só com estorno **confirmado**; amber honesto sem confirmação); `display.ts`/`use-campaign-form.ts` (restauração server-side; imagem **nunca** prometida).
+- **Neutralização de resultado atrasado (B2B-D6)** — `record_generation_outcome → operation_terminal`; `deliver` só `art_uploaded → delivered`; terminais não sobrescritos.
+
+### 11.2 Protocolo final de publicação/token/epoch (recorte de integridade)
+
+- **Estado por operação:** `publication_state ∈ {none, in_flight, published, failed_before_upload, result_unknown}` (separado do `status` do crédito), `publication_token`, `state_epoch`.
+- **RPCs:** `begin_publication` (antes do upload, sob C4) / `abort_publication` (só `before_upload`) / `mark_result_unknown` / `confirm_existing_art` (recuperação sem novo upload) / `get_publication_epoch`.
+- **Transições principais:** `mark`/`deliver` exigem **token do dono**; `refund`/`close_failed_operation` exigem **`observed_epoch` fresco** (capturado antes da sonda) e **bloqueiam `published`**; o **PF automático** fica bloqueado com publicação ativa (`in_flight`/`result_unknown`).
+
+### 11.3 Exceção administrativa auditada (estende B2B-D4)
+
+`admin_resolve_product_1_1_pending` distingue: (i) **automático/PF bloqueado** com publicação ativa; (ii) **administrativo excepcional** — **somente** via marca autorizada/auditada **`authorized_publication_closure`** (ao lado de `authorized_abandon`) — que **pode** encerrar um estado **realmente inconclusivo** tornando a operação **terminal**. **`published` nunca estorna**; resultado tardio **não** reabre entrega nem cobrança; autoridade **server-side**.
+
+### 11.4 Migrations — LOCAL-ONLY, aplicadas SOMENTE no isolado
+
+**Quatro** migrations B2.2 (apenas autoradas no repo; aplicadas **exclusivamente** em `vendeo-f562a-isolated`, nunca `db push`/`--linked`/remoto):
+
+| Arquivo | Papel |
+|---|---|
+| `20261015000001_f56_2b2b_failure_closure.sql` | `product_1_1_close_failed_operation` (PF sob C4 + estorno idempotente) |
+| `20261015000002_f56_2b2b_pending_abandon.sql` | `admin_resolve_product_1_1_pending` — abandono autorizado |
+| `20261015000003_f56_2b2b_pending_read.sql` | Leitura de `outcome` persistido (`unknown`/`failed`) não terminal |
+| `20261016000001_f56_2b2b_publication_fence.sql` | Fence de publicação (token/epoch) + recriação de transições |
+
+### 11.5 Provas, limites e tracking
+
+- **Provas (duas camadas):** Camada 1 (contrato/simulação) + **Camada 2** (efeitos reais em Postgres/Storage **locais**, provider **SIMULADO**) — efeitos (a)–(j) e seams (a)/(b)/(c), **0 skipped**; **nenhuma** chamada paga/ativação. Detalhe em `56.2.4-VERIFICATION.md`.
+- **Checkpoint humano:** `approved_with_limitations` (2026-10-16, escopo INATIVO) — **inspeção visual adicional dos reparos NÃO realizada** (aceita a cobertura automatizada).
+- **Lifecycle OpenSpec SEPARADO:** `sync`/`archive` **NÃO** executados; `openspec/specs/**` e archives intocados; change agregadora não sincronizada/arquivada. **B2.3/F56.3 NÃO antecipadas.**
+- **Resíduo separado:** sign-off de segurança da **B2.1** permanece **PENDENTE** (§7), **sinalizado** — **não** aprovado nem encerrado aqui.
+- **Tasks:** `tasks.md` reconciliado **individualmente** contra a evidência GSD (2026-10-16). **D13 NÃO resolvido.**

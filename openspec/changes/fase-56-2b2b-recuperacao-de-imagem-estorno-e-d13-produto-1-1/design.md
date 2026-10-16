@@ -133,3 +133,40 @@ Cinco **costuras de integração** foram reconciliadas após revisão humana (de
 5. **D8 provas por seam:** Camada 2 atravessa tela→serviço/RPC, orquestrador→marcador, CTA→formulário→nova identidade; provider simulado, banco/Storage locais.
 
 **D13 permanece NÃO resolvido; o archive da b1b não é reescrito.**
+
+## Adendo de implementação (2026-10-16)
+
+> **Adendo de reconciliação documental.** As seções acima são a base **pré-implementação** (2026-10-15) e permanecem válidas no essencial, salvo onde este adendo as **evolui**. O adendo **não** cria requirements nem REQ-ID; registra o que foi efetivamente implementado e comprovado (GSD `56.2.4`, 10/10 planos; checkpoint `approved_with_limitations`, escopo INATIVO/local). **D13 NÃO é declarado resolvido.**
+
+### A-1 — Protocolo final de publicação (token/epoch) — extensão de B2B-D3/D6
+
+A janela entre **upload no Storage** e **transição no banco** passou a ser protegida por um **fence de publicação** (recorte de integridade), sem fila/worker/cron:
+
+- **Estado por operação:** `publication_state ∈ {none, in_flight, published, failed_before_upload, result_unknown}` (**separado** do `status` do crédito), `publication_token` (dono) e `state_epoch` (frescor).
+- **RPCs:** `begin_publication` (anúncio **antes** do upload, sob a trava C4), `abort_publication` (só `before_upload`; replay idempotente), `mark_result_unknown` (mantém a proteção), `confirm_existing_art` (**recuperação de objeto existente, sem novo upload**), `get_publication_epoch`.
+- **Transições principais:** `mark`/`deliver` exigem **token do dono** (replay valida o token); `refund` e `close_failed_operation` exigem **`observed_epoch` fresco**, capturado **antes** da sonda, comparado sob a trava — **stale ⇒ recusa**; `published` **nunca** é estornado; o **encerramento automático (PF) fica bloqueado** enquanto houver publicação ativa (`in_flight`/`result_unknown`).
+- **Recuperação (B2B-D1):** usa `confirm_existing_art` (sem token, sem regenerar), cobrindo `in_flight`/`result_unknown`/`published`/histórico, **nunca** reabrindo terminais.
+
+### A-2 — Exceção administrativa auditada (extensão de B2B-D4)
+
+`admin_resolve_product_1_1_pending` passou a distinguir **dois regimes**:
+
+1. **Automático/PF BLOQUEADO** enquanto houver publicação ativa (`in_flight`/`result_unknown`).
+2. **Administrativo excepcional** — **somente** via evidência autorizada/auditada (marca **`authorized_publication_closure`**, ao lado de **`authorized_abandon`**), que **pode** encerrar um estado **realmente inconclusivo** tornando a operação **terminal**. **`published` nunca** estorna; a entrega tardia **não** reabre cobrança. Regra honesta: **autoridade server-side**, nunca do cliente; `actor_id`/motivo/evidência auditados.
+
+### A-3 — Conjunto final de migrations (LOCAL-ONLY, aplicadas SOMENTE no isolado)
+
+**Quatro** migrations B2.2, **apenas autoradas** no repo e **aplicadas exclusivamente** na instância isolada descartável `vendeo-f562a-isolated` (nunca `db push`/`--linked`/remoto/reset):
+
+| Arquivo | Papel |
+|---|---|
+| `20261015000001_f56_2b2b_failure_closure.sql` | RPC `product_1_1_close_failed_operation` (predicado PF sob C4 + estorno idempotente) |
+| `20261015000002_f56_2b2b_pending_abandon.sql` | `CREATE OR REPLACE` de `admin_resolve_product_1_1_pending` — abandono autorizado (`authorized_abandon`) |
+| `20261015000003_f56_2b2b_pending_read.sql` | Leitura expondo `outcome` persistido (`unknown`/`failed`) para operação não terminal |
+| `20261016000001_f56_2b2b_publication_fence.sql` | Fence de publicação (estado/token/epoch) + recriação de `mark`/`deliver`/`refund`/`close_failed_operation`/`admin_resolve` |
+
+### A-4 — Estado, limites e rastreabilidade
+
+- **Provas:** Camada 1 (contrato/simulação) + **Camada 2** (efeitos reais em Postgres/Storage **locais**, provider **SIMULADO**) — efeitos (a)–(j) e seams (a)/(b)/(c), **0 skipped**; **nenhuma** chamada paga/ativação. Detalhe em `56.2.4-VERIFICATION.md`.
+- **Lifecycle OpenSpec SEPARADO:** `sync`/`archive` **NÃO** executados; archive da b1b intocado; change agregadora não sincronizada/arquivada. **B2.3/F56.3 NÃO antecipadas.** Sign-off de segurança da **B2.1** permanece **PENDENTE** (separado). **D13 NÃO resolvido.**
+- **Reconciliação de tarefas e tracking:** `tasks.md` (reconciliado 2026-10-16) e `RECONCILIATION.md` §11.

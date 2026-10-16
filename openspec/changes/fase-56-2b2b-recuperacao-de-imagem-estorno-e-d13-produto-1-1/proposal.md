@@ -73,9 +73,22 @@ Aprovação, reprovação, correção, contador e bloqueio server-side de downlo
 - **UI-SPEC** para formulário restaurado, mensagem e ações: `UI-SPEC.md` **APROVADO** (2026-10-15) como contrato pré-implementação, no escopo INATIVO.
 - **Resíduo separado:** sign-off de segurança da **B2.1** permanece **PENDENTE** (não corrigido aqui) — `RECONCILIATION.md` §7.
 
-## Checkpoint Humano
+## Checkpoint Humano (pré-implementação) — HISTÓRICO
 
-**APROVADA (2026-10-15, escopo INATIVO).** O responsável aprovou a **base reconciliada** (precisões A–D e decisão **A-1 = 4a**) e a **UI-SPEC** da B2.2 como **contrato pré-implementação**, **exclusivamente no escopo INATIVO**. Nenhuma implementação, GSD, migration/`db push`, chamada paga, ativação ou B2.3 foi iniciada. A **validação do resultado implementado** é um checkpoint **posterior e distinto** (UAT da B2.2). O sign-off pendente da **B2.1** permanece **separado**.
+> **Estado no momento da aprovação (2026-10-15, escopo INATIVO).** Este parágrafo descreve a condição **pré-implementação** e é preservado como histórico; o estado implementado está em **"Estado de implementação"** abaixo.
+
+**APROVADA (2026-10-15, escopo INATIVO).** O responsável aprovou a **base reconciliada** (precisões A–D e decisão **A-1 = 4a**) e a **UI-SPEC** da B2.2 como **contrato pré-implementação**, **exclusivamente no escopo INATIVO**. Naquele momento, nenhuma implementação, GSD, migration/`db push`, chamada paga, ativação ou B2.3 havia sido iniciada. A **validação do resultado implementado** é um checkpoint **posterior e distinto** (UAT da B2.2). O sign-off pendente da **B2.1** permanece **separado**.
+
+## Estado de implementação (2026-10-16)
+
+> **Adendo de reconciliação documental.** Registra o estado **implementado e comprovado** da B2.2, preservando o histórico pré-implementação acima. Nada aqui altera os 11 requirements, o **gate D13** (que permanece **NÃO resolvido**) nem o archive da b1b.
+
+- **Implementação executada (GSD `56.2.4`):** **10/10 planos** concluídos; checkpoint humano **`approved_with_limitations`** (2026-10-16) **exclusivamente** no escopo **INATIVO/local**. Evidências: `.planning/phases/56.2.4-.../56.2.4-VERIFICATION.md`, `-UAT.md`, `-REVIEW-INDEPENDENT.md`, `-SECURITY-INDEPENDENT.md`.
+- **Provas em duas camadas:** Camada 1 (contrato/simulação) e Camada 2 (efeitos reais em Postgres/Storage **locais**, provider **SIMULADO**) — efeitos (a)–(j) e os **seams** (a)/(b)/(c), **0 skipped**. **Nenhuma** chamada paga; **nenhuma** ativação.
+- **Protocolo final de publicação/token/epoch (recorte de integridade):** além do PF, a operação passou a registrar **`publication_state`** (`none|in_flight|published|failed_before_upload|result_unknown`), **`publication_token`** (dono) e **`state_epoch`** (frescor). As RPCs `begin_publication`/`abort_publication`/`mark_result_unknown`/`confirm_existing_art`/`get_publication_epoch` governam a janela **Storage→banco**; `mark`/`deliver` exigem **token do dono**; `refund`/`close_failed_operation` exigem **`observed_epoch` fresco** capturado **antes** da sonda e **bloqueiam `published`**. A recuperação de arte usa `confirm_existing_art` (**sem** novo upload).
+- **Exceção administrativa auditada:** `admin_resolve_product_1_1_pending` ganhou, **somente no caminho autorizado e auditado**, a marca **`authorized_publication_closure`** para encerrar publicação **realmente inconclusiva** (`in_flight`/`result_unknown`); **`published` nunca estorna**; a entrega tardia **não** reabre cobrança.
+- **Migrations — LOCAL-ONLY, aplicadas SOMENTE na instância isolada** (`vendeo-f562a-isolated`), nunca por `db push`/`--linked`/remoto: **quatro** arquivos B2.2 — `20261015000001_f56_2b2b_failure_closure.sql`, `20261015000002_f56_2b2b_pending_abandon.sql`, `20261015000003_f56_2b2b_pending_read.sql`, `20261016000001_f56_2b2b_publication_fence.sql`.
+- **Lifecycle OpenSpec SEPARADO:** `sync`/`archive` **NÃO** executados; `openspec/specs/**` e archives intocados; a change agregadora **não** é sincronizada/arquivada. **D13 NÃO resolvido**; sign-off de segurança da **B2.1** permanece **PENDENTE** (sinalizado separadamente). **B2.3** e a **F56.3** **NÃO** antecipadas.
 
 ## Impact
 
