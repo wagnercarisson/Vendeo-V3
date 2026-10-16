@@ -15,6 +15,11 @@ import type {
 import { withOnCallTelemetry } from "@/lib/ai/telemetry-sink";
 import type { ImageModelPairConfig } from "@/lib/ai/image-model-pair";
 import type {
+  PilotPaidCallHandle,
+  PilotPaidCallKind,
+  PilotSpendGate,
+} from "@/lib/product-1-1/pilot/spend-control";
+import type {
   CurrentImageGenerationConfig,
   ImageGenerationConfigSnapshot,
 } from "@/lib/ai/image-generation-config-snapshot";
@@ -381,6 +386,14 @@ export interface ProductOneToOneGenerationDeps {
    */
   readonly resolveAttemptCost?: AttemptCostResolver;
   readonly client?: SupabaseClient;
+  /**
+   * F56.2b2c (B2.3) — Gate de gasto do piloto (POR CHAMADA). Quando AUSENTE, o
+   * piloto está INATIVO (o gate NÃO é consultado). Quando fornecido, é consultado
+   * ANTES de cada chamada paga (imagem principal/retry/fallback e copy inicial):
+   * só `acquired` autoriza o provider; `existing_in_flight`/`closed` NÃO; resultado
+   * desconhecido (timeout/abort) chama `markUnknown` (bloqueia novas chamadas).
+   */
+  readonly pilotSpend?: PilotSpendGate;
 }
 
 type NdjsonEvent = Record<string, unknown>;
@@ -549,11 +562,13 @@ export async function runProductOneToOneGeneration(
             runId: input.runId,
             traceId: input.traceId,
           },
-          { invoker: deps.copyInvoker },
+          { invoker: deps.copyInvoker, pilotSpend: deps.pilotSpend, callKind: "copy_initial" },
         )
       : undefined);
   // Gap 4 / P1 — custo interno por tentativa pela pricing do NOVO FLUXO.
   const resolveAttemptCost = deps.resolveAttemptCost ?? defaultResolveAttemptCost;
+  // F56.2b2c (B2.3) — gate de gasto do piloto (INATIVO quando ausente).
+  const pilotSpend: PilotSpendGate | undefined = deps.pilotSpend;
   const recordAttemptCall =
     deps.recordAttempt ??
     ((call: RecordAttemptCall) =>
@@ -1220,11 +1235,51 @@ export async function runProductOneToOneGeneration(
               size: "1024x1024",
               signal: controllerAbort.signal,
             };
-            const result = await gateway.invoke(NEW_FLOW_CAPABILITY, request, telemetry, target);
-            if (!result.imageBase64) {
-              throw new Error("no_image_in_response");
+            // F56.2b2c (B2.3) — gate de gasto do piloto POR CHAMADA (INATIVO se ausente).
+            const pilotKind: PilotPaidCallKind =
+              target === "fallback"
+                ? "image_fallback"
+                : attemptNumber === 1
+                  ? "image_primary"
+                  : "image_retry";
+            const pilotEstimatedUsd = internalCost.estimatedCostUsd ?? 0;
+            let pilotHandle: PilotPaidCallHandle | undefined;
+            if (pilotSpend) {
+              const decision = await pilotSpend.beginPaidCall({
+                campaignId,
+                operationId,
+                kind: pilotKind,
+                attemptSeq: attemptNumber,
+                estimatedUsd: pilotEstimatedUsd,
+              });
+              // Só `acquired` autoriza invocar o provider; replay/closed/fechado NÃO.
+              if (!decision.acquired) {
+                throw new Error(`pilot_spend_blocked:${decision.reason}`);
+              }
+              pilotHandle = decision.handle;
             }
-            imageDataUrl = `data:${result.mimeType ?? "image/png"};base64,${result.imageBase64}`;
+            try {
+              const result = await gateway.invoke(NEW_FLOW_CAPABILITY, request, telemetry, target);
+              if (!result.imageBase64) {
+                throw new Error("no_image_in_response");
+              }
+              imageDataUrl = `data:${result.mimeType ?? "image/png"};base64,${result.imageBase64}`;
+              if (pilotSpend && pilotHandle) {
+                await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: pilotEstimatedUsd });
+              }
+            } catch (invokeError) {
+              if (pilotSpend && pilotHandle) {
+                const aborted =
+                  controllerAbort.signal.aborted ||
+                  (invokeError instanceof Error && invokeError.name === "AbortError");
+                if (aborted) {
+                  await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_abort" });
+                } else {
+                  await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: pilotEstimatedUsd });
+                }
+              }
+              throw invokeError;
+            }
           } catch (error) {
             failure = error;
           }

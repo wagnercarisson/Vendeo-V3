@@ -316,6 +316,12 @@ export class ProductOneToOneCopyRecoveryClient {
     const target = await this.resolveTarget(input, acquired.attemptSeq);
     const runner = createDefaultProductOneToOneCopyOps(input.runner, {
       ...(input.runnerDeps ?? {}),
+      // F56.2b2c (B2.3) — kind da chamada de copy (automática × manual) para o
+      // gate de gasto do piloto; `pilotSpend` chega por `runnerDeps`. O gate é
+      // aplicado em `default-copy-runner.ts` (ponto único de chamada da copy).
+      callKind:
+        input.runnerDeps?.callKind ??
+        (input.mode === "manual" ? "copy_manual" : "copy_auto"),
       target,
     });
 

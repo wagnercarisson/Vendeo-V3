@@ -8,6 +8,11 @@ import { createDefaultTelemetryContext } from "@/lib/ai/telemetry-sink";
 import { defaultAiGateway } from "@/lib/ai";
 import type { AiInvoker } from "@/lib/ai/gateway";
 import type { AiTelemetryContext } from "@/lib/ai/types";
+import type {
+  PilotPaidCallHandle,
+  PilotPaidCallKind,
+  PilotSpendGate,
+} from "@/lib/product-1-1/pilot/spend-control";
 
 import type { CopyCommit, CopyDelivery } from "./copy-state";
 
@@ -86,6 +91,15 @@ export interface DefaultProductOneToOneCopyRunnerDeps {
    * provider com o alvo informado.
    */
   readonly target?: "primary" | "fallback";
+  /**
+   * F56.2b2c (B2.3) — gate de gasto do piloto (INATIVO se ausente). Contabiliza a
+   * COPY por chamada; só `acquired` autoriza o provider da copy.
+   */
+  readonly pilotSpend?: PilotSpendGate;
+  /** Kind da chamada de copy (`copy_initial` default; `copy_auto`/`copy_manual` na recuperação). */
+  readonly callKind?: PilotPaidCallKind;
+  /** Estimativa conservadora (USD) da chamada de copy (default 0). */
+  readonly estimatedUsd?: number;
 }
 
 /** Contrato estrutural consumido pelo orquestrador (`ProductOneToOneCopyOps`). */
@@ -177,16 +191,51 @@ export function createDefaultProductOneToOneCopyOps(
       traceId: input.traceId,
     });
 
+    // F56.2b2c (B2.3) — gate de gasto do piloto POR CHAMADA (INATIVO se ausente).
+    const pilotSpend = deps.pilotSpend;
+    const callKind: PilotPaidCallKind = deps.callKind ?? "copy_initial";
+    const estimatedUsd = deps.estimatedUsd ?? 0;
+    let pilotHandle: PilotPaidCallHandle | undefined;
+    if (pilotSpend) {
+      const decision = await pilotSpend.beginPaidCall({
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        kind: callKind,
+        attemptSeq: 0,
+        estimatedUsd,
+      });
+      if (!decision.acquired) {
+        throw new Error(`pilot_spend_blocked:${decision.reason}`);
+      }
+      pilotHandle = decision.handle;
+    }
+
     // F56.2b2a (lacuna 3) — EXATAMENTE UMA chamada ao provider por tentativa: o
     // alvo é EXPLÍCITO e decidido SERVER-SIDE; NÃO existe fallback INTERNO
     // dentro do MESMO acionamento. O alvo de fallback, quando aplicável, é a
     // TENTATIVA SEGUINTE (adquirida após a espera da política).
-    const result = await service.generateCopy(copyInput, {
-      signal,
-      telemetry,
-      target: deps.target ?? "primary",
-    });
-    return deliveryFromResult(result);
+    try {
+      const result = await service.generateCopy(copyInput, {
+        signal,
+        telemetry,
+        target: deps.target ?? "primary",
+      });
+      if (pilotSpend && pilotHandle) {
+        await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: estimatedUsd });
+      }
+      return deliveryFromResult(result);
+    } catch (error) {
+      if (pilotSpend && pilotHandle) {
+        const aborted =
+          signal.aborted || (error instanceof Error && error.name === "AbortError");
+        if (aborted) {
+          await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_abort" });
+        } else {
+          await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: estimatedUsd });
+        }
+      }
+      throw error;
+    }
   };
 
   return {

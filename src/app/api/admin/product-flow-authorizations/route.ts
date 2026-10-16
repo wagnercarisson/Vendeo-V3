@@ -19,9 +19,11 @@ import { resolveCanonicalInstanceIdentity } from "@/lib/product-1-1/authorizatio
  *   escopo/instância. Somente leitura.
  * - `POST`: protegido por `requireAdmin`; valida o corpo com Zod e persiste por
  *   **RPC auditada** `admin_grant_product_flow_stage_authorization` (motivo e
- *   `operationId` obrigatórios, actor derivado server-side). Nesta change a
- *   concessão de estágio habilitador é **recusada** (403) e auditada; o estado
- *   operacional permanece `off`.
+ *   `operationId` obrigatórios, actor derivado server-side). **F56.2b2c:** a via
+ *   ESTREITA `isolated_pilot` + `test_stores` é **concedida** (200) e auditada;
+ *   os demais estágios habilitadores e o escopo geral (`all_stores`) continuam
+ *   **RECUSADOS** (403, `operational_activation_blocked_in_b1a`) — a barreira
+ *   global é preservada. A habilitação da janela depende da flag aplicável.
  *
  * Esta rota é a ÚNICA superfície autorizada a importar
  * `src/lib/product-1-1/authorization/**` (exceção estreita da guarda de
