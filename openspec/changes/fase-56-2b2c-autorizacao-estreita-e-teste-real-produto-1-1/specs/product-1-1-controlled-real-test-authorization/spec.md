@@ -6,12 +6,12 @@
 
 ### Requirement: Autorização temporária estreita
 
-O sistema SHALL permitir uma autorização **temporária e estreita** para o **teste real controlado isolado**, restrita a uma **instância autorizada** e a **lojas autorizadas**, com **expiração**, **auditoria** (concessor, motivo, `operation_id`, escopo, instância) e **revogação**. A concessão SHALL ocorrer por **admin autenticado** via RPC auditada.
+O sistema SHALL permitir uma autorização **temporária e estreita** para o **teste real controlado isolado**, restrita a uma **instância autorizada** e ao **escopo de lojas de teste**, com **auditoria** (concessor, motivo, `operation_id`, escopo, instância) e **revogação**. A concessão SHALL ocorrer por **admin autenticado** via RPC auditada. **Expiração:** a existente é **respeitada quando informada**; **não** se implementa **nova expiração obrigatória** — a janela é controlada pela **flag** e pela **revogação**.
 
 #### Scenario: Autorização restrita a instância e lojas
 
 - **WHEN** a autorização temporária é concedida
-- **THEN** ela é restrita à instância autorizada e às lojas autorizadas
+- **THEN** ela é restrita à instância autorizada e ao **escopo de lojas de teste** (`test_stores`)
 - **AND** nenhuma outra instância ou loja é habilitada
 
 #### Scenario: Concessão auditada
@@ -20,11 +20,12 @@ O sistema SHALL permitir uma autorização **temporária e estreita** para o **t
 - **THEN** ficam registrados o concessor, o motivo, o `operation_id`, o escopo e a instância
 - **AND** a concessão é auditável
 
-#### Scenario: Autorização com expiração
+#### Scenario: Expiração existente respeitada (quando informada)
 
-- **WHEN** a autorização é concedida com expiração
+- **WHEN** a autorização é concedida **com** expiração
 - **THEN** após o vencimento ela deixa de permitir o recorte
 - **AND** o estado retorna a não autorizado
+- **AND** quando **sem** expiração informada, a janela é delimitada pela **flag** e pela **revogação**
 
 ### Requirement: Revogação e revalidação server-side
 
@@ -61,3 +62,39 @@ A autorização temporária SHALL NOT habilitar aprovação, reprovação ou cor
 - **WHEN** a autorização temporária está vigente
 - **THEN** aprovação/reprovação/correção continuam indisponíveis
 - **AND** a decisão de aprovação permanece reservada à F56.3
+
+### Requirement: Via estreita e testes negativos
+
+A autorização habilitadora SHALL ocorrer **somente** pela via **`isolated_pilot` + `test_stores` + `isolated`** (ajuste **mínimo** da barreira existente). **`all_stores` SHALL permanecer sempre recusado**. A **janela** SHALL ser controlada por **`product_1_1_test_stores_enabled`**; **não** haverá autorização/expiração/allowlist **por loja**. Os controles existentes (instância, autorização, auditoria, revogação) SHALL ser **reaproveitados**, sem novo subsistema.
+
+#### Scenario: Via estreita é a única permitida
+
+- **WHEN** a autorização habilitadora é concedida
+- **THEN** ela é `isolated_pilot` + `test_stores` + `isolated`
+- **AND** `all_stores` permanece recusado
+
+#### Scenario: Ambas as lojas de teste validam
+
+- **WHEN** Adega ou NovaTek (`is_test_store=true`) usa o fluxo novo sob a autorização vigente
+- **THEN** a validação é permitida no recorte de lojas de teste
+
+#### Scenario: Flag desligada nega
+
+- **WHEN** `product_1_1_test_stores_enabled` está `false`
+- **THEN** a decisão nega o fluxo novo
+
+#### Scenario: Loja não-test nega
+
+- **WHEN** a loja não é de teste (`is_test_store=false`)
+- **THEN** o novo fluxo é negado
+
+#### Scenario: Instância ou ambiente não autorizado nega
+
+- **WHEN** a instância canônica não corresponde ou o ambiente não é `isolated`
+- **THEN** a decisão nega
+
+#### Scenario: Escopo geral recusado
+
+- **WHEN** se tenta o escopo geral (`all_stores`)
+- **THEN** a recusa é preservada
+- **AND** a produção permanece intocada

@@ -6,7 +6,7 @@
 
 ### Requirement: Concessão operacional bloqueada nesta change
 
-A API/RPC operacional SHALL **recusar** estágios habilitadores no **escopo geral** antes do gate da F56.2b2. A **barreira global NÃO é removida**. A **única** via para habilitar o **teste real isolado** SHALL ser a **autorização temporária ESTREITA** (capability `product-1-1-controlled-real-test-authorization`), com instância e lojas autorizadas, expiração, auditoria e revogação. Testes de lógica usam dados controlados e não chamam esse caminho operacional.
+A API/RPC operacional SHALL **recusar** estágios habilitadores no **escopo geral** antes do gate da F56.2b2. A **barreira global NÃO é removida**. A **única** via para habilitar o **teste real isolado** SHALL ser a **autorização temporária ESTREITA** (capability `product-1-1-controlled-real-test-authorization`), com **instância** e **escopo de lojas de teste**, **auditoria** e **revogação** (a **expiração existente** é respeitada quando informada). Testes de lógica usam dados controlados e não chamam esse caminho operacional.
 
 #### Scenario: Fixture de estágio não ativa fluxo real
 
@@ -77,3 +77,73 @@ A separação entre deploy e dados SHALL ser explícita: **rollback de deploy n�
 - **WHEN** um deploy é revertido
 - **THEN** o estado de banco e o ledger permanecem como estavam
 - **AND** nenhuma reversão automática de migration/cobrança é executada
+
+### Requirement: Pricing completo e controle de gasto mínimo (alcance real)
+
+O teste real SHALL exigir **pricing `complete` para principal E fallback**, por **modelo+qualidade**, na configuração **própria do fluxo novo** (`image_model_pair_config`) — **não** em `ai_model_selection` (legado). O **controle de gasto mínimo** SHALL **limitar chamadas** (imagem ≤3; copy ≤6), usar **estimativas conservadoras** para **parar** e **prevenir execuções simultâneas**. **Não** existe cap monetário cumulativo hoje e o mecanismo SHALL NOT prometer **garantia financeira** da cobrança final do provider.
+
+#### Scenario: Pricing incompleto bloqueia
+
+- **WHEN** o principal ou o fallback não tem pricing `complete` por modelo+qualidade
+- **THEN** a execução é bloqueada antes de reserva/provider
+- **AND** nenhum valor é inventado
+
+#### Scenario: Controle mínimo limita chamadas e para
+
+- **WHEN** o limite de chamadas/tentativas ou o limite conservador é atingido
+- **THEN** novas chamadas não ocorrem e o estado é encerrado honestamente
+- **AND** nenhuma garantia financeira da cobrança final é prometida
+
+#### Scenario: Execuções simultâneas prevenidas
+
+- **WHEN** duas execuções concorrem pela mesma operação
+- **THEN** apenas uma vence a aquisição atômica
+- **AND** a perdedora não chama o provider
+
+### Requirement: Inspeção humana do resultado do teste real
+
+O **resultado do teste real** SHALL ser submetido a **inspeção humana**. Falhas **raras** do provider SHALL permanecer cobertas por **testes simulados**, sem exigir provocá-las no provider pago.
+
+#### Scenario: Inspeção humana obrigatória
+
+- **WHEN** o teste real produz um resultado
+- **THEN** o resultado é inspecionado por humano
+- **AND** nenhuma aprovação automática substitui a inspeção
+
+#### Scenario: Falhas raras por simulação
+
+- **WHEN** uma falha rara do provider precisa ser coberta
+- **THEN** ela é exercitada por simulação
+- **AND** não é exigida no provider pago
+
+### Requirement: Testes negativos de habilitação e não regressão do legado
+
+O novo fluxo SHALL cobrir **testes negativos**: **flag desligada**, **loja não-test**, **instância/ambiente não autorizado** e **escopo geral** (`all_stores`). O **fluxo legado** SHALL permanecer **inalterado** (sem regressão intencional).
+
+#### Scenario: Flag desligada
+
+- **WHEN** o flag de lojas de teste está desligado
+- **THEN** o novo fluxo é negado
+- **AND** nenhuma geração ocorre
+
+#### Scenario: Loja não-test
+
+- **WHEN** a loja não é de teste
+- **THEN** o novo fluxo é negado
+
+#### Scenario: Instância ou ambiente não autorizado
+
+- **WHEN** a instância canônica não corresponde ou o ambiente não é `isolated`
+- **THEN** o novo fluxo é negado
+
+#### Scenario: Escopo geral
+
+- **WHEN** se tenta o escopo geral (`all_stores`)
+- **THEN** a recusa permanece
+- **AND** a produção permanece intocada
+
+#### Scenario: Legado sem regressão
+
+- **WHEN** o recorte de lojas de teste é exercido
+- **THEN** o comportamento do fluxo legado permanece inalterado
+- **AND** não há regressão intencional do legado
