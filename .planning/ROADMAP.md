@@ -408,7 +408,7 @@ Plans:
 
 **Provas exigidas no planejamento (duas camadas — Precisão D):** **Camada 1** — falhas raras por **simulação controlada** (harness/fake: falha de `storeArtifact`, sonda `indeterminate`, falha de gravação do marcador) provando **controle de fluxo**; **Camada 2** — **efeitos reais** em **Postgres/Storage locais** (instância isolada e descartável, repontada) comprovando: corrida **entrega × estorno**; **estorno idempotente**; **resultado atrasado**; **falha de Storage/banco**; **formulário restaurado**; **geração normal sem arte (claim `in_progress`) → consulta/reload NÃO estorna**; **principal falhou/fallback pendente NÃO estorna** (janela principal→fallback); **falha final (PF) → encerra e estorna uma vez** (decisão server-side); **sem sinal de finalidade → exige encerramento autorizado e auditado**; **encerramento impede atomicamente tentativa posterior** (`operation_terminal`). **Nenhuma** falha provocada em provider **pago** (reservado à B2.3). Gates locais: typecheck, lint, build e suíte local **sem chamada paga**; `openspec validate --strict`; `git diff --check`. Migration **LOCAL-ONLY** (autorada; aplicada só na instância isolada, nunca `db push` remoto). **Checkpoint humano antes do fechamento e revisão das autorizações antes de qualquer operação de banco.**
 
-**Plans:** 10 plans (`56.2.4-01..-10`) (**8 executados** — `56.2.4-01..-06` + `56.2.4-08`; **09/10 pendentes**; **Plano 07 = fechamento reconciliado, após 08–10**)
+**Plans:** 10 plans (`56.2.4-01..-10`) — **7/10 concluídos** (`56.2.4-01..-06` + `56.2.4-08`); **09/10 pendentes**; **07 = fechamento reconciliado (após 08–10)**
 
 **Wave 1**
 - [x] 56.2.4-01-PLAN.md — [BLOCKING migration] Encerramento PF sob a trava C4 + estorno idempotente (migration LOCAL-ONLY apenas autorada) + contrato (REQ-56.2.4-05, -06) — **CONCLUÍDO 2026-10-15** (`56.2.4-01-SUMMARY.md`)
@@ -419,14 +419,13 @@ Plans:
 - [x] 56.2.4-05-PLAN.md — UI `refunded` (mensagem exata) + formulário restaurado server-side + prova de render (REQ-56.2.4-07, -08, -10) — **CONCLUÍDO 2026-10-15** (`56.2.4-05-SUMMARY.md`)
 **Wave 3**
 - [x] 56.2.4-06-PLAN.md — [BLOCKING] Revisão de autorizações + harness isolado + aplicação LOCAL-ONLY + Camada 2 (efeitos reais a-j) (REQ-56.2.4-01..08, -10, -11) — **CONCLUÍDO 2026-10-15** (`56.2.4-06-SUMMARY.md`); correções de prova pós-revisão (`4674aaf7`/`24c8cafd`/`de7c053c`)
-**Wave 4**
-- [ ] 56.2.4-07-PLAN.md — Gates + evidência do gate D13 (não resolvido) + checkpoint humano STOP (REQ-56.2.4-01..11) — **VERIFICAÇÃO REGISTRADA 2026-10-15; CHECKPOINT HUMANO PENDENTE (fase NÃO concluída)** (`56.2.4-VERIFICATION.md`, `56.2.4-UAT.md`)
-
-**Wave 5 — reparos (CR-01/SEC-01 … CR-03/SEC-03)**
+**Wave 5 — reparo 1 (CR-01/SEC-01)**
 - [x] 56.2.4-08-PLAN.md — [BLOCKING] FENCE de publicação (publication_state/token/state_epoch; begin antes do upload; mark/deliver com token; confirm_existing_art; exceção admin restrita; PF completo com epoch; barreira real) — **CONCLUÍDO 2026-10-16** (`56.2.4-08-SUMMARY.md`); aplicado **só** no isolado (`20261016000001`, hash `2C2D81AE…`); Camada 2 **104/0 skipped**
+**Wave 6 — reparo 2 (CR-02/CR-03)**
 - [ ] 56.2.4-09-PLAN.md — Recuperação alcançável pela interface + terminal do iniciador (CR-02/CR-03) — **pendente**
+**Wave 7 — reparo 3 (médios)**
 - [ ] 56.2.4-10-PLAN.md — Fidelidade da restauração + ferramentas (médios) — **pendente**
-
-**Wave 6 — fechamento reconciliado (Plano 07)** — executar **após 08–10** (gates funcionais + **independentes**; D13 **não resolvido**; checkpoint humano).
+**Wave 8 — fechamento reconciliado (Plano 07)**
+- [ ] 56.2.4-07-PLAN.md — Gates + evidência do gate D13 (não resolvido) + checkpoint humano STOP (REQ-56.2.4-01..11) — **VERIFICAÇÃO REGISTRADA 2026-10-15; CHECKPOINT HUMANO PENDENTE (fase NÃO concluída)** (`56.2.4-VERIFICATION.md`, `56.2.4-UAT.md`) — executar **após 08–10** (gates funcionais + **independentes**; D13 **não resolvido**)
 
 **Canonical refs:** `openspec/changes/fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/` (proposal, design B2B-D1..D9, specs `product-1-1-artifact-delivery` / `product-1-1-campaign-credit-billing` / `product-1-1-generation-orchestration`, tasks §1–§6, UI-SPEC, RECONCILIATION), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/campaign-preview.md`, `src/lib/product-1-1/orchestration/generation-orchestrator.ts`, `src/lib/product-1-1/pending/resolve-pending-operation.ts`, `src/app/api/admin/product-1-1-pending/route.ts`, `src/app/(app)/campanhas/[id]/client.tsx`, `src/components/flow/use-campaign-form.ts`, `src/hooks/use-input-preservation.ts`, `supabase/migrations/20261009000002_*` (resolução auditada, b1b LOCAL-ONLY), `supabase/migrations/20261009000005_f56_2b1b_copy_state.sql` (b1b, LOCAL-ONLY), `scripts/run-f56-2b1b-isolated-integration.ps1` (harness de prova isolado).
