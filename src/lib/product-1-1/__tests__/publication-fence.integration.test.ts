@@ -11,11 +11,101 @@ import {
   createIsolatedContext,
   createTestStore,
   creditOperationRow,
+  jpeg1024DataUrl,
   pgCallJson,
+  readNdjson,
   reserveCredit,
   setCredits,
+  terminalEvent,
   type IsolatedContext,
 } from "./integration-harness";
+
+import type { ImageGenerationConfigSnapshot } from "@/lib/ai/image-generation-config-snapshot";
+import type { AiInvoker } from "@/lib/ai/gateway";
+import type { AiInvocationRequest } from "@/lib/ai/types";
+import type { NewFlowPreflightResult } from "../orchestration/preflight";
+import type { AttemptCostResolver } from "../orchestration/instrumentation";
+import { ProductOneToOneAttemptStartClient } from "../orchestration/attempt-start-client";
+import { ProductOneToOneCreditOperationClient } from "../credit-operation/credit-operation-client";
+import { ProductOneToOneArtifactStore } from "../artifact/artifact-store";
+import {
+  runProductOneToOneGeneration,
+  type ProductOneToOneGenerationDeps,
+} from "../orchestration/generation-orchestrator";
+
+const PRIMARY = { model: "gpt-image-2.5-sunburst", quality: "medium" } as const;
+const FALLBACK = { model: "gpt-image-2", quality: "medium" } as const;
+
+function snapshotFor(campaignId: string): ImageGenerationConfigSnapshot {
+  return {
+    campaignId,
+    primaryModel: PRIMARY.model,
+    primaryQuality: PRIMARY.quality,
+    fallbackModel: FALLBACK.model,
+    fallbackQuality: FALLBACK.quality,
+    configVersionId: randomUUID(),
+    origin: "selection",
+    runId: randomUUID(),
+    traceId: `trace-${randomUUID()}`,
+    createdAt: new Date().toISOString(),
+  } as unknown as ImageGenerationConfigSnapshot;
+}
+
+function genInput(campaign: string, operation: string) {
+  return {
+    campaignId: campaign,
+    operationId: operation,
+    storeId,
+    briefing: {
+      backgroundDirection: "studio" as const,
+      product: { name: "Produto 1:1", description: "Descrição" },
+      commercial: {
+        intent: "offer" as const,
+        originalPriceText: "R$ 100",
+        discountedPriceText: "R$ 80",
+        badge: null,
+        validity: null,
+      },
+      constraints: { mandatoryArtworkText: null },
+    },
+    briefingText: "briefing",
+    campaignIntent: "offer" as const,
+    backgroundDirection: "studio" as const,
+  };
+}
+
+function gatewayCapturing(
+  captured: AiInvocationRequest[],
+  behavior: () => Promise<{ imageBase64: string; mimeType: string }>,
+): AiInvoker {
+  return {
+    invoke: async (_capability: string, request: AiInvocationRequest) => {
+      captured.push(request);
+      return behavior();
+    },
+  } as unknown as AiInvoker;
+}
+
+function genDeps(overrides: Partial<ProductOneToOneGenerationDeps> = {}): ProductOneToOneGenerationDeps {
+  return {
+    client: ctx.supabase,
+    runPreflight: async () =>
+      ({
+        config: { primary: PRIMARY, fallback: FALLBACK, origin: "selection", configVersionId: randomUUID() },
+        pricing: { status: "complete" },
+      }) as unknown as NewFlowPreflightResult,
+    buildSnapshot: (_config, context) => snapshotFor(context.campaignId),
+    credit: new ProductOneToOneCreditOperationClient(ctx.supabase),
+    attempts: new ProductOneToOneAttemptStartClient(ctx.supabase),
+    artifact: new ProductOneToOneArtifactStore(ctx.supabase),
+    recordAttempt: async () => ({}),
+    resolveAttemptCost: (async () => {
+      throw new Error("pricing_stub");
+    }) as unknown as AttemptCostResolver,
+    generateSupportReference: () => randomUUID(),
+    ...overrides,
+  };
+}
 
 /**
  * F56.2b2b — Plano 08 (Recorte 1): FENCE de publicação — prova de Camada 2
@@ -248,4 +338,113 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
     const confirmed = await confirmExistingArt(campaign, op, "integral");
     expect(confirmed).toMatchObject({ success: true, status: "delivered" });
   }, 60_000);
+});
+
+describe("F56.2b2b — Camada 2: BARREIRA pós-upload/pré-`mark` (orquestrador REAL + Storage local)", () => {
+  it("upload ÍNTEGRO pausado ⇒ encerramento recusado, sem estorno; liberar a barreira entrega SEM novo upload/geração/cobrança", async () => {
+    const campaign = await createCampaign(ctx.supabase, storeId);
+    const op = randomUUID();
+    const realArtifact = new ProductOneToOneArtifactStore(ctx.supabase);
+
+    // Sincronização EXPLÍCITA (sem sleeps): o teste pausa o orquestrador APÓS o
+    // upload real no Storage e ANTES de `mark`.
+    let releaseBarrier!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+    let signalUpload!: () => void;
+    const uploadReached = new Promise<void>((resolve) => {
+      signalUpload = resolve;
+    });
+    let storeCalls = 0;
+    const captured: AiInvocationRequest[] = [];
+    const image = await jpeg1024DataUrl();
+
+    const artifactWrapper = {
+      storeArtifact: async (
+        input: Parameters<ProductOneToOneArtifactStore["storeArtifact"]>[0],
+      ) => {
+        storeCalls += 1;
+        const ref = await realArtifact.storeArtifact(input);
+        signalUpload(); // upload REAL concluído — a imagem já está no Storage
+        await barrier; // BARREIRA: antes de `mark`
+        return ref;
+      },
+      probeArtifact: (
+        input: Parameters<ProductOneToOneArtifactStore["probeArtifact"]>[0],
+      ) => realArtifact.probeArtifact(input),
+    };
+
+    // Lê o stream em paralelo para que o orquestrador prossiga até a barreira.
+    const reading = runProductOneToOneGeneration(
+      genInput(campaign, op),
+      genDeps({
+        artifact: artifactWrapper,
+        createGateway: () =>
+          gatewayCapturing(captured, async () => ({
+            imageBase64: image.split(",")[1],
+            mimeType: "image/jpeg",
+          })),
+      }),
+    ).then((response) => readNdjson(response));
+
+    await uploadReached; // pausado APÓS o upload real
+
+    // (1) A imagem REALMENTE existe e é ÍNTEGRA no Storage local.
+    const probe = await realArtifact.probeArtifact({
+      storeId,
+      campaignId: campaign,
+      operationId: op,
+    });
+    expect(probe.kind).toBe("integral");
+
+    // Operação NÃO terminal e publicação ATIVA (fence), com epoch observável.
+    expect((await creditOperationRow(ctx.pg, campaign, op))?.status).toBe("reserved");
+    const { rows: fenceRows } = await ctx.pg.query<{ publication_state: string; state_epoch: number }>(
+      "SELECT publication_state, state_epoch FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 AND operation_id=$2",
+      [campaign, op],
+    );
+    expect(fenceRows[0].publication_state).toBe("in_flight");
+
+    const refundBefore = await refundLedgerCount();
+
+    // (2a) Encerramento AUTOMÁTICO recusado enquanto o fence está ativo (conexão
+    // independente — concorrência real, não serialização na mesma conexão).
+    await expect(
+      pgCallJson(
+        ctx.pg2,
+        "SELECT public.product_1_1_close_failed_operation($1::uuid,$2::uuid,'absent',$3::integer,$4::text) AS r",
+        [campaign, op, fenceRows[0].state_epoch, "generation_failed"],
+      ),
+    ).rejects.toThrow(/publication_in_progress/);
+
+    // (2b) Encerramento por EVIDÊNCIA OBSOLETA (epoch anterior ao begin = 0) recusado.
+    await expect(
+      pgCallJson(
+        ctx.pg2,
+        "SELECT public.admin_resolve_product_1_1_pending($1,$2,$3,$4,$5,$6,$7::jsonb) AS r",
+        [
+          randomUUID(),
+          campaign,
+          op,
+          "refund_once",
+          "evidencia obsoleta",
+          randomUUID(),
+          JSON.stringify(evidence({ state_epoch: 0 })),
+        ],
+      ),
+    ).rejects.toThrow(/publication_in_progress|evidence_stale/);
+
+    // Sem estorno em NENHUMA das recusas.
+    expect(await refundLedgerCount()).toBe(refundBefore);
+
+    // (3) Libera a barreira: a entrega conclui SEM novo upload, geração ou cobrança.
+    releaseBarrier();
+    const terminal = terminalEvent(await reading);
+    expect(terminal).toMatchObject({ type: "result" });
+    expect(storeCalls).toBe(1); // exatamente UM upload (nenhuma regeneração)
+    expect(captured).toHaveLength(1); // exatamente UMA chamada ao provider
+    expect(await refundLedgerCount()).toBe(refundBefore);
+    expect((await creditOperationRow(ctx.pg, campaign, op))?.status).toBe("delivered");
+  }, 90_000);
 });
