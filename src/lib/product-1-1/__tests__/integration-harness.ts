@@ -179,27 +179,44 @@ export function reserveCredit(
   );
 }
 
-export function markArtUploaded(
+export async function markArtUploaded(
   pg: PgClient,
   campaign: string,
   operation: string,
 ): Promise<Record<string, unknown>> {
+  // Recorte 1 (Plano 08): `mark` agora exige o TOKEN do dono. Anuncia a
+  // publicação ANTES (fence) e usa o token resultante — assinatura preservada.
+  await pgCallJson(pg, "SELECT public.product_1_1_begin_publication($1, $2) AS r", [
+    campaign,
+    operation,
+  ]);
+  const { rows } = await pg.query<{ publication_token: string | null }>(
+    "SELECT publication_token FROM public.product_1_1_campaign_credit_operations WHERE campaign_id = $1 AND operation_id = $2",
+    [campaign, operation],
+  );
+  const token = rows[0]?.publication_token ?? null;
+  if (!token) throw new Error("fixture_publication_token_missing");
   return pgCallJson(
     pg,
-    "SELECT public.product_1_1_mark_campaign_credit_art_uploaded($1, $2) AS r",
-    [campaign, operation],
+    "SELECT public.product_1_1_mark_campaign_credit_art_uploaded($1, $2, $3) AS r",
+    [campaign, operation, token],
   );
 }
 
-export function deliverCredit(
+export async function deliverCredit(
   pg: PgClient,
   campaign: string,
   operation: string,
 ): Promise<Record<string, unknown>> {
+  const { rows } = await pg.query<{ publication_token: string | null }>(
+    "SELECT publication_token FROM public.product_1_1_campaign_credit_operations WHERE campaign_id = $1 AND operation_id = $2",
+    [campaign, operation],
+  );
+  const token = rows[0]?.publication_token ?? null;
   return pgCallJson(
     pg,
-    "SELECT public.product_1_1_deliver_campaign_credit_operation($1, $2) AS r",
-    [campaign, operation],
+    "SELECT public.product_1_1_deliver_campaign_credit_operation($1, $2, $3) AS r",
+    [campaign, operation, token],
   );
 }
 

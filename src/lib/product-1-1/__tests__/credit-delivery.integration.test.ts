@@ -58,14 +58,14 @@ describe("F56.2b1b — credit delivery (Postgres real)", () => {
     expect(await availableCredits(ctx.pg, storeId)).toBe(before - 1);
     expect(await deductionCount(ctx.pg, storeId)).toBe(1);
 
+    const deliveryClient = new ProductOneToOneCreditOperationClient(ctx.supabase);
+    const pubToken = (await deliveryClient.beginPublication(campaign, operationId)).token;
+    if (!pubToken) throw new Error("fixture_publication_token_missing");
     await ctx.pg.query(
-      "SELECT public.product_1_1_mark_campaign_credit_art_uploaded($1, $2) AS r",
-      [campaign, operationId],
+      "SELECT public.product_1_1_mark_campaign_credit_art_uploaded($1, $2, $3) AS r",
+      [campaign, operationId, pubToken],
     );
-    const delivered = await new ProductOneToOneCreditOperationClient(ctx.supabase).deliver(
-      campaign,
-      operationId,
-    );
+    const delivered = await deliveryClient.deliver(campaign, operationId, pubToken);
     expect(delivered).toMatchObject({ status: "delivered", consumedDefinitive: true });
     // Um crédito por entrega — nenhuma segunda dedução.
     expect(await deductionCount(ctx.pg, storeId)).toBe(1);
@@ -145,11 +145,13 @@ describe("F56.2b1b — credit delivery (Postgres real)", () => {
     const operationId = randomUUID();
     const client = new ProductOneToOneCreditOperationClient(ctx.supabase);
     await reserve(campaign, operationId);
+    const pubToken = (await client.beginPublication(campaign, operationId)).token;
+    if (!pubToken) throw new Error("fixture_publication_token_missing");
     await ctx.pg.query(
-      "SELECT public.product_1_1_mark_campaign_credit_art_uploaded($1, $2) AS r",
-      [campaign, operationId],
+      "SELECT public.product_1_1_mark_campaign_credit_art_uploaded($1, $2, $3) AS r",
+      [campaign, operationId, pubToken],
     );
-    await client.deliver(campaign, operationId);
+    await client.deliver(campaign, operationId, pubToken);
 
     const attempts = new ProductOneToOneAttemptStartClient(ctx.supabase);
     const refused = await attempts.acquire({

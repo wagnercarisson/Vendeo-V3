@@ -290,6 +290,8 @@ function record(overrides: Partial<PendingOperationState> = {}): PendingOperatio
     unknown: false,
     failed: false,
     processing: false,
+    stateEpoch: 0,
+    publicationState: "none",
     supportReference: null,
     createdAt: "2026-10-12T00:00:00.000Z",
     updatedAt: "2026-10-12T00:00:00.000Z",

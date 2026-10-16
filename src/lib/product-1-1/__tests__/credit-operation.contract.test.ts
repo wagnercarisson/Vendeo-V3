@@ -190,7 +190,7 @@ describe("F56.2b1a — cliente fino de operação de crédito (simulado)", () =>
 
   it("delivered marca consumo definitivo; refunded restaura", async () => {
     m.rpc.mockResolvedValueOnce({ data: state({ status: "delivered" }), error: null });
-    const delivered = await new ProductOneToOneCreditOperationClient().deliver("camp-1", "op-1");
+    const delivered = await new ProductOneToOneCreditOperationClient().deliver("camp-1", "op-1", "tok-1");
     expect(delivered.consumedDefinitive).toBe(true);
 
     m.rpc.mockResolvedValueOnce({
@@ -256,7 +256,7 @@ describe("F56.2b1a — cliente fino de operação de crédito (simulado)", () =>
   it("resposta vazia/ inválida lança erro (nunca sucesso enganoso)", async () => {
     m.rpc.mockResolvedValue({ data: null, error: null });
     await expect(
-      new ProductOneToOneCreditOperationClient().deliver("camp-1", "op-1"),
+      new ProductOneToOneCreditOperationClient().deliver("camp-1", "op-1", "tok-1"),
     ).rejects.toBeInstanceOf(CreditOperationError);
   });
 

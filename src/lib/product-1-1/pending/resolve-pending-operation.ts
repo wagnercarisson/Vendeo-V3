@@ -161,6 +161,10 @@ interface ServerDerivedEvidence {
   readonly origin: "server-derived";
   readonly art_kind: ArtifactProbe["kind"];
   readonly execution_ended: boolean;
+  /** Recorte 1 — frescor capturado ANTES da sonda (comparado sob a trava pela RPC). */
+  readonly state_epoch: number;
+  /** Recorte 1 — estado do fence de publicação (nunca declarado pelo cliente). */
+  readonly publication_state: string;
   /** B2B-D4 — marca de abandono AUTORIZADO (só no caminho autorizado/auditado). */
   readonly authorized_abandon?: boolean;
 }
@@ -264,6 +268,8 @@ export async function resolvePendingOperation(
     origin: "server-derived",
     art_kind: artKind,
     execution_ended: executionEnded,
+    state_epoch: state.stateEpoch,
+    publication_state: state.publicationState,
     // A marca só é emitida no caminho AUTORIZADO; nunca inferida do cliente.
     ...(authorizedAbandon ? { authorized_abandon: true } : {}),
   });

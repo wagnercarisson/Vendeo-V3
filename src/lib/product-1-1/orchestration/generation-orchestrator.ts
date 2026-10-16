@@ -182,9 +182,30 @@ export interface ProductOneToOneCreditOps {
     campaignId: string;
     operationId: string;
   }): Promise<CreditOperationState>;
-  markArtUploaded(campaignId: string, operationId: string): Promise<CreditOperationState>;
-  deliver(campaignId: string, operationId: string): Promise<CreditOperationState>;
+  markArtUploaded(campaignId: string, operationId: string, publicationToken: string): Promise<CreditOperationState>;
+  deliver(campaignId: string, operationId: string, publicationToken: string): Promise<CreditOperationState>;
   refund(campaignId: string, operationId: string, reason?: string): Promise<CreditOperationState>;
+  /**
+   * Recorte 1 (Plano 08) — FENCE pré-upload. `beginPublication` recebe a posse
+   * (token) da publicação ANTES de escrever no Storage; `abortPublication` SÓ
+   * encerra com falha comprovada ANTES do envio; `markResultUnknown` mantém a
+   * proteção quando o resultado do upload é desconhecido.
+   */
+  beginPublication(
+    campaignId: string,
+    operationId: string,
+  ): Promise<{ acquired: boolean; token: string | null; publicationState: string }>;
+  abortPublication(
+    campaignId: string,
+    operationId: string,
+    publicationToken: string,
+    phase: "before_upload" | "metadata_failed" | "result_unknown",
+  ): Promise<{ success: boolean; reason?: string }>;
+  markResultUnknown(
+    campaignId: string,
+    operationId: string,
+    publicationToken: string,
+  ): Promise<{ success: boolean; reason?: string }>;
   /**
    * C3 (F56.2b2b) — encerramento local por falha FINAL (predicado PF) sob a trava
    * C4. Forma ÚNICA OBJETO com o tipo REAL da sonda (`ArtifactProbe["kind"]`),
@@ -1192,8 +1213,6 @@ export async function runProductOneToOneGeneration(
 
           if (imageDataUrl !== undefined) {
             // ── (7) sucesso: finaliza o claim, grava a arte, entrega ─────
-            // P1 (Opção A): o envelope REAL de sucesso já foi persistido pelo
-            // sink ÚNICO durante `gateway.invoke` (SEM reconstrução/duplicação).
             try {
               await attempts.finish({
                 campaignId,
@@ -1204,6 +1223,20 @@ export async function runProductOneToOneGeneration(
             } catch {
               // ignore
             }
+            // Recorte 1 (Plano 08) — FENCE PRÉ-UPLOAD: anunciar a publicação ANTES
+            // de escrever no Storage. `acquired:false` ⇒ reenvio ACOMPANHA a
+            // publicação existente e NÃO inicia outra (emite pendência).
+            let publicationToken: string | null = null;
+            try {
+              const begun = await credit.beginPublication(campaignId, operationId);
+              publicationToken = begun.acquired ? begun.token : null;
+            } catch {
+              publicationToken = null;
+            }
+            if (publicationToken === null) {
+              await emitUnknownPending({ internalCategory: "publication_not_acquired" });
+              return;
+            }
             let ref: ProductOneToOneArtifactRef;
             try {
               ref = await artifact.storeArtifact({
@@ -1213,10 +1246,13 @@ export async function runProductOneToOneGeneration(
                 imageDataUrl,
               });
             } catch {
-              // Achado 4 — NÃO estornar cegamente: reexaminar a arte. Objeto
-              // presente (`integral`) ou ausência não comprovada
-              // (`indeterminate`/leitura falha) ⇒ pendente, SEM estorno; só
-              // ausência COMPROVADA autoriza o estorno único.
+              // NÃO comprovadamente antes do envio ⇒ MANTER proteção (`result_unknown`);
+              // reexaminar a arte (`settleConfirmedFailure` sonda) e NUNCA estornar cego.
+              try {
+                await credit.markResultUnknown(campaignId, operationId, publicationToken);
+              } catch {
+                // permanece `in_flight` (protegido)
+              }
               await settleConfirmedFailure({
                 internalCategory: "artifact_store_failed",
                 normalizedError: "unknown_provider_error",
@@ -1233,9 +1269,16 @@ export async function runProductOneToOneGeneration(
             }
             void ref;
             try {
-              await credit.markArtUploaded(campaignId, operationId);
-              await credit.deliver(campaignId, operationId);
+              await credit.markArtUploaded(campaignId, operationId, publicationToken);
+              await credit.deliver(campaignId, operationId, publicationToken);
             } catch {
+              // Upload concluído mas confirmação/metadados falharam ⇒ `result_unknown`
+              // (a recuperação conclui a entrega a partir da arte íntegra).
+              try {
+                await credit.markResultUnknown(campaignId, operationId, publicationToken);
+              } catch {
+                // permanece `in_flight` (protegido)
+              }
               await emitOperationalFailure({
                 internalCategory: "delivery_failed",
                 normalizedError: "unknown_provider_error",

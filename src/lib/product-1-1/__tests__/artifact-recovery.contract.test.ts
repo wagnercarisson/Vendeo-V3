@@ -15,13 +15,11 @@ import type { ArtifactProbe } from "../artifact/types";
 import type { CreditOperationStatus } from "../credit-operation/types";
 
 // ---------------------------------------------------------------------------
-// F56.2b2b — Plano 02 / Task 1 (correção pós-revisão): fronteira de CONFIRMAÇÃO
-// de resultado do serviço de recuperação.
+// F56.2b2b — Plano 02 / Task 1 (correção) + Recorte 1 (Plano 08): a recuperação
+// CONFIRMA o objeto EXISTENTE via `product_1_1_confirm_existing_art` (SEM token e
+// SEM novo upload) — nunca chama `mark`/`deliver` diretamente.
 //
-// Contract test ESTÁTICO (fonte sem regeneração/assinatura; NÃO importa o
-// cliente de crédito COMPARTILHADO) + testes com o cliente ESTRITO REAL e uma
-// RPC SIMULADA (fake SupabaseClient.rpc) — não apenas mocks que já devolvem o
-// status correto. Sem banco, sem provider, sem crédito real.
+// Contract test ESTÁTICO + testes com o cliente ESTRITO REAL e uma RPC simulada.
 // ---------------------------------------------------------------------------
 
 const STORE_ID = "11111111-1111-4111-8111-111111111111";
@@ -30,12 +28,10 @@ const OPERATION_ID = "33333333-3333-4333-8333-333333333333";
 const DIVERGENT_OPERATION_ID = "99999999-9999-4999-8999-999999999999";
 
 const GET_RPC = "product_1_1_get_campaign_credit_operation";
-const MARK_RPC = "product_1_1_mark_campaign_credit_art_uploaded";
-const DELIVER_RPC = "product_1_1_deliver_campaign_credit_operation";
+const CONFIRM_RPC = "product_1_1_confirm_existing_art";
 
 const SERVICE_FILE = "src/lib/product-1-1/artifact/artifact-recovery.ts";
 const serviceSource = readFileSync(path.resolve(process.cwd(), SERVICE_FILE), "utf8");
-// Fonte ATIVA (sem comentários): as asserções de código NUNCA dependem de comentário.
 const activeServiceSource = serviceSource
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .split(/\r?\n/)
@@ -75,20 +71,13 @@ function envelope(status: string, over: Record<string, unknown> = {}): Record<st
   };
 }
 
-/** Simula as RPCs b1a de forma FIEL (CAS reserved→art_uploaded→delivered). */
+/** Simula GET + CONFIRM_EXISTING_ART de forma FIEL (não-terminal → delivered). */
 function happyResponder(initial: CreditOperationStatus | null): Responder {
   let status = initial;
   return (fn) => {
     if (fn === GET_RPC) return { data: status === null ? null : envelope(status) };
-    if (fn === MARK_RPC) {
+    if (fn === CONFIRM_RPC) {
       if (status === "reserved" || status === "art_uploaded") {
-        status = "art_uploaded";
-        return { data: envelope("art_uploaded") };
-      }
-      return { data: { success: false, reason: "invalid_transition" } };
-    }
-    if (fn === DELIVER_RPC) {
-      if (status === "art_uploaded" || status === "delivered") {
         status = "delivered";
         return { data: envelope("delivered") };
       }
@@ -98,7 +87,6 @@ function happyResponder(initial: CreditOperationStatus | null): Responder {
   };
 }
 
-/** Instancia a recuperação com o cliente ESTRITO REAL sobre uma RPC simulada. */
 function makeRecovery(input: { probe: ArtifactProbe; responder: Responder }) {
   const rpcCalls: string[] = [];
   const rpc = vi.fn(async (fn: string, params: Record<string, unknown>) => {
@@ -135,30 +123,31 @@ describe("F56.2b2b — artifact-recovery (fonte estática, SEM regeneração/ass
     expect(activeServiceSource).not.toMatch(/storeArtifact/);
     expect(activeServiceSource).not.toMatch(/getSignedArtifactUrl/);
     expect(activeServiceSource).not.toMatch(/defaultAiGateway|generateImage|resizeToJpeg1024/);
-    // Fronteira própria: NÃO importa o cliente de crédito compartilhado (legado intocado).
     expect(activeServiceSource).not.toMatch(/credit-operation-client/);
+    // Recorte 1: confirma objeto EXISTENTE (nunca `mark`/`deliver` com token).
+    expect(activeServiceSource).toMatch(/confirm_existing_art/);
   });
 });
 
 describe("F56.2b2b — artifact-recovery: caminho feliz (RPC simulada, cliente estrito REAL)", () => {
-  it("`integral` + `reserved` ⇒ GET → MARK → DELIVER, anuncia `delivered`", async () => {
+  it("`integral` + `reserved` ⇒ GET → CONFIRM_EXISTING_ART, anuncia `delivered`", async () => {
     const { recovery, rpcCalls } = makeRecovery({
       probe: INTEGRAL_PROBE,
       responder: happyResponder("reserved"),
     });
     const result = await recover(recovery);
-    expect(rpcCalls).toEqual([GET_RPC, MARK_RPC, DELIVER_RPC]);
+    expect(rpcCalls).toEqual([GET_RPC, CONFIRM_RPC]);
     expect(result).toMatchObject({ outcome: "delivered", kind: "integral", status: "delivered" });
     expect(result.ref).not.toBeNull();
   });
 
-  it("`integral` + `art_uploaded` ⇒ conclui a entrega uma vez", async () => {
+  it("`integral` + `art_uploaded` ⇒ confirma a entrega uma vez", async () => {
     const { recovery, rpcCalls } = makeRecovery({
       probe: INTEGRAL_PROBE,
       responder: happyResponder("art_uploaded"),
     });
     const result = await recover(recovery);
-    expect(rpcCalls).toEqual([GET_RPC, MARK_RPC, DELIVER_RPC]);
+    expect(rpcCalls).toEqual([GET_RPC, CONFIRM_RPC]);
     expect(result.outcome).toBe("delivered");
   });
 
@@ -172,7 +161,7 @@ describe("F56.2b2b — artifact-recovery: caminho feliz (RPC simulada, cliente e
     expect(result).toMatchObject({ outcome: "operation_terminal", status: "delivered" });
   });
 
-  it("`integral` + `refunded` (terminal) ⇒ `operation_terminal` (NÃO retorna a delivered)", async () => {
+  it("`integral` + `refunded` (terminal) ⇒ `operation_terminal` (NÃO reabre)", async () => {
     const { recovery, rpcCalls } = makeRecovery({
       probe: INTEGRAL_PROBE,
       responder: happyResponder("refunded"),
@@ -183,7 +172,7 @@ describe("F56.2b2b — artifact-recovery: caminho feliz (RPC simulada, cliente e
   });
 });
 
-describe("F56.2b2b — artifact-recovery: fronteira de confirmação (regressões do revisor)", () => {
+describe("F56.2b2b — artifact-recovery: fronteira de confirmação", () => {
   it("operação AUSENTE (`get` ⇒ null) ⇒ NÃO prossegue, ZERO mutação", async () => {
     const { recovery, rpcCalls } = makeRecovery({
       probe: INTEGRAL_PROBE,
@@ -192,8 +181,7 @@ describe("F56.2b2b — artifact-recovery: fronteira de confirmação (regressõe
     const result = await recover(recovery);
     expect(result).toMatchObject({ outcome: "unresolved", kind: "integral", status: null });
     expect(rpcCalls).toEqual([GET_RPC]);
-    expect(rpcCalls).not.toContain(MARK_RPC);
-    expect(rpcCalls).not.toContain(DELIVER_RPC);
+    expect(rpcCalls).not.toContain(CONFIRM_RPC);
   });
 
   it("identidade DIVERGENTE na leitura ⇒ LANÇA (`credit_identity_mismatch`), ZERO mutação", async () => {
@@ -201,7 +189,7 @@ describe("F56.2b2b — artifact-recovery: fronteira de confirmação (regressõe
       probe: INTEGRAL_PROBE,
       responder: (fn) => {
         if (fn === GET_RPC) return { data: envelope("reserved", { operation_id: DIVERGENT_OPERATION_ID }) };
-        return { data: envelope("art_uploaded") };
+        return { data: envelope("delivered") };
       },
     });
     await expect(recover(recovery)).rejects.toMatchObject({
@@ -214,7 +202,7 @@ describe("F56.2b2b — artifact-recovery: fronteira de confirmação (regressõe
     for (const bad of [{ status: "reserved" }, { success: false, reason: "x" }, "not-an-object"]) {
       const { recovery, rpcCalls } = makeRecovery({
         probe: INTEGRAL_PROBE,
-        responder: (fn) => (fn === GET_RPC ? { data: bad } : { data: envelope("art_uploaded") }),
+        responder: (fn) => (fn === GET_RPC ? { data: bad } : { data: envelope("delivered") }),
       });
       await expect(recover(recovery)).rejects.toBeInstanceOf(ArtifactRecoveryError);
       expect(rpcCalls).toEqual([GET_RPC]);
@@ -224,58 +212,30 @@ describe("F56.2b2b — artifact-recovery: fronteira de confirmação (regressõe
   it("status CONTRADITÓRIO na leitura (fora do union) ⇒ LANÇA, ZERO mutação", async () => {
     const { recovery, rpcCalls } = makeRecovery({
       probe: INTEGRAL_PROBE,
-      responder: (fn) => (fn === GET_RPC ? { data: envelope("weird_status") } : { data: envelope("art_uploaded") }),
+      responder: (fn) => (fn === GET_RPC ? { data: envelope("weird_status") } : { data: envelope("delivered") }),
     });
     await expect(recover(recovery)).rejects.toMatchObject({ code: "credit_status_unexpected" });
     expect(rpcCalls).toEqual([GET_RPC]);
   });
 
-  it("falha em `markArtUploaded` (success:false) ⇒ NÃO chama `deliver`", async () => {
+  it("`confirm_existing_art` com `success:false` ⇒ LANÇA (`invalid_credit_response`)", async () => {
     const { recovery, rpcCalls } = makeRecovery({
       probe: INTEGRAL_PROBE,
       responder: (fn) => {
         if (fn === GET_RPC) return { data: envelope("reserved") };
-        if (fn === MARK_RPC) return { data: { success: false, reason: "invalid_transition" } };
+        if (fn === CONFIRM_RPC) return { data: { success: false, reason: "publication_not_owner" } };
         return { data: envelope("delivered") };
       },
     });
     await expect(recover(recovery)).rejects.toMatchObject({ code: "invalid_credit_response" });
-    expect(rpcCalls).toEqual([GET_RPC, MARK_RPC]);
-    expect(rpcCalls).not.toContain(DELIVER_RPC);
+    expect(rpcCalls).toEqual([GET_RPC, CONFIRM_RPC]);
   });
 
-  it("`markArtUploaded` confirmando status ERRADO ⇒ LANÇA e NÃO chama `deliver`", async () => {
-    const { recovery, rpcCalls } = makeRecovery({
-      probe: INTEGRAL_PROBE,
-      responder: (fn) => {
-        if (fn === GET_RPC) return { data: envelope("reserved") };
-        if (fn === MARK_RPC) return { data: envelope("reserved") }; // esperado art_uploaded
-        return { data: envelope("delivered") };
-      },
-    });
-    await expect(recover(recovery)).rejects.toMatchObject({ code: "credit_status_unexpected" });
-    expect(rpcCalls).not.toContain(DELIVER_RPC);
-  });
-
-  it("`deliver` com `success:false` ⇒ LANÇA (entrega NÃO anunciada)", async () => {
-    const { recovery, rpcCalls } = makeRecovery({
-      probe: INTEGRAL_PROBE,
-      responder: (fn) => {
-        if (fn === GET_RPC) return { data: envelope("art_uploaded") };
-        if (fn === MARK_RPC) return { data: envelope("art_uploaded") };
-        return { data: { success: false, reason: "invalid_transition" } };
-      },
-    });
-    await expect(recover(recovery)).rejects.toMatchObject({ code: "invalid_credit_response" });
-    expect(rpcCalls).toEqual([GET_RPC, MARK_RPC, DELIVER_RPC]);
-  });
-
-  it("`deliver` confirmando status CONTRADITÓRIO ⇒ LANÇA (entrega NÃO anunciada)", async () => {
+  it("`confirm_existing_art` com status CONTRADITÓRIO ⇒ LANÇA (entrega NÃO anunciada)", async () => {
     const { recovery } = makeRecovery({
       probe: INTEGRAL_PROBE,
       responder: (fn) => {
         if (fn === GET_RPC) return { data: envelope("art_uploaded") };
-        if (fn === MARK_RPC) return { data: envelope("art_uploaded") };
         return { data: envelope("art_uploaded") }; // esperado delivered
       },
     });

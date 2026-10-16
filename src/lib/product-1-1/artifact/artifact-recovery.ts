@@ -86,11 +86,15 @@ export interface ArtifactRecoveryProbe {
 /** Porta do cliente de crédito ESTRITO (validação fechada de identidade/status). */
 export interface ArtifactRecoveryCreditOps {
   get(campaignId: string, operationId: string): Promise<ValidatedCreditState | null>;
-  markArtUploaded(
+  /**
+   * RECUPERAÇÃO: confirma objeto EXISTENTE via `product_1_1_confirm_existing_art`
+   * (SEM token e SEM novo upload). `artKind` é a sonda SERVER-SIDE (`integral`).
+   */
+  confirmExistingArt(
     campaignId: string,
     operationId: string,
+    artKind: ArtifactProbe["kind"],
   ): Promise<ValidatedCreditState>;
-  deliver(campaignId: string, operationId: string): Promise<ValidatedCreditState>;
 }
 
 export interface ArtifactRecoveryDeps {
@@ -112,8 +116,6 @@ const CREDIT_STATUSES: readonly CreditOperationStatus[] = [
 ];
 
 const GET_RPC = "product_1_1_get_campaign_credit_operation";
-const MARK_UPLOADED_RPC = "product_1_1_mark_campaign_credit_art_uploaded";
-const DELIVER_RPC = "product_1_1_deliver_campaign_credit_operation";
 
 /**
  * Cliente de crédito ESTRITO e LOCAL à recuperação. NÃO altera o cliente
@@ -143,29 +145,15 @@ class StrictProductOneToOneCreditOps implements ArtifactRecoveryCreditOps {
     return this.validate(data, campaignId, operationId);
   }
 
-  async markArtUploaded(
+  async confirmExistingArt(
     campaignId: string,
     operationId: string,
+    artKind: ArtifactProbe["kind"],
   ): Promise<ValidatedCreditState> {
-    return this.invoke(MARK_UPLOADED_RPC, campaignId, operationId, "art_uploaded");
-  }
-
-  async deliver(
-    campaignId: string,
-    operationId: string,
-  ): Promise<ValidatedCreditState> {
-    return this.invoke(DELIVER_RPC, campaignId, operationId, "delivered");
-  }
-
-  private async invoke(
-    fn: string,
-    campaignId: string,
-    operationId: string,
-    expected: CreditOperationStatus,
-  ): Promise<ValidatedCreditState> {
-    const { data, error } = await this.client.rpc(fn, {
+    const { data, error } = await this.client.rpc("product_1_1_confirm_existing_art", {
       p_campaign_id: campaignId,
       p_operation_id: operationId,
+      p_art_kind: artKind,
     });
     if (error) {
       throw new ArtifactRecoveryError(
@@ -173,7 +161,7 @@ class StrictProductOneToOneCreditOps implements ArtifactRecoveryCreditOps {
         error.message ?? "credit_rpc_error",
       );
     }
-    return this.validate(data, campaignId, operationId, expected);
+    return this.validate(data, campaignId, operationId, "delivered");
   }
 
   private validate(
@@ -286,10 +274,13 @@ export class ProductOneToOneArtifactRecovery {
     }
 
     // Só `reserved`/`art_uploaded` chegam aqui (o leitor estrito garante o union).
-    // `markArtUploaded` precisa CONFIRMAR `art_uploaded`; uma falha aqui impede o
-    // `deliver` (a entrega NÃO é anunciada sem confirmação válida).
-    await this.credit.markArtUploaded(input.campaignId, input.operationId);
-    const delivered = await this.credit.deliver(input.campaignId, input.operationId);
+    // Confirma o OBJETO EXISTENTE (sonda server-side `integral`) SEM novo upload;
+    // a RPC exige crédito não-terminal e NUNCA reabre terminais.
+    const delivered = await this.credit.confirmExistingArt(
+      input.campaignId,
+      input.operationId,
+      "integral",
+    );
 
     return Object.freeze({
       outcome: "delivered" as const,

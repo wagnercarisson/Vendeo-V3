@@ -35,6 +35,10 @@ const KNOWN_CODES: readonly CreditOperationErrorCode[] = [
   "finality_not_recorded",
   "operation_in_progress",
   "absent_not_confirmed",
+  "publication_in_progress",
+  "publication_not_owner",
+  "stale_publication",
+  "abort_not_allowed",
 ];
 
 /** Um único crédito por entrega (fixado). */
@@ -161,20 +165,87 @@ export class ProductOneToOneCreditOperationClient {
   async markArtUploaded(
     campaignId: string,
     operationId: string,
+    publicationToken: string,
   ): Promise<CreditOperationState> {
     return this.invoke("product_1_1_mark_campaign_credit_art_uploaded", {
       p_campaign_id: campaignId,
       p_operation_id: operationId,
+      p_publication_token: publicationToken,
     });
   }
 
   async deliver(
     campaignId: string,
     operationId: string,
+    publicationToken: string,
   ): Promise<CreditOperationState> {
     return this.invoke("product_1_1_deliver_campaign_credit_operation", {
       p_campaign_id: campaignId,
       p_operation_id: operationId,
+      p_publication_token: publicationToken,
+    });
+  }
+
+  /**
+   * Recorte 1 (Plano 08) — FENCE pré-upload. `beginPublication` ANUNCIA a
+   * publicação ANTES de `storeArtifact` (sob C4) e devolve o TOKEN do dono.
+   * `acquired:false` ⇒ reenvio ACOMPANHA a publicação existente (não publica).
+   */
+  async beginPublication(
+    campaignId: string,
+    operationId: string,
+  ): Promise<{ acquired: boolean; token: string | null; publicationState: string }> {
+    const { data, error } = await this.client.rpc("product_1_1_begin_publication", {
+      p_campaign_id: campaignId,
+      p_operation_id: operationId,
+    });
+    if (error) throw mapError(error.message);
+    const record = (data ?? {}) as Record<string, unknown>;
+    return Object.freeze({
+      acquired: record.acquired === true,
+      token: (record.token as string | null) ?? null,
+      publicationState: String(record.publication_state ?? ""),
+    });
+  }
+
+  /** `abort` SÓ com falha comprovada ANTES do envio (`phase='before_upload'`). */
+  async abortPublication(
+    campaignId: string,
+    operationId: string,
+    publicationToken: string,
+    phase: "before_upload" | "metadata_failed" | "result_unknown",
+  ): Promise<{ success: boolean; reason?: string }> {
+    return this.invokeFenceAction("product_1_1_abort_publication", {
+      p_campaign_id: campaignId,
+      p_operation_id: operationId,
+      p_publication_token: publicationToken,
+      p_phase: phase,
+    });
+  }
+
+  /** Resultado do upload DESCONHECIDO ⇒ mantém a proteção (`result_unknown`). */
+  async markResultUnknown(
+    campaignId: string,
+    operationId: string,
+    publicationToken: string,
+  ): Promise<{ success: boolean; reason?: string }> {
+    return this.invokeFenceAction("product_1_1_mark_result_unknown", {
+      p_campaign_id: campaignId,
+      p_operation_id: operationId,
+      p_publication_token: publicationToken,
+    });
+  }
+
+  private async invokeFenceAction(
+    fn: string,
+    params: Record<string, unknown>,
+  ): Promise<{ success: boolean; reason?: string }> {
+    const { data, error } = await this.client.rpc(fn, params);
+    if (error) throw mapError(error.message);
+    const record = (data ?? {}) as Record<string, unknown>;
+    return Object.freeze({
+      success: record.success === true,
+      ...(typeof record.reason === "string" ? { reason: record.reason } : {}),
     });
   }
 

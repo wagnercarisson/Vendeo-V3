@@ -26,7 +26,7 @@ const CLAIMS_TABLE = "product_1_1_generation_attempt_claims";
 const OUTCOMES_TABLE = "product_1_1_generation_outcomes";
 
 const CREDIT_COLUMNS =
-  "campaign_id, operation_id, store_id, amount, status, created_at, updated_at";
+  "campaign_id, operation_id, store_id, amount, status, state_epoch, publication_state, created_at, updated_at";
 const CLAIMS_COLUMNS = "status, attempt_number, updated_at";
 const OUTCOME_COLUMNS = "outcome, support_reference";
 
@@ -36,6 +36,8 @@ interface CreditRow {
   store_id: string;
   amount: number;
   status: CreditOperationStatus;
+  state_epoch: number | null;
+  publication_state: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -66,6 +68,10 @@ export interface PendingOperationState {
   readonly failed: boolean;
   /** E1 — claim `in_progress` presente (execução ativa ou residual). */
   readonly processing: boolean;
+  /** Recorte 1 (Plano 08) — frescor da evidência de ausência (capturado ANTES da sonda). */
+  readonly stateEpoch: number;
+  /** Recorte 1 — estado do FENCE de publicação (separado do `status` do crédito). */
+  readonly publicationState: string;
   readonly supportReference: string | null;
   readonly createdAt: string | null;
   readonly updatedAt: string | null;
@@ -165,6 +171,8 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
       unknown,
       failed,
       processing,
+      stateEpoch: Number(row.state_epoch ?? 0),
+      publicationState: String(row.publication_state ?? "none"),
       // P2 — a referência de suporte é exposta para QUALQUER marcador PERSISTIDO
       // NÃO terminal (`unknown` OU `failed`), sem alterar o significado de `unknown`.
       supportReference: !terminal ? (outcome?.support_reference ?? null) : null,

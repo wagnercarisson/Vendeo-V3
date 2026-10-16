@@ -227,6 +227,8 @@ function storeRepository(store: AuthorizedStore, probe: ArtifactProbe): PendingO
     unknown: false,
     failed: false,
     processing: store.claim === "in_progress",
+    stateEpoch: 0,
+    publicationState: "none",
     supportReference: null,
     createdAt: "2026-10-15T00:00:00.000Z",
     updatedAt: "2026-10-15T00:00:00.000Z",

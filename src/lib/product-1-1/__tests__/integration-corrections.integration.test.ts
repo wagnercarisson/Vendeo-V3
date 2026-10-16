@@ -204,8 +204,11 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
             reserveCalls += 1;
             return credit.reserve(i);
           },
-          markArtUploaded: (c, o) => credit.markArtUploaded(c, o),
-          deliver: (c, o) => credit.deliver(c, o),
+          beginPublication: (c, o) => credit.beginPublication(c, o),
+          abortPublication: (c, o, t, p) => credit.abortPublication(c, o, t, p),
+          markResultUnknown: (c, o, t) => credit.markResultUnknown(c, o, t),
+          markArtUploaded: (c, o, t) => credit.markArtUploaded(c, o, t),
+          deliver: (c, o, t) => credit.deliver(c, o, t),
           refund: (c, o, r) => credit.refund(c, o, r),
           closeFailedOperation: (i) => credit.closeFailedOperation(i),
         },
@@ -282,8 +285,11 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
         },
         credit: {
           reserve: (i) => realCredit.reserve(i),
-          markArtUploaded: (c, o) => realCredit.markArtUploaded(c, o),
-          deliver: (c, o) => realCredit.deliver(c, o),
+          beginPublication: (c, o) => realCredit.beginPublication(c, o),
+          abortPublication: (c, o, t, p) => realCredit.abortPublication(c, o, t, p),
+          markResultUnknown: (c, o, t) => realCredit.markResultUnknown(c, o, t),
+          markArtUploaded: (c, o, t) => realCredit.markArtUploaded(c, o, t),
+          deliver: (c, o, t) => realCredit.deliver(c, o, t),
           refund: async (c, o, r) => {
             refundCalls += 1;
             return realCredit.refund(c, o, r);
@@ -314,8 +320,11 @@ describe("F56.2b1b — integration corrections (Postgres/Storage real)", () => {
         deps({
           credit: {
             reserve: (i) => realCredit.reserve(i),
-            markArtUploaded: (c, o) => realCredit.markArtUploaded(c, o),
-            deliver: (c, o) => realCredit.deliver(c, o),
+            beginPublication: (c, o) => realCredit.beginPublication(c, o),
+            abortPublication: (c, o, t, p) => realCredit.abortPublication(c, o, t, p),
+            markResultUnknown: (c, o, t) => realCredit.markResultUnknown(c, o, t),
+            markArtUploaded: (c, o, t) => realCredit.markArtUploaded(c, o, t),
+            deliver: (c, o, t) => realCredit.deliver(c, o, t),
             refund: async (c, o, r) => {
               refundCalls += 1;
               return realCredit.refund(c, o, r);

@@ -303,6 +303,9 @@ async function buildHarness(): Promise<Harness> {
     persistSnapshot: persist,
     credit: {
       reserve,
+      beginPublication: vi.fn(async () => ({ acquired: true, token: "pub-token", publicationState: "in_flight" })),
+      abortPublication: vi.fn(async () => ({ success: true })),
+      markResultUnknown: vi.fn(async () => ({ success: true })),
       markArtUploaded,
       deliver,
       refund,

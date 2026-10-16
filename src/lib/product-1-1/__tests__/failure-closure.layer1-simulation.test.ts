@@ -133,6 +133,9 @@ async function buildHarness(): Promise<Layer1Harness> {
 
   const credit = {
     reserve: vi.fn(async () => baseOp({ status: "reserved" })),
+    beginPublication: vi.fn(async () => ({ acquired: true, token: "pub-token", publicationState: "in_flight" })),
+    abortPublication: vi.fn(async () => ({ success: true })),
+    markResultUnknown: vi.fn(async () => ({ success: true })),
     markArtUploaded: vi.fn(async () => baseOp({ status: "art_uploaded" })),
     deliver: vi.fn(async () => baseOp({ status: "delivered", consumedDefinitive: true })),
     refund: vi.fn(async () => {

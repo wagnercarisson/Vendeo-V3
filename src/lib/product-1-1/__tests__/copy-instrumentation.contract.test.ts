@@ -1005,6 +1005,9 @@ async function buildOrchestratorHarness(): Promise<OrchestratorHarness> {
     persistSnapshot: async () => ({ snapshotOriginalId: SNAPSHOT_ID, reused: false }),
     credit: {
       reserve: vi.fn(async () => baseState()),
+      beginPublication: vi.fn(async () => ({ acquired: true, token: "pub-token", publicationState: "in_flight" })),
+      abortPublication: vi.fn(async () => ({ success: true })),
+      markResultUnknown: vi.fn(async () => ({ success: true })),
       markArtUploaded: vi.fn(async () => baseState({ status: "art_uploaded" })),
       deliver,
       refund,

@@ -50,15 +50,17 @@ $allowedPending = @(
   "20261013000003_f56_2b2a_copy_state_backfill",
   "20261015000001_f56_2b2b_failure_closure",
   "20261015000002_f56_2b2b_pending_abandon",
-  "20261015000003_f56_2b2b_pending_read"
+  "20261015000003_f56_2b2b_pending_read",
+  "20261016000001_f56_2b2b_publication_fence"
 )
 # As OITO migrations anteriores são DEPENDÊNCIAS JÁ APLICADAS (nunca reaplicadas).
 $expectedAppliedPrior = @(
   "20261009000001", "20261009000002", "20261009000003", "20261009000004", "20261009000005",
-  "20261013000001", "20261013000002", "20261013000003"
+  "20261013000001", "20261013000002", "20261013000003",
+  "20261015000001", "20261015000002", "20261015000003"
 )
 # As TRÊS pendentes AUTORIZADAS desta fase.
-$expectedPendingB2b = @("20261015000001", "20261015000002", "20261015000003")
+$expectedPendingB2b = @("20261016000001")
 $defaultSuites = @(
   "src/lib/product-1-1/__tests__/atomic-attempt.integration.test.ts",
   "src/lib/product-1-1/__tests__/credit-delivery.integration.test.ts",
