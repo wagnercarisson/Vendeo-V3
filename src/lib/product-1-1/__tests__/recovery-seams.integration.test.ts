@@ -58,9 +58,12 @@ vi.mock("@/lib/supabase/server", () => {
 // Auth/CSRF SIMULADOS: identidade e loja atuais vêm do holder (backend REAL).
 vi.mock("@/lib/auth/require-user", () => ({
   requirePageUser: vi.fn(async () => ({ userId: h.userId })),
+  requireApiUser: vi.fn(async () => ({ userId: h.userId })),
 }));
 vi.mock("@/lib/auth/store-ownership", () => ({
   getCurrentStore: vi.fn(async () => ({ id: h.storeId })),
+  // Ownership REAL simplificado: a origem da rota pertence ao usuário simulado.
+  requireOwnership: vi.fn(async (storeId: string) => ({ id: storeId })),
 }));
 vi.mock("@/lib/legal/clearance", () => ({
   requireLegalClearance: vi.fn(async () => ({ ok: true })),
@@ -129,6 +132,8 @@ import { ProductOneToOneAttemptStartClient } from "../orchestration/attempt-star
 import { ProductOneToOneCreditOperationClient } from "../credit-operation/credit-operation-client";
 import { ProductOneToOneArtifactStore } from "../artifact/artifact-store";
 import { ProductOneToOneArtifactRecovery } from "../artifact/artifact-recovery";
+import { NextRequest } from "next/server";
+import { UnknownResultPanel } from "@/components/flow/unknown-result-panel";
 import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 import { RefundedPanel } from "@/components/flow/refunded-panel";
 import { useCampaignForm } from "@/components/flow/use-campaign-form";
@@ -180,6 +185,7 @@ async function createRestorableCampaign(
       product_name: productName,
       storage_path: `${ownerStoreId}/${randomUUID()}.jpg`,
       input_snapshot: {
+        frozenContentReferences: [],
         product: { name: productName, description: "desc" },
         commercial: {
           intent: "offer",
@@ -253,6 +259,17 @@ async function makeRefunded(campaign: string, direction: "studio" | "original" |
   });
   expect((await creditOperationRow(ctx.pg, campaign, operation))?.status).toBe("refunded");
   return operation;
+}
+
+/** Constrói um NextRequest POST com Origin/Host (fronteira CSRF) para a rota REAL. */
+function buildReq(url: string, body: unknown): NextRequest {
+  const origin = "http://localhost";
+  const headers = new Headers({ "content-type": "application/json", origin, host: "localhost" });
+  return new NextRequest(`${origin}${url}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
 }
 
 describe("F56.2b2b — Camada 2 / SEAM (c): página REAL → formulário REAL → NOVA identidade", () => {
@@ -403,7 +420,7 @@ describe("F56.2b2b — Camada 2 / SEAM (c): página REAL → formulário REAL �
     ).toBeDisabled();
   }, 60_000);
 
-  it("(d) unknown → ADMINISTRAÇÃO → refunded → restauração → NOVOS IDs (caminho administrativo REAL)", async () => {
+  it("(d) [a partir da RPC real] reserve+marcador → ADMINISTRAÇÃO → refunded → restauração → NOVOS IDs (NÃO exercita o painel unknown)", async () => {
     const campaign = await createRestorableCampaign(storeId, "Produto seam d");
     const operation = randomUUID();
     await reserveCredit(ctx.pg, storeId, campaign, operation);
@@ -466,11 +483,10 @@ describe("F56.2b2b — Camada 2 / SEAM (c): página REAL → formulário REAL �
     expect(body.operationId).not.toBe(operation);
   }, 90_000);
 
-  it("(e) AÇÃO da UI → serviço REAL de recuperação → imagem recuperada no isolado (SEM regenerar)", async () => {
+  it("(e) rota REAL (POST handler) → serviço REAL → `delivered` no isolado; e o PAINEL consome a MESMA resposta e encaminha", async () => {
     const campaign = await createRestorableCampaign(storeId, "Produto seam e");
     const operation = randomUUID();
     await reserveCredit(ctx.pg, storeId, campaign, operation);
-    // Arte ÍNTEGRA real no Storage local — o caminho que a ação da UI aciona.
     const image = await jpeg1024DataUrl();
     await new ProductOneToOneArtifactStore(ctx.supabase).storeArtifact({
       storeId,
@@ -479,12 +495,74 @@ describe("F56.2b2b — Camada 2 / SEAM (c): página REAL → formulário REAL �
       imageDataUrl: image,
     });
 
-    const result = await new ProductOneToOneArtifactRecovery().recoverDelivery({
+    // ROTA REAL (handler) — não chamamos o serviço diretamente.
+    const route = await import("@/app/api/campaign/[id]/image-recovery/route");
+    const realResponse = await route.POST(
+      buildReq(`/api/campaign/${campaign}/image-recovery`, { operationId: operation }),
+      { params: Promise.resolve({ id: campaign }) },
+    );
+    expect(realResponse.status).toBe(200);
+    expect(await realResponse.clone().json()).toMatchObject({
+      recovery: { outcome: "delivered", kind: "integral" },
+    });
+    expect((await creditOperationRow(ctx.pg, campaign, operation))?.status).toBe("delivered");
+
+    // O PAINEL REAL consome a MESMA resposta da rota real e encaminha ao detalhe.
+    vi.stubGlobal("fetch", vi.fn(async () => realResponse.clone()));
+    render(createElement(UnknownResultPanel, { campaignId: campaign, operationId: operation }));
+    fireEvent.click(screen.getByRole("button", { name: /Recuperar imagem salva/ }));
+
+    await waitFor(() => expect(nav.push).toHaveBeenCalledWith(`/campanhas/${campaign}`));
+  }, 90_000);
+
+  it("(e2) operação JÁ `delivered` antes do POST ⇒ rota responde terminal ⇒ painel encaminha (sem ficar preso)", async () => {
+    const campaign = await createRestorableCampaign(storeId, "Produto seam e2");
+    const operation = randomUUID();
+    await reserveCredit(ctx.pg, storeId, campaign, operation);
+    const image = await jpeg1024DataUrl();
+    await new ProductOneToOneArtifactStore(ctx.supabase).storeArtifact({
+      storeId,
+      campaignId: campaign,
+      operationId: operation,
+      imageDataUrl: image,
+    });
+    // Conclui a entrega ANTES do POST (a segunda chamada encontra um terminal).
+    await new ProductOneToOneArtifactRecovery().recoverDelivery({
       storeId,
       campaignId: campaign,
       operationId: operation,
     });
-    expect(result).toMatchObject({ outcome: "delivered", kind: "integral" });
     expect((await creditOperationRow(ctx.pg, campaign, operation))?.status).toBe("delivered");
+
+    const route = await import("@/app/api/campaign/[id]/image-recovery/route");
+    const realResponse = await route.POST(
+      buildReq(`/api/campaign/${campaign}/image-recovery`, { operationId: operation }),
+      { params: Promise.resolve({ id: campaign }) },
+    );
+    expect(realResponse.status).toBe(200);
+    expect(await realResponse.clone().json()).toMatchObject({
+      recovery: { outcome: "operation_terminal", status: "delivered" },
+    });
+
+    vi.stubGlobal("fetch", vi.fn(async () => realResponse.clone()));
+    render(createElement(UnknownResultPanel, { campaignId: campaign, operationId: operation }));
+    fireEvent.click(screen.getByRole("button", { name: /Recuperar imagem salva/ }));
+    await waitFor(() => expect(nav.push).toHaveBeenCalledWith(`/campanhas/${campaign}`));
+  }, 90_000);
+
+  it("(f) painel unknown REAL → `Verificar novamente` pela ROTA REAL → refunded ⇒ detalhe", async () => {
+    const campaign = await createRestorableCampaign(storeId, "Produto seam f");
+    const operation = await makeRefunded(campaign, "studio");
+
+    const route = await import("@/app/api/campaign/generation-status/route");
+    const realResponse = await route.POST(
+      buildReq("/api/campaign/generation-status", { campaignId: campaign, operationId: operation }),
+    );
+    expect(realResponse.status).toBe(200);
+
+    vi.stubGlobal("fetch", vi.fn(async () => realResponse.clone()));
+    render(createElement(UnknownResultPanel, { campaignId: campaign, operationId: operation }));
+    fireEvent.click(screen.getByRole("button", { name: /Verificar novamente/ }));
+    await waitFor(() => expect(nav.push).toHaveBeenCalledWith(`/campanhas/${campaign}`));
   }, 90_000);
 });

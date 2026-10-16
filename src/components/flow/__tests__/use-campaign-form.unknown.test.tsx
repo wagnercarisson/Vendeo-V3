@@ -241,6 +241,22 @@ describe("UnknownResultPanel — reverificação consome o estado devolvido (cor
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
   });
 
+  it("recuperação já RESOLVIDA (`operation_terminal`/delivered|refunded) ⇒ encaminha ao detalhe (não fica preso)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ recovery: { outcome: "operation_terminal", status: "refunded" } }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<UnknownResultPanel campaignId={CAMPAIGN_ID} operationId={OPERATION_ID} />);
+    fireEvent.click(screen.getByText("Recuperar imagem salva"));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(`/campanhas/${CAMPAIGN_ID}`),
+    );
+  });
+
   it("`delivered` ⇒ navega para a página da campanha", async () => {
     vi.stubGlobal(
       "fetch",

@@ -125,11 +125,19 @@ export function UnknownResultPanel({
         return;
       }
       const data = await res.json().catch(() => null);
-      if (data?.recovery?.outcome === "delivered") {
-        onResolved?.("delivered");
+      const outcome = data?.recovery?.outcome as string | undefined;
+      const status = data?.recovery?.status as string | undefined;
+      // Conclui a recuperação quando a operação JÁ ESTÁ terminal (a arte foi
+      // concluída/estornada por outra chamada) — não fica preso no painel.
+      const terminalDelivered =
+        outcome === "delivered" ||
+        (outcome === "operation_terminal" && (status === "delivered" || status === "refunded"));
+      if (terminalDelivered) {
+        onResolved?.(status === "refunded" ? "refunded" : "delivered");
         router.push(`/campanhas/${campaignId}`);
         return;
       }
+      // Sem terminal confirmado: apenas reconsulta (query-only).
       router.refresh();
     } catch {
       setRecheckMessage("Não foi possível recuperar a imagem agora. Tente novamente.");
