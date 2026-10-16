@@ -298,7 +298,12 @@ export class ProductOneToOneCreditOperationClient {
       p_operation_id: operationId,
     });
     if (error) throw mapError(error.message);
-    return Number(data ?? 0);
+    // SEM valor presumido: só um inteiro >= 0 EFETIVAMENTE retornado é válido.
+    // Resposta ausente/inválida ⇒ LANÇA (o orquestrador trata como não confirmado).
+    if (typeof data !== "number" || !Number.isInteger(data) || data < 0) {
+      throw new CreditOperationError("unknown", "invalid_publication_epoch");
+    }
+    return data;
   }
 
   async get(

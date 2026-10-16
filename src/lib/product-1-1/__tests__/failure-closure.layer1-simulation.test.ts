@@ -108,6 +108,7 @@ interface Layer1Harness {
   setMarkerWriteThrows(fail: boolean): void;
   setCloseThrows(fail: boolean): void;
   setRecordAttemptThrows(fail: boolean): void;
+  setEpochReadThrows(fail: boolean): void;
   setAcquireSequence(seq: Array<{ acquired: boolean; reason: string | null }>): void;
   setReplayMarkerReference(ref: string | null): void;
 }
@@ -129,12 +130,16 @@ async function buildHarness(): Promise<Layer1Harness> {
   let markerWriteThrows = false;
   let closeThrows = false;
   let recordAttemptThrows = false;
+  let epochReadThrows = false;
   let currentTarget: "primary" | "fallback" = "primary";
 
   const credit = {
     reserve: vi.fn(async () => baseOp({ status: "reserved" })),
     beginPublication: vi.fn(async () => ({ acquired: true, token: "pub-token", publicationState: "in_flight" })),
-    getPublicationEpoch: vi.fn(async () => 0),
+    getPublicationEpoch: vi.fn(async () => {
+      if (epochReadThrows) throw new Error("epoch_read_failed");
+      return 0;
+    }),
     abortPublication: vi.fn(async () => ({ success: true })),
     markResultUnknown: vi.fn(async () => ({ success: true })),
     markArtUploaded: vi.fn(async () => baseOp({ status: "art_uploaded" })),
@@ -297,6 +302,9 @@ async function buildHarness(): Promise<Layer1Harness> {
     setRecordAttemptThrows(fail) {
       recordAttemptThrows = fail;
     },
+    setEpochReadThrows(fail) {
+      epochReadThrows = fail;
+    },
     setAcquireSequence(seq) {
       acquireSequence = seq;
       acquireIndex = 0;
@@ -400,6 +408,20 @@ describe("F56.2b2b — Camada 1: 'failed' só no ponto terminal (4a) e chamadore
     expect(harness.closeCalls).toHaveLength(0);
     expect(harness.refundCalls).toBe(0);
     expect(harness.recordOutcomes).not.toContain("failed");
+  });
+
+  it("(sem valor presumido) leitura do epoch FALHA ⇒ closeFailedOperation NÃO é chamado (pendência)", async () => {
+    const harness = await buildHarness();
+    harness.setArtifactKind("absent");
+    harness.setProviderSequence([TERMINAL_FAILURE()]);
+    // Leitura de frescor indisponível ⇒ NÃO confirmada ⇒ nunca um valor presumido.
+    harness.setEpochReadThrows(true);
+
+    const { terminal } = await run(harness);
+
+    expect(harness.closeCalls).toHaveLength(0);
+    expect(harness.refundCalls).toBe(0);
+    expect(terminal).toMatchObject({ type: "unknown" });
   });
 });
 
@@ -548,6 +570,23 @@ describe("F56.2b2b — Camada 1: contrato do cliente `closeFailedOperation` (cli
       p_observed_epoch: 0,
       p_reason: "generation_failed",
     });
+  });
+
+  it("getPublicationEpoch: só inteiro >= 0 efetivamente retornado; ausente/inválido/erro ⇒ LANÇA (sem valor presumido)", async () => {
+    const epochOf = (result: { data?: unknown; error?: unknown }) =>
+      new ProductOneToOneCreditOperationClient(clientWithRpc(result).client).getPublicationEpoch(
+        CAMPAIGN_ID,
+        OPERATION_ID,
+      );
+    // ZERO continua válido quando EXPLICITAMENTE retornado pelo banco.
+    expect(await epochOf({ data: 0 })).toBe(0);
+    expect(await epochOf({ data: 7 })).toBe(7);
+    // Ausente/inválido ⇒ LANÇA (nunca presume 0).
+    for (const bad of [null, undefined, "3", -1, 1.5, {}, true]) {
+      await expect(epochOf({ data: bad })).rejects.toBeInstanceOf(CreditOperationError);
+    }
+    // Erro da RPC ⇒ LANÇA.
+    await expect(epochOf({ error: { message: "rpc_boom" } })).rejects.toBeInstanceOf(CreditOperationError);
   });
 
   it("`success`/`idempotent` ausentes ou inválidos, identidade ou ação divergentes ⇒ LANÇA (fail-closed)", async () => {
