@@ -216,7 +216,7 @@ export interface ProductOneToOneCreditOps {
     campaignId: string;
     operationId: string;
     artKind: ArtifactProbe["kind"];
-    observedEpoch?: number;
+    observedEpoch: number;
     reason?: string;
   }): Promise<CreditOperationState>;
   /** Recorte 1 — frescor da publicação (capturado ANTES da sonda). */
@@ -805,10 +805,14 @@ export async function runProductOneToOneGeneration(
         /** P3 — referência de suporte CANÔNICA (persistida) para a pendência. */
         reference?: string;
       }): Promise<void> => {
-        // FRESCOR: capturado ANTES da sonda (comparado sob a trava na RPC).
-        const observedEpoch = await credit
-          .getPublicationEpoch(campaignId, operationId)
-          .catch(() => -1);
+        // FRESCOR: capturado ANTES da sonda. Falha de leitura ⇒ NÃO CONFIRMADO ⇒ o
+        // encerramento PF NÃO é apresentado (pendência) — nunca valor presumido.
+        let observedEpoch: number | null = null;
+        try {
+          observedEpoch = await credit.getPublicationEpoch(campaignId, operationId);
+        } catch {
+          observedEpoch = null;
+        }
         const kind = await probeArtifactKind();
         // Quando o marcador `failed` JÁ foi persistido, NÃO reescrever `unknown`
         // (roteia à resolução autorizada sem o caminho que grava `unknown`) e usa a
@@ -851,20 +855,22 @@ export async function runProductOneToOneGeneration(
         }
 
         let closed = false;
-        try {
-          const state = await credit.closeFailedOperation({
-            campaignId,
-            operationId,
-            artKind: kind,
-            observedEpoch,
-            reason: params.reason,
-          });
-          // Só confirma o encerramento com `refunded` CONFIRMADO.
-          closed = state.status === "refunded";
-        } catch {
-          // Recusa do PF (`operation_terminal`/`operation_in_progress`/
-          // `finality_not_recorded`/`absent_not_confirmed`) ⇒ SEM estorno.
-          closed = false;
+        if (observedEpoch !== null) {
+          try {
+            const state = await credit.closeFailedOperation({
+              campaignId,
+              operationId,
+              artKind: kind,
+              observedEpoch,
+              reason: params.reason,
+            });
+            // Só confirma o encerramento com `refunded` CONFIRMADO.
+            closed = state.status === "refunded";
+          } catch {
+            // Recusa do PF (`operation_terminal`/`operation_in_progress`/
+            // `finality_not_recorded`/`absent_not_confirmed`) ⇒ SEM estorno.
+            closed = false;
+          }
         }
         if (closed) {
           await emitOperationalFailure({

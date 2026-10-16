@@ -240,6 +240,12 @@ async function makeRefunded(campaign: string, direction: "studio" | "original" |
     campaignId: campaign,
     operationId: operation,
     artKind: "absent",
+    observedEpoch: (
+      await ctx.pg.query<{ state_epoch: number }>(
+        "SELECT state_epoch FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 AND operation_id=$2",
+        [campaign, operation],
+      )
+    ).rows[0].state_epoch,
     reason: "generation_failed",
   });
   expect((await creditOperationRow(ctx.pg, campaign, operation))?.status).toBe("refunded");

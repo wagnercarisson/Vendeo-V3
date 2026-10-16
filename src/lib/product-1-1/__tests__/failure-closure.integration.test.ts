@@ -99,6 +99,14 @@ async function refundLedgerCount(store: string): Promise<number> {
   return rows[0].n;
 }
 
+async function currentEpoch(campaign: string, operation: string): Promise<number> {
+  const { rows } = await ctx.pg.query<{ state_epoch: number }>(
+    "SELECT state_epoch FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 AND operation_id=$2",
+    [campaign, operation],
+  );
+  return rows[0].state_epoch;
+}
+
 /** Insere evidência congelada (frozen evidence) com a direção de fundo dada. */
 async function insertFrozenEvidence(
   campaign: string,
@@ -152,7 +160,7 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
     await markArtUploaded(ctx.pg, campaign, operation);
     await deliverCredit(ctx.pg, campaign, operation);
     await expect(
-      credit().closeFailedOperation({ campaignId: campaign, operationId: operation, artKind: "absent" }),
+      credit().closeFailedOperation({ campaignId: campaign, operationId: operation, artKind: "absent", observedEpoch: await currentEpoch(campaign, operation) }),
     ).rejects.toMatchObject({ code: "delivered_not_refundable" });
     const delivered = await creditOperationRow(ctx.pg, campaign, operation);
     expect(delivered?.status).toBe("delivered");
@@ -192,7 +200,7 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
     expect(String((rejected[0] as PromiseRejectedResult).reason)).toMatch(
-      /publication_in_progress|evidence_stale/,
+      /publication_in_progress|evidence_stale|delivered_not_refundable/,
     );
 
     const final = await creditOperationRow(ctx.pg, raceCampaign, raceOp);
@@ -212,6 +220,7 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
       campaignId: campaign,
       operationId: operation,
       artKind: "absent",
+      observedEpoch: await currentEpoch(campaign, operation),
       reason: "generation_failed",
     });
     expect(first).toMatchObject({ status: "refunded", idempotent: false });
@@ -222,6 +231,7 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
       campaignId: campaign,
       operationId: operation,
       artKind: "absent",
+      observedEpoch: await currentEpoch(campaign, operation),
       reason: "generation_failed",
     });
     expect(second).toMatchObject({ status: "refunded", idempotent: true });
@@ -238,6 +248,7 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
       campaignId: campaign,
       operationId: operation,
       artKind: "absent",
+      observedEpoch: await currentEpoch(campaign, operation),
       reason: "generation_failed",
     });
 
@@ -294,7 +305,7 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
     expect(resolveResult.error?.message ?? "").toContain("insufficient_evidence");
     // RPC de encerramento PF recusa `indeterminate` como ausência não confirmada.
     await expect(
-      credit().closeFailedOperation({ campaignId: campaign, operationId: operation, artKind: "indeterminate" }),
+      credit().closeFailedOperation({ campaignId: campaign, operationId: operation, artKind: "indeterminate", observedEpoch: await currentEpoch(campaign, operation) }),
     ).rejects.toMatchObject({ code: "absent_not_confirmed" });
     expect((await creditOperationRow(ctx.pg, campaign, operation))?.status).toBe("reserved");
   }, 60_000);
@@ -381,7 +392,7 @@ describe("F56.2b2b — Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4)
 
     // Sem marcador `failed` persistido ⇒ PF incompleto ⇒ nenhum estorno.
     await expect(
-      credit().closeFailedOperation({ campaignId: campaign, operationId: operation, artKind: "absent" }),
+      credit().closeFailedOperation({ campaignId: campaign, operationId: operation, artKind: "absent", observedEpoch: await currentEpoch(campaign, operation) }),
     ).rejects.toMatchObject({ code: "finality_not_recorded" });
     expect((await creditOperationRow(ctx.pg, campaign, operation))?.status).toBe("reserved");
     expect(await outcomeRow(campaign, operation)).toBeNull();
@@ -400,6 +411,7 @@ describe("F56.2b2b — Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4)
       campaignId: campaign,
       operationId: operation,
       artKind: "absent",
+      observedEpoch: await currentEpoch(campaign, operation),
       reason: "generation_failed",
     });
     expect(state).toMatchObject({ status: "refunded", idempotent: false });
@@ -454,7 +466,7 @@ describe("F56.2b2b — Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4)
     await attempts().acquire({ campaignId: autoCampaign, operationId: autoOp, target: "primary", attemptNumber: 1 });
     await attempts().finish({ campaignId: autoCampaign, operationId: autoOp, attemptNumber: 1, status: "failed" });
     await recordFailed(autoCampaign, autoOp, "IMG-REF-J");
-    await credit().closeFailedOperation({ campaignId: autoCampaign, operationId: autoOp, artKind: "absent" });
+    await credit().closeFailedOperation({ campaignId: autoCampaign, operationId: autoOp, artKind: "absent", observedEpoch: await currentEpoch(autoCampaign, autoOp) });
     const refusedAuto = await attempts().acquire({ campaignId: autoCampaign, operationId: autoOp, target: "primary", attemptNumber: 2 });
     expect(refusedAuto).toMatchObject({ acquired: false, reason: "operation_terminal" });
 

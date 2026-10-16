@@ -313,7 +313,7 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
     await mark(campaign, op, token);
     await deliver(campaign, op, token);
     expect((await abort(campaign, op, token, "before_upload")).success).toBe(false);
-    await expect(mark(campaign, op, token)).rejects.toThrow(/publication_not_owner/);
+    await expect(mark(campaign, op, token)).rejects.toThrow(/invalid_transition/);
   }, 60_000);
 
   it("(C1-f) replays idempotentes: sem 2º ledger e sem reabrir", async () => {

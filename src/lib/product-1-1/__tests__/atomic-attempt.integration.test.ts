@@ -25,6 +25,7 @@ import {
   createTestStore,
   creditOperationRow,
   jpeg1024DataUrl,
+  markArtUploaded,
   readNdjson,
   reserveCredit,
   setCredits,
@@ -249,10 +250,7 @@ describe("F56.2b1b — atomic attempt start (Postgres real / provider simulado)"
     // operação de crédito `art_uploaded` ⇒ operation_art_uploaded
     const cArt = await createCampaign(ctx.supabase, storeId);
     const oArt = await freshOperation(storeId, cArt);
-    await ctx.pg.query(
-      "SELECT public.product_1_1_mark_campaign_credit_art_uploaded($1, $2) AS r",
-      [cArt, oArt],
-    );
+    await markArtUploaded(ctx.pg, cArt, oArt);
     const afterArt = await client.acquire({
       campaignId: cArt,
       operationId: oArt,

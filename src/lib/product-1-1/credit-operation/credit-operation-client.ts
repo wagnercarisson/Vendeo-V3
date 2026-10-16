@@ -273,17 +273,18 @@ export class ProductOneToOneCreditOperationClient {
     campaignId: string;
     operationId: string;
     artKind: ArtifactProbe["kind"];
-    /** Frescor observado ANTES da sonda. Ausente ⇒ o cliente lê o epoch corrente. */
-    observedEpoch?: number;
+    /** Frescor observado ANTES da sonda (OBRIGATÓRIO; sem fallback para zero). */
+    observedEpoch: number;
     reason?: string;
   }): Promise<CreditOperationState> {
-    const observedEpoch =
-      input.observedEpoch ?? (await this.getPublicationEpoch(input.campaignId, input.operationId).catch(() => 0));
+    if (!Number.isInteger(input.observedEpoch)) {
+      throw new CreditOperationError("unknown", "invalid_observed_epoch");
+    }
     const { data, error } = await this.client.rpc("product_1_1_close_failed_operation", {
       p_campaign_id: input.campaignId,
       p_operation_id: input.operationId,
       p_art_kind: input.artKind,
-      p_observed_epoch: observedEpoch,
+      p_observed_epoch: input.observedEpoch,
       p_reason: input.reason ?? CLOSE_FAILED_ACTION,
     });
     if (error) throw mapError(error.message);
