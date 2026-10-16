@@ -54,8 +54,8 @@ export function UnknownResultPanel({
 }: UnknownResultPanelProps) {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const [recheckMessage, setRecheckMessage] = useState<string | null>(null);
-  const [resolved, setResolved] = useState<UnknownResolution | null>(null);
 
   const canQueryOperation = Boolean(campaignId && operationId);
 
@@ -89,10 +89,10 @@ export function UnknownResultPanel({
         return;
       }
       if (state === "refunded") {
-        // Terminal PERSISTIDO (falha + crédito devolvido): notifica o pai (limpa/
-        // atualiza o estado) e exibe o terminal — o usuário não fica preso.
+        // Recorte 2 (Plano 09): terminal de estorno CONFIRMADO ⇒ DETALHE, que
+        // reutiliza o `RefundedPanel` — SEM segunda superfície equivalente aqui.
         onResolved?.("refunded");
-        setResolved("refunded");
+        router.push(`/campanhas/${campaignId}`);
         return;
       }
       // Pendente (`reserved`/`art_uploaded`) ou desconhecido ⇒ mantém o painel.
@@ -104,29 +104,39 @@ export function UnknownResultPanel({
     }
   };
 
-  if (resolved === "refunded") {
-    return (
-      <div
-        role="alert"
-        className="w-full rounded-lg border border-accent-red/30 bg-accent-red/10 px-4 py-4"
-      >
-        <div className="flex items-start gap-3">
-          <AlertTriangle
-            className="h-5 w-5 text-accent-red shrink-0 mt-0.5"
-            aria-hidden="true"
-          />
-          <div className="flex-1 space-y-1">
-            <p className="font-heading text-sm font-semibold text-accent-red">
-              A geração falhou.
-            </p>
-            <p className="text-xs text-accent-red/90 font-body">
-              A geração falhou e o crédito foi devolvido.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  /**
+   * Recorte 2 (Plano 09 / CR-02) — AÇÃO EXPLÍCITA e autenticada do usuário para
+   * RECUPERAR a arte íntegra já existente (sem regenerar). Faz POST na rota
+   * dedicada (ownership/autorização no servidor) e, em `delivered`, navega à
+   * campanha; caso contrário, apenas reconsulta (`router.refresh`, query-only).
+   */
+  const handleRecoverImage = async () => {
+    setRecheckMessage(null);
+    if (!canQueryOperation) return;
+    setRecovering(true);
+    try {
+      const res = await fetch(`/api/campaign/${campaignId}/image-recovery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operationId }),
+      });
+      if (!res.ok) {
+        setRecheckMessage("Não foi possível recuperar a imagem agora. Tente novamente.");
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      if (data?.recovery?.outcome === "delivered") {
+        onResolved?.("delivered");
+        router.push(`/campanhas/${campaignId}`);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setRecheckMessage("Não foi possível recuperar a imagem agora. Tente novamente.");
+    } finally {
+      setRecovering(false);
+    }
+  };
 
   return (
     <div
@@ -164,9 +174,18 @@ export function UnknownResultPanel({
               size="sm"
               onClick={handleRecheck}
               loading={checking}
-              disabled={checking}
+              disabled={checking || recovering}
             >
               Verificar novamente
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRecoverImage}
+              loading={recovering}
+              disabled={recovering || checking}
+            >
+              Recuperar imagem salva
             </Button>
             {supportEmail && (
               <Button

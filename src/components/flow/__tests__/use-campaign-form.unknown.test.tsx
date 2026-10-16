@@ -178,7 +178,7 @@ describe("UnknownResultPanel — Superfície 3 (render)", () => {
 // ---------------------------------------------------------------------------
 
 describe("UnknownResultPanel — reverificação consome o estado devolvido (correção)", () => {
-  it("`refunded` ⇒ notifica o pai (`onResolved('refunded')`) e exibe o terminal persistido", async () => {
+  it("`refunded` ⇒ notifica o pai (`onResolved('refunded')`) e ENCAMINHA ao detalhe (reutiliza `RefundedPanel`)", async () => {
     const onResolved = vi.fn();
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ operation: { state: "refunded" } }));
     vi.stubGlobal("fetch", fetchMock);
@@ -194,12 +194,31 @@ describe("UnknownResultPanel — reverificação consome o estado devolvido (cor
     fireEvent.click(screen.getByText("Verificar novamente"));
 
     await waitFor(() => expect(onResolved).toHaveBeenCalledWith("refunded"));
-    expect(
-      await screen.findByText("A geração falhou e o crédito foi devolvido."),
-    ).toBeInTheDocument();
-    expect(mockPush).not.toHaveBeenCalled();
+    // Recorte 2 (Plano 09): o terminal de estorno leva ao DETALHE — sem segunda superfície.
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(`/campanhas/${CAMPAIGN_ID}`),
+    );
+    expect(screen.queryByText("A geração falhou e o crédito foi devolvido.")).toBeNull();
     // Somente consulta — nunca inicia geração/cobrança.
     expect(String(fetchMock.mock.calls[0][0])).toContain("/api/campaign/generation-status");
+  });
+
+  it("ação explícita 'Recuperar imagem salva' ⇒ POST na rota de recuperação; em `delivered` navega (sem regenerar)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ recovery: { outcome: "delivered" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<UnknownResultPanel campaignId={CAMPAIGN_ID} operationId={OPERATION_ID} />);
+    fireEvent.click(screen.getByText("Recuperar imagem salva"));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(`/campanhas/${CAMPAIGN_ID}`),
+    );
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      `/api/campaign/${CAMPAIGN_ID}/image-recovery`,
+    );
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
   });
 
   it("`delivered` ⇒ navega para a página da campanha", async () => {

@@ -1205,6 +1205,17 @@ export function useCampaignForm(
       }
 
       if (event.type === "error") {
+        // Recorte 2 (Plano 09): estorno CONFIRMADO ⇒ encaminha ao DETALHE
+        // (reutiliza o `RefundedPanel`) e REMOVE o retry da identidade terminal.
+        if ((event as { refunded?: boolean }).refunded === true) {
+          const refundedCampaignId =
+            typeof event.campaignId === "string" ? event.campaignId : lastCampaignId;
+          setIsSubmitting(false);
+          if (refundedCampaignId) {
+            router.push(`/campanhas/${refundedCampaignId}`);
+            return true;
+          }
+        }
         const errorEvent = event as { code: string; message: string; requiresUserAction?: boolean };
         if (errorEvent.code === "generated_product_mismatch") {
           setSubmitError(errorEvent.message || "A imagem gerada não corresponde ao produto.");

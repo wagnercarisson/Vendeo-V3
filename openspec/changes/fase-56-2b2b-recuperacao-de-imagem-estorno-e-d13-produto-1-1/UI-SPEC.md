@@ -263,3 +263,8 @@ primitivos existentes em `src/components/ui/*`. Nenhum registry de terceiros é 
 **Checker (`gsd-ui-checker`, 2026-10-15) — resultado ORIGINAL preservado:** 1º passe **APPROVED** (0 BLOCK, **1 FLAG** → Dimension 4 `Line Height` ausente). **O FLAG de tipografia foi CORRIGIDO nesta rodada** (coluna `Line Height` reposta + nota de pesos herdados do MASTER §3). Recomendações aplicadas: aviso de **nova geração/cobrança normal** (Copywriting) e alinhamento do padrão de botão ao primitivo real `src/components/ui/button.tsx`.
 
 **Revisão humana: APROVADA (2026-10-15, `reviewed_at`).** O responsável aprovou este contrato de UI como **CONTRATO pré-implementação**, **exclusivamente no escopo INATIVO**. **Distinção de checkpoints:** esta é a aprovação do **CONTRATO** (pré-implementação); a validação do **resultado implementado** ocorrerá no **UAT** da B2.2 — uma aprovação **posterior e distinta**. Nenhuma implementação foi iniciada a partir deste documento. O parecer do checker **não** substitui a revisão humana.
+
+
+## Recorte 2 (Plano 09) — ação de recuperação e terminal `refunded`
+
+*Reconciliado 2026-10-16 (pré-implementação).* A superfície de **resultado desconhecido** ganha a ação explícita **`Recuperar imagem salva`** (POST autenticado em `/api/campaign/[id]/image-recovery` → GET; **sem** regenerar/cobrar). O terminal **`refunded` CONFIRMADO** (iniciador e unknown→admin) **encaminha ao DETALHE**, que **reutiliza o `RefundedPanel`** existente — **sem** segunda superfície equivalente. `GET`/`Verificar novamente` permanecem **consulta**. Sem novo requisito/fluxo.

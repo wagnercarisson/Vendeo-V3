@@ -672,6 +672,10 @@ export async function runProductOneToOneGeneration(
             : publicFailure.message,
           httpStatus: params.httpStatus ?? 502,
           retryable: false,
+          // Recorte 2 (Plano 09): SINAL DISCRIMINADO de estorno CONFIRMADO. O
+          // consumidor encaminha ao detalhe (RefundedPanel) e NÃO oferece retry
+          // da identidade terminal.
+          ...(params.refunded ? { refunded: true, campaignId } : {}),
         });
       };
 
