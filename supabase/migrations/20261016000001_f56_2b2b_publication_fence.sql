@@ -233,8 +233,9 @@ BEGIN
       'credit_tx_id', v_row.credit_tx_id, 'refund_tx_id', v_row.refund_tx_id);
   END IF;
   IF v_row.status = 'delivered' THEN RAISE EXCEPTION 'delivered_not_refundable'; END IF;
-  -- FENCE: publicação ATIVA NUNCA é estornada por caminho direto.
-  IF v_row.publication_state IN ('in_flight','result_unknown') THEN RAISE EXCEPTION 'publication_in_progress'; END IF;
+  -- FENCE: publicação ATIVA **ou já publicada** (`published` = arte confirmada) NUNCA
+  -- é estornada por caminho direto.
+  IF v_row.publication_state IN ('in_flight','result_unknown','published') THEN RAISE EXCEPTION 'publication_in_progress'; END IF;
   IF v_row.status NOT IN ('reserved','art_uploaded') THEN RAISE EXCEPTION 'invalid_transition'; END IF;
   IF v_row.credit_tx_id IS NULL THEN RAISE EXCEPTION 'credit_reservation_missing_tx'; END IF;
   v_refund_id := public.refund_credit(v_row.credit_tx_id,
@@ -310,7 +311,7 @@ DECLARE
   v_credit public.product_1_1_campaign_credit_operations%ROWTYPE;
   v_existing JSONB; v_existing_action TEXT; v_existing_actor UUID; v_existing_reason TEXT;
   v_art_kind TEXT; v_execution_ended BOOLEAN; v_in_progress BOOLEAN;
-  v_authorized_abandon BOOLEAN := false; v_authorized_closure BOOLEAN := false; v_result JSONB;
+  v_authorized_abandon BOOLEAN := false; v_authorized_closure BOOLEAN := false; v_result JSONB; v_refund_id UUID;
 BEGIN
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_campaign_id IS NULL THEN RAISE EXCEPTION 'missing_campaign_id'; END IF;
@@ -373,15 +374,26 @@ BEGIN
 
   IF p_action = 'deliver_existing_art' THEN
     IF v_art_kind <> 'integral' THEN RAISE EXCEPTION 'insufficient_evidence'; END IF;
-    IF v_credit.status = 'reserved' THEN
-      PERFORM public.product_1_1_mark_campaign_credit_art_uploaded(p_campaign_id, p_operation_id, v_credit.publication_token);
-    ELSIF v_credit.status <> 'art_uploaded' THEN RAISE EXCEPTION 'invalid_transition'; END IF;
-    PERFORM public.product_1_1_deliver_campaign_credit_operation(p_campaign_id, p_operation_id, v_credit.publication_token);
+    -- Recuperação de arte EXISTENTE (SEM token): funciona também em operações
+    -- HISTÓRICAS (token nulo). Mantém autorização (admin) e auditoria.
+    PERFORM public.product_1_1_confirm_existing_art(p_campaign_id, p_operation_id, 'integral');
   ELSE
     IF v_art_kind <> 'absent' THEN RAISE EXCEPTION 'insufficient_evidence'; END IF;
     IF NOT v_execution_ended AND NOT v_authorized_abandon THEN RAISE EXCEPTION 'execution_not_ended'; END IF;
     IF v_credit.status = 'delivered' THEN RAISE EXCEPTION 'delivered_not_refundable'; END IF;
-    PERFORM public.product_1_1_refund_campaign_credit_operation(p_campaign_id, p_operation_id, btrim(p_reason));
+    -- EXCEÇÃO AUTORIZADA (inconclusivo `in_flight`/`result_unknown`): estorno
+    -- INLINE na MESMA transação — a RPC direta recusaria a publicação ativa, mas
+    -- o caminho autorizado/auditado PRECISA concluir. Ainda sob a trava C4.
+    IF v_credit.publication_state IN ('in_flight','result_unknown') THEN
+      IF v_credit.credit_tx_id IS NULL THEN RAISE EXCEPTION 'credit_reservation_missing_tx'; END IF;
+      v_refund_id := public.refund_credit(v_credit.credit_tx_id, btrim(p_reason),
+        'p1_1_refund_' || p_campaign_id::text || '_' || p_operation_id::text, '{}'::jsonb);
+      UPDATE public.product_1_1_campaign_credit_operations
+         SET status = 'refunded', refund_tx_id = v_refund_id, state_epoch = state_epoch + 1, updated_at = now()
+       WHERE id = v_credit.id;
+    ELSE
+      PERFORM public.product_1_1_refund_campaign_credit_operation(p_campaign_id, p_operation_id, btrim(p_reason));
+    END IF;
   END IF;
 
   IF v_in_progress THEN

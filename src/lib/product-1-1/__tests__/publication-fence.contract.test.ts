@@ -88,7 +88,12 @@ describe("F56.2b2b — publication-fence: MIGRATION (forward-only)", () => {
     expect(activeSql).toMatch(/p_observed_epoch INTEGER/);
     expect(activeSql).toMatch(/p_observed_epoch IS DISTINCT FROM v_credit\.state_epoch[\s\S]*?evidence_stale/);
     expect(activeSql).toMatch(/publication_state IN \('in_flight','result_unknown','published'\)[\s\S]*?publication_in_progress/);
-    // Exceção RESTRITA à marca própria (`authorized_publication_closure`); `published` nunca estorna.
+    // B2 — o estorno DIRETO também bloqueia `published` (arte confirmada vence).
+    expect(activeSql).toMatch(/refund_campaign_credit_operation[\s\S]*?publication_state IN \('in_flight','result_unknown','published'\)/);
+    // B3 — entrega administrativa de HISTÓRICOS usa `confirm_existing_art` (sem token).
+    expect(activeSql).toMatch(/deliver_existing_art[\s\S]*?confirm_existing_art/);
+    // B1 — exceção autorizada faz o estorno INLINE sob a trava (não via RPC guardada).
+    expect(activeSql).toMatch(/publication_state IN \('in_flight','result_unknown'\)[\s\S]*?refund_credit\(/);
     expect(activeSql).toMatch(/authorized_publication_closure/);
     expect(activeSql).toMatch(/publication_active_art/);
     // Token OBRIGATÓRIO e do dono (não nulo) no mark/deliver.

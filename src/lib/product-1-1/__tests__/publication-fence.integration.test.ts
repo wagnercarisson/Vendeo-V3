@@ -341,6 +341,19 @@ describe("F56.2b2b — Camada 2: FENCE de publicação (Recorte 1)", () => {
 });
 
 describe("F56.2b2b — Camada 2: BARREIRA pós-upload/pré-`mark` (orquestrador REAL + Storage local)", () => {
+  beforeAll(async () => {
+    // A barreira vive em um DESCRIBE próprio: cria/fecha o SEU contexto (o do
+    // primeiro describe já foi fechado no `afterAll` dele).
+    ctx = await createIsolatedContext();
+    const store = await createTestStore(ctx.supabase);
+    storeId = store.storeId;
+    await setCredits(ctx.pg, storeId, 40);
+  }, 60_000);
+
+  afterAll(async () => {
+    await closeIsolatedContext(ctx);
+  });
+
   it("upload ÍNTEGRO pausado ⇒ encerramento recusado, sem estorno; liberar a barreira entrega SEM novo upload/geração/cobrança", async () => {
     const campaign = await createCampaign(ctx.supabase, storeId);
     const op = randomUUID();
@@ -390,7 +403,8 @@ describe("F56.2b2b — Camada 2: BARREIRA pós-upload/pré-`mark` (orquestrador 
 
     await uploadReached; // pausado APÓS o upload real
 
-    // (1) A imagem REALMENTE existe e é ÍNTEGRA no Storage local.
+    try {
+      // (1) A imagem REALMENTE existe e é ÍNTEGRA no Storage local.
     const probe = await realArtifact.probeArtifact({
       storeId,
       campaignId: campaign,
@@ -446,5 +460,8 @@ describe("F56.2b2b — Camada 2: BARREIRA pós-upload/pré-`mark` (orquestrador 
     expect(captured).toHaveLength(1); // exatamente UMA chamada ao provider
     expect(await refundLedgerCount()).toBe(refundBefore);
     expect((await creditOperationRow(ctx.pg, campaign, op))?.status).toBe("delivered");
+    } finally {
+      releaseBarrier();
+    }
   }, 90_000);
 });

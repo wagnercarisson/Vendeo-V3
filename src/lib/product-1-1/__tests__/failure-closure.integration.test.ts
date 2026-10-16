@@ -169,34 +169,36 @@ describe("F56.2b2b — Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Stora
     await markArtUploaded(ctx.pg, raceCampaign, raceOp);
     await recordFailed(raceCampaign, raceOp, "IMG-RACE-A");
 
+    const raceEpoch = (
+      await ctx.pg.query<{ state_epoch: number }>(
+        "SELECT state_epoch FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 AND operation_id=$2",
+        [raceCampaign, raceOp],
+      )
+    ).rows[0].state_epoch;
+
     const refundBefore = await refundLedgerCount(storeId);
     const settled = await Promise.allSettled([
       deliverCredit(ctx.pg, raceCampaign, raceOp),
       pgCallJson(
         ctx.pg2,
-        "SELECT public.product_1_1_close_failed_operation($1, $2, 'absent', $3) AS r",
-        [raceCampaign, raceOp, "race"],
+        "SELECT public.product_1_1_close_failed_operation($1, $2, 'absent', $3::integer, $4::text) AS r",
+        [raceCampaign, raceOp, raceEpoch, "race"],
       ),
     ]);
     const fulfilled = settled.filter((s) => s.status === "fulfilled");
     const rejected = settled.filter((s) => s.status === "rejected");
-    // EXATAMENTE UM vencedor — nunca ambos, nunca nenhum.
+    // Recorte 1 (Plano 08): com a arte JÁ PUBLICADA (`published`), o ENCERRAMENTO
+    // PF é SEMPRE recusado (arte confirmada vence) — a ENTREGA é o ÚNICO vencedor.
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
+    expect(String((rejected[0] as PromiseRejectedResult).reason)).toMatch(
+      /publication_in_progress|evidence_stale/,
+    );
 
     const final = await creditOperationRow(ctx.pg, raceCampaign, raceOp);
-    const refundAfter = await refundLedgerCount(storeId);
-    if (final?.status === "delivered") {
-      // A ENTREGA venceu ⇒ NENHUM estorno aplicado (refund_tx nulo, ledger intacto).
-      expect(final.refund_tx_id).toBeNull();
-      expect(refundAfter).toBe(refundBefore);
-    } else if (final?.status === "refunded") {
-      // O FECHAMENTO PF venceu ⇒ estorno ÚNICO e coerente (refund_tx + 1 ledger).
-      expect(final.refund_tx_id).not.toBeNull();
-      expect(refundAfter).toBe(refundBefore + 1);
-    } else {
-      throw new Error(`race_terminal_not_expected:${String(final?.status)}`);
-    }
+    expect(final?.status).toBe("delivered");
+    expect(final?.refund_tx_id).toBeNull();
+    expect(await refundLedgerCount(storeId)).toBe(refundBefore);
   }, 90_000);
 
   it("(b) estorno idempotente: 2ª chamada `idempotent:true`, sem segundo efeito de ledger", async () => {
