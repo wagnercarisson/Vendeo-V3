@@ -152,6 +152,26 @@ describe("useCampaignForm — terminal `unknown` (Plano 06 / F8)", () => {
     });
     expect(result.current.unknownResult).toBeNull();
   });
+
+  it("evento `refunded:true` do iniciador ⇒ encaminha ao DETALHE (sem retry da identidade terminal)", async () => {
+    const result = await submitWith([
+      { type: "phase", phase: "orchestration", status: "running", operationId: OPERATION_ID, campaignId: CAMPAIGN_ID },
+      {
+        type: "error",
+        code: "IMG-001",
+        reference: "IMG-001-ref",
+        message: "Falha. Crédito estornado.",
+        refunded: true,
+        campaignId: CAMPAIGN_ID,
+      },
+    ]);
+
+    // Encaminhamento ao detalhe (reutiliza o `RefundedPanel`) e sem `submitError`
+    // (portanto sem "Tentar novamente" da identidade terminal).
+    expect(mockPush).toHaveBeenCalledWith(`/campanhas/${CAMPAIGN_ID}`);
+    expect(result.current.submitError).toBeNull();
+    expect(result.current.unknownResult).toBeNull();
+  });
 });
 
 describe("UnknownResultPanel — Superfície 3 (render)", () => {

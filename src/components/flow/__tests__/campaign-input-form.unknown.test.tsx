@@ -15,6 +15,7 @@ const CAMPAIGN_ID = "22222222-2222-4222-8222-222222222222";
 const OPERATION_ID = "33333333-3333-4333-8333-333333333333";
 
 const mockResetUnknownResult = vi.fn();
+const mockInvalidateTerminalIdentity = vi.fn();
 
 vi.mock("@/hooks/use-operation-costs", () => ({
   useOperationCosts: () => ({
@@ -90,6 +91,7 @@ vi.mock("@/components/flow/use-campaign-form", async (importOriginal) => {
         campaignId: CAMPAIGN_ID,
       },
       resetUnknownResult: mockResetUnknownResult,
+      invalidateTerminalIdentity: mockInvalidateTerminalIdentity,
     }),
   };
 });
@@ -129,7 +131,7 @@ beforeEach(() => {
 });
 
 describe("CampaignInputForm — consumidor da resolução do resultado desconhecido", () => {
-  it("`refunded` na reverificação ⇒ limpa o estado do formulário e exibe o terminal (não fica preso)", async () => {
+  it("`refunded` na reverificação ⇒ invalida a identidade terminal e NÃO renderiza a superfície antiga", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -150,12 +152,9 @@ describe("CampaignInputForm — consumidor da resolução do resultado desconhec
     fireEvent.click(screen.getByText("Verificar novamente"));
 
     await waitFor(() => expect(mockResetUnknownResult).toHaveBeenCalled());
-    expect(
-      await screen.findByText("A geração falhou e o crédito foi devolvido."),
-    ).toBeInTheDocument();
-    // O estado desconhecido NÃO permanece (não fica preso na Superfície 3).
-    expect(
-      screen.queryByText("Não foi possível confirmar a conclusão desta geração"),
-    ).toBeNull();
+    expect(mockInvalidateTerminalIdentity).toHaveBeenCalled();
+    // Recorte 2 (Plano 09): NÃO renderiza a superfície vermelha antiga — o painel
+    // encaminha ao DETALHE, que reutiliza o `RefundedPanel`.
+    expect(screen.queryByText("A geração falhou e o crédito foi devolvido.")).toBeNull();
   });
 });

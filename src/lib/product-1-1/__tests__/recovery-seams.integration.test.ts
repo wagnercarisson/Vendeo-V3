@@ -127,6 +127,8 @@ vi.mock("@/components/flow/campaign-image-upload", () => ({
 
 import { ProductOneToOneAttemptStartClient } from "../orchestration/attempt-start-client";
 import { ProductOneToOneCreditOperationClient } from "../credit-operation/credit-operation-client";
+import { ProductOneToOneArtifactStore } from "../artifact/artifact-store";
+import { ProductOneToOneArtifactRecovery } from "../artifact/artifact-recovery";
 import { CampaignPageClient } from "@/components/flow/campaign-page-client";
 import { RefundedPanel } from "@/components/flow/refunded-panel";
 import { useCampaignForm } from "@/components/flow/use-campaign-form";
@@ -136,6 +138,7 @@ import {
   createIsolatedContext,
   createTestStore,
   creditOperationRow,
+  jpeg1024DataUrl,
   reserveCredit,
   setCredits,
   type IsolatedContext,
@@ -399,4 +402,89 @@ describe("F56.2b2b — Camada 2 / SEAM (c): página REAL → formulário REAL �
       screen.getByRole("button", { name: /Revisar e gerar/ }),
     ).toBeDisabled();
   }, 60_000);
+
+  it("(d) unknown → ADMINISTRAÇÃO → refunded → restauração → NOVOS IDs (caminho administrativo REAL)", async () => {
+    const campaign = await createRestorableCampaign(storeId, "Produto seam d");
+    const operation = randomUUID();
+    await reserveCredit(ctx.pg, storeId, campaign, operation);
+    // Direção resolvida (evidência congelada) para permitir o avanço da cadeia.
+    await insertFrozenEvidence(campaign, operation, "studio");
+    await ctx.pg.query(
+      "SELECT public.product_1_1_record_generation_outcome($1, $2, 'failed', $3)",
+      [campaign, operation, "IMG-SEAM-D"],
+    );
+    // Encerramento ADMINISTRATIVO real (evidência server-derived; ausência; execução encerrada).
+    await ctx.pg.query(
+      "SELECT public.admin_resolve_product_1_1_pending($1,$2,$3,$4,$5,$6,$7::jsonb)",
+      [
+        h.userId,
+        campaign,
+        operation,
+        "refund_once",
+        "inconclusivo",
+        randomUUID(),
+        JSON.stringify({
+          origin: "server-derived",
+          art_kind: "absent",
+          execution_ended: true,
+          state_epoch: 0,
+          publication_state: "none",
+        }),
+      ],
+    );
+    expect((await creditOperationRow(ctx.pg, campaign, operation))?.status).toBe("refunded");
+
+    // Restauração REAL (página) + NOVOS IDs na submissão.
+    const restored = await renderNova(campaign);
+    expect(restored).toMatchObject({ campaignId: campaign, productName: "Produto seam d" });
+
+    sessionStorage.setItem(`campaign_draft_image:${campaign}`, VALID_DATA_URL);
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response('{"type":"phase","phase":"generating","status":"start"}\n', { status: 200 }),
+    );
+    vi.stubGlobal("fetch", mockFetch);
+    const { result } = renderHook(() =>
+      useCampaignForm(storeId, { eligible: true, restoredForm: restored }),
+    );
+    await waitFor(() => expect(result.current.fields.productName).toBe("Produto seam d"));
+    await act(async () => {
+      expect(await result.current.enterReview()).toBe(true);
+    });
+    await act(async () => {
+      await result.current.confirmReview();
+    });
+    const gen = mockFetch.mock.calls.filter(([url]) =>
+      String(url).includes("/api/campaign/generate-image"),
+    );
+    expect(gen.length).toBeGreaterThan(0);
+    const body = JSON.parse(String((gen[0][1] as RequestInit).body)) as {
+      campaignId?: string;
+      operationId?: string;
+    };
+    expect(body.campaignId).toMatch(UUID_V4);
+    expect(body.campaignId).not.toBe(campaign);
+    expect(body.operationId).not.toBe(operation);
+  }, 90_000);
+
+  it("(e) AÇÃO da UI → serviço REAL de recuperação → imagem recuperada no isolado (SEM regenerar)", async () => {
+    const campaign = await createRestorableCampaign(storeId, "Produto seam e");
+    const operation = randomUUID();
+    await reserveCredit(ctx.pg, storeId, campaign, operation);
+    // Arte ÍNTEGRA real no Storage local — o caminho que a ação da UI aciona.
+    const image = await jpeg1024DataUrl();
+    await new ProductOneToOneArtifactStore(ctx.supabase).storeArtifact({
+      storeId,
+      campaignId: campaign,
+      operationId: operation,
+      imageDataUrl: image,
+    });
+
+    const result = await new ProductOneToOneArtifactRecovery().recoverDelivery({
+      storeId,
+      campaignId: campaign,
+      operationId: operation,
+    });
+    expect(result).toMatchObject({ outcome: "delivered", kind: "integral" });
+    expect((await creditOperationRow(ctx.pg, campaign, operation))?.status).toBe("delivered");
+  }, 90_000);
 });

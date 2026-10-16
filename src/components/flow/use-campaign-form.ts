@@ -239,6 +239,8 @@ export interface UseCampaignFormReturn {
    */
   unknownResult: UnknownResultState | null;
   resetUnknownResult: () => void;
+  /** Recorte 2 (Plano 09): invalida a identidade terminal (não reenvia os IDs estornados). */
+  invalidateTerminalIdentity: () => void;
   /**
    * F56.2b2b (B2B-D9): aviso HONESTO de limitação quando os campos foram
    * restaurados do SERVIDOR (sem rascunho escopado) — a imagem do produto/
@@ -1208,6 +1210,9 @@ export function useCampaignForm(
         // Recorte 2 (Plano 09): estorno CONFIRMADO ⇒ encaminha ao DETALHE
         // (reutiliza o `RefundedPanel`) e REMOVE o retry da identidade terminal.
         if ((event as { refunded?: boolean }).refunded === true) {
+          // Recorte 2 (Plano 09): invalida a IDENTIDADE TERMINAL — o retry NÃO
+          // pode reenviar os mesmos IDs. Os CAMPOS/dados permanecem preservados.
+          confirmedBodyRef.current = null;
           const refundedCampaignId =
             typeof event.campaignId === "string" ? event.campaignId : lastCampaignId;
           setIsSubmitting(false);
@@ -1740,6 +1745,14 @@ export function useCampaignForm(
     setUnknownResult(null);
   }, []);
 
+  /**
+   * Recorte 2 (Plano 09): invalida a IDENTIDADE TERMINAL (não reenvia os mesmos
+   * IDs). Preserva os campos/rascunhos (não limpa nada além da identidade).
+   */
+  const invalidateTerminalIdentity = useCallback(() => {
+    confirmedBodyRef.current = null;
+  }, []);
+
   return {
     fields,
     fieldErrors,
@@ -1757,6 +1770,7 @@ export function useCampaignForm(
     handleSubmit,
     retrySubmit,
     resetSubmit,
+    invalidateTerminalIdentity,
     isValid,
     pendingConflict,
     handleConflictContinue,

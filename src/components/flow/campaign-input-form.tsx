@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { useCampaignForm, inferIntent } from "./use-campaign-form";
 import type { CampaignFormFields, CampaignProductFormImage } from "./use-campaign-form";
 import { CampaignImageUpload } from "./campaign-image-upload";
@@ -96,20 +96,20 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     confirmReview,
     unknownResult,
     resetUnknownResult,
+    invalidateTerminalIdentity,
     restorationNotice,
     backgroundDirectionNotice,
     backgroundDirectionRequired,
   } = useCampaignForm(storeId, { eligible, restoredForm });
 
-  // F56.2b1b (Plano 06 — correção): resultado TERMINAL resolvido pelo painel de
-  // resultado desconhecido ("Verificar novamente"). Em `refunded`, o estado do
-  // formulário (`unknownResult`) é limpo e o terminal persistido é exibido aqui —
-  // o usuário não fica preso na Superfície 3.
-  const [resolvedTerminal, setResolvedTerminal] = useState<"refunded" | null>(null);
-
+  // Recorte 2 (Plano 09): o resultado TERMINAL `refunded` é apresentado pelo
+  // DETALHE (reutiliza o `RefundedPanel`) — NÃO há mais superfície paralela aqui.
   const handleUnknownResolved = (outcome: "delivered" | "refunded") => {
     if (outcome === "refunded") {
-      setResolvedTerminal("refunded");
+      // Recorte 2 (Plano 09): o `UnknownResultPanel` JÁ encaminha ao DETALHE
+      // (reutiliza o `RefundedPanel`). Aqui apenas invalidamos a identidade
+      // terminal e limpamos o estado — SEM renderizar a superfície vermelha antiga.
+      invalidateTerminalIdentity?.();
       resetUnknownResult?.();
     }
   };
@@ -145,35 +145,6 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         onBack={exitReview}
         onConfirm={confirmReview}
       />
-    );
-  }
-
-  // F56.2b1b (Plano 06 — correção): resultado TERMINAL `refunded` resolvido pelo
-  // painel — falha confirmada + crédito devolvido (copy da UI-SPEC). Exibido aqui
-  // (estado do formulário já limpo) para não prender o usuário na Superfície 3.
-  if (resolvedTerminal === "refunded") {
-    return (
-      <div className="space-y-4">
-        <div
-          role="alert"
-          className="w-full rounded-lg border border-accent-red/30 bg-accent-red/10 px-4 py-4"
-        >
-          <div className="flex items-start gap-3">
-            <AlertTriangle
-              className="h-5 w-5 text-accent-red shrink-0 mt-0.5"
-              aria-hidden="true"
-            />
-            <div className="flex-1 space-y-1">
-              <p className="font-heading text-sm font-semibold text-accent-red">
-                A geração falhou.
-              </p>
-              <p className="text-xs text-accent-red/90 font-body">
-                A geração falhou e o crédito foi devolvido.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     );
   }
 
