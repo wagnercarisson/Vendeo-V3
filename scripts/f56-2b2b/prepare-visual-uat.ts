@@ -26,6 +26,7 @@ import {
   pgCallJson,
   reserveCredit,
 } from "../../src/lib/product-1-1/__tests__/integration-harness";
+import { validateFixturePostconditions } from "./fixture-postconditions";
 
 const PREFLIGHT_TOKEN = "vendeo-f562a-isolated:56321:56322";
 const UAT_EMAIL = "uat.b21@vendeo.local";
@@ -232,23 +233,46 @@ async function main(): Promise<void> {
       );
       if (existing.rows.length > 0) {
         const campaignId = existing.rows[0].id;
-        const op = await ctx.pg.query<{ operation_id: string; status: string }>(
-          "SELECT operation_id,status FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 ORDER BY created_at DESC LIMIT 1",
+        const op = await ctx.pg.query<{
+          operation_id: string;
+          status: string;
+          credit_tx_id: string | null;
+          refund_tx_id: string | null;
+        }>(
+          "SELECT operation_id,status,credit_tx_id,refund_tx_id FROM public.product_1_1_campaign_credit_operations WHERE campaign_id=$1 ORDER BY created_at DESC LIMIT 1",
           [campaignId],
         );
-        const outcome = await ctx.pg.query<{ outcome: string }>(
-          "SELECT outcome FROM public.product_1_1_generation_outcomes WHERE campaign_id=$1 ORDER BY created_at DESC LIMIT 1",
-          [campaignId],
-        );
-        const status = op.rows[0]?.status ?? null;
-        // Pós-condições COMPLETAS: uma fixture existente SÓ é declarada pronta se
-        // estiver TERMINAL e coerente (`refunded` + outcome `failed`). Estado
-        // PARCIAL ⇒ ABORTA EXPLÍCITO (nunca `skipped` por nome); sem reparo silencioso.
-        if (status !== "refunded" || outcome.rows[0]?.outcome !== "failed") {
+        const row = op.rows[0];
+        const operationId = row?.operation_id ?? "";
+        const outcome = operationId
+          ? await ctx.pg.query<{ outcome: string; operation_id: string }>(
+              "SELECT outcome, operation_id FROM public.product_1_1_generation_outcomes WHERE campaign_id=$1 AND operation_id=$2",
+              [campaignId, operationId],
+            )
+          : null;
+        const evidence = operationId
+          ? await ctx.pg.query<{ background_direction: string | null }>(
+              "SELECT background_direction FROM public.product_1_1_snapshot_frozen_evidence WHERE campaign_id=$1 AND operation_id=$2 LIMIT 1",
+              [campaignId, operationId],
+            )
+          : null;
+
+        // Validador PURO: terminal coerente + MESMA operação + ledger + evidência.
+        const validation = validateFixturePostconditions({
+          key: fixture.key,
+          campaignId,
+          operationId,
+          status: row?.status ?? null,
+          creditTxId: row?.credit_tx_id ?? null,
+          refundTxId: row?.refund_tx_id ?? null,
+          outcome: outcome?.rows[0]?.outcome ?? null,
+          outcomeOperationId: outcome?.rows[0]?.operation_id ?? null,
+          evidenceDirection: evidence?.rows[0]?.background_direction ?? null,
+          expectedDirection: fixture.direction,
+        });
+        if (!validation.ok) {
           throw new Error(
-            `fixture_partial_state:${fixture.key}:campaign=${campaignId}:status=${String(status)}:outcome=${String(
-              outcome.rows[0]?.outcome ?? null,
-            )}:no cleanup/rollback performed; inspecione a fixture local antes de repetir`,
+            `fixture_partial_state:${fixture.key}:campaign=${campaignId}:reason=${validation.reason ?? "unknown"}:no cleanup/rollback performed; inspecione a fixture local antes de repetir`,
           );
         }
         results.push({
@@ -256,8 +280,8 @@ async function main(): Promise<void> {
           skipped: true,
           validated: true,
           campaignId,
-          operationId: op.rows[0]?.operation_id ?? null,
-          status,
+          operationId: operationId || null,
+          status: row?.status ?? null,
           badgeText: fixture.badgeText,
           url: `${APP_URL}/campanhas/${campaignId}`,
           restoreUrl: `${APP_URL}/campanhas/nova?restoreFrom=${campaignId}`,

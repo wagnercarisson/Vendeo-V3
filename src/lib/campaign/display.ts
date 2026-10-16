@@ -12,13 +12,27 @@ import type {
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
- * Recorte 3 (Plano 10) — remove APENAS o prefixo canônico do aviso ilustrativo
- * (`ILLUSTRATIVE_NOTICE_TEXT`) quando presente, preservando o TEXTO LIVRE. Evita
- * duplicar o aviso no reenvio do formulário restaurado.
+ * Recorte 3 (Plano 10) — classifica o aviso ilustrativo de forma ESTRITA: só é o
+ * aviso quando o texto é o canônico COMPLETO ou o canônico seguido do separador
+ * esperado (`\n`/`\r\n`). Qualquer outro texto (mesmo começando igual) é TEXTO
+ * LIVRE e permanece ÍNTEGRO — nunca truncamos texto arbitrário.
  */
-function stripIllustrativeNoticePrefix(text: string): string {
-  if (!text.startsWith(ILLUSTRATIVE_NOTICE_TEXT)) return text;
-  return text.slice(ILLUSTRATIVE_NOTICE_TEXT.length).replace(/^\r?\n/, "");
+function classifyIllustrativeNotice(text: string): {
+  showIllustrativeNotice: boolean;
+  free: string;
+} {
+  if (text === ILLUSTRATIVE_NOTICE_TEXT) {
+    return { showIllustrativeNotice: true, free: "" };
+  }
+  const crlf = `${ILLUSTRATIVE_NOTICE_TEXT}\r\n`;
+  if (text.startsWith(crlf)) {
+    return { showIllustrativeNotice: true, free: text.slice(crlf.length) };
+  }
+  const lf = `${ILLUSTRATIVE_NOTICE_TEXT}\n`;
+  if (text.startsWith(lf)) {
+    return { showIllustrativeNotice: true, free: text.slice(lf.length) };
+  }
+  return { showIllustrativeNotice: false, free: text };
 }
 
 // F37.1 (D2): estado de aprovação da campanha — derivado de campaign_art_versions
@@ -414,6 +428,12 @@ export interface CampaignFormRestore {
   readonly preserveImageContext: boolean;
   readonly validityDisplayText?: string;
   readonly mandatoryArtworkTextFree: string;
+  /**
+   * Recorte 3 (Plano 10) — checkbox ilustrativo RESTAURADO SEPARADAMENTE do texto
+   * livre (derivado do snapshot quando o aviso canônico está presente). Ausente em
+   * snapshots antigos ⇒ `false` (compatibilidade explícita; nunca presume `true`).
+   */
+  readonly showIllustrativeNotice?: boolean;
   readonly backgroundDirection?: RestoredBackgroundDirection;
   /**
    * F56.2b2b (P1) — `true` SOMENTE quando a direção de fundo NÃO pôde ser
@@ -496,10 +516,10 @@ export function mapRestoredForm(
   const preserveImageContext = creative.preserveImageContext === true;
   const validityDisplayText =
     typeof validity?.displayText === "string" ? validity.displayText : undefined;
-  const mandatoryArtworkTextFree =
-    typeof legalNotice?.text === "string"
-      ? stripIllustrativeNoticePrefix(legalNotice.text)
-      : "";
+  const mandatoryArtworkTextFreeRaw =
+    typeof legalNotice?.text === "string" ? legalNotice.text : "";
+  const { showIllustrativeNotice, free: mandatoryArtworkTextFree } =
+    classifyIllustrativeNotice(mandatoryArtworkTextFreeRaw);
   const backgroundDirection =
     input.backgroundDirection === "studio" ||
     input.backgroundDirection === "original" ||
@@ -527,6 +547,7 @@ export function mapRestoredForm(
     preserveImageContext,
     ...(validityDisplayText !== undefined ? { validityDisplayText } : {}),
     mandatoryArtworkTextFree,
+    showIllustrativeNotice,
     ...(backgroundDirection !== undefined
       ? { backgroundDirection }
       : { backgroundDirectionUnresolved: true }),

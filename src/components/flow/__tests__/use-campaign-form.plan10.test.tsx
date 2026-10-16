@@ -8,6 +8,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { useCampaignForm } from "@/components/flow/use-campaign-form";
+import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
+
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const VALID_DATA_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
@@ -103,5 +106,77 @@ describe("F56.2b2b — Plano 10: intenção/selo hidratados preservados", () => 
     );
     // O rascunho de OUTRA campanha NÃO é apagado nem sobrescrito.
     expect(sessionStorage.getItem(`campaign_draft_image:${OTHER}`)).toBe("OUTRA");
+  });
+
+  it("grava o snapshot/imagem ENVIADOS sob B ANTES do stream (B a partir de A) e PRESERVA A", async () => {
+    const A = RESTORED.campaignId;
+    sessionStorage.setItem(`campaign_draft_image:${A}`, VALID_DATA_URL);
+    const captured: { body?: string } = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: unknown, init?: RequestInit) => {
+        captured.body = String(init?.body ?? "");
+        // Stream SEM eventos: nada de `campaignId` chega do servidor.
+        return new Response("", { status: 200, headers: { "Content-Type": "application/x-ndjson" } });
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useCampaignForm("11111111-1111-4111-8111-111111111111", { eligible: true, restoredForm: RESTORED }),
+    );
+    await waitFor(() => expect(result.current.isValid).toBe(true));
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    const body = JSON.parse(captured.body ?? "{}") as { campaignId?: string };
+    expect(body.campaignId).toMatch(UUID_V4);
+    expect(body.campaignId).not.toBe(A);
+    // Persistido ANTES de qualquer evento do stream.
+    expect(sessionStorage.getItem(`campaign_draft_image:${body.campaignId}`)).toBe(VALID_DATA_URL);
+    // A é preservada.
+    expect(sessionStorage.getItem(`campaign_draft_image:${A}`)).toBe(VALID_DATA_URL);
+  });
+
+  it("checkbox ilustrativo restaurado controla o aviso no CORPO (ligado/desligado; com/sem texto)", async () => {
+    const cases = [
+      { show: true, free: "Oferta exclusiva", notice: true },
+      { show: false, free: "Sem aviso", notice: false },
+    ];
+    for (const c of cases) {
+      sessionStorage.clear();
+      sessionStorage.setItem(`campaign_draft_image:${RESTORED.campaignId}`, VALID_DATA_URL);
+      const captured: { body?: string } = {};
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (_url: unknown, init?: RequestInit) => {
+          captured.body = String(init?.body ?? "");
+          return new Response("", { status: 200 });
+        }),
+      );
+      const restored = {
+        ...RESTORED,
+        showIllustrativeNotice: c.show,
+        mandatoryArtworkTextFree: c.free,
+      };
+      const { result } = renderHook(() =>
+        useCampaignForm("11111111-1111-4111-8111-111111111111", { eligible: true, restoredForm: restored }),
+      );
+      await waitFor(() => expect(result.current.isValid).toBe(true));
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+      const body = JSON.parse(captured.body ?? "{}") as { mandatoryArtworkText?: string };
+      const text = body.mandatoryArtworkText ?? "";
+      if (c.notice) {
+        expect(text).toContain(ILLUSTRATIVE_NOTICE_TEXT);
+        expect(text).toContain(c.free);
+        // Sem DUPLICAÇÃO: o canônico aparece exatamente UMA vez.
+        expect(text.split(ILLUSTRATIVE_NOTICE_TEXT).length - 1).toBe(1);
+      } else {
+        expect(text).not.toContain(ILLUSTRATIVE_NOTICE_TEXT);
+        expect(text).toBe(c.free);
+      }
+    }
   });
 });

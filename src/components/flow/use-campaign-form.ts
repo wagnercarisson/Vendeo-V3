@@ -709,6 +709,7 @@ function restoredFormToFields(
     preserveImageContext: restored.preserveImageContext,
     mandatoryArtworkTextFree: restored.mandatoryArtworkTextFree,
     mandatoryArtworkText: restored.mandatoryArtworkTextFree,
+    showIllustrativeNotice: restored.showIllustrativeNotice ?? false,
   };
   if (restored.validityDisplayText) {
     fields.validityMode = "custom";
@@ -829,6 +830,25 @@ export function useCampaignForm(
       setDraftScope(newId);
     },
     [draftScope, imageDraftKey],
+  );
+
+  /**
+   * Recorte 3 (Plano 10): grava o SNAPSHOT e a IMAGEM EFETIVAMENTE ENVIADOS sob a
+   * identidade `id` (B) ANTES da requisição — não depende de evento do stream nem
+   * do autosave (500 ms). Preserva A e qualquer outro escopo (só escreve em B).
+   */
+  const persistSubmittedDraft = useCallback(
+    (id: string | null, snapshotFields: CampaignFormFields, imageDataUrl: string | null) => {
+      if (!id) return;
+      try {
+        sessionStorage.setItem(scopedDraftKey(id), JSON.stringify(snapshotFields));
+        if (imageDataUrl) sessionStorage.setItem(scopedImageDraftKey(id), imageDataUrl);
+      } catch {
+        /* storage indisponível */
+      }
+      setDraftScope((prev) => (prev === id ? prev : id));
+    },
+    [],
   );
   const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);
   // F56.2b2b (B2B-D9): aviso HONESTO de que a imagem do produto/referências
@@ -1464,6 +1484,14 @@ export function useCampaignForm(
         identity: draftIdentity?.identity,
       });
 
+      // Recorte 3 (Plano 10): persiste o snapshot/imagem ENVIADOS sob a identidade
+      // B ANTES da requisição (identidade já no corpo no novo fluxo).
+      persistSubmittedDraft(
+        typeof body.campaignId === "string" ? body.campaignId : null,
+        frozenFields,
+        resolvedImages[0]?.dataUrl ?? restoredImageDataUrl ?? null,
+      );
+
       await consumeStream(body, abortController);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro inesperado ao gerar imagem";
@@ -1740,6 +1768,13 @@ export function useCampaignForm(
       eligible,
       identity: draftIdentity?.identity,
     });
+    // Recorte 3 (Plano 10): persiste o snapshot/imagem ENVIADOS sob a identidade B
+    // ANTES da requisição (não depende de evento do stream nem do autosave).
+    persistSubmittedDraft(
+      typeof body.campaignId === "string" ? body.campaignId : null,
+      frozenFields,
+      frozenPrepared[0]?.dataUrl ?? null,
+    );
     // F43 (mini-fix): guarda o body confirmado para o retry pós-falha repetir a
     // MESMA tentativa (não reativar a validação vision via handleSubmit legado).
     confirmedBodyRef.current = body;

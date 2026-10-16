@@ -15,30 +15,40 @@ import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
  * Remove APENAS o prefixo canônico — evita DUPLICAR o aviso no reenvio.
  */
 describe("F56.2b2b — Plano 10: aviso ilustrativo (round-trip sem duplicação)", () => {
-  it("remove SOMENTE o prefixo canônico; o TEXTO LIVRE permanece", () => {
+  const base = (text: string) => ({
+    product: { name: "Produto", description: "" },
+    commercial: { intent: "offer", legalNotice: { text } },
+  });
+
+  it("canônico COMPLETO ⇒ checkbox ligado + texto livre vazio", () => {
     const restored = mapRestoredForm({
       campaignId: "22222222-2222-4222-8222-222222222222",
-      inputSnapshot: {
-        product: { name: "Produto", description: "" },
-        commercial: {
-          intent: "offer",
-          legalNotice: { text: `${ILLUSTRATIVE_NOTICE_TEXT}\nOferta exclusiva` },
-        },
-      },
+      inputSnapshot: base(ILLUSTRATIVE_NOTICE_TEXT),
       backgroundDirection: "studio",
     });
+    expect(restored?.showIllustrativeNotice).toBe(true);
+    expect(restored?.mandatoryArtworkTextFree).toBe("");
+  });
+
+  it("canônico + separador + texto ⇒ checkbox ligado + texto livre", () => {
+    const restored = mapRestoredForm({
+      campaignId: "22222222-2222-4222-8222-222222222222",
+      inputSnapshot: base(`${ILLUSTRATIVE_NOTICE_TEXT}\nOferta exclusiva`),
+      backgroundDirection: "studio",
+    });
+    expect(restored?.showIllustrativeNotice).toBe(true);
     expect(restored?.mandatoryArtworkTextFree).toBe("Oferta exclusiva");
   });
 
-  it("sem o prefixo ⇒ texto livre INTACTO (não mexe em texto arbitrário)", () => {
-    const restored = mapRestoredForm({
-      campaignId: "22222222-2222-4222-8222-222222222222",
-      inputSnapshot: {
-        product: { name: "Produto", description: "" },
-        commercial: { intent: "offer", legalNotice: { text: "Imagem ilustrativa" } },
-      },
-      backgroundDirection: "studio",
-    });
-    expect(restored?.mandatoryArtworkTextFree).toBe("Imagem ilustrativa");
+  it("texto ARBITRÁRIO (mesmo começando igual, sem separador) ⇒ checkbox DESLIGADO + texto ÍNTEGRO", () => {
+    for (const text of ["Imagem ilustrativa", `${ILLUSTRATIVE_NOTICE_TEXT}X`, `x ${ILLUSTRATIVE_NOTICE_TEXT}`]) {
+      const restored = mapRestoredForm({
+        campaignId: "22222222-2222-4222-8222-222222222222",
+        inputSnapshot: base(text),
+        backgroundDirection: "studio",
+      });
+      expect(restored?.showIllustrativeNotice).toBe(false);
+      expect(restored?.mandatoryArtworkTextFree).toBe(text);
+    }
   });
 });
