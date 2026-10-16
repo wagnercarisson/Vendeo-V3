@@ -52,6 +52,8 @@ Falha **confirmada** sem arte utilizável SHALL gerar `refunded` **uma vez**. Re
 
 O encerramento de uma operação sem arte SHALL ser **local** ao servidor e SHALL NOT depender de comprovar que o provider encerrou **nem** de o marcador `generation_outcomes` já estar gravado. Operação não terminal **e** arte ausente são **necessárias, mas NÃO suficientes** para o encerramento. O encerramento SHALL exigir o **gatilho persistido** de **falha FINAL para a operação, sem retry/fallback pendente**: **(a)** `outcome = 'failed'` de operação **gravado com sucesso** no ponto de decisão terminal; **e (b)** **nenhum** claim `in_progress` para a operação; **e (c)** arte `absent` confirmada com operação não terminal. **(a) exige gravação bem-sucedida do marcador**: se o marcador não puder ser gravado (erro) ou já existir um `unknown` imutável, **não** se trata como sucesso automático nem se sobrescreve — o caso SHALL ser encaminhado à resolução autorizada. Recusas isoladas (`primary_after_fallback`/`attempt_already_completed`/`attempt_limit_reached`) SHALL NOT ser gatilho. **Sem sinal de finalidade** (nenhum claim persistido, `in_progress`/`abandoned`/`unknown`, retry/fallback pendente, ou finalidade não provável), o encerramento SHALL ser **explicitamente autorizado e auditado** (motivo obrigatório + evidência), registrando a resolução (append-only, idempotente). O encerramento (automático ou autorizado) SHALL ocorrer sob a **mesma trava** da linha de crédito e transitar a operação para **terminal**, de modo que **qualquer tentativa posterior seja impedida atomicamente**. **O gatilho automático exige ausência de `in_progress` e SHALL NOT abandonar claim algum**; **finalizar um claim `in_progress` como `abandoned` pertence EXCLUSIVAMENTE ao encerramento autorizado**, sob a mesma trava, **com proteção contra o resultado atrasado**. O estorno SHALL ser persistido antes de qualquer anúncio. A recuperação financeira SHALL limitar-se a operações **não terminais**; `refunded` SHALL NOT retornar a `delivered`.
 
+**Duas vias, com precondições distintas:** (i) **automática/ordinária** — exige o predicado PF (falha FINAL persistida, nenhum claim `in_progress`, ausência `absent` **confirmada** e **fresca** pelo epoch capturado **antes da sonda**) e **publicação não protegida** (sem `in_flight`/`result_unknown`/`published`); (ii) **exceção administrativa** — encerramento **explícito e auditado** do caso **inconclusivo** (`in_flight`/`result_unknown` genuinamente inconclusivo), com motivo e evidência **server-side**, que **não** depende de frescor de epoch e **admite** resultado tardio **sem** reabrir `refunded`. Ambas as vias SHALL NOT estornar `published`; a exceção SHALL NOT ser usada como autorização genérica de estorno e **requer** reconhecimento explícito, autorizado e auditado do inconclusivo.
+
 #### Scenario: Geração normal não estorna
 
 - **WHEN** a operação é não terminal e a arte ainda não existe, com claim `in_progress`
@@ -128,9 +130,28 @@ O encerramento de uma operação sem arte SHALL ser **local** ao servidor e SHAL
 - **THEN** nenhum estorno é aplicado
 - **AND** `refunded` não retorna a `delivered`, mesmo que apareça imagem atrasada
 
+#### Scenario: Publicação ativa bloqueia o encerramento automático
+
+- **WHEN** a operação é não terminal (`reserved`/`art_uploaded`) mas a publicação está **ativa ou publicada** (`in_flight`/`result_unknown`/`published`)
+- **THEN** o encerramento **automático** (PF) não ocorre
+- **AND** nenhum estorno automático é executado
+
+#### Scenario: Exceção administrativa encerra publicação inconclusiva
+
+- **WHEN** a publicação está **genuinamente inconclusiva** (`in_flight`/`result_unknown`) e o administrador autorizado a reconhece explicitamente
+- **THEN** o encerramento ocorre **somente** pela exceção administrativa **explicitamente autorizada e auditada** (motivo + evidência server-side)
+- **AND** admite resultado/imagem **tardio** sem reabrir `refunded`
+- **AND** não depende de frescor de epoch
+
+#### Scenario: Exceção não estorna publicação publicada
+
+- **WHEN** a operação está `published`
+- **THEN** o estorno é recusado, inclusive pela exceção administrativa
+- **AND** `published` permanece terminal
+
 ### Requirement: Estorno idempotente e corrida entrega × estorno
 
-O estorno SHALL ser **idempotente** por `campaignId + operation_id` e SHALL usar CAS/transição protegida. Na **corrida entrega × estorno**, se `delivered`/arte íntegra estiver comprovada, o estorno SHALL ser **recusado**; o estorno SHALL ocorrer apenas na ausência de arte.
+O estorno SHALL ser **idempotente** por `campaignId + operation_id` e SHALL usar CAS/transição protegida. Na **corrida entrega × estorno**, se `delivered`/arte íntegra estiver comprovada, o estorno SHALL ser **recusado**; o estorno SHALL ocorrer apenas na ausência de arte. No caminho **automático/ordinário**, a ausência observada SHALL ser **fresca** — o epoch SHALL ser capturado **antes da sonda** (Requirement "Publicação anunciada antes do upload e fence de encerramento"); observação **obsoleta** SHALL NOT autorizar estorno **automático**. A exigência de frescor aplica-se **ao caminho automático**; a **exceção administrativa** segue suas próprias precondições e **não** depende de frescor de epoch.
 
 #### Scenario: Corrida entrega × estorno
 
@@ -149,6 +170,12 @@ O estorno SHALL ser **idempotente** por `campaignId + operation_id` e SHALL usar
 - **WHEN** a operação está `delivered`
 - **THEN** o estorno é recusado
 - **AND** o consumo final é mantido
+
+#### Scenario: Corrida automática com observação obsoleta
+
+- **WHEN** a entrega avança entre a sonda e o encerramento **automático**
+- **THEN** o estorno automático é recusado
+- **AND** há no máximo um efeito de ledger
 
 ### Requirement: Resultado atrasado de operação estornada não reabre nem libera
 
@@ -191,3 +218,38 @@ Erro ou indisponibilidade ao consultar o Storage ou o banco SHALL NOT ser tratad
 - **WHEN** o estorno não pôde ser confirmado como persistido
 - **THEN** a UI não anuncia crédito devolvido
 - **AND** a autorização de recuperação/gratuidade permanece determinada pelo estado server-side
+
+### Requirement: Publicação anunciada antes do upload e fence de encerramento
+
+A operação SHALL anunciar a publicação (`in_flight`) **antes** de enviar a arte ao Storage privado, associando um **token de posse** (`publication_token`) e um **epoch de estado** (`state_epoch`) à operação. Concluir a entrega (`art_uploaded` → `delivered`) SHALL exigir o **token do dono** corrente; publicação sem o token corrente SHALL NOT concluir a entrega (bypass recusado). Resultado de upload/metadados **desconhecido** SHALL preservar a proteção da publicação (`result_unknown`): SHALL NOT liberar o **encerramento financeiro** nem o **estorno automático**, mas **não** SHALL impedir a **recuperação** de arte existente (confirmar e entregar um objeto íntegro após sonda `integral`, **sem novo upload**). No caminho **automático/ordinário**, o encerramento financeiro (`refund`/`close_failed_operation`) SHALL capturar o epoch **imediatamente ANTERIOR à sonda** e SHALL recusar o encerramento quando o epoch observado estiver **obsoleto** (mutação concorrente) ou quando a operação estiver **publicada** (`published`). Uma operação `published` SHALL **nunca** ser estornada; resultado/imagem **tardio** SHALL NOT reabrir `refunded`. A **exceção administrativa** (Requirement "Encerramento local com estorno confirmado") é a via do caso **inconclusivo** e **não** depende de frescor de epoch. A recuperação de arte **existente** SHALL NOT depender do token de posse.
+
+#### Scenario: Publicação anunciada antes do upload
+
+- **WHEN** a operação inicia o envio da arte ao Storage
+- **THEN** o estado `in_flight` (token + epoch) é registrado **antes** do upload
+- **AND** nenhuma entrega é concluída antes do anúncio
+
+#### Scenario: Transição exige o token do dono
+
+- **WHEN** uma transição de entrega (`art_uploaded`/`delivered`) ocorre sem o token corrente
+- **THEN** a transição é recusada
+- **AND** nenhuma entrega por bypass é aceita
+
+#### Scenario: Estorno recusado com observação obsoleta
+
+- **WHEN** o epoch anterior à sonda difere do epoch corrente no momento do encerramento automático
+- **THEN** o encerramento é recusado
+- **AND** nenhum efeito de ledger ocorre
+
+#### Scenario: Resultado desconhecido bloqueia o encerramento, não a recuperação
+
+- **WHEN** o upload/metadados têm resultado **desconhecido** (`result_unknown`) e a sonda confirma `integral`
+- **THEN** o encerramento financeiro automático **não** ocorre
+- **AND** a recuperação **entrega** o objeto existente **sem novo upload**
+- **AND** nenhuma nova chamada ao modelo é feita
+
+#### Scenario: Publicação publicada nunca estorna
+
+- **WHEN** a operação está `published`
+- **THEN** o estorno é recusado (inclusive pela exceção administrativa)
+- **AND** imagem/resultado tardio não reabre `refunded`

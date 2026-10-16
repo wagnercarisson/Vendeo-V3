@@ -193,11 +193,14 @@ A **Camada 2** deve provar pelos seams reais: **(a)** tela administrativa → se
 
 - **Estado por operação:** `publication_state ∈ {none, in_flight, published, failed_before_upload, result_unknown}` (separado do `status` do crédito), `publication_token`, `state_epoch`.
 - **RPCs:** `begin_publication` (antes do upload, sob C4) / `abort_publication` (só `before_upload`) / `mark_result_unknown` / `confirm_existing_art` (recuperação sem novo upload) / `get_publication_epoch`.
-- **Transições principais:** `mark`/`deliver` exigem **token do dono**; `refund`/`close_failed_operation` exigem **`observed_epoch` fresco** (capturado antes da sonda) e **bloqueiam `published`**; o **PF automático** fica bloqueado com publicação ativa (`in_flight`/`result_unknown`).
+- **Transições principais (caminho automático/ordinário):** `mark`/`deliver` exigem **token do dono**; `refund`/`close_failed_operation` exigem **`observed_epoch` fresco** (capturado **antes da sonda** — não "antes da recusa") e **bloqueiam `published`**; o **PF automático** fica bloqueado com publicação ativa (`in_flight`/`result_unknown`) ou publicada. **A exceção administrativa (11.3) NÃO depende de frescor de epoch.**
+- **`result_unknown` bloqueia o encerramento, não a recuperação:** o resultado desconhecido preserva a proteção contra o **encerramento automático**, mas **não** impede a **recuperação** (sonda `integral` ⇒ confirmar e entregar o objeto existente **sem novo upload**). Objeto íntegro encontrado SHALL ser **entregue**.
 
 ### 11.3 Exceção administrativa auditada (estende B2B-D4)
 
-`admin_resolve_product_1_1_pending` distingue: (i) **automático/PF bloqueado** com publicação ativa; (ii) **administrativo excepcional** — **somente** via marca autorizada/auditada **`authorized_publication_closure`** (ao lado de `authorized_abandon`) — que **pode** encerrar um estado **realmente inconclusivo** tornando a operação **terminal**. **`published` nunca estorna**; resultado tardio **não** reabre entrega nem cobrança; autoridade **server-side**.
+`admin_resolve_product_1_1_pending` distingue: (i) **automático/PF bloqueado** com publicação ativa (`in_flight`/`result_unknown`) ou publicada; (ii) **administrativo excepcional** — **somente** via marca autorizada/auditada **`authorized_publication_closure`** (ao lado de `authorized_abandon`) — que **pode** encerrar um estado **genuinamente inconclusivo** tornando a operação **terminal**. **Não** é autorização genérica de estorno: exige **reconhecimento explícito, autorizado e auditado** do inconclusivo; **não** depende de frescor de epoch e **admite** resultado tardio **sem** reabrir `refunded`. **`published` nunca estorna** (nem por esta via); **não** se promete "arte íntegra sempre vence" no caminho inconclusivo. Autoridade **server-side**, nunca do cliente; `actor_id`/motivo/evidência auditados.
+
+> **Mapeamento (REQ-IDs GSD, sem renumerar):** fence/token/epoch/`published` + exceção ⇒ **REQ-56.2.4-05/-06/-11**; recuperação sem novo upload ⇒ **REQ-56.2.4-10**; claim residual ⇒ **REQ-56.2.4-09**.
 
 ### 11.4 Migrations — LOCAL-ONLY, aplicadas SOMENTE no isolado
 

@@ -32,6 +32,8 @@ Sem arte íntegra persistida, o download SHALL permanecer recusado e a operaçã
 
 A recuperação SHALL buscar a arte no **Storage privado** pelo caminho determinístico do novo fluxo e SHALL limitar-se a operações **não terminais** (`reserved`/`art_uploaded`). **Arte íntegra existente** SHALL ser recuperada e a entrega **concluída sem regenerar**. A recuperação SHALL usar o resultado **tipado** da sonda, sem colapsar erro/indisponibilidade com ausência. Uma operação `refunded` SHALL NOT retornar a `delivered` mesmo que apareça imagem atrasada.
 
+A entrega da arte recuperada SHALL confirmar o **objeto EXISTENTE** após sonda `integral`, **sem novo upload** e **sem** depender do **token de posse** de publicação. A recuperação SHALL cobrir a operação cuja arte já foi anunciada/publicada (`in_flight`, `result_unknown`, `published` ou histórico pré-fence) e SHALL NOT reabrir operações **terminais** (`delivered`/`refunded`): **objeto íntegro** confirmado pela sonda SHALL ser **entregue**. Um estado de publicação **ainda não confirmado** (`in_flight`/`result_unknown`) **pode** ser encerrado pela **exceção administrativa autorizada** (capability de crédito) — a recuperação **não** promete que “arte íntegra sempre vence” nesse caminho —, mas uma operação `published` SHALL NOT ser estornada.
+
 #### Scenario: Arte íntegra recuperada sem regenerar
 
 - **WHEN** a sonda retorna `integral` para uma operação não terminal
@@ -51,6 +53,13 @@ A recuperação SHALL buscar a arte no **Storage privado** pelo caminho determin
 - **THEN** isso não é tratado como ausência da arte
 - **AND** a recuperação reverifica e dá feedback honesto
 - **AND** nenhuma conclusão de ausência é declarada
+
+#### Scenario: Recuperação confirma objeto existente sem novo upload
+
+- **WHEN** a sonda retorna `integral` para uma operação com publicação anunciada/publicada
+- **THEN** a arte existente é confirmada e entregue
+- **AND** nenhum novo upload ao Storage é realizado
+- **AND** nenhuma nova chamada ao modelo é feita
 
 ### Requirement: Recuperação não regenera a imagem
 

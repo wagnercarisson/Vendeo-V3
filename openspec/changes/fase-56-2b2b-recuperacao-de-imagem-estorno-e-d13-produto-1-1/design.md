@@ -144,15 +144,18 @@ A janela entre **upload no Storage** e **transição no banco** passou a ser pro
 
 - **Estado por operação:** `publication_state ∈ {none, in_flight, published, failed_before_upload, result_unknown}` (**separado** do `status` do crédito), `publication_token` (dono) e `state_epoch` (frescor).
 - **RPCs:** `begin_publication` (anúncio **antes** do upload, sob a trava C4), `abort_publication` (só `before_upload`; replay idempotente), `mark_result_unknown` (mantém a proteção), `confirm_existing_art` (**recuperação de objeto existente, sem novo upload**), `get_publication_epoch`.
-- **Transições principais:** `mark`/`deliver` exigem **token do dono** (replay valida o token); `refund` e `close_failed_operation` exigem **`observed_epoch` fresco**, capturado **antes** da sonda, comparado sob a trava — **stale ⇒ recusa**; `published` **nunca** é estornado; o **encerramento automático (PF) fica bloqueado** enquanto houver publicação ativa (`in_flight`/`result_unknown`).
-- **Recuperação (B2B-D1):** usa `confirm_existing_art` (sem token, sem regenerar), cobrindo `in_flight`/`result_unknown`/`published`/histórico, **nunca** reabrindo terminais.
+- **Transições principais (caminho automático/ordinário):** `mark`/`deliver` exigem **token do dono** (replay valida o token); `refund` e `close_failed_operation` exigem **`observed_epoch` fresco**, capturado **antes da sonda** (não "antes da recusa"), comparado sob a trava — **stale ⇒ recusa**; `published` **nunca** é estornado; o **encerramento automático (PF) fica bloqueado** enquanto houver publicação ativa (`in_flight`/`result_unknown`) ou publicada (`published`). **A exceção administrativa (A-2) NÃO depende de frescor de epoch.**
+- **`result_unknown` bloqueia o encerramento, não a recuperação:** resultado de upload/metadados desconhecido preserva a proteção contra o **encerramento financeiro automático**, mas **não** impede a **recuperação** — se a sonda confirma `integral`, o objeto existente é **confirmado e entregue** (sem novo upload).
+- **Recuperação (B2B-D1):** usa `confirm_existing_art` (sem token, sem novo upload), cobrindo `in_flight`/`result_unknown`/`published`/histórico, **nunca** reabrindo terminais (`delivered`/`refunded`). Objeto **íntegro** confirmado SHALL ser **entregue**; um estado **ainda não confirmado** (`in_flight`/`result_unknown`) **pode** ser encerrado pela **exceção administrativa** — a recuperação **não** promete "arte íntegra sempre vence" nesse caminho.
 
 ### A-2 — Exceção administrativa auditada (extensão de B2B-D4)
 
 `admin_resolve_product_1_1_pending` passou a distinguir **dois regimes**:
 
 1. **Automático/PF BLOQUEADO** enquanto houver publicação ativa (`in_flight`/`result_unknown`).
-2. **Administrativo excepcional** — **somente** via evidência autorizada/auditada (marca **`authorized_publication_closure`**, ao lado de **`authorized_abandon`**), que **pode** encerrar um estado **realmente inconclusivo** tornando a operação **terminal**. **`published` nunca** estorna; a entrega tardia **não** reabre cobrança. Regra honesta: **autoridade server-side**, nunca do cliente; `actor_id`/motivo/evidência auditados.
+2. **Administrativo excepcional** — **somente** via evidência autorizada/auditada (marca **`authorized_publication_closure`**, ao lado de **`authorized_abandon`**), que **pode** encerrar um estado **genuinamente inconclusivo** (`in_flight`/`result_unknown`) tornando a operação **terminal**. **Não** é autorização genérica de estorno: requer **reconhecimento explícito, autorizado e auditado** do inconclusivo; **não** depende de frescor de epoch e **admite** resultado/imagem tardio **sem** reabrir `refunded`. **`published` nunca** estorna (nem por esta via). **Não** se promete "arte íntegra sempre vence" no caminho inconclusivo. Regra honesta: **autoridade server-side**, nunca do cliente; `actor_id`/motivo/evidência auditados.
+
+> **Mapeamento a REQ-IDs existentes (sem renumerar o GSD):** fence/token/epoch/`published` e exceção administrativa ⇒ **REQ-56.2.4-05/-06/-11**; recuperação sem novo upload ⇒ **REQ-56.2.4-10**; ajuste do claim residual ⇒ **REQ-56.2.4-09**. Fecha achados **CR-01..03/SEC-01..03** (reparos 08–09).
 
 ### A-3 — Conjunto final de migrations (LOCAL-ONLY, aplicadas SOMENTE no isolado)
 
