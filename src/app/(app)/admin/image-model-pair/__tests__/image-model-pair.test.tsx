@@ -271,6 +271,22 @@ describe("ImageModelPairConfigForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Modelo ou qualidade fora do catálogo elegível");
   });
 
+  it("permite selecionar as seis combinações completas em principal e fallback", () => {
+    render(<ImageModelPairConfigForm view={CONFIGURED_VIEW} />);
+    for (const label of ["Par principal", "Par fallback"]) {
+      const group = screen.getByRole("group", { name: label });
+      const modelSelect = within(group).getByLabelText("Modelo");
+      const qualitySelect = within(group).getByLabelText("Qualidade");
+      for (const model of ELIGIBLE_MODELS) for (const quality of ELIGIBLE_QUALITIES) {
+        fireEvent.change(modelSelect, { target: { value: model } });
+        fireEvent.change(qualitySelect, { target: { value: quality } });
+        expect(modelSelect).toHaveValue(model);
+        expect(qualitySelect).toHaveValue(quality);
+        expect(screen.queryByText(/Cobertura de pricing/)).not.toBeInTheDocument();
+      }
+    }
+  });
+
   it("não renderiza controles destrutivos ou de reset", () => {
     render(<ImageModelPairConfigForm view={CONFIGURED_VIEW} />);
     expect(screen.queryByText(/Restaurar padrão/i)).not.toBeInTheDocument();

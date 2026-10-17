@@ -30,6 +30,7 @@ import { ImagesAdapter } from "../adapters/images";
 import { AiInvocationError } from "../types";
 import type { AiModelTarget } from "../model-resolver";
 import { MalformedResponseError } from "@/lib/copy/errors";
+import { ELIGIBLE_IMAGE_MODELS, ELIGIBLE_IMAGE_QUALITIES } from "../image-model-pair";
 
 const primaryTarget: AiModelTarget = {
   provider: "openai",
@@ -55,6 +56,18 @@ afterEach(() => {
 });
 
 describe("UpstreamImagesAdapter — qualidade chega ao wire (F56.1 D-20)", () => {
+  for (const model of ELIGIBLE_IMAGE_MODELS) for (const quality of ELIGIBLE_IMAGE_QUALITIES) {
+    it(`preserva o par selecionado ${model}/${quality} no SDK (sem provider real)`, async () => {
+      mockImagesEdit.mockResolvedValue({ data: [{ b64_json: "IMG" }] });
+      await new UpstreamImagesAdapter().invoke(
+        { prompt: "p", productImagesDataUrls: [dataUrl], quality },
+        { provider: "openai", model, protocol: "images" },
+      );
+      expect(mockImagesEdit).toHaveBeenCalledTimes(1);
+      expect(mockImagesEdit.mock.calls[0][0]).toMatchObject({ model, quality, size: "1024x1024", n: 1 });
+    });
+  }
+
   it("propaga quality=medium exatamente ao images.edit (sem omitir/substituir)", async () => {
     mockImagesEdit.mockResolvedValue({ data: [{ b64_json: "IMG" }] });
 
