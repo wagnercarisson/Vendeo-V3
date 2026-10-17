@@ -14,6 +14,11 @@ import {
   type PilotPaidCallKind,
   type PilotSpendGate,
 } from "@/lib/product-1-1/pilot/spend-control";
+import {
+  computeCopyEstimate,
+  type PilotCopyPricing,
+} from "@/lib/product-1-1/pilot/copy-estimate";
+import { AiModelPricingService } from "@/lib/ai-cost/ai-model-pricing";
 
 import type { CopyCommit, CopyDelivery } from "./copy-state";
 
@@ -105,8 +110,28 @@ export interface DefaultProductOneToOneCopyRunnerDeps {
    * (nunca contabilizada como US$ 0).
    */
   readonly estimatedUsd?: number;
+  /** Leitura do PRICING do ALVO PREPARADO (default: `AiModelPricingService`). */
+  readonly readCopyPricing?: (target: {
+    provider: string;
+    model: string;
+  }) => Promise<PilotCopyPricing | null>;
   /** Sequência real da tentativa (default 0) — contabilidade por chamada. */
   readonly attemptSeq?: number;
+}
+
+/** Leitor DEFAULT do pricing do alvo preparado (falha/ausência ⇒ `null`). */
+async function defaultReadCopyPricing(target: {
+  provider: string;
+  model: string;
+}): Promise<PilotCopyPricing | null> {
+  const result = await new AiModelPricingService().getModelPricing({
+    provider: target.provider as never,
+    model: target.model,
+  });
+  const input = result?.pricing?.inputCostUsd;
+  const output = result?.pricing?.outputCostUsd;
+  if (input == null || output == null) return null;
+  return { inputUsdPer1M: input, outputUsdPer1M: output };
 }
 
 /** Contrato estrutural consumido pelo orquestrador (`ProductOneToOneCopyOps`). */
@@ -190,7 +215,7 @@ export function createDefaultProductOneToOneCopyOps(
       return deliveryFromResult(deterministic);
     }
 
-    const service = new CopyDirectorService(deps.invoker ?? defaultAiGateway);
+    const invoker = deps.invoker ?? defaultAiGateway;
     const telemetry = createTelemetry({
       campaignId: input.campaignId,
       storeId: input.storeId,
@@ -202,25 +227,46 @@ export function createDefaultProductOneToOneCopyOps(
     const pilotSpend = deps.pilotSpend;
     const callKind: PilotPaidCallKind = deps.callKind ?? "copy_initial";
     const attemptSeq = deps.attemptSeq ?? 0;
+    const target = deps.target ?? "primary";
     let pilotHandle: PilotPaidCallHandle | undefined;
+    let copyEstimate: number | undefined;
+    let pinnedInvoker: AiInvoker | undefined;
     if (pilotSpend) {
-      // Estimativa OBRIGATÓRIA e ESTRITAMENTE POSITIVA quando armado (M1).
-      const estimatedUsd = deps.estimatedUsd;
-      if (!Number.isFinite(estimatedUsd) || (estimatedUsd as number) <= 0) {
-        throw new Error("pilot_spend_blocked:estimate_required");
+      // Coerência por chamada (opção 2): preparar o alvo UMA vez; pricing e
+      // estimativa DESTE mesmo alvo; preparação ausente ou pricing inválido
+      // BLOQUEIA sem provider. Caminho legado (sem gate) inalterado.
+      if (!invoker.prepare || !invoker.invokePrepared) {
+        throw new Error("pilot_spend_blocked:preparation_unsupported");
       }
+      const prepared = await invoker.prepare("campaign_copy", target);
+      const pricing = await (deps.readCopyPricing ?? defaultReadCopyPricing)({
+        provider: prepared.provider,
+        model: prepared.model,
+      });
+      const estimate = computeCopyEstimate(pricing);
+      if (estimate === null) {
+        throw new Error("pilot_spend_blocked:pricing_unavailable");
+      }
+      copyEstimate = estimate;
       const decision = await pilotSpend.beginPaidCall({
         campaignId: input.campaignId,
         operationId: input.operationId,
         kind: callKind,
         attemptSeq,
-        estimatedUsd: estimatedUsd as number,
+        estimatedUsd: estimate,
       });
       if (!decision.acquired) {
         throw new Error(`pilot_spend_blocked:${decision.reason}`);
       }
       pilotHandle = decision.handle;
+      // Invocação PREPARADA — mesmo alvo/versão de pricing da estimativa.
+      pinnedInvoker = {
+        hasFallback: (capability) => invoker.hasFallback(capability),
+        invoke: (_capability, request, tel) => invoker.invokePrepared!(prepared, request, tel),
+      };
     }
+
+    const service = new CopyDirectorService(pinnedInvoker ?? invoker);
 
     // F56.2b2a (lacuna 3) — EXATAMENTE UMA chamada ao provider por tentativa: o
     // alvo é EXPLÍCITO e decidido SERVER-SIDE; NÃO existe fallback INTERNO
@@ -230,10 +276,10 @@ export function createDefaultProductOneToOneCopyOps(
       const result = await service.generateCopy(copyInput, {
         signal,
         telemetry,
-        target: deps.target ?? "primary",
+        target,
       });
       if (pilotSpend && pilotHandle) {
-        await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: deps.estimatedUsd });
+        await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: copyEstimate });
       }
       return deliveryFromResult(result);
     } catch (error) {
@@ -244,7 +290,7 @@ export function createDefaultProductOneToOneCopyOps(
           if (signal.aborted || isUnknownPilotOutcome(error)) {
             await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_unknown" });
           } else {
-            await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: deps.estimatedUsd });
+            await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: copyEstimate });
           }
         } catch (gateError) {
           console.error(
