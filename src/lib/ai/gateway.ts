@@ -21,7 +21,7 @@ export type AiInvocationTarget = "primary" | "fallback";
 export interface PreparedInvocation {
   readonly capability: AiCapability;
   readonly target: AiInvocationTarget;
-  readonly provider: string;
+  readonly provider: AiModelTarget["provider"];
   readonly model: string;
   readonly protocol: AiModelTarget["protocol"];
   /** Alvo resolvido (interno) — reutilizado na execução SEM nova resolução. */

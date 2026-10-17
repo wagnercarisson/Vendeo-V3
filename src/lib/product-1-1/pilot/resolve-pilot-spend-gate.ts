@@ -84,3 +84,45 @@ export function resolvePilotCopyEstimatedUsd(): number | undefined {
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? value : undefined;
 }
+
+/**
+ * LIMITE DE SAÍDA da NOSSA copy (tokens) — preservado do comportamento vigente
+ * (`copy-director-service` usa 1.000). NÃO é a capacidade máxima do modelo.
+ */
+export const PILOT_COPY_MAX_OUTPUT_TOKENS = 1000;
+
+/**
+ * Premissa **CONSERVADORA de ENTRADA** da copy (tokens) — **SUPOSIÇÃO documentada**,
+ * NÃO um limite garantido. Usada apenas para dimensionar a estimativa do piloto.
+ */
+export const PILOT_COPY_CONSERVATIVE_INPUT_TOKENS = 2000;
+
+export interface PilotCopyPricing {
+  readonly inputUsdPer1M: number;
+  readonly outputUsdPer1M: number;
+}
+
+/**
+ * Estimativa CONSERVADORA (USD) do alvo de copy a partir do pricing DESTE alvo.
+ * `null` quando o pricing é ausente/inválido (o piloto então BLOQUEIA — nunca
+ * contabiliza US$ 0).
+ */
+export function computeCopyEstimate(
+  pricing: PilotCopyPricing | null | undefined,
+): number | null {
+  if (!pricing) return null;
+  const { inputUsdPer1M, outputUsdPer1M } = pricing;
+  if (
+    !Number.isFinite(inputUsdPer1M) ||
+    !Number.isFinite(outputUsdPer1M) ||
+    inputUsdPer1M <= 0 ||
+    outputUsdPer1M <= 0
+  ) {
+    return null;
+  }
+  return (
+    (PILOT_COPY_CONSERVATIVE_INPUT_TOKENS * inputUsdPer1M +
+      PILOT_COPY_MAX_OUTPUT_TOKENS * outputUsdPer1M) /
+    1_000_000
+  );
+}
