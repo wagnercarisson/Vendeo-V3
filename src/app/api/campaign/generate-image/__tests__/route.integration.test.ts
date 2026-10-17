@@ -33,6 +33,7 @@ const h = vi.hoisted(() => {
     creditBeginPublication: vi.fn(),
     creditMarkResultUnknown: vi.fn(),
     creditGetPublicationEpoch: vi.fn(),
+    resolvePilotSpendGate: vi.fn(),
     storeArtifact: vi.fn(),
     probeArtifact: vi.fn(),
     gatewayInvoke: vi.fn(),
@@ -55,6 +56,13 @@ const h = vi.hoisted(() => {
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: { from: h.mockFrom, rpc: h.mockRpc, storage: { from: vi.fn() } },
   createServerClient: vi.fn(),
+}));
+
+// F56.2b2c — o GATE produtivo NÃO é movido: o RESOLVER é mockado e fornece o gate
+// aos consumidores reais (rota → orquestrador). Default: `inactive`.
+vi.mock("@/lib/product-1-1/pilot/resolve-pilot-spend-gate", () => ({
+  resolvePilotSpendGate: (...args: unknown[]) => h.resolvePilotSpendGate(...args),
+  resolvePilotCopyEstimatedUsd: () => 0.05,
 }));
 
 // ── Serviços EXTERNOS do orquestrador (mockados) ─────────────────────────────
@@ -432,6 +440,8 @@ beforeEach(() => {
   h.creditBeginPublication.mockResolvedValue({ acquired: true, token: "pub-token" });
   h.creditMarkResultUnknown.mockResolvedValue({ status: "unknown" });
   h.creditGetPublicationEpoch.mockResolvedValue(1);
+  // Piloto INATIVO por padrão (o gate só é armado nos testes específicos).
+  h.resolvePilotSpendGate.mockResolvedValue({ kind: "inactive" });
 
   h.storeArtifact.mockResolvedValue({
     storagePath: `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`,
@@ -622,6 +632,23 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     const terminal = terminalOf(parseEvents(await res.text()));
     expect(terminal).toMatchObject({ type: "unknown" });
     expect(String(terminal.message ?? "")).not.toContain("estornado");
+  });
+
+  it("(F56.2b2c armed) piloto ARMADO, gate BLOQUEIA ⇒ ZERO chamadas ao provider", async () => {
+    const endPaidCall = vi.fn(async () => undefined);
+    h.resolvePilotSpendGate.mockResolvedValue({
+      kind: "armed",
+      gate: {
+        beginPaidCall: vi.fn(async () => ({ acquired: false, outcome: "blocked", reason: "pilot_cap_reached" })),
+        endPaidCall,
+        markUnknown: vi.fn(async () => undefined),
+      },
+    });
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    // BLOQUEIO de gasto ⇒ NENHUMA invocação ao provider.
+    expect(h.gatewayInvoke).not.toHaveBeenCalled();
   });
 
   it("(achado 5b) `unknown` persistido ⇒ claim FINALIZADO (`abandoned`), não `in_progress`", async () => {
