@@ -39,4 +39,14 @@ dirigido por catálogo; sem seletor paralelo/env/modelo fixo. **Entrega de imple
 3. **Seleção:** UI admin (`admin_set_ai_model_selection`, `campaign_copy` → `openai/gpt-6-luna`), na sessão.
 
 ## Fora da autorização atual
-Aplicar migration, cadastrar pricing, selecionar Luna, ligar flags ou chamadas pagas. Sem produção/deploy.
+Aplicar migration/cadastrar pricing/selecionar Luna **foram executados em 2026-10-17 na homologação local** (ver abaixo);
+permanecem fora: **produção/deploy**, novas chamadas fora da janela e qualquer reabertura da B2.3.
+
+## Janela local executada (UAT — resumo)
+- **Aplicado**: migration (ledger 126→127), pricing `openai/gpt-6-luna`, seleção via admin (`gpt-4o`→**`gpt-6-luna`**).
+- **Sessão (3 operações; provider real)**: imagem `flare/medium` + copy (1ª `gpt-4o`, 2ª/3ª `gpt-6-luna`).
+  Estimativas: `0,136`+`0,0200`; `0,044`+`0,0007`; `0,044`+`0,0007`. Todas `released`; sem `unknown`.
+- **Gasto**: `spent 0,156 → 0,2454`; `cap 3,00` (base 1,00 + adicional 2,00).
+- **Campanhas preservadas**: `20d54b1d…` (Figo & Maçã), `6ecef78c…`/`e043e52e…` (Morango & Pêssego).
+- **Desligado**: flag `test_stores=false`, `all_stores=false`, autorização revogada, geração pausada.
+- Detalhes em `UAT.md`. **B2.3 não reaberta/contadores intactos; produção desligada.**
