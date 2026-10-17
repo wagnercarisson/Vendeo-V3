@@ -47,6 +47,24 @@ describe("GenerationProgress — novo fluxo (B2.3)", () => {
     expect(document.querySelectorAll(".animate-spin").length).toBe(0);
   });
 
+  it("unknown: para a animação SEM vermelho (distinção preservada)", () => {
+    render(
+      <GenerationProgress
+        variant="unknown"
+        phases={[
+          { phase: "campaign_validation", status: "complete" },
+          { phase: "campaign_preparation", status: "complete" },
+          { phase: "campaign_image", status: "skipped", message: "Aguardando confirmação" },
+        ]}
+      />,
+    );
+    expect(document.querySelectorAll(".animate-spin").length).toBe(0);
+    // nenhuma marca vermelha de falha confirmada
+    expect(document.querySelectorAll(".text-accent-red").length).toBe(0);
+    // painel âmbar de incerteza presente
+    expect(screen.getByText("Não foi possível confirmar a conclusão desta geração")).toBeTruthy();
+  });
+
   it("legado: mantém as 4 etapas (Validação/Briefing/Arte/Revisão)", () => {
     render(
       <GenerationProgress

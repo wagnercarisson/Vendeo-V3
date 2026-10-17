@@ -624,10 +624,17 @@ export async function runProductOneToOneGeneration(
         // ainda `running` é encerrada como `failed` antes do terminal.
         for (const [phase, status] of flowPhaseStatus) {
           if (status !== "running") continue;
-          if (event.type === "result") {
-            emitFlowPhase(phase, "skipped", "Não aguardado");
-          } else {
+          if (event.type === "error") {
             emitFlowPhase(phase, "failed", "Interrompido");
+          } else {
+            // `result` (concluído) e `unknown` (INCERTEZA) NÃO são falha confirmada:
+            // interrompem a animação como NEUTRO, preservando a distinção
+            // visual/textual contratada (unknown = âmbar, nunca vermelho).
+            emitFlowPhase(
+              phase,
+              "skipped",
+              event.type === "unknown" ? "Aguardando confirmação" : "Não aguardado",
+            );
           }
         }
         emit(event);
