@@ -699,6 +699,47 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     expect(terminal).toBeTruthy();
   });
 
+  it("(F56.2b2c armed) M3 imagem: timeout + falha DUPLA de marcação ⇒ unknown, sem retry/refund/PF", async () => {
+    const beginPaidCall = vi.fn(async () => ({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "image_primary" as const } }));
+    const markUnknown = vi.fn(async () => {
+      throw new Error("db_down_block");
+    });
+    h.resolvePilotSpendGate.mockResolvedValue({
+      kind: "armed",
+      gate: { beginPaidCall, endPaidCall: vi.fn(async () => undefined), markUnknown },
+    });
+    h.gatewayInvoke.mockRejectedValue(Object.assign(new Error("timed out"), { kind: "timeout" }));
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    const terminal = terminalOf(parseEvents(await res.text()));
+    // Natureza DESCONHECIDA preservada (o erro do gate não substitui o original).
+    expect(terminal).toMatchObject({ type: "unknown" });
+    expect(beginPaidCall).toHaveBeenCalledTimes(1); // sem retry/novo begin
+    expect(markUnknown).toHaveBeenCalledTimes(1);
+    expect(h.creditRefund).not.toHaveBeenCalled();
+    expect(h.creditCloseFailedOperation).not.toHaveBeenCalled();
+  });
+
+  it("(F56.2b2c armed) IN-02: sucesso do provider + endPaidCall FALHA ⇒ sem segunda chamada paga", async () => {
+    const handle = { callId: "c", ownerToken: "o", kind: "image_primary" as const };
+    const beginPaidCall = vi.fn(async () => ({ acquired: true, handle }));
+    const endPaidCall = vi.fn(async () => {
+      throw new Error("end_fail");
+    });
+    const markUnknown = vi.fn(async () => undefined);
+    h.resolvePilotSpendGate.mockResolvedValue({
+      kind: "armed",
+      gate: { beginPaidCall, endPaidCall, markUnknown },
+    });
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    const terminal = terminalOf(parseEvents(await res.text()));
+    // IN-02 (disposição): a falha do encerramento NÃO provoca 2ª chamada paga.
+    expect(h.gatewayInvoke).toHaveBeenCalledTimes(1);
+    expect(terminal).toBeTruthy();
+  });
+
+
   it("(achado 5b) `unknown` persistido ⇒ claim FINALIZADO (`abandoned`), não `in_progress`", async () => {
     h.gatewayInvoke.mockRejectedValue(Object.assign(new Error("timeout"), { name: "AbortError" }));
 
