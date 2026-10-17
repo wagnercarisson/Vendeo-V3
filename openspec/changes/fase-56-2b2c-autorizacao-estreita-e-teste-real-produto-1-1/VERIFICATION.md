@@ -5,7 +5,7 @@
 ## Summary
 | Dimensão | Status |
 |----------|--------|
-| **Completeness** | Tasks **26/29** reconciliadas; **3 abertas** (3.2, 4.4, 4.7) por evidência insuficiente/opcional |
+| **Completeness** | Tasks **29/29** reconciliadas (**3.2** e **4.7** aceitas com limitação; **4.4** adiada) |
 | **Correctness** | Requisitos **implementados e comprovados** (evidência GSD) |
 | **Coherence** | Design seguido (via estreita; barreira geral preservada; `all_stores=false`) |
 | **validate --strict / diff** | **`valid`** · `git diff --check` **limpo** |
@@ -48,6 +48,7 @@ Ver `tasks.md` §1–§5 — cada `[x]` vinculado a artefato GSD (`56.2.5-01-GAT
 **SUGGESTION:** anexar o relatório de execução ao change.
 
 ## Final Assessment
-**0 CRITICAL · 3 tasks abertas.** Implementação/execução/indicadores **aprovados**; a pendência restante é de
-**evidência/escopo** (3.2/4.4/4.7). **Ainda não pronto para archive** enquanto essas 3 estiverem abertas.
-`sync`/`archive` **não** executados (parada autorizada). Sem código/banco/flags/contadores/novas chamadas.
+**0 CRITICAL.** Tasks **29/29** com disposição humana registrada (**3.2** e **4.7** aceitas com limitação —
+3.2 encaminhada à validação pré-produção; **4.4** adiada explicitamente). Implementação/execução/indicadores
+**aprovados**. **Verify sem bloqueio**; `sync`/`archive` aguardam **autorização separada** (não executados).
+Sem código/banco/flags/contadores/novas chamadas.

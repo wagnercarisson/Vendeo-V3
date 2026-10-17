@@ -29,7 +29,7 @@
 ## 3. Validação local-primeiro
 
 - [x] 3.1 Rodar na **`vendeo-homolog`** com **lojas de teste** e **provider simulado**; nenhuma chamada paga — **`56.2.5-04-HARNESS-RECONCILIATION.md`; preflight PASS; provas simuladas**
-- [ ] 3.2 **ABERTO** — Cobertura **pelo navegador** de form/geração/estados/persistência/copy/recuperação/créditos/download: **não exercitada integralmente nesta fatia** (apenas 1 geração real pelo navegador em 4.2 + testes automatizados). Evidência insuficiente para marcar como concluída.
+- [x] 3.2 **ACEITO COM LIMITAÇÃO** (decisão humana 2026-10-17) — cobertura de navegador **parcial** nesta entrega local (apenas **1 geração real** pelo navegador em 4.2 + testes automatizados). **NÃO exercitado no navegador nesta rodada:** validação completa do formulário; todos os estados de UI; persistência/restauração; recuperação de copy; painel de créditos; download. **Encaminhado à validação pré-produção.**
 - [x] 3.3 Rodar typecheck, lint, build e suíte local — **typecheck 0 · lint 0 · build 0 · integração 24/24**
 - [x] 3.4 Pricing **`complete` principal E fallback** por **modelo+qualidade** em `image_model_pair_config` — **`gpt-image-2/medium`+`gpt-image-2/low`; `ai_model_selection` preenchido **somente** para `campaign_copy` (gpt-4o), **não** para imagem** (decisão humana registrada)
 
@@ -38,10 +38,10 @@
 - [x] 4.1 **Checkpoint humano** (autorização + modelo/qualidade + pricing + teto) — **`56.2.5-UAT.md`; cap US$1,00**
 - [x] 4.2 Executar o **teste real controlado local** apenas no recorte autorizado — **`56.2.5-04-PILOT-EXECUTION.md` (N=1)**
 - [x] 4.3 Registrar evidências; **sem deploy/remote migration** — campanha `20d54b1d…`; flag `test_stores` **temporária** no escopo local, revogada ao final (sem habilitação geral)
-- [ ] 4.4 **ABERTO (opcional/posterior)** — Preview restrito com configuração isolada de dados/credenciais: **não executado** (condicional/posterior; não bloqueia).
+- [x] 4.4 **ADIADO EXPLICITAMENTE** (decisão humana 2026-10-17) — preview restrito era **opcional/posterior**; **não executado** e **não declarado executado**.
 - [x] 4.5 **Controle de gasto mínimo** (imagem ≤3; copy ≤6; estimativas conservadoras; anti-concorrência; parar; sem garantia financeira) — **`spend-control.ts` + migration `…0002`; gasto 13/13**
 - [x] 4.6 **Inspeção humana** do resultado real; falhas raras por **simulação** — **UAT aprovado (arte/copy)** + D13 local (3/3)
-- [ ] 4.7 **ABERTO/PARCIAL** — Negativos (flag off/loja não-test/instância/escopo geral) **cobertos**; porém **apenas 1 loja de teste** foi exercitada no fluxo novo (**Adega E NovaTek** não validaram ambas). Evidência insuficiente para marcar concluída.
+- [x] 4.7 **ACEITO COM LIMITAÇÃO** (decisão humana 2026-10-17) — negativos (flag off / loja não-test / instância / escopo geral) **cobertos**; o **piloto N=1 aprovado** gerou em **UMA** loja e a **segunda (NovaTek) NÃO gerou**. **Negativos automatizados ≠ geração real na NovaTek.**
 
 ## 5. Fronteiras e checkpoint final
 
@@ -52,4 +52,4 @@
 - [x] 5.5 Registrar o resultado **sem** iniciar GSD — **`56.2.5-04-SUMMARY.md`**
 - [x] 5.6 Explicitar a **ordem** dos checkpoints (A: sign-off B2.1; B: D13 + modelo/qualidade/pricing + gasto + inspeção) — **`56.2.5-CONTEXT.md`/planos**
 
-> **Abertas (3):** **3.2**, **4.4**, **4.7** — por **evidência insuficiente** (não por associação à fase). Reconciliação **documental**; sem reabrir código nem repetir o piloto.
+> **Disposições (2026-10-17):** **3.2** e **4.7** **aceitas com limitação** (3.2 → validação pré-produção); **4.4** **adiada explicitamente** (opcional/posterior). Total reconciliado: **29/29**. Reconciliação **documental**; sem reabrir código nem repetir o piloto.
