@@ -73,6 +73,14 @@ describe("F56.2b2c — resolução do gate (arma / inativo / BLOQUEADO)", () => 
     });
   });
 
+  it("estágio habilitador NÃO-estreito ⇒ blocked (M2: não arma gate para escopo geral)", async () => {
+    mockResolveAuth.mockResolvedValue({ allowed: true, stage: "test_stores", usedGeneralPrecedence: false });
+    await expect(resolvePilotSpendGate({ store: STORE })).resolves.toEqual({
+      kind: "blocked",
+      reason: "non_narrow_enabling_stage",
+    });
+  });
+
   it("flag desligada com autorização estreita ⇒ blocked (inconsistência)", async () => {
     mockResolveAuth.mockResolvedValue({ allowed: true, stage: "isolated_pilot", usedGeneralPrecedence: false });
     mockFlags.mockResolvedValue({

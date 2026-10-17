@@ -23,7 +23,8 @@ import { ProductOneToOnePilotSpendControl, type PilotSpendGate } from "@/lib/pro
 export type PilotSpendBlockReason =
   | "authorization_read_failure"
   | "flags_unavailable"
-  | "eligibility_context_failure";
+  | "eligibility_context_failure"
+  | "non_narrow_enabling_stage";
 
 export type PilotSpendGateResolution =
   | { readonly kind: "armed"; readonly gate: PilotSpendGate }
@@ -53,7 +54,9 @@ export async function resolvePilotSpendGate(input: {
     return { kind: "inactive" };
   }
   if (decision.stage !== "isolated_pilot") {
-    return { kind: "inactive" };
+    // Estágio HABILITADOR não-estreito (`test_stores`/`all_stores`) ⇒ NEGAR o novo
+    // fluxo (NÃO armar gate para escopo geral — não amplia a autorização aprovada).
+    return { kind: "blocked", reason: "non_narrow_enabling_stage" };
   }
 
   // Autorização estreita vigente: a flag é a janela. Falha/leitura inválida ⇒
@@ -79,5 +82,5 @@ export function resolvePilotCopyEstimatedUsd(): number | undefined {
   const raw = process.env.VENDEO_PILOT_COPY_ESTIMATED_USD;
   if (raw === undefined || raw.trim() === "") return undefined;
   const value = Number(raw);
-  return Number.isFinite(value) && value >= 0 ? value : undefined;
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }

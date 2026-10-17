@@ -149,8 +149,9 @@ export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
     attemptSeq: number;
     estimatedUsd: number;
   }): Promise<PilotPaidCallDecision> {
-    // Estimativa OBRIGATÓRIA e conservadora: ausência/inválida NÃO vira chamada gratuita.
-    if (!Number.isFinite(input.estimatedUsd) || input.estimatedUsd < 0) {
+    // Estimativa OBRIGATÓRIA, conservadora e ESTRITAMENTE POSITIVA (M1): ausência/zero/
+    // negativa NÃO viram chamada gratuita.
+    if (!Number.isFinite(input.estimatedUsd) || input.estimatedUsd <= 0) {
       return { acquired: false, outcome: "blocked", reason: "estimate_required" };
     }
     const callId = this.generateId();
@@ -198,8 +199,12 @@ export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
     handle: PilotPaidCallHandle;
     actualEstimatedUsd?: number | null;
   }): Promise<void> {
-    // `actualEstimatedUsd` OMITIDO/null ⇒ passa `null` (a RPC mantém a estimativa
-    // anterior; NUNCA zera). Falha PROPAGADA (não engolida).
+    // M1: valor INFORMADO deve ser finito e > 0; `NULL`/ausente PRESERVA a estimativa.
+    if (typeof input.actualEstimatedUsd === "number") {
+      if (!Number.isFinite(input.actualEstimatedUsd) || input.actualEstimatedUsd <= 0) {
+        throw new Error("invalid_estimated_usd");
+      }
+    }
     await this.repository.endPaidCall({
       callId: input.handle.callId,
       ownerToken: input.handle.ownerToken,

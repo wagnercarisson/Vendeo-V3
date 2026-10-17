@@ -139,7 +139,9 @@ class StatefulFakeRepo implements PilotSpendRepositoryPort {
   }
 
   blockedCalls = new Set<string>();
+  blockGlobalFails = false;
   async blockGlobal(input: { callId: string }): Promise<Record<string, unknown>> {
+    if (this.blockGlobalFails) throw new Error("db_down_block");
     this.blockedCalls.add(input.callId);
     return { success: true, blocked: true };
   }
@@ -238,6 +240,31 @@ describe("F56.2b2c — protocolo do serviço com RPC simulada COM ESTADO", () =>
       outcome: "blocked",
       reason: "estimate_required",
     });
+  });
+
+  it("estimativa ZERO/negativa/ausente ⇒ bloqueia (M1: nunca chamada gratuita)", async () => {
+    const repo = new StatefulFakeRepo();
+    repo.setCap({ capUsd: 10 });
+    const c = control(repo);
+    for (const value of [0, -1, Number.NaN]) {
+      expect(await c.beginPaidCall({ ...BASE, kind: "image_primary", estimatedUsd: value })).toEqual({
+        acquired: false,
+        outcome: "blocked",
+        reason: "estimate_required",
+      });
+    }
+  });
+
+  it("M3: timeout/rede com FALHA DUPLA de marcação/bloqueio NÃO gera nova chamada", async () => {
+    const repo = new StatefulFakeRepo();
+    repo.setCap({ capUsd: 10 });
+    const c = control(repo);
+    const img = await c.beginPaidCall({ ...BASE, kind: "image_primary", estimatedUsd: 0.3 });
+    const handle = (img as { handle: PilotPaidCallHandle }).handle;
+    repo.markUnknownFails = true;
+    repo.blockGlobalFails = true;
+    // A falha dupla PROPAGA (fail-closed) — não é `catch` silencioso.
+    await expect(c.markUnknown({ handle, reason: "network" })).rejects.toThrow();
   });
 
   it("falha de markUnknown instala BLOQUEIO GLOBAL e a reconciliação da chamada VINCULADA libera", async () => {

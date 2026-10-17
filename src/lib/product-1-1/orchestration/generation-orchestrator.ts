@@ -1257,9 +1257,8 @@ export async function runProductOneToOneGeneration(
             const pilotEstimatedUsd = internalCost.estimatedCostUsd;
             let pilotHandle: PilotPaidCallHandle | undefined;
             if (pilotSpend) {
-              // Estimativa OBRIGATÓRIA quando armado: ausência de preço NÃO vira
-              // chamada gratuita (pricing `complete` garante valor real).
-              if (typeof pilotEstimatedUsd !== "number" || !Number.isFinite(pilotEstimatedUsd) || pilotEstimatedUsd < 0) {
+              // Estimativa OBRIGATÓRIA e ESTRITAMENTE POSITIVA quando armado (M1).
+              if (typeof pilotEstimatedUsd !== "number" || !Number.isFinite(pilotEstimatedUsd) || pilotEstimatedUsd <= 0) {
                 throw new Error("pilot_spend_blocked:estimate_required");
               }
               const decision = await pilotSpend.beginPaidCall({
@@ -1286,10 +1285,20 @@ export async function runProductOneToOneGeneration(
               }
             } catch (invokeError) {
               if (pilotSpend && pilotHandle) {
-                if (controllerAbort.signal.aborted || isUnknownPilotOutcome(invokeError)) {
-                  await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_unknown" });
-                } else {
-                  await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: pilotEstimatedUsd });
+                // M3 — a falha do gate é REGISTRADA SEPARADAMENTE; relançamos o ERRO
+                // ORIGINAL (natureza desconhecida preservada). Nunca converte a falha
+                // secundária em autorização para retry/marcador `failed`/estorno PF.
+                try {
+                  if (controllerAbort.signal.aborted || isUnknownPilotOutcome(invokeError)) {
+                    await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_unknown" });
+                  } else {
+                    await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: pilotEstimatedUsd });
+                  }
+                } catch (gateError) {
+                  console.error(
+                    "[pilot-spend] falha ao encerrar/marcar a chamada de imagem:",
+                    String(gateError instanceof Error ? gateError.message : gateError),
+                  );
                 }
               }
               throw invokeError;

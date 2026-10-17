@@ -204,9 +204,9 @@ export function createDefaultProductOneToOneCopyOps(
     const attemptSeq = deps.attemptSeq ?? 0;
     let pilotHandle: PilotPaidCallHandle | undefined;
     if (pilotSpend) {
-      // Estimativa OBRIGATÓRIA quando armado: ausência NÃO vira chamada gratuita.
+      // Estimativa OBRIGATÓRIA e ESTRITAMENTE POSITIVA quando armado (M1).
       const estimatedUsd = deps.estimatedUsd;
-      if (!Number.isFinite(estimatedUsd) || (estimatedUsd as number) < 0) {
+      if (!Number.isFinite(estimatedUsd) || (estimatedUsd as number) <= 0) {
         throw new Error("pilot_spend_blocked:estimate_required");
       }
       const decision = await pilotSpend.beginPaidCall({
@@ -238,11 +238,19 @@ export function createDefaultProductOneToOneCopyOps(
       return deliveryFromResult(result);
     } catch (error) {
       if (pilotSpend && pilotHandle) {
-        if (signal.aborted || isUnknownPilotOutcome(error)) {
-          // Resultado DESCONHECIDO ⇒ marca `unknown` (bloqueia novas chamadas).
-          await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_unknown" });
-        } else {
-          await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: deps.estimatedUsd });
+        // M3 — falha do gate é REGISTRADA SEPARADAMENTE; o erro ORIGINAL é relançado
+        // (natureza desconhecida preservada). Nunca converte em retry/failed/estorno.
+        try {
+          if (signal.aborted || isUnknownPilotOutcome(error)) {
+            await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_unknown" });
+          } else {
+            await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: deps.estimatedUsd });
+          }
+        } catch (gateError) {
+          console.error(
+            "[pilot-spend] falha ao encerrar/marcar a chamada de copy:",
+            String(gateError instanceof Error ? gateError.message : gateError),
+          );
         }
       }
       throw error;
