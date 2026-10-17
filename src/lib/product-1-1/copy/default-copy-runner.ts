@@ -128,10 +128,13 @@ async function defaultReadCopyPricing(target: {
     provider: target.provider as never,
     model: target.model,
   });
-  const input = result?.pricing?.inputCostUsd;
-  const output = result?.pricing?.outputCostUsd;
+  // O piloto exige pricing CADASTRADO válido — o bootstrap `code_default` NÃO
+  // é aceito (fora do piloto o comportamento legado permanece).
+  if (!result || !result.pricing || result.versionId === "code_default") return null;
+  const input = result.pricing.inputCostUsd;
+  const output = result.pricing.outputCostUsd;
   if (input == null || output == null) return null;
-  return { inputUsdPer1M: input, outputUsdPer1M: output };
+  return { inputUsdPer1M: input, outputUsdPer1M: output, versionId: result.versionId };
 }
 
 /** Contrato estrutural consumido pelo orquestrador (`ProductOneToOneCopyOps`). */
@@ -243,6 +246,13 @@ export function createDefaultProductOneToOneCopyOps(
         provider: prepared.provider,
         model: prepared.model,
       });
+      // REGISTRA a versão de pricing efetivamente usada (vinculada ao alvo).
+      console.info(
+        "[pilot-copy] pricing version=%s provider=%s model=%s",
+        pricing?.versionId ?? "unknown",
+        prepared.provider,
+        prepared.model,
+      );
       const estimate = computeCopyEstimate(pricing);
       if (estimate === null) {
         throw new Error("pilot_spend_blocked:pricing_unavailable");

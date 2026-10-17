@@ -16,6 +16,8 @@ export const PILOT_COPY_CONSERVATIVE_INPUT_TOKENS = 2000;
 export interface PilotCopyPricing {
   readonly inputUsdPer1M: number;
   readonly outputUsdPer1M: number;
+  /** Versão/origem do pricing usada (ex.: `code_default` NÃO é aceito no piloto). */
+  readonly versionId?: string;
 }
 
 /**

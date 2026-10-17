@@ -112,7 +112,8 @@ export class AiGateway {
       provider: selected.provider,
       model: selected.model,
       protocol: selected.protocol,
-      resolved: selected,
+      // Cópia CONGELADA (não a referência original mutável do resolver).
+      resolved: Object.freeze({ ...selected }),
     });
   }
 

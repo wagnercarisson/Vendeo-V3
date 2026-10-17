@@ -22,10 +22,11 @@ export class ChatCompletionsAdapter implements AiAdapter {
       model: target.model,
       messages: buildMessages(request),
     };
-    // Fronteira do adapter: parâmetros específicos do modelo RESOLVIDO (o serviço
-    // NÃO supõe o modelo). GPT-6 Luna é modelo de raciocínio: no Chat Completions
-    // exige `reasoning_effort: "none"`, usa `max_completion_tokens` (não
-    // `max_tokens`) e NÃO recebe `temperature`. GPT-4o/Gemini preservados.
+    // ESCOLHA NOSSA para esta tarefa: em `gpt-6-luna` usamos
+    // `reasoning_effort: "none"` (a exigência oficial citada refere-se a
+    // *function calling* em Chat Completions, NÃO a toda chamada de texto),
+    // `max_completion_tokens` (não `max_tokens`) e NÃO enviamos `temperature`.
+    // GPT-4o/Gemini preservados.
     if (target.model === "gpt-6-luna") {
       params.reasoning_effort = "none";
       if (request.maxTokens !== undefined) params.max_completion_tokens = request.maxTokens;
