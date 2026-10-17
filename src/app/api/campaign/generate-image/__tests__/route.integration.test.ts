@@ -33,6 +33,14 @@ const h = vi.hoisted(() => {
     creditBeginPublication: vi.fn(),
     creditMarkResultUnknown: vi.fn(),
     creditGetPublicationEpoch: vi.fn(),
+    resolvePilotSpendGate: vi.fn(),
+    resolveImagePairCost: vi.fn(async (config: {
+      primary: Record<string, unknown>;
+      fallback: Record<string, unknown>;
+    }) => ({
+      primary: { ...config.primary, costUsd: 0.04, versionId: "fixture-pricing-v1", costSource: "pricing_table" },
+      fallback: { ...config.fallback, costUsd: 0.06, versionId: "fixture-pricing-v1", costSource: "pricing_table" },
+    })),
     storeArtifact: vi.fn(),
     probeArtifact: vi.fn(),
     gatewayInvoke: vi.fn(),
@@ -56,6 +64,16 @@ vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: { from: h.mockFrom, rpc: h.mockRpc, storage: { from: vi.fn() } },
   createServerClient: vi.fn(),
 }));
+
+vi.mock("@/lib/product-1-1/pilot/resolve-pilot-spend-gate", () => ({
+  resolvePilotSpendGate: (...args: unknown[]) => h.resolvePilotSpendGate(...args),
+  resolvePilotCopyEstimatedUsd: () => 0.05,
+}));
+
+vi.mock("@/lib/ai-cost/image-pair-pricing", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/ai-cost/image-pair-pricing")>();
+  return { ...actual, resolveImagePairCost: (...args: unknown[]) => h.resolveImagePairCost(...args) };
+});
 
 // ── Serviços EXTERNOS do orquestrador (mockados) ─────────────────────────────
 vi.mock("@/lib/product-1-1/orchestration/attempt-start-client", () => ({
@@ -432,6 +450,7 @@ beforeEach(() => {
   h.creditBeginPublication.mockResolvedValue({ acquired: true, token: "pub-token" });
   h.creditMarkResultUnknown.mockResolvedValue({ status: "unknown" });
   h.creditGetPublicationEpoch.mockResolvedValue(1);
+  h.resolvePilotSpendGate.mockResolvedValue({ kind: "inactive" });
 
   h.storeArtifact.mockResolvedValue({
     storagePath: `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`,
@@ -622,6 +641,58 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     const terminal = terminalOf(parseEvents(await res.text()));
     expect(terminal).toMatchObject({ type: "unknown" });
     expect(String(terminal.message ?? "")).not.toContain("estornado");
+  });
+
+  it("(F56.2b2c armed) BLOQUEIA: resolver→pricing→beginPaidCall; recusa ⇒ ZERO provider", async () => {
+    const beginPaidCall = vi.fn(async () => ({ acquired: false, outcome: "blocked", reason: "pilot_cap_reached" }));
+    h.resolvePilotSpendGate.mockResolvedValue({
+      kind: "armed",
+      gate: { beginPaidCall, endPaidCall: vi.fn(async () => undefined), markUnknown: vi.fn(async () => undefined) },
+    });
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    console.error("ARMED_BUNDLE " + JSON.stringify({
+      status: res.status,
+      resolver: h.resolvePilotSpendGate.mock.results.map((r) => r.value),
+      op_read: h.getCampaignOperation.mock.calls.length,
+      reserve: h.creditReserve.mock.calls.length,
+      acquire: h.acquire.mock.calls.length,
+      record_attempt: h.recordGenerationAttempt.mock.calls.length,
+      record_outcome: h.recordOperationOutcome.mock.calls.length,
+      pricing: h.resolveImagePairCost.mock.calls.length,
+      begin: beginPaidCall.mock.calls.length,
+      provider: h.gatewayInvoke.mock.calls.length,
+    }));
+    expect(res.status).toBe(200);
+    // Fronteira 1: resolver chamado pela rota.
+    expect(h.resolvePilotSpendGate).toHaveBeenCalled();
+    // Fronteira 3: beginPaidCall com identidade/tentativa e estimativa FINITA.
+    expect(beginPaidCall).toHaveBeenCalledWith(
+      expect.objectContaining({ operationId: OPERATION_ID, kind: "image_primary", attemptSeq: 1, estimatedUsd: expect.any(Number) }),
+    );
+    expect(beginPaidCall.mock.calls[0][0].estimatedUsd).toBeGreaterThan(0);
+    // Recusa do gate ⇒ ZERO provider.
+    expect(h.gatewayInvoke).not.toHaveBeenCalled();
+  });
+
+  it("(F56.2b2c armed) ADQUIRE: provider UMA vez + endPaidCall", async () => {
+    const handle = { callId: "c1", ownerToken: "o1", kind: "image_primary" as const };
+    const beginPaidCall = vi.fn(async () => ({ acquired: true, handle }));
+    const endPaidCall = vi.fn(async () => undefined);
+    h.resolvePilotSpendGate.mockResolvedValue({
+      kind: "armed",
+      gate: { beginPaidCall, endPaidCall, markUnknown: vi.fn(async () => undefined) },
+    });
+    const { POST } = await import("../route");
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    expect(beginPaidCall).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "image_primary", attemptSeq: 1, estimatedUsd: expect.any(Number) }),
+    );
+    expect(beginPaidCall.mock.calls[0][0].estimatedUsd).toBeGreaterThan(0);
+    // Aquisição ⇒ SOMENTE a chamada prevista, seguida do encerramento.
+    expect(h.gatewayInvoke).toHaveBeenCalledTimes(1);
+    expect(endPaidCall).toHaveBeenCalledTimes(1);
   });
 
   it("(achado 5b) `unknown` persistido ⇒ claim FINALIZADO (`abandoned`), não `in_progress`", async () => {
