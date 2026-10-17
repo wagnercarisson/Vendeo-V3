@@ -129,6 +129,11 @@ async function main() {
     check(Number(capNow.rows[0].cap_usd) === 5.0, "replay de A NÃO reaplica teto antigo (segue 5.0)");
     const conflict = await a.query("select public.product_1_1_pilot_set_cap($1,$2,$3,$4) as r", [actor, 9.9, "x", opA1]);
     check(conflict.rows[0].r.conflict === true, "operation_id divergente ⇒ conflito");
+    // Estado ESPERADO dos campos de TETO/auditoria = o que as PRÓPRIAS provas deixam
+    // (snapshot do início serve APENAS como destino da restauração).
+    const expectedCap = (await a.query(
+      "select cap_usd, cap_set_by, cap_reason, cap_operation_id, cap_set_at from public.product_1_1_pilot_spend_state where id = true",
+    )).rows[0];
 
     // (A) begin × begin com BARREIRA (trava comum) — prova que B CHEGOU à trava.
     const cA = randomUUID();
@@ -193,7 +198,11 @@ async function main() {
         "select * from public.product_1_1_pilot_spend_state where id = true",
       )).rows[0];
       const expected = {
-        ...snapshot,
+        cap_usd: expectedCap.cap_usd,
+        cap_set_by: expectedCap.cap_set_by,
+        cap_reason: expectedCap.cap_reason,
+        cap_operation_id: expectedCap.cap_operation_id,
+        cap_set_at: expectedCap.cap_set_at,
         spent_usd: expectedSpent,
         blocked_reason: null,
         blocked_at: null,

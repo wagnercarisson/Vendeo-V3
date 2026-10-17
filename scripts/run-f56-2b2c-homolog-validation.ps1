@@ -54,15 +54,27 @@ try {
 } catch { $containerUp = $false }
 Check "container $Container Up" $containerUp
 
-# (3) Status - parser que REMOVE ASPAS; valida host/porta API e DB
-$statusEnv = $null
-try { $statusEnv = npx --no-install supabase status --workdir $Workdir -o env 2>$null } catch { $statusEnv = $null }
+# (3) Status - captura separando stdout/avisos (stderr) e verificando EXIT CODE.
+# O CLI escreve avisos em stderr; NAO tratamos stderr como falha fatal. Nunca
+# imprimimos stdout/stderr (confidencialidade) - extraimos apenas API_URL/DB_URL.
+function Invoke-Cli([string[]]$Argv) {
+  $outFile = [System.IO.Path]::GetTempFileName()
+  $errFile = [System.IO.Path]::GetTempFileName()
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  $code = 1
+  try { & npx @Argv 1> $outFile 2> $errFile; $code = $LASTEXITCODE }
+  finally { $ErrorActionPreference = $prev }
+  $stdout = @(Get-Content $outFile -ErrorAction SilentlyContinue)
+  Remove-Item $outFile, $errFile -ErrorAction SilentlyContinue
+  return @{ ExitCode = $code; StdOut = $stdout }
+}
+$status = Invoke-Cli @("--no-install","supabase","status","--workdir",$Workdir,"-o","env")
+Check "supabase status exit 0" ($status.ExitCode -eq 0)
 $apiUrl = ""; $dbUrl = ""
-if ($statusEnv) {
-  foreach ($line in $statusEnv) {
-    if ($line -match "^\s*API_URL\s*=") { $apiUrl = Unquote (($line -split "=", 2)[1]) }
-    if ($line -match "^\s*DB_URL\s*=")  { $dbUrl  = Unquote (($line -split "=", 2)[1]) }
-  }
+foreach ($line in $status.StdOut) {
+  if ("$line" -match "^\s*API_URL\s*=") { $apiUrl = Unquote (("$line" -split "=", 2)[1]) }
+  if ("$line" -match "^\s*DB_URL\s*=")  { $dbUrl  = Unquote (("$line" -split "=", 2)[1]) }
 }
 $apiOk = ($apiUrl -ne "") -and (@("127.0.0.1","localhost","::1") -contains (Uri-Host $apiUrl)) -and ((Uri-Port $apiUrl) -eq $ApiPort)
 Check "API da homolog em host local :$ApiPort (apos unquote)" $apiOk
