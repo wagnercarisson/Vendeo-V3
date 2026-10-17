@@ -496,4 +496,58 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
     expect(end).not.toHaveBeenCalled();
     expect(begin).toHaveBeenCalledTimes(1); // sem novo begin/retry
   });
+
+  it("FALLBACK pelo runner: pricing/versão do ALVO fallback ⇒ estimativa própria + invokePrepared", async () => {
+    const gate = spyGate({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "copy_auto" } });
+    const invoker = fakeInvoker(
+      () => ({ content: JSON.stringify({ title: "T", caption: "C", hashtags: [], cta_post: "x" }) }) as AiInvocationResult,
+    );
+    const readCopyPricing = vi.fn(async () => ({ inputUsdPer1M: 2.5, outputUsdPer1M: 10, versionId: "fallback-v" }));
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, {
+      invoker,
+      pilotSpend: gate,
+      callKind: "copy_auto",
+      target: "fallback",
+      readCopyPricing,
+    });
+    await ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined });
+    // prepara o FALLBACK (não o principal)
+    expect(invoker.prepare as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledWith("campaign_copy", "fallback");
+    // estimativa derivada do pricing do FALLBACK: (2000*2.5 + 1000*10)/1e6 = 0.015
+    expect(gate.begin).toHaveBeenCalledWith(
+      expect.objectContaining({ estimatedUsd: expect.closeTo(0.015, 10) }),
+    );
+    expect(invoker.invokePrepared as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
+  });
+
+  it("RECUPERAÇÃO (copy_auto): pricing válido contabiliza; pricing inválido BLOQUEIA sem provider", async () => {
+    const gate = spyGate({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "copy_auto" } });
+    const invoker = fakeInvoker(
+      () => ({ content: JSON.stringify({ title: "T", caption: "C", hashtags: [], cta_post: "x" }) }) as AiInvocationResult,
+    );
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, {
+      invoker,
+      pilotSpend: gate,
+      callKind: "copy_auto",
+      target: "fallback",
+      readCopyPricing: PRICING,
+    });
+    await ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined });
+    expect(gate.begin).toHaveBeenCalledTimes(1);
+    expect(gate.end).toHaveBeenCalledTimes(1);
+
+    const gate2 = spyGate({ acquired: true, handle: { callId: "c2", ownerToken: "o", kind: "copy_manual" } });
+    const invoker2 = fakeInvoker(() => ({ content: "{}" }) as AiInvocationResult);
+    const ops2 = createDefaultProductOneToOneCopyOps(COPY_INPUT, {
+      invoker: invoker2,
+      pilotSpend: gate2,
+      callKind: "copy_manual",
+      target: "fallback",
+      readCopyPricing: async () => null,
+    });
+    await expect(
+      ops2.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
+    ).rejects.toThrow(/pricing_unavailable/);
+    expect(invoker2.invokePrepared as unknown as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+  });
 });
