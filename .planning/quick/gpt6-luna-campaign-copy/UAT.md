@@ -30,5 +30,21 @@ pricing do alvo: 2000×0,10 + 1000×0,50 /1e6).
   **geração pausada** (`VENDEO_GENERATION_PAUSED=true`); Next religado.
 - **Sem** produção/deploy; **sem** reabrir/incrementar a B2.3; contadores intactos.
 
+## Reconciliação (2026-10-17)
+- **Correção Flare → Sunburst (última campanha):** `image_generation_operations` confirma —
+  `20d54b1d…` (histórica) → `gpt-image-2/medium`; `6ecef78c…` (nova) → `gpt-image-2.5-flare/medium`;
+  **`e043e52e…` (nova, a mais recente) → `gpt-image-2.5-sunburst/medium`** (não Flare). Par vigente no fim da
+  janela: `gpt-image-2.5-sunburst/medium` + `gpt-image-2/low`.
+- **Duas gerações NOVAS ≠ campanha histórica:** `6ecef78c…` e `e043e52e…` (“Morango & Pêssego”) são desta janela;
+  `20d54b1d…` (“Figo & Maçã”) é a sessão histórica anterior.
+- **Migration aplicada:** `20261018000001_quick_gpt6_luna_campaign_copy.sql` (ledger **126 → 127**).
+- **Divergência de teto (registrada):** `cap` histórico **1,00** → configurado **3,00** (base 1,00 + adicional **2,00**).
+- **Resultado:** seleção pelo admin comprovada; **três modelos de imagem executados** (`gpt-image-2/medium`,
+  `gpt-image-2.5-flare/medium`, `gpt-image-2.5-sunburst/medium`) + copy (`gpt-4o`, `gpt-6-luna`).
+  **Luna aprovado para copy nesta validação local.**
+- **Custos — ESTIMATIVAS × OBSERVADOS (separados):** estimativas por chamada **0,136/0,0200**, **0,044/0,0007**,
+  **0,044/0,0007** (spent 0,156→0,2454). **Custos observados (painel OpenAI): NÃO fornecidos nesta rodada** —
+  registrar separadamente quando disponíveis (sem novas gerações para buscá-los).
+
 ## Nota
 Números do painel podem não estar todos disponíveis ainda; **não** foram feitas novas gerações para buscá-los.
