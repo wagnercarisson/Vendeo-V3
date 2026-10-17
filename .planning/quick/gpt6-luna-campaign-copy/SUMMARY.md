@@ -26,8 +26,9 @@ dirigido por catálogo; sem seletor paralelo/env/modelo fixo. **Entrega de imple
     **bloqueio** sem `prepare` e com pricing `null` (sem provider); **fallback com MODELO distinto** (gemini) —
     reader recebe `provider/model` do fallback e o MESMO alvo chega a `invokePrepared`; **rastreabilidade**
     (versão de pricing + modelo + estimativa vinculados a `campaignId/operationId` e `callId` após aquisição).
-  - **PENDENTE (não coberto):** caminho **real** de recuperação via `ProductOneToOneCopyRecoveryClient.recoverCopyAttempt`
-    (exige fake do cliente Supabase: query builder + RPCs de estado) — hoje coberto apenas pelo runner com `callKind`/`target`.
+  - **Recuperação REAL** via `ProductOneToOneCopyRecoveryClient.recoverCopyAttempt` (fronteiras simuladas):
+    vencedor (adquire → prepara alvo → estima pelo pricing → `invokePrepared`), pricing inválido **bloqueia** sem
+    provider, e **perdedor** NÃO chama provider nem o gate.
 - **Falhas PRÉ-EXISTENTES (discriminadas):** `copy-recovery.contract` **10** + `copy-wiring-gaps.contract`
   **3** = **13** — idênticas no baseline (verificado por `stash`), **não** substituem os testes novos.
 
