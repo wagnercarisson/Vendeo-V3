@@ -32,6 +32,7 @@ const h = vi.hoisted(() => {
     creditCloseFailedOperation: vi.fn(),
     creditBeginPublication: vi.fn(),
     creditMarkResultUnknown: vi.fn(),
+    creditGetPublicationEpoch: vi.fn(),
     storeArtifact: vi.fn(),
     probeArtifact: vi.fn(),
     gatewayInvoke: vi.fn(),
@@ -75,6 +76,7 @@ vi.mock("@/lib/product-1-1/credit-operation/credit-operation-client", () => ({
     closeFailedOperation = h.creditCloseFailedOperation;
     beginPublication = h.creditBeginPublication;
     markResultUnknown = h.creditMarkResultUnknown;
+    getPublicationEpoch = h.creditGetPublicationEpoch;
   },
 }));
 
@@ -429,6 +431,7 @@ beforeEach(() => {
   // FENCE de publicação (B2.2): posse adquirida na 1ª tentativa.
   h.creditBeginPublication.mockResolvedValue({ acquired: true, token: "pub-token" });
   h.creditMarkResultUnknown.mockResolvedValue({ status: "unknown" });
+  h.creditGetPublicationEpoch.mockResolvedValue(1);
 
   h.storeArtifact.mockResolvedValue({
     storagePath: `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`,
