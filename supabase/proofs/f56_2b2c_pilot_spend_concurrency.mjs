@@ -16,6 +16,7 @@
 
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
+import { classifyPreservation } from "./lib/preservation.mjs";
 
 const CONN =
   process.env.PILOT_PROOF_DATABASE_URL ??
@@ -172,43 +173,67 @@ async function main() {
     console.log(failures === 0 ? "\nPROOFS: PASS" : `\nPROOFS: ${failures} FAIL`);
     process.exitCode = failures === 0 ? 0 : 1;
   } finally {
-    // RESTAURAÇÃO/LIMPEZA (bloqueante se falhar) — sem resíduo na homologação permanente.
+    // VERIFICAÇÃO + RESTAURAÇÃO ATÔMICA sob a trava comum (bloqueante se divergir).
+    // Distingue os EFEITOS ESPERADOS das PRÓPRIAS PROVAS de ALTERAÇÕES EXTERNAS:
+    // o acumulado esperado = snapshot + estimativas das fixtures (0.30 + 0.20 + 0.25);
+    // qualquer divergência ⇒ NÃO restaura e ABORTA (nunca sobrescreve gasto externo).
+    const expectedSpent = Number(snapshot.spent_usd ?? 0) + 0.75;
     try {
-      // Encerra transação eventualmente aberta/abortada ANTES da limpeza.
       await a.query("rollback").catch(() => undefined);
       await b.query("rollback").catch(() => undefined);
-      // Apaga fixtures por CAMPANHA (cobre aquisições inesperadas) e por call_id.
-      await a.query(
-        "delete from public.product_1_1_pilot_paid_calls where campaign_id = any($1::uuid[]) or call_id = any($2::uuid[])",
-        [[campA, campB], createdCalls],
-      );
-      await a.query(
-        "delete from public.product_1_1_pilot_blocked_calls where call_id = any($1::uuid[])",
-        [createdCalls],
-      );
-      if (createdOps.length) {
+
+      await a.query("begin");
+      await a.query("select pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'))");
+      const current = (await a.query(
+        "select spent_usd, blocked_reason from public.product_1_1_pilot_spend_state where id = true",
+      )).rows[0];
+      const verdict = classifyPreservation({
+        currentSpentUsd: current.spent_usd,
+        expectedSpentUsd: expectedSpent,
+        currentBlockedReason: current.blocked_reason,
+        expectedBlockedReason: snapshot.blocked_reason ?? null,
+      });
+      if (!verdict.ok) {
+        await a.query("rollback");
+        failures += 1;
+        console.error(`PROOFS: divergência externa (${verdict.reason}) — NÃO restaurado; verifique manualmente`);
+        process.exitCode = 1;
+      } else {
+        // Apaga fixtures e restaura o singleton — MESMA transação sob a trava.
         await a.query(
-          "delete from public.product_1_1_pilot_cap_audit where operation_id = any($1::uuid[])",
-          [createdOps],
+          "delete from public.product_1_1_pilot_paid_calls where campaign_id = any($1::uuid[]) or call_id = any($2::uuid[])",
+          [[campA, campB], createdCalls],
         );
+        await a.query(
+          "delete from public.product_1_1_pilot_blocked_calls where call_id = any($1::uuid[])",
+          [createdCalls],
+        );
+        if (createdOps.length) {
+          await a.query(
+            "delete from public.product_1_1_pilot_cap_audit where operation_id = any($1::uuid[])",
+            [createdOps],
+          );
+        }
+        await a.query(
+          "update public.product_1_1_pilot_spend_state set cap_usd=$1, spent_usd=$2, cap_set_by=$3, cap_reason=$4, cap_operation_id=$5, cap_set_at=$6, blocked_reason=$7, blocked_at=$8, updated_at=$9 where id=true",
+          [
+            snapshot.cap_usd,
+            snapshot.spent_usd,
+            snapshot.cap_set_by,
+            snapshot.cap_reason,
+            snapshot.cap_operation_id,
+            snapshot.cap_set_at,
+            snapshot.blocked_reason,
+            snapshot.blocked_at,
+            snapshot.updated_at,
+          ],
+        );
+        await a.query("commit");
       }
-      await a.query(
-        "update public.product_1_1_pilot_spend_state set cap_usd=$1, spent_usd=$2, cap_set_by=$3, cap_reason=$4, cap_operation_id=$5, cap_set_at=$6, blocked_reason=$7, blocked_at=$8, updated_at=$9 where id=true",
-        [
-          snapshot.cap_usd,
-          snapshot.spent_usd,
-          snapshot.cap_set_by,
-          snapshot.cap_reason,
-          snapshot.cap_operation_id,
-          snapshot.cap_set_at,
-          snapshot.blocked_reason,
-          snapshot.blocked_at,
-          snapshot.updated_at,
-        ],
-      );
     } catch (cleanupError) {
+      await a.query("rollback").catch(() => undefined);
       failures += 1;
-      console.error("PROOFS: FALHA NA LIMPEZA (bloqueante) — verifique manualmente", cleanupError);
+      console.error("PROOFS: FALHA NA VERIFICAÇÃO/RESTAURAÇÃO (bloqueante)", cleanupError);
       process.exitCode = 1;
     }
     await a.end().catch(() => undefined);
