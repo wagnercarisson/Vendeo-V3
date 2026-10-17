@@ -22,8 +22,17 @@ export class ChatCompletionsAdapter implements AiAdapter {
       model: target.model,
       messages: buildMessages(request),
     };
-    if (request.temperature !== undefined) params.temperature = request.temperature;
-    if (request.maxTokens !== undefined) params.max_tokens = request.maxTokens;
+    // Fronteira do adapter: parâmetros específicos do modelo RESOLVIDO (o serviço
+    // NÃO supõe o modelo). GPT-6 Luna é modelo de raciocínio: no Chat Completions
+    // exige `reasoning_effort: "none"`, usa `max_completion_tokens` (não
+    // `max_tokens`) e NÃO recebe `temperature`. GPT-4o/Gemini preservados.
+    if (target.model === "gpt-6-luna") {
+      params.reasoning_effort = "none";
+      if (request.maxTokens !== undefined) params.max_completion_tokens = request.maxTokens;
+    } else {
+      if (request.temperature !== undefined) params.temperature = request.temperature;
+      if (request.maxTokens !== undefined) params.max_tokens = request.maxTokens;
+    }
 
     if (request.responseFormat === "json_schema" && request.jsonSchema) {
       const { zodResponseFormat } = await import("openai/helpers/zod");
