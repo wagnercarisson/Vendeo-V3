@@ -23,8 +23,11 @@ dirigido por catálogo; sem seletor paralelo/env/modelo fixo. **Entrega de imple
 - **`typecheck` 0** · **`lint` (completo) 0** · **`build` 0** (dev parado para não disputar `.next`).
 - Suítes afetadas: **130/130 verde** (7 suítes + behavioral 18/18), incluindo:
   - pinning Luna→GPT-4o; adapter Luna vs GPT-4o; cadeia `pricing/versão→gate→invokePrepared→end/markUnknown`;
-    **bloqueio** sem `prepare` e com pricing `null` (sem provider); **fallback** (estimativa própria 0,015);
-    **recuperação** (copy_auto/manual).
+    **bloqueio** sem `prepare` e com pricing `null` (sem provider); **fallback com MODELO distinto** (gemini) —
+    reader recebe `provider/model` do fallback e o MESMO alvo chega a `invokePrepared`; **rastreabilidade**
+    (versão de pricing + modelo + estimativa vinculados a `campaignId/operationId` e `callId` após aquisição).
+  - **PENDENTE (não coberto):** caminho **real** de recuperação via `ProductOneToOneCopyRecoveryClient.recoverCopyAttempt`
+    (exige fake do cliente Supabase: query builder + RPCs de estado) — hoje coberto apenas pelo runner com `callKind`/`target`.
 - **Falhas PRÉ-EXISTENTES (discriminadas):** `copy-recovery.contract` **10** + `copy-wiring-gaps.contract`
   **3** = **13** — idênticas no baseline (verificado por `stash`), **não** substituem os testes novos.
 
