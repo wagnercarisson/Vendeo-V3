@@ -32,6 +32,7 @@ export const MODEL_ALLOWLIST: Record<AiProvider, Record<string, readonly AiProto
     "gpt-4o-mini": ["chat-completions", "responses"],
     "gpt-5.5": ["responses"],
     "gpt-image-2": ["images"],
+    "gpt-6-luna": ["chat-completions"],
   },
   gemini: {
     "gemini-3.1-flash-lite": ["gemini"],
