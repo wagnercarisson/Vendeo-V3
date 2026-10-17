@@ -176,7 +176,22 @@ export type InputValidationResult =
 
 // ─── Generation Progress Types ────────────────────────────────────────────
 
-export type GenerationPhase = "input_validation" | "prompt_assembly" | "image_generation" | "quality_review" | "done";
+export type LegacyGenerationPhase = "input_validation" | "prompt_assembly" | "image_generation" | "quality_review" | "done";
+
+/**
+ * F56.2b2c (B2.3) — fases do NOVO fluxo Produto 1:1, correspondentes ao trabalho
+ * REAL (sem “revisão de qualidade” inexistente e sem conflitar com as 4 etapas do
+ * legado). `image` e `copy` podem correr concorrentemente; retry/fallback
+ * ATUALIZAM a MESMA fase (`campaign_image`), sem reiniciar o progresso.
+ */
+export type NewFlowGenerationPhase =
+  | "campaign_validation"
+  | "campaign_preparation"
+  | "campaign_image"
+  | "campaign_copy"
+  | "campaign_delivery";
+
+export type GenerationPhase = LegacyGenerationPhase | NewFlowGenerationPhase;
 
 export type GenerationPhaseStatus = "pending" | "running" | "complete" | "skipped" | "failed";
 

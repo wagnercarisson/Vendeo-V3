@@ -611,9 +611,25 @@ export async function runProductOneToOneGeneration(
           // stream already closed by client
         }
       };
+      const flowPhaseStatus = new Map<string, string>();
+      let preparationEmitted = false;
+      const emitFlowPhase = (phase: string, status: string, message?: string) => {
+        flowPhaseStatus.set(phase, status);
+        emit({ type: "phase", phase, status, ...(message ? { message } : {}) });
+      };
       const emitTerminal = (event: NdjsonEvent) => {
         if (terminalSent) return;
         terminalSent = true;
+        // F56.2b2c — em falha/desconhecido NENHUM spinner continua: toda fase
+        // ainda `running` é encerrada como `failed` antes do terminal.
+        for (const [phase, status] of flowPhaseStatus) {
+          if (status !== "running") continue;
+          if (event.type === "result") {
+            emitFlowPhase(phase, "skipped", "Não aguardado");
+          } else {
+            emitFlowPhase(phase, "failed", "Interrompido");
+          }
+        }
         emit(event);
       };
 
@@ -959,6 +975,7 @@ export async function runProductOneToOneGeneration(
           return;
         }
         if (!acquired.acquired) return; // PERDEDOR: ZERO chamadas, nenhum estado.
+        emitFlowPhase("campaign_copy", "running", "Gerando texto da campanha...");
         const copyStore: CopyStateStore = {
           recordCopyState: ops.recordCopyState ?? ((i) => recordCopyState(client, i)),
           recordCancellation:
@@ -987,13 +1004,19 @@ export async function runProductOneToOneGeneration(
           },
           copyStore,
         ).then(
-          () => budget.dispose(),
-          () => budget.dispose(),
+          () => {
+            budget.dispose();
+            emitFlowPhase("campaign_copy", "complete");
+          },
+          () => {
+            budget.dispose();
+            emitFlowPhase("campaign_copy", "failed", "Falha ao gerar o texto.");
+          },
         );
       };
 
       try {
-        emit({ type: "phase", phase: "orchestration", status: "running" });
+        emitFlowPhase("campaign_validation", "running", "Validando dados...");
 
         // ── (0) F6/I1 — operação existe ⇒ SOMENTE consulta ────────────────
         // Fail-closed: falha de LEITURA da operação NÃO prossegue para efeitos.
@@ -1148,6 +1171,22 @@ export async function runProductOneToOneGeneration(
           // do dreno; perdedora ⇒ acompanha com ZERO chamadas.
           await startCopy();
 
+          if (!preparationEmitted) {
+            preparationEmitted = true;
+            emitFlowPhase("campaign_validation", "complete");
+            emitFlowPhase("campaign_preparation", "running", "Preparando briefing...");
+            emitFlowPhase("campaign_preparation", "complete");
+            emitFlowPhase("campaign_copy", "running", "Gerando texto da campanha...");
+          }
+          emitFlowPhase(
+            "campaign_image",
+            "running",
+            target === "fallback"
+              ? "Tentando provedor alternativo..."
+              : attemptNumber > 1
+                ? "Tentando novamente a imagem..."
+                : "Gerando imagem...",
+          );
           // Histórico append-only da tentativa (mesma identidade/par do snapshot).
           try {
             await recordAttemptCall({
@@ -1385,7 +1424,9 @@ export async function runProductOneToOneGeneration(
               });
               return;
             }
-            emit({ type: "phase", phase: "orchestration", status: "complete" });
+            emitFlowPhase("campaign_image", "complete");
+            emitFlowPhase("campaign_delivery", "running", "Entregando a campanha...");
+            emitFlowPhase("campaign_delivery", "complete");
             emitTerminal({ type: "result", campaignUrl: `/campanhas/${campaignId}` });
             return;
           }

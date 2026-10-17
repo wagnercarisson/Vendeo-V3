@@ -407,6 +407,39 @@ async function runOrchestrator(harness: Harness) {
   return { response, events, terminal: events.at(-1) };
 }
 
+describe("F56.2b2c — indicadores de progresso do novo fluxo (B2.3)", () => {
+  it("sucesso: emite fases REAIS do novo fluxo, sem 'orchestration' e sem fase running no fim", async () => {
+    const harness = await buildHarness();
+    const { events, terminal } = await runOrchestrator(harness);
+    expect(terminal).toMatchObject({ type: "result" });
+
+    const phases = events.filter((e) => e.type === "phase") as Array<{
+      phase: string;
+      status: string;
+    }>;
+    const names = phases.map((p) => p.phase);
+
+    expect(names).toContain("campaign_validation");
+    expect(names).toContain("campaign_preparation");
+    expect(names).toContain("campaign_image");
+    expect(names).toContain("campaign_delivery");
+    // não usa a fase genérica do legado
+    expect(names).not.toContain("orchestration");
+    // validação ocorre ANTES da imagem (não é conclusão antecipada)
+    expect(names.indexOf("campaign_validation")).toBeLessThan(names.indexOf("campaign_image"));
+
+    // entrega só conclui; imagem termina `complete`
+    const imageStatuses = phases.filter((p) => p.phase === "campaign_image").map((p) => p.status);
+    expect(imageStatuses.at(-1)).toBe("complete");
+    expect(phases.filter((p) => p.phase === "campaign_delivery").at(-1)?.status).toBe("complete");
+
+    // NENHUMA fase termina `running` (sem spinner residual no terminal)
+    const last = new Map<string, string>();
+    for (const p of phases) last.set(p.phase, p.status);
+    for (const status of last.values()) expect(status).not.toBe("running");
+  });
+});
+
 describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)", () => {
   it("sucesso: ordem C5 (preflight → persist → reserve → acquire → provider), um crédito efetivado e terminal `result`", async () => {
     const harness = await buildHarness();

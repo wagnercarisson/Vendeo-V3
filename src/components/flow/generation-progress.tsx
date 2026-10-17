@@ -62,7 +62,34 @@ const PHASE_FRIENDLY_LABELS: Record<string, string> = {
   image_generation: "Geração da imagem com IA",
   quality_review: "Revisão de qualidade da imagem",
   done: "Concluído",
+  // F56.2b2c (B2.3) — fases do novo fluxo (trabalho REAL; sem “revisão” inexistente).
+  campaign_validation: "Validação dos dados da campanha",
+  campaign_preparation: "Preparação do briefing e do snapshot",
+  campaign_image: "Geração da imagem com IA",
+  campaign_copy: "Geração do texto da campanha",
+  campaign_delivery: "Entrega da campanha",
 };
+
+/** F56.2b2c — ordem e rótulos das fases do NOVO fluxo (separada do legado). */
+const NEW_FLOW_PHASE_ORDER = [
+  "campaign_validation",
+  "campaign_preparation",
+  "campaign_image",
+  "campaign_copy",
+  "campaign_delivery",
+] as const;
+
+const NEW_FLOW_PHASE_LABELS: Record<string, { label: string; running: string }> = {
+  campaign_validation: { label: "Validação", running: "Validando dados..." },
+  campaign_preparation: { label: "Preparação", running: "Preparando briefing..." },
+  campaign_image: { label: "Arte", running: "Gerando imagem..." },
+  campaign_copy: { label: "Texto", running: "Gerando texto da campanha..." },
+  campaign_delivery: { label: "Entrega", running: "Entregando a campanha..." },
+};
+
+function isNewFlowPhases(phases: GenerationPhaseEvent[]): boolean {
+  return phases.some((p) => (NEW_FLOW_PHASE_ORDER as readonly string[]).includes(p.phase));
+}
 
 function buildPhaseStatus(phases: GenerationPhaseEvent[]): { phase: string; status: string }[] {
   const seen = new Set<string>();
@@ -83,7 +110,11 @@ export function GenerationProgress({ phases, error, onRetry, variant = "running"
   const latestPhase = phases.length > 0 ? phases[phases.length - 1] : null;
   const currentMessage = latestPhase?.message || GENERATION_STATE_MESSAGES.running;
 
-  const phaseOrder = ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
+  const isNewFlow = isNewFlowPhases(phases);
+  const phaseOrder: readonly string[] = isNewFlow
+    ? NEW_FLOW_PHASE_ORDER
+    : ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
+  const phaseLabels = isNewFlow ? NEW_FLOW_PHASE_LABELS : PHASE_LABELS;
 
   const phaseStatus = buildPhaseStatus(phases);
 
@@ -96,7 +127,7 @@ export function GenerationProgress({ phases, error, onRetry, variant = "running"
             const phaseEvents = phases.filter((p) => p.phase === phaseId);
             const latest = phaseEvents[phaseEvents.length - 1];
             const status = latest?.status || "pending";
-            const phaseInfo = PHASE_LABELS[phaseId];
+            const phaseInfo = phaseLabels[phaseId];
 
             return (
               <div key={phaseId} className="flex flex-col items-center gap-1.5">
