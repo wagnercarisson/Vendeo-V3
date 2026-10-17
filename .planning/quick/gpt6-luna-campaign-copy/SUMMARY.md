@@ -4,7 +4,7 @@
 dirigido por catálogo; sem seletor paralelo/env/modelo fixo. **Entrega de implementação local.**
 
 ## Arquivos / commits
-- `supabase/migrations/20261018000001_quick_gpt6_luna_campaign_copy.sql` — **autorada, NÃO aplicada**.
+- `supabase/migrations/20261018000001_quick_gpt6_luna_campaign_copy.sql` — **autorada** — *(SUPERADO: **aplicada** em 2026-10-17, ledger **126 → 127**)*.
   **SHA-256:** `0723C8916C5747893470019DBEAF9966D783D1C76EF8D44C433B4C111828B0F7` (forward-only; confere
   divergência; sem `ON CONFLICT DO NOTHING`; `validated_at NULL`).
 - `src/lib/ai/model-registry.ts` — allowlist `openai: gpt-6-luna` (default gpt-4o intacto).
@@ -32,7 +32,8 @@ dirigido por catálogo; sem seletor paralelo/env/modelo fixo. **Entrega de imple
 - **Falhas PRÉ-EXISTENTES (discriminadas):** `copy-recovery.contract` **10** + `copy-wiring-gaps.contract`
   **3** = **13** — idênticas no baseline (verificado por `stash`), **não** substituem os testes novos.
 
-## Pacote para aplicação local (NÃO executado)
+## Pacote para aplicação local — *(histórico)*
+*(SUPERADO: executado em **2026-10-17** na `vendeo-homolog`: migration aplicada, pricing cadastrado e seleção via admin.)*
 1. **Migration** (catálogo) só na `vendeo-homolog` via `migration up --local`.
 2. **Pricing:** `admin_set_ai_model_price(openai/gpt-6-luna, input 0.10, output 0.50, cached 0.01,
    source_url=platform.openai.com/docs/pricing)`.
@@ -44,9 +45,10 @@ permanecem fora: **produção/deploy**, novas chamadas fora da janela e qualquer
 
 ## Janela local executada (UAT — resumo)
 - **Aplicado**: migration (ledger 126→127), pricing `openai/gpt-6-luna`, seleção via admin (`gpt-4o`→**`gpt-6-luna`**).
-- **Sessão (3 operações; provider real)**: imagem `flare/medium` + copy (1ª `gpt-4o`, 2ª/3ª `gpt-6-luna`).
+- **Sessão (3 operações; provider real)**: imagem — histórica `gpt-image-2/medium`; novas **`gpt-image-2.5-flare/medium`** e **`gpt-image-2.5-sunburst/medium`**; copy 1ª `gpt-4o`, 2ª/3ª `gpt-6-luna`.
   Estimativas: `0,136`+`0,0200`; `0,044`+`0,0007`; `0,044`+`0,0007`. Todas `released`; sem `unknown`.
-- **Gasto**: `spent 0,156 → 0,2454`; `cap 3,00` (base 1,00 + adicional 2,00).
+- **Gasto**: `spent 0,156 → 0,2454`; `cap 3,00` (base 1,00 + adicional 2,00). **Previsto autorizado US$2,156**
+  (spent 0,156 + adicional 2,00) × **configurado US$3,00** — **gasto final DENTRO do orçamento** (não excede 2,156).
 - **Campanhas preservadas**: `20d54b1d…` (Figo & Maçã), `6ecef78c…`/`e043e52e…` (Morango & Pêssego).
 - **Desligado**: flag `test_stores=false`, `all_stores=false`, autorização revogada, geração pausada.
 - Detalhes em `UAT.md`. **B2.3 não reaberta/contadores intactos; produção desligada.**

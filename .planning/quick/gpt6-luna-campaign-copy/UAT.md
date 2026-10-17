@@ -12,7 +12,7 @@
 |---|--------|------|----------------|
 | 1 | `image_primary` 0,136 | `copy_initial` 0,0200 (gpt-4o) | 0,156 |
 | 2 | `image_primary` 0,044 (flare med) | `copy_initial` 0,0007 (Luna) | 0,0447 |
-| 3 | `image_primary` 0,044 (flare med) | `copy_initial` 0,0007 (Luna) | 0,0447 |
+| 3 | `image_primary` 0,044 (sunburst med) | `copy_initial` 0,0007 (Luna) | 0,0447 |
 
 Todas **`released`**; **sem `unknown`**, sem fallback, sem retry. `copy_initial` de Luna = **0,0007** (derivada do
 pricing do alvo: 2000×0,10 + 1000×0,50 /1e6).
@@ -39,6 +39,11 @@ pricing do alvo: 2000×0,10 + 1000×0,50 /1e6).
   `20d54b1d…` (“Figo & Maçã”) é a sessão histórica anterior.
 - **Migration aplicada:** `20261018000001_quick_gpt6_luna_campaign_copy.sql` (ledger **126 → 127**).
 - **Divergência de teto (registrada):** `cap` histórico **1,00** → configurado **3,00** (base 1,00 + adicional **2,00**).
+  **Previsto autorizado: US$2,156** (spent 0,156 + adicional 2,00) × **configurado US$3,00**; **gasto final 0,2454 —
+  DENTRO do orçamento autorizado** (não excede 2,156; sem gasto acima do previsto).
+- **Bloqueio visual pré-produção (PENDENTE):** verificação visual de **identidade da loja** e **fundo/arte** no
+  navegador permanece **pendente antes da produção** (herdada do item 3.2 do fechamento B2.3; aceita com limitação
+  nesta validação local).
 - **Resultado:** seleção pelo admin comprovada; **três modelos de imagem executados** (`gpt-image-2/medium`,
   `gpt-image-2.5-flare/medium`, `gpt-image-2.5-sunburst/medium`) + copy (`gpt-4o`, `gpt-6-luna`).
   **Luna aprovado para copy nesta validação local.**
