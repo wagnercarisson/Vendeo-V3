@@ -1,4 +1,4 @@
-import type { AiCapability, AiModelResolver } from "./model-resolver";
+import type { AiCapability, AiModelResolver, AiModelTarget } from "./model-resolver";
 import {
   AiInvocationError,
   normalizeAiError,
@@ -11,6 +11,22 @@ import {
 
 /** Seleção explícita do alvo pelo orquestrador (o gateway nunca decide). */
 export type AiInvocationTarget = "primary" | "fallback";
+
+/**
+ * Contexto de invocação PREPARADO (pinning) — interno, imutável, vinculado à
+ * capacidade/alvo. O gateway prepara capacidade + primary/fallback + provider +
+ * modelo + protocolo; a execução reusa esse alvo SEM nova resolução. NÃO contém
+ * regra de orçamento (isso é do serviço de gasto) nem entra pelo navegador.
+ */
+export interface PreparedInvocation {
+  readonly capability: AiCapability;
+  readonly target: AiInvocationTarget;
+  readonly provider: string;
+  readonly model: string;
+  readonly protocol: AiModelTarget["protocol"];
+  /** Alvo resolvido (interno) — reutilizado na execução SEM nova resolução. */
+  readonly resolved: AiModelTarget;
+}
 
 /**
  * Seam de invocação injetável (F46-03, D11): `AiGateway` satisfaz esta
@@ -29,6 +45,21 @@ export interface AiInvoker {
     target?: AiInvocationTarget,
   ): Promise<AiInvocationResult>;
   hasFallback(capability: AiCapability): Promise<boolean>;
+  /**
+   * Aditivo (pinning) — prepara uma invocação com alvo resolvido, para execução
+   * SEM nova resolução. **Opcional** para preservar fakes legados; quando ausente
+   * no piloto, a preparação é tratada como não suportada e BLOQUEIA.
+   */
+  prepare?(
+    capability: AiCapability,
+    target?: AiInvocationTarget,
+  ): Promise<PreparedInvocation>;
+  /** Executa um contexto preparado (sem re-resolver). Emite 1 envelope por tentativa. */
+  invokePrepared?(
+    prepared: PreparedInvocation,
+    request: AiInvocationRequest,
+    telemetry: AiTelemetryContext,
+  ): Promise<AiInvocationResult>;
 }
 
 /**
@@ -61,17 +92,13 @@ export class AiGateway {
     return fallback.provider !== config.primary.provider || fallback.model !== config.primary.model;
   }
 
-  async invoke(
+  /** Prepara (pinning) capacidade + alvo + provider + modelo + protocolo, SEM invocar. */
+  async prepare(
     capability: AiCapability,
-    request: AiInvocationRequest,
-    telemetry: AiTelemetryContext,
     target: AiInvocationTarget = "primary",
-  ): Promise<AiInvocationResult> {
-    assertTelemetryContext(telemetry);
-
+  ): Promise<PreparedInvocation> {
     const config = await this.resolver.resolve(capability);
     const selected = target === "fallback" ? config.fallback : config.primary;
-
     if (!selected) {
       throw new AiInvocationError({
         kind: "capability",
@@ -79,34 +106,59 @@ export class AiGateway {
         message: `[ai-gateway] fallback não configurado para a capacidade "${capability}"`,
       });
     }
+    return Object.freeze({
+      capability,
+      target,
+      provider: selected.provider,
+      model: selected.model,
+      protocol: selected.protocol,
+      resolved: selected,
+    });
+  }
 
-    const adapter = this.adapters.get(selected.protocol);
+  async invoke(
+    capability: AiCapability,
+    request: AiInvocationRequest,
+    telemetry: AiTelemetryContext,
+    target: AiInvocationTarget = "primary",
+  ): Promise<AiInvocationResult> {
+    assertTelemetryContext(telemetry);
+    const prepared = await this.prepare(capability, target);
+    return this.invokePrepared(prepared, request, telemetry);
+  }
+
+  /** Executa o contexto preparado — SEM nova resolução; 1 envelope por tentativa. */
+  async invokePrepared(
+    prepared: PreparedInvocation,
+    request: AiInvocationRequest,
+    telemetry: AiTelemetryContext,
+  ): Promise<AiInvocationResult> {
+    assertTelemetryContext(telemetry);
+
+    const adapter = this.adapters.get(prepared.protocol);
     if (!adapter) {
       throw new AiInvocationError({
         kind: "capability",
         retryable: false,
-        message: `[ai-gateway] adapter não registrado para o protocolo "${selected.protocol}"`,
+        message: `[ai-gateway] adapter não registrado para o protocolo "${prepared.protocol}"`,
       });
     }
 
     const startedAt = Date.now();
     try {
-      const result = await adapter.invoke(request, selected);
+      const result = await adapter.invoke(request, prepared.resolved);
       await this.emit(telemetry, {
-        capability,
-        protocol: selected.protocol,
+        capability: prepared.capability,
+        protocol: prepared.protocol,
         status: "success",
-        provider: selected.provider,
+        provider: prepared.provider,
         model: result.model,
         usage: result.usage,
         usageMeta: result.usageMeta,
         durationMs: Date.now() - startedAt,
         providerReportedCostUsd: result.providerReportedCostUsd,
-        // F56.1 (D-21) — campos ADITIVOS por tentativa: a qualidade do request, o
-        // alvo recebido e o número da tentativa. Não alteram o legado nem a
-        // invariante de um envelope por tentativa real.
         quality: request.quality,
-        target,
+        target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
       });
       return result;
@@ -115,21 +167,19 @@ export class AiGateway {
       const normalized = normalizeAiError(err);
       const isInvocationError = normalized instanceof AiInvocationError;
       await this.emit(telemetry, {
-        capability,
-        protocol: selected.protocol,
+        capability: prepared.capability,
+        protocol: prepared.protocol,
         status: isInvocationError && normalized.kind === "timeout" ? "timeout" : "failed",
-        provider: selected.provider,
-        model: selected.model,
+        provider: prepared.provider,
+        model: prepared.model,
         durationMs,
         errorType: isInvocationError
           ? normalized.kind
           : err instanceof Error
             ? err.name
             : "unknown",
-        // F56.1 (D-21) — os mesmos campos aditivos também no caminho de falha/
-        // timeout, de modo que cada envelope seja correlacionável por tentativa.
         quality: request.quality,
-        target,
+        target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
       });
       if (isInvocationError) throw normalized;
