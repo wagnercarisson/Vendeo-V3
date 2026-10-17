@@ -8,7 +8,7 @@ Specify deterministic, versioned production prompt composition for the Product 1
 
 ### Requirement: Incorporação versionada e congelada dos prompts e regras aprovados
 
-O novo fluxo SHALL compor o prompt por um **módulo produtivo próprio** que incorpora os prompts/regras aprovados na bancada F48.2.6 na forma do **baseline aprovado do laboratório** (quick 261009-u3h, aprovado pelo responsável em 2026-10-11) — Produto v4, compositor v6, Oferta v2, Destaque v2, Exclusivo v4 e direção de fundo versionada (`policyVersions.fundo`) — com versões fixadas e registráveis. O módulo SHALL NOT ler configuração mutável da bancada em tempo de execução.
+O novo fluxo SHALL compor o prompt por um **módulo produtivo próprio** que incorpora os prompts/regras aprovados na bancada F48.2.6 na forma do **baseline aprovado do laboratório** (quick 261009-u3h, aprovado pelo responsável em 2026-10-11), posteriormente reconciliado pelo **baseline de produção** (quick 261017-cdi, aprovado pelo responsável em 2026-10-17) — Produto v4, compositor v7, Oferta v2, Destaque v2, Exclusivo v4 e direção de fundo versionada (`policyVersions.fundo` v2) — com versões fixadas e registráveis. O módulo SHALL NOT ler configuração mutável da bancada em tempo de execução.
 
 #### Scenario: Prompt vem de versão fixada
 
@@ -49,6 +49,52 @@ A composição SHALL preservar os contratos aprovados: nome completo com palavra
 - **WHEN** a intenção é Oferta, Destaque ou Exclusivo
 - **THEN** a matriz comercial aplicada corresponde à intenção selecionada
 - **AND** preços/original são tratados conforme a intenção
+
+### Requirement: Identidade da loja e fundos recriados
+
+A composição SHALL transportar a **paleta canônica resolvida** da loja **uma única vez**, no bloco `[IDENTIDADE E DIREÇÃO VISUAL]`, com **precedência documentada** das fontes, alinhada ao que a tela apresenta ao lojista — principal: `brand_colors_chosen[0]` → `safe_color_tokens.primary` → `brand_color`; acento: `brand_colors_chosen[1]` → `safe_color_tokens.accent`. A versão das regras de identidade SHALL ser registrada na evidência (`policyVersions.identidade`). A composição SHALL reconciliar a regra de presença/ausência de identidade (logo/assinatura) sem enfraquecer a paleta. Sem fonte válida, a composição SHALL enviar orientação **neutra** explícita **somente** em fundos recriados (nunca em `original`), sem inventar cores.
+
+Nos fundos **recriados** (estúdio/ambientado), o fundo SHALL priorizar a paleta da loja e garantir contraste/separação visual do produto; SHALL ser emitida **uma única vez** uma orientação comum de contraste. A direção `original` SHALL permanecer sem imposição de paleta.
+
+#### Scenario: Paleta uma única vez, com precedência
+
+- **WHEN** a loja possui paleta resolvida (perfil ou `brand_color`)
+- **THEN** a paleta aparece uma única vez no bloco de identidade
+- **AND** a precedência das fontes é determinística e documentada
+
+#### Scenario: Sem paleta ⇒ orientação neutra somente em fundos recriados
+
+- **WHEN** a loja não possui paleta de cores resolvida
+- **THEN** a composição orienta uma direção neutra explícita apenas em estúdio/ambientado
+- **AND** nenhuma cor da loja é inventada e `original` não recebe a orientação neutra
+
+#### Scenario: Fundos recriados priorizam a identidade
+
+- **WHEN** a direção de fundo é estúdio ou ambientado
+- **THEN** o fundo deriva da paleta da loja e a orientação comum de contraste é emitida uma única vez
+- **AND** a embalagem, a oferta e a direção escolhida permanecem preservadas
+
+#### Scenario: Original sem imposição de paleta
+
+- **WHEN** a direção é original
+- **THEN** a instrução de fundo permanece inalterada
+- **AND** nenhuma orientação de contraste é acrescentada
+
+### Requirement: Separação entre referências de produto e imagem de identidade
+
+A composição SHALL contar apenas imagens de **produto** para a hierarquia de múltiplas imagens. A imagem de identidade (logo/assinatura) SHALL NOT contar como imagem de produto nem disparar a instrução de múltiplas imagens; referências adicionais legítimas de produto continuam contando.
+
+#### Scenario: Identidade não dispara múltiplas imagens
+
+- **WHEN** há uma imagem de produto e uma imagem de identidade
+- **THEN** a composição trata o caso como imagem única de produto
+- **AND** a hierarquia de múltiplas imagens não é emitida
+
+#### Scenario: Referências de produto adicionais continuam contando
+
+- **WHEN** há mais de uma imagem de produto
+- **THEN** a composição trata a primeira como protagonista e as demais como auxiliares
+- **AND** a imagem de identidade permanece fora da contagem
 
 ### Requirement: Sem troca silenciosa da intenção
 

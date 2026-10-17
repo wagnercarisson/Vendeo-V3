@@ -516,6 +516,24 @@ function identityContributions(
 }
 
 /**
+ * Quick 261017-cdi — referências de PRODUTO para a composição, EXCLUINDO a
+ * imagem de identidade (logo/assinatura). A identidade NÃO deve contar como
+ * imagem de produto nem disparar a instrução de múltiplas imagens do produto;
+ * referências adicionais legítimas (variações/combo) continuam contando.
+ * Quando não há seleções, cai no `references` legado (compatibilidade de testes).
+ */
+function productReferenceIds(
+  input: ProductOneToOneGenerationInput,
+): readonly string[] | undefined {
+  if (input.referenceSelections && input.referenceSelections.length > 0) {
+    return input.referenceSelections
+      .filter((selection) => selection.kind !== "identity")
+      .map((selection) => selection.id);
+  }
+  return input.references;
+}
+
+/**
  * Executa a geração do Produto 1:1 no ciclo da requisição e devolve um
  * `Response` NDJSON. Exatamente um evento terminal; cada evento traz
  * `operationId` (e `campaignId`).
@@ -1066,7 +1084,7 @@ export async function runProductOneToOneGeneration(
         const composition = composeProductPrompt({
           briefing: input.briefing,
           promptBase: input.promptBase ?? PRODUCT_1_1_PROMPT_BASE.content,
-          references: input.references,
+          references: productReferenceIds(input),
           contributions: identityContributions(input),
         });
         const snapshot = buildSnapshot(preflight.config, {

@@ -23,10 +23,11 @@ import type { ProductPromptCompositionBriefing } from "../policies/types";
  *
  * A incorporação produtiva (quick 261011-lc6) atualizou a fixture para o
  * **baseline do laboratório aprovado pelo responsável em 2026-10-11** (quick
- * 261009-u3h, domínio `99017f35`). A rastreabilidade do baseline anterior é
- * preservada em `previousBaseline` (sourceCommit `8f0b3fb0` + proveniência). A
- * equivalência continua sendo aderência ao **baseline aprovado**, não igualdade
- * permanente com a bancada mutável.
+ * 261009-u3h, domínio `99017f35`). A quick 261017-cdi atualizou novamente para o
+ * **baseline de produção** com a paleta de identidade e a orientação de contraste
+ * em fundos recriados, movendo o baseline anterior (99017f35) para
+ * `previousBaseline`. A equivalência continua sendo aderência ao **baseline
+ * aprovado**, não igualdade permanente com a bancada mutável.
  *
  * Nenhuma importação do laboratório é usada aqui: o runtime produtivo é a única
  * fonte de produção, confrontada contra o baseline imutável.
@@ -44,8 +45,14 @@ interface FrozenCase {
 }
 
 interface FrozenBaseline {
-  readonly sourceCommit: string;
+  readonly sourceCommit: string | null;
   readonly provenance: string;
+  readonly technicalBaseline?: boolean;
+  readonly visualApproval?: {
+    readonly status: string;
+    readonly approvedBy: string | null;
+    readonly approvedOn: string | null;
+  };
   readonly approvedBy?: string;
   readonly approvedOn?: string;
   readonly previousBaseline?: {
@@ -72,11 +79,16 @@ describe("F48.2.6 → Product 1:1 frozen prompt equivalence", () => {
   });
 
   it("preserva a rastreabilidade do baseline anterior", () => {
-    expect(baseline.sourceCommit).toBe("99017f35451366b05f51099bfe02143f1d49d206");
+    // Baseline TÉCNICO desta quick: sem commit de origem (implementação local,
+    // ainda não commitada) e SEM aprovação visual — a validação visual é PENDENTE.
+    expect(baseline.sourceCommit).toBeNull();
+    expect(baseline.technicalBaseline).toBe(true);
+    expect(baseline.visualApproval?.status).toBe("pending");
+    // O baseline anterior (laboratório aprovado, quick 261009-u3h) é preservado.
     expect(baseline.previousBaseline?.sourceCommit).toBe(
-      "8f0b3fb0cb7fb3c9aecbe2c82abfc96ab50efd3f",
+      "99017f35451366b05f51099bfe02143f1d49d206",
     );
-    expect(baseline.previousBaseline?.provenance).toContain("10/10");
+    expect(baseline.previousBaseline?.provenance).toContain("261009-u3h");
   });
 
   it.each(

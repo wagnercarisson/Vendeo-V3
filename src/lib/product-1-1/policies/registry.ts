@@ -1,5 +1,6 @@
 import type { ProductOneToOneIntent } from "../intent-selection";
 import { PRODUCT_1_1_BACKGROUND_DIRECTION_VERSION } from "../background-direction";
+import { PRODUCT_1_1_IDENTITY_CONTEXT_VERSION } from "../identity-context";
 import { destaquePolicy } from "./destaque";
 import { exclusivoPolicy } from "./exclusivo";
 import { formato11Policy } from "./formato-1-1";
@@ -145,6 +146,10 @@ export function resolveProductOneToOnePromptPolicies(
   // evidência de versões, sem nova dimensão/política (incorporado do baseline
   // aprovado do laboratório — quick 261009-u3h).
   versions.fundo = PRODUCT_1_1_BACKGROUND_DIRECTION_VERSION;
+
+  // Quick 261017-cdi — versão das regras de identidade/paleta do novo fluxo,
+  // registrada na MESMA evidência de versões (sem nova dimensão/política).
+  versions.identidade = PRODUCT_1_1_IDENTITY_CONTEXT_VERSION;
 
   return { contributions, versions };
 }

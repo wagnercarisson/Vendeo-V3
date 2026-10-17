@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { PRODUCT_1_1_BACKGROUND_LABELS } from "../background-direction";
+import {
+  PRODUCT_1_1_BACKGROUND_COMMON_ORIENTATION,
+  PRODUCT_1_1_BACKGROUND_LABELS,
+  PRODUCT_1_1_BACKGROUND_PROMPT_INSTRUCTIONS,
+} from "../background-direction";
 import { PRODUCT_1_1_INTENT_LABELS } from "../intent-selection";
 import { PROMPT_BASE_CONTENT, PROMPT_BASE_VERSION } from "../prompt-base";
 import {
@@ -41,7 +45,7 @@ const BRIEFING: ProductPromptCompositionBriefing = {
 
 describe("Product 1:1 prompt composition contract", () => {
   it("exposes the fixed versions and canonical block order", () => {
-    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v6");
+    expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
     expect(PROMPT_BASE_VERSION).toBe("48.2.6-produto-1-1-v1");
     expect(Object.values(PROMPT_BLOCK_LABELS)).toHaveLength(7);
     expect(PROMPT_BLOCK_ORDER).toEqual(Object.values(PROMPT_BLOCK_LABELS));
@@ -90,7 +94,8 @@ describe("Product 1:1 prompt composition contract", () => {
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
       geral: GENERAL_INTEGRITY_POLICY_VERSION,
-      fundo: "48.2.6-background-direction-v1",
+      fundo: "48.2.6-background-direction-v2",
+      identidade: "48.2.6-identity-context-v1",
     });
 
     for (const line of PRODUCT_1_1_GENERAL_INTEGRITY_LINES) {
@@ -133,6 +138,8 @@ describe("Product 1:1 prompt composition contract", () => {
     const runtimePaths = [
       "src/lib/product-1-1/prompt-base.ts",
       "src/lib/product-1-1/prompt-composition.ts",
+      "src/lib/product-1-1/background-direction.ts",
+      "src/lib/product-1-1/identity-context.ts",
       "src/lib/product-1-1/policies/types.ts",
       "src/lib/product-1-1/policies/produto.ts",
       "src/lib/product-1-1/policies/oferta.ts",
@@ -149,5 +156,52 @@ describe("Product 1:1 prompt composition contract", () => {
         /(?:from\s*["'][^"']*lab\/bench|import\s*["'][^"']*lab\/bench)/,
       );
     }
+  });
+});
+
+describe("Product 1:1 background directions (recreated vs original)", () => {
+  it.each(["offer", "spotlight", "exclusive"] as const)(
+    "emite a orientação comum de contraste UMA única vez em estúdio/ambientado (%s)",
+    (intent) => {
+      for (const direction of ["studio", "ambient"] as const) {
+        const composed = composeProductPrompt({
+          briefing: { ...BRIEFING, backgroundDirection: direction, commercial: { ...BRIEFING.commercial, intent } },
+          promptBase: PROMPT_BASE_CONTENT,
+          references: ["product.png"],
+        });
+        const occurrences = composed.text.split(
+          PRODUCT_1_1_BACKGROUND_COMMON_ORIENTATION,
+        );
+        expect(occurrences.length, `${direction}/${intent}`).toBe(2);
+        expect(composed.text).toContain(PRODUCT_1_1_BACKGROUND_PROMPT_INSTRUCTIONS[direction]);
+      }
+    },
+  );
+
+  it("não acrescenta paleta nem orientação de contraste em original", () => {
+    const composed = composeProductPrompt({
+      briefing: { ...BRIEFING, backgroundDirection: "original" },
+      promptBase: PROMPT_BASE_CONTENT,
+      references: ["product.png"],
+    });
+
+    expect(composed.text).toContain(PRODUCT_1_1_BACKGROUND_PROMPT_INSTRUCTIONS.original);
+    expect(composed.text).not.toContain(PRODUCT_1_1_BACKGROUND_COMMON_ORIENTATION);
+    expect(composed.text.toLowerCase()).not.toContain("paleta da loja");
+  });
+
+  it("substitui as instruções antigas (sem acúmulo) e mantém a paleta citada só na direção", () => {
+    const composed = composeProductPrompt({
+      briefing: { ...BRIEFING, backgroundDirection: "studio" },
+      promptBase: PROMPT_BASE_CONTENT,
+      references: ["product.png"],
+    });
+
+    expect(composed.text).not.toContain(
+      "Use um fundo de estúdio discreto, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.",
+    );
+    expect(composed.text).toContain(
+      "Use um fundo de estúdio discreto na paleta da loja, em cor sólida ou gradiente suave, sem cenário ou objetos de apoio.",
+    );
   });
 });

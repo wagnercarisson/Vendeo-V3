@@ -1,5 +1,7 @@
 import {
+  PRODUCT_1_1_BACKGROUND_COMMON_ORIENTATION,
   PRODUCT_1_1_BACKGROUND_PROMPT_INSTRUCTIONS,
+  isRecreatedBackgroundDirection,
 } from "./background-direction";
 import { PROMPT_BASE_VERSION } from "./prompt-base";
 import {
@@ -10,7 +12,7 @@ import {
 } from "./policies/types";
 import { resolveProductOneToOnePromptPolicies } from "./policies/registry";
 
-export const COMPOSER_VERSION = "48.2.4-prompt-composer-v6";
+export const COMPOSER_VERSION = "48.2.4-prompt-composer-v7";
 
 /**
  * Orientação fixa da instrução de nome. Fica separada da lógica de composição
@@ -87,6 +89,11 @@ function commercialLines(briefing: ProductPromptCompositionBriefing): string[] {
       briefing.backgroundDirection
     ],
   );
+  // Orientação comum de contraste — emitida UMA única vez e SOMENTE quando o
+  // fundo é recriado (estúdio/ambientado). Não é emitida para `original`.
+  if (isRecreatedBackgroundDirection(briefing.backgroundDirection)) {
+    lines.push(PRODUCT_1_1_BACKGROUND_COMMON_ORIENTATION);
+  }
   pushLine(lines, "Preço original", briefing.commercial.originalPriceText);
   pushLine(lines, "Preço de venda", briefing.commercial.discountedPriceText);
   pushLine(lines, "Selo", briefing.commercial.badge);

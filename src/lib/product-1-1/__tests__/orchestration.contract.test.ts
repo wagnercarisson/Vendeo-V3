@@ -394,11 +394,17 @@ async function buildHarness(): Promise<Harness> {
   } as Harness;
 }
 
-async function runOrchestrator(harness: Harness) {
+async function runOrchestrator(
+  harness: Harness,
+  inputOverrides: Record<string, unknown> = {},
+) {
   const { runProductOneToOneGeneration } = await import(
     "../orchestration/generation-orchestrator"
   );
-  const response = await runProductOneToOneGeneration(makeInput(), harness.deps);
+  const response = await runProductOneToOneGeneration(
+    { ...makeInput(), ...inputOverrides },
+    harness.deps,
+  );
   const text = await response.text();
   const events = text
     .split("\n")
@@ -551,6 +557,38 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(request.prompt).toContain("Crie uma peça profissional");
     expect(request.quality).toBe("medium");
     expect(request.productImagesDataUrls).toEqual(["data:image/png;base64,primary"]);
+  });
+
+  it("Quick 261017-cdi: a imagem de identidade NÃO conta como referência de produto (1 produto + logo ⇒ 'Imagens de referência: 1')", async () => {
+    const harness = await buildHarness();
+    await runOrchestrator(harness, {
+      references: ["prod-hash", "logo-hash"],
+      referenceSelections: [
+        { kind: "product", id: "prod-hash", role: "primary", index: 0 },
+        { kind: "identity", id: "logo-hash", role: "identity", index: 1 },
+      ],
+    });
+
+    const request = harness.calls.gatewayRequests[0];
+    expect(request.prompt).toContain("Imagens de referência: 1");
+    expect(request.prompt).not.toContain("Imagens de referência: 2");
+    expect(request.prompt).not.toContain("apoio visual secundário");
+  });
+
+  it("Quick 261017-cdi: referências adicionais de PRODUTO continuam contando (2 produtos ⇒ hierarquia de múltiplas imagens)", async () => {
+    const harness = await buildHarness();
+    await runOrchestrator(harness, {
+      references: ["prod-a", "prod-b", "logo-hash"],
+      referenceSelections: [
+        { kind: "product", id: "prod-a", role: "primary", index: 0 },
+        { kind: "reference", id: "prod-b", role: "variation", index: 1 },
+        { kind: "identity", id: "logo-hash", role: "identity", index: 2 },
+      ],
+    });
+
+    const request = harness.calls.gatewayRequests[0];
+    expect(request.prompt).toContain("Imagens de referência: 2");
+    expect(request.prompt).toContain("apoio visual secundário");
   });
 
   it("falha confirmada + ausência COMPROVADA ⇒ `closeFailedOperation` (PF) UMA vez e terminal `IMG-001` (estornado) com diagnóstico durável", async () => {

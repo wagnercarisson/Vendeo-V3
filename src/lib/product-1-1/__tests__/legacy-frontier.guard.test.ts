@@ -113,8 +113,9 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   },
   {
     path: "src/lib/ai/adapters/chat-completions.ts",
-    authorization: "quick 261010-rsp (diagnóstico aditivo de identidade visual)",
-    commit: "6c2ebdb7",
+    authorization:
+      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + quick gpt6-luna (adapter gpt-6-luna: reasoning_effort none / max_completion_tokens, sem temperature — GPT-4o/Gemini preservados)",
+    commit: "322809d0",
   },
   {
     path: "src/lib/ai/adapters/__tests__/chat-completions.test.ts",
@@ -125,6 +126,39 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
     path: "src/lib/ai/__tests__/ai-invocation-result-additive.contract.test.ts",
     authorization: "quick 261010-rsp (contrato aditivo)",
     commit: "6c2ebdb7",
+  },
+  // Reconciliação do manifesto (2026-10-17, quick 261017-cdi): registra por
+  // caminho + commit + autorização as mudanças de fronteira JÁ AUTORIZADAS por
+  // quicks anteriores (gpt6-luna e 261017-ms4) que ainda não constavam aqui.
+  // Nenhum caminho é liberado em bloco; BASE_SHA e testes negativos permanecem.
+  {
+    path: "src/lib/ai/gateway.ts",
+    authorization:
+      "quick gpt6-luna (AiInvoker/AiGateway: prepare/invokePrepared + correções)",
+    commit: "322809d0",
+  },
+  {
+    path: "src/lib/ai/__tests__/gateway-prepared.test.ts",
+    authorization: "quick gpt6-luna (teste prepare/invokePrepared + pinning)",
+    commit: "7d08a068",
+  },
+  {
+    path: "src/lib/ai/model-registry.ts",
+    authorization:
+      "quick gpt6-luna (allowlist `openai: gpt-6-luna` para campaign_copy)",
+    commit: "0b72ad99",
+  },
+  {
+    path: "src/lib/ai/__tests__/upstream-images-adapter.test.ts",
+    authorization:
+      "quick 261017-ms4 (pricing das seis combinações — teste do adapter)",
+    commit: "8a8c0819",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/homolog-image-pricing-readiness.test.ts",
+    authorization:
+      "quick 261017-ms4 (pricing das seis combinações — teste de readiness)",
+    commit: "8a8c0819",
   },
   {
     path: "src/lib/lab/bench/domain/__tests__/intent-schema.contract.test.ts",
@@ -416,9 +450,9 @@ describe("legacy-frontier guard — reconciliação (testes negativos)", () => {
   const AUTHORIZED = AUTHORIZED_FRONTIER_CHANGES.map((entry) => entry.path);
 
   it("rejeita um caminho de fronteira EXTRA não autorizado", () => {
-    const changed = [...AUTHORIZED, "src/lib/ai/gateway.ts"];
+    const changed = [...AUTHORIZED, "src/lib/ai/adapters/images.ts"];
     const { extra } = diffAgainstAuthorized(changed, AUTHORIZED);
-    expect(extra).toEqual(["src/lib/ai/gateway.ts"]);
+    expect(extra).toEqual(["src/lib/ai/adapters/images.ts"]);
   });
 
   it("rejeita a ausência de um caminho autorizado", () => {

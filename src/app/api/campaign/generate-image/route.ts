@@ -50,6 +50,10 @@ import {
 import type { ProductOneToOneCopyContext } from "@/lib/product-1-1/copy/default-copy-runner";
 import { validateOriginalBackground, countProductImages, ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE } from "@/lib/product-1-1/selection-validation";
 import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
+import {
+  buildNewFlowIdentityBlock,
+  type ProductOneToOneIdentityContext,
+} from "@/lib/product-1-1/identity-context";
 
 export const runtime = "nodejs";
 
@@ -679,6 +683,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
         ReturnType<typeof validateIdentityReference>
       >;
       let newFlowIdentityDirective: string | null = null;
+      // Quick 261017-cdi — dados estruturados da identidade (paleta canônica)
+      // congelados na evidência/fingerprint. Preenchido junto da diretiva.
+      let newFlowIdentityContextFrozen: ProductOneToOneIdentityContext | null = null;
       // B1 — identidade convertida ao formato ACEITO pelo adapter do novo fluxo
       // (`data:image/png|jpeg|webp;base64,...`). NUNCA a URL assinada rotativa.
       let newFlowIdentityImage: Awaited<
@@ -722,6 +729,19 @@ export const POST = apiHandler(async (request: NextRequest) => {
           newFlow as unknown as CampaignInput,
         );
         newFlowIdentityDirective = newFlowIdentityContext?.identity?.directive ?? null;
+        // Quick 261017-cdi — reconcilia a diretiva legada para o novo fluxo
+        // (remove a cláusula "perfil de marca / não obrigatório") e acrescenta a
+        // paleta canônica da loja; a orientação neutra (sem paleta) só entra em
+        // fundos recriados. Congelado na evidência/fingerprint abaixo.
+        const newFlowIdentityBlock = buildNewFlowIdentityBlock({
+          legacyDirective: newFlowIdentityDirective ?? "",
+          backgroundDirection: newFlowBackgroundDirection,
+          storeName: newFlowStore.name,
+          storeBrandColor: newFlowStore.brand_color,
+          brandProfile: newFlowEffectiveIdentitySnapshot.brandProfile,
+        });
+        newFlowIdentityDirective = newFlowIdentityBlock.directive;
+        newFlowIdentityContextFrozen = newFlowIdentityBlock.context;
         // Gap 1 — a copy DEFAULT do novo fluxo usa a loja resolvida server-side
         // (nunca dados do cliente) + o comercial já validado.
         newFlowCopyContext = {
@@ -777,6 +797,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
           buildCampaignBriefFromFlat(newFlow, newFlowStoreId),
         ) as unknown as Record<string, unknown>),
         identityDirective: newFlowIdentityDirective ?? null,
+        // Quick 261017-cdi — a paleta canônica resolvida entra no fingerprint do
+        // conteúdo congelado das novas campanhas (evidências históricas intactas).
+        identityContext: newFlowIdentityContextFrozen,
       };
       const newFlowFrozenContentHash = computeFrozenContentHash(
         newFlowFrozenSnapshot,
@@ -906,9 +929,18 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // Gap 1 — `copyContext` (loja, resolvida server-side) habilita a copy
       // DEFAULT do novo fluxo (corrida produtiva EXISTENTE); o orquestrador
       // conecta o serviço de copy e persiste o texto entregue.
+      // Quick 261017-cdi — briefing congelado carrega os dados estruturados da
+      // identidade (paleta canônica) para a evidência/fingerprint das novas
+      // campanhas. O compositor ignora a chave extra `identity`; a paleta chega
+      // ao modelo pelo bloco de identidade (`identityDirective`).
+      const newFlowFrozenBriefing = newFlowIdentityContextFrozen
+        ? { ...newFlowBriefing, identity: newFlowIdentityContextFrozen }
+        : newFlowBriefing;
       return await runProductOneToOneGeneration(
         {
           ...newFlowOrchestrationInput,
+          briefing: newFlowFrozenBriefing,
+          briefingText: JSON.stringify(newFlowFrozenBriefing),
           references: newFlowEvidenceReferenceSelections.map((selection) => selection.id),
           referenceSelections: newFlowEvidenceReferenceSelections,
           identityImageUrl: newFlowIdentityImage?.dataUrl ?? undefined,
