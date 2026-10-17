@@ -66,13 +66,13 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/product-1-1/pilot/resolve-pilot-spend-gate", () => ({
-  resolvePilotSpendGate: (...args: unknown[]) => h.resolvePilotSpendGate(...args),
+  resolvePilotSpendGate: (input: unknown) => h.resolvePilotSpendGate(input),
   resolvePilotCopyEstimatedUsd: () => 0.05,
 }));
 
 vi.mock("@/lib/ai-cost/image-pair-pricing", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/ai-cost/image-pair-pricing")>();
-  return { ...actual, resolveImagePairCost: (...args: unknown[]) => h.resolveImagePairCost(...args) };
+  return { ...actual, resolveImagePairCost: (config: any) => h.resolveImagePairCost(config) };
 });
 
 // ── Serviços EXTERNOS do orquestrador (mockados) ─────────────────────────────
@@ -644,15 +644,17 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
   });
 
   it("(F56.2b2c armed) BLOQUEIA: resolver→pricing→beginPaidCall; recusa ⇒ ZERO provider", async () => {
-    const beginPaidCall = vi.fn(async () => ({ acquired: false, outcome: "blocked", reason: "pilot_cap_reached" }));
+    const beginPaidCall = vi.fn(async (_input: { kind: string; attemptSeq: number; estimatedUsd: number; operationId?: string }) => ({ acquired: false, outcome: "blocked", reason: "pilot_cap_reached" }));
     h.resolvePilotSpendGate.mockResolvedValue({
       kind: "armed",
       gate: { beginPaidCall, endPaidCall: vi.fn(async () => undefined), markUnknown: vi.fn(async () => undefined) },
     });
     const { POST } = await import("../route");
     const res = await POST(makeRequest(VALID_BODY));
+    const terminal = terminalOf(parseEvents(await res.text()));
     console.error("ARMED_BUNDLE " + JSON.stringify({
       status: res.status,
+      terminal,
       resolver: h.resolvePilotSpendGate.mock.results.map((r) => r.value),
       op_read: h.getCampaignOperation.mock.calls.length,
       reserve: h.creditReserve.mock.calls.length,
@@ -670,14 +672,14 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     expect(beginPaidCall).toHaveBeenCalledWith(
       expect.objectContaining({ operationId: OPERATION_ID, kind: "image_primary", attemptSeq: 1, estimatedUsd: expect.any(Number) }),
     );
-    expect(beginPaidCall.mock.calls[0][0].estimatedUsd).toBeGreaterThan(0);
+    expect(beginPaidCall.mock.calls[0]?.[0]?.estimatedUsd).toBeGreaterThan(0);
     // Recusa do gate ⇒ ZERO provider.
     expect(h.gatewayInvoke).not.toHaveBeenCalled();
   });
 
   it("(F56.2b2c armed) ADQUIRE: provider UMA vez + endPaidCall", async () => {
     const handle = { callId: "c1", ownerToken: "o1", kind: "image_primary" as const };
-    const beginPaidCall = vi.fn(async () => ({ acquired: true, handle }));
+    const beginPaidCall = vi.fn(async (_input: { kind: string; attemptSeq: number; estimatedUsd: number }) => ({ acquired: true, handle }));
     const endPaidCall = vi.fn(async () => undefined);
     h.resolvePilotSpendGate.mockResolvedValue({
       kind: "armed",
@@ -685,14 +687,16 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     });
     const { POST } = await import("../route");
     const res = await POST(makeRequest(VALID_BODY));
+    const terminal = terminalOf(parseEvents(await res.text()));
     expect(res.status).toBe(200);
     expect(beginPaidCall).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "image_primary", attemptSeq: 1, estimatedUsd: expect.any(Number) }),
     );
-    expect(beginPaidCall.mock.calls[0][0].estimatedUsd).toBeGreaterThan(0);
+    expect(beginPaidCall.mock.calls[0]?.[0]?.estimatedUsd).toBeGreaterThan(0);
     // Aquisição ⇒ SOMENTE a chamada prevista, seguida do encerramento.
     expect(h.gatewayInvoke).toHaveBeenCalledTimes(1);
     expect(endPaidCall).toHaveBeenCalledTimes(1);
+    expect(terminal).toBeTruthy();
   });
 
   it("(achado 5b) `unknown` persistido ⇒ claim FINALIZADO (`abandoned`), não `in_progress`", async () => {
