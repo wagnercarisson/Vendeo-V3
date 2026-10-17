@@ -104,6 +104,8 @@ async function main() {
   const snapshot = (await a.query(
     "select * from public.product_1_1_pilot_spend_state where id = true",
   )).rows[0];
+  // Acumulado ESPERADO = snapshot + estimativas das fixtures EFETIVAMENTE confirmadas.
+  let expectedSpent = Number(snapshot.spent_usd ?? 0);
 
   try {
     // (C1) nasce não configurado
@@ -134,6 +136,7 @@ async function main() {
     await a.query("begin");
     const acqA = await callBegin(a, { campaignId: campA, operationId: opA, callId: cA, kind: "image_primary", attemptSeq: 1, estimatedUsd: 0.3, ownerToken: owner });
     check(acqA.ok && acqA.value.outcome === "acquired", "A adquiriu (segura a trava)");
+    if (acqA.ok && acqA.value.outcome === "acquired") expectedSpent += 0.3;
     const bPid = await backendPid(b);
     const bPromise = callBegin(b, { campaignId: campB, operationId: opB, callId: randomUUID(), kind: "image_primary", attemptSeq: 1, estimatedUsd: 0.1, ownerToken: owner });
     const waited = await waitForAdvisoryLockWait(a, bPid);
@@ -146,7 +149,9 @@ async function main() {
     //     e, após o commit, vê `unknown` ⇒ pilot_requires_reconciliation.
     const cU = randomUUID();
     createdCalls.push(cU);
-    await callBegin(a, { campaignId: campA, operationId: opA, callId: cU, kind: "copy_initial", attemptSeq: 1, estimatedUsd: 0.2, ownerToken: owner });
+    const acqU = await callBegin(a, { campaignId: campA, operationId: opA, callId: cU, kind: "copy_initial", attemptSeq: 1, estimatedUsd: 0.2, ownerToken: owner });
+    check(acqU.ok && acqU.value.outcome === "acquired", "cU adquirida (verificada)");
+    if (acqU.ok && acqU.value.outcome === "acquired") expectedSpent += 0.2;
     await a.query("begin");
     await a.query("select public.product_1_1_pilot_mark_unknown($1,$2,$3)", [cU, owner, "timeout"]);
     const bPid2 = await backendPid(b);
@@ -165,6 +170,7 @@ async function main() {
     createdCalls.push(cE);
     const acqE = await callBegin(a, { campaignId: campA, operationId: opA, callId: cE, kind: "copy_manual", attemptSeq: 3, estimatedUsd: 0.25, ownerToken: owner });
     check(acqE.ok && acqE.value.outcome === "acquired", "cE adquirida (verificada)");
+    if (acqE.ok && acqE.value.outcome === "acquired") expectedSpent += 0.25;
     const spentBefore = await a.query("select spent_usd from public.product_1_1_pilot_spend_state where id = true");
     await a.query("select public.product_1_1_pilot_end_paid_call($1,$2,$3)", [cE, owner, null]);
     const spentAfter = await a.query("select spent_usd from public.product_1_1_pilot_spend_state where id = true");
@@ -177,7 +183,6 @@ async function main() {
     // Distingue os EFEITOS ESPERADOS das PRÓPRIAS PROVAS de ALTERAÇÕES EXTERNAS:
     // o acumulado esperado = snapshot + estimativas das fixtures (0.30 + 0.20 + 0.25);
     // qualquer divergência ⇒ NÃO restaura e ABORTA (nunca sobrescreve gasto externo).
-    const expectedSpent = Number(snapshot.spent_usd ?? 0) + 0.75;
     try {
       await a.query("rollback").catch(() => undefined);
       await b.query("rollback").catch(() => undefined);
@@ -185,14 +190,15 @@ async function main() {
       await a.query("begin");
       await a.query("select pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'))");
       const current = (await a.query(
-        "select spent_usd, blocked_reason from public.product_1_1_pilot_spend_state where id = true",
+        "select * from public.product_1_1_pilot_spend_state where id = true",
       )).rows[0];
-      const verdict = classifyPreservation({
-        currentSpentUsd: current.spent_usd,
-        expectedSpentUsd: expectedSpent,
-        currentBlockedReason: current.blocked_reason,
-        expectedBlockedReason: snapshot.blocked_reason ?? null,
-      });
+      const expected = {
+        ...snapshot,
+        spent_usd: expectedSpent,
+        blocked_reason: null,
+        blocked_at: null,
+      };
+      const verdict = classifyPreservation({ current, expected });
       if (!verdict.ok) {
         await a.query("rollback");
         failures += 1;
