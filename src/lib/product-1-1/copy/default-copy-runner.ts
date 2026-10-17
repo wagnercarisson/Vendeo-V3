@@ -240,13 +240,6 @@ export function createDefaultProductOneToOneCopyOps(
         provider: prepared.provider,
         model: prepared.model,
       });
-      // REGISTRA a versão de pricing efetivamente usada (vinculada ao alvo).
-      console.info(
-        "[pilot-copy] pricing version=%s provider=%s model=%s",
-        pricing?.versionId ?? "unknown",
-        prepared.provider,
-        prepared.model,
-      );
       const estimate = computeCopyEstimate(pricing);
       if (estimate === null) {
         throw new Error("pilot_spend_blocked:pricing_unavailable");
@@ -263,6 +256,18 @@ export function createDefaultProductOneToOneCopyOps(
         throw new Error(`pilot_spend_blocked:${decision.reason}`);
       }
       pilotHandle = decision.handle;
+      // REGISTRO rastreável: versão de pricing + modelo + estimativa vinculados
+      // à operação e à chamada (após a aquisição).
+      console.info(
+        "[pilot-copy] campaignId=%s operationId=%s callId=%s pricing=%s provider=%s model=%s estimateUsd=%s",
+        input.campaignId,
+        input.operationId,
+        pilotHandle.callId,
+        pricing?.versionId ?? "unknown",
+        prepared.provider,
+        prepared.model,
+        estimate,
+      );
       // Invocação PREPARADA — mesmo alvo/versão de pricing da estimativa.
       pinnedInvoker = {
         hasFallback: (capability) => invoker.hasFallback(capability),

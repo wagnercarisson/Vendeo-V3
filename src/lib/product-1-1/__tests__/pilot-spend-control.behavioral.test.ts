@@ -497,12 +497,36 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
     expect(begin).toHaveBeenCalledTimes(1); // sem novo begin/retry
   });
 
-  it("FALLBACK pelo runner: pricing/versão do ALVO fallback ⇒ estimativa própria + invokePrepared", async () => {
+  it("FALLBACK pelo runner: modelo DIFERENTE ⇒ reader recebe provider/model do fallback e invokePrepared usa esse alvo", async () => {
     const gate = spyGate({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "copy_auto" } });
-    const invoker = fakeInvoker(
-      () => ({ content: JSON.stringify({ title: "T", caption: "C", hashtags: [], cta_post: "x" }) }) as AiInvocationResult,
+    const preparedFallback = {
+      capability: "campaign_copy",
+      target: "fallback",
+      provider: "gemini",
+      model: "gemini-3.1-flash-lite",
+      protocol: "gemini",
+      resolved: { provider: "gemini", model: "gemini-3.1-flash-lite", protocol: "gemini" },
+    };
+    const prepare = vi.fn(async (_c: unknown, target?: string) =>
+      target === "fallback"
+        ? preparedFallback
+        : {
+            capability: "campaign_copy",
+            target: "primary",
+            provider: "openai",
+            model: "gpt-6-luna",
+            protocol: "chat-completions",
+            resolved: { provider: "openai", model: "gpt-6-luna", protocol: "chat-completions" },
+          },
     );
-    const readCopyPricing = vi.fn(async () => ({ inputUsdPer1M: 2.5, outputUsdPer1M: 10, versionId: "fallback-v" }));
+    const invokePrepared = vi.fn(
+      async (_prepared: unknown) => ({ content: JSON.stringify({ title: "T", caption: "C", hashtags: [], cta_post: "x" }) }) as AiInvocationResult,
+    );
+    const invoker = { invoke: vi.fn(), hasFallback: vi.fn(async () => true), prepare, invokePrepared } as unknown as AiInvoker;
+    const readCopyPricing = vi.fn(async (t: { provider: string; model: string }) => {
+      expect(t).toEqual({ provider: "gemini", model: "gemini-3.1-flash-lite" });
+      return { inputUsdPer1M: 0.1, outputUsdPer1M: 0.4, versionId: "gemini-v" };
+    });
     const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, {
       invoker,
       pilotSpend: gate,
@@ -511,13 +535,14 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
       readCopyPricing,
     });
     await ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined });
-    // prepara o FALLBACK (não o principal)
-    expect(invoker.prepare as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledWith("campaign_copy", "fallback");
-    // estimativa derivada do pricing do FALLBACK: (2000*2.5 + 1000*10)/1e6 = 0.015
+    expect(prepare).toHaveBeenCalledWith("campaign_copy", "fallback");
+    expect(readCopyPricing).toHaveBeenCalledTimes(1);
+    // estimativa do FALLBACK: (2000*0.1 + 1000*0.4)/1e6 = 0.0006
     expect(gate.begin).toHaveBeenCalledWith(
-      expect.objectContaining({ estimatedUsd: expect.closeTo(0.015, 10) }),
+      expect.objectContaining({ estimatedUsd: expect.closeTo(0.0006, 10) }),
     );
-    expect(invoker.invokePrepared as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
+    expect(invokePrepared).toHaveBeenCalledTimes(1);
+    expect(invokePrepared.mock.calls[0][0]).toMatchObject({ provider: "gemini", model: "gemini-3.1-flash-lite" });
   });
 
   it("RECUPERAÇÃO (copy_auto): pricing válido contabiliza; pricing inválido BLOQUEIA sem provider", async () => {
