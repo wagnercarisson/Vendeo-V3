@@ -735,8 +735,10 @@ describe("F56.2b1b — rota COMPLETA + orquestrador real (correção de integra�
     const res = await POST(makeRequest(VALID_BODY));
     const terminal = terminalOf(parseEvents(await res.text()));
     // IN-02 (disposição): a falha do encerramento NÃO provoca 2ª chamada paga.
+    expect(beginPaidCall).toHaveBeenCalledTimes(1); // caminho armed realmente exercido
+    expect(endPaidCall).toHaveBeenCalled(); // caminho de falha exercitado
     expect(h.gatewayInvoke).toHaveBeenCalledTimes(1);
-    expect(terminal).toBeTruthy();
+    expect(terminal).toMatchObject({ type: "result" }); // disposição observada
   });
 
 
