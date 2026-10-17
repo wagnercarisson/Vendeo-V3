@@ -17,11 +17,13 @@ $Container  = "supabase_db_$ProjectId"
 
 $AllowedPending = @(
   "20261017000001_f56_2b2c_narrow_authorization.sql",
-  "20261017000002_f56_2b2c_pilot_spend_control.sql"
+  "20261017000002_f56_2b2c_pilot_spend_control.sql",
+  "20261017000003_f56_2b2c_pilot_spend_estimate_positive.sql"
 )
 $ExpectedHash = @{
   "20261017000001_f56_2b2c_narrow_authorization.sql" = "52859A5BFA7BD7EE4AC5F38156F1D07E6C2A23CF978024BDEFE298C07D928B41"
   "20261017000002_f56_2b2c_pilot_spend_control.sql"  = "6F31F1D81277C80A83B6193C2132A55A5406B896D1555BF7305A8D8590F7DC4B"
+  "20261017000003_f56_2b2c_pilot_spend_estimate_positive.sql" = "908DC6DB08113DB3E6A60BA2BF6DF014D6955A7B0D17FC302B9056B9D5B6310C"
 }
 
 $script:Failures = @()
@@ -115,8 +117,8 @@ if ($null -eq $flags) {
   Check "product_1_1_test_stores_enabled=false" ((@($flags) -contains "product_1_1_test_stores_enabled=f") -or (@($flags) -contains "product_1_1_test_stores_enabled=false"))
   Check "product_1_1_all_stores_enabled=false" ((@($flags) -contains "product_1_1_all_stores_enabled=f") -or (@($flags) -contains "product_1_1_all_stores_enabled=false"))
 }
-$enabling = Psql "select count(*) from product_flow_stage_authorizations where event_type='granted' and stage <> 'off'"
-Check "nenhuma autorizacao habilitadora (stage <> off)" (($null -ne $enabling) -and (([int](($enabling -join "").Trim())) -eq 0))
+$enabling = Psql "select count(*) from (select distinct on (scope) event_type, stage from public.product_flow_stage_authorizations order by scope, seq desc) t where t.event_type='granted' and t.stage <> 'off'"
+Check "nenhuma autorizacao habilitadora VIGENTE (ultimo evento por escopo)" (($null -ne $enabling) -and (([int](($enabling -join "").Trim())) -eq 0))
 $envLocal = Join-Path (Get-Location) ".env.local"
 Check "VENDEO_GENERATION_PAUSED=true (.env.local)" ((Test-Path $envLocal) -and ((Get-Content $envLocal -Raw) -match "VENDEO_GENERATION_PAUSED=true"))
 Check "sem VENDEO_PILOT_COPY_ESTIMATED_USD no ambiente" ([string]::IsNullOrEmpty($env:VENDEO_PILOT_COPY_ESTIMATED_USD))

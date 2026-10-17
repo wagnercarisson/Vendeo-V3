@@ -437,7 +437,28 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
     await expect(
       ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
     ).rejects.toThrow();
-    expect(gate.unknown).toHaveBeenCalledTimes(1);
-    expect(gate.end).not.toHaveBeenCalled();
+  });
+
+  it("M3 (copy): falha de `markUnknown` ⇒ erro ORIGINAL propagado, sem endPaidCall nem retry", async () => {
+    const original = Object.assign(new Error("timed out"), { kind: "timeout" });
+    const begin = vi.fn(async () => ({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "copy_auto" } }));
+    const end = vi.fn(async () => undefined);
+    const unknown = vi.fn(async () => {
+      throw new Error("db_down_block");
+    });
+    const gate = { beginPaidCall: begin, endPaidCall: end, markUnknown: unknown } as unknown as PilotSpendGate;
+    const invoker = {
+      invoke: vi.fn(async () => {
+        throw original;
+      }),
+      hasFallback: vi.fn(async () => false),
+    } as unknown as AiInvoker;
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, estimatedUsd: 0.05 });
+    await expect(
+      ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
+    ).rejects.toBe(original); // erro ORIGINAL (desconhecido) preservado — não o erro do gate
+    expect(unknown).toHaveBeenCalledTimes(1);
+    expect(end).not.toHaveBeenCalled();
+    expect(begin).toHaveBeenCalledTimes(1); // sem novo begin/retry
   });
 });
