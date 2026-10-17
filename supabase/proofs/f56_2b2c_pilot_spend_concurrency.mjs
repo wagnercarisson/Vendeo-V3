@@ -32,6 +32,12 @@ function check(cond, label) {
 }
 
 function assertLocalDestination(conn) {
+  const expectedPort = Number(process.env.PILOT_PROOF_PORT ?? "57782");
+  if (process.env.PILOT_PROOF_IDENTITY !== "vendeo-homolog") {
+    throw new Error(
+      'PROOFS: identidade não confirmada. Defina PILOT_PROOF_IDENTITY="vendeo-homolog" (homologação permanente).',
+    );
+  }
   let url;
   try {
     url = new URL(conn);
@@ -39,7 +45,11 @@ function assertLocalDestination(conn) {
     throw new Error(`DATABASE_URL inválida: ${conn}`);
   }
   if (!["127.0.0.1", "localhost", "::1", "[::1]"].includes(url.hostname)) {
-    throw new Error(`PROOFS: destino NÃO-LOCAL recusado (${url.hostname}). Use a homologação local.`);
+    throw new Error(`PROOFS: destino NÃO-LOCAL recusado (${url.hostname}).`);
+  }
+  const port = url.port ? Number(url.port) : 5432;
+  if (port !== expectedPort) {
+    throw new Error(`PROOFS: porta ${port} ≠ ${expectedPort} (vendeo-homolog). Recusado.`);
   }
 }
 
@@ -91,7 +101,7 @@ async function main() {
   const createdOps = [];
 
   const snapshot = (await a.query(
-    "select cap_usd, spent_usd, blocked_reason, blocked_at, blocked_call_id from public.product_1_1_pilot_spend_state where id = true",
+    "select * from public.product_1_1_pilot_spend_state where id = true",
   )).rows[0];
 
   try {
@@ -146,10 +156,14 @@ async function main() {
     const bResult2 = await bPromise2;
     check(!bResult2.ok && bResult2.message.includes("pilot_requires_reconciliation"), "begin após mark_unknown ⇒ pilot_requires_reconciliation");
 
+    // Reconcilia `cU` (obrigatório) ANTES do próximo cenário.
+    await a.query("select public.product_1_1_pilot_reconcile_unknown($1,$2,$3,$4,$5)", [actor, cU, "keep_accounted_release", "prova", randomUUID()]);
+
     // (C4) end(NULL) mantém o acumulado — comparar IMEDIATAMENTE antes/depois.
     const cE = randomUUID();
     createdCalls.push(cE);
-    await callBegin(a, { campaignId: campA, operationId: opA, callId: cE, kind: "copy_manual", attemptSeq: 3, estimatedUsd: 0.25, ownerToken: owner });
+    const acqE = await callBegin(a, { campaignId: campA, operationId: opA, callId: cE, kind: "copy_manual", attemptSeq: 3, estimatedUsd: 0.25, ownerToken: owner });
+    check(acqE.ok && acqE.value.outcome === "acquired", "cE adquirida (verificada)");
     const spentBefore = await a.query("select spent_usd from public.product_1_1_pilot_spend_state where id = true");
     await a.query("select public.product_1_1_pilot_end_paid_call($1,$2,$3)", [cE, owner, null]);
     const spentAfter = await a.query("select spent_usd from public.product_1_1_pilot_spend_state where id = true");
@@ -158,20 +172,44 @@ async function main() {
     console.log(failures === 0 ? "\nPROOFS: PASS" : `\nPROOFS: ${failures} FAIL`);
     process.exitCode = failures === 0 ? 0 : 1;
   } finally {
-    // RESTAURAÇÃO/LIMPEZA (best-effort) — sem resíduo na homologação permanente.
+    // RESTAURAÇÃO/LIMPEZA (bloqueante se falhar) — sem resíduo na homologação permanente.
     try {
-      if (createdCalls.length) {
-        await a.query("delete from public.product_1_1_pilot_paid_calls where call_id = any($1::uuid[])", [createdCalls]);
-      }
+      // Encerra transação eventualmente aberta/abortada ANTES da limpeza.
+      await a.query("rollback").catch(() => undefined);
+      await b.query("rollback").catch(() => undefined);
+      // Apaga fixtures por CAMPANHA (cobre aquisições inesperadas) e por call_id.
+      await a.query(
+        "delete from public.product_1_1_pilot_paid_calls where campaign_id = any($1::uuid[]) or call_id = any($2::uuid[])",
+        [[campA, campB], createdCalls],
+      );
+      await a.query(
+        "delete from public.product_1_1_pilot_blocked_calls where call_id = any($1::uuid[])",
+        [createdCalls],
+      );
       if (createdOps.length) {
-        await a.query("delete from public.product_1_1_pilot_cap_audit where operation_id = any($1::uuid[])", [createdOps]);
+        await a.query(
+          "delete from public.product_1_1_pilot_cap_audit where operation_id = any($1::uuid[])",
+          [createdOps],
+        );
       }
       await a.query(
-        "update public.product_1_1_pilot_spend_state set cap_usd=$1, spent_usd=$2, blocked_reason=$3, blocked_at=$4, blocked_call_id=$5, cap_set_by=NULL, cap_reason=NULL, cap_operation_id=NULL, cap_set_at=NULL, updated_at=now() where id=true",
-        [snapshot.cap_usd, snapshot.spent_usd, snapshot.blocked_reason, snapshot.blocked_at, snapshot.blocked_call_id],
+        "update public.product_1_1_pilot_spend_state set cap_usd=$1, spent_usd=$2, cap_set_by=$3, cap_reason=$4, cap_operation_id=$5, cap_set_at=$6, blocked_reason=$7, blocked_at=$8, updated_at=$9 where id=true",
+        [
+          snapshot.cap_usd,
+          snapshot.spent_usd,
+          snapshot.cap_set_by,
+          snapshot.cap_reason,
+          snapshot.cap_operation_id,
+          snapshot.cap_set_at,
+          snapshot.blocked_reason,
+          snapshot.blocked_at,
+          snapshot.updated_at,
+        ],
       );
     } catch (cleanupError) {
-      console.error("PROOFS: falha na limpeza — verifique manualmente", cleanupError);
+      failures += 1;
+      console.error("PROOFS: FALHA NA LIMPEZA (bloqueante) — verifique manualmente", cleanupError);
+      process.exitCode = 1;
     }
     await a.end().catch(() => undefined);
     await b.end().catch(() => undefined);

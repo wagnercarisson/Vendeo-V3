@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS public.product_1_1_pilot_spend_state (
   cap_set_at       TIMESTAMPTZ,
   blocked_reason   TEXT,
   blocked_at       TIMESTAMPTZ,
-  blocked_call_id  UUID,
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 INSERT INTO public.product_1_1_pilot_spend_state (id, cap_usd, spent_usd)
@@ -44,6 +43,14 @@ CREATE TABLE IF NOT EXISTS public.product_1_1_pilot_cap_audit (
   cap_usd      NUMERIC NOT NULL CHECK (cap_usd >= 0),
   reason       TEXT NOT NULL,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Conjunto de chamadas responsáveis pelo BLOQUEIO GLOBAL (preserva TODAS; o
+-- bloqueio só é liberado quando o conjunto fica vazio).
+CREATE TABLE IF NOT EXISTS public.product_1_1_pilot_blocked_calls (
+  call_id    UUID PRIMARY KEY,
+  reason     TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- =============================================================================
@@ -75,15 +82,19 @@ CREATE INDEX IF NOT EXISTS idx_p1_1_pilot_calls_unknown
 ALTER TABLE public.product_1_1_pilot_spend_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_1_1_pilot_paid_calls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_1_1_pilot_cap_audit ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_1_1_pilot_blocked_calls ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.product_1_1_pilot_spend_state FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.product_1_1_pilot_paid_calls FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.product_1_1_pilot_cap_audit FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.product_1_1_pilot_blocked_calls FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.product_1_1_pilot_spend_state FROM service_role;
 REVOKE ALL ON TABLE public.product_1_1_pilot_paid_calls FROM service_role;
 REVOKE ALL ON TABLE public.product_1_1_pilot_cap_audit FROM service_role;
+REVOKE ALL ON TABLE public.product_1_1_pilot_blocked_calls FROM service_role;
 GRANT SELECT ON TABLE public.product_1_1_pilot_spend_state TO service_role;
 GRANT SELECT ON TABLE public.product_1_1_pilot_paid_calls TO service_role;
 GRANT SELECT ON TABLE public.product_1_1_pilot_cap_audit TO service_role;
+GRANT SELECT ON TABLE public.product_1_1_pilot_blocked_calls TO service_role;
 
 -- =============================================================================
 -- 3. RPC: definir o teto (auditável; idempotente por operation_id)
@@ -203,9 +214,11 @@ BEGIN
   -- Configuração inicial fail-closed.
   IF v_state.cap_usd IS NULL THEN RAISE EXCEPTION 'pilot_cap_not_configured'; END IF;
 
-  -- Bloqueio GLOBAL do piloto (instalado quando `mark_unknown` não pôde persistir):
-  -- recusa QUALQUER nova chamada até reconciliação explícita.
-  IF v_state.blocked_reason IS NOT NULL THEN RAISE EXCEPTION 'pilot_globally_blocked'; END IF;
+  -- Bloqueio GLOBAL do piloto (rede de segurança): recusa QUALQUER nova chamada
+  -- enquanto houver QUALQUER chamada no conjunto de bloqueio (preserva todas).
+  IF EXISTS (SELECT 1 FROM public.product_1_1_pilot_blocked_calls) THEN
+    RAISE EXCEPTION 'pilot_globally_blocked';
+  END IF;
 
   -- Resultado desconhecido em QUALQUER campanha bloqueia TODAS as novas chamadas.
   SELECT EXISTS (SELECT 1 FROM public.product_1_1_pilot_paid_calls WHERE state = 'unknown')
@@ -359,8 +372,7 @@ SET search_path = ''
 AS $$
 DECLARE
   v_row      public.product_1_1_pilot_paid_calls%ROWTYPE;
-  v_bound    UUID;
-  v_is_bound BOOLEAN;
+  v_in_set   BOOLEAN;
 BEGIN
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
@@ -374,37 +386,39 @@ BEGIN
   SELECT * INTO v_row FROM public.product_1_1_pilot_paid_calls WHERE call_id = p_call_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'call_not_found'; END IF;
 
-  -- A liberação do BLOQUEIO GLOBAL só ocorre ao reconciliar a chamada VINCULADA.
-  SELECT blocked_call_id INTO v_bound FROM public.product_1_1_pilot_spend_state WHERE id = TRUE;
-  v_is_bound := (v_bound IS NOT NULL AND v_bound = p_call_id);
+  -- Pertence ao CONJUNTO de bloqueio global?
+  v_in_set := EXISTS (
+    SELECT 1 FROM public.product_1_1_pilot_blocked_calls WHERE call_id = p_call_id
+  );
 
   IF v_row.state = 'stale' THEN
-    IF v_is_bound THEN
+    IF v_in_set THEN
+      DELETE FROM public.product_1_1_pilot_blocked_calls WHERE call_id = p_call_id;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.product_1_1_pilot_blocked_calls) THEN
       UPDATE public.product_1_1_pilot_spend_state
-         SET blocked_reason = NULL, blocked_at = NULL, blocked_call_id = NULL, updated_at = now()
-       WHERE id = TRUE;
+         SET blocked_reason = NULL, blocked_at = NULL, updated_at = now() WHERE id = TRUE;
     END IF;
     RETURN jsonb_build_object('success', true, 'idempotent', true, 'state', 'stale', 'call_id', p_call_id);
   END IF;
 
-  -- Reconciliável: `unknown` (fluxo normal) OU `in_flight` vinculada ao bloqueio
-  -- global (o caso em que `mark_unknown` falhou e a chamada ficou travada).
-  IF v_row.state <> 'unknown' AND NOT (v_row.state = 'in_flight' AND v_is_bound) THEN
+  -- Reconciliável: `unknown` OU `in_flight` PERTENCENTE ao conjunto de bloqueio.
+  IF v_row.state <> 'unknown' AND NOT (v_row.state = 'in_flight' AND v_in_set) THEN
     RAISE EXCEPTION 'call_not_unknown';
   END IF;
 
-  -- Mantém a estimativa CONTABILIZADA; marca `stale` (não bloqueia mais) e
-  -- registra a auditoria (ator/motivo) no próprio registro da chamada.
   UPDATE public.product_1_1_pilot_paid_calls
      SET state = 'stale', resolved_by = p_actor_id, resolution_reason = btrim(p_reason), updated_at = now()
    WHERE call_id = p_call_id;
 
-  -- Limpa o bloqueio global SOMENTE quando reconcilia a chamada VINCULADA
-  -- (reconciliar outra chamada NÃO limpa indiscriminadamente o bloqueio pendente).
-  IF v_is_bound THEN
+  -- Remove ESTA chamada do conjunto; limpa o bloqueio global SOMENTE quando o
+  -- conjunto fica VAZIO (se outra chamada inconclusiva permanecer, segue bloqueado).
+  IF v_in_set THEN
+    DELETE FROM public.product_1_1_pilot_blocked_calls WHERE call_id = p_call_id;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.product_1_1_pilot_blocked_calls) THEN
     UPDATE public.product_1_1_pilot_spend_state
-       SET blocked_reason = NULL, blocked_at = NULL, blocked_call_id = NULL, updated_at = now()
-     WHERE id = TRUE;
+       SET blocked_reason = NULL, blocked_at = NULL, updated_at = now() WHERE id = TRUE;
   END IF;
 
   RETURN jsonb_build_object('success', true, 'idempotent', false, 'state', 'stale', 'call_id', p_call_id);
@@ -426,11 +440,13 @@ AS $$
 BEGIN
   IF p_reason IS NULL OR btrim(p_reason) = '' THEN RAISE EXCEPTION 'missing_reason'; END IF;
   PERFORM pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'));
-  -- Vincula o bloqueio à CHAMADA que o originou (para reconciliação humana posterior).
+  -- Preserva TODAS as chamadas responsáveis (sem perder a 2ª inconclusiva).
+  INSERT INTO public.product_1_1_pilot_blocked_calls (call_id, reason)
+  VALUES (p_call_id, btrim(p_reason))
+  ON CONFLICT (call_id) DO NOTHING;
   UPDATE public.product_1_1_pilot_spend_state
      SET blocked_reason = COALESCE(blocked_reason, btrim(p_reason)),
          blocked_at = COALESCE(blocked_at, now()),
-         blocked_call_id = COALESCE(blocked_call_id, p_call_id),
          updated_at = now()
    WHERE id = TRUE;
   RETURN jsonb_build_object('success', true, 'blocked', true, 'call_id', p_call_id);
@@ -460,6 +476,7 @@ GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_block_global(UUID, TEXT) TO s
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_end_paid_call(UUID, UUID, NUMERIC);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_begin_paid_call(UUID, UUID, UUID, TEXT, INTEGER, NUMERIC, UUID);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_set_cap(UUID, NUMERIC, TEXT, UUID);
+-- DROP TABLE IF EXISTS public.product_1_1_pilot_blocked_calls;
 -- DROP TABLE IF EXISTS public.product_1_1_pilot_cap_audit;
 -- DROP TABLE IF EXISTS public.product_1_1_pilot_paid_calls;
 -- DROP TABLE IF EXISTS public.product_1_1_pilot_spend_state;
