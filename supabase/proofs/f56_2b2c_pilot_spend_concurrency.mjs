@@ -118,18 +118,22 @@ export async function runProofs({ makeClient, log = () => {} }) {
     const opA1 = randomUUID();
     const opB1 = randomUUID();
     createdOps.push(opA1, opB1);
+    const readCap = async () =>
+      (await a.query(
+        "select cap_usd, cap_set_by, cap_reason, cap_operation_id, cap_set_at from public.product_1_1_pilot_spend_state where id = true",
+      )).rows[0];
+    // Estado esperado dos campos de TETO = atualizado IMEDIATAMENTE após CADA mutação
+    // confirmada (se a 2ª falhar, o esperado reflete a 1ª).
     await a.query("select public.product_1_1_pilot_set_cap($1,$2,$3,$4)", [actor, 1.0, "A", opA1]);
+    expectedCap = await readCap();
     await a.query("select public.product_1_1_pilot_set_cap($1,$2,$3,$4)", [actor, 5.0, "B", opB1]);
+    expectedCap = await readCap();
     const replay = await a.query("select public.product_1_1_pilot_set_cap($1,$2,$3,$4) as r", [actor, 1.0, "A", opA1]);
     const capNow = await a.query("select cap_usd from public.product_1_1_pilot_spend_state where id = true");
     check(replay.rows[0].r.idempotent === true, "replay de A ⇒ idempotent");
     check(Number(capNow.rows[0].cap_usd) === 5.0, "replay de A NÃO reaplica teto antigo (segue 5.0)");
     const conflict = await a.query("select public.product_1_1_pilot_set_cap($1,$2,$3,$4) as r", [actor, 9.9, "x", opA1]);
     check(conflict.rows[0].r.conflict === true, "operation_id divergente ⇒ conflito");
-    // Atualiza o esperado com os campos de teto EFETIVAMENTE deixados pelas provas.
-    expectedCap = (await a.query(
-      "select cap_usd, cap_set_by, cap_reason, cap_operation_id, cap_set_at from public.product_1_1_pilot_spend_state where id = true",
-    )).rows[0];
 
     // (A) begin × begin com barreira
     const cA = randomUUID();
