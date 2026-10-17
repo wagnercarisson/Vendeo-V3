@@ -48,7 +48,7 @@ export interface PilotSpendRepositoryPort {
     ownerToken: string;
     reason: string;
   }): Promise<Record<string, unknown>>;
-  blockGlobal(input: { reason: string }): Promise<Record<string, unknown>>;
+  blockGlobal(input: { callId: string; reason: string }): Promise<Record<string, unknown>>;
   reconcileUnknown(input: {
     actorId: string;
     callId: string;
@@ -123,8 +123,11 @@ export class SupabasePilotSpendRepository implements PilotSpendRepositoryPort {
     });
   }
 
-  blockGlobal(input: { reason: string }): Promise<Record<string, unknown>> {
-    return this.rpc("product_1_1_pilot_block_global", { p_reason: input.reason });
+  blockGlobal(input: { callId: string; reason: string }): Promise<Record<string, unknown>> {
+    return this.rpc("product_1_1_pilot_block_global", {
+      p_call_id: input.callId,
+      p_reason: input.reason,
+    });
   }
 
   reconcileUnknown(input: {

@@ -44,6 +44,14 @@ describe("F56.2b2c — resolução do gate (arma / inativo / BLOQUEADO)", () => 
     await expect(resolvePilotSpendGate({ store: STORE })).resolves.toEqual({ kind: "inactive" });
   });
 
+  it("resposta REAL `read_failure` (não-exceção) ⇒ blocked (INCERTEZA, não inativo)", async () => {
+    mockResolveAuth.mockResolvedValue({ allowed: false, code: "read_failure" });
+    await expect(resolvePilotSpendGate({ store: STORE })).resolves.toEqual({
+      kind: "blocked",
+      reason: "authorization_read_failure",
+    });
+  });
+
   it("autorização estreita + flag ligada ⇒ armed", async () => {
     mockResolveAuth.mockResolvedValue({ allowed: true, stage: "isolated_pilot", usedGeneralPrecedence: false });
     mockFlags.mockResolvedValue({

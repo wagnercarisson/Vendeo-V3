@@ -125,13 +125,30 @@ class StatefulFakeRepo implements PilotSpendRepositoryPort {
   async reconcileUnknown(input: { callId: string }): Promise<Record<string, unknown>> {
     const c = this.calls.get(input.callId);
     if (!c) throw new Error("call_not_found");
+    const isBound = this.blockedCallId !== null && this.blockedCallId === input.callId;
+    if (c.state === "stale") {
+      if (isBound) {
+        this.blocked = false;
+        this.blockedCallId = null;
+      }
+      return { success: true, idempotent: true, state: "stale" };
+    }
+    if (c.state !== "unknown" && !(c.state === "in_flight" && isBound)) {
+      throw new Error("call_not_unknown");
+    }
     c.state = "stale";
-    return { success: true, state: "stale" };
+    if (isBound) {
+      this.blocked = false;
+      this.blockedCallId = null;
+    }
+    return { success: true, idempotent: false, state: "stale" };
   }
 
   blocked = false;
-  async blockGlobal(): Promise<Record<string, unknown>> {
+  blockedCallId: string | null = null;
+  async blockGlobal(input: { callId: string }): Promise<Record<string, unknown>> {
     this.blocked = true;
+    this.blockedCallId = this.blockedCallId ?? input.callId;
     return { success: true, blocked: true };
   }
 }
@@ -231,7 +248,7 @@ describe("F56.2b2c — protocolo do serviço com RPC simulada COM ESTADO", () =>
     });
   });
 
-  it("falha de markUnknown instala BLOQUEIO GLOBAL (nenhuma nova chamada, qualquer campanha)", async () => {
+  it("falha de markUnknown instala BLOQUEIO GLOBAL e a reconciliação da chamada VINCULADA libera", async () => {
     const repo = new StatefulFakeRepo();
     repo.setCap({ capUsd: 10 });
     const c = control(repo);
@@ -240,8 +257,34 @@ describe("F56.2b2c — protocolo do serviço com RPC simulada COM ESTADO", () =>
     repo.markUnknownFails = true;
     await c.markUnknown({ handle, reason: "timeout" });
     expect(repo.blocked).toBe(true);
+    expect(repo.blockedCallId).toBe(handle.callId);
     const other = await c.beginPaidCall({ campaignId: "camp-b", operationId: "op-b", attemptSeq: 1, kind: "copy_initial", estimatedUsd: 0.1 });
     expect(other).toEqual({ acquired: false, outcome: "blocked", reason: "pilot_globally_blocked" });
+
+    // Reconciliação HUMANA da chamada VINCULADA (mesmo em `in_flight`) libera o bloqueio.
+    await c.reconcileUnknown({ actorId: "admin", callId: handle.callId, decision: "keep_accounted_release", reason: "ok", operationId: "rec-x" });
+    expect(repo.blocked).toBe(false);
+    expect(repo.calls.get(handle.callId)!.state).toBe("stale");
+    const after = await c.beginPaidCall({ campaignId: "camp-b", operationId: "op-b", attemptSeq: 1, kind: "image_primary", estimatedUsd: 0.1 });
+    expect(after.acquired).toBe(true);
+  });
+
+  it("reconciliar OUTRA chamada NÃO limpa o bloqueio pendente", async () => {
+    const repo = new StatefulFakeRepo();
+    repo.setCap({ capUsd: 10 });
+    const c = control(repo);
+    const img = await c.beginPaidCall({ ...BASE, kind: "image_primary", estimatedUsd: 0.3 });
+    const copy = await c.beginPaidCall({ ...BASE, kind: "copy_initial", estimatedUsd: 0.2 });
+    const imgHandle = (img as { handle: PilotPaidCallHandle }).handle;
+    const copyHandle = (copy as { handle: PilotPaidCallHandle }).handle;
+    repo.markUnknownFails = true;
+    await c.markUnknown({ handle: imgHandle, reason: "timeout" });
+    expect(repo.blocked).toBe(true);
+    // A copy não é a chamada vinculada e está `in_flight` ⇒ recusa.
+    await expect(
+      c.reconcileUnknown({ actorId: "admin", callId: copyHandle.callId, decision: "keep_accounted_release", reason: "ok", operationId: "rec-y" }),
+    ).rejects.toThrow(/call_not_unknown/);
+    expect(repo.blocked).toBe(true);
   });
 });
 

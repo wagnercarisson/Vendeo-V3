@@ -223,6 +223,7 @@ export class ProductOneToOnePilotSpendControl implements PilotSpendGate {
       });
     } catch (error) {
       await this.repository.blockGlobal({
+        callId: input.handle.callId,
         reason: `mark_unknown_failed:${input.reason}`,
       });
       void error;

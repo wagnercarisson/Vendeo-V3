@@ -43,8 +43,16 @@ export async function resolvePilotSpendGate(input: {
     return { kind: "blocked", reason: "eligibility_context_failure" };
   }
 
-  // Leitura DETERMINÍSTA não-armada ⇒ INATIVO (segue sem gate).
-  if (!decision.allowed || decision.stage !== "isolated_pilot") {
+  // Leitura DETERMINÍSTA não-armada ⇒ INATIVO (segue sem gate). ATENÇÃO:
+  // `resolveProductFlowAuthorization` **retorna** `{allowed:false, code:"read_failure"}`
+  // em falha de leitura (não lança) — isso é INCERTEZA e deve BLOQUEAR.
+  if (!decision.allowed) {
+    if (decision.code === "read_failure" || decision.code === "flags_unavailable") {
+      return { kind: "blocked", reason: "authorization_read_failure" };
+    }
+    return { kind: "inactive" };
+  }
+  if (decision.stage !== "isolated_pilot") {
     return { kind: "inactive" };
   }
 

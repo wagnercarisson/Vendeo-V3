@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS public.product_1_1_pilot_spend_state (
   cap_set_at       TIMESTAMPTZ,
   blocked_reason   TEXT,
   blocked_at       TIMESTAMPTZ,
+  blocked_call_id  UUID,
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 INSERT INTO public.product_1_1_pilot_spend_state (id, cap_usd, spent_usd)
@@ -357,7 +358,9 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_row public.product_1_1_pilot_paid_calls%ROWTYPE;
+  v_row      public.product_1_1_pilot_paid_calls%ROWTYPE;
+  v_bound    UUID;
+  v_is_bound BOOLEAN;
 BEGIN
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_operation_id IS NULL THEN RAISE EXCEPTION 'missing_operation_id'; END IF;
@@ -370,10 +373,25 @@ BEGIN
 
   SELECT * INTO v_row FROM public.product_1_1_pilot_paid_calls WHERE call_id = p_call_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'call_not_found'; END IF;
+
+  -- A liberação do BLOQUEIO GLOBAL só ocorre ao reconciliar a chamada VINCULADA.
+  SELECT blocked_call_id INTO v_bound FROM public.product_1_1_pilot_spend_state WHERE id = TRUE;
+  v_is_bound := (v_bound IS NOT NULL AND v_bound = p_call_id);
+
   IF v_row.state = 'stale' THEN
+    IF v_is_bound THEN
+      UPDATE public.product_1_1_pilot_spend_state
+         SET blocked_reason = NULL, blocked_at = NULL, blocked_call_id = NULL, updated_at = now()
+       WHERE id = TRUE;
+    END IF;
     RETURN jsonb_build_object('success', true, 'idempotent', true, 'state', 'stale', 'call_id', p_call_id);
   END IF;
-  IF v_row.state <> 'unknown' THEN RAISE EXCEPTION 'call_not_unknown'; END IF;
+
+  -- Reconciliável: `unknown` (fluxo normal) OU `in_flight` vinculada ao bloqueio
+  -- global (o caso em que `mark_unknown` falhou e a chamada ficou travada).
+  IF v_row.state <> 'unknown' AND NOT (v_row.state = 'in_flight' AND v_is_bound) THEN
+    RAISE EXCEPTION 'call_not_unknown';
+  END IF;
 
   -- Mantém a estimativa CONTABILIZADA; marca `stale` (não bloqueia mais) e
   -- registra a auditoria (ator/motivo) no próprio registro da chamada.
@@ -381,11 +399,13 @@ BEGIN
      SET state = 'stale', resolved_by = p_actor_id, resolution_reason = btrim(p_reason), updated_at = now()
    WHERE call_id = p_call_id;
 
-  -- A reconciliação explícita também REMOVE o bloqueio global (instalado quando
-  -- `mark_unknown` não pôde persistir).
-  UPDATE public.product_1_1_pilot_spend_state
-     SET blocked_reason = NULL, blocked_at = NULL, updated_at = now()
-   WHERE id = TRUE;
+  -- Limpa o bloqueio global SOMENTE quando reconcilia a chamada VINCULADA
+  -- (reconciliar outra chamada NÃO limpa indiscriminadamente o bloqueio pendente).
+  IF v_is_bound THEN
+    UPDATE public.product_1_1_pilot_spend_state
+       SET blocked_reason = NULL, blocked_at = NULL, blocked_call_id = NULL, updated_at = now()
+     WHERE id = TRUE;
+  END IF;
 
   RETURN jsonb_build_object('success', true, 'idempotent', false, 'state', 'stale', 'call_id', p_call_id);
 END;
@@ -394,7 +414,10 @@ $$;
 -- =============================================================================
 -- 8. RPC: bloqueio GLOBAL do piloto (rede de segurança quando `mark_unknown` falha)
 -- =============================================================================
-CREATE OR REPLACE FUNCTION public.product_1_1_pilot_block_global(p_reason TEXT)
+CREATE OR REPLACE FUNCTION public.product_1_1_pilot_block_global(
+  p_call_id UUID,
+  p_reason  TEXT
+)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -403,12 +426,14 @@ AS $$
 BEGIN
   IF p_reason IS NULL OR btrim(p_reason) = '' THEN RAISE EXCEPTION 'missing_reason'; END IF;
   PERFORM pg_advisory_xact_lock(hashtext('product_1_1_pilot_spend'));
+  -- Vincula o bloqueio à CHAMADA que o originou (para reconciliação humana posterior).
   UPDATE public.product_1_1_pilot_spend_state
      SET blocked_reason = COALESCE(blocked_reason, btrim(p_reason)),
          blocked_at = COALESCE(blocked_at, now()),
+         blocked_call_id = COALESCE(blocked_call_id, p_call_id),
          updated_at = now()
    WHERE id = TRUE;
-  RETURN jsonb_build_object('success', true, 'blocked', true);
+  RETURN jsonb_build_object('success', true, 'blocked', true, 'call_id', p_call_id);
 END;
 $$;
 
@@ -418,18 +443,18 @@ REVOKE ALL ON FUNCTION public.product_1_1_pilot_begin_paid_call(UUID, UUID, UUID
 REVOKE ALL ON FUNCTION public.product_1_1_pilot_end_paid_call(UUID, UUID, NUMERIC) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.product_1_1_pilot_mark_unknown(UUID, UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.product_1_1_pilot_reconcile_unknown(UUID, UUID, TEXT, TEXT, UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.product_1_1_pilot_block_global(TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.product_1_1_pilot_block_global(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_set_cap(UUID, NUMERIC, TEXT, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_begin_paid_call(UUID, UUID, UUID, TEXT, INTEGER, NUMERIC, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_end_paid_call(UUID, UUID, NUMERIC) TO service_role;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_mark_unknown(UUID, UUID, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_reconcile_unknown(UUID, UUID, TEXT, TEXT, UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_block_global(TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.product_1_1_pilot_block_global(UUID, TEXT) TO service_role;
 
 -- =============================================================================
 -- REVERT (executar manualmente apenas na instância local, se autorizado)
 -- =============================================================================
--- DROP FUNCTION IF EXISTS public.product_1_1_pilot_block_global(TEXT);
+-- DROP FUNCTION IF EXISTS public.product_1_1_pilot_block_global(UUID, TEXT);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_reconcile_unknown(UUID, UUID, TEXT, TEXT, UUID);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_mark_unknown(UUID, UUID, TEXT);
 -- DROP FUNCTION IF EXISTS public.product_1_1_pilot_end_paid_call(UUID, UUID, NUMERIC);
