@@ -73,18 +73,6 @@ export async function resolvePilotSpendGate(input: {
   return { kind: "armed", gate: new ProductOneToOnePilotSpendControl() };
 }
 
-/**
- * Estimativa CONSERVADORA aprovada para a COPY (USD). É uma **decisão humana**
- * (Plan 04); enquanto não configurada, retorna `undefined` — o gate então
- * BLOQUEIA a copy (nunca contabiliza US$ 0).
- */
-export function resolvePilotCopyEstimatedUsd(): number | undefined {
-  const raw = process.env.VENDEO_PILOT_COPY_ESTIMATED_USD;
-  if (raw === undefined || raw.trim() === "") return undefined;
-  const value = Number(raw);
-  return Number.isFinite(value) && value > 0 ? value : undefined;
-}
-
 // Estimativa (opção 2) extraída para módulo PURO `./copy-estimate` (sem
 // server-only/env), para uso pelo runner da copy sem puxar a cadeia de flags.
 export {

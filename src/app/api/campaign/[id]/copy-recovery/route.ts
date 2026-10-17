@@ -11,7 +11,7 @@ import { getLaunchConfig } from "@/lib/launch-config/config";
 import type { CampaignIntent } from "@/lib/campaign/types";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
-import { resolvePilotSpendGate, resolvePilotCopyEstimatedUsd } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
+import { resolvePilotSpendGate } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import {
   ProductOneToOneCopyRecoveryClient,
@@ -340,7 +340,7 @@ export const POST = apiHandler(
         // copy é decisão humana aprovada; ausente ⇒ a chamada é BLOQUEADA.
         runnerDeps: {
           pilotSpend: pilotGate.kind === "armed" ? pilotGate.gate : undefined,
-          estimatedUsd: resolvePilotCopyEstimatedUsd(),
+          // (estimativa derivada no runner a partir do pricing do alvo)
         },
       });
       return NextResponse.json({ recovery: result });

@@ -341,8 +341,29 @@ function fakeInvoker(behavior: () => AiInvocationResult): AiInvoker {
   return {
     invoke: vi.fn(async () => behavior()),
     hasFallback: vi.fn(async () => false),
+    prepare: vi.fn(async () => ({
+      capability: "campaign_copy",
+      target: "primary",
+      provider: "openai",
+      model: "gpt-6-luna",
+      protocol: "chat-completions",
+      resolved: { provider: "openai", model: "gpt-6-luna", protocol: "chat-completions" },
+    })),
+    invokePrepared: vi.fn(async () => behavior()),
   } as unknown as AiInvoker;
 }
+
+/** Pricing simulado do alvo (testes) — cadastrado (não `code_default`). */
+const PRICING = async () => ({ inputUsdPer1M: 0.1, outputUsdPer1M: 0.5, versionId: "test" });
+
+const fakePrepare = vi.fn(async () => ({
+  capability: "campaign_copy",
+  target: "primary",
+  provider: "openai",
+  model: "gpt-6-luna",
+  protocol: "chat-completions",
+  resolved: { provider: "openai", model: "gpt-6-luna", protocol: "chat-completions" },
+}));
 
 function spyGate(
   decision: PilotPaidCallDecision,
@@ -372,23 +393,28 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
     const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, {
       invoker,
       pilotSpend: gate,
-      estimatedUsd: 0.05,
+      readCopyPricing: PRICING,
     });
     await expect(
       ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
     ).rejects.toThrow(/pilot_spend_blocked/);
-    expect((invoker.invoke as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect((invoker.invokePrepared as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
     expect(gate.begin).toHaveBeenCalledTimes(1);
   });
 
-  it("estimativa ausente quando ARMADO ⇒ bloqueia antes do provider", async () => {
+  it("pricing ausente/inválido quando ARMADO ⇒ bloqueia antes do provider", async () => {
     const gate = spyGate({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "copy_initial" } });
     const invoker = fakeInvoker(() => ({ content: "{}" }) as AiInvocationResult);
-    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate });
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, {
+      invoker,
+      pilotSpend: gate,
+      readCopyPricing: async () => null,
+    });
     await expect(
       ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
-    ).rejects.toThrow(/estimate_required/);
-    expect((invoker.invoke as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    ).rejects.toThrow(/pricing_unavailable/);
+    expect((invoker.invokePrepared as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(gate.begin).not.toHaveBeenCalled();
   });
 
   it("gate adquirido ⇒ provider chamado e endPaidCall registrado", async () => {
@@ -399,23 +425,26 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
           content: JSON.stringify({ title: "T", caption: "Promoção", hashtags: ["#a"], cta_post: "Saiba mais!" }),
         }) as AiInvocationResult,
     );
-    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, estimatedUsd: 0.05 });
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, readCopyPricing: PRICING });
     await ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined });
-    expect((invoker.invoke as unknown as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+    expect((invoker.invokePrepared as unknown as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
     expect(gate.end).toHaveBeenCalledTimes(1);
   });
 
   it("timeout do provider ⇒ markUnknown (não encerra como conhecido)", async () => {
     const gate = spyGate({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "copy_auto" } });
+    const throwTimeout = async (): Promise<AiInvocationResult> => {
+      const err = new Error("timed out");
+      (err as unknown as { kind: string }).kind = "timeout";
+      throw err;
+    };
     const invoker: AiInvoker = {
-      invoke: vi.fn(async () => {
-        const err = new Error("timed out");
-        (err as unknown as { kind: string }).kind = "timeout";
-        throw err;
-      }),
+      invoke: vi.fn(throwTimeout),
       hasFallback: vi.fn(async () => false),
+      prepare: fakePrepare,
+      invokePrepared: vi.fn(throwTimeout),
     } as unknown as AiInvoker;
-    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, estimatedUsd: 0.05 });
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, readCopyPricing: PRICING });
     await expect(
       ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
     ).rejects.toThrow();
@@ -425,15 +454,18 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
 
   it("falha de REDE (ECONNRESET) ⇒ markUnknown (não encerra como conhecido)", async () => {
     const gate = spyGate({ acquired: true, handle: { callId: "c", ownerToken: "o", kind: "copy_auto" } });
+    const throwNetwork = async (): Promise<AiInvocationResult> => {
+      const err = new Error("read ECONNRESET");
+      (err as unknown as { code: string }).code = "ECONNRESET";
+      throw err;
+    };
     const invoker: AiInvoker = {
-      invoke: vi.fn(async () => {
-        const err = new Error("read ECONNRESET");
-        (err as unknown as { code: string }).code = "ECONNRESET";
-        throw err;
-      }),
+      invoke: vi.fn(throwNetwork),
       hasFallback: vi.fn(async () => false),
+      prepare: fakePrepare,
+      invokePrepared: vi.fn(throwNetwork),
     } as unknown as AiInvoker;
-    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, estimatedUsd: 0.05 });
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, readCopyPricing: PRICING });
     await expect(
       ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
     ).rejects.toThrow();
@@ -447,13 +479,16 @@ describe("F56.2b2c — consumidor REAL da copy com provider SIMULADO", () => {
       throw new Error("db_down_block");
     });
     const gate = { beginPaidCall: begin, endPaidCall: end, markUnknown: unknown } as unknown as PilotSpendGate;
+    const throwOriginal = async (): Promise<AiInvocationResult> => {
+      throw original;
+    };
     const invoker = {
-      invoke: vi.fn(async () => {
-        throw original;
-      }),
+      invoke: vi.fn(throwOriginal),
       hasFallback: vi.fn(async () => false),
+      prepare: fakePrepare,
+      invokePrepared: vi.fn(throwOriginal),
     } as unknown as AiInvoker;
-    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, estimatedUsd: 0.05 });
+    const ops = createDefaultProductOneToOneCopyOps(COPY_INPUT, { invoker, pilotSpend: gate, readCopyPricing: PRICING });
     await expect(
       ops.runCopy({ campaignId: "camp-a", operationId: "op-a", signal: new AbortController().signal, commit: async () => undefined }),
     ).rejects.toBe(original); // erro ORIGINAL (desconhecido) preservado — não o erro do gate

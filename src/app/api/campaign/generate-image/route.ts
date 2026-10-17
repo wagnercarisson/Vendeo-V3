@@ -41,7 +41,7 @@ import { detectExclusiveNewFlowFields } from "@/lib/product-1-1/submission/exclu
 import { assertSubmissionEligible } from "@/lib/product-1-1/submission/assert-submission-eligible";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
-import { resolvePilotSpendGate, resolvePilotCopyEstimatedUsd } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
+import { resolvePilotSpendGate } from "@/lib/product-1-1/pilot/resolve-pilot-spend-gate";
 import { NewFlowGenerateImageRequestSchema } from "@/lib/image-generation/schema";
 import {
   runProductOneToOneGeneration,
@@ -292,7 +292,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       );
     }
     const pilotSpendDep = pilotGate.kind === "armed" ? pilotGate.gate : undefined;
-    const pilotCopyEstimatedUsd = resolvePilotCopyEstimatedUsd();
+    // (estimativa da copy agora derivada do pricing do alvo no runner)
 
     let eligibilityDecision: Awaited<
       ReturnType<typeof resolveProductFlowAuthorization>
@@ -496,7 +496,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         // registro de tentativa ou criação de campanha roda.
         return await runProductOneToOneGeneration(newFlowOrchestrationInput, {
           pilotSpend: pilotSpendDep,
-          pilotCopyEstimatedUsd,
+          // (estimativa derivada no runner)
         });
       }
 
@@ -920,7 +920,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         },
         // F56.2b2c (B2.3) — conexão server-side OBRIGATÓRIA do gate de gasto do
         // piloto (null ⇒ piloto INATIVO; preserva o legado).
-        { pilotSpend: pilotSpendDep, pilotCopyEstimatedUsd },
+        { pilotSpend: pilotSpendDep },
       );
     }
   }

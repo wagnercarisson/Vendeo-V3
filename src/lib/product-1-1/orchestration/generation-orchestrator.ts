@@ -399,7 +399,6 @@ export interface ProductOneToOneGenerationDeps {
    * F56.2b2c (B2.3) — estimativa aprovada (USD) da CALL DE COPY (decisão humana,
    * Plan 04). Sem valor, a copy é BLOQUEADA quando o gate está armado.
    */
-  readonly pilotCopyEstimatedUsd?: number;
 }
 
 type NdjsonEvent = Record<string, unknown>;
@@ -573,7 +572,6 @@ export async function runProductOneToOneGeneration(
             pilotSpend: deps.pilotSpend,
             callKind: "copy_initial",
             attemptSeq: 1,
-            estimatedUsd: deps.pilotCopyEstimatedUsd,
           },
         )
       : undefined);

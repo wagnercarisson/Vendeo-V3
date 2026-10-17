@@ -104,19 +104,13 @@ export interface DefaultProductOneToOneCopyRunnerDeps {
   readonly pilotSpend?: PilotSpendGate;
   /** Kind da chamada de copy (`copy_initial` default; `copy_auto`/`copy_manual` na recuperação). */
   readonly callKind?: PilotPaidCallKind;
-  /**
-   * Estimativa conservadora (USD) da chamada de copy. OBRIGATÓRIA quando o gate do
-   * piloto está ARMADO (`pilotSpend` presente): ausência ⇒ a chamada é BLOQUEADA
-   * (nunca contabilizada como US$ 0).
-   */
-  readonly estimatedUsd?: number;
+  /** Sequência real da tentativa (default 0) — contabilidade por chamada. */
+  readonly attemptSeq?: number;
   /** Leitura do PRICING do ALVO PREPARADO (default: `AiModelPricingService`). */
   readonly readCopyPricing?: (target: {
     provider: string;
     model: string;
   }) => Promise<PilotCopyPricing | null>;
-  /** Sequência real da tentativa (default 0) — contabilidade por chamada. */
-  readonly attemptSeq?: number;
 }
 
 /** Leitor DEFAULT do pricing do alvo preparado (falha/ausência ⇒ `null`). */

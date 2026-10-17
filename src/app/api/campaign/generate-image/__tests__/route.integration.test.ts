@@ -67,7 +67,6 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/product-1-1/pilot/resolve-pilot-spend-gate", () => ({
   resolvePilotSpendGate: (input: unknown) => h.resolvePilotSpendGate(input),
-  resolvePilotCopyEstimatedUsd: () => 0.05,
 }));
 
 vi.mock("@/lib/ai-cost/image-pair-pricing", async (importOriginal) => {
