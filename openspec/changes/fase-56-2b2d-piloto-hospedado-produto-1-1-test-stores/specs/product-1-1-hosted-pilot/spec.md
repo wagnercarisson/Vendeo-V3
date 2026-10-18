@@ -88,22 +88,60 @@ O encerramento da execução pela plataforma SHALL NOT ser interpretado como pro
 
 ### Requirement: Provas hospedadas mínimas, sem simulação pública
 
-As provas hospedadas SHALL ser o **menor conjunto** necessário, **reutilizando** as provas locais existentes, com **provider simulado** onde possível. O sistema SHALL NOT expor **rota pública de simulação** nem permitir que **clientes escolham provider simulado**.
+O destino adotado SHALL ser **sem novo ambiente remoto** (Alt C): as provas **P1** são **locais** (reuso), e a prova **P3** de execução Vercel SHALL ocorrer em **produção restrita a lojas de teste**, com provider **real**, sob checkpoint de chamada paga. A prova **P2** de banco remoto não-produção SHALL NOT ser exigida nem provisionada. O sistema SHALL NOT expor **rota pública de simulação** nem permitir que **clientes escolham provider simulado**.
 
 #### Scenario: Reuso das provas locais
 - **WHEN** uma comprovação já existe no escopo local
-- **THEN** ela é reutilizada como evidência de contrato
+- **THEN** ela é reutilizada como evidência de contrato (P1)
 - **AND** não é repetida sem necessidade no hospedado
+
+#### Scenario: P3 em produção restrita
+- **WHEN** a execução Vercel é comprovada
+- **THEN** ela usa a rota real e provider real em produção restrita a `test_stores`
+- **AND** ocorre sob checkpoint de chamada paga
+
+#### Scenario: Sem ambiente não-produção
+- **WHEN** as provas hospedadas são planejadas
+- **THEN** nenhum projeto Supabase não-produção é provisionado
+- **AND** P2 é registrada como não aplicável
 
 #### Scenario: Sem rota pública de simulação
 - **WHEN** as provas com provider simulado são executadas
-- **THEN** elas ocorrem em harness/Preview interno
+- **THEN** elas ocorrem apenas no harness local
 - **AND** nenhuma rota pública expõe simulação de provider
 
 #### Scenario: Cliente não escolhe provider
 - **WHEN** um cliente usa o fluxo
 - **THEN** o cliente **não** seleciona provider simulado
 - **AND** a escolha de provider permanece server-side
+
+### Requirement: Verificações no destino após as migrations
+
+Após as migrations, o destino SHALL ter **schema, RLS/grants e configuração** verificados por leitura server-side, **sem exportar dados**. `invalid`/`indeterminate` SHALL permanecer **inconclusivo** e o protocolo administrativo existente SHALL NOT ser ampliado.
+
+#### Scenario: Schema e RLS/grants verificados no destino
+- **WHEN** as migrations são aplicadas no destino
+- **THEN** schema, RLS/grants e configuração são verificados por leitura
+- **AND** nenhum dado é exportado
+
+#### Scenario: invalid/indeterminate permanecem inconclusivos
+- **WHEN** a evidência é `invalid` ou `indeterminate`
+- **THEN** a operação permanece inconclusiva
+- **AND** não há encerramento administrativo sem as precondições existentes
+
+### Requirement: D13 hospedado e kill real
+
+O **kill real** da plataforma SHALL permanecer **limitação** não deterministicamente reproduzível. **D13 hospedado SHALL NOT ser declarado resolvido pelo caminho feliz**; antes do piloto, SHALL haver **disposição explícita** sobre a limitação.
+
+#### Scenario: D13 não resolvido pelo caminho feliz
+- **WHEN** o piloto conclui com sucesso
+- **THEN** D13 hospedado não é declarado resolvido apenas por isso
+- **AND** a limitação do kill real permanece registrada
+
+#### Scenario: Disposição explícita antes do piloto
+- **WHEN** o piloto pago é autorizado
+- **THEN** existe disposição explícita sobre a limitação do kill real
+- **AND** a decisão é registrada antes da primeira chamada paga
 
 ### Requirement: Piloto manual restrito a lojas de teste
 

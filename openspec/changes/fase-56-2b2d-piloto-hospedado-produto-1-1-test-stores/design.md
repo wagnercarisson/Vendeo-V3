@@ -55,15 +55,17 @@ Fato: o teto da plataforma é **300s** e o timeout interno atual é **300s** →
 
 ### D4 — Provas hospedadas mínimas (reuso do local)
 
-**Decisão:** reaproveitar as provas locais como evidência de contrato e adicionar apenas o que o local **não** emula:
+**Decisão (reconciliada com Alt C — sem novo ambiente remoto):** reaproveitar as provas locais como evidência de contrato e adicionar apenas o que o local **não** emula, **sem provisionar ambiente**:
 
-- **Kill da plataforma** com **provider simulado** (sem chamada paga).
-- Caminho **automático PF** e **resolução autorizada/auditada** no banco hospedado.
-- **RLS/grants** e **ausência de vazamento de segredos em logs** no hospedado.
-- Captcha/Google reais por login manual.
+- **P1 — local (reuso):** fence, `unknown`, `delivered`, `refund_once`, kill **simulado**, idempotência; provider simulado é **fixture local**, sem rota pública.
+- **P3 — execução Vercel:** a orquestração real roda na função hospedada pela rota real `generate-image`, com **provider real**, **produção restrita a `test_stores`**, sob checkpoint de chamada paga. É a primeira operação paga do piloto.
+- **P2 — banco remoto não-produção: NÃO aplicável** (Alt C); harness/runner específicos de P2 **saem da execução**.
+- **Verificações no destino após as migrations:** schema, RLS/grants e configuração SHALL ser verificados por leitura server-side no destino (produção), **sem exportar dados**.
+- **RLS/grants**, **ausência de vazamento de segredos em logs** e Captcha/Google reais por login manual permanecem no conjunto mínimo.
 
-- **Ressalva 2 (kill ≠ ausência):** o kill da plataforma **não** prova ausência de upload e **não autoriza, por si só, nenhuma via de encerramento**. Preservar **duas vias**: (a) **automática**, com probe de arte (`integral`/`absent`/`invalid`/`indeterminate`) **fresco sob epoch** e as provas de fence; (b) **administrativa**, explicitamente **autorizada/auditada**, com as **precondições próprias** já aprovadas, **sem** exigir frescor universal. O frescor do epoch SHALL NOT ser universalizado.
-- **Ressalva 4 (sem simulação pública):** os testes com provider simulado SHALL ser **internos/efêmeros** (harness/Preview), **sem rota pública** e **sem** que o cliente escolha provider simulado.
+- **Ressalva 2 (kill ≠ ausência):** o kill da plataforma **não** prova ausência de upload e **não autoriza, por si só, nenhuma via de encerramento**. Preservar **duas vias**: (a) **automática**, com probe de arte (`integral`/`absent`/`invalid`/`indeterminate`) **fresco sob epoch** e as provas de fence; (b) **administrativa**, explicitamente **autorizada/auditada**, com as **precondições próprias** já aprovadas, **sem** exigir frescor universal. O frescor do epoch SHALL NOT ser universalizado. `invalid`/`indeterminate` permanecem **inconclusivos**.
+- **Ressalva 4 (sem simulação pública):** os testes com provider simulado SHALL ser **locais**, **sem rota pública** e **sem** que o cliente escolha provider simulado.
+- **Kill real:** não é deterministicamente reproduzível; permanece **limitação**. **D13 hospedado NÃO é declarado resolvido pelo caminho feliz** e exige **disposição explícita antes do piloto**.
 
 ### D5 — Piloto manual restrito e separação da abertura geral
 

@@ -40,24 +40,30 @@
 - [ ] 4.6 Deploy `main`; confirmar via API commit/branch/plano/Fluid/timeout; **fluxo permanece OFF**
 - [ ] 4.7 Configurar catálogo, pricing (principal+fallback) e `image_model_pair_config`; preflight `complete`
 - [ ] 4.8 Verificar não regressão do legado com **novo fluxo OFF**, **autorização desabilitada**, `all_stores=false` e **pausa global preservada** (legado operacional)
+- [ ] 4.9 Verificar no destino (produção) **schema, RLS/grants e configuração** por leitura server-side, **sem exportar dados**
 
-## 5. Provas hospedadas de recuperação e segurança (mínimas)
+## 5. Provas de recuperação e segurança (mínimas, Alt C)
 
-- [ ] 5.1 Reutilizar as provas locais como evidência de contrato (sem repetir o que já está coberto)
-- [ ] 5.2 Kill hospedado com **provider simulado interno/Preview** (sem rota pública) e verificação de claim residual
-- [ ] 5.3 Ausência+PF→`refunded` com probe fresco (kill ≠ ausência) no banco hospedado
-- [ ] 5.4 Arte íntegra→`delivered` no banco hospedado
-- [ ] 5.5 Inconclusivo→resolução **administrativa autorizada/auditada** no banco hospedado (precondições próprias, sem exigir frescor universal)
+> **Destino: Alt C — sem novo ambiente remoto.** P1 = local; P3 = execução Vercel em produção restrita a `test_stores`. P2 (banco remoto não-produção) **não aplicável**.
+
+- [ ] 5.1 Reutilizar as provas locais (P1) como evidência de contrato, sem repetir o que já está coberto
+- [ ] 5.2 Kill **simulado local** (P1) com provider simulado (fixture local, sem rota pública) e verificação de claim residual
+- [ ] 5.3 Ausência+PF→`refunded` com probe fresco (kill ≠ ausência) no destino, via leitura/execução controlada
+- [ ] 5.4 Arte íntegra→`delivered` no destino
+- [ ] 5.5 `invalid`/`indeterminate` **permanecem inconclusivos**; resolução administrativa só com as precondições existentes, sem ampliar RPC nem fabricar evidência
 - [ ] 5.6 Fence sob timeout/rede (`begin_publication`/`abort`/`mark_result_unknown`)
 - [ ] 5.7 Replay idempotente de `deliver` após redeploy
-- [ ] 5.8 RLS/grants efetivos no hospedado (RPC-only, `service_role` só `SELECT`)
+- [ ] 5.8 RLS/grants efetivos no destino (RPC-only, `service_role` só `SELECT`)
 - [ ] 5.9 Ausência de vazamento de segredos nos logs hospedados
 - [ ] 5.10 Login real com CAPTCHA/Google no hospedado
 - [ ] 5.11 Garantir que nenhuma rota pública expõe provider simulado e que o cliente não escolhe provider
+- [ ] 5.12 **P3 — execução Vercel** na rota real, provider real, produção restrita a `test_stores`, sob checkpoint de chamada paga (primeira operação paga do piloto)
+- [ ] 5.13 Registrar **kill real como limitação** e **não declarar D13 resolvido pelo caminho feliz**
 
 ## 6. Piloto manual restrito (lojas de teste)
 
-- [ ] 6.0 Concluir as **provas hospedadas simuladas** e obter o **aceite para iniciar** — ambos **antes** da primeira chamada paga
+- [ ] 6.0 Concluir as **provas** (P1 local + aceite) — **antes** da primeira chamada paga
+- [ ] 6.0.1 Registrar **disposição explícita** sobre o kill real e a limitação de D13 hospedado **antes do piloto** (D13 não resolvido pelo caminho feliz)
 - [ ] 6.1 Conceder autorização `test_stores`, configurar teto e registrar `operation_id`
 - [ ] 6.2 Ligar `product_1_1_test_stores_enabled` apenas na janela; `all_stores` sempre `false`; **não** alterar a pausa global (o legado segue operando)
 - [ ] 6.3 Executar piloto manual nas lojas de teste, com inspeção humana do resultado
