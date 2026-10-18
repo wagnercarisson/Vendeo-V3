@@ -1,6 +1,10 @@
 import "server-only";
 import { createServerClient, supabaseAdmin } from "@/lib/supabase/server";
+import { classifyCampaignFlow } from "./new-flow-marker";
 import type { CampaignStatus } from "./types";
+
+/** Classificação PERSISTIDA do fluxo (novo fluxo × legado) para exibição. */
+export type CampaignListFlow = "new" | "legacy";
 
 export interface CampaignListItem {
   id: string;
@@ -9,6 +13,12 @@ export interface CampaignListItem {
   createdAt: string;
   thumbnailUrl: string | null;
   storagePath: string;
+  /**
+   * Quick 261018-enc — classificação derivada SERVER-SIDE do marcador persistido
+   * (`frozenContentReferences`). O card recebe SOMENTE esta classificação, nunca o
+   * `input_snapshot` inteiro. Legado/indeterminado ⇒ `"legacy"` (conservador).
+   */
+  flow: CampaignListFlow;
 }
 
 export interface ListCampaignsParams {
@@ -36,7 +46,11 @@ function mapToListItem(row: {
   status: string;
   created_at: string;
   storage_path: string;
+  input_snapshot: Record<string, unknown> | null;
 }): CampaignListItem {
+  // A classificação é feita AQUI (servidor); o `input_snapshot` NÃO é retornado.
+  const flow: CampaignListFlow =
+    classifyCampaignFlow(row.input_snapshot) === "new_flow" ? "new" : "legacy";
   return {
     id: row.id,
     productName: row.product_name,
@@ -44,6 +58,7 @@ function mapToListItem(row: {
     createdAt: row.created_at,
     thumbnailUrl: null,
     storagePath: row.storage_path,
+    flow,
   };
 }
 
@@ -66,7 +81,7 @@ export async function listCampaigns(
 
   let query = supabase
     .from("campaigns")
-    .select("id, product_name, status, created_at, storage_path", { count: "exact" })
+    .select("id, product_name, status, created_at, storage_path, input_snapshot", { count: "exact" })
     .eq("store_id", storeId)
     .in("status", status);
 

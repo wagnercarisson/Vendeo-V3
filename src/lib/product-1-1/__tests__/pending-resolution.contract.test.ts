@@ -449,6 +449,63 @@ describe("F56.2b1b — serviço resolvePendingOperation (F5/C4/E1, simulado)", (
     expect(result.status).toBe("refunded");
   });
 
+  it("Quick 261018-enc: refund_once confirmado projeta a campanha (motivo por estado)", async () => {
+    const client = fakeRpcClient(
+      envelope({ action: "refund_once", status: "refunded", art_kind: "absent" }),
+    );
+    const project = vi.fn(async () => ({ projected: true, reason: "projected" }));
+
+    // (a) claim residual → abandono administrativo
+    await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "abandono", resolutionOperationId: RESOLUTION_ID, authorizeAbandon: true },
+      { client, repository: fakeRepository({ record: record({ processing: true }), probe: { kind: "absent" } }), projectClosedCampaign: project as never },
+    );
+    expect(project).toHaveBeenLastCalledWith({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      reason: "authorized_abandon",
+    });
+
+    // (b) publicação inconclusiva autorizada → motivo de fechamento de publicação
+    await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "publicação inconclusiva", resolutionOperationId: RESOLUTION_ID, authorizePublicationClosure: true },
+      { client, repository: fakeRepository({ record: record({ publicationState: "result_unknown" }), probe: { kind: "absent" } }), projectClosedCampaign: project as never },
+    );
+    expect(project).toHaveBeenLastCalledWith({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      reason: "publication_closure",
+    });
+
+    // (c) motivo não comprovável → neutro
+    await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "encerrar", resolutionOperationId: RESOLUTION_ID },
+      { client, repository: fakeRepository({ record: record(), probe: { kind: "absent" } }), projectClosedCampaign: project as never },
+    );
+    expect(project).toHaveBeenLastCalledWith({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      reason: "closed_neutral",
+    });
+  });
+
+  it("Quick 261018-enc: falha da projeção de encerramento NÃO altera o resultado da resolução", async () => {
+    const client = fakeRpcClient(
+      envelope({ action: "refund_once", status: "refunded", art_kind: "absent" }),
+    );
+    const project = vi.fn(async () => {
+      throw new Error("projection boom");
+    });
+    const result = await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "refund_once", reason: "encerrar", resolutionOperationId: RESOLUTION_ID },
+      { client, repository: fakeRepository({ record: record(), probe: { kind: "absent" } }), projectClosedCampaign: project as never },
+    );
+    expect(result).toMatchObject({ status: "refunded", action: "refund_once" });
+  });
+
   it("E1/D13: claim `in_progress` residual BLOQUEIA sem evidência de encerramento (RPC NÃO chamada)", async () => {
     const client = fakeRpcClient({ success: true });
     const repository = fakeRepository({ record: record({ processing: true, unknown: true }), probe: { kind: "absent" } });

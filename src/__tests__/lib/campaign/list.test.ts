@@ -34,7 +34,7 @@ const mockErrorItem = {
 };
 
 function buildChain(
-  resolveData: { id: string; product_name: string; status: string; created_at: string; storage_path: string }[],
+  resolveData: { id: string; product_name: string; status: string; created_at: string; storage_path: string; input_snapshot?: Record<string, unknown> | null }[],
   totalCount: number = 0,
 ) {
   const lteFn = vi.fn().mockReturnThis();
@@ -329,6 +329,64 @@ describe("listCampaigns", () => {
     expect(result.pageSize).toBe(10);
     expect(orderFn).toHaveBeenCalledWith("created_at", { ascending: false });
     expect(rangeFn).toHaveBeenCalledWith(0, 9);
+  });
+
+  it("classifies flow server-side: new-flow marker ⇒ 'new', sem expor input_snapshot", async () => {
+    const rows = [
+      {
+        id: "id-new",
+        product_name: "Novo",
+        status: "error",
+        created_at: "2026-07-10T12:00:00Z",
+        storage_path: "store-123/id-new.jpg",
+        input_snapshot: { frozenContentReferences: [] },
+      },
+      {
+        id: "id-legacy",
+        product_name: "Legado",
+        status: "ready",
+        created_at: "2026-07-09T12:00:00Z",
+        storage_path: "store-123/id-legacy.jpg",
+        input_snapshot: { someLegacyField: true },
+      },
+    ];
+    buildChain(rows);
+
+    const { listCampaigns } = await import("@/lib/campaign/list");
+    const result = await listCampaigns("store-123");
+
+    expect(result.items[0].flow).toBe("new");
+    expect(result.items[1].flow).toBe("legacy");
+    // O `input_snapshot` NUNCA é enviado ao cliente.
+    expect(result.items[0]).not.toHaveProperty("input_snapshot");
+    expect(result.items[0]).not.toHaveProperty("inputSnapshot");
+  });
+
+  it("classifies malformed/absent snapshot as 'legacy' (conservador)", async () => {
+    const rows = [
+      {
+        id: "id-a",
+        product_name: "Sem snapshot",
+        status: "error",
+        created_at: "2026-07-10T12:00:00Z",
+        storage_path: "store-123/id-a.jpg",
+      },
+      {
+        id: "id-b",
+        product_name: "Snapshot malformado",
+        status: "error",
+        created_at: "2026-07-09T12:00:00Z",
+        storage_path: "store-123/id-b.jpg",
+        input_snapshot: null,
+      },
+    ];
+    buildChain(rows);
+
+    const { listCampaigns } = await import("@/lib/campaign/list");
+    const result = await listCampaigns("store-123");
+
+    expect(result.items[0].flow).toBe("legacy");
+    expect(result.items[1].flow).toBe("legacy");
   });
 });
 

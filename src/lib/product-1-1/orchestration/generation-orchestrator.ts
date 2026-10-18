@@ -99,6 +99,7 @@ import {
 import { classifyCopyFailure } from "../copy/copy-recovery";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { projectDeliveredCampaign } from "./project-delivered-campaign";
+import { projectClosedCampaign } from "./project-closed-campaign";
 
 /**
  * F56.2b1b (B1B-D2/D4/D5/D12, C1/C5/I1/I2, F1–F8) — orquestrador NDJSON do novo
@@ -404,6 +405,14 @@ export interface ProductOneToOneGenerationDeps {
    */
   readonly projectDeliveredCampaign?: typeof projectDeliveredCampaign;
   /**
+   * Quick 261018-enc — projeção IDEMPOTENTE da campanha após ENCERRAMENTO
+   * CONFIRMADO com estorno (`status='error'` + mensagem por motivo). Default =
+   * `projectClosedCampaign`. NUNCA lança; uma falha de projeção NÃO provoca nova
+   * chamada ao provider, estorno, nem reclassifica o encerramento. NUNCA
+   * sobrescreve uma entrega confirmada (`ready`).
+   */
+  readonly projectClosedCampaign?: typeof projectClosedCampaign;
+  /**
    * F56.2b2c (B2.3) — estimativa aprovada (USD) da CALL DE COPY (decisão humana,
    * Plan 04). Sem valor, a copy é BLOQUEADA quando o gate está armado.
    */
@@ -563,6 +572,8 @@ export async function runProductOneToOneGeneration(
     deps.artifact ?? (new ProductOneToOneArtifactStore() as ProductOneToOneArtifactOps);
   const createGateway = deps.createGateway ?? createNewFlowImageGateway;
   const projectCampaign = deps.projectDeliveredCampaign ?? projectDeliveredCampaign;
+  const projectClosed =
+    deps.projectClosedCampaign ?? projectClosedCampaign;
   const newSupportReference = deps.generateSupportReference ?? generateSupportReference;
   const recordDiagnosis =
     deps.recordDiagnosis ??
@@ -961,6 +972,25 @@ export async function runProductOneToOneGeneration(
             quality: params.quality,
             refunded: true,
           });
+          // Quick 261018-enc — ENCERRAMENTO CONFIRMADO com estorno: projeta a
+          // campanha na listagem (`status='error'` + motivo). Idempotente e
+          // best-effort: uma falha aqui NÃO altera o desfecho, NÃO provoca nova
+          // chamada ao provider/estorno e NUNCA sobrescreve uma entrega `ready`.
+          try {
+            await projectClosed({
+              storeId,
+              campaignId,
+              operationId,
+              reason: "confirmed_failure",
+            });
+          } catch (projectionError) {
+            console.warn(
+              "[generation-orchestrator] campaign closure projection failed",
+              projectionError instanceof Error
+                ? projectionError.message
+                : String(projectionError),
+            );
+          }
           return;
         }
         await emitPending();

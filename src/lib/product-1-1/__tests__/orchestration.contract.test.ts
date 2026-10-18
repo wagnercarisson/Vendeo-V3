@@ -586,6 +586,43 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(harness.calls.refund).not.toHaveBeenCalled();
   });
 
+  it("Quick 261018-enc: encerramento confirmado com estorno projeta a campanha (motivo confirmed_failure)", async () => {
+    const harness = await buildHarness();
+    harness.setProviderSequence([
+      Object.assign(new Error("content policy violation"), { code: "content_policy" }),
+    ]);
+    const projectClosed = vi.fn(async () => ({ projected: true, reason: "projected" }));
+
+    const { terminal } = await runOrchestrator(harness, {}, { projectClosedCampaign: projectClosed });
+
+    expect(harness.calls.closeFailedOperation).toHaveBeenCalledTimes(1);
+    expect(terminal).toMatchObject({ type: "error", code: "IMG-001" });
+    expect(projectClosed).toHaveBeenCalledTimes(1);
+    expect(projectClosed).toHaveBeenCalledWith({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      reason: "confirmed_failure",
+    });
+  });
+
+  it("Quick 261018-enc: FALHA da projeção de encerramento NÃO reclassifica nem estorna adicionalmente", async () => {
+    const harness = await buildHarness();
+    harness.setProviderSequence([
+      Object.assign(new Error("content policy violation"), { code: "content_policy" }),
+    ]);
+    const projectClosed = vi.fn(async () => {
+      throw new Error("closure projection boom");
+    });
+
+    const { terminal } = await runOrchestrator(harness, {}, { projectClosedCampaign: projectClosed });
+
+    // O encerramento continua terminal `IMG-001`/estornado; só UMA `closeFailedOperation`.
+    expect(terminal).toMatchObject({ type: "error", code: "IMG-001" });
+    expect(harness.calls.closeFailedOperation).toHaveBeenCalledTimes(1);
+    expect(harness.calls.refund).not.toHaveBeenCalled();
+  });
+
   it("Quick 261017-cdi: a imagem de identidade NÃO conta como referência de produto (1 produto + logo ⇒ 'Imagens de referência: 1')", async () => {
     const harness = await buildHarness();
     await runOrchestrator(harness, {

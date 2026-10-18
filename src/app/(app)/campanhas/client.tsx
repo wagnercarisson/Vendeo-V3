@@ -228,9 +228,25 @@ export default function CampaignListClient({
   );
 }
 
+function campaignStatusDisplay(campaign: CampaignListItem): {
+  text: string;
+  className: string;
+} {
+  if (campaign.status === "ready") {
+    return { text: "Pronta", className: "text-accent-green" };
+  }
+  // Quick 261018-enc — campanha do NOVO fluxo encerrada com estorno: rótulo
+  // NEUTRO (não “falha técnica”; o tratamento por motivo vive no detalhe).
+  if (campaign.flow === "new") {
+    return { text: "Não concluída", className: "text-text-secondary" };
+  }
+  return { text: "Erro", className: "text-accent-red" };
+}
+
 function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
   const router = useRouter();
   const formattedDate = formatDate(campaign.createdAt);
+  const status = campaignStatusDisplay(campaign);
 
   return (
     <div className="flex gap-4 rounded-xl border border-border bg-bg-surface p-4">
@@ -252,12 +268,8 @@ function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
         <span className="text-sm text-text-muted font-body">
           {formattedDate}
         </span>
-        <span
-          className={`text-sm font-medium font-heading ${
-            campaign.status === "ready" ? "text-accent-green" : "text-accent-red"
-          }`}
-        >
-          {campaign.status === "ready" ? "Pronta" : "Erro"}
+        <span className={`text-sm font-medium font-heading ${status.className}`}>
+          {status.text}
         </span>
       </div>
       <div className="flex flex-col items-end justify-center gap-2">

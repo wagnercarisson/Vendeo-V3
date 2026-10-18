@@ -17,6 +17,7 @@ const mockReadyCampaign: CampaignListItem = {
   createdAt: "2026-07-10T12:00:00Z",
   thumbnailUrl: "https://example.com/thumb.jpg",
   storagePath: "store-123/id-1.jpg",
+  flow: "legacy",
 };
 
 const mockErrorCampaign: CampaignListItem = {
@@ -26,6 +27,17 @@ const mockErrorCampaign: CampaignListItem = {
   createdAt: "2026-07-09T12:00:00Z",
   thumbnailUrl: null,
   storagePath: "store-123/id-2.jpg",
+  flow: "legacy",
+};
+
+const mockNewFlowClosedCampaign: CampaignListItem = {
+  id: "id-3",
+  productName: "Produto Encerrado",
+  status: "error",
+  createdAt: "2026-07-08T12:00:00Z",
+  thumbnailUrl: null,
+  storagePath: "store-123/id-3.jpg",
+  flow: "new",
 };
 
 const baseProps = {
@@ -124,6 +136,23 @@ describe("CampaignListClient — display", () => {
 
     const erroElements = screen.getAllByText("Erro");
     expect(erroElements.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows neutral label 'Não concluída' for new-flow closed campaign (not 'Erro')", () => {
+    render(
+      <CampaignListClient
+        items={[mockNewFlowClosedCampaign]}
+        {...baseProps}
+        total={1}
+      />,
+    );
+
+    expect(screen.getAllByText("Não concluída").length).toBeGreaterThanOrEqual(1);
+    // O rótulo da CAMPANHA não é "Erro" (o chip de filtro "Erro" é um botão legítimo).
+    const cardErro = screen
+      .queryAllByText("Erro")
+      .filter((el) => el.tagName === "SPAN");
+    expect(cardErro).toHaveLength(0);
   });
 
   it("renders empty state when no campaigns", () => {

@@ -8,6 +8,10 @@ import {
   type PendingOperationsRepository,
 } from "./pending-operations-repository";
 import { projectDeliveredCampaign } from "@/lib/product-1-1/orchestration/project-delivered-campaign";
+import {
+  projectClosedCampaign,
+  type ProjectClosedReason,
+} from "@/lib/product-1-1/orchestration/project-closed-campaign";
 
 /**
  * F56.2b1b (Plano 07, B1B-D5 / REQ-56.2.2-08) — serviço server-only de resolução
@@ -154,6 +158,12 @@ export interface ResolvePendingDependencies {
    * entrega (reparo idempotente) e NUNCA provoca estorno.
    */
   readonly projectDeliveredCampaign?: typeof projectDeliveredCampaign;
+  /**
+   * Quick 261018-enc — projeção idempotente da campanha após `refund_once`
+   * CONFIRMADO (`status='refunded'`). Default = `projectClosedCampaign`. Uma falha
+   * NÃO reclassifica o encerramento nem sobrescreve entrega confirmada.
+   */
+  readonly projectClosedCampaign?: typeof projectClosedCampaign;
 }
 
 export interface PendingResolutionResult {
@@ -342,6 +352,34 @@ export async function resolvePendingOperation(
     } catch (error) {
       console.warn(
         "[resolve-pending-operation] campaign projection failed",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  // Quick 261018-enc — encerramento CONFIRMADO com estorno (`refund_once`
+  // idempotente/concluído): projeta a campanha na listagem. O motivo é
+  // best-effort; se não for comprovável, usa o neutro. Uma falha aqui NÃO
+  // reclassifica o encerramento nem sobrescreve entrega confirmada.
+  if (input.action === "refund_once") {
+    const projectClosed =
+      dependencies.projectClosedCampaign ?? projectClosedCampaign;
+    const reason: ProjectClosedReason = state.processing
+      ? "authorized_abandon"
+      : state.publicationState === "in_flight" ||
+          state.publicationState === "result_unknown"
+        ? "publication_closure"
+        : "closed_neutral";
+    try {
+      await projectClosed({
+        storeId: state.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        reason,
+      });
+    } catch (error) {
+      console.warn(
+        "[resolve-pending-operation] campaign closure projection failed",
         error instanceof Error ? error.message : String(error),
       );
     }
