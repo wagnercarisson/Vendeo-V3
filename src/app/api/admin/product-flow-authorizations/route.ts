@@ -19,9 +19,10 @@ import { resolveCanonicalInstanceIdentity } from "@/lib/product-1-1/authorizatio
  *   escopo/instância. Somente leitura.
  * - `POST`: protegido por `requireAdmin`; valida o corpo com Zod e persiste por
  *   **RPC auditada** `admin_grant_product_flow_stage_authorization` (motivo e
- *   `operationId` obrigatórios, actor derivado server-side). **F56.2b2c:** a via
- *   ESTREITA `isolated_pilot` + `test_stores` é **concedida** (200) e auditada;
- *   os demais estágios habilitadores e o escopo geral (`all_stores`) continuam
+ *   `operationId` obrigatórios, actor derivado server-side). **F56.2b2d:** as vias
+ *   ESTREITAS `isolated_pilot` + `test_stores` (inalterada) e `test_stores` +
+ *   `test_stores` (operacional) são **concedidas** (200) e auditadas; os demais
+ *   estágios habilitadores e o escopo geral (`all_stores`) continuam
  *   **RECUSADOS** (403, `operational_activation_blocked_in_b1a`) — a barreira
  *   global é preservada. A habilitação da janela depende da flag aplicável.
  *
@@ -151,8 +152,9 @@ export const POST = apiHandler(async (request: Request) => {
   }
 
   // Sucesso de concessão: exige envelope consistente com a solicitação.
-  // Casos aceitos (F56.2b2c): (a) concessão legada `off`; (b) via ESCREITA estreita
-  // `isolated_pilot` + `test_stores`. Qualquer outro estágio habilitador é recusado
+  // Casos aceitos (F56.2b2d): (a) concessão legada `off`; (b) via estreita
+  // `isolated_pilot` + `test_stores`; (c) via estreita operacional
+  // `test_stores` + `test_stores`. Qualquer outro estágio habilitador é recusado
   // (403 pelo ramo `refused` acima) — a barreira global é preservada.
   if (result.granted === true) {
     const isLegacyOffGrant =
@@ -164,10 +166,15 @@ export const POST = apiHandler(async (request: Request) => {
       result.stage === "isolated_pilot" &&
       body.scope === "test_stores" &&
       result.scope === "test_stores";
+    const isOperationalTestStoresGrant =
+      body.stage === "test_stores" &&
+      result.stage === "test_stores" &&
+      body.scope === "test_stores" &&
+      result.scope === "test_stores";
     const consistentGrant =
       result.success === true &&
       result.refused === false &&
-      (isLegacyOffGrant || isNarrowPilotGrant);
+      (isLegacyOffGrant || isNarrowPilotGrant || isOperationalTestStoresGrant);
 
     if (!consistentGrant) {
       return NextResponse.json(
@@ -179,7 +186,7 @@ export const POST = apiHandler(async (request: Request) => {
     return NextResponse.json({
       granted: true,
       idempotent: result.idempotent === true,
-      stage: isNarrowPilotGrant ? "isolated_pilot" : "off",
+      stage: result.stage,
       scope: result.scope,
     });
   }
