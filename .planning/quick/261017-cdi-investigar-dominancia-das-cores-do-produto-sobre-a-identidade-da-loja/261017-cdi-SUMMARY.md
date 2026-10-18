@@ -208,6 +208,16 @@ Regras atendidas: só age com operação PERSISTIDA `delivered` + vínculo loja/
 4. **Snapshots históricos** de Destaque com “R$ 0,00” e os payloads antigos **não foram reescritos** (evidência do defeito).
 5. **Oferta (paridade):** a revalidação server-side espelha a regra legada; relações extras (`original ≥ discounted`, badge) seguem **apenas no formulário**, como no legado — sem regras novas no servidor.
 
+## 15. Aceite explícito do EXECUTOR — controle positivo `R$ 16,99`
+
+Registro de aceite do **executor** (agente) — **não** é aprovação do responsável e **não** houve novo teste/geração:
+
+- Campanha **`22d4c990-91c8-4ea5-a4db-a59c7e559499`** — **Pão Caseiro (kg)**, intenção **spotlight**, direção `studio`; operação `8c83fae4-9e46-4f77-83d9-a7152b5c973f`; arte `…/product-1-1/8c83fae4…/art-1024.jpg`.
+- Verificado ponta a ponta: payload com `discountedPriceCents` presente (`hasPrice:true`); **briefing congelado** `discountedPriceText:"R$ 16,99"`; **arte renderiza “R$ 16,99”** (badge “Mais Vendido”, logo da loja, aviso ilustrativo); **copy** mantém “por R$ 16,99”.
+- Conclusão: o contrato de **Destaque com preço positivo** foi preservado — não é gratuidade nem preço artificial.
+- Data: **2026-10-18**. Sem novos testes ou gerações; janela mantida desligada.
+
+
 
 
 
