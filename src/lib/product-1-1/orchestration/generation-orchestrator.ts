@@ -98,6 +98,7 @@ import {
 } from "../copy/copy-acquisition-client";
 import { classifyCopyFailure } from "../copy/copy-recovery";
 import { getLaunchConfig } from "@/lib/launch-config/config";
+import { projectDeliveredCampaign } from "./project-delivered-campaign";
 
 /**
  * F56.2b1b (B1B-D2/D4/D5/D12, C1/C5/I1/I2, F1–F8) — orquestrador NDJSON do novo
@@ -396,6 +397,13 @@ export interface ProductOneToOneGenerationDeps {
    */
   readonly pilotSpend?: PilotSpendGate;
   /**
+   * Quick 261017-cdi — projeção IDEMPOTENTE da campanha após ENTREGA CONFIRMADA
+   * (`status='ready'` + caminho real da arte). Default = `projectDeliveredCampaign`.
+   * NUNCA lança: uma falha de projeção NÃO provoca nova chamada ao provider,
+   * estorno, nem reclassifica a entrega — permite reparo idempotente.
+   */
+  readonly projectDeliveredCampaign?: typeof projectDeliveredCampaign;
+  /**
    * F56.2b2c (B2.3) — estimativa aprovada (USD) da CALL DE COPY (decisão humana,
    * Plan 04). Sem valor, a copy é BLOQUEADA quando o gate está armado.
    */
@@ -554,6 +562,7 @@ export async function runProductOneToOneGeneration(
   const artifact =
     deps.artifact ?? (new ProductOneToOneArtifactStore() as ProductOneToOneArtifactOps);
   const createGateway = deps.createGateway ?? createNewFlowImageGateway;
+  const projectCampaign = deps.projectDeliveredCampaign ?? projectDeliveredCampaign;
   const newSupportReference = deps.generateSupportReference ?? generateSupportReference;
   const recordDiagnosis =
     deps.recordDiagnosis ??
@@ -1446,6 +1455,20 @@ export async function runProductOneToOneGeneration(
                 quality: snapshotPairForTarget(snapshot, target).quality,
               });
               return;
+            }
+            // Quick 261017-cdi — ENTREGA CONFIRMADA: projeta a campanha na listagem
+            // (`status='ready'` + caminho real da arte). Idempotente e best-effort:
+            // uma falha aqui NÃO altera o desfecho da entrega (sem regeneração/
+            // estorno) e permite reparo repetindo a chamada.
+            try {
+              await projectCampaign({ storeId, campaignId, operationId });
+            } catch (projectionError) {
+              console.warn(
+                "[generation-orchestrator] campaign projection failed",
+                projectionError instanceof Error
+                  ? projectionError.message
+                  : String(projectionError),
+              );
             }
             emitFlowPhase("campaign_image", "complete");
             emitFlowPhase("campaign_delivery", "running", "Entregando a campanha...");

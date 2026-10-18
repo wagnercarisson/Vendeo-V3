@@ -9,6 +9,9 @@ import {
   type ArtifactProbe,
   type ProductOneToOneArtifactRef,
 } from "./types";
+import { NEW_FLOW_ARTIFACT_PATH_RE, artifactStoragePath } from "./artifact-path";
+
+export { artifactStoragePath } from "./artifact-path";
 
 /**
  * F56.2b1b — Armazenamento do artefato do Produto 1:1 (Plano 05, server-only).
@@ -31,18 +34,11 @@ const SUPPORTED_INPUT_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/we
 /**
  * Prefixo EXCLUSIVO do novo fluxo (`{storeId}/{campaignId}/product-1-1/{operationId}/art-1024.jpg`)
  * — usado para RECUSAR assinatura de path arbitrário do cliente (T-56.2.2-05-03).
+ *
+ * Quick 261017-cdi — movido para o módulo PURO `./artifact-path` (reutilizado pela
+ * projeção da campanha/ferramentas de reparo sem carregar `server-only`/`sharp`).
  */
-const NEW_FLOW_PATH_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/product-1-1\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/art-1024\.jpg$/i;
-
-/** Caminho determinístico e exclusivo do novo fluxo (T-56.2.2-05-03). */
-export function artifactStoragePath(
-  storeId: string,
-  campaignId: string,
-  operationId: string,
-): string {
-  return `${storeId}/${campaignId}/product-1-1/${operationId}/art-1024.jpg`;
-}
+const NEW_FLOW_PATH_RE = NEW_FLOW_ARTIFACT_PATH_RE;
 
 /**
  * Pipeline PRÓPRIO do novo fluxo: transcodifica para JPEG sRGB 1:1 1024×1024.

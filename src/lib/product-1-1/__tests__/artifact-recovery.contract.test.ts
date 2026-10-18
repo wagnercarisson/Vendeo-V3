@@ -87,7 +87,15 @@ function happyResponder(initial: CreditOperationStatus | null): Responder {
   };
 }
 
-function makeRecovery(input: { probe: ArtifactProbe; responder: Responder }) {
+function makeRecovery(input: {
+  probe: ArtifactProbe;
+  responder: Responder;
+  projectDeliveredCampaign?: (value: {
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+  }) => Promise<unknown>;
+}) {
   const rpcCalls: string[] = [];
   const rpc = vi.fn(async (fn: string, params: Record<string, unknown>) => {
     rpcCalls.push(fn);
@@ -98,6 +106,9 @@ function makeRecovery(input: { probe: ArtifactProbe; responder: Responder }) {
   const probeArtifact = vi.fn(async () => input.probe);
   const recovery = new ProductOneToOneArtifactRecovery(client, {
     artifacts: { probeArtifact },
+    ...(input.projectDeliveredCampaign
+      ? { projectDeliveredCampaign: input.projectDeliveredCampaign as never }
+      : {}),
   });
   return { recovery, rpcCalls, probeArtifact };
 }
@@ -169,6 +180,61 @@ describe("F56.2b2b — artifact-recovery: caminho feliz (RPC simulada, cliente e
     const result = await recover(recovery);
     expect(rpcCalls).toEqual([GET_RPC]);
     expect(result).toMatchObject({ outcome: "operation_terminal", status: "refunded" });
+  });
+});
+
+describe("F56.2b2b/261017-cdi — artifact-recovery: projeção da campanha", () => {
+  it("entrega recuperada (`delivered`) projeta a campanha", async () => {
+    const project = vi.fn(async () => ({ projected: true, reason: "projected" }));
+    const { recovery } = makeRecovery({
+      probe: INTEGRAL_PROBE,
+      responder: happyResponder("reserved"),
+      projectDeliveredCampaign: project,
+    });
+    const result = await recover(recovery);
+    expect(result.outcome).toBe("delivered");
+    expect(project).toHaveBeenCalledWith({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+  });
+
+  it("terminal `delivered` também projeta (reparo idempotente)", async () => {
+    const project = vi.fn(async () => ({ projected: true, reason: "already_projected" }));
+    const { recovery } = makeRecovery({
+      probe: INTEGRAL_PROBE,
+      responder: happyResponder("delivered"),
+      projectDeliveredCampaign: project,
+    });
+    const result = await recover(recovery);
+    expect(result.outcome).toBe("operation_terminal");
+    expect(project).toHaveBeenCalledTimes(1);
+  });
+
+  it("terminal `refunded` NÃO projeta", async () => {
+    const project = vi.fn(async () => ({ projected: false, reason: "operation_not_delivered" }));
+    const { recovery } = makeRecovery({
+      probe: INTEGRAL_PROBE,
+      responder: happyResponder("refunded"),
+      projectDeliveredCampaign: project,
+    });
+    const result = await recover(recovery);
+    expect(result.outcome).toBe("operation_terminal");
+    expect(project).not.toHaveBeenCalled();
+  });
+
+  it("falha da projeção NÃO reclassifica a entrega confirmada", async () => {
+    const project = vi.fn(async () => {
+      throw new Error("projection boom");
+    });
+    const { recovery } = makeRecovery({
+      probe: INTEGRAL_PROBE,
+      responder: happyResponder("reserved"),
+      projectDeliveredCampaign: project,
+    });
+    const result = await recover(recovery);
+    expect(result).toMatchObject({ outcome: "delivered", status: "delivered" });
   });
 });
 

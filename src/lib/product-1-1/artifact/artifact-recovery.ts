@@ -5,6 +5,9 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { ProductOneToOneArtifactStore } from "./artifact-store";
 import type { ArtifactProbe, ProductOneToOneArtifactRef } from "./types";
 import type { CreditOperationStatus } from "@/lib/product-1-1/credit-operation/types";
+import {
+  projectDeliveredCampaign,
+} from "@/lib/product-1-1/orchestration/project-delivered-campaign";
 
 /**
  * F56.2b2b (B2.2 / B2B-D1, D2 / REQ-56.2.4-01..03, -10) — Recuperação de arte
@@ -100,6 +103,12 @@ export interface ArtifactRecoveryCreditOps {
 export interface ArtifactRecoveryDeps {
   readonly artifacts?: ArtifactRecoveryProbe;
   readonly credit?: ArtifactRecoveryCreditOps;
+  /**
+   * Quick 261017-cdi — projeção idempotente da campanha após entrega confirmada
+   * (ou já terminal `delivered`). Default = `projectDeliveredCampaign`. Uma falha
+   * NÃO reclassifica a entrega (reparo idempotente).
+   */
+  readonly projectDeliveredCampaign?: typeof projectDeliveredCampaign;
 }
 
 export interface RecoverDeliveryInput {
@@ -210,6 +219,7 @@ class StrictProductOneToOneCreditOps implements ArtifactRecoveryCreditOps {
 export class ProductOneToOneArtifactRecovery {
   private readonly artifacts: ArtifactRecoveryProbe;
   private readonly credit: ArtifactRecoveryCreditOps;
+  private readonly projectCampaign: typeof projectDeliveredCampaign;
 
   constructor(
     private readonly client: SupabaseClient = supabaseAdmin,
@@ -217,6 +227,26 @@ export class ProductOneToOneArtifactRecovery {
   ) {
     this.artifacts = deps.artifacts ?? new ProductOneToOneArtifactStore(client);
     this.credit = deps.credit ?? new StrictProductOneToOneCreditOps(client);
+    this.projectCampaign = deps.projectDeliveredCampaign ?? projectDeliveredCampaign;
+  }
+
+  /**
+   * Projeta a campanha após entrega confirmada. NUNCA propaga erro: uma falha de
+   * projeção não altera o desfecho da recuperação (reparo idempotente).
+   */
+  private async safeProject(input: RecoverDeliveryInput): Promise<void> {
+    try {
+      await this.projectCampaign({
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+      });
+    } catch (error) {
+      console.warn(
+        "[artifact-recovery] campaign projection failed",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   /**
@@ -265,6 +295,11 @@ export class ProductOneToOneArtifactRecovery {
 
     // Terminal: NENHUM efeito de ledger (`refunded` NÃO retorna a `delivered`).
     if (current.status === "delivered" || current.status === "refunded") {
+      // `delivered` já terminal: projeta (reparo idempotente) — a campanha pode
+      // ter ficado sem a projeção. `refunded` NUNCA é marcado como pronto.
+      if (current.status === "delivered") {
+        await this.safeProject(input);
+      }
       return Object.freeze({
         outcome: "operation_terminal" as const,
         kind: "integral" as const,
@@ -281,6 +316,9 @@ export class ProductOneToOneArtifactRecovery {
       input.operationId,
       "integral",
     );
+
+    // Entrega CONFIRMADA (recuperação sem regenerar): projeta a campanha.
+    await this.safeProject(input);
 
     return Object.freeze({
       outcome: "delivered" as const,

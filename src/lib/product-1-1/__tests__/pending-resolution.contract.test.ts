@@ -406,6 +406,35 @@ describe("F56.2b1b — serviço resolvePendingOperation (F5/C4/E1, simulado)", (
     expect(result.status).toBe("delivered");
   });
 
+  it("Quick 261017-cdi: deliver_existing_art confirmado projeta a campanha", async () => {
+    const client = fakeRpcClient(envelope());
+    const repository = fakeRepository({ record: record(), probe: { kind: "integral" } });
+    const project = vi.fn(async () => ({ projected: true, reason: "projected" }));
+    const result = await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "arte existente", resolutionOperationId: RESOLUTION_ID },
+      { client, repository, projectDeliveredCampaign: project as never },
+    );
+    expect(result.status).toBe("delivered");
+    expect(project).toHaveBeenCalledWith({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+  });
+
+  it("Quick 261017-cdi: falha da projeção não altera o resultado da resolução", async () => {
+    const client = fakeRpcClient(envelope());
+    const repository = fakeRepository({ record: record(), probe: { kind: "integral" } });
+    const project = vi.fn(async () => {
+      throw new Error("projection boom");
+    });
+    const result = await resolvePendingOperation(
+      { actorId: ACTOR_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID, action: "deliver_existing_art", reason: "arte existente", resolutionOperationId: RESOLUTION_ID },
+      { client, repository, projectDeliveredCampaign: project as never },
+    );
+    expect(result).toMatchObject({ status: "delivered", action: "deliver_existing_art" });
+  });
+
   it("refund_once com ausência confirmada e execução encerrada: invoca a RPC", async () => {
     const client = fakeRpcClient(
       envelope({ action: "refund_once", status: "refunded", art_kind: "absent" }),

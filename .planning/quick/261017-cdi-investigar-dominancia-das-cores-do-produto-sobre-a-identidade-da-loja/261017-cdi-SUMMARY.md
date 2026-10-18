@@ -127,3 +127,28 @@ Executado **localmente, sem provider** (sem chamadas pagas, flags, migrations, p
 
 **Gates após as correções:** `tsc` 0; focados **135/135**; `eslint .` 0; `next build` exit 0; spec válida; guarda 10/10. **Sem provider/flags/migrations/produção.** Geração real continua para autorização posterior.
 
+## 10. Causa: campanhas do novo fluxo ausentes na lista + correção (alternativa A)
+
+**Causa demonstrada:** `listCampaigns` filtra `status ∈ ('ready','error')`, mas o novo fluxo **nunca** transicionava `campaigns.status` (ficava `generating`) nem registrava o caminho real da arte. A entrega do novo fluxo (`product_1_1_deliver_campaign_credit_operation`) só atualiza `product_1_1_campaign_credit_operations`. A página de detalhe já usa marcador + operação; só a **lista** ficou presa ao `status` legado.
+
+**Correção (alternativa A) — helper idempotente central `projectDeliveredCampaign`** (`orchestration/project-delivered-campaign.ts`), chamado nos **três** caminhos que confirmam entrega:
+1. geração normal (orquestrador, após `credit.deliver` confirmar `delivered`);
+2. recuperação de arte (`artifact-recovery`, após `delivered`/terminal `delivered`);
+3. resolução de pendência (`resolve-pending-operation`, após `deliver_existing_art`).
+
+Regras atendidas: só age com operação PERSISTIDA `delivered` + vínculo loja/campanha/operação + **arte persistida** no caminho determinístico; **nunca** lança (falha vira resultado tipado `projection_update_failed`) e **não** provoca nova chamada ao provider, estorno ou reclassificação; **não** toca `approval_status`/créditos/auditoria; repetir é seguro. `artifactStoragePath` extraído para módulo puro (`artifact/artifact-path.ts`), reexportado por `artifact-store`.
+
+**Reparo (autorizado, 3 campanhas)** — revalidado `delivered` + arte existentes e aplicado pelo MESMO helper (antes → depois):
+- `20d54b1d…`: `generating` → **`ready`**; path `<loja>/20d54b1d….jpg` → `…/product-1-1/355cc9bb…/art-1024.jpg`; `approval_status` inalterado (`pending_approval`).
+- `6ecef78c…`: `generating` → **`ready`**; path → `…/product-1-1/d5fe3115…/art-1024.jpg`.
+- `e043e52e…`: `generating` → **`ready`**; path → `…/product-1-1/0b8642f4…/art-1024.jpg`.
+- **Idempotência confirmada**: 2ª execução → `already_projected` (sem novo update).
+- **Verificações:** listagem (`status∈ready/error`, ordem desc) passa a listar as 3 no topo; os 3 objetos de arte existem no bucket; `createSignedUrl` (thumbnail) → **OK**; `input_snapshot` das 3 tem o marcador `frozenContentReferences` (detalhe = novo fluxo). Créditos/operações/auditoria/aprovação preservados.
+
+**Lacuna apresentada (NÃO ampliada):** terminais de **falha/estorno** não têm projeção — uma operação `refunded` deixa `campaigns.status='generating'` e a campanha **some da lista** (o legado usava `error`). Hoje **0 linhas afetadas** (nenhuma operação não-`delivered`). Aguarda autorização para ampliar o recorte.
+
+**Testes (focados 214/214):** nova suíte `project-delivered-campaign.contract` (normal, idempotente, inconclusivo/estorno/upload, loja divergente, arte ausente, falha de update sem lançar) + orquestrador (entrega projeta; falha da projeção não reclassifica/estorna), `artifact-recovery` (delivered/terminal-delivered projetam; refunded não; falha não reclassifica) e `pending-resolution` (deliver projeta; falha não altera o resultado).
+
+**Gates desta correção:** `tsc` 0; focados **214/214**; `eslint .` 0; `next build` exit 0; guarda 10/10. **Sem flags, novas gerações, produção, deploy ou push.** (A janela de validação visual permaneceu habilitada; o Next foi reiniciado para servir o build novo.)
+
+

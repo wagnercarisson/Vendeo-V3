@@ -7,6 +7,7 @@ import {
   SupabasePendingOperationsRepository,
   type PendingOperationsRepository,
 } from "./pending-operations-repository";
+import { projectDeliveredCampaign } from "@/lib/product-1-1/orchestration/project-delivered-campaign";
 
 /**
  * F56.2b1b (Plano 07, B1B-D5 / REQ-56.2.2-08) — serviço server-only de resolução
@@ -147,6 +148,12 @@ export interface ResolvePendingInput {
 export interface ResolvePendingDependencies {
   readonly client?: SupabaseClient;
   readonly repository?: PendingOperationsRepository;
+  /**
+   * Quick 261017-cdi — projeção idempotente da campanha após `deliver_existing_art`
+   * confirmado. Default = `projectDeliveredCampaign`. Uma falha NÃO reclassifica a
+   * entrega (reparo idempotente) e NUNCA provoca estorno.
+   */
+  readonly projectDeliveredCampaign?: typeof projectDeliveredCampaign;
 }
 
 export interface PendingResolutionResult {
@@ -319,6 +326,25 @@ export async function resolvePendingOperation(
     record.status !== expectedStatus
   ) {
     throw new PendingOperationResolutionError("invalid_response", "invalid_response_envelope");
+  }
+
+  // Quick 261017-cdi — entrega CONFIRMADA pela RPC: projeta a campanha na
+  // listagem. NUNCA propaga erro nem provoca estorno (reparo idempotente).
+  if (input.action === "deliver_existing_art") {
+    const projectCampaign =
+      dependencies.projectDeliveredCampaign ?? projectDeliveredCampaign;
+    try {
+      await projectCampaign({
+        storeId: state.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+      });
+    } catch (error) {
+      console.warn(
+        "[resolve-pending-operation] campaign projection failed",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   return Object.freeze({

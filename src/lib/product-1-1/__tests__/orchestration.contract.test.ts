@@ -397,13 +397,14 @@ async function buildHarness(): Promise<Harness> {
 async function runOrchestrator(
   harness: Harness,
   inputOverrides: Record<string, unknown> = {},
+  depsOverride: Record<string, unknown> = {},
 ) {
   const { runProductOneToOneGeneration } = await import(
     "../orchestration/generation-orchestrator"
   );
   const response = await runProductOneToOneGeneration(
     { ...makeInput(), ...inputOverrides },
-    harness.deps,
+    { ...harness.deps, ...depsOverride },
   );
   const text = await response.text();
   const events = text
@@ -557,6 +558,32 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(request.prompt).toContain("Crie uma peça profissional");
     expect(request.quality).toBe("medium");
     expect(request.productImagesDataUrls).toEqual(["data:image/png;base64,primary"]);
+  });
+
+  it("Quick 261017-cdi: entrega confirmada projeta a campanha (status ready + arte)", async () => {
+    const harness = await buildHarness();
+    const project = vi.fn(async () => ({ projected: true, reason: "projected" }));
+    const { terminal } = await runOrchestrator(harness, {}, { projectDeliveredCampaign: project });
+
+    expect(terminal).toMatchObject({ type: "result" });
+    expect(project).toHaveBeenCalledTimes(1);
+    expect(project).toHaveBeenCalledWith({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+    });
+  });
+
+  it("Quick 261017-cdi: FALHA da projeção NÃO reclassifica a entrega nem estorna", async () => {
+    const harness = await buildHarness();
+    const project = vi.fn(async () => {
+      throw new Error("projection boom");
+    });
+    const { terminal } = await runOrchestrator(harness, {}, { projectDeliveredCampaign: project });
+
+    // A entrega continua terminal `result` (a projeção é best-effort/reparável).
+    expect(terminal).toMatchObject({ type: "result" });
+    expect(harness.calls.refund).not.toHaveBeenCalled();
   });
 
   it("Quick 261017-cdi: a imagem de identidade NÃO conta como referência de produto (1 produto + logo ⇒ 'Imagens de referência: 1')", async () => {
