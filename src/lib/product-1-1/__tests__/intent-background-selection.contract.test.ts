@@ -179,6 +179,51 @@ describe("F56.2b1b — gating de payload (buildCampaignGenerationBody)", () => {
   });
 });
 
+describe("quick 261017-cdi — preço no payload (novo fluxo omite zero; legado preserva)", () => {
+  it("elegível: Destaque sem preço NÃO envia originalPriceCents=0 nem discountedPriceCents", () => {
+    const fields = legacyOfferFields({
+      campaignIntent: "spotlight",
+      originalPriceCents: 0,
+      discountedPriceCents: undefined,
+      badge: "Destaque da Semana",
+    });
+    const body = buildCampaignGenerationBody(fields, singlePreparedImage(), "store-1", {
+      eligible: true,
+    });
+    expect(body).not.toHaveProperty("originalPriceCents");
+    expect(body).not.toHaveProperty("discountedPriceCents");
+  });
+
+  it("elegível: Destaque com preço POSITIVO preserva o valor (original 0 é omitido)", () => {
+    const fields = legacyOfferFields({
+      campaignIntent: "spotlight",
+      originalPriceCents: 0,
+      discountedPriceCents: 1990,
+      badge: "Destaque da Semana",
+    });
+    const body = buildCampaignGenerationBody(fields, singlePreparedImage(), "store-1", {
+      eligible: true,
+    });
+    expect(body.discountedPriceCents).toBe(1990);
+    expect(body).not.toHaveProperty("originalPriceCents");
+  });
+
+  it("legado (inelegível): byte-compatível — `0` é preservado", () => {
+    const fields = legacyOfferFields({
+      campaignIntent: "spotlight",
+      originalPriceCents: 0,
+      discountedPriceCents: undefined,
+      badge: "Destaque da Semana",
+    });
+    const body = buildCampaignGenerationBody(fields, singlePreparedImage(), "store-1");
+    expect(body.originalPriceCents).toBe(0);
+    expect(body.discountedPriceCents).toBeUndefined();
+    // byte-compatível: a chave `discountedPriceCents` é preservada com `undefined`
+    // (JSON.stringified a descarta) — igual ao comportamento legado.
+    expect(JSON.stringify(body)).not.toContain("discountedPriceCents");
+  });
+});
+
 describe("F56.2b1b — regra Original exige exatamente uma imagem de produto", () => {
   it("aceita exatamente 1 imagem de produto", () => {
     expect(validateOriginalBackground({ productImageCount: 1 })).toEqual({

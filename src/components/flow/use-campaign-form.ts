@@ -641,11 +641,26 @@ export function buildCampaignGenerationBody(
     identity?: DraftIdentity;
   }
 ): Record<string, unknown> {
+  // Quick 261017-cdi — no NOVO fluxo (elegível), zero/ausente = AUSÊNCIA: o
+  // payload não carrega valor monetário nulo. No LEGADO (inelegível) a saída
+  // permanece byte-compatível (mesmas chaves/ordem, inclusive `0`).
+  const priceFields: Record<string, unknown> = options?.eligible
+    ? {
+        ...(fields.originalPriceCents > 0
+          ? { originalPriceCents: fields.originalPriceCents }
+          : {}),
+        ...(fields.discountedPriceCents && fields.discountedPriceCents > 0
+          ? { discountedPriceCents: fields.discountedPriceCents }
+          : {}),
+      }
+    : {
+        originalPriceCents: fields.originalPriceCents,
+        discountedPriceCents: fields.discountedPriceCents,
+      };
   const body: Record<string, unknown> = {
     storeId,
     productName: fields.productName,
-    originalPriceCents: fields.originalPriceCents,
-    discountedPriceCents: fields.discountedPriceCents,
+    ...priceFields,
     description: fields.description || undefined,
     badgeText: fields.badge,
     campaignIntent: fields.campaignIntent,

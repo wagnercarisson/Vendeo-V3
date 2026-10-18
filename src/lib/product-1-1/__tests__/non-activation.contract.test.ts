@@ -111,6 +111,9 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       // Quick 261017-cdi — bloco de identidade do novo fluxo (paleta canônica +
       // presença/ausência reconciliada). Par EXATO, sem prefixo amplo.
       "@/lib/product-1-1/identity-context",
+      // Quick 261017-cdi — normalização de preço do novo fluxo (zero/ausente =
+      // ausência) + paridade da validação de oferta. Par EXATO, sem prefixo amplo.
+      "@/lib/product-1-1/commercial-price",
     ],
   },
   // Plano 04 — rota de status do reenvio (query-only).
@@ -684,6 +687,8 @@ describe("Product 1:1 — reconciliação G-NA (Plano 04, F56.2b1b)", () => {
       "@/lib/product-1-1/copy/default-copy-runner",
       // Quick 261017-cdi — identidade do novo fluxo (paleta canônica).
       "@/lib/product-1-1/identity-context",
+      // Quick 261017-cdi — normalização de preço do novo fluxo.
+      "@/lib/product-1-1/commercial-price",
     ]) {
       expect(
         isAuthorizedAdminAuthorizationImport(AUTHORIZED_CAMPAIGN_GENERATE_IMAGE_ROUTE, specifier),

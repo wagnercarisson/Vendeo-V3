@@ -96,6 +96,33 @@ A composição SHALL contar apenas imagens de **produto** para a hierarquia de m
 - **THEN** a composição trata a primeira como protagonista e as demais como auxiliares
 - **AND** a imagem de identidade permanece fora da contagem
 
+### Requirement: Preço zero/ausente é ausência (nunca gratuidade)
+
+A composição SHALL omitir preço, moeda, etiqueta de preço e comparação "de/por" quando o preço for **ausente ou zero**. Preço **positivo** informado SHALL ser preservado conforme o contrato. **Oferta** SHALL exigir preço promocional positivo, revalidado **server-side antes de qualquer efeito** (reserva de crédito ou geração), sem aceitar ausente/zero. Valores **negativos, não-inteiros, de tipo inválido ou `null`** SHALL ser **recusados** pela validação da API — nunca convertidos silenciosamente em ausência.
+
+#### Scenario: Destaque sem preço ou zero
+
+- **WHEN** a intenção é Destaque e o preço é ausente ou zero
+- **THEN** nem o briefing congelado nem os prompts de imagem/copy carregam valor monetário
+- **AND** zero NÃO é interpretado como gratuidade
+
+#### Scenario: Destaque com preço positivo
+
+- **WHEN** um preço positivo é informado
+- **THEN** o valor é preservado conforme o contrato
+
+#### Scenario: Oferta sem preço promocional positivo é recusada
+
+- **WHEN** a intenção é Oferta e o preço promocional é ausente/zero
+- **THEN** a geração é recusada como erro de campo ANTES de reservar crédito ou iniciar geração
+- **AND** nenhuma reserva/geração é efetivada
+
+#### Scenario: Valores malformados são recusados
+
+- **WHEN** o preço é negativo, fracionário, de tipo inválido ou `null`
+- **THEN** a validação da API recusa a requisição
+- **AND** o valor NÃO é convertido silenciosamente em ausência
+
 ### Requirement: Sem troca silenciosa da intenção
 
 A composição SHALL NOT alterar silenciosamente a intenção escolhida.

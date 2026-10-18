@@ -54,6 +54,11 @@ import {
   buildNewFlowIdentityBlock,
   type ProductOneToOneIdentityContext,
 } from "@/lib/product-1-1/identity-context";
+import {
+  isOfferMissingDiscountedPrice,
+  positiveCentsOrUndefined,
+  positivePriceTextBRL,
+} from "@/lib/product-1-1/commercial-price";
 
 export const runtime = "nodejs";
 
@@ -420,10 +425,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
       // e as seleções identificam cada imagem por CONTEÚDO (hash estável do
       // `dataUrl`) + papel + ÍNDICE de ordem. Qualquer mudança de conteúdo/preço/
       // selo/validade/texto altera a evidência congelada / fingerprint.
-      const priceText = (cents: number | undefined): string | null =>
-        typeof cents === "number"
-          ? `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`
-          : null;
+      // Quick 261017-cdi: preço SOMENTE positivo vira valor monetário — zero/ausente
+      // é ausência (nunca "R$ 0,00"). Ver `positivePriceTextBRL`.
       const contentId = (dataUrl: string): string =>
         createHash("sha256").update(dataUrl).digest("hex");
       // (achado 1 / gap 1) Normaliza AMBOS os transportes UMA única vez numa lista
@@ -465,8 +468,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
         },
         commercial: {
           intent: newFlow.campaignIntent,
-          originalPriceText: priceText(newFlow.originalPriceCents),
-          discountedPriceText: priceText(newFlow.discountedPriceCents),
+          originalPriceText: positivePriceTextBRL(newFlow.originalPriceCents),
+          discountedPriceText: positivePriceTextBRL(newFlow.discountedPriceCents),
           badge: newFlow.badgeText ?? null,
           validity: newFlow.validity ?? null,
         },
@@ -502,6 +505,23 @@ export const POST = apiHandler(async (request: NextRequest) => {
           pilotSpend: pilotSpendDep,
           // (estimativa derivada no runner)
         });
+      }
+
+      // Quick 261017-cdi — Oferta: revalidação SERVER-SIDE ANTES de qualquer efeito
+      // (criação de campanha, reserva de crédito ou geração). PARIDADE com a regra
+      // legada (`route.ts` pós-parse): oferta exige preço promocional positivo.
+      // Erro de CAMPO — nunca IMG-001. (Ausente/zero = ausência; não é gratuidade.)
+      if (isOfferMissingDiscountedPrice(newFlow.campaignIntent, newFlow.discountedPriceCents)) {
+        return Response.json(
+          {
+            error: {
+              code: "offer_requires_discounted_price",
+              message: "Preço com desconto é obrigatório para ofertas",
+              fields: ["discountedPriceCents"],
+            },
+          },
+          { status: 400 },
+        );
       }
 
       // (2) Regra Original revalidada server-side — erro de CAMPO, nunca IMG-001.
@@ -756,8 +776,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
           campaignGuidelines:
             newFlowIdentityContext?.brandProfile?.campaign_guidelines ?? undefined,
           badgeText: newFlow.badgeText ?? undefined,
-          originalPriceCents: newFlow.originalPriceCents,
-          discountedPriceCents: newFlow.discountedPriceCents,
+          originalPriceCents: positiveCentsOrUndefined(newFlow.originalPriceCents),
+          discountedPriceCents: positiveCentsOrUndefined(newFlow.discountedPriceCents),
         };
       } catch (err) {
         console.error(

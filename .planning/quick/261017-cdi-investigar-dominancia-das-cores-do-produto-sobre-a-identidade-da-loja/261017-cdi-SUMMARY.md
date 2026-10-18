@@ -151,4 +151,25 @@ Regras atendidas: só age com operação PERSISTIDA `delivered` + vínculo loja/
 
 **Gates desta correção:** `tsc` 0; focados **214/214**; `eslint .` 0; `next build` exit 0; guarda 10/10. **Sem flags, novas gerações, produção, deploy ou push.** (A janela de validação visual permaneceu habilitada; o Next foi reiniciado para servir o build novo.)
 
+## 11. Defeito comercial — preço ausente virava “R$ 0,00” (corrigido na origem)
+
+**Janela encerrada (preservando registros):** flag `product_1_1_test_stores_enabled=false`, `all_stores=false`, autorização **revogada** (seq 12 `off`), geração **pausada** (`VENDEO_GENERATION_PAUSED=true`). `spent` US$ 0,4242 / `cap` 0,8454 (histórico intacto). As 4 campanhas da janela e os snapshots históricos **não foram reescritos**; as artes **não** foram reparadas.
+
+**Causa demonstrada (cadeia):** formulário envia `originalPriceCents: 0` (default) + `discountedPriceCents` ausente → schema aceita 0 (`nonnegative`/`positive`) → normalização nova da rota `priceText(0)` = “R$ 0,00” → briefing congelado `originalPriceText:"R$ 0,00"` → composer v7 emite “Preço original: R$ 0,00” → a arte de Destaque renderizou **“R$ 0,00”**. A copy já tratava 0 como ausência (`!discounted`), mas recebia `originalPriceCents: 0`.
+
+**Correção (origem apropriada, legado preservado):**
+- Novo módulo puro `src/lib/product-1-1/commercial-price.ts`: `positivePriceTextBRL` (só positivo ⇒ texto; 0/ausente ⇒ `null`), `positiveCentsOrUndefined` (só positivo ⇒ centavos), `isOfferMissingDiscountedPrice` (paridade legada).
+- Rota (novo fluxo): briefing usa `positivePriceTextBRL` (zero/ausente ⇒ ausência); `copyContext` usa `positiveCentsOrUndefined`.
+- Formulário: **somente no novo fluxo (elegível)**, zero/ausente é **omitido** do payload; o legado (inelegível) permanece **byte-compatível**.
+- **Oferta:** revalidação server-side adicionada **antes de criar campanha/reservar crédito/gerar** (`isOfferMissingDiscountedPrice`) — **paridade** com a regra legada (`route.ts` pós-parse: `offer && !discountedPriceCents`), erro de campo 400. *Relato de paridade:* a checagem legada existia mas o ramo do novo fluxo a **contornava**; nenhum erro encontrado no caminho de Oferta válida (segue funcionando). Não foram criadas regras novas (relações extras como `original ≥ discounted`/badge continuam apenas no formulário, como no legado).
+- **Contrato da API:** negativos, fracionários, tipos inválidos e `null` são **recusados** pelo schema (não convertidos em ausência).
+- Testes: `commercial-price.contract` (helpers + schema + copy `buildCommercialFrame`), payload do formulário (novo omite zero; legado preserva), e prompt de imagem (sem/zero preço ⇒ nenhuma linha de preço/“R$”; positivo ⇒ preserva). **Prova por testes de que os prompts de imagem/copy não recebem preço artificial** — não equivale a garantir visualmente toda saída do modelo.
+
+**Registros separados (conforme solicitado):**
+- **Cores:** **aprovadas pelo responsável** — validação de identidade/cor tratada à parte deste defeito comercial.
+- **Artes de Destaque com “R$ 0,00”:** **REPROVADAS comercialmente** (não reparadas; snapshots preservados).
+
+**Gates:** `tsc` 0; focados **252/252**; `eslint .` 0; `next build` 0; spec `product-1-1-prompt-composition` válida. Sem geração paga, produção, deploy ou push. Janela permanece **desligada**.
+
+
 

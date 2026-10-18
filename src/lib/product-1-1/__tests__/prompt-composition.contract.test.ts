@@ -205,3 +205,42 @@ describe("Product 1:1 background directions (recreated vs original)", () => {
     );
   });
 });
+
+describe("quick 261017-cdi — prompt de imagem NÃO recebe preço artificial", () => {
+  const spotlightNoPrice: ProductPromptCompositionBriefing = {
+    backgroundDirection: "studio",
+    product: { name: "Rocambole de Morango", description: null },
+    commercial: {
+      intent: "spotlight",
+      originalPriceText: null,
+      discountedPriceText: null,
+      badge: "Destaque da Semana",
+      validity: null,
+    },
+    constraints: { mandatoryArtworkText: null },
+  };
+
+  it("Destaque sem preço: nenhuma linha de preço/moeda (R$)", () => {
+    const composed = composeProductPrompt({
+      briefing: spotlightNoPrice,
+      promptBase: PROMPT_BASE_CONTENT,
+      references: ["product.png"],
+    });
+    expect(composed.text).not.toContain("Preço original");
+    expect(composed.text).not.toContain("Preço de venda");
+    expect(composed.text).not.toContain("R$");
+    expect(composed.text).toContain("Destaque da Semana");
+  });
+
+  it("Destaque com preço positivo informado: preserva a linha de preço", () => {
+    const composed = composeProductPrompt({
+      briefing: {
+        ...spotlightNoPrice,
+        commercial: { ...spotlightNoPrice.commercial, discountedPriceText: "R$ 19,90" },
+      },
+      promptBase: PROMPT_BASE_CONTENT,
+      references: ["product.png"],
+    });
+    expect(composed.text).toContain("Preço de venda: R$ 19,90");
+  });
+});
