@@ -180,6 +180,35 @@ Regras atendidas: só age com operação PERSISTIDA `delivered` + vínculo loja/
 - **Infra de teste:** adicionado mock de `resolve-pilot-spend-gate` (`{kind:"inactive"}`) — o gate real (dependência de DB) fazia o mock de autorização (sem `stage`) resolver `blocked` ⇒ **503 espúrio**. Com o mock, `route.test.ts` passa **93/93** (corrige também as **26 falhas pré-existentes** da suíte de rota).
 - Gates: `tsc` 0; `eslint .` 0.
 
+## 13. Sessão de validação (Destaque sem preço) — resultados, evidência e encerramento
+
+**Autorização/janela:** reaberta com autorização estreita seq **13** (`isolated_pilot`+`test_stores`) e `test_stores=true`; **encerrada** com flag `false` e autorização sequência **14** (`off`). `all_stores=false` durante toda a sessão. Pausa restaurada (`VENDEO_GENERATION_PAUSED=true`).
+
+**Gasto final:** `spent` **0,4242 → 0,5583** (`Δ 0,1341` = 3 × image_primary `0,044` + copy_initial `0,0007`); `cap` **0,8454** (histórico preservado). Todas as chamadas `released`; sem `unknown`/fallback.
+
+**Evidências (duas imagens de Destaque SEM preço) — correção comprovada:**
+- `9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98` — **Rocambole de Morango**, `studio`, spotlight, **sem preço**. Briefing congelado `originalPriceText:null`/`discountedPriceText:null`; **arte sem “R$ 0,00”**; copy sem preço.
+- `b1f75489-82d7-4420-936f-a7c24ec9b4a1` — **Rocambole de Morango**, `ambient`, spotlight, **sem preço**. Idem (arte sem preço; copy sem preço).
+- **Controle positivo:** `22d4c990-91c8-4ea5-a4db-a59c7e559499` — **Pão Caseiro (kg)**, spotlight **com preço `R$ 16,99`**; briefing/copy preservam o preço (contrato de Destaque com preço positivo mantido).
+- **Log de payload (fonte):** sem preço ⇒ **sem `originalPriceCents`** e `hasPrice:false`; com preço ⇒ `discountedPriceCents` presente e `hasPrice:true` (zero omitido no novo fluxo).
+
+**Copy sem preço artificial:** confirmado (as duas evidências não têm valor monetário na copy; o controle positivo mantém `R$ 16,99`).
+
+**Histórico/listagem:** as 6 campanhas recentes constam `ready` e aparecem na listagem (inclui as 2 evidências), comprovando a projeção.
+
+**Teste de Oferta inválida:** `route.test.ts` 93/93 — Oferta sem preço promocional ⇒ **400 antes de criar campanha, reservar crédito ou chamar provider** (commit `47a3f1ef`).
+
+**Registro de cores (separado):** cores **aprovadas pelo responsável**; as artes de evidência respeitam a paleta da loja (`#D59D5E`/`#E0B786`). As artes de Destaque **anteriores** com “R$ 0,00” permanecem **reprovadas comercialmente** (não reparadas; snapshots preservados).
+
+## 14. Pendências conhecidas (não ampliadas)
+
+1. **Projeção de terminais de falha/estorno:** campanhas de operações `refunded` permanecem `generating` e ficam fora da listagem (o legado usava `error`). Nenhuma linha afetada hoje; correção não autorizada/ampliada.
+2. **Mock de `resolve-pilot-spend-gate` em `route.test.ts`** é **infra de teste** (o gate real tem cobertura própria); motivo: o mock de autorização sem `stage` fazia o gate resolver `blocked` ⇒ 503 espúrio.
+3. **Validação visual** é inspeção manual das artes; **não** equivale a garantir toda saída do modelo.
+4. **Snapshots históricos** de Destaque com “R$ 0,00” e os payloads antigos **não foram reescritos** (evidência do defeito).
+5. **Oferta (paridade):** a revalidação server-side espelha a regra legada; relações extras (`original ≥ discounted`, badge) seguem **apenas no formulário**, como no legado — sem regras novas no servidor.
+
+
 
 
 
