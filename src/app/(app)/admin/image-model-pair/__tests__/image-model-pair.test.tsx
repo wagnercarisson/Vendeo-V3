@@ -8,7 +8,7 @@ import type {
   ImagePairPricingCoverage,
   ImagePairTargetPricingStatus,
 } from "@/lib/ai-cost/types";
-import { ImageModelPairConfigForm, ImageModelPairInactiveBanner } from "../form";
+import { ImageModelPairConfigForm, ImageModelPairScopeBanner } from "../form";
 
 const ELIGIBLE_MODELS = ["gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst"];
 const ELIGIBLE_QUALITIES = ["low", "medium"];
@@ -107,15 +107,17 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("ImageModelPairConfigForm", () => {
-  it("mostra o aviso permanente de não-ativa no estado vazio", () => {
+  it("mostra a explicação de escopo do Produto 1:1 no estado vazio, sem afirmar estado do fluxo", () => {
     render(
       <>
-        <ImageModelPairInactiveBanner />
+        <ImageModelPairScopeBanner />
         <ImageModelPairConfigForm view={EMPTY_VIEW} />
       </>,
     );
-    expect(screen.getByText("Esta configuração NÃO está ativa em produção.")).toBeInTheDocument();
-    expect(screen.getByText(/Nenhuma campanha usa estes modelos/)).toBeInTheDocument();
+    expect(screen.getByText(/Esta configuração define os modelos do fluxo Produto 1:1/)).toBeInTheDocument();
+    expect(screen.getByText(/A habilitação do fluxo é controlada separadamente/)).toBeInTheDocument();
+    expect(screen.queryByText(/NÃO está ativa em produção/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nenhuma campanha usa estes modelos/)).not.toBeInTheDocument();
   });
 
   it("restringe as opções ao catálogo elegível (3 modelos x low/medium)", () => {
@@ -140,11 +142,11 @@ describe("ImageModelPairConfigForm", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("envia PUT com operationId e mantém o aviso de não-ativa após o sucesso", async () => {
+  it("envia PUT com operationId e mantém a explicação de escopo após o sucesso", async () => {
     mockFetch.mockResolvedValue({ ok: true, json: async () => ({ config: { success: true } }) });
     render(
       <>
-        <ImageModelPairInactiveBanner />
+        <ImageModelPairScopeBanner />
         <ImageModelPairConfigForm view={EMPTY_VIEW} />
       </>,
     );
@@ -164,7 +166,7 @@ describe("ImageModelPairConfigForm", () => {
     expect(body.fallbackModel).toBe("gpt-image-2");
 
     expect(await screen.findByText("Configuração salva com auditoria.")).toBeInTheDocument();
-    expect(screen.getByText("Esta configuração NÃO está ativa em produção.")).toBeInTheDocument();
+    expect(screen.getByText(/Esta configuração define os modelos do fluxo Produto 1:1/)).toBeInTheDocument();
   });
 
   it("reutiliza o operationId no retry e o renova ao editar", async () => {

@@ -21,7 +21,12 @@ type Draft = {
 const groups = [
   { key: "text", label: "Texto", description: "Copy, análise e briefing comercial." },
   { key: "vision", label: "Visual", description: "Validação e leitura de referências." },
-  { key: "image", label: "Imagem", description: "Geração, edição e assinatura visual." },
+  {
+    key: "image",
+    label: "Imagem",
+    description:
+      "Fluxo legado — geração, edição e assinatura visual. O fluxo Produto 1:1 é configurado na seção \"Imagem de campanhas — Produto 1:1\".",
+  },
 ] as const;
 
 function targetKey(target: { provider: string; model: string; protocol: string } | null): string {

@@ -53,9 +53,6 @@ export default async function AdminLayout({
         <Link href="/admin/ai-model-selection" className="font-medium hover:text-primary">
           Modelos de IA
         </Link>
-        <Link href="/admin/image-model-pair" className="font-medium hover:text-primary">
-          Par de modelos (novo fluxo)
-        </Link>
         <Link href="/admin/product-1-1-pending" className="font-medium hover:text-primary">
           Pendências Produto 1:1
         </Link>

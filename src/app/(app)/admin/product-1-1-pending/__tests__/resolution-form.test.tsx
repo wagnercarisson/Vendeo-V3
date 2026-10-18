@@ -255,8 +255,10 @@ describe("ProductOneToOne pending — navegação aditiva (layout)", () => {
     );
     expect(layoutSource).toMatch(/href="\/admin\/product-1-1-pending"/);
     expect(layoutSource).toMatch(/Pendências Produto 1:1/);
-    // Links existentes preservados.
-    expect(layoutSource).toMatch(/href="\/admin\/image-model-pair"/);
+    // Links existentes preservados; a entrada única de modelos aponta para a página unificada
+    // (a rota legada /admin/image-model-pair permanece como redirecionamento).
+    expect(layoutSource).toMatch(/href="\/admin\/ai-model-selection"/);
+    expect(layoutSource).not.toMatch(/href="\/admin\/image-model-pair"/);
     expect(layoutSource).toMatch(/href="\/admin\/laboratorio"/);
   });
 });

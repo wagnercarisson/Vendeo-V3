@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check, Save } from "lucide-react";
+import { AlertTriangle, Check, Save, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { INITIAL_IMAGE_MODEL_PAIR } from "@/lib/ai/image-model-pair";
@@ -9,23 +9,25 @@ import type { ImageModelPairConfigView } from "@/lib/ai/image-model-pair-config-
 import type { ImagePairPricingCoverage } from "@/lib/ai-cost/types";
 
 /**
- * Aviso permanente (região B) de que a configuração NÃO está ativa em produção
- * (D-23 / T-56.1-32). Não-dismissível e presente em todos os estados da tela.
- * Exportado para a página compor a região B antes das regiões C/D/E, mantendo
+ * Explicação de escopo (região B) da configuração do par do Produto 1:1.
+ * Não-dismissível e presente em todos os estados da tela. Ela descreve o que a
+ * configuração define, sem afirmar que o fluxo está ativo ou inativo em
+ * produção — a habilitação é controlada separadamente e não é consultada aqui.
+ * Exportada para a página compor a região B antes das regiões C/D/E, mantendo
  * uma única instância e permitindo provar por teste sua permanência.
  */
-export function ImageModelPairInactiveBanner() {
+export function ImageModelPairScopeBanner() {
   return (
-    <div className="rounded-xl border border-accent-amber/20 bg-accent-amber/5 p-4">
+    <div className="rounded-xl border border-accent-blue/20 bg-accent-blue/5 p-4">
       <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-accent-amber" aria-hidden="true" />
+        <Settings2 className="mt-0.5 h-5 w-5 shrink-0 text-accent-blue" aria-hidden="true" />
         <div className="space-y-1">
-          <p className="font-heading text-sm font-semibold text-accent-amber">
-            Esta configuração NÃO está ativa em produção.
+          <p className="font-heading text-sm font-semibold text-text-primary">
+            Modelos do fluxo Produto 1:1
           </p>
           <p className="text-sm text-text-secondary">
-            Ela prepara o novo fluxo de imagem Produto 1:1. Nenhuma campanha usa estes modelos e o fluxo
-            atual permanece inalterado.
+            Esta configuração define os modelos do fluxo Produto 1:1. A habilitação do fluxo é controlada
+            separadamente.
           </p>
         </div>
       </div>

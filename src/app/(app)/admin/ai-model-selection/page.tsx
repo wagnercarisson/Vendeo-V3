@@ -1,5 +1,6 @@
 import { buildAiModelSelectionView } from "@/lib/ai/ai-model-selection-view";
 import { AiModelSelectionForm } from "./form";
+import { ProductOneToOneImageModelSection } from "./image-model-pair-section";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,26 @@ export default async function AdminAiModelSelectionPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-text-primary sm:text-3xl">Modelos de IA</h1>
         <p className="mt-2 text-sm leading-6 text-text-secondary">
-          Escolha o modelo usado por capacidade. A tela mostra o alvo efetivamente resolvido,
-          o default do sistema e qualquer configuração persistida que precise de atenção.
+          Configure, em um único lugar, os modelos por capacidade e o par de imagem do fluxo
+          Produto 1:1. Cada seção salva de forma independente, com auditoria e motivo obrigatório.
         </p>
       </header>
-      <AiModelSelectionForm view={view} />
+
+      <section aria-labelledby="other-capabilities-heading" className="space-y-4">
+        <div>
+          <h2 id="other-capabilities-heading" className="font-heading text-2xl font-bold text-text-primary sm:text-3xl">
+            Demais capacidades
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-text-secondary">
+            Seleção de modelos por capacidade, preservando os agrupamentos existentes. As capacidades
+            de imagem abaixo pertencem ao fluxo legado; o fluxo Produto 1:1 é configurado na seção
+            seguinte.
+          </p>
+        </div>
+        <AiModelSelectionForm view={view} />
+      </section>
+
+      <ProductOneToOneImageModelSection />
     </div>
   );
 }
