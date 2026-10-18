@@ -187,6 +187,9 @@ describe('BrandDirectorService.analyze onCall (F38.1/F46-04, D7/D9/D11)', () => 
       imageDetail: 'low',
       maxTokens: 3000,
     });
+    // A imagem do logo é enviada como data URL no request de visão.
+    const sentRequest = invokeMock.mock.calls[0][1] as { productImagesDataUrls?: string[] };
+    expect(sentRequest.productImagesDataUrls?.[0]).toMatch(/^data:image\/png;base64,/);
   });
 
   it('sem telemetria lança (contexto obrigatório)', async () => {
@@ -244,6 +247,7 @@ describe('BrandDirectorService.analyze — classificação de resposta (F-quick)
     errorType: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     providerKind?: string;
+    model: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     deterministicPreserved: boolean;
   }> {
@@ -262,6 +266,7 @@ describe('BrandDirectorService.analyze — classificação de resposta (F-quick)
     return {
       errorType: err.metadata.errorType,
       providerKind: err.metadata.providerKind,
+      model: err.metadata.model,
       deterministicPreserved: err.deterministicResult !== null,
     };
   }
@@ -308,9 +313,81 @@ describe('BrandDirectorService.analyze — classificação de resposta (F-quick)
     expect(info.errorType).toBe('truncated_response');
   });
 
-  it('finish_reason=content_filter → refused', async () => {
+  it('finish_reason=content_filter → content_filter (distinto de recusa explícita)', async () => {
     const info = await analyzeExpectError(visionInvoker({ content: '{}', finishReason: 'content_filter' }));
-    expect(info.errorType).toBe('refused');
+    expect(info.errorType).toBe('content_filter');
+  });
+
+  it('content_filter NÃO é classificado como recusa explícita', async () => {
+    const info = await analyzeExpectError(visionInvoker({ content: '', finishReason: 'content_filter' }));
+    expect(info.errorType).not.toBe('refused');
+    expect(info.errorType).toBe('content_filter');
+  });
+
+  it('metadados usam o MODELO EFETIVO retornado pelo gateway (não o default fixo)', async () => {
+    const invoker = {
+      invoke: vi.fn(async () => ({ content: '{"a":', model: 'gpt-6-luna', finishReason: 'stop' })) as unknown as AiInvoker['invoke'],
+      hasFallback: vi.fn(async () => false),
+    } as AiInvoker;
+    const info = await analyzeExpectError(invoker);
+    expect(info.errorType).toBe('invalid_json');
+    expect(info.model).toBe('gpt-6-luna');
+  });
+
+  /** Fake que EMITE o envelope no sink (como o gateway real) e devolve o resultado. */
+  function emittingInvoker(result: { content?: string | null; finishReason?: string; refusal?: string }): AiInvoker {
+    return {
+      invoke: vi.fn(async (_capability: string, _request: unknown, telemetry: AiTelemetryContext) => {
+        await telemetry.sink.emit({
+          capability: 'brand_profile_vision',
+          protocol: 'chat-completions',
+          status: 'success',
+          provider: 'openai',
+          model: 'gpt-6-luna',
+          durationMs: 5,
+        });
+        return {
+          content: result.content ?? undefined,
+          model: 'gpt-6-luna',
+          finishReason: result.finishReason,
+          refusal: result.refusal,
+        };
+      }) as unknown as AiInvoker['invoke'],
+      hasFallback: vi.fn(async () => false),
+    };
+  }
+
+  function capturingTelemetry(): { telemetry: AiTelemetryContext; emitted: Array<Record<string, unknown>> } {
+    const emitted: Array<Record<string, unknown>> = [];
+    return {
+      telemetry: { ...TELEMETRY, sink: { emit: async (e: unknown) => { emitted.push(e as Record<string, unknown>); } } },
+      emitted,
+    };
+  }
+
+  it('anota domainStatus=failed + domainErrorType no envelope quando a análise é recusada (não parece sucesso)', async () => {
+    const { telemetry, emitted } = capturingTelemetry();
+    const { BrandDirectorService } = await import('../brand-director');
+    const service = new BrandDirectorService(emittingInvoker({ content: '', refusal: 'não posso ajudar', finishReason: 'stop' }));
+    await service
+      .analyze({ logoBuffer: Buffer.from('fake-png'), logoMimeType: 'image/png', storeData: basicStoreData, telemetry })
+      .catch(() => {});
+
+    expect(emitted).toHaveLength(1);
+    const metadata = emitted[0].metadata as Record<string, unknown> | undefined;
+    expect(metadata?.domainStatus).toBe('failed');
+    expect(metadata?.domainErrorType).toBe('refused');
+  });
+
+  it('anota domainStatus=success no envelope quando a análise conclui', async () => {
+    const { telemetry, emitted } = capturingTelemetry();
+    const { BrandDirectorService } = await import('../brand-director');
+    const service = new BrandDirectorService(emittingInvoker({ content: visionJson(), finishReason: 'stop' }));
+    await service.analyze({ logoBuffer: Buffer.from('fake-png'), logoMimeType: 'image/png', storeData: basicStoreData, telemetry });
+
+    expect(emitted).toHaveLength(1);
+    const metadata = emitted[0].metadata as Record<string, unknown> | undefined;
+    expect(metadata?.domainStatus).toBe('success');
   });
 
   it('JSON malformado → invalid_json', async () => {

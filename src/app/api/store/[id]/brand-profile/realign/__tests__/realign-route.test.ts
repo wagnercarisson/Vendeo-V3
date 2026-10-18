@@ -617,7 +617,7 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
 
     expect(res.status).toBe(200);
     expect(body.success).toBe(false);
-    expect(body.message).toBe('Não foi possível atualizar a direção visual. O perfil anterior foi mantido.');
+    expect(body.message).toBe('Não foi possível interpretar a análise do logotipo. Tente novamente. A direção visual anterior foi mantida.');
     expect(body.error).toBe('invalid_json');
     expect(body.error).not.toContain('JSON input');
     // perfil anterior preservado: nenhum update de status (não marca outdated)

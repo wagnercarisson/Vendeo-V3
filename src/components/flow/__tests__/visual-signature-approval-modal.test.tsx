@@ -442,3 +442,58 @@ describe('VisualSignatureApprovalModal behavioral (Cancelar) — rendering', () 
     expect(screen.queryByText('Ajustar assinatura')).not.toBeInTheDocument();
   });
 });
+
+describe('VisualSignatureApprovalModal — bp_failed retry (diagnóstico do realinhamento)', () => {
+  it('falha no realinhamento mantém o modal e mostra a mensagem segura específica', async () => {
+    const props = createModalProps({ mode: 'substitution' });
+    const { onClose } = props;
+
+    vi.spyOn(global, 'fetch').mockImplementation(async (url) => {
+      const urlStr = typeof url === 'string' ? url : '';
+      if (urlStr.includes('/api/legal/status')) {
+        return new Response(JSON.stringify({ acceptanceStatus: 'current' }), { status: 200 });
+      }
+      if (urlStr.includes('/generate-without-logo')) {
+        return new Response(
+          JSON.stringify({ assetUrl: 'https://x/sig.png', signatureId: 'sig-1', artDirectorOutput: {}, attempt: 1 }),
+          { status: 200 },
+        );
+      }
+      if (urlStr.includes('/visual-signature/approve')) {
+        return new Response(
+          JSON.stringify({ signature: { assetUrl: 'https://x/sig.png' }, bp_status: 'failed', brandProfileData: null }),
+          { status: 200 },
+        );
+      }
+      if (urlStr.includes('/brand-profile/realign')) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: 'O provedor recusou a análise deste logotipo. A direção visual anterior foi mantida.',
+            error: 'refused',
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    });
+
+    render(<VisualSignatureApprovalModal {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Aprovar')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Aprovar'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Perfil de marca pendente')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Tentar novamente'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/A direção visual anterior foi mantida\./)).toBeInTheDocument();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});

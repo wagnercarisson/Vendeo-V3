@@ -2,8 +2,8 @@ import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { BrandDirectorResult, ColorCluster, ColorProbeResult } from './types';
 import { probeColors, deltaE, hexToLab, rgbToHex, findClosestProbeCluster, isLightNeutral, STRONG_MATCH_DELTA_E, ACCEPTABLE_MATCH_DELTA_E, LOOSE_MATCH_DELTA_E } from './color-probe';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
-import { defaultAiGateway, withOnCallTelemetry, AiInvocationError } from '@/lib/ai';
-import type { AiInvocationRequest, AiInvocationResult, AiInvoker, AiTelemetryContext } from '@/lib/ai';
+import { defaultAiGateway, withOnCallTelemetry, withDomainOutcome, AiInvocationError } from '@/lib/ai';
+import type { AiInvocationRequest, AiInvocationResult, AiInvoker, AiTelemetryContext, AiDomainOutcomeHandle } from '@/lib/ai';
 
 /** Espelha o default do registry para `brand_profile_vision` (F46 D1). */
 const DEFAULT_VISION_MODEL = 'gpt-4o';
@@ -305,7 +305,8 @@ export class BrandDirectorService {
   /**
    * Valida e interpreta a resposta de visão **antes** do `JSON.parse`,
    * classificando a falha na camada correta com prioridade definida:
-   * recusa → truncamento → conteúdo vazio → JSON inválido → formato inválido.
+   * recusa explícita → content_filter → truncamento → conteúdo vazio → JSON
+   * inválido → formato inválido.
    *
    * Loga apenas diagnóstico **sanitizado** (`errorType`, `finishReason`,
    * presença de recusa, comprimento do conteúdo) — nunca o conteúdo, prompt ou
@@ -332,8 +333,15 @@ export class BrandDirectorService {
     };
 
     // 1. Recusa explícita tem prioridade — mesmo com `content` nulo/vazio.
-    if (refusalPresent || finishReason === 'content_filter') {
+    if (refusalPresent) {
       return fail('refused', 'A análise visual foi recusada pelo provedor.');
+    }
+
+    // 1b. Bloqueio por política de conteúdo (`finish_reason=content_filter`) é
+    //     distinto de recusa explícita — nem todo filtro vem acompanhado de
+    //     `message.refusal`.
+    if (finishReason === 'content_filter') {
+      return fail('content_filter', 'A análise visual foi bloqueada pelas políticas de conteúdo do provedor.');
     }
 
     // 2. Truncamento — a resposta não foi concluída (prioridade sobre vazio).
@@ -426,6 +434,14 @@ export class BrandDirectorService {
     }
 
     const model = DEFAULT_VISION_MODEL;
+    // Modelo **efetivo** reportado pelo gateway (pode diferir do default quando a
+    // seleção administrativa aponta outro modelo, ex.: gpt-6-luna). Alimenta os
+    // metadados/logs sanitizados — nunca o conteúdo/prompt/imagem.
+    let effectiveModel = model;
+    // Resultado de DOMÍNIO: anexa `domainStatus`/`domainErrorType` ao MESMO
+    // envelope emitido pelo gateway — uma chamada HTTP bem-sucedida com análise
+    // recusada/vazia NÃO parece sucesso funcional (F46-03/D11).
+    let domainOutcome: AiDomainOutcomeHandle | null = null;
 
     console.log(`[BrandDirector] logo analysis start: model=${model}, mimeType=${params.logoMimeType}, bufferSize=${params.logoBuffer.length} bytes, store=${params.storeData.storeName}`);
 
@@ -472,8 +488,9 @@ export class BrandDirectorService {
       console.log(`[BrandDirector] calling OpenAI vision: model=${model}, detail=low, maxTokens=3000, dataUrlLength=${imageDataUrl.length}`);
 
       // F46-04 (D9): brand_profile_vision via camada única. O gateway resolve o
-      // modelo real (gpt-4o) e o sink persiste; o `onCall` legado apenas recebe
-      // o envelope já produzido (comportamento best-effort preservado).
+      // modelo real (default gpt-4o, ou a seleção administrativa — ex.: gpt-6-luna)
+      // e o sink persiste; o `onCall` legado apenas recebe o envelope já produzido
+      // (comportamento best-effort preservado).
       if (!params.telemetry) {
         throw new BrandDirectorAnalysisError(
           '[BrandDirectorService] AiTelemetryContext é obrigatório para invoke("brand_profile_vision")',
@@ -481,6 +498,10 @@ export class BrandDirectorService {
           deterministicResult,
         );
       }
+
+      // F46-03 (D11): envolve a telemetria para anotar o resultado de domínio no
+      // envelope. O flush ao sink real acontece em `domainOutcome.complete(...)`.
+      domainOutcome = withDomainOutcome(params.telemetry);
 
       const request: AiInvocationRequest = {
         prompt: `Analise o logotipo desta loja e gere o perfil de marca completo em JSON.\n\n${technicalSection}`,
@@ -494,12 +515,14 @@ export class BrandDirectorService {
       const gatewayResult = await this.invoker.invoke(
         'brand_profile_vision',
         request,
-        withOnCallTelemetry(params.telemetry, params.onCall),
+        withOnCallTelemetry(domainOutcome.telemetry, params.onCall),
       );
+
+      effectiveModel = gatewayResult.model || model;
 
       const elapsedMs = Date.now() - startTime;
       const { raw, contentLength } = this.parseVisionResponse(gatewayResult, {
-        model,
+        model: effectiveModel,
         elapsedMs,
         deterministicResult,
       });
@@ -514,7 +537,7 @@ export class BrandDirectorService {
         console.error(`[BrandDirector] analysis failed: type=incomplete_response, elapsed=${elapsedMs}ms, emptyFields=${emptyFields.length}, contentLength=${contentLength}`);
         throw new BrandDirectorAnalysisError(
           errorMsg,
-          { provider: 'openai', model, elapsedMs, errorType: 'incomplete_response' },
+          { provider: 'openai', model: effectiveModel, elapsedMs, errorType: 'incomplete_response' },
           deterministicResult,
         );
       }
@@ -524,21 +547,28 @@ export class BrandDirectorService {
 
       console.log(`[BrandDirector] result built: primary=${result.inferred_primary_color}, accent=${result.inferred_accent_color}, detected=[${result.logo_colors_detected.join(',')}], confidence=${result.confidence_score}`);
 
+      await domainOutcome.complete({ domainStatus: 'success' });
       return result;
     } catch (err) {
       const elapsedMs = Date.now() - startTime;
 
       if (err instanceof BrandDirectorAnalysisError) {
         console.error(`[BrandDirector] analysis failed: type=${err.metadata.errorType}, elapsed=${elapsedMs}ms, providerKind=${err.metadata.providerKind ?? 'n/a'}`);
+        if (domainOutcome) {
+          await domainOutcome.complete({ domainStatus: 'failed', domainErrorType: err.metadata.errorType });
+        }
         throw err;
       }
 
       const providerKind = err instanceof AiInvocationError ? err.kind : undefined;
       console.error(`[BrandDirector] unexpected error: elapsed=${elapsedMs}ms, type=api_error, providerKind=${providerKind ?? 'unknown'}`);
 
+      if (domainOutcome) {
+        await domainOutcome.complete({ domainStatus: 'failed', domainErrorType: 'api_error' });
+      }
       throw new BrandDirectorAnalysisError(
         err instanceof AiInvocationError ? err.message : 'Falha inesperada na análise visual.',
-        { provider: 'openai', model, elapsedMs, errorType: 'api_error', providerKind },
+        { provider: 'openai', model: effectiveModel, elapsedMs, errorType: 'api_error', providerKind },
         deterministicResult,
       );
     }

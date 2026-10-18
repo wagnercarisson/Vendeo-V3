@@ -11,7 +11,7 @@ import "@testing-library/jest-dom/vitest";
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import type { Store } from "@/lib/store";
 import {
   STORE_NAME_HINT,
@@ -347,3 +347,58 @@ describe("StoreIdentityForm — orientação contextual (F49)", () => {
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+
+describe("StoreIdentityForm — carregamento do perfil vigente × tentativa failed histórica", () => {
+  const SYNCED = {
+    id: "p-synced",
+    status: "synced",
+    source: "logo_analysis",
+    safe_color_tokens: { primary: "#D59D5E", secondary: "#5B463A", accent: "#E0B786", background: "#FDF8EC" },
+    brand_colors_chosen: [],
+    visual_style: "clássica e artesanal",
+    visual_tone: "acolhedor",
+    brand_personality: "tradicional",
+    inferred_primary_color: "#D59D5E",
+    inferred_accent_color: "#E0B786",
+    logo_colors_detected: ["#D59D5E"],
+    metadata: {},
+  };
+  const FAILED_LATEST = { id: "p-failed", status: "failed", source: "logo_analysis", metadata: { errorType: "refused" } };
+
+  it("carrega o VIGENTE via ?status=synced e NÃO usa a tentativa failed histórica como atual", async () => {
+    const fetchMock = installFetch({
+      "/api/store/store-1/brand-profile?status=synced": SYNCED,
+      "/api/store/store-1/brand-profile": FAILED_LATEST,
+      "/api/store/store-1/logo": { assets: {} },
+      "/api/store/store-1": STORE,
+    });
+
+    renderForm("posicionamento");
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith("/api/store/store-1/brand-profile?status=synced");
+    });
+    // Com vigente presente, o perfil sem filtro (que devolveria a failed) não é buscado.
+    const plainProfileCalls = fetchMock.mock.calls.filter(
+      ([u]) => String(u) === "/api/store/store-1/brand-profile",
+    );
+    expect(plainProfileCalls).toHaveLength(0);
+  });
+
+  it("sem vigente, diagnostica a tentativa failed histórica sem tratá-la como atual", async () => {
+    const fetchMock = installFetch({
+      "/api/store/store-1/brand-profile?status=synced": null,
+      "/api/store/store-1/brand-profile": FAILED_LATEST,
+      "/api/store/store-1/logo": { assets: {} },
+      "/api/store/store-1": STORE,
+    });
+
+    renderForm("posicionamento");
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([u]) => String(u) === "/api/store/store-1/brand-profile"),
+      ).toBe(true);
+    });
+  });
+});

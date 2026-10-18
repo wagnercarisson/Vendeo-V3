@@ -39,6 +39,33 @@ type ActiveVsSummary = {
   dismissed_snapshot: CriticalSnapshot | null;
 };
 
+/** Mensagem genérica de fallback quando a API não devolve uma mensagem pública. */
+export const REALIGN_GENERIC_ERROR = "Não foi possível realinhar. Tente novamente mais tarde.";
+
+/**
+ * Erro de realinhamento com a **mensagem pública segura** devolvida pela API.
+ * Permite à UI preservar a mensagem específica (ex.: recusa de análise) sem
+ * confundir com erros brutos de salvamento/rede — os handlers só exibem
+ * `publicMessage` quando o erro é um `RealignError`.
+ */
+export class RealignError extends Error {
+  readonly publicMessage: string;
+  constructor(publicMessage: string) {
+    super(publicMessage);
+    this.name = "RealignError";
+    this.publicMessage = publicMessage;
+  }
+}
+
+/**
+ * Resolve a mensagem exibida ao lojista a partir do erro do realinhamento:
+ * preserva a mensagem pública segura da API (`RealignError`) e usa o fallback
+ * genérico em qualquer outro caso (rede, salvar, erros brutos).
+ */
+export function resolveRealignErrorMessage(error: unknown): string {
+  return error instanceof RealignError ? error.publicMessage : REALIGN_GENERIC_ERROR;
+}
+
 function snapshotsEqual(a: StoreProfileInputSnapshot | null, b: StoreProfileInputSnapshot | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
@@ -251,7 +278,7 @@ export function useDriftDetection(
         options?.onRealinhado?.();
         return data;
       } else {
-        throw new Error(data.message || 'Erro ao realinhar direção visual');
+        throw new RealignError(data.message || REALIGN_GENERIC_ERROR);
       }
     } finally {
       setIsRealinhando(false);

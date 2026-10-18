@@ -25,7 +25,7 @@ import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createElement } from "react";
 import { renderHook, act, waitFor, render, screen, fireEvent } from "@testing-library/react";
-import { useDriftDetection } from "../use-drift-detection";
+import { useDriftDetection, RealignError, resolveRealignErrorMessage, REALIGN_GENERIC_ERROR } from "../use-drift-detection";
 import { useOnboardingTabs } from "@/hooks/use-onboarding-tabs";
 import type { UseOnboardingTabsDeps } from "@/hooks/use-onboarding-tabs";
 
@@ -236,6 +236,36 @@ describe("drift-tabs — useDriftDetection real (D13, endpoints preservados)", (
     expect(call[1]).toMatchObject({ method: "POST" });
     expect(onRealinhado).toHaveBeenCalled();
     expect(result.current.driftStatus).toBe("none");
+  });
+
+  it("(mensagem) realinhar() com success:false propaga RealignError com a mensagem pública e NÃO zera o drift", async () => {
+    const PUBLIC = "O provedor recusou a análise deste logotipo. A direção visual anterior foi mantida.";
+    fetchMock.mockResolvedValueOnce(mockFetchResponse({ success: false, message: PUBLIC, error: "refused" }));
+    const { result } = renderHook(() =>
+      useDriftDetection(DRIFTED_STORE, DRIFTED_PROFILE, "text_only"),
+    );
+    await waitFor(() => expect(result.current.driftStatus).toBe("new"));
+
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.realinhar();
+      } catch (e) {
+        caught = e;
+      }
+    });
+
+    expect(caught).toBeInstanceOf(RealignError);
+    expect((caught as RealignError).publicMessage).toBe(PUBLIC);
+    // Mensagem específica preservada pelos handlers; perfil/drift anterior mantido.
+    expect(resolveRealignErrorMessage(caught)).toBe(PUBLIC);
+    expect(result.current.driftStatus).toBe("new");
+  });
+
+  it("(mensagem) resolveRealignErrorMessage usa fallback genérico para erros não-RealignError", () => {
+    expect(resolveRealignErrorMessage(new Error("raw save/provider error"))).toBe(REALIGN_GENERIC_ERROR);
+    expect(resolveRealignErrorMessage(undefined)).toBe(REALIGN_GENERIC_ERROR);
+    expect(resolveRealignErrorMessage(new RealignError("mensagem segura da API"))).toBe("mensagem segura da API");
   });
 
   it("(Bug A) drift NÃO é one-shot: após realinhar, nova divergência reabre o fluxo (refs sincronizados)", async () => {

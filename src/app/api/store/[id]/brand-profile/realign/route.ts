@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { BrandDirectorService, BrandDirectorAnalysisError } from '@/lib/brand-assets/brand-director';
+import { publicBrandDirectorErrorMessage } from '@/lib/brand-assets/brand-director-error-message';
 import { BrandTextOnlyInferenceService, BrandTextOnlyInferenceError } from '@/lib/brand-assets/text-only-inference-service';
 import { BrandProfilerWithoutLogoService, BrandProfilerWithoutLogoError } from '@/lib/visual-signature/brand-profiler';
 import type { BrandProfilerInput } from '@/lib/visual-signature/types';
@@ -516,12 +517,16 @@ async function handleLogoRealign(
 
     // Don't update store state on failure — preserve existing state
     locks.delete(id);
-    // F-quick: expõe apenas o código classificado (sem a mensagem interna do
-    // provider). `message` permanece a fonte pública para a UI.
+    // Mensagem pública específica por `errorType` (sem a mensagem interna do
+    // provider) + confirmação de que o perfil anterior foi mantido. `error`
+    // permanece o código classificado.
     const errorCode = err instanceof BrandDirectorAnalysisError ? err.metadata.errorType : 'unexpected_error';
+    const publicMessage = err instanceof BrandDirectorAnalysisError
+      ? publicBrandDirectorErrorMessage(errorCode)
+      : 'Não foi possível concluir a análise agora. Tente novamente em instantes.';
     return NextResponse.json({
       success: false,
-      message: 'Não foi possível atualizar a direção visual. O perfil anterior foi mantido.',
+      message: `${publicMessage} A direção visual anterior foi mantida.`,
       error: errorCode,
     });
   }

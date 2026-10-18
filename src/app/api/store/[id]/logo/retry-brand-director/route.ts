@@ -9,34 +9,12 @@ import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
+import { publicBrandDirectorErrorMessage } from '@/lib/brand-assets/brand-director-error-message';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function validateUUID(id: string): boolean {
   return UUID_REGEX.test(id);
-}
-
-/**
- * Mensagem pública por `errorType` — clara, sem afirmar causa não comprovada e
- * sem expor detalhes internos do provider. O motivo técnico permanece apenas no
- * log server-side e no campo `diagnostic` (não exibido ao lojista).
- */
-function publicBrandDirectorErrorMessage(errorType: string): string {
-  switch (errorType) {
-    case 'refused':
-      return 'Não foi possível analisar este logotipo. Tente outra imagem.';
-    case 'truncated_response':
-      return 'A análise do logotipo não foi concluída. Tente novamente.';
-    case 'empty_content':
-      return 'Não foi possível extrair a identidade deste logotipo. Tente novamente.';
-    case 'invalid_json':
-    case 'invalid_json_shape':
-      return 'Não foi possível interpretar a análise do logotipo. Tente novamente.';
-    case 'incomplete_response':
-      return 'A análise do logotipo veio incompleta. Tente novamente.';
-    default:
-      return 'Não foi possível concluir a análise agora. Tente novamente em instantes.';
-  }
 }
 
 export const POST = apiHandler(async (

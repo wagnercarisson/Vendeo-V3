@@ -10,7 +10,7 @@ import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/const
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
 import { useState, useCallback, useRef, useEffect, useMemo, useId } from "react";
 import { useRouter } from "next/navigation";
-import { useDriftDetection } from "./use-drift-detection";
+import { useDriftDetection, resolveRealignErrorMessage } from "./use-drift-detection";
 import { getDriftPolicy } from "@/lib/drift";
 import type { OnboardingTab, TabBlockReason } from "@/lib/store-onboarding/tabs";
 import { tabBlockReasonText } from "@/lib/store-onboarding/reason-text";
@@ -571,7 +571,9 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         const [storeRes, logoRes, profileRes] = await Promise.all([
           fetch(`/api/store/${storeId}`),
           fetch(`/api/store/${storeId}/logo`),
-          fetch(`/api/store/${storeId}/brand-profile`),
+          // Perfil VIGENTE (synced) — separado da tentativa `failed` histórica, que
+          // NÃO deve ser tratada como atual nem sobrepor as cores/direção vigentes.
+          fetch(`/api/store/${storeId}/brand-profile?status=synced`),
         ]);
 
         if (storeRes.ok) {
@@ -593,6 +595,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         if (profileRes.ok) {
           const profile = await profileRes.json();
           if (profile) {
+            // `?status=synced` ⇒ sempre o perfil VIGENTE.
             if (profile.logo_colors_detected?.length > 0) {
               setDetectedColors(profile.logo_colors_detected);
             }
@@ -610,25 +613,33 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                 ?? ''
               );
             }
-            if (profile.status === 'synced') {
-              setInferredProfile({
-                safe_color_tokens: profile.safe_color_tokens,
-                visual_style: profile.visual_style,
-                visual_tone: profile.visual_tone,
-                brand_personality: profile.brand_personality,
-                brand_colors_chosen: profile.brand_colors_chosen,
-                inferred_primary_color: profile.inferred_primary_color,
-                inferred_accent_color: profile.inferred_accent_color,
-                metadata: profile.metadata,
-              });
-            } else if (profile.status === 'failed') {
-              console.error('[StoreIdentityForm] Profile failed:', profile.source, profile.metadata?.error);
-              if (profile.source === 'logo_analysis') {
-                setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
-              } else {
-                setInferenceError('Falha de conexão. Tente novamente mais tarde.');
+            setInferredProfile({
+              safe_color_tokens: profile.safe_color_tokens,
+              visual_style: profile.visual_style,
+              visual_tone: profile.visual_tone,
+              brand_personality: profile.brand_personality,
+              brand_colors_chosen: profile.brand_colors_chosen,
+              inferred_primary_color: profile.inferred_primary_color,
+              inferred_accent_color: profile.inferred_accent_color,
+              metadata: profile.metadata,
+            });
+          } else {
+            // Sem perfil vigente: apenas DIAGNOSTICA a tentativa `failed` histórica
+            // (sem tratá-la como atual nem aplicar suas cores).
+            try {
+              const latestRes = await fetch(`/api/store/${storeId}/brand-profile`);
+              if (latestRes.ok) {
+                const latest = await latestRes.json();
+                if (latest?.status === 'failed') {
+                  console.error('[StoreIdentityForm] Profile failed (histórico):', latest.source, latest.metadata?.errorType ?? latest.metadata?.error);
+                  if (latest.source === 'logo_analysis') {
+                    setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
+                  } else {
+                    setInferenceError('Falha de conexão. Tente novamente mais tarde.');
+                  }
+                }
               }
-            }
+            } catch {}
           }
         }
       } catch {}
@@ -937,7 +948,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         return;
       }
       setBrandDirectorWarning(null);
-      const profileRes = await fetch(`/api/store/${storeId}/brand-profile`);
+      const profileRes = await fetch(`/api/store/${storeId}/brand-profile?status=synced`);
       if (profileRes.ok) {
         const profile = await profileRes.json();
         if (profile?.status === 'synced') {
@@ -2104,7 +2115,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                             );
                           }
                         }
-                      } catch (e) { setDriftError('Não foi possível realinhar. Tente novamente mais tarde.'); }
+                      } catch (e) { setDriftError(resolveRealignErrorMessage(e)); }
                     }}
                     disabled={isRealinhando}
                     className="text-text-muted text-xs underline cursor-pointer hover:text-text-primary transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
@@ -2589,9 +2600,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               }
               driftFromSaveRef.current = null;
               setShowDriftDecisionModal(false);
-            } catch {
-              setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
-              setFeedbackOverlay({ message: 'Não foi possível realinhar. Tente novamente mais tarde.', type: 'error' });
+            } catch (e) {
+              const message = resolveRealignErrorMessage(e);
+              setDriftError(message);
+              setFeedbackOverlay({ message, type: 'error' });
             }
           }}
           onIgnorar={async () => {
@@ -2700,8 +2712,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               }
               setDriftNavIntercept(false);
               if (pendingNavUrl) router.push(pendingNavUrl);
-            } catch {
-              setDriftError('Não foi possível realinhar. Tente novamente mais tarde.');
+            } catch (e) {
+              setDriftError(resolveRealignErrorMessage(e));
             }
           }}
           onIgnorar={async () => {

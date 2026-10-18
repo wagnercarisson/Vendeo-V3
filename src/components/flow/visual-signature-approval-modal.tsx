@@ -435,17 +435,34 @@ export function VisualSignatureApprovalModal({
   const handleRetryBP = useCallback(async () => {
     if (onTier2Retry) {
       await onTier2Retry();
-    } else {
-      try {
-        await fetch(`/api/store/${storeId}/brand-profile/realign`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-      } catch {
-        // Silent fallback — retry best-effort
-      }
+      onClose();
+      return;
     }
-    onClose();
+    try {
+      const res = await fetch(`/api/store/${storeId}/brand-profile/realign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json().catch(() => ({}));
+      // Falha funcional (recusa, filtro de conteúdo, vazio, truncamento, JSON):
+      // mantém o modal e mostra a mensagem segura/específica devolvida pela API.
+      // O perfil de marca anterior permanece (garantido server-side).
+      if (!res.ok || data.success === false) {
+        setState((prev) =>
+          prev.phase === "bp_failed"
+            ? { ...prev, message: data.message || "Não foi possível gerar o perfil de marca agora. Tente novamente." }
+            : prev,
+        );
+        return;
+      }
+      onClose();
+    } catch {
+      setState((prev) =>
+        prev.phase === "bp_failed"
+          ? { ...prev, message: "Erro de conexão ao gerar o perfil de marca. Tente novamente." }
+          : prev,
+      );
+    }
   }, [onTier2Retry, storeId, onClose]);
 
   const handleClose = useCallback(() => {
