@@ -171,5 +171,15 @@ Regras atendidas: só age com operação PERSISTIDA `delivered` + vínculo loja/
 
 **Gates:** `tsc` 0; focados **252/252**; `eslint .` 0; `next build` 0; spec `product-1-1-prompt-composition` válida. Sem geração paga, produção, deploy ou push. Janela permanece **desligada**.
 
+## 12. Reabertura da janela (validação manual de Destaque sem preço) + confirmação do teste de rota
+
+**Janela reaberta (autorizado):** destino `vendeo-homolog` (Kong `127.0.0.1:57781`), `spent` **0,4242** / `cap` **0,8454** (histórico preservado; sem novo `set_cap`), autorização estreita **`isolated_pilot`+`test_stores`** concedida (seq **13**), `product_1_1_test_stores_enabled=true`, `all_stores=false`, geração **despausada** (`VENDEO_GENERATION_PAUSED=false`); Next reiniciado. Par vigente `sunburst/medium` + fallback `gpt-image-2/low`; copy `gpt-6-luna`. Encerra-se ao aviso de término (revoga/autorização + flag off + pausa).
+
+**Confirmação do teste de rota (Oferta sem preço promocional ⇒ 400 antes de efeitos):**
+- `route.test.ts` — 2 casos novos: **ausente** ⇒ 400 `offer_requires_discounted_price` (fields `["discountedPriceCents"]`); **zero** ⇒ 400 de schema. Ambos provam **`createCampaign` NÃO chamado, `reserveCredit` NÃO chamado, `runProductOneToOneGeneration` (provider) NÃO chamado**.
+- **Infra de teste:** adicionado mock de `resolve-pilot-spend-gate` (`{kind:"inactive"}`) — o gate real (dependência de DB) fazia o mock de autorização (sem `stage`) resolver `blocked` ⇒ **503 espúrio**. Com o mock, `route.test.ts` passa **93/93** (corrige também as **26 falhas pré-existentes** da suíte de rota).
+- Gates: `tsc` 0; `eslint .` 0.
+
+
 
 

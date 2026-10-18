@@ -49,6 +49,17 @@ vi.mock('@/lib/campaign/image-processor', () => ({
   buildPublicationCopySnapshot: vi.fn(),
 }));
 
+// Quick 261017-cdi — o caminho do novo fluxo consulta o gate de gasto do piloto
+// (dependência de DB). Nos testes de ROTA ele é mockado para `inactive` (o fluxo
+// segue sem gate), preservando os re-exports do módulo. Sem este mock, a ausência
+// de `stage` no mock de autorização faz o gate resolver `blocked` ⇒ 503 espúrio.
+const mockResolvePilotSpendGate = vi.fn(async () => ({ kind: 'inactive' as const }));
+vi.mock('@/lib/product-1-1/pilot/resolve-pilot-spend-gate', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/lib/product-1-1/pilot/resolve-pilot-spend-gate')>();
+  return { ...actual, resolvePilotSpendGate: mockResolvePilotSpendGate };
+});
+
 vi.mock('@/lib/image-generation/config', () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
   MAX_PRODUCT_IMAGE_BASE64_SIZE: 5 * 1024 * 1024,
@@ -1852,6 +1863,35 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     // O schema legado estrito rejeita `backgroundDirection`; o do novo fluxo aceita.
     expect(GenerateImageRequestSchema.safeParse(VALID_NEW_FLOW_BODY).success).toBe(false);
     expect(NewFlowGenerateImageRequestSchema.safeParse(VALID_NEW_FLOW_BODY).success).toBe(true);
+  });
+
+  it('Quick 261017-cdi: Oferta SEM preço promocional (ausente) ⇒ 400 de campo ANTES de qualquer efeito', async () => {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+    const semPreco: Record<string, unknown> = { ...VALID_NEW_FLOW_BODY };
+    delete semPreco.discountedPriceCents;
+
+    const res = await POST(makeRequest(semPreco));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('offer_requires_discounted_price');
+    expect(body.error.fields).toEqual(['discountedPriceCents']);
+
+    // NENHUM efeito antes do 400: sem campanha, sem reserva de crédito, sem provider.
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
+  it('Quick 261017-cdi: Oferta com preço promocional ZERO ⇒ 400 de schema, sem efeitos', async () => {
+    setupNewFlowMocks();
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest({ ...VALID_NEW_FLOW_BODY, discountedPriceCents: 0 }));
+    expect(res.status).toBe(400);
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
   });
 
   it('F2: backgroundDirection inválido ⇒ 400 (schema estrito do novo fluxo), sem reserva/provider', async () => {
