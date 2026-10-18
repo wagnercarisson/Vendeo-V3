@@ -1,7 +1,9 @@
-# 261017-cdi — Validação visual MANUAL (EXECUÇÃO PENDENTE DE AUTORIZAÇÃO)
+# 261017-cdi — Validação visual MANUAL (SESSÃO PREPARADA — AGUARDANDO GERAÇÕES)
 
-> **Estado:** plano preparado; **NÃO executado**. Nenhuma flag ligada, nenhuma
-> despausa, nenhuma geração. Este documento **não autoriza** gerar.
+> **Estado:** **SESSÃO PREPARADA E AUTORIZADA** (responsável, 2026-10-17). Janela
+> local habilitada: cap **US$ 0,8454**, autorização estreita `isolated_pilot` +
+> `test_stores`, flag `product_1_1_test_stores_enabled=on`, geração **despausada**.
+> **Nenhuma geração executada ainda.** A condução é manual, pelo navegador.
 > **Base de código:** commit `0f510d8b` (composer v7, fundo v2, identidade v1).
 > **Ambiente:** `vendeo-homolog` (local). **Produção desligada.**
 
@@ -36,12 +38,24 @@ Conferir em cada arte: uso da **paleta da loja**, **separação produto/fundo**,
 
 ## ANTES DE HABILITAR — PARAR PARA AUTORIZAÇÃO
 
-### Produtos propostos (a confirmar pelo responsável)
-- **Produto A:** Red Bull Summer 250ml Morango & Pêssego — dominante **azul/prata/vermelho**.
-- **Produto B:** Rocambole de Morango (kg) — dominante **rosa/vermelho/creme**.
+### Produtos (confirmados pelo responsável)
+- **Produto A:** Red Bull Summer 250ml Morango & Pêssego — dominante **laranja**
+  (com prata/branco; “Morango & Pêssego” em magenta).
+- **Produto B:** Rocambole de Morango (kg) — dominante **creme/branco** com
+  **vermelho** (morangos) e dourado.
 
-> Ambos da mesma loja (Adega Mestre das Geladas). O responsável pode trocar B por
-> outro produto de cor dominante distinta.
+> Mesma loja (Adega Mestre das Geladas; `is_test_store=true`, `identity_state=logo`,
+> `brand_color=#242422`). Corrigido o relato anterior do Red Bull (era
+> “azul/prata/vermelho”; conferido na imagem real, é **laranja**).
+
+### Janela preparada (estado real)
+- **Gasto acumulado:** `spent_usd` = **US$ 0,2454** (confirmado; histórico preservado).
+- **Teto:** `cap_usd` = **US$ 0,8454** (spent + adicional US$ 0,60).
+- **Autorização:** `isolated_pilot` + `test_stores` (seq 11, granted, instância
+  `127.0.0.1:57781`).
+- **Flags:** `product_1_1_test_stores_enabled=true`; `all_stores=false`.
+- **Geração:** despausada (`VENDEO_GENERATION_PAUSED=false`); Next reiniciado para
+  carregar env + build do commit `0f510d8b`.
 
 ### Par de imagem vigente, fallback e copy
 - **Principal:** `openai/gpt-image-2.5-sunburst` / `medium`.
