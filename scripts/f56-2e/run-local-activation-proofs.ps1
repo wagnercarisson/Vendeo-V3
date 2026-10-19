@@ -1,4 +1,4 @@
-﻿param(
+param(
   [switch]$PreflightOnly
 )
 
@@ -125,4 +125,3 @@ node (Join-Path $repoRoot "supabase\proofs\f56_2e_activation_proofs.mjs")
 if ($LASTEXITCODE -ne 0) { Fail "provas reais falharam" }
 
 Write-Output "PASS f56-2e local activation proofs"
-

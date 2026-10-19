@@ -1,4 +1,4 @@
-﻿// @vitest-environment node
+// @vitest-environment node
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -68,4 +68,3 @@ describe("F56.2e - estado de ativacao respeita expiracao", () => {
     expect(state.mode).toBe("test_stores");
   });
 });
-

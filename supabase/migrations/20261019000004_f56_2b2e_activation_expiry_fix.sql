@@ -214,4 +214,3 @@ GRANT EXECUTE ON FUNCTION public.admin_set_product_1_1_activation(UUID, TEXT, TE
 -- REVERT (manual, somente na instancia isolada)
 -- DROP FUNCTION IF EXISTS public.admin_set_product_1_1_activation(UUID, TEXT, TEXT, TEXT, UUID);
 -- DROP TABLE IF EXISTS public.product_1_1_activation_actions;
-
