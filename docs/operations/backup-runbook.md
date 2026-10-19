@@ -71,6 +71,49 @@ evidência detalhada permanece fora do Git.
 
 Sem evidência de restauração de banco, metadados e objetos, o primeiro convite permanece bloqueado, mesmo que a implementação técnica da F50 esteja concluída.
 
+## F56.2b2d — Backup Verificável Antes das Migrations do Release
+
+Esta seção é **obrigatória** antes de qualquer migration do conjunto definitivo do release
+F56.2b2d (ver `f56-2b2d-release-runbook.md`, etapa 1). A verificação de restauração ocorre
+**antes** das migrations remotas, em checkpoint humano próprio.
+
+### Estado real do projeto Free (fato, não presunção)
+
+- O projeto de produção está no **plano Free**, que **NÃO oferece backup restaurável gerenciado**.
+  Não existe cópia gerenciada do próprio Supabase para a qual recorrer após um erro.
+- `walg_enabled=true` e `backups=[]` (estado observado) **NÃO provam restaurabilidade**. WAL-G
+  habilitado não é prova de que existe uma cópia restaurável e íntegra; a lista de backups vazia
+  confirma que não há ponto de restauração gerenciado disponível.
+- **PITR está desabilitado** (`pitr_enabled=false`). Portanto **nenhum procedimento aqui presume
+  point-in-time recovery**; a restauração depende exclusivamente do backup externo produzido por
+  este runbook.
+
+### Backup do banco e dos objetos de Storage
+
+Repetir o fluxo já descrito em *Conteúdo do Backup* e materializar, para esta fase:
+
+1. Dump lógico do banco com schema, dados, funções, policies e metadados.
+2. Cópia de **todos** os objetos de Storage (buckets privados e artefatos), preservando bucket,
+   storage path, mime type, tamanho e checksum SHA-256.
+3. Manifesto imutável com timestamp, versão da ferramenta, **contagem de linhas, contagem de
+   objetos, bytes e SHA-256** de cada item.
+4. Criptografar e enviar ao destino externo privado, validando o checksum remoto.
+
+### Restauração comprovada em destino LOCAL SEPARADO
+
+- A restauração é executada em um **destino local separado**, **sem sobrescrever o ambiente
+  `vendeo-homolog`**. O ambiente isolado é descartável e não aponta a aplicação para ele.
+- Comparar **contagens e checksums** do banco restaurado com o manifesto.
+- Restaurar os metadados dos buckets e uma amostra representativa de objetos, comparando
+  **contagem, bytes e SHA-256**, e comprovando leitura via URL assinada.
+- Sem esta evidência, as migrations do conjunto definitivo **permanecem bloqueadas**.
+
+### Evidência
+
+- Guardar a evidência (manifesto, relatório de restauração, checksums e prova de leitura assinada)
+  **fora do Git**, no sistema de evidências do responsável. Nunca versionar dumps, objetos ou chaves.
+- Registrar apenas identificador da execução, timestamps, contagens, checksums e resultado.
+
 ## Verificação de Segredos e Git
 
 - Usar variáveis de ambiente ou secret manager para service role, destino e chave de criptografia.
