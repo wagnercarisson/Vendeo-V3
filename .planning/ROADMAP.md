@@ -1,4 +1,4 @@
-﻿# Roadmap: Vendeo V3
+# Roadmap: Vendeo V3
 
 ## Milestone v1.5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â LanÃƒÆ’Ã‚Â§amento Externo Controlado ÃƒÂ¢Ã¢â‚¬â€Ã¢â‚¬Â 
 
@@ -498,4 +498,3 @@ Plans:
 **Gate:** `all_stores` sÃƒÆ’Ã‚Â³ ÃƒÆ’Ã‚Â© ativado apÃƒÆ’Ã‚Â³s 5.3 + 5.7 + validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna + campanha completa + aceite humano + disposiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o D13. Luna aprovado ÃƒÆ’Ã‚Â© mantido; restauraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o somente em reprovaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/problema/decisÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita. As migrations sÃƒÆ’Ã‚Â£o provadas em Postgres local isolado antes da publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. A janela preserva `spent_usd`, configura o cap e ativa `test_stores` antes de gerar. ApÃƒÆ’Ã‚Â³s a abertura, a fase encerra ativa e monitorada salvo critÃƒÆ’Ã‚Â©rio de parada/decisÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita.
 
 **Canonical refs:** `openspec/changes/fase-56-2-7-abertura-gradual-produto-1-1-luna/` (proposal, design D1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂD8, 4 specs, tasks), `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CONTEXT.md` e `56.2.7-PATTERNS.md`, `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
-
