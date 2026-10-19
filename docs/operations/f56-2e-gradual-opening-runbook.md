@@ -35,8 +35,8 @@ A ativacao/desligamento normal ocorre no painel **Controles operacionais > Produ
 3. Configurar `openai/gpt-6-luna`: pricing vigente, selecoes de `campaign_copy`, `brand_profile_text` e `brand_profile_vision`; fallback vazio em brand profiles. Registrar selecao anterior.
 4. Validar por leitura catalogo/protocolo/pricing/preflight e executar uma campanha completa em loja de teste.
 5. Provas:
-   - **5.3:** `node scripts/f56-2e/hosted-proofs.mjs --check --kind=5.3 ...` e depois `--execute --confirm=EXECUTE`. Deve resultar `refunded` uma vez; replay idempotente; sem provider/campanha de cliente.
-   - **5.7:** usar operacao **ja `delivered` antes do redeploy** (N=1 `22eeed06...`/`6f7a65e4...`). `--check` e depois `--execute`. Deve retornar idempotente, mesmo caminho/hash, sem nova geracao/upload/provider/transacao. `art_uploaded` NAO e PASS.
+   - **5.3:** `node scripts/f56-2e/hosted-proofs.mjs --check --kind=5.3 ...` e depois `--execute --confirm=EXECUTE`. O harness captura o epoch, sonda o **Storage** no caminho deterministico, exige PF completo (`failed` + sem claim), encerra, repete o encerramento e confere exatamente um estorno no ledger. `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` sao obrigatorios.
+   - **5.7:** usar operacao **ja `delivered` antes do redeploy** (N=1 `22eeed06...`/`6f7a65e4...`) e informar `--redeploy-at=<ISO>`. `--check` e depois `--execute`. O harness compara bytes/tamanho/hash da arte, eventos de geracao, transacoes e paid calls antes/depois, e repete o replay duas vezes. `art_uploaded` NAO e PASS.
 6. Encerrar a janela com chaves OFF + revogacao, sem pausar o legado e sem cancelar operacoes em andamento. Se Luna foi aprovado, **manter** as selecoes; se reprovado/problema/decisao explicita, restaurar as anteriores.
 
 ## 4. Checkpoint 3 - abertura geral

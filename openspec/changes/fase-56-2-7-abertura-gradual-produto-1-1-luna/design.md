@@ -96,6 +96,8 @@ A re-leitura de flags dentro do gate deixa de ser necessária para decidir o est
 
 **Falha:** qualquer exceção em qualquer passo aborta a transação inteira; não existe estado parcial aplicado. Se a resposta não puder ser confirmada, o endpoint retorna erro sem declarar o modo. A verificação final roda **dentro** da RPC (flags + `derive` do histórico) e uma divergência levanta exceção, revertendo tudo.
 
+**Expiração:** a leitura do estado e a verificação de `already_in_mode` tratam autorização expirada como estágio efetivo `off`. Uma autorização expirada não aparece como modo ativo nem impede a nova concessão; a decisão real já bloqueia a geração.
+
 **Aprovação humana:** a RPC **não** consulta documentos, specs ou evidências. O checkpoint registrado é a autorização operacional; a confirmação administrativa autenticada/auditada é o comando de ativação. Nenhuma spec deve prometer bloqueio técnico por aprovação documental.
 
 **UI:** não expõe toggle direto das duas chaves do Produto 1:1; o toggle genérico permanece para as demais flags. A rota genérica `PUT /api/admin/feature-flags` continua para compatibilidade/emergência, mas não é o caminho normal. A ação normal exige confirmação explícita para `all_stores` e mostra o estado verificado (ou erro) após a RPC.

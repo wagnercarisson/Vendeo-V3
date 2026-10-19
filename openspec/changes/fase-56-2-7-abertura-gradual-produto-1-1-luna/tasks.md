@@ -23,7 +23,7 @@
 - [ ] 2.6 Adicionar testes de resolução de Luna para as três capacidades: catálogo/protocolo, pricing, seleção; `campaign_copy` com fallback completo; `brand_profile_text`/`vision` com fallback vazio; fallback preenchido descarta a seleção e não deve ser aceito como validação.
 - [ ] 2.7 Executar `npm run typecheck`, `npm run lint`, `npm run build`, as suítes afetadas e `openspec validate fase-56-2-7-abertura-gradual-produto-1-1-luna --strict`; registrar saídas e `git diff --check`.
 - [ ] 2.8 Executar revisão consolidada de código e segurança; nenhum achado high/critical aberto antes do Checkpoint 1.
-- [ ] 2.9 Aplicar as duas migrations **somente na instância local isolada existente** (`vendeo-homolog`, sem reset/recriação/remoto) e executar provas reais em Postgres de transição, falha intermediária com rollback total, replay, conflito e concorrência; restaurar OFF ao final.
+- [ ] 2.9 Aplicar as quatro migrations da 56.2.7 **somente na instância local isolada existente** (`vendeo-f562a-isolated`, API 56321/DB 56322; sem reset/recriação/remoto) e executar provas reais em Postgres de transição, falha intermediária com rollback total, replay, conflito, concorrência e expiração; restaurar OFF ao final.
 
 ## 3. Checkpoint 1 — Publicação
 

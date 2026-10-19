@@ -62,6 +62,12 @@ A ativação e o desligamento SHALL ocorrer por uma única ação normal no admi
 - **AND** a UI exibe o estado atual relido, não o modo antigo do replay
 - **AND** nenhuma mutação é reaplicada
 
+#### Scenario: Autorização expirada não conta como ativa
+- **WHEN** a autorização mais recente está expirada e a chave está ligada
+- **THEN** a leitura do estado não a apresenta como modo ativo
+- **AND** uma nova ativação não é tratada como `already_in_mode`
+- **AND** a nova concessão vigente passa a valer
+
 #### Scenario: operationId divergente
 - **WHEN** o mesmo `operationId` é reutilizado com conteúdo diferente
 - **THEN** a ação retorna conflito
