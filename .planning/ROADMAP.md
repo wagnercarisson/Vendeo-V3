@@ -489,7 +489,7 @@ Plans:
 - [x] 56.2.7-02-PLAN.md â€” Rotas admin e gate de gasto.
 - [x] 56.2.7-03-PLAN.md â€” Painel de ativaÃ§Ã£o e testes de UI.
 - [x] 56.2.7-04-PLAN.md â€” Observabilidade de Luna, runbook, harness 5.3/5.7 e gates/revisÃ£o.
-- [ ] 56.2.7-05-PLAN.md â€” Checkpoint 1: publicaÃ§Ã£o com fluxo OFF (humano).
+- [x] 56.2.7-05-PLAN.md â€” Checkpoint 1: publicaÃ§Ã£o com fluxo OFF (humano).
 - [ ] 56.2.7-06-PLAN.md â€” Checkpoint 2: configuraÃ§Ã£o de Luna, janela paga, 5.3/5.7 e encerramento (humano).
 - [ ] 56.2.7-07-PLAN.md â€” Aceite, Checkpoint 3, ativaÃ§Ã£o `all_stores`, monitoramento, desligamento e consolidaÃ§Ã£o (humano).
 
@@ -498,4 +498,5 @@ Plans:
 **Gate:** `all_stores` sÃ³ Ã© ativado apÃ³s 5.3 + 5.7 + validaÃ§Ã£o de Luna + campanha completa + aceite humano + disposiÃ§Ã£o D13. Luna aprovado Ã© mantido; restauraÃ§Ã£o somente em reprovaÃ§Ã£o/problema/decisÃ£o explÃ­cita. As migrations sÃ£o provadas em Postgres local isolado antes da publicaÃ§Ã£o. A janela preserva `spent_usd`, configura o cap e ativa `test_stores` antes de gerar. ApÃ³s a abertura, a fase encerra ativa e monitorada salvo critÃ©rio de parada/decisÃ£o explÃ­cita.
 
 **Canonical refs:** `openspec/changes/fase-56-2-7-abertura-gradual-produto-1-1-luna/` (proposal, design D1â€”D8, 4 specs, tasks), `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CONTEXT.md` e `56.2.7-PATTERNS.md`, `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
+
 
