@@ -291,10 +291,24 @@ export const POST = apiHandler(async (request: NextRequest) => {
     const guardUser = await requireApiUser();
     const guardStore = await requireOwnership(rawStoreId, guardUser.userId);
 
-    // F56.2b2c (B2.3) — resolução server-side do gate de gasto do piloto ANTES de
-    // qualquer efeito. `blocked` (INCERTEZA) ⇒ IMPEDE o caminho novo (não retira a
-    // proteção); `inactive` ⇒ segue sem gate (legado/inerte preservado).
-    const pilotGate = await resolvePilotSpendGate({ store: guardStore });
+    // F56.2b2c (B2.3) — a decisão de elegibilidade é resolvida UMA vez e
+    // reutilizada pelo gate de gasto. `blocked` (INCERTEZA) ⇒ IMPEDE o caminho
+    // novo; `inactive` ⇒ segue sem gate (legado/inerte preservado).
+    let eligibilityDecision: Awaited<
+      ReturnType<typeof resolveProductFlowAuthorization>
+    >;
+    try {
+      eligibilityDecision = await resolveProductFlowAuthorization(
+        resolveEligibilityContext(guardStore),
+      );
+    } catch {
+      eligibilityDecision = { allowed: false, code: "read_failure" };
+    }
+
+    const pilotGate = await resolvePilotSpendGate({
+      store: guardStore,
+      decision: eligibilityDecision,
+    });
     if (pilotGate.kind === "blocked") {
       return Response.json(
         {
@@ -308,17 +322,6 @@ export const POST = apiHandler(async (request: NextRequest) => {
     }
     const pilotSpendDep = pilotGate.kind === "armed" ? pilotGate.gate : undefined;
     // (estimativa da copy agora derivada do pricing do alvo no runner)
-
-    let eligibilityDecision: Awaited<
-      ReturnType<typeof resolveProductFlowAuthorization>
-    >;
-    try {
-      eligibilityDecision = await resolveProductFlowAuthorization(
-        resolveEligibilityContext(guardStore),
-      );
-    } catch {
-      eligibilityDecision = { allowed: false, code: "read_failure" };
-    }
 
     const guard = assertSubmissionEligible(body, eligibilityDecision);
     if (guard.kind === "refused") {

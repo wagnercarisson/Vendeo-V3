@@ -34,13 +34,19 @@ type StoreRow = Parameters<typeof resolveEligibilityContext>[0];
 
 export async function resolvePilotSpendGate(input: {
   store: StoreRow;
+  /** Decisao ja resolvida pelo chamador (evita dupla leitura na mesma rota). */
+  decision?: Awaited<ReturnType<typeof resolveProductFlowAuthorization>>;
 }): Promise<PilotSpendGateResolution> {
   let decision: Awaited<ReturnType<typeof resolveProductFlowAuthorization>>;
-  try {
-    const context = resolveEligibilityContext(input.store);
-    decision = await resolveProductFlowAuthorization(context);
-  } catch {
-    return { kind: "blocked", reason: "eligibility_context_failure" };
+  if (input.decision) {
+    decision = input.decision;
+  } else {
+    try {
+      const context = resolveEligibilityContext(input.store);
+      decision = await resolveProductFlowAuthorization(context);
+    } catch {
+      return { kind: "blocked", reason: "eligibility_context_failure" };
+    }
   }
 
   // Leitura DETERMINÍSTA não-armada ⇒ INATIVO (segue sem gate). ATENÇÃO:

@@ -209,6 +209,26 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
   // (sem prefixo `pending/**` genérico). A rota importa SOMENTE o serviço de
   // resolução; a página importa SOMENTE o repositório de pendências; o formulário
   // client NÃO importa `product-1-1` (regra vazia explícita).
+  // F56.2e (56.2.7) - superficie administrativa da ativacao coordenada.
+  ["src/app/api/admin/product-1-1-activation/route.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/activation/schemas",
+      "@/lib/product-1-1/activation/activation-state",
+      "@/lib/product-1-1/authorization/instance-identity",
+    ],
+  },
+  ["src/app/(app)/admin/feature-flags/page.tsx"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/activation/activation-state"],
+  },
+  ["src/app/(app)/admin/feature-flags/product-activation-panel.tsx"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/activation/schemas",
+      "@/lib/product-1-1/activation/activation-state",
+    ],
+  },
   [AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE]: {
     prefixes: [],
     exact: ["@/lib/product-1-1/pending/resolve-pending-operation"],

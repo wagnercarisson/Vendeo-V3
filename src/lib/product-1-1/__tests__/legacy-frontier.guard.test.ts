@@ -69,6 +69,12 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
     commit: "3d6e5763",
   },
   {
+    path: "src/lib/ai/__tests__/luna-gradual-opening.contract.test.ts",
+    authorization:
+      "F56.2e 56.2.7 (teste de resolucao de Luna nas tres capacidades)",
+    commit: "2d81646c",
+  },
+  {
     path: "src/lib/lab/bench/domain/background-direction.ts",
     authorization: "quick 261009-u3h (prompts experimentais — somente laboratório)",
     commit: "99017f35",

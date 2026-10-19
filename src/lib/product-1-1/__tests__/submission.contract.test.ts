@@ -122,8 +122,8 @@ beforeEach(() => {
   });
 });
 
-describe("F56.2b1a — detector de campos exclusivos do novo fluxo", () => {
-  it("detecta `backgroundDirection` e NÃO trata `campaignIntent` como exclusivo", () => {
+describe("F56.2b1a â€” detector de campos exclusivos do novo fluxo", () => {
+  it("detecta `backgroundDirection` e NÃƒO trata `campaignIntent` como exclusivo", () => {
     expect(detectExclusiveNewFlowFields({ backgroundDirection: "gradient" })).toEqual([
       "backgroundDirection",
     ]);
@@ -135,8 +135,8 @@ describe("F56.2b1a — detector de campos exclusivos do novo fluxo", () => {
   });
 });
 
-describe("F56.2b1a — assertSubmissionEligible (puro)", () => {
-  it("corpo legado → not_new_flow; elegível → allowed; inelegível → refused (sem tocar o corpo)", () => {
+describe("F56.2b1a â€” assertSubmissionEligible (puro)", () => {
+  it("corpo legado â†’ not_new_flow; elegÃ­vel â†’ allowed; inelegÃ­vel â†’ refused (sem tocar o corpo)", () => {
     const legacy = { productName: "X", campaignIntent: "offer" };
     expect(assertSubmissionEligible(legacy, { allowed: true, stage: "all_stores", usedGeneralPrecedence: false })).toEqual(
       { kind: "not_new_flow" },
@@ -152,13 +152,13 @@ describe("F56.2b1a — assertSubmissionEligible (puro)", () => {
       code: "new_flow_ineligible",
       fields: ["backgroundDirection"],
     });
-    // O guard é puro: não remove/reinterpreta o campo exclusivo.
+    // O guard Ã© puro: nÃ£o remove/reinterpreta o campo exclusivo.
     expect(body).toEqual({ backgroundDirection: "gradient" });
   });
 });
 
-describe("F56.2b1a — contexto de elegibilidade derivado server-side", () => {
-  it("escopo vem de is_test_store; instância/ambiente da configuração server-side", () => {
+describe("F56.2b1a â€” contexto de elegibilidade derivado server-side", () => {
+  it("escopo vem de is_test_store; instÃ¢ncia/ambiente da configuraÃ§Ã£o server-side", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:56321";
     expect(resolveEligibilityContext({ is_test_store: true })).toEqual({
       requestedScope: "test_stores",
@@ -174,7 +174,7 @@ describe("F56.2b1a — contexto de elegibilidade derivado server-side", () => {
     });
   });
 
-  it("ausência de configuração lança (fail-closed)", () => {
+  it("ausÃªncia de configuraÃ§Ã£o lanÃ§a (fail-closed)", () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.SUPABASE_URL;
     expect(() => resolveEligibilityContext({ is_test_store: false })).toThrow();
@@ -182,16 +182,16 @@ describe("F56.2b1a — contexto de elegibilidade derivado server-side", () => {
   });
 });
 
-describe("F56.2b1a — guard conectado ao handler (ordem e fail-closed)", () => {
-  it("payload legado NÃO faz consultas de autorização nem reserva", async () => {
+describe("F56.2b1a â€” guard conectado ao handler (ordem e fail-closed)", () => {
+  it("payload legado NÃƒO faz consultas de autorizaÃ§Ã£o nem reserva", async () => {
     const res = await post({ storeId: STORE_ID, productImageDataUrl: "x" });
-    // Falha no safeParse legado (sem productName) → 400, sem consultas novas.
+    // Falha no safeParse legado (sem productName) â†’ 400, sem consultas novas.
     expect(res.status).toBe(400);
     expect(m.resolveAuthorization).not.toHaveBeenCalled();
     expect(m.reserveCredit).not.toHaveBeenCalled();
   });
 
-  it("campos exclusivos sem elegibilidade são recusados antes da reserva", async () => {
+  it("campos exclusivos sem elegibilidade sÃ£o recusados antes da reserva", async () => {
     const res = await post({
       storeId: STORE_ID,
       productImageDataUrl: "x",
@@ -207,8 +207,8 @@ describe("F56.2b1a — guard conectado ao handler (ordem e fail-closed)", () => 
     expect(m.requireOwnership).toHaveBeenCalledWith(STORE_ID, "user-1");
   });
 
-  it("loja alheia é rejeitada antes de consultar a autorização", async () => {
-    m.requireOwnership.mockRejectedValueOnce(new StoreNotFoundError("não pertence"));
+  it("loja alheia Ã© rejeitada antes de consultar a autorizaÃ§Ã£o", async () => {
+    m.requireOwnership.mockRejectedValueOnce(new StoreNotFoundError("nÃ£o pertence"));
 
     const res = await post({
       storeId: STORE_ID,
@@ -220,7 +220,7 @@ describe("F56.2b1a — guard conectado ao handler (ordem e fail-closed)", () => 
     expect(m.resolveAuthorization).not.toHaveBeenCalled();
   });
 
-  it("tentativa de forjar escopo/ambiente é ignorada (derivação server-side)", async () => {
+  it("tentativa de forjar escopo/ambiente Ã© ignorada (derivaÃ§Ã£o server-side)", async () => {
     const res = await post({
       storeId: STORE_ID,
       productImageDataUrl: "x",
@@ -241,7 +241,7 @@ describe("F56.2b1a — guard conectado ao handler (ordem e fail-closed)", () => 
     expect(calledWith.expectedInstanceIdentity).not.toBe("forged-instance");
   });
 
-  it("falha de leitura da autorização é negada (fail-closed)", async () => {
+  it("falha de leitura da autorizaÃ§Ã£o Ã© negada (fail-closed)", async () => {
     m.resolveAuthorization.mockRejectedValueOnce(new Error("db down"));
 
     const res = await post({
@@ -250,11 +250,11 @@ describe("F56.2b1a — guard conectado ao handler (ordem e fail-closed)", () => 
       backgroundDirection: "gradient",
     });
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(503);
     expect(m.reserveCredit).not.toHaveBeenCalled();
   });
 
-  it("storeId ausente/inválido com campo exclusivo → 400 identificável, sem consultas", async () => {
+  it("storeId ausente/invÃ¡lido com campo exclusivo â†’ 400 identificÃ¡vel, sem consultas", async () => {
     const res = await post({ productImageDataUrl: "x", backgroundDirection: "gradient" });
 
     expect(res.status).toBe(400);
@@ -262,3 +262,4 @@ describe("F56.2b1a — guard conectado ao handler (ordem e fail-closed)", () => 
     expect(m.resolveAuthorization).not.toHaveBeenCalled();
   });
 });
+
