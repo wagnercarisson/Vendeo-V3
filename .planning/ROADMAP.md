@@ -458,7 +458,7 @@ Plans:
 
 ### Phase 56.2.6: F56.2b2d — Piloto hospedado do Produto 1:1 em lojas de teste
 
-**Status:** ◆ **PROPOSTA APROVADA PARA PLANEJAMENTO (2026-10-18)** — base OpenSpec `fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores` (proposal/design/specs/tasks; `openspec validate --strict` valid; commit documental `3df50531`). **Planejamento GSD apenas; nenhuma implementação, migration aplicada, backup/exportação, deploy, configuração, flag ou chamada paga.**
+**Status:** ✅ **EXECUTADA E VERIFICADA COM LIMITAÇÕES (2026-10-19)** — 8/8 planos/summaries; piloto N=1 concluído e janela encerrada; verificação GSD `PASS WITH LIMITATIONS`; **archive do N=1 pronto com adiamento formal de 5.3/5.7** (`DEFERRED.md`); abertura geral **bloqueada**; D13 aceito **somente** para o N=1; kill real **INCONCLUSIVE**; `all_stores=false`; **sem sync/archive**. Migration aplicada, deploy publicado (`1da6fb60`), configuração D2 aplicada e chamada paga única executada no piloto.
 
 **Goal:** habilitar o estágio `test_stores` no **ambiente operacional** (alinhando RPC, rota admin e gate de gasto; preservando `isolated_pilot` e bloqueando `all_stores`), definir um **deadline global comprovado** compatível com a função Vercel de **300s**, preparar a **publicação com fluxo OFF** (backup verificável de banco + Storage, conjunto definitivo de migrations, deploy, configuração e não regressão do legado), executar o **menor conjunto de provas hospedadas** de recuperação e segurança (sem rota pública de simulação) e conduzir um **piloto manual restrito a lojas de teste** com orçamento, monitoramento, critérios de parada e **desligamento sem pausar o legado**. A abertura a lojas gerais permanece **fora de escopo**.
 
@@ -466,6 +466,6 @@ Plans:
 
 **Requirements:** `REQ-56.2.6-01..12` — (01) ativação operacional `test_stores`; (02) `isolated_pilot` preservado/`all_stores` bloqueado; (03) deadline/timeout com margem; (04) kill ≠ ausência e duas vias de encerramento; (05) backup banco+Storage verificável; (06) conjunto definitivo de migrations/laboratório; (07) deploy OFF + configuração + legado; (08) provas hospedadas mínimas sem simulação pública; (09) piloto manual restrito/orçamento/monitoramento; (10) desligamento sem pausar o legado; (11) sequência provas→aceite→primeira chamada paga; (12) separação piloto × abertura geral.
 
-**Plans:** 3/8 plans executed
+**Plans:** 8/8 plans executed (8 summaries). **Verification:** `56.2.6-VERIFICATION.md` — `PASS WITH LIMITATIONS`; **archive do N=1 pronto** com adiamento formal de 5.3/5.7 (`DEFERRED.md`), que permanecem obrigatórios antes da abertura geral. **5.9** fechado por inspeção delimitada. **OpenSpec:** 52/54 tasks; sem sync/archive.
 
 **Canonical refs:** `openspec/changes/fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/` (proposal, design D1–D5, 4 specs, tasks §1–§7), `openspec/specs/product-1-1-flow-activation/spec.md`, `openspec/specs/product-1-1-controlled-real-test-authorization/spec.md`, `openspec/specs/product-1-1-generation-orchestration/spec.md`, `src/lib/product-1-1/authorization/authorization-decision.ts`, `src/lib/product-1-1/pilot/resolve-pilot-spend-gate.ts`, `src/app/api/admin/product-flow-authorizations/route.ts`, `supabase/migrations/20261017000001_f56_2b2c_narrow_authorization.sql`, `docs/operations/backup-runbook.md`.

@@ -1,0 +1,31 @@
+{
+  "profile": "pilot_active",
+  "phase": "56.2.6",
+  "generated_at": "2026-10-19T17:36:24Z",
+  "criteria": [
+    {
+      "id": "authorization_granted",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-WINDOW.md §4 (seq=1 granted test_stores/test_stores; 3a529a8f…)",
+      "timestamp": "2026-10-19T17:33:41.495643+00:00"
+    },
+    {
+      "id": "window_flag_on",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-WINDOW.md §4 (product_1_1_test_stores_enabled=true; 8131968e…)",
+      "timestamp": "2026-10-19T17:33:41.495643+00:00"
+    },
+    {
+      "id": "spend_under_cap",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-WINDOW.md §8/§9 (spent_usd=0.059 < cap_usd=0.50; blocked_reason=null)",
+      "timestamp": "2026-10-19T17:36:24.036749+00:00"
+    },
+    {
+      "id": "no_non_test_store",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-WINDOW.md §1/§8 (Adega is_test_store=true; all_stores=false; gate exige is_test_store)",
+      "timestamp": "2026-10-19T17:36:24.036749+00:00"
+    }
+  ]
+}

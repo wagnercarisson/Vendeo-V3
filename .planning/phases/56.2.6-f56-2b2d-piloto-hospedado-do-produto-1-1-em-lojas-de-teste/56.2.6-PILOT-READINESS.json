@@ -1,0 +1,31 @@
+{
+  "profile": "pilot_readiness",
+  "phase": "56.2.6",
+  "generated_at": "2026-10-19T17:33:41Z",
+  "criteria": [
+    {
+      "id": "hosted_proofs_pass",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-READINESS.md §2 / 56.2.6-HOSTED-PROOFS.md (P1 local 7/7; P2 N/A Alt C)",
+      "timestamp": "2026-10-19T17:30:00Z"
+    },
+    {
+      "id": "acceptance_to_start",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-WINDOW.md §1 (aceite humano antes da primeira chamada paga)",
+      "timestamp": "2026-10-19T17:33:41Z"
+    },
+    {
+      "id": "spend_cap_configured",
+      "status": "PASS",
+      "source": "56.2.6-07-D2-CONFIG-CHECKPOINT.md (cap_usd=0.50 via c3e61324…; product_1_1_pilot_spend_state)",
+      "timestamp": "2026-10-19T17:25:42Z"
+    },
+    {
+      "id": "d13_disposition_recorded",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-WINDOW.md §1/§10 (D13 aceito só para N=1; kill real INCONCLUSIVE; P3 não resolve D13)",
+      "timestamp": "2026-10-19T17:33:41Z"
+    }
+  ]
+}

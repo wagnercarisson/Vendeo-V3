@@ -1,0 +1,19 @@
+{
+  "profile": "pilot_shutdown",
+  "phase": "56.2.6",
+  "generated_at": "2026-10-19T17:38:20Z",
+  "criteria": [
+    {
+      "id": "shutdown_flag_off_revoked",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-WINDOW.md §9 (flag OFF 29561fe0…; revogação a14e49ca… stage=off; seq=2 revoked/off)",
+      "timestamp": "2026-10-19T17:38:20.956023+00:00"
+    },
+    {
+      "id": "no_non_test_store",
+      "status": "PASS",
+      "source": "56.2.6-08-N1-WINDOW.md §9/§10 (test_stores=false, all_stores=false; apenas Adega participou)",
+      "timestamp": "2026-10-19T17:38:20.956023+00:00"
+    }
+  ]
+}
