@@ -1,4 +1,4 @@
-import { PromptLoader } from '@/lib/image-generation/prompt-loader';
+﻿import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { TextOnlyInferenceInput, TextOnlyInferenceResult } from './types';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
 import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
@@ -23,11 +23,11 @@ export class BrandTextOnlyInferenceError extends Error {
 }
 
 /**
- * Inferência de identidade visual apenas por texto (F46-03).
+ * InferÃªncia de identidade visual apenas por texto (F46-03).
  *
- * Executa via camada única (`invoke("brand_profile_text")`) — NÃO instancia
- * `new OpenAI()` nem lê env-var de modelo. Exige um `AiTelemetryContext`
- * injetado pelo caller (a persistência é do sink).
+ * Executa via camada Ãºnica (`invoke("brand_profile_text")`) â€” NÃƒO instancia
+ * `new OpenAI()` nem lÃª env-var de modelo. Exige um `AiTelemetryContext`
+ * injetado pelo caller (a persistÃªncia Ã© do sink).
  */
 export class BrandTextOnlyInferenceService {
   private promptLoader = new PromptLoader();
@@ -40,16 +40,16 @@ export class BrandTextOnlyInferenceService {
   async infer(
     input: TextOnlyInferenceInput,
     timeoutMs: number = 30000,
-    /** F38.1 (D7/D11): callback best-effort com o envelope já produzido (brand_profile_text). Opcional — nunca bloqueia. */
+    /** F38.1 (D7/D11): callback best-effort com o envelope jÃ¡ produzido (brand_profile_text). Opcional â€” nunca bloqueia. */
     onCall?: (info: AiCallInfo) => void | Promise<void>,
-    /** F46-03 (D9): contexto de telemetria do caller (run/sink obrigatório). */
+    /** F46-03 (D9): contexto de telemetria do caller (run/sink obrigatÃ³rio). */
     telemetry?: AiTelemetryContext,
   ): Promise<TextOnlyInferenceResult> {
     const startTime = Date.now();
 
     if (!process.env.OPENAI_API_KEY) {
       if (process.env.NODE_ENV === 'production') {
-        throw new BrandTextOnlyInferenceError('OPENAI_API_KEY não configurada', {
+        throw new BrandTextOnlyInferenceError('OPENAI_API_KEY nÃ£o configurada', {
           provider: 'openai',
           model: DEFAULT_MODEL,
           elapsedMs: 0,
@@ -59,12 +59,12 @@ export class BrandTextOnlyInferenceService {
 
       return {
         safe_color_tokens: { primary: '#CC0000', secondary: '#666666', accent: '#CC0000', background: '#FFFFFF' },
-        visual_style: 'mock — desenvolvimento',
-        visual_tone: 'mock — desenvolvimento',
-        typography_direction: 'mock — desenvolvimento',
-        brand_personality: 'mock — desenvolvimento',
-        campaign_guidelines: 'mock — desenvolvimento',
-        campaign_brief: 'mock — desenvolvimento',
+        visual_style: 'mock â€” desenvolvimento',
+        visual_tone: 'mock â€” desenvolvimento',
+        typography_direction: 'mock â€” desenvolvimento',
+        brand_personality: 'mock â€” desenvolvimento',
+        campaign_guidelines: 'mock â€” desenvolvimento',
+        campaign_brief: 'mock â€” desenvolvimento',
         inferred_primary_color: '#CC0000',
         inferred_accent_color: '#CC0000',
         confidence_score: 0.1,
@@ -73,22 +73,24 @@ export class BrandTextOnlyInferenceService {
 
     if (!telemetry) {
       throw new BrandTextOnlyInferenceError(
-        '[BrandTextOnlyInferenceService] AiTelemetryContext é obrigatório para invoke("brand_profile_text")',
+        '[BrandTextOnlyInferenceService] AiTelemetryContext Ã© obrigatÃ³rio para invoke("brand_profile_text")',
         { provider: 'openai', model: DEFAULT_MODEL, elapsedMs: 0, errorType: 'missing_telemetry' },
       );
     }
 
+    let effectiveModel = DEFAULT_MODEL;
+
     try {
       let userColorsSection = '';
       if (input.userPrimaryColor || input.userAccentColor) {
-        userColorsSection = `## Preferência de Cores do Lojista\n\nO lojista escolheu manualmente as seguintes cores. Considere como SINAL DE PREFERÊNCIA, não como regra obrigatória — você pode adotar, ajustar ou descartar conforme seu julgamento profissional:\n\n`;
+        userColorsSection = `## PreferÃªncia de Cores do Lojista\n\nO lojista escolheu manualmente as seguintes cores. Considere como SINAL DE PREFERÃŠNCIA, nÃ£o como regra obrigatÃ³ria â€” vocÃª pode adotar, ajustar ou descartar conforme seu julgamento profissional:\n\n`;
         if (input.userPrimaryColor) {
-          userColorsSection += `- **Cor primária escolhida:** ${input.userPrimaryColor}\n`;
+          userColorsSection += `- **Cor primÃ¡ria escolhida:** ${input.userPrimaryColor}\n`;
         }
         if (input.userAccentColor) {
           userColorsSection += `- **Cor de destaque escolhida:** ${input.userAccentColor}\n`;
         }
-        userColorsSection += `\nInstrução: avalie se as cores escolhidas são adequadas para o segmento e perfil da loja. Se forem apropriadas, incorpore-as. Se não forem ideais, sugira alternativas melhores no mesmo espectro.`;
+        userColorsSection += `\nInstruÃ§Ã£o: avalie se as cores escolhidas sÃ£o adequadas para o segmento e perfil da loja. Se forem apropriadas, incorpore-as. Se nÃ£o forem ideais, sugira alternativas melhores no mesmo espectro.`;
       }
 
       const prompt = this.promptLoader.load('store-brand-inference', {
@@ -128,6 +130,7 @@ export class BrandTextOnlyInferenceService {
           request,
           withOnCallTelemetry(telemetry, onCall),
         );
+        effectiveModel = result.model || DEFAULT_MODEL;
       } finally {
         clearTimeout(timeoutId);
       }
@@ -158,9 +161,9 @@ export class BrandTextOnlyInferenceService {
         (err instanceof Error && err.name === 'AbortError');
 
       if (isTimeout) {
-        throw new BrandTextOnlyInferenceError('Inferência excedeu o tempo limite', {
+        throw new BrandTextOnlyInferenceError('InferÃªncia excedeu o tempo limite', {
           provider: 'openai',
-          model: DEFAULT_MODEL,
+          model: effectiveModel,
           elapsedMs,
           errorType: 'timeout',
         });
@@ -171,10 +174,11 @@ export class BrandTextOnlyInferenceService {
 
       throw new BrandTextOnlyInferenceError(errorMessage, {
         provider: 'openai',
-        model: DEFAULT_MODEL,
+        model: effectiveModel,
         elapsedMs,
         errorType,
       });
     }
   }
 }
+
