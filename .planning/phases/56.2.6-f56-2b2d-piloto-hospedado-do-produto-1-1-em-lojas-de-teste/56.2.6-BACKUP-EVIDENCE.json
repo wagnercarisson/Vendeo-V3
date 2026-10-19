@@ -1,8 +1,9 @@
 {
   "profile": "backup",
-  "approved": false,
-  "backup_scope": "local-only",
-  "accepted_limitation": "Sem segunda cópia independente (nuvem/externa); limitação aceita pelo responsável em 2026-10-19.",
+  "approved": true,
+  "backup_scope": "local + second copy (Google Drive)",
+  "independent_copy": "present — Google Drive; downloaded copy hash-verified",
+  "destination_privacy": "PENDING CONFIRMATION — privacidade/MFA do Google Drive não presumidos",
   "generated_at_utc": "2026-10-19T17:00:00Z",
   "archive": {
     "path": "C:\\Vendeo-Backups\\f56-2b2d-pre-release-20261019.rar",
@@ -10,6 +11,14 @@
     "size_bytes": 109402910,
     "sha256": "FA23CFAE98E98D240627944B5F099BDF73F714976EE20C0526CA1A51E97BFD16",
     "extracted_staging": "C:\\Vendeo-Backups\\f56-2b2d-restore-staging-20261019-02"
+  },
+  "second_copy": {
+    "location": "Google Drive",
+    "downloaded_path": "C:\\Users\\wagne\\Downloads\\f56-2b2d-pre-release-20261019.rar",
+    "size_bytes": 109402910,
+    "sha256": "FA23CFAE98E98D240627944B5F099BDF73F714976EE20C0526CA1A51E97BFD16",
+    "hash_matches_original": true,
+    "verified_by": "Codex (download) + executor (file/size/SHA-256)"
   },
   "restore_destination": {
     "project_id": "f56-2b2d-restore-20261019",
@@ -29,9 +38,9 @@
       "timestamp": "2026-10-19T16:20:00Z"
     },
     "backup_encrypted_uploaded": {
-      "status": "INCONCLUSIVE",
-      "source": "backup apenas local; sem destino externo independente (limitação aceita 2026-10-19)",
-      "timestamp": "2026-10-19T16:20:00Z"
+      "status": "PASS",
+      "source": "segunda cópia no Google Drive; baixada em C:\\Users\\wagne\\Downloads\\f56-2b2d-pre-release-20261019.rar; 109402910 bytes; SHA-256 idêntico ao original",
+      "timestamp": "2026-10-19T18:00:00Z"
     },
     "restore_separate_destination": {
       "status": "PASS",
