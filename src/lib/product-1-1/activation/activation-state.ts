@@ -33,15 +33,20 @@ function stageOf(
   events: Awaited<ReturnType<SupabaseStageAuthorizationRepository["listEvents"]>>,
   scope: "test_stores" | "all_stores",
   instanceIdentity: string,
+  nowMs: number,
 ): ProductFlowStage {
-  return (
-    deriveCurrentAuthorization(events, scope, instanceIdentity)?.stage ?? "off"
-  );
+  const current = deriveCurrentAuthorization(events, scope, instanceIdentity);
+  if (!current) return "off";
+  // Alinhado a `decideProductFlowAuthorization`: autorizacao expirada nao conta
+  // como estagio vigente, mesmo que o evento `granted` seja o mais recente.
+  if (current.expiresAtMs !== null && nowMs >= current.expiresAtMs) return "off";
+  return current.stage;
 }
 
 export async function readProductActivationState(
   flags: FeatureFlagService = new FeatureFlagService(),
   repository: SupabaseStageAuthorizationRepository = new SupabaseStageAuthorizationRepository(),
+  nowMs: number = Date.now(),
 ): Promise<ProductActivationState> {
   const instanceIdentity = resolveCanonicalInstanceIdentity();
   const [flagRead, testEvents, allEvents] = await Promise.all([
@@ -50,8 +55,8 @@ export async function readProductActivationState(
     repository.listEvents({ scope: "all_stores", instanceIdentity }),
   ]);
 
-  const testStores = stageOf(testEvents, "test_stores", instanceIdentity);
-  const allStores = stageOf(allEvents, "all_stores", instanceIdentity);
+  const testStores = stageOf(testEvents, "test_stores", instanceIdentity, nowMs);
+  const allStores = stageOf(allEvents, "all_stores", instanceIdentity, nowMs);
 
   let mode: ProductActivationState["mode"] = "inconsistent";
   if (!flagRead.testStoresEnabled && !flagRead.allStoresEnabled) {

@@ -1,4 +1,4 @@
-param(
+﻿param(
   [switch]$PreflightOnly
 )
 
@@ -27,7 +27,8 @@ $allowedPending = @(
   "20261018000003_quick_gpt6_luna_brand_profile_vision.sql",
   "20261019000001_f56_2b2d_operational_test_stores_authorization.sql",
   "20261019000002_f56_2b2e_all_stores_authorization.sql",
-  "20261019000003_f56_2b2e_product_flow_activation.sql"
+  "20261019000003_f56_2b2e_product_flow_activation.sql",
+  "20261019000004_f56_2b2e_activation_expiry_fix.sql"
 )
 
 function Fail([string]$Message) {
@@ -96,7 +97,7 @@ foreach ($allowed in $allowedPending) {
 }
 
 if ($PreflightOnly) {
-  Write-Output "PASS preflight f56-2e isolated (9 pendentes autorizadas, nenhuma extra)"
+  Write-Output "PASS preflight f56-2e isolated (10 pendentes autorizadas, nenhuma extra)"
   exit 0
 }
 
@@ -105,7 +106,7 @@ foreach ($allowed in $allowedPending) {
   Copy-Item (Join-Path (Join-Path $repoRoot "supabase\migrations") $allowed) (Join-Path $migrationsDir $allowed) -Force
 }
 
-Write-Output "Aplicando 9 migrations autorizadas SOMENTE em $projectId..."
+Write-Output "Aplicando 10 migrations autorizadas SOMENTE em $projectId..."
 npx --no-install supabase --workdir $workdir migration up --local
 if ($LASTEXITCODE -ne 0) { Fail "migration up --local falhou" }
 
@@ -124,3 +125,4 @@ node (Join-Path $repoRoot "supabase\proofs\f56_2e_activation_proofs.mjs")
 if ($LASTEXITCODE -ne 0) { Fail "provas reais falharam" }
 
 Write-Output "PASS f56-2e local activation proofs"
+

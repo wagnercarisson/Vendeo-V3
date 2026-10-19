@@ -12,6 +12,10 @@ const activationSql = readFileSync(
   path.join(DIR, "20261019000003_f56_2b2e_product_flow_activation.sql"),
   "utf8",
 );
+const expirySql = readFileSync(
+  path.join(DIR, "20261019000004_f56_2b2e_activation_expiry_fix.sql"),
+  "utf8",
+);
 
 function active(source: string): string {
   return source
@@ -77,6 +81,13 @@ describe("F56.2b2e - RPC coordenadora (contrato estatico)", () => {
     expect(activation).toMatch(/REVOKE ALL ON FUNCTION/);
     expect(activation).toMatch(/GRANT EXECUTE ON FUNCTION/);
     expect(activation).not.toMatch(/readFile|checkpoint|openspec|proposal\.md/i);
+  });
+
+  it("corrige autorizacao expirada na leitura e em alreadyInMode", () => {
+    expect(expirySql).toMatch(
+      /CASE WHEN stage <> 'off' AND expires_at IS NOT NULL AND expires_at <= now\(\) THEN 'off' ELSE stage END/,
+    );
+    expect((expirySql.match(/expires_at <= now\(\)/g) ?? []).length).toBeGreaterThanOrEqual(4);
   });
 });
 

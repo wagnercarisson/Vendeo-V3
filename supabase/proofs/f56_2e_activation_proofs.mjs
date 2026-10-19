@@ -66,12 +66,17 @@ async function readState(client) {
   const enabled = Object.fromEntries(flags.rows.map((r) => [r.key, r.enabled]));
   const stage = async (scope) => {
     const { rows } = await client.query(
-      `SELECT stage FROM public.product_flow_stage_authorizations
+      `SELECT stage, expires_at FROM public.product_flow_stage_authorizations
         WHERE scope = $1 AND instance_identity = $2 AND event_type <> 'refused'
         ORDER BY created_at DESC, seq DESC LIMIT 1`,
       [scope, INSTANCE],
     );
-    return rows[0]?.stage ?? "off";
+    const row = rows[0];
+    if (!row) return "off";
+    if (row.stage !== "off" && row.expires_at && new Date(row.expires_at).getTime() <= Date.now()) {
+      return "off";
+    }
+    return row.stage;
   };
   const testStage = await stage("test_stores");
   const allStage = await stage("all_stores");
@@ -198,6 +203,23 @@ async function main() {
     assert.equal(historical.mode, "all_stores", "resultado historico preservado");
     const current = await readState(client);
     assert.equal(current.mode, "test_stores", "leitura fresca deve refletir a acao mais nova");
+
+    // Autorizacao EXPIRADA nao pode aparecer como estado ativo nem bloquear
+    // uma nova concessao (alreadyInMode deve ser false).
+    await activation(client, actor, "off", randomUUID(), "proof before expiry");
+    const expiredOp = randomUUID();
+    await client.query(
+      `INSERT INTO public.product_flow_stage_authorizations
+         (event_type, stage, scope, instance_identity, granted_by, reason, operation_id, expires_at)
+       VALUES ('granted', 'test_stores', 'test_stores', $1, $2, 'expired proof', $3, now() - interval '1 hour')`,
+      [INSTANCE, actor, expiredOp],
+    );
+    const expiredState = await readState(client);
+    assert.equal(expiredState.mode, "off", "autorizacao expirada nao pode parecer ativa");
+    assert.equal(expiredState.testStage, "off", "leitura deve tratar expirada como off");
+    const renewed = await activation(client, actor, "test_stores", randomUUID(), "proof renew expired");
+    assert.equal(renewed.alreadyInMode, false, "autorizacao expirada nao pode bloquear nova concessao");
+    await assertState(client, "test_stores", "apos renovar autorizacao expirada");
 
     // Falha intermediaria real.
     await activation(client, actor, "off", randomUUID(), "proof before failure");
