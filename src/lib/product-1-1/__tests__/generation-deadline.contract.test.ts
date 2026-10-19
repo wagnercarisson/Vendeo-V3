@@ -141,6 +141,7 @@ interface Harness {
   };
   setProviderMode(mode: ProviderMode): void;
   resolveDeferred(result: AiInvocationResult): void;
+  rejectDeferred(error: unknown): void;
   setRecordOutcomeFailure(fail: boolean): void;
   armGate(delayMs?: number): void;
 }
@@ -149,6 +150,7 @@ function buildHarness(): Harness {
   const order: string[] = [];
   let providerMode: ProviderMode = "resolve";
   let deferredResolve: ((result: AiInvocationResult) => void) | null = null;
+  let deferredReject: ((error: unknown) => void) | null = null;
   let recordOutcomeFailure = false;
   let providerCalls = 0;
   let beginDelayMs = 0;
@@ -252,8 +254,9 @@ function buildHarness(): Harness {
         return new Promise<AiInvocationResult>(() => {});
       }
       if (providerMode === "deferred") {
-        return new Promise<AiInvocationResult>((resolvePromise) => {
+        return new Promise<AiInvocationResult>((resolvePromise, rejectPromise) => {
           deferredResolve = resolvePromise;
+          deferredReject = rejectPromise;
         });
       }
       return Promise.resolve(providerResult);
@@ -356,6 +359,13 @@ function buildHarness(): Harness {
         const resolvePromise = deferredResolve;
         deferredResolve = null;
         resolvePromise(result);
+      }
+    },
+    rejectDeferred(error) {
+      if (deferredReject) {
+        const rejectPromise = deferredReject;
+        deferredReject = null;
+        rejectPromise(error);
       }
     },
     setRecordOutcomeFailure(fail) {
@@ -602,27 +612,82 @@ describe("F56.2b2d — deadline: honestidade e kill não autoriza via", () => {
 });
 
 describe("F56.2b2d — deadline: cancelamento, gate e orçamento (correções)", () => {
-  it("cancelamento do stream durante provider pendente não vira resultado vazio, falha confirmada ou estorno", async () => {
+  it("cancelar com provider que NUNCA resolve ⇒ execução encerra e chamada paga é tratada (sem execução sem limite)", async () => {
+    vi.useFakeTimers();
     const harness = buildHarness();
     harness.setProviderMode("never");
     harness.armGate(0);
 
     const response = await invokeOrchestrator(harness);
     // Garante que a chamada paga foi invocada (gate armado) antes de cancelar.
-    await vi.waitFor(() => {
-      expect(harness.calls.providerCalls).toBe(1);
-    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(harness.calls.providerCalls).toBe(1);
 
     await response.body?.cancel();
-    await Promise.resolve();
-    await Promise.resolve();
+    // Desconectar NÃO remove o limite: mesmo com o provider pendente, a execução
+    // encerra e a chamada paga recebe tratamento durável INCONCLUSIVO.
+    await vi.advanceTimersByTimeAsync(TEST_DEADLINE_MS + 1_000);
 
-    // Cancelar NÃO pode produzir resultado/entrega/estorno nem liberação de gasto
-    // como desfecho conhecido.
+    expect(harness.calls.beginPaidCall).toHaveBeenCalledTimes(1);
+    expect(harness.calls.markUnknown).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "timeout_or_unknown" }),
+    );
+    expect(harness.calls.endPaidCall).not.toHaveBeenCalled();
     expect(harness.calls.deliver).not.toHaveBeenCalled();
     expect(harness.calls.refund).not.toHaveBeenCalled();
     expect(harness.calls.markArtUploaded).not.toHaveBeenCalled();
     expect(harness.calls.storeArtifact).not.toHaveBeenCalled();
+  });
+
+  it("provider resolve APÓS o cancelamento ⇒ resultado tardio contido (sem entrega/estorno)", async () => {
+    vi.useFakeTimers();
+    const harness = buildHarness();
+    harness.setProviderMode("deferred");
+    harness.armGate(0);
+
+    const response = await invokeOrchestrator(harness);
+    await vi.advanceTimersByTimeAsync(0);
+    await response.body?.cancel();
+    await vi.advanceTimersByTimeAsync(0);
+    const markUnknownCallsAfterCancel = harness.calls.markUnknown.mock.calls.length;
+
+    // Resolve DEPOIS do cancelamento (chamada paga já inconclusiva).
+    harness.resolveDeferred({
+      imageBase64: "AAAA",
+      mimeType: "image/png",
+      model: "gpt-image-2.5-sunburst",
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(harness.calls.deliver).not.toHaveBeenCalled();
+    expect(harness.calls.markArtUploaded).not.toHaveBeenCalled();
+    expect(harness.calls.refund).not.toHaveBeenCalled();
+    expect(harness.calls.storeArtifact).not.toHaveBeenCalled();
+    // Nenhum novo tratamento de gasto pelo resultado tardio.
+    expect(harness.calls.markUnknown.mock.calls.length).toBe(markUnknownCallsAfterCancel);
+  });
+
+  it("provider rejeita APÓS o cancelamento ⇒ sem segundo terminal nem estorno", async () => {
+    vi.useFakeTimers();
+    const harness = buildHarness();
+    harness.setProviderMode("deferred");
+    harness.armGate(0);
+
+    const response = await invokeOrchestrator(harness);
+    await vi.advanceTimersByTimeAsync(0);
+    await response.body?.cancel();
+    await vi.advanceTimersByTimeAsync(0);
+    const refundBefore = harness.calls.refund.mock.calls.length;
+
+    harness.rejectDeferred(new Error("provider_late_failure"));
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(harness.calls.refund.mock.calls.length).toBe(refundBefore);
+    expect(harness.calls.deliver).not.toHaveBeenCalled();
     expect(harness.calls.endPaidCall).not.toHaveBeenCalled();
   });
 

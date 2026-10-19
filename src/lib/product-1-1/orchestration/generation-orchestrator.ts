@@ -666,6 +666,24 @@ export async function runProductOneToOneGeneration(
     () => controllerAbort.abort(),
     remainingBudget(Date.now(), deadlineAtInMs),
   );
+  // F56.2b2d (fechamento do cancelamento) — desconectar o CONSUMIDOR não pode
+  // remover o limite de execução. Política: CANCELAMENTO TIPADO — a corrida é
+  // rejeitada por `product_1_1_consumer_cancelled` (chamada paga já iniciada vira
+  // INCONCLUSIVA), SEM resultado vazio artificial, estorno por cancelamento,
+  // retry, entrega ou execução sem limite. O deadline/timer PERMANECEM como
+  // backstop e só são limpos no `finally` quando o fluxo encerra.
+  let consumerCancelled = false;
+  let rejectCancellation: (reason: unknown) => void = () => {};
+  const cancellationRejection = new Promise<never>((_resolve, reject) => {
+    rejectCancellation = reject;
+  });
+  void cancellationRejection.catch(() => {});
+  const onConsumerCancel = (): void => {
+    if (consumerCancelled) return;
+    consumerCancelled = true;
+    controllerAbort.abort();
+    rejectCancellation(new Error("product_1_1_consumer_cancelled"));
+  };
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -1436,6 +1454,7 @@ export async function runProductOneToOneGeneration(
               // é tratada como `unknown` (honesto, fail-closed) — nunca como
               // resultado conhecido, falha confirmada ou estorno.
               if (
+                consumerCancelled ||
                 deadlineRejection.didHit() ||
                 remainingBudget(Date.now(), deadlineAtInMs) <= 0
               ) {
@@ -1488,6 +1507,7 @@ export async function runProductOneToOneGeneration(
               const result = await Promise.race([
                 providerCall,
                 deadlineRejection.promise,
+                cancellationRejection,
               ]);
               if (!result.imageBase64) {
                 throw new Error("no_image_in_response");
@@ -1503,6 +1523,7 @@ export async function runProductOneToOneGeneration(
                 // secundária em autorização para retry/marcador `failed`/estorno PF.
                 try {
                   if (
+                    consumerCancelled ||
                     controllerAbort.signal.aborted ||
                     deadlineRejection.didHit() ||
                     isUnknownPilotOutcome(invokeError)
@@ -1658,7 +1679,9 @@ export async function runProductOneToOneGeneration(
           if (
             isUnknownResult(
               failure,
-              controllerAbort.signal.aborted || deadlineRejection.didHit(),
+              controllerAbort.signal.aborted ||
+                deadlineRejection.didHit() ||
+                consumerCancelled,
             )
           ) {
             // P1 (Opção A): o envelope REAL (timeout/abort) já foi persistido
@@ -1794,9 +1817,11 @@ export async function runProductOneToOneGeneration(
       }
     },
     cancel() {
-      // Cliente cancelou o stream: limpa o timer de abort e a promessa de deadline.
-      clearTimeout(abortTimerId);
-      deadlineRejection.cancel();
+      // Cliente desconectou: CANCELAMENTO TIPADO — a corrida é rejeitada e a
+      // chamada paga em curso é classificada como INCONCLUSIVA. Os timers de
+      // deadline/abort PERMANECEM como backstop (desconectar o consumidor NÃO
+      // remove o limite) e são limpos no `finally` quando o fluxo encerra.
+      onConsumerCancel();
     },
   });
 
