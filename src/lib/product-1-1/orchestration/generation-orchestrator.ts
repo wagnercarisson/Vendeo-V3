@@ -1617,8 +1617,16 @@ export async function runProductOneToOneGeneration(
             return;
           }
 
-          // ── Resultado DESCONHECIDO (timeout/abort) ──────────────────────
-          if (isUnknownResult(failure, controllerAbort.signal.aborted)) {
+          // ── Resultado DESCONHECIDO (timeout/abort/deadline) ─────────────
+          // A corrida provider×deadline pode rejeitar ANTES do abort cooperativo
+          // propagar — `didHit()` cobre o disparo do deadline mesmo quando o
+          // `signal` ainda não está `aborted`.
+          if (
+            isUnknownResult(
+              failure,
+              controllerAbort.signal.aborted || deadlineRejection.didHit(),
+            )
+          ) {
             // P1 (Opção A): o envelope REAL (timeout/abort) já foi persistido
             // pelo sink ÚNICO durante `gateway.invoke`.
             const reference = newSupportReference();
