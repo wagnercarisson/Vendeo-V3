@@ -1,7 +1,14 @@
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { ALL_FEATURE_FLAG_KEYS } from "@/lib/feature-flags/feature-flag-service";
+import {
+  ALL_FEATURE_FLAG_KEYS,
+  PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
+  PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
+} from "@/lib/feature-flags/feature-flag-service";
+import { readProductActivationState } from "@/lib/product-1-1/activation/activation-state";
+import type { ProductActivationState } from "@/lib/product-1-1/activation/activation-state";
 import { FeatureFlagsForm } from "./feature-flags-form";
+import { ProductActivationPanel } from "./product-activation-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +86,17 @@ export default async function AdminFeatureFlagsPage() {
     userMap[u.id] = u.email;
   }
 
+  let activationState: ProductActivationState | null = null;
+  let activationError: string | null = null;
+  try {
+    activationState = await readProductActivationState();
+  } catch (error) {
+    activationError =
+      error instanceof Error
+        ? error.message
+        : "Nao foi possivel ler o estado de ativacao.";
+  }
+
   const byKey = new Map((data ?? []).map((f) => [f.key, f]));
 
   // Monta rows na ordem canônica ALL_FEATURE_FLAG_KEYS.
@@ -100,6 +118,12 @@ export default async function AdminFeatureFlagsPage() {
     ];
   });
 
+  const productFlowKeys = new Set([
+    PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
+    PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
+  ]);
+  const genericRows = rows.filter((row) => !productFlowKeys.has(row.key));
+
   return (
     <div className="space-y-6">
       <div>
@@ -116,9 +140,14 @@ export default async function AdminFeatureFlagsPage() {
           {" "}20260821000002_qcw_operational_flags.sql para ativá-las.
         </div>
       )}
+      <ProductActivationPanel
+        initialState={activationState}
+        initialError={activationError}
+      />
+
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Flags de operação</h2>
-        <FeatureFlagsForm rows={rows} />
+        <FeatureFlagsForm rows={genericRows} />
       </section>
     </div>
   );
