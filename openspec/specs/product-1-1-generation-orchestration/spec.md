@@ -302,4 +302,4 @@ A orquestração SHALL operar com timeout interno **estritamente menor** que o t
 
 ## Pilot Scope and Deferred Items
 
-The hosted pilot is scoped to **N=1** and test stores. The real platform kill remains **INCONCLUSIVE**; D13 is accepted **only** for the N=1 monitored pilot. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) are **deferred by responsible decision, not executed**, and remain required before any general opening. `all_stores` remains refused. Durable pointer: `openspec/changes/fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md` (or the corresponding archived path after archive).
+The hosted pilot is scoped to **N=1** and test stores. The real platform kill remains **INCONCLUSIVE**; D13 is accepted **only** for the N=1 monitored pilot. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) are **deferred by responsible decision, not executed**, and remain required before any general opening. `all_stores` remains refused. Durable pointer: `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
