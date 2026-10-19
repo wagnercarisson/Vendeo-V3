@@ -1,6 +1,5 @@
 import "server-only";
 
-import { FeatureFlagService } from "@/lib/feature-flags/feature-flag-service";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 
@@ -33,13 +32,6 @@ export type PilotSpendGateResolution =
 
 type StoreRow = Parameters<typeof resolveEligibilityContext>[0];
 
-/**
- * Whitelist EXPLÍCITA das duas vias estreitas habilitadoras (F56.2b2d): a via
- * local `isolated_pilot` (inalterada) e a via operacional `test_stores`. NUNCA
- * inclui `all_stores` — o escopo geral permanece bloqueado.
- */
-const NARROW_STAGES: ReadonlySet<string> = new Set(["isolated_pilot", "test_stores"]);
-
 export async function resolvePilotSpendGate(input: {
   store: StoreRow;
 }): Promise<PilotSpendGateResolution> {
@@ -60,23 +52,11 @@ export async function resolvePilotSpendGate(input: {
     }
     return { kind: "inactive" };
   }
-  if (!NARROW_STAGES.has(decision.stage)) {
-    // Estágio HABILITADOR não-estreito (`all_stores`) ⇒ NEGAR o novo fluxo
-    // (NÃO armar gate para escopo geral — não amplia a autorização aprovada).
-    return { kind: "blocked", reason: "non_narrow_enabling_stage" };
-  }
 
-  // Autorização estreita vigente: a flag é a janela. Falha/leitura inválida ⇒
-  // INCERTEZA ⇒ bloqueia (não retira a proteção).
-  try {
-    const flags = await new FeatureFlagService().readProductOneToOneFlags();
-    if (!flags.testStoresEnabled || flags.testStoresStatus !== "valid") {
-      return { kind: "blocked", reason: "flags_unavailable" };
-    }
-  } catch {
-    return { kind: "blocked", reason: "flags_unavailable" };
-  }
-
+  // A decisão server-side já validou a flag aplicável, o escopo exato e a
+  // instância. O gate arma para qualquer estágio habilitador permitido
+  // (`isolated_pilot`, `test_stores`, `all_stores`) e mantém o mesmo controle
+  // de gasto por chamada.
   return { kind: "armed", gate: new ProductOneToOnePilotSpendControl() };
 }
 

@@ -21,10 +21,11 @@ import { resolveCanonicalInstanceIdentity } from "@/lib/product-1-1/authorizatio
  *   **RPC auditada** `admin_grant_product_flow_stage_authorization` (motivo e
  *   `operationId` obrigatórios, actor derivado server-side). **F56.2b2d:** as vias
  *   ESTREITAS `isolated_pilot` + `test_stores` (inalterada) e `test_stores` +
- *   `test_stores` (operacional) são **concedidas** (200) e auditadas; os demais
- *   estágios habilitadores e o escopo geral (`all_stores`) continuam
- *   **RECUSADOS** (403, `operational_activation_blocked_in_b1a`) — a barreira
- *   global é preservada. A habilitação da janela depende da flag aplicável.
+ *   `test_stores` (operacional) e `all_stores` + `all_stores` (abertura geral)
+ *   são **concedidas** (200) e auditadas; combinações inválidas continuam
+ *   recusadas. A aprovação humana é registrada no checkpoint; esta rota não lê
+ *   documentos. A habilitação depende da flag aplicável e do comando
+ *   administrativo de ativação.
  *
  * Esta rota é a ÚNICA superfície autorizada a importar
  * `src/lib/product-1-1/authorization/**` (exceção estreita da guarda de
@@ -171,10 +172,18 @@ export const POST = apiHandler(async (request: Request) => {
       result.stage === "test_stores" &&
       body.scope === "test_stores" &&
       result.scope === "test_stores";
+    const isAllStoresGrant =
+      body.stage === "all_stores" &&
+      result.stage === "all_stores" &&
+      body.scope === "all_stores" &&
+      result.scope === "all_stores";
     const consistentGrant =
       result.success === true &&
       result.refused === false &&
-      (isLegacyOffGrant || isNarrowPilotGrant || isOperationalTestStoresGrant);
+      (isLegacyOffGrant ||
+        isNarrowPilotGrant ||
+        isOperationalTestStoresGrant ||
+        isAllStoresGrant);
 
     if (!consistentGrant) {
       return NextResponse.json(
