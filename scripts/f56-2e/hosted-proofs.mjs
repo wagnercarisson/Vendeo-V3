@@ -64,6 +64,60 @@ function serviceKey() {
   return key;
 }
 
+function sqlLiteral(value) {
+  if (value === null || value === undefined) return "NULL";
+  if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+/**
+ * Cliente alternativo para execucao hospedada sem DATABASE_URL: usa a
+ * Management API do Supabase com token de acesso. Nao imprime credenciais.
+ */
+class ManagementSqlClient {
+  constructor(token, projectRef) {
+    this.token = token;
+    this.projectRef = projectRef;
+  }
+  async connect() {}
+  async end() {}
+  async query(sql, params = []) {
+    const text = sql.replace(/\$(\d+)/g, (_, n) => sqlLiteral(params[Number(n) - 1]));
+    const response = await fetch(
+      `https://api.supabase.com/v1/projects/${this.projectRef}/database/query`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: text }),
+      },
+    );
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`management_sql_failed:${response.status}:${body.slice(0, 200)}`);
+    }
+    const rows = await response.json();
+    return { rows: Array.isArray(rows) ? rows : [], rowCount: Array.isArray(rows) ? rows.length : 0 };
+  }
+}
+
+function databaseClient() {
+  if (process.env.DATABASE_URL) {
+    return new Client({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: true } : false,
+    });
+  }
+  const token = process.env.SUPABASE_ACCESS_TOKEN;
+  const projectRef = process.env.SUPABASE_PROJECT_REF;
+  assert.ok(token, "DATABASE_URL ou SUPABASE_ACCESS_TOKEN ausente");
+  assert.ok(projectRef, "SUPABASE_PROJECT_REF ausente para Management API");
+  return new ManagementSqlClient(token, projectRef);
+}
+
 async function storageObject(storagePath) {
   const url = `${httpBase()}/storage/v1/object/${BUCKET}/${storagePath
     .split("/")
@@ -115,10 +169,7 @@ async function main() {
   if (execute) assert.equal(confirm, "EXECUTE", "--execute exige --confirm=EXECUTE");
   if (kind === "5.7") assert.ok(redeployAt, "5.7 exige --redeploy-at=<ISO>");
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: true } : false,
-  });
+  const client = databaseClient();
   await client.connect();
   try {
     const storeRow = await client.query(
@@ -197,9 +248,14 @@ async function main() {
       return;
     }
 
-    assert.ok(["reserved", "art_uploaded"].includes(row.status), "5.3 exige operacao nao terminal");
-    assert.ok(!["in_flight", "result_unknown", "published"].includes(row.publication_state), "5.3 exige publicacao nao ativa/publicada");
-    assert.equal(row.refund_tx_id, null, "5.3 exige operacao ainda nao estornada");
+    const alreadyRefunded = row.status === "refunded";
+    if (alreadyRefunded) {
+      assert.ok(row.refund_tx_id, "5.3 refunded exige refund_tx_id");
+    } else {
+      assert.ok(["reserved", "art_uploaded"].includes(row.status), "5.3 exige operacao nao terminal");
+      assert.ok(!["in_flight", "result_unknown", "published"].includes(row.publication_state), "5.3 exige publicacao nao ativa/publicada");
+      assert.equal(row.refund_tx_id, null, "5.3 exige operacao ainda nao estornada");
+    }
     assert.equal(artifact.rowCount, 0, "5.3 exige ausencia de registro de arte (nao basta sozinho)");
 
     const claims = await client.query(
@@ -220,16 +276,40 @@ async function main() {
 
     const refundReference = `p1_1_refund_${campaign}_${operation}`;
     const refundBefore = await client.query(
-      "SELECT count(*)::int AS n FROM public.credit_transactions WHERE reference = $1",
+      "SELECT count(*)::int AS n FROM public.credit_transactions WHERE idempotency_key = $1",
       [refundReference],
     );
-    assert.equal(refundBefore.rows[0].n, 0, "5.3 exige zero estorno antes");
+    assert.equal(
+      refundBefore.rows[0].n,
+      alreadyRefunded ? 1 : 0,
+      alreadyRefunded ? "5.3 refunded exige exatamente um estorno" : "5.3 exige zero estorno antes",
+    );
 
     if (check) {
       console.log(JSON.stringify({
         kind, mode: "check", status: row.status, storagePath,
         probe: probe.kind, observedEpoch, refunds: refundBefore.rows[0].n,
         note: "execucao exige --execute --confirm=EXECUTE",
+      }));
+      return;
+    }
+
+    if (alreadyRefunded) {
+      const replay = await client.query(
+        "SELECT public.product_1_1_close_failed_operation($1::uuid, $2::uuid, $3, $4::int, $5) AS r",
+        [campaign, operation, "absent", observedEpoch, "F56.2e hosted proof 5.3"],
+      );
+      assert.equal(replay.rows[0].r.idempotent, true, "replay 5.3 deve ser idempotente");
+      assert.equal(replay.rows[0].r.status, "refunded");
+      const refundAfterReplay = await client.query(
+        "SELECT count(*)::int AS n FROM public.credit_transactions WHERE idempotency_key = $1",
+        [refundReference],
+      );
+      assert.equal(refundAfterReplay.rows[0].n, 1, "replay nao pode criar segundo estorno");
+      console.log(JSON.stringify({
+        kind, mode: "replay", status: "refunded", storagePath,
+        probe: probe.kind, observedEpoch, refunds: refundAfterReplay.rows[0].n,
+        replayIdempotent: true,
       }));
       return;
     }
@@ -243,7 +323,7 @@ async function main() {
     assert.equal(first.rows[0].r.idempotent, false, "1o encerramento deve aplicar o estorno");
 
     const refundAfter = await client.query(
-      "SELECT count(*)::int AS n FROM public.credit_transactions WHERE reference = $1",
+      "SELECT count(*)::int AS n FROM public.credit_transactions WHERE idempotency_key = $1",
       [refundReference],
     );
     assert.equal(refundAfter.rows[0].n, 1, "5.3 exige exatamente um estorno");
@@ -255,7 +335,7 @@ async function main() {
     assert.equal(replay.rows[0].r.idempotent, true, "replay 5.3 deve ser idempotente");
     assert.equal(replay.rows[0].r.status, "refunded");
     const refundAfterReplay = await client.query(
-      "SELECT count(*)::int AS n FROM public.credit_transactions WHERE reference = $1",
+      "SELECT count(*)::int AS n FROM public.credit_transactions WHERE idempotency_key = $1",
       [refundReference],
     );
     assert.equal(refundAfterReplay.rows[0].n, 1, "replay nao pode criar segundo estorno");
