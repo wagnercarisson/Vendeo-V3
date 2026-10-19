@@ -286,7 +286,7 @@ describe("F56.2b1b — artifact download / Storage real", () => {
     expect(probe.kind).toBe("indeterminate");
   });
 
-  it("C2 — a ROTA REAL `/api/campaign/[id]/download` só libera com `delivered`+`integral` (403/sem assinatura vs 302/uma assinatura) e aplica OWNERSHIP", async () => {
+  it("C2 — a ROTA REAL `/api/campaign/[id]/download` só libera com `delivered`+`integral` (403 sem download vs 200 attachment, sem assinatura) e aplica OWNERSHIP", async () => {
     const campaignId = randomUUID();
     const operationId = randomUUID();
 
@@ -327,17 +327,21 @@ describe("F56.2b1b — artifact download / Storage real", () => {
     expect(blocked.status).toBe(403);
     expect(counters.signed).toBe(0);
 
-    // APÓS `delivered` + arte ÍNTEGRA ⇒ 302 + EXATAMENTE UMA URL assinada.
+    // APÓS `delivered` + arte ÍNTEGRA ⇒ 200 com bytes do arquivo (attachment),
+    // com nome seguro/tipo correto e SEM URL assinada (não redireciona).
     await deliverCredit(ctx.pg, campaignId, operationId);
     const allowed = await call();
-    expect(allowed.status).toBe(302);
-    expect(String(allowed.headers.get("location"))).toContain("token=");
-    expect(counters.signed).toBe(1);
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(String(allowed.headers.get("Content-Disposition"))).toContain('attachment; filename="');
+    expect(counters.signed).toBe(0);
+    const body = Buffer.from(await allowed.arrayBuffer());
+    expect(body.length).toBeGreaterThan(0);
 
-    // OWNERSHIP: `requireOwnership` recusando ⇒ 404 (nunca 302; nenhuma nova assinatura).
+    // OWNERSHIP: `requireOwnership` recusando ⇒ 404 (nunca 200; nenhuma assinatura).
     h.requireOwnership.mockRejectedValueOnce(new StoreNotFoundError("not owner"));
     const foreign = await call();
     expect(foreign.status).toBe(404);
-    expect(counters.signed).toBe(1);
+    expect(counters.signed).toBe(0);
   }, 90_000);
 });

@@ -10,6 +10,31 @@ let mockGetCampaignImpl = vi.fn();
 let mockListArtVersionsImpl = vi.fn();
 let mockIsCampaignApprovalEnabledImpl = vi.fn();
 
+const mockNewFlow = vi.hoisted(() => ({
+  getCampaignOperation: vi.fn(),
+  probeArtifact: vi.fn(),
+  downloadArtifact: vi.fn(),
+}));
+
+vi.mock("@/lib/product-1-1/orchestration/attempt-start-client", () => ({
+  ProductOneToOneAttemptStartClient: class {
+    getCampaignOperation(...args: unknown[]) {
+      return mockNewFlow.getCampaignOperation(...args);
+    }
+  },
+}));
+
+vi.mock("@/lib/product-1-1/artifact/artifact-store", () => ({
+  ProductOneToOneArtifactStore: class {
+    probeArtifact(...args: unknown[]) {
+      return mockNewFlow.probeArtifact(...args);
+    }
+    downloadArtifact(...args: unknown[]) {
+      return mockNewFlow.downloadArtifact(...args);
+    }
+  },
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: {
     from: mockSupabaseFrom,
@@ -85,6 +110,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockIsCampaignApprovalEnabledImpl.mockResolvedValue(false);
   mockListArtVersionsImpl.mockResolvedValue([]);
+  mockNewFlow.getCampaignOperation.mockResolvedValue(null);
+  mockNewFlow.probeArtifact.mockResolvedValue({ kind: "absent" });
+  mockNewFlow.downloadArtifact.mockRejectedValue(new Error("not expected"));
 });
 
 describe("GET /api/campaign/[id]/download", () => {
@@ -330,5 +358,156 @@ describe("GET /api/campaign/[id]/download", () => {
     });
 
     expect(response.status).toBe(200);
+  });
+});
+
+// F56.2.6 (UAT) — o download do novo fluxo entrega o ARQUIVO pela própria rota
+// (attachment + nome seguro + tipo), sem redirecionar para a URL de exibição.
+describe("F56.2.6 — download do novo fluxo (proxy, não redirect)", () => {
+  const NEW_FLOW_CAMPAIGN = {
+    id: VALID_UUID,
+    store_id: "store-1",
+    status: "ready",
+    storage_path: `${VALID_UUID}/${VALID_UUID}/product-1-1/${VALID_UUID}/art-1024.jpg`,
+    product_name: "51 Ice Maça Verde 275ml",
+    created_at: "2026-10-19T17:36:18Z",
+    input_snapshot: { frozenContentReferences: [] },
+    approval_status: "pending_approval",
+    rejection_count: 0,
+    approved_version_id: null,
+    approved_at: null,
+  };
+
+  const DELIVERED_OPERATION = {
+    campaignId: VALID_UUID,
+    operationId: VALID_UUID,
+    status: "delivered",
+    amount: 1,
+    creditTxId: "tx-1",
+    refundTxId: null,
+    consumedDefinitive: true,
+    terminal: true,
+    unknown: false,
+    outcome: null,
+    supportReference: null,
+  };
+
+  const INTEGRAL_PROBE = {
+    kind: "integral",
+    storagePath: NEW_FLOW_CAMPAIGN.storage_path,
+    width: 1024,
+    height: 1024,
+    mimeType: "image/jpeg",
+    ref: {
+      storagePath: NEW_FLOW_CAMPAIGN.storage_path,
+      width: 1024,
+      height: 1024,
+      mimeType: "image/jpeg",
+    },
+  };
+
+  function ready(operation: unknown = DELIVERED_OPERATION, probe: unknown = INTEGRAL_PROBE) {
+    mockRequireApiUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    mockGetCampaignImpl.mockResolvedValue(NEW_FLOW_CAMPAIGN);
+    mockRequireOwnershipImpl.mockResolvedValue({ id: "store-1" });
+    mockNewFlow.getCampaignOperation.mockResolvedValue(operation);
+    mockNewFlow.probeArtifact.mockResolvedValue(probe);
+  }
+
+  async function call() {
+    const { GET } = await import("@/app/api/campaign/[id]/download/route");
+    return GET(createRequest(`http://localhost:3000/api/campaign/${VALID_UUID}/download`), {
+      params: Promise.resolve({ id: VALID_UUID }),
+    });
+  }
+
+  it("delivered + arte íntegra → 200 attachment, nome seguro e tipo correto", async () => {
+    ready();
+    mockNewFlow.downloadArtifact.mockResolvedValue({
+      buffer: Buffer.from("artifact-bytes"),
+      mimeType: "image/jpeg",
+    });
+
+    const response = await call();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(response.headers.get("Content-Disposition")).toBe(
+      'attachment; filename="51_ice_ma_a_verde_275ml-2026-10-19.jpg"',
+    );
+    expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("artifact-bytes");
+  });
+
+  it.each([
+    ["art_uploaded", { ...DELIVERED_OPERATION, status: "art_uploaded", terminal: false }],
+    ["unknown", { ...DELIVERED_OPERATION, status: "reserved", unknown: true, terminal: false }],
+    ["refunded", { ...DELIVERED_OPERATION, status: "refunded", terminal: true }],
+  ])("operação %s → 403 sem download", async (_label, operation) => {
+    ready(operation);
+    const response = await call();
+    expect(response.status).toBe(403);
+    expect(mockNewFlow.downloadArtifact).not.toHaveBeenCalled();
+  });
+
+  it.each(["absent", "invalid", "indeterminate"] as const)(
+    "probe %s → 403 sem download",
+    async (kind) => {
+      ready(DELIVERED_OPERATION, { kind });
+      const response = await call();
+      expect(response.status).toBe(403);
+      expect(mockNewFlow.downloadArtifact).not.toHaveBeenCalled();
+    },
+  );
+
+  it("falha de Storage na entrega → 502", async () => {
+    ready();
+    mockNewFlow.downloadArtifact.mockRejectedValue(new Error("storage unavailable"));
+    const response = await call();
+    expect(response.status).toBe(502);
+  });
+
+  it("marcador novo sem operação → 503 (fail-closed)", async () => {
+    ready(null);
+    const response = await call();
+    expect(response.status).toBe(503);
+  });
+
+  it("classificação indeterminada → 503", async () => {
+    mockRequireApiUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    mockGetCampaignImpl.mockResolvedValue({ ...NEW_FLOW_CAMPAIGN, input_snapshot: [] });
+    mockRequireOwnershipImpl.mockResolvedValue({ id: "store-1" });
+    const response = await call();
+    expect(response.status).toBe(503);
+  });
+
+  it("ownership recusado → 404 e sem download", async () => {
+    ready();
+    const { StoreNotFoundError } = await import("@/lib/auth/errors");
+    mockRequireOwnershipImpl.mockRejectedValue(new StoreNotFoundError("not owner"));
+    const response = await call();
+    expect(response.status).toBe(404);
+    expect(mockNewFlow.downloadArtifact).not.toHaveBeenCalled();
+  });
+
+  it("legado: mantém attachment e nome seguro", async () => {
+    mockRequireApiUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    mockGetCampaignImpl.mockResolvedValue({
+      id: VALID_UUID,
+      store_id: "store-1",
+      status: "ready",
+      storage_path: "store-1/camp-123.jpg",
+      product_name: "Produto Teste",
+      created_at: "2026-07-10T12:00:00Z",
+    });
+    mockRequireOwnershipImpl.mockResolvedValue({ id: "store-1" });
+    mockDownload.mockResolvedValue({
+      data: new Blob(["legacy"], { type: "image/jpeg" }),
+      error: null,
+    });
+    const response = await call();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Disposition")).toBe(
+      'attachment; filename="produto_teste-2026-07-10.jpg"',
+    );
   });
 });

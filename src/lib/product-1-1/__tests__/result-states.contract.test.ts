@@ -48,17 +48,17 @@ vi.mock("@/lib/product-1-1/orchestration/attempt-start-client", () => ({
   },
 }));
 
-const { mockProbeArtifact, mockGetSignedArtifactUrl } = vi.hoisted(() => ({
+const { mockProbeArtifact, mockDownloadArtifact } = vi.hoisted(() => ({
   mockProbeArtifact: vi.fn(),
-  mockGetSignedArtifactUrl: vi.fn(),
+  mockDownloadArtifact: vi.fn(),
 }));
 vi.mock("@/lib/product-1-1/artifact/artifact-store", () => ({
   ProductOneToOneArtifactStore: class {
     probeArtifact(input: unknown) {
       return mockProbeArtifact(input);
     }
-    getSignedArtifactUrl(storagePath: string) {
-      return mockGetSignedArtifactUrl(storagePath);
+    downloadArtifact(storagePath: string) {
+      return mockDownloadArtifact(storagePath);
     }
   },
 }));
@@ -190,7 +190,10 @@ beforeEach(() => {
     error: null,
   });
   mockProbeArtifact.mockResolvedValue(integralProbe());
-  mockGetSignedArtifactUrl.mockResolvedValue("https://signed.example/art-1024.jpg");
+  mockDownloadArtifact.mockResolvedValue({
+    buffer: Buffer.from([1, 2, 3]),
+    mimeType: "image/jpeg",
+  });
 });
 
 describe("GET /api/campaign/[id]/download — portão do novo fluxo (I3 fail-closed)", () => {
@@ -210,7 +213,7 @@ describe("GET /api/campaign/[id]/download — portão do novo fluxo (I3 fail-clo
       campaignId: CAMPAIGN_ID,
       operationId: OPERATION_ID,
     });
-    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
   });
 
   it("I3: `reserved` com objeto íntegro ⇒ 403 e NENHUMA URL assinada gerada", async () => {
@@ -224,7 +227,7 @@ describe("GET /api/campaign/[id]/download — portão do novo fluxo (I3 fail-clo
     const res = await callRoute();
 
     expect(res.status).toBe(403);
-    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
   });
 
   it("I3: `delivered` + objeto `absent` ⇒ 403 e NENHUMA URL assinada gerada", async () => {
@@ -239,7 +242,7 @@ describe("GET /api/campaign/[id]/download — portão do novo fluxo (I3 fail-clo
     const res = await callRoute();
 
     expect(res.status).toBe(403);
-    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
   });
 
   it("I3: `delivered` + `indeterminate` ⇒ 403 (erro de Storage NÃO é ausência) sem assinar", async () => {
@@ -254,10 +257,10 @@ describe("GET /api/campaign/[id]/download — portão do novo fluxo (I3 fail-clo
     const res = await callRoute();
 
     expect(res.status).toBe(403);
-    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
   });
 
-  it("`delivered` + objeto `integral` ⇒ assina a URL DEPOIS do portão liberar", async () => {
+  it("`delivered` + objeto `integral` ⇒ ENTREGA os bytes (attachment) DEPOIS do portão liberar", async () => {
     mockGetCampaignOperation.mockResolvedValue({
       operationId: OPERATION_ID,
       status: "delivered",
@@ -267,10 +270,12 @@ describe("GET /api/campaign/[id]/download — portão do novo fluxo (I3 fail-clo
 
     const res = await callRoute();
 
-    expect(mockGetSignedArtifactUrl).toHaveBeenCalledWith(NEW_FLOW_PATH);
-    expect(res.status).toBeGreaterThanOrEqual(300);
-    expect(res.status).toBeLessThan(400);
-    expect(res.headers.get("location")).toBe("https://signed.example/art-1024.jpg");
+    expect(mockDownloadArtifact).toHaveBeenCalledWith(NEW_FLOW_PATH);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(res.headers.get("Content-Disposition")).toContain("attachment; filename=");
+    // A entrega é feita pela ROTA (não por redirect para a URL de exibição).
+    expect(res.headers.get("location")).toBeNull();
   });
 
   it("campanha legada (operação `null`) ⇒ caminho anterior byte-compatível (F37 + storage)", async () => {
@@ -278,7 +283,7 @@ describe("GET /api/campaign/[id]/download — portão do novo fluxo (I3 fail-clo
 
     expect(res.status).toBe(200);
     expect(mockProbeArtifact).not.toHaveBeenCalled();
-    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
     expect(mockStorageDownload).toHaveBeenCalledWith(`${STORE_ID}/${CAMPAIGN_ID}.jpg`);
     expect(res.headers.get("Content-Disposition")).toContain("attachment");
   });
@@ -313,7 +318,7 @@ describe("GET /api/campaign/[id]/download — classificação PERSISTIDA do flux
 
     expect(res.status).toBe(503);
     expect(mockProbeArtifact).not.toHaveBeenCalled();
-    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
     // NUNCA cai no ramo legado.
     expect(mockStorageDownload).not.toHaveBeenCalled();
   });
@@ -335,7 +340,7 @@ describe("GET /api/campaign/[id]/download — classificação PERSISTIDA do flux
     expect(res.status).toBe(200);
     expect(mockStorageDownload).toHaveBeenCalledWith(`${STORE_ID}/${CAMPAIGN_ID}.jpg`);
     expect(res.headers.get("Content-Disposition")).toContain("attachment");
-    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
   });
 
   it("(c) marcador presente + operação LEGÍVEL ⇒ o portão do novo fluxo GOVERNA", async () => {
@@ -357,7 +362,7 @@ describe("GET /api/campaign/[id]/download — classificação PERSISTIDA do flux
     const res = await callRoute();
 
     expect(res.status).toBe(403);
-    expect(mockGetSignedArtifactUrl).not.toHaveBeenCalled();
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
     expect(mockStorageDownload).not.toHaveBeenCalled();
   });
 });
@@ -372,16 +377,18 @@ describe("rota download — preservação do ramo legado (source)", () => {
     expect(source).toContain(".download(");
   });
 
-  it("o ramo novo é aditivo e fail-closed: assina SOMENTE após `decideNewFlowDownload`", () => {
+  it("o ramo novo é aditivo e fail-closed: entrega os bytes SOMENTE após `decideNewFlowDownload`", () => {
     const decisionIdx = source.indexOf("decideNewFlowDownload(");
-    const signIdx = source.indexOf("getSignedArtifactUrl(");
+    const deliverIdx = source.indexOf("downloadArtifact(");
     const f37Idx = source.indexOf("await isCampaignApprovalEnabled()");
     const rejectIdx = source.indexOf("decision.allowed");
 
     expect(decisionIdx).toBeGreaterThan(-1);
-    expect(signIdx).toBeGreaterThan(decisionIdx);
+    expect(deliverIdx).toBeGreaterThan(decisionIdx);
     expect(rejectIdx).toBeGreaterThan(decisionIdx);
-    expect(rejectIdx).toBeLessThan(signIdx);
+    expect(rejectIdx).toBeLessThan(deliverIdx);
+    // A entrega é direta (attachment), não um redirect para a URL de exibição.
+    expect(source).not.toContain("NextResponse.redirect");
     // O ramo novo (detecção de operação) precede o gate legado da F37.
     expect(source.indexOf("getCampaignOperation(")).toBeLessThan(f37Idx);
   });

@@ -279,6 +279,56 @@ export class ProductOneToOneArtifactStore {
   }
 
   /**
+   * Download do artefato para ENTREGA AO USUÁRIO (rota de download).
+   *
+   * A rota NÃO redireciona para uma URL assinada: baixa os bytes do bucket
+   * privado e os devolve com `Content-Disposition: attachment` e o tipo
+   * derivado do CONTEÚDO. O caminho precisa pertencer ao novo fluxo e o
+   * conteúdo é revalidado (JPEG 1024×1024) antes de sair. Sem assinatura.
+   */
+  async downloadArtifact(
+    storagePath: string,
+  ): Promise<{ buffer: Buffer; mimeType: "image/jpeg" }> {
+    if (!NEW_FLOW_PATH_RE.test(storagePath)) {
+      throw new ProductOneToOneArtifactUploadError(
+        "artifact_invalid_path",
+        `refusing to download non-new-flow path: ${storagePath}`,
+      );
+    }
+
+    const { data, error } = await this.client.storage
+      .from(BUCKET)
+      .download(storagePath);
+    if (error || !data) {
+      throw new ProductOneToOneArtifactUploadError(
+        "artifact_download_failed",
+        error instanceof Error ? error.message : "artifact_download_failed",
+      );
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await toBuffer(data);
+    } catch (bufferError) {
+      throw new ProductOneToOneArtifactUploadError(
+        "artifact_download_failed",
+        errorMessage(bufferError),
+      );
+    }
+
+    try {
+      await verifyJpeg1024(buffer);
+    } catch (verifyError) {
+      throw new ProductOneToOneArtifactUploadError(
+        "artifact_download_failed",
+        errorMessage(verifyError),
+      );
+    }
+
+    return { buffer, mimeType: ARTIFACT_MIME_TYPE };
+  }
+
+  /**
    * I3 — leitura ASSINADA do bucket privado. É SEPARADA do probe e só deve ser
    * chamada pelo portão de download (Plano 06) APÓS `delivered`. Nunca é chamada
    * por `probeArtifact` nem por caminho de investigação. O TTL é do servidor

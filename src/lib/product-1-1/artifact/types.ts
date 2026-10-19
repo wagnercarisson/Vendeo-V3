@@ -48,7 +48,8 @@ export type ProductOneToOneArtifactErrorCode =
   | "artifact_metadata_persist_failed"
   | "artifact_missing"
   | "artifact_invalid_path"
-  | "artifact_sign_failed";
+  | "artifact_sign_failed"
+  | "artifact_download_failed";
 
 export class ProductOneToOneArtifactUploadError extends Error {
   constructor(

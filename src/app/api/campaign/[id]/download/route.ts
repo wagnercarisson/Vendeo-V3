@@ -11,6 +11,7 @@ import { isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-serv
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
 import { decideNewFlowDownload } from "@/lib/product-1-1/artifact/download-gate";
+import { buildSafeDownloadFilename } from "@/lib/campaign/download-filename";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -36,7 +37,7 @@ export const GET = apiHandler(async (
   // F56.2b1b (Plano 06, B1B-D6 / C2 / F4 / I3) — campanha do NOVO fluxo: o
   // download é governado pelo estado PERSISTIDO da operação (`delivered`) +
   // objeto ÍNTEGRO. `art_uploaded` sozinho NÃO libera e o estado persistido NUNCA
-  // é promovido por presença de objeto. A URL assinada só é gerada DEPOIS de
+  // é promovido por presença de objeto. A entrega dos bytes só ocorre DEPOIS de
   // `decideNewFlowDownload` liberar (I3). A F37 NÃO governa este ramo. Campanhas
   // legadas (operação `null`) seguem no caminho anterior byte-compatível.
   const loadNewFlowOperation = async () => {
@@ -82,8 +83,30 @@ export const GET = apiHandler(async (
     if (!decision.allowed || decision.storagePath === null) {
       return NextResponse.json({ error: "Download not available" }, { status: 403 });
     }
-    const signedUrl = await artifactStore.getSignedArtifactUrl(decision.storagePath);
-    return NextResponse.redirect(signedUrl, 302);
+    // F56.2b1b (correção UAT 56.2.6) — ENTREGA do arquivo pela PRÓPRIA rota:
+    // baixa os bytes do bucket privado e devolve `attachment` com nome seguro e
+    // tipo correto. NÃO redireciona para a URL de EXIBIÇÃO e NÃO depende de
+    // `Content-Disposition` em redirect cross-origin. A URL usada para exibir a
+    // imagem na página permanece inalterada.
+    let artifact: { buffer: Buffer; mimeType: "image/jpeg" };
+    try {
+      artifact = await artifactStore.downloadArtifact(decision.storagePath);
+    } catch {
+      return NextResponse.json({ error: "Failed to download image" }, { status: 502 });
+    }
+    const filename = buildSafeDownloadFilename({
+      productName: campaign.product_name,
+      createdAt: campaign.created_at,
+      extension: "jpg",
+    });
+    const body = new Uint8Array(artifact.buffer);
+    return new NextResponse(new Blob([body], { type: artifact.mimeType }), {
+      headers: {
+        "Content-Type": artifact.mimeType,
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
   }
 
   // F37.1 (D2/decisão 4): gate de aprovação — enquanto a candidata não é
@@ -110,9 +133,11 @@ export const GET = apiHandler(async (
     );
   }
 
-  const safeName = campaign.product_name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase() || "campanha";
-  const dateStr = campaign.created_at?.split("T")[0] ?? new Date().toISOString().split("T")[0];
-  const filename = `${safeName}-${dateStr}.jpg`;
+  const filename = buildSafeDownloadFilename({
+    productName: campaign.product_name,
+    createdAt: campaign.created_at,
+    extension: "jpg",
+  });
 
   return new NextResponse(fileData, {
     headers: {

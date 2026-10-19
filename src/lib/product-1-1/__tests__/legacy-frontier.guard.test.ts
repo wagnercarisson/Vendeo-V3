@@ -33,6 +33,9 @@ const AUTHORIZED_ROUTE_FILE = "src/app/api/campaign/generate-image/route.ts";
 // comparação de conteúdo dos 12 caminhos adicionais (que permanece inalterada).
 const AUTHORIZED_DOWNLOAD_ROUTE_FILE =
   "src/app/api/campaign/[id]/download/route.ts";
+// Commit aprovado do ramo legado da rota de download (antes da correção de
+// entrega): o bloco legado é comparado por CONTEÚDO contra este commit.
+const AUTHORIZED_DOWNLOAD_ROUTE_COMMIT = "e3fb664e";
 
 interface AuthorizedFrontierChange {
   readonly path: string;
@@ -52,6 +55,18 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
     authorization:
       "F56.2b1b Plano 06 (portão de download do novo fluxo — ramo legado preservado)",
     commit: "e3fb664e",
+  },
+  {
+    path: "src/lib/ai/__tests__/quick-gpt6-luna-brand-profile-text.test.ts",
+    authorization:
+      "quick 261018-k9c (testes Luna em brand_profile_text — caminho específico)",
+    commit: "3d6e5763",
+  },
+  {
+    path: "src/lib/ai/__tests__/quick-gpt6-luna-brand-profile-vision.test.ts",
+    authorization:
+      "quick 261018-k9c (testes Luna em brand_profile_vision — caminho específico)",
+    commit: "3d6e5763",
   },
   {
     path: "src/lib/lab/bench/domain/background-direction.ts",
@@ -235,6 +250,31 @@ function normalize(text: string): string {
   return text.replace(/\r\n/g, "\n");
 }
 
+// Bloco legado completo: começa no gate F37 e vai até o fim da rota (storage,
+// resposta e fechamento). A comparação por CONTEÚDO contra o commit aprovado
+// admite SOMENTE a extração exata do cálculo do nome para o helper.
+const LEGACY_BLOCK_MARKER = "  // F37.1";
+const LEGACY_FILENAME_CALCULATION = [
+  '  const safeName = campaign.product_name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase() || "campanha";',
+  '  const dateStr = campaign.created_at?.split("T")[0] ?? new Date().toISOString().split("T")[0];',
+  "  const filename = `${safeName}-${dateStr}.jpg`;",
+].join("\n");
+const SHARED_FILENAME_CALCULATION = [
+  "  const filename = buildSafeDownloadFilename({",
+  "    productName: campaign.product_name,",
+  "    createdAt: campaign.created_at,",
+  '    extension: "jpg",',
+  "  });",
+].join("\n");
+
+function legacyBlock(source: string): string {
+  const idx = source.indexOf(LEGACY_BLOCK_MARKER);
+  if (idx < 0) {
+    throw new Error("legacy_block_marker_missing");
+  }
+  return source.slice(idx).trimEnd();
+}
+
 /** Diferenças do conjunto alterado contra o conjunto autorizado. */
 function diffAgainstAuthorized(
   changed: readonly string[],
@@ -410,13 +450,9 @@ describe("legacy-frontier guard — F56.2a", () => {
       "--",
       AUTHORIZED_DOWNLOAD_ROUTE_FILE,
     ]);
-    const lines = diff.split(/\r?\n/);
-    const removed = lines.filter((l) => l.startsWith("-") && !l.startsWith("---"));
-    const added = lines.filter((l) => l.startsWith("+") && !l.startsWith("+++"));
-
-    // (i) Nenhuma linha existente removida/alterada: o ramo legado (F37 +
-    // storage privado) é preservado byte a byte.
-    expect(removed).toEqual([]);
+    const added = diff
+      .split(/\r?\n/)
+      .filter((l) => l.startsWith("+") && !l.startsWith("+++"));
 
     const addedText = added.join("\n");
     // O ramo novo é ADITIVO: importa o portão, a arte e o cliente de operação.
@@ -429,20 +465,39 @@ describe("legacy-frontier guard — F56.2a", () => {
       path.resolve(REPOSITORY_ROOT, AUTHORIZED_DOWNLOAD_ROUTE_FILE),
       "utf8",
     );
+    const approvedSource = git([
+      "show",
+      `${AUTHORIZED_DOWNLOAD_ROUTE_COMMIT}:${AUTHORIZED_DOWNLOAD_ROUTE_FILE}`,
+    ]);
+
+    // (i) O bloco legado COMPLETO (F37 + storage privado + resposta + fechamento)
+    // é comparado por CONTEÚDO contra o commit aprovado. A ÚNICA diferença
+    // admitida é a extração EXATA do cálculo do nome para o helper compartilhado.
+    const approvedLegacy = legacyBlock(approvedSource);
+    expect(approvedLegacy).toContain(LEGACY_FILENAME_CALCULATION);
+    const expectedLegacy = approvedLegacy.replace(
+      LEGACY_FILENAME_CALCULATION,
+      SHARED_FILENAME_CALCULATION,
+    );
+    expect(normalize(expectedLegacy)).not.toBe(normalize(approvedLegacy));
+    expect(normalize(legacyBlock(source))).toBe(normalize(expectedLegacy));
+
     // (ii) O ramo legado (F37 + storage privado) permanece presente.
     expect(source).toMatch(/await isCampaignApprovalEnabled\(\)/);
     expect(source).toMatch(/isDeliveryReleased\(/);
     expect(source).toMatch(/from\("campaign-images"\)\s*\.download\(/);
-    // (iii) Fail-closed: a URL assinada só é gerada APÓS o portão liberar e a
-    // recusa retorna ANTES de assinar; o ramo novo precede o gate legado da F37.
+    // (iii) Fail-closed: os bytes são entregues APÓS o portão liberar e a recusa
+    // retorna ANTES da entrega; o ramo novo precede o gate legado da F37.
     const decisionIdx = source.indexOf("decideNewFlowDownload(");
     const rejectIdx = source.indexOf("decision.allowed");
-    const signIdx = source.indexOf("getSignedArtifactUrl(");
+    const deliverIdx = source.indexOf("downloadArtifact(");
     const f37Idx = source.indexOf("await isCampaignApprovalEnabled()");
     expect(decisionIdx).toBeGreaterThan(-1);
     expect(rejectIdx).toBeGreaterThan(decisionIdx);
-    expect(signIdx).toBeGreaterThan(rejectIdx);
+    expect(deliverIdx).toBeGreaterThan(rejectIdx);
     expect(source.indexOf("getCampaignOperation(")).toBeLessThan(f37Idx);
+    // A entrega do novo fluxo não é um redirect para a URL de exibição.
+    expect(source).not.toContain("NextResponse.redirect");
   });
 });
 
