@@ -135,10 +135,14 @@ interface Harness {
     finish: ReturnType<typeof vi.fn>;
     recordOutcome: ReturnType<typeof vi.fn>;
     getCampaignOperation: ReturnType<typeof vi.fn>;
+    beginPaidCall: ReturnType<typeof vi.fn>;
+    endPaidCall: ReturnType<typeof vi.fn>;
+    markUnknown: ReturnType<typeof vi.fn>;
   };
   setProviderMode(mode: ProviderMode): void;
   resolveDeferred(result: AiInvocationResult): void;
   setRecordOutcomeFailure(fail: boolean): void;
+  armGate(delayMs?: number): void;
 }
 
 function buildHarness(): Harness {
@@ -147,6 +151,7 @@ function buildHarness(): Harness {
   let deferredResolve: ((result: AiInvocationResult) => void) | null = null;
   let recordOutcomeFailure = false;
   let providerCalls = 0;
+  let beginDelayMs = 0;
   const providerResult: AiInvocationResult = {
     imageBase64: "AAAA",
     mimeType: "image/png",
@@ -192,6 +197,30 @@ function buildHarness(): Harness {
     return { outcome: input.outcome, supportReference: null };
   });
   const getCampaignOperation = vi.fn(async () => null);
+
+  // Gate de gasto do piloto (armado por `armGate`). `beginPaidCall` pode
+  // atravessar o deadline (defeito 3); `markUnknown`/`endPaidCall` são
+  // espiões (defeito 2).
+  const pilotHandle = {
+    callId: "call-1",
+    ownerToken: "tok-1",
+    kind: "image_primary" as const,
+  };
+  const beginPaidCall = vi.fn(async () => {
+    order.push("beginPaidCall");
+    if (beginDelayMs > 0) {
+      await new Promise<void>((resolveDelay) => {
+        setTimeout(resolveDelay, beginDelayMs);
+      });
+    }
+    return { acquired: true as const, handle: pilotHandle };
+  });
+  const endPaidCall = vi.fn(async () => {
+    order.push("endPaidCall");
+  });
+  const markUnknown = vi.fn(async () => {
+    order.push("markUnknown");
+  });
 
   const acquire = vi.fn(async (input: { target: AttemptTarget; attemptNumber: number }) => {
     order.push(`acquire:${input.target}:${input.attemptNumber}`);
@@ -277,6 +306,24 @@ function buildHarness(): Harness {
     recordAttempt: vi.fn(async () => ({ id: "op-1" })),
     recordDiagnosis: vi.fn(async () => ({ reference: "ref" })),
     generateSupportReference: () => "66666666-6666-4666-8666-666666666666",
+    // Pricing do novo fluxo SIMULADA (estimativa positiva) — necessária quando o
+    // gate de gasto está armado (estimativa obrigatória > 0).
+    resolveAttemptCost: async () => ({
+      primary: {
+        model: SNAPSHOT.primaryModel,
+        quality: SNAPSHOT.primaryQuality,
+        costUsd: 0.041,
+        versionId: "pricing-ver-1",
+        costSource: "pricing_table" as const,
+      },
+      fallback: {
+        model: SNAPSHOT.fallbackModel,
+        quality: SNAPSHOT.fallbackQuality,
+        costUsd: 0.019,
+        versionId: "pricing-ver-1",
+        costSource: "pricing_table" as const,
+      },
+    }),
   };
 
   return {
@@ -297,6 +344,9 @@ function buildHarness(): Harness {
       finish,
       recordOutcome,
       getCampaignOperation,
+      beginPaidCall,
+      endPaidCall,
+      markUnknown,
     },
     setProviderMode(mode) {
       providerMode = mode;
@@ -310,6 +360,14 @@ function buildHarness(): Harness {
     },
     setRecordOutcomeFailure(fail) {
       recordOutcomeFailure = fail;
+    },
+    armGate(delayMs = 0) {
+      beginDelayMs = delayMs;
+      (deps as { pilotSpend?: unknown }).pilotSpend = {
+        beginPaidCall,
+        endPaidCall,
+        markUnknown,
+      };
     },
   };
 }
@@ -387,11 +445,16 @@ describe("F56.2b2d — deadline: constantes e helpers puros", () => {
     await pendingAssertion;
     expect(pending.didHit()).toBe(true);
 
-    // cancel() impede rejeição posterior e não fica pendente.
+    // cancel() NÃO assenta a promessa: cancelar NUNCA pode parecer um resultado
+    // do provider (vazio), falha confirmada ou autorização de estorno.
     const cancelled = createDeadlineRejection(Date.now() + 5_000);
     cancelled.cancel();
     await vi.advanceTimersByTimeAsync(10_000);
-    await expect(cancelled.promise).resolves.toBeUndefined();
+    const settled = await Promise.race([
+      cancelled.promise.then(() => "settled").catch(() => "rejected"),
+      Promise.resolve("pending"),
+    ]);
+    expect(settled).toBe("pending");
     expect(cancelled.didHit()).toBe(false);
   });
 });
@@ -535,5 +598,73 @@ describe("F56.2b2d — deadline: honestidade e kill não autoriza via", () => {
     expect(harness.calls.abortPublication).not.toHaveBeenCalled();
     expect(harness.calls.closeFailedOperation).not.toHaveBeenCalled();
     expect(harness.calls.refund).not.toHaveBeenCalled();
+  });
+});
+
+describe("F56.2b2d — deadline: cancelamento, gate e orçamento (correções)", () => {
+  it("cancelamento do stream durante provider pendente não vira resultado vazio, falha confirmada ou estorno", async () => {
+    const harness = buildHarness();
+    harness.setProviderMode("never");
+    harness.armGate(0);
+
+    const response = await invokeOrchestrator(harness);
+    // Garante que a chamada paga foi invocada (gate armado) antes de cancelar.
+    await vi.waitFor(() => {
+      expect(harness.calls.providerCalls).toBe(1);
+    });
+
+    await response.body?.cancel();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Cancelar NÃO pode produzir resultado/entrega/estorno nem liberação de gasto
+    // como desfecho conhecido.
+    expect(harness.calls.deliver).not.toHaveBeenCalled();
+    expect(harness.calls.refund).not.toHaveBeenCalled();
+    expect(harness.calls.markArtUploaded).not.toHaveBeenCalled();
+    expect(harness.calls.storeArtifact).not.toHaveBeenCalled();
+    expect(harness.calls.endPaidCall).not.toHaveBeenCalled();
+  });
+
+  it("deadline dispara antes do abort propagar ⇒ markUnknown (nunca endPaidCall como desfecho conhecido)", async () => {
+    vi.useFakeTimers();
+    const harness = buildHarness();
+    harness.setProviderMode("never");
+    harness.armGate(0);
+
+    const response = await invokeOrchestrator(harness);
+    await vi.advanceTimersByTimeAsync(TEST_DEADLINE_MS);
+    const events = parseEvents(await response.text());
+
+    expect(harness.calls.beginPaidCall).toHaveBeenCalledTimes(1);
+    expect(harness.calls.markUnknown).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "timeout_or_unknown" }),
+    );
+    expect(harness.calls.endPaidCall).not.toHaveBeenCalled();
+    expect(harness.calls.providerCalls).toBe(1);
+    expect(harness.calls.refund).not.toHaveBeenCalled();
+    expect(harness.calls.deliver).not.toHaveBeenCalled();
+    expect(events.at(-1)).toMatchObject({ type: "unknown" });
+  });
+
+  it("orçamento esgotado durante beginPaidCall ⇒ ZERO invocação ao provider e aquisição tratada", async () => {
+    vi.useFakeTimers();
+    const harness = buildHarness();
+    harness.setProviderMode("resolve"); // resolveria, mas NÃO deve ser invocado
+    harness.armGate(TEST_DEADLINE_MS); // beginPaidCall atravessa o deadline
+
+    const response = await invokeOrchestrator(harness);
+    await vi.advanceTimersByTimeAsync(TEST_DEADLINE_MS + 1_000);
+    const events = parseEvents(await response.text());
+
+    expect(harness.calls.beginPaidCall).toHaveBeenCalledTimes(1);
+    expect(harness.calls.providerCalls).toBe(0);
+    expect(harness.calls.markUnknown).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "deadline_before_provider" }),
+    );
+    expect(harness.calls.endPaidCall).not.toHaveBeenCalled();
+    expect(harness.calls.refund).not.toHaveBeenCalled();
+    expect(harness.calls.deliver).not.toHaveBeenCalled();
+    expect(events.at(-1)).toMatchObject({ type: "unknown" });
   });
 });

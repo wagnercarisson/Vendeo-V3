@@ -1429,6 +1429,36 @@ export async function runProductOneToOneGeneration(
               pilotHandle = decision.handle;
             }
             try {
+              // F56.2b2d (correção) — RECONFERÊNCIA IMEDIATA antes da chamada paga:
+              // o tempo gasto em aquisição/consultas/`beginPaidCall` pode ter
+              // atravessado o deadline. `Promise.race` NÃO impede iniciar a chamada
+              // PERDEDORA, então a invocação é BLOQUEADA aqui e a aquisição já feita
+              // é tratada como `unknown` (honesto, fail-closed) — nunca como
+              // resultado conhecido, falha confirmada ou estorno.
+              if (
+                deadlineRejection.didHit() ||
+                remainingBudget(Date.now(), deadlineAtInMs) <= 0
+              ) {
+                if (pilotSpend && pilotHandle) {
+                  try {
+                    await pilotSpend.markUnknown({
+                      handle: pilotHandle,
+                      reason: "deadline_before_provider",
+                    });
+                  } catch (releaseError) {
+                    console.error(
+                      "[pilot-spend] falha ao tratar aquisição sem invocação:",
+                      String(
+                        releaseError instanceof Error
+                          ? releaseError.message
+                          : releaseError,
+                      ),
+                    );
+                  }
+                  pilotHandle = undefined;
+                }
+                throw new Error("product_1_1_deadline_before_provider");
+              }
               // T-56.2.6-47 — a invocação ÚNICA do provider é CORRIDA contra o
               // deadline. O promise PERDEDOR é QUARENTENADO: um resultado TARDIO
               // nunca entrega, marca arte, estorna nem emite segundo terminal.
@@ -1472,7 +1502,11 @@ export async function runProductOneToOneGeneration(
                 // ORIGINAL (natureza desconhecida preservada). Nunca converte a falha
                 // secundária em autorização para retry/marcador `failed`/estorno PF.
                 try {
-                  if (controllerAbort.signal.aborted || isUnknownPilotOutcome(invokeError)) {
+                  if (
+                    controllerAbort.signal.aborted ||
+                    deadlineRejection.didHit() ||
+                    isUnknownPilotOutcome(invokeError)
+                  ) {
                     await pilotSpend.markUnknown({ handle: pilotHandle, reason: "timeout_or_unknown" });
                   } else {
                     await pilotSpend.endPaidCall({ handle: pilotHandle, actualEstimatedUsd: pilotEstimatedUsd });

@@ -91,8 +91,10 @@ export interface DeadlineRejection {
   /** Rejeita com `product_1_1_deadline_reached` no instante-limite. */
   readonly promise: Promise<never>;
   /**
-   * Limpa o timer e assenta a promessa cumprida (não fica pendente e NÃO rejeita
-   * depois). Idempotente; sem efeito se o deadline já disparou.
+   * Limpa o timer e impede um disparo POSTERIOR. NÃO assenta a promessa: um
+   * cancelamento NUNCA pode ser confundido com um resultado do provider (vazio),
+   * com uma falha confirmada ou com autorização de estorno. Idempotente; sem
+   * efeito se o deadline já disparou.
    */
   cancel(): void;
   /** `true` SOMENTE quando o deadline DISPAROU (não quando cancelado). */
@@ -111,11 +113,9 @@ export function createDeadlineRejection(
   let hit = false;
   let settled = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let settle: () => void = () => {};
   let rejectFn: (reason: unknown) => void = () => {};
 
-  const promise = new Promise<never>((resolve, reject) => {
-    settle = () => (resolve as (value?: unknown) => void)(undefined);
+  const promise = new Promise<never>((_resolve, reject) => {
     rejectFn = reject;
   });
   // Nunca deixar a rejeição (ex.: orçamento já esgotado no construtor) sem
@@ -143,10 +143,10 @@ export function createDeadlineRejection(
         clearTimeout(timer);
         timer = null;
       }
-      if (!settled) {
-        settled = true;
-        settle();
-      }
+      // NÃO assenta a promessa com valor: cancelar NUNCA pode parecer um
+      // resultado do provider (vazio) nem uma falha confirmada. Apenas impede
+      // um disparo posterior do deadline.
+      settled = true;
     },
     didHit(): boolean {
       return hit;
