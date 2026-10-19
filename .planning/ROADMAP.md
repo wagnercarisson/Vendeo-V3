@@ -468,4 +468,6 @@ Plans:
 
 **Plans:** 8/8 plans executed (8 summaries). **Verification:** `56.2.6-VERIFICATION.md` — `PASS WITH LIMITATIONS`. **OpenSpec:** change **ARQUIVADA** em `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/`; **52/54 tasks**; **5.3/5.7 abertas e adiadas** por decisão do responsável (não executadas; obrigatórias antes da abertura geral); **5.9** fechado por inspeção delimitada; `DEFERRED.md` preservado.
 
+**Next action:** definir o próximo escopo; carregar 5.3/5.7 como bloqueios da abertura geral; **não iniciar nada automaticamente**.
+
 **Canonical refs:** `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/` (proposal, design D1–D5, 4 specs, tasks §1–§7, `DEFERRED.md`), `openspec/specs/product-1-1-flow-activation/spec.md`, `openspec/specs/product-1-1-controlled-real-test-authorization/spec.md`, `openspec/specs/product-1-1-generation-orchestration/spec.md`, `openspec/specs/product-1-1-hosted-pilot/spec.md`, `src/lib/product-1-1/authorization/authorization-decision.ts`, `src/lib/product-1-1/pilot/resolve-pilot-spend-gate.ts`, `src/app/api/admin/product-flow-authorizations/route.ts`, `supabase/migrations/20261017000001_f56_2b2c_narrow_authorization.sql`, `docs/operations/backup-runbook.md`.

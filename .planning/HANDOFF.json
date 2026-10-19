@@ -1,370 +1,98 @@
 {
   "version": "1.0",
-  "root_snapshot_note": "Historical F56.1 snapshot fields: root phase/phase_name/phase_dir/status/phase_status/plan/openspec_source/openspec_archive, GSD/planning review blocks, resolved_plans/checkpoints/current_phase_result, and the root artifacts list. Current F56.2b1b state is in current_phase and the closeout fields at the bottom; the F56.2b1a state is preserved verbatim in current_phase.previous_local_phase.",
+  "root_snapshot_note": "Historical F56.1 root snapshot fields and the previous 56.2.4/B2.2 current_phase snapshot are preserved as history. Current state is 56.2.6/F56.2b2d: N=1 closed and archived, with 5.3/5.7 deferred for general opening.",
   "current_phase": {
-    "phase": "56.2.4",
-    "functional_label": "F56.2b2b — B2.2 Recuperação de imagem, estorno e D13 do Produto 1:1 (entrega INATIVA)",
-    "updated_at": "2026-10-16",
-    "status": "complete_inactive_uat_approved_with_limitations_gsd_closed_openspec_verified_synced_archived",
-    "plan_count": "10/10",
-    "summary_count": "10/10",
+    "phase": "56.2.6",
+    "functional_label": "F56.2b2d ? Piloto hospedado do Produto 1:1 em lojas de teste (N=1, escopo encerrado)",
+    "updated_at": "2026-10-19",
+    "status": "complete_n1_scope_verified_with_limitations_openspec_synced_archived",
+    "plan_count": "8/8",
+    "summary_count": "8/8",
     "plan_summary_inventory": [
-      "56.2.4-01-PLAN.md ↔ 56.2.4-01-SUMMARY.md",
-      "56.2.4-02-PLAN.md ↔ 56.2.4-02-SUMMARY.md",
-      "56.2.4-03-PLAN.md ↔ 56.2.4-03-SUMMARY.md",
-      "56.2.4-04-PLAN.md ↔ 56.2.4-04-SUMMARY.md",
-      "56.2.4-05-PLAN.md ↔ 56.2.4-05-SUMMARY.md",
-      "56.2.4-06-PLAN.md ↔ 56.2.4-06-SUMMARY.md",
-      "56.2.4-07-PLAN.md ↔ 56.2.4-07-SUMMARY.md",
-      "56.2.4-08-PLAN.md ↔ 56.2.4-08-SUMMARY.md",
-      "56.2.4-09-PLAN.md ↔ 56.2.4-09-SUMMARY.md",
-      "56.2.4-10-PLAN.md ↔ 56.2.4-10-SUMMARY.md"
+      "56.2.6-01-PLAN.md ? 56.2.6-01-SUMMARY.md",
+      "56.2.6-02-PLAN.md ? 56.2.6-02-SUMMARY.md",
+      "56.2.6-03-PLAN.md ? 56.2.6-03-SUMMARY.md",
+      "56.2.6-04-PLAN.md ? 56.2.6-04-SUMMARY.md",
+      "56.2.6-05-PLAN.md ? 56.2.6-05-SUMMARY.md",
+      "56.2.6-06-PLAN.md ? 56.2.6-06-SUMMARY.md",
+      "56.2.6-07-PLAN.md ? 56.2.6-07-SUMMARY.md",
+      "56.2.6-08-PLAN.md ? 56.2.6-08-SUMMARY.md"
     ],
-    "openspec_change": "fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1 (base aprovada b2edfb5b; change NOMEADA verificada, sincronizada e ARQUIVADA em openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/)",
-    "openspec_tasks": "45/45 (reconciliado item a item com evidencia; ver tasks.md)",
-    "uat": "human_approved_with_limitations_2026-10-16_inactive_scope_only",
-    "human_checkpoint": "approved_with_limitations",
-    "uat_decision_text": "Aprovação exclusivamente da entrega B2.2 inativa/local, com testes automatizados e integração isolada; inspeção visual adicional dos reparos não realizada, conforme decisão anterior. Sem aprovação de produção, ativação ou provider real. D13 e o resíduo de sign-off da B2.1 permanecem separados e pendentes.",
-    "code_review_independent": {
-      "artifact": ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-REVIEW-INDEPENDENT.md",
-      "status": "verified_after_repairs",
-      "revision": "56aa8a60",
-      "implementation_code_final": "7877e317",
-      "high": 0,
-      "critical": 0,
-      "prior_resolved": [
-        "CR-01 (Plano 08)",
-        "CR-02 (Plano 09)",
-        "CR-03 (Plano 09)",
-        "WR-01 (Plano 10)",
-        "WR-02 (Plano 10)",
-        "WR-03 (Plano 10)",
-        "WR-04 (Plano 10)"
-      ]
-    },
-    "security_independent": {
-      "artifact": ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-SECURITY-INDEPENDENT.md",
-      "status": "RESOLVED_NO_OPEN_HIGH_CRITICAL",
-      "revision": "56aa8a60",
-      "asvs_level": 1,
-      "security_block_on": "high",
-      "register_occurrences": 76,
-      "unique_threat_ids": 67,
-      "mitigated_occurrences": 67,
-      "accepted_risk_occurrences": 9,
-      "threats_open": 0,
-      "open_findings_high": 0,
-      "open_findings_critical": 0,
-      "prior_resolved": [
-        "SEC-01 (Plano 08)",
-        "SEC-02 (Plano 09)",
-        "SEC-03 (Plano 09)",
-        "SEC-04 (Plano 10)",
-        "SEC-05 (Plano 10)",
-        "UF-01 (Plano 10)"
-      ]
+    "openspec_change": "fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores (ARQUIVADA em openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/)",
+    "openspec_tasks": "52/54 ? 5.3/5.7 abertas e adiadas por decis?o do respons?vel; N?O executadas; obrigat?rias antes da abertura geral",
+    "uat": "human_approved_n1_scope_with_limitations_2026-10-19",
+    "human_checkpoint": "approved_n1_scope_with_limitations",
+    "uat_decision_text": "Aprovo o fechamento do piloto N=1 com as limita??es registradas. Aceito a verifica??o delimitada de logs e o adiamento expl?cito de 5.3/5.7, que permanecem obrigat?rios antes da abertura geral.",
+    "verification": {
+      "artifact": ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-VERIFICATION.md",
+      "status": "pass_with_limitations",
+      "archive_ready": true,
+      "score": "12/12 requirements; 10/10 truths"
     },
     "documentary_gates": {
       "typecheck": "0",
       "lint": "0",
-      "build": "exit 0 (81/81 páginas; mesma .next, sem next dev)",
-      "openspec_validate_strict": "valid (change nomeada)",
-      "git_diff_check": "passed",
-      "local_layer1": "30 files / 711 tests",
-      "local_render": "52 files / 551 tests",
-      "isolated_layer2": "99 (default) + 9 (fence), 0 skipped, RUNNER_EXIT=0, -SkipApply (sem migrations)",
-      "prior_blocking_gate": "integration-corrections (2 falhas) RESOLVIDO por reconciliação test-only 5214fea5",
-      "nyquist_validation": "not_executed (workflow.nyquist_validation=false; preservado)"
+      "build": "exit 0",
+      "route_unit": "22/22",
+      "isolated_integration": "7/7",
+      "result_states": "21/21",
+      "legacy_frontier": "10/10",
+      "backup_gate": "APPROVED 8/8",
+      "pilot_readiness": "APPROVED 4/4",
+      "pilot_active": "APPROVED 4/4",
+      "pilot_shutdown": "APPROVED 2/2",
+      "openspec_validate_strict": "valid",
+      "git_diff_check": "passed"
     },
     "openspec_lifecycle": {
       "verified": true,
       "synced": true,
       "archived": true,
       "status": "done",
-      "archive_path": "openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1",
+      "archive_path": "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores",
       "synced_specs": [
-        "product-1-1-artifact-delivery (updated: 1 MODIFIED + 2 ADDED)",
-        "product-1-1-campaign-credit-billing (updated: 1 MODIFIED + 5 ADDED)",
-        "product-1-1-generation-orchestration (updated: 1 MODIFIED + 2 ADDED)"
+        "product-1-1-controlled-real-test-authorization (updated)",
+        "product-1-1-flow-activation (updated)",
+        "product-1-1-generation-orchestration (updated)",
+        "product-1-1-hosted-pilot (created)"
       ],
-      "tasks": "45/45",
+      "tasks": "52/54 (5.3/5.7 adiadas, n?o executadas)",
       "commits": {
-        "reconciliation": "e148dc94",
-        "normatization": "f628f724",
-        "sync": "aa8477e7",
-        "archive": "b526256d"
+        "code_fix": "1da6fb60",
+        "verification_docs": "99e3585c",
+        "sync": "2880fc61",
+        "archive": "fdd2b314"
       },
-      "note": "2026-10-16: /opsx-verify -> reconciliacao documental + normatizacao do protocolo de publicacao/estorno -> /opsx-sync (3 specs principais) -> /opsx-archive concluidos. 45/45 tasks. D13 NAO resolvido; sign-off B2.1 separado/pendente. Contadores NAO incrementados/recalculados."
+      "note": "2026-10-19: verify -> sync -> archive no escopo N=1. 5.3/5.7 permanecem abertas e adiadas; 5.9 fechado com escopo delimitado. DEFERRED.md preservado no archive."
     },
-    "gate_blocking_b2": {
-      "id": "D13",
-      "desc": "GATE operacional bloqueante antes do piloto/habilitação da b2 (imagem): comprovar estratégia operacional segura (efeitos reais em Postgres/Storage; teste com provider real/ativação é da B2.3).",
-      "satisfied": false,
-      "note": "D13 NÃO é declarado resolvido. A Camada 2 isolada conta como evidência, mas não satisfaz o gate; a Camada 1 (simulação) não substitui. Archive da b1b intocado."
+    "gate_blocking_general_opening": {
+      "items": [
+        "5.3",
+        "5.7"
+      ],
+      "disposition": "deferred_by_responsible_not_executed",
+      "required_before": "all_stores / abertura geral",
+      "pointer": "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md"
     },
-    "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation; migrations B2.2 (20261015000001..000003) e fence (20261016000001) somente na instância isolada vendeo-f562a-isolated",
-    "b2_not_started": false,
-    "b23_not_started": true,
-    "f563_not_started": true,
-    "counters_reconciled": {
-      "base": "scoped",
-      "before": {
-        "completed_phases": 5,
-        "completed_plans": 44,
-        "total_plans": 50,
-        "percent": 71
-      },
-      "after": {
-        "completed_phases": 6,
-        "completed_plans": 53,
-        "total_plans": 53,
-        "percent": 86
-      },
-      "note": "Base escopada: 56.2.4 planejada com 7 planos (a498d317: total_plans 43→50); só o plano -05 havia sido contado (3f8a7457: completed_plans 43→44). Reconciliado: 56.2.4 tem 10 planos (reparos 08–10 = +3 no total) e conclui 10 → +9 em completed_plans. Sem recálculo global nem dupla contagem."
-    },
+    "d13": "accepted_only_for_n1_not_resolved_integral",
+    "kill_real": "inconclusive",
+    "all_stores": false,
+    "window_closed": true,
+    "operational_state": "test_stores=false; all_stores=false; authorization seq=2 revoked/off; pause=false; cap=0.50; spent=0.059; deployment 1da6fb60 READY; window closed",
+    "counters_base": "7/7 phases; 57/57 plans; 100% ? preserved, not recalculated",
     "artifacts": [
-      ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-07-SUMMARY.md",
-      ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-VERIFICATION.md",
-      ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-UAT.md",
-      ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-REVIEW-INDEPENDENT.md",
-      ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-SECURITY-INDEPENDENT.md",
-      ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-10-INSPECTION.md",
-      "supabase/migrations/20261016000001_f56_2b2b_publication_fence.sql"
+      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-VERIFICATION.md",
+      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-OPENSPEC-VERIFICATION.md",
+      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-LOGS-VERIFICATION.md",
+      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-PILOT-EVIDENCE.md",
+      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-PILOT-EVIDENCE.json",
+      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-UAT.md",
+      "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md",
+      "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/tasks.md"
     ],
-    "previous_local_phase": {
-      "phase": "56.2.3",
-      "functional_label": "F56.2b2a — B2.1 Recuperação de copy do Produto 1:1",
-      "updated_at": "2026-10-15",
-      "status": "complete_inactive_uat_approved_openspec_verified_synced_archived",
-      "plan_count": "6/6",
-      "summary_count": "6/6",
-      "plan_summary_inventory": [
-        "56.2.3-01-PLAN.md ↔ 56.2.3-01-SUMMARY.md",
-        "56.2.3-02-PLAN.md ↔ 56.2.3-02-SUMMARY.md",
-        "56.2.3-03-PLAN.md ↔ 56.2.3-03-SUMMARY.md",
-        "56.2.3-04-PLAN.md ↔ 56.2.3-04-SUMMARY.md",
-        "56.2.3-05-PLAN.md ↔ 56.2.3-05-SUMMARY.md",
-        "56.2.3-06-PLAN.md ↔ 56.2.3-06-SUMMARY.md"
-      ],
-      "openspec_change": "fase-56-2b2a-recuperacao-de-copy-produto-1-1 (ARQUIVADA em openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/; verificada e sincronizada — spec principal product-1-1-copy-recovery)",
-      "openspec_tasks": "46/46 (reconciled item a item com evidencia; nenhum N/A)",
-      "uat": "human_approved_2026-10-15_inactive_scope_only",
-      "human_checkpoint": "approved",
-      "security": {
-        "artifact": ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-SECURITY.md",
-        "status": "verified",
-        "threats_total": 69,
-        "closed": 69,
-        "open": 0,
-        "asvs_level": 1,
-        "signed_off_by": "pending"
-      },
-      "code_review": {
-        "artifact": ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-REVIEW.md",
-        "HIGH": "CR-01 resolved 7dee0866",
-        "MEDIUM": "WR-01 resolved 7dee0866",
-        "LOW": "WR-02/WR-03 non-blocking debt"
-      },
-      "backfill": {
-        "clean_live_proof": "PASS on vendeo-f562b-isolated",
-        "first_attempt": "failed (f562a) preserved as history"
-      },
-      "nyquist_validation": {
-        "status": "not_executed",
-        "reason": "workflow.nyquist_validation=false",
-        "config_preserved": true,
-        "approved": false,
-        "implementation_failure": false
-      },
-      "documentary_gates": {
-        "openspec_validate_strict": "passed",
-        "git_diff_check": "passed",
-        "typecheck": "0",
-        "lint": "0",
-        "build": "exit 0",
-        "contract_render_tests": "324/324 (9 files)",
-        "node_test_fixture_readiness": "15/15",
-        "isolated_integration": "copy-recovery 23/23 + copy-state 8/8 (0 skipped)"
-      },
-      "openspec_lifecycle": {
-        "verified": true,
-        "synced": true,
-        "archived": true,
-        "status": "done",
-        "archive_path": "openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1",
-        "note": "/opsx-verify -> /opsx-sync (spec principal product-1-1-copy-recovery sincronizada) -> /opsx-archive concluidos; 46/46 tasks."
-      },
-      "gate_blocking_b2": {
-        "id": "D13",
-        "desc": "GATE operacional da próxima fatia (imagem/habilitação — B2.2): comprovar estratégia operacional segura antes do piloto/habilitação da b2 (imagem).",
-        "satisfied": false
-      },
-      "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation",
-      "b2_not_started": true,
-      "f563_not_started": true,
-      "artifacts": [
-        ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-05-SUMMARY.md",
-        ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-VERIFICATION.md",
-        ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-UAT.md",
-        ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-REVIEW.md",
-        ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-SECURITY.md",
-        ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-05-VISUAL-UAT.md",
-        ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-05-VISUAL-FIXTURES.md",
-        "supabase/migrations/20261013000001_f56_2b2a_copy_attempt_identity.sql",
-        "supabase/migrations/20261013000002_f56_2b2a_copy_acquire_attempt.sql",
-        "supabase/migrations/20261013000003_f56_2b2a_copy_state_backfill.sql",
-        "scripts/f56-2b2a/prepare-visual-uat.ts",
-        "scripts/f56-2b2a/prepare-campaign-fixture.ts",
-        "scripts/f56-2b2a/fixture-readiness.mjs"
-      ],
-      "next_action": "Manter a 56.2.3 como fase atual concluida (entrega INATIVA) com a change ARQUIVADA em openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/. Proxima acao: revisar e realinhar a base B2.2 (recuperacao de imagem/estorno/D13) — SEM iniciar planejamento ou execucao automaticamente; B2.2/B2.3/F56.3 nao iniciados.",
-      "previous_local_phase": {
-        "phase": "56.2.2",
-        "functional_label": "F56.2b1b — Núcleo entregável do Produto 1:1",
-        "updated_at": "2026-10-12",
-        "status": "complete_verified_synced_archived",
-        "status_note": "Concluída e APROVADA pelo responsável como entrega INATIVA da b1b (UAT aprovado em 2026-10-12). Lifecycle OpenSpec CONCLUÍDO: /opsx-verify -> /opsx-sync (11 specs sincronizadas; 11/11 valid) -> /opsx-archive; change ARQUIVADA em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/.",
-        "plan_count": "10/10",
-        "summary_count": "10/10",
-        "plan_summary_inventory": [
-          "56.2.2-01-PLAN.md ↔ 56.2.2-01-SUMMARY.md",
-          "56.2.2-02-PLAN.md ↔ 56.2.2-02-SUMMARY.md",
-          "56.2.2-03-PLAN.md ↔ 56.2.2-03-SUMMARY.md",
-          "56.2.2-04-PLAN.md ↔ 56.2.2-04-SUMMARY.md",
-          "56.2.2-05-PLAN.md ↔ 56.2.2-05-SUMMARY.md",
-          "56.2.2-06-PLAN.md ↔ 56.2.2-06-SUMMARY.md",
-          "56.2.2-07-PLAN.md ↔ 56.2.2-07-SUMMARY.md",
-          "56.2.2-08-PLAN.md ↔ 56.2.2-08-SUMMARY.md",
-          "56.2.2-09-PLAN.md ↔ 56.2.2-09-SUMMARY.md",
-          "56.2.2-10-PLAN.md ↔ 56.2.2-10-SUMMARY.md"
-        ],
-        "openspec_change": "fase-56-2b1b-nucleo-entregavel-produto-1-1 (change NOMEADA — ARQUIVADA em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/; verificada e sincronizada)",
-        "openspec_tasks": "39/39 (task 7.5 = N/A — GATE BLOQUEANTE da b2, documentado; NÃO exercido na b1b inativa; task 7.4 = DONE — revisão humana, UAT aprovado 2026-10-12)",
-        "uat": "human_approved_2026-10-12",
-        "human_checkpoint": "approved",
-        "security": "verified — 48/48 ameaças fechadas, 0 abertas (56.2.2-SECURITY.md; status: verified, ASVS L1); sign-off humano em 2026-10-12, EXCLUSIVO para a entrega INATIVA da b1b",
-        "security_review": {
-          "artifact": ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-SECURITY.md",
-          "status": "verified",
-          "threats_total": 48,
-          "closed": 48,
-          "open": 0,
-          "asvs_level": 1,
-          "signed_off_by": "human",
-          "signed_off_at": "2026-10-12",
-          "scope": "entrega INATIVA da b1b (exclusivo)",
-          "preserved": {
-            "wr03": "ENCERRADO - hipotese NAO APLICAVEL ao Supabase CLI v2.104.0 (atomicidade POR ARQUIVO: SQL + INSERT da versao no MESMO batch, implicitamente transacional); NAO e corrigido - nenhuma alteracao SQL necessaria; limites: NAO atomico pelo conjunto (uma transacao por arquivo) e execucao MANUAL fora do CLI NAO coberta. Fontes: pkg/migration/file.go ExecBatch, pkg/migration/apply.go ApplyMigrations (v2.104.0)",
-            "d13": "GATE bloqueante do piloto/habilitacao da b2",
-            "pre_existing_failures": "18 mantidas como divida separada (nao verdes)"
-          }
-        },
-        "nyquist_validation": {
-          "status": "not_executed",
-          "reason": "workflow.nyquist_validation=false",
-          "config_preserved": true,
-          "approved": false,
-          "implementation_failure": false,
-          "note": "O /gsd-validate-phase 56.2.2 encerrou no gate de configuracao (nyquist_validation=false). NAO e aprovacao nem falha da implementacao; a configuracao foi preservada."
-        },
-        "documentary_gates": {
-          "openspec_validate_strict": "passed",
-          "git_diff_check": "passed",
-          "json_parse": "passed",
-          "plan_summary_inventory": "10/10"
-        },
-        "openspec_lifecycle": {
-          "verified": true,
-          "synced": true,
-          "archived": true,
-          "status": "done",
-          "archive_path": "openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1",
-          "note": "/opsx-verify -> /opsx-sync (11 specs sincronizadas; 11/11 valid) -> /opsx-archive concluidos. Change arquivada em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/."
-        },
-        "gate_blocking_b2": {
-          "id": "tasks.md §7.5 / D13",
-          "desc": "GATE OBRIGATÓRIO (b2, BLOQUEANTE): comprovar estratégia operacional segura de resolução de claims residuais antes do piloto/habilitação da b2. A b1b inativa conclui com a limitação documentada; o risco é explicitamente aceito; claim in_progress residual permanece bloqueado (sem estorno, sem nova geração, sem retomada); recuperabilidade completa NÃO é declarada.",
-          "satisfied": false
-        },
-        "pre_existing_failures": "18 falhas pré-existentes confirmadas contra a baseline 50152297 (lab/bench 14 — backgroundDirection; provider/timeout 3; legal 1 — terms-of-service-v1-5.md da fase 50 ausente) mantidas como dívida SEPARADA; NÃO declaradas verdes.",
-        "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation",
-        "b2_not_started": true,
-        "f563_not_started": true,
-        "artifacts": [
-          ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-VERIFICATION.md",
-          ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-UAT.md",
-          ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-UI-SPEC.md",
-          ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-CONTEXT.md",
-          ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-09-EVIDENCE.md",
-          ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-10-SUMMARY.md",
-          "openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/tasks.md",
-          ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-SECURITY.md"
-        ],
-        "previous_local_phase": {
-          "phase": "56.2.1",
-          "functional_label": "F56.2b1a — Fundação inativa do Produto 1:1",
-          "updated_at": "2026-10-08",
-          "status": "complete_verified_synced_archived",
-          "plan_count": "6/6",
-          "summary_count": "6/6",
-          "plan_summary_inventory": [
-            "56.2.1-01-PLAN.md ↔ 56.2.1-01-SUMMARY.md",
-            "56.2.1-02-PLAN.md ↔ 56.2.1-02-SUMMARY.md",
-            "56.2.1-03-PLAN.md ↔ 56.2.1-03-SUMMARY.md",
-            "56.2.1-04-PLAN.md ↔ 56.2.1-04-SUMMARY.md",
-            "56.2.1-05-PLAN.md ↔ 56.2.1-05-SUMMARY.md",
-            "56.2.1-06-PLAN.md ↔ 56.2.1-06-SUMMARY.md"
-          ],
-          "openspec_tasks": "23/23 (task 1.4 = N/A — gate aprovado)",
-          "uat": "human_approved_and_reconfirmed",
-          "security": "14_of_14_closed_0_open",
-          "human_checkpoint": "approved_and_reconfirmed_2026-10-08",
-          "final_snapshot": {
-            "contracts": "152/152",
-            "postgres": "20/20",
-            "gate": "12/12",
-            "independent_scoped_check": "128/128 (src/lib/product-1-1 + tests/database; escopo distinto, identificado separadamente)"
-          },
-          "documentary_gates": {
-            "openspec_validate_strict": "passed",
-            "git_diff_check": "passed",
-            "json_parse": "passed",
-            "plan_summary_inventory": "6/6"
-          },
-          "openspec_lifecycle": {
-            "verified": true,
-            "synced": true,
-            "archived": true,
-            "archive_path": "openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1",
-            "synced_specs": [
-              "product-1-1-flow-activation (updated: 2 requirements adicionados)",
-              "product-1-1-campaign-credit-billing (created: 3 requirements)"
-            ]
-          },
-          "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation",
-          "artifacts": [
-            ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-VERIFICATION.md",
-            ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-UAT.md",
-            ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-06-SUMMARY.md",
-            ".planning/STATE.md",
-            ".planning/ROADMAP.md",
-            ".planning/HANDOFF.json",
-            "openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1/tasks.md"
-          ],
-          "previous_local_phase": {
-            "phase": "56.2a",
-            "status": "complete_verified_synced_archived",
-            "archive_path": "openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1",
-            "openspec_tasks": "31/31",
-            "final_reset": "exit_1_http_502_unknown_cause_not_success_not_repeated"
-          },
-          "next_action": "F56.2b1a verified, synced, and archived. Keep F56.2b1b gated on F56.2b1a closeout (done) and the F56.2a reset HTTP 502 investigation; F56.2b1b and F56.2b2 remain future. No push. This approval does not authorize activation, db push, provider, reset, or starting b1b/b2."
-        },
-        "next_action": "F56.2b1b (GSD 56.2.2) complete as an INACTIVE, human-approved deliverable (UAT approved 2026-10-12); 39/39 OpenSpec tasks reconciled (7.5 = N/A — b2 blocking GATE). OpenSpec lifecycle DONE (/opsx-verify -> /opsx-sync -> /opsx-archive; change archived at openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/). PENDING: the b2 GATE (§7.5/D13). b2 (56.2.3) and F56.3 NOT started. No push. This approval does not authorize activation, db push, provider, reset, or starting b2/F56.3."
-      }
-    }
+    "next_action": "Definir o pr?ximo escopo; carregar 5.3/5.7 como bloqueios da abertura geral; N?O iniciar nada automaticamente."
   },
-  "timestamp": "2026-10-16",
+  "timestamp": "2026-10-19",
   "phase": "56.1",
   "phase_name": "contrato-produtivo-modelos-e-fallback",
   "phase_dir": ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback",
@@ -400,9 +128,9 @@
     "evidence_check": "GSD verify-work 10/10 PASS; UAT humano local aprovado na instancia isolada vendeo-f561-isolated; 55/55 tasks OpenSpec.",
     "next_action": "Nenhuma acao GSD pendente. Lifecycle OpenSpec concluido em 2026-10-06."
   },
-  "next_phase": "B2.3 (F56.2b2c — autorizacao estreita / teste real) CONCLUIDA como entrega LOCAL/INATIVA em 2026-10-17 (GSD 56.2.5; 4/4 planos): piloto pago N=1 executado e aprovado; indicadores de progresso implementados e aprovados visualmente (reproducao controlada, sem provider); D13 atendido SOMENTE no piloto local; sign-off B2.1 aprovado (escopo inativo). Lifecycle OpenSpec da B2.3 CONCLUIDO (2026-10-17): verify -> sync -> archive em openspec/changes/archive/2026-10-17-fase-56-2b2c-autorizacao-estreita-e-teste-real-produto-1-1/; 29/29 tasks com disposicao (nao todas executadas); contadores nao incrementados novamente.",
+  "next_phase": "A definir (pr?ximo escopo). 56.2.6 encerrada e arquivada no escopo N=1; 5.3/5.7 s?o bloqueios da abertura geral.",
   "next_phase_started": false,
-  "next_phase_note": "B2.2 (GSD 56.2.4 / F56.2b2b — Recuperação de imagem, estorno e D13 do Produto 1:1) CONCLUÍDA como entrega INATIVA em 2026-10-16: 10/10 planos/summaries (incl. reparos 08 fence, 09 recuperação+terminal, 10 fidelidade+ferramentas). Checkpoint humano approved_with_limitations (escopo exclusivamente inativo/local; inspeção visual adicional não realizada). Gates: typecheck/lint/build 0; local 30/711 + render 52/551; Camada 2 isolada 99+9/0 skipped; openspec strict valid; diff limpo. Gates INDEPENDENTES reexecutados (code review 0 high/critical; segurança 0 high/critical open; CR-01..03/WR-01..04/SEC-01..05/UF-01 RESOLVED). Lifecycle OpenSpec CONCLUIDO (verify/sync/archive, 2026-10-16; archive openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/; 45/45 tasks). D13 atendido SOMENTE no piloto local; sign-off B2.1 aprovado (escopo inativo); contadores na base escopada (fases 7/7; planos 57/57; 100%) — nao incrementados novamente. B2.3 (GSD 56.2.5) CONCLUIDA (LOCAL/INATIVA) em 2026-10-17; F56.3 NAO iniciado; flags false/stage off; sem push/deploy/reset/provider. A aprovação NÃO autoriza produção/ativação.",
+  "next_phase_note": "F56.2b2d (GSD 56.2.6) encerrada no escopo N=1 e arquivada em openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/. 8/8 planos; 52/54 tasks; 5.3/5.7 adiadas por decis?o do respons?vel (n?o executadas; obrigat?rias antes de all_stores); 5.9 fechado com escopo delimitado; D13 somente N=1; kill real INCONCLUSIVE; all_stores=false; janela encerrada. Contadores 7/7 ? 57/57 ? 100% preservados como base escopada, sem rec?lculo.",
   "planning_review": {
     "phase": "56.1",
     "plans": [
@@ -607,7 +335,371 @@
       "uncommitted_files": [],
       "next_action": "F48.2.6 concluida, verificada, sincronizada e arquivada em 2026-10-05; commit de fechamento do tracking criado. Push remoto executado manualmente pelo responsavel com a worktree limpa.",
       "context_notes": "HISTORICO: F48.2.6 GSD concluida: 10/10 planos/summaries, UAT 5/5, CHECKPOINT B approved_with_limitations. OpenSpec verificada, sincronizada (8 specs principais) e arquivada em 2026-10-05; limitacoes/criterios UAT sem evidencia permanecem pending, sem promocao produtiva. O conteudo integral anterior foi preservado nos artefatos da fase."
-    }
+    },
+    "snapshot_current_phase_56_2_4": {
+      "phase": "56.2.4",
+      "functional_label": "F56.2b2b — B2.2 Recuperação de imagem, estorno e D13 do Produto 1:1 (entrega INATIVA)",
+      "updated_at": "2026-10-16",
+      "status": "complete_inactive_uat_approved_with_limitations_gsd_closed_openspec_verified_synced_archived",
+      "plan_count": "10/10",
+      "summary_count": "10/10",
+      "plan_summary_inventory": [
+        "56.2.4-01-PLAN.md ↔ 56.2.4-01-SUMMARY.md",
+        "56.2.4-02-PLAN.md ↔ 56.2.4-02-SUMMARY.md",
+        "56.2.4-03-PLAN.md ↔ 56.2.4-03-SUMMARY.md",
+        "56.2.4-04-PLAN.md ↔ 56.2.4-04-SUMMARY.md",
+        "56.2.4-05-PLAN.md ↔ 56.2.4-05-SUMMARY.md",
+        "56.2.4-06-PLAN.md ↔ 56.2.4-06-SUMMARY.md",
+        "56.2.4-07-PLAN.md ↔ 56.2.4-07-SUMMARY.md",
+        "56.2.4-08-PLAN.md ↔ 56.2.4-08-SUMMARY.md",
+        "56.2.4-09-PLAN.md ↔ 56.2.4-09-SUMMARY.md",
+        "56.2.4-10-PLAN.md ↔ 56.2.4-10-SUMMARY.md"
+      ],
+      "openspec_change": "fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1 (base aprovada b2edfb5b; change NOMEADA verificada, sincronizada e ARQUIVADA em openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/)",
+      "openspec_tasks": "45/45 (reconciliado item a item com evidencia; ver tasks.md)",
+      "uat": "human_approved_with_limitations_2026-10-16_inactive_scope_only",
+      "human_checkpoint": "approved_with_limitations",
+      "uat_decision_text": "Aprovação exclusivamente da entrega B2.2 inativa/local, com testes automatizados e integração isolada; inspeção visual adicional dos reparos não realizada, conforme decisão anterior. Sem aprovação de produção, ativação ou provider real. D13 e o resíduo de sign-off da B2.1 permanecem separados e pendentes.",
+      "code_review_independent": {
+        "artifact": ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-REVIEW-INDEPENDENT.md",
+        "status": "verified_after_repairs",
+        "revision": "56aa8a60",
+        "implementation_code_final": "7877e317",
+        "high": 0,
+        "critical": 0,
+        "prior_resolved": [
+          "CR-01 (Plano 08)",
+          "CR-02 (Plano 09)",
+          "CR-03 (Plano 09)",
+          "WR-01 (Plano 10)",
+          "WR-02 (Plano 10)",
+          "WR-03 (Plano 10)",
+          "WR-04 (Plano 10)"
+        ]
+      },
+      "security_independent": {
+        "artifact": ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-SECURITY-INDEPENDENT.md",
+        "status": "RESOLVED_NO_OPEN_HIGH_CRITICAL",
+        "revision": "56aa8a60",
+        "asvs_level": 1,
+        "security_block_on": "high",
+        "register_occurrences": 76,
+        "unique_threat_ids": 67,
+        "mitigated_occurrences": 67,
+        "accepted_risk_occurrences": 9,
+        "threats_open": 0,
+        "open_findings_high": 0,
+        "open_findings_critical": 0,
+        "prior_resolved": [
+          "SEC-01 (Plano 08)",
+          "SEC-02 (Plano 09)",
+          "SEC-03 (Plano 09)",
+          "SEC-04 (Plano 10)",
+          "SEC-05 (Plano 10)",
+          "UF-01 (Plano 10)"
+        ]
+      },
+      "documentary_gates": {
+        "typecheck": "0",
+        "lint": "0",
+        "build": "exit 0 (81/81 páginas; mesma .next, sem next dev)",
+        "openspec_validate_strict": "valid (change nomeada)",
+        "git_diff_check": "passed",
+        "local_layer1": "30 files / 711 tests",
+        "local_render": "52 files / 551 tests",
+        "isolated_layer2": "99 (default) + 9 (fence), 0 skipped, RUNNER_EXIT=0, -SkipApply (sem migrations)",
+        "prior_blocking_gate": "integration-corrections (2 falhas) RESOLVIDO por reconciliação test-only 5214fea5",
+        "nyquist_validation": "not_executed (workflow.nyquist_validation=false; preservado)"
+      },
+      "openspec_lifecycle": {
+        "verified": true,
+        "synced": true,
+        "archived": true,
+        "status": "done",
+        "archive_path": "openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1",
+        "synced_specs": [
+          "product-1-1-artifact-delivery (updated: 1 MODIFIED + 2 ADDED)",
+          "product-1-1-campaign-credit-billing (updated: 1 MODIFIED + 5 ADDED)",
+          "product-1-1-generation-orchestration (updated: 1 MODIFIED + 2 ADDED)"
+        ],
+        "tasks": "45/45",
+        "commits": {
+          "reconciliation": "e148dc94",
+          "normatization": "f628f724",
+          "sync": "aa8477e7",
+          "archive": "b526256d"
+        },
+        "note": "2026-10-16: /opsx-verify -> reconciliacao documental + normatizacao do protocolo de publicacao/estorno -> /opsx-sync (3 specs principais) -> /opsx-archive concluidos. 45/45 tasks. D13 NAO resolvido; sign-off B2.1 separado/pendente. Contadores NAO incrementados/recalculados."
+      },
+      "gate_blocking_b2": {
+        "id": "D13",
+        "desc": "GATE operacional bloqueante antes do piloto/habilitação da b2 (imagem): comprovar estratégia operacional segura (efeitos reais em Postgres/Storage; teste com provider real/ativação é da B2.3).",
+        "satisfied": false,
+        "note": "D13 NÃO é declarado resolvido. A Camada 2 isolada conta como evidência, mas não satisfaz o gate; a Camada 1 (simulação) não substitui. Archive da b1b intocado."
+      },
+      "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation; migrations B2.2 (20261015000001..000003) e fence (20261016000001) somente na instância isolada vendeo-f562a-isolated",
+      "b2_not_started": false,
+      "b23_not_started": true,
+      "f563_not_started": true,
+      "counters_reconciled": {
+        "base": "scoped",
+        "before": {
+          "completed_phases": 5,
+          "completed_plans": 44,
+          "total_plans": 50,
+          "percent": 71
+        },
+        "after": {
+          "completed_phases": 6,
+          "completed_plans": 53,
+          "total_plans": 53,
+          "percent": 86
+        },
+        "note": "Base escopada: 56.2.4 planejada com 7 planos (a498d317: total_plans 43→50); só o plano -05 havia sido contado (3f8a7457: completed_plans 43→44). Reconciliado: 56.2.4 tem 10 planos (reparos 08–10 = +3 no total) e conclui 10 → +9 em completed_plans. Sem recálculo global nem dupla contagem."
+      },
+      "artifacts": [
+        ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-07-SUMMARY.md",
+        ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-VERIFICATION.md",
+        ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-UAT.md",
+        ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-REVIEW-INDEPENDENT.md",
+        ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-SECURITY-INDEPENDENT.md",
+        ".planning/phases/56.2.4-f56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/56.2.4-10-INSPECTION.md",
+        "supabase/migrations/20261016000001_f56_2b2b_publication_fence.sql"
+      ],
+      "previous_local_phase": {
+        "phase": "56.2.3",
+        "functional_label": "F56.2b2a — B2.1 Recuperação de copy do Produto 1:1",
+        "updated_at": "2026-10-15",
+        "status": "complete_inactive_uat_approved_openspec_verified_synced_archived",
+        "plan_count": "6/6",
+        "summary_count": "6/6",
+        "plan_summary_inventory": [
+          "56.2.3-01-PLAN.md ↔ 56.2.3-01-SUMMARY.md",
+          "56.2.3-02-PLAN.md ↔ 56.2.3-02-SUMMARY.md",
+          "56.2.3-03-PLAN.md ↔ 56.2.3-03-SUMMARY.md",
+          "56.2.3-04-PLAN.md ↔ 56.2.3-04-SUMMARY.md",
+          "56.2.3-05-PLAN.md ↔ 56.2.3-05-SUMMARY.md",
+          "56.2.3-06-PLAN.md ↔ 56.2.3-06-SUMMARY.md"
+        ],
+        "openspec_change": "fase-56-2b2a-recuperacao-de-copy-produto-1-1 (ARQUIVADA em openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/; verificada e sincronizada — spec principal product-1-1-copy-recovery)",
+        "openspec_tasks": "46/46 (reconciled item a item com evidencia; nenhum N/A)",
+        "uat": "human_approved_2026-10-15_inactive_scope_only",
+        "human_checkpoint": "approved",
+        "security": {
+          "artifact": ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-SECURITY.md",
+          "status": "verified",
+          "threats_total": 69,
+          "closed": 69,
+          "open": 0,
+          "asvs_level": 1,
+          "signed_off_by": "pending"
+        },
+        "code_review": {
+          "artifact": ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-REVIEW.md",
+          "HIGH": "CR-01 resolved 7dee0866",
+          "MEDIUM": "WR-01 resolved 7dee0866",
+          "LOW": "WR-02/WR-03 non-blocking debt"
+        },
+        "backfill": {
+          "clean_live_proof": "PASS on vendeo-f562b-isolated",
+          "first_attempt": "failed (f562a) preserved as history"
+        },
+        "nyquist_validation": {
+          "status": "not_executed",
+          "reason": "workflow.nyquist_validation=false",
+          "config_preserved": true,
+          "approved": false,
+          "implementation_failure": false
+        },
+        "documentary_gates": {
+          "openspec_validate_strict": "passed",
+          "git_diff_check": "passed",
+          "typecheck": "0",
+          "lint": "0",
+          "build": "exit 0",
+          "contract_render_tests": "324/324 (9 files)",
+          "node_test_fixture_readiness": "15/15",
+          "isolated_integration": "copy-recovery 23/23 + copy-state 8/8 (0 skipped)"
+        },
+        "openspec_lifecycle": {
+          "verified": true,
+          "synced": true,
+          "archived": true,
+          "status": "done",
+          "archive_path": "openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1",
+          "note": "/opsx-verify -> /opsx-sync (spec principal product-1-1-copy-recovery sincronizada) -> /opsx-archive concluidos; 46/46 tasks."
+        },
+        "gate_blocking_b2": {
+          "id": "D13",
+          "desc": "GATE operacional da próxima fatia (imagem/habilitação — B2.2): comprovar estratégia operacional segura antes do piloto/habilitação da b2 (imagem).",
+          "satisfied": false
+        },
+        "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation",
+        "b2_not_started": true,
+        "f563_not_started": true,
+        "artifacts": [
+          ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-05-SUMMARY.md",
+          ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-VERIFICATION.md",
+          ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-UAT.md",
+          ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-REVIEW.md",
+          ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-SECURITY.md",
+          ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-05-VISUAL-UAT.md",
+          ".planning/phases/56.2.3-f56-2b2a-recuperacao-de-copy-do-produto-1-1/56.2.3-05-VISUAL-FIXTURES.md",
+          "supabase/migrations/20261013000001_f56_2b2a_copy_attempt_identity.sql",
+          "supabase/migrations/20261013000002_f56_2b2a_copy_acquire_attempt.sql",
+          "supabase/migrations/20261013000003_f56_2b2a_copy_state_backfill.sql",
+          "scripts/f56-2b2a/prepare-visual-uat.ts",
+          "scripts/f56-2b2a/prepare-campaign-fixture.ts",
+          "scripts/f56-2b2a/fixture-readiness.mjs"
+        ],
+        "next_action": "Manter a 56.2.3 como fase atual concluida (entrega INATIVA) com a change ARQUIVADA em openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/. Proxima acao: revisar e realinhar a base B2.2 (recuperacao de imagem/estorno/D13) — SEM iniciar planejamento ou execucao automaticamente; B2.2/B2.3/F56.3 nao iniciados.",
+        "previous_local_phase": {
+          "phase": "56.2.2",
+          "functional_label": "F56.2b1b — Núcleo entregável do Produto 1:1",
+          "updated_at": "2026-10-12",
+          "status": "complete_verified_synced_archived",
+          "status_note": "Concluída e APROVADA pelo responsável como entrega INATIVA da b1b (UAT aprovado em 2026-10-12). Lifecycle OpenSpec CONCLUÍDO: /opsx-verify -> /opsx-sync (11 specs sincronizadas; 11/11 valid) -> /opsx-archive; change ARQUIVADA em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/.",
+          "plan_count": "10/10",
+          "summary_count": "10/10",
+          "plan_summary_inventory": [
+            "56.2.2-01-PLAN.md ↔ 56.2.2-01-SUMMARY.md",
+            "56.2.2-02-PLAN.md ↔ 56.2.2-02-SUMMARY.md",
+            "56.2.2-03-PLAN.md ↔ 56.2.2-03-SUMMARY.md",
+            "56.2.2-04-PLAN.md ↔ 56.2.2-04-SUMMARY.md",
+            "56.2.2-05-PLAN.md ↔ 56.2.2-05-SUMMARY.md",
+            "56.2.2-06-PLAN.md ↔ 56.2.2-06-SUMMARY.md",
+            "56.2.2-07-PLAN.md ↔ 56.2.2-07-SUMMARY.md",
+            "56.2.2-08-PLAN.md ↔ 56.2.2-08-SUMMARY.md",
+            "56.2.2-09-PLAN.md ↔ 56.2.2-09-SUMMARY.md",
+            "56.2.2-10-PLAN.md ↔ 56.2.2-10-SUMMARY.md"
+          ],
+          "openspec_change": "fase-56-2b1b-nucleo-entregavel-produto-1-1 (change NOMEADA — ARQUIVADA em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/; verificada e sincronizada)",
+          "openspec_tasks": "39/39 (task 7.5 = N/A — GATE BLOQUEANTE da b2, documentado; NÃO exercido na b1b inativa; task 7.4 = DONE — revisão humana, UAT aprovado 2026-10-12)",
+          "uat": "human_approved_2026-10-12",
+          "human_checkpoint": "approved",
+          "security": "verified — 48/48 ameaças fechadas, 0 abertas (56.2.2-SECURITY.md; status: verified, ASVS L1); sign-off humano em 2026-10-12, EXCLUSIVO para a entrega INATIVA da b1b",
+          "security_review": {
+            "artifact": ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-SECURITY.md",
+            "status": "verified",
+            "threats_total": 48,
+            "closed": 48,
+            "open": 0,
+            "asvs_level": 1,
+            "signed_off_by": "human",
+            "signed_off_at": "2026-10-12",
+            "scope": "entrega INATIVA da b1b (exclusivo)",
+            "preserved": {
+              "wr03": "ENCERRADO - hipotese NAO APLICAVEL ao Supabase CLI v2.104.0 (atomicidade POR ARQUIVO: SQL + INSERT da versao no MESMO batch, implicitamente transacional); NAO e corrigido - nenhuma alteracao SQL necessaria; limites: NAO atomico pelo conjunto (uma transacao por arquivo) e execucao MANUAL fora do CLI NAO coberta. Fontes: pkg/migration/file.go ExecBatch, pkg/migration/apply.go ApplyMigrations (v2.104.0)",
+              "d13": "GATE bloqueante do piloto/habilitacao da b2",
+              "pre_existing_failures": "18 mantidas como divida separada (nao verdes)"
+            }
+          },
+          "nyquist_validation": {
+            "status": "not_executed",
+            "reason": "workflow.nyquist_validation=false",
+            "config_preserved": true,
+            "approved": false,
+            "implementation_failure": false,
+            "note": "O /gsd-validate-phase 56.2.2 encerrou no gate de configuracao (nyquist_validation=false). NAO e aprovacao nem falha da implementacao; a configuracao foi preservada."
+          },
+          "documentary_gates": {
+            "openspec_validate_strict": "passed",
+            "git_diff_check": "passed",
+            "json_parse": "passed",
+            "plan_summary_inventory": "10/10"
+          },
+          "openspec_lifecycle": {
+            "verified": true,
+            "synced": true,
+            "archived": true,
+            "status": "done",
+            "archive_path": "openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1",
+            "note": "/opsx-verify -> /opsx-sync (11 specs sincronizadas; 11/11 valid) -> /opsx-archive concluidos. Change arquivada em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/."
+          },
+          "gate_blocking_b2": {
+            "id": "tasks.md §7.5 / D13",
+            "desc": "GATE OBRIGATÓRIO (b2, BLOQUEANTE): comprovar estratégia operacional segura de resolução de claims residuais antes do piloto/habilitação da b2. A b1b inativa conclui com a limitação documentada; o risco é explicitamente aceito; claim in_progress residual permanece bloqueado (sem estorno, sem nova geração, sem retomada); recuperabilidade completa NÃO é declarada.",
+            "satisfied": false
+          },
+          "pre_existing_failures": "18 falhas pré-existentes confirmadas contra a baseline 50152297 (lab/bench 14 — backgroundDirection; provider/timeout 3; legal 1 — terms-of-service-v1-5.md da fase 50 ausente) mantidas como dívida SEPARADA; NÃO declaradas verdes.",
+          "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation",
+          "b2_not_started": true,
+          "f563_not_started": true,
+          "artifacts": [
+            ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-VERIFICATION.md",
+            ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-UAT.md",
+            ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-UI-SPEC.md",
+            ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-CONTEXT.md",
+            ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-09-EVIDENCE.md",
+            ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-10-SUMMARY.md",
+            "openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/tasks.md",
+            ".planning/phases/56.2.2-f56-2b1b-n-cleo-entreg-vel-do-produto-1-1/56.2.2-SECURITY.md"
+          ],
+          "previous_local_phase": {
+            "phase": "56.2.1",
+            "functional_label": "F56.2b1a — Fundação inativa do Produto 1:1",
+            "updated_at": "2026-10-08",
+            "status": "complete_verified_synced_archived",
+            "plan_count": "6/6",
+            "summary_count": "6/6",
+            "plan_summary_inventory": [
+              "56.2.1-01-PLAN.md ↔ 56.2.1-01-SUMMARY.md",
+              "56.2.1-02-PLAN.md ↔ 56.2.1-02-SUMMARY.md",
+              "56.2.1-03-PLAN.md ↔ 56.2.1-03-SUMMARY.md",
+              "56.2.1-04-PLAN.md ↔ 56.2.1-04-SUMMARY.md",
+              "56.2.1-05-PLAN.md ↔ 56.2.1-05-SUMMARY.md",
+              "56.2.1-06-PLAN.md ↔ 56.2.1-06-SUMMARY.md"
+            ],
+            "openspec_tasks": "23/23 (task 1.4 = N/A — gate aprovado)",
+            "uat": "human_approved_and_reconfirmed",
+            "security": "14_of_14_closed_0_open",
+            "human_checkpoint": "approved_and_reconfirmed_2026-10-08",
+            "final_snapshot": {
+              "contracts": "152/152",
+              "postgres": "20/20",
+              "gate": "12/12",
+              "independent_scoped_check": "128/128 (src/lib/product-1-1 + tests/database; escopo distinto, identificado separadamente)"
+            },
+            "documentary_gates": {
+              "openspec_validate_strict": "passed",
+              "git_diff_check": "passed",
+              "json_parse": "passed",
+              "plan_summary_inventory": "6/6"
+            },
+            "openspec_lifecycle": {
+              "verified": true,
+              "synced": true,
+              "archived": true,
+              "archive_path": "openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1",
+              "synced_specs": [
+                "product-1-1-flow-activation (updated: 2 requirements adicionados)",
+                "product-1-1-campaign-credit-billing (created: 3 requirements)"
+              ]
+            },
+            "operational_state": "stage_off_flags_false_no_enabling_grant_no_db_push_reset_provider_activation",
+            "artifacts": [
+              ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-VERIFICATION.md",
+              ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-UAT.md",
+              ".planning/phases/56.2.1-f56-2b1a-funda-o-inativa-do-produto-1-1/56.2.1-06-SUMMARY.md",
+              ".planning/STATE.md",
+              ".planning/ROADMAP.md",
+              ".planning/HANDOFF.json",
+              "openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1/tasks.md"
+            ],
+            "previous_local_phase": {
+              "phase": "56.2a",
+              "status": "complete_verified_synced_archived",
+              "archive_path": "openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1",
+              "openspec_tasks": "31/31",
+              "final_reset": "exit_1_http_502_unknown_cause_not_success_not_repeated"
+            },
+            "next_action": "F56.2b1a verified, synced, and archived. Keep F56.2b1b gated on F56.2b1a closeout (done) and the F56.2a reset HTTP 502 investigation; F56.2b1b and F56.2b2 remain future. No push. This approval does not authorize activation, db push, provider, reset, or starting b1b/b2."
+          },
+          "next_action": "F56.2b1b (GSD 56.2.2) complete as an INACTIVE, human-approved deliverable (UAT approved 2026-10-12); 39/39 OpenSpec tasks reconciled (7.5 = N/A — b2 blocking GATE). OpenSpec lifecycle DONE (/opsx-verify -> /opsx-sync -> /opsx-archive; change archived at openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/). PENDING: the b2 GATE (§7.5/D13). b2 (56.2.3) and F56.3 NOT started. No push. This approval does not authorize activation, db push, provider, reset, or starting b2/F56.3."
+        }
+      }
+    },
+    "snapshot_note": "Snapshot do current_phase anterior (56.2.4/B2.2) preservado como hist?rico; a posi??o atual ? 56.2.6 encerrada/arquivada no escopo N=1."
   },
   "artifacts": [
     ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-CONTEXT.md",
@@ -641,12 +733,15 @@
     "openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback"
   ],
   "blockers": [
-    "Warning operacional: reset final isolado F56.2a exit 1/HTTP 502, causa/upstream desconhecido. Não é sucesso; pós-condições foram confirmadas por SELECT e aceitas para fechamento. Investigar antes de depender do procedimento de reset em b1b/b2. Nenhum bloqueio para a b1a (já arquivada)."
+    "Abertura geral: 5.3 (estorno hospedado) e 5.7 (replay p?s-redeploy) adiadas por decis?o do respons?vel; N?O executadas; obrigat?rias antes de all_stores.",
+    "Hist?rico: reset final isolado F56.2a exit 1/HTTP 502, causa/upstream desconhecido; n?o ? sucesso e n?o foi repetido."
   ],
   "human_actions_pending": [
-    "Investigar a causa desconhecida do exit 1/HTTP 502 antes de depender do procedimento de reset em b1b/b2."
+    "Definir o pr?ximo escopo (sem iniciar automaticamente).",
+    "Comprovar 5.3/5.7 antes de qualquer abertura geral.",
+    "Hist?rico: investigar a causa desconhecida do exit 1/HTTP 502 antes de depender do procedimento de reset."
   ],
   "uncommitted_files": [],
-  "next_action": "GSD 56.2.4 concluído (10/10; B2.2 INATIVA; checkpoint approved_with_limitations) e lifecycle OpenSpec CONCLUIDO (verify/sync/archive; 45/45 tasks; archive openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/; commits e148dc94/f628f724/aa8477e7/b526256d). D13 atendido SOMENTE no piloto local; sign-off humano de seguranca B2.1 aprovado (escopo inativo). B2.3 (GSD 56.2.5) CONCLUIDA como entrega LOCAL/INATIVA em 2026-10-17; lifecycle OpenSpec da B2.3 = etapa SEPARADA (requer autorizacao). B2.3 (GSD 56.2.5) CONCLUIDA como entrega LOCAL/INATIVA em 2026-10-17 (piloto pago N=1 aprovado; indicadores aprovados visualmente; D13 so no piloto local; sign-off B2.1 aprovado no escopo inativo; lifecycle OpenSpec SEPARADO/pendente). Nao iniciar F56.3; sem ativacao/provider/deploy/db push/reset. Nao transformar a aprovacao em autorizacao de producao.",
-  "context_notes": "F56.1 permanece como histórico concluído. F56.2a: 6/6 planos e summaries, OpenSpec 31/31, UAT 4 pass + 1 N/A, segurança 20/20, verificada/sincronizada/arquivada no archive 2026-10-07. F56.2b1a (GSD 56.2.1): 6/6 planos e summaries; OpenSpec 23/23 com task 1.4 N/A (gate APPROVED 12/12); UAT humano aprovado em 2026-10-08T21:00:22Z e reconfirmado; segurança 14/14 fechadas, 0 abertas; snapshot final contratos 152/152 / Postgres 20/20 / gate 12/12 (verificação independente de escopo distinto 128/128); lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído e change arquivada em openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1. F56.2b1b (GSD 56.2.2): 10/10 planos e summaries; OpenSpec 39/39 com task 7.5 N/A (GATE BLOQUEANTE da b2, documentado — não exercido na b1b inativa) e task 7.4 DONE (revisão humana); UAT humano aprovado em 2026-10-12 (9/9 pass, 0 issues) com escopo EXCLUSIVO da entrega INATIVA da b1b; 18 falhas pré-existentes (lab/bench 14, provider/timeout 3, legal 1) confirmadas contra a baseline 50152297 e mantidas como dívida SEPARADA (não declaradas verdes); 3 asserções test-only da fase corrigidas (commit 51f6c2b6). Stage off; flags false; nenhuma concessão habilitadora; sem db push/reset/deploy/provider/chamada paga/ativação; migrations b1b somente na instância isolada. b1b sincronizada e ARQUIVADA em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/ (lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído); o GATE bloqueante da b2 (estratégia operacional de resolução de claims residuais) permanece PENDENTE. A revisão de segurança formal está CONCLUÍDA (56.2.2-SECURITY.md, verified, 48/48; sign-off humano 2026-10-12, entrega INATIVA). b2 (56.2.3)/F56.3 não iniciados. Reset final F56.2a retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não deve ser apresentado como sucesso; não repetir reset nem executar novo comando DB como parte deste fechamento. Esta aprovação não autoriza ativação, db push, provider, reset nem início de b2/F56.3. HISTORICO 2026-10-16: B2.2 (GSD 56.2.4 / F56.2b2b) CONCLUÍDA como entrega INATIVA — 10/10 planos (01..10 incl. reparos 08 fence de publicação, 09 recuperação alcançável + terminal do iniciador, 10 fidelidade da restauração + ferramentas). Checkpoint humano approved_with_limitations (inativo/local; inspeção visual adicional não realizada). Code review e segurança INDEPENDENTES reexecutados pós-reparos: 0 high/critical (CR-01..03/WR-01..04/SEC-01..05/UF-01 RESOLVED). Lifecycle OpenSpec CONCLUIDO em 2026-10-16 (verify/sync/archive; 45/45 tasks; archive openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/; commits e148dc94/f628f724/aa8477e7/b526256d). D13 bloqueante NÃO resolvido; sign-off B2.1 separado/pendente. Contadores reconciliados na base escopada (completed_phases 5→6; total_plans 50→53; completed_plans 44→53; percent 71→86). Sem ativação/db push/reset/deploy/provider; B2.3/F56.3 NÃO iniciados."
+  "next_action": "Definir o pr?ximo escopo; carregar 5.3/5.7 como bloqueios da abertura geral; N?O iniciar nada automaticamente. Sem push/deploy/ativa??o.",
+  "context_notes": "F56.1 permanece como histórico concluído. F56.2a: 6/6 planos e summaries, OpenSpec 31/31, UAT 4 pass + 1 N/A, segurança 20/20, verificada/sincronizada/arquivada no archive 2026-10-07. F56.2b1a (GSD 56.2.1): 6/6 planos e summaries; OpenSpec 23/23 com task 1.4 N/A (gate APPROVED 12/12); UAT humano aprovado em 2026-10-08T21:00:22Z e reconfirmado; segurança 14/14 fechadas, 0 abertas; snapshot final contratos 152/152 / Postgres 20/20 / gate 12/12 (verificação independente de escopo distinto 128/128); lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído e change arquivada em openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1. F56.2b1b (GSD 56.2.2): 10/10 planos e summaries; OpenSpec 39/39 com task 7.5 N/A (GATE BLOQUEANTE da b2, documentado — não exercido na b1b inativa) e task 7.4 DONE (revisão humana); UAT humano aprovado em 2026-10-12 (9/9 pass, 0 issues) com escopo EXCLUSIVO da entrega INATIVA da b1b; 18 falhas pré-existentes (lab/bench 14, provider/timeout 3, legal 1) confirmadas contra a baseline 50152297 e mantidas como dívida SEPARADA (não declaradas verdes); 3 asserções test-only da fase corrigidas (commit 51f6c2b6). Stage off; flags false; nenhuma concessão habilitadora; sem db push/reset/deploy/provider/chamada paga/ativação; migrations b1b somente na instância isolada. b1b sincronizada e ARQUIVADA em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/ (lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído); o GATE bloqueante da b2 (estratégia operacional de resolução de claims residuais) permanece PENDENTE. A revisão de segurança formal está CONCLUÍDA (56.2.2-SECURITY.md, verified, 48/48; sign-off humano 2026-10-12, entrega INATIVA). b2 (56.2.3)/F56.3 não iniciados. Reset final F56.2a retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não deve ser apresentado como sucesso; não repetir reset nem executar novo comando DB como parte deste fechamento. Esta aprovação não autoriza ativação, db push, provider, reset nem início de b2/F56.3. HISTORICO 2026-10-16: B2.2 (GSD 56.2.4 / F56.2b2b) CONCLUÍDA como entrega INATIVA — 10/10 planos (01..10 incl. reparos 08 fence de publicação, 09 recuperação alcançável + terminal do iniciador, 10 fidelidade da restauração + ferramentas). Checkpoint humano approved_with_limitations (inativo/local; inspeção visual adicional não realizada). Code review e segurança INDEPENDENTES reexecutados pós-reparos: 0 high/critical (CR-01..03/WR-01..04/SEC-01..05/UF-01 RESOLVED). Lifecycle OpenSpec CONCLUIDO em 2026-10-16 (verify/sync/archive; 45/45 tasks; archive openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/; commits e148dc94/f628f724/aa8477e7/b526256d). D13 bloqueante NÃO resolvido; sign-off B2.1 separado/pendente. Contadores reconciliados na base escopada (completed_phases 5→6; total_plans 50→53; completed_plans 44→53; percent 71→86). Sem ativação/db push/reset/deploy/provider; B2.3/F56.3 NÃO iniciados. F56.2b2d/GSD 56.2.6: encerrada no escopo N=1 e arquivada em 2026-10-19; 8/8 planos; 52/54 tasks; 5.3/5.7 adiadas e n?o executadas; 5.9 fechado com escopo delimitado; D13 somente N=1; kill real INCONCLUSIVE; all_stores=false; DEFERRED.md preservado no archive."
 }
