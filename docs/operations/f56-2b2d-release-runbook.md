@@ -94,4 +94,8 @@ Perfil de evidência: `release` (7 critérios).
 Verificação: `verify-hosted-release.mjs --check <release.json> --profile release`.
 
 Somente com todos os checkpoints `APPROVED` o piloto pode ser iniciado
-(`f56-2b2d-pilot-runbook.md`).
+(`f56-2b2d-pilot-runbook.md`). O piloto tem **três estágios de evidência separados** —
+`pilot_readiness` (prontidão/aceite para abrir), `pilot_active` (janela ativa) e
+`pilot_shutdown` (encerramento com flag OFF + autorização revogada) — cada um exigindo apenas
+evidências possíveis naquele momento (sem condição circular e sem aprovar antecipadamente o
+encerramento).

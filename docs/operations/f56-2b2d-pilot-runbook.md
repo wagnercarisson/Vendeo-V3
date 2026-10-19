@@ -6,25 +6,51 @@
 **Regra de escopo:** este runbook **descreve** o piloto. Nenhum script desta fase abre a janela,
 habilita lojas, configura produção ou faz chamada paga.
 
-## Pré-requisitos — antes da primeira chamada paga
+O piloto tem **três estágios distintos**, cada um com perfil de evidência próprio. Um estágio
+**nunca** exige critérios impossíveis naquele momento (sem condição circular e sem marcar um
+encerramento como PASS antes do encerramento).
 
-> **CHECKPOINT HUMANO — aceite para iniciar (perfil `pilot`).**
+## Estágio A — Prontidão / aceite para abrir (perfil `pilot_readiness`)
 
-- **Provas simuladas** (P1 local) concluídas com sucesso.
-- **Aceite para iniciar** registrado **antes** da primeira chamada paga. Sem este aceite, a janela
-  não abre.
-- Release aprovado (todas as cinco etapas de `f56-2b2d-release-runbook.md` com `APPROVED`).
-- Evidência de `pilot` com todos os critérios `PASS` + fonte + timestamp
-  (`verify-hosted-release.mjs --check <pilot.json> --profile pilot`).
+> **CHECKPOINT HUMANO — aceite para iniciar.** Antes de LIGAR a flag e antes da primeira chamada paga.
 
-## Janela de Execução
+Critérios (4): `hosted_proofs_pass`, `acceptance_to_start`, `spend_cap_configured`,
+`d13_disposition_recorded`.
 
-- `product_1_1_test_stores_enabled=true` **apenas durante a janela**; reverter para `false` ao
-  encerrar (desligamento normal abaixo).
+- **Provas** (P1 local + P3) concluídas com sucesso.
+- **Aceite para iniciar** registrado **antes** da primeira chamada paga.
+- **Teto de gasto configurado** (`spend_cap_configured`) — a chamada paga é bloqueada sem cap.
+- **Disposição explícita** sobre o kill real / D13 hospedado registrada.
+- Release aprovado (cinco etapas de `f56-2b2d-release-runbook.md` com `APPROVED`).
+
+Verificação: `verify-hosted-release.mjs --check <readiness.json> --profile pilot_readiness`.
+
+## Estágio B — Janela ativa (perfil `pilot_active`)
+
+> **CHECKPOINT HUMANO — durante a janela.** Enquanto a flag estiver ligada e a janela em curso.
+
+Critérios (4): `authorization_granted`, `window_flag_on`, `spend_under_cap`, `no_non_test_store`.
+
+- `product_1_1_test_stores_enabled=true` **apenas durante a janela**.
 - `all_stores=false` durante toda a janela.
 - Autorização vigente: estágio `test_stores` + escopo `test_stores`, com `operation_id` registrado.
 - Teto de gasto e orçamento definidos; nenhuma chamada paga sem `acquired` no gate de gasto.
+- **Nenhuma loja não-test** habilitada.
 - Janela, orçamento e responsáveis registrados antes do início.
+
+Verificação: `verify-hosted-release.mjs --check <active.json> --profile pilot_active`.
+
+## Estágio C — Encerramento (perfil `pilot_shutdown`)
+
+> **CHECKPOINT HUMANO — encerramento.** Obrigatório apenas no fim da janela.
+
+Critérios (2): `shutdown_flag_off_revoked`, `no_non_test_store`.
+
+- Flag do novo fluxo **OFF** e autorização `test_stores` **revogada**.
+- **Nenhuma loja não-test** habilitada.
+- Pausa global (`VENDEO_GENERATION_PAUSED`) **preservada** (não usada como controle do piloto).
+
+Verificação: `verify-hosted-release.mjs --check <shutdown.json> --profile pilot_shutdown`.
 
 ## Monitoramento
 
@@ -70,3 +96,4 @@ honesto (inclusive `unknown`/pendência) e não prometem escrita após kill.
 - Confirmar que **nenhuma loja não-test foi habilitada**.
 - Confirmar que a pausa global permaneceu no estado anterior (não foi usada como controle).
 - Registrar a evidência de encerramento fora do Git.
+- Verificar com `--profile pilot_shutdown` (estágio C).

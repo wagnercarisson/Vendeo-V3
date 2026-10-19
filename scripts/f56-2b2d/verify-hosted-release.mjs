@@ -44,14 +44,23 @@ export const REQUIRED_CRITERIA = Object.freeze({
     "lab_migrations_treated",
     "no_repair_used",
   ],
-  pilot: [
+  // Piloto em TRÊS estágios distintos (sem condição circular e sem marcar um
+  // encerramento como PASS antes do momento).
+  pilot_readiness: [
     "hosted_proofs_pass",
     "acceptance_to_start",
+    "spend_cap_configured",
+    "d13_disposition_recorded",
+  ],
+  pilot_active: [
     "authorization_granted",
     "window_flag_on",
     "spend_under_cap",
     "no_non_test_store",
+  ],
+  pilot_shutdown: [
     "shutdown_flag_off_revoked",
+    "no_non_test_store",
   ],
 });
 
@@ -112,9 +121,10 @@ export function parseCriteria(document) {
  * Avaliador puro fail-closed.
  * @param {unknown} document
  * @param {string[]} requiredCriteria
+ * @param {string|null} [expectedProfile] quando informado, o documento PRECISA declarar o mesmo perfil
  * @returns {{ profile: string|null, approved: boolean, allPass: boolean, criteria: Array<object>, blocking: string[], errors: string[] }}
  */
-export function evaluateReleaseGate(document, requiredCriteria) {
+export function evaluateReleaseGate(document, requiredCriteria, expectedProfile = null) {
   const required = Array.isArray(requiredCriteria) ? requiredCriteria : [];
   const errors = [];
   const { map, duplicate, structural } = parseCriteria(document);
@@ -138,20 +148,36 @@ export function evaluateReleaseGate(document, requiredCriteria) {
     if (!VALID_CRITERION_STATUS.has(status)) problems.push(`status inválido '${status}'`);
     if (!source) problems.push("sem fonte");
     if (!timestamp) problems.push("sem timestamp");
+    else if (Number.isNaN(Date.parse(timestamp))) problems.push(`timestamp inválido '${timestamp}'`);
     if (status !== "PASS") problems.push(`status ${status || "ausente"} (não PASS)`);
     const ok = problems.length === 0;
     criteria.push({ id, status: status || "MISSING", source: source || null, timestamp: timestamp || null, ok, reason: problems.join("; ") || "ok" });
     if (!ok) blocking.push(id);
   }
 
-  const allPass = blocking.length === 0 && errors.length === 0;
+  const profile =
+    document && typeof document === "object" && !Array.isArray(document) && typeof document.profile === "string"
+      ? document.profile
+      : null;
+
+  // Perfil solicitado deve CASAR com o perfil declarado no documento.
+  if (expectedProfile !== null && expectedProfile !== undefined) {
+    if (profile === null) errors.push("campo 'profile' ausente no documento");
+    else if (profile !== expectedProfile) {
+      errors.push(`perfil divergente: documento '${profile}' ≠ solicitado '${expectedProfile}'`);
+    }
+  }
 
   const claimed = document && typeof document === "object" ? document.approved : undefined;
-  if (claimed === true && !allPass) errors.push("documento declarado 'approved: true' contradiz critérios não-PASS");
-  if (claimed === false && allPass) errors.push("documento declarado 'approved: false' contradiz critérios todos PASS");
+  if (claimed === true && (blocking.length > 0 || errors.length > 0)) {
+    errors.push("documento declarado 'approved: true' contradiz critérios não-PASS");
+  }
+  if (claimed === false && blocking.length === 0 && errors.length === 0) {
+    errors.push("documento declarado 'approved: false' contradiz critérios todos PASS");
+  }
 
-  const approved = allPass && errors.length === 0 && claimed !== false;
-  const profile = document && typeof document === "object" && typeof document.profile === "string" ? document.profile : null;
+  const allPass = blocking.length === 0 && errors.length === 0;
+  const approved = allPass && claimed !== false;
   return { profile, approved, allPass, criteria, blocking, errors };
 }
 
@@ -196,7 +222,7 @@ function parseArgs(argv) {
 function usage() {
   return [
     "uso:",
-    "  node scripts/f56-2b2d/verify-hosted-release.mjs --check <evidence.json> --profile release|backup|migrations|pilot",
+    "  node scripts/f56-2b2d/verify-hosted-release.mjs --check <evidence.json> --profile release|backup|migrations|pilot_readiness|pilot_active|pilot_shutdown",
     "  node scripts/f56-2b2d/verify-hosted-release.mjs --probe --url <supabase-url>",
   ].join("\n");
 }
@@ -269,9 +295,10 @@ function main() {
     process.exit(2);
   }
 
-  const result = evaluateReleaseGate(document, REQUIRED_CRITERIA[args.profile]);
+  const result = evaluateReleaseGate(document, REQUIRED_CRITERIA[args.profile], args.profile);
   for (const c of result.criteria) {
     console.log(`${c.ok ? "PASS" : "FAIL"} | ${c.id} | ${c.status} | ${c.source ?? "-"} | ${c.timestamp ?? "-"}`);
+    if (!c.ok) console.log(`     motivo: ${redact(c.reason)}`);
   }
   for (const e of result.errors) console.error(` - ${redact(e)}`);
   if (result.approved) {

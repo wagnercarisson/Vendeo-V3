@@ -108,9 +108,49 @@ export function buildMigrationSet(entries, opts = {}) {
  * @returns {{ ok: boolean, missing: string[], extra: string[], hash_mismatch: Array<{ file: string, expected: string, actual: string }>, countMatch: boolean }}
  */
 export function compareMigrationSet(manifest, entries, opts = {}) {
-  const expected = buildMigrationSet(manifest?.files ?? []);
+  const manifestFiles = Array.isArray(manifest?.files) ? manifest.files : [];
+  const invalid_hash = [];
+  const name_version_mismatch = [];
+  const duplicates = [];
+  const seen = new Set();
+  const expByVersion = new Map();
+
+  for (const raw of manifestFiles) {
+    const file = typeof raw === "string" ? raw : raw && raw.file;
+    if (typeof file !== "string" || !MIGRATION_NAME_PATTERN.test(file)) {
+      name_version_mismatch.push(typeof file === "string" ? file : "<sem nome>");
+      continue;
+    }
+    const parsedVersion = parseMigrationVersion(file);
+    const declaredVersion = typeof raw === "object" && raw ? raw.version : undefined;
+    if (declaredVersion !== undefined && declaredVersion !== parsedVersion) {
+      name_version_mismatch.push(`${file} (versão declarada ${declaredVersion} ≠ ${parsedVersion})`);
+    }
+    if (seen.has(parsedVersion)) {
+      duplicates.push(parsedVersion);
+      continue;
+    }
+    seen.add(parsedVersion);
+    const sha = typeof raw === "object" && raw ? raw.sha256 : undefined;
+    if (typeof sha !== "string" || !/^[0-9a-f]{64}$/.test(sha)) {
+      invalid_hash.push(file);
+    }
+    expByVersion.set(parsedVersion, {
+      version: parsedVersion,
+      file,
+      sha256: typeof sha === "string" ? sha : "",
+    });
+  }
+
+  // Contagem DECLARADA no manifesto precisa ser um inteiro igual ao tamanho de `files[]`.
+  let count_declared_mismatch = false;
+  if (manifest && typeof manifest === "object" && manifest.count !== undefined) {
+    if (!Number.isInteger(manifest.count) || manifest.count !== manifestFiles.length) {
+      count_declared_mismatch = true;
+    }
+  }
+
   const actual = buildMigrationSet(entries, opts);
-  const expByVersion = new Map(expected.files.map((f) => [f.version, f]));
   const actByVersion = new Map(actual.files.map((f) => [f.version, f]));
 
   const missing = [];
@@ -123,7 +163,8 @@ export function compareMigrationSet(manifest, entries, opts = {}) {
       continue;
     }
     const a = actByVersion.get(version);
-    if (f.sha256 && a.sha256 && f.sha256 !== a.sha256) {
+    if (a.file !== f.file) name_version_mismatch.push(`${f.file} ≠ ${a.file}`);
+    if (f.sha256 !== a.sha256) {
       hash_mismatch.push({ file: f.file, expected: f.sha256, actual: a.sha256 });
     }
   }
@@ -131,9 +172,27 @@ export function compareMigrationSet(manifest, entries, opts = {}) {
     if (!expByVersion.has(version)) extra.push(f.file);
   }
 
-  const countMatch = expected.count === actual.count;
-  const ok = missing.length === 0 && extra.length === 0 && hash_mismatch.length === 0;
-  return { ok, missing, extra, hash_mismatch, countMatch };
+  const countMatch = expByVersion.size === actual.count && !count_declared_mismatch;
+  const ok =
+    missing.length === 0 &&
+    extra.length === 0 &&
+    hash_mismatch.length === 0 &&
+    invalid_hash.length === 0 &&
+    name_version_mismatch.length === 0 &&
+    duplicates.length === 0 &&
+    !count_declared_mismatch &&
+    countMatch;
+  return {
+    ok,
+    missing,
+    extra,
+    hash_mismatch,
+    countMatch,
+    count_declared_mismatch,
+    invalid_hash,
+    name_version_mismatch,
+    duplicates,
+  };
 }
 
 /**
@@ -213,8 +272,12 @@ function main() {
       if (result.missing.length) console.error(` - missing: ${result.missing.join(", ")}`);
       if (result.extra.length) console.error(` - extra: ${result.extra.join(", ")}`);
       for (const h of result.hash_mismatch) {
-        console.error(` - hash_mismatch: ${h.file} (esperado ${h.expected}, atual ${h.actual})`);
+        console.error(` - hash_mismatch: ${h.file} (esperado ${h.expected || "<ausente>"}, atual ${h.actual || "<ausente>"})`);
       }
+      if (result.invalid_hash.length) console.error(` - hash ausente/inválido: ${result.invalid_hash.join(", ")}`);
+      if (result.name_version_mismatch.length) console.error(` - nome/versão divergente: ${result.name_version_mismatch.join(", ")}`);
+      if (result.duplicates.length) console.error(` - versão duplicada: ${result.duplicates.join(", ")}`);
+      if (result.count_declared_mismatch) console.error(" - 'count' declarado inconsistente com files[]");
       if (!result.countMatch) console.error(" - count divergente");
       process.exit(1);
     }

@@ -108,6 +108,39 @@ test("manifesto: nome fora do padrão é rejeitado", () => {
   assert.equal(parseMigrationVersion("bad.sql"), null);
 });
 
+test("manifesto: hash ausente/malformado é recusado no --check", () => {
+  const base = manifestFrom(Object.keys(CONTENT)).files.map((f) => ({ ...f }));
+
+  const missing = base.map((f) => ({ ...f }));
+  missing[0].sha256 = "";
+  const resMissing = compareMigrationSet({ count: missing.length, files: missing }, Object.keys(CONTENT), { hashOf });
+  assert.equal(resMissing.ok, false);
+  assert.ok(resMissing.invalid_hash.includes(missing[0].file));
+  assert.ok(resMissing.hash_mismatch.length >= 1);
+
+  const malformed = base.map((f) => ({ ...f }));
+  malformed[1].sha256 = "not-a-hash";
+  const resBad = compareMigrationSet({ count: malformed.length, files: malformed }, Object.keys(CONTENT), { hashOf });
+  assert.equal(resBad.ok, false);
+  assert.ok(resBad.invalid_hash.includes(malformed[1].file));
+});
+
+test("manifesto: 'count' declarado inconsistente é recusado", () => {
+  const set = manifestFrom(Object.keys(CONTENT));
+  const res = compareMigrationSet({ count: 999, files: set.files }, Object.keys(CONTENT), { hashOf });
+  assert.equal(res.ok, false);
+  assert.equal(res.count_declared_mismatch, true);
+  assert.equal(res.countMatch, false);
+});
+
+test("manifesto: nome/versão divergente é recusado", () => {
+  const files = manifestFrom(Object.keys(CONTENT)).files.map((f) => ({ ...f }));
+  files[0].version = "20990101000001"; // divergente do nome do arquivo
+  const res = compareMigrationSet({ count: files.length, files }, Object.keys(CONTENT), { hashOf });
+  assert.equal(res.ok, false);
+  assert.ok(res.name_version_mismatch.length >= 1);
+});
+
 test("manifesto: sha256 tem 64 hex e ledger não é presumido", () => {
   const set = manifestFrom(Object.keys(CONTENT));
   for (const f of set.files) assert.match(f.sha256, /^[0-9a-f]{64}$/);
@@ -125,19 +158,27 @@ test("manifesto: sha256 tem 64 hex e ledger não é presumido", () => {
 
 // --- Avaliador fail-closed ---------------------------------------------------
 
-test("gate: REQUIRED_CRITERIA tem exatamente 7/8/4/7 chaves únicas", () => {
+test("gate: REQUIRED_CRITERIA tem conjuntos fechados e sem condição circular", () => {
   assert.equal(REQUIRED_CRITERIA.release.length, 7);
   assert.equal(REQUIRED_CRITERIA.backup.length, 8);
   assert.equal(REQUIRED_CRITERIA.migrations.length, 4);
-  assert.equal(REQUIRED_CRITERIA.pilot.length, 7);
+  assert.equal(REQUIRED_CRITERIA.pilot_readiness.length, 4);
+  assert.equal(REQUIRED_CRITERIA.pilot_active.length, 4);
+  assert.equal(REQUIRED_CRITERIA.pilot_shutdown.length, 2);
   for (const list of Object.values(REQUIRED_CRITERIA)) {
     assert.equal(new Set(list).size, list.length);
   }
+  // Estágios separados, sem condição circular e sem encerramento antecipado.
+  assert.ok(!REQUIRED_CRITERIA.pilot_readiness.includes("shutdown_flag_off_revoked"));
+  assert.ok(!REQUIRED_CRITERIA.pilot_readiness.includes("window_flag_on"));
+  assert.ok(!REQUIRED_CRITERIA.pilot_active.includes("acceptance_to_start"));
+  assert.ok(!REQUIRED_CRITERIA.pilot_shutdown.includes("window_flag_on"));
+  assert.ok(!REQUIRED_CRITERIA.pilot_shutdown.includes("authorization_granted"));
 });
 
 test("gate: documento completo APPROVED por perfil", () => {
-  for (const profile of ["release", "backup", "migrations", "pilot"]) {
-    const res = evaluateReleaseGate(goodDoc(profile), REQUIRED_CRITERIA[profile]);
+  for (const profile of ["release", "backup", "migrations", "pilot_readiness", "pilot_active", "pilot_shutdown"]) {
+    const res = evaluateReleaseGate(goodDoc(profile), REQUIRED_CRITERIA[profile], profile);
     assert.equal(res.approved, true, `perfil ${profile}`);
     assert.equal(res.allPass, true);
     assert.deepEqual(res.blocking, []);
@@ -151,7 +192,7 @@ test("gate: FAIL bloqueia", () => {
 });
 
 test("gate: INCONCLUSIVE bloqueia", () => {
-  const res = evaluateReleaseGate(goodDoc("pilot", { hosted_proofs_pass: { status: "INCONCLUSIVE" } }), REQUIRED_CRITERIA.pilot);
+  const res = evaluateReleaseGate(goodDoc("pilot_readiness", { hosted_proofs_pass: { status: "INCONCLUSIVE" } }), REQUIRED_CRITERIA.pilot_readiness, "pilot_readiness");
   assert.equal(res.approved, false);
   assert.ok(res.blocking.includes("hosted_proofs_pass"));
 });
@@ -189,6 +230,42 @@ test("gate: contradição approved:false com todos PASS bloqueia", () => {
   const res = evaluateReleaseGate(doc, REQUIRED_CRITERIA.release);
   assert.equal(res.approved, false);
   assert.ok(res.errors.some((e) => e.includes("contradiz")));
+});
+
+// --- Perfil / timestamp ------------------------------------------------------
+
+test("gate: perfil divergente do solicitado não aprova", () => {
+  const doc = goodDoc("pilot_shutdown");
+  doc.profile = "pilot_active"; // divergente
+  const res = evaluateReleaseGate(doc, REQUIRED_CRITERIA.pilot_shutdown, "pilot_shutdown");
+  assert.equal(res.approved, false);
+  assert.ok(res.errors.some((e) => e.includes("perfil divergente")));
+});
+
+test("gate: perfil ausente no documento não aprova quando solicitado", () => {
+  const doc = goodDoc("release");
+  delete doc.profile;
+  const res = evaluateReleaseGate(doc, REQUIRED_CRITERIA.release, "release");
+  assert.equal(res.approved, false);
+  assert.ok(res.errors.some((e) => e.includes("profile") && e.includes("ausente")));
+});
+
+test("gate: timestamp inválido bloqueia", () => {
+  const res = evaluateReleaseGate(
+    goodDoc("release", { backup_manifest: { timestamp: "not-a-date" } }),
+    REQUIRED_CRITERIA.release,
+    "release",
+  );
+  assert.equal(res.approved, false);
+  const c = res.criteria.find((x) => x.id === "backup_manifest");
+  assert.match(c.reason, /timestamp inválido/);
+});
+
+test("gate: estágios do piloto não exigem o encerramento antes da abertura", () => {
+  for (const profile of ["pilot_readiness", "pilot_active", "pilot_shutdown"]) {
+    const res = evaluateReleaseGate(goodDoc(profile), REQUIRED_CRITERIA[profile], profile);
+    assert.equal(res.approved, true, `perfil ${profile}`);
+  }
 });
 
 // --- Redaction / host --------------------------------------------------------
