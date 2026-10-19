@@ -123,6 +123,12 @@ function computeFrozenContentHash(
 }
 
 export const POST = apiHandler(async (request: NextRequest) => {
+  // F56.2b2d (Plano 02) — instante do INÍCIO do POST, capturado ANTES de
+  // qualquer trabalho pesado (parse/preflight/identidade). O deadline do novo
+  // fluxo é ancorado AQUI — o tempo consumido antes do orquestrador é
+  // descontado do orçamento. Repassado SOMENTE ao input do novo fluxo; a rota
+  // legada e `IMAGE_GENERATION_GLOBAL_TIMEOUT_MS` permanecem inalterados.
+  const requestStartedAtMs = Date.now();
   requireSameOrigin(request);
 
   // ── Pre-stream: Launch config + run context (D1/D7) ───────────
@@ -494,6 +500,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         references: newFlowReferenceSelections.map((selection) => selection.id),
         referenceSelections: newFlowReferenceSelections,
         productImagesDataUrls: newFlowProductImages.map((image) => image.dataUrl),
+        requestStartedAtMs,
         runId: operationRunId,
         traceId,
       };

@@ -3,7 +3,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
 import { createNewFlowImageGateway } from "@/lib/ai/upstream-images-runtime";
 import type { AiInvoker } from "@/lib/ai/gateway";
 import type {
@@ -100,6 +99,14 @@ import { classifyCopyFailure } from "../copy/copy-recovery";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { projectDeliveredCampaign } from "./project-delivered-campaign";
 import { projectClosedCampaign } from "./project-closed-campaign";
+import {
+  PRODUCT_1_1_GENERATION_DEADLINE_MS,
+  canStartDurableWrite,
+  createDeadlineRejection,
+  deadlineAt,
+  remainingBeforeDeadline,
+  remainingBudget,
+} from "./deadline";
 
 /**
  * F56.2b1b (B1B-D2/D4/D5/D12, C1/C5/I1/I2, F1–F8) — orquestrador NDJSON do novo
@@ -171,6 +178,13 @@ export interface ProductOneToOneGenerationInput {
   readonly promptBase?: string;
   readonly runId?: string;
   readonly traceId?: string;
+  /**
+   * F56.2b2d (Plano 02) — instante (epoch ms) do INÍCIO do POST, capturado pela
+   * rota ANTES de qualquer trabalho pesado (parse/preflight/identidade). O clock
+   * do deadline começa AQUI: o tempo já consumido antes do orquestrador é
+   * descontado do orçamento. Ausente ⇒ `Date.now()` (fallback conservador).
+   */
+  readonly requestStartedAtMs?: number;
 }
 
 export interface RecordAttemptCall {
@@ -416,6 +430,13 @@ export interface ProductOneToOneGenerationDeps {
    * F56.2b2c (B2.3) — estimativa aprovada (USD) da CALL DE COPY (decisão humana,
    * Plan 04). Sem valor, a copy é BLOQUEADA quando o gate está armado.
    */
+  /**
+   * F56.2b2d (Plano 02 / W11) — SEAM DE TESTE: quando presente, substitui
+   * `PRODUCT_1_1_GENERATION_DEADLINE_MS` no cálculo do deadline. NÃO é flag de
+   * runtime/env — só permite provar o deadline com valores curtos/determinísticos
+   * nos testes de contrato.
+   */
+  readonly deadlineMs?: number;
 }
 
 type NdjsonEvent = Record<string, unknown>;
@@ -627,10 +648,23 @@ export async function runProductOneToOneGeneration(
 
   const { campaignId, operationId, storeId } = input;
   const encoder = new TextEncoder();
+  // ── Deadline GLOBAL ancorado no INÍCIO DA REQUISIÇÃO (F56.2b2d / D2) ─────
+  // O relógio começa em `requestStartedAtMs` (capturado pela rota no topo do
+  // POST) — NUNCA reinicia na entrada do orquestrador. O orçamento já consumido
+  // antes daqui é descontado automaticamente.
+  const startMs = input.requestStartedAtMs ?? Date.now();
+  const deadlineAtInMs = deadlineAt(
+    startMs,
+    deps.deadlineMs ?? PRODUCT_1_1_GENERATION_DEADLINE_MS,
+  );
   const controllerAbort = new AbortController();
-  const timeoutId = setTimeout(
+  // Corrida provider×deadline: a rejeição fecha o `await` pendente mesmo quando o
+  // provider ignora o abort do signal (o abort sozinho NÃO encerra um await).
+  const deadlineRejection = createDeadlineRejection(deadlineAtInMs);
+  // Abort cooperativo no instante-limite (NÃO usa mais o timeout do legado).
+  const abortTimerId = setTimeout(
     () => controllerAbort.abort(),
-    IMAGE_GENERATION_GLOBAL_TIMEOUT_MS,
+    remainingBudget(Date.now(), deadlineAtInMs),
   );
 
   const stream = new ReadableStream({
@@ -648,6 +682,10 @@ export async function runProductOneToOneGeneration(
         }
       };
       const flowPhaseStatus = new Map<string, string>();
+      // F56.2b2d — guarda de escrita durável NÃO-terminal: `false` quando a
+      // reserva de persistência já foi atingida. NÃO promete escrita após kill.
+      const canWriteDurable = (): boolean =>
+        canStartDurableWrite(Date.now(), deadlineAtInMs);
       let preparationEmitted = false;
       const emitFlowPhase = (phase: string, status: string, message?: string) => {
         flowPhaseStatus.set(phase, status);
@@ -1043,9 +1081,14 @@ export async function runProductOneToOneGeneration(
           recordCancellation:
             ops.recordCancellation ?? ((i) => recordCancellation(client, i)),
         };
+        // F56.2b2d — o orçamento da copy é limitado pelo tempo RESTANTE até o
+        // deadline (não pelo teto da plataforma/legado).
         const budgetMs = Math.max(
           0,
-          Math.min(ops.budgetMs ?? COPY_BUDGET_MS, IMAGE_GENERATION_GLOBAL_TIMEOUT_MS),
+          Math.min(
+            ops.budgetMs ?? COPY_BUDGET_MS,
+            remainingBeforeDeadline(Date.now(), deadlineAtInMs),
+          ),
         );
         const budget = (ops.makeBudgetSignal ?? createCopyBudgetSignal)(budgetMs);
         copyDrain = drainCopyTask(
@@ -1146,6 +1189,12 @@ export async function runProductOneToOneGeneration(
         // ── (3) persistir snapshot/evidência ANTES de qualquer efeito ────
         // (inclui o REPARO de um estado `repairable`: a evidência é completada
         //  para o MESMO snapshot ANTES de reserva/provider.)
+        if (!canWriteDurable()) {
+          // Reserva de persistência atingida: NÃO iniciar a escrita durável.
+          // Encerra honestamente (pendência `unknown` best-effort).
+          await emitUnknownPending({ internalCategory: "persistence_reserve_reached" });
+          return;
+        }
         let persisted: PersistProductOneToOneSnapshotResult;
         try {
           persisted = await persistSnapshot(snapshot, evidence);
@@ -1158,6 +1207,10 @@ export async function runProductOneToOneGeneration(
         }
 
         // ── (4) reserva b1a ──────────────────────────────────────────────
+        if (!canWriteDurable()) {
+          await emitUnknownPending({ internalCategory: "persistence_reserve_reached" });
+          return;
+        }
         try {
           await credit.reserve({ storeId, campaignId, operationId });
         } catch {
@@ -1376,7 +1429,36 @@ export async function runProductOneToOneGeneration(
               pilotHandle = decision.handle;
             }
             try {
-              const result = await gateway.invoke(NEW_FLOW_CAPABILITY, request, telemetry, target);
+              // T-56.2.6-47 — a invocação ÚNICA do provider é CORRIDA contra o
+              // deadline. O promise PERDEDOR é QUARENTENADO: um resultado TARDIO
+              // nunca entrega, marca arte, estorna nem emite segundo terminal.
+              // Abortar o signal sozinho NÃO encerra o `await` pendente.
+              const providerCall = gateway.invoke(
+                NEW_FLOW_CAPABILITY,
+                request,
+                telemetry,
+                target,
+              );
+              providerCall.then(
+                () => {
+                  if (deadlineRejection.didHit()) {
+                    console.warn(
+                      "[generation-orchestrator] late provider result discarded after deadline",
+                    );
+                  }
+                },
+                () => {
+                  if (deadlineRejection.didHit()) {
+                    console.warn(
+                      "[generation-orchestrator] late provider failure discarded after deadline",
+                    );
+                  }
+                },
+              );
+              const result = await Promise.race([
+                providerCall,
+                deadlineRejection.promise,
+              ]);
               if (!result.imageBase64) {
                 throw new Error("no_image_in_response");
               }
@@ -1424,6 +1506,16 @@ export async function runProductOneToOneGeneration(
             // de escrever no Storage. `acquired:false` ⇒ reenvio ACOMPANHA a
             // publicação existente e NÃO inicia outra (emite pendência).
             let publicationToken: string | null = null;
+            if (!canWriteDurable()) {
+              await emitUnknownPending({
+                internalCategory: "persistence_reserve_reached",
+                target,
+                attemptNumber,
+                model: snapshotPairForTarget(snapshot, target).model,
+                quality: snapshotPairForTarget(snapshot, target).quality,
+              });
+              return;
+            }
             try {
               const begun = await credit.beginPublication(campaignId, operationId);
               publicationToken = begun.acquired ? begun.token : null;
@@ -1465,8 +1557,26 @@ export async function runProductOneToOneGeneration(
               return;
             }
             void ref;
+            const deliveryPendingParams = {
+              internalCategory: "persistence_reserve_reached",
+              target,
+              attemptNumber,
+              model: snapshotPairForTarget(snapshot, target).model,
+              quality: snapshotPairForTarget(snapshot, target).quality,
+            };
+            if (!canWriteDurable()) {
+              // Não iniciar a confirmação de arte dentro da reserva.
+              await emitUnknownPending(deliveryPendingParams);
+              return;
+            }
             try {
               await credit.markArtUploaded(campaignId, operationId, publicationToken);
+              if (!canWriteDurable()) {
+                // Arte confirmada mas entrega fora da reserva: NÃO iniciar a
+                // entrega; permanece recuperável como pendência honesta.
+                await emitUnknownPending(deliveryPendingParams);
+                return;
+              }
               await credit.deliver(campaignId, operationId, publicationToken);
             } catch {
               // Upload concluído mas confirmação/metadados falharam ⇒ `result_unknown`
@@ -1623,7 +1733,8 @@ export async function runProductOneToOneGeneration(
           normalizedError: "unknown_provider_error",
         });
       } finally {
-        clearTimeout(timeoutId);
+        clearTimeout(abortTimerId);
+        deadlineRejection.cancel();
         // F8 — drena a copy DENTRO do ciclo: aguarda/cancela ANTES de encerrar
         // (nunca deixa task órfã após a resposta). Best-effort: nunca bloqueia.
         if (copyDrain) {
@@ -1639,6 +1750,11 @@ export async function runProductOneToOneGeneration(
           // already closed
         }
       }
+    },
+    cancel() {
+      // Cliente cancelou o stream: limpa o timer de abort e a promessa de deadline.
+      clearTimeout(abortTimerId);
+      deadlineRejection.cancel();
     },
   });
 
