@@ -1,0 +1,62 @@
+{
+  "profile": "backup",
+  "approved": false,
+  "backup_scope": "local-only",
+  "accepted_limitation": "Sem segunda cópia independente (nuvem/externa); limitação aceita pelo responsável em 2026-10-19.",
+  "generated_at_utc": "2026-10-19T17:00:00Z",
+  "archive": {
+    "path": "C:\\Vendeo-Backups\\f56-2b2d-pre-release-20261019.rar",
+    "format": "RAR",
+    "size_bytes": 109402910,
+    "sha256": "FA23CFAE98E98D240627944B5F099BDF73F714976EE20C0526CA1A51E97BFD16",
+    "extracted_staging": "C:\\Vendeo-Backups\\f56-2b2d-restore-staging-20261019-02"
+  },
+  "restore_destination": {
+    "project_id": "f56-2b2d-restore-20261019",
+    "api_url": "http://127.0.0.1:57811",
+    "db_port": 57812,
+    "distinct_from": "vendeo-homolog (57780-57789)"
+  },
+  "criteria": {
+    "backup_db_manifest": {
+      "status": "PASS",
+      "source": "database-manifest.json: 4 arquivos (schema/data/roles/extensions) com SHA-256; dumps incluem supabase_migrations",
+      "timestamp": "2026-10-19T16:20:00Z"
+    },
+    "backup_storage_objects": {
+      "status": "PASS",
+      "source": "storage-objects-manifest.json: 472 objetos / 112241587 bytes / SHA-256",
+      "timestamp": "2026-10-19T16:20:00Z"
+    },
+    "backup_encrypted_uploaded": {
+      "status": "INCONCLUSIVE",
+      "source": "backup apenas local; sem destino externo independente (limitação aceita 2026-10-19)",
+      "timestamp": "2026-10-19T16:20:00Z"
+    },
+    "restore_separate_destination": {
+      "status": "PASS",
+      "source": "instância f56-2b2d-restore-20261019 (API 57811 / DB 57812), separada de vendeo-homolog",
+      "timestamp": "2026-10-19T16:45:00Z"
+    },
+    "restore_counts_match": {
+      "status": "PASS",
+      "source": "14/14 tabelas de negócio iguais à produção (stores 10, campaigns 233, generation_events 905, credit_transactions 329, ...) + ledger 99",
+      "timestamp": "2026-10-19T16:50:00Z"
+    },
+    "restore_checksums_match": {
+      "status": "PASS",
+      "source": "472/472 objetos com SHA-256 igual; arquivos de banco verificados contra database-manifest",
+      "timestamp": "2026-10-19T16:55:00Z"
+    },
+    "restore_signed_url_read": {
+      "status": "PASS",
+      "source": "URL assinada: HTTP 200, 229128 bytes, SHA-256 igual ao manifesto",
+      "timestamp": "2026-10-19T16:56:00Z"
+    },
+    "pitr_not_assumed": {
+      "status": "PASS",
+      "source": "pitr_enabled=false; restauração a partir do .rar, sem point-in-time",
+      "timestamp": "2026-10-19T16:20:00Z"
+    }
+  }
+}
