@@ -466,6 +466,6 @@ Plans:
 
 **Requirements:** `REQ-56.2.6-01..12` — (01) ativação operacional `test_stores`; (02) `isolated_pilot` preservado/`all_stores` bloqueado; (03) deadline/timeout com margem; (04) kill ≠ ausência e duas vias de encerramento; (05) backup banco+Storage verificável; (06) conjunto definitivo de migrations/laboratório; (07) deploy OFF + configuração + legado; (08) provas hospedadas mínimas sem simulação pública; (09) piloto manual restrito/orçamento/monitoramento; (10) desligamento sem pausar o legado; (11) sequência provas→aceite→primeira chamada paga; (12) separação piloto × abertura geral.
 
-**Plans:** a definir no planejamento GSD; diretório `.planning/phases/56.2.6-f56-2b2d-piloto-hospedado-produto-1-1-test-stores/`.
+**Plans:** 2/8 plans executed
 
 **Canonical refs:** `openspec/changes/fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/` (proposal, design D1–D5, 4 specs, tasks §1–§7), `openspec/specs/product-1-1-flow-activation/spec.md`, `openspec/specs/product-1-1-controlled-real-test-authorization/spec.md`, `openspec/specs/product-1-1-generation-orchestration/spec.md`, `src/lib/product-1-1/authorization/authorization-decision.ts`, `src/lib/product-1-1/pilot/resolve-pilot-spend-gate.ts`, `src/app/api/admin/product-flow-authorizations/route.ts`, `supabase/migrations/20261017000001_f56_2b2c_narrow_authorization.sql`, `docs/operations/backup-runbook.md`.

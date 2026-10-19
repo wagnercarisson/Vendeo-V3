@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: executing
-last_updated: "2026-10-18T00:00:00.000Z"
+last_updated: "2026-10-19T00:07:16.545Z"
 progress:
   total_phases: 7
   completed_phases: 7
@@ -26,6 +26,8 @@ progress:
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
+
+- **EXECUÇÃO 56.2.6-02 (2026-10-18) — CONCLUÍDA (2/8 planos da fase 56.2.6).** Deadline global do Produto 1:1 (REQ-56.2.6-03/-04): módulo puro `deadline.ts` (teto 300s, deadline interno **240s**, reserva de persistência 20s, helpers absolutos + `createDeadlineRejection`); orquestrador com deadline ancorado em `input.requestStartedAtMs` (capturado pela rota no topo do POST), corrida `Promise.race([gateway.invoke(...), deadlineRejection.promise])` com quarentena do resultado tardio, guardas `canStartDurableWrite` antes de cada escrita NÃO-terminal, marcador terminal `unknown` sempre best-effort, orçamento da copy limitado por `remainingBeforeDeadline`. Legado (`IMAGE_GENERATION_GLOBAL_TIMEOUT_MS`=300000) e rota legada intocados; nenhuma nova chamada a `credit.refund`; fence preservado. Suíte nova `generation-deadline.contract.test.ts` (12/12). Gates: typecheck exit 0; `orchestration.contract` 37/37; deadline 12/12; `git diff --check` limpo. Commits `b116f150`, `12bfd565`, `bbbd445b`, `35184b2c`; SUMMARY `56.2.6-02-SUMMARY.md`. **Nota:** `Write`/`Edit` de STATE.md por SDK (`state.record-metric`) recalculou globalmente os contadores do front-matter; restaurado o baseline ESCOPADO (7/7 · 57/57 · 100%) por convenção do repo — contadores NÃO incrementados. Sem migration/deploy/ativação/chamada paga.
 
 - **RECONCILIAÇÃO PÓS-LIFECYCLE 56.2.4 (2026-10-16) — OpenSpec CONCLUÍDO (verify → sync → archive).** A change nomeada `fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1` foi **verificada**, **sincronizada** nas **3 specs principais** (`product-1-1-artifact-delivery` 1 MOD + 2 ADD; `product-1-1-campaign-credit-billing` 1 MOD + 5 ADD; `product-1-1-generation-orchestration` 1 MOD + 2 ADD) e **ARQUIVADA** em `openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/`; **45/45 tasks**. Commits: reconciliação `e148dc94`, normatização `f628f724`, sync `aa8477e7`, archive `b526256d`. **Contadores NÃO incrementados/recalculados** (este registro não conclui outra fase/plano). **D13 permanece bloqueante; sign-off de segurança B2.1 separado/pendente.** **Próxima ação: revisar e realinhar a base B2.3 — SEM iniciar planejamento ou execução automaticamente.**
 
@@ -191,6 +193,9 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 - [Phase 56.1 / Plano 10]: o formulario cliente restringe modelo+qualidade ao catalogo elegivel (3 modelos x low/medium), exige motivo (`Motivo obrigatorio`, role=alert) e envia PUT com `operationId` estavel por fingerprint (reuso no retry, renovacao na edicao) (D-02/T-56.1-31/T-56.1-33).
 - [Phase ?]: Plano 01 (56.2.2): elegibilidade do novo fluxo Produto 1:1 decidida server-side (resolveProductFlowAuthorization fail-closed) e propagada por booleano; seletor exclusivo Direcao de fundo montado so sob elegibilidade; payload legado byte-compativel em off; identidade C3 (campaignId/operationId) estavel por fingerprint; G-NA reconciliada com pares exatos importador+modulo.
 - Phase 56.2.3 added: F56.2b2a (B2.1) - Recuperacao de copy: planejamento GSD iniciado a partir da base OpenSpec fase-56-2b2a-recuperacao-de-copy-produto-1-1 (10 REQ-IDs REQ-56.2.3-01..10)
+- [Phase 56.2.6]: Deadline interno do Produto 1:1 = 240000 ms (faixa aprovada 240-270s) — design Open Question 1
+- [Phase 56.2.6]: Reserva de persistencia = 20000 ms, entre 0 e teto-deadline
+- [Phase 56.2.6]: Deadline rejeitado na corrida classificado como desconhecido via aborted ou didHit()
 
 ## Pending Todos
 
@@ -301,3 +306,4 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | Phase 56.2 P04 | 20m | 3 tasks | 4 files |
 | Phase 56.2 P05 | 6m | 3 tasks | 2 files |
 | Phase 56.2.2 P01 | 35min | 4 tasks | 9 files |
+| Phase 56.2.6 P02 | 14min | 3 tasks | 4 files |
