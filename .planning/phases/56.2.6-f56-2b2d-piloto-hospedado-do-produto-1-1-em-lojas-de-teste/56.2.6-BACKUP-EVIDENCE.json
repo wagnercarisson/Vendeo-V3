@@ -3,7 +3,7 @@
   "approved": true,
   "backup_scope": "local + second copy (Google Drive)",
   "independent_copy": "present — Google Drive; downloaded copy hash-verified",
-  "destination_privacy": "PENDING CONFIRMATION — privacidade/MFA do Google Drive não presumidos",
+  "destination_privacy": "CONFIRMED (humano, 2026-10-19) — Google Drive restrito + verificação em duas etapas",
   "generated_at_utc": "2026-10-19T17:00:00Z",
   "archive": {
     "path": "C:\\Vendeo-Backups\\f56-2b2d-pre-release-20261019.rar",
