@@ -102,6 +102,35 @@ O sistema SHALL ler validamente ambas as flags server-side, mas a ativação exi
 - **WHEN** a leitura de qualquer flag ou autorização falha
 - **THEN** a função de decisão não permite o fluxo novo
 
+### Requirement: Ativação operacional restrita a lojas de teste
+
+O sistema SHALL permitir a habilitação do estágio `test_stores` no **ambiente operacional**, restrita ao escopo de lojas de teste (`scope="test_stores"`), alinhando a RPC de concessão, a rota admin e o gate de gasto. A via `isolated_pilot` SHALL permanecer **inalterada** (ambiente `isolated`). O escopo geral (`all_stores`) SHALL permanecer **sempre recusado**.
+
+#### Scenario: Estágio test_stores operacional é aceito apenas para lojas de teste
+- **WHEN** um admin concede `test_stores` com escopo `test_stores`
+- **THEN** a concessão é `granted`, auditada e revalidada server-side
+- **AND** apenas lojas de teste (`is_test_store=true`) são elegíveis no ambiente operacional
+
+#### Scenario: isolated_pilot permanece inalterado
+- **WHEN** a via `isolated_pilot` é usada
+- **THEN** ela continua exigindo escopo `test_stores` e ambiente `isolated`
+- **AND** nenhuma mudança é feita na sua matriz
+
+#### Scenario: all_stores permanece recusado
+- **WHEN** se tenta conceder `all_stores` ou qualquer escopo `all_stores`
+- **THEN** a RPC recusa e registra a recusa
+- **AND** o escopo geral permanece bloqueado
+
+#### Scenario: Gate de gasto arma para test_stores
+- **WHEN** a loja é de teste, o estágio `test_stores` está vigente e as flags são válidas
+- **THEN** o gate de gasto resolve `armed`
+- **AND** estágios/escopos não-estreitos permanecem `blocked`
+
+#### Scenario: Instância canônica obrigatória
+- **WHEN** a autorização é concedida no operacional
+- **THEN** ela é vinculada à identidade canônica da instância (host server-side)
+- **AND** a revalidação exige correspondência exata
+
 ### Requirement: Concessão operacional bloqueada nesta change
 
 A API/RPC operacional SHALL **recusar** estágios habilitadores no **escopo geral** antes do gate da F56.2b2. A **barreira global NÃO é removida**. A **única** via para habilitar o **teste real isolado** SHALL ser a **autorização temporária ESTREITA** (capability `product-1-1-controlled-real-test-authorization`), com **instância** e **escopo de lojas de teste**, **auditoria** e **revogação** (a **expiração existente** é respeitada quando informada). Testes de lógica usam dados controlados e não chamam esse caminho operacional.
@@ -184,12 +213,12 @@ A validação SHALL ocorrer **primeiro localmente**, no **ambiente Docker/Supaba
 
 ### Requirement: Habilitação de lojas de teste condicionada à validação do piloto
 
-A habilitação de lojas de teste para uso real SHALL ser avaliada somente **após** a validação do piloto controlado, executado em loja de teste com **autorização humana específica** e **pricing completo**, e **após** a comprovação da estratégia substituta de D13.
+A habilitação de lojas de teste para uso real SHALL ser avaliada somente **após** a validação do piloto controlado, executado em loja de teste com **autorização humana específica** e **pricing completo**, e **após** a comprovação da estratégia substituta de D13. O piloto **hospedado** restrito a lojas de teste SHALL ocorrer no **ambiente operacional** sob autorização `test_stores`, com o **fluxo mantido OFF** fora da janela.
 
 #### Scenario: Piloto em loja de teste com autorização e pricing completo
 - **WHEN** o piloto controlado é executado
-- **THEN** ele ocorre em loja de teste (`is_test_store = true`), no ambiente isolado autorizado
-- **AND** usa autorização temporária estreita vigente, com pricing completo
+- **THEN** ele ocorre em loja de teste (`is_test_store = true`) sob autorização `test_stores` vigente
+- **AND** usa pricing completo (principal e fallback)
 
 #### Scenario: Habilitação só depois da validação
 - **WHEN** o piloto ainda não foi validado ou a estratégia de D13 não foi comprovada
@@ -251,9 +280,10 @@ O novo fluxo SHALL cobrir **testes negativos**: **flag desligada**, **loja não-
 - **WHEN** a loja não é de teste
 - **THEN** o novo fluxo é negado
 
-#### Scenario: Instância ou ambiente não autorizado
-- **WHEN** a instância canônica não corresponde ou o ambiente não é `isolated`
+#### Scenario: Instância ou combinação não autorizada
+- **WHEN** a instância canônica não corresponde **ou** a combinação estágio×ambiente×escopo é incompatível (ex.: `test_stores` em loja não-test, `isolated_pilot` em ambiente operacional)
 - **THEN** o novo fluxo é negado
+- **AND** nenhuma geração ocorre
 
 #### Scenario: Escopo geral
 - **WHEN** se tenta o escopo geral (`all_stores`)
@@ -264,3 +294,7 @@ O novo fluxo SHALL cobrir **testes negativos**: **flag desligada**, **loja não-
 - **WHEN** o recorte de lojas de teste é exercido
 - **THEN** o comportamento do fluxo legado permanece inalterado
 - **AND** não há regressão intencional do legado
+
+## Pilot Scope and Deferred Items
+
+The operational `test_stores` activation is scoped to the **N=1 hosted pilot**; it does not authorize general stores. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) are **deferred by responsible decision, not executed**, and remain required before any general opening. D13 is accepted **only** for the N=1 monitored pilot; the real platform kill remains **INCONCLUSIVE**; `all_stores` remains refused. Durable pointer: `openspec/changes/fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md` (or the corresponding archived path after archive).

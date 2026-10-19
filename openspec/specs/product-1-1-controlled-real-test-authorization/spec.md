@@ -58,18 +58,38 @@ A autorização temporária SHALL NOT habilitar aprovação, reprovação ou cor
 - **THEN** aprovação/reprovação/correção continuam indisponíveis
 - **AND** a decisão de aprovação permanece reservada à F56.3
 
+### Requirement: Autorização operacional estreita para lojas de teste
+
+A autorização habilitadora SHALL admitir uma **segunda via estreita**, além de `isolated_pilot`: o estágio `test_stores` com escopo `test_stores` no **ambiente operacional**, concedido por **admin autenticado** via **RPC auditada**, restrito à **instância canônica**, com **auditoria** e **revogação**. O escopo geral SHALL permanecer **recusado**.
+
+#### Scenario: Concessão test_stores auditada
+- **WHEN** o admin concede `test_stores` + `test_stores`
+- **THEN** a RPC registra concessor, motivo, `operation_id`, escopo e instância
+- **AND** a concessão é `granted` e auditável
+
+#### Scenario: Escopo geral recusado
+- **WHEN** se tenta conceder `all_stores` ou escopo `all_stores`
+- **THEN** a RPC recusa e registra a recusa
+- **AND** nenhum estágio de escopo geral é habilitado
+
+#### Scenario: Revogação encerra a via operacional
+- **WHEN** a autorização `test_stores` é revogada
+- **THEN** o recorte operacional deixa de ser permitido
+- **AND** a decisão passa a negar
+
 ### Requirement: Via estreita e testes negativos
 
-A autorização habilitadora SHALL ocorrer **somente** pela via **`isolated_pilot` + `test_stores` + `isolated`** (ajuste **mínimo** da barreira existente). **`all_stores` SHALL permanecer sempre recusado**. A **janela** SHALL ser controlada por **`product_1_1_test_stores_enabled`**; **não** haverá autorização/expiração/allowlist **por loja**. Os controles existentes (instância, autorização, auditoria, revogação) SHALL ser **reaproveitados**, sem novo subsistema.
+A autorização habilitadora SHALL ocorrer **somente** por vias **estreitas**: (i) **`isolated_pilot` + `test_stores` + `isolated`** (via **inalterada**, usada na validação local); **ou** (ii) **`test_stores` + `test_stores` + `operational`** (novo piloto hospedado restrito a lojas de teste). **`all_stores` SHALL permanecer sempre recusado**. A **janela** SHALL ser controlada por **`product_1_1_test_stores_enabled`**; **não** haverá autorização/expiração/allowlist **por loja**. Os controles existentes (instância, autorização, auditoria, revogação) SHALL ser **reaproveitados**, sem novo subsistema.
 
-#### Scenario: Via estreita é a única permitida
+#### Scenario: Vias estreitas são as únicas permitidas
 - **WHEN** a autorização habilitadora é concedida
-- **THEN** ela é `isolated_pilot` + `test_stores` + `isolated`
+- **THEN** ela é `isolated_pilot` + `test_stores` + `isolated` **ou** `test_stores` + `test_stores` + `operational`
 - **AND** `all_stores` permanece recusado
 
 #### Scenario: Ambas as lojas de teste validam
 - **WHEN** Adega ou NovaTek (`is_test_store=true`) usa o fluxo novo sob a autorização vigente
 - **THEN** a validação é permitida no recorte de lojas de teste
+- **AND** nenhuma loja não-test é habilitada
 
 #### Scenario: Flag desligada nega
 - **WHEN** `product_1_1_test_stores_enabled` está `false`
@@ -79,11 +99,15 @@ A autorização habilitadora SHALL ocorrer **somente** pela via **`isolated_pilo
 - **WHEN** a loja não é de teste (`is_test_store=false`)
 - **THEN** o novo fluxo é negado
 
-#### Scenario: Instância ou ambiente não autorizado nega
-- **WHEN** a instância canônica não corresponde ou o ambiente não é `isolated`
+#### Scenario: Instância ou combinação não autorizada nega
+- **WHEN** a instância canônica não corresponde **ou** a combinação estágio×ambiente×escopo é incompatível
 - **THEN** a decisão nega
 
 #### Scenario: Escopo geral recusado
 - **WHEN** se tenta o escopo geral (`all_stores`)
 - **THEN** a recusa é preservada
 - **AND** a produção permanece intocada
+
+## Pilot Scope and Deferred Items
+
+The operational `test_stores` authorization is scoped to the **N=1 hosted pilot** and does not authorize general stores. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) are **deferred by responsible decision, not executed**, and remain required before any general opening. D13 is accepted **only** for the N=1 monitored pilot; the real platform kill remains **INCONCLUSIVE**; `all_stores` remains refused. Durable pointer: `openspec/changes/fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md` (or the corresponding archived path after archive).

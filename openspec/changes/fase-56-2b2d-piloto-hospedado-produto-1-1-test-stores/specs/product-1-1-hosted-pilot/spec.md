@@ -170,11 +170,12 @@ O piloto SHALL ser **manual**, **restrito a lojas de teste** (`is_test_store=tru
 
 ### Requirement: Sequência de autorização do primeiro piloto
 
-As **provas hospedadas simuladas** e o **aceite para iniciar** SHALL preceder a **primeira chamada paga**. O início do piloto SHALL NOT exigir que o piloto hospedado já esteja aprovado.
+As **provas locais simuladas (P1)** e o **aceite para iniciar** SHALL preceder a **primeira chamada paga**. A prova **P2** SHALL ser registrada como **NÃO APLICÁVEL** (Alt C) e a prova **P3** SHALL ser o **piloto real no ambiente hospedado**. O início do piloto SHALL NOT exigir que o piloto hospedado já esteja aprovado.
 
 #### Scenario: Provas e aceite antes da primeira chamada paga
 - **WHEN** o piloto hospedado é iniciado
-- **THEN** as provas simuladas já foram executadas e aceitas
+- **THEN** as provas locais simuladas (P1) já foram executadas e aceitas
+- **AND** P2 é N/A (Alt C) e P3 é o piloto real no ambiente hospedado
 - **AND** a primeira chamada paga ocorre somente depois do aceite
 
 #### Scenario: Piloto não precisa estar aprovado para começar

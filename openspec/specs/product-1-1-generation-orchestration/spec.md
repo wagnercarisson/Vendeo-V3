@@ -274,3 +274,32 @@ Um resultado/arte **atrasado** de operação encerrada (`refunded`) SHALL NOT re
 - **THEN** o estado persistido não é sobrescrito
 - **AND** a cobrança não é reaberta
 - **AND** a nova campanha não é liberada por esse resultado
+
+### Requirement: Encerramento pela plataforma e orçamento de tempo
+
+A orquestração SHALL operar com timeout interno **estritamente menor** que o teto da função da plataforma (**300s**), compondo um **deadline global comprovado** com **margem para persistência cooperativa**. O sistema SHALL NOT prometer que a última escrita ocorre após um kill abrupto; nesse caso, o **estado durável anterior** SHALL permanecer recuperável, sem inventar `unknown` persistido nem ausência de arte. O encerramento pela plataforma SHALL NOT ser interpretado como prova de sucesso nem de ausência e **não autoriza, por si só, nenhuma via**: a **automática** exige probe fresco sob epoch e fence; a **administrativa** exige autorização/auditoria e suas precondições próprias.
+
+#### Scenario: Deadline comprovado com margem
+- **WHEN** a execução se aproxima do teto de 300s
+- **THEN** o deadline global foi provado por teste e o timeout interno é menor que o teto
+- **AND** há margem para persistência cooperativa
+
+#### Scenario: Kill pode impedir a última escrita
+- **WHEN** a plataforma encerra a função abruptamente
+- **THEN** a última escrita pode não ocorrer
+- **AND** o estado durável anterior permanece recuperável
+
+#### Scenario: Kill não é prova de ausência nem autoriza via
+- **WHEN** a plataforma encerra a função no meio da execução
+- **THEN** a ausência de arte não é presumida
+- **AND** nenhuma via de encerramento é autorizada apenas pelo kill
+- **AND** a via automática exige probe fresco e a administrativa exige autorização/auditoria
+
+#### Scenario: Resultado desconhecido é honesto
+- **WHEN** a execução termina sem confirmação
+- **THEN** o estado é `unknown`/inconclusivo, sem retomada automática
+- **AND** nenhuma conclusão de sucesso ou ausência é inferida
+
+## Pilot Scope and Deferred Items
+
+The hosted pilot is scoped to **N=1** and test stores. The real platform kill remains **INCONCLUSIVE**; D13 is accepted **only** for the N=1 monitored pilot. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) are **deferred by responsible decision, not executed**, and remain required before any general opening. `all_stores` remains refused. Durable pointer: `openspec/changes/fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md` (or the corresponding archived path after archive).
