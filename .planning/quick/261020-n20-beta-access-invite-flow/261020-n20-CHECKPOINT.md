@@ -103,13 +103,22 @@ O deploy 2 foi necessário porque as variáveis de e-mail foram adicionadas apó
 
 **Parada antes de habilitar:** falta confirmar o e-mail controlado de validação e o estado do rastreamento no Resend. Não habilitar envio nem criar/aprovar solicitação até essas confirmações.
 
-## Aguardando antes do teste
+## Execução da janela (2026-10-20)
 
-1. **E-mail da conta de validação** controlado pelo responsável (não assumir a solicitação pendente existente).
-2. Confirmação de que o rastreamento de abertura/cliques está desligado no painel do Resend.
-3. Autorização final para ligar `VENDEO_EMAIL_ENABLED=true` e redeployar.
+| Etapa | Resultado |
+|---|---|
+| `VENDEO_EMAIL_ENABLED` | **true** (habilitado nesta janela) |
+| Redeploy com envio ligado | `dpl_G6aFPfXwW1vqkbxLEfSRLiX4x8C5` — **READY** |
+| `launch_at` F50.2 | `2026-10-20T21:25:31.344856+00:00` |
+| Tracking | não configurado; nenhum subdomínio de tracking criado |
+| Solicitação de validação | `2e9f8544-db99-4b87-a356-7dac06a7cb7a` — `comercial@vendeo.tech`, **pending**, criada em `2026-10-20T21:43:14Z` (depois do `launch_at`) |
+| Aprovação/convite | **NÃO EXECUTADOS** — aprovação exige sessão de admin |
+| Outras solicitações | intocadas |
+| Estado final do envio | **ligado** (`VENDEO_EMAIL_ENABLED=true`) |
 
-**Aceite e onboarding:** validação **transferida para a F50.2**, não executada nesta quick. O teste desta quick termina com o convite recebido e o link conferido **sem consumir**.
+**Parada de segurança:** a única conta admin de produção não é a conta do responsável/Windows e não há sessão admin autorizada disponível. Não gerei magiclink nem sessão para essa conta. A aprovação deve ser feita pela UI admin ou com sessão/credencial explicitamente fornecida.
+
+**Aceite/onboarding:** validação **transferida para a F50.2**, não executada.
 
 ## Fora de escopo / não executado
 
