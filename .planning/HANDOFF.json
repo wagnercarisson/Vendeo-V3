@@ -22,7 +22,7 @@
       "lint": "0",
       "build": "exit 0 (published deployment)",
       "focused_tests": "99/99",
-      "changelog_tests": "22/22",
+      "changelog_tests": "30/30",
       "openspec_validate_strict": "valid",
       "git_diff_check": "passed"
     },
@@ -62,11 +62,14 @@
       "note": "Separate from delivery; keep task 5.5 open until the seven days are recorded."
     },
     "changelog": {
-      "status": "authorized_pending_publication",
+      "status": "published_and_card_validated",
       "entry": "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md",
       "verification": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CHANGELOG-VERIFICATION.md",
       "announcement": "card",
-      "note": "Publish after explicit authorization; then validate /novidades and the dashboard card."
+      "note": "Published after explicit authorization; dashboard card and /novidades validated with an authenticated test-store session.",
+      "deployment": "dpl_7YAtV11z5UDEEzx9m9YWPcvLpdXA READY",
+      "validated_at": "2026-10-19",
+      "validation": "Authenticated test-store session: dashboard 200 with title; /novidades 200 with title and slug; no data mutation."
     },
     "d13": "accepted_for_monitored_general_opening_not_resolved",
     "kill_real": "inconclusive",
@@ -78,7 +81,7 @@
       ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-ACCEPTANCE.md",
       "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md"
     ],
-    "next_action": "Publish and validate the changelog; keep 5.5 open until 2026-10-26; then run sync/archive."
+    "next_action": "Keep 5.5 open until 2026-10-26; run sync/archive after final review and monitoring closure."
   },
   "timestamp": "2026-10-19",
   "phase": "56.1",
