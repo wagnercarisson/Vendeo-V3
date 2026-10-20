@@ -707,6 +707,22 @@ function FormContent({
         {priceFeedbackMessage(fields.originalPriceCents, fields.discountedPriceCents)}
       </FieldHint>
 
+      <IntentSelector
+        value={fields.campaignIntent}
+        onChange={(intent) => setField("campaignIntent", intent)}
+        availableOptions={
+          (() => {
+            const inferred = inferIntent(fields.originalPriceCents, fields.discountedPriceCents);
+            if (inferred === "offer") return ["offer"];
+            if (fields.discountedPriceCents !== undefined && (fields.discountedPriceCents ?? 0) > 0) {
+              return ["offer", "spotlight"];
+            }
+            return ["spotlight", "exclusive"];
+          })()
+        }
+        disabled={isSubmitting}
+      />
+
       <div>
         <label
           htmlFor="badge"
@@ -758,22 +774,6 @@ function FormContent({
         )}
       </div>
 
-      <IntentSelector
-        value={fields.campaignIntent}
-        onChange={(intent) => setField("campaignIntent", intent)}
-        availableOptions={
-          (() => {
-            const inferred = inferIntent(fields.originalPriceCents, fields.discountedPriceCents);
-            if (inferred === "offer") return ["offer"];
-            if (fields.discountedPriceCents !== undefined && (fields.discountedPriceCents ?? 0) > 0) {
-              return ["offer", "spotlight"];
-            }
-            return ["spotlight", "exclusive"];
-          })()
-        }
-        disabled={isSubmitting}
-      />
-
       {/* F56.2b1b (B1B-D1): região B — controle EXCLUSIVO do novo fluxo,
           montado SOMENTE sob elegibilidade server-side. Em `off` não é montado e
           a região A (intenção legada) acima permanece intacta. */}
@@ -788,7 +788,11 @@ function FormContent({
         />
       )}
 
-      {fields.campaignIntent !== "offer" && (
+      {/* F56.2b1b (B1B-D1): a checkbox legada só existe fora do novo fluxo.
+          Sob elegibilidade, `backgroundDirection` (Estúdio/Ambientado/Original)
+          é o ÚNICO controle dessa escolha — a checkbox seria redundante e
+          poderia contradizê-lo. Em `off`, o comportamento legado é preservado. */}
+      {!eligible && fields.campaignIntent !== "offer" && (
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
