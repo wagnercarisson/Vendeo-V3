@@ -32,7 +32,7 @@
       "archived": false,
       "status": "verification_complete_sync_archive_pending",
       "sync_preparation": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
-      "note": "Apply the historical reconciliation note during sync; do not rewrite 56.2.6 evidence or DEFERRED.md. Archive after monitoring closure or explicit decision."
+      "note": "Apply the historical reconciliation note during sync; do not rewrite 56.2.6 evidence or DEFERRED.md. Archive may proceed with task 5.5 transferred and open by explicit decision; monitoring continues after archive."
     },
     "operational_snapshot": {
       "captured_at": "2026-10-19",
@@ -81,7 +81,7 @@
       ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-ACCEPTANCE.md",
       "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md"
     ],
-    "next_action": "Keep 5.5 open until 2026-10-26; run sync/archive after final review and monitoring closure."
+    "next_action": "Run sync/archive after final review; keep 5.5 open and monitored until 2026-10-26."
   },
   "timestamp": "2026-10-19",
   "phase": "56.1",
