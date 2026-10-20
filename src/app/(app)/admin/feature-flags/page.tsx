@@ -9,6 +9,8 @@ import { readProductActivationState } from "@/lib/product-1-1/activation/activat
 import type { ProductActivationState } from "@/lib/product-1-1/activation/activation-state";
 import { FeatureFlagsForm } from "./feature-flags-form";
 import { ProductActivationPanel } from "./product-activation-panel";
+import { TrialOfferPanel } from "./trial-offer-panel";
+import { TRIAL_OFFER_KEY } from "@/lib/credit/trial-offer/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +99,19 @@ export default async function AdminFeatureFlagsPage() {
         : "Nao foi possivel ler o estado de ativacao.";
   }
 
+  const { data: trialSettings, error: trialSettingsError } = await supabaseAdmin
+    .from("trial_offer_settings")
+    .select("enabled, launch_at")
+    .eq("offer_key", TRIAL_OFFER_KEY)
+    .maybeSingle();
+
+  const trialEnabled = trialSettings?.enabled === true;
+  const trialLaunchAt =
+    typeof trialSettings?.launch_at === "string" ? trialSettings.launch_at : null;
+  const trialError = trialSettingsError
+    ? "Não foi possível ler a configuração da oferta de 28 dias."
+    : null;
+
   const byKey = new Map((data ?? []).map((f) => [f.key, f]));
 
   // Monta rows na ordem canônica ALL_FEATURE_FLAG_KEYS.
@@ -140,6 +155,12 @@ export default async function AdminFeatureFlagsPage() {
           {" "}20260821000002_qcw_operational_flags.sql para ativá-las.
         </div>
       )}
+      <TrialOfferPanel
+        initialEnabled={trialEnabled}
+        initialLaunchAt={trialLaunchAt}
+        initialError={trialError}
+      />
+
       <ProductActivationPanel
         initialState={activationState}
         initialError={activationError}

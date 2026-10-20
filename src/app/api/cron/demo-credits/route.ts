@@ -14,6 +14,15 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
+
+  // Parcelas do teste de 28 dias: o cron é diário, então a parcela elegível
+  // no dia pode ser creditada nesta execução (ou na seguinte, se o horário
+  // de elegibilidade ocorrer depois). O processamento é idempotente.
+  const { data: trialOfferData, error: trialOfferError } = await supabaseAdmin.rpc(
+    "process_trial_offer_installments",
+    {},
+  );
+
   const { data: balances, error: balanceError } = await supabaseAdmin
     .from("credit_balances")
     .select("store_id, demo_balance, demo_expires_at, demo_cycle_id, origin_demo_grant_tx_id")
@@ -67,5 +76,13 @@ export async function GET(request: NextRequest) {
     await processClaimedEmail(claimed);
     emails += 1;
   }
-  return NextResponse.json({ ok: true, materialized, repaired, emails });
+  return NextResponse.json({
+    ok: true,
+    materialized,
+    repaired,
+    emails,
+    trialOffer: trialOfferError
+      ? { error: "trial_offer_processing_failed" }
+      : (trialOfferData ?? { granted: 0, skipped: 0, errors: 0 }),
+  });
 }

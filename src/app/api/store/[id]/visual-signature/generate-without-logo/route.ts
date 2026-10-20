@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
+import { maybeCompleteOnboardingAndStartTrial } from '@/lib/credit/trial-offer/completion';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { getLaunchConfig } from '@/lib/launch-config/config';
@@ -553,11 +554,13 @@ export const POST = apiHandler(async (
     }
 
     console.log(`[generate-without-logo][req-${reqId}] enviando response success`);
+    const trialOffer = await maybeCompleteOnboardingAndStartTrial(id);
     return NextResponse.json({
       success: true,
       assetUrl: result.assetUrl,
       signatureId: result.signature.id,
       artDirectorOutput: result.artDirectorOutput,
+      trialOffer,
     });
   }
 

@@ -46,6 +46,25 @@ export class CreditService {
     return data?.origin_demo_grant_tx_id ?? null;
   }
 
+  async getTrialOfferEnrollment(storeId: string): Promise<TrialOfferEnrollment | null> {
+    const { data, error } = await supabaseAdmin
+      .from("trial_offer_enrollments")
+      .select("id, started_at, expires_at, granted_total, last_granted_seq")
+      .eq("store_id", storeId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return {
+      id: data.id as string,
+      startedAt: data.started_at as string,
+      expiresAt: data.expires_at as string,
+      grantedTotal: Number(data.granted_total ?? 0),
+      lastGrantedSeq: Number(data.last_granted_seq ?? -1),
+    };
+  }
+
   async reserveCredit(
     storeId: string,
     amount: number,
@@ -157,6 +176,14 @@ export interface CreditBalanceBreakdown {
   bonusBalance: number;
   purchasedBalance: number;
   availableBalance: number;
+}
+
+export interface TrialOfferEnrollment {
+  id: string;
+  startedAt: string;
+  expiresAt: string;
+  grantedTotal: number;
+  lastGrantedSeq: number;
 }
 
 function availableBalance(row: {

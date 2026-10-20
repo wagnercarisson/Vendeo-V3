@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { getLaunchConfig } from "@/lib/launch-config/config";
+import { maybeCompleteOnboardingAndStartTrial } from "@/lib/credit/trial-offer/completion";
 
 export const POST = apiHandler(async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const admin = await requireAdmin();
@@ -23,8 +24,10 @@ export const POST = apiHandler(async (_request: NextRequest, { params }: { param
   }
 
   const result = data as Record<string, unknown>;
+  const trialOffer = await maybeCompleteOnboardingAndStartTrial(id);
   return NextResponse.json({
     success: true,
     onboardingGranted: result.onboardingGranted ?? false,
+    trialOffer,
   });
 });

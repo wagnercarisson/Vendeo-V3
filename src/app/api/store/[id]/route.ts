@@ -6,6 +6,7 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { buildStoreResponse } from "@/lib/store-response";
 import { STORE_SUBSEGMENTS } from "@/lib/constants";
+import { maybeCompleteOnboardingAndStartTrial } from "@/lib/credit/trial-offer/completion";
 
 const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "comércio", "varejo"];
 
@@ -236,7 +237,9 @@ export const PATCH = apiHandler(async (
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data, { status: 200 });
+    const trialOffer = await maybeCompleteOnboardingAndStartTrial(id);
+
+    return NextResponse.json({ ...(data as Record<string, unknown>), trialOffer }, { status: 200 });
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -8,6 +8,7 @@ import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
+import { maybeCompleteOnboardingAndStartTrial } from '@/lib/credit/trial-offer/completion';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -214,8 +215,10 @@ export const POST = apiHandler(async (
     }
 
     inferenceLocks.delete(id);
+    const trialOffer = await maybeCompleteOnboardingAndStartTrial(id);
     return NextResponse.json({
       success: true,
+      trialOffer,
       profile: {
         id: profile.id,
         status: profile.status,

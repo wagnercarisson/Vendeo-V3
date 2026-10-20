@@ -41,14 +41,16 @@ export default async function ContaPage({
 
   let balance = 0;
   let breakdown: import("@/lib/credit/credit-service").CreditBalanceBreakdown | null = null;
+  let trialOfferEnrollment: import("@/lib/credit/credit-service").TrialOfferEnrollment | null = null;
   let history: import("@/lib/credit/types").CreditTransaction[] = [];
   let totalItems = 0;
   let creditError = false;
 
   if (store) {
     try {
-      [breakdown, history, totalItems] = await Promise.all([
+      [breakdown, trialOfferEnrollment, history, totalItems] = await Promise.all([
         creditService.getBalanceBreakdown(store.id),
+        creditService.getTrialOfferEnrollment(store.id),
         creditService.getHistory(store.id, LIMIT, offset),
         creditService.countCreditTransactions(store.id),
       ]);
@@ -109,6 +111,7 @@ export default async function ContaPage({
                   demoBalance={breakdown?.demoBalance}
                   demoExpiresAt={breakdown?.demoExpiresAt}
                   originDemoGrantTxId={breakdown?.originDemoGrantTxId}
+                  trialOfferEnrollment={trialOfferEnrollment}
                   hasStore={true}
                   supportEmail={supportEmail}
                 />

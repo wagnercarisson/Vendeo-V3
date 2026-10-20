@@ -4,6 +4,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
+import { maybeCompleteOnboardingAndStartTrial } from '@/lib/credit/trial-offer/completion';
 import {
   validateImage,
   getImageDimensions,
@@ -452,11 +453,14 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
     return { ...asset, signed_url: data?.signedUrl ?? null };
   }));
 
+  const trialOffer = await maybeCompleteOnboardingAndStartTrial(storeId);
+
   return NextResponse.json({
     originalAsset: signedAssets[0],
     variants: signedAssets.slice(1),
     profile: createdProfile,
     version: nextVersion,
+    trialOffer,
   }, { status: 201 });
 }
 

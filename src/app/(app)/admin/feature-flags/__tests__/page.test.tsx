@@ -42,6 +42,20 @@ function mockFlags(featureFlags: unknown[]) {
         })),
       };
     }
+    if (table === "trial_offer_settings") {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn(() =>
+              Promise.resolve({
+                data: { enabled: false, launch_at: null },
+                error: null,
+              }),
+            ),
+          })),
+        })),
+      };
+    }
     return {};
   });
 }

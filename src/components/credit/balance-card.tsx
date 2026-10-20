@@ -7,6 +7,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCredits } from "@/lib/credit/format";
 import { getDemoStatus, formatRelativeExpiry } from "@/lib/credit/demo-status";
 import {
+  getNextTrialInstallment,
+  getTrialOfferStatus,
+  isTrialOfferRefundGrace,
+} from "@/lib/credit/trial-offer/status";
+import type {
+  TrialOfferEnrollmentView,
+} from "@/lib/credit/trial-offer/status";
+import {
   useOperationCosts,
   type OperationCostsMap,
   type UseOperationCostsStatus,
@@ -23,6 +31,7 @@ interface BalanceCardProps {
   demoBalance?: number;
   demoExpiresAt?: string | null;
   originDemoGrantTxId?: string | null;
+  trialOfferEnrollment?: TrialOfferEnrollmentView | null;
 }
 
 function getState(balance: number, hasStore: boolean) {
@@ -87,7 +96,7 @@ function ReadyContent(props: BalanceCardProps) {
           Você ainda não tem uma loja
         </p>
         <p className="text-sm text-text-muted font-body">
-          Crie sua loja para começar a gerar campanhas e ganhar 10 créditos gratuitos.
+          Crie sua loja para começar a gerar campanhas e liberar o teste gratuito ao concluir o onboarding.
         </p>
         <Link
           href="/loja"
@@ -105,6 +114,29 @@ function ReadyContent(props: BalanceCardProps) {
     demoExpiresAt: props.demoExpiresAt ?? null,
     originDemoGrantTxId: props.originDemoGrantTxId,
   });
+  const trialStatus = getTrialOfferStatus({
+    enrollment: props.trialOfferEnrollment ?? null,
+    demoBalance: props.demoBalance ?? 0,
+    demoExpiresAt: props.demoExpiresAt ?? null,
+    hasLegacyDemo: Boolean(props.originDemoGrantTxId) && !props.trialOfferEnrollment,
+  });
+  const nextInstallment = getNextTrialInstallment(
+    props.trialOfferEnrollment ?? null,
+  );
+  const graceRefund = isTrialOfferRefundGrace({
+    enrollment: props.trialOfferEnrollment ?? null,
+    demoBalance: props.demoBalance ?? 0,
+    demoExpiresAt: props.demoExpiresAt ?? null,
+  });
+  const trialStatusLabel = {
+    not_started: "Teste gratuito: começa ao concluir o onboarding",
+    active: "Teste gratuito de 28 dias ativo",
+    expiring_soon: "Teste gratuito: expira em breve",
+    exhausted: "Teste gratuito esgotado",
+    expired: "Teste gratuito encerrado",
+    legacy_demo: "Demonstração legada",
+    none: "Teste gratuito: não iniciado",
+  }[trialStatus];
 
   const stateConfig = {
     normal: {
@@ -137,8 +169,32 @@ function ReadyContent(props: BalanceCardProps) {
         {availableBalance}
       </p>
       <div className="space-y-1 text-sm text-text-secondary font-body" aria-label="Status da demonstração">
-        <p>{({ active: "Demonstração ativa", expiring_soon: "Expira em breve", exhausted: "Demonstração esgotada", expired: "Demonstração encerrada", none: "Demonstração não iniciada" } as const)[demoStatus]}</p>
-        {props.demoExpiresAt && (demoStatus === "active" || demoStatus === "expiring_soon") && (
+        {(!props.trialOfferEnrollment || trialStatus === "legacy_demo") && (
+          <p>{({ active: "Demonstração ativa", expiring_soon: "Expira em breve", exhausted: "Demonstração esgotada", expired: "Demonstração encerrada", none: "Demonstração não iniciada" } as const)[demoStatus]}</p>
+        )}
+        <p>{trialStatusLabel}</p>
+        {props.trialOfferEnrollment && trialStatus !== "expired" && (
+          <p>
+            Vence em{" "}
+            {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(props.trialOfferEnrollment.expiresAt))}
+            {" · "}
+            {formatRelativeExpiry(props.trialOfferEnrollment.expiresAt)}
+          </p>
+        )}
+        {nextInstallment && (
+          <p>
+            Próxima parcela: dia {nextInstallment.seq * 7} — elegível em{" "}
+            {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(nextInstallment.dueAt))}
+            ; pode ser creditada na execução diária seguinte.
+          </p>
+        )}
+        {graceRefund && props.demoExpiresAt && (
+          <p className="text-accent-amber">
+            Crédito estornado disponível por 24h — válido até{" "}
+            {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(props.demoExpiresAt))}.
+          </p>
+        )}
+        {props.demoExpiresAt && (!props.trialOfferEnrollment || trialStatus === "legacy_demo") && (demoStatus === "active" || demoStatus === "expiring_soon") && (
           <p>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(props.demoExpiresAt))} · {formatRelativeExpiry(props.demoExpiresAt)}</p>
         )}
         {demoStatus === "expired" && availableBalance > 0 && <p>Há saldo utilizável além da demonstração.</p>}

@@ -14,6 +14,7 @@ import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
 import { z } from "zod";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { evaluateFreemiumEligibility } from "@/lib/freemium/freemium-risk-service";
+import { maybeCompleteOnboardingAndStartTrial } from "@/lib/credit/trial-offer/completion";
 
 const UpdateCnpjSchema = z.object({
   storeId: z.string().uuid(),
@@ -198,7 +199,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, store: data });
+    const trialOffer = await maybeCompleteOnboardingAndStartTrial(store.id);
+
+    return NextResponse.json({ success: true, store: data, trialOffer });
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

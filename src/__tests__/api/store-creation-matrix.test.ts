@@ -142,6 +142,9 @@ describe("POST /api/store — modo verified/fiscal (com CNPJ)", () => {
     let capturedName = "";
     let capturedParams: Record<string, unknown> = {};
     mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
+      if (rpcName === "record_onboarding_completion" || rpcName === "start_trial_offer_enrollment") {
+        return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+      }
       capturedName = rpcName;
       capturedParams = params;
       return Promise.resolve({
@@ -194,6 +197,9 @@ describe("POST /api/store — modo draft (sem CNPJ)", () => {
     let capturedName = "";
     let capturedParams: Record<string, unknown> = {};
     mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
+      if (rpcName === "record_onboarding_completion" || rpcName === "start_trial_offer_enrollment") {
+        return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+      }
       capturedName = rpcName;
       capturedParams = params;
       return Promise.resolve({
@@ -321,6 +327,9 @@ describe("POST /api/store — ownership (body user_id ignorado)", () => {
     let capturedName = "";
     let capturedParams: Record<string, unknown> = {};
     mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
+      if (rpcName === "record_onboarding_completion" || rpcName === "start_trial_offer_enrollment") {
+        return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+      }
       capturedName = rpcName;
       capturedParams = params;
       return Promise.resolve({

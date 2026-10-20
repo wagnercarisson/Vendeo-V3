@@ -17,12 +17,32 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | F44.1.1, F45–F49: temas, direção de arte, gateway, catálogo, laboratório e orientação | `.planning/phases/44-*` a `.planning/phases/49-*`, summaries/verificações e OpenSpec arquivado |
 | F50: demonstração gratuita e validade dos créditos | `.planning/phases/50-demonstracao-gratuita-validade-creditos/`, `50-VERIFICATION.md`, summaries e `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/` |
 | F50.1: formalização legal e ativação | Futura; fonte de planejamento será um novo plano/OpenSpec quando a fase for formalmente constituída |
+| F50.2: oferta de teste gratuito de 28 dias | Planejada; 3 planos em `.planning/phases/50.2-oferta-teste-gratuito-28-dias/`; fonte ativa `openspec/changes/oferta-teste-gratuito-28-dias/` |
 | F56.1: contrato produtivo, modelos e fallback | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` |
 | F56.2a: preparação não operacional do Produto 1:1 | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/` |
 | F56.2b1a: fundação inativa do Produto 1:1 | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1/` |
 | F56.2b1b: núcleo entregável do Produto 1:1 | Cobertura concluída; concluída/verificada/sincronizada/arquivada em 2026-10-12; fonte arquivada `openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/` |
 | F56.2b2a (B2.1): recuperação de copy do Produto 1:1 | Cobertura concluída; concluída/verificada/sincronizada/arquivada em 2026-10-15 (46/46 tasks); fonte arquivada `openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/` |
 | Monetização pública / Stripe | Iniciativa diferida para v1.7+, fora da numeração e sem requisitos ativos |
+
+## F50.2 — Planejada (Oferta de teste gratuito de 28 dias)
+
+**Fonte ativa:** `openspec/changes/oferta-teste-gratuito-28-dias/` (proposal, design, 4 specs, tasks; `validate --strict` valid). **Planos:** `50.2-01..03` em `.planning/phases/50.2-oferta-teste-gratuito-28-dias/`. **Status:** planejada, não executada; nenhuma aplicação em produção. Token `50.2` porque `50.1` está reservada à formalização legal/PJ.
+
+| REQ-ID | Cobertura | Plano |
+|---|---|---|
+| REQ-50.2-01 | Chave `enabled` + `launch_at` imutável na primeira ativação; auditoria existente | 01 |
+| REQ-50.2-02 | Elegibilidade por `auth.users.created_at`, raiz, loja de teste e benefício anterior | 01 |
+| REQ-50.2-03 | Enrollment por beneficiário; unicidade por raiz/loja; início/vencimento/oferta | 01 |
+| REQ-50.2-04 | Conclusão do onboarding; readiness; `onboarding_completed_at`; rotas reais | 01/02 |
+| REQ-50.2-05 | Falha repetível (`retryable_failure`), distinção antes/depois da conclusão, janela vencida | 01/02/03 |
+| REQ-50.2-06 | Quatro concessões fixas de 5; máximo 20; intervalos de 24h | 01 |
+| REQ-50.2-07 | Episódio demo compartilhado; origem/ciclo/vencimento/contribuintes | 01 |
+| REQ-50.2-08 | Idempotência, concorrência, recuperação e cron existente | 01/02/03 |
+| REQ-50.2-09 | Expiração, estorno, graça de 24h e preservação de comprados/bônus | 01/03 |
+| REQ-50.2-10 | Precedência com demo legada; chave desligada sem fallback | 01/03 |
+| REQ-50.2-11 | Exclusão mensal permanente por enrollment; legado intacto | 01/03 |
+| REQ-50.2-12 | UI/status/próxima parcela/cron diário/retry/pós-teste | 02/03 |
 
 ## F56.1 — Cobertura concluída (Contrato produtivo, modelos e fallback)
 

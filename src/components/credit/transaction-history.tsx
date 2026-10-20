@@ -21,6 +21,21 @@ function formatValue(type: string, amount: number): string {
   return `${prefix}${Math.abs(amount)}`;
 }
 
+function getTransactionLabel(tx: CreditTransaction): string {
+  const metadata = (tx.metadata ?? {}) as Record<string, unknown>;
+  const program = metadata.credit_program;
+  if (program === "trial_28d") {
+    if (tx.type === "demo") {
+      const seq = Number(metadata.installment_seq);
+      return Number.isFinite(seq)
+        ? `Teste gratuito — parcela ${seq + 1}/4`
+        : "Teste gratuito";
+    }
+    if (tx.type === "expiration") return "Expiração do teste";
+  }
+  return getLabel(CREDIT_TYPE_LABELS, tx.type);
+}
+
 export function TransactionHistory({
   transactions,
   totalPages,
@@ -78,7 +93,7 @@ export function TransactionHistory({
                     <Badge
                       variant={CREDIT_TYPE_BADGE[tx.type] ?? "default"}
                     >
-                      {getLabel(CREDIT_TYPE_LABELS, tx.type)}
+                      {getTransactionLabel(tx)}
                     </Badge>
                   </td>
                   <td className="py-3 pr-4 text-text-primary font-body tabular-nums">
@@ -105,7 +120,7 @@ export function TransactionHistory({
               <div key={tx.id} className="rounded-lg border border-border bg-bg-surface p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <Badge variant={CREDIT_TYPE_BADGE[tx.type] ?? "default"}>
-                    {getLabel(CREDIT_TYPE_LABELS, tx.type)}
+                    {getTransactionLabel(tx)}
                   </Badge>
                   <span className="text-sm font-semibold tabular-nums text-text-primary">
                     {formatValue(tx.type, tx.amount)}

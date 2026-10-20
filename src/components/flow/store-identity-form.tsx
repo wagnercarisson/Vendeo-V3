@@ -50,6 +50,8 @@ import { useOnboardingTabs } from "@/hooks/use-onboarding-tabs";
 import { ONBOARDING_TABS } from "@/lib/store-onboarding/tabs";
 import { restoreDraft } from "@/lib/store-onboarding/draft-store";
 import type { StoreReadinessResult } from "@/lib/store-readiness";
+import { TrialOfferRetry } from "@/components/credit/trial-offer-retry";
+import type { TrialOfferOutcome } from "./use-store-form";
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -160,6 +162,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false);
   const [driftRefreshKey, setDriftRefreshKey] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
+  const [trialOffer, setTrialOffer] = useState<TrialOfferOutcome | null>(null);
   const [existingLegalOk, setExistingLegalOk] = useState(true);
   const [legalCheckLoading, setLegalCheckLoading] = useState(true);
   const [showContractModal, setShowContractModal] = useState(false);
@@ -1193,6 +1196,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
     const saved = await save(acceptedTerms || undefined);
     if (saved && "storeId" in saved) {
+      setTrialOffer(saved.trialOffer ?? null);
       // F36 (D1/D8): cadastro_fiscal pendente NÃO bloqueia navegação — apenas geração.
       setDriftRefreshKey(k => k + 1);
       // MD-03: refetch readiness após save (cobre update-cnpj draft→fiscal).
@@ -1751,6 +1755,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               <AlertCircle className="w-5 h-5 text-accent-red shrink-0 mt-0.5" />
               <p className="text-accent-red text-sm font-body flex-1">{formError}</p>
             </div>
+          )}
+
+          {trialOffer && (
+            <TrialOfferRetry status={trialOffer.status} />
           )}
 
           {/* Billing card */}

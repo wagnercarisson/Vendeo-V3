@@ -18,6 +18,7 @@ import { BrasilApiProvider } from "@/lib/cnpj/lookup-providers/brasil-api";
 import { CnpjaProvider } from "@/lib/cnpj/lookup-providers/cnpja";
 import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
 import { evaluateFreemiumEligibility } from "@/lib/freemium/freemium-risk-service";
+import { maybeCompleteOnboardingAndStartTrial } from "@/lib/credit/trial-offer/completion";
 
 const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "com\u00e9rcio", "varejo"];
 
@@ -300,12 +301,15 @@ export const POST = apiHandler(async (request: NextRequest) => {
       );
     }
 
+    const trialOffer = await maybeCompleteOnboardingAndStartTrial(String((rpcStore as Record<string, unknown>).id));
+
     const responseData = {
       ...(rpcStore as Record<string, unknown>),
       cnpjMasked,
       onboardingGranted: rpcData.onboardingGranted ?? false,
       verificationStatus: rpcData.verificationStatus ?? verificationStatus,
       message: userMessage,
+      trialOffer,
     };
 
     return NextResponse.json(responseData, { status: 201 });
@@ -357,8 +361,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
       );
     }
 
+    const trialOffer = await maybeCompleteOnboardingAndStartTrial(String((draftRpcStore as Record<string, unknown>).id));
+
     return NextResponse.json(
-      { ...(draftRpcStore as Record<string, unknown>), onboardingGranted: draftRpcData.onboardingGranted ?? false },
+      { ...(draftRpcStore as Record<string, unknown>), onboardingGranted: draftRpcData.onboardingGranted ?? false, trialOffer },
       { status: 201 }
     );
   } catch (error) {

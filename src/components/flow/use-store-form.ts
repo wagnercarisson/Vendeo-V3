@@ -34,10 +34,22 @@ export type FormMode = "create" | "edit";
 /** Estado do auto-save (F36 D4) — badge "Não salvo"/"Salva ✓" na UI da 36-04. */
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+export type TrialOfferOutcome = {
+  status:
+    | "started"
+    | "existing"
+    | "not_ready"
+    | "offer_disabled"
+    | "not_eligible"
+    | "expired_window"
+    | "retryable_failure";
+  reason?: string;
+};
+
 export interface UseStoreFormReturn {
   formData: FormData;
   setField: (field: keyof FormData, value: string) => void;
-  save: (acceptedTerms?: boolean) => Promise<{ storeId: string } | { error: string; code?: string } | void>;
+  save: (acceptedTerms?: boolean) => Promise<{ storeId: string; trialOffer?: TrialOfferOutcome } | { error: string; code?: string } | void>;
   /**
    * F36 D4/D15 — auto-save silencioso (sem toast; feedback via `saveStatus`).
    * - storeId existe → PATCH silencioso em /api/store/${storeId} (falha NÃO bloqueia navegação)
@@ -331,7 +343,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
           setHasExistingCnpj(true);
           setSaveStatus("saved");
           setSuccessMessage("Loja salva. Agora configure a direção visual.");
-          return { storeId };
+          return { storeId, trialOffer: saved.trialOffer as TrialOfferOutcome | undefined };
         } else if (!saved.id || typeof saved.id !== "string") {
           setError("Loja salva, mas resposta não retornou o ID da loja.");
           setSaveStatus("error");
@@ -341,7 +353,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       }
 
       setSaveStatus("saved");
-      return { storeId: saved.id as string };
+      return { storeId: saved.id as string, trialOffer: saved.trialOffer as TrialOfferOutcome | undefined };
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao salvar";
       setError(msg);
