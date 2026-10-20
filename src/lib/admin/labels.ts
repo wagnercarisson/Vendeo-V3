@@ -10,6 +10,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   reveal_cnpj: "Revelar CNPJ",
   access_request_approve: "Aprovar Solicitação de Acesso",
   access_request_reject: "Recusar Solicitação de Acesso",
+  access_request_invite: "Convite de Acesso ao Beta",
   feature_flag_update: "Atualização de controle operacional",
   operation_cost_update: "Atualização de custo operacional",
   ai_model_selection_update: "Atualização de seleção de modelo IA",

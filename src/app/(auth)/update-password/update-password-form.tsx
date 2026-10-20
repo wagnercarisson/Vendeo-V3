@@ -11,7 +11,7 @@ export function UpdatePasswordForm() {
   const [loading, setLoading] = useState(false);
 
   function validate(password: string, confirm: string): string | null {
-    if (password.length < 6) return "A senha deve ter no mínimo 6 caracteres";
+    if (password.length < 8) return "A senha deve ter no mínimo 8 caracteres";
     if (password !== confirm) return "As senhas não conferem";
     return null;
   }
@@ -41,7 +41,7 @@ export function UpdatePasswordForm() {
         return;
       }
 
-      router.replace("/");
+      router.replace("/dashboard");
     } catch {
       setError("Não foi possível atualizar a senha. Tente novamente.");
     } finally {
@@ -63,7 +63,7 @@ export function UpdatePasswordForm() {
             type="password"
             autoComplete="new-password"
             required
-            minLength={6}
+            minLength={8}
             className="w-full rounded-lg border border-slate-600 bg-slate-800 py-3 pl-10 pr-3 text-slate-50 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             style={{ minHeight: "44px" }}
           />

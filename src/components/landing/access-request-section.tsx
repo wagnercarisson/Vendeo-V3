@@ -87,8 +87,9 @@ export function AccessRequestSection({
                   Solicitação enviada
                 </h2>
                 <p className="mt-2 text-sm text-text-secondary">
-                  Recebemos sua solicitação. A liberação é por convite — vamos
-                  analisar seu pedido. Em breve entraremos em contato.
+                  Recebemos sua solicitação. Vamos analisar seu pedido e, se aprovado,
+                  você receberá um convite por e-mail no endereço informado. Verifique
+                  também a caixa de spam.
                 </p>
               </div>
             ) : (

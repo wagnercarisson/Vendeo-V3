@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { sendAccessInvite } from "@/lib/access-requests/invite";
 
 const ReviewSchema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -12,7 +13,8 @@ const ReviewSchema = z.object({
 
 // POST /api/admin/access-requests/[id]
 // Muda o status via RPC atômico admin_review_access_request (status + admin_audit_log
-// na mesma transação). A rota NÃO insere em admin_audit_log diretamente.
+// na mesma transação). A rota NÃO insere em admin_audit_log diretamente para a revisão.
+// Após aprovar, dispara o convite; falha de convite NÃO desfaz a aprovação.
 export const POST = apiHandler(
   async (
     request: NextRequest,
@@ -61,9 +63,34 @@ export const POST = apiHandler(
       );
     }
 
+    if (action === "reject") {
+      return NextResponse.json({ success: true, status: "rejected" });
+    }
+
+    // A aprovação já está persistida e auditada. O convite é um passo separado,
+    // com estado próprio (enviado/falhou), reenviável sem reaprovar.
+    let invite: Awaited<ReturnType<typeof sendAccessInvite>>["outcome"] | null = null;
+    try {
+      const result = await sendAccessInvite({
+        requestId: id,
+        actorId: admin.userId,
+        trigger: "approve",
+      });
+      invite = result.outcome;
+    } catch (inviteError) {
+      console.error("access invite dispatch error:", inviteError);
+      invite = {
+        status: "failed",
+        providerMessageId: null,
+        sentAt: null,
+        error: "invite_dispatch_failed",
+      };
+    }
+
     return NextResponse.json({
       success: true,
-      status: action === "approve" ? "approved" : "rejected",
+      status: "approved",
+      invite,
     });
   },
 );

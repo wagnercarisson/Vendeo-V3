@@ -30,5 +30,9 @@
 
 | Variável | Obrigatória | Default | Descrição | Exemplo |
 |----------|-------------|---------|-----------|---------|
-| `SUPPORT_EMAIL` | Não | — | Email de suporte para CTAs de crédito | `suporte@exemplo.com` |
+| `SUPPORT_EMAIL` | Não | — | Email de suporte para CTAs de crédito e orientação de convite | `suporte@exemplo.com` |
 | `VENDEO_USD_BRL_RATE` | Não | `5.50` | Taxa de conversão USD→BRL para dashboard | `5.50` |
+| `NEXT_PUBLIC_SITE_URL` | Sim | — | URL pública do app; base do link de convite e dos redirects de auth | `https://vendeo.tech` |
+| `VENDEO_EMAIL_ENABLED` | Não | `false` | Habilita envio de e-mail pelo app (convite do beta e notificações) | `true` |
+| `RESEND_API_KEY` | Não | — | Chave da API Resend (backend apenas) | `re_...` |
+| `VENDEO_EMAIL_FROM` | Não | `noreply@vendeo.tech` | Remetente verificado no Resend | `noreply@vendeo.tech` |

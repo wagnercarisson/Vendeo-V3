@@ -28,6 +28,24 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
   rejected: "text-accent-red",
 };
 
+const INVITE_STATUS_LABELS: Record<string, string> = {
+  not_sent: "Não enviado",
+  sending: "Enviando…",
+  sent: "Enviado ao provedor",
+  failed: "Falhou",
+  unconfirmed: "Não confirmado",
+  account_active: "Conta já ativa",
+};
+
+const INVITE_BADGE_CLASSES: Record<string, string> = {
+  not_sent: "text-text-muted",
+  sending: "text-accent-amber",
+  sent: "text-accent-green",
+  failed: "text-accent-red",
+  unconfirmed: "text-accent-amber",
+  account_active: "text-accent-blue",
+};
+
 const SEGMENT_LABELS: Record<string, string> = Object.fromEntries(
   STORE_SEGMENTS.map((segment) => [segment.value, segment.label]),
 );
@@ -77,8 +95,8 @@ export default async function AdminAccessRequestsPage({
         Solicitações de acesso
       </h1>
       <p className="mb-6 text-sm text-text-secondary">
-        Pedidos de acesso free da landing pública — aprovação/recusa registrada
-        no histórico de auditoria.
+        Pedidos de acesso free da landing pública. Aprovar dispara o convite por
+        e-mail; o status do envio e o reenvio ficam registrados na auditoria.
       </p>
 
       <div className="mb-6 flex gap-1 border-b">
@@ -123,6 +141,7 @@ export default async function AdminAccessRequestsPage({
                   <th className="px-2 py-3 text-left font-heading font-semibold">Fonte</th>
                   <th className="px-2 py-3 text-left font-heading font-semibold">Criado em</th>
                   <th className="px-2 py-3 text-left font-heading font-semibold">Status</th>
+                  <th className="px-2 py-3 text-left font-heading font-semibold">Convite</th>
                   <th className="px-2 py-3 text-left font-heading font-semibold">Ações</th>
                 </tr>
               </thead>
@@ -161,9 +180,26 @@ export default async function AdminAccessRequestsPage({
                       </span>
                     </td>
                     <td className="px-2 py-3">
+                      <span
+                        title={(request.invite_error as string) || undefined}
+                        className={`inline-flex items-center rounded-full bg-bg-elevated px-2 py-0.5 font-heading text-[10px] font-medium ${
+                          INVITE_BADGE_CLASSES[request.invite_status as string] ?? ""
+                        }`}
+                      >
+                        {INVITE_STATUS_LABELS[request.invite_status as string] ?? "Não enviado"}
+                      </span>
+                      {request.invite_sent_at ? (
+                        <span className="mt-1 block text-[10px] text-text-muted">
+                          {formatDateTimeBR(request.invite_sent_at as string)}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-2 py-3">
                       <AccessRequestActions
                         requestId={request.id as string}
                         status={request.status as string}
+                        inviteStatus={(request.invite_status as string) ?? "not_sent"}
+                        inviteError={(request.invite_error as string) ?? null}
                       />
                     </td>
                   </tr>
