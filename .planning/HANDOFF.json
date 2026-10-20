@@ -4,16 +4,16 @@
   "current_phase": {
     "phase": "56.2.7",
     "functional_label": "Abertura gradual do Produto 1:1 com Luna (all_stores ativo; monitoramento de 7 dias transferido)",
-    "updated_at": "2026-10-19",
-    "status": "implementation_verified_monitoring_transferred_in_progress_openspec_sync_archive_pending",
+    "updated_at": "2026-10-20",
+    "status": "archived_monitoring_transferred_in_progress",
     "plan_count": "7/7",
     "summary_count": "6/7 (plano 07 sem SUMMARY; entrega concluída, monitoramento transferido)",
     "openspec_change": "fase-56-2-7-abertura-gradual-produto-1-1-luna (ATIVA; sync/archive pendentes)",
-    "openspec_tasks": "35/38; 5.5 monitoramento transferido e aberto; 6.3 sincronização preparada; 6.4 verify/sync/archive pendentes",
+    "openspec_tasks": "37/38; 5.5 monitoramento transferido e aberto; 6.3/6.4 executados",
     "verification": {
       "artifact": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-OPENSPEC-VERIFICATION.md",
-      "status": "implementation_verified_with_lifecycle_followups",
-      "archive_ready": false,
+      "status": "archived_monitoring_in_progress",
+      "archive_ready": true,
       "score": "21/21 requirements; 89/89 scenarios",
       "note": "OpenSpec verification already executed. Sync/archive are next lifecycle steps, not implementation defects."
     },
@@ -28,11 +28,21 @@
     },
     "openspec_lifecycle": {
       "verified": true,
-      "synced": false,
-      "archived": false,
-      "status": "verification_complete_sync_archive_pending",
+      "synced": true,
+      "archived": true,
+      "status": "done",
       "sync_preparation": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
-      "note": "Apply the historical reconciliation note during sync; do not rewrite 56.2.6 evidence or DEFERRED.md. Archive may proceed with task 5.5 transferred and open by explicit decision; monitoring continues after archive."
+      "note": "2026-10-20: verify -> sync -> archive. 5.3/5.7 proven in 56.2.7 while preserving the 56.2.6 deferral record. Task 5.5 remains open and transferred; monitoring continues after archive.",
+      "archive_path": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna",
+      "synced_specs": [
+        "product-1-1-controlled-real-test-authorization (updated)",
+        "product-1-1-flow-activation (updated)",
+        "product-1-1-hosted-pilot (updated)",
+        "product-1-1-gradual-opening (created)",
+        "product-1-1-generation-orchestration (historical note reconciled)"
+      ],
+      "tasks": "37/38 (5.5 aberta e transferida)",
+      "archive_date": "2026-10-20"
     },
     "operational_snapshot": {
       "captured_at": "2026-10-19",
@@ -79,11 +89,18 @@
       ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
       ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-EVIDENCE.md",
       ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-ACCEPTANCE.md",
-      "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md"
+      "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md",
+      "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/tasks.md",
+      "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/MONITORING.md"
     ],
-    "next_action": "Run sync/archive after final review; keep 5.5 open and monitored until 2026-10-26."
+    "next_action": "Keep 5.5 open and monitor until 2026-10-26 23:59 BRT; no new phase, generation, operational change or deploy.",
+    "archive": {
+      "path": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna",
+      "monitoring_pointer": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/MONITORING.md",
+      "archived_at": "2026-10-20"
+    }
   },
-  "timestamp": "2026-10-19",
+  "timestamp": "2026-10-20",
   "phase": "56.1",
   "phase_name": "contrato-produtivo-modelos-e-fallback",
   "phase_dir": ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback",
@@ -119,9 +136,9 @@
     "evidence_check": "GSD verify-work 10/10 PASS; UAT humano local aprovado na instancia isolada vendeo-f561-isolated; 55/55 tasks OpenSpec.",
     "next_action": "Nenhuma acao GSD pendente. Lifecycle OpenSpec concluido em 2026-10-06."
   },
-  "next_phase": "56.2.7 - concluir monitoramento e lifecycle OpenSpec",
-  "next_phase_started": true,
-  "next_phase_note": "F56.2.7 com implementação verificada e all_stores ativo. A entrega está concluída; o monitoramento de 7 dias foi transferido e permanece em andamento até 2026-10-26 23:59 BRT. Sync/archive são os próximos passos do lifecycle, após a revisão final. 56.2.6 permanece arquivada e preservada.",
+  "next_phase": "Nenhuma nova fase; apenas monitoramento 5.5 pós-archive",
+  "next_phase_started": false,
+  "next_phase_note": "F56.2.7 arquivada em 2026-10-20. A entrega esta concluida; a task 5.5 permanece aberta e transferida, com monitoramento ate 2026-10-26 23:59 BRT. O fluxo all_stores permanece ativo com as configuracoes aprovadas. Sem novas geracoes, alteracoes operacionais ou deploy.",
   "planning_review": {
     "phase": "56.1",
     "plans": [

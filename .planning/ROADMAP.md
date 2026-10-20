@@ -474,7 +474,7 @@ Plans:
 
 ### Phase 56.2.7: Abertura gradual do Produto 1:1 com Luna
 
-**Status:** **EM EXECUÇÃO — PLANOS 01–06 CONCLUÍDOS; 07 COM MONITORAMENTO TRANSFERIDO E SYNC/ARCHIVE PENDENTES; CHANGELOG PUBLICADO; ABERTURA GERAL ATIVA (2026-10-19).** OpenSpec `fase-56-2-7-abertura-gradual-produto-1-1-luna` publicada, Luna validado e 5.3/5.7 comprovados; `all_stores` ativo e monitorado.
+**Status:** **ARQUIVADA EM 2026-10-20 — PLANOS 01–06 CONCLUÍDOS; 07 CONCLUÍDO COM MONITORAMENTO TRANSFERIDO; CHANGELOG PUBLICADO; ABERTURA GERAL ATIVA; 5.5 ABERTA (37/38 TASKS).** OpenSpec `fase-56-2-7-abertura-gradual-produto-1-1-luna` arquivada em `openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/`; Luna validado e 5.3/5.7 comprovados; `all_stores` ativo e monitorado.
 
 **Goal:** concluir a adoÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna (`campaign_copy`, `brand_profile_text`, `brand_profile_vision`) e permitir a abertura gradual do Produto 1:1 pelos trÃƒÆ’Ã‚Âªs estados (OFF, lojas de teste, todas as lojas), com `all_stores` ampliado de forma mÃƒÆ’Ã‚Â­nima, aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o administrativa atÃƒÆ’Ã‚Â´mica/auditada, provas hospedadas 5.3/5.7 e trÃƒÆ’Ã‚Âªs checkpoints humanos. A ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/desligamento nÃƒÆ’Ã‚Â£o exige SQL manual nem novo deploy.
 
@@ -491,7 +491,7 @@ Plans:
 - [x] 56.2.7-04-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Observabilidade de Luna, runbook, harness 5.3/5.7 e gates/revisÃƒÆ’Ã‚Â£o.
 - [x] 56.2.7-05-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Checkpoint 1: publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o com fluxo OFF (humano).
 - [x] 56.2.7-06-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Checkpoint 2: configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna, janela paga, 5.3/5.7 e encerramento (humano).
-- [ ] 56.2.7-07-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Aceite, Checkpoint 3, ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o `all_stores`, monitoramento, desligamento e consolidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (humano).
+- [x] 56.2.7-07-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Aceite, Checkpoint 3, ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o `all_stores`, monitoramento, desligamento e consolidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (humano).
 
 **Waves:** `01 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ 02/03 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ 04 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ 05 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ 06 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ 07`. Checkpoints humanos bloqueantes: publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, janela paga e abertura geral.
 

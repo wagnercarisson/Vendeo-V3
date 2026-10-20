@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Piloto hospedado do Produto 1:1 restrito a lojas de teste: publicação com fluxo OFF, backup verificável, conjunto exato de migrations, deploy/configuração com não regressão do legado, provas hospedadas mínimas, orçamento de tempo, piloto manual N=1 com monitoramento/parada/desligamento e separação explícita da abertura geral. O N=1 é uma etapa da liberação, não a promoção geral.
+Piloto hospedado do Produto 1:1 restrito a lojas de teste: publicação com fluxo OFF, backup verificável, conjunto exato de migrations, deploy/configuração sem regressão do legado, provas hospedadas mínimas, piloto N=1 e separação da abertura geral. A abertura geral foi autorizada na 56.2.7 e permanece sob monitoramento transferido.
 
 ## Requirements
 
@@ -135,10 +135,10 @@ Após as migrations, o destino SHALL ter **schema, RLS/grants e configuração**
 
 ### Requirement: D13 hospedado e kill real
 
-O **kill real** da plataforma SHALL permanecer **limitação** não deterministicamente reproduzível. **D13 hospedado SHALL NOT ser declarado resolvido pelo caminho feliz**; antes do piloto, SHALL haver **disposição explícita** sobre a limitação.
+O **kill real** da plataforma SHALL permanecer **limitação** não deterministicamente reproduzível. **D13 hospedado SHALL NOT ser declarado resolvido pelo caminho feliz**, por 5.3, por 5.7 ou pelo sucesso do N=1. Antes do piloto pago SHALL haver **disposição explícita** sobre a limitação; antes da abertura geral SHALL haver **nova disposição explícita**, aceitando a limitação residual com controles compensatórios ou bloqueando a abertura.
 
 #### Scenario: D13 não resolvido pelo caminho feliz
-- **WHEN** o piloto conclui com sucesso
+- **WHEN** o piloto ou a janela conclui com sucesso
 - **THEN** D13 hospedado não é declarado resolvido apenas por isso
 - **AND** a limitação do kill real permanece registrada
 
@@ -146,6 +146,11 @@ O **kill real** da plataforma SHALL permanecer **limitação** não deterministi
 - **WHEN** o piloto pago é autorizado
 - **THEN** existe disposição explícita sobre a limitação do kill real
 - **AND** a decisão é registrada antes da primeira chamada paga
+
+#### Scenario: Disposição explícita antes da abertura geral
+- **WHEN** a abertura para todas as lojas é avaliada
+- **THEN** existe disposição registrada aceitando a limitação residual com controles compensatórios ou bloqueando a abertura
+- **AND** nenhuma disposição é inferida do caminho feliz
 
 ### Requirement: Piloto manual restrito a lojas de teste
 
@@ -189,18 +194,41 @@ As **provas locais simuladas (P1)** e o **aceite para iniciar** SHALL preceder a
 
 ### Requirement: Separação entre piloto hospedado e abertura a lojas gerais
 
-O piloto hospedado SHALL ser tratado como **etapa** da liberação e SHALL NOT ser considerado conclusão da promoção. A abertura a **lojas gerais** (`all_stores`) SHALL permanecer **fora de escopo** desta mudança e SHALL exigir mudança futura e separada.
+O piloto hospedado SHALL ser tratado como **etapa** da liberação e SHALL NOT ser considerado conclusão da promoção. A abertura a **lojas gerais** (`all_stores`) SHALL ocorrer somente por mudança separada e aprovada, após as provas 5.3 e 5.7, a validação de Luna nas três capacidades, uma campanha completa em loja de teste e o aceite humano. Esta change é essa mudança separada; ela SHALL NOT reabrir nem reescrever as evidências da fase 56.2.6.
 
-#### Scenario: all_stores permanece bloqueado
+#### Scenario: all_stores permanece bloqueado durante o piloto
 - **WHEN** o piloto hospedado está vigente
-- **THEN** o escopo geral (`all_stores`) permanece recusado
+- **THEN** o escopo geral (`all_stores`) não é ativado
 - **AND** nenhuma loja geral é habilitada
 
-#### Scenario: Abertura geral é mudança separada
+#### Scenario: Abertura geral exige a mudança separada
 - **WHEN** se avalia habilitar lojas gerais
-- **THEN** isso exige uma mudança futura e separada
-- **AND** não é autorizado por esta mudança
+- **THEN** isso exige as provas, a validação e o aceite desta mudança
+- **AND** não é autorizado pelo piloto N=1 nem pelo caminho feliz
+
+#### Scenario: Evidências do N=1 preservadas
+- **WHEN** a abertura geral é preparada ou executada
+- **THEN** os artefatos e evidências da fase 56.2.6 permanecem inalterados
+- **AND** o adiamento original de 5.3/5.7 não é convertido em PASS
 
 ## Pilot Scope and Deferred Items
 
-This capability is scoped to the **N=1 hosted pilot** in test stores. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) are **deferred by responsible decision, not executed**, and remain required before any general opening. **5.9** was closed with a delimited log inspection, preserving the retention gap of the exact pilot window; it is not a promise of absolute absence. D13 is accepted **only** for the N=1 monitored pilot; the real platform kill remains **INCONCLUSIVE**; `all_stores` remains refused. Durable pointer: `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
+The operational `test_stores` authorization was scoped to the **N=1 hosted pilot** in
+56.2.6. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) were
+**deferred by responsible decision and not executed** at that time; that historical
+record and the `DEFERRED.md` pointer are preserved in the archived 56.2.6 change.
+
+In 56.2.7, **5.3 and 5.7 were executed and proven in the hosted environment**:
+5.3 passed with a single refund and idempotent replay; 5.7 passed with a `delivered`
+operation replayed after redeploy, unchanged artifact hash and no new generation,
+upload, provider, event or credit transaction.
+
+The general opening was authorized in 56.2.7. `all_stores` is active under the
+**7-day monitoring transferred on 2026-10-19 and still in progress**; the flow is not
+automatically shut down. D13 remains accepted only for the monitored opening; the real
+platform kill remains **INCONCLUSIVE**. The 56.2.6 evidence and its deferral are not
+rewritten.
+
+Durable monitoring pointer: `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-MONITORING-TRANSFER.md`.
+
+Durable 56.2.6 deferral pointer: `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.

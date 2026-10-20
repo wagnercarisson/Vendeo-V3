@@ -1,6 +1,6 @@
 # Tasks — Abertura gradual do Produto 1:1 com Luna
 
-> **Estado desta change:** implementação publicada e checkpoints 1–3 executados. As migrations `20261019000002..04` foram aplicadas, Luna foi validado nas três capacidades, 5.3/5.7 foram comprovados e `all_stores` está ativo. A entrega está concluída; o **monitoramento de 7 dias (5.5) foi transferido e permanece aberto**, e a consolidação documental foi executada. Sync/archive são os próximos passos do lifecycle (6.3–6.4), não defeitos da implementação.
+> **Estado desta change:** **ARQUIVADA em 2026-10-20.** Implementação publicada, checkpoints 1–3 executados, Luna validado nas três capacidades, 5.3/5.7 comprovados e `all_stores` ativo. A entrega está concluída; o **monitoramento de 7 dias (5.5) foi transferido e permanece aberto**. Sync/archive executados. **37/38 tasks — 5.5 não executada e não dispensada.**
 
 ## 1. Implementação mínima
 
@@ -55,5 +55,5 @@
 
 - [x] 6.1 Consolidar runbook, evidências de configuração, janela, 5.3/5.7, ativação e monitoramento; sanitizar segredos e dados de clientes. Evidência: `56.2.7-OPENSPEC-VERIFICATION.md`, `56.2.7-MONITORING-TRANSFER.md`.
 - [x] 6.2 Atualizar os trackings do projeto (`STATE.md`, `ROADMAP.md`, `HANDOFF.json`) sem reabrir nem reescrever as evidências da fase 56.2.6. Valores operacionais registrados como **snapshot datado**, não estado permanentemente atual.
-- [ ] 6.3 Reconciliar a nota “Pilot Scope and Deferred Items” das specs principais com o novo estado, sem converter o adiamento original de 5.3/5.7 em PASS e sem apagar o ponteiro `DEFERRED.md`. **Preparado em `56.2.7-SYNC-PREPARATION.md`; aplicar no sync.**
-- [ ] 6.4 Executar `openspec verify`, `openspec sync` e `openspec archive` na ordem do workflow, após a revisão final e com todas as evidências disponíveis. **Próximos passos do lifecycle; não são defeitos da implementação. O archive pode ocorrer com 5.5 transferida e aberta; o monitoramento continua após o archive.**
+- [x] 6.3 Reconciliar a nota “Pilot Scope and Deferred Items” das specs principais com o novo estado, sem converter o adiamento original de 5.3/5.7 em PASS e sem apagar o ponteiro `DEFERRED.md`. **Aplicado no sync; 56.2.6 preservada.**
+- [x] 6.4 Executar `openspec verify`, `openspec sync` e `openspec archive` na ordem do workflow, após a revisão final e com todas as evidências disponíveis. **Executado; archive em 2026-10-20. 5.5 permanece aberta e transferida; o monitoramento continua após o archive.**

@@ -302,4 +302,22 @@ A orquestração SHALL operar com timeout interno **estritamente menor** que o t
 
 ## Pilot Scope and Deferred Items
 
-The hosted pilot is scoped to **N=1** and test stores. The real platform kill remains **INCONCLUSIVE**; D13 is accepted **only** for the N=1 monitored pilot. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) are **deferred by responsible decision, not executed**, and remain required before any general opening. `all_stores` remains refused. Durable pointer: `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
+The operational `test_stores` authorization was scoped to the **N=1 hosted pilot** in
+56.2.6. Items **5.3** (hosted refund path) and **5.7** (post-redeploy replay) were
+**deferred by responsible decision and not executed** at that time; that historical
+record and the `DEFERRED.md` pointer are preserved in the archived 56.2.6 change.
+
+In 56.2.7, **5.3 and 5.7 were executed and proven in the hosted environment**:
+5.3 passed with a single refund and idempotent replay; 5.7 passed with a `delivered`
+operation replayed after redeploy, unchanged artifact hash and no new generation,
+upload, provider, event or credit transaction.
+
+The general opening was authorized in 56.2.7. `all_stores` is active under the
+**7-day monitoring transferred on 2026-10-19 and still in progress**; the flow is not
+automatically shut down. D13 remains accepted only for the monitored opening; the real
+platform kill remains **INCONCLUSIVE**. The 56.2.6 evidence and its deferral are not
+rewritten.
+
+Durable monitoring pointer: `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-MONITORING-TRANSFER.md`.
+
+Durable 56.2.6 deferral pointer: `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
