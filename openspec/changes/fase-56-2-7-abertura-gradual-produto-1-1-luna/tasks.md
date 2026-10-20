@@ -1,6 +1,6 @@
 # Tasks — Abertura gradual do Produto 1:1 com Luna
 
-> **Estado desta change:** implementação publicada e checkpoints 1–3 executados. As migrations `20261019000002..04` foram aplicadas, Luna foi validado nas três capacidades, 5.3/5.7 foram comprovados e `all_stores` está ativo. Permanecem abertos o monitoramento de 7 dias (5.5) e a consolidação final (6.1–6.4). Os três checkpoints humanos foram os gates de execução.
+> **Estado desta change:** implementação publicada e checkpoints 1–3 executados. As migrations `20261019000002..04` foram aplicadas, Luna foi validado nas três capacidades, 5.3/5.7 foram comprovados e `all_stores` está ativo. A entrega está concluída; o **monitoramento de 7 dias (5.5) foi transferido e permanece aberto**, e a consolidação documental foi executada. Sync/archive são os próximos passos do lifecycle (6.3–6.4), não defeitos da implementação.
 
 ## 1. Implementação mínima
 
@@ -48,12 +48,12 @@
 - [x] 5.2 Registrar a disposição explícita sobre D13/kill real para a abertura geral: aceitar a limitação residual com controles compensatórios ou bloquear. Não declarar D13 resolvido.
 - [x] 5.3 Registrar o aceite humano do Checkpoint 3: abertura geral aprovada, orçamento/teto e monitoramento definidos, lojas gerais autorizadas e rollback condicional de seleção definido. O registro é a autorização operacional; a RPC não valida documentos.
 - [x] 5.4 Ativar `all_stores` pela ação normal do admin (sem deploy): a RPC transacional deve confirmar as duas autorizações, `all_stores=true`, `test_stores=false`, decisão permitida para loja geral e loja de teste, e verificação final consistente; testar também que uma falha reverte tudo.
-- [ ] 5.5 Monitorar o período inicial: gasto estimado versus teto, sucesso/falha/`unknown`, retry/fallback, claims, distribuição por loja e erros; aplicar critérios de parada.
+- [ ] 5.5 Monitorar o período inicial: gasto estimado versus teto, sucesso/falha/`unknown`, retry/fallback, claims, distribuição por loja e erros; aplicar critérios de parada. **Transferido em 2026-10-19; em andamento até 2026-10-26 23:59 BRT; não executado e não dispensado.** Evidência: `56.2.7-MONITORING-TRANSFER.md`.
 - [x] 5.6 Validar o desligamento normal (chaves OFF + revogação) nos testes e na janela, sem pausar o legado nem cancelar operações em andamento. Após a abertura geral, **não desligar automaticamente para encerrar a fase**: só desligar por critério de parada ou decisão explícita; caso contrário, encerrar com `all_stores` ativo e monitorado.
 
 ## 6. Consolidação documental final
 
-- [ ] 6.1 Consolidar runbook, evidências de configuração, janela, 5.3/5.7, ativação e monitoramento; sanitizar segredos e dados de clientes.
-- [ ] 6.2 Atualizar os trackings do projeto (`STATE.md`, `ROADMAP.md`, `HANDOFF.json`) sem reabrir nem reescrever as evidências da fase 56.2.6.
-- [ ] 6.3 Reconciliar a nota “Pilot Scope and Deferred Items” das specs principais com o novo estado, sem converter o adiamento original de 5.3/5.7 em PASS e sem apagar o ponteiro `DEFERRED.md`.
-- [ ] 6.4 Executar `openspec verify`, `openspec sync` e `openspec archive` na ordem do workflow, após o encerramento e com todas as evidências disponíveis.
+- [x] 6.1 Consolidar runbook, evidências de configuração, janela, 5.3/5.7, ativação e monitoramento; sanitizar segredos e dados de clientes. Evidência: `56.2.7-OPENSPEC-VERIFICATION.md`, `56.2.7-MONITORING-TRANSFER.md`.
+- [x] 6.2 Atualizar os trackings do projeto (`STATE.md`, `ROADMAP.md`, `HANDOFF.json`) sem reabrir nem reescrever as evidências da fase 56.2.6. Valores operacionais registrados como **snapshot datado**, não estado permanentemente atual.
+- [ ] 6.3 Reconciliar a nota “Pilot Scope and Deferred Items” das specs principais com o novo estado, sem converter o adiamento original de 5.3/5.7 em PASS e sem apagar o ponteiro `DEFERRED.md`. **Preparado em `56.2.7-SYNC-PREPARATION.md`; aplicar no sync.**
+- [ ] 6.4 Executar `openspec verify`, `openspec sync` e `openspec archive` na ordem do workflow, após o encerramento e com todas as evidências disponíveis. **Próximos passos do lifecycle; não são defeitos da implementação.**

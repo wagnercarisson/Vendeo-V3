@@ -1,96 +1,84 @@
 {
   "version": "1.0",
-  "root_snapshot_note": "Historical F56.1 root snapshot fields and the previous 56.2.4/B2.2 current_phase snapshot are preserved as history. Current state is 56.2.6/F56.2b2d: N=1 closed and archived, with 5.3/5.7 deferred for general opening.",
+  "root_snapshot_note": "Historical snapshots are preserved as history. Current state is 56.2.7: implementation and Checkpoint 3 complete; all_stores active; 7-day monitoring transferred and still in progress. Operational values are a dated snapshot, not permanently current.",
   "current_phase": {
-    "phase": "56.2.6",
-    "functional_label": "F56.2b2d ? Piloto hospedado do Produto 1:1 em lojas de teste (N=1, escopo encerrado)",
+    "phase": "56.2.7",
+    "functional_label": "Abertura gradual do Produto 1:1 com Luna (all_stores ativo; monitoramento de 7 dias transferido)",
     "updated_at": "2026-10-19",
-    "status": "complete_n1_scope_verified_with_limitations_openspec_synced_archived",
-    "plan_count": "8/8",
-    "summary_count": "8/8",
-    "plan_summary_inventory": [
-      "56.2.6-01-PLAN.md ? 56.2.6-01-SUMMARY.md",
-      "56.2.6-02-PLAN.md ? 56.2.6-02-SUMMARY.md",
-      "56.2.6-03-PLAN.md ? 56.2.6-03-SUMMARY.md",
-      "56.2.6-04-PLAN.md ? 56.2.6-04-SUMMARY.md",
-      "56.2.6-05-PLAN.md ? 56.2.6-05-SUMMARY.md",
-      "56.2.6-06-PLAN.md ? 56.2.6-06-SUMMARY.md",
-      "56.2.6-07-PLAN.md ? 56.2.6-07-SUMMARY.md",
-      "56.2.6-08-PLAN.md ? 56.2.6-08-SUMMARY.md"
-    ],
-    "openspec_change": "fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores (ARQUIVADA em openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/)",
-    "openspec_tasks": "52/54 ? 5.3/5.7 abertas e adiadas por decis?o do respons?vel; N?O executadas; obrigat?rias antes da abertura geral",
-    "uat": "human_approved_n1_scope_with_limitations_2026-10-19",
-    "human_checkpoint": "approved_n1_scope_with_limitations",
-    "uat_decision_text": "Aprovo o fechamento do piloto N=1 com as limita??es registradas. Aceito a verifica??o delimitada de logs e o adiamento expl?cito de 5.3/5.7, que permanecem obrigat?rios antes da abertura geral.",
+    "status": "implementation_verified_monitoring_transferred_in_progress_openspec_sync_archive_pending",
+    "plan_count": "7/7",
+    "summary_count": "6/7 (plano 07 sem SUMMARY; entrega concluída, monitoramento transferido)",
+    "openspec_change": "fase-56-2-7-abertura-gradual-produto-1-1-luna (ATIVA; sync/archive pendentes)",
+    "openspec_tasks": "35/38; 5.5 monitoramento transferido e aberto; 6.3 sincronização preparada; 6.4 verify/sync/archive pendentes",
     "verification": {
-      "artifact": ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-VERIFICATION.md",
-      "status": "pass_with_limitations",
-      "archive_ready": true,
-      "score": "12/12 requirements; 10/10 truths"
+      "artifact": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-OPENSPEC-VERIFICATION.md",
+      "status": "implementation_verified_with_lifecycle_followups",
+      "archive_ready": false,
+      "score": "21/21 requirements; 89/89 scenarios",
+      "note": "OpenSpec verification already executed. Sync/archive are next lifecycle steps, not implementation defects."
     },
     "documentary_gates": {
       "typecheck": "0",
       "lint": "0",
-      "build": "exit 0",
-      "route_unit": "22/22",
-      "isolated_integration": "7/7",
-      "result_states": "21/21",
-      "legacy_frontier": "10/10",
-      "backup_gate": "APPROVED 8/8",
-      "pilot_readiness": "APPROVED 4/4",
-      "pilot_active": "APPROVED 4/4",
-      "pilot_shutdown": "APPROVED 2/2",
+      "build": "exit 0 (published deployment)",
+      "focused_tests": "99/99",
+      "changelog_tests": "22/22",
       "openspec_validate_strict": "valid",
       "git_diff_check": "passed"
     },
     "openspec_lifecycle": {
       "verified": true,
-      "synced": true,
-      "archived": true,
-      "status": "done",
-      "archive_path": "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores",
-      "synced_specs": [
-        "product-1-1-controlled-real-test-authorization (updated)",
-        "product-1-1-flow-activation (updated)",
-        "product-1-1-generation-orchestration (updated)",
-        "product-1-1-hosted-pilot (created)"
-      ],
-      "tasks": "52/54 (5.3/5.7 adiadas, n?o executadas)",
-      "commits": {
-        "code_fix": "1da6fb60",
-        "verification_docs": "99e3585c",
-        "sync": "2880fc61",
-        "archive": "fdd2b314"
+      "synced": false,
+      "archived": false,
+      "status": "verification_complete_sync_archive_pending",
+      "sync_preparation": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
+      "note": "Apply the historical reconciliation note during sync; do not rewrite 56.2.6 evidence or DEFERRED.md. Archive after monitoring closure or explicit decision."
+    },
+    "operational_snapshot": {
+      "captured_at": "2026-10-19",
+      "note": "DATED SNAPSHOT - not a permanently current state. Re-read panel/database before decisions.",
+      "all_stores": true,
+      "test_stores": false,
+      "authorizations": {
+        "all_stores": "all_stores",
+        "test_stores": "test_stores"
       },
-      "note": "2026-10-19: verify -> sync -> archive no escopo N=1. 5.3/5.7 permanecem abertas e adiadas; 5.9 fechado com escopo delimitado. DEFERRED.md preservado no archive."
+      "cap_usd": 5,
+      "spent_usd": 0.1484,
+      "available_usd": 4.8516,
+      "generation_paused": false,
+      "deployment": "dpl_FHMwawB4yZPYfTsinnTq7KEtpr5E READY",
+      "source": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-EVIDENCE.md"
     },
-    "gate_blocking_general_opening": {
-      "items": [
-        "5.3",
-        "5.7"
-      ],
-      "disposition": "deferred_by_responsible_not_executed",
-      "required_before": "all_stores / abertura geral",
-      "pointer": "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md"
+    "monitoring": {
+      "task": "5.5",
+      "status": "transferred_in_progress",
+      "responsible": "Checkpoint 3 approver (named in the approval record)",
+      "transferred_at": "2026-10-19",
+      "ends_at": "2026-10-26T23:59:59-03:00",
+      "artifact": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-MONITORING-TRANSFER.md",
+      "executed": false,
+      "waived": false,
+      "note": "Separate from delivery; keep task 5.5 open until the seven days are recorded."
     },
-    "d13": "accepted_only_for_n1_not_resolved_integral",
+    "changelog": {
+      "status": "authorized_pending_publication",
+      "entry": "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md",
+      "verification": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CHANGELOG-VERIFICATION.md",
+      "announcement": "card",
+      "note": "Publish after explicit authorization; then validate /novidades and the dashboard card."
+    },
+    "d13": "accepted_for_monitored_general_opening_not_resolved",
     "kill_real": "inconclusive",
-    "all_stores": false,
-    "window_closed": true,
-    "operational_state": "test_stores=false; all_stores=false; authorization seq=2 revoked/off; pause=false; cap=0.50; spent=0.059; deployment 1da6fb60 READY; window closed",
-    "counters_base": "7/7 phases; 57/57 plans; 100% ? preserved, not recalculated",
     "artifacts": [
-      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-VERIFICATION.md",
-      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-OPENSPEC-VERIFICATION.md",
-      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-LOGS-VERIFICATION.md",
-      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-PILOT-EVIDENCE.md",
-      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-PILOT-EVIDENCE.json",
-      ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-UAT.md",
-      "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md",
-      "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/tasks.md"
+      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-OPENSPEC-VERIFICATION.md",
+      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-MONITORING-TRANSFER.md",
+      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
+      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-EVIDENCE.md",
+      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-ACCEPTANCE.md",
+      "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md"
     ],
-    "next_action": "Definir o pr?ximo escopo; carregar 5.3/5.7 como bloqueios da abertura geral; N?O iniciar nada automaticamente."
+    "next_action": "Publish and validate the changelog; keep 5.5 open until 2026-10-26; then run sync/archive."
   },
   "timestamp": "2026-10-19",
   "phase": "56.1",
@@ -128,9 +116,9 @@
     "evidence_check": "GSD verify-work 10/10 PASS; UAT humano local aprovado na instancia isolada vendeo-f561-isolated; 55/55 tasks OpenSpec.",
     "next_action": "Nenhuma acao GSD pendente. Lifecycle OpenSpec concluido em 2026-10-06."
   },
-  "next_phase": "A definir (pr?ximo escopo). 56.2.6 encerrada e arquivada no escopo N=1; 5.3/5.7 s?o bloqueios da abertura geral.",
-  "next_phase_started": false,
-  "next_phase_note": "F56.2b2d (GSD 56.2.6) encerrada no escopo N=1 e arquivada em openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/. 8/8 planos; 52/54 tasks; 5.3/5.7 adiadas por decis?o do respons?vel (n?o executadas; obrigat?rias antes de all_stores); 5.9 fechado com escopo delimitado; D13 somente N=1; kill real INCONCLUSIVE; all_stores=false; janela encerrada. Contadores 7/7 ? 57/57 ? 100% preservados como base escopada, sem rec?lculo.",
+  "next_phase": "56.2.7 - concluir monitoramento e lifecycle OpenSpec",
+  "next_phase_started": true,
+  "next_phase_note": "F56.2.7 com implementação verificada e all_stores ativo. A entrega está concluída; o monitoramento de 7 dias foi transferido e permanece em andamento até 2026-10-26 23:59 BRT. Sync/archive são os próximos passos do lifecycle, após a revisão final. 56.2.6 permanece arquivada e preservada.",
   "planning_review": {
     "phase": "56.1",
     "plans": [
@@ -699,7 +687,98 @@
         }
       }
     },
-    "snapshot_note": "Snapshot do current_phase anterior (56.2.4/B2.2) preservado como hist?rico; a posi??o atual ? 56.2.6 encerrada/arquivada no escopo N=1."
+    "snapshot_note": "Snapshot do current_phase anterior (56.2.4/B2.2) preservado como hist?rico; a posi??o atual ? 56.2.6 encerrada/arquivada no escopo N=1.",
+    "previous_current_phase_56_2_6": {
+      "phase": "56.2.6",
+      "functional_label": "F56.2b2d ? Piloto hospedado do Produto 1:1 em lojas de teste (N=1, escopo encerrado)",
+      "updated_at": "2026-10-19",
+      "status": "complete_n1_scope_verified_with_limitations_openspec_synced_archived",
+      "plan_count": "8/8",
+      "summary_count": "8/8",
+      "plan_summary_inventory": [
+        "56.2.6-01-PLAN.md ? 56.2.6-01-SUMMARY.md",
+        "56.2.6-02-PLAN.md ? 56.2.6-02-SUMMARY.md",
+        "56.2.6-03-PLAN.md ? 56.2.6-03-SUMMARY.md",
+        "56.2.6-04-PLAN.md ? 56.2.6-04-SUMMARY.md",
+        "56.2.6-05-PLAN.md ? 56.2.6-05-SUMMARY.md",
+        "56.2.6-06-PLAN.md ? 56.2.6-06-SUMMARY.md",
+        "56.2.6-07-PLAN.md ? 56.2.6-07-SUMMARY.md",
+        "56.2.6-08-PLAN.md ? 56.2.6-08-SUMMARY.md"
+      ],
+      "openspec_change": "fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores (ARQUIVADA em openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/)",
+      "openspec_tasks": "52/54 ? 5.3/5.7 abertas e adiadas por decis?o do respons?vel; N?O executadas; obrigat?rias antes da abertura geral",
+      "uat": "human_approved_n1_scope_with_limitations_2026-10-19",
+      "human_checkpoint": "approved_n1_scope_with_limitations",
+      "uat_decision_text": "Aprovo o fechamento do piloto N=1 com as limita??es registradas. Aceito a verifica??o delimitada de logs e o adiamento expl?cito de 5.3/5.7, que permanecem obrigat?rios antes da abertura geral.",
+      "verification": {
+        "artifact": ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-VERIFICATION.md",
+        "status": "pass_with_limitations",
+        "archive_ready": true,
+        "score": "12/12 requirements; 10/10 truths"
+      },
+      "documentary_gates": {
+        "typecheck": "0",
+        "lint": "0",
+        "build": "exit 0",
+        "route_unit": "22/22",
+        "isolated_integration": "7/7",
+        "result_states": "21/21",
+        "legacy_frontier": "10/10",
+        "backup_gate": "APPROVED 8/8",
+        "pilot_readiness": "APPROVED 4/4",
+        "pilot_active": "APPROVED 4/4",
+        "pilot_shutdown": "APPROVED 2/2",
+        "openspec_validate_strict": "valid",
+        "git_diff_check": "passed"
+      },
+      "openspec_lifecycle": {
+        "verified": true,
+        "synced": true,
+        "archived": true,
+        "status": "done",
+        "archive_path": "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores",
+        "synced_specs": [
+          "product-1-1-controlled-real-test-authorization (updated)",
+          "product-1-1-flow-activation (updated)",
+          "product-1-1-generation-orchestration (updated)",
+          "product-1-1-hosted-pilot (created)"
+        ],
+        "tasks": "52/54 (5.3/5.7 adiadas, n?o executadas)",
+        "commits": {
+          "code_fix": "1da6fb60",
+          "verification_docs": "99e3585c",
+          "sync": "2880fc61",
+          "archive": "fdd2b314"
+        },
+        "note": "2026-10-19: verify -> sync -> archive no escopo N=1. 5.3/5.7 permanecem abertas e adiadas; 5.9 fechado com escopo delimitado. DEFERRED.md preservado no archive."
+      },
+      "gate_blocking_general_opening": {
+        "items": [
+          "5.3",
+          "5.7"
+        ],
+        "disposition": "deferred_by_responsible_not_executed",
+        "required_before": "all_stores / abertura geral",
+        "pointer": "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md"
+      },
+      "d13": "accepted_only_for_n1_not_resolved_integral",
+      "kill_real": "inconclusive",
+      "all_stores": false,
+      "window_closed": true,
+      "operational_state": "test_stores=false; all_stores=false; authorization seq=2 revoked/off; pause=false; cap=0.50; spent=0.059; deployment 1da6fb60 READY; window closed",
+      "counters_base": "7/7 phases; 57/57 plans; 100% ? preserved, not recalculated",
+      "artifacts": [
+        ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-VERIFICATION.md",
+        ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-OPENSPEC-VERIFICATION.md",
+        ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-LOGS-VERIFICATION.md",
+        ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-PILOT-EVIDENCE.md",
+        ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-PILOT-EVIDENCE.json",
+        ".planning/phases/56.2.6-f56-2b2d-piloto-hospedado-do-produto-1-1-em-lojas-de-teste/56.2.6-UAT.md",
+        "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md",
+        "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/tasks.md"
+      ],
+      "next_action": "Definir o pr?ximo escopo; carregar 5.3/5.7 como bloqueios da abertura geral; N?O iniciar nada automaticamente."
+    }
   },
   "artifacts": [
     ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-CONTEXT.md",
