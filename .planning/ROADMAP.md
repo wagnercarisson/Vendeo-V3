@@ -474,7 +474,7 @@ Plans:
 
 ### Phase 56.2.7: Abertura gradual do Produto 1:1 com Luna
 
-**Status:** ÃƒÂ¢Ã¢â‚¬â€Ã¢â‚¬Â¹ **EM EXECUÇÃO - ABERTURA GERAL ATIVA (2026-10-19); MONITORAMENTO DE 7 DIAS** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 7 planos criados para revisÃƒÆ’Ã‚Â£o; nenhum plano executado; OpenSpec `fase-56-2-7-abertura-gradual-produto-1-1-luna` validada (`--strict`). Substitui o prÃƒÆ’Ã‚Â³ximo escopo da 56.2.6 sem reabrir sua fase ou reescrever evidÃƒÆ’Ã‚Âªncias.
+**Status:** **EM EXECUÇÃO — PLANOS 01–06 CONCLUÍDOS; 07 EM ANDAMENTO (MONITORAMENTO DE 7 DIAS E CONSOLIDAÇÃO PENDENTES); ABERTURA GERAL ATIVA (2026-10-19).** OpenSpec fase-56-2-7-abertura-gradual-produto-1-1-luna publicada, Luna validado e 5.3/5.7 comprovados; all_stores ativo e monitorado.
 
 **Goal:** concluir a adoÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna (`campaign_copy`, `brand_profile_text`, `brand_profile_vision`) e permitir a abertura gradual do Produto 1:1 pelos trÃƒÆ’Ã‚Âªs estados (OFF, lojas de teste, todas as lojas), com `all_stores` ampliado de forma mÃƒÆ’Ã‚Â­nima, aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o administrativa atÃƒÆ’Ã‚Â´mica/auditada, provas hospedadas 5.3/5.7 e trÃƒÆ’Ã‚Âªs checkpoints humanos. A ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/desligamento nÃƒÆ’Ã‚Â£o exige SQL manual nem novo deploy.
 
