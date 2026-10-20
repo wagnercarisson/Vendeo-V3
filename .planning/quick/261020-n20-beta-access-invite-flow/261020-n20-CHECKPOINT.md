@@ -87,12 +87,29 @@ Consequência: enquanto a configuração estiver ausente, aprovar uma solicitaç
 
 O deploy 2 foi necessário porque as variáveis de e-mail foram adicionadas após o deploy 1. Nenhum convite real foi enviado e nenhuma solicitação foi aprovada.
 
+## Pré-checagens da janela (2026-10-20, somente leitura)
+
+| Item | Estado |
+|---|---|
+| F50.2 | **ATIVA**: `enabled=true`, `launch_at=2026-10-20T21:25:31.344856+00:00` |
+| Fila de notificações | **0** pendentes/processing (sem backlog de disparo) |
+| SMTP Auth | Resend, `smtp.resend.com:587`, remetente `noreply@vendeo.tech` |
+| Credenciais SMTP | presentes |
+| DKIM `resend._domainkey.vendeo.tech` | **presente** (TXT `p=...`) — domínio verificado no DNS |
+| `send.vendeo.tech` | MX SES/Resend + SPF `amazonses.com` |
+| `VENDEO_EMAIL_ENABLED` | **false** — ainda não habilitado |
+| Rastreamento de abertura/cliques | **pendente de confirmação** (não legível sem API key do Resend) |
+| E-mail de validação | **pendente de confirmação** |
+
+**Parada antes de habilitar:** falta confirmar o e-mail controlado de validação e o estado do rastreamento no Resend. Não habilitar envio nem criar/aprovar solicitação até essas confirmações.
+
 ## Aguardando antes do teste
 
-1. **Confirmação da ativação da F50.2** (preferencialmente pelo painel admin, com auditoria do ator real).
-2. **E-mail da conta de validação** controlado pelo responsável.
-3. Confirmação de que o rastreamento de cliques está desligado no painel do Resend.
-4. Autorização para ligar `VENDEO_EMAIL_ENABLED=true` e redeployar (envio afeta também outras notificações; fila antiga está vazia).
+1. **E-mail da conta de validação** controlado pelo responsável (não assumir a solicitação pendente existente).
+2. Confirmação de que o rastreamento de abertura/cliques está desligado no painel do Resend.
+3. Autorização final para ligar `VENDEO_EMAIL_ENABLED=true` e redeployar.
+
+**Aceite e onboarding:** validação **transferida para a F50.2**, não executada nesta quick. O teste desta quick termina com o convite recebido e o link conferido **sem consumir**.
 
 ## Fora de escopo / não executado
 
