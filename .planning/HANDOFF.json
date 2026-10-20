@@ -1,192 +1,145 @@
 {
   "version": "1.0",
-  "root_snapshot_note": "Historical snapshots are preserved as history. Current state is 56.2.7: implementation and Checkpoint 3 complete; all_stores active; 7-day monitoring transferred and still in progress. Operational values are a dated snapshot, not permanently current.",
+  "root_snapshot_note": "Historical snapshots are preserved as history. Current state is 50.2: production UAT PASS, OpenSpec verified/synced/archived, offer active, and the first installment remains an open operational follow-up (not proven in advance). Operational values are a dated snapshot, not permanently current.",
   "current_phase": {
-    "phase": "56.2.7",
-    "functional_label": "Abertura gradual do Produto 1:1 com Luna (all_stores ativo; monitoramento de 7 dias transferido)",
+    "phase": "50.2",
+    "functional_label": "Oferta de teste gratuito de 28 dias (ativa; UAT de produção e archive concluídos; primeira parcela em acompanhamento)",
     "updated_at": "2026-10-20",
-    "status": "archived_monitoring_transferred_in_progress",
-    "plan_count": "7/7",
-    "summary_count": "6/7 (plano 07 sem SUMMARY; entrega concluída, monitoramento transferido)",
-    "openspec_change": "fase-56-2-7-abertura-gradual-produto-1-1-luna (ATIVA; sync/archive pendentes)",
-    "openspec_tasks": "37/38; 5.5 monitoramento transferido e aberto; 6.3/6.4 executados",
+    "status": "complete_uat_pass_verified_synced_archived_operational_followup_open",
+    "plan_count": "3/3",
+    "summary_count": "3/3",
+    "openspec_change": "oferta-teste-gratuito-28-dias (ARQUIVADA em openspec/changes/archive/2026-10-20-oferta-teste-gratuito-28-dias/)",
+    "openspec_tasks": "42/42",
     "verification": {
-      "artifact": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-OPENSPEC-VERIFICATION.md",
-      "status": "archived_monitoring_in_progress",
+      "artifact": ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-VERIFICATION.md",
+      "status": "pass_with_open_operational_followup",
       "archive_ready": true,
-      "score": "21/21 requirements; 89/89 scenarios",
-      "note": "OpenSpec verification already executed. Sync/archive are next lifecycle steps, not implementation defects."
+      "score": "15/15 requirements; 77/77 scenarios; 4 specs valid; production UAT PASS",
+      "note": "First installment remains unproven and must be checked after the daily cron following 2026-10-27T21:50:52.269093Z."
     },
     "documentary_gates": {
-      "typecheck": "0",
-      "lint": "0",
-      "build": "exit 0 (published deployment)",
-      "focused_tests": "99/99",
-      "changelog_tests": "30/30",
-      "openspec_validate_strict": "valid",
-      "git_diff_check": "passed"
+      "typecheck": "PASS (historical)",
+      "lint": "PASS (historical)",
+      "build": "PASS (published deployment)",
+      "openspec_validate_strict": "valid for change and 4 affected specs; 75 pre-existing failures in unrelated specs",
+      "git_diff_check": "passed (no whitespace errors; CRLF normalization warnings only)"
     },
     "openspec_lifecycle": {
       "verified": true,
       "synced": true,
       "archived": true,
       "status": "done",
-      "sync_preparation": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
-      "note": "2026-10-20: verify -> sync -> archive. 5.3/5.7 proven in 56.2.7 while preserving the 56.2.6 deferral record. Task 5.5 remains open and transferred; monitoring continues after archive.",
-      "archive_path": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna",
+      "archive_path": "openspec/changes/archive/2026-10-20-oferta-teste-gratuito-28-dias",
       "synced_specs": [
-        "product-1-1-controlled-real-test-authorization (updated)",
-        "product-1-1-flow-activation (updated)",
-        "product-1-1-hosted-pilot (updated)",
-        "product-1-1-gradual-opening (created)",
-        "product-1-1-generation-orchestration (historical note reconciled)"
+        "demo-credit-grant (updated)",
+        "demo-status-ui (updated)",
+        "monthly-credits-engine (updated)",
+        "trial-offer (created)"
       ],
-      "tasks": "37/38 (5.5 aberta e transferida)",
+      "tasks": "42/42",
       "archive_date": "2026-10-20"
     },
     "operational_snapshot": {
-      "captured_at": "2026-10-19",
-      "note": "DATED SNAPSHOT - not a permanently current state. Re-read panel/database before decisions.",
-      "all_stores": true,
-      "test_stores": false,
-      "authorizations": {
-        "all_stores": "all_stores",
-        "test_stores": "test_stores"
-      },
-      "cap_usd": 5,
-      "spent_usd": 0.1484,
-      "available_usd": 4.8516,
-      "generation_paused": false,
-      "deployment": "dpl_FHMwawB4yZPYfTsinnTq7KEtpr5E READY",
-      "source": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-EVIDENCE.md"
+      "captured_at": "2026-10-20",
+      "note": "DATED SNAPSHOT - re-read database/panel before decisions.",
+      "offer_enabled": true,
+      "launch_at": "2026-10-20T21:25:31.344856Z",
+      "account": "comercial@vendeo.tech",
+      "store_id": "b81d924e-aeee-4e44-837f-25a6b7340ba9",
+      "enrollment_id": "99680463-ca57-4eca-a285-9172173c5250",
+      "started_at": "2026-10-20T21:50:52.269093Z",
+      "expires_at": "2026-11-17T21:50:52.269093Z",
+      "granted_total": 5,
+      "last_granted_seq": 0,
+      "balance": 5,
+      "next_installment_due": "2026-10-27T21:50:52.269093Z",
+      "next_installment_seq": 1,
+      "next_installment_idempotency_key": "trial28d:99680463-ca57-4eca-a285-9172173c5250:1"
     },
     "monitoring": {
-      "task": "5.5",
-      "status": "transferred_in_progress",
-      "responsible": "Checkpoint 3 approver (named in the approval record)",
-      "transferred_at": "2026-10-19",
-      "ends_at": "2026-10-26T23:59:59-03:00",
-      "artifact": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-MONITORING-TRANSFER.md",
-      "executed": false,
-      "waived": false,
-      "note": "Separate from delivery; keep task 5.5 open until the seven days are recorded."
+      "status": "open_unproven",
+      "artifact": "openspec/changes/archive/2026-10-20-oferta-teste-gratuito-28-dias/MONITORING.md",
+      "eligible_at": "2026-10-27T21:50:52.269093Z",
+      "expected": "5 credits on the next daily cron execution after eligibility; exact time is not promised",
+      "verified": false
     },
-    "changelog": {
-      "status": "published_and_card_validated",
-      "entry": "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md",
-      "verification": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CHANGELOG-VERIFICATION.md",
-      "announcement": "card",
-      "note": "Published after explicit authorization; dashboard card and /novidades validated with an authenticated test-store session.",
-      "deployment": "dpl_7YAtV11z5UDEEzx9m9YWPcvLpdXA READY",
-      "validated_at": "2026-10-19",
-      "validation": "Authenticated test-store session: dashboard 200 with title; /novidades 200 with title and slug; no data mutation."
-    },
-    "d13": "accepted_for_monitored_general_opening_not_resolved",
-    "kill_real": "inconclusive",
     "artifacts": [
-      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-OPENSPEC-VERIFICATION.md",
-      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-MONITORING-TRANSFER.md",
-      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
-      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-EVIDENCE.md",
-      ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-ACCEPTANCE.md",
-      "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md",
-      "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/tasks.md",
-      "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/MONITORING.md"
+      ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-UAT-PRODUCTION.md",
+      ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-VERIFICATION.md",
+      ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-CLOSURE-READINESS.md",
+      "openspec/changes/archive/2026-10-20-oferta-teste-gratuito-28-dias/MONITORING.md"
     ],
-    "next_action": "Keep 5.5 open and monitor until 2026-10-26 23:59 BRT; no new phase, generation, operational change or deploy.",
-    "archive": {
-      "path": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna",
-      "monitoring_pointer": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/MONITORING.md",
-      "archived_at": "2026-10-20"
-    }
+    "next_action": "Keep the offer active. After 2026-10-27T21:50:52.269093Z, verify the first installment in the following daily cron; do not mark it proven before then. No manual credit, new account, invite, email, env change or generation."
   },
   "timestamp": "2026-10-20",
-  "phase": "56.1",
-  "phase_name": "contrato-produtivo-modelos-e-fallback",
-  "phase_dir": ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback",
-  "status": "complete_verified_synced_archived",
-  "phase_status": "11_of_11_plans_complete_human_uat_local_approved_gsd_10_of_10_openspec_55_of_55_archived_2026_10_06",
-  "plan": "56-1-11-phase-verification-human-checkpoint-approved",
-  "openspec_source": "fase-56-1-contrato-produtivo-modelos-fallback",
+  "phase": "50.2",
+  "phase_name": "oferta-teste-gratuito-28-dias",
+  "phase_dir": ".planning/phases/50.2-oferta-teste-gratuito-28-dias",
+  "status": "complete_uat_pass_verified_synced_archived_operational_followup_open",
+  "phase_status": "3_of_3_plans_complete_uat_production_pass_openspec_42_of_42_archived_2026_10_20",
+  "plan": "50.2-03-production-uat-and-closure",
+  "openspec_source": "oferta-teste-gratuito-28-dias",
   "openspec_archive": {
-    "path": "openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback",
+    "path": "openspec/changes/archive/2026-10-20-oferta-teste-gratuito-28-dias",
     "verified": true,
     "synced": true,
     "archived": true,
     "active": false,
     "synced_specs": [
-      "ai-invocation-gateway (updated)",
-      "ai-model-catalog (updated)",
-      "ai-model-pricing (updated)",
-      "image-generation-model-pair-config (created)",
-      "image-generation-config-snapshot (created)",
-      "image-generation-failure-policy (created)",
-      "image-generation-support-reference (created)",
-      "image-generation-instrumentation (created)"
+      "demo-credit-grant (updated)",
+      "demo-status-ui (updated)",
+      "monthly-credits-engine (updated)",
+      "trial-offer (created)"
     ],
-    "note": "2026-10-06: F56.1 verificada (/opsx-verify), sincronizada (/opsx-sync: 3 specs principais atualizadas + 5 criadas) e arquivada (/opsx-archive) APOS o UAT humano local. Nenhuma change OpenSpec ativa; sem provider, sem db push e sem ativacao."
+    "note": "2026-10-20: verify -> sync -> archive. 42/42 tasks. First installment remains an open operational follow-up in MONITORING.md, not proven in advance."
   },
   "gsd_verification": {
-    "phase": "56.1",
-    "workflow": "/gsd-verify-work 56.1",
-    "status": "complete",
-    "artifact": ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-GSD-UAT.md",
-    "uat_artifact": ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-GSD-UAT.md",
-    "result": "10 passed, 0 issues",
-    "evidence_check": "GSD verify-work 10/10 PASS; UAT humano local aprovado na instancia isolada vendeo-f561-isolated; 55/55 tasks OpenSpec.",
-    "next_action": "Nenhuma acao GSD pendente. Lifecycle OpenSpec concluido em 2026-10-06."
+    "phase": "50.2",
+    "workflow": "GSD/OpenSpec closure reconciliation",
+    "status": "pass_with_open_operational_followup",
+    "artifact": ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-VERIFICATION.md",
+    "uat_artifact": ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-UAT-PRODUCTION.md",
+    "result": "production UAT PASS; 3/3 plans; 42/42 tasks; 15/15 requirements; 77/77 scenarios; 4 affected specs valid; archive complete; 75 unrelated specs fail repo-wide strict validation",
+    "evidence_check": "The first 5-credit grant, balance, onboarding date, next installment due date and expiry were verified read-only in production. Balance UI confirmed by the responsible owner.",
+    "next_action": "Verify the first installment after 2026-10-27T21:50:52.269093Z in the following daily cron; do not anticipate proof."
   },
-  "next_phase": "Nenhuma nova fase; apenas monitoramento 5.5 pós-archive",
+  "next_phase": "Nenhuma nova fase; acompanhamento operacional da primeira parcela",
   "next_phase_started": false,
-  "next_phase_note": "F56.2.7 arquivada em 2026-10-20. A entrega esta concluida; a task 5.5 permanece aberta e transferida, com monitoramento ate 2026-10-26 23:59 BRT. O fluxo all_stores permanece ativo com as configuracoes aprovadas. Sem novas geracoes, alteracoes operacionais ou deploy.",
+  "next_phase_note": "F50.2 concluída, verificada, sincronizada e arquivada. A oferta permanece ativa. A primeira parcela vence em 2026-10-27T21:50:52.269093Z e deve ser conferida na execução diária seguinte do cron; não marcar como comprovada antes. Sem nova conta, concessão manual, envio, geração ou alteração de datas.",
   "planning_review": {
-    "phase": "56.1",
+    "phase": "50.2",
     "plans": [
-      "56-1-01",
-      "56-1-02",
-      "56-1-03",
-      "56-1-04",
-      "56-1-05",
-      "56-1-06",
-      "56-1-07",
-      "56-1-08",
-      "56-1-09",
-      "56-1-10",
-      "56-1-11"
+      "50.2-01",
+      "50.2-02",
+      "50.2-03"
     ],
-    "plan_checker": "passed",
-    "execution": "plans_01_through_11_complete",
-    "implementation": "plans_01_through_11_complete",
-    "checkpoint_b": "human_verify_local_preparatory_approved",
-    "next_action": "GSD reconciliado. OpenSpec verificado, sincronizado e arquivado em 2026-10-06; nenhuma operacao de lifecycle pendente."
+    "execution": "plans_01_through_03_complete",
+    "implementation": "plans_01_through_03_complete",
+    "checkpoint": "production_activation_and_uat_pass",
+    "next_action": "GSD/OpenSpec reconciliado. Sync e archive concluídos; acompanhamento operacional da primeira parcela permanece aberto."
   },
   "resolved_plans": [
-    "56-1-01",
-    "56-1-02",
-    "56-1-03",
-    "56-1-04",
-    "56-1-05",
-    "56-1-06",
-    "56-1-07",
-    "56-1-08",
-    "56-1-09",
-    "56-1-10",
-    "56-1-11"
+    "50.2-01",
+    "50.2-02",
+    "50.2-03"
   ],
   "checkpoints": {
-    "human_verify_task_5": "approved_local_preparatory_scope",
-    "gsd_verify_work": "10_of_10_pass"
+    "human_verify_task_5": "approved_by_responsible",
+    "production_activation": "approved_and_completed",
+    "production_uat": "pass",
+    "openspec_archive": "done_2026_10_20"
   },
   "current_phase_result": {
-    "phase": "56.1",
-    "gsd_status": "complete_verified_synced_archived",
-    "plan_count": "11/11 plans and 11/11 summaries",
-    "human_uat": "approved_local_preparatory_scope",
-    "gsd_uat": "10 passed, 0 issues",
-    "openspec_status": "archived_2026_10_06; 55/55 tasks complete; 3 main specs updated + 5 created",
-    "candidate_promoted": false,
-    "executor_provider_calls": 0,
-    "new_generations": 0,
+    "phase": "50.2",
+    "gsd_status": "complete_verified_synced_archived_operational_followup_open",
+    "plan_count": "3/3 plans and 3/3 summaries",
+    "human_uat": "production_pass_2026_10_20",
+    "openspec_status": "archived_2026_10_20; 42/42 tasks; 4 specs synced (3 updated + 1 created)",
+    "offer_active": true,
+    "first_installment_proven": false,
+    "manual_credit_granted": false,
+    "dates_changed": false,
+    "new_accounts_created": 0,
     "remote_push": false
   },
   "history": {
@@ -798,49 +751,121 @@
         "openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/tasks.md"
       ],
       "next_action": "Definir o pr?ximo escopo; carregar 5.3/5.7 como bloqueios da abertura geral; N?O iniciar nada automaticamente."
+    },
+    "previous_current_phase_56_2_7": {
+      "phase": "56.2.7",
+      "functional_label": "Abertura gradual do Produto 1:1 com Luna (all_stores ativo; monitoramento de 7 dias transferido)",
+      "updated_at": "2026-10-20",
+      "status": "archived_monitoring_transferred_in_progress",
+      "plan_count": "7/7",
+      "summary_count": "6/7 (plano 07 sem SUMMARY; entrega concluída, monitoramento transferido)",
+      "openspec_change": "fase-56-2-7-abertura-gradual-produto-1-1-luna (ATIVA; sync/archive pendentes)",
+      "openspec_tasks": "37/38; 5.5 monitoramento transferido e aberto; 6.3/6.4 executados",
+      "verification": {
+        "artifact": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-OPENSPEC-VERIFICATION.md",
+        "status": "archived_monitoring_in_progress",
+        "archive_ready": true,
+        "score": "21/21 requirements; 89/89 scenarios",
+        "note": "OpenSpec verification already executed. Sync/archive are next lifecycle steps, not implementation defects."
+      },
+      "documentary_gates": {
+        "typecheck": "0",
+        "lint": "0",
+        "build": "exit 0 (published deployment)",
+        "focused_tests": "99/99",
+        "changelog_tests": "30/30",
+        "openspec_validate_strict": "valid",
+        "git_diff_check": "passed"
+      },
+      "openspec_lifecycle": {
+        "verified": true,
+        "synced": true,
+        "archived": true,
+        "status": "done",
+        "sync_preparation": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
+        "note": "2026-10-20: verify -> sync -> archive. 5.3/5.7 proven in 56.2.7 while preserving the 56.2.6 deferral record. Task 5.5 remains open and transferred; monitoring continues after archive.",
+        "archive_path": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna",
+        "synced_specs": [
+          "product-1-1-controlled-real-test-authorization (updated)",
+          "product-1-1-flow-activation (updated)",
+          "product-1-1-hosted-pilot (updated)",
+          "product-1-1-gradual-opening (created)",
+          "product-1-1-generation-orchestration (historical note reconciled)"
+        ],
+        "tasks": "37/38 (5.5 aberta e transferida)",
+        "archive_date": "2026-10-20"
+      },
+      "operational_snapshot": {
+        "captured_at": "2026-10-19",
+        "note": "DATED SNAPSHOT - not a permanently current state. Re-read panel/database before decisions.",
+        "all_stores": true,
+        "test_stores": false,
+        "authorizations": {
+          "all_stores": "all_stores",
+          "test_stores": "test_stores"
+        },
+        "cap_usd": 5,
+        "spent_usd": 0.1484,
+        "available_usd": 4.8516,
+        "generation_paused": false,
+        "deployment": "dpl_FHMwawB4yZPYfTsinnTq7KEtpr5E READY",
+        "source": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-EVIDENCE.md"
+      },
+      "monitoring": {
+        "task": "5.5",
+        "status": "transferred_in_progress",
+        "responsible": "Checkpoint 3 approver (named in the approval record)",
+        "transferred_at": "2026-10-19",
+        "ends_at": "2026-10-26T23:59:59-03:00",
+        "artifact": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-MONITORING-TRANSFER.md",
+        "executed": false,
+        "waived": false,
+        "note": "Separate from delivery; keep task 5.5 open until the seven days are recorded."
+      },
+      "changelog": {
+        "status": "published_and_card_validated",
+        "entry": "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md",
+        "verification": ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CHANGELOG-VERIFICATION.md",
+        "announcement": "card",
+        "note": "Published after explicit authorization; dashboard card and /novidades validated with an authenticated test-store session.",
+        "deployment": "dpl_7YAtV11z5UDEEzx9m9YWPcvLpdXA READY",
+        "validated_at": "2026-10-19",
+        "validation": "Authenticated test-store session: dashboard 200 with title; /novidades 200 with title and slug; no data mutation."
+      },
+      "d13": "accepted_for_monitored_general_opening_not_resolved",
+      "kill_real": "inconclusive",
+      "artifacts": [
+        ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-OPENSPEC-VERIFICATION.md",
+        ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-MONITORING-TRANSFER.md",
+        ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-SYNC-PREPARATION.md",
+        ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-EVIDENCE.md",
+        ".planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-07-OPENING-ACCEPTANCE.md",
+        "content/changelog/2026-10-19-campanhas-mais-qualidade-novos-cenarios.md",
+        "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/tasks.md",
+        "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/MONITORING.md"
+      ],
+      "next_action": "Keep 5.5 open and monitor until 2026-10-26 23:59 BRT; no new phase, generation, operational change or deploy.",
+      "archive": {
+        "path": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna",
+        "monitoring_pointer": "openspec/changes/archive/2026-10-20-fase-56-2-7-abertura-gradual-produto-1-1-luna/MONITORING.md",
+        "archived_at": "2026-10-20"
+      }
     }
   },
   "artifacts": [
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-CONTEXT.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-UI-SPEC.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-PATTERNS.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-01-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-01-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-02-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-02-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-03-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-03-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-04-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-04-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-05-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-05-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-06-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-06-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-07-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-07-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-08-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-08-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-09-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-09-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-10-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-10-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-11-PLAN.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-11-SUMMARY.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-UAT.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56-1-VERIFICATION.md",
-    ".planning/phases/56.1-contrato-produtivo-modelos-e-fallback/56.1-GSD-UAT.md",
-    "openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback"
+    ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-UAT-PRODUCTION.md",
+    ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-VERIFICATION.md",
+    ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-CLOSURE-READINESS.md",
+    ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-03-GATES.md",
+    ".planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-03-ISOLATED-EVIDENCE.md",
+    "openspec/changes/archive/2026-10-20-oferta-teste-gratuito-28-dias/MONITORING.md"
   ],
-  "blockers": [
-    "Abertura geral: 5.3 (estorno hospedado) e 5.7 (replay p?s-redeploy) adiadas por decis?o do respons?vel; N?O executadas; obrigat?rias antes de all_stores.",
-    "Hist?rico: reset final isolado F56.2a exit 1/HTTP 502, causa/upstream desconhecido; n?o ? sucesso e n?o foi repetido."
-  ],
+  "blockers": [],
   "human_actions_pending": [
-    "Definir o pr?ximo escopo (sem iniciar automaticamente).",
-    "Comprovar 5.3/5.7 antes de qualquer abertura geral.",
-    "Hist?rico: investigar a causa desconhecida do exit 1/HTTP 502 antes de depender do procedimento de reset."
+    "Após 2026-10-27T21:50:52.269093Z, conferir a primeira parcela na execução diária seguinte do cron e registrar a evidência; não marcar como comprovada antes.",
+    "Definir o próximo escopo sem iniciar nada automaticamente."
   ],
   "uncommitted_files": [],
-  "next_action": "Definir o pr?ximo escopo; carregar 5.3/5.7 como bloqueios da abertura geral; N?O iniciar nada automaticamente. Sem push/deploy/ativa??o.",
-  "context_notes": "F56.1 permanece como histórico concluído. F56.2a: 6/6 planos e summaries, OpenSpec 31/31, UAT 4 pass + 1 N/A, segurança 20/20, verificada/sincronizada/arquivada no archive 2026-10-07. F56.2b1a (GSD 56.2.1): 6/6 planos e summaries; OpenSpec 23/23 com task 1.4 N/A (gate APPROVED 12/12); UAT humano aprovado em 2026-10-08T21:00:22Z e reconfirmado; segurança 14/14 fechadas, 0 abertas; snapshot final contratos 152/152 / Postgres 20/20 / gate 12/12 (verificação independente de escopo distinto 128/128); lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído e change arquivada em openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1. F56.2b1b (GSD 56.2.2): 10/10 planos e summaries; OpenSpec 39/39 com task 7.5 N/A (GATE BLOQUEANTE da b2, documentado — não exercido na b1b inativa) e task 7.4 DONE (revisão humana); UAT humano aprovado em 2026-10-12 (9/9 pass, 0 issues) com escopo EXCLUSIVO da entrega INATIVA da b1b; 18 falhas pré-existentes (lab/bench 14, provider/timeout 3, legal 1) confirmadas contra a baseline 50152297 e mantidas como dívida SEPARADA (não declaradas verdes); 3 asserções test-only da fase corrigidas (commit 51f6c2b6). Stage off; flags false; nenhuma concessão habilitadora; sem db push/reset/deploy/provider/chamada paga/ativação; migrations b1b somente na instância isolada. b1b sincronizada e ARQUIVADA em openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/ (lifecycle /opsx-verify -> /opsx-sync -> /opsx-archive concluído); o GATE bloqueante da b2 (estratégia operacional de resolução de claims residuais) permanece PENDENTE. A revisão de segurança formal está CONCLUÍDA (56.2.2-SECURITY.md, verified, 48/48; sign-off humano 2026-10-12, entrega INATIVA). b2 (56.2.3)/F56.3 não iniciados. Reset final F56.2a retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não deve ser apresentado como sucesso; não repetir reset nem executar novo comando DB como parte deste fechamento. Esta aprovação não autoriza ativação, db push, provider, reset nem início de b2/F56.3. HISTORICO 2026-10-16: B2.2 (GSD 56.2.4 / F56.2b2b) CONCLUÍDA como entrega INATIVA — 10/10 planos (01..10 incl. reparos 08 fence de publicação, 09 recuperação alcançável + terminal do iniciador, 10 fidelidade da restauração + ferramentas). Checkpoint humano approved_with_limitations (inativo/local; inspeção visual adicional não realizada). Code review e segurança INDEPENDENTES reexecutados pós-reparos: 0 high/critical (CR-01..03/WR-01..04/SEC-01..05/UF-01 RESOLVED). Lifecycle OpenSpec CONCLUIDO em 2026-10-16 (verify/sync/archive; 45/45 tasks; archive openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/; commits e148dc94/f628f724/aa8477e7/b526256d). D13 bloqueante NÃO resolvido; sign-off B2.1 separado/pendente. Contadores reconciliados na base escopada (completed_phases 5→6; total_plans 50→53; completed_plans 44→53; percent 71→86). Sem ativação/db push/reset/deploy/provider; B2.3/F56.3 NÃO iniciados. F56.2b2d/GSD 56.2.6: encerrada no escopo N=1 e arquivada em 2026-10-19; 8/8 planos; 52/54 tasks; 5.3/5.7 adiadas e n?o executadas; 5.9 fechado com escopo delimitado; D13 somente N=1; kill real INCONCLUSIVE; all_stores=false; DEFERRED.md preservado no archive."
+  "next_action": "Manter a oferta ativa. Conferir a primeira parcela após 2026-10-27T21:50:52.269093Z na execução diária seguinte do cron; não antecipar prova. Sem crédito manual, nova conta, convite, e-mail, env ou geração.",
+  "context_notes": "F50.2 concluída, verificada, sincronizada e arquivada em 2026-10-20. UAT de produção PASS: conta criada após launch_at, onboarding, exatamente um enrollment, uma concessão inicial de 5 créditos e saldo visual de 5. OpenSpec: 42/42 tasks; 4 specs (demo-credit-grant, demo-status-ui, monthly-credits-engine atualizadas; trial-offer criada). Archive: openspec/changes/archive/2026-10-20-oferta-teste-gratuito-28-dias/. A primeira parcela (5 créditos) é elegível em 2026-10-27T21:50:52.269093Z e permanece NÃO comprovada até a execução real do cron; ver MONITORING.md. Nenhuma nova conta, concessão manual, envio, geração ou alteração de datas. Validação global --specs --strict: 192 passed, 75 failed em specs não relacionadas; as quatro specs afetadas passam."
 }
