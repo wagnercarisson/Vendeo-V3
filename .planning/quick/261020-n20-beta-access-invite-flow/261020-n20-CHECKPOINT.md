@@ -54,6 +54,8 @@ Consequência: enquanto a configuração estiver ausente, aprovar uma solicitaç
 
 ## Domínio remetente e rastreamento
 
+**SMTP do Supabase Auth:** Resend (`smtp.resend.com:587`, remetente `noreply@vendeo.tech`), confirmado em 2026-10-20. Hostinger é registro histórico. Diagnóstico completo em `261020-n20-SMTP-DIAGNOSIS.md`.
+
 | Verificação | Estado |
 |---|---|
 | `send.vendeo.tech` MX | `feedback-smtp.sa-east-1.amazonses.com` (infra típica do Resend) |

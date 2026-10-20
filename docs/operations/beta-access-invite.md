@@ -14,6 +14,16 @@ Fluxo coberto: **solicitação → aprovação admin → e-mail de convite → d
 
 Reenvio: convite pendente → `generateLink({ type: "magiclink" })`; conta já ativa → e-mail de orientação para `/login`, sem forçar troca de senha. Reenviar nunca altera `auth.users.created_at`.
 
+## Provedor de e-mail vigente (produção)
+
+Confirmado por leitura da configuração de Auth em 2026-10-20:
+
+- **SMTP do Supabase Auth (signup/recuperação): Resend** — `smtp.resend.com:587`, remetente `noreply@vendeo.tech` (nome `Vendeo`). Senha presente, não registrada aqui.
+- O registro de **Hostinger** em `docs/archived-alignments/alinhamento-fase-8-ciclo-de-conta.md` é **histórico/superado**; não é o provedor vigente.
+- **Convites do beta:** usam a **API do Resend do app** (não o SMTP do Auth), com `VENDEO_EMAIL_FROM` e `RESEND_API_KEY` próprios. Não é necessária troca de provedor.
+
+Antes de habilitar envio real, confirmar no painel do Resend a verificação do domínio e desligar o rastreamento de cliques. A API do Resend não foi consultada por falta de chave de API utilizável; a evidência DNS mostra `send.vendeo.tech` (SES/Resend) com **DKIM `resend._domainkey` ausente**, o que impede afirmar que o domínio está verificado.
+
 ## Pré-checagem de produção (obrigatória antes de habilitar envio real)
 
 | Item | Como conferir | Falha |
