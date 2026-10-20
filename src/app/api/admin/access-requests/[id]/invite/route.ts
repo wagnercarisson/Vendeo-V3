@@ -42,9 +42,21 @@ export const POST = apiHandler(
       );
     }
 
+    if (result.reason === "stale") {
+      return NextResponse.json(
+        {
+          error: "Este envio foi substituído por uma tentativa mais recente.",
+          invite: result.outcome,
+          auditRecorded: result.auditRecorded,
+        },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json({
       success: result.ok,
       invite: result.outcome,
+      auditRecorded: result.auditRecorded,
     });
   },
 );

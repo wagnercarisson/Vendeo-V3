@@ -41,6 +41,14 @@ export function UpdatePasswordForm() {
         return;
       }
 
+      // Cadastro só é considerado concluído após a senha ser definida.
+      // Falha aqui não bloqueia o acesso; o reenvio continua retomável.
+      await fetch("/api/auth/invite-completed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }).catch(() => null);
+
       router.replace("/dashboard");
     } catch {
       setError("Não foi possível atualizar a senha. Tente novamente.");

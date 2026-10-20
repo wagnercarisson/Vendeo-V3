@@ -25,7 +25,9 @@ ALTER TABLE public.access_requests
   ADD COLUMN IF NOT EXISTS invite_error TEXT,
   ADD COLUMN IF NOT EXISTS invite_provider_message_id TEXT,
   ADD COLUMN IF NOT EXISTS invite_locked_until TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS invited_user_id UUID;
+  ADD COLUMN IF NOT EXISTS invite_attempt_token UUID,
+  ADD COLUMN IF NOT EXISTS invited_user_id UUID,
+  ADD COLUMN IF NOT EXISTS password_set_at TIMESTAMPTZ;
 
 COMMENT ON COLUMN public.access_requests.invite_status IS
   'Estado do envio do convite: not_sent | sending | sent | failed | unconfirmed | account_active.';
@@ -35,8 +37,12 @@ COMMENT ON COLUMN public.access_requests.invite_provider_message_id IS
   'Id da mensagem no provedor (Resend). Nunca contém token/hash.';
 COMMENT ON COLUMN public.access_requests.invite_locked_until IS
   'Lease atômico contra envios concorrentes; expira sozinho.';
+COMMENT ON COLUMN public.access_requests.invite_attempt_token IS
+  'Token da tentativa que detém o lease. Finalização só aplica se o token ainda for o atual.';
 COMMENT ON COLUMN public.access_requests.invited_user_id IS
   'Usuário criado pelo convite (auth.users.id), quando aplicável.';
+COMMENT ON COLUMN public.access_requests.password_set_at IS
+  'Instante em que o usuário concluiu a definição de senha. NULL após aceitar o convite = cadastro incompleto (retomável).';
 
 -- =============================================================================
 -- 2. CHECK de invite_status
@@ -89,7 +95,9 @@ ALTER TABLE public.admin_audit_log
 --   ));
 -- ALTER TABLE public.access_requests DROP CONSTRAINT IF EXISTS chk_access_requests_invite_status;
 -- ALTER TABLE public.access_requests
+--   DROP COLUMN IF EXISTS password_set_at,
 --   DROP COLUMN IF EXISTS invited_user_id,
+--   DROP COLUMN IF EXISTS invite_attempt_token,
 --   DROP COLUMN IF EXISTS invite_locked_until,
 --   DROP COLUMN IF EXISTS invite_provider_message_id,
 --   DROP COLUMN IF EXISTS invite_error,

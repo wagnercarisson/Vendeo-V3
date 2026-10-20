@@ -70,6 +70,7 @@ export const POST = apiHandler(
     // A aprovação já está persistida e auditada. O convite é um passo separado,
     // com estado próprio (enviado/falhou), reenviável sem reaprovar.
     let invite: Awaited<ReturnType<typeof sendAccessInvite>>["outcome"] | null = null;
+    let auditRecorded: boolean | undefined;
     try {
       const result = await sendAccessInvite({
         requestId: id,
@@ -77,6 +78,7 @@ export const POST = apiHandler(
         trigger: "approve",
       });
       invite = result.outcome;
+      auditRecorded = result.auditRecorded;
     } catch (inviteError) {
       console.error("access invite dispatch error:", inviteError);
       invite = {
@@ -91,6 +93,7 @@ export const POST = apiHandler(
       success: true,
       status: "approved",
       invite,
+      auditRecorded,
     });
   },
 );

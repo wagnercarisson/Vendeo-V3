@@ -36,3 +36,4 @@
 | `VENDEO_EMAIL_ENABLED` | Não | `false` | Habilita envio de e-mail pelo app (convite do beta e notificações) | `true` |
 | `RESEND_API_KEY` | Não | — | Chave da API Resend (backend apenas) | `re_...` |
 | `VENDEO_EMAIL_FROM` | Não | `noreply@vendeo.tech` | Remetente verificado no Resend | `noreply@vendeo.tech` |
+| `RESEND_API_URL` | Não | `https://api.resend.com/emails` | **Somente teste isolado** — endpoint de captura; nunca usar em produção | `http://127.0.0.1:3101/emails` |

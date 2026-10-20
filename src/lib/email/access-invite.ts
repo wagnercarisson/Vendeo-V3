@@ -15,7 +15,8 @@ import "server-only";
  *   entregue. Resultado ambíguo (timeout/5xx/rede) vira "unconfirmed".
  */
 
-const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const RESEND_ENDPOINT =
+  process.env.RESEND_API_URL?.trim() || "https://api.resend.com/emails";
 const SEND_TIMEOUT_MS = 10_000;
 
 export type InviteEmailKind = "invite" | "continue" | "account_active";
@@ -69,7 +70,12 @@ function escapeHtml(value: string): string {
 
 function safeError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "erro desconhecido");
-  return message.replace(/\s+/g, " ").trim().slice(0, 300);
+  return message
+    .replace(/token_hash=[^&\s]+/gi, "token_hash=[redacted]")
+    .replace(/https?:\/\/[^\s"']+/gi, "[url]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
 }
 
 function buildContent(input: {

@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 import { NextRequest, NextResponse } from "next/server";
 
 const VALID_NEXT = ["/", "/update-password"] as const;
@@ -52,6 +53,13 @@ export async function GET(request: NextRequest) {
 
 // POST — consumo do convite somente após ação explícita na página /convite.
 export async function POST(request: NextRequest) {
+  // Cria sessão: exige mesma origem (CSRF). Sem detalhes/token na resposta.
+  try {
+    requireSameOrigin(request);
+  } catch {
+    return new NextResponse(null, { status: 403 });
+  }
+
   const form = await request.formData().catch(() => null);
   const tokenHash = String(form?.get("token_hash") ?? "");
   const type = String(form?.get("type") ?? "");

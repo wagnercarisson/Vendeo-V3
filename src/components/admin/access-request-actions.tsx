@@ -8,20 +8,41 @@ type InviteOutcome = {
   error?: string | null;
 } | null;
 
-function inviteMessage(invite: InviteOutcome, approved: boolean): string {
+function inviteMessage(
+  invite: InviteOutcome,
+  approved: boolean,
+  auditRecorded?: boolean,
+): string {
   const prefix = approved ? "Aprovado." : "Reenvio:";
+  let message: string;
   switch (invite?.status) {
     case "sent":
-      return `${prefix} convite enviado ao provedor.`;
+      message = `${prefix} convite enviado ao provedor.`;
+      break;
     case "account_active":
-      return `${prefix} conta já ativa — enviamos orientação para entrar.`;
+      message = `${prefix} conta já ativa — enviamos orientação para entrar.`;
+      break;
     case "unconfirmed":
-      return `${prefix} resultado do envio não confirmado. Verifique antes de reenviar.`;
+      message = `${prefix} resultado do envio não confirmado. Verifique antes de reenviar.`;
+      break;
+    case "sent_unrecorded":
+      message = `${prefix} o provedor aceitou o e-mail, mas o registro local não foi confirmado. Não reenvie automaticamente.`;
+      break;
+    case "stale":
+      message = `${prefix} este envio foi substituído por uma tentativa mais recente.`;
+      break;
     case "failed":
-      return `${prefix} o convite falhou${invite.error ? ` (${invite.error})` : ""}.`;
+      message = `${prefix} o convite falhou${invite.error ? ` (${invite.error})` : ""}.`;
+      break;
     default:
-      return approved ? "Aprovado, mas o convite não foi enviado." : "Convite não enviado.";
+      message = approved ? "Aprovado, mas o convite não foi enviado." : "Convite não enviado.";
   }
+
+  if (auditRecorded === false) {
+    message += " Auditoria não registrada.";
+  }
+
+  return message;
 }
 
 export function AccessRequestActions({
@@ -70,7 +91,7 @@ export function AccessRequestActions({
       }
 
       if (action === "approve") {
-        setMessage(inviteMessage(data?.invite ?? null, true));
+        setMessage(inviteMessage(data?.invite ?? null, true, data?.auditRecorded));
       }
 
       router.refresh();
@@ -97,7 +118,7 @@ export function AccessRequestActions({
         return;
       }
 
-      setMessage(inviteMessage(data?.invite ?? null, false));
+      setMessage(inviteMessage(data?.invite ?? null, false, data?.auditRecorded));
       router.refresh();
     } catch {
       setError("Erro de rede");
