@@ -103,22 +103,26 @@ O deploy 2 foi necessário porque as variáveis de e-mail foram adicionadas apó
 
 **Parada antes de habilitar:** falta confirmar o e-mail controlado de validação e o estado do rastreamento no Resend. Não habilitar envio nem criar/aprovar solicitação até essas confirmações.
 
-## Execução da janela (2026-10-20)
+## Resultado do teste único (2026-10-20)
 
-| Etapa | Resultado |
+| Item | Resultado |
 |---|---|
-| `VENDEO_EMAIL_ENABLED` | **true** (habilitado nesta janela) |
-| Redeploy com envio ligado | `dpl_G6aFPfXwW1vqkbxLEfSRLiX4x8C5` — **READY** |
-| `launch_at` F50.2 | `2026-10-20T21:25:31.344856+00:00` |
-| Tracking | não configurado; nenhum subdomínio de tracking criado |
-| Solicitação de validação | `2e9f8544-db99-4b87-a356-7dac06a7cb7a` — `comercial@vendeo.tech`, **pending**, criada em `2026-10-20T21:43:14Z` (depois do `launch_at`) |
-| Aprovação/convite | **NÃO EXECUTADOS** — aprovação exige sessão de admin |
-| Outras solicitações | intocadas |
-| Estado final do envio | **ligado** (`VENDEO_EMAIL_ENABLED=true`) |
+| Solicitação | `2e9f8544-db99-4b87-a356-7dac06a7cb7a` — `approved` |
+| Aprovação | `2026-10-20T21:46:15Z` |
+| Convite | `invite_status=sent`, tentativa 1, sem erro |
+| `providerMessageId` | `01a15b47-85a2-736e-be1a-bbb53d85473c` |
+| Envio ao provedor | `2026-10-20T21:46:16Z` |
+| `auth.users.created_at` | `2026-10-20T21:46:16Z` (depois do `launch_at`) |
+| Recebimento | confirmado pelo responsável |
+| Token | **não exposto**; não foi possível conferir o destino “sem consumir” porque o convite já foi consumido |
+| Estado posterior observado | e-mail confirmado `21:48:16Z`, senha `21:48:34Z`, loja criada `21:50:25Z`, onboarding `21:50:52Z` |
+| Créditos | **+5** (`demo`, saldo 5, enrollment seq 0, validade até `2026-11-17`) |
+| Campanhas pagas | **0** |
+| Outras solicitações | intocadas (5 aprovadas no total: 4 anteriores + esta; 1 pendente alheia) |
+| Notificações pendentes | **0** |
+| `VENDEO_EMAIL_ENABLED` final | **true** (permanece ligado) |
 
-**Parada de segurança:** a única conta admin de produção não é a conta do responsável/Windows e não há sessão admin autorizada disponível. Não gerei magiclink nem sessão para essa conta. A aprovação deve ser feita pela UI admin ou com sessão/credencial explicitamente fornecida.
-
-**Aceite/onboarding:** validação **transferida para a F50.2**, não executada.
+**Aceite/onboarding:** não foram executados por esta quick. O estado de produção mostra que ocorreram após o recebimento; o registro desta quick é **validação transferida para a F50.2**, não execução própria. Nenhum token, link completo ou senha foi exposto.
 
 ## Fora de escopo / não executado
 
