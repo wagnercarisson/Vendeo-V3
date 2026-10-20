@@ -98,4 +98,48 @@ describe("POST /api/admin/access-requests/[id]/invite", () => {
       error: "Já existe um envio de convite em andamento. Aguarde.",
     });
   });
+
+  it("409 quando a tentativa perdeu o lease (stale)", async () => {
+    mockSendAccessInvite.mockResolvedValue({
+      ok: false,
+      reason: "stale",
+      auditRecorded: true,
+      outcome: {
+        status: "stale",
+        providerMessageId: "msg-old",
+        sentAt: "2026-10-20T12:00:00.000Z",
+        error: "stale_attempt",
+      },
+    });
+
+    const res = await postInvite("req-1");
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      error: "Este envio foi substituído por uma tentativa mais recente.",
+      invite: { status: "stale" },
+    });
+  });
+
+  it("provedor aceitou sem persistência local → 200 com sent_unrecorded", async () => {
+    mockSendAccessInvite.mockResolvedValue({
+      ok: false,
+      auditRecorded: false,
+      outcome: {
+        status: "sent_unrecorded",
+        providerMessageId: "msg-1",
+        sentAt: "2026-10-20T12:00:00.000Z",
+        error: "local_persistence_failed",
+      },
+    });
+
+    const res = await postInvite("req-1");
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: false,
+      auditRecorded: false,
+      invite: { status: "sent_unrecorded", providerMessageId: "msg-1" },
+    });
+  });
 });

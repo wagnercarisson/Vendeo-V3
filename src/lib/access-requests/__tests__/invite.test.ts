@@ -37,9 +37,20 @@ const baseRow = {
   status: "approved",
   invite_attempts: 0,
   invited_user_id: null,
+  password_set_at: null,
 };
 
-function setupChains(row: unknown = baseRow, claimed: unknown = baseRow) {
+type ChainOptions = {
+  finalizeData?: unknown;
+  finalizeError?: unknown;
+  auditError?: unknown;
+};
+
+function setupChains(
+  row: unknown = baseRow,
+  claimed: unknown = baseRow,
+  options: ChainOptions = {},
+) {
   const readChain: any = {};
   readChain.select = () => readChain;
   readChain.eq = () => readChain;
@@ -49,29 +60,40 @@ function setupChains(row: unknown = baseRow, claimed: unknown = baseRow) {
   claimChain.update = () => claimChain;
   claimChain.eq = () => claimChain;
   claimChain.or = () => claimChain;
+  claimChain.is = () => claimChain;
+  claimChain.lt = () => claimChain;
   claimChain.select = () => claimChain;
   claimChain.maybeSingle = async () => ({ data: claimed, error: null });
 
   const finalizeUpdates: Array<Record<string, unknown>> = [];
+  const finalizeEqCalls: Array<[string, unknown]> = [];
   const finalizeChain: any = {};
   finalizeChain.update = (values: Record<string, unknown>) => {
     finalizeUpdates.push(values);
     return finalizeChain;
   };
-  finalizeChain.eq = async () => ({ error: null });
+  finalizeChain.eq = (column: string, value: unknown) => {
+    finalizeEqCalls.push([column, value]);
+    return finalizeChain;
+  };
+  finalizeChain.select = () => finalizeChain;
+  finalizeChain.maybeSingle = async () => ({
+    data: options.finalizeData === undefined ? { id: "req-1" } : options.finalizeData,
+    error: options.finalizeError ?? null,
+  });
+
+  const auditInsert = vi.fn(async () => ({ error: options.auditError ?? null }));
 
   let accessRequestCalls = 0;
   mocks.from.mockImplementation((table: string) => {
-    if (table === "admin_audit_log") {
-      return { insert: async () => ({ error: null }) };
-    }
+    if (table === "admin_audit_log") return { insert: auditInsert };
     accessRequestCalls += 1;
     if (accessRequestCalls === 1) return readChain;
     if (accessRequestCalls === 2) return claimChain;
     return finalizeChain;
   });
 
-  return { finalizeUpdates };
+  return { finalizeUpdates, finalizeEqCalls, auditInsert };
 }
 
 beforeEach(() => {
@@ -114,7 +136,7 @@ describe("sendAccessInvite — orquestração", () => {
   });
 
   it("primeiro convite: generateLink invite + e-mail kind=invite", async () => {
-    const { finalizeUpdates } = setupChains();
+    const { finalizeUpdates, finalizeEqCalls } = setupChains();
     mocks.generateLink.mockResolvedValue({
       data: {
         user: { id: "user-1" },
@@ -145,6 +167,11 @@ describe("sendAccessInvite — orquestração", () => {
       invite_provider_message_id: "msg-1",
       invited_user_id: "user-1",
     });
+    // A finalização exige o token da tentativa que adquiriu o lease.
+    expect(finalizeEqCalls).toEqual(
+      expect.arrayContaining([["invite_attempt_token", expect.any(String)]]),
+    );
+    expect(finalizeUpdates[0].invite_attempt_token).toBeNull();
   });
 
   it("convite pendente conhecido → magiclink de continuação (não invite)", async () => {
@@ -186,8 +213,48 @@ describe("sendAccessInvite — orquestração", () => {
     expect(result.outcome.status).toBe("sent");
   });
 
-  it("conta já ativa → e-mail de orientação, sem magiclink e sem troca de senha", async () => {
-    const activeRow = { ...baseRow, invited_user_id: "user-2" };
+  it("convite ACEITO e abandonado antes da senha → reenvio retoma (magiclink)", async () => {
+    const acceptedRow = { ...baseRow, invited_user_id: "user-1", password_set_at: null };
+    setupChains(acceptedRow, acceptedRow);
+    mocks.getUserById.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-1",
+          email: "loja@example.com",
+          invited_at: "2026-10-20T12:00:00Z",
+          email_confirmed_at: "2026-10-20T12:05:00Z",
+          confirmed_at: "2026-10-20T12:05:00Z",
+          last_sign_in_at: "2026-10-20T12:05:00Z",
+        },
+      },
+      error: null,
+    });
+    mocks.generateLink.mockResolvedValue({
+      data: { user: { id: "user-1" }, properties: { hashed_token: "hash-3" } },
+      error: null,
+    });
+
+    const result = await sendAccessInvite({
+      requestId: "req-1",
+      actorId: "admin-1",
+      trigger: "resend",
+    });
+
+    expect(mocks.generateLink).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "magiclink" }),
+    );
+    expect(mocks.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "continue", tokenHash: "hash-3" }),
+    );
+    expect(result.outcome.status).toBe("sent");
+  });
+
+  it("conta com senha definida → e-mail de orientação, sem magiclink", async () => {
+    const activeRow = {
+      ...baseRow,
+      invited_user_id: "user-2",
+      password_set_at: "2026-10-20T12:06:00Z",
+    };
     setupChains(activeRow, activeRow);
     mocks.getUserById.mockResolvedValue({
       data: {
@@ -217,10 +284,14 @@ describe("sendAccessInvite — orquestração", () => {
   });
 
   it("erro 'already registered' + conta ativa → account_active (sem reset de senha)", async () => {
-    setupChains();
+    const activeRow = { ...baseRow, password_set_at: "2026-10-20T12:06:00Z" };
+    setupChains(activeRow, activeRow);
     mocks.generateLink.mockResolvedValue({
       data: null,
-      error: { message: "A user with this email address has already been registered", code: "email_exists" },
+      error: {
+        message: "A user with this email address has already been registered",
+        code: "email_exists",
+      },
     });
     mocks.listUsers.mockResolvedValue({
       data: {
@@ -271,7 +342,7 @@ describe("sendAccessInvite — orquestração", () => {
   it("resultado ambíguo do provedor → unconfirmed, sem reenvio automático", async () => {
     setupChains();
     mocks.generateLink.mockResolvedValue({
-      data: { user: { id: "user-4" }, properties: { hashed_token: "hash-3" } },
+      data: { user: { id: "user-4" }, properties: { hashed_token: "hash-4" } },
       error: null,
     });
     mocks.sendEmail.mockResolvedValue({ status: "unconfirmed", error: "timeout" });
@@ -286,6 +357,60 @@ describe("sendAccessInvite — orquestração", () => {
     expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
   });
 
+  it("tentativa antiga (lease perdido) NÃO sobrescreve a finalização mais recente", async () => {
+    const { finalizeUpdates } = setupChains(baseRow, baseRow, { finalizeData: null });
+    mocks.generateLink.mockResolvedValue({
+      data: { user: { id: "user-5" }, properties: { hashed_token: "hash-5" } },
+      error: null,
+    });
+
+    const result = await sendAccessInvite({
+      requestId: "req-1",
+      actorId: "admin-1",
+      trigger: "approve",
+    });
+
+    expect(result.reason).toBe("stale");
+    expect(result.outcome.status).toBe("stale");
+    expect(finalizeUpdates).toHaveLength(1);
+  });
+
+  it("provedor aceitou, mas persistência local falhou → sent_unrecorded (não 'sent')", async () => {
+    setupChains(baseRow, baseRow, { finalizeError: { message: "db down" } });
+    mocks.generateLink.mockResolvedValue({
+      data: { user: { id: "user-6" }, properties: { hashed_token: "hash-6" } },
+      error: null,
+    });
+
+    const result = await sendAccessInvite({
+      requestId: "req-1",
+      actorId: "admin-1",
+      trigger: "approve",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.outcome.status).toBe("sent_unrecorded");
+    expect(result.outcome.providerMessageId).toBe("msg-1");
+    expect(result.outcome.error).toContain("local_persistence_failed");
+  });
+
+  it("falha de auditoria é exposta sem virar sucesso silencioso", async () => {
+    setupChains(baseRow, baseRow, { auditError: { message: "audit down" } });
+    mocks.generateLink.mockResolvedValue({
+      data: { user: { id: "user-7" }, properties: { hashed_token: "hash-7" } },
+      error: null,
+    });
+
+    const result = await sendAccessInvite({
+      requestId: "req-1",
+      actorId: "admin-1",
+      trigger: "approve",
+    });
+
+    expect(result.outcome.status).toBe("sent");
+    expect(result.auditRecorded).toBe(false);
+  });
+
   it("solicitação não aprovada → não envia", async () => {
     setupChains({ ...baseRow, status: "pending" }, { ...baseRow, status: "pending" });
 
@@ -298,5 +423,26 @@ describe("sendAccessInvite — orquestração", () => {
     expect(result.reason).toBe("not_approved");
     expect(mocks.generateLink).not.toHaveBeenCalled();
     expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("erro com token/URL é persistido redigido", async () => {
+    const { finalizeUpdates } = setupChains();
+    mocks.generateLink.mockResolvedValue({
+      data: null,
+      error: {
+        message:
+          "failed for https://vendeo.tech/convite?token_hash=segredo123&type=invite",
+      },
+    });
+
+    await sendAccessInvite({
+      requestId: "req-1",
+      actorId: "admin-1",
+      trigger: "approve",
+    });
+
+    const stored = String(finalizeUpdates[0]?.invite_error ?? "");
+    expect(stored).not.toContain("segredo123");
+    expect(stored).not.toContain("https://");
   });
 });

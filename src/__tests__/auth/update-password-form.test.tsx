@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockUpdateUser = vi.fn();
 const mockReplace = vi.fn();
+const mockFetch = vi.fn();
 
 vi.mock("@/lib/supabase/client", () => ({
   createBrowserClient: vi.fn(() => ({
@@ -24,6 +25,9 @@ import { UpdatePasswordForm } from "@/app/(auth)/update-password/update-password
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  mockFetch.mockReset();
+  mockFetch.mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", mockFetch);
 });
 
 describe("UpdatePasswordForm", () => {
@@ -89,6 +93,10 @@ describe("UpdatePasswordForm", () => {
     });
 
     expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/auth/invite-completed",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("shows error message on updateUser failure", async () => {

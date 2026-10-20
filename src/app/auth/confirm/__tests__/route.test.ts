@@ -33,6 +33,19 @@ async function confirmPost(fields: Record<string, string>): Promise<Response> {
   const req = new NextRequest("http://localhost/auth/confirm", {
     method: "POST",
     body: form,
+    headers: { origin: "http://localhost", host: "localhost" },
+  });
+  return POST(req);
+}
+
+async function confirmPostCrossOrigin(fields: Record<string, string>): Promise<Response> {
+  const { POST } = await import("@/app/auth/confirm/route");
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) form.set(key, value);
+  const req = new NextRequest("http://localhost/auth/confirm", {
+    method: "POST",
+    body: form,
+    headers: { origin: "https://evil.example", host: "localhost" },
   });
   return POST(req);
 }
@@ -148,5 +161,17 @@ describe("Convite — GET não consome; POST consome após clique", () => {
 
     expect(mockVerifyOtp).not.toHaveBeenCalled();
     expect(res.headers.get("location")).toContain("/login?error=invite_failed");
+  });
+
+  it("POST cross-origin é bloqueado (CSRF) antes de criar sessão", async () => {
+    mockVerifyOtp.mockResolvedValue({ error: null });
+
+    const res = await confirmPostCrossOrigin({
+      token_hash: "invite-token",
+      type: "invite",
+    });
+
+    expect(res.status).toBe(403);
+    expect(mockVerifyOtp).not.toHaveBeenCalled();
   });
 });
