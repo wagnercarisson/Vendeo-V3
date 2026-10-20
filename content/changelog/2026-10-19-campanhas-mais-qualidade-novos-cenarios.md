@@ -27,4 +27,4 @@ announcement: "card"
 ## O que você precisa fazer
 
 - Nada é obrigatório. Os recursos já estão disponíveis ao criar uma campanha.
-- Se quiser, escolha o cenário **Estúdio**, **Ambientado** ou **Original** no formulário. A opção **Original** pede uma imagem principal do produto.
+- Se quiser, escolha o cenário **Estúdio**, **Ambientado** ou **Original** no formulário. A opção **Original** exige exatamente uma imagem de produto.
