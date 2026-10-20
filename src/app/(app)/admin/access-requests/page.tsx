@@ -200,6 +200,7 @@ export default async function AdminAccessRequestsPage({
                         status={request.status as string}
                         inviteStatus={(request.invite_status as string) ?? "not_sent"}
                         inviteError={(request.invite_error as string) ?? null}
+                        inviteLockedUntil={(request.invite_locked_until as string) ?? null}
                       />
                     </td>
                   </tr>

@@ -29,11 +29,13 @@ export function AccessRequestActions({
   status,
   inviteStatus,
   inviteError,
+  inviteLockedUntil,
 }: {
   requestId: string;
   status: string;
   inviteStatus?: string | null;
   inviteError?: string | null;
+  inviteLockedUntil?: string | null;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -42,6 +44,11 @@ export function AccessRequestActions({
 
   // Já revisadas (approved/rejected) não podem ser re-revisadas
   const actionsDisabled = status !== "pending";
+  // Lease vencido não bloqueia: o servidor permite reenviar após a expiração.
+  const sendingActive =
+    inviteStatus === "sending" &&
+    Boolean(inviteLockedUntil) &&
+    new Date(inviteLockedUntil as string).getTime() > Date.now();
 
   async function handleAction(action: "approve" | "reject") {
     setLoading(action);
@@ -125,11 +132,11 @@ export function AccessRequestActions({
           <button
             type="button"
             onClick={handleResend}
-            disabled={loading !== null || inviteStatus === "sending"}
+            disabled={loading !== null || sendingActive}
             title={inviteError ?? undefined}
             className="text-xs font-medium text-accent-blue hover:underline disabled:opacity-50"
           >
-            {loading === "resend" || inviteStatus === "sending"
+            {loading === "resend" || sendingActive
               ? "Enviando..."
               : inviteStatus === "not_sent"
                 ? "Enviar convite"
