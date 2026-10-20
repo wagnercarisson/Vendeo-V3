@@ -227,6 +227,10 @@ Plans:
 
 **Gates:** nenhuma migration aplicada em produção; provas somente em banco isolado; preservar Produto 1:1, `56.2.7` e monitoramento beta; sem dependências novas; sem provider pago.
 
+### F50.2 — Atualização pós-UAT (2026-10-20)
+
+**Status:** **UAT DE PRODUÇÃO PASS; FECHAMENTO PENDENTE DE REVISÃO HUMANA.** Esta atualização substitui o status de checkpoint acima. As quatro migrations foram aplicadas em produção; o deploy F50.2 `dpl_3d7fiErdfikwyqA2wPDpUGay6toq` estava READY no SHA `05e81d90`, e o convite beta foi validado no deploy `dpl_G6aFPfXwW1vqkbxLEfSRLiX4x8C5` / SHA `51fd0770`. A oferta foi ativada pelo painel com ator autenticado. O fluxo real de convite, senha e onboarding criou uma conta elegível, um enrollment e uma concessão inicial de 5 créditos. Saldo no banco: 5 créditos (confirmação visual na interface não registrada nesta evidência). Nenhum crédito manual, nenhuma data alterada e nenhum reparo necessário. Evidências: `50.2-UAT-PRODUCTION.md`, `50.2-BETA-INVITE-EVIDENCE.md` e `50.2-CLOSURE-READINESS.md`. Sync/archive permanecem pendentes de revisão.
+
 ## Phase 56.1: Contrato produtivo, modelos e fallback
 
 **Goal:** preparar a infraestrutura produtiva do novo fluxo de imagem Produto 1:1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o administrativa auditÃƒÆ’Ã‚Â¡vel de um par principal e um par fallback (modelo + qualidade) restrita a um catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel fechado, contrato de snapshot imutÃƒÆ’Ã‚Â¡vel por operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, polÃƒÆ’Ã‚Â­tica explÃƒÆ’Ã‚Â­cita de falhas e fallback, resposta pÃƒÆ’Ã‚Âºblica identificÃƒÆ’Ã‚Â¡vel sem vazar motivo interno, e instrumentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de qualidade/telemetria/custo ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â como componentes e testes simulados, sem ativar geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, sem debitar crÃƒÆ’Ã‚Â©dito e sem alterar o fluxo legado.

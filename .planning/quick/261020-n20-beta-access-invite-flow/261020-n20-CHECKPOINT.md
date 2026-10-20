@@ -3,127 +3,77 @@ quick_id: 261020-n20
 slug: beta-access-invite-flow
 type: publication-checkpoint
 created: 2026-10-20
-status: awaiting-authorization
+updated: 2026-10-20
+status: complete
 ---
 
 # Checkpoint de publicação — convite de acesso ao beta
 
-Nada foi aplicado, enviado, aprovado ou publicado nesta etapa. Verificações somente leitura.
+Documento final da quick `261020-n20`. Publicação, teste único e encerramento concluídos em 2026-10-20.
 
-## Destino
-
-| Item | Estado |
-|---|---|
-| Vercel | projeto `vendeo-v3` (scope `wagnercarissons-projects`), alias de produção `https://vendeo.tech` |
-| Deployment ativo | `dpl_3d7fiErdfikwyqA2wPDpUGay6toq`, `READY`, criado em 2026-10-20 15:57 (local) |
-| Metadados Git no deployment | ausentes (deploy sem vínculo de commit no Vercel) |
-| Supabase de produção | projeto `gvbzwihwgzujwsviufgy` |
-| Git remoto | `origin` → `github.com/wagnercarisson/Vendeo-V3` |
-| Branch | `main` |
-| HEAD local | `382bfb8444b6a91c239b47d4ac6ebe194d9cb4b6` |
-| `origin/main` | `05e81d90` |
-| Divergência | **9 commits à frente, 0 atrás** (não enviados) |
-| `/convite` em produção | **404** (código novo não está no ar) |
-
-## Migration
+## Estado final
 
 | Item | Estado |
 |---|---|
-| Arquivo | `supabase/migrations/20261020000005_beta_access_invite.sql` |
-| SHA-256 | `5DBA88ABCCC7EE5BDE640C64FB4509AABE90FC93D587B755C1E735BF860B8559` |
-| Tamanho | 5.934 bytes |
-| Estado no remoto | **PENDENTE** (`20261020000005` sem versão remota) |
-| Últimas aplicadas | `20261020000001..04` (F50.2) |
-| Natureza | aditiva: colunas de convite/`password_set_at` + CHECK de auditoria |
-
-## Configuração de e-mail em produção (presença/estado)
-
-Verificado via `vercel env ls` e leitura temporária com valores mascarados; nenhum segredo foi exibido e o arquivo temporário foi removido.
-
-| Variável | Estado |
-|---|---|
-| `NEXT_PUBLIC_SITE_URL` | `https://vendeo.tech` |
-| `VENDEO_PUBLIC_SIGNUP_ENABLED` | `false` |
-| `VENDEO_EMAIL_ENABLED` | **AUSENTE** (não está ativo) |
-| `RESEND_API_KEY` | **AUSENTE** |
-| `VENDEO_EMAIL_FROM` | **AUSENTE** |
-| `SUPPORT_EMAIL` | presente |
-| `SUPABASE_SERVICE_ROLE_KEY` | presente |
-
-Consequência: enquanto a configuração estiver ausente, aprovar uma solicitação **após o deploy** não envia e-mail; o convite fica `failed` com `email_not_configured` e a aprovação permanece válida (reenviável). **Se `VENDEO_EMAIL_ENABLED=true` for configurado**, aprovar passa a disparar o convite — e a mesma chave também controla outras notificações do app, portanto não deve ser alterada às cegas.
-
-## Domínio remetente e rastreamento
-
-**SMTP do Supabase Auth:** Resend (`smtp.resend.com:587`, remetente `noreply@vendeo.tech`), confirmado em 2026-10-20. Hostinger é registro histórico. Diagnóstico completo em `261020-n20-SMTP-DIAGNOSIS.md`.
-
-| Verificação | Estado |
-|---|---|
-| `send.vendeo.tech` MX | `feedback-smtp.sa-east-1.amazonses.com` (infra típica do Resend) |
-| `send.vendeo.tech` SPF | `v=spf1 include:amazonses.com ~all` |
-| DKIM `resend._domainkey.vendeo.tech` | **NXDOMAIN — ausente** |
-| SPF apex `vendeo.tech` | Hostinger |
-| DMARC | `v=DMARC1; p=none` |
-| Domínio verificado no Resend | **CONFIRMADO pelo responsável em 2026-10-20** (a checagem DNS anterior não substitui o painel) |
-| Rastreamento de cliques desligado | **A confirmar no painel antes de ligar o envio** |
-
-**Nota histórica:** a checagem DNS de 2026-10-20 encontrou `resend._domainkey` ausente; o responsável confirmou posteriormente que o domínio está verificado no Resend. A confirmação do painel prevalece.
-
-## Execução da publicação (2026-10-20)
-
-| Etapa | Resultado |
-|---|---|
-| Migration `20261020000005` | **APLICADA** via `supabase migration up --linked`; lista remota confirma a versão |
-| Colunas em produção | `invite_status`, `invite_attempt_token`, `password_set_at` consultáveis |
-| Push | `origin/main` = `51fd0770` |
-| Deploy 1 | `dpl_5jnnxCnzN3cv43UBTXKZ9C9TGk3D` — READY, alias `vendeo.tech` |
-| Deploy 2 (após envs de e-mail) | `dpl_T7NYno2RL3AePRVV7WpwHqEonVMr` — READY |
-| `/convite` | 200, página de aceite renderizada |
-| `/login?error=invite_failed` | 200, banner de orientação presente |
-| `/signup` | 200, beta fechado preservado |
-| `VENDEO_EMAIL_ENABLED` | **false** (envio desligado) |
-| `RESEND_API_KEY` / `VENDEO_EMAIL_FROM` | presentes (`noreply@vendeo.tech`) |
-| Notificações antigas pendentes | **0** |
-| F50.2 | `enabled=false`, `launch_at=null` — **aguardando confirmação antes do primeiro convite** |
-
-O deploy 2 foi necessário porque as variáveis de e-mail foram adicionadas após o deploy 1. Nenhum convite real foi enviado e nenhuma solicitação foi aprovada.
-
-## Pré-checagens da janela (2026-10-20, somente leitura)
-
-| Item | Estado |
-|---|---|
-| F50.2 | **ATIVA**: `enabled=true`, `launch_at=2026-10-20T21:25:31.344856+00:00` |
-| Fila de notificações | **0** pendentes/processing (sem backlog de disparo) |
+| Vercel | projeto `vendeo-v3`, alias de produção `https://vendeo.tech` |
+| Deploy com envio ligado | `dpl_G6aFPfXwW1vqkbxLEfSRLiX4x8C5` — **READY** |
+| Código publicado | `51fd0770` (docs posteriores: `b39ac789`) |
+| Migration | `20261020000005_beta_access_invite.sql` **aplicada** |
+| SHA-256 da migration | `5DBA88ABCCC7EE5BDE640C64FB4509AABE90FC93D587B755C1E735BF860B8559` |
+| Supabase produção | `gvbzwihwgzujwsviufgy` |
 | SMTP Auth | Resend, `smtp.resend.com:587`, remetente `noreply@vendeo.tech` |
-| Credenciais SMTP | presentes |
-| DKIM `resend._domainkey.vendeo.tech` | **presente** (TXT `p=...`) — domínio verificado no DNS |
-| `send.vendeo.tech` | MX SES/Resend + SPF `amazonses.com` |
-| `VENDEO_EMAIL_ENABLED` | **false** — ainda não habilitado |
-| Rastreamento de abertura/cliques | **pendente de confirmação** (não legível sem API key do Resend) |
-| E-mail de validação | **pendente de confirmação** |
+| Domínio Resend | verificado (DKIM `resend._domainkey.vendeo.tech` presente) |
+| Tracking | não configurado; nenhum subdomínio de tracking criado |
+| `VENDEO_PUBLIC_SIGNUP_ENABLED` | `false` |
+| `VENDEO_EMAIL_ENABLED` final | **true** — permanece ligado |
+| Fila de notificações | **0** pendentes/processing |
+| F50.2 | **ativa**; `launch_at=2026-10-20T21:25:31.344856+00:00` |
 
-**Parada antes de habilitar:** falta confirmar o e-mail controlado de validação e o estado do rastreamento no Resend. Não habilitar envio nem criar/aprovar solicitação até essas confirmações.
-
-## Resultado do teste único (2026-10-20)
+## Teste único — envio e recebimento
 
 | Item | Resultado |
 |---|---|
-| Solicitação | `2e9f8544-db99-4b87-a356-7dac06a7cb7a` — `approved` |
-| Aprovação | `2026-10-20T21:46:15Z` |
-| Convite | `invite_status=sent`, tentativa 1, sem erro |
+| Solicitação | `2e9f8544-db99-4b87-a356-7dac06a7cb7a` — `comercial@vendeo.tech` |
+| Status | `approved` em `2026-10-20T21:46:15Z` |
+| Convite | `invite_status=sent`, tentativa 1, `invite_error=null` |
 | `providerMessageId` | `01a15b47-85a2-736e-be1a-bbb53d85473c` |
 | Envio ao provedor | `2026-10-20T21:46:16Z` |
-| `auth.users.created_at` | `2026-10-20T21:46:16Z` (depois do `launch_at`) |
-| Recebimento | confirmado pelo responsável |
-| Token | **não exposto**; não foi possível conferir o destino “sem consumir” porque o convite já foi consumido |
-| Estado posterior observado | e-mail confirmado `21:48:16Z`, senha `21:48:34Z`, loja criada `21:50:25Z`, onboarding `21:50:52Z` |
-| Créditos | **+5** (`demo`, saldo 5, enrollment seq 0, validade até `2026-11-17`) |
+| `auth.users.created_at` | `2026-10-20T21:46:16Z` — depois do `launch_at` |
+| Recebimento | **confirmado pelo responsável** em `comercial@vendeo.tech` |
+| Auditoria | `access_request_approve` + `access_request_invite` (`result=sent`) |
+
+**Aceite do agente:** o envio e o recebimento são aceitos como evidência desta quick. O agente não aprovou a solicitação, não clicou no convite e não expôs token ou link completo.
+
+## Validação humana posterior (compartilhada com a F50.2)
+
+Após o recebimento, o responsável executou o aceite, a definição de senha e o onboarding. O agente **não executou** essas etapas; apenas as observou em leitura.
+
+| Evidência | Valor |
+|---|---|
+| E-mail confirmado / sessão | `2026-10-20T21:48:16Z` |
+| `password_set_at` | `2026-10-20T21:48:34Z` |
+| Loja criada | `2026-10-20T21:50:25Z` — “Farmácia do Povo” (`is_test_store=false`) |
+| Onboarding concluído | `2026-10-20T21:50:52Z` |
+| Enrollment F50.2 | `started_at=2026-10-20T21:50:52Z`, `expires_at=2026-11-17T21:50:52Z`, `granted_total=5`, `last_granted_seq=0` |
+| Créditos | **+5 demo** (`balance=5`, `demo_balance=5`, validade até 2026-11-17) |
 | Campanhas pagas | **0** |
 | Outras solicitações | intocadas (5 aprovadas no total: 4 anteriores + esta; 1 pendente alheia) |
-| Notificações pendentes | **0** |
-| `VENDEO_EMAIL_ENABLED` final | **true** (permanece ligado) |
 
-**Aceite/onboarding:** não foram executados por esta quick. O estado de produção mostra que ocorreram após o recebimento; o registro desta quick é **validação transferida para a F50.2**, não execução própria. Nenhum token, link completo ou senha foi exposto.
+**Atribuição:** aceite/senha/onboarding são **validação humana posterior transferida para a F50.2**, não execução do agente nem desta quick. Evidência compartilhada em `.planning/phases/50.2-oferta-teste-gratuito-28-dias/50.2-BETA-INVITE-EVIDENCE.md`.
 
-## Fora de escopo / não executado
+## Link e token
 
-Migration, push e deploy foram executados nesta janela. **Não executado:** aprovação de qualquer solicitação, convite real, campanha paga, alteração de DNS/credenciais e ativação da F50.2. `.dev.log` e credenciais fora do commit.
+O convite já havia sido consumido quando o estado foi conferido. Por isso não foi possível inspecionar o destino “sem consumir”. Nenhum token, link completo ou senha foi exposto. O template gera `https://vendeo.tech/convite` (validado no E2E isolado).
+
+## Histórico
+
+- `261020-n20-SMTP-DIAGNOSIS.md` — reconciliação Hostinger × Resend; SMTP vigente é Resend.
+- Deploy inicial `dpl_5jnnxCnzN3cv43UBTXKZ9C9TGk3D` e deploy de envs `dpl_T7NYno2RL3AePRVV7WpwHqEonVMr`, ambos READY; o deploy final com envio ligado é `dpl_G6aFPfXwW1vqkbxLEfSRLiX4x8C5`.
+
+## Não executado
+
+- Nenhum novo teste ou envio após o teste único.
+- Nenhuma outra solicitação aprovada.
+- Nenhuma campanha paga.
+- Nenhuma alteração de dados ou créditos pelo agente.
+- Nenhuma alteração de DNS, credenciais ou configuração além de `VENDEO_EMAIL_ENABLED=true` e dos deploys autorizados.
