@@ -63,37 +63,37 @@ Consequência: enquanto a configuração estiver ausente, aprovar uma solicitaç
 | DKIM `resend._domainkey.vendeo.tech` | **NXDOMAIN — ausente** |
 | SPF apex `vendeo.tech` | Hostinger |
 | DMARC | `v=DMARC1; p=none` |
-| Domínio verificado no Resend | **NÃO CONFIRMÁVEL**; DNS indica configuração incompleta (DKIM ausente) |
-| Rastreamento de cliques desligado | **NÃO CONFIRMÁVEL** sem `RESEND_API_KEY`; deve ser verificado/desligado no painel do Resend |
+| Domínio verificado no Resend | **CONFIRMADO pelo responsável em 2026-10-20** (a checagem DNS anterior não substitui o painel) |
+| Rastreamento de cliques desligado | **A confirmar no painel antes de ligar o envio** |
 
-**Bloqueio:** sem DKIM e sem chave, o envio real não deve ser habilitado.
+**Nota histórica:** a checagem DNS de 2026-10-20 encontrou `resend._domainkey` ausente; o responsável confirmou posteriormente que o domínio está verificado no Resend. A confirmação do painel prevalece.
 
-## Pré-requisitos antes de qualquer envio real
+## Execução da publicação (2026-10-20)
 
-1. Concluir verificação do domínio no Resend (adicionar o DKIM `resend._domainkey` fornecido pelo painel).
-2. Confirmar/desligar rastreamento de cliques e abertura no domínio remetente.
-3. Definir `RESEND_API_KEY` e `VENDEO_EMAIL_FROM` na Vercel (produção).
-4. Manter `VENDEO_EMAIL_ENABLED=false` até a janela autorizada; ao ligar, assumir que **outras notificações** também serão habilitadas.
-5. Aplicar a migration `20261020000005` **antes** do deploy (o código novo espera as colunas).
-6. Confirmar `trial_offer_settings.launch_at` antes do primeiro convite real da conta de teste (o primeiro `generateLink` cria `auth.users`; reenvio não altera `created_at`).
-7. Após o deploy, **não aprovar solicitações reais** até a autorização do teste controlado.
+| Etapa | Resultado |
+|---|---|
+| Migration `20261020000005` | **APLICADA** via `supabase migration up --linked`; lista remota confirma a versão |
+| Colunas em produção | `invite_status`, `invite_attempt_token`, `password_set_at` consultáveis |
+| Push | `origin/main` = `51fd0770` |
+| Deploy 1 | `dpl_5jnnxCnzN3cv43UBTXKZ9C9TGk3D` — READY, alias `vendeo.tech` |
+| Deploy 2 (após envs de e-mail) | `dpl_T7NYno2RL3AePRVV7WpwHqEonVMr` — READY |
+| `/convite` | 200, página de aceite renderizada |
+| `/login?error=invite_failed` | 200, banner de orientação presente |
+| `/signup` | 200, beta fechado preservado |
+| `VENDEO_EMAIL_ENABLED` | **false** (envio desligado) |
+| `RESEND_API_KEY` / `VENDEO_EMAIL_FROM` | presentes (`noreply@vendeo.tech`) |
+| Notificações antigas pendentes | **0** |
+| F50.2 | `enabled=false`, `launch_at=null` — **aguardando confirmação antes do primeiro convite** |
 
-## Ordem recomendada (após autorização)
+O deploy 2 foi necessário porque as variáveis de e-mail foram adicionadas após o deploy 1. Nenhum convite real foi enviado e nenhuma solicitação foi aprovada.
 
-1. Migration no Supabase de produção.
-2. Push dos 9 commits + deploy Vercel.
-3. Verificar `/convite`, presença das envs e ausência de mudança de comportamento com a flag off.
-4. Em janela autorizada: configurar Resend/flag e executar **um** teste com e-mail controlado.
-5. Conferir `access_requests`, `admin_audit_log`, `auth.users.created_at` e ausência de crédito antes do onboarding.
+## Aguardando antes do teste
 
-## Autorizações necessárias (separadas)
-
-- [ ] Aplicar a migration `20261020000005` em produção.
-- [ ] Push/deploy dos 9 commits (`382bfb84`).
-- [ ] Configurar `RESEND_API_KEY` / `VENDEO_EMAIL_FROM` e concluir o domínio no Resend.
-- [ ] Ligar `VENDEO_EMAIL_ENABLED=true` (ciente do impacto em outras notificações).
-- [ ] Executar o teste real com e-mail controlado (sem aprovar outras solicitações).
+1. **Confirmação da ativação da F50.2** (preferencialmente pelo painel admin, com auditoria do ator real).
+2. **E-mail da conta de validação** controlado pelo responsável.
+3. Confirmação de que o rastreamento de cliques está desligado no painel do Resend.
+4. Autorização para ligar `VENDEO_EMAIL_ENABLED=true` e redeployar (envio afeta também outras notificações; fila antiga está vazia).
 
 ## Fora de escopo / não executado
 
-Nenhuma migration aplicada em produção; nenhum push; nenhum deploy; nenhuma aprovação; nenhum convite real; nenhuma env alterada; `.dev.log` e credenciais fora do commit.
+Migration, push e deploy foram executados nesta janela. **Não executado:** aprovação de qualquer solicitação, convite real, campanha paga, alteração de DNS/credenciais e ativação da F50.2. `.dev.log` e credenciais fora do commit.
