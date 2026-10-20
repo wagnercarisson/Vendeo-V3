@@ -62,6 +62,19 @@ describe("Teste 13a - LoginPage flag off", () => {
     expect(link).toHaveAttribute("href", "/");
     expect(screen.queryByRole("link", { name: /Criar uma conta/i })).not.toBeInTheDocument();
   });
+
+  it("invite_failed: exibe orientação clara e contato de suporte", async () => {
+    render(await LoginPage({ searchParams: Promise.resolve({ error: "invite_failed" }) }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/convite é inválido, expirou ou já foi usado/i);
+    const support = screen.getByRole("link", { name: /suporte@vendeo\.tech/ });
+    expect(support.getAttribute("href")).toContain("mailto:");
+  });
+
+  it("erro desconhecido não expõe mensagem", async () => {
+    render(await LoginPage({ searchParams: Promise.resolve({ error: "algo_interno" }) }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });
 
 describe("Teste 13b - LoginPage flag on", () => {

@@ -47,7 +47,7 @@ describe("UpdatePasswordForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Atualizar senha" }));
 
     await waitFor(() => {
-      expect(screen.getByText("A senha deve ter no mínimo 6 caracteres")).toBeInTheDocument();
+      expect(screen.getByText("A senha deve ter no mínimo 8 caracteres")).toBeInTheDocument();
     });
 
     expect(mockUpdateUser).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe("UpdatePasswordForm", () => {
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
-  it("calls updateUser and redirects to / on success", async () => {
+  it("calls updateUser and redirects to /dashboard on success", async () => {
     mockUpdateUser.mockResolvedValue({ error: null });
 
     render(<UpdatePasswordForm />);
@@ -88,7 +88,7 @@ describe("UpdatePasswordForm", () => {
       expect(mockUpdateUser).toHaveBeenCalledWith({ password: "newpassword123" });
     });
 
-    expect(mockReplace).toHaveBeenCalledWith("/");
+    expect(mockReplace).toHaveBeenCalledWith("/dashboard");
   });
 
   it("shows error message on updateUser failure", async () => {

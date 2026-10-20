@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/components/auth/google-button", () => ({
@@ -46,6 +46,16 @@ describe("Teste 10a - AccessRequestSection flag off", () => {
     expect(screen.getByText("Solicite seu acesso free")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Continuar com Google" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Continuar com email/ })).not.toBeInTheDocument();
+  });
+
+  it("confirmação explica que a resposta chegará por e-mail", () => {
+    render(<AccessRequestSection entries={emptyEntries} publicSignupEnabled={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Simular envio" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /receberá um convite por e-mail no endereço informado/i,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(/caixa de spam/i);
   });
 });
 

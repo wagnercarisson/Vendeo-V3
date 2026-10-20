@@ -195,9 +195,10 @@ describe("Landing page (/)", () => {
     expect(
       screen.queryByRole("link", { name: "Solicitar acesso free" }),
     ).not.toBeInTheDocument();
-    // Card mantém a sequência "recebemos sua solicitação..." + "em breve entraremos em contato"
+    // Card explica que a resposta chega por e-mail
     expect(screen.getByText(/Recebemos sua solicitação/)).toBeInTheDocument();
-    expect(screen.getByText(/Em breve entraremos em contato/)).toBeInTheDocument();
+    expect(screen.getByText(/receberá um convite por e-mail/)).toBeInTheDocument();
+    expect(screen.getByText(/caixa de spam/)).toBeInTheDocument();
   });
 
   it("renders prominent Novidades button below the access card", async () => {

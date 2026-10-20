@@ -24,6 +24,11 @@ vi.mock("@/lib/auth/csrf", () => ({
   requireSameOrigin: (...args: unknown[]) => mockRequireSameOrigin(...args),
 }));
 
+const mockSendAccessInvite = vi.fn();
+vi.mock("@/lib/access-requests/invite", () => ({
+  sendAccessInvite: (...args: unknown[]) => mockSendAccessInvite(...args),
+}));
+
 async function postReview(id: string, body: unknown) {
   const { POST } = await import("../[id]/route");
   const req = new NextRequest(
@@ -44,10 +49,19 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockRequireAdmin.mockResolvedValue({ userId: "admin-1" });
   mockRequireSameOrigin.mockImplementation(() => {});
+  mockSendAccessInvite.mockResolvedValue({
+    ok: true,
+    outcome: {
+      status: "sent",
+      providerMessageId: "msg-1",
+      sentAt: "2026-10-20T12:00:00.000Z",
+      error: null,
+    },
+  });
 });
 
 describe("POST /api/admin/access-requests/[id]", () => {
-  it("approve chama RPC admin_review_access_request com p_action approve e retorna success", async () => {
+  it("approve chama RPC, dispara convite e retorna success + invite", async () => {
     mockRpc.mockResolvedValue({
       data: { success: true, status: "approved", email: "loja@example.com" },
       error: null,
@@ -59,6 +73,12 @@ describe("POST /api/admin/access-requests/[id]", () => {
     expect(await res.json()).toEqual({
       success: true,
       status: "approved",
+      invite: {
+        status: "sent",
+        providerMessageId: "msg-1",
+        sentAt: "2026-10-20T12:00:00.000Z",
+        error: null,
+      },
     });
     expect(mockRpc).toHaveBeenCalledWith("admin_review_access_request", {
       p_request_id: "req-1",
@@ -66,9 +86,37 @@ describe("POST /api/admin/access-requests/[id]", () => {
       p_actor_id: "admin-1",
       p_notes: null,
     });
+    expect(mockSendAccessInvite).toHaveBeenCalledWith({
+      requestId: "req-1",
+      actorId: "admin-1",
+      trigger: "approve",
+    });
   });
 
-  it("reject chama RPC com p_action reject e retorna status rejected", async () => {
+  it("falha do convite NÃO desfaz a aprovação (200 + invite failed)", async () => {
+    mockRpc.mockResolvedValue({
+      data: { success: true, status: "approved", email: "loja@example.com" },
+      error: null,
+    });
+    mockSendAccessInvite.mockResolvedValue({
+      ok: false,
+      outcome: {
+        status: "failed",
+        providerMessageId: null,
+        sentAt: null,
+        error: "email_not_configured:VENDEO_EMAIL_ENABLED",
+      },
+    });
+
+    const res = await postReview("req-1", { action: "approve" });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("approved");
+    expect(body.invite.status).toBe("failed");
+  });
+
+  it("reject chama RPC com p_action reject, NÃO dispara convite", async () => {
     mockRpc.mockResolvedValue({
       data: { success: true, status: "rejected", email: "loja@example.com" },
       error: null,
@@ -84,6 +132,7 @@ describe("POST /api/admin/access-requests/[id]", () => {
       p_actor_id: "admin-1",
       p_notes: "Fora do segmento",
     });
+    expect(mockSendAccessInvite).not.toHaveBeenCalled();
   });
 
   it("400 com action inválida — antes de chamar o RPC", async () => {
@@ -156,11 +205,12 @@ describe("POST /api/admin/access-requests/[id]", () => {
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("NÃO insere diretamente em admin_audit_log (auditoria só via RPC)", async () => {
+  it("não insere diretamente em admin_audit_log na aprovação (auditoria da revisão é do RPC)", async () => {
     mockRpc.mockResolvedValue({ data: { success: true }, error: null });
 
     await postReview("req-1", { action: "approve" });
 
     expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockSendAccessInvite).toHaveBeenCalledTimes(1);
   });
 });
