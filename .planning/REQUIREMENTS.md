@@ -6,7 +6,7 @@
 
 Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, tabelas e estados legados foram preservados integralmente em [`REQUIREMENTS-ARCHIVE.md`](./REQUIREMENTS-ARCHIVE.md) e não devem ser interpretados como pendências atuais.
 
-**F51.1/F51.2/F51.3 — integração executada e commitada localmente (2026-10-21, `12b39ae4`):** o merge de `escopo/landing` incorporou a landing visual e a fundação de SEO na branch `integracao/landing-app-atual`, preservando F50.2/F56. Validação: **35 arquivos / 434 testes verdes**; baseline F56 **128/4** inalterado; typecheck/lint/build **0**; smoke HTTP e SEO A/B/C; aceite visual humano mobile/desktop nos dois modos. **Follow-up registrado, não corrigido:** canonical `http://localhost:3000` em produção com origem inválida. Verificação GSD e fechamento OpenSpec permanecem pendentes; sem merge para `main`, push ou deploy.
+**F51.1/F51.2/F51.3 — integração verificada (2026-10-21):** execução commitada em `12b39ae4`; branch `integracao/landing-app-atual`, base `main` `8c4413de`, landing `7d0d6d96`. Verificação GSD **PASS WITH LIMITATIONS**: **12/12 requisitos**, **16/16 plan truths**; code review **APPROVED WITH FINDINGS** (0 High/Critical; MD-01 Medium não bloqueante) e segurança **PASS WITH FINDINGS** (ASVS L1; 0 High/Critical). Preservados F50.2/F56, as **quatro falhas externas F56** (128/4; suíte não declarada verde) e o follow-up canonical/OG `http://localhost:3000`. Aguardando OpenSpec verify/sync/archive; sem merge para `main`, push ou deploy.
 
 ## Índice Histórico
 
