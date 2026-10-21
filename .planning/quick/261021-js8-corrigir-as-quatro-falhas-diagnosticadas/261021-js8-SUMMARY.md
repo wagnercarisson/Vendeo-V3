@@ -126,3 +126,19 @@ Sem merge para `main`, push, deploy, tag ou lifecycle OpenSpec.
 A correção não exigiu código de produto nem ampliação de escopo. O comportamento funcional
 do aplicativo não foi alterado; portanto, **nenhum defeito funcional foi evidenciado** nesta
 rodada. A validação é exclusivamente de contrato/harness e de governança da fronteira.
+
+## 6. Follow-up LOW aceito (não bloqueante)
+
+A revisão final dos commits `742abe9b`/`5301bc9a` identificou que o mock das RPCs do piloto
+modela apenas o caminho de sucesso: `begin` sempre devolve `acquired`, `end`/`mark_unknown`/
+`block_global` sempre devolvem sucesso e não há asserção de que a RPC `begin` foi chamada.
+Isso deixa a **cobertura do wiring do gate parcial neste contrato**; a identidade do `begin`
+é preservada e validada, e o fluxo até o provider é exercitado.
+
+Os bloqueios/erros do gate permanecem cobertos nas suítes específicas
+(`pilot-spend-control.behavioral.test.ts`, `pilot-spend-control.contract.test.ts`,
+`resolve-pilot-spend-gate.test.ts` e `operational-pilot-spend-gate.contract.test.ts`).
+
+O achado foi **aceito como não bloqueante**. Registro completo e melhoria futura (não
+executada) em `261021-js8-deferred-items.md`. Nenhum código ou teste foi alterado por este
+registro.
