@@ -4,7 +4,7 @@
 - [ ] 1.2 Atualizar `src/lib/cnpj/validate.ts` para validar `^[A-Z0-9]{12}[0-9]{2}$`, rejeitar qualquer caractere fora de `[0-9A-Za-z./\-\s]`, calcular os dois DVs por `charCode − 48` com os pesos oficiais e retornar `"CNPJ deve ter 14 caracteres"` apenas para comprimento após remover formatação.
 - [ ] 1.3 Garantir que a lista de sequências numéricas conhecidas continue rejeitada e que CNPJs numéricos retornem exatamente o mesmo `normalized` de antes.
 - [ ] 1.4 Atualizar `src/lib/cnpj/mask.ts` para aceitar o padrão canônico alfanumérico, preservar as posições 9–12 e retornar `"CNPJ inválido"` para entrada fora do padrão (fail-closed).
-- [ ] 1.5 Criar `src/lib/cnpj/input-mask.ts` com `formatCnpjInput` (máscara progressiva tolerante na UI) e `formatCnpj` (exibição completa), reutilizando a normalização estrita no valor canônico.
+- [ ] 1.5 Criar `src/lib/cnpj/input-mask.ts` com `hasInvalidCnpjChars`, `formatCnpjInput(raw, previousValue)` fail-closed e `formatCnpj` (exibição completa), reutilizando a normalização estrita no valor canônico.
 - [ ] 1.6 Atualizar `src/lib/cnpj/types.ts` e comentários de `hash.ts` para refletir o CNPJ canônico alfanumérico; não alterar o algoritmo do HMAC.
 - [ ] 1.7 Substituir normalizações locais de CNPJ (`replace(/\D/g, "")`) por `normalizeCnpj`/`formatCnpjInput` em todos os pontos mapeados.
 
@@ -29,13 +29,15 @@
 
 ## 4. UI de onboarding, legado e admin
 
-- [ ] 4.1 Atualizar `src/components/flow/store-identity-form.tsx` para usar `formatCnpjInput` no onChange, preservar letras na colagem/edição e exibir o CNPJ completo com `formatCnpj`.
+- [ ] 4.1 Atualizar `src/components/flow/store-identity-form.tsx` para detectar `hasInvalidCnpjChars` no onChange/colagem, manter o último valor válido, exibir erro local, limpar lookup e bloquear consulta/submissão; usar `formatCnpj` para exibição.
 - [ ] 4.2 Atualizar a comparação de CNPJ persistido no `store-identity-form.tsx` para `normalizeCnpj(formData.cnpj) === initialStore.cnpj_normalized`.
 - [ ] 4.3 Atualizar `src/components/flow/use-store-form.ts` para normalizar o CNPJ antes de POST create, PATCH/update-cnpj e elegibilidade de fiscal no auto-save.
-- [ ] 4.4 Atualizar `src/app/(app)/cadastro/cnpj/cnpj-update-form.tsx` para máscara alfanumérica, validação local e mensagens.
+- [ ] 4.4 Atualizar `src/app/(app)/cadastro/cnpj/cnpj-update-form.tsx` para máscara alfanumérica, detecção de caractere desconhecido, erro local e bloqueio de envio.
 - [ ] 4.5 Atualizar a tela admin `create-test-store` para máscara alfanumérica e placeholder `XX.XXX.XXX/XXXX-DV`.
 - [ ] 4.6 Confirmar que todas as exibições admin usam `maskCnpj` e que o sufixo alfanumérico é preservado.
 - [ ] 4.7 Ajustar placeholders, `maxLength`, `autoCapitalize` e textos auxiliares sem alterar o design system existente.
+- [ ] 4.8 Garantir que o erro local de CNPJ só seja limpo após `validateCnpj` retornar sucesso e que entradas parciais válidas mantenham o erro anterior.
+- [ ] 4.9 Garantir que colar `12.ABC.345/01DE-35😀` não dispare `/api/cnpj/lookup` no blur nem submeta o formulário, em onboarding e em `/cadastro/cnpj`.
 
 ## 5. Banco de dados e migration
 
@@ -51,12 +53,13 @@
 
 - [ ] 6.1 Atualizar `src/lib/cnpj/__tests__/normalize.test.ts` com letras preservadas, minúsculas, pontuação, espaços, acentos e emojis (sem descarte silencioso).
 - [ ] 6.2 Atualizar `src/lib/cnpj/__tests__/validate.test.ts` com `12.ABC.345/01DE-35` válido, `12.ABC.345/01DE-34` inválido, DVs alfabéticos inválidos, `00000000000000` rejeitado e regressão numérica completa.
-- [ ] 6.3 Adicionar testes de `formatCnpjInput`, `formatCnpj` e `maskCnpj` alfanumérico, incluindo placeholder fail-closed para entrada inválida.
+- [ ] 6.3 Adicionar testes de `hasInvalidCnpjChars`, `formatCnpjInput(raw, previousValue)`, `formatCnpj` e `maskCnpj` alfanumérico, incluindo placeholder fail-closed para entrada inválida.
 - [ ] 6.4 Adicionar teste de hash garantindo que raiz canônica alfanumérica e numérica produzem os hashes esperados e que caixa/pontuação não mudam o hash.
 - [ ] 6.5 Adicionar testes de cache hit/miss com entrada mascarada, minúscula e canônica, comprovando uma única chave e que 404 ambíguo não cacheia `not_found`.
 - [ ] 6.6 Adicionar testes de integração para criação, atualização, reconsulta, duplicidade, `unsupported_format` definitivo, mistura com `unavailable`, `not_found` conclusivo e respostas de erro.
 - [ ] 6.7 Adicionar regressão para CNPJs numéricos existentes em APIs, componentes e invariantes de freemium.
 - [ ] 6.8 Criar `scripts/verify/50-3-cnpj-alfanumerico-verification.mjs` para validar a constraint local com a matriz de vetores e as checagens pré/pós-migration.
+- [ ] 6.9 Adicionar testes de componente garantindo que `12.ABC.345/01DE-35😀` mantém o último valor válido, exibe erro, não chama lookup no blur e não submete; e que o erro só é limpo após entrada válida.
 
 ## 7. Verificação e checkpoints
 
@@ -64,7 +67,7 @@
 - [ ] 7.2 Checkpoint 2: rodar testes de provedores, orquestração e APIs; confirmar que CNPJs numéricos não regrediram.
 - [ ] 7.3 Checkpoint 3: aplicar a migration em banco local e rodar o script de verificação pré/pós; confirmar constraint e dados intactos.
 - [ ] 7.4 Checkpoint 4: rodar `npm run test` completo e `npm run build`.
-- [ ] 7.5 Checkpoint 5: validação manual local do fluxo de onboarding com CNPJ numérico, o vetor de cálculo `12.ABC.345/01DE-35` e o primeiro CNPJ alfanumérico emitido `00.000.000/E08G-12` (digitação, colagem, edição, máscara, erro de DV, caractere inválido, cache hit/miss e reconsulta).
+- [ ] 7.5 Checkpoint 5: validação manual local do fluxo de onboarding com CNPJ numérico, o vetor de cálculo `12.ABC.345/01DE-35` e o primeiro CNPJ alfanumérico emitido `00.000.000/E08G-12` (digitação, colagem, edição, máscara, erro de DV, caractere inválido sem lookup/envio, cache hit/miss e reconsulta).
 - [ ] 7.6 Registrar evidências de validação no change (comandos, resultados e limitações) sem aplicar migration remota.
 
 ## 8. Documentação, limites e follow-ups
@@ -83,8 +86,10 @@
 - [ ] 9.4 Automático: o hash da raiz de `12.abc.345/01de-35` é idêntico ao de `12ABC34501DE35`.
 - [ ] 9.5 Automático: CNPJs numéricos existentes mantêm valor, hash, máscara e comportamento de cache.
 - [ ] 9.6 Automático: a constraint local aceita os dois formatos e rejeita os inválidos, sem alterar linhas existentes.
-- [ ] 9.7 Manual: criar loja com CNPJ alfanumérico válido e confirmar persistência canônica, raiz correta e máscara admin.
-- [ ] 9.8 Manual: atualizar loja legada com CNPJ alfanumérico válido e confirmar atomicidade, ausência de créditos e reconsulta.
-- [ ] 9.9 Manual: simular provedor sem suporte (400/422 e 404), confirmar fallback, ausência de falso `not_found`, cache não envenenado e mensagem controlada.
-- [ ] 9.10 Manual: confirmar que rollback após existir CNPJ alfanumérico não usa versão numeric-only e que o plano forward-only/write-freeze está documentado.
-- [ ] 9.11 Manual: confirmar que nenhuma mudança comercial, de ownership ou de modelo institucional foi introduzida.
+- [ ] 9.7 Automático: `hasInvalidCnpjChars` detecta emoji/acento/símbolo; `formatCnpjInput("12.ABC.345/01DE-35😀", "12.ABC") === "12.ABC"`.
+- [ ] 9.8 Manual: colar `12.ABC.345/01DE-35😀` mantém o último valor válido, exibe erro local, não chama lookup e não submete; o erro só é limpo após entrada válida.
+- [ ] 9.9 Manual: criar loja com CNPJ alfanumérico válido e confirmar persistência canônica, raiz correta e máscara admin.
+- [ ] 9.10 Manual: atualizar loja legada com CNPJ alfanumérico válido e confirmar atomicidade, ausência de créditos e reconsulta.
+- [ ] 9.11 Manual: simular provedor sem suporte (400/422 e 404), confirmar fallback, ausência de falso `not_found`, cache não envenenado e mensagem controlada.
+- [ ] 9.12 Manual: confirmar que rollback após existir CNPJ alfanumérico não usa versão numeric-only e que o plano forward-only/write-freeze está documentado.
+- [ ] 9.13 Manual: confirmar que nenhuma mudança comercial, de ownership ou de modelo institucional foi introduzida.

@@ -34,7 +34,7 @@ A normalização de domínio/API SHALL ser estrita:
 - Caracteres desconhecidos NÃO são removidos silenciosamente: permanecem no resultado e fazem `validateCnpj` falhar.
 - O resultado canônico precisa casar `^[A-Z0-9]{12}[0-9]{2}$`. O comprimento é sempre 14 e a raiz é `normalized.slice(0, 8)`.
 
-O `formatCnpjInput` da UI pode ignorar teclas/colagem fora do conjunto permitido por tolerância de digitação, mas o valor enviado à API é revalidado no servidor. A API e o domínio nunca “corrigem” um CNPJ válido acrescido de lixo.
+O `formatCnpjInput` da UI NÃO SHALL remover caracteres desconhecidos silenciosamente. Ao detectar acento, emoji ou símbolo, a UI mantém visualmente o último valor válido, exibe erro local de CNPJ inválido e bloqueia lookup e submissão. O valor enviado à API é sempre revalidado no servidor; a API e o domínio nunca “corrigem” um CNPJ válido acrescido de lixo.
 
 Consequências:
 - `12.abc.345/01de-35` → `12ABC34501DE35`.
@@ -77,11 +77,21 @@ Separar três responsabilidades em `src/lib/cnpj/`:
 | Função | Responsabilidade | Exemplo |
 |---|---|---|
 | `normalizeCnpj` | canônico, sem pontuação, maiúsculo | `12.abc...` → `12ABC...35` |
-| `formatCnpjInput` | máscara progressiva para digitação/colagem | `12ABC` → `12.ABC` |
+| `formatCnpjInput` | máscara progressiva fail-closed; mantém o último valor válido se detectar caractere desconhecido | `12ABC` → `12.ABC`; `12ABC😀` → valor anterior + erro |
+| `hasInvalidCnpjChars` | detecta caracteres fora de `[0-9A-Za-z./\-\s]` antes de formatar | `12ABC😀` → `true` |
 | `formatCnpj` | exibição completa | `12ABC34501DE35` → `12.ABC.345/01DE-35` |
 | `maskCnpj` | privacidade fail-closed | `12ABC34501DE35` → `**.***.***/01DE-**`; inválido → `CNPJ inválido` |
 
-`formatCnpjInput` é a única camada tolerante: ignora caracteres fora de `[0-9A-Za-z./\-\s]` durante digitação/colagem, usa `normalizeCnpj` sobre o subconjunto permitido e aplica a pontuação nos índices 2, 5, 8 e 12, limitando a 14 caracteres canônicos e 18 caracteres formatados. O input permanece `type="text"`, com `autoCapitalize="characters"` e `spellCheck={false}`; não usar `inputMode="numeric"`.
+`formatCnpjInput(raw, previousValue = "")` é fail-closed na UI:
+
+- Se `hasInvalidCnpjChars(raw)` for `true`, retorna `previousValue` sem incorporar o caractere desconhecido.
+- Caso contrário, remove a formatação conhecida, converte letras para maiúscula e aplica a pontuação nos índices 2, 5, 8 e 12, limitando a 14 caracteres canônicos e 18 formatados.
+- A UI SHALL manter um estado local `cnpjInputError` e detectar o caractere desconhecido no evento de mudança/colagem, não apenas no blur.
+- Com erro local, a UI SHALL exibir a mensagem de CNPJ inválido, limpar o estado de lookup (`idle`), NÃO chamar `/api/cnpj/lookup` no blur e NÃO permitir submissão do formulário.
+- O erro local SHALL ser limpo somente quando uma entrada posterior passar em `validateCnpj` (formato completo válido). Entradas parciais válidas mantêm o erro anterior até a validação completa.
+- O input permanece `type="text"`, com `autoCapitalize="characters"` e `spellCheck={false}`; não usar `inputMode="numeric"`.
+
+Exemplo de colagem hostil: `12.ABC.345/01DE-35😀` mantém o valor anterior, exibe erro, não consulta a API e não envia o formulário. O mesmo valor enviado diretamente à API retorna `400`.
 
 `maskCnpj` é fail-closed: se o valor recebido não casar `^[A-Z0-9]{12}[0-9]{2}$`, retorna o placeholder `"CNPJ inválido"` em vez de devolver o identificador fiscal integral. Nenhuma tela administrativa pode exibir o valor cru em caso de dado inesperado.
 
@@ -178,6 +188,7 @@ Alternativa considerada: tratar todo `404` como `not_found` e cachear. Rejeitada
 | Risco | Mitigação |
 |---|---|
 | Normalização permissiva removendo caracteres arbitrários | Normalização estrita: apenas formatação conhecida é removida; qualquer outro caractere invalida a entrada. Testes com emoji, acento e símbolo garantem que não há conversão silenciosa. |
+| UI apagando caractere desconhecido e enviando CNPJ “limpo” | UI fail-closed: mantém o último valor válido, detecta o caractere, exibe erro local, bloqueia lookup e submissão; erro só sai após `validateCnpj` válido. |
 | Divergência entre validação TypeScript e constraint PostgreSQL | Um único padrão documentado; testes de vetores no TS e script de verificação SQL local comparam a mesma matriz de casos. |
 | Hashes diferentes para o mesmo CNPJ por caixa/pontuação | Canonicalização obrigatória antes de `slice(0,8)` e `hashCnpjRoot`; teste de hash para `12ABC...` e `12.abc...`. |
 | Cache duplicado por representações diferentes | Chave sempre canônica; testes de cache hit com entrada mascarada/minúscula. |
@@ -219,7 +230,7 @@ Alternativa considerada: tratar todo `404` como `not_found` e cachear. Rejeitada
 | Núcleo CNPJ | `src/lib/cnpj/mask.ts` | sufixo alfanumérico e placeholder fail-closed |
 | Núcleo CNPJ | `src/lib/cnpj/types.ts` | tipos canônicos e outcome |
 | Núcleo CNPJ | `src/lib/cnpj/hash.ts` (sem mudança de algoritmo) | documentar raiz canônica |
-| Núcleo CNPJ | `src/lib/cnpj/input-mask.ts` (novo) | `formatCnpjInput` tolerante / `formatCnpj` centralizados |
+| Núcleo CNPJ | `src/lib/cnpj/input-mask.ts` (novo) | `formatCnpjInput` fail-closed + `hasInvalidCnpjChars` + `formatCnpj` centralizados |
 | Núcleo CNPJ | `src/lib/cnpj/__tests__/*` | vetores oficiais + regressão numérica + entradas hostis |
 | Providers | `src/lib/cnpj/lookup-providers/types.ts` | `unsupported_format` + `supportsAlphanumeric` |
 | Providers | `src/lib/cnpj/lookup-providers/brasil-api.ts` | 404 ambíguo, 400/422 alfanumérico e capacidade declarada |

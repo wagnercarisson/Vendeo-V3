@@ -63,7 +63,7 @@ O sistema SHALL prover `update_store_cnpj(p_store_id, p_cnpj_normalized, p_cnpj_
 
 ### Requirement: Formulário de atualização cadastral aceita CNPJ alfanumérico
 
-O formulário de `/cadastro/cnpj` SHALL aceitar CNPJs numéricos e alfanuméricos, preservando letras durante digitação, colagem e edição. A validação local SHALL usar a mesma normalização e o mesmo algoritmo de DV da API. O formulário SHALL exibir mensagem de erro clara quando o formato ou os DVs forem inválidos, sem remover letras silenciosamente.
+O formulário de `/cadastro/cnpj` SHALL aceitar CNPJs numéricos e alfanuméricos, preservando letras durante digitação, colagem e edição. A validação local SHALL usar a mesma normalização e o mesmo algoritmo de DV da API. O formulário SHALL exibir mensagem de erro clara quando o formato ou os DVs forem inválidos, sem remover letras silenciosamente. Caracteres desconhecidos (acentos, emojis, símbolos) SHALL manter o último valor válido, exibir erro local e bloquear lookup e envio.
 
 #### Scenario: Colagem de CNPJ alfanumérico é preservada
 
@@ -88,6 +88,14 @@ O formulário de `/cadastro/cnpj` SHALL aceitar CNPJs numéricos e alfanumérico
 - **WHEN** a API de atualização recebe `cnpjNormalized` contendo emoji, acento ou símbolo
 - **THEN** responde `400` com erro de CNPJ inválido
 - **AND** nenhum dado fiscal é persistido
+
+#### Scenario: Colagem com emoji não realiza consulta nem envio
+
+- **WHEN** o lojista cola `12.ABC.345/01DE-35😀` no campo CNPJ de `/cadastro/cnpj`
+- **THEN** o campo mantém visualmente o último valor válido
+- **AND** a UI exibe erro local de CNPJ inválido
+- **AND** nenhuma consulta de CNPJ é disparada
+- **AND** nenhuma chamada de atualização é feita
 
 #### Scenario: Consulta ainda não suporta o formato
 

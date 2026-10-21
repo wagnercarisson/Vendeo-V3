@@ -156,12 +156,14 @@ O sistema SHALL prover `normalizeCnpj(raw: string): string` que remove somente a
 
 ### Requirement: Formatação de CNPJ para input e exibição
 
-O sistema SHALL centralizar a máscara progressiva de digitação/colagem e a formatação completa de exibição em `src/lib/cnpj/`, preservando letras maiúsculas nas posições alfanuméricas.
+O sistema SHALL centralizar a máscara progressiva de digitação/colagem, a detecção de caracteres desconhecidos e a formatação completa de exibição em `src/lib/cnpj/`, preservando letras maiúsculas nas posições alfanuméricas.
 
-- `formatCnpjInput(raw)` SHALL ser tolerante na UI: ignorar caracteres fora de `[0-9A-Za-z./\-\s]`, remover a formatação conhecida, converter letras para maiúscula, limitar a 14 caracteres canônicos e aplicar progressivamente a máscara `XX.XXX.XXX/XXXX-DV`.
-- `formatCnpj(normalized)` SHALL exibir o CNPJ canônico completo no formato `XX.XXX.XXX/XXXX-DV`.
-- A tolerância da UI NÃO SHALL ser replicada na API/domínio: o servidor revalida o valor e rejeita caracteres desconhecidos.
-- Nenhum componente SHALL manter uma máscara local que remova letras com `\D`.
+- `hasInvalidCnpjChars(raw)` SHALL retornar `true` quando a entrada contiver qualquer caractere fora de `[0-9A-Za-z./\-\s]`, incluindo acentos, emojis e símbolos.
+- `formatCnpjInput(raw, previousValue = "")` SHALL ser fail-closed na UI: se houver caractere desconhecido, retorna `previousValue` sem incorporar o caractere; caso contrário, remove a formatação conhecida, converte letras para maiúscula, limita a 14 caracteres canônicos e aplica progressivamente a máscara `XX.XXX.XXX/XXXX-DV`.
+- A UI SHALL detectar o caractere desconhecido no evento de mudança/colagem, exibir erro local de CNPJ inválido, limpar o estado de lookup, NÃO chamar a consulta no blur e NÃO permitir submissão.
+- O erro local SHALL ser limpo somente quando uma entrada posterior passar em `validateCnpj` (formato completo válido). Entradas parciais válidas mantêm o erro anterior.
+- A tolerância da UI NÃO SHALL ser replicada na API/domínio: o servidor revalida o valor, rejeita caracteres desconhecidos e nunca os remove para produzir um CNPJ válido.
+- Nenhum componente SHALL manter uma máscara local que remova letras ou caracteres desconhecidos com `\D`.
 
 #### Scenario: Digitação parcial alfanumérica recebe máscara progressiva
 
@@ -183,8 +185,40 @@ O sistema SHALL centralizar a máscara progressiva de digitação/colagem e a fo
 - **WHEN** `formatCnpjInput("12ABC34501DE3599")` é chamado
 - **THEN** retorna `"12.ABC.345/01DE-35"`
 
-#### Scenario: UI ignora caractere desconhecido sem alterar o valor canônico
+#### Scenario: Caractere desconhecido mantém o último valor válido
 
-- **WHEN** `formatCnpjInput("12.ABC.345/01DE-35😀")` é chamado
-- **THEN** retorna `"12.ABC.345/01DE-35"`
-- **AND** a tolerância é exclusiva da UI; uma chamada direta à API com o valor contendo emoji retorna `400` e não é canonicalizada para um CNPJ válido
+- **WHEN** `formatCnpjInput("12.ABC.345/01DE-35😀", "12.ABC")` é chamado
+- **THEN** retorna `"12.ABC"`
+- **AND** o caractere desconhecido não é incorporado ao valor visual
+
+#### Scenario: Detector reconhece acentos, emojis e símbolos
+
+- **WHEN** `hasInvalidCnpjChars("12.ABC.345/01DE-35😀")`, `hasInvalidCnpjChars("12.ÁBC.345/01DE-35")` ou `hasInvalidCnpjChars("12.ABC.345/01DE-35!")` é chamado
+- **THEN** retorna `true`
+
+#### Scenario: Detector aceita formatação conhecida e alfanuméricos
+
+- **WHEN** `hasInvalidCnpjChars(" 12. ABC. 345/01DE-35 ")` é chamado
+- **THEN** retorna `false`
+
+#### Scenario: Colagem com emoji não realiza consulta nem envio
+
+- **WHEN** o lojista cola `12.ABC.345/01DE-35😀` no campo CNPJ
+- **THEN** o campo mantém visualmente o último valor válido
+- **AND** a UI exibe erro local de CNPJ inválido
+- **AND** o evento de blur NÃO chama `/api/cnpj/lookup`
+- **AND** o formulário NÃO é submetido
+
+#### Scenario: Erro local só é limpo após entrada válida
+
+- **WHEN** a UI está com erro local por caractere desconhecido
+- **AND** o lojista digita uma entrada parcial válida
+- **THEN** o erro permanece
+- **AND** quando a entrada completa passa em `validateCnpj`, o erro é limpo
+- **AND** o lookup/submissão voltam a ser permitidos
+
+#### Scenario: API direta continua estrita
+
+- **WHEN** uma chamada direta à API recebe `12.ABC.345/01DE-35😀`
+- **THEN** responde `400` com `{ "error": "CNPJ inválido" }`
+- **AND** o caractere não é removido para produzir um CNPJ válido
