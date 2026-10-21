@@ -282,6 +282,7 @@ async function main(): Promise<void> {
     }));
     evidence.pricing = {
       advisory: true,
+      coverage_semantics: "presence_only_not_full_quality_or_modality_coverage",
       preset_coverage: presetCoverage,
       all_presets_covered: presetCoverage.every(
         (item) =>
