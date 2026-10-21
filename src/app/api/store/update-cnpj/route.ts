@@ -18,7 +18,9 @@ import { maybeCompleteOnboardingAndStartTrial } from "@/lib/credit/trial-offer/c
 
 const UpdateCnpjSchema = z.object({
   storeId: z.string().uuid(),
-  cnpjNormalized: z.string().length(14),
+  // Aceita a representação de entrada (pontuação/caixa); a autoridade de
+  // formato é validateCnpj, que devolve o canônico de 14 caracteres.
+  cnpjNormalized: z.string().min(1).max(40),
   razaoSocial: z.string().min(2).max(200),
   nomeFantasia: z.string().max(200).optional(),
 });
@@ -54,20 +56,23 @@ export const POST = apiHandler(async (request: NextRequest) => {
       return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
     }
 
+    // Única fonte de verdade para hash, duplicidade, lookup e persistência.
+    const canonical = cnpjResult.normalized;
+
     // Idempotência: se a loja já possui EXATAMENTE este CNPJ, o re-save é um
     // no-op de sucesso — evita o 409 cnpj_already_set quando o cliente
     // re-envia o mesmo CNPJ (desync de hasExistingCnpj no onboarding).
-    if (store.cnpj_normalized === cnpjNormalized) {
+    if (store.cnpj_normalized === canonical) {
       return NextResponse.json({ success: true, store: [store] });
     }
 
-    const cnpjRootHash = hashCnpjRoot(cnpjNormalized.slice(0, 8));
+    const cnpjRootHash = hashCnpjRoot(canonical.slice(0, 8));
 
     // App-level duplicate check (antes do RPC)
     const { data: existingCnpj } = await supabaseAdmin
       .from("stores")
       .select("id")
-      .eq("cnpj_normalized", cnpjNormalized)
+      .eq("cnpj_normalized", canonical)
       .neq("id", storeId)
       .maybeSingle();
 
@@ -81,7 +86,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
       new CnpjaProvider(),
       createSupabaseLookupCache(supabaseAdmin as never)
     );
-    const lookupResult = await lookupService.resolve(cnpjNormalized);
+    const lookupResult = await lookupService.resolve(canonical);
 
     if (lookupResult.status === "not_found") {
       return NextResponse.json(
@@ -90,8 +95,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
       );
     }
 
-    if (lookupResult.status === "unavailable") {
-      // Para loja normal, bloqueia. Exceção: test store.
+    if (lookupResult.status === "unsupported_format" || lookupResult.status === "unavailable") {
+      // Para loja normal, bloqueia. Exceção: test store (defer, sem grant).
       if (!(store as any).is_test_store) {
         return NextResponse.json(
           { error: "Serviço de consulta CNPJ temporariamente indisponível. Tente novamente mais tarde." },
@@ -144,7 +149,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         const rootEligible = !existingEntitlement;
 
         const eligibility = evaluateFreemiumEligibility({
-          cnpj: cnpjNormalized,
+          cnpj: canonical,
           storeName: (store as any).name ?? "",
           city: storeCity,
           state: storeState,
@@ -164,17 +169,23 @@ export const POST = apiHandler(async (request: NextRequest) => {
         verificationData = { signals: {}, score: 0 };
         verificationReasons = null;
       }
-    } else if (lookupResult.status === "unavailable" && (store as any).is_test_store) {
-      // Test store com API indisponível: permite continuar com defer
+    } else if (
+      (lookupResult.status === "unsupported_format" || lookupResult.status === "unavailable") &&
+      (store as any).is_test_store
+    ) {
+      // Test store com API indisponível/formatos não suportados: continua com
+      // defer e sem grant, usando a reason correspondente ao status.
       verificationStatus = "defer";
-      verificationReasons = ["api_unavailable"];
+      verificationReasons = [
+        lookupResult.status === "unsupported_format" ? "api_unsupported_format" : "api_unavailable",
+      ];
     }
 
     const nomeFantasiaFinal = officialNomeFantasia;
 
     const { data, error } = await supabaseAdmin.rpc("update_store_cnpj", {
       p_store_id: storeId,
-      p_cnpj_normalized: cnpjNormalized,
+      p_cnpj_normalized: canonical,
       p_cnpj_root_hash: cnpjRootHash,
       p_razao_social: officialRazaoSocial,
       p_nome_fantasia: nomeFantasiaFinal,
