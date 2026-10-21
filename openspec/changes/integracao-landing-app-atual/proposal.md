@@ -10,7 +10,8 @@ A landing da F51.1 e a fundação de SEO da F51.2 foram concluídas em uma frent
 - Migrar a cobertura ainda válida dos testes legados antes de remover `src/__tests__/app/landing-page.test.tsx`, incluindo as interações de Novidades e a confirmação de convite/spam.
 - Recompor `next.config.ts` com os quatro redirects 301 existentes, o isolamento de build do laboratório (`VENDEO_LAB_ISOLATED_DIST`) e os headers de SEO, sem sobreposição destrutiva.
 - Reconciliar `tsconfig`, `tsconfig.typecheck`, `eslint` e `.gitignore` mantendo as exclusões específicas do laboratório e sem ocultar código de produto.
-- Auditar a comunicação pública da oferta contra a política F50.2 implementada; qualquer ajuste de texto será apresentado para aprovação antes de alterar a landing.
+- Auditar a comunicação pública da oferta contra a política F50.2 implementada; qualquer ajuste de texto será apresentado para aprovação antes de alterar a landing. A decisão de 2026-10-21 aprova o texto de parcelas/processamento diário e apenas “Oferta para novas contas elegíveis.”, sem exibir participação por raiz de CNPJ.
+- Registrar como escopo futuro, **não aprovado para implementação**, avaliar elegibilidade por CNPJ completo em vez de raiz de CNPJ.
 - Preservar F56, backend, migrations, modelos, providers, créditos, flags operacionais e o tracking atual. Incorporar o histórico F51.1/F51.2 ao tracking sem restaurar estados anteriores da `main`.
 - Registrar como follow-up, sem corrigir, o caso de produção confirmada com origem inválida em que `canonical`/`og:url` recaem em `http://localhost:3000`.
 

@@ -5,16 +5,16 @@
 ## Purpose
 
 A tabela `access_requests` preservada como histórico, fila comercial e canal de contato/contingência operacional — NÃO como mecanismo de autorização. Landing e `/signup` passam a responder conforme a flag `VENDEO_PUBLIC_SIGNUP_ENABLED` (D4/D5).
-
 ## Requirements
-
 ### Requirement: CTA da landing conforme a flag
 
-A seção de acesso da landing (`src/components/landing/access-request-section.tsx`) SHALL apresentar CTAs conforme `VENDEO_PUBLIC_SIGNUP_ENABLED` — D4/D5:
+A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL apresentar **todos** os CTAs de aquisição — inclusive os dos blocos de transformação, identidade e oferta, além do hero — conforme `VENDEO_PUBLIC_SIGNUP_ENABLED` — D4/D5:
 
 - **Flag on:** CTA principal "Continuar com Google" (→ `signInWithOAuth('google')`) + CTA secundário "Continuar com email" (→ `/signup`).
 - **Flag off (estado atual):** "Solicitar acesso free" + formulário de solicitação, comportamento idêntico ao atual.
-- A flag SHALL ser validada **server-side** na rota/página que controla (não só no cliente).
+- A flag SHALL ser lida **server-side** na rota/página que controla (não só no cliente) e reutilizada em todos os CTAs de aquisição.
+- O contrato do `POST /api/access-requests` e o formulário de solicitação SHALL permanecer inalterados.
+- "Entrar" SHALL ser ação secundária destinada a quem já possui conta, nunca a ação universal de aquisição.
 
 #### Scenario: Flag on renderiza CTAs de signup
 
@@ -25,6 +25,12 @@ A seção de acesso da landing (`src/components/landing/access-request-section.t
 
 - **WHEN** `VENDEO_PUBLIC_SIGNUP_ENABLED` está desligado (default)
 - **THEN** a landing exibe "Solicitar acesso free" + formulário de solicitação (comportamento atual idêntico)
+
+#### Scenario: CTAs de transformação, identidade e oferta respeitam a flag
+
+- **WHEN** a landing renovada é renderizada
+- **THEN** os CTAs de aquisição do hero, da transformação, da identidade e da oferta obedecem ao mesmo modo da flag
+- **AND** o contrato do `POST /api/access-requests` permanece inalterado
 
 ### Requirement: access_requests preservado como histórico, fila comercial e canal de contato — NÃO autorização
 

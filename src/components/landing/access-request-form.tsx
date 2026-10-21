@@ -122,11 +122,16 @@ export function AccessRequestForm({
         </p>
       )}
 
+      {/* D-19 contrast correction (LOCAL to this submit): the shared Button's
+          `primary` variant hard-codes white text, which is ≈2.1:1 on the green
+          surface. `!text-bg-deep` (≈8.8:1) overrides it here only. Follow-up:
+          MASTER §6.1 still documents the white-on-green guidance for the
+          shared component. */}
       <Button
         type="submit"
         variant="primary"
         size="lg"
-        className="w-full"
+        className="w-full !text-bg-deep"
         loading={state === "submitting"}
         disabled={state === "submitting"}
       >

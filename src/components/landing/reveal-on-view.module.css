@@ -1,0 +1,24 @@
+@keyframes setReveal {
+  from {
+    transform: translateY(16px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/*
+ * Minimal set-entrance animation (approved): transform only, 16px -> 0,
+ * 280ms ease-out, runs once when the set enters the viewport. It never hides
+ * the content (no opacity change) and does not affect layout. Disabled under
+ * prefers-reduced-motion so everything stays static and visible.
+ */
+.reveal {
+  animation: setReveal 280ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}

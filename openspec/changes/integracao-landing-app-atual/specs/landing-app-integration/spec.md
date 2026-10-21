@@ -122,7 +122,7 @@ A integração SHALL NOT alterar backend, migrations, modelos, providers, crédi
 
 ### Requirement: Comunicação da oferta consistente e sujeita a aprovação
 
-A landing integrada SHALL comunicar a oferta conforme a política `trial-offer` implementada: 28 dias, até 20 créditos, quatro parcelas de 5 nos dias 0/7/14/21, acúmulo, vencimento do gratuito restante ao final e início somente na conclusão do onboarding elegível. A comunicação secundária SHALL explicar que a oferta é para novas contas elegíveis e limitada a uma participação por raiz de CNPJ. O texto final, incluindo a frase de elegibilidade, depende de aprovação humana antes de ser aplicado.
+A landing integrada SHALL comunicar a oferta conforme a política `trial-offer` implementada: 28 dias, até 20 créditos, quatro parcelas de 5 nos dias 0/7/14/21, acúmulo, vencimento do gratuito restante ao final e início somente na conclusão do onboarding elegível. A comunicação secundária SHALL informar que a oferta é para novas contas elegíveis. A landing SHALL NOT exibir a participação por raiz de CNPJ; essa regra permanece interna na política. O texto aprovado em 2026-10-21 SHALL ser aplicado e coberto por teste.
 
 #### Scenario: Mecânica consistente
 
@@ -131,17 +131,18 @@ A landing integrada SHALL comunicar a oferta conforme a política `trial-offer` 
 - **AND** a liberação das parcelas considera o processamento diário, sem prometer o segundo exato
 - **AND** a oferta não promete uso ilimitado nem 20 campanhas
 
-#### Scenario: Elegibilidade comunicada
+#### Scenario: Elegibilidade comunicada sem expor a regra de raiz
 
 - **WHEN** o conteúdo secundário da oferta é revisado
 - **THEN** informa que a oferta vale para novas contas elegíveis
-- **AND** informa o limite de uma participação por raiz de CNPJ
+- **AND** não menciona participação por raiz de CNPJ
+- **AND** a regra interna de raiz permanece na política `trial-offer`
 
-#### Scenario: Ajuste não aplicado sem aprovação
+#### Scenario: Ajuste aplicado somente após aprovação
 
 - **WHEN** a auditoria identificar necessidade de ajuste de texto
 - **THEN** o ajuste é registrado e apresentado para aprovação
-- **AND** o texto público permanece inalterado até a decisão
+- **AND** o texto público só é alterado após a decisão humana
 
 ### Requirement: Preservação do tracking e incorporação de F51.1/F51.2
 

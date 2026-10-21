@@ -1,9 +1,31 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { FALLBACK_ORIGIN, resolveCanonicalOrigin } from "@/lib/seo/origin";
+import { NOINDEX_ROBOTS } from "@/lib/seo/indexation-policy";
+
+/**
+ * Origem canônica resolvida por ambiente (D-02) — `metadataBase` deriva dela e
+ * **nunca** aponta para uma origem divergente de produção (status ≠ `valid` cai
+ * no `FALLBACK_ORIGIN`). O default de indexação da raiz é `noindex, nofollow`
+ * (D-06); a home é a única exceção explícita (ver `src/app/page.tsx`).
+ */
+const resolvedOrigin = resolveCanonicalOrigin();
+const metadataBase = new URL(resolvedOrigin.origin ?? FALLBACK_ORIGIN);
+
+// Diagnóstico observável (único efeito colateral permitido): apenas status e
+// nomes de variáveis — nunca valores de env nem credenciais.
+if (resolvedOrigin.diagnostic || resolvedOrigin.status !== "valid") {
+  console.warn(
+    `[seo/layout] metadataBase sem origem de produção confirmada (status: ${resolvedOrigin.status})` +
+      (resolvedOrigin.diagnostic ? ` — ${resolvedOrigin.diagnostic}` : ""),
+  );
+}
 
 export const metadata: Metadata = {
+  metadataBase,
   title: "Vendeo",
   description: "Motor de geração de campanhas profissionais",
+  robots: NOINDEX_ROBOTS,
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

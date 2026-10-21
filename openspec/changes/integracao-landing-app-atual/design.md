@@ -115,12 +115,14 @@ Comparação entre a comunicação da landing e a política `trial-offer` implem
 | “Os créditos acumulam… vencem ao final do período” | Acúmulo e vencimento único em `expires_at` | Consistente |
 | “No beta fechado, solicitar acesso não inicia o período” | Início somente na conclusão do onboarding elegível | Consistente |
 
-**Texto proposto (pendente de aprovação, não aplicar automaticamente):**
+**Texto proposto (aprovado em 2026-10-21):**
 
 - Substituir a mecânica por: “Você recebe 5 créditos iniciais. Mais 5 são liberados a partir dos dias 7, 14 e 21, no processamento diário, até o máximo de 20 créditos no período.”
-- Acrescentar no conteúdo secundário: “Oferta para novas contas elegíveis, limitada a uma participação por raiz de CNPJ.”
+- Acrescentar no conteúdo secundário apenas: “Oferta para novas contas elegíveis.”
 
-A elegibilidade não é precisão opcional: o texto final deve explicar que a oferta vale para novas contas elegíveis e uma participação por raiz de CNPJ. A frase sobre o início após o cadastro pode permanecer; a elegibilidade é explicitada no conteúdo secundário. Sem aprovação humana, nenhuma alteração é aplicada.
+A decisão humana **não autoriza** exibir a participação por raiz de CNPJ na landing. A elegibilidade por raiz continua sendo regra interna da política `trial-offer`; a comunicação pública apenas informa que a oferta é para novas contas elegíveis. A frase sobre o início após o cadastro permanece.
+
+**Escopo futuro (não aprovado para implementação):** avaliar a elegibilidade por **CNPJ completo**, em vez de raiz de CNPJ. Não altera a política atual, backend, migrations ou créditos nesta mudança.
 
 ### D-09 — Tracking: base atual + histórico
 
@@ -181,6 +183,7 @@ Os artefatos aprovados e o planejamento são commitados antes do merge, deixando
 
 ## Open Questions
 
-- Aprovar o texto da oferta proposto em D-08, incluindo a frase de elegibilidade e a participação por raiz de CNPJ, antes da implementação.
+- Aprovar o texto da oferta proposto em D-08, incluindo a frase de elegibilidade, antes da implementação.
+- **Escopo futuro não aprovado:** avaliar elegibilidade por CNPJ completo em vez de raiz de CNPJ.
 - Confirmar se `node_modules.shared-link` existirá no worktree de integração; se sim, excluir apenas esse caminho.
 - Confirmar o local/estado atual de `.dev.log` antes do merge para garantir que permaneça intocado.

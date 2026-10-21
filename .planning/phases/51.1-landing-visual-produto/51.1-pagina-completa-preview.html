@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-mode="off">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PREVIEW — Página completa F51.1 (não é produção)</title>
+<style>
+  :root {
+    --bg-deep: #020617;
+    --bg-surface: #0F172A;
+    --bg-elevated: #1E293B;
+    --border: #1E293B;
+    --border-light: #334155;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --accent-green: #22C55E;
+    --accent-blue: #3B82F6;
+    --accent-amber: #F59E0B;
+    --font-heading: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-body: 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg-surface); color: var(--text-primary); font-family: var(--font-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-family: var(--font-heading); margin: 0; }
+  p { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+
+  .banner { background: var(--accent-amber); color: #020617; text-align: center; font-family: var(--font-heading); font-weight: 600; font-size: 0.8125rem; padding: 8px 16px; }
+  .modebar { background: var(--bg-elevated); color: var(--text-secondary); text-align: center; font-size: 0.75rem; padding: 8px 16px; display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .modebar button { background: transparent; border: 1px solid var(--border-light); color: var(--text-secondary); border-radius: 8px; min-height: 36px; padding: 4px 12px; cursor: pointer; font: inherit; }
+  .modebar button[aria-pressed="true"] { color: #020617; background: #22C55E; border-color: #22C55E; }
+  .legend { max-width: 64rem; margin: 0 auto; padding: 12px 24px; color: var(--text-secondary); font-size: 0.75rem; border-bottom: 1px dashed var(--border-light); }
+  .legend code { color: var(--text-primary); }
+
+  html[data-mode="off"] .on-only { display: none !important; }
+  html[data-mode="on"] .off-only { display: none !important; }
+
+  .site-header { width: 100%; max-width: 64rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 24px; }
+  .brand-logo { height: 24px; width: auto; display: block; align-self: center; }
+  .brand-logo--header { height: 36px; }
+  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 8px 16px; border: 1px solid var(--border-light); border-radius: 8px; color: var(--text-secondary); font-size: 0.875rem; }
+
+  section.block { width: 100%; max-width: 64rem; margin: 0 auto; padding: 32px 24px; }
+  h2 { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+  .support { margin-top: 12px; color: var(--text-secondary); font-size: 1rem; max-width: 36rem; }
+  .tile-label { margin-top: 12px; font-family: var(--font-heading); font-size: 1rem; font-weight: 600; }
+
+  /* Hero */
+  .hero { padding: 64px 24px 48px; }
+  .hero-grid { display: grid; gap: 40px; align-items: center; }
+  .pill { display: inline-block; border: 1px solid var(--border-light); background: var(--bg-deep); color: var(--accent-amber); border-radius: 9999px; padding: 6px 16px; font-size: 0.75rem; font-weight: 500; }
+  h1 { margin-top: 20px; font-weight: 700; font-size: 1.875rem; line-height: 1.15; }
+  .sub { margin-top: 20px; color: var(--text-secondary); font-size: 1rem; max-width: 36rem; }
+  .distinction { margin-top: 16px; color: var(--text-secondary); }
+  .accent { color: var(--accent-green); }
+  .acq { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .acq--center { align-items: center; }
+  .btn-block { width: 100%; max-width: 24rem; }
+  .btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; border-radius: 8px; background: #22C55E; color: #020617; font-family: var(--font-heading); font-weight: 600; }
+
+  .frame { aspect-ratio: 1 / 1; width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-deep); display: flex; align-items: center; justify-content: center; }
+  .frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .frame.skeleton { color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 12px; }
+  .media-sm { margin: 0 auto; width: 100%; max-width: 24rem; }
+
+  .summary-card { background: var(--bg-deep); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px; }
+  .summary-kicker { font-family: var(--font-heading); font-size: 0.75rem; font-weight: 600; color: var(--accent-green); }
+  .summary-list { margin: 8px 0 0; display: grid; gap: 6px; }
+  .summary-list > div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  .summary-list > div:last-child { border-bottom: none; }
+  .summary-list dt { color: var(--text-secondary); font-size: 0.8125rem; }
+  .summary-list dd { color: var(--text-primary); font-size: 0.8125rem; min-width: 0; word-break: break-word; text-align: right; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .transform-grid { margin-top: 24px; display: grid; grid-template-columns: 1fr; gap: 16px; align-items: center; }
+  .transform-arrow { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+  .transform-arrow svg { width: 24px; height: 24px; }
+  .arrow-right { display: none; }
+  .steps { list-style: none; padding: 0; margin: 24px 0 0; }
+  .steps li { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .steps li:last-child { border-bottom: none; }
+  .steps .row { display: flex; align-items: baseline; gap: 8px; }
+  .steps .n { color: var(--accent-green); font-family: var(--font-heading); font-size: 0.875rem; font-weight: 700; }
+  .steps .t { font-family: var(--font-heading); font-size: 1rem; font-weight: 600; }
+  .steps .d { margin-top: 4px; color: var(--text-secondary); font-size: 0.875rem; }
+
+  .strip { margin-top: 24px; display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; padding-bottom: 8px; border-radius: 12px; }
+  .strip > li { flex: 0 0 78%; scroll-snap-align: start; list-style: none; }
+  .strip:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 4px; }
+  .swipe { margin-top: 8px; color: var(--text-muted); font-size: 0.75rem; }
+
+  .identity-grid { margin-top: 24px; display: grid; gap: 24px; align-items: center; }
+  .identity-media { margin: 0 auto; width: 100%; max-width: 20rem; }
+
+  .offer-card { border: 1px solid var(--border); border-radius: 16px; background: var(--bg-deep); padding: 24px; }
+  .offer-main { margin-top: 12px; font-family: var(--font-heading); font-weight: 600; font-size: 1.125rem; color: var(--text-secondary); max-width: 36rem; }
+  details.mechanics { margin-top: 24px; border: 1px solid var(--border); border-radius: 8px; background: rgba(15,23,42,0.4); padding: 16px; font-size: 0.875rem; color: var(--text-secondary); }
+  details.mechanics summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+  details.mechanics p { margin-top: 8px; }
+
+  .faq { margin-top: 24px; display: grid; gap: 12px; }
+  .faq details { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-deep); }
+  .faq summary { min-height: 44px; display: flex; align-items: center; padding: 12px 20px; cursor: pointer; font-family: var(--font-heading); font-weight: 600; }
+  .faq p { padding: 0 20px 16px; color: var(--text-secondary); font-size: 0.875rem; }
+
+  .form-card { max-width: 28rem; margin: 0 auto; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-deep); padding: 32px; }
+  .form-card p { color: var(--text-secondary); font-size: 0.875rem; }
+
+  .site-footer { border-top: 1px solid var(--border); margin-top: 24px; }
+  .site-footer-inner { max-width: 64rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 24px; color: var(--text-secondary); font-size: 0.875rem; }
+  .footer-nav { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  .footer-nav span { display: inline-flex; align-items: center; min-height: 44px; }
+
+  @keyframes setReveal { from { transform: translateY(16px); } to { transform: translateY(0); } }
+  .demo-set.reveal { animation: setReveal 280ms ease-out; }
+  @media (prefers-reduced-motion: reduce) { .demo-set.reveal { animation: none; } }
+
+  @media (min-width: 640px) {
+    section.block { padding: 48px 24px; }
+    h2 { font-size: 1.875rem; }
+    .hero { padding: 96px 24px 48px; }
+    .hero-grid { grid-template-columns: 1fr 1fr; }
+    h1 { font-size: 3rem; }
+    .sub { font-size: 1.125rem; }
+    .acq { align-items: flex-start; }
+    .acq--center { align-items: center; }
+    .media-sm { margin: 0; max-width: none; }
+    .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; }
+    .transform-grid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+    .brand-logo--header { height: 44px; }
+    .arrow-down { display: none; }
+    .arrow-right { display: block; }
+    .strip { display: grid; grid-template-columns: repeat(3, 1fr); overflow: visible; padding-bottom: 0; }
+    .strip > li { flex: initial; }
+    .swipe { display: none; }
+    .identity-grid { grid-template-columns: 1fr 1fr; }
+    .identity-media { margin: 0; max-width: none; }
+    .faq { grid-template-columns: 1fr 1fr; }
+    .site-footer-inner { flex-direction: row; align-items: center; justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+  <div class="banner">PREVIEW — PÁGINA COMPLETA F51.1 · NÃO é produção</div>
+  <div class="modebar">
+    <span>Chave:</span>
+    <button type="button" data-setmode="off">fechada (flag off)</button>
+    <button type="button" data-setmode="on">aberta (flag on)</button>
+  </div>
+  <div class="legend">
+    Abra via <code>file://</code>. Redimensione a janela (breakpoint 640px) para <strong>mobile</strong> e <strong>desktop</strong>.
+    Alterne a chave acima para revisar os <strong>dois modos</strong>. Artes de demonstração: hero, transformação (entrada + miniatura + campanha), apresentação, abordagens e identidade (1:1, <code>object-fit: contain</code>, sem recorte). Conteúdo demonstrativo — as lojas citadas <strong>não</strong> são clientes reais e não há garantia de fidelidade pixel a pixel.
+  </div>
+
+  <header class="site-header">
+    <img class="brand-logo brand-logo--header" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
+    <a class="btn-secondary" href="#">Entrar</a>
+  </header>
+
+  <main>
+    <!-- 1. Hero -->
+    <section class="block hero" data-public-signup-enabled="false">
+      <div class="hero-grid">
+        <div class="copy">
+          <span class="pill off-only">Beta fechado — acesso liberado por convite. Solicite seu acesso free.</span>
+          <h1>O que seu negócio quer divulgar vira uma campanha pronta para publicar.</h1>
+          <p class="sub">Você informa o básico. O Vendeo prepara a campanha completa — com arte e texto — pronta para publicar.</p>
+          <p class="distinction">Você define como quer apresentar.</p>
+          <div class="acq off-only">
+            <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
+          </div>
+          <div class="acq on-only">
+            <a class="btn-block btn-primary" href="#">Continuar com Google</a>
+            <a class="btn-block btn-secondary" href="#">Continuar com email</a>
+          </div>
+        </div>
+        <div class="media-sm">
+          <div class="frame"><img src="../../../public/landing/hero-oferta-cafe.webp" alt="Campanha de oferta de café da Mercearia Tio João" /></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Transformação e simplicidade -->
+    <section class="block">
+      <h2>Da informação à campanha, sem complicação</h2>
+      <div class="transform-grid">
+        <div class="summary-card">
+          <span class="summary-kicker">Entrada</span>
+          <dl class="summary-list">
+            <div><dt>Produto</dt><dd>Ração Confiance 15 kg Premium</dd></div>
+            <div><dt>Descrição</dt><dd>Alimento completo para cães adultos</dd></div>
+            <div><dt>Preço</dt><dd>R$ 114,90</dd></div>
+            <div><dt>Selo selecionado</dt><dd>Lançamento</dd></div>
+          </dl>
+          <figure style="margin:16px 0 0;">
+            <img src="../../../public/landing/transformacao-produto-racao.webp" alt="Foto da ração Confiance Premium de 15 kg enviada para criar a campanha" width="112" height="103" style="width:112px;height:auto;border-radius:8px;border:1px solid var(--border-light);" />
+            <figcaption style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);">Foto enviada</figcaption>
+          </figure>
+        </div>
+        <div class="transform-arrow" aria-hidden="true">
+          <svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+          <svg class="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </div>
+        <div class="frame"><img src="../../../public/landing/transformacao-petshop.webp" alt="Campanha da Pet Shop Bicho Fofo para ração Confiance Premium de 15 kg por R$ 114,90" /></div>
+      </div>
+      <ol class="steps">
+        <li><div class="row"><span class="n">1</span><span class="t">Você informa o básico</span></div><div class="d">Produto, oferta, preço e alguns detalhes da campanha.</div></li>
+        <li><div class="row"><span class="n">2</span><span class="t">O Vendeo prepara a campanha</span></div><div class="d">O Vendeo cria a arte e o texto a partir dessas informações.</div></li>
+        <li><div class="row"><span class="n">3</span><span class="t">Você confere</span></div><div class="d">Revisa a campanha e decide antes de publicar.</div></li>
+        <li><div class="row"><span class="n">4</span><span class="t">Basta baixar para publicar</span></div><div class="d">Sua campanha está pronta para as redes sociais.</div></li>
+      </ol>
+      <div class="acq acq--center off-only">
+        <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
+      </div>
+      <div class="acq acq--center on-only">
+        <a class="btn-block btn-primary" href="#">Continuar com Google</a>
+        <a class="btn-block btn-secondary" href="#">Continuar com email</a>
+      </div>
+    </section>
+
+    <!-- 3. Apresentação do produto -->
+    <section class="block">
+      <h2>Escolha como apresentar seu produto.</h2>
+      <p class="support">Estúdio, ambientado ou mantendo o fundo original.</p>
+      <p class="support">Você escolhe o cenário. O Vendeo apresenta seu produto com a identidade da sua loja.</p>
+      <div class="demo-set">
+        <ul class="strip" tabindex="0" aria-label="Formas de apresentar o produto: estúdio, ambientado e fundo original">
+          <li><div class="frame"><img src="../../../public/landing/apresentacao-estudio.webp" alt="Campanha de produto apresentada em estúdio" /></div><h3 class="tile-label">Estúdio</h3></li>
+          <li><div class="frame"><img src="../../../public/landing/apresentacao-ambientado.webp" alt="Campanha de produto apresentada ambientada em cenário de loja" /></div><h3 class="tile-label">Ambientado</h3></li>
+          <li><div class="frame"><img src="../../../public/landing/apresentacao-fundo-original.webp" alt="Campanha de produto mantendo o fundo original" /></div><h3 class="tile-label">Fundo original</h3></li>
+        </ul>
+        <p class="swipe">‹ deslize para ver as 3 ›</p>
+      </div>
+    </section>
+
+    <!-- 4. Identidade e controle -->
+    <section class="block">
+      <h2>Fica com a cara da sua loja — e você decide</h2>
+      <div class="identity-grid">
+        <div class="identity-media">
+          <div class="frame"><img src="../../../public/landing/identidade-floricultura.webp" alt="Campanha de buquê de rosas da Floricultura Dona Flor" /></div>
+        </div>
+        <div>
+          <p class="support">Sua marca, suas cores e o estilo da sua loja presentes na campanha.</p>
+          <p class="support" style="font-size:0.875rem;">Você confere cada campanha e decide o que publicar.</p>
+          <div class="acq off-only">
+            <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
+          </div>
+          <div class="acq on-only">
+            <a class="btn-block btn-primary" href="#">Continuar com Google</a>
+            <a class="btn-block btn-secondary" href="#">Continuar com email</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Abordagens de divulgação -->
+    <section class="block">
+      <h2>Uma campanha para cada jeito de divulgar.</h2>
+      <p class="support">Mostre uma oferta, valorize um produto ou apresente algo especial.</p>
+      <div class="demo-set">
+        <ul class="strip" tabindex="0" aria-label="Abordagens de divulgação: oferta, destaque e exclusivo">
+          <li><div class="frame"><img src="../../../public/landing/abordagens-oferta.webp" alt="Exemplo de campanha para oferta" /></div><h3 class="tile-label">Oferta</h3></li>
+          <li><div class="frame"><img src="../../../public/landing/abordagens-destaque.webp" alt="Exemplo de campanha para destaque" /></div><h3 class="tile-label">Destaque</h3></li>
+          <li><div class="frame"><img src="../../../public/landing/abordagens-exclusivo.webp" alt="Exemplo de campanha para exclusivo" /></div><h3 class="tile-label">Exclusivo</h3></li>
+        </ul>
+        <p class="swipe">‹ deslize para ver as 3 ›</p>
+      </div>
+    </section>
+
+    <!-- 6. Oferta de teste gratuito -->
+    <section class="block">
+      <div class="offer-card">
+        <h2>Teste gratuitamente, sem cartão de crédito</h2>
+        <p class="offer-main">Experimente o Vendeo em sua loja: 28 dias gratuitos e até 20 créditos.</p>
+        <div class="acq acq--center off-only">
+          <a class="btn-primary" href="#acesso">Solicitar acesso free</a>
+        </div>
+        <div class="acq acq--center on-only">
+          <a class="btn-block btn-primary" href="#">Continuar com Google</a>
+          <a class="btn-block btn-secondary" href="#">Continuar com email</a>
+        </div>
+        <details class="mechanics">
+          <summary>Como funcionam os créditos do teste gratuito?</summary>
+          <p>O período de 28 dias começa após concluir o cadastro e a configuração inicial da sua loja.</p>
+          <p>Você recebe 5 créditos iniciais e mais 5 nos dias 7, 14 e 21, até o máximo de 20 créditos concedidos no período.</p>
+          <p>Os créditos acumulam, inclusive as parcelas liberadas durante sua ausência, e os créditos gratuitos restantes vencem ao final do período.</p>
+          <p>No beta fechado, solicitar acesso não inicia o período da oferta.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- 7. FAQ + rodapé legal -->
+    <section class="block">
+      <h2>Perguntas frequentes</h2>
+      <div class="faq">
+        <details><summary>Para quem o Vendeo foi desenvolvido?</summary><p>Para lojistas que querem divulgar produtos e ofertas nas redes sociais com campanhas profissionais.</p></details>
+        <details><summary>Preciso saber design ou marketing?</summary><p>Não. Você informa o básico, e o Vendeo entrega a campanha completa — com arte e texto — para você conferir, baixar e publicar.</p></details>
+        <details><summary>Preciso fornecer informações pessoais?</summary><p>Sim. Solicitamos informações para seu acesso e contato, além de dados da sua loja para personalizar as campanhas com a identidade do seu negócio. Você pode consultar os detalhes na Política de Privacidade.</p></details>
+        <details><summary>Preciso informar cartão de crédito?</summary><p>Não. O teste gratuito não exige cartão de crédito.</p></details>
+      </div>
+    </section>
+
+    <!-- Formulário (flag off) -->
+    <section id="acesso" class="block off-only">
+      <div class="form-card">
+        <h2 style="text-align:center;">Solicite seu acesso free</h2>
+        <p style="text-align:center;margin-top:8px;">Deixe seu email e conte um pouco sobre sua loja. A liberação é por convite.</p>
+        <p style="margin-top:16px;color:var(--text-muted);font-size:0.75rem;">Representação do formulário existente (flag off).</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <img class="brand-logo" src="../../../public/landing/vendeo-logo-dark.webp" alt="Vendeo" />
+      <nav class="footer-nav">
+        <span>Termos de Uso</span><span>Política de Privacidade</span><span>Uso Aceitável</span><span>Novidades</span><span>Contato</span><span>Entrar</span>
+      </nav>
+    </div>
+    <div style="max-width:64rem;margin:0 auto;padding:0 24px 32px;">
+      <p style="font-size:0.75rem;color:var(--text-secondary);text-align:center;max-width:48rem;margin:0 auto;">
+        As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas. As marcas de produtos pertencem aos respectivos titulares. O Vendeo não possui vínculo, parceria, patrocínio ou endosso das marcas ou dos fabricantes utilizados para ilustrar as campanhas.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      function setMode(mode) {
+        root.setAttribute("data-mode", mode);
+        document.querySelectorAll("[data-setmode]").forEach(function (b) {
+          b.setAttribute("aria-pressed", String(b.getAttribute("data-setmode") === mode));
+        });
+      }
+      document.querySelectorAll("[data-setmode]").forEach(function (b) {
+        b.addEventListener("click", function () { setMode(b.getAttribute("data-setmode")); });
+      });
+      setMode("off");
+
+      if (!("IntersectionObserver" in window)) return;
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      var sets = document.querySelectorAll(".demo-set");
+      if (!sets.length) return;
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("reveal"); io.unobserve(e.target); } });
+      }, { threshold: 0.15 });
+      sets.forEach(function (s) { io.observe(s); });
+    })();
+  </script>
+</body>
+</html>

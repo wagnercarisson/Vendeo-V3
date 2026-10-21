@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import { buildRobotsHeaders } from "./src/lib/seo/robots-headers";
+import { isProductionConfirmed } from "./src/lib/seo/environment";
 
 /** Diretório de build exclusivo do laboratório local (nunca o `.next` padrão). */
 const LAB_DIST_DIR = "supabase/.temp/landing-lab/.next-web";
@@ -20,6 +22,9 @@ const nextConfig: NextConfig = {
         typescript: { tsconfigPath: LAB_TSCONFIG },
       }
     : {}),
+  async headers() {
+    return buildRobotsHeaders({ productionConfirmed: isProductionConfirmed() });
+  },
   async redirects() {
     return [
       {
