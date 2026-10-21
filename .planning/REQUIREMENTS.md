@@ -6,7 +6,7 @@
 
 Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, tabelas e estados legados foram preservados integralmente em [`REQUIREMENTS-ARCHIVE.md`](./REQUIREMENTS-ARCHIVE.md) e não devem ser interpretados como pendências atuais.
 
-**F51.1/F51.2/F51.3 — integração validada localmente (2026-10-21):** o merge de `escopo/landing` incorporou a landing visual e a fundação de SEO na branch `integracao/landing-app-atual`. Validação integrada concluída: **35 arquivos / 434 testes verdes**, baseline F56 **128/4** inalterado, typecheck/lint/build **0**, smoke HTTP e SEO A/B/C validados, aceite visual humano aprovado em mobile/desktop nos dois modos. **Follow-up registrado, não corrigido:** produção confirmada com origem inválida emite canonical `http://localhost:3000`. Nenhum requisito de F56/F50.2 é alterado. Aguardando checkpoint final antes do commit de merge.
+**F51.1/F51.2/F51.3 — integração executada e commitada localmente (2026-10-21, `12b39ae4`):** o merge de `escopo/landing` incorporou a landing visual e a fundação de SEO na branch `integracao/landing-app-atual`, preservando F50.2/F56. Validação: **35 arquivos / 434 testes verdes**; baseline F56 **128/4** inalterado; typecheck/lint/build **0**; smoke HTTP e SEO A/B/C; aceite visual humano mobile/desktop nos dois modos. **Follow-up registrado, não corrigido:** canonical `http://localhost:3000` em produção com origem inválida. Verificação GSD e fechamento OpenSpec permanecem pendentes; sem merge para `main`, push ou deploy.
 
 ## Índice Histórico
 
