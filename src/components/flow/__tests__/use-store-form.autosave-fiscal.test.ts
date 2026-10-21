@@ -21,6 +21,9 @@ import type { Store } from "@/lib/store";
 // CNPJ válido de teste (check digits conferem): 11.222.333/0001-81
 const VALID_CNPJ = "11222333000181";
 const VALID_CNPJ_MASKED = "11.222.333/0001-81";
+// F50.3: CNPJ alfanumérico canônico válido (DV oficial).
+const VALID_ALPHA_CNPJ = "12ABC34501DE35";
+const VALID_ALPHA_MASKED = "12.ABC.345/01DE-35";
 const RAZAO = "LOJA TESTE LTDA";
 const FANTASIA = "Loja Teste";
 
@@ -303,5 +306,89 @@ describe("useStoreForm.autoSave — ramo fiscal (draft → fiscal)", () => {
     expect(creates[0].razaoSocial).toBeUndefined();
     expect(out?.ok).toBe(true);
     expect(out?.storeId).toBe("store-created-1");
+  });
+
+  // ── F50.3 (REQ-50.3-02): canonicalização e bloqueio fiscal ──────────────
+
+  it("fiscalWriteBlocked → NÃO chama /api/store/update-cnpj e não marca fiscalPersisted", async () => {
+    const fetchMock = setupFetch({
+      updateCnpj: { ok: true, data: { success: true } },
+      patch: { ok: true, data: { id: "store-1" } },
+    });
+    const { result } = renderHook(() =>
+      useStoreForm({ initialStore: draftStore(), fiscalWriteBlocked: true }),
+    );
+    fillFiscal(result);
+
+    let out: Awaited<ReturnType<ReturnType<typeof useStoreForm>["autoSave"]>> | undefined;
+    await act(async () => {
+      out = await result.current.autoSave({});
+    });
+
+    expect(updateCnpjBodies(fetchMock)).toHaveLength(0);
+    expect(out?.fiscalPersisted).toBeUndefined();
+    expect(patchBodies(fetchMock)).toHaveLength(1);
+  });
+
+  it("CNPJ alfanumérico válido → corpo de update-cnpj usa o canônico (nunca a máscara)", async () => {
+    const fetchMock = setupFetch({
+      updateCnpj: { ok: true, data: { success: true } },
+      patch: { ok: true, data: { id: "store-1" } },
+    });
+    const { result } = renderHook(() => useStoreForm({ initialStore: draftStore() }));
+    act(() => {
+      result.current.setField("cnpj", VALID_ALPHA_MASKED);
+      result.current.setField("razaoSocial", RAZAO);
+    });
+
+    let out: Awaited<ReturnType<ReturnType<typeof useStoreForm>["autoSave"]>> | undefined;
+    await act(async () => {
+      out = await result.current.autoSave({});
+    });
+
+    const bodies = updateCnpjBodies(fetchMock);
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].cnpjNormalized).toBe(VALID_ALPHA_CNPJ);
+    expect(out?.fiscalPersisted).toBe(true);
+  });
+
+  it("CNPJ numérico mantém o mesmo corpo canônico de antes (regressão)", async () => {
+    const fetchMock = setupFetch({
+      updateCnpj: { ok: true, data: { success: true } },
+      patch: { ok: true, data: { id: "store-1" } },
+    });
+    const { result } = renderHook(() => useStoreForm({ initialStore: draftStore() }));
+    fillFiscal(result);
+
+    await act(async () => {
+      await result.current.autoSave({});
+    });
+
+    const bodies = updateCnpjBodies(fetchMock);
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].cnpjNormalized).toBe(VALID_CNPJ);
+    expect(bodies[0].razaoSocial).toBe(RAZAO);
+    expect(bodies[0].nomeFantasia).toBe(FANTASIA);
+  });
+
+  it("save() create com CNPJ mascarado envia body.cnpj canônico", async () => {
+    const fetchMock = setupFetch({});
+    const { result } = renderHook(() =>
+      useStoreForm({ initialStore: draftStore({ id: undefined }) }),
+    );
+    act(() => {
+      result.current.setField("name", "Loja X");
+      result.current.setField("segment", "outros");
+      result.current.setField("cnpj", VALID_ALPHA_MASKED);
+      result.current.setAcceptedTerms(true);
+    });
+
+    await act(async () => {
+      await result.current.save(true);
+    });
+
+    const creates = callBodies(fetchMock, "/api/store");
+    expect(creates).toHaveLength(1);
+    expect(creates[0].cnpj).toBe(VALID_ALPHA_CNPJ);
   });
 });
