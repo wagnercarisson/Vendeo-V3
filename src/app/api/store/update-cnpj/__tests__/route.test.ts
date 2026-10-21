@@ -26,15 +26,12 @@ vi.mock("@/lib/auth/store-ownership", () => ({
   getCurrentStore: vi.fn(async () => ({ id: STORE_UUID, name: "Minha Loja" })),
 }));
 
-vi.mock("@/lib/cnpj/validate", () => ({
-  validateCnpj: vi.fn((raw: string) => {
-    const digits = raw.replace(/\D/g, "");
-    if (digits === "12345678000195" || digits === "22345678000195") {
-      return { normalized: digits };
-    }
-    return new Error("CNPJ inválido");
-  }),
-}));
+// Usa o validador real (allowlist + DV oficial) em vez de reimplementar a
+// normalização com replace(/\D/g, "") — que esconderia regressões alfanuméricas.
+vi.mock("@/lib/cnpj/validate", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/cnpj/validate")>();
+  return { validateCnpj: original.validateCnpj };
+});
 
 vi.mock("@/lib/cnpj/hash", () => ({
   hashCnpjRoot: vi.fn(() => "mocked_hash_64chars"),
@@ -77,6 +74,7 @@ function mockFromNoDuplicate() {
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
   };
   mockFrom.mockReturnValue(chain);
+  return chain;
 }
 
 beforeEach(() => {
@@ -92,6 +90,7 @@ beforeEach(() => {
 });
 
 import { CnpjVerificationService } from "@/lib/cnpj/verification-service";
+import { hashCnpjRoot } from "@/lib/cnpj/hash";
 
 describe("POST /api/store/update-cnpj", () => {
   it("updates CNPJ for legacy store without granting credits", async () => {
@@ -118,6 +117,8 @@ describe("POST /api/store/update-cnpj", () => {
       p_razao_social: "OFICIAL LTDA",
       p_nome_fantasia: "Fantasia Oficial",
     }));
+    // Regressão numérica: raiz/hash inalterados.
+    expect(hashCnpjRoot).toHaveBeenCalledWith("12345678");
   });
 
   it("inserts consumed entitlement without granting credits", async () => {
@@ -213,6 +214,7 @@ describe("POST /api/store/update-cnpj", () => {
     expect(res.status).toBe(200);
     expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
       p_verification_status: "defer",
+      p_verification_reasons: ["api_unavailable"],
     }));
   });
 
@@ -244,7 +246,7 @@ describe("POST /api/store/update-cnpj", () => {
     const { POST } = await import("../route");
     const res = await POST(createRequest({
       storeId: STORE_UUID,
-      cnpjNormalized: "22345678000195",
+      cnpjNormalized: "11222333000181",
       razaoSocial: "Razao Social Ltda",
     }));
 
@@ -274,6 +276,87 @@ describe("POST /api/store/update-cnpj", () => {
     const body = await res.json();
     expect(body.success).toBe(true);
     // Nenhuma consulta externa/RPC: nada a fazer, CNPJ já persistido.
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockResolve).not.toHaveBeenCalled();
+  });
+
+  it("persiste CNPJ alfanumérico canônico e hasheia a raiz canônica", async () => {
+    const chain = mockFromNoDuplicate();
+    mockRpc.mockResolvedValueOnce({
+      data: { store: [{ id: STORE_UUID }] },
+      error: null,
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12.ABC.345/01DE-35",
+      razaoSocial: "Razao Social Ltda",
+    }));
+
+    expect(res.status).toBe(200);
+    // Raiz das posições 1–8 do canônico (letras maiúsculas, sem pontuação).
+    expect(hashCnpjRoot).toHaveBeenCalledWith("12ABC345");
+    // Duplicidade compara o canônico, nunca a entrada mascarada.
+    expect(chain.eq).toHaveBeenCalledWith("cnpj_normalized", "12ABC34501DE35");
+    expect(mockResolve).toHaveBeenCalledWith("12ABC34501DE35");
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_cnpj_normalized: "12ABC34501DE35",
+      p_cnpj_root_hash: "mocked_hash_64chars",
+    }));
+  });
+
+  it("retorna 503 sem persistir quando o formato não é suportado (loja normal)", async () => {
+    mockResolve.mockResolvedValue({ status: "unsupported_format" });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12.ABC.345/01DE-35",
+      razaoSocial: "Razao Social Ltda",
+    }));
+
+    expect(res.status).toBe(503);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("permite defer com api_unsupported_format em test store", async () => {
+    mockResolve.mockResolvedValue({ status: "unsupported_format" });
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Test Store",
+      is_test_store: true,
+    } as import("@/lib/store").Store);
+    mockRpc.mockResolvedValueOnce({
+      data: { store: [{ id: STORE_UUID }] },
+      error: null,
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12.ABC.345/01DE-35",
+      razaoSocial: "Razao Social Ltda",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_cnpj_normalized: "12ABC34501DE35",
+      p_verification_status: "defer",
+      p_verification_reasons: ["api_unsupported_format"],
+    }));
+  });
+
+  it("rejeita caractere desconhecido sem canonicalizar silenciosamente", async () => {
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12.ABC.345/01DE-35😀",
+      razaoSocial: "Razao Social Ltda",
+    }));
+
+    expect(res.status).toBe(400);
     expect(mockRpc).not.toHaveBeenCalled();
     expect(mockResolve).not.toHaveBeenCalled();
   });
