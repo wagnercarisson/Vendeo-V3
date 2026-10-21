@@ -42,7 +42,8 @@ export const POST = apiHandler(async (
       return NextResponse.json(
         {
           error: "Não foi possível consultar os dados do CNPJ agora. Tente novamente mais tarde.",
-          lookupStatus: "unavailable",
+          // Reflexo explícito do status agregado (sem vazar detalhe de provedor).
+          lookupStatus: lookupResult.status,
         },
         { status: 503 }
       );

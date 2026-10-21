@@ -28,6 +28,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: "CNPJ é obrigatório" }, { status: 400 });
   }
 
+  // validateCnpj aplica o contrato canônico de 14 caracteres (12 alfanuméricos
+  // + 2 dígitos verificadores) e rejeita caracteres desconhecidos. Hash e RPC
+  // usam exclusivamente o valor normalizado.
   const cnpjResult = validateCnpj(cnpj);
   if (cnpjResult instanceof Error) {
     return NextResponse.json({ error: "CNPJ inválido" }, { status: 400 });
