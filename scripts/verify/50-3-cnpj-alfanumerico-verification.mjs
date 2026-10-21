@@ -12,6 +12,7 @@
 //   (sem flags)            executa todas as asserções e imprime o fingerprint atual
 //   --print-fingerprint    imprime somente o md5 e sai 0 (nenhuma outra asserção)
 //   --pre-fingerprint <md5> executa todas as asserções e compara o fingerprint com <md5>
+//   --self-test            exercita expectCheckViolation com client simulado (sem banco)
 //
 // A matriz de constraint usa INSERT real dentro de uma transação com
 // `session_replication_role = replica` (desliga triggers/FK, MANTÉM CHECK/NOT NULL)
@@ -34,6 +35,7 @@ const EXPECTED_WITH_CNPJ = 5;
 const EXPECTED_ALPHANUMERIC = 0;
 const EXPECTED_CACHE_ROWS = 1;
 const CONSTRAINT_NAME = "chk_stores_cnpj_atomic";
+const CHECK_VIOLATION = "23514";
 const ALPHANUMERIC_PATTERN = "[A-Z0-9]{12}[0-9]{2}";
 
 const FINGERPRINT_SQL = `
@@ -45,9 +47,10 @@ const FINGERPRINT_SQL = `
 `;
 
 const results = [];
+let suppressAssertOutput = false;
 const assert = (name, ok, detail = "") => {
   results.push({ name, ok, detail });
-  console.log(`${ok ? "PASS" : "FAIL"} ${name}${ok ? "" : ` — ${detail}`}`);
+  if (!suppressAssertOutput) console.log(`${ok ? "PASS" : "FAIL"} ${name}${ok ? "" : ` — ${detail}`}`);
 };
 
 // ---------------------------------------------------------------------------
@@ -58,6 +61,10 @@ function parseArgs(argv) {
   const options = { mode: "verify", preFingerprint: null };
   if (argv.includes("--print-fingerprint")) {
     options.mode = "print-fingerprint";
+    return options;
+  }
+  if (argv.includes("--self-test")) {
+    options.mode = "self-test";
     return options;
   }
   const preIndex = argv.indexOf("--pre-fingerprint");
@@ -209,8 +216,8 @@ async function expectCheckViolation(client, label, vector, savepoint) {
     await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
   }
 
-  const isCheckViolation = error?.code === "23514";
-  const isSameConstraint = error?.constraint === "chk_stores_cnpj_atomic";
+  const isCheckViolation = error?.code === CHECK_VIOLATION;
+  const isSameConstraint = error?.constraint === CONSTRAINT_NAME;
   assert(
     `${label}: rejeitado com ${CHECK_VIOLATION} em ${CONSTRAINT_NAME}`,
     isCheckViolation && isSameConstraint,
@@ -252,6 +259,127 @@ async function readBaseline(client) {
 async function readFingerprint(client) {
   const { rows } = await client.query(FINGERPRINT_SQL);
   return rows[0]?.fingerprint ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Self-test offline — exercita expectCheckViolation sem conectar ao banco
+// ---------------------------------------------------------------------------
+
+function createSimulatedCheckClient(outcome) {
+  const calls = [];
+  return {
+    calls,
+    async query(sql, params) {
+      calls.push({ sql, params });
+      if (sql.trimStart().toUpperCase().startsWith("INSERT")) {
+        if (outcome.accept) return { rowCount: 1, rows: [] };
+        throw outcome.error;
+      }
+      return { rowCount: 0, rows: [] };
+    },
+  };
+}
+
+async function runSelfTest() {
+  console.log("\nF50.3 CNPJ alfanumerico verifier self-test (sem banco)\n");
+  const startIndex = results.length;
+  const cases = [
+    {
+      name: "23514 + chk_stores_cnpj_atomic aceita a rejeicao esperada",
+      outcome: {
+        accept: false,
+        error: {
+          code: CHECK_VIOLATION,
+          constraint: CONSTRAINT_NAME,
+          message: "new row violates check constraint",
+        },
+      },
+      expectedOk: true,
+      expectedDetailPattern: null,
+    },
+    {
+      name: "23505 registra falha",
+      outcome: {
+        accept: false,
+        error: {
+          code: "23505",
+          constraint: "stores_user_id_key",
+          message: "duplicate key value violates unique constraint",
+        },
+      },
+      expectedOk: false,
+      expectedDetailPattern: "code=23505",
+    },
+    {
+      name: "ausencia de erro registra falha",
+      outcome: { accept: true, error: null },
+      expectedOk: false,
+      expectedDetailPattern: "INSERT foi aceito",
+    },
+  ];
+
+  for (const [index, testCase] of cases.entries()) {
+    const position = index + 1;
+    const client = createSimulatedCheckClient(testCase.outcome);
+    const savepoint = `self_test_sp_${position}`;
+    suppressAssertOutput = true;
+    try {
+      await expectCheckViolation(
+        client,
+        `self-test ${position}`,
+        { name: "F50.3 self-test", cnpjNormalized: "12ABC34501DE35", cnpjRootHash: "root" },
+        savepoint,
+      );
+    } finally {
+      suppressAssertOutput = false;
+    }
+
+    // Remove a asserção exercitada do tally: o self-test avalia o efeito dela
+    // separadamente e não deve contá-la como falha própria.
+    const entry = results.pop();
+    assert(
+      `self-test ${position}: ${testCase.name}`,
+      entry.ok === testCase.expectedOk,
+      `esperado ok=${testCase.expectedOk}, obtido ok=${entry.ok} (${entry.detail})`,
+    );
+    if (testCase.expectedDetailPattern) {
+      assert(
+        `self-test ${position}: detalhe contem "${testCase.expectedDetailPattern}"`,
+        String(entry.detail).includes(testCase.expectedDetailPattern),
+        `detalhe=${entry.detail}`,
+      );
+    }
+
+    const inserts = client.calls.filter((call) =>
+      call.sql.trimStart().toUpperCase().startsWith("INSERT"),
+    );
+    assert(`self-test ${position}: INSERT tentado uma vez`, inserts.length === 1, `tentativas=${inserts.length}`);
+
+    const rollbacks = client.calls.filter(
+      (call) => call.sql === `ROLLBACK TO SAVEPOINT ${savepoint}`,
+    );
+    assert(
+      `self-test ${position}: rollback ao savepoint executado uma vez`,
+      rollbacks.length === 1,
+      `rollbacks=${rollbacks.length}`,
+    );
+
+    const savepointIndex = client.calls.findIndex((call) => call.sql === `SAVEPOINT ${savepoint}`);
+    const rollbackIndex = client.calls.findIndex(
+      (call) => call.sql === `ROLLBACK TO SAVEPOINT ${savepoint}`,
+    );
+    assert(
+      `self-test ${position}: savepoint antes do rollback`,
+      savepointIndex !== -1 && rollbackIndex > savepointIndex,
+      `savepoint=${savepointIndex} rollback=${rollbackIndex}`,
+    );
+  }
+
+  const failed = results.slice(startIndex).filter((result) => !result.ok);
+  console.log(
+    `\nSelf-test: ${results.length - startIndex - failed.length} passed / ${failed.length} failed / ${results.length - startIndex} total`,
+  );
+  if (failed.length > 0) process.exitCode = 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -426,6 +554,12 @@ async function verify(client, options) {
 
 async function run() {
   const options = parseArgs(process.argv.slice(2));
+
+  if (options.mode === "self-test") {
+    await runSelfTest();
+    return;
+  }
+
   assertFixedTarget(DB_URL);
 
   if (options.mode !== "print-fingerprint") {
