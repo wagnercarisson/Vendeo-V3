@@ -223,6 +223,16 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
       "quick 261013-hxm — fixtures e alinhamento do snapshot do laboratório",
     commit: "af28dc7e",
   },
+  // Reconciliação 2026-10-21 — F50.2 (oferta de teste gratuito de 28 dias).
+  // Mudança ADITIVA/read-only no CreditService (leitura do enrollment), já
+  // aprovada no planejamento da F50.2 (50.2-02-PLAN.md) e publicada nesse
+  // commit. A comparação de conteúdo contra `05e81d90` permanece ativa.
+  {
+    path: "src/lib/credit/credit-service.ts",
+    authorization:
+      "F50.2 (leitura de enrollment do teste gratuito — aditiva/read-only)",
+    commit: "05e81d90",
+  },
 ];
 
 const ADDITIONAL_AUTHORIZED_FILES = AUTHORIZED_FRONTIER_CHANGES.filter(

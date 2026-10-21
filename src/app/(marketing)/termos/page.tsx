@@ -3,6 +3,12 @@ import { ArrowLeft } from "lucide-react";
 import { getCurrentVersion } from "@/lib/legal/document-versions";
 import { getDocumentFile, getDocumentLabel } from "@/lib/legal/document-content";
 import { LegalDocumentViewer } from "@/components/legal/legal-document-viewer";
+import type { Metadata } from "next";
+import { NOINDEX_ROBOTS } from "@/lib/seo/indexation-policy";
+
+export const metadata: Metadata = {
+  robots: NOINDEX_ROBOTS,
+};
 
 export default async function TermosPage() {
   const version = await getCurrentVersion("terms_of_service");

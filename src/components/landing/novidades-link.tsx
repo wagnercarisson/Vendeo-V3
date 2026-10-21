@@ -58,7 +58,7 @@ export function NovidadesLink({ entries, variant }: NovidadesLinkProps) {
         className={
           variant === "prominent"
             ? "inline-flex min-h-[44px] cursor-pointer items-center rounded-lg font-heading font-semibold text-accent-green hover:underline focus:ring-2 focus:ring-accent-green focus:outline-none"
-            : "cursor-pointer text-sm text-text-muted transition-colors hover:text-text-primary"
+            : "inline-flex min-h-[44px] cursor-pointer items-center rounded px-2 text-sm text-text-secondary transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
         }
       >
         Novidades

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PREVIEW — Hero (oferta de café) · F51.1 · não é produção</title>
+<style>
+  :root {
+    --bg-deep: #020617;
+    --bg-surface: #0F172A;
+    --border: #1E293B;
+    --border-light: #334155;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --accent-green: #22C55E;
+    --accent-amber: #F59E0B;
+    --font-heading: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-body: 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg-deep); color: var(--text-primary); font-family: var(--font-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  h1, p { margin: 0; }
+  .banner { background: #F59E0B; color: #020617; text-align: center; font-family: var(--font-heading); font-weight: 600; font-size: 0.8125rem; padding: 8px 16px; }
+  .legend { max-width: 64rem; margin: 0 auto; padding: 16px 24px; color: var(--text-secondary); font-size: 0.75rem; border-bottom: 1px dashed var(--border-light); }
+  .legend code { color: var(--text-primary); }
+
+  .hero { width: 100%; max-width: 64rem; margin: 0 auto; padding: 64px 24px 48px; }
+  .grid { display: grid; gap: 40px; align-items: center; }
+  .copy { text-align: center; }
+  .pill { display: inline-block; border: 1px solid var(--border-light); background: var(--bg-surface); color: var(--accent-amber); border-radius: 9999px; padding: 6px 16px; font-size: 0.75rem; font-weight: 500; }
+  h1 { margin-top: 20px; font-family: var(--font-heading); font-weight: 700; font-size: 1.875rem; line-height: 1.15; }
+  .sub { margin-top: 20px; color: var(--text-secondary); font-size: 1rem; max-width: 36rem; margin-left: auto; margin-right: auto; }
+  .distinction { margin-top: 16px; color: var(--text-secondary); }
+  .accent { color: var(--accent-green); }
+  .cta { margin-top: 32px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px 24px; border-radius: 8px; background: #22C55E; color: #020617; font-family: var(--font-heading); font-weight: 600; text-decoration: none; }
+  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px 24px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.875rem; }
+
+  .media { margin: 0 auto; width: 100%; max-width: 24rem; }
+  .frame { aspect-ratio: 1 / 1; width: 100%; overflow: hidden; border-radius: 12px; border: 1px solid var(--border-light); background: var(--bg-surface); display: flex; align-items: center; justify-content: center; }
+  .frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+  @media (min-width: 640px) {
+    .hero { padding: 96px 24px 48px; }
+    .grid { grid-template-columns: 1fr 1fr; }
+    .copy { text-align: left; }
+    h1 { font-size: 3rem; }
+    .sub { font-size: 1.125rem; margin-left: 0; margin-right: 0; }
+    .cta { flex-direction: row; justify-content: flex-start; }
+    .media { margin: 0; max-width: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="banner">PREVIEW DE REVISÃO — Hero (oferta de café) · NÃO é produção</div>
+  <div class="legend">
+    Abra no navegador (<code>file://</code>) e redimensione a janela (breakpoint 640px): <strong>mobile</strong> = copy → CTA → imagem (empilhado); <strong>desktop</strong> = duas colunas.
+    Peça do hero em 1:1, exibida com <code>object-fit: contain</code> — <strong>sem recorte</strong>. Arquivo: <code>public/landing/hero-oferta-cafe.webp</code>.
+    Headline, CTA e responsividade existentes mantidos.
+  </div>
+
+  <section class="hero" data-public-signup-enabled="false">
+    <div class="grid">
+      <div class="copy">
+        <span class="pill">Beta fechado — acesso liberado por convite. Solicite seu acesso free.</span>
+        <h1>O que seu negócio quer divulgar vira uma campanha pronta para publicar.</h1>
+        <p class="sub">Você informa o básico. O Vendeo prepara a campanha completa — com arte e texto — pronta para publicar.</p>
+        <p class="distinction">Você define como quer apresentar.</p>
+        <div class="cta">
+          <a class="btn-primary" href="#">Solicitar acesso free</a>
+          <a class="btn-secondary" href="#">Entrar</a>
+        </div>
+      </div>
+      <div class="media">
+        <div class="frame"><img src="../../../public/landing/hero-oferta-cafe.webp" alt="Campanha de oferta de café da Mercearia Tio João" /></div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

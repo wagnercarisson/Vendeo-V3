@@ -201,6 +201,32 @@ const routeHarness = vi.hoisted(() => {
           error: null,
         });
       }
+      // Gate de gasto do piloto (F56.2b2c) — envelopes FECHADOS com a
+      // identidade enviada, como as RPCs reais. Mantém o gate ARMADO no
+      // contrato da rota, sem banco nem provider real.
+      if (name === "product_1_1_pilot_begin_paid_call") {
+        return Promise.resolve({
+          data: {
+            success: true,
+            outcome: "acquired",
+            call_id: params.p_call_id,
+            campaign_id: params.p_campaign_id,
+            operation_id: params.p_operation_id,
+            kind: params.p_kind,
+            attempt_seq: params.p_attempt_seq,
+          },
+          error: null,
+        });
+      }
+      if (name === "product_1_1_pilot_end_paid_call") {
+        return Promise.resolve({ data: { success: true, state: "released" }, error: null });
+      }
+      if (name === "product_1_1_pilot_mark_unknown") {
+        return Promise.resolve({ data: { success: true, state: "unknown" }, error: null });
+      }
+      if (name === "product_1_1_pilot_block_global") {
+        return Promise.resolve({ data: { success: true }, error: null });
+      }
       if (/credit|artifact|deliver|refund|reserve|estorno/i.test(name)) {
         state.creditOrArtifactCalls += 1;
       }
@@ -210,24 +236,51 @@ const routeHarness = vi.hoisted(() => {
 
   const providerGateway = {
     async invoke(): Promise<{ content: string; model: string }> {
-      state.providerCalls += 1;
-      const next = state.providerSequence[state.providerIndex] ?? "ok";
-      state.providerIndex += 1;
-      if (next instanceof Error) throw next;
-      return {
-        content: JSON.stringify({
-          title: "Oferta Especial",
-          caption: "Legenda simulada",
-          hashtags: [],
-          cta_post: "Aproveite!",
-        }),
-        model: "gpt-4o",
-      };
+      return simulateProvider();
     },
     async hasFallback(): Promise<boolean> {
       return false;
     },
+    // Contrato ATUAL do runner quando o gate do piloto está armado:
+    // `prepare` fixa o alvo e `invokePrepared` executa SEM nova resolução.
+    // O contador de chamadas continua sendo o mesmo do `invoke`.
+    async prepare(): Promise<{
+      capability: string;
+      target: string;
+      provider: string;
+      model: string;
+      protocol: string;
+      resolved: { provider: string; model: string; protocol: string };
+    }> {
+      return {
+        capability: "campaign_copy",
+        target: "primary",
+        provider: "openai",
+        model: "gpt-4o",
+        protocol: "chat-completions",
+        resolved: { provider: "openai", model: "gpt-4o", protocol: "chat-completions" },
+      };
+    },
+    async invokePrepared(): Promise<{ content: string; model: string }> {
+      return simulateProvider();
+    },
   };
+
+  function simulateProvider(): { content: string; model: string } {
+    state.providerCalls += 1;
+    const next = state.providerSequence[state.providerIndex] ?? "ok";
+    state.providerIndex += 1;
+    if (next instanceof Error) throw next;
+    return {
+      content: JSON.stringify({
+        title: "Oferta Especial",
+        caption: "Legenda simulada",
+        hashtags: [],
+        cta_post: "Aproveite!",
+      }),
+      model: "gpt-4o",
+    };
+  }
 
   return { state, client, providerGateway, iso, NOW };
 });
@@ -300,6 +353,23 @@ vi.mock("@/lib/product-1-1/orchestration/attempt-start-client", () => ({
 
 vi.mock("@/lib/launch-config/config", () => ({
   getLaunchConfig: (): { copyDirectorEnabled: boolean } => ({ copyDirectorEnabled: true }),
+}));
+
+// F56.2b2c — o runner exige pricing CADASTRADO (não `code_default`) quando o
+// gate do piloto está armado. Determinístico e sem banco: o valor só precisa
+// ser finito/positivo para a estimativa conservadora.
+vi.mock("@/lib/ai-cost/ai-model-pricing", () => ({
+  AiModelPricingService: class {
+    async getModelPricing(): Promise<{
+      pricing: { inputCostUsd: number; outputCostUsd: number };
+      versionId: string;
+    }> {
+      return {
+        pricing: { inputCostUsd: 0.1, outputCostUsd: 0.5 },
+        versionId: "test-copy-recovery",
+      };
+    }
+  },
 }));
 
 import type { SupabaseClient } from "@supabase/supabase-js";
