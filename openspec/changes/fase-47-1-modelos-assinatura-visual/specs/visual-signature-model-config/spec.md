@@ -47,6 +47,23 @@ configuração dedicada com auditoria e retornar o sistema à seleção herdada.
 - **THEN** a operação é recusada por conflito
 - **AND** a configuração vigente permanece inalterada
 
+#### Scenario: Concorrência equivalente com o mesmo operation_id
+- **WHEN** duas chamadas concorrentes de set usam o mesmo `operation_id` e conteúdo equivalente
+- **THEN** a RPC serializa as chamadas antes da consulta de idempotência
+- **AND** existe exatamente uma versão/auditoria
+- **AND** ambas retornam sucesso/idempotente sem violação de unicidade
+
+#### Scenario: Concorrência divergente com o mesmo operation_id
+- **WHEN** duas chamadas concorrentes usam o mesmo `operation_id` com conteúdo divergente
+- **THEN** uma vence e a outra recebe `operation_id_conflict`
+- **AND** a configuração e a auditoria permanecem íntegras
+
+#### Scenario: Concorrência set × reset
+- **WHEN** set e reset concorrentes usam o mesmo `operation_id`
+- **THEN** as chamadas são serializadas
+- **AND** uma vence e a outra recebe conflito tipado
+- **AND** nenhuma colisão de índice único é exposta
+
 #### Scenario: Reset auditado
 - **WHEN** um admin remove a configuração dedicada com motivo
 - **THEN** a linha é removida com auditoria
@@ -113,6 +130,12 @@ falhar, a operação SHALL falhar antes de qualquer escrita, débito ou provider
 - **WHEN** o preflight é executado
 - **THEN** confirma project_id local, containers/API/DB esperados, portas loopback e ledger
 - **AND** registra evidência sanitizada antes de qualquer migration ou débito
+
+#### Scenario: Falha de isolamento aborta antes da conexão
+- **WHEN** qualquer checagem estática de isolamento falha
+- **THEN** o preflight encerra antes de abrir conexão com o banco
+- **AND** a evidência registra `database_connection_attempted=false`
+- **AND** o script TypeScript valida o destino por conta própria antes de conectar
 
 #### Scenario: Instância de produção é recusada no preflight
 - **WHEN** o preflight encontra container/projeto/URL de produção

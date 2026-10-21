@@ -160,6 +160,15 @@ BEGIN
       RAISE EXCEPTION 'invalid_preset';
   END CASE;
 
+  -- Serializa set/reset ANTES da consulta de idempotência. Sem esta trava,
+  -- duas chamadas concorrentes com o mesmo operation_id podem ambas observar
+  -- ausência e a segunda falha no índice único da auditoria em vez de retornar
+  -- replay idempotente/conflito tipado. A trava é por transação e cobre a
+  -- feature inteira, preservando a ordem singleton/auditoria.
+  PERFORM pg_advisory_xact_lock(
+    hashtext('f47_1_visual_signature_model_config')
+  );
+
   -- Idempotência global por operation_id (índice único parcial). Um
   -- operation_id reutilizado por outra ação/conteúdo é conflito.
   SELECT metadata, action INTO v_existing_metadata, v_existing_action
@@ -284,6 +293,12 @@ BEGIN
   IF p_instance_identity IS NULL OR btrim(p_instance_identity) = '' THEN
     RAISE EXCEPTION 'missing_instance_identity';
   END IF;
+
+  -- Mesma trava de feature do set: serializa reset × set e reset × reset antes
+  -- de consultar idempotência, eliminando a janela de corrida do operation_id.
+  PERFORM pg_advisory_xact_lock(
+    hashtext('f47_1_visual_signature_model_config')
+  );
 
   SELECT metadata, action INTO v_existing_metadata, v_existing_action
   FROM public.admin_audit_log

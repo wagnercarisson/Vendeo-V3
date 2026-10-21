@@ -170,16 +170,29 @@ describe("F47.1 — migration visual_signature_model_config (contrato estático)
     );
   });
 
-  it("implementa idempotência por operation_id e conflito explícito", () => {
+  it("sincroniza set/reset antes da idempotência e implementa conflito explícito", () => {
     const setFn = activeSql.slice(
       activeSql.indexOf("admin_set_visual_signature_model_config"),
       activeSql.indexOf("admin_reset_visual_signature_model_config"),
     );
-    expect(setFn).toMatch(/WHERE operation_id = p_operation_id/);
+    const resetFn = activeSql.slice(
+      activeSql.indexOf("admin_reset_visual_signature_model_config"),
+      activeSql.indexOf("ALTER TABLE public.admin_audit_log DROP CONSTRAINT"),
+    );
+
+    // A trava de transação deve preceder a consulta por operation_id em AMBAS
+    // as RPCs. Sem isso, concorrentes com o mesmo ID podem colidir no índice
+    // único da auditoria em vez de retornar replay/conflito tipado.
+    expect(setFn).toMatch(
+      /pg_advisory_xact_lock\([\s\S]*?hashtext\('f47_1_visual_signature_model_config'\)[\s\S]*?\)[\s\S]*?WHERE operation_id = p_operation_id/,
+    );
+    expect(resetFn).toMatch(
+      /pg_advisory_xact_lock\([\s\S]*?hashtext\('f47_1_visual_signature_model_config'\)[\s\S]*?\)[\s\S]*?WHERE operation_id = p_operation_id/,
+    );
+
     expect(setFn).toContain("operation_id_conflict");
     expect(setFn).toMatch(/'idempotent', true/);
     expect(setFn).toMatch(/'idempotent', false/);
-
     expect(activeSql).toContain("operation_id_conflict");
     expect(activeSql).toMatch(/'operation', 'reset'/);
     expect(activeSql).toMatch(/'removed', \(v_deleted > 0\)/);

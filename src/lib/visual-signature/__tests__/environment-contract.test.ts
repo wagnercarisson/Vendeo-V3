@@ -5,6 +5,7 @@ import {
   LOCAL_SUPABASE_HOSTS,
   VISUAL_SIGNATURE_LOCAL_ERRORS,
   VisualSignatureLocalEnvironmentError,
+  assertLocalPostgresEndpoint,
   assertLocalSupabaseEndpoint,
   evaluateLocalValidationStage,
   resolveLocalSupabaseEndpoints,
@@ -138,6 +139,40 @@ describe("F47.1 — contrato puro de endpoint local (D5)", () => {
         lunaIntegrityOk: true,
       }).failures,
     ).toContain("gpt_5_5_catalog_missing");
+  });
+
+  it("valida o destino Postgres antes da conexão: loopback + porta esperada", () => {
+    expect(
+      assertLocalPostgresEndpoint(
+        "postgresql://postgres:secret@127.0.0.1:57782/postgres",
+        "57782",
+      ),
+    ).toEqual({ host: "127.0.0.1", port: "57782" });
+
+    expect(
+      captureCode(() =>
+        assertLocalPostgresEndpoint(
+          "postgresql://postgres:secret@db.example.supabase.co:57782/postgres",
+          "57782",
+        ),
+      ),
+    ).toBe(VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_not_loopback);
+
+    expect(
+      captureCode(() =>
+        assertLocalPostgresEndpoint(
+          "postgresql://postgres:secret@127.0.0.1:54322/postgres",
+          "57782",
+        ),
+      ),
+    ).toBe(VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_port_mismatch);
+
+    expect(captureCode(() => assertLocalPostgresEndpoint("", "57782"))).toBe(
+      VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_missing,
+    );
+    expect(
+      captureCode(() => assertLocalPostgresEndpoint("mysql://127.0.0.1:57782/db", "57782")),
+    ).toBe(VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_invalid);
   });
 
   it("é módulo puro: não importa server-only, não lê env e não declara porta de API/DB", () => {

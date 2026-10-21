@@ -11,7 +11,12 @@
  */
 import { readdirSync } from "node:fs";
 import { Client } from "pg";
-import { evaluateLocalValidationStage } from "../../src/lib/visual-signature/local-validation/environment-contract";
+import {
+  assertLocalPostgresEndpoint,
+  evaluateLocalValidationStage,
+  resolveLocalSupabaseEndpoints,
+  VisualSignatureLocalEnvironmentError,
+} from "../../src/lib/visual-signature/local-validation/environment-contract";
 
 const STAGE = process.env.PREFLIGHT_STAGE === "post-migration" ? "post-migration" : "pre-migration";
 const DATABASE_URL = process.env.DATABASE_URL ?? "";
@@ -23,6 +28,7 @@ const REPO_MIGRATIONS_DIR = process.env.REPO_MIGRATIONS_DIR ?? "";
 const VALIDATION_INSTANCE = process.env.VISUAL_SIGNATURE_MODEL_VALIDATION_INSTANCE ?? "";
 const NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
+const EXPECTED_DB_PORT = process.env.EXPECTED_DB_PORT ?? "";
 const VALIDATION_FLAG_ENABLED = process.env.VENDEO_VS_VALIDATION_ENABLED === "1";
 const CREDENTIAL_PRESENT = (process.env.VENDEO_VS_VALIDATION_OPENAI_API_KEY ?? "").trim() !== "";
 
@@ -96,7 +102,56 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Fail-closed ANTES de qualquer conexão: valida os endpoints Supabase e o
+  // destino Postgres por conta própria, sem confiar apenas no PowerShell.
+  try {
+    resolveLocalSupabaseEndpoints(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_URL);
+  } catch (error) {
+    failures.push(
+      error instanceof VisualSignatureLocalEnvironmentError
+        ? error.code
+        : "supabase_endpoint_invalid",
+    );
+  }
+
+  try {
+    const dbTarget = assertLocalPostgresEndpoint(DATABASE_URL, EXPECTED_DB_PORT);
+    evidence.database_target = {
+      host: dbTarget.host,
+      port: dbTarget.port,
+      loopback: true,
+    };
+  } catch (error) {
+    failures.push(
+      error instanceof VisualSignatureLocalEnvironmentError
+        ? error.code
+        : "database_endpoint_invalid",
+    );
+  }
+
+  const preConnectionFailures = Array.from(
+    new Set(
+      failures.filter(
+        (failure) => failure !== "validation_credential_missing",
+      ),
+    ),
+  );
+  if (preConnectionFailures.length > 0) {
+    console.log(
+      JSON.stringify({
+        ...evidence,
+        ok: false,
+        database_connection_attempted: false,
+        failures: Array.from(new Set(failures)),
+        error: "preflight_isolation_failed_before_database_connection",
+      }),
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const client = new Client({ connectionString: DATABASE_URL });
+  evidence.database_connection_attempted = true;
   await client.connect();
   try {
     const databaseResult = await client.query<{ current_database: string }>(

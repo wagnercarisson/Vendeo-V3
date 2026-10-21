@@ -212,9 +212,24 @@ if (Test-Path $RepoMigrationPath) {
 }
 
 # ---------------------------------------------------------------------------
+# (6.1) ABORT BEFORE DB: qualquer falha estática/isolation impede conexão
+# ---------------------------------------------------------------------------
+# Fail-closed: se workdir/project/containers/API/DB/identidade/URLs/migration
+# falharam, o script TypeScript NÃO é executado. Assim, um destino recusado
+# nunca recebe sequer uma consulta de leitura.
+if ($script:Failures.Count -gt 0) {
+  Write-Output "  info database_connection_attempted=false"
+  Write-Output ""
+  Write-Output ("RESULT: FAIL (" + $script:Failures.Count + " falha(s); conexão com banco NÃO tentada)")
+  foreach ($f in $script:Failures) { Write-Output ("  - " + $f) }
+  exit 1
+}
+
+# ---------------------------------------------------------------------------
 # (7) Preflight de banco (read-only) via tsx
 # ---------------------------------------------------------------------------
 $env:PREFLIGHT_STAGE = $Stage
+$env:EXPECTED_DB_PORT = [string]$DbPort
 $env:EXPECTED_PROJECT_ID = $ProjectId
 $env:EXPECTED_MIGRATION_VERSION = $ExpectedMigrationVersion
 $env:EXPECTED_MIGRATION_FILE = $ExpectedMigration
@@ -243,6 +258,7 @@ if ($appRaw.Count -gt 0) {
 Check "preflight-app.ts executou e emitiu JSON sanitizado" (($appExit -eq 0) -and ($null -ne $app))
 
 if ($null -ne $app) {
+  Write-Output ("  info database_connection_attempted=" + $app.database_connection_attempted)
   Write-Output ("  info db.current_database=" + $app.database.current_database)
   Write-Output ("  info ledger.count=" + $app.ledger.count)
   Write-Output ("  info migrations.workdir_file_count=" + $app.migrations.workdir_file_count)

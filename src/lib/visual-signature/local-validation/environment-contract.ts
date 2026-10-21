@@ -29,6 +29,12 @@ export const VISUAL_SIGNATURE_LOCAL_ERRORS = {
   endpoint_credentials_forbidden:
     "visual_signature_local_endpoint_credentials_forbidden",
   endpoints_origin_mismatch: "visual_signature_local_endpoints_origin_mismatch",
+  database_endpoint_missing: "visual_signature_local_database_endpoint_missing",
+  database_endpoint_invalid: "visual_signature_local_database_endpoint_invalid",
+  database_endpoint_not_loopback:
+    "visual_signature_local_database_endpoint_not_loopback",
+  database_endpoint_port_mismatch:
+    "visual_signature_local_database_endpoint_port_mismatch",
 } as const;
 
 export type VisualSignatureLocalErrorCode =
@@ -136,6 +142,58 @@ export function resolveLocalSupabaseEndpoints(
   }
 
   return primary;
+}
+
+/**
+ * Valida o destino Postgres ANTES de qualquer conexão. Aceita somente
+ * `postgres://`/`postgresql://` em host loopback com porta explícita e igual à
+ * porta esperada do workdir. Não imprime/retorna a connection string.
+ */
+export function assertLocalPostgresEndpoint(
+  url: string,
+  expectedPort: string,
+): { host: LocalSupabaseHost; port: string } {
+  if (typeof url !== "string" || url.trim() === "") {
+    throw new VisualSignatureLocalEnvironmentError(
+      VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_missing,
+    );
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    throw new VisualSignatureLocalEnvironmentError(
+      VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_invalid,
+    );
+  }
+
+  if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+    throw new VisualSignatureLocalEnvironmentError(
+      VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_invalid,
+    );
+  }
+
+  const host = normalizeHost(parsed.hostname);
+  // Não reutiliza `assertNotRemoteHost` aqui: o código de erro deve ser o de
+  // destino Postgres, não o de endpoint HTTP.
+  if (!(LOCAL_SUPABASE_HOSTS as readonly string[]).includes(host)) {
+    throw new VisualSignatureLocalEnvironmentError(
+      VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_not_loopback,
+    );
+  }
+  if (!parsed.port) {
+    throw new VisualSignatureLocalEnvironmentError(
+      VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_invalid,
+    );
+  }
+  if (expectedPort.trim() === "" || parsed.port !== expectedPort.trim()) {
+    throw new VisualSignatureLocalEnvironmentError(
+      VISUAL_SIGNATURE_LOCAL_ERRORS.database_endpoint_port_mismatch,
+    );
+  }
+
+  return { host: host as LocalSupabaseHost, port: parsed.port };
 }
 
 /** Estágio do preflight (pré/pós aplicação da migration local). */
