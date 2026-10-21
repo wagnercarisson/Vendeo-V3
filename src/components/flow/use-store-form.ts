@@ -153,7 +153,7 @@ export function useIdentityActions(
   }, [identityState, hasExistingVS, hasArchivedSignatures]);
 }
 
-export function useStoreForm({ initialStore }: { initialStore?: Store | null } = {}): UseStoreFormReturn {
+export function useStoreForm({ initialStore, fiscalWriteBlocked = false }: { initialStore?: Store | null; fiscalWriteBlocked?: boolean } = {}): UseStoreFormReturn {
   const [formData, setFormData] = useState<FormData>(() => {
     if (initialStore) {
       return {
@@ -267,17 +267,22 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       let res: Response;
 
       if (storeId) {
-        // Edit mode — check if store needs CNPJ routing
-        const cnpjDigits = formData.cnpj.replace(/\D/g, "");
+        // Edit mode — check if store needs CNPJ routing.
+        // F50.3: a única fonte do CNPJ é `validateCnpj` (canônico, alfanumérico).
+        const cnpjResult = validateCnpj(formData.cnpj);
 
-        if (!hasExistingCnpj && cnpjDigits.length === 14) {
+        if (
+          !hasExistingCnpj &&
+          !(cnpjResult instanceof Error) &&
+          !fiscalWriteBlocked
+        ) {
           // Store sem CNPJ + formulário com CNPJ válido → rota dedicada
           res = await fetch("/api/store/update-cnpj", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               storeId,
-              cnpjNormalized: cnpjDigits,
+              cnpjNormalized: cnpjResult.normalized,
               razaoSocial: formData.razaoSocial,
               nomeFantasia: formData.nomeFantasia || formData.razaoSocial,
             }),
@@ -297,8 +302,13 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       } else {
         // Create mode — F36 D8/D15: CNPJ é OPCIONAL (não validar localmente quando
         // ausente); sem CNPJ no body, o POST atinge o branch DRAFT da rota (36-01).
-        if (formData.cnpj) {
-          body.cnpj = formData.cnpj.replace(/\D/g, "");
+        // F50.3: quando presente, envia SOMENTE o canônico de `validateCnpj` e
+        // nunca grava com erro local ativo (fiscalWriteBlocked).
+        if (formData.cnpj && !fiscalWriteBlocked) {
+          const cnpjResult = validateCnpj(formData.cnpj);
+          if (!(cnpjResult instanceof Error)) {
+            body.cnpj = cnpjResult.normalized;
+          }
         }
         if (formData.razaoSocial) body.razaoSocial = formData.razaoSocial;
         const nomeFantasiaFinal = formData.nomeFantasia || formData.razaoSocial;
@@ -362,7 +372,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
     } finally {
       setIsSaving(false);
     }
-  }, [formData, storeId, colorTouched, hasExistingCnpj, updateStoreId]);
+  }, [formData, storeId, colorTouched, hasExistingCnpj, updateStoreId, fiscalWriteBlocked]);
 
   /**
    * F36 D4/D15 — auto-save silencioso do onboarding.
@@ -372,11 +382,12 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
    * draft da rota — 36-01); falha BLOQUEIA o avanço. Sem mínimo → sem fetch
    * (não se cria loja prematuramente; o draft permanece no localStorage).
    * Loja draft não libera campanha/freemium — readiness reporta cadastro_fiscal.
-   * Com storeId + loja SEM CNPJ + CNPJ válido (14 dígitos) + razão social
+   * Com storeId + loja SEM CNPJ + CNPJ válido (14 caracteres) + razão social
    * mínima → roda /api/store/update-cnpj (draft→fiscal) além do PATCH;
    * retorna fiscalPersisted em sucesso. CNPJ inválido/incompleto NÃO vira
    * fiscal válido (readiness permanece pendente). Loja COM CNPJ → PATCH inclui
-   * razaoSocial/nomeFantasia (paridade com save()).
+   * razaoSocial/nomeFantasia (paridade com save()). `fiscalWriteBlocked`
+   * (erro local no input) impede a escrita fiscal mesmo com CNPJ sanitizado.
    */
   const autoSave = useCallback(
     async (fields: Partial<FormData>): Promise<{
@@ -438,15 +449,16 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
       const currentStoreId = storeIdRef.current;
 
       // F36 (fix fiscal): elegibilidade para transição draft → fiscal no
-      // autoSave — storeId existente + loja sem CNPJ + CNPJ normalizado válido
-      // (14 dígitos + check digits) + razão social mínima (mínimo da rota).
-      const cnpjDigits = merged.cnpj.replace(/\D/g, "");
-      const cnpjValido =
-        cnpjDigits.length === 14 && !(validateCnpj(cnpjDigits) instanceof Error);
+      // autoSave — storeId existente + loja sem CNPJ + CNPJ canônico válido
+      // (14 caracteres + check digits) + razão social mínima (mínimo da rota).
+      // F50.3: `fiscalWriteBlocked` (erro local no input) veta a escrita.
+      const cnpjResult = validateCnpj(merged.cnpj);
+      const cnpjValido = !(cnpjResult instanceof Error);
+      const cnpjNormalized = cnpjResult instanceof Error ? "" : cnpjResult.normalized;
       const razaoSocialTrimmed = merged.razaoSocial.trim();
       const razaoMinima = razaoSocialTrimmed.length >= 2;
       const fiscalElegivel =
-        !!currentStoreId && !hasExistingCnpj && cnpjValido && razaoMinima;
+        !!currentStoreId && !hasExistingCnpj && cnpjValido && razaoMinima && !fiscalWriteBlocked;
 
       // Loja COM CNPJ → razaoSocial/nomeFantasia vão no PATCH (paridade com
       // save(); o guard 409 do PATCH só vale para loja SEM CNPJ).
@@ -488,7 +500,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 storeId: currentStoreId,
-                cnpjNormalized: cnpjDigits,
+                cnpjNormalized,
                 razaoSocial: merged.razaoSocial,
                 nomeFantasia: merged.nomeFantasia.trim() || merged.razaoSocial,
               }),
@@ -552,7 +564,7 @@ export function useStoreForm({ initialStore }: { initialStore?: Store | null } =
         return { ok: false };
       }
     },
-    [formData, acceptedTerms, updateStoreId, hasExistingCnpj],
+    [formData, acceptedTerms, updateStoreId, hasExistingCnpj, fiscalWriteBlocked],
   );
 
   return {

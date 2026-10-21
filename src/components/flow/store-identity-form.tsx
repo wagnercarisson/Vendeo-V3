@@ -100,7 +100,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   // F50.3 (REQ-50.3-02): erro local de CNPJ — precisa existir ANTES do hook
   // para alimentar `fiscalWriteBlocked` (input fail-closed → bloqueio fiscal).
   const [cnpjInputError, setCnpjInputError] = useState<string | null>(null);
-  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms, autoSave, saveStatus } = useStoreForm({ initialStore: initialStore ?? null });
+  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms, autoSave, saveStatus } = useStoreForm({ initialStore: initialStore ?? null, fiscalWriteBlocked: cnpjInputError !== null });
 
   // F49 (D3/D4/D5/D6/D7): ids de ajuda derivados do hook de id do React. O id do
   // próprio campo permanece estático (`name`/`segment`/`tone_of_voice`/...) para
