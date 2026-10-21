@@ -6,7 +6,7 @@
 
 Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, tabelas e estados legados foram preservados integralmente em [`REQUIREMENTS-ARCHIVE.md`](./REQUIREMENTS-ARCHIVE.md) e não devem ser interpretados como pendências atuais.
 
-**F51.1/F51.2/F51.3 — integração verificada (2026-10-21):** execução commitada em `12b39ae4`; branch `integracao/landing-app-atual`, base `main` `8c4413de`, landing `7d0d6d96`. Verificação GSD **PASS WITH LIMITATIONS**: **12/12 requisitos**, **16/16 plan truths**; code review **APPROVED WITH FINDINGS** (0 High/Critical; MD-01 Medium não bloqueante) e segurança **PASS WITH FINDINGS** (ASVS L1; 0 High/Critical). Preservados F50.2/F56, as **quatro falhas externas F56** (128/4; suíte não declarada verde) e o follow-up canonical/OG `http://localhost:3000`. Aguardando OpenSpec verify/sync/archive; sem merge para `main`, push ou deploy.
+**F51.1/F51.2/F51.3 — integração verificada e re-verificada (2026-10-21):** execução commitada em `12b39ae4`; correção de cobertura `bad3ce14`; branch `integracao/landing-app-atual`, base `main` `8c4413de`, landing `7d0d6d96`. Verificação GSD inicial **PASS WITH LIMITATIONS**; **OPSX-51.3-01/MD-01 resolvido** com teste de integração real (4/4; suíte 24/258; typecheck/lint 0). Re-verify OpenSpec **12/12 requisitos**, sem critical aberto, com ressalva histórica de que a cobertura foi restaurada depois da remoção do legado. Preservados F50.2/F56, as **quatro falhas externas F56** (128/4; suíte não declarada verde) e o follow-up canonical/OG `http://localhost:3000`. Sem merge para `main`, push, deploy ou lifecycle OpenSpec.
 
 ## Índice Histórico
 
