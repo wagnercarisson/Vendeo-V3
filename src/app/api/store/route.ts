@@ -31,6 +31,10 @@ function validateSubsegment(value: string): string | null {
   return null;
 }
 
+function assertNever(value: never): never {
+  throw new Error(`Unhandled CNPJ lookup status: ${JSON.stringify(value)}`);
+}
+
 function sanitizeSubsegment(value: string): string {
   return value
     .trim()
@@ -160,20 +164,29 @@ export const POST = apiHandler(async (request: NextRequest) => {
     );
     const lookupResult = await lookupService.resolve(normalized);
 
-    if (lookupResult.status === "not_found") {
-      return NextResponse.json(
-        { error: "Não foi possível criar a loja. O CNPJ informado não foi encontrado na Receita Federal. Verifique o número e tente novamente." },
-        { status: 400 }
-      );
-    }
+    // Ramo exaustivo: qualquer status novo quebra a compilação via assertNever.
+    switch (lookupResult.status) {
+      case "not_found":
+        return NextResponse.json(
+          { error: "Não foi possível criar a loja. O CNPJ informado não foi encontrado na Receita Federal. Verifique o número e tente novamente." },
+          { status: 400 }
+        );
 
-    if (lookupResult.status === "unavailable") {
-      verificationStatus = "defer";
-      verificationReasons = ["api_unavailable"];
-      userMessage = "Loja criada. Não foi possível verificar os dados cadastrais agora. Você pode tentar novamente em 'Dados da Loja'.";
-    }
+      case "unavailable":
+        verificationStatus = "defer";
+        verificationReasons = ["api_unavailable"];
+        userMessage = "Loja criada. Não foi possível verificar os dados cadastrais agora. Você pode tentar novamente em 'Dados da Loja'.";
+        break;
 
-    if (lookupResult.status === "resolved") {
+      case "unsupported_format":
+        // Formato ainda não suportado pelos provedores NÃO é inexistência:
+        // loja é criada com defer e sem grant.
+        verificationStatus = "defer";
+        verificationReasons = ["api_unsupported_format"];
+        userMessage = "Loja criada. A consulta cadastral ainda não suporta este formato de CNPJ; você pode tentar novamente em 'Dados da Loja'.";
+        break;
+
+      case "resolved": {
       cnpjOfficialData = lookupResult.data;
       verificationData = { signals: {}, score: 0 };
 
@@ -227,6 +240,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
         verificationData = { signals: {}, score: 0 };
         verificationReasons = null;
       }
+      break;
+      }
+
+      default:
+        assertNever(lookupResult);
     }
 
     let cnpjValidationScore: Record<string, unknown> | null = null;
