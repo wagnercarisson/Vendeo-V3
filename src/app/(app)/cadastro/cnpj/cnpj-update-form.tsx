@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { validateCnpj } from "@/lib/cnpj/validate";
+import {
+  formatCnpj,
+  formatCnpjInput,
+  hasInvalidCnpjChars,
+} from "@/lib/cnpj/input-mask";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,23 +29,46 @@ export function CnpjUpdateForm({
   const [razaoSocial, setRazaoSocial] = useState(existingRazaoSocial ?? "");
   const [nomeFantasia, setNomeFantasia] = useState(existingNomeFantasia ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleCnpjChange = (raw: string) => {
-    const digits = raw.replace(/\D/g, "").slice(0, 14);
-    let masked = digits;
-    if (digits.length > 2) masked = digits.slice(0, 2) + "." + digits.slice(2);
-    if (digits.length > 5) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5);
-    if (digits.length > 8) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5, 8) + "/" + digits.slice(8);
-    if (digits.length > 12) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5, 8) + "/" + digits.slice(8, 12) + "-" + digits.slice(12, 14);
-    setCnpj(masked);
-    setError(null);
+    // Fail-closed: unknown characters (accents, emoji, symbols) never reach the
+    // value. Keep the last valid value and surface a local error.
+    if (hasInvalidCnpjChars(raw)) {
+      setInputError("CNPJ inválido");
+      return;
+    }
+
+    const next = formatCnpjInput(raw, cnpj);
+    setCnpj(next);
+
+    // The error is only cleared by a COMPLETE valid entry. Empty/partial
+    // entries keep both the error and the submit block.
+    if (!(validateCnpj(next) instanceof Error)) {
+      setInputError(null);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    // Inspect the raw clipboard BEFORE maxLength truncates and before onChange.
+    // An unknown character after position 18 must not be silently dropped.
+    const rawPaste = e.clipboardData?.getData("text") ?? "";
+    if (hasInvalidCnpjChars(rawPaste)) {
+      e.preventDefault();
+      setInputError("CNPJ inválido");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (inputError) {
+      setError("CNPJ inválido. Verifique os dígitos e tente novamente.");
+      return;
+    }
 
     const result = validateCnpj(cnpj);
     if (result instanceof Error) {
@@ -141,21 +169,21 @@ export function CnpjUpdateForm({
         </label>
         {existingCnpj ? (
           <div className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text-muted">
-            {existingCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
+            {formatCnpj(existingCnpj)}
           </div>
         ) : (
           <input
             id="cnpj"
             type="text"
             value={cnpj}
+            onPaste={handlePaste}
             onChange={(e) => handleCnpjChange(e.target.value)}
             onBlur={() => {
-              const digits = cnpj.replace(/\D/g, "");
-              if (digits.length === 14) {
-                const result = validateCnpj(cnpj);
-                if (result instanceof Error) {
-                  setError("CNPJ inválido. Verifique os dígitos e tente novamente.");
-                }
+              if (inputError) return;
+              if (cnpj.length < 18) return;
+              const result = validateCnpj(cnpj);
+              if (result instanceof Error) {
+                setError("CNPJ inválido. Verifique os dígitos e tente novamente.");
               }
             }}
             placeholder="XX.XXX.XXX/YYYY-ZZ"
@@ -198,10 +226,10 @@ export function CnpjUpdateForm({
         </p>
       </div>
 
-      {error && (
+      {(inputError ?? error) && (
         <p className="flex items-center gap-1.5 text-accent-red text-xs">
           <AlertCircle className="w-3.5 h-3.5" />
-          {error}
+          {inputError ?? error}
         </p>
       )}
 
