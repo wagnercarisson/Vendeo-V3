@@ -1,7 +1,7 @@
 {
   "runtime": "opencode",
   "model_profile": "inherit",
-  "commit_docs": true,
+  "commit_docs": false,
   "parallelization": false,
   "search_gitignored": false,
   "brave_search": false,
