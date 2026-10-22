@@ -128,9 +128,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function newClient(label: string): Promise<Client> {
   const client = new Client({
     connectionString: CONNECTION_STRING,
-    application_name: `f50_4_conc_${label}_${crypto.randomUUID().slice(0, 8)}`,
   });
   await client.connect();
+  await client.query(`SET application_name = 'f50_4_conc_${label}'`);
   return client;
 }
 
@@ -346,9 +346,9 @@ const grantMonthlyCapped = (client: Client) =>
 beforeAll(async () => {
   monitor = new Client({
     connectionString: CONNECTION_STRING,
-    application_name: "f50_4_conc_monitor",
   });
   await monitor.connect();
+  await monitor.query("SET application_name = 'f50_4_conc_monitor'");
 
   const { rows } = await monitor.query<{ sentinels: number; settings: number }>(`
     select
