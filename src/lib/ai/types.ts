@@ -112,6 +112,13 @@ export interface AiInvocationUsageMeta {
    * Ausente quando a tool não recebeu `model` (caminho legado).
    */
   imageGenerationModel?: string;
+  /**
+   * F47.1 (D8/D7) — usage PRÓPRIO da tool, somente quando o provider o expõe
+   * separadamente. Ausente ⇒ nunca é inventado nem duplicado.
+   */
+  imageToolUsage?: TokenUsage;
+  /** Fonte explícita do usage da tool: real (`tool_output`) ou ausente. */
+  imageToolUsageSource?: "response_usage" | "tool_output" | "absent";
 }
 
 /**

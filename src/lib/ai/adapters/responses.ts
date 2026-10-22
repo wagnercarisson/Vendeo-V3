@@ -98,8 +98,17 @@ export class ResponsesAdapter implements AiAdapter {
       ...(request.timeout !== undefined ? { timeout: request.timeout } : {}),
     });
 
-    const output = (response as { output?: Array<{ type?: string; result?: string }> }).output;
+    const output = (
+      response as {
+        output?: Array<{ type?: string; result?: string; usage?: unknown }>;
+      }
+    ).output;
     const imageOutput = output?.find((item) => item.type === "image_generation_call");
+    // F47.1 (D8): usage próprio da tool SOMENTE quando o provider o expõe.
+    // Nunca é inferido do usage principal.
+    const imageToolUsage = usesImageTool
+      ? normalizeResponsesUsage(imageOutput?.usage)
+      : undefined;
     const imageBase64 = imageOutput?.result;
     const textContent = (response as { output_text?: string }).output_text;
     const rawUsage = (response as { usage?: unknown }).usage;
@@ -134,6 +143,14 @@ export class ResponsesAdapter implements AiAdapter {
         ...(usesImageTool && request.imageGenerationModel
           ? { imageGenerationModel: request.imageGenerationModel }
           : {}),
+        // F47.1 (D8): separação explícita. `absent` é registrado para a tool
+        // quando não há usage próprio; o objeto de usage permanece ausente.
+        ...(usesImageTool
+          ? {
+              ...(imageToolUsage ? { imageToolUsage } : {}),
+              imageToolUsageSource: imageToolUsage ? ("tool_output" as const) : ("absent" as const),
+            }
+          : {}),
         ...(rawUsage && typeof rawUsage === "object"
           ? { providerUsageRaw: rawUsage as Record<string, unknown> }
           : {}),
@@ -151,8 +168,18 @@ export function normalizeResponsesUsage(usage: unknown): TokenUsage | undefined 
   const raw = usage as {
     input_tokens?: number;
     output_tokens?: number;
-    input_tokens_details?: { cached_tokens?: number; text_tokens?: number; image_tokens?: number };
-    output_tokens_details?: { text_tokens?: number; image_tokens?: number };
+    input_tokens_details?: {
+      cached_tokens?: number;
+      text_tokens?: number;
+      image_tokens?: number;
+      cached_tokens_details?: { text_tokens?: number; image_tokens?: number };
+    };
+    output_tokens_details?: {
+      text_tokens?: number;
+      image_tokens?: number;
+      reasoning_tokens?: number;
+    };
+    reasoning_excluded_from_output?: boolean;
   };
 
   const inputDetails = raw.input_tokens_details;
@@ -167,6 +194,18 @@ export function normalizeResponsesUsage(usage: unknown): TokenUsage | undefined 
 
   if (inputDetails?.cached_tokens !== undefined) {
     normalized.cachedInputTokens = inputDetails.cached_tokens;
+  }
+  if (inputDetails?.cached_tokens_details?.text_tokens !== undefined) {
+    normalized.cachedTextTokens = inputDetails.cached_tokens_details.text_tokens;
+  }
+  if (inputDetails?.cached_tokens_details?.image_tokens !== undefined) {
+    normalized.cachedImageTokens = inputDetails.cached_tokens_details.image_tokens;
+  }
+  if (outputDetails?.reasoning_tokens !== undefined) {
+    normalized.reasoningTokens = outputDetails.reasoning_tokens;
+  }
+  if (typeof raw.reasoning_excluded_from_output === "boolean") {
+    normalized.reasoningExcludedFromOutput = raw.reasoning_excluded_from_output;
   }
   if (outputDetails?.image_tokens !== undefined) {
     normalized.imageTokens = outputDetails.image_tokens;

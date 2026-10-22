@@ -106,6 +106,28 @@ export class DefaultAiTelemetrySink implements AiTelemetrySink {
           // (usageMeta.imageGenerationTool) — nunca inferida do protocolo responses.
           imageGenerationTool: envelope.usageMeta?.imageGenerationTool === true,
           generationType,
+          // F47.1 (D8): fio completo do preset — o sink apenas ENCAMINHA o que
+          // veio do envelope/request; não recalcula custo nem tarifas.
+          visualSignaturePreset:
+            typeof envelope.metadata?.visual_signature_preset === "string"
+              ? envelope.metadata.visual_signature_preset
+              : null,
+          imageGenerationModel:
+            envelope.usageMeta?.imageGenerationModel ??
+            (typeof envelope.metadata?.image_model === "string"
+              ? envelope.metadata.image_model
+              : null),
+          imageQuality:
+            envelope.quality ??
+            (typeof envelope.metadata?.image_quality === "string"
+              ? envelope.metadata.image_quality
+              : null),
+          imageToolUsage: envelope.usageMeta?.imageToolUsage,
+          imageToolUsageSource: envelope.usageMeta?.imageToolUsageSource,
+          configVersionId:
+            typeof envelope.metadata?.config_version_id === "string"
+              ? envelope.metadata.config_version_id
+              : null,
         });
       }
 
@@ -210,6 +232,8 @@ function buildCallMetadata(
         responses_model: envelope.usageMeta.responsesModel,
         image_generation_tool: envelope.usageMeta.imageGenerationTool,
         image_generation_model: envelope.usageMeta.imageGenerationModel,
+        image_tool_usage: envelope.usageMeta.imageToolUsage,
+        image_tool_usage_source: envelope.usageMeta.imageToolUsageSource,
       }
     : undefined;
 
@@ -228,6 +252,14 @@ function buildCallMetadata(
         }
       : undefined;
 
+  // F47.1 (D8): campos de configuração/tentativa/custo só entram no caminho
+  // com preset explícito (ou com cobertura calculada). Os demais fluxos mantêm
+  // o metadata legado byte-compatível.
+  const presetFromMetadata = envelope.metadata?.visual_signature_preset;
+  const isVisualSignaturePresetEvent =
+    typeof presetFromMetadata === "string" || cost.costCoverage !== undefined;
+  const attemptNumber = envelope.attemptNumber ?? 1;
+
   return {
     // Caller metadata primeiro: os campos canônicos do sink (capability/protocol/
     // usage/fórmula) SEMPRE vencem — o caller não pode forjar campos do sink.
@@ -236,6 +268,53 @@ function buildCallMetadata(
     protocol: envelope.protocol,
     ...(usageMeta ?? {}),
     ...(formula ?? {}),
+    ...(isVisualSignaturePresetEvent
+      ? {
+          responses_model:
+            envelope.usageMeta?.responsesModel ??
+            (typeof envelope.metadata?.responses_model === "string"
+              ? envelope.metadata.responses_model
+              : envelope.model),
+          image_model:
+            envelope.usageMeta?.imageGenerationModel ??
+            (typeof envelope.metadata?.image_model === "string"
+              ? envelope.metadata.image_model
+              : null),
+          image_quality:
+            envelope.quality ??
+            (typeof envelope.metadata?.image_quality === "string"
+              ? envelope.metadata.image_quality
+              : null),
+          visual_signature_preset:
+            typeof presetFromMetadata === "string" ? presetFromMetadata : null,
+          reasoning_effort:
+            typeof envelope.metadata?.reasoning_effort === "string"
+              ? envelope.metadata.reasoning_effort
+              : null,
+          config_version_id:
+            typeof envelope.metadata?.config_version_id === "string"
+              ? envelope.metadata.config_version_id
+              : null,
+          attempt_number: attemptNumber,
+          retry_used:
+            typeof envelope.metadata?.retry_used === "boolean"
+              ? envelope.metadata.retry_used
+              : attemptNumber > 1,
+          retry_prompt_variant:
+            typeof envelope.metadata?.retry_prompt_variant === "string"
+              ? envelope.metadata.retry_prompt_variant
+              : null,
+          credential_scope:
+            typeof envelope.metadata?.credential_scope === "string"
+              ? envelope.metadata.credential_scope
+              : "normal",
+          cost_coverage: cost.costCoverage ?? "unknown",
+          cost_source: cost.costSource,
+          cost_estimation_note: cost.costEstimationNote ?? null,
+          provider_reported_cost_usd:
+            cost.providerReportedCostUsd ?? envelope.providerReportedCostUsd ?? null,
+        }
+      : {}),
     // P1 (Opção A): origem INTERNA auditável do NOVO FLUXO — acrescentada DEPOIS
     // do spread de `envelope.metadata` (o caller não pode forjar estas chaves).
     // Ausente ⇒ metadata legada byte-idêntica.
