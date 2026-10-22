@@ -1,0 +1,131 @@
+{
+  "phase": "50.4",
+  "generated_at": "2026-10-22T23:28:28.030Z",
+  "baseline": {
+    "source": "50.4-BASELINE-TESTS.json",
+    "mode": "environment_unavailable",
+    "base_sha": "8db1d599ce98070907bc98637520bc7ee8acd61c"
+  },
+  "tests": {
+    "exit_code": 1,
+    "base_sha": "8db1d599ce98070907bc98637520bc7ee8acd61c",
+    "current_failures": [
+      "src/lib/__tests__/access-request-limit.postgres.test.ts > admin_review_access_request beta limit > rejects the 51st approval without changing status or audit",
+      "src/lib/__tests__/access-request-limit.postgres.test.ts > admin_review_access_request beta limit > enforces case-insensitive identity for active requests",
+      "src/lib/__tests__/access-request-limit.postgres.test.ts > admin_review_access_request beta limit > serializes concurrent approvals at 49 distinct approved emails",
+      "src/__tests__/api/store-ownership-api.test.ts > POST /api/store > ignores user_id in body (uses claims.sub) ? draft mode",
+      "src/lib/brand-assets/__tests__/text-only-inference-service.test.ts > BrandTextOnlyInferenceService.infer onCall (F38.1, D7/D11) > Teste 4: infer em dev sem OPENAI_API_KEY (caminho mock) -> onCall NUNCA invocado",
+      "src/lib/credit/__tests__/credit-concurrency.test.ts > F50 real PostgreSQL concurrency and temporal rules > serializes concurrent demo grants to one entitlement and one transaction",
+      "src/lib/credit/__tests__/credit-concurrency.test.ts > F50 real PostgreSQL concurrency and temporal rules > serializes expiration and reserves without a negative balance",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > refunds within the original episode without extending its expiry",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes remaining credit before refund and opens a traceable 24-hour grace episode after expiry",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > reserves demo, bonus, and purchased buckets in order with complete metadata",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes an expired demo during reserve and returns saldo_insuficiente without deduction",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes one exact expiration with cycle, origin, contributors, and zeroed episode fields",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > uses GREATEST for active grace, preserves exhausted episodes, and restores bonus and purchased buckets",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > restores an exhausted demo in the original episode before expiry",
+      "src/lib/credit/__tests__/credit-idempotency.test.ts > F50 PostgreSQL idempotency, permissions, eligibility and wrappers > handles disabled, onboarding, duplicate, TTL and expiration idempotently",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeito (e) ? formul?rio restaurado (evid?ncia congelada + dire??o de fundo) > (e) snapshot server-side + dire??o de fundo LIDA da EVID?NCIA CONGELADA ? preservado",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (f) gera??o normal sem arte com claim `in_progress` ? consulta/reload N?O estorna",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (g) principal falhou (claim `failed`), fallback ainda ser? iniciado ? N?O estorna (janela principal?fallback)",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (h) falha final (PF completo, 4a) ? encerra e estorna UMA vez (decis?o server-side)",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (i) sem sinal de finalidade ? exige encerramento AUTORIZADO+auditado (abandono do residual)",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (j) encerramento (autom?tico ou autorizado) impede atomicamente tentativa posterior (operation_terminal, sob C4)",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2 / SEAM (b): ORQUESTRADOR REAL ? marcador `failed` ? encerramento (PF) > falha final REAL do orquestrador grava `failed` e encerra via `product_1_1_close_failed_operation` (estorno UMA vez)"
+    ],
+    "new_failures": [
+      "src/lib/__tests__/access-request-limit.postgres.test.ts > admin_review_access_request beta limit > rejects the 51st approval without changing status or audit",
+      "src/lib/__tests__/access-request-limit.postgres.test.ts > admin_review_access_request beta limit > enforces case-insensitive identity for active requests",
+      "src/lib/__tests__/access-request-limit.postgres.test.ts > admin_review_access_request beta limit > serializes concurrent approvals at 49 distinct approved emails",
+      "src/__tests__/api/store-ownership-api.test.ts > POST /api/store > ignores user_id in body (uses claims.sub) ? draft mode",
+      "src/lib/brand-assets/__tests__/text-only-inference-service.test.ts > BrandTextOnlyInferenceService.infer onCall (F38.1, D7/D11) > Teste 4: infer em dev sem OPENAI_API_KEY (caminho mock) -> onCall NUNCA invocado",
+      "src/lib/credit/__tests__/credit-concurrency.test.ts > F50 real PostgreSQL concurrency and temporal rules > serializes concurrent demo grants to one entitlement and one transaction",
+      "src/lib/credit/__tests__/credit-concurrency.test.ts > F50 real PostgreSQL concurrency and temporal rules > serializes expiration and reserves without a negative balance",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > refunds within the original episode without extending its expiry",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes remaining credit before refund and opens a traceable 24-hour grace episode after expiry",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > reserves demo, bonus, and purchased buckets in order with complete metadata",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes an expired demo during reserve and returns saldo_insuficiente without deduction",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes one exact expiration with cycle, origin, contributors, and zeroed episode fields",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > uses GREATEST for active grace, preserves exhausted episodes, and restores bonus and purchased buckets",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > restores an exhausted demo in the original episode before expiry",
+      "src/lib/credit/__tests__/credit-idempotency.test.ts > F50 PostgreSQL idempotency, permissions, eligibility and wrappers > handles disabled, onboarding, duplicate, TTL and expiration idempotently",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeito (e) ? formul?rio restaurado (evid?ncia congelada + dire??o de fundo) > (e) snapshot server-side + dire??o de fundo LIDA da EVID?NCIA CONGELADA ? preservado",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (f) gera??o normal sem arte com claim `in_progress` ? consulta/reload N?O estorna",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (g) principal falhou (claim `failed`), fallback ainda ser? iniciado ? N?O estorna (janela principal?fallback)",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (h) falha final (PF completo, 4a) ? encerra e estorna UMA vez (decis?o server-side)",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (i) sem sinal de finalidade ? exige encerramento AUTORIZADO+auditado (abandono do residual)",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (j) encerramento (autom?tico ou autorizado) impede atomicamente tentativa posterior (operation_terminal, sob C4)",
+      "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ? Camada 2 / SEAM (b): ORQUESTRADOR REAL ? marcador `failed` ? encerramento (PF) > falha final REAL do orquestrador grava `failed` e encerra via `product_1_1_close_failed_operation` (estorno UMA vez)"
+    ],
+    "preexisting_failures": [],
+    "baseline_decision": "rejected"
+  },
+  "gates": [
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L16"
+    },
+    {
+      "command": "npm run lint",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L17"
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L18"
+    },
+    {
+      "command": "npm test",
+      "exit_code": 1,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L19"
+    },
+    {
+      "command": "npx vitest run src/lib/credit/__tests__/trial-offer-sql.contract.test.ts",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L20"
+    },
+    {
+      "command": "npx vitest run src/lib/credit/__tests__/f50-4-concurrency.test.ts",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L21"
+    },
+    {
+      "command": "openspec validate fase-50-4-oferta-onboarding-por-cnpj --strict",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L22"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L23"
+    },
+    {
+      "command": "node scripts/f50-4/run-sql-tests.mjs tests/sql/f50_4_m1_activation.sql tests/sql/f50_4_m2_identity.sql tests/sql/f50_4_eligibility_matrix.sql tests/sql/f50_4_legacy_coexistence.sql tests/sql/f50_4_manual_credit.sql",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L24"
+    },
+    {
+      "command": "npx vitest run src/lib/cnpj/__tests__ src/app/api/store/__tests__/route.test.ts src/app/api/store/update-cnpj/__tests__/route.test.ts",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L25"
+    },
+    {
+      "command": "npx vitest run src/components/flow/__tests__/use-store-form.autosave-fiscal.test.ts src/components/flow/__tests__/store-identity-form.drift.test.ts src/components/flow/__tests__/store-identity-form.drift-tabs.test.ts src/components/flow/__tests__/store-identity-form.cnpj-alfanumerico.test.tsx",
+      "exit_code": 0,
+      "finished_at": "2026-10-22T23:30:00Z",
+      "evidence": "50.4-CLOSURE.md#L26"
+    }
+  ]
+}
