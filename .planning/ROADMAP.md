@@ -288,23 +288,23 @@ Plans:
 
 ### Phase 50.4: F50.4 - Oferta de onboarding individualizada por CNPJ completo
 
-**Goal:** Permitir que matriz e filiais recebam individualmente a oferta atual de onboarding, uma vez por CNPJ completo, preservando contas, benefícios e políticas anteriores, com identidade imutável do beneficiário, coortes explícitas, concorrência segura entre programas, migration fail-closed e ativação produtiva fora desta execução.
-**Status:** **Planejada - aguardando revisão humana.** Base OpenSpec em `openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/`; planos em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/`.
-**Depends on:** F50.2 (oferta ativa; `launch_at` preservado), F50.3 (CNPJ canônico numérico e alfanumérico), F32/F33 (freemium e verificação cadastral) e F34 (readiness).
+**Goal:** Permitir que matriz e filiais recebam individualmente a oferta atual de onboarding, uma vez por CNPJ completo, preservando contas, benefï¿½cios e polï¿½ticas anteriores, com identidade imutï¿½vel do beneficiï¿½rio, coortes explï¿½citas, concorrï¿½ncia segura entre programas, migration fail-closed e ativaï¿½ï¿½o produtiva fora desta execuï¿½ï¿½o.
+**Status:** **Planejada - aguardando revisï¿½o humana.** Base OpenSpec em `openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/`; planos em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/`.
+**Depends on:** F50.2 (oferta ativa; `launch_at` preservado), F50.3 (CNPJ canï¿½nico numï¿½rico e alfanumï¿½rico), F32/F33 (freemium e verificaï¿½ï¿½o cadastral) e F34 (readiness).
 **Requirements**: REQ-50.4-01, REQ-50.4-02, REQ-50.4-03, REQ-50.4-04, REQ-50.4-05, REQ-50.4-06, REQ-50.4-07, REQ-50.4-08, REQ-50.4-09, REQ-50.4-10
-**Plans:** 10 plans
+**Plans:** 7/10 plans executed
 
 Plans:
-- [ ] 50.4-01-PLAN.md - Baseline + Migration M1 (`individual_launch_at` + RPC de ativação auditada) e prova SQL de idempotência/recusas.
-- [ ] 50.4-02-PLAN.md - Harness de PostgreSQL descartável fail-closed, runner SQL, verificador de schema/ledger e regressão do parser 2.75.0.
-- [ ] 50.4-03-PLAN.md - Migration M2: identidade imutável, backfill fail-closed, unicidade por CNPJ + índice parcial legado, trigger e RPCs de coorte/elegibilidade/conclusão/inscrição.
-- [ ] 50.4-04-PLAN.md - Migration M3: demo/mensal/exceção com coortes e protocolo de locks; contrato estático F50.4.
-- [ ] 50.4-05-PLAN.md - Núcleo de aplicação: tipos/motor puro com coortes e helper de conclusão/retry com motivos seguros.
-- [ ] 50.4-06-PLAN.md - Rotas `/api/store` e `update-cnpj` com contexto de política, mensagens por coorte e cobertura dos 8 call sites.
-- [ ] 50.4-07-PLAN.md - Painel/admin: leitura de `individual_launch_at` e ação separada de ativação com motivo, CSRF e idempotência.
+- [x] 50.4-01-PLAN.md - Baseline + Migration M1 (`individual_launch_at` + RPC de ativaï¿½ï¿½o auditada) e prova SQL de idempotï¿½ncia/recusas.
+- [x] 50.4-02-PLAN.md - Harness de PostgreSQL descartï¿½vel fail-closed, runner SQL, verificador de schema/ledger e regressï¿½o do parser 2.75.0.
+- [x] 50.4-03-PLAN.md - Migration M2: identidade imutï¿½vel, backfill fail-closed, unicidade por CNPJ + ï¿½ndice parcial legado, trigger e RPCs de coorte/elegibilidade/conclusï¿½o/inscriï¿½ï¿½o.
+- [x] 50.4-04-PLAN.md - Migration M3: demo/mensal/exceï¿½ï¿½o com coortes e protocolo de locks; contrato estï¿½tico F50.4.
+- [x] 50.4-05-PLAN.md - Nï¿½cleo de aplicaï¿½ï¿½o: tipos/motor puro com coortes e helper de conclusï¿½o/retry com motivos seguros.
+- [x] 50.4-06-PLAN.md - Rotas `/api/store` e `update-cnpj` com contexto de polï¿½tica, mensagens por coorte e cobertura dos 8 call sites.
+- [x] 50.4-07-PLAN.md - Painel/admin: leitura de `individual_launch_at` e aï¿½ï¿½o separada de ativaï¿½ï¿½o com motivo, CSRF e idempotï¿½ncia.
 - [ ] 50.4-08-PLAN.md - ValidaÃ§Ã£o real (aplicaÃ§Ã£o): `db push` via CLI 2.75.0 em descartÃ¡vel, ledger, constraints, grants/RLS e suÃ­tes SQL.
-- [ ] 50.4-10-PLAN.md - ValidaÃ§Ã£o comportamental: concorrÃªncia trial Ã demo Ã mensal Ã exceÃ§Ã£o, precheck/abort, rollback/forward-fix, regressÃ£o do parser e destruiÃ§Ã£o do ambiente.
-- [ ] 50.4-09-PLAN.md - Gates, segurança ASVS L1, UAT de regressão e nova política no descartável, encerramento sem publicação.
+- [ ] 50.4-10-PLAN.md - ValidaÃ§Ã£o comportamental: concorrÃªncia trial ï¿½ demo ï¿½ mensal ï¿½ exceÃ§Ã£o, precheck/abort, rollback/forward-fix, regressÃ£o do parser e destruiÃ§Ã£o do ambiente.
+- [ ] 50.4-09-PLAN.md - Gates, seguranï¿½a ASVS L1, UAT de regressï¿½o e nova polï¿½tica no descartï¿½vel, encerramento sem publicaï¿½ï¿½o.
 
 ## Phase 56.1: Contrato produtivo, modelos e fallback
 
