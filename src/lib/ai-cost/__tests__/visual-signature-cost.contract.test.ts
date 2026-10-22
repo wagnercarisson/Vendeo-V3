@@ -159,6 +159,20 @@ describe("F47.1 — roteamento do caminho com preset", () => {
     expect(result.costCoverage).toBe("complete");
   });
 
+  it("ajuste manual explícito continua vencendo o pricing automático", async () => {
+    const result = await resolveAiCost({
+      provider: "openai",
+      model: "gpt-6-luna",
+      usage: FULL_USAGE,
+      manualCostUsd: 0.75,
+      generationType: "visual_signature_image",
+      visualSignaturePreset: "sunburst_medium",
+    });
+
+    expect(result).toEqual({ estimatedCostUsd: 0.75, costSource: "manual_unknown" });
+    expect(mockGetModelPricing).not.toHaveBeenCalled();
+  });
+
   it("caminho legado (sem preset) permanece sem costCoverage e sem fórmula visual", async () => {
     const result = await resolveAiCost({
       provider: "openai",

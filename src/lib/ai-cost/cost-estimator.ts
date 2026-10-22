@@ -184,6 +184,18 @@ export async function resolveAiCost(params: {
 }): Promise<CostResolution> {
   const { provider, model, usage, providerReportedCostUsd, manualCostUsd } = params;
 
+  // Ajuste manual explícito continua vencendo o pricing automático (mesma
+  // ordem da cadeia legada), mas nunca sobrepõe um custo reportado.
+  const hasProviderReported =
+    typeof providerReportedCostUsd === "number" && !Number.isNaN(providerReportedCostUsd);
+  if (
+    !hasProviderReported &&
+    typeof manualCostUsd === "number" &&
+    !Number.isNaN(manualCostUsd)
+  ) {
+    return { estimatedCostUsd: manualCostUsd, costSource: "manual_unknown" };
+  }
+
   const isVisualSignaturePresetPath =
     params.generationType === "visual_signature_image" &&
     (params.visualSignaturePreset != null || params.imageGenerationModel != null);
