@@ -45,9 +45,11 @@ export function CnpjUpdateForm({
     setCnpj(next);
 
     // The error is only cleared by a COMPLETE valid entry. Empty/partial
-    // entries keep both the error and the submit block.
+    // entries keep both the error and the submit block. Clearing the submit
+    // error here avoids a stale message after the user fixes the CNPJ (WR-01).
     if (!(validateCnpj(next) instanceof Error)) {
       setInputError(null);
+      setError(null);
     }
   };
 
