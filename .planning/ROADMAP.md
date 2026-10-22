@@ -533,4 +533,4 @@ Plans:
 
 ### Phase 47.1: Configuração e validação local de modelos da Assinatura Visual
 
-**Status:** **PLANEJADA (2026-10-21)** — 5 planos GSD gerados, aguardando aprovação do Codex para execução. OpenSpec `fase-47-1-modelos-assinatura-visual` aprovado para planejamento GSD; implementação não aprovada. F47 concluída preservada. Planos e matriz em `.planning/phases/47.1-configuracao-validacao-local-modelos-assinatura-visual/`. Nenhuma implementação, migration aplicada, chamada paga, push ou deploy. Contadores históricos não recalculados.
+**Status:** **EM EXECUÇÃO CONTROLADA (2026-10-22)** — **plano 47.1-01 concluído e aprovado pelo Codex** (Tasks 1–5; migration local aplicada no ledger 133→134; preflight pós-migration PASS; provas reais 67/67 PASS; SUMMARY em `47.1-01-SUMMARY.md`). **Plano 47.1-02 em execução** conforme base OpenSpec aprovada; plano 03 não iniciado. F47 concluída preservada. Planos e matriz em `.planning/phases/47.1-configuracao-validacao-local-modelos-assinatura-visual/`. Nenhuma nova migration, chamada paga, UAT, push, deploy ou alteração de produção. Contadores históricos não recalculados.
