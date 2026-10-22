@@ -23,6 +23,11 @@ export class VisualSignatureValidator {
     onCall?: (info: AiCallInfo) => void | Promise<void>;
     /** F46-04 (D9): contexto de telemetria do caller (run/sink obrigatório). */
     telemetry?: AiTelemetryContext;
+    /** F47.1 (D8): escopo da credencial por chamada (imagem E validação). */
+    credentialScope?: "validation" | "normal";
+    /** F47.1 (D8): tentativa de retry real (não a primeira tentativa). */
+    retryUsed?: boolean;
+    retryPromptVariant?: "full" | "simplified";
   }): Promise<{ valid: boolean; reason?: string }> {
     if (!params.imageBase64 || params.imageBase64.length === 0) {
       return { valid: false, reason: "Empty image data" };
@@ -47,7 +52,10 @@ export class VisualSignatureValidator {
       params.imageBase64,
       params.storeName,
       params.onCall,
-      params.telemetry
+      params.telemetry,
+      params.credentialScope,
+      params.retryUsed,
+      params.retryPromptVariant
     );
     if (!semantic.valid) {
       return semantic;
@@ -60,7 +68,10 @@ export class VisualSignatureValidator {
     imageBase64: string,
     storeName: string,
     onCall?: (info: AiCallInfo) => void | Promise<void>,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    credentialScope?: "validation" | "normal",
+    retryUsed?: boolean,
+    retryPromptVariant?: "full" | "simplified"
   ): Promise<{ valid: boolean; reason?: string }> {
     // F46-04 (reabertura, D9): telemetria é OBRIGATÓRIA — sem contexto o
     // `invoke` não pode executar e a validação semântica NÃO pode ser ignorada
@@ -98,6 +109,15 @@ A imagem é VÁLIDA se:
         imageDetail: "low",
         temperature: 0.1,
         maxTokens: 150,
+        ...(credentialScope
+          ? {
+              metadata: {
+                credential_scope: credentialScope,
+                retry_used: retryUsed ?? false,
+                retry_prompt_variant: retryPromptVariant ?? "full",
+              },
+            }
+          : {}),
       };
 
       const result = await this.invoker.invoke(
@@ -275,9 +295,20 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       console.log('[ai-image-generator] validando imagem...', { base64Length: imageBase64.length });
 
       const validator = new VisualSignatureValidator(this.invoker);
+      const retryUsed = params.attempt !== undefined && params.attempt >= 1;
+      const retryPromptVariant = params.simplifiedPrompt ? "simplified" : "full";
       const validation = await validator.validate({
         imageBase64,
         storeName: params.storeName,
+        // F47.1 (D8): telemetria de auditoria por chamada. Só o caminho com
+        // configuração dedicada informa escopo; o legado permanece sem metadata.
+        ...(dedicatedConfig
+          ? {
+              credentialScope: "validation" as const,
+              retryUsed,
+              retryPromptVariant,
+            }
+          : {}),
         // F46-04/F46-05 (D9): imagem (visual_signature_image) e validação
         // (visual_signature_validation) são persistidas pelo SINK do contexto de
         // telemetria — `attemptTelemetry` carrega o attemptNumber REAL por

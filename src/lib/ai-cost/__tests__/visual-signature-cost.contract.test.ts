@@ -24,8 +24,8 @@ const FULL_USAGE = {
   promptTokens: 1000,
   completionTokens: 500,
   cachedInputTokens: 200,
-  inputTextTokens: 800,
-  inputImageTokens: 200,
+  inputTextTokens: 1000,
+  inputImageTokens: 0,
   cachedTextTokens: 200,
   cachedImageTokens: 0,
   outputTextTokens: 300,
@@ -55,11 +55,15 @@ describe("F47.1 — roteamento do caminho com preset", () => {
       model: "gpt-image-2.5-sunburst",
       quality: "medium",
     });
+    expect(mockGetModelPricing).toHaveBeenCalledWith({
+      provider: "openai",
+      model: "gpt-6-luna",
+    });
     expect(mockGetModelPricing).not.toHaveBeenCalledWith(
       expect.objectContaining({ model: "responses:image_generation" }),
     );
-    // 600*5 + 200*0.5 + 200*8 + 300*30 + 200*8 = 0.0153
-    expect(result.estimatedCostUsd).toBeCloseTo(0.0153, 8);
+    // 800*5 + 200*0.5 + 300*30 + 200*8 = 0.0147
+    expect(result.estimatedCostUsd).toBeCloseTo(0.0147, 8);
     expect(result.costSource).toBe("pricing_table");
     expect(result.costCoverage).toBe("complete");
     expect(result.costFormulaVersion).toBe("visual_signature_usage_v1");
@@ -120,7 +124,7 @@ describe("F47.1 — roteamento do caminho com preset", () => {
     });
 
     expect(result.providerReportedCostUsd).toBe(0.5);
-    expect(result.estimatedCostUsd).toBeCloseTo(0.0153, 8);
+    expect(result.estimatedCostUsd).toBeCloseTo(0.0147, 8);
     expect(result.costSource).toBe("provider_reported");
     expect(result.costEstimationNote).toContain("provider_reported_separate");
   });
@@ -171,6 +175,42 @@ describe("F47.1 — roteamento do caminho com preset", () => {
 
     expect(result).toEqual({ estimatedCostUsd: 0.75, costSource: "manual_unknown" });
     expect(mockGetModelPricing).not.toHaveBeenCalled();
+  });
+
+  it("trocar o orquestrador altera sua parcela, com versões separadas", async () => {
+    mockGetModelPricing.mockImplementation(
+      ({ model }: { model: string; quality?: string }) => {
+        if (model === "gpt-image-2.5-sunburst") {
+          return Promise.resolve({ pricing: { imageTokenUsdPer1M: 8 }, versionId: "image-v1" });
+        }
+        if (model === "gpt-5.5") {
+          return Promise.resolve({
+            pricing: { inputCostUsd: 5, outputCostUsd: 30, cachedInputCostUsd: 0.5 },
+            versionId: "orch-v1",
+          });
+        }
+        return Promise.resolve({
+          pricing: { inputCostUsd: 50, outputCostUsd: 300, cachedInputCostUsd: 5 },
+          versionId: "orch-v2",
+        });
+      },
+    );
+
+    const base = {
+      provider: "openai",
+      usage: FULL_USAGE,
+      generationType: "visual_signature_image" as const,
+      visualSignaturePreset: "sunburst_medium",
+      imageGenerationModel: "gpt-image-2.5-sunburst",
+      imageQuality: "medium" as const,
+    };
+    const cheap = await resolveAiCost({ ...base, model: "gpt-5.5" });
+    const expensive = await resolveAiCost({ ...base, model: "gpt-6-luna" });
+
+    expect(expensive.estimatedCostUsd!).toBeGreaterThan(cheap.estimatedCostUsd!);
+    expect(cheap.orchestratorPricingVersion).toBe("orch-v1");
+    expect(expensive.orchestratorPricingVersion).toBe("orch-v2");
+    expect(expensive.imagePricingVersion).toBe("image-v1");
   });
 
   it("caminho legado (sem preset) permanece sem costCoverage e sem fórmula visual", async () => {

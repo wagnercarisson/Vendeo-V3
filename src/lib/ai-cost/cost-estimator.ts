@@ -5,8 +5,10 @@ import { getModelPricing } from "./ai-model-pricing";
 import type { ModelPricing } from "./ai-model-pricing";
 import {
   getVisualSignatureModelPricing,
+  getVisualSignatureOrchestratorPricing,
   getVisualSignaturePresetPricing,
-  type VisualSignaturePricingResult,
+  type VisualSignatureImagePricingResult,
+  type VisualSignatureOrchestratorPricingResult,
 } from "./visual-signature-pricing";
 import type { VisualSignatureImagePreset } from "@/lib/ai/visual-signature-model-config";
 import { computeVisualSignatureCost } from "./visual-signature-usage";
@@ -338,11 +340,11 @@ async function resolveVisualSignaturePresetCost(params: {
   imageQuality?: string | null;
   imageToolUsage?: TokenUsage;
 }): Promise<CostResolution> {
-  let pricing: VisualSignaturePricingResult;
+  let imagePricing: VisualSignatureImagePricingResult;
 
   try {
     if (params.visualSignaturePreset) {
-      pricing = await getVisualSignaturePresetPricing({
+      imagePricing = await getVisualSignaturePresetPricing({
         preset: params.visualSignaturePreset as VisualSignatureImagePreset,
         provider: params.provider,
       });
@@ -350,7 +352,7 @@ async function resolveVisualSignaturePresetCost(params: {
       params.imageGenerationModel &&
       (params.imageQuality === "low" || params.imageQuality === "medium")
     ) {
-      pricing = await getVisualSignatureModelPricing({
+      imagePricing = await getVisualSignatureModelPricing({
         provider: params.provider,
         model: params.imageGenerationModel,
         quality: params.imageQuality,
@@ -378,8 +380,8 @@ async function resolveVisualSignaturePresetCost(params: {
   // divergência não é "corrigida" silenciosamente.
   if (
     params.imageGenerationModel &&
-    pricing.model !== null &&
-    params.imageGenerationModel !== pricing.model
+    imagePricing.model !== null &&
+    params.imageGenerationModel !== imagePricing.model
   ) {
     return {
       estimatedCostUsd: null,
@@ -387,16 +389,42 @@ async function resolveVisualSignaturePresetCost(params: {
       costSource: "not_available",
       costCoverage: "partial",
       costEstimationNote: "visual_signature_preset_model_mismatch",
-      pricingVersion: pricing.pricingVersion,
+      pricingVersion: imagePricing.pricingVersion,
+      imagePricingVersion: imagePricing.pricingVersion,
+    };
+  }
+
+  // Tarifas do ORQUESTRADOR são independentes das tarifas de imagem/tool.
+  // Falha de leitura não bloqueia: o cálculo segue com os componentes
+  // comprovados e cobertura parcial.
+  let orchestratorPricing: VisualSignatureOrchestratorPricingResult;
+  try {
+    orchestratorPricing = await getVisualSignatureOrchestratorPricing({
+      provider: params.provider,
+      model: params.model,
+    });
+  } catch {
+    orchestratorPricing = {
+      status: "missing",
+      model: params.model,
+      provider: params.provider,
+      rates: {},
+      pricingVersion: null,
+      missingRates: [
+        "orchestrator.inputTextUsdPer1M",
+        "orchestrator.outputTextUsdPer1M",
+        "orchestrator.cachedTextUsdPer1M",
+      ],
     };
   }
 
   const computed = computeVisualSignatureCost({
     usage: params.usage,
-    rates: pricing.rates,
+    orchestratorRates: orchestratorPricing.rates,
+    imageRates: imagePricing.rates,
     providerReportedCostUsd: params.providerReportedCostUsd,
     imageToolUsage: params.imageToolUsage,
-    historicalEstimateUsd: pricing.historicalReferenceUsd,
+    historicalEstimateUsd: imagePricing.historicalReferenceUsd,
     historicalEstimateSource: "local_historical_images",
     preset: params.visualSignaturePreset ?? params.imageQuality ?? null,
   });
@@ -406,7 +434,10 @@ async function resolveVisualSignaturePresetCost(params: {
     providerReportedCostUsd: computed.providerReportedCostUsd ?? null,
     costSource: computed.costSource,
     costCoverage: computed.costCoverage,
-    pricingVersion: pricing.pricingVersion,
+    pricingVersion:
+      orchestratorPricing.pricingVersion ?? imagePricing.pricingVersion,
+    orchestratorPricingVersion: orchestratorPricing.pricingVersion,
+    imagePricingVersion: imagePricing.pricingVersion,
     costFormulaVersion: "visual_signature_usage_v1",
     costEstimationNote: computed.costEstimationNote ?? undefined,
   };

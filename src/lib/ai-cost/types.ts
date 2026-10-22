@@ -115,6 +115,12 @@ export interface CostResolution {
    * Ausente nos caminhos legados (comportamento preservado).
    */
   costCoverage?: "complete" | "partial" | "unknown";
+  /**
+   * F47.1 (D8): versões SEPARADAS das tarifas usadas. O orquestrador (texto) e
+   * a imagem/tool podem vir de linhas/versões diferentes do catálogo.
+   */
+  orchestratorPricingVersion?: string | null;
+  imagePricingVersion?: string | null;
 }
 
 /**

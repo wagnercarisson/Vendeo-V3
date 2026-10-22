@@ -10,6 +10,7 @@ vi.mock("../ai-model-pricing", () => ({
 }));
 
 import {
+  getVisualSignatureOrchestratorPricing,
   getVisualSignaturePresetPricing,
   VISUAL_SIGNATURE_HISTORICAL_ESTIMATES,
 } from "../visual-signature-pricing";
@@ -28,7 +29,7 @@ beforeEach(() => {
   mockGetModelPricing.mockResolvedValue({ pricing: FULL_PRICING, versionId: VERSION });
 });
 
-describe("F47.1 — pricing quality-aware do preset", () => {
+describe("F47.1 — pricing quality-aware do preset (imagem)", () => {
   it("Sunburst Medium procura openai/gpt-image-2.5-sunburst/medium", async () => {
     const result = await getVisualSignaturePresetPricing({ preset: "sunburst_medium" });
 
@@ -40,12 +41,12 @@ describe("F47.1 — pricing quality-aware do preset", () => {
     expect(result.status).toBe("complete");
     expect(result.pricingVersion).toBe(VERSION);
     expect(result.rates).toEqual({
-      inputTextUsdPer1M: 5,
-      outputTextUsdPer1M: 30,
-      cachedTextUsdPer1M: 0.5,
-      inputImageUsdPer1M: 8,
-      outputImageUsdPer1M: 8,
+      imageTokenUsdPer1M: 8,
+      cachedImageUsdPer1M: undefined,
     });
+    // A tarifa única NÃO é copiada para entrada e saída.
+    expect(result.rates.inputImageUsdPer1M).toBeUndefined();
+    expect(result.rates.outputImageUsdPer1M).toBeUndefined();
   });
 
   it("nunca consulta responses:image_generation (0.065)", async () => {
@@ -67,7 +68,7 @@ describe("F47.1 — pricing quality-aware do preset", () => {
     expect(VISUAL_SIGNATURE_HISTORICAL_ESTIMATES.low).toBe(0.036);
   });
 
-  it("tarifa de cache/imagem ausente → partial com missingRates explícitos", async () => {
+  it("linha sem tarifa de imagem → missing, sem inventar valor", async () => {
     mockGetModelPricing.mockResolvedValue({
       pricing: { inputCostUsd: 5, outputCostUsd: 30 },
       versionId: VERSION,
@@ -75,21 +76,46 @@ describe("F47.1 — pricing quality-aware do preset", () => {
 
     const result = await getVisualSignaturePresetPricing({ preset: "flare_medium" });
 
-    expect(result.status).toBe("partial");
-    expect(result.missingRates).toEqual(
-      expect.arrayContaining(["cachedTextUsdPer1M", "inputImageUsdPer1M", "outputImageUsdPer1M"]),
-    );
+    expect(result.status).toBe("missing");
+    expect(result.missingRates).toContain("image.imageTokenUsdPer1M");
   });
+});
 
-  it("linha sem nenhuma tarifa útil → missing, sem inventar valor", async () => {
-    mockGetModelPricing.mockResolvedValue({
-      pricing: { imageUnitCostUsd: 0.05 },
-      versionId: VERSION,
+describe("F47.1 — pricing do orquestrador (texto)", () => {
+  it("lê o modelo do orquestrador SEM quality e retorna tarifas de texto", async () => {
+    const result = await getVisualSignatureOrchestratorPricing({
+      provider: "openai",
+      model: "gpt-6-luna",
     });
 
-    const result = await getVisualSignaturePresetPricing({ preset: "flare_low" });
+    expect(mockGetModelPricing).toHaveBeenCalledWith({
+      provider: "openai",
+      model: "gpt-6-luna",
+    });
+    expect(result.status).toBe("complete");
+    expect(result.rates).toEqual({
+      inputTextUsdPer1M: 5,
+      outputTextUsdPer1M: 30,
+      cachedTextUsdPer1M: 0.5,
+    });
+    expect(result.pricingVersion).toBe(VERSION);
+  });
+
+  it("linha ausente → missing, sem usar tarifa de imagem", async () => {
+    mockGetModelPricing.mockResolvedValue(null);
+
+    const result = await getVisualSignatureOrchestratorPricing({
+      provider: "openai",
+      model: "gpt-6-luna",
+    });
 
     expect(result.status).toBe("missing");
     expect(result.rates).toEqual({});
+    expect(result.missingRates).toEqual(
+      expect.arrayContaining([
+        "orchestrator.inputTextUsdPer1M",
+        "orchestrator.outputTextUsdPer1M",
+      ]),
+    );
   });
 });

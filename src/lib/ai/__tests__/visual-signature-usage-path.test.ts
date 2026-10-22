@@ -116,8 +116,8 @@ const RAW_MAIN = {
   input_tokens: 1000,
   output_tokens: 500,
   input_tokens_details: {
-    text_tokens: 800,
-    image_tokens: 200,
+    text_tokens: 1000,
+    image_tokens: 0,
     cached_tokens: 200,
     cached_tokens_details: { text_tokens: 200, image_tokens: 0 },
   },
@@ -168,7 +168,7 @@ describe("F47.1 — percurso completo adapter → gateway → sink → estimador
     expect(event.model).toBe("gpt-6-luna");
     expect(event.cost.costCoverage).toBe("complete");
     expect(event.cost.costSource).toBe("pricing_table");
-    expect(event.cost.estimatedCostUsd).toBeCloseTo(0.0153, 8);
+    expect(event.cost.estimatedCostUsd).toBeCloseTo(0.0147, 8);
     expect(event.metadata).toMatchObject({
       responses_model: "gpt-6-luna",
       image_model: "gpt-image-2.5-sunburst",
@@ -187,7 +187,7 @@ describe("F47.1 — percurso completo adapter → gateway → sink → estimador
 
   it("tool usage separado é precificado uma vez, com cobertura completa", async () => {
     const adapter = new FakeAdapter(
-      { input_tokens: 1000, output_tokens: 500 },
+      undefined,
       { output_tokens: 196, output_tokens_details: { text_tokens: 0, image_tokens: 196 } },
     );
     const gateway = new AiGateway(resolver, { get: () => adapter });
@@ -208,8 +208,8 @@ describe("F47.1 — percurso completo adapter → gateway → sink → estimador
 
     const event = mockRecord.mock.calls[0][0];
     expect(event.cost.costCoverage).toBe("complete");
-    // 1000*5 + 500*30 + 196*8 = 0.021568
-    expect(event.cost.estimatedCostUsd).toBeCloseTo(0.021568, 8);
+    // Tool: 196 tokens de imagem * 8 = 0.001568 (uma única vez).
+    expect(event.cost.estimatedCostUsd).toBeCloseTo(0.001568, 8);
     expect(event.metadata).toMatchObject({
       image_tool_usage_source: "tool_output",
       image_tool_usage: expect.objectContaining({ outputImageTokens: 196 }),
@@ -268,6 +268,65 @@ describe("F47.1 — percurso completo adapter → gateway → sink → estimador
     expect(event.cost.costSource).not.toBe("fallback_static");
   });
 
+  it("percurso completo com tarifas diferentes para orquestrador e imagem", async () => {
+    mockGetModelPricing.mockImplementation(
+      ({ model, quality }: { model: string; quality?: string }) => {
+        if (quality) {
+          return Promise.resolve({
+            pricing: { imageTokenUsdPer1M: 8 },
+            versionId: "image-v1",
+          });
+        }
+        if (model === "gpt-6-luna") {
+          return Promise.resolve({
+            pricing: { inputCostUsd: 50, outputCostUsd: 300, cachedInputCostUsd: 5 },
+            versionId: "orch-luna",
+          });
+        }
+        return Promise.resolve({
+          pricing: { inputCostUsd: 5, outputCostUsd: 30, cachedInputCostUsd: 0.5 },
+          versionId: "orch-55",
+        });
+      },
+    );
+
+    const run = async (model: "gpt-5.5" | "gpt-6-luna") => {
+      const adapter = new FakeAdapter(RAW_MAIN);
+      const modelResolver: AiModelResolver = {
+        resolve: async () => ({
+          capability: "visual_signature_image",
+          segment: "image",
+          primary: { ...target, model },
+        }),
+        listCapabilities: () => ["visual_signature_image"],
+      };
+      const gateway = new AiGateway(modelResolver, { get: () => adapter });
+      const { context } = telemetry();
+      await gateway.invoke(
+        "visual_signature_image",
+        {
+          prompt: "arte",
+          tools: "image_generation",
+          quality: "medium",
+          imageGenerationModel: "gpt-image-2.5-sunburst",
+          reasoningEffort: "low",
+          metadata: REQUEST_METADATA,
+        },
+        context,
+      );
+      return mockRecord.mock.calls.at(-1)![0];
+    };
+
+    const cheap = await run("gpt-5.5");
+    const expensive = await run("gpt-6-luna");
+
+    expect(expensive.cost.estimatedCostUsd).toBeGreaterThan(cheap.cost.estimatedCostUsd);
+    expect(cheap.cost.orchestratorPricingVersion).toBe("orch-55");
+    expect(expensive.cost.orchestratorPricingVersion).toBe("orch-luna");
+    expect(expensive.cost.imagePricingVersion).toBe("image-v1");
+    expect(cheap.metadata.image_model).toBe("gpt-image-2.5-sunburst");
+  });
+
   it("custo reportado trafega separado da estimativa até o evento", async () => {
     const adapter = new FakeAdapter(RAW_MAIN, undefined, 0.5);
     const gateway = new AiGateway(resolver, { get: () => adapter });
@@ -288,7 +347,7 @@ describe("F47.1 — percurso completo adapter → gateway → sink → estimador
 
     const event = mockRecord.mock.calls[0][0];
     expect(event.cost.providerReportedCostUsd).toBe(0.5);
-    expect(event.cost.estimatedCostUsd).toBeCloseTo(0.0153, 8);
+    expect(event.cost.estimatedCostUsd).toBeCloseTo(0.0147, 8);
     expect(event.metadata.provider_reported_cost_usd).toBe(0.5);
   });
 });

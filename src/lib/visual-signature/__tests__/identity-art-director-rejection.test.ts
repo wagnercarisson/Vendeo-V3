@@ -66,6 +66,10 @@ describe("F47.1 - identity art director: rejectionContext e brandColor", () => {
       rejectionContext: { reason: "Use azul e fonte mais grossa", attempt: 1 },
     });
 
+    // Rejeição real: attempt = rejectionContext.attempt + 1.
+    expect(aiImageGenerator.generate.mock.calls[0][0]).toMatchObject({
+      attempt: 2,
+    });
     expect(promptLoader.load).toHaveBeenCalledWith(
       "store-identity-art-director",
       expect.objectContaining({
@@ -109,6 +113,10 @@ describe("F47.1 - identity art director: rejectionContext e brandColor", () => {
 
     await service.generate({ ...BASE_INPUT, brandColor: "#112233" });
 
+    // Primeira tentativa do Diretor de Arte é attempt=0 (image_direct).
+    expect(aiImageGenerator.generate.mock.calls[0][0]).toMatchObject({
+      attempt: 0,
+    });
     const vars = promptLoader.load.mock.calls[0][1];
     expect(vars.brandColor).toBe("#112233");
     expect(vars.rejectionContext).toBe("");

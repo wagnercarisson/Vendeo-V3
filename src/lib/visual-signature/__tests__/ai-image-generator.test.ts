@@ -58,6 +58,54 @@ beforeEach(() => {
   mockUpload.mockResolvedValue({ storagePath: "p", assetUrl: "u" });
 });
 
+describe("VisualSignatureValidator — auditoria por chamada (F47.1)", () => {
+  it("validação dedicada leva credential_scope/retry ao request", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      content: '{"valid":true}',
+      model: "gpt-6-luna",
+    });
+    const validator = new VisualSignatureValidator({
+      invoke,
+      hasFallback: vi.fn().mockResolvedValue(false),
+    } as never);
+
+    await validator.validate({
+      imageBase64: Buffer.alloc(2048, 1).toString("base64"),
+      storeName: "Loja Teste",
+      telemetry: makeTelemetry(),
+      credentialScope: "validation",
+      retryUsed: true,
+      retryPromptVariant: "simplified",
+    });
+
+    const request = invoke.mock.calls[0][1];
+    expect(request.metadata).toEqual({
+      credential_scope: "validation",
+      retry_used: true,
+      retry_prompt_variant: "simplified",
+    });
+  });
+
+  it("validação legada permanece sem metadata adicional", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      content: '{"valid":true}',
+      model: "gpt-5.5",
+    });
+    const validator = new VisualSignatureValidator({
+      invoke,
+      hasFallback: vi.fn().mockResolvedValue(false),
+    } as never);
+
+    await validator.validate({
+      imageBase64: Buffer.alloc(2048, 1).toString("base64"),
+      storeName: "Loja Teste",
+      telemetry: makeTelemetry(),
+    });
+
+    expect(invoke.mock.calls[0][1]).not.toHaveProperty("metadata");
+  });
+});
+
 describe("AiImageGenerator — attemptNumber por tentativa (F46-04)", () => {
   it("validator recebe telemetria com attemptNumber 0 e 1 (image_direct/image_retry)", async () => {
     const validateSpy = vi
@@ -138,7 +186,15 @@ describe("AiImageGenerator � F47.1 configura��o dedicada x legado", () => 
         image_model: "gpt-image-2.5-sunburst",
         image_quality: "medium",
         reasoning_effort: "low",
+        retry_used: false,
+        retry_prompt_variant: "full",
+        credential_scope: "validation",
       },
+    });
+    expect(validateSpy.mock.calls[0][0]).toMatchObject({
+      credentialScope: "validation",
+      retryUsed: false,
+      retryPromptVariant: "full",
     });
     expect(result.metadata).toMatchObject({
       model: "gpt-6-luna",

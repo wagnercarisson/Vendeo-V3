@@ -62,10 +62,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockRecord.mockResolvedValue(undefined);
   mockResolveAiCost.mockResolvedValue({
-    estimatedCostUsd: 0.0153,
+    estimatedCostUsd: 0.0147,
     costSource: "pricing_table",
     costCoverage: "complete",
     costEstimationNote: null,
+    orchestratorPricingVersion: "orch-v1",
+    imagePricingVersion: "image-v1",
   });
 });
 
@@ -109,6 +111,8 @@ describe("F47.1 — campos de telemetria da Assinatura Visual", () => {
       cost_source: "pricing_table",
       cost_estimation_note: null,
       provider_reported_cost_usd: null,
+      orchestrator_pricing_version: "orch-v1",
+      image_pricing_version: "image-v1",
     });
   });
 
@@ -149,6 +153,40 @@ describe("F47.1 — campos de telemetria da Assinatura Visual", () => {
       cost_source: "provider_reported",
       provider_reported_cost_usd: 0.2,
       cost_coverage: "complete",
+    });
+  });
+
+  it("validação semântica dedicada registra credential_scope sem depender do preset", async () => {
+    mockResolveAiCost.mockResolvedValue({
+      estimatedCostUsd: 0.001,
+      costSource: "pricing_table",
+    });
+
+    const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
+    await sink.emit({
+      capability: "visual_signature_validation",
+      protocol: "responses",
+      status: "success",
+      provider: "openai",
+      model: "gpt-6-luna",
+      durationMs: 10,
+      attemptNumber: 1,
+      usage: { promptTokens: 100, completionTokens: 20 },
+      usageMeta: { responsesModel: "gpt-6-luna" },
+      metadata: {
+        credential_scope: "validation",
+        retry_used: true,
+        retry_prompt_variant: "full",
+      },
+    });
+
+    expect(emitted().metadata).toMatchObject({
+      credential_scope: "validation",
+      retry_used: true,
+      retry_prompt_variant: "full",
+      attempt_number: 1,
+      visual_signature_preset: null,
+      cost_coverage: null,
     });
   });
 

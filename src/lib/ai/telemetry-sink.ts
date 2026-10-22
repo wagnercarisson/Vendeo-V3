@@ -256,8 +256,12 @@ function buildCallMetadata(
   // com preset explícito (ou com cobertura calculada). Os demais fluxos mantêm
   // o metadata legado byte-compatível.
   const presetFromMetadata = envelope.metadata?.visual_signature_preset;
+  const hasCredentialScope =
+    typeof envelope.metadata?.credential_scope === "string";
   const isVisualSignaturePresetEvent =
-    typeof presetFromMetadata === "string" || cost.costCoverage !== undefined;
+    typeof presetFromMetadata === "string" ||
+    hasCredentialScope ||
+    cost.costCoverage !== undefined;
   const attemptNumber = envelope.attemptNumber ?? 1;
 
   return {
@@ -308,11 +312,14 @@ function buildCallMetadata(
             typeof envelope.metadata?.credential_scope === "string"
               ? envelope.metadata.credential_scope
               : "normal",
-          cost_coverage: cost.costCoverage ?? "unknown",
+          cost_coverage: cost.costCoverage ?? null,
           cost_source: cost.costSource,
           cost_estimation_note: cost.costEstimationNote ?? null,
           provider_reported_cost_usd:
             cost.providerReportedCostUsd ?? envelope.providerReportedCostUsd ?? null,
+          orchestrator_pricing_version:
+            cost.orchestratorPricingVersion ?? null,
+          image_pricing_version: cost.imagePricingVersion ?? null,
         }
       : {}),
     // P1 (Opção A): origem INTERNA auditável do NOVO FLUXO — acrescentada DEPOIS
