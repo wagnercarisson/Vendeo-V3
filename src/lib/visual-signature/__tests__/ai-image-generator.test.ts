@@ -92,3 +92,86 @@ describe("AiImageGenerator â€” attemptNumber por tentativa (F46-04)", () => {
     validateSpy.mockRestore();
   });
 });
+
+describe("AiImageGenerator — F47.1 configuração dedicada x legado", () => {
+  const DEDICATED = {
+    mode: "dedicated" as const,
+    orchestratorModel: "gpt-6-luna" as const,
+    imagePreset: "sunburst_medium" as const,
+    imageModel: "gpt-image-2.5-sunburst",
+    imageQuality: "medium" as const,
+    reasoningEffort: "low" as const,
+    configVersionId: "11111111-1111-1111-1111-111111111111",
+    instanceIdentity: "127.0.0.1:57781",
+  };
+
+  function makeGenerator(invoke: ReturnType<typeof vi.fn>) {
+    return new AiImageGenerator({
+      promptLoader: { load: () => "prompt" } as never,
+      invoker: { invoke, hasFallback: vi.fn().mockResolvedValue(false) } as never,
+    });
+  }
+
+  it("com snapshot dedicado envia modelo/qualidade/reasoning/metadata e persiste metadados", async () => {
+    const validateSpy = vi
+      .spyOn(VisualSignatureValidator.prototype, "validate")
+      .mockResolvedValue({ valid: true });
+    const invoke = vi.fn().mockResolvedValue({ imageBase64: "aGVsbG8=", model: "gpt-6-luna" });
+
+    const result = await makeGenerator(invoke).generate({
+      ...BASE_PARAMS,
+      attempt: 0,
+      telemetry: makeTelemetry(),
+      visualSignatureConfig: DEDICATED,
+    });
+
+    const request = invoke.mock.calls[0][1];
+    expect(request).toMatchObject({
+      quality: "medium",
+      imageGenerationModel: "gpt-image-2.5-sunburst",
+      reasoningEffort: "low",
+      metadata: {
+        config_version_id: DEDICATED.configVersionId,
+        visual_signature_preset: "sunburst_medium",
+        responses_model: "gpt-6-luna",
+        image_model: "gpt-image-2.5-sunburst",
+        image_quality: "medium",
+        reasoning_effort: "low",
+      },
+    });
+    expect(result.metadata).toMatchObject({
+      model: "gpt-6-luna",
+      responses_model: "gpt-6-luna",
+      image_model: "gpt-image-2.5-sunburst",
+      image_quality: "medium",
+      visual_signature_preset: "sunburst_medium",
+      reasoning_effort: "low",
+      config_version_id: DEDICATED.configVersionId,
+    });
+
+    validateSpy.mockRestore();
+  });
+
+  it("sem snapshot mantém o request legado byte-compatível", async () => {
+    const validateSpy = vi
+      .spyOn(VisualSignatureValidator.prototype, "validate")
+      .mockResolvedValue({ valid: true });
+    const invoke = vi.fn().mockResolvedValue({ imageBase64: "aGVsbG8=", model: "gpt-5.5" });
+
+    const result = await makeGenerator(invoke).generate({
+      ...BASE_PARAMS,
+      attempt: 0,
+      telemetry: makeTelemetry(),
+    });
+
+    const request = invoke.mock.calls[0][1];
+    expect(request.quality).toBe("auto");
+    expect(request).not.toHaveProperty("imageGenerationModel");
+    expect(request).not.toHaveProperty("reasoningEffort");
+    expect(request).not.toHaveProperty("metadata");
+    expect(result.metadata).not.toHaveProperty("config_version_id");
+    expect(result.metadata).not.toHaveProperty("image_model");
+
+    validateSpy.mockRestore();
+  });
+});

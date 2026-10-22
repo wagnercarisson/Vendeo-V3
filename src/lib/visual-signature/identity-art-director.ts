@@ -10,7 +10,8 @@ import type {
 } from '@/lib/visual-signature/types';
 import { normalizeIntendedPalette } from '@/lib/visual-signature/types';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
-import type { AiTelemetryContext } from '@/lib/ai';
+import type { AiInvoker, AiTelemetryContext } from '@/lib/ai';
+import type { VisualSignatureModelConfigSnapshot } from '@/lib/ai/visual-signature-model-config-service';
 
 export interface VisualSignatureGenerationResult {
   signature: VisualSignatureRecord;
@@ -22,10 +23,20 @@ export interface VisualSignatureGenerationResult {
 export class StoreIdentityArtDirectorService {
   private promptLoader: PromptLoader;
   private aiImageGenerator: AiImageGenerator;
+  private readonly visualSignatureConfig?: VisualSignatureModelConfigSnapshot;
 
-  constructor(opts?: { promptLoader?: PromptLoader; aiImageGenerator?: AiImageGenerator }) {
+  constructor(opts?: {
+    promptLoader?: PromptLoader;
+    aiImageGenerator?: AiImageGenerator;
+    /** F47.1 (D4): gateway congelado da operação (validação local) ou default. */
+    invoker?: AiInvoker;
+    /** F47.1 (D4): snapshot congelado da configuração dedicada. */
+    visualSignatureConfig?: VisualSignatureModelConfigSnapshot;
+  }) {
     this.promptLoader = opts?.promptLoader ?? new PromptLoader();
-    this.aiImageGenerator = opts?.aiImageGenerator ?? new AiImageGenerator();
+    this.aiImageGenerator =
+      opts?.aiImageGenerator ?? new AiImageGenerator({ invoker: opts?.invoker });
+    this.visualSignatureConfig = opts?.visualSignatureConfig;
   }
 
   async generate(
@@ -87,6 +98,7 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
         customPrompt: loadedPrompt, // Passing the full identity art director prompt
         onCall, // F38.1 (D11): propaga o onCall do caller (imagem + validação)
         telemetry, // F46-04 (D9): encaminha o contexto de telemetria (sink injetado)
+        visualSignatureConfig: this.visualSignatureConfig,
       });
       console.log('[identity-art-director] AiImageGenerator retornou', { tier: result.tier, assetUrl: result.assetUrl });
 

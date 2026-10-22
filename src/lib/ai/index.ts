@@ -44,6 +44,24 @@ export {
   ALL_CAPABILITIES,
 } from "./model-registry";
 export { PersistedModelResolver } from "./persisted-model-resolver";
+export {
+  loadVisualSignatureModelConfigSnapshot,
+  invalidateVisualSignatureModelConfigCache,
+  VisualSignatureConfigReadError,
+  VisualSignatureConfigDivergentError,
+  VisualSignatureConfigOutsideEnvironmentError,
+  LEGACY_VISUAL_SIGNATURE_MODEL_CONFIG,
+} from "./visual-signature-model-config-service";
+export type {
+  VisualSignatureModelConfigSnapshot,
+  VisualSignatureDedicatedConfigSnapshot,
+  VisualSignatureLegacyConfigSnapshot,
+  VisualSignatureModelConfigRow,
+  VisualSignatureModelConfigReader,
+} from "./visual-signature-model-config-service";
+export { createFrozenVisualSignatureResolver } from "./visual-signature-frozen-resolver";
+export { createVisualSignatureValidationGateway } from "./visual-signature-validation-gateway";
+export { readValidationApiKey } from "./api-keys";
 export { CAPABILITY_GENERATION_TYPE } from "./generation-type-map";
 export { getApiKey } from "./api-keys";
 export {

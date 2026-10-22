@@ -4,6 +4,7 @@ import type { CascadeResult, VisualSignatureMetadata } from "./types";
 import type { AiCallInfo } from "@/lib/ai-cost/types";
 import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
 import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
+import type { VisualSignatureModelConfigSnapshot } from "@/lib/ai/visual-signature-model-config-service";
 
 export class VisualSignatureValidator {
   private readonly invoker: AiInvoker;
@@ -150,6 +151,13 @@ export class AiImageGenerator {
     onCall?: (info: AiCallInfo) => void | Promise<void>;
     /** F46-04 (D9): contexto de telemetria do caller (run/sink) — encaminhado à validação. */
     telemetry?: AiTelemetryContext;
+    /**
+     * F47.1 (D4/D7): snapshot congelado da configuração dedicada. Quando
+     * ausente/legado, o request permanece byte-compatível (`quality: "auto"`,
+     * sem `model`, sem `reasoning`, sem metadata de configuração). O generator
+     * NÃO lê a configuração — ele apenas usa o snapshot recebido.
+     */
+    visualSignatureConfig?: VisualSignatureModelConfigSnapshot;
   }): Promise<CascadeResult> {
     const startTime = Date.now();
     console.log('[ai-image-generator] generate() iniciado', { storeName: params.storeName, segment: params.segment, attempt: params.attempt });
@@ -199,14 +207,37 @@ Sem textos promocionais. Apenas a imagem PNG.`;
 
     try {
       console.log('[ai-image-generator] ⏳ ANTES da chamada ao gateway (visual_signature_image)', { timestamp: new Date().toISOString() });
-      const request: AiInvocationRequest = {
-        prompt,
-        tools: "image_generation",
-        size: "1024x1024",
-        quality: "auto",
-        signal: params.signal,
-        timeout: timeoutMs,
-      };
+      const dedicatedConfig =
+        params.visualSignatureConfig?.mode === "dedicated" ? params.visualSignatureConfig : null;
+      // F47.1 (D4/D7): com snapshot dedicado, modelo/qualidade/reasoning/metadata
+      // são explícitos. Sem snapshot, o payload legado permanece byte-compatível.
+      const request: AiInvocationRequest = dedicatedConfig
+        ? {
+            prompt,
+            tools: "image_generation",
+            size: "1024x1024",
+            quality: dedicatedConfig.imageQuality,
+            imageGenerationModel: dedicatedConfig.imageModel,
+            reasoningEffort: "low",
+            metadata: {
+              config_version_id: dedicatedConfig.configVersionId,
+              visual_signature_preset: dedicatedConfig.imagePreset,
+              responses_model: dedicatedConfig.orchestratorModel,
+              image_model: dedicatedConfig.imageModel,
+              image_quality: dedicatedConfig.imageQuality,
+              reasoning_effort: "low",
+            },
+            signal: params.signal,
+            timeout: timeoutMs,
+          }
+        : {
+            prompt,
+            tools: "image_generation",
+            size: "1024x1024",
+            quality: "auto",
+            signal: params.signal,
+            timeout: timeoutMs,
+          };
       const response = await this.invoker.invoke(
         "visual_signature_image",
         request,
@@ -269,6 +300,16 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         provider: "openai",
         model,
         elapsedMs,
+        ...(dedicatedConfig
+          ? {
+              responses_model: dedicatedConfig.orchestratorModel,
+              image_model: dedicatedConfig.imageModel,
+              image_quality: dedicatedConfig.imageQuality,
+              visual_signature_preset: dedicatedConfig.imagePreset,
+              reasoning_effort: "low" as const,
+              config_version_id: dedicatedConfig.configVersionId,
+            }
+          : {}),
       };
 
       const promptUsed = prompt;

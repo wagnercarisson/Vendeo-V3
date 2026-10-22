@@ -7,7 +7,19 @@ import type { Store } from "@/lib/store";
 import { AiImageGenerator } from "./ai-image-generator";
 import { getActiveVisualSignature, getSignedVisualSignatureUrl } from "./persistence";
 import { AiCostTracker } from "@/lib/ai-cost";
-import { createDefaultTelemetryContext, defaultAiModelResolver } from "@/lib/ai";
+import {
+  createDefaultTelemetryContext,
+  defaultAiGateway,
+  defaultAiModelResolver,
+  createFrozenVisualSignatureResolver,
+  createVisualSignatureValidationGateway,
+  loadVisualSignatureModelConfigSnapshot,
+} from "@/lib/ai";
+import type {
+  AiInvoker,
+  AiTelemetryContext,
+  VisualSignatureModelConfigSnapshot,
+} from "@/lib/ai";
 import { resolveEconomicSnapshot } from "@/lib/economic/economic-snapshot";
 import type {
   VisualSignatureRecord,
@@ -74,6 +86,43 @@ function classifyError(
   };
 }
 
+function createAttemptTelemetryContext(params: {
+  run: { operationRunId: string; traceId: string };
+  economicSnapshot: { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null };
+  storeId: string;
+  attemptNumber: number;
+}): AiTelemetryContext {
+  return createDefaultTelemetryContext({
+    operationRunId: params.run.operationRunId,
+    operationRunType: "visual_signature",
+    traceId: params.run.traceId,
+    storeId: params.storeId,
+    attemptNumber: params.attemptNumber,
+    usdBrlRateAtGeneration: params.economicSnapshot.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: params.economicSnapshot.creditValueBrlAtGeneration,
+  });
+}
+
+/**
+ * F47.1 (D4/D5) — resolve UMA configuração congelada + UM gateway por operação.
+ * Opt-in desligado ⇒ legado (gateway padrão). Opt-in ligado com qualquer falha
+ * ⇒ erro fail-closed (sem débito/provider).
+ */
+async function resolveVisualSignatureExecution(): Promise<{
+  config: VisualSignatureModelConfigSnapshot;
+  invoker: AiInvoker;
+}> {
+  const config = await loadVisualSignatureModelConfigSnapshot();
+  if (config.mode === "legacy") {
+    return { config, invoker: defaultAiGateway };
+  }
+  const resolver = createFrozenVisualSignatureResolver({
+    snapshot: config,
+    fallbackResolver: defaultAiModelResolver,
+  });
+  return { config, invoker: createVisualSignatureValidationGateway(resolver) };
+}
+
 async function getStore(storeId: string): Promise<Store> {
   const { data, error } = await supabase
     .from("stores")
@@ -125,11 +174,23 @@ export async function generateVariations(
     };
   }
 
-  const aiGenerator = new AiImageGenerator();
-  const effectiveVisualSignatureModel = await defaultAiModelResolver
-    .resolve("visual_signature_image")
-    .then((config) => config.primary.model)
-    .catch(() => "unknown");
+  // F47.1 (D4): UMA configuração congelada + UM gateway por operação. Falha do
+  // guard/serviço é fail-closed (nenhum débito/provider).
+  let execution: Awaited<ReturnType<typeof resolveVisualSignatureExecution>>;
+  try {
+    execution = await resolveVisualSignatureExecution();
+  } catch {
+    return { success: false, error: "Configuração de validação local indisponível." };
+  }
+
+  const aiGenerator = new AiImageGenerator({ invoker: execution.invoker });
+  const effectiveVisualSignatureModel =
+    execution.config.mode === "dedicated"
+      ? execution.config.orchestratorModel
+      : await defaultAiModelResolver
+          .resolve("visual_signature_image")
+          .then((config) => config.primary.model)
+          .catch(() => "unknown");
   const tonalities = ["profissional", "moderno", "elegante"];
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
@@ -138,15 +199,6 @@ export async function generateVariations(
   const run = new AiCostTracker().startRun("visual_signature");
   // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
   const economicSnapshot = await resolveEconomicSnapshot("[vs/server-actions]");
-  const telemetry = createDefaultTelemetryContext({
-    operationRunId: run.operationRunId,
-    operationRunType: "visual_signature",
-    traceId: run.traceId,
-    storeId,
-    attemptNumber: 0,
-    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
-    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
-  });
 
   const variations: Array<{ tier: string; assetUrl: string; storagePath: string; mimeType: string }> = [];
 
@@ -165,7 +217,13 @@ export async function generateVariations(
         tone,
         signal: AbortSignal.timeout(120000),
         attempt: 0,
-        telemetry,
+        telemetry: createAttemptTelemetryContext({
+          run,
+          economicSnapshot,
+          storeId,
+          attemptNumber: 0,
+        }),
+        visualSignatureConfig: execution.config,
       });
     } catch (err) {
       const a1 = classifyError(err, "image_direct", attempt1Start, effectiveVisualSignatureModel);
@@ -183,7 +241,13 @@ export async function generateVariations(
             signal: AbortSignal.timeout(120000),
             attempt: 1,
             simplifiedPrompt: true,
-            telemetry,
+            telemetry: createAttemptTelemetryContext({
+              run,
+              economicSnapshot,
+              storeId,
+              attemptNumber: 1,
+            }),
+            visualSignatureConfig: execution.config,
           });
         } catch (err2) {
           const a2 = classifyError(err2, "image_retry", attempt2Start, effectiveVisualSignatureModel);
@@ -235,6 +299,15 @@ export async function generateAutomatic(storeId: string): Promise<
     return { success: false, error: "Loja não encontrada" };
   }
 
+  // F47.1 (D4): configuração/gateway congelados ANTES de qualquer escrita
+  // (arquivamento), débito ou provider.
+  let execution: Awaited<ReturnType<typeof resolveVisualSignatureExecution>>;
+  try {
+    execution = await resolveVisualSignatureExecution();
+  } catch {
+    return { success: false, error: "Configuração de validação local indisponível." };
+  }
+
   try {
     const existing = await getActiveVisualSignature(storeId);
     if (existing) {
@@ -246,11 +319,14 @@ export async function generateAutomatic(storeId: string): Promise<
   }
 
   const totalStart = Date.now();
-  const aiGenerator = new AiImageGenerator();
-  const effectiveVisualSignatureModel = await defaultAiModelResolver
-    .resolve("visual_signature_image")
-    .then((config) => config.primary.model)
-    .catch(() => "unknown");
+  const aiGenerator = new AiImageGenerator({ invoker: execution.invoker });
+  const effectiveVisualSignatureModel =
+    execution.config.mode === "dedicated"
+      ? execution.config.orchestratorModel
+      : await defaultAiModelResolver
+          .resolve("visual_signature_image")
+          .then((config) => config.primary.model)
+          .catch(() => "unknown");
   const previousAttempts: CascadeAttempt[] = [];
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
@@ -258,15 +334,6 @@ export async function generateAutomatic(storeId: string): Promise<
   const run = new AiCostTracker().startRun("visual_signature");
   // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
   const economicSnapshot = await resolveEconomicSnapshot("[vs/server-actions]");
-  const telemetry = createDefaultTelemetryContext({
-    operationRunId: run.operationRunId,
-    operationRunType: "visual_signature",
-    traceId: run.traceId,
-    storeId,
-    attemptNumber: 0,
-    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
-    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
-  });
 
   const tones = ["profissional", "moderno", "elegante"];
   const tone = tones[Math.floor(Math.random() * tones.length)];
@@ -283,7 +350,13 @@ export async function generateAutomatic(storeId: string): Promise<
       tone,
       signal: AbortSignal.timeout(120000),
       attempt: 0,
-      telemetry,
+      telemetry: createAttemptTelemetryContext({
+        run,
+        economicSnapshot,
+        storeId,
+        attemptNumber: 0,
+      }),
+      visualSignatureConfig: execution.config,
     });
 
     const { data: signature, error } = await supabase
@@ -337,7 +410,13 @@ export async function generateAutomatic(storeId: string): Promise<
       signal: AbortSignal.timeout(120000),
       attempt: 1,
       simplifiedPrompt: true,
-      telemetry,
+      telemetry: createAttemptTelemetryContext({
+        run,
+        economicSnapshot,
+        storeId,
+        attemptNumber: 1,
+      }),
+      visualSignatureConfig: execution.config,
     });
 
     const { data: signature, error } = await supabase

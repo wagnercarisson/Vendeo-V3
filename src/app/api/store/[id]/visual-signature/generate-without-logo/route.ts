@@ -19,8 +19,16 @@ import { OperationCostService, OperationCostUnavailableError } from '@/lib/credi
 import type { OperationCostResolution } from '@/lib/credit/types';
 import { requireLegalClearance } from '@/lib/legal/clearance';
 import { AiCostTracker } from '@/lib/ai-cost';
-import { createDefaultTelemetryContext, BufferingAiTelemetrySink } from '@/lib/ai';
-import type { AiTelemetryContext } from '@/lib/ai';
+import {
+  createDefaultTelemetryContext,
+  BufferingAiTelemetrySink,
+  defaultAiGateway,
+  defaultAiModelResolver,
+  createFrozenVisualSignatureResolver,
+  createVisualSignatureValidationGateway,
+  loadVisualSignatureModelConfigSnapshot,
+} from '@/lib/ai';
+import type { AiInvoker, AiTelemetryContext, VisualSignatureModelConfigSnapshot } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { ProductEventService } from '@/lib/product-events/service';
 
@@ -130,6 +138,30 @@ export const POST = apiHandler(async (
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
     }
     console.log(`[generate-without-logo][req-${reqId}] store carregada`, { name: store.name, segment: store.segment, identity_state: store.identity_state });
+
+    // ── F47.1 (D4/D5): configuração congelada ANTES de débito/provider ──
+    // Opt-in desligado ⇒ legado (gateway padrão). Opt-in ligado com qualquer
+    // falha ⇒ 503 fail-closed, sem reserva de crédito e sem provider.
+    let visualSignatureConfig: VisualSignatureModelConfigSnapshot;
+    let visualSignatureInvoker: AiInvoker;
+    try {
+      visualSignatureConfig = await loadVisualSignatureModelConfigSnapshot();
+      visualSignatureInvoker =
+        visualSignatureConfig.mode === "dedicated"
+          ? createVisualSignatureValidationGateway(
+              createFrozenVisualSignatureResolver({
+                snapshot: visualSignatureConfig,
+                fallbackResolver: defaultAiModelResolver,
+              }),
+            )
+          : defaultAiGateway;
+    } catch {
+      console.log(`[generate-without-logo][req-${reqId}] validação local indisponível (fail-closed)`);
+      return NextResponse.json(
+        { success: false, error: "Configuração de validação local indisponível." },
+        { status: 503 },
+      );
+    }
 
     // ----- Substitution mode guards -----
     if (mode === 'substitution') {
@@ -324,7 +356,10 @@ export const POST = apiHandler(async (
 
   // ----- ATTEMPT 1: image_direct (full art director prompt) -----
   console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 1 — image_direct`);
-  const service = new StoreIdentityArtDirectorService();
+  const service = new StoreIdentityArtDirectorService({
+    invoker: visualSignatureInvoker,
+    visualSignatureConfig,
+  });
 
   let result: Awaited<ReturnType<typeof service.generate>> | null = null;
   let attempt1Error: unknown = null;
@@ -357,7 +392,7 @@ export const POST = apiHandler(async (
         // F38.2.1 (D3): retry = NOVO run → novo snapshot (valores vigentes agora).
         economicSnapshot = await resolveEconomicSnapshot();
         validation = createValidationTelemetry(run, economicSnapshot, 1);
-        const aiGenerator = new AiImageGenerator();
+        const aiGenerator = new AiImageGenerator({ invoker: visualSignatureInvoker });
         const retryResult = await aiGenerator.generate({
           storeId: id,
           storeName: store.name,
@@ -368,6 +403,7 @@ export const POST = apiHandler(async (
           attempt: 1,
           simplifiedPrompt: true,
           telemetry: validation.telemetry, // F46-05 (D9): imagem + validação via sink
+          visualSignatureConfig,
         });
 
         const artDirectorOutput: VisualSignatureArtDirectorOutput = {

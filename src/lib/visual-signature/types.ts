@@ -38,6 +38,33 @@ export interface VisualSignatureMetadata {
   artDirectorOutput?: VisualSignatureArtDirectorOutput | VisualSignatureMetadataArtDirectorOutput;
   input_snapshot?: VisualSignatureMetadataInputSnapshot;
   credit_tx_id?: string;
+  // F47.1 (D4) — configuração congelada por operação (quando dedicada). O campo
+  // legado `model` continua sendo o modelo Responses.
+  responses_model?: string;
+  image_model?: string;
+  image_quality?: "low" | "medium";
+  visual_signature_preset?: string;
+  reasoning_effort?: "low";
+  config_version_id?: string;
+  // F47.1 (D9) — proveniência do parsing da intenção criativa.
+  creative_intent_parse_status?:
+    | "parsed_json"
+    | "no_json"
+    | "invalid_json"
+    | "incomplete_json"
+    | "not_attempted";
+  creative_intent_fallback_applied?: boolean;
+  creative_intent_fallback_reason?:
+    | "missing_json"
+    | "invalid_json"
+    | "missing_visual_direction"
+    | "missing_content_used"
+    | "exception"
+    | null;
+  creative_intent_source?: "model" | "fallback";
+  creative_intent_schema_version?: "vs-intent-v1";
+  intended_palette_status?: "present_normalized" | "absent" | "invalid";
+  content_used_present?: boolean;
 }
 
 export interface VisualSignatureRecord {
