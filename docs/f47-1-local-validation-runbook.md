@@ -36,9 +36,24 @@ não faz `db push`, `--linked`, reset, `migration repair`, push ou deploy.
 
 Ele exige containers locais saudáveis, API/DB em loopback nas portas esperadas,
 ausência de Vercel/produção, `gpt-6-luna/responses` ativo, migration no ledger e
-nenhuma pendência. Falha ⇒ **parar**.
+Falha ⇒ **parar**.
 
-## 3. Variáveis de ambiente
+## 3. Inicialização do app local
+
+`npm run dev` sozinho NÒO carrega as variáveis locais e falha no middleware com
+`Missing NEXT_PUBLIC_SUPABASE_URL`. Use o inicializador que lê somente a chave
+autorizada e deriva as credenciais do Supabase aprovado em memória:
+
+```powershell
+powershell -NoProfile -File scripts/f47-1/start-local-app.ps1 -Port 3000
+```
+
+Ele não imprime/copia/persiste segredos; define as variáveis apenas no processo
+do app. Se `NEXT_PUBLIC_TURNSTILE_SITE_KEY` estiver ausente e
+`captcha_enabled=true`, o login local por senha pode não concluir; não desative
+o captcha para contornar a proteção.
+
+## 4. Variáveis de ambiente
 
 Nunca registrar valores neste documento, em logs ou em evidências.
 
@@ -57,7 +72,7 @@ Distinção obrigatória:
 
 O precheck só reporta presença booleana; nunca imprime as chaves.
 
-## 4. Migration e configuração
+## 5. Migration e configuração
 
 A migration F47.1 é **local-only** e já foi aplicada no destino aprovado no
 plano 47.1-01. Não reaplicar, não usar `db push`, não resetar o banco.
@@ -71,7 +86,7 @@ com ator, motivo, `operation_id`, identidade canônica e `reasoning_effort='low'
 derivado no servidor. O reset usa
 `admin_reset_visual_signature_model_config` com motivo e auditoria.
 
-## 5. Gates e provas
+## 6. Gates e provas
 
 ```powershell
 powershell -NoProfile -File scripts/f47-1/run-phase-gates.ps1 `
@@ -99,7 +114,7 @@ As provas usam o destino local aprovado e:
 
 Falha em qualquer gate ⇒ **parar**.
 
-## 6. Precheck do UAT
+## 7. Precheck do UAT
 
 ```powershell
 powershell -NoProfile -File scripts/f47-1/run-uat-precheck.ps1 `
@@ -167,7 +182,7 @@ humano da Task 3.
 A credencial sentinela usada apenas no `ProofsOnly` das provas SQL **não** é
 credencial válida e **não** pode ser usada para aprovar o precheck de UAT.
 
-## 7. Execução manual do UAT
+## 8. Execução manual do UAT
 
 O executor **não** executa as gerações pagas. A rodada é conduzida pelo humano
 após o checkpoint de autorização.
@@ -189,7 +204,7 @@ após o checkpoint de autorização.
 8. Resultado de retry usa prompt simplificado e não é equivalente ao prompt
    inicial.
 
-## 8. Recovery forward-only
+## 9. Recovery forward-only
 
 Se a configuração dedicada precisar ser desativada:
 
@@ -202,7 +217,7 @@ Se a configuração dedicada precisar ser desativada:
 Não usar `db push`, reset destrutivo, `migration repair`, `--linked` ou qualquer
 promoção remota. Nenhuma recuperação deve apagar auditoria.
 
-## 9. Critérios de parada
+## 10. Critérios de parada
 
 - preflight/precheck falhou;
 - `maxRetries=0` não comprovado;
