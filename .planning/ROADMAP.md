@@ -305,7 +305,7 @@ Plans:
 - [ ] 50.4-08-PLAN.md - Validação real (aplicação): `db push` via CLI 2.75.0 em descartável, ledger, constraints, grants/RLS e suítes SQL.
 - [ ] 50.4-09-PLAN.md - Gates, seguran�a ASVS L1, UAT de regress�o e nova pol�tica no descart�vel, encerramento sem publica��o.
 - [ ] 50.4-10-PLAN.md - Validação comportamental: concorrência trial � demo � mensal � exceção, precheck/abort, rollback/forward-fix, regressão do parser e destruição do ambiente.
-- [ ] 50.4-10-PLAN.md - Valida��o comportamental: concorr�ncia trial � demo � mensal � exce��o, precheck/abort, rollback/forward-fix, regress�o do parser e destrui��o do ambiente.
+
 ## Phase 56.1: Contrato produtivo, modelos e fallback
 
 **Goal:** preparar a infraestrutura produtiva do novo fluxo de imagem Produto 1:1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o administrativa auditÃƒÆ’Ã‚Â¡vel de um par principal e um par fallback (modelo + qualidade) restrita a um catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel fechado, contrato de snapshot imutÃƒÆ’Ã‚Â¡vel por operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, polÃƒÆ’Ã‚Â­tica explÃƒÆ’Ã‚Â­cita de falhas e fallback, resposta pÃƒÆ’Ã‚Âºblica identificÃƒÆ’Ã‚Â¡vel sem vazar motivo interno, e instrumentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de qualidade/telemetria/custo ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â como componentes e testes simulados, sem ativar geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, sem debitar crÃƒÆ’Ã‚Â©dito e sem alterar o fluxo legado.
