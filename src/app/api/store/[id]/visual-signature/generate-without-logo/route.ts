@@ -426,6 +426,10 @@ export const POST = apiHandler(async (
 
         const parsedIntent =
           retryResult.creativeIntent ?? parseCreativeIntent(retryResult.aiResponseMessage);
+        const retrySink = validation.telemetry.sink;
+        if (retrySink instanceof DeferredAiTelemetrySink) {
+          retrySink.enrichLast("visual_signature_image", { ...parsedIntent.metadata });
+        }
         const artDirectorOutput: VisualSignatureArtDirectorOutput = {
           creative_description: `Assinatura visual para ${store.name} (${store.segment}) — gerada via retry`,
           suggested_colors: store.brand_color ? [store.brand_color] : [],

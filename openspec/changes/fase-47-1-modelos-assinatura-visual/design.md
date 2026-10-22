@@ -452,6 +452,7 @@ creative_intent_fallback_reason:
   | "invalid_json"
   | "missing_visual_direction"
   | "missing_content_used"
+  | "invalid_content_used"
   | "exception"
   | null;
 
@@ -464,6 +465,10 @@ content_used_present: boolean;
 ```
 
 - `intended_palette` é o nome correto (não `intent_palette`).
+- Validação runtime: `content_used` deve ser objeto simples (array/valor não
+  objeto → `invalid_content_used`); indicadores fornecidos devem ser booleanos
+  (`store_name`/`city`/`state`/`slogan` com outro tipo → `invalid_content_used`);
+  `visual_direction` é trimada e vazia/whitespace → `missing_visual_direction`.
 - Fallback aplicado continua sendo o comportamento atual, mas seus valores
   (`visual_direction: "Personalizada"`, `content_used.store_name: true`, etc.)
   **não** podem ser apresentados como direção efetivamente retornada pelo

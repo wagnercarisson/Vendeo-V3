@@ -34,11 +34,15 @@ vi.mock('@/lib/auth/csrf', () => ({
   requireSameOrigin: vi.fn(() => {}),
 }));
 
-vi.mock('@/lib/visual-signature/identity-art-director', () => ({
-  StoreIdentityArtDirectorService: class {
-    generate = mockIdentityDirectorGenerate;
-  },
-}));
+vi.mock('@/lib/visual-signature/identity-art-director', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/visual-signature/identity-art-director')>();
+  return {
+    ...actual,
+    StoreIdentityArtDirectorService: class {
+      generate = mockIdentityDirectorGenerate;
+    },
+  };
+});
 
 vi.mock('@/lib/visual-signature/ai-image-generator', () => ({
   AiImageGenerator: class {
@@ -564,11 +568,22 @@ describe('VS cost accounting (6.4)', () => {
         mimeType: 'image/png',
         metadata: { generation_tier: 'image_direct', provider: 'openai', model: 'gpt-5.5' },
         prompt: 'retry prompt',
+        aiResponseMessage: JSON.stringify({
+          visual_direction: 'Minimalista',
+          content_used: { store_name: true, city: false, state: false, slogan: false },
+        }),
       };
     });
     const { POST } = await import('../route');
     const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
     expect(res.status).toBe(200);
+
+    const persistedRetry = mockPersistSignature.mock.calls.at(-1)?.[0];
+    expect(persistedRetry.metadata).toMatchObject({
+      creative_intent_parse_status: 'parsed_json',
+      creative_intent_source: 'model',
+      artDirectorOutput: { visual_direction: 'Minimalista' },
+    });
 
     const attempt1Events = capturedEvents.filter((e: any) => e.attemptNumber === 0);
     const retryEvents = capturedEvents.filter((e: any) => e.attemptNumber === 1);

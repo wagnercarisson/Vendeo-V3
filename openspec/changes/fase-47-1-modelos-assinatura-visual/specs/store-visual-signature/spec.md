@@ -65,6 +65,17 @@ preservar `visual_direction`, `content_used` e `intended_palette`.
 - **AND** o motivo do fallback é registrado separadamente
 - **AND** os valores de fallback não são tratados como saída do modelo
 
+#### Scenario: `content_used` inválido
+- **WHEN** `content_used` é array ou contém indicador fornecido não booleano
+- **THEN** o status é `incomplete_json`
+- **AND** o motivo é `invalid_content_used`
+- **AND** o fallback não é apresentado como direção do modelo
+
+#### Scenario: direção vazia
+- **WHEN** `visual_direction` é vazia ou só whitespace
+- **THEN** o status é `incomplete_json`
+- **AND** o motivo é `missing_visual_direction`
+
 #### Scenario: Paleta intencional
 - **WHEN** `intended_palette` está presente e é normalizável
 - **THEN** `intended_palette_status` é `present_normalized`

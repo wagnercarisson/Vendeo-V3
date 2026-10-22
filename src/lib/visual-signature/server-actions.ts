@@ -409,11 +409,17 @@ export async function generateAutomatic(storeId: string): Promise<
 
     const parsedIntent =
       result.creativeIntent ?? parseCreativeIntent(result.aiResponseMessage);
-    const { data: existingSignature } = await supabase
+    const { data: existingSignature, error: existingError } = await supabase
       .from("store_visual_signatures")
       .select("metadata")
       .eq("storage_path", result.storagePath)
       .maybeSingle();
+    if (existingError) {
+      return {
+        success: false,
+        error: "Não foi possível ler os dados da assinatura para concluir a ativação.",
+      };
+    }
     const { data: signature, error } = await supabase
       .from("store_visual_signatures")
       .update({
@@ -421,7 +427,9 @@ export async function generateAutomatic(storeId: string): Promise<
         updated_at: new Date().toISOString(),
         metadata: {
           ...(existingSignature?.metadata ?? {}),
+          ...result.metadata,
           ...parsedIntent.metadata,
+          artDirectorOutput: parsedIntent.output,
         },
       })
       .eq("storage_path", result.storagePath)
@@ -483,11 +491,17 @@ export async function generateAutomatic(storeId: string): Promise<
 
     const retryIntent =
       retryResult.creativeIntent ?? parseCreativeIntent(retryResult.aiResponseMessage);
-    const { data: existingRetrySignature } = await supabase
+    const { data: existingRetrySignature, error: existingRetryError } = await supabase
       .from("store_visual_signatures")
       .select("metadata")
       .eq("storage_path", retryResult.storagePath)
       .maybeSingle();
+    if (existingRetryError) {
+      return {
+        success: false,
+        error: "Não foi possível ler os dados da assinatura para concluir a ativação.",
+      };
+    }
     const { data: signature, error } = await supabase
       .from("store_visual_signatures")
       .update({
@@ -495,7 +509,9 @@ export async function generateAutomatic(storeId: string): Promise<
         updated_at: new Date().toISOString(),
         metadata: {
           ...(existingRetrySignature?.metadata ?? {}),
+          ...retryResult.metadata,
           ...retryIntent.metadata,
+          artDirectorOutput: retryIntent.output,
         },
       })
       .eq("storage_path", retryResult.storagePath)

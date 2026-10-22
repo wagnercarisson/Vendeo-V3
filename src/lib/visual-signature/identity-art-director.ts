@@ -1,4 +1,4 @@
-﻿import { PromptLoader } from '@/lib/image-generation/prompt-loader';
+import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import { AiImageGenerator } from '@/lib/visual-signature/ai-image-generator';
 import { persistSignature } from '@/lib/visual-signature/persistence';
 import type {
@@ -11,7 +11,6 @@ import type { AiCallInfo } from '@/lib/ai-cost/types';
 import type { AiInvoker, AiTelemetryContext } from '@/lib/ai';
 import { parseCreativeIntent } from './creative-intent';
 import type { VisualSignatureModelConfigSnapshot } from '@/lib/ai/visual-signature-model-config-service';
-
 export interface VisualSignatureGenerationResult {
   signature: VisualSignatureRecord;
   artDirectorOutput: VisualSignatureArtDirectorOutput;
@@ -26,6 +25,7 @@ export type {
   CreativeIntentParseResult,
 } from './creative-intent';
 export { parseCreativeIntent } from './creative-intent';
+
 export class StoreIdentityArtDirectorService {
   private promptLoader: PromptLoader;
   private aiImageGenerator: AiImageGenerator;
@@ -34,41 +34,38 @@ export class StoreIdentityArtDirectorService {
   constructor(opts?: {
     promptLoader?: PromptLoader;
     aiImageGenerator?: AiImageGenerator;
-    /** F47.1 (D4): gateway congelado da operaÃ§Ã£o (validaÃ§Ã£o local) ou default. */
     invoker?: AiInvoker;
-    /** F47.1 (D4): snapshot congelado da configuraÃ§Ã£o dedicada. */
     visualSignatureConfig?: VisualSignatureModelConfigSnapshot;
   }) {
     this.promptLoader = opts?.promptLoader ?? new PromptLoader();
-    this.aiImageGenerator =
-      opts?.aiImageGenerator ?? new AiImageGenerator({ invoker: opts?.invoker });
+    this.aiImageGenerator = opts?.aiImageGenerator ?? new AiImageGenerator({ invoker: opts?.invoker });
     this.visualSignatureConfig = opts?.visualSignatureConfig;
   }
 
   async generate(
     input: VisualSignatureWithoutLogoInput,
     signal?: AbortSignal,
-    /** F38.1 (D7/D11): repassa o callback onCall do caller ao AiImageGenerator â€”
+    /** F38.1 (D7/D11): repassa o callback onCall do caller ao AiImageGenerator —
      * os eventos call-level (visual_signature_image/validation) atravessam o service. */
     onCall?: (info: AiCallInfo) => void | Promise<void>,
-    /** F46-04 (D9): contexto de telemetria do caller â€” encaminhado ao AiImageGenerator
-     * (e daÃ­ ao validator) para que o sink injetado alcance `invoke`. */
+    /** F46-04 (D9): contexto de telemetria do caller — encaminhado ao AiImageGenerator
+     * (e daí ao validator) para que o sink injetado alcance `invoke`. */
     telemetry?: AiTelemetryContext
   ): Promise<VisualSignatureGenerationResult> {
     const rejectionContextStr = input.rejectionContext
-      ? `### URGENTE: FEEDBACK DO LOJISTA (PRIORIDADE MÃXIMA)
-A versÃ£o anterior (tentativa ${input.rejectionContext.attempt}) foi REJEITADA pelo lojista.
+      ? `### URGENTE: FEEDBACK DO LOJISTA (PRIORIDADE MÁXIMA)
+A versão anterior (tentativa ${input.rejectionContext.attempt}) foi REJEITADA pelo lojista.
 ${
   input.rejectionContext.reason
-    ? `MOTIVO DA REJEIÃ‡ÃƒO: "${input.rejectionContext.reason}"`
-    : 'MOTIVO: O lojista nÃ£o gostou da direÃ§Ã£o anterior.'
+    ? `MOTIVO DA REJEIÇÃO: "${input.rejectionContext.reason}"`
+    : 'MOTIVO: O lojista não gostou da direção anterior.'
 }
 
-INSTRUÃ‡Ã•ES OBRIGATÃ“RIAS PARA ESTA NOVA GERAÃ‡ÃƒO:
-1. O feedback acima TEM PRIORIDADE ABSOLUTA sobre a "Cor da marca" original ou qualquer instruÃ§Ã£o anterior.
-2. Se o lojista pediu uma cor especÃ­fica, USE A COR PEDIDA.
-3. Se houver feedback especÃ­fico, atenda ao feedback mas, a menos que o feedback cite explicitamente, mantenha a assinatura visual alinhada aos propÃ³sitos da loja (segmento, tom de voz, intenÃ§Ã£o e contexto).
-4. Se o lojista nÃ£o gostou do estilo, MUDE COMPLETAMENTE a direÃ§Ã£o criativa. NÃ£o faÃ§a apenas ajustes finos.
+INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
+1. O feedback acima TEM PRIORIDADE ABSOLUTA sobre a "Cor da marca" original ou qualquer instrução anterior.
+2. Se o lojista pediu uma cor específica, USE A COR PEDIDA.
+3. Se houver feedback específico, atenda ao feedback mas, a menos que o feedback cite explicitamente, mantenha a assinatura visual alinhada aos propósitos da loja (segmento, tom de voz, intenção e contexto).
+4. Se o lojista não gostou do estilo, MUDE COMPLETAMENTE a direção criativa. Não faça apenas ajustes finos.
 5. Ignore a {{brandColor}} original se ela entrar em conflito com o que o lojista pediu no feedback acima.`
       : '';
 
@@ -83,7 +80,7 @@ INSTRUÃ‡Ã•ES OBRIGATÃ“RIAS PARA ESTA NOVA GERAÃ‡ÃƒO:
       slogan: input.slogan ?? '',
       city: input.city ?? '',
       state: input.state ?? '',
-      brandColor: input.brandColor ?? 'NÃƒO DEFINIDA (Escolha uma paleta coerente com o segmento)',
+      brandColor: input.brandColor ?? 'NÃO DEFINIDA (Escolha uma paleta coerente com o segmento)',
       rejectionContext: rejectionContextStr,
     });
     console.log('[identity-art-director] prompt carregado', { promptLength: loadedPrompt.length });
@@ -102,19 +99,19 @@ INSTRUÃ‡Ã•ES OBRIGATÃ“RIAS PARA ESTA NOVA GERAÃ‡ÃƒO:
         signal,
         attempt: input.rejectionContext ? (input.rejectionContext.attempt + 1) : 1,
         customPrompt: loadedPrompt, // Passing the full identity art director prompt
-        onCall, // F38.1 (D11): propaga o onCall do caller (imagem + validaÃ§Ã£o)
+        onCall, // F38.1 (D11): propaga o onCall do caller (imagem + validação)
         telemetry, // F46-04 (D9): encaminha o contexto de telemetria (sink injetado)
         visualSignatureConfig: this.visualSignatureConfig,
       });
       console.log('[identity-art-director] AiImageGenerator retornou', { tier: result.tier, assetUrl: result.assetUrl });
 
       if (result.tier === 'typographic') {
-        console.log('[identity-art-director] typographic fallback detectado â€” lanÃ§ando erro');
-        throw new Error('identity_art_director_failed: Typographic fallback nÃ£o Ã© permitido para geraÃ§Ã£o sem logo');
+        console.log('[identity-art-director] typographic fallback detectado — lançando erro');
+        throw new Error('identity_art_director_failed: Typographic fallback não é permitido para geração sem logo');
       }
 
       // F47.1 (D9): o parser roda no AiImageGenerator para TODOS os entry points
-      // e para o retry; aqui apenas consumimos a proveniência já enriquecida no
+      // e para o retry; aqui apenas consumimos a proveni?ncia j? enriquecida no
       // envelope antes do flush. O fallback local cobre apenas fakes antigos.
       const parsedIntent = result.creativeIntent ?? parseCreativeIntent(result.aiResponseMessage);
       const metadataArtDirectorOutput: VisualSignatureMetadataArtDirectorOutput =
@@ -155,7 +152,7 @@ INSTRUÃ‡Ã•ES OBRIGATÃ“RIAS PARA ESTA NOVA GERAÃ‡ÃƒO:
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.log('[identity-art-director] catch â€” erro', { message, stack: error instanceof Error ? error.stack : '' });
+      console.log('[identity-art-director] catch — erro', { message, stack: error instanceof Error ? error.stack : '' });
       throw new Error(`identity_art_director_failed: ${message}`);
     }
   }
