@@ -292,7 +292,7 @@ Plans:
 **Status:** **Planejada - aguardando revis�o humana.** Base OpenSpec em `openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/`; planos em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/`.
 **Depends on:** F50.2 (oferta ativa; `launch_at` preservado), F50.3 (CNPJ can�nico num�rico e alfanum�rico), F32/F33 (freemium e verifica��o cadastral) e F34 (readiness).
 **Requirements**: REQ-50.4-01, REQ-50.4-02, REQ-50.4-03, REQ-50.4-04, REQ-50.4-05, REQ-50.4-06, REQ-50.4-07, REQ-50.4-08, REQ-50.4-09, REQ-50.4-10
-**Plans:** 7/10 plans executed
+**Plans:** 9/10 plans executed
 
 Plans:
 - [x] 50.4-01-PLAN.md - Baseline + Migration M1 (`individual_launch_at` + RPC de ativa��o auditada) e prova SQL de idempot�ncia/recusas.
@@ -302,8 +302,8 @@ Plans:
 - [x] 50.4-05-PLAN.md - N�cleo de aplica��o: tipos/motor puro com coortes e helper de conclus�o/retry com motivos seguros.
 - [x] 50.4-06-PLAN.md - Rotas `/api/store` e `update-cnpj` com contexto de pol�tica, mensagens por coorte e cobertura dos 8 call sites.
 - [x] 50.4-07-PLAN.md - Painel/admin: leitura de `individual_launch_at` e a��o separada de ativa��o com motivo, CSRF e idempot�ncia.
-- [ ] 50.4-08-PLAN.md - Validação real (aplicação): `db push` via CLI 2.75.0 em descartável, ledger, constraints, grants/RLS e suítes SQL.
-- [ ] 50.4-10-PLAN.md - Validação comportamental: concorrência trial � demo � mensal � exceção, precheck/abort, rollback/forward-fix, regressão do parser e destruição do ambiente.
+- [x] 50.4-08-PLAN.md - Validação real (aplicação): `db push` via CLI 2.75.0 em descartável, ledger, constraints, grants/RLS e suítes SQL.
+- [x] 50.4-10-PLAN.md - Validação comportamental: concorrência trial � demo � mensal � exceção, precheck/abort, rollback/forward-fix, regressão do parser e destruição do ambiente.
 - [ ] 50.4-09-PLAN.md - Gates, seguran�a ASVS L1, UAT de regress�o e nova pol�tica no descart�vel, encerramento sem publica��o.
 
 ## Phase 56.1: Contrato produtivo, modelos e fallback
