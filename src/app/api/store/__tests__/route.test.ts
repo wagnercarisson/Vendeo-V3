@@ -39,16 +39,12 @@ vi.mock('@/lib/legal/document-versions', () => ({
   getCurrentVersion: vi.fn(async () => ({ version: 'v1.0', effectiveAt: '2026-07-23T00:00:00Z', summary: null })),
 }));
 
-vi.mock('@/lib/cnpj/validate', () => ({
-  validateCnpj: vi.fn((raw: string) => {
-    const digits = raw.replace(/\D/g, "");
-    if (digits === "12345678000195") return { normalized: "12345678000195" };
-    if (digits === "22345678000195") return { normalized: "22345678000195" };
-    if (digits === "3345678000190") return { normalized: "3345678000190" };
-    if (digits === "11111111111111") return new Error("CNPJ inv\u00e1lido");
-    return new Error("CNPJ inv\u00e1lido");
-  }),
-}));
+// Validador real: normalização canônica + DV oficial (sem reimplementar com
+// replace(/\D/g, "") no mock, que esconderia regressões alfanuméricas).
+vi.mock('@/lib/cnpj/validate', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/cnpj/validate')>();
+  return { validateCnpj: original.validateCnpj };
+});
 
 vi.mock('@/lib/cnpj/mask', () => ({
   maskCnpj: vi.fn(() => "**.***.***/0001-**"),
@@ -83,6 +79,7 @@ vi.mock('@/lib/cnpj/verification-service', async (importOriginal) => {
 vi.mock('@/lib/cnpj/lookup-providers/types', () => ({}));
 
 import * as freemiumRisk from "@/lib/freemium/freemium-risk-service";
+import { hashCnpjRoot } from "@/lib/cnpj/hash";
 
 import { POST } from "../route";
 
@@ -228,6 +225,80 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     const body = await res.json();
     expect(body.onboardingGranted).toBe(false);
     expect(body.verificationStatus).toBe("defer");
+    expect(mockRpc).toHaveBeenCalledWith("create_store_with_cnpj", expect.objectContaining({
+      p_verification_status: "defer",
+      p_verification_reasons: ["api_unavailable"],
+    }));
+  });
+
+  it("persists canonical alphanumeric CNPJ and canonical root hash", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        store: [{ id: "store-alpha", name: "Loja Alpha", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+        verificationStatus: "unverified",
+      },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      name: "Loja Alpha",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.abc.345/01de-35",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    expect(hashCnpjRoot).toHaveBeenCalledWith("12ABC345");
+    expect(mockRpc).toHaveBeenCalledWith("create_store_with_cnpj", expect.objectContaining({
+      p_cnpj_normalized: "12ABC34501DE35",
+      p_cnpj_root_hash: "mocked_hash_64chars",
+    }));
+  });
+
+  it("creates store with DEFER/api_unsupported_format when providers reject the format", async () => {
+    mockResolve.mockResolvedValue({ status: "unsupported_format" });
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        store: [{ id: "store-unsupported", name: "Loja Unsupported", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+        verificationStatus: "defer",
+      },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      name: "Loja Unsupported",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.ABC.345/01DE-35",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.onboardingGranted).toBe(false);
+    expect(body.verificationStatus).toBe("defer");
+    expect(mockRpc).toHaveBeenCalledWith("create_store_with_cnpj", expect.objectContaining({
+      p_cnpj_normalized: "12ABC34501DE35",
+      p_verification_status: "defer",
+      p_verification_reasons: ["api_unsupported_format"],
+    }));
+  });
+
+  it("rejects unknown characters without creating a store or querying providers", async () => {
+    const res = await POST(createRequest({
+      name: "Loja Emoji",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.ABC.345/01DE-35😀",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("CNPJ inválido");
+    expect(mockResolve).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("creates store with rejected status for inactive CNPJ", async () => {

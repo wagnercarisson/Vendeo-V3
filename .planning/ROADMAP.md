@@ -58,6 +58,7 @@
 | 50 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ DemonstraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Gratuita e Validade dos CrÃƒÆ’Ã‚Â©ditos | ConcluÃƒÆ’Ã‚Â­da; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FormalizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Legal e AtivaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da DemonstraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o | Aguardando constituiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da PJ; nÃƒÆ’Ã‚Â£o planejada, nÃƒÆ’Ã‚Â£o ativa e nÃƒÆ’Ã‚Â£o bloqueante para o estado concluÃƒÆ’Ã‚Â­do |
 | 50.2 | ✅ Concluída, verificada, sincronizada e arquivada — Oferta de teste gratuito de 28 dias | 3/3 planos; 42/42 tasks; 4 specs sincronizadas; UAT de produção PASS com saldo de 5 créditos; oferta ativa; archive `2026-10-20-oferta-teste-gratuito-28-dias`; primeira parcela em acompanhamento aberto (não comprovada). Token `50.2` porque `50.1` está reservada à formalização legal/PJ |
+| 50.3 | ✔ Encerrada com limitações aceitas; não publicada | Compatibilidade integral com CNPJ alfanumérico; 7 planos + gap closure 08 (CR-01/WR-01 fechados); UAT `approved_with_limitations` (6 PASS/1 com limitação/4 parciais); OpenSpec **65/69 tasks** (4 parciais: 7.5, 9.9, 9.10, 9.11); archive `2026-10-22-fase-50-3-suporte-cnpj-alfanumerico`; migration só no isolado; F50.4 fora de escopo; sem merge/push/deploy |
 | 51.3 | ✅ Concluída, verificada, sincronizada e arquivada na branch local — não publicada | Integração landing F51.1/SEO F51.2; 12/12 requisitos; MD-01 resolvido em `bad3ce14` após verificação; 4/4 teste real, 24/258; code review/security sem High/Critical; arquivo `2026-10-21-integracao-landing-app-atual`; F56 128/4 e canonical/OG preservados; sem merge main/push/deploy |
 | 56.1 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Contrato produtivo, modelos e fallback | **ConcluÃƒÆ’Ã‚Â­da, verificada, sincronizada e arquivada em 2026-10-06; 11/11 planos; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; archive `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` (motivo vazio bloqueado; salvamento pela tela OK; teste Flare/medium ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ versÃƒÆ’Ã‚Â£o `f314d801-87be-479c-9c01-4d574b9d892f` com exatamente 1 auditoria; par inicial restaurado ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ versÃƒÆ’Ã‚Â£o `b3fa7b83-a0aa-48db-8f02-9bcbdd32bbe8`; histÃƒÆ’Ã‚Â³rico preservado; troca de teste NÃƒÆ’Ã†â€™O ÃƒÆ’Ã‚Â© promoÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Flare); OpenSpec 55/55 tasks (9.4 concluÃƒÆ’Ã‚Â­da); GSD verify-work 10/10 PASS; lifecycle /opsx-verify ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ /opsx-sync ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ /opsx-archive executado e arquivado; 3 specs principais atualizadas + 5 criadas.** Plano 11: guard de isolamento/nÃƒÆ’Ã‚Â£o-regressÃƒÆ’Ã‚Â£o + teste REAL da RPC + gates/UAT sem provider + VERIFICATION. Plano 10: tela admin ÃƒÆ’Ã‚Âºnica do par (page server `force-dynamic` + form cliente) com aviso permanente de nÃƒÆ’Ã‚Â£o-ativa em produÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (nÃƒÆ’Ã‚Â£o-dismissÃƒÆ’Ã‚Â­vel, presente no estado vazio e no sucesso), catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel somente leitura (3 modelos ÃƒÆ’Ã¢â‚¬â€ `low`/`medium`), par vigente/origem/versÃƒÆ’Ã‚Â£o, cobertura de pricing `partial`/`missing` warn-not-block (nÃƒÆ’Ã‚Â£o desabilita salvar) e formulÃƒÆ’Ã‚Â¡rio auditÃƒÆ’Ã‚Â¡vel restrito ao catÃƒÆ’Ã‚Â¡logo com `operationId` estÃƒÆ’Ã‚Â¡vel por fingerprint; link aditivo em `layout.tsx` (`Par de modelos (novo fluxo)`) e 10 testes de UI com API mockada (typecheck/lint verdes; nenhum controle destrutivo; fluxo legado intocado). Plano 08: serviÃƒÆ’Ã‚Â§o server-only de leitura/cache fail-closed do par (TTL + dedupe in-flight + invalidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita) + view admin (catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel/par vigente/origem/versÃƒÆ’Ã‚Â£o/cobertura de pricing por par) + schema Zod strict restrito ao catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel + rota admin GET/PUT auditada por RPC `admin_set_image_model_pair_config` com invalidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de cache (38 testes; typecheck/lint verdes; `git diff` vazio em `ai-model-selection-service.ts`; fluxo legado intocado). Plano 07: resposta pÃƒÆ’Ã‚Âºblica IMG-001 + referÃƒÆ’Ã‚Âªncia opaca UUID v4 + tabela durÃƒÆ’Ã‚Â¡vel imutÃƒÆ’Ã‚Â¡vel `image_generation_failure_diagnoses` + repositÃƒÆ’Ã‚Â³rio server-only `recordDiagnosis`/`findByReference` com client injetÃƒÆ’Ã‚Â¡vel + rota admin de correlaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o read-only; `db reset`/`db lint` isolados EXIT 0; durabilidade cross-instance provada por nova instÃƒÆ’Ã‚Â¢ncia (2 linhas persistidas); 26 testes; infraestrutura preparatÃƒÆ’Ã‚Â³ria do novo fluxo Produto 1:1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de par principal/fallback, snapshot, polÃƒÆ’Ã‚Â­tica de falhas, resposta ao lojista e instrumentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o; fluxo legado intocado. Plano 04: pricing ciente de qualidade ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â leitura aditiva por `quality` em `getModelPricing` (omitido = query legada byte a byte; informado = `.eq("quality")` sem bootstrap), cobertura `complete`/`partial`/`missing` por par `modelo+qualidade` com fail-closed `image_pair_pricing_incomplete` e custo por tentativa com versÃƒÆ’Ã‚Â£o/origem (`image-pair-pricing.ts`; 25 testes; typecheck/lint verdes; `cost-estimator.ts` sem diff). Plano 02: migration local-only aditiva (tabela `image_model_pair_config` + RPC auditada idempotente `admin_set_image_model_pair_config` + registro idempotente dos tres modelos elegiveis sob `campaign_product_image`, linha legada `campaign_image_edit`/`gpt-image-2` preservada; `db reset`/`db lint` EXIT 0 na instancia isolada `vendeo-f561-isolated`; commits `3b463a60`/`b5b18450`). Plano 01: contratos de par/capacidade `campaign_product_image`/taxonomia quota-billing/envelope/barreira fail-closed (95 testes, typecheck e lint verdes). Plano 05: componente puro de snapshot imutavel por operacao (`image-generation-config-snapshot.ts`) - builder tipado, resolucao nova-campanha x correcao, correlacao run/trace e tolerancia ao legado (16 testes; typecheck/lint verdes). Plano 06: classificador puro de elegibilidade ao fallback + maquina de tentativas com teto de 3 chamadas (2 principal + 1 fallback) e nao cobranca simulada de falha tecnica (`image-generation-failure-policy.ts`; 35 testes; typecheck/lint verdes). Plano 09: adapter de imagem do novo fluxo que propaga a qualidade ao wire + runtime isolado de registro do adapter + envelope por tentativa enriquecido de forma aditiva com `quality`/`target`/`attemptNumber` (`upstream-images.ts`, `upstream-images-runtime.ts`; 14 testes; typecheck/lint verdes). Plano 03: migration local-only aditiva do snapshot imutavel por campanha (colunas tipadas, origem fechada sem `default`, trigger de imutabilidade) + dimensao de qualidade no pricing (quality nullable + dois indices parciais de vigencia) + RPC `admin_set_ai_model_price` estendida com `p_quality` opcional ao final (12 parametros); coexistencia de vigencias provada na instancia isolada; `db reset`/`db lint` EXIT 0; commits `a854e54e`/`7e03f10a`/`c5af7c6f` |
 | 56.2a | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ConcluÃƒÆ’Ã‚Â­da, verificada, sincronizada e arquivada | **6/6 planos/summaries; OpenSpec 31/31; UAT 4 pass + 1 N/A; seguranÃƒÆ’Ã‚Â§a 20/20 fechadas, 0 abertas.** Cinco specs principais sincronizadas (2 atualizadas + 3 criadas); archive `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/`. Warning preservado: reset final isolado exit 1/HTTP 502 de causa desconhecida ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© sucesso, nÃƒÆ’Ã‚Â£o foi repetido; investigar antes de depender do procedimento em F56.2b1. IntegraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o real 6/6 e `db lint` anterior exit 0. Estruturas **inativas**; sem provider/chamada paga/`db push`/ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. |
@@ -104,6 +105,7 @@
 **Planos:** diretorio `.planning/phases/48.2.1-otimizacao-prompts-diretor/`.
 
 Plans:
+
 - [x] 48-2-1-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Dominio, migration local e programa (`lab_prompt_programs`, `campaign_intent`/`program_id`/`rubric`, orcamento atomico, `DIRECTOR_PROMPTS`).
 - [x] 48-2-1-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Diagnostico versionado da F37 e matriz de nove cenarios (Checkpoint humano 1; aprovado com diagnosticVersion 3).
 - [x] 48-2-1-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Execucao do Diretor por tipo de campanha e harness (uma chamada `campaign_image`; settle/release de orcamento).
@@ -123,6 +125,7 @@ Plans:
 **Restricoes transversais:** `prompts/` intocado byte a byte; migration local-only (sem `db push` remoto); exatamente uma chamada `campaign_image` por run; toda execucao paga exigiria programa `authorized` e reserva atomica (saldo = `budget_usd - consumed - reserved`).
 
 **Excecao preexistente (externa a F48.2.1):** `src/lib/legal/__tests__/legal-document-versions.test.ts` falha com `ENOENT` (caminho antigo da F50, change arquivada). O gate fail-closed do Plano 09 aceita a suite completa somente com essa excecao exata (1 arquivo / 1 teste) e a registra como follow-up externo.
+
 ## F48.2.2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FundaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da bancada de geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o no Admin/LaboratÃƒÆ’Ã‚Â³rio
 
 **Status:** **ConcluÃƒÆ’Ã‚Â­da, verificada, sincronizada e arquivada** (2026-09-28) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 8/8 planos concluÃƒÆ’Ã‚Â­dos (`48-2-2-01` a `48-2-2-08`), com **CHECKPOINT 1**, **CHECKPOINT 2** e **CHECKPOINT 3 aprovados**. UAT local aprovado com **uma** geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o real controlada (run `f6148ea6-...`, `gpt-image-2.5-flare`, `images`, `low`, `1024x1024`, `succeeded`; custo **calculado** US$ 0,014592 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â provider reportado `null`; UI US$ 0,01). ProduÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o intocada (`base..HEAD` vazio). OpenSpec **verificado, sincronizado e arquivado** em `openspec/changes/archive/2026-09-28-fase-48-2-2-fundacao-bancada-geracao/`. A antiga F48.2.2 (**Auditoria e OtimizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do Prompt do Revisor**) foi **descartada/substituÃƒÆ’Ã‚Â­da** (implementaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o nÃƒÆ’Ã‚Â£o iniciada; sem artefatos mantidos; recuperÃƒÆ’Ã‚Â¡vel pelo histÃƒÆ’Ã‚Â³rico do Git).
@@ -130,6 +133,7 @@ Plans:
 **Plans:** 8 plans
 
 Plans:
+
 - [x] 48-2-2-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Bounded context `src/lib/lab/bench/**`, contratos de isolamento, registry de dimensÃƒÆ’Ã‚Âµes e **SPIKE BLOQUEANTE de modelos/presets (CHECKPOINT 1)**.
 - [x] 48-2-2-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PersistÃƒÆ’Ã‚Âªncia local-first: DDL fora de `supabase/migrations/`, bootstrap local com REVERT, guard de path `bench/{runId}/...` e serviÃƒÆ’Ã‚Â§os de run/artefato.
 - [x] 48-2-2-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Lojas de teste via manifesto local, contrato completo de branding (inclui `typography_direction`) e snapshot de campanha produto/oferta com intenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o resolvida.
@@ -146,6 +150,7 @@ Plans:
 **Objetivo:** construir uma bancada interna, desktop e restrita ÃƒÆ’Ã‚Â  ÃƒÆ’Ã‚Â¡rea administrativa/laboratÃƒÆ’Ã‚Â³rio, capaz de realizar geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes reais e mensurÃƒÆ’Ã‚Â¡veis, separadas do fluxo de produÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.
 
 **Escopo de alto nÃƒÆ’Ã‚Â­vel:**
+
 - operar dentro da ÃƒÆ’Ã‚Â¡rea Admin/LaboratÃƒÆ’Ã‚Â³rio, com acesso restrito;
 - selecionar uma loja real e carregar integralmente o branding persistido (logo/assinatura, nome, paleta, tokens seguros, direÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o tipogrÃƒÆ’Ã‚Â¡fica, estilo visual, tom, personalidade, posicionamento e diretrizes);
 - receber imagens reais do produto; permitir prompt manual nesta primeira fase; permitir seleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de modelo e qualidade;
@@ -165,6 +170,7 @@ Plans:
 **Objetivo:** permitir que a bancada experimente com a identidade **real** das lojas de teste, sem jamais consultar produÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o durante a operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o normal.
 
 **Escopo de alto nÃƒÆ’Ã‚Â­vel:**
+
 - **importaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita e unidirecional** da identidade das lojas de teste do Supabase remoto para o ambiente local;
 - comando **local** (nÃƒÆ’Ã‚Â£o botÃƒÆ’Ã‚Â£o); **nenhuma** consulta remota durante a operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o normal do laboratÃƒÆ’Ã‚Â³rio;
 - **nÃƒÆ’Ã‚Â£o copiar** campanhas, produtos, ofertas, imagens de campanha, usuÃƒÆ’Ã‚Â¡rios, crÃƒÆ’Ã‚Â©ditos, billing ou histÃƒÆ’Ã‚Â³rico operacional;
@@ -180,6 +186,7 @@ Plans:
 **Objetivo:** usar a bancada validada para testar o novo pipeline de campanha Oferta 1:1.
 
 **Escopo de alto nÃƒÆ’Ã‚Â­vel:**
+
 - dados reais da campanha;
 - montagem determinÃƒÆ’Ã‚Â­stica e orientada do prompt de Oferta 1:1;
 - branding persistido como contrato obrigatÃƒÆ’Ã‚Â³rio, sem reinterpretar ou recriar a direÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da marca;
@@ -238,6 +245,47 @@ Plans:
 
 **Acompanhamento aberto:** primeira parcela elegível em `2026-10-27T21:50:52.269093Z` (27/10/2026, 18:50:52 BRT); crédito de 5 esperado na execução diária seguinte do cron. **Não comprovado antecipadamente.** Ponteiro: `openspec/changes/archive/2026-10-20-oferta-teste-gratuito-28-dias/MONITORING.md`.
 
+### Phase 50.3: F50.3 — Compatibilidade integral com CNPJ alfanumérico
+
+**Goal:** Tornar todo o fluxo cadastral compatível com CNPJ numérico e alfanumérico canônico (14 caracteres; 12 `[A-Z0-9]` + 2 `[0-9]`), com normalização estrita, DV oficial, máscara e inputs fail-closed, provedores com capacidade/fallback e cache seguro, APIs e atomicidade preservadas, migration fail-closed e provas em PostgreSQL local isolado, sem alterar freemium legado, oferta F50.2, ownership, RLS, saldos ou enrollments.
+
+**Status:** **Encerrada com limitações aceitas; não publicada** (2026-10-22). 7 planos + gap closure `50.3-08` (CR-01/WR-01 fechados); UAT `approved_with_limitations`; OpenSpec **65/69 tasks** (4 parciais aceitas: 7.5, 9.9, 9.10, 9.11 — mantidas abertas); change arquivada em `openspec/changes/archive/2026-10-22-fase-50-3-suporte-cnpj-alfanumerico/`; migration aplicada **somente** no isolado `vendeo-f562a-isolated`; produção intocada; sem merge, push ou deploy.
+
+**Fonte normativa:** `openspec/changes/fase-50-3-suporte-cnpj-alfanumerico/` (proposal, design, 7 delta specs, tasks; `validate --strict` valid).
+
+**Depends on:** F50.2 (concluída; oferta ativa preservada), F33 (verificação CNPJ), F32 (freemium por raiz) e F34 (readiness). F50.4 (oferta individualizada por CNPJ completo) permanece fora de escopo e futura.
+
+**Requirements**: REQ-50.3-01, REQ-50.3-02, REQ-50.3-03, REQ-50.3-04, REQ-50.3-05, REQ-50.3-06, REQ-50.3-07, REQ-50.3-08, REQ-50.3-09, REQ-50.3-10
+
+**Gap closure:** `50.3-08-PLAN.md` - CR-01 (bloqueio fiscal central em `save()`, `hasExistingCnpj` do servidor, drift sem bypass) e WR-01 (erro de submit obsoleto), ambos **fechados** no re-review.
+**Follow-ups preservados:** WR-02, IN-01..IN-07, F50.3-UAT-01/02/03; limitações 1, 4, 5, 7 e 9. `supportsAlphanumeric=false` (suporte real não comprovado).
+**Plans:** 7 plans + 1 gap-closure plan
+Plans:
+**Wave 1**
+
+- [x] 50.3-01-PLAN.md — Núcleo CNPJ: normalização estrita, DV oficial, máscara fail-closed, input-mask, vetores oficiais e regressão numérica (Checkpoint A).
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 50.3-02-PLAN.md — Provedores e cache: `supportsAlphanumeric`, 404 ambíguo, 400/422, agregação de fallback e cache canônico sem falso `not_found`.
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 50.3-03-PLAN.md — APIs e persistência canônica: store, update-cnpj, lookup, reconsult, admin create-test; `cnpjResult.normalized` em todo hash/duplicidade/RPC.
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 50.3-04-PLAN.md — UI onboarding fail-closed: erro local, último valor válido, sequência/abort de lookup, bloqueio de autosave/submit (`fiscalWriteBlocked`).
+- [x] 50.3-06-PLAN.md — Migration fail-closed + prova SQL no isolado `vendeo-f562a-isolated` (Checkpoint B; aplicação bloqueante local).
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [x] 50.3-05-PLAN.md — UI legado/admin: `cnpj-update-form`, `create-test-store`, exibições mascaradas e contratos de apresentação.
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [x] 50.3-07-PLAN.md — Regressão, gates automáticos, documentação (limitação `0001`/F50.4) e UAT manual separado.
+
 ## Phase 56.1: Contrato produtivo, modelos e fallback
 
 **Goal:** preparar a infraestrutura produtiva do novo fluxo de imagem Produto 1:1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o administrativa auditÃƒÆ’Ã‚Â¡vel de um par principal e um par fallback (modelo + qualidade) restrita a um catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel fechado, contrato de snapshot imutÃƒÆ’Ã‚Â¡vel por operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, polÃƒÆ’Ã‚Â­tica explÃƒÆ’Ã‚Â­cita de falhas e fallback, resposta pÃƒÆ’Ã‚Âºblica identificÃƒÆ’Ã‚Â¡vel sem vazar motivo interno, e instrumentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de qualidade/telemetria/custo ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â como componentes e testes simulados, sem ativar geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, sem debitar crÃƒÆ’Ã‚Â©dito e sem alterar o fluxo legado.
@@ -253,6 +301,7 @@ Plans:
 **Fonte normativa (arquivada):** `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `proposal.md`, `design.md` (D1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“D12), `tasks.md` (55 tasks em 10 seÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes) e 8 specs (`image-generation-model-pair-config`, `image-generation-config-snapshot`, `image-generation-failure-policy`, `image-generation-support-reference`, `image-generation-instrumentation`, `ai-model-catalog`, `ai-model-pricing`, `ai-invocation-gateway`). `openspec validate --strict` vÃƒÆ’Ã‚Â¡lido.
 
 **Escopo de alto nÃƒÆ’Ã‚Â­vel:**
+
 - configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o global auditÃƒÆ’Ã‚Â¡vel (RPC `SECURITY DEFINER`, motivo obrigatÃƒÆ’Ã‚Â³rio, `operation_id`) de par principal/fallback `modelo + qualidade`, isolada de `ai_model_selection`;
 - catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel fechado: `gpt-image-2`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst` em `low`/`medium`, registrados no `ai_model_catalog` sob capacidade prÃƒÆ’Ã‚Â³pria `campaign_product_image` (sem vazar para capacidades legadas nem ativar geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o);
 - escolha inicial registrada como decisÃƒÆ’Ã‚Â£o humana: principal `gpt-image-2.5-sunburst / medium`, fallback `gpt-image-2 / medium` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **nÃƒÆ’Ã‚Â£o ativa em produÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o**;
@@ -291,11 +340,13 @@ Plans:
 **ReconciliaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o:** substitui parte da change `fase-56-2-novo-fluxo-geracao-produto-1-1` (relocada para `openspec/changes/archive/2026-10-06-fase-56-2-novo-fluxo-geracao-produto-1-1/`; ver `RECONCILIATION.md`). A change original ÃƒÆ’Ã‚Â© preservada e marcada como substituÃƒÆ’Ã‚Â­da; nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© descartada silenciosamente.
 
 **DecisÃƒÆ’Ã‚Âµes fechadas pelo responsÃƒÆ’Ã‚Â¡vel (2026-10-06):**
+
 - Nomes literais das chaves: `product_1_1_test_stores_enabled` (lojas com `is_test_store=true`) e `product_1_1_all_stores_enabled` (todas as lojas); ambas desligadas por padrÃƒÆ’Ã‚Â£o e alterÃƒÆ’Ã‚Â¡veis pela RPC auditada existente `admin_update_feature_flag`. PrecedÃƒÆ’Ã‚Âªncia: a chave **geral prevalece**.
 - SeleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o: **domÃƒÆ’Ã‚Â­nio puro + componentes React apresentacionais, sem wiring**, nÃƒÆ’Ã‚Â£o montados no fluxo do lojista; a regra "Original exige exatamente uma imagem de produto (identidade nÃƒÆ’Ã‚Â£o conta)" vive no domÃƒÆ’Ã‚Â­nio como **erro de campo** (nunca `IMG-001`).
 - UI-SPEC: **pular nesta fatia** (`--skip-ui`) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â os componentes nÃƒÆ’Ã‚Â£o serÃƒÆ’Ã‚Â£o montados; seguir `openspec/design-system/MASTER.md`; criar UI-SPEC na F56.2b1, quando a interface for conectada e visÃƒÆ’Ã‚Â­vel.
 
 **Escopo de alto nÃƒÆ’Ã‚Â­vel:**
+
 - registro das duas chaves em `feature_flags` (default desligado) + funÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o pura/server-side de decisÃƒÆ’Ã‚Â£o fail-closed com precedÃƒÆ’Ã‚Âªncia da chave geral;
 - domÃƒÆ’Ã‚Â­nio de seleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita de intenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (Oferta/Destaque/Exclusivo) e direÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de fundo (EstÃƒÆ’Ã‚Âºdio/Ambientado/Original) + componentes apresentacionais inativos; regra de Original e erro de campo; teste de nÃƒÆ’Ã‚Â£o-exposiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ao lojista;
 - mÃƒÆ’Ã‚Â³dulo produtivo versionado e congelado (Produto v4/compositor v5/trÃƒÆ’Ã‚Âªs intenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes/fundo escolhido), sem leitura de configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o mutÃƒÆ’Ã‚Â¡vel da bancada em runtime; testes de **equivalÃƒÆ’Ã‚Âªncia** com a bancada F48.2.6 aprovada;
@@ -313,6 +364,7 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
+
 - [x] 56-2-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **ConcluÃƒÆ’Ã‚Â­do**; summary `56-2-01-SUMMARY.md` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Chaves de ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o em `feature_flags` (desligadas) + decisÃƒÆ’Ã‚Â£o server-side fail-closed com precedÃƒÆ’Ã‚Âªncia + migration local-only (nÃƒÆ’Ã‚Â£o aplicada).
 - [x] 56-2-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **ConcluÃƒÆ’Ã‚Â­do**; summary `56-2-02-SUMMARY.md` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â DomÃƒÆ’Ã‚Â­nio puro e componentes apresentacionais inativos de seleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de intenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/fundo (regra de Original, erro de campo, nÃƒÆ’Ã‚Â£o-exposiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o).
 - [x] 56-2-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **ConcluÃƒÆ’Ã‚Â­do**; summary `56-2-03-SUMMARY.md` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â MÃƒÆ’Ã‚Â³dulo produtivo de composiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o versionada (Produto v4/compositor v5), equivalente em texto/blocos/todas as versÃƒÆ’Ã‚Âµes ÃƒÆ’Ã‚Â  bancada F48.2.6.
@@ -353,6 +405,7 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
+
 - [x] 56.2.1-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â DiagnÃƒÆ’Ã‚Â³stico read-only do HTTP 502 e gate verificÃƒÆ’Ã‚Â¡vel de identidade/isolation/serviÃƒÆ’Ã‚Â§os/schema; registra serviÃƒÆ’Ã‚Â§os obrigatÃƒÆ’Ã‚Â³rios, exclusÃƒÆ’Ã‚Âµes intencionais (Analytics) e execuÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o elevada (bloqueia migrations/testes transacionais) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **ConcluÃƒÆ’Ã‚Â­do (2026-10-08): gate `56.2.1-01-GATE.md` APPROVED (12/12); checkpoint humano aprovado (`vendeo-f562a-isolated`, API 127.0.0.1:56321, DB 56322); summary `56.2.1-01-SUMMARY.md`; sem migrations/testes transacionais/reset/provider/ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o**
 - [x] 56.2.1-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â AutorizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o independente auditÃƒÆ’Ã‚Â¡vel e decisÃƒÆ’Ã‚Â£o fail-closed, stage operacional off ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **ConcluÃƒÆ’Ã‚Â­do (2026-10-08): migration local-only append-only + RPCs auditadas (recusa estÃƒÆ’Ã‚Â¡gio habilitador); decisÃƒÆ’Ã‚Â£o pura fail-closed + serviÃƒÆ’Ã‚Â§o + API admin (requireAdmin); exceÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o estreita ÃƒÆ’Ã‚Â  guarda F56.2a (sÃƒÆ’Ã‚Â³ a rota autorizada importa authorization); summary `56.2.1-02-SUMMARY.md`; migration NÃƒÆ’Ã†â€™O aplicada; sem testes transacionais**
 - [x] 56.2.1-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Guard de campos exclusivos do novo fluxo conectado antes de `GenerateImageRequestSchema.safeParse` (route.ts:180) e da reserva, compatibilidade legada ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **ConcluÃƒÆ’Ã‚Â­do (2026-10-08): detector de campo exclusivo (backgroundDirection) sobre o corpo bruto + guard `assertSubmissionEligible` conectado antes do `safeParse` e da reserva; contexto server-side (`is_test_store`; instÃƒÆ’Ã‚Â¢ncia/ambiente de `NEXT_PUBLIC_SUPABASE_URL`); exceÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o estreita da guarda F56.2a (sÃƒÆ’Ã‚Â³ a rota generate-image importa submission/** + o mÃƒÆ’Ã‚Â³dulo exato authorization-service); legado preservado; summary `56.2.1-03-SUMMARY.md`; sem migrations/testes transacionais/ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o**
@@ -379,6 +432,7 @@ Plans:
 **Ondas (desbloqueio):** Onda 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `56.2.2-01` (elegibilidade UI), `56.2.2-02` (snapshot/preflight/histÃƒÆ’Ã‚Â³rico), `56.2.2-03` (inÃƒÆ’Ã‚Â­cio de tentativa atÃƒÆ’Ã‚Â´mico/migration), `56.2.2-05` (arte 1024ÃƒÆ’Ã¢â‚¬â€1024); Onda 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `56.2.2-04` (orquestraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/roteamento/reenvio; depende de 01/02/03/05); Onda 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `56.2.2-06` (estados de resultado + portÃƒÆ’Ã‚Â£o de download), `56.2.2-08` (copy/instrumentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o; depende de 04); Onda 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `56.2.2-07` (resoluÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o administrativa auditada; depende de 03/04/05/06); Onda 5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `56.2.2-09` (harness isolado Postgres/Storage reais; depende de 02ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“08; `autonomous: false`); Onda 6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `56.2.2-10` (validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/fechamento + checkpoint humano; depende de 01ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“09; `autonomous: false`). *Ondas normalizadas por dependÃƒÆ’Ã‚Âªncia estrutural (2026-10-11): 10 planos em 6 ondas; a execuÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o permanece sequencial e hÃƒÆ’Ã‚Â¡ parada humana apÃƒÆ’Ã‚Â³s o Plano 06, antes do Plano 07.*
 
 Plans:
+
 - [x] 56.2.2-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Elegibilidade: formulÃƒÆ’Ã‚Â¡rio elegÃƒÆ’Ã‚Â­vel (DireÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de fundo), gating de payload legado e regra Original. (REQ-56.2.2-01)
 - [x] 56.2.2-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Snapshot congelado antes de reserva/provider; preflight fail-closed (pricing complete para principal e fallback); histÃƒÆ’Ã‚Â³rico append-only. (REQ-56.2.2-02, -03) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **ConcluÃƒÆ’Ã‚Â­do (2026-10-12):** snapshot + evidÃƒÆ’Ã‚Âªncia congelada (briefing/referÃƒÆ’Ã‚Âªncias/versÃƒÆ’Ã‚Âµes de composiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o) com identidade `campaign_id`+`operation_id` explÃƒÆ’Ã‚Â­cita (F6/C3) e idempotÃƒÆ’Ã‚Âªncia; preflight fail-closed resolve a config UMA vez (F3) e exige pricing `complete` para principal/fallback (nÃƒÆ’Ã‚Â£o persiste snapshot ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â C5); histÃƒÆ’Ã‚Â³rico append-only reconstruÃƒÆ’Ã‚Â­vel que recusa operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o terminal/incerta (F6). 3/3 tarefas; `56.2.2-02-SUMMARY.md`; contratos 25/25; `src/lib/product-1-1` 179/179; typecheck 0. Migration `20261009000003` **apenas autorada (LOCAL-ONLY), NÃƒÆ’Ã†â€™O aplicada**; flags `false`; autorizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o `off`; sem `db push`/provider/ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. Cobertura `REQ-56.2.2-02`/`-03` **PARCIAL** (concluem com a ligaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do Plano 04).
 - [x] 56.2.2-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â InÃƒÆ’Ã‚Â­cio de tentativa atÃƒÆ’Ã‚Â´mico no Postgres (migration local-only + cliente RPC): duas requisiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes nÃƒÆ’Ã‚Â£o chamam o provider duas vezes. (REQ-56.2.2-05) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **ConcluÃƒÆ’Ã‚Â­do (2026-10-12):** migration `20261009000001` **apenas autorada (LOCAL-ONLY), NÃƒÆ’Ã†â€™O aplicada** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `product_1_1_generation_attempt_claims` (UNIQUE por tentativa + ÃƒÆ’Ã‚Â­ndice ÃƒÆ’Ã‚Âºnico parcial `in_progress`) e relaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o PERSISTIDA do resultado desconhecido `product_1_1_generation_outcomes` (C1, imutÃƒÆ’Ã‚Â¡vel); RPCs acquire/finish/get-by-campaign/record sob a MESMA trava `FOR UPDATE` da linha de crÃƒÆ’Ã‚Â©dito (C4, reusada no Plano 07); teto 2+1 por alvo (F1; fallback na 2Ãƒâ€šÃ‚Âª chamada); recusa terminal/desconhecida (F6/C1) e precedÃƒÆ’Ã‚Âªncia terminal (I2); cliente server-only `ProductOneToOneAttemptStartClient`. 2/2 tarefas; typecheck 0; contrato 22/22; `src/lib/product-1-1` 219/219. **CorreÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes de revisÃƒÆ’Ã‚Â£o (2026-10-12):** F1 (sequÃƒÆ’Ã‚Âªncia/estado prÃƒÆ’Ã‚Â©vio no `acquire`), F2 (replay divergente do outcome ÃƒÂ¢Ã¢â‚¬Â¡Ã¢â‚¬â„¢ `operation_identity_conflict`) e F3 (envelopes fail-closed no cliente); commits `0fee7533`/`8b9eefd8`/`4277313f`; contrato 34/34; flags `false`; sem `db push`/provider (migration LOCAL-ONLY segue NÃƒÆ’Ã†â€™O aplicada). Cobertura `REQ-56.2.2-05` **PARCIAL** (fecha com a ligaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do Plano 04).
@@ -412,16 +466,27 @@ Plans:
 
 Plans:
 **Wave 1** *(sem dependÃƒÆ’Ã‚Âªncias)*
+
 - [x] 56.2.3-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FundaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o: identidade/lease da tentativa + `copy-state.ts`/drenador identificado + contrato (REQ-56.2.3-07, -01, -03)
+
 **Wave 2** *(blocked on Wave 1 completion)*
+
 - [x] 56.2.3-06-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â AquisiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o atÃƒÆ’Ã‚Â´mica (RPC sob trava C4) + migraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de dados (backfill transacional) + cliente server-only (REQ-56.2.3-07, -06, -03, -04)
+
 **Wave 3** *(blocked on Wave 2 completion)*
+
 - [x] 56.2.3-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PolÃƒÆ’Ã‚Â­tica (30s/5s/10s, teto 6) + serviÃƒÆ’Ã‚Â§o server-only + **sem fallback dentro da tentativa** (fallback = tentativa seguinte) + wiring da tentativa inicial (REQ-56.2.3-06, -03, -02, -08, -05, -09, -01)
+
 **Wave 4** *(blocked on Wave 3 completion)*
+
 - [x] 56.2.3-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Rota + barreira de nÃƒÆ’Ã‚Â£o-ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/identidade + ownership + G-NA (REQ-56.2.3-04, -05, -08, -01, -10, -03, -07)
+
 **Wave 5** *(blocked on Wave 4 completion)*
+
 - [x] 56.2.3-04-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â UI (7 estados, lease/espera server-side, agenda da 2Ãƒâ€šÃ‚Âª automÃƒÆ’Ã‚Â¡tica, CTA manual) (REQ-56.2.3-02, -03, -01, -10, -06, -08, -07)
+
 **Wave 6** *(blocked on Wave 5 completion)*
+
 - [x] 56.2.3-05-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â [BLOCKING] VerificaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o pela rota real + backfill + gates/rastreabilidade + checkpoint humano (REQ-56.2.3-01..10)
 
 **Canonical refs:** `openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/` (proposal, design B2A-D1..D6, spec `product-1-1-copy-recovery`, tasks Ãƒâ€šÃ‚Â§1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â§5, UI-SPEC, RECONCILIATION), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/campaign-preview.md`, `src/lib/product-1-1/copy/copy-state.ts`, `src/app/(app)/campanhas/[id]/client.tsx`, `src/components/flow/generation-progress.tsx`, `supabase/migrations/20261009000005_f56_2b1b_copy_state.sql` (b1b, LOCAL-ONLY).
@@ -443,21 +508,34 @@ Plans:
 **Plans:** 10 plans (`56.2.4-01..-10`) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **10/10 concluÃƒÆ’Ã‚Â­dos** (`56.2.4-01..-06` + `56.2.4-08` + `56.2.4-09` + `56.2.4-10` + `56.2.4-07` fechamento); **fase CONCLUÃƒÆ’Ã‚ÂDA (entrega B2.2 INATIVA; checkpoint `approved_with_limitations`)**; **OpenSpec verificado/sincronizado/arquivado (45/45 tasks; archive `2026-10-16-fase-56-2b2b-.../`)**
 
 **Wave 1**
+
 - [x] 56.2.4-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â [BLOCKING migration] Encerramento PF sob a trava C4 + estorno idempotente (migration LOCAL-ONLY apenas autorada) + contrato (REQ-56.2.4-05, -06) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-15** (`56.2.4-01-SUMMARY.md`)
 - [x] 56.2.4-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â RecuperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de arte no Storage privado sem regenerar (serviÃƒÆ’Ã‚Â§o + rota onde o lojista apenas solicita) + G-NA (REQ-56.2.4-01, -02, -03, -10) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-15** (`56.2.4-02-SUMMARY.md`)
+
 **Wave 2**
+
 - [x] 56.2.4-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Gatilho PF (4a) no ponto de decisÃƒÆ’Ã‚Â£o terminal + cliente de encerramento + Camada 1 (simulaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o) (REQ-56.2.4-04, -05, -06, -07, -10, -11) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-15** (`56.2.4-03-SUMMARY.md`)
 - [x] 56.2.4-04-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Encerramento autorizado e auditado (abandono de claim exclusivo do caminho autorizado) + migration LOCAL-ONLY (REQ-56.2.4-05, -08) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-15** (`56.2.4-04-SUMMARY.md`)
 - [x] 56.2.4-05-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â UI `refunded` (mensagem exata) + formulÃƒÆ’Ã‚Â¡rio restaurado server-side + prova de render (REQ-56.2.4-07, -08, -10) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-15** (`56.2.4-05-SUMMARY.md`)
+
 **Wave 3**
+
 - [x] 56.2.4-06-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â [BLOCKING] RevisÃƒÆ’Ã‚Â£o de autorizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes + harness isolado + aplicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o LOCAL-ONLY + Camada 2 (efeitos reais a-j) (REQ-56.2.4-01..08, -10, -11) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-15** (`56.2.4-06-SUMMARY.md`); correÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes de prova pÃƒÆ’Ã‚Â³s-revisÃƒÆ’Ã‚Â£o (`4674aaf7`/`24c8cafd`/`de7c053c`)
+
 **Wave 5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â reparo 1 (CR-01/SEC-01)**
+
 - [x] 56.2.4-08-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â [BLOCKING] FENCE de publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (publication_state/token/state_epoch; begin antes do upload; mark/deliver com token; confirm_existing_art; exceÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o admin restrita; PF completo com epoch; barreira real) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-16** (`56.2.4-08-SUMMARY.md`); aplicado **sÃƒÆ’Ã‚Â³** no isolado (`20261016000001`, hash `2C2D81AEÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`); Camada 2 **104/0 skipped**
+
 **Wave 6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â reparo 2 (CR-02/CR-03)**
+
 - [x] 56.2.4-09-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â RecuperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o alcanÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â¡vel pela interface + terminal do iniciador (CR-02/CR-03) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-16** (`56.2.4-09-SUMMARY.md`); aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita + `refunded`ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢detalhe (reutiliza `RefundedPanel`); seams por **rota real** (e/e2/f); **cenÃƒÆ’Ã‚Â¡rios validados por TESTES AUTOMATIZADOS** (inspeÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o visual nova NÃƒÆ’Ã†â€™O realizada)
+
 **Wave 7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â reparo 3 (mÃƒÆ’Ã‚Â©dios)**
+
 - [x] 56.2.4-10-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fidelidade da restauraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o + ferramentas (mÃƒÆ’Ã‚Â©dios) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-16** (`56.2.4-10-SUMMARY.md`); rascunho/imagem por **identidade enviada** (prÃƒÆ’Ã‚Â©-requisiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, proteÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o contra adoÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o legada do stream); **checkbox ilustrativo + texto livre separados** (regra estrita); intenÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/selo = seleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita; runner `--no-install`; **fixture parcial ÃƒÂ¢Ã¢â‚¬Â¡Ã¢â‚¬â„¢ parada explÃƒÆ’Ã‚Â­cita** (validador puro de ledger/loja/snapshot/evidÃƒÆ’Ã‚Âªncia); provas **comportamentais com fatos simulados** + estÃƒÆ’Ã‚Â¡ticas + **Camada 2 isolada 99+9/0 skipped**; **inspeÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o visual nova NÃƒÆ’Ã†â€™O realizada** (`56.2.4-10-INSPECTION.md` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â roteiro + necessidade de fixture apresentada)
+
 **Wave 8 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â fechamento reconciliado (Plano 07)**
+
 - [x] 56.2.4-07-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Gates + evidÃƒÆ’Ã‚Âªncia do gate D13 (nÃƒÆ’Ã‚Â£o resolvido) + checkpoint humano STOP (REQ-56.2.4-01..11) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **CONCLUÃƒÆ’Ã‚ÂDO 2026-10-16 (pÃƒÆ’Ã‚Â³s 08ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“10); CHECKPOINT APROVADO `approved_with_limitations` (escopo B2.2 INATIVA/LOCAL; inspeÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o adicional nÃƒÆ’Ã‚Â£o realizada)** (`56.2.4-VERIFICATION.md`, `56.2.4-UAT.md`, `56.2.4-07-SUMMARY.md`) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â gates funcionais revalidados (typecheck/lint/build 0; local 30/711 + 52/551; Camada 2 isolada 99+9/0 skipped; OpenSpec valid; diff limpo) + **gates INDEPENDENTES reexecutados** (code review **0 high/critical**; seguranÃƒÆ’Ã‚Â§a **0 high/critical open**; achados CR-01..03/WR-01..04/SEC-01..05/UF-01 **RESOLVED**); D13 **nÃƒÆ’Ã‚Â£o resolvido**; UAT **`approved_with_limitations`**; **OpenSpec verificado/sincronizado/arquivado (45/45 tasks)**
 
 **Canonical refs:** `openspec/changes/archive/2026-10-16-fase-56-2b2b-recuperacao-de-imagem-estorno-e-d13-produto-1-1/` (proposal, design B2B-D1..D9, specs `product-1-1-artifact-delivery` / `product-1-1-campaign-credit-billing` / `product-1-1-generation-orchestration`, tasks Ãƒâ€šÃ‚Â§1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â§6, UI-SPEC, RECONCILIATION), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/campaign-preview.md`, `src/lib/product-1-1/orchestration/generation-orchestrator.ts`, `src/lib/product-1-1/pending/resolve-pending-operation.ts`, `src/app/api/admin/product-1-1-pending/route.ts`, `src/app/(app)/campanhas/[id]/client.tsx`, `src/components/flow/use-campaign-form.ts`, `src/hooks/use-input-preservation.ts`, `supabase/migrations/20261009000002_*` (resoluÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o auditada, b1b LOCAL-ONLY), `supabase/migrations/20261009000005_f56_2b1b_copy_state.sql` (b1b, LOCAL-ONLY), `scripts/run-f56-2b1b-isolated-integration.ps1` (harness de prova isolado).
@@ -475,6 +553,7 @@ Plans:
 **Plans:** 4 plans (`56.2.5-01..04`); diretÃƒÆ’Ã‚Â³rio `.planning/phases/56.2.5-f56-2b2c-autorizacao-estreita-e-teste-real-produto-1-1/`.
 
 Plans:
+
 - [ ] 56.2.5-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PreparaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, dependÃƒÆ’Ã‚Âªncias, ambiente reutilizado, preservaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da quick e **Checkpoint A (prÃƒÆ’Ã‚Â©-implementaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o)** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â `autonomous: false` (REQ-56.2.5-06, -08, -09, -11).
 - [ ] 56.2.5-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Ajuste mÃƒÆ’Ã‚Â­nimo da barreira** (migration LOCAL-ONLY autorada + RPC `isolated_pilot`+`test_stores`) + rota admin + contrato/negativos (REQ-56.2.5-01..06, -12).
 - [ ] 56.2.5-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Controle de gasto mÃƒÆ’Ã‚Â­nimo por chamada** (contabilidade por `call_id`/`kind`; acumulado entre requisiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes e lojas; piloto **sequencial por campanha** com distinÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o `in_flight`/`unknown` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â dono persistido, sem liberaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o por tempo; **copy obrigatÃƒÆ’Ã‚Â³ria** em todos os caminhos; cap fail-closed) + wiring no orquestrador e na copy + contrato (REQ-56.2.5-07, -10).
@@ -517,6 +596,7 @@ Plans:
 **Plans:** 7 plans (`56.2.7-01..07`); diretÃƒÆ’Ã‚Â³rio `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/`.
 
 Plans:
+
 - [x] 56.2.7-01-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Migrations da via `all_stores` e da RPC coordenadora + contratos.
 - [x] 56.2.7-02-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Rotas admin e gate de gasto.
 - [x] 56.2.7-03-PLAN.md ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Painel de ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o e testes de UI.

@@ -46,6 +46,26 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | REQ-50.2-11 | Exclusão mensal permanente por enrollment; legado intacto | 01/03 |
 | REQ-50.2-12 | UI/status/próxima parcela/cron diário/retry/pós-teste | 02/03 |
 
+## F50.3 — Encerrada com limitações aceitas; não publicada (Compatibilidade integral com CNPJ alfanumérico)
+
+**Fonte (arquivada):** `openspec/changes/archive/2026-10-22-fase-50-3-suporte-cnpj-alfanumerico/` (7 delta specs sincronizadas). **Planos:** `.planning/phases/50.3-f50-3-compatibilidade-integral-com-cnpj-alfanumerico/`. **Status:** **encerrada com limitações aceitas; não publicada** (2026-10-22) — UAT `approved_with_limitations`; OpenSpec 65/69 tasks (4 parciais: 7.5, 9.9, 9.10, 9.11); migration aplicada somente no isolado; produção intocada.
+
+| REQ-ID | Cobertura | Plano |
+|---|---|---|
+| REQ-50.3-01 | Normalização canônica estrita, DV oficial, hash de raiz e mascaramento fail-closed | 01 |
+| REQ-50.3-02 | Inputs e formatadores fail-closed; erro local, bloqueio de lookup/submissão, autosave e respostas em voo | 04, 05 |
+| REQ-50.3-03 | Provedores com capacidade alfanumérica, 404 ambíguo, fallback seguro e cache canônico sem falso not_found | 02 |
+| REQ-50.3-04 | APIs, schemas e contratos de criação/atualização/reconsulta/lookup/admin aceitam o formato canônico | 03 |
+| REQ-50.3-05 | Persistência atômica, constraint PostgreSQL e migration fail-closed sem reescrever dados | 06 |
+| REQ-50.3-06 | Preservação de unicidade global, raiz/hash, freemium legado, F50.2, ownership, RLS, saldos e enrollments | 03, 05 |
+| REQ-50.3-07 | Testes contratuais dos provedores distinguem mocks de evidência real; sem provedor pago ou flag | 02 |
+| REQ-50.3-08 | Migration e provas em PostgreSQL local isolado com destino fixado, pré/pós-checagem e rollback documentado | 06 |
+| REQ-50.3-09 | Regressão numérica e cobertura de criação, atualização, reconsulta, cache hit/miss, duplicidade e erros | 01, 07 |
+| REQ-50.3-10 | Validação automática separada da aprovação visual humana; limitação 0001 registrada; F50.4 fora de escopo | 07 |
+'
+**Cobertura reconciliada:** REQ-50.3-01, -02, -05, -06, -07, -08 e -10 **comprovados**; REQ-50.3-03, -04 e -09 **comprovados com limitação aceita** (cache/representações, criação live e sucesso numérico live). Follow-ups preservados em `FOLLOW-UPS.md` (WR-02, IN-01..IN-07, F50.3-UAT-01/02/03).
+'
+
 ## F56.1 — Cobertura concluída (Contrato produtivo, modelos e fallback)
 
 **Fonte (arquivada):** `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` (8 specs). **Status:** COBERTURA CONCLUÍDA da F56.1 — 11/11 planos, UAT humano local aprovado, GSD 10/10, OpenSpec 55/55, verificada/sincronizada/arquivada em 2026-10-06 em `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`. Cada requirement OpenSpec abaixo mapeia para um REQ-ID usado no frontmatter `requirements` dos planos e no gate de cobertura (todos concluídos).

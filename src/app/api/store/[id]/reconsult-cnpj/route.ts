@@ -38,11 +38,12 @@ export const POST = apiHandler(async (
 
     const lookupResult = await lookupService.resolve(cnpjNormalized);
 
-    if (lookupResult.status === "unavailable") {
+    if (lookupResult.status === "unavailable" || lookupResult.status === "unsupported_format") {
       return NextResponse.json(
         {
           error: "Não foi possível consultar os dados do CNPJ agora. Tente novamente mais tarde.",
-          lookupStatus: "unavailable",
+          // Reflexo explícito do status agregado (sem vazar detalhe de provedor).
+          lookupStatus: lookupResult.status,
         },
         { status: 503 }
       );

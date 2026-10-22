@@ -47,6 +47,13 @@ export const GET = apiHandler(async (request: NextRequest) => {
       });
     }
 
+    if (result.status === "unsupported_format") {
+      return NextResponse.json({
+        status: "unsupported_format",
+        message: "A consulta cadastral ainda não suporta este formato de CNPJ. Tente novamente mais tarde.",
+      });
+    }
+
     return NextResponse.json({
       status: "unavailable",
       message: "Não foi possível consultar os dados deste CNPJ agora. A loja será criada sem créditos iniciais. Você pode tentar novamente em 'Dados da Loja'.",

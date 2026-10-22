@@ -4,7 +4,14 @@ import { normalizeCnpj } from "./normalize";
 type SafeLookupResult =
   | { status: "resolved"; data: CnpjLookupData }
   | { status: "not_found" }
+  | { status: "unsupported_format" }
   | { status: "unavailable" };
+
+const CACHE_TTL_HOURS = 24;
+
+function hasAlphanumericChars(cnpj: string): boolean {
+  return /[A-Z]/.test(cnpj);
+}
 
 export interface CnpjLookupCache {
   get(cnpjNormalized: string): Promise<{ outcome: string; data: unknown; expiresAt: Date } | null>;
@@ -40,27 +47,38 @@ export class CnpjVerificationService {
     const primaryResult = await this.safeLookup(this.primaryProvider, normalized);
 
     if (primaryResult.status === "resolved") {
-      await this.cache.set(normalized, "resolved", primaryResult.data, 24);
+      await this.cache.set(normalized, "resolved", primaryResult.data, CACHE_TTL_HOURS);
       return primaryResult;
     }
 
     if (primaryResult.status === "not_found") {
-      await this.cache.set(normalized, "not_found", null, 24);
+      // safeLookup only lets conclusive not_found through (numeric or declared capability).
+      await this.cache.set(normalized, "not_found", null, CACHE_TTL_HOURS);
       return { status: "not_found" };
     }
 
+    // unavailable | unsupported_format | ambiguous alphanumeric 404 → fallback.
     const fallbackResult = await this.safeLookup(this.fallbackProvider, normalized);
 
     if (fallbackResult.status === "resolved") {
-      await this.cache.set(normalized, "resolved", fallbackResult.data, 24);
+      await this.cache.set(normalized, "resolved", fallbackResult.data, CACHE_TTL_HOURS);
       return fallbackResult;
     }
 
     if (fallbackResult.status === "not_found") {
-      await this.cache.set(normalized, "not_found", null, 24);
+      await this.cache.set(normalized, "not_found", null, CACHE_TTL_HOURS);
       return { status: "not_found" };
     }
 
+    // Definitive format rejection only when every attempted provider rejected it explicitly.
+    if (
+      primaryResult.status === "unsupported_format" &&
+      fallbackResult.status === "unsupported_format"
+    ) {
+      return { status: "unsupported_format" };
+    }
+
+    // unavailable | unsupported_format + unavailable | both unavailable → not cacheable.
     return { status: "unavailable" };
   }
 
@@ -68,12 +86,24 @@ export class CnpjVerificationService {
     provider: CnpjLookupProvider,
     cnpj: string
   ): Promise<SafeLookupResult> {
+    let result: SafeLookupResult;
     try {
-      const result = await provider.lookup(cnpj);
-      return result as SafeLookupResult;
+      result = (await provider.lookup(cnpj)) as SafeLookupResult;
     } catch {
       return { status: "unavailable" };
     }
+
+    // Defense in depth: an alphanumeric 404 from a provider that does not
+    // declare support is ambiguous and must never become not_found.
+    if (
+      result.status === "not_found" &&
+      hasAlphanumericChars(cnpj) &&
+      provider.supportsAlphanumeric !== true
+    ) {
+      return { status: "unavailable" };
+    }
+
+    return result;
   }
 }
 

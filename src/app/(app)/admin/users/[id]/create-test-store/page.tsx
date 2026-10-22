@@ -4,16 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { validateCnpj } from "@/lib/cnpj/validate";
-
-function maskCnpjInput(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 14);
-  let masked = digits;
-  if (digits.length > 2) masked = digits.slice(0, 2) + "." + digits.slice(2);
-  if (digits.length > 5) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5);
-  if (digits.length > 8) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5, 8) + "/" + digits.slice(8);
-  if (digits.length > 12) masked = digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5, 8) + "/" + digits.slice(8, 12) + "-" + digits.slice(12);
-  return masked;
-}
+import { formatCnpjInput, hasInvalidCnpjChars } from "@/lib/cnpj/input-mask";
 
 export default function CreateTestStorePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -27,16 +18,45 @@ export default function CreateTestStorePage({ params }: { params: Promise<{ id: 
   const [state, setState] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cnpjInputError, setCnpjInputError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     params.then(p => setUserId(p.id));
   }, [params]);
 
+  const handleCnpjChange = (raw: string) => {
+    // Fail-closed: unknown characters never mutate the value; the controlled
+    // input keeps the last valid value and the error blocks submission.
+    if (hasInvalidCnpjChars(raw)) {
+      setCnpjInputError("CNPJ inválido");
+      return;
+    }
+
+    const next = formatCnpjInput(raw, cnpj);
+    setCnpj(next);
+
+    // Only a COMPLETE valid entry clears the error; empty keeps the block.
+    if (!(validateCnpj(next) instanceof Error)) {
+      setCnpjInputError(null);
+    }
+  };
+
+  const handleCnpjPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    // Inspect the raw clipboard BEFORE maxLength truncates and before onChange,
+    // so a hostile character after position 18 is never silently dropped.
+    const rawPaste = e.clipboardData?.getData("text") ?? "";
+    if (hasInvalidCnpjChars(rawPaste)) {
+      e.preventDefault();
+      setCnpjInputError("CNPJ inválido");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    if (cnpjInputError) { setError("CNPJ inválido"); return; }
     if (!name.trim()) { setError("Nome da loja é obrigatório"); return; }
     if (!segment) { setError("Segmento é obrigatório"); return; }
     if (!cnpj) { setError("CNPJ é obrigatório"); return; }
@@ -110,7 +130,7 @@ export default function CreateTestStorePage({ params }: { params: Promise<{ id: 
 
         <div>
           <label className="block text-xs font-heading font-semibold uppercase tracking-wider text-text-muted mb-1">CNPJ * (validação local apenas)</label>
-          <input type="text" value={cnpj} onChange={e => setCnpj(maskCnpjInput(e.target.value))} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-sm font-mono" placeholder="XX.XXX.XXX/0001-XX" maxLength={18} />
+          <input type="text" value={cnpj} onPaste={handleCnpjPaste} onChange={e => handleCnpjChange(e.target.value)} className="w-full bg-bg-surface border border-border-light rounded-lg min-h-[44px] px-3.5 py-2.5 text-sm font-mono" placeholder="XX.XXX.XXX/XXXX-DV" maxLength={18} />
         </div>
 
         <div>
@@ -147,10 +167,10 @@ export default function CreateTestStorePage({ params }: { params: Promise<{ id: 
           </select>
         </div>
 
-        {error && (
+        {(cnpjInputError ?? error) && (
           <div className="flex items-start gap-2 bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-3">
             <AlertCircle className="w-4 h-4 text-accent-red shrink-0 mt-0.5" />
-            <p className="text-accent-red text-xs">{error}</p>
+            <p className="text-accent-red text-xs">{cnpjInputError ?? error}</p>
           </div>
         )}
 

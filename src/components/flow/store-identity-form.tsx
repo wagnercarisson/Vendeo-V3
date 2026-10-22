@@ -42,6 +42,7 @@ import { DriftCriticalModal } from "./drift-critical-modal";
 import { isValidHex, normalizeBrandColorsChosen, hasUserChosenColors } from "@/lib/validators/color";
 import { normalizeCnpj } from "@/lib/cnpj/normalize";
 import { validateCnpj } from "@/lib/cnpj/validate";
+import { formatCnpj, formatCnpjInput, hasInvalidCnpjChars } from "@/lib/cnpj/input-mask";
 import { ContractAcceptanceModal } from "@/components/legal/contract-acceptance-modal";
 import { FeedbackOverlay } from "./feedback-overlay";
 import { StoreTabs } from "./store-tabs";
@@ -96,7 +97,10 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
 }
 
 export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string }) {
-  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms, autoSave, saveStatus } = useStoreForm({ initialStore: initialStore ?? null });
+  // F50.3 (REQ-50.3-02): erro local de CNPJ — precisa existir ANTES do hook
+  // para alimentar `fiscalWriteBlocked` (input fail-closed → bloqueio fiscal).
+  const [cnpjInputError, setCnpjInputError] = useState<string | null>(null);
+  const { formData, setField, save, isLoading, isSaving, error, warningMessage, dismissWarning, successMessage, mode, clearStore, storeId, acceptedTerms, setAcceptedTerms, autoSave, saveStatus } = useStoreForm({ initialStore: initialStore ?? null, fiscalWriteBlocked: cnpjInputError !== null });
 
   // F49 (D3/D4/D5/D6/D7): ids de ajuda derivados do hook de id do React. O id do
   // próprio campo permanece estático (`name`/`segment`/`tone_of_voice`/...) para
@@ -159,6 +163,19 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const [cnpjLookupStatus, setCnpjLookupStatus] = useState<'idle' | 'loading' | 'resolved' | 'not_found' | 'unavailable'>('idle');
   const [cnpjLookupData, setCnpjLookupData] = useState<Record<string, unknown> | null>(null);
   const [cnpjLookupMessage, setCnpjLookupMessage] = useState<string | null>(null);
+  // F50.3: espelho síncrono do erro local (o onBlur/handleStep1Submit leem o
+  // valor corrente sem depender do ciclo de render) + último valor VÁLIDO
+  // exibido (fail-closed) + sequência/abort do lookup (descarte de resposta
+  // obsoleta) + CNPJ canônico cujos dados oficiais estão carregados.
+  const cnpjInputErrorRef = useRef<string | null>(null);
+  const lastValidDisplayRef = useRef(
+    initialStore?.cnpj_normalized
+      ? formatCnpj(normalizeCnpj(initialStore.cnpj_normalized))
+      : "",
+  );
+  const lookupSeqRef = useRef(0);
+  const lookupAbortRef = useRef<AbortController | null>(null);
+  const officialCnpjRef = useRef<string | null>(null);
   const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false);
   const [driftRefreshKey, setDriftRefreshKey] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
@@ -1147,7 +1164,12 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       const subsegmentErr = validateOtherSubsegment(formData.subsegment);
       if (subsegmentErr) errors.subsegment = subsegmentErr;
     }
-    if (formData.cnpj) {
+    // F50.3: erro local de CNPJ bloqueia SEMPRE — inclusive quando a colagem
+    // hostil ocorreu com o campo vazio (sem formData.cnpj). Não existe exceção
+    // de campo vazio: o erro só é limpo por uma entrada completa válida.
+    if (cnpjInputErrorRef.current) {
+      errors.cnpj = "CNPJ inválido";
+    } else if (formData.cnpj !== "") {
       const cnpjResult = validateCnpj(formData.cnpj);
       if (cnpjResult instanceof Error) {
         errors.cnpj = "CNPJ inválido";
@@ -1157,6 +1179,11 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     const touchedFields: Record<string, boolean> = { name: true, segment: true, subsegment: !!errors.subsegment };
     if (errors.cnpj) touchedFields.cnpj = true;
     setTouched(touchedFields);
+    if (errors.cnpj) {
+      setFormError("CNPJ inválido");
+      setFeedbackOverlay({ message: "CNPJ inválido", type: 'error', focusSelector: "#cnpj" });
+      return;
+    }
     if (Object.keys(errors).length > 0) {
       setFormError("Verifique os campos obrigatórios");
       setFeedbackOverlay({ message: "Verifique os campos obrigatórios", type: 'error' });
@@ -1480,10 +1507,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             const hasStoredCnpj = !!initialStore?.cnpj_normalized;
             const isOfficialData = cnpjLookupStatus === 'resolved'
               || (!!(initialStore as any)?.cnpj_official_data
-                && (initialStore as any).cnpj_normalized === formData.cnpj.replace(/\D/g, ""));
+                && (initialStore as any).cnpj_normalized === normalizeCnpj(formData.cnpj));
             const dataFromLookup = hasStoredCnpj || cnpjLookupStatus === 'resolved';
             if (hasStoredCnpj) {
-              const masked = formData.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+              const masked = formatCnpj(normalizeCnpj(formData.cnpj));
               const nomeFantasiaDisplay = formData.nomeFantasia || formData.razaoSocial;
               const hasOfficialData = !!(initialStore as any)?.cnpj_official_data;
               return (
@@ -1544,24 +1571,76 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                   <label htmlFor="cnpj" className={labelClass}>CNPJ *</label>
                   <input id="cnpj" type="text" value={formData.cnpj}
                     title="Verificamos os dados do CNPJ para liberar os créditos gratuitos."
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/\D/g, "").slice(0, 14);
-                      let masked = raw;
-                      if (raw.length > 2) masked = raw.slice(0, 2) + "." + raw.slice(2);
-                      if (raw.length > 5) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5);
-                      if (raw.length > 8) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5, 8) + "/" + raw.slice(8);
-                      if (raw.length > 12) masked = raw.slice(0, 2) + "." + raw.slice(2, 5) + "." + raw.slice(5, 8) + "/" + raw.slice(8, 12) + "-" + raw.slice(12, 14);
-                      setField("cnpj", masked);
-                      if (cnpjLookupStatus !== 'idle') {
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    onPaste={(e) => {
+                      // F50.3 (T-50.3-17): a colagem é inspecionada no BRUTO,
+                      // antes do maxLength truncar e antes do onChange. Caractere
+                      // desconhecido após a posição 18 nunca é descartado em
+                      // silêncio: erro local + valor visual preservado.
+                      const rawPaste = e.clipboardData?.getData("text") ?? "";
+                      if (hasInvalidCnpjChars(rawPaste)) {
+                        e.preventDefault();
+                        lookupSeqRef.current += 1;
+                        lookupAbortRef.current?.abort();
+                        setCnpjInputError("CNPJ inválido");
+                        cnpjInputErrorRef.current = "CNPJ inválido";
                         setCnpjLookupStatus('idle');
                         setCnpjLookupData(null);
                         setCnpjLookupMessage(null);
-                        setField("razaoSocial", "");
-                        setField("nomeFantasia", "");
+                      }
+                    }}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (hasInvalidCnpjChars(raw)) {
+                        // Não altera o valor visual (input controlado mantém o
+                        // último valor válido) e NÃO apaga razão/fantasia —
+                        // apenas sinaliza o erro e limpa o lookup.
+                        lookupSeqRef.current += 1;
+                        lookupAbortRef.current?.abort();
+                        setCnpjInputError("CNPJ inválido");
+                        cnpjInputErrorRef.current = "CNPJ inválido";
+                        setCnpjLookupStatus('idle');
+                        setCnpjLookupData(null);
+                        setCnpjLookupMessage(null);
+                        return;
+                      }
+                      const next = formatCnpjInput(raw, lastValidDisplayRef.current);
+                      const nextCanonical = normalizeCnpj(next);
+                      const prevCanonical = normalizeCnpj(lastValidDisplayRef.current);
+                      if (nextCanonical !== prevCanonical) {
+                        lookupSeqRef.current += 1;
+                        lookupAbortRef.current?.abort();
+                        setCnpjLookupStatus('idle');
+                        setCnpjLookupData(null);
+                        setCnpjLookupMessage(null);
+                        // T-50.3-36: CNPJ novo não pode herdar nome/billing da
+                        // empresa anterior — save() envia esses campos no POST.
+                        if (
+                          officialCnpjRef.current !== null &&
+                          officialCnpjRef.current !== nextCanonical
+                        ) {
+                          setField("razaoSocial", "");
+                          setField("nomeFantasia", "");
+                          setBillingData({});
+                          setBillingCompleteness(null);
+                          setBillingConfirmed(false);
+                          setBillingExpanded(false);
+                          officialCnpjRef.current = null;
+                        }
+                      }
+                      setField("cnpj", next);
+                      lastValidDisplayRef.current = next;
+                      // O erro só é limpo por uma entrada COMPLETA e válida;
+                      // campo vazio/parcial mantém erro e bloqueio.
+                      if (!(validateCnpj(next) instanceof Error)) {
+                        setCnpjInputError(null);
+                        cnpjInputErrorRef.current = null;
                       }
                     }}
                     onBlur={async () => {
                       setTouched((prev) => ({ ...prev, cnpj: true }));
+                      if (cnpjInputErrorRef.current || hasInvalidCnpjChars(formData.cnpj)) return;
                       if (formData.cnpj) {
                         const result = validateCnpj(formData.cnpj);
                         if (result instanceof Error) {
@@ -1570,11 +1649,17 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                         }
                         setFieldErrors((prev) => ({ ...prev, cnpj: undefined }));
                         const normalized = result.normalized;
+                        // T-50.3-18: sequência + abort garantem que uma resposta
+                        // em voo não sobrescreve estado de uma entrada mais nova.
+                        const seq = ++lookupSeqRef.current;
+                        const controller = new AbortController();
+                        lookupAbortRef.current = controller;
                         setCnpjLookupStatus('loading');
                         setCnpjLookupMessage('Consultando dados cadastrais...');
                         try {
-                          const res = await fetch(`/api/cnpj/lookup?cnpj=${normalized}`);
+                          const res = await fetch(`/api/cnpj/lookup?cnpj=${encodeURIComponent(normalized)}`, { signal: controller.signal });
                           const data = await res.json();
+                          if (seq !== lookupSeqRef.current) return;
                           if (data.status === 'resolved') {
                             setCnpjLookupStatus('resolved');
                             setCnpjLookupData(data.data);
@@ -1593,20 +1678,29 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                               billing_address_zipcode: data.data.cep || '',
                             });
                             setBillingExpanded(true);
+                            officialCnpjRef.current = normalized;
                           } else if (data.status === 'not_found') {
                             setCnpjLookupStatus('not_found');
                             setCnpjLookupMessage('CNPJ não encontrado na Receita Federal.');
+                            officialCnpjRef.current = null;
                           } else {
                             setCnpjLookupStatus('unavailable');
                             setCnpjLookupMessage('Não foi possível consultar os dados deste CNPJ agora. A loja será criada sem créditos iniciais. Você pode tentar novamente em \'Dados da Loja\'.');
+                            officialCnpjRef.current = null;
                           }
-                        } catch {
+                        } catch (err) {
+                          if (err instanceof DOMException && err.name === 'AbortError') return;
+                          if (seq !== lookupSeqRef.current) return;
                           setCnpjLookupStatus('unavailable');
                           setCnpjLookupMessage('Não foi possível consultar os dados deste CNPJ agora.');
+                          officialCnpjRef.current = null;
                         }
                       }
                     }}
                     placeholder="XX.XXX.XXX/YYYY-ZZ" maxLength={18} className={inputClass("cnpj")} />
+                  {cnpjInputError && (
+                    <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{cnpjInputError}</p>
+                  )}
                   {touched.cnpj && fieldErrors.cnpj && (
                     <p className="mt-1.5 flex items-center gap-1.5 text-accent-red text-xs"><AlertCircle className="w-3.5 h-3.5" />{fieldErrors.cnpj}</p>
                   )}

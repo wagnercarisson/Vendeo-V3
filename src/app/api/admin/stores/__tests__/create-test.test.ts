@@ -3,12 +3,8 @@ import { NextRequest } from "next/server";
 
 vi.mock("server-only", () => ({}));
 
-const { mockRpc, mockValidateCnpj, mockHashCnpjRoot } = vi.hoisted(() => ({
+const { mockRpc, mockHashCnpjRoot } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
-  mockValidateCnpj: vi.fn((raw: string) => {
-    if (raw.replace(/\D/g, "") === "12345678000195") return { normalized: "12345678000195" };
-    return new Error("CNPJ inválido");
-  }),
   mockHashCnpjRoot: vi.fn((root: string) => `hashed_${root}`),
 }));
 
@@ -25,9 +21,11 @@ vi.mock("@/lib/auth/api-handler", () => ({
   apiHandler: vi.fn((handler) => handler),
 }));
 
-vi.mock("@/lib/cnpj/validate", () => ({
-  validateCnpj: mockValidateCnpj,
-}));
+// Validador real: contrato canônico de 14 caracteres + DV oficial.
+vi.mock("@/lib/cnpj/validate", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/cnpj/validate")>();
+  return { validateCnpj: original.validateCnpj };
+});
 
 vi.mock("@/lib/cnpj/hash", () => ({
   hashCnpjRoot: mockHashCnpjRoot,
@@ -73,6 +71,44 @@ describe("POST /api/admin/stores/create-test", () => {
         p_cnpj_root_hash: "hashed_12345678",
       }),
     );
+  });
+
+  it("creates test store with canonical alphanumeric CNPJ and root hash", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: { store: [{ id: "test-store-2", name: "Loja Alfa", is_test_store: true }] },
+      error: null,
+    });
+
+    const res = await POST(createRequest({
+      userId: "user-1",
+      name: "Loja Alfa",
+      segment: "outros",
+      cnpj: "12.ABC.345/01DE-35",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockHashCnpjRoot).toHaveBeenCalledWith("12ABC345");
+    expect(mockRpc).toHaveBeenCalledWith(
+      "admin_create_test_store",
+      expect.objectContaining({
+        p_cnpj_normalized: "12ABC34501DE35",
+        p_cnpj_root_hash: "hashed_12ABC345",
+      }),
+    );
+  });
+
+  it("rejects unknown characters without calling the RPC", async () => {
+    const res = await POST(createRequest({
+      userId: "user-1",
+      name: "Loja Emoji",
+      segment: "outros",
+      cnpj: "12.ABC.345/01DE-35😀",
+    }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("CNPJ inválido");
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("rejects without userId", async () => {

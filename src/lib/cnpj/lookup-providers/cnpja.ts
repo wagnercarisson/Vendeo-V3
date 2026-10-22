@@ -39,6 +39,8 @@ function mapResponse(data: Record<string, unknown>, cnpj: string): CnpjLookupDat
 }
 
 export class CnpjaProvider implements CnpjLookupProvider {
+  constructor(readonly supportsAlphanumeric = false) {}
+
   async lookup(cnpj: string): Promise<LookupResult> {
     const url = `${BASE_URL}/${cnpj}`;
 
@@ -55,7 +57,19 @@ export class CnpjaProvider implements CnpjLookupProvider {
         }
 
         if (response.status === 404) {
-          return { status: "not_found" };
+          // Ambiguous for alphanumeric CNPJs unless the provider declares support.
+          if (!/[A-Z]/.test(cnpj) || this.supportsAlphanumeric) {
+            return { status: "not_found" };
+          }
+          return { status: "unavailable" };
+        }
+
+        if (response.status === 400 || response.status === 422) {
+          // Explicit format rejection only for alphanumeric CNPJs.
+          if (/[A-Z]/.test(cnpj)) {
+            return { status: "unsupported_format" };
+          }
+          return { status: "unavailable" };
         }
 
         if (response.status === 429 || response.status >= 500) {
