@@ -11,9 +11,43 @@ export type TrialOfferStatus =
   | "expired_window"
   | "retryable_failure";
 
+/**
+ * Motivos seguros expostos ao chamador (UI/rota). A allowlist é fechada: o
+ * payload JSONB das RPCs nunca é repassado cru, de modo que campos internos
+ * (identidade do beneficiário, hashes de raiz, ids de outra loja) não vazam.
+ *
+ * F50.4 adiciona os motivos por coorte:
+ * - `beneficiary_already_enrolled`: o CNPJ completo já possui inscrição;
+ * - `root_used_other_beneficiary`: a raiz já consumiu o benefício legado em
+ *   outra filial (somente coorte `root_legacy`);
+ * - `beneficiary_already_used`: restrição por CNPJ reportada pela RPC;
+ * - `prior_benefit_ambiguous`: benefício anterior ambíguo (fail-closed,
+ *   diagnóstico administrativo — nunca compensação automática).
+ */
+export type TrialOfferReason =
+  | "beneficiary_already_enrolled"
+  | "root_used_other_beneficiary"
+  | "beneficiary_already_used"
+  | "prior_benefit_ambiguous"
+  | "prior_benefit"
+  | "not_ready"
+  | "not_completed"
+  | "expired_window"
+  | "offer_disabled"
+  | "launch_not_set"
+  | "account_before_launch"
+  | "account_not_found"
+  | "store_not_found"
+  | "no_root"
+  | "test_store"
+  | "not_eligible"
+  | "record_failed"
+  | "start_failed"
+  | "unexpected_error";
+
 export interface TrialOfferResult {
   status: TrialOfferStatus;
-  reason?: string;
+  reason?: TrialOfferReason;
   enrollment?: {
     id: string;
     startedAt: string;
@@ -23,8 +57,36 @@ export interface TrialOfferResult {
   };
 }
 
+const SAFE_REASONS: ReadonlySet<string> = new Set<TrialOfferReason>([
+  "beneficiary_already_enrolled",
+  "root_used_other_beneficiary",
+  "beneficiary_already_used",
+  "prior_benefit_ambiguous",
+  "prior_benefit",
+  "not_ready",
+  "not_completed",
+  "expired_window",
+  "offer_disabled",
+  "launch_not_set",
+  "account_before_launch",
+  "account_not_found",
+  "store_not_found",
+  "no_root",
+  "test_store",
+  "not_eligible",
+  "record_failed",
+  "start_failed",
+  "unexpected_error",
+]);
+
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+/** Descarta qualquer motivo fora da allowlist; nunca repassa payload externo. */
+function sanitizeReason(value: unknown, fallback: TrialOfferReason): TrialOfferReason {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  return SAFE_REASONS.has(candidate) ? (candidate as TrialOfferReason) : fallback;
 }
 
 function mapStartResult(data: unknown): TrialOfferResult {
@@ -44,21 +106,45 @@ function mapStartResult(data: unknown): TrialOfferResult {
       record.last_granted_seq ?? enrollmentRaw.last_granted_seq ?? 0,
     );
 
+    // `existing` só chega aqui quando a RPC devolve o enrollment da própria
+    // loja (escopo por `store_id`); nenhum dado de outra filial é montado.
     return {
       status,
       enrollment: id
-        ? { id, startedAt, expiresAt, grantedTotal, lastGrantedSeq }
+        ? {
+            id,
+            startedAt,
+            expiresAt,
+            grantedTotal: Number.isFinite(grantedTotal) ? grantedTotal : 0,
+            lastGrantedSeq: Number.isFinite(lastGrantedSeq) ? lastGrantedSeq : 0,
+          }
         : undefined,
     };
   }
 
-  if (status === "offer_disabled" || status === "expired_window") {
-    return { status, reason: String(record.reason ?? status) };
+  if (status === "offer_disabled") {
+    return {
+      status: "offer_disabled",
+      reason: sanitizeReason(record.reason, "offer_disabled"),
+    };
   }
 
+  if (status === "expired_window") {
+    return {
+      status: "expired_window",
+      reason: sanitizeReason(record.reason, "expired_window"),
+    };
+  }
+
+  if (status === "not_ready") {
+    return { status: "not_ready", reason: sanitizeReason(record.reason, "not_ready") };
+  }
+
+  // Motivos por coorte (F50.4) e demais recusas seguras permanecem como
+  // `not_eligible` + motivo allowlisted.
   return {
     status: "not_eligible",
-    reason: String(record.reason ?? status ?? "not_eligible"),
+    reason: sanitizeReason(record.reason ?? record.status, "not_eligible"),
   };
 }
 
@@ -76,7 +162,10 @@ async function runTrialOffer(storeId: string): Promise<TrialOfferResult> {
     if (record.completed !== true) {
       const status = String(record.status ?? "not_ready");
       if (status === "not_ready") return { status: "not_ready", reason: "not_ready" };
-      return { status: "not_eligible", reason: String(record.reason ?? status) };
+      return {
+        status: "not_eligible",
+        reason: sanitizeReason(record.reason ?? status, "not_eligible"),
+      };
     }
 
     const startResult = await supabaseAdmin.rpc("start_trial_offer_enrollment", {
@@ -105,7 +194,9 @@ export async function maybeCompleteOnboardingAndStartTrial(
 
 /**
  * Retry dedicado: repete somente conclusão/inscrição. Não salva onboarding,
- * não chama logo/perfil/assinatura e não invoca provider.
+ * não chama logo/perfil/assinatura e não invoca provider. Como ambos os passos
+ * são RPCs idempotentes por loja, repetir a chamada não duplica enrollment nem
+ * crédito.
  */
 export async function retryTrialOfferEnrollment(
   storeId: string,
