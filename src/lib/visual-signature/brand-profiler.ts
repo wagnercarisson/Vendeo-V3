@@ -276,7 +276,7 @@ export class BrandProfilerWithoutLogoService {
 
     const buffer = await this.downloadAssetBuffer(input.assetUrl);
     const localAsset = isLoopbackAssetUrl(input.assetUrl);
-    if (localAsset && !buffer) {
+    if (localAsset && (!buffer || buffer.length === 0)) {
       throw new BrandProfilerWithoutLogoError(
         'Falha ao baixar a imagem local para análise de visão',
         {

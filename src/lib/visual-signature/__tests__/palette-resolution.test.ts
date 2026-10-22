@@ -288,6 +288,25 @@ async function gen(
       ).rejects.toMatchObject({ metadata: { errorType: 'local_asset_download_failed' } });
       expect(mockOpenAICreate).not.toHaveBeenCalled();
     });
+
+    it('HTTP 200 com corpo vazio também é rejeitado sem chamar o provedor', async () => {
+      const intended = makeIntended();
+      mockProbeColors.mockResolvedValue(makeProbeResult([]));
+      mockFetch.mockResolvedValue({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      });
+
+      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
+      const profiler = new BrandProfilerWithoutLogoService();
+      await expect(
+        gen(profiler, makeInput({
+          intendedPalette: intended,
+          assetUrl: 'http://127.0.0.1:57781/storage/v1/object/sign/visual-signatures/empty.png',
+        })),
+      ).rejects.toMatchObject({ metadata: { errorType: 'local_asset_download_failed' } });
+      expect(mockOpenAICreate).not.toHaveBeenCalled();
+    });
   });
 
   // Smart findClosestProbeCluster mock: exact hex match → deltaE 0;

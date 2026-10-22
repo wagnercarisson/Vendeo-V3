@@ -64,7 +64,8 @@ loopback.
   `data:image/png;base64,...` em `productImagesDataUrls`.
 - `callVision` e `callVisionFull` recebem a referência de imagem resolvida.
 - URL remota continua sendo enviada como URL, sem mudança de comportamento.
-- Falha de download local gera `BrandProfilerWithoutLogoError` explícito com
+- Falha de download local — incluindo HTTP 200 com corpo vazio
+  (`buffer.length === 0`) — gera `BrandProfilerWithoutLogoError` explícito com
   `errorType='local_asset_download_failed'`; não envia vazio nem prossegue com a
   URL loopback.
 - Modelo, prompt, parâmetros, telemetria e regras de perfil não foram alterados.
@@ -76,11 +77,12 @@ loopback.
 
 ## Testes e gates
 
-- `palette-resolution.test.ts`: **24/24 PASS**, incluindo:
+- `palette-resolution.test.ts`: **25/25 PASS**, incluindo:
   - imagem local enviada como data URL em `callVision`;
   - `callVisionFull` também envia data URL;
   - URL remota preservada;
-  - falha de download local gera erro explícito e não chama OpenAI.
+  - falha de download local gera erro explícito e não chama OpenAI;
+  - HTTP 200 com corpo vazio também gera erro explícito e não chama OpenAI.
 - Suítes relacionadas (`brand-profiler`, rota brand-profile, approve): **66/66 PASS**.
 - `npx tsc -p tsconfig.typecheck.json --noEmit`: **exit 0**.
 - `npm run lint`: **exit 0**.
