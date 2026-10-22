@@ -66,6 +66,9 @@ export class ResponsesAdapter implements AiAdapter {
       params.tools = [
         {
           type: "image_generation",
+          // F47.1 (D7): `model` só existe no caminho com configuração dedicada.
+          // Ausente ⇒ payload legado byte-compatível (sem `model`).
+          ...(request.imageGenerationModel ? { model: request.imageGenerationModel } : {}),
           size: request.size,
           quality: request.quality,
         },
@@ -82,6 +85,12 @@ export class ResponsesAdapter implements AiAdapter {
       // can set the parameter tool_choice to {"type": "image_generation"}".
       // Continua sendo UMA única chamada — sem retry e sem fallback automático.
       params.tool_choice = { type: "image_generation" };
+    }
+
+    // F47.1 (D7): reasoning da VS (fixo em "low" nesta fase). Ausente ⇒ nenhum
+    // `reasoning` é enviado (payload legado).
+    if (request.reasoningEffort) {
+      params.reasoning = { effort: request.reasoningEffort };
     }
 
     const response = await openai.responses.create(params as never, {
@@ -120,6 +129,11 @@ export class ResponsesAdapter implements AiAdapter {
         providerUsageSource: usesImageTool ? "responses.image_generation" : "responses",
         responsesModel: target.model,
         imageGenerationTool: usesImageTool,
+        // F47.1 (D7): modelo da tool separado do modelo Responses. Só existe
+        // quando a tool recebeu `model` — nunca é inferido/inventado no legado.
+        ...(usesImageTool && request.imageGenerationModel
+          ? { imageGenerationModel: request.imageGenerationModel }
+          : {}),
         ...(rawUsage && typeof rawUsage === "object"
           ? { providerUsageRaw: rawUsage as Record<string, unknown> }
           : {}),

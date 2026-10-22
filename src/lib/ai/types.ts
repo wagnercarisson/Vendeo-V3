@@ -82,6 +82,22 @@ export interface AiInvocationRequest {
    * preserva o `timeout` do caminho `visual_signature_image`.
    */
   timeout?: number;
+  /**
+   * F47.1 (D7) — modelo explícito da tool `image_generation`. Ausente ⇒ payload
+   * legado byte-compatível (a tool NÃO envia `model`).
+   */
+  imageGenerationModel?: string;
+  /**
+   * F47.1 (D7) — reasoning da VS, restrito a `"low"` nesta fase. Ausente ⇒
+   * nenhum `reasoning` é enviado (payload legado).
+   */
+  reasoningEffort?: "low";
+  /**
+   * F47.1 (D7) — metadata de configuração/unidade (ex.: `config_version_id`)
+   * propagada ao envelope de telemetria. Campos canônicos do envelope NÃO podem
+   * ser sobrescritos por estas chaves.
+   */
+  metadata?: Record<string, unknown>;
 }
 
 /** Metadados de usage do provider (auditoria/calibração — não entra no cálculo). */
@@ -91,6 +107,11 @@ export interface AiInvocationUsageMeta {
   providerUsageSource?: string;
   responsesModel?: string;
   imageGenerationTool?: boolean;
+  /**
+   * F47.1 (D7) — modelo explícito da tool (separado do modelo Responses).
+   * Ausente quando a tool não recebeu `model` (caminho legado).
+   */
+  imageGenerationModel?: string;
 }
 
 /**
@@ -178,6 +199,39 @@ export interface AiEnvelopeInternalCost {
   model: string;
   /** Qualidade do par usada na tentativa (VALIDADA contra `envelope.quality`). */
   quality: string;
+}
+
+/**
+ * F47.1 (D7) — chaves canônicas do envelope/evento que metadata de caller JAMAIS
+ * pode sobrescrever (nem no gateway, nem no sink, nem no enriquecimento).
+ */
+export const AI_ENVELOPE_CANONICAL_METADATA_KEYS = [
+  "capability",
+  "protocol",
+  "status",
+  "errorType",
+  "provider",
+  "model",
+  "quality",
+  "target",
+  "attemptNumber",
+  "usage",
+  "usageMeta",
+  "durationMs",
+  "providerReportedCostUsd",
+] as const;
+
+/** Remove de `metadata` qualquer chave canônica do envelope (aditivo, defensivo). */
+export function sanitizeEnvelopeMetadata(
+  metadata: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (!metadata) return undefined;
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if ((AI_ENVELOPE_CANONICAL_METADATA_KEYS as readonly string[]).includes(key)) continue;
+    sanitized[key] = value;
+  }
+  return sanitized;
 }
 
 /** Destino de emissão de envelopes (sink injetável — o gateway não persiste). */

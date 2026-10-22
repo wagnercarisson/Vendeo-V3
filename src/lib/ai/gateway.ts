@@ -2,6 +2,7 @@ import type { AiCapability, AiModelResolver, AiModelTarget } from "./model-resol
 import {
   AiInvocationError,
   normalizeAiError,
+  sanitizeEnvelopeMetadata,
   type AiAdapterRegistry,
   type AiCallEnvelope,
   type AiInvocationRequest,
@@ -146,6 +147,7 @@ export class AiGateway {
     }
 
     const startedAt = Date.now();
+    const requestMetadata = sanitizeEnvelopeMetadata(request.metadata);
     try {
       const result = await adapter.invoke(request, prepared.resolved);
       await this.emit(telemetry, {
@@ -161,6 +163,7 @@ export class AiGateway {
         quality: request.quality,
         target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
+        ...(requestMetadata ? { metadata: requestMetadata } : {}),
       });
       return result;
     } catch (err) {
@@ -182,6 +185,7 @@ export class AiGateway {
         quality: request.quality,
         target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
+        ...(requestMetadata ? { metadata: requestMetadata } : {}),
       });
       if (isInvocationError) throw normalized;
       throw err;

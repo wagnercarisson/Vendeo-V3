@@ -208,6 +208,7 @@ function buildCallMetadata(
         provider_usage_source: envelope.usageMeta.providerUsageSource,
         responses_model: envelope.usageMeta.responsesModel,
         image_generation_tool: envelope.usageMeta.imageGenerationTool,
+        image_generation_model: envelope.usageMeta.imageGenerationModel,
       }
     : undefined;
 
