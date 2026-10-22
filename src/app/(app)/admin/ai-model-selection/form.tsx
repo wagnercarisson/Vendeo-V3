@@ -143,10 +143,10 @@ export function AiModelSelectionForm({
       </div>
 
       {inheritedVisualSignature && (
-        <section aria-labelledby="vs-inherited-diagnostic-heading" className="space-y-3">
+        <section aria-labelledby={`${mode}-vs-inherited-diagnostic-heading`} className="space-y-3">
           <div>
             <h2
-              id="vs-inherited-diagnostic-heading"
+              id={`${mode}-vs-inherited-diagnostic-heading`}
               className="font-heading text-lg font-semibold text-text-primary"
             >
               Seleção herdada — diagnóstico
@@ -160,10 +160,14 @@ export function AiModelSelectionForm({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                  Executado agora
+                  Alvo herdado
                 </p>
                 <p className="mt-1 break-words text-sm text-text-primary">
                   {targetLabel(inheritedVisualSignature.current.primary)}
+                </p>
+                <p className="mt-2 text-xs text-text-muted">
+                  A configuração dedicada, quando habilitada, prevalece sobre este alvo. Ele não
+                  representa necessariamente a execução atual.
                 </p>
               </div>
               <span
@@ -197,9 +201,9 @@ export function AiModelSelectionForm({
           return true;
         });
         return (
-          <section key={group.key} aria-labelledby={`group-${group.key}`} className="space-y-3">
+          <section key={group.key} aria-labelledby={`${mode}-group-${group.key}`} className="space-y-3">
             <div>
-              <h2 id={`group-${group.key}`} className="font-heading text-lg font-semibold text-text-primary">{group.label}</h2>
+              <h2 id={`${mode}-group-${group.key}`} className="font-heading text-lg font-semibold text-text-primary">{group.label}</h2>
               <p className="text-sm text-text-secondary">{group.description}</p>
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
@@ -278,8 +282,8 @@ export function AiModelSelectionForm({
                     )}
 
                     <div className="mt-4 space-y-3">
-                      <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`primary-${item.capability}`}>Novo primary</label>
-                      <select id={`primary-${item.capability}`} value={`${draft.provider}|${draft.model}|${draft.protocol}`} onChange={(event) => {
+                      <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`${mode}-primary-${item.capability}`}>Novo primary</label>
+                      <select id={`${mode}-primary-${item.capability}`} value={`${draft.provider}|${draft.model}|${draft.protocol}`} onChange={(event) => {
                         const [provider, model, protocol] = event.target.value.split("|");
                         edit(item.capability, { provider, model, protocol });
                       }} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
@@ -289,8 +293,8 @@ export function AiModelSelectionForm({
 
                       {item.capability === "campaign_copy" && (
                         <>
-                          <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`fallback-${item.capability}`}>Fallback genérico</label>
-                          <select id={`fallback-${item.capability}`} value={draft.fallback} onChange={(event) => edit(item.capability, { fallback: event.target.value })} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
+                          <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`${mode}-fallback-${item.capability}`}>Fallback genérico</label>
+                          <select id={`${mode}-fallback-${item.capability}`} value={draft.fallback} onChange={(event) => edit(item.capability, { fallback: event.target.value })} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
                             <option value="">Sem fallback</option>
                             {configured?.fallback && configured.fallback.catalogStatus !== "active" && <option disabled value={targetKey(configured.fallback)}>{targetLabel(configured.fallback)} · {configured.fallback.catalogStatus}</option>}
                             {view.catalog.filter((row) => row.capability === "campaign_copy" && row.status === "active").map((option) => <option key={`fallback-${option.id}`} value={`${option.provider}|${option.model}|${option.protocol}`}>{targetLabel(option)}</option>)}
@@ -298,8 +302,8 @@ export function AiModelSelectionForm({
                         </>
                       )}
 
-                      <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`reason-${item.capability}`}>Motivo da alteração</label>
-                      <input id={`reason-${item.capability}`} value={draft.reason} onChange={(event) => edit(item.capability, { reason: event.target.value })} placeholder="Motivo obrigatório para auditoria" className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 placeholder:text-text-muted focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20" />
+                      <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`${mode}-reason-${item.capability}`}>Motivo da alteração</label>
+                      <input id={`${mode}-reason-${item.capability}`} value={draft.reason} onChange={(event) => edit(item.capability, { reason: event.target.value })} placeholder="Motivo obrigatório para auditoria" className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 placeholder:text-text-muted focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20" />
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">

@@ -43,6 +43,7 @@ const VIEW: VisualSignatureModelConfigView = {
     catalogStatus: "active",
     eligible: true,
   },
+  consumption: { optedIn: true, effective: true, reason: "enabled" },
   pricingByPreset: {
     flare_low: { status: "complete", missingRates: [], historicalReferenceUsd: 0.036, pricingVersion: "p1" },
     flare_medium: { status: "partial", missingRates: ["image.imageTokenUsdPer1M"], historicalReferenceUsd: 0.044, pricingVersion: "p2" },
@@ -52,13 +53,25 @@ const VIEW: VisualSignatureModelConfigView = {
   readError: null,
 };
 
+const EMPTY_VIEW: VisualSignatureModelConfigView = {
+  ...VIEW,
+  configured: false,
+  current: null,
+  consumption: { optedIn: false, effective: false, reason: "not_configured" },
+};
+
 const mockFetch = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("fetch", mockFetch);
   vi.stubGlobal("crypto", { randomUUID: vi.fn().mockReturnValue("ui-operation-id") });
-  mockFetch.mockResolvedValue({ ok: true, json: async () => ({ config: {} }) });
+  mockFetch.mockImplementation(async (_url: string, init?: RequestInit) => {
+    if (init?.method === "GET") {
+      return { ok: true, json: async () => VIEW };
+    }
+    return { ok: true, json: async () => ({ config: {} }) };
+  });
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -117,10 +130,11 @@ describe("F47.1 — card da Assinatura Visual", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Salvar Assinatura Visual" }));
 
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
     const [url, init] = mockFetch.mock.calls[0];
     expect(url).toBe("/api/admin/visual-signature-model-config");
     expect(init.method).toBe("PUT");
+    expect(mockFetch.mock.calls[1][1]?.method).toBe("GET");
     const body = JSON.parse(init.body);
     expect(body).toEqual({
       orchestratorModel: "gpt-5.5",
@@ -134,6 +148,59 @@ describe("F47.1 — card da Assinatura Visual", () => {
     expect(screen.getByText(/salva com auditoria/)).toBeInTheDocument();
   });
 
+  it("salvar partindo de configuração ausente atualiza versão e habilita o reset", async () => {
+    render(<VisualSignatureConfigForm view={EMPTY_VIEW} />);
+    const reset = screen.getByRole("button", { name: "Voltar à seleção herdada" });
+    expect(reset).toBeDisabled();
+    expect(screen.getByText(/Nenhuma configuração dedicada registrada/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Motivo da alteração da Assinatura Visual"), {
+      target: { value: "primeira configuração" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar Assinatura Visual" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("11111111-1111-4111-8111-111111111111")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("decisão local")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Voltar à seleção herdada" })).toBeEnabled();
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("reset reflete a remoção do card e desabilita o reset", async () => {
+    mockFetch.mockImplementation(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "GET") return { ok: true, json: async () => EMPTY_VIEW };
+      return { ok: true, json: async () => ({ reset: { success: true } }) };
+    });
+    render(<VisualSignatureConfigForm view={VIEW} />);
+
+    fireEvent.change(screen.getByLabelText("Motivo da alteração da Assinatura Visual"), {
+      target: { value: "voltar ao herdado" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Voltar à seleção herdada" }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Nenhuma configuração dedicada registrada/)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("11111111-1111-4111-8111-111111111111")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Voltar à seleção herdada" })).toBeDisabled();
+  });
+
+  it("distingue configuração registrada de configuração efetivamente habilitada", () => {
+    render(
+      <VisualSignatureConfigForm
+        view={{
+          ...VIEW,
+          consumption: { optedIn: false, effective: false, reason: "opt_in_disabled" },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("registrada — não habilitada")).toBeInTheDocument();
+    expect(screen.queryByText("em uso no ambiente local")).not.toBeInTheDocument();
+    expect(screen.getByText(/opt-in local está desligado/)).toBeInTheDocument();
+  });
+
   it("reset usa DELETE com motivo e operationId", async () => {
     render(<VisualSignatureConfigForm view={VIEW} />);
     fireEvent.change(screen.getByLabelText("Motivo da alteração da Assinatura Visual"), {
@@ -141,7 +208,7 @@ describe("F47.1 — card da Assinatura Visual", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Voltar à seleção herdada" }));
 
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
     const [url, init] = mockFetch.mock.calls[0];
     expect(url).toBe("/api/admin/visual-signature-model-config");
     expect(init.method).toBe("DELETE");
@@ -161,6 +228,6 @@ describe("F47.1 — card da Assinatura Visual", () => {
       target: { value: "manter mesmo sem pricing" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Salvar Assinatura Visual" }));
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
   });
 });

@@ -97,12 +97,32 @@ describe("Página unificada de modelos — ordem F47.1", () => {
     expect(legacy).toBeGreaterThan(shared);
   });
 
-  it("não oferece edição de visual_signature_image no formulário genérico", () => {
+  it("não oferece edição de visual_signature_image e chama a herdada de alvo, não de execução", () => {
     const { container } = render(<AiModelSelectionForm view={SELECTION_VIEW} mode="shared" />);
 
-    expect(container.querySelector("#primary-visual_signature_image")).toBeNull();
-    expect(screen.getByRole("heading", { name: "Seleção herdada — diagnóstico" })).toBeInTheDocument();
+    expect(container.querySelector('[id$="primary-visual_signature_image"]')).toBeNull();
+    const heading = screen.getByRole("heading", { name: "Seleção herdada — diagnóstico" });
+    expect(heading).toBeInTheDocument();
     expect(screen.getByText(/O diagnóstico permanece visível/)).toBeInTheDocument();
+    const section = heading.closest("section");
+    expect(section).not.toBeNull();
+    expect(within(section as HTMLElement).getByText("Alvo herdado")).toBeInTheDocument();
+    expect(within(section as HTMLElement).queryByText("Executado agora")).not.toBeInTheDocument();
+    expect(
+      within(section as HTMLElement).getByText(/não representa necessariamente a execução atual/),
+    ).toBeInTheDocument();
+  });
+
+  it("não repete IDs quando shared e legacy são renderizados juntos", () => {
+    const { container } = render(
+      <>
+        <AiModelSelectionForm view={SELECTION_VIEW} mode="shared" />
+        <AiModelSelectionForm view={SELECTION_VIEW} mode="legacy" />
+      </>,
+    );
+    const ids = Array.from(container.querySelectorAll("[id]")).map((node) => node.id);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 

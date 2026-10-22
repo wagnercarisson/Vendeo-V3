@@ -13,6 +13,10 @@ import {
   type VisualSignatureModelConfigRow,
 } from "./visual-signature-model-config-service";
 import {
+  assertVisualSignatureValidationEnvironment,
+  isVisualSignatureValidationOptedIn,
+} from "@/lib/visual-signature/local-validation/guard";
+import {
   getVisualSignaturePresetPricing,
   type VisualSignatureImagePricingResult,
 } from "@/lib/ai-cost/visual-signature-pricing";
@@ -54,6 +58,16 @@ export interface VisualSignatureInheritedView {
   eligible: boolean;
 }
 
+/**
+ * Registrada ≠ efetivamente habilitada. O GET é diagnóstico e não usa a linha
+ * para afirmar consumo; `effective` exige opt-in + guard local válidos.
+ */
+export interface VisualSignatureConsumptionView {
+  optedIn: boolean;
+  effective: boolean;
+  reason: "not_configured" | "opt_in_disabled" | "environment_invalid" | "enabled";
+}
+
 export interface VisualSignaturePresetPricingView {
   status: "complete" | "partial" | "missing";
   missingRates: string[];
@@ -74,6 +88,7 @@ export interface VisualSignatureModelConfigView {
   configured: boolean;
   current: VisualSignatureConfigViewRow | null;
   inherited: VisualSignatureInheritedView;
+  consumption: VisualSignatureConsumptionView;
   pricingByPreset: Record<VisualSignatureImagePreset, VisualSignaturePresetPricingView>;
   /** Falha de leitura da configuração dedicada (mensagem segura). */
   readError: string | null;
@@ -91,11 +106,37 @@ export type VisualSignatureSelectionViewBuilder = () => Promise<AiModelSelection
 export type VisualSignaturePresetPricingResolver = (
   preset: VisualSignatureImagePreset,
 ) => Promise<VisualSignatureImagePricingResult>;
+export type VisualSignatureConsumptionResolver = (
+  configured: boolean,
+) => VisualSignatureConsumptionView;
 
 export interface BuildVisualSignatureModelConfigViewDependencies {
   configReader?: VisualSignatureConfigRowReader;
   selectionViewBuilder?: VisualSignatureSelectionViewBuilder;
   pricingResolver?: VisualSignaturePresetPricingResolver;
+  consumptionResolver?: VisualSignatureConsumptionResolver;
+}
+
+/**
+ * Default: opt-in é necessário, mas não suficiente. Com opt-in ligado, o guard
+ * local completo é consultado em modo diagnóstico (sem escrita/generation).
+ */
+export function resolveVisualSignatureConsumption(
+  configured: boolean,
+): VisualSignatureConsumptionView {
+  const optedIn = isVisualSignatureValidationOptedIn();
+  if (!configured) {
+    return { optedIn, effective: false, reason: "not_configured" };
+  }
+  if (!optedIn) {
+    return { optedIn, effective: false, reason: "opt_in_disabled" };
+  }
+  try {
+    assertVisualSignatureValidationEnvironment();
+    return { optedIn: true, effective: true, reason: "enabled" };
+  } catch {
+    return { optedIn: true, effective: false, reason: "environment_invalid" };
+  }
 }
 
 function defaultInherited(): VisualSignatureInheritedView {
@@ -201,6 +242,8 @@ export async function buildVisualSignatureModelConfigView(
   const pricingResolver =
     dependencies.pricingResolver ??
     ((preset) => getVisualSignaturePresetPricing({ preset }));
+  const consumptionResolver =
+    dependencies.consumptionResolver ?? resolveVisualSignatureConsumption;
 
   const presets: VisualSignaturePresetView[] = (
     Object.keys(VISUAL_SIGNATURE_IMAGE_PRESETS) as VisualSignatureImagePreset[]
@@ -240,6 +283,7 @@ export async function buildVisualSignatureModelConfigView(
   }
 
   const pricingByPreset = await buildPricing(pricingResolver);
+  const consumption = consumptionResolver(current !== null);
 
   return {
     orchestrators: VISUAL_SIGNATURE_ORCHESTRATORS,
@@ -248,6 +292,7 @@ export async function buildVisualSignatureModelConfigView(
     configured: current !== null,
     current,
     inherited,
+    consumption,
     pricingByPreset,
     readError,
   };

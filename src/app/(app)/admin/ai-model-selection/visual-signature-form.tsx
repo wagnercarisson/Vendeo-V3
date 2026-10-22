@@ -40,7 +40,8 @@ function coverageVariant(pricing: VisualSignaturePresetPricingView): "ready" | "
   return "error";
 }
 
-export function VisualSignatureConfigForm({ view }: { view: VisualSignatureModelConfigView }) {
+export function VisualSignatureConfigForm({ view: initialView }: { view: VisualSignatureModelConfigView }) {
+  const [view, setView] = useState<VisualSignatureModelConfigView>(initialView);
   const initial = view.current;
   const [orchestrator, setOrchestrator] = useState<VisualSignatureOrchestrator>(
     initial?.orchestratorModel ?? view.orchestrators[0],
@@ -93,6 +94,26 @@ export function VisualSignatureConfigForm({ view }: { view: VisualSignatureModel
       });
       const data = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) throw new Error(data.error || `Erro ${response.status}`);
+
+      // Estado CONFIRMADO pelo servidor: relê o view model e sincroniza
+      // seletores, versão/autor/motivo e disponibilidade do reset.
+      const refreshed = await fetch("/api/admin/visual-signature-model-config", {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!refreshed.ok) {
+        setSuccess(
+          action === "reset"
+            ? "Configuração dedicada removida; recarregue a página para atualizar o diagnóstico."
+            : "Configuração salva; recarregue a página para atualizar o diagnóstico.",
+        );
+        setError("A operação foi concluída, mas não foi possível recarregar o estado confirmado.");
+        return;
+      }
+      const next = (await refreshed.json()) as VisualSignatureModelConfigView;
+      setView(next);
+      setOrchestrator(next.current?.orchestratorModel ?? orchestrator);
+      setPreset(next.current?.imagePreset ?? preset);
       setReason("");
       setOperation(null);
       setSuccess(
@@ -109,7 +130,11 @@ export function VisualSignatureConfigForm({ view }: { view: VisualSignatureModel
 
   return (
     <div className="space-y-6">
-      <CurrentConfigCard current={view.current} readError={view.readError} />
+      <CurrentConfigCard
+        current={view.current}
+        consumption={view.consumption}
+        readError={view.readError}
+      />
 
       <Card className="space-y-5 p-6">
         <div className="flex items-start gap-3 rounded-xl border border-accent-blue/20 bg-accent-blue/5 p-4 text-sm text-text-secondary">
@@ -245,9 +270,11 @@ export function VisualSignatureConfigForm({ view }: { view: VisualSignatureModel
 
 function CurrentConfigCard({
   current,
+  consumption,
   readError,
 }: {
   current: VisualSignatureConfigViewRow | null;
+  consumption: VisualSignatureModelConfigView["consumption"];
   readError: string | null;
 }) {
   if (readError) {
@@ -271,9 +298,18 @@ function CurrentConfigCard({
   return (
     <Card className="space-y-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-heading text-lg font-semibold text-text-primary">Configuração vigente</h3>
-        <Badge variant="ready">ativa no ambiente local</Badge>
+        <h3 className="font-heading text-lg font-semibold text-text-primary">Configuração registrada</h3>
+        <Badge variant={consumption.effective ? "ready" : "generating"}>
+          {consumption.effective ? "em uso no ambiente local" : "registrada — não habilitada"}
+        </Badge>
       </div>
+      {!consumption.effective && (
+        <p className="rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
+          {consumption.reason === "opt_in_disabled"
+            ? "A configuração está registrada, mas o opt-in local está desligado. A geração usa a seleção herdada."
+            : "A configuração está registrada, mas o ambiente local não passou no guard. A geração usa a seleção herdada."}
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Orquestrador</p>

@@ -99,6 +99,11 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
       configReader: async () => ROW,
       selectionViewBuilder: async () => selectionView(true),
       pricingResolver: async () => pricing("complete"),
+      consumptionResolver: () => ({
+        optedIn: false,
+        effective: false,
+        reason: "opt_in_disabled",
+      }),
     });
 
     expect(view.configured).toBe(true);
@@ -114,6 +119,11 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
       reason: "decisão local",
     });
     expect(view.inherited.origin).toBe("human_decision");
+    expect(view.consumption).toEqual({
+      optedIn: false,
+      effective: false,
+      reason: "opt_in_disabled",
+    });
   });
 
   it("configuração ausente mantém a seleção herdada visível", async () => {
@@ -121,9 +131,15 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
       configReader: async () => null,
       selectionViewBuilder: async () => selectionView(false),
       pricingResolver: async () => pricing("complete"),
+      consumptionResolver: () => ({
+        optedIn: false,
+        effective: false,
+        reason: "not_configured",
+      }),
     });
 
     expect(view.configured).toBe(false);
+    expect(view.consumption.reason).toBe("not_configured");
     expect(view.current).toBeNull();
     expect(view.inherited).toEqual({
       provider: "openai",
