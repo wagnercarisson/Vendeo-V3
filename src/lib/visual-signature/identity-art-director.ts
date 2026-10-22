@@ -97,9 +97,10 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
         brandColor: input.brandColor ?? '',
         tone,
         signal,
-        // F47.1 (D8): a PRIMEIRA tentativa é 0 (image_direct); um retry real é
-        // >=1. Antes, o valor inicial era 1 e `retry_used` nascia verdadeiro.
-        attempt: input.rejectionContext ? (input.rejectionContext.attempt + 1) : 0,
+        // F47.1 (D8): `rejectionContext` é HISTÓRICO da geração anterior, não
+        // o índice da tentativa desta operação. Toda chamada inicial do DA é
+        // `attempt=0` (image_direct); retries internos usam >=1 no chamador.
+        attempt: 0,
         customPrompt: loadedPrompt, // Passing the full identity art director prompt
         onCall, // F38.1 (D11): propaga o onCall do caller (imagem + validação)
         telemetry, // F46-04 (D9): encaminha o contexto de telemetria (sink injetado)

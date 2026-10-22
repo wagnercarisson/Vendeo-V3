@@ -66,9 +66,9 @@ describe("F47.1 - identity art director: rejectionContext e brandColor", () => {
       rejectionContext: { reason: "Use azul e fonte mais grossa", attempt: 1 },
     });
 
-    // Rejeição real: attempt = rejectionContext.attempt + 1.
+    // rejectionContext é histórico: a operação atual começa em attempt=0.
     expect(aiImageGenerator.generate.mock.calls[0][0]).toMatchObject({
-      attempt: 2,
+      attempt: 0,
     });
     expect(promptLoader.load).toHaveBeenCalledWith(
       "store-identity-art-director",

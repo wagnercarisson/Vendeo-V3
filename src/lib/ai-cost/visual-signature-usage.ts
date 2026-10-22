@@ -39,6 +39,15 @@ export interface VisualSignatureImageRates {
   cachedImageUsdPer1M?: number;
 }
 
+/**
+ * Tarifas do modelo da TOOL (texto + imagem). O texto da tool NUNCA usa as
+ * tarifas do orquestrador; se o modelo da tool não expuser tarifa de texto, o
+ * componente fica sem preço e a cobertura é parcial.
+ */
+export interface VisualSignatureToolRates
+  extends VisualSignatureOrchestratorRates,
+    VisualSignatureImageRates {}
+
 export interface NormalizedVisualSignatureUsage {
   inputTokens?: number;
   outputTokens?: number;
@@ -81,6 +90,8 @@ export interface ComputeVisualSignatureCostParams {
   usage?: TokenUsage;
   orchestratorRates: VisualSignatureOrchestratorRates;
   imageRates: VisualSignatureImageRates;
+  /** Tarifas próprias do modelo da tool (texto + imagem). */
+  toolRates?: VisualSignatureToolRates;
   providerReportedCostUsd?: number | null;
   /** Usage próprio da tool, quando o provider expõe separadamente. */
   imageToolUsage?: TokenUsage;
@@ -399,8 +410,9 @@ export function computeVisualSignatureCost(
   if (toolOverlapUnproven) {
     noteParts.push("tool_usage_overlap_unproven");
   } else if (toolIsSoleSource && toolUsage) {
-    const toolRates = resolveDirectionalImageRates(toolUsage, params.imageRates);
-    if (toolRates.unproven) {
+    const toolModelRates = params.toolRates ?? {};
+    const toolImageRates = resolveDirectionalImageRates(toolUsage, toolModelRates);
+    if (toolImageRates.unproven) {
       noteParts.push("image_rate_direction_unproven");
     }
     if (
@@ -419,41 +431,95 @@ export function computeVisualSignatureCost(
       toolInconsistent = true;
       noteParts.push("tool_input_breakdown_inconsistent");
     }
-    addComponent(
-      components,
-      missingRates,
-      "tool_input_text",
-      "orchestrator.inputTextUsdPer1M",
-      toolTextInputTokens(toolUsage) ?? 0,
-      params.orchestratorRates.inputTextUsdPer1M,
-    );
-    addComponent(
-      components,
-      missingRates,
-      "tool_output_text",
-      "orchestrator.outputTextUsdPer1M",
-      toolTextOutputTokens(toolUsage) ?? 0,
-      params.orchestratorRates.outputTextUsdPer1M,
-    );
-    addComponent(
-      components,
-      missingRates,
-      "tool_input_image",
-      "image.inputImageUsdPer1M",
-      toolUsage.inputImageTokens ?? 0,
-      toolRates.input,
-    );
-    addComponent(
-      components,
-      missingRates,
-      "tool_output_image",
-      "image.outputImageUsdPer1M",
-      toolUsage.outputImageTokens ?? 0,
-      toolRates.output,
-    );
+    if (toolUsage.inconsistent) {
+      toolInconsistent = true;
+    }
+    for (const note of toolUsage.notes) {
+      if (!noteParts.includes(note)) noteParts.push(note);
+    }
+
+    const toolCached = toolUsage.cachedInputTokens ?? 0;
+    const toolCacheUnattributed =
+      toolCached > 0 && toolUsage.cacheAttribution === "unattributed";
+
+    if (toolCacheUnattributed) {
+      // Mesma regra do usage principal: sem modalidade, nenhum componente de
+      // entrada é precificado. Só a saída confirmada continua.
+      noteParts.push("tool_cache_attribution_missing_input_unpriced");
+      addComponent(
+        components,
+        missingRates,
+        "tool_output_text",
+        "tool.outputTextUsdPer1M",
+        toolTextOutputTokens(toolUsage) ?? 0,
+        toolModelRates.outputTextUsdPer1M,
+      );
+      addComponent(
+        components,
+        missingRates,
+        "tool_output_image",
+        "tool.outputImageUsdPer1M",
+        toolUsage.outputImageTokens ?? 0,
+        toolImageRates.output,
+      );
+    } else {
+      const cachedText = toolUsage.cachedTextTokens ?? 0;
+      const cachedImage = toolUsage.cachedImageTokens ?? 0;
+      addComponent(
+        components,
+        missingRates,
+        "tool_input_text",
+        "tool.inputTextUsdPer1M",
+        Math.max(0, (toolTextInputTokens(toolUsage) ?? 0) - cachedText),
+        toolModelRates.inputTextUsdPer1M,
+      );
+      addComponent(
+        components,
+        missingRates,
+        "tool_cached_text",
+        "tool.cachedTextUsdPer1M",
+        cachedText,
+        toolModelRates.cachedTextUsdPer1M,
+      );
+      addComponent(
+        components,
+        missingRates,
+        "tool_input_image",
+        "tool.inputImageUsdPer1M",
+        Math.max(0, (toolUsage.inputImageTokens ?? 0) - cachedImage),
+        toolImageRates.input,
+      );
+      addComponent(
+        components,
+        missingRates,
+        "tool_cached_image",
+        "tool.cachedImageUsdPer1M",
+        cachedImage,
+        toolModelRates.cachedImageUsdPer1M,
+      );
+      addComponent(
+        components,
+        missingRates,
+        "tool_output_text",
+        "tool.outputTextUsdPer1M",
+        toolTextOutputTokens(toolUsage) ?? 0,
+        toolModelRates.outputTextUsdPer1M,
+      );
+      addComponent(
+        components,
+        missingRates,
+        "tool_output_image",
+        "tool.outputImageUsdPer1M",
+        toolUsage.outputImageTokens ?? 0,
+        toolImageRates.output,
+      );
+    }
     noteParts.push("tool_usage_separate");
     computedFormula = "C";
-    canBeComplete = !toolRates.unproven && !toolInconsistent;
+    // Sem usage do ORQUESTRADOR, o custo total da chamada não está completo:
+    // o ramo da tool nunca declara `complete` sozinho.
+    canBeComplete = false;
+    noteParts.push("orchestrator_usage_missing_tool_only");
   }
 
   const hasToolUsage =

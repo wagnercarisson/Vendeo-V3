@@ -8,6 +8,7 @@ import { getModelPricing, type ModelPricing } from "./ai-model-pricing";
 import type {
   VisualSignatureImageRates,
   VisualSignatureOrchestratorRates,
+  VisualSignatureToolRates,
 } from "./visual-signature-usage";
 
 /**
@@ -40,6 +41,8 @@ export interface VisualSignatureImagePricingResult {
   quality: "low" | "medium" | null;
   provider: string;
   rates: VisualSignatureImageRates;
+  /** Tarifas próprias do modelo da tool (texto + imagem), quando expostas. */
+  toolRates: VisualSignatureToolRates;
   pricingVersion: string | null;
   missingRates: string[];
   /** Referência histórica local (somente low/medium), nunca tarifa. */
@@ -78,6 +81,16 @@ function mapImagePricing(pricing: ModelPricing): VisualSignatureImageRates {
   };
 }
 
+function mapToolPricing(pricing: ModelPricing): VisualSignatureToolRates {
+  return {
+    inputTextUsdPer1M: pricing.inputCostUsd,
+    outputTextUsdPer1M: pricing.outputCostUsd,
+    cachedTextUsdPer1M: pricing.cachedInputCostUsd,
+    imageTokenUsdPer1M: pricing.imageTokenUsdPer1M,
+    cachedImageUsdPer1M: undefined,
+  };
+}
+
 function classifyImage(params: {
   preset: VisualSignatureImagePreset | null;
   model: string | null;
@@ -108,6 +121,7 @@ function classifyImage(params: {
     quality: params.quality,
     provider: params.provider,
     rates,
+    toolRates: params.result ? mapToolPricing(params.result.pricing) : {},
     pricingVersion: params.result?.versionId ?? null,
     missingRates,
     historicalReferenceUsd,
@@ -123,10 +137,14 @@ export async function getVisualSignatureOrchestratorPricing(params: {
   provider: string;
   model: string;
 }): Promise<VisualSignatureOrchestratorPricingResult> {
-  const result = await getModelPricing({
+  const rawResult = await getModelPricing({
     provider: params.provider,
     model: normalizeModel(params.model),
   });
+  // F47.1 (D8): no caminho dedicado, o bootstrap `code_default` é tratado como
+  // tarifa operacional AUSENTE. O comportamento legado de `getModelPricing`
+  // permanece intacto; quem o consome aqui simplesmente não o aceita.
+  const result = rawResult?.versionId === "code_default" ? null : rawResult;
   const rates = result ? mapOrchestratorPricing(result.pricing) : {};
   const missingRates: string[] = [];
   if (rates.inputTextUsdPer1M === undefined) missingRates.push("orchestrator.inputTextUsdPer1M");

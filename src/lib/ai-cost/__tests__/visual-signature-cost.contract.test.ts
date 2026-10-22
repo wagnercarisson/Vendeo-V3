@@ -213,6 +213,37 @@ describe("F47.1 — roteamento do caminho com preset", () => {
     expect(expensive.imagePricingVersion).toBe("image-v1");
   });
 
+  it("orquestrador code_default não vira pricing_table/complete no caminho dedicado", async () => {
+    mockGetModelPricing.mockImplementation(
+      ({ model, quality }: { model: string; quality?: string }) => {
+        if (quality) {
+          return Promise.resolve({
+            pricing: { imageTokenUsdPer1M: 8 },
+            versionId: "image-v1",
+          });
+        }
+        return Promise.resolve({
+          pricing: { inputCostUsd: 5, outputCostUsd: 30, cachedInputCostUsd: 0.5 },
+          versionId: "code_default",
+        });
+      },
+    );
+
+    const result = await resolveAiCost({
+      provider: "openai",
+      model: "gpt-5.5",
+      usage: FULL_USAGE,
+      generationType: "visual_signature_image",
+      visualSignaturePreset: "sunburst_medium",
+      imageGenerationModel: "gpt-image-2.5-sunburst",
+      imageQuality: "medium",
+    });
+
+    expect(result.costCoverage).not.toBe("complete");
+    expect(result.orchestratorPricingVersion).toBeNull();
+    expect(result.costEstimationNote).toContain("missing_rates=orchestrator.");
+  });
+
   it("caminho legado (sem preset) permanece sem costCoverage e sem fórmula visual", async () => {
     const result = await resolveAiCost({
       provider: "openai",

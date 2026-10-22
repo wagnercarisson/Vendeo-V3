@@ -207,7 +207,8 @@ describe("F47.1 — percurso completo adapter → gateway → sink → estimador
     );
 
     const event = mockRecord.mock.calls[0][0];
-    expect(event.cost.costCoverage).toBe("complete");
+    // Sem usage do orquestrador, o ramo da tool sozinho não é completo.
+    expect(event.cost.costCoverage).toBe("partial");
     // Tool: 196 tokens de imagem * 8 = 0.001568 (uma única vez).
     expect(event.cost.estimatedCostUsd).toBeCloseTo(0.001568, 8);
     expect(event.metadata).toMatchObject({

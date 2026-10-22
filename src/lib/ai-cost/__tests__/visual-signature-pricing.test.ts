@@ -47,6 +47,12 @@ describe("F47.1 — pricing quality-aware do preset (imagem)", () => {
     // A tarifa única NÃO é copiada para entrada e saída.
     expect(result.rates.inputImageUsdPer1M).toBeUndefined();
     expect(result.rates.outputImageUsdPer1M).toBeUndefined();
+    expect(result.toolRates).toMatchObject({
+      inputTextUsdPer1M: 5,
+      outputTextUsdPer1M: 30,
+      cachedTextUsdPer1M: 0.5,
+      imageTokenUsdPer1M: 8,
+    });
   });
 
   it("nunca consulta responses:image_generation (0.065)", async () => {
@@ -99,6 +105,23 @@ describe("F47.1 — pricing do orquestrador (texto)", () => {
       cachedTextUsdPer1M: 0.5,
     });
     expect(result.pricingVersion).toBe(VERSION);
+  });
+
+  it("code_default é tratado como ausente no caminho dedicado", async () => {
+    mockGetModelPricing.mockResolvedValue({
+      pricing: { inputCostUsd: 5, outputCostUsd: 30, cachedInputCostUsd: 0.5 },
+      versionId: "code_default",
+    });
+
+    const result = await getVisualSignatureOrchestratorPricing({
+      provider: "openai",
+      model: "gpt-5.5",
+    });
+
+    expect(result.status).toBe("missing");
+    expect(result.rates).toEqual({});
+    expect(result.pricingVersion).toBeNull();
+    expect(result.missingRates.length).toBeGreaterThan(0);
   });
 
   it("linha ausente → missing, sem usar tarifa de imagem", async () => {

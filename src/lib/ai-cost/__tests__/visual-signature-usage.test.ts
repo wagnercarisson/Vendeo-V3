@@ -313,15 +313,91 @@ describe("F47.1 — fórmulas B/C/E", () => {
       usage: undefined,
       orchestratorRates: ORCHESTRATOR,
       imageRates: { imageTokenUsdPer1M: 30 },
+      toolRates: { outputTextUsdPer1M: 30, imageTokenUsdPer1M: 30 },
       imageToolUsage: { completionTokens: 1000, outputImageTokens: 196 },
     });
 
     expect(result.formula).toBe("C");
-    expect(result.costCoverage).toBe("complete");
+    // Sem usage do orquestrador, o custo total da chamada não é completo.
+    expect(result.costCoverage).toBe("partial");
+    expect(result.costEstimationNote).toContain("orchestrator_usage_missing_tool_only");
     // Texto derivado = 1000 - 196 = 804; imagem = 196. Total = 0.03.
     expect(result.components.tool_output_text?.tokens).toBe(804);
     expect(result.components.tool_output_image?.tokens).toBe(196);
     expect(result.estimatedCostUsd).toBeCloseTo(0.03, 8);
+  });
+
+  it("tool com reasoning maior que output não recebe cobertura completa", () => {
+    const result = computeVisualSignatureCost({
+      usage: undefined,
+      orchestratorRates: {},
+      imageRates: {},
+      toolRates: {
+        inputTextUsdPer1M: 5,
+        cachedTextUsdPer1M: 0.5,
+        outputTextUsdPer1M: 30,
+        imageTokenUsdPer1M: 8,
+      },
+      imageToolUsage: {
+        completionTokens: 10,
+        outputTextTokens: 10,
+        outputImageTokens: 0,
+        reasoningTokens: 20,
+      },
+    });
+
+    expect(result.costCoverage).toBe("partial");
+    expect(result.costEstimationNote).toContain("reasoning_exceeds_output");
+  });
+
+  it("tool com cache sem atribuição não cobra todo o input como não cacheado", () => {
+    const result = computeVisualSignatureCost({
+      usage: undefined,
+      orchestratorRates: {},
+      imageRates: {},
+      toolRates: {
+        inputTextUsdPer1M: 5,
+        cachedTextUsdPer1M: 0.5,
+        outputTextUsdPer1M: 30,
+        imageTokenUsdPer1M: 8,
+      },
+      imageToolUsage: {
+        promptTokens: 1000,
+        completionTokens: 0,
+        cachedInputTokens: 800,
+        inputTextTokens: 1000,
+        outputTextTokens: 0,
+        outputImageTokens: 0,
+      },
+    });
+
+    expect(["partial", "unknown"]).toContain(result.costCoverage);
+    expect(result.costEstimationNote).toContain("tool_cache_attribution_missing_input_unpriced");
+    expect(result.components.tool_input_text).toBeUndefined();
+    // Nenhum componente de entrada foi inventado.
+    expect(result.estimatedCostUsd).toBeNull();
+  });
+
+  it("tool sem tarifa própria não usa a tarifa do orquestrador", () => {
+    const result = computeVisualSignatureCost({
+      usage: undefined,
+      orchestratorRates: { inputTextUsdPer1M: 5, outputTextUsdPer1M: 30 },
+      imageRates: {},
+      imageToolUsage: {
+        promptTokens: 1000,
+        completionTokens: 500,
+        inputTextTokens: 1000,
+        outputTextTokens: 500,
+        outputImageTokens: 0,
+      },
+    });
+
+    expect(result.components.tool_input_text?.usd).toBeNull();
+    expect(result.components.tool_output_text?.usd).toBeNull();
+    expect(result.costCoverage).toBe("unknown");
+    expect(result.missingRates).toEqual(
+      expect.arrayContaining(["tool.inputTextUsdPer1M", "tool.outputTextUsdPer1M"]),
+    );
   });
 
   it("tool com usage principal presente não é somado (exclusão não comprovada)", () => {

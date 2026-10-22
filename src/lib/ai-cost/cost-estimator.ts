@@ -422,6 +422,7 @@ async function resolveVisualSignaturePresetCost(params: {
     usage: params.usage,
     orchestratorRates: orchestratorPricing.rates,
     imageRates: imagePricing.rates,
+    toolRates: imagePricing.toolRates,
     providerReportedCostUsd: params.providerReportedCostUsd,
     imageToolUsage: params.imageToolUsage,
     historicalEstimateUsd: imagePricing.historicalReferenceUsd,
