@@ -25,9 +25,14 @@ const groups = [
     key: "image",
     label: "Imagem",
     description:
-      "Fluxo legado — geração, edição e assinatura visual. O fluxo Produto 1:1 é configurado na seção \"Imagem de campanhas — Produto 1:1\".",
+      "Fluxo legado — geração e edição de campanhas. Produto 1:1 e Assinatura Visual têm cards dedicados nesta página.",
   },
 ] as const;
+
+export type AiModelSelectionFormMode = "all" | "shared" | "legacy";
+
+const LEGACY_IMAGE_CAPABILITIES = new Set(["campaign_image", "campaign_image_edit"]);
+const VISUAL_SIGNATURE_CAPABILITY = "visual_signature_image";
 
 function targetKey(target: { provider: string; model: string; protocol: string } | null): string {
   return target ? `${target.provider}|${target.model}|${target.protocol}` : "";
@@ -58,9 +63,25 @@ function makeDraft(item: AiModelCapabilityView): Draft {
   };
 }
 
-export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel }) {
+export function AiModelSelectionForm({
+  view,
+  mode = "all",
+}: {
+  view: AiModelSelectionViewModel;
+  mode?: AiModelSelectionFormMode;
+}) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
     Object.fromEntries(view.capabilities.map((item) => [item.capability, makeDraft(item)])),
+  );
+
+  const visibleGroups = groups.filter((group) => {
+    if (mode === "shared") return group.key === "text" || group.key === "vision";
+    if (mode === "legacy") return group.key === "image";
+    return true;
+  });
+
+  const inheritedVisualSignature = view.capabilities.find(
+    (item) => item.capability === VISUAL_SIGNATURE_CAPABILITY,
   );
 
   function patch(capability: string, update: Partial<Draft>) {
@@ -121,8 +142,60 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
         </div>
       </div>
 
-      {groups.map((group) => {
-        const items = view.capabilities.filter((item) => item.segment === group.key);
+      {inheritedVisualSignature && (
+        <section aria-labelledby="vs-inherited-diagnostic-heading" className="space-y-3">
+          <div>
+            <h2
+              id="vs-inherited-diagnostic-heading"
+              className="font-heading text-lg font-semibold text-text-primary"
+            >
+              Seleção herdada — diagnóstico
+            </h2>
+            <p className="text-sm text-text-secondary">
+              <code className="font-mono text-xs">visual_signature_image</code> não é editável aqui.
+              O diagnóstico permanece visível e a edição ocorre no card “Assinatura Visual”.
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-bg-surface p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                  Executado agora
+                </p>
+                <p className="mt-1 break-words text-sm text-text-primary">
+                  {targetLabel(inheritedVisualSignature.current.primary)}
+                </p>
+              </div>
+              <span
+                className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${statusClass(
+                  inheritedVisualSignature.current.primary.catalogStatus,
+                )}`}
+              >
+                {inheritedVisualSignature.current.primary.catalogStatus}
+              </span>
+            </div>
+            <p className="mt-3 text-xs text-text-muted">
+              Origem:{" "}
+              {inheritedVisualSignature.configured?.primary
+                ? "decisão humana persistida"
+                : inheritedVisualSignature.source === "selection"
+                  ? "seleção persistida"
+                  : "default do sistema"}
+              . O reset dedicado retorna a geração a esta seleção.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {visibleGroups.map((group) => {
+        const items = view.capabilities.filter((item) => {
+          if (item.capability === VISUAL_SIGNATURE_CAPABILITY) return false;
+          if (item.segment !== group.key) return false;
+          if (mode === "legacy" && group.key === "image") {
+            return LEGACY_IMAGE_CAPABILITIES.has(item.capability);
+          }
+          return true;
+        });
         return (
           <section key={group.key} aria-labelledby={`group-${group.key}`} className="space-y-3">
             <div>

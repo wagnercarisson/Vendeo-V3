@@ -1,0 +1,356 @@
+"use client";
+
+import { useState } from "react";
+import { AlertTriangle, Check, RotateCcw, Save, Settings2 } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import type {
+  VisualSignatureConfigViewRow,
+  VisualSignatureModelConfigView,
+  VisualSignaturePresetPricingView,
+} from "@/lib/ai/visual-signature-model-config-view";
+import type {
+  VisualSignatureImagePreset,
+  VisualSignatureOrchestrator,
+} from "@/lib/ai/visual-signature-model-config";
+
+function formatTimestamp(value: string | null): string {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("pt-BR");
+}
+
+function originLabel(origin: VisualSignatureModelConfigView["inherited"]["origin"]): string {
+  if (origin === "human_decision") return "Decisão humana";
+  if (origin === "selection") return "Seleção";
+  return "Default do sistema";
+}
+
+function coverageLabel(pricing: VisualSignaturePresetPricingView): string {
+  if (pricing.status === "complete") return "Completa";
+  if (pricing.status === "partial") return "Parcial";
+  return "Ausente";
+}
+
+function coverageVariant(pricing: VisualSignaturePresetPricingView): "ready" | "generating" | "error" {
+  if (pricing.status === "complete") return "ready";
+  if (pricing.status === "partial") return "generating";
+  return "error";
+}
+
+export function VisualSignatureConfigForm({ view }: { view: VisualSignatureModelConfigView }) {
+  const initial = view.current;
+  const [orchestrator, setOrchestrator] = useState<VisualSignatureOrchestrator>(
+    initial?.orchestratorModel ?? view.orchestrators[0],
+  );
+  const [preset, setPreset] = useState<VisualSignatureImagePreset>(
+    initial?.imagePreset ?? view.presets[0]?.preset ?? "flare_low",
+  );
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [operation, setOperation] = useState<{ fingerprint: string; id: string } | null>(null);
+
+  const selectedPreset = view.presets.find((item) => item.preset === preset) ?? view.presets[0];
+  const selectedPricing = view.pricingByPreset[preset];
+
+  function idempotencyKey(fingerprint: string): string {
+    if (operation?.fingerprint === fingerprint) return operation.id;
+    const id = crypto.randomUUID();
+    setOperation({ fingerprint, id });
+    return id;
+  }
+
+  async function mutate(action: "save" | "reset") {
+    setError(null);
+    setSuccess(null);
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      setError("Motivo obrigatório");
+      return;
+    }
+    if (action === "reset" && !view.configured) {
+      setError("Não há configuração dedicada para remover.");
+      return;
+    }
+
+    const body =
+      action === "reset"
+        ? { reason: trimmed }
+        : { orchestratorModel: orchestrator, imagePreset: preset, reason: trimmed };
+    const fingerprint = JSON.stringify([action, body]);
+    const operationId = idempotencyKey(fingerprint);
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/admin/visual-signature-model-config", {
+        method: action === "reset" ? "DELETE" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, operationId }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(data.error || `Erro ${response.status}`);
+      setReason("");
+      setOperation(null);
+      setSuccess(
+        action === "reset"
+          ? "Configuração dedicada removida; a próxima geração usará a seleção herdada."
+          : "Configuração da Assinatura Visual salva com auditoria.",
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível concluir a operação.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <CurrentConfigCard current={view.current} readError={view.readError} />
+
+      <Card className="space-y-5 p-6">
+        <div className="flex items-start gap-3 rounded-xl border border-accent-blue/20 bg-accent-blue/5 p-4 text-sm text-text-secondary">
+          <Settings2 className="mt-0.5 h-5 w-5 shrink-0 text-accent-blue" aria-hidden="true" />
+          <p>
+            <strong className="text-text-primary">Configuração dedicada.</strong> Salva apenas este
+            card, via RPC auditada. Não altera o Produto 1:1 nem a seleção genérica. O reasoning é
+            fixo em <code className="font-mono text-xs text-text-primary">low</code> e derivado no
+            servidor.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1.5 text-sm text-text-secondary">
+            <span className="block text-xs font-medium uppercase tracking-wider">Orquestrador</span>
+            <select
+              aria-label="Orquestrador da Assinatura Visual"
+              value={orchestrator}
+              onChange={(event) => {
+                setOrchestrator(event.target.value as VisualSignatureOrchestrator);
+                setOperation(null);
+              }}
+              className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20"
+            >
+              {view.orchestrators.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1.5 text-sm text-text-secondary">
+            <span className="block text-xs font-medium uppercase tracking-wider">Preset de imagem</span>
+            <select
+              aria-label="Preset de imagem da Assinatura Visual"
+              value={preset}
+              onChange={(event) => {
+                setPreset(event.target.value as VisualSignatureImagePreset);
+                setOperation(null);
+              }}
+              className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20"
+            >
+              {view.presets.map((item) => (
+                <option key={item.preset} value={item.preset}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Preview do mapeamento</p>
+          <p className="mt-1 break-words text-sm text-text-primary">
+            {selectedPreset?.label ?? preset} → <code className="font-mono text-xs">{selectedPreset?.model}</code> ·{" "}
+            {selectedPreset?.quality}
+          </p>
+          <p className="mt-1 text-xs text-text-muted">
+            {view.orchestrators.length} orquestradores × {view.presets.length} presets ={" "}
+            {view.combinations.length} combinações.
+          </p>
+        </div>
+
+        {selectedPricing && selectedPricing.status !== "complete" && (
+          <div className="flex items-start gap-2 rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              Pricing {coverageLabel(selectedPricing).toLowerCase()}: faltam{" "}
+              {selectedPricing.missingRates.join(", ") || "tarifas comprovadas"}. A seleção continua
+              permitida; o custo desconhecido será registrado como parcial/ausente.
+            </span>
+          </div>
+        )}
+
+        <label className="block space-y-1.5 text-sm text-text-secondary">
+          <span className="block text-xs font-medium uppercase tracking-wider">Motivo da alteração</span>
+          <input
+            aria-label="Motivo da alteração da Assinatura Visual"
+            value={reason}
+            onChange={(event) => {
+              setReason(event.target.value);
+              setOperation(null);
+            }}
+            placeholder="Motivo obrigatório para auditoria"
+            className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20"
+          />
+        </label>
+
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" loading={loading} onClick={() => void mutate("save")}>
+            <Save className="h-4 w-4" aria-hidden="true" />
+            Salvar Assinatura Visual
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            loading={loading}
+            disabled={!view.configured}
+            onClick={() => void mutate("reset")}
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            Voltar à seleção herdada
+          </Button>
+        </div>
+
+        {error && (
+          <p className="text-xs text-accent-red" role="alert">
+            {error}
+          </p>
+        )}
+        {success && (
+          <p className="flex items-center gap-1 text-xs text-accent-green">
+            <Check className="h-4 w-4" aria-hidden="true" />
+            {success}
+          </p>
+        )}
+      </Card>
+
+      <InheritedCard inherited={view.inherited} />
+
+      {selectedPricing && (
+        <p className="text-xs text-text-muted">
+          Cobertura de pricing do preset selecionado: <Badge variant={coverageVariant(selectedPricing)}>{coverageLabel(selectedPricing)}</Badge>
+          {selectedPricing.historicalReferenceUsd != null &&
+            ` · referência histórica local US$ ${selectedPricing.historicalReferenceUsd} (não é custo estimado)`}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CurrentConfigCard({
+  current,
+  readError,
+}: {
+  current: VisualSignatureConfigViewRow | null;
+  readError: string | null;
+}) {
+  if (readError) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-accent-red" role="alert">
+          {readError}
+        </p>
+      </Card>
+    );
+  }
+  if (!current) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-text-secondary">
+          Nenhuma configuração dedicada registrada. Enquanto isso, a geração usa a seleção herdada.
+        </p>
+      </Card>
+    );
+  }
+  return (
+    <Card className="space-y-4 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-heading text-lg font-semibold text-text-primary">Configuração vigente</h3>
+        <Badge variant="ready">ativa no ambiente local</Badge>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Orquestrador</p>
+          <p className="mt-1 text-sm text-text-primary">{current.orchestratorModel}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Preset / imagem</p>
+          <p className="mt-1 break-words text-sm text-text-primary">
+            {current.imagePreset} · {current.imageModel} · {current.imageQuality}
+          </p>
+        </div>
+      </div>
+      <dl className="grid gap-3 text-xs sm:grid-cols-2">
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <dt className="font-semibold uppercase tracking-wider text-text-muted">Versão</dt>
+          <dd className="mt-1 break-all font-mono text-text-primary">{current.configVersionId}</dd>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <dt className="font-semibold uppercase tracking-wider text-text-muted">Reasoning</dt>
+          <dd className="mt-1 text-text-primary">{current.reasoningEffort}</dd>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <dt className="font-semibold uppercase tracking-wider text-text-muted">Autor</dt>
+          <dd className="mt-1 break-all text-text-primary">{current.updatedBy ?? "—"}</dd>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <dt className="font-semibold uppercase tracking-wider text-text-muted">Atualizado em</dt>
+          <dd className="mt-1 text-text-primary">{formatTimestamp(current.updatedAt)}</dd>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3 sm:col-span-2">
+          <dt className="font-semibold uppercase tracking-wider text-text-muted">Motivo</dt>
+          <dd className="mt-1 break-words text-text-primary">{current.reason ?? "—"}</dd>
+        </div>
+      </dl>
+    </Card>
+  );
+}
+
+function InheritedCard({ inherited }: { inherited: VisualSignatureModelConfigView["inherited"] }) {
+  return (
+    <Card className="space-y-4 p-6" aria-labelledby="inherited-selection-heading">
+      <div>
+        <h3 id="inherited-selection-heading" className="font-heading text-lg font-semibold text-text-primary">
+          Seleção herdada — somente leitura
+        </h3>
+        <p className="mt-1 text-sm text-text-secondary">
+          Diagnóstico de <code className="font-mono text-xs">visual_signature_image</code>. Não é um
+          segundo editor; o reset dedicado retorna a geração a esta seleção.
+        </p>
+      </div>
+      <div className="grid gap-3 text-xs sm:grid-cols-2">
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <p className="font-semibold uppercase tracking-wider text-text-muted">Provider</p>
+          <p className="mt-1 text-text-primary">{inherited.provider}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <p className="font-semibold uppercase tracking-wider text-text-muted">Modelo</p>
+          <p className="mt-1 break-all text-text-primary">{inherited.model}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <p className="font-semibold uppercase tracking-wider text-text-muted">Protocolo</p>
+          <p className="mt-1 text-text-primary">{inherited.protocol}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
+          <p className="font-semibold uppercase tracking-wider text-text-muted">Origem</p>
+          <p className="mt-1 text-text-primary">{originLabel(inherited.origin)}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-bg-deep/40 p-3 sm:col-span-2">
+          <p className="font-semibold uppercase tracking-wider text-text-muted">Status de catálogo</p>
+          <p className="mt-1 flex items-center gap-2 text-text-primary">
+            {inherited.catalogStatus}
+            <Badge variant={inherited.eligible ? "ready" : "error"}>
+              {inherited.eligible ? "elegível" : "fora do catálogo ativo"}
+            </Badge>
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+}

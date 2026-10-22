@@ -80,6 +80,32 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
+describe("Página unificada de modelos — ordem F47.1", () => {
+  it("ordena Produto 1:1 → Assinatura Visual → compartilhadas → legado", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/app/(app)/admin/ai-model-selection/page.tsx"),
+      "utf8",
+    );
+    const product = source.indexOf("<ProductOneToOneImageModelSection");
+    const visualSignature = source.indexOf("<VisualSignatureModelSection");
+    const shared = source.indexOf('id="shared-capabilities-heading"');
+    const legacy = source.indexOf('id="legacy-campaign-heading"');
+
+    expect(product).toBeGreaterThan(-1);
+    expect(visualSignature).toBeGreaterThan(product);
+    expect(shared).toBeGreaterThan(visualSignature);
+    expect(legacy).toBeGreaterThan(shared);
+  });
+
+  it("não oferece edição de visual_signature_image no formulário genérico", () => {
+    const { container } = render(<AiModelSelectionForm view={SELECTION_VIEW} mode="shared" />);
+
+    expect(container.querySelector("#primary-visual_signature_image")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Seleção herdada — diagnóstico" })).toBeInTheDocument();
+    expect(screen.getByText(/O diagnóstico permanece visível/)).toBeInTheDocument();
+  });
+});
+
 describe("Página unificada de modelos — composição", () => {
   it("exibe as capacidades legadas e a seção Produto 1:1 na mesma página", () => {
     render(<UnifiedComposition />);

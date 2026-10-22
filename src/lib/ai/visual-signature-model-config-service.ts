@@ -40,6 +40,10 @@ export interface VisualSignatureModelConfigRow {
   image_quality: string;
   reasoning_effort: string;
   config_version_id: string;
+  /** F47.1 admin (D10): auditoria da configuração vigente. */
+  reason?: string | null;
+  updated_by?: string | null;
+  updated_at?: string | null;
 }
 
 export interface VisualSignatureModelConfigReader {
@@ -110,13 +114,24 @@ async function readRowFromSupabase(): Promise<VisualSignatureModelConfigRow | nu
   const { data, error } = await supabaseAdmin
     .from("visual_signature_model_config")
     .select(
-      "scope, environment_scope, instance_identity, orchestrator_model, image_preset, image_model, image_quality, reasoning_effort, config_version_id",
+      "scope, environment_scope, instance_identity, orchestrator_model, image_preset, image_model, image_quality, reasoning_effort, config_version_id, reason, updated_by, updated_at",
     )
     .eq("scope", VISUAL_SIGNATURE_CONFIG_SCOPE)
     .maybeSingle();
 
   if (error) throw new VisualSignatureConfigReadError({ cause: error });
   return (data as VisualSignatureModelConfigRow | null) ?? null;
+}
+
+/**
+ * F47.1 (D10) — leitura ADMIN da linha vigente (somente leitura).
+ *
+ * Diferente de `loadVisualSignatureModelConfigSnapshot`, NÃO aplica o guard de
+ * opt-in: a tela administrativa precisa diagnosticar a configuração mesmo
+ * quando o opt-in está desligado. Nenhuma escrita ocorre aqui.
+ */
+export async function readVisualSignatureModelConfigRowForAdmin(): Promise<VisualSignatureModelConfigRow | null> {
+  return readRowFromSupabase();
 }
 
 const defaultReader: VisualSignatureModelConfigReader = { read: readRowFromSupabase };
