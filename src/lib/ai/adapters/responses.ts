@@ -4,6 +4,17 @@ import { getApiKey } from "../api-keys";
 import { AiInvocationError } from "../types";
 import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../types";
 
+export interface ResponsesAdapterClientOptions {
+  /**
+   * F47.1 (D6/D12) — retries internos do SDK. O gateway de validação local usa
+   * `0` para que o limite efetivo seja o das tentativas de aplicação. Ausente no
+   * adapter default ⇒ comportamento atual do SDK permanece intacto.
+   */
+  maxRetries?: number;
+  /** Timeout de cliente opcional (ms), repassado ao SDK. */
+  timeout?: number;
+}
+
 /**
  * Adapter do protocolo `responses` (OpenAI Responses API).
  *
@@ -15,9 +26,22 @@ import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../type
 export class ResponsesAdapter implements AiAdapter {
   readonly protocol = "responses" as const;
 
+  /**
+   * `resolveApiKey` é injetável por construtor (F47.1, D6); o default continua
+   * `getApiKey` (comportamento atual intacto). `clientOptions` permite provar
+   * `maxRetries=0` no gateway de validação local.
+   */
+  constructor(
+    private readonly resolveApiKey: (provider: AiModelTarget["provider"]) => string = getApiKey,
+    private readonly clientOptions: ResponsesAdapterClientOptions = {},
+  ) {}
+
   async invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult> {
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: getApiKey(target.provider) });
+    const openai = new OpenAI({
+      apiKey: this.resolveApiKey(target.provider),
+      ...this.clientOptions,
+    });
 
     const content: unknown[] = [{ type: "input_text", text: request.prompt }];
     for (const url of request.productImagesDataUrls ?? []) {
