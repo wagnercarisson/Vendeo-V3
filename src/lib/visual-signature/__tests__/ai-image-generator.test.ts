@@ -242,8 +242,8 @@ describe("AiImageGenerator - F47.1 parsing/proveniencia por tentativa", () => {
 
     expect(result.creativeIntent?.metadata.creative_intent_parse_status).toBe("parsed_json");
     expect(result.creativeIntent?.metadata.creative_intent_source).toBe("model");
-    expect(result.metadata.creative_intent_parse_status).toBe("parsed_json");
-    expect(result.metadata.creative_intent_source).toBe("model");
+    expect(result.metadata?.creative_intent_parse_status).toBe("parsed_json");
+    expect(result.metadata?.creative_intent_source).toBe("model");
     const envelope = sink.pending.find((item) => item.capability === "visual_signature_image");
     expect(envelope?.metadata).toMatchObject({
       creative_intent_parse_status: "parsed_json",
@@ -260,7 +260,7 @@ describe("AiImageGenerator - F47.1 parsing/proveniencia por tentativa", () => {
       creative_intent_fallback_reason: "missing_json",
       creative_intent_source: "fallback",
     });
-    expect(result.metadata.creative_intent_source).toBe("fallback");
+    expect(result.metadata?.creative_intent_source).toBe("fallback");
     const envelope = sink.pending.find((item) => item.capability === "visual_signature_image");
     expect(envelope?.metadata).toMatchObject({
       creative_intent_parse_status: "no_json",
