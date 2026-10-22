@@ -12,6 +12,10 @@ const { mockRpc, mockFrom } = vi.hoisted(() => ({
 
 const mockResolve = vi.fn();
 
+// F50.4 — resultados roteados por nome de RPC (policy_context × update_store_cnpj).
+let policyContextResult: { data: unknown; error: unknown } = { data: null, error: null };
+let updateCnpjResult: { data: unknown; error: unknown } = { data: null, error: null };
+
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: { rpc: mockRpc, from: mockFrom },
   createServerClient: vi.fn(),
@@ -83,6 +87,13 @@ beforeEach(() => {
   mockFrom.mockReset();
   mockResolve.mockReset();
   mockEvaluateFreemium.mockReset();
+  policyContextResult = { data: null, error: null };
+  updateCnpjResult = { data: null, error: null };
+  mockRpc.mockImplementation((rpcName: string) => {
+    if (rpcName === "trial_offer_policy_context") return Promise.resolve(policyContextResult);
+    if (rpcName === "update_store_cnpj") return Promise.resolve(updateCnpjResult);
+    return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+  });
   mockFromNoDuplicate();
   // Default: lookup resolve resolved with official data
   vi.mocked(CnpjVerificationService).prototype.resolve = mockResolve;
@@ -94,10 +105,10 @@ import { hashCnpjRoot } from "@/lib/cnpj/hash";
 
 describe("POST /api/store/update-cnpj", () => {
   it("updates CNPJ for legacy store without granting credits", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195" }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -122,10 +133,10 @@ describe("POST /api/store/update-cnpj", () => {
   });
 
   it("inserts consumed entitlement without granting credits", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -142,10 +153,10 @@ describe("POST /api/store/update-cnpj", () => {
   });
 
   it("uses official razao_social from CnpjVerificationService when resolved", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -199,10 +210,10 @@ describe("POST /api/store/update-cnpj", () => {
       name: "Test Store",
       is_test_store: true,
     } as import("@/lib/store").Store);
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -219,10 +230,10 @@ describe("POST /api/store/update-cnpj", () => {
   });
 
   it("calculates cnpj_validation_score when resolved", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -238,10 +249,10 @@ describe("POST /api/store/update-cnpj", () => {
   });
 
   it("blocks CNPJ overwrite when store already has CNPJ", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: null,
       error: { message: "cnpj_already_set" },
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -282,10 +293,10 @@ describe("POST /api/store/update-cnpj", () => {
 
   it("persiste CNPJ alfanumérico canônico e hasheia a raiz canônica", async () => {
     const chain = mockFromNoDuplicate();
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -328,10 +339,10 @@ describe("POST /api/store/update-cnpj", () => {
       name: "Test Store",
       is_test_store: true,
     } as import("@/lib/store").Store);
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -362,14 +373,14 @@ describe("POST /api/store/update-cnpj", () => {
   });
 
   it("returns 409 with cnpj_already_registered when CNPJ index conflicts", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: null,
       error: {
         code: "23505",
         message: 'duplicate key value violates unique constraint "idx_stores_cnpj_normalized"',
         details: 'Key (cnpj_normalized)=(12345678000195) already exists.',
       },
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -404,10 +415,10 @@ describe("POST /api/store/update-cnpj", () => {
   });
 
   it("passes verification params to RPC when resolved", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -435,10 +446,10 @@ describe("POST /api/store/update-cnpj", () => {
   });
 
   it("returns 500 for unknown RPC errors instead of leaking raw SQL", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: null,
       error: { message: "some_random_internal_error" },
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -453,10 +464,10 @@ describe("POST /api/store/update-cnpj", () => {
   });
 
   it("Teste 26 (D7a): keeps store unverified when city/state absent — motor NOT called, no auto-approval", async () => {
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     await POST(createRequest({
@@ -489,10 +500,10 @@ describe("POST /api/store/update-cnpj", () => {
       score: 30,
       signals: { situacaoCadastral: "INAPTA" },
     });
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -527,10 +538,10 @@ describe("POST /api/store/update-cnpj", () => {
       score: 40,
       signals: { cnaeCompatible: "incompatible" },
     });
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -561,10 +572,10 @@ describe("POST /api/store/update-cnpj", () => {
       score: 100,
       signals: { cnaeCompatible: "compatible" },
     });
-    mockRpc.mockResolvedValueOnce({
+    updateCnpjResult = {
       data: { store: [{ id: STORE_UUID }] },
       error: null,
-    });
+    };
 
     const { POST } = await import("../route");
     const res = await POST(createRequest({
@@ -583,6 +594,129 @@ describe("POST /api/store/update-cnpj", () => {
     expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
       p_verification_status: "approved",
     }));
+  });
+
+  it("F50.4: coorte per_cnpj com raiz inelegível e beneficiário elegível passa o contexto ao motor", async () => {
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Minha Loja",
+      city: "São Paulo",
+      state: "SP",
+      segment: "moda-calcados-acessorios",
+    } as import("@/lib/store").Store);
+    policyContextResult = {
+      data: {
+        policy_cohort: "per_cnpj_f50_4",
+        beneficiary_eligible: true,
+        beneficiary_ambiguous: false,
+        root_eligible: false,
+      },
+      error: null,
+    };
+    updateCnpjResult = { data: { store: [{ id: STORE_UUID }] }, error: null };
+    mockEvaluateFreemium.mockReturnValue({
+      decision: "approved",
+      reasons: [],
+      score: 100,
+      signals: {},
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockEvaluateFreemium).toHaveBeenCalledWith(expect.objectContaining({
+      policyCohort: "per_cnpj_f50_4",
+      beneficiaryEligible: true,
+      rootEligible: false,
+    }));
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_verification_status: "approved",
+    }));
+  });
+
+  it("F50.4: mesmo CNPJ na coorte per_cnpj rejeita e não expõe dados sensíveis", async () => {
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Minha Loja",
+      city: "São Paulo",
+      state: "SP",
+      segment: "moda-calcados-acessorios",
+    } as import("@/lib/store").Store);
+    policyContextResult = {
+      data: {
+        policy_cohort: "per_cnpj_f50_4",
+        beneficiary_eligible: false,
+        beneficiary_ambiguous: false,
+        root_eligible: true,
+      },
+      error: null,
+    };
+    updateCnpjResult = { data: { store: [{ id: STORE_UUID }] }, error: null };
+    mockEvaluateFreemium.mockReturnValue({
+      decision: "reject",
+      reasons: ["beneficiary_already_used"],
+      score: 20,
+      signals: {},
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao",
+    }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("beneficiary_cnpj_normalized");
+    expect(serialized).not.toContain("root_hash");
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_verification_status: "reject",
+      p_verification_reasons: ["beneficiary_already_used"],
+    }));
+  });
+
+  it("F50.4: RPC de contexto indisponível → fallback legado por root_hash sem quebrar a atualização", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Minha Loja",
+      city: "São Paulo",
+      state: "SP",
+      segment: "moda-calcados-acessorios",
+    } as import("@/lib/store").Store);
+    policyContextResult = { data: null, error: { message: "rpc unavailable" } };
+    updateCnpjResult = { data: { store: [{ id: STORE_UUID }] }, error: null };
+    mockEvaluateFreemium.mockReturnValue({
+      decision: "approved",
+      reasons: [],
+      score: 100,
+      signals: {},
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(warn).toHaveBeenCalledWith("trial_offer_policy_context_unavailable");
+    expect(mockEvaluateFreemium).toHaveBeenCalledWith(expect.objectContaining({
+      rootEligible: true,
+    }));
+    expect(mockEvaluateFreemium.mock.calls[0][0].policyCohort).toBeUndefined();
+    warn.mockRestore();
   });
 
   it("returns 403 when storeId does not match user store", async () => {

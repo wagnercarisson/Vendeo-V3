@@ -25,6 +25,60 @@ const UpdateCnpjSchema = z.object({
   nomeFantasia: z.string().max(200).optional(),
 });
 
+type PolicyContextSignals = {
+  policyCohort?: "root_legacy" | "per_cnpj_f50_4";
+  beneficiaryEligible?: boolean;
+  rootEligible: boolean;
+};
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+/**
+ * F50.4 — mesmo contexto de política de `/api/store` (RPC service_role-only),
+ * sem replicar a regra de coorte em TypeScript. Fallback explícito para o
+ * comportamento legado (rootEligible por `freemium_entitlements`/root_hash)
+ * quando a RPC falhar ou não devolver `policy_cohort`.
+ */
+async function resolvePolicyContext(
+  userId: string,
+  cnpjNormalized: string,
+  rootHash: string,
+): Promise<PolicyContextSignals> {
+  const { data, error } = await supabaseAdmin.rpc("trial_offer_policy_context", {
+    p_user_id: userId,
+    p_cnpj_normalized: cnpjNormalized,
+    p_root_hash: rootHash,
+  });
+
+  const record = toRecord(data);
+  const cohort = record.policy_cohort;
+
+  if (!error && (cohort === "root_legacy" || cohort === "per_cnpj_f50_4")) {
+    return {
+      policyCohort: cohort,
+      beneficiaryEligible:
+        typeof record.beneficiary_eligible === "boolean"
+          ? record.beneficiary_eligible
+          : undefined,
+      rootEligible: record.root_eligible === true,
+    };
+  }
+
+  // Log estruturado sem CNPJ/root_hash/payload.
+  console.warn("trial_offer_policy_context_unavailable");
+
+  const { data: existingEntitlement } = await supabaseAdmin
+    .from("freemium_entitlements")
+    .select("id")
+    .eq("root_hash", rootHash)
+    .eq("benefit_type", "onboarding")
+    .maybeSingle();
+
+  return { rootEligible: !existingEntitlement };
+}
+
 export const POST = apiHandler(async (request: NextRequest) => {
   try {
     const user = await requireUser();
@@ -138,15 +192,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
       const storeState = typeof (store as any).state === "string" ? (store as any).state.trim() : "";
 
       if (storeCity !== "" && storeState !== "") {
-        // rootEligible: mesma consulta do create (freemium_entitlements por root_hash)
-        const { data: existingEntitlement } = await supabaseAdmin
-          .from("freemium_entitlements")
-          .select("id")
-          .eq("root_hash", cnpjRootHash)
-          .eq("benefit_type", "onboarding")
-          .maybeSingle();
-
-        const rootEligible = !existingEntitlement;
+        // F50.4 — mesma RPC de contexto de `/api/store`; fallback legado explícito.
+        const policy = await resolvePolicyContext(user.userId, canonical, cnpjRootHash);
 
         const eligibility = evaluateFreemiumEligibility({
           cnpj: canonical,
@@ -157,7 +204,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
           officialData: cnpjOfficialData,
           lookupOutcome: "resolved",
           rootHash: cnpjRootHash,
-          rootEligible,
+          rootEligible: policy.rootEligible,
+          policyCohort: policy.policyCohort,
+          beneficiaryEligible: policy.beneficiaryEligible,
         });
 
         verificationData = { signals: eligibility.signals, score: eligibility.score };
