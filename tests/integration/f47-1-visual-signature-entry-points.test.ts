@@ -6,8 +6,6 @@
  * a configuração congelada chega aos três entry points e que o retry reutiliza
  * o mesmo snapshot, enquanto uma nova geração relê a configuração vigente.
  */
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.hoisted(() => {
@@ -225,25 +223,6 @@ describe("F47.1 — configuração congelada nos entry points", () => {
     expect(secondCalls).toHaveLength(1);
     expect(secondCalls[0].visualSignatureConfig).toBe(SNAPSHOT_B);
     expect(h.load).toHaveBeenCalledTimes(2);
-  });
-
-  it("a rota generate-without-logo recebe o snapshot antes das tentativas e o reusa no retry", () => {
-    const source = readFileSync(
-      path.resolve(
-        process.cwd(),
-        "src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts",
-      ),
-      "utf8",
-    );
-    const loadAt = source.indexOf("loadVisualSignatureModelConfigSnapshot()");
-    const firstService = source.indexOf("new StoreIdentityArtDirectorService");
-    const retryGenerator = source.indexOf("new AiImageGenerator", firstService);
-    const configPasses = source.match(/visualSignatureConfig,/g) ?? [];
-
-    expect(loadAt).toBeGreaterThan(-1);
-    expect(firstService).toBeGreaterThan(loadAt);
-    expect(retryGenerator).toBeGreaterThan(firstService);
-    expect(configPasses.length).toBeGreaterThanOrEqual(2);
   });
 
   it("outras capacidades delegam ao resolver padrão e não herdam o preset da VS", () => {

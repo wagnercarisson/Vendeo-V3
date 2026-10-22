@@ -102,10 +102,19 @@ Falha em qualquer gate ⇒ **parar**.
 ## 6. Precheck do UAT
 
 ```powershell
-powershell -NoProfile -File scripts/f47-1/run-uat-precheck.ps1 -Mode initial
+powershell -NoProfile -File scripts/f47-1/run-uat-precheck.ps1 `
+  -Mode initial `
+  -ExpectedOrchestrator gpt-5.5 `
+  -ExpectedPreset sunburst_medium
 ```
 
-O precheck é read-only e falha fechado se:
+O precheck é read-only, **não substitui** `NEXT_PUBLIC_SUPABASE_URL`/
+`SUPABASE_URL` e compara os valores originais com o destino aprovado. Se o
+isolamento falhar, ele para antes de preflight/psql. O resultado é estruturado
+(`UAT_PRECHECK_RESULT`) para distinguir isolamento, credencial, configuração
+ausente/inválida e combinação esperada.
+
+Ele falha fechado se:
 
 - o preflight pós-migration falhar;
 - a migration não estiver no ledger;
@@ -113,10 +122,18 @@ O precheck é read-only e falha fechado se:
 - a configuração dedicada não puder ser lida;
 - as credenciais `validation`/`normal` estiverem ausentes;
 - opt-in/identidade não estiverem configurados;
-- `maxRetries=0` não for comprovado pelo teste do adapter.
+- `maxRetries=0` não for comprovado pelo teste do adapter;
+- a configuração dedicada estiver ausente (herdada não é “pronta” para esta
+  rodada);
+- a combinação esperada (`ExpectedOrchestrator`/`ExpectedPreset`) não coincidir
+  com a vigente;
+- a linha tiver identidade/tuple inválida pelo contrato puro do runtime.
 
-Ele somente **registra** se a próxima geração usará a configuração dedicada ou
-a seleção herdada. Não grava configuração e não chama provider.
+Ele não grava configuração e não chama provider. A ausência de configuração
+dedicada pode ser um estado de preparação, mas **não** autoriza a rodada: sem
+preset dedicado o runtime usaria gateway legado, credencial normal, qualidade
+automática e retry padrão do SDK. O precheck deve ser repetido antes de cada
+geração, com a combinação esperada e a versão registradas.
 
 ### Orçamento e limites
 
@@ -142,6 +159,13 @@ O custo reportado pelo provider é autoritativo.
 - aprovação/perfil de marca: `credential_scope='normal'`.
 
 Nunca afirmar que todo o UAT usou exclusivamente a chave dedicada.
+
+O precheck marca `profile_flow_planned=1` e `authorization=pending`; ele não
+autoriza a rodada de perfil de marca. Essa autorização pertence ao checkpoint
+humano da Task 3.
+
+A credencial sentinela usada apenas no `ProofsOnly` das provas SQL **não** é
+credencial válida e **não** pode ser usada para aprovar o precheck de UAT.
 
 ## 7. Execução manual do UAT
 

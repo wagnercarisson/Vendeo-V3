@@ -76,7 +76,8 @@ Invoke-Gate "focused-vitest" {
     "src/app/(app)/admin/ai-model-selection/unified-model-config.test.tsx" `
     "src/app/(app)/admin/ai-model-selection/ai-model-selection.test.tsx" `
     tests/integration/f47-1-visual-signature-entry-points.test.ts `
-    tests/integration/f47-1-visual-signature-regressions.test.ts
+    tests/integration/f47-1-visual-signature-regressions.test.ts `
+    tests/integration/f47-1-uat-precheck.test.ts
 }
 
 Invoke-Gate "openspec-strict" {
