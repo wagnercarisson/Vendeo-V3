@@ -1,5 +1,5 @@
 ---
-status: fix_applied_pending_codex_review
+status: validated_manual_realignment_pending_final_review
 trigger: "F47.1 — brand_profile_vision falhou duas vezes com provider_error ao analisar assinaturas locais da Calce Bem; hipótese de URL de Storage loopback inacessível ao provedor."
 created: 2026-10-22T19:05:00Z
 updated: 2026-10-22T19:10:00Z
@@ -87,6 +87,29 @@ loopback.
 - `npx tsc -p tsconfig.typecheck.json --noEmit`: **exit 0**.
 - `npm run lint`: **exit 0**.
 - `git diff --check`: **limpo**.
+
+## Validação posterior (sem nova imagem)
+
+Após a correção (`a37f4b83` + `d16b54f2`) e a alteração do tom para
+**acolhedor**, foi executado um realinhamento manual da assinatura Luna
+existente `b257e678-72d3-4b3a-8706-49b283e5bdcd` em `2026-10-22 22:40:48Z`,
+sem nova geração de imagem:
+
+- `brand_profile_vision` **success**;
+- duração **6.562 ms**;
+- entrada **1.865 tokens**, saída **431 tokens**;
+- estimativa **US$ 0,000402**, `pricing_table`;
+- perfil `a91f20de-8fee-4c4d-8d76-01cfd8c90186` criado, `synced`, vinculado à
+  assinatura ativa;
+- perfil antigo da NovaTek `c1106c93-58f2-4096-80c6-d4c555bb889b` passou para
+  `outdated`.
+
+Isso valida o caminho corrigido, **não** transforma as duas falhas anteriores em
+sucesso desde a primeira tentativa nem as trata como repetição idêntica.
+
+Os eventos das duas falhas têm `fallback_static` de US$ 0,15, que **não é
+cobrança real confirmada**. Custos de imagem permanecem parciais; custo
+total/economia total não estão comprovados.
 
 ## Pendência separada (não corrigida)
 

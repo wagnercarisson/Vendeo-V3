@@ -34,8 +34,20 @@ aplicada, chamada paga, push ou deploy**. A F47 concluída permanece preservada.
 ## Estado
 
 - OpenSpec: **4/4 artefatos completos; `validate --strict` válido.**
-- Revisão Codex: **aprovada para planejamento GSD; implementação não aprovada.**
-- Implementação: **não iniciada.**
-- Planos GSD: **5 planos gerados em `.planning/phases/47.1-configuracao-validacao-local-modelos-assinatura-visual/`; aguardando revisão do Codex antes da execução.**
-- Matriz de cobertura: **`47.1-COVERAGE-MATRIX.md`** (requisito/cenário → plano → teste/evidência).
-- Migration aplicada, chamada paga, push ou deploy: **nenhum.**
+- Revisão Codex: **planos e escopos executados aprovados; consolidação UAT
+  aguardando revisão final antes de verify/sync/archive.**
+- Implementação: **concluída no escopo local**, com duas gerações comparativas
+  executadas (GPT-5.5 e GPT-6-Luna, Sunburst Medium), avaliação visual humana e
+  realinhamento manual da assinatura Luna.
+- Planos GSD: **5 planos em `.planning/phases/47.1-configuracao-validacao-local-modelos-assinatura-visual/`.**
+- UAT: **`47.1-UAT.md`** — cobertura inicial executada; seis combinações
+  adicionais **não executadas**; custos parciais.
+- Correção de imagem local: commits `a37f4b83` e `d16b54f2`; validada por
+  realinhamento manual bem-sucedido (`b257e678-...` / perfil `a91f20de-...`).
+- Matriz de cobertura: **`47.1-COVERAGE-MATRIX.md`** (requisito/cenário → plano
+  → teste/evidência).
+- **Pendência separada:** falha de atualização pode deixar perfil antigo
+  apresentado como vigente; defeito **não corrigido**.
+- **Produção:** nenhuma aprovação, promoção, push ou deploy.
+- **Fora de escopo:** as seis combinações adicionais e a geração opcional com
+  `rejectionContext` não foram executadas.
