@@ -40,67 +40,101 @@ INSERT INTO auth.users (id, aud, role, email, created_at, updated_at) VALUES
   ('00000000-0000-4000-8000-0000000004b3', 'authenticated', 'authenticated',
    'f50-4-matrix-late@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
   ('00000000-0000-4000-8000-0000000004b4', 'authenticated', 'authenticated',
-   'f50-4-matrix-old@test.local', '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z');
+   'f50-4-matrix-old@test.local', '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10001', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-1@test.local', '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10002', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-2@test.local', '2026-10-06T00:00:00Z', '2026-10-06T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10003', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-3@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10004', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-4@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10005', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-5@test.local', '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10006', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-6@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10007', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-7@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10008', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-8@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10009', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-9@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10010', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-10@test.local', '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10011', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-11@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10012', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-12@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10013', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-13@test.local', '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10014', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-14@test.local', '2026-10-06T00:00:00Z', '2026-10-06T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10015', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-15@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10016', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-16@test.local', '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b10017', 'authenticated', 'authenticated',
+   'f50-4-matrix-store-17@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z');
 
 INSERT INTO public.stores (
   id, name, segment, user_id, cnpj_normalized, cnpj_root_hash,
   onboarding_completed_at, is_test_store
 ) VALUES
-  ('00000000-0000-4000-8000-0000000005c01', 'matrix-a', 'outros',
-   '00000000-0000-4000-8000-0000000004b1', '11222333000181', 'root-num',
+  ('00000000-0000-4000-8000-000000005c01', 'matrix-a', 'outros',
+   '00000000-0000-4000-8000-000000b10001', '11222333000181', 'root-num',
    '2026-10-10T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c02', 'matrix-b', 'outros',
-   '00000000-0000-4000-8000-0000000004b2', '11222333000262', 'root-num',
+  ('00000000-0000-4000-8000-000000005c02', 'matrix-b', 'outros',
+   '00000000-0000-4000-8000-000000b10002', '11222333000262', 'root-num',
    '2026-10-18T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c03', 'matrix-c', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '11222333000343', 'root-num',
+  ('00000000-0000-4000-8000-000000005c03', 'matrix-c', 'outros',
+   '00000000-0000-4000-8000-000000b10003', '11222333000343', 'root-num',
    '2026-10-21T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c11', 'matrix-c2', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '11222333000777', 'root-num',
+  ('00000000-0000-4000-8000-000000005c11', 'matrix-c2', 'outros',
+   '00000000-0000-4000-8000-000000b10004', '11222333000777', 'root-num',
    '2026-10-21T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c04', 'matrix-y1', 'outros',
-   '00000000-0000-4000-8000-0000000004b1', '77888999000111', 'root-y',
+  ('00000000-0000-4000-8000-000000005c04', 'matrix-y1', 'outros',
+   '00000000-0000-4000-8000-000000b10005', '77888999000111', 'root-y',
    '2026-10-10T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c05', 'matrix-y2', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '77888999000222', 'root-y',
+  ('00000000-0000-4000-8000-000000005c05', 'matrix-y2', 'outros',
+   '00000000-0000-4000-8000-000000b10006', '77888999000222', 'root-y',
    '2026-10-21T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c06', 'matrix-amb', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '99888777000199', 'root-amb',
+  ('00000000-0000-4000-8000-000000005c06', 'matrix-amb', 'outros',
+   '00000000-0000-4000-8000-000000b10007', '99888777000199', 'root-amb',
    '2026-10-21T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c07', 'matrix-test', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '99888777000200', 'root-amb',
+  ('00000000-0000-4000-8000-000000005c07', 'matrix-test', 'outros',
+   '00000000-0000-4000-8000-000000b10008', '99888777000200', 'root-amb',
    '2026-10-21T00:00:00Z', true),
-  ('00000000-0000-4000-8000-0000000005c08', 'matrix-draft', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', NULL, '',
+  ('00000000-0000-4000-8000-000000005c08', 'matrix-draft', 'outros',
+   '00000000-0000-4000-8000-000000b10009', NULL, '',
    '2026-10-21T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c09', 'matrix-old', 'outros',
-   '00000000-0000-4000-8000-0000000004b4', '66777888000150', 'root-old',
+  ('00000000-0000-4000-8000-000000005c09', 'matrix-old', 'outros',
+   '00000000-0000-4000-8000-000000b10010', '66777888000150', 'root-old',
    '2026-10-10T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c0a', 'matrix-alnum', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '12ABC345000199', 'root-alnum',
+  ('00000000-0000-4000-8000-000000005c0a', 'matrix-alnum', 'outros',
+   '00000000-0000-4000-8000-000000b10011', '12ABC345000199', 'root-alnum',
    '2026-10-21T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c0b', 'matrix-exp', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '55666777000140', 'root-exp',
+  ('00000000-0000-4000-8000-000000005c0b', 'matrix-exp', 'outros',
+   '00000000-0000-4000-8000-000000b10012', '55666777000140', 'root-exp',
    '2026-09-01T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c0c', 'matrix-x1', 'outros',
-   '00000000-0000-4000-8000-0000000004b1', '44555666000110', 'root-x',
+  ('00000000-0000-4000-8000-000000005c0c', 'matrix-x1', 'outros',
+   '00000000-0000-4000-8000-000000b10013', '44555666000110', 'root-x',
    '2026-10-10T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c0d', 'matrix-x2', 'outros',
-   '00000000-0000-4000-8000-0000000004b2', '44555666000200', 'root-x',
+  ('00000000-0000-4000-8000-000000005c0d', 'matrix-x2', 'outros',
+   '00000000-0000-4000-8000-000000b10014', '44555666000200', 'root-x',
    '2026-10-10T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c0e', 'matrix-x3', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '44555666000391', 'root-x',
+  ('00000000-0000-4000-8000-000000005c0e', 'matrix-x3', 'outros',
+   '00000000-0000-4000-8000-000000b10015', '44555666000391', 'root-x',
    '2026-10-21T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c0f', 'matrix-z1', 'outros',
-   '00000000-0000-4000-8000-0000000004b1', '33444555000160', 'root-z',
+  ('00000000-0000-4000-8000-000000005c0f', 'matrix-z1', 'outros',
+   '00000000-0000-4000-8000-000000b10016', '33444555000160', 'root-z',
    '2026-10-10T00:00:00Z', false),
-  ('00000000-0000-4000-8000-0000000005c10', 'matrix-z2', 'outros',
-   '00000000-0000-4000-8000-0000000004b3', '33444555000241', 'root-z',
+  ('00000000-0000-4000-8000-000000005c10', 'matrix-z2', 'outros',
+   '00000000-0000-4000-8000-000000b10017', '33444555000241', 'root-z',
    '2026-10-21T00:00:00Z', false);
 
 -- Benefício legado na filial A (CNPJ 11222333000181 / raiz root-num).
 INSERT INTO public.freemium_entitlements (store_id, root_hash, benefit_type, reason)
-VALUES ('00000000-0000-4000-8000-0000000005c01', 'root-num', 'onboarding', 'fixture matrix');
+VALUES ('00000000-0000-4000-8000-000000005c01', 'root-num', 'onboarding', 'fixture matrix');
 
 -- Entitlement órfão (store_id NULL) com raiz própria -> ambiguidade.
 INSERT INTO public.freemium_entitlements (store_id, root_hash, benefit_type, reason)
@@ -113,28 +147,28 @@ INSERT INTO public.trial_offer_enrollments (
 ) VALUES
   -- filial per_cnpj da raiz root-y (não pode bloquear s_y1 legado)
   ('00000000-0000-4000-8000-0000000007f1',
-   '00000000-0000-4000-8000-0000000005c05',
+   '00000000-0000-4000-8000-000000005c05',
    '00000000-0000-4000-8000-0000000004b3',
    'root-y', 'trial_28d_v1',
    '2026-10-21T00:00:00Z', '2026-11-18T00:00:00Z',
    '77888999000222', 'per_cnpj_f50_4'),
   -- root_legacy da raiz root-x (bloqueia s_x1, não s_x3)
   ('00000000-0000-4000-8000-0000000007f2',
-   '00000000-0000-4000-8000-0000000005c0d',
+   '00000000-0000-4000-8000-000000005c0d',
    '00000000-0000-4000-8000-0000000004b2',
    'root-x', 'trial_28d_v1',
    '2026-10-10T00:00:00Z', '2026-11-07T00:00:00Z',
    '44555666000200', 'root_legacy'),
   -- enrollment cujo beneficiário pertence a outra loja (safeguard de conflito)
   ('00000000-0000-4000-8000-0000000007f3',
-   '00000000-0000-4000-8000-0000000005c0f',
+   '00000000-0000-4000-8000-000000005c0f',
    '00000000-0000-4000-8000-0000000004b1',
    'root-z', 'trial_28d_v1',
    '2026-10-10T00:00:00Z', '2026-11-07T00:00:00Z',
    '33444555000241', 'per_cnpj_f50_4'),
   -- enrollment da própria s_c (existing)
   ('00000000-0000-4000-8000-0000000007f4',
-   '00000000-0000-4000-8000-0000000005c03',
+   '00000000-0000-4000-8000-000000005c03',
    '00000000-0000-4000-8000-0000000004b3',
    'root-num', 'trial_28d_v1',
    '2026-10-21T00:00:00Z', '2026-11-18T00:00:00Z',
@@ -166,7 +200,7 @@ DECLARE
   v_other_id UUID;
 BEGIN
   v_c2 := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c11',
+    '00000000-0000-4000-8000-000000005c11',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_c2 ->> 'eligible')::boolean IS NOT TRUE
@@ -179,7 +213,7 @@ BEGIN
   END IF;
 
   v_alnum := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c0a',
+    '00000000-0000-4000-8000-000000005c0a',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_alnum ->> 'eligible')::boolean IS NOT TRUE THEN
@@ -187,7 +221,7 @@ BEGIN
   END IF;
 
   v_c := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c03',
+    '00000000-0000-4000-8000-000000005c03',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_c ->> 'eligible')::boolean IS NOT TRUE
@@ -212,7 +246,7 @@ DECLARE
   v JSONB;
 BEGIN
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c0c',
+    '00000000-0000-4000-8000-000000005c0c',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'eligible')::boolean IS NOT FALSE
@@ -226,7 +260,7 @@ BEGIN
 
   -- A mesma raiz em per_cnpj_f50_4 (CNPJ distinto) permanece elegível.
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c0e',
+    '00000000-0000-4000-8000-000000005c0e',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'eligible')::boolean IS NOT TRUE
@@ -244,7 +278,7 @@ DECLARE
   v JSONB;
 BEGIN
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c04',
+    '00000000-0000-4000-8000-000000005c04',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'eligible')::boolean IS NOT TRUE
@@ -270,7 +304,7 @@ BEGIN
 
   -- Conta root_legacy (CNPJ B) é bloqueada por prior_benefit da filial A.
   v_legacy := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c02',
+    '00000000-0000-4000-8000-000000005c02',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_legacy ->> 'eligible')::boolean IS NOT FALSE
@@ -280,7 +314,7 @@ BEGIN
 
   -- A mesma filial A NÃO bloqueia uma loja per_cnpj_f50_4 de outro CNPJ.
   v_new_cohort := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c11',
+    '00000000-0000-4000-8000-000000005c11',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_new_cohort ->> 'eligible')::boolean IS NOT TRUE THEN
@@ -318,7 +352,7 @@ DECLARE
   v_count BIGINT;
 BEGIN
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c10',
+    '00000000-0000-4000-8000-000000005c10',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'eligible')::boolean IS NOT FALSE
@@ -331,7 +365,7 @@ BEGIN
   END IF;
 
   v_start := public.start_trial_offer_enrollment(
-    '00000000-0000-4000-8000-0000000005c10',
+    '00000000-0000-4000-8000-000000005c10',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_start ->> 'status') <> 'not_eligible'
@@ -341,7 +375,7 @@ BEGIN
 
   SELECT count(*) INTO v_count
   FROM public.trial_offer_enrollments
-  WHERE store_id = '00000000-0000-4000-8000-0000000005c10';
+  WHERE store_id = '00000000-0000-4000-8000-000000005c10';
 
   IF v_count <> 0 THEN
     RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: loja bloqueada recebeu enrollment';
@@ -358,7 +392,7 @@ DECLARE
 BEGIN
   -- u_legacy2 foi criado antes do marco; onboarding concluído depois.
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c02',
+    '00000000-0000-4000-8000-000000005c02',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'policy_cohort') <> 'root_legacy' THEN
@@ -375,7 +409,7 @@ DECLARE
   v JSONB;
 BEGIN
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c07',
+    '00000000-0000-4000-8000-000000005c07',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'reason') <> 'test_store' THEN
@@ -383,7 +417,7 @@ BEGIN
   END IF;
 
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c08',
+    '00000000-0000-4000-8000-000000005c08',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'reason') <> 'no_root' THEN
@@ -391,7 +425,7 @@ BEGIN
   END IF;
 
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c0b',
+    '00000000-0000-4000-8000-000000005c0b',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'reason') <> 'expired_window' THEN
@@ -399,7 +433,7 @@ BEGIN
   END IF;
 
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c09',
+    '00000000-0000-4000-8000-000000005c09',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'reason') <> 'account_before_launch' THEN
@@ -418,7 +452,7 @@ DECLARE
   v_keys TEXT[];
 BEGIN
   v := public.trial_offer_eligibility(
-    '00000000-0000-4000-8000-0000000005c06',
+    '00000000-0000-4000-8000-000000005c06',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v ->> 'reason') <> 'prior_benefit_ambiguous' THEN
@@ -468,7 +502,7 @@ DECLARE
   v_per_cnpj_count BIGINT;
 BEGIN
   v_start := public.start_trial_offer_enrollment(
-    '00000000-0000-4000-8000-0000000005c0a',
+    '00000000-0000-4000-8000-000000005c0a',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_start ->> 'status') <> 'started' THEN
@@ -477,7 +511,7 @@ BEGIN
 
   SELECT beneficiary_cnpj_normalized, policy_cohort INTO v_row
   FROM public.trial_offer_enrollments
-  WHERE store_id = '00000000-0000-4000-8000-0000000005c0a';
+  WHERE store_id = '00000000-0000-4000-8000-000000005c0a';
 
   IF v_row.beneficiary_cnpj_normalized <> '12ABC345000199'
      OR v_row.policy_cohort <> 'per_cnpj_f50_4' THEN
@@ -486,7 +520,7 @@ BEGIN
 
   -- Conta legada da raiz root-y inscreve mesmo com per_cnpj da mesma raiz.
   v_legacy_start := public.start_trial_offer_enrollment(
-    '00000000-0000-4000-8000-0000000005c04',
+    '00000000-0000-4000-8000-000000005c04',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_legacy_start ->> 'status') <> 'started' THEN
@@ -508,7 +542,7 @@ BEGIN
 
   -- Replay idempotente da própria loja.
   v_start := public.start_trial_offer_enrollment(
-    '00000000-0000-4000-8000-0000000005c04',
+    '00000000-0000-4000-8000-000000005c04',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
   IF (v_start ->> 'status') <> 'existing' THEN

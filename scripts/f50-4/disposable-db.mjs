@@ -28,6 +28,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -46,6 +47,7 @@ const CLI_VERSION = "2.75.0";
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_CONFIG = path.join(REPO_ROOT, "supabase", "config.toml");
 const REPO_MIGRATIONS = path.join(REPO_ROOT, "supabase", "migrations");
+const REPO_TEMPLATES = path.join(REPO_ROOT, "supabase", "templates");
 const HARNESS_SQL = path.join(REPO_ROOT, "tests", "sql", "_harness.sql");
 
 const PROJECT_PREFIX = "f50-4-disposable-";
@@ -291,6 +293,9 @@ function rewriteConfig(source, { projectId, ports }) {
   lines = setKeyInSection(lines, "db", "port", ports.db);
   lines = setKeyInSection(lines, "db", "shadow_port", ports.shadow);
   lines = setKeyInSection(lines, "studio", "port", ports.studio);
+  // O harness não depende de e-mail; em hosts onde a imagem do mailpit não
+  // executa, manter o serviço ligado impede o stack de ficar saudável.
+  lines = setKeyInSection(lines, "inbucket", "enabled", "false");
   lines = setKeyInSection(lines, "inbucket", "port", ports.inbucket);
   lines = setKeyInSection(lines, "analytics", "port", ports.analytics);
   text = lines.join("\n");
@@ -430,6 +435,12 @@ export async function createDisposable(argv = []) {
   await assertPortsFree(ports);
 
   mkdirSync(path.join(workdir, "supabase", "migrations"), { recursive: true });
+  // auth.email.template.*.content_path do config.toml aponta para
+  // ./supabase/templates/*.html relativo ao workdir; sem copiar os templates
+  // o `supabase start` falha antes de qualquer efeito (fail-closed).
+  if (existsSync(REPO_TEMPLATES)) {
+    cpSync(REPO_TEMPLATES, path.join(workdir, "supabase", "templates"), { recursive: true });
+  }
   const sourceConfig = readFileSync(REPO_CONFIG, "utf8");
   writeFileSync(
     path.join(workdir, "supabase", "config.toml"),
@@ -562,11 +573,13 @@ export async function pushDisposable(argv = []) {
   assertLocalDatabaseUrl(url);
 
   console.log(`supabase ${version} — db push --yes --db-url ${redactedTarget(url)}`);
+  // O PostgreSQL local do stack não oferece TLS; o CLI (pgx) tenta TLS por
+  // padrão ao usar --db-url. Forçar PGSSLMODE=disable mantém o alvo local.
   const push = spawnSync("supabase", ["db", "push", "--yes", "--db-url", url], {
     cwd: REPO_ROOT,
     encoding: "utf8",
     stdio: "inherit",
-    env: { ...process.env },
+    env: { ...process.env, PGSSLMODE: "disable" },
   });
   if (push.status !== 0) {
     throw new Error(`supabase db push falhou (exit ${push.status ?? "?"}); nunca tratar como sucesso.`);

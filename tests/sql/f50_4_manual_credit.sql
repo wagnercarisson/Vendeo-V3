@@ -30,23 +30,31 @@ INSERT INTO auth.users (id, aud, role, email, created_at, updated_at) VALUES
   ('00000000-0000-4000-8000-00000000d401', 'authenticated', 'authenticated',
    'f50-4-manual-legacy@test.local', '2026-09-25T00:00:00Z', '2026-09-25T00:00:00Z'),
   ('00000000-0000-4000-8000-00000000d402', 'authenticated', 'authenticated',
-   'f50-4-manual-new@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z');
+   'f50-4-manual-new@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b30001', 'authenticated', 'authenticated',
+   'f50-4-manual-store-1@test.local', '2026-09-25T00:00:00Z', '2026-09-25T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b30002', 'authenticated', 'authenticated',
+   'f50-4-manual-store-2@test.local', '2026-09-25T00:00:00Z', '2026-09-25T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b30003', 'authenticated', 'authenticated',
+   'f50-4-manual-store-3@test.local', '2026-09-25T00:00:00Z', '2026-09-25T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b30004', 'authenticated', 'authenticated',
+   'f50-4-manual-store-4@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z');
 
 INSERT INTO public.stores (
   id, name, segment, user_id, cnpj_normalized, cnpj_root_hash,
   onboarding_completed_at, created_at, is_test_store
 ) VALUES
   ('00000000-0000-4000-8000-00000000e401', 'manual-enrollment', 'outros',
-   '00000000-0000-4000-8000-00000000d401', '11222333000181', 'root-manual',
+   '00000000-0000-4000-8000-000000b30001', '11222333000181', 'root-manual',
    '2026-10-10T00:00:00Z', '2025-01-10T12:00:00Z', false),
   ('00000000-0000-4000-8000-00000000e402', 'manual-exception', 'outros',
-   '00000000-0000-4000-8000-00000000d401', '22333444000122', 'root-exception',
+   '00000000-0000-4000-8000-000000b30002', '22333444000122', 'root-exception',
    '2026-10-10T00:00:00Z', '2025-02-10T12:00:00Z', false),
   ('00000000-0000-4000-8000-00000000e403', 'manual-free-text', 'outros',
-   '00000000-0000-4000-8000-00000000d401', '33444555000160', 'root-text',
+   '00000000-0000-4000-8000-000000b30003', '33444555000160', 'root-text',
    '2026-10-10T00:00:00Z', '2025-03-10T12:00:00Z', false),
   ('00000000-0000-4000-8000-00000000e404', 'manual-eligibility', 'outros',
-   '00000000-0000-4000-8000-00000000d402', '55666777000140', 'root-eligibility',
+   '00000000-0000-4000-8000-000000b30004', '55666777000140', 'root-eligibility',
    '2026-10-21T00:00:00Z', '2025-04-10T12:00:00Z', false);
 
 -- Enrollment congelado: o crédito manual não pode tocá-lo.

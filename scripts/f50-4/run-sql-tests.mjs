@@ -132,6 +132,10 @@ async function main() {
         await client.query(readFileSync(file, "utf8"));
         console.log(`PASS ${name} (${Date.now() - startedAt}ms)`);
       } catch (error) {
+        // Uma falha pode deixar a sessão dentro de uma transação abortada
+        // (25P02). Cada arquivo é independente: limpar o estado antes do
+        // próximo garante que uma falha não contagie as demais suítes.
+        await client.query("ROLLBACK").catch(() => {});
         failures.push({ name, error });
         console.log(
           `FAIL ${name} (${Date.now() - startedAt}ms) — code=${error.code ?? "?"} message=${error.message}`,

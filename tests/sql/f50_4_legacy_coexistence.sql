@@ -34,7 +34,31 @@ INSERT INTO auth.users (id, aud, role, email, created_at, updated_at) VALUES
   ('00000000-0000-4000-8000-00000000a401', 'authenticated', 'authenticated',
    'f50-4-coexist-legacy@test.local', '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z'),
   ('00000000-0000-4000-8000-00000000a402', 'authenticated', 'authenticated',
-   'f50-4-coexist-new@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z');
+   'f50-4-coexist-new@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20001', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-1@test.local', '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20002', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-2@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20003', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-3@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20004', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-4@test.local', '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20005', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-5@test.local', '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20006', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-6@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20007', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-7@test.local', '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20008', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-8@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20009', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-9@test.local', '2026-10-20T00:00:00Z', '2026-10-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20010', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-10@test.local', '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20011', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-11@test.local', '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000b20012', 'authenticated', 'authenticated',
+   'f50-4-coexist-store-12@test.local', '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z');
 
 INSERT INTO public.stores (
   id, name, segment, user_id, cnpj_normalized, cnpj_root_hash,
@@ -42,47 +66,47 @@ INSERT INTO public.stores (
 ) VALUES
   -- Demo legada (conta pré launch_at) + filial nova da mesma raiz.
   ('00000000-0000-4000-8000-00000000b401', 'coexist-demo-legacy', 'outros',
-   '00000000-0000-4000-8000-00000000a401', '11222333000181', 'root-demo-legacy',
+   '00000000-0000-4000-8000-000000b20001', '11222333000181', 'root-demo-legacy',
    '2026-10-10T00:00:00Z', '2025-01-15T12:00:00Z', false),
   ('00000000-0000-4000-8000-00000000b402', 'coexist-demo-branch', 'outros',
-   '00000000-0000-4000-8000-00000000a402', '11222333000343', 'root-demo-legacy',
+   '00000000-0000-4000-8000-000000b20002', '11222333000343', 'root-demo-legacy',
    '2026-10-20T00:00:00Z', '2026-10-20T12:00:00Z', false),
   -- Conta pós launch_at -> demo nunca aplica.
   ('00000000-0000-4000-8000-00000000b403', 'coexist-after-launch', 'outros',
-   '00000000-0000-4000-8000-00000000a402', '11222333000262', 'root-after-launch',
+   '00000000-0000-4000-8000-000000b20003', '11222333000262', 'root-after-launch',
    '2026-10-20T00:00:00Z', '2025-02-15T12:00:00Z', false),
   -- Raiz com enrollment root_legacy -> demo consumida.
   ('00000000-0000-4000-8000-00000000b404', 'coexist-consumed', 'outros',
-   '00000000-0000-4000-8000-00000000a401', '99888777000199', 'root-consumed',
+   '00000000-0000-4000-8000-000000b20004', '99888777000199', 'root-consumed',
    '2026-10-10T00:00:00Z', '2025-03-15T12:00:00Z', false),
   -- Barreira por mesmo CNPJ (enrollment de outro CNPJ na MESMA raiz não bloqueia).
   ('00000000-0000-4000-8000-00000000b405', 'coexist-cnpj-barrier', 'outros',
-   '00000000-0000-4000-8000-00000000a401', '44555666000110', 'root-cnpj-barrier',
+   '00000000-0000-4000-8000-000000b20005', '44555666000110', 'root-cnpj-barrier',
    '2026-10-10T00:00:00Z', '2025-04-15T12:00:00Z', false),
   ('00000000-0000-4000-8000-00000000b406', 'coexist-cnpj-other', 'outros',
-   '00000000-0000-4000-8000-00000000a402', '44555666000200', 'root-cnpj-other',
+   '00000000-0000-4000-8000-000000b20006', '44555666000200', 'root-cnpj-other',
    '2026-10-20T00:00:00Z', '2026-10-20T12:00:00Z', false),
   -- Raiz mensal mista: matriz legada + filial nova F50.4.
   ('00000000-0000-4000-8000-00000000b407', 'coexist-monthly-legacy', 'outros',
-   '00000000-0000-4000-8000-00000000a401', '55666777000140', 'root-monthly-mixed',
+   '00000000-0000-4000-8000-000000b20007', '55666777000140', 'root-monthly-mixed',
    '2026-10-10T00:00:00Z', '2025-03-10T12:00:00Z', false),
   ('00000000-0000-4000-8000-00000000b408', 'coexist-monthly-branch', 'outros',
-   '00000000-0000-4000-8000-00000000a402', '55666777000221', 'root-monthly-mixed',
+   '00000000-0000-4000-8000-000000b20008', '55666777000221', 'root-monthly-mixed',
    '2026-10-20T00:00:00Z', '2026-10-20T12:00:00Z', false),
   -- Raiz apenas com loja nova F50.4.
   ('00000000-0000-4000-8000-00000000b409', 'coexist-monthly-newonly', 'outros',
-   '00000000-0000-4000-8000-00000000a402', '77888999000111', 'root-monthly-newonly',
+   '00000000-0000-4000-8000-000000b20009', '77888999000111', 'root-monthly-newonly',
    '2026-10-20T00:00:00Z', '2025-04-05T12:00:00Z', false),
   -- Raiz com enrollment root_legacy (exclusão do mensal).
   ('00000000-0000-4000-8000-00000000b40a', 'coexist-monthly-enrolled', 'outros',
-   '00000000-0000-4000-8000-00000000a401', '66777888000150', 'root-monthly-enrolled',
+   '00000000-0000-4000-8000-000000b20010', '66777888000150', 'root-monthly-enrolled',
    '2026-10-10T00:00:00Z', '2025-05-20T12:00:00Z', false),
   -- Ordem de chegada: filial (não matriz) cadastrada antes da matriz.
   ('00000000-0000-4000-8000-00000000b40b', 'coexist-order-branch', 'outros',
-   '00000000-0000-4000-8000-00000000a401', '33444555000241', 'root-order',
+   '00000000-0000-4000-8000-000000b20011', '33444555000241', 'root-order',
    '2026-10-10T00:00:00Z', '2024-01-06T12:00:00Z', false),
   ('00000000-0000-4000-8000-00000000b40c', 'coexist-order-matrix', 'outros',
-   '00000000-0000-4000-8000-00000000a401', '33444555000160', 'root-order',
+   '00000000-0000-4000-8000-000000b20012', '33444555000160', 'root-order',
    '2026-10-10T00:00:00Z', '2025-06-06T12:00:00Z', false);
 
 -- Histórico freemium das raízes mensais (entitlement de onboarding).
