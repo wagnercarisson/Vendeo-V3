@@ -218,6 +218,9 @@ export default async function AdminUserDetailPage({
                 {freemiumStatus === "used" && <span className="text-accent-amber">Freemium usado</span>}
                 {freemiumStatus === "exhausted" && <span className="text-accent-red">Freemium esgotado</span>}
                 {freemiumStatus === "no_cnpj" && <span className="text-muted-foreground">Sem CNPJ</span>}
+                <p className="text-[11px] text-muted-foreground">
+                  Benefícios registrados para esta loja; não representa a elegibilidade de outras filiais.
+                </p>
               </dd>
             </dl>
             {entitlements.length > 0 && (

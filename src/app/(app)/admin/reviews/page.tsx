@@ -193,6 +193,10 @@ function StoreRows({
             <summary className="cursor-pointer text-xs text-accent-blue hover:underline font-medium">
               Ver dados informados × oficiais
             </summary>
+            <p className="mt-1 text-[11px] text-text-muted">
+              Histórico de benefícios por raiz (legado). Ele não define a elegibilidade da coorte
+              por CNPJ completo da F50.4.
+            </p>
             <ReviewDetail
               store={{
                 name: storeName,

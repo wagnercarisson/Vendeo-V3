@@ -63,4 +63,58 @@ describe("F50.2 trial offer retry route", () => {
     expect(response.status).toBe(404);
     expect(mockRetry).not.toHaveBeenCalled();
   });
+
+  it("F50.4: retry de enrollment existente é idempotente e não duplica crédito", async () => {
+    mockRetry.mockResolvedValue({ status: "existing" });
+    const { POST } = await import("../route");
+
+    const first = await POST(request());
+    const second = await POST(request());
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(mockRetry).toHaveBeenNthCalledWith(1, "store-1");
+    expect(mockRetry).toHaveBeenNthCalledWith(2, "store-1");
+    expect((await first.json()).trialOffer.status).toBe("existing");
+    expect((await second.json()).trialOffer.status).toBe("existing");
+    // A rota só delega; nenhuma concessão/onboarding é reexecutada localmente.
+    expect(mockRetry).toHaveBeenCalledTimes(2);
+  });
+
+  it("F50.4: mapeia motivos por coorte sem expor dados sensíveis", async () => {
+    mockRetry.mockResolvedValue({
+      status: "not_eligible",
+      reason: "beneficiary_already_enrolled",
+    });
+    const { POST } = await import("../route");
+
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.trialOffer).toEqual({
+      status: "not_eligible",
+      reason: "beneficiary_already_enrolled",
+    });
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("beneficiary_cnpj_normalized");
+    expect(serialized).not.toContain("root_hash");
+  });
+
+  it("F50.4: repassa motivos seguros root_used_other_beneficiary e prior_benefit_ambiguous", async () => {
+    const { POST } = await import("../route");
+
+    mockRetry.mockResolvedValueOnce({
+      status: "not_eligible",
+      reason: "root_used_other_beneficiary",
+    });
+    const first = await POST(request());
+    expect((await first.json()).trialOffer.reason).toBe("root_used_other_beneficiary");
+
+    mockRetry.mockResolvedValueOnce({
+      status: "not_eligible",
+      reason: "prior_benefit_ambiguous",
+    });
+    const second = await POST(request());
+    expect((await second.json()).trialOffer.reason).toBe("prior_benefit_ambiguous");
+  });
 });

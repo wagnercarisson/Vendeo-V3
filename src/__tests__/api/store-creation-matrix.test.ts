@@ -189,6 +189,157 @@ describe("POST /api/store — modo verified/fiscal (com CNPJ)", () => {
     const data = await res.json();
     expect(data.error).toBe("CNPJ inv\u00e1lido");
   });
+
+  it("F50.4 matriz legada: root_legacy com raiz usada rejeita com mensagem legada", async () => {
+    mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
+    let capturedParams: Record<string, unknown> = {};
+    mockSupabaseRpc.mockImplementation((rpcName: string, params: Record<string, unknown>) => {
+      if (rpcName === "trial_offer_policy_context") {
+        return Promise.resolve({
+          data: {
+            policy_cohort: "root_legacy",
+            beneficiary_eligible: false,
+            beneficiary_ambiguous: false,
+            root_eligible: false,
+          },
+          error: null,
+        });
+      }
+      if (rpcName === "record_onboarding_completion" || rpcName === "start_trial_offer_enrollment") {
+        return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+      }
+      capturedParams = params;
+      return Promise.resolve({
+        data: { store: [{ id: "store-legacy", name: "Filial Legada", user_id: "user-123" }], onboardingGranted: false },
+        error: null,
+      });
+    });
+
+    const { POST } = await import("@/app/api/store/route");
+    const res = await POST(createReq("POST", {
+      name: "Filial Legada",
+      segment: "variedades",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    expect(capturedParams.p_verification_status).toBe("reject");
+    expect(capturedParams.p_verification_reasons).toEqual(["root_already_used"]);
+    const data = await res.json();
+    expect(data.message).toContain("Loja criada como filial");
+  });
+
+  it("F50.4 matriz filial nova: per_cnpj elegível não é rejeitada pela raiz", async () => {
+    mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
+    let capturedParams: Record<string, unknown> = {};
+    mockSupabaseRpc.mockImplementation((rpcName: string, params: Record<string, unknown>) => {
+      if (rpcName === "trial_offer_policy_context") {
+        return Promise.resolve({
+          data: {
+            policy_cohort: "per_cnpj_f50_4",
+            beneficiary_eligible: true,
+            beneficiary_ambiguous: false,
+            root_eligible: false,
+          },
+          error: null,
+        });
+      }
+      if (rpcName === "record_onboarding_completion" || rpcName === "start_trial_offer_enrollment") {
+        return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+      }
+      capturedParams = params;
+      return Promise.resolve({
+        data: { store: [{ id: "store-new-branch", name: "Filial Nova", user_id: "user-123" }], onboardingGranted: false },
+        error: null,
+      });
+    });
+
+    const { POST } = await import("@/app/api/store/route");
+    const res = await POST(createReq("POST", {
+      name: "Filial Nova",
+      segment: "variedades",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    expect(capturedParams.p_verification_status).not.toBe("reject");
+    expect(capturedParams.p_verification_reasons ?? []).not.toContain("root_already_used");
+    const data = await res.json();
+    expect(data.message).not.toContain("filial");
+  });
+
+  it("F50.4 matriz mesmo CNPJ: rejeita com mensagem própria do beneficiário", async () => {
+    mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
+    let capturedParams: Record<string, unknown> = {};
+    mockSupabaseRpc.mockImplementation((rpcName: string, params: Record<string, unknown>) => {
+      if (rpcName === "trial_offer_policy_context") {
+        return Promise.resolve({
+          data: {
+            policy_cohort: "per_cnpj_f50_4",
+            beneficiary_eligible: false,
+            beneficiary_ambiguous: false,
+            root_eligible: true,
+          },
+          error: null,
+        });
+      }
+      if (rpcName === "record_onboarding_completion" || rpcName === "start_trial_offer_enrollment") {
+        return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+      }
+      capturedParams = params;
+      return Promise.resolve({
+        data: { store: [{ id: "store-same-cnpj", name: "Mesmo CNPJ", user_id: "user-123" }], onboardingGranted: false },
+        error: null,
+      });
+    });
+
+    const { POST } = await import("@/app/api/store/route");
+    const res = await POST(createReq("POST", {
+      name: "Mesmo CNPJ",
+      segment: "variedades",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    expect(capturedParams.p_verification_status).toBe("reject");
+    expect(capturedParams.p_verification_reasons).toEqual(["beneficiary_already_used"]);
+    const data = await res.json();
+    expect(data.message).toContain("já foi utilizado para este CNPJ");
+    expect(JSON.stringify(data)).not.toContain("beneficiary_cnpj_normalized");
+  });
+
+  it("F50.4 matriz oferta desligada: trial offer não concede e não faz fallback", async () => {
+    mockRequireUser.mockResolvedValue({ userId: "user-123", claims: {} });
+    mockSupabaseRpc.mockImplementation((rpcName: string) => {
+      if (rpcName === "record_onboarding_completion") {
+        return Promise.resolve({ data: { completed: true }, error: null });
+      }
+      if (rpcName === "start_trial_offer_enrollment") {
+        return Promise.resolve({ data: { status: "offer_disabled", reason: "offer_disabled" }, error: null });
+      }
+      return Promise.resolve({
+        data: { store: [{ id: "store-off", name: "Loja Oferta Off", user_id: "user-123" }], onboardingGranted: false },
+        error: null,
+      });
+    });
+
+    const { POST } = await import("@/app/api/store/route");
+    const res = await POST(createReq("POST", { name: "Loja Oferta Off", segment: "variedades", acceptedTerms: true }));
+
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.trialOffer.status).toBe("offer_disabled");
+    expect(data.onboardingGranted).toBe(false);
+  });
 });
 
 describe("POST /api/store — modo draft (sem CNPJ)", () => {
