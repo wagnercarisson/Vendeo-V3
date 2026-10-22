@@ -46,7 +46,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | REQ-50.2-11 | Exclusão mensal permanente por enrollment; legado intacto | 01/03 |
 | REQ-50.2-12 | UI/status/próxima parcela/cron diário/retry/pós-teste | 02/03 |
 
-## F50.3 — Planejada (Compatibilidade integral com CNPJ alfanumérico)
+## F50.3 — Encerrada com limitações aceitas; não publicada (Compatibilidade integral com CNPJ alfanumérico)
 
 **Fonte (arquivada):** `openspec/changes/archive/2026-10-22-fase-50-3-suporte-cnpj-alfanumerico/` (7 delta specs sincronizadas). **Planos:** `.planning/phases/50.3-f50-3-compatibilidade-integral-com-cnpj-alfanumerico/`. **Status:** **encerrada com limitações aceitas; não publicada** (2026-10-22) — UAT `approved_with_limitations`; OpenSpec 65/69 tasks (4 parciais: 7.5, 9.9, 9.10, 9.11); migration aplicada somente no isolado; produção intocada.
 

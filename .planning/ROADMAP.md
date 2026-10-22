@@ -593,9 +593,7 @@ Plans:
 
 **Requirements:** `REQ-56.2.7-01..12` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â (01) trÃƒÆ’Ã‚Âªs estados/transiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes; (02) autorizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o `all_stores` + `test_stores`; (03) RPC coordenadora atÃƒÆ’Ã‚Â´mica/idempotente/concorrÃƒÆ’Ã‚Âªncia; (04) endpoint/painel admin; (05) gate de gasto; (06) configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna (catÃƒÆ’Ã‚Â¡logo/pricing/seleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/fallback); (07) validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna nas trÃƒÆ’Ã‚Âªs capacidades; (08) prova 5.3; (09) prova 5.7; (10) checkpoints/orÃƒÆ’Ã‚Â§amento/monitoramento; (11) D13 e abertura geral; (12) desligamento/consolidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.
 
-**Gap closure:** `50.3-08-PLAN.md` - CR-01 (bloqueio fiscal central em `save()`, `hasExistingCnpj` do servidor, drift sem bypass) e WR-01 (erro de submit obsoleto), ambos **fechados** no re-review.
-**Follow-ups preservados:** WR-02, IN-01..IN-07, F50.3-UAT-01/02/03; limitações 1, 4, 5, 7 e 9. `supportsAlphanumeric=false` (suporte real não comprovado).
-**Plans:** 7 plans + 1 gap-closure plan (`56.2.7-01..07`); diretÃƒÆ’Ã‚Â³rio `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/`.
+**Plans:** 7 plans (`56.2.7-01..07`); diretÃƒÆ’Ã‚Â³rio `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/`.
 
 Plans:
 
