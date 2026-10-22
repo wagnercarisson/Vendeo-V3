@@ -303,8 +303,8 @@ Plans:
 - [ ] 50.4-06-PLAN.md - Rotas `/api/store` e `update-cnpj` com contexto de política, mensagens por coorte e cobertura dos 8 call sites.
 - [ ] 50.4-07-PLAN.md - Painel/admin: leitura de `individual_launch_at` e ação separada de ativação com motivo, CSRF e idempotência.
 - [ ] 50.4-08-PLAN.md - ValidaÃ§Ã£o real (aplicaÃ§Ã£o): `db push` via CLI 2.75.0 em descartÃ¡vel, ledger, constraints, grants/RLS e suÃ­tes SQL.
-- [ ] 50.4-09-PLAN.md - Gates, segurança ASVS L1, UAT de regressão e nova política no descartável, encerramento sem publicação.
 - [ ] 50.4-10-PLAN.md - ValidaÃ§Ã£o comportamental: concorrÃªncia trial Ã demo Ã mensal Ã exceÃ§Ã£o, precheck/abort, rollback/forward-fix, regressÃ£o do parser e destruiÃ§Ã£o do ambiente.
+- [ ] 50.4-09-PLAN.md - Gates, segurança ASVS L1, UAT de regressão e nova política no descartável, encerramento sem publicação.
 
 ## Phase 56.1: Contrato produtivo, modelos e fallback
 
