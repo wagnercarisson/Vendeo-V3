@@ -37,12 +37,60 @@ async function put(body: Record<string, unknown>, headers: Record<string, string
   return PUT(request(body, headers));
 }
 
+function mockSettings(data: unknown) {
+  mockFrom.mockImplementation(() => ({
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        maybeSingle: vi.fn(() => Promise.resolve({ data, error: null })),
+      })),
+    })),
+  }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockRequireAdmin.mockResolvedValue({ userId: "admin-1" });
 });
 
 describe("F50.2 admin trial offer route", () => {
+  it("GET expõe apenas enabled, launchAt, individualLaunchAt e cohortState", async () => {
+    mockSettings({
+      enabled: true,
+      launch_at: "2026-10-20T12:00:00.000Z",
+      individual_launch_at: "2026-10-21T12:00:00.000Z",
+      offer_key: "trial_28d_v1",
+      root_hash: "segredo",
+    });
+
+    const { GET } = await import("../route");
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      enabled: true,
+      launchAt: "2026-10-20T12:00:00.000Z",
+      individualLaunchAt: "2026-10-21T12:00:00.000Z",
+      cohortState: "active",
+    });
+    expect(body).not.toHaveProperty("root_hash");
+    expect(body).not.toHaveProperty("offer_key");
+  });
+
+  it("GET marca cohortState inactive quando o marco individual é nulo", async () => {
+    mockSettings({
+      enabled: true,
+      launch_at: "2026-10-20T12:00:00.000Z",
+      individual_launch_at: null,
+    });
+
+    const { GET } = await import("../route");
+    const body = await (await GET()).json();
+
+    expect(body.individualLaunchAt).toBeNull();
+    expect(body.cohortState).toBe("inactive");
+  });
+
   it("exige motivo e não chama a RPC sem ele", async () => {
     const response = await put({ enabled: true, reason: "" });
     expect(response.status).toBe(400);

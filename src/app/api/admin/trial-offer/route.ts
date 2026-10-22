@@ -16,9 +16,13 @@ const UpdateSchema = z
 
 function safeSettings(data: unknown) {
   const row = (data ?? {}) as Record<string, unknown>;
+  const individualLaunchAt =
+    typeof row.individual_launch_at === "string" ? row.individual_launch_at : null;
   return {
     enabled: row.enabled === true,
     launchAt: typeof row.launch_at === "string" ? row.launch_at : null,
+    individualLaunchAt,
+    cohortState: individualLaunchAt ? ("active" as const) : ("inactive" as const),
   };
 }
 
@@ -27,7 +31,7 @@ export const GET = apiHandler(async () => {
 
   const { data, error } = await supabaseAdmin
     .from("trial_offer_settings")
-    .select("enabled, launch_at")
+    .select("enabled, launch_at, individual_launch_at")
     .eq("offer_key", TRIAL_OFFER_KEY)
     .maybeSingle();
 

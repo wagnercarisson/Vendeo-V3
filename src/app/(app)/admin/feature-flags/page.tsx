@@ -101,13 +101,17 @@ export default async function AdminFeatureFlagsPage() {
 
   const { data: trialSettings, error: trialSettingsError } = await supabaseAdmin
     .from("trial_offer_settings")
-    .select("enabled, launch_at")
+    .select("enabled, launch_at, individual_launch_at")
     .eq("offer_key", TRIAL_OFFER_KEY)
     .maybeSingle();
 
   const trialEnabled = trialSettings?.enabled === true;
   const trialLaunchAt =
     typeof trialSettings?.launch_at === "string" ? trialSettings.launch_at : null;
+  const trialIndividualLaunchAt =
+    typeof trialSettings?.individual_launch_at === "string"
+      ? trialSettings.individual_launch_at
+      : null;
   const trialError = trialSettingsError
     ? "Não foi possível ler a configuração da oferta de 28 dias."
     : null;
@@ -158,6 +162,7 @@ export default async function AdminFeatureFlagsPage() {
       <TrialOfferPanel
         initialEnabled={trialEnabled}
         initialLaunchAt={trialLaunchAt}
+        initialIndividualLaunchAt={trialIndividualLaunchAt}
         initialError={trialError}
       />
 

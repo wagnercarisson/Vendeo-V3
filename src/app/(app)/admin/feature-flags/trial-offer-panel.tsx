@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 interface Props {
   initialEnabled: boolean;
   initialLaunchAt: string | null;
+  initialIndividualLaunchAt?: string | null;
   initialError?: string | null;
 }
 
@@ -22,8 +23,10 @@ function formatLaunchAt(value: string | null): string {
 export function TrialOfferPanel({
   initialEnabled,
   initialLaunchAt,
+  initialIndividualLaunchAt = null,
   initialError = null,
 }: Props) {
+  void initialIndividualLaunchAt;
   const [enabled, setEnabled] = useState(initialEnabled);
   const [launchAt, setLaunchAt] = useState<string | null>(initialLaunchAt);
   const [reason, setReason] = useState("");
