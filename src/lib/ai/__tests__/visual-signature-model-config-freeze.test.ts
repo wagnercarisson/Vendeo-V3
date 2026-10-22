@@ -6,6 +6,7 @@ import {
   VisualSignatureConfigOutsideEnvironmentError,
   VisualSignatureConfigReadError,
   loadVisualSignatureModelConfigSnapshot,
+  resolveVisualSignatureModelConfigDiagnostic,
   type VisualSignatureModelConfigRow,
   type VisualSignatureModelConfigReader,
 } from "../visual-signature-model-config-service";
@@ -213,5 +214,90 @@ describe("F47.1 — resolver congelado", () => {
     expect(invoke).toHaveBeenCalledTimes(2);
     expect(sink.emit).toHaveBeenCalledTimes(2);
     expect(resolve).not.toHaveBeenCalled();
+  });
+});
+
+describe("F47.1 — diagnóstico usa as mesmas regras do runtime", () => {
+  function diagnose(options: {
+    reader?: VisualSignatureModelConfigReader;
+    isOptedIn?: boolean;
+    assertEnvironment?: () => typeof ENVIRONMENT;
+  }) {
+    return resolveVisualSignatureModelConfigDiagnostic({
+      reader: options.reader,
+      isOptedIn: () => options.isOptedIn ?? true,
+      assertEnvironment: options.assertEnvironment ?? (() => ENVIRONMENT),
+    });
+  }
+
+  it("opt-in desligado → inherited/opt_in_disabled sem ler a tabela", async () => {
+    const reader = { read: vi.fn() };
+    const diagnostic = await diagnose({ reader: reader as never, isOptedIn: false });
+
+    expect(diagnostic).toEqual({ status: "inherited", reason: "opt_in_disabled" });
+    expect(reader.read).not.toHaveBeenCalled();
+  });
+
+  it("guard inválido → blocked/guard com e sem linha, sem ler a tabela", async () => {
+    const reader = { read: vi.fn() };
+    const diagnostic = await diagnose({
+      reader: reader as never,
+      assertEnvironment: () => {
+        throw new Error("guard failed");
+      },
+    });
+
+    expect(diagnostic.status).toBe("blocked");
+    if (diagnostic.status === "blocked") {
+      expect(diagnostic.reason).toBe("guard");
+    }
+    expect(reader.read).not.toHaveBeenCalled();
+  });
+
+  it("guard válido + ausência confirmada → inherited/absent", async () => {
+    const diagnostic = await diagnose({ reader: { read: async () => null } });
+    expect(diagnostic).toEqual({ status: "inherited", reason: "absent" });
+  });
+
+  it("guard válido + tuple válida → dedicated", async () => {
+    const diagnostic = await diagnose({ reader: { read: async () => makeRow() } });
+    expect(diagnostic.status).toBe("dedicated");
+  });
+
+  it("identidade divergente → blocked/identity", async () => {
+    const diagnostic = await diagnose({
+      reader: { read: async () => makeRow({ instance_identity: "127.0.0.1:9999" }) },
+    });
+    expect(diagnostic.status).toBe("blocked");
+    if (diagnostic.status === "blocked") {
+      expect(diagnostic.reason).toBe("identity");
+      expect(diagnostic.code).toBe("visual_signature_config_outside_approved_environment");
+    }
+  });
+
+  it("tuple inválida → blocked/tuple com código seguro", async () => {
+    const diagnostic = await diagnose({
+      reader: { read: async () => makeRow({ image_preset: "image-2-low" }) },
+    });
+    expect(diagnostic.status).toBe("blocked");
+    if (diagnostic.status === "blocked") {
+      expect(diagnostic.reason).toBe("tuple");
+      expect(diagnostic.code).toBe("invalid_preset");
+    }
+  });
+
+  it("falha de leitura → blocked/read_failure, nunca inherited/absent", async () => {
+    const diagnostic = await diagnose({
+      reader: {
+        read: async () => {
+          throw new Error("db down");
+        },
+      },
+    });
+    expect(diagnostic.status).toBe("blocked");
+    if (diagnostic.status === "blocked") {
+      expect(diagnostic.reason).toBe("read_failure");
+      expect(diagnostic.code).toBe("visual_signature_model_config_read_failed");
+    }
   });
 });

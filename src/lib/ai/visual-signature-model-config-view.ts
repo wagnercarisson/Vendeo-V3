@@ -10,12 +10,10 @@ import {
 } from "./visual-signature-model-config";
 import {
   readVisualSignatureModelConfigRowForAdmin,
+  resolveVisualSignatureModelConfigDiagnostic,
+  type VisualSignatureModelConfigDiagnostic,
   type VisualSignatureModelConfigRow,
 } from "./visual-signature-model-config-service";
-import {
-  assertVisualSignatureValidationEnvironment,
-  isVisualSignatureValidationOptedIn,
-} from "@/lib/visual-signature/local-validation/guard";
 import {
   getVisualSignaturePresetPricing,
   type VisualSignatureImagePricingResult,
@@ -59,13 +57,21 @@ export interface VisualSignatureInheritedView {
 }
 
 /**
- * Registrada ≠ efetivamente habilitada. O GET é diagnóstico e não usa a linha
- * para afirmar consumo; `effective` exige opt-in + guard local válidos.
+ * Diagnóstico derivado do MESMO resolvedor do runtime.
+ *
+ * - `dedicated_valid`: guard + identidade + tuple válidos.
+ * - `inherited_opt_in_disabled`: opt-in desligado.
+ * - `inherited_absent`: guard válido e ausência confirmada.
+ * - `blocked`: guard, leitura, identidade ou tuple falharam.
  */
-export interface VisualSignatureConsumptionView {
-  optedIn: boolean;
-  effective: boolean;
-  reason: "not_configured" | "opt_in_disabled" | "environment_invalid" | "enabled";
+export interface VisualSignatureConfigDiagnosticView {
+  status:
+    | "dedicated_valid"
+    | "inherited_opt_in_disabled"
+    | "inherited_absent"
+    | "blocked";
+  reason: "opt_in_disabled" | "absent" | "guard" | "identity" | "tuple" | "read_failure" | null;
+  code: string | null;
 }
 
 export interface VisualSignaturePresetPricingView {
@@ -88,7 +94,7 @@ export interface VisualSignatureModelConfigView {
   configured: boolean;
   current: VisualSignatureConfigViewRow | null;
   inherited: VisualSignatureInheritedView;
-  consumption: VisualSignatureConsumptionView;
+  diagnostic: VisualSignatureConfigDiagnosticView;
   pricingByPreset: Record<VisualSignatureImagePreset, VisualSignaturePresetPricingView>;
   /** Falha de leitura da configuração dedicada (mensagem segura). */
   readError: string | null;
@@ -106,37 +112,36 @@ export type VisualSignatureSelectionViewBuilder = () => Promise<AiModelSelection
 export type VisualSignaturePresetPricingResolver = (
   preset: VisualSignatureImagePreset,
 ) => Promise<VisualSignatureImagePricingResult>;
-export type VisualSignatureConsumptionResolver = (
-  configured: boolean,
-) => VisualSignatureConsumptionView;
+export type VisualSignatureDiagnosticResolver = () => Promise<VisualSignatureModelConfigDiagnostic>;
 
 export interface BuildVisualSignatureModelConfigViewDependencies {
   configReader?: VisualSignatureConfigRowReader;
   selectionViewBuilder?: VisualSignatureSelectionViewBuilder;
   pricingResolver?: VisualSignaturePresetPricingResolver;
-  consumptionResolver?: VisualSignatureConsumptionResolver;
+  diagnosticResolver?: VisualSignatureDiagnosticResolver;
 }
 
-/**
- * Default: opt-in é necessário, mas não suficiente. Com opt-in ligado, o guard
- * local completo é consultado em modo diagnóstico (sem escrita/generation).
- */
-export function resolveVisualSignatureConsumption(
-  configured: boolean,
-): VisualSignatureConsumptionView {
-  const optedIn = isVisualSignatureValidationOptedIn();
-  if (!configured) {
-    return { optedIn, effective: false, reason: "not_configured" };
+function toDiagnosticView(
+  diagnostic: VisualSignatureModelConfigDiagnostic,
+): VisualSignatureConfigDiagnosticView {
+  if (diagnostic.status === "dedicated") {
+    return { status: "dedicated_valid", reason: null, code: null };
   }
-  if (!optedIn) {
-    return { optedIn, effective: false, reason: "opt_in_disabled" };
+  if (diagnostic.status === "inherited") {
+    return {
+      status:
+        diagnostic.reason === "absent"
+          ? "inherited_absent"
+          : "inherited_opt_in_disabled",
+      reason: diagnostic.reason,
+      code: null,
+    };
   }
-  try {
-    assertVisualSignatureValidationEnvironment();
-    return { optedIn: true, effective: true, reason: "enabled" };
-  } catch {
-    return { optedIn: true, effective: false, reason: "environment_invalid" };
-  }
+  return {
+    status: "blocked",
+    reason: diagnostic.reason,
+    code: diagnostic.code,
+  };
 }
 
 function defaultInherited(): VisualSignatureInheritedView {
@@ -242,8 +247,8 @@ export async function buildVisualSignatureModelConfigView(
   const pricingResolver =
     dependencies.pricingResolver ??
     ((preset) => getVisualSignaturePresetPricing({ preset }));
-  const consumptionResolver =
-    dependencies.consumptionResolver ?? resolveVisualSignatureConsumption;
+  const diagnosticResolver =
+    dependencies.diagnosticResolver ?? (() => resolveVisualSignatureModelConfigDiagnostic());
 
   const presets: VisualSignaturePresetView[] = (
     Object.keys(VISUAL_SIGNATURE_IMAGE_PRESETS) as VisualSignatureImagePreset[]
@@ -283,7 +288,13 @@ export async function buildVisualSignatureModelConfigView(
   }
 
   const pricingByPreset = await buildPricing(pricingResolver);
-  const consumption = consumptionResolver(current !== null);
+
+  let diagnostic: VisualSignatureConfigDiagnosticView;
+  try {
+    diagnostic = toDiagnosticView(await diagnosticResolver());
+  } catch {
+    diagnostic = { status: "blocked", reason: "read_failure", code: null };
+  }
 
   return {
     orchestrators: VISUAL_SIGNATURE_ORCHESTRATORS,
@@ -292,7 +303,7 @@ export async function buildVisualSignatureModelConfigView(
     configured: current !== null,
     current,
     inherited,
-    consumption,
+    diagnostic,
     pricingByPreset,
     readError,
   };

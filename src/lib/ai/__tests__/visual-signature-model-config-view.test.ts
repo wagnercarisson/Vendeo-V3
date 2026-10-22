@@ -76,6 +76,7 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
       configReader: async () => null,
       selectionViewBuilder: async () => selectionView(false),
       pricingResolver: async () => pricing("complete"),
+      diagnosticResolver: async () => ({ status: "inherited", reason: "opt_in_disabled" }),
     });
 
     expect(view.orchestrators).toEqual(["gpt-5.5", "gpt-6-luna"]);
@@ -99,10 +100,19 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
       configReader: async () => ROW,
       selectionViewBuilder: async () => selectionView(true),
       pricingResolver: async () => pricing("complete"),
-      consumptionResolver: () => ({
-        optedIn: false,
-        effective: false,
-        reason: "opt_in_disabled",
+      diagnosticResolver: async () => ({
+        status: "dedicated",
+        snapshot: {
+          mode: "dedicated",
+          orchestratorModel: "gpt-6-luna",
+          imagePreset: "sunburst_medium",
+          imageModel: "gpt-image-2.5-sunburst",
+          imageQuality: "medium",
+          reasoningEffort: "low",
+          configVersionId: ROW.config_version_id,
+          instanceIdentity: ROW.instance_identity,
+        },
+        row: ROW,
       }),
     });
 
@@ -119,10 +129,10 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
       reason: "decisão local",
     });
     expect(view.inherited.origin).toBe("human_decision");
-    expect(view.consumption).toEqual({
-      optedIn: false,
-      effective: false,
-      reason: "opt_in_disabled",
+    expect(view.diagnostic).toEqual({
+      status: "dedicated_valid",
+      reason: null,
+      code: null,
     });
   });
 
@@ -131,15 +141,15 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
       configReader: async () => null,
       selectionViewBuilder: async () => selectionView(false),
       pricingResolver: async () => pricing("complete"),
-      consumptionResolver: () => ({
-        optedIn: false,
-        effective: false,
-        reason: "not_configured",
-      }),
+      diagnosticResolver: async () => ({ status: "inherited", reason: "absent" }),
     });
 
     expect(view.configured).toBe(false);
-    expect(view.consumption.reason).toBe("not_configured");
+    expect(view.diagnostic).toEqual({
+      status: "inherited_absent",
+      reason: "absent",
+      code: null,
+    });
     expect(view.current).toBeNull();
     expect(view.inherited).toEqual({
       provider: "openai",
@@ -151,12 +161,54 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
     });
   });
 
+  it("mapeia opt-in desligado sem afirmar configuração válida", async () => {
+    const view = await buildVisualSignatureModelConfigView({
+      configReader: async () => ROW,
+      selectionViewBuilder: async () => selectionView(false),
+      pricingResolver: async () => pricing("complete"),
+      diagnosticResolver: async () => ({ status: "inherited", reason: "opt_in_disabled" }),
+    });
+
+    expect(view.diagnostic).toEqual({
+      status: "inherited_opt_in_disabled",
+      reason: "opt_in_disabled",
+      code: null,
+    });
+  });
+
+  it.each([
+    ["guard", "visual_signature_validation_instance_mismatch", true],
+    ["guard", "visual_signature_validation_disabled", false],
+    ["identity", "visual_signature_config_outside_approved_environment", true],
+    ["tuple", "invalid_preset", true],
+    ["read_failure", "visual_signature_model_config_read_failed", false],
+  ] as const)(
+    "mapeia bloqueio %s (%s) sem erro bruto",
+    async (reason, code, withRow) => {
+      const view = await buildVisualSignatureModelConfigView({
+        configReader: async () => (withRow ? ROW : null),
+        selectionViewBuilder: async () => selectionView(false),
+        pricingResolver: async () => pricing("complete"),
+        diagnosticResolver: async () => ({
+          status: "blocked",
+          reason,
+          code,
+          error: new Error("SQL bruto que NÃO pode vazar"),
+        }),
+      });
+
+      expect(view.diagnostic).toEqual({ status: "blocked", reason, code });
+      expect(JSON.stringify(view.diagnostic)).not.toContain("SQL bruto");
+    },
+  );
+
   it("preserva pricing partial/missing sem inventar tarifa", async () => {
     const view = await buildVisualSignatureModelConfigView({
       configReader: async () => null,
       selectionViewBuilder: async () => selectionView(false),
       pricingResolver: async (preset) =>
         preset === "flare_low" ? pricing("partial") : pricing("missing"),
+      diagnosticResolver: async () => ({ status: "inherited", reason: "absent" }),
     });
 
     expect(view.pricingByPreset.flare_low.status).toBe("partial");
@@ -171,10 +223,21 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
       configReader,
       selectionViewBuilder: async () => selectionView(false),
       pricingResolver: async () => pricing("complete"),
+      diagnosticResolver: async () => ({
+        status: "blocked",
+        reason: "read_failure",
+        code: "visual_signature_model_config_read_failed",
+        error: new Error("relation does not exist"),
+      }),
     });
 
     expect(view.configured).toBe(false);
     expect(view.readError).toBe("Não foi possível ler a configuração da Assinatura Visual.");
+    expect(view.diagnostic).toEqual({
+      status: "blocked",
+      reason: "read_failure",
+      code: "visual_signature_model_config_read_failed",
+    });
     expect(view.readError).not.toContain("relation");
     expect(configReader).toHaveBeenCalledTimes(1);
   });

@@ -109,6 +109,124 @@ export interface LoadVisualSignatureModelConfigOptions {
   isOptedIn?: () => boolean;
 }
 
+/**
+ * F47.1 (D10) — diagnóstico discriminado usando as MESMAS regras do runtime.
+ *
+ * - `inherited/opt_in_disabled`: opt-in desligado; tabela não consultada.
+ * - `inherited/absent`: guard válido e ausência confirmada.
+ * - `dedicated`: guard, identidade e tuple válidos.
+ * - `blocked`: guard, leitura, identidade ou tuple falharam.
+ *
+ * O diagnóstico não cria um segundo contrato de decisão: `load...Snapshot`
+ * consome este mesmo resultado e re-lança o erro original.
+ */
+export type VisualSignatureModelConfigDiagnostic =
+  | {
+      status: "dedicated";
+      snapshot: VisualSignatureDedicatedConfigSnapshot;
+      row: VisualSignatureModelConfigRow;
+    }
+  | { status: "inherited"; reason: "opt_in_disabled" | "absent" }
+  | {
+      status: "blocked";
+      reason: "guard" | "read_failure" | "identity" | "tuple";
+      code: string | null;
+      error: unknown;
+    };
+
+export async function resolveVisualSignatureModelConfigDiagnostic(
+  options: LoadVisualSignatureModelConfigOptions = {},
+): Promise<VisualSignatureModelConfigDiagnostic> {
+  const isOptedIn = options.isOptedIn ?? isVisualSignatureValidationOptedIn;
+
+  if (!isOptedIn()) {
+    return { status: "inherited", reason: "opt_in_disabled" };
+  }
+
+  const assertEnvironment = options.assertEnvironment ?? assertVisualSignatureValidationEnvironment;
+  let environment: VisualSignatureValidationEnvironment;
+  try {
+    environment = assertEnvironment();
+  } catch (error) {
+    return {
+      status: "blocked",
+      reason: "guard",
+      code: error instanceof VisualSignatureValidationGuardError ? error.code : null,
+      error,
+    };
+  }
+
+  const reader = options.reader ?? defaultReader;
+  let row: VisualSignatureModelConfigRow | null;
+  try {
+    row = await reader.read();
+  } catch (error) {
+    const readError =
+      error instanceof VisualSignatureConfigReadError
+        ? error
+        : new VisualSignatureConfigReadError({ cause: error });
+    return {
+      status: "blocked",
+      reason: "read_failure",
+      code: readError.code,
+      error: readError,
+    };
+  }
+
+  if (!row) {
+    return { status: "inherited", reason: "absent" };
+  }
+
+  if (
+    row.environment_scope !== VISUAL_SIGNATURE_ENVIRONMENT_SCOPE ||
+    row.instance_identity !== environment.instanceIdentity
+  ) {
+    const error = new VisualSignatureConfigOutsideEnvironmentError();
+    return { status: "blocked", reason: "identity", code: error.code, error };
+  }
+
+  try {
+    assertVisualSignatureConfigTuple({
+      orchestratorModel: row.orchestrator_model,
+      imagePreset: row.image_preset,
+      imageModel: row.image_model,
+      imageQuality: row.image_quality,
+      reasoningEffort: row.reasoning_effort,
+    });
+  } catch (error) {
+    const tupleError =
+      error instanceof VisualSignatureConfigError
+        ? new VisualSignatureConfigDivergentError(error.code, { cause: error })
+        : error instanceof VisualSignatureValidationGuardError
+          ? error
+          : new VisualSignatureConfigDivergentError("invalid_tuple", { cause: error });
+    return {
+      status: "blocked",
+      reason: "tuple",
+      code:
+        tupleError instanceof VisualSignatureConfigDivergentError
+          ? tupleError.detail
+          : tupleError instanceof VisualSignatureValidationGuardError
+            ? tupleError.code
+            : null,
+      error: tupleError,
+    };
+  }
+
+  const snapshot: VisualSignatureDedicatedConfigSnapshot = Object.freeze({
+    mode: "dedicated",
+    orchestratorModel: row.orchestrator_model as VisualSignatureOrchestrator,
+    imagePreset: row.image_preset as VisualSignatureImagePreset,
+    imageModel: row.image_model,
+    imageQuality: row.image_quality as "low" | "medium",
+    reasoningEffort: "low",
+    configVersionId: row.config_version_id,
+    instanceIdentity: row.instance_identity,
+  });
+
+  return { status: "dedicated", snapshot, row };
+}
+
 async function readRowFromSupabase(): Promise<VisualSignatureModelConfigRow | null> {
   const { supabaseAdmin } = await import("@/lib/supabase/server");
   const { data, error } = await supabaseAdmin
@@ -139,61 +257,15 @@ const defaultReader: VisualSignatureModelConfigReader = { read: readRowFromSupab
 export async function loadVisualSignatureModelConfigSnapshot(
   options: LoadVisualSignatureModelConfigOptions = {},
 ): Promise<VisualSignatureModelConfigSnapshot> {
-  const isOptedIn = options.isOptedIn ?? isVisualSignatureValidationOptedIn;
+  const diagnostic = await resolveVisualSignatureModelConfigDiagnostic(options);
 
-  // Opt-in desligado: a configuração dedicada NÃO é consumida (legado puro).
-  if (!isOptedIn()) return LEGACY_VISUAL_SIGNATURE_MODEL_CONFIG;
+  if (diagnostic.status === "dedicated") return diagnostic.snapshot;
+  if (diagnostic.status === "inherited") return LEGACY_VISUAL_SIGNATURE_MODEL_CONFIG;
 
-  // Opt-in ligado: qualquer falha do guard propaga (fail-closed ANTES de
-  // débito/provider). A opção injetável existe apenas para testes.
-  const assertEnvironment = options.assertEnvironment ?? assertVisualSignatureValidationEnvironment;
-  const environment = assertEnvironment();
-
-  const reader = options.reader ?? defaultReader;
-  let row: VisualSignatureModelConfigRow | null;
-  try {
-    row = await reader.read();
-  } catch (error) {
-    if (error instanceof VisualSignatureConfigReadError) throw error;
-    throw new VisualSignatureConfigReadError({ cause: error });
-  }
-
-  // Ausência CONFIRMADA (sem linha) ⇒ legado.
-  if (!row) return LEGACY_VISUAL_SIGNATURE_MODEL_CONFIG;
-
-  if (
-    row.environment_scope !== VISUAL_SIGNATURE_ENVIRONMENT_SCOPE ||
-    row.instance_identity !== environment.instanceIdentity
-  ) {
-    throw new VisualSignatureConfigOutsideEnvironmentError();
-  }
-
-  try {
-    assertVisualSignatureConfigTuple({
-      orchestratorModel: row.orchestrator_model,
-      imagePreset: row.image_preset,
-      imageModel: row.image_model,
-      imageQuality: row.image_quality,
-      reasoningEffort: row.reasoning_effort,
-    });
-  } catch (error) {
-    if (error instanceof VisualSignatureConfigError) {
-      throw new VisualSignatureConfigDivergentError(error.code, { cause: error });
-    }
-    if (error instanceof VisualSignatureValidationGuardError) throw error;
-    throw new VisualSignatureConfigDivergentError("invalid_tuple", { cause: error });
-  }
-
-  return Object.freeze({
-    mode: "dedicated",
-    orchestratorModel: row.orchestrator_model as VisualSignatureOrchestrator,
-    imagePreset: row.image_preset as VisualSignatureImagePreset,
-    imageModel: row.image_model,
-    imageQuality: row.image_quality as "low" | "medium",
-    reasoningEffort: "low",
-    configVersionId: row.config_version_id,
-    instanceIdentity: row.instance_identity,
-  });
+  // Mesmo erro tipado produzido pelas regras do runtime — nunca convertido em
+  // ausência/legado.
+  if (diagnostic.error instanceof Error) throw diagnostic.error;
+  throw new Error("visual_signature_model_config_diagnostic_failed");
 }
 
 /**

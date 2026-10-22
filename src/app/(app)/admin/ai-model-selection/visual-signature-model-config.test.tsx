@@ -43,7 +43,7 @@ const VIEW: VisualSignatureModelConfigView = {
     catalogStatus: "active",
     eligible: true,
   },
-  consumption: { optedIn: true, effective: true, reason: "enabled" },
+  diagnostic: { status: "dedicated_valid", reason: null, code: null },
   pricingByPreset: {
     flare_low: { status: "complete", missingRates: [], historicalReferenceUsd: 0.036, pricingVersion: "p1" },
     flare_medium: { status: "partial", missingRates: ["image.imageTokenUsdPer1M"], historicalReferenceUsd: 0.044, pricingVersion: "p2" },
@@ -57,7 +57,7 @@ const EMPTY_VIEW: VisualSignatureModelConfigView = {
   ...VIEW,
   configured: false,
   current: null,
-  consumption: { optedIn: false, effective: false, reason: "not_configured" },
+  diagnostic: { status: "inherited_absent", reason: "absent", code: null },
 };
 
 const mockFetch = vi.fn();
@@ -152,7 +152,7 @@ describe("F47.1 — card da Assinatura Visual", () => {
     render(<VisualSignatureConfigForm view={EMPTY_VIEW} />);
     const reset = screen.getByRole("button", { name: "Voltar à seleção herdada" });
     expect(reset).toBeDisabled();
-    expect(screen.getByText(/Nenhuma configuração dedicada registrada/)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhum registro dedicado para exibir/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Motivo da alteração da Assinatura Visual"), {
       target: { value: "primeira configuração" },
@@ -180,7 +180,7 @@ describe("F47.1 — card da Assinatura Visual", () => {
     fireEvent.click(screen.getByRole("button", { name: "Voltar à seleção herdada" }));
 
     await waitFor(() =>
-      expect(screen.getByText(/Nenhuma configuração dedicada registrada/)).toBeInTheDocument(),
+      expect(screen.getByText(/Nenhum registro dedicado para exibir/)).toBeInTheDocument(),
     );
     expect(screen.queryByText("11111111-1111-4111-8111-111111111111")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Voltar à seleção herdada" })).toBeDisabled();
@@ -191,14 +191,43 @@ describe("F47.1 — card da Assinatura Visual", () => {
       <VisualSignatureConfigForm
         view={{
           ...VIEW,
-          consumption: { optedIn: false, effective: false, reason: "opt_in_disabled" },
+          diagnostic: {
+            status: "inherited_opt_in_disabled",
+            reason: "opt_in_disabled",
+            code: null,
+          },
         }}
       />,
     );
 
-    expect(screen.getByText("registrada — não habilitada")).toBeInTheDocument();
+    expect(screen.getByText("seleção herdada — opt-in desligado")).toBeInTheDocument();
     expect(screen.queryByText("em uso no ambiente local")).not.toBeInTheDocument();
     expect(screen.getByText(/opt-in local está desligado/)).toBeInTheDocument();
+  });
+
+  it("mostra bloqueio por guard com e sem configuração registrada", () => {
+    const { unmount } = render(
+      <VisualSignatureConfigForm
+        view={{
+          ...VIEW,
+          diagnostic: { status: "blocked", reason: "guard", code: "instance_mismatch" },
+        }}
+      />,
+    );
+    expect(screen.getByText("geração bloqueada — guard local")).toBeInTheDocument();
+    expect(screen.queryByText("em uso no ambiente local")).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <VisualSignatureConfigForm
+        view={{
+          ...EMPTY_VIEW,
+          diagnostic: { status: "blocked", reason: "guard", code: "disabled" },
+        }}
+      />,
+    );
+    expect(screen.getByText("geração bloqueada — guard local")).toBeInTheDocument();
+    expect(screen.getByText(/O guard local bloqueia a geração/)).toBeInTheDocument();
   });
 
   it("reset usa DELETE com motivo e operationId", async () => {

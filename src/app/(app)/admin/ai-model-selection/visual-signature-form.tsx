@@ -28,6 +28,58 @@ function originLabel(origin: VisualSignatureModelConfigView["inherited"]["origin
   return "Default do sistema";
 }
 
+function diagnosticLabel(diagnostic: VisualSignatureModelConfigView["diagnostic"]): string {
+  if (diagnostic.status === "dedicated_valid") return "em uso no ambiente local";
+  if (diagnostic.status === "inherited_opt_in_disabled") {
+    return "seleção herdada — opt-in desligado";
+  }
+  if (diagnostic.status === "inherited_absent") {
+    return "seleção herdada — ausência confirmada";
+  }
+  if (diagnostic.reason === "guard") return "geração bloqueada — guard local";
+  if (diagnostic.reason === "identity") return "geração bloqueada — identidade divergente";
+  if (diagnostic.reason === "tuple") return "geração bloqueada — tuple inválida";
+  return "geração bloqueada — falha de leitura";
+}
+
+function diagnosticVariant(
+  diagnostic: VisualSignatureModelConfigView["diagnostic"],
+): "ready" | "generating" | "error" | "default" {
+  if (diagnostic.status === "dedicated_valid") return "ready";
+  if (diagnostic.status === "blocked") return "error";
+  if (diagnostic.status === "inherited_opt_in_disabled") return "generating";
+  return "default";
+}
+
+function diagnosticDescription(
+  diagnostic: VisualSignatureModelConfigView["diagnostic"],
+  hasCurrent: boolean,
+): string {
+  if (diagnostic.status === "dedicated_valid") {
+    return hasCurrent
+      ? "Configuração dedicada válida: guard, identidade e tuple foram aceitos pelo runtime."
+      : "Configuração dedicada válida, mas os detalhes não puderam ser carregados para exibição.";
+  }
+  if (diagnostic.status === "inherited_opt_in_disabled") {
+    return hasCurrent
+      ? "A configuração está registrada, mas o opt-in local está desligado. A geração usa a seleção herdada."
+      : "Opt-in local desligado. A geração usa a seleção herdada.";
+  }
+  if (diagnostic.status === "inherited_absent") {
+    return "Guard válido e ausência confirmada de configuração dedicada. A geração usa a seleção herdada.";
+  }
+  if (diagnostic.reason === "guard") {
+    return "O guard local bloqueia a geração. A configuração dedicada não é aplicada.";
+  }
+  if (diagnostic.reason === "identity") {
+    return "A identidade da linha diverge da identidade canônica. A geração falha antes do provider.";
+  }
+  if (diagnostic.reason === "tuple") {
+    return "A tuple de configuração é inválida. A geração falha antes do provider.";
+  }
+  return "Falha ao ler a configuração dedicada. A geração falha; a ausência não é presumida.";
+}
+
 function coverageLabel(pricing: VisualSignaturePresetPricingView): string {
   if (pricing.status === "complete") return "Completa";
   if (pricing.status === "partial") return "Parcial";
@@ -132,7 +184,7 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
     <div className="space-y-6">
       <CurrentConfigCard
         current={view.current}
-        consumption={view.consumption}
+        diagnostic={view.diagnostic}
         readError={view.readError}
       />
 
@@ -270,47 +322,45 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
 
 function CurrentConfigCard({
   current,
-  consumption,
+  diagnostic,
   readError,
 }: {
   current: VisualSignatureConfigViewRow | null;
-  consumption: VisualSignatureModelConfigView["consumption"];
+  diagnostic: VisualSignatureModelConfigView["diagnostic"];
   readError: string | null;
 }) {
-  if (readError) {
-    return (
-      <Card className="p-6">
-        <p className="text-sm text-accent-red" role="alert">
-          {readError}
-        </p>
-      </Card>
-    );
-  }
-  if (!current) {
-    return (
-      <Card className="p-6">
-        <p className="text-sm text-text-secondary">
-          Nenhuma configuração dedicada registrada. Enquanto isso, a geração usa a seleção herdada.
-        </p>
-      </Card>
-    );
-  }
   return (
     <Card className="space-y-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-heading text-lg font-semibold text-text-primary">Configuração registrada</h3>
-        <Badge variant={consumption.effective ? "ready" : "generating"}>
-          {consumption.effective ? "em uso no ambiente local" : "registrada — não habilitada"}
-        </Badge>
+        <h3 className="font-heading text-lg font-semibold text-text-primary">
+          Configuração dedicada
+        </h3>
+        <Badge variant={diagnosticVariant(diagnostic)}>{diagnosticLabel(diagnostic)}</Badge>
       </div>
-      {!consumption.effective && (
-        <p className="rounded-lg border border-accent-amber/20 bg-accent-amber/5 p-3 text-xs text-accent-amber">
-          {consumption.reason === "opt_in_disabled"
-            ? "A configuração está registrada, mas o opt-in local está desligado. A geração usa a seleção herdada."
-            : "A configuração está registrada, mas o ambiente local não passou no guard. A geração usa a seleção herdada."}
+      <p
+        className={`rounded-lg border p-3 text-xs ${
+          diagnostic.status === "blocked"
+            ? "border-accent-red/20 bg-accent-red/5 text-accent-red"
+            : diagnostic.status === "dedicated_valid"
+              ? "border-accent-blue/20 bg-accent-blue/5 text-text-secondary"
+              : "border-accent-amber/20 bg-accent-amber/5 text-accent-amber"
+        }`}
+      >
+        {diagnosticDescription(diagnostic, current !== null)}
+      </p>
+      {readError && (
+        <p className="text-xs text-accent-red" role="alert">
+          {readError}
         </p>
       )}
-      <div className="grid gap-3 sm:grid-cols-2">
+      {!current ? (
+        <p className="text-sm text-text-secondary">
+          Nenhum registro dedicado para exibir. O diagnóstico acima é a fonte de verdade sobre a
+          geração.
+        </p>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-border bg-bg-deep/40 p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Orquestrador</p>
           <p className="mt-1 text-sm text-text-primary">{current.orchestratorModel}</p>
@@ -343,7 +393,9 @@ function CurrentConfigCard({
           <dt className="font-semibold uppercase tracking-wider text-text-muted">Motivo</dt>
           <dd className="mt-1 break-words text-text-primary">{current.reason ?? "—"}</dd>
         </div>
-      </dl>
+        </dl>
+        </>
+      )}
     </Card>
   );
 }
