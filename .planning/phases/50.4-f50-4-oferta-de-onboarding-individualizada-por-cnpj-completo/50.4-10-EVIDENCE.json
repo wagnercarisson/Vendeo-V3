@@ -96,5 +96,27 @@
         "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L852"
       }
     ]
+  },
+  "precheck": {
+    "exit_code": 1,
+    "codes_observed": [
+      "F50_4_PRECHECK_MISSING_STORE",
+      "F50_4_PRECHECK_BAD_CNPJ",
+      "F50_4_PRECHECK_ROOT_HASH_MISMATCH"
+    ],
+    "state_unchanged": true,
+    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L76"
+  },
+  "rollback": {
+    "enabled_false_preserved_enrollments": true,
+    "unique_root_hash_restored": false,
+    "second_branch_insertable": true,
+    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L107"
+  },
+  "parser": {
+    "exit_code": 1,
+    "sqlstate": "42601",
+    "atomic_in_real_migrations": false,
+    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L133"
   }
 }
