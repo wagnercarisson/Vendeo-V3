@@ -105,18 +105,28 @@
       "F50_4_PRECHECK_ROOT_HASH_MISMATCH"
     ],
     "state_unchanged": true,
-    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L76"
+    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L83"
   },
   "rollback": {
     "enabled_false_preserved_enrollments": true,
     "unique_root_hash_restored": false,
     "second_branch_insertable": true,
-    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L107"
+    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L114"
   },
   "parser": {
     "exit_code": 1,
     "sqlstate": "42601",
     "atomic_in_real_migrations": false,
-    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L133"
+    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L140"
+  },
+  "destroy": {
+    "exit_code": 0,
+    "run_ids": [
+      "20261022220210-98c269",
+      "20261022230000-precheck"
+    ],
+    "containers_remaining": 0,
+    "production_activated": false,
+    "evidence": ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.md#L161"
   }
 }
