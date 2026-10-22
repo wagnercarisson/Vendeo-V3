@@ -44,6 +44,60 @@ function sanitizeSubsegment(value: string): string {
     .join(" ");
 }
 
+type PolicyContextSignals = {
+  policyCohort?: "root_legacy" | "per_cnpj_f50_4";
+  beneficiaryEligible?: boolean;
+  rootEligible: boolean;
+};
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+/**
+ * F50.4 — contexto de política resolvido no banco (RPC service_role-only).
+ * O app NÃO replica a regra de coorte. Fallback explícito: sem `policy_cohort`
+ * (RPC indisponível/payload inválido) mantém o comportamento legado da F50.2,
+ * recalculando `rootEligible` por `freemium_entitlements`/root_hash.
+ */
+async function resolvePolicyContext(
+  userId: string,
+  cnpjNormalized: string,
+  rootHash: string,
+): Promise<PolicyContextSignals> {
+  const { data, error } = await supabase.rpc("trial_offer_policy_context", {
+    p_user_id: userId,
+    p_cnpj_normalized: cnpjNormalized,
+    p_root_hash: rootHash,
+  });
+
+  const record = toRecord(data);
+  const cohort = record.policy_cohort;
+
+  if (!error && (cohort === "root_legacy" || cohort === "per_cnpj_f50_4")) {
+    return {
+      policyCohort: cohort,
+      beneficiaryEligible:
+        typeof record.beneficiary_eligible === "boolean"
+          ? record.beneficiary_eligible
+          : undefined,
+      rootEligible: record.root_eligible === true,
+    };
+  }
+
+  // Log estruturado sem CNPJ/root_hash/payload.
+  console.warn("trial_offer_policy_context_unavailable");
+
+  const { data: existingEntitlement } = await supabase
+    .from("freemium_entitlements")
+    .select("id")
+    .eq("root_hash", rootHash)
+    .eq("benefit_type", "onboarding")
+    .maybeSingle();
+
+  return { rootEligible: !existingEntitlement };
+}
+
 export const POST = apiHandler(async (request: NextRequest) => {
   requireSameOrigin(request);
   try {
@@ -197,14 +251,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
       const storeState = typeof state === "string" ? state.trim() : "";
 
       if (storeCity !== "" && storeState !== "") {
-        const { data: existingEntitlement } = await supabase
-          .from("freemium_entitlements")
-          .select("id")
-          .eq("root_hash", rootHash)
-          .eq("benefit_type", "onboarding")
-          .maybeSingle();
-
-        const rootEligible = !existingEntitlement;
+        // F50.4 — coorte/elegibilidade por CNPJ resolvidas pela RPC; fallback legado
+        // explícito quando o contexto não está disponível (sem estado novo de coorte).
+        const policy = await resolvePolicyContext(user.userId, normalized, rootHash);
 
         const eligibility = evaluateFreemiumEligibility({
           cnpj: normalized,
@@ -215,7 +264,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
           officialData: cnpjOfficialData,
           lookupOutcome: "resolved",
           rootHash,
-          rootEligible,
+          rootEligible: policy.rootEligible,
+          policyCohort: policy.policyCohort,
+          beneficiaryEligible: policy.beneficiaryEligible,
         });
 
         verificationData = { signals: eligibility.signals, score: eligibility.score };
@@ -229,6 +280,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
         } else if (eligibility.decision === "reject") {
           if (eligibility.reasons.includes("cnpj_baixada") || eligibility.reasons.includes("cnpj_nula")) {
             userMessage = "Loja criada. Este CNPJ está com situação cadastral inativa.";
+          } else if (eligibility.reasons.includes("beneficiary_already_used")) {
+            userMessage = "Loja criada. O benefício de boas-vindas já foi utilizado para este CNPJ.";
           } else if (eligibility.reasons.includes("root_already_used")) {
             userMessage = "Loja criada como filial. Esta empresa já utilizou o benefício de boas-vindas.";
           }

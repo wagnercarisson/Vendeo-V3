@@ -9,6 +9,10 @@ const { mockRpc } = vi.hoisted(() => ({
 
 const mockResolve = vi.fn();
 
+// F50.4 — resultados roteados por nome de RPC (policy_context × create_store_*).
+let policyContextResult: { data: unknown; error: unknown } = { data: null, error: null };
+let createStoreResult: { data: unknown; error: unknown } = { data: null, error: null };
+
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
     rpc: mockRpc,
@@ -118,19 +122,28 @@ const sampleLookupResolved = {
 describe("POST /api/store — CNPJ onboarding with verification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    policyContextResult = { data: null, error: null };
+    createStoreResult = { data: null, error: null };
+    mockRpc.mockImplementation((rpcName: string) => {
+      if (rpcName === "trial_offer_policy_context") return Promise.resolve(policyContextResult);
+      if (rpcName === "create_store_with_cnpj" || rpcName === "create_store_draft") {
+        return Promise.resolve(createStoreResult);
+      }
+      return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+    });
   });
 
   it("creates store with APPROVE verification and grant onboarding", async () => {
     const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
     mockResolve.mockResolvedValue(sampleLookupResolved);
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-1", name: "Minha Loja", segment: "moda-calcados-acessorios" }],
         onboardingGranted: true,
         verificationStatus: "approved",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Minha Loja",
@@ -164,14 +177,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
         nome_fantasia: null,
       },
     });
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-2", name: "Loja Review", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
         verificationStatus: "review",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Nome Completamente Diferente",
@@ -205,14 +218,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
 
   it("creates store with DEFER when lookup unavailable", async () => {
     mockResolve.mockResolvedValue({ status: "unavailable" });
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-3", name: "Loja Defer", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
         verificationStatus: "defer",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Loja Defer",
@@ -233,14 +246,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
 
   it("persists canonical alphanumeric CNPJ and canonical root hash", async () => {
     mockResolve.mockResolvedValue(sampleLookupResolved);
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-alpha", name: "Loja Alpha", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
         verificationStatus: "unverified",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Loja Alpha",
@@ -259,14 +272,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
 
   it("creates store with DEFER/api_unsupported_format when providers reject the format", async () => {
     mockResolve.mockResolvedValue({ status: "unsupported_format" });
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-unsupported", name: "Loja Unsupported", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
         verificationStatus: "defer",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Loja Unsupported",
@@ -310,14 +323,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
         situacao_cadastral: "BAIXADA",
       },
     });
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-4", name: "Loja Inativa", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
         verificationStatus: "rejected",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Loja Inativa",
@@ -337,14 +350,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
   it("Teste 26 (D7): does NOT call the motor when city/state absent — unverified, no review, no grant", async () => {
     const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
     mockResolve.mockResolvedValue(sampleLookupResolved);
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-5", name: "Loja Sem Cidade", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
         verificationStatus: "unverified",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Loja Sem Cidade",
@@ -365,14 +378,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
   it("Teste 26 (D7): keeps store unverified when city present but state absent", async () => {
     const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
     mockResolve.mockResolvedValue(sampleLookupResolved);
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-6", name: "Loja Sem UF", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
         verificationStatus: "unverified",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Loja Sem UF",
@@ -399,13 +412,13 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
   });
 
   it("creates draft store when CNPJ is missing (F36 D15 — no grant, no p_cnpj_normalized)", async () => {
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-draft-1", name: "Loja", segment: "moda-calcados-acessorios" }],
         onboardingGranted: false,
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Loja",
@@ -431,14 +444,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
 
   it("returns 409 with cnpj_already_registered when CNPJ index conflicts", async () => {
     mockResolve.mockResolvedValue(sampleLookupResolved);
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: null,
       error: {
         code: "23505",
         message: 'duplicate key value violates unique constraint "idx_stores_cnpj_normalized"',
         details: 'Key (cnpj_normalized)=(12345678000195) already exists.',
       },
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Outra Loja",
@@ -455,14 +468,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
 
   it("returns 409 with user-already-has-store when user_id key conflicts", async () => {
     mockResolve.mockResolvedValue(sampleLookupResolved);
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: null,
       error: {
         code: "23505",
         message: 'duplicate key value violates unique constraint "stores_user_id_key"',
         details: 'Key (user_id)=(00000000-0000-0000-0000-000000000001) already exists.',
       },
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Outra Loja",
@@ -478,14 +491,14 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
 
   it("persists CNPJ, razao_social and nome_fantasia atomically via RPC", async () => {
     mockResolve.mockResolvedValue(sampleLookupResolved);
-    mockRpc.mockResolvedValueOnce({
+    createStoreResult = {
       data: {
         store: [{ id: "store-atomic", name: "Loja Atomica", segment: "moda-calcados-acessorios", cnpj_normalized: "12345678000195", razao_social: "MINHA LOJA LTDA", nome_fantasia: "Minha Loja" }],
         onboardingGranted: true,
         verificationStatus: "approved",
       },
       error: null,
-    });
+    };
 
     const res = await POST(createRequest({
       name: "Loja Atomica",
@@ -506,5 +519,155 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
       p_razao_social: "MINHA LOJA LTDA",
       p_nome_fantasia: "Minha Loja",
     }));
+  });
+
+  it("F50.4: coorte per_cnpj com rootEligible=false e beneficiário elegível NÃO rejeita", async () => {
+    const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    policyContextResult = {
+      data: {
+        policy_cohort: "per_cnpj_f50_4",
+        beneficiary_eligible: true,
+        beneficiary_ambiguous: false,
+        root_eligible: false,
+      },
+      error: null,
+    };
+    createStoreResult = {
+      data: {
+        store: [{ id: "store-cohort", name: "Filial Nova", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: true,
+        verificationStatus: "approved",
+      },
+      error: null,
+    };
+
+    const res = await POST(createRequest({
+      name: "Filial Nova",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({
+      policyCohort: "per_cnpj_f50_4",
+      beneficiaryEligible: true,
+      rootEligible: false,
+    }));
+    const body = await res.json();
+    expect(body.verificationStatus).not.toBe("rejected");
+    expect(body.message).not.toContain("filial");
+    spy.mockRestore();
+  });
+
+  it("F50.4: mesmo CNPJ na coorte per_cnpj rejeita com mensagem própria, sem dados sensíveis", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    policyContextResult = {
+      data: {
+        policy_cohort: "per_cnpj_f50_4",
+        beneficiary_eligible: false,
+        beneficiary_ambiguous: false,
+        root_eligible: true,
+      },
+      error: null,
+    };
+    createStoreResult = {
+      data: {
+        store: [{ id: "store-used", name: "Mesmo CNPJ", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+        verificationStatus: "rejected",
+      },
+      error: null,
+    };
+
+    const res = await POST(createRequest({
+      name: "Mesmo CNPJ",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.message).toContain("já foi utilizado para este CNPJ");
+    expect(body.message).not.toContain("10 créditos");
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("beneficiary_cnpj_normalized");
+    expect(serialized).not.toContain("root_hash");
+  });
+
+  it("F50.4: coorte root_legacy com rootEligible=false emite root_already_used", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    policyContextResult = {
+      data: {
+        policy_cohort: "root_legacy",
+        beneficiary_eligible: false,
+        beneficiary_ambiguous: false,
+        root_eligible: false,
+      },
+      error: null,
+    };
+    createStoreResult = {
+      data: {
+        store: [{ id: "store-legacy", name: "Filial Legada", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: false,
+        verificationStatus: "rejected",
+      },
+      error: null,
+    };
+
+    const res = await POST(createRequest({
+      name: "Filial Legada",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.message).toContain("Loja criada como filial");
+  });
+
+  it("F50.4: RPC de contexto indisponível → fallback legado e criação não quebra", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    policyContextResult = { data: null, error: { message: "rpc unavailable" } };
+    createStoreResult = {
+      data: {
+        store: [{ id: "store-fallback", name: "Loja Fallback", segment: "moda-calcados-acessorios" }],
+        onboardingGranted: true,
+        verificationStatus: "approved",
+      },
+      error: null,
+    };
+
+    const res = await POST(createRequest({
+      name: "Loja Fallback",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    // Fallback legado: entitlement ausente → rootEligible true (sem coorte nova).
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ rootEligible: true }));
+    expect(spy.mock.calls[0][0].policyCohort).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith("trial_offer_policy_context_unavailable");
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("beneficiary_cnpj_normalized");
+    expect(serialized).not.toContain("root_hash");
+    warn.mockRestore();
+    spy.mockRestore();
   });
 });
