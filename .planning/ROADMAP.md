@@ -58,7 +58,7 @@
 | 50 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ DemonstraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Gratuita e Validade dos CrÃƒÆ’Ã‚Â©ditos | ConcluÃƒÆ’Ã‚Â­da; 17/17 planos, beta fechado preservado |
 | 50.1 | Futura ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FormalizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o Legal e AtivaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da DemonstraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o | Aguardando constituiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o da PJ; nÃƒÆ’Ã‚Â£o planejada, nÃƒÆ’Ã‚Â£o ativa e nÃƒÆ’Ã‚Â£o bloqueante para o estado concluÃƒÆ’Ã‚Â­do |
 | 50.2 | ✅ Concluída, verificada, sincronizada e arquivada — Oferta de teste gratuito de 28 dias | 3/3 planos; 42/42 tasks; 4 specs sincronizadas; UAT de produção PASS com saldo de 5 créditos; oferta ativa; archive `2026-10-20-oferta-teste-gratuito-28-dias`; primeira parcela em acompanhamento aberto (não comprovada). Token `50.2` porque `50.1` está reservada à formalização legal/PJ |
-| 50.3 | Planejada — Compatibilidade integral com CNPJ alfanumérico | OpenSpec revisada; 10 REQ-IDs; 7 planos; migration local-only; F50.4 fora de escopo |
+| 50.3 | ✔ Encerrada com limitações aceitas; não publicada | Compatibilidade integral com CNPJ alfanumérico; 7 planos + gap closure 08 (CR-01/WR-01 fechados); UAT `approved_with_limitations` (6 PASS/1 com limitação/4 parciais); OpenSpec **65/69 tasks** (4 parciais: 7.5, 9.9, 9.10, 9.11); archive `2026-10-22-fase-50-3-suporte-cnpj-alfanumerico`; migration só no isolado; F50.4 fora de escopo; sem merge/push/deploy |
 | 51.3 | ✅ Concluída, verificada, sincronizada e arquivada na branch local — não publicada | Integração landing F51.1/SEO F51.2; 12/12 requisitos; MD-01 resolvido em `bad3ce14` após verificação; 4/4 teste real, 24/258; code review/security sem High/Critical; arquivo `2026-10-21-integracao-landing-app-atual`; F56 128/4 e canonical/OG preservados; sem merge main/push/deploy |
 | 56.1 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Contrato produtivo, modelos e fallback | **ConcluÃƒÆ’Ã‚Â­da, verificada, sincronizada e arquivada em 2026-10-06; 11/11 planos; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; archive `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` (motivo vazio bloqueado; salvamento pela tela OK; teste Flare/medium ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ versÃƒÆ’Ã‚Â£o `f314d801-87be-479c-9c01-4d574b9d892f` com exatamente 1 auditoria; par inicial restaurado ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ versÃƒÆ’Ã‚Â£o `b3fa7b83-a0aa-48db-8f02-9bcbdd32bbe8`; histÃƒÆ’Ã‚Â³rico preservado; troca de teste NÃƒÆ’Ã†â€™O ÃƒÆ’Ã‚Â© promoÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Flare); OpenSpec 55/55 tasks (9.4 concluÃƒÆ’Ã‚Â­da); GSD verify-work 10/10 PASS; lifecycle /opsx-verify ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ /opsx-sync ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ /opsx-archive executado e arquivado; 3 specs principais atualizadas + 5 criadas.** Plano 11: guard de isolamento/nÃƒÆ’Ã‚Â£o-regressÃƒÆ’Ã‚Â£o + teste REAL da RPC + gates/UAT sem provider + VERIFICATION. Plano 10: tela admin ÃƒÆ’Ã‚Âºnica do par (page server `force-dynamic` + form cliente) com aviso permanente de nÃƒÆ’Ã‚Â£o-ativa em produÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (nÃƒÆ’Ã‚Â£o-dismissÃƒÆ’Ã‚Â­vel, presente no estado vazio e no sucesso), catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel somente leitura (3 modelos ÃƒÆ’Ã¢â‚¬â€ `low`/`medium`), par vigente/origem/versÃƒÆ’Ã‚Â£o, cobertura de pricing `partial`/`missing` warn-not-block (nÃƒÆ’Ã‚Â£o desabilita salvar) e formulÃƒÆ’Ã‚Â¡rio auditÃƒÆ’Ã‚Â¡vel restrito ao catÃƒÆ’Ã‚Â¡logo com `operationId` estÃƒÆ’Ã‚Â¡vel por fingerprint; link aditivo em `layout.tsx` (`Par de modelos (novo fluxo)`) e 10 testes de UI com API mockada (typecheck/lint verdes; nenhum controle destrutivo; fluxo legado intocado). Plano 08: serviÃƒÆ’Ã‚Â§o server-only de leitura/cache fail-closed do par (TTL + dedupe in-flight + invalidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita) + view admin (catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel/par vigente/origem/versÃƒÆ’Ã‚Â£o/cobertura de pricing por par) + schema Zod strict restrito ao catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel + rota admin GET/PUT auditada por RPC `admin_set_image_model_pair_config` com invalidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de cache (38 testes; typecheck/lint verdes; `git diff` vazio em `ai-model-selection-service.ts`; fluxo legado intocado). Plano 07: resposta pÃƒÆ’Ã‚Âºblica IMG-001 + referÃƒÆ’Ã‚Âªncia opaca UUID v4 + tabela durÃƒÆ’Ã‚Â¡vel imutÃƒÆ’Ã‚Â¡vel `image_generation_failure_diagnoses` + repositÃƒÆ’Ã‚Â³rio server-only `recordDiagnosis`/`findByReference` com client injetÃƒÆ’Ã‚Â¡vel + rota admin de correlaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o read-only; `db reset`/`db lint` isolados EXIT 0; durabilidade cross-instance provada por nova instÃƒÆ’Ã‚Â¢ncia (2 linhas persistidas); 26 testes; infraestrutura preparatÃƒÆ’Ã‚Â³ria do novo fluxo Produto 1:1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de par principal/fallback, snapshot, polÃƒÆ’Ã‚Â­tica de falhas, resposta ao lojista e instrumentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o; fluxo legado intocado. Plano 04: pricing ciente de qualidade ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â leitura aditiva por `quality` em `getModelPricing` (omitido = query legada byte a byte; informado = `.eq("quality")` sem bootstrap), cobertura `complete`/`partial`/`missing` por par `modelo+qualidade` com fail-closed `image_pair_pricing_incomplete` e custo por tentativa com versÃƒÆ’Ã‚Â£o/origem (`image-pair-pricing.ts`; 25 testes; typecheck/lint verdes; `cost-estimator.ts` sem diff). Plano 02: migration local-only aditiva (tabela `image_model_pair_config` + RPC auditada idempotente `admin_set_image_model_pair_config` + registro idempotente dos tres modelos elegiveis sob `campaign_product_image`, linha legada `campaign_image_edit`/`gpt-image-2` preservada; `db reset`/`db lint` EXIT 0 na instancia isolada `vendeo-f561-isolated`; commits `3b463a60`/`b5b18450`). Plano 01: contratos de par/capacidade `campaign_product_image`/taxonomia quota-billing/envelope/barreira fail-closed (95 testes, typecheck e lint verdes). Plano 05: componente puro de snapshot imutavel por operacao (`image-generation-config-snapshot.ts`) - builder tipado, resolucao nova-campanha x correcao, correlacao run/trace e tolerancia ao legado (16 testes; typecheck/lint verdes). Plano 06: classificador puro de elegibilidade ao fallback + maquina de tentativas com teto de 3 chamadas (2 principal + 1 fallback) e nao cobranca simulada de falha tecnica (`image-generation-failure-policy.ts`; 35 testes; typecheck/lint verdes). Plano 09: adapter de imagem do novo fluxo que propaga a qualidade ao wire + runtime isolado de registro do adapter + envelope por tentativa enriquecido de forma aditiva com `quality`/`target`/`attemptNumber` (`upstream-images.ts`, `upstream-images-runtime.ts`; 14 testes; typecheck/lint verdes). Plano 03: migration local-only aditiva do snapshot imutavel por campanha (colunas tipadas, origem fechada sem `default`, trigger de imutabilidade) + dimensao de qualidade no pricing (quality nullable + dois indices parciais de vigencia) + RPC `admin_set_ai_model_price` estendida com `p_quality` opcional ao final (12 parametros); coexistencia de vigencias provada na instancia isolada; `db reset`/`db lint` EXIT 0; commits `a854e54e`/`7e03f10a`/`c5af7c6f` |
 | 56.2a | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ConcluÃƒÆ’Ã‚Â­da, verificada, sincronizada e arquivada | **6/6 planos/summaries; OpenSpec 31/31; UAT 4 pass + 1 N/A; seguranÃƒÆ’Ã‚Â§a 20/20 fechadas, 0 abertas.** Cinco specs principais sincronizadas (2 atualizadas + 3 criadas); archive `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/`. Warning preservado: reset final isolado exit 1/HTTP 502 de causa desconhecida ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© sucesso, nÃƒÆ’Ã‚Â£o foi repetido; investigar antes de depender do procedimento em F56.2b1. IntegraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o real 6/6 e `db lint` anterior exit 0. Estruturas **inativas**; sem provider/chamada paga/`db push`/ativaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. |
@@ -249,7 +249,7 @@ Plans:
 
 **Goal:** Tornar todo o fluxo cadastral compatível com CNPJ numérico e alfanumérico canônico (14 caracteres; 12 `[A-Z0-9]` + 2 `[0-9]`), com normalização estrita, DV oficial, máscara e inputs fail-closed, provedores com capacidade/fallback e cache seguro, APIs e atomicidade preservadas, migration fail-closed e provas em PostgreSQL local isolado, sem alterar freemium legado, oferta F50.2, ownership, RLS, saldos ou enrollments.
 
-**Status:** **Planned** — 7 planos em 6 waves; OpenSpec revisada (5 ajustes aplicados; `validate --strict` valid), sem implementação, migration aplicada ou deploy.
+**Status:** **Encerrada com limitações aceitas; não publicada** (2026-10-22). 7 planos + gap closure `50.3-08` (CR-01/WR-01 fechados); UAT `approved_with_limitations`; OpenSpec **65/69 tasks** (4 parciais aceitas: 7.5, 9.9, 9.10, 9.11 — mantidas abertas); change arquivada em `openspec/changes/archive/2026-10-22-fase-50-3-suporte-cnpj-alfanumerico/`; migration aplicada **somente** no isolado `vendeo-f562a-isolated`; produção intocada; sem merge, push ou deploy.
 
 **Fonte normativa:** `openspec/changes/fase-50-3-suporte-cnpj-alfanumerico/` (proposal, design, 7 delta specs, tasks; `validate --strict` valid).
 
@@ -257,32 +257,34 @@ Plans:
 
 **Requirements**: REQ-50.3-01, REQ-50.3-02, REQ-50.3-03, REQ-50.3-04, REQ-50.3-05, REQ-50.3-06, REQ-50.3-07, REQ-50.3-08, REQ-50.3-09, REQ-50.3-10
 
-**Plans:** 7 plans
+**Gap closure:** `50.3-08-PLAN.md` - CR-01 (bloqueio fiscal central em `save()`, `hasExistingCnpj` do servidor, drift sem bypass) e WR-01 (erro de submit obsoleto), ambos **fechados** no re-review.
+**Follow-ups preservados:** WR-02, IN-01..IN-07, F50.3-UAT-01/02/03; limitações 1, 4, 5, 7 e 9. `supportsAlphanumeric=false` (suporte real não comprovado).
+**Plans:** 7 plans + 1 gap-closure plan
 Plans:
 **Wave 1**
 
-- [ ] 50.3-01-PLAN.md — Núcleo CNPJ: normalização estrita, DV oficial, máscara fail-closed, input-mask, vetores oficiais e regressão numérica (Checkpoint A).
+- [x] 50.3-01-PLAN.md — Núcleo CNPJ: normalização estrita, DV oficial, máscara fail-closed, input-mask, vetores oficiais e regressão numérica (Checkpoint A).
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 50.3-02-PLAN.md — Provedores e cache: `supportsAlphanumeric`, 404 ambíguo, 400/422, agregação de fallback e cache canônico sem falso `not_found`.
+- [x] 50.3-02-PLAN.md — Provedores e cache: `supportsAlphanumeric`, 404 ambíguo, 400/422, agregação de fallback e cache canônico sem falso `not_found`.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 50.3-03-PLAN.md — APIs e persistência canônica: store, update-cnpj, lookup, reconsult, admin create-test; `cnpjResult.normalized` em todo hash/duplicidade/RPC.
+- [x] 50.3-03-PLAN.md — APIs e persistência canônica: store, update-cnpj, lookup, reconsult, admin create-test; `cnpjResult.normalized` em todo hash/duplicidade/RPC.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 50.3-04-PLAN.md — UI onboarding fail-closed: erro local, último valor válido, sequência/abort de lookup, bloqueio de autosave/submit (`fiscalWriteBlocked`).
-- [ ] 50.3-06-PLAN.md — Migration fail-closed + prova SQL no isolado `vendeo-f562a-isolated` (Checkpoint B; aplicação bloqueante local).
+- [x] 50.3-04-PLAN.md — UI onboarding fail-closed: erro local, último valor válido, sequência/abort de lookup, bloqueio de autosave/submit (`fiscalWriteBlocked`).
+- [x] 50.3-06-PLAN.md — Migration fail-closed + prova SQL no isolado `vendeo-f562a-isolated` (Checkpoint B; aplicação bloqueante local).
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 50.3-05-PLAN.md — UI legado/admin: `cnpj-update-form`, `create-test-store`, exibições mascaradas e contratos de apresentação.
+- [x] 50.3-05-PLAN.md — UI legado/admin: `cnpj-update-form`, `create-test-store`, exibições mascaradas e contratos de apresentação.
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 50.3-07-PLAN.md — Regressão, gates automáticos, documentação (limitação `0001`/F50.4) e UAT manual separado.
+- [x] 50.3-07-PLAN.md — Regressão, gates automáticos, documentação (limitação `0001`/F50.4) e UAT manual separado.
 
 ## Phase 56.1: Contrato produtivo, modelos e fallback
 
@@ -591,7 +593,9 @@ Plans:
 
 **Requirements:** `REQ-56.2.7-01..12` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â (01) trÃƒÆ’Ã‚Âªs estados/transiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes; (02) autorizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o `all_stores` + `test_stores`; (03) RPC coordenadora atÃƒÆ’Ã‚Â´mica/idempotente/concorrÃƒÆ’Ã‚Âªncia; (04) endpoint/painel admin; (05) gate de gasto; (06) configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna (catÃƒÆ’Ã‚Â¡logo/pricing/seleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/fallback); (07) validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna nas trÃƒÆ’Ã‚Âªs capacidades; (08) prova 5.3; (09) prova 5.7; (10) checkpoints/orÃƒÆ’Ã‚Â§amento/monitoramento; (11) D13 e abertura geral; (12) desligamento/consolidaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.
 
-**Plans:** 7 plans (`56.2.7-01..07`); diretÃƒÆ’Ã‚Â³rio `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/`.
+**Gap closure:** `50.3-08-PLAN.md` - CR-01 (bloqueio fiscal central em `save()`, `hasExistingCnpj` do servidor, drift sem bypass) e WR-01 (erro de submit obsoleto), ambos **fechados** no re-review.
+**Follow-ups preservados:** WR-02, IN-01..IN-07, F50.3-UAT-01/02/03; limitações 1, 4, 5, 7 e 9. `supportsAlphanumeric=false` (suporte real não comprovado).
+**Plans:** 7 plans + 1 gap-closure plan (`56.2.7-01..07`); diretÃƒÆ’Ã‚Â³rio `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/`.
 
 Plans:
 

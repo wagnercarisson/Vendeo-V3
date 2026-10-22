@@ -48,7 +48,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 
 ## F50.3 — Planejada (Compatibilidade integral com CNPJ alfanumérico)
 
-**Fonte ativa:** `openspec/changes/fase-50-3-suporte-cnpj-alfanumerico/` (proposal, design, 7 delta specs, tasks; `validate --strict` valid). **Planos:** `.planning/phases/50.3-f50-3-compatibilidade-integral-com-cnpj-alfanumerico/`. **Status:** planejada, não executada; sem implementação, migration aplicada, deploy ou push.
+**Fonte (arquivada):** `openspec/changes/archive/2026-10-22-fase-50-3-suporte-cnpj-alfanumerico/` (7 delta specs sincronizadas). **Planos:** `.planning/phases/50.3-f50-3-compatibilidade-integral-com-cnpj-alfanumerico/`. **Status:** **encerrada com limitações aceitas; não publicada** (2026-10-22) — UAT `approved_with_limitations`; OpenSpec 65/69 tasks (4 parciais: 7.5, 9.9, 9.10, 9.11); migration aplicada somente no isolado; produção intocada.
 
 | REQ-ID | Cobertura | Plano |
 |---|---|---|
@@ -62,6 +62,9 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | REQ-50.3-08 | Migration e provas em PostgreSQL local isolado com destino fixado, pré/pós-checagem e rollback documentado | 06 |
 | REQ-50.3-09 | Regressão numérica e cobertura de criação, atualização, reconsulta, cache hit/miss, duplicidade e erros | 01, 07 |
 | REQ-50.3-10 | Validação automática separada da aprovação visual humana; limitação 0001 registrada; F50.4 fora de escopo | 07 |
+'
+**Cobertura reconciliada:** REQ-50.3-01, -02, -05, -06, -07, -08 e -10 **comprovados**; REQ-50.3-03, -04 e -09 **comprovados com limitação aceita** (cache/representações, criação live e sucesso numérico live). Follow-ups preservados em `FOLLOW-UPS.md` (WR-02, IN-01..IN-07, F50.3-UAT-01/02/03).
+'
 
 ## F56.1 — Cobertura concluída (Contrato produtivo, modelos e fallback)
 
