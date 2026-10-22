@@ -111,3 +111,110 @@ describe("F50.2 trial offer SQL contract", () => {
     expect(`${settings}\n${rpcs}`).not.toMatch(/GRANT EXECUTE ON FUNCTION[\s\S]*?TO authenticated/);
   });
 });
+
+// =============================================================================
+// F50.4 — contrato estático das migrations M1/M2/M3
+// =============================================================================
+
+const f504M1 = readMigration("20261022000001_f50_4_individual_launch.sql");
+const f504M2 = readMigration("20261022000002_f50_4_enrollment_identity.sql");
+const f504M3 = readMigration("20261022000003_f50_4_benefit_coexistence.sql");
+const f504All = `${f504M1}\n${f504M2}\n${f504M3}`;
+
+describe("F50.4 enrollment identity SQL contract", () => {
+  it("adds beneficiary snapshot and policy cohort with the canonical check", () => {
+    expect(f504M2).toMatch(/ADD COLUMN IF NOT EXISTS beneficiary_cnpj_normalized TEXT/);
+    expect(f504M2).toMatch(/ADD COLUMN IF NOT EXISTS policy_cohort TEXT NOT NULL DEFAULT 'root_legacy'/);
+    expect(f504M2).toMatch(/beneficiary_cnpj_normalized ~ '\^\[A-Z0-9\]\{12\}\[0-9\]\{2\}\$'/);
+    expect(f504M2).toMatch(/policy_cohort IN \('root_legacy','per_cnpj_f50_4'\)/);
+  });
+
+  it("enforces beneficiary/store uniqueness and a partial legacy root index", () => {
+    expect(f504M2).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS uq_trial_offer_enrollments_beneficiary/);
+    expect(f504M2).toMatch(/uq_trial_offer_enrollments_beneficiary[\s\S]*?\(beneficiary_cnpj_normalized\)/);
+    expect(f504M2).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS uq_trial_offer_enrollments_root_legacy/);
+    expect(f504M2).toMatch(/uq_trial_offer_enrollments_root_legacy[\s\S]*?WHERE policy_cohort = 'root_legacy'/);
+  });
+
+  it("does not keep a global UNIQUE(root_hash) in the F50.4 migrations", () => {
+    expect(f504All).not.toMatch(/uq_trial_offer_enrollments_root UNIQUE \(root_hash\)/);
+    expect(f504All).not.toMatch(/CONSTRAINT\s+\w+\s+UNIQUE\s*\(\s*root_hash\s*\)/);
+    expect(f504M2).toMatch(/DROP CONSTRAINT IF EXISTS uq_trial_offer_enrollments_root/);
+  });
+
+  it("creates the identity immutability trigger", () => {
+    expect(f504M2).toMatch(/CREATE OR REPLACE FUNCTION public\.trial_offer_enrollments_immutable_identity\(\)/);
+    expect(f504M2).toMatch(/CREATE TRIGGER trg_trial_offer_enrollments_immutable_identity\s+BEFORE UPDATE ON public\.trial_offer_enrollments/);
+    expect(f504M2).toMatch(/trial_offer_enrollment_identity_immutable/);
+  });
+
+  it("M1 writes individual_launch_at only inside the activation RPC", () => {
+    const fnIndex = f504M1.indexOf(
+      "CREATE OR REPLACE FUNCTION public.admin_activate_trial_offer_individual_launch",
+    );
+    const updateIndex = f504M1.indexOf("UPDATE public.trial_offer_settings");
+    expect(fnIndex).toBeGreaterThan(-1);
+    expect(updateIndex).toBeGreaterThan(fnIndex);
+    expect((f504M1.match(/UPDATE public\.trial_offer_settings/g) ?? []).length).toBe(1);
+    expect((f504M1.match(/SET individual_launch_at/g) ?? []).length).toBe(1);
+    expect(f504M1).not.toMatch(/UPDATE public\.trial_offer_settings\s+SET launch_at/);
+  });
+
+  it("M3 applies the root lock protocol and preserves legacy values", () => {
+    expect(f504M3).toMatch(/CREATE OR REPLACE FUNCTION public\.grant_demo_credits\(/);
+    expect(f504M3).toMatch(/p_ttl_hours INTEGER DEFAULT 168/);
+    expect(f504M3).toMatch(/FROM public\.stores s\s+WHERE s\.id = p_store_id\s+FOR UPDATE/);
+    expect(f504M3).toMatch(/pg_advisory_xact_lock\(\s*hashtextextended\('vendeo:benefit:' \|\| v_root_hash, 0\)\s*\)/);
+    expect(f504M3).toMatch(/e\.policy_cohort = 'root_legacy'/);
+    expect(f504M3).toMatch(/beneficiary_cnpj_normalized = v_cnpj_normalized/);
+    expect(f504M3).toMatch(/p_reference_date DATE DEFAULT NULL/);
+    expect(f504M3).toMatch(/ORDER BY s\.cnpj_root_hash/);
+    expect(f504M3).toMatch(/v_recipient\.id FOR UPDATE[\s\S]*?pg_advisory_xact_lock/);
+    expect(f504M3).toMatch(/EXCEPTION WHEN SQLSTATE 'P5040' THEN/);
+    expect(f504M3).toMatch(/RAISE EXCEPTION 'f50_4_monthly_cap_reached' USING ERRCODE = 'P5040'/);
+    expect(f504M3).toMatch(/skipped_new_policy_store/);
+    expect(f504M3).toMatch(/skipped_trial_offer_cohort/);
+    expect(f504M3).not.toMatch(/p_limit|p_cycle/);
+  });
+
+  it("M3 never redefines the out-of-scope financial functions", () => {
+    for (const fn of [
+      "grant_trial_offer_installment",
+      "materialize_demo_expiration_at",
+      "refund_credit_at",
+      "admin_grant_credits",
+    ]) {
+      expect(f504All).not.toMatch(
+        new RegExp(`CREATE OR REPLACE FUNCTION public\\.${fn}\\b`),
+      );
+    }
+  });
+
+  it("restricts every F50.4 RPC to service_role", () => {
+    for (const fn of [
+      "admin_activate_trial_offer_individual_launch",
+      "trial_offer_policy_cohort",
+      "trial_offer_beneficiary_prior_benefit",
+      "trial_offer_legacy_root_prior_benefit",
+      "trial_offer_policy_context",
+      "trial_offer_eligibility",
+      "record_onboarding_completion",
+      "start_trial_offer_enrollment",
+      "grant_demo_credits",
+      "grant_monthly_credits",
+      "admin_grant_freemium_exception",
+    ]) {
+      expect(f504All).toMatch(
+        new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}[\\s\\S]*?FROM PUBLIC, anon, authenticated`),
+      );
+      expect(f504All).toMatch(
+        new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}[\\s\\S]*?TO service_role`),
+      );
+    }
+    expect(f504All).not.toMatch(/GRANT EXECUTE ON FUNCTION[\s\S]*?TO authenticated/);
+  });
+
+  it("keeps F50.4 identifiers free of the CLI parser pitfall", () => {
+    expect(f504All).not.toMatch(/atomic/i);
+  });
+});
