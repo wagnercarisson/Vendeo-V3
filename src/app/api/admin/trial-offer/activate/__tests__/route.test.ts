@@ -12,9 +12,9 @@ vi.mock("@/lib/admin/require-admin", () => ({
 
 const rpcCalls: unknown[][] = [];
 const fromCalls: unknown[][] = [];
-const mockRpc = vi.fn((..._args: unknown[]) =>
-  Promise.resolve({ data: null, error: null }),
-);
+const mockRpc = vi.fn<
+  (...args: unknown[]) => Promise<{ data: unknown; error: { message: string } | null }>
+>((..._args: unknown[]) => Promise.resolve({ data: null, error: null }));
 const mockFrom = vi.fn((..._args: unknown[]) => {
   throw new Error("from() não deveria ser chamado na ativação");
 });
