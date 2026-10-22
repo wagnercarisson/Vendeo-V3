@@ -5,6 +5,7 @@ import { requireOwnership } from "@/lib/auth/store-ownership";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import type { Store } from "@/lib/store";
 import { AiImageGenerator } from "./ai-image-generator";
+import { parseCreativeIntent } from "./identity-art-director";
 import { getActiveVisualSignature, getSignedVisualSignatureUrl } from "./persistence";
 import { AiCostTracker } from "@/lib/ai-cost";
 import {
@@ -28,6 +29,7 @@ import type {
   GenerateVariationsResult,
   CascadeAttempt,
   CascadeAttemptStatus,
+  CascadeResult,
 } from "./types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -249,12 +251,10 @@ export async function generateVariations(
   // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
   const economicSnapshot = await resolveEconomicSnapshot("[vs/server-actions]");
 
-  const variations: Array<{ tier: string; assetUrl: string; storagePath: string; mimeType: string }> = [];
+  const variations: CascadeResult[] = [];
 
   for (const tone of tonalities) {
-    let result:
-      | { tier: string; assetUrl: string; storagePath: string; mimeType: string }
-      | null = null;
+    let result: CascadeResult | null = null;
     const attempt1Start = Date.now();
     const attempt1 = createAttemptTelemetryContext({
       run,
@@ -325,16 +325,7 @@ export async function generateVariations(
 
   return {
     success: true,
-    variations: variations as GenerateVariationsResult extends {
-      success: true;
-    }
-      ? Array<{
-          tier: "image_direct" | "image_retry" | "typographic";
-          assetUrl: string;
-          storagePath: string;
-          mimeType: "image/png" | "image/svg+xml";
-        }>
-      : never,
+    variations,
   };
 }
 
@@ -416,11 +407,22 @@ export async function generateAutomatic(storeId: string): Promise<
       visualSignatureConfig: execution.config,
     });
 
+    const parsedIntent =
+      result.creativeIntent ?? parseCreativeIntent(result.aiResponseMessage);
+    const { data: existingSignature } = await supabase
+      .from("store_visual_signatures")
+      .select("metadata")
+      .eq("storage_path", result.storagePath)
+      .maybeSingle();
     const { data: signature, error } = await supabase
       .from("store_visual_signatures")
       .update({
         status: "active",
         updated_at: new Date().toISOString(),
+        metadata: {
+          ...(existingSignature?.metadata ?? {}),
+          ...parsedIntent.metadata,
+        },
       })
       .eq("storage_path", result.storagePath)
       .select()
@@ -479,11 +481,22 @@ export async function generateAutomatic(storeId: string): Promise<
       visualSignatureConfig: execution.config,
     });
 
+    const retryIntent =
+      retryResult.creativeIntent ?? parseCreativeIntent(retryResult.aiResponseMessage);
+    const { data: existingRetrySignature } = await supabase
+      .from("store_visual_signatures")
+      .select("metadata")
+      .eq("storage_path", retryResult.storagePath)
+      .maybeSingle();
     const { data: signature, error } = await supabase
       .from("store_visual_signatures")
       .update({
         status: "active",
         updated_at: new Date().toISOString(),
+        metadata: {
+          ...(existingRetrySignature?.metadata ?? {}),
+          ...retryIntent.metadata,
+        },
       })
       .eq("storage_path", retryResult.storagePath)
       .select()

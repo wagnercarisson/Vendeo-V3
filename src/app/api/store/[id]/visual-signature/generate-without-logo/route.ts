@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
-import { StoreIdentityArtDirectorService } from '@/lib/visual-signature/identity-art-director';
+import { StoreIdentityArtDirectorService, parseCreativeIntent } from '@/lib/visual-signature/identity-art-director';
 import { AiImageGenerator } from '@/lib/visual-signature/ai-image-generator';
 import { persistSignature, getActiveVisualSignature } from '@/lib/visual-signature/persistence';
 import { insertGenerationEvent } from '@/lib/visual-signature/generation-events';
@@ -424,10 +424,12 @@ export const POST = apiHandler(async (
           visualSignatureConfig,
         });
 
+        const parsedIntent =
+          retryResult.creativeIntent ?? parseCreativeIntent(retryResult.aiResponseMessage);
         const artDirectorOutput: VisualSignatureArtDirectorOutput = {
           creative_description: `Assinatura visual para ${store.name} (${store.segment}) — gerada via retry`,
           suggested_colors: store.brand_color ? [store.brand_color] : [],
-          visual_direction: 'Personalizada (retry)',
+          visual_direction: parsedIntent.output.visual_direction,
           elements_used: ['nome da loja'],
         };
 
@@ -448,6 +450,7 @@ export const POST = apiHandler(async (
           prompt: retryResult.prompt,
           metadata: {
             ...retryResult.metadata,
+            ...parsedIntent.metadata,
             artDirectorOutput,
           },
         });
@@ -472,15 +475,7 @@ export const POST = apiHandler(async (
           metadata: {
             ...(signature.metadata ?? {}),
             input_snapshot: retryInputSnapshot,
-            artDirectorOutput: {
-              visual_direction: 'Personalizada (retry)',
-              content_used: {
-                store_name: true,
-                city: !!store.city,
-                state: !!store.state,
-                slogan: !!store.slogan,
-              },
-            },
+            artDirectorOutput: parsedIntent.output,
           },
           updated_at: new Date().toISOString(),
         })
@@ -489,15 +484,7 @@ export const POST = apiHandler(async (
       result = {
         signature,
         artDirectorOutput,
-        metadataArtDirectorOutput: {
-          visual_direction: 'Personalizada (retry)',
-          content_used: {
-            store_name: true,
-            city: !!store.city,
-            state: !!store.state,
-            slogan: !!store.slogan,
-          },
-        },
+        metadataArtDirectorOutput: parsedIntent.output,
         assetUrl: retryResult.assetUrl,
       };
       console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });

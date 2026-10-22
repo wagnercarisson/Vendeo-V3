@@ -2,9 +2,10 @@ import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { uploadToStorage, persistSignature } from "./persistence";
 import type { CascadeResult, VisualSignatureMetadata } from "./types";
 import type { AiCallInfo } from "@/lib/ai-cost/types";
-import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
+import { defaultAiGateway, DeferredAiTelemetrySink, withOnCallTelemetry } from "@/lib/ai";
 import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
 import type { VisualSignatureModelConfigSnapshot } from "@/lib/ai/visual-signature-model-config-service";
+import { parseCreativeIntent } from "./creative-intent";
 
 export class VisualSignatureValidator {
   private readonly invoker: AiInvoker;
@@ -248,6 +249,15 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       const model = response.model;
       const imageBase64 = response.imageBase64;
       const aiResponseMessage = response.content?.trim() || undefined;
+      // F47.1 (D9): parsing/proveniência acontece UMA vez por tentativa, no
+      // gerador compartilhado pelos três entry points. O envelope é enriquecido
+      // antes do flush; o resultado carrega a proveniência para a assinatura.
+      const creativeIntent = parseCreativeIntent(aiResponseMessage);
+      if (attemptTelemetry.sink instanceof DeferredAiTelemetrySink) {
+        attemptTelemetry.sink.enrichLast("visual_signature_image", {
+          ...creativeIntent.metadata,
+        });
+      }
 
       if (!imageBase64) {
         console.log('[ai-image-generator] resposta sem image_generation output');
@@ -310,6 +320,7 @@ Sem textos promocionais. Apenas a imagem PNG.`;
               config_version_id: dedicatedConfig.configVersionId,
             }
           : {}),
+        ...creativeIntent.metadata,
       };
 
       const promptUsed = prompt;
@@ -323,6 +334,7 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         metadata,
         prompt: promptUsed,
         aiResponseMessage,
+        creativeIntent,
       };
     } catch (error) {
       const elapsedMs = Date.now() - startTime;

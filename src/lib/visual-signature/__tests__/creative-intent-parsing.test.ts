@@ -108,6 +108,60 @@ describe("F47.1 — parsing e fallback da intenção criativa", () => {
     expect(invalid.output.intended_palette).toBeUndefined();
   });
 
+  it("content_used array → incomplete_json/invalid_content_used (não aceita array)", () => {
+    const result = parseCreativeIntent(
+      JSON.stringify({
+        visual_direction: "Minimalista",
+        content_used: [{ store_name: true }],
+      }),
+    );
+    expect(result.metadata).toMatchObject({
+      creative_intent_parse_status: "incomplete_json",
+      creative_intent_fallback_reason: "invalid_content_used",
+      creative_intent_source: "fallback",
+      content_used_present: false,
+    });
+    expect(result.output.visual_direction).toBe("Personalizada");
+  });
+
+  it("indicador fornecido não booleano → invalid_content_used", () => {
+    const result = parseCreativeIntent(
+      JSON.stringify({
+        visual_direction: "Minimalista",
+        content_used: { store_name: "sim", city: true },
+      }),
+    );
+    expect(result.metadata).toMatchObject({
+      creative_intent_parse_status: "incomplete_json",
+      creative_intent_fallback_reason: "invalid_content_used",
+      creative_intent_source: "fallback",
+      content_used_present: true,
+    });
+    expect(result.output.visual_direction).toBe("Personalizada");
+  });
+
+  it("direção vazia ou só whitespace não é direção válida", () => {
+    const empty = parseCreativeIntent(
+      JSON.stringify({ visual_direction: "   ", content_used: { store_name: true } }),
+    );
+    expect(empty.metadata).toMatchObject({
+      creative_intent_parse_status: "incomplete_json",
+      creative_intent_fallback_reason: "missing_visual_direction",
+      creative_intent_source: "fallback",
+    });
+  });
+
+  it("direção válida é normalizada com trim", () => {
+    const result = parseCreativeIntent(
+      JSON.stringify({
+        visual_direction: "  Minimalista  ",
+        content_used: { store_name: true },
+      }),
+    );
+    expect(result.metadata.creative_intent_parse_status).toBe("parsed_json");
+    expect(result.output.visual_direction).toBe("Minimalista");
+  });
+
   it("extrai JSON cercado por texto do modelo", () => {
     const result = parseCreativeIntent(
       'segue {"visual_direction":"x","content_used":{"store_name":true}} fim',

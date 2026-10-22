@@ -2,6 +2,7 @@ import type { ColorCluster } from '@/lib/brand-assets/types';
 export type { ColorCluster };
 import { findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
 import type { CostSource, OperationRunType, AiCallInfo } from '@/lib/ai-cost/types';
+import type { CreativeIntentParseResult } from './creative-intent';
 
 export type VisualSignatureType =
   | "ai_generated"
@@ -59,6 +60,7 @@ export interface VisualSignatureMetadata {
     | "invalid_json"
     | "missing_visual_direction"
     | "missing_content_used"
+    | "invalid_content_used"
     | "exception"
     | null;
   creative_intent_source?: "model" | "fallback";
@@ -106,6 +108,7 @@ export type CascadeResult =
       prompt: string;
       metadata: VisualSignatureMetadata;
       aiResponseMessage?: string;
+      creativeIntent?: CreativeIntentParseResult;
     }
   | {
       tier: "typographic";
@@ -115,6 +118,7 @@ export type CascadeResult =
       prompt?: string;
       metadata?: VisualSignatureMetadata;
       aiResponseMessage?: string;
+      creativeIntent?: CreativeIntentParseResult;
     };
 
 export type GenerateVariationsResult =

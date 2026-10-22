@@ -27,6 +27,7 @@ vi.mock("../persistence", () => ({
 }));
 
 import { AiImageGenerator, VisualSignatureValidator } from "../ai-image-generator";
+import { DeferredAiTelemetrySink } from "@/lib/ai";
 import type { AiTelemetryContext } from "@/lib/ai";
 
 function makeTelemetry(): AiTelemetryContext {
@@ -93,7 +94,7 @@ describe("AiImageGenerator â€” attemptNumber por tentativa (F46-04)", () => {
   });
 });
 
-describe("AiImageGenerator — F47.1 configuração dedicada x legado", () => {
+describe("AiImageGenerator ï¿½ F47.1 configuraï¿½ï¿½o dedicada x legado", () => {
   const DEDICATED = {
     mode: "dedicated" as const,
     orchestratorModel: "gpt-6-luna" as const,
@@ -152,7 +153,7 @@ describe("AiImageGenerator — F47.1 configuração dedicada x legado", () => {
     validateSpy.mockRestore();
   });
 
-  it("sem snapshot mantém o request legado byte-compatível", async () => {
+  it("sem snapshot mantï¿½m o request legado byte-compatï¿½vel", async () => {
     const validateSpy = vi
       .spyOn(VisualSignatureValidator.prototype, "validate")
       .mockResolvedValue({ valid: true });
@@ -173,5 +174,141 @@ describe("AiImageGenerator — F47.1 configuração dedicada x legado", () => {
     expect(result.metadata).not.toHaveProperty("image_model");
 
     validateSpy.mockRestore();
+  });
+});
+
+describe("AiImageGenerator - F47.1 parsing/proveniencia por tentativa", () => {
+  function makeTelemetryWithSink() {
+    const sink = new DeferredAiTelemetrySink(() => {});
+    const telemetry: AiTelemetryContext = {
+      ...makeTelemetry(),
+      sink,
+    };
+    return { telemetry, sink };
+  }
+
+  function makeEmittingInvoker(content?: string) {
+    return {
+      invoke: vi.fn().mockImplementation(async (_capability, _request, telemetry) => {
+        telemetry.sink.emit({
+          capability: "visual_signature_image",
+          protocol: "responses",
+          status: "success",
+          provider: "openai",
+          model: "gpt-5.5",
+          durationMs: 1,
+          usageMeta: {
+            providerUsageSource: "responses.image_generation",
+            responsesModel: "gpt-5.5",
+            imageGenerationTool: true,
+          },
+        } as never);
+        return {
+          imageBase64: "aGVsbG8=",
+          model: "gpt-5.5",
+          content,
+        };
+      }),
+      hasFallback: vi.fn().mockResolvedValue(false),
+    };
+  }
+
+  async function generateWithContent(content: string | undefined, attempt = 0) {
+    const validateSpy = vi
+      .spyOn(VisualSignatureValidator.prototype, "validate")
+      .mockResolvedValue({ valid: true });
+    const { telemetry, sink } = makeTelemetryWithSink();
+    const generator = new AiImageGenerator({
+      promptLoader: { load: () => "prompt" } as never,
+      invoker: makeEmittingInvoker(content) as never,
+    });
+    const result = await generator.generate({
+      ...BASE_PARAMS,
+      attempt,
+      simplifiedPrompt: attempt > 0,
+      telemetry,
+    });
+    validateSpy.mockRestore();
+    return { result, sink };
+  }
+
+  it("JSON valido: assinatura e envelope recebem parsed_json/model", async () => {
+    const { result, sink } = await generateWithContent(
+      JSON.stringify({
+        visual_direction: "Minimalista",
+        content_used: { store_name: true, city: false, state: false, slogan: false },
+      }),
+    );
+
+    expect(result.creativeIntent?.metadata.creative_intent_parse_status).toBe("parsed_json");
+    expect(result.creativeIntent?.metadata.creative_intent_source).toBe("model");
+    expect(result.metadata.creative_intent_parse_status).toBe("parsed_json");
+    expect(result.metadata.creative_intent_source).toBe("model");
+    const envelope = sink.pending.find((item) => item.capability === "visual_signature_image");
+    expect(envelope?.metadata).toMatchObject({
+      creative_intent_parse_status: "parsed_json",
+      creative_intent_source: "model",
+      content_used_present: true,
+    });
+  });
+
+  it("JSON ausente: fallback explicito na assinatura e no envelope; nunca modelo", async () => {
+    const { result, sink } = await generateWithContent("sem json");
+    expect(result.creativeIntent?.metadata).toMatchObject({
+      creative_intent_parse_status: "no_json",
+      creative_intent_fallback_applied: true,
+      creative_intent_fallback_reason: "missing_json",
+      creative_intent_source: "fallback",
+    });
+    expect(result.metadata.creative_intent_source).toBe("fallback");
+    const envelope = sink.pending.find((item) => item.capability === "visual_signature_image");
+    expect(envelope?.metadata).toMatchObject({
+      creative_intent_parse_status: "no_json",
+      creative_intent_source: "fallback",
+    });
+  });
+
+  it("retry com JSON ausente mantem proveniencia separada e nao sobrescreve com not_attempted", async () => {
+    const { result, sink } = await generateWithContent(undefined, 1);
+    expect(result.tier).toBe("image_retry");
+    expect(result.creativeIntent?.metadata.creative_intent_parse_status).toBe("no_json");
+    expect(result.creativeIntent?.metadata.creative_intent_source).toBe("fallback");
+    const envelope = sink.pending.find((item) => item.capability === "visual_signature_image");
+    expect(envelope?.metadata).toMatchObject({
+      creative_intent_parse_status: "no_json",
+      creative_intent_source: "fallback",
+    });
+    expect(envelope?.metadata?.creative_intent_parse_status).not.toBe("not_attempted");
+  });
+
+  it("array ou indicador invalido em content_used vira fallback invalid_content_used", async () => {
+    const arrayResult = await generateWithContent(
+      JSON.stringify({ visual_direction: "x", content_used: [] }),
+    );
+    expect(arrayResult.result.creativeIntent?.metadata).toMatchObject({
+      creative_intent_parse_status: "incomplete_json",
+      creative_intent_fallback_reason: "invalid_content_used",
+      creative_intent_source: "fallback",
+    });
+
+    const invalidIndicator = await generateWithContent(
+      JSON.stringify({ visual_direction: "x", content_used: { store_name: "sim" } }),
+    );
+    expect(invalidIndicator.result.creativeIntent?.metadata).toMatchObject({
+      creative_intent_parse_status: "incomplete_json",
+      creative_intent_fallback_reason: "invalid_content_used",
+      creative_intent_source: "fallback",
+    });
+  });
+
+  it("direcao vazia vira fallback missing_visual_direction", async () => {
+    const { result } = await generateWithContent(
+      JSON.stringify({ visual_direction: "   ", content_used: { store_name: true } }),
+    );
+    expect(result.creativeIntent?.metadata).toMatchObject({
+      creative_intent_parse_status: "incomplete_json",
+      creative_intent_fallback_reason: "missing_visual_direction",
+      creative_intent_source: "fallback",
+    });
   });
 });
