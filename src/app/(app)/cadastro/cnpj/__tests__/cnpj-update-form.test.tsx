@@ -147,4 +147,75 @@ describe("CnpjUpdateForm — CNPJ alfanumérico fail-closed", () => {
     fireEvent.submit(getForm(container));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   });
+
+  // ── WR-01: erro de submit obsoleto após correção válida ──────────────────
+
+  it("erro de submit desaparece ao corrigir para CNPJ completo válido, sem novo submit", () => {
+    const { container } = renderForm();
+    const input = getCnpjInput();
+
+    fireEvent.change(input, { target: { value: "12.ABC.345/01DE-34" } });
+    fireEvent.submit(getForm(container));
+
+    expect(
+      screen.getByText(/CNPJ inválido\. Verifique os dígitos e tente novamente\./),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: VALID_MASKED } });
+
+    expect(
+      screen.queryByText(/CNPJ inválido\. Verifique os dígitos e tente novamente\./),
+    ).not.toBeInTheDocument();
+  });
+
+  it("caractere desconhecido mantém o bloqueio mesmo com entrada parcial válida; completa válida envia uma vez", async () => {
+    const { container } = renderForm();
+    const input = getCnpjInput();
+
+    fireEvent.paste(input, {
+      clipboardData: { getData: () => `${VALID_MASKED}😀` },
+    });
+    expect(screen.getByText("CNPJ inválido")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "12.ABC.345/01DE-3" } });
+    expect(screen.getByText("CNPJ inválido")).toBeInTheDocument();
+
+    fireEvent.submit(getForm(container));
+    expect(screen.getByText("CNPJ inválido")).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: VALID_MASKED } });
+    expect(screen.queryByText("CNPJ inválido")).not.toBeInTheDocument();
+
+    fireEvent.submit(getForm(container));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.cnpjNormalized).toBe(VALID_CANONICAL);
+  });
+
+  it("envio após a correção não reintroduz a mensagem antiga de erro", async () => {
+    const { container } = renderForm();
+    const input = getCnpjInput();
+    const submitError =
+      /CNPJ inválido\. Verifique os dígitos e tente novamente\./;
+
+    fireEvent.change(input, { target: { value: "12.ABC.345/01DE-34" } });
+    fireEvent.submit(getForm(container));
+    expect(screen.getByText(submitError)).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: VALID_MASKED } });
+    expect(screen.queryByText(submitError)).not.toBeInTheDocument();
+
+    fireEvent.submit(getForm(container));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Dados cadastrais atualizados com sucesso!"),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(submitError)).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
