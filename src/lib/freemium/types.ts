@@ -27,6 +27,14 @@ export type FreemiumStatus = "active" | "used" | "exhausted" | "no_cnpj";
 
 export type Decision = "approved" | "review" | "reject" | "defer";
 
+/**
+ * F50.4 — coorte de benefício resolvida externamente (server-side).
+ * - `root_legacy`: política legada por raiz (F42/F50.2).
+ * - `per_cnpj_f50_4`: política por CNPJ completo (F50.4).
+ * Ausente = comportamento legado (compatibilidade com callers existentes).
+ */
+export type FreemiumPolicyCohort = "root_legacy" | "per_cnpj_f50_4";
+
 export type FreemiumEligibilityInput = {
   cnpj: string;
   storeName: string;
@@ -39,6 +47,10 @@ export type FreemiumEligibilityInput = {
   lookupOutcome: "resolved" | "not_found" | "unavailable";
   rootHash: string;
   rootEligible: boolean;
+  /** F50.4 — coorte resolvida pelo caller; ausente preserva o comportamento legado. */
+  policyCohort?: FreemiumPolicyCohort;
+  /** F50.4 — elegibilidade por CNPJ completo na coorte `per_cnpj_f50_4`. */
+  beneficiaryEligible?: boolean;
 };
 
 export type FreemiumEligibilityOutput = {
@@ -52,6 +64,7 @@ export type FreemiumEligibilityOutput = {
     cnpjExists: boolean | null;
     situacaoCadastral: string | null;
     rootEligible: boolean | null;
+    beneficiaryEligible?: boolean | null;
     cnaeCompatible: "compatible" | "incompatible" | "unknown" | null;
   };
 };

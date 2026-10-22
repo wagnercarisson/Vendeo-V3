@@ -30,8 +30,21 @@ function makeInput(overrides: Partial<FreemiumEligibilityInput> = {}): FreemiumE
     lookupOutcome: "resolved",
     rootHash: "abc123",
     rootEligible: true,
+    // F50.4 — por padrão `policyCohort`/`beneficiaryEligible` ficam ausentes:
+    // é o cenário legado que os callers atuais produzem.
     ...overrides,
   };
+}
+
+/** F50.4 — input na nova coorte por CNPJ completo. */
+function makeCohortInput(
+  overrides: Partial<FreemiumEligibilityInput> = {},
+): FreemiumEligibilityInput {
+  return makeInput({
+    policyCohort: "per_cnpj_f50_4",
+    beneficiaryEligible: true,
+    ...overrides,
+  });
 }
 
 describe("normalizeCity", () => {
@@ -362,3 +375,94 @@ describe("Teste 33 — api_unavailable/sem dados → defer (não falso negativo)
   });
 });
 });
+
+describe("F50.4 — separação legado (raiz) × nova coorte (CNPJ completo)", () => {
+  it("coorte per_cnpj_f50_4 + beneficiaryEligible=false → reject beneficiary_already_used (sem root_already_used)", () => {
+    const result = evaluateFreemiumEligibility(
+      makeCohortInput({ beneficiaryEligible: false }),
+    );
+
+    expect(result.decision).toBe("reject");
+    expect(result.reasons).toContain("beneficiary_already_used");
+    expect(result.reasons).not.toContain("root_already_used");
+    expect(result.signals.beneficiaryEligible).toBe(false);
+  });
+
+  it("coorte per_cnpj_f50_4 + rootEligible=false + beneficiaryEligible=true → não rejeita pela raiz", () => {
+    const result = evaluateFreemiumEligibility(
+      makeCohortInput({ rootEligible: false, beneficiaryEligible: true }),
+    );
+
+    expect(result.reasons).not.toContain("root_already_used");
+    expect(result.reasons).not.toContain("beneficiary_already_used");
+    // Demais sinais positivos → a filial é aprovada (score final ≥ 60).
+    expect(result.decision).toBe("approved");
+    expect(result.score).toBeGreaterThanOrEqual(60);
+    expect(result.signals.rootEligible).toBe(false);
+    expect(result.signals.beneficiaryEligible).toBe(true);
+  });
+
+  it("coorte root_legacy + rootEligible=false → reject root_already_used (não usa a coorte nova)", () => {
+    const result = evaluateFreemiumEligibility(
+      makeInput({
+        policyCohort: "root_legacy",
+        rootEligible: false,
+        beneficiaryEligible: false,
+      }),
+    );
+
+    expect(result.decision).toBe("reject");
+    expect(result.reasons).toContain("root_already_used");
+    expect(result.reasons).not.toContain("beneficiary_already_used");
+  });
+
+  it("coorte ausente preserva o comportamento legado (root_already_used)", () => {
+    const input = makeInput({ rootEligible: false, beneficiaryEligible: false });
+    // Garante explicitamente a ausência dos campos da F50.4.
+    expect(input.policyCohort).toBeUndefined();
+    expect(input.beneficiaryEligible).toBe(false);
+
+    const result = evaluateFreemiumEligibility(input);
+    expect(result.decision).toBe("reject");
+    expect(result.reasons).toContain("root_already_used");
+    expect(result.reasons).not.toContain("beneficiary_already_used");
+  });
+
+  it("sinal beneficiaryEligible reflete o valor informado e fica null quando ausente", () => {
+    expect(
+      evaluateFreemiumEligibility(makeCohortInput({ beneficiaryEligible: true })).signals
+        .beneficiaryEligible,
+    ).toBe(true);
+    expect(
+      evaluateFreemiumEligibility(makeCohortInput({ beneficiaryEligible: false })).signals
+        .beneficiaryEligible,
+    ).toBe(false);
+    expect(
+      evaluateFreemiumEligibility(makeInput()).signals.beneficiaryEligible,
+    ).toBeNull();
+  });
+
+  it("beneficiaryEligible não soma pontos no score final (determinismo do D10)", () => {
+    const approved = evaluateFreemiumEligibility(makeCohortInput());
+    const withoutBeneficiarySignal = evaluateFreemiumEligibility(
+      makeCohortInput({ beneficiaryEligible: undefined }),
+    );
+
+    expect(approved.decision).toBe("approved");
+    expect(approved.score).toBe(withoutBeneficiarySignal.score);
+  });
+
+  it("ordem D10 preservada: situação não-ativa vence a restrição da nova coorte", () => {
+    const result = evaluateFreemiumEligibility(
+      makeCohortInput({
+        beneficiaryEligible: false,
+        officialData: { ...makeInput().officialData!, situacao_cadastral: "INAPTA" },
+      }),
+    );
+
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toContain("situacao_nao_ativa");
+    expect(result.reasons).not.toContain("beneficiary_already_used");
+  });
+});
+

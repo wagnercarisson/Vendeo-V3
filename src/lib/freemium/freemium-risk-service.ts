@@ -31,8 +31,9 @@ export function computeSimilarity(
  * - F34 `check_store_readiness` é INTOCADA: elegibilidade decide o benefício;
  *   readiness decide a capacidade de gerar. Separação de conceitos (D7).
  *
- * Ordem D10: CNPJ → situação ATIVA exata (BAIXADA/NULA reject antes) → raiz →
- * nome ≥ 0.6 → cidade/UF (pré-gate no caller) → CNAE → approved (score ≥ 60).
+ * Ordem D10: CNPJ → situação ATIVA exata (BAIXADA/NULA reject antes) → restrição de
+ * benefício (coorte: raiz legada × CNPJ completo F50.4) → nome ≥ 0.6 → cidade/UF
+ * (pré-gate no caller) → CNAE → approved (score ≥ 60).
  */
 export function evaluateFreemiumEligibility(
   input: FreemiumEligibilityInput
@@ -56,6 +57,8 @@ export function evaluateFreemiumEligibility(
         ? input.state.toUpperCase() === input.officialData.uf.toUpperCase()
         : null,
     rootEligible: input.rootEligible,
+    // F50.4 — sinal de elegibilidade por CNPJ completo; exposto, sem somar pontos.
+    beneficiaryEligible: input.beneficiaryEligible ?? null,
     // D9: tri-state preenchido via cnae-mapping quando há officialData; null caso contrário
     cnaeCompatible: input.officialData
       ? cnaeCompatibilityFor(input.segment, input.officialData.cnae_principal ?? null)
@@ -115,7 +118,20 @@ export function evaluateFreemiumEligibility(
     };
   }
 
-  if (input.rootEligible === false) {
+  // F50.4 — a coorte decide qual restrição de benefício vale (D9/D10):
+  // - `per_cnpj_f50_4`: apenas o mesmo CNPJ completo bloqueia; a raiz não rejeita
+  //   (uma filial com CNPJ novo não é bloqueada pelo benefício de outra filial).
+  // - `root_legacy` ou coorte ausente: comportamento legado por raiz.
+  if (input.policyCohort === "per_cnpj_f50_4") {
+    if (input.beneficiaryEligible === false) {
+      return {
+        decision: "reject",
+        reasons: ["beneficiary_already_used"],
+        score: 20,
+        signals,
+      };
+    }
+  } else if (input.rootEligible === false) {
     return {
       decision: "reject",
       reasons: ["root_already_used"],
