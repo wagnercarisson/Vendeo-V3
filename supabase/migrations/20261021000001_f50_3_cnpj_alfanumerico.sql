@@ -16,6 +16,11 @@
 --
 -- Alvo de aplicação autorizado: container supabase_db_vendeo-f562a-isolated
 -- (PostgreSQL 17.6, 127.0.0.1:56322). Nunca remoto/produção.
+--
+-- Produção (2026-10-22): a versão 20261021000001 ainda NÃO consta no ledger
+-- remoto (`supabase migration list --linked`: local presente / remoto vazio)
+-- e `chk_stores_cnpj_atomic` segue com `^\d{14}$`. Aplicar somente após a
+-- validação desta correção de parser.
 
 -- =============================================================================
 -- 1. Preflight — aborta antes de alterar a constraint
@@ -86,16 +91,20 @@ $$;
 --   - cnpj_normalized fora do padrão canônico
 --   - cnpj_normalized válido sem cnpj_root_hash
 
-ALTER TABLE public.stores DROP CONSTRAINT IF EXISTS chk_stores_cnpj_atomic;
+-- Compatibilidade com o parser do Supabase CLI 2.75.0: o nome da constraint
+-- termina em "atomic", que o tokenizer confunde com BEGIN ATOMIC e passa a
+-- ignorar os `;` seguintes. O identificador com escape Unicode abaixo resolve
+-- para o MESMO nome real `chk_stores_cnpj_atomic`.
+ALTER TABLE public.stores DROP CONSTRAINT IF EXISTS U&"chk_stores_cnpj_atom\0069c";
 
-ALTER TABLE public.stores ADD CONSTRAINT chk_stores_cnpj_atomic
+ALTER TABLE public.stores ADD CONSTRAINT U&"chk_stores_cnpj_atom\0069c"
   CHECK (
     (cnpj_normalized IS NULL AND razao_social IS NULL AND nome_fantasia IS NULL AND cnpj_root_hash = '')
     OR
     (cnpj_normalized IS NOT NULL AND cnpj_normalized ~ '^[A-Z0-9]{12}[0-9]{2}$' AND cnpj_root_hash <> '')
   ) NOT VALID;
 
-ALTER TABLE public.stores VALIDATE CONSTRAINT chk_stores_cnpj_atomic;
+ALTER TABLE public.stores VALIDATE CONSTRAINT U&"chk_stores_cnpj_atom\0069c";
 
 -- =============================================================================
 -- 3. Comentários de coluna — apenas onde o contrato mudou
