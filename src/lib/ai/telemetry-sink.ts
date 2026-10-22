@@ -8,6 +8,7 @@ import type {
   AiTelemetryContext,
   AiTelemetrySink,
 } from "./types";
+import { sanitizeEnvelopeMetadata } from "./types";
 
 /**
  * Sink de telemetria (F46, D3/D9/D10).
@@ -293,6 +294,104 @@ export class BufferingAiTelemetrySink implements AiTelemetrySink {
     const items = [...this.buffer];
     this.buffer.length = 0;
     await this.flushHandler(items);
+  }
+}
+
+/**
+ * Sink de buffering por TENTATIVA com enriquecimento pré-flush (F47.1, D9).
+ *
+ * Diferenças do `BufferingAiTelemetrySink`:
+ * - `enrichLast(capability, metadata)` mescla metadados de parsing no ÚLTIMO
+ *   envelope daquela capacidade (a imagem é emitida antes da validação);
+ * - `flush()` é idempotente POR INSTÂNCIA (nunca uma flag global), então
+ *   tentativas/imagens sequenciais não compartilham estado;
+ * - em falha do handler o buffer NÃO é limpo e a instância NÃO é marcada como
+ *   entregue — a falha é propagada ao caller (nenhum "no-loss" falso).
+ *
+ * O sink padrão e o `BufferingAiTelemetrySink` permanecem intactos.
+ */
+export class DeferredAiTelemetrySink implements AiTelemetrySink {
+  private readonly buffer: AiCallEnvelope[] = [];
+  private delivered = false;
+
+  constructor(
+    private readonly flushHandler: (envelopes: AiCallEnvelope[]) => void | Promise<void>,
+  ) {}
+
+  emit(envelope: AiCallEnvelope): void {
+    if (this.delivered) {
+      throw new Error("[DeferredAiTelemetrySink] envelope emitido após flush da tentativa");
+    }
+    this.buffer.push(envelope);
+  }
+
+  /** Envelopes ainda não entregues (ordem preservada). */
+  get pending(): readonly AiCallEnvelope[] {
+    return this.buffer;
+  }
+
+  /** Se esta instância já entregou os envelopes ao handler. */
+  get isDelivered(): boolean {
+    return this.delivered;
+  }
+
+  /**
+   * Mescla `metadata` (sem chaves canônicas) no último envelope da capacidade.
+   * Retorna `false` quando não há envelope daquela capacidade.
+   */
+  enrichLast(capability: AiCallEnvelope["capability"], metadata: Record<string, unknown>): boolean {
+    const sanitized = sanitizeEnvelopeMetadata(metadata);
+    if (!sanitized) return false;
+    for (let index = this.buffer.length - 1; index >= 0; index -= 1) {
+      const envelope = this.buffer[index];
+      if (envelope.capability !== capability) continue;
+      this.buffer[index] = {
+        ...envelope,
+        metadata: { ...(envelope.metadata ?? {}), ...sanitized },
+      };
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Enriquecimento idempotente: só aplica se o envelope ainda não tiver as
+   * chaves informadas (ex.: `creative_intent_parse_status='not_attempted'` só
+   * entra quando o parsing realmente não aconteceu).
+   */
+  enrichLastIfMissing(
+    capability: AiCallEnvelope["capability"],
+    metadata: Record<string, unknown>,
+  ): boolean {
+    let target: AiCallEnvelope | undefined;
+    for (let index = this.buffer.length - 1; index >= 0; index -= 1) {
+      if (this.buffer[index].capability === capability) {
+        target = this.buffer[index];
+        break;
+      }
+    }
+    if (!target) return false;
+    const existing = target.metadata ?? {};
+    // Marcador de parsing já presente (inclusive `parsed_json`) ⇒ não sobrescreve.
+    if ("creative_intent_parse_status" in existing) return false;
+    if (Object.keys(metadata).every((key) => key in existing)) return false;
+    return this.enrichLast(capability, metadata);
+  }
+
+  /**
+   * Entrega UMA vez. Idempotente por instância. Em falha do handler o buffer é
+   * preservado e o erro propaga.
+   */
+  async flush(): Promise<void> {
+    if (this.delivered) return;
+    if (this.buffer.length === 0) {
+      this.delivered = true;
+      return;
+    }
+    const items = [...this.buffer];
+    await this.flushHandler(items);
+    this.delivered = true;
+    this.buffer.length = 0;
   }
 }
 

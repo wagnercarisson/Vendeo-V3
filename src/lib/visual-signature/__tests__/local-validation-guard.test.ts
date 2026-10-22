@@ -39,7 +39,7 @@ const ENV_KEYS = [
 
 function resetEnv(): void {
   for (const key of ENV_KEYS) delete process.env[key];
-  process.env.NODE_ENV = "test";
+  vi.stubEnv("NODE_ENV", "test");
 }
 
 function setLocalEnv(overrides: Partial<Record<(typeof ENV_KEYS)[number], string>> = {}): void {
@@ -117,7 +117,7 @@ describe("F47.1 — guard fail-closed", () => {
 
   it("NODE_ENV=production → not_local", () => {
     setLocalEnv();
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     expect(guardCode(() => assertVisualSignatureValidationEnvironment())).toBe(
       "visual_signature_validation_not_local",
     );

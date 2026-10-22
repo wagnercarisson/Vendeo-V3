@@ -68,6 +68,7 @@ export {
   DefaultAiTelemetrySink,
   NoopAiTelemetrySink,
   BufferingAiTelemetrySink,
+  DeferredAiTelemetrySink,
   createDefaultTelemetryContext,
   withOnCallTelemetry,
 } from "./telemetry-sink";

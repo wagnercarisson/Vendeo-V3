@@ -9,6 +9,7 @@ import { getActiveVisualSignature, getSignedVisualSignatureUrl } from "./persist
 import { AiCostTracker } from "@/lib/ai-cost";
 import {
   createDefaultTelemetryContext,
+  DeferredAiTelemetrySink,
   defaultAiGateway,
   defaultAiModelResolver,
   createFrozenVisualSignatureResolver,
@@ -86,13 +87,48 @@ function classifyError(
   };
 }
 
+const NOT_ATTEMPTED_CREATIVE_INTENT = {
+  creative_intent_parse_status: "not_attempted" as const,
+  creative_intent_fallback_applied: false,
+  creative_intent_fallback_reason: null,
+  creative_intent_source: "fallback" as const,
+  creative_intent_schema_version: "vs-intent-v1" as const,
+};
+
+interface AttemptTelemetry {
+  telemetry: AiTelemetryContext;
+  flush: () => Promise<void>;
+}
+
+/**
+ * F47.1 (D9) — UM `DeferredAiTelemetrySink` por tentativa/imagem.
+ *
+ * O flush enriquece a imagem com `not_attempted` quando o parsing não ocorreu,
+ * entrega uma única vez e, em falha do handler, não limpa/marca a instância
+ * (nenhum "no-loss" falso — a falha é apenas logada como best-effort).
+ */
 function createAttemptTelemetryContext(params: {
   run: { operationRunId: string; traceId: string };
   economicSnapshot: { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null };
   storeId: string;
   attemptNumber: number;
-}): AiTelemetryContext {
-  return createDefaultTelemetryContext({
+}): AttemptTelemetry {
+  const sink = new DeferredAiTelemetrySink(async (envelopes) => {
+    const sinkContext = createDefaultTelemetryContext({
+      operationRunId: params.run.operationRunId,
+      operationRunType: "visual_signature",
+      traceId: params.run.traceId,
+      storeId: params.storeId,
+      attemptNumber: params.attemptNumber,
+      usdBrlRateAtGeneration: params.economicSnapshot.usdBrlRateAtGeneration,
+      creditValueBrlAtGeneration: params.economicSnapshot.creditValueBrlAtGeneration,
+    });
+    for (const envelope of envelopes) {
+      await sinkContext.sink.emit(envelope);
+    }
+  });
+
+  const telemetry = createDefaultTelemetryContext({
     operationRunId: params.run.operationRunId,
     operationRunType: "visual_signature",
     traceId: params.run.traceId,
@@ -100,7 +136,20 @@ function createAttemptTelemetryContext(params: {
     attemptNumber: params.attemptNumber,
     usdBrlRateAtGeneration: params.economicSnapshot.usdBrlRateAtGeneration,
     creditValueBrlAtGeneration: params.economicSnapshot.creditValueBrlAtGeneration,
+    sink,
   });
+
+  return {
+    telemetry,
+    flush: async () => {
+      sink.enrichLastIfMissing("visual_signature_image", NOT_ATTEMPTED_CREATIVE_INTENT);
+      try {
+        await sink.flush();
+      } catch (error) {
+        console.error("[vs/server-actions] flush de telemetria falhou (best-effort):", error);
+      }
+    },
+  };
 }
 
 /**
@@ -207,6 +256,12 @@ export async function generateVariations(
       | { tier: string; assetUrl: string; storagePath: string; mimeType: string }
       | null = null;
     const attempt1Start = Date.now();
+    const attempt1 = createAttemptTelemetryContext({
+      run,
+      economicSnapshot,
+      storeId,
+      attemptNumber: 0,
+    });
 
     try {
       result = await aiGenerator.generate({
@@ -217,12 +272,7 @@ export async function generateVariations(
         tone,
         signal: AbortSignal.timeout(120000),
         attempt: 0,
-        telemetry: createAttemptTelemetryContext({
-          run,
-          economicSnapshot,
-          storeId,
-          attemptNumber: 0,
-        }),
+        telemetry: attempt1.telemetry,
         visualSignatureConfig: execution.config,
       });
     } catch (err) {
@@ -230,7 +280,14 @@ export async function generateVariations(
       console.log(`[visual-signature] generateVariations tone=${tone} attempt1 ${a1.status}`);
 
       if (a1.status !== "timeout") {
+        await attempt1.flush();
         const attempt2Start = Date.now();
+        const attempt2 = createAttemptTelemetryContext({
+          run,
+          economicSnapshot,
+          storeId,
+          attemptNumber: 1,
+        });
         try {
           result = await aiGenerator.generate({
             storeId: store.id,
@@ -241,19 +298,18 @@ export async function generateVariations(
             signal: AbortSignal.timeout(120000),
             attempt: 1,
             simplifiedPrompt: true,
-            telemetry: createAttemptTelemetryContext({
-              run,
-              economicSnapshot,
-              storeId,
-              attemptNumber: 1,
-            }),
+            telemetry: attempt2.telemetry,
             visualSignatureConfig: execution.config,
           });
         } catch (err2) {
           const a2 = classifyError(err2, "image_retry", attempt2Start, effectiveVisualSignatureModel);
           console.log(`[visual-signature] generateVariations tone=${tone} retry ${a2.status}`);
+        } finally {
+          await attempt2.flush();
         }
       }
+    } finally {
+      await attempt1.flush();
     }
 
     if (!result) {
@@ -341,6 +397,12 @@ export async function generateAutomatic(storeId: string): Promise<
   // Attempt 1: image_direct
   console.log(`[visual-signature] tier=image_direct started`);
   const attempt1Start = Date.now();
+  const attempt1 = createAttemptTelemetryContext({
+    run,
+    economicSnapshot,
+    storeId,
+    attemptNumber: 0,
+  });
   try {
     const result = await aiGenerator.generate({
       storeId: store.id,
@@ -350,12 +412,7 @@ export async function generateAutomatic(storeId: string): Promise<
       tone,
       signal: AbortSignal.timeout(120000),
       attempt: 0,
-      telemetry: createAttemptTelemetryContext({
-        run,
-        economicSnapshot,
-        storeId,
-        attemptNumber: 0,
-      }),
+      telemetry: attempt1.telemetry,
       visualSignatureConfig: execution.config,
     });
 
@@ -395,11 +452,19 @@ export async function generateAutomatic(storeId: string): Promise<
         error: "Não conseguimos criar sua assinatura visual agora. Tente novamente ou envie seu logotipo.",
       };
     }
+  } finally {
+    await attempt1.flush();
   }
 
   // Attempt 2: image_retry (only on non-timeout failures)
   console.log(`[visual-signature] tier=image_retry started (simplified prompt)`);
   const attempt2Start = Date.now();
+  const attempt2 = createAttemptTelemetryContext({
+    run,
+    economicSnapshot,
+    storeId,
+    attemptNumber: 1,
+  });
   try {
     const retryResult = await aiGenerator.generate({
       storeId: store.id,
@@ -410,12 +475,7 @@ export async function generateAutomatic(storeId: string): Promise<
       signal: AbortSignal.timeout(120000),
       attempt: 1,
       simplifiedPrompt: true,
-      telemetry: createAttemptTelemetryContext({
-        run,
-        economicSnapshot,
-        storeId,
-        attemptNumber: 1,
-      }),
+      telemetry: attempt2.telemetry,
       visualSignatureConfig: execution.config,
     });
 
@@ -442,6 +502,8 @@ export async function generateAutomatic(storeId: string): Promise<
     const attempt = classifyError(err, "image_retry", attempt2Start, effectiveVisualSignatureModel);
     previousAttempts.push(attempt);
     console.log(`[visual-signature] tier=image_retry ${attempt.status}`);
+  } finally {
+    await attempt2.flush();
   }
 
   // Both attempts failed — return controlled error, no typographic fallback

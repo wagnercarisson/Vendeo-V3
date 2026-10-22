@@ -21,7 +21,7 @@ import { requireLegalClearance } from '@/lib/legal/clearance';
 import { AiCostTracker } from '@/lib/ai-cost';
 import {
   createDefaultTelemetryContext,
-  BufferingAiTelemetrySink,
+  DeferredAiTelemetrySink,
   defaultAiGateway,
   defaultAiModelResolver,
   createFrozenVisualSignatureResolver,
@@ -287,7 +287,8 @@ export const POST = apiHandler(async (
     attemptNumber: number,
   ): { telemetry: AiTelemetryContext; flush: (visualSignatureId: string | null) => Promise<void> } => {
     let resolvedSignatureId: string | null = null;
-    const buffering = new BufferingAiTelemetrySink(async (envelopes) => {
+    // F47.1 (D9): UM sink por tentativa; enriquecimento antes de um único flush.
+    const deferred = new DeferredAiTelemetrySink(async (envelopes) => {
       const sinkContext = createDefaultTelemetryContext({
         operationRunId: runRef.operationRunId,
         operationRunType: "visual_signature",
@@ -310,13 +311,30 @@ export const POST = apiHandler(async (
       attemptNumber,
       usdBrlRateAtGeneration: snapshot.usdBrlRateAtGeneration,
       creditValueBrlAtGeneration: snapshot.creditValueBrlAtGeneration,
-      sink: buffering,
+      sink: deferred,
     });
     return {
       telemetry,
       flush: async (visualSignatureId: string | null) => {
+        // Se o parsing não ocorreu, o envelope sai uma única vez como
+        // `not_attempted` (nunca um segundo evento).
+        deferred.enrichLastIfMissing("visual_signature_image", {
+          creative_intent_parse_status: "not_attempted",
+          creative_intent_fallback_applied: false,
+          creative_intent_fallback_reason: null,
+          creative_intent_source: "fallback",
+          creative_intent_schema_version: "vs-intent-v1",
+        });
         resolvedSignatureId = visualSignatureId;
-        await buffering.flush();
+        try {
+          await deferred.flush();
+        } catch (error) {
+          // Falha do handler NÃO é mascarada como entrega/no-loss.
+          console.error(
+            `[generate-without-logo][req-${reqId}] flush de telemetria falhou (best-effort):`,
+            error,
+          );
+        }
       },
     };
   };

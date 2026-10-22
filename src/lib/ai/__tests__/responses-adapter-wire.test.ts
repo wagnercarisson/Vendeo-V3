@@ -33,13 +33,17 @@ function makeTelemetry(envelopes: AiCallEnvelope[]): AiTelemetryContext {
     traceId: "trace-1",
     storeId: "store-1",
     attemptNumber: 0,
-    sink: { emit: (envelope) => envelopes.push(envelope) },
+    sink: {
+      emit: (envelope) => {
+        envelopes.push(envelope);
+      },
+    },
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  process.env.NODE_ENV = "test";
+  vi.stubEnv("NODE_ENV", "test");
   process.env.OPENAI_API_KEY = "sk-test";
   mockResponsesCreate.mockResolvedValue(imageResponse);
 });
