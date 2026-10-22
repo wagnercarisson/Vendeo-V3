@@ -1,0 +1,49 @@
+{
+  "phase": "50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo",
+  "captured_at": "2026-10-22T20:21:28.000Z",
+  "base_sha": "8db1d599ce98070907bc98637520bc7ee8acd61c",
+  "mode": "environment_unavailable",
+  "environment_notes": "Suite completa executada com `npm test` (vitest run) antes de qualquer alteracao de codigo. PostgreSQL local nao estava disponivel (TCP 127.0.0.1:54322 fechado; TEST_DATABASE_URL nao definido), portanto as suites de integracao Postgres/Storage falharam por conexao, nao por regressao funcional. Nenhum resultado foi inventado; contagens e exit code sao reais.",
+  "command": "npm test",
+  "exit_code": 1,
+  "counts": {
+    "passed": 6642,
+    "failed": 9,
+    "skipped": 147,
+    "test_files_total": 552,
+    "test_files_failed": 25,
+    "test_files_passed": 525,
+    "test_files_skipped": 2
+  },
+  "failed_tests": [
+    "scripts/f56-2b2d/__tests__/release-gate.test.mjs",
+    "scripts/f56-2e/__tests__/hosted-proofs.test.mjs",
+    "src/__tests__/api/store-ownership-api.test.ts > POST /api/store > ignores user_id in body (uses claims.sub) - draft mode",
+    "src/lib/__tests__/access-request-limit.postgres.test.ts",
+    "src/lib/__tests__/data-subject-requests.postgres.test.ts",
+    "src/lib/ai/__tests__/image-generation-operations-repository.integration.test.ts",
+    "src/lib/brand-assets/__tests__/text-only-inference-service.test.ts",
+    "src/lib/credit/__tests__/credit-concurrency.test.ts",
+    "src/lib/credit/__tests__/credit-f50-11-integration.test.ts",
+    "src/lib/credit/__tests__/credit-idempotency.test.ts",
+    "src/lib/credit/__tests__/operation-cost-service.integration.test.ts",
+    "src/lib/product-1-1/__tests__/artifact-download.integration.test.ts",
+    "src/lib/product-1-1/__tests__/atomic-attempt.integration.test.ts",
+    "src/lib/product-1-1/__tests__/concurrent-route-submission.integration.test.ts",
+    "src/lib/product-1-1/__tests__/copy-recovery.integration.test.ts",
+    "src/lib/product-1-1/__tests__/copy-state.integration.test.ts",
+    "src/lib/product-1-1/__tests__/credit-delivery.integration.test.ts",
+    "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts",
+    "src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts",
+    "src/lib/product-1-1/__tests__/local-pilot-recovery.integration.test.ts",
+    "src/lib/product-1-1/__tests__/pending-resolution.integration.test.ts",
+    "src/lib/product-1-1/__tests__/persisted-campaign.integration.test.ts",
+    "src/lib/product-1-1/__tests__/publication-fence.integration.test.ts",
+    "src/lib/product-1-1/__tests__/recovery-seams.integration.test.ts",
+    "tests/integration/product-1-1-credit-transaction.test.ts"
+  ],
+  "historical_reference": {
+    "source": "F50.3 archive",
+    "note": "referencia historica arquivada; nao presumir que as mesmas falhas persistem"
+  }
+}
