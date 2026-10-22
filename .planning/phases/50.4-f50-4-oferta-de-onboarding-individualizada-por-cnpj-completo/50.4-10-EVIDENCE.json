@@ -1,0 +1,100 @@
+{
+  "phase": "50.4",
+  "concurrency": {
+    "exit_code": 0,
+    "deadlocks": 0,
+    "scenarios": [
+      {
+        "id": "trial_x_demo_trial_first",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "demo bloqueada por enrollment root_legacy",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L446"
+      },
+      {
+        "id": "trial_x_demo_demo_first",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "trial bloqueado por benefício demo anterior",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L482"
+      },
+      {
+        "id": "trial_x_monthly_trial_first",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "mensal pulou a raiz com enrollment root_legacy",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L515"
+      },
+      {
+        "id": "trial_x_monthly_monthly_first",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "mensal concedido antes; trial inscreveu depois",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L544"
+      },
+      {
+        "id": "trial_x_exception_exception_first",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "exceção concedida; trial viu prior_benefit",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L575"
+      },
+      {
+        "id": "trial_x_exception_trial_first",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "enrollment preservado; exceção manual ainda concedida",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L609"
+      },
+      {
+        "id": "demo_x_exception",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "demo bloqueada pela exceção administrativa da raiz",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L651"
+      },
+      {
+        "id": "per_cnpj_x_root_legacy",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "filial per_cnpj e conta root_legacy coexistiram",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L684"
+      },
+      {
+        "id": "two_branches_same_root",
+        "status": "PASS",
+        "observed_wait_event": "Lock/advisory",
+        "detail": "duas filiais per_cnpj criaram enrollment e grant",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L718"
+      },
+      {
+        "id": "same_store_concurrent",
+        "status": "PASS",
+        "observed_wait_event": "Lock/transactionid",
+        "detail": "um enrollment e um grant para o mesmo store_id",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L755"
+      },
+      {
+        "id": "monthly_multiple_roots",
+        "status": "PASS",
+        "observed_wait_event": "Lock/transactionid",
+        "detail": "múltiplas raízes sem deadlock; cada uma concedida uma vez",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L785"
+      },
+      {
+        "id": "monthly_x_admin_grant_cap",
+        "status": "PASS",
+        "observed_wait_event": "Lock/transactionid",
+        "detail": "mensal observou saldo commitado acima do cap e não criou entitlement",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L813"
+      },
+      {
+        "id": "installment_vs_root_decision",
+        "status": "PASS",
+        "observed_wait_event": "none",
+        "detail": "parcela/estorno sem advisory de raiz (none)",
+        "evidence": "src/lib/credit/__tests__/f50-4-concurrency.test.ts#L852"
+      }
+    ]
+  }
+}
