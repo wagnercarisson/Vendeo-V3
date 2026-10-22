@@ -286,6 +286,24 @@ Plans:
 
 - [x] 50.3-07-PLAN.md — Regressão, gates automáticos, documentação (limitação `0001`/F50.4) e UAT manual separado.
 
+### Phase 50.4: F50.4 - Oferta de onboarding individualizada por CNPJ completo
+
+**Goal:** Permitir que matriz e filiais recebam individualmente a oferta atual de onboarding, uma vez por CNPJ completo, preservando contas, benef�cios e pol�ticas anteriores, com identidade imut�vel do benefici�rio, coortes expl�citas, concorr�ncia segura entre programas, migration fail-closed e ativa��o produtiva fora desta execu��o.
+**Status:** **Planejada - aguardando revis�o humana.** Base OpenSpec em `openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/`; planos em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/`.
+**Depends on:** F50.2 (oferta ativa; `launch_at` preservado), F50.3 (CNPJ can�nico num�rico e alfanum�rico), F32/F33 (freemium e verifica��o cadastral) e F34 (readiness).
+**Requirements**: REQ-50.4-01, REQ-50.4-02, REQ-50.4-03, REQ-50.4-04, REQ-50.4-05, REQ-50.4-06, REQ-50.4-07, REQ-50.4-08, REQ-50.4-09, REQ-50.4-10
+**Plans:** 9 plans
+
+Plans:
+- [ ] 50.4-01-PLAN.md - Baseline + Migration M1 (`individual_launch_at` + RPC de ativa��o auditada) e prova SQL de idempot�ncia/recusas.
+- [ ] 50.4-02-PLAN.md - Harness de PostgreSQL descart�vel fail-closed, runner SQL, verificador de schema/ledger e regress�o do parser 2.75.0.
+- [ ] 50.4-03-PLAN.md - Migration M2: identidade imut�vel, backfill fail-closed, unicidade por CNPJ + �ndice parcial legado, trigger e RPCs de coorte/elegibilidade/conclus�o/inscri��o.
+- [ ] 50.4-04-PLAN.md - Migration M3: demo/mensal/exce��o com coortes e protocolo de locks; contrato est�tico F50.4.
+- [ ] 50.4-05-PLAN.md - N�cleo de aplica��o: tipos/motor puro com coortes e helper de conclus�o/retry com motivos seguros.
+- [ ] 50.4-06-PLAN.md - Rotas `/api/store` e `update-cnpj` com contexto de pol�tica, mensagens por coorte e cobertura dos 8 call sites.
+- [ ] 50.4-07-PLAN.md - Painel/admin: leitura de `individual_launch_at` e a��o separada de ativa��o com motivo, CSRF e idempot�ncia.
+- [ ] 50.4-08-PLAN.md - Valida��o real: `db push` via CLI 2.75.0 em descart�vel, su�tes SQL, concorr�ncia, fail-closed, rollback e grants.
+- [ ] 50.4-09-PLAN.md - Gates, seguran�a ASVS L1, UAT de regress�o e nova pol�tica no descart�vel, encerramento sem publica��o.
 ## Phase 56.1: Contrato produtivo, modelos e fallback
 
 **Goal:** preparar a infraestrutura produtiva do novo fluxo de imagem Produto 1:1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â configuraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o administrativa auditÃƒÆ’Ã‚Â¡vel de um par principal e um par fallback (modelo + qualidade) restrita a um catÃƒÆ’Ã‚Â¡logo elegÃƒÆ’Ã‚Â­vel fechado, contrato de snapshot imutÃƒÆ’Ã‚Â¡vel por operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, polÃƒÆ’Ã‚Â­tica explÃƒÆ’Ã‚Â­cita de falhas e fallback, resposta pÃƒÆ’Ã‚Âºblica identificÃƒÆ’Ã‚Â¡vel sem vazar motivo interno, e instrumentaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de qualidade/telemetria/custo ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â como componentes e testes simulados, sem ativar geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, sem debitar crÃƒÆ’Ã‚Â©dito e sem alterar o fluxo legado.
