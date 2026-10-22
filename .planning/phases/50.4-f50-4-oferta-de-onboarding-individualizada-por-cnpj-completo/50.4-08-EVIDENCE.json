@@ -1,0 +1,230 @@
+{
+  "phase": "50.4",
+  "plan": "08",
+  "cli_version": "2.75.0",
+  "run_id": "20261022220210-98c269",
+  "project_id": "f50-4-disposable-20261022220210-98c269",
+  "host_port": "127.0.0.1:54422",
+  "database": "postgres",
+  "auth_users_present": true,
+  "roles_present": true,
+  "environment_kept_alive": true,
+  "checkpoint_c_approved": true,
+  "production_activation": false,
+  "ledger_versions_count": 142,
+  "ledger_f50_4_versions": [
+    "20261022000001",
+    "20261022000002",
+    "20261022000003"
+  ],
+  "commands": [
+    {
+      "id": "cli-version",
+      "command": "supabase --version",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L28",
+      "assertions": [
+        "versão reportada é 2.75.0",
+        "binário global (não npx)"
+      ]
+    },
+    {
+      "id": "create",
+      "command": "node scripts/f50-4/disposable-db.mjs create",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L36",
+      "assertions": [
+        "stack Supabase real em 127.0.0.1:54422",
+        "auth.users presente",
+        "roles anon/authenticated/service_role presentes",
+        "sentinela f50_4_harness_identity purpose=disposable",
+        "migrations_expected=142"
+      ]
+    },
+    {
+      "id": "status-pre-push",
+      "command": "node scripts/f50-4/disposable-db.mjs status",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L46",
+      "assertions": [
+        "identidade do alvo confirmada",
+        "PostgreSQL 17.6"
+      ]
+    },
+    {
+      "id": "push",
+      "command": "node scripts/f50-4/disposable-db.mjs push  # supabase db push --yes --db-url",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L54",
+      "assertions": [
+        "M1-M3 aplicadas pelo CLI 2.75.0",
+        "exit 0",
+        "ledger com 142 versões",
+        "sem SQLSTATE 42601"
+      ]
+    },
+    {
+      "id": "ledger",
+      "command": "psql ... -c \"SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;\"",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L65",
+      "assertions": [
+        "ledger não vazio",
+        "contém 20261022000001",
+        "contém 20261022000002",
+        "contém 20261022000003"
+      ]
+    },
+    {
+      "id": "seed-f50-2",
+      "command": "psql ... -c \"UPDATE public.trial_offer_settings SET enabled = true, launch_at = COALESCE(launch_at, '2026-10-20T21:25:31.344856Z'::timestamptz), updated_at = now() WHERE offer_key = 'trial_28d_v1';\"",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L74",
+      "assertions": [
+        "enabled=true",
+        "launch_at=2026-10-20T21:25:31.344856Z",
+        "individual_launch_at IS NULL",
+        "UPDATE 1"
+      ]
+    },
+    {
+      "id": "verifier",
+      "command": "node scripts/verify/50-4-f50-4-verification.mjs --expect-launch-at 2026-10-20T21:25:31.344856Z",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L87",
+      "assertions": [
+        "66 passed / 0 failed",
+        "constraints convalidated=true",
+        "índice parcial root_legacy presente",
+        "sem UNIQUE(root_hash) global",
+        "grants service_role-only"
+      ]
+    },
+    {
+      "id": "verifier-skip-db",
+      "command": "node scripts/verify/50-4-f50-4-verification.mjs --skip-db",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L97",
+      "assertions": [
+        "7 passed / 0 failed"
+      ]
+    },
+    {
+      "id": "sql-suites",
+      "command": "node scripts/f50-4/run-sql-tests.mjs tests/sql/f50_4_m1_activation.sql tests/sql/f50_4_m2_identity.sql tests/sql/f50_4_eligibility_matrix.sql tests/sql/f50_4_legacy_coexistence.sql tests/sql/f50_4_manual_credit.sql",
+      "exit_code": 0,
+      "evidence": "50.4-08-EVIDENCE.md#L105",
+      "assertions": [
+        "5 passed / 0 failed",
+        "suítes transacionais com ROLLBACK",
+        "enrollments=0 após execução"
+      ]
+    }
+  ],
+  "sql_tests": [
+    { "file": "tests/sql/f50_4_m1_activation.sql", "status": "PASS" },
+    { "file": "tests/sql/f50_4_m2_identity.sql", "status": "PASS" },
+    { "file": "tests/sql/f50_4_eligibility_matrix.sql", "status": "PASS" },
+    { "file": "tests/sql/f50_4_legacy_coexistence.sql", "status": "PASS" },
+    { "file": "tests/sql/f50_4_manual_credit.sql", "status": "PASS" }
+  ],
+  "privileges": {
+    "admin_activate_trial_offer_individual_launch": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true,
+      "evidence": "50.4-08-EVIDENCE.md#L133"
+    },
+    "trial_offer_policy_cohort": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true,
+      "evidence": "50.4-08-EVIDENCE.md#L133"
+    },
+    "trial_offer_beneficiary_prior_benefit": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true,
+      "evidence": "50.4-08-EVIDENCE.md#L133"
+    },
+    "trial_offer_legacy_root_prior_benefit": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true,
+      "evidence": "50.4-08-EVIDENCE.md#L133"
+    },
+    "trial_offer_policy_context": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true,
+      "evidence": "50.4-08-EVIDENCE.md#L133"
+    },
+    "trial_offer_eligibility": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true,
+      "evidence": "50.4-08-EVIDENCE.md#L133"
+    },
+    "record_onboarding_completion": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true,
+      "evidence": "50.4-08-EVIDENCE.md#L133"
+    },
+    "start_trial_offer_enrollment": {
+      "anon": false,
+      "authenticated": false,
+      "service_role": true,
+      "evidence": "50.4-08-EVIDENCE.md#L133"
+    }
+  },
+  "rls": {
+    "table": "trial_offer_enrollments",
+    "enabled": true,
+    "forced": false,
+    "grants": {
+      "service_role": ["INSERT", "SELECT", "UPDATE"],
+      "anon": [],
+      "authenticated": []
+    },
+    "policies": [],
+    "evidence": "50.4-08-EVIDENCE.md#L133"
+  },
+  "invariants": {
+    "individual_launch_at": null,
+    "launch_at": "2026-10-20T21:25:31.344856Z",
+    "enabled": true,
+    "trigger_present": true,
+    "partial_index_predicate": "policy_cohort = 'root_legacy'",
+    "fingerprint": "2a299f49332bbef9b567e83ed95f0cab",
+    "enrollments_after_suites": 0,
+    "evidence": "50.4-08-EVIDENCE.md#L150"
+  },
+  "deviations": [
+    {
+      "rule": 3,
+      "type": "blocking",
+      "description": "supabase start exigia supabase/templates no workdir; create agora copia os templates."
+    },
+    {
+      "rule": 3,
+      "type": "blocking",
+      "description": "db push tentava TLS contra o Postgres local; push define PGSSLMODE=disable."
+    },
+    {
+      "rule": 3,
+      "type": "blocking",
+      "description": "mailpit com exec format error no host; [inbucket] enabled=false no config efêmero."
+    },
+    {
+      "rule": 1,
+      "type": "bug",
+      "description": "runner SQL não limpava transação abortada entre arquivos; ROLLBACK adicionado."
+    },
+    {
+      "rule": 1,
+      "type": "bug",
+      "description": "fixtures da matriz usavam UUIDs inválidos (13 hex) e três suítes reutilizavam stores.user_id único; fixtures corrigidas sem enfraquecer asserções."
+    }
+  ]
+}
