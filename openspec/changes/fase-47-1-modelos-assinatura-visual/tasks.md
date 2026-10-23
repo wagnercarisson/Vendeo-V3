@@ -77,7 +77,9 @@
 > **Evidência:** `47.1-UAT.md`. A Task 7.2 foi executada, mas as duas primeiras
 > tentativas de perfil falharam (`brand_profile_vision`, loopback); o perfil só
 > concluiu após a correção `a37f4b83`/`d16b54f2` e o realinhamento manual da
-> assinatura Luna. As Tasks 7.4 e 7.5 permanecem não executadas.
+> assinatura Luna. A Task 7.3 está detalhada por run no §2.1 do UAT; campos
+> ausentes, incluindo `provider_reported_cost_usd`, estão registrados como NULL,
+> sem inferência. As Tasks 7.4 e 7.5 permanecem não executadas.
 
 - [x] 7.1 Preparar o roteiro de UAT com entry point único `generate-without-logo` em modo standard, mesma loja/dados/prompt/tamanho/reasoning, e registrar hashes/versões. Autorizar **até 2 tentativas de aplicação por geração** (até 2 imagens + 2 validações), com `maxRetries=0` no gateway de validação; se não for garantido, multiplicar o orçamento por `1 + retry_default_do_SDK` e declarar o limite.
 - [x] 7.2 Executar a rodada inicial obrigatória: GPT-5.5 + Sunburst Medium e Luna + Sunburst Medium = 2 gerações, **até 4 tentativas de imagem e até 4 validações**; aprovar 1 assinatura para cobrir 1 fluxo de perfil de marca na credencial normal. Custo histórico de referência de imagem até ~US$ 0,176; sem garantia e sem teto financeiro.
