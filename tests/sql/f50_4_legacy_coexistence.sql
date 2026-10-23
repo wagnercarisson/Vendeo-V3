@@ -9,7 +9,7 @@
 -- Cobre:
 --   1. Demo legada 10/168 para conta anterior ao launch_at.
 --   2. `trial_offer_applies` para conta criada em/a partir do launch_at.
---   3. `trial_offer_consumed` somente por enrollment root_legacy/mesmo CNPJ.
+--   3. `trial_offer_consumed` somente por enrollment root_legacy da própria loja.
 --   4. Filial per_cnpj_f50_4 não retira a demo da conta anterior.
 --   5. Mensal pula raiz com enrollment root_legacy (mesmo vencido).
 --   6. Filial F50.4 não reduz o mensal da matriz legada.
@@ -138,10 +138,10 @@ INSERT INTO public.trial_offer_enrollments (
    'root-monthly-enrolled', 'trial_28d_v1',
    '2026-09-01T00:00:00Z', '2026-09-29T00:00:00Z',
    '66777888000150', 'root_legacy'),
-  -- Enrollment root_legacy de OUTRA loja, com o MESMO CNPJ do beneficiário b405.
+  -- Enrollment root_legacy da PRÓPRIA loja b405 (mesmo CNPJ do beneficiário).
   ('00000000-0000-4000-8000-00000000c404',
-   '00000000-0000-4000-8000-00000000b406', '00000000-0000-4000-8000-00000000a402',
-   'root-cnpj-other', 'trial_28d_v1',
+   '00000000-0000-4000-8000-00000000b405', '00000000-0000-4000-8000-000000b20005',
+   'root-cnpj-barrier', 'trial_28d_v1',
    '2026-10-20T00:00:00Z', '2026-11-17T00:00:00Z',
    '44555666000110', 'root_legacy');
 
@@ -212,7 +212,9 @@ END;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 3. `trial_offer_consumed` por enrollment root_legacy e por MESMO CNPJ.
+-- 3. `trial_offer_consumed` por enrollment root_legacy da própria loja.
+--    (A barreira legada por mesmo CNPJ entre lojas distintas deixou de ser
+--     estruturalmente possível após WR-04 e não é simulada com bypass.)
 -- -----------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -231,7 +233,7 @@ BEGIN
   );
 
   IF (v_grant ->> 'reason') <> 'trial_offer_consumed' THEN
-    RAISE EXCEPTION 'F50_4_COEXIST_ASSERT: mesmo CNPJ deveria consumir a demo (%)', v_grant;
+    RAISE EXCEPTION 'F50_4_COEXIST_ASSERT: enrollment root_legacy da propria loja deveria consumir a demo (%)', v_grant;
   END IF;
 END;
 $$;

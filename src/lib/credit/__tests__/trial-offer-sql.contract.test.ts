@@ -119,6 +119,7 @@ describe("F50.2 trial offer SQL contract", () => {
 const f504M1 = readMigration("20261022000001_f50_4_individual_launch.sql");
 const f504M2 = readMigration("20261022000002_f50_4_enrollment_identity.sql");
 const f504M3 = readMigration("20261022000003_f50_4_benefit_coexistence.sql");
+const f504M4 = readMigration("20261023000001_f50_4_snapshot_integrity.sql");
 const f504All = `${f504M1}\n${f504M2}\n${f504M3}`;
 
 describe("F50.4 enrollment identity SQL contract", () => {
@@ -216,5 +217,63 @@ describe("F50.4 enrollment identity SQL contract", () => {
 
   it("keeps F50.4 identifiers free of the CLI parser pitfall", () => {
     expect(f504All).not.toMatch(/atomic/i);
+  });
+});
+
+// =============================================================================
+// F50.4 — contrato estático da migration M4 (integridade do snapshot)
+// =============================================================================
+
+describe("F50.4 snapshot integrity SQL contract", () => {
+  it("aborts before DDL when an enrollment snapshot diverges from its store", () => {
+    const precheckIndex = f504M4.indexOf("F50_4_PRECHECK_BENEFICIARY_MISMATCH");
+    const functionIndex = f504M4.indexOf(
+      "CREATE OR REPLACE FUNCTION public.trial_offer_enrollments_validate_beneficiary",
+    );
+
+    expect(precheckIndex).toBeGreaterThan(-1);
+    expect(functionIndex).toBeGreaterThan(precheckIndex);
+    expect(f504M4).toMatch(/LEFT JOIN public\.stores s ON s\.id = e\.store_id/);
+    expect(f504M4).toMatch(/s\.id IS NULL/);
+    expect(f504M4).toMatch(/s\.cnpj_normalized IS NULL/);
+    expect(f504M4).toMatch(
+      /e\.beneficiary_cnpj_normalized IS DISTINCT FROM s\.cnpj_normalized/,
+    );
+  });
+
+  it("defines a BEFORE INSERT trigger comparing the snapshot to stores.cnpj_normalized", () => {
+    expect(f504M4).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.trial_offer_enrollments_validate_beneficiary\(\)/,
+    );
+    expect(f504M4).toMatch(/SET search_path = ''/);
+    expect(f504M4).toMatch(/SELECT s\.cnpj_normalized/);
+    expect(f504M4).toMatch(/FROM public\.stores s\s+WHERE s\.id = NEW\.store_id/);
+    expect(f504M4).toMatch(
+      /v_store_cnpj IS DISTINCT FROM NEW\.beneficiary_cnpj_normalized/,
+    );
+    expect(f504M4).toMatch(/trial_offer_enrollment_beneficiary_mismatch/);
+    expect(f504M4).toMatch(
+      /CREATE TRIGGER trg_trial_offer_enrollments_validate_beneficiary\s+BEFORE INSERT ON public\.trial_offer_enrollments/,
+    );
+  });
+
+  it("keeps the UPDATE immutability trigger and never redefines existing columns/indexes", () => {
+    expect(f504M2).toMatch(
+      /CREATE TRIGGER trg_trial_offer_enrollments_immutable_identity\s+BEFORE UPDATE ON public\.trial_offer_enrollments/,
+    );
+    expect(f504M4).not.toMatch(/ADD COLUMN/i);
+    expect(f504M4).not.toMatch(/ALTER COLUMN/i);
+    expect(f504M4).not.toMatch(/CREATE (UNIQUE )?INDEX/i);
+    expect(f504M4).not.toMatch(/DROP COLUMN/i);
+    expect(f504M4).not.toMatch(/DROP CONSTRAINT/i);
+  });
+
+  it("restricts the trigger function to service_role", () => {
+    expect(f504M4).toMatch(
+      /REVOKE ALL ON FUNCTION public\.trial_offer_enrollments_validate_beneficiary\(\)\s+FROM PUBLIC, anon, authenticated/,
+    );
+    expect(f504M4).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.trial_offer_enrollments_validate_beneficiary\(\)\s+TO service_role/,
+    );
   });
 });

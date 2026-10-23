@@ -13,7 +13,7 @@
 --      conta legada (via trial_offer_legacy_root_prior_benefit/prior_benefit)
 --      e NÃO bloqueia uma loja per_cnpj_f50_4 de outro CNPJ.
 --   5. existing_enrollment_id somente da própria loja.
---   6. beneficiary_already_enrolled para o mesmo CNPJ completo.
+--   6. Inscrição da própria loja (existing) sem criar novo enrollment.
 --   7. Coorte decidida por auth.users.created_at (onboarding tardio preserva).
 --   8. Recusas: is_test_store, root_hash vazio, janela vencida, conta antiga.
 --   9. prior_benefit_ambiguous fail-closed por entitlement órfão.
@@ -159,10 +159,10 @@ INSERT INTO public.trial_offer_enrollments (
    'root-x', 'trial_28d_v1',
    '2026-10-10T00:00:00Z', '2026-11-07T00:00:00Z',
    '44555666000200', 'root_legacy'),
-  -- enrollment cujo beneficiário pertence a outra loja (safeguard de conflito)
+  -- enrollment da própria z2 (snapshot = stores.cnpj_normalized)
   ('00000000-0000-4000-8000-0000000007f3',
-   '00000000-0000-4000-8000-000000005c0f',
-   '00000000-0000-4000-8000-0000000004b1',
+   '00000000-0000-4000-8000-000000005c10',
+   '00000000-0000-4000-8000-000000b10017',
    'root-z', 'trial_28d_v1',
    '2026-10-10T00:00:00Z', '2026-11-07T00:00:00Z',
    '33444555000241', 'per_cnpj_f50_4'),
@@ -343,7 +343,7 @@ END;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 6. beneficiary_already_enrolled (mesmo CNPJ, sem vazamento)
+-- 6. Inscrição da própria loja: existing, sem novo enrollment
 -- -----------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -355,30 +355,32 @@ BEGIN
     '00000000-0000-4000-8000-000000005c10',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
-  IF (v ->> 'eligible')::boolean IS NOT FALSE
-     OR (v ->> 'reason') <> 'beneficiary_already_enrolled' THEN
-    RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: mesmo CNPJ deveria retornar beneficiary_already_enrolled (%)', v;
+  IF (v ->> 'eligible')::boolean IS NOT TRUE
+     OR (v ->> 'existing_enrollment_id')::uuid IS DISTINCT FROM
+        '00000000-0000-4000-8000-0000000007f3'::uuid THEN
+    RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: inscricao da propria loja deveria retornar existing (%)', v;
   END IF;
 
-  IF v ->> 'existing_enrollment_id' IS NOT NULL THEN
-    RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: beneficiary_already_enrolled vazou enrollment alheio (%)', v;
+  IF v ? 'beneficiary_cnpj_normalized' OR v ? 'root_hash' THEN
+    RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: resposta da propria loja vazou CNPJ/root_hash (%)', v;
   END IF;
 
   v_start := public.start_trial_offer_enrollment(
     '00000000-0000-4000-8000-000000005c10',
     TIMESTAMPTZ '2026-10-21T12:00:00Z'
   );
-  IF (v_start ->> 'status') <> 'not_eligible'
-     OR (v_start ->> 'reason') <> 'beneficiary_already_enrolled' THEN
-    RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: inscricao deveria falhar como beneficiary_already_enrolled (%)', v_start;
+  IF (v_start ->> 'status') <> 'existing'
+     OR (v_start ->> 'enrollment_id')::uuid IS DISTINCT FROM
+        '00000000-0000-4000-8000-0000000007f3'::uuid THEN
+    RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: inscricao da propria loja deveria retornar existing (%)', v_start;
   END IF;
 
   SELECT count(*) INTO v_count
   FROM public.trial_offer_enrollments
   WHERE store_id = '00000000-0000-4000-8000-000000005c10';
 
-  IF v_count <> 0 THEN
-    RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: loja bloqueada recebeu enrollment';
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'F50_4_MATRIX_ASSERT: replay da propria loja criou novo enrollment (count=%)', v_count;
   END IF;
 END;
 $$;

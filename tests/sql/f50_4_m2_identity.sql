@@ -165,11 +165,16 @@ $$;
 
 -- -----------------------------------------------------------------------------
 -- 2. beneficiary_cnpj_normalized é NOT NULL
+--
+-- O trigger BEFORE INSERT da M4 valida antes da constraint NOT NULL. Para
+-- provar a constraint (e não o trigger), o INSERT roda com
+-- session_replication_role = replica; `origin` é restaurado no mesmo bloco.
 -- -----------------------------------------------------------------------------
 DO $$
 DECLARE
   v_blocked BOOLEAN := false;
 BEGIN
+  SET LOCAL session_replication_role = replica;
   BEGIN
     INSERT INTO public.trial_offer_enrollments (
       store_id, user_id, root_hash, offer_key, started_at, expires_at,
@@ -184,6 +189,7 @@ BEGIN
   EXCEPTION WHEN not_null_violation THEN
     v_blocked := true;
   END;
+  SET LOCAL session_replication_role = origin;
 
   IF NOT v_blocked THEN
     RAISE EXCEPTION 'F50_4_M2_ASSERT: beneficiary_cnpj_normalized aceitou NULL';
@@ -239,11 +245,16 @@ $$;
 
 -- -----------------------------------------------------------------------------
 -- 5. Mesmo CNPJ completo nunca se repete (outra loja/coorte)
+--
+-- O trigger da M4 recusaria o snapshot divergente antes da unicidade. Para
+-- provar a unicidade global, o INSERT roda com session_replication_role =
+-- replica (constraints continuam ativas) e `origin` é restaurado no bloco.
 -- -----------------------------------------------------------------------------
 DO $$
 DECLARE
   v_blocked BOOLEAN := false;
 BEGIN
+  SET LOCAL session_replication_role = replica;
   BEGIN
     INSERT INTO public.trial_offer_enrollments (
       store_id, user_id, root_hash, offer_key, started_at, expires_at,
@@ -258,6 +269,7 @@ BEGIN
   EXCEPTION WHEN unique_violation THEN
     v_blocked := true;
   END;
+  SET LOCAL session_replication_role = origin;
 
   IF NOT v_blocked THEN
     RAISE EXCEPTION 'F50_4_M2_ASSERT: CNPJ beneficiario repetido em outra loja/coorte foi aceito';
@@ -332,6 +344,7 @@ DECLARE
   v_blocked BOOLEAN;
 BEGIN
   v_blocked := false;
+  SET LOCAL session_replication_role = replica;
   BEGIN
     INSERT INTO public.trial_offer_enrollments (
       store_id, user_id, root_hash, offer_key, started_at, expires_at,
@@ -346,6 +359,7 @@ BEGIN
   EXCEPTION WHEN check_violation THEN
     v_blocked := true;
   END;
+  SET LOCAL session_replication_role = origin;
 
   IF NOT v_blocked THEN
     RAISE EXCEPTION 'F50_4_M2_ASSERT: CHECK aceitou CNPJ fora do padrao canonico';
