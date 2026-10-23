@@ -326,6 +326,43 @@ describe("PATCH /api/store/:id", () => {
     expect(res.status).toBe(200);
   });
 
+  it("CR-01: PATCH não vaza cnpj_normalized/cnpj_root_hash e calcula cnpjRegistered", async () => {
+    mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
+    mockRequireOwnershipImpl.mockResolvedValue(mockStore);
+    const patchedRow = {
+      ...mockStore,
+      name: "Loja Atualizada",
+      cnpj_normalized: "12345678000195",
+      cnpj_root_hash: "root_hash_secreto",
+    };
+    mockSupabaseFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn(),
+      update: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(async () => ({ data: patchedRow, error: null })),
+          })),
+        })),
+      })),
+    } as ReturnType<typeof mockSupabaseFrom>);
+
+    const { PATCH } = await import("@/app/api/store/[id]/route");
+    const res = await PATCH(createReq("PATCH", { name: "Loja Atualizada" }), { params: Promise.resolve({ id: "store-1" }) });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("cnpj_normalized");
+    expect(serialized).not.toContain("cnpj_root_hash");
+    expect(body.cnpjRegistered).toBe(true);
+    expect(body.name).toBe("Loja Atualizada");
+  });
+
   it("returns 404 when patching another user's store", async () => {
     const { StoreNotFoundError } = await import("@/lib/auth/store-ownership");
     mockRequireUserImpl.mockResolvedValue({ userId: "user-999", claims: { sub: "user-999" } });

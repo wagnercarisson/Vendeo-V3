@@ -6,6 +6,7 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { buildStoreResponse } from "@/lib/store-response";
+import { toPublicStoreDTO } from "@/lib/store-public-dto";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS } from "@/lib/constants";
 import { getCurrentVersion } from "@/lib/legal/document-versions";
 import { validateCnpj } from "@/lib/cnpj/validate";
@@ -374,8 +375,12 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
     const trialOffer = await maybeCompleteOnboardingAndStartTrial(String((rpcStore as Record<string, unknown>).id));
 
+    // CR-01: a linha crua do RPC (que contém cnpj_normalized/cnpj_root_hash)
+    // NUNCA é espalhada na resposta. O DTO é allowlisted e a confirmação
+    // fiscal viaja como booleano server-side (`cnpjRegistered`).
     const responseData = {
-      ...(rpcStore as Record<string, unknown>),
+      ...toPublicStoreDTO(rpcStore as Record<string, unknown>),
+      cnpjRegistered: true,
       cnpjMasked,
       onboardingGranted: rpcData.onboardingGranted ?? false,
       verificationStatus: rpcData.verificationStatus ?? verificationStatus,
@@ -434,8 +439,14 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
     const trialOffer = await maybeCompleteOnboardingAndStartTrial(String((draftRpcStore as Record<string, unknown>).id));
 
+    // CR-01: draft também passa pelo DTO; cnpjRegistered é sempre false aqui.
     return NextResponse.json(
-      { ...(draftRpcStore as Record<string, unknown>), onboardingGranted: draftRpcData.onboardingGranted ?? false, trialOffer },
+      {
+        ...toPublicStoreDTO(draftRpcStore as Record<string, unknown>),
+        cnpjRegistered: false,
+        onboardingGranted: draftRpcData.onboardingGranted ?? false,
+        trialOffer,
+      },
       { status: 201 }
     );
   } catch (error) {
@@ -456,7 +467,7 @@ export const GET = apiHandler(async (_request: NextRequest) => {
     }
 
     const data = await buildStoreResponse(store);
-    return NextResponse.json(data);
+    return NextResponse.json(toPublicStoreDTO(data as unknown as Record<string, unknown>));
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

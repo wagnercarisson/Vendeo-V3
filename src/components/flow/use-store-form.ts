@@ -387,7 +387,7 @@ export function useStoreForm({ initialStore, fiscalWriteBlocked = false }: { ini
         // (`cnpj_normalized` não vazio na resposta do create). Derivar de
         // `formData.cnpj` marcava a loja como fiscal mesmo quando o POST draft
         // não persistiu o CNPJ, levando a PATCH/409 e perda da sessão.
-        if (typeof saved.cnpj_normalized === "string" && saved.cnpj_normalized !== "") {
+        if (saved.cnpjRegistered === true) {
           setHasExistingCnpj(true);
         }
         setSuccessMessage("Loja salva. Agora configure a direção visual.");

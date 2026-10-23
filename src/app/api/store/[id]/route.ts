@@ -5,6 +5,7 @@ import { requireOwnership, StoreNotFoundError } from "@/lib/auth/store-ownership
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { buildStoreResponse } from "@/lib/store-response";
+import { toPublicStoreDTO } from "@/lib/store-public-dto";
 import { STORE_SUBSEGMENTS } from "@/lib/constants";
 import { maybeCompleteOnboardingAndStartTrial } from "@/lib/credit/trial-offer/completion";
 
@@ -37,7 +38,9 @@ export const GET = apiHandler(async (
     const user = await requireUser();
     const store = await requireOwnership(id, user.userId);
     const data = await buildStoreResponse(store);
-    return NextResponse.json(data, { status: 200 });
+    // CR-01: buildStoreResponse espalha a linha de `stores` (inclui
+    // cnpj_normalized/cnpj_root_hash). A resposta passa pelo DTO allowlisted.
+    return NextResponse.json(toPublicStoreDTO(data as unknown as Record<string, unknown>), { status: 200 });
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -239,7 +242,11 @@ export const PATCH = apiHandler(async (
 
     const trialOffer = await maybeCompleteOnboardingAndStartTrial(id);
 
-    return NextResponse.json({ ...(data as Record<string, unknown>), trialOffer }, { status: 200 });
+    // CR-01: PATCH também devolve DTO allowlisted (nunca `data` cru).
+    return NextResponse.json(
+      { ...toPublicStoreDTO(data as Record<string, unknown>), trialOffer },
+      { status: 200 }
+    );
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

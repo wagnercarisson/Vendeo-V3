@@ -15,6 +15,7 @@ import { z } from "zod";
 import { validateCnpj } from "@/lib/cnpj/validate";
 import { evaluateFreemiumEligibility } from "@/lib/freemium/freemium-risk-service";
 import { maybeCompleteOnboardingAndStartTrial } from "@/lib/credit/trial-offer/completion";
+import { toPublicStoreDTO, toPublicStoreList } from "@/lib/store-public-dto";
 
 const UpdateCnpjSchema = z.object({
   storeId: z.string().uuid(),
@@ -117,7 +118,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
     // no-op de sucesso — evita o 409 cnpj_already_set quando o cliente
     // re-envia o mesmo CNPJ (desync de hasExistingCnpj no onboarding).
     if (store.cnpj_normalized === canonical) {
-      return NextResponse.json({ success: true, store: [store] });
+      // CR-01: replay idempotente também passa pelo DTO allowlisted.
+      return NextResponse.json({
+        success: true,
+        store: [toPublicStoreDTO(store as unknown as Record<string, unknown>)],
+      });
     }
 
     const cnpjRootHash = hashCnpjRoot(canonical.slice(0, 8));
@@ -261,7 +266,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
     const trialOffer = await maybeCompleteOnboardingAndStartTrial(store.id);
 
-    return NextResponse.json({ success: true, store: data, trialOffer });
+    // CR-01: nunca devolver `data` (linha crua de `stores`) — DTO allowlisted.
+    return NextResponse.json({ success: true, store: toPublicStoreList(data), trialOffer });
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

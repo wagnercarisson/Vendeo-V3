@@ -138,7 +138,13 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     mockResolve.mockResolvedValue(sampleLookupResolved);
     createStoreResult = {
       data: {
-        store: [{ id: "store-1", name: "Minha Loja", segment: "moda-calcados-acessorios" }],
+        store: [{
+          id: "store-1",
+          name: "Minha Loja",
+          segment: "moda-calcados-acessorios",
+          cnpj_normalized: "12345678000195",
+          cnpj_root_hash: "mocked_hash_64chars",
+        }],
         onboardingGranted: true,
         verificationStatus: "approved",
       },
@@ -159,6 +165,11 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     expect(body.id).toBe("store-1");
     expect(body.onboardingGranted).toBe(true);
     expect(body.verificationStatus).toBe("approved");
+    expect(body.cnpjRegistered).toBe(true);
+    // CR-01: identificadores internos não podem voltar nem serializados.
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("cnpj_normalized");
+    expect(serialized).not.toContain("cnpj_root_hash");
     // D7: city/state preenchidos → motor chamado com valores non-null
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({
       city: "São Paulo",
@@ -414,7 +425,13 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
   it("creates draft store when CNPJ is missing (F36 D15 — no grant, no p_cnpj_normalized)", async () => {
     createStoreResult = {
       data: {
-        store: [{ id: "store-draft-1", name: "Loja", segment: "moda-calcados-acessorios" }],
+        store: [{
+          id: "store-draft-1",
+          name: "Loja",
+          segment: "moda-calcados-acessorios",
+          cnpj_normalized: null,
+          cnpj_root_hash: "mocked_hash_64chars",
+        }],
         onboardingGranted: false,
       },
       error: null,
@@ -431,6 +448,11 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     expect(body.id).toBe("store-draft-1");
     // Loja draft nunca recebe grant freemium
     expect(body.onboardingGranted).toBe(false);
+    // CR-01: draft nunca confirma CNPJ e não vaza identificadores.
+    expect(body.cnpjRegistered).toBe(false);
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("cnpj_normalized");
+    expect(serialized).not.toContain("cnpj_root_hash");
     // Modo draft usa create_store_draft SEM p_cnpj_normalized
     expect(mockRpc).toHaveBeenCalledWith("create_store_draft", expect.objectContaining({
       p_user_id: "00000000-0000-0000-0000-000000000001",
@@ -493,7 +515,7 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     mockResolve.mockResolvedValue(sampleLookupResolved);
     createStoreResult = {
       data: {
-        store: [{ id: "store-atomic", name: "Loja Atomica", segment: "moda-calcados-acessorios", cnpj_normalized: "12345678000195", razao_social: "MINHA LOJA LTDA", nome_fantasia: "Minha Loja" }],
+        store: [{ id: "store-atomic", name: "Loja Atomica", segment: "moda-calcados-acessorios", cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars", razao_social: "MINHA LOJA LTDA", nome_fantasia: "Minha Loja" }],
         onboardingGranted: true,
         verificationStatus: "approved",
       },
@@ -512,6 +534,9 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.id).toBe("store-atomic");
+    expect(body.cnpjRegistered).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("cnpj_normalized");
+    expect(JSON.stringify(body)).not.toContain("cnpj_root_hash");
 
     // Verify all three fiscal fields are passed in a single RPC call
     expect(mockRpc).toHaveBeenCalledWith("create_store_with_cnpj", expect.objectContaining({
@@ -576,7 +601,13 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     };
     createStoreResult = {
       data: {
-        store: [{ id: "store-used", name: "Mesmo CNPJ", segment: "moda-calcados-acessorios" }],
+        store: [{
+          id: "store-used",
+          name: "Mesmo CNPJ",
+          segment: "moda-calcados-acessorios",
+          cnpj_normalized: "12345678000195",
+          cnpj_root_hash: "mocked_hash_64chars",
+        }],
         onboardingGranted: false,
         verificationStatus: "rejected",
       },

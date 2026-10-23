@@ -426,7 +426,7 @@ describe("useStoreForm.autoSave — ramo fiscal (draft → fiscal)", () => {
 
   it("(a) create com CNPJ alfanumérico válido → um POST canônico; próxima chamada vira PATCH sem update-cnpj", async () => {
     const fetchMock = setupFetch({
-      create: { ok: true, data: { id: "store-created-1", cnpj_normalized: VALID_ALPHA_CNPJ } },
+      create: { ok: true, data: { id: "store-created-1", cnpjRegistered: true } },
       patch: { ok: true, data: { id: "store-created-1" } },
     });
     const { result } = setupCreateForm(VALID_ALPHA_MASKED);
@@ -522,7 +522,7 @@ describe("useStoreForm.autoSave — ramo fiscal (draft → fiscal)", () => {
     expect(result.current.storeId).toBeNull();
   });
 
-  it("(g) create válido sem cnpj_normalized na resposta → próxima save() chama update-cnpj (sem marcação otimista)", async () => {
+  it("(g) create válido sem cnpjRegistered na resposta → próxima save() chama update-cnpj (sem marcação otimista)", async () => {
     const fetchMock = setupFetch({
       create: { ok: true, data: { id: "store-created-1" } },
       updateCnpj: { ok: true, data: { success: true } },

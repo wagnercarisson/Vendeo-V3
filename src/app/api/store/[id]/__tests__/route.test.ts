@@ -138,6 +138,35 @@ describe('GET /api/store/[id] — enriched with identity', () => {
     expect(body.visual_signature_url).toBeNull();
   });
 
+  it('CR-01: sanitiza cnpj_normalized/cnpj_root_hash e preserva identity/visual_signature_attempts', async () => {
+    vi.mocked(requireOwnership).mockResolvedValue({
+      ...mockStore,
+      cnpj_normalized: '12345678000195',
+      cnpj_root_hash: 'root_hash_secreto',
+      visual_signature_attempts: 2,
+    });
+    vi.mocked(buildStoreResponse).mockResolvedValue({
+      ...mockEnrichedResponse,
+      cnpj_normalized: '12345678000195',
+      cnpj_root_hash: 'root_hash_secreto',
+      visual_signature_attempts: 2,
+    });
+
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain('cnpj_normalized');
+    expect(serialized).not.toContain('cnpj_root_hash');
+    expect(body.identity).toBeDefined();
+    expect(body.identity.identityState).toBe('text_only');
+    expect(body.visual_signature_attempts).toBe(2);
+    expect(body.cnpjRegistered).toBe(true);
+  });
+
   it('returns 404 for non-existent store', async () => {
     const { StoreNotFoundError } = await import('@/lib/auth/store-ownership');
     vi.mocked(requireOwnership).mockRejectedValue(new StoreNotFoundError());

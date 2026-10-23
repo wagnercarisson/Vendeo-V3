@@ -106,7 +106,7 @@ import { hashCnpjRoot } from "@/lib/cnpj/hash";
 describe("POST /api/store/update-cnpj", () => {
   it("updates CNPJ for legacy store without granting credits", async () => {
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195" }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -121,6 +121,11 @@ describe("POST /api/store/update-cnpj", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
+    expect(Array.isArray(body.store)).toBe(true);
+    expect(body.store[0].cnpjRegistered).toBe(true);
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("cnpj_normalized");
+    expect(serialized).not.toContain("cnpj_root_hash");
     // Deve usar razao_social oficial, não o input do cliente
     expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
       p_store_id: STORE_UUID,
@@ -134,7 +139,7 @@ describe("POST /api/store/update-cnpj", () => {
 
   it("inserts consumed entitlement without granting credits", async () => {
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -154,7 +159,7 @@ describe("POST /api/store/update-cnpj", () => {
 
   it("uses official razao_social from CnpjVerificationService when resolved", async () => {
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -211,7 +216,7 @@ describe("POST /api/store/update-cnpj", () => {
       is_test_store: true,
     } as import("@/lib/store").Store);
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -231,7 +236,7 @@ describe("POST /api/store/update-cnpj", () => {
 
   it("calculates cnpj_validation_score when resolved", async () => {
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -274,6 +279,7 @@ describe("POST /api/store/update-cnpj", () => {
       id: STORE_UUID,
       name: "Loja Marise",
       cnpj_normalized: "12345678000195",
+      cnpj_root_hash: "mocked_hash_64chars",
     } as import("@/lib/store").Store);
 
     const { POST } = await import("../route");
@@ -286,6 +292,12 @@ describe("POST /api/store/update-cnpj", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
+    // Replay também passa pelo DTO: array preservado e sem vazamento de CNPJ.
+    expect(Array.isArray(body.store)).toBe(true);
+    expect(body.store[0].cnpjRegistered).toBe(true);
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain("cnpj_normalized");
+    expect(serialized).not.toContain("cnpj_root_hash");
     // Nenhuma consulta externa/RPC: nada a fazer, CNPJ já persistido.
     expect(mockRpc).not.toHaveBeenCalled();
     expect(mockResolve).not.toHaveBeenCalled();
@@ -294,7 +306,7 @@ describe("POST /api/store/update-cnpj", () => {
   it("persiste CNPJ alfanumérico canônico e hasheia a raiz canônica", async () => {
     const chain = mockFromNoDuplicate();
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -340,7 +352,7 @@ describe("POST /api/store/update-cnpj", () => {
       is_test_store: true,
     } as import("@/lib/store").Store);
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -416,7 +428,7 @@ describe("POST /api/store/update-cnpj", () => {
 
   it("passes verification params to RPC when resolved", async () => {
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -465,7 +477,7 @@ describe("POST /api/store/update-cnpj", () => {
 
   it("Teste 26 (D7a): keeps store unverified when city/state absent — motor NOT called, no auto-approval", async () => {
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -501,7 +513,7 @@ describe("POST /api/store/update-cnpj", () => {
       signals: { situacaoCadastral: "INAPTA" },
     });
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -539,7 +551,7 @@ describe("POST /api/store/update-cnpj", () => {
       signals: { cnaeCompatible: "incompatible" },
     });
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -573,7 +585,7 @@ describe("POST /api/store/update-cnpj", () => {
       signals: { cnaeCompatible: "compatible" },
     });
     updateCnpjResult = {
-      data: { store: [{ id: STORE_UUID }] },
+      data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
       error: null,
     };
 
@@ -614,7 +626,7 @@ describe("POST /api/store/update-cnpj", () => {
       },
       error: null,
     };
-    updateCnpjResult = { data: { store: [{ id: STORE_UUID }] }, error: null };
+    updateCnpjResult = { data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] }, error: null };
     mockEvaluateFreemium.mockReturnValue({
       decision: "approved",
       reasons: [],
@@ -658,7 +670,7 @@ describe("POST /api/store/update-cnpj", () => {
       },
       error: null,
     };
-    updateCnpjResult = { data: { store: [{ id: STORE_UUID }] }, error: null };
+    updateCnpjResult = { data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] }, error: null };
     mockEvaluateFreemium.mockReturnValue({
       decision: "reject",
       reasons: ["beneficiary_already_used"],
@@ -695,7 +707,7 @@ describe("POST /api/store/update-cnpj", () => {
       segment: "moda-calcados-acessorios",
     } as import("@/lib/store").Store);
     policyContextResult = { data: null, error: { message: "rpc unavailable" } };
-    updateCnpjResult = { data: { store: [{ id: STORE_UUID }] }, error: null };
+    updateCnpjResult = { data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] }, error: null };
     mockEvaluateFreemium.mockReturnValue({
       decision: "approved",
       reasons: [],
