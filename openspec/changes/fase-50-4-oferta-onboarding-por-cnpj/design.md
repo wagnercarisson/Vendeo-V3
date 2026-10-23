@@ -117,7 +117,9 @@ Além da inscrição, há decisões que leem ou escrevem estado de benefício po
 
 ### D4 — Elegibilidade separada por coorte
 
-`trial_offer_eligibility(p_store_id, p_now)` passa a retornar também `policy_cohort` e `beneficiary_cnpj_normalized` **somente para uso interno**; a camada de aplicação não devolve o CNPJ ao cliente.
+`trial_offer_eligibility(p_store_id, p_now)` retorna apenas `eligible`, `reason`, `policy_cohort` e `existing_enrollment_id` da própria loja. Não retorna `beneficiary_cnpj_normalized`, `root_hash` nem IDs de outra filial; a identidade do beneficiário permanece interna à função e à tabela, e a aplicação resolve coorte/elegibilidade sem receber o CNPJ.
+
+> **Nota de correção (2026-10-23):** o texto original desta decisão previa retornar `beneficiary_cnpj_normalized` também, “somente para uso interno”. O contrato efetivamente implementado e verificado — `20261022000002_f50_4_enrollment_identity.sql#L383-L575` e `50.4-VERIFICATION.md` (truth 3) — retorna somente os quatro campos acima. A nota preserva o racional original e corrige a descrição do contrato real.
 
 Ordem de avaliação:
 
