@@ -289,10 +289,10 @@ Plans:
 ### Phase 50.4: F50.4 - Oferta de onboarding individualizada por CNPJ completo
 
 **Goal:** Permitir que matriz e filiais recebam individualmente a oferta atual de onboarding, uma vez por CNPJ completo, preservando contas, benef�cios e pol�ticas anteriores, com identidade imut�vel do benefici�rio, coortes expl�citas, concorr�ncia segura entre programas, migration fail-closed e ativa��o produtiva fora desta execu��o.
-**Status:** **Verificada com limitações - gap closure em execução (planos 11-12 executados, plano 13 pendente), aguardando re-review.** Base OpenSpec em openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/; planos em .planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/.
+**Status:** **Verificada com limitações – gap closure executada (planos 11–13); re-review final registrado em `50.4-GAP-CLOSURE-REVIEW.md`.** Nenhuma publicação/deploy/merge/ativação; `npm test` permanece não-verde (22 falhas D2). Base OpenSpec em openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/; planos em .planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/.
 **Depends on:** F50.2 (oferta ativa; `launch_at` preservado), F50.3 (CNPJ can�nico num�rico e alfanum�rico), F32/F33 (freemium e verifica��o cadastral) e F34 (readiness).
 **Requirements**: REQ-50.4-01, REQ-50.4-02, REQ-50.4-03, REQ-50.4-04, REQ-50.4-05, REQ-50.4-06, REQ-50.4-07, REQ-50.4-08, REQ-50.4-09, REQ-50.4-10
-**Plans:** 13 plans (12 complete + 1 gap closure pending)
+**Plans:** 13/13 plans complete (10 originais + 3 gap closure)
 
 Plans:
 - [x] 50.4-01-PLAN.md - Baseline + Migration M1 (`individual_launch_at` + RPC de ativa��o auditada) e prova SQL de idempot�ncia/recusas.
@@ -307,7 +307,7 @@ Plans:
 - [x] 50.4-09-PLAN.md - Gates, seguran�a ASVS L1, UAT de regress�o e nova pol�tica no descart�vel, encerramento sem publica��o.
 - [x] 50.4-11-PLAN.md - Gap closure: DTO público allowlisted (CR-01), CSRF em update-cnpj (CR-02), mensagem real (WR-02) e ambiguidade preservada (WR-03). **Executado localmente em 2026-10-23 (commits `f7f56195`, `e9b3bca7`, `467c0051`); testes focados 155/156, typecheck/lint pass; falha preexistente documentada do draft mode.**
 - [x] 50.4-12-PLAN.md - Gap closure: integridade do snapshot (WR-04), concorrência opt-in/evidência (WR-05), verificador de índice (IN-01), status de completion (IN-02) e 23505 para 409 (IN-04), com checkpoint para validação DB. **Executado em 2026-10-23 (commits `841bc745`, `931f5db8`, `e6079646`, `6c5823f7`, `c52aa48e`, `dab6b99b`); checkpoint autorizou PostgreSQL 17 descartável, 143 migrations, SQL 4/4 + 5/5, concorrência 14/14 e verificador 69/69; ambiente destruído; evidência fora de `.planning`.**
-- [ ] 50.4-13-PLAN.md - Gap closure: STRIDE consolidado (WR-01), reconciliação do UAT (IN-03), addendum no VERIFICATION e re-review final.
+- [x] 50.4-13-PLAN.md - Gap closure: STRIDE consolidado (WR-01), reconciliação do UAT (IN-03), addendum no VERIFICATION e re-review final. **Executado em 2026-10-23: `50.4-SECURITY.md` com STRIDE consolidado e correções cronológicas, `50.4-UAT.md` reconciliado, addendum no `50.4-VERIFICATION.md` e `50.4-GAP-CLOSURE-REVIEW.md`; testes focados 188 passed/14 skipped, typecheck/lint/`--skip-db`/OpenSpec pass; evidência DB reutilizada do plano 12 sem reconexão; `npm test` não executado (não-verde por D2).**
 
 ## Phase 56.1: Contrato produtivo, modelos e fallback
 
