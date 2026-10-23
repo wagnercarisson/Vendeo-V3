@@ -41,8 +41,9 @@ INSERT INTO public.stores (
    '00000000-0000-4000-8000-00000000a602', '44555666000200', 'root-snapshot-2',
    '2026-10-21T00:00:00Z', false),
   -- Loja sem CNPJ canônico: o snapshot não tem valor válido para comparar.
+  -- chk_stores_cnpj_atomic exige cnpj_root_hash = '' quando cnpj_normalized é NULL.
   ('00000000-0000-4000-8000-00000000b603', 'snapshot-no-cnpj', 'outros',
-   '00000000-0000-4000-8000-00000000a603', NULL, 'root-snapshot-3',
+   '00000000-0000-4000-8000-00000000a603', NULL, '',
    '2026-10-21T00:00:00Z', false);
 
 -- -----------------------------------------------------------------------------
