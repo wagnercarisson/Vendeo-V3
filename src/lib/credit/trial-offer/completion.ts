@@ -122,30 +122,21 @@ function mapStartResult(data: unknown): TrialOfferResult {
     };
   }
 
-  if (status === "offer_disabled") {
-    return {
-      status: "offer_disabled",
-      reason: sanitizeReason(record.reason, "offer_disabled"),
-    };
-  }
-
-  if (status === "expired_window") {
-    return {
-      status: "expired_window",
-      reason: sanitizeReason(record.reason, "expired_window"),
-    };
-  }
-
   if (status === "not_ready") {
     return { status: "not_ready", reason: sanitizeReason(record.reason, "not_ready") };
   }
 
+  // A RPC nunca devolve `expired_window`/`offer_disabled` em `status`: esses
+  // motivos chegam como `not_eligible` + `reason`. Preservamos o status
+  // derivado do motivo para a UI existente, sem ramos de status inexistentes.
+  const reason = sanitizeReason(record.reason ?? record.status, "not_eligible");
+  if (reason === "expired_window" || reason === "offer_disabled") {
+    return { status: reason, reason };
+  }
+
   // Motivos por coorte (F50.4) e demais recusas seguras permanecem como
   // `not_eligible` + motivo allowlisted.
-  return {
-    status: "not_eligible",
-    reason: sanitizeReason(record.reason ?? record.status, "not_eligible"),
-  };
+  return { status: "not_eligible", reason };
 }
 
 async function runTrialOffer(storeId: string): Promise<TrialOfferResult> {

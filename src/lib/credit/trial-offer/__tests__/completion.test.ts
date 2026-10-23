@@ -94,10 +94,13 @@ describe("maybeCompleteOnboardingAndStartTrial", () => {
     expect(result.enrollment).toBeUndefined();
   });
 
-  it("preserva expired_window e offer_disabled com motivo seguro", async () => {
+  it("mapeia not_eligible + reason expired_window/offer_disabled para o status da UI", async () => {
     mockRpc
       .mockResolvedValueOnce({ data: completedPayload(), error: null })
-      .mockResolvedValueOnce({ data: { status: "expired_window", reason: "expired_window" }, error: null });
+      .mockResolvedValueOnce({
+        data: { status: "not_eligible", reason: "expired_window" },
+        error: null,
+      });
 
     const expired = await maybeCompleteOnboardingAndStartTrial(storeId);
     expect(expired.status).toBe("expired_window");
@@ -106,7 +109,10 @@ describe("maybeCompleteOnboardingAndStartTrial", () => {
     mockRpc.mockReset();
     mockRpc
       .mockResolvedValueOnce({ data: completedPayload(), error: null })
-      .mockResolvedValueOnce({ data: { status: "offer_disabled", reason: "offer_disabled" }, error: null });
+      .mockResolvedValueOnce({
+        data: { status: "not_eligible", reason: "offer_disabled" },
+        error: null,
+      });
 
     const disabled = await maybeCompleteOnboardingAndStartTrial(storeId);
     expect(disabled.status).toBe("offer_disabled");

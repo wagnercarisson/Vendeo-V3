@@ -324,7 +324,7 @@ describe("POST /api/store — modo verified/fiscal (com CNPJ)", () => {
         return Promise.resolve({ data: { completed: true }, error: null });
       }
       if (rpcName === "start_trial_offer_enrollment") {
-        return Promise.resolve({ data: { status: "offer_disabled", reason: "offer_disabled" }, error: null });
+        return Promise.resolve({ data: { status: "not_eligible", reason: "offer_disabled" }, error: null });
       }
       return Promise.resolve({
         data: { store: [{ id: "store-off", name: "Loja Oferta Off", user_id: "user-123" }], onboardingGranted: false },
