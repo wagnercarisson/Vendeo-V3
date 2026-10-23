@@ -2,9 +2,13 @@
  * F50.4 — Prova REAL de concorrência cruzada em PostgreSQL descartável.
  *
  * Regras de segurança:
- *  - Só executa contra 127.0.0.1 na porta dedicada (F50_4_DB_PORT) e exige a
+ *  - Opt-in explícito por F50_4_RUN_CONCURRENCY=1. Sem opt-in, a suíte é
+ *    marcada como skipped e não abre conexão nem falha na coleta.
+ *  - Com opt-in, exige 127.0.0.1 na porta dedicada (F50_4_DB_PORT) e a
  *    sentinela `public.f50_4_harness_identity` com purpose='disposable'.
  *  - Falha fechada se a URL não for informada ou apontar para outro alvo.
+ *  - Evidência vai para F50_4_EVIDENCE_PATH ou para o diretório temporário do
+ *    SO; caminhos dentro de `.planning` são recusados antes da escrita.
  *  - Nunca registra CNPJ completo, root_hash, senha ou connection string.
  *
  * Método: duas conexões `pg` independentes, BEGIN explícito, lock_timeout e
@@ -12,19 +16,45 @@
  * espera real. `Promise.all` sozinho NÃO é usado como prova de serialização.
  */
 import { readFileSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-const EVIDENCE_JSON = path.resolve(
-  process.cwd(),
-  ".planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-10-EVIDENCE.json",
-);
+const RUN_CONCURRENCY = process.env.F50_4_RUN_CONCURRENCY === "1";
 const TEST_FILE = fileURLToPath(import.meta.url);
 
+if (!RUN_CONCURRENCY) {
+  console.info(
+    "[f50-4-concurrency] suite skipped: set F50_4_RUN_CONCURRENCY=1 and F50_4_DB_URL to run against the disposable database.",
+  );
+}
+
+/** Evidência nunca é escrita em `.planning` (artefatos versionados). */
+function resolveEvidencePath(): string {
+  const configured = process.env.F50_4_EVIDENCE_PATH;
+  const target = configured
+    ? path.resolve(configured)
+    : path.join(os.tmpdir(), "f50-4-concurrency-evidence.json");
+
+  const planningRoot = path.resolve(process.cwd(), ".planning");
+  const relative = path.relative(planningRoot, target);
+  const insidePlanning =
+    relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  if (insidePlanning) {
+    throw new Error(
+      "F50_4_EVIDENCE_PATH não pode apontar para .planning: a evidência deve ficar fora dos artefatos versionados.",
+    );
+  }
+  if (path.basename(target) === "50.4-10-EVIDENCE.json") {
+    throw new Error("F50_4_EVIDENCE_PATH não pode sobrescrever 50.4-10-EVIDENCE.json.");
+  }
+  return target;
+}
+
 // ---------------------------------------------------------------------------
-// Alvo fail-closed
+// Alvo fail-closed (avaliado apenas com opt-in explícito)
 // ---------------------------------------------------------------------------
 const DB_URL = process.env.F50_4_DB_URL ?? process.env.TEST_DATABASE_URL ?? "";
 const EXPECTED_PORT = process.env.F50_4_DB_PORT ?? "54422";
@@ -55,7 +85,7 @@ function assertDisposableTarget(): string {
   return DB_URL;
 }
 
-const CONNECTION_STRING = assertDisposableTarget();
+const CONNECTION_STRING = RUN_CONCURRENCY ? assertDisposableTarget() : "";
 
 // ---------------------------------------------------------------------------
 // Constantes temporais (UTC) — nenhuma derivada de CNPJ real
@@ -344,6 +374,7 @@ const grantMonthlyCapped = (client: Client) =>
 // Setup / teardown
 // ---------------------------------------------------------------------------
 beforeAll(async () => {
+  if (!RUN_CONCURRENCY) return;
   monitor = new Client({
     connectionString: CONNECTION_STRING,
   });
@@ -385,6 +416,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  if (!RUN_CONCURRENCY) return;
   const stores = createdStoreIds.splice(0);
   const users = createdUserIds.splice(0);
   if (stores.length === 0 && users.length === 0) return;
@@ -412,6 +444,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
+  if (!RUN_CONCURRENCY) return;
   await monitor.query(
     "update public.trial_offer_settings set individual_launch_at = $1 where offer_key = 'trial_28d_v1'",
     [originalIndividualLaunchAt],
@@ -434,7 +467,7 @@ afterAll(async () => {
       scenarios,
     },
   };
-  writeFileSync(EVIDENCE_JSON, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  writeFileSync(resolveEvidencePath(), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 
   await monitor.end().catch(() => undefined);
 });
@@ -442,7 +475,9 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 // Cenários
 // ---------------------------------------------------------------------------
-describe("F50.4 concorrência cruzada em PostgreSQL real (descartável)", () => {
+describe.skipIf(!RUN_CONCURRENCY)(
+  "F50.4 concorrência cruzada em PostgreSQL real (descartável, opt-in F50_4_RUN_CONCURRENCY=1)",
+  () => {
   it("trial_x_demo_trial_first", async () => {
     const root = `root_conc_trial_first_${crypto.randomUUID()}`;
     const trialStore = await createStore({
