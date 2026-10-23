@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: completed_with_limitations
-last_updated: "2026-10-23T19:20:13.000Z"
+last_updated: "2026-10-23T19:58:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 9
-  total_plans: 90
-  completed_plans: 79
+  total_plans: 93
+  completed_plans: 91
   percent: 75
 ---
 
@@ -26,6 +26,8 @@ progress:
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
+
+- **EXECUÇÃO 50.4-12 — Gap closure WR-04/WR-05/IN-01/IN-02/IN-04: EXECUTADA COM VALIDAÇÃO DB AUTORIZADA (2026-10-23); AGUARDANDO PLANO 13.** Commits atômicos `841bc745` (migration M4 + suíte SQL + fixtures), `931f5db8` (concorrência opt-in/fail-closed), `e6079646` (verificador índice/trigger/ledger), `6c5823f7` (status de completion), `c52aa48e` (23505 de `operation_id` → 409) e `dab6b99b` (fixture sem CNPJ). Checkpoint `authorize-disposable` aprovado: PostgreSQL 17.6 local `f50-4-disposable-20261023-p12-dbval` (127.0.0.1:54422), **143 migrations** (inclui `20261023000001`), SQL explícito **4/4**, regressão SQL **5/5**, concorrência **14/14** (0 deadlocks), verificador **69/69** (ledger/triggers/grants, sem índice único global em `root_hash`), fingerprint `2a299f49332bbef9b567e83ed95f0cab`; ambiente **destruído** (destroy exit 0, 0 containers, workdir removido). Evidência durável fora de `.planning` em `C:\Users\wagne\AppData\Local\Temp\f50-4-evidence\` (`50.4-12-db-evidence.json`, `50.4-12-db-verification.txt`, `50.4-12-sql-explicit.txt`, `50.4-12-sql-default.txt`, `50.4-12-concurrency-evidence.json`) para reuso pelo plano 13 **sem reconectar**. `npm test` completo **não executado** e permanece não-verde (22 falhas D2). Sem push, merge, deploy, sync/archive ou ativação produtiva. SUMMARY em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-12-SUMMARY.md`.
 
 - **EXECUÇÃO 50.4-11 — Gap closure CR-01/CR-02/WR-02/WR-03: EXECUTADA LOCALMENTE (2026-10-23); AGUARDANDO PLANO 12.** Commits atômicos `f7f56195` (DTO allowlisted), `e9b3bca7` (DTO nas cinco superfícies + `cnpjRegistered`) e `467c0051` (CSRF em `update-cnpj`, mensagem real e ambiguidade). Testes focados **155/156**, typecheck/lint **pass**; única falha é a preexistente `store-ownership-api > draft mode`, já diagnosticada no D2 e não corrigida por restrição. `npm test` completo **não executado** e permanece não-verde (22 falhas). Sem banco, migration, UAT, push, merge, deploy ou ativação. SUMMARY em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-11-SUMMARY.md`.
 
