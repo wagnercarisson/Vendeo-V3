@@ -289,7 +289,7 @@ Plans:
 ### Phase 50.4: F50.4 - Oferta de onboarding individualizada por CNPJ completo
 
 **Goal:** Permitir que matriz e filiais recebam individualmente a oferta atual de onboarding, uma vez por CNPJ completo, preservando contas, benefï¿½cios e polï¿½ticas anteriores, com identidade imutï¿½vel do beneficiï¿½rio, coortes explï¿½citas, concorrï¿½ncia segura entre programas, migration fail-closed e ativaï¿½ï¿½o produtiva fora desta execuï¿½ï¿½o.
-**Status:** **Implementada — aguardando verificação/aceite.** Base OpenSpec em `openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/`; planos em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/`.
+**Status:** **Verificada com limitações — aguardando revisão.** Base OpenSpec em `openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/`; planos em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/`.
 **Depends on:** F50.2 (oferta ativa; `launch_at` preservado), F50.3 (CNPJ canï¿½nico numï¿½rico e alfanumï¿½rico), F32/F33 (freemium e verificaï¿½ï¿½o cadastral) e F34 (readiness).
 **Requirements**: REQ-50.4-01, REQ-50.4-02, REQ-50.4-03, REQ-50.4-04, REQ-50.4-05, REQ-50.4-06, REQ-50.4-07, REQ-50.4-08, REQ-50.4-09, REQ-50.4-10
 **Plans:** 10/10 plans complete
