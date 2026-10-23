@@ -31,7 +31,16 @@ const ALLOWED_HOSTS = new Set(["127.0.0.1", "localhost"]);
 const PROJECT_PREFIX = "f50-4-disposable-";
 const CONTAINER_PORT_KEY = "5432/tcp";
 
-const REQUIRED_LEDGER_VERSIONS = ["20261022000001", "20261022000002", "20261022000003"];
+const REQUIRED_LEDGER_VERSIONS = [
+  "20261022000001",
+  "20261022000002",
+  "20261022000003",
+  "20261023000001",
+];
+const REQUIRED_TRIGGERS = [
+  "trg_trial_offer_enrollments_immutable_identity",
+  "trg_trial_offer_enrollments_validate_beneficiary",
+];
 const EXPECTED_RPCS = [
   "admin_activate_trial_offer_individual_launch",
   "trial_offer_policy_context",
@@ -293,6 +302,28 @@ async function assertLedger(client) {
   }
 }
 
+/**
+ * Detecta índice UNIQUE cujo conjunto de chaves é exatamente `(root_hash)` e
+ * que NÃO é parcial. Ignora schema, `IF NOT EXISTS`, nome e `USING btree`.
+ * Usado tanto contra `pg_indexes` quanto no self-check de `--skip-db`.
+ */
+function isGlobalUniqueRootHashIndex(indexdef) {
+  if (typeof indexdef !== "string") return false;
+  const def = indexdef.replace(/\s+/g, " ").trim();
+  if (!/^CREATE UNIQUE INDEX\b/i.test(def)) return false;
+
+  const keysMatch = def.match(/\(([^()]*)\)/);
+  if (!keysMatch) return false;
+  const keys = keysMatch[1]
+    .split(",")
+    .map((key) => key.trim().replace(/^"|"$/g, "").toLowerCase())
+    .filter(Boolean);
+
+  if (keys.length !== 1 || keys[0] !== "root_hash") return false;
+  if (/\bWHERE\b/i.test(def)) return false;
+  return true;
+}
+
 async function assertConstraints(client) {
   const constraints = await client.query(
     `SELECT conname, contype, convalidated, pg_get_constraintdef(oid) AS definition
@@ -353,6 +384,15 @@ async function assertConstraints(client) {
     Boolean(partialRoot),
     `índices=${[...indexByName.keys()].join(",")}`,
   );
+
+  const globalRootIndex = indexes.rows.find((row) =>
+    isGlobalUniqueRootHashIndex(row.indexdef ?? ""),
+  );
+  assert(
+    "NÃO existe índice único global em root_hash",
+    globalRootIndex === undefined,
+    `índice global detectado=${globalRootIndex?.indexname ?? "(nenhum)"}`,
+  );
 }
 
 async function assertTrigger(client) {
@@ -362,11 +402,13 @@ async function assertTrigger(client) {
         AND NOT tgisinternal`,
   );
   const names = new Set(triggers.rows.map((row) => row.tgname));
-  assert(
-    "trigger trg_trial_offer_enrollments_immutable_identity existe",
-    names.has("trg_trial_offer_enrollments_immutable_identity"),
-    `triggers=${[...names].join(",")}`,
-  );
+  for (const name of REQUIRED_TRIGGERS) {
+    assert(
+      `trigger ${name} existe`,
+      names.has(name),
+      `triggers=${[...names].join(",")}`,
+    );
+  }
 }
 
 async function assertGrants(client) {
@@ -427,7 +469,29 @@ function skipDb() {
     ["allowlist 127.0.0.1", ALLOWED_HOSTS.has("127.0.0.1")],
     ["porta derivada de F50_4_DB_PORT", dbPort() === String(process.env.F50_4_DB_PORT ?? 54422)],
     ["fingerprint SQL referencia schema_migrations", typeof FINGERPRINT_SQL === "string"],
-    ["ledger esperado definido", REQUIRED_LEDGER_VERSIONS.length === 3],
+    ["ledger esperado definido", REQUIRED_LEDGER_VERSIONS.length === 4],
+    [
+      "detector identifica índice único global em root_hash",
+      isGlobalUniqueRootHashIndex(
+        "CREATE UNIQUE INDEX uq_root ON public.trial_offer_enrollments USING btree (root_hash)",
+      ) === true,
+    ],
+    [
+      "detector ignora índice único parcial root_legacy",
+      isGlobalUniqueRootHashIndex(
+        "CREATE UNIQUE INDEX uq_root_legacy ON public.trial_offer_enrollments USING btree (root_hash) WHERE (policy_cohort = 'root_legacy'::text)",
+      ) === false,
+    ],
+    [
+      "detector ignora índice composto (store_id, root_hash)",
+      isGlobalUniqueRootHashIndex(
+        "CREATE UNIQUE INDEX uq_store_root ON public.trial_offer_enrollments USING btree (store_id, root_hash)",
+      ) === false,
+    ],
+    [
+      "trigger de integridade do snapshot exigido",
+      REQUIRED_TRIGGERS.includes("trg_trial_offer_enrollments_validate_beneficiary"),
+    ],
     ["RPCs esperadas definidas", EXPECTED_RPCS.length > 0],
     ["script existe no disco", crypto.createHash("md5").update(path.basename(SCRIPT_PATH)).digest("hex").length === 32],
   ];
