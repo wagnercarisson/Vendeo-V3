@@ -8,25 +8,27 @@ Motor de decisão determinístico `evaluateFreemiumEligibility` que avalia elegi
 
 ### Requirement: evaluateFreemiumEligibility — motor de decisão determinístico
 
-O sistema SHALL prover `evaluateFreemiumEligibility(input: FreemiumEligibilityInput): FreemiumEligibilityOutput` que avalia a elegibilidade do freemium com base em regras determinísticas (sem ML, sem IA) — ordem revisada **D10** e novos motivos **D8/D9/D7**.
+O sistema SHALL prover `evaluateFreemiumEligibility(input: FreemiumEligibilityInput): FreemiumEligibilityOutput` que avalia a elegibilidade do freemium com base em regras determinísticas (sem ML, sem IA) — ordem revisada **D10** e motivos **D8/D9/D7**, com separação entre a restrição legada por raiz e a elegibilidade da oferta F50.4 por CNPJ completo.
 
 ```typescript
 interface FreemiumEligibilityInput {
   cnpj: string;
   storeName: string;
-  city: string | null; // reflete a loja no banco (nullable); o pre-gate do caller/rota impede chamadas com null (D7)
-  state: string | null; // reflete a loja no banco (nullable); o pre-gate do caller/rota impede chamadas com null (D7)
+  city: string | null;
+  state: string | null;
   segment: string;
   officialData: CnpjLookupData | null;
   lookupOutcome: 'resolved' | 'not_found' | 'unavailable';
   rootHash: string;
-  rootEligible: boolean; // resolvido externamente — NÃO consultar Supabase dentro da função
+  rootEligible: boolean; // política legada por raiz
+  policyCohort?: 'root_legacy' | 'per_cnpj_f50_4'; // resolvido externamente
+  beneficiaryEligible?: boolean; // política por CNPJ completo na coorte F50.4
 }
 
 interface FreemiumEligibilityOutput {
   decision: "approved" | "review" | "reject" | "defer";
   reasons: string[];
-  score: number; // 0-100
+  score: number;
   signals: {
     nameSimilarity: number | null;
     cityMatch: boolean | null;
@@ -34,7 +36,8 @@ interface FreemiumEligibilityOutput {
     cnpjExists: boolean | null;
     situacaoCadastral: string | null;
     rootEligible: boolean | null;
-    cnaeCompatible: CnaeCompatibility | null; // "compatible" | "incompatible" | "unknown" — preenchido na F42 (D9)
+    beneficiaryEligible?: boolean | null;
+    cnaeCompatible: CnaeCompatibility | null;
   };
 }
 ```
@@ -43,20 +46,22 @@ interface FreemiumEligibilityOutput {
 
 **Ordem do motor (D10):**
 1. CNPJ existe (resolved)? NÃO → reject `cnpj_not_found` / defer `api_unavailable` (sem dados)
-2. Situação cadastral normalizada == `ATIVA`? (`BAIXADA` → reject `cnpj_baixada`; `NULA` → reject `cnpj_nula`; não-vazia e outro valor → review `situacao_nao_ativa`; ausente/inválida em resposta resolvida → defer `dados_oficiais_incompletos`) — **D8**
-3. Raiz CNPJ já usada? SIM → reject `root_already_used`
+2. Situação cadastral normalizada == `ATIVA`? (`BAIXADA` → reject `cnpj_baixada`; `NULA` → reject `cnpj_nula`; não-vazia e outro valor → review `situacao_nao_ativa`; ausente/inválida em resposta resolvida → defer `dados_oficiais_incompletos`)
+3. Restrição de benefício:
+   - `policyCohort = 'per_cnpj_f50_4'`: se `beneficiaryEligible === false` → reject `beneficiary_already_used`; `rootEligible` NÃO é usado para rejeitar por outra filial;
+   - caso contrário (`root_legacy` ou coorte ausente): se `rootEligible === false` → reject `root_already_used`
 4. Similaridade nome (informado × oficial) ≥ 0.6? NÃO → review `nome_divergente`
-5. Cidade/UF (sempre preenchidas aqui — pré-gate): sem correspondência oficial → review `localizacao_oficial_indisponivel`; divergentes → review `cidade_divergente`/`uf_divergente` — **D7**
-6. Segmento × CNAE: `incompatible` → review `segmento_cnae_divergente` (nunca reject) — **D9**
+5. Cidade/UF (sempre preenchidas aqui — pré-gate): sem correspondência oficial → review `localizacao_oficial_indisponivel`; divergentes → review `cidade_divergente`/`uf_divergente`
+6. Segmento × CNAE: `incompatible` → review `segmento_cnae_divergente` (nunca reject)
 7. Senão → approved (score final ≥ 60)
 
-Score/signals preservados (score final ≥ 60 para approved) com `cnaeCompatible` agora preenchido (antes `null`).
+O motor SHALL permanecer puro, sem consultar Supabase. Os callers SHALL resolver `policyCohort` e `beneficiaryEligible` server-side. Na coorte `root_legacy`, `beneficiaryEligible` SHALL espelhar `rootEligible` e o comportamento existente SHALL ser preservado.
 
 #### Scenario: APPROVED quando todos os sinais são positivos
 
 - **WHEN** `officialData` existe com `situacao_cadastral = 'ATIVA'`
-- **AND** `rootEligible = true`
-- **AND** `nameSimilarity >= 0.6` (com razão social ou nome fantasia)
+- **AND** a restrição de benefício aplicável é elegível
+- **AND** `nameSimilarity >= 0.6`
 - **AND** `cityMatch = true`
 - **AND** `stateMatch = true`
 - **THEN** `decision = 'approved'`
@@ -64,12 +69,11 @@ Score/signals preservados (score final ≥ 60 para approved) com `cnaeCompatible
 
 #### Scenario: APPROVED via nome fantasia
 
-- **WHEN** `storeName` diverge da razão social (similarity < 0.6)
-- **BUT** `storeName` coincide com nome fantasia (similarity >= 0.6)
+- **WHEN** `storeName` diverge da razão social mas coincide com o nome fantasia
 - **AND** demais sinais positivos
 - **THEN** `decision = 'approved'`
 
-#### Scenario: REJECT quando CNPJ não encontrado (not_found)
+#### Scenario: REJECT quando CNPJ não encontrado
 
 - **WHEN** `lookupOutcome = 'not_found'`
 - **THEN** `decision = 'reject'`
@@ -87,94 +91,44 @@ Score/signals preservados (score final ≥ 60 para approved) com `cnaeCompatible
 - **THEN** `decision = 'reject'`
 - **AND** `reasons` contém `cnpj_nula`
 
-#### Scenario: REJECT quando root não é elegível
+#### Scenario: REJECT legado por raiz já usada
 
-- **WHEN** `rootEligible = false` (raiz já recebeu onboarding)
+- **WHEN** `policyCohort = 'root_legacy'` e `rootEligible = false`
 - **THEN** `decision = 'reject'`
 - **AND** `reasons` contém `root_already_used`
+- **AND** `beneficiaryEligible` não altera a decisão legada
 
-#### Scenario: REVIEW quando situação é INAPTA (corrige lacuna F33)
+#### Scenario: Nova coorte não usa restrição de raiz
 
-- **WHEN** `situacaoCadastral = 'INAPTA'` (situação não-vazia ≠ ATIVA/BAIXADA/NULA)
-- **AND** demais sinais não configuram rejection puro
-- **THEN** `decision = 'review'`
-- **AND** `reasons` contém `situacao_nao_ativa`
+- **WHEN** `policyCohort = 'per_cnpj_f50_4'`, `rootEligible = false` e `beneficiaryEligible = true`
+- **THEN** o motor NÃO emite `root_already_used`
+- **AND** a decisão segue os demais sinais (não é rejeitada pela raiz)
+- **AND** a filial pode ser aprovada se os outros critérios forem satisfeitos
 
-#### Scenario: REVIEW quando situação é SUSPENSA (substitui situacao_suspensa no motor)
+#### Scenario: Nova coorte rejeita benefício do mesmo CNPJ
 
-- **WHEN** `situacaoCadastral = 'SUSPENSA'` (situação não-vazia ≠ ATIVA/BAIXADA/NULA)
-- **AND** demais sinais não configuram rejection puro
-- **THEN** `decision = 'review'`
-- **AND** `reasons` contém `situacao_nao_ativa` (novas avaliações NÃO emitem mais `situacao_suspensa` — legado de histórico, D8)
+- **WHEN** `policyCohort = 'per_cnpj_f50_4'` e `beneficiaryEligible = false`
+- **THEN** `decision = 'reject'`
+- **AND** `reasons` contém `beneficiary_already_used`
+- **AND** `reasons` NÃO contém `root_already_used`
 
-#### Scenario: DEFER quando situação ausente/inválida em resposta resolvida
+#### Scenario: Coorte ausente preserva compatibilidade
 
-- **WHEN** `lookupOutcome = 'resolved'`
-- **AND** `situacaoCadastral` é `null`/vazia/não normalizável
-- **THEN** `decision = 'defer'`
-- **AND** `reasons` contém `dados_oficiais_incompletos` (nunca aprova; não gera review ruidoso)
+- **WHEN** `policyCohort` não é informado e `rootEligible = false`
+- **THEN** o comportamento legado é preservado com `root_already_used`
+- **AND** nenhum caller existente quebra
 
-#### Scenario: REVIEW quando nome diverge
+#### Scenario: REVIEW por nome divergente
 
-- **WHEN** `nameSimilarity < 0.6` (com ambos razão social e nome fantasia)
-- **AND** demais sinais não configuram rejection puro
+- **WHEN** `nameSimilarity < 0.6` e os demais critérios permitem avaliação
 - **THEN** `decision = 'review'`
 - **AND** `reasons` contém `nome_divergente`
 
-#### Scenario: Pré-gate — cidade/UF ausentes deixam a loja em draft sem avaliação
+#### Scenario: Sinal de beneficiário é exposto
 
-- **WHEN** a loja não preencheu `city`/`state` no formulário (`city = null` e/ou `state = null`)
-- **THEN** o **caller/rota NÃO chama `evaluateFreemiumEligibility`** (pré-gate D7)
-- **AND** a loja permanece **draft/unverified**, sem avaliação e sem review (sem ruído na fila admin)
-- **AND** não há aprovação automática nem concessão
-- **AND** o motor nunca é consultado com `city`/`state` nulos — seu contrato não expõe estado "draft"
-
-#### Scenario: REVIEW quando cidade/UF preenchidas mas oficiais ausentes
-
-- **WHEN** a loja preencheu `city`/`state`
-- **AND** o provedor não fornece dados de localização (sem correspondência oficial)
-- **THEN** `decision = 'review'`
-- **AND** `reasons` contém `localizacao_oficial_indisponivel`
-
-#### Scenario: REVIEW quando cidade diverge
-
-- **WHEN** `cityMatch = false` (cidade informada ≠ cidade oficial)
-- **AND** demais sinais não configuram rejection puro
-- **THEN** `decision = 'review'`
-- **AND** `reasons` contém `cidade_divergente`
-
-#### Scenario: REVIEW quando UF diverge
-
-- **WHEN** `stateMatch = false` (UF informada ≠ UF oficial)
-- **AND** demais sinais não configuram rejection puro
-- **THEN** `decision = 'review'`
-- **AND** `reasons` contém `uf_divergente`
-
-#### Scenario: REVIEW quando segmento × CNAE é incompatible (nunca reject)
-
-- **WHEN** `cnaeCompatible = "incompatible"` (CNAE principal na lista negativa explícita do segmento)
-- **AND** demais sinais não configuram rejection puro
-- **THEN** `decision = 'review'`
-- **AND** `reasons` contém `segmento_cnae_divergente`
-- **AND** NUNCA é `reject` apenas por CNAE
-
-#### Scenario: CNAE unknown não influencia a decisão
-
-- **WHEN** `cnaeCompatible = "unknown"` (ausente, inválido ou fora das listas)
-- **AND** demais sinais positivos
-- **THEN** o sinal CNAE não penaliza — segue a avaliação dos demais sinais
-
-#### Scenario: DEFER quando lookup está indisponível (ambos provedores falham)
-
-- **WHEN** `lookupOutcome = 'unavailable'`
-- **THEN** `decision = 'defer'`
-- **AND** `reasons` contém `api_unavailable`
-
-#### Scenario: Ordem do motor — situação não ATIVA antes de raiz/nome/cidade/UF
-
-- **WHEN** uma loja tem `situacaoCadastral = 'INAPTA'` E `rootEligible = false`
-- **THEN** o motor avalia a situação primeiro (D10 ordem 2)
-- **AND** retorna `review` com `situacao_nao_ativa` (não `reject root_already_used`, pois a situação é avaliada antes da raiz)
+- **WHEN** `beneficiaryEligible` é informado
+- **THEN** `signals.beneficiaryEligible` reflete o valor
+- **AND** o score e a ordem D10 permanecem determinísticos
 
 ### Requirement: normalizeCity — comparação ignorando acentos e case
 
@@ -189,3 +143,27 @@ O sistema SHALL prover `normalizeCity(city: string): string` que normaliza a cid
 
 - **WHEN** `normalizeCity("São Paulo")` é comparado com `normalizeCity("São Bernardo do Campo")`
 - **THEN** são diferentes
+
+### Requirement: Mensagem de restrição compatível com a coorte
+
+O sistema SHALL NOT apresentar a mensagem “Loja criada como filial. Esta empresa já utilizou o benefício de boas-vindas.” quando a loja é elegível à oferta F50.4. Para a coorte `per_cnpj_f50_4`, mensagens de restrição SHALL se referir ao benefício do mesmo CNPJ completo, quando aplicável, e SHALL NOT prometer “créditos de boas-vindas” que a política legada não concede à filial.
+
+A mensagem SHALL continuar segura, sem expor CNPJ completo, `root_hash` ou dados de outra filial.
+
+#### Scenario: Filial elegível não recebe mensagem de raiz usada
+
+- **WHEN** a filial tem CNPJ completo novo e é elegível à F50.4, mas a raiz já usou o onboarding legado
+- **THEN** a resposta não usa a mensagem de “já utilizou o benefício” por causa da raiz
+- **AND** a loja é criada e pode seguir o onboarding da oferta
+
+#### Scenario: Mesmo CNPJ recebe mensagem própria
+
+- **WHEN** o mesmo CNPJ completo já consumiu benefício inicial
+- **THEN** a resposta informa a restrição do benefício sem dados de outra loja
+- **AND** nenhum enrollment ou crédito é apresentado como disponível
+
+#### Scenario: Coorte legada preserva a mensagem atual
+
+- **WHEN** a conta é `root_legacy` e a raiz restringe o benefício
+- **THEN** a mensagem legada de raiz permanece válida
+- **AND** nenhum dado sigiloso é exposto
