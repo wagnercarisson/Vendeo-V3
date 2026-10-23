@@ -20,16 +20,48 @@ function enrollment(overrides: Partial<TrialOfferEnrollmentView> = {}): TrialOff
 }
 
 describe("F50.2 trial offer status", () => {
-  it("returns not_started or legacy_demo without enrollment", () => {
+  it("returns unknown without enrollment and without authoritative eligibility", () => {
     expect(
       getTrialOfferStatus({ enrollment: null, demoBalance: 0, demoExpiresAt: null }, now),
+    ).toBe("unknown");
+    // Ausência de inscrição não é prova de elegibilidade: nenhum sinal de saldo,
+    // histórico manual ou demo deve ser interpretado como direito ao teste.
+    expect(
+      getTrialOfferStatus(
+        { enrollment: null, demoBalance: 0, demoExpiresAt: null, eligibility: "unknown" },
+        now,
+      ),
+    ).toBe("unknown");
+  });
+
+  it("returns not_started only with explicit eligibility", () => {
+    expect(
+      getTrialOfferStatus(
+        { enrollment: null, demoBalance: 0, demoExpiresAt: null, eligibility: "eligible" },
+        now,
+      ),
     ).toBe("not_started");
+  });
+
+  it("preserves legacy_demo without enrollment", () => {
     expect(
       getTrialOfferStatus(
         { enrollment: null, demoBalance: 5, demoExpiresAt: null, hasLegacyDemo: true },
         now,
       ),
     ).toBe("legacy_demo");
+  });
+
+  it("preserves active when demo credit evidence exists without enrollment", () => {
+    expect(
+      getTrialOfferStatus({ enrollment: null, demoBalance: 5, demoExpiresAt: null }, now),
+    ).toBe("active");
+    expect(
+      getTrialOfferStatus(
+        { enrollment: null, demoBalance: 0, demoExpiresAt: "2026-10-25T00:00:00.000Z" },
+        now,
+      ),
+    ).toBe("active");
   });
 
   it("derives active, expiring_soon, exhausted and expired", () => {

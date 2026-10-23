@@ -4,6 +4,7 @@ import {
 } from "./constants";
 
 export type TrialOfferStatus =
+  | "unknown"
   | "not_started"
   | "active"
   | "expiring_soon"
@@ -25,6 +26,13 @@ export interface TrialOfferStatusInput {
   demoBalance: number;
   demoExpiresAt: string | null;
   hasLegacyDemo?: boolean;
+  /**
+   * Sinal autoritativo de elegibilidade ao teste, decidido pelo servidor.
+   * Ausência de inscrição NÃO é prova de elegibilidade: contas legadas que
+   * nunca participaram do teste não devem receber promessa de benefício.
+   * Quando omitido, o status é tratado como "unknown" (fail-closed).
+   */
+  eligibility?: "eligible" | "unknown";
 }
 
 export interface NextTrialInstallment {
@@ -39,7 +47,9 @@ export function getTrialOfferStatus(
   const enrollment = input.enrollment;
   if (!enrollment) {
     if (input.hasLegacyDemo) return "legacy_demo";
-    return input.demoBalance > 0 || input.demoExpiresAt ? "active" : "not_started";
+    if (input.demoBalance > 0 || input.demoExpiresAt) return "active";
+    // Fail-closed: sem sinal autoritativo de elegibilidade não anunciamos o teste.
+    return input.eligibility === "eligible" ? "not_started" : "unknown";
   }
 
   const expiresAt = new Date(enrollment.expiresAt).getTime();
