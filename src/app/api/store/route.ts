@@ -20,6 +20,7 @@ import { CnpjaProvider } from "@/lib/cnpj/lookup-providers/cnpja";
 import type { CnpjLookupData } from "@/lib/cnpj/lookup-providers/types";
 import { evaluateFreemiumEligibility } from "@/lib/freemium/freemium-risk-service";
 import { maybeCompleteOnboardingAndStartTrial } from "@/lib/credit/trial-offer/completion";
+import { buildOnboardingSuccessMessage } from "@/lib/credit/trial-offer/messages";
 
 const GENERIC_SUBSEGMENT_VALUES = ["outro", "loja", "comercio", "com\u00e9rcio", "varejo"];
 
@@ -48,6 +49,7 @@ function sanitizeSubsegment(value: string): string {
 type PolicyContextSignals = {
   policyCohort?: "root_legacy" | "per_cnpj_f50_4";
   beneficiaryEligible?: boolean;
+  beneficiaryAmbiguous?: boolean;
   rootEligible: boolean;
 };
 
@@ -82,6 +84,7 @@ async function resolvePolicyContext(
         typeof record.beneficiary_eligible === "boolean"
           ? record.beneficiary_eligible
           : undefined,
+      beneficiaryAmbiguous: record.beneficiary_ambiguous === true,
       rootEligible: record.root_eligible === true,
     };
   }
@@ -268,6 +271,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
           rootEligible: policy.rootEligible,
           policyCohort: policy.policyCohort,
           beneficiaryEligible: policy.beneficiaryEligible,
+          beneficiaryAmbiguous: policy.beneficiaryAmbiguous,
         });
 
         verificationData = { signals: eligibility.signals, score: eligibility.score };
@@ -375,6 +379,17 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
     const trialOffer = await maybeCompleteOnboardingAndStartTrial(String((rpcStore as Record<string, unknown>).id));
 
+    const onboardingGranted = rpcData.onboardingGranted === true;
+    // WR-02: mensagem derivada do resultado real da oferta. Ramos anteriores
+    // (not_found/unavailable/unsupported_format) continuam em `userMessage`.
+    const successMessage = buildOnboardingSuccessMessage({
+      decision: String(rpcData.verificationStatus ?? verificationStatus),
+      reasons: verificationReasons ?? [],
+      onboardingGranted,
+      trialOffer,
+      fallbackMessage: userMessage,
+    });
+
     // CR-01: a linha crua do RPC (que contém cnpj_normalized/cnpj_root_hash)
     // NUNCA é espalhada na resposta. O DTO é allowlisted e a confirmação
     // fiscal viaja como booleano server-side (`cnpjRegistered`).
@@ -382,9 +397,9 @@ export const POST = apiHandler(async (request: NextRequest) => {
       ...toPublicStoreDTO(rpcStore as Record<string, unknown>),
       cnpjRegistered: true,
       cnpjMasked,
-      onboardingGranted: rpcData.onboardingGranted ?? false,
+      onboardingGranted,
       verificationStatus: rpcData.verificationStatus ?? verificationStatus,
-      message: userMessage,
+      message: successMessage,
       trialOffer,
     };
 

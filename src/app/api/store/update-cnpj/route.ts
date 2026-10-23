@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { requireUser, UnauthorizedError } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
 import { isCnpjDuplicateError, CNPJ_DUPLICATE_RESPONSE } from "@/lib/cnpj/duplicate-error";
@@ -29,6 +30,7 @@ const UpdateCnpjSchema = z.object({
 type PolicyContextSignals = {
   policyCohort?: "root_legacy" | "per_cnpj_f50_4";
   beneficiaryEligible?: boolean;
+  beneficiaryAmbiguous?: boolean;
   rootEligible: boolean;
 };
 
@@ -63,6 +65,7 @@ async function resolvePolicyContext(
         typeof record.beneficiary_eligible === "boolean"
           ? record.beneficiary_eligible
           : undefined,
+      beneficiaryAmbiguous: record.beneficiary_ambiguous === true,
       rootEligible: record.root_eligible === true,
     };
   }
@@ -81,6 +84,9 @@ async function resolvePolicyContext(
 }
 
 export const POST = apiHandler(async (request: NextRequest) => {
+  // CR-02: defesa CSRF deve ser a PRIMEIRA instrução — antes de requireUser,
+  // parse do body, leitura da loja, RPC, escrita ou concessão de crédito.
+  requireSameOrigin(request);
   try {
     const user = await requireUser();
     const store = await getCurrentStore(user.userId);
@@ -212,6 +218,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
           rootEligible: policy.rootEligible,
           policyCohort: policy.policyCohort,
           beneficiaryEligible: policy.beneficiaryEligible,
+          beneficiaryAmbiguous: policy.beneficiaryAmbiguous,
         });
 
         verificationData = { signals: eligibility.signals, score: eligibility.score };

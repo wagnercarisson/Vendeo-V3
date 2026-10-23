@@ -59,6 +59,8 @@ export function evaluateFreemiumEligibility(
     rootEligible: input.rootEligible,
     // F50.4 — sinal de elegibilidade por CNPJ completo; exposto, sem somar pontos.
     beneficiaryEligible: input.beneficiaryEligible ?? null,
+    // F50.4 — ambiguidade do benefício anterior; nunca afirma uso indevido.
+    beneficiaryAmbiguous: input.beneficiaryAmbiguous ?? null,
     // D9: tri-state preenchido via cnae-mapping quando há officialData; null caso contrário
     cnaeCompatible: input.officialData
       ? cnaeCompatibilityFor(input.segment, input.officialData.cnae_principal ?? null)
@@ -123,6 +125,16 @@ export function evaluateFreemiumEligibility(
   //   (uma filial com CNPJ novo não é bloqueada pelo benefício de outra filial).
   // - `root_legacy` ou coorte ausente: comportamento legado por raiz.
   if (input.policyCohort === "per_cnpj_f50_4") {
+    if (input.beneficiaryEligible === false && input.beneficiaryAmbiguous === true) {
+      // WR-03: benefício anterior ambíguo NÃO é uso confirmado. Fail-closed
+      // em `review`, com diagnóstico administrativo — sem compensação.
+      return {
+        decision: "review",
+        reasons: ["prior_benefit_ambiguous"],
+        score: 20,
+        signals,
+      };
+    }
     if (input.beneficiaryEligible === false) {
       return {
         decision: "reject",

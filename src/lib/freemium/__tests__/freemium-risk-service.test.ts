@@ -388,6 +388,28 @@ describe("F50.4 — separação legado (raiz) × nova coorte (CNPJ completo)", (
     expect(result.signals.beneficiaryEligible).toBe(false);
   });
 
+  it("coorte per_cnpj_f50_4 + beneficiaryEligible=false + beneficiaryAmbiguous=true → review prior_benefit_ambiguous", () => {
+    const result = evaluateFreemiumEligibility(
+      makeCohortInput({ beneficiaryEligible: false, beneficiaryAmbiguous: true }),
+    );
+
+    expect(result.decision).toBe("review");
+    expect(result.reasons).toEqual(["prior_benefit_ambiguous"]);
+    expect(result.reasons).not.toContain("beneficiary_already_used");
+    expect(result.score).toBe(20);
+    expect(result.signals.beneficiaryAmbiguous).toBe(true);
+  });
+
+  it("coorte per_cnpj_f50_4 + beneficiaryEligible=false sem ambiguidade → reject beneficiary_already_used", () => {
+    const result = evaluateFreemiumEligibility(
+      makeCohortInput({ beneficiaryEligible: false, beneficiaryAmbiguous: false }),
+    );
+
+    expect(result.decision).toBe("reject");
+    expect(result.reasons).toEqual(["beneficiary_already_used"]);
+    expect(result.signals.beneficiaryAmbiguous).toBe(false);
+  });
+
   it("coorte per_cnpj_f50_4 + rootEligible=false + beneficiaryEligible=true → não rejeita pela raiz", () => {
     const result = evaluateFreemiumEligibility(
       makeCohortInput({ rootEligible: false, beneficiaryEligible: true }),

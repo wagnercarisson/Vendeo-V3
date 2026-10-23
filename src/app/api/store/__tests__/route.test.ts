@@ -666,6 +666,94 @@ describe("POST /api/store — CNPJ onboarding with verification", () => {
     expect(body.message).toContain("Loja criada como filial");
   });
 
+  it("F50.4 (WR-02): coorte per_cnpj aprovada sem concessão não promete créditos", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    policyContextResult = {
+      data: {
+        policy_cohort: "per_cnpj_f50_4",
+        beneficiary_eligible: true,
+        beneficiary_ambiguous: false,
+        root_eligible: false,
+      },
+      error: null,
+    };
+    createStoreResult = {
+      data: {
+        store: [{
+          id: "store-conditional",
+          name: "Loja Condicional",
+          segment: "moda-calcados-acessorios",
+          cnpj_normalized: "12345678000195",
+          cnpj_root_hash: "mocked_hash_64chars",
+        }],
+        onboardingGranted: false,
+        verificationStatus: "approved",
+      },
+      error: null,
+    };
+
+    const res = await POST(createRequest({
+      name: "Loja Condicional",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.onboardingGranted).toBe(false);
+    expect(body.trialOffer.status).toBe("not_ready");
+    expect(body.message).toContain("será ativada quando o onboarding for concluído");
+    expect(body.message).not.toContain("liberados");
+  });
+
+  it("F50.4 (WR-03): benefício ambíguo gera verificação pendente, não uso confirmado", async () => {
+    mockResolve.mockResolvedValue(sampleLookupResolved);
+    policyContextResult = {
+      data: {
+        policy_cohort: "per_cnpj_f50_4",
+        beneficiary_eligible: false,
+        beneficiary_ambiguous: true,
+        root_eligible: false,
+      },
+      error: null,
+    };
+    createStoreResult = {
+      data: {
+        store: [{
+          id: "store-ambiguous",
+          name: "Loja Ambígua",
+          segment: "moda-calcados-acessorios",
+          cnpj_normalized: "12345678000195",
+          cnpj_root_hash: "mocked_hash_64chars",
+        }],
+        onboardingGranted: false,
+        verificationStatus: "review",
+      },
+      error: null,
+    };
+
+    const res = await POST(createRequest({
+      name: "Loja Ambígua",
+      segment: "moda-calcados-acessorios",
+      cnpj: "12.345.678/0001-95",
+      city: "São Paulo",
+      state: "SP",
+      acceptedTerms: true,
+    }));
+
+    expect(res.status).toBe(201);
+    expect(mockRpc).toHaveBeenCalledWith("create_store_with_cnpj", expect.objectContaining({
+      p_verification_status: "review",
+      p_verification_reasons: ["prior_benefit_ambiguous"],
+    }));
+    const body = await res.json();
+    expect(body.message).toContain("verificação cadastral");
+    expect(body.message).not.toContain("já foi utilizado");
+  });
+
   it("F50.4: RPC de contexto indisponível → fallback legado e criação não quebra", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const spy = vi.spyOn(freemiumRisk, "evaluateFreemiumEligibility");

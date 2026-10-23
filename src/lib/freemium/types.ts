@@ -51,6 +51,8 @@ export type FreemiumEligibilityInput = {
   policyCohort?: FreemiumPolicyCohort;
   /** F50.4 — elegibilidade por CNPJ completo na coorte `per_cnpj_f50_4`. */
   beneficiaryEligible?: boolean;
+  /** F50.4 — benefício anterior ambíguo (fail-closed, verificação pendente). */
+  beneficiaryAmbiguous?: boolean;
 };
 
 export type FreemiumEligibilityOutput = {
@@ -65,6 +67,7 @@ export type FreemiumEligibilityOutput = {
     situacaoCadastral: string | null;
     rootEligible: boolean | null;
     beneficiaryEligible?: boolean | null;
+    beneficiaryAmbiguous?: boolean | null;
     cnaeCompatible: "compatible" | "incompatible" | "unknown" | null;
   };
 };

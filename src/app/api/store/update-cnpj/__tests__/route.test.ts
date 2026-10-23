@@ -60,11 +60,16 @@ vi.mock("@/lib/freemium/freemium-risk-service", () => ({
 
 process.env.CNPJ_PEPPER = "test_pepper_hex_64_chars";
 
-function createRequest(body: unknown): NextRequest {
+function createRequest(body: unknown, origin = "http://localhost"): NextRequest {
   return new NextRequest("http://localhost/api/store/update-cnpj", {
     method: "POST",
     body: JSON.stringify(body),
-    headers: { "x-forwarded-for": "127.0.0.1", "user-agent": "test" },
+    headers: {
+      origin,
+      host: "localhost",
+      "x-forwarded-for": "127.0.0.1",
+      "user-agent": "test",
+    },
   });
 }
 
@@ -104,6 +109,36 @@ import { CnpjVerificationService } from "@/lib/cnpj/verification-service";
 import { hashCnpjRoot } from "@/lib/cnpj/hash";
 
 describe("POST /api/store/update-cnpj", () => {
+  it("CR-02: rejeita origem cruzada com 403 antes de RPC, escrita e concessão", async () => {
+    updateCnpjResult = { data: { store: [{ id: STORE_UUID }] }, error: null };
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao Social Ltda",
+    }, "http://evil.example"));
+
+    expect(res.status).toBe(403);
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockResolve).not.toHaveBeenCalled();
+  });
+
+  it("CR-02: origem ausente também retorna 403 sem efeitos", async () => {
+    const { POST } = await import("../route");
+    const request = new NextRequest("http://localhost/api/store/update-cnpj", {
+      method: "POST",
+      body: JSON.stringify({ storeId: STORE_UUID, cnpjNormalized: "12345678000195", razaoSocial: "Razao" }),
+      headers: { "x-forwarded-for": "127.0.0.1" },
+    });
+    const res = await POST(request);
+
+    expect(res.status).toBe(403);
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
   it("updates CNPJ for legacy store without granting credits", async () => {
     updateCnpjResult = {
       data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] },
@@ -645,6 +680,7 @@ describe("POST /api/store/update-cnpj", () => {
     expect(mockEvaluateFreemium).toHaveBeenCalledWith(expect.objectContaining({
       policyCohort: "per_cnpj_f50_4",
       beneficiaryEligible: true,
+      beneficiaryAmbiguous: false,
       rootEligible: false,
     }));
     expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
@@ -693,6 +729,51 @@ describe("POST /api/store/update-cnpj", () => {
     expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
       p_verification_status: "reject",
       p_verification_reasons: ["beneficiary_already_used"],
+    }));
+  });
+
+  it("F50.4 (WR-03): contexto ambíguo é transportado ao motor", async () => {
+    const { getCurrentStore } = await import("@/lib/auth/store-ownership");
+    vi.mocked(getCurrentStore).mockResolvedValueOnce({
+      id: STORE_UUID,
+      name: "Minha Loja",
+      city: "São Paulo",
+      state: "SP",
+      segment: "moda-calcados-acessorios",
+    } as import("@/lib/store").Store);
+    policyContextResult = {
+      data: {
+        policy_cohort: "per_cnpj_f50_4",
+        beneficiary_eligible: false,
+        beneficiary_ambiguous: true,
+        root_eligible: true,
+      },
+      error: null,
+    };
+    updateCnpjResult = { data: { store: [{ id: STORE_UUID, cnpj_normalized: "12345678000195", cnpj_root_hash: "mocked_hash_64chars" }] }, error: null };
+    mockEvaluateFreemium.mockReturnValue({
+      decision: "review",
+      reasons: ["prior_benefit_ambiguous"],
+      score: 20,
+      signals: {},
+    });
+
+    const { POST } = await import("../route");
+    const res = await POST(createRequest({
+      storeId: STORE_UUID,
+      cnpjNormalized: "12345678000195",
+      razaoSocial: "Razao",
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockEvaluateFreemium).toHaveBeenCalledWith(expect.objectContaining({
+      policyCohort: "per_cnpj_f50_4",
+      beneficiaryEligible: false,
+      beneficiaryAmbiguous: true,
+    }));
+    expect(mockRpc).toHaveBeenCalledWith("update_store_cnpj", expect.objectContaining({
+      p_verification_status: "review",
+      p_verification_reasons: ["prior_benefit_ambiguous"],
     }));
   });
 
