@@ -45,6 +45,18 @@ export interface AiInvocationMessage {
 }
 
 /**
+ * Proveniência da credencial efetivamente resolvida pelo adapter.
+ * `undefined` significa "não resolvida/desconhecida" — nunca inferir pelo nome
+ * da capability ou do run type.
+ */
+export type AiCredentialScope = "normal" | "validation";
+
+/** Objeto mutável compartilhado entre gateway e adapter durante uma tentativa. */
+export interface AiCredentialProvenance {
+  scope?: AiCredentialScope;
+}
+
+/**
  * Request canônico do gateway — o caller monta o prompt/regras de negócio e o
  * gateway só traduz para o protocolo do alvo (adapter não decide prompt/modelo).
  */
@@ -171,6 +183,11 @@ export interface AiCallEnvelope extends AiCallInfo {
    * resultado **HTTP**; a classificação de domínio é aditiva.
    */
   metadata?: Record<string, unknown>;
+  /**
+   * F47.1 — proveniência da credencial efetivamente resolvida. Preenchida pelo
+   * adapter via `AiCredentialProvenance`; nunca inferida de capability.
+   */
+  credentialScope?: AiCredentialScope;
   // F56.1 (D-21) — campos aditivos por tentativa de geração de imagem do novo
   // fluxo. Não alteram os campos existentes nem o "um envelope por tentativa".
   /** Qualidade efetivamente usada na tentativa (`low`/`medium`). */
@@ -268,7 +285,11 @@ export interface AiTelemetryContext {
 /** Adapter por protocolo de wire — traduz o shape do provider e retorna o contrato. */
 export interface AiAdapter {
   readonly protocol: AiProtocol;
-  invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult>;
+  invoke(
+    request: AiInvocationRequest,
+    target: AiModelTarget,
+    provenance?: AiCredentialProvenance,
+  ): Promise<AiInvocationResult>;
 }
 
 /** Mapa protocolo → adapter (implementação padrão em `adapters/registry.ts`). */

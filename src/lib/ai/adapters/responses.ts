@@ -2,7 +2,13 @@ import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { AiModelTarget } from "../model-resolver";
 import { getApiKey } from "../api-keys";
 import { AiInvocationError } from "../types";
-import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../types";
+import type {
+  AiAdapter,
+  AiCredentialProvenance,
+  AiCredentialScope,
+  AiInvocationRequest,
+  AiInvocationResult,
+} from "../types";
 
 export interface ResponsesAdapterClientOptions {
   /**
@@ -34,12 +40,25 @@ export class ResponsesAdapter implements AiAdapter {
   constructor(
     private readonly resolveApiKey: (provider: AiModelTarget["provider"]) => string = getApiKey,
     private readonly clientOptions: ResponsesAdapterClientOptions = {},
+    /**
+     * Escopo da credencial resolvida por este adapter. Ausente (default) =
+     * desconhecido; um resolvedor customizado sem escopo não vira `normal`.
+     */
+    private readonly credentialScope?: AiCredentialScope,
   ) {}
 
-  async invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult> {
+  async invoke(
+    request: AiInvocationRequest,
+    target: AiModelTarget,
+    provenance?: AiCredentialProvenance,
+  ): Promise<AiInvocationResult> {
     const { default: OpenAI } = await import("openai");
+    const apiKey = this.resolveApiKey(target.provider);
+    if (provenance && this.credentialScope && apiKey.length > 0) {
+      provenance.scope = this.credentialScope;
+    }
     const openai = new OpenAI({
-      apiKey: this.resolveApiKey(target.provider),
+      apiKey,
       ...this.clientOptions,
     });
 

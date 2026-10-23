@@ -340,6 +340,11 @@ function buildCallMetadata(
             : {}),
         }
       : {}),
+    // F47.1 — proveniência interna vence metadata de caller. Só existe quando
+    // o adapter registrou uma credencial efetivamente resolvida.
+    ...(envelope.credentialScope
+      ? { credential_scope: envelope.credentialScope }
+      : {}),
   };
 }
 

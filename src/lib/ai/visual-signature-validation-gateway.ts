@@ -17,7 +17,11 @@ import type { AiAdapter, AiAdapterRegistry } from "./types";
  * recebido é responsável pelo congelamento do alvo de `visual_signature_image`.
  */
 export function createVisualSignatureValidationGateway(resolver: AiModelResolver): AiGateway {
-  const responsesAdapter = new ResponsesAdapter(readValidationApiKey, { maxRetries: 0 });
+  const responsesAdapter = new ResponsesAdapter(
+    readValidationApiKey,
+    { maxRetries: 0 },
+    "validation",
+  );
   const adapters: AiAdapterRegistry = {
     get(protocol: AiProtocol): AiAdapter | undefined {
       return protocol === "responses" ? responsesAdapter : undefined;
