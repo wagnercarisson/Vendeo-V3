@@ -1,137 +1,137 @@
-{
-  "phase": "50.4",
-  "mode": "disposable",
-  "app_verified_disposable": true,
-  "production_activated": false,
-  "environment_destroyed": false,
-  "human_acceptance": "pending",
-  "environment": {
-    "run_id": "20261022165000-d2uat",
-    "api_port": 54432,
-    "db_port": 54422,
-    "app_base_url": "http://127.0.0.1:3100",
-    "individual_launch_at": "2026-10-22T23:24:35.350Z"
-  },
-  "scenarios": [
-    {
-      "id": "regression_active_f50_2_null_marker",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L34"
-    },
-    {
-      "id": "regression_legacy_account_before_launch",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L35"
-    },
-    {
-      "id": "regression_demo_10_168",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L36"
-    },
-    {
-      "id": "regression_legacy_demo_does_not_repeat",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L37"
-    },
-    {
-      "id": "regression_f50_2_trial_enrollment_and_installments",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L38"
-    },
-    {
-      "id": "regression_retry_idempotent",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L39"
-    },
-    {
-      "id": "regression_offer_disabled_no_fallback",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L40"
-    },
-    {
-      "id": "regression_monthly_per_root",
-      "group": "regression",
-      "status": "PENDING",
-      "evidence": "50.4-UAT.md#L41"
-    },
-    {
-      "id": "regression_signup_numeric_alphanumeric_cnpj",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L42"
-    },
-    {
-      "id": "regression_autosave_drift",
-      "group": "regression",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L43"
-    },
-    {
-      "id": "regression_ui_visual",
-      "group": "regression",
-      "status": "PENDING",
-      "evidence": "50.4-UAT.md#L44"
-    },
-    {
-      "id": "new_policy_controlled_activation",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L53"
-    },
-    {
-      "id": "new_policy_matrix_and_two_branches",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L54"
-    },
-    {
-      "id": "new_policy_same_cnpj_no_repeat",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L55"
-    },
-    {
-      "id": "new_policy_manual_credit_does_not_block",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L56"
-    },
-    {
-      "id": "new_policy_prior_benefit",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L57"
-    },
-    {
-      "id": "new_policy_prior_benefit_ambiguous",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L58"
-    },
-    {
-      "id": "new_policy_arrival_order_legacy_x_f50_4",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L59"
-    },
-    {
-      "id": "new_policy_admin_exception_clean_root",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L60"
-    },
-    {
-      "id": "new_policy_offer_disabled_no_fallback",
-      "group": "new_policy",
-      "status": "PASS",
-      "evidence": "50.4-UAT.md#L61"
-    }
-  ]
+﻿{
+    "phase":  "50.4",
+    "mode":  "disposable",
+    "app_verified_disposable":  true,
+    "production_activated":  false,
+    "environment_destroyed":  false,
+    "human_acceptance":  "pending",
+    "environment":  {
+                        "run_id":  "20261022165000-d2uat",
+                        "api_port":  54432,
+                        "db_port":  54422,
+                        "app_base_url":  "http://127.0.0.1:3100",
+                        "individual_launch_at":  "2026-10-22T23:24:35.350Z"
+                    },
+    "scenarios":  [
+                      {
+                          "id":  "regression_active_f50_2_null_marker",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L34"
+                      },
+                      {
+                          "id":  "regression_legacy_account_before_launch",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L35"
+                      },
+                      {
+                          "id":  "regression_demo_10_168",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L36"
+                      },
+                      {
+                          "id":  "regression_legacy_demo_does_not_repeat",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L37"
+                      },
+                      {
+                          "id":  "regression_f50_2_trial_enrollment_and_installments",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L38"
+                      },
+                      {
+                          "id":  "regression_retry_idempotent",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L39"
+                      },
+                      {
+                          "id":  "regression_offer_disabled_no_fallback",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L40"
+                      },
+                      {
+                          "id":  "regression_monthly_per_root",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT-MONTHLY-REGRESSION.sql#L99"
+                      },
+                      {
+                          "id":  "regression_signup_numeric_alphanumeric_cnpj",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L42"
+                      },
+                      {
+                          "id":  "regression_autosave_drift",
+                          "group":  "regression",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L43"
+                      },
+                      {
+                          "id":  "regression_ui_visual",
+                          "group":  "regression",
+                          "status":  "PENDING",
+                          "evidence":  "50.4-UAT.md#L44"
+                      },
+                      {
+                          "id":  "new_policy_controlled_activation",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L53"
+                      },
+                      {
+                          "id":  "new_policy_matrix_and_two_branches",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L54"
+                      },
+                      {
+                          "id":  "new_policy_same_cnpj_no_repeat",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L55"
+                      },
+                      {
+                          "id":  "new_policy_manual_credit_does_not_block",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L56"
+                      },
+                      {
+                          "id":  "new_policy_prior_benefit",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L57"
+                      },
+                      {
+                          "id":  "new_policy_prior_benefit_ambiguous",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L58"
+                      },
+                      {
+                          "id":  "new_policy_arrival_order_legacy_x_f50_4",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L59"
+                      },
+                      {
+                          "id":  "new_policy_admin_exception_clean_root",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L60"
+                      },
+                      {
+                          "id":  "new_policy_offer_disabled_no_fallback",
+                          "group":  "new_policy",
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L61"
+                      }
+                  ]
 }

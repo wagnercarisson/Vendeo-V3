@@ -1,0 +1,50 @@
+{
+  "phase": "50.4",
+  "comparison": "credit suites — PHASE_BASE_SHA vs current",
+  "generated_at": "2026-10-23T00:30:00Z",
+  "base": {
+    "ref": "8db1d599ce98070907bc98637520bc7ee8acd61c",
+    "database": "f50_4_base_credit",
+    "function_source": "supabase/migrations/20261020000004_f50_2_trial_offer_precedence.sql",
+    "tests_failed": 10,
+    "tests_passed": 4,
+    "exit_code": 1,
+    "failed_tests": [
+      "src/lib/credit/__tests__/credit-concurrency.test.ts > F50 real PostgreSQL concurrency and temporal rules > serializes concurrent demo grants to one entitlement and one transaction",
+      "src/lib/credit/__tests__/credit-concurrency.test.ts > F50 real PostgreSQL concurrency and temporal rules > serializes expiration and reserves without a negative balance",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > refunds within the original episode without extending its expiry",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes remaining credit before refund and opens a traceable 24-hour grace episode after expiry",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > reserves demo, bonus, and purchased buckets in order with complete metadata",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes an expired demo during reserve and returns saldo_insuficiente without deduction",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes one exact expiration with cycle, origin, contributors, and zeroed episode fields",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > uses GREATEST for active grace, preserves exhausted episodes, and restores bonus and purchased buckets",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > restores an exhausted demo in the original episode before expiry",
+      "src/lib/credit/__tests__/credit-idempotency.test.ts > F50 PostgreSQL idempotency, permissions, eligibility and wrappers > handles disabled, onboarding, duplicate, TTL and expiration idempotently"
+    ]
+  },
+  "current": {
+    "ref": "HEAD",
+    "database": "f50_4_current_credit",
+    "tests_failed": 10,
+    "tests_passed": 4,
+    "exit_code": 1,
+    "failed_tests": [
+      "src/lib/credit/__tests__/credit-concurrency.test.ts > F50 real PostgreSQL concurrency and temporal rules > serializes concurrent demo grants to one entitlement and one transaction",
+      "src/lib/credit/__tests__/credit-concurrency.test.ts > F50 real PostgreSQL concurrency and temporal rules > serializes expiration and reserves without a negative balance",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > refunds within the original episode without extending its expiry",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes remaining credit before refund and opens a traceable 24-hour grace episode after expiry",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > reserves demo, bonus, and purchased buckets in order with complete metadata",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes an expired demo during reserve and returns saldo_insuficiente without deduction",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > materializes one exact expiration with cycle, origin, contributors, and zeroed episode fields",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > uses GREATEST for active grace, preserves exhausted episodes, and restores bonus and purchased buckets",
+      "src/lib/credit/__tests__/credit-f50-11-integration.test.ts > F50-11 real PostgreSQL integration > restores an exhausted demo in the original episode before expiry",
+      "src/lib/credit/__tests__/credit-idempotency.test.ts > F50 PostgreSQL idempotency, permissions, eligibility and wrappers > handles disabled, onboarding, duplicate, TTL and expiration idempotently"
+    ]
+  },
+  "identical_failure_names": true,
+  "classification": "ambiente/F50.2 launch_at ativo; nenhuma diferença nominal entre base e atual",
+  "evidence": {
+    "base": "C:/Users/wagne/AppData/Local/Temp/opencode/f50-4-base-credit-tests2.txt",
+    "current": "C:/Users/wagne/AppData/Local/Temp/opencode/f50-4-current-credit-tests2.txt"
+  }
+}
