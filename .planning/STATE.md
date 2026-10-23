@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: completed_with_limitations
-last_updated: "2026-10-23T19:58:00.000Z"
+last_updated: "2026-10-23T17:05:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 93
-  completed_plans: 91
+  completed_plans: 92
   percent: 75
 ---
 
@@ -26,6 +26,8 @@ progress:
 - Próxima iniciativa condicionada: F50.1 aguardando constituição da PJ.
 
 ## Current Position
+
+- **EXECUÇÃO 50.4-13 — Gap closure WR-01/IN-03 + re-review final: EXECUTADA (2026-10-23); GAP CLOSURE ENCERRADA.** Commits `d72cf2aa` (STRIDE consolidado + correções cronológicas no SECURITY), `da683a26` (UAT reconciliado, addendum no VERIFICATION, ROADMAP 13/13) e `54b05631` (re-review final + seção de status no REVIEW). `50.4-SECURITY.md` agora tem “Registro STRIDE consolidado” cobrindo `T-50.4-01..53`, `T-50.4-SC`, `T-50.4-GC-01..09` e `T-50.4-GC-SC` com disposição e evidência `arquivo#linha`; CR-01/CR-02 corrigidos com nota de revisão sem apagar a cronologia; grants/ledger/trigger citados **exclusivamente** pela evidência reutilizada do plano 12 (`C:\Users\wagne\AppData\Local\Temp\f50-4-evidence\`, 69/69 PASS) — **sem reconectar, recriar ou reaplicar migrations**. `50.4-UAT.md` reconciliado (`environment_destroyed=true`, nota IN-03); addendum no `50.4-VERIFICATION.md` (frontmatter `status: passed`/`gate_status: not_green` e 10 truths intocados); `50.4-GAP-CLOSURE-REVIEW.md` com **11/11 achados resolvidos**. Verificação focada: **188 passed / 14 skipped / 0 failed**, typecheck/lint exit 0, `--skip-db` 11/11 (prova offline de estrutura), OpenSpec escopado valid. `npm test` completo **não executado** e permanece **não-verde** (22 falhas D2); UAT 20/20, `approved_with_limitations` e `admin_exception` único por raiz preservados. Sem PostgreSQL, push, merge, deploy, sync/archive ou ativação. SUMMARY em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-13-SUMMARY.md`.
 
 - **EXECUÇÃO 50.4-12 — Gap closure WR-04/WR-05/IN-01/IN-02/IN-04: EXECUTADA COM VALIDAÇÃO DB AUTORIZADA (2026-10-23); AGUARDANDO PLANO 13.** Commits atômicos `841bc745` (migration M4 + suíte SQL + fixtures), `931f5db8` (concorrência opt-in/fail-closed), `e6079646` (verificador índice/trigger/ledger), `6c5823f7` (status de completion), `c52aa48e` (23505 de `operation_id` → 409) e `dab6b99b` (fixture sem CNPJ). Checkpoint `authorize-disposable` aprovado: PostgreSQL 17.6 local `f50-4-disposable-20261023-p12-dbval` (127.0.0.1:54422), **143 migrations** (inclui `20261023000001`), SQL explícito **4/4**, regressão SQL **5/5**, concorrência **14/14** (0 deadlocks), verificador **69/69** (ledger/triggers/grants, sem índice único global em `root_hash`), fingerprint `2a299f49332bbef9b567e83ed95f0cab`; ambiente **destruído** (destroy exit 0, 0 containers, workdir removido). Evidência durável fora de `.planning` em `C:\Users\wagne\AppData\Local\Temp\f50-4-evidence\` (`50.4-12-db-evidence.json`, `50.4-12-db-verification.txt`, `50.4-12-sql-explicit.txt`, `50.4-12-sql-default.txt`, `50.4-12-concurrency-evidence.json`) para reuso pelo plano 13 **sem reconectar**. `npm test` completo **não executado** e permanece não-verde (22 falhas D2). Sem push, merge, deploy, sync/archive ou ativação produtiva. SUMMARY em `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/50.4-12-SUMMARY.md`.
 
