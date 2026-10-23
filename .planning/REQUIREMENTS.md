@@ -20,12 +20,19 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | F50: demonstração gratuita e validade dos créditos | `.planning/phases/50-demonstracao-gratuita-validade-creditos/`, `50-VERIFICATION.md`, summaries e `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/` |
 | F50.1: formalização legal e ativação | Futura; fonte de planejamento será um novo plano/OpenSpec quando a fase for formalmente constituída |
 | F50.2: oferta de teste gratuito de 28 dias | Planejada; 3 planos em `.planning/phases/50.2-oferta-teste-gratuito-28-dias/`; fonte ativa `openspec/changes/oferta-teste-gratuito-28-dias/` |
+| F47.1: configuração e validação local de modelos da Assinatura Visual | Fonte ativa `openspec/changes/archive/2026-10-23-fase-47-1-modelos-assinatura-visual/`; cobertura em `.planning/phases/47.1-configuracao-validacao-local-modelos-assinatura-visual/47.1-COVERAGE-MATRIX.md`; **sem REQ-IDs retrospectivos** |
 | F56.1: contrato produtivo, modelos e fallback | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` |
 | F56.2a: preparação não operacional do Produto 1:1 | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/` |
 | F56.2b1a: fundação inativa do Produto 1:1 | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-08-fase-56-2b1a-fundacao-inativa-produto-1-1/` |
 | F56.2b1b: núcleo entregável do Produto 1:1 | Cobertura concluída; concluída/verificada/sincronizada/arquivada em 2026-10-12; fonte arquivada `openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/` |
 | F56.2b2a (B2.1): recuperação de copy do Produto 1:1 | Cobertura concluída; concluída/verificada/sincronizada/arquivada em 2026-10-15 (46/46 tasks); fonte arquivada `openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/` |
 | Monetização pública / Stripe | Iniciativa diferida para v1.7+, fora da numeração e sem requisitos ativos |
+
+## F47.1 — Configuração e validação local de modelos da Assinatura Visual (arquivada em 2026-10-23)
+
+**Fonte de requisitos:** `openspec/changes/archive/2026-10-23-fase-47-1-modelos-assinatura-visual/` (9 capabilities; 35 requirements; 116 cenários; Tasks 7.4/7.5 opcionais não executadas). **Cobertura:** `.planning/phases/47.1-configuracao-validacao-local-modelos-assinatura-visual/47.1-COVERAGE-MATRIX.md`, `47.1-UAT.md`, `47.1-VERIFICATION.md` e `47.1-OPSX-VERIFY.md`. **Aprovação final:** Codex, 2026-10-23, cobertura parcial aceita.
+
+**Tracking:** esta fase **não possui `REQ-47.1-*`** e não foram criados IDs retrospectivos. A rastreabilidade usa os nomes das capabilities/requirements OpenSpec e a matriz de cobertura. **Cobertura visual:** apenas GPT-5.5 + Sunburst Medium e GPT-6-Luna + Sunburst Medium, tom jovem; as 6 combinações adicionais e o `rejectionContext` permanecem opcionais não executados; a cobertura parcial foi aceita e a change arquivada em 2026-10-23. **Produção:** nenhuma aprovação.
 
 ## F50.2 — Planejada (Oferta de teste gratuito de 28 dias)
 

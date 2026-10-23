@@ -2,7 +2,7 @@
 status: validated_manual_realignment_pending_final_review
 trigger: "F47.1 — brand_profile_vision falhou duas vezes com provider_error ao analisar assinaturas locais da Calce Bem; hipótese de URL de Storage loopback inacessível ao provedor."
 created: 2026-10-22T19:05:00Z
-updated: 2026-10-22T19:10:00Z
+updated: 2026-10-23T16:27:58Z
 ---
 
 # F47.1 — brand_profile_vision com imagem local
