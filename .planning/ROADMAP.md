@@ -253,7 +253,7 @@ Plans:
 
 **Fonte normativa:** `openspec/changes/fase-50-3-suporte-cnpj-alfanumerico/` (proposal, design, 7 delta specs, tasks; `validate --strict` valid).
 
-**Depends on:** F50.2 (concluída; oferta ativa preservada), F33 (verificação CNPJ), F32 (freemium por raiz) e F34 (readiness). F50.4 (oferta individualizada por CNPJ completo) permanece fora de escopo e futura.
+**Depends on:** F50.2 (concluída; oferta ativa preservada), F33 (verificação CNPJ), F32 (freemium por raiz) e F34 (readiness). F50.4 (oferta individualizada por CNPJ completo) foi encerrada com limitações aceitas; não publicada; ativação produtiva pendente.
 
 **Requirements**: REQ-50.3-01, REQ-50.3-02, REQ-50.3-03, REQ-50.3-04, REQ-50.3-05, REQ-50.3-06, REQ-50.3-07, REQ-50.3-08, REQ-50.3-09, REQ-50.3-10
 
@@ -289,7 +289,8 @@ Plans:
 ### Phase 50.4: F50.4 - Oferta de onboarding individualizada por CNPJ completo
 
 **Goal:** Permitir que matriz e filiais recebam individualmente a oferta atual de onboarding, uma vez por CNPJ completo, preservando contas, benef�cios e pol�ticas anteriores, com identidade imut�vel do benefici�rio, coortes expl�citas, concorr�ncia segura entre programas, migration fail-closed e ativa��o produtiva fora desta execu��o.
-**Status:** **Verificada com limitações – gap closure executada (planos 11–13); re-review final registrado em `50.4-GAP-CLOSURE-REVIEW.md`.** Nenhuma publicação/deploy/merge/ativação; `npm test` permanece não-verde (22 falhas D2). Base OpenSpec em openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/; planos em .planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/.
+**Status:** **Encerrada com limitações aceitas — não publicada; ativação produtiva pendente (2026-10-23).** Change arquivada em `openspec/changes/archive/2026-10-23-fase-50-4-oferta-onboarding-por-cnpj/` (sync `7b62964d`). **62/64 tasks** (5.5 aberta como lacuna de cobertura aceita; 10.4 aberta, pré-publicação não realizada). `npm test` completo não-verde (22 falhas D2); aceite `approved_with_limitations`; erro preexistente da main spec `admin-credit-grant` não atribuído à F50.4. Nenhuma publicação/deploy/merge/ativação produtiva.
+**Fonte (arquivada):** `openspec/changes/archive/2026-10-23-fase-50-4-oferta-onboarding-por-cnpj/` (proposal, design, 6 delta specs, matrix, inventory, tasks).
 **Depends on:** F50.2 (oferta ativa; `launch_at` preservado), F50.3 (CNPJ can�nico num�rico e alfanum�rico), F32/F33 (freemium e verifica��o cadastral) e F34 (readiness).
 **Requirements**: REQ-50.4-01, REQ-50.4-02, REQ-50.4-03, REQ-50.4-04, REQ-50.4-05, REQ-50.4-06, REQ-50.4-07, REQ-50.4-08, REQ-50.4-09, REQ-50.4-10
 **Plans:** 13/13 plans complete (10 originais + 3 gap closure)

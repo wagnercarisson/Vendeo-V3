@@ -66,24 +66,24 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 **Cobertura reconciliada:** REQ-50.3-01, -02, -05, -06, -07, -08 e -10 **comprovados**; REQ-50.3-03, -04 e -09 **comprovados com limitação aceita** (cache/representações, criação live e sucesso numérico live). Follow-ups preservados em `FOLLOW-UPS.md` (WR-02, IN-01..IN-07, F50.3-UAT-01/02/03).
 '
 
-## F50.4 — Planejada (Oferta de onboarding individualizada por CNPJ completo)
+## F50.4 — Encerrada com limitações aceitas (Oferta de onboarding individualizada por CNPJ completo)
 
-**Fonte:** `openspec/changes/fase-50-4-oferta-onboarding-por-cnpj/` (proposal, design, 6 delta specs, matrix, inventory, tasks; `validate --strict` valid). **Planos:** `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/`. **Status:** planejada; aguardando revisão humana antes de implementar. **Política:** cada CNPJ completo elegível pode receber a oferta uma vez; contas anteriores preservadas; mesmo CNPJ não repete; crédito manual separado; ativação produtiva fora desta execução.
+**Fonte (arquivada):** `openspec/changes/archive/2026-10-23-fase-50-4-oferta-onboarding-por-cnpj/` (proposal, design, 6 delta specs, matrix, inventory, tasks). **Planos:** `.planning/phases/50.4-f50-4-oferta-de-onboarding-individualizada-por-cnpj-completo/`. **Status:** Encerrada com limitações aceitas — não publicada; ativação produtiva pendente (2026-10-23). **Política:** cada CNPJ completo elegível pode receber a oferta uma vez; contas anteriores preservadas; mesmo CNPJ não repete; crédito manual separado; ativação produtiva fora desta execução.
 
 | REQ-ID | Cobertura | Plano |
 |---|---|---|
-| REQ-50.4-01 | Marco próprio da F50.4, coortes por `auth.users.created_at` e preservação do `launch_at` da F50.2 | TBD |
-| REQ-50.4-02 | Identidade imutável do CNPJ beneficiário, unicidade por CNPJ completo + loja e índice parcial de raiz legada | TBD |
-| REQ-50.4-03 | Elegibilidade separada por coorte; matriz/filiais independentes; mesmo CNPJ sem repetição; nenhuma filial vê dados de outra | TBD |
-| REQ-50.4-04 | Protocolo de locks trial × demo × mensal × exceção; ordem determinística; ausência de deadlock e prova cruzada em PostgreSQL real | TBD |
-| REQ-50.4-05 | Coexistência demo/mensal legados; nenhuma reativação; filial F50.4 não reduz enquadramento anterior | TBD |
-| REQ-50.4-06 | Crédito manual `admin_grant` separado de `admin_exception`; sem bloqueio, consumo de parcela ou extensão da janela; classificação estruturada prevalece | TBD |
-| REQ-50.4-07 | Migration fail-closed, backfill com evidência segura, preservação de dados e rollback/forward-fix sem `UNIQUE(root_hash)` global | TBD |
-| REQ-50.4-08 | Validação pelo Supabase CLI real em PostgreSQL descartável; parser, ledger e constraints; nenhum ambiente compartilhado | TBD |
-| REQ-50.4-09 | Avaliação cadastral e mensagens compatíveis; `root_already_used` não rejeita a F50.4; regressão F50.3/autosave/drift | TBD |
-| REQ-50.4-10 | Testes, regressão, segurança, UAT, checkpoints e tracking; ativação produtiva não executada; ativação controlada apenas em descartável | TBD |
+| REQ-50.4-01 | Marco próprio da F50.4, coortes por `auth.users.created_at` e preservação do `launch_at` da F50.2 | 01, 03, 07 |
+| REQ-50.4-02 | Identidade imutável do CNPJ beneficiário, unicidade por CNPJ completo + loja e índice parcial de raiz legada | 03, 04 |
+| REQ-50.4-03 | Elegibilidade separada por coorte; matriz/filiais independentes; mesmo CNPJ sem repetição; nenhuma filial vê dados de outra | 03, 05, 06 |
+| REQ-50.4-04 | Protocolo de locks trial × demo × mensal × exceção; ordem determinística; ausência de deadlock e prova cruzada em PostgreSQL real | 04, 08, 10 |
+| REQ-50.4-05 | Coexistência demo/mensal legados; nenhuma reativação; filial F50.4 não reduz enquadramento anterior | 04 |
+| REQ-50.4-06 | Crédito manual `admin_grant` separado de `admin_exception`; sem bloqueio, consumo de parcela ou extensão da janela; classificação estruturada prevalece | 04, 05 |
+| REQ-50.4-07 | Migration fail-closed, backfill com evidência segura, preservação de dados e rollback/forward-fix sem `UNIQUE(root_hash)` global | 03, 04, 10 |
+| REQ-50.4-08 | Validação pelo Supabase CLI real em PostgreSQL descartável; parser, ledger e constraints; nenhum ambiente compartilhado | 02, 08 |
+| REQ-50.4-09 | Avaliação cadastral e mensagens compatíveis; `root_already_used` não rejeita a F50.4; regressão F50.3/autosave/drift | 05, 06 |
+| REQ-50.4-10 | Testes, regressão, segurança, UAT, checkpoints e tracking; ativação produtiva não executada; ativação controlada apenas em descartável | 02, 07, 09, 10 |
 
-**Cobertura:** 10/10 REQ-IDs atribuídos a planos. Os REQ-IDs são mapeados às specs `trial-offer`, `demo-credit-grant`, `monthly-credits-engine`, `freemium-entitlement`, `freemium-risk-service` e `admin-credit-grant`.
+**Cobertura:** 10/10 REQ-IDs atribuídos a planos; REQ-50.4-10 coberto com limitação (`npm test` não-verde, 22 falhas D2; 5.5 aberta como lacuna de cobertura aceita e 10.4 aberta porque a publicação não foi autorizada). Os REQ-IDs são mapeados às specs `trial-offer`, `demo-credit-grant`, `monthly-credits-engine`, `freemium-entitlement`, `freemium-risk-service` e `admin-credit-grant`.
 
 ## F56.1 — Cobertura concluída (Contrato produtivo, modelos e fallback)
 
