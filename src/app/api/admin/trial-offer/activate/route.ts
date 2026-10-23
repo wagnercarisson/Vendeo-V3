@@ -18,6 +18,17 @@ const SAFE_CONFLICT_CODES = new Set([
   "individual_launch_before_launch_at",
 ]);
 
+/**
+ * `admin_audit_log.operation_id` é único globalmente
+ * (`idx_admin_audit_log_operation`). Só esse conflito vira 409 seguro; outros
+ * 23505 preservam o tratamento genérico, sem vazar SQL bruto.
+ */
+function isOperationIdUniqueViolation(message: string, details: string): boolean {
+  const haystack = `${message} ${details}`;
+  if (/idx_admin_audit_log_operation/i.test(haystack)) return true;
+  return /operation_id/i.test(haystack) && /duplicate key|unique/i.test(haystack);
+}
+
 export const POST = apiHandler(async (request: Request) => {
   const admin = await requireAdmin();
   requireSameOrigin(request);
@@ -43,6 +54,12 @@ export const POST = apiHandler(async (request: Request) => {
 
   if (error) {
     const message = error.message ?? "";
+    if (
+      error.code === "23505" &&
+      isOperationIdUniqueViolation(message, error.details ?? "")
+    ) {
+      return NextResponse.json({ error: "operation_id_conflict" }, { status: 409 });
+    }
     if (
       message.includes("missing_reason") ||
       message.includes("missing_operation_id") ||

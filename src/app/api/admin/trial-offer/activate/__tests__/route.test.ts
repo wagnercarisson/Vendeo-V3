@@ -13,7 +13,10 @@ vi.mock("@/lib/admin/require-admin", () => ({
 const rpcCalls: unknown[][] = [];
 const fromCalls: unknown[][] = [];
 const mockRpc = vi.fn<
-  (...args: unknown[]) => Promise<{ data: unknown; error: { message: string } | null }>
+  (...args: unknown[]) => Promise<{
+    data: unknown;
+    error: { code?: string; message: string; details?: string } | null;
+  }>
 >((..._args: unknown[]) => Promise.resolve({ data: null, error: null }));
 const mockFrom = vi.fn((..._args: unknown[]) => {
   throw new Error("from() não deveria ser chamado na ativação");
@@ -205,6 +208,47 @@ describe("F50.4 admin trial offer activate route", () => {
 
     expect(response.status).toBe(409);
     expect((await response.json()).error).toBe("operation_id_conflict");
+  });
+
+  it("mapeia 23505 de idx_admin_audit_log_operation para 409 sem escrita extra", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "23505",
+        message:
+          'duplicate key value violates unique constraint "idx_admin_audit_log_operation"',
+      },
+    });
+
+    const response = await post({
+      reason: "Ativar",
+      operationId: "44444444-4444-4444-8444-444444444444",
+    });
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toBe("operation_id_conflict");
+    assertNoSideEffects();
+  });
+
+  it("não mapeia 23505 de outra constraint para operation_id_conflict", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "23505",
+        message:
+          'duplicate key value violates unique constraint "outra_constraint"',
+      },
+    });
+
+    const response = await post({ reason: "Ativar" });
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.error).not.toBe("operation_id_conflict");
+    expect(body.error).toBe(
+      "Não foi possível ativar a oferta por CNPJ completo",
+    );
+    assertNoSideEffects();
   });
 
   it("mapeia marco já gravado para 409", async () => {
