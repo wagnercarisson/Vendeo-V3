@@ -3,8 +3,8 @@
     "mode":  "disposable",
     "app_verified_disposable":  true,
     "production_activated":  false,
-    "environment_destroyed":  false,
-    "human_acceptance":  "pending",
+    "environment_destroyed":  true,
+    "human_acceptance":  "approved_with_limitations",
     "environment":  {
                         "run_id":  "20261022165000-d2uat",
                         "api_port":  54432,
@@ -76,8 +76,8 @@
                       {
                           "id":  "regression_ui_visual",
                           "group":  "regression",
-                          "status":  "PENDING",
-                          "evidence":  "50.4-UAT.md#L44"
+                          "status":  "PASS",
+                          "evidence":  "50.4-UAT.md#L44 (inspeção humana D2)"
                       },
                       {
                           "id":  "new_policy_controlled_activation",
@@ -133,5 +133,13 @@
                           "status":  "PASS",
                           "evidence":  "50.4-UAT.md#L61"
                       }
-                  ]
+                  ],
+    "human_acceptance_evidence":  "D2 2026-10-23: painel admin em estado já ativado; marcos separados e reativação bloqueada; sem novas alterações",
+    "human_acceptance_scope":  "Somente superfície administrativa e estado apresentados; npm test não-verde aceito com limitações documentadas",
+    "cleanup":  {
+                    "run_id":  "20261022165000-d2uat",
+                    "project_id":  "f50-4-disposable-20261022165000-d2uat",
+                    "containers_remaining":  0,
+                    "evidence":  "50.4-D2-NPM-TEST-DIAGNOSIS.md; disposable-db destroy exit 0"
+                }
 }
