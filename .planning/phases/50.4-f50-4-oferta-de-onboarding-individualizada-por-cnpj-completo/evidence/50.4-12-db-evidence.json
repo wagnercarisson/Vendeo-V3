@@ -1,0 +1,274 @@
+{
+  "phase": "50.4",
+  "plan": 12,
+  "run_id": "20261023-p12-dbval",
+  "project_id": "f50-4-disposable-20261023-p12-dbval",
+  "target": "127.0.0.1:54422/postgres",
+  "captured_at": "2026-10-23T19:47:59.967Z",
+  "identity": {
+    "database": "postgres",
+    "version": "17.6"
+  },
+  "sentinel": {
+    "run_id": "20261023-p12-dbval",
+    "purpose": "disposable",
+    "migrations_dir": "C:\\Projetos\\Vendeo V3\\supabase\\migrations",
+    "migrations_expected": 143,
+    "created_at": "2026-10-23T19:41:06.379Z"
+  },
+  "ledger": {
+    "total": 143,
+    "has_20261023000001": true,
+    "versions": [
+      "20260524210001",
+      "20260525010443",
+      "20260601000001",
+      "20260601000002",
+      "20260601000003",
+      "20260601000004",
+      "20260602000001",
+      "20260602000002",
+      "20260602000003",
+      "20260602000004",
+      "20260602000005",
+      "20260603000001",
+      "20260603000002",
+      "20260603000003",
+      "20260603000004",
+      "20260604000001",
+      "20260611000001",
+      "20260612000001",
+      "20260706000001",
+      "20260707000001",
+      "20260708000001",
+      "20260708000002",
+      "20260710000001",
+      "20260710000002",
+      "20260716000001",
+      "20260717000001",
+      "20260717000002",
+      "20260717000003",
+      "20260718000001",
+      "20260718000002",
+      "20260718000003",
+      "20260722000001",
+      "20260722000002",
+      "20260722000003",
+      "20260723000001",
+      "20260723000002",
+      "20260723000003",
+      "20260723000004",
+      "20260723000005",
+      "20260723000006",
+      "20260723000008",
+      "20260724000001",
+      "20260724000002",
+      "20260724000003",
+      "20260727000001",
+      "20260728000001",
+      "20260728000002",
+      "20260729000001",
+      "20260729000002",
+      "20260730000001",
+      "20260731000001",
+      "20260731000002",
+      "20260731000003",
+      "20260731000004",
+      "20260801000001",
+      "20260807000001",
+      "20260808000001",
+      "20260809000001",
+      "20260809000002",
+      "20260809000003",
+      "20260810000001",
+      "20260810000002",
+      "20260810000003",
+      "20260810000004",
+      "20260810010000",
+      "20260811000001",
+      "20260812000001",
+      "20260812000002",
+      "20260813000001",
+      "20260815000001",
+      "20260817000001",
+      "20260821000001",
+      "20260821000002",
+      "20260825000001",
+      "20260826000001",
+      "20260826000002",
+      "20260831000001",
+      "20260901000001",
+      "20260901000002",
+      "20260905000001",
+      "20260906000001",
+      "20260906000002",
+      "20260906000003",
+      "20260912000001",
+      "20260914000001",
+      "20260914000002",
+      "20260914000003",
+      "20260915000001",
+      "20260915000002",
+      "20260915000003",
+      "20260920000001",
+      "20260920000002",
+      "20260921000001",
+      "20260921000004",
+      "20260922000001",
+      "20260923000001",
+      "20260924000001",
+      "20260924000002",
+      "20260924000003",
+      "20260925000001",
+      "20260926000001",
+      "20261005000001",
+      "20261005000002",
+      "20261005000003",
+      "20261006000001",
+      "20261006000002",
+      "20261008000001",
+      "20261008000002",
+      "20261008000003",
+      "20261008000004",
+      "20261008000005",
+      "20261009000001",
+      "20261009000002",
+      "20261009000003",
+      "20261009000004",
+      "20261009000005",
+      "20261013000001",
+      "20261013000002",
+      "20261013000003",
+      "20261015000001",
+      "20261015000002",
+      "20261015000003",
+      "20261016000001",
+      "20261017000001",
+      "20261017000002",
+      "20261017000003",
+      "20261018000001",
+      "20261018000002",
+      "20261018000003",
+      "20261019000001",
+      "20261019000002",
+      "20261019000003",
+      "20261019000004",
+      "20261020000001",
+      "20261020000002",
+      "20261020000003",
+      "20261020000004",
+      "20261020000005",
+      "20261021000001",
+      "20261022000001",
+      "20261022000002",
+      "20261022000003",
+      "20261023000001"
+    ]
+  },
+  "fingerprint": "2a299f49332bbef9b567e83ed95f0cab",
+  "triggers": [
+    "trg_trial_offer_enrollments_immutable_identity",
+    "trg_trial_offer_enrollments_validate_beneficiary"
+  ],
+  "constraints": [
+    {
+      "conname": "chk_trial_offer_enrollments_beneficiary_cnpj",
+      "contype": "c",
+      "convalidated": true
+    },
+    {
+      "conname": "chk_trial_offer_enrollments_granted_total",
+      "contype": "c",
+      "convalidated": true
+    },
+    {
+      "conname": "chk_trial_offer_enrollments_last_seq",
+      "contype": "c",
+      "convalidated": true
+    },
+    {
+      "conname": "chk_trial_offer_enrollments_policy_cohort",
+      "contype": "c",
+      "convalidated": true
+    },
+    {
+      "conname": "chk_trial_offer_enrollments_window",
+      "contype": "c",
+      "convalidated": true
+    },
+    {
+      "conname": "trial_offer_enrollments_pkey",
+      "contype": "p",
+      "convalidated": true
+    },
+    {
+      "conname": "trial_offer_enrollments_store_id_fkey",
+      "contype": "f",
+      "convalidated": true
+    },
+    {
+      "conname": "trial_offer_enrollments_user_id_fkey",
+      "contype": "f",
+      "convalidated": true
+    },
+    {
+      "conname": "uq_trial_offer_enrollments_store",
+      "contype": "u",
+      "convalidated": true
+    }
+  ],
+  "indexes": [
+    {
+      "indexname": "idx_trial_offer_enrollments_due",
+      "indexdef": "CREATE INDEX idx_trial_offer_enrollments_due ON public.trial_offer_enrollments USING btree (expires_at, last_granted_seq)"
+    },
+    {
+      "indexname": "trial_offer_enrollments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX trial_offer_enrollments_pkey ON public.trial_offer_enrollments USING btree (id)"
+    },
+    {
+      "indexname": "uq_trial_offer_enrollments_beneficiary",
+      "indexdef": "CREATE UNIQUE INDEX uq_trial_offer_enrollments_beneficiary ON public.trial_offer_enrollments USING btree (beneficiary_cnpj_normalized)"
+    },
+    {
+      "indexname": "uq_trial_offer_enrollments_root_legacy",
+      "indexdef": "CREATE UNIQUE INDEX uq_trial_offer_enrollments_root_legacy ON public.trial_offer_enrollments USING btree (root_hash) WHERE (policy_cohort = 'root_legacy'::text)"
+    },
+    {
+      "indexname": "uq_trial_offer_enrollments_store",
+      "indexdef": "CREATE UNIQUE INDEX uq_trial_offer_enrollments_store ON public.trial_offer_enrollments USING btree (store_id)"
+    }
+  ],
+  "grants": [
+    {
+      "proname": "record_onboarding_completion",
+      "anon_exec": false,
+      "authenticated_exec": false,
+      "service_role_exec": true
+    },
+    {
+      "proname": "start_trial_offer_enrollment",
+      "anon_exec": false,
+      "authenticated_exec": false,
+      "service_role_exec": true
+    },
+    {
+      "proname": "trial_offer_eligibility",
+      "anon_exec": false,
+      "authenticated_exec": false,
+      "service_role_exec": true
+    },
+    {
+      "proname": "trial_offer_enrollments_immutable_identity",
+      "anon_exec": true,
+      "authenticated_exec": true,
+      "service_role_exec": true
+    },
+    {
+      "proname": "trial_offer_enrollments_validate_beneficiary",
+      "anon_exec": false,
+      "authenticated_exec": false,
+      "service_role_exec": true
+    }
+  ]
+}
