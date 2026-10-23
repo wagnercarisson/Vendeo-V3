@@ -147,4 +147,76 @@ describe("BalanceCard", () => {
       vi.useRealTimers();
     }
   });
+
+  it("legacy account without demo or trial does not promise demo or free trial", () => {
+    mockUseOperationCosts.mockReturnValue({
+      costs: {
+        campaign_generation: { costCredits: 1, enabled: true },
+        visual_signature_generation: { costCredits: 1, enabled: true },
+      },
+      status: "loaded",
+      refetch: vi.fn(),
+    });
+    const html = renderToString(<BalanceCard balance={5} availableBalance={5} hasStore />);
+    expect(html).toContain("5 créditos disponíveis");
+    expect(html).toContain("Campanha: 1 crédito");
+    expect(html).not.toContain("Demonstração não iniciada");
+    expect(html).not.toContain("Demonstração ativa");
+    expect(html).not.toContain("Demonstração legada");
+    expect(html).not.toContain("Teste gratuito");
+  });
+
+  it("shows the trial start message only with explicit eligibility", () => {
+    mockUseOperationCosts.mockReturnValue({ costs: null, status: "loading", refetch: vi.fn() });
+    const html = renderToString(
+      <BalanceCard balance={5} availableBalance={5} hasStore trialOfferEligibility="eligible" />,
+    );
+    expect(html).toContain("Teste gratuito: começa ao concluir o onboarding");
+    expect(html).not.toContain("Demonstração não iniciada");
+  });
+
+  it("keeps active legacy demo status and relative expiry", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-23T06:00:00.000Z"));
+    try {
+      mockUseOperationCosts.mockReturnValue({ costs: null, status: "loading", refetch: vi.fn() });
+      const html = renderToString(
+        <BalanceCard balance={10} demoBalance={10} demoExpiresAt="2026-10-02T06:00:00.000Z" originDemoGrantTxId="grant-1" hasStore />,
+      );
+      expect(html).toContain("Demonstração ativa");
+      expect(html).toContain("expira em");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps active trial status, expiry and next installment", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-20T12:00:00.000Z"));
+    try {
+      mockUseOperationCosts.mockReturnValue({ costs: null, status: "loading", refetch: vi.fn() });
+      const html = renderToString(
+        <BalanceCard
+          balance={5}
+          availableBalance={5}
+          demoBalance={5}
+          demoExpiresAt="2026-11-17T00:00:00.000Z"
+          hasStore
+          trialOfferEnrollment={{
+            id: "enr-1",
+            startedAt: "2026-10-20T00:00:00.000Z",
+            expiresAt: "2026-11-17T00:00:00.000Z",
+            grantedTotal: 5,
+            lastGrantedSeq: 0,
+          }}
+        />,
+      );
+      expect(html).toContain("Teste gratuito de 28 dias ativo");
+      expect(html).toContain("Vence em");
+      expect(html).toContain("Próxima parcela");
+      expect(html).not.toContain("Demonstração não iniciada");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

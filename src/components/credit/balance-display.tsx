@@ -38,8 +38,9 @@ function DemoSummary({ demoBalance = 0, demoExpiresAt = null, originDemoGrantTxI
     if (!demoExpiresAt) return;
     setLocalExpiry(new Date(demoExpiresAt).toLocaleString("pt-BR"));
   }, [demoExpiresAt]);
-  const isRelevant = status !== "none";
-  return <span className={isRelevant ? "text-xs text-text-secondary" : "sr-only"}>
+  // Sem demo existente não há nada a comunicar — nem visualmente, nem em sr-only.
+  if (status === "none") return null;
+  return <span className="text-xs text-text-secondary">
     {getDemoLabel(status)}
     {demoExpiresAt && (status === "active" || status === "expiring_soon")
       ? ` · ${localExpiry ?? ""} (${formatRelativeExpiry(demoExpiresAt)})`

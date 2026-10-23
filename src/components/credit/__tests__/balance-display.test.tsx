@@ -32,4 +32,17 @@ describe("BalanceDisplay", () => {
     expect(html).toContain("text-accent-green");
     expect(html).not.toContain("Solicitar créditos");
   });
+
+  it("does not announce a missing demo when there is none", () => {
+    const html = renderToString(<BalanceDisplay balance={5} availableBalance={5} />);
+    expect(html).toContain("5 créditos");
+    expect(html).not.toContain("Demonstração não iniciada");
+  });
+
+  it("keeps the demo label when a demo is active", () => {
+    const html = renderToString(
+      <BalanceDisplay balance={10} demoBalance={10} demoExpiresAt="2030-01-01T00:00:00.000Z" originDemoGrantTxId="grant-1" />,
+    );
+    expect(html).toContain("Demonstração ativa");
+  });
 });

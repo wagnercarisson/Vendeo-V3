@@ -32,6 +32,7 @@ interface BalanceCardProps {
   demoExpiresAt?: string | null;
   originDemoGrantTxId?: string | null;
   trialOfferEnrollment?: TrialOfferEnrollmentView | null;
+  trialOfferEligibility?: "eligible" | "unknown";
 }
 
 function getState(balance: number, hasStore: boolean) {
@@ -119,6 +120,7 @@ function ReadyContent(props: BalanceCardProps) {
     demoBalance: props.demoBalance ?? 0,
     demoExpiresAt: props.demoExpiresAt ?? null,
     hasLegacyDemo: Boolean(props.originDemoGrantTxId) && !props.trialOfferEnrollment,
+    eligibility: props.trialOfferEligibility ?? "unknown",
   });
   const nextInstallment = getNextTrialInstallment(
     props.trialOfferEnrollment ?? null,
@@ -129,6 +131,7 @@ function ReadyContent(props: BalanceCardProps) {
     demoExpiresAt: props.demoExpiresAt ?? null,
   });
   const trialStatusLabel = {
+    unknown: "",
     not_started: "Teste gratuito: começa ao concluir o onboarding",
     active: "Teste gratuito de 28 dias ativo",
     expiring_soon: "Teste gratuito: expira em breve",
@@ -169,10 +172,10 @@ function ReadyContent(props: BalanceCardProps) {
         {availableBalance}
       </p>
       <div className="space-y-1 text-sm text-text-secondary font-body" aria-label="Status da demonstração">
-        {(!props.trialOfferEnrollment || trialStatus === "legacy_demo") && (
+        {(!props.trialOfferEnrollment || trialStatus === "legacy_demo") && demoStatus !== "none" && (
           <p>{({ active: "Demonstração ativa", expiring_soon: "Expira em breve", exhausted: "Demonstração esgotada", expired: "Demonstração encerrada", none: "Demonstração não iniciada" } as const)[demoStatus]}</p>
         )}
-        <p>{trialStatusLabel}</p>
+        {trialStatus !== "unknown" && <p>{trialStatusLabel}</p>}
         {props.trialOfferEnrollment && trialStatus !== "expired" && (
           <p>
             Vence em{" "}
