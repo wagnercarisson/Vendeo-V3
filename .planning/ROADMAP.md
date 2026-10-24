@@ -1,4 +1,4 @@
-﻿# Roadmap: Vendeo V3
+# Roadmap: Vendeo V3
 
 ## Milestone v1.5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â LanÃƒÆ’Ã‚Â§amento Externo Controlado ÃƒÂ¢Ã¢â‚¬â€Ã¢â‚¬Â 
 
@@ -670,4 +670,3 @@ Plans:
 **Gate:** nenhuma integração antes da revisão dos planos; nenhuma migration remota antes do ensaio descartável e do manifesto de release derivado do ledger; nenhuma publicação sem migrations; nenhum piloto sem publicação OFF; nenhuma ativação sem piloto aprovado. O lote remoto é limitado ao aprovado e ausente; dependência fora do lote para o gate.
 
 **Canonical refs:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design D1–D13, 4 delta specs, tasks), `.planning/phases/47.2-integracao-promocao-assinatura-visual/` (APPROVAL, CONTEXT, PATTERNS, COVERAGE-MATRIX, 10 PLAN), `openspec/changes/archive/2026-10-23-fase-47-1-modelos-assinatura-visual/`, `openspec/changes/archive/2026-10-23-fase-50-4-oferta-onboarding-por-cnpj/`.
-

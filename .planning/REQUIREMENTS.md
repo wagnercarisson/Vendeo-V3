@@ -1,4 +1,4 @@
-﻿# Requirements: Vendeo V3
+# Requirements: Vendeo V3
 
 **Status operacional:** a **F56.1 — Contrato produtivo, modelos e fallback** está com **COBERTURA CONCLUÍDA** (11/11 planos GSD; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; verificada/sincronizada/arquivada em 2026-10-06 em `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`), com os 27 REQ-IDs mapeados dos 8 specs OpenSpec da change agora arquivada.
 
@@ -260,4 +260,3 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 - Quick plans e summaries: `.planning/quick/`.
 - Propostas, specs e tasks arquivadas: `openspec/changes/archive/`.
 - Auditorias e decisões históricas: `.planning/` e `docs/`.
-

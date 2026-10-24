@@ -1,4 +1,4 @@
-﻿---
+---
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
@@ -356,4 +356,3 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 | Phase 56.2 P05 | 6m | 3 tasks | 2 files |
 | Phase 56.2.2 P01 | 35min | 4 tasks | 9 files |
 | Phase 56.2.6 P02 | 14min | 3 tasks | 4 files |
-
