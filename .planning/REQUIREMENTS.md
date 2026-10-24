@@ -1,4 +1,4 @@
-# Requirements: Vendeo V3
+﻿# Requirements: Vendeo V3
 
 **Status operacional:** a **F56.1 — Contrato produtivo, modelos e fallback** está com **COBERTURA CONCLUÍDA** (11/11 planos GSD; UAT humano local aprovado; GSD 10/10; OpenSpec 55/55; verificada/sincronizada/arquivada em 2026-10-06 em `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/`), com os 27 REQ-IDs mapeados dos 8 specs OpenSpec da change agora arquivada.
 
@@ -30,7 +30,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 
 ## F47.2 — Planejada (Integração e promoção produtiva da Assinatura Visual)
 
-**Fonte ativa:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design, 4 delta specs, tasks; `validate --strict` valid) + `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. **Status:** **Plano 01 concluído e aceito; Plano 02 concluído e aceito; Plano 03 executado em 2026-10-24, aguardando revisão.** F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva `E11D8E1D…` e manifesto emitidos; ambiente/credenciais/liberação por versão implementados com 232/232 testes focados. Nenhuma migration aplicada, banco, provider, push ou deploy. **Planos:** `47.2-01..10` em 9 waves, com checkpoints separados de integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
+**Fonte ativa:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design, 4 delta specs, tasks; `validate --strict` valid) + `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. **Status:** **Plano 01 concluído e aceito; Plano 02 concluído e aceito; Plano 03 executado em 2026-10-24, aguardando revisão.** F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva `E11D8E1D…` e manifesto emitidos; ambiente/credenciais/liberação por versão implementados com 234/234 testes focados. Nenhuma migration aplicada, banco, provider, push ou deploy. **Planos:** `47.2-01..10` em 9 waves, com checkpoints separados de integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
 
 | REQ-ID | Cobertura | Plano |
 |---|---|---|
@@ -260,3 +260,4 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 - Quick plans e summaries: `.planning/quick/`.
 - Propostas, specs e tasks arquivadas: `openspec/changes/archive/`.
 - Auditorias e decisões históricas: `.planning/` e `docs/`.
+

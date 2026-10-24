@@ -31,6 +31,7 @@ import {
 import type { AiInvoker, AiTelemetryContext, VisualSignatureModelConfigSnapshot } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { ProductEventService } from '@/lib/product-events/service';
+import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -399,7 +400,7 @@ export const POST = apiHandler(async (
   if (!result && attempt1Error) {
     const isTimeout = attempt1Error instanceof DOMException && attempt1Error.name === 'AbortError';
 
-    if (!isTimeout) {
+    if (!isTimeout && !isVisualSignatureSmokeNoRetry()) {
       console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — image_retry (prompt simplificado)`);
       try {
         // F38.1 (D1): fecha o run 1 (envelopes de imagem/validação da tentativa

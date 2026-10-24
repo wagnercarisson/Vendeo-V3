@@ -1,4 +1,4 @@
-# Roadmap: Vendeo V3
+﻿# Roadmap: Vendeo V3
 
 ## Milestone v1.5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â LanÃƒÆ’Ã‚Â§amento Externo Controlado ÃƒÂ¢Ã¢â‚¬â€Ã¢â‚¬Â 
 
@@ -642,7 +642,7 @@ Plans:
 
 ### Phase 47.2: F47.2 — Integração e promoção produtiva da Assinatura Visual
 
-**Status:** **PLANO 01 CONCLUÍDO E ACEITO; PLANO 02 CONCLUÍDO E ACEITO; PLANO 03 EXECUTADO, AGUARDANDO REVISÃO (2026-10-24); PLANO 04 NÃO INICIADO.** Merge `ecf29e54` aceito; baseline registrado (6744 passed/9 failed/161 skipped); F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva `E11D8E1D…` e manifesto emitidos; Plano 03 entregou ambiente/credenciais/liberação por versão com 232/232 testes focados. Base OpenSpec `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` validada (`--strict` valid; 20 requisitos; 4 capabilities). Aprovação registrada em `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. Nenhuma migration aplicada, banco, provider, push ou deploy.
+**Status:** **PLANO 01 CONCLUÍDO E ACEITO; PLANO 02 CONCLUÍDO E ACEITO; PLANO 03 EXECUTADO, AGUARDANDO REVISÃO (2026-10-24); PLANO 04 NÃO INICIADO.** Merge `ecf29e54` aceito; baseline registrado (6744 passed/9 failed/161 skipped); F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva `E11D8E1D…` e manifesto emitidos; Plano 03 entregou ambiente/credenciais/liberação por versão com 234/234 testes focados. Base OpenSpec `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` validada (`--strict` valid; 20 requisitos; 4 capabilities). Aprovação registrada em `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. Nenhuma migration aplicada, banco, provider, push ou deploy.
 
 **Goal:** integrar a branch completa da F47.1 à `main` atual preservando histórico e F50.3/F50.4; renumerar apenas a F47.1 com timestamp UTC real e criar a migration corretiva F47.2; substituir o isolamento exclusivamente local por contrato explícito de ambiente com liberação vinculada à versão; corrigir a atualidade do perfil por origem/ativo/contexto; provar não-interferência na F50.4; e preparar a promoção com gates separados.
 
@@ -670,3 +670,4 @@ Plans:
 **Gate:** nenhuma integração antes da revisão dos planos; nenhuma migration remota antes do ensaio descartável e do manifesto de release derivado do ledger; nenhuma publicação sem migrations; nenhum piloto sem publicação OFF; nenhuma ativação sem piloto aprovado. O lote remoto é limitado ao aprovado e ausente; dependência fora do lote para o gate.
 
 **Canonical refs:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design D1–D13, 4 delta specs, tasks), `.planning/phases/47.2-integracao-promocao-assinatura-visual/` (APPROVAL, CONTEXT, PATTERNS, COVERAGE-MATRIX, 10 PLAN), `openspec/changes/archive/2026-10-23-fase-47-1-modelos-assinatura-visual/`, `openspec/changes/archive/2026-10-23-fase-50-4-oferta-onboarding-por-cnpj/`.
+

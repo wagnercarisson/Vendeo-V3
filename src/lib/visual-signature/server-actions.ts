@@ -23,6 +23,7 @@ import type {
   VisualSignatureModelConfigSnapshot,
 } from "@/lib/ai";
 import { resolveEconomicSnapshot } from "@/lib/economic/economic-snapshot";
+import { isVisualSignatureSmokeNoRetry } from "./smoke-retry-policy";
 import type {
   VisualSignatureRecord,
   VisualSignatureMetadata,
@@ -285,7 +286,7 @@ export async function generateVariations(
       const a1 = classifyError(err, "image_direct", attempt1Start, effectiveVisualSignatureModel);
       console.log(`[visual-signature] generateVariations tone=${tone} attempt1 ${a1.status}`);
 
-      if (a1.status !== "timeout") {
+      if (!isVisualSignatureSmokeNoRetry() && a1.status !== "timeout") {
         await attempt1.flush();
         const attempt2Start = Date.now();
         const attempt2 = createAttemptTelemetryContext({
@@ -473,6 +474,12 @@ export async function generateAutomatic(storeId: string): Promise<
   }
 
   // Attempt 2: image_retry (only on non-timeout failures)
+  if (isVisualSignatureSmokeNoRetry()) {
+    return {
+      success: false,
+      error: "Não conseguimos criar sua assinatura visual agora. Tente novamente ou envie seu logotipo.",
+    };
+  }
   console.log(`[visual-signature] tier=image_retry started (simplified prompt)`);
   const attempt2Start = Date.now();
   const attempt2 = createAttemptTelemetryContext({
