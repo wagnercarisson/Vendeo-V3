@@ -6,7 +6,7 @@
  * a configuração congelada chega aos três entry points e que o retry reutiliza
  * o mesmo snapshot, enquanto uma nova geração relê a configuração vigente.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 vi.hoisted(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL ??= "http://localhost:54321";
@@ -167,6 +167,10 @@ beforeEach(() => {
 });
 
 describe("F47.1 — configuração congelada nos entry points", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("generateVariations usa o mesmo snapshot nas 3 variações e no retry", async () => {
     let failFirst = true;
     h.generate.mockImplementation(async (params: { tone: string; attempt: number }) => {
@@ -195,6 +199,41 @@ describe("F47.1 — configuração congelada nos entry points", () => {
     expect(secondCalls).toHaveLength(3);
     expect(secondCalls.every((call) => call.visualSignatureConfig === SNAPSHOT_B)).toBe(true);
     expect(h.load).toHaveBeenCalledTimes(2);
+  });
+
+  it("F47.2: smoke no-retry não remove retry do legado em generateVariations", async () => {
+    vi.stubEnv("VENDEO_VS_SMOKE_NO_RETRY", "1");
+    let failFirst = true;
+    h.generate.mockImplementation(async (params: { tone: string; attempt: number }) => {
+      if (params.tone === "profissional" && params.attempt === 0 && failFirst) {
+        failFirst = false;
+        throw new Error("falha transitória fake");
+      }
+      return result({ tier: params.attempt > 0 ? "image_retry" : "image_direct" });
+    });
+    h.load.mockResolvedValueOnce({ mode: "legacy" });
+
+    const first = await generateVariations(store.id);
+
+    expect(first.success).toBe(true);
+    expect(h.generate).toHaveBeenCalledTimes(4);
+    vi.unstubAllEnvs();
+  });
+
+  it("F47.2: smoke no-retry remove retry somente no dedicado em generateVariations", async () => {
+    vi.stubEnv("VENDEO_VS_SMOKE_NO_RETRY", "1");
+    h.generate.mockImplementation(async (params: { tone: string; attempt: number }) => {
+      if (params.tone === "profissional" && params.attempt === 0) {
+        throw new Error("falha transitória fake");
+      }
+      return result({ tier: params.attempt > 0 ? "image_retry" : "image_direct" });
+    });
+    h.load.mockResolvedValueOnce(SNAPSHOT_A);
+
+    await generateVariations(store.id);
+
+    expect(h.generate).toHaveBeenCalledTimes(1);
+    expect(h.generate.mock.calls[0][0].attempt).toBe(0);
   });
 
   it("generateAutomatic reutiliza o snapshot no retry e relê em nova geração", async () => {

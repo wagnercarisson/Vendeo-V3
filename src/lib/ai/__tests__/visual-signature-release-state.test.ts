@@ -144,6 +144,27 @@ describe("F47.2 — estados de liberação no snapshot", () => {
     }
   });
 
+  it("configuração inativa divergente não bloqueia o legado", async () => {
+    const snapshot = await loadVisualSignatureModelConfigSnapshot({
+      reader: {
+        read: async () => ({
+          ...row(),
+          environment_scope: "production",
+          instance_identity: "outra-identidade",
+        }),
+      },
+      releaseReader: {
+        read: async () => release({ published_config_version_id: null }),
+      },
+      pilotStoreReader: { read: async () => [] },
+      storeId: "store-in",
+      isOptedIn: () => true,
+      assertEnvironment: () => ENVIRONMENT,
+      assertCredential: () => {},
+    });
+    expect(snapshot).toEqual({ mode: "legacy" });
+  });
+
   it("piloto sem storeId não retorna dedicado", async () => {
     const snapshot = await loadVisualSignatureModelConfigSnapshot({
       reader: { read: async () => row() },

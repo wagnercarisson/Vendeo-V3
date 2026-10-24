@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const mockSupabaseFrom = vi.fn();
@@ -622,6 +622,53 @@ describe('VS cost accounting (6.4)', () => {
     for (const e of attempt1Events) {
       expect(e.visualSignatureId).toBeNull();
     }
+  });
+
+  it('F47.2: smoke no-retry não remove retry do legado', async () => {
+    vi.stubEnv('VENDEO_VS_SMOKE_NO_RETRY', '1');
+    setupStandardStore();
+    mockLoadVisualSignatureConfig.mockResolvedValueOnce({ mode: 'legacy' });
+    mockIdentityDirectorGenerate.mockRejectedValueOnce(new Error('identity_art_director_failed: boom'));
+    mockAiGeneratorGenerate.mockResolvedValueOnce({
+      tier: 'image_direct',
+      assetUrl: 'https://example.com/retry.png',
+      storagePath: 'test/retry.png',
+      mimeType: 'image/png',
+      metadata: { generation_tier: 'image_direct' },
+      prompt: 'retry prompt',
+      aiResponseMessage: JSON.stringify({
+        visual_direction: 'Minimalista',
+        content_used: { store_name: true, city: false, state: false, slogan: false },
+      }),
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    expect(mockAiGeneratorGenerate).toHaveBeenCalledTimes(1);
+    vi.unstubAllEnvs();
+  });
+
+  it('F47.2: smoke no-retry remove retry somente no caminho dedicado', async () => {
+    vi.stubEnv('VENDEO_VS_SMOKE_NO_RETRY', '1');
+    setupStandardStore();
+    mockLoadVisualSignatureConfig.mockResolvedValueOnce({
+      mode: 'dedicated',
+      orchestratorModel: 'gpt-5.5',
+      imagePreset: 'sunburst_medium',
+      imageModel: 'gpt-image-2.5-sunburst',
+      imageQuality: 'medium',
+      reasoningEffort: 'low',
+      configVersionId: '11111111-1111-4111-8111-111111111111',
+      instanceIdentity: '127.0.0.1:57781',
+    });
+    mockIdentityDirectorGenerate.mockRejectedValueOnce(new Error('identity_art_director_failed: boom'));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).not.toBe(200);
+    expect(mockAiGeneratorGenerate).toHaveBeenCalledTimes(0);
+    vi.unstubAllEnvs();
   });
 
   it('F47.1: rota congela snapshot no retry e relê a configuração na próxima requisição', async () => {

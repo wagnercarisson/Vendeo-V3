@@ -28,8 +28,13 @@ function originLabel(origin: VisualSignatureModelConfigView["inherited"]["origin
   return "Default do sistema";
 }
 
-function diagnosticLabel(diagnostic: VisualSignatureModelConfigView["diagnostic"]): string {
-  if (diagnostic.status === "dedicated_valid") return "em uso no ambiente local";
+function diagnosticLabel(
+  diagnostic: VisualSignatureModelConfigView["diagnostic"],
+  environment?: string,
+): string {
+  if (diagnostic.status === "dedicated_valid") {
+    return `em uso no ambiente ${environment ?? "configurado"}`;
+  }
   if (diagnostic.status === "inherited_opt_in_disabled") {
     return "seleção herdada — opt-in desligado";
   }
@@ -128,6 +133,7 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
 
   const selectedPreset = view.presets.find((item) => item.preset === preset) ?? view.presets[0];
   const selectedPricing = view.pricingByPreset[preset];
+  const effective = view.diagnostic.status === "dedicated_valid";
 
   function idempotencyKey(fingerprint: string): string {
     if (operation?.fingerprint === fingerprint) return operation.id;
@@ -278,6 +284,7 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
         current={view.current}
         diagnostic={view.diagnostic}
         readError={view.readError}
+        environment={view.release?.environment}
       />
 
       <Card className="space-y-4 p-6">
@@ -290,8 +297,12 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
                 : "Sem estado de liberação vinculado à versão."}
             </p>
           </div>
-          <Badge variant={view.release?.activated ? "ready" : "default"}>
-            {view.release?.activated ? "em uso" : "herdado"}
+          <Badge variant={effective ? "ready" : "default"}>
+            {effective
+              ? "em uso"
+              : view.release?.activated
+                ? "registrado — não efetivo"
+                : "herdado"}
           </Badge>
         </div>
         <label className="space-y-1.5 text-sm text-text-secondary">
@@ -457,10 +468,12 @@ function CurrentConfigCard({
   current,
   diagnostic,
   readError,
+  environment,
 }: {
   current: VisualSignatureConfigViewRow | null;
   diagnostic: VisualSignatureModelConfigView["diagnostic"];
   readError: string | null;
+  environment?: string;
 }) {
   return (
     <Card className="space-y-4 p-6">
@@ -468,7 +481,7 @@ function CurrentConfigCard({
         <h3 className="font-heading text-lg font-semibold text-text-primary">
           Configuração dedicada
         </h3>
-        <Badge variant={diagnosticVariant(diagnostic)}>{diagnosticLabel(diagnostic)}</Badge>
+        <Badge variant={diagnosticVariant(diagnostic)}>{diagnosticLabel(diagnostic, environment)}</Badge>
       </div>
       <p
         className={`rounded-lg border p-3 text-xs ${

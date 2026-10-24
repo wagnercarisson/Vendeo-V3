@@ -236,15 +236,21 @@ export async function resolveVisualSignatureModelConfigDiagnostic(
     return { status: "inherited", reason: "absent" };
   }
 
-  if (
-    row.environment_scope !== (environment.environment ?? VISUAL_SIGNATURE_ENVIRONMENT_SCOPE) ||
-    row.instance_identity !== environment.instanceIdentity
-  ) {
-    const error = new VisualSignatureConfigOutsideEnvironmentError();
-    return { status: "blocked", reason: "identity", code: error.code, error };
+  const useRelease = options.releaseReader !== undefined || options.reader === undefined;
+
+  // Compatibilidade com leitores legados (sem release): a checagem de
+  // identidade continua imediata. No caminho real, a matriz de elegibilidade é
+  // aplicada antes de qualquer bloqueio de identidade.
+  if (!useRelease) {
+    if (
+      row.environment_scope !== (environment.environment ?? VISUAL_SIGNATURE_ENVIRONMENT_SCOPE) ||
+      row.instance_identity !== environment.instanceIdentity
+    ) {
+      const error = new VisualSignatureConfigOutsideEnvironmentError();
+      return { status: "blocked", reason: "identity", code: error.code, error };
+    }
   }
 
-  const useRelease = options.releaseReader !== undefined || options.reader === undefined;
   let release: VisualSignatureReleaseRow | null = null;
   let pilotStores: string[] = [];
   if (useRelease) {
@@ -262,14 +268,6 @@ export async function resolveVisualSignatureModelConfigDiagnostic(
 
     if (!release) {
       return { status: "inherited", reason: "not_published" };
-    }
-    const declaredEnvironment = environment.environment ?? VISUAL_SIGNATURE_ENVIRONMENT_SCOPE;
-    if (
-      release.environment_scope !== declaredEnvironment ||
-      release.instance_identity !== environment.instanceIdentity
-    ) {
-      const error = new VisualSignatureConfigOutsideEnvironmentError();
-      return { status: "blocked", reason: "identity", code: error.code, error };
     }
     if (release.published_config_version_id !== row.config_version_id) {
       return { status: "inherited", reason: "not_published" };
@@ -302,6 +300,17 @@ export async function resolveVisualSignatureModelConfigDiagnostic(
 
     // Consistência entre config/release/allowlist: o release é relido após as
     // consultas independentes. Se mudou, o conjunto é de momentos diferentes.
+    const declaredEnvironment = environment.environment ?? VISUAL_SIGNATURE_ENVIRONMENT_SCOPE;
+    if (
+      row.environment_scope !== declaredEnvironment ||
+      row.instance_identity !== environment.instanceIdentity ||
+      release.environment_scope !== declaredEnvironment ||
+      release.instance_identity !== environment.instanceIdentity
+    ) {
+      const error = new VisualSignatureConfigOutsideEnvironmentError();
+      return { status: "blocked", reason: "identity", code: error.code, error };
+    }
+
     try {
       const releaseAgain = await releaseReader.read();
       const signature = (value: VisualSignatureReleaseRow | null) =>
@@ -324,6 +333,19 @@ export async function resolveVisualSignatureModelConfigDiagnostic(
           code: error.code,
           error,
         };
+      }
+      if (release.activation_mode === "pilot") {
+        const pilotAgain = await (options.pilotStoreReader ?? defaultPilotStoreReader).read();
+        const sorted = (items: string[]) => [...items].sort().join(",");
+        if (sorted(pilotStores) !== sorted(pilotAgain)) {
+          const error = new VisualSignatureConfigConcurrentChangeError();
+          return {
+            status: "blocked",
+            reason: "concurrent_change",
+            code: error.code,
+            error,
+          };
+        }
       }
     } catch (error) {
       return {
@@ -444,7 +466,7 @@ async function readReleaseFromSupabase(): Promise<VisualSignatureReleaseRow | nu
   const { supabaseAdmin } = await import("@/lib/supabase/server");
   const { data, error } = await supabaseAdmin
     .from("visual_signature_model_config_release")
-    .select("published_config_version_id, activated_config_version_id, activation_mode, environment_scope, instance_identity")
+    .select("published_config_version_id, activated_config_version_id, activation_mode, environment_scope, instance_identity, updated_at, last_operation_id")
     .eq("scope", VISUAL_SIGNATURE_CONFIG_SCOPE)
     .maybeSingle();
   if (error) throw error;

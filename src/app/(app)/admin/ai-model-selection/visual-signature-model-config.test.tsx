@@ -111,6 +111,29 @@ describe("F47.1 — card da Assinatura Visual", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it("distingue ativação registrada de uso efetivo", () => {
+    render(
+      <VisualSignatureConfigForm
+        view={{
+          ...VIEW,
+          release: {
+            environment: "local_validation",
+            published: true,
+            activated: true,
+            activationMode: "pilot",
+            pilotEligible: true,
+          },
+          diagnostic: {
+            status: "inherited_opt_in_disabled",
+            reason: "opt_in_disabled",
+            code: null,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("registrado — não efetivo")).toBeInTheDocument();
+  });
+
   it("salva apenas no endpoint dedicado, sem enviar modelo/qualidade/reasoning", async () => {
     render(<VisualSignatureConfigForm view={VIEW} />);
 
