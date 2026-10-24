@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Runner = Join-Path $Repo 'scripts\f47-2\run-disposable-proofs.ps1'
+$Module = Join-Path $Repo 'scripts\f47-2\lib\DisposableRunner.psm1'
 $Manifest = 'C:\Users\wagne\AppData\Local\Temp\opencode\f47-2-compose-review\compose.yaml'
 
 $tokens = $null
@@ -9,6 +10,7 @@ $parseErrors = $null
 if ($parseErrors.Count -gt 0) { throw 'Runner has PowerShell parse errors.' }
 
 $source = Get-Content -LiteralPath $Runner -Raw
+$moduleSource = Get-Content -LiteralPath $Module -Raw
 foreach ($required in @(
     "'environment', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop'",
     '-ConfirmStart', '-ConfirmMigrations', '-ConfirmInvariants', '-ConfirmCompatibility', '-ConfirmStop',
@@ -17,9 +19,15 @@ foreach ($required in @(
     'Stop-NewComposeProject', "'--timeout', '20'", 'partial run, never a Task 3 PASS',
     'exact compatibility-new test inventory is not defined', 'ExpectedManifestHash',
     'image ID differs from the stopped source service',
-    'inventory differs from the two preserved volumes'
+    'inventory differs from the two preserved volumes',
+    "-TimeoutMilliseconds 120000", 'compose_stop_state_check',
+    "-Stage 'ledger_select_sql'", 'migration_${Operation}_cli',
+    'Resolve-ComposeStopVerification'
 )) {
     if (-not $source.Contains($required)) { throw "Runner missing required safety contract: $required" }
+}
+if (-not $moduleSource.Contains('stop_exit_nonzero_but_no_running_containers')) {
+    throw 'Runner module missing safe stop-state classification.'
 }
 foreach ($forbidden in @('supabase status', 'supabase start', 'supabase stop', '--linked', 'migration repair', 'db reset', 'db push', 'compose down', 'down -v')) {
     if ($source.Contains($forbidden)) { throw "Runner contains forbidden operation: $forbidden" }

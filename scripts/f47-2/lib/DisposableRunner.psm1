@@ -93,6 +93,62 @@ function New-ComposeArguments {
     return @('compose', '-p', $ProjectName, '-f', $ManifestPath) + $Arguments
 }
 
+function Get-SafeProcessFailureCategory {
+    param([Parameter(Mandatory = $true)][object]$Result)
+    if ($Result.StartError) { return 'process_start_error' }
+    if ($Result.TimedOut) { return 'process_timeout' }
+    if ($Result.ExitCode -ne 0 -and $Result.StdErrPresent) { return 'nonzero_with_stderr' }
+    if ($Result.ExitCode -ne 0) { return 'nonzero_exit' }
+    if ($Result.StdErrPresent) { return 'stderr_on_success' }
+    return 'none'
+}
+
+function New-SafeProcessDiagnostic {
+    param(
+        [Parameter(Mandatory = $true)][ValidatePattern('^[a-z0-9_]+$')][string]$Stage,
+        [Parameter(Mandatory = $true)][object]$Result
+    )
+    $category = Get-SafeProcessFailureCategory -Result $Result
+    return [pscustomobject]@{
+        Stage = $Stage
+        ExitCode = [int]$Result.ExitCode
+        TimedOut = [bool]$Result.TimedOut
+        Category = $category
+        StdErrPresent = [bool]$Result.StdErrPresent
+    }
+}
+
+function Resolve-ComposeStopVerification {
+    param(
+        [Parameter(Mandatory = $true)][object]$StopResult,
+        [Parameter(Mandatory = $true)][object]$RunningQueryResult
+    )
+    if ($RunningQueryResult.StartError -or $RunningQueryResult.TimedOut -or $RunningQueryResult.ExitCode -ne 0) {
+        return [pscustomobject]@{
+            VerifiedStopped = $false
+            ExitCode = 1
+            RunningCount = -1
+            Category = Get-SafeProcessFailureCategory -Result $RunningQueryResult
+        }
+    }
+    $runningIds = @($RunningQueryResult.Lines | Where-Object { $_ -match '^[0-9a-f]{12,64}$' })
+    if ($runningIds.Count -eq 0) {
+        $stopFailed = $StopResult.StartError -or $StopResult.TimedOut -or $StopResult.ExitCode -ne 0
+        return [pscustomobject]@{
+            VerifiedStopped = $true
+            ExitCode = 0
+            RunningCount = 0
+            Category = if ($stopFailed) { 'stop_exit_nonzero_but_no_running_containers' } else { 'none' }
+        }
+    }
+    return [pscustomobject]@{
+        VerifiedStopped = $false
+        ExitCode = 1
+        RunningCount = $runningIds.Count
+        Category = 'containers_still_running'
+    }
+}
+
 function New-RestReadinessProbe {
     param(
         [Parameter(Mandatory = $true)][ValidatePattern('^[a-z0-9_]+$')][string]$ProjectId,
@@ -182,4 +238,4 @@ function Invoke-StartupWithRestrictedCleanup {
     }
 }
 
-Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Invoke-StartupWithRestrictedCleanup
+Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Invoke-StartupWithRestrictedCleanup

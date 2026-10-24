@@ -40,6 +40,14 @@ function Invoke-Compose {
     return Invoke-Captured -FilePath 'docker' -Arguments $composeArguments -TimeoutMilliseconds $TimeoutMilliseconds
 }
 
+function Write-SafeProcessDiagnostic {
+    param([string]$Stage, [object]$Result)
+    $diagnostic = New-SafeProcessDiagnostic -Stage $Stage -Result $Result
+    Write-Warning ("RUNNER_DIAGNOSTIC stage={0} exit_code={1} timeout={2} error_category={3} stderr_present={4}" -f `
+        $diagnostic.Stage, $diagnostic.ExitCode, $diagnostic.TimedOut.ToString().ToLowerInvariant(),
+        $diagnostic.Category, $diagnostic.StdErrPresent.ToString().ToLowerInvariant())
+}
+
 function Assert-ReviewInputs {
     if (-not (Test-Path -LiteralPath $Manifest -PathType Leaf)) { throw 'Restricted review manifest is missing.' }
     if ((Get-FileHash -Algorithm SHA256 -LiteralPath $Manifest).Hash -ne $ExpectedManifestHash) {
@@ -147,8 +155,24 @@ function Assert-PreStartIsolation {
 }
 
 function Stop-NewComposeProject {
-    $stopped = Invoke-Compose -Arguments @('stop', '--timeout', '20')
-    if ($stopped.ExitCode -ne 0) { throw 'Stopping the dedicated Compose project failed; output suppressed.' }
+    # Compose's graceful-stop timeout is 20 seconds per service. Allow enough
+    # wall time for the whole nine-service project plus CLI/Docker overhead.
+    $stopped = Invoke-Compose -Arguments @('stop', '--timeout', '20') -TimeoutMilliseconds 120000
+    if ($stopped.ExitCode -ne 0) { Write-SafeProcessDiagnostic -Stage 'compose_stop' -Result $stopped }
+
+    $running = Invoke-Captured -FilePath 'docker' -Arguments @('ps', '-q', '--filter', "label=com.docker.compose.project=$ComposeProject") -TimeoutMilliseconds 30000
+    $verification = Resolve-ComposeStopVerification -StopResult $stopped -RunningQueryResult $running
+    if ($verification.Category -ne 'none') {
+        Write-Warning ("RUNNER_DIAGNOSTIC stage=compose_stop_state_check exit_code={0} timeout={1} error_category={2} running_count={3} stderr_present={4}" -f `
+            $stopped.ExitCode, $stopped.TimedOut.ToString().ToLowerInvariant(), $verification.Category, $verification.RunningCount, $stopped.StdErrPresent.ToString().ToLowerInvariant())
+    }
+    return [pscustomobject]@{
+        ExitCode = $verification.ExitCode
+        TimedOut = $false
+        StartError = $false
+        StdErrPresent = $false
+        StoppedVerified = $verification.VerifiedStopped
+    }
 }
 
 function Get-NewComposeContainers {
@@ -223,7 +247,10 @@ function Get-LedgerVersions {
     $container = Get-DatabaseContainer
     $query = 'SELECT version FROM supabase_migrations.schema_migrations ORDER BY version'
     $result = Invoke-Captured -FilePath 'docker' -Arguments @('exec', '-u', 'postgres', $container.Id, 'psql', '-XAt', '-U', 'postgres', '-d', 'postgres', '-c', $query)
-    if ($result.ExitCode -ne 0) { throw 'Read-only migration ledger query failed; output suppressed.' }
+    if ($result.ExitCode -ne 0 -or $result.TimedOut -or $result.StartError) {
+        Write-SafeProcessDiagnostic -Stage 'ledger_select_sql' -Result $result
+        throw 'Read-only ledger SELECT failed; details above are categorized and sanitized.'
+    }
     return @($result.Lines | ForEach-Object { "$($_)".Trim() } | Where-Object { $_ -match '^\d{14}$' })
 }
 
@@ -244,7 +271,10 @@ function Invoke-StandardMigrationCommand {
     }
     $args = @('--workdir', $Workdir, 'migration', $Operation, '--db-url', $DatabaseUrl, '--yes')
     $result = Invoke-Captured -FilePath $Cli -Arguments $args
-    if ($result.ExitCode -ne 0) { throw "Supabase migration $Operation failed; output suppressed." }
+    if ($result.ExitCode -ne 0 -or $result.TimedOut -or $result.StartError) {
+        Write-SafeProcessDiagnostic -Stage "migration_${Operation}_cli" -Result $result
+        throw "Supabase migration $Operation failed; details above are categorized and sanitized."
+    }
 }
 
 function Start-DisposableEnvironment {
@@ -257,7 +287,7 @@ function Start-DisposableEnvironment {
         Wait-RestReadiness
         return $true
     } `
-        -CleanupAction { Invoke-Compose -Arguments @('stop', '--timeout', '20') }
+        -CleanupAction { Stop-NewComposeProject }
     if (-not $outcome.Succeeded) {
         if (-not $outcome.CleanupSucceeded) {
             throw 'Startup/validation failed; restricted Compose stop was attempted but could not be confirmed.'
@@ -348,8 +378,10 @@ switch ($Stage) {
     }
     'stop' {
         if (-not $ConfirmStop) { throw 'Stopping requires the separate -ConfirmStop human gate.' }
-        $result = Invoke-Compose -Arguments @('stop', '--timeout', '20')
-        if ($result.ExitCode -ne 0) { throw 'Stopping the dedicated Compose project failed; output suppressed.' }
+        $result = Stop-NewComposeProject
+        if ($result.ExitCode -ne 0 -or $result.TimedOut -or $result.StartError) {
+            throw 'Restricted stop could not confirm zero running containers; do not retry automatically.'
+        }
         Write-Output 'Only the dedicated disposable Compose project was stopped; volumes were not removed.'
     }
 }

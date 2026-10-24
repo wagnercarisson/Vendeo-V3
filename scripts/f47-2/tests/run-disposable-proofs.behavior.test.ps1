@@ -81,11 +81,17 @@ Assert-Test $extraRejected 'Unexpected published ports are rejected by exact-set
 # Native stderr is drained but never returned or emitted; nonzero exit is preserved.
 $stderrResult = Invoke-Captured -FilePath $powershell -Arguments @('-NoProfile', '-NonInteractive', '-File', $fake, 'stderr') -TimeoutMilliseconds 10000
 $serialized = ConvertTo-Json -InputObject $stderrResult -Depth 5 -Compress
-Assert-Test ($stderrResult.ExitCode -eq 23 -and $stderrResult.StdErrPresent) 'stderr does not throw and process exit code is retained.'
-Assert-Test (-not $serialized.Contains('offline-sensitive-stderr-marker')) 'stderr content is not returned or disclosed.'
+    Assert-Test ($stderrResult.ExitCode -eq 23 -and $stderrResult.StdErrPresent) 'stderr does not throw and process exit code is retained.'
+    Assert-Test (-not $serialized.Contains('offline-sensitive-stderr-marker')) 'stderr content is not returned or disclosed.'
+    $safeDiagnostic = New-SafeProcessDiagnostic -Stage 'fake_process' -Result $stderrResult
+    $safeSerialized = ConvertTo-Json -InputObject $safeDiagnostic -Depth 5 -Compress
+    Assert-Test ($safeDiagnostic.Stage -eq 'fake_process' -and $safeDiagnostic.ExitCode -eq 23 -and -not $safeDiagnostic.TimedOut -and $safeDiagnostic.Category -eq 'nonzero_with_stderr') 'Safe diagnostics retain stage/code/timeout/category.'
+    Assert-Test (-not $safeSerialized.Contains('offline-sensitive-stderr-marker')) 'Safe diagnostics never include raw stderr.'
 
 $timeoutResult = Invoke-Captured -FilePath $powershell -Arguments @('-NoProfile', '-NonInteractive', '-File', $fake, 'timeout') -TimeoutMilliseconds 1200
-Assert-Test ($timeoutResult.TimedOut -and $timeoutResult.ExitCode -eq -1) 'A hung fake process is killed at the configured timeout.'
+    Assert-Test ($timeoutResult.TimedOut -and $timeoutResult.ExitCode -eq -1) 'A hung fake process is killed at the configured timeout.'
+    $timeoutDiagnostic = New-SafeProcessDiagnostic -Stage 'fake_timeout' -Result $timeoutResult
+    Assert-Test ($timeoutDiagnostic.Category -eq 'process_timeout' -and $timeoutDiagnostic.TimedOut) 'Safe diagnostics classify process timeouts.'
 
 # Failed start and post-start validation invoke only the injected cleanup action.
 $script:cleanupCount = 0
@@ -103,8 +109,15 @@ Assert-Test (-not $failedValidation.Succeeded -and $failedValidation.CleanupAtte
 
 $stopArguments = New-ComposeArguments -ProjectName 'vendeo_f47_2_disposable_compose_20261024' -ManifestPath 'C:\restricted\compose.yaml' -Arguments @('stop', '--timeout', '20')
 Assert-Test (($stopArguments -join ' ') -eq 'compose -p vendeo_f47_2_disposable_compose_20261024 -f C:\restricted\compose.yaml stop --timeout 20') 'Cleanup command is scoped to the dedicated Compose project and stop only.'
+$stopNonzero = [pscustomobject]@{ ExitCode = 1; TimedOut = $false; StartError = $false; StdErrPresent = $true }
+$zeroRunning = [pscustomobject]@{ ExitCode = 0; TimedOut = $false; StartError = $false; StdErrPresent = $false; Lines = @() }
+$stoppedVerified = Resolve-ComposeStopVerification -StopResult $stopNonzero -RunningQueryResult $zeroRunning
+Assert-Test ($stoppedVerified.VerifiedStopped -and $stoppedVerified.ExitCode -eq 0 -and $stoppedVerified.Category -eq 'stop_exit_nonzero_but_no_running_containers') 'Nonzero Compose stop is accepted only when read-only state confirms no running containers.'
+$oneRunning = [pscustomobject]@{ ExitCode = 0; TimedOut = $false; StartError = $false; StdErrPresent = $false; Lines = @('0123456789abcdef0123456789abcdef') }
+$stopUnverified = Resolve-ComposeStopVerification -StopResult $stopNonzero -RunningQueryResult $oneRunning
+Assert-Test (-not $stopUnverified.VerifiedStopped -and $stopUnverified.RunningCount -eq 1 -and $stopUnverified.Category -eq 'containers_still_running') 'Stop is not reported successful while any dedicated project container remains running.'
 
-Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, PSCustomObject wildcard/exact bindings, stderr suppression, process timeout, restricted cleanup).'
+Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, PSCustomObject wildcard/exact bindings, stderr suppression, sanitized stage/code/category diagnostics, process timeout, restricted cleanup and stop-state verification).'
 }
 finally {
     Remove-Item -LiteralPath $temporary -Recurse -Force -ErrorAction SilentlyContinue
