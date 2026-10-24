@@ -331,4 +331,48 @@ function Invoke-StartupWithRestrictedCleanup {
     }
 }
 
-Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Resolve-LedgerCheckpoint, Resolve-LedgerRelationProbeOutput, Invoke-StartupWithRestrictedCleanup
+function Invoke-ProvisionWorkWithRestrictedStop {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][scriptblock]$PreMigrationCheck,
+        [Parameter(Mandatory = $true)][scriptblock]$CopyAction,
+        [Parameter(Mandatory = $true)][scriptblock]$ApplyAction,
+        [Parameter(Mandatory = $true)][scriptblock]$VerifyAction,
+        [Parameter(Mandatory = $true)][scriptblock]$StopAction
+    )
+    $failedStage = $null
+    $operationSucceeded = $false
+    $stopResult = $null
+    try {
+        $failedStage = 'pre_migration_check'
+        & $PreMigrationCheck
+        $failedStage = 'copy_hash'
+        & $CopyAction
+        $failedStage = 'migration_up'
+        & $ApplyAction
+        $failedStage = 'post_migration_ledger'
+        & $VerifyAction
+        $operationSucceeded = $true
+        $failedStage = $null
+    }
+    catch {
+        # Return only a fixed stage token; never surface exception/stderr/URL.
+        $operationSucceeded = $false
+    }
+    finally {
+        try { $stopResult = & $StopAction }
+        catch { $stopResult = $null }
+    }
+    $stopSucceeded = $false
+    if ($null -ne $stopResult) {
+        $stopSucceeded = (-not $stopResult.StartError -and -not $stopResult.TimedOut -and
+            $stopResult.ExitCode -eq 0 -and $stopResult.StoppedVerified)
+    }
+    return [pscustomobject]@{
+        Succeeded = $operationSucceeded
+        FailedStage = $failedStage
+        StopSucceeded = $stopSucceeded
+    }
+}
+
+Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Resolve-LedgerCheckpoint, Resolve-LedgerRelationProbeOutput, Invoke-StartupWithRestrictedCleanup, Invoke-ProvisionWorkWithRestrictedStop

@@ -34,13 +34,32 @@ foreach ($required in @(
     "-Stage 'ledger_select_sql'", 'migration_${Operation}_cli',
     'Resolve-ComposeStopVerification', 'Assert-ExistingComposeForResume',
     "'start', '--wait', '--wait-timeout', '180'", 'Assert-ResumeContainerInventory',
-    'Assert-SameContainerIds', 'Test-DisposableResumePreflight',
+    'Assert-SameContainerIds', 'Test-DisposableResumePreflight', 'Invoke-ProvisionWorkWithRestrictedStop',
     'no start/stop performed.'
 )) {
     if (-not $source.Contains($required)) { throw "Runner missing required safety contract: $required" }
 }
 if (-not $moduleSource.Contains('stop_exit_nonzero_but_no_running_containers')) {
     throw 'Runner module missing safe stop-state classification.'
+}
+$provisionStart = $source.IndexOf('function Invoke-Provision {')
+$proofStart = $source.IndexOf('function Invoke-SignatureProof {', $provisionStart)
+if ($provisionStart -lt 0 -or $proofStart -le $provisionStart) { throw 'Could not isolate the provision stage for static sequencing checks.' }
+$provisionSource = $source.Substring($provisionStart, $proofStart - $provisionStart)
+$orderedTokens = @(
+    'Assert-ExistingComposeForResume',
+    "'start', '--wait', '--wait-timeout', '180'",
+    "-Operation 'list'",
+    'Copy-Item -LiteralPath',
+    "-Operation 'up'",
+    'Get-LedgerState',
+    '-StopAction { Stop-NewComposeProject }'
+)
+$lastIndex = -1
+foreach ($token in $orderedTokens) {
+    $index = $provisionSource.IndexOf($token)
+    if ($index -le $lastIndex) { throw "Provision stage order is missing or incorrect at: $token" }
+    $lastIndex = $index
 }
 foreach ($forbidden in @('supabase status', 'supabase start', 'supabase stop', '--linked', 'migration repair', 'db reset', 'db push', 'compose down', 'down -v')) {
     if ($source.Contains($forbidden)) { throw "Runner contains forbidden operation: $forbidden" }

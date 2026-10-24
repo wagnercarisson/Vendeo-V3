@@ -216,7 +216,25 @@ try { Resolve-LedgerCheckpoint -TableExists $false -Versions @() -Context 'pre_m
 catch { $cliListGateRejected = $true }
 Assert-Test $cliListGateRejected 'Uninitialized ledger is not accepted unless the normal CLI migration list succeeded.'
 
-Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, bindings, stderr/diagnostics, process timeout, cleanup, resume identity/images/volumes, null/unexpected mounts, absent/empty/post-migration ledger rules).'
+$script:provisionSequence = @()
+$successfulProvisionGate = Invoke-ProvisionWorkWithRestrictedStop `
+    -PreMigrationCheck { $script:provisionSequence += 'list_and_precheck' } `
+    -CopyAction { $script:provisionSequence += 'copy_hash' } `
+    -ApplyAction { $script:provisionSequence += 'migration_up' } `
+    -VerifyAction { $script:provisionSequence += 'list_and_postcheck' } `
+    -StopAction { $script:provisionSequence += 'restricted_stop'; [pscustomobject]@{ StartError = $false; TimedOut = $false; ExitCode = 0; StoppedVerified = $true } }
+Assert-Test ($successfulProvisionGate.Succeeded -and $successfulProvisionGate.StopSucceeded -and ($script:provisionSequence -join ',') -eq 'list_and_precheck,copy_hash,migration_up,list_and_postcheck,restricted_stop') 'Provision gate orders precheck/copy/apply/postcheck and always verifies restricted stop.'
+
+$script:provisionSequence = @()
+$failedProvisionGate = Invoke-ProvisionWorkWithRestrictedStop `
+    -PreMigrationCheck { $script:provisionSequence += 'list_and_precheck' } `
+    -CopyAction { $script:provisionSequence += 'copy_hash' } `
+    -ApplyAction { $script:provisionSequence += 'migration_up'; throw 'offline-fake-error-secret' } `
+    -VerifyAction { $script:provisionSequence += 'must_not_run' } `
+    -StopAction { $script:provisionSequence += 'restricted_stop'; [pscustomobject]@{ StartError = $false; TimedOut = $false; ExitCode = 0; StoppedVerified = $true } }
+Assert-Test (-not $failedProvisionGate.Succeeded -and $failedProvisionGate.FailedStage -eq 'migration_up' -and $failedProvisionGate.StopSucceeded -and ($script:provisionSequence -join ',') -eq 'list_and_precheck,copy_hash,migration_up,restricted_stop') 'Any provision failure skips later work, invokes restricted stop, and returns only a safe stage token.'
+
+Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, bindings, stderr/diagnostics, process timeout, cleanup, resume identity/images/volumes, null/unexpected mounts, ledger states, combined provision order/failure cleanup).'
 }
 finally {
     Remove-Item -LiteralPath $temporary -Recurse -Force -ErrorAction SilentlyContinue

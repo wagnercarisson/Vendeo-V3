@@ -235,6 +235,13 @@ function Assert-ExistingComposeForResume {
     if (@(Get-ChildItem -LiteralPath $migrationDir -Force -ErrorAction Stop).Count -ne 0) {
         throw 'Disposable migration directory is not empty; read-only resume is blocked.'
     }
+    $config = Get-Content -LiteralPath (Join-Path $Workdir 'supabase\config.toml') -Raw
+    if ($config -notmatch '(?m)^project_id\s*=\s*"vendeo_f47_2_disposable_20261024"' -or
+        $config -notmatch '(?ms)^\[db\.seed\]\s*.*?^enabled\s*=\s*false\s*$' -or
+        $config -notmatch '(?ms)^\[db\.seed\]\s*.*?^sql_paths\s*=\s*\[\]\s*$' -or
+        (Test-Path -LiteralPath (Join-Path $Workdir 'supabase\seed.sql'))) {
+        throw 'Resume workdir project/seed configuration failed closed checks.'
+    }
     return $containers
 }
 
@@ -484,7 +491,6 @@ function Assert-RunningEnvironment {
 
 function Invoke-Provision {
     if (-not $ConfirmMigrations) { throw 'Migration application requires the separate -ConfirmMigrations human gate.' }
-    Assert-RunningEnvironment
     $manifest = Read-MigrationManifest
     $source = Join-Path $Repo 'supabase\migrations'
     $target = Join-Path $Workdir 'supabase\migrations'
@@ -497,23 +503,73 @@ function Invoke-Provision {
             throw 'Source migration hash mismatch; refusing to copy.'
         }
     }
-    $url = Get-LocalDatabaseUrl
-    Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $url
-    $before = Assert-PreMigrationLedgerCheckpoint -MigrationListSucceeded $true
-    if ($before.Count -ne 0) { throw 'Disposable migration ledger is not empty before provision.' }
-    foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $target $file.Name) }
-    foreach ($file in Get-ChildItem -LiteralPath $target -Filter '*.sql' -File) {
-        if ((Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
-            throw 'Copied migration hash mismatch; refusing to apply.'
+
+    # This stage owns one combined authorization boundary: start the already
+    # existing containers, apply the local batch, reconcile the ledger, then
+    # stop and verify the dedicated project. No `compose up` or recreation.
+    $before = @(Assert-ExistingComposeForResume)
+    $beforeIds = @($before.Id | Sort-Object)
+    $startOutcome = Invoke-StartupWithRestrictedCleanup `
+        -StartAction { Invoke-Compose -Arguments @('start', '--wait', '--wait-timeout', '180') -TimeoutMilliseconds 210000 } `
+        -ValidateAction {
+            Assert-LoopbackBindingsAndHealth
+            $after = @(Get-NewComposeContainers)
+            $afterIds = @($after.Id | Sort-Object)
+            $null = Assert-SameContainerIds -Before $beforeIds -After $afterIds
+            Wait-RestReadiness
+            return $true
+        } `
+        -CleanupAction { Stop-NewComposeProject }
+    if (-not $startOutcome.Succeeded) {
+        if (-not $startOutcome.CleanupSucceeded) {
+            throw 'Provision resume failed; restricted stop was attempted but could not be confirmed. No migrations were started.'
         }
+        throw 'Provision resume validation failed; existing project was stopped. No migrations were started; do not retry without review.'
     }
-    Invoke-StandardMigrationCommand -Operation 'up' -DatabaseUrl $url
-    Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $url
+
     $expected = @($manifest.Keys | ForEach-Object { $_.Substring(0, 14) } | Sort-Object -Unique)
-    $after = Get-LedgerState
-    $postMigrationState = Resolve-LedgerCheckpoint -TableExists $after.TableExists -Versions $after.Versions -Context 'post_migration' -ExpectedVersions $expected
-    if ($postMigrationState.Count -ne $ExpectedMigrationCount) { throw 'Post-migration ledger count differs from the approved batch.' }
-    Write-Output 'Migration batch applied through Supabase CLI to verified local loopback DB; ledger count=145.'
+    $provisionDatabaseUrl = Get-LocalDatabaseUrl
+    $provisionOutcome = Invoke-ProvisionWorkWithRestrictedStop `
+        -PreMigrationCheck {
+        Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $provisionDatabaseUrl
+        $preMigrationState = Assert-PreMigrationLedgerCheckpoint -MigrationListSucceeded $true
+        if ($preMigrationState.Count -ne 0) { throw 'Initial disposable ledger is not empty.' }
+    } `
+        -CopyAction {
+        foreach ($file in $files) {
+            if ((Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
+                throw 'Source migration hash changed after preflight; copy blocked.'
+            }
+        }
+        foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $target $file.Name) }
+        $copiedFiles = @(Get-ChildItem -LiteralPath $target -Filter '*.sql' -File)
+        if ($copiedFiles.Count -ne $ExpectedMigrationCount) { throw 'Copied migration count differs from the approved batch.' }
+        foreach ($file in $copiedFiles) {
+            if (-not $manifest.ContainsKey($file.Name) -or (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
+                throw 'Copied migration hash mismatch; application blocked.'
+            }
+        }
+    } `
+        -ApplyAction {
+        Invoke-StandardMigrationCommand -Operation 'up' -DatabaseUrl $provisionDatabaseUrl
+    } `
+        -VerifyAction {
+        Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $provisionDatabaseUrl
+        $postMigrationState = Get-LedgerState
+        $validatedLedger = Resolve-LedgerCheckpoint -TableExists $postMigrationState.TableExists -Versions $postMigrationState.Versions -Context 'post_migration' -ExpectedVersions $expected
+        if ($validatedLedger.Count -ne $ExpectedMigrationCount) { throw 'Post-migration ledger count differs from the approved 145-version batch.' }
+    } `
+        -StopAction { Stop-NewComposeProject }
+
+    if (-not $provisionOutcome.StopSucceeded) {
+        throw 'Provision stage ended but restricted stop could not confirm zero running containers; request review.'
+    }
+    if (-not $provisionOutcome.Succeeded) {
+        Write-Warning ("RUNNER_DIAGNOSTIC stage=provision_{0} error_category=operation_failed" -f $provisionOutcome.FailedStage)
+        throw 'Provision failed; restricted stop was verified. Do not retry without review.'
+    }
+
+    Write-Output 'Provision complete: 145 source hashes verified, CLI migration up/list succeeded, exact ledger verified, and existing Compose project stopped/verified. No proofs run.'
 }
 
 function Invoke-SignatureProof {
