@@ -8,7 +8,9 @@ function read(relative: string): string {
   return readFileSync(path.join(ROOT, relative), "utf8");
 }
 
-describe("F47.2 — regressão do perfil frente à oferta", () => {
+// Contrato ESTÁTICO: complementa, sem substituir, as provas comportamentais
+// de approve-route, realign-route e retry-route (Plano 47.2-05).
+describe("F47.2 — contrato estático de regressão do perfil frente à oferta", () => {
   it("falha/realinhamento de perfil não escreve estado de oferta", () => {
     const realign = read("src/app/api/store/[id]/brand-profile/realign/route.ts");
     expect(realign).not.toContain("trial_offer");

@@ -6,6 +6,9 @@ const mockBrandDirectorAnalyze = vi.fn();
 const mockTextOnlyInfer = vi.fn();
 const mockStorageDownload = vi.fn();
 const mockCreateSignedUrl = vi.fn(() => Promise.resolve({ data: { signedUrl: 'signed-vs-url' }, error: null }));
+const mockTrialComplete = vi.fn();
+const mockReserveCredit = vi.fn();
+const mockRefundCredit = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
@@ -29,6 +32,17 @@ vi.mock('@/lib/auth/store-ownership', () => ({
 
 vi.mock('@/lib/auth/csrf', () => ({
   requireSameOrigin: vi.fn(() => {}),
+}));
+
+vi.mock('@/lib/credit/trial-offer/completion', () => ({
+  maybeCompleteOnboardingAndStartTrial: mockTrialComplete,
+}));
+
+vi.mock('@/lib/credit/credit-service', () => ({
+  CreditService: class {
+    reserveCredit = mockReserveCredit;
+    refundCredit = mockRefundCredit;
+  },
 }));
 
 vi.mock('@/lib/brand-assets/brand-director', () => ({
@@ -338,6 +352,10 @@ function makeRequest(storeId: string = STORE_ID) {
 describe('POST /api/store/[id]/brand-profile/realign', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTrialComplete.mockReset();
+    mockTrialComplete.mockResolvedValue({ started: false });
+    mockReserveCredit.mockReset();
+    mockRefundCredit.mockReset();
     mockBrandDirectorAnalyze.mockResolvedValue(mockDirectorResult);
     mockProfilerGenerate.mockClear();
     mockTextOnlyInfer.mockResolvedValue({
@@ -380,8 +398,39 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
   });
 
   it('text_only path — returns 200 with profile', async () => {
+    let storeUpdate: Record<string, unknown> | null = null;
+    const financeState = { balance: 42, reserved: 0, transactions: 0 };
+    const offerState = {
+      individual_launch_at: '2026-06-01T00:00:00Z',
+      started_at: '2026-06-01T00:00:00Z',
+      expires_at: '2026-06-29T00:00:00Z',
+      cohort: 'baseline-cohort',
+    };
+    const financialBefore = structuredClone(financeState);
+    const offerBefore = structuredClone(offerState);
+    mockReserveCredit.mockImplementation(async (_storeId: string, amount: number) => {
+      financeState.balance -= amount;
+      financeState.reserved += amount;
+      financeState.transactions += 1;
+    });
+    mockRefundCredit.mockImplementation(async () => {
+      financeState.balance += 1;
+      financeState.reserved -= 1;
+      financeState.transactions += 1;
+    });
+    mockTrialComplete.mockImplementation(async () => {
+      offerState.started_at = new Date().toISOString();
+      offerState.expires_at = new Date(Date.now() + 28 * 86400000).toISOString();
+    });
     mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'stores') {
+        const chain = makeChain({ data: mockStore, error: null });
+        chain.update = vi.fn((payload: Record<string, unknown>) => {
+          storeUpdate = payload;
+          return chain;
+        });
+        return chain;
+      }
       if (table === 'store_brand_assets') return makeChain({ data: null, error: null });
       if (table === 'store_brand_profiles') return makeProfileChain({ data: null, error: null });
       return makeChain({ data: null, error: null });
@@ -392,6 +441,15 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.profile.source).toBe('text_only');
+    expect(mockTrialComplete).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRefundCredit).not.toHaveBeenCalled();
+    expect(storeUpdate).not.toBeNull();
+    expect(storeUpdate).not.toHaveProperty('individual_launch_at');
+    expect(storeUpdate).not.toHaveProperty('started_at');
+    expect(storeUpdate).not.toHaveProperty('expires_at');
+    expect(financeState).toEqual(financialBefore);
+    expect(offerState).toEqual(offerBefore);
   });
 
   it('text_only path with existing profile — marks outdated before insert', async () => {
@@ -542,6 +600,29 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
   });
 
   it('VS path — profiler failure returns error, previous profile not outdated', async () => {
+    const financeState = { balance: 42, reserved: 0, transactions: 0 };
+    const offerState = {
+      individual_launch_at: '2026-06-01T00:00:00Z',
+      started_at: '2026-06-01T00:00:00Z',
+      expires_at: '2026-06-29T00:00:00Z',
+      cohort: 'baseline-cohort',
+    };
+    const financialBefore = structuredClone(financeState);
+    const offerBefore = structuredClone(offerState);
+    mockReserveCredit.mockImplementation(async (_storeId: string, amount: number) => {
+      financeState.balance -= amount;
+      financeState.reserved += amount;
+      financeState.transactions += 1;
+    });
+    mockRefundCredit.mockImplementation(async () => {
+      financeState.balance += 1;
+      financeState.reserved -= 1;
+      financeState.transactions += 1;
+    });
+    mockTrialComplete.mockImplementation(async () => {
+      offerState.started_at = new Date().toISOString();
+      offerState.expires_at = new Date(Date.now() + 28 * 86400000).toISOString();
+    });
     mockProfilerGenerate.mockRejectedValue(new Error('Inference failed'));
 
     mockSupabaseFrom.mockImplementation((table: string) => {
@@ -556,6 +637,11 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
     const body = await res.json();
     expect(body.success).toBe(false);
     expect(body.error).toBe('Inference failed');
+    expect(mockTrialComplete).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRefundCredit).not.toHaveBeenCalled();
+    expect(financeState).toEqual(financialBefore);
+    expect(offerState).toEqual(offerBefore);
   });
 
   it('logo path inserts profile with selected fields in response', async () => {

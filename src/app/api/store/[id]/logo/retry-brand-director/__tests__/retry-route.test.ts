@@ -4,6 +4,9 @@ import { NextRequest } from 'next/server';
 const mockSupabaseFrom = vi.fn();
 const mockSupabaseStorageFrom = vi.fn();
 const mockBrandDirectorAnalyze = vi.fn();
+const mockTrialComplete = vi.fn();
+const mockReserveCredit = vi.fn();
+const mockRefundCredit = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
@@ -24,6 +27,17 @@ vi.mock('@/lib/auth/store-ownership', () => ({
 
 vi.mock('@/lib/auth/csrf', () => ({
   requireSameOrigin: vi.fn(() => {}),
+}));
+
+vi.mock('@/lib/credit/trial-offer/completion', () => ({
+  maybeCompleteOnboardingAndStartTrial: mockTrialComplete,
+}));
+
+vi.mock('@/lib/credit/credit-service', () => ({
+  CreditService: class {
+    reserveCredit = mockReserveCredit;
+    refundCredit = mockRefundCredit;
+  },
 }));
 
 vi.mock('@/lib/brand-assets/brand-director', () => ({
@@ -141,6 +155,10 @@ function createRequest() {
 describe('POST /api/store/[id]/logo/retry-brand-director', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTrialComplete.mockReset();
+    mockTrialComplete.mockResolvedValue({ started: false });
+    mockReserveCredit.mockReset();
+    mockRefundCredit.mockReset();
     mockBrandDirectorAnalyze.mockReset();
     mockSupabaseStorageFrom.mockReturnValue({
       download: vi.fn(() => Promise.resolve({ data: null, error: null })),
@@ -208,6 +226,29 @@ describe('POST /api/store/[id]/logo/retry-brand-director', () => {
   });
 
   it('returns 200 with success:true on successful retry with fallback', async () => {
+    const financeState = { balance: 42, reserved: 0, transactions: 0 };
+    const offerState = {
+      individual_launch_at: '2026-06-01T00:00:00Z',
+      started_at: '2026-06-01T00:00:00Z',
+      expires_at: '2026-06-29T00:00:00Z',
+      cohort: 'baseline-cohort',
+    };
+    const financialBefore = structuredClone(financeState);
+    const offerBefore = structuredClone(offerState);
+    mockReserveCredit.mockImplementation(async (_storeId: string, amount: number) => {
+      financeState.balance -= amount;
+      financeState.reserved += amount;
+      financeState.transactions += 1;
+    });
+    mockRefundCredit.mockImplementation(async () => {
+      financeState.balance += 1;
+      financeState.reserved -= 1;
+      financeState.transactions += 1;
+    });
+    mockTrialComplete.mockImplementation(async () => {
+      offerState.started_at = new Date().toISOString();
+      offerState.expires_at = new Date(Date.now() + 28 * 86400000).toISOString();
+    });
     mockBrandDirectorAnalyze.mockResolvedValue({
       logo_colors_detected: ['#1a365d'],
       brand_colors_chosen: [],
@@ -257,6 +298,11 @@ describe('POST /api/store/[id]/logo/retry-brand-director', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.profile.status).toBe('synced');
+    expect(mockTrialComplete).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRefundCredit).not.toHaveBeenCalled();
+    expect(financeState).toEqual(financialBefore);
+    expect(offerState).toEqual(offerBefore);
   });
 
   it('returns 200 with success:true on successful retry without fallback', async () => {
@@ -340,6 +386,9 @@ describe('POST /api/store/[id]/logo/retry-brand-director', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(false);
     expect(body.retry).toBe(true);
+    expect(mockTrialComplete).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRefundCredit).not.toHaveBeenCalled();
   });
 
   it('restores fallback on insert failure', async () => {

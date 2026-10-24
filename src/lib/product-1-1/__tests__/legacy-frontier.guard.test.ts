@@ -117,14 +117,14 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/types.ts",
     authorization:
-      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + F56.2b1b Plano 08 P1 Opção A (tipo aditivo AiEnvelopeInternalCost)",
-    commit: "201e606f",
+      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + F56.2b1b Plano 08 P1 Opção A (tipo aditivo AiEnvelopeInternalCost) + F47.1-06 (proveniência de credencial no perfil, revisada e aceita no plano 47.1-06)",
+    commit: "9d1bb8db",
   },
   {
     path: "src/lib/ai/telemetry-sink.ts",
     authorization:
-      "F56.2b1b Plano 08 P1 Opção A (custo interno `internalCost` opcional no contexto do sink — aditivo)",
-    commit: "201e606f",
+      "F56.2b1b Plano 08 P1 Opção A (custo interno `internalCost` opcional no contexto do sink — aditivo) + F47.1-06 (proveniência de credencial no perfil, revisada e aceita no plano 47.1-06)",
+    commit: "9d1bb8db",
   },
   {
     path: "src/lib/ai/__tests__/telemetry-sink.test.ts",
@@ -135,8 +135,8 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/adapters/chat-completions.ts",
     authorization:
-      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + quick gpt6-luna (adapter gpt-6-luna: reasoning_effort none / max_completion_tokens, sem temperature — GPT-4o/Gemini preservados)",
-    commit: "322809d0",
+      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + quick gpt6-luna (adapter gpt-6-luna: reasoning_effort none / max_completion_tokens, sem temperature — GPT-4o/Gemini preservados) + F47.2-04 (contexto de perfil na inferência, revisado e aceito no plano 47.2-04)",
+    commit: "2e9aeb30",
   },
   {
     path: "src/lib/ai/adapters/__tests__/chat-completions.test.ts",
@@ -155,8 +155,8 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/gateway.ts",
     authorization:
-      "quick gpt6-luna (AiInvoker/AiGateway: prepare/invokePrepared + correções)",
-    commit: "322809d0",
+      "quick gpt6-luna (AiInvoker/AiGateway: prepare/invokePrepared + correções) + F47.1-06 (proveniência de credencial no perfil, revisada e aceita no plano 47.1-06)",
+    commit: "9d1bb8db",
   },
   {
     path: "src/lib/ai/__tests__/gateway-prepared.test.ts",
@@ -166,8 +166,8 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/model-registry.ts",
     authorization:
-      "quick gpt6-luna (allowlist `openai: gpt-6-luna` para campaign_copy)",
-    commit: "0b72ad99",
+      "quick gpt6-luna (allowlist `openai: gpt-6-luna` para campaign_copy) + F47.1-01 (presets da assinatura visual e allowlist restrita de Luna, revisados e aceitos no plano 47.1-01)",
+    commit: "06070695",
   },
   {
     path: "src/lib/ai/__tests__/upstream-images-adapter.test.ts",
@@ -232,6 +232,178 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
     authorization:
       "F50.2 (leitura de enrollment do teste gratuito — aditiva/read-only)",
     commit: "05e81d90",
+  },
+  // Reconciliação 2026-10-24 — F47.1/F47.2 (Assinatura Visual).
+  // Mudanças efetivamente revisadas nos planos 47.1-01..06 e 47.2-03/04.
+  // Cada caminho mantém autorização e commit de origem; o conteúdo atual é
+  // comparado exatamente ao commit abaixo, sem exclusão de diretórios.
+  {
+    path: "src/lib/ai-cost/__tests__/visual-signature-cost.contract.test.ts",
+    authorization:
+      "F47.1-03 (contrato de custo da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "e96418a6",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/visual-signature-pricing.test.ts",
+    authorization:
+      "F47.1-03 (pricing da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "e96418a6",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/visual-signature-usage.test.ts",
+    authorization:
+      "F47.1-03 (uso/custo da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "e96418a6",
+  },
+  {
+    path: "src/lib/ai-cost/cost-estimator.ts",
+    authorization:
+      "F47.1-03 (estimador de custo da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "e96418a6",
+  },
+  {
+    path: "src/lib/ai-cost/types.ts",
+    authorization:
+      "F47.1-03 (tipos de custo da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "91ce3da3",
+  },
+  {
+    path: "src/lib/ai-cost/visual-signature-pricing.ts",
+    authorization:
+      "F47.1-03 (pricing da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "e96418a6",
+  },
+  {
+    path: "src/lib/ai-cost/visual-signature-usage.ts",
+    authorization:
+      "F47.1-03 (uso da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "e96418a6",
+  },
+  {
+    path: "src/lib/ai/__tests__/api-keys.test.ts",
+    authorization:
+      "F47.2-03 (resolução de credencial por ambiente, revisado e aceito no plano 47.2-03)",
+    commit: "90e78c14",
+  },
+  {
+    path: "src/lib/ai/__tests__/brand-profile-credential-scope.test.ts",
+    authorization:
+      "F47.1-06 (escopo de credencial no perfil, revisado e aceito no plano 47.1-06)",
+    commit: "9d1bb8db",
+  },
+  {
+    path: "src/lib/ai/__tests__/deferred-telemetry-sink.test.ts",
+    authorization:
+      "F47.1-02 (telemetria diferida por tentativa, revisado e aceito no plano 47.1-02)",
+    commit: "b9798867",
+  },
+  {
+    path: "src/lib/ai/__tests__/responses-adapter-retry.test.ts",
+    authorization:
+      "F47.1-03 (retry do adapter Responses, revisado e aceito no plano 47.1-03)",
+    commit: "5f8dcd6b",
+  },
+  {
+    path: "src/lib/ai/__tests__/responses-adapter-wire.test.ts",
+    authorization:
+      "F47.1-02 (wire do adapter Responses, revisado e aceito no plano 47.1-02)",
+    commit: "b9798867",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-luna-allowlist.contract.test.ts",
+    authorization:
+      "F47.1-01 (allowlist restrita de Luna para a Assinatura Visual, revisado e aceito no plano 47.1-01)",
+    commit: "06070695",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-model-config-freeze.test.ts",
+    authorization:
+      "F47.1-04 (congelamento da configuração por operação, revisado e aceito no plano 47.1-04)",
+    commit: "d0f0da6c",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-model-config-view.test.ts",
+    authorization:
+      "F47.2-03 (visão administrativa da configuração, revisado e aceito no plano 47.2-03)",
+    commit: "2aaff487",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-model-config.contract.test.ts",
+    authorization:
+      "F47.2-03 (contrato de configuração da Assinatura Visual, revisado e aceito no plano 47.2-03)",
+    commit: "2aaff487",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-release-reader.consistency.test.ts",
+    authorization:
+      "F47.2-03 (consistência da leitura de liberação, revisado e aceito no plano 47.2-03)",
+    commit: "6ddbdbbe",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-release-state.test.ts",
+    authorization:
+      "F47.2-03 (estado de liberação por ambiente, revisado e aceito no plano 47.2-03)",
+    commit: "6ddbdbbe",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-telemetry-fields.test.ts",
+    authorization:
+      "F47.1-03 (campos de telemetria da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "91ce3da3",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-usage-path.test.ts",
+    authorization:
+      "F47.1-03 (caminho de uso/custo da Assinatura Visual, revisado e aceito no plano 47.1-03)",
+    commit: "e96418a6",
+  },
+  {
+    path: "src/lib/ai/adapters/responses.ts",
+    authorization:
+      "F47.1-06 (proveniência de credencial no adapter Responses, revisado e aceito no plano 47.1-06)",
+    commit: "9d1bb8db",
+  },
+  {
+    path: "src/lib/ai/api-keys.ts",
+    authorization:
+      "F47.2-03 (resolução de credencial por ambiente, revisado e aceito no plano 47.2-03)",
+    commit: "90e78c14",
+  },
+  {
+    path: "src/lib/ai/index.ts",
+    authorization:
+      "F47.2-04 (exportações do contexto de perfil da Assinatura Visual, revisado e aceito no plano 47.2-04)",
+    commit: "2e9aeb30",
+  },
+  {
+    path: "src/lib/ai/visual-signature-frozen-resolver.ts",
+    authorization:
+      "F47.1-02 (resolver congelado por operação, revisado e aceito no plano 47.1-02)",
+    commit: "ffbf7cd8",
+  },
+  {
+    path: "src/lib/ai/visual-signature-model-config-service.ts",
+    authorization:
+      "F47.2-03 (serviço de configuração e liberação, revisado e aceito no plano 47.2-03)",
+    commit: "6ddbdbbe",
+  },
+  {
+    path: "src/lib/ai/visual-signature-model-config-view.ts",
+    authorization:
+      "F47.2-03 (visão administrativa da configuração, revisado e aceito no plano 47.2-03)",
+    commit: "2aaff487",
+  },
+  {
+    path: "src/lib/ai/visual-signature-model-config.ts",
+    authorization:
+      "F47.2-03 (contrato de configuração da Assinatura Visual, revisado e aceito no plano 47.2-03)",
+    commit: "2aaff487",
+  },
+  {
+    path: "src/lib/ai/visual-signature-validation-gateway.ts",
+    authorization:
+      "F47.2-03 (gateway de validação local, revisado e aceito no plano 47.2-03)",
+    commit: "90e78c14",
   },
 ];
 

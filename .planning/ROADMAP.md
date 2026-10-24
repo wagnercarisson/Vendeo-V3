@@ -656,9 +656,9 @@ Plans:
 
 - [x] 47.2-01-PLAN.md — Baseline, integração Git e tracking (checkpoint de integração) — concluído e aceito em 2026-10-24 (`ecf29e54`).
 - [x] 47.2-02-PLAN.md — Renumeração imutável F47.1 + migration corretiva F47.2 + manifesto de integração — concluído e aceito em 2026-10-24.
-- [x] 47.2-03-PLAN.md — Contrato de ambiente e liberação por versão — concluído e aceito em 2026-10-24.\n- [x] 47.2-04-PLAN.md — Atualidade do perfil por origem, ativo e contexto — concluído e aceito em 2026-10-24.\n- [ ] 47.2-05-PLAN.md — Compatibilidade F50.4 + validação local — executado em 2026-10-24; aguardando revisão.
-- [ ] 47.2-04-PLAN.md — Atualidade do perfil por origem, ativo e contexto.
-- [ ] 47.2-05-PLAN.md — Compatibilidade F50.4 + validação local.
+- [x] 47.2-03-PLAN.md — Contrato de ambiente e liberação por versão — concluído e aceito em 2026-10-24.
+- [x] 47.2-04-PLAN.md — Atualidade do perfil por origem, ativo e contexto — concluído e aceito em 2026-10-24.
+- [ ] 47.2-05-PLAN.md — Compatibilidade F50.4 + validação local — executado em 2026-10-24; aguardando revisão.
 - [ ] 47.2-06-PLAN.md — Provas Postgres em banco descartável (checkpoint).
 - [ ] 47.2-07-PLAN.md — Preparação remota + migrations remotas (checkpoint).
 - [ ] 47.2-08-PLAN.md — Publicação de código com configuração desativada (checkpoint).

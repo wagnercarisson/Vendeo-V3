@@ -9,6 +9,7 @@ const mockInsertGenerationEvent = vi.fn();
 const mockGetLaunchConfig = vi.fn();
 const mockGetBalance = vi.fn();
 const mockReserveCredit = vi.fn();
+const mockTrialComplete = vi.fn();
 const mockGetOriginDemoGrantTxId = vi.fn();
 const mockGetBalanceBreakdown = vi.fn();
 const mockProductEventRecord = vi.fn();
@@ -166,6 +167,10 @@ vi.mock('@/lib/credit/credit-service', () => ({
   },
 }));
 
+vi.mock('@/lib/credit/trial-offer/completion', () => ({
+  maybeCompleteOnboardingAndStartTrial: mockTrialComplete,
+}));
+
 vi.mock('@/lib/product-events/service', () => ({
   ProductEventService: class { record = mockProductEventRecord; },
 }));
@@ -290,6 +295,8 @@ beforeEach(() => {
   // com opt-in desligado. Testes dedicados sobrescrevem por cenário.
   mockLoadVisualSignatureConfig.mockReset();
   mockLoadVisualSignatureConfig.mockResolvedValue({ mode: 'legacy' });
+  mockTrialComplete.mockReset();
+  mockTrialComplete.mockResolvedValue({ started: false });
 });
 
 describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
@@ -383,6 +390,78 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
     expect(body).toHaveProperty('assetUrl');
     expect(body).toHaveProperty('signatureId');
     expect(body).toHaveProperty('artDirectorOutput');
+  });
+
+  it('sucesso reserva o crédito uma vez, não estorna e conclui o onboarding uma vez', async () => {
+    const finance = { available: 5, reserved: 0 };
+    mockReserveCredit.mockImplementation(async (_storeId: string, amount: number) => {
+      finance.available -= amount;
+      finance.reserved += amount;
+      return 'ct-001';
+    });
+    mockRefundCredit.mockImplementation(async () => {
+      finance.available += 1;
+      finance.reserved -= 1;
+      return 'refund-tx';
+    });
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const before = { ...finance };
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(200);
+    expect(mockReserveCredit).toHaveBeenCalledTimes(1);
+    expect(mockReserveCredit).toHaveBeenCalledWith(
+      STORE_ID,
+      1,
+      expect.objectContaining({
+        metadata: expect.objectContaining({ feature: 'visual_signature' }),
+      }),
+    );
+    expect(mockRefundCredit).not.toHaveBeenCalled();
+    expect(mockTrialComplete).toHaveBeenCalledTimes(1);
+    expect(mockTrialComplete).toHaveBeenCalledWith(STORE_ID);
+    expect(finance).toEqual({ available: before.available - 1, reserved: before.reserved + 1 });
+  });
+
+  it('falha após a reserva estorna uma vez e não conclui onboarding', async () => {
+    const finance = { available: 5, reserved: 0 };
+    mockReserveCredit.mockImplementation(async (_storeId: string, amount: number) => {
+      finance.available -= amount;
+      finance.reserved += amount;
+      return 'ct-001';
+    });
+    mockRefundCredit.mockImplementation(async () => {
+      finance.available += 1;
+      finance.reserved -= 1;
+      return 'refund-tx';
+    });
+    mockIdentityDirectorGenerate.mockRejectedValue(new Error('provider indisponível'));
+    mockAiGeneratorGenerate.mockRejectedValue(new Error('provider indisponível'));
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(500);
+    expect(mockReserveCredit).toHaveBeenCalledTimes(1);
+    expect(mockRefundCredit).toHaveBeenCalledTimes(1);
+    expect(mockRefundCredit).toHaveBeenCalledWith(
+      'ct-001',
+      'generation_error',
+      expect.objectContaining({ metadata: expect.objectContaining({ feature: 'visual_signature' }) }),
+    );
+    expect(mockTrialComplete).not.toHaveBeenCalled();
+    expect(finance).toEqual({ available: 5, reserved: 0 });
   });
 
   it('generation calls StoreIdentityArtDirectorService', async () => {

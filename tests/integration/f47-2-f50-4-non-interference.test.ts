@@ -8,7 +8,11 @@ function read(relative: string): string {
   return readFileSync(path.join(ROOT, relative), "utf8");
 }
 
-describe("F47.2 — não interferência com a oferta F50.4/F50.2", () => {
+// Contrato ESTÁTICO: verifica apenas ausência/presença de dependências nos
+// arquivos. As provas comportamentais ficam nas suítes de rota (handlers reais
+// com dependências mockadas): generate-route, approve-route, realign-route e
+// retry-route. Provas Postgres reais permanecem no Plano 06.
+describe("F47.2 — contrato estático de não interferência com a oferta F50.4/F50.2", () => {
   it("geração preserva débito/estorno e a chamada existente de onboarding", () => {
     const source = read("src/app/api/store/[id]/visual-signature/generate-without-logo/route.ts");
     expect(source).toContain("maybeCompleteOnboardingAndStartTrial");
