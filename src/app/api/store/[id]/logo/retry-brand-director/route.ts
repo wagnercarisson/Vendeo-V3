@@ -12,6 +12,7 @@ import { createVisualSignatureProfileSmokeGateway } from '@/lib/ai';
 import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { publicBrandDirectorErrorMessage } from '@/lib/brand-assets/brand-director-error-message';
+import { buildBrandProfileContext } from '@/lib/visual-signature/brand-profile-state';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -105,6 +106,11 @@ export const POST = apiHandler(async (
   }
 
   const currentSnapshot = buildStoreProfileInputSnapshot(store);
+  const profileContext = buildBrandProfileContext({
+    origin: "logo_analysis",
+    assetId: activeAsset.id,
+    inputSnapshot: currentSnapshot,
+  });
 
   const accentColor = fallbackRecord?.brand_colors_chosen?.[1]
     ?? fallbackRecord?.safe_color_tokens?.accent
@@ -191,6 +197,11 @@ export const POST = apiHandler(async (
         status: 'synced',
         metadata: {
           input_snapshot: currentSnapshot,
+          context_hash: profileContext.contextHash,
+          context: {
+            origin: profileContext.origin,
+            identity_asset_id: profileContext.assetId,
+          },
         },
       })
       .select()
@@ -218,6 +229,38 @@ export const POST = apiHandler(async (
 
     return NextResponse.json({ profile: newProfile, success: true }, { status: 200 });
   } catch (err) {
+    const safeMessage =
+      err instanceof BrandDirectorAnalysisError
+        ? publicBrandDirectorErrorMessage(err.metadata.errorType)
+        : 'Falha na análise do logo. Tente novamente.';
+
+    await supabase
+      .from('store_brand_profiles')
+      .insert({
+        store_id: storeId,
+        source: 'logo_analysis',
+        active_logo_asset_id: activeAsset.id,
+        status: 'failed',
+        metadata: {
+          error: safeMessage,
+          attempt_snapshot: currentSnapshot,
+          context_hash: profileContext.contextHash,
+          context: {
+            origin: profileContext.origin,
+            identity_asset_id: profileContext.assetId,
+          },
+          failure: {
+            code: "brand_profile_failed",
+            message: safeMessage,
+            origin: "logo_analysis",
+            identity_asset_id: activeAsset.id,
+            at: new Date().toISOString(),
+          },
+        },
+      })
+      .select()
+      .single();
+
     if (err instanceof BrandDirectorAnalysisError) {
       return NextResponse.json({
         success: false,

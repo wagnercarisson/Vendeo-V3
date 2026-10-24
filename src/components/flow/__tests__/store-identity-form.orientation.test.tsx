@@ -121,7 +121,7 @@ const STORE: Store = {
   is_test_store: false,
 };
 
-function renderForm(tab: "dados" | "posicionamento") {
+function renderForm(tab: "dados" | "posicionamento" | "direcao-visual") {
   return render(
     <StoreIdentityForm initialStore={STORE} userId="user-1" initialTab={tab} />,
   );
@@ -409,5 +409,23 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
         ),
       ).toBe(true);
     });
+  });
+
+  it("exibe conteúdo atual e anteriores após o carregamento", async () => {
+    installFetch({
+      "/api/store/store-1/brand-profile?view=state": {
+        state: "current",
+        current: SYNCED,
+        previous: [ { ...SYNCED, id: "p-old" } ],
+        lastFailure: null,
+      },
+      "/api/store/store-1/logo": { assets: {} },
+      "/api/store/store-1": STORE,
+    });
+
+    renderForm("direcao-visual");
+
+    expect(await screen.findByText("Direção atual")).toBeInTheDocument();
+    expect(await screen.findByText(/Direção anterior: 1/)).toBeInTheDocument();
   });
 });

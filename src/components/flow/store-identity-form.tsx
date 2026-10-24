@@ -647,6 +647,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               metadata: profile.metadata,
             });
           } else {
+            setInferredProfile(null);
+            setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
             // Sem perfil vigente: apenas DIAGNOSTICA a tentativa `failed` histórica
             // (sem tratá-la como atual nem aplicar suas cores).
             try {
@@ -2592,11 +2594,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                       <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0" />
                       <p className="text-accent-green text-sm font-heading font-semibold">Direção atual</p>
                     </div>
-                    {previousProfiles.length > 0 && (
-                      <p className="mt-2 text-xs font-body text-text-secondary">
-                        Direção anterior: {previousProfiles.length} perfil(is) preservado(s) no histórico.
-                      </p>
-                    )}
                     {inferredProfile.safe_color_tokens && (() => {
                       const tokens = inferredProfile.safe_color_tokens!;
                       const colorKeys = Object.entries(tokens).filter(([, v]) => /^#[0-9A-Fa-f]{6}$/.test(v));
@@ -2615,6 +2612,11 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                       return null;
                     })()}
                   </div>
+                )}
+                {previousProfiles.length > 0 && (
+                  <p className="mt-2 text-xs font-body text-text-secondary">
+                    Direção anterior: {previousProfiles.length} perfil(is) preservado(s) no histórico.
+                  </p>
                 )}
                 </div>
 

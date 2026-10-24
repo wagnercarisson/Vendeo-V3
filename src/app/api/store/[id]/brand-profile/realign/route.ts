@@ -19,6 +19,7 @@ import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retr
 import type { GenerationEventType } from '@/lib/visual-signature/types';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
+import { buildBrandProfileContext } from '@/lib/visual-signature/brand-profile-state';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
@@ -144,6 +145,13 @@ async function handleTextOnlyRealign(
     .eq('status', 'synced')
     .maybeSingle();
 
+  const failureSnapshot = buildStoreProfileInputSnapshot(store);
+  const failureContext = buildBrandProfileContext({
+    origin: "text_only",
+    assetId: null,
+    inputSnapshot: failureSnapshot,
+  });
+
   try {
     const currentPrimary = store.brand_color
       ?? currentProfile?.safe_color_tokens?.primary
@@ -154,7 +162,11 @@ async function handleTextOnlyRealign(
       ?? currentProfile?.inferred_accent_color
       ?? undefined;
 
-    const service = new BrandTextOnlyInferenceService();
+    const service = new BrandTextOnlyInferenceService(
+      isVisualSignatureSmokeNoRetry()
+        ? createVisualSignatureProfileSmokeGateway()
+        : undefined,
+    );
     const timeoutMs = parseInt(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS ?? '30000', 10);
     const startTime = Date.now();
 
@@ -211,6 +223,11 @@ async function handleTextOnlyRealign(
     }
 
     const inputSnapshot = buildStoreProfileInputSnapshot(store);
+    const context = buildBrandProfileContext({
+      origin: "text_only",
+      assetId: null,
+      inputSnapshot,
+    });
 
     const previousBrandColors = (currentProfile?.brand_colors_chosen as Array<string | null> | undefined)?.some(
       (c: string | null) => c !== null && /^#[0-9A-Fa-f]{6}$/.test(c)
@@ -234,7 +251,11 @@ async function handleTextOnlyRealign(
         inferred_primary_color: result.inferred_primary_color,
         inferred_accent_color: result.inferred_accent_color,
         confidence_score: result.confidence_score,
-        metadata: { input_snapshot: inputSnapshot },
+        metadata: {
+          input_snapshot: inputSnapshot,
+          context_hash: context.contextHash,
+          context: { origin: context.origin, identity_asset_id: context.assetId },
+        },
         status: 'synced',
       })
       .select()
@@ -284,7 +305,7 @@ async function handleTextOnlyRealign(
     });
   } catch (err) {
     // Inference failed — current profile NOT marked outdated
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const safeMessage = 'Falha na análise textual. Tente novamente.';
 
     await supabase
       .from('store_brand_profiles')
@@ -292,7 +313,22 @@ async function handleTextOnlyRealign(
         store_id: id,
         source: 'text_only',
         status: 'failed',
-        metadata: { error: message },
+        metadata: {
+          error: safeMessage,
+          attempt_snapshot: failureSnapshot,
+          context_hash: failureContext.contextHash,
+          context: {
+            origin: failureContext.origin,
+            identity_asset_id: failureContext.assetId,
+          },
+          failure: {
+            code: "brand_profile_failed",
+            message: safeMessage,
+            origin: "text_only",
+            identity_asset_id: null,
+            at: new Date().toISOString(),
+          },
+        },
       })
       .select()
       .single();
@@ -302,7 +338,7 @@ async function handleTextOnlyRealign(
     return NextResponse.json({
       success: false,
       message: 'Não foi possível gerar a direção visual. Tente novamente.',
-      error: message,
+      error: 'brand_profile_failed',
     });
   }
 }
@@ -339,6 +375,12 @@ async function handleLogoRealign(
     .eq('status', 'synced')
     .maybeSingle();
 
+  const logoContext = buildBrandProfileContext({
+    origin: "logo_analysis",
+    assetId: logoAsset.id,
+    inputSnapshot: buildStoreProfileInputSnapshot(store),
+  });
+
   try {
     let logoBuffer: Buffer | null = null;
     let logoMimeType = 'image/png';
@@ -359,7 +401,11 @@ async function handleLogoRealign(
       ?? currentProfile?.safe_color_tokens?.accent
       ?? null;
 
-    const director = new BrandDirectorService();
+    const director = new BrandDirectorService(
+      isVisualSignatureSmokeNoRetry()
+        ? createVisualSignatureProfileSmokeGateway()
+        : undefined,
+    );
     const startTime = Date.now();
 
     // ── F38.1 (D1/D7): run context do path logo (análise com logo) ──────
@@ -438,6 +484,8 @@ async function handleLogoRealign(
         confidence_score: analysis.confidence_score,
         metadata: {
           input_snapshot: buildStoreProfileInputSnapshot(store),
+          context_hash: logoContext.contextHash,
+          context: { origin: logoContext.origin, identity_asset_id: logoContext.assetId },
         },
         status: 'synced',
       })
@@ -499,7 +547,20 @@ async function handleLogoRealign(
           inferred_primary_color: dc?.inferred_primary_color ?? null,
           inferred_accent_color: dc?.inferred_accent_color ?? null,
           status: 'failed',
-          metadata: { error: err.message, errorType: err.metadata.errorType },
+          metadata: {
+            error: 'Falha na análise do logo. Tente novamente.',
+            errorType: err.metadata.errorType,
+            attempt_snapshot: buildStoreProfileInputSnapshot(store),
+            context_hash: logoContext.contextHash,
+            context: { origin: logoContext.origin, identity_asset_id: logoContext.assetId },
+            failure: {
+              code: "brand_profile_failed",
+              message: 'Falha na análise do logo. Tente novamente.',
+              origin: "logo_analysis",
+              identity_asset_id: logoAsset.id,
+              at: new Date().toISOString(),
+            },
+          },
         })
         .select()
         .single();
@@ -511,7 +572,19 @@ async function handleLogoRealign(
           source: 'logo_analysis',
           active_logo_asset_id: logoAsset.id,
           status: 'failed',
-          metadata: { error: err instanceof Error ? err.message : 'Erro interno' },
+          metadata: {
+            error: 'Falha na análise do logo. Tente novamente.',
+            attempt_snapshot: buildStoreProfileInputSnapshot(store),
+            context_hash: logoContext.contextHash,
+            context: { origin: logoContext.origin, identity_asset_id: logoContext.assetId },
+            failure: {
+              code: "brand_profile_failed",
+              message: 'Falha na análise do logo. Tente novamente.',
+              origin: "logo_analysis",
+              identity_asset_id: logoAsset.id,
+              at: new Date().toISOString(),
+            },
+          },
         })
         .select()
         .single();
