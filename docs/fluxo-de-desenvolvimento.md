@@ -33,6 +33,13 @@
 - Usar `rg` e leituras direcionadas.
 - Preservar alterações preexistentes não relacionadas.
 
+## Nomenclatura de migrations e promoção
+
+- Gerar migrations como `YYYYMMDDHHmmss_descricao.sql`, usando data/hora real de criação em UTC, com horas, minutos e segundos; não substituir o horário por um contador diário (`000001`, `000002`).
+- Conferir a unicidade do prefixo na worktree, na branch de destino e nas branches paralelas conhecidas antes da criação e novamente no conjunto integrado antes do release. Se houver colisão no mesmo segundo, obter novo timestamp e conferir novamente.
+- Não renumerar migrations já aplicadas em ambiente compartilhado/produção. Na colisão conhecida F47.1 × F50.3, preservar F50.3 e renumerar F47.1 na integração autorizada, mantendo versão/hash originais e evidências da aplicação local; atualizar referências/testes sem alterar ledgers silenciosamente.
+- Validação local é uma etapa, não o destino final do produto. Explicitar no planejamento o que é proteção de laboratório, o que falta para produção e os gates separados de publicação/ativação. Fase local concluída não significa produção aprovada.
+
 ## Validações distintas
 
 - **plan-checker:** coerência e executabilidade dos planos.

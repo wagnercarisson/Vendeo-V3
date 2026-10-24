@@ -77,6 +77,14 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 Before starting, resuming, planning, executing, or verifying a phase, read `docs/fluxo-de-desenvolvimento.md`.
 
+## Migration naming and integration
+
+- New migrations MUST use `YYYYMMDDHHmmss_description.sql`, with the actual creation date and time down to seconds (UTC). Do not use a date plus an artificial daily counter such as `000001` instead of the real time.
+- Before creating a migration, check the timestamp prefix for uniqueness across the current worktree, the target integration branch and known parallel branches. Timestamps reduce collisions but do not guarantee uniqueness: if the prefix exists, obtain a fresh timestamp and check again.
+- Before merge/release, verify uniqueness of ALL migration version prefixes in the combined set; different descriptions do not make duplicate versions valid.
+- Do not rename migrations already applied to shared/production databases. The known F47.1/F50.3 collision must preserve F50.3; renumber F47.1 during the authorized integration, preserving its original version/hash and local-apply evidence and updating references/tests. Do not silently repair existing ledgers.
+- Local validation is a stage toward the product, not proof of production readiness. Plans must explicitly distinguish local-only safeguards, production-enablement work, release gates and activation; do not present completion of a local experiment as approval for production.
+
 ## Project Tracking
 
 - Current execution state: `.planning/STATE.md`
