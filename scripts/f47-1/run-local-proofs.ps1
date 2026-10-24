@@ -16,13 +16,24 @@ param(
   [string]$ProjectId = "vendeo-homolog",
   [int]$ApiPort = 57781,
   [int]$DbPort = 57782,
-  [string]$ExpectedMigration = "20261021000001_f47_1_visual_signature_model_config.sql",
+  [string]$ExpectedMigration = "20261024141422_f47_1_visual_signature_model_config.sql",
   [string]$ExpectedSha256 = "B352F93EFA1B2F829E5D97FFAA79F7972CF3D7696C6B7CEB40EBFC517A26AA90",
   [switch]$ProofsOnly
 )
 
 $ErrorActionPreference = "Stop"
 $script:Failures = @()
+
+function Get-LfNormalizedSha256([string]$Path) {
+  $text = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8) -replace "`r`n", "`n"
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($text))
+    return (($bytes | ForEach-Object { $_.ToString("X2") }) -join "")
+  } finally {
+    $sha.Dispose()
+  }
+}
 
 $RepoRoot       = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ConfigToml     = Join-Path $Workdir "supabase\config.toml"
@@ -143,7 +154,7 @@ Check "sem project ref remoto nas URLs" (($apiHost -notmatch '\.supabase\.co$') 
 Check "migration autorada presente no repo" (Test-Path $RepoMigration)
 $repoSha = ""
 if (Test-Path $RepoMigration) {
-  $repoSha = (Get-FileHash -Algorithm SHA256 $RepoMigration).Hash.ToUpperInvariant()
+  $repoSha = Get-LfNormalizedSha256 $RepoMigration
   Check "SHA-256 do repo confere com o autorizado" ($repoSha -ieq $ExpectedSha256.ToUpperInvariant())
   Write-Output "  info repo_sha256=$repoSha"
 }
@@ -161,7 +172,7 @@ if (-not $ProofsOnly -and -not (Test-Path $WorkdirMigration)) {
 }
 $workdirShaOk = $false
 if (Test-Path $WorkdirMigration) {
-  $workdirSha = (Get-FileHash -Algorithm SHA256 $WorkdirMigration).Hash.ToUpperInvariant()
+  $workdirSha = Get-LfNormalizedSha256 $WorkdirMigration
   $workdirShaOk = ($workdirSha -ieq $ExpectedSha256.ToUpperInvariant())
   Write-Output "  info workdir_sha256=$workdirSha"
 }

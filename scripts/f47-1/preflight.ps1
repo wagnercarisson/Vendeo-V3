@@ -24,11 +24,24 @@ param(
   [string]$ProjectId = "vendeo-homolog",
   [int]$ApiPort = 57781,
   [int]$DbPort = 57782,
-  [string]$ExpectedMigration = "20261021000001_f47_1_visual_signature_model_config.sql",
+  [string]$ExpectedMigration = "20261024141422_f47_1_visual_signature_model_config.sql",
   [string]$ExpectedSha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
+
+function Get-LfNormalizedSha256([string]$Path) {
+  # O checkout Windows pode converter LF->CRLF. O hash autorizado é do blob
+  # versionado em LF; normalizar evita redefinir silenciosamente o esperado.
+  $text = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8) -replace "`r`n", "`n"
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($text))
+    return (($bytes | ForEach-Object { $_.ToString("X2") }) -join "")
+  } finally {
+    $sha.Dispose()
+  }
+}
 
 $RepoRoot   = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ConfigToml = Join-Path $Workdir "supabase\config.toml"
@@ -203,7 +216,7 @@ Check "sem project ref remoto/Supabase Cloud/Vercel nas URLs" (
 Check "migration autorada presente no repo" (Test-Path $RepoMigrationPath)
 $migrationSha = ""
 if (Test-Path $RepoMigrationPath) {
-  $migrationSha = (Get-FileHash -Algorithm SHA256 $RepoMigrationPath).Hash.ToUpperInvariant()
+  $migrationSha = Get-LfNormalizedSha256 $RepoMigrationPath
   Write-Output "  info migration=$ExpectedMigration"
   Write-Output "  info sha256=$migrationSha"
   if ($ExpectedSha256 -ne "") {

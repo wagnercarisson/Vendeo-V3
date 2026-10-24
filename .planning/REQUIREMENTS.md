@@ -30,7 +30,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 
 ## F47.2 — Planejada (Integração e promoção produtiva da Assinatura Visual)
 
-**Fonte ativa:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design, 4 delta specs, tasks; `validate --strict` valid) + `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. **Status:** aprovada pelo Codex em 2026-10-24 **somente para planejamento GSD**; não executada; nenhuma integração, renumeração, implementação, banco, provider, push ou deploy. **Planos:** `47.2-01..10` em 9 waves, com checkpoints separados de integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
+**Fonte ativa:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design, 4 delta specs, tasks; `validate --strict` valid) + `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. **Status:** **Plano 01 concluído e aceito em 2026-10-24 (merge `ecf29e54`); Plano 02 executado em 2026-10-24, aguardando revisão.** F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva criada e manifesto emitido; nenhuma migration aplicada, banco, provider, push ou deploy. **Planos:** `47.2-01..10` em 9 waves, com checkpoints separados de integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
 
 | REQ-ID | Cobertura | Plano |
 |---|---|---|

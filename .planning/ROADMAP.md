@@ -642,7 +642,7 @@ Plans:
 
 ### Phase 47.2: F47.2 — Integração e promoção produtiva da Assinatura Visual
 
-**Status:** **PLANEJADA E APROVADA PELO CODEX PARA PLANEJAMENTO GSD (2026-10-24); NÃO EXECUTADA.** Base OpenSpec `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` validada (`--strict` valid; 20 requisitos; 4 capabilities). Aprovação registrada em `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. Nenhuma integração, renumeração, implementação, banco, provider, push ou deploy executado.
+**Status:** **PLANO 01 CONCLUÍDO E ACEITO; PLANO 02 EXECUTADO, AGUARDANDO REVISÃO (2026-10-24); PLANO 03 NÃO INICIADO.** Merge `ecf29e54` aceito; baseline registrado (6744 passed/9 failed/161 skipped); F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva criada e manifesto emitido. Base OpenSpec `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` validada (`--strict` valid; 20 requisitos; 4 capabilities). Aprovação registrada em `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. Nenhuma migration aplicada, banco, provider, push ou deploy.
 
 **Goal:** integrar a branch completa da F47.1 à `main` atual preservando histórico e F50.3/F50.4; renumerar apenas a F47.1 com timestamp UTC real e criar a migration corretiva F47.2; substituir o isolamento exclusivamente local por contrato explícito de ambiente com liberação vinculada à versão; corrigir a atualidade do perfil por origem/ativo/contexto; provar não-interferência na F50.4; e preparar a promoção com gates separados.
 
@@ -654,8 +654,8 @@ Plans:
 
 Plans:
 
-- [ ] 47.2-01-PLAN.md — Baseline, integração Git e tracking (checkpoint de integração).
-- [ ] 47.2-02-PLAN.md — Renumeração imutável F47.1 + migration corretiva F47.2 + manifesto de integração.
+- [x] 47.2-01-PLAN.md — Baseline, integração Git e tracking (checkpoint de integração) — concluído e aceito em 2026-10-24 (`ecf29e54`).
+- [ ] 47.2-02-PLAN.md — Renumeração imutável F47.1 + migration corretiva F47.2 + manifesto de integração — executado em 2026-10-24; aguardando revisão.
 - [ ] 47.2-03-PLAN.md — Contrato de ambiente e liberação por versão.
 - [ ] 47.2-04-PLAN.md — Atualidade do perfil por origem, ativo e contexto.
 - [ ] 47.2-05-PLAN.md — Compatibilidade F50.4 + validação local.

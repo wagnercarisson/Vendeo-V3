@@ -29,7 +29,7 @@ const DATABASE_URL = process.env.DATABASE_URL ?? "";
 const EXPECTED_DB_PORT = Number(process.env.EXPECTED_DB_PORT ?? "57782");
 const EXPECTED_PROJECT_ID = process.env.EXPECTED_PROJECT_ID ?? "vendeo-homolog";
 const MIGRATION_PATH = process.env.MIGRATION_PATH ?? "";
-const MIGRATION_VERSION = process.env.EXPECTED_MIGRATION_VERSION ?? "20261021000001";
+const MIGRATION_VERSION = process.env.EXPECTED_MIGRATION_VERSION ?? "20261024141422";
 const PROOFS_ONLY = process.env.PROOFS_ONLY === "1";
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);

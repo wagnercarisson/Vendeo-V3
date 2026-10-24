@@ -12,8 +12,9 @@ reset de banco de produção ou chamadas pagas automáticas.
 | Project ID | `vendeo-homolog` |
 | API local | `127.0.0.1:57781` |
 | DB local | `127.0.0.1:57782` |
-| Migration | `20261021000001_f47_1_visual_signature_model_config.sql` |
-| SHA-256 | `B352F93EFA1B2F829E5D97FFAA79F7972CF3D7696C6B7CEB40EBFC517A26AA90` |
+| Migration | `20261024141422_f47_1_visual_signature_model_config.sql` |
+| SHA-256 (LF normalizado) | `B352F93EFA1B2F829E5D97FFAA79F7972CF3D7696C6B7CEB40EBFC517A26AA90` |
+| SHA-256 físico em checkout CRLF | `03EBFB1783F79AF99A89828324F0C2BE9F9053FEB499E21B10EF3FC3BFF983D9` |
 
 API e DB são validados **separadamente**. A porta do DB não é derivada da API
 nem recebida por env adicional: ela vem do `supabase status`/config local e é
@@ -27,7 +28,7 @@ powershell -NoProfile -File scripts/f47-1/preflight.ps1 `
   -PreflightOnly -Stage post-migration `
   -Workdir G:\Vendeo-Homolog -ProjectId vendeo-homolog `
   -ApiPort 57781 -DbPort 57782 `
-  -ExpectedMigration 20261021000001_f47_1_visual_signature_model_config.sql `
+  -ExpectedMigration 20261024141422_f47_1_visual_signature_model_config.sql `
   -ExpectedSha256 B352F93EFA1B2F829E5D97FFAA79F7972CF3D7696C6B7CEB40EBFC517A26AA90
 ```
 

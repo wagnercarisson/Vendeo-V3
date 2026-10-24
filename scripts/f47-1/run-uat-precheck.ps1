@@ -15,7 +15,7 @@ param(
   [string]$ProjectId = "vendeo-homolog",
   [int]$ApiPort = 57781,
   [int]$DbPort = 57782,
-  [string]$ExpectedMigration = "20261021000001_f47_1_visual_signature_model_config.sql",
+  [string]$ExpectedMigration = "20261024141422_f47_1_visual_signature_model_config.sql",
   [string]$ExpectedSha256 = "B352F93EFA1B2F829E5D97FFAA79F7972CF3D7696C6B7CEB40EBFC517A26AA90",
   [string]$ExpectedOrchestrator = "",
   [string]$ExpectedPreset = ""

@@ -9,7 +9,7 @@ const MIGRATION_PATH = path.resolve(
   process.cwd(),
   "supabase",
   "migrations",
-  "20261021000001_f47_1_visual_signature_model_config.sql",
+  "20261024141422_f47_1_visual_signature_model_config.sql",
 );
 
 const sql = readFileSync(MIGRATION_PATH, "utf8");
