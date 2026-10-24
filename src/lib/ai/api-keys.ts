@@ -32,6 +32,39 @@ export function getApiKey(provider: AiProvider): string {
   }
 }
 
+/**
+ * F47.1 (D6) — credencial DEDICADA da validação local da Assinatura Visual.
+ *
+ * Lê SOMENTE `VENDEO_VS_VALIDATION_OPENAI_API_KEY`. Ausente/vazia falha com
+ * erro tipado e NUNCA cai para `OPENAI_API_KEY` ou qualquer outra chave.
+ */
+export const VALIDATION_OPENAI_API_KEY_ENV = "VENDEO_VS_VALIDATION_OPENAI_API_KEY" as const;
+
+export const VALIDATION_PROVIDER_KEY_MISSING =
+  "visual_signature_validation_provider_key_missing" as const;
+
+export class ValidationApiKeyMissingError extends Error {
+  readonly code = VALIDATION_PROVIDER_KEY_MISSING;
+
+  constructor(provider: AiProvider) {
+    super(`${VALIDATION_PROVIDER_KEY_MISSING}:${provider}`);
+    this.name = "ValidationApiKeyMissingError";
+  }
+}
+
+export function readValidationApiKey(provider: AiProvider): string {
+  // A validação local desta fase usa exclusivamente OpenAI/Responses. Qualquer
+  // outro provider falha fechado (sem fallback silencioso).
+  if (provider !== "openai") {
+    throw new ValidationApiKeyMissingError(provider);
+  }
+  const value = process.env[VALIDATION_OPENAI_API_KEY_ENV];
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ValidationApiKeyMissingError(provider);
+  }
+  return value;
+}
+
 function resolveKey(provider: AiProvider, envName: "OPENAI_API_KEY" | "GEMINI_API_KEY"): string {
   const value = process.env[envName];
   if (value !== undefined && value.length > 0) {

@@ -15,6 +15,9 @@ const mockProductEventRecord = vi.fn();
 mockGetOriginDemoGrantTxId.mockResolvedValue(null);
 mockGetBalanceBreakdown.mockResolvedValue({ availableBalance: 0, demoBalance: 0, demoExpiresAt: null });
 const mockRefundCredit = vi.fn();
+const mockLoadVisualSignatureConfig = vi.fn();
+const mockIdentityDirectorCtor = vi.fn();
+const mockAiGeneratorCtor = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: { from: mockSupabaseFrom },
@@ -34,14 +37,24 @@ vi.mock('@/lib/auth/csrf', () => ({
   requireSameOrigin: vi.fn(() => {}),
 }));
 
-vi.mock('@/lib/visual-signature/identity-art-director', () => ({
-  StoreIdentityArtDirectorService: class {
-    generate = mockIdentityDirectorGenerate;
-  },
-}));
+vi.mock('@/lib/visual-signature/identity-art-director', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/visual-signature/identity-art-director')>();
+  return {
+    ...actual,
+    StoreIdentityArtDirectorService: class {
+      constructor(opts: unknown) {
+        mockIdentityDirectorCtor(opts);
+      }
+      generate = mockIdentityDirectorGenerate;
+    },
+  };
+});
 
 vi.mock('@/lib/visual-signature/ai-image-generator', () => ({
   AiImageGenerator: class {
+    constructor(opts: unknown) {
+      mockAiGeneratorCtor(opts);
+    }
     generate = mockAiGeneratorGenerate;
   },
 }));
@@ -86,6 +99,7 @@ vi.mock('@/lib/ai', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/ai')>();
   return {
     ...actual,
+    loadVisualSignatureModelConfigSnapshot: mockLoadVisualSignatureConfig,
     createDefaultTelemetryContext: (params: any) => {
       const { sink, tracker: _tracker, onCostResolved, ...ctx } = params;
       const convert = {
@@ -271,6 +285,13 @@ function makeRequest(body: Record<string, unknown> = {}) {
   }));
 }
 
+beforeEach(() => {
+  // Default de TODOS os describes: configuração legada, como o runtime faria
+  // com opt-in desligado. Testes dedicados sobrescrevem por cenário.
+  mockLoadVisualSignatureConfig.mockReset();
+  mockLoadVisualSignatureConfig.mockResolvedValue({ mode: 'legacy' });
+});
+
 describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -290,6 +311,7 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
       enabled: true,
       source: 'table',
     });
+    mockLoadVisualSignatureConfig.mockResolvedValue({ mode: 'legacy' });
     mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
     mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
     mockInsertGenerationEvent.mockResolvedValue(undefined);
@@ -564,11 +586,22 @@ describe('VS cost accounting (6.4)', () => {
         mimeType: 'image/png',
         metadata: { generation_tier: 'image_direct', provider: 'openai', model: 'gpt-5.5' },
         prompt: 'retry prompt',
+        aiResponseMessage: JSON.stringify({
+          visual_direction: 'Minimalista',
+          content_used: { store_name: true, city: false, state: false, slogan: false },
+        }),
       };
     });
     const { POST } = await import('../route');
     const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
     expect(res.status).toBe(200);
+
+    const persistedRetry = mockPersistSignature.mock.calls.at(-1)?.[0];
+    expect(persistedRetry.metadata).toMatchObject({
+      creative_intent_parse_status: 'parsed_json',
+      creative_intent_source: 'model',
+      artDirectorOutput: { visual_direction: 'Minimalista' },
+    });
 
     const attempt1Events = capturedEvents.filter((e: any) => e.attemptNumber === 0);
     const retryEvents = capturedEvents.filter((e: any) => e.attemptNumber === 1);
@@ -589,6 +622,73 @@ describe('VS cost accounting (6.4)', () => {
     for (const e of attempt1Events) {
       expect(e.visualSignatureId).toBeNull();
     }
+  });
+
+  it('F47.1: rota congela snapshot no retry e relê a configuração na próxima requisição', async () => {
+    setupStandardStore();
+    const snapshotA = {
+      mode: 'dedicated' as const,
+      orchestratorModel: 'gpt-5.5' as const,
+      imagePreset: 'sunburst_medium' as const,
+      imageModel: 'gpt-image-2.5-sunburst',
+      imageQuality: 'medium' as const,
+      reasoningEffort: 'low' as const,
+      configVersionId: '11111111-1111-4111-8111-111111111111',
+      instanceIdentity: '127.0.0.1:57781',
+    };
+    const snapshotB = {
+      ...snapshotA,
+      orchestratorModel: 'gpt-6-luna' as const,
+      configVersionId: '22222222-2222-4222-8222-222222222222',
+    };
+    mockLoadVisualSignatureConfig
+      .mockResolvedValueOnce(snapshotA)
+      .mockResolvedValueOnce(snapshotB);
+
+    mockIdentityDirectorGenerate.mockRejectedValueOnce(new Error('identity_art_director_failed: boom'));
+    mockAiGeneratorGenerate.mockResolvedValueOnce({
+      tier: 'image_direct',
+      assetUrl: 'https://example.com/retry.png',
+      storagePath: 'test/retry.png',
+      mimeType: 'image/png',
+      metadata: { generation_tier: 'image_direct' },
+      prompt: 'retry prompt',
+      aiResponseMessage: JSON.stringify({
+        visual_direction: 'Minimalista',
+        content_used: { store_name: true, city: false, state: false, slogan: false },
+      }),
+    });
+
+    const { POST } = await import('../route');
+    const first = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(first.status).toBe(200);
+
+    expect(mockLoadVisualSignatureConfig).toHaveBeenCalledTimes(1);
+    expect(mockIdentityDirectorCtor).toHaveBeenCalledWith(
+      expect.objectContaining({ visualSignatureConfig: snapshotA }),
+    );
+    expect(mockAiGeneratorGenerate.mock.calls[0][0].visualSignatureConfig).toBe(snapshotA);
+
+    mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
+    const second = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(second.status).toBe(200);
+    expect(mockLoadVisualSignatureConfig).toHaveBeenCalledTimes(2);
+    expect(mockIdentityDirectorCtor).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visualSignatureConfig: snapshotB }),
+    );
+  });
+
+  it('F47.1: falha de configuração bloqueia antes de reserva/provider', async () => {
+    setupStandardStore();
+    mockLoadVisualSignatureConfig.mockRejectedValue(new Error('config read failed'));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(503);
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockIdentityDirectorCtor).not.toHaveBeenCalled();
+    expect(mockAiGeneratorGenerate).not.toHaveBeenCalled();
   });
 
   it('Teste 11 (6.4): visual_signature_id preenchido em todos os eventos do run', async () => {

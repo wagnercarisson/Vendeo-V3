@@ -6,12 +6,11 @@ import type {
   VisualSignatureArtDirectorOutput,
   VisualSignatureMetadataArtDirectorOutput,
   VisualSignatureRecord,
-  ColorUsage,
 } from '@/lib/visual-signature/types';
-import { normalizeIntendedPalette } from '@/lib/visual-signature/types';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
-import type { AiTelemetryContext } from '@/lib/ai';
-
+import type { AiInvoker, AiTelemetryContext } from '@/lib/ai';
+import { parseCreativeIntent } from './creative-intent';
+import type { VisualSignatureModelConfigSnapshot } from '@/lib/ai/visual-signature-model-config-service';
 export interface VisualSignatureGenerationResult {
   signature: VisualSignatureRecord;
   artDirectorOutput: VisualSignatureArtDirectorOutput;
@@ -19,13 +18,28 @@ export interface VisualSignatureGenerationResult {
   assetUrl: string;
 }
 
+export type {
+  CreativeIntentParseStatus,
+  CreativeIntentFallbackReason,
+  CreativeIntentParsingMetadata,
+  CreativeIntentParseResult,
+} from './creative-intent';
+export { parseCreativeIntent } from './creative-intent';
+
 export class StoreIdentityArtDirectorService {
   private promptLoader: PromptLoader;
   private aiImageGenerator: AiImageGenerator;
+  private readonly visualSignatureConfig?: VisualSignatureModelConfigSnapshot;
 
-  constructor(opts?: { promptLoader?: PromptLoader; aiImageGenerator?: AiImageGenerator }) {
+  constructor(opts?: {
+    promptLoader?: PromptLoader;
+    aiImageGenerator?: AiImageGenerator;
+    invoker?: AiInvoker;
+    visualSignatureConfig?: VisualSignatureModelConfigSnapshot;
+  }) {
     this.promptLoader = opts?.promptLoader ?? new PromptLoader();
-    this.aiImageGenerator = opts?.aiImageGenerator ?? new AiImageGenerator();
+    this.aiImageGenerator = opts?.aiImageGenerator ?? new AiImageGenerator({ invoker: opts?.invoker });
+    this.visualSignatureConfig = opts?.visualSignatureConfig;
   }
 
   async generate(
@@ -83,10 +97,14 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
         brandColor: input.brandColor ?? '',
         tone,
         signal,
-        attempt: input.rejectionContext ? (input.rejectionContext.attempt + 1) : 1,
+        // F47.1 (D8): `rejectionContext` é HISTÓRICO da geração anterior, não
+        // o índice da tentativa desta operação. Toda chamada inicial do DA é
+        // `attempt=0` (image_direct); retries internos usam >=1 no chamador.
+        attempt: 0,
         customPrompt: loadedPrompt, // Passing the full identity art director prompt
         onCall, // F38.1 (D11): propaga o onCall do caller (imagem + validação)
         telemetry, // F46-04 (D9): encaminha o contexto de telemetria (sink injetado)
+        visualSignatureConfig: this.visualSignatureConfig,
       });
       console.log('[identity-art-director] AiImageGenerator retornou', { tier: result.tier, assetUrl: result.assetUrl });
 
@@ -95,51 +113,12 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
         throw new Error('identity_art_director_failed: Typographic fallback não é permitido para geração sem logo');
       }
 
-      let metadataArtDirectorOutput: VisualSignatureMetadataArtDirectorOutput | null = null;
-      if (result.aiResponseMessage) {
-        try {
-          const jsonMatch = result.aiResponseMessage.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            if (parsed.visual_direction && parsed.content_used) {
-              const normalizedIntended = normalizeIntendedPalette(parsed.intended_palette);
-              let validatedColorUsage: ColorUsage | undefined;
-              const cu = parsed.color_usage;
-              if (cu && typeof cu === 'object' &&
-                  typeof cu.primary === 'string' && typeof cu.accent === 'string' &&
-                  typeof cu.support === 'string' && typeof cu.background === 'string') {
-                validatedColorUsage = cu as ColorUsage;
-              }
-              metadataArtDirectorOutput = {
-                visual_direction: parsed.visual_direction,
-                content_used: {
-                  store_name: parsed.content_used?.store_name ?? true,
-                  city: parsed.content_used?.city ?? false,
-                  state: parsed.content_used?.state ?? false,
-                  slogan: parsed.content_used?.slogan ?? false,
-                },
-                visual_elements: parsed.visual_elements,
-                intended_palette: normalizedIntended ?? undefined,
-                color_usage: validatedColorUsage,
-              };
-            }
-          }
-        } catch {
-          console.log('[identity-art-director] falha ao parsear JSON do response.message — usando fallback');
-        }
-      }
-
-      if (!metadataArtDirectorOutput) {
-        metadataArtDirectorOutput = {
-          visual_direction: 'Personalizada',
-          content_used: {
-            store_name: true,
-            city: false,
-            state: false,
-            slogan: false,
-          },
-        };
-      }
+      // F47.1 (D9): o parser roda no AiImageGenerator para TODOS os entry points
+      // e para o retry; aqui apenas consumimos a proveni?ncia j? enriquecida no
+      // envelope antes do flush. O fallback local cobre apenas fakes antigos.
+      const parsedIntent = result.creativeIntent ?? parseCreativeIntent(result.aiResponseMessage);
+      const metadataArtDirectorOutput: VisualSignatureMetadataArtDirectorOutput =
+        parsedIntent.output;
 
       const artDirectorOutput: VisualSignatureArtDirectorOutput = {
         creative_description: `Assinatura visual para ${input.storeName} (${input.segment})`,
@@ -162,6 +141,7 @@ INSTRUÇÕES OBRIGATÓRIAS PARA ESTA NOVA GERAÇÃO:
         prompt: result.prompt,
         metadata: {
           ...result.metadata,
+          ...parsedIntent.metadata,
           artDirectorOutput,
         },
       });

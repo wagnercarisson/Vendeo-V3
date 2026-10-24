@@ -27,6 +27,20 @@ const DEFAULT_VISION_MODEL = 'gpt-4o';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
+/**
+ * F47.1: URLs de Storage local (loopback) não são acessíveis pela OpenAI.
+ * Para essas, o profiler envia a imagem já baixada como data URL; URLs
+ * remotas preservam exatamente o comportamento anterior.
+ */
+function isLoopbackAssetUrl(assetUrl: string): boolean {
+  try {
+    const host = new URL(assetUrl).hostname;
+    return host === '127.0.0.1' || host === 'localhost' || host === '::1' || host === '[::1]';
+  } catch {
+    return false;
+  }
+}
+
 function isValidHex(value: string): boolean {
   return HEX_REGEX.test(value);
 }
@@ -261,6 +275,24 @@ export class BrandProfilerWithoutLogoService {
     }
 
     const buffer = await this.downloadAssetBuffer(input.assetUrl);
+    const localAsset = isLoopbackAssetUrl(input.assetUrl);
+    if (localAsset && (!buffer || buffer.length === 0)) {
+      throw new BrandProfilerWithoutLogoError(
+        'Falha ao baixar a imagem local para análise de visão',
+        {
+          provider: 'openai',
+          model: DEFAULT_VISION_MODEL,
+          elapsedMs: Date.now() - startTime,
+          errorType: 'local_asset_download_failed',
+        },
+      );
+    }
+    // Reutiliza o MESMO buffer da análise de cores para o provedor de visão.
+    // URLs remotas continuam sendo enviadas como URL (sem mudança de comportamento).
+    const visionImageUrl =
+      localAsset && buffer
+        ? `data:image/png;base64,${buffer.toString('base64')}`
+        : input.assetUrl;
     let probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null = null;
     if (buffer) {
       probeResult = await probeColors(buffer);
@@ -283,7 +315,7 @@ export class BrandProfilerWithoutLogoService {
         return this.mockGenerate(input, probeResult);
       }
 
-      return this.generateWithIntendedPalette(input, buffer, probeResult, nonArtifactClusters, startTime, telemetry);
+      return this.generateWithIntendedPalette(input, buffer, probeResult, nonArtifactClusters, startTime, telemetry, visionImageUrl);
     }
 
     // --- PATH 2: No intendedPalette (retry/legacy) → fallback heuristic ---
@@ -298,7 +330,7 @@ export class BrandProfilerWithoutLogoService {
       return this.mockGenerate(input, probeResult);
     }
 
-    return this.generateWithFallback(input, probeResult, nonArtifactClusters, startTime, telemetry);
+    return this.generateWithFallback(input, probeResult, nonArtifactClusters, startTime, telemetry, visionImageUrl);
   }
 
   private async mockGenerate(
@@ -350,7 +382,8 @@ export class BrandProfilerWithoutLogoService {
     probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
     nonArtifactClusters: ColorCluster[],
     startTime: number,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    visionImageUrl?: string
   ): Promise<BrandProfileGenerationResult> {
     const intended = input.intendedPalette!;
     const roles: { role: string; hex: string }[] = [
@@ -386,21 +419,22 @@ export class BrandProfilerWithoutLogoService {
     }
 
     if (probeUnavailable) {
-      return this.handleProbeUnavailable(input, intended, startTime, telemetry);
+      return this.handleProbeUnavailable(input, intended, startTime, telemetry, visionImageUrl);
     }
 
     if (allConfirmed) {
-      return this.handleAllConfirmed(input, intended, nonArtifactClusters, rolePresence, startTime, telemetry);
+      return this.handleAllConfirmed(input, intended, nonArtifactClusters, rolePresence, startTime, telemetry, visionImageUrl);
     }
 
-    return this.handleDivergence(input, intended, buffer, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime, telemetry);
+    return this.handleDivergence(input, intended, buffer, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime, telemetry, visionImageUrl);
   }
 
   private async handleProbeUnavailable(
     input: BrandProfilerInput,
     intended: IntendedPalette,
     startTime: number,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    visionImageUrl?: string
   ): Promise<BrandProfileGenerationResult> {
     const resolved = intendedToResolved(intended, intended.support);
     const safeColors = sanitizeResolvedPalette(resolved);
@@ -425,7 +459,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('happy_path', input);
-    const visionResult = await this.callVision(input, prompt, telemetry);
+    const visionResult = await this.callVision(input, prompt, telemetry, visionImageUrl);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -439,7 +473,8 @@ export class BrandProfilerWithoutLogoService {
     nonArtifactClusters: ColorCluster[],
     rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }>,
     startTime: number,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    visionImageUrl?: string
   ): Promise<BrandProfileGenerationResult> {
     const resolved = intendedToResolved(intended, intended.support);
     const safeColors = sanitizeResolvedPalette(resolved);
@@ -470,7 +505,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('happy_path', input);
-    const visionResult = await this.callVision(input, prompt, telemetry);
+    const visionResult = await this.callVision(input, prompt, telemetry, visionImageUrl);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -487,7 +522,8 @@ export class BrandProfilerWithoutLogoService {
     contestedRoles: string[],
     contestedSupportIndices: number[],
     startTime: number,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    visionImageUrl?: string
   ): Promise<BrandProfileGenerationResult> {
     const contestedHexes: string[] = [];
     for (const role of contestedRoles) {
@@ -514,7 +550,7 @@ export class BrandProfilerWithoutLogoService {
     });
 
     try {
-      const visionResult = await this.callVisionFull(input, prompt, telemetry);
+      const visionResult = await this.callVisionFull(input, prompt, telemetry, visionImageUrl);
       const raw = JSON.parse(visionResult);
       const correctionsObj = {
         corrections: raw.corrections,
@@ -622,7 +658,8 @@ export class BrandProfilerWithoutLogoService {
     probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
     nonArtifactClusters: ColorCluster[],
     startTime: number,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    visionImageUrl?: string
   ): Promise<BrandProfileGenerationResult> {
     const brandColor = input.brandColor;
 
@@ -686,7 +723,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('legacy', input);
-    const visionResult = await this.callVision(input, prompt, telemetry);
+    const visionResult = await this.callVision(input, prompt, telemetry, visionImageUrl);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -708,7 +745,8 @@ export class BrandProfilerWithoutLogoService {
   private async callVision(
     input: BrandProfilerInput,
     prompt: string,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    visionImageUrl?: string
   ): Promise<string> {
     if (!telemetry) {
       throw new Error(
@@ -721,7 +759,7 @@ export class BrandProfilerWithoutLogoService {
     const request: AiInvocationRequest = {
       prompt: 'Analise visualmente a assinatura visual aprovada e gere o perfil de marca.',
       system: prompt,
-      productImagesDataUrls: [input.assetUrl],
+      productImagesDataUrls: [visionImageUrl ?? input.assetUrl],
       imageDetail: 'low',
       responseFormat: 'json_object',
       maxTokens: 2000,
@@ -739,7 +777,8 @@ export class BrandProfilerWithoutLogoService {
   private async callVisionFull(
     input: BrandProfilerInput,
     prompt: string,
-    telemetry?: AiTelemetryContext
+    telemetry?: AiTelemetryContext,
+    visionImageUrl?: string
   ): Promise<string> {
     if (!telemetry) {
       throw new Error(
@@ -750,7 +789,7 @@ export class BrandProfilerWithoutLogoService {
     const request: AiInvocationRequest = {
       prompt: 'Analise visualmente a assinatura visual aprovada, corrija as cores contestadas e gere o perfil de marca completo.',
       system: prompt,
-      productImagesDataUrls: [input.assetUrl],
+      productImagesDataUrls: [visionImageUrl ?? input.assetUrl],
       imageDetail: 'low',
       responseFormat: 'json_object',
       maxTokens: 3000,
