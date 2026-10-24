@@ -522,6 +522,7 @@ BEGIN
     WHERE scope = 'visual_signature'
     RETURNING * INTO v_release;
 
+    DELETE FROM public.visual_signature_model_config_pilot_stores;
   ELSE
     IF v_release.published_config_version_id IS DISTINCT FROM v_config_version_id THEN
       RAISE EXCEPTION 'config_not_published';

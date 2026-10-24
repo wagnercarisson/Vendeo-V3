@@ -214,7 +214,8 @@ permitida.
 Salvar uma nova configuração SHALL invalidar a aprovação anterior na mesma
 transação (ponteiros nulos, modo `none`, allowlist limpa) e exigir nova
 publicação/ativação. Resetar SHALL exigir configuração não ativada, limpar a
-allowlist e preservar na auditoria a composição anterior da allowlist.
+allowlist existente e registrar na auditoria o estado existente no momento do
+reset.
 
 As transições SHALL ser serializadas por advisory lock por escopo e
 `SELECT ... FOR UPDATE`; replay com o mesmo `operation_id` e conteúdo equivalente
@@ -261,22 +262,22 @@ liberação, estados derivados, `environment_scope`, `instance_identity`,
 - **THEN** a operação é recusada com `deactivate_required`
 - **AND** publicação e ativação permanecem inalteradas
 
-#### Scenario: Desativar preserva auditoria e mantém allowlist inativa
+#### Scenario: Desativar preserva auditoria e limpa allowlist
 - **WHEN** a desativação é acionada
 - **THEN** `activated_config_version_id` é anulado e o modo vira `none`
-- **AND** a allowlist é preservada inativa, para auditoria do reset
-- **AND** a publicação permanece e a auditoria registra a allowlist anterior
-- **AND** a geração volta ao caminho herdado
+- **AND** a composição anterior da allowlist é registrada na auditoria
+- **AND** a allowlist é limpa
+- **AND** a publicação permanece e a geração volta ao caminho herdado
 
 #### Scenario: Reset exige desativação
 - **WHEN** o reset é solicitado com a configuração ativada
 - **THEN** a operação é recusada com `deactivate_required`
 - **AND** configuração, allowlist e auditoria permanecem intactas
 
-#### Scenario: Reset limpa allowlist e preserva composição
+#### Scenario: Reset limpa allowlist e audita o estado existente
 - **WHEN** o reset é autorizado após a desativação
-- **THEN** a allowlist é limpa
-- **AND** a composição anterior permanece registrada na auditoria
+- **THEN** a allowlist existente no momento do reset é limpa (vazia após a desativação)
+- **AND** a auditoria do reset registra o estado existente, sem duplicar a composição já registrada na desativação
 - **AND** a configuração é removida sem apagar o histórico
 
 #### Scenario: Concorrência salvar × ativar

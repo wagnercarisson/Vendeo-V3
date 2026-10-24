@@ -233,9 +233,9 @@ Cinco estados separados, cada um com autoridade e evidência:
   p_mode, p_pilot_store_ids[], ...)` exige versão vigente **e** publicada; grava
   `activated_config_version_id` e a allowlist na mesma transação. Ativar uma
   versão diferente da publicada retorna `config_version_mismatch`.
-- Desativar (`p_mode='none'`) anula `activated_config_version_id` e mantém a
-  publicação; a allowlist é preservada **inativa** para que o reset possa
-  auditar sua composição anterior. Retorna `deactivated`.
+- Desativar (`p_mode='none'`) anula `activated_config_version_id`, mantém a
+  publicação e limpa a allowlist; a composição anterior é registrada na
+  auditoria do evento de desativação. Retorna `deactivated`.
 - `admin_reset_visual_signature_model_config` exige a versão vigente esperada
   (`p_expected_config_version_id`) e que a configuração **não esteja ativada**
   (`deactivate_required`); na mesma transação, remove a configuração, anula os
@@ -391,7 +391,7 @@ legítimo ou pela primeira conclusão elegível bloqueia o gate.
 
 ### D10 — Recuperação e rollback
 
-- Desativação: anular `activated_config_version_id` e `activation_mode='none'` por operação auditada, com motivo, ator e `operation_id`; manter a allowlist inativa (sem apagar), para que o reset audite a composição anterior, e retornar ao caminho legado sem apagar configuração.
+- Desativação: anular `activated_config_version_id`, `activation_mode='none'`, registrar a composição anterior da allowlist na auditoria e limpar a allowlist por operação auditada, com motivo, ator e `operation_id`; retorno ao caminho legado sem apagar configuração.
 - Reset: exigir configuração não ativada; remover configuração, anular ponteiros
   e limpar allowlist, preservando o histórico de auditoria.
 - Rollback de código: redeploy do SHA anterior; **não** reverte migrations.
@@ -399,7 +399,7 @@ legítimo ou pela primeira conclusão elegível bloqueia o gate.
   edição de ledger ou `migration repair` automático.
 - Piloto: critério de parada explícito (erro de geração, custo anômalo, quebra
   de perfil ou qualquer sinal de interferência na F50.4) desativa a configuração
-  e mantém a allowlist inativa até o reset auditado.
+  e limpa a allowlist, registrando a composição anterior na auditoria.
 
 ### D11 — Gates, autoridade e critério de parada
 

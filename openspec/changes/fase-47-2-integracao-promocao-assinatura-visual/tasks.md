@@ -38,7 +38,7 @@
 - [ ] 4.5 Implementar o schema, tabelas e RPCs previstos na migration corretiva F47.2 (criada na Task 3.5): `visual_signature_model_config_release`, allowlist e liberação por versão, mantendo `local_validation` válido e a linha local existente.
 - [ ] 4.6 Implementar estados derivados por ponteiro de versão (`published_config_version_id`/`activated_config_version_id` = `config_version_id`) e `activation_mode`, sem booleanos redundantes na configuração.
 - [ ] 4.7 Implementar as RPCs auditadas de publicação, ativação/desativação e reset com `p_expected_config_version_id`, ator, motivo, `operation_id`, identidade e escopo.
-- [ ] 4.8 Implementar os invariantes: salvar nova versão invalida aprovação; despublicar exige desativação; desativar mantém a allowlist inativa; reset exige desativação, limpa allowlist e preserva a composição anterior na auditoria.
+- [ ] 4.8 Implementar os invariantes: salvar nova versão invalida aprovação; despublicar exige desativação; desativar registra a composição anterior na auditoria e limpa allowlist; reset exige desativação e audita o estado existente (lista vazia após desativação).
 - [ ] 4.9 Implementar concorrência por advisory lock + `SELECT ... FOR UPDATE`, com resultado serializável e consistente: ativar→salvar pode concluir as duas operações e invalidar a ativação; salvar→ativar retorna `config_version_mismatch` para a versão antiga; sem estado parcial e sem exigir artificialmente um único sucesso.
 - [ ] 4.10 Implementar a allowlist das duas combinações avaliadas e o bloqueio técnico das seis não avaliadas.
 - [ ] 4.11 Manter o modelo validador `4o-mini` e a validação semântica inalterados.

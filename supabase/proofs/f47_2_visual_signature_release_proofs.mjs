@@ -57,19 +57,48 @@ async function expectFailure(client, name, sql, params, pattern) {
   }
 }
 
+async function ensureFixtures(client) {
+  let actor = (await client.query("SELECT id::text AS id FROM auth.users ORDER BY id LIMIT 1")).rows[0]?.id;
+  let actorCreated = false;
+  if (!actor) {
+    actor = randomUUID();
+    await client.query(
+      `INSERT INTO auth.users (
+         id, instance_id, aud, role, email, encrypted_password,
+         email_confirmed_at, created_at, updated_at
+       ) VALUES ($1, NULL, 'authenticated', 'authenticated', $2, '',
+                 now(), now(), now())`,
+      [actor, `f47-2-proof-${actor}@example.invalid`],
+    );
+    actorCreated = true;
+  }
+
+  let store = (await client.query("SELECT id::text AS id FROM public.stores ORDER BY id LIMIT 1")).rows[0]?.id;
+  let storeCreated = false;
+  if (!store) {
+    store = (
+      await client.query(
+        `INSERT INTO public.stores (name, segment, user_id, city, state)
+         VALUES ('F47.2 Proof Store', 'outros', $1, 'Sao Paulo', 'SP')
+         RETURNING id::text AS id`,
+        [actor],
+      )
+    ).rows[0].id;
+    storeCreated = true;
+  }
+
+  return { actor, store, actorCreated, storeCreated };
+}
+
 async function main() {
   assertLocalTarget();
   const client = await connect();
 
   try {
-    const actorRows = await client.query("SELECT id::text AS id FROM auth.users ORDER BY id LIMIT 1");
-    const storeRows = await client.query("SELECT id::text AS id FROM public.stores ORDER BY id LIMIT 1");
-    const actor = actorRows.rows[0]?.id;
-    const store = storeRows.rows[0]?.id;
-    if (!actor) throw new Error("proof_actor_missing");
-    if (!store) throw new Error("proof_store_missing");
-
     await client.query("BEGIN");
+    const { actor, store, actorCreated, storeCreated } = await ensureFixtures(client);
+    record("fixtures: ator disponível", Boolean(actor), actorCreated ? "created" : "existing");
+    record("fixtures: loja disponível", Boolean(store), storeCreated ? "created" : "existing");
 
     const legacySet = await client.query(
       "SELECT to_regprocedure('public.admin_set_visual_signature_model_config(uuid,text,text,text,text,uuid,text)') AS fn",
@@ -205,6 +234,43 @@ async function main() {
       [actor, v2.config_version_id, store, randomUUID(), ACTOR_INSTANCE],
     );
 
+    const beforeReset = (
+      await client.query(
+        `SELECT c.config_version_id,
+                r.published_config_version_id, r.activated_config_version_id, r.activation_mode
+         FROM public.visual_signature_model_config c
+         JOIN public.visual_signature_model_config_release r ON r.scope = c.scope`,
+      )
+    ).rows[0];
+    const auditBefore = (
+      await client.query("SELECT count(*)::int AS n FROM public.admin_audit_log")
+    ).rows[0].n;
+
+    await expectFailure(
+      client,
+      "reset: identidade divergente rejeitada",
+      "SELECT public.admin_reset_visual_signature_model_config($1,$2,'reset wrong identity',$3,$4)",
+      [actor, v2.config_version_id, randomUUID(), "127.0.0.1:99999"],
+      /instance_identity_mismatch/,
+    );
+
+    const afterResetFail = (
+      await client.query(
+        `SELECT c.config_version_id,
+                r.published_config_version_id, r.activated_config_version_id, r.activation_mode
+         FROM public.visual_signature_model_config c
+         JOIN public.visual_signature_model_config_release r ON r.scope = c.scope`,
+      )
+    ).rows[0];
+    const auditAfter = (
+      await client.query("SELECT count(*)::int AS n FROM public.admin_audit_log")
+    ).rows[0].n;
+    record(
+      "reset: identidade divergente não altera configuração/release",
+      JSON.stringify(beforeReset) === JSON.stringify(afterResetFail),
+    );
+    record("reset: identidade divergente não audita", auditBefore === auditAfter);
+
     await expectFailure(
       client,
       "reset: com ativação vigente exige desativação",
@@ -218,7 +284,15 @@ async function main() {
       [actor, v2.config_version_id, randomUUID(), ACTOR_INSTANCE],
     );
     const allow3 = await client.query("SELECT count(*)::int AS n FROM public.visual_signature_model_config_pilot_stores");
-    record("desativação: allowlist preservada inativa", allow3.rows[0].n === 1);
+    record("desativação: allowlist limpa", allow3.rows[0].n === 0);
+    const deactivateAudit = await client.query(
+      "SELECT metadata FROM public.admin_audit_log WHERE action='visual_signature_model_config_activation' AND metadata->>'mode'='none' ORDER BY created_at DESC LIMIT 1",
+    );
+    record(
+      "desativação: auditoria registra composição anterior",
+      Array.isArray(deactivateAudit.rows[0]?.metadata?.previous_pilot_stores) &&
+        deactivateAudit.rows[0].metadata.previous_pilot_stores.length === 1,
+    );
 
     const reset = (
       await client.query(
@@ -235,9 +309,9 @@ async function main() {
       "SELECT metadata FROM public.admin_audit_log WHERE action='visual_signature_model_config_reset' ORDER BY created_at DESC LIMIT 1",
     );
     record(
-      "reset: auditoria preserva composição anterior da allowlist",
+      "reset: auditoria registra estado existente (lista vazia após desativação)",
       Array.isArray(resetAudit.rows[0]?.metadata?.previous_pilot_stores) &&
-        resetAudit.rows[0].metadata.previous_pilot_stores.length === 1,
+        resetAudit.rows[0].metadata.previous_pilot_stores.length === 0,
     );
 
     const production = (

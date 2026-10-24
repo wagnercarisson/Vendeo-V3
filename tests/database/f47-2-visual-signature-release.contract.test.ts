@@ -177,12 +177,12 @@ describe("F47.2 — migrations e liberação da Assinatura Visual", () => {
     expect(resetFn).toContain("instance_identity_mismatch");
   });
 
-  it("desativação preserva allowlist inativa; reset limpa", () => {
+  it("desativação limpa allowlist; reset audita o estado existente", () => {
     const deactivateBlock = active472.slice(
       active472.indexOf("IF p_mode = 'none'"),
       active472.indexOf("ELSE", active472.indexOf("IF p_mode = 'none'")),
     );
-    expect(deactivateBlock).not.toContain("DELETE FROM public.visual_signature_model_config_pilot_stores");
+    expect(deactivateBlock).toContain("DELETE FROM public.visual_signature_model_config_pilot_stores");
     const resetBlock = active472.slice(
       active472.indexOf("FUNCTION public.admin_reset_visual_signature_model_config"),
       active472.indexOf("DROP FUNCTION IF EXISTS public.admin_set_visual_signature_model_config"),
@@ -206,5 +206,8 @@ describe("F47.2 — migrations e liberação da Assinatura Visual", () => {
     expect(current).toContain("admin_publish_visual_signature_model_config");
     expect(current).toContain("invalid_published");
     expect(current).toContain("instance_identity_mismatch");
+    expect(current).toContain("INSERT INTO auth.users");
+    expect(current).toContain("INSERT INTO public.stores");
+    expect(current).toContain("reset: identidade divergente rejeitada");
   });
 });
