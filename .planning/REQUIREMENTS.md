@@ -30,7 +30,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 
 ## F47.2 — Planejada (Integração e promoção produtiva da Assinatura Visual)
 
-**Fonte ativa:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design, 4 delta specs, tasks; `validate --strict` valid) + `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. **Status:** **Plano 01 concluído e aceito; Plano 02 concluído e aceito; Plano 03 executado em 2026-10-24, aguardando revisão.** F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva `E11D8E1D…` e manifesto emitidos; ambiente/credenciais/liberação por versão implementados com 245/245 testes focados. Nenhuma migration aplicada, banco, provider, push ou deploy. **Planos:** `47.2-01..10` em 9 waves, com checkpoints separados de integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
+**Fonte ativa:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design, 4 delta specs, tasks; `validate --strict` valid) + `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. **Status:** **Plano 01 concluído e aceito; Plano 02 concluído e aceito; Plano 03 concluído e aceito; Plano 04 executado em 2026-10-24, aguardando revisão.** F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva `E11D8E1D…` e manifesto emitidos; ambiente/credenciais/liberação por versão implementados com 245/245 testes focados. Nenhuma migration aplicada, banco, provider, push ou deploy. **Planos:** `47.2-01..10` em 9 waves, com checkpoints separados de integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
 
 | REQ-ID | Cobertura | Plano |
 |---|---|---|

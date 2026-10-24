@@ -4,6 +4,10 @@ import { validateBrandColorsChosen, normalizeBrandColorsChosen } from '@/lib/val
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
+import {
+  deriveBrandProfileState,
+  type BrandProfileSnapshotFields,
+} from '@/lib/visual-signature/brand-profile-state';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -17,6 +21,11 @@ export const GET = apiHandler(async (
   await requireAuthorizedStore(id);
   const url = new URL(request.url);
   const statusParam = url.searchParams.get('status');
+  const viewParam = url.searchParams.get('view');
+
+  if (viewParam === "state") {
+    return getProfileState(id);
+  }
 
   if (statusParam === 'synced') {
     const { data, error } = await supabase
@@ -52,6 +61,90 @@ export const GET = apiHandler(async (
 
 function cleanPlaceholderColors(colors: Array<string | null>): Array<string | null> {
   return colors.map(c => c === PLACEHOLDER_HEX ? null : c);
+}
+
+async function getProfileState(storeId: string) {
+  const [storeResult, signatureResult, profilesResult] = await Promise.all([
+    supabase.from("stores").select("*").eq("id", storeId).single(),
+    supabase
+      .from("store_visual_signatures")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("status", "active")
+      .maybeSingle(),
+    supabase
+      .from("store_brand_profiles")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (storeResult.error || !storeResult.data) {
+    return NextResponse.json({ error: "Loja não encontrada" }, { status: 404 });
+  }
+  if (profilesResult.error) {
+    return NextResponse.json({ error: profilesResult.error.message }, { status: 500 });
+  }
+
+  const store = storeResult.data as Record<string, unknown>;
+  const records = (profilesResult.data ?? []) as Array<{
+    id: string;
+    source: string;
+    status: string;
+    created_at: string;
+    updated_at?: string | null;
+    visual_signature_id?: string | null;
+    active_logo_asset_id?: string | null;
+    metadata?: Record<string, unknown> | null;
+  }>;
+
+  const identityState = String(store.identity_state ?? "text_only");
+  const activeOrigin =
+    identityState === "logo"
+      ? "logo_analysis"
+      : identityState === "visual_signature"
+        ? "without_logo"
+        : "text_only";
+
+  const latestLogo = records.find(
+    (record) => record.source === "logo_analysis" && record.status === "synced",
+  );
+  const activeAssetId =
+    activeOrigin === "without_logo"
+      ? (signatureResult.data?.id ?? null)
+      : activeOrigin === "logo_analysis"
+        ? (latestLogo?.active_logo_asset_id ?? null)
+        : null;
+
+  const snapshot: BrandProfileSnapshotFields = {
+    segment: String(store.segment ?? ""),
+    subsegment: (store.subsegment as string | null | undefined) ?? null,
+    tone_of_voice: (store.tone_of_voice as string | null | undefined) ?? null,
+    name: String(store.name ?? ""),
+    positioning: (store.positioning as string | null | undefined) ?? null,
+    short_description: (store.short_description as string | null | undefined) ?? null,
+    slogan: (store.slogan as string | null | undefined) ?? null,
+  };
+
+  const derived = deriveBrandProfileState({
+    records,
+    activeOrigin,
+    activeAssetId,
+    currentSnapshot: snapshot,
+  });
+
+  return NextResponse.json(
+    {
+      state: derived.state,
+      currentKind: derived.currentKind,
+      currentProfileId: derived.current?.id ?? null,
+      current: derived.current,
+      previousProfileIds: derived.previous.map((record) => record.id),
+      previous: derived.previous,
+      lastFailure: derived.lastFailure,
+    },
+    { status: 200, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export const PATCH = apiHandler(async (

@@ -21,6 +21,10 @@ import { hasUserChosenColors } from '@/lib/validators/color';
 import { probeColors, findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
 import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
 import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from '@/lib/ai';
+import {
+  buildBrandProfileContext,
+  type BrandProfileSnapshotFields,
+} from './brand-profile-state';
 
 /** Espelha o default do registry para `brand_profile_vision` (F46 D1). */
 const DEFAULT_VISION_MODEL = 'gpt-4o';
@@ -32,8 +36,7 @@ const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
  * Para essas, o profiler envia a imagem já baixada como data URL; URLs
  * remotas preservam exatamente o comportamento anterior.
  */
-function isLoopbackAssetUrl(assetUrl: string): boolean {
-  try {
+function isLoopbackAssetUrl(assetUrl: string): boolean {  try {
     const host = new URL(assetUrl).hostname;
     return host === '127.0.0.1' || host === 'localhost' || host === '::1' || host === '[::1]';
   } catch {
@@ -43,6 +46,26 @@ function isLoopbackAssetUrl(assetUrl: string): boolean {
 
 function isValidHex(value: string): boolean {
   return HEX_REGEX.test(value);
+}
+
+function profileInputSnapshot(input: BrandProfilerInput): BrandProfileSnapshotFields {
+  return {
+    segment: input.segment,
+    subsegment: input.subsegment,
+    tone_of_voice: input.tone_of_voice,
+    name: input.storeName,
+    positioning: input.positioning,
+    short_description: input.short_description,
+    slogan: input.slogan,
+  };
+}
+
+function profileContext(input: BrandProfilerInput) {
+  return buildBrandProfileContext({
+    origin: "without_logo",
+    assetId: input.visualSignatureId,
+    inputSnapshot: profileInputSnapshot(input),
+  });
 }
 
 /**
@@ -871,7 +894,10 @@ export class BrandProfilerWithoutLogoService {
 
     const brandColorsChosen = this.getBrandColorsChosen(input, safeTokens);
 
+    const context = profileContext(input);
     const metadata: Record<string, unknown> = {
+      context_hash: context.contextHash,
+      context: { origin: context.origin, identity_asset_id: context.assetId },
       art_director_output: input.artDirectorOutput,
       input_snapshot: {
         segment: input.segment,
@@ -992,7 +1018,10 @@ export class BrandProfilerWithoutLogoService {
     const brandColorsChosen = this.getBrandColorsChosen(input, safeTokens);
 
     // Build metadata, preserving content_used from VS metadata in regenerate mode
+    const context = profileContext(input);
     const metadata: Record<string, unknown> = {
+      context_hash: context.contextHash,
+      context: { origin: context.origin, identity_asset_id: context.assetId },
       art_director_output: input.artDirectorOutput,
       input_snapshot: {
         segment: input.segment,
@@ -1068,6 +1097,7 @@ export class BrandProfilerWithoutLogoService {
 
       if (updateError) {
         console.error(`[BrandProfiler] Ramo A: update failed for profile ${targetBP.id}: ${updateError.message}. Previous remains synced.`);
+        await this.persistFailedProfile(input, updateError.message);
         throw new Error(`Failed to update brand profile: ${updateError.message}`);
       }
 
@@ -1194,8 +1224,19 @@ export class BrandProfilerWithoutLogoService {
 
     const brandColorsChosen = this.getBrandColorsChosen(input, { primary, secondary: '#999999', accent, background: '#FFFFFF' });
 
+    const context = profileContext(input);
     const metadata: Record<string, unknown> = {
+      context_hash: context.contextHash,
+      context: { origin: context.origin, identity_asset_id: context.assetId },
       error: errorMessage,
+      attempt_snapshot: profileInputSnapshot(input),
+      failure: {
+        code: "brand_profile_failed",
+        message: errorMessage,
+        origin: "without_logo",
+        identity_asset_id: input.visualSignatureId,
+        at: new Date().toISOString(),
+      },
       art_director_output: input.artDirectorOutput,
       extracted_colors: _extractedColors,
     };
@@ -1229,6 +1270,7 @@ export class BrandProfilerWithoutLogoService {
       .from('store_brand_profiles')
       .select('id')
       .eq('visual_signature_id', input.visualSignatureId)
+      .eq('status', 'failed')
       .order('updated_at', { ascending: false })
       .limit(1);
     const existingProfileId = existingProfiles?.[0]?.id ?? null;
