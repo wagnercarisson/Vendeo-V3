@@ -12,8 +12,8 @@ if ($parseErrors.Count -gt 0) { throw 'Runner has PowerShell parse errors.' }
 $source = Get-Content -LiteralPath $Runner -Raw
 $moduleSource = Get-Content -LiteralPath $Module -Raw
 foreach ($required in @(
-    "'environment', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop'",
-    '-ConfirmStart', '-ConfirmMigrations', '-ConfirmInvariants', '-ConfirmCompatibility', '-ConfirmStop',
+    "'environment', 'resume-checkpoint', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop'",
+    '-ConfirmStart', '-ConfirmResume', '-ConfirmMigrations', '-ConfirmInvariants', '-ConfirmCompatibility', '-ConfirmStop',
     "'--wait-timeout', '180'", '127.0.0.1:56322',
     "'--db-url'", "-Operation 'list'", "-Operation 'up'", "EXPECTED_DB_PORT = '56322'",
     'Stop-NewComposeProject', "'--timeout', '20'", 'partial run, never a Task 3 PASS',
@@ -22,7 +22,9 @@ foreach ($required in @(
     'inventory differs from the two preserved volumes',
     "-TimeoutMilliseconds 120000", 'compose_stop_state_check',
     "-Stage 'ledger_select_sql'", 'migration_${Operation}_cli',
-    'Resolve-ComposeStopVerification'
+    'Resolve-ComposeStopVerification', 'Assert-ExistingComposeForResume',
+    "'start', '--wait', '--wait-timeout', '180'", 'Assert-ResumeContainerInventory',
+    'Assert-SameContainerIds'
 )) {
     if (-not $source.Contains($required)) { throw "Runner missing required safety contract: $required" }
 }
@@ -46,4 +48,4 @@ if (Test-Path -LiteralPath $Manifest -PathType Leaf) {
     }
 }
 
-Write-Output 'Offline static runner checks: PASS (PowerShell parser, gates, loopback target, bounded start, REST condition, secret/output guards).'
+Write-Output 'Offline static runner checks: PASS (PowerShell parser, gates, loopback target, bounded start/resume, REST condition, secret/output guards).'

@@ -117,7 +117,46 @@ $oneRunning = [pscustomobject]@{ ExitCode = 0; TimedOut = $false; StartError = $
 $stopUnverified = Resolve-ComposeStopVerification -StopResult $stopNonzero -RunningQueryResult $oneRunning
 Assert-Test (-not $stopUnverified.VerifiedStopped -and $stopUnverified.RunningCount -eq 1 -and $stopUnverified.Category -eq 'containers_still_running') 'Stop is not reported successful while any dedicated project container remains running.'
 
-Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, PSCustomObject wildcard/exact bindings, stderr suppression, sanitized stage/code/category diagnostics, process timeout, restricted cleanup and stop-state verification).'
+$resumeLabels = [pscustomobject]@{
+    'com.docker.compose.service' = 'db'
+    'com.docker.compose.project' = 'vendeo_f47_2_disposable_compose_20261024'
+    'com.supabase.cli.project' = 'vendeo_f47_2_disposable_20261024'
+}
+$resumeContainer = [pscustomobject]@{
+    Id = '1111111111111111111111111111111111111111111111111111111111111111'
+    Name = '/supabase_db_vendeo_f47_2_disposable_20261024_compose'
+    State = [pscustomobject]@{ Status = 'exited' }
+    Config = [pscustomobject]@{ Labels = $resumeLabels; Image = 'postgres:reviewed' }
+    HostConfig = [pscustomobject]@{ RestartPolicy = [pscustomobject]@{ Name = 'no' } }
+    Image = 'sha256:reviewed-image-id'
+    Mounts = @([pscustomobject]@{ Type = 'volume'; Name = 'supabase_db_vendeo_f47_2_disposable_20261024'; Destination = '/var/lib/postgresql/data'; RW = $true })
+}
+$resumeService = [pscustomobject]@{
+    Service = 'db'
+    Image = 'postgres:reviewed'
+    ImageId = 'sha256:reviewed-image-id'
+    Mounts = @([pscustomobject]@{ Type = 'volume'; Source = 'supabase_db_vendeo_f47_2_disposable_20261024'; Target = '/var/lib/postgresql/data'; ReadOnly = $false })
+}
+Assert-Test (Assert-ResumeContainerInventory -Containers @($resumeContainer) -ExpectedServices @($resumeService) -ComposeProject 'vendeo_f47_2_disposable_compose_20261024' -ProjectId 'vendeo_f47_2_disposable_20261024') 'Resume accepts only exact stopped container identity/image/volume inventory.'
+$wrongImageService = $resumeService.PSObject.Copy()
+$wrongImageService.ImageId = 'sha256:unexpected-image-id'
+$identityDriftRejected = $false
+try { Assert-ResumeContainerInventory -Containers @($resumeContainer) -ExpectedServices @($wrongImageService) -ComposeProject 'vendeo_f47_2_disposable_compose_20261024' -ProjectId 'vendeo_f47_2_disposable_20261024' }
+catch { $identityDriftRejected = $true }
+Assert-Test $identityDriftRejected 'Resume blocks when a local image ID differs from the reviewed image.'
+$wrongMountService = $resumeService.PSObject.Copy()
+$wrongMountService.Mounts = @([pscustomobject]@{ Type = 'volume'; Source = 'unexpected-volume'; Target = '/var/lib/postgresql/data'; ReadOnly = $false })
+$mountDriftRejected = $false
+try { Assert-ResumeContainerInventory -Containers @($resumeContainer) -ExpectedServices @($wrongMountService) -ComposeProject 'vendeo_f47_2_disposable_compose_20261024' -ProjectId 'vendeo_f47_2_disposable_20261024' }
+catch { $mountDriftRejected = $true }
+Assert-Test $mountDriftRejected 'Resume blocks when the preserved volume mapping differs.'
+Assert-Test (Assert-SameContainerIds -Before @('id-a', 'id-b') -After @('id-b', 'id-a')) 'Resume permits only the same container IDs, independent of ordering.'
+$recreatedIdsRejected = $false
+try { Assert-SameContainerIds -Before @('id-a', 'id-b') -After @('id-a', 'id-new') }
+catch { $recreatedIdsRejected = $true }
+Assert-Test $recreatedIdsRejected 'Resume blocks if Compose recreated even one container.'
+
+Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, PSCustomObject wildcard/exact bindings, stderr suppression, sanitized diagnostics, process timeout, restricted cleanup/stop-state verification, resume identity/image/volume checks).'
 }
 finally {
     Remove-Item -LiteralPath $temporary -Recurse -Force -ErrorAction SilentlyContinue

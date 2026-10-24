@@ -204,6 +204,63 @@ function Assert-ExpectedHostPortBindings {
     }
 }
 
+function Assert-ResumeContainerInventory {
+    param(
+        [Parameter(Mandatory = $true)][object[]]$Containers,
+        [Parameter(Mandatory = $true)][object[]]$ExpectedServices,
+        [Parameter(Mandatory = $true)][string]$ComposeProject,
+        [Parameter(Mandatory = $true)][string]$ProjectId
+    )
+    if ($Containers.Count -ne $ExpectedServices.Count) {
+        throw 'Existing Compose container count differs from the reviewed service inventory.'
+    }
+    foreach ($expected in $ExpectedServices) {
+        $matches = @($Containers | Where-Object { $_.Config.Labels.'com.docker.compose.service' -eq $expected.Service })
+        if ($matches.Count -ne 1) { throw 'Existing Compose service identity is missing or duplicated.' }
+        $container = $matches[0]
+        $expectedName = "/supabase_$($expected.Service)_${ProjectId}_compose"
+        if ($container.Name -ne $expectedName -or
+            $container.State.Status -ne 'exited' -or
+            $container.Config.Labels.'com.docker.compose.project' -ne $ComposeProject -or
+            $container.Config.Labels.'com.supabase.cli.project' -ne $ProjectId -or
+            $container.Config.Image -ne $expected.Image -or
+            $container.Image -ne $expected.ImageId -or
+            $container.HostConfig.RestartPolicy.Name -notin @('', 'no')) {
+            throw 'Existing Compose container name/state/project/image identity differs from the reviewed inventory.'
+        }
+
+        $expectedMounts = @($expected.Mounts)
+        $actualMounts = @($container.Mounts)
+        if ($actualMounts.Count -ne $expectedMounts.Count) { throw 'Existing Compose mount count differs from the reviewed inventory.' }
+        foreach ($mount in $expectedMounts) {
+            $sourceProperty = if ($mount.Type -eq 'volume') { 'Name' } else { 'Source' }
+            $actualSource = [string]$mount.Source
+            if ($mount.Type -eq 'volume') { $actualSource = [string]$mount.Source }
+            $found = @($actualMounts | Where-Object {
+                $_.Type -eq $mount.Type -and
+                $_.Destination -eq $mount.Target -and
+                $_.$sourceProperty -eq $actualSource -and
+                [bool]$_.RW -eq (-not [bool]$mount.ReadOnly)
+            })
+            if ($found.Count -ne 1) { throw 'Existing Compose mount source/target/mode differs from the reviewed inventory.' }
+        }
+    }
+    return $true
+}
+
+function Assert-SameContainerIds {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$Before,
+        [Parameter(Mandatory = $true)][string[]]$After
+    )
+    $beforeSorted = @($Before | Sort-Object)
+    $afterSorted = @($After | Sort-Object)
+    if ((Compare-Object $beforeSorted $afterSorted) -or $beforeSorted.Count -ne $afterSorted.Count) {
+        throw 'Resume changed container IDs; recreation is forbidden.'
+    }
+    return $true
+}
+
 function Invoke-StartupWithRestrictedCleanup {
     [CmdletBinding()]
     param(
@@ -238,4 +295,4 @@ function Invoke-StartupWithRestrictedCleanup {
     }
 }
 
-Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Invoke-StartupWithRestrictedCleanup
+Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Invoke-StartupWithRestrictedCleanup

@@ -1,10 +1,11 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('environment', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop')]
+    [ValidateSet('environment', 'resume-checkpoint', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop')]
     [string]$Stage,
 
     [switch]$ConfirmStart,
+    [switch]$ConfirmResume,
     [switch]$ConfirmMigrations,
     [switch]$ConfirmInvariants,
     [switch]$ConfirmCompatibility,
@@ -154,6 +155,89 @@ function Assert-PreStartIsolation {
     }
 }
 
+function Assert-ExistingComposeForResume {
+    Assert-ReviewInputs
+    $resolvedResult = Invoke-Compose -Arguments @('config', '--format', 'json')
+    if ($resolvedResult.ExitCode -ne 0) { throw 'Resolved Compose manifest could not be checked; output suppressed.' }
+    try { $resolved = ($resolvedResult.Lines -join "`n") | ConvertFrom-Json }
+    catch { throw 'Resolved Compose manifest JSON is invalid; output suppressed.' }
+
+    $list = Invoke-Captured -FilePath 'docker' -Arguments @('ps', '-aq', '--filter', "label=com.docker.compose.project=$ComposeProject")
+    if ($list.ExitCode -ne 0 -or $list.TimedOut -or $list.StartError) {
+        Write-SafeProcessDiagnostic -Stage 'resume_container_inventory' -Result $list
+        throw 'Could not safely enumerate existing Compose containers.'
+    }
+    $ids = @($list.Lines | Where-Object { $_ -match '^[0-9a-f]{12,64}$' })
+    if ($ids.Count -ne 9) { throw 'Resume requires exactly the nine existing Compose containers; no recreation allowed.' }
+    $containers = @(Invoke-DockerJson -Arguments (@('inspect') + $ids))
+
+    $expectedServices = @()
+    $expectedBindings = @()
+    foreach ($serviceProperty in $resolved.services.PSObject.Properties) {
+        $serviceName = [string]$serviceProperty.Name
+        $service = $serviceProperty.Value
+        $imageResult = Invoke-Captured -FilePath 'docker' -Arguments @('image', 'inspect', $service.image, '--format', '{{.Id}}')
+        if ($imageResult.ExitCode -ne 0 -or $imageResult.TimedOut -or $imageResult.StartError) {
+            Write-SafeProcessDiagnostic -Stage 'resume_image_inspect' -Result $imageResult
+            throw 'A reviewed image is not available locally; resume will not pull or recreate it.'
+        }
+        $mounts = @($service.volumes | ForEach-Object {
+            [pscustomobject]@{
+                Type = [string]$_.type
+                Source = [string]$_.source
+                Target = [string]$_.target
+                ReadOnly = [bool]$_.read_only
+            }
+        })
+        $expectedServices += [pscustomobject]@{
+            Service = $serviceName
+            Image = [string]$service.image
+            ImageId = ($imageResult.Lines -join '').Trim()
+            Mounts = $mounts
+        }
+        foreach ($port in $service.ports) {
+            $expectedBindings += [pscustomobject]@{
+                Container = "/supabase_${serviceName}_${ProjectId}_compose"
+                ContainerPort = "$($port.target)/$($port.protocol)"
+                HostIp = [string]$port.host_ip
+                HostPort = [string]$port.published
+            }
+        }
+    }
+    if ($expectedBindings.Count -ne 3) { throw 'Reviewed manifest does not resolve to exactly three published ports.' }
+    $null = Assert-ResumeContainerInventory -Containers $containers -ExpectedServices $expectedServices -ComposeProject $ComposeProject -ProjectId $ProjectId
+    Assert-ExpectedHostPortBindings -Containers $containers -ExpectedBindings $expectedBindings
+
+    $expectedVolumes = @("supabase_db_$ProjectId", "supabase_storage_$ProjectId") | Sort-Object
+    $volumeResult = Invoke-Captured -FilePath 'docker' -Arguments @('volume', 'ls', '-q', '--filter', "label=com.supabase.cli.project=$ProjectId")
+    if ($volumeResult.ExitCode -ne 0 -or $volumeResult.TimedOut -or $volumeResult.StartError) {
+        Write-SafeProcessDiagnostic -Stage 'resume_volume_inventory' -Result $volumeResult
+        throw 'Could not safely inspect preserved volume inventory.'
+    }
+    $actualVolumes = @($volumeResult.Lines | Where-Object { $_ } | Sort-Object)
+    if (Compare-Object $expectedVolumes $actualVolumes) { throw 'Resume volume inventory differs from the two preserved volumes.' }
+    foreach ($volume in $expectedVolumes) {
+        $users = Invoke-Captured -FilePath 'docker' -Arguments @('ps', '-q', '--filter', "volume=$volume")
+        if ($users.ExitCode -ne 0 -or $users.TimedOut -or $users.StartError) {
+            Write-SafeProcessDiagnostic -Stage 'resume_volume_users' -Result $users
+            throw 'Could not verify active users of preserved volumes.'
+        }
+        if (@($users.Lines | Where-Object { $_ -match '^[0-9a-f]{12,64}$' }).Count -ne 0) {
+            throw 'Another running container uses a preserved volume; refusing to resume Postgres.'
+        }
+    }
+    foreach ($port in @(56321, 56322, 56323)) {
+        if (@(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue).Count -gt 0) {
+            throw "Resume port $port is already listening while Compose containers should be stopped."
+        }
+    }
+    $migrationDir = Join-Path $Workdir 'supabase\migrations'
+    if (@(Get-ChildItem -LiteralPath $migrationDir -File -ErrorAction Stop).Count -ne 0) {
+        throw 'Disposable migration directory is not empty; read-only resume is blocked.'
+    }
+    return $containers
+}
+
 function Stop-NewComposeProject {
     # Compose's graceful-stop timeout is 20 seconds per service. Allow enough
     # wall time for the whole nine-service project plus CLI/Docker overhead.
@@ -297,6 +381,58 @@ function Start-DisposableEnvironment {
     Write-Output 'Disposable Compose environment healthy; bindings verified loopback; REST probe passed.'
 }
 
+function Resume-DisposableCheckpoint {
+    if (-not $ConfirmResume) { throw 'Resume requires the separate -ConfirmResume human gate.' }
+    $before = @(Assert-ExistingComposeForResume)
+    $beforeIds = @($before.Id | Sort-Object)
+    $outcome = Invoke-StartupWithRestrictedCleanup `
+        -StartAction { Invoke-Compose -Arguments @('start', '--wait', '--wait-timeout', '180') -TimeoutMilliseconds 210000 } `
+        -ValidateAction {
+            Assert-LoopbackBindingsAndHealth
+            $after = @(Get-NewComposeContainers)
+            $afterIds = @($after.Id | Sort-Object)
+            $null = Assert-SameContainerIds -Before $beforeIds -After $afterIds
+            Wait-RestReadiness
+            return $true
+        } `
+        -CleanupAction { Stop-NewComposeProject }
+    if (-not $outcome.Succeeded) {
+        if (-not $outcome.CleanupSucceeded) {
+            throw 'Resume validation failed; restricted stop was attempted but could not be confirmed.'
+        }
+        throw 'Resume validation failed; existing project was stopped and must not be retried without review.'
+    }
+
+    $ledgerResult = $null
+    $ledgerCount = -1
+    $ledgerSucceeded = $false
+    try {
+        $url = Get-LocalDatabaseUrl
+        Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $url
+        $ledger = @(Get-LedgerVersions)
+        $ledgerCount = $ledger.Count
+        $ledgerSucceeded = $true
+    }
+    catch {
+        # The command-specific sanitized warning identifies whether CLI list or
+        # the SQL SELECT failed; never echo the caught exception or its output.
+        Write-Warning 'RUNNER_DIAGNOSTIC stage=resume_ledger_result error_category=ledger_read_failed details=see_sanitized_process_diagnostic'
+    }
+    finally {
+        $stopResult = Stop-NewComposeProject
+    }
+
+    if ($stopResult.ExitCode -ne 0 -or -not $stopResult.StoppedVerified) {
+        throw 'Resume ended but restricted stop could not confirm zero running containers; stop and request review.'
+    }
+    if (-not $ledgerSucceeded) { throw 'Read-only ledger diagnostic failed; project stopped and no migration/proof was run.' }
+    if ($ledgerCount -ne 0) {
+        Write-Warning "RUNNER_DIAGNOSTIC stage=resume_ledger_result error_category=ledger_not_empty row_count=$ledgerCount"
+        throw 'Read-only ledger returned rows; project stopped and checkpoint is blocked.'
+    }
+    Write-Output 'Resume used existing container IDs; CLI list and SQL ledger SELECT completed; ledger row count=0; dedicated project stopped and verified.'
+}
+
 function Assert-RunningEnvironment {
     Assert-ReviewInputs
     Assert-LoopbackBindingsAndHealth
@@ -362,6 +498,7 @@ function Invoke-SignatureProof {
 
 switch ($Stage) {
     'environment' { Start-DisposableEnvironment }
+    'resume-checkpoint' { Resume-DisposableCheckpoint }
     'checkpoint' {
         Assert-RunningEnvironment
         $url = Get-LocalDatabaseUrl
