@@ -64,7 +64,7 @@ function cleanPlaceholderColors(colors: Array<string | null>): Array<string | nu
 }
 
 async function getProfileState(storeId: string) {
-  const [storeResult, signatureResult, profilesResult] = await Promise.all([
+  const [storeResult, signatureResult, profilesResult, assetsResult] = await Promise.all([
     supabase.from("stores").select("*").eq("id", storeId).single(),
     supabase
       .from("store_visual_signatures")
@@ -77,6 +77,14 @@ async function getProfileState(storeId: string) {
       .select("*")
       .eq("store_id", storeId)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("store_brand_assets")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("variant_type", "original")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1),
   ]);
 
   if (storeResult.error || !storeResult.data) {
@@ -84,6 +92,9 @@ async function getProfileState(storeId: string) {
   }
   if (profilesResult.error) {
     return NextResponse.json({ error: profilesResult.error.message }, { status: 500 });
+  }
+  if (signatureResult.error) {
+    return NextResponse.json({ error: signatureResult.error.message }, { status: 500 });
   }
 
   const store = storeResult.data as Record<string, unknown>;
@@ -109,12 +120,16 @@ async function getProfileState(storeId: string) {
   const latestLogo = records.find(
     (record) => record.source === "logo_analysis" && record.status === "synced",
   );
+  const activeLogoAssetId = (assetsResult.data?.[0]?.id as string | undefined) ?? null;
   const activeAssetId =
     activeOrigin === "without_logo"
       ? (signatureResult.data?.id ?? null)
       : activeOrigin === "logo_analysis"
-        ? (latestLogo?.active_logo_asset_id ?? null)
+        ? activeLogoAssetId
         : null;
+
+  const fallbackLogoAssetId =
+    latestLogo?.active_logo_asset_id ?? null;
 
   const snapshot: BrandProfileSnapshotFields = {
     segment: String(store.segment ?? ""),
@@ -131,6 +146,7 @@ async function getProfileState(storeId: string) {
     activeOrigin,
     activeAssetId,
     currentSnapshot: snapshot,
+    fallbackLogoAssetId,
   });
 
   return NextResponse.json(

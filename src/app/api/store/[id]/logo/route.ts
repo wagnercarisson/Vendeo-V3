@@ -18,8 +18,11 @@ import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { assertCanTransition, transition } from '@/lib/identity-transitions';
 import { buildStoreProfileInputSnapshot } from '@/lib/snapshot';
+import { buildBrandProfileContext } from '@/lib/visual-signature/brand-profile-state';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
+import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
+import { createVisualSignatureProfileSmokeGateway } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 
 const ALLOWED_EXTENSION_MAP: Record<string, string> = {
@@ -246,6 +249,14 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
     ?? null;
 
   const inputSnapshot = store ? buildStoreProfileInputSnapshot(store) : null;
+  const logoContext =
+    inputSnapshot && originalAsset?.id
+      ? buildBrandProfileContext({
+          origin: "logo_analysis",
+          assetId: originalAsset.id,
+          inputSnapshot,
+        })
+      : null;
 
   let createdProfile = null;
 
@@ -254,7 +265,11 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
 
     // Phase 2 — BrandDirector (BEFORE profile mutation)
     try {
-      const director = new BrandDirectorService();
+      const director = new BrandDirectorService(
+        isVisualSignatureSmokeNoRetry()
+          ? createVisualSignatureProfileSmokeGateway()
+          : undefined,
+      );
       // F46-04 (reabertura, D9): telemetria pelo sink único para
       // brand_profile_vision — o caller fornece run + sink ao `analyze`.
       const run = new AiCostTracker().startRun("brand_profile");
@@ -338,6 +353,10 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           status: 'synced',
           metadata: {
             input_snapshot: inputSnapshot,
+            context_hash: logoContext?.contextHash ?? null,
+            context: logoContext
+              ? { origin: logoContext.origin, identity_asset_id: logoContext.assetId }
+              : null,
           },
         })
         .select()
@@ -424,6 +443,17 @@ async function handlePostUpload(request: NextRequest, storeId: string) {
           metadata: {
             error: err instanceof Error ? err.message : 'Brand Director analysis failed',
             attempt_snapshot: inputSnapshot ? buildStoreProfileInputSnapshot(store) : null,
+            context_hash: logoContext?.contextHash ?? null,
+            context: logoContext
+              ? { origin: logoContext.origin, identity_asset_id: logoContext.assetId }
+              : null,
+            failure: {
+              code: "brand_profile_failed",
+              message: err instanceof Error ? err.message : 'Brand Director analysis failed',
+              origin: "logo_analysis",
+              identity_asset_id: originalAsset?.id ?? null,
+              at: new Date().toISOString(),
+            },
           },
         })
         .select()

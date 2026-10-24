@@ -140,6 +140,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const [step2Success, setStep2Success] = useState<string | null>(null);
   const [analysisWarning, setAnalysisWarning] = useState<string | null>(null);
   const [profileStateNotice, setProfileStateNotice] = useState<string | null>(null);
+  const [previousProfiles, setPreviousProfiles] = useState<Array<{ id: string }>>([]);
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -589,12 +590,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
     const load = async () => {
       try {
-        const [storeRes, logoRes, profileRes, stateRes] = await Promise.all([
+        const [storeRes, logoRes, profileRes] = await Promise.all([
           fetch(`/api/store/${storeId}`),
           fetch(`/api/store/${storeId}/logo`),
-          // Perfil VIGENTE (synced) — separado da tentativa `failed` histórica, que
-          // NÃO deve ser tratada como atual nem sobrepor as cores/direção vigentes.
-          fetch(`/api/store/${storeId}/brand-profile?status=synced`),
+          // Estado derivado: atual/anterior/falha por origem e contexto.
           fetch(`/api/store/${storeId}/brand-profile?view=state`),
         ]);
 
@@ -615,7 +614,9 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         }
 
         if (profileRes.ok) {
-          const profile = await profileRes.json();
+          const stateView = await profileRes.json();
+          const profile = stateView.current;
+          setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
           if (profile) {
             // `?status=synced` ⇒ sempre o perfil VIGENTE.
             if (profile.logo_colors_detected?.length > 0) {
@@ -663,10 +664,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               }
             } catch {}
           }
-        }
-
-        if (stateRes.ok) {
-          const stateView = await stateRes.json();
           if (stateView.state === "failed") {
             setProfileStateNotice(
               "Não foi possível atualizar a direção visual. O perfil anterior foi preservado e está identificado como anterior.",
@@ -985,9 +982,11 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         return;
       }
       setBrandDirectorWarning(null);
-      const profileRes = await fetch(`/api/store/${storeId}/brand-profile?status=synced`);
+      const profileRes = await fetch(`/api/store/${storeId}/brand-profile?view=state`);
       if (profileRes.ok) {
-        const profile = await profileRes.json();
+        const stateView = await profileRes.json();
+        const profile = stateView.current;
+        setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
         if (profile?.status === 'synced') {
           setInferredProfile({
             safe_color_tokens: profile.safe_color_tokens,
@@ -2591,8 +2590,13 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                   <div className="mt-4">
                     <div className="flex items-center gap-3 p-4 bg-bg-elevated border border-border rounded-xl">
                       <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0" />
-                      <p className="text-accent-green text-sm font-heading font-semibold">Direção visual definida pelo Vendeo</p>
+                      <p className="text-accent-green text-sm font-heading font-semibold">Direção atual</p>
                     </div>
+                    {previousProfiles.length > 0 && (
+                      <p className="mt-2 text-xs font-body text-text-secondary">
+                        Direção anterior: {previousProfiles.length} perfil(is) preservado(s) no histórico.
+                      </p>
+                    )}
                     {inferredProfile.safe_color_tokens && (() => {
                       const tokens = inferredProfile.safe_color_tokens!;
                       const colorKeys = Object.entries(tokens).filter(([, v]) => /^#[0-9A-Fa-f]{6}$/.test(v));

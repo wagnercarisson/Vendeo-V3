@@ -9,6 +9,9 @@ import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 import { maybeCompleteOnboardingAndStartTrial } from '@/lib/credit/trial-offer/completion';
+import { buildBrandProfileContext } from '@/lib/visual-signature/brand-profile-state';
+import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
+import { createVisualSignatureProfileSmokeGateway } from '@/lib/ai';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -64,7 +67,11 @@ export const POST = apiHandler(async (
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
     }
 
-    const service = new BrandTextOnlyInferenceService();
+    const service = new BrandTextOnlyInferenceService(
+      isVisualSignatureSmokeNoRetry()
+        ? createVisualSignatureProfileSmokeGateway()
+        : undefined,
+    );
     const timeoutMs = parseInt(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS ?? '30000', 10);
     const startTime = Date.now();
 
@@ -171,6 +178,11 @@ export const POST = apiHandler(async (
       .eq('status', 'synced');
 
     const inputSnapshot = buildStoreProfileInputSnapshot(store);
+    const context = buildBrandProfileContext({
+      origin: "text_only",
+      assetId: null,
+      inputSnapshot,
+    });
 
     const { data: profile, error: insertError } = await supabase
       .from('store_brand_profiles')
@@ -188,7 +200,11 @@ export const POST = apiHandler(async (
         inferred_primary_color: result.inferred_primary_color,
         inferred_accent_color: result.inferred_accent_color,
         confidence_score: result.confidence_score,
-        metadata: { input_snapshot: inputSnapshot },
+        metadata: {
+          input_snapshot: inputSnapshot,
+          context_hash: context.contextHash,
+          context: { origin: context.origin, identity_asset_id: context.assetId },
+        },
         status: 'synced',
       })
       .select()
@@ -235,6 +251,19 @@ export const POST = apiHandler(async (
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
+    const { data: failureStore } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    const failureSnapshot = failureStore ? buildStoreProfileInputSnapshot(failureStore) : null;
+    const failureContext = failureSnapshot
+      ? buildBrandProfileContext({
+          origin: "text_only",
+          assetId: null,
+          inputSnapshot: failureSnapshot,
+        })
+      : null;
 
     await supabase
       .from('store_brand_profiles')
@@ -242,7 +271,24 @@ export const POST = apiHandler(async (
         store_id: id,
         source: 'text_only',
         status: 'failed',
-        metadata: { error: message },
+        metadata: {
+          error: message,
+          attempt_snapshot: failureSnapshot,
+          context_hash: failureContext?.contextHash ?? null,
+          context: failureContext
+            ? {
+                origin: failureContext.origin,
+                identity_asset_id: failureContext.assetId,
+              }
+            : null,
+          failure: {
+            code: "brand_profile_failed",
+            message,
+            origin: "text_only",
+            identity_asset_id: null,
+            at: new Date().toISOString(),
+          },
+        },
       })
       .select()
       .single();

@@ -19,6 +19,8 @@ import type {
 export class ChatCompletionsAdapter implements AiAdapter {
   readonly protocol = "chat-completions" as const;
 
+  constructor(private readonly clientOptions: { maxRetries?: number; timeout?: number } = {}) {}
+
   async invoke(
     request: AiInvocationRequest,
     target: AiModelTarget,
@@ -29,7 +31,7 @@ export class ChatCompletionsAdapter implements AiAdapter {
     // Só registra a proveniência depois de obter uma chave não vazia. Falha
     // antes/durante a resolução não inventa escopo.
     if (provenance && apiKey.length > 0) provenance.scope = "normal";
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey, ...this.clientOptions });
 
     const params: Record<string, unknown> = {
       model: target.model,

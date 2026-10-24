@@ -365,10 +365,14 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
   };
   const FAILED_LATEST = { id: "p-failed", status: "failed", source: "logo_analysis", metadata: { errorType: "refused" } };
 
-  it("carrega o VIGENTE via ?status=synced e NÃO usa a tentativa failed histórica como atual", async () => {
+  it("carrega o VIGENTE via ?view=state e NÃO usa a tentativa failed histórica como atual", async () => {
     const fetchMock = installFetch({
-      "/api/store/store-1/brand-profile?status=synced": SYNCED,
-      "/api/store/store-1/brand-profile": FAILED_LATEST,
+      "/api/store/store-1/brand-profile?view=state": {
+        state: "current",
+        current: SYNCED,
+        previous: [],
+        lastFailure: null,
+      },
       "/api/store/store-1/logo": { assets: {} },
       "/api/store/store-1": STORE,
     });
@@ -376,9 +380,8 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
     renderForm("posicionamento");
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith("/api/store/store-1/brand-profile?status=synced");
+      expect(fetchMock).toHaveBeenCalledWith("/api/store/store-1/brand-profile?view=state");
     });
-    // Com vigente presente, o perfil sem filtro (que devolveria a failed) não é buscado.
     const plainProfileCalls = fetchMock.mock.calls.filter(
       ([u]) => String(u) === "/api/store/store-1/brand-profile",
     );
@@ -387,8 +390,12 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
 
   it("sem vigente, diagnostica a tentativa failed histórica sem tratá-la como atual", async () => {
     const fetchMock = installFetch({
-      "/api/store/store-1/brand-profile?status=synced": null,
-      "/api/store/store-1/brand-profile": FAILED_LATEST,
+      "/api/store/store-1/brand-profile?view=state": {
+        state: "failed",
+        current: null,
+        previous: [SYNCED],
+        lastFailure: FAILED_LATEST,
+      },
       "/api/store/store-1/logo": { assets: {} },
       "/api/store/store-1": STORE,
     });
@@ -397,7 +404,9 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
 
     await waitFor(() => {
       expect(
-        fetchMock.mock.calls.some(([u]) => String(u) === "/api/store/store-1/brand-profile"),
+        fetchMock.mock.calls.some(
+          ([u]) => String(u) === "/api/store/store-1/brand-profile?view=state",
+        ),
       ).toBe(true);
     });
   });

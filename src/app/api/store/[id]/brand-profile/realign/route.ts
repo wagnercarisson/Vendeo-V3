@@ -14,6 +14,8 @@ import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
+import { createVisualSignatureProfileSmokeGateway } from '@/lib/ai';
+import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
 import type { GenerationEventType } from '@/lib/visual-signature/types';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
@@ -583,7 +585,11 @@ async function handleVSRealign(
     ?.intended_palette as BrandProfilerInput['intendedPalette'] | undefined;
 
   try {
-    const profiler = new BrandProfilerWithoutLogoService();
+    const profiler = new BrandProfilerWithoutLogoService(
+      isVisualSignatureSmokeNoRetry()
+        ? createVisualSignatureProfileSmokeGateway()
+        : undefined,
+    );
     const startTime = Date.now();
 
     // ── F38.1 (D1/D7): regenerate = NOVO run (novo operationRunId — 6.5

@@ -15,6 +15,8 @@ import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
+import { createVisualSignatureProfileSmokeGateway } from '@/lib/ai';
+import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
 
@@ -225,7 +227,11 @@ async function handleSubstitution(
   }
 
   try {
-    const profiler = new BrandProfilerWithoutLogoService();
+    const profiler = new BrandProfilerWithoutLogoService(
+      isVisualSignatureSmokeNoRetry()
+        ? createVisualSignatureProfileSmokeGateway()
+        : undefined,
+    );
     const result = await profiler.generate({
       storeId: id,
       storeName: store.name,
@@ -625,7 +631,11 @@ export const POST = apiHandler(async (
   }
 
   try {
-    const profiler = new BrandProfilerWithoutLogoService();
+    const profiler = new BrandProfilerWithoutLogoService(
+      isVisualSignatureSmokeNoRetry()
+        ? createVisualSignatureProfileSmokeGateway()
+        : undefined,
+    );
     const result = await profiler.generate({
       storeId: id,
       storeName: store.name,

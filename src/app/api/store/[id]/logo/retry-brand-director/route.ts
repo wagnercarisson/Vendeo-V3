@@ -8,6 +8,8 @@ import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
 import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
+import { createVisualSignatureProfileSmokeGateway } from '@/lib/ai';
+import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { publicBrandDirectorErrorMessage } from '@/lib/brand-assets/brand-director-error-message';
 
@@ -109,7 +111,11 @@ export const POST = apiHandler(async (
     ?? fallbackRecord?.inferred_accent_color
     ?? undefined;
 
-  const director = new BrandDirectorService();
+  const director = new BrandDirectorService(
+    isVisualSignatureSmokeNoRetry()
+      ? createVisualSignatureProfileSmokeGateway()
+      : undefined,
+  );
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
   // brand_profile_vision — o caller fornece run + sink ao `analyze`.

@@ -1097,7 +1097,6 @@ export class BrandProfilerWithoutLogoService {
 
       if (updateError) {
         console.error(`[BrandProfiler] Ramo A: update failed for profile ${targetBP.id}: ${updateError.message}. Previous remains synced.`);
-        await this.persistFailedProfile(input, updateError.message);
         throw new Error(`Failed to update brand profile: ${updateError.message}`);
       }
 
@@ -1264,30 +1263,9 @@ export class BrandProfilerWithoutLogoService {
       status: 'failed' as const,
     };
 
-    // UPSERT to prevent duplicate failed profiles for the same visual_signature_id
-    // Use order().limit(1) to avoid the duplicate-profile bug with maybeSingle().
-    const { data: existingProfiles } = await supabase
+    const { error } = await supabase
       .from('store_brand_profiles')
-      .select('id')
-      .eq('visual_signature_id', input.visualSignatureId)
-      .eq('status', 'failed')
-      .order('updated_at', { ascending: false })
-      .limit(1);
-    const existingProfileId = existingProfiles?.[0]?.id ?? null;
-
-    let error: any;
-    if (existingProfileId) {
-      const result = await supabase
-        .from('store_brand_profiles')
-        .update(failedData)
-        .eq('id', existingProfileId);
-      error = result.error;
-    } else {
-      const result = await supabase
-        .from('store_brand_profiles')
-        .insert(failedData);
-      error = result.error;
-    }
+      .insert(failedData);
 
     if (error) {
       console.error('[BrandProfiler] Failed to persist failed profile:', error.message);

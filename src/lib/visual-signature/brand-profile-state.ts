@@ -3,10 +3,10 @@ import { createHash } from "node:crypto";
 export type BrandProfileIdentityOrigin = "logo_analysis" | "without_logo" | "text_only";
 
 export interface BrandProfileSnapshotFields {
-  segment: string;
+  segment: string | null;
   subsegment: string | null;
   tone_of_voice: string | null;
-  name: string;
+  name: string | null;
   positioning: string | null;
   short_description: string | null;
   slogan: string | null;
@@ -36,6 +36,7 @@ export interface BrandProfileState {
   currentKind: "active" | "logo_removed_fallback" | null;
   previous: BrandProfileStateRecord[];
   lastFailure: BrandProfileStateRecord | null;
+  historicalFailureCount: number;
 }
 
 const SNAPSHOT_KEYS: (keyof BrandProfileSnapshotFields)[] = [
@@ -127,6 +128,7 @@ export function deriveBrandProfileState(params: {
   activeOrigin: BrandProfileIdentityOrigin;
   activeAssetId: string | null;
   currentSnapshot: BrandProfileSnapshotFields;
+  fallbackLogoAssetId?: string | null;
 }): BrandProfileState {
   const ordered = [...params.records].sort((a, b) => timestamp(b) - timestamp(a));
   const expectedHash = contextHash(
@@ -160,7 +162,12 @@ export function deriveBrandProfileState(params: {
       (record) => record.source === "text_only" && profileContextHash(record) === expectedHash,
     );
     if (!textOnlyCurrent) {
-      const logoFallback = synced.find((record) => record.source === "logo_analysis");
+      const logoFallback = synced.find(
+        (record) =>
+          record.source === "logo_analysis" &&
+          (params.fallbackLogoAssetId == null ||
+            record.active_logo_asset_id === params.fallbackLogoAssetId),
+      );
       if (logoFallback) {
         current = logoFallback;
         currentKind = "logo_removed_fallback";
@@ -168,8 +175,24 @@ export function deriveBrandProfileState(params: {
     }
   }
 
-  const lastFailure = failures[0] ?? null;
-  const previous = synced.filter((record) => record.id !== current?.id);
+  const relevantFailures = failures.filter((failure) => {
+    if (profileContextHash(failure) === expectedHash) return true;
+    if (
+      currentKind === "logo_removed_fallback" &&
+      params.fallbackLogoAssetId != null
+    ) {
+      const identity = (failure.metadata?.failure as Record<string, unknown> | undefined)
+        ?.identity_asset_id;
+      return identity === params.fallbackLogoAssetId;
+    }
+    return false;
+  });
+  const lastFailure = relevantFailures[0] ?? null;
+  const previous = ordered.filter(
+    (record) =>
+      record.id !== current?.id &&
+      (record.status === "synced" || record.status === "outdated"),
+  );
   const state: BrandProfileState["state"] =
     lastFailure && (!current || timestamp(lastFailure) > timestamp(current))
       ? "failed"
@@ -185,5 +208,6 @@ export function deriveBrandProfileState(params: {
     currentKind,
     previous,
     lastFailure,
+    historicalFailureCount: failures.length - relevantFailures.length,
   };
 }
