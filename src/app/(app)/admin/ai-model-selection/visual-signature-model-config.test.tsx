@@ -9,19 +9,14 @@ import type { VisualSignatureModelConfigView } from "@/lib/ai/visual-signature-m
 const VIEW: VisualSignatureModelConfigView = {
   orchestrators: ["gpt-5.5", "gpt-6-luna"],
   presets: [
-    { preset: "flare_low", label: "Flare · Low", model: "gpt-image-2.5-flare", quality: "low" },
-    { preset: "flare_medium", label: "Flare · Medium", model: "gpt-image-2.5-flare", quality: "medium" },
-    { preset: "sunburst_low", label: "Sunburst · Low", model: "gpt-image-2.5-sunburst", quality: "low" },
     { preset: "sunburst_medium", label: "Sunburst · Medium", model: "gpt-image-2.5-sunburst", quality: "medium" },
   ],
-  combinations: ["flare_low", "flare_medium", "sunburst_low", "sunburst_medium"].flatMap((imagePreset) =>
-    ["gpt-5.5", "gpt-6-luna"].map((orchestratorModel) => ({
-      orchestratorModel: orchestratorModel as "gpt-5.5" | "gpt-6-luna",
-      imagePreset: imagePreset as "flare_low" | "flare_medium" | "sunburst_low" | "sunburst_medium",
-      model: imagePreset.startsWith("flare") ? "gpt-image-2.5-flare" : "gpt-image-2.5-sunburst",
-      quality: imagePreset.endsWith("low") ? ("low" as const) : ("medium" as const),
-    })),
-  ),
+  combinations: ["gpt-5.5", "gpt-6-luna"].map((orchestratorModel) => ({
+    orchestratorModel: orchestratorModel as "gpt-5.5" | "gpt-6-luna",
+    imagePreset: "sunburst_medium" as const,
+    model: "gpt-image-2.5-sunburst",
+    quality: "medium" as const,
+  })),
   configured: true,
   current: {
     orchestratorModel: "gpt-6-luna",
@@ -77,14 +72,14 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("F47.1 — card da Assinatura Visual", () => {
-  it("exibe dois orquestradores, quatro presets, oito combinações e a configuração vigente", () => {
+  it("exibe dois orquestradores, um preset avaliado, duas combinações e a configuração vigente", () => {
     render(<VisualSignatureConfigForm view={VIEW} />);
 
     const orchestrators = screen.getByLabelText("Orquestrador da Assinatura Visual");
     const presets = screen.getByLabelText("Preset de imagem da Assinatura Visual");
     expect(orchestrators.querySelectorAll("option")).toHaveLength(2);
-    expect(presets.querySelectorAll("option")).toHaveLength(4);
-    expect(screen.getByText(/8 combinações/)).toBeInTheDocument();
+    expect(presets.querySelectorAll("option")).toHaveLength(1);
+    expect(screen.getByText(/2 combinações/)).toBeInTheDocument();
     expect(screen.getByText(/Sunburst · Medium →/)).toBeInTheDocument();
     expect(screen.getByText("11111111-1111-4111-8111-111111111111")).toBeInTheDocument();
     expect(screen.getByText("decisão local")).toBeInTheDocument();
@@ -123,7 +118,7 @@ describe("F47.1 — card da Assinatura Visual", () => {
       target: { value: "gpt-5.5" },
     });
     fireEvent.change(screen.getByLabelText("Preset de imagem da Assinatura Visual"), {
-      target: { value: "flare_medium" },
+      target: { value: "sunburst_medium" },
     });
     fireEvent.change(screen.getByLabelText("Motivo da alteração da Assinatura Visual"), {
       target: { value: "ajuste local" },
@@ -138,7 +133,7 @@ describe("F47.1 — card da Assinatura Visual", () => {
     const body = JSON.parse(init.body);
     expect(body).toEqual({
       orchestratorModel: "gpt-5.5",
-      imagePreset: "flare_medium",
+      imagePreset: "sunburst_medium",
       reason: "ajuste local",
       operationId: "ui-operation-id",
     });

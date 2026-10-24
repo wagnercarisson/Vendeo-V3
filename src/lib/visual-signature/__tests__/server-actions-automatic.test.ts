@@ -1,5 +1,5 @@
 ﻿// @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 vi.hoisted(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL ??= "http://localhost:54321";
@@ -121,6 +121,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { generateAutomatic } from "../server-actions";
+import { loadVisualSignatureModelConfigSnapshot } from "@/lib/ai";
 
 const creativeIntent = {
   output: {
@@ -164,6 +165,44 @@ beforeEach(() => {
 });
 
 describe("F47.1 - generateAutomatic persiste proveniencia", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.clearAllMocks();
+  });
+
+  it("VENDEO_VS_SMOKE_NO_RETRY não remove retry do legado", async () => {
+    vi.stubEnv("VENDEO_VS_SMOKE_NO_RETRY", "1");
+    vi.mocked(loadVisualSignatureModelConfigSnapshot).mockResolvedValueOnce({ mode: "legacy" });
+    h.generate
+      .mockRejectedValueOnce(new Error("first attempt failed"))
+      .mockResolvedValueOnce(generatorResult());
+
+    const result = await generateAutomatic("11111111-1111-4111-8111-111111111111");
+
+    expect(result.success).toBe(true);
+    expect(h.generate).toHaveBeenCalledTimes(2);
+  });
+
+  it("VENDEO_VS_SMOKE_NO_RETRY remove retry somente no caminho dedicado", async () => {
+    vi.stubEnv("VENDEO_VS_SMOKE_NO_RETRY", "1");
+    vi.mocked(loadVisualSignatureModelConfigSnapshot).mockResolvedValueOnce({
+      mode: "dedicated",
+      orchestratorModel: "gpt-6-luna",
+      imagePreset: "sunburst_medium",
+      imageModel: "gpt-image-2.5-sunburst",
+      imageQuality: "medium",
+      reasoningEffort: "low",
+      configVersionId: "11111111-1111-1111-1111-111111111111",
+      instanceIdentity: "127.0.0.1:57781",
+    });
+    h.generate.mockRejectedValueOnce(new Error("first attempt failed"));
+
+    const result = await generateAutomatic("11111111-1111-4111-8111-111111111111");
+
+    expect(result.success).toBe(false);
+    expect(h.generate).toHaveBeenCalledTimes(1);
+  });
+
   it("preserva metadata existente, incorpora metadata do gerador e grava output parseado", async () => {
     h.generate.mockResolvedValue(generatorResult());
 

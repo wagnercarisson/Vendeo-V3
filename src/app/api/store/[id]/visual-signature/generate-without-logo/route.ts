@@ -400,7 +400,7 @@ export const POST = apiHandler(async (
   if (!result && attempt1Error) {
     const isTimeout = attempt1Error instanceof DOMException && attempt1Error.name === 'AbortError';
 
-    if (!isTimeout && !isVisualSignatureSmokeNoRetry()) {
+    if (!isTimeout && !(visualSignatureConfig.mode === "dedicated" && isVisualSignatureSmokeNoRetry())) {
       console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — image_retry (prompt simplificado)`);
       try {
         // F38.1 (D1): fecha o run 1 (envelopes de imagem/validação da tentativa

@@ -45,6 +45,7 @@ vi.mock("@/lib/visual-signature/local-validation/guard", () => ({
     code = "visual_signature_validation_disabled";
   },
   assertVisualSignatureValidationEnvironment: (...args: unknown[]) => mockGuard(...args),
+  assertVisualSignatureAdminEnvironment: (...args: unknown[]) => mockGuard(...args),
 }));
 
 const OPERATION_ID = "11111111-1111-4111-8111-111111111111";

@@ -3,6 +3,7 @@ import * as configModule from "../visual-signature-model-config";
 import {
   VISUAL_SIGNATURE_CONFIG_SCOPE,
   VISUAL_SIGNATURE_ENVIRONMENT_SCOPE,
+  VISUAL_SIGNATURE_EVALUATED_COMBINATIONS,
   VISUAL_SIGNATURE_IMAGE_PRESETS,
   VISUAL_SIGNATURE_ORCHESTRATORS,
   VISUAL_SIGNATURE_REASONING_EFFORT,
@@ -50,19 +51,40 @@ describe("F47.1 — registry puro da configuração da Assinatura Visual", () =>
     expect(exported.some((key) => /pric|cost|default/i.test(key))).toBe(false);
   });
 
-  it("aceita as 8 combinações orquestrador × preset", () => {
+  it("aceita somente as 2 combinações avaliadas", () => {
+    for (const { orchestratorModel, imagePreset } of VISUAL_SIGNATURE_EVALUATED_COMBINATIONS) {
+      const resolved = resolveVisualSignaturePreset(imagePreset);
+      expect(() =>
+        assertVisualSignatureConfigTuple({
+          orchestratorModel,
+          imagePreset,
+          imageModel: resolved.model,
+          imageQuality: resolved.quality,
+          reasoningEffort: "low",
+        }),
+      ).not.toThrow();
+    }
+
     for (const orchestratorModel of VISUAL_SIGNATURE_ORCHESTRATORS) {
       for (const imagePreset of Object.keys(EXPECTED_PRESETS)) {
+        if (
+          (orchestratorModel === "gpt-5.5" || orchestratorModel === "gpt-6-luna") &&
+          imagePreset === "sunburst_medium"
+        ) {
+          continue;
+        }
         const resolved = resolveVisualSignaturePreset(imagePreset);
-        expect(() =>
-          assertVisualSignatureConfigTuple({
-            orchestratorModel,
-            imagePreset,
-            imageModel: resolved.model,
-            imageQuality: resolved.quality,
-            reasoningEffort: "low",
-          }),
-        ).not.toThrow();
+        expect(
+          captureCode(() =>
+            assertVisualSignatureConfigTuple({
+              orchestratorModel,
+              imagePreset,
+              imageModel: resolved.model,
+              imageQuality: resolved.quality,
+              reasoningEffort: "low",
+            }),
+          ),
+        ).toBe("preset_not_evaluated");
       }
     }
   });

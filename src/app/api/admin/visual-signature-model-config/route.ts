@@ -14,7 +14,7 @@ import { buildVisualSignatureModelConfigView } from "@/lib/ai/visual-signature-m
 import { invalidateVisualSignatureModelConfigCache } from "@/lib/ai/visual-signature-model-config-service";
 import {
   VisualSignatureValidationGuardError,
-  assertVisualSignatureValidationEnvironment,
+  assertVisualSignatureAdminEnvironment,
 } from "@/lib/visual-signature/local-validation/guard";
 
 /**
@@ -132,7 +132,7 @@ export const PUT = apiHandler(async (request: Request) => {
 
   let environment: { environment?: "local_validation" | "production"; instanceIdentity: string };
   try {
-    environment = assertVisualSignatureValidationEnvironment();
+    environment = assertVisualSignatureAdminEnvironment();
   } catch (error) {
     return guardError(error);
   }
@@ -163,7 +163,7 @@ export const POST = apiHandler(async (request: Request) => {
 
   let environment: { instanceIdentity: string };
   try {
-    environment = assertVisualSignatureValidationEnvironment();
+    environment = assertVisualSignatureAdminEnvironment();
   } catch (error) {
     return guardError(error);
   }
@@ -211,7 +211,7 @@ export const DELETE = apiHandler(async (request: Request) => {
 
   let environment: { environment?: "local_validation" | "production"; instanceIdentity: string };
   try {
-    environment = assertVisualSignatureValidationEnvironment();
+    environment = assertVisualSignatureAdminEnvironment();
   } catch (error) {
     return guardError(error);
   }

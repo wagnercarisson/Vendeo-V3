@@ -71,7 +71,7 @@ function pricing(status: "complete" | "partial" | "missing"): VisualSignatureIma
 }
 
 describe("F47.1 — view model admin da Assinatura Visual", () => {
-  it("expõe 2 orquestradores, 4 presets e as 8 combinações", async () => {
+  it("expõe 2 orquestradores, 1 preset avaliado e as 2 combinações aprovadas", async () => {
     const view = await buildVisualSignatureModelConfigView({
       configReader: async () => null,
       selectionViewBuilder: async () => selectionView(false),
@@ -80,19 +80,37 @@ describe("F47.1 — view model admin da Assinatura Visual", () => {
     });
 
     expect(view.orchestrators).toEqual(["gpt-5.5", "gpt-6-luna"]);
-    expect(view.presets.map((item) => item.preset)).toEqual([
-      "flare_low",
-      "flare_medium",
-      "sunburst_low",
-      "sunburst_medium",
-    ]);
-    expect(view.combinations).toHaveLength(8);
+    expect(view.presets.map((item) => item.preset)).toEqual(["sunburst_medium"]);
+    expect(view.combinations).toHaveLength(2);
     expect(view.combinations[0]).toMatchObject({
       orchestratorModel: "gpt-5.5",
-      imagePreset: "flare_low",
-      model: "gpt-image-2.5-flare",
-      quality: "low",
+      imagePreset: "sunburst_medium",
+      model: "gpt-image-2.5-sunburst",
+      quality: "medium",
     });
+  });
+
+  it("expõe estado publicado sem ativação independentemente do diagnóstico", async () => {
+    const view = await buildVisualSignatureModelConfigView({
+      configReader: async () => ROW,
+      releaseReader: async () => ({
+        published_config_version_id: ROW.config_version_id,
+        activated_config_version_id: null,
+        activation_mode: "none",
+        environment_scope: "local_validation",
+        instance_identity: "127.0.0.1:57781",
+      }),
+      selectionViewBuilder: async () => selectionView(false),
+      pricingResolver: async () => pricing("complete"),
+      diagnosticResolver: async () => ({ status: "inherited", reason: "not_activated" }),
+    });
+
+    expect(view.release).toMatchObject({
+      published: true,
+      activated: false,
+      activationMode: "none",
+    });
+    expect(view.diagnostic.status).toBe("inherited_not_activated");
   });
 
   it("configuração presente expõe versão, autor, data, motivo e reasoning fixo", async () => {

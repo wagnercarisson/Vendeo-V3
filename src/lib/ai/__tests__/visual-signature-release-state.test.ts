@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   loadVisualSignatureModelConfigSnapshot,
   VisualSignatureConfigOutsideEnvironmentError,
@@ -106,5 +106,75 @@ describe("F47.2 — estados de liberação no snapshot", () => {
         }),
       }),
     ).rejects.toBeInstanceOf(VisualSignatureConfigOutsideEnvironmentError);
+  });
+
+  it("produção habilitada sem opt-in local não retorna legado", async () => {
+    vi.stubEnv("VISUAL_SIGNATURE_OPERATING_ENVIRONMENT", "production");
+    vi.stubEnv("VENDEO_VS_PRODUCTION_ENABLED", "1");
+    vi.stubEnv("VENDEO_VS_VALIDATION_ENABLED", "");
+    try {
+      const snapshot = await loadVisualSignatureModelConfigSnapshot({
+        reader: {
+          read: async () => ({
+            ...row(),
+            environment_scope: "production",
+            instance_identity: "abc123",
+          }),
+        },
+        releaseReader: {
+          read: async () => ({
+            ...release(),
+            environment_scope: "production",
+            instance_identity: "abc123",
+          }),
+        },
+        pilotStoreReader: { read: async () => ["store-in"] },
+        storeId: "store-in",
+        assertEnvironment: () => ({
+          environment: "production",
+          instanceIdentity: "abc123",
+          supabaseOrigin: "https://abc123.supabase.co",
+          apiKey: "sk-prod",
+        }),
+        assertCredential: () => {},
+      });
+      expect(snapshot.mode).toBe("dedicated");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("piloto sem storeId não retorna dedicado", async () => {
+    const snapshot = await loadVisualSignatureModelConfigSnapshot({
+      reader: { read: async () => row() },
+      releaseReader: { read: async () => release() },
+      pilotStoreReader: { read: async () => ["store-in"] },
+      isOptedIn: () => true,
+      assertEnvironment: () => ENVIRONMENT,
+      assertCredential: () => {},
+    });
+    expect(snapshot).toEqual({ mode: "legacy" });
+  });
+
+  it("detecta mudança de release entre as leituras", async () => {
+    let calls = 0;
+    await expect(
+      loadVisualSignatureModelConfigSnapshot({
+        reader: { read: async () => row() },
+        releaseReader: {
+          read: async () => {
+            calls += 1;
+            return calls === 1
+              ? release()
+              : release({ activated_config_version_id: null, activation_mode: "none" });
+          },
+        },
+        pilotStoreReader: { read: async () => ["store-in"] },
+        storeId: "store-in",
+        isOptedIn: () => true,
+        assertEnvironment: () => ENVIRONMENT,
+        assertCredential: () => {},
+      }),
+    ).rejects.toMatchObject({ code: "visual_signature_release_changed_during_read" });
   });
 });

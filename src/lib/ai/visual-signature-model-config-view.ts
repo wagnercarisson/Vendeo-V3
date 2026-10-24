@@ -3,6 +3,7 @@ import "server-only";
 import { buildAiModelSelectionView, type AiModelSelectionViewModel } from "./ai-model-selection-view";
 import { MODEL_REGISTRY, LEGACY_SELECTION_CAPABILITIES } from "./model-registry";
 import {
+  VISUAL_SIGNATURE_EVALUATED_COMBINATIONS,
   VISUAL_SIGNATURE_IMAGE_PRESETS,
   VISUAL_SIGNATURE_ORCHESTRATORS,
   type VisualSignatureImagePreset,
@@ -10,9 +11,11 @@ import {
 } from "./visual-signature-model-config";
 import {
   readVisualSignatureModelConfigRowForAdmin,
+  readVisualSignatureModelConfigReleaseForAdmin,
   resolveVisualSignatureModelConfigDiagnostic,
   type VisualSignatureModelConfigDiagnostic,
   type VisualSignatureModelConfigRow,
+  type VisualSignatureReleaseRow,
 } from "./visual-signature-model-config-service";
 import {
   getVisualSignaturePresetPricing,
@@ -84,6 +87,7 @@ export interface VisualSignatureConfigDiagnosticView {
     | "tuple"
     | "read_failure"
     | "release_read_failure"
+    | "concurrent_change"
     | null;
   code: string | null;
 }
@@ -98,7 +102,7 @@ export interface VisualSignaturePresetPricingView {
 export interface VisualSignatureModelConfigView {
   orchestrators: readonly VisualSignatureOrchestrator[];
   presets: readonly VisualSignaturePresetView[];
-  /** 2 orquestradores × 4 presets = 8 combinações. */
+  /** Combinações com avaliação humana registrada (F47.2/D6). */
   combinations: readonly {
     orchestratorModel: VisualSignatureOrchestrator;
     imagePreset: VisualSignatureImagePreset;
@@ -137,6 +141,7 @@ export type VisualSignatureDiagnosticResolver = () => Promise<VisualSignatureMod
 
 export interface BuildVisualSignatureModelConfigViewDependencies {
   configReader?: VisualSignatureConfigRowReader;
+  releaseReader?: () => Promise<VisualSignatureReleaseRow | null>;
   selectionViewBuilder?: VisualSignatureSelectionViewBuilder;
   pricingResolver?: VisualSignaturePresetPricingResolver;
   diagnosticResolver?: VisualSignatureDiagnosticResolver;
@@ -272,6 +277,11 @@ export async function buildVisualSignatureModelConfigView(
 ): Promise<VisualSignatureModelConfigView> {
   const configReader =
     dependencies.configReader ?? readVisualSignatureModelConfigRowForAdmin;
+  const releaseReader =
+    dependencies.releaseReader ??
+    (dependencies.configReader
+      ? async () => null
+      : readVisualSignatureModelConfigReleaseForAdmin);
   const selectionViewBuilder =
     dependencies.selectionViewBuilder ?? (() => buildAiModelSelectionView());
   const pricingResolver =
@@ -280,9 +290,10 @@ export async function buildVisualSignatureModelConfigView(
   const diagnosticResolver =
     dependencies.diagnosticResolver ?? (() => resolveVisualSignatureModelConfigDiagnostic());
 
-  const presets: VisualSignaturePresetView[] = (
-    Object.keys(VISUAL_SIGNATURE_IMAGE_PRESETS) as VisualSignatureImagePreset[]
-  ).map((preset) => {
+  const evaluatedPresets = Array.from(
+    new Set(VISUAL_SIGNATURE_EVALUATED_COMBINATIONS.map((item) => item.imagePreset)),
+  ) as VisualSignatureImagePreset[];
+  const presets: VisualSignaturePresetView[] = evaluatedPresets.map((preset) => {
     const mapping = VISUAL_SIGNATURE_IMAGE_PRESETS[preset];
     return {
       preset,
@@ -292,19 +303,22 @@ export async function buildVisualSignatureModelConfigView(
     };
   });
 
-  const combinations = VISUAL_SIGNATURE_ORCHESTRATORS.flatMap((orchestratorModel) =>
-    presets.map((preset) => ({
-      orchestratorModel,
-      imagePreset: preset.preset,
-      model: preset.model,
-      quality: preset.quality,
-    })),
-  );
+  const combinations = VISUAL_SIGNATURE_EVALUATED_COMBINATIONS.map((item) => {
+    const mapping = VISUAL_SIGNATURE_IMAGE_PRESETS[item.imagePreset];
+    return {
+      orchestratorModel: item.orchestratorModel,
+      imagePreset: item.imagePreset,
+      model: mapping.model,
+      quality: mapping.quality,
+    };
+  });
 
   let current: VisualSignatureConfigViewRow | null = null;
+  let currentRow: VisualSignatureModelConfigRow | null = null;
   let readError: string | null = null;
   try {
     const row = await configReader();
+    currentRow = row;
     current = row ? readCurrent(row) : null;
   } catch {
     readError = "Não foi possível ler a configuração da Assinatura Visual.";
@@ -322,21 +336,23 @@ export async function buildVisualSignatureModelConfigView(
   let diagnostic: VisualSignatureConfigDiagnosticView;
   let release: VisualSignatureModelConfigView["release"] = null;
   try {
-    const resolved = await diagnosticResolver();
-    diagnostic = toDiagnosticView(resolved);
-    if (resolved.status === "dedicated") {
-      const snapshot = resolved.snapshot;
+    const releaseRow = await releaseReader();
+    if (currentRow && releaseRow) {
       release = {
-        environment: snapshot.environment ?? "local_validation",
-        published:
-          snapshot.publishedConfigVersionId === snapshot.configVersionId,
+        environment: releaseRow.environment_scope,
+        published: releaseRow.published_config_version_id === currentRow.config_version_id,
         activated:
-          snapshot.activatedConfigVersionId === snapshot.configVersionId &&
-          snapshot.activationMode !== "none",
-        activationMode: snapshot.activationMode ?? "none",
-        pilotEligible: snapshot.pilotEligible ?? false,
+          releaseRow.activated_config_version_id === currentRow.config_version_id &&
+          releaseRow.activation_mode !== "none",
+        activationMode: releaseRow.activation_mode,
+        pilotEligible: releaseRow.activation_mode === "general",
       };
     }
+  } catch {
+    // A tela ainda deve renderizar o restante; o diagnóstico abaixo cobre bloqueios.
+  }
+  try {
+    diagnostic = toDiagnosticView(await diagnosticResolver());
   } catch {
     diagnostic = { status: "blocked", reason: "read_failure", code: null };
   }

@@ -38,6 +38,23 @@ export const VISUAL_SIGNATURE_REASONING_EFFORT = "low" as const;
 
 export type VisualSignatureReasoningEffort = typeof VISUAL_SIGNATURE_REASONING_EFFORT;
 
+/** F47.2 (D6): somente combinações com avaliação humana registrada. */
+export const VISUAL_SIGNATURE_EVALUATED_COMBINATIONS = [
+  { orchestratorModel: "gpt-5.5", imagePreset: "sunburst_medium" },
+  { orchestratorModel: "gpt-6-luna", imagePreset: "sunburst_medium" },
+] as const;
+
+export function isEvaluatedVisualSignatureCombination(
+  orchestratorModel: string,
+  imagePreset: string,
+): boolean {
+  return VISUAL_SIGNATURE_EVALUATED_COMBINATIONS.some(
+    (item) =>
+      item.orchestratorModel === orchestratorModel &&
+      item.imagePreset === imagePreset,
+  );
+}
+
 /** Escopo de ambiente persistido na linha singleton. */
 export const VISUAL_SIGNATURE_ENVIRONMENT_SCOPE = "local_validation" as const;
 
@@ -50,7 +67,8 @@ export type VisualSignatureConfigErrorCode =
   | "invalid_preset"
   | "invalid_image_quality"
   | "invalid_reasoning"
-  | "preset_tuple_mismatch";
+  | "preset_tuple_mismatch"
+  | "preset_not_evaluated";
 
 export class VisualSignatureConfigError extends Error {
   constructor(readonly code: VisualSignatureConfigErrorCode) {
@@ -123,5 +141,13 @@ export function assertVisualSignatureConfigTuple(
   const expected = VISUAL_SIGNATURE_IMAGE_PRESETS[tuple.imagePreset];
   if (tuple.imageModel !== expected.model || tuple.imageQuality !== expected.quality) {
     throw new VisualSignatureConfigError("preset_tuple_mismatch");
+  }
+  if (
+    !isEvaluatedVisualSignatureCombination(
+      tuple.orchestratorModel,
+      tuple.imagePreset,
+    )
+  ) {
+    throw new VisualSignatureConfigError("preset_not_evaluated");
   }
 }

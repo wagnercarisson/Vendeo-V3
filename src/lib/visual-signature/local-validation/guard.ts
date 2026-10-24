@@ -46,12 +46,21 @@ export interface VisualSignatureValidationEnvironment {
   readonly environment?: VisualSignatureEnvironment;
   readonly instanceIdentity: string;
   readonly supabaseOrigin: string;
-  readonly apiKey: string;
+  readonly apiKey?: string;
 }
 
 /** Opt-in explícito do laboratório; qualquer outro valor é off. */
 export function isVisualSignatureValidationOptedIn(): boolean {
   return process.env.VENDEO_VS_VALIDATION_ENABLED === "1";
+}
+
+/** Habilitação explícita por ambiente (produção ≠ opt-in local). */
+export function isVisualSignatureEnvironmentEnabled(
+  environment: VisualSignatureEnvironment,
+): boolean {
+  return environment === "production"
+    ? process.env.VENDEO_VS_PRODUCTION_ENABLED === "1"
+    : isVisualSignatureValidationOptedIn();
 }
 
 /**
@@ -93,21 +102,24 @@ function mapEndpointError(error: unknown): VisualSignatureValidationGuardError {
   );
 }
 
-export function assertVisualSignatureValidationEnvironment(): VisualSignatureValidationEnvironment {
+export function assertVisualSignatureEnvironmentIdentity(): VisualSignatureValidationEnvironment {
   const environment = resolveVisualSignatureEnvironment();
 
+  if (!isVisualSignatureEnvironmentEnabled(environment)) {
+    throw new VisualSignatureValidationGuardError(
+      environment === "production"
+        ? "visual_signature_production_disabled"
+        : "visual_signature_validation_disabled",
+    );
+  }
+
   if (environment === "local_validation") {
-    if (!isVisualSignatureValidationOptedIn()) {
-      throw new VisualSignatureValidationGuardError("visual_signature_validation_disabled");
-    }
     if (process.env.NODE_ENV === "production") {
       throw new VisualSignatureValidationGuardError("visual_signature_validation_not_local");
     }
     if (typeof process.env.VERCEL === "string" && process.env.VERCEL !== "") {
       throw new VisualSignatureValidationGuardError("visual_signature_validation_not_local");
     }
-  } else if (process.env.VENDEO_VS_PRODUCTION_ENABLED !== "1") {
-    throw new VisualSignatureValidationGuardError("visual_signature_production_disabled");
   }
 
   const projectRef = (process.env.VISUAL_SIGNATURE_SUPABASE_PROJECT_REF ?? "").trim();
@@ -162,6 +174,21 @@ export function assertVisualSignatureValidationEnvironment(): VisualSignatureVal
     }
   }
 
+  return Object.freeze({
+    ...(environment === "production" ? { environment } : {}),
+    instanceIdentity,
+    supabaseOrigin: endpoint.origin,
+  });
+}
+
+/** Autorização administrativa não exige credencial de provider. */
+export const assertVisualSignatureAdminEnvironment =
+  assertVisualSignatureEnvironmentIdentity;
+
+export function assertVisualSignatureValidationEnvironment(): VisualSignatureValidationEnvironment {
+  const identity = assertVisualSignatureEnvironmentIdentity();
+  const environment = identity.environment ?? "local_validation";
+
   let apiKey: string;
   try {
     apiKey = readVisualSignatureApiKey("openai", environment);
@@ -172,10 +199,5 @@ export function assertVisualSignatureValidationEnvironment(): VisualSignatureVal
     );
   }
 
-  return Object.freeze({
-    ...(environment === "production" ? { environment } : {}),
-    instanceIdentity,
-    supabaseOrigin: endpoint.origin,
-    apiKey,
-  });
+  return Object.freeze({ ...identity, apiKey });
 }
