@@ -642,7 +642,7 @@ Plans:
 
 ### Phase 47.2: F47.2 — Integração e promoção produtiva da Assinatura Visual
 
-**Status:** **PLANO 01 CONCLUÍDO E ACEITO; PLANO 02 CONCLUÍDO E ACEITO; PLANO 03 CONCLUÍDO E ACEITO; PLANO 04 CONCLUÍDO E ACEITO; PLANO 05 EXECUTADO, AGUARDANDO REVISÃO (2026-10-24); PLANO 06 NÃO INICIADO.** Merge `ecf29e54` aceito; baseline registrado (6744 passed/9 failed/161 skipped); F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva `E11D8E1D…` e manifesto emitidos; Plano 03 entregou ambiente/credenciais/liberação por versão com 245/245 testes focados. Base OpenSpec `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` validada (`--strict` valid; 20 requisitos; 4 capabilities). Aprovação registrada em `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. Nenhuma migration aplicada, banco, provider, push ou deploy.
+**Status:** **PLANOS 01–05 CONCLUÍDOS E ACEITOS; PLANO 06 PARADO NO CHECKPOINT, PROVISIONAMENTO AGUARDANDO AUTORIZAÇÃO HUMANA (2026-10-24).** Merge `ecf29e54` aceito; baseline registrado (6744 passed/9 failed/161 skipped); F47.1 renumerada (SHA LF `B352F93E…`), F47.2 corretiva `E11D8E1D…` e manifesto emitidos; Plano 03 entregou ambiente/credenciais/liberação por versão com 245/245 testes focados. Plano 05 aceito; evidência de suíte completa: 24 arquivos/8 testes falhos contra 25/9 no baseline. Checkpoint do Plano 06 e hash list de 145 migrations em `47.2-06-POSTGRES-CHECKPOINT.md` e `47.2-06-MIGRATION-HASHES.txt`. Base OpenSpec validada (`--strict`). Até autorização: nenhum workdir/ambiente criado/iniciado, nenhuma migration aplicada e nenhum banco acessado; sem provider, push ou deploy.
 
 **Goal:** integrar a branch completa da F47.1 à `main` atual preservando histórico e F50.3/F50.4; renumerar apenas a F47.1 com timestamp UTC real e criar a migration corretiva F47.2; substituir o isolamento exclusivamente local por contrato explícito de ambiente com liberação vinculada à versão; corrigir a atualidade do perfil por origem/ativo/contexto; provar não-interferência na F50.4; e preparar a promoção com gates separados.
 
@@ -658,8 +658,8 @@ Plans:
 - [x] 47.2-02-PLAN.md — Renumeração imutável F47.1 + migration corretiva F47.2 + manifesto de integração — concluído e aceito em 2026-10-24.
 - [x] 47.2-03-PLAN.md — Contrato de ambiente e liberação por versão — concluído e aceito em 2026-10-24.
 - [x] 47.2-04-PLAN.md — Atualidade do perfil por origem, ativo e contexto — concluído e aceito em 2026-10-24.
-- [ ] 47.2-05-PLAN.md — Compatibilidade F50.4 + validação local — executado em 2026-10-24; aguardando revisão.
-- [ ] 47.2-06-PLAN.md — Provas Postgres em banco descartável (checkpoint).
+- [x] 47.2-05-PLAN.md — Compatibilidade F50.4 + validação local — concluído e aceito em 2026-10-24 (`a8fd61c4`).
+- [ ] 47.2-06-PLAN.md — Provas Postgres em banco descartável — checkpoint preparado; provisionamento aguarda autorização humana; nenhum ambiente criado/iniciado.
 - [ ] 47.2-07-PLAN.md — Preparação remota + migrations remotas (checkpoint).
 - [ ] 47.2-08-PLAN.md — Publicação de código com configuração desativada (checkpoint).
 - [ ] 47.2-09-PLAN.md — Piloto limitado e smoke pago mínimo (checkpoint).
