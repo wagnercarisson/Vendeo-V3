@@ -186,7 +186,37 @@ try { Assert-ResumeContainerInventory -Containers @($unexpectedActualVolume) -Ex
 catch { $unexpectedActualRejected = $true }
 Assert-Test $unexpectedActualRejected 'An unexpected actual mount on a service with no volumes is rejected.'
 
-Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, PSCustomObject wildcard/exact bindings, stderr suppression, sanitized diagnostics, process timeout, restricted cleanup/stop-state verification, resume identity/image/volume checks, null/empty mount lists and unexpected mounts).'
+$uninitializedLedger = Resolve-LedgerCheckpoint -TableExists $false -Versions @() -Context 'pre_migration' -MigrationDirectoryEmpty $true -MigrationListSucceeded $true
+Assert-Test ($uninitializedLedger.State -eq 'ledger_not_initialized' -and $uninitializedLedger.Count -eq 0) 'Missing history table is accepted only in the pre-migration checkpoint after successful list and empty migration directory.'
+Assert-Test (-not (Resolve-LedgerRelationProbeOutput -Lines @('absent'))) 'The to_regclass safe token absent maps to a missing history table.'
+Assert-Test (Resolve-LedgerRelationProbeOutput -Lines @('present')) 'The to_regclass safe token present maps to an existing history table.'
+$badRelationTokenRejected = $false
+try { Resolve-LedgerRelationProbeOutput -Lines @('password=do-not-print') }
+catch { $badRelationTokenRejected = $true }
+Assert-Test $badRelationTokenRejected 'Unexpected relation probe output is rejected without surfacing its contents.'
+$emptyInitializedLedger = Resolve-LedgerCheckpoint -TableExists $true -Versions @() -Context 'pre_migration' -MigrationDirectoryEmpty $true -MigrationListSucceeded $true
+Assert-Test ($emptyInitializedLedger.State -eq 'ledger_empty' -and $emptyInitializedLedger.TableExists) 'An initialized empty ledger is distinguished from an absent ledger.'
+$notInitializedPostRejected = $false
+try { Resolve-LedgerCheckpoint -TableExists $false -Versions @() -Context 'post_migration' -ExpectedVersions @('20260101000000') }
+catch { $notInitializedPostRejected = $true }
+Assert-Test $notInitializedPostRejected 'A missing ledger table is rejected after migrations.'
+$versionsExpected = @('20260101000000', '20260102000000')
+$postLedger = Resolve-LedgerCheckpoint -TableExists $true -Versions $versionsExpected -Context 'post_migration' -ExpectedVersions $versionsExpected
+Assert-Test ($postLedger.State -eq 'ledger_initialized' -and $postLedger.Count -eq 2) 'Post-migration ledger requires and accepts the exact expected version set.'
+$postMismatchRejected = $false
+try { Resolve-LedgerCheckpoint -TableExists $true -Versions @('20260101000000') -Context 'post_migration' -ExpectedVersions $versionsExpected }
+catch { $postMismatchRejected = $true }
+Assert-Test $postMismatchRejected 'Post-migration ledger rejects missing batch versions.'
+$preMigrationGateRejected = $false
+try { Resolve-LedgerCheckpoint -TableExists $false -Versions @() -Context 'pre_migration' -MigrationDirectoryEmpty $false -MigrationListSucceeded $true }
+catch { $preMigrationGateRejected = $true }
+Assert-Test $preMigrationGateRejected 'Uninitialized ledger is not accepted when the migration directory is not empty.'
+$cliListGateRejected = $false
+try { Resolve-LedgerCheckpoint -TableExists $false -Versions @() -Context 'pre_migration' -MigrationDirectoryEmpty $true -MigrationListSucceeded $false }
+catch { $cliListGateRejected = $true }
+Assert-Test $cliListGateRejected 'Uninitialized ledger is not accepted unless the normal CLI migration list succeeded.'
+
+Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, bindings, stderr/diagnostics, process timeout, cleanup, resume identity/images/volumes, null/unexpected mounts, absent/empty/post-migration ledger rules).'
 }
 finally {
     Remove-Item -LiteralPath $temporary -Recurse -Force -ErrorAction SilentlyContinue

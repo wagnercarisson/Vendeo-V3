@@ -11,6 +11,16 @@ if ($parseErrors.Count -gt 0) { throw 'Runner has PowerShell parse errors.' }
 
 $source = Get-Content -LiteralPath $Runner -Raw
 $moduleSource = Get-Content -LiteralPath $Module -Raw
+foreach ($requiredLedgerContract in @(
+    "to_regclass('supabase_migrations.schema_migrations')",
+    'ledger_relation_probe', 'ledger_select_sql',
+    "-Context 'pre_migration'", "-Context 'post_migration'",
+    'ledger_not_initialized'
+)) {
+    if (-not $source.Contains($requiredLedgerContract) -and -not $moduleSource.Contains($requiredLedgerContract)) {
+        throw "Ledger initialization contract missing: $requiredLedgerContract"
+    }
+}
 foreach ($required in @(
     "'environment', 'resume-preflight', 'resume-checkpoint', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop'",
     '-ConfirmStart', '-ConfirmResume', '-ConfirmMigrations', '-ConfirmInvariants', '-ConfirmCompatibility', '-ConfirmStop',

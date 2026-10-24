@@ -261,6 +261,42 @@ function Assert-SameContainerIds {
     return $true
 }
 
+function Resolve-LedgerCheckpoint {
+    param(
+        [Parameter(Mandatory = $true)][bool]$TableExists,
+        [AllowEmptyCollection()][string[]]$Versions = @(),
+        [Parameter(Mandatory = $true)][ValidateSet('pre_migration', 'post_migration')][string]$Context,
+        [bool]$MigrationDirectoryEmpty = $false,
+        [bool]$MigrationListSucceeded = $false,
+        [string[]]$ExpectedVersions = @()
+    )
+    $actualVersions = @($Versions | Where-Object { $_ -match '^\d{14}$' } | Sort-Object -Unique)
+    if ($Context -eq 'pre_migration') {
+        if (-not $MigrationListSucceeded) { throw 'Pre-migration checkpoint requires successful Supabase CLI migration list.' }
+        if (-not $MigrationDirectoryEmpty) { throw 'Pre-migration checkpoint requires an empty migration directory.' }
+        if ($actualVersions.Count -gt 0) { throw 'Pre-migration ledger unexpectedly contains migration versions.' }
+        $state = if ($TableExists) { 'ledger_empty' } else { 'ledger_not_initialized' }
+        return [pscustomobject]@{ State = $state; Count = 0; TableExists = $TableExists }
+    }
+
+    if (-not $TableExists) { throw 'Post-migration ledger table is missing.' }
+    $expected = @($ExpectedVersions | Where-Object { $_ -match '^\d{14}$' } | Sort-Object -Unique)
+    $versionDifferences = @(Compare-Object $expected $actualVersions)
+    if ($expected.Count -eq 0 -or $actualVersions.Count -ne $expected.Count -or $versionDifferences.Count -gt 0) {
+        throw 'Post-migration ledger does not match the expected migration version set.'
+    }
+    return [pscustomobject]@{ State = 'ledger_initialized'; Count = $actualVersions.Count; TableExists = $true }
+}
+
+function Resolve-LedgerRelationProbeOutput {
+    param([AllowEmptyCollection()][string[]]$Lines = @())
+    $states = @($Lines | ForEach-Object { "$($_)".Trim() } | Where-Object { $_ })
+    if ($states.Count -ne 1 -or $states[0] -notin @('absent', 'present')) {
+        throw 'Ledger relation probe output is not a single safe state token.'
+    }
+    return ($states[0] -eq 'present')
+}
+
 function Invoke-StartupWithRestrictedCleanup {
     [CmdletBinding()]
     param(
@@ -295,4 +331,4 @@ function Invoke-StartupWithRestrictedCleanup {
     }
 }
 
-Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Invoke-StartupWithRestrictedCleanup
+Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Resolve-LedgerCheckpoint, Resolve-LedgerRelationProbeOutput, Invoke-StartupWithRestrictedCleanup

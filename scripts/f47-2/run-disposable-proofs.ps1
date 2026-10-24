@@ -143,7 +143,7 @@ function Assert-PreStartIsolation {
     }
 
     $migrationDir = Join-Path $Workdir 'supabase\migrations'
-    if (@(Get-ChildItem -LiteralPath $migrationDir -File -ErrorAction Stop).Count -ne 0) {
+    if (@(Get-ChildItem -LiteralPath $migrationDir -Force -ErrorAction Stop).Count -ne 0) {
         throw 'Disposable migrations directory is not empty.'
     }
     $config = Get-Content -LiteralPath (Join-Path $Workdir 'supabase\config.toml') -Raw
@@ -232,7 +232,7 @@ function Assert-ExistingComposeForResume {
         }
     }
     $migrationDir = Join-Path $Workdir 'supabase\migrations'
-    if (@(Get-ChildItem -LiteralPath $migrationDir -File -ErrorAction Stop).Count -ne 0) {
+    if (@(Get-ChildItem -LiteralPath $migrationDir -Force -ErrorAction Stop).Count -ne 0) {
         throw 'Disposable migration directory is not empty; read-only resume is blocked.'
     }
     return $containers
@@ -327,15 +327,51 @@ function Get-LocalDatabaseUrl {
     return "postgresql://postgres:$encoded@127.0.0.1:56322/postgres"
 }
 
-function Get-LedgerVersions {
+function Get-LedgerState {
     $container = Get-DatabaseContainer
+    $relationQuery = "SELECT CASE WHEN to_regclass('supabase_migrations.schema_migrations') IS NULL THEN 'absent' ELSE 'present' END"
+    $relationResult = Invoke-Captured -FilePath 'docker' -Arguments @('exec', '-u', 'postgres', $container.Id, 'psql', '-XAt', '-U', 'postgres', '-d', 'postgres', '-c', $relationQuery)
+    if ($relationResult.ExitCode -ne 0 -or $relationResult.TimedOut -or $relationResult.StartError) {
+        Write-SafeProcessDiagnostic -Stage 'ledger_relation_probe' -Result $relationResult
+        throw 'Read-only ledger relation probe failed; details above are categorized and sanitized.'
+    }
+    try { $tableExists = Resolve-LedgerRelationProbeOutput -Lines $relationResult.Lines }
+    catch {
+        Write-Warning 'RUNNER_DIAGNOSTIC stage=ledger_relation_probe error_category=unexpected_safe_probe_result'
+        throw 'Read-only ledger relation probe returned an unexpected result.'
+    }
+    if (-not $tableExists) {
+        return [pscustomobject]@{ TableExists = $false; Versions = @() }
+    }
+
     $query = 'SELECT version FROM supabase_migrations.schema_migrations ORDER BY version'
     $result = Invoke-Captured -FilePath 'docker' -Arguments @('exec', '-u', 'postgres', $container.Id, 'psql', '-XAt', '-U', 'postgres', '-d', 'postgres', '-c', $query)
     if ($result.ExitCode -ne 0 -or $result.TimedOut -or $result.StartError) {
         Write-SafeProcessDiagnostic -Stage 'ledger_select_sql' -Result $result
         throw 'Read-only ledger SELECT failed; details above are categorized and sanitized.'
     }
-    return @($result.Lines | ForEach-Object { "$($_)".Trim() } | Where-Object { $_ -match '^\d{14}$' })
+    $versions = @($result.Lines | ForEach-Object { "$($_)".Trim() } | Where-Object { $_ -match '^\d{14}$' })
+    return [pscustomobject]@{ TableExists = $true; Versions = $versions }
+}
+
+function Assert-PreMigrationLedgerCheckpoint {
+    param([bool]$MigrationListSucceeded)
+    $migrationDir = Join-Path $Workdir 'supabase\migrations'
+    $migrationDirectoryEmpty = @(Get-ChildItem -LiteralPath $migrationDir -Force -ErrorAction Stop).Count -eq 0
+    $ledgerState = Get-LedgerState
+    $decision = Resolve-LedgerCheckpoint `
+        -TableExists $ledgerState.TableExists `
+        -Versions $ledgerState.Versions `
+        -Context 'pre_migration' `
+        -MigrationDirectoryEmpty $migrationDirectoryEmpty `
+        -MigrationListSucceeded $MigrationListSucceeded
+    if ($decision.State -eq 'ledger_not_initialized') {
+        Write-Warning 'RUNNER_LEDGER_STATE state=ledger_not_initialized phase=pre_migration_checkpoint'
+    }
+    else {
+        Write-Warning 'RUNNER_LEDGER_STATE state=ledger_empty phase=pre_migration_checkpoint'
+    }
+    return $decision
 }
 
 function Read-MigrationManifest {
@@ -403,14 +439,15 @@ function Resume-DisposableCheckpoint {
         throw 'Resume validation failed; existing project was stopped and must not be retried without review.'
     }
 
-    $ledgerResult = $null
     $ledgerCount = -1
+    $ledgerStateName = 'unknown'
     $ledgerSucceeded = $false
     try {
         $url = Get-LocalDatabaseUrl
         Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $url
-        $ledger = @(Get-LedgerVersions)
-        $ledgerCount = $ledger.Count
+        $ledgerState = Assert-PreMigrationLedgerCheckpoint -MigrationListSucceeded $true
+        $ledgerCount = $ledgerState.Count
+        $ledgerStateName = $ledgerState.State
         $ledgerSucceeded = $true
     }
     catch {
@@ -430,7 +467,7 @@ function Resume-DisposableCheckpoint {
         Write-Warning "RUNNER_DIAGNOSTIC stage=resume_ledger_result error_category=ledger_not_empty row_count=$ledgerCount"
         throw 'Read-only ledger returned rows; project stopped and checkpoint is blocked.'
     }
-    Write-Output 'Resume used existing container IDs; CLI list and SQL ledger SELECT completed; ledger row count=0; dedicated project stopped and verified.'
+    Write-Output "Resume used existing container IDs; CLI list and ledger diagnosis completed; ledger_state=$ledgerStateName row_count=0; dedicated project stopped and verified."
 }
 
 function Test-DisposableResumePreflight {
@@ -452,7 +489,7 @@ function Invoke-Provision {
     $source = Join-Path $Repo 'supabase\migrations'
     $target = Join-Path $Workdir 'supabase\migrations'
     $files = @(Get-ChildItem -LiteralPath $source -Filter '*.sql' -File)
-    if ($files.Count -ne $ExpectedMigrationCount -or @(Get-ChildItem -LiteralPath $target -File).Count -ne 0) {
+    if ($files.Count -ne $ExpectedMigrationCount -or @(Get-ChildItem -LiteralPath $target -Force).Count -ne 0) {
         throw 'Source/target migration inventory mismatch; refusing to copy.'
     }
     foreach ($file in $files) {
@@ -460,10 +497,10 @@ function Invoke-Provision {
             throw 'Source migration hash mismatch; refusing to copy.'
         }
     }
-    $before = @(Get-LedgerVersions)
-    if ($before.Count -ne 0) { throw 'Disposable migration ledger is not empty before provision.' }
     $url = Get-LocalDatabaseUrl
     Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $url
+    $before = Assert-PreMigrationLedgerCheckpoint -MigrationListSucceeded $true
+    if ($before.Count -ne 0) { throw 'Disposable migration ledger is not empty before provision.' }
     foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $target $file.Name) }
     foreach ($file in Get-ChildItem -LiteralPath $target -Filter '*.sql' -File) {
         if ((Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
@@ -472,18 +509,20 @@ function Invoke-Provision {
     }
     Invoke-StandardMigrationCommand -Operation 'up' -DatabaseUrl $url
     Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $url
-    $after = @(Get-LedgerVersions)
     $expected = @($manifest.Keys | ForEach-Object { $_.Substring(0, 14) } | Sort-Object -Unique)
-    if ($after.Count -ne $ExpectedMigrationCount -or (Compare-Object $expected $after).Count -ne 0) {
-        throw 'Post-migration ledger does not match the approved 145-version manifest.'
-    }
+    $after = Get-LedgerState
+    $postMigrationState = Resolve-LedgerCheckpoint -TableExists $after.TableExists -Versions $after.Versions -Context 'post_migration' -ExpectedVersions $expected
+    if ($postMigrationState.Count -ne $ExpectedMigrationCount) { throw 'Post-migration ledger count differs from the approved batch.' }
     Write-Output 'Migration batch applied through Supabase CLI to verified local loopback DB; ledger count=145.'
 }
 
 function Invoke-SignatureProof {
     if (-not $ConfirmInvariants) { throw 'Invariant proof execution requires the separate -ConfirmInvariants human gate.' }
     Assert-RunningEnvironment
-    if (@(Get-LedgerVersions).Count -ne $ExpectedMigrationCount) { throw 'Migration ledger is incomplete; refusing proofs.' }
+    $expected = @((Read-MigrationManifest).Keys | ForEach-Object { $_.Substring(0, 14) } | Sort-Object -Unique)
+    $ledgerState = Get-LedgerState
+    $validatedLedger = Resolve-LedgerCheckpoint -TableExists $ledgerState.TableExists -Versions $ledgerState.Versions -Context 'post_migration' -ExpectedVersions $expected
+    if ($validatedLedger.Count -ne $ExpectedMigrationCount) { throw 'Migration ledger is incomplete; refusing proofs.' }
     $url = Get-LocalDatabaseUrl
     $oldUrl = $env:DATABASE_URL
     $oldPort = $env:EXPECTED_DB_PORT
@@ -509,9 +548,8 @@ switch ($Stage) {
         Assert-RunningEnvironment
         $url = Get-LocalDatabaseUrl
         Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $url
-        $ledger = @(Get-LedgerVersions)
-        if ($ledger.Count -ne 0) { throw 'Initial ledger is not empty; block checkpoint.' }
-        Write-Output 'Environment checkpoint PASS; initial migration ledger count=0.'
+        $ledger = Assert-PreMigrationLedgerCheckpoint -MigrationListSucceeded $true
+        Write-Output "Environment checkpoint PASS; ledger_state=$($ledger.State) count=$($ledger.Count)."
     }
     'provision' { Invoke-Provision }
     'invariants' { Invoke-SignatureProof }
