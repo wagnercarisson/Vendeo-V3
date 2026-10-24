@@ -12,9 +12,8 @@ import {
 /**
  * F47.2 — Guard server-only do ambiente operacional da Assinatura Visual.
  *
- * O ambiente é um enum fechado (`local_validation`|`production`). Preview é
- * sempre recusado. As proteções locais da F47.1 permanecem; produção exige
- * declaração explícita, project ref canônico e credencial dedicada.
+ * Produção é selecionada exclusivamente por VERCEL_ENV; preview é sempre
+ * recusado. As proteções locais e a credencial dedicada de validação permanecem.
  */
 
 export type VisualSignatureValidationGuardErrorCode =
@@ -53,18 +52,16 @@ export function isVisualSignatureValidationOptedIn(): boolean {
   return process.env.VENDEO_VS_VALIDATION_ENABLED === "1";
 }
 
-/** Habilitação explícita por ambiente (produção ≠ opt-in local). */
+/** Produção é determinada pelo ambiente Vercel; validação local segue opt-in. */
 export function isVisualSignatureEnvironmentEnabled(
   environment: VisualSignatureEnvironment,
 ): boolean {
-  return environment === "production"
-    ? process.env.VENDEO_VS_PRODUCTION_ENABLED === "1"
-    : isVisualSignatureValidationOptedIn();
+  return environment === "production" || isVisualSignatureValidationOptedIn();
 }
 
 /**
- * Resolve o ambiente declarado. Sem declaração, mantém compatibilidade com o
- * laboratório apenas fora de produção/Vercel; em produção, exige declaração.
+ * Seleciona produção somente em Vercel Production; preview é bloqueado e os
+ * demais ambientes continuam no caminho de validação local.
  */
 export function resolveVisualSignatureEnvironment(
   env: Record<string, string | undefined> = process.env,
@@ -73,16 +70,20 @@ export function resolveVisualSignatureEnvironment(
     throw new VisualSignatureValidationGuardError("visual_signature_preview_forbidden");
   }
 
-  const declared = (env.VISUAL_SIGNATURE_OPERATING_ENVIRONMENT ?? "").trim();
-  if (declared === "local_validation" || declared === "production") {
-    return declared;
-  }
-  if (declared !== "") {
-    throw new VisualSignatureValidationGuardError("visual_signature_environment_invalid");
-  }
-  // Compatibilidade F47.1: sem declaração, o guard local continua sendo a
-  // autoridade e falha com not_local em produção/Vercel. Nunca assume produção.
+  if (env.VERCEL_ENV === "production") return "production";
   return "local_validation";
+}
+
+function deriveProjectRef(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    throw new Error("invalid_supabase_url");
+  }
+  const match = parsed.hostname.match(/^([a-z0-9-]+)\.supabase\.co$/i);
+  if (!match) throw new Error("invalid_supabase_project_ref");
+  return match[1];
 }
 
 function mapEndpointError(error: unknown): VisualSignatureValidationGuardError {
@@ -131,9 +132,23 @@ export function assertVisualSignatureEnvironmentIdentity(): VisualSignatureValid
     }
   }
 
-  const projectRef = (process.env.VISUAL_SIGNATURE_SUPABASE_PROJECT_REF ?? "").trim();
   const primaryUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secondaryUrl = process.env.SUPABASE_URL;
+  let projectRef = "";
+  if (environment === "production") {
+    try {
+      if (!primaryUrl || !primaryUrl.trim()) throw new Error("missing_supabase_url");
+      projectRef = deriveProjectRef(primaryUrl);
+      if (secondaryUrl?.trim() && deriveProjectRef(secondaryUrl) !== projectRef) {
+        throw new Error("supabase_urls_disagree");
+      }
+    } catch (error) {
+      throw new VisualSignatureValidationGuardError(
+        "visual_signature_production_endpoint_invalid",
+        { cause: error },
+      );
+    }
+  }
 
   let endpoint: { origin: string };
   try {

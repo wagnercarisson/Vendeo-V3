@@ -73,6 +73,42 @@ describe("F47.2 — estados de liberação no snapshot", () => {
     ).toEqual({ mode: "legacy" });
   });
 
+  it("ausência da linha de configuração usa legado sem ler release", async () => {
+    const releaseRead = vi.fn();
+    const snapshot = await loadVisualSignatureModelConfigSnapshot({
+      reader: { read: async () => null },
+      releaseReader: { read: releaseRead },
+      isOptedIn: () => true,
+      assertEnvironment: () => ENVIRONMENT,
+    });
+    expect(snapshot).toEqual({ mode: "legacy" });
+    expect(releaseRead).not.toHaveBeenCalled();
+  });
+
+  it("configuração divergente desativada segue legado sem comparar identidade", async () => {
+    const snapshot = await loadVisualSignatureModelConfigSnapshot({
+      reader: { read: async () => ({ ...row(), instance_identity: "old-identity" }) },
+      releaseReader: { read: async () => release({ activated_config_version_id: null, activation_mode: "none" }) },
+      isOptedIn: () => true,
+      assertEnvironment: () => ENVIRONMENT,
+    });
+    expect(snapshot).toEqual({ mode: "legacy" });
+  });
+
+  it("falhas ao ler configuração ou release nunca viram legado", async () => {
+    await expect(loadVisualSignatureModelConfigSnapshot({
+      reader: { read: async () => { throw new Error("config db unavailable"); } },
+      isOptedIn: () => true,
+      assertEnvironment: () => ENVIRONMENT,
+    })).rejects.toMatchObject({ code: "visual_signature_model_config_read_failed" });
+    await expect(loadVisualSignatureModelConfigSnapshot({
+      reader: { read: async () => row() },
+      releaseReader: { read: async () => { throw new Error("release db unavailable"); } },
+      isOptedIn: () => true,
+      assertEnvironment: () => ENVIRONMENT,
+    })).rejects.toThrow("release db unavailable");
+  });
+
   it("loja fora do piloto usa legado", async () => {
     expect(await load({ storeId: "store-out" })).toEqual({ mode: "legacy" });
   });
@@ -108,9 +144,8 @@ describe("F47.2 — estados de liberação no snapshot", () => {
     ).rejects.toBeInstanceOf(VisualSignatureConfigOutsideEnvironmentError);
   });
 
-  it("produção habilitada sem opt-in local não retorna legado", async () => {
-    vi.stubEnv("VISUAL_SIGNATURE_OPERATING_ENVIRONMENT", "production");
-    vi.stubEnv("VENDEO_VS_PRODUCTION_ENABLED", "1");
+  it("VERCEL_ENV production permite configuração elegível sem opt-in dedicado", async () => {
+    vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("VENDEO_VS_VALIDATION_ENABLED", "");
     try {
       const snapshot = await loadVisualSignatureModelConfigSnapshot({

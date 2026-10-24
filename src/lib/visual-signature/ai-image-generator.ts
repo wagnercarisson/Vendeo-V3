@@ -230,6 +230,8 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       console.log('[ai-image-generator] ⏳ ANTES da chamada ao gateway (visual_signature_image)', { timestamp: new Date().toISOString() });
       const dedicatedConfig =
         params.visualSignatureConfig?.mode === "dedicated" ? params.visualSignatureConfig : null;
+      const credentialScope =
+        dedicatedConfig?.environment === "production" ? "normal" : "validation";
       // F47.1 (D4/D7): com snapshot dedicado, modelo/qualidade/reasoning/metadata
       // são explícitos. Sem snapshot, o payload legado permanece byte-compatível.
       const request: AiInvocationRequest = dedicatedConfig
@@ -250,7 +252,7 @@ Sem textos promocionais. Apenas a imagem PNG.`;
               attempt_number: params.attempt ?? 1,
               retry_used: params.attempt !== undefined && params.attempt >= 1,
               retry_prompt_variant: params.simplifiedPrompt ? "simplified" : "full",
-              credential_scope: "validation",
+              credential_scope: credentialScope,
             },
             signal: params.signal,
             timeout: timeoutMs,
@@ -304,7 +306,7 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         // configuração dedicada informa escopo; o legado permanece sem metadata.
         ...(dedicatedConfig
           ? {
-              credentialScope: "validation" as const,
+              credentialScope,
               retryUsed,
               retryPromptVariant,
             }

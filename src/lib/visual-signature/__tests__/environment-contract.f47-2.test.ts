@@ -4,6 +4,7 @@ import {
   VisualSignatureEnvironmentError,
 } from "../local-validation/environment-contract";
 import {
+  assertVisualSignatureEnvironmentIdentity,
   assertVisualSignatureValidationEnvironment,
   resolveVisualSignatureEnvironment,
   VisualSignatureValidationGuardError,
@@ -50,13 +51,37 @@ describe("F47.2 — contrato de ambiente", () => {
     vi.unstubAllEnvs();
   });
 
-  it("produção exige declaração e habilitação", () => {
+  it("produção é selecionada apenas por VERCEL_ENV", () => {
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("VERCEL_ENV", "production");
-    vi.stubEnv("VISUAL_SIGNATURE_OPERATING_ENVIRONMENT", "production");
-    vi.stubEnv("VENDEO_VS_PRODUCTION_ENABLED", "");
-    expect(() => assertVisualSignatureValidationEnvironment()).toThrow(
-      /visual_signature_production_disabled/,
-    );
+    expect(resolveVisualSignatureEnvironment({ VERCEL_ENV: "production" })).toBe("production");
+    vi.stubEnv("VENDEO_VS_VALIDATION_ENABLED", "");
+    expect(() => assertVisualSignatureValidationEnvironment()).toThrow(/production_endpoint_invalid/);
+  });
+
+  it("deriva ref e aceita URLs Supabase concordantes em HTTPS", () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("VENDEO_VS_VALIDATION_ENABLED", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc123.supabase.co");
+    vi.stubEnv("SUPABASE_URL", "https://abc123.supabase.co");
+    vi.stubEnv("OPENAI_API_KEY", "shared-key");
+    expect(assertVisualSignatureEnvironmentIdentity()).toMatchObject({
+      environment: "production",
+      instanceIdentity: "abc123",
+      supabaseOrigin: "https://abc123.supabase.co",
+    });
+    expect(assertVisualSignatureValidationEnvironment().apiKey).toBe("shared-key");
+  });
+
+  it("recusa endpoints de produção divergentes ou sem HTTPS", () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("VENDEO_VS_VALIDATION_ENABLED", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc123.supabase.co");
+    vi.stubEnv("SUPABASE_URL", "https://other.supabase.co");
+    expect(() => assertVisualSignatureEnvironmentIdentity()).toThrow(/production_endpoint_invalid/);
+    vi.stubEnv("SUPABASE_URL", "http://abc123.supabase.co");
+    expect(() => assertVisualSignatureEnvironmentIdentity()).toThrow(/production_endpoint_invalid/);
   });
 });

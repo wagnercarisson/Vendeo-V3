@@ -223,6 +223,29 @@ describe("POST /api/admin/visual-signature-model-config", () => {
       p_instance_identity: "127.0.0.1:57781",
     });
   });
+
+  it("desativa por operação auditada sem exigir credencial de provider", async () => {
+    mockGuard.mockReturnValue({ environment: "production", instanceIdentity: "abc123" });
+    const response = await call("POST", {
+      action: "activate",
+      expectedConfigVersionId: "11111111-1111-1111-1111-111111111111",
+      mode: "none",
+      reason: "desativação autorizada",
+      operationId: OPERATION_ID,
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockGuard).toHaveBeenCalledTimes(1);
+    expect(mockRpc).toHaveBeenCalledWith("admin_activate_visual_signature_model_config", {
+      p_actor_id: "admin-1",
+      p_expected_config_version_id: "11111111-1111-1111-1111-111111111111",
+      p_mode: "none",
+      p_pilot_store_ids: null,
+      p_reason: "desativação autorizada",
+      p_operation_id: OPERATION_ID,
+      p_instance_identity: "abc123",
+    });
+  });
 });
 
 describe("DELETE /api/admin/visual-signature-model-config", () => {

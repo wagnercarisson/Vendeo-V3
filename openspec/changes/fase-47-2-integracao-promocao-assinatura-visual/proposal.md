@@ -43,10 +43,10 @@ cada uma com autorização própria.
   (renumeração imutável + migration corretiva) e provar que o schema resultante
   é compatível com o código atualmente publicado. Esse manifesto é distinto do
   **manifesto completo de release**, que depende do ledger observado.
-- Substituir o guard exclusivamente local por um **contrato explícito de
-  ambiente**: tipo de ambiente, identidade Supabase canônica, credencial
-  operacional dedicada e habilitação por flags separadas. As proteções locais
-  são preservadas; preview e produção não herdam configuração por acidente.
+- Substituir o guard exclusivamente local por seleção de produção via
+  `VERCEL_ENV=production`, identidade Supabase derivada/conferida pelas URLs e
+  credencial compartilhada por `getApiKey` (`OPENAI_API_KEY`). A validação local
+  mantém sua chave dedicada; preview é recusado e as proteções locais são preservadas.
 - Manter a configuração congelada por operação, a auditoria, o reset e o
   diagnóstico já existentes. Publicação e ativação nascem **desativadas** e
   ficam **vinculadas à versão** da configuração; salvar nova versão invalida a
@@ -55,9 +55,9 @@ cada uma com autorização própria.
 - Definir o **lote remoto a partir do ledger observado**, limitado ao lote
   aprovado. Dependência ausente fora do lote exige parada e autorização; nenhuma
   migration fora do lote é aplicada automaticamente.
-- Fixar uma única ordem de release: migrations **aditivas primeiro**, depois o
-  código de transição comprovadamente compatível, depois configuração, piloto e
-  ativação.
+- Fixar a ordem de release: migrations **aditivas primeiro**, depois o código de
+  transição comprovadamente compatível, depois configuração e ativação auditada.
+  Piloto é opcional, não pré-requisito.
 - Definir a política dos presets não avaliados: permanecem **bloqueados por
   padrão**, liberáveis apenas por autorização explícita e registro de decisão.
   O modelo validador `4o-mini` não é alterado.

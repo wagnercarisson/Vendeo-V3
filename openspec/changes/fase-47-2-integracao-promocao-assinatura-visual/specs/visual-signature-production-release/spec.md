@@ -2,30 +2,35 @@
 
 ### Requirement: Contrato explícito de ambiente operacional
 
-O sistema SHALL declarar explicitamente o ambiente operacional da Assinatura
-Visual como um enum fechado (`local_validation` ou `production`) e SHALL NOT
-inferir o ambiente apenas de `NODE_ENV`, `VERCEL` ou de qualquer variável
-ausente.
+O sistema SHALL selecionar produção exclusivamente quando `VERCEL_ENV=production`;
+`VERCEL_ENV=preview` SHALL ser recusado. Fora de produção, a validação permanece
+submetida aos guardas locais/homolog existentes.
 
-O contrato SHALL exigir, simultaneamente: ambiente declarado, identidade
-Supabase canônica esperada, credencial operacional dedicada e habilitação
-explícita. A ausência ou divergência de qualquer dimensão SHALL falhar fechado
-com erro tipado, sem fallback silencioso.
+Em produção, a identidade SHALL ser derivada de `NEXT_PUBLIC_SUPABASE_URL`; quando
+`SUPABASE_URL` também estiver configurada, os endpoints SHALL concordar. Ambos
+devem usar HTTPS e domínio Supabase canônico. Chamadas ao provedor usam a chave
+compartilhada `OPENAI_API_KEY`, resolvida por `getApiKey`; não há chave exclusiva
+da Assinatura Visual nem opt-in adicional.
+
+A identidade persistida só SHALL ser comparada depois de confirmação de
+configuração publicada e ativada elegível. Configuração ausente, não publicada,
+desativada ou fora da allowlist seleciona legado; falhas de leitura de config,
+release ou allowlist SHALL falhar fechado.
 
 O ambiente `preview` SHALL ser sempre recusado neste recorte, pois o enum não
 possui valor `preview`. Uma execução de preview SHALL NOT consumir configuração,
 credencial ou banco de produção por herança, mesmo que as variáveis de produção
 existam no projeto e a identidade seja semelhante.
 
-#### Scenario: Ambiente declarado e identidade conferem
+#### Scenario: Produção usa credencial compartilhada e URL derivada
 
-- **WHEN** o ambiente declarado é `production`, a identidade Supabase observada é exatamente a esperada e existe credencial operacional dedicada
+- **WHEN** `VERCEL_ENV=production`, os endpoints Supabase válidos concordam e existe `OPENAI_API_KEY`
 - **THEN** o contrato é satisfeito e a operação pode prosseguir
 - **AND** nenhum valor de credencial é registrado, retornado ou incluído em telemetria
 
-#### Scenario: Ausência de dimensão falha fechado
+#### Scenario: URL divergente ou inválida falha fechado
 
-- **WHEN** o ambiente declarado, a identidade esperada ou a credencial dedicada estiverem ausentes
+- **WHEN** a URL estiver ausente/inválida, não usar HTTPS/canonical host, ou os endpoints divergirem
 - **THEN** a operação é recusada com erro tipado
 - **AND** nenhuma chamada ao provedor é realizada
 - **AND** nenhuma configuração é gravada
@@ -50,8 +55,8 @@ motivo e `operation_id`. A ativação SHALL NOT ocorrer como efeito colateral de
 deploy, de aplicação de migration ou de leitura de configuração.
 
 A ordem única de release SHALL ser: migrations aditivas → publicação de código
-compatível com o schema já aplicado → publicação da configuração → piloto →
-ativação. As migrations SHALL ser compatíveis com o código atualmente publicado,
+compatível com o schema já aplicado → publicação da configuração → ativação
+administrativa. Piloto é opcional e não é pré-requisito de ativação. As migrations SHALL ser compatíveis com o código atualmente publicado,
 e o código novo SHALL ser compatível com o schema já aplicado.
 
 #### Scenario: Deploy não ativa configuração
@@ -68,7 +73,7 @@ e o código novo SHALL ser compatível com o schema já aplicado.
 - **AND** o código atualmente publicado continua funcionando após o lote
 - **AND** o código novo só é publicado depois do schema estar disponível
 - **AND** a configuração só é publicada depois do código
-- **AND** o piloto e a ativação vêm depois da configuração
+- **AND** a ativação vem depois da configuração; piloto, se adotado, é opcional
 
 #### Scenario: Aplicação de migration não ativa configuração
 
@@ -198,11 +203,11 @@ inativa.
 - **AND** nenhuma conclusão presume que a F50.4 esteja inativa
 - **AND** a conferência permanece somente leitura
 
-### Requirement: Piloto e ativação com critério de parada
+### Requirement: Ativação auditada sem piloto obrigatório
 
-O sistema SHALL permitir piloto limitado por allowlist explícita, com custo,
-duração e escopo registrados. A ativação geral SHALL ser um gate separado e
-posterior à aprovação do piloto.
+O sistema SHALL permitir ativação administrativa auditada após publicação. Piloto
+limitado por allowlist poderá ser usado, mas SHALL NOT ser obrigatório nem
+constituir gate prévio para ativação geral.
 
 O piloto SHALL possuir critério de parada verificável, incluindo falha de
 geração, custo anômalo, apresentação incorreta de perfil ou qualquer sinal de
@@ -223,11 +228,11 @@ sem apagar histórico.
 - **AND** a geração volta ao caminho legado
 - **AND** configuração e histórico permanecem preservados
 
-#### Scenario: Ativação geral exige aprovação do piloto
+#### Scenario: Ativação geral não exige piloto
 
-- **WHEN** a ativação geral é solicitada sem aprovação registrada do piloto
-- **THEN** a operação é recusada
-- **AND** nenhuma loja fora do piloto é afetada
+- **WHEN** a ativação geral é solicitada para configuração publicada e válida
+- **THEN** a ativação é permitida por operação administrativa auditada
+- **AND** não se exige piloto ou aprovação de piloto
 
 ### Requirement: Recuperação e rollback com banco forward-only
 

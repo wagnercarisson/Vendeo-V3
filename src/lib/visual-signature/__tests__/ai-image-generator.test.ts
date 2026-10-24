@@ -209,6 +209,21 @@ describe("AiImageGenerator � F47.1 configura��o dedicada x legado", () => 
     validateSpy.mockRestore();
   });
 
+  it("produção classifica a chave compartilhada como normal em imagem e validação", async () => {
+    const validateSpy = vi.spyOn(VisualSignatureValidator.prototype, "validate").mockResolvedValue({ valid: true });
+    const invoke = vi.fn().mockResolvedValue({ imageBase64: "aGVsbG8=", model: "gpt-6-luna" });
+    await makeGenerator(invoke).generate({
+      ...BASE_PARAMS,
+      attempt: 0,
+      telemetry: makeTelemetry(),
+      visualSignatureConfig: { ...DEDICATED, environment: "production" },
+    });
+
+    expect(invoke.mock.calls[0][1].metadata.credential_scope).toBe("normal");
+    expect(validateSpy.mock.calls[0][0].credentialScope).toBe("normal");
+    validateSpy.mockRestore();
+  });
+
   it("sem snapshot mant�m o request legado byte-compat�vel", async () => {
     const validateSpy = vi
       .spyOn(VisualSignatureValidator.prototype, "validate")

@@ -106,7 +106,7 @@ geração solicitada pelo usuário SHALL reler a configuração vigente.
 
 A decisão antes do débito SHALL seguir a matriz operacional: configuração
 desativada ou loja fora do piloto usa o caminho herdado; ativação com
-configuração, identidade ou credencial inválida bloqueia antes de débito e
+configuração elegível, identidade ou credencial inválida bloqueia antes de débito e
 provider; ativação válida congela a configuração dedicada.
 
 #### Scenario: Retry preserva o snapshot
@@ -148,26 +148,28 @@ produção, ausência de ambiente Vercel, endpoints Supabase de banco/Storage em
 host loopback com porta local exata, identidade canônica exata e credencial de
 provider dedicada.
 
-Em `production`, o contrato SHALL exigir ambiente declarado explicitamente,
-identidade Supabase canônica esperada (project ref + endpoint), credencial
-operacional dedicada e identidade da linha igual à identidade atual. Ausência ou
-divergência de qualquer dimensão SHALL falhar antes de qualquer escrita, débito
-ou provider. A allowlist de identidade SHALL ser uma segunda condição, nunca a
-única.
+Em `production`, selecionado exclusivamente por `VERCEL_ENV=production`, a
+identidade SHALL ser derivada de `NEXT_PUBLIC_SUPABASE_URL`; se `SUPABASE_URL`
+estiver configurada, os endpoints devem concordar. URLs de produção exigem HTTPS
+e host Supabase canônico. O provider usa a credencial compartilhada de
+`getApiKey` (`OPENAI_API_KEY`); validação local mantém chave dedicada. A identidade
+persistida só é comparada depois de confirmar publicação e ativação elegíveis.
+Ausência, não publicação, desativação ou inelegibilidade usa legado; falha ao ler
+configuração, release ou allowlist bloqueia antes de escrita, débito ou provider.
 
 Preview SHALL ser sempre recusado neste recorte, pois o enum não possui valor
 `preview`. Não existe exceção por identidade, herança de variáveis de produção
 nem fallback “produção por omissão”.
 
 #### Scenario: Produção válida consome a configuração
-- **WHEN** o ambiente é `production`, a identidade confere e a credencial dedicada existe
+- **WHEN** `VERCEL_ENV=production`, as URLs configuradas concordam e a chave compartilhada está disponível
 - **THEN** a configuração publicada e ativada pode ser consumida
 - **AND** nenhum segredo é registrado ou retornado
 
-#### Scenario: Produção sem dimensão obrigatória falha fechado
-- **WHEN** ambiente, identidade ou credencial dedicada estiverem ausentes
+#### Scenario: Endpoint de produção inválido falha fechado
+- **WHEN** a URL de produção estiver ausente, inválida, sem HTTPS ou divergente
 - **THEN** a operação é recusada antes de qualquer escrita, débito ou provider
-- **AND** a credencial normal do app não é usada como fallback
+- **AND** nenhuma chamada ao provider é realizada
 
 #### Scenario: Preview é sempre recusado
 - **WHEN** a execução ocorre em preview
@@ -181,14 +183,19 @@ nem fallback “produção por omissão”.
 - **THEN** o guard recusa a operação antes de qualquer escrita ou débito
 - **AND** nenhum provider é chamado
 
-#### Scenario: Identidade divergente falha fechado
-- **WHEN** a identidade da linha não corresponde à identidade canônica atual
+#### Scenario: Identidade elegível divergente falha fechado
+- **WHEN** a versão publicada e ativada é elegível, mas a identidade persistida não corresponde à identidade canônica atual
 - **THEN** a operação falha antes do provider
 - **AND** nenhum fallback silencioso é usado
 
+#### Scenario: Configuração não elegível com identidade antiga usa legado
+- **WHEN** a configuração está ausente, não publicada, desativada ou fora de escopo
+- **THEN** identidade persistida divergente não bloqueia o caminho legado
+- **AND** não é consumida configuração dedicada
+
 ## ADDED Requirements
 
-### Requirement: Estados de liberação vinculados à versão e allowlist de piloto
+### Requirement: Estados de liberação vinculados à versão
 
 O sistema SHALL persistir os estados de liberação em tabelas próprias, separadas
 da configuração:
@@ -238,12 +245,16 @@ liberação, estados derivados, `environment_scope`, `instance_identity`,
 - **THEN** a operação é recusada com `config_version_mismatch`
 - **AND** nenhum estado é alterado
 
-#### Scenario: Ativar em piloto com allowlist
+#### Scenario: Ativar em piloto com allowlist opcional
 - **WHEN** a ativação em modo `pilot` recebe a versão publicada vigente e uma lista de lojas
 - **THEN** `activated_config_version_id` aponta para a versão vigente
 - **AND** a allowlist é gravada na mesma transação
 - **AND** somente as lojas listadas congelam a configuração dedicada
 - **AND** as demais usam o caminho herdado
+
+#### Scenario: Ativação geral não exige piloto
+- **WHEN** a versão publicada vigente é ativada em modo geral
+- **THEN** a ativação é aceita por RPC auditada sem aprovação de piloto
 
 #### Scenario: Ativação exige publicação da mesma versão
 - **WHEN** a ativação é solicitada sem publicação ou com versão diferente
@@ -268,6 +279,7 @@ liberação, estados derivados, `environment_scope`, `instance_identity`,
 - **AND** a composição anterior da allowlist é registrada na auditoria
 - **AND** a allowlist é limpa
 - **AND** a publicação permanece e a geração volta ao caminho herdado
+- **AND** a operação administrativa não exige credencial de provider
 
 #### Scenario: Reset exige desativação
 - **WHEN** o reset é solicitado com a configuração ativada

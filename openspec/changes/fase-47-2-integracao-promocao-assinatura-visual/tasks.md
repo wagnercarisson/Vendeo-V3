@@ -34,7 +34,7 @@
 - [ ] 4.1 Implementar o enum fechado de ambiente (`local_validation`/`production`) e o resolvedor de identidade Supabase canônica por ambiente.
 - [ ] 4.2 Preservar integralmente as proteções locais (loopback, `NODE_ENV`, `VERCEL` ausente, identidade e credencial dedicada).
 - [ ] 4.3 Implementar recusa **sempre** explícita de preview, sem exceção por identidade e sem herança de configuração/credencial de produção.
-- [ ] 4.4 Implementar credencial operacional dedicada por ambiente, sem fallback para `OPENAI_API_KEY` no caminho da Assinatura Visual.
+- [ ] 4.4 Resolver a credencial de produção pelo `getApiKey` compartilhado (`OPENAI_API_KEY`), mantendo isolada a credencial de validação local.
 - [ ] 4.5 Implementar o schema, tabelas e RPCs previstos na migration corretiva F47.2 (criada na Task 3.5): `visual_signature_model_config_release`, allowlist e liberação por versão, mantendo `local_validation` válido e a linha local existente.
 - [ ] 4.6 Implementar estados derivados por ponteiro de versão (`published_config_version_id`/`activated_config_version_id` = `config_version_id`) e `activation_mode`, sem booleanos redundantes na configuração.
 - [ ] 4.7 Implementar as RPCs auditadas de publicação, ativação/desativação e reset com `p_expected_config_version_id`, ator, motivo, `operation_id`, identidade e escopo.

@@ -7,34 +7,40 @@ import {
   readVisualSignatureApiKey,
 } from "../api-keys";
 
-describe("F47.2 — credenciais dedicadas por ambiente", () => {
+describe("F47.2 — credenciais compartilhada de produção e dedicada de validação", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
   it("local usa a credencial de validação", () => {
     vi.stubEnv("VENDEO_VS_VALIDATION_OPENAI_API_KEY", "sk-local");
-    vi.stubEnv("VENDEO_VS_PRODUCTION_OPENAI_API_KEY", "sk-prod");
+    vi.stubEnv("OPENAI_API_KEY", "sk-prod");
     expect(readVisualSignatureApiKey("openai", "local_validation")).toBe("sk-local");
     expect(readValidationApiKey("openai")).toBe("sk-local");
   });
 
-  it("produção usa a credencial operacional dedicada", () => {
+  it("produção usa a chave compartilhada", () => {
     vi.stubEnv("VENDEO_VS_VALIDATION_OPENAI_API_KEY", "sk-local");
-    vi.stubEnv("VENDEO_VS_PRODUCTION_OPENAI_API_KEY", "sk-prod");
+    vi.stubEnv("OPENAI_API_KEY", "sk-prod");
     expect(readVisualSignatureApiKey("openai", "production")).toBe("sk-prod");
     expect(readOperationalApiKey("openai")).toBe("sk-prod");
   });
 
-  it("não cai para OPENAI_API_KEY", () => {
+  it("validação não cai para OPENAI_API_KEY", () => {
     vi.stubEnv("OPENAI_API_KEY", "sk-normal");
     vi.stubEnv("VENDEO_VS_VALIDATION_OPENAI_API_KEY", "");
-    vi.stubEnv("VENDEO_VS_PRODUCTION_OPENAI_API_KEY", "");
+    vi.stubEnv("OPENAI_API_KEY", "");
     expect(() => readVisualSignatureApiKey("openai", "local_validation")).toThrow(
       ValidationApiKeyMissingError,
     );
     expect(() => readVisualSignatureApiKey("openai", "production")).toThrow(
       OperationalApiKeyMissingError,
     );
+  });
+
+  it("produção sem chave compartilhada falha fechado mesmo fora NODE_ENV production", () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    expect(() => readVisualSignatureApiKey("openai", "production")).toThrow(OperationalApiKeyMissingError);
   });
 });

@@ -29,7 +29,7 @@ export function createVisualSignatureValidationGateway(
   const responsesAdapter = new ResponsesAdapter(
     resolveApiKey,
     { maxRetries: 0 },
-    "validation",
+    environment === "production" ? "normal" : "validation",
   );
   const adapters: AiAdapterRegistry = {
     get(protocol: AiProtocol): AiAdapter | undefined {
