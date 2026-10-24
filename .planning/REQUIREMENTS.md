@@ -19,6 +19,7 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | F44.1.1, F45–F49: temas, direção de arte, gateway, catálogo, laboratório e orientação | `.planning/phases/44-*` a `.planning/phases/49-*`, summaries/verificações e OpenSpec arquivado |
 | F50: demonstração gratuita e validade dos créditos | `.planning/phases/50-demonstracao-gratuita-validade-creditos/`, `50-VERIFICATION.md`, summaries e `openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/` |
 | F50.1: formalização legal e ativação | Futura; fonte de planejamento será um novo plano/OpenSpec quando a fase for formalmente constituída |
+| F47.2: integração e promoção produtiva da Assinatura Visual | Planejada; 10 planos em `.planning/phases/47.2-integracao-promocao-assinatura-visual/`; fonte ativa `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` |
 | F50.2: oferta de teste gratuito de 28 dias | Planejada; 3 planos em `.planning/phases/50.2-oferta-teste-gratuito-28-dias/`; fonte ativa `openspec/changes/oferta-teste-gratuito-28-dias/` |
 | F56.1: contrato produtivo, modelos e fallback | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-06-fase-56-1-contrato-produtivo-modelos-fallback/` |
 | F56.2a: preparação não operacional do Produto 1:1 | Cobertura concluída abaixo; fonte arquivada `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/` |
@@ -26,6 +27,25 @@ Este arquivo é um índice operacional, não uma tabela histórica. Checkboxes, 
 | F56.2b1b: núcleo entregável do Produto 1:1 | Cobertura concluída; concluída/verificada/sincronizada/arquivada em 2026-10-12; fonte arquivada `openspec/changes/archive/2026-10-12-fase-56-2b1b-nucleo-entregavel-produto-1-1/` |
 | F56.2b2a (B2.1): recuperação de copy do Produto 1:1 | Cobertura concluída; concluída/verificada/sincronizada/arquivada em 2026-10-15 (46/46 tasks); fonte arquivada `openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/` |
 | Monetização pública / Stripe | Iniciativa diferida para v1.7+, fora da numeração e sem requisitos ativos |
+
+## F47.2 — Planejada (Integração e promoção produtiva da Assinatura Visual)
+
+**Fonte ativa:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design, 4 delta specs, tasks; `validate --strict` valid) + `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. **Status:** aprovada pelo Codex em 2026-10-24 **somente para planejamento GSD**; não executada; nenhuma integração, renumeração, implementação, banco, provider, push ou deploy. **Planos:** `47.2-01..10` em 9 waves, com checkpoints separados de integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
+
+| REQ-ID | Cobertura | Plano |
+|---|---|---|
+| REQ-47.2-01 | Integração Git preservando histórico + tracking F50.3/F50.4 | 01 |
+| REQ-47.2-02 | Renumeração imutável F47.1 + F47.2 corretiva + manifestos | 02 |
+| REQ-47.2-03 | Contrato de ambiente + liberação por versão + invariantes/concorrência | 03 |
+| REQ-47.2-04 | Perfil atual/anterior/falha por origem, ativo e contexto | 04 |
+| REQ-47.2-05 | Compatibilidade F50.4: comportamentos legítimos, sem reinício/duplicação | 05 |
+| REQ-47.2-06 | Validação local + provas Postgres descartável | 05/06 |
+| REQ-47.2-07 | Preparação remota + manifesto de release + lote aprovado | 07 |
+| REQ-47.2-08 | Publicação de código com configuração desativada | 08 |
+| REQ-47.2-09 | Piloto limitado com smoke pago mínimo e critério de parada | 09 |
+| REQ-47.2-10 | Ativação, recuperação e encerramento/tracking | 10 |
+
+**Fora de escopo:** ativar a política individualizada da F50.4, alterar o validador `4o-mini`, reabrir a F47.1, mudar preços/prompts, deploy automático.
 
 ## F50.2 — Planejada (Oferta de teste gratuito de 28 dias)
 

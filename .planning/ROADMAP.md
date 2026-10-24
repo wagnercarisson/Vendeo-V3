@@ -634,3 +634,34 @@ Plans:
 **Gate:** `all_stores` sÃƒÆ’Ã‚Â³ ÃƒÆ’Ã‚Â© ativado apÃƒÆ’Ã‚Â³s 5.3 + 5.7 + validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna + campanha completa + aceite humano + disposiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o D13. Luna aprovado ÃƒÆ’Ã‚Â© mantido; restauraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o somente em reprovaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/problema/decisÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita. As migrations sÃƒÆ’Ã‚Â£o provadas em Postgres local isolado antes da publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. A janela preserva `spent_usd`, configura o cap e ativa `test_stores` antes de gerar. ApÃƒÆ’Ã‚Â³s a abertura, a fase encerra ativa e monitorada salvo critÃƒÆ’Ã‚Â©rio de parada/decisÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita.
 
 **Canonical refs:** `openspec/changes/fase-56-2-7-abertura-gradual-produto-1-1-luna/` (proposal, design D1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂD8, 4 specs, tasks), `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CONTEXT.md` e `56.2.7-PATTERNS.md`, `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
+
+### Phase 47.2: F47.2 — Integração e promoção produtiva da Assinatura Visual
+
+**Status:** **PLANEJADA E APROVADA PELO CODEX PARA PLANEJAMENTO GSD (2026-10-24); NÃO EXECUTADA.** Base OpenSpec `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` validada (`--strict` valid; 20 requisitos; 4 capabilities). Aprovação registrada em `.planning/phases/47.2-integracao-promocao-assinatura-visual/47.2-APPROVAL.md`. Nenhuma integração, renumeração, implementação, banco, provider, push ou deploy executado.
+
+**Goal:** integrar a branch completa da F47.1 à `main` atual preservando histórico e F50.3/F50.4; renumerar apenas a F47.1 com timestamp UTC real e criar a migration corretiva F47.2; substituir o isolamento exclusivamente local por contrato explícito de ambiente com liberação vinculada à versão; corrigir a atualidade do perfil por origem/ativo/contexto; provar não-interferência na F50.4; e preparar a promoção com gates separados.
+
+**Depends on:** F47.1 (branch `feature/ajuste-modelo-assinatura-visual`, `a6c746d0`); `main` `a9681bf6`; F50.3/F50.4 preservadas. F50.4 arquivada com limitações (`gate_status=not_green`), sem presunção de estado de produção.
+
+**Requirements:** `REQ-47.2-01..10` — (01) integração/tracking; (02) migrations e manifestos; (03) ambiente e liberação por versão; (04) perfil por origem/ativo/contexto; (05) compatibilidade F50.4; (06) validação local e Postgres; (07) preparação remota e lote; (08) publicação; (09) piloto; (10) ativação/encerramento.
+
+**Plans:** 10 plans (`47.2-01..10`); diretório `.planning/phases/47.2-integracao-promocao-assinatura-visual/`.
+
+Plans:
+
+- [ ] 47.2-01-PLAN.md — Baseline, integração Git e tracking (checkpoint de integração).
+- [ ] 47.2-02-PLAN.md — Renumeração imutável F47.1 + migration corretiva F47.2 + manifesto de integração.
+- [ ] 47.2-03-PLAN.md — Contrato de ambiente e liberação por versão.
+- [ ] 47.2-04-PLAN.md — Atualidade do perfil por origem, ativo e contexto.
+- [ ] 47.2-05-PLAN.md — Compatibilidade F50.4 + validação local.
+- [ ] 47.2-06-PLAN.md — Provas Postgres em banco descartável (checkpoint).
+- [ ] 47.2-07-PLAN.md — Preparação remota + migrations remotas (checkpoint).
+- [ ] 47.2-08-PLAN.md — Publicação de código com configuração desativada (checkpoint).
+- [ ] 47.2-09-PLAN.md — Piloto limitado e smoke pago mínimo (checkpoint).
+- [ ] 47.2-10-PLAN.md — Ativação, recuperação e encerramento (checkpoint).
+
+**Waves:** `01 → 02 → 03/04 → 05 → 06 → 07 → 08 → 09 → 10`. Checkpoints humanos bloqueantes: integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
+
+**Gate:** nenhuma integração antes da revisão dos planos; nenhuma migration remota antes do ensaio descartável e do manifesto de release derivado do ledger; nenhuma publicação sem migrations; nenhum piloto sem publicação OFF; nenhuma ativação sem piloto aprovado. O lote remoto é limitado ao aprovado e ausente; dependência fora do lote para o gate.
+
+**Canonical refs:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design D1–D13, 4 delta specs, tasks), `.planning/phases/47.2-integracao-promocao-assinatura-visual/` (APPROVAL, CONTEXT, PATTERNS, COVERAGE-MATRIX, 10 PLAN), `openspec/changes/archive/2026-10-23-fase-47-1-modelos-assinatura-visual/`, `openspec/changes/archive/2026-10-23-fase-50-4-oferta-onboarding-por-cnpj/`.
