@@ -32,7 +32,7 @@ foreach ($required in @(
     'inventory differs from the two preserved volumes',
     "-TimeoutMilliseconds 120000", 'compose_stop_state_check',
     "-Stage 'ledger_select_sql'", 'migration_${Operation}_cli',
-    'Resolve-ComposeStopVerification', 'Assert-ExistingComposeForResume',
+    'Resolve-ComposeStopVerification', 'Assert-ExistingComposeForResume', 'Get-MigrationProcessTimeout',
     "'start', '--wait', '--wait-timeout', '180'", 'Assert-ResumeContainerInventory',
     'Assert-SameContainerIds', 'Test-DisposableResumePreflight', 'Invoke-ProvisionWorkWithRestrictedStop',
     'no start/stop performed.'
@@ -49,6 +49,7 @@ $provisionSource = $source.Substring($provisionStart, $proofStart - $provisionSt
 $orderedTokens = @(
     'Assert-ExistingComposeForResume',
     "'start', '--wait', '--wait-timeout', '180'",
+    '-PrepareAction {', 'Get-LocalDatabaseUrl', '-PreMigrationCheck {',
     "-Operation 'list'",
     'Copy-Item -LiteralPath',
     "-Operation 'up'",

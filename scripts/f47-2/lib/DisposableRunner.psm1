@@ -297,6 +297,12 @@ function Resolve-LedgerRelationProbeOutput {
     return ($states[0] -eq 'present')
 }
 
+function Get-MigrationProcessTimeout {
+    param([Parameter(Mandatory = $true)][ValidateSet('list', 'up')][string]$Operation)
+    if ($Operation -eq 'up') { return 900000 }
+    return 120000
+}
+
 function Invoke-StartupWithRestrictedCleanup {
     [CmdletBinding()]
     param(
@@ -334,6 +340,7 @@ function Invoke-StartupWithRestrictedCleanup {
 function Invoke-ProvisionWorkWithRestrictedStop {
     [CmdletBinding()]
     param(
+        [Parameter(Mandatory = $true)][scriptblock]$PrepareAction,
         [Parameter(Mandatory = $true)][scriptblock]$PreMigrationCheck,
         [Parameter(Mandatory = $true)][scriptblock]$CopyAction,
         [Parameter(Mandatory = $true)][scriptblock]$ApplyAction,
@@ -343,15 +350,18 @@ function Invoke-ProvisionWorkWithRestrictedStop {
     $failedStage = $null
     $operationSucceeded = $false
     $stopResult = $null
+    $context = $null
     try {
+        $failedStage = 'prepare'
+        $context = & $PrepareAction
         $failedStage = 'pre_migration_check'
-        & $PreMigrationCheck
+        & $PreMigrationCheck $context
         $failedStage = 'copy_hash'
-        & $CopyAction
+        & $CopyAction $context
         $failedStage = 'migration_up'
-        & $ApplyAction
+        & $ApplyAction $context
         $failedStage = 'post_migration_ledger'
-        & $VerifyAction
+        & $VerifyAction $context
         $operationSucceeded = $true
         $failedStage = $null
     }
@@ -375,4 +385,4 @@ function Invoke-ProvisionWorkWithRestrictedStop {
     }
 }
 
-Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Resolve-LedgerCheckpoint, Resolve-LedgerRelationProbeOutput, Invoke-StartupWithRestrictedCleanup, Invoke-ProvisionWorkWithRestrictedStop
+Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Resolve-LedgerCheckpoint, Resolve-LedgerRelationProbeOutput, Get-MigrationProcessTimeout, Invoke-StartupWithRestrictedCleanup, Invoke-ProvisionWorkWithRestrictedStop

@@ -397,7 +397,8 @@ function Invoke-StandardMigrationCommand {
         throw 'Refusing migration command not targeting the approved loopback Postgres.'
     }
     $args = @('--workdir', $Workdir, 'migration', $Operation, '--db-url', $DatabaseUrl, '--yes')
-    $result = Invoke-Captured -FilePath $Cli -Arguments $args
+    $timeoutMilliseconds = Get-MigrationProcessTimeout -Operation $Operation
+    $result = Invoke-Captured -FilePath $Cli -Arguments $args -TimeoutMilliseconds $timeoutMilliseconds
     if ($result.ExitCode -ne 0 -or $result.TimedOut -or $result.StartError) {
         Write-SafeProcessDiagnostic -Stage "migration_${Operation}_cli" -Result $result
         throw "Supabase migration $Operation failed; details above are categorized and sanitized."
@@ -528,36 +529,42 @@ function Invoke-Provision {
     }
 
     $expected = @($manifest.Keys | ForEach-Object { $_.Substring(0, 14) } | Sort-Object -Unique)
-    $provisionDatabaseUrl = Get-LocalDatabaseUrl
     $provisionOutcome = Invoke-ProvisionWorkWithRestrictedStop `
+        -PrepareAction {
+            [pscustomobject]@{ DatabaseUrl = Get-LocalDatabaseUrl }
+        } `
         -PreMigrationCheck {
-        Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $provisionDatabaseUrl
-        $preMigrationState = Assert-PreMigrationLedgerCheckpoint -MigrationListSucceeded $true
-        if ($preMigrationState.Count -ne 0) { throw 'Initial disposable ledger is not empty.' }
+            param($context)
+            Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $context.DatabaseUrl
+            $preMigrationState = Assert-PreMigrationLedgerCheckpoint -MigrationListSucceeded $true
+            if ($preMigrationState.Count -ne 0) { throw 'Initial disposable ledger is not empty.' }
     } `
         -CopyAction {
-        foreach ($file in $files) {
-            if ((Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
-                throw 'Source migration hash changed after preflight; copy blocked.'
+            param($context)
+            foreach ($file in $files) {
+                if ((Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
+                    throw 'Source migration hash changed after preflight; copy blocked.'
+                }
             }
-        }
-        foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $target $file.Name) }
-        $copiedFiles = @(Get-ChildItem -LiteralPath $target -Filter '*.sql' -File)
-        if ($copiedFiles.Count -ne $ExpectedMigrationCount) { throw 'Copied migration count differs from the approved batch.' }
-        foreach ($file in $copiedFiles) {
-            if (-not $manifest.ContainsKey($file.Name) -or (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
-                throw 'Copied migration hash mismatch; application blocked.'
+            foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $target $file.Name) }
+            $copiedFiles = @(Get-ChildItem -LiteralPath $target -Filter '*.sql' -File)
+            if ($copiedFiles.Count -ne $ExpectedMigrationCount) { throw 'Copied migration count differs from the approved batch.' }
+            foreach ($file in $copiedFiles) {
+                if (-not $manifest.ContainsKey($file.Name) -or (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
+                    throw 'Copied migration hash mismatch; application blocked.'
+                }
             }
-        }
-    } `
+        } `
         -ApplyAction {
-        Invoke-StandardMigrationCommand -Operation 'up' -DatabaseUrl $provisionDatabaseUrl
+            param($context)
+            Invoke-StandardMigrationCommand -Operation 'up' -DatabaseUrl $context.DatabaseUrl
     } `
         -VerifyAction {
-        Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $provisionDatabaseUrl
-        $postMigrationState = Get-LedgerState
-        $validatedLedger = Resolve-LedgerCheckpoint -TableExists $postMigrationState.TableExists -Versions $postMigrationState.Versions -Context 'post_migration' -ExpectedVersions $expected
-        if ($validatedLedger.Count -ne $ExpectedMigrationCount) { throw 'Post-migration ledger count differs from the approved 145-version batch.' }
+            param($context)
+            Invoke-StandardMigrationCommand -Operation 'list' -DatabaseUrl $context.DatabaseUrl
+            $postMigrationState = Get-LedgerState
+            $validatedLedger = Resolve-LedgerCheckpoint -TableExists $postMigrationState.TableExists -Versions $postMigrationState.Versions -Context 'post_migration' -ExpectedVersions $expected
+            if ($validatedLedger.Count -ne $ExpectedMigrationCount) { throw 'Post-migration ledger count differs from the approved 145-version batch.' }
     } `
         -StopAction { Stop-NewComposeProject }
 

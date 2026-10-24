@@ -215,24 +215,38 @@ $cliListGateRejected = $false
 try { Resolve-LedgerCheckpoint -TableExists $false -Versions @() -Context 'pre_migration' -MigrationDirectoryEmpty $true -MigrationListSucceeded $false }
 catch { $cliListGateRejected = $true }
 Assert-Test $cliListGateRejected 'Uninitialized ledger is not accepted unless the normal CLI migration list succeeded.'
+Assert-Test ((Get-MigrationProcessTimeout -Operation 'up') -eq 900000) 'migration up receives a bounded 15-minute process timeout.'
+Assert-Test ((Get-MigrationProcessTimeout -Operation 'list') -eq 120000) 'migration list receives its own bounded process timeout.'
 
 $script:provisionSequence = @()
 $successfulProvisionGate = Invoke-ProvisionWorkWithRestrictedStop `
-    -PreMigrationCheck { $script:provisionSequence += 'list_and_precheck' } `
-    -CopyAction { $script:provisionSequence += 'copy_hash' } `
-    -ApplyAction { $script:provisionSequence += 'migration_up' } `
-    -VerifyAction { $script:provisionSequence += 'list_and_postcheck' } `
+    -PrepareAction { $script:provisionSequence += 'resolve_local_database_url'; [pscustomobject]@{ DatabaseUrl = 'offline-local-url' } } `
+    -PreMigrationCheck { param($context) $script:provisionSequence += 'list_and_precheck'; if($context.DatabaseUrl -ne 'offline-local-url'){throw 'bad fake context'} } `
+    -CopyAction { param($context) $script:provisionSequence += 'copy_hash' } `
+    -ApplyAction { param($context) $script:provisionSequence += 'migration_up' } `
+    -VerifyAction { param($context) $script:provisionSequence += 'list_and_postcheck' } `
     -StopAction { $script:provisionSequence += 'restricted_stop'; [pscustomobject]@{ StartError = $false; TimedOut = $false; ExitCode = 0; StoppedVerified = $true } }
-Assert-Test ($successfulProvisionGate.Succeeded -and $successfulProvisionGate.StopSucceeded -and ($script:provisionSequence -join ',') -eq 'list_and_precheck,copy_hash,migration_up,list_and_postcheck,restricted_stop') 'Provision gate orders precheck/copy/apply/postcheck and always verifies restricted stop.'
+Assert-Test ($successfulProvisionGate.Succeeded -and $successfulProvisionGate.StopSucceeded -and ($script:provisionSequence -join ',') -eq 'resolve_local_database_url,list_and_precheck,copy_hash,migration_up,list_and_postcheck,restricted_stop') 'Provision gate resolves the local URL inside the protected scope, orders precheck/copy/apply/postcheck and always verifies restricted stop.'
 
 $script:provisionSequence = @()
 $failedProvisionGate = Invoke-ProvisionWorkWithRestrictedStop `
-    -PreMigrationCheck { $script:provisionSequence += 'list_and_precheck' } `
-    -CopyAction { $script:provisionSequence += 'copy_hash' } `
-    -ApplyAction { $script:provisionSequence += 'migration_up'; throw 'offline-fake-error-secret' } `
-    -VerifyAction { $script:provisionSequence += 'must_not_run' } `
+    -PrepareAction { $script:provisionSequence += 'resolve_local_database_url'; [pscustomobject]@{ DatabaseUrl = 'offline-local-url' } } `
+    -PreMigrationCheck { param($context) $script:provisionSequence += 'list_and_precheck' } `
+    -CopyAction { param($context) $script:provisionSequence += 'copy_hash' } `
+    -ApplyAction { param($context) $script:provisionSequence += 'migration_up'; throw 'offline-fake-error-secret' } `
+    -VerifyAction { param($context) $script:provisionSequence += 'must_not_run' } `
     -StopAction { $script:provisionSequence += 'restricted_stop'; [pscustomobject]@{ StartError = $false; TimedOut = $false; ExitCode = 0; StoppedVerified = $true } }
-Assert-Test (-not $failedProvisionGate.Succeeded -and $failedProvisionGate.FailedStage -eq 'migration_up' -and $failedProvisionGate.StopSucceeded -and ($script:provisionSequence -join ',') -eq 'list_and_precheck,copy_hash,migration_up,restricted_stop') 'Any provision failure skips later work, invokes restricted stop, and returns only a safe stage token.'
+Assert-Test (-not $failedProvisionGate.Succeeded -and $failedProvisionGate.FailedStage -eq 'migration_up' -and $failedProvisionGate.StopSucceeded -and ($script:provisionSequence -join ',') -eq 'resolve_local_database_url,list_and_precheck,copy_hash,migration_up,restricted_stop') 'Any provision failure skips later work, invokes restricted stop, and returns only a safe stage token.'
+
+$script:provisionSequence = @()
+$failedUrlResolutionGate = Invoke-ProvisionWorkWithRestrictedStop `
+    -PrepareAction { $script:provisionSequence += 'resolve_local_database_url'; throw 'offline-fake-url-error-secret' } `
+    -PreMigrationCheck { param($context) $script:provisionSequence += 'must_not_run' } `
+    -CopyAction { param($context) $script:provisionSequence += 'must_not_copy' } `
+    -ApplyAction { param($context) $script:provisionSequence += 'must_not_apply' } `
+    -VerifyAction { param($context) $script:provisionSequence += 'must_not_verify' } `
+    -StopAction { $script:provisionSequence += 'restricted_stop'; [pscustomobject]@{ StartError = $false; TimedOut = $false; ExitCode = 0; StoppedVerified = $true } }
+Assert-Test (-not $failedUrlResolutionGate.Succeeded -and $failedUrlResolutionGate.FailedStage -eq 'prepare' -and $failedUrlResolutionGate.StopSucceeded -and ($script:provisionSequence -join ',') -eq 'resolve_local_database_url,restricted_stop') 'Local DB URL resolution failure is protected by restricted stop and no later action runs.'
 
 Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, bindings, stderr/diagnostics, process timeout, cleanup, resume identity/images/volumes, null/unexpected mounts, ledger states, combined provision order/failure cleanup).'
 }
