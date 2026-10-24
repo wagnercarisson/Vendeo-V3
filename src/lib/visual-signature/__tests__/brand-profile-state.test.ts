@@ -87,12 +87,37 @@ describe("F47.2 — atualidade do perfil por origem e ativo", () => {
     expect(derived.lastFailure?.id).toBe("f1");
   });
 
+  it("sem asset removido identificado não há fallback", () => {
+    const derived = deriveBrandProfileState({
+      records: [record({ id: "l1", source: "logo_analysis", status: "synced", assetId: "logo1", at: "2026-10-24T10:00:00Z" })],
+      activeOrigin: "text_only",
+      activeAssetId: null,
+      currentSnapshot: SNAPSHOT,
+      fallbackLogoAssetId: null,
+    });
+    expect(derived.current).toBeNull();
+    expect(derived.currentKind).toBeNull();
+  });
+
+  it("perfil de outro logo não é usado como fallback", () => {
+    const derived = deriveBrandProfileState({
+      records: [record({ id: "l1", source: "logo_analysis", status: "synced", assetId: "logo-outro", at: "2026-10-24T10:00:00Z" })],
+      activeOrigin: "text_only",
+      activeAssetId: null,
+      currentSnapshot: SNAPSHOT,
+      fallbackLogoAssetId: "logo-removido",
+    });
+    expect(derived.current).toBeNull();
+    expect(derived.currentKind).toBeNull();
+  });
+
   it("perfil de logo removido permanece fallback atual", () => {
     const derived = deriveBrandProfileState({
       records: [record({ id: "l1", source: "logo_analysis", status: "synced", assetId: "logo1", at: "2026-10-24T10:00:00Z" })],
       activeOrigin: "text_only",
       activeAssetId: null,
       currentSnapshot: SNAPSHOT,
+      fallbackLogoAssetId: "logo1",
     });
     expect(derived.current?.id).toBe("l1");
     expect(derived.currentKind).toBe("logo_removed_fallback");

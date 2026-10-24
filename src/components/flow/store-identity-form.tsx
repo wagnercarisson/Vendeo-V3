@@ -1016,6 +1016,13 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         const stateView = await profileRes.json();
         const profile = stateView.current;
         setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
+        setProfileStateNotice(
+          stateView.state === "failed"
+            ? "Não foi possível atualizar a direção visual. O perfil anterior foi preservado e está identificado como anterior."
+            : stateView.currentKind === "logo_removed_fallback"
+              ? "O logo foi removido; a direção atual permanece como fallback até uma nova análise textual."
+              : null,
+        );
         if (profile?.status === 'synced') {
           setInferredProfile({
             safe_color_tokens: profile.safe_color_tokens,

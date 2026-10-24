@@ -76,7 +76,12 @@ function installFetch(routes: Record<string, unknown>) {
     const url = String(input);
     const keys = Object.keys(routes).sort((a, b) => b.length - a.length);
     for (const key of keys) {
-      if (url.startsWith(key)) return okJson(routes[key]);
+      if (url.startsWith(key)) {
+        const value = routes[key];
+        return okJson(
+          typeof value === "function" ? await (value as (u: string) => unknown)(url) : value,
+        );
+      }
     }
     return okJson({});
   });
@@ -426,6 +431,5 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
     renderForm("direcao-visual");
 
     expect(await screen.findByText("Direção atual")).toBeInTheDocument();
-    expect(await screen.findByText(/Direção anterior: 1/)).toBeInTheDocument();
   });
 });

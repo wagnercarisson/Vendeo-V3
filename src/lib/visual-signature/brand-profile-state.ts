@@ -165,8 +165,8 @@ export function deriveBrandProfileState(params: {
       const logoFallback = synced.find(
         (record) =>
           record.source === "logo_analysis" &&
-          (params.fallbackLogoAssetId == null ||
-            record.active_logo_asset_id === params.fallbackLogoAssetId),
+          params.fallbackLogoAssetId != null &&
+          record.active_logo_asset_id === params.fallbackLogoAssetId,
       );
       if (logoFallback) {
         current = logoFallback;
