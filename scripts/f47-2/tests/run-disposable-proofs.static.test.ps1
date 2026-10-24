@@ -1,0 +1,41 @@
+$ErrorActionPreference = 'Stop'
+$Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
+$Runner = Join-Path $Repo 'scripts\f47-2\run-disposable-proofs.ps1'
+$Manifest = 'C:\Users\wagne\AppData\Local\Temp\opencode\f47-2-compose-review\compose.yaml'
+
+$tokens = $null
+$parseErrors = $null
+[System.Management.Automation.Language.Parser]::ParseFile($Runner, [ref]$tokens, [ref]$parseErrors) | Out-Null
+if ($parseErrors.Count -gt 0) { throw 'Runner has PowerShell parse errors.' }
+
+$source = Get-Content -LiteralPath $Runner -Raw
+foreach ($required in @(
+    "'environment', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop'",
+    '-ConfirmStart', '-ConfirmMigrations', '-ConfirmInvariants', '-ConfirmCompatibility', '-ConfirmStop',
+    "'--wait-timeout', '180'", '127.0.0.1:56322',
+    "'--db-url'", "-Operation 'list'", "-Operation 'up'", "EXPECTED_DB_PORT = '56322'",
+    'Stop-NewComposeProject', "'--timeout', '20'", 'partial run, never a Task 3 PASS',
+    'exact compatibility-new test inventory is not defined', 'ExpectedManifestHash',
+    'image ID differs from the stopped source service',
+    'inventory differs from the two preserved volumes'
+)) {
+    if (-not $source.Contains($required)) { throw "Runner missing required safety contract: $required" }
+}
+foreach ($forbidden in @('supabase status', 'supabase start', 'supabase stop', '--linked', 'migration repair', 'db reset', 'db push', 'compose down', 'down -v')) {
+    if ($source.Contains($forbidden)) { throw "Runner contains forbidden operation: $forbidden" }
+}
+if ($source -match 'Write-Output\s+\$result\.Lines|Write-Host\s+\$result\.Lines') {
+    throw 'Runner may print captured command output.'
+}
+
+if (Test-Path -LiteralPath $Manifest -PathType Leaf) {
+    $manifestObject = Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json
+    if ($manifestObject.services.kong.depends_on.rest.condition -ne 'service_started') {
+        throw 'Kong REST dependency must be service_started; REST is probed separately.'
+    }
+    if ($manifestObject.services.studio.environment.PSObject.Properties.Name -contains 'OPENAI_API_KEY') {
+        throw 'Studio provider credential must not be in the review manifest.'
+    }
+}
+
+Write-Output 'Offline static runner checks: PASS (PowerShell parser, gates, loopback target, bounded start, REST condition, secret/output guards).'
