@@ -55,6 +55,8 @@ export const POST = apiHandler(async (
     return NextResponse.json({ error: 'textOnlyOrigin é obrigatório (explicit ou implicit)' }, { status: 400 });
   }
 
+  let requestSnapshot: ReturnType<typeof buildStoreProfileInputSnapshot> | null = null;
+
   try {
     const { data: store, error: storeError } = await supabase
       .from('stores')
@@ -66,6 +68,8 @@ export const POST = apiHandler(async (
       inferenceLocks.delete(id);
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
     }
+
+    requestSnapshot = buildStoreProfileInputSnapshot(store);
 
     const service = new BrandTextOnlyInferenceService(
       isVisualSignatureSmokeNoRetry()
@@ -250,13 +254,8 @@ export const POST = apiHandler(async (
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    const { data: failureStore } = await supabase
-      .from('stores')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    const failureSnapshot = failureStore ? buildStoreProfileInputSnapshot(failureStore) : null;
+    const safeMessage = 'Não foi possível gerar a direção visual. Tente novamente.';
+    const failureSnapshot = requestSnapshot;
     const failureContext = failureSnapshot
       ? buildBrandProfileContext({
           origin: "text_only",
@@ -272,7 +271,7 @@ export const POST = apiHandler(async (
         source: 'text_only',
         status: 'failed',
         metadata: {
-          error: message,
+          error: safeMessage,
           attempt_snapshot: failureSnapshot,
           context_hash: failureContext?.contextHash ?? null,
           context: failureContext
@@ -283,7 +282,7 @@ export const POST = apiHandler(async (
             : null,
           failure: {
             code: "brand_profile_failed",
-            message,
+            message: safeMessage,
             origin: "text_only",
             identity_asset_id: null,
             at: new Date().toISOString(),
@@ -306,7 +305,7 @@ export const POST = apiHandler(async (
     return NextResponse.json({
       success: false,
       message: 'Não foi possível gerar a direção visual. Tente novamente.',
-      error: message,
+      error: 'brand_profile_failed',
     });
   }
 });

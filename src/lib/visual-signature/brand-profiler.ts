@@ -1223,15 +1223,16 @@ export class BrandProfilerWithoutLogoService {
 
     const brandColorsChosen = this.getBrandColorsChosen(input, { primary, secondary: '#999999', accent, background: '#FFFFFF' });
 
+    const safeMessage = 'Falha na análise do perfil de marca. Tente novamente.';
     const context = profileContext(input);
     const metadata: Record<string, unknown> = {
       context_hash: context.contextHash,
       context: { origin: context.origin, identity_asset_id: context.assetId },
-      error: errorMessage,
+      error: safeMessage,
       attempt_snapshot: profileInputSnapshot(input),
       failure: {
         code: "brand_profile_failed",
-        message: errorMessage,
+        message: safeMessage,
         origin: "without_logo",
         identity_asset_id: input.visualSignatureId,
         at: new Date().toISOString(),

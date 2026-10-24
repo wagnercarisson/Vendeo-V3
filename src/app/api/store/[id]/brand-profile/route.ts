@@ -96,6 +96,9 @@ async function getProfileState(storeId: string) {
   if (signatureResult.error) {
     return NextResponse.json({ error: signatureResult.error.message }, { status: 500 });
   }
+  if (assetsResult.error) {
+    return NextResponse.json({ error: assetsResult.error.message }, { status: 500 });
+  }
 
   const store = storeResult.data as Record<string, unknown>;
   const records = (profilesResult.data ?? []) as Array<{
@@ -117,10 +120,22 @@ async function getProfileState(storeId: string) {
         ? "without_logo"
         : "text_only";
 
-  const latestLogo = records.find(
-    (record) => record.source === "logo_analysis" && record.status === "synced",
-  );
   const activeLogoAssetId = (assetsResult.data?.[0]?.id as string | undefined) ?? null;
+  let removedLogoAssetId: string | null = null;
+  if (!activeLogoAssetId) {
+    const { data: removedAssets, error: removedError } = await supabase
+      .from("store_brand_assets")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("variant_type", "original")
+      .eq("status", "archived")
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    if (removedError) {
+      return NextResponse.json({ error: removedError.message }, { status: 500 });
+    }
+    removedLogoAssetId = (removedAssets?.[0]?.id as string | undefined) ?? null;
+  }
   const activeAssetId =
     activeOrigin === "without_logo"
       ? (signatureResult.data?.id ?? null)
@@ -128,8 +143,7 @@ async function getProfileState(storeId: string) {
         ? activeLogoAssetId
         : null;
 
-  const fallbackLogoAssetId =
-    latestLogo?.active_logo_asset_id ?? null;
+  const fallbackLogoAssetId = removedLogoAssetId;
 
   const snapshot: BrandProfileSnapshotFields = {
     segment: String(store.segment ?? ""),

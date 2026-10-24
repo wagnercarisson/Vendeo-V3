@@ -981,6 +981,33 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       const data = await res.json();
       if (!res.ok || data.success === false) {
         setBrandDirectorWarning(data.error || "Não foi possível atualizar a direção visual. Tente novamente.");
+        const stateRes = await fetch(`/api/store/${storeId}/brand-profile?view=state`);
+        if (stateRes.ok) {
+          const stateView = await stateRes.json();
+          const current = stateView.current;
+          setInferredProfile(
+            current?.status === 'synced'
+              ? {
+                  safe_color_tokens: current.safe_color_tokens,
+                  visual_style: current.visual_style,
+                  visual_tone: current.visual_tone,
+                  brand_personality: current.brand_personality,
+                  brand_colors_chosen: current.brand_colors_chosen,
+                  inferred_primary_color: current.inferred_primary_color,
+                  inferred_accent_color: current.inferred_accent_color,
+                  metadata: current.metadata,
+                }
+              : null,
+          );
+          setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
+          setProfileStateNotice(
+            stateView.state === "failed"
+              ? "Não foi possível atualizar a direção visual. O perfil anterior foi preservado e está identificado como anterior."
+              : stateView.currentKind === "logo_removed_fallback"
+                ? "O logo foi removido; a direção atual permanece como fallback até uma nova análise textual."
+                : null,
+          );
+        }
         return;
       }
       setBrandDirectorWarning(null);
@@ -1017,6 +1044,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           if (profile.logo_colors_detected?.length > 0) {
             setDetectedColors(profile.logo_colors_detected);
           }
+        } else {
+          setInferredProfile(null);
         }
       }
     } catch (err) {
