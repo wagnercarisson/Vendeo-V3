@@ -1,25 +1,24 @@
 #!/usr/bin/env node
 /**
- * F47.1 — Provas REAIS em Postgres local isolado da configuracao dedicada
- * da Assinatura Visual (tabela, CHECKs, RLS/grants, RPCs set/reset,
- * idempotencia, conflito por operation_id, auditoria, catalogo Luna e
- * concorrencia).
+ * HISTÓRICO F47.1 — NÃO COMPATÍVEL COM O SCHEMA COMBINADO F47.2.
  *
- * Garantias:
- *   * Conecta SOMENTE no Postgres local aprovado (host loopback + porta
- *     esperada por EXPECTED_DB_PORT). Recusa qualquer outro destino.
- *   * NAO chama provider, NAO faz push/deploy, NAO aplica migration.
- *   * Provas nao concorrentes rodam em UMA transacao com ROLLBACK: nenhuma
- *     escrita persistente no schema public.
- *   * Provas concorrentes usam um DATABASE descartavel criado e removido
- *     neste mesmo servidor local (as transacoes concorrentes precisam de
- *     commits reais; o schema public aprovado nunca e tocado).
- *   * Antes/depois compara EXATAMENTE a linha preexistente de
- *     visual_signature_model_config (incluindo config_version_id), a
- *     auditoria, o catalogo e ai_model_pricing.
+ * As RPCs antigas de set/reset foram removidas pela migration corretiva F47.2.
+ * Este harness é preservado apenas como evidência histórica da validação local
+ * da F47.1 e NÃO deve ser executado contra o schema combinado.
  *
- * Nunca imprime connection string, senha, chave ou token.
+ * O harness atual é `f47_2_visual_signature_release_proofs.mjs`.
+ *
+ * Para reproduzir apenas a F47.1, defina F47_1_HISTORICAL_PROOF=1.
  */
+const F47_1_HISTORICAL = process.env.F47_1_HISTORICAL_PROOF === "1";
+if (!F47_1_HISTORICAL) {
+  console.error(
+    "HISTORICO F47.1: harness incompativel com o schema F47.2 (RPCs removidas). " +
+      "Use f47_2_visual_signature_release_proofs.mjs. " +
+      "Para reproduzir apenas a F47.1, defina F47_1_HISTORICAL_PROOF=1.",
+  );
+  process.exit(2);
+}
 
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";

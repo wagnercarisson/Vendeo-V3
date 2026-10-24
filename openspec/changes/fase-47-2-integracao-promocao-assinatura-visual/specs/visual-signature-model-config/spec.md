@@ -261,10 +261,10 @@ liberação, estados derivados, `environment_scope`, `instance_identity`,
 - **THEN** a operação é recusada com `deactivate_required`
 - **AND** publicação e ativação permanecem inalteradas
 
-#### Scenario: Desativar preserva auditoria e limpa allowlist
+#### Scenario: Desativar preserva auditoria e mantém allowlist inativa
 - **WHEN** a desativação é acionada
 - **THEN** `activated_config_version_id` é anulado e o modo vira `none`
-- **AND** a allowlist é limpa
+- **AND** a allowlist é preservada inativa, para auditoria do reset
 - **AND** a publicação permanece e a auditoria registra a allowlist anterior
 - **AND** a geração volta ao caminho herdado
 

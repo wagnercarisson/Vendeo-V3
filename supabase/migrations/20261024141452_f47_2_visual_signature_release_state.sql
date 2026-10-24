@@ -81,10 +81,16 @@ CREATE POLICY "Service role can manage visual signature pilot stores"
   ON public.visual_signature_model_config_pilot_stores FOR ALL TO service_role
   USING (true) WITH CHECK (true);
 
+REVOKE ALL ON TABLE public.visual_signature_model_config FROM PUBLIC, anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.visual_signature_model_config FROM service_role;
+GRANT SELECT ON TABLE public.visual_signature_model_config TO service_role;
+
 REVOKE ALL ON TABLE public.visual_signature_model_config_release FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.visual_signature_model_config_pilot_stores FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.visual_signature_model_config_release TO service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.visual_signature_model_config_pilot_stores TO service_role;
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.visual_signature_model_config_release FROM service_role;
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.visual_signature_model_config_pilot_stores FROM service_role;
+GRANT SELECT ON TABLE public.visual_signature_model_config_release TO service_role;
+GRANT SELECT ON TABLE public.visual_signature_model_config_pilot_stores TO service_role;
 
 -- =============================================================================
 -- 4. RPC de set v2 — ambiente explícito e invalidação da liberação anterior
@@ -299,11 +305,13 @@ AS $$
 DECLARE
   v_config_version_id UUID;
   v_config_environment TEXT;
+  v_config_identity TEXT;
   v_release           public.visual_signature_model_config_release%ROWTYPE;
   v_existing_metadata JSONB;
   v_existing_action   TEXT;
   v_result            JSONB;
 BEGIN
+  IF p_published IS NULL THEN RAISE EXCEPTION 'invalid_published'; END IF;
   IF p_actor_id IS NULL THEN RAISE EXCEPTION 'missing_actor_id'; END IF;
   IF p_expected_config_version_id IS NULL THEN RAISE EXCEPTION 'missing_config_version_id'; END IF;
   IF p_reason IS NULL OR btrim(p_reason) = '' THEN RAISE EXCEPTION 'missing_reason'; END IF;
@@ -334,8 +342,8 @@ BEGIN
       || jsonb_build_object('success', true, 'idempotent', true);
   END IF;
 
-  SELECT config_version_id, environment_scope
-  INTO v_config_version_id, v_config_environment
+  SELECT config_version_id, environment_scope, instance_identity
+  INTO v_config_version_id, v_config_environment, v_config_identity
   FROM public.visual_signature_model_config
   WHERE scope = 'visual_signature'
   FOR UPDATE;
@@ -343,6 +351,9 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'config_missing'; END IF;
   IF v_config_version_id IS DISTINCT FROM p_expected_config_version_id THEN
     RAISE EXCEPTION 'config_version_mismatch';
+  END IF;
+  IF btrim(p_instance_identity) IS DISTINCT FROM v_config_identity THEN
+    RAISE EXCEPTION 'instance_identity_mismatch';
   END IF;
 
   SELECT * INTO v_release
@@ -425,6 +436,7 @@ AS $$
 DECLARE
   v_config_version_id UUID;
   v_config_environment TEXT;
+  v_config_identity TEXT;
   v_release           public.visual_signature_model_config_release%ROWTYPE;
   v_existing_metadata JSONB;
   v_existing_action   TEXT;
@@ -471,8 +483,8 @@ BEGIN
       || jsonb_build_object('success', true, 'idempotent', true);
   END IF;
 
-  SELECT config_version_id, environment_scope
-  INTO v_config_version_id, v_config_environment
+  SELECT config_version_id, environment_scope, instance_identity
+  INTO v_config_version_id, v_config_environment, v_config_identity
   FROM public.visual_signature_model_config
   WHERE scope = 'visual_signature'
   FOR UPDATE;
@@ -480,6 +492,9 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'config_missing'; END IF;
   IF v_config_version_id IS DISTINCT FROM p_expected_config_version_id THEN
     RAISE EXCEPTION 'config_version_mismatch';
+  END IF;
+  IF btrim(p_instance_identity) IS DISTINCT FROM v_config_identity THEN
+    RAISE EXCEPTION 'instance_identity_mismatch';
   END IF;
 
   SELECT * INTO v_release
@@ -507,7 +522,6 @@ BEGIN
     WHERE scope = 'visual_signature'
     RETURNING * INTO v_release;
 
-    DELETE FROM public.visual_signature_model_config_pilot_stores;
   ELSE
     IF v_release.published_config_version_id IS DISTINCT FROM v_config_version_id THEN
       RAISE EXCEPTION 'config_not_published';
@@ -610,6 +624,8 @@ SET search_path = ''
 AS $$
 DECLARE
   v_config_version_id UUID;
+  v_config_environment TEXT;
+  v_config_identity TEXT;
   v_release           public.visual_signature_model_config_release%ROWTYPE;
   v_existing_metadata JSONB;
   v_existing_action   TEXT;
@@ -648,7 +664,8 @@ BEGIN
       || jsonb_build_object('success', true, 'idempotent', true);
   END IF;
 
-  SELECT config_version_id INTO v_config_version_id
+  SELECT config_version_id, environment_scope, instance_identity
+  INTO v_config_version_id, v_config_environment, v_config_identity
   FROM public.visual_signature_model_config
   WHERE scope = 'visual_signature'
   FOR UPDATE;
@@ -656,6 +673,9 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'config_missing'; END IF;
   IF v_config_version_id IS DISTINCT FROM p_expected_config_version_id THEN
     RAISE EXCEPTION 'config_version_mismatch';
+  END IF;
+  IF btrim(p_instance_identity) IS DISTINCT FROM v_config_identity THEN
+    RAISE EXCEPTION 'instance_identity_mismatch';
   END IF;
 
   SELECT * INTO v_release

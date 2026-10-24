@@ -137,4 +137,74 @@ describe("F47.2 — migrations e liberação da Assinatura Visual", () => {
     expect(active472).not.toMatch(/INSERT INTO public\.supabase_migrations/i);
     expect(active472).not.toMatch(/https?:\/\//i);
   });
+
+  it("revoga DML direto do service_role e mantém SELECT + RPCs", () => {
+    for (const table of [
+      "visual_signature_model_config",
+      "visual_signature_model_config_release",
+      "visual_signature_model_config_pilot_stores",
+    ]) {
+      expect(active472).toMatch(
+        new RegExp(`REVOKE INSERT, UPDATE, DELETE ON TABLE public\\.${table} FROM service_role`),
+      );
+      expect(active472).toMatch(
+        new RegExp(`GRANT SELECT ON TABLE public\\.${table} TO service_role`),
+      );
+    }
+    expect(active472).not.toMatch(
+      /GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public\.visual_signature_model_config/,
+    );
+  });
+
+  it("rejeita publicação NULL e identidade divergente", () => {
+    expect(active472).toMatch(/IF p_published IS NULL THEN RAISE EXCEPTION 'invalid_published'/);
+    expect(active472).toContain("instance_identity_mismatch");
+    const publishFn = active472.slice(
+      active472.indexOf("FUNCTION public.admin_publish_visual_signature_model_config"),
+      active472.indexOf("FUNCTION public.admin_activate_visual_signature_model_config"),
+    );
+    expect(publishFn).toContain("invalid_published");
+    expect(publishFn).toContain("instance_identity_mismatch");
+    const activateFn = active472.slice(
+      active472.indexOf("FUNCTION public.admin_activate_visual_signature_model_config"),
+      active472.indexOf("FUNCTION public.admin_reset_visual_signature_model_config"),
+    );
+    expect(activateFn).toContain("instance_identity_mismatch");
+    const resetFn = active472.slice(
+      active472.indexOf("FUNCTION public.admin_reset_visual_signature_model_config"),
+      active472.indexOf("DROP FUNCTION IF EXISTS public.admin_set_visual_signature_model_config"),
+    );
+    expect(resetFn).toContain("instance_identity_mismatch");
+  });
+
+  it("desativação preserva allowlist inativa; reset limpa", () => {
+    const deactivateBlock = active472.slice(
+      active472.indexOf("IF p_mode = 'none'"),
+      active472.indexOf("ELSE", active472.indexOf("IF p_mode = 'none'")),
+    );
+    expect(deactivateBlock).not.toContain("DELETE FROM public.visual_signature_model_config_pilot_stores");
+    const resetBlock = active472.slice(
+      active472.indexOf("FUNCTION public.admin_reset_visual_signature_model_config"),
+      active472.indexOf("DROP FUNCTION IF EXISTS public.admin_set_visual_signature_model_config"),
+    );
+    expect(resetBlock).toContain("DELETE FROM public.visual_signature_model_config_pilot_stores");
+    expect(resetBlock).toContain("previous_pilot_stores");
+  });
+
+  it("separa harness histórico do harness combinado", () => {
+    const historical = readFileSync(
+      path.resolve(process.cwd(), "supabase", "proofs", "f47_1_visual_signature_model_config_proofs.mjs"),
+      "utf8",
+    );
+    const current = readFileSync(
+      path.resolve(process.cwd(), "supabase", "proofs", "f47_2_visual_signature_release_proofs.mjs"),
+      "utf8",
+    );
+    expect(historical).toContain("NÃO COMPATÍVEL COM O SCHEMA COMBINADO F47.2");
+    expect(historical).toContain("F47_1_HISTORICAL_PROOF");
+    expect(current).toContain("admin_set_visual_signature_model_config_v2");
+    expect(current).toContain("admin_publish_visual_signature_model_config");
+    expect(current).toContain("invalid_published");
+    expect(current).toContain("instance_identity_mismatch");
+  });
 });
