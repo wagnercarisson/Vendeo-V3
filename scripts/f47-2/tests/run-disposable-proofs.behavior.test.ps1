@@ -11,6 +11,17 @@ function Assert-Test {
 $temporary = Join-Path ([IO.Path]::GetTempPath()) ('f47-2-runner-fakes-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temporary | Out-Null
 try {
+    $composeManifestFixture = Join-Path $temporary 'compose-review.json'
+    $composeManifestHash = 'A' * 64
+    Set-Content -LiteralPath $composeManifestFixture -Value '{"services":{}}' -Encoding utf8
+    $composeManifestHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $composeManifestFixture).Hash
+    function Invoke-ProvisionScopeManifestRegression {
+        param([string]$ComposePath, [string]$ExpectedHash)
+        $manifest = @{ '20260101000000_fixture.sql' = ('B' * 64) }
+        Assert-ComposeManifestArtifact -Path $ComposePath -ExpectedHash $ExpectedHash
+    }
+    Assert-Test (Invoke-ProvisionScopeManifestRegression -ComposePath $composeManifestFixture -ExpectedHash $composeManifestHash) 'Compose manifest validation remains bound to its path when invoked inside a provision-like scope containing a migration hash table.'
+
     $fake = Join-Path $temporary 'fake-command.ps1'
     @'
 param([string]$Mode)

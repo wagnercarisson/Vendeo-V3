@@ -18,7 +18,7 @@ Import-Module -Name $RunnerModule -Force -ErrorAction Stop
 
 $ProjectId = 'vendeo_f47_2_disposable_20261024'
 $ComposeProject = 'vendeo_f47_2_disposable_compose_20261024'
-$Manifest = 'C:\Users\wagne\AppData\Local\Temp\opencode\f47-2-compose-review\compose.yaml'
+$ComposeManifestPath = 'C:\Users\wagne\AppData\Local\Temp\opencode\f47-2-compose-review\compose.yaml'
 $ExpectedManifestHash = 'AEC60160266A80F08AAB6FB18AC0E4F5B8233BE992D1896517EDAD5BE7A9F1C1'
 $Workdir = 'C:\Users\wagne\AppData\Local\Temp\opencode\vendeo-f47-2-disposable'
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -37,7 +37,7 @@ function Invoke-DockerJson {
 
 function Invoke-Compose {
     param([string[]]$Arguments, [int]$TimeoutMilliseconds = 30000)
-    $composeArguments = New-ComposeArguments -ProjectName $ComposeProject -ManifestPath $Manifest -Arguments $Arguments
+    $composeArguments = New-ComposeArguments -ProjectName $ComposeProject -ManifestPath $ComposeManifestPath -Arguments $Arguments
     return Invoke-Captured -FilePath 'docker' -Arguments $composeArguments -TimeoutMilliseconds $TimeoutMilliseconds
 }
 
@@ -50,10 +50,7 @@ function Write-SafeProcessDiagnostic {
 }
 
 function Assert-ReviewInputs {
-    if (-not (Test-Path -LiteralPath $Manifest -PathType Leaf)) { throw 'Restricted review manifest is missing.' }
-    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $Manifest).Hash -ne $ExpectedManifestHash) {
-        throw 'Compose manifest SHA-256 differs from the reviewed artifact.'
-    }
+    $null = Assert-ComposeManifestArtifact -Path $ComposeManifestPath -ExpectedHash $ExpectedManifestHash
     if (-not (Test-Path -LiteralPath (Join-Path $Workdir 'supabase\config.toml') -PathType Leaf)) { throw 'Disposable Supabase config is missing.' }
     if (-not (Test-Path -LiteralPath $Cli -PathType Leaf)) { throw 'Pinned Supabase CLI executable is missing.' }
     if (-not (Test-Path -LiteralPath $MigrationHashFile -PathType Leaf)) { throw 'Migration hash manifest is missing.' }
@@ -80,15 +77,15 @@ function Assert-ReviewInputs {
     foreach ($volume in @("supabase_db_$ProjectId", "supabase_storage_$ProjectId")) {
         if (-not $resolved.volumes.$volume.external) { throw 'Reviewed DB/Storage volume must remain external.' }
     }
-    try { $manifestObject = Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json }
+    try { $ComposeManifestObject = Get-Content -LiteralPath $ComposeManifestPath -Raw | ConvertFrom-Json }
     catch { throw 'Restricted Compose manifest is not valid JSON/YAML; output suppressed.' }
-    if ($manifestObject.services.kong.depends_on.rest.condition -ne 'service_started') {
+    if ($ComposeManifestObject.services.kong.depends_on.rest.condition -ne 'service_started') {
         throw 'Kong REST dependency must be service_started; REST readiness is probed separately.'
     }
-    if ($manifestObject.services.studio.environment.PSObject.Properties.Name -contains 'OPENAI_API_KEY') {
+    if ($ComposeManifestObject.services.studio.environment.PSObject.Properties.Name -contains 'OPENAI_API_KEY') {
         throw 'Provider credential must not be present in the disposable review manifest.'
     }
-    foreach ($service in $manifestObject.services.PSObject.Properties) {
+    foreach ($service in $ComposeManifestObject.services.PSObject.Properties) {
         if ($service.Value.restart -ne 'no') { throw 'All disposable services must have restart=no.' }
         foreach ($port in $service.Value.ports) {
             if ($port.host_ip -ne '127.0.0.1') { throw 'Manifest contains a non-loopback published port.' }
@@ -492,7 +489,7 @@ function Assert-RunningEnvironment {
 
 function Invoke-Provision {
     if (-not $ConfirmMigrations) { throw 'Migration application requires the separate -ConfirmMigrations human gate.' }
-    $manifest = Read-MigrationManifest
+    $migrationHashes = Read-MigrationManifest
     $source = Join-Path $Repo 'supabase\migrations'
     $target = Join-Path $Workdir 'supabase\migrations'
     $files = @(Get-ChildItem -LiteralPath $source -Filter '*.sql' -File)
@@ -500,7 +497,7 @@ function Invoke-Provision {
         throw 'Source/target migration inventory mismatch; refusing to copy.'
     }
     foreach ($file in $files) {
-        if (-not $manifest.ContainsKey($file.Name) -or (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
+        if (-not $migrationHashes.ContainsKey($file.Name) -or (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $migrationHashes[$file.Name]) {
             throw 'Source migration hash mismatch; refusing to copy.'
         }
     }
@@ -528,7 +525,7 @@ function Invoke-Provision {
         throw 'Provision resume validation failed; existing project was stopped. No migrations were started; do not retry without review.'
     }
 
-    $expected = @($manifest.Keys | ForEach-Object { $_.Substring(0, 14) } | Sort-Object -Unique)
+    $expected = @($migrationHashes.Keys | ForEach-Object { $_.Substring(0, 14) } | Sort-Object -Unique)
     $provisionOutcome = Invoke-ProvisionWorkWithRestrictedStop `
         -PrepareAction {
             [pscustomobject]@{ DatabaseUrl = Get-LocalDatabaseUrl }
@@ -542,7 +539,7 @@ function Invoke-Provision {
         -CopyAction {
             param($context)
             foreach ($file in $files) {
-                if ((Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
+                if ((Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $migrationHashes[$file.Name]) {
                     throw 'Source migration hash changed after preflight; copy blocked.'
                 }
             }
@@ -550,7 +547,7 @@ function Invoke-Provision {
             $copiedFiles = @(Get-ChildItem -LiteralPath $target -Filter '*.sql' -File)
             if ($copiedFiles.Count -ne $ExpectedMigrationCount) { throw 'Copied migration count differs from the approved batch.' }
             foreach ($file in $copiedFiles) {
-                if (-not $manifest.ContainsKey($file.Name) -or (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $manifest[$file.Name]) {
+                if (-not $migrationHashes.ContainsKey($file.Name) -or (Get-FileHash -Algorithm SHA256 -LiteralPath $file.FullName).Hash -ne $migrationHashes[$file.Name]) {
                     throw 'Copied migration hash mismatch; application blocked.'
                 }
             }

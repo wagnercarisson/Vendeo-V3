@@ -93,6 +93,18 @@ function New-ComposeArguments {
     return @('compose', '-p', $ProjectName, '-f', $ManifestPath) + $Arguments
 }
 
+function Assert-ComposeManifestArtifact {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ExpectedHash
+    )
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw 'Restricted review manifest is missing.' }
+    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash -ne $ExpectedHash.ToUpperInvariant()) {
+        throw 'Compose manifest SHA-256 differs from the reviewed artifact.'
+    }
+    return $true
+}
+
 function Get-SafeProcessFailureCategory {
     param([Parameter(Mandatory = $true)][object]$Result)
     if ($Result.StartError) { return 'process_start_error' }
@@ -385,4 +397,4 @@ function Invoke-ProvisionWorkWithRestrictedStop {
     }
 }
 
-Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Resolve-LedgerCheckpoint, Resolve-LedgerRelationProbeOutput, Get-MigrationProcessTimeout, Invoke-StartupWithRestrictedCleanup, Invoke-ProvisionWorkWithRestrictedStop
+Export-ModuleMember -Function Invoke-Captured, New-ComposeArguments, Assert-ComposeManifestArtifact, New-SafeProcessDiagnostic, Get-SafeProcessFailureCategory, Resolve-ComposeStopVerification, New-RestReadinessProbe, Get-HostPortBindings, Assert-ExpectedHostPortBindings, Assert-ResumeContainerInventory, Assert-SameContainerIds, Resolve-LedgerCheckpoint, Resolve-LedgerRelationProbeOutput, Get-MigrationProcessTimeout, Invoke-StartupWithRestrictedCleanup, Invoke-ProvisionWorkWithRestrictedStop

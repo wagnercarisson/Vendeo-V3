@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Runner = Join-Path $Repo 'scripts\f47-2\run-disposable-proofs.ps1'
 $Module = Join-Path $Repo 'scripts\f47-2\lib\DisposableRunner.psm1'
-$Manifest = 'C:\Users\wagne\AppData\Local\Temp\opencode\f47-2-compose-review\compose.yaml'
+$ComposeManifestPath = 'C:\Users\wagne\AppData\Local\Temp\opencode\f47-2-compose-review\compose.yaml'
 
 $tokens = $null
 $parseErrors = $null
@@ -33,6 +33,7 @@ foreach ($required in @(
     "-TimeoutMilliseconds 120000", 'compose_stop_state_check',
     "-Stage 'ledger_select_sql'", 'migration_${Operation}_cli',
     'Resolve-ComposeStopVerification', 'Assert-ExistingComposeForResume', 'Get-MigrationProcessTimeout',
+    'Assert-ComposeManifestArtifact', '$ComposeManifestPath', '$migrationHashes',
     "'start', '--wait', '--wait-timeout', '180'", 'Assert-ResumeContainerInventory',
     'Assert-SameContainerIds', 'Test-DisposableResumePreflight', 'Invoke-ProvisionWorkWithRestrictedStop',
     'no start/stop performed.'
@@ -69,8 +70,8 @@ if ($source -match 'Write-Output\s+\$result\.Lines|Write-Host\s+\$result\.Lines'
     throw 'Runner may print captured command output.'
 }
 
-if (Test-Path -LiteralPath $Manifest -PathType Leaf) {
-    $manifestObject = Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json
+if (Test-Path -LiteralPath $ComposeManifestPath -PathType Leaf) {
+    $manifestObject = Get-Content -LiteralPath $ComposeManifestPath -Raw | ConvertFrom-Json
     if ($manifestObject.services.kong.depends_on.rest.condition -ne 'service_started') {
         throw 'Kong REST dependency must be service_started; REST is probed separately.'
     }
