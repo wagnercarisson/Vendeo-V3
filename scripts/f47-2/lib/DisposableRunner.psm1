@@ -229,8 +229,8 @@ function Assert-ResumeContainerInventory {
             throw 'Existing Compose container name/state/project/image identity differs from the reviewed inventory.'
         }
 
-        $expectedMounts = @($expected.Mounts)
-        $actualMounts = @($container.Mounts)
+        $expectedMounts = @($expected.Mounts | Where-Object { $null -ne $_ })
+        $actualMounts = @($container.Mounts | Where-Object { $null -ne $_ })
         if ($actualMounts.Count -ne $expectedMounts.Count) { throw 'Existing Compose mount count differs from the reviewed inventory.' }
         foreach ($mount in $expectedMounts) {
             $sourceProperty = if ($mount.Type -eq 'volume') { 'Name' } else { 'Source' }

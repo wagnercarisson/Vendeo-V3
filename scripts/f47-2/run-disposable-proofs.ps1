@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('environment', 'resume-checkpoint', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop')]
+    [ValidateSet('environment', 'resume-preflight', 'resume-checkpoint', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop')]
     [string]$Stage,
 
     [switch]$ConfirmStart,
@@ -181,7 +181,7 @@ function Assert-ExistingComposeForResume {
             Write-SafeProcessDiagnostic -Stage 'resume_image_inspect' -Result $imageResult
             throw 'A reviewed image is not available locally; resume will not pull or recreate it.'
         }
-        $mounts = @($service.volumes | ForEach-Object {
+        $mounts = @($service.volumes | Where-Object { $null -ne $_ } | ForEach-Object {
             [pscustomobject]@{
                 Type = [string]$_.type
                 Source = [string]$_.source
@@ -433,6 +433,11 @@ function Resume-DisposableCheckpoint {
     Write-Output 'Resume used existing container IDs; CLI list and SQL ledger SELECT completed; ledger row count=0; dedicated project stopped and verified.'
 }
 
+function Test-DisposableResumePreflight {
+    $containers = @(Assert-ExistingComposeForResume)
+    Write-Output ("Resume preflight PASS; existing containers={0}; no start/stop performed." -f $containers.Count)
+}
+
 function Assert-RunningEnvironment {
     Assert-ReviewInputs
     Assert-LoopbackBindingsAndHealth
@@ -498,6 +503,7 @@ function Invoke-SignatureProof {
 
 switch ($Stage) {
     'environment' { Start-DisposableEnvironment }
+    'resume-preflight' { Test-DisposableResumePreflight }
     'resume-checkpoint' { Resume-DisposableCheckpoint }
     'checkpoint' {
         Assert-RunningEnvironment

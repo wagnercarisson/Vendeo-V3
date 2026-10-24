@@ -12,7 +12,7 @@ if ($parseErrors.Count -gt 0) { throw 'Runner has PowerShell parse errors.' }
 $source = Get-Content -LiteralPath $Runner -Raw
 $moduleSource = Get-Content -LiteralPath $Module -Raw
 foreach ($required in @(
-    "'environment', 'resume-checkpoint', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop'",
+    "'environment', 'resume-preflight', 'resume-checkpoint', 'checkpoint', 'provision', 'invariants', 'compatibility-new', 'stop'",
     '-ConfirmStart', '-ConfirmResume', '-ConfirmMigrations', '-ConfirmInvariants', '-ConfirmCompatibility', '-ConfirmStop',
     "'--wait-timeout', '180'", '127.0.0.1:56322',
     "'--db-url'", "-Operation 'list'", "-Operation 'up'", "EXPECTED_DB_PORT = '56322'",
@@ -24,7 +24,8 @@ foreach ($required in @(
     "-Stage 'ledger_select_sql'", 'migration_${Operation}_cli',
     'Resolve-ComposeStopVerification', 'Assert-ExistingComposeForResume',
     "'start', '--wait', '--wait-timeout', '180'", 'Assert-ResumeContainerInventory',
-    'Assert-SameContainerIds'
+    'Assert-SameContainerIds', 'Test-DisposableResumePreflight',
+    'no start/stop performed.'
 )) {
     if (-not $source.Contains($required)) { throw "Runner missing required safety contract: $required" }
 }

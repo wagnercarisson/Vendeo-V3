@@ -156,7 +156,37 @@ try { Assert-SameContainerIds -Before @('id-a', 'id-b') -After @('id-a', 'id-new
 catch { $recreatedIdsRejected = $true }
 Assert-Test $recreatedIdsRejected 'Resume blocks if Compose recreated even one container.'
 
-Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, PSCustomObject wildcard/exact bindings, stderr suppression, sanitized diagnostics, process timeout, restricted cleanup/stop-state verification, resume identity/image/volume checks).'
+$noMountLabels = [pscustomobject]@{
+    'com.docker.compose.service' = 'rest'
+    'com.docker.compose.project' = 'vendeo_f47_2_disposable_compose_20261024'
+    'com.supabase.cli.project' = 'vendeo_f47_2_disposable_20261024'
+}
+$noMountContainer = [pscustomobject]@{
+    Name = '/supabase_rest_vendeo_f47_2_disposable_20261024_compose'
+    State = [pscustomobject]@{ Status = 'exited' }
+    Config = [pscustomobject]@{ Labels = $noMountLabels; Image = 'rest:reviewed' }
+    HostConfig = [pscustomobject]@{ RestartPolicy = [pscustomobject]@{ Name = '' } }
+    Image = 'sha256:rest-image-id'
+    Mounts = @($null)
+}
+$noMountService = [pscustomobject]@{ Service = 'rest'; Image = 'rest:reviewed'; ImageId = 'sha256:rest-image-id'; Mounts = @($null) }
+Assert-Test (Assert-ResumeContainerInventory -Containers @($noMountContainer) -ExpectedServices @($noMountService) -ComposeProject 'vendeo_f47_2_disposable_compose_20261024' -ProjectId 'vendeo_f47_2_disposable_20261024') 'A service with null/empty Compose and inspect mount lists is accepted as zero mounts.'
+
+$unexpectedExpectedVolume = $noMountService.PSObject.Copy()
+$unexpectedExpectedVolume.Mounts = @([pscustomobject]@{ Type = 'volume'; Source = 'unexpected-volume'; Target = '/unexpected'; ReadOnly = $false })
+$unexpectedVolumeRejected = $false
+try { Assert-ResumeContainerInventory -Containers @($noMountContainer) -ExpectedServices @($unexpectedExpectedVolume) -ComposeProject 'vendeo_f47_2_disposable_compose_20261024' -ProjectId 'vendeo_f47_2_disposable_20261024' }
+catch { $unexpectedVolumeRejected = $true }
+Assert-Test $unexpectedVolumeRejected 'A volume absent from the actual container is rejected.'
+
+$unexpectedActualVolume = $noMountContainer.PSObject.Copy()
+$unexpectedActualVolume.Mounts = @([pscustomobject]@{ Type = 'volume'; Name = 'unexpected-volume'; Destination = '/unexpected'; RW = $true })
+$unexpectedActualRejected = $false
+try { Assert-ResumeContainerInventory -Containers @($unexpectedActualVolume) -ExpectedServices @($noMountService) -ComposeProject 'vendeo_f47_2_disposable_compose_20261024' -ProjectId 'vendeo_f47_2_disposable_20261024' }
+catch { $unexpectedActualRejected = $true }
+Assert-Test $unexpectedActualRejected 'An unexpected actual mount on a service with no volumes is rejected.'
+
+Write-Output 'Offline behavioral runner tests: PASS (probe URL/timeout, PSCustomObject wildcard/exact bindings, stderr suppression, sanitized diagnostics, process timeout, restricted cleanup/stop-state verification, resume identity/image/volume checks, null/empty mount lists and unexpected mounts).'
 }
 finally {
     Remove-Item -LiteralPath $temporary -Recurse -Force -ErrorAction SilentlyContinue
