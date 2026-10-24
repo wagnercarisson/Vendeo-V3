@@ -1,0 +1,774 @@
+﻿
+> vendeo-v3@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.9 C:/Projetos/Vendeo V3
+
+ ÔØ» src/lib/credit/__tests__/credit-concurrency.test.ts (2 tests | 2 skipped) 14ms
+ ÔØ» src/lib/credit/__tests__/credit-idempotency.test.ts (2 tests | 2 skipped) 14ms
+ ÔØ» src/lib/__tests__/data-subject-requests.postgres.test.ts (4 tests | 4 skipped) 14ms
+ ÔØ» src/lib/__tests__/access-request-limit.postgres.test.ts (6 tests | 6 skipped) 12ms
+ ÔØ» src/lib/credit/__tests__/credit-f50-11-integration.test.ts (10 tests | 10 skipped) 18ms
+ ÔØ» src/lib/credit/__tests__/operation-cost-service.integration.test.ts (2 tests | 2 skipped) 398ms
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts (11 tests | 7 failed | 4 skipped) 23ms
+     ├ù (e) snapshot server-side + dire├º├úo de fundo LIDA da EVID├èNCIA CONGELADA ÔçÆ preservado 2ms
+     ├ù (f) gera├º├úo normal sem arte com claim `in_progress` ÔçÆ consulta/reload N├âO estorna 1ms
+     ├ù (g) principal falhou (claim `failed`), fallback ainda ser├í iniciado ÔçÆ N├âO estorna (janela principalÔåÆfallback) 1ms
+     ├ù (h) falha final (PF completo, 4a) ÔçÆ encerra e estorna UMA vez (decis├úo server-side) 1ms
+     ├ù (i) sem sinal de finalidade ÔçÆ exige encerramento AUTORIZADO+auditado (abandono do residual) 1ms
+     ├ù (j) encerramento (autom├ítico ou autorizado) impede atomicamente tentativa posterior (operation_terminal, sob C4) 1ms
+     ├ù falha final REAL do orquestrador grava `failed` e encerra via `product_1_1_close_failed_operation` (estorno UMA vez) 1ms
+ ÔØ» src/lib/product-1-1/__tests__/local-pilot-recovery.integration.test.ts (7 tests | 7 skipped) 9ms
+ ÔØ» src/lib/product-1-1/__tests__/copy-state.integration.test.ts (8 tests | 8 skipped) 11ms
+ ÔØ» src/__tests__/api/store-ownership-api.test.ts (17 tests | 1 failed) 809ms
+     ├ù ignores user_id in body (uses claims.sub) ÔÇö draft mode 11ms
+ ÔØ» src/lib/product-1-1/__tests__/pending-resolution.integration.test.ts (11 tests | 11 skipped) 15ms
+ ÔØ» tests/integration/product-1-1-credit-transaction.test.ts (20 tests | 20 skipped) 9ms
+ ÔØ» src/lib/ai/__tests__/image-generation-operations-repository.integration.test.ts (6 tests | 6 skipped) 9ms
+ ÔØ» src/lib/product-1-1/__tests__/artifact-download.integration.test.ts (7 tests | 7 skipped) 9ms
+ ÔØ» scripts/f56-2b2d/__tests__/release-gate.test.mjs (0 test)
+ ÔØ» src/lib/product-1-1/__tests__/credit-delivery.integration.test.ts (6 tests | 6 skipped) 12ms
+ ÔØ» src/lib/product-1-1/__tests__/publication-fence.integration.test.ts (9 tests | 9 skipped) 13ms
+ ÔØ» src/lib/product-1-1/__tests__/concurrent-route-submission.integration.test.ts (1 test | 1 skipped) 10ms
+ ÔØ» src/lib/product-1-1/__tests__/persisted-campaign.integration.test.ts (5 tests | 5 skipped) 10ms
+ ÔØ» src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts (13 tests | 13 skipped) 12ms
+ ÔØ» src/lib/product-1-1/__tests__/atomic-attempt.integration.test.ts (7 tests | 7 skipped) 18ms
+ ÔØ» scripts/f56-2e/__tests__/hosted-proofs.test.mjs (0 test)
+ ÔØ» src/lib/product-1-1/__tests__/copy-recovery.integration.test.ts (0 test)
+ ÔØ» src/lib/product-1-1/__tests__/recovery-seams.integration.test.ts (7 tests | 7 skipped) 11ms
+ ÔØ» src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts (10 tests | 3 failed) 4740ms
+     ├ù reconhece EXATAMENTE o conjunto autorizado de mudan├ºas de fronteira 68ms
+     ├ù n├úo autoriza modifica├º├úo de conte├║do nos caminhos autorizados adicionais 1970ms
+     ├ù aceita caminhos e conte├║dos quando id├¬nticos ao autorizado 2166ms
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: navigation to another Document
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: navigation to another Document
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Suites 24 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  tests/integration/product-1-1-credit-transaction.test.ts [ tests/integration/product-1-1-credit-transaction.test.ts ]
+Error: isolated_integration_requires_runner_and_preflight
+ ÔØ» tests/integration/product-1-1-credit-transaction.test.ts:168:11
+    166|
+    167|   if (!url || !serviceRoleKey || !databaseUrl) {
+    168|     throw new Error("isolated_integration_requires_runner_and_preflighÔÇª
+       |           ^
+    169|   }
+    170|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  scripts/f56-2b2d/__tests__/release-gate.test.mjs [ scripts/f56-2b2d/__tests__/release-gate.test.mjs ]
+SyntaxError: Invalid or unexpected token
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/__tests__/access-request-limit.postgres.test.ts [ src/lib/__tests__/access-request-limit.postgres.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» query src/lib/__tests__/access-request-limit.postgres.test.ts:12:4
+     10|
+     11| const query = async <T = Record<string, unknown>>(text: string, valuesÔÇª
+     12|   (await pool.query<T>(text, values)).rows;
+       |    ^
+     13|
+     14| const rpc = async <T = Record<string, unknown>>(args: unknown[]) => {
+ ÔØ» src/lib/__tests__/access-request-limit.postgres.test.ts:57:3
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[3/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/__tests__/data-subject-requests.postgres.test.ts [ src/lib/__tests__/data-subject-requests.postgres.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» src/lib/__tests__/data-subject-requests.postgres.test.ts:18:25
+     16| }
+     17|
+     18| beforeAll(async () => { await pool.query("select 1"); });
+       |                         ^
+     19| afterAll(async () => {
+     20|   await pool.query("set session_replication_role = replica");
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[4/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/__tests__/data-subject-requests.postgres.test.ts [ src/lib/__tests__/data-subject-requests.postgres.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» src/lib/__tests__/data-subject-requests.postgres.test.ts:20:3
+     18| beforeAll(async () => { await pool.query("select 1"); });
+     19| afterAll(async () => {
+     20|   await pool.query("set session_replication_role = replica");
+       |   ^
+     21|   if (requests.length) await pool.query("delete from public.data_subjeÔÇª
+     22|   if (operations.length) await pool.query("delete from public.admin_auÔÇª
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[5/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  scripts/f56-2e/__tests__/hosted-proofs.test.mjs [ scripts/f56-2e/__tests__/hosted-proofs.test.mjs ]
+SyntaxError: Invalid or unexpected token
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[6/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/ai/__tests__/image-generation-operations-repository.integration.test.ts > image-generation-operations-repository ÔÇö PostgreSQL isolated integration (F56.2a)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» src/lib/ai/__tests__/image-generation-operations-repository.integration.test.ts:122:13
+    120|
+    121|     if (!url || !serviceRoleKey || !databaseUrl) {
+    122|       throw new Error("isolated_integration_requires_runner_and_redactÔÇª
+       |             ^
+    123|     }
+    124|     if (url !== LOCAL_API_URL) {
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[7/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/credit/__tests__/credit-concurrency.test.ts [ src/lib/credit/__tests__/credit-concurrency.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» src/lib/credit/__tests__/credit-concurrency.test.ts:29:25
+     27| }
+     28|
+     29| beforeAll(async () => { await pool.query("select 1"); });
+       |                         ^
+     30|
+     31| afterAll(async () => {
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[8/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/credit/__tests__/credit-concurrency.test.ts [ src/lib/credit/__tests__/credit-concurrency.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» src/lib/credit/__tests__/credit-concurrency.test.ts:32:3
+     30|
+     31| afterAll(async () => {
+     32|   await pool.query("set session_replication_role = replica");
+       |   ^
+     33|   if (stores.length) await pool.query("delete from public.stores whereÔÇª
+     34|   if (users.length) await pool.query("delete from auth.users where id ÔÇª
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[9/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/credit/__tests__/credit-f50-11-integration.test.ts [ src/lib/credit/__tests__/credit-f50-11-integration.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» query src/lib/credit/__tests__/credit-f50-11-integration.test.ts:9:11
+      7|
+      8| async function query<T = Record<string, unknown>>(sql: string, values:ÔÇª
+      9|   return (await pool.query<T>(sql, values)).rows;
+       |           ^
+     10| }
+     11|
+ ÔØ» src/lib/credit/__tests__/credit-f50-11-integration.test.ts:30:25
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[10/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/credit/__tests__/credit-f50-11-integration.test.ts [ src/lib/credit/__tests__/credit-f50-11-integration.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» query src/lib/credit/__tests__/credit-f50-11-integration.test.ts:9:11
+      7|
+      8| async function query<T = Record<string, unknown>>(sql: string, values:ÔÇª
+      9|   return (await pool.query<T>(sql, values)).rows;
+       |           ^
+     10| }
+     11|
+ ÔØ» src/lib/credit/__tests__/credit-f50-11-integration.test.ts:32:3
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[11/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/credit/__tests__/credit-idempotency.test.ts [ src/lib/credit/__tests__/credit-idempotency.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» q src/lib/credit/__tests__/credit-idempotency.test.ts:7:94
+      5| const stores: string[] = [];
+      6| const users: string[] = [];
+      7| async function q<T = Record<string, unknown>>(sql: string, values: unkÔÇª
+       |                                                                                              ^
+      8| async function rpc<T>(name: string, args: unknown[]) { return (await pÔÇª
+      9| async function fixture() {
+ ÔØ» src/lib/credit/__tests__/credit-idempotency.test.ts:15:25
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[12/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/credit/__tests__/credit-idempotency.test.ts [ src/lib/credit/__tests__/credit-idempotency.test.ts ]
+Error: connect ECONNREFUSED 127.0.0.1:54322
+ ÔØ» node_modules/pg-pool/index.js:45:11
+ ÔØ» src/lib/credit/__tests__/credit-idempotency.test.ts:16:24
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[13/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/credit/__tests__/operation-cost-service.integration.test.ts > OperationCostService integration (real DB)
+Error: Missing NEXT_PUBLIC_SUPABASE_URL
+ ÔØ» src/lib/supabase/server.ts:8:9
+      6| const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      7| if (!supabaseUrl) {
+      8|   throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+       |         ^
+      9| }
+     10|
+ ÔØ» src/lib/credit/operation-cost-service.ts:3:1
+ ÔØ» src/lib/credit/__tests__/operation-cost-service.integration.test.ts:34:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[14/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/artifact-download.integration.test.ts > F56.2b1b ÔÇö artifact download / Storage real
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/artifact-download.integration.test.ts:117:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[15/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/artifact-download.integration.test.ts > F56.2b1b ÔÇö artifact download / Storage real
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/artifact-download.integration.test.ts:128:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[16/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/atomic-attempt.integration.test.ts > F56.2b1b ÔÇö atomic attempt start (Postgres real / provider simulado)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/atomic-attempt.integration.test.ts:116:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[17/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/atomic-attempt.integration.test.ts > F56.2b1b ÔÇö atomic attempt start (Postgres real / provider simulado)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/atomic-attempt.integration.test.ts:124:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[18/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/concurrent-route-submission.integration.test.ts > F56.2b1b ÔÇö submiss├úo CONCORRENTE atrav├®s da ROTA REAL (Postgres/Storage real)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/concurrent-route-submission.integration.test.ts:244:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[19/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/concurrent-route-submission.integration.test.ts > F56.2b1b ÔÇö submiss├úo CONCORRENTE atrav├®s da ROTA REAL (Postgres/Storage real)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/concurrent-route-submission.integration.test.ts:255:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[20/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/copy-recovery.integration.test.ts [ src/lib/product-1-1/__tests__/copy-recovery.integration.test.ts ]
+Error: [vitest] There was an error when mocking a module. If you are using "vi.mock" factory, make sure there are no top level variables inside, since this call is hoisted to top of the file. Read more: https://vitest.dev/api/vi.html#vi-mock
+ ÔØ» src/lib/product-1-1/pilot/pilot-spend-repository.ts:5:1
+      3| import type { SupabaseClient } from "@supabase/supabase-js";
+      4|
+      5| import { supabaseAdmin } from "@/lib/supabase/server";
+       | ^
+      6|
+      7| /**
+System.Management.Automation.RemoteException
+Caused by: Error: supabaseUrl is required.
+ ÔØ» validateSupabaseUrl ../Vendeo%20V3/node_modules/@supabase/supabase-js/dist/index.mjs:405:25
+ ÔØ» new SupabaseClient ../Vendeo%20V3/node_modules/@supabase/supabase-js/dist/index.mjs:645:19
+ ÔØ» createClient ../Vendeo%20V3/node_modules/@supabase/supabase-js/dist/index.mjs:872:9
+ ÔØ» src/lib/product-1-1/__tests__/copy-recovery.integration.test.ts:47:18
+ ÔØ» src/lib/product-1-1/pilot/pilot-spend-repository.ts:5:1
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[21/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/copy-state.integration.test.ts > F56.2b1b ÔÇö copy state (Postgres real)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/copy-state.integration.test.ts:157:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[22/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/copy-state.integration.test.ts > F56.2b1b ÔÇö copy state (Postgres real)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/copy-state.integration.test.ts:163:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[23/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/credit-delivery.integration.test.ts > F56.2b1b ÔÇö credit delivery (Postgres real)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/credit-delivery.integration.test.ts:41:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[24/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/credit-delivery.integration.test.ts > F56.2b1b ÔÇö credit delivery (Postgres real)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/credit-delivery.integration.test.ts:48:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[25/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ÔÇö Camada 2: efeitos reais (a)-(d) do B2B-D8 (Postgres/Storage isolados)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts:147:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[26/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts > F56.2b1b ÔÇö integration corrections (Postgres/Storage real)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts:168:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[27/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts > F56.2b1b ÔÇö integration corrections (Postgres/Storage real)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts:175:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[28/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/local-pilot-recovery.integration.test.ts > F56.2.6 ÔÇö P1 REUSO LOCAL: recupera├º├úo e seguran├ºa (provider simulado)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» Module.requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» src/lib/product-1-1/__tests__/local-pilot-recovery.integration.test.ts:147:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[29/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/pending-resolution.integration.test.ts > F56.2b1b ÔÇö pending resolution (Postgres real)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/pending-resolution.integration.test.ts:92:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[30/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/pending-resolution.integration.test.ts > F56.2b1b ÔÇö pending resolution (Postgres real)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/pending-resolution.integration.test.ts:105:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[31/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/persisted-campaign.integration.test.ts > F56.2b1b ÔÇö persisted campaign / frozen evidence (Postgres/Storage real)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/persisted-campaign.integration.test.ts:144:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[32/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/persisted-campaign.integration.test.ts > F56.2b1b ÔÇö persisted campaign / frozen evidence (Postgres/Storage real)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/persisted-campaign.integration.test.ts:151:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[33/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/publication-fence.integration.test.ts > F56.2b2b ÔÇö Camada 2: FENCE de publica├º├úo (Recorte 1)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/publication-fence.integration.test.ts:199:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[34/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/publication-fence.integration.test.ts > F56.2b2b ÔÇö Camada 2: FENCE de publica├º├úo (Recorte 1)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/publication-fence.integration.test.ts:207:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[35/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/publication-fence.integration.test.ts > F56.2b2b ÔÇö Camada 2: BARREIRA p├│s-upload/pr├®-`mark` (orquestrador REAL + Storage local)
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/publication-fence.integration.test.ts:349:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[36/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/publication-fence.integration.test.ts > F56.2b2b ÔÇö Camada 2: BARREIRA p├│s-upload/pr├®-`mark` (orquestrador REAL + Storage local)
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/publication-fence.integration.test.ts:357:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[37/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/recovery-seams.integration.test.ts > F56.2b2b ÔÇö Camada 2 / SEAM (c): p├ígina REAL ÔåÆ formul├írio REAL ÔåÆ NOVA identidade
+Error: isolated_integration_requires_runner_and_redacted_preflight
+ ÔØ» requireIsolatedEnv src/lib/product-1-1/__tests__/integration-harness.ts:38:11
+     36|
+     37|   if (!url || !serviceRoleKey || !databaseUrl) {
+     38|     throw new Error("isolated_integration_requires_runner_and_redactedÔÇª
+       |           ^
+     39|   }
+     40|   if (url !== LOCAL_API_URL) throw new Error("isolated_integration_apiÔÇª
+ ÔØ» Module.createIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:52:15
+ ÔØ» src/lib/product-1-1/__tests__/recovery-seams.integration.test.ts:277:17
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[38/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/recovery-seams.integration.test.ts > F56.2b2b ÔÇö Camada 2 / SEAM (c): p├ígina REAL ÔåÆ formul├írio REAL ÔåÆ NOVA identidade
+TypeError: Cannot read properties of undefined (reading 'pg')
+ ÔØ» Module.closeIsolatedContext src/lib/product-1-1/__tests__/integration-harness.ts:64:11
+     62|
+     63| export async function closeIsolatedContext(ctx: Partial<IsolatedContexÔÇª
+     64|   if (ctx.pg) await ctx.pg.end().catch(() => undefined);
+       |           ^
+     65|   if (ctx.pg2) await ctx.pg2.end().catch(() => undefined);
+     66| }
+ ÔØ» src/lib/product-1-1/__tests__/recovery-seams.integration.test.ts:287:11
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[39/50]ÔÄ»
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 11 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/__tests__/api/store-ownership-api.test.ts > POST /api/store > ignores user_id in body (uses claims.sub) ÔÇö draft mode
+AssertionError: expected 'record_onboarding_completion' to be 'create_store_draft' // Object.is equality
+System.Management.Automation.RemoteException
+Expected: "create_store_draft"
+Received: "record_onboarding_completion"
+System.Management.Automation.RemoteException
+ ÔØ» src/__tests__/api/store-ownership-api.test.ts:223:26
+    221|     const res = await POST(createReq("POST", { name: "Minha Loja", segÔÇª
+    222|     expect(res.status).toBe(201);
+    223|     expect(capturedName).toBe("create_store_draft");
+       |                          ^
+    224|     expect(capturedParams.p_user_id).toBe("user-123");
+    225|   });
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[40/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ÔÇö Camada 2: efeito (e) ÔÇö formul├írio restaurado (evid├¬ncia congelada + dire├º├úo de fundo) > (e) snapshot server-side + dire├º├úo de fundo LIDA da EVID├èNCIA CONGELADA ÔçÆ preservado
+TypeError: Cannot read properties of undefined (reading 'supabase')
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts:316:52
+    314| describe("F56.2b2b ÔÇö Camada 2: efeito (e) ÔÇö formul├írio restaurado (eviÔÇª
+    315|   it("(e) snapshot server-side + dire├º├úo de fundo LIDA da EVID├èNCIA COÔÇª
+    316|     const { data: campaignRow, error } = await ctx.supabase
+       |                                                    ^
+    317|       .from("campaigns")
+    318|       .insert({
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[41/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ÔÇö Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (f) gera├º├úo normal sem arte com claim `in_progress` ÔçÆ consulta/reload N├âO estorna
+TypeError: Cannot read properties of undefined (reading 'supabase')
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts:364:47
+    362| describe("F56.2b2b ÔÇö Camada 2: efeitos (f)-(j) e encerramento sob a trÔÇª
+    363|   it("(f) gera├º├úo normal sem arte com claim `in_progress` ÔçÆ consulta/rÔÇª
+    364|     const campaign = await createCampaign(ctx.supabase, storeId);
+       |                                               ^
+    365|     const operation = randomUUID();
+    366|     await reserveCredit(ctx.pg, storeId, campaign, operation);
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[42/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ÔÇö Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (g) principal falhou (claim `failed`), fallback ainda ser├í iniciado ÔçÆ N├âO estorna (janela principalÔåÆfallback)
+TypeError: Cannot read properties of undefined (reading 'supabase')
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts:387:47
+    385|
+    386|   it("(g) principal falhou (claim `failed`), fallback ainda ser├í iniciÔÇª
+    387|     const campaign = await createCampaign(ctx.supabase, storeId);
+       |                                               ^
+    388|     const operation = randomUUID();
+    389|     await reserveCredit(ctx.pg, storeId, campaign, operation);
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[43/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ÔÇö Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (h) falha final (PF completo, 4a) ÔçÆ encerra e estorna UMA vez (decis├úo server-side)
+TypeError: Cannot read properties of undefined (reading 'supabase')
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts:402:47
+    400|
+    401|   it("(h) falha final (PF completo, 4a) ÔçÆ encerra e estorna UMA vez (dÔÇª
+    402|     const campaign = await createCampaign(ctx.supabase, storeId);
+       |                                               ^
+    403|     const operation = randomUUID();
+    404|     await reserveCredit(ctx.pg, storeId, campaign, operation);
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[44/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ÔÇö Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (i) sem sinal de finalidade ÔçÆ exige encerramento AUTORIZADO+auditado (abandono do residual)
+TypeError: Cannot read properties of undefined (reading 'supabase')
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts:422:47
+    420|
+    421|   it("(i) sem sinal de finalidade ÔçÆ exige encerramento AUTORIZADO+audiÔÇª
+    422|     const campaign = await createCampaign(ctx.supabase, storeId);
+       |                                               ^
+    423|     const operation = randomUUID();
+    424|     await reserveCredit(ctx.pg, storeId, campaign, operation);
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[45/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ÔÇö Camada 2: efeitos (f)-(j) e encerramento sob a trava (C4) > (j) encerramento (autom├ítico ou autorizado) impede atomicamente tentativa posterior (operation_terminal, sob C4)
+TypeError: Cannot read properties of undefined (reading 'supabase')
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts:463:51
+    461|   it("(j) encerramento (autom├ítico ou autorizado) impede atomicamente ÔÇª
+    462|     // Autom├ítico: PF completo ÔçÆ refunded ÔçÆ acquire recusado.
+    463|     const autoCampaign = await createCampaign(ctx.supabase, storeId);
+       |                                                   ^
+    464|     const autoOp = randomUUID();
+    465|     await reserveCredit(ctx.pg, storeId, autoCampaign, autoOp);
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[46/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/failure-closure.integration.test.ts > F56.2b2b ÔÇö Camada 2 / SEAM (b): ORQUESTRADOR REAL ÔåÆ marcador `failed` ÔåÆ encerramento (PF) > falha final REAL do orquestrador grava `failed` e encerra via `product_1_1_close_failed_operation` (estorno UMA vez)
+TypeError: Cannot read properties of undefined (reading 'supabase')
+ ÔØ» src/lib/product-1-1/__tests__/failure-closure.integration.test.ts:503:47
+    501|
+    502|   it("falha final REAL do orquestrador grava `failed` e encerra via `pÔÇª
+    503|     const campaign = await createCampaign(ctx.supabase, storeId);
+       |                                               ^
+    504|     const operation = randomUUID();
+    505|     const cfg = config();
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[47/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts > legacy-frontier guard ÔÇö F56.2a > reconhece EXATAMENTE o conjunto autorizado de mudan├ºas de fronteira
+AssertionError: caminhos de fronteira n├úo autorizados: expected [ ÔÇª(28) ] to deeply equal []
+System.Management.Automation.RemoteException
+- Expected
++ Received
+System.Management.Automation.RemoteException
+- []
++ [
++   "src/lib/ai-cost/__tests__/visual-signature-cost.contract.test.ts",
++   "src/lib/ai-cost/__tests__/visual-signature-pricing.test.ts",
++   "src/lib/ai-cost/__tests__/visual-signature-usage.test.ts",
++   "src/lib/ai-cost/cost-estimator.ts",
++   "src/lib/ai-cost/types.ts",
++   "src/lib/ai-cost/visual-signature-pricing.ts",
++   "src/lib/ai-cost/visual-signature-usage.ts",
++   "src/lib/ai/__tests__/api-keys.test.ts",
++   "src/lib/ai/__tests__/brand-profile-credential-scope.test.ts",
++   "src/lib/ai/__tests__/deferred-telemetry-sink.test.ts",
++   "src/lib/ai/__tests__/responses-adapter-retry.test.ts",
++   "src/lib/ai/__tests__/responses-adapter-wire.test.ts",
++   "src/lib/ai/__tests__/visual-signature-luna-allowlist.contract.test.ts",
++   "src/lib/ai/__tests__/visual-signature-model-config-freeze.test.ts",
++   "src/lib/ai/__tests__/visual-signature-model-config-view.test.ts",
++   "src/lib/ai/__tests__/visual-signature-model-config.contract.test.ts",
++   "src/lib/ai/__tests__/visual-signature-release-reader.consistency.test.ts",
++   "src/lib/ai/__tests__/visual-signature-release-state.test.ts",
++   "src/lib/ai/__tests__/visual-signature-telemetry-fields.test.ts",
++   "src/lib/ai/__tests__/visual-signature-usage-path.test.ts",
++   "src/lib/ai/adapters/responses.ts",
++   "src/lib/ai/api-keys.ts",
++   "src/lib/ai/index.ts",
++   "src/lib/ai/visual-signature-frozen-resolver.ts",
++   "src/lib/ai/visual-signature-model-config-service.ts",
++   "src/lib/ai/visual-signature-model-config-view.ts",
++   "src/lib/ai/visual-signature-model-config.ts",
++   "src/lib/ai/visual-signature-validation-gateway.ts",
++ ]
+System.Management.Automation.RemoteException
+ ÔØ» src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts:359:60
+    357|
+    358|     // Conjunto exato: nenhum caminho N├âO autorizado e nenhum autorizaÔÇª
+    359|     expect(extra, "caminhos de fronteira n├úo autorizados").toEqual([]);
+       |                                                            ^
+    360|     expect(missing, "caminhos autorizados ausentes do diff").toEqual([ÔÇª
+    361|     expect(changed).toHaveLength(AUTHORIZED_FRONTIER_CHANGES.length);
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[48/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts > legacy-frontier guard ÔÇö F56.2a > n├úo autoriza modifica├º├úo de conte├║do nos caminhos autorizados adicionais
+
+ Test Files  25 failed | 563 passed | 3 skipped (591)
+AssertionError: expected [ 'src/lib/ai/types.ts', ÔÇª(4) ] to deeply equal []
+System.Management.Automation.RemoteException
+- Expected
++ Received
+System.Management.Automation.RemoteException
+- []
++ [
++   "src/lib/ai/types.ts",
++   "src/lib/ai/telemetry-sink.ts",
++   "src/lib/ai/adapters/chat-completions.ts",
++   "src/lib/ai/gateway.ts",
++   "src/lib/ai/model-registry.ts",
++ ]
+System.Management.Automation.RemoteException
+ ÔØ» src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts:373:24
+    371|     // O conte├║do ATUAL deve ser id├¬ntico ao conte├║do do commit aprovaÔÇª
+    372|     // autoriza├º├úo do caminho n├úo ├® autoriza├º├úo permanente para modifiÔÇª
+    373|     expect(mismatches).toEqual([]);
+       |                        ^
+    374|   });
+    375|
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[49/50]ÔÄ»
+System.Management.Automation.RemoteException
+ FAIL  src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts > legacy-frontier guard ÔÇö reconcilia├º├úo (testes negativos) > aceita caminhos e conte├║dos quando id├¬nticos ao autorizado
+AssertionError: expected [ 'src/lib/ai/types.ts', ÔÇª(4) ] to deeply equal []
+System.Management.Automation.RemoteException
+- Expected
++ Received
+System.Management.Automation.RemoteException
+- []
++ [
++   "src/lib/ai/types.ts",
++   "src/lib/ai/telemetry-sink.ts",
++   "src/lib/ai/adapters/chat-completions.ts",
++   "src/lib/ai/gateway.ts",
++   "src/lib/ai/model-registry.ts",
++ ]
+System.Management.Automation.RemoteException
+ ÔØ» src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts:555:24
+    553|       (commit, file) => git(["show", `${commit}:${file}`]),
+    554|     );
+    555|     expect(mismatches).toEqual([]);
+       |                        ^
+    556|   });
+    557| });
+System.Management.Automation.RemoteException
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[50/50]ÔÄ»
+System.Management.Automation.RemoteException
+      Tests  11 failed | 7028 passed | 161 skipped (7200)
+   Start at  14:33:43
+   Duration  73.17s (transform 44.01s, setup 0ms, import 153.48s, tests 167.56s, environment 214.61s)
+

@@ -1,7 +1,6 @@
 import "server-only";
 
 import { readVisualSignatureApiKey } from "@/lib/ai/api-keys";
-import { resolveCanonicalInstanceIdentity } from "@/lib/product-1-1/authorization/instance-identity";
 import {
   VISUAL_SIGNATURE_ENVIRONMENT_ERRORS,
   VisualSignatureEnvironmentError,
@@ -100,6 +99,16 @@ function mapEndpointError(error: unknown): VisualSignatureValidationGuardError {
     "visual_signature_validation_endpoint_not_loopback",
     { cause: error instanceof VisualSignatureLocalEnvironmentError ? error.code : error },
   );
+}
+
+function resolveCanonicalInstanceIdentity(): string {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!raw || raw.trim() === "") {
+    throw new Error("instance_identity_missing");
+  }
+  const url = new URL(raw);
+  if (!url.host) throw new Error("instance_identity_invalid");
+  return url.host;
 }
 
 export function assertVisualSignatureEnvironmentIdentity(): VisualSignatureValidationEnvironment {

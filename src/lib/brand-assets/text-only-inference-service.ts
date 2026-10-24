@@ -1,4 +1,4 @@
-﻿import { PromptLoader } from '@/lib/image-generation/prompt-loader';
+import { PromptLoader } from '@/lib/image-generation/prompt-loader';
 import type { TextOnlyInferenceInput, TextOnlyInferenceResult } from './types';
 import type { AiCallInfo } from '@/lib/ai-cost/types';
 import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
@@ -59,12 +59,12 @@ export class BrandTextOnlyInferenceService {
 
       return {
         safe_color_tokens: { primary: '#CC0000', secondary: '#666666', accent: '#CC0000', background: '#FFFFFF' },
-        visual_style: 'mock â€” desenvolvimento',
-        visual_tone: 'mock â€” desenvolvimento',
-        typography_direction: 'mock â€” desenvolvimento',
-        brand_personality: 'mock â€” desenvolvimento',
-        campaign_guidelines: 'mock â€” desenvolvimento',
-        campaign_brief: 'mock â€” desenvolvimento',
+        visual_style: 'mock — desenvolvimento',
+        visual_tone: 'mock — desenvolvimento',
+        typography_direction: 'mock — desenvolvimento',
+        brand_personality: 'mock — desenvolvimento',
+        campaign_guidelines: 'mock — desenvolvimento',
+        campaign_brief: 'mock — desenvolvimento',
         inferred_primary_color: '#CC0000',
         inferred_accent_color: '#CC0000',
         confidence_score: 0.1,
