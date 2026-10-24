@@ -139,6 +139,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const [hasActiveLogo, setHasActiveLogo] = useState(false);
   const [step2Success, setStep2Success] = useState<string | null>(null);
   const [analysisWarning, setAnalysisWarning] = useState<string | null>(null);
+  const [profileStateNotice, setProfileStateNotice] = useState<string | null>(null);
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -588,12 +589,13 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
     const load = async () => {
       try {
-        const [storeRes, logoRes, profileRes] = await Promise.all([
+        const [storeRes, logoRes, profileRes, stateRes] = await Promise.all([
           fetch(`/api/store/${storeId}`),
           fetch(`/api/store/${storeId}/logo`),
           // Perfil VIGENTE (synced) — separado da tentativa `failed` histórica, que
           // NÃO deve ser tratada como atual nem sobrepor as cores/direção vigentes.
           fetch(`/api/store/${storeId}/brand-profile?status=synced`),
+          fetch(`/api/store/${storeId}/brand-profile?view=state`),
         ]);
 
         if (storeRes.ok) {
@@ -660,6 +662,21 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                 }
               }
             } catch {}
+          }
+        }
+
+        if (stateRes.ok) {
+          const stateView = await stateRes.json();
+          if (stateView.state === "failed") {
+            setProfileStateNotice(
+              "Não foi possível atualizar a direção visual. O perfil anterior foi preservado e está identificado como anterior.",
+            );
+          } else if (stateView.currentKind === "logo_removed_fallback") {
+            setProfileStateNotice(
+              "O logo foi removido; a direção atual permanece como fallback até uma nova análise textual.",
+            );
+          } else {
+            setProfileStateNotice(null);
           }
         }
       } catch {}
@@ -2322,6 +2339,12 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                   <p className="mt-2 flex items-start gap-1.5 text-accent-amber text-xs bg-amber-900/20 border border-amber-700/30 rounded-lg px-3 py-2">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     <span>{analysisWarning}</span>
+                  </p>
+                )}
+                {profileStateNotice && (
+                  <p className="mt-2 flex items-start gap-1.5 text-accent-amber text-xs bg-amber-900/20 border border-amber-700/30 rounded-lg px-3 py-2">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>{profileStateNotice}</span>
                   </p>
                 )}
 
