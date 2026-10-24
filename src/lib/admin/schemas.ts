@@ -187,10 +187,37 @@ export const VisualSignatureModelConfigUpdateSchema = z
 
 export const VisualSignatureModelConfigResetSchema = z
   .object({
+    expectedConfigVersionId: z.string().uuid(),
     reason: z.string().trim().min(1).max(500),
     operationId: z.string().uuid(),
   })
   .strict();
+
+export const VisualSignatureModelConfigPublishSchema = z
+  .object({
+    action: z.literal("publish"),
+    expectedConfigVersionId: z.string().uuid(),
+    published: z.boolean(),
+    reason: z.string().trim().min(1).max(500),
+    operationId: z.string().uuid(),
+  })
+  .strict();
+
+export const VisualSignatureModelConfigActivateSchema = z
+  .object({
+    action: z.literal("activate"),
+    expectedConfigVersionId: z.string().uuid(),
+    mode: z.enum(["none", "pilot", "general"]),
+    pilotStoreIds: z.array(z.string().uuid()).max(100).optional(),
+    reason: z.string().trim().min(1).max(500),
+    operationId: z.string().uuid(),
+  })
+  .strict();
+
+export const VisualSignatureReleaseCommandSchema = z.discriminatedUnion("action", [
+  VisualSignatureModelConfigPublishSchema,
+  VisualSignatureModelConfigActivateSchema,
+]);
 
 /**
  * Body de PUT /api/admin/image-model-pair (F56.1, D-02/D-04).

@@ -242,6 +242,7 @@ describe("F47.1 — card da Assinatura Visual", () => {
     expect(url).toBe("/api/admin/visual-signature-model-config");
     expect(init.method).toBe("DELETE");
     expect(JSON.parse(init.body)).toEqual({
+      expectedConfigVersionId: "11111111-1111-4111-8111-111111111111",
       reason: "voltar ao herdado",
       operationId: "ui-operation-id",
     });

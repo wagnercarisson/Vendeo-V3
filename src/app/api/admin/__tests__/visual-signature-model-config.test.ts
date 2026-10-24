@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ForbiddenError } from "@/lib/auth/errors";
 
@@ -51,11 +51,11 @@ const OPERATION_ID = "11111111-1111-4111-8111-111111111111";
 const VALID_BODY = {
   orchestratorModel: "gpt-6-luna",
   imagePreset: "sunburst_medium",
-  reason: "decisão local aprovada",
+  reason: "decisÃ£o local aprovada",
   operationId: OPERATION_ID,
 };
 
-async function call(method: "GET" | "PUT" | "DELETE", body?: unknown) {
+async function call(method: "GET" | "PUT" | "POST" | "DELETE", body?: unknown) {
   const route = await import("../visual-signature-model-config/route");
   if (method === "GET") return route.GET();
   return route[method](
@@ -73,7 +73,7 @@ beforeEach(() => {
   mockRequireSameOrigin.mockReturnValue(undefined);
   mockGuard.mockReturnValue({ instanceIdentity: "127.0.0.1:57781" });
   mockRpc.mockResolvedValue({
-    data: { success: true, config_version_id: "version-1" },
+    data: { success: true, config_version_id: "11111111-1111-1111-1111-111111111111" },
     error: null,
   });
   mockBuildView.mockResolvedValue({
@@ -84,7 +84,7 @@ beforeEach(() => {
 });
 
 describe("GET /api/admin/visual-signature-model-config", () => {
-  it("nega não-admin sem ler a view", async () => {
+  it("nega nÃ£o-admin sem ler a view", async () => {
     mockRequireAdmin.mockRejectedValue(new ForbiddenError());
 
     const response = await call("GET");
@@ -104,19 +104,20 @@ describe("GET /api/admin/visual-signature-model-config", () => {
 });
 
 describe("PUT /api/admin/visual-signature-model-config", () => {
-  it("chama somente a RPC dedicada com reasoning low derivado e identidade canônica", async () => {
+  it("chama somente a RPC dedicada com reasoning low derivado e identidade canÃ´nica", async () => {
     const response = await call("PUT", VALID_BODY);
 
     expect(response.status).toBe(200);
     expect(mockRequireSameOrigin).toHaveBeenCalledTimes(1);
     expect(mockRpc).toHaveBeenCalledTimes(1);
-    expect(mockRpc).toHaveBeenCalledWith("admin_set_visual_signature_model_config", {
+    expect(mockRpc).toHaveBeenCalledWith("admin_set_visual_signature_model_config_v2", {
       p_actor_id: "admin-1",
       p_orchestrator_model: "gpt-6-luna",
       p_image_preset: "sunburst_medium",
       p_reasoning_effort: "low",
-      p_reason: "decisão local aprovada",
+      p_reason: "decisÃ£o local aprovada",
       p_operation_id: OPERATION_ID,
+      p_environment_scope: "local_validation",
       p_instance_identity: "127.0.0.1:57781",
     });
     expect(mockInvalidate).toHaveBeenCalledTimes(1);
@@ -167,7 +168,7 @@ describe("PUT /api/admin/visual-signature-model-config", () => {
     expect(JSON.stringify(body)).not.toContain("duplicate key");
   });
 
-  it("erro desconhecido da RPC não vaza mensagem bruta", async () => {
+  it("erro desconhecido da RPC nÃ£o vaza mensagem bruta", async () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: "permission denied for table x" } });
 
     const response = await call("PUT", VALID_BODY);
@@ -179,9 +180,54 @@ describe("PUT /api/admin/visual-signature-model-config", () => {
   });
 });
 
+describe("POST /api/admin/visual-signature-model-config", () => {
+  it("publica a versão vigente via RPC", async () => {
+    const response = await call("POST", {
+      action: "publish",
+      expectedConfigVersionId: "11111111-1111-1111-1111-111111111111",
+      published: true,
+      reason: "publicar",
+      operationId: OPERATION_ID,
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("admin_publish_visual_signature_model_config", {
+      p_actor_id: "admin-1",
+      p_published: true,
+      p_expected_config_version_id: "11111111-1111-1111-1111-111111111111",
+      p_reason: "publicar",
+      p_operation_id: OPERATION_ID,
+      p_instance_identity: "127.0.0.1:57781",
+    });
+  });
+
+  it("ativa piloto com allowlist via RPC", async () => {
+    const response = await call("POST", {
+      action: "activate",
+      expectedConfigVersionId: "11111111-1111-1111-1111-111111111111",
+      mode: "pilot",
+      pilotStoreIds: ["22222222-2222-2222-2222-222222222222"],
+      reason: "piloto",
+      operationId: OPERATION_ID,
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith("admin_activate_visual_signature_model_config", {
+      p_actor_id: "admin-1",
+      p_expected_config_version_id: "11111111-1111-1111-1111-111111111111",
+      p_mode: "pilot",
+      p_pilot_store_ids: ["22222222-2222-2222-2222-222222222222"],
+      p_reason: "piloto",
+      p_operation_id: OPERATION_ID,
+      p_instance_identity: "127.0.0.1:57781",
+    });
+  });
+});
+
 describe("DELETE /api/admin/visual-signature-model-config", () => {
   it("reset auditado chama a RPC de reset e invalida a leitura", async () => {
     const response = await call("DELETE", {
+      expectedConfigVersionId: "11111111-1111-1111-1111-111111111111",
       reason: "voltar ao herdado",
       operationId: OPERATION_ID,
     });
@@ -189,6 +235,7 @@ describe("DELETE /api/admin/visual-signature-model-config", () => {
     expect(response.status).toBe(200);
     expect(mockRpc).toHaveBeenCalledWith("admin_reset_visual_signature_model_config", {
       p_actor_id: "admin-1",
+      p_expected_config_version_id: "11111111-1111-1111-1111-111111111111",
       p_reason: "voltar ao herdado",
       p_operation_id: OPERATION_ID,
       p_instance_identity: "127.0.0.1:57781",
@@ -196,9 +243,12 @@ describe("DELETE /api/admin/visual-signature-model-config", () => {
     expect(mockInvalidate).toHaveBeenCalledTimes(1);
   });
 
-  it("reset exige motivo e operationId", async () => {
+  it("reset exige motivo, operationId e versÃ£o", async () => {
     expect((await call("DELETE", { reason: "", operationId: OPERATION_ID })).status).toBe(400);
     expect((await call("DELETE", { reason: "ok" })).status).toBe(400);
+    expect(
+      (await call("DELETE", { expectedConfigVersionId: "11111111-1111-1111-1111-111111111111", reason: "ok" })).status,
+    ).toBe(400);
     expect(mockRpc).not.toHaveBeenCalled();
   });
 });

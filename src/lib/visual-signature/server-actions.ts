@@ -159,11 +159,11 @@ function createAttemptTelemetryContext(params: {
  * Opt-in desligado ⇒ legado (gateway padrão). Opt-in ligado com qualquer falha
  * ⇒ erro fail-closed (sem débito/provider).
  */
-async function resolveVisualSignatureExecution(): Promise<{
+async function resolveVisualSignatureExecution(storeId: string): Promise<{
   config: VisualSignatureModelConfigSnapshot;
   invoker: AiInvoker;
 }> {
-  const config = await loadVisualSignatureModelConfigSnapshot();
+  const config = await loadVisualSignatureModelConfigSnapshot({ storeId });
   if (config.mode === "legacy") {
     return { config, invoker: defaultAiGateway };
   }
@@ -171,7 +171,13 @@ async function resolveVisualSignatureExecution(): Promise<{
     snapshot: config,
     fallbackResolver: defaultAiModelResolver,
   });
-  return { config, invoker: createVisualSignatureValidationGateway(resolver) };
+  return {
+    config,
+    invoker: createVisualSignatureValidationGateway(
+      resolver,
+      config.environment ?? "local_validation",
+    ),
+  };
 }
 
 async function getStore(storeId: string): Promise<Store> {
@@ -229,7 +235,7 @@ export async function generateVariations(
   // guard/serviço é fail-closed (nenhum débito/provider).
   let execution: Awaited<ReturnType<typeof resolveVisualSignatureExecution>>;
   try {
-    execution = await resolveVisualSignatureExecution();
+    execution = await resolveVisualSignatureExecution(storeId);
   } catch {
     return { success: false, error: "Configuração de validação local indisponível." };
   }
@@ -350,7 +356,7 @@ export async function generateAutomatic(storeId: string): Promise<
   // (arquivamento), débito ou provider.
   let execution: Awaited<ReturnType<typeof resolveVisualSignatureExecution>>;
   try {
-    execution = await resolveVisualSignatureExecution();
+    execution = await resolveVisualSignatureExecution(storeId);
   } catch {
     return { success: false, error: "Configuração de validação local indisponível." };
   }

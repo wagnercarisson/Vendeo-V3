@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import {
   VisualSignatureModelConfigResetSchema,
   VisualSignatureModelConfigUpdateSchema,
+  VisualSignatureReleaseCommandSchema,
 } from "@/lib/admin/schemas";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { requireSameOrigin } from "@/lib/auth/csrf";
@@ -45,6 +46,27 @@ const SAFE_RPC_CODES = [
   "visual_signature_validation_endpoint_not_loopback",
   "visual_signature_validation_instance_mismatch",
   "visual_signature_validation_provider_key_missing",
+  "visual_signature_environment_missing",
+  "visual_signature_environment_invalid",
+  "visual_signature_preview_forbidden",
+  "visual_signature_production_disabled",
+  "visual_signature_production_ref_missing",
+  "visual_signature_production_ref_mismatch",
+  "visual_signature_production_endpoint_invalid",
+  "missing_config_version_id",
+  "invalid_published",
+  "invalid_environment_scope",
+  "preset_not_evaluated",
+  "config_missing",
+  "release_state_missing",
+  "config_version_mismatch",
+  "instance_identity_mismatch",
+  "config_not_published",
+  "deactivate_required",
+  "invalid_activation_mode",
+  "pilot_allowlist_required",
+  "pilot_allowlist_not_allowed",
+  "invalid_pilot_store",
 ] as const;
 
 function safeCode(message: string, fallback: string): string {
@@ -108,14 +130,14 @@ export const PUT = apiHandler(async (request: Request) => {
   const body = await parseBody(request, VisualSignatureModelConfigUpdateSchema);
   if (body instanceof Response) return body;
 
-  let environment: { instanceIdentity: string };
+  let environment: { environment?: "local_validation" | "production"; instanceIdentity: string };
   try {
     environment = assertVisualSignatureValidationEnvironment();
   } catch (error) {
     return guardError(error);
   }
 
-  const { data, error } = await supabaseAdmin.rpc("admin_set_visual_signature_model_config", {
+  const { data, error } = await supabaseAdmin.rpc("admin_set_visual_signature_model_config_v2", {
     p_actor_id: admin.userId,
     p_orchestrator_model: body.orchestratorModel,
     p_image_preset: body.imagePreset,
@@ -123,12 +145,61 @@ export const PUT = apiHandler(async (request: Request) => {
     p_reasoning_effort: "low",
     p_reason: body.reason,
     p_operation_id: body.operationId,
+    p_environment_scope: environment.environment ?? "local_validation",
     p_instance_identity: environment.instanceIdentity,
   });
   if (error) return rpcError(error);
 
   invalidateVisualSignatureModelConfigCache();
   return NextResponse.json({ config: data });
+});
+
+export const POST = apiHandler(async (request: Request) => {
+  const admin = await requireAdmin();
+  requireSameOrigin(request);
+
+  const body = await parseBody(request, VisualSignatureReleaseCommandSchema);
+  if (body instanceof Response) return body;
+
+  let environment: { instanceIdentity: string };
+  try {
+    environment = assertVisualSignatureValidationEnvironment();
+  } catch (error) {
+    return guardError(error);
+  }
+
+  if (body.action === "publish") {
+    const { data, error } = await supabaseAdmin.rpc(
+      "admin_publish_visual_signature_model_config",
+      {
+        p_actor_id: admin.userId,
+        p_published: body.published,
+        p_expected_config_version_id: body.expectedConfigVersionId,
+        p_reason: body.reason,
+        p_operation_id: body.operationId,
+        p_instance_identity: environment.instanceIdentity,
+      },
+    );
+    if (error) return rpcError(error);
+    invalidateVisualSignatureModelConfigCache();
+    return NextResponse.json({ release: data });
+  }
+
+  const { data, error } = await supabaseAdmin.rpc(
+    "admin_activate_visual_signature_model_config",
+    {
+      p_actor_id: admin.userId,
+      p_expected_config_version_id: body.expectedConfigVersionId,
+      p_mode: body.mode,
+      p_pilot_store_ids: body.pilotStoreIds ?? null,
+      p_reason: body.reason,
+      p_operation_id: body.operationId,
+      p_instance_identity: environment.instanceIdentity,
+    },
+  );
+  if (error) return rpcError(error);
+  invalidateVisualSignatureModelConfigCache();
+  return NextResponse.json({ release: data });
 });
 
 export const DELETE = apiHandler(async (request: Request) => {
@@ -138,7 +209,7 @@ export const DELETE = apiHandler(async (request: Request) => {
   const body = await parseBody(request, VisualSignatureModelConfigResetSchema);
   if (body instanceof Response) return body;
 
-  let environment: { instanceIdentity: string };
+  let environment: { environment?: "local_validation" | "production"; instanceIdentity: string };
   try {
     environment = assertVisualSignatureValidationEnvironment();
   } catch (error) {
@@ -149,6 +220,7 @@ export const DELETE = apiHandler(async (request: Request) => {
     "admin_reset_visual_signature_model_config",
     {
       p_actor_id: admin.userId,
+      p_expected_config_version_id: body.expectedConfigVersionId,
       p_reason: body.reason,
       p_operation_id: body.operationId,
       p_instance_identity: environment.instanceIdentity,

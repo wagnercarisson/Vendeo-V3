@@ -40,6 +40,45 @@ export function getApiKey(provider: AiProvider): string {
  */
 export const VALIDATION_OPENAI_API_KEY_ENV = "VENDEO_VS_VALIDATION_OPENAI_API_KEY" as const;
 
+/** F47.2 — credencial operacional dedicada da Assinatura Visual em produção. */
+export const PRODUCTION_OPENAI_API_KEY_ENV = "VENDEO_VS_PRODUCTION_OPENAI_API_KEY" as const;
+
+export const OPERATIONAL_PROVIDER_KEY_MISSING =
+  "visual_signature_operational_provider_key_missing" as const;
+
+export class OperationalApiKeyMissingError extends Error {
+  readonly code = OPERATIONAL_PROVIDER_KEY_MISSING;
+
+  constructor(provider: AiProvider) {
+    super(`${OPERATIONAL_PROVIDER_KEY_MISSING}:${provider}`);
+    this.name = "OperationalApiKeyMissingError";
+  }
+}
+
+export function readOperationalApiKey(provider: AiProvider): string {
+  if (provider !== "openai") {
+    throw new OperationalApiKeyMissingError(provider);
+  }
+  const value = process.env[PRODUCTION_OPENAI_API_KEY_ENV];
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new OperationalApiKeyMissingError(provider);
+  }
+  return value;
+}
+
+/**
+ * F47.2 — seleciona a credencial dedicada pelo ambiente operacional.
+ * Nunca cai para `OPENAI_API_KEY`.
+ */
+export function readVisualSignatureApiKey(
+  provider: AiProvider,
+  environment: "local_validation" | "production",
+): string {
+  return environment === "production"
+    ? readOperationalApiKey(provider)
+    : readValidationApiKey(provider);
+}
+
 export const VALIDATION_PROVIDER_KEY_MISSING =
   "visual_signature_validation_provider_key_missing" as const;
 

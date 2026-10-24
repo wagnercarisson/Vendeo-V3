@@ -1,29 +1,21 @@
 import "server-only";
 
-import { readValidationApiKey } from "@/lib/ai/api-keys";
+import { readVisualSignatureApiKey } from "@/lib/ai/api-keys";
 import { resolveCanonicalInstanceIdentity } from "@/lib/product-1-1/authorization/instance-identity";
 import {
+  VISUAL_SIGNATURE_ENVIRONMENT_ERRORS,
+  VisualSignatureEnvironmentError,
   VisualSignatureLocalEnvironmentError,
-  resolveLocalSupabaseEndpoints,
+  resolveSupabaseEndpointForEnvironment,
+  type VisualSignatureEnvironment,
 } from "./environment-contract";
 
 /**
- * F47.1 (D5/D6) — Guard server-only do ambiente local aprovado.
+ * F47.2 — Guard server-only do ambiente operacional da Assinatura Visual.
  *
- * A configuração experimental da Assinatura Visual só pode ser consumida quando
- * TODAS as condições forem verdadeiras:
- *
- * 1. opt-in explícito (`VENDEO_VS_VALIDATION_ENABLED === "1"`);
- * 2. não-produção e não-Vercel;
- * 3. endpoint Supabase (banco/Storage) em host loopback com porta explícita,
- *    validado por `assertLocalSupabaseEndpoint` do plano 01;
- * 4. identidade canônica (`resolveCanonicalInstanceIdentity()`) exatamente igual
- *    a `VISUAL_SIGNATURE_MODEL_VALIDATION_INSTANCE` (API host:port);
- * 5. credencial dedicada de provider presente (`VENDEO_VS_VALIDATION_OPENAI_API_KEY`).
- *
- * A allowlist de identidade é uma SEGUNDA condição — nunca substitui a prova de
- * loopback. Nenhuma chave é logada, persistida ou devolvida em metadata; o
- * objeto retornado carrega a chave apenas em memória para o adapter.
+ * O ambiente é um enum fechado (`local_validation`|`production`). Preview é
+ * sempre recusado. As proteções locais da F47.1 permanecem; produção exige
+ * declaração explícita, project ref canônico e credencial dedicada.
  */
 
 export type VisualSignatureValidationGuardErrorCode =
@@ -31,7 +23,14 @@ export type VisualSignatureValidationGuardErrorCode =
   | "visual_signature_validation_not_local"
   | "visual_signature_validation_endpoint_not_loopback"
   | "visual_signature_validation_instance_mismatch"
-  | "visual_signature_validation_provider_key_missing";
+  | "visual_signature_validation_provider_key_missing"
+  | "visual_signature_environment_missing"
+  | "visual_signature_environment_invalid"
+  | "visual_signature_preview_forbidden"
+  | "visual_signature_production_disabled"
+  | "visual_signature_production_ref_missing"
+  | "visual_signature_production_ref_mismatch"
+  | "visual_signature_production_endpoint_invalid";
 
 export class VisualSignatureValidationGuardError extends Error {
   readonly code: VisualSignatureValidationGuardErrorCode;
@@ -44,71 +43,128 @@ export class VisualSignatureValidationGuardError extends Error {
 }
 
 export interface VisualSignatureValidationEnvironment {
+  readonly environment?: VisualSignatureEnvironment;
   readonly instanceIdentity: string;
   readonly supabaseOrigin: string;
   readonly apiKey: string;
 }
 
-/** Opt-in explícito; qualquer outro valor (ausente/inclusively "true") é off. */
+/** Opt-in explícito do laboratório; qualquer outro valor é off. */
 export function isVisualSignatureValidationOptedIn(): boolean {
   return process.env.VENDEO_VS_VALIDATION_ENABLED === "1";
 }
 
 /**
- * Valida o ambiente local fail-closed, na ordem documentada. Retorna um objeto
- * CONGELADO com identidade/origin e a credencial dedicada (apenas em memória).
+ * Resolve o ambiente declarado. Sem declaração, mantém compatibilidade com o
+ * laboratório apenas fora de produção/Vercel; em produção, exige declaração.
  */
+export function resolveVisualSignatureEnvironment(
+  env: Record<string, string | undefined> = process.env,
+): VisualSignatureEnvironment {
+  if (env.VERCEL_ENV === "preview") {
+    throw new VisualSignatureValidationGuardError("visual_signature_preview_forbidden");
+  }
+
+  const declared = (env.VISUAL_SIGNATURE_OPERATING_ENVIRONMENT ?? "").trim();
+  if (declared === "local_validation" || declared === "production") {
+    return declared;
+  }
+  if (declared !== "") {
+    throw new VisualSignatureValidationGuardError("visual_signature_environment_invalid");
+  }
+  // Compatibilidade F47.1: sem declaração, o guard local continua sendo a
+  // autoridade e falha com not_local em produção/Vercel. Nunca assume produção.
+  return "local_validation";
+}
+
+function mapEndpointError(error: unknown): VisualSignatureValidationGuardError {
+  if (error instanceof VisualSignatureEnvironmentError) {
+    const code =
+      error.code === VISUAL_SIGNATURE_ENVIRONMENT_ERRORS.production_ref_missing
+        ? "visual_signature_production_ref_missing"
+        : error.code === VISUAL_SIGNATURE_ENVIRONMENT_ERRORS.production_ref_mismatch
+          ? "visual_signature_production_ref_mismatch"
+          : "visual_signature_production_endpoint_invalid";
+    return new VisualSignatureValidationGuardError(code, { cause: error });
+  }
+  return new VisualSignatureValidationGuardError(
+    "visual_signature_validation_endpoint_not_loopback",
+    { cause: error instanceof VisualSignatureLocalEnvironmentError ? error.code : error },
+  );
+}
+
 export function assertVisualSignatureValidationEnvironment(): VisualSignatureValidationEnvironment {
-  if (!isVisualSignatureValidationOptedIn()) {
-    throw new VisualSignatureValidationGuardError("visual_signature_validation_disabled");
+  const environment = resolveVisualSignatureEnvironment();
+
+  if (environment === "local_validation") {
+    if (!isVisualSignatureValidationOptedIn()) {
+      throw new VisualSignatureValidationGuardError("visual_signature_validation_disabled");
+    }
+    if (process.env.NODE_ENV === "production") {
+      throw new VisualSignatureValidationGuardError("visual_signature_validation_not_local");
+    }
+    if (typeof process.env.VERCEL === "string" && process.env.VERCEL !== "") {
+      throw new VisualSignatureValidationGuardError("visual_signature_validation_not_local");
+    }
+  } else if (process.env.VENDEO_VS_PRODUCTION_ENABLED !== "1") {
+    throw new VisualSignatureValidationGuardError("visual_signature_production_disabled");
   }
 
-  if (process.env.NODE_ENV === "production") {
-    throw new VisualSignatureValidationGuardError("visual_signature_validation_not_local");
-  }
-
-  if (typeof process.env.VERCEL === "string" && process.env.VERCEL !== "") {
-    throw new VisualSignatureValidationGuardError("visual_signature_validation_not_local");
-  }
-
+  const projectRef = (process.env.VISUAL_SIGNATURE_SUPABASE_PROJECT_REF ?? "").trim();
   const primaryUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secondaryUrl = process.env.SUPABASE_URL;
 
   let endpoint: { origin: string };
   try {
-    endpoint = resolveLocalSupabaseEndpoints(
+    endpoint = resolveSupabaseEndpointForEnvironment(
       typeof primaryUrl === "string" ? primaryUrl : "",
-      typeof secondaryUrl === "string" ? secondaryUrl : undefined,
+      environment,
+      projectRef,
     );
+    if (typeof secondaryUrl === "string" && secondaryUrl.trim() !== "") {
+      const secondary = resolveSupabaseEndpointForEnvironment(
+        secondaryUrl,
+        environment,
+        projectRef,
+      );
+      if (secondary.origin !== endpoint.origin) {
+        throw new VisualSignatureLocalEnvironmentError(
+          "visual_signature_local_endpoints_origin_mismatch",
+        );
+      }
+    }
   } catch (error) {
-    // Qualquer falha de endpoint (ausente/inválido/credenciais/remoto/origin
-    // divergente) vira erro tipado de loopback — nunca aceita silenciosamente.
-    throw new VisualSignatureValidationGuardError(
-      "visual_signature_validation_endpoint_not_loopback",
-      { cause: error instanceof VisualSignatureLocalEnvironmentError ? error.code : error },
-    );
+    throw mapEndpointError(error);
   }
 
-  const expectedIdentity = (process.env.VISUAL_SIGNATURE_MODEL_VALIDATION_INSTANCE ?? "").trim();
-  let actualIdentity: string;
-  try {
-    actualIdentity = resolveCanonicalInstanceIdentity();
-  } catch (error) {
-    throw new VisualSignatureValidationGuardError(
-      "visual_signature_validation_instance_mismatch",
-      { cause: error },
-    );
-  }
-
-  if (expectedIdentity === "" || actualIdentity !== expectedIdentity) {
-    throw new VisualSignatureValidationGuardError(
-      "visual_signature_validation_instance_mismatch",
-    );
+  let instanceIdentity: string;
+  if (environment === "production") {
+    if (projectRef === "") {
+      throw new VisualSignatureValidationGuardError("visual_signature_production_ref_missing");
+    }
+    instanceIdentity = projectRef;
+  } else {
+    const expectedIdentity = (
+      process.env.VISUAL_SIGNATURE_MODEL_VALIDATION_INSTANCE ?? ""
+    ).trim();
+    try {
+      instanceIdentity = resolveCanonicalInstanceIdentity();
+    } catch (error) {
+      throw new VisualSignatureValidationGuardError(
+        "visual_signature_validation_instance_mismatch",
+        { cause: error },
+      );
+    }
+    if (expectedIdentity === "" || instanceIdentity !== expectedIdentity) {
+      throw new VisualSignatureValidationGuardError(
+        "visual_signature_validation_instance_mismatch",
+      );
+    }
   }
 
   let apiKey: string;
   try {
-    apiKey = readValidationApiKey("openai");
+    apiKey = readVisualSignatureApiKey("openai", environment);
   } catch (error) {
     throw new VisualSignatureValidationGuardError(
       "visual_signature_validation_provider_key_missing",
@@ -117,7 +173,8 @@ export function assertVisualSignatureValidationEnvironment(): VisualSignatureVal
   }
 
   return Object.freeze({
-    instanceIdentity: actualIdentity,
+    ...(environment === "production" ? { environment } : {}),
+    instanceIdentity,
     supabaseOrigin: endpoint.origin,
     apiKey,
   });

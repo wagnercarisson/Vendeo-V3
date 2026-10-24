@@ -1,8 +1,9 @@
-import { readValidationApiKey } from "./api-keys";
+import { readValidationApiKey, readVisualSignatureApiKey } from "./api-keys";
 import { ResponsesAdapter } from "./adapters/responses";
 import { AiGateway } from "./gateway";
 import type { AiModelResolver, AiProtocol } from "./model-resolver";
 import type { AiAdapter, AiAdapterRegistry } from "./types";
+import type { VisualSignatureEnvironment } from "@/lib/visual-signature/local-validation/environment-contract";
 
 /**
  * F47.1 (D5/D6/D12) — gateway de validação local da Assinatura Visual.
@@ -16,9 +17,17 @@ import type { AiAdapter, AiAdapterRegistry } from "./types";
  * não devolve adapter e o gateway lança erro de capability). O resolver
  * recebido é responsável pelo congelamento do alvo de `visual_signature_image`.
  */
-export function createVisualSignatureValidationGateway(resolver: AiModelResolver): AiGateway {
+export function createVisualSignatureValidationGateway(
+  resolver: AiModelResolver,
+  environment: VisualSignatureEnvironment = "local_validation",
+): AiGateway {
+  const resolveApiKey =
+    environment === "production"
+      ? (provider: Parameters<typeof readVisualSignatureApiKey>[0]) =>
+          readVisualSignatureApiKey(provider, environment)
+      : readValidationApiKey;
   const responsesAdapter = new ResponsesAdapter(
-    readValidationApiKey,
+    resolveApiKey,
     { maxRetries: 0 },
     "validation",
   );

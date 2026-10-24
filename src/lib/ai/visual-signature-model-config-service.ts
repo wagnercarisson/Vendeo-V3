@@ -9,6 +9,7 @@ import {
   type VisualSignatureOrchestrator,
   type VisualSignatureReasoningEffort,
 } from "./visual-signature-model-config";
+import type { VisualSignatureEnvironment } from "@/lib/visual-signature/local-validation/environment-contract";
 import {
   VisualSignatureValidationGuardError,
   assertVisualSignatureValidationEnvironment,
@@ -50,6 +51,22 @@ export interface VisualSignatureModelConfigReader {
   read(): Promise<VisualSignatureModelConfigRow | null>;
 }
 
+export interface VisualSignatureReleaseRow {
+  published_config_version_id: string | null;
+  activated_config_version_id: string | null;
+  activation_mode: "none" | "pilot" | "general";
+  environment_scope: string;
+  instance_identity: string;
+}
+
+export interface VisualSignatureReleaseReader {
+  read(): Promise<VisualSignatureReleaseRow | null>;
+}
+
+export interface VisualSignaturePilotStoreReader {
+  read(): Promise<string[]>;
+}
+
 export class VisualSignatureConfigReadError extends Error {
   readonly code = "visual_signature_model_config_read_failed" as const;
 
@@ -89,6 +106,12 @@ export interface VisualSignatureDedicatedConfigSnapshot {
   readonly reasoningEffort: VisualSignatureReasoningEffort;
   readonly configVersionId: string;
   readonly instanceIdentity: string;
+  /** Presentes apenas quando o estado de liberação foi consultado. */
+  readonly environment?: VisualSignatureEnvironment;
+  readonly publishedConfigVersionId?: string | null;
+  readonly activatedConfigVersionId?: string | null;
+  readonly activationMode?: "none" | "pilot" | "general";
+  readonly pilotEligible?: boolean;
 }
 
 export interface VisualSignatureLegacyConfigSnapshot {
@@ -105,6 +128,9 @@ export const LEGACY_VISUAL_SIGNATURE_MODEL_CONFIG: VisualSignatureLegacyConfigSn
 
 export interface LoadVisualSignatureModelConfigOptions {
   reader?: VisualSignatureModelConfigReader;
+  releaseReader?: VisualSignatureReleaseReader;
+  pilotStoreReader?: VisualSignaturePilotStoreReader;
+  storeId?: string;
   assertEnvironment?: () => VisualSignatureValidationEnvironment;
   isOptedIn?: () => boolean;
 }
@@ -126,10 +152,13 @@ export type VisualSignatureModelConfigDiagnostic =
       snapshot: VisualSignatureDedicatedConfigSnapshot;
       row: VisualSignatureModelConfigRow;
     }
-  | { status: "inherited"; reason: "opt_in_disabled" | "absent" }
+  | {
+      status: "inherited";
+      reason: "opt_in_disabled" | "absent" | "not_published" | "not_activated" | "outside_pilot";
+    }
   | {
       status: "blocked";
-      reason: "guard" | "read_failure" | "identity" | "tuple";
+      reason: "guard" | "read_failure" | "identity" | "tuple" | "release_read_failure";
       code: string | null;
       error: unknown;
     };
@@ -178,11 +207,65 @@ export async function resolveVisualSignatureModelConfigDiagnostic(
   }
 
   if (
-    row.environment_scope !== VISUAL_SIGNATURE_ENVIRONMENT_SCOPE ||
+    row.environment_scope !== (environment.environment ?? VISUAL_SIGNATURE_ENVIRONMENT_SCOPE) ||
     row.instance_identity !== environment.instanceIdentity
   ) {
     const error = new VisualSignatureConfigOutsideEnvironmentError();
     return { status: "blocked", reason: "identity", code: error.code, error };
+  }
+
+  const useRelease = options.releaseReader !== undefined || options.reader === undefined;
+  let release: VisualSignatureReleaseRow | null = null;
+  let pilotStores: string[] = [];
+  if (useRelease) {
+    const releaseReader = options.releaseReader ?? defaultReleaseReader;
+    try {
+      release = await releaseReader.read();
+    } catch (error) {
+      return {
+        status: "blocked",
+        reason: "release_read_failure",
+        code: "visual_signature_release_read_failed",
+        error,
+      };
+    }
+
+    if (!release) {
+      return { status: "inherited", reason: "not_published" };
+    }
+    const declaredEnvironment = environment.environment ?? VISUAL_SIGNATURE_ENVIRONMENT_SCOPE;
+    if (
+      release.environment_scope !== declaredEnvironment ||
+      release.instance_identity !== environment.instanceIdentity
+    ) {
+      const error = new VisualSignatureConfigOutsideEnvironmentError();
+      return { status: "blocked", reason: "identity", code: error.code, error };
+    }
+    if (release.published_config_version_id !== row.config_version_id) {
+      return { status: "inherited", reason: "not_published" };
+    }
+    if (
+      release.activated_config_version_id !== row.config_version_id ||
+      release.activation_mode === "none"
+    ) {
+      return { status: "inherited", reason: "not_activated" };
+    }
+
+    if (release.activation_mode === "pilot") {
+      try {
+        pilotStores = await (options.pilotStoreReader ?? defaultPilotStoreReader).read();
+      } catch (error) {
+        return {
+          status: "blocked",
+          reason: "release_read_failure",
+          code: "visual_signature_pilot_read_failed",
+          error,
+        };
+      }
+      if (options.storeId !== undefined && !pilotStores.includes(options.storeId)) {
+        return { status: "inherited", reason: "outside_pilot" };
+      }
+    }
   }
 
   try {
@@ -222,6 +305,17 @@ export async function resolveVisualSignatureModelConfigDiagnostic(
     reasoningEffort: "low",
     configVersionId: row.config_version_id,
     instanceIdentity: row.instance_identity,
+    ...(useRelease && release
+      ? {
+          environment: (environment.environment ?? VISUAL_SIGNATURE_ENVIRONMENT_SCOPE) as VisualSignatureEnvironment,
+          publishedConfigVersionId: release.published_config_version_id,
+          activatedConfigVersionId: release.activated_config_version_id,
+          activationMode: release.activation_mode,
+          pilotEligible:
+            release.activation_mode === "general" ||
+            (options.storeId !== undefined && pilotStores.includes(options.storeId)),
+        }
+      : {}),
   });
 
   return { status: "dedicated", snapshot, row };
@@ -253,6 +347,29 @@ export async function readVisualSignatureModelConfigRowForAdmin(): Promise<Visua
 }
 
 const defaultReader: VisualSignatureModelConfigReader = { read: readRowFromSupabase };
+
+async function readReleaseFromSupabase(): Promise<VisualSignatureReleaseRow | null> {
+  const { supabaseAdmin } = await import("@/lib/supabase/server");
+  const { data, error } = await supabaseAdmin
+    .from("visual_signature_model_config_release")
+    .select("published_config_version_id, activated_config_version_id, activation_mode, environment_scope, instance_identity")
+    .eq("scope", VISUAL_SIGNATURE_CONFIG_SCOPE)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as VisualSignatureReleaseRow | null) ?? null;
+}
+
+async function readPilotStoresFromSupabase(): Promise<string[]> {
+  const { supabaseAdmin } = await import("@/lib/supabase/server");
+  const { data, error } = await supabaseAdmin
+    .from("visual_signature_model_config_pilot_stores")
+    .select("store_id");
+  if (error) throw error;
+  return (data ?? []).map((row: { store_id: string }) => row.store_id);
+}
+
+const defaultReleaseReader: VisualSignatureReleaseReader = { read: readReleaseFromSupabase };
+const defaultPilotStoreReader: VisualSignaturePilotStoreReader = { read: readPilotStoresFromSupabase };
 
 export async function loadVisualSignatureModelConfigSnapshot(
   options: LoadVisualSignatureModelConfigOptions = {},

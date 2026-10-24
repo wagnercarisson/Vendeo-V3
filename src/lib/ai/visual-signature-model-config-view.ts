@@ -69,8 +69,22 @@ export interface VisualSignatureConfigDiagnosticView {
     | "dedicated_valid"
     | "inherited_opt_in_disabled"
     | "inherited_absent"
+    | "inherited_not_published"
+    | "inherited_not_activated"
+    | "inherited_outside_pilot"
     | "blocked";
-  reason: "opt_in_disabled" | "absent" | "guard" | "identity" | "tuple" | "read_failure" | null;
+  reason:
+    | "opt_in_disabled"
+    | "absent"
+    | "not_published"
+    | "not_activated"
+    | "outside_pilot"
+    | "guard"
+    | "identity"
+    | "tuple"
+    | "read_failure"
+    | "release_read_failure"
+    | null;
   code: string | null;
 }
 
@@ -93,6 +107,13 @@ export interface VisualSignatureModelConfigView {
   }[];
   configured: boolean;
   current: VisualSignatureConfigViewRow | null;
+  release?: {
+    environment: string;
+    published: boolean;
+    activated: boolean;
+    activationMode: "none" | "pilot" | "general";
+    pilotEligible: boolean;
+  } | null;
   inherited: VisualSignatureInheritedView;
   diagnostic: VisualSignatureConfigDiagnosticView;
   pricingByPreset: Record<VisualSignatureImagePreset, VisualSignaturePresetPricingView>;
@@ -128,12 +149,21 @@ function toDiagnosticView(
     return { status: "dedicated_valid", reason: null, code: null };
   }
   if (diagnostic.status === "inherited") {
+    if (diagnostic.reason === "absent") {
+      return { status: "inherited_absent", reason: "absent", code: null };
+    }
+    if (diagnostic.reason === "not_published") {
+      return { status: "inherited_not_published", reason: "not_published", code: null };
+    }
+    if (diagnostic.reason === "not_activated") {
+      return { status: "inherited_not_activated", reason: "not_activated", code: null };
+    }
+    if (diagnostic.reason === "outside_pilot") {
+      return { status: "inherited_outside_pilot", reason: "outside_pilot", code: null };
+    }
     return {
-      status:
-        diagnostic.reason === "absent"
-          ? "inherited_absent"
-          : "inherited_opt_in_disabled",
-      reason: diagnostic.reason,
+      status: "inherited_opt_in_disabled",
+      reason: "opt_in_disabled",
       code: null,
     };
   }
@@ -290,8 +320,23 @@ export async function buildVisualSignatureModelConfigView(
   const pricingByPreset = await buildPricing(pricingResolver);
 
   let diagnostic: VisualSignatureConfigDiagnosticView;
+  let release: VisualSignatureModelConfigView["release"] = null;
   try {
-    diagnostic = toDiagnosticView(await diagnosticResolver());
+    const resolved = await diagnosticResolver();
+    diagnostic = toDiagnosticView(resolved);
+    if (resolved.status === "dedicated") {
+      const snapshot = resolved.snapshot;
+      release = {
+        environment: snapshot.environment ?? "local_validation",
+        published:
+          snapshot.publishedConfigVersionId === snapshot.configVersionId,
+        activated:
+          snapshot.activatedConfigVersionId === snapshot.configVersionId &&
+          snapshot.activationMode !== "none",
+        activationMode: snapshot.activationMode ?? "none",
+        pilotEligible: snapshot.pilotEligible ?? false,
+      };
+    }
   } catch {
     diagnostic = { status: "blocked", reason: "read_failure", code: null };
   }
@@ -302,6 +347,7 @@ export async function buildVisualSignatureModelConfigView(
     combinations,
     configured: current !== null,
     current,
+    release,
     inherited,
     diagnostic,
     pricingByPreset,

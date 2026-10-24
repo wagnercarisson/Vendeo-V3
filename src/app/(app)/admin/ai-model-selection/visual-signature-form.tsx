@@ -36,6 +36,15 @@ function diagnosticLabel(diagnostic: VisualSignatureModelConfigView["diagnostic"
   if (diagnostic.status === "inherited_absent") {
     return "seleção herdada — ausência confirmada";
   }
+  if (diagnostic.status === "inherited_not_published") {
+    return "seleção herdada — configuração não publicada";
+  }
+  if (diagnostic.status === "inherited_not_activated") {
+    return "seleção herdada — configuração não ativada";
+  }
+  if (diagnostic.status === "inherited_outside_pilot") {
+    return "seleção herdada — loja fora do piloto";
+  }
   if (diagnostic.reason === "guard") return "geração bloqueada — guard local";
   if (diagnostic.reason === "identity") return "geração bloqueada — identidade divergente";
   if (diagnostic.reason === "tuple") return "geração bloqueada — tuple inválida";
@@ -67,6 +76,15 @@ function diagnosticDescription(
   }
   if (diagnostic.status === "inherited_absent") {
     return "Guard válido e ausência confirmada de configuração dedicada. A geração usa a seleção herdada.";
+  }
+  if (diagnostic.status === "inherited_not_published") {
+    return "A configuração existe, mas não está publicada. A geração usa a seleção herdada.";
+  }
+  if (diagnostic.status === "inherited_not_activated") {
+    return "A configuração está publicada, mas não ativada. A geração usa a seleção herdada.";
+  }
+  if (diagnostic.status === "inherited_outside_pilot") {
+    return "A loja está fora da allowlist do piloto. A geração usa a seleção herdada.";
   }
   if (diagnostic.reason === "guard") {
     return "O guard local bloqueia a geração. A configuração dedicada não é aplicada.";
@@ -102,6 +120,7 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
     initial?.imagePreset ?? view.presets[0]?.preset ?? "flare_low",
   );
   const [reason, setReason] = useState("");
+  const [pilotStoreIds, setPilotStoreIds] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -129,10 +148,17 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
       setError("Não há configuração dedicada para remover.");
       return;
     }
+    if (action === "reset" && !view.current?.configVersionId) {
+      setError("Versão da configuração indisponível; recarregue a página.");
+      return;
+    }
 
     const body =
       action === "reset"
-        ? { reason: trimmed }
+        ? {
+            expectedConfigVersionId: view.current?.configVersionId,
+            reason: trimmed,
+          }
         : { orchestratorModel: orchestrator, imagePreset: preset, reason: trimmed };
     const fingerprint = JSON.stringify([action, body]);
     const operationId = idempotencyKey(fingerprint);
@@ -180,6 +206,72 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
     }
   }
 
+  async function mutateRelease(action: "publish" | "unpublish" | "pilot" | "none") {
+    setError(null);
+    setSuccess(null);
+    const trimmed = reason.trim();
+    const expectedConfigVersionId = view.current?.configVersionId;
+    if (!expectedConfigVersionId) {
+      setError("Salve a configuração antes de alterar a liberação.");
+      return;
+    }
+    if (!trimmed) {
+      setError("Motivo obrigatório");
+      return;
+    }
+    const ids = pilotStoreIds
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (action === "pilot" && ids.length === 0) {
+      setError("Informe ao menos uma loja para o piloto.");
+      return;
+    }
+
+    const body =
+      action === "publish" || action === "unpublish"
+        ? {
+            action: "publish",
+            expectedConfigVersionId,
+            published: action === "publish",
+            reason: trimmed,
+          }
+        : {
+            action: "activate",
+            expectedConfigVersionId,
+            mode: action === "pilot" ? "pilot" : "none",
+            ...(action === "pilot" ? { pilotStoreIds: ids } : {}),
+            reason: trimmed,
+          };
+
+    const operationId = idempotencyKey(JSON.stringify(body));
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/visual-signature-model-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, operationId }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(data.error || `Erro ${response.status}`);
+
+      const refreshed = await fetch("/api/admin/visual-signature-model-config", {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (refreshed.ok) {
+        setView((await refreshed.json()) as VisualSignatureModelConfigView);
+      }
+      setReason("");
+      setOperation(null);
+      setSuccess("Estado de liberação atualizado com auditoria.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível alterar a liberação.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <CurrentConfigCard
@@ -187,6 +279,47 @@ export function VisualSignatureConfigForm({ view: initialView }: { view: VisualS
         diagnostic={view.diagnostic}
         readError={view.readError}
       />
+
+      <Card className="space-y-4 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary">Liberação da configuração</h3>
+            <p className="text-xs text-text-secondary">
+              {view.release
+                ? `Ambiente ${view.release.environment} · publicação ${view.release.published ? "ativa" : "inativa"} · ativação ${view.release.activationMode}`
+                : "Sem estado de liberação vinculado à versão."}
+            </p>
+          </div>
+          <Badge variant={view.release?.activated ? "ready" : "default"}>
+            {view.release?.activated ? "em uso" : "herdado"}
+          </Badge>
+        </div>
+        <label className="space-y-1.5 text-sm text-text-secondary">
+          <span className="block text-xs font-medium uppercase tracking-wider">
+            Lojas do piloto (UUID separados por vírgula)
+          </span>
+          <input
+            aria-label="Lojas do piloto da Assinatura Visual"
+            value={pilotStoreIds}
+            onChange={(event) => setPilotStoreIds(event.target.value)}
+            className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20"
+          />
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" disabled={loading || !view.current} onClick={() => mutateRelease("publish")}>
+            Publicar
+          </Button>
+          <Button type="button" variant="secondary" disabled={loading || !view.current} onClick={() => mutateRelease("unpublish")}>
+            Despublicar
+          </Button>
+          <Button type="button" variant="secondary" disabled={loading || !view.current} onClick={() => mutateRelease("pilot")}>
+            Ativar piloto
+          </Button>
+          <Button type="button" variant="secondary" disabled={loading || !view.current} onClick={() => mutateRelease("none")}>
+            Desativar
+          </Button>
+        </div>
+      </Card>
 
       <Card className="space-y-5 p-6">
         <div className="flex items-start gap-3 rounded-xl border border-accent-blue/20 bg-accent-blue/5 p-4 text-sm text-text-secondary">

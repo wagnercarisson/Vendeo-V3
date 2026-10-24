@@ -145,7 +145,7 @@ export const POST = apiHandler(async (
     let visualSignatureConfig: VisualSignatureModelConfigSnapshot;
     let visualSignatureInvoker: AiInvoker;
     try {
-      visualSignatureConfig = await loadVisualSignatureModelConfigSnapshot();
+      visualSignatureConfig = await loadVisualSignatureModelConfigSnapshot({ storeId: id });
       visualSignatureInvoker =
         visualSignatureConfig.mode === "dedicated"
           ? createVisualSignatureValidationGateway(
@@ -153,6 +153,7 @@ export const POST = apiHandler(async (
                 snapshot: visualSignatureConfig,
                 fallbackResolver: defaultAiModelResolver,
               }),
+              visualSignatureConfig.environment ?? "local_validation",
             )
           : defaultAiGateway;
     } catch {

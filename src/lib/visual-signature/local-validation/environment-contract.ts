@@ -1,19 +1,81 @@
 /**
- * F47.1 (D5) — Contrato PURO de endpoint local (loopback) do Supabase.
- *
- * Não importa `server-only`, não lê env e não conhece porta de API/DB: pode ser
- * exercitado por scripts de preflight, testes e pelo guard server-only do
- * plano 02 (que o consome).
- *
- * A allowlist de identidade é uma SEGUNDA condição. Ela nunca substitui a
- * prova de que o endpoint é loopback: um processo local apontando para uma URL
- * Supabase de produção deve ser recusado mesmo que a identidade coincida.
+ * F47.2 — resolve o endpoint Supabase conforme o ambiente declarado.
+ * Em produção exige HTTPS no host canônico `${projectRef}.supabase.co`.
+ * Em local mantém a prova de loopback da F47.1.
  */
+export function resolveSupabaseEndpointForEnvironment(
+  url: string,
+  environment: VisualSignatureEnvironment,
+  expectedProjectRef?: string,
+): LocalSupabaseEndpoint {
+  if (environment === "local_validation") {
+    return assertLocalSupabaseEndpoint(url);
+  }
+
+  if (typeof url !== "string" || url.trim() === "") {
+    throw new VisualSignatureLocalEnvironmentError(
+      VISUAL_SIGNATURE_LOCAL_ERRORS.endpoint_missing,
+    );
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    throw new VisualSignatureEnvironmentError(
+      VISUAL_SIGNATURE_ENVIRONMENT_ERRORS.production_endpoint_invalid,
+    );
+  }
+  if (parsed.protocol !== "https:" || parsed.username !== "" || parsed.password !== "") {
+    throw new VisualSignatureEnvironmentError(
+      VISUAL_SIGNATURE_ENVIRONMENT_ERRORS.production_endpoint_invalid,
+    );
+  }
+  const ref = (expectedProjectRef ?? "").trim();
+  if (ref === "") {
+    throw new VisualSignatureEnvironmentError(
+      VISUAL_SIGNATURE_ENVIRONMENT_ERRORS.production_ref_missing,
+    );
+  }
+  if (parsed.hostname !== `${ref}.supabase.co`) {
+    throw new VisualSignatureEnvironmentError(
+      VISUAL_SIGNATURE_ENVIRONMENT_ERRORS.production_ref_mismatch,
+    );
+  }
+  return Object.freeze({
+    origin: parsed.origin,
+    host: parsed.hostname as LocalSupabaseHost,
+    port: parsed.port,
+  });
+}
 
 /** Hosts loopback aceitos. Comparação exata após normalização de `::1`. */
 export const LOCAL_SUPABASE_HOSTS = ["127.0.0.1", "localhost", "::1"] as const;
 
 export type LocalSupabaseHost = (typeof LOCAL_SUPABASE_HOSTS)[number];
+
+/** F47.2 — ambientes operacionais fechados. `preview` não é um valor válido. */
+export const VISUAL_SIGNATURE_ENVIRONMENTS = ["local_validation", "production"] as const;
+
+export type VisualSignatureEnvironment = (typeof VISUAL_SIGNATURE_ENVIRONMENTS)[number];
+
+export const VISUAL_SIGNATURE_ENVIRONMENT_ERRORS = {
+  environment_missing: "visual_signature_environment_missing",
+  environment_invalid: "visual_signature_environment_invalid",
+  preview_forbidden: "visual_signature_preview_forbidden",
+  production_ref_missing: "visual_signature_production_ref_missing",
+  production_ref_mismatch: "visual_signature_production_ref_mismatch",
+  production_endpoint_invalid: "visual_signature_production_endpoint_invalid",
+} as const;
+
+export type VisualSignatureEnvironmentErrorCode =
+  (typeof VISUAL_SIGNATURE_ENVIRONMENT_ERRORS)[keyof typeof VISUAL_SIGNATURE_ENVIRONMENT_ERRORS];
+
+export class VisualSignatureEnvironmentError extends Error {
+  constructor(readonly code: VisualSignatureEnvironmentErrorCode) {
+    super(code);
+    this.name = "VisualSignatureEnvironmentError";
+  }
+}
 
 export interface LocalSupabaseEndpoint {
   /** Origin normalizado (`scheme://host:port`), pronto para comparação. */
