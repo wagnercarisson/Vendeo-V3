@@ -83,6 +83,19 @@ Nenhum banco, migration, Docker, Supabase CLI, `psql`, provider pago, rede, flag
 2. **Novos testes do `AiImageGenerator` não mockam `VisualSignatureValidator.prototype.validate`** — o plano pedia simultaneamente o mock do validator e a prova de isolamento por `capability === "visual_signature_validation"`; com `validate` mockado a chamada de validação nunca ocorre. Para satisfazer a truth “a validação não recebe os overrides”, os testes novos usam o validator real com imagem fake > 1KB e um invoker fake que responde `{"valid": true}`; o teste pré-existente de `attemptNumber` (que usa o mock) permanece intacto e verde.
 3. **Mocks explícitos do novo módulo não foram necessários nos testes vizinhos** — `visual-signature/__tests__/{generate-without-logo,credit-flow}.test.ts` caem deterministicamente no fallback `{data:null,error:null}` (legado) e continuaram verdes; nenhum assert vizinho foi editado.
 
+## Complemento pós-revisão — metadata do `generateAutomatic` (2026-10-25)
+
+Revisão do Codex apontou que `generateAutomatic` descartava o metadata do gerador nas duas tentativas (atualizava apenas `status`/`updated_at`). Complemento restrito:
+
+- `activateGeneratedSignature(storagePath, generatedMetadata)` lê o `metadata` existente da linha e faz o update com `{ ...existingMetadata, ...quatroCampos }` — sem sobrescrever metadata de outras etapas.
+- Os quatro campos persistidos: `orchestrator_model`, `image_model`, `image_quality`, `visual_signature_config_version_id`.
+- Aplicado no sucesso inicial (attempt 1) e no sucesso do retry (attempt 2), com o metadata da tentativa vencedora.
+- Nenhum outro comportamento alterado.
+
+Testes adicionados em `generation-config-snapshot.test.ts` inspecionando o payload de `update`: sucesso inicial e retry, ambos preservando `existing`/`artDirectorOutput` e gravando os quatro campos. Resultado: **8/8** no arquivo; regressão `src/lib/visual-signature` + `src/__tests__/actions` + `src/app/api/store` = **32 files / 344 tests passed**; typecheck e lint exit 0.
+
+Commit do complemento: `12223a8a`.
+
 ## Notes for review
 
 - Commit atômico desta quick: `f3dcfa8f` (15 arquivos de código/teste; nenhum arquivo em `.planning/`, `supabase/` ou `openspec/` incluído).
