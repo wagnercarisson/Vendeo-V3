@@ -156,6 +156,24 @@ describe("F47.1 — campos de telemetria da Assinatura Visual", () => {
     });
   });
 
+  it("produção com chave compartilhada permanece normal, sem virar dedicada", async () => {
+    mockResolveAiCost.mockResolvedValue({
+      estimatedCostUsd: 0.0147,
+      costSource: "pricing_table",
+      costCoverage: "complete",
+    });
+
+    const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
+    await sink.emit({
+      ...envelope,
+      metadata: { ...envelope.metadata, credential_scope: "normal" },
+    });
+
+    const event = emitted();
+    expect(event.metadata?.credential_scope).toBe("normal");
+    expect(JSON.stringify(event)).not.toMatch(/sk-(?:prod|local|shared|[A-Za-z0-9])/);
+  });
+
   it("validação semântica dedicada registra credential_scope sem depender do preset", async () => {
     mockResolveAiCost.mockResolvedValue({
       estimatedCostUsd: 0.001,

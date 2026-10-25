@@ -185,6 +185,30 @@ describe("F47.1 — percurso completo adapter → gateway → sink → estimador
     });
   });
 
+  it("chave compartilhada de produção registra credential_scope normal no percurso completo", async () => {
+    const adapter = new FakeAdapter(RAW_MAIN);
+    const gateway = new AiGateway(resolver, { get: () => adapter });
+    const { context } = telemetry();
+
+    await gateway.invoke(
+      "visual_signature_image",
+      {
+        prompt: "arte",
+        tools: "image_generation",
+        quality: "medium",
+        imageGenerationModel: "gpt-image-2.5-sunburst",
+        reasoningEffort: "low",
+        metadata: { ...REQUEST_METADATA, credential_scope: "normal" as const },
+      },
+      context,
+    );
+
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.metadata.credential_scope).toBe("normal");
+    expect(event.metadata.credential_scope).not.toBe("validation");
+    expect(JSON.stringify(event)).not.toMatch(/sk-(?:prod|local|shared|[A-Za-z0-9])/);
+  });
+
   it("tool usage separado é precificado uma vez, com cobertura completa", async () => {
     const adapter = new FakeAdapter(
       undefined,

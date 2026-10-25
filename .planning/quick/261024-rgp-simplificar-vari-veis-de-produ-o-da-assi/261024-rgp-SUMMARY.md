@@ -48,7 +48,8 @@ completed: 2026-10-24
 - Preserved frozen operation/retry behavior, evaluated Sunburst Medium combinations, Product 1:1, campaign paths, and F50.4. No migrations, database, deployment pipeline, environment files, or Vercel configuration changed.
 
 ## Verification
-- Focused behavior suites: PASS, 9 files / 87 tests.
+- Focused behavior suites: PASS, 9 files / 87 tests (initial run).
+- Follow-up evidence gaps closed: 10 files / 140 tests PASS, adding direct production telemetry `normal` assertions (sink and full adapter→gateway→sink path) and rerunning existing Product 1:1/F50.4 contracts plus the four behavioral route suites. No runtime defect found.
 - `npm run typecheck`: PASS.
 - `npm run lint`: PASS.
 - `npm run build`: PASS with transient build-only placeholder Supabase/site URL variables; no env file changes. Existing Next.js/Supabase and ESLint-plugin warnings remained; static generation completed (89/89).
