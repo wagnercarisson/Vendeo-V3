@@ -5,6 +5,8 @@ import { requireOwnership } from "@/lib/auth/store-ownership";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import type { Store } from "@/lib/store";
 import { AiImageGenerator } from "./ai-image-generator";
+import { resolveVisualSignatureGenerationConfig } from "./model-config";
+import type { VisualSignatureGenerationConfig } from "./model-config";
 import { getActiveVisualSignature, getSignedVisualSignatureUrl } from "./persistence";
 import { AiCostTracker } from "@/lib/ai-cost";
 import { createDefaultTelemetryContext, defaultAiModelResolver } from "@/lib/ai";
@@ -126,10 +128,26 @@ export async function generateVariations(
   }
 
   const aiGenerator = new AiImageGenerator();
-  const effectiveVisualSignatureModel = await defaultAiModelResolver
-    .resolve("visual_signature_image")
-    .then((config) => config.primary.model)
-    .catch(() => "unknown");
+  // F47.3: a configuração dedicada é resolvida UMA vez por operação e o mesmo
+  // snapshot é reutilizado em todas as tentativas/tonalidades. Falha explícita
+  // (nunca defaults silenciosos) e sem criar run.
+  let generationConfig: VisualSignatureGenerationConfig | null = null;
+  try {
+    const resolution = await resolveVisualSignatureGenerationConfig();
+    generationConfig = resolution.config;
+  } catch {
+    return {
+      success: false,
+      error: "Configuração de modelos da assinatura visual indisponível. Tente novamente.",
+    };
+  }
+
+  const effectiveVisualSignatureModel = generationConfig
+    ? generationConfig.orchestratorModel
+    : await defaultAiModelResolver
+        .resolve("visual_signature_image")
+        .then((config) => config.primary.model)
+        .catch(() => "unknown");
   const tonalities = ["profissional", "moderno", "elegante"];
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
@@ -166,6 +184,7 @@ export async function generateVariations(
         signal: AbortSignal.timeout(120000),
         attempt: 0,
         telemetry,
+        generationConfig,
       });
     } catch (err) {
       const a1 = classifyError(err, "image_direct", attempt1Start, effectiveVisualSignatureModel);
@@ -184,6 +203,7 @@ export async function generateVariations(
             attempt: 1,
             simplifiedPrompt: true,
             telemetry,
+            generationConfig,
           });
         } catch (err2) {
           const a2 = classifyError(err2, "image_retry", attempt2Start, effectiveVisualSignatureModel);
@@ -235,6 +255,19 @@ export async function generateAutomatic(storeId: string): Promise<
     return { success: false, error: "Loja não encontrada" };
   }
 
+  // F47.3: resolução ÚNICA por operação, antes de arquivar/startRun. Falha
+  // explícita sem gerar (sem defaults silenciosos).
+  let generationConfig: VisualSignatureGenerationConfig | null = null;
+  try {
+    const resolution = await resolveVisualSignatureGenerationConfig();
+    generationConfig = resolution.config;
+  } catch {
+    return {
+      success: false,
+      error: "Configuração de modelos da assinatura visual indisponível. Tente novamente.",
+    };
+  }
+
   try {
     const existing = await getActiveVisualSignature(storeId);
     if (existing) {
@@ -247,10 +280,12 @@ export async function generateAutomatic(storeId: string): Promise<
 
   const totalStart = Date.now();
   const aiGenerator = new AiImageGenerator();
-  const effectiveVisualSignatureModel = await defaultAiModelResolver
-    .resolve("visual_signature_image")
-    .then((config) => config.primary.model)
-    .catch(() => "unknown");
+  const effectiveVisualSignatureModel = generationConfig
+    ? generationConfig.orchestratorModel
+    : await defaultAiModelResolver
+        .resolve("visual_signature_image")
+        .then((config) => config.primary.model)
+        .catch(() => "unknown");
   const previousAttempts: CascadeAttempt[] = [];
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
@@ -284,6 +319,7 @@ export async function generateAutomatic(storeId: string): Promise<
       signal: AbortSignal.timeout(120000),
       attempt: 0,
       telemetry,
+      generationConfig,
     });
 
     const { data: signature, error } = await supabase
@@ -338,6 +374,7 @@ export async function generateAutomatic(storeId: string): Promise<
       attempt: 1,
       simplifiedPrompt: true,
       telemetry,
+      generationConfig,
     });
 
     const { data: signature, error } = await supabase

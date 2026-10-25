@@ -1,6 +1,7 @@
 import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { uploadToStorage, persistSignature } from "./persistence";
 import type { CascadeResult, VisualSignatureMetadata } from "./types";
+import type { VisualSignatureGenerationConfig } from "./model-config";
 import type { AiCallInfo } from "@/lib/ai-cost/types";
 import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
 import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
@@ -150,6 +151,12 @@ export class AiImageGenerator {
     onCall?: (info: AiCallInfo) => void | Promise<void>;
     /** F46-04 (D9): contexto de telemetria do caller (run/sink) — encaminhado à validação. */
     telemetry?: AiTelemetryContext;
+    /**
+     * F47.3: snapshot da configuração dedicada (`visual_signature_model_config`)
+     * resolvido UMA vez por operação. Ausente/null = caminho legado
+     * (`quality:"auto"`, tool sem `model`, metadata `null`/`'auto'`).
+     */
+    generationConfig?: VisualSignatureGenerationConfig | null;
   }): Promise<CascadeResult> {
     const startTime = Date.now();
     console.log('[ai-image-generator] generate() iniciado', { storeName: params.storeName, segment: params.segment, attempt: params.attempt });
@@ -203,9 +210,15 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         prompt,
         tools: "image_generation",
         size: "1024x1024",
-        quality: "auto",
+        quality: params.generationConfig ? params.generationConfig.imageQuality : "auto",
         signal: params.signal,
         timeout: timeoutMs,
+        ...(params.generationConfig
+          ? {
+              orchestratorModel: params.generationConfig.orchestratorModel,
+              imageGenerationModel: params.generationConfig.imageModel,
+            }
+          : {}),
       };
       const response = await this.invoker.invoke(
         "visual_signature_image",
@@ -269,6 +282,10 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         provider: "openai",
         model,
         elapsedMs,
+        orchestrator_model: model,
+        image_model: params.generationConfig?.imageModel ?? null,
+        image_quality: params.generationConfig?.imageQuality ?? "auto",
+        visual_signature_config_version_id: params.generationConfig?.configVersionId ?? null,
       };
 
       const promptUsed = prompt;

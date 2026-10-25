@@ -74,6 +74,16 @@ export interface AiInvocationRequest {
   jsonSchema?: AiJsonSchemaSpec;
   /** Habilita a tool `image_generation` na Responses API. */
   tools?: "image_generation";
+  /**
+   * F47.3: modelo principal **efetivo** pinado pela operação (protocolo
+   * `responses`). Ausente = usa `target.model` do alvo resolvido.
+   */
+  orchestratorModel?: string;
+  /**
+   * F47.3: modelo da tool `image_generation`, separado do orquestrador. Quando
+   * ausente a tool NÃO recebe `model` (payload legado preservado).
+   */
+  imageGenerationModel?: string;
   maxTokens?: number;
   temperature?: number;
   signal?: AbortSignal;

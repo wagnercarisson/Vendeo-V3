@@ -31,8 +31,11 @@ export class ResponsesAdapter implements AiAdapter {
       content.push({ type: "input_image", image_url: request.identityImageUrl, detail: "low" });
     }
 
+    // F47.3: modelo principal efetivo pinado pela operação (fallback: alvo).
+    const effectiveModel = request.orchestratorModel ?? target.model;
+
     const params: Record<string, unknown> = {
-      model: target.model,
+      model: effectiveModel,
       input: [{ role: "user", content }],
     };
     if (request.temperature !== undefined) params.temperature = request.temperature;
@@ -44,6 +47,11 @@ export class ResponsesAdapter implements AiAdapter {
           type: "image_generation",
           size: request.size,
           quality: request.quality,
+          // F47.3: o `model` da tool só aparece quando informado (spread
+          // condicional — nunca `model: undefined`, que mudaria o payload legado).
+          ...(request.imageGenerationModel
+            ? { model: request.imageGenerationModel }
+            : {}),
         },
       ];
       // F48.1 (UAT) — força a tool `image_generation`.
@@ -87,14 +95,14 @@ export class ResponsesAdapter implements AiAdapter {
       content: textContent ? textContent : undefined,
       imageBase64,
       mimeType: imageBase64 ? "image/png" : undefined,
-      model: target.model,
+      model: effectiveModel,
       usage: normalizeResponsesUsage(rawUsage),
       // F46-05 (reabertura): o marcador `imageGenerationTool` NÃO pode depender da
       // presença de `usage` — uma imagem bem-sucedida sem usage ainda usou a tool
       // e precisa chegar ao estimador com `imageGenerationTool: true`.
       usageMeta: {
         providerUsageSource: usesImageTool ? "responses.image_generation" : "responses",
-        responsesModel: target.model,
+        responsesModel: effectiveModel,
         imageGenerationTool: usesImageTool,
         ...(rawUsage && typeof rawUsage === "object"
           ? { providerUsageRaw: rawUsage as Record<string, unknown> }

@@ -346,6 +346,79 @@ describe("ResponsesAdapter — breakdown granular e tool image_generation (D2)",
     });
   });
 
+  // F47.3: overrides de modelo pinados pela operação da Assinatura Visual.
+  it("usa orchestratorModel e imageGenerationModel no payload quando informados", async () => {
+    mockResponsesCreate.mockResolvedValue({
+      output: [{ type: "image_generation_call", result: "BASE64IMG" }],
+      output_text: "",
+    });
+
+    const result = await new ResponsesAdapter().invoke(
+      {
+        prompt: "gerar arte",
+        tools: "image_generation",
+        size: "1024x1024",
+        quality: "medium",
+        orchestratorModel: "gpt-6-luna",
+        imageGenerationModel: "gpt-image-2.5-sunburst",
+      },
+      responsesTarget,
+    );
+
+    expect(mockResponsesCreate.mock.calls[0][0]).toEqual({
+      model: "gpt-6-luna",
+      input: [
+        { role: "user", content: [{ type: "input_text", text: "gerar arte" }] },
+      ],
+      tools: [
+        {
+          type: "image_generation",
+          size: "1024x1024",
+          quality: "medium",
+          model: "gpt-image-2.5-sunburst",
+        },
+      ],
+      tool_choice: { type: "image_generation" },
+    });
+    expect(result.model).toBe("gpt-6-luna");
+    expect(result.usageMeta?.responsesModel).toBe("gpt-6-luna");
+  });
+
+  it("sem imageGenerationModel a tool NÃO contém a chave model (payload legado)", async () => {
+    mockResponsesCreate.mockResolvedValue({
+      output: [{ type: "image_generation_call", result: "BASE64IMG" }],
+      output_text: "",
+    });
+
+    await new ResponsesAdapter().invoke(
+      {
+        prompt: "gerar arte",
+        tools: "image_generation",
+        size: "1024x1024",
+        quality: "medium",
+      },
+      responsesTarget,
+    );
+
+    const params = mockResponsesCreate.mock.calls[0][0];
+    expect(params.tools[0]).not.toHaveProperty("model");
+    expect(params.tools).toEqual([
+      { type: "image_generation", size: "1024x1024", quality: "medium" },
+    ]);
+  });
+
+  it("sem orchestratorModel usa o modelo do alvo (params.model e result.model)", async () => {
+    mockResponsesCreate.mockResolvedValue({ output: [], output_text: "texto" });
+
+    const result = await new ResponsesAdapter().invoke(
+      { prompt: "oi", imageGenerationModel: "gpt-image-2.5-flare" },
+      responsesTarget,
+    );
+
+    expect(mockResponsesCreate.mock.calls[0][0].model).toBe(responsesTarget.model);
+    expect(result.model).toBe(responsesTarget.model);
+  });
+
   it("não envia tool_choice quando a tool image_generation não é solicitada", async () => {
     mockResponsesCreate.mockResolvedValue({ output: [], output_text: "texto" });
 

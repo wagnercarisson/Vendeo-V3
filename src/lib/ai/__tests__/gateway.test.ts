@@ -204,6 +204,51 @@ describe("AiGateway — envelope por tentativa real (D3)", () => {
     expect(sink.envelopes[0].errorType).toBe("timeout");
   });
 
+  // F47.3: o envelope de FALHA reporta o modelo orquestrador pinado pela
+  // operação (o modelo real não é conhecido), mesmo divergindo de prepared.model.
+  it("falha com orchestratorModel informado → envelope usa o orquestrador", async () => {
+    const { adapter } = makeAdapter("chat-completions", async () => {
+      throw new AiInvocationError({
+        kind: "provider_error",
+        retryable: false,
+        message: "boom",
+      });
+    });
+    const gateway = new AiGateway(makeResolver(), makeRegistry([adapter]));
+    const sink = new RecordingSink();
+
+    await expect(
+      gateway.invoke(
+        "campaign_copy",
+        { prompt: "x", orchestratorModel: "gpt-6-luna" },
+        makeTelemetry(sink),
+      ),
+    ).rejects.toBeInstanceOf(AiInvocationError);
+
+    expect(sink.envelopes).toHaveLength(1);
+    expect(sink.envelopes[0].status).toBe("failed");
+    // prepared.model (baseConfig) é "gpt-4o" — o envelope usa o orquestrador.
+    expect(sink.envelopes[0].model).toBe("gpt-6-luna");
+  });
+
+  it("sucesso com orchestratorModel mantém o modelo REAL do resultado", async () => {
+    const { adapter } = makeAdapter("chat-completions", async () => ({
+      ...successResult,
+      model: "modelo-real",
+    }));
+    const gateway = new AiGateway(makeResolver(), makeRegistry([adapter]));
+    const sink = new RecordingSink();
+
+    await gateway.invoke(
+      "campaign_copy",
+      { prompt: "x", orchestratorModel: "gpt-6-luna" },
+      makeTelemetry(sink),
+    );
+
+    expect(sink.envelopes[0].status).toBe("success");
+    expect(sink.envelopes[0].model).toBe("modelo-real");
+  });
+
   it("erro de domínio (MalformedResponseError) não é normalizado e propaga o original", async () => {
     const domainError = new MalformedResponseError();
     const { adapter } = makeAdapter("chat-completions", async () => {

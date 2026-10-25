@@ -6,6 +6,8 @@ import { persistSignature, getActiveVisualSignature } from '@/lib/visual-signatu
 import { insertGenerationEvent } from '@/lib/visual-signature/generation-events';
 import { revalidateCriticalDrift } from '@/lib/visual-signature/drift-revalidator';
 import type { VisualSignatureArtDirectorOutput, VisualSignatureMetadataInputSnapshot } from '@/lib/visual-signature/types';
+import { resolveVisualSignatureGenerationConfig } from '@/lib/visual-signature/model-config';
+import type { VisualSignatureGenerationConfig } from '@/lib/visual-signature/model-config';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -175,6 +177,21 @@ export const POST = apiHandler(async (
       console.log(`[generate-without-logo][req-${reqId}] SUBSTITUIÇÃO — guardas OK`);
     }
 
+    // ----- F47.3: resolve a configuração dedicada ANTES de custo/saldo/reserva -----
+    // Falha de leitura/configuração inválida → 503 sem débito e sem geração
+    // (nunca defaults silenciosos). Resolvida UMA vez e reutilizada no retry.
+    let visualSignatureConfig: VisualSignatureGenerationConfig | null = null;
+    try {
+      const resolution = await resolveVisualSignatureGenerationConfig();
+      visualSignatureConfig = resolution.config;
+    } catch {
+      console.error(`[generate-without-logo][req-${reqId}] visual_signature_model_config_unavailable`, { storeId: id });
+      return NextResponse.json(
+        { error: 'visual_signature_model_config_unavailable', message: 'Configuração de modelos da assinatura visual indisponível.' },
+        { status: 503 },
+      );
+    }
+
     // ----- Resolve operation cost (D12) — SEMPRE, mesmo sem cobrança -----
     try {
       cost = await new OperationCostService().getCost("visual_signature_generation");
@@ -333,7 +350,7 @@ export const POST = apiHandler(async (
     // F46-05 (D9): imagem (visual_signature_image) e validação
     // (visual_signature_validation) são persistidas pelo SINK do contexto de
     // telemetria — o `onCall` legado (persistência manual híbrida) foi removido.
-    result = await service.generate(serviceInput, abortController.signal, undefined, validation.telemetry);
+    result = await service.generate(serviceInput, abortController.signal, undefined, validation.telemetry, visualSignatureConfig);
     console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 1 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });
   } catch (err) {
     attempt1Error = err;
@@ -368,6 +385,7 @@ export const POST = apiHandler(async (
           attempt: 1,
           simplifiedPrompt: true,
           telemetry: validation.telemetry, // F46-05 (D9): imagem + validação via sink
+          generationConfig: visualSignatureConfig, // F47.3: MESMO snapshot da tentativa 1
         });
 
         const artDirectorOutput: VisualSignatureArtDirectorOutput = {

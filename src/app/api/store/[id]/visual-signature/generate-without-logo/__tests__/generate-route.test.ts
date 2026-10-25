@@ -7,6 +7,9 @@ const mockAiGeneratorGenerate = vi.fn();
 const mockPersistSignature = vi.fn();
 const mockInsertGenerationEvent = vi.fn();
 const mockGetLaunchConfig = vi.fn();
+const { mockResolveVisualSignatureConfig } = vi.hoisted(() => ({
+  mockResolveVisualSignatureConfig: vi.fn(),
+}));
 const mockGetBalance = vi.fn();
 const mockReserveCredit = vi.fn();
 const mockGetOriginDemoGrantTxId = vi.fn();
@@ -44,6 +47,13 @@ vi.mock('@/lib/visual-signature/ai-image-generator', () => ({
   AiImageGenerator: class {
     generate = mockAiGeneratorGenerate;
   },
+}));
+
+// F47.3: resolução da configuração dedicada — default legado para não alterar
+// os casos existentes; os novos casos controlam dedicated/falha explicitamente.
+vi.mock('@/lib/visual-signature/model-config', () => ({
+  resolveVisualSignatureGenerationConfig: (...args: any[]) =>
+    mockResolveVisualSignatureConfig(...args),
 }));
 
 vi.mock('@/lib/visual-signature/persistence', () => ({
@@ -274,6 +284,7 @@ function makeRequest(body: Record<string, unknown> = {}) {
 describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockResolveVisualSignatureConfig.mockResolvedValue({ source: 'legacy', config: null });
     mockGetLaunchConfig.mockReturnValue({
       v15Enabled: true,
       creditsChargingEnabled: true,
@@ -430,7 +441,8 @@ describe('POST /api/store/[id]/visual-signature/generate-without-logo', () => {
       }),
       expect.any(AbortSignal),
       undefined, // F46-05 (D9): onCall legado removido (persistência pelo sink)
-      expect.objectContaining({ sink: expect.anything() }) // F46-04 (D9): telemetria da validação
+      expect.objectContaining({ sink: expect.anything() }), // F46-04 (D9): telemetria da validação
+      null // F47.3: sem configuração dedicada (legado) o 5º argumento é null
     );
   });
 });
@@ -441,6 +453,7 @@ describe('VS cost accounting (6.4)', () => {
   // buffer do tracker mockado e reconstrói o setup padrão de forma idempotente.
   beforeEach(() => {
     vi.clearAllMocks();
+    mockResolveVisualSignatureConfig.mockResolvedValue({ source: 'legacy', config: null });
     mockGetLaunchConfig.mockReturnValue({
       v15Enabled: true,
       creditsChargingEnabled: true,
@@ -668,6 +681,7 @@ describe('VS cost accounting (6.4)', () => {
 describe('snapshot econômico (F38.2.1) — VS', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockResolveVisualSignatureConfig.mockResolvedValue({ source: 'legacy', config: null });
     mockGetLaunchConfig.mockReturnValue({
       v15Enabled: true,
       creditsChargingEnabled: true,
@@ -763,5 +777,115 @@ describe('snapshot econômico (F38.2.1) — VS', () => {
     expect(delivery).toBeDefined();
     expect(delivery![0].usd_brl_rate_at_generation).toBeNull();
     expect(delivery![0].credit_value_brl_at_generation).toBeNull();
+  });
+});
+
+// ── F47.3: configuração dedicada de modelo/qualidade da Assinatura Visual ──
+describe('Resolução da configuração dedicada (F47.3)', () => {
+  const CONFIG: any = {
+    orchestratorModel: 'gpt-6-luna',
+    imageModel: 'gpt-image-2.5-sunburst',
+    imageQuality: 'medium',
+    imagePreset: 'sunburst_medium',
+    configVersionId: '11111111-1111-4111-8111-111111111111',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockResolveVisualSignatureConfig.mockResolvedValue({ source: 'legacy', config: null });
+    mockGetLaunchConfig.mockReturnValue({
+      v15Enabled: true,
+      creditsChargingEnabled: true,
+      copyDirectorEnabled: true,
+      rateLimitEnabled: true,
+      generationPaused: false,
+    });
+    mockGetBalance.mockResolvedValue(5);
+    mockReserveCredit.mockResolvedValue('ct-001');
+    mockRefundCredit.mockResolvedValue('refund-tx');
+    mockGetCost.mockResolvedValue({
+      operationKey: 'visual_signature_generation',
+      costCredits: 1,
+      enabled: true,
+      source: 'table',
+    });
+    mockIdentityDirectorGenerate.mockResolvedValue(mockSignatureResult);
+    mockPersistSignature.mockResolvedValue(mockSignatureResult.signature);
+    mockInsertGenerationEvent.mockResolvedValue(undefined);
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: [], error: null });
+      return makeChain({ data: null, error: null });
+    });
+  });
+
+  it('resolve uma única vez e ANTES de custo/saldo/reserva', async () => {
+    const order: string[] = [];
+    mockResolveVisualSignatureConfig.mockImplementation(async () => {
+      order.push('config');
+      return { source: 'dedicated', config: CONFIG };
+    });
+    mockGetCost.mockImplementation(async () => {
+      order.push('cost');
+      return { operationKey: 'visual_signature_generation', costCredits: 1, enabled: true, source: 'table' };
+    });
+    mockReserveCredit.mockImplementation(async () => {
+      order.push('reserve');
+      return 'ct-001';
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(200);
+    expect(order.filter((step) => step === 'config')).toHaveLength(1);
+    expect(order.indexOf('config')).toBeLessThan(order.indexOf('cost'));
+    expect(order.indexOf('config')).toBeLessThan(order.indexOf('reserve'));
+    expect(mockResolveVisualSignatureConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it('falha de leitura → 503 sem débito, sem custo e sem geração', async () => {
+    mockResolveVisualSignatureConfig.mockRejectedValue(new Error('boom'));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toBe('visual_signature_model_config_unavailable');
+    expect(body.message).toBe('Configuração de modelos da assinatura visual indisponível.');
+    expect(mockGetCost).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockIdentityDirectorGenerate).not.toHaveBeenCalled();
+  });
+
+  it('retry reutiliza o MESMO snapshot resolvido uma única vez', async () => {
+    mockResolveVisualSignatureConfig.mockResolvedValue({ source: 'dedicated', config: CONFIG });
+    mockIdentityDirectorGenerate.mockRejectedValue(new Error('falhou'));
+    mockAiGeneratorGenerate.mockResolvedValue({ tier: 'typographic' });
+
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(mockResolveVisualSignatureConfig).toHaveBeenCalledTimes(1);
+    expect(mockIdentityDirectorGenerate).toHaveBeenCalledTimes(1);
+    // 5º argumento = snapshot dedicado (mesma referência)
+    expect(mockIdentityDirectorGenerate.mock.calls[0][4]).toBe(CONFIG);
+    expect(mockAiGeneratorGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({ generationConfig: CONFIG }),
+    );
+  });
+
+  it('legado: passa null no 5º argumento e no retry', async () => {
+    mockIdentityDirectorGenerate.mockRejectedValue(new Error('falhou'));
+    mockAiGeneratorGenerate.mockResolvedValue({ tier: 'typographic' });
+
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(mockIdentityDirectorGenerate.mock.calls[0][4]).toBeNull();
+    expect(mockAiGeneratorGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({ generationConfig: null }),
+    );
   });
 });

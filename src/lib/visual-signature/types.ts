@@ -38,6 +38,12 @@ export interface VisualSignatureMetadata {
   artDirectorOutput?: VisualSignatureArtDirectorOutput | VisualSignatureMetadataArtDirectorOutput;
   input_snapshot?: VisualSignatureMetadataInputSnapshot;
   credit_tx_id?: string;
+  // F47.3: configuração dedicada consumida na geração (aditivo). No legado
+  // (sem linha de configuração) grava-se `null`/`'auto'` explicitamente.
+  orchestrator_model?: string;
+  image_model?: string | null;
+  image_quality?: string;
+  visual_signature_config_version_id?: string | null;
 }
 
 export interface VisualSignatureRecord {

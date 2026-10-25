@@ -172,7 +172,9 @@ export class AiGateway {
         protocol: prepared.protocol,
         status: isInvocationError && normalized.kind === "timeout" ? "timeout" : "failed",
         provider: prepared.provider,
-        model: prepared.model,
+        // F47.3: numa falha o modelo real não é conhecido — usa o orquestrador
+        // pinado pela operação quando informado (fallback: modelo do alvo).
+        model: request.orchestratorModel ?? prepared.model,
         durationMs,
         errorType: isInvocationError
           ? normalized.kind
