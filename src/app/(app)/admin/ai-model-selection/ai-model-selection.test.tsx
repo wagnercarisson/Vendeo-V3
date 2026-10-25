@@ -42,6 +42,12 @@ const FULL_VIEW = {
   }),
 };
 
+const VISUAL_PROPS = {
+  visualSignatureConfigView: { status: "legacy" },
+  inheritedVisualSignatureOrchestrator: "gpt-5.5",
+  inheritedVisualSignatureOrchestratorSource: "default",
+} as const;
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("fetch", mockFetch);
@@ -53,7 +59,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("AiModelSelectionForm", () => {
   it("agrupa capacidades e oferece fallback somente para campaign_copy", () => {
-    render(<AiModelSelectionForm view={VIEW} />);
+    render(<AiModelSelectionForm view={VIEW} {...VISUAL_PROPS} />);
     expect(screen.getByRole("heading", { name: "Texto" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Imagem" })).toBeInTheDocument();
     expect(screen.getByText("campaign_image_edit")).toBeInTheDocument();
@@ -63,7 +69,7 @@ describe("AiModelSelectionForm", () => {
 
   it("exige motivo e envia operationId no save", async () => {
     mockFetch.mockResolvedValue({ ok: true, json: async () => ({ selection: { success: true } }) });
-    render(<AiModelSelectionForm view={VIEW} />);
+    render(<AiModelSelectionForm view={VIEW} {...VISUAL_PROPS} />);
     const copyCard = screen.getByText("campaign_copy").closest("article");
     expect(copyCard).not.toBeNull();
     fireEvent.click(within(copyCard!).getByRole("button", { name: "Salvar seleção" }));
@@ -82,7 +88,7 @@ describe("AiModelSelectionForm", () => {
       .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: "falhou" }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ selection: { success: true } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ selection: { success: true } }) });
-    render(<AiModelSelectionForm view={VIEW} />);
+    render(<AiModelSelectionForm view={VIEW} {...VISUAL_PROPS} />);
     expect(screen.getByText("Fallback executado")).toBeInTheDocument();
     expect(screen.getByText("Fallback default")).toBeInTheDocument();
     const copyCard = screen.getByText("campaign_copy").closest("article")!;
@@ -113,7 +119,7 @@ describe("AiModelSelectionForm", () => {
       } : item),
     };
     mockFetch.mockResolvedValue({ ok: true, json: async () => ({ reset: { reset: false } }) });
-    render(<AiModelSelectionForm view={diagnosticView} />);
+    render(<AiModelSelectionForm view={diagnosticView} {...VISUAL_PROPS} />);
     expect(screen.getByText(/Fallback persistido: missing-fallback/)).toBeInTheDocument();
     const copyCard = screen.getByText("campaign_copy").closest("article")!;
     fireEvent.change(within(copyCard).getByLabelText("Motivo da alteração"), { target: { value: "reset" } });
@@ -130,7 +136,7 @@ describe("AiModelSelectionForm", () => {
         configured: { primary: null, fallback: target("openai", "deprecated-fallback", "chat-completions", "deprecated") },
       } : item),
     };
-    render(<AiModelSelectionForm view={fallbackDeprecatedView} />);
+    render(<AiModelSelectionForm view={fallbackDeprecatedView} {...VISUAL_PROPS} />);
     const option = screen.getByRole("option", { name: /deprecated-fallback.*deprecated/ });
     expect(option).toBeDisabled();
     expect(screen.getByLabelText("Fallback genérico")).toHaveValue("openai|deprecated-fallback|chat-completions");
@@ -139,10 +145,24 @@ describe("AiModelSelectionForm", () => {
   });
 
   it("renderiza as 11 capacidades legadas (sem campaign_product_image)", () => {
-    render(<AiModelSelectionForm view={FULL_VIEW} />);
+    render(<AiModelSelectionForm view={FULL_VIEW} {...VISUAL_PROPS} />);
     for (const capability of LEGACY_SELECTION_CAPABILITIES)
       expect(screen.getByText(capability)).toBeInTheDocument();
     expect(screen.queryByText("campaign_product_image")).not.toBeInTheDocument();
+  });
+
+  it("substitui exclusivamente o card visual_signature_image pelo card dedicado", () => {
+    render(<AiModelSelectionForm view={FULL_VIEW} {...VISUAL_PROPS} />);
+    const occurrence = screen.getAllByText("visual_signature_image");
+    expect(occurrence).toHaveLength(1);
+    const card = occurrence[0].closest("article");
+    expect(card).not.toBeNull();
+    expect(within(card!).getByText("Assinatura Visual")).toBeInTheDocument();
+    expect(within(card!).queryByText("Novo primary")).not.toBeInTheDocument();
+    expect(within(card!).getByRole("button", { name: "Salvar conjunto" })).toBeInTheDocument();
+    // Demais cards do grupo continuam presentes e genéricos.
+    expect(screen.getByText("campaign_image")).toBeInTheDocument();
+    expect(screen.getByText("campaign_image_edit")).toBeInTheDocument();
   });
 
   it("recalcula o aviso de pricing quando o primary em edição muda", () => {
@@ -160,7 +180,7 @@ describe("AiModelSelectionForm", () => {
       } : item),
     };
     pricingView.catalog = [...pricingView.catalog, { id: "custom-fallback", capability: "campaign_copy", segment: "text", provider: "gemini", model: "custom-no-price-fallback", protocol: "gemini", label: "Custom fallback", status: "active", source_note: null, validated_at: null, created_at: "", updated_at: "" }];
-    render(<AiModelSelectionForm view={pricingView} />);
+    render(<AiModelSelectionForm view={pricingView} {...VISUAL_PROPS} />);
     const copyCard = screen.getByText("campaign_copy").closest("article")!;
     fireEvent.change(within(copyCard).getByLabelText("Novo primary"), { target: { value: "openai|custom-no-price|chat-completions" } });
     expect(within(copyCard).getByText(/Pricing missing: faltam input_tokens, output_tokens/)).toBeInTheDocument();

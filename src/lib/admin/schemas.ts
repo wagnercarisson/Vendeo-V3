@@ -420,3 +420,52 @@ export const ProductOneToOnePendingResolutionSchema = z
 export type ProductOneToOnePendingResolution = z.infer<
   typeof ProductOneToOnePendingResolutionSchema
 >;
+
+// ─── Assinatura Visual — configuração dedicada (F47.3-lh9) ───────────────────
+// Schemas estritos da superfície administrativa do card
+// `visual_signature_image`. A gravação ocorre apenas pelas RPCs dedicadas
+// (`admin_set_visual_signature_model_config_v3` /
+// `admin_reset_visual_signature_model_config`) — nunca por mutação direta.
+//
+// As listas literais abaixo espelham `VISUAL_SIGNATURE_*` de
+// `src/lib/visual-signature/model-config.ts` (fonte de verdade). O import é
+// deliberadamente evitado: aquele módulo é server-only e importa o client
+// Supabase, cuja validação de env no load quebraria outros testes de schema.
+// A paridade é provada no teste da rota.
+
+/**
+ * Body de PUT /api/admin/visual-signature-model-config.
+ * `.strict()` recusa `environmentScope`, `instanceIdentity`, `actorId`,
+ * `reasoningEffort`, `imagePreset` e qualquer campo extra: ambiente/identidade,
+ * ator e reasoning são DERIVADOS server-side.
+ */
+export const VisualSignatureModelConfigUpdateSchema = z
+  .object({
+    orchestratorModel: z.enum(["gpt-5.5", "gpt-6-luna"]),
+    imageModel: z.enum(["gpt-image-2.5-flare", "gpt-image-2.5-sunburst"]),
+    imageQuality: z.enum(["low", "medium"]),
+    reason: z.string().trim().min(1),
+    operationId: z.string().uuid(),
+  })
+  .strict();
+
+export type VisualSignatureModelConfigUpdate = z.infer<
+  typeof VisualSignatureModelConfigUpdateSchema
+>;
+
+/**
+ * Body de DELETE /api/admin/visual-signature-model-config.
+ * `expectedConfigVersionId` garante remoção da versão vigente; nenhum campo de
+ * ambiente é aceito (a RPC dedicada não recebe environment).
+ */
+export const VisualSignatureModelConfigResetSchema = z
+  .object({
+    expectedConfigVersionId: z.string().uuid(),
+    reason: z.string().trim().min(1),
+    operationId: z.string().uuid(),
+  })
+  .strict();
+
+export type VisualSignatureModelConfigReset = z.infer<
+  typeof VisualSignatureModelConfigResetSchema
+>;

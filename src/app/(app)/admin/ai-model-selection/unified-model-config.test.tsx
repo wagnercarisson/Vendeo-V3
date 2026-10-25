@@ -57,10 +57,16 @@ const PAIR_VIEW: ImageModelPairConfigView = {
   readError: null,
 };
 
+const SELECTION_PROPS = {
+  visualSignatureConfigView: { status: "legacy" },
+  inheritedVisualSignatureOrchestrator: "gpt-5.5",
+  inheritedVisualSignatureOrchestratorSource: "default",
+} as const;
+
 function UnifiedComposition() {
   return (
     <div>
-      <AiModelSelectionForm view={SELECTION_VIEW} />
+      <AiModelSelectionForm view={SELECTION_VIEW} {...SELECTION_PROPS} />
       <section aria-labelledby="product-1-1-image-heading">
         <h2 id="product-1-1-image-heading">Imagem de campanhas — Produto 1:1</h2>
         <ImageModelPairScopeBanner />
@@ -119,6 +125,16 @@ describe("Página unificada de modelos — composição", () => {
     expect(mockFetch.mock.calls.filter((call) => call[0] === "/api/admin/image-model-pair")).toHaveLength(1);
   });
 
+  it("substitui apenas visual_signature_image pelo card dedicado, mantendo os demais", () => {
+    render(<UnifiedComposition />);
+    expect(screen.getAllByText("visual_signature_image")).toHaveLength(1);
+    const card = screen.getByText("visual_signature_image").closest("article")!;
+    expect(within(card).getByText("Assinatura Visual")).toBeInTheDocument();
+    expect(within(card).queryByText("Novo primary")).not.toBeInTheDocument();
+    expect(screen.getByText("campaign_image")).toBeInTheDocument();
+    expect(screen.getByText("campaign_image_edit")).toBeInTheDocument();
+  });
+
   it("mantém o motivo obrigatório na seção Produto 1:1 sem acionar a rede", () => {
     render(<UnifiedComposition />);
     const pairSection = screen.getByRole("region", { name: "Configuração do par" });
@@ -154,5 +170,15 @@ describe("Página unificada de modelos — rota legada e navegação", () => {
     );
     expect(layoutSource).toMatch(/href="\/admin\/ai-model-selection"/);
     expect(layoutSource).not.toMatch(/href="\/admin\/image-model-pair"/);
+  });
+
+  it("a página lê a configuração dedicada server-side e a repassa ao form", () => {
+    const pageSource = readFileSync(
+      path.resolve(process.cwd(), "src/app/(app)/admin/ai-model-selection/page.tsx"),
+      "utf8",
+    );
+    expect(pageSource).toMatch(/buildVisualSignatureAdminConfigView/);
+    expect(pageSource).toMatch(/visualSignatureConfigView/);
+    expect(pageSource).toMatch(/visual_signature_image/);
   });
 });

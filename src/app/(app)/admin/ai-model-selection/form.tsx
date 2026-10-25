@@ -4,6 +4,8 @@ import { useState } from "react";
 import { AlertTriangle, Check, RotateCcw, Save, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AiModelSelectionViewModel, AiModelCapabilityView } from "@/lib/ai/ai-model-selection-view";
+import type { VisualSignatureAdminConfigView } from "@/lib/visual-signature/admin-config-view";
+import { VisualSignatureModelCard } from "./visual-signature-model-card";
 
 type Draft = {
   provider: string;
@@ -25,7 +27,7 @@ const groups = [
     key: "image",
     label: "Imagem",
     description:
-      "Fluxo legado — geração, edição e assinatura visual. O fluxo Produto 1:1 é configurado na seção \"Imagem de campanhas — Produto 1:1\".",
+      "Fluxo legado — geração e edição. A Assinatura Visual usa configuração dedicada neste mesmo grupo; o fluxo Produto 1:1 é configurado na seção \"Imagem de campanhas — Produto 1:1\".",
   },
 ] as const;
 
@@ -58,7 +60,17 @@ function makeDraft(item: AiModelCapabilityView): Draft {
   };
 }
 
-export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel }) {
+export function AiModelSelectionForm({
+  view,
+  visualSignatureConfigView,
+  inheritedVisualSignatureOrchestrator,
+  inheritedVisualSignatureOrchestratorSource,
+}: {
+  view: AiModelSelectionViewModel;
+  visualSignatureConfigView: VisualSignatureAdminConfigView;
+  inheritedVisualSignatureOrchestrator: string;
+  inheritedVisualSignatureOrchestratorSource: "selection" | "default";
+}) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
     Object.fromEntries(view.capabilities.map((item) => [item.capability, makeDraft(item)])),
   );
@@ -131,6 +143,16 @@ export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
               {items.map((item) => {
+                if (item.capability === "visual_signature_image") {
+                  return (
+                    <VisualSignatureModelCard
+                      key={item.capability}
+                      view={visualSignatureConfigView}
+                      inheritedOrchestratorModel={inheritedVisualSignatureOrchestrator}
+                      inheritedOrchestratorSource={inheritedVisualSignatureOrchestratorSource}
+                    />
+                  );
+                }
                 const draft = drafts[item.capability];
                 const activeOptions = view.catalog.filter((row) => row.capability === item.capability && row.status === "active");
                 const configured = item.configured;

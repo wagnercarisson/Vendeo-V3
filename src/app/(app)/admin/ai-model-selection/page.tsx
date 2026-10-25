@@ -1,4 +1,5 @@
 import { buildAiModelSelectionView } from "@/lib/ai/ai-model-selection-view";
+import { buildVisualSignatureAdminConfigView } from "@/lib/visual-signature/admin-config-view";
 import { AiModelSelectionForm } from "./form";
 import { ProductOneToOneImageModelSection } from "./image-model-pair-section";
 
@@ -6,6 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminAiModelSelectionPage() {
   const view = await buildAiModelSelectionView();
+  const visualSignatureCapability = view.capabilities.find(
+    (item) => item.capability === "visual_signature_image",
+  );
+  const visualSignatureConfigView = await buildVisualSignatureAdminConfigView();
 
   return (
     <div className="space-y-6">
@@ -32,7 +37,14 @@ export default async function AdminAiModelSelectionPage() {
             seguinte.
           </p>
         </div>
-        <AiModelSelectionForm view={view} />
+        <AiModelSelectionForm
+          view={view}
+          visualSignatureConfigView={visualSignatureConfigView}
+          inheritedVisualSignatureOrchestrator={
+            visualSignatureCapability?.current.primary.model ?? "gpt-5.5"
+          }
+          inheritedVisualSignatureOrchestratorSource={visualSignatureCapability?.source ?? "default"}
+        />
       </section>
 
       <ProductOneToOneImageModelSection />
