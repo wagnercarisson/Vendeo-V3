@@ -105,6 +105,53 @@ async function archiveExistingActive(storeId: string): Promise<void> {
   }
 }
 
+/**
+ * F47.3 — ativa a assinatura gerada preservando o metadata já existente e
+ * acrescentando os quatro campos da configuração efetivamente usada na
+ * tentativa (orquestrador, imagem, qualidade e versão). A leitura antes do
+ * update evita sobrescrever metadata de outras etapas (ex.: artDirectorOutput).
+ */
+async function activateGeneratedSignature(
+  storagePath: string,
+  generatedMetadata: VisualSignatureMetadata | undefined
+): Promise<{
+  signature: VisualSignatureRecord | null;
+  error: { message: string } | null;
+}> {
+  const { data: existing, error: readError } = await supabase
+    .from("store_visual_signatures")
+    .select("metadata")
+    .eq("storage_path", storagePath)
+    .maybeSingle();
+
+  if (readError) {
+    return { signature: null, error: readError };
+  }
+
+  const existingMetadata =
+    (existing?.metadata as Record<string, unknown> | null) ?? {};
+  const configMetadata = {
+    orchestrator_model: generatedMetadata?.orchestrator_model,
+    image_model: generatedMetadata?.image_model,
+    image_quality: generatedMetadata?.image_quality,
+    visual_signature_config_version_id:
+      generatedMetadata?.visual_signature_config_version_id,
+  };
+
+  const { data: signature, error } = await supabase
+    .from("store_visual_signatures")
+    .update({
+      status: "active",
+      updated_at: new Date().toISOString(),
+      metadata: { ...existingMetadata, ...configMetadata },
+    })
+    .eq("storage_path", storagePath)
+    .select()
+    .single();
+
+  return { signature, error };
+}
+
 export async function generateVariations(
   storeId: string
 ): Promise<GenerateVariationsResult> {
@@ -322,15 +369,10 @@ export async function generateAutomatic(storeId: string): Promise<
       generationConfig,
     });
 
-    const { data: signature, error } = await supabase
-      .from("store_visual_signatures")
-      .update({
-        status: "active",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("storage_path", result.storagePath)
-      .select()
-      .single();
+    const { signature, error } = await activateGeneratedSignature(
+      result.storagePath,
+      result.metadata
+    );
 
     if (error || !signature) {
       return {
@@ -377,15 +419,10 @@ export async function generateAutomatic(storeId: string): Promise<
       generationConfig,
     });
 
-    const { data: signature, error } = await supabase
-      .from("store_visual_signatures")
-      .update({
-        status: "active",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("storage_path", retryResult.storagePath)
-      .select()
-      .single();
+    const { signature, error } = await activateGeneratedSignature(
+      retryResult.storagePath,
+      retryResult.metadata
+    );
 
     if (error || !signature) {
       return {

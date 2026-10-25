@@ -9,11 +9,15 @@ const {
   mockGenerate,
   mockStartRun,
   mockGetActiveVisualSignature,
+  mockReadSignatureMetadata,
+  mockUpdateSignature,
 } = vi.hoisted(() => ({
   mockResolveVisualSignatureConfig: vi.fn(),
   mockGenerate: vi.fn(),
   mockStartRun: vi.fn(),
   mockGetActiveVisualSignature: vi.fn(),
+  mockReadSignatureMetadata: vi.fn(),
+  mockUpdateSignature: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => {
@@ -31,8 +35,25 @@ vi.mock("@/lib/supabase/server", () => {
     return chain;
   };
   const supabaseAdmin = {
-    from: (table: string) =>
-      makeChain(
+    from: (table: string) => {
+      if (table === "store_visual_signatures") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: (...args: unknown[]) =>
+                mockReadSignatureMetadata(...args),
+            }),
+          }),
+          update: (payload: Record<string, unknown>) => ({
+            eq: () => ({
+              select: () => ({
+                single: async () => mockUpdateSignature(payload),
+              }),
+            }),
+          }),
+        };
+      }
+      return makeChain(
         table === "stores"
           ? {
               data: {
@@ -43,10 +64,9 @@ vi.mock("@/lib/supabase/server", () => {
               },
               error: null,
             }
-          : table === "store_visual_signatures"
-            ? { data: { id: "sig-1", store_id: "550e8400-e29b-41d4-a716-446655440000" }, error: null }
-            : { data: null, error: null },
-      ),
+          : { data: null, error: null },
+      );
+    },
   };
   return { supabaseAdmin };
 });
@@ -122,7 +142,14 @@ const SUCCESS_RESULT = {
   assetUrl: "https://example.com/vs.png",
   storagePath: "test/vs.png",
   mimeType: "image/png" as const,
-  metadata: { generation_tier: "image_direct" as const },
+  metadata: {
+    generation_tier: "image_direct" as const,
+    orchestrator_model: "gpt-6-luna",
+    image_model: "gpt-image-2.5-sunburst",
+    image_quality: "medium",
+    visual_signature_config_version_id:
+      "11111111-1111-4111-8111-111111111111",
+  },
   prompt: "prompt",
 };
 
@@ -138,6 +165,20 @@ beforeEach(() => {
     return { operationRunId: `run-${runSeq}`, traceId: `trace-${runSeq}` };
   });
   mockGetActiveVisualSignature.mockResolvedValue(null);
+  mockReadSignatureMetadata.mockResolvedValue({
+    data: { metadata: { existing: "keep" } },
+    error: null,
+  });
+  mockUpdateSignature.mockImplementation(
+    async (payload: { metadata: Record<string, unknown> }) => ({
+      data: {
+        id: "sig-1",
+        store_id: "550e8400-e29b-41d4-a716-446655440000",
+        metadata: payload.metadata,
+      },
+      error: null,
+    }),
+  );
   // Padrão das variações: attempt 0 falha (força retry), attempt 1 sucede.
   mockGenerate.mockImplementation(async (params: { attempt?: number }) => {
     if (params.attempt === 0) throw new Error("boom");
@@ -230,5 +271,71 @@ describe("generateAutomatic — resolução única do snapshot (F47.3)", () => {
     expect(result).toEqual({ success: false, error: FAILURE_MESSAGE });
     expect(mockGenerate).not.toHaveBeenCalled();
     expect(mockStartRun).not.toHaveBeenCalled();
+  });
+
+  it("persiste os quatro campos no sucesso inicial sem sobrescrever metadata existente", async () => {
+    mockResolveVisualSignatureConfig.mockResolvedValue({
+      source: "dedicated",
+      config: DEDICATED_CONFIG,
+    });
+    mockReadSignatureMetadata.mockResolvedValue({
+      data: {
+        metadata: {
+          artDirectorOutput: { visual_direction: "Personalizada" },
+          existing: "keep",
+        },
+      },
+      error: null,
+    });
+    mockGenerate.mockResolvedValue(SUCCESS_RESULT);
+
+    const result = await generateAutomatic(STORE_ID);
+
+    expect(result.success).toBe(true);
+    expect(mockUpdateSignature).toHaveBeenCalledTimes(1);
+    expect(mockUpdateSignature.mock.calls[0][0]).toMatchObject({
+      status: "active",
+      metadata: {
+        artDirectorOutput: { visual_direction: "Personalizada" },
+        existing: "keep",
+        orchestrator_model: "gpt-6-luna",
+        image_model: "gpt-image-2.5-sunburst",
+        image_quality: "medium",
+        visual_signature_config_version_id:
+          "11111111-1111-4111-8111-111111111111",
+      },
+    });
+  });
+
+  it("persiste os quatro campos no sucesso do retry sem sobrescrever metadata existente", async () => {
+    mockResolveVisualSignatureConfig.mockResolvedValue({
+      source: "dedicated",
+      config: DEDICATED_CONFIG,
+    });
+    mockReadSignatureMetadata.mockResolvedValue({
+      data: { metadata: { existing: "keep-from-retry" } },
+      error: null,
+    });
+    mockGenerate.mockImplementation(async (params: { attempt?: number }) => {
+      if (params.attempt === 0) throw new Error("boom");
+      return SUCCESS_RESULT;
+    });
+
+    const result = await generateAutomatic(STORE_ID);
+
+    expect(result.success).toBe(true);
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    expect(mockUpdateSignature).toHaveBeenCalledTimes(1);
+    expect(mockUpdateSignature.mock.calls[0][0]).toMatchObject({
+      status: "active",
+      metadata: {
+        existing: "keep-from-retry",
+        orchestrator_model: "gpt-6-luna",
+        image_model: "gpt-image-2.5-sunburst",
+        image_quality: "medium",
+        visual_signature_config_version_id:
+          "11111111-1111-4111-8111-111111111111",
+      },
+    });
   });
 });
