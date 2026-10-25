@@ -32,9 +32,9 @@ export default async function AdminAiModelSelectionPage() {
             Demais capacidades
           </h2>
           <p className="mt-1 text-sm leading-6 text-text-secondary">
-            Seleção de modelos por capacidade, preservando os agrupamentos existentes. As capacidades
-            de imagem abaixo pertencem ao fluxo legado; o fluxo Produto 1:1 é configurado na seção
-            seguinte.
+            Seleção de modelos por capacidade, preservando os agrupamentos existentes. A Assinatura
+            Visual tem configuração dedicada no grupo Imagem; as demais capacidades de imagem
+            pertencem ao fluxo legado. O fluxo Produto 1:1 é configurado na seção seguinte.
           </p>
         </div>
         <AiModelSelectionForm

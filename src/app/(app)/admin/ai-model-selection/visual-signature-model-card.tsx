@@ -80,7 +80,19 @@ const SAFE_ERRORS: Record<string, string> = {
   invalid_preset_tuple: "Combinação de modelo e qualidade inválida.",
   operation_id_conflict: "Esta operação já foi aplicada com outro conteúdo.",
   environment_unresolved: "Ambiente administrativo não pôde ser resolvido.",
+  config_version_mismatch:
+    "A configuração mudou desde o carregamento. Recarregue a página e tente novamente.",
+  config_missing: "Não há configuração dedicada vigente para remover.",
+  instance_identity_mismatch:
+    "O ambiente mudou desde o carregamento. Recarregue a página e tente novamente.",
+  deactivate_required:
+    "A configuração está ativa em um fluxo de liberação e não pode ser removida por esta tela.",
+  missing_config_version_id: "Versão da configuração ausente. Recarregue a página.",
+  invalid_rpc_response: "O servidor não confirmou a operação. Tente novamente.",
   unexpected_error: "Não foi possível concluir a operação.",
+  "Dados inválidos": "Dados inválidos. Confira os campos e tente novamente.",
+  "Corpo da requisição inválido":
+    "Requisição inválida. Recarregue a página e tente novamente.",
 };
 
 const CONTROL_CLASS =

@@ -44,6 +44,7 @@ const DELETE_CONFLICT_CODES = [
   "config_missing",
   "config_version_mismatch",
   "instance_identity_mismatch",
+  "release_state_missing",
   "deactivate_required",
 ] as const;
 
