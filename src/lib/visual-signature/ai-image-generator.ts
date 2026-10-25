@@ -2,10 +2,8 @@ import { PromptLoader } from "@/lib/image-generation/prompt-loader";
 import { uploadToStorage, persistSignature } from "./persistence";
 import type { CascadeResult, VisualSignatureMetadata } from "./types";
 import type { AiCallInfo } from "@/lib/ai-cost/types";
-import { defaultAiGateway, DeferredAiTelemetrySink, withOnCallTelemetry } from "@/lib/ai";
+import { defaultAiGateway, withOnCallTelemetry } from "@/lib/ai";
 import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from "@/lib/ai";
-import type { VisualSignatureModelConfigSnapshot } from "@/lib/ai/visual-signature-model-config-service";
-import { parseCreativeIntent } from "./creative-intent";
 
 export class VisualSignatureValidator {
   private readonly invoker: AiInvoker;
@@ -23,11 +21,6 @@ export class VisualSignatureValidator {
     onCall?: (info: AiCallInfo) => void | Promise<void>;
     /** F46-04 (D9): contexto de telemetria do caller (run/sink obrigatório). */
     telemetry?: AiTelemetryContext;
-    /** F47.1 (D8): escopo da credencial por chamada (imagem E validação). */
-    credentialScope?: "validation" | "normal";
-    /** F47.1 (D8): tentativa de retry real (não a primeira tentativa). */
-    retryUsed?: boolean;
-    retryPromptVariant?: "full" | "simplified";
   }): Promise<{ valid: boolean; reason?: string }> {
     if (!params.imageBase64 || params.imageBase64.length === 0) {
       return { valid: false, reason: "Empty image data" };
@@ -52,10 +45,7 @@ export class VisualSignatureValidator {
       params.imageBase64,
       params.storeName,
       params.onCall,
-      params.telemetry,
-      params.credentialScope,
-      params.retryUsed,
-      params.retryPromptVariant
+      params.telemetry
     );
     if (!semantic.valid) {
       return semantic;
@@ -68,10 +58,7 @@ export class VisualSignatureValidator {
     imageBase64: string,
     storeName: string,
     onCall?: (info: AiCallInfo) => void | Promise<void>,
-    telemetry?: AiTelemetryContext,
-    credentialScope?: "validation" | "normal",
-    retryUsed?: boolean,
-    retryPromptVariant?: "full" | "simplified"
+    telemetry?: AiTelemetryContext
   ): Promise<{ valid: boolean; reason?: string }> {
     // F46-04 (reabertura, D9): telemetria é OBRIGATÓRIA — sem contexto o
     // `invoke` não pode executar e a validação semântica NÃO pode ser ignorada
@@ -109,15 +96,6 @@ A imagem é VÁLIDA se:
         imageDetail: "low",
         temperature: 0.1,
         maxTokens: 150,
-        ...(credentialScope
-          ? {
-              metadata: {
-                credential_scope: credentialScope,
-                retry_used: retryUsed ?? false,
-                retry_prompt_variant: retryPromptVariant ?? "full",
-              },
-            }
-          : {}),
       };
 
       const result = await this.invoker.invoke(
@@ -172,13 +150,6 @@ export class AiImageGenerator {
     onCall?: (info: AiCallInfo) => void | Promise<void>;
     /** F46-04 (D9): contexto de telemetria do caller (run/sink) — encaminhado à validação. */
     telemetry?: AiTelemetryContext;
-    /**
-     * F47.1 (D4/D7): snapshot congelado da configuração dedicada. Quando
-     * ausente/legado, o request permanece byte-compatível (`quality: "auto"`,
-     * sem `model`, sem `reasoning`, sem metadata de configuração). O generator
-     * NÃO lê a configuração — ele apenas usa o snapshot recebido.
-     */
-    visualSignatureConfig?: VisualSignatureModelConfigSnapshot;
   }): Promise<CascadeResult> {
     const startTime = Date.now();
     console.log('[ai-image-generator] generate() iniciado', { storeName: params.storeName, segment: params.segment, attempt: params.attempt });
@@ -228,43 +199,14 @@ Sem textos promocionais. Apenas a imagem PNG.`;
 
     try {
       console.log('[ai-image-generator] ⏳ ANTES da chamada ao gateway (visual_signature_image)', { timestamp: new Date().toISOString() });
-      const dedicatedConfig =
-        params.visualSignatureConfig?.mode === "dedicated" ? params.visualSignatureConfig : null;
-      const credentialScope =
-        dedicatedConfig?.environment === "production" ? "normal" : "validation";
-      // F47.1 (D4/D7): com snapshot dedicado, modelo/qualidade/reasoning/metadata
-      // são explícitos. Sem snapshot, o payload legado permanece byte-compatível.
-      const request: AiInvocationRequest = dedicatedConfig
-        ? {
-            prompt,
-            tools: "image_generation",
-            size: "1024x1024",
-            quality: dedicatedConfig.imageQuality,
-            imageGenerationModel: dedicatedConfig.imageModel,
-            reasoningEffort: "low",
-            metadata: {
-              config_version_id: dedicatedConfig.configVersionId,
-              visual_signature_preset: dedicatedConfig.imagePreset,
-              responses_model: dedicatedConfig.orchestratorModel,
-              image_model: dedicatedConfig.imageModel,
-              image_quality: dedicatedConfig.imageQuality,
-              reasoning_effort: "low",
-              attempt_number: params.attempt ?? 1,
-              retry_used: params.attempt !== undefined && params.attempt >= 1,
-              retry_prompt_variant: params.simplifiedPrompt ? "simplified" : "full",
-              credential_scope: credentialScope,
-            },
-            signal: params.signal,
-            timeout: timeoutMs,
-          }
-        : {
-            prompt,
-            tools: "image_generation",
-            size: "1024x1024",
-            quality: "auto",
-            signal: params.signal,
-            timeout: timeoutMs,
-          };
+      const request: AiInvocationRequest = {
+        prompt,
+        tools: "image_generation",
+        size: "1024x1024",
+        quality: "auto",
+        signal: params.signal,
+        timeout: timeoutMs,
+      };
       const response = await this.invoker.invoke(
         "visual_signature_image",
         request,
@@ -275,15 +217,6 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       const model = response.model;
       const imageBase64 = response.imageBase64;
       const aiResponseMessage = response.content?.trim() || undefined;
-      // F47.1 (D9): parsing/proveniência acontece UMA vez por tentativa, no
-      // gerador compartilhado pelos três entry points. O envelope é enriquecido
-      // antes do flush; o resultado carrega a proveniência para a assinatura.
-      const creativeIntent = parseCreativeIntent(aiResponseMessage);
-      if (attemptTelemetry.sink instanceof DeferredAiTelemetrySink) {
-        attemptTelemetry.sink.enrichLast("visual_signature_image", {
-          ...creativeIntent.metadata,
-        });
-      }
 
       if (!imageBase64) {
         console.log('[ai-image-generator] resposta sem image_generation output');
@@ -297,20 +230,9 @@ Sem textos promocionais. Apenas a imagem PNG.`;
       console.log('[ai-image-generator] validando imagem...', { base64Length: imageBase64.length });
 
       const validator = new VisualSignatureValidator(this.invoker);
-      const retryUsed = params.attempt !== undefined && params.attempt >= 1;
-      const retryPromptVariant = params.simplifiedPrompt ? "simplified" : "full";
       const validation = await validator.validate({
         imageBase64,
         storeName: params.storeName,
-        // F47.1 (D8): telemetria de auditoria por chamada. Só o caminho com
-        // configuração dedicada informa escopo; o legado permanece sem metadata.
-        ...(dedicatedConfig
-          ? {
-              credentialScope,
-              retryUsed,
-              retryPromptVariant,
-            }
-          : {}),
         // F46-04/F46-05 (D9): imagem (visual_signature_image) e validação
         // (visual_signature_validation) são persistidas pelo SINK do contexto de
         // telemetria — `attemptTelemetry` carrega o attemptNumber REAL por
@@ -347,17 +269,6 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         provider: "openai",
         model,
         elapsedMs,
-        ...(dedicatedConfig
-          ? {
-              responses_model: dedicatedConfig.orchestratorModel,
-              image_model: dedicatedConfig.imageModel,
-              image_quality: dedicatedConfig.imageQuality,
-              visual_signature_preset: dedicatedConfig.imagePreset,
-              reasoning_effort: "low" as const,
-              config_version_id: dedicatedConfig.configVersionId,
-            }
-          : {}),
-        ...creativeIntent.metadata,
       };
 
       const promptUsed = prompt;
@@ -371,7 +282,6 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         metadata,
         prompt: promptUsed,
         aiResponseMessage,
-        creativeIntent,
       };
     } catch (error) {
       const elapsedMs = Date.now() - startTime;

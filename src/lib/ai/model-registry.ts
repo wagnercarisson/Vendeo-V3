@@ -32,38 +32,13 @@ export const MODEL_ALLOWLIST: Record<AiProvider, Record<string, readonly AiProto
     "gpt-4o-mini": ["chat-completions", "responses"],
     "gpt-5.5": ["responses"],
     "gpt-image-2": ["images"],
-    // F47.1 (D3): `responses` é aditivo e RESTRITO por capacidade — ver
-    // `MODEL_CAPABILITY_RESTRICTIONS`. A allowlist global não é suficiente.
-    "gpt-6-luna": ["chat-completions", "responses"],
+    "gpt-6-luna": ["chat-completions"],
   },
   gemini: {
     "gemini-3.1-flash-lite": ["gemini"],
     "gemini-2.0-flash": ["gemini"],
   },
 };
-
-/**
- * F47.1 (D3) — Restrições por CAPACIDADE sobre combinações presentes na
- * `MODEL_ALLOWLIST` global. A allowlist é por provider → modelo → protocolos e
- * não distingue capacidade; estas regras impedem que uma combinação aditiva
- * vaze para capacidades onde não foi autorizada.
- *
- * `gpt-6-luna` + `responses` é aceito SOMENTE em `visual_signature_image`.
- * `campaign_image` e `visual_signature_validation` continuam recusando.
- */
-export const MODEL_CAPABILITY_RESTRICTIONS: ReadonlyArray<{
-  provider: AiProvider;
-  model: string;
-  protocol: AiProtocol;
-  allowedCapabilities: readonly AiCapability[];
-}> = [
-  {
-    provider: "openai",
-    model: "gpt-6-luna",
-    protocol: "responses",
-    allowedCapabilities: ["visual_signature_image"],
-  },
-];
 
 /** Protocolos aceitos por capacidade (cobre primary e fallback). */
 export const CAPABILITY_PROTOCOLS: Record<AiCapability, readonly AiProtocol[]> = {
@@ -82,34 +57,6 @@ export const CAPABILITY_PROTOCOLS: Record<AiCapability, readonly AiProtocol[]> =
   // nos mapas sem ativar geração e sem entrar na seleção legada.
   campaign_product_image: ["images"],
 };
-
-/**
- * Verifica se uma combinação provider+modelo+protocolo é permitida para a
- * capacidade informada. Aplica a allowlist global, a compatibilidade de
- * protocolo por capacidade e as restrições aditivas por capacidade (F47.1).
- */
-export function isModelAllowedForCapability(
-  capability: AiCapability,
-  target: AiModelTarget,
-): boolean {
-  const allowedProtocols = MODEL_ALLOWLIST[target.provider]?.[target.model];
-  if (!allowedProtocols?.includes(target.protocol)) {
-    return false;
-  }
-  if (!CAPABILITY_PROTOCOLS[capability]?.includes(target.protocol)) {
-    return false;
-  }
-  for (const restriction of MODEL_CAPABILITY_RESTRICTIONS) {
-    if (
-      restriction.provider === target.provider &&
-      restriction.model === target.model &&
-      restriction.protocol === target.protocol
-    ) {
-      return restriction.allowedCapabilities.includes(capability);
-    }
-  }
-  return true;
-}
 
 /** Segmento canônico de cada capacidade (fonte única — validação fail-fast). */
 export const CAPABILITY_SEGMENTS: Record<AiCapability, AiSegment> = {
@@ -255,11 +202,6 @@ function assertValidTarget(
   if (!CAPABILITY_PROTOCOLS[capability].includes(target.protocol)) {
     throw new Error(
       `[model-registry] ${capability}.${role}: protocolo "${target.protocol}" incompatível com a capacidade`,
-    );
-  }
-  if (!isModelAllowedForCapability(capability, target)) {
-    throw new Error(
-      `[model-registry] ${capability}.${role}: combinação "${target.model}/${target.protocol}" não autorizada para a capacidade (restrição F47.1)`,
     );
   }
 }

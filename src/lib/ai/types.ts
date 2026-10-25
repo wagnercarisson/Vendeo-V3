@@ -45,18 +45,6 @@ export interface AiInvocationMessage {
 }
 
 /**
- * Proveniência da credencial efetivamente resolvida pelo adapter.
- * `undefined` significa "não resolvida/desconhecida" — nunca inferir pelo nome
- * da capability ou do run type.
- */
-export type AiCredentialScope = "normal" | "validation";
-
-/** Objeto mutável compartilhado entre gateway e adapter durante uma tentativa. */
-export interface AiCredentialProvenance {
-  scope?: AiCredentialScope;
-}
-
-/**
  * Request canônico do gateway — o caller monta o prompt/regras de negócio e o
  * gateway só traduz para o protocolo do alvo (adapter não decide prompt/modelo).
  */
@@ -94,22 +82,6 @@ export interface AiInvocationRequest {
    * preserva o `timeout` do caminho `visual_signature_image`.
    */
   timeout?: number;
-  /**
-   * F47.1 (D7) — modelo explícito da tool `image_generation`. Ausente ⇒ payload
-   * legado byte-compatível (a tool NÃO envia `model`).
-   */
-  imageGenerationModel?: string;
-  /**
-   * F47.1 (D7) — reasoning da VS, restrito a `"low"` nesta fase. Ausente ⇒
-   * nenhum `reasoning` é enviado (payload legado).
-   */
-  reasoningEffort?: "low";
-  /**
-   * F47.1 (D7) — metadata de configuração/unidade (ex.: `config_version_id`)
-   * propagada ao envelope de telemetria. Campos canônicos do envelope NÃO podem
-   * ser sobrescritos por estas chaves.
-   */
-  metadata?: Record<string, unknown>;
 }
 
 /** Metadados de usage do provider (auditoria/calibração — não entra no cálculo). */
@@ -119,18 +91,6 @@ export interface AiInvocationUsageMeta {
   providerUsageSource?: string;
   responsesModel?: string;
   imageGenerationTool?: boolean;
-  /**
-   * F47.1 (D7) — modelo explícito da tool (separado do modelo Responses).
-   * Ausente quando a tool não recebeu `model` (caminho legado).
-   */
-  imageGenerationModel?: string;
-  /**
-   * F47.1 (D8/D7) — usage PRÓPRIO da tool, somente quando o provider o expõe
-   * separadamente. Ausente ⇒ nunca é inventado nem duplicado.
-   */
-  imageToolUsage?: TokenUsage;
-  /** Fonte explícita do usage da tool: real (`tool_output`) ou ausente. */
-  imageToolUsageSource?: "response_usage" | "tool_output" | "absent";
 }
 
 /**
@@ -183,11 +143,6 @@ export interface AiCallEnvelope extends AiCallInfo {
    * resultado **HTTP**; a classificação de domínio é aditiva.
    */
   metadata?: Record<string, unknown>;
-  /**
-   * F47.1 — proveniência da credencial efetivamente resolvida. Preenchida pelo
-   * adapter via `AiCredentialProvenance`; nunca inferida de capability.
-   */
-  credentialScope?: AiCredentialScope;
   // F56.1 (D-21) — campos aditivos por tentativa de geração de imagem do novo
   // fluxo. Não alteram os campos existentes nem o "um envelope por tentativa".
   /** Qualidade efetivamente usada na tentativa (`low`/`medium`). */
@@ -225,39 +180,6 @@ export interface AiEnvelopeInternalCost {
   quality: string;
 }
 
-/**
- * F47.1 (D7) — chaves canônicas do envelope/evento que metadata de caller JAMAIS
- * pode sobrescrever (nem no gateway, nem no sink, nem no enriquecimento).
- */
-export const AI_ENVELOPE_CANONICAL_METADATA_KEYS = [
-  "capability",
-  "protocol",
-  "status",
-  "errorType",
-  "provider",
-  "model",
-  "quality",
-  "target",
-  "attemptNumber",
-  "usage",
-  "usageMeta",
-  "durationMs",
-  "providerReportedCostUsd",
-] as const;
-
-/** Remove de `metadata` qualquer chave canônica do envelope (aditivo, defensivo). */
-export function sanitizeEnvelopeMetadata(
-  metadata: Record<string, unknown> | undefined,
-): Record<string, unknown> | undefined {
-  if (!metadata) return undefined;
-  const sanitized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(metadata)) {
-    if ((AI_ENVELOPE_CANONICAL_METADATA_KEYS as readonly string[]).includes(key)) continue;
-    sanitized[key] = value;
-  }
-  return sanitized;
-}
-
 /** Destino de emissão de envelopes (sink injetável — o gateway não persiste). */
 export interface AiTelemetrySink {
   emit(envelope: AiCallEnvelope): void | Promise<void>;
@@ -285,11 +207,7 @@ export interface AiTelemetryContext {
 /** Adapter por protocolo de wire — traduz o shape do provider e retorna o contrato. */
 export interface AiAdapter {
   readonly protocol: AiProtocol;
-  invoke(
-    request: AiInvocationRequest,
-    target: AiModelTarget,
-    provenance?: AiCredentialProvenance,
-  ): Promise<AiInvocationResult>;
+  invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult>;
 }
 
 /** Mapa protocolo → adapter (implementação padrão em `adapters/registry.ts`). */

@@ -7,10 +7,6 @@ import { PersistedModelResolver } from "./persisted-model-resolver";
 import { aiModelCatalogService } from "./ai-model-catalog-service";
 import { aiModelSelectionService } from "./ai-model-selection-service";
 import type { AiInvocationRequest, AiInvocationResult, AiTelemetryContext } from "./types";
-import { ResponsesAdapter } from "./adapters/responses";
-import { ChatCompletionsAdapter } from "./adapters/chat-completions";
-import { getApiKey } from "./api-keys";
-import type { AiProtocol } from "./model-resolver";
 
 /**
  * Ponto único de composição do AI Gateway (F46, D1.1/D2).
@@ -25,19 +21,6 @@ export const defaultAiModelResolver = new PersistedModelResolver({
   catalogService: aiModelCatalogService,
 });
 export const defaultAiGateway = new AiGateway(defaultAiModelResolver, defaultAdapterRegistry);
-
-/** F47.2 — gateway de perfil com retry zero, usado somente no smoke controlado. */
-export function createVisualSignatureProfileSmokeGateway(): AiGateway {
-  const responses = new ResponsesAdapter(getApiKey, { maxRetries: 0 }, "normal");
-  const chat = new ChatCompletionsAdapter({ maxRetries: 0 });
-  return new AiGateway(defaultAiModelResolver, {
-    get(protocol: AiProtocol) {
-      if (protocol === "responses") return responses;
-      if (protocol === "chat-completions") return chat;
-      return undefined;
-    },
-  });
-}
 
 /** Função de conveniência para o caminho de produção (usa a instância padrão). */
 export function invoke(
@@ -61,31 +44,12 @@ export {
   ALL_CAPABILITIES,
 } from "./model-registry";
 export { PersistedModelResolver } from "./persisted-model-resolver";
-export {
-  loadVisualSignatureModelConfigSnapshot,
-  invalidateVisualSignatureModelConfigCache,
-  VisualSignatureConfigReadError,
-  VisualSignatureConfigDivergentError,
-  VisualSignatureConfigOutsideEnvironmentError,
-  LEGACY_VISUAL_SIGNATURE_MODEL_CONFIG,
-} from "./visual-signature-model-config-service";
-export type {
-  VisualSignatureModelConfigSnapshot,
-  VisualSignatureDedicatedConfigSnapshot,
-  VisualSignatureLegacyConfigSnapshot,
-  VisualSignatureModelConfigRow,
-  VisualSignatureModelConfigReader,
-} from "./visual-signature-model-config-service";
-export { createFrozenVisualSignatureResolver } from "./visual-signature-frozen-resolver";
-export { createVisualSignatureValidationGateway } from "./visual-signature-validation-gateway";
-export { readValidationApiKey } from "./api-keys";
 export { CAPABILITY_GENERATION_TYPE } from "./generation-type-map";
 export { getApiKey } from "./api-keys";
 export {
   DefaultAiTelemetrySink,
   NoopAiTelemetrySink,
   BufferingAiTelemetrySink,
-  DeferredAiTelemetrySink,
   createDefaultTelemetryContext,
   withOnCallTelemetry,
 } from "./telemetry-sink";

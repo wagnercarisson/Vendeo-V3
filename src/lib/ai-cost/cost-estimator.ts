@@ -3,15 +3,6 @@ import type { CostResolution, TokenUsage } from "./types";
 import type { GenerationEventType } from "@/lib/visual-signature/types";
 import { getModelPricing } from "./ai-model-pricing";
 import type { ModelPricing } from "./ai-model-pricing";
-import {
-  getVisualSignatureModelPricing,
-  getVisualSignatureOrchestratorPricing,
-  getVisualSignaturePresetPricing,
-  type VisualSignatureImagePricingResult,
-  type VisualSignatureOrchestratorPricingResult,
-} from "./visual-signature-pricing";
-import type { VisualSignatureImagePreset } from "@/lib/ai/visual-signature-model-config";
-import { computeVisualSignatureCost } from "./visual-signature-usage";
 
 /**
  * Strip de sufixo de data para lookup de preço (mantido de cost-estimator.ts:50-52):
@@ -171,40 +162,8 @@ export async function resolveAiCost(params: {
    * gpt-image-2 — outros caminhos de precificação.
    */
   generationType?: GenerationEventType;
-  /**
-   * F47.1 (D8): caminho com preset explícito da Assinatura Visual. Quando
-   * presente (ou quando `imageGenerationModel` acompanha
-   * `visual_signature_image`), roteia para o cálculo quality-aware ANTES da
-   * cadeia legada — sem `fallback_static` e sem `responses:image_generation`.
-   */
-  visualSignaturePreset?: string | null;
-  imageGenerationModel?: string | null;
-  imageQuality?: string | null;
-  imageToolUsage?: TokenUsage;
-  imageToolUsageSource?: "response_usage" | "tool_output" | "absent";
-  configVersionId?: string | null;
 }): Promise<CostResolution> {
   const { provider, model, usage, providerReportedCostUsd, manualCostUsd } = params;
-
-  // Ajuste manual explícito continua vencendo o pricing automático (mesma
-  // ordem da cadeia legada), mas nunca sobrepõe um custo reportado.
-  const hasProviderReported =
-    typeof providerReportedCostUsd === "number" && !Number.isNaN(providerReportedCostUsd);
-  if (
-    !hasProviderReported &&
-    typeof manualCostUsd === "number" &&
-    !Number.isNaN(manualCostUsd)
-  ) {
-    return { estimatedCostUsd: manualCostUsd, costSource: "manual_unknown" };
-  }
-
-  const isVisualSignaturePresetPath =
-    params.generationType === "visual_signature_image" &&
-    (params.visualSignaturePreset != null || params.imageGenerationModel != null);
-
-  if (isVisualSignaturePresetPath) {
-    return resolveVisualSignaturePresetCost(params);
-  }
 
   // Fonte 1: provider_reported (D3) — nunca sobrescrito pelo cálculo interno
   if (typeof providerReportedCostUsd === "number" && !Number.isNaN(providerReportedCostUsd)) {
@@ -322,124 +281,4 @@ export async function resolveAiCost(params: {
   // Fonte 5: not_available — sem usage E sem preço/config → custo desconhecido
   // (tokens ainda gravados pelo tracker — D4)
   return { estimatedCostUsd: null, costSource: "not_available" };
-}
-
-/**
- * F47.1 (D8) — caminho isolado do preset da Assinatura Visual.
- *
- * Não consulta `responses:image_generation`, não usa `fallback_static` e não
- * cai na cadeia legada. Tarifa ausente produz `partial`/`unknown` com motivo.
- */
-async function resolveVisualSignaturePresetCost(params: {
-  provider: string;
-  model: string;
-  usage?: TokenUsage;
-  providerReportedCostUsd?: number | null;
-  visualSignaturePreset?: string | null;
-  imageGenerationModel?: string | null;
-  imageQuality?: string | null;
-  imageToolUsage?: TokenUsage;
-}): Promise<CostResolution> {
-  let imagePricing: VisualSignatureImagePricingResult;
-
-  try {
-    if (params.visualSignaturePreset) {
-      imagePricing = await getVisualSignaturePresetPricing({
-        preset: params.visualSignaturePreset as VisualSignatureImagePreset,
-        provider: params.provider,
-      });
-    } else if (
-      params.imageGenerationModel &&
-      (params.imageQuality === "low" || params.imageQuality === "medium")
-    ) {
-      imagePricing = await getVisualSignatureModelPricing({
-        provider: params.provider,
-        model: params.imageGenerationModel,
-        quality: params.imageQuality,
-      });
-    } else {
-      return {
-        estimatedCostUsd: null,
-        providerReportedCostUsd: params.providerReportedCostUsd ?? null,
-        costSource: "not_available",
-        costCoverage: "unknown",
-        costEstimationNote: "visual_signature_preset_or_quality_missing",
-      };
-    }
-  } catch {
-    return {
-      estimatedCostUsd: null,
-      providerReportedCostUsd: params.providerReportedCostUsd ?? null,
-      costSource: "not_available",
-      costCoverage: "unknown",
-      costEstimationNote: "visual_signature_preset_invalid",
-    };
-  }
-
-  // O modelo explícito do request precisa bater com o modelo do preset. Uma
-  // divergência não é "corrigida" silenciosamente.
-  if (
-    params.imageGenerationModel &&
-    imagePricing.model !== null &&
-    params.imageGenerationModel !== imagePricing.model
-  ) {
-    return {
-      estimatedCostUsd: null,
-      providerReportedCostUsd: params.providerReportedCostUsd ?? null,
-      costSource: "not_available",
-      costCoverage: "partial",
-      costEstimationNote: "visual_signature_preset_model_mismatch",
-      pricingVersion: imagePricing.pricingVersion,
-      imagePricingVersion: imagePricing.pricingVersion,
-    };
-  }
-
-  // Tarifas do ORQUESTRADOR são independentes das tarifas de imagem/tool.
-  // Falha de leitura não bloqueia: o cálculo segue com os componentes
-  // comprovados e cobertura parcial.
-  let orchestratorPricing: VisualSignatureOrchestratorPricingResult;
-  try {
-    orchestratorPricing = await getVisualSignatureOrchestratorPricing({
-      provider: params.provider,
-      model: params.model,
-    });
-  } catch {
-    orchestratorPricing = {
-      status: "missing",
-      model: params.model,
-      provider: params.provider,
-      rates: {},
-      pricingVersion: null,
-      missingRates: [
-        "orchestrator.inputTextUsdPer1M",
-        "orchestrator.outputTextUsdPer1M",
-        "orchestrator.cachedTextUsdPer1M",
-      ],
-    };
-  }
-
-  const computed = computeVisualSignatureCost({
-    usage: params.usage,
-    orchestratorRates: orchestratorPricing.rates,
-    imageRates: imagePricing.rates,
-    toolRates: imagePricing.toolRates,
-    providerReportedCostUsd: params.providerReportedCostUsd,
-    imageToolUsage: params.imageToolUsage,
-    historicalEstimateUsd: imagePricing.historicalReferenceUsd,
-    historicalEstimateSource: "local_historical_images",
-    preset: params.visualSignaturePreset ?? params.imageQuality ?? null,
-  });
-
-  return {
-    estimatedCostUsd: computed.estimatedCostUsd,
-    providerReportedCostUsd: computed.providerReportedCostUsd ?? null,
-    costSource: computed.costSource,
-    costCoverage: computed.costCoverage,
-    pricingVersion:
-      orchestratorPricing.pricingVersion ?? imagePricing.pricingVersion,
-    orchestratorPricingVersion: orchestratorPricing.pricingVersion,
-    imagePricingVersion: imagePricing.pricingVersion,
-    costFormulaVersion: "visual_signature_usage_v1",
-    costEstimationNote: computed.costEstimationNote ?? undefined,
-  };
 }

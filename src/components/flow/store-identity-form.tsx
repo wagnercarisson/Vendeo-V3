@@ -139,8 +139,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const [hasActiveLogo, setHasActiveLogo] = useState(false);
   const [step2Success, setStep2Success] = useState<string | null>(null);
   const [analysisWarning, setAnalysisWarning] = useState<string | null>(null);
-  const [profileStateNotice, setProfileStateNotice] = useState<string | null>(null);
-  const [previousProfiles, setPreviousProfiles] = useState<Array<{ id: string }>>([]);
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -593,8 +591,9 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         const [storeRes, logoRes, profileRes] = await Promise.all([
           fetch(`/api/store/${storeId}`),
           fetch(`/api/store/${storeId}/logo`),
-          // Estado derivado: atual/anterior/falha por origem e contexto.
-          fetch(`/api/store/${storeId}/brand-profile?view=state`),
+          // Perfil VIGENTE (synced) — separado da tentativa `failed` histórica, que
+          // NÃO deve ser tratada como atual nem sobrepor as cores/direção vigentes.
+          fetch(`/api/store/${storeId}/brand-profile?status=synced`),
         ]);
 
         if (storeRes.ok) {
@@ -614,9 +613,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         }
 
         if (profileRes.ok) {
-          const stateView = await profileRes.json();
-          const profile = stateView.current;
-          setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
+          const profile = await profileRes.json();
           if (profile) {
             // `?status=synced` ⇒ sempre o perfil VIGENTE.
             if (profile.logo_colors_detected?.length > 0) {
@@ -647,8 +644,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               metadata: profile.metadata,
             });
           } else {
-            setInferredProfile(null);
-            setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
             // Sem perfil vigente: apenas DIAGNOSTICA a tentativa `failed` histórica
             // (sem tratá-la como atual nem aplicar suas cores).
             try {
@@ -665,17 +660,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                 }
               }
             } catch {}
-          }
-          if (stateView.state === "failed") {
-            setProfileStateNotice(
-              "Não foi possível atualizar a direção visual. O perfil anterior foi preservado e está identificado como anterior.",
-            );
-          } else if (stateView.currentKind === "logo_removed_fallback") {
-            setProfileStateNotice(
-              "O logo foi removido; a direção atual permanece como fallback até uma nova análise textual.",
-            );
-          } else {
-            setProfileStateNotice(null);
           }
         }
       } catch {}
@@ -981,48 +965,12 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       const data = await res.json();
       if (!res.ok || data.success === false) {
         setBrandDirectorWarning(data.error || "Não foi possível atualizar a direção visual. Tente novamente.");
-        const stateRes = await fetch(`/api/store/${storeId}/brand-profile?view=state`);
-        if (stateRes.ok) {
-          const stateView = await stateRes.json();
-          const current = stateView.current;
-          setInferredProfile(
-            current?.status === 'synced'
-              ? {
-                  safe_color_tokens: current.safe_color_tokens,
-                  visual_style: current.visual_style,
-                  visual_tone: current.visual_tone,
-                  brand_personality: current.brand_personality,
-                  brand_colors_chosen: current.brand_colors_chosen,
-                  inferred_primary_color: current.inferred_primary_color,
-                  inferred_accent_color: current.inferred_accent_color,
-                  metadata: current.metadata,
-                }
-              : null,
-          );
-          setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
-          setProfileStateNotice(
-            stateView.state === "failed"
-              ? "Não foi possível atualizar a direção visual. O perfil anterior foi preservado e está identificado como anterior."
-              : stateView.currentKind === "logo_removed_fallback"
-                ? "O logo foi removido; a direção atual permanece como fallback até uma nova análise textual."
-                : null,
-          );
-        }
         return;
       }
       setBrandDirectorWarning(null);
-      const profileRes = await fetch(`/api/store/${storeId}/brand-profile?view=state`);
+      const profileRes = await fetch(`/api/store/${storeId}/brand-profile?status=synced`);
       if (profileRes.ok) {
-        const stateView = await profileRes.json();
-        const profile = stateView.current;
-        setPreviousProfiles(Array.isArray(stateView.previous) ? stateView.previous : []);
-        setProfileStateNotice(
-          stateView.state === "failed"
-            ? "Não foi possível atualizar a direção visual. O perfil anterior foi preservado e está identificado como anterior."
-            : stateView.currentKind === "logo_removed_fallback"
-              ? "O logo foi removido; a direção atual permanece como fallback até uma nova análise textual."
-              : null,
-        );
+        const profile = await profileRes.json();
         if (profile?.status === 'synced') {
           setInferredProfile({
             safe_color_tokens: profile.safe_color_tokens,
@@ -1051,8 +999,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           if (profile.logo_colors_detected?.length > 0) {
             setDetectedColors(profile.logo_colors_detected);
           }
-        } else {
-          setInferredProfile(null);
         }
       }
     } catch (err) {
@@ -2378,12 +2324,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                     <span>{analysisWarning}</span>
                   </p>
                 )}
-                {profileStateNotice && (
-                  <p className="mt-2 flex items-start gap-1.5 text-accent-amber text-xs bg-amber-900/20 border border-amber-700/30 rounded-lg px-3 py-2">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <span>{profileStateNotice}</span>
-                  </p>
-                )}
 
                 {inferenceLoading && (
                   <div className="mt-4 flex items-center gap-3 p-4 bg-bg-elevated border border-border rounded-xl">
@@ -2628,7 +2568,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                   <div className="mt-4">
                     <div className="flex items-center gap-3 p-4 bg-bg-elevated border border-border rounded-xl">
                       <CheckCircle2 className="w-5 h-5 text-accent-green shrink-0" />
-                      <p className="text-accent-green text-sm font-heading font-semibold">Direção atual</p>
+                      <p className="text-accent-green text-sm font-heading font-semibold">Direção visual definida pelo Vendeo</p>
                     </div>
                     {inferredProfile.safe_color_tokens && (() => {
                       const tokens = inferredProfile.safe_color_tokens!;
@@ -2648,11 +2588,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
                       return null;
                     })()}
                   </div>
-                )}
-                {previousProfiles.length > 0 && (
-                  <p className="mt-2 text-xs font-body text-text-secondary">
-                    Direção anterior: {previousProfiles.length} perfil(is) preservado(s) no histórico.
-                  </p>
                 )}
                 </div>
 

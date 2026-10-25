@@ -634,39 +634,3 @@ Plans:
 **Gate:** `all_stores` sÃƒÆ’Ã‚Â³ ÃƒÆ’Ã‚Â© ativado apÃƒÆ’Ã‚Â³s 5.3 + 5.7 + validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna + campanha completa + aceite humano + disposiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o D13. Luna aprovado ÃƒÆ’Ã‚Â© mantido; restauraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o somente em reprovaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/problema/decisÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita. As migrations sÃƒÆ’Ã‚Â£o provadas em Postgres local isolado antes da publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. A janela preserva `spent_usd`, configura o cap e ativa `test_stores` antes de gerar. ApÃƒÆ’Ã‚Â³s a abertura, a fase encerra ativa e monitorada salvo critÃƒÆ’Ã‚Â©rio de parada/decisÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita.
 
 **Canonical refs:** `openspec/changes/fase-56-2-7-abertura-gradual-produto-1-1-luna/` (proposal, design D1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂD8, 4 specs, tasks), `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CONTEXT.md` e `56.2.7-PATTERNS.md`, `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
-
-### Phase 47.1: Configuração e validação local de modelos da Assinatura Visual
-
-**Status:** **CONCLUÍDA E ARQUIVADA COM COBERTURA PARCIAL ACEITA (2026-10-23)** — **histórico:** **plano 47.1-01 concluído e aprovado pelo Codex** (Tasks 1–5; migration local aplicada no ledger 133→134; preflight pós-migration PASS; provas reais 67/67 PASS; SUMMARY em `47.1-01-SUMMARY.md`). **Plano 47.1-02 concluído e aprovado pelo Codex** (guard/credencial/`maxRetries=0`, wire aditivo, snapshot congelado, parsing/proveniência e testes comportamentais; 111/111 focados; aprovação registrada em `47.1-02-SUMMARY.md`). **Plano 47.1-03 aprovado pelo Codex (2026-10-22)** (ramo da tool com regras completas e tarifas próprias, `code_default` tratado como ausente, `rejectionContext` separado da tentativa; 52/52 focados + 190/190 regressão + 41/41 contratos). **Plano 47.1-04 aprovado pelo Codex (2026-10-22).** **Plano 47.1-05 UAT inicial executado (2026-10-22); relatórios GSD/OpenSpec produzidos (2026-10-23).** Duas gerações comparativas locais (GPT-5.5 e GPT-6-Luna, Sunburst Medium) com avaliação visual humana favorável ao segmento de calçados e tom jovem, sem superioridade estatística. Versões `137d0990-...` e `600af8c4-...`; assinaturas `7d2866b6-...` (archived) e `b257e678-...` (active). Cronologia preservada: duas falhas `brand_profile_vision` por loopback, correção `a37f4b83`/`d16b54f2`, sucesso posterior via realinhamento manual após tom acolhedor (6.562 ms; 1.865/431 tokens; estimativa US$ 0,000402; perfil `a91f20de-...` synced; perfil NovaTek outdated). Custos de imagem parciais; total/economia não comprovados; `fallback_static` de falhas não é cobrança real. As seis combinações adicionais e o `rejectionContext` são opcionais não executados; cobertura parcial aceita; confirmação explícita registrada antes do archive. **`credential_scope` do perfil:** plano 06 aprovado pelo Codex e executado; 146 testes PASS; eventos futuros cobertos por mocks, eventos históricos inalterados. **F47.1 arquivada em 2026-10-23** em `openspec/changes/archive/2026-10-23-fase-47-1-modelos-assinatura-visual/`, com cobertura parcial aceita. **Nenhuma aprovação de produção.** **Pendência separada:** perfil antigo pode ser apresentado como vigente após falha de atualização; defeito não corrigido. **Sem aprovação de produção.** Sync/archive executados em 2026-10-23; push/deploy e alteração de produção não executados. Contadores históricos não recalculados.
-
-
-### Phase 47.2: F47.2 — Integração e promoção produtiva da Assinatura Visual
-
-**Status:** Planos 01–05 aceitos; Plano 06 concluído com limitações em G:\Vendeo-Homolog, sem runner descartável. Harness de migration F47.2 em transação revertida 34/34 PASS; 15 suítes focadas 134/134 PASS; ledger homolog 134, auditoria 71 e configuração/pricing preservados; migration F47.2 não persistiu. Sem geração paga/nova validação de navegador (limitações, não PASS); novo piloto não exigido. Typecheck/lint/build locais passaram. Deployment Vercel production READY, SHA 6a061c82e1b5b3e3c034069d80a078f1c5dc4eed. Ledger/catalog/pricing remoto não observados por falta de SQL read-only; lote exato bloqueado até leitura, sem assumir homolog=produção. Proposta única em 47.2-RELEASE-PROPOSAL.md; sem merge/push/deploy/ativação nesta etapa.
-
-**Goal:** integrar a branch completa da F47.1 à `main` atual preservando histórico e F50.3/F50.4; renumerar apenas a F47.1 com timestamp UTC real e criar a migration corretiva F47.2; substituir o isolamento exclusivamente local por contrato explícito de ambiente com liberação vinculada à versão; corrigir a atualidade do perfil por origem/ativo/contexto; provar não-interferência na F50.4; e preparar a promoção com gates separados.
-
-**Depends on:** F47.1 (branch `feature/ajuste-modelo-assinatura-visual`, `a6c746d0`); `main` `a9681bf6`; F50.3/F50.4 preservadas. F50.4 arquivada com limitações (`gate_status=not_green`), sem presunção de estado de produção.
-
-**Requirements:** `REQ-47.2-01..10` — (01) integração/tracking; (02) migrations e manifestos; (03) ambiente e liberação por versão; (04) perfil por origem/ativo/contexto; (05) compatibilidade F50.4; (06) validação local e Postgres; (07) preparação remota e lote; (08) publicação; (09) piloto; (10) ativação/encerramento.
-
-**Plans:** 10 plans (`47.2-01..10`); diretório `.planning/phases/47.2-integracao-promocao-assinatura-visual/`.
-
-Plans:
-
-- [x] 47.2-01-PLAN.md — Baseline, integração Git e tracking (checkpoint de integração) — concluído e aceito em 2026-10-24 (`ecf29e54`).
-- [x] 47.2-02-PLAN.md — Renumeração imutável F47.1 + migration corretiva F47.2 + manifesto de integração — concluído e aceito em 2026-10-24.
-- [x] 47.2-03-PLAN.md — Contrato de ambiente e liberação por versão — concluído e aceito em 2026-10-24.
-- [x] 47.2-04-PLAN.md — Atualidade do perfil por origem, ativo e contexto — concluído e aceito em 2026-10-24.
-- [x] 47.2-05-PLAN.md — Compatibilidade F50.4 + validação local — concluído e aceito em 2026-10-24 (`a8fd61c4`).
-- [ ] 47.2-06-PLAN.md — Provas Postgres em banco descartável — checkpoint preparado; provisionamento aguarda autorização humana; nenhum ambiente criado/iniciado.
-- [ ] 47.2-07-PLAN.md — Preparação remota + migrations remotas (checkpoint).
-- [ ] 47.2-08-PLAN.md — Publicação de código com configuração desativada (checkpoint).
-- [ ] 47.2-09-PLAN.md — Piloto limitado e smoke pago mínimo (checkpoint).
-- [ ] 47.2-10-PLAN.md — Ativação, recuperação e encerramento (checkpoint).
-
-**Waves:** `01 → 02 → 03/04 → 05 → 06 → 07 → 08 → 09 → 10`. Checkpoints humanos bloqueantes: integração, Postgres descartável, migrations remotas, publicação, piloto e ativação.
-
-**Gate:** nenhuma integração antes da revisão dos planos; nenhuma migration remota antes do ensaio descartável e do manifesto de release derivado do ledger; nenhuma publicação sem migrations; nenhum piloto sem publicação OFF; nenhuma ativação sem piloto aprovado. O lote remoto é limitado ao aprovado e ausente; dependência fora do lote para o gate.
-
-**Canonical refs:** `openspec/changes/fase-47-2-integracao-promocao-assinatura-visual/` (proposal, design D1–D13, 4 delta specs, tasks), `.planning/phases/47.2-integracao-promocao-assinatura-visual/` (APPROVAL, CONTEXT, PATTERNS, COVERAGE-MATRIX, 10 PLAN), `openspec/changes/archive/2026-10-23-fase-47-1-modelos-assinatura-visual/`, `openspec/changes/archive/2026-10-23-fase-50-4-oferta-onboarding-por-cnpj/`.

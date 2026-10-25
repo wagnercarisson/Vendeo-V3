@@ -5,32 +5,16 @@ import { requireOwnership } from "@/lib/auth/store-ownership";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
 import type { Store } from "@/lib/store";
 import { AiImageGenerator } from "./ai-image-generator";
-import { parseCreativeIntent } from "./identity-art-director";
 import { getActiveVisualSignature, getSignedVisualSignatureUrl } from "./persistence";
 import { AiCostTracker } from "@/lib/ai-cost";
-import {
-  createDefaultTelemetryContext,
-  DeferredAiTelemetrySink,
-  defaultAiGateway,
-  defaultAiModelResolver,
-  createFrozenVisualSignatureResolver,
-  createVisualSignatureValidationGateway,
-  loadVisualSignatureModelConfigSnapshot,
-} from "@/lib/ai";
-import type {
-  AiInvoker,
-  AiTelemetryContext,
-  VisualSignatureModelConfigSnapshot,
-} from "@/lib/ai";
+import { createDefaultTelemetryContext, defaultAiModelResolver } from "@/lib/ai";
 import { resolveEconomicSnapshot } from "@/lib/economic/economic-snapshot";
-import { isVisualSignatureSmokeNoRetry } from "./smoke-retry-policy";
 import type {
   VisualSignatureRecord,
   VisualSignatureMetadata,
   GenerateVariationsResult,
   CascadeAttempt,
   CascadeAttemptStatus,
-  CascadeResult,
 } from "./types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -90,97 +74,6 @@ function classifyError(
   };
 }
 
-const NOT_ATTEMPTED_CREATIVE_INTENT = {
-  creative_intent_parse_status: "not_attempted" as const,
-  creative_intent_fallback_applied: false,
-  creative_intent_fallback_reason: null,
-  creative_intent_source: "fallback" as const,
-  creative_intent_schema_version: "vs-intent-v1" as const,
-};
-
-interface AttemptTelemetry {
-  telemetry: AiTelemetryContext;
-  flush: () => Promise<void>;
-}
-
-/**
- * F47.1 (D9) — UM `DeferredAiTelemetrySink` por tentativa/imagem.
- *
- * O flush enriquece a imagem com `not_attempted` quando o parsing não ocorreu,
- * entrega uma única vez e, em falha do handler, não limpa/marca a instância
- * (nenhum "no-loss" falso — a falha é apenas logada como best-effort).
- */
-function createAttemptTelemetryContext(params: {
-  run: { operationRunId: string; traceId: string };
-  economicSnapshot: { usdBrlRateAtGeneration: number | null; creditValueBrlAtGeneration: number | null };
-  storeId: string;
-  attemptNumber: number;
-}): AttemptTelemetry {
-  const sink = new DeferredAiTelemetrySink(async (envelopes) => {
-    const sinkContext = createDefaultTelemetryContext({
-      operationRunId: params.run.operationRunId,
-      operationRunType: "visual_signature",
-      traceId: params.run.traceId,
-      storeId: params.storeId,
-      attemptNumber: params.attemptNumber,
-      usdBrlRateAtGeneration: params.economicSnapshot.usdBrlRateAtGeneration,
-      creditValueBrlAtGeneration: params.economicSnapshot.creditValueBrlAtGeneration,
-    });
-    for (const envelope of envelopes) {
-      await sinkContext.sink.emit(envelope);
-    }
-  });
-
-  const telemetry = createDefaultTelemetryContext({
-    operationRunId: params.run.operationRunId,
-    operationRunType: "visual_signature",
-    traceId: params.run.traceId,
-    storeId: params.storeId,
-    attemptNumber: params.attemptNumber,
-    usdBrlRateAtGeneration: params.economicSnapshot.usdBrlRateAtGeneration,
-    creditValueBrlAtGeneration: params.economicSnapshot.creditValueBrlAtGeneration,
-    sink,
-  });
-
-  return {
-    telemetry,
-    flush: async () => {
-      sink.enrichLastIfMissing("visual_signature_image", NOT_ATTEMPTED_CREATIVE_INTENT);
-      try {
-        await sink.flush();
-      } catch (error) {
-        console.error("[vs/server-actions] flush de telemetria falhou (best-effort):", error);
-      }
-    },
-  };
-}
-
-/**
- * F47.1 (D4/D5) — resolve UMA configuração congelada + UM gateway por operação.
- * Opt-in desligado ⇒ legado (gateway padrão). Opt-in ligado com qualquer falha
- * ⇒ erro fail-closed (sem débito/provider).
- */
-async function resolveVisualSignatureExecution(storeId: string): Promise<{
-  config: VisualSignatureModelConfigSnapshot;
-  invoker: AiInvoker;
-}> {
-  const config = await loadVisualSignatureModelConfigSnapshot({ storeId });
-  if (config.mode === "legacy") {
-    return { config, invoker: defaultAiGateway };
-  }
-  const resolver = createFrozenVisualSignatureResolver({
-    snapshot: config,
-    fallbackResolver: defaultAiModelResolver,
-  });
-  return {
-    config,
-    invoker: createVisualSignatureValidationGateway(
-      resolver,
-      config.environment ?? "local_validation",
-    ),
-  };
-}
-
 async function getStore(storeId: string): Promise<Store> {
   const { data, error } = await supabase
     .from("stores")
@@ -232,23 +125,11 @@ export async function generateVariations(
     };
   }
 
-  // F47.1 (D4): UMA configuração congelada + UM gateway por operação. Falha do
-  // guard/serviço é fail-closed (nenhum débito/provider).
-  let execution: Awaited<ReturnType<typeof resolveVisualSignatureExecution>>;
-  try {
-    execution = await resolveVisualSignatureExecution(storeId);
-  } catch {
-    return { success: false, error: "Configuração de validação local indisponível." };
-  }
-
-  const aiGenerator = new AiImageGenerator({ invoker: execution.invoker });
-  const effectiveVisualSignatureModel =
-    execution.config.mode === "dedicated"
-      ? execution.config.orchestratorModel
-      : await defaultAiModelResolver
-          .resolve("visual_signature_image")
-          .then((config) => config.primary.model)
-          .catch(() => "unknown");
+  const aiGenerator = new AiImageGenerator();
+  const effectiveVisualSignatureModel = await defaultAiModelResolver
+    .resolve("visual_signature_image")
+    .then((config) => config.primary.model)
+    .catch(() => "unknown");
   const tonalities = ["profissional", "moderno", "elegante"];
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
@@ -257,18 +138,23 @@ export async function generateVariations(
   const run = new AiCostTracker().startRun("visual_signature");
   // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
   const economicSnapshot = await resolveEconomicSnapshot("[vs/server-actions]");
+  const telemetry = createDefaultTelemetryContext({
+    operationRunId: run.operationRunId,
+    operationRunType: "visual_signature",
+    traceId: run.traceId,
+    storeId,
+    attemptNumber: 0,
+    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+  });
 
-  const variations: CascadeResult[] = [];
+  const variations: Array<{ tier: string; assetUrl: string; storagePath: string; mimeType: string }> = [];
 
   for (const tone of tonalities) {
-    let result: CascadeResult | null = null;
+    let result:
+      | { tier: string; assetUrl: string; storagePath: string; mimeType: string }
+      | null = null;
     const attempt1Start = Date.now();
-    const attempt1 = createAttemptTelemetryContext({
-      run,
-      economicSnapshot,
-      storeId,
-      attemptNumber: 0,
-    });
 
     try {
       result = await aiGenerator.generate({
@@ -279,22 +165,14 @@ export async function generateVariations(
         tone,
         signal: AbortSignal.timeout(120000),
         attempt: 0,
-        telemetry: attempt1.telemetry,
-        visualSignatureConfig: execution.config,
+        telemetry,
       });
     } catch (err) {
       const a1 = classifyError(err, "image_direct", attempt1Start, effectiveVisualSignatureModel);
       console.log(`[visual-signature] generateVariations tone=${tone} attempt1 ${a1.status}`);
 
-      if (!(execution.config.mode === "dedicated" && isVisualSignatureSmokeNoRetry()) && a1.status !== "timeout") {
-        await attempt1.flush();
+      if (a1.status !== "timeout") {
         const attempt2Start = Date.now();
-        const attempt2 = createAttemptTelemetryContext({
-          run,
-          economicSnapshot,
-          storeId,
-          attemptNumber: 1,
-        });
         try {
           result = await aiGenerator.generate({
             storeId: store.id,
@@ -305,18 +183,13 @@ export async function generateVariations(
             signal: AbortSignal.timeout(120000),
             attempt: 1,
             simplifiedPrompt: true,
-            telemetry: attempt2.telemetry,
-            visualSignatureConfig: execution.config,
+            telemetry,
           });
         } catch (err2) {
           const a2 = classifyError(err2, "image_retry", attempt2Start, effectiveVisualSignatureModel);
           console.log(`[visual-signature] generateVariations tone=${tone} retry ${a2.status}`);
-        } finally {
-          await attempt2.flush();
         }
       }
-    } finally {
-      await attempt1.flush();
     }
 
     if (!result) {
@@ -332,7 +205,16 @@ export async function generateVariations(
 
   return {
     success: true,
-    variations,
+    variations: variations as GenerateVariationsResult extends {
+      success: true;
+    }
+      ? Array<{
+          tier: "image_direct" | "image_retry" | "typographic";
+          assetUrl: string;
+          storagePath: string;
+          mimeType: "image/png" | "image/svg+xml";
+        }>
+      : never,
   };
 }
 
@@ -353,15 +235,6 @@ export async function generateAutomatic(storeId: string): Promise<
     return { success: false, error: "Loja não encontrada" };
   }
 
-  // F47.1 (D4): configuração/gateway congelados ANTES de qualquer escrita
-  // (arquivamento), débito ou provider.
-  let execution: Awaited<ReturnType<typeof resolveVisualSignatureExecution>>;
-  try {
-    execution = await resolveVisualSignatureExecution(storeId);
-  } catch {
-    return { success: false, error: "Configuração de validação local indisponível." };
-  }
-
   try {
     const existing = await getActiveVisualSignature(storeId);
     if (existing) {
@@ -373,14 +246,11 @@ export async function generateAutomatic(storeId: string): Promise<
   }
 
   const totalStart = Date.now();
-  const aiGenerator = new AiImageGenerator({ invoker: execution.invoker });
-  const effectiveVisualSignatureModel =
-    execution.config.mode === "dedicated"
-      ? execution.config.orchestratorModel
-      : await defaultAiModelResolver
-          .resolve("visual_signature_image")
-          .then((config) => config.primary.model)
-          .catch(() => "unknown");
+  const aiGenerator = new AiImageGenerator();
+  const effectiveVisualSignatureModel = await defaultAiModelResolver
+    .resolve("visual_signature_image")
+    .then((config) => config.primary.model)
+    .catch(() => "unknown");
   const previousAttempts: CascadeAttempt[] = [];
 
   // F46-04 (reabertura, D9): telemetria pelo sink único para
@@ -388,6 +258,15 @@ export async function generateAutomatic(storeId: string): Promise<
   const run = new AiCostTracker().startRun("visual_signature");
   // F46-04 (reabertura D3): snapshot econômico no run (apuração sem fallback).
   const economicSnapshot = await resolveEconomicSnapshot("[vs/server-actions]");
+  const telemetry = createDefaultTelemetryContext({
+    operationRunId: run.operationRunId,
+    operationRunType: "visual_signature",
+    traceId: run.traceId,
+    storeId,
+    attemptNumber: 0,
+    usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+    creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+  });
 
   const tones = ["profissional", "moderno", "elegante"];
   const tone = tones[Math.floor(Math.random() * tones.length)];
@@ -395,12 +274,6 @@ export async function generateAutomatic(storeId: string): Promise<
   // Attempt 1: image_direct
   console.log(`[visual-signature] tier=image_direct started`);
   const attempt1Start = Date.now();
-  const attempt1 = createAttemptTelemetryContext({
-    run,
-    economicSnapshot,
-    storeId,
-    attemptNumber: 0,
-  });
   try {
     const result = await aiGenerator.generate({
       storeId: store.id,
@@ -410,34 +283,14 @@ export async function generateAutomatic(storeId: string): Promise<
       tone,
       signal: AbortSignal.timeout(120000),
       attempt: 0,
-      telemetry: attempt1.telemetry,
-      visualSignatureConfig: execution.config,
+      telemetry,
     });
 
-    const parsedIntent =
-      result.creativeIntent ?? parseCreativeIntent(result.aiResponseMessage);
-    const { data: existingSignature, error: existingError } = await supabase
-      .from("store_visual_signatures")
-      .select("metadata")
-      .eq("storage_path", result.storagePath)
-      .maybeSingle();
-    if (existingError) {
-      return {
-        success: false,
-        error: "Não foi possível ler os dados da assinatura para concluir a ativação.",
-      };
-    }
     const { data: signature, error } = await supabase
       .from("store_visual_signatures")
       .update({
         status: "active",
         updated_at: new Date().toISOString(),
-        metadata: {
-          ...(existingSignature?.metadata ?? {}),
-          ...result.metadata,
-          ...parsedIntent.metadata,
-          artDirectorOutput: parsedIntent.output,
-        },
       })
       .eq("storage_path", result.storagePath)
       .select()
@@ -469,25 +322,11 @@ export async function generateAutomatic(storeId: string): Promise<
         error: "Não conseguimos criar sua assinatura visual agora. Tente novamente ou envie seu logotipo.",
       };
     }
-  } finally {
-    await attempt1.flush();
   }
 
   // Attempt 2: image_retry (only on non-timeout failures)
-  if (execution.config.mode === "dedicated" && isVisualSignatureSmokeNoRetry()) {
-    return {
-      success: false,
-      error: "Não conseguimos criar sua assinatura visual agora. Tente novamente ou envie seu logotipo.",
-    };
-  }
   console.log(`[visual-signature] tier=image_retry started (simplified prompt)`);
   const attempt2Start = Date.now();
-  const attempt2 = createAttemptTelemetryContext({
-    run,
-    economicSnapshot,
-    storeId,
-    attemptNumber: 1,
-  });
   try {
     const retryResult = await aiGenerator.generate({
       storeId: store.id,
@@ -498,34 +337,14 @@ export async function generateAutomatic(storeId: string): Promise<
       signal: AbortSignal.timeout(120000),
       attempt: 1,
       simplifiedPrompt: true,
-      telemetry: attempt2.telemetry,
-      visualSignatureConfig: execution.config,
+      telemetry,
     });
 
-    const retryIntent =
-      retryResult.creativeIntent ?? parseCreativeIntent(retryResult.aiResponseMessage);
-    const { data: existingRetrySignature, error: existingRetryError } = await supabase
-      .from("store_visual_signatures")
-      .select("metadata")
-      .eq("storage_path", retryResult.storagePath)
-      .maybeSingle();
-    if (existingRetryError) {
-      return {
-        success: false,
-        error: "Não foi possível ler os dados da assinatura para concluir a ativação.",
-      };
-    }
     const { data: signature, error } = await supabase
       .from("store_visual_signatures")
       .update({
         status: "active",
         updated_at: new Date().toISOString(),
-        metadata: {
-          ...(existingRetrySignature?.metadata ?? {}),
-          ...retryResult.metadata,
-          ...retryIntent.metadata,
-          artDirectorOutput: retryIntent.output,
-        },
       })
       .eq("storage_path", retryResult.storagePath)
       .select()
@@ -544,8 +363,6 @@ export async function generateAutomatic(storeId: string): Promise<
     const attempt = classifyError(err, "image_retry", attempt2Start, effectiveVisualSignatureModel);
     previousAttempts.push(attempt);
     console.log(`[visual-signature] tier=image_retry ${attempt.status}`);
-  } finally {
-    await attempt2.flush();
   }
 
   // Both attempts failed — return controlled error, no typographic fallback

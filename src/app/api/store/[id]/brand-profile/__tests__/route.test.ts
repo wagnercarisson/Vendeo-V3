@@ -103,59 +103,6 @@ describe('GET /api/store/[id]/brand-profile', () => {
     const body = await res.json();
     expect(body).toBeNull();
   });
-
-  it('?view=state retorna 500 quando assets falham', async () => {
-    mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'store_brand_profiles') return makeChain({ data: [mockSyncedProfile], error: null });
-      if (table === 'store_visual_signatures') return makeChain({ data: null, error: null });
-      if (table === 'stores') return makeChain({ data: { id: STORE_ID, identity_state: 'text_only', name: 'Loja', segment: 'outros' }, error: null });
-      if (table === 'store_brand_assets') return makeChain({ data: null, error: { message: 'assets unavailable' } });
-      return makeChain({ data: null, error: null });
-    });
-    const { GET } = await import('../route');
-    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile?view=state`));
-    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
-    expect(res.status).toBe(500);
-  });
-
-  it('?view=state usa o logo arquivado como fallback removido', async () => {
-    let assetCalls = 0;
-    mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table === 'store_brand_profiles') {
-        return makeChain({
-          data: [{
-            ...mockSyncedProfile,
-            active_logo_asset_id: 'logo-removed',
-            metadata: {
-              input_snapshot: {
-                segment: 'outros', subsegment: null, tone_of_voice: null,
-                name: 'Loja', positioning: null, short_description: null, slogan: null,
-              },
-            },
-          }],
-          error: null,
-        });
-      }
-      if (table === 'store_visual_signatures') return makeChain({ data: null, error: null });
-      if (table === 'stores') return makeChain({ data: { id: STORE_ID, identity_state: 'text_only', name: 'Loja', segment: 'outros' }, error: null });
-      if (table === 'store_brand_assets') {
-        assetCalls += 1;
-        return makeChain(
-          assetCalls === 1
-            ? { data: [], error: null }
-            : { data: [{ id: 'logo-removed' }], error: null },
-        );
-      }
-      return makeChain({ data: null, error: null });
-    });
-    const { GET } = await import('../route');
-    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile?view=state`));
-    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.currentKind).toBe('logo_removed_fallback');
-    expect(body.current.id).toBe('profile-001');
-  });
 });
 
 // ── F38.1 (6.5): rota principal NÃO gera via profiler ──────────────────────

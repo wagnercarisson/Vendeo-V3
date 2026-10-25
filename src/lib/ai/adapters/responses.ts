@@ -2,24 +2,7 @@ import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { AiModelTarget } from "../model-resolver";
 import { getApiKey } from "../api-keys";
 import { AiInvocationError } from "../types";
-import type {
-  AiAdapter,
-  AiCredentialProvenance,
-  AiCredentialScope,
-  AiInvocationRequest,
-  AiInvocationResult,
-} from "../types";
-
-export interface ResponsesAdapterClientOptions {
-  /**
-   * F47.1 (D6/D12) — retries internos do SDK. O gateway de validação local usa
-   * `0` para que o limite efetivo seja o das tentativas de aplicação. Ausente no
-   * adapter default ⇒ comportamento atual do SDK permanece intacto.
-   */
-  maxRetries?: number;
-  /** Timeout de cliente opcional (ms), repassado ao SDK. */
-  timeout?: number;
-}
+import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../types";
 
 /**
  * Adapter do protocolo `responses` (OpenAI Responses API).
@@ -32,35 +15,9 @@ export interface ResponsesAdapterClientOptions {
 export class ResponsesAdapter implements AiAdapter {
   readonly protocol = "responses" as const;
 
-  /**
-   * `resolveApiKey` é injetável por construtor (F47.1, D6); o default continua
-   * `getApiKey` (comportamento atual intacto). `clientOptions` permite provar
-   * `maxRetries=0` no gateway de validação local.
-   */
-  constructor(
-    private readonly resolveApiKey: (provider: AiModelTarget["provider"]) => string = getApiKey,
-    private readonly clientOptions: ResponsesAdapterClientOptions = {},
-    /**
-     * Escopo da credencial resolvida por este adapter. Ausente (default) =
-     * desconhecido; um resolvedor customizado sem escopo não vira `normal`.
-     */
-    private readonly credentialScope?: AiCredentialScope,
-  ) {}
-
-  async invoke(
-    request: AiInvocationRequest,
-    target: AiModelTarget,
-    provenance?: AiCredentialProvenance,
-  ): Promise<AiInvocationResult> {
+  async invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult> {
     const { default: OpenAI } = await import("openai");
-    const apiKey = this.resolveApiKey(target.provider);
-    if (provenance && this.credentialScope && apiKey.length > 0) {
-      provenance.scope = this.credentialScope;
-    }
-    const openai = new OpenAI({
-      apiKey,
-      ...this.clientOptions,
-    });
+    const openai = new OpenAI({ apiKey: getApiKey(target.provider) });
 
     const content: unknown[] = [{ type: "input_text", text: request.prompt }];
     for (const url of request.productImagesDataUrls ?? []) {
@@ -85,9 +42,6 @@ export class ResponsesAdapter implements AiAdapter {
       params.tools = [
         {
           type: "image_generation",
-          // F47.1 (D7): `model` só existe no caminho com configuração dedicada.
-          // Ausente ⇒ payload legado byte-compatível (sem `model`).
-          ...(request.imageGenerationModel ? { model: request.imageGenerationModel } : {}),
           size: request.size,
           quality: request.quality,
         },
@@ -106,28 +60,13 @@ export class ResponsesAdapter implements AiAdapter {
       params.tool_choice = { type: "image_generation" };
     }
 
-    // F47.1 (D7): reasoning da VS (fixo em "low" nesta fase). Ausente ⇒ nenhum
-    // `reasoning` é enviado (payload legado).
-    if (request.reasoningEffort) {
-      params.reasoning = { effort: request.reasoningEffort };
-    }
-
     const response = await openai.responses.create(params as never, {
       signal: request.signal,
       ...(request.timeout !== undefined ? { timeout: request.timeout } : {}),
     });
 
-    const output = (
-      response as {
-        output?: Array<{ type?: string; result?: string; usage?: unknown }>;
-      }
-    ).output;
+    const output = (response as { output?: Array<{ type?: string; result?: string }> }).output;
     const imageOutput = output?.find((item) => item.type === "image_generation_call");
-    // F47.1 (D8): usage próprio da tool SOMENTE quando o provider o expõe.
-    // Nunca é inferido do usage principal.
-    const imageToolUsage = usesImageTool
-      ? normalizeResponsesUsage(imageOutput?.usage)
-      : undefined;
     const imageBase64 = imageOutput?.result;
     const textContent = (response as { output_text?: string }).output_text;
     const rawUsage = (response as { usage?: unknown }).usage;
@@ -157,19 +96,6 @@ export class ResponsesAdapter implements AiAdapter {
         providerUsageSource: usesImageTool ? "responses.image_generation" : "responses",
         responsesModel: target.model,
         imageGenerationTool: usesImageTool,
-        // F47.1 (D7): modelo da tool separado do modelo Responses. Só existe
-        // quando a tool recebeu `model` — nunca é inferido/inventado no legado.
-        ...(usesImageTool && request.imageGenerationModel
-          ? { imageGenerationModel: request.imageGenerationModel }
-          : {}),
-        // F47.1 (D8): separação explícita. `absent` é registrado para a tool
-        // quando não há usage próprio; o objeto de usage permanece ausente.
-        ...(usesImageTool
-          ? {
-              ...(imageToolUsage ? { imageToolUsage } : {}),
-              imageToolUsageSource: imageToolUsage ? ("tool_output" as const) : ("absent" as const),
-            }
-          : {}),
         ...(rawUsage && typeof rawUsage === "object"
           ? { providerUsageRaw: rawUsage as Record<string, unknown> }
           : {}),
@@ -187,18 +113,8 @@ export function normalizeResponsesUsage(usage: unknown): TokenUsage | undefined 
   const raw = usage as {
     input_tokens?: number;
     output_tokens?: number;
-    input_tokens_details?: {
-      cached_tokens?: number;
-      text_tokens?: number;
-      image_tokens?: number;
-      cached_tokens_details?: { text_tokens?: number; image_tokens?: number };
-    };
-    output_tokens_details?: {
-      text_tokens?: number;
-      image_tokens?: number;
-      reasoning_tokens?: number;
-    };
-    reasoning_excluded_from_output?: boolean;
+    input_tokens_details?: { cached_tokens?: number; text_tokens?: number; image_tokens?: number };
+    output_tokens_details?: { text_tokens?: number; image_tokens?: number };
   };
 
   const inputDetails = raw.input_tokens_details;
@@ -213,18 +129,6 @@ export function normalizeResponsesUsage(usage: unknown): TokenUsage | undefined 
 
   if (inputDetails?.cached_tokens !== undefined) {
     normalized.cachedInputTokens = inputDetails.cached_tokens;
-  }
-  if (inputDetails?.cached_tokens_details?.text_tokens !== undefined) {
-    normalized.cachedTextTokens = inputDetails.cached_tokens_details.text_tokens;
-  }
-  if (inputDetails?.cached_tokens_details?.image_tokens !== undefined) {
-    normalized.cachedImageTokens = inputDetails.cached_tokens_details.image_tokens;
-  }
-  if (outputDetails?.reasoning_tokens !== undefined) {
-    normalized.reasoningTokens = outputDetails.reasoning_tokens;
-  }
-  if (typeof raw.reasoning_excluded_from_output === "boolean") {
-    normalized.reasoningExcludedFromOutput = raw.reasoning_excluded_from_output;
   }
   if (outputDetails?.image_tokens !== undefined) {
     normalized.imageTokens = outputDetails.image_tokens;

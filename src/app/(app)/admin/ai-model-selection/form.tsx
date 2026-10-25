@@ -25,14 +25,9 @@ const groups = [
     key: "image",
     label: "Imagem",
     description:
-      "Fluxo legado — geração e edição de campanhas. Produto 1:1 e Assinatura Visual têm cards dedicados nesta página.",
+      "Fluxo legado — geração, edição e assinatura visual. O fluxo Produto 1:1 é configurado na seção \"Imagem de campanhas — Produto 1:1\".",
   },
 ] as const;
-
-export type AiModelSelectionFormMode = "all" | "shared" | "legacy";
-
-const LEGACY_IMAGE_CAPABILITIES = new Set(["campaign_image", "campaign_image_edit"]);
-const VISUAL_SIGNATURE_CAPABILITY = "visual_signature_image";
 
 function targetKey(target: { provider: string; model: string; protocol: string } | null): string {
   return target ? `${target.provider}|${target.model}|${target.protocol}` : "";
@@ -63,25 +58,9 @@ function makeDraft(item: AiModelCapabilityView): Draft {
   };
 }
 
-export function AiModelSelectionForm({
-  view,
-  mode = "all",
-}: {
-  view: AiModelSelectionViewModel;
-  mode?: AiModelSelectionFormMode;
-}) {
+export function AiModelSelectionForm({ view }: { view: AiModelSelectionViewModel }) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
     Object.fromEntries(view.capabilities.map((item) => [item.capability, makeDraft(item)])),
-  );
-
-  const visibleGroups = groups.filter((group) => {
-    if (mode === "shared") return group.key === "text" || group.key === "vision";
-    if (mode === "legacy") return group.key === "image";
-    return true;
-  });
-
-  const inheritedVisualSignature = view.capabilities.find(
-    (item) => item.capability === VISUAL_SIGNATURE_CAPABILITY,
   );
 
   function patch(capability: string, update: Partial<Draft>) {
@@ -142,68 +121,12 @@ export function AiModelSelectionForm({
         </div>
       </div>
 
-      {inheritedVisualSignature && (
-        <section aria-labelledby={`${mode}-vs-inherited-diagnostic-heading`} className="space-y-3">
-          <div>
-            <h2
-              id={`${mode}-vs-inherited-diagnostic-heading`}
-              className="font-heading text-lg font-semibold text-text-primary"
-            >
-              Seleção herdada — diagnóstico
-            </h2>
-            <p className="text-sm text-text-secondary">
-              <code className="font-mono text-xs">visual_signature_image</code> não é editável aqui.
-              O diagnóstico permanece visível e a edição ocorre no card “Assinatura Visual”.
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-bg-surface p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                  Alvo herdado
-                </p>
-                <p className="mt-1 break-words text-sm text-text-primary">
-                  {targetLabel(inheritedVisualSignature.current.primary)}
-                </p>
-                <p className="mt-2 text-xs text-text-muted">
-                  A configuração dedicada, quando habilitada, prevalece sobre este alvo. Ele não
-                  representa necessariamente a execução atual.
-                </p>
-              </div>
-              <span
-                className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${statusClass(
-                  inheritedVisualSignature.current.primary.catalogStatus,
-                )}`}
-              >
-                {inheritedVisualSignature.current.primary.catalogStatus}
-              </span>
-            </div>
-            <p className="mt-3 text-xs text-text-muted">
-              Origem:{" "}
-              {inheritedVisualSignature.configured?.primary
-                ? "decisão humana persistida"
-                : inheritedVisualSignature.source === "selection"
-                  ? "seleção persistida"
-                  : "default do sistema"}
-              . O reset dedicado retorna a geração a esta seleção.
-            </p>
-          </div>
-        </section>
-      )}
-
-      {visibleGroups.map((group) => {
-        const items = view.capabilities.filter((item) => {
-          if (item.capability === VISUAL_SIGNATURE_CAPABILITY) return false;
-          if (item.segment !== group.key) return false;
-          if (mode === "legacy" && group.key === "image") {
-            return LEGACY_IMAGE_CAPABILITIES.has(item.capability);
-          }
-          return true;
-        });
+      {groups.map((group) => {
+        const items = view.capabilities.filter((item) => item.segment === group.key);
         return (
-          <section key={group.key} aria-labelledby={`${mode}-group-${group.key}`} className="space-y-3">
+          <section key={group.key} aria-labelledby={`group-${group.key}`} className="space-y-3">
             <div>
-              <h2 id={`${mode}-group-${group.key}`} className="font-heading text-lg font-semibold text-text-primary">{group.label}</h2>
+              <h2 id={`group-${group.key}`} className="font-heading text-lg font-semibold text-text-primary">{group.label}</h2>
               <p className="text-sm text-text-secondary">{group.description}</p>
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
@@ -282,8 +205,8 @@ export function AiModelSelectionForm({
                     )}
 
                     <div className="mt-4 space-y-3">
-                      <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`${mode}-primary-${item.capability}`}>Novo primary</label>
-                      <select id={`${mode}-primary-${item.capability}`} value={`${draft.provider}|${draft.model}|${draft.protocol}`} onChange={(event) => {
+                      <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`primary-${item.capability}`}>Novo primary</label>
+                      <select id={`primary-${item.capability}`} value={`${draft.provider}|${draft.model}|${draft.protocol}`} onChange={(event) => {
                         const [provider, model, protocol] = event.target.value.split("|");
                         edit(item.capability, { provider, model, protocol });
                       }} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
@@ -293,8 +216,8 @@ export function AiModelSelectionForm({
 
                       {item.capability === "campaign_copy" && (
                         <>
-                          <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`${mode}-fallback-${item.capability}`}>Fallback genérico</label>
-                          <select id={`${mode}-fallback-${item.capability}`} value={draft.fallback} onChange={(event) => edit(item.capability, { fallback: event.target.value })} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
+                          <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`fallback-${item.capability}`}>Fallback genérico</label>
+                          <select id={`fallback-${item.capability}`} value={draft.fallback} onChange={(event) => edit(item.capability, { fallback: event.target.value })} className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20">
                             <option value="">Sem fallback</option>
                             {configured?.fallback && configured.fallback.catalogStatus !== "active" && <option disabled value={targetKey(configured.fallback)}>{targetLabel(configured.fallback)} · {configured.fallback.catalogStatus}</option>}
                             {view.catalog.filter((row) => row.capability === "campaign_copy" && row.status === "active").map((option) => <option key={`fallback-${option.id}`} value={`${option.provider}|${option.model}|${option.protocol}`}>{targetLabel(option)}</option>)}
@@ -302,8 +225,8 @@ export function AiModelSelectionForm({
                         </>
                       )}
 
-                      <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`${mode}-reason-${item.capability}`}>Motivo da alteração</label>
-                      <input id={`${mode}-reason-${item.capability}`} value={draft.reason} onChange={(event) => edit(item.capability, { reason: event.target.value })} placeholder="Motivo obrigatório para auditoria" className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 placeholder:text-text-muted focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20" />
+                      <label className="block text-xs font-medium uppercase tracking-wider text-text-secondary" htmlFor={`reason-${item.capability}`}>Motivo da alteração</label>
+                      <input id={`reason-${item.capability}`} value={draft.reason} onChange={(event) => edit(item.capability, { reason: event.target.value })} placeholder="Motivo obrigatório para auditoria" className="min-h-11 w-full rounded-lg border border-border-light bg-bg-deep px-3 text-sm text-text-primary outline-none transition-colors duration-200 placeholder:text-text-muted focus:border-accent-blue focus:ring-2 focus:ring-accent-blue/20" />
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">

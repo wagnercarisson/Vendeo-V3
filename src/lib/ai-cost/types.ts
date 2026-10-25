@@ -49,20 +49,6 @@ export interface TokenUsage {
   outputTextTokens?: number;
   /** F38.1: output_tokens_details.image_tokens — tokens de imagem gerada (mesmo valor de imageTokens). */
   outputImageTokens?: number;
-  /**
-   * F47.1 (D8): `reasoning_tokens` do provider. É SUBCONJUNTO de
-   * `completionTokens`/`output_tokens` por padrão — nunca somado novamente.
-   */
-  reasoningTokens?: number;
-  /**
-   * F47.1 (D8): o provider declarou explicitamente que `reasoning_tokens` está
-   * FORA de `output_tokens`. Só então o reasoning é precificado separadamente.
-   */
-  reasoningExcludedFromOutput?: boolean;
-  /** F47.1 (D8): parcela de cache atribuível a texto, quando detalhada. */
-  cachedTextTokens?: number;
-  /** F47.1 (D8): parcela de cache atribuível a imagem, quando detalhada. */
-  cachedImageTokens?: number;
 }
 
 /**
@@ -108,19 +94,6 @@ export interface CostResolution {
   imageToolPricingProvider?: string;
   imageToolPricingModel?: string;
   imageToolPricingVersion?: string;
-  /**
-   * F47.1 (D8): cobertura HONESTA da estimativa. `complete` exige atribuição de
-   * tokens e todas as tarifas necessárias; `partial` cobre componentes
-   * confirmados com lacunas explícitas; `unknown` quando nada é confirmável.
-   * Ausente nos caminhos legados (comportamento preservado).
-   */
-  costCoverage?: "complete" | "partial" | "unknown";
-  /**
-   * F47.1 (D8): versões SEPARADAS das tarifas usadas. O orquestrador (texto) e
-   * a imagem/tool podem vir de linhas/versões diferentes do catálogo.
-   */
-  orchestratorPricingVersion?: string | null;
-  imagePricingVersion?: string | null;
 }
 
 /**

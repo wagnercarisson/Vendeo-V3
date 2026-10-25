@@ -228,85 +228,6 @@ async function gen(
       });
       expect(colorValidation(result.profile).global_status).toBe('all_confirmed');
     });
-
-    it('imagem local (loopback) é enviada como data URL reutilizando o buffer', async () => {
-      const intended = makeIntended();
-      const clusters = [
-        makeCluster('#22C55E'), makeCluster('#1E40AF'), makeCluster('#0F172A'), makeCluster('#3B82F6'),
-      ];
-      mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
-      mockFetch.mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new Uint8Array([1,2,3,4]).buffer) });
-      smartProbeMock(clusters);
-      mockOpenAICreate.mockResolvedValue({
-        choices: [{ message: { content: JSON.stringify({ visual_style: 'Modern', confidence_score: 0.9 }) } }],
-      });
-
-      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
-      const profiler = new BrandProfilerWithoutLogoService();
-      await gen(profiler, makeInput({
-        intendedPalette: intended,
-        assetUrl: 'http://127.0.0.1:57781/storage/v1/object/sign/visual-signatures/x.png?token=secret',
-      }));
-
-      const payload = JSON.stringify(mockOpenAICreate.mock.calls[0][0]);
-      expect(payload).toContain('data:image/png;base64,');
-      expect(payload).not.toContain('127.0.0.1:57781');
-    });
-
-    it('URL remota preserva o envio por URL', async () => {
-      const intended = makeIntended();
-      const clusters = [
-        makeCluster('#22C55E'), makeCluster('#1E40AF'), makeCluster('#0F172A'), makeCluster('#3B82F6'),
-      ];
-      mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
-      mockFetch.mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(50)) });
-      smartProbeMock(clusters);
-      mockOpenAICreate.mockResolvedValue({
-        choices: [{ message: { content: JSON.stringify({ visual_style: 'Modern', confidence_score: 0.9 }) } }],
-      });
-
-      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
-      const profiler = new BrandProfilerWithoutLogoService();
-      await gen(profiler, makeInput({ intendedPalette: intended, assetUrl: 'https://cdn.example.com/vs.png' }));
-
-      const payload = JSON.stringify(mockOpenAICreate.mock.calls[0][0]);
-      expect(payload).toContain('https://cdn.example.com/vs.png');
-    });
-
-    it('falha de download local gera erro explícito e não chama o provedor', async () => {
-      const intended = makeIntended();
-      mockProbeColors.mockResolvedValue(makeProbeResult([]));
-      mockFetch.mockResolvedValue({ ok: false, arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)) });
-
-      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
-      const profiler = new BrandProfilerWithoutLogoService();
-      await expect(
-        gen(profiler, makeInput({
-          intendedPalette: intended,
-          assetUrl: 'http://127.0.0.1:57781/storage/v1/object/sign/visual-signatures/x.png',
-        })),
-      ).rejects.toMatchObject({ metadata: { errorType: 'local_asset_download_failed' } });
-      expect(mockOpenAICreate).not.toHaveBeenCalled();
-    });
-
-    it('HTTP 200 com corpo vazio também é rejeitado sem chamar o provedor', async () => {
-      const intended = makeIntended();
-      mockProbeColors.mockResolvedValue(makeProbeResult([]));
-      mockFetch.mockResolvedValue({
-        ok: true,
-        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      });
-
-      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
-      const profiler = new BrandProfilerWithoutLogoService();
-      await expect(
-        gen(profiler, makeInput({
-          intendedPalette: intended,
-          assetUrl: 'http://127.0.0.1:57781/storage/v1/object/sign/visual-signatures/empty.png',
-        })),
-      ).rejects.toMatchObject({ metadata: { errorType: 'local_asset_download_failed' } });
-      expect(mockOpenAICreate).not.toHaveBeenCalled();
-    });
   });
 
   // Smart findClosestProbeCluster mock: exact hex match → deltaE 0;
@@ -356,34 +277,6 @@ async function gen(
 
       expect(result.success).toBe(true);
       expect(colorValidation(result.profile).global_status).toBe('vision_adjudicated');
-    });
-
-    it('callVisionFull também envia imagem local como data URL', async () => {
-      const intended = makeIntended();
-      const clusters = [
-        makeCluster('#1E40AF'), makeCluster('#0F172A'), makeCluster('#3B82F6'),
-      ];
-      mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
-      mockFetch.mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new Uint8Array([9,8,7]).buffer) });
-      smartProbeMock(clusters);
-      mockOpenAICreate.mockResolvedValue({
-        choices: [{ message: { content: JSON.stringify({
-          corrections: { primary: '#1E40AF', accent: null, background: null, support: [] },
-          reason: 'Used accent as primary',
-          visual_style: 'Modern', confidence_score: 0.8,
-        }) } }],
-      });
-
-      const { BrandProfilerWithoutLogoService } = await import('../brand-profiler');
-      const profiler = new BrandProfilerWithoutLogoService();
-      await gen(profiler, makeInput({
-        intendedPalette: intended,
-        assetUrl: 'http://localhost:57781/storage/v1/object/sign/visual-signatures/y.png',
-      }));
-
-      const payload = JSON.stringify(mockOpenAICreate.mock.calls[0][0]);
-      expect(payload).toContain('data:image/png;base64,');
-      expect(payload).not.toContain('localhost:57781');
     });
   });
 

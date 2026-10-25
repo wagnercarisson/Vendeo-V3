@@ -8,9 +8,6 @@ const mockUpdateEventDecision = vi.fn();
 const mockReconcileProfiles = vi.fn();
 const mockRevalidateCriticalDrift = vi.fn();
 const mockCreateSignedUrl = vi.fn(() => Promise.resolve({ data: { signedUrl: 'signed-vs-url' }, error: null }));
-const mockTrialComplete = vi.fn();
-const mockReserveCredit = vi.fn();
-const mockRefundCredit = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
@@ -33,17 +30,6 @@ vi.mock('@/lib/auth/csrf', () => ({
 
 vi.mock('@/lib/visual-signature/drift-validator', () => ({
   validateDrift: mockValidateDrift,
-}));
-
-vi.mock('@/lib/credit/trial-offer/completion', () => ({
-  maybeCompleteOnboardingAndStartTrial: mockTrialComplete,
-}));
-
-vi.mock('@/lib/credit/credit-service', () => ({
-  CreditService: class {
-    reserveCredit = mockReserveCredit;
-    refundCredit = mockRefundCredit;
-  },
 }));
 
 vi.mock('@/lib/visual-signature/brand-profiler', () => ({
@@ -170,10 +156,6 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storeBrandProfileUpdates.length = 0;
-    mockTrialComplete.mockReset();
-    mockTrialComplete.mockResolvedValue({ started: false });
-    mockReserveCredit.mockReset();
-    mockRefundCredit.mockReset();
     mockBrandProfilerGenerate.mockResolvedValue({
       profile: { ...mockProfile, id: 'new-profile-001' },
       success: true,
@@ -317,29 +299,6 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
 
   it('12.9 — creates new brand profile via profiler', async () => {
     storeBrandProfileUpdates.length = 0;
-    const financeState = { balance: 42, reserved: 0, transactions: 0 };
-    const offerState = {
-      individual_launch_at: '2026-06-01T00:00:00Z',
-      started_at: '2026-06-01T00:00:00Z',
-      expires_at: '2026-06-29T00:00:00Z',
-      cohort: 'baseline-cohort',
-    };
-    const financialBefore = structuredClone(financeState);
-    const offerBefore = structuredClone(offerState);
-    mockReserveCredit.mockImplementation(async (_storeId: string, amount: number) => {
-      financeState.balance -= amount;
-      financeState.reserved += amount;
-      financeState.transactions += 1;
-    });
-    mockRefundCredit.mockImplementation(async () => {
-      financeState.balance += 1;
-      financeState.reserved -= 1;
-      financeState.transactions += 1;
-    });
-    mockTrialComplete.mockImplementation(async () => {
-      offerState.started_at = new Date().toISOString();
-      offerState.expires_at = new Date(Date.now() + 28 * 86400000).toISOString();
-    });
     setupStoreQuery({ data: mockStore, error: null });
     const { POST } = await import('../route');
     const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
@@ -360,18 +319,6 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     expect(snapshotKeys).toEqual(
       expect.arrayContaining(['segment', 'subsegment', 'tone_of_voice', 'name', 'positioning', 'short_description', 'slogan'])
     );
-
-    // F47.2-05: aprovação/troca de assinatura não consome nem altera a oferta.
-    expect(mockTrialComplete).not.toHaveBeenCalled();
-    expect(mockReserveCredit).not.toHaveBeenCalled();
-    expect(mockRefundCredit).not.toHaveBeenCalled();
-    expect(financeState).toEqual(financialBefore);
-    expect(offerState).toEqual(offerBefore);
-    for (const update of storeBrandProfileUpdates) {
-      expect(update).not.toHaveProperty('individual_launch_at');
-      expect(update).not.toHaveProperty('started_at');
-      expect(update).not.toHaveProperty('expires_at');
-    }
   });
 
   it('12.10 — brand profiler failure returns fallback', async () => {
@@ -763,17 +710,6 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
   });
 
   it('SUB-5 — should return 200 with bp_status:failed when BP fails (Tier 2 fallback)', async () => {
-    const offerState = {
-      individual_launch_at: '2026-06-01T00:00:00Z',
-      started_at: '2026-06-01T00:00:00Z',
-      expires_at: '2026-06-29T00:00:00Z',
-      cohort: 'baseline-cohort',
-    };
-    const offerBefore = structuredClone(offerState);
-    mockTrialComplete.mockImplementation(async () => {
-      offerState.started_at = new Date().toISOString();
-      offerState.expires_at = new Date(Date.now() + 28 * 86400000).toISOString();
-    });
     mockBrandProfilerGenerate.mockRejectedValue(new Error('BP generation failed'));
 
     setupVSQuery();
@@ -786,36 +722,9 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
     expect(body.visual_signature_id).toBe(SIG_ID);
     expect(body.signature.status).toBe('active');
     expect(body.warning).toBeDefined();
-    expect(mockTrialComplete).not.toHaveBeenCalled();
-    expect(mockReserveCredit).not.toHaveBeenCalled();
-    expect(mockRefundCredit).not.toHaveBeenCalled();
-    expect(offerState).toEqual(offerBefore);
   });
 
   it('SUB-6 — should succeed with bp_status:success on full substitution', async () => {
-    const financeState = { balance: 42, reserved: 0, transactions: 0 };
-    const offerState = {
-      individual_launch_at: '2026-06-01T00:00:00Z',
-      started_at: '2026-06-01T00:00:00Z',
-      expires_at: '2026-06-29T00:00:00Z',
-      cohort: 'baseline-cohort',
-    };
-    const financialBefore = structuredClone(financeState);
-    const offerBefore = structuredClone(offerState);
-    mockReserveCredit.mockImplementation(async (_storeId: string, amount: number) => {
-      financeState.balance -= amount;
-      financeState.reserved += amount;
-      financeState.transactions += 1;
-    });
-    mockRefundCredit.mockImplementation(async () => {
-      financeState.balance += 1;
-      financeState.reserved -= 1;
-      financeState.transactions += 1;
-    });
-    mockTrialComplete.mockImplementation(async () => {
-      offerState.started_at = new Date().toISOString();
-      offerState.expires_at = new Date(Date.now() + 28 * 86400000).toISOString();
-    });
     setupVSQuery();
 
     const { POST } = await import('../route');
@@ -826,10 +735,5 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
     expect(body.visual_signature_id).toBe(SIG_ID);
     expect(body.signature.status).toBe('active');
     expect(body.signature.id).toBe(SIG_ID);
-    expect(mockTrialComplete).not.toHaveBeenCalled();
-    expect(mockReserveCredit).not.toHaveBeenCalled();
-    expect(mockRefundCredit).not.toHaveBeenCalled();
-    expect(financeState).toEqual(financialBefore);
-    expect(offerState).toEqual(offerBefore);
   });
 });

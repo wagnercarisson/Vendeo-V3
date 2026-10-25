@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
-import { StoreIdentityArtDirectorService, parseCreativeIntent } from '@/lib/visual-signature/identity-art-director';
+import { StoreIdentityArtDirectorService } from '@/lib/visual-signature/identity-art-director';
 import { AiImageGenerator } from '@/lib/visual-signature/ai-image-generator';
 import { persistSignature, getActiveVisualSignature } from '@/lib/visual-signature/persistence';
 import { insertGenerationEvent } from '@/lib/visual-signature/generation-events';
@@ -19,19 +19,10 @@ import { OperationCostService, OperationCostUnavailableError } from '@/lib/credi
 import type { OperationCostResolution } from '@/lib/credit/types';
 import { requireLegalClearance } from '@/lib/legal/clearance';
 import { AiCostTracker } from '@/lib/ai-cost';
-import {
-  createDefaultTelemetryContext,
-  DeferredAiTelemetrySink,
-  defaultAiGateway,
-  defaultAiModelResolver,
-  createFrozenVisualSignatureResolver,
-  createVisualSignatureValidationGateway,
-  loadVisualSignatureModelConfigSnapshot,
-} from '@/lib/ai';
-import type { AiInvoker, AiTelemetryContext, VisualSignatureModelConfigSnapshot } from '@/lib/ai';
+import { createDefaultTelemetryContext, BufferingAiTelemetrySink } from '@/lib/ai';
+import type { AiTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { ProductEventService } from '@/lib/product-events/service';
-import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -139,31 +130,6 @@ export const POST = apiHandler(async (
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
     }
     console.log(`[generate-without-logo][req-${reqId}] store carregada`, { name: store.name, segment: store.segment, identity_state: store.identity_state });
-
-    // ── F47.1 (D4/D5): configuração congelada ANTES de débito/provider ──
-    // Opt-in desligado ⇒ legado (gateway padrão). Opt-in ligado com qualquer
-    // falha ⇒ 503 fail-closed, sem reserva de crédito e sem provider.
-    let visualSignatureConfig: VisualSignatureModelConfigSnapshot;
-    let visualSignatureInvoker: AiInvoker;
-    try {
-      visualSignatureConfig = await loadVisualSignatureModelConfigSnapshot({ storeId: id });
-      visualSignatureInvoker =
-        visualSignatureConfig.mode === "dedicated"
-          ? createVisualSignatureValidationGateway(
-              createFrozenVisualSignatureResolver({
-                snapshot: visualSignatureConfig,
-                fallbackResolver: defaultAiModelResolver,
-              }),
-              visualSignatureConfig.environment ?? "local_validation",
-            )
-          : defaultAiGateway;
-    } catch {
-      console.log(`[generate-without-logo][req-${reqId}] validação local indisponível (fail-closed)`);
-      return NextResponse.json(
-        { success: false, error: "Configuração de validação local indisponível." },
-        { status: 503 },
-      );
-    }
 
     // ----- Substitution mode guards -----
     if (mode === 'substitution') {
@@ -289,8 +255,7 @@ export const POST = apiHandler(async (
     attemptNumber: number,
   ): { telemetry: AiTelemetryContext; flush: (visualSignatureId: string | null) => Promise<void> } => {
     let resolvedSignatureId: string | null = null;
-    // F47.1 (D9): UM sink por tentativa; enriquecimento antes de um único flush.
-    const deferred = new DeferredAiTelemetrySink(async (envelopes) => {
+    const buffering = new BufferingAiTelemetrySink(async (envelopes) => {
       const sinkContext = createDefaultTelemetryContext({
         operationRunId: runRef.operationRunId,
         operationRunType: "visual_signature",
@@ -313,30 +278,13 @@ export const POST = apiHandler(async (
       attemptNumber,
       usdBrlRateAtGeneration: snapshot.usdBrlRateAtGeneration,
       creditValueBrlAtGeneration: snapshot.creditValueBrlAtGeneration,
-      sink: deferred,
+      sink: buffering,
     });
     return {
       telemetry,
       flush: async (visualSignatureId: string | null) => {
-        // Se o parsing não ocorreu, o envelope sai uma única vez como
-        // `not_attempted` (nunca um segundo evento).
-        deferred.enrichLastIfMissing("visual_signature_image", {
-          creative_intent_parse_status: "not_attempted",
-          creative_intent_fallback_applied: false,
-          creative_intent_fallback_reason: null,
-          creative_intent_source: "fallback",
-          creative_intent_schema_version: "vs-intent-v1",
-        });
         resolvedSignatureId = visualSignatureId;
-        try {
-          await deferred.flush();
-        } catch (error) {
-          // Falha do handler NÃO é mascarada como entrega/no-loss.
-          console.error(
-            `[generate-without-logo][req-${reqId}] flush de telemetria falhou (best-effort):`,
-            error,
-          );
-        }
+        await buffering.flush();
       },
     };
   };
@@ -376,10 +324,7 @@ export const POST = apiHandler(async (
 
   // ----- ATTEMPT 1: image_direct (full art director prompt) -----
   console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 1 — image_direct`);
-  const service = new StoreIdentityArtDirectorService({
-    invoker: visualSignatureInvoker,
-    visualSignatureConfig,
-  });
+  const service = new StoreIdentityArtDirectorService();
 
   let result: Awaited<ReturnType<typeof service.generate>> | null = null;
   let attempt1Error: unknown = null;
@@ -400,7 +345,7 @@ export const POST = apiHandler(async (
   if (!result && attempt1Error) {
     const isTimeout = attempt1Error instanceof DOMException && attempt1Error.name === 'AbortError';
 
-    if (!isTimeout && !(visualSignatureConfig.mode === "dedicated" && isVisualSignatureSmokeNoRetry())) {
+    if (!isTimeout) {
       console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — image_retry (prompt simplificado)`);
       try {
         // F38.1 (D1): fecha o run 1 (envelopes de imagem/validação da tentativa
@@ -412,7 +357,7 @@ export const POST = apiHandler(async (
         // F38.2.1 (D3): retry = NOVO run → novo snapshot (valores vigentes agora).
         economicSnapshot = await resolveEconomicSnapshot();
         validation = createValidationTelemetry(run, economicSnapshot, 1);
-        const aiGenerator = new AiImageGenerator({ invoker: visualSignatureInvoker });
+        const aiGenerator = new AiImageGenerator();
         const retryResult = await aiGenerator.generate({
           storeId: id,
           storeName: store.name,
@@ -423,19 +368,12 @@ export const POST = apiHandler(async (
           attempt: 1,
           simplifiedPrompt: true,
           telemetry: validation.telemetry, // F46-05 (D9): imagem + validação via sink
-          visualSignatureConfig,
         });
 
-        const parsedIntent =
-          retryResult.creativeIntent ?? parseCreativeIntent(retryResult.aiResponseMessage);
-        const retrySink = validation.telemetry.sink;
-        if (retrySink instanceof DeferredAiTelemetrySink) {
-          retrySink.enrichLast("visual_signature_image", { ...parsedIntent.metadata });
-        }
         const artDirectorOutput: VisualSignatureArtDirectorOutput = {
           creative_description: `Assinatura visual para ${store.name} (${store.segment}) — gerada via retry`,
           suggested_colors: store.brand_color ? [store.brand_color] : [],
-          visual_direction: parsedIntent.output.visual_direction,
+          visual_direction: 'Personalizada (retry)',
           elements_used: ['nome da loja'],
         };
 
@@ -456,7 +394,6 @@ export const POST = apiHandler(async (
           prompt: retryResult.prompt,
           metadata: {
             ...retryResult.metadata,
-            ...parsedIntent.metadata,
             artDirectorOutput,
           },
         });
@@ -481,7 +418,15 @@ export const POST = apiHandler(async (
           metadata: {
             ...(signature.metadata ?? {}),
             input_snapshot: retryInputSnapshot,
-            artDirectorOutput: parsedIntent.output,
+            artDirectorOutput: {
+              visual_direction: 'Personalizada (retry)',
+              content_used: {
+                store_name: true,
+                city: !!store.city,
+                state: !!store.state,
+                slogan: !!store.slogan,
+              },
+            },
           },
           updated_at: new Date().toISOString(),
         })
@@ -490,7 +435,15 @@ export const POST = apiHandler(async (
       result = {
         signature,
         artDirectorOutput,
-        metadataArtDirectorOutput: parsedIntent.output,
+        metadataArtDirectorOutput: {
+          visual_direction: 'Personalizada (retry)',
+          content_used: {
+            store_name: true,
+            city: !!store.city,
+            state: !!store.state,
+            slogan: !!store.slogan,
+          },
+        },
         assetUrl: retryResult.assetUrl,
       };
       console.log(`[generate-without-logo][req-${reqId}] ATTEMPT 2 — sucesso`, { assetUrl: result.assetUrl, signatureId: result.signature.id });

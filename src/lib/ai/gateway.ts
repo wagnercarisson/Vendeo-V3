@@ -2,10 +2,8 @@ import type { AiCapability, AiModelResolver, AiModelTarget } from "./model-resol
 import {
   AiInvocationError,
   normalizeAiError,
-  sanitizeEnvelopeMetadata,
   type AiAdapterRegistry,
   type AiCallEnvelope,
-  type AiCredentialProvenance,
   type AiInvocationRequest,
   type AiInvocationResult,
   type AiTelemetryContext,
@@ -148,19 +146,8 @@ export class AiGateway {
     }
 
     const startedAt = Date.now();
-    const exposeCredentialScope = telemetry.operationRunType === "brand_profile";
-    const sanitizedMetadata = sanitizeEnvelopeMetadata(request.metadata);
-    // No perfil, credential_scope é exclusivamente interno. A metadata do
-    // caller é removida ANTES de o sink classificar/persistir o evento.
-    const requestMetadata =
-      exposeCredentialScope && sanitizedMetadata
-        ? omitCallerCredentialScope(sanitizedMetadata)
-        : sanitizedMetadata;
-    const credentialProvenance: AiCredentialProvenance = {};
     try {
-      const result = exposeCredentialScope
-        ? await adapter.invoke(request, prepared.resolved, credentialProvenance)
-        : await adapter.invoke(request, prepared.resolved);
+      const result = await adapter.invoke(request, prepared.resolved);
       await this.emit(telemetry, {
         capability: prepared.capability,
         protocol: prepared.protocol,
@@ -174,10 +161,6 @@ export class AiGateway {
         quality: request.quality,
         target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
-        ...(requestMetadata ? { metadata: requestMetadata } : {}),
-        ...(exposeCredentialScope && credentialProvenance.scope !== undefined
-          ? { credentialScope: credentialProvenance.scope }
-          : {}),
       });
       return result;
     } catch (err) {
@@ -199,10 +182,6 @@ export class AiGateway {
         quality: request.quality,
         target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
-        ...(requestMetadata ? { metadata: requestMetadata } : {}),
-        ...(exposeCredentialScope && credentialProvenance.scope !== undefined
-          ? { credentialScope: credentialProvenance.scope }
-          : {}),
       });
       if (isInvocationError) throw normalized;
       throw err;
@@ -217,11 +196,6 @@ export class AiGateway {
       console.error("[ai-gateway] sink de telemetria falhou (best-effort):", err);
     }
   }
-}
-
-function omitCallerCredentialScope(metadata: Record<string, unknown>): Record<string, unknown> {
-  const { credential_scope: _callerScope, ...rest } = metadata;
-  return rest;
 }
 
 function assertTelemetryContext(telemetry: AiTelemetryContext): void {

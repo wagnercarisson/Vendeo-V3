@@ -76,12 +76,7 @@ function installFetch(routes: Record<string, unknown>) {
     const url = String(input);
     const keys = Object.keys(routes).sort((a, b) => b.length - a.length);
     for (const key of keys) {
-      if (url.startsWith(key)) {
-        const value = routes[key];
-        return okJson(
-          typeof value === "function" ? await (value as (u: string) => unknown)(url) : value,
-        );
-      }
+      if (url.startsWith(key)) return okJson(routes[key]);
     }
     return okJson({});
   });
@@ -126,7 +121,7 @@ const STORE: Store = {
   is_test_store: false,
 };
 
-function renderForm(tab: "dados" | "posicionamento" | "direcao-visual") {
+function renderForm(tab: "dados" | "posicionamento") {
   return render(
     <StoreIdentityForm initialStore={STORE} userId="user-1" initialTab={tab} />,
   );
@@ -370,14 +365,10 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
   };
   const FAILED_LATEST = { id: "p-failed", status: "failed", source: "logo_analysis", metadata: { errorType: "refused" } };
 
-  it("carrega o VIGENTE via ?view=state e NÃO usa a tentativa failed histórica como atual", async () => {
+  it("carrega o VIGENTE via ?status=synced e NÃO usa a tentativa failed histórica como atual", async () => {
     const fetchMock = installFetch({
-      "/api/store/store-1/brand-profile?view=state": {
-        state: "current",
-        current: SYNCED,
-        previous: [],
-        lastFailure: null,
-      },
+      "/api/store/store-1/brand-profile?status=synced": SYNCED,
+      "/api/store/store-1/brand-profile": FAILED_LATEST,
       "/api/store/store-1/logo": { assets: {} },
       "/api/store/store-1": STORE,
     });
@@ -385,8 +376,9 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
     renderForm("posicionamento");
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith("/api/store/store-1/brand-profile?view=state");
+      expect(fetchMock).toHaveBeenCalledWith("/api/store/store-1/brand-profile?status=synced");
     });
+    // Com vigente presente, o perfil sem filtro (que devolveria a failed) não é buscado.
     const plainProfileCalls = fetchMock.mock.calls.filter(
       ([u]) => String(u) === "/api/store/store-1/brand-profile",
     );
@@ -395,12 +387,8 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
 
   it("sem vigente, diagnostica a tentativa failed histórica sem tratá-la como atual", async () => {
     const fetchMock = installFetch({
-      "/api/store/store-1/brand-profile?view=state": {
-        state: "failed",
-        current: null,
-        previous: [SYNCED],
-        lastFailure: FAILED_LATEST,
-      },
+      "/api/store/store-1/brand-profile?status=synced": null,
+      "/api/store/store-1/brand-profile": FAILED_LATEST,
       "/api/store/store-1/logo": { assets: {} },
       "/api/store/store-1": STORE,
     });
@@ -409,27 +397,8 @@ describe("StoreIdentityForm — carregamento do perfil vigente × tentativa fail
 
     await waitFor(() => {
       expect(
-        fetchMock.mock.calls.some(
-          ([u]) => String(u) === "/api/store/store-1/brand-profile?view=state",
-        ),
+        fetchMock.mock.calls.some(([u]) => String(u) === "/api/store/store-1/brand-profile"),
       ).toBe(true);
     });
-  });
-
-  it("exibe conteúdo atual e anteriores após o carregamento", async () => {
-    installFetch({
-      "/api/store/store-1/brand-profile?view=state": {
-        state: "current",
-        current: SYNCED,
-        previous: [ { ...SYNCED, id: "p-old" } ],
-        lastFailure: null,
-      },
-      "/api/store/store-1/logo": { assets: {} },
-      "/api/store/store-1": STORE,
-    });
-
-    renderForm("direcao-visual");
-
-    expect(await screen.findByText("Direção atual")).toBeInTheDocument();
   });
 });

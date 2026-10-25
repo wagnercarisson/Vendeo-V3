@@ -163,63 +163,6 @@ export const AiModelSelectionResetSchema = z
   .strict();
 
 /**
- * F47.1 (D10) — configuração dedicada da Assinatura Visual.
- * Apenas orquestrador/preset/motivo/operationId. Modelo, qualidade, identidade
- * e reasoning são derivados no servidor/RPC e NÃO entram no corpo.
- */
-export const VisualSignatureOrchestratorSchema = z.enum(["gpt-5.5", "gpt-6-luna"]);
-
-export const VisualSignatureImagePresetSchema = z.enum([
-  "flare_low",
-  "flare_medium",
-  "sunburst_low",
-  "sunburst_medium",
-]);
-
-export const VisualSignatureModelConfigUpdateSchema = z
-  .object({
-    orchestratorModel: VisualSignatureOrchestratorSchema,
-    imagePreset: VisualSignatureImagePresetSchema,
-    reason: z.string().trim().min(1).max(500),
-    operationId: z.string().uuid(),
-  })
-  .strict();
-
-export const VisualSignatureModelConfigResetSchema = z
-  .object({
-    expectedConfigVersionId: z.string().uuid(),
-    reason: z.string().trim().min(1).max(500),
-    operationId: z.string().uuid(),
-  })
-  .strict();
-
-export const VisualSignatureModelConfigPublishSchema = z
-  .object({
-    action: z.literal("publish"),
-    expectedConfigVersionId: z.string().uuid(),
-    published: z.boolean(),
-    reason: z.string().trim().min(1).max(500),
-    operationId: z.string().uuid(),
-  })
-  .strict();
-
-export const VisualSignatureModelConfigActivateSchema = z
-  .object({
-    action: z.literal("activate"),
-    expectedConfigVersionId: z.string().uuid(),
-    mode: z.enum(["none", "pilot", "general"]),
-    pilotStoreIds: z.array(z.string().uuid()).max(100).optional(),
-    reason: z.string().trim().min(1).max(500),
-    operationId: z.string().uuid(),
-  })
-  .strict();
-
-export const VisualSignatureReleaseCommandSchema = z.discriminatedUnion("action", [
-  VisualSignatureModelConfigPublishSchema,
-  VisualSignatureModelConfigActivateSchema,
-]);
-
-/**
  * Body de PUT /api/admin/image-model-pair (F56.1, D-02/D-04).
  * Configuração do par principal/fallback do novo fluxo Produto 1:1: par
  * `modelo + qualidade` restrito ao catálogo elegível FECHADO

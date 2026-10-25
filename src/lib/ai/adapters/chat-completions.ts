@@ -1,12 +1,7 @@
 import type { TokenUsage } from "@/lib/ai-cost/types";
 import type { AiModelTarget } from "../model-resolver";
 import { getApiKey } from "../api-keys";
-import type {
-  AiAdapter,
-  AiCredentialProvenance,
-  AiInvocationRequest,
-  AiInvocationResult,
-} from "../types";
+import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../types";
 
 /**
  * Adapter do protocolo `chat-completions` (OpenAI Chat Completions).
@@ -19,19 +14,9 @@ import type {
 export class ChatCompletionsAdapter implements AiAdapter {
   readonly protocol = "chat-completions" as const;
 
-  constructor(private readonly clientOptions: { maxRetries?: number; timeout?: number } = {}) {}
-
-  async invoke(
-    request: AiInvocationRequest,
-    target: AiModelTarget,
-    provenance?: AiCredentialProvenance,
-  ): Promise<AiInvocationResult> {
+  async invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult> {
     const { default: OpenAI } = await import("openai");
-    const apiKey = getApiKey(target.provider);
-    // Só registra a proveniência depois de obter uma chave não vazia. Falha
-    // antes/durante a resolução não inventa escopo.
-    if (provenance && apiKey.length > 0) provenance.scope = "normal";
-    const openai = new OpenAI({ apiKey, ...this.clientOptions });
+    const openai = new OpenAI({ apiKey: getApiKey(target.provider) });
 
     const params: Record<string, unknown> = {
       model: target.model,

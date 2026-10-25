@@ -9,9 +9,6 @@ import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { EconomicParameterService } from '@/lib/economic/economic-parameter-service';
 import { maybeCompleteOnboardingAndStartTrial } from '@/lib/credit/trial-offer/completion';
-import { buildBrandProfileContext } from '@/lib/visual-signature/brand-profile-state';
-import { isVisualSignatureSmokeNoRetry } from '@/lib/visual-signature/smoke-retry-policy';
-import { createVisualSignatureProfileSmokeGateway } from '@/lib/ai';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -55,8 +52,6 @@ export const POST = apiHandler(async (
     return NextResponse.json({ error: 'textOnlyOrigin é obrigatório (explicit ou implicit)' }, { status: 400 });
   }
 
-  let requestSnapshot: ReturnType<typeof buildStoreProfileInputSnapshot> | null = null;
-
   try {
     const { data: store, error: storeError } = await supabase
       .from('stores')
@@ -69,13 +64,7 @@ export const POST = apiHandler(async (
       return NextResponse.json({ error: 'Loja não encontrada' }, { status: 404 });
     }
 
-    requestSnapshot = buildStoreProfileInputSnapshot(store);
-
-    const service = new BrandTextOnlyInferenceService(
-      isVisualSignatureSmokeNoRetry()
-        ? createVisualSignatureProfileSmokeGateway()
-        : undefined,
-    );
+    const service = new BrandTextOnlyInferenceService();
     const timeoutMs = parseInt(process.env.IMAGE_GENERATION_GLOBAL_TIMEOUT_MS ?? '30000', 10);
     const startTime = Date.now();
 
@@ -182,11 +171,6 @@ export const POST = apiHandler(async (
       .eq('status', 'synced');
 
     const inputSnapshot = buildStoreProfileInputSnapshot(store);
-    const context = buildBrandProfileContext({
-      origin: "text_only",
-      assetId: null,
-      inputSnapshot,
-    });
 
     const { data: profile, error: insertError } = await supabase
       .from('store_brand_profiles')
@@ -204,11 +188,7 @@ export const POST = apiHandler(async (
         inferred_primary_color: result.inferred_primary_color,
         inferred_accent_color: result.inferred_accent_color,
         confidence_score: result.confidence_score,
-        metadata: {
-          input_snapshot: inputSnapshot,
-          context_hash: context.contextHash,
-          context: { origin: context.origin, identity_asset_id: context.assetId },
-        },
+        metadata: { input_snapshot: inputSnapshot },
         status: 'synced',
       })
       .select()
@@ -254,15 +234,7 @@ export const POST = apiHandler(async (
       },
     });
   } catch (err) {
-    const safeMessage = 'Não foi possível gerar a direção visual. Tente novamente.';
-    const failureSnapshot = requestSnapshot;
-    const failureContext = failureSnapshot
-      ? buildBrandProfileContext({
-          origin: "text_only",
-          assetId: null,
-          inputSnapshot: failureSnapshot,
-        })
-      : null;
+    const message = err instanceof Error ? err.message : 'Erro interno';
 
     await supabase
       .from('store_brand_profiles')
@@ -270,24 +242,7 @@ export const POST = apiHandler(async (
         store_id: id,
         source: 'text_only',
         status: 'failed',
-        metadata: {
-          error: safeMessage,
-          attempt_snapshot: failureSnapshot,
-          context_hash: failureContext?.contextHash ?? null,
-          context: failureContext
-            ? {
-                origin: failureContext.origin,
-                identity_asset_id: failureContext.assetId,
-              }
-            : null,
-          failure: {
-            code: "brand_profile_failed",
-            message: safeMessage,
-            origin: "text_only",
-            identity_asset_id: null,
-            at: new Date().toISOString(),
-          },
-        },
+        metadata: { error: message },
       })
       .select()
       .single();
@@ -305,7 +260,7 @@ export const POST = apiHandler(async (
     return NextResponse.json({
       success: false,
       message: 'Não foi possível gerar a direção visual. Tente novamente.',
-      error: 'brand_profile_failed',
+      error: message,
     });
   }
 });

@@ -21,51 +21,14 @@ import { hasUserChosenColors } from '@/lib/validators/color';
 import { probeColors, findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
 import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
 import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from '@/lib/ai';
-import {
-  buildBrandProfileContext,
-  type BrandProfileSnapshotFields,
-} from './brand-profile-state';
 
 /** Espelha o default do registry para `brand_profile_vision` (F46 D1). */
 const DEFAULT_VISION_MODEL = 'gpt-4o';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
-/**
- * F47.1: URLs de Storage local (loopback) não são acessíveis pela OpenAI.
- * Para essas, o profiler envia a imagem já baixada como data URL; URLs
- * remotas preservam exatamente o comportamento anterior.
- */
-function isLoopbackAssetUrl(assetUrl: string): boolean {  try {
-    const host = new URL(assetUrl).hostname;
-    return host === '127.0.0.1' || host === 'localhost' || host === '::1' || host === '[::1]';
-  } catch {
-    return false;
-  }
-}
-
 function isValidHex(value: string): boolean {
   return HEX_REGEX.test(value);
-}
-
-function profileInputSnapshot(input: BrandProfilerInput): BrandProfileSnapshotFields {
-  return {
-    segment: input.segment,
-    subsegment: input.subsegment,
-    tone_of_voice: input.tone_of_voice,
-    name: input.storeName,
-    positioning: input.positioning,
-    short_description: input.short_description,
-    slogan: input.slogan,
-  };
-}
-
-function profileContext(input: BrandProfilerInput) {
-  return buildBrandProfileContext({
-    origin: "without_logo",
-    assetId: input.visualSignatureId,
-    inputSnapshot: profileInputSnapshot(input),
-  });
 }
 
 /**
@@ -298,24 +261,6 @@ export class BrandProfilerWithoutLogoService {
     }
 
     const buffer = await this.downloadAssetBuffer(input.assetUrl);
-    const localAsset = isLoopbackAssetUrl(input.assetUrl);
-    if (localAsset && (!buffer || buffer.length === 0)) {
-      throw new BrandProfilerWithoutLogoError(
-        'Falha ao baixar a imagem local para análise de visão',
-        {
-          provider: 'openai',
-          model: DEFAULT_VISION_MODEL,
-          elapsedMs: Date.now() - startTime,
-          errorType: 'local_asset_download_failed',
-        },
-      );
-    }
-    // Reutiliza o MESMO buffer da análise de cores para o provedor de visão.
-    // URLs remotas continuam sendo enviadas como URL (sem mudança de comportamento).
-    const visionImageUrl =
-      localAsset && buffer
-        ? `data:image/png;base64,${buffer.toString('base64')}`
-        : input.assetUrl;
     let probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null = null;
     if (buffer) {
       probeResult = await probeColors(buffer);
@@ -338,7 +283,7 @@ export class BrandProfilerWithoutLogoService {
         return this.mockGenerate(input, probeResult);
       }
 
-      return this.generateWithIntendedPalette(input, buffer, probeResult, nonArtifactClusters, startTime, telemetry, visionImageUrl);
+      return this.generateWithIntendedPalette(input, buffer, probeResult, nonArtifactClusters, startTime, telemetry);
     }
 
     // --- PATH 2: No intendedPalette (retry/legacy) → fallback heuristic ---
@@ -353,7 +298,7 @@ export class BrandProfilerWithoutLogoService {
       return this.mockGenerate(input, probeResult);
     }
 
-    return this.generateWithFallback(input, probeResult, nonArtifactClusters, startTime, telemetry, visionImageUrl);
+    return this.generateWithFallback(input, probeResult, nonArtifactClusters, startTime, telemetry);
   }
 
   private async mockGenerate(
@@ -405,8 +350,7 @@ export class BrandProfilerWithoutLogoService {
     probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
     nonArtifactClusters: ColorCluster[],
     startTime: number,
-    telemetry?: AiTelemetryContext,
-    visionImageUrl?: string
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const intended = input.intendedPalette!;
     const roles: { role: string; hex: string }[] = [
@@ -442,22 +386,21 @@ export class BrandProfilerWithoutLogoService {
     }
 
     if (probeUnavailable) {
-      return this.handleProbeUnavailable(input, intended, startTime, telemetry, visionImageUrl);
+      return this.handleProbeUnavailable(input, intended, startTime, telemetry);
     }
 
     if (allConfirmed) {
-      return this.handleAllConfirmed(input, intended, nonArtifactClusters, rolePresence, startTime, telemetry, visionImageUrl);
+      return this.handleAllConfirmed(input, intended, nonArtifactClusters, rolePresence, startTime, telemetry);
     }
 
-    return this.handleDivergence(input, intended, buffer, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime, telemetry, visionImageUrl);
+    return this.handleDivergence(input, intended, buffer, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime, telemetry);
   }
 
   private async handleProbeUnavailable(
     input: BrandProfilerInput,
     intended: IntendedPalette,
     startTime: number,
-    telemetry?: AiTelemetryContext,
-    visionImageUrl?: string
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const resolved = intendedToResolved(intended, intended.support);
     const safeColors = sanitizeResolvedPalette(resolved);
@@ -482,7 +425,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('happy_path', input);
-    const visionResult = await this.callVision(input, prompt, telemetry, visionImageUrl);
+    const visionResult = await this.callVision(input, prompt, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -496,8 +439,7 @@ export class BrandProfilerWithoutLogoService {
     nonArtifactClusters: ColorCluster[],
     rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }>,
     startTime: number,
-    telemetry?: AiTelemetryContext,
-    visionImageUrl?: string
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const resolved = intendedToResolved(intended, intended.support);
     const safeColors = sanitizeResolvedPalette(resolved);
@@ -528,7 +470,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('happy_path', input);
-    const visionResult = await this.callVision(input, prompt, telemetry, visionImageUrl);
+    const visionResult = await this.callVision(input, prompt, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -545,8 +487,7 @@ export class BrandProfilerWithoutLogoService {
     contestedRoles: string[],
     contestedSupportIndices: number[],
     startTime: number,
-    telemetry?: AiTelemetryContext,
-    visionImageUrl?: string
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const contestedHexes: string[] = [];
     for (const role of contestedRoles) {
@@ -573,7 +514,7 @@ export class BrandProfilerWithoutLogoService {
     });
 
     try {
-      const visionResult = await this.callVisionFull(input, prompt, telemetry, visionImageUrl);
+      const visionResult = await this.callVisionFull(input, prompt, telemetry);
       const raw = JSON.parse(visionResult);
       const correctionsObj = {
         corrections: raw.corrections,
@@ -681,8 +622,7 @@ export class BrandProfilerWithoutLogoService {
     probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
     nonArtifactClusters: ColorCluster[],
     startTime: number,
-    telemetry?: AiTelemetryContext,
-    visionImageUrl?: string
+    telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
     const brandColor = input.brandColor;
 
@@ -746,7 +686,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('legacy', input);
-    const visionResult = await this.callVision(input, prompt, telemetry, visionImageUrl);
+    const visionResult = await this.callVision(input, prompt, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -768,8 +708,7 @@ export class BrandProfilerWithoutLogoService {
   private async callVision(
     input: BrandProfilerInput,
     prompt: string,
-    telemetry?: AiTelemetryContext,
-    visionImageUrl?: string
+    telemetry?: AiTelemetryContext
   ): Promise<string> {
     if (!telemetry) {
       throw new Error(
@@ -782,7 +721,7 @@ export class BrandProfilerWithoutLogoService {
     const request: AiInvocationRequest = {
       prompt: 'Analise visualmente a assinatura visual aprovada e gere o perfil de marca.',
       system: prompt,
-      productImagesDataUrls: [visionImageUrl ?? input.assetUrl],
+      productImagesDataUrls: [input.assetUrl],
       imageDetail: 'low',
       responseFormat: 'json_object',
       maxTokens: 2000,
@@ -800,8 +739,7 @@ export class BrandProfilerWithoutLogoService {
   private async callVisionFull(
     input: BrandProfilerInput,
     prompt: string,
-    telemetry?: AiTelemetryContext,
-    visionImageUrl?: string
+    telemetry?: AiTelemetryContext
   ): Promise<string> {
     if (!telemetry) {
       throw new Error(
@@ -812,7 +750,7 @@ export class BrandProfilerWithoutLogoService {
     const request: AiInvocationRequest = {
       prompt: 'Analise visualmente a assinatura visual aprovada, corrija as cores contestadas e gere o perfil de marca completo.',
       system: prompt,
-      productImagesDataUrls: [visionImageUrl ?? input.assetUrl],
+      productImagesDataUrls: [input.assetUrl],
       imageDetail: 'low',
       responseFormat: 'json_object',
       maxTokens: 3000,
@@ -894,10 +832,7 @@ export class BrandProfilerWithoutLogoService {
 
     const brandColorsChosen = this.getBrandColorsChosen(input, safeTokens);
 
-    const context = profileContext(input);
     const metadata: Record<string, unknown> = {
-      context_hash: context.contextHash,
-      context: { origin: context.origin, identity_asset_id: context.assetId },
       art_director_output: input.artDirectorOutput,
       input_snapshot: {
         segment: input.segment,
@@ -1018,10 +953,7 @@ export class BrandProfilerWithoutLogoService {
     const brandColorsChosen = this.getBrandColorsChosen(input, safeTokens);
 
     // Build metadata, preserving content_used from VS metadata in regenerate mode
-    const context = profileContext(input);
     const metadata: Record<string, unknown> = {
-      context_hash: context.contextHash,
-      context: { origin: context.origin, identity_asset_id: context.assetId },
       art_director_output: input.artDirectorOutput,
       input_snapshot: {
         segment: input.segment,
@@ -1223,20 +1155,8 @@ export class BrandProfilerWithoutLogoService {
 
     const brandColorsChosen = this.getBrandColorsChosen(input, { primary, secondary: '#999999', accent, background: '#FFFFFF' });
 
-    const safeMessage = 'Falha na análise do perfil de marca. Tente novamente.';
-    const context = profileContext(input);
     const metadata: Record<string, unknown> = {
-      context_hash: context.contextHash,
-      context: { origin: context.origin, identity_asset_id: context.assetId },
-      error: safeMessage,
-      attempt_snapshot: profileInputSnapshot(input),
-      failure: {
-        code: "brand_profile_failed",
-        message: safeMessage,
-        origin: "without_logo",
-        identity_asset_id: input.visualSignatureId,
-        at: new Date().toISOString(),
-      },
+      error: errorMessage,
       art_director_output: input.artDirectorOutput,
       extracted_colors: _extractedColors,
     };
@@ -1264,9 +1184,29 @@ export class BrandProfilerWithoutLogoService {
       status: 'failed' as const,
     };
 
-    const { error } = await supabase
+    // UPSERT to prevent duplicate failed profiles for the same visual_signature_id
+    // Use order().limit(1) to avoid the duplicate-profile bug with maybeSingle().
+    const { data: existingProfiles } = await supabase
       .from('store_brand_profiles')
-      .insert(failedData);
+      .select('id')
+      .eq('visual_signature_id', input.visualSignatureId)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const existingProfileId = existingProfiles?.[0]?.id ?? null;
+
+    let error: any;
+    if (existingProfileId) {
+      const result = await supabase
+        .from('store_brand_profiles')
+        .update(failedData)
+        .eq('id', existingProfileId);
+      error = result.error;
+    } else {
+      const result = await supabase
+        .from('store_brand_profiles')
+        .insert(failedData);
+      error = result.error;
+    }
 
     if (error) {
       console.error('[BrandProfiler] Failed to persist failed profile:', error.message);
