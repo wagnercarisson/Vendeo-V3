@@ -46,7 +46,7 @@ import {
 } from "@/lib/copy/errors";
 import { ChatCompletionsAdapter } from "../adapters/chat-completions";
 import { ResponsesAdapter } from "../adapters/responses";
-import { ImagesAdapter } from "../adapters/images";
+import { ImagesAdapter, normalizeUpstreamImagesUsage } from "../adapters/images";
 import { GeminiAdapter } from "../adapters/gemini";
 
 const chatTarget: AiModelTarget = {
@@ -551,7 +551,7 @@ describe("ImagesAdapter — ausência de usage é explícita (D2/D7)", () => {
     );
   });
 
-  it("images.edit preserva cache agregado e cache por modalidade quando explícitos", async () => {
+  it("legacy ImagesAdapter NÃO lê cache (isolamento do Produto 1:1)", async () => {
     mockImagesEdit.mockResolvedValue({
       data: [{ b64_json: "IMG" }],
       usage: {
@@ -574,30 +574,44 @@ describe("ImagesAdapter — ausência de usage é explícita (D2/D7)", () => {
       imagesTarget,
     );
 
-    expect(result.usage).toMatchObject({
+    // O normalizador compartilhado permanece sem cache; somente o
+    // UpstreamImagesAdapter (Produto 1:1) lê os novos campos.
+    expect(result.usage?.cachedInputTokens).toBeUndefined();
+    expect(result.usage?.cachedInputTextTokens).toBeUndefined();
+    expect(result.usage?.cachedInputImageTokens).toBeUndefined();
+  });
+
+  it("normalizeUpstreamImagesUsage lê cache agregado e por modalidade (Produto 1:1)", () => {
+    const usage = normalizeUpstreamImagesUsage({
+      input_tokens: 100,
+      output_tokens: 50,
+      total_tokens: 150,
+      input_tokens_details: {
+        text_tokens: 20,
+        image_tokens: 80,
+        cached_tokens: 10,
+        cached_text_tokens: 4,
+        cached_image_tokens: 6,
+      },
+      output_tokens_details: { image_tokens: 50 },
+    });
+
+    expect(usage).toMatchObject({
       cachedInputTokens: 10,
       cachedInputTextTokens: 4,
       cachedInputImageTokens: 6,
     });
   });
 
-  it("images.edit sem cache explícito NÃO inventa cache por modalidade", async () => {
-    mockImagesEdit.mockResolvedValue({
-      data: [{ b64_json: "IMG" }],
-      usage: {
-        input_tokens: 100,
-        output_tokens: 50,
-        input_tokens_details: { text_tokens: 20, image_tokens: 80 },
-      },
+  it("normalizeUpstreamImagesUsage sem cache explícito NÃO inventa modalidade", () => {
+    const usage = normalizeUpstreamImagesUsage({
+      input_tokens: 100,
+      output_tokens: 50,
+      input_tokens_details: { text_tokens: 20, image_tokens: 80 },
     });
 
-    const result = await new ImagesAdapter().invoke(
-      { prompt: "editar", productImagesDataUrls: ["data:image/png;base64,AAA"] },
-      imagesTarget,
-    );
-
-    expect(result.usage?.cachedInputTextTokens).toBeUndefined();
-    expect(result.usage?.cachedInputImageTokens).toBeUndefined();
+    expect(usage?.cachedInputTextTokens).toBeUndefined();
+    expect(usage?.cachedInputImageTokens).toBeUndefined();
   });
 
   it("sem imagem primária → erro de domínio (MalformedResponseError)", async () => {

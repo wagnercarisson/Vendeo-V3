@@ -119,17 +119,6 @@ export function normalizeImagesUsage(usage: unknown): TokenUsage | undefined {
   if (raw.input_tokens_details?.image_tokens !== undefined) {
     normalized.inputImageTokens = raw.input_tokens_details.image_tokens;
   }
-  if (raw.input_tokens_details?.cached_tokens !== undefined) {
-    normalized.cachedInputTokens = raw.input_tokens_details.cached_tokens;
-  }
-  // Quick 261026 — cache por modalidade SÓ quando o provider entrega os campos
-  // explícitos. `cached_tokens` agregado não é dividido por inferência.
-  if (raw.input_tokens_details?.cached_text_tokens !== undefined) {
-    normalized.cachedInputTextTokens = raw.input_tokens_details.cached_text_tokens;
-  }
-  if (raw.input_tokens_details?.cached_image_tokens !== undefined) {
-    normalized.cachedInputImageTokens = raw.input_tokens_details.cached_image_tokens;
-  }
   if (raw.output_tokens_details?.text_tokens !== undefined) {
     normalized.outputTextTokens = raw.output_tokens_details.text_tokens;
   }
@@ -138,6 +127,42 @@ export function normalizeImagesUsage(usage: unknown): TokenUsage | undefined {
   }
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+/**
+ * Quick 261026 — normalização ESPECÍFICA do `UpstreamImagesAdapter`
+ * (Produto 1:1). Adiciona o cache da Images API por cima do normalizador
+ * compartilhado, SEM alterar o caminho legado (`ImagesAdapter`).
+ *
+ * - `cached_tokens` agregado é preservado como `cachedInputTokens` (o cálculo
+ *   do Produto 1:1 o trata como ambíguo se não houver split por modalidade);
+ * - `cached_text_tokens`/`cached_image_tokens` são lidos apenas quando o
+ *   provider entrega os campos explícitos.
+ */
+export function normalizeUpstreamImagesUsage(usage: unknown): TokenUsage | undefined {
+  const normalized = normalizeImagesUsage(usage);
+  if (!normalized || !usage || typeof usage !== "object") return normalized;
+
+  const details = (usage as {
+    input_tokens_details?: {
+      cached_tokens?: number;
+      cached_text_tokens?: number;
+      cached_image_tokens?: number;
+    };
+  }).input_tokens_details;
+  if (!details) return normalized;
+
+  if (details.cached_tokens !== undefined) {
+    normalized.cachedInputTokens = details.cached_tokens;
+  }
+  if (details.cached_text_tokens !== undefined) {
+    normalized.cachedInputTextTokens = details.cached_text_tokens;
+  }
+  if (details.cached_image_tokens !== undefined) {
+    normalized.cachedInputImageTokens = details.cached_image_tokens;
+  }
+
+  return normalized;
 }
 
 async function dataUrlToFile(

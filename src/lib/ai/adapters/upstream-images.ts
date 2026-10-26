@@ -8,7 +8,7 @@ import {
   type AiInvocationRequest,
   type AiInvocationResult,
 } from "../types";
-import { normalizeImagesUsage } from "./images";
+import { normalizeUpstreamImagesUsage } from "./images";
 
 const DATA_URL_PATTERN = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i;
 
@@ -134,7 +134,7 @@ export class UpstreamImagesAdapter implements AiAdapter {
       }
 
       const rawUsage = (response as { usage?: unknown }).usage;
-      const usage = normalizeImagesUsage(rawUsage);
+      const usage = normalizeUpstreamImagesUsage(rawUsage);
 
       return {
         imageBase64,
