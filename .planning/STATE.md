@@ -255,6 +255,19 @@ Fase anterior: 48.2.2 (Fundação da bancada de geração no Admin/Laboratório)
 
 ## Quick Tasks Completed
 
+**Atualização operacional 261026-pricing (2026-10-26):** após os registros de
+implementação abaixo, migration `20261026191931` aplicada com autorização somente
+no homolog `G:\Vendeo-Homolog` (ledger 137 → 138). Corrigido o passthrough exato
+do cron no middleware, mantendo CRON_SECRET no handler. Sincronização HTTP 200
+confirmada no banco às 17:14 BRT: tentativa
+`19397bc9-2b92-4ea9-9008-ebd593592596`, 7 modelos/11 preços conferidos/9 alterados.
+Flare/Sunburst: entrada textual 5, cache textual 1,25, entrada de imagem 8,
+cache de imagem 2, saída de imagem 30 US$/1M; unidades preservadas.
+74 testes offline PASS, typecheck e lint exit 0 (limitação da cobertura ESLint TS
+registrada no SUMMARY). Código/tracking deste complemento ainda não commitados.
+Sem produção, push, deploy ou geração paga. Pendente validação humana da tabela
+e uma geração no localhost para conferir a contabilização.
+
 | ID | Date | Summary |
 |---|---|---|
 | 261026-pricing | 2026-10-26 | **Sincronização diária das tarifas OpenAI + seção “Tarifas OpenAI” no `/admin`.** Cron próprio `GET /api/cron/sync-openai-pricing` (`CRON_SECRET` existente, diário 08h, `maxDuration=30`), desacoplado dos crons de crédito. Parser determinístico restrito à tabela **Standard** (Batch/Flex/Fast/Ultrafast ignorados), inventário fechado de 7 modelos/11 linhas (`gpt-4o`, `gpt-4o-mini`, `gpt-5.5`, `gpt-6-luna`, `gpt-image-2` null/low/medium, Flare/Sunburst low/medium), com entrada textual/cache/saída textual e entrada/cache/saída de imagem distintas. Fetch público com timeout/limite/hash/ETag/Last-Modified e redirect rejeitado. Migration **criada e não aplicada** `20261026191931_quick_openai_pricing_sync.sql`: colunas aditivas `image_input_token_usd_per_1m`/`image_cached_input_token_usd_per_1m`, tabela backend-only `pricing_sync_attempts` (running/success/failed, uma running), RPCs atômicas start/apply/fail com lock, recuperação de execução interrompida >15min, versionamento somente do que mudou, preservação de `image_unit_usd`/IDs históricos e `updated_by NULL`; RPC manual preserva as novas dimensões. O apply marca success na mesma transação; falha reverte tudo e não retorna sucesso. O `vs-image-usage-v1` não foi alterado. Admin exibe valores **persistidos** (não recém-extraídos), unidade explícita, ID completo, “—” para não aplicável, tabela separada por unidade de imagem, datas em America/Sao_Paulo e avisos para falha, atraso >36h, nunca confirmada, interrompida e estado indisponível; sucesso fresco remove o aviso. Gates: focados 63/63; regressão afetada 2079 passed/7 skipped (integrações isoladas e guard `legacy-frontier` da quick anterior não verdes); typecheck/lint/build/diff-check limpos. **Gap closure pós-revisão (commit `99132b1e`):** parser distingue valor / não aplicável (`-` ou `—`) / informação ausente (célula vazia); cache aplicável não confirmado falha a tentativa (`not_applicable_dimension`/`missing_information`) e preserva a tabela (GPT-4o com cache `-` não aplica); somente saída textual de modelo de imagem aceita `-`; pendência `failed`/`stale`/`never` permanece destacada durante novo `running`, com “Nova consulta em andamento desde…”, e só é limpa após sucesso; tabela por unidade informa que não é conferida pelo sync; comentário da migration passou a “aplicação pendente de autorização” (homolog e produção). Leitura real read-only do `pricing.md` extraiu os 7 modelos; nenhum preço foi persistido. Sem banco, Docker, provider, aplicação de migration, push ou deploy. Evidência: `quick/261026-openai-pricing-sync/SUMMARY.md`; commits `89994b1d`, `99132b1e`. |

@@ -1,10 +1,15 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-const { mockRunSync } = vi.hoisted(() => ({
+const { mockRunSync, mockUpdateSession } = vi.hoisted(() => ({
   mockRunSync: vi.fn(),
+  mockUpdateSession: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/middleware", () => ({
+  updateSession: mockUpdateSession,
 }));
 
 vi.mock("@/lib/ai-cost/openai-pricing-sync", () => ({
@@ -12,6 +17,7 @@ vi.mock("@/lib/ai-cost/openai-pricing-sync", () => ({
 }));
 
 import { GET } from "../route";
+import { middleware } from "@/middleware";
 
 function request(headers: Record<string, string> = {}) {
   return new NextRequest("http://localhost/api/cron/sync-openai-pricing", {
@@ -22,6 +28,10 @@ function request(headers: Record<string, string> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUpdateSession.mockImplementation(async () => ({
+    response: NextResponse.next(),
+    claims: null,
+  }));
   process.env.CRON_SECRET = "test-cron-secret";
 });
 
@@ -30,6 +40,39 @@ afterEach(() => {
 });
 
 describe("GET /api/cron/sync-openai-pricing", () => {
+  it.each([undefined, "Bearer invalid-secret"])(
+    "sem sessão, middleware alcança handler mas bearer %s não autoriza sync",
+    async (authorization) => {
+      const req = request(authorization ? { authorization } : {});
+      const gate = await middleware(req);
+      expect(gate.headers.get("x-middleware-next")).toBe("1");
+      const result = await GET(req);
+      expect(result.status).toBe(401);
+      expect(mockRunSync).not.toHaveBeenCalled();
+    },
+  );
+
+  it("middleware real permite cron sem sessão com secret válido até o handler", async () => {
+    mockRunSync.mockResolvedValue({
+      status: "success", attemptId: "attempt-1",
+      modelsChecked: 7, pricesChecked: 11, pricesChanged: 0,
+    });
+    const req = request({ authorization: "Bearer test-cron-secret" });
+    const gate = await middleware(req);
+    expect(gate.headers.get("x-middleware-next")).toBe("1");
+    const result = await GET(req);
+    expect(result.status).toBe(200);
+    expect(mockRunSync).toHaveBeenCalledTimes(1);
+  });
+
+  it("exceção é exata: outra rota de cron continua exigindo sessão", async () => {
+    const req = new NextRequest("http://localhost/api/cron/sync-openai-pricing/other", {
+      headers: { authorization: "Bearer test-cron-secret" },
+    });
+    expect((await middleware(req)).status).toBe(401);
+    expect(mockRunSync).not.toHaveBeenCalled();
+  });
+
   it("exige CRON_SECRET configurado", async () => {
     delete process.env.CRON_SECRET;
     const response = await GET(request());

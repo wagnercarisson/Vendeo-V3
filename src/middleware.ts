@@ -10,7 +10,12 @@ const PUBLIC_ROUTES = new Set([
 const GUEST_ONLY_ROUTES = new Set(["/login", "/signup", "/check-email", "/forgot-password"]);
 
 const ALWAYS_PASSTHROUGH = new Set(["/auth/confirm"]);
-const API_PASSTHROUGH = new Set(["/api/cron/monthly-credits", "/api/legal/current-versions"]);
+const API_PASSTHROUGH = new Set([
+  "/api/cron/monthly-credits",
+  // A rota valida CRON_SECRET; agendamentos não possuem sessão de usuário.
+  "/api/cron/sync-openai-pricing",
+  "/api/legal/current-versions",
+]);
 
 export async function middleware(request: NextRequest) {
   const { response, claims } = await updateSession(request);

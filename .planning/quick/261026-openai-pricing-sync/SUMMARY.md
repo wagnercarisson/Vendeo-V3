@@ -202,3 +202,42 @@ validação mais estrita. Migration continua **não aplicada**.
   e o estado no `/admin`, e só então fazer a geração manual conjunta com a quick
   anterior.
 - Parado para revisão do Codex.
+
+## Complemento autorizado — middleware e primeira sincronização no homolog
+
+- Autorização humana para correção direta na mesma quick e sincronização no
+  homolog, condicionada à compatibilidade com Vercel Hobby. A documentação
+  oficial permite 100 jobs/projeto, cada job no máximo uma vez por dia:
+  https://vercel.com/docs/cron-jobs/usage-and-pricing (consulta em 2026-10-26).
+  O agendamento `0 8 * * *` é UTC; no Hobby pode ocorrer dentro da hora agendada.
+- Migration `20261026191931` aplicada anteriormente, sob autorização, somente
+  em `G:\Vendeo-Homolog` (Postgres 127.0.0.1:57782): ledger 137 → 138.
+  As 17 linhas de pricing e seus valores originais foram preservados na aplicação;
+  tabela de tentativas vazia, RLS ativo e RPCs restritas ao service_role.
+- A chamada inicial foi bloqueada com 401 pelo middleware, antes do handler:
+  nenhuma tentativa nem tarifa foi gravada. A rota exata de pricing foi adicionada
+  ao passthrough de sessão; o handler mantém CRON_SECRET obrigatório. Não foi
+  liberado um prefixo de rotas. Regressões usam middleware real + handler com
+  secret ausente/inválido/válido e caminho vizinho que continua protegido.
+- O app local deixou de estar disponível durante a retomada (ECONNREFUSED,
+  nenhuma tentativa registrada). Foi iniciado novamente em 127.0.0.1:3000
+  para concluir a operação autorizada, sem iniciar/reiniciar Docker.
+- Corrigida somente a anotação de retorno do logger fake da suíte de sync,
+  incompatível com os tipos atuais do Vitest; nenhuma mudança no logger runtime.
+- Primeira sincronização efetiva: HTTP 200, tentativa
+  `19397bc9-2b92-4ea9-9008-ebd593592596`, iniciada em
+  `2026-10-26T20:14:17.339Z` e concluída em `2026-10-26T20:14:17.552Z`
+  (17:14 em America/Sao_Paulo). Resultado confirmado por SELECT read-only:
+  **success, 7 modelos, 11 preços conferidos, 9 alterados**.
+- Flare/Sunburst low/medium agora persistem, em US$/1M: entrada textual 5,
+  cache textual 1,25, saída textual NULL, entrada de imagem 8, cache de imagem 2,
+  saída de imagem 30. Valores por unidade foram preservados. GPT-4o e mini
+  receberam as tarifas de cache textual 1,25 e 0,075 respectivamente.
+- Gates reexecutados: 9 suítes / **74 testes PASS**; TypeScript com
+  `--incremental false` exit 0; `npm.cmd run lint` exit 0; diff-check limpo.
+  O lint direcionado avisou que os arquivos TS não têm configuração aplicável;
+  seu resultado não é prova de lint específico de TypeScript. Build não repetido.
+- Sem nova geração/provider pago, recálculo de eventos, alteração remota, push
+  ou deploy. O servidor local foi deixado disponível para o teste humano.
+- Pendente: usuário recarregar `/admin`, confirmar a apresentação e gerar uma
+  assinatura para validar conjuntamente a contabilização de imagem.

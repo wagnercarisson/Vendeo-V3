@@ -44,4 +44,14 @@ Total: 7 modelos, 11 linhas de pricing (qualidades repetem a mesma tarifa por to
 
 ## Fora do escopo
 
+### Complemento autorizado: acesso do cron pelo middleware
+
+Após aplicação autorizada da migration no homolog, a primeira chamada HTTP foi
+bloqueada pelo middleware de sessão (401), antes de iniciar qualquer tentativa.
+O usuário autorizou corrigir diretamente este gap na mesma quick e executar uma
+sincronização no homolog. Adicionar somente a rota exata de pricing ao passthrough;
+preservar CRON_SECRET no handler e testar middleware real + handler sem sessão,
+com bearer ausente, inválido e válido, além de rota vizinha protegida.
+Não autoriza produção, geração paga, push ou deploy.
+
 Aplicar migration, atualizar tarifas reais, banco/Docker/provider, recálculo histórico, edição manual no painel, push/deploy.

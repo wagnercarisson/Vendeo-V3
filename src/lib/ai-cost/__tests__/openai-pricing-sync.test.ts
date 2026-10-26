@@ -78,10 +78,7 @@ function makeStore(overrides: Partial<PricingSyncStore> = {}) {
   return { store, startAttempt, readCurrentPrices, applyPrices, failAttempt };
 }
 
-function makeLogger(): OpenAiPricingSyncLogger & {
-  info: ReturnType<typeof vi.fn>;
-  error: ReturnType<typeof vi.fn>;
-} {
+function makeLogger(): OpenAiPricingSyncLogger {
   return {
     info: vi.fn(),
     error: vi.fn(),
