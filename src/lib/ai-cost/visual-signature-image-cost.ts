@@ -100,11 +100,13 @@ function round6(value: number): number {
  * Ausência de uma dimensão de usage NÃO vira zero: se a entrada ou a saída não
  * foram reportadas (e não podem ser derivadas com segurança), o componente
  * textual fica desconhecido (`orchestrator_*_usage`) em vez de "completo".
+ * O usage agregado (`promptTokens` + `completionTokens`, sem breakdown de
+ * imagem) é aceito integralmente como uso do orquestrador — a imagem é
+ * estimada e somada separadamente.
  */
 function calculateOrchestratorTextComponent(
   usage: TokenUsage,
   pricing: ModelPricing,
-  imageGenerated: boolean,
 ): { usd: number | null; missing: string[] } {
   const missing: string[] = [];
 
@@ -122,16 +124,13 @@ function calculateOrchestratorTextComponent(
   if (usage.outputTextTokens !== undefined) {
     outputTextTokens = usage.outputTextTokens;
   } else if (usage.completionTokens !== undefined) {
-    if (usage.outputImageTokens !== undefined) {
-      outputTextTokens = Math.max(0, usage.completionTokens - usage.outputImageTokens);
-    } else if (!imageGenerated) {
-      // Sem imagem gerada, a saída reportada é textual.
-      outputTextTokens = usage.completionTokens;
-    } else {
-      // Com imagem gerada e sem breakdown, não é possível separar texto/imagem.
-      missing.push("orchestrator_output_usage");
-      outputTextTokens = 0;
-    }
+    // Breakdown detalhado: separa imagem do texto. Sem breakdown, o usage
+    // agregado do orquestrador é aceito como veio (a imagem é estimada
+    // separadamente, conforme a distinção de componentes do provider).
+    outputTextTokens =
+      usage.outputImageTokens !== undefined
+        ? Math.max(0, usage.completionTokens - usage.outputImageTokens)
+        : usage.completionTokens;
   } else {
     missing.push("orchestrator_output_usage");
     outputTextTokens = 0;
@@ -192,7 +191,7 @@ export function calculateVisualSignatureImageCost(
   } else if (orchestratorPricing === null) {
     missing.push("orchestrator_pricing");
   } else {
-    const text = calculateOrchestratorTextComponent(usage, orchestratorPricing, imageGenerated);
+    const text = calculateOrchestratorTextComponent(usage, orchestratorPricing);
     textComponentUsd = text.usd;
     missing.push(...text.missing);
   }

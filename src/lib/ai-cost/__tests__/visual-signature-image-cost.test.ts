@@ -157,6 +157,18 @@ describe("calculateVisualSignatureImageCost — vs-image-usage-v1 × ai_model_pr
     );
   });
 
+  it("usage agregado completo (prompt+completion, sem breakdown de imagem) é aceito como orquestrador", () => {
+    const result = calculate({
+      usage: { promptTokens: 1000, completionTokens: 100 },
+    });
+
+    expect(result.textComponentUsd).toBe(0.008);
+    expect(result.estimatedCostUsd).toBe(0.01725);
+    expect(result.visualSignatureImageUsage.coverage).toBe("complete");
+    expect(result.visualSignatureImageUsage.missing).toEqual([]);
+    expect(result.visualSignatureImageUsage.usageBreakdown).toBe("aggregate");
+  });
+
   it("preserva o snapshot/versionamento dos parâmetros usados", () => {
     const result = calculate();
     const audit = result.visualSignatureImageUsage;

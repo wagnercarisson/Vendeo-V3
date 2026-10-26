@@ -93,6 +93,10 @@ permanece inalterado.
   desconhecido (`orchestrator_input_usage`/`orchestrator_output_usage`) e a
   cobertura é `partial`. Um valor **explicitamente zero** continua sendo zero
   reportado e não impede a cobertura `complete`.
+- **Usage agregado completo é aceito:** `promptTokens` + `completionTokens`
+  (sem breakdown de imagem) são contabilizados como uso do orquestrador; a
+  imagem é estimada e somada separadamente. Não é exigido inventar/separar um
+  breakdown que o provider não enviou.
 
 ## Escopo de aplicação
 

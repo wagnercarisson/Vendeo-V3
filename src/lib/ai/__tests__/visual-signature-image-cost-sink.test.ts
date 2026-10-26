@@ -23,6 +23,7 @@ vi.mock("@/lib/ai-cost/ai-model-pricing", () => ({
 
 import { DefaultAiTelemetrySink, type AiTelemetrySinkContext } from "../telemetry-sink";
 import type { AiCallEnvelope } from "../types";
+import { normalizeResponsesUsage } from "../adapters/responses";
 
 const context: AiTelemetrySinkContext = {
   operationRunId: "run-1",
@@ -146,6 +147,39 @@ describe("DefaultAiTelemetrySink — estimativa da imagem da Assinatura Visual",
       image_usage_coverage: "complete",
       image_usage_missing: [],
       orchestrator_pricing_version: "orch-pricing-v1",
+    });
+  });
+
+  it("usage agregado do normalizador do adapter (sem breakdown) → orquestrador completo + imagem estimada", async () => {
+    // Fixture crua do Responses API: apenas input_tokens/output_tokens, sem
+    // detalhes de texto/imagem. O normalizador NÃO inventa breakdown.
+    const usage = normalizeResponsesUsage({
+      input_tokens: 1000,
+      output_tokens: 223,
+      total_tokens: 1223,
+    });
+    expect(usage).toEqual({
+      promptTokens: 1000,
+      completionTokens: 223,
+      totalTokens: 1223,
+    });
+
+    const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
+    await sink.emit({ ...VS_IMAGE_ENVELOPE, usage });
+
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.tokens).toEqual(usage);
+    expect(event.cost).toMatchObject({
+      estimatedCostUsd: 0.02094,
+      costSource: "pricing_table",
+      textComponentUsd: 0.01169,
+      imageToolComponentUsd: 0.00925,
+      costEstimationNote:
+        "visual_signature_image_usage_estimated_vs-image-usage-v1",
+    });
+    expect(event.metadata).toMatchObject({
+      image_usage_coverage: "complete",
+      image_usage_usage_breakdown: "aggregate",
     });
   });
 
