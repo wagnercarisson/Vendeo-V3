@@ -85,6 +85,11 @@ Before starting, resuming, planning, executing, or verifying a phase, read `docs
 - Do not rename migrations already applied to shared/production databases. The known F47.1/F50.3 collision must preserve F50.3; renumber F47.1 during the authorized integration, preserving its original version/hash and local-apply evidence and updating references/tests. Do not silently repair existing ledgers.
 - Local validation is a stage toward the product, not proof of production readiness. Plans must explicitly distinguish local-only safeguards, production-enablement work, release gates and activation; do not present completion of a local experiment as approval for production.
 
+## Support error codes
+
+- Before adding or changing user-facing support error codes, read `docs/convencoes/codigos-de-erro-suporte.md`.
+- Keep the short public code separate from the internal occurrence reference and safe technical classification. Adopt incrementally within the authorized scope; do not refactor unrelated errors or create a support table implicitly.
+
 ## Project Tracking
 
 - Current execution state: `.planning/STATE.md`
