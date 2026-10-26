@@ -1382,6 +1382,15 @@ export async function runProductOneToOneGeneration(
               source: attemptCost.costSource,
               model: attemptPair.model,
               quality: attemptPair.quality,
+              // Quick 261026: o pós-chamada usa tokens REAIS × estas tarifas
+              // congeladas. `estimatedCostUsd` acima continua sendo o image_unit
+              // do pré-chamada do piloto; não é o custo final.
+              ...(attemptCost.pricing
+                ? {
+                    settlement: "usage_tokens" as const,
+                    tokenPricing: attemptCost.pricing,
+                  }
+                : {}),
             };
           } catch {
             // Fail-open da PRICING nunca vira fallback legado: mantém

@@ -95,7 +95,13 @@ export function normalizeImagesUsage(usage: unknown): TokenUsage | undefined {
     input_tokens?: number;
     output_tokens?: number;
     total_tokens?: number;
-    input_tokens_details?: { text_tokens?: number; image_tokens?: number };
+    input_tokens_details?: {
+      text_tokens?: number;
+      image_tokens?: number;
+      cached_tokens?: number;
+      cached_text_tokens?: number;
+      cached_image_tokens?: number;
+    };
     output_tokens_details?: { text_tokens?: number; image_tokens?: number };
   };
 
@@ -112,6 +118,17 @@ export function normalizeImagesUsage(usage: unknown): TokenUsage | undefined {
   }
   if (raw.input_tokens_details?.image_tokens !== undefined) {
     normalized.inputImageTokens = raw.input_tokens_details.image_tokens;
+  }
+  if (raw.input_tokens_details?.cached_tokens !== undefined) {
+    normalized.cachedInputTokens = raw.input_tokens_details.cached_tokens;
+  }
+  // Quick 261026 — cache por modalidade SÓ quando o provider entrega os campos
+  // explícitos. `cached_tokens` agregado não é dividido por inferência.
+  if (raw.input_tokens_details?.cached_text_tokens !== undefined) {
+    normalized.cachedInputTextTokens = raw.input_tokens_details.cached_text_tokens;
+  }
+  if (raw.input_tokens_details?.cached_image_tokens !== undefined) {
+    normalized.cachedInputImageTokens = raw.input_tokens_details.cached_image_tokens;
   }
   if (raw.output_tokens_details?.text_tokens !== undefined) {
     normalized.outputTextTokens = raw.output_tokens_details.text_tokens;

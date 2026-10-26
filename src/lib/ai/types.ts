@@ -1,4 +1,9 @@
-import type { AiCallInfo, OperationRunType, TokenUsage } from "@/lib/ai-cost/types";
+import type {
+  AiCallInfo,
+  OperationRunType,
+  TokenUsage,
+  UsageTokenPricing,
+} from "@/lib/ai-cost/types";
 import type { VisualSignatureImageUsageTarget } from "@/lib/ai-cost/visual-signature-image-usage";
 import {
   AuthConfigError,
@@ -183,7 +188,11 @@ export interface AiCallEnvelope extends AiCallInfo {
  * cadeia legada de `resolveAiCost` permanece intacta.
  */
 export interface AiEnvelopeInternalCost {
-  /** Custo interno (USD) do par; `null` quando a pricing não o resolveu. */
+  /**
+   * Custo interno (USD) do par; `null` quando a pricing não o resolveu.
+   * Quando `settlement === "usage_tokens"`, este valor é apenas a estimativa
+   * PRÉ-CHAMADA (image_unit) do controle de gasto — NÃO é o custo final.
+   */
   estimatedCostUsd: number | null;
   /** `versionId` da linha vigente de `ai_model_pricing` | `'code_default'` | null. */
   pricingVersion: string | null;
@@ -195,6 +204,18 @@ export interface AiEnvelopeInternalCost {
   model: string;
   /** Qualidade do par usada na tentativa (VALIDADA contra `envelope.quality`). */
   quality: string;
+  /**
+   * Quick 261026 — modo de liquidação do custo interno:
+   * - ausente: comportamento anterior (usa `estimatedCostUsd` pré-resolvido);
+   * - `"usage_tokens"`: calcula pós-chamada com `envelope.usage` × `tokenPricing`.
+   */
+  settlement?: "usage_tokens";
+  /**
+   * Tarifas por token congeladas para o pós-chamada (quando
+   * `settlement === "usage_tokens"`). Inclui entrada/cache/saída textual e
+   * entrada/cache/saída de imagem. Não é usada pelo pré-chamada do piloto.
+   */
+  tokenPricing?: UsageTokenPricing;
 }
 
 /** Destino de emissão de envelopes (sink injetável — o gateway não persiste). */

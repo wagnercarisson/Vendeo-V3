@@ -22,6 +22,7 @@ const UUID = "11111111-1111-4111-8111-111111111111";
 /** Colunas legadas do select de getModelPricing — o caminho sem qualidade preserva esse conjunto. */
 const LEGACY_COLUMNS =
   "id, provider, model, input_token_usd_per_1m, output_token_usd_per_1m, cached_input_token_usd_per_1m, image_unit_usd, image_token_usd_per_1m";
+const QUALITY_COLUMNS = `${LEGACY_COLUMNS}, quality, image_input_token_usd_per_1m, image_cached_input_token_usd_per_1m`;
 
 interface PricingRowFixture {
   id: string;
@@ -33,6 +34,8 @@ interface PricingRowFixture {
   cached_input_token_usd_per_1m: number | null;
   image_unit_usd: number | null;
   image_token_usd_per_1m: number | null;
+  image_input_token_usd_per_1m?: number | null;
+  image_cached_input_token_usd_per_1m?: number | null;
 }
 
 function row(overrides: Partial<PricingRowFixture> = {}): PricingRowFixture {
@@ -111,7 +114,16 @@ describe("getModelPricing — dimensão de qualidade aditiva (D-08)", () => {
 
   it("com quality → seleciona quality e filtra .eq('quality', 'medium')", async () => {
     mockMaybeSingle.mockResolvedValue({
-      data: row({ model: "gpt-image-2", quality: "medium", image_unit_usd: 0.05 }),
+      data: row({
+        model: "gpt-image-2",
+        quality: "medium",
+        image_unit_usd: 0.05,
+        input_token_usd_per_1m: 5,
+        cached_input_token_usd_per_1m: 1.25,
+        image_input_token_usd_per_1m: 8,
+        image_cached_input_token_usd_per_1m: 2,
+        image_token_usd_per_1m: 30,
+      }),
       error: null,
     });
 
@@ -121,9 +133,19 @@ describe("getModelPricing — dimensão de qualidade aditiva (D-08)", () => {
       quality: "medium",
     });
 
-    expect(mockSelect).toHaveBeenCalledWith(`${LEGACY_COLUMNS}, quality`);
+    expect(mockSelect).toHaveBeenCalledWith(QUALITY_COLUMNS);
     expect(mockQualityEq).toHaveBeenCalledWith("quality", "medium");
-    expect(result).toEqual({ pricing: { imageUnitCostUsd: 0.05 }, versionId: UUID });
+    expect(result).toEqual({
+      pricing: {
+        imageUnitCostUsd: 0.05,
+        inputCostUsd: 5,
+        cachedInputCostUsd: 1.25,
+        imageInputTokenUsdPer1M: 8,
+        imageCachedInputTokenUsdPer1M: 2,
+        imageTokenUsdPer1M: 30,
+      },
+      versionId: UUID,
+    });
   });
 
   it("com quality e sem linha vigente → null (nunca code_default — D-09/D-10)", async () => {
@@ -347,6 +369,7 @@ describe("resolveImagePairCoverage / assertImagePairExecutable (D-09/D-10)", () 
       costUsd: 0.05,
       versionId: UUID,
       costSource: "pricing_table",
+      pricing: { imageUnitCostUsd: 0.05 },
     });
     expect(cost.fallback).toEqual({
       model: "gpt-image-2",
@@ -354,7 +377,66 @@ describe("resolveImagePairCoverage / assertImagePairExecutable (D-09/D-10)", () 
       costUsd: 0.04,
       versionId: UUID,
       costSource: "pricing_table",
+      pricing: { imageUnitCostUsd: 0.04 },
     });
+  });
+
+  it("pós-chamada recebe as tarifas por token congeladas, separadas do image_unit", async () => {
+    const { client } = fakePricingClient([
+      row({
+        model: "gpt-image-2.5-sunburst",
+        quality: "medium",
+        image_unit_usd: 0.041,
+        input_token_usd_per_1m: 5,
+        cached_input_token_usd_per_1m: 1.25,
+        image_input_token_usd_per_1m: 8,
+        image_cached_input_token_usd_per_1m: 2,
+        image_token_usd_per_1m: 30,
+      }),
+      row({
+        model: "gpt-image-2",
+        quality: "medium",
+        image_unit_usd: 0.05,
+        input_token_usd_per_1m: 5,
+        cached_input_token_usd_per_1m: 1.25,
+        image_input_token_usd_per_1m: 8,
+        image_cached_input_token_usd_per_1m: 2,
+        image_token_usd_per_1m: 30,
+      }),
+    ]);
+    const service = new ImagePairPricingService(client as never);
+
+    const cost = await service.resolveCost(pairConfig());
+
+    expect(cost.primary.costUsd).toBe(0.041); // pré-chamada (pilot)
+    expect(cost.primary.pricing).toMatchObject({
+      inputCostUsd: 5,
+      cachedInputCostUsd: 1.25,
+      imageInputTokenUsdPer1M: 8,
+      imageCachedInputTokenUsdPer1M: 2,
+      imageTokenUsdPer1M: 30,
+      imageUnitCostUsd: 0.041,
+    });
+  });
+
+  it("code_default não é aceito como tarifa tabelada no novo fluxo", async () => {
+    const spy = vi
+      .spyOn(AiModelPricingService.prototype, "getModelPricing")
+      .mockResolvedValue({
+        pricing: { imageUnitCostUsd: 0.041 },
+        versionId: "code_default",
+      });
+    const service = new ImagePairPricingService({} as never);
+
+    const coverage = await service.resolveCoverage(pairConfig());
+
+    expect(coverage.pricingCoverage).toBe("missing");
+    expect(coverage.missingComponents).toEqual(["image_unit"]);
+    await expect(service.resolveCost(pairConfig())).rejects.toMatchObject({
+      code: IMAGE_PAIR_PRICING_INCOMPLETE,
+    });
+
+    spy.mockRestore();
   });
 
   it("resolveImagePairCost é fail-closed quando a cobertura é incompleta (não inventa custo)", async () => {

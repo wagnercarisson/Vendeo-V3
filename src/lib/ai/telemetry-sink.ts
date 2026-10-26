@@ -1,4 +1,5 @@
 import { resolveAiCost } from "@/lib/ai-cost/cost-estimator";
+import { calculateProductOneToOneImageUsageCost } from "@/lib/ai-cost/image-usage-token-cost";
 import { resolveVisualSignatureImageCost } from "@/lib/ai-cost/visual-signature-image-cost";
 import { AiCostTracker } from "@/lib/ai-cost/tracker";
 import type { AiCostEvent, CostResolution, OperationRunType } from "@/lib/ai-cost/types";
@@ -189,6 +190,21 @@ function resolveInternalCost(
     return { valid: false, reason: "quality_mismatch" };
   }
 
+  // Quick 261026 — Produto 1:1: custo pós-chamada com tokens REAIS × tarifas
+  // congeladas por tentativa. `estimatedCostUsd` aqui é apenas a estimativa
+  // pré-chamada do controle de gasto (image_unit) e NÃO é usada como custo.
+  if (internal.settlement === "usage_tokens") {
+    const cost = calculateProductOneToOneImageUsageCost({
+      usage: envelope.usage,
+      pricing: internal.tokenPricing ?? null,
+      pricingVersion: internal.pricingVersion ?? null,
+      pricingSource: internal.source,
+      model: internal.model,
+      quality: internal.quality,
+    });
+    return { valid: true, cost };
+  }
+
   const usd = internal.estimatedCostUsd;
   if (typeof usd !== "number" || !Number.isFinite(usd) || usd < 0) {
     return { valid: false, reason: "invalid_cost_value" };
@@ -246,6 +262,7 @@ function buildCallMetadata(
       : undefined;
 
   const imageUsageAudit = cost.visualSignatureImageUsage;
+  const productOneToOneAudit = cost.productOneToOneImageUsage;
 
   return {
     // Caller metadata primeiro: os campos canônicos do sink (capability/protocol/
@@ -282,6 +299,42 @@ function buildCallMetadata(
           orchestrator_pricing_version: imageUsageAudit.orchestratorPricingVersion,
         }
       : {}),
+    // Quick 261026 — custo PÓS-CHAMADA do Produto 1:1 com tokens reais.
+    // Separado da estimativa pré-chamada do piloto (`internal_cost_pre_call_*`).
+    ...(productOneToOneAudit
+      ? {
+          product_1_1_image_usage_origin: productOneToOneAudit.origin,
+          product_1_1_image_usage_formula_version:
+            productOneToOneAudit.formulaVersion,
+          product_1_1_image_usage_pricing_version:
+            productOneToOneAudit.pricingVersion,
+          product_1_1_image_usage_pricing_source:
+            productOneToOneAudit.pricingSource,
+          product_1_1_image_usage_model: productOneToOneAudit.model,
+          product_1_1_image_usage_quality: productOneToOneAudit.quality,
+          product_1_1_image_usage_input_text_tokens:
+            productOneToOneAudit.inputTextTokens,
+          product_1_1_image_usage_cached_input_text_tokens:
+            productOneToOneAudit.cachedInputTextTokens,
+          product_1_1_image_usage_input_image_tokens:
+            productOneToOneAudit.inputImageTokens,
+          product_1_1_image_usage_cached_input_image_tokens:
+            productOneToOneAudit.cachedInputImageTokens,
+          product_1_1_image_usage_output_text_tokens:
+            productOneToOneAudit.outputTextTokens,
+          product_1_1_image_usage_output_image_tokens:
+            productOneToOneAudit.outputImageTokens,
+          product_1_1_image_usage_text_component_usd:
+            productOneToOneAudit.textComponentUsd,
+          product_1_1_image_usage_image_component_usd:
+            productOneToOneAudit.imageComponentUsd,
+          product_1_1_image_usage_coverage: productOneToOneAudit.coverage,
+          product_1_1_image_usage_missing: productOneToOneAudit.missing,
+          product_1_1_image_usage_cache_mode: productOneToOneAudit.cacheMode,
+          product_1_1_image_usage_usage_breakdown:
+            productOneToOneAudit.usageBreakdown,
+        }
+      : {}),
     // P1 (Opção A): origem INTERNA auditável do NOVO FLUXO — acrescentada DEPOIS
     // do spread de `envelope.metadata` (o caller não pode forjar estas chaves).
     // Ausente ⇒ metadata legada byte-idêntica.
@@ -292,6 +345,10 @@ function buildCallMetadata(
           internal_cost_version_id: internal.pricingVersion,
           internal_cost_model: internal.model,
           internal_cost_quality: internal.quality,
+          internal_cost_settlement: internal.settlement ?? null,
+          // Estimativa de SEGURANÇA do pré-chamada (image_unit), separada do
+          // custo pós-chamada por tokens. Não é o `estimated_cost_usd` final.
+          internal_cost_pre_call_estimate_usd: internal.estimatedCostUsd,
           ...(internalInvalidReason != null
             ? {
                 internal_cost_invalid: true,

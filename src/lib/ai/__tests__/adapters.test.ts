@@ -551,6 +551,55 @@ describe("ImagesAdapter — ausência de usage é explícita (D2/D7)", () => {
     );
   });
 
+  it("images.edit preserva cache agregado e cache por modalidade quando explícitos", async () => {
+    mockImagesEdit.mockResolvedValue({
+      data: [{ b64_json: "IMG" }],
+      usage: {
+        input_tokens: 100,
+        output_tokens: 50,
+        total_tokens: 150,
+        input_tokens_details: {
+          text_tokens: 20,
+          image_tokens: 80,
+          cached_tokens: 10,
+          cached_text_tokens: 4,
+          cached_image_tokens: 6,
+        },
+        output_tokens_details: { image_tokens: 50 },
+      },
+    });
+
+    const result = await new ImagesAdapter().invoke(
+      { prompt: "editar", productImagesDataUrls: ["data:image/png;base64,AAA"] },
+      imagesTarget,
+    );
+
+    expect(result.usage).toMatchObject({
+      cachedInputTokens: 10,
+      cachedInputTextTokens: 4,
+      cachedInputImageTokens: 6,
+    });
+  });
+
+  it("images.edit sem cache explícito NÃO inventa cache por modalidade", async () => {
+    mockImagesEdit.mockResolvedValue({
+      data: [{ b64_json: "IMG" }],
+      usage: {
+        input_tokens: 100,
+        output_tokens: 50,
+        input_tokens_details: { text_tokens: 20, image_tokens: 80 },
+      },
+    });
+
+    const result = await new ImagesAdapter().invoke(
+      { prompt: "editar", productImagesDataUrls: ["data:image/png;base64,AAA"] },
+      imagesTarget,
+    );
+
+    expect(result.usage?.cachedInputTextTokens).toBeUndefined();
+    expect(result.usage?.cachedInputImageTokens).toBeUndefined();
+  });
+
   it("sem imagem primária → erro de domínio (MalformedResponseError)", async () => {
     await expect(
       new ImagesAdapter().invoke({ prompt: "editar" }, imagesTarget),

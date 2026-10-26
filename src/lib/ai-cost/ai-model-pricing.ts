@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import type { UsageTokenPricing } from "./types";
 
 /**
  * Bootstrap de preços em código (D8) — espelha EXATAMENTE os 7 seeds da migration
@@ -12,12 +13,8 @@ import { supabaseAdmin } from "@/lib/supabase/server";
  * NÃO inventar `inputCostUsd`/`outputCostUsd` = 0 (espelha o CHECK
  * chk_ai_model_pricing_at_least_one_price).
  */
-export interface ModelPricing {
-  inputCostUsd?: number;
-  outputCostUsd?: number;
-  cachedInputCostUsd?: number;
+export interface ModelPricing extends UsageTokenPricing {
   imageUnitCostUsd?: number;
-  imageTokenUsdPer1M?: number;
 }
 
 /** Bootstrap 7 seeds (D8): valores verificáveis da migration, não canonizados. */
@@ -53,6 +50,8 @@ interface PricingRow {
   cached_input_token_usd_per_1m: number | null;
   image_unit_usd: number | null;
   image_token_usd_per_1m: number | null;
+  image_input_token_usd_per_1m?: number | null;
+  image_cached_input_token_usd_per_1m?: number | null;
 }
 
 /**
@@ -68,9 +67,17 @@ const LEGACY_PRICING_COLUMNS =
   "id, provider, model, input_token_usd_per_1m, output_token_usd_per_1m, cached_input_token_usd_per_1m, image_unit_usd, image_token_usd_per_1m";
 
 /**
+ * Quick 261026 — colunas do caminho COM qualidade (Produto 1:1). Adiciona as
+ * dimensões explícitas de entrada/cache de imagem, sem alterar o select legado.
+ * A migration de pricing correspondente já fornece essas colunas no ambiente.
+ */
+const QUALITY_PRICING_COLUMNS =
+  `${LEGACY_PRICING_COLUMNS}, quality, image_input_token_usd_per_1m, image_cached_input_token_usd_per_1m`;
+
+/**
  * Mapper linha → ModelPricing (snake→camel). Valida "ao menos uma dimensão"
  * (espelha o CHECK chk_ai_model_pricing_at_least_one_price): linha com todas as
- * 5 dimensões nulas → null (linha inválida — nunca retorna um ModelPricing vazio).
+ * dimensões nulas → null (linha inválida — nunca retorna um ModelPricing vazio).
  */
 function mapRowToModelPricing(row: PricingRow): ModelPricing | null {
   const pricing: ModelPricing = {};
@@ -79,6 +86,12 @@ function mapRowToModelPricing(row: PricingRow): ModelPricing | null {
   if (row.cached_input_token_usd_per_1m != null) pricing.cachedInputCostUsd = Number(row.cached_input_token_usd_per_1m);
   if (row.image_unit_usd != null) pricing.imageUnitCostUsd = Number(row.image_unit_usd);
   if (row.image_token_usd_per_1m != null) pricing.imageTokenUsdPer1M = Number(row.image_token_usd_per_1m);
+  if (row.image_input_token_usd_per_1m != null) {
+    pricing.imageInputTokenUsdPer1M = Number(row.image_input_token_usd_per_1m);
+  }
+  if (row.image_cached_input_token_usd_per_1m != null) {
+    pricing.imageCachedInputTokenUsdPer1M = Number(row.image_cached_input_token_usd_per_1m);
+  }
   if (Object.keys(pricing).length === 0) return null;
   return pricing;
 }
@@ -114,7 +127,7 @@ export class AiModelPricingService {
       //     usa `DEFAULT_AI_MODEL_PRICING` (o custo por qualidade precisa ser explícito
       //     — D-09/D-10): sem linha vigente de qualidade, retorna null (cobertura missing).
       const columns: string =
-        quality === undefined ? LEGACY_PRICING_COLUMNS : `${LEGACY_PRICING_COLUMNS}, quality`;
+        quality === undefined ? LEGACY_PRICING_COLUMNS : QUALITY_PRICING_COLUMNS;
 
       const vigenteQuery = this.client
         .from("ai_model_pricing")

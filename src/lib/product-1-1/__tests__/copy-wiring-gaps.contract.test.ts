@@ -407,6 +407,14 @@ function buildHarness(): Harness {
         costUsd: 0.041,
         versionId: "pricing-ver-1",
         costSource: "pricing_table" as const,
+        pricing: {
+          inputCostUsd: 5,
+          cachedInputCostUsd: 1.25,
+          outputCostUsd: 10,
+          imageInputTokenUsdPer1M: 8,
+          imageCachedInputTokenUsdPer1M: 2,
+          imageTokenUsdPer1M: 30,
+        },
       },
       fallback: {
         model: SNAPSHOT.fallbackModel,
@@ -414,6 +422,14 @@ function buildHarness(): Harness {
         costUsd: 0.019,
         versionId: "pricing-ver-1",
         costSource: "pricing_table" as const,
+        pricing: {
+          inputCostUsd: 5,
+          cachedInputCostUsd: 1.25,
+          outputCostUsd: 10,
+          imageInputTokenUsdPer1M: 8,
+          imageCachedInputTokenUsdPer1M: 2,
+          imageTokenUsdPer1M: 30,
+        },
       },
     }),
   };
@@ -639,6 +655,15 @@ describe("Plano 08 (correção/P1) — custo interno pela pricing do NOVO FLUXO 
       source: "pricing_table",
       model: SNAPSHOT.primaryModel,
       quality: SNAPSHOT.primaryQuality,
+      settlement: "usage_tokens",
+      tokenPricing: {
+        inputCostUsd: 5,
+        cachedInputCostUsd: 1.25,
+        outputCostUsd: 10,
+        imageInputTokenUsdPer1M: 8,
+        imageCachedInputTokenUsdPer1M: 2,
+        imageTokenUsdPer1M: 30,
+      },
     });
 
     // O envelope observado é o REAL do gateway (usage/duration/status reais).

@@ -60,6 +60,13 @@ export interface ImagePairAttemptCost {
   costUsd: number | null;
   versionId: string;
   costSource: ImagePairCostSource;
+  /**
+   * Quick 261026 — tarifas por token congeladas para o pós-chamada. `costUsd`
+   * continua sendo o `image_unit_usd` do pré-chamada (controle de gasto); este
+   * campo é usado SOMENTE para calcular o custo com tokens reais do provider.
+   * Opcional para preservar fakes antigos; o fluxo real sempre o preenche.
+   */
+  pricing?: ModelPricing;
 }
 
 /** Custo resolvido dos dois pares da configuração (D-22). */
@@ -109,8 +116,11 @@ export class ImagePairPricingService {
       model: pair.model,
       quality: pair.quality,
     });
-    this.cache.set(key, { expiresAt: this.now() + this.ttlMs, result });
-    return result;
+    // Quick 261026: `code_default` não é tarifa tabelada — rejeitar também no
+    // pré-chamada do novo fluxo (o legado continua aceitando o bootstrap).
+    const effective = result?.versionId === "code_default" ? null : result;
+    this.cache.set(key, { expiresAt: this.now() + this.ttlMs, result: effective });
+    return effective;
   }
 
   /**
@@ -203,6 +213,7 @@ export class ImagePairPricingService {
       costUsd: result.pricing.imageUnitCostUsd ?? null,
       versionId: result.versionId,
       costSource: result.versionId === "code_default" ? "code_default" : "pricing_table",
+      pricing: result.pricing,
     };
   }
 }

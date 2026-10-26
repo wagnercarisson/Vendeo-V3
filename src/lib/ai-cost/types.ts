@@ -46,10 +46,59 @@ export interface TokenUsage {
   inputTextTokens?: number;
   /** F38.1: input_tokens_details.image_tokens — tokens de imagem na entrada (foto do produto). */
   inputImageTokens?: number;
+  /**
+   * Quick 261026 — cache de entrada separado por modalidade. Presente SOMENTE
+   * quando o provider entrega o detalhamento inequívoco (texto vs imagem).
+   * `cachedInputTokens` continua sendo o total quando o provider só informa o
+   * agregado; nesse caso a modalidade NÃO é inferida.
+   */
+  cachedInputTextTokens?: number;
+  /** Quick 261026 — cache de entrada de imagem (detalhamento explícito). */
+  cachedInputImageTokens?: number;
   /** F38.1: output_tokens_details.text_tokens — texto de saída (não inclui a imagem gerada). */
   outputTextTokens?: number;
   /** F38.1: output_tokens_details.image_tokens — tokens de imagem gerada (mesmo valor de imageTokens). */
   outputImageTokens?: number;
+}
+
+/**
+ * Tarifas por token usadas no pós-chamada do Produto 1:1. Estrutura compatível
+ * com `ModelPricing` (que inclui `imageUnitCostUsd`, usado apenas no pré-chamada
+ * do controle de gasto). Não confundir:
+ * - `inputCostUsd` / `cachedInputCostUsd` / `outputCostUsd` = texto;
+ * - `imageInputTokenUsdPer1M` = entrada de imagem;
+ * - `imageCachedInputTokenUsdPer1M` = cache de entrada de imagem;
+ * - `imageTokenUsdPer1M` = saída de imagem.
+ */
+export interface UsageTokenPricing {
+  inputCostUsd?: number;
+  cachedInputCostUsd?: number;
+  outputCostUsd?: number;
+  imageInputTokenUsdPer1M?: number;
+  imageCachedInputTokenUsdPer1M?: number;
+  imageTokenUsdPer1M?: number;
+}
+
+/** Auditoria do custo pós-chamada por tokens reais do Produto 1:1. */
+export interface ProductOneToOneImageUsageAudit {
+  origin: "usage_tokens";
+  formulaVersion: string;
+  pricingVersion: string | null;
+  pricingSource: string | null;
+  model: string;
+  quality: string;
+  inputTextTokens: number | null;
+  cachedInputTextTokens: number | null;
+  inputImageTokens: number | null;
+  cachedInputImageTokens: number | null;
+  outputTextTokens: number | null;
+  outputImageTokens: number | null;
+  textComponentUsd: number | null;
+  imageComponentUsd: number | null;
+  coverage: "complete" | "partial" | "unknown";
+  missing: string[];
+  cacheMode: "none" | "explicit" | "ambiguous";
+  usageBreakdown: "detailed" | "aggregate" | "absent";
 }
 
 /**
@@ -101,6 +150,11 @@ export interface CostResolution {
    * preenche tokens reais nem `provider_reported_cost_usd`.
    */
   visualSignatureImageUsage?: VisualSignatureImageUsageAudit;
+  /**
+   * Quick 261026 — custo pós-chamada do Produto 1:1 calculado com tokens reais
+   * do provider × tarifas versionadas. Persistido apenas no metadata existente.
+   */
+  productOneToOneImageUsage?: ProductOneToOneImageUsageAudit;
 }
 
 /**
