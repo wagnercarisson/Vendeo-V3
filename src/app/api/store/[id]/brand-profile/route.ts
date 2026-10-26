@@ -4,6 +4,7 @@ import { validateBrandColorsChosen, normalizeBrandColorsChosen } from '@/lib/val
 import { requireAuthorizedStore } from '@/lib/auth/store-ownership';
 import { requireSameOrigin } from '@/lib/auth/csrf';
 import { apiHandler } from '@/lib/auth/api-handler';
+import { loadVisualDirectionState } from '@/lib/visual-signature/direction-pending';
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -17,6 +18,15 @@ export const GET = apiHandler(async (
   await requireAuthorizedStore(id);
   const url = new URL(request.url);
   const statusParam = url.searchParams.get('status');
+
+  if (statusParam === 'direction-state') {
+    try {
+      return NextResponse.json(await loadVisualDirectionState(id), { status: 200 });
+    } catch {
+      console.error('[brand-profile] direction_state_unavailable');
+      return NextResponse.json({ error: 'direction_state_unavailable' }, { status: 500 });
+    }
+  }
 
   if (statusParam === 'synced') {
     const { data, error } = await supabase

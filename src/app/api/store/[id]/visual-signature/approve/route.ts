@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 import { validateDrift } from '@/lib/visual-signature/drift-validator';
-import { BrandProfilerWithoutLogoService } from '@/lib/visual-signature/brand-profiler';
+import { BrandProfilerWithoutLogoService, BrandProfilerWithoutLogoError } from '@/lib/visual-signature/brand-profiler';
+import {
+  clearVisualDirectionFailure,
+  isVisualSignatureActive,
+  markSyncedProfilesOutdatedExceptActive,
+  recordVisualDirectionFailure,
+  sanitizeDirectionDiagnostic,
+} from '@/lib/visual-signature/direction-pending';
 import { updateGenerationEventDecision } from '@/lib/visual-signature/generation-events';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
 import { IDENTITY_TO_LOGO_STATUS } from '@/lib/constants';
@@ -39,6 +46,91 @@ async function createBrandProfileTelemetry(storeId: string, visualSignatureId: s
     attemptNumber: 0,
     usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
     creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+  });
+}
+
+/**
+ * Quick 261025-svt: falha do profiler pós-aprovação é fail-closed.
+ * - Assinatura permanece ativa.
+ * - Perfis `synced` alheios à assinatura ativa viram `outdated` (nunca restaurados).
+ * - Referência de falha persistida na metadata da assinatura ativa.
+ */
+async function handleProfilerFailure(args: {
+  storeId: string;
+  signatureId: string;
+  reqId: number;
+  err: unknown;
+  failureReference: string;
+  signedAssetUrl: string;
+}): Promise<NextResponse> {
+  const { storeId, signatureId, reqId, err, failureReference, signedAssetUrl } = args;
+  const isProfilerError = err instanceof BrandProfilerWithoutLogoError;
+  const safeErrorType = isProfilerError ? err.metadata.errorType : 'unexpected_error';
+
+  const sanitized = sanitizeDirectionDiagnostic(err instanceof Error ? err.message : '');
+  console.error(`[approve][req-${reqId}] brand_profile_failed`, {
+    code: safeErrorType,
+    ...(sanitized ? { detail: sanitized } : {}),
+  });
+
+  if (isProfilerError && err.metadata.errorType === 'visual_signature_superseded') {
+    return NextResponse.json({
+      success: false,
+      error: 'visual_signature_superseded',
+      message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+    }, { status: 409 });
+  }
+
+  const cleanup = await markSyncedProfilesOutdatedExceptActive(storeId);
+  if (!cleanup.ok) {
+    return NextResponse.json({
+      success: false,
+      error: 'brand_profile_cleanup_failed',
+      message: 'Não foi possível concluir a transição com segurança. Tente novamente.',
+    }, { status: 500 });
+  }
+
+  const recorded = await recordVisualDirectionFailure({
+    storeId,
+    signatureId,
+    reference: failureReference,
+    failureCode: safeErrorType,
+  });
+
+  if (recorded.status === 'superseded') {
+    return NextResponse.json({
+      success: false,
+      error: 'visual_signature_superseded',
+      message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+    }, { status: 409 });
+  }
+
+  if (recorded.status === 'error') {
+    return NextResponse.json({
+      success: false,
+      error: 'brand_profile_reference_failed',
+      message: 'Não foi possível concluir a transição com segurança. Tente novamente.',
+    }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    signature: { id: signatureId, assetUrl: signedAssetUrl, status: 'active' },
+    brandProfile: { id: '', status: 'failed' },
+    brandProfileData: null,
+    bp_status: 'failed',
+    brand_profile_status: 'failed',
+    failure_reference: failureReference,
+    visual_signature_id: signatureId,
+    message:
+      'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. ' +
+      'A geração de campanhas ficará indisponível até a conclusão. ' +
+      `Informe ao suporte o código ${failureReference}. ` +
+      'Após a orientação do suporte, clique em Realinhar direção visual.',
+    logoStatus: 'generated',
+    inferredPrimaryColor: null,
+    inferredAccentColor: null,
+    logoColorsDetected: [],
   });
 }
 
@@ -224,8 +316,11 @@ async function handleSubstitution(
     console.error(`[approve][req-${reqId}] Error loading previousBrandColors:`, err);
   }
 
+  let failureReference = '';
   try {
     const profiler = new BrandProfilerWithoutLogoService();
+    const telemetry = await createBrandProfileTelemetry(id, signatureId);
+    failureReference = telemetry.operationRunId;
     const result = await profiler.generate({
       storeId: id,
       storeName: store.name,
@@ -244,7 +339,8 @@ async function handleSubstitution(
       referenceCardUrl: null,
       intendedPalette,
       previousBrandColors,
-    }, await createBrandProfileTelemetry(id, signatureId));
+      assertActiveVisualSignature: () => isVisualSignatureActive(id, signatureId),
+    }, telemetry);
 
     console.log(`[approve][req-${reqId}] SUBSTITUIÇÃO — Tier 2 BP OK`, { profileId: result.profile.id });
 
@@ -270,6 +366,15 @@ async function handleSubstitution(
       .filter((c: string) => /^#[0-9A-Fa-f]{6}$/.test(c))
       .map((c: string) => c.toUpperCase());
 
+    const cleared = await clearVisualDirectionFailure({ storeId: id, signatureId });
+    if (cleared.status === 'superseded') {
+      return NextResponse.json({
+        success: false,
+        error: 'visual_signature_superseded',
+        message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+      }, { status: 409 });
+    }
+
     return NextResponse.json({
       success: true,
       signature: {
@@ -293,55 +398,23 @@ async function handleSubstitution(
         metadata: result.profile.metadata,
       },
       bp_status: 'success',
+      brand_profile_status: 'synced',
+      failure_reference: null,
       visual_signature_id: signatureId,
+      ...(cleared.status === 'error' ? { warning: 'direction_metadata_cleanup_failed' } : {}),
     });
   } catch (err) {
-    console.error(`[approve][req-${reqId}] SUBSTITUIÇÃO — Tier 2 BP FAILED (activation NOT undone)`, err);
+    console.error(`[approve][req-${reqId}] SUBSTITUIÇÃO — Tier 2 BP FAILED (activation NOT undone)`, {
+      code: err instanceof BrandProfilerWithoutLogoError ? err.metadata.errorType : 'unexpected_error',
+    });
 
-    // BP insert failed — restore previous profile to synced if possible
-    try {
-      await supabase
-        .from('store_brand_profiles')
-        .update({ status: 'synced', updated_at: new Date().toISOString() })
-        .eq('store_id', id)
-        .eq('status', 'outdated')
-        .eq('source', 'without_logo');
-    } catch (restoreErr) {
-      console.error(`[approve][req-${reqId}] SUBSTITUIÇÃO — fallback restore failed (non-critical):`, restoreErr);
-    }
-
-    // Return 200 with warning — new VS stays active, BP can be retried via /realign
-    const sanitizeHex = (v: string | null | undefined, fb: string): string =>
-      v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
-
-    const fallbackPrimary = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.primary
-      ?? (artDirectorOutput as any)?.suggested_colors?.[0]
-      ?? store.brand_color
-      ?? null;
-    const fallbackAccent = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.accent
-      ?? (artDirectorOutput as any)?.suggested_colors?.[1]
-      ?? null;
-    const inferredPrimaryColor = sanitizeHex(fallbackPrimary, '#666666');
-    const inferredAccentColor = sanitizeHex(fallbackAccent, '#999999');
-    const logoColorsDetected = [inferredPrimaryColor, inferredAccentColor]
-      .filter((c): c is string => /^#[0-9A-Fa-f]{6}$/.test(c));
-
-    return NextResponse.json({
-      success: true,
-      signature: {
-        id: pendingSig.id,
-         assetUrl: pendingAssetUrl,
-        status: 'active',
-      },
-      brandProfile: { id: '', status: 'failed' },
-      inferredPrimaryColor,
-      inferredAccentColor,
-      logoColorsDetected,
-      logoStatus: 'generated',
-      brandProfileData: null,
-      bp_status: 'failed',
-      visual_signature_id: signatureId,
-      warning: 'Assinatura visual ativada. Geração de perfil de marca falhou — pode ser retentada via /brand-profile/realign.',
+    return handleProfilerFailure({
+      storeId: id,
+      signatureId,
+      reqId,
+      err,
+      failureReference,
+      signedAssetUrl: pendingAssetUrl,
     });
   }
 }
@@ -538,6 +611,15 @@ export const POST = apiHandler(async (
   if (existingProfile) {
     console.log(`[approve][req-${reqId}] found existing profile (${existingProfile.status}), reactivating`);
 
+    // Quick 261025-svt: guard antes de qualquer persistência do perfil reusado.
+    if (!(await isVisualSignatureActive(id, body.signatureId))) {
+      return NextResponse.json({
+        success: false,
+        error: 'visual_signature_superseded',
+        message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+      }, { status: 409 });
+    }
+
     await reconcileProfiles(id, {
       activateProfileIds: [existingProfile.id],
       markIncompatibleAsOutdated: true,
@@ -564,6 +646,15 @@ export const POST = apiHandler(async (
       })
       .eq('id', existingProfile.id);
 
+    const reusedCleared = await clearVisualDirectionFailure({ storeId: id, signatureId: body.signatureId });
+    if (reusedCleared.status === 'superseded') {
+      return NextResponse.json({
+        success: false,
+        error: 'visual_signature_superseded',
+        message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+      }, { status: 409 });
+    }
+
     console.log(`[approve][req-${reqId}] returning reused profile`);
     return NextResponse.json({
       success: true,
@@ -587,6 +678,9 @@ export const POST = apiHandler(async (
         inferred_accent_color: existingProfile.inferred_accent_color,
         metadata: existingProfile.metadata,
       },
+      brand_profile_status: 'synced',
+      failure_reference: null,
+      ...(reusedCleared.status === 'error' ? { warning: 'direction_metadata_cleanup_failed' } : {}),
     });
   }
 
@@ -624,8 +718,11 @@ export const POST = apiHandler(async (
     console.error(`[approve][req-${reqId}] Error loading previousBrandColors:`, err);
   }
 
+  let standardFailureReference = '';
   try {
     const profiler = new BrandProfilerWithoutLogoService();
+    const standardTelemetry = await createBrandProfileTelemetry(id, body.signatureId);
+    standardFailureReference = standardTelemetry.operationRunId;
     const result = await profiler.generate({
       storeId: id,
       storeName: store.name,
@@ -644,7 +741,8 @@ export const POST = apiHandler(async (
       referenceCardUrl: null,
       intendedPalette: intendedPaletteLocal,
       previousBrandColors,
-    }, await createBrandProfileTelemetry(id, body.signatureId));
+      assertActiveVisualSignature: () => isVisualSignatureActive(id, body.signatureId),
+    }, standardTelemetry);
 
     console.log(`[approve][req-${reqId}] BrandProfiler OK`, { profileId: result.profile.id });
     brandProfileResult = {
@@ -673,6 +771,15 @@ export const POST = apiHandler(async (
       .filter((c: string) => /^#[0-9A-Fa-f]{6}$/.test(c))
       .map((c: string) => c.toUpperCase());
 
+    const standardCleared = await clearVisualDirectionFailure({ storeId: id, signatureId: body.signatureId });
+    if (standardCleared.status === 'superseded') {
+      return NextResponse.json({
+        success: false,
+        error: 'visual_signature_superseded',
+        message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+      }, { status: 409 });
+    }
+
     console.log(`[approve][req-${reqId}] enviando response`, { inferredPrimaryColor, inferredAccentColor, logoColorsDetected });
     return NextResponse.json({
       success: true,
@@ -696,39 +803,22 @@ export const POST = apiHandler(async (
         inferred_accent_color: result.profile.inferred_accent_color,
         metadata: result.profile.metadata,
       },
+      brand_profile_status: 'synced',
+      failure_reference: null,
+      ...(standardCleared.status === 'error' ? { warning: 'direction_metadata_cleanup_failed' } : {}),
     });
   } catch (err) {
-    console.error(`[approve][req-${reqId}] BrandProfiler FAILED`, err);
-    brandProfileResult = { id: '', status: 'failed' };
+    console.error(`[approve][req-${reqId}] BrandProfiler FAILED`, {
+      code: err instanceof BrandProfilerWithoutLogoError ? err.metadata.errorType : 'unexpected_error',
+    });
 
-    const sanitizeHex = (v: string | null | undefined, fb: string): string =>
-      v && /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : fb;
-
-    const fallbackPrimary = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.primary
-      ?? (artDirectorOutput as any)?.suggested_colors?.[0]
-      ?? store.brand_color
-      ?? null;
-    const fallbackAccent = (artDirectorOutput as unknown as VisualSignatureMetadataArtDirectorOutput)?.intended_palette?.accent
-      ?? (artDirectorOutput as any)?.suggested_colors?.[1]
-      ?? null;
-    inferredPrimaryColor = sanitizeHex(fallbackPrimary, '#666666');
-    inferredAccentColor = sanitizeHex(fallbackAccent, '#999999');
-    const logoColorsDetected = [inferredPrimaryColor, inferredAccentColor]
-      .filter((c): c is string => /^#[0-9A-Fa-f]{6}$/.test(c));
-
-    return NextResponse.json({
-      success: true,
-      signature: {
-        id: signature.id,
-         assetUrl: signedAssetUrl,
-        status: 'active',
-      },
-      brandProfile: brandProfileResult,
-      inferredPrimaryColor,
-      inferredAccentColor,
-      logoColorsDetected,
-      logoStatus: 'generated',
-      brandProfileData: null,
+    return handleProfilerFailure({
+      storeId: id,
+      signatureId: body.signatureId,
+      reqId,
+      err,
+      failureReference: standardFailureReference,
+      signedAssetUrl,
     });
   }
 });

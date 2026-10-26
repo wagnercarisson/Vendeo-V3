@@ -352,6 +352,12 @@ export interface BrandProfilerInput {
   } | null;
   /** F38.1 (D7/D11): callback best-effort com dados de cada chamada de IA (brand_profile_vision / brand_profile_text mapeados na rota). Opcional — nunca bloqueia. */
   onCall?: (info: AiCallInfo) => void | Promise<void>;
+  /**
+   * Quick 261025-svt (decisão B): guard opcional chamado ANTES de qualquer
+   * persistência do perfil (reuso, regenerate e falha). `false` = assinatura
+   * substituída — não gravar nada e sinalizar `visual_signature_superseded`.
+   */
+  assertActiveVisualSignature?: () => Promise<boolean>;
 }
 
 export interface BrandProfilerWithoutLogoResult {

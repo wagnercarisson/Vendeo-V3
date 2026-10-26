@@ -32,7 +32,7 @@ type ApprovalState =
   | { phase: "insufficient_credits" }
   | { phase: "error"; message: string; drift?: { fields: string[]; reason: string; requires_regeneration: boolean }; acceptUrl?: string }
   | { phase: "done"; logoStatus: string; signatureUrl?: string; brandProfile?: unknown; inferredPrimaryColor?: string; inferredAccentColor?: string; logoColorsDetected?: string[] }
-  | { phase: "bp_failed"; message: string; signatureUrl?: string; brandProfileData?: Record<string, unknown> | null; logoStatus?: string };
+  | { phase: "bp_failed"; message: string; signatureUrl?: string; brandProfileData?: Record<string, unknown> | null; logoStatus?: string; failureReference?: string };
 
 interface VisualSignatureApprovalModalProps {
   isOpen: boolean;
@@ -72,6 +72,7 @@ interface VisualSignatureApprovalModalProps {
   onRemove?: () => void;
   onTier2Retry?: () => Promise<void>;
   onOpenGallery?: () => void;
+  onDirectionPending?: (info: { message: string; reference?: string }) => void;
 }
 
 export function VisualSignatureApprovalModal({
@@ -96,6 +97,7 @@ export function VisualSignatureApprovalModal({
   onRemove,
   onTier2Retry,
   onOpenGallery,
+  onDirectionPending,
 }: VisualSignatureApprovalModalProps) {
   const { costs, status } = useOperationCosts();
   const vsCost = costs?.visual_signature_generation;
@@ -322,15 +324,18 @@ export function VisualSignatureApprovalModal({
         return;
       }
 
-      // In substitution mode, check for Tier 2 brand-profile failure
-      if (mode === 'substitution' && data.bp_status === 'failed') {
+      // Quick 261025-svt: falha do perfil de marca em QUALQUER modo é
+      // fail-closed — mostra a pendência e oferece o realinhamento.
+      if (data.bp_status === 'failed') {
         setState({
           phase: "bp_failed",
-          message: "O perfil de marca não pôde ser gerado. Você pode tentar novamente.",
+          message: data.message || "Não foi possível concluir a direção visual. A geração de campanhas ficará indisponível até a conclusão.",
           signatureUrl: data.signature?.assetUrl,
-          brandProfileData: data.brandProfileData ?? null,
+          brandProfileData: null,
           logoStatus: "generated",
+          failureReference: data.failure_reference,
         });
+        onDirectionPending?.({ message: data.message, reference: data.failure_reference });
         return;
       }
 
@@ -354,7 +359,7 @@ export function VisualSignatureApprovalModal({
     } catch {
       setState({ phase: "error", message: "Erro de conexão. Tente novamente." });
     }
-  }, [state, storeId, mode, onComplete]);
+  }, [state, storeId, mode, onComplete, onDirectionPending]);
 
   const handleApproveFromReview = useCallback(async (signatureId: string) => {
     setState({ phase: "approving" });
@@ -382,14 +387,18 @@ export function VisualSignatureApprovalModal({
         return;
       }
 
-      if (mode === 'substitution' && data.bp_status === 'failed') {
+      // Quick 261025-svt: falha do perfil de marca em QUALQUER modo é
+      // fail-closed — mostra a pendência e oferece o realinhamento.
+      if (data.bp_status === 'failed') {
         setState({
           phase: "bp_failed",
-          message: "O perfil de marca não pôde ser gerado. Você pode tentar novamente.",
+          message: data.message || "Não foi possível concluir a direção visual. A geração de campanhas ficará indisponível até a conclusão.",
           signatureUrl: data.signature?.assetUrl,
-          brandProfileData: data.brandProfileData ?? null,
+          brandProfileData: null,
           logoStatus: "generated",
+          failureReference: data.failure_reference,
         });
+        onDirectionPending?.({ message: data.message, reference: data.failure_reference });
         return;
       }
 
@@ -413,7 +422,7 @@ export function VisualSignatureApprovalModal({
     } catch {
       setState({ phase: "error", message: "Erro de conexão. Tente novamente." });
     }
-  }, [storeId, mode, onComplete]);
+  }, [storeId, mode, onComplete, onDirectionPending]);
 
   const handleRealignActive = useCallback(() => {
     setState({
@@ -446,15 +455,39 @@ export function VisualSignatureApprovalModal({
       const data = await res.json().catch(() => ({}));
       // Falha funcional (recusa, filtro de conteúdo, vazio, truncamento, JSON):
       // mantém o modal e mostra a mensagem segura/específica devolvida pela API.
-      // O perfil de marca anterior permanece (garantido server-side).
       if (!res.ok || data.success === false) {
         setState((prev) =>
           prev.phase === "bp_failed"
-            ? { ...prev, message: data.message || "Não foi possível gerar o perfil de marca agora. Tente novamente." }
+            ? {
+                ...prev,
+                message: data.message || "Não foi possível gerar o perfil de marca agora. Tente novamente.",
+                failureReference: data.failure_reference ?? prev.failureReference,
+              }
             : prev,
         );
         return;
       }
+
+      // Recuperação bem-sucedida: aplica o perfil retornado e conclui o fluxo.
+      const profile = data.profile ?? null;
+      const brandProfileData = profile
+        ? {
+            safe_color_tokens: profile.safe_color_tokens,
+            visual_style: profile.visual_style,
+            visual_tone: profile.visual_tone,
+            brand_personality: profile.brand_personality,
+            brand_colors_chosen: profile.brand_colors_chosen,
+            inferred_primary_color: profile.inferred_primary_color,
+            inferred_accent_color: profile.inferred_accent_color,
+            metadata: profile.metadata,
+          }
+        : null;
+
+      onComplete({
+        logoStatus: 'generated',
+        signatureUrl: state.phase === 'bp_failed' ? state.signatureUrl : undefined,
+        brandProfileData,
+      });
       onClose();
     } catch {
       setState((prev) =>
@@ -463,7 +496,7 @@ export function VisualSignatureApprovalModal({
           : prev,
       );
     }
-  }, [onTier2Retry, storeId, onClose]);
+  }, [onTier2Retry, storeId, onClose, onComplete, state]);
 
   const handleClose = useCallback(() => {
     if (state.phase === "done") {
@@ -811,10 +844,15 @@ export function VisualSignatureApprovalModal({
             <div className="flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3 w-full">
               <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
               <div>
-                <p className="text-accent-amber text-sm font-heading font-semibold">Perfil de marca pendente</p>
+                <p className="text-accent-amber text-sm font-heading font-semibold">Direção visual pendente</p>
                 <p className="text-text-muted text-xs font-body mt-0.5">
                   {state.message}
                 </p>
+                {state.failureReference && (
+                  <p className="text-text-muted text-xs font-body mt-0.5">
+                    Código de suporte: {state.failureReference}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-3 w-full">
@@ -823,7 +861,7 @@ export function VisualSignatureApprovalModal({
                 onClick={handleRetryBP}
                 className="w-full px-4 py-2.5 bg-accent-amber text-white font-heading font-semibold text-sm rounded-lg hover:brightness-110 transition-all duration-200"
               >
-                Tentar novamente
+                Realinhar direção visual
               </button>
               <button
                 type="button"

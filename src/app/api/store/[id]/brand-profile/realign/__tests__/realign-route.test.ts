@@ -54,17 +54,40 @@ vi.mock('@/lib/brand-assets/text-only-inference-service', () => ({
 }));
 
 const mockProfilerGenerate = vi.fn();
+const mockLoadDirectionState = vi.fn(async () => ({
+  pending: true,
+  active_signature_id: 'vs-001',
+  synced_profile_id: null,
+  reference: null,
+  failure_at: null,
+}));
+const mockMarkOutdated = vi.fn(async () => ({ ok: true }));
+const mockRecordFailure = vi.fn(async () => ({ status: 'ok' }));
+const mockClearFailure = vi.fn(async () => ({ status: 'ok' }));
+const mockIsActiveVS = vi.fn(async () => true);
+const mockSanitizeDiagnostic = vi.fn((s: string) => s);
 
 vi.mock('@/lib/visual-signature/brand-profiler', () => ({
   BrandProfilerWithoutLogoService: class {
     generate = mockProfilerGenerate;
   },
   BrandProfilerWithoutLogoError: class extends Error {
-    constructor(msg: string) {
+    metadata: { provider: string; model: string; elapsedMs: number; errorType: string };
+    constructor(msg: string, metadata: any = {}) {
       super(msg);
       this.name = 'BrandProfilerWithoutLogoError';
+      this.metadata = metadata;
     }
   },
+}));
+
+vi.mock('@/lib/visual-signature/direction-pending', () => ({
+  loadVisualDirectionState: mockLoadDirectionState,
+  markSyncedProfilesOutdatedExceptActive: mockMarkOutdated,
+  recordVisualDirectionFailure: mockRecordFailure,
+  clearVisualDirectionFailure: mockClearFailure,
+  isVisualSignatureActive: mockIsActiveVS,
+  sanitizeDirectionDiagnostic: mockSanitizeDiagnostic,
 }));
 
 vi.mock('@/lib/constants', () => ({
@@ -338,6 +361,18 @@ function makeRequest(storeId: string = STORE_ID) {
 describe('POST /api/store/[id]/brand-profile/realign', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLoadDirectionState.mockReset().mockResolvedValue({
+      pending: true,
+      active_signature_id: 'vs-001',
+      synced_profile_id: null,
+      reference: null,
+      failure_at: null,
+    });
+    mockMarkOutdated.mockReset().mockResolvedValue({ ok: true });
+    mockRecordFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockClearFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockIsActiveVS.mockReset().mockResolvedValue(true);
+    mockSanitizeDiagnostic.mockImplementation((s: string) => s);
     mockBrandDirectorAnalyze.mockResolvedValue(mockDirectorResult);
     mockProfilerGenerate.mockClear();
     mockTextOnlyInfer.mockResolvedValue({
@@ -555,7 +590,134 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
     expect(res.status).toBe(200); // Returns 200 with success: false
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.error).toBe('Inference failed');
+    expect(body.error).toBe('brand_profile_vision_failed');
+    expect(body.error).not.toContain('Inference failed');
+  });
+
+  it('VS path — pendência: falha grava referência nova e marca synced antigos outdated', async () => {
+    mockProfilerGenerate.mockRejectedValue(new Error('raw provider message'));
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(false);
+    expect(body.brand_profile_status).toBe('failed');
+    expect(typeof body.failure_reference).toBe('string');
+    expect(body.failure_reference).toMatch(/^run-\d+$/);
+    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID);
+    expect(mockRecordFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storeId: STORE_ID,
+        signatureId: 'vs-001',
+        reference: body.failure_reference,
+        failureCode: 'unexpected_error',
+      }),
+    );
+    expect(body.error).not.toContain('raw provider');
+  });
+
+  it('VS path — sem pendência: falha preserva perfil e mensagem "direção anterior mantida"', async () => {
+    mockLoadDirectionState.mockResolvedValue({
+      pending: false,
+      active_signature_id: 'vs-001',
+      synced_profile_id: 'p1',
+      reference: null,
+      failure_at: null,
+    });
+    mockProfilerGenerate.mockRejectedValue(new Error('vision down'));
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: { ...mockProfile, visual_signature_id: 'vs-001' }, error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.message).toContain('A direção visual anterior foi mantida.');
+    expect(body.error).toBe('brand_profile_vision_failed');
+    expect(mockMarkOutdated).not.toHaveBeenCalled();
+    expect(mockRecordFailure).not.toHaveBeenCalled();
+  });
+
+  it('VS path — superseded → 409 sem cleanup/metadata', async () => {
+    const mod = await import('@/lib/visual-signature/brand-profiler');
+    mockProfilerGenerate.mockRejectedValue(
+      new mod.BrandProfilerWithoutLogoError('superseded', {
+        provider: 'openai',
+        model: 'gpt-4o',
+        elapsedMs: 0,
+        errorType: 'visual_signature_superseded',
+      }),
+    );
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe('visual_signature_superseded');
+    expect(mockMarkOutdated).not.toHaveBeenCalled();
+    expect(mockRecordFailure).not.toHaveBeenCalled();
+  });
+
+  it('VS path — leitura de estado falhando → 500 direction_state_unavailable', async () => {
+    mockLoadDirectionState.mockRejectedValue(new Error('db down'));
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe('direction_state_unavailable');
+    expect(mockProfilerGenerate).not.toHaveBeenCalled();
+  });
+
+  it('VS path — sucesso limpa metadata e reporta synced', async () => {
+    mockProfilerGenerate.mockResolvedValue({
+      success: true,
+      profile: {
+        id: 'vs-profile-001', status: 'synced', source: 'without_logo',
+        safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+        inferred_primary_color: '#22C55E', inferred_accent_color: '#1E40AF',
+        visual_style: 'Moderno', visual_tone: 'Elegante', brand_personality: 'Sofisticado',
+        brand_colors_chosen: ['#22C55E', '#1E40AF'], metadata: {},
+      },
+    });
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    expect(body.brand_profile_status).toBe('synced');
+    expect(body.failure_reference).toBeNull();
+    expect(mockClearFailure).toHaveBeenCalledWith({ storeId: STORE_ID, signatureId: 'vs-001' });
   });
 
   it('logo path inserts profile with selected fields in response', async () => {
@@ -630,6 +792,11 @@ describe('Brand cost accounting (6.5) — realign', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEvents.length = 0;
+    mockLoadDirectionState.mockReset().mockResolvedValue({ pending: true, active_signature_id: 'vs-001', synced_profile_id: null, reference: null, failure_at: null });
+    mockMarkOutdated.mockReset().mockResolvedValue({ ok: true });
+    mockRecordFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockClearFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockIsActiveVS.mockReset().mockResolvedValue(true);
     mockBrandDirectorAnalyze.mockResolvedValue(mockDirectorResult);
     mockProfilerGenerate.mockClear();
     mockTextOnlyInfer.mockResolvedValue({
@@ -769,6 +936,11 @@ describe('Brand cost accounting (6.5) — realign', () => {
     const firstRunId = [...firstRunIds][0];
 
     capturedEvents.length = 0;
+    mockLoadDirectionState.mockReset().mockResolvedValue({ pending: true, active_signature_id: 'vs-001', synced_profile_id: null, reference: null, failure_at: null });
+    mockMarkOutdated.mockReset().mockResolvedValue({ ok: true });
+    mockRecordFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockClearFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockIsActiveVS.mockReset().mockResolvedValue(true);
     const res2 = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
     expect(res2.status).toBe(200);
     const secondRunEvents = capturedEvents.filter(
@@ -796,6 +968,11 @@ describe('snapshot econômico (F38.2.1) — realign', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedEvents.length = 0;
+    mockLoadDirectionState.mockReset().mockResolvedValue({ pending: true, active_signature_id: 'vs-001', synced_profile_id: null, reference: null, failure_at: null });
+    mockMarkOutdated.mockReset().mockResolvedValue({ ok: true });
+    mockRecordFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockClearFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockIsActiveVS.mockReset().mockResolvedValue(true);
     mockBrandDirectorAnalyze.mockResolvedValue(mockDirectorResult);
     mockProfilerGenerate.mockClear();
     mockTextOnlyInfer.mockResolvedValue({

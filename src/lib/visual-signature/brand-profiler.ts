@@ -131,6 +131,23 @@ export class BrandProfilerWithoutLogoService {
     this.invoker = invoker;
   }
 
+  /**
+   * Quick 261025-svt: guard de assinatura ativa. Sem guard = sem efeito.
+   * `false` ⇒ assinatura substituída; nenhuma persistência deve ocorrer.
+   */
+  private async assertStillActive(input: BrandProfilerInput): Promise<void> {
+    if (!input.assertActiveVisualSignature) return;
+    const active = await input.assertActiveVisualSignature();
+    if (!active) {
+      throw new BrandProfilerWithoutLogoError("visual_signature_superseded", {
+        provider: "openai",
+        model: DEFAULT_VISION_MODEL,
+        elapsedMs: 0,
+        errorType: "visual_signature_superseded",
+      });
+    }
+  }
+
   private async downloadAssetBuffer(assetUrl: string): Promise<Buffer | null> {
     try {
       const response = await fetch(assetUrl);
@@ -232,6 +249,10 @@ export class BrandProfilerWithoutLogoService {
 
   async generate(input: BrandProfilerInput, telemetry?: AiTelemetryContext): Promise<BrandProfileGenerationResult> {
     const startTime = Date.now();
+
+    // Quick 261025-svt: guard antes de QUALQUER persistência — inclusive o
+    // caminho de reuso/cache (outdated→synced).
+    await this.assertStillActive(input);
 
     // Mode 'regenerate': skip cache, go directly to inference
     if (input.mode !== 'regenerate') {
@@ -808,6 +829,7 @@ export class BrandProfilerWithoutLogoService {
     result: BrandProfilerWithoutLogoResult,
     colorValidation?: ColorValidation
   ): Promise<BrandProfileRecord> {
+    await this.assertStillActive(input);
     // Mode 'regenerate': delegate to 3-branch persistence
     if (input.mode === 'regenerate') {
       return this.persistWithRegenerate(input, result, colorValidation);
@@ -933,6 +955,7 @@ export class BrandProfilerWithoutLogoService {
     result: BrandProfilerWithoutLogoResult,
     colorValidation?: ColorValidation
   ): Promise<BrandProfileRecord> {
+    await this.assertStillActive(input);
     const safeLogoColors = sanitizeHexArray(result.logo_colors_detected);
     const palette = safeLogoColors.length > 0 ? safeLogoColors : ['#666666'];
     const safePrimary = sanitizeHex(result.inferred_primary_color)
@@ -1147,6 +1170,7 @@ export class BrandProfilerWithoutLogoService {
     _extractedColors: string[] = [],
     colorValidation?: ColorValidation
   ): Promise<void> {
+    await this.assertStillActive(input);
     const rawColors = _extractedColors.length > 0 ? _extractedColors : input.artDirectorOutput.suggested_colors;
     const palette = sanitizeHexArray(rawColors);
     const finalPalette = palette.length > 0 ? palette : ['#666666'];

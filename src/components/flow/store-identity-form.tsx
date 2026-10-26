@@ -5,6 +5,7 @@ import type { FormData as StoreFormData } from "./use-store-form";
 import type { Store } from "@/lib/store";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
+import { DirectionPendingBanner } from "./direction-pending-banner";
 import { VisualSignatureHistoryModal } from "./visual-signature-history-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
@@ -178,6 +179,14 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const officialCnpjRef = useRef<string | null>(null);
   const [showRemoveLogoDialog, setShowRemoveLogoDialog] = useState(false);
   const [driftRefreshKey, setDriftRefreshKey] = useState(0);
+  // Quick 261025-svt: estado server-side da direção visual (pendência/erro).
+  const [directionPending, setDirectionPending] = useState<{
+    pending: boolean;
+    reference: string | null;
+    error: boolean;
+    message: string | null;
+  }>({ pending: false, reference: null, error: false, message: null });
+  const [isRealinhandoDirection, setIsRealinhandoDirection] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [trialOffer, setTrialOffer] = useState<TrialOfferOutcome | null>(null);
   const [existingLegalOk, setExistingLegalOk] = useState(true);
@@ -317,8 +326,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   // F36 (D4/D6/D13): readiness consumido pelo hook (tabStates / geração).
   const [readiness, setReadiness] = useState<StoreReadinessResult>({ ready: true, missing: [] });
   // MD-03: força refetch após update-cnpj (storeId não muda → sem trigger natural).
-  const [readinessRefreshKey, setReadinessRefreshKey] = useState(0);
-  useEffect(() => {
+  const [readinessRefreshKey, setReadinessRefreshKey] = useState(0);  useEffect(() => {
     if (!storeId) {
       setReadiness({ ready: true, missing: [] });
       return;
@@ -588,12 +596,14 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
     const load = async () => {
       try {
-        const [storeRes, logoRes, profileRes] = await Promise.all([
+        const [storeRes, logoRes, profileRes, directionRes] = await Promise.all([
           fetch(`/api/store/${storeId}`),
           fetch(`/api/store/${storeId}/logo`),
           // Perfil VIGENTE (synced) — separado da tentativa `failed` histórica, que
           // NÃO deve ser tratada como atual nem sobrepor as cores/direção vigentes.
           fetch(`/api/store/${storeId}/brand-profile?status=synced`),
+          // Quick 261025-svt: pendência de direção visual server-side.
+          fetch(`/api/store/${storeId}/brand-profile?status=direction-state`),
         ]);
 
         if (storeRes.ok) {
@@ -610,6 +620,58 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             const preferredAsset = assets.on_dark ?? assets.original;
             if (preferredAsset?.signed_url) setLogoResultUrl(preferredAsset.signed_url);
           }
+        }
+
+        // Quick 261025-svt: avalia o estado da direção ANTES de aplicar o perfil.
+        // Erro de leitura é explícito — nunca tratado como ausência/legado.
+        let directionPendingActive = false;
+        let directionReadFailed = false;
+        if (directionRes.ok) {
+          try {
+            const directionState = await directionRes.json();
+            if (directionState?.pending) {
+              directionPendingActive = true;
+              const reference: string | null = directionState.reference ?? null;
+              setDirectionPending({
+                pending: true,
+                reference,
+                error: false,
+                message:
+                  'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. ' +
+                  'A geração de campanhas ficará indisponível até a conclusão. ' +
+                  `Informe ao suporte o código ${reference ?? ''}. ` +
+                  'Após a orientação do suporte, clique em Realinhar direção visual.',
+              });
+            } else {
+              setDirectionPending({ pending: false, reference: null, error: false, message: null });
+            }
+          } catch {
+            directionReadFailed = true;
+          }
+        } else {
+          directionReadFailed = true;
+        }
+
+        if (directionReadFailed) {
+          directionPendingActive = true;
+          setDirectionPending({
+            pending: true,
+            reference: null,
+            error: true,
+            message:
+              'Não foi possível verificar a direção visual. Recarregue a página. ' +
+              'A geração de campanhas permanece bloqueada até a verificação.',
+          });
+        }
+
+        if (directionPendingActive) {
+          // Não aplica o perfil vigente (pode ser de assinatura substituída) e
+          // limpa os campos orientadores.
+          setInferredProfile(null);
+          setBrandColorsChosen([]);
+          setDetectedColors([]);
+          setAccentColor("");
+          return;
         }
 
         if (profileRes.ok) {
@@ -651,7 +713,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               if (latestRes.ok) {
                 const latest = await latestRes.json();
                 if (latest?.status === 'failed') {
-                  console.error('[StoreIdentityForm] Profile failed (histórico):', latest.source, latest.metadata?.errorType ?? latest.metadata?.error);
+                  console.error('[StoreIdentityForm] Profile failed (histórico):', latest.source, latest.metadata?.errorType);
                   if (latest.source === 'logo_analysis') {
                     setBrandDirectorWarning('A direção visual não foi gerada para este logotipo. Tente novamente.');
                   } else {
@@ -799,8 +861,67 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       }
     }
     setDriftRefreshKey(k => k + 1);
+    setReadinessRefreshKey(k => k + 1);
+    setDirectionPending({ pending: false, reference: null, error: false, message: null });
     setShowApprovalModal(false);
   }, [setField, formData.brand_color, setIdentityState, setInferredProfile, setDriftRefreshKey]);
+
+  const handleDirectionRealign = useCallback(async () => {
+    if (!storeId || isRealinhandoDirection) return;
+    setIsRealinhandoDirection(true);
+    try {
+      const res = await fetch(`/api/store/${storeId}/brand-profile/realign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success !== false) {
+        const profile = data.profile;
+        if (profile) {
+          if (profile.logo_colors_detected?.length > 0) {
+            setDetectedColors(profile.logo_colors_detected);
+          }
+          if (hasUserChosenColors(profile.brand_colors_chosen ?? [])) {
+            setBrandColorsChosen(profile.brand_colors_chosen);
+            setField("brand_color", profile.brand_colors_chosen[0] ?? "");
+            setAccentColor(profile.brand_colors_chosen[1] ?? profile.inferred_accent_color ?? "");
+          } else if (profile.safe_color_tokens?.primary) {
+            setField("brand_color", profile.safe_color_tokens.primary);
+            setAccentColor(profile.inferred_accent_color ?? profile.safe_color_tokens.accent ?? "");
+          }
+          setInferredProfile({
+            safe_color_tokens: profile.safe_color_tokens,
+            visual_style: profile.visual_style,
+            visual_tone: profile.visual_tone,
+            brand_personality: profile.brand_personality,
+            brand_colors_chosen: profile.brand_colors_chosen,
+            inferred_primary_color: profile.inferred_primary_color,
+            inferred_accent_color: profile.inferred_accent_color,
+            metadata: profile.metadata,
+          });
+        }
+        setDirectionPending({ pending: false, reference: null, error: false, message: null });
+        setReadinessRefreshKey(k => k + 1);
+        setDriftRefreshKey(k => k + 1);
+      } else {
+        setDirectionPending((prev) => ({
+          ...prev,
+          reference: data.failure_reference ?? prev.reference,
+          message: data.message ?? "Não foi possível realinhar a direção visual. Tente novamente.",
+          error: false,
+        }));
+      }
+    } catch {
+      setDirectionPending((prev) => ({
+        ...prev,
+        message: "Não foi possível realinhar a direção visual. Tente novamente.",
+        error: false,
+      }));
+    } finally {
+      setIsRealinhandoDirection(false);
+    }
+  }, [storeId, isRealinhandoDirection, setField]);
 
   useEffect(() => {
     if (isLoading || !storeId) return;
@@ -2168,8 +2289,17 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               </div>
             </div>
 
-            {redirectMessage === "needs-visual-direction" && (
-              <div className="mb-4 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
+            {directionPending.pending && (
+              <DirectionPendingBanner
+                reference={directionPending.reference}
+                message={directionPending.message ?? ""}
+                onRealign={handleDirectionRealign}
+                isRealinhando={isRealinhandoDirection}
+                error={directionPending.error}
+              />
+            )}
+
+            {redirectMessage === "needs-visual-direction" && (              <div className="mb-4 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
                 <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
                 <p className="text-accent-amber text-sm font-body flex-1">
                   Sua loja precisa de uma direção visual para gerar campanhas. Configure agora.
@@ -2852,6 +2982,9 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
           onOpenGallery={handleOpenGallery}
+          onDirectionPending={({ message, reference }) =>
+            setDirectionPending({ pending: true, reference: reference ?? null, error: false, message })
+          }
           initialReviewFeedbackOpen={openApprovalWithFeedback}
         />
       )}

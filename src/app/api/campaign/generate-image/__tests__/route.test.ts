@@ -1962,6 +1962,7 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
     expect(res.status).toBe(412);
     expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
   });
 
   it('F2: rate limit ⇒ 429, sem reserva/provider', async () => {

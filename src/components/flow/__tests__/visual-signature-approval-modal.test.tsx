@@ -46,20 +46,17 @@ beforeEach(() => {
 describe('VisualSignatureApprovalModal mode:substitution', () => {
   it('substitution mode checks bp_status after approval', () => {
     function handleApprovalResponse(
-      mode: 'standard' | 'substitution',
       bpStatus: string | undefined
     ): 'done' | 'bp_failed' {
-      if (bpStatus === 'failed' && mode === 'substitution') {
+      if (bpStatus === 'failed') {
         return 'bp_failed';
       }
       return 'done';
     }
 
-    expect(handleApprovalResponse('substitution', 'failed')).toBe('bp_failed');
-    expect(handleApprovalResponse('substitution', 'synced')).toBe('done');
-    expect(handleApprovalResponse('substitution', undefined)).toBe('done');
-    // Standard mode ignores bp_status
-    expect(handleApprovalResponse('standard', 'failed')).toBe('done');
+    expect(handleApprovalResponse('failed')).toBe('bp_failed');
+    expect(handleApprovalResponse('synced')).toBe('done');
+    expect(handleApprovalResponse(undefined)).toBe('done');
   });
 
   it('bp_failed offers Tentar novamente -> calls POST /brand-profile/realign', () => {
@@ -141,20 +138,19 @@ describe('VisualSignatureApprovalModal mode:standard', () => {
     expect(body).not.toHaveProperty('mode');
   });
 
-  it('standard mode does NOT check bp_status', () => {
+  it('standard mode também trata bp_status=failed (fail-closed)', () => {
     function handleApprovalResponse(
-      mode: 'standard' | 'substitution',
       bpStatus: string | undefined
     ): 'done' | 'bp_failed' {
-      if (bpStatus === 'failed' && mode === 'substitution') {
+      if (bpStatus === 'failed') {
         return 'bp_failed';
       }
       return 'done';
     }
 
-    expect(handleApprovalResponse('standard', 'failed')).toBe('done');
-    expect(handleApprovalResponse('standard', 'synced')).toBe('done');
-    expect(handleApprovalResponse('standard', undefined)).toBe('done');
+    expect(handleApprovalResponse('failed')).toBe('bp_failed');
+    expect(handleApprovalResponse('synced')).toBe('done');
+    expect(handleApprovalResponse(undefined)).toBe('done');
   });
 });
 
@@ -443,6 +439,144 @@ describe('VisualSignatureApprovalModal behavioral (Cancelar) — rendering', () 
   });
 });
 
+describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-svt)', () => {
+  function mockFlow(opts: {
+    approveBody: Record<string, unknown>;
+    realign?: Record<string, unknown>;
+  }) {
+    vi.spyOn(global, 'fetch').mockImplementation(async (url, init) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof Request ? url.url : '';
+      if (urlStr.includes('/api/legal/status')) {
+        return new Response(JSON.stringify({ acceptanceStatus: 'current' }), { status: 200 });
+      }
+      if (urlStr.includes('/generate-without-logo')) {
+        return new Response(
+          JSON.stringify({ assetUrl: 'https://x/sig.png', signatureId: 'sig-1', artDirectorOutput: {}, attempt: 1 }),
+          { status: 200 },
+        );
+      }
+      if (urlStr.includes('/visual-signature?limit=6') || (urlStr.includes('/visual-signature') && (!init || !init.method || init.method === 'GET'))) {
+        return new Response(JSON.stringify({ signatures: [] }), { status: 200 });
+      }
+      if (urlStr.includes('/visual-signature/approve')) {
+        return new Response(JSON.stringify(opts.approveBody), { status: 200 });
+      }
+      if (urlStr.includes('/brand-profile/realign')) {
+        return new Response(JSON.stringify(opts.realign ?? {}), { status: 200 });
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    });
+  }
+
+  for (const mode of ['standard', 'substitution'] as const) {
+    it(`${mode}: bp_status=failed mostra título, mensagem, referência e CTA`, async () => {
+      const onDirectionPending = vi.fn();
+      mockFlow({
+        approveBody: {
+          signature: { assetUrl: 'https://x/sig.png' },
+          bp_status: 'failed',
+          brandProfileData: null,
+          message: 'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.',
+          failure_reference: 'run-ref-7',
+        },
+      });
+
+      render(<VisualSignatureApprovalModal {...createModalProps({ mode, onDirectionPending })} />);
+
+      await waitFor(() => expect(screen.getByText('Aprovar')).toBeInTheDocument());
+      fireEvent.click(screen.getByText('Aprovar'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.')).toBeInTheDocument();
+      expect(screen.getByText('Código de suporte: run-ref-7')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Realinhar direção visual' })).toBeInTheDocument();
+      expect(onDirectionPending).toHaveBeenCalledWith({
+        message: 'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.',
+        reference: 'run-ref-7',
+      });
+    });
+  }
+
+  it('sucesso do realinhamento chama onComplete com brandProfileData e fecha', async () => {
+    const onComplete = vi.fn();
+    const onClose = vi.fn();
+    mockFlow({
+      approveBody: {
+        signature: { assetUrl: 'https://x/sig.png' },
+        bp_status: 'failed',
+        message: 'pendente',
+        failure_reference: 'run-ref-8',
+      },
+      realign: {
+        success: true,
+        profile: {
+          id: 'p-1',
+          status: 'synced',
+          safe_color_tokens: { primary: '#111111' },
+          visual_style: 'Moderno',
+          visual_tone: 'Elegante',
+          brand_personality: 'Sofisticado',
+          brand_colors_chosen: ['#111111', '#222222'],
+          inferred_primary_color: '#111111',
+          inferred_accent_color: '#222222',
+          metadata: {},
+        },
+      },
+    });
+
+    render(<VisualSignatureApprovalModal {...createModalProps({ onComplete, onClose })} />);
+
+    await waitFor(() => expect(screen.getByText('Aprovar')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Aprovar'));
+    await waitFor(() => expect(screen.getByText('Direção visual pendente')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Realinhar direção visual' }));
+
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          logoStatus: 'generated',
+          brandProfileData: expect.objectContaining({ safe_color_tokens: { primary: '#111111' } }),
+        }),
+      );
+    });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('nova falha mantém bp_failed e atualiza referência/mensagem', async () => {
+    const onClose = vi.fn();
+    mockFlow({
+      approveBody: {
+        signature: { assetUrl: 'https://x/sig.png' },
+        bp_status: 'failed',
+        message: 'pendente inicial',
+        failure_reference: 'run-ref-9',
+      },
+      realign: {
+        success: false,
+        message: 'Não foi possível concluir a direção visual. Tente novamente.',
+        failure_reference: 'run-ref-10',
+      },
+    });
+
+    render(<VisualSignatureApprovalModal {...createModalProps({ onClose })} />);
+
+    await waitFor(() => expect(screen.getByText('Aprovar')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Aprovar'));
+    await waitFor(() => expect(screen.getByText('Código de suporte: run-ref-9')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Realinhar direção visual' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Código de suporte: run-ref-10')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
 describe('VisualSignatureApprovalModal — bp_failed retry (diagnóstico do realinhamento)', () => {
   it('falha no realinhamento mantém o modal e mostra a mensagem segura específica', async () => {
     const props = createModalProps({ mode: 'substitution' });
@@ -486,10 +620,10 @@ describe('VisualSignatureApprovalModal — bp_failed retry (diagnóstico do real
     fireEvent.click(screen.getByText('Aprovar'));
 
     await waitFor(() => {
-      expect(screen.getByText('Perfil de marca pendente')).toBeInTheDocument();
+      expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Tentar novamente'));
+    fireEvent.click(screen.getByText('Realinhar direção visual'));
 
     await waitFor(() => {
       expect(screen.getByText(/A direção visual anterior foi mantida\./)).toBeInTheDocument();

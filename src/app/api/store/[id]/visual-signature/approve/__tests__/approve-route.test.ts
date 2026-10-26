@@ -8,6 +8,11 @@ const mockUpdateEventDecision = vi.fn();
 const mockReconcileProfiles = vi.fn();
 const mockRevalidateCriticalDrift = vi.fn();
 const mockCreateSignedUrl = vi.fn(() => Promise.resolve({ data: { signedUrl: 'signed-vs-url' }, error: null }));
+const mockIsVisualSignatureActive = vi.fn(async () => true);
+const mockMarkOutdated = vi.fn(async () => ({ ok: true }));
+const mockRecordFailure = vi.fn(async () => ({ status: 'ok' }));
+const mockClearFailure = vi.fn(async () => ({ status: 'ok' }));
+const mockSanitizeDiagnostic = vi.fn((s: string) => s);
 
 vi.mock('@/lib/supabase/server', () => ({
   supabaseAdmin: {
@@ -36,6 +41,22 @@ vi.mock('@/lib/visual-signature/brand-profiler', () => ({
   BrandProfilerWithoutLogoService: class {
     generate = mockBrandProfilerGenerate;
   },
+  BrandProfilerWithoutLogoError: class extends Error {
+    metadata: { provider: string; model: string; elapsedMs: number; errorType: string };
+    constructor(message: string, metadata: any) {
+      super(message);
+      this.name = 'BrandProfilerWithoutLogoError';
+      this.metadata = metadata;
+    }
+  },
+}));
+
+vi.mock('@/lib/visual-signature/direction-pending', () => ({
+  isVisualSignatureActive: mockIsVisualSignatureActive,
+  markSyncedProfilesOutdatedExceptActive: mockMarkOutdated,
+  recordVisualDirectionFailure: mockRecordFailure,
+  clearVisualDirectionFailure: mockClearFailure,
+  sanitizeDirectionDiagnostic: mockSanitizeDiagnostic,
 }));
 
 vi.mock('@/lib/visual-signature/generation-events', () => ({
@@ -155,6 +176,11 @@ function setupStoreQuery(result: any) {
 describe('POST /api/store/[id]/visual-signature/approve', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsVisualSignatureActive.mockReset().mockResolvedValue(true);
+    mockMarkOutdated.mockReset().mockResolvedValue({ ok: true });
+    mockRecordFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockClearFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockSanitizeDiagnostic.mockImplementation((s: string) => s);
     storeBrandProfileUpdates.length = 0;
     mockBrandProfilerGenerate.mockResolvedValue({
       profile: { ...mockProfile, id: 'new-profile-001' },
@@ -321,7 +347,7 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     );
   });
 
-  it('12.10 — brand profiler failure returns fallback', async () => {
+  it('12.10 — brand profiler failure returns fail-closed response', async () => {
     setupStoreQuery({ data: mockStore, error: null });
     mockBrandProfilerGenerate.mockRejectedValue(new Error('Vision failed'));
     const { POST } = await import('../route');
@@ -330,6 +356,109 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     const body = await res.json();
     expect(body.brandProfile.status).toBe('failed');
     expect(body.brandProfileData).toBeNull();
+    expect(body.bp_status).toBe('failed');
+    expect(body.brand_profile_status).toBe('failed');
+    expect(typeof body.failure_reference).toBe('string');
+    expect(body.failure_reference.length).toBeGreaterThan(0);
+    expect(body.inferredPrimaryColor).toBeNull();
+    expect(body.inferredAccentColor).toBeNull();
+    expect(body.logoColorsDetected).toEqual([]);
+    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID);
+    expect(mockRecordFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storeId: STORE_ID,
+        signatureId: SIG_ID,
+        reference: body.failure_reference,
+        failureCode: 'unexpected_error',
+      }),
+    );
+  });
+
+  it('12.10b — falha do profiler nunca restaura perfil para synced', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    mockBrandProfilerGenerate.mockRejectedValue(new Error('Vision failed'));
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const statuses = storeBrandProfileUpdates.map((u: any) => u.status).filter(Boolean);
+    expect(statuses).not.toContain('synced');
+  });
+
+  it('12.10c — cleanup falhando → 500 sem success:true', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    mockBrandProfilerGenerate.mockRejectedValue(new Error('Vision failed'));
+    mockMarkOutdated.mockResolvedValue({ ok: false, error: 'cleanup_failed' });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe('brand_profile_cleanup_failed');
+    expect(body.success).not.toBe(true);
+  });
+
+  it('12.10d — gravação de referência falhando → 500', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    mockBrandProfilerGenerate.mockRejectedValue(new Error('Vision failed'));
+    mockRecordFailure.mockResolvedValue({ status: 'error', error: 'reference_failed' });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe('brand_profile_reference_failed');
+  });
+
+  it('12.10e — guard superseded → 409 sem cleanup nem metadata', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    const mod = await import('@/lib/visual-signature/brand-profiler');
+    mockBrandProfilerGenerate.mockRejectedValue(
+      new mod.BrandProfilerWithoutLogoError('superseded', {
+        provider: 'openai',
+        model: 'gpt-4o',
+        elapsedMs: 0,
+        errorType: 'visual_signature_superseded',
+      }),
+    );
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe('visual_signature_superseded');
+    expect(mockMarkOutdated).not.toHaveBeenCalled();
+    expect(mockRecordFailure).not.toHaveBeenCalled();
+  });
+
+  it('12.10f — resposta atrasada (metadata superseded) → 409, sem perfil de A', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    mockBrandProfilerGenerate.mockRejectedValue(new Error('Vision failed'));
+    mockRecordFailure.mockResolvedValue({ status: 'superseded' });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe('visual_signature_superseded');
+  });
+
+  it('12.10g — reuso quando isVisualSignatureActive=false → 409', async () => {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockSignature, error: null });
+      if (table === 'store_brand_profiles') return makeBrandProfileChain({ data: [mockProfile], error: null });
+      return makeChain({ data: null, error: null });
+    });
+    mockIsVisualSignatureActive.mockResolvedValue(false);
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(409);
+    expect(mockReconcileProfiles).not.toHaveBeenCalled();
+  });
+
+  it('12.9b — sucesso limpa metadata de falha e reporta synced', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    expect(body.brand_profile_status).toBe('synced');
+    expect(body.failure_reference).toBeNull();
+    expect(mockClearFailure).toHaveBeenCalledWith({ storeId: STORE_ID, signatureId: SIG_ID });
   });
 
   it('12.11 — intendedPalette null → profiler called with null', async () => {
@@ -603,6 +732,11 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsVisualSignatureActive.mockReset().mockResolvedValue(true);
+    mockMarkOutdated.mockReset().mockResolvedValue({ ok: true });
+    mockRecordFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockClearFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockSanitizeDiagnostic.mockImplementation((s: string) => s);
     storeBrandProfileUpdates.length = 0;
     mockBrandProfilerGenerate.mockResolvedValue({
       profile: { ...mockProfile, id: 'new-sub-profile-001' },
@@ -709,7 +843,7 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
     expect(res.status).toBe(500);
   });
 
-  it('SUB-5 — should return 200 with bp_status:failed when BP fails (Tier 2 fallback)', async () => {
+  it('SUB-5 — should return 200 with bp_status:failed when BP fails (fail-closed)', async () => {
     mockBrandProfilerGenerate.mockRejectedValue(new Error('BP generation failed'));
 
     setupVSQuery();
@@ -719,9 +853,38 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.bp_status).toBe('failed');
+    expect(body.brand_profile_status).toBe('failed');
+    expect(typeof body.failure_reference).toBe('string');
     expect(body.visual_signature_id).toBe(SIG_ID);
     expect(body.signature.status).toBe('active');
-    expect(body.warning).toBeDefined();
+    expect(body.inferredPrimaryColor).toBeNull();
+    expect(body.inferredAccentColor).toBeNull();
+    expect(body.logoColorsDetected).toEqual([]);
+    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID);
+    expect(mockRecordFailure).toHaveBeenCalled();
+    // NUNCA restaura perfil para synced
+    const statuses = storeBrandProfileUpdates.map((u: any) => u.status).filter(Boolean);
+    expect(statuses).not.toContain('synced');
+  });
+
+  it('SUB-5b — substitution superseded → 409 sem cleanup nem metadata', async () => {
+    const mod = await import('@/lib/visual-signature/brand-profiler');
+    mockBrandProfilerGenerate.mockRejectedValue(
+      new mod.BrandProfilerWithoutLogoError('superseded', {
+        provider: 'openai',
+        model: 'gpt-4o',
+        elapsedMs: 0,
+        errorType: 'visual_signature_superseded',
+      }),
+    );
+
+    setupVSQuery();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeSubstitutionRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(409);
+    expect(mockMarkOutdated).not.toHaveBeenCalled();
+    expect(mockRecordFailure).not.toHaveBeenCalled();
   });
 
   it('SUB-6 — should succeed with bp_status:success on full substitution', async () => {

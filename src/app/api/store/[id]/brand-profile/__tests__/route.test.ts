@@ -24,6 +24,12 @@ vi.mock('@/lib/validators/color', () => ({
   normalizeBrandColorsChosen: vi.fn((c: any) => c),
 }));
 
+const mockLoadDirectionState = vi.fn();
+
+vi.mock('@/lib/visual-signature/direction-pending', () => ({
+  loadVisualDirectionState: mockLoadDirectionState,
+}));
+
 function makeChain(result: any) {
   const resolvable = Promise.resolve(result);
   const chain: any = Object.assign(() => resolvable, {
@@ -102,6 +108,64 @@ describe('GET /api/store/[id]/brand-profile', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toBeNull();
+  });
+
+  it('?status=direction-state pendente retorna o estado', async () => {
+    mockLoadDirectionState.mockResolvedValue({
+      pending: true,
+      active_signature_id: 'sig-1',
+      synced_profile_id: null,
+      reference: 'run-9',
+      failure_at: '2026-10-25T00:00:00.000Z',
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile?status=direction-state`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pending).toBe(true);
+    expect(body.reference).toBe('run-9');
+  });
+
+  it('?status=direction-state completo retorna pending=false', async () => {
+    mockLoadDirectionState.mockResolvedValue({
+      pending: false,
+      active_signature_id: 'sig-1',
+      synced_profile_id: 'p1',
+      reference: 'sig-1',
+      failure_at: null,
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile?status=direction-state`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    expect(body.pending).toBe(false);
+    expect(body.active_signature_id).toBe('sig-1');
+  });
+
+  it('?status=direction-state sem assinatura ativa retorna nulls', async () => {
+    mockLoadDirectionState.mockResolvedValue({
+      pending: false,
+      active_signature_id: null,
+      synced_profile_id: null,
+      reference: null,
+      failure_at: null,
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile?status=direction-state`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    expect(body.active_signature_id).toBeNull();
+  });
+
+  it('?status=direction-state erro de leitura → 500 direction_state_unavailable', async () => {
+    mockLoadDirectionState.mockRejectedValue(new Error('db down'));
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile?status=direction-state`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe('direction_state_unavailable');
   });
 });
 

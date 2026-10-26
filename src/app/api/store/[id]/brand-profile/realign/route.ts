@@ -17,6 +17,14 @@ import { createDefaultTelemetryContext } from '@/lib/ai';
 import type { GenerationEventType } from '@/lib/visual-signature/types';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
+import {
+  clearVisualDirectionFailure,
+  isVisualSignatureActive,
+  loadVisualDirectionState,
+  markSyncedProfilesOutdatedExceptActive,
+  recordVisualDirectionFailure,
+  sanitizeDirectionDiagnostic,
+} from '@/lib/visual-signature/direction-pending';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
@@ -582,13 +590,31 @@ async function handleVSRealign(
   const intendedPalette = (vsMetadata?.artDirectorOutput as Record<string, unknown> | undefined)
     ?.intended_palette as BrandProfilerInput['intendedPalette'] | undefined;
 
+  let pendingBefore = true;
+  let failureReference: string | null = null;
+
   try {
+    // Quick 261025-svt: distinguir realinhamento de recuperação (pendência)
+    // de um realinhamento comum. Erro de leitura é explícito (nunca ausência).
+    try {
+      const directionState = await loadVisualDirectionState(id);
+      pendingBefore = directionState.pending;
+    } catch {
+      locks.delete(id);
+      return NextResponse.json({
+        success: false,
+        error: 'direction_state_unavailable',
+        message: 'Não foi possível verificar a direção visual agora. Tente novamente.',
+      }, { status: 500 });
+    }
+
     const profiler = new BrandProfilerWithoutLogoService();
     const startTime = Date.now();
 
     // ── F38.1 (D1/D7): regenerate = NOVO run (novo operationRunId — 6.5
     // test 4). Cada request de geração/realinhamento é um run (D1). ──────
     const run = new AiCostTracker().startRun("brand_profile");
+    failureReference = run.operationRunId;
     // F38.2.1 (D3): snapshot do run — resolvido UMA vez após o startRun.
     const economicSnapshot = await resolveEconomicSnapshot();
 
@@ -632,6 +658,7 @@ async function handleVSRealign(
       previousBrandColors: previousBrandColors,
       mode: 'regenerate',
       contentUsed: contentUsed as BrandProfilerInput['contentUsed'],
+      assertActiveVisualSignature: () => isVisualSignatureActive(id, vsRecord.id),
     }, telemetry);
 
     // F38.1 (D1/D6): delivery marker sem custo (anti-dupla-contagem).
@@ -645,6 +672,16 @@ async function handleVSRealign(
 
     // Profiler handles 3 branches internally with compensation.
     // Identity state remains 'visual_signature' — no change to store.
+
+    const cleared = await clearVisualDirectionFailure({ storeId: id, signatureId: vsRecord.id });
+    if (cleared.status === 'superseded') {
+      locks.delete(id);
+      return NextResponse.json({
+        success: false,
+        error: 'visual_signature_superseded',
+        message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+      }, { status: 409 });
+    }
 
     locks.delete(id);
     return NextResponse.json({
@@ -662,17 +699,79 @@ async function handleVSRealign(
         brand_colors_chosen: result.profile.brand_colors_chosen,
         metadata: result.profile.metadata,
       },
+      brand_profile_status: 'synced',
+      failure_reference: null,
+      ...(cleared.status === 'error' ? { warning: 'direction_metadata_cleanup_failed' } : {}),
     });
   } catch (err) {
     // Profiler handles persistence internally (failed profile).
-    // Previous profile NOT marked outdated (compensation inside profiler).
-    const message = err instanceof Error ? err.message : 'Erro interno';
-
     locks.delete(id);
+
+    const isProfilerError = err instanceof BrandProfilerWithoutLogoError;
+    const safeErrorType = isProfilerError ? err.metadata.errorType : 'unexpected_error';
+    const sanitized = sanitizeDirectionDiagnostic(err instanceof Error ? err.message : '');
+    console.error('[realign/vs] brand_profile_failed', {
+      code: safeErrorType,
+      ...(sanitized ? { detail: sanitized } : {}),
+    });
+
+    if (isProfilerError && err.metadata.errorType === 'visual_signature_superseded') {
+      return NextResponse.json({
+        success: false,
+        error: 'visual_signature_superseded',
+        message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+      }, { status: 409 });
+    }
+
+    if (!pendingBefore) {
+      return NextResponse.json({
+        success: false,
+        message: 'Não foi possível regenerar o perfil de marca. A direção visual anterior foi mantida.',
+        error: 'brand_profile_vision_failed',
+      });
+    }
+
+    const cleanup = await markSyncedProfilesOutdatedExceptActive(id);
+    if (!cleanup.ok) {
+      return NextResponse.json({
+        success: false,
+        error: 'brand_profile_cleanup_failed',
+        message: 'Não foi possível concluir a transição com segurança. Tente novamente.',
+      }, { status: 500 });
+    }
+
+    const recorded = await recordVisualDirectionFailure({
+      storeId: id,
+      signatureId: vsRecord.id,
+      reference: failureReference,
+      failureCode: safeErrorType,
+    });
+
+    if (recorded.status === 'superseded') {
+      return NextResponse.json({
+        success: false,
+        error: 'visual_signature_superseded',
+        message: 'A assinatura visual foi substituída por outra aprovação. Recarregue a página.',
+      }, { status: 409 });
+    }
+
+    if (recorded.status === 'error') {
+      return NextResponse.json({
+        success: false,
+        error: 'brand_profile_reference_failed',
+        message: 'Não foi possível concluir a transição com segurança. Tente novamente.',
+      }, { status: 500 });
+    }
+
     return NextResponse.json({
       success: false,
-      message: 'Não foi possível regenerar o perfil de marca. A assinatura visual foi mantida.',
-      error: message,
+      message:
+        'Não foi possível concluir a direção visual. A geração de campanhas ficará indisponível até a conclusão. ' +
+        `Informe ao suporte o código ${failureReference ?? ''}. ` +
+        'Após a orientação do suporte, clique em Realinhar direção visual.',
+      error: 'brand_profile_vision_failed',
+      brand_profile_status: 'failed',
+      failure_reference: failureReference,
     });
   }
 }

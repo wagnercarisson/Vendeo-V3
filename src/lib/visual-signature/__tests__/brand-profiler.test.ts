@@ -330,6 +330,108 @@ describe('BrandProfilerWithoutLogoService.generate', () => {
   });
 });
 
+describe('BrandProfilerWithoutLogoService — assertActiveVisualSignature guard (261025-svt)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new ArrayBuffer(0),
+    });
+  });
+
+  it('guard false com perfil existente → superseded e ZERO update/insert', async () => {
+    const updateMock = vi.fn();
+    const insertMock = vi.fn();
+    mockSupabaseFrom.mockImplementation(() => {
+      const chain: any = makeChain({ data: [mockSyncedProfile], error: null });
+      chain.update = updateMock;
+      chain.insert = insertMock;
+      return chain;
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+
+    await expect(
+      service.generate({ ...mockBrandProfilerInput, assertActiveVisualSignature: async () => false }),
+    ).rejects.toMatchObject({
+      name: 'BrandProfilerWithoutLogoError',
+      metadata: { errorType: 'visual_signature_superseded' },
+    });
+
+    expect(mockSupabaseFrom).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('guard false bloqueia o caminho de reuso (existente synced) antes do update outdated→synced', async () => {
+    let updateCalledWith: any = null;
+    mockSupabaseFrom.mockImplementation(() => {
+      const chain: any = makeChain({ data: [mockOutdatedProfile], error: null });
+      chain.update = vi.fn((data: any) => {
+        updateCalledWith = data;
+        return chain;
+      });
+      return chain;
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+
+    await expect(
+      service.generate({ ...mockBrandProfilerInput, assertActiveVisualSignature: async () => false }),
+    ).rejects.toMatchObject({ metadata: { errorType: 'visual_signature_superseded' } });
+
+    expect(updateCalledWith).toBeNull();
+  });
+
+  it('guard false sem perfil → rejeita antes de qualquer insert', async () => {
+    const insertMock = vi.fn();
+    mockSupabaseFrom.mockImplementation(() => {
+      const chain: any = makeChain({ data: [], error: null });
+      chain.insert = insertMock;
+      return chain;
+    });
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+
+    await expect(
+      service.generate({ ...mockBrandProfilerInput, assertActiveVisualSignature: async () => false }),
+    ).rejects.toMatchObject({ metadata: { errorType: 'visual_signature_superseded' } });
+
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it('guard true → fluxo atual preservado (reuso retorna perfil)', async () => {
+    mockSupabaseFrom.mockImplementation(() => makeChain({ data: [mockSyncedProfile], error: null }));
+    const guard = vi.fn(async () => true);
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      assertActiveVisualSignature: guard,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.profile.id).toBe('profile-synced-001');
+    expect(guard).toHaveBeenCalled();
+  });
+
+  it('sem guard → comportamento atual preservado', async () => {
+    mockSupabaseFrom.mockImplementation(() => makeChain({ data: [mockSyncedProfile], error: null }));
+
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService();
+    const result = await service.generate(mockBrandProfilerInput);
+
+    expect(result.success).toBe(true);
+    expect(result.profile.id).toBe('profile-synced-001');
+  });
+});
+
 describe('BrandProfilerWithoutLogoService — onCall (F38.1, D7/D11)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
