@@ -39,7 +39,10 @@ export interface ParsedOpenAiModelPricing {
 }
 
 type Modality = "text" | "image";
-type PriceCell = { value: number | null; explicitNull: boolean };
+type PriceCell =
+  | { kind: "value"; value: number }
+  | { kind: "not_applicable" }
+  | { kind: "missing" };
 
 interface CollectedRow {
   model: string;
@@ -83,8 +86,11 @@ function isSeparatorRow(cells: string[]): boolean {
 
 function parsePriceCell(raw: string | undefined): PriceCell {
   const value = (raw ?? "").trim();
-  if (value === "" || value === "-" || value === "—") {
-    return { value: null, explicitNull: true };
+  if (value === "") {
+    return { kind: "missing" };
+  }
+  if (value === "-" || value === "—") {
+    return { kind: "not_applicable" };
   }
   const match = value.match(/^\$?\s*(\d+(?:\.\d+)?)$/);
   if (!match) {
@@ -94,7 +100,7 @@ function parsePriceCell(raw: string | undefined): PriceCell {
   if (!Number.isFinite(parsed) || parsed < 0) {
     throw new OpenAiPricingParseError("invalid_price", value.slice(0, 40));
   }
-  return { value: parsed, explicitNull: false };
+  return { kind: "value", value: parsed };
 }
 
 function findColumn(headers: string[], names: readonly string[]): number {
@@ -240,14 +246,29 @@ function extractTable(params: {
 }
 
 function requireNumber(cell: PriceCell | undefined, detail: string): number {
-  if (!cell || cell.value === null) {
-    throw new OpenAiPricingParseError("missing_dimension", detail);
+  if (!cell || cell.kind === "missing") {
+    throw new OpenAiPricingParseError("missing_information", detail);
+  }
+  if (cell.kind === "not_applicable") {
+    throw new OpenAiPricingParseError("not_applicable_dimension", detail);
   }
   return cell.value;
 }
 
-function optionalNumber(cell: PriceCell | undefined): number | null {
-  return cell?.value ?? null;
+/**
+ * Só para dimensão explicitamente não aplicável no provider (ex.: saída textual
+ * de modelo de imagem, publicada como "-"). Célula vazia continua sendo
+ * informação ausente e falha a tentativa.
+ */
+function optionalNotApplicableNumber(
+  cell: PriceCell | undefined,
+  detail: string,
+): number | null {
+  if (!cell || cell.kind === "missing") {
+    throw new OpenAiPricingParseError("missing_information", detail);
+  }
+  if (cell.kind === "not_applicable") return null;
+  return cell.value;
 }
 
 function resolveInventory(
@@ -269,7 +290,12 @@ function resolveInventory(
         model: entry.model,
         kind: "text",
         inputTextUsdPer1M: requireNumber(textRow.textInput, `${entry.model}:input_text`),
-        cachedInputTextUsdPer1M: optionalNumber(textRow.textCached),
+        // Cache é tarifa aplicável aos modelos textuais do inventário; "-"/vazio
+        // NÃO vira null silencioso (preserva a tabela em caso de dúvida).
+        cachedInputTextUsdPer1M: requireNumber(
+          textRow.textCached,
+          `${entry.model}:cached_input_text`,
+        ),
         outputTextUsdPer1M: requireNumber(textRow.textOutput, `${entry.model}:output_text`),
         inputImageUsdPer1M: null,
         cachedInputImageUsdPer1M: null,
@@ -288,11 +314,21 @@ function resolveInventory(
       model: entry.model,
       kind: "image",
       inputTextUsdPer1M: requireNumber(textRow.textInput, `${entry.model}:input_text`),
-      cachedInputTextUsdPer1M: optionalNumber(textRow.textCached),
+      cachedInputTextUsdPer1M: requireNumber(
+        textRow.textCached,
+        `${entry.model}:cached_input_text`,
+      ),
       // Modelos de imagem não publicam saída textual ("-" na tabela Text).
-      outputTextUsdPer1M: optionalNumber(textRow.textOutput),
+      // "-" é não aplicável; célula vazia é informação ausente (falha).
+      outputTextUsdPer1M: optionalNotApplicableNumber(
+        textRow.textOutput,
+        `${entry.model}:output_text`,
+      ),
       inputImageUsdPer1M: requireNumber(imageRow.imageInput, `${entry.model}:input_image`),
-      cachedInputImageUsdPer1M: optionalNumber(imageRow.imageCached),
+      cachedInputImageUsdPer1M: requireNumber(
+        imageRow.imageCached,
+        `${entry.model}:cached_input_image`,
+      ),
       outputImageUsdPer1M: requireNumber(imageRow.imageOutput, `${entry.model}:output_image`),
     };
   });

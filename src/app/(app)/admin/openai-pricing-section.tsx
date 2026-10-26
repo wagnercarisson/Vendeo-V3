@@ -60,14 +60,23 @@ function stateBadge(state: PricingSyncState): { variant: "ready" | "error" | "ge
 
 function syncNotice(
   state: PricingSyncState,
-  lastAttempt: PricingSyncAttemptSummary | null,
 ): { variant: "info" | "warning"; lines: string[] } | null {
   const success = state.lastSuccessAt
     ? formatDateTimeBR(state.lastSuccessAt)
     : "nunca confirmada";
-  const attemptAt = lastAttempt
-    ? `${formatDateTimeBR(lastAttempt.startedAt)} — ${attemptStatusLabel(lastAttempt)}`
+  const lastResolvedAttempt = state.lastAttemptAt
+    ? `${formatDateTimeBR(state.lastAttemptAt)} — ${
+        state.lastAttemptStatus === "failed"
+          ? "falhou"
+          : state.lastAttemptStatus === "success"
+            ? "sucesso"
+            : "em andamento"
+      }`
     : "sem tentativa registrada";
+  const runningLine =
+    state.running && state.runningSince
+      ? `Nova consulta em andamento desde ${formatDateTimeBR(state.runningSince)}.`
+      : null;
 
   if (state.kind === "fresh") return null;
 
@@ -77,7 +86,7 @@ function syncNotice(
       lines: [
         "Atualização das tarifas OpenAI em andamento.",
         `Última confirmação: ${success}.`,
-        `Última tentativa: ${attemptAt}.`,
+        ...(runningLine ? [runningLine] : []),
       ],
     };
   }
@@ -88,7 +97,8 @@ function syncNotice(
       lines: [
         "Atualização das tarifas OpenAI pendente.",
         `Última confirmação: ${success}.`,
-        `Última tentativa: ${attemptAt}.`,
+        `Última tentativa: ${lastResolvedAttempt}.`,
+        ...(runningLine ? [runningLine] : []),
         "Os custos continuam sendo estimados com a última tabela confirmada.",
       ],
     };
@@ -100,14 +110,15 @@ function syncNotice(
       lines: [
         "Atualização das tarifas OpenAI pendente.",
         `Última confirmação: ${success} (há mais de 36 horas).`,
-        `Última tentativa: ${attemptAt}.`,
+        `Última tentativa: ${lastResolvedAttempt}.`,
+        ...(runningLine ? [runningLine] : []),
         "Os custos continuam sendo estimados com a última tabela confirmada.",
       ],
     };
   }
 
   if (state.kind === "interrupted") {
-    const interruptedAt = state.lastAttemptAt ?? lastAttempt?.startedAt ?? null;
+    const interruptedAt = state.lastAttemptAt ?? null;
     return {
       variant: "warning",
       lines: [
@@ -118,6 +129,7 @@ function syncNotice(
         interruptedAt
           ? `A última execução ficou interrompida em ${formatDateTimeBR(interruptedAt)}.`
           : "A última execução ficou interrompida.",
+        ...(runningLine ? [runningLine] : []),
         "Os custos continuam sendo estimados com a última tabela confirmada.",
       ],
     };
@@ -129,7 +141,8 @@ function syncNotice(
       lines: [
         "Atualização das tarifas OpenAI pendente.",
         "Nenhuma confirmação automática registrada.",
-        lastAttempt ? `Última tentativa: ${attemptAt}.` : "Nenhuma tentativa registrada.",
+        `Última tentativa: ${lastResolvedAttempt}.`,
+        ...(runningLine ? [runningLine] : []),
         "Os custos continuam sendo estimados com a última tabela disponível.",
       ],
     };
@@ -157,7 +170,7 @@ export function OpenAiPricingSectionView({
   data: OpenAiPricingDashboardResult;
 }) {
   const badge = stateBadge(data.state);
-  const notice = syncNotice(data.state, data.lastAttempt);
+  const notice = syncNotice(data.state);
 
   const showTextCache = hasAny(data.prices, (row) => row.cachedInputTokenUsdPer1M);
   const showTextOutput = hasAny(data.prices, (row) => row.outputTokenUsdPer1M);
@@ -321,6 +334,12 @@ export function OpenAiPricingSectionView({
           <div className="space-y-2">
             <h3 className="text-sm font-semibold">Preços por unidade de imagem</h3>
             <p className="text-xs text-muted-foreground">US$ por imagem</p>
+            <p className="text-xs text-muted-foreground">
+              Valores preservados pelo versionamento de preços. Eles não são
+              conferidos pela sincronização automática das tarifas por token; o
+              selo de conferência acima se refere somente aos valores por 1
+              milhão de tokens.
+            </p>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-left text-sm">
                 <thead className="bg-bg-surface text-xs uppercase text-muted-foreground">

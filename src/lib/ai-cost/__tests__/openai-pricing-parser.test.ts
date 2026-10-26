@@ -120,7 +120,7 @@ describe("parseOpenAiStandardPricing — tabela Standard", () => {
     );
   });
 
-  it("zero explícito é válido; ausência ('-') não vira zero", () => {
+  it("zero explícito é válido; cache não confirmado ('-') falha e preserva a tabela", () => {
     const zeroMarkdown = FIXTURE.replace(
       "| gpt-4o | $2.50 | $10.00 | $1.25 |",
       "| gpt-4o | $2.50 | $10.00 | $0.00 |",
@@ -128,12 +128,43 @@ describe("parseOpenAiStandardPricing — tabela Standard", () => {
     const zero = parseOpenAiStandardPricing(zeroMarkdown, TEXT_ONLY)[0];
     expect(zero.cachedInputTextUsdPer1M).toBe(0);
 
+    // GPT-4o tem cache aplicável. "-" não pode virar null e apagar a tarifa
+    // existente na próxima versão.
     const absentMarkdown = FIXTURE.replace(
       "| gpt-4o | $2.50 | $10.00 | $1.25 |",
       "| gpt-4o | $2.50 | $10.00 | - |",
     );
-    const absent = parseOpenAiStandardPricing(absentMarkdown, TEXT_ONLY)[0];
-    expect(absent.cachedInputTextUsdPer1M).toBeNull();
+    expect(() => parseOpenAiStandardPricing(absentMarkdown, TEXT_ONLY)).toThrowError(
+      expect.objectContaining({ code: "not_applicable_dimension" }),
+    );
+  });
+
+  it("célula vazia é informação ausente (distinta de '-' não aplicável)", () => {
+    const emptyMarkdown = FIXTURE.replace(
+      "| gpt-4o | $2.50 | $10.00 | $1.25 |",
+      "| gpt-4o | $2.50 | $10.00 |  |",
+    );
+
+    expect(() => parseOpenAiStandardPricing(emptyMarkdown, TEXT_ONLY)).toThrowError(
+      expect.objectContaining({ code: "missing_information" }),
+    );
+  });
+
+  it("saída textual '-' de modelo de imagem é não aplicável (null) e não erro", () => {
+    const parsed = parseFixture();
+    const image = parsed.find((row) => row.model === "gpt-image-2");
+    expect(image?.outputTextUsdPer1M).toBeNull();
+  });
+
+  it("saída textual vazia de modelo de imagem é informação ausente → erro", () => {
+    const markdown = FIXTURE.replace(
+      "| gpt-image-2 | Text | $5.00 | - | $1.25 |",
+      "| gpt-image-2 | Text | $5.00 |  | $1.25 |",
+    );
+
+    expect(() => parseOpenAiStandardPricing(markdown, OPENAI_PRICING_INVENTORY)).toThrowError(
+      expect.objectContaining({ code: "missing_information" }),
+    );
   });
 
   it("dimensão obrigatória ausente ('-') → erro, não zero", () => {
@@ -143,7 +174,7 @@ describe("parseOpenAiStandardPricing — tabela Standard", () => {
     );
 
     expect(() => parseOpenAiStandardPricing(markdown, TEXT_ONLY)).toThrowError(
-      expect.objectContaining({ code: "missing_dimension" }),
+      expect.objectContaining({ code: "not_applicable_dimension" }),
     );
   });
 

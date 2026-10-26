@@ -205,6 +205,32 @@ describe("runOpenAiPricingSync — sucesso, falha e atomicidade", () => {
     );
   });
 
+  it("cache aplicável não confirmado ('-') → falha a tentativa inteira, sem apply", async () => {
+    const { store, applyPrices, failAttempt } = makeStore();
+    const content = FIXTURE.replace(
+      "| gpt-4o | $2.50 | $10.00 | $1.25 |",
+      "| gpt-4o | $2.50 | $10.00 | - |",
+    );
+
+    const result = await runOpenAiPricingSync({
+      store,
+      fetchDocument: async () => ({ ...DOCUMENT, content }),
+      logger: makeLogger(),
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "parse",
+      code: "parse_not_applicable_dimension",
+    });
+    expect(applyPrices).not.toHaveBeenCalled();
+    expect(failAttempt).toHaveBeenCalledWith(
+      "attempt-1",
+      "parse",
+      "parse_not_applicable_dimension",
+    );
+  });
+
   it("falha no apply → retorna failed (nunca sucesso) e registra", async () => {
     const { store, failAttempt } = makeStore({
       applyPrices: vi.fn(async () => {

@@ -2,8 +2,8 @@
 -- Quick 261026 — sincronização diária das tarifas OpenAI
 -- Migration: 20261026191931_quick_openai_pricing_sync.sql
 --
--- LOCAL-ONLY: NÃO aplicar nesta execução. Criada para revisão e aplicação
--- autorizada posterior.
+-- APLICAÇÃO PENDENTE DE AUTORIZAÇÃO — preparada para homolog e produção.
+-- NÃO aplicar sem autorização explícita nesta ou em outra execução.
 --
 -- Escopo:
 --   1. Dimensões explícitas de entrada/cache de imagem em ai_model_pricing.

@@ -21,6 +21,8 @@ function makeData(
     lastSuccessAt: "2026-10-26T19:01:00.000Z",
     lastAttemptAt: "2026-10-26T19:00:00.000Z",
     lastAttemptStatus: "success",
+    running: false,
+    runningSince: null,
   };
 
   return {
@@ -129,6 +131,8 @@ describe("OpenAiPricingSectionView — tabela persistida e estado", () => {
         lastSuccessAt: "2026-10-26T19:01:00.000Z",
         lastAttemptAt: "2026-10-26T19:30:00.000Z",
         lastAttemptStatus: "failed",
+        running: false,
+        runningSince: null,
       },
       lastAttempt: {
         id: "attempt-fail",
@@ -150,6 +154,42 @@ describe("OpenAiPricingSectionView — tabela persistida e estado", () => {
     );
   });
 
+  it("falha continua destacada durante nova consulta, com aviso de andamento", () => {
+    const data = makeData({
+      state: {
+        kind: "failed",
+        lastSuccessAt: "2026-10-26T19:01:00.000Z",
+        lastAttemptAt: "2026-10-26T19:30:00.000Z",
+        lastAttemptStatus: "failed",
+        running: true,
+        runningSince: "2026-10-26T19:50:00.000Z",
+      },
+      lastAttempt: {
+        id: "attempt-running",
+        status: "running",
+        startedAt: "2026-10-26T19:50:00.000Z",
+        finishedAt: null,
+        failureStage: null,
+        failureCode: null,
+      },
+    });
+
+    render(<OpenAiPricingSectionView data={data} />);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Atualização das tarifas OpenAI pendente.");
+    expect(alert).toHaveTextContent("Última tentativa: 26/10/2026, 16:30 — falhou.");
+    expect(alert).toHaveTextContent(
+      "Nova consulta em andamento desde 26/10/2026, 16:50.",
+    );
+  });
+
+  it("preços por unidade informam que não são conferidos pelo sincronizador", () => {
+    render(<OpenAiPricingSectionView data={makeData()} />);
+    expect(
+      screen.getByText(/não são conferidos pela sincronização automática/),
+    ).toBeInTheDocument();
+  });
+
   it("stale (>36h) adapta o aviso", () => {
     const data = makeData({
       state: {
@@ -157,6 +197,8 @@ describe("OpenAiPricingSectionView — tabela persistida e estado", () => {
         lastSuccessAt: "2026-10-24T10:00:00.000Z",
         lastAttemptAt: "2026-10-26T19:00:00.000Z",
         lastAttemptStatus: "success",
+        running: false,
+        runningSince: null,
       },
     });
 
@@ -171,6 +213,8 @@ describe("OpenAiPricingSectionView — tabela persistida e estado", () => {
         lastSuccessAt: null,
         lastAttemptAt: "2026-10-26T19:00:00.000Z",
         lastAttemptStatus: "failed",
+        running: false,
+        runningSince: null,
       },
       lastSuccessAt: null,
     });
@@ -189,6 +233,8 @@ describe("OpenAiPricingSectionView — tabela persistida e estado", () => {
         lastSuccessAt: null,
         lastAttemptAt: null,
         lastAttemptStatus: null,
+        running: false,
+        runningSince: null,
       },
       lastSuccessAt: null,
       lastAttempt: null,

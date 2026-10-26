@@ -104,7 +104,7 @@ describe("derivePricingSyncState — sucesso, falha e atraso", () => {
         ],
         now: NOW,
       }),
-    ).toMatchObject({ kind: "running" });
+    ).toMatchObject({ kind: "running", running: true });
 
     expect(
       derivePricingSyncState({
@@ -117,7 +117,107 @@ describe("derivePricingSyncState — sucesso, falha e atraso", () => {
         ],
         now: NOW,
       }),
-    ).toMatchObject({ kind: "interrupted" });
+    ).toMatchObject({ kind: "interrupted", running: false });
+  });
+
+  it("falha anterior continua destacada durante nova consulta", () => {
+    const state = derivePricingSyncState({
+      attempts: [
+        attempt({
+          id: "attempt-running",
+          status: "running",
+          startedAt: "2026-10-26T19:50:00.000Z",
+          finishedAt: null,
+        }),
+        attempt({
+          id: "attempt-fail",
+          status: "failed",
+          startedAt: "2026-10-26T19:20:00.000Z",
+          finishedAt: "2026-10-26T19:21:00.000Z",
+          failureStage: "fetch",
+          failureCode: "fetch_timeout",
+        }),
+        attempt(),
+      ],
+      now: NOW,
+    });
+
+    expect(state).toMatchObject({
+      kind: "failed",
+      running: true,
+      runningSince: "2026-10-26T19:50:00.000Z",
+      lastSuccessAt: "2026-10-26T19:01:00.000Z",
+      lastAttemptAt: "2026-10-26T19:20:00.000Z",
+      lastAttemptStatus: "failed",
+    });
+  });
+
+  it("atraso anterior continua destacado durante nova consulta", () => {
+    const old = new Date(NOW.getTime() - PRICING_SYNC_STALE_MS - 60_000).toISOString();
+    const state = derivePricingSyncState({
+      attempts: [
+        attempt({
+          status: "running",
+          startedAt: "2026-10-26T19:50:00.000Z",
+          finishedAt: null,
+        }),
+        attempt({ startedAt: old, finishedAt: old }),
+      ],
+      now: NOW,
+    });
+
+    expect(state).toMatchObject({
+      kind: "stale",
+      running: true,
+      runningSince: "2026-10-26T19:50:00.000Z",
+    });
+  });
+
+  it("nunca confirmada com falha anterior continua pendente durante nova consulta", () => {
+    const state = derivePricingSyncState({
+      attempts: [
+        attempt({
+          status: "running",
+          startedAt: "2026-10-26T19:50:00.000Z",
+          finishedAt: null,
+        }),
+        attempt({
+          status: "failed",
+          startedAt: "2026-10-26T19:30:00.000Z",
+          finishedAt: "2026-10-26T19:31:00.000Z",
+          failureStage: "parse",
+          failureCode: "parse_missing_information",
+        }),
+      ],
+      now: NOW,
+    });
+
+    expect(state).toMatchObject({
+      kind: "never",
+      running: true,
+      lastSuccessAt: null,
+      lastAttemptStatus: "failed",
+    });
+  });
+
+  it("sucesso anterior fresco + nova consulta → running informativo", () => {
+    const state = derivePricingSyncState({
+      attempts: [
+        attempt({
+          status: "running",
+          startedAt: "2026-10-26T19:50:00.000Z",
+          finishedAt: null,
+        }),
+        attempt(),
+      ],
+      now: NOW,
+    });
+
+    expect(state).toMatchObject({
+      kind: "running",
+      running: true,
+      lastSuccessAt: "2026-10-26T19:01:00.000Z",
+    });
   });
 
   it("falha de consulta ao estado → unavailable (nunca atualizado)", () => {
