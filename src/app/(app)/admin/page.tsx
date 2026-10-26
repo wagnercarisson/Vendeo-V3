@@ -5,6 +5,7 @@ import { MonthlyCreditGrantButton } from "@/components/admin/monthly-credit-gran
 import { AUDIT_ACTION_LABELS } from "@/lib/admin/labels";
 import { getLabel } from "@/lib/labels";
 import { formatDateTimeBR } from "@/lib/formatters";
+import { OpenAiPricingSection } from "./openai-pricing-section";
 
 export default async function AdminDashboardPage() {
   await requireAdmin();
@@ -61,6 +62,8 @@ export default async function AdminDashboardPage() {
           </div>
         </Card>
       </div>
+
+      <OpenAiPricingSection />
 
       <Card>
         <div className="p-4">
