@@ -52,8 +52,8 @@ Nenhuma migration, tabela, coluna, status novo, dependência ou variável de amb
 
 ## Testes e gates
 
-- Suíte focada: **222 passed / 0 failed** (9 arquivos).
-- Regressão ampliada (`visual-signature` + `api/store` + `components/flow/__tests__` + readiness + guarda de não-ativação + generate-image): **931 passed / 0 failed** (78 arquivos).
+- Suíte focada: **224 passed / 0 failed** (9 arquivos).
+- Regressão ampliada (`visual-signature` + `api/store` + `components/flow/__tests__` + readiness + guarda de não-ativação + generate-image): **933 passed / 0 failed** (78 arquivos).
 - `npm run typecheck`: exit 0.
 - `npm run lint`: exit 0.
 - `git diff --check`: limpo.
@@ -72,6 +72,19 @@ Após revisão do orquestrador, foram corrigidos pontos de borda sem ampliar o e
 
 Gates reexecutados após o complemento: focados **222/222** (9 arquivos); regressão ampliada **931/931** (78 arquivos); `npm run typecheck`, `npm run lint` e `git diff --check` exit 0.
 
+## Complemento — sincronização do formulário na aprovação com pendência (2026-10-25)
+
+O callback parcial `onDirectionPending` passou a carregar também `signatureUrl`/`signatureId` do resultado da aprovação. No formulário, o mesmo callback agora:
+
+- atualiza `identityState` para `visual_signature`, `logoStatus` para `generated` e a imagem da assinatura aprovada;
+- reconsulta `readiness` e `drift` (refresh keys);
+- limpa os campos orientadores/diagnósticos;
+- **mantém** o banner de pendência e **não** aplica `brandProfileData` nem direção antiga.
+
+Foi adicionado o seam opcional `initialApprovalMode` ao `StoreIdentityForm` (não passado em produção) para o teste integrado abrir o modal real. Os testes integrados cobrem **aprovação inicial** e **substituição** de ponta a ponta (modal → callback → formulário), verificando troca da imagem, identidade, banner/referência e nova consulta de readiness.
+
+Gates após o complemento: focados **224/224**; regressão ampliada **933/933**; `npm run typecheck`, `npm run lint` e `git diff --check` exit 0. Commit `59277cce`.
+
 ## Sem banco/provider/ambiente
 
 Nenhum Docker, Supabase CLI, psql, banco de dados, provider, chamada de rede ou migration foi executado. Testes são offline com mocks/fakes. Nenhuma tabela/coluna/status/migration/dependência/env foi criada ou alterada.
@@ -86,4 +99,4 @@ Nenhum Docker, Supabase CLI, psql, banco de dados, provider, chamada de rede ou 
 
 ## Disposição
 
-Commits locais de código/testes referenciando `261025-svt`: `20d25bf2` (implementação) e `12ed46c3` (complemento pós-revisão). Artefatos `.planning/**`, `STATE.md` e `ROADMAP.md` permanecem fora desses commits.
+Commits locais de código/testes referenciando `261025-svt`: `20d25bf2` (implementação), `12ed46c3` (complemento pós-revisão) e `59277cce` (sincronização do formulário na aprovação com pendência). Artefatos `.planning/**`, `STATE.md` e `ROADMAP.md` permanecem fora desses commits.
