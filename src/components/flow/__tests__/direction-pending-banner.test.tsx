@@ -6,8 +6,8 @@ import { DirectionPendingBanner } from '../direction-pending-banner';
 
 function renderBanner(overrides: Partial<React.ComponentProps<typeof DirectionPendingBanner>> = {}) {
   const props = {
-    reference: 'run-123',
-    message: 'A geração de campanhas ficará indisponível até a conclusão.',
+    message:
+      'Não foi possível concluir sua direção visual. A geração de campanhas ficará indisponível até a conclusão. Entre em contato com o suporte e informe o código DVAP01. Após a orientação do suporte, clique em Realinhar direção visual.',
     onRealign: vi.fn(),
     isRealinhando: false,
     error: false,
@@ -18,13 +18,20 @@ function renderBanner(overrides: Partial<React.ComponentProps<typeof DirectionPe
 }
 
 describe('DirectionPendingBanner', () => {
-  it('renderiza role=alert, título, mensagem e referência', () => {
+  it('renderiza role=alert, título e mensagem com o código uma única vez', () => {
     renderBanner();
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
-    expect(screen.getByText('A geração de campanhas ficará indisponível até a conclusão.')).toBeInTheDocument();
-    expect(screen.getByText('Código de suporte: run-123')).toBeInTheDocument();
+    expect(screen.getByText(/informe o código DVAP01/)).toBeInTheDocument();
+    expect(screen.getByRole('alert').textContent?.match(/DVAP01/g)).toHaveLength(1);
+  });
+
+  it('não renderiza referência interna nem linha "Código de suporte"', () => {
+    renderBanner({ message: 'Mensagem com DVAP01.' });
+
+    expect(screen.queryByText(/Código de suporte/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-/i)).not.toBeInTheDocument();
   });
 
   it('botão exato "Realinhar direção visual" dispara onRealign', () => {
@@ -35,9 +42,17 @@ describe('DirectionPendingBanner', () => {
   });
 
   it('estado error mostra o título de erro', () => {
-    renderBanner({ error: true, reference: null, message: 'Não foi possível verificar.' });
+    renderBanner({ error: true, message: 'Não foi possível verificar.' });
     expect(screen.getByText('Não foi possível verificar a direção visual')).toBeInTheDocument();
     expect(screen.queryByText(/Código de suporte/)).not.toBeInTheDocument();
+  });
+
+  it('mostra DVRE01 no realinhamento pendente', () => {
+    renderBanner({
+      message:
+        'Não foi possível concluir sua direção visual. A geração de campanhas ficará indisponível até a conclusão. Entre em contato com o suporte e informe o código DVRE01. Após a orientação do suporte, clique em Realinhar direção visual.',
+    });
+    expect(screen.getByText(/informe o código DVRE01/)).toBeInTheDocument();
   });
 
   it('botão desabilitado quando isRealinhando', () => {

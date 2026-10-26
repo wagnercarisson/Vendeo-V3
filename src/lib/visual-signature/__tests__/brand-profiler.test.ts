@@ -31,6 +31,27 @@ vi.mock('@/lib/brand-assets/color-probe', () => ({
 
 import { NoopAiTelemetrySink } from '@/lib/ai';
 import type { AiInvoker, AiTelemetryContext, TokenUsage } from '@/lib/ai';
+import { AiInvocationError } from '@/lib/ai/types';
+
+const PNG_BYTES = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01]);
+const JPEG_BYTES = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
+function fetchBytes(bytes: Uint8Array) {
+  return { ok: true, arrayBuffer: async () => bytes.buffer.slice(0) };
+}
+
+function makeRecordingInvoker(content = '{"visual_style":"Elegante"}') {
+  const invokeMock = vi.fn(async (_capability: string, _request: unknown, _telemetry: AiTelemetryContext) => {
+    return { content, model: 'gpt-4o' };
+  });
+  return {
+    invoker: {
+      invoke: invokeMock as unknown as AiInvoker['invoke'],
+      hasFallback: vi.fn(async () => false),
+    } as AiInvoker,
+    invokeMock,
+  };
+}
 
 const TELEMETRY: AiTelemetryContext = {
   operationRunId: 'run-1',
@@ -327,6 +348,142 @@ describe('BrandProfilerWithoutLogoService.generate', () => {
       process.env.OPENAI_API_KEY = originalApiKey;
       (process.env as Record<string, string>).NODE_ENV = originalNodeEnv ?? '';
     }
+  });
+});
+
+describe('BrandProfilerWithoutLogoService — asset local (261025-v14)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'store_brand_profiles') return makeChain({ data: [], error: null });
+      if (table === 'stores') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+    process.env.OPENAI_API_KEY = 'test-key';
+    (process.env as Record<string, string>).NODE_ENV = 'test';
+  });
+
+  afterEach(() => {
+    delete process.env.OPENAI_API_KEY;
+    (process.env as Record<string, string>).NODE_ENV = 'test';
+  });
+
+  it('loopback localhost → data URL no callVision (download único)', async () => {
+    mockFetch.mockResolvedValue(fetchBytes(PNG_BYTES));
+    const { invoker, invokeMock } = makeRecordingInvoker();
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService(invoker);
+
+    const result = await service.generate({
+      ...mockBrandProfilerInput,
+      assetUrl: 'http://localhost/sig.png',
+      intendedPalette: { primary: '#FF0000', accent: '#00FF00', background: '#FFFFFF', support: [] },
+    }, TELEMETRY);
+
+    expect(result.success).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const request = invokeMock.mock.calls[0][1] as { productImagesDataUrls: string[] };
+    expect(request.productImagesDataUrls).toHaveLength(1);
+    expect(request.productImagesDataUrls[0]).toMatch(/^data:image\/png;base64,/);
+    expect(request.productImagesDataUrls[0]).not.toContain('localhost');
+  });
+
+  it.each([
+    ['http://127.0.0.1/sig.png', PNG_BYTES, 'image/png'],
+    ['http://[::1]/sig.jpg', JPEG_BYTES, 'image/jpeg'],
+  ])('%s → data URL %s em callVisionFull', async (assetUrl, bytes, mime) => {
+    mockFetch.mockResolvedValue(fetchBytes(bytes));
+    const { invoker, invokeMock } = makeRecordingInvoker();
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService(invoker);
+
+    const asset = await (service as any).downloadAssetBuffer(assetUrl);
+    expect(asset.mimeType).toBe(mime);
+
+    await (service as any).callVisionFull({ ...mockBrandProfilerInput, assetUrl }, 'prompt', asset, TELEMETRY);
+
+    const request = invokeMock.mock.calls[0][1] as { productImagesDataUrls: string[] };
+    expect(request.productImagesDataUrls[0]).toMatch(new RegExp(`^data:${mime.replace('/', '\\/')};base64,`));
+  });
+
+  it('URL remota permanece crua (mesmo sem asset baixado)', async () => {
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService(makeRecordingInvoker().invoker);
+
+    const payload = (service as any).buildVisionImagePayload('https://cdn.example.com/x.png', null);
+
+    expect(payload).toBe('https://cdn.example.com/x.png');
+  });
+
+  it('loopback com download vazio → local_asset_download_failed e provider NÃO é chamado', async () => {
+    mockFetch.mockResolvedValue({ ok: true, arrayBuffer: async () => new ArrayBuffer(0) });
+    const { invoker, invokeMock } = makeRecordingInvoker();
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService(invoker);
+
+    await expect(service.generate({
+      ...mockBrandProfilerInput,
+      assetUrl: 'http://localhost/sig.png',
+      intendedPalette: { primary: '#FF0000', accent: '#00FF00', background: '#FFFFFF', support: [] },
+    }, TELEMETRY)).rejects.toMatchObject({
+      name: 'BrandProfilerWithoutLogoError',
+      metadata: { errorType: 'local_asset_download_failed' },
+    });
+
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it('loopback com HTTP não-ok ou conteúdo sem magic bytes → local_asset_download_failed sem provider', async () => {
+    mockFetch.mockResolvedValue({ ok: false, arrayBuffer: async () => new ArrayBuffer(0) });
+    const { invoker, invokeMock } = makeRecordingInvoker();
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService(invoker);
+
+    const input = {
+      ...mockBrandProfilerInput,
+      assetUrl: 'http://localhost/sig.png',
+      intendedPalette: { primary: '#FF0000', accent: '#00FF00', background: '#FFFFFF', support: [] },
+    };
+
+    await expect(service.generate(input, TELEMETRY)).rejects.toMatchObject({
+      metadata: { errorType: 'local_asset_download_failed' },
+    });
+
+    mockFetch.mockResolvedValue(fetchBytes(Uint8Array.from([0x00, 0x01, 0x02, 0x03])));
+    await expect(service.generate(input, TELEMETRY)).rejects.toMatchObject({
+      metadata: { errorType: 'local_asset_download_failed' },
+    });
+
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it('provider_error do gateway no caminho de divergência permanece provider_error', async () => {
+    const providerError = new AiInvocationError({
+      kind: 'provider_error',
+      retryable: true,
+      message: 'upstream failed',
+    });
+    const invokeMock = vi.fn(async () => { throw providerError; });
+    const invoker = {
+      invoke: invokeMock as unknown as AiInvoker['invoke'],
+      hasFallback: vi.fn(async () => false),
+    } as AiInvoker;
+    const { BrandProfilerWithoutLogoService } = await import('@/lib/visual-signature/brand-profiler');
+    const service = new BrandProfilerWithoutLogoService(invoker);
+
+    const rolePresence = new Map();
+
+    await expect((service as any).handleDivergence(
+      { ...mockBrandProfilerInput, assetUrl: 'https://cdn.example.com/x.png' },
+      { primary: '#FF0000', accent: '#00FF00', background: '#FFFFFF', support: [] },
+      null,
+      [],
+      rolePresence,
+      [],
+      [],
+      Date.now(),
+      TELEMETRY,
+    )).rejects.toMatchObject({ metadata: { errorType: 'provider_error' } });
   });
 });
 

@@ -6,6 +6,10 @@ import type { Store } from "@/lib/store";
 import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { DirectionPendingBanner } from "./direction-pending-banner";
+import {
+  visualDirectionSupportMessage,
+  type VisualDirectionSupportCode,
+} from "@/lib/visual-signature/support-codes";
 import { VisualSignatureHistoryModal } from "./visual-signature-history-modal";
 import { STORE_SEGMENTS, STORE_SUBSEGMENTS, BRAZILIAN_STATES } from "@/lib/constants";
 import { AlertCircle, CheckCircle2, Loader2, X, Upload, ArrowLeft, Sparkles } from "lucide-react";
@@ -182,10 +186,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   // Quick 261025-svt: estado server-side da direção visual (pendência/erro).
   const [directionPending, setDirectionPending] = useState<{
     pending: boolean;
-    reference: string | null;
+    supportCode: VisualDirectionSupportCode | null;
     error: boolean;
     message: string | null;
-  }>({ pending: false, reference: null, error: false, message: null });
+  }>({ pending: false, supportCode: null, error: false, message: null });
   const [isRealinhandoDirection, setIsRealinhandoDirection] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [trialOffer, setTrialOffer] = useState<TrialOfferOutcome | null>(null);
@@ -632,19 +636,17 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             const directionState = await directionRes.json();
             if (directionState?.pending) {
               directionPendingActive = true;
-              const reference: string | null = directionState.reference ?? null;
+              // Fallback histórico (sem support code persistido) → DVAP01.
+              const code: VisualDirectionSupportCode =
+                directionState.support_code === 'DVRE01' ? 'DVRE01' : 'DVAP01';
               setDirectionPending({
                 pending: true,
-                reference,
+                supportCode: code,
                 error: false,
-                message:
-                  'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. ' +
-                  'A geração de campanhas ficará indisponível até a conclusão. ' +
-                  `Informe ao suporte o código ${reference ?? ''}. ` +
-                  'Após a orientação do suporte, clique em Realinhar direção visual.',
+                message: visualDirectionSupportMessage(code),
               });
             } else {
-              setDirectionPending({ pending: false, reference: null, error: false, message: null });
+              setDirectionPending({ pending: false, supportCode: null, error: false, message: null });
             }
           } catch {
             directionReadFailed = true;
@@ -657,7 +659,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           directionPendingActive = true;
           setDirectionPending({
             pending: true,
-            reference: null,
+            supportCode: null,
             error: true,
             message:
               'Não foi possível verificar a direção visual. Recarregue a página. ' +
@@ -865,7 +867,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     }
     setDriftRefreshKey(k => k + 1);
     setReadinessRefreshKey(k => k + 1);
-    setDirectionPending({ pending: false, reference: null, error: false, message: null });
+    setDirectionPending({ pending: false, supportCode: null, error: false, message: null });
     setShowApprovalModal(false);
   }, [setField, formData.brand_color, setIdentityState, setInferredProfile, setDriftRefreshKey]);
 
@@ -904,27 +906,33 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
             metadata: profile.metadata,
           });
         }
-        setDirectionPending({ pending: false, reference: null, error: false, message: null });
+        setDirectionPending({ pending: false, supportCode: null, error: false, message: null });
         setBrandDirectorWarning(null);
         setInferenceError(null);
         setReadinessRefreshKey(k => k + 1);
         setDriftRefreshKey(k => k + 1);
       } else {
+        const code: VisualDirectionSupportCode =
+          data.support_code === 'DVRE01' ? 'DVRE01' : 'DVAP01';
         setDirectionPending((prev) => ({
           ...prev,
           pending: true,
-          reference: data.failure_reference ?? prev.reference,
-          message: data.message ?? "Não foi possível realinhar a direção visual. Tente novamente.",
+          supportCode: code,
+          message: data.message ?? visualDirectionSupportMessage(code),
           error: false,
         }));
       }
     } catch {
-      setDirectionPending((prev) => ({
-        ...prev,
-        pending: true,
-        message: "Não foi possível realinhar a direção visual. Tente novamente.",
-        error: false,
-      }));
+      setDirectionPending((prev) => {
+        const code: VisualDirectionSupportCode = prev.supportCode ?? 'DVAP01';
+        return {
+          ...prev,
+          pending: true,
+          supportCode: code,
+          message: visualDirectionSupportMessage(code),
+          error: false,
+        };
+      });
     } finally {
       setIsRealinhandoDirection(false);
     }
@@ -2298,7 +2306,6 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
             {directionPending.pending && (
               <DirectionPendingBanner
-                reference={directionPending.reference}
                 message={directionPending.message ?? ""}
                 onRealign={handleDirectionRealign}
                 isRealinhando={isRealinhandoDirection}
@@ -2990,10 +2997,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
           onOpenGallery={handleOpenGallery}
-          onDirectionPending={({ message, reference, signatureUrl }) => {
+          onDirectionPending={({ message, supportCode, signatureUrl }) => {
             setDirectionPending({
               pending: true,
-              reference: reference ?? null,
+              supportCode: supportCode === 'DVRE01' ? 'DVRE01' : 'DVAP01',
               error: false,
               message,
             });

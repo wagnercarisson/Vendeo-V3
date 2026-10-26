@@ -469,14 +469,15 @@ describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-s
   }
 
   for (const mode of ['standard', 'substitution'] as const) {
-    it(`${mode}: bp_status=failed mostra título, mensagem, referência e CTA`, async () => {
+    it(`${mode}: bp_status=failed mostra título, mensagem e CTA sem UUID`, async () => {
       const onDirectionPending = vi.fn();
       mockFlow({
         approveBody: {
           signature: { assetUrl: 'https://x/sig.png' },
           bp_status: 'failed',
           brandProfileData: null,
-          message: 'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.',
+          support_code: 'DVAP01',
+          message: 'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. Informe ao suporte o código DVAP01.',
           failure_reference: 'run-ref-7',
         },
       });
@@ -489,13 +490,14 @@ describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-s
       await waitFor(() => {
         expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
       });
-      expect(screen.getByText('Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.')).toBeInTheDocument();
-      expect(screen.getByText('Código de suporte: run-ref-7')).toBeInTheDocument();
+      expect(screen.getByText(/Informe ao suporte o código DVAP01/)).toBeInTheDocument();
+      expect(screen.queryByText('Código de suporte: run-ref-7')).not.toBeInTheDocument();
+      expect(screen.queryByText(/run-ref-7/)).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Realinhar direção visual' })).toBeInTheDocument();
       expect(onDirectionPending).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: 'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.',
-          reference: 'run-ref-7',
+          message: expect.stringContaining('DVAP01'),
+          supportCode: 'DVAP01',
         }),
       );
     });
@@ -508,6 +510,7 @@ describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-s
       approveBody: {
         signature: { assetUrl: 'https://x/sig.png' },
         bp_status: 'failed',
+        support_code: 'DVAP01',
         message: 'pendente',
         failure_reference: 'run-ref-8',
       },
@@ -547,18 +550,20 @@ describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-s
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('nova falha mantém bp_failed e atualiza referência/mensagem', async () => {
+  it('nova falha mantém bp_failed e atualiza mensagem/código sem UUID', async () => {
     const onClose = vi.fn();
     mockFlow({
       approveBody: {
         signature: { assetUrl: 'https://x/sig.png' },
         bp_status: 'failed',
-        message: 'pendente inicial',
+        support_code: 'DVAP01',
+        message: 'pendente inicial com código DVAP01',
         failure_reference: 'run-ref-9',
       },
       realign: {
         success: false,
-        message: 'Não foi possível concluir a direção visual. Tente novamente.',
+        message: 'Não foi possível concluir a direção visual. Informe ao suporte o código DVRE01.',
+        support_code: 'DVRE01',
         failure_reference: 'run-ref-10',
       },
     });
@@ -567,14 +572,15 @@ describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-s
 
     await waitFor(() => expect(screen.getByText('Aprovar')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Aprovar'));
-    await waitFor(() => expect(screen.getByText('Código de suporte: run-ref-9')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/pendente inicial com código DVAP01/)).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'Realinhar direção visual' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Código de suporte: run-ref-10')).toBeInTheDocument();
+      expect(screen.getByText(/Informe ao suporte o código DVRE01/)).toBeInTheDocument();
     });
     expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
+    expect(screen.queryByText(/run-ref-10/)).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
 });

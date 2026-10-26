@@ -900,3 +900,84 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
     expect(body.signature.id).toBe(SIG_ID);
   });
 });
+
+describe('POST /api/store/[id]/visual-signature/approve — códigos de suporte (261025-v14)', () => {
+  const DVAP01_MESSAGE =
+    'Não foi possível concluir sua direção visual. A geração de campanhas ficará indisponível até a conclusão. Entre em contato com o suporte e informe o código DVAP01. Após a orientação do suporte, clique em Realinhar direção visual.';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsVisualSignatureActive.mockReset().mockResolvedValue(true);
+    mockMarkOutdated.mockReset().mockResolvedValue({ ok: true });
+    mockRecordFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockClearFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    storeBrandProfileUpdates.length = 0;
+    mockValidateDrift.mockReturnValue({
+      has_drift: false, fields: [], reason: 'no_drift', requires_regeneration: false,
+    });
+    mockUpdateEventDecision.mockResolvedValue(undefined);
+  });
+
+  it('falha do profiler → support_code DVAP01, mensagem sem UUID e record com routine approval', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    mockBrandProfilerGenerate.mockRejectedValue(new Error('Vision failed'));
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+
+    expect(body.support_code).toBe('DVAP01');
+    expect(body.message).toBe(DVAP01_MESSAGE);
+    expect(body.message).not.toContain(body.failure_reference);
+    expect(body.message.match(/DVAP01/g)).toHaveLength(1);
+    expect(mockRecordFailure).toHaveBeenCalledWith(expect.objectContaining({
+      supportCode: 'DVAP01',
+      routine: 'approval',
+      failureCode: 'unexpected_error',
+    }));
+  });
+
+  it('AiInvocationError provider_error preserva classificação (não unexpected_error)', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    const { AiInvocationError } = await import('@/lib/ai/types');
+    mockBrandProfilerGenerate.mockRejectedValue(new AiInvocationError({
+      kind: 'provider_error', retryable: true, message: 'upstream',
+    }));
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+
+    expect(body.support_code).toBe('DVAP01');
+    expect(mockRecordFailure).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: 'provider_error',
+      supportCode: 'DVAP01',
+      routine: 'approval',
+    }));
+  });
+
+  it('local_asset_download_failed preserva classificação', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    const mod = await import('@/lib/visual-signature/brand-profiler');
+    mockBrandProfilerGenerate.mockRejectedValue(new mod.BrandProfilerWithoutLogoError('download', {
+      provider: 'openai', model: 'gpt-4o', elapsedMs: 0, errorType: 'local_asset_download_failed',
+    }));
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(mockRecordFailure).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: 'local_asset_download_failed',
+      supportCode: 'DVAP01',
+      routine: 'approval',
+    }));
+  });
+
+  it('sucesso responde support_code null', async () => {
+    setupStoreQuery({ data: mockStore, error: null });
+    mockBrandProfilerGenerate.mockResolvedValue({ profile: { ...mockProfile, id: 'new-profile-001' }, success: true });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+
+    expect(body.support_code).toBeNull();
+    expect(body.brand_profile_status).toBe('synced');
+  });
+});

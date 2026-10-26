@@ -3,7 +3,6 @@
 import { AlertCircle } from "lucide-react";
 
 interface DirectionPendingBannerProps {
-  reference: string | null;
   message: string;
   onRealign: () => void;
   isRealinhando: boolean;
@@ -13,9 +12,10 @@ interface DirectionPendingBannerProps {
 /**
  * Quick 261025-svt: aviso persistente de direção visual pendente.
  * Sem opção de ignorar — a campanha permanece bloqueada até a recuperação.
+ * Quick 261025-v14: o código público (DVAP01/DVRE01) aparece apenas dentro da
+ * mensagem canônica — nunca UUID/referência interna em linha separada.
  */
 export function DirectionPendingBanner({
-  reference,
   message,
   onRealign,
   isRealinhando,
@@ -32,9 +32,6 @@ export function DirectionPendingBanner({
           {error ? "Não foi possível verificar a direção visual" : "Direção visual pendente"}
         </p>
         <p className="text-text-muted text-xs font-body">{message}</p>
-        {reference && (
-          <p className="text-text-muted text-xs font-body">Código de suporte: {reference}</p>
-        )}
         <button
           type="button"
           onClick={onRealign}

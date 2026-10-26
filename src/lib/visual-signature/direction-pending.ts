@@ -1,5 +1,12 @@
 import "server-only";
 import { supabaseAdmin as supabase } from "@/lib/supabase/server";
+import {
+  deriveVisualDirectionSupportCode,
+} from "@/lib/visual-signature/support-codes";
+import type {
+  VisualDirectionFailureRoutine,
+  VisualDirectionSupportCode,
+} from "@/lib/visual-signature/support-codes";
 
 /**
  * Estado server-side da direção visual (quick 261025-svt).
@@ -16,6 +23,7 @@ export interface VisualDirectionState {
   synced_profile_id: string | null;
   reference: string | null;
   failure_at: string | null;
+  support_code: VisualDirectionSupportCode | null;
 }
 
 const LOG_PREFIX = "[direction-pending]";
@@ -69,6 +77,7 @@ export async function loadVisualDirectionState(
       synced_profile_id: null,
       reference: null,
       failure_at: null,
+      support_code: null,
     };
   }
 
@@ -90,6 +99,7 @@ export async function loadVisualDirectionState(
     synced_profile_id: synced?.id ?? null,
     reference: reference ?? null,
     failure_at: failureAt,
+    support_code: pending ? deriveVisualDirectionSupportCode(metadata) : null,
   };
 }
 
@@ -181,6 +191,8 @@ export async function recordVisualDirectionFailure(args: {
   signatureId: string;
   reference: string | null;
   failureCode: string;
+  supportCode: VisualDirectionSupportCode;
+  routine: VisualDirectionFailureRoutine;
   client?: SupabaseLike;
 }): Promise<
   { status: "ok" } | { status: "superseded" } | { status: "error"; error: string }
@@ -211,6 +223,8 @@ export async function recordVisualDirectionFailure(args: {
     brand_profile_failure_reference: args.reference,
     brand_profile_failure_at: new Date().toISOString(),
     brand_profile_failure_code: args.failureCode,
+    brand_profile_support_code: args.supportCode,
+    brand_profile_failure_routine: args.routine,
   };
 
   const updateResult = await client
@@ -271,6 +285,8 @@ export async function clearVisualDirectionFailure(args: {
     brand_profile_failure_reference: null,
     brand_profile_failure_at: null,
     brand_profile_failure_code: null,
+    brand_profile_support_code: null,
+    brand_profile_failure_routine: null,
   };
 
   const updateResult = await client

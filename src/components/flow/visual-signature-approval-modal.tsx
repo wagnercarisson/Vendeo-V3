@@ -32,7 +32,7 @@ type ApprovalState =
   | { phase: "insufficient_credits" }
   | { phase: "error"; message: string; drift?: { fields: string[]; reason: string; requires_regeneration: boolean }; acceptUrl?: string }
   | { phase: "done"; logoStatus: string; signatureUrl?: string; brandProfile?: unknown; inferredPrimaryColor?: string; inferredAccentColor?: string; logoColorsDetected?: string[] }
-  | { phase: "bp_failed"; message: string; signatureUrl?: string; brandProfileData?: Record<string, unknown> | null; logoStatus?: string; failureReference?: string };
+  | { phase: "bp_failed"; message: string; signatureUrl?: string; brandProfileData?: Record<string, unknown> | null; logoStatus?: string; supportCode?: string };
 
 interface VisualSignatureApprovalModalProps {
   isOpen: boolean;
@@ -74,7 +74,7 @@ interface VisualSignatureApprovalModalProps {
   onOpenGallery?: () => void;
   onDirectionPending?: (info: {
     message: string;
-    reference?: string;
+    supportCode?: string;
     signatureUrl?: string;
     signatureId?: string;
   }) => void;
@@ -338,11 +338,11 @@ export function VisualSignatureApprovalModal({
           signatureUrl: data.signature?.assetUrl,
           brandProfileData: null,
           logoStatus: "generated",
-          failureReference: data.failure_reference,
+          supportCode: data.support_code,
         });
         onDirectionPending?.({
           message: data.message,
-          reference: data.failure_reference,
+          supportCode: data.support_code,
           signatureUrl: data.signature?.assetUrl,
           signatureId: data.signature?.id,
         });
@@ -406,11 +406,11 @@ export function VisualSignatureApprovalModal({
           signatureUrl: data.signature?.assetUrl,
           brandProfileData: null,
           logoStatus: "generated",
-          failureReference: data.failure_reference,
+          supportCode: data.support_code,
         });
         onDirectionPending?.({
           message: data.message,
-          reference: data.failure_reference,
+          supportCode: data.support_code,
           signatureUrl: data.signature?.assetUrl,
           signatureId: data.signature?.id,
         });
@@ -472,19 +472,19 @@ export function VisualSignatureApprovalModal({
       // mantém o modal e mostra a mensagem segura/específica devolvida pela API.
       if (!res.ok || data.success === false) {
         const nextMessage = data.message || "Não foi possível gerar o perfil de marca agora. Tente novamente.";
-        const nextReference =
-          data.failure_reference ??
-          (state.phase === "bp_failed" ? state.failureReference : undefined);
+        const nextSupportCode =
+          data.support_code ??
+          (state.phase === "bp_failed" ? state.supportCode : undefined);
         setState((prev) =>
           prev.phase === "bp_failed"
             ? {
                 ...prev,
                 message: nextMessage,
-                failureReference: nextReference,
+                supportCode: nextSupportCode,
               }
             : prev,
         );
-        onDirectionPending?.({ message: nextMessage, reference: nextReference });
+        onDirectionPending?.({ message: nextMessage, supportCode: nextSupportCode });
         return;
       }
 
@@ -511,14 +511,15 @@ export function VisualSignatureApprovalModal({
       onClose();
     } catch {
       const nextMessage = "Erro de conexão ao gerar o perfil de marca. Tente novamente.";
+      const nextSupportCode = state.phase === "bp_failed" ? state.supportCode : undefined;
       setState((prev) =>
         prev.phase === "bp_failed"
-          ? { ...prev, message: nextMessage }
+          ? { ...prev, message: nextMessage, supportCode: nextSupportCode }
           : prev,
       );
       onDirectionPending?.({
         message: nextMessage,
-        reference: state.phase === "bp_failed" ? state.failureReference : undefined,
+        supportCode: nextSupportCode,
       });
     }
   }, [onTier2Retry, storeId, onClose, onComplete, onDirectionPending, state]);
@@ -873,11 +874,6 @@ export function VisualSignatureApprovalModal({
                 <p className="text-text-muted text-xs font-body mt-0.5">
                   {state.message}
                 </p>
-                {state.failureReference && (
-                  <p className="text-text-muted text-xs font-body mt-0.5">
-                    Código de suporte: {state.failureReference}
-                  </p>
-                )}
               </div>
             </div>
             <div className="flex flex-col gap-3 w-full">

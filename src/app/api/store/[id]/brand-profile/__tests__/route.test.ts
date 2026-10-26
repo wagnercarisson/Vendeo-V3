@@ -117,6 +117,7 @@ describe('GET /api/store/[id]/brand-profile', () => {
       synced_profile_id: null,
       reference: 'run-9',
       failure_at: '2026-10-25T00:00:00.000Z',
+      support_code: 'DVAP01',
     });
     const { GET } = await import('../route');
     const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile?status=direction-state`));
@@ -125,6 +126,23 @@ describe('GET /api/store/[id]/brand-profile', () => {
     const body = await res.json();
     expect(body.pending).toBe(true);
     expect(body.reference).toBe('run-9');
+    expect(body.support_code).toBe('DVAP01');
+  });
+
+  it('?status=direction-state derivação histórica realign → DVRE01', async () => {
+    mockLoadDirectionState.mockResolvedValue({
+      pending: true,
+      active_signature_id: 'sig-1',
+      synced_profile_id: null,
+      reference: 'run-10',
+      failure_at: '2026-10-25T00:00:00.000Z',
+      support_code: 'DVRE01',
+    });
+    const { GET } = await import('../route');
+    const req = new NextRequest(new Request(`http://localhost/api/store/${STORE_ID}/brand-profile?status=direction-state`));
+    const res = await GET(req, { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+    expect(body.support_code).toBe('DVRE01');
   });
 
   it('?status=direction-state completo retorna pending=false', async () => {

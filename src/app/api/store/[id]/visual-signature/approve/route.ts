@@ -23,6 +23,11 @@ import { AiCostTracker } from '@/lib/ai-cost';
 import { createDefaultTelemetryContext } from '@/lib/ai';
 import { resolveEconomicSnapshot } from '@/lib/economic/economic-snapshot';
 import { requireSignedVisualSignatureUrl } from '@/lib/visual-signature/persistence';
+import {
+  VISUAL_DIRECTION_SUPPORT_CODES,
+  visualDirectionSupportMessage,
+} from '@/lib/visual-signature/support-codes';
+import { classifyVisualDirectionFailure } from '@/lib/visual-signature/failure-classification';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -64,12 +69,15 @@ async function handleProfilerFailure(args: {
 }): Promise<NextResponse> {
   const { storeId, signatureId, reqId, err, failureReference, signedAssetUrl } = args;
   const isProfilerError = err instanceof BrandProfilerWithoutLogoError;
-  const safeErrorType = isProfilerError ? err.metadata.errorType : 'unexpected_error';
+  const safeErrorType = classifyVisualDirectionFailure(err);
   // Referência persistida e correlacionável. Fallback = id existente da própria
   // assinatura caso a criação do run tenha falhado antes de produzir o id.
   const reference = failureReference || signatureId;
 
   console.error(`[approve][req-${reqId}] brand_profile_failed`, {
+    supportCode: VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED,
+    reference,
+    signatureId,
     code: safeErrorType,
   });
 
@@ -95,6 +103,8 @@ async function handleProfilerFailure(args: {
     signatureId,
     reference,
     failureCode: safeErrorType,
+    supportCode: VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED,
+    routine: 'approval',
   });
 
   if (recorded.status === 'superseded') {
@@ -121,12 +131,9 @@ async function handleProfilerFailure(args: {
     bp_status: 'failed',
     brand_profile_status: 'failed',
     failure_reference: reference,
+    support_code: VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED,
     visual_signature_id: signatureId,
-    message:
-      'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. ' +
-      'A geração de campanhas ficará indisponível até a conclusão. ' +
-      `Informe ao suporte o código ${reference}. ` +
-      'Após a orientação do suporte, clique em Realinhar direção visual.',
+    message: visualDirectionSupportMessage(VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED),
     logoStatus: 'generated',
     inferredPrimaryColor: null,
     inferredAccentColor: null,
@@ -400,12 +407,13 @@ async function handleSubstitution(
       bp_status: 'success',
       brand_profile_status: 'synced',
       failure_reference: null,
+      support_code: null,
       visual_signature_id: signatureId,
       ...(cleared.status === 'error' ? { warning: 'direction_metadata_cleanup_failed' } : {}),
     });
   } catch (err) {
     console.error(`[approve][req-${reqId}] SUBSTITUIÇÃO — Tier 2 BP FAILED (activation NOT undone)`, {
-      code: err instanceof BrandProfilerWithoutLogoError ? err.metadata.errorType : 'unexpected_error',
+      code: classifyVisualDirectionFailure(err),
     });
 
     return handleProfilerFailure({
@@ -680,6 +688,7 @@ export const POST = apiHandler(async (
       },
       brand_profile_status: 'synced',
       failure_reference: null,
+      support_code: null,
       ...(reusedCleared.status === 'error' ? { warning: 'direction_metadata_cleanup_failed' } : {}),
     });
   }
@@ -805,11 +814,12 @@ export const POST = apiHandler(async (
       },
       brand_profile_status: 'synced',
       failure_reference: null,
+      support_code: null,
       ...(standardCleared.status === 'error' ? { warning: 'direction_metadata_cleanup_failed' } : {}),
     });
   } catch (err) {
     console.error(`[approve][req-${reqId}] BrandProfiler FAILED`, {
-      code: err instanceof BrandProfilerWithoutLogoError ? err.metadata.errorType : 'unexpected_error',
+      code: classifyVisualDirectionFailure(err),
     });
 
     return handleProfilerFailure({

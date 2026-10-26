@@ -1051,3 +1051,100 @@ describe('snapshot econômico (F38.2.1) — realign', () => {
     expect(delivery.creditValueBrlAtGeneration).toBeNull();
   });
 });
+
+describe('POST /api/store/[id]/brand-profile/realign — códigos de suporte (261025-v14)', () => {
+  const DVRE01_MESSAGE =
+    'Não foi possível concluir sua direção visual. A geração de campanhas ficará indisponível até a conclusão. Entre em contato com o suporte e informe o código DVRE01. Após a orientação do suporte, clique em Realinhar direção visual.';
+
+  function setupVS() {
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'stores') return makeChain({ data: mockVSStore, error: null });
+      if (table === 'store_visual_signatures') return makeChain({ data: mockActiveVS, error: null });
+      if (table === 'store_brand_profiles') return makeChain({ data: null, error: null });
+      return makeChain({ data: null, error: null });
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLoadDirectionState.mockReset().mockResolvedValue({
+      pending: true, active_signature_id: 'vs-001', synced_profile_id: null, reference: null, failure_at: null,
+    });
+    mockMarkOutdated.mockReset().mockResolvedValue({ ok: true });
+    mockRecordFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockClearFailure.mockReset().mockResolvedValue({ status: 'ok' });
+    mockIsActiveVS.mockReset().mockResolvedValue(true);
+  });
+
+  it('pendência: falha responde DVRE01, mensagem sem UUID e record com routine realign', async () => {
+    setupVS();
+    mockProfilerGenerate.mockRejectedValue(new Error('vision down'));
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+
+    expect(body.support_code).toBe('DVRE01');
+    expect(body.message).toBe(DVRE01_MESSAGE);
+    expect(body.message).not.toContain(body.failure_reference);
+    expect(body.message.match(/DVRE01/g)).toHaveLength(1);
+    expect(body.failure_reference).toMatch(/^run-\d+$/);
+    expect(mockRecordFailure).toHaveBeenCalledWith(expect.objectContaining({
+      supportCode: 'DVRE01',
+      routine: 'realign',
+      failureCode: 'unexpected_error',
+    }));
+  });
+
+  it('provider_error preservado no realinhamento pendente', async () => {
+    setupVS();
+    const { AiInvocationError } = await import('@/lib/ai/types');
+    mockProfilerGenerate.mockRejectedValue(new AiInvocationError({
+      kind: 'provider_error', retryable: true, message: 'upstream',
+    }));
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(mockRecordFailure).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: 'provider_error',
+      supportCode: 'DVRE01',
+      routine: 'realign',
+    }));
+  });
+
+  it('local_asset_download_failed preservado no realinhamento pendente', async () => {
+    setupVS();
+    const mod = await import('@/lib/visual-signature/brand-profiler');
+    mockProfilerGenerate.mockRejectedValue(new mod.BrandProfilerWithoutLogoError('download', {
+      provider: 'openai', model: 'gpt-4o', elapsedMs: 0, errorType: 'local_asset_download_failed',
+    }));
+    const { POST } = await import('../route');
+    await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+
+    expect(mockRecordFailure).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: 'local_asset_download_failed',
+      supportCode: 'DVRE01',
+      routine: 'realign',
+    }));
+  });
+
+  it('sucesso responde support_code null e limpa metadata', async () => {
+    setupVS();
+    mockProfilerGenerate.mockResolvedValue({
+      success: true,
+      profile: {
+        id: 'vs-profile-001', status: 'synced', source: 'without_logo',
+        safe_color_tokens: { primary: '#22C55E', secondary: '#3B82F6', accent: '#1E40AF', background: '#0F172A' },
+        inferred_primary_color: '#22C55E', inferred_accent_color: '#1E40AF',
+        visual_style: 'Moderno', visual_tone: 'Elegante', brand_personality: 'Sofisticado',
+        brand_colors_chosen: ['#22C55E', '#1E40AF'], metadata: {},
+      },
+    });
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(), { params: Promise.resolve({ id: STORE_ID }) });
+    const body = await res.json();
+
+    expect(body.support_code).toBeNull();
+    expect(body.failure_reference).toBeNull();
+    expect(mockClearFailure).toHaveBeenCalledWith({ storeId: STORE_ID, signatureId: 'vs-001' });
+  });
+});

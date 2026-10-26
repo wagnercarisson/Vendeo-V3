@@ -21,9 +21,51 @@ import { hasUserChosenColors } from '@/lib/validators/color';
 import { probeColors, findClosestProbeCluster } from '@/lib/brand-assets/color-probe';
 import { defaultAiGateway, withOnCallTelemetry } from '@/lib/ai';
 import type { AiInvocationRequest, AiInvoker, AiTelemetryContext } from '@/lib/ai';
+import { AiInvocationError } from '@/lib/ai/types';
 
 /** Espelha o default do registry para `brand_profile_vision` (F46 D1). */
 const DEFAULT_VISION_MODEL = 'gpt-4o';
+
+/**
+ * Asset baixado UMA vez por operação (quick 261025-v14).
+ * O MIME é detectado por magic bytes — nunca por URL/Content-Type não confiável.
+ */
+interface DownloadedAsset {
+  buffer: Buffer;
+  mimeType: string;
+}
+
+/** Detecta o MIME de imagem por magic bytes. Retorna `null` se não reconhecido. */
+function detectImageMime(buffer: Buffer): string | null {
+  if (buffer.length >= 4 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return 'image/png';
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+  const header6 = buffer.length >= 6 ? buffer.toString('ascii', 0, 6) : '';
+  if (header6 === 'GIF87a' || header6 === 'GIF89a') {
+    return 'image/gif';
+  }
+  return null;
+}
+
+/** Assets de loopback não são acessíveis ao provider remoto de visão. */
+function isLoopbackAssetUrl(raw: string): boolean {
+  try {
+    const { hostname } = new URL(raw);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]';
+  } catch {
+    return false;
+  }
+}
 
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -148,16 +190,53 @@ export class BrandProfilerWithoutLogoService {
     }
   }
 
-  private async downloadAssetBuffer(assetUrl: string): Promise<Buffer | null> {
+  private async downloadAssetBuffer(assetUrl: string): Promise<DownloadedAsset | null> {
     try {
       const response = await fetch(assetUrl);
-      if (response.ok) {
-        return Buffer.from(await response.arrayBuffer());
+      if (!response.ok) {
+        console.error('[BrandProfiler] asset_download_failed');
+        return null;
       }
-    } catch (err) {
-      console.error(`[BrandProfiler] Failed to download asset:`, err);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length === 0) {
+        console.error('[BrandProfiler] asset_download_failed');
+        return null;
+      }
+      const mimeType = detectImageMime(buffer);
+      if (!mimeType) {
+        console.error('[BrandProfiler] asset_download_failed');
+        return null;
+      }
+      return { buffer, mimeType };
+    } catch {
+      // Nunca logar o erro bruto nem a URL (T-14-01).
+      console.error('[BrandProfiler] asset_download_failed');
+      return null;
     }
-    return null;
+  }
+
+  /**
+   * Payload de imagem para a chamada de visão. Loopback vira data URL base64
+   * (download único validado); URL remota permanece crua. Loopback sem asset
+   * válido falha com `local_asset_download_failed` SEM chamar o provider.
+   */
+  private buildVisionImagePayload(assetUrl: string, asset: DownloadedAsset | null): string {
+    if (!isLoopbackAssetUrl(assetUrl)) return assetUrl;
+
+    if (!asset || asset.buffer.length === 0 || !asset.mimeType.startsWith('image/')) {
+      console.error('[BrandProfiler] local_asset_download_failed');
+      throw new BrandProfilerWithoutLogoError(
+        'Não foi possível processar a imagem da assinatura visual local.',
+        {
+          provider: 'openai',
+          model: DEFAULT_VISION_MODEL,
+          elapsedMs: 0,
+          errorType: 'local_asset_download_failed',
+        },
+      );
+    }
+
+    return `data:${asset.mimeType};base64,${asset.buffer.toString('base64')}`;
   }
 
   private getAllNonArtifactClusters(probe: import('@/lib/brand-assets/types').ColorProbeResult): ColorCluster[] {
@@ -281,10 +360,10 @@ export class BrandProfilerWithoutLogoService {
       console.log(`[BrandProfiler] Mode 'regenerate' for signature ${input.visualSignatureId} — skipping cache.`);
     }
 
-    const buffer = await this.downloadAssetBuffer(input.assetUrl);
+    const asset = await this.downloadAssetBuffer(input.assetUrl);
     let probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null = null;
-    if (buffer) {
-      probeResult = await probeColors(buffer);
+    if (asset) {
+      probeResult = await probeColors(asset.buffer);
     }
 
     const nonArtifactClusters = probeResult
@@ -304,7 +383,7 @@ export class BrandProfilerWithoutLogoService {
         return this.mockGenerate(input, probeResult);
       }
 
-      return this.generateWithIntendedPalette(input, buffer, probeResult, nonArtifactClusters, startTime, telemetry);
+      return this.generateWithIntendedPalette(input, asset, probeResult, nonArtifactClusters, startTime, telemetry);
     }
 
     // --- PATH 2: No intendedPalette (retry/legacy) → fallback heuristic ---
@@ -319,7 +398,7 @@ export class BrandProfilerWithoutLogoService {
       return this.mockGenerate(input, probeResult);
     }
 
-    return this.generateWithFallback(input, probeResult, nonArtifactClusters, startTime, telemetry);
+    return this.generateWithFallback(input, asset, probeResult, nonArtifactClusters, startTime, telemetry);
   }
 
   private async mockGenerate(
@@ -367,7 +446,7 @@ export class BrandProfilerWithoutLogoService {
 
   private async generateWithIntendedPalette(
     input: BrandProfilerInput,
-    buffer: Buffer | null,
+    asset: DownloadedAsset | null,
     probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
     nonArtifactClusters: ColorCluster[],
     startTime: number,
@@ -407,19 +486,20 @@ export class BrandProfilerWithoutLogoService {
     }
 
     if (probeUnavailable) {
-      return this.handleProbeUnavailable(input, intended, startTime, telemetry);
+      return this.handleProbeUnavailable(input, intended, asset, startTime, telemetry);
     }
 
     if (allConfirmed) {
-      return this.handleAllConfirmed(input, intended, nonArtifactClusters, rolePresence, startTime, telemetry);
+      return this.handleAllConfirmed(input, intended, asset, nonArtifactClusters, rolePresence, startTime, telemetry);
     }
 
-    return this.handleDivergence(input, intended, buffer, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime, telemetry);
+    return this.handleDivergence(input, intended, asset, nonArtifactClusters, rolePresence, contestedRoles, contestedSupportIndices, startTime, telemetry);
   }
 
   private async handleProbeUnavailable(
     input: BrandProfilerInput,
     intended: IntendedPalette,
+    asset: DownloadedAsset | null,
     startTime: number,
     telemetry?: AiTelemetryContext
   ): Promise<BrandProfileGenerationResult> {
@@ -446,7 +526,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('happy_path', input);
-    const visionResult = await this.callVision(input, prompt, telemetry);
+    const visionResult = await this.callVision(input, prompt, asset, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -457,6 +537,7 @@ export class BrandProfilerWithoutLogoService {
   private async handleAllConfirmed(
     input: BrandProfilerInput,
     intended: IntendedPalette,
+    asset: DownloadedAsset | null,
     nonArtifactClusters: ColorCluster[],
     rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }>,
     startTime: number,
@@ -491,7 +572,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('happy_path', input);
-    const visionResult = await this.callVision(input, prompt, telemetry);
+    const visionResult = await this.callVision(input, prompt, asset, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -502,7 +583,7 @@ export class BrandProfilerWithoutLogoService {
   private async handleDivergence(
     input: BrandProfilerInput,
     intended: IntendedPalette,
-    buffer: Buffer | null,
+    asset: DownloadedAsset | null,
     nonArtifactClusters: ColorCluster[],
     rolePresence: Map<string, { presence: ColorValidationEntry['presence']; deltaE: number | null; cluster: ColorCluster | null }>,
     contestedRoles: string[],
@@ -535,7 +616,7 @@ export class BrandProfilerWithoutLogoService {
     });
 
     try {
-      const visionResult = await this.callVisionFull(input, prompt, telemetry);
+      const visionResult = await this.callVisionFull(input, prompt, asset, telemetry);
       const raw = JSON.parse(visionResult);
       const correctionsObj = {
         corrections: raw.corrections,
@@ -607,8 +688,24 @@ export class BrandProfilerWithoutLogoService {
       return { profile, success: true };
     } catch (err) {
       const elapsedMs = Date.now() - startTime;
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      const errorType = err instanceof VisionAdjudicationError ? err.code : 'api_error';
+
+      // Preserva a classificação conhecida (gateway/domínio) em vez de
+      // reclassificar tudo como `api_error` (T-14-01).
+      let errorType: string;
+      let safeMessage: string;
+      if (err instanceof BrandProfilerWithoutLogoError) {
+        errorType = err.metadata.errorType;
+        safeMessage = err.message;
+      } else if (err instanceof AiInvocationError) {
+        errorType = err.kind;
+        safeMessage = 'Falha do provedor ao analisar a assinatura visual.';
+      } else if (err instanceof VisionAdjudicationError) {
+        errorType = err.code;
+        safeMessage = 'Não foi possível validar a análise de cores da assinatura visual.';
+      } else {
+        errorType = 'api_error';
+        safeMessage = 'Falha ao analisar a assinatura visual.';
+      }
 
       const failureReason: import('@/lib/visual-signature/types').VisionFailureReason =
         errorType === 'no_choice' || errorType === 'invalid_json' || errorType === 'hex_outside_observed_colors' || errorType === 'api_error'
@@ -618,7 +715,7 @@ export class BrandProfilerWithoutLogoService {
       const visionFailedAudit: VisionAdjudicationAudit = {
         status: 'failed',
         reason: failureReason,
-        details: errorMessage,
+        details: safeMessage,
         attemptedAt: new Date().toISOString(),
       };
 
@@ -627,9 +724,9 @@ export class BrandProfilerWithoutLogoService {
         vision_adjudication: visionFailedAudit,
       };
 
-      await this.persistFailedProfile(input, errorMessage, [], failedValidation);
+      await this.persistFailedProfile(input, safeMessage, [], failedValidation);
 
-      throw new BrandProfilerWithoutLogoError(errorMessage, {
+      throw new BrandProfilerWithoutLogoError(safeMessage, {
         provider: 'openai',
         model: DEFAULT_VISION_MODEL,
         elapsedMs,
@@ -640,6 +737,7 @@ export class BrandProfilerWithoutLogoService {
 
   private async generateWithFallback(
     input: BrandProfilerInput,
+    asset: DownloadedAsset | null,
     probeResult: import('@/lib/brand-assets/types').ColorProbeResult | null,
     nonArtifactClusters: ColorCluster[],
     startTime: number,
@@ -707,7 +805,7 @@ export class BrandProfilerWithoutLogoService {
     };
 
     const prompt = this.buildPromptContext('legacy', input);
-    const visionResult = await this.callVision(input, prompt, telemetry);
+    const visionResult = await this.callVision(input, prompt, asset, telemetry);
     const enriched = this.mergeSemanticFields(result, visionResult);
 
     const profile = await this.persistProfile(input, enriched, colorValidation);
@@ -729,6 +827,7 @@ export class BrandProfilerWithoutLogoService {
   private async callVision(
     input: BrandProfilerInput,
     prompt: string,
+    asset: DownloadedAsset | null,
     telemetry?: AiTelemetryContext
   ): Promise<string> {
     if (!telemetry) {
@@ -742,7 +841,7 @@ export class BrandProfilerWithoutLogoService {
     const request: AiInvocationRequest = {
       prompt: 'Analise visualmente a assinatura visual aprovada e gere o perfil de marca.',
       system: prompt,
-      productImagesDataUrls: [input.assetUrl],
+      productImagesDataUrls: [this.buildVisionImagePayload(input.assetUrl, asset)],
       imageDetail: 'low',
       responseFormat: 'json_object',
       maxTokens: 2000,
@@ -760,6 +859,7 @@ export class BrandProfilerWithoutLogoService {
   private async callVisionFull(
     input: BrandProfilerInput,
     prompt: string,
+    asset: DownloadedAsset | null,
     telemetry?: AiTelemetryContext
   ): Promise<string> {
     if (!telemetry) {
@@ -771,7 +871,7 @@ export class BrandProfilerWithoutLogoService {
     const request: AiInvocationRequest = {
       prompt: 'Analise visualmente a assinatura visual aprovada, corrija as cores contestadas e gere o perfil de marca completo.',
       system: prompt,
-      productImagesDataUrls: [input.assetUrl],
+      productImagesDataUrls: [this.buildVisionImagePayload(input.assetUrl, asset)],
       imageDetail: 'low',
       responseFormat: 'json_object',
       maxTokens: 3000,

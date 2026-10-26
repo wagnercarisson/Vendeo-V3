@@ -24,6 +24,11 @@ import {
   markSyncedProfilesOutdatedExceptActive,
   recordVisualDirectionFailure,
 } from '@/lib/visual-signature/direction-pending';
+import {
+  VISUAL_DIRECTION_SUPPORT_CODES,
+  visualDirectionSupportMessage,
+} from '@/lib/visual-signature/support-codes';
+import { classifyVisualDirectionFailure } from '@/lib/visual-signature/failure-classification';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const realignLocks = new Map<string, boolean>();
@@ -700,6 +705,7 @@ async function handleVSRealign(
       },
       brand_profile_status: 'synced',
       failure_reference: null,
+      support_code: null,
       ...(cleared.status === 'error' ? { warning: 'direction_metadata_cleanup_failed' } : {}),
     });
   } catch (err) {
@@ -707,8 +713,11 @@ async function handleVSRealign(
     locks.delete(id);
 
     const isProfilerError = err instanceof BrandProfilerWithoutLogoError;
-    const safeErrorType = isProfilerError ? err.metadata.errorType : 'unexpected_error';
+    const safeErrorType = classifyVisualDirectionFailure(err);
     console.error('[realign/vs] brand_profile_failed', {
+      supportCode: VISUAL_DIRECTION_SUPPORT_CODES.REALIGN_FAILED,
+      reference: failureReference,
+      signatureId: vsRecord.id,
       code: safeErrorType,
     });
 
@@ -745,6 +754,8 @@ async function handleVSRealign(
       signatureId: vsRecord.id,
       reference,
       failureCode: safeErrorType,
+      supportCode: VISUAL_DIRECTION_SUPPORT_CODES.REALIGN_FAILED,
+      routine: 'realign',
     });
 
     if (recorded.status === 'superseded') {
@@ -765,13 +776,11 @@ async function handleVSRealign(
 
     return NextResponse.json({
       success: false,
-      message:
-        'Não foi possível concluir a direção visual. A geração de campanhas ficará indisponível até a conclusão. ' +
-        `Informe ao suporte o código ${reference}. ` +
-        'Após a orientação do suporte, clique em Realinhar direção visual.',
+      message: visualDirectionSupportMessage(VISUAL_DIRECTION_SUPPORT_CODES.REALIGN_FAILED),
       error: 'brand_profile_vision_failed',
       brand_profile_status: 'failed',
       failure_reference: reference,
+      support_code: VISUAL_DIRECTION_SUPPORT_CODES.REALIGN_FAILED,
     });
   }
 }

@@ -68,6 +68,7 @@ describe("loadVisualDirectionState", () => {
       synced_profile_id: null,
       reference: null,
       failure_at: null,
+      support_code: null,
     });
   });
 
@@ -138,6 +139,84 @@ describe("loadVisualDirectionState", () => {
     mockSupabaseFrom.mockReturnValue(makeChain({ result: { data: null, error: { message: "boom" } } }));
 
     await expect(loadVisualDirectionState(STORE_ID)).rejects.toThrow("direction_state_read_failed");
+  });
+
+  it("pendência histórica sem support code → DVAP01", async () => {
+    mockSupabaseFrom.mockImplementation((table: string) =>
+      table === "store_visual_signatures"
+        ? makeChain({
+            result: {
+              data: {
+                id: SIG_ID,
+                metadata: {
+                  brand_profile_failure_reference: "run-legacy",
+                  brand_profile_failure_at: "2026-10-25T00:00:00.000Z",
+                },
+              },
+              error: null,
+            },
+          })
+        : makeChain({ result: { data: null, error: null } }),
+    );
+
+    const state = await loadVisualDirectionState(STORE_ID);
+
+    expect(state.pending).toBe(true);
+    expect(state.support_code).toBe("DVAP01");
+    expect(state.reference).toBe("run-legacy");
+  });
+
+  it("metadata com rotina realign → DVRE01", async () => {
+    mockSupabaseFrom.mockImplementation((table: string) =>
+      table === "store_visual_signatures"
+        ? makeChain({
+            result: {
+              data: { id: SIG_ID, metadata: { brand_profile_failure_routine: "realign" } },
+              error: null,
+            },
+          })
+        : makeChain({ result: { data: null, error: null } }),
+    );
+
+    const state = await loadVisualDirectionState(STORE_ID);
+
+    expect(state.support_code).toBe("DVRE01");
+  });
+
+  it("metadata com support code explícito → respeitado", async () => {
+    mockSupabaseFrom.mockImplementation((table: string) =>
+      table === "store_visual_signatures"
+        ? makeChain({
+            result: {
+              data: {
+                id: SIG_ID,
+                metadata: {
+                  brand_profile_support_code: "DVRE01",
+                  brand_profile_failure_routine: "approval",
+                },
+              },
+              error: null,
+            },
+          })
+        : makeChain({ result: { data: null, error: null } }),
+    );
+
+    const state = await loadVisualDirectionState(STORE_ID);
+
+    expect(state.support_code).toBe("DVRE01");
+  });
+
+  it("sem pendência → support_code null", async () => {
+    mockSupabaseFrom.mockImplementation((table: string) =>
+      table === "store_visual_signatures"
+        ? makeChain({ result: { data: { id: SIG_ID, metadata: { brand_profile_support_code: "DVRE01" } }, error: null } })
+        : makeChain({ result: { data: { id: "profile-1", visual_signature_id: SIG_ID }, error: null } }),
+    );
+
+    const state = await loadVisualDirectionState(STORE_ID);
+
+    expect(state.pending).toBe(false);
+    expect(state.support_code).toBeNull();
   });
 });
 
@@ -237,6 +316,8 @@ describe("recordVisualDirectionFailure", () => {
       signatureId: SIG_ID,
       reference: "run-1",
       failureCode: "api_error",
+      supportCode: "DVAP01",
+      routine: "approval",
     });
 
     expect(result).toEqual({ status: "ok" });
@@ -247,6 +328,8 @@ describe("recordVisualDirectionFailure", () => {
       brand_profile_status: "failed",
       brand_profile_failure_reference: "run-1",
       brand_profile_failure_code: "api_error",
+      brand_profile_support_code: "DVAP01",
+      brand_profile_failure_routine: "approval",
     });
     expect(typeof updates[0].metadata.brand_profile_failure_at).toBe("string");
   });
@@ -259,6 +342,8 @@ describe("recordVisualDirectionFailure", () => {
       signatureId: SIG_ID,
       reference: "run-1",
       failureCode: "api_error",
+      supportCode: "DVAP01",
+      routine: "approval",
     });
 
     expect(result).toEqual({ status: "superseded" });
@@ -277,6 +362,8 @@ describe("recordVisualDirectionFailure", () => {
       signatureId: SIG_ID,
       reference: "run-1",
       failureCode: "api_error",
+      supportCode: "DVAP01",
+      routine: "approval",
     });
 
     expect(result).toEqual({ status: "superseded" });
@@ -292,6 +379,8 @@ describe("recordVisualDirectionFailure", () => {
       signatureId: SIG_ID,
       reference: "run-1",
       failureCode: "api_error",
+      supportCode: "DVAP01",
+      routine: "approval",
     });
 
     expect(result).toEqual({ status: "error", error: "reference_failed" });
@@ -317,6 +406,8 @@ describe("clearVisualDirectionFailure", () => {
       brand_profile_failure_reference: null,
       brand_profile_failure_at: null,
       brand_profile_failure_code: null,
+      brand_profile_support_code: null,
+      brand_profile_failure_routine: null,
     });
   });
 

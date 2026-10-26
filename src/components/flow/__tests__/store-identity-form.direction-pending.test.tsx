@@ -178,12 +178,18 @@ function installFetch(routes: Routes = {}) {
   return fetchMock;
 }
 
+const DVAP01_MESSAGE =
+  "Não foi possível concluir sua direção visual. A geração de campanhas ficará indisponível até a conclusão. Entre em contato com o suporte e informe o código DVAP01. Após a orientação do suporte, clique em Realinhar direção visual.";
+const DVRE01_MESSAGE =
+  "Não foi possível concluir sua direção visual. A geração de campanhas ficará indisponível até a conclusão. Entre em contato com o suporte e informe o código DVRE01. Após a orientação do suporte, clique em Realinhar direção visual.";
+
 const PENDING_STATE = {
   pending: true,
   active_signature_id: "sig-1",
   synced_profile_id: null,
   reference: "run-ref-42",
   failure_at: "2026-10-25T00:00:00.000Z",
+  support_code: "DVAP01",
 };
 
 function renderForm() {
@@ -213,19 +219,46 @@ afterEach(() => {
 });
 
 describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
-  it("load com pending mostra banner com referência e não aplica o perfil synced", async () => {
+  it("load com pending mostra banner com DVAP01 (sem UUID) e não aplica o perfil synced", async () => {
     const fetchMock = installFetch({ directionState: PENDING_STATE, syncedProfile: SYNCED_PROFILE });
     renderForm();
 
     await waitFor(() => {
       expect(screen.getByText("Direção visual pendente")).toBeInTheDocument();
     });
-    expect(screen.getByText("Código de suporte: run-ref-42")).toBeInTheDocument();
+    expect(screen.getByText(DVAP01_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText(/Código de suporte/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/run-ref-42/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Realinhar direção visual" })).toBeInTheDocument();
     // Campos orientadores limpos → badge "Necessário" (sem perfil aplicado)
     expect(screen.getAllByText("Necessário").length).toBeGreaterThan(0);
 
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes("status=direction-state"))).toBe(true);
+  });
+
+  it("load com pendência histórica sem support_code deriva DVAP01", async () => {
+    installFetch({
+      directionState: { ...PENDING_STATE, support_code: undefined },
+      syncedProfile: SYNCED_PROFILE,
+    });
+    renderForm();
+
+    await waitFor(() => {
+      expect(screen.getByText("Direção visual pendente")).toBeInTheDocument();
+    });
+    expect(screen.getByText(DVAP01_MESSAGE)).toBeInTheDocument();
+  });
+
+  it("load com direção realinhada pendente usa DVRE01", async () => {
+    installFetch({
+      directionState: { ...PENDING_STATE, support_code: "DVRE01" },
+      syncedProfile: SYNCED_PROFILE,
+    });
+    renderForm();
+
+    await waitFor(() => {
+      expect(screen.getByText(DVRE01_MESSAGE)).toBeInTheDocument();
+    });
   });
 
   it("load sem pendência não mostra banner", async () => {
@@ -280,25 +313,28 @@ describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
     ).toBe(true);
   });
 
-  it("realinhamento falhando mantém a pendência e atualiza a referência", async () => {
+  it("realinhamento falhando mantém a pendência e atualiza para DVRE01", async () => {
     installFetch({
       directionState: PENDING_STATE,
       realign: {
         success: false,
-        message: "Não foi possível concluir a direção visual. Tente novamente.",
+        message: DVRE01_MESSAGE,
+        support_code: "DVRE01",
         failure_reference: "run-ref-99",
       },
     });
     renderForm();
 
-    await waitFor(() => expect(screen.getByText("Código de suporte: run-ref-42")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(DVAP01_MESSAGE)).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Realinhar direção visual" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Código de suporte: run-ref-99")).toBeInTheDocument();
+      expect(screen.getByText(DVRE01_MESSAGE)).toBeInTheDocument();
     });
     expect(screen.getByText("Direção visual pendente")).toBeInTheDocument();
+    expect(screen.queryByText(/run-ref-99/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Código de suporte/)).not.toBeInTheDocument();
   });
 
   it("integração modal → formulário (aprovação inicial): atualiza imagem/identidade e readiness sem remover a pendência", async () => {
@@ -321,9 +357,9 @@ describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
         },
         bp_status: "failed",
         brand_profile_status: "failed",
+        support_code: "DVAP01",
         failure_reference: "run-initial",
-        message:
-          "Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. Informe ao suporte o código run-initial.",
+        message: DVAP01_MESSAGE,
       },
     });
 
@@ -350,7 +386,8 @@ describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
       );
     });
     expect(screen.getByText("Assinatura visual ativa")).toBeInTheDocument();
-    expect(screen.getAllByText(/Código de suporte: run-initial/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/informe o código DVAP01/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/run-initial/)).not.toBeInTheDocument();
     expect(screen.queryByText("Direção visual definida pelo Vendeo")).not.toBeInTheDocument();
 
     const readinessAfter = fetchMock.mock.calls.filter(
@@ -401,9 +438,9 @@ describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
         },
         bp_status: "failed",
         brand_profile_status: "failed",
+        support_code: "DVAP01",
         failure_reference: "run-substitution",
-        message:
-          "Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. Informe ao suporte o código run-substitution.",
+        message: DVAP01_MESSAGE,
       },
     });
 
@@ -430,7 +467,8 @@ describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
       );
     });
     expect(screen.getByText("Assinatura visual ativa")).toBeInTheDocument();
-    expect(screen.getAllByText(/Código de suporte: run-substitution/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/informe o código DVAP01/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/run-substitution/)).not.toBeInTheDocument();
 
     const readinessAfter = fetchMock.mock.calls.filter(
       ([u]) => String(u) === "/api/store/check-readiness",
