@@ -13,6 +13,7 @@ env_touched: false
 migrations_touched: true
 migration_applied: false
 code_commit: 89994b1d
+gap_closure_commit: 99132b1e
 ---
 
 # Quick 261026 — Sincronização diária das tarifas OpenAI + painel admin
@@ -138,8 +139,8 @@ Seção `OpenAiPricingSection` inserida **antes** do card “Últimas Ações”
 
 | Gate | Resultado |
 |---|---|
-| 7 arquivos novos/focados | **53/53** |
-| Regressão afetada (`ai-cost`, `ai`, `visual-signature`, admin, cron, product-1-1, formatters) sem integrações/guard | **147 arquivos / 2069 passed, 7 skipped** |
+| 7 arquivos novos/focados | **63/63** |
+| Regressão afetada (`ai-cost`, `ai`, `visual-signature`, admin, cron, product-1-1, formatters) sem integrações/guard | **147 arquivos / 2079 passed, 7 skipped** |
 | `npm run typecheck` | exit 0 |
 | `npm run lint` | exit 0 |
 | `npm run build` | exit 0 |
@@ -157,6 +158,33 @@ isolado (`isolated_integration_requires_runner_and_redacted_preflight`); o guard
 `legacy-frontier` continua acusando as mudanças da quick anterior
 (`vs-image-usage-v1`), não desta quick. Nenhuma dessas falhas foi “corrigida”
 artificialmente aqui.
+
+## Gap closure pós-revisão (commit `99132b1e`)
+
+1. **Cache aplicável não pode ser apagado.** O parser passou a distinguir três
+   estados por célula: valor, **não aplicável** (`-`/`—`) e **informação
+   ausente** (célula vazia). Entrada/cache/saída textual de modelos textuais e
+   entrada/cache/saída de imagem de modelos de imagem são obrigatórias. Cache
+   aplicável com `-` falha com `not_applicable_dimension`; célula vazia falha
+   com `missing_information`; somente a saída textual de modelo de imagem aceita
+   `-` como não aplicável. A falha ocorre antes do apply: GPT-4o com cache `-`
+   preserva a tabela inteira. Regressões no parser e no serviço (apply não é
+   chamado) cobrem o caso.
+2. **Pendência continua destacada durante nova consulta.** A derivação de
+   estado agora mantém `failed`/`stale`/`never` quando uma nova tentativa está
+   `running`, adicionando `running: true` e `runningSince`; a UI acrescenta
+   “Nova consulta em andamento desde [data]”. O aviso só é removido depois de
+   um sucesso confirmado. Testes cobrem falha/atraso/nunca confirmada durante
+   retry, sucesso fresco + retry e sucesso posterior limpando o aviso.
+3. **Clareza da unidade por imagem.** A tabela separada “Preços por unidade de
+   imagem” agora informa explicitamente que esses valores são preservados pelo
+   versionamento e **não** são conferidos pela sincronização automática; o selo
+   de conferência se refere apenas às tarifas por 1M de tokens.
+4. **Comentário da migration.** `LOCAL-ONLY` foi substituído por “APLICAÇÃO
+   PENDENTE DE AUTORIZAÇÃO — preparada para homolog e produção”.
+
+Releitura real read-only do `pricing.md` continuou extraindo os 7 modelos após a
+validação mais estrita. Migration continua **não aplicada**.
 
 ## Limitações e próximos passos
 
