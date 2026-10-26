@@ -157,6 +157,16 @@ describe("calculateVisualSignatureImageCost — vs-image-usage-v1 × ai_model_pr
     );
   });
 
+  it("usage só com saída também não completa: entrada ausente é desconhecida", () => {
+    const result = calculate({ usage: { completionTokens: 100 } });
+
+    expect(result.textComponentUsd).toBeUndefined();
+    expect(result.visualSignatureImageUsage.missing).toContain(
+      "orchestrator_input_usage",
+    );
+    expect(result.visualSignatureImageUsage.coverage).toBe("partial");
+  });
+
   it("usage agregado completo (prompt+completion, sem breakdown de imagem) é aceito como orquestrador", () => {
     const result = calculate({
       usage: { promptTokens: 1000, completionTokens: 100 },
