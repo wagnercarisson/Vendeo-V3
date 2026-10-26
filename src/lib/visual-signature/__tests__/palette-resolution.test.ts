@@ -186,6 +186,15 @@ async function gen(
   return p.generate(input, TELEMETRY);
 }
 
+const PNG_ASSET_BYTES = Uint8Array.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ...new Array(42).fill(0),
+]);
+
+function pngAssetArrayBuffer() {
+  return PNG_ASSET_BYTES.buffer.slice(0);
+}
+
   describe('11 — profiler palette resolution (mocked probe + OpenAI + Supabase)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -194,7 +203,7 @@ async function gen(
     mockSupabaseFrom.mockReturnValue(makeDbChain({ data: null, error: null }));
     mockFetch.mockResolvedValue({
       ok: true,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(50)),
+      arrayBuffer: () => Promise.resolve(pngAssetArrayBuffer()),
     });
     global.fetch = mockFetch;
   });
@@ -212,7 +221,7 @@ async function gen(
       ];
 
       mockProbeColors.mockResolvedValue(makeProbeResult(clusters));
-      mockFetch.mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(50)) });
+      mockFetch.mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(pngAssetArrayBuffer()) });
       smartProbeMock(clusters);
       mockOpenAICreate.mockResolvedValue({
         choices: [{ message: { content: JSON.stringify({ visual_style: 'Modern', visual_tone: 'Elegante', typography_direction: 'Sans-serif', brand_personality: 'Sofisticado', campaign_guidelines: 'Test', campaign_brief: 'Test', confidence_score: 0.9 }) } }],

@@ -37,7 +37,17 @@ interface DownloadedAsset {
 
 /** Detecta o MIME de imagem por magic bytes. Retorna `null` se não reconhecido. */
 function detectImageMime(buffer: Buffer): string | null {
-  if (buffer.length >= 4 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
     return 'image/png';
   }
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
@@ -724,7 +734,7 @@ export class BrandProfilerWithoutLogoService {
         vision_adjudication: visionFailedAudit,
       };
 
-      await this.persistFailedProfile(input, safeMessage, [], failedValidation);
+      await this.persistFailedProfile(input, safeMessage, [], failedValidation, errorType);
 
       throw new BrandProfilerWithoutLogoError(safeMessage, {
         provider: 'openai',
@@ -1268,7 +1278,8 @@ export class BrandProfilerWithoutLogoService {
     input: BrandProfilerInput,
     errorMessage: string,
     _extractedColors: string[] = [],
-    colorValidation?: ColorValidation
+    colorValidation?: ColorValidation,
+    errorType?: string,
   ): Promise<void> {
     await this.assertStillActive(input);
     const rawColors = _extractedColors.length > 0 ? _extractedColors : input.artDirectorOutput.suggested_colors;
@@ -1281,6 +1292,7 @@ export class BrandProfilerWithoutLogoService {
 
     const metadata: Record<string, unknown> = {
       error: errorMessage,
+      ...(errorType ? { error_type: errorType } : {}),
       art_director_output: input.artDirectorOutput,
       extracted_colors: _extractedColors,
     };
@@ -1333,7 +1345,9 @@ export class BrandProfilerWithoutLogoService {
     }
 
     if (error) {
-      console.error('[BrandProfiler] Failed to persist failed profile:', error.message);
+      console.error('[BrandProfiler] failed_profile_persist_failed', {
+        code: 'failed_profile_persist_failed',
+      });
     }
   }
 
