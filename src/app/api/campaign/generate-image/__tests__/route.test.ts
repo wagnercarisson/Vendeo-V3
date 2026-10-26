@@ -764,6 +764,21 @@ describe('POST /api/campaign/generate-image', () => {
     expect(res.status).toBe(402);
   });
 
+  it('readiness sem brand_profile retorna 412 sem reserva de crédito nem provider', async () => {
+    await setupSuccessMocks();
+    mockRpc.mockResolvedValueOnce({
+      data: { ready: false, missing: [{ item: 'brand_profile', reason: 'sem marca' }] },
+      error: null,
+    });
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+
+    expect(res.status).toBe(412);
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockGenerateImage).not.toHaveBeenCalled();
+  });
+
   it('falha interna ao reservar crédito retorna 500 sem linguagem de pagamento', async () => {
     await setupSuccessMocks();
     mockReserveCredit.mockRejectedValueOnce(new Error('database unavailable'));

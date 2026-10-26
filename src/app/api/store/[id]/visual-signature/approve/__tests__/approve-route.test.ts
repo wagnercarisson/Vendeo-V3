@@ -9,9 +9,9 @@ const mockReconcileProfiles = vi.fn();
 const mockRevalidateCriticalDrift = vi.fn();
 const mockCreateSignedUrl = vi.fn(() => Promise.resolve({ data: { signedUrl: 'signed-vs-url' }, error: null }));
 const mockIsVisualSignatureActive = vi.fn(async () => true);
-const mockMarkOutdated = vi.fn(async () => ({ ok: true }));
-const mockRecordFailure = vi.fn(async () => ({ status: 'ok' }));
-const mockClearFailure = vi.fn(async () => ({ status: 'ok' }));
+const mockMarkOutdated = vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true }));
+const mockRecordFailure = vi.fn(async (): Promise<{ status: string; error?: string }> => ({ status: 'ok' }));
+const mockClearFailure = vi.fn(async (): Promise<{ status: string; error?: string }> => ({ status: 'ok' }));
 const mockSanitizeDiagnostic = vi.fn((s: string) => s);
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -363,7 +363,7 @@ describe('POST /api/store/[id]/visual-signature/approve', () => {
     expect(body.inferredPrimaryColor).toBeNull();
     expect(body.inferredAccentColor).toBeNull();
     expect(body.logoColorsDetected).toEqual([]);
-    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID);
+    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID, { signatureId: SIG_ID });
     expect(mockRecordFailure).toHaveBeenCalledWith(
       expect.objectContaining({
         storeId: STORE_ID,
@@ -860,7 +860,7 @@ describe('POST /api/store/[id]/visual-signature/approve — Substitution mode', 
     expect(body.inferredPrimaryColor).toBeNull();
     expect(body.inferredAccentColor).toBeNull();
     expect(body.logoColorsDetected).toEqual([]);
-    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID);
+    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID, { signatureId: SIG_ID });
     expect(mockRecordFailure).toHaveBeenCalled();
     // NUNCA restaura perfil para synced
     const statuses = storeBrandProfileUpdates.map((u: any) => u.status).filter(Boolean);

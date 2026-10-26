@@ -94,13 +94,21 @@ export async function loadVisualDirectionState(
 }
 
 /**
- * Invalida perfis `synced` que não pertencem à assinatura ativa, preservando o
- * conteúdo/histórico. NUNCA grava `synced` (fail-closed).
+ * Invalida perfis `synced` que não pertencem a uma assinatura mais nova.
+ *
+ * - `options.signatureId` é a assinatura que falhou. Se ela ainda for a ativa,
+ *   TODOS os perfis synced da loja são invalidados (inclusive um perfil synced
+ *   antigo da própria assinatura, que não pode continuar liberando campanhas).
+ * - Se outra assinatura já assumiu como ativa, o perfil dela é preservado;
+ *   somente perfis legados/antigos são invalidados.
+ *
+ * Preserva conteúdo/histórico. NUNCA grava `synced` (fail-closed).
  */
 export async function markSyncedProfilesOutdatedExceptActive(
   storeId: string,
-  client: SupabaseLike = supabase,
+  options: { signatureId?: string; client?: SupabaseLike } = {},
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const client = options.client ?? supabase;
   const now = new Date().toISOString();
 
   const activeResult = await client
@@ -117,8 +125,12 @@ export async function markSyncedProfilesOutdatedExceptActive(
   }
 
   const activeId: string | null = activeResult?.data?.[0]?.id ?? null;
+  // Só preserva o perfil ativo quando ele pertence a OUTRA assinatura (resposta
+  // atrasada). Se a assinatura ativa é a que falhou, ela deve ser invalidada.
+  const preserveActiveId =
+    activeId && options.signatureId !== activeId ? activeId : null;
 
-  if (activeId) {
+  if (preserveActiveId) {
     const legacy = await client
       .from("store_brand_profiles")
       .update({ status: "outdated", updated_at: now })
@@ -136,7 +148,7 @@ export async function markSyncedProfilesOutdatedExceptActive(
       .update({ status: "outdated", updated_at: now })
       .eq("store_id", storeId)
       .eq("status", "synced")
-      .neq("visual_signature_id", activeId);
+      .neq("visual_signature_id", preserveActiveId);
 
     if (other?.error) {
       console.error(`${LOG_PREFIX} cleanup_failed`, { code: "cleanup_failed" });
@@ -203,7 +215,7 @@ export async function recordVisualDirectionFailure(args: {
 
   const updateResult = await client
     .from("store_visual_signatures")
-    .update({ metadata: merged, updated_at: new Date().toISOString() })
+    .update({ metadata: merged })
     .eq("id", args.signatureId)
     .eq("store_id", args.storeId)
     .eq("status", "active")
@@ -263,7 +275,7 @@ export async function clearVisualDirectionFailure(args: {
 
   const updateResult = await client
     .from("store_visual_signatures")
-    .update({ metadata: merged, updated_at: new Date().toISOString() })
+    .update({ metadata: merged })
     .eq("id", args.signatureId)
     .eq("store_id", args.storeId)
     .eq("status", "active")

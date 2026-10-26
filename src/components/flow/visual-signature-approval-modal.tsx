@@ -456,15 +456,20 @@ export function VisualSignatureApprovalModal({
       // Falha funcional (recusa, filtro de conteúdo, vazio, truncamento, JSON):
       // mantém o modal e mostra a mensagem segura/específica devolvida pela API.
       if (!res.ok || data.success === false) {
+        const nextMessage = data.message || "Não foi possível gerar o perfil de marca agora. Tente novamente.";
+        const nextReference =
+          data.failure_reference ??
+          (state.phase === "bp_failed" ? state.failureReference : undefined);
         setState((prev) =>
           prev.phase === "bp_failed"
             ? {
                 ...prev,
-                message: data.message || "Não foi possível gerar o perfil de marca agora. Tente novamente.",
-                failureReference: data.failure_reference ?? prev.failureReference,
+                message: nextMessage,
+                failureReference: nextReference,
               }
             : prev,
         );
+        onDirectionPending?.({ message: nextMessage, reference: nextReference });
         return;
       }
 
@@ -490,13 +495,18 @@ export function VisualSignatureApprovalModal({
       });
       onClose();
     } catch {
+      const nextMessage = "Erro de conexão ao gerar o perfil de marca. Tente novamente.";
       setState((prev) =>
         prev.phase === "bp_failed"
-          ? { ...prev, message: "Erro de conexão ao gerar o perfil de marca. Tente novamente." }
+          ? { ...prev, message: nextMessage }
           : prev,
       );
+      onDirectionPending?.({
+        message: nextMessage,
+        reference: state.phase === "bp_failed" ? state.failureReference : undefined,
+      });
     }
-  }, [onTier2Retry, storeId, onClose, onComplete, state]);
+  }, [onTier2Retry, storeId, onClose, onComplete, onDirectionPending, state]);
 
   const handleClose = useCallback(() => {
     if (state.phase === "done") {
@@ -868,7 +878,7 @@ export function VisualSignatureApprovalModal({
                 onClick={onClose}
                 className="w-full px-4 py-2.5 border border-border-light text-text-primary font-heading font-semibold text-sm rounded-lg hover:bg-bg-elevated transition-all duration-200"
               >
-                Continuar
+                Fechar
               </button>
             </div>
           </div>

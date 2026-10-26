@@ -54,16 +54,16 @@ vi.mock('@/lib/brand-assets/text-only-inference-service', () => ({
 }));
 
 const mockProfilerGenerate = vi.fn();
-const mockLoadDirectionState = vi.fn(async () => ({
+const mockLoadDirectionState = vi.fn(async (): Promise<Record<string, unknown>> => ({
   pending: true,
   active_signature_id: 'vs-001',
   synced_profile_id: null,
   reference: null,
   failure_at: null,
 }));
-const mockMarkOutdated = vi.fn(async () => ({ ok: true }));
-const mockRecordFailure = vi.fn(async () => ({ status: 'ok' }));
-const mockClearFailure = vi.fn(async () => ({ status: 'ok' }));
+const mockMarkOutdated = vi.fn(async (): Promise<{ ok: boolean; error?: string }> => ({ ok: true }));
+const mockRecordFailure = vi.fn(async (): Promise<{ status: string; error?: string }> => ({ status: 'ok' }));
+const mockClearFailure = vi.fn(async (): Promise<{ status: string; error?: string }> => ({ status: 'ok' }));
 const mockIsActiveVS = vi.fn(async () => true);
 const mockSanitizeDiagnostic = vi.fn((s: string) => s);
 
@@ -612,7 +612,7 @@ describe('POST /api/store/[id]/brand-profile/realign', () => {
     expect(body.brand_profile_status).toBe('failed');
     expect(typeof body.failure_reference).toBe('string');
     expect(body.failure_reference).toMatch(/^run-\d+$/);
-    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID);
+    expect(mockMarkOutdated).toHaveBeenCalledWith(STORE_ID, { signatureId: 'vs-001' });
     expect(mockRecordFailure).toHaveBeenCalledWith(
       expect.objectContaining({
         storeId: STORE_ID,

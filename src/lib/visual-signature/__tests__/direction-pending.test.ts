@@ -142,7 +142,7 @@ describe("loadVisualDirectionState", () => {
 });
 
 describe("markSyncedProfilesOutdatedExceptActive", () => {
-  it("com assinatura ativa exclui o perfil dela e inclui legado/outros ids", async () => {
+  it("quando outra assinatura já assumiu, preserva o perfil dela e invalida legado/outros ids", async () => {
     const updates: any[] = [];
     mockSupabaseFrom.mockImplementation((table: string) => {
       if (table === "store_visual_signatures") {
@@ -151,7 +151,9 @@ describe("markSyncedProfilesOutdatedExceptActive", () => {
       return makeChain({ result: { data: null, error: null }, updates });
     });
 
-    const result = await markSyncedProfilesOutdatedExceptActive(STORE_ID);
+    const result = await markSyncedProfilesOutdatedExceptActive(STORE_ID, {
+      signatureId: "sig-antiga",
+    });
 
     expect(result).toEqual({ ok: true });
     expect(updates).toHaveLength(2);
@@ -159,6 +161,25 @@ describe("markSyncedProfilesOutdatedExceptActive", () => {
       expect(update.status).toBe("outdated");
       expect(update.status).not.toBe("synced");
     }
+  });
+
+  it("quando a própria assinatura que falhou ainda é a ativa, invalida TODOS os synced", async () => {
+    const updates: any[] = [];
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === "store_visual_signatures") {
+        return makeChain({ result: { data: [{ id: SIG_ID }], error: null } });
+      }
+      return makeChain({ result: { data: null, error: null }, updates });
+    });
+
+    const result = await markSyncedProfilesOutdatedExceptActive(STORE_ID, {
+      signatureId: SIG_ID,
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(updates).toHaveLength(1);
+    expect(updates[0].status).toBe("outdated");
+    expect(updates[0].status).not.toBe("synced");
   });
 
   it("sem assinatura ativa invalida todos os synced", async () => {

@@ -7,7 +7,6 @@ import {
   isVisualSignatureActive,
   markSyncedProfilesOutdatedExceptActive,
   recordVisualDirectionFailure,
-  sanitizeDirectionDiagnostic,
 } from '@/lib/visual-signature/direction-pending';
 import { updateGenerationEventDecision } from '@/lib/visual-signature/generation-events';
 import { reconcileProfiles } from '@/lib/brand-assets/profile-reconciliation';
@@ -66,11 +65,12 @@ async function handleProfilerFailure(args: {
   const { storeId, signatureId, reqId, err, failureReference, signedAssetUrl } = args;
   const isProfilerError = err instanceof BrandProfilerWithoutLogoError;
   const safeErrorType = isProfilerError ? err.metadata.errorType : 'unexpected_error';
+  // Referência persistida e correlacionável. Fallback = id existente da própria
+  // assinatura caso a criação do run tenha falhado antes de produzir o id.
+  const reference = failureReference || signatureId;
 
-  const sanitized = sanitizeDirectionDiagnostic(err instanceof Error ? err.message : '');
   console.error(`[approve][req-${reqId}] brand_profile_failed`, {
     code: safeErrorType,
-    ...(sanitized ? { detail: sanitized } : {}),
   });
 
   if (isProfilerError && err.metadata.errorType === 'visual_signature_superseded') {
@@ -81,7 +81,7 @@ async function handleProfilerFailure(args: {
     }, { status: 409 });
   }
 
-  const cleanup = await markSyncedProfilesOutdatedExceptActive(storeId);
+  const cleanup = await markSyncedProfilesOutdatedExceptActive(storeId, { signatureId });
   if (!cleanup.ok) {
     return NextResponse.json({
       success: false,
@@ -93,7 +93,7 @@ async function handleProfilerFailure(args: {
   const recorded = await recordVisualDirectionFailure({
     storeId,
     signatureId,
-    reference: failureReference,
+    reference,
     failureCode: safeErrorType,
   });
 
@@ -120,12 +120,12 @@ async function handleProfilerFailure(args: {
     brandProfileData: null,
     bp_status: 'failed',
     brand_profile_status: 'failed',
-    failure_reference: failureReference,
+    failure_reference: reference,
     visual_signature_id: signatureId,
     message:
       'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. ' +
       'A geração de campanhas ficará indisponível até a conclusão. ' +
-      `Informe ao suporte o código ${failureReference}. ` +
+      `Informe ao suporte o código ${reference}. ` +
       'Após a orientação do suporte, clique em Realinhar direção visual.',
     logoStatus: 'generated',
     inferredPrimaryColor: null,

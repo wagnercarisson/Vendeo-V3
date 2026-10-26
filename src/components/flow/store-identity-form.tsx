@@ -326,7 +326,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   // F36 (D4/D6/D13): readiness consumido pelo hook (tabStates / geração).
   const [readiness, setReadiness] = useState<StoreReadinessResult>({ ready: true, missing: [] });
   // MD-03: força refetch após update-cnpj (storeId não muda → sem trigger natural).
-  const [readinessRefreshKey, setReadinessRefreshKey] = useState(0);  useEffect(() => {
+  const [readinessRefreshKey, setReadinessRefreshKey] = useState(0);
+  useEffect(() => {
     if (!storeId) {
       setReadiness({ ready: true, missing: [] });
       return;
@@ -671,6 +672,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           setBrandColorsChosen([]);
           setDetectedColors([]);
           setAccentColor("");
+          setBrandDirectorWarning(null);
+          setInferenceError(null);
           return;
         }
 
@@ -902,11 +905,14 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           });
         }
         setDirectionPending({ pending: false, reference: null, error: false, message: null });
+        setBrandDirectorWarning(null);
+        setInferenceError(null);
         setReadinessRefreshKey(k => k + 1);
         setDriftRefreshKey(k => k + 1);
       } else {
         setDirectionPending((prev) => ({
           ...prev,
+          pending: true,
           reference: data.failure_reference ?? prev.reference,
           message: data.message ?? "Não foi possível realinhar a direção visual. Tente novamente.",
           error: false,
@@ -915,6 +921,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     } catch {
       setDirectionPending((prev) => ({
         ...prev,
+        pending: true,
         message: "Não foi possível realinhar a direção visual. Tente novamente.",
         error: false,
       }));
@@ -2299,7 +2306,8 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               />
             )}
 
-            {redirectMessage === "needs-visual-direction" && (              <div className="mb-4 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
+            {redirectMessage === "needs-visual-direction" && (
+              <div className="mb-4 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
                 <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
                 <p className="text-accent-amber text-sm font-body flex-1">
                   Sua loja precisa de uma direção visual para gerar campanhas. Configure agora.
@@ -2982,9 +2990,20 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
           onOpenGallery={handleOpenGallery}
-          onDirectionPending={({ message, reference }) =>
-            setDirectionPending({ pending: true, reference: reference ?? null, error: false, message })
-          }
+          onDirectionPending={({ message, reference }) => {
+            setDirectionPending({
+              pending: true,
+              reference: reference ?? null,
+              error: false,
+              message,
+            });
+            setInferredProfile(null);
+            setBrandColorsChosen([]);
+            setDetectedColors([]);
+            setAccentColor("");
+            setBrandDirectorWarning(null);
+            setInferenceError(null);
+          }}
           initialReviewFeedbackOpen={openApprovalWithFeedback}
         />
       )}

@@ -23,7 +23,6 @@ import {
   loadVisualDirectionState,
   markSyncedProfilesOutdatedExceptActive,
   recordVisualDirectionFailure,
-  sanitizeDirectionDiagnostic,
 } from '@/lib/visual-signature/direction-pending';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -709,10 +708,8 @@ async function handleVSRealign(
 
     const isProfilerError = err instanceof BrandProfilerWithoutLogoError;
     const safeErrorType = isProfilerError ? err.metadata.errorType : 'unexpected_error';
-    const sanitized = sanitizeDirectionDiagnostic(err instanceof Error ? err.message : '');
     console.error('[realign/vs] brand_profile_failed', {
       code: safeErrorType,
-      ...(sanitized ? { detail: sanitized } : {}),
     });
 
     if (isProfilerError && err.metadata.errorType === 'visual_signature_superseded') {
@@ -731,7 +728,9 @@ async function handleVSRealign(
       });
     }
 
-    const cleanup = await markSyncedProfilesOutdatedExceptActive(id);
+    const cleanup = await markSyncedProfilesOutdatedExceptActive(id, {
+      signatureId: vsRecord.id,
+    });
     if (!cleanup.ok) {
       return NextResponse.json({
         success: false,
@@ -740,10 +739,11 @@ async function handleVSRealign(
       }, { status: 500 });
     }
 
+    const reference = failureReference ?? vsRecord.id;
     const recorded = await recordVisualDirectionFailure({
       storeId: id,
       signatureId: vsRecord.id,
-      reference: failureReference,
+      reference,
       failureCode: safeErrorType,
     });
 
@@ -767,11 +767,11 @@ async function handleVSRealign(
       success: false,
       message:
         'Não foi possível concluir a direção visual. A geração de campanhas ficará indisponível até a conclusão. ' +
-        `Informe ao suporte o código ${failureReference ?? ''}. ` +
+        `Informe ao suporte o código ${reference}. ` +
         'Após a orientação do suporte, clique em Realinhar direção visual.',
       error: 'brand_profile_vision_failed',
       brand_profile_status: 'failed',
-      failure_reference: failureReference,
+      failure_reference: reference,
     });
   }
 }
