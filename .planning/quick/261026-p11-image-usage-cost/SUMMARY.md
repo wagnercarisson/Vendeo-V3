@@ -13,6 +13,7 @@ provider_touched: false
 env_touched: false
 migrations_touched: false
 code_commit: 2d42c512
+gap_closure_commit: 5816a8ce
 ---
 
 # Quick 261026 — Custo pós-chamada do Produto 1:1 por tokens reais
@@ -130,8 +131,8 @@ atravessando `UpstreamImagesAdapter → AiGateway → DefaultAiTelemetrySink`.
 
 | Gate | Resultado |
 |---|---|
-| 8 arquivos focados (cálculo, integração, pricing, adapter, sink, não-ativação) | **185/185** |
-| Regressão afetada (`ai-cost`, `ai`, `visual-signature`, admin, cron, product-1-1, formatters; sem integrações/guard) | **149 arquivos / 2103 passed, 7 skipped** |
+| 10 arquivos focados (cálculo, integração, isolamento legado, pricing, adapter, sink, não-ativação) | **203/203** |
+| Regressão afetada (`ai-cost`, `ai`, `visual-signature`, admin, cron, product-1-1, formatters; sem integrações/guard) | **150 arquivos / 2107 passed, 7 skipped** |
 | `npm run typecheck` | exit 0 |
 | `npm run lint` | exit 0 |
 | `npm run build` | exit 0 |
@@ -148,6 +149,34 @@ Cobertura específica:
 - pré-chamada preservada (`internalCost.estimatedCostUsd = image_unit`);
 - guard `non-activation` confirma que o runtime legado não importa estruturas
   do Produto 1:1 (calculadora em nome neutro).
+
+## Gap closure pós-revisão (commit `5816a8ce`)
+
+Achado: o normalizador compartilhado `normalizeImagesUsage` passou a preencher
+`cachedInputTokens`. No cálculo legado com breakdown detalhado, a entrada já era
+contabilizada integralmente e o cache era somado novamente — mudando custos
+fora do Produto 1:1.
+
+Correção:
+
+- `normalizeImagesUsage` voltou a **não** ler nenhum campo de cache (legado
+  byte-a-byte);
+- a leitura de `cached_tokens`/`cached_text_tokens`/`cached_image_tokens` foi
+  movida para `normalizeUpstreamImagesUsage`, usada **somente** pelo
+  `UpstreamImagesAdapter` (Produto 1:1);
+- o cálculo legado foi mantido intocado (não foi “corrigido” globalmente).
+
+Regressão comparativa com a mesma resposta crua (`input_tokens: 1000`,
+`text_tokens: 400`, `image_tokens: 600`, `cached_tokens: 300`,
+`output_image_tokens: 50`):
+
+- legado: `normalizeImagesUsage` não expõe cache e `resolveAiCost` = **US$
+  0,021500** (sem o antigo acréscimo de 0,000375);
+- Produto 1:1: `normalizeUpstreamImagesUsage` expõe `cachedInputTokens: 300`,
+  mas sem split de modalidade → cálculo `not_available` com
+  `cache_modality_ambiguous` (não inventa 0,021875);
+- com split explícito (`cached_text_tokens: 100`, `cached_image_tokens: 200`),
+  o Produto 1:1 calcula US$ 0,006725; o legado continua sem ler cache.
 
 ## Limitações
 
