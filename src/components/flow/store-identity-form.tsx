@@ -7,7 +7,10 @@ import { StorePreview } from "./store-preview";
 import { VisualSignatureApprovalModal } from "./visual-signature-approval-modal";
 import { DirectionPendingBanner } from "./direction-pending-banner";
 import {
+  isVisualDirectionSupportCode,
+  visualDirectionConnectionMessage,
   visualDirectionSupportMessage,
+  VISUAL_DIRECTION_REALIGN_FALLBACK_MESSAGE,
   type VisualDirectionSupportCode,
 } from "@/lib/visual-signature/support-codes";
 import { VisualSignatureHistoryModal } from "./visual-signature-history-modal";
@@ -62,6 +65,30 @@ import type { TrialOfferOutcome } from "./use-store-form";
 const HEX_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_LOGO_SIZE = 5 * 1024 * 1024;
+
+/**
+ * O fallback de `getStoreReadiness` devolve `brand_profile` em `missing`
+ * quando o RPC falha. Essa razão não confirma ausência de direção visual;
+ * é apenas indisponibilidade de leitura. Mantemos o prefixo alinhado ao
+ * fallback server-side sem alterar as regras da prontidão.
+ */
+const READINESS_UNAVAILABLE_REASON_PREFIX = "Não foi possível verificar a prontidão da loja";
+
+function hasConfirmedBrandProfileMissing(readiness: StoreReadinessResult): boolean {
+  return readiness.missing.some(
+    (item) =>
+      item.item === "brand_profile"
+      && !item.reason.startsWith(READINESS_UNAVAILABLE_REASON_PREFIX),
+  );
+}
+
+function hasUnavailableReadiness(readiness: StoreReadinessResult): boolean {
+  return readiness.missing.some(
+    (item) =>
+      item.item === "brand_profile"
+      && item.reason.startsWith(READINESS_UNAVAILABLE_REASON_PREFIX),
+  );
+}
 
 type FieldErrors = Partial<Record<string, string>>;
 
@@ -329,14 +356,17 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
 
   // F36 (D4/D6/D13): readiness consumido pelo hook (tabStates / geração).
   const [readiness, setReadiness] = useState<StoreReadinessResult>({ ready: true, missing: [] });
+  const [readinessStatus, setReadinessStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   // MD-03: força refetch após update-cnpj (storeId não muda → sem trigger natural).
   const [readinessRefreshKey, setReadinessRefreshKey] = useState(0);
   useEffect(() => {
     if (!storeId) {
       setReadiness({ ready: true, missing: [] });
+      setReadinessStatus('ready');
       return;
     }
     let cancelled = false;
+    setReadinessStatus('loading');
     fetch("/api/store/check-readiness", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -344,12 +374,23 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled && data) {
-          setReadiness({ ready: data.ready ?? false, missing: data.missing ?? [] });
+        if (cancelled) return;
+        if (!data) {
+          setReadinessStatus('unavailable');
+          return;
         }
+        const nextReadiness: StoreReadinessResult = {
+          ready: data.ready ?? false,
+          missing: data.missing ?? [],
+        };
+        setReadiness(nextReadiness);
+        setReadinessStatus(hasUnavailableReadiness(nextReadiness) ? 'unavailable' : 'ready');
       })
       .catch(() => {
-        if (!cancelled) setReadiness({ ready: false, missing: [] });
+        if (!cancelled) {
+          setReadiness({ ready: false, missing: [] });
+          setReadinessStatus('unavailable');
+        }
       });
     return () => { cancelled = true; };
   }, [storeId, readinessRefreshKey]);
@@ -866,6 +907,7 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
       }
     }
     setDriftRefreshKey(k => k + 1);
+    setReadinessStatus('loading');
     setReadinessRefreshKey(k => k + 1);
     setDirectionPending({ pending: false, supportCode: null, error: false, message: null });
     setShowApprovalModal(false);
@@ -909,27 +951,37 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
         setDirectionPending({ pending: false, supportCode: null, error: false, message: null });
         setBrandDirectorWarning(null);
         setInferenceError(null);
+        setReadinessStatus('loading');
         setReadinessRefreshKey(k => k + 1);
         setDriftRefreshKey(k => k + 1);
       } else {
-        const code: VisualDirectionSupportCode =
-          data.support_code === 'DVRE01' ? 'DVRE01' : 'DVAP01';
-        setDirectionPending((prev) => ({
-          ...prev,
-          pending: true,
-          supportCode: code,
-          message: data.message ?? visualDirectionSupportMessage(code),
-          error: false,
-        }));
+        setDirectionPending((prev) => {
+          const code = isVisualDirectionSupportCode(data.support_code)
+            ? data.support_code
+            : isVisualDirectionSupportCode(prev.supportCode)
+              ? prev.supportCode
+              : null;
+          const serverMessage = typeof data.message === 'string' ? data.message : '';
+          const message = code
+            ? (serverMessage.includes(code) ? serverMessage : visualDirectionSupportMessage(code))
+            : (serverMessage || VISUAL_DIRECTION_REALIGN_FALLBACK_MESSAGE);
+          return {
+            ...prev,
+            pending: true,
+            supportCode: code,
+            message,
+            error: false,
+          };
+        });
       }
     } catch {
       setDirectionPending((prev) => {
-        const code: VisualDirectionSupportCode = prev.supportCode ?? 'DVAP01';
+        const code = isVisualDirectionSupportCode(prev.supportCode) ? prev.supportCode : null;
         return {
           ...prev,
           pending: true,
           supportCode: code,
-          message: visualDirectionSupportMessage(code),
+          message: visualDirectionConnectionMessage(code),
           error: false,
         };
       });
@@ -2313,7 +2365,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
               />
             )}
 
-            {redirectMessage === "needs-visual-direction" && (
+            {redirectMessage === "needs-visual-direction"
+              && readinessStatus === 'ready'
+              && !directionPending.pending
+              && hasConfirmedBrandProfileMissing(readiness) && (
               <div className="mb-4 flex items-start gap-3 bg-amber-900/20 border border-amber-700/30 rounded-lg px-4 py-3">
                 <AlertCircle className="w-5 h-5 text-accent-amber shrink-0 mt-0.5" />
                 <p className="text-accent-amber text-sm font-body flex-1">
@@ -2998,11 +3053,12 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           onRemove={handleRemoveVS}
           onOpenGallery={handleOpenGallery}
           onDirectionPending={({ message, supportCode, signatureUrl }) => {
+            const code = isVisualDirectionSupportCode(supportCode) ? supportCode : null;
             setDirectionPending({
               pending: true,
-              supportCode: supportCode === 'DVRE01' ? 'DVRE01' : 'DVAP01',
+              supportCode: code,
               error: false,
-              message,
+              message: message ?? visualDirectionConnectionMessage(code),
             });
             // A assinatura foi aprovada mesmo com a direção pendente: atualiza
             // identidade/imagem e reconsulta readiness/drift SEM remover o banner

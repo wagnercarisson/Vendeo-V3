@@ -74,9 +74,12 @@ const SYNCED_PROFILE = {
   metadata: {},
 };
 
+type ReadinessConfig = Record<string, unknown> | "loading" | "error" | "reject";
+
 interface Routes {
   directionState?: Record<string, unknown> | "error";
   syncedProfile?: unknown;
+  readiness?: ReadinessConfig | ReadinessConfig[];
   realign?: Record<string, unknown>;
   visualSignatures?: Record<string, unknown>;
   reviewSignatures?: Record<string, unknown>;
@@ -85,7 +88,15 @@ interface Routes {
   store?: Record<string, unknown>;
 }
 
+function readinessResponse(config?: ReadinessConfig): Promise<Response> | Response {
+  if (config === "loading") return new Promise<Response>(() => {});
+  if (config === "error") return { ok: false, json: async () => ({}) } as Response;
+  if (config === "reject") return Promise.reject(new Error("readiness unavailable"));
+  return okJson(config ?? { ready: true, missing: [] });
+}
+
 function installFetch(routes: Routes = {}) {
+  let readinessCalls = 0;
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? "GET";
@@ -105,7 +116,11 @@ function installFetch(routes: Routes = {}) {
       return okJson({ hasValidAcceptance: true });
     }
     if (url === "/api/store/check-readiness") {
-      return okJson({ ready: true, missing: [] });
+      const configured = Array.isArray(routes.readiness)
+        ? routes.readiness[Math.min(readinessCalls, routes.readiness.length - 1)]
+        : routes.readiness;
+      readinessCalls += 1;
+      return readinessResponse(configured);
     }
     if (url === `/api/store/${STORE_ID}/visual-signature/generate-without-logo`) {
       return okJson(
@@ -192,9 +207,34 @@ const PENDING_STATE = {
   support_code: "DVAP01",
 };
 
-function renderForm() {
+const NEEDS_DIRECTION_WARNING =
+  "Sua loja precisa de uma direção visual para gerar campanhas. Configure agora.";
+
+const READY = { ready: true, missing: [] };
+const FISCAL_ONLY = {
+  ready: false,
+  missing: [{ item: "cadastro_fiscal", reason: "CNPJ pendente para geração." }],
+};
+const BRAND_PROFILE_MISSING = {
+  ready: false,
+  missing: [{ item: "brand_profile", reason: "Perfil de marca ainda não gerado." }],
+};
+const READINESS_UNAVAILABLE = {
+  ready: false,
+  missing: [{
+    item: "brand_profile",
+    reason: "Não foi possível verificar a prontidão da loja: offline",
+  }],
+};
+
+function renderForm({ redirectMessage }: { redirectMessage?: string } = {}) {
   return render(
-    <StoreIdentityForm initialStore={STORE} userId="user-1" initialTab="direcao-visual" />,
+    <StoreIdentityForm
+      initialStore={STORE}
+      userId="user-1"
+      initialTab="direcao-visual"
+      redirectMessage={redirectMessage}
+    />,
   );
 }
 
@@ -279,6 +319,113 @@ describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
       expect(screen.getByText("Não foi possível verificar a direção visual")).toBeInTheDocument();
     });
     expect(screen.getByRole("button", { name: "Realinhar direção visual" })).toBeInTheDocument();
+  });
+
+  describe("GAP 1 — aviso de direção derivado da prontidão", () => {
+    it("URL needs-visual-direction + prontidão completa não mostra o aviso antigo", async () => {
+      const fetchMock = installFetch({ readiness: READY });
+      renderForm({ redirectMessage: "needs-visual-direction" });
+
+      await waitFor(() => {
+        expect(fetchMock.mock.calls.some(
+          ([u]) => String(u) === "/api/store/check-readiness",
+        )).toBe(true);
+      });
+      expect(screen.queryByText(NEEDS_DIRECTION_WARNING)).not.toBeInTheDocument();
+    });
+
+    it("pendência apenas fiscal não é tratada como ausência de direção", async () => {
+      const fetchMock = installFetch({ readiness: FISCAL_ONLY });
+      renderForm({ redirectMessage: "needs-visual-direction" });
+
+      await waitFor(() => {
+        expect(fetchMock.mock.calls.some(
+          ([u]) => String(u) === "/api/store/check-readiness",
+        )).toBe(true);
+      });
+      expect(screen.queryByText(NEEDS_DIRECTION_WARNING)).not.toBeInTheDocument();
+    });
+
+    it("brand_profile confirmado em missing mostra o aviso de direção", async () => {
+      installFetch({ readiness: BRAND_PROFILE_MISSING });
+      renderForm({ redirectMessage: "needs-visual-direction" });
+
+      await waitFor(() => {
+        expect(screen.getByText(NEEDS_DIRECTION_WARNING)).toBeInTheDocument();
+      });
+    });
+
+    it("prontidão carregando não infere ausência de direção pela URL", async () => {
+      const fetchMock = installFetch({ readiness: "loading" });
+      renderForm({ redirectMessage: "needs-visual-direction" });
+
+      await waitFor(() => {
+        expect(fetchMock.mock.calls.some(
+          ([u]) => String(u) === "/api/store/check-readiness",
+        )).toBe(true);
+      });
+      expect(screen.queryByText(NEEDS_DIRECTION_WARNING)).not.toBeInTheDocument();
+    });
+
+    it("prontidão indisponível (fallback/erro) não infere ausência de direção pela URL", async () => {
+      const fallbackFetch = installFetch({ readiness: READINESS_UNAVAILABLE });
+      const first = renderForm({ redirectMessage: "needs-visual-direction" });
+
+      await waitFor(() => {
+        expect(fallbackFetch.mock.calls.some(
+          ([u]) => String(u) === "/api/store/check-readiness",
+        )).toBe(true);
+      });
+      expect(screen.queryByText(NEEDS_DIRECTION_WARNING)).not.toBeInTheDocument();
+      first.unmount();
+
+      installFetch({ readiness: "reject" });
+      renderForm({ redirectMessage: "needs-visual-direction" });
+      await waitFor(() => {
+        expect(screen.queryByText(NEEDS_DIRECTION_WARNING)).not.toBeInTheDocument();
+      });
+    });
+
+    it("realinhamento bem-sucedido + prontidão atualizada remove o aviso sem mudar a URL", async () => {
+      installFetch({
+        directionState: PENDING_STATE,
+        readiness: [BRAND_PROFILE_MISSING, READY],
+        realign: { success: true, profile: SYNCED_PROFILE },
+      });
+      const urlBefore = window.location.href;
+      renderForm({ redirectMessage: "needs-visual-direction" });
+
+      await waitFor(() => expect(screen.getByText("Direção visual pendente")).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Realinhar direção visual" }));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Direção visual pendente")).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText(NEEDS_DIRECTION_WARNING)).not.toBeInTheDocument();
+      expect(window.location.href).toBe(urlBefore);
+    });
+
+    it("outra pendência permanece após recuperação e não há aviso de direção/campanhas liberadas", async () => {
+      installFetch({
+        directionState: PENDING_STATE,
+        readiness: [BRAND_PROFILE_MISSING, FISCAL_ONLY],
+        realign: { success: true, profile: SYNCED_PROFILE },
+      });
+      renderForm({ redirectMessage: "needs-visual-direction" });
+
+      await waitFor(() => expect(screen.getByText("Direção visual pendente")).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Realinhar direção visual" }));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Direção visual pendente")).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText(NEEDS_DIRECTION_WARNING)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("tab", { name: /Dados/i }));
+      await waitFor(() => {
+        expect(screen.getByText(/Fiscal pendente:/)).toBeInTheDocument();
+      });
+    });
   });
 
   it("realinhamento bem-sucedido limpa o banner e reexecuta readiness", async () => {

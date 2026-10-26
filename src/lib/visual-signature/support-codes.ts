@@ -39,7 +39,29 @@ export function supportCodeForRoutine(routine: VisualDirectionFailureRoutine): V
     : VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED;
 }
 
-function isKnownSupportCode(value: unknown): value is VisualDirectionSupportCode {
+/**
+ * Falha de conexão ao tentar realinhar sem resposta do servidor.
+ * Não é uma ocorrência persistida nem uma classificação técnica confirmada.
+ */
+export const VISUAL_DIRECTION_CONNECTION_ERROR_MESSAGE =
+  'Erro de conexão ao realinhar a direção visual. Tente novamente.';
+
+/** Fallback seguro para falha funcional de realinhamento sem mensagem da API. */
+export const VISUAL_DIRECTION_REALIGN_FALLBACK_MESSAGE =
+  'Não foi possível realinhar a direção visual agora. Tente novamente.';
+
+/**
+ * Mensagem de conexão consistente entre modal e formulário.
+ * Com código conhecido, usa a mensagem canônica do catálogo (código uma vez).
+ * Sem código, usa mensagem segura sem inventar referência/classificação.
+ */
+export function visualDirectionConnectionMessage(
+  code?: VisualDirectionSupportCode | null,
+): string {
+  return code ? visualDirectionSupportMessage(code) : VISUAL_DIRECTION_CONNECTION_ERROR_MESSAGE;
+}
+
+export function isVisualDirectionSupportCode(value: unknown): value is VisualDirectionSupportCode {
   return value === VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED
     || value === VISUAL_DIRECTION_SUPPORT_CODES.REALIGN_FAILED;
 }
@@ -56,7 +78,7 @@ export function deriveVisualDirectionSupportCode(
   metadata: Record<string, unknown> | null | undefined,
 ): VisualDirectionSupportCode {
   const explicit = metadata?.brand_profile_support_code;
-  if (isKnownSupportCode(explicit)) return explicit;
+  if (isVisualDirectionSupportCode(explicit)) return explicit;
 
   const routine = metadata?.brand_profile_failure_routine;
   if (routine === 'realign') return VISUAL_DIRECTION_SUPPORT_CODES.REALIGN_FAILED;

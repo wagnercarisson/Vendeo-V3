@@ -3,6 +3,11 @@ import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VisualSignatureApprovalModal } from '../visual-signature-approval-modal';
+import {
+  VISUAL_DIRECTION_CONNECTION_ERROR_MESSAGE,
+  VISUAL_DIRECTION_SUPPORT_CODES,
+  visualDirectionSupportMessage,
+} from '@/lib/visual-signature/support-codes';
 
 const mockUseOperationCosts = vi.fn(() => ({
   costs: {
@@ -440,9 +445,14 @@ describe('VisualSignatureApprovalModal behavioral (Cancelar) — rendering', () 
 });
 
 describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-svt)', () => {
+  const DVAP01_MESSAGE = visualDirectionSupportMessage(
+    VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED,
+  );
+
   function mockFlow(opts: {
     approveBody: Record<string, unknown>;
     realign?: Record<string, unknown>;
+    realignThrows?: boolean;
   }) {
     vi.spyOn(global, 'fetch').mockImplementation(async (url, init) => {
       const urlStr = typeof url === 'string' ? url : url instanceof Request ? url.url : '';
@@ -462,6 +472,7 @@ describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-s
         return new Response(JSON.stringify(opts.approveBody), { status: 200 });
       }
       if (urlStr.includes('/brand-profile/realign')) {
+        if (opts.realignThrows) throw new TypeError('Failed to fetch');
         return new Response(JSON.stringify(opts.realign ?? {}), { status: 200 });
       }
       return new Response(JSON.stringify({}), { status: 200 });
@@ -582,6 +593,76 @@ describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-s
     expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
     expect(screen.queryByText(/run-ref-10/)).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('erro de conexão mantém o código conhecido uma única vez e propaga mensagem consistente', async () => {
+    const onDirectionPending = vi.fn();
+    const onClose = vi.fn();
+    mockFlow({
+      approveBody: {
+        signature: { assetUrl: 'https://x/sig.png' },
+        bp_status: 'failed',
+        support_code: VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED,
+        message: DVAP01_MESSAGE,
+        failure_reference: 'run-ref-connection',
+      },
+      realignThrows: true,
+    });
+
+    render(<VisualSignatureApprovalModal {...createModalProps({ onDirectionPending, onClose })} />);
+
+    await waitFor(() => expect(screen.getByText('Aprovar')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Aprovar'));
+    await waitFor(() => expect(screen.getByText('Direção visual pendente')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Realinhar direção visual' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(DVAP01_MESSAGE)).toBeInTheDocument();
+    });
+    expect(screen.getByText(DVAP01_MESSAGE).textContent?.match(/DVAP01/g)).toHaveLength(1);
+    expect(screen.queryByText(/run-ref-connection/)).not.toBeInTheDocument();
+    expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Realinhar direção visual' })).toBeInTheDocument();
+    expect(onDirectionPending).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        message: DVAP01_MESSAGE,
+        supportCode: VISUAL_DIRECTION_SUPPORT_CODES.APPROVAL_FAILED,
+      }),
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('erro de conexão sem código conhecido usa mensagem segura sem inventar código/referência', async () => {
+    const onDirectionPending = vi.fn();
+    mockFlow({
+      approveBody: {
+        signature: { assetUrl: 'https://x/sig.png' },
+        bp_status: 'failed',
+        message: 'Direção visual pendente sem código público.',
+        failure_reference: 'run-ref-no-code',
+      },
+      realignThrows: true,
+    });
+
+    render(<VisualSignatureApprovalModal {...createModalProps({ onDirectionPending })} />);
+
+    await waitFor(() => expect(screen.getByText('Aprovar')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Aprovar'));
+    await waitFor(() => expect(screen.getByText('Direção visual pendente')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Realinhar direção visual' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(VISUAL_DIRECTION_CONNECTION_ERROR_MESSAGE)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/DVAP01|DVRE01/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/run-ref-no-code/)).not.toBeInTheDocument();
+    expect(screen.getByText('Direção visual pendente')).toBeInTheDocument();
+    expect(onDirectionPending).toHaveBeenLastCalledWith({
+      message: VISUAL_DIRECTION_CONNECTION_ERROR_MESSAGE,
+      supportCode: undefined,
+    });
   });
 });
 

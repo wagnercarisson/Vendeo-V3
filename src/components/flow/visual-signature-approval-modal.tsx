@@ -5,6 +5,12 @@ import { useOperationCosts } from "@/hooks/use-operation-costs";
 import { formatCredits } from "@/lib/credit/format";
 import { AlertCircle, CheckCircle2, Loader2, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import type { VisualSignatureArtDirectorOutput } from "@/lib/visual-signature/types";
+import {
+  isVisualDirectionSupportCode,
+  visualDirectionConnectionMessage,
+  visualDirectionSupportMessage,
+  VISUAL_DIRECTION_REALIGN_FALLBACK_MESSAGE,
+} from "@/lib/visual-signature/support-codes";
 
 interface RestoreEligibilityInfo {
   can_restore: boolean;
@@ -471,20 +477,32 @@ export function VisualSignatureApprovalModal({
       // Falha funcional (recusa, filtro de conteúdo, vazio, truncamento, JSON):
       // mantém o modal e mostra a mensagem segura/específica devolvida pela API.
       if (!res.ok || data.success === false) {
-        const nextMessage = data.message || "Não foi possível gerar o perfil de marca agora. Tente novamente.";
-        const nextSupportCode =
-          data.support_code ??
-          (state.phase === "bp_failed" ? state.supportCode : undefined);
+        const previousSupportCode =
+          state.phase === "bp_failed" && isVisualDirectionSupportCode(state.supportCode)
+            ? state.supportCode
+            : null;
+        const nextSupportCode = isVisualDirectionSupportCode(data.support_code)
+          ? data.support_code
+          : previousSupportCode;
+        const serverMessage = typeof data.message === "string" ? data.message : "";
+        const nextMessage = nextSupportCode
+          ? (serverMessage.includes(nextSupportCode)
+              ? serverMessage
+              : visualDirectionSupportMessage(nextSupportCode))
+          : (serverMessage || VISUAL_DIRECTION_REALIGN_FALLBACK_MESSAGE);
         setState((prev) =>
           prev.phase === "bp_failed"
             ? {
                 ...prev,
                 message: nextMessage,
-                supportCode: nextSupportCode,
+                supportCode: nextSupportCode ?? undefined,
               }
             : prev,
         );
-        onDirectionPending?.({ message: nextMessage, supportCode: nextSupportCode });
+        onDirectionPending?.({
+          message: nextMessage,
+          supportCode: nextSupportCode ?? undefined,
+        });
         return;
       }
 
@@ -510,16 +528,19 @@ export function VisualSignatureApprovalModal({
       });
       onClose();
     } catch {
-      const nextMessage = "Erro de conexão ao gerar o perfil de marca. Tente novamente.";
-      const nextSupportCode = state.phase === "bp_failed" ? state.supportCode : undefined;
+      const nextSupportCode =
+        state.phase === "bp_failed" && isVisualDirectionSupportCode(state.supportCode)
+          ? state.supportCode
+          : null;
+      const nextMessage = visualDirectionConnectionMessage(nextSupportCode);
       setState((prev) =>
         prev.phase === "bp_failed"
-          ? { ...prev, message: nextMessage, supportCode: nextSupportCode }
+          ? { ...prev, message: nextMessage, supportCode: nextSupportCode ?? undefined }
           : prev,
       );
       onDirectionPending?.({
         message: nextMessage,
-        supportCode: nextSupportCode,
+        supportCode: nextSupportCode ?? undefined,
       });
     }
   }, [onTier2Retry, storeId, onClose, onComplete, onDirectionPending, state]);
