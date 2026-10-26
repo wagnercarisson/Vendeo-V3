@@ -13,6 +13,7 @@ env_touched: false
 migrations_touched: false
 code_commit: 43652290
 gap_closure_commit: b46fd472
+usage_aggregate_commit: 563e1a09
 ---
 
 # Quick 261026 — Estimativa versionada do consumo da imagem da Assinatura Visual
@@ -167,9 +168,13 @@ Três correções pequenas apontadas na revisão, com regressões offline:
    desconhecido (`orchestrator_output_usage`/`orchestrator_input_usage`) e a
    cobertura é `partial`. Saída **explicitamente zero** continua válida e
    mantém `complete`.
+4. **Usage agregado completo é aceito.** `promptTokens` + `completionTokens`
+   sem breakdown de imagem são contabilizados como uso do orquestrador; a
+   imagem é estimada e somada separadamente. A regressão passa pelo
+   `normalizeResponsesUsage` do adapter (fixture crua só com
+   `input_tokens`/`output_tokens`, sem inventar breakdown) até o sink.
 
 Regressões: `visual-signature-image-cost.test.ts` e
-`visual-signature-image-cost-sink.test.ts` → **23/23**; módulos afetados
+`visual-signature-image-cost-sink.test.ts` → **25/25**; módulos afetados
 (`ai-cost`, `ai`, `visual-signature`, admin de custos, sem a integração isolada)
-→ **797 passed / 7 skipped**; typecheck/lint/`git diff --check` limpos.
-
+→ **799 passed / 7 skipped**; typecheck/lint/`git diff --check` limpos.
