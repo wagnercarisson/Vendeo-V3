@@ -199,17 +199,36 @@ Sem textos promocionais. Apenas a imagem PNG.`;
     // attemptNumber REAL por tentativa (image_direct=0, image_retry=1) — a mesma
     // telemetria alimenta a imagem (visual_signature_image) e a validação
     // (visual_signature_validation).
+    //
+    // F47.4: o alvo da estimativa versionada (modelo/qualidade/tamanho
+    // EFETIVAMENTE enviados) acompanha a telemetria SOMENTE quando a operação usa
+    // a configuração dedicada. Ausente ⇒ caminho legado byte-a-byte.
+    const imageSize = "1024x1024";
     const attemptTelemetry: AiTelemetryContext = {
       ...params.telemetry,
       attemptNumber: params.attempt ?? params.telemetry.attemptNumber,
+      ...(params.generationConfig
+        ? {
+            visualSignatureImageUsage: {
+              imageModel: params.generationConfig.imageModel,
+              imageQuality: params.generationConfig.imageQuality,
+              size: imageSize,
+              configVersionId: params.generationConfig.configVersionId,
+            },
+          }
+        : {}),
     };
+
+    // A validação é uma chamada separada e não usa a estimativa da imagem.
+    const validationTelemetry: AiTelemetryContext = { ...attemptTelemetry };
+    delete validationTelemetry.visualSignatureImageUsage;
 
     try {
       console.log('[ai-image-generator] ⏳ ANTES da chamada ao gateway (visual_signature_image)', { timestamp: new Date().toISOString() });
       const request: AiInvocationRequest = {
         prompt,
         tools: "image_generation",
-        size: "1024x1024",
+        size: imageSize,
         quality: params.generationConfig ? params.generationConfig.imageQuality : "auto",
         signal: params.signal,
         timeout: timeoutMs,
@@ -251,7 +270,8 @@ Sem textos promocionais. Apenas a imagem PNG.`;
         // telemetria — `attemptTelemetry` carrega o attemptNumber REAL por
         // tentativa (image_direct=0, image_retry=1). O `onCall` legado do caller
         // deixa de ser acionado (o sink é o dono único da persistência).
-        telemetry: attemptTelemetry,
+        // F47.4: a validação NÃO recebe o alvo da estimativa da imagem.
+        telemetry: validationTelemetry,
       });
 
       if (!validation.valid) {

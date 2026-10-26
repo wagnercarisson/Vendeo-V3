@@ -11,6 +11,10 @@ import {
   deriveRunBadge,
   classifySegment,
 } from "../operation-runs-service";
+import {
+  VISUAL_SIGNATURE_IMAGE_ESTIMATE_COMPLETE_NOTE,
+  VISUAL_SIGNATURE_IMAGE_ESTIMATE_PARTIAL_NOTE,
+} from "../visual-signature-image-usage";
 
 /** Run bruto do RPC — mesmo shape do JSONB de admin_get_ai_operation_runs (38-2-01/38-2-1-03). */
 function makeRawRun(overrides: Record<string, unknown> = {}): any {
@@ -709,6 +713,43 @@ describe("OperationRunsService — badges de confiança (D5)", () => {
     expect(deriveEventBadge("manual_unknown", null)).toBe("partial");
     expect(deriveEventBadge("pricing_table", null)).toBe("estimated");
     expect(deriveEventBadge("not_available", null)).toBe("not_available");
+  });
+
+  it("estimativa versionada da imagem da VS → 'estimated' (nunca provider_reported)", () => {
+    expect(
+      deriveEventBadge("pricing_table", VISUAL_SIGNATURE_IMAGE_ESTIMATE_COMPLETE_NOTE),
+    ).toBe("estimated");
+    expect(
+      deriveEventBadge("pricing_table", VISUAL_SIGNATURE_IMAGE_ESTIMATE_PARTIAL_NOTE),
+    ).toBe("partial");
+    // Fontes estimadas nunca viram cobrança reportada pelo provider.
+    expect(
+      deriveEventBadge(
+        "pricing_table",
+        VISUAL_SIGNATURE_IMAGE_ESTIMATE_COMPLETE_NOTE,
+      ),
+    ).not.toBe("provider_reported");
+  });
+
+  it("entrega só com a estimativa versionada da VS → badge estimated na listagem", () => {
+    expect(
+      deriveRunBadge({
+        has_estimated: true,
+        has_provider_reported: false,
+        cost_sources: ["pricing_table"],
+        cost_estimation_notes: [VISUAL_SIGNATURE_IMAGE_ESTIMATE_COMPLETE_NOTE],
+      }),
+    ).toBe("estimated");
+    // Quando falta tarifa, o evento é `not_available`; a listagem não o
+    // apresenta como estimativa completa.
+    expect(
+      deriveRunBadge({
+        has_not_available: true,
+        has_estimated: true,
+        cost_sources: ["not_available"],
+        cost_estimation_notes: [VISUAL_SIGNATURE_IMAGE_ESTIMATE_PARTIAL_NOTE],
+      }),
+    ).toBe("not_available");
   });
 
   it("entrega: has_provider_reported=true → provider_reported (prioridade); sem flags → estimated genérico", () => {

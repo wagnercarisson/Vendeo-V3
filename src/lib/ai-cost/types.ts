@@ -1,4 +1,5 @@
 import type { GenerationEventType, GenerationEventStatus } from "@/lib/visual-signature/types";
+import type { VisualSignatureImageUsageAudit } from "./visual-signature-image-usage";
 
 /**
  * Fontes de classificação do custo apurado (D4).
@@ -94,6 +95,12 @@ export interface CostResolution {
   imageToolPricingProvider?: string;
   imageToolPricingModel?: string;
   imageToolPricingVersion?: string;
+  /**
+   * Estimativa versionada de consumo da imagem da Assinatura Visual (novo
+   * caminho dedicado). Persistida apenas no metadata JSONB existente — não
+   * preenche tokens reais nem `provider_reported_cost_usd`.
+   */
+  visualSignatureImageUsage?: VisualSignatureImageUsageAudit;
 }
 
 /**

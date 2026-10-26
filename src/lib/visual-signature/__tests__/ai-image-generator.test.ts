@@ -108,14 +108,24 @@ const DEDICATED_CONFIG: VisualSignatureGenerationConfig = {
 };
 
 function makeRecordingInvoker() {
-  const calls: Array<{ capability: string; request: AiInvocationRequest }> = [];
-  const invoke = vi.fn(async (capability: string, request: AiInvocationRequest) => {
-    calls.push({ capability, request });
-    if (capability === "visual_signature_validation") {
-      return { content: '{"valid": true}', model: "gpt-6-luna" };
-    }
-    return { imageBase64: IMAGE_BASE64, model: "gpt-6-luna", content: undefined };
-  });
+  const calls: Array<{
+    capability: string;
+    request: AiInvocationRequest;
+    telemetry: AiTelemetryContext;
+  }> = [];
+  const invoke = vi.fn(
+    async (
+      capability: string,
+      request: AiInvocationRequest,
+      telemetry: AiTelemetryContext,
+    ) => {
+      calls.push({ capability, request, telemetry });
+      if (capability === "visual_signature_validation") {
+        return { content: '{"valid": true}', model: "gpt-6-luna" };
+      }
+      return { imageBase64: IMAGE_BASE64, model: "gpt-6-luna", content: undefined };
+    },
+  );
   return {
     invoker: { invoke, hasFallback: vi.fn().mockResolvedValue(false) } as never,
     calls,
@@ -152,6 +162,14 @@ describe("AiImageGenerator — configuração dedicada (F47.3)", () => {
       orchestratorModel: "gpt-6-luna",
       imageGenerationModel: "gpt-image-2.5-sunburst",
     });
+    // F47.4: o alvo da estimativa acompanha a chamada da imagem com os valores
+    // EFETIVAMENTE enviados (modelo/qualidade/tamanho + versão da config).
+    expect(imageCall!.telemetry.visualSignatureImageUsage).toEqual({
+      imageModel: "gpt-image-2.5-sunburst",
+      imageQuality: "medium",
+      size: "1024x1024",
+      configVersionId: DEDICATED_CONFIG.configVersionId,
+    });
 
     const metadata = result.metadata;
     expect(metadata).toMatchObject({
@@ -181,6 +199,8 @@ describe("AiImageGenerator — configuração dedicada (F47.3)", () => {
     expect(validationCall!.request).not.toHaveProperty("orchestratorModel");
     expect(validationCall!.request).not.toHaveProperty("imageGenerationModel");
     expect(validationCall!.request).not.toHaveProperty("quality");
+    // F47.4: a validação é uma chamada separada e NÃO herda a estimativa da imagem.
+    expect(validationCall!.telemetry).not.toHaveProperty("visualSignatureImageUsage");
   });
 
   it.each([
@@ -207,6 +227,8 @@ describe("AiImageGenerator — configuração dedicada (F47.3)", () => {
     });
     expect(imageCall!.request).not.toHaveProperty("orchestratorModel");
     expect(imageCall!.request).not.toHaveProperty("imageGenerationModel");
+    // F47.4: sem configuração dedicada não há alvo de estimativa (legado intacto).
+    expect(imageCall!.telemetry).not.toHaveProperty("visualSignatureImageUsage");
 
     expect(result.metadata).toMatchObject({
       generation_tier: "image_direct",

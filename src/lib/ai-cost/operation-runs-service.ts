@@ -2,6 +2,10 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { EconomicParameterService } from "@/lib/economic/economic-parameter-service";
+import {
+  VISUAL_SIGNATURE_IMAGE_ESTIMATE_COMPLETE_NOTE,
+  VISUAL_SIGNATURE_IMAGE_ESTIMATE_PARTIAL_NOTE,
+} from "./visual-signature-image-usage";
 
 /**
  * Erro de indisponibilidade da apuração de custos de operação (fail-closed,
@@ -369,6 +373,15 @@ export function deriveEventBadge(
     }
     if (costEstimationNote === "responses_image_generation_tool_without_unit_pricing") {
       return "partial";
+    }
+    // F47.4: estimativa versionada da imagem da Assinatura Visual. A ausência
+    // de tarifa/uso registra `not_available` (tratado acima); quando o evento
+    // chega como pricing_table + nota parcial, o badge é explícito.
+    if (costEstimationNote === VISUAL_SIGNATURE_IMAGE_ESTIMATE_PARTIAL_NOTE) {
+      return "partial";
+    }
+    if (costEstimationNote === VISUAL_SIGNATURE_IMAGE_ESTIMATE_COMPLETE_NOTE) {
+      return "estimated";
     }
     // pricing_table sem nota → estimated
     return "estimated";

@@ -210,6 +210,28 @@ describe("OperationRunsTable (D3/D5/D7)", () => {
     expect(screen.getByText("Estimado")).toBeInTheDocument(); // badge D5
   });
 
+  it("nova geração da Assinatura Visual com estimativa versionada aparece como Estimado (não provider)", () => {
+    render(
+      <OperationRunsTable
+        runs={[
+          makeRun({
+            operationRunType: "visual_signature",
+            custoUsdTotal: 0.01725,
+            custoBrl: 0.09,
+            provider: "openai",
+            model: "gpt-5.5",
+            costSource: "pricing_table",
+            badge: "estimated",
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Assinatura visual")).toBeInTheDocument();
+    expect(screen.getByText("Estimado")).toBeInTheDocument();
+    expect(screen.queryByText("Custo reportado pelo provider")).not.toBeInTheDocument();
+  });
+
   it("placeholder F38.3 (D7): 'ainda indisponível' e 'pendente' visíveis", () => {
     render(<OperationRunsTable runs={[makeRun()]} />);
     expect(screen.getAllByText("ainda indisponível").length).toBeGreaterThan(0);
@@ -407,6 +429,71 @@ describe("RunDetailDialog (D4)", () => {
     expect(
       screen.getByText("Receita estimada R$ 20,00 · Resultado estimado R$ -30,00"),
     ).toBeInTheDocument();
+  });
+
+  it("detalhe da nova geração da VS: total estimado + componentes T/I e badge Estimado", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        run: makeRun({
+          operationRunType: "visual_signature",
+          custoUsdTotal: 0.01725,
+          custoBrl: 0.09,
+          provider: "openai",
+          model: "gpt-5.5",
+          costSource: "pricing_table",
+          badge: "estimated",
+        }),
+        events: [
+          {
+            generationType: "visual_signature_image",
+            provider: "openai",
+            model: "gpt-5.5",
+            status: "success",
+            errorType: null,
+            attemptNumber: 1,
+            durationMs: 1000,
+            promptTokens: 1000,
+            completionTokens: 223,
+            totalTokens: 1223,
+            cachedInputTokens: 0,
+            imageTokens: 123,
+            estimatedCostUsd: 0.01725,
+            estimatedCostBrl: 0.09,
+            textComponentUsd: 0.008,
+            imageToolComponentUsd: 0.00925,
+            costSource: "pricing_table",
+            costFormulaVersion: "visual_signature_image_usage_estimate_v1",
+            costEstimationNote:
+              "visual_signature_image_usage_estimated_vs-image-usage-v1",
+            metadata: {
+              image_usage_origin:
+                "manual_observation_openai_platform_with_rounding_and_margin",
+              image_usage_estimated: true,
+            },
+            badge: "estimated",
+            usdBrlRateAtGeneration: 5,
+            usdBrlRateSourceAtGeneration: "captured_at_generation",
+          },
+        ],
+      }),
+    });
+
+    render(
+      <RunDetailDialog
+        operationRunId="22222222-2222-4222-8222-222222222222"
+        onClose={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("visual_signature_image")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Estimado")).toBeInTheDocument();
+    expect(screen.queryByText("Custo reportado pelo provider")).not.toBeInTheDocument();
+    // Componentes separados: texto real (T) + imagem estimada (I).
+    expect(screen.getByText(/T US\$ 0,01/)).toBeInTheDocument();
+    expect(screen.getByText(/I US\$ 0,01/)).toBeInTheDocument();
   });
 
   it("run legado no detalhe → origem 'estimado de parâmetro atual (fallback)' + câmbio do evento 'parâmetro atual (fallback)'", async () => {

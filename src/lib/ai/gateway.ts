@@ -146,6 +146,7 @@ export class AiGateway {
     }
 
     const startedAt = Date.now();
+    const visualSignatureImageUsage = telemetry.visualSignatureImageUsage;
     try {
       const result = await adapter.invoke(request, prepared.resolved);
       await this.emit(telemetry, {
@@ -161,6 +162,7 @@ export class AiGateway {
         quality: request.quality,
         target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
+        ...(visualSignatureImageUsage ? { visualSignatureImageUsage } : {}),
       });
       return result;
     } catch (err) {
@@ -184,6 +186,7 @@ export class AiGateway {
         quality: request.quality,
         target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
+        ...(visualSignatureImageUsage ? { visualSignatureImageUsage } : {}),
       });
       if (isInvocationError) throw normalized;
       throw err;

@@ -1,4 +1,5 @@
 import type { AiCallInfo, OperationRunType, TokenUsage } from "@/lib/ai-cost/types";
+import type { VisualSignatureImageUsageTarget } from "@/lib/ai-cost/visual-signature-image-usage";
 import {
   AuthConfigError,
   MalformedResponseError,
@@ -161,6 +162,12 @@ export interface AiCallEnvelope extends AiCallInfo {
   target?: "primary" | "fallback";
   /** Número da tentativa real na operação (1-based). */
   attemptNumber?: number;
+  /**
+   * Alvo da estimativa versionada de consumo da imagem da Assinatura Visual.
+   * Presente SOMENTE no novo caminho com configuração dedicada válida; ausente
+   * ⇒ cadeia legada de custo permanece intacta.
+   */
+  visualSignatureImageUsage?: VisualSignatureImageUsageTarget;
 }
 
 /**
@@ -211,6 +218,12 @@ export interface AiTelemetryContext {
   visualSignatureId?: string;
   themeId?: string;
   attemptNumber?: number;
+  /**
+   * F47.4: alvo da estimativa versionada da imagem da Assinatura Visual,
+   * propagado pelo gerador quando a operação usa configuração dedicada. O
+   * gateway copia este campo para o envelope da tentativa real.
+   */
+  visualSignatureImageUsage?: VisualSignatureImageUsageTarget;
   sink: AiTelemetrySink;
 }
 

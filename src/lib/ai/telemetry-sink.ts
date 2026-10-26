@@ -1,4 +1,5 @@
 import { resolveAiCost } from "@/lib/ai-cost/cost-estimator";
+import { resolveVisualSignatureImageCost } from "@/lib/ai-cost/visual-signature-image-cost";
 import { AiCostTracker } from "@/lib/ai-cost/tracker";
 import type { AiCostEvent, CostResolution, OperationRunType } from "@/lib/ai-cost/types";
 import { CAPABILITY_GENERATION_TYPE } from "./generation-type-map";
@@ -76,7 +77,25 @@ export class DefaultAiTelemetrySink implements AiTelemetrySink {
 
       let cost: CostResolution;
       let internalInvalidReason: string | null = null;
-      if (internal) {
+      const visualSignatureImageUsage =
+        envelope.capability === "visual_signature_image"
+          ? envelope.visualSignatureImageUsage
+          : undefined;
+
+      if (visualSignatureImageUsage) {
+        // F47.4: caminho coberto da Assinatura Visual com configuração dedicada.
+        // Substitui a cadeia genérica (e o componente provisório de US$ 0,065):
+        // componente textual = tokens REAIS do orquestrador; componente da
+        // imagem = estimativa versionada (vs-image-usage-v1) × tarifas vigentes
+        // de ai_model_pricing. Sem tarifa ⇒ parcial/desconhecido (nunca 0,065).
+        cost = await resolveVisualSignatureImageCost({
+          provider: envelope.provider,
+          orchestratorModel: envelope.model,
+          usage: envelope.usage,
+          target: visualSignatureImageUsage,
+          imageGenerated: envelope.status === "success",
+        });
+      } else if (internal) {
         // P1 (Opção A): custo INTERNO já resolvido. A origem é `pricing_table`
         // (nunca `provider_reported`) — o envelope REAL carrega usage/durationMs/
         // status/model/quality reais do gateway.
@@ -226,6 +245,8 @@ function buildCallMetadata(
         }
       : undefined;
 
+  const imageUsageAudit = cost.visualSignatureImageUsage;
+
   return {
     // Caller metadata primeiro: os campos canônicos do sink (capability/protocol/
     // usage/fórmula) SEMPRE vencem — o caller não pode forjar campos do sink.
@@ -234,6 +255,33 @@ function buildCallMetadata(
     protocol: envelope.protocol,
     ...(usageMeta ?? {}),
     ...(formula ?? {}),
+    // F47.4: consumo ESTIMADO da imagem separado dos tokens REAIS do provider.
+    // `provider_usage_raw` e os campos de tokens continuam intactos.
+    ...(imageUsageAudit
+      ? {
+          image_usage_origin: imageUsageAudit.origin,
+          image_usage_estimated: imageUsageAudit.estimated,
+          image_usage_estimate_version: imageUsageAudit.estimateVersion,
+          image_usage_estimate_approved_at: imageUsageAudit.approvedAt,
+          image_usage_model: imageUsageAudit.model,
+          image_usage_quality: imageUsageAudit.quality,
+          image_usage_size: imageUsageAudit.size,
+          image_usage_config_version_id: imageUsageAudit.configVersionId,
+          image_usage_input_text_tokens: imageUsageAudit.inputTextTokens,
+          image_usage_output_image_tokens: imageUsageAudit.outputImageTokens,
+          image_usage_pricing_version: imageUsageAudit.imagePricingVersion,
+          image_usage_pricing_input_text_usd_per_1m:
+            imageUsageAudit.imageInputTextUsdPer1M,
+          image_usage_pricing_output_image_usd_per_1m:
+            imageUsageAudit.imageOutputImageUsdPer1M,
+          image_usage_component_usd: imageUsageAudit.imageComponentUsd,
+          image_usage_text_component_usd: imageUsageAudit.textComponentUsd,
+          image_usage_coverage: imageUsageAudit.coverage,
+          image_usage_missing: imageUsageAudit.missing,
+          image_usage_usage_breakdown: imageUsageAudit.usageBreakdown,
+          orchestrator_pricing_version: imageUsageAudit.orchestratorPricingVersion,
+        }
+      : {}),
     // P1 (Opção A): origem INTERNA auditável do NOVO FLUXO — acrescentada DEPOIS
     // do spread de `envelope.metadata` (o caller não pode forjar estas chaves).
     // Ausente ⇒ metadata legada byte-idêntica.
