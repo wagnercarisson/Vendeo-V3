@@ -191,6 +191,39 @@ describe("DefaultAiTelemetrySink — estimativa da imagem da Assinatura Visual",
     });
   });
 
+  it("code_default do orquestrador NÃO é aceito como tarifa tabelada neste caminho", async () => {
+    mockGetModelPricing.mockImplementation(
+      async ({ model, quality }: { model: string; quality?: string }) =>
+        model === "gpt-5.5"
+          ? {
+              // Bootstrap de código: não é linha de `ai_model_pricing`.
+              pricing: { inputCostUsd: 5, outputCostUsd: 30 },
+              versionId: "code_default",
+            }
+          : pricingFor(model, quality),
+    );
+    const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
+
+    await sink.emit(VS_IMAGE_ENVELOPE);
+
+    // O caminho novo NÃO cai na cadeia legada nem classifica code_default como
+    // pricing_table; o legado (outros caminhos) permanece intacto.
+    expect(mockResolveAiCost).not.toHaveBeenCalled();
+    const event = mockRecord.mock.calls[0][0];
+    expect(event.cost).toMatchObject({
+      estimatedCostUsd: null,
+      costSource: "not_available",
+      imageToolComponentUsd: 0.00925,
+    });
+    expect(event.cost.textComponentUsd).toBeUndefined();
+    expect(event.cost.pricingVersion).toBe("image-pricing-v1");
+    expect(event.metadata).toMatchObject({
+      image_usage_coverage: "partial",
+      orchestrator_pricing_version: null,
+    });
+    expect(event.metadata.image_usage_missing).toContain("orchestrator_pricing");
+  });
+
   it("combinação não coberta → desconhecida, sem tarifa de imagem e sem cadeia legada", async () => {
     const sink = new DefaultAiTelemetrySink(context, { record: mockRecord } as never);
 

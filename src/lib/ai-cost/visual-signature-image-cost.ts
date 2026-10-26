@@ -92,27 +92,54 @@ function round6(value: number): number {
  * Componente do orquestrador calculado com os tokens REAIS do provider,
  * excluindo os tokens de imagem quando o breakdown granular existe (eles são
  * substituídos pelo componente estimado da imagem).
+ *
+ * Cache NÃO é contado duas vezes: `cached_tokens` é um subconjunto da entrada
+ * reportada e é descontado da tarifa normal antes de ser cobrado pela tarifa de
+ * cache, em ambos os formatos (detalhado e agregado).
+ *
+ * Ausência de uma dimensão de usage NÃO vira zero: se a entrada ou a saída não
+ * foram reportadas (e não podem ser derivadas com segurança), o componente
+ * textual fica desconhecido (`orchestrator_*_usage`) em vez de "completo".
  */
 function calculateOrchestratorTextComponent(
   usage: TokenUsage,
   pricing: ModelPricing,
+  imageGenerated: boolean,
 ): { usd: number | null; missing: string[] } {
-  const detailed =
-    usage.inputImageTokens !== undefined || usage.outputImageTokens !== undefined;
-  const inputImageTokens = usage.inputImageTokens ?? 0;
-  const outputImageTokens = usage.outputImageTokens ?? 0;
-  const inputTextTokens =
-    usage.inputTextTokens ?? Math.max(0, (usage.promptTokens ?? 0) - inputImageTokens);
-  const outputTextTokens =
-    usage.outputTextTokens ?? Math.max(0, (usage.completionTokens ?? 0) - outputImageTokens);
-  const cachedInputTokens = usage.cachedInputTokens ?? 0;
-  // Sem breakdown granular, o prompt inclui os tokens cacheados — mesma
-  // semântica da cadeia legada (não cobra cache duas vezes).
-  const uncachedInputTextTokens = detailed
-    ? inputTextTokens
-    : Math.max(0, inputTextTokens - cachedInputTokens);
-
   const missing: string[] = [];
+
+  let inputTextTokens: number;
+  if (usage.inputTextTokens !== undefined) {
+    inputTextTokens = usage.inputTextTokens;
+  } else if (usage.promptTokens !== undefined) {
+    inputTextTokens = Math.max(0, usage.promptTokens - (usage.inputImageTokens ?? 0));
+  } else {
+    missing.push("orchestrator_input_usage");
+    inputTextTokens = 0;
+  }
+
+  let outputTextTokens: number;
+  if (usage.outputTextTokens !== undefined) {
+    outputTextTokens = usage.outputTextTokens;
+  } else if (usage.completionTokens !== undefined) {
+    if (usage.outputImageTokens !== undefined) {
+      outputTextTokens = Math.max(0, usage.completionTokens - usage.outputImageTokens);
+    } else if (!imageGenerated) {
+      // Sem imagem gerada, a saída reportada é textual.
+      outputTextTokens = usage.completionTokens;
+    } else {
+      // Com imagem gerada e sem breakdown, não é possível separar texto/imagem.
+      missing.push("orchestrator_output_usage");
+      outputTextTokens = 0;
+    }
+  } else {
+    missing.push("orchestrator_output_usage");
+    outputTextTokens = 0;
+  }
+
+  const cachedInputTokens = usage.cachedInputTokens ?? 0;
+  const uncachedInputTextTokens = Math.max(0, inputTextTokens - cachedInputTokens);
+
   if (uncachedInputTextTokens > 0 && pricing.inputCostUsd == null) {
     missing.push("orchestrator_input");
   }
@@ -165,7 +192,7 @@ export function calculateVisualSignatureImageCost(
   } else if (orchestratorPricing === null) {
     missing.push("orchestrator_pricing");
   } else {
-    const text = calculateOrchestratorTextComponent(usage, orchestratorPricing);
+    const text = calculateOrchestratorTextComponent(usage, orchestratorPricing, imageGenerated);
     textComponentUsd = text.usd;
     missing.push(...text.missing);
   }
@@ -286,7 +313,10 @@ export async function resolveVisualSignatureImageCost(
       provider,
       model: normalizeModel(orchestratorModel),
     });
-    if (result) {
+    // Fonte exclusiva deste caminho = tabela `ai_model_pricing`. O bootstrap de
+    // código (`code_default`) NÃO é tarifa tabelada e vira indisponível somente
+    // aqui; a cadeia legada continua aceitando-o normalmente.
+    if (result && result.versionId !== "code_default") {
       orchestratorPricing = result.pricing;
       orchestratorPricingVersion = result.versionId;
     }
@@ -306,7 +336,9 @@ export async function resolveVisualSignatureImageCost(
         model: estimate.model,
         quality: estimate.quality,
       });
-      if (result) {
+      // Defensivo: com `quality` o leitor já não usa bootstrap, mas o caminho
+      // novo nunca classifica `code_default` como tarifa tabelada.
+      if (result && result.versionId !== "code_default") {
         imagePricing = result.pricing;
         imagePricingVersion = result.versionId;
       }

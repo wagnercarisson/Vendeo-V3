@@ -78,6 +78,22 @@ O componente genérico de **US$ 0,065** (`responses:image_generation`) **não** 
 somado neste caminho. O caminho legado (sem configuração dedicada válida)
 permanece inalterado.
 
+### Cache, tarifa de código e usage incompleto
+
+- **Cache não é contado duas vezes:** `cached_tokens` é um subconjunto da
+  entrada reportada. O cálculo desconta os tokens cacheados da tarifa normal de
+  entrada e cobra somente esses tokens pela tarifa de cache — tanto no breakdown
+  detalhado quanto no agregado.
+- **`code_default` não é tarifa tabelada:** o bootstrap de código do leitor de
+  pricing é tratado como **indisponível** somente neste caminho novo
+  (`orchestrator_pricing`/`image_pricing` ausente). A cadeia legada continua
+  aceitando o bootstrap normalmente.
+- **Ausência de usage não é zero:** se a entrada ou a saída não foram reportadas
+  (e não podem ser derivadas com segurança), o componente textual fica
+  desconhecido (`orchestrator_input_usage`/`orchestrator_output_usage`) e a
+  cobertura é `partial`. Um valor **explicitamente zero** continua sendo zero
+  reportado e não impede a cobertura `complete`.
+
 ## Escopo de aplicação
 
 Aplicado somente na geração da **Assinatura Visual** quando:

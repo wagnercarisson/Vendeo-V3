@@ -109,6 +109,54 @@ describe("calculateVisualSignatureImageCost — vs-image-usage-v1 × ai_model_pr
     expect(result.providerReportedCostUsd).toBeUndefined();
   });
 
+  it("cache não é contado duas vezes: desconta cached da entrada normal e cobra só a tarifa de cache", () => {
+    const result = calculate({
+      usage: {
+        inputTextTokens: 1000,
+        cachedInputTokens: 200,
+        outputTextTokens: 100,
+        outputImageTokens: 123,
+      },
+    });
+
+    // (800 × 5 + 200 × 0,5 + 100 × 30) / 1M = 0,0071
+    expect(result.textComponentUsd).toBe(0.0071);
+    // Não é o valor com dupla contagem (1000 × 5 + 200 × 0,5 + 100 × 30 = 0,0081).
+    expect(result.textComponentUsd).not.toBe(0.0081);
+    expect(result.estimatedCostUsd).toBe(0.01635);
+  });
+
+  it("usage só com entrada NÃO vira saída zero: saída ausente é desconhecida", () => {
+    const result = calculate({ usage: { inputTextTokens: 1000 } });
+
+    expect(result.textComponentUsd).toBeUndefined();
+    expect(result.estimatedCostUsd).toBeNull();
+    expect(result.visualSignatureImageUsage.missing).toContain(
+      "orchestrator_output_usage",
+    );
+    expect(result.visualSignatureImageUsage.coverage).toBe("partial");
+  });
+
+  it("saída explicitamente zero é zero reportado (não ausência) e mantém cobertura completa", () => {
+    const result = calculate({
+      usage: { inputTextTokens: 1000, outputTextTokens: 0 },
+    });
+
+    expect(result.textComponentUsd).toBe(0.005);
+    expect(result.estimatedCostUsd).toBe(0.01425);
+    expect(result.visualSignatureImageUsage.coverage).toBe("complete");
+    expect(result.visualSignatureImageUsage.missing).toEqual([]);
+  });
+
+  it("usage agregado só com prompt também não completa a saída", () => {
+    const result = calculate({ usage: { promptTokens: 1000 } });
+
+    expect(result.textComponentUsd).toBeUndefined();
+    expect(result.visualSignatureImageUsage.missing).toContain(
+      "orchestrator_output_usage",
+    );
+  });
+
   it("preserva o snapshot/versionamento dos parâmetros usados", () => {
     const result = calculate();
     const audit = result.visualSignatureImageUsage;
