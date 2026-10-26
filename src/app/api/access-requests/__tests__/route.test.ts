@@ -6,13 +6,22 @@ vi.mock("server-only", () => ({}));
 
 const mockMaybeSingle = vi.fn();
 const mockInsert = vi.fn();
+const mockInsertSingle = vi.fn();
 const mockFrom = vi.fn();
+const mockNotify = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   supabaseAdmin: {
     from: (...args: unknown[]) => mockFrom(...args),
   },
   createServerClient: vi.fn(),
+}));
+
+vi.mock("@/lib/access-requests/admin-notice", () => ({
+  notifyAdminOfAccessRequest: (...args: unknown[]) => mockNotify(...args),
+  isRetryableAdminNoticeStatus: (status: unknown) =>
+    typeof status === "string" &&
+    ["pending", "failed", "unconfirmed", "suppressed", "sending"].includes(status),
 }));
 
 const mockRequireSameOrigin = vi.fn();
@@ -39,6 +48,19 @@ async function postAccessRequest(body: unknown, origin = "http://localhost") {
 beforeEach(() => {
   vi.clearAllMocks();
   mockRequireSameOrigin.mockImplementation(() => {});
+  mockNotify.mockResolvedValue({
+    status: "sent",
+    providerMessageId: "email-1",
+    errorCode: null,
+    persisted: true,
+  });
+  mockInsertSingle.mockResolvedValue({
+    data: { id: "req-new" },
+    error: null,
+  });
+  mockInsert.mockReturnValue({
+    select: vi.fn(() => ({ single: mockInsertSingle })),
+  });
   const chain = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -52,7 +74,6 @@ beforeEach(() => {
 describe("POST /api/access-requests", () => {
   it("200 { ok: true } e insere para email novo", async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
-    mockInsert.mockResolvedValue({ error: null });
 
     const res = await postAccessRequest({
       email: "loja@example.com",
@@ -71,12 +92,14 @@ describe("POST /api/access-requests", () => {
       whatsapp: null,
       privacy_notice_version: "v1.3",
       source: "landing",
+      admin_notice_status: "pending",
     });
+    expect(mockNotify).toHaveBeenCalledTimes(1);
+    expect(mockNotify).toHaveBeenCalledWith("req-new");
   });
 
   it("normaliza email para minúsculas antes do insert", async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
-    mockInsert.mockResolvedValue({ error: null });
 
     await postAccessRequest({ email: "  Loja@Test.COM  ", privacy_notice_version: "v1.3" });
 
@@ -150,14 +173,78 @@ describe("POST /api/access-requests", () => {
     expect(await res.json()).toEqual({ error: "Dados inválidos" });
   });
 
+  it("duplicata com aviso já enviado NÃO cria nem reenvia aviso", async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "req-1", admin_notice_status: "sent" },
+      error: null,
+    });
+
+    const res = await postAccessRequest({
+      email: "loja@example.com",
+      privacy_notice_version: "v1.3",
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
+
+  it("duplicata com aviso falho retoma o MESMO aviso (sem novo registro)", async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: "req-1", admin_notice_status: "failed" },
+      error: null,
+    });
+
+    const res = await postAccessRequest({
+      email: "loja@example.com",
+      privacy_notice_version: "v1.3",
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockNotify).toHaveBeenCalledWith("req-1");
+  });
+
+  it("falha do aviso após persistência NÃO muda a resposta pública de sucesso", async () => {
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+    mockNotify.mockRejectedValue(new Error("resend down"));
+
+    const res = await postAccessRequest({
+      email: "loja@example.com",
+      privacy_notice_version: "v1.3",
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(mockNotify).toHaveBeenCalledWith("req-new");
+  });
+
+  it("insert confirmado sem id não tenta aviso e mantém resposta pública", async () => {
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+    mockInsertSingle.mockResolvedValue({ data: null, error: null });
+
+    const res = await postAccessRequest({
+      email: "loja@example.com",
+      privacy_notice_version: "v1.3",
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
+
   it("500 quando o insert falha no banco", async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
-    mockInsert.mockResolvedValue({ error: { message: "db down" } });
+    mockInsertSingle.mockResolvedValue({
+      data: null,
+      error: { message: "db down" },
+    });
 
     const res = await postAccessRequest({ email: "loja@example.com", privacy_notice_version: "v1.3" });
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "Erro ao registrar solicitação" });
+    expect(mockNotify).not.toHaveBeenCalled();
   });
 
   it("403 quando requireSameOrigin falha", async () => {
