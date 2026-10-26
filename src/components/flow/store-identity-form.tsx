@@ -97,7 +97,7 @@ function getSubsegmentMode(segment: string): 'rich' | 'travado' | 'other' | 'loc
   return 'rich';
 }
 
-export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string }) {
+export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMessage, initialApprovalMode }: { initialStore?: Store | null; userId?: string; initialTab?: OnboardingTab; redirectMessage?: string; initialApprovalMode?: 'standard' | 'substitution' }) {
   // F50.3 (REQ-50.3-02): erro local de CNPJ — precisa existir ANTES do hook
   // para alimentar `fiscalWriteBlocked` (input fail-closed → bloqueio fiscal).
   const [cnpjInputError, setCnpjInputError] = useState<string | null>(null);
@@ -142,10 +142,10 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
   const [analysisWarning, setAnalysisWarning] = useState<string | null>(null);
   const [logoStatus, setLogoStatus] = useState<string | null>(null);
   const [visualSignatureUrl, setVisualSignatureUrl] = useState<string | null>(null);
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(!!initialApprovalMode);
   const [openApprovalWithFeedback, setOpenApprovalWithFeedback] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [approvalMode, setApprovalMode] = useState<'standard' | 'substitution'>('standard');
+  const [approvalMode, setApprovalMode] = useState<'standard' | 'substitution'>(initialApprovalMode ?? 'standard');
   const [subsegmentIsOther, setSubsegmentIsOther] = useState(false);
   const [identityState, setIdentityState] = useState<string | null>(null);
   const [hasArchivedSignatures, setHasArchivedSignatures] = useState(false);
@@ -2990,19 +2990,30 @@ export function StoreIdentityForm({ initialStore, userId, initialTab, redirectMe
           onComplete={handleApprovalComplete}
           onRemove={handleRemoveVS}
           onOpenGallery={handleOpenGallery}
-          onDirectionPending={({ message, reference }) => {
+          onDirectionPending={({ message, reference, signatureUrl }) => {
             setDirectionPending({
               pending: true,
               reference: reference ?? null,
               error: false,
               message,
             });
+            // A assinatura foi aprovada mesmo com a direção pendente: atualiza
+            // identidade/imagem e reconsulta readiness/drift SEM remover o banner
+            // e SEM preencher a direção antiga.
+            setIdentityState("visual_signature");
+            setLogoStatus("generated");
+            if (signatureUrl) {
+              setVisualSignatureUrl(signatureUrl);
+              setLogoResultUrl(signatureUrl);
+            }
             setInferredProfile(null);
             setBrandColorsChosen([]);
             setDetectedColors([]);
             setAccentColor("");
             setBrandDirectorWarning(null);
             setInferenceError(null);
+            setReadinessRefreshKey(k => k + 1);
+            setDriftRefreshKey(k => k + 1);
           }}
           initialReviewFeedbackOpen={openApprovalWithFeedback}
         />

@@ -72,7 +72,12 @@ interface VisualSignatureApprovalModalProps {
   onRemove?: () => void;
   onTier2Retry?: () => Promise<void>;
   onOpenGallery?: () => void;
-  onDirectionPending?: (info: { message: string; reference?: string }) => void;
+  onDirectionPending?: (info: {
+    message: string;
+    reference?: string;
+    signatureUrl?: string;
+    signatureId?: string;
+  }) => void;
 }
 
 export function VisualSignatureApprovalModal({
@@ -335,7 +340,12 @@ export function VisualSignatureApprovalModal({
           logoStatus: "generated",
           failureReference: data.failure_reference,
         });
-        onDirectionPending?.({ message: data.message, reference: data.failure_reference });
+        onDirectionPending?.({
+          message: data.message,
+          reference: data.failure_reference,
+          signatureUrl: data.signature?.assetUrl,
+          signatureId: data.signature?.id,
+        });
         return;
       }
 
@@ -398,7 +408,12 @@ export function VisualSignatureApprovalModal({
           logoStatus: "generated",
           failureReference: data.failure_reference,
         });
-        onDirectionPending?.({ message: data.message, reference: data.failure_reference });
+        onDirectionPending?.({
+          message: data.message,
+          reference: data.failure_reference,
+          signatureUrl: data.signature?.assetUrl,
+          signatureId: data.signature?.id,
+        });
         return;
       }
 

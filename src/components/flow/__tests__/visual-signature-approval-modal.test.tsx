@@ -492,10 +492,12 @@ describe('VisualSignatureApprovalModal — bp_failed em ambos os modos (261025-s
       expect(screen.getByText('Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.')).toBeInTheDocument();
       expect(screen.getByText('Código de suporte: run-ref-7')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Realinhar direção visual' })).toBeInTheDocument();
-      expect(onDirectionPending).toHaveBeenCalledWith({
-        message: 'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.',
-        reference: 'run-ref-7',
-      });
+      expect(onDirectionPending).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual.',
+          reference: 'run-ref-7',
+        }),
+      );
     });
   }
 

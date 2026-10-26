@@ -78,6 +78,11 @@ interface Routes {
   directionState?: Record<string, unknown> | "error";
   syncedProfile?: unknown;
   realign?: Record<string, unknown>;
+  visualSignatures?: Record<string, unknown>;
+  reviewSignatures?: Record<string, unknown>;
+  generate?: Record<string, unknown>;
+  approve?: Record<string, unknown>;
+  store?: Record<string, unknown>;
 }
 
 function installFetch(routes: Routes = {}) {
@@ -93,11 +98,50 @@ function installFetch(routes: Routes = {}) {
         },
       });
     }
+    if (url === "/api/legal/status") {
+      return okJson({ acceptanceStatus: "current" });
+    }
     if (url === `/api/store/${STORE_ID}/legal-status`) {
       return okJson({ hasValidAcceptance: true });
     }
     if (url === "/api/store/check-readiness") {
       return okJson({ ready: true, missing: [] });
+    }
+    if (url === `/api/store/${STORE_ID}/visual-signature/generate-without-logo`) {
+      return okJson(
+        routes.generate ?? {
+          assetUrl: "https://x/pending.png",
+          signatureId: "sig-pending",
+          artDirectorOutput: {
+            creative_description: "Assinatura pendente",
+            suggested_colors: ["#22C55E"],
+            visual_direction: "Moderna",
+            elements_used: ["nome da loja"],
+          },
+          attempt: 1,
+        },
+      );
+    }
+    if (url === `/api/store/${STORE_ID}/visual-signature/approve`) {
+      return okJson(
+        routes.approve ?? {
+          signature: { assetUrl: "https://x/pending.png", id: "sig-pending", status: "active" },
+          bp_status: "success",
+        },
+      );
+    }
+    if (url.includes(`/api/store/${STORE_ID}/visual-signature?limit=6`)) {
+      return okJson(routes.reviewSignatures ?? { signatures: [], total: 0 });
+    }
+    if (url === `/api/store/${STORE_ID}/visual-signature`) {
+      return okJson(
+        routes.visualSignatures ?? {
+          signatures: [],
+          total: 0,
+          credit_balance: 5,
+          credits_charging_enabled: false,
+        },
+      );
     }
     if (url === `/api/store/${STORE_ID}/brand-profile?status=direction-state`) {
       if (routes.directionState === "error") {
@@ -126,7 +170,7 @@ function installFetch(routes: Routes = {}) {
       return okJson({ assets: {} });
     }
     if (url === `/api/store/${STORE_ID}`) {
-      return okJson(STORE);
+      return okJson(routes.store ?? STORE);
     }
     return okJson({});
   });
@@ -256,4 +300,141 @@ describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
     });
     expect(screen.getByText("Direção visual pendente")).toBeInTheDocument();
   });
+
+  it("integração modal → formulário (aprovação inicial): atualiza imagem/identidade e readiness sem remover a pendência", async () => {
+    const initialStore = {
+      ...STORE,
+      identity_state: "text_only",
+      logo_status: null,
+      visual_signature_url: null,
+      has_archived_signatures: false,
+      tone_of_voice: "profissional",
+    };
+    const fetchMock = installFetch({
+      store: initialStore,
+      syncedProfile: null,
+      approve: {
+        signature: {
+          assetUrl: "https://x/new-initial.png",
+          id: "sig-new-initial",
+          status: "active",
+        },
+        bp_status: "failed",
+        brand_profile_status: "failed",
+        failure_reference: "run-initial",
+        message:
+          "Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. Informe ao suporte o código run-initial.",
+      },
+    });
+
+    render(
+      <StoreIdentityForm
+        initialStore={initialStore as unknown as Store}
+        userId="user-1"
+        initialTab="direcao-visual"
+        initialApprovalMode="standard"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Aprovar" })).toBeInTheDocument());
+    const readinessBefore = fetchMock.mock.calls.filter(
+      ([u]) => String(u) === "/api/store/check-readiness",
+    ).length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Aprovar" }));
+
+    await waitFor(() => {
+      expect(screen.getByAltText("Assinatura visual")).toHaveAttribute(
+        "src",
+        "https://x/new-initial.png",
+      );
+    });
+    expect(screen.getByText("Assinatura visual ativa")).toBeInTheDocument();
+    expect(screen.getAllByText(/Código de suporte: run-initial/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Direção visual definida pelo Vendeo")).not.toBeInTheDocument();
+
+    const readinessAfter = fetchMock.mock.calls.filter(
+      ([u]) => String(u) === "/api/store/check-readiness",
+    ).length;
+    expect(readinessAfter).toBeGreaterThan(readinessBefore);
+  }, 15000);
+
+  it("integração modal → formulário (substituição): troca a imagem pendente e reconsulta readiness sem remover o banner", async () => {
+    const substitutionStore = {
+      ...STORE,
+      identity_state: "visual_signature",
+      logo_status: "generated",
+      visual_signature_url: "https://x/old-signature.png",
+      visual_signature_attempts: 1,
+    };
+    const fetchMock = installFetch({
+      store: substitutionStore,
+      visualSignatures: {
+        signatures: [
+          {
+            id: "sig-active",
+            status: "active",
+            type: "ai_generated",
+            input_snapshot: {
+              name: "Nome Antigo",
+              segment: "outros",
+              city: null,
+              state: null,
+              slogan: null,
+            },
+            art_direction: {
+              content_used: { store_name: true, city: false, state: false, slogan: false },
+            },
+            critical_drift: null,
+            dismissed_snapshot: null,
+          },
+        ],
+        total: 1,
+        credit_balance: 5,
+        credits_charging_enabled: false,
+      },
+      approve: {
+        signature: {
+          assetUrl: "https://x/new-substitution.png",
+          id: "sig-new-substitution",
+          status: "active",
+        },
+        bp_status: "failed",
+        brand_profile_status: "failed",
+        failure_reference: "run-substitution",
+        message:
+          "Sua assinatura foi aprovada, mas não conseguimos concluir a direção visual. Informe ao suporte o código run-substitution.",
+      },
+    });
+
+    render(
+      <StoreIdentityForm
+        initialStore={substitutionStore as unknown as Store}
+        userId="user-1"
+        initialTab="direcao-visual"
+        initialApprovalMode="substitution"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Aprovar" })).toBeInTheDocument());
+    const readinessBefore = fetchMock.mock.calls.filter(
+      ([u]) => String(u) === "/api/store/check-readiness",
+    ).length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Aprovar" }));
+
+    await waitFor(() => {
+      expect(screen.getByAltText("Assinatura visual")).toHaveAttribute(
+        "src",
+        "https://x/new-substitution.png",
+      );
+    });
+    expect(screen.getByText("Assinatura visual ativa")).toBeInTheDocument();
+    expect(screen.getAllByText(/Código de suporte: run-substitution/).length).toBeGreaterThan(0);
+
+    const readinessAfter = fetchMock.mock.calls.filter(
+      ([u]) => String(u) === "/api/store/check-readiness",
+    ).length;
+    expect(readinessAfter).toBeGreaterThan(readinessBefore);
+  }, 15000);
 });
