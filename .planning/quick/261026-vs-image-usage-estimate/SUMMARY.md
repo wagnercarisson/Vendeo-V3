@@ -175,6 +175,6 @@ Três correções pequenas apontadas na revisão, com regressões offline:
    `input_tokens`/`output_tokens`, sem inventar breakdown) até o sink.
 
 Regressões: `visual-signature-image-cost.test.ts` e
-`visual-signature-image-cost-sink.test.ts` → **25/25**; módulos afetados
+`visual-signature-image-cost-sink.test.ts` → **26/26**; módulos afetados
 (`ai-cost`, `ai`, `visual-signature`, admin de custos, sem a integração isolada)
-→ **799 passed / 7 skipped**; typecheck/lint/`git diff --check` limpos.
+→ **800 passed / 7 skipped**; typecheck/lint/`git diff --check` limpos.
