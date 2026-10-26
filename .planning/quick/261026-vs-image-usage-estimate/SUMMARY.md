@@ -12,6 +12,7 @@ provider_touched: false
 env_touched: false
 migrations_touched: false
 code_commit: 43652290
+gap_closure_commit: b46fd472
 ---
 
 # Quick 261026 — Estimativa versionada do consumo da imagem da Assinatura Visual
@@ -148,3 +149,27 @@ isolado/DB (`isolated_integration_requires_runner_and_redacted_preflight`). Não
 - Não há garantia de que o custo estimado coincida com a cobrança final.
 - Nada foi aplicado em banco, homolog ou produção.
 - Parado para revisão do Codex antes de publicação.
+
+## Gap closure pós-revisão (commit `b46fd472`)
+
+Três correções pequenas apontadas na revisão, com regressões offline:
+
+1. **Cache sem dupla contagem.** `cached_tokens` passou a ser descontado da
+   entrada normal em ambos os formatos (detalhado e agregado) e cobrado somente
+   pela tarifa de cache. Exemplo regressivo: 1000 entrada, 200 cacheados, 100
+   saída, 5/M + 0,5/M cache + 30/M saída → **US$ 0,0071** (não 0,0081).
+2. **`code_default` não é tarifa tabelada neste caminho.** O bootstrap de código
+   do leitor de pricing é tratado como indisponível apenas no novo caminho
+   (`orchestrator_pricing`/`image_pricing` ausente, cobertura `partial`). A
+   cadeia legada continua aceitando o bootstrap normalmente.
+3. **Usage incompleto não vira zero.** Se a saída (ou a entrada) não foi
+   reportada e não pode ser derivada com segurança, o componente textual fica
+   desconhecido (`orchestrator_output_usage`/`orchestrator_input_usage`) e a
+   cobertura é `partial`. Saída **explicitamente zero** continua válida e
+   mantém `complete`.
+
+Regressões: `visual-signature-image-cost.test.ts` e
+`visual-signature-image-cost-sink.test.ts` → **23/23**; módulos afetados
+(`ai-cost`, `ai`, `visual-signature`, admin de custos, sem a integração isolada)
+→ **797 passed / 7 skipped**; typecheck/lint/`git diff --check` limpos.
+
