@@ -2,7 +2,7 @@
 
 **Gathered:** 2026-10-27
 **Revised:** 2026-10-27 (revisão de aprovação)
-**Status:** Approved and executed — automated gates green; human visual validation pending
+**Status:** Approved and executed — automated gates green; desktop visual approved; mobile/low/zoom pending unless checked
 **Mode:** quick (no discussion; user-supplied decisions recorded as locked)
 
 <scope_note>
@@ -44,10 +44,14 @@ implementação, push ou deploy deve ser produzido antes da aprovação humana.
 - **Opacidade original preservada**: a redução aprovada é de tamanho, não de opacidade.
   `opacity-80` foi removido do plano; qualquer redução de opacidade exigiria aprovação separada.
 
-### Mobile (< `md`, 768px)
-- **Símbolo** na topbar; clicável para `/dashboard`.
+### Mobile e faixa intermediária
+- **Celulares (< 640 px):** **sem símbolo** na topbar.
+- **Faixa 640–767 px (sem sidebar):** símbolo **somente nessa faixa**, com
+  `hidden sm:inline-flex md:hidden`; clicável para `/dashboard`.
+- **Tablet/desktop (≥ 768 px):** sidebar preservada; símbolo oculto.
 - **Logotipo horizontal** no topo do drawer aberto; clicável para `/dashboard`.
-- Nome da loja, CTA “Nova Campanha”, notificações e conta preservados.
+- Nome da loja, hambúrguer, CTA “Nova Campanha”, notificações e conta preservados.
+- Composição de tablet/desktop com sidebar **inalterada**.
 
 ### Prioridade e altura
 - Navegação tem prioridade: a assinatura **não** sobrepõe links, **não** reduz a área útil da

@@ -1,8 +1,10 @@
 ---
 status: complete
 implementation_status: implemented
+revision: 2
 gate_status: automated_green
-acceptance: pending_visual
+acceptance: partial_visual
+visual_status: "desktop aprovado pelo responsável; mobile, telas baixas e zoom não verificados visualmente nesta rodada"
 date: 2026-10-27
 quick_id: 261027-p0h
 phase: quick
@@ -11,15 +13,16 @@ commits:
   - 7f6ef7b3
   - 6e107cc0
   - b9af61a7
+  - 8720a2e0
 verification:
-  shell_tests: "PASS — 7 files / 58 tests (src/__tests__/components/shell)"
+  shell_tests: "PASS — 7 files / 61 tests (src/__tests__/components/shell)"
   related_tests: "PASS — 2 files / 27 tests (layout-metadata + landing-page)"
   typecheck: "PASS — tsc -p tsconfig.typecheck.json --noEmit"
   lint: "PASS (exit 0) — limitação: eslint.config.mjs não cobre TypeScript; evidência não prova lint efetivo dos .ts/.tsx"
   build: "PASS — check:cnae + next build; 91/91 páginas"
   asset: "PASS — public/brand/vendeo-signature.png em 1256x923 RGBA, cantos alpha 0 e 575.797 pixels transparentes"
   diff_check: "PASS — git diff --check sem erros"
-  visual: "PENDENTE — validação humana em navegador, incluindo 320/375 px, 559/560 px, texto ampliado e zoom 200%"
+  visual: "PARCIAL — desktop aprovado pelo responsável; 320/375/639/640/767/768 revalidados por DOM/classes; mobile, telas baixas e zoom não verificados visualmente nesta rodada"
 ---
 
 # Quick 261027-p0h — Identidade Vendeo no app shell
@@ -34,11 +37,30 @@ dependências, landing ou manifest/PWA**:
   altura automática ≈86,7 px, **opacidade original**.
 - Assinatura oculta por **guarda medida** (`shouldShowSignature`), com piso de 560 px e
   `ResizeObserver`; sem observer, permanece oculta.
-- Topbar mobile: símbolo entre o hambúrguer e o nome da loja, clicável para `/dashboard`.
+- Topbar: **sem símbolo em celulares (<640 px)**; símbolo somente na faixa **640–767 px**
+  (`hidden sm:inline-flex md:hidden`), entre o hambúrguer e o nome da loja, clicável para
+  `/dashboard`; em ≥768 px a sidebar é a marca principal.
 - Drawer: logotipo horizontal no topo, clicável para `/dashboard` e fechando o menu.
 - Assinatura ausente da topbar e do drawer.
 - Navegação, loja, CTA, notificações, conta, focus trap, Escape, scroll lock e reduced motion
   preservados.
+
+## Revisão 2 — aceite visual
+
+- Símbolo removido da topbar em celulares; mantido apenas na faixa 640–767 px.
+- Logotipo horizontal do drawer móvel preservado.
+- Composição de tablet/desktop com sidebar preservada; símbolo oculto em ≥768 px.
+- Nome da loja, hambúrguer, CTA, notificações e conta preservados.
+- Testes da topbar atualizados para `hidden sm:inline-flex md:hidden` e para a ordem
+  hambúrguer → símbolo → nome da loja.
+- `VendeoSignature`: acrescentados testes de transição do `ResizeObserver` — espaço suficiente
+  (aparece), navegação maior (desaparece), espaço devolvido (reaparece) e desmontagem
+  (observer desconectado + listener de resize removido).
+- Revalidação automatizada de DOM/classes em 320/375/639/640/767/768 px; a media query em si
+  não é avaliada pelo jsdom. A ordem das utilities no CSS compilado foi conferida:
+  `.hidden` após `.inline-flex`, `sm:inline-flex` e `md:hidden` nas respectivas media queries.
+- **Aceite humano:** desktop aprovado pelo responsável. Mobile, telas baixas e zoom **não**
+  constam como verificados visualmente nesta rodada.
 
 ## Medição aplicada
 
@@ -95,7 +117,7 @@ Caminho da montagem registrado no CONTEXT/PLAN para conferência.
 
 ## Evidências
 
-- `npx vitest run src/__tests__/components/shell` — **7 arquivos / 58 testes**.
+- `npx vitest run src/__tests__/components/shell` — **7 arquivos / 61 testes**.
 - `npx vitest run src/__tests__/app/layout-metadata.test.ts src/components/landing/__tests__/landing-page.test.tsx`
   — **2 arquivos / 27 testes**.
 - `npm run typecheck` — exit 0.
@@ -105,11 +127,14 @@ Caminho da montagem registrado no CONTEXT/PLAN para conferência.
 - `git diff --check` — limpo.
 - Auditoria do asset — 1256x923, RGBA, cantos alpha 0.
 
-## Pendente
+## Aceite e pendências
 
-- **Validação visual humana** em navegador: 1440/1024/768/375/320 px; alturas 900/600/560/559/480;
-  nome de loja longo em 320/375; texto ampliado; zoom 200%; teclado/foco; logo sem retângulo;
-  assinatura centralizada/discreta; drawer sem assinatura.
+- **Desktop:** aprovado pelo responsável (sidebar, logo e assinatura).
+- **Mobile (320/375), telas baixas (559/560) e zoom 200%:** não verificados visualmente nesta
+  rodada; apenas revalidação automatizada de DOM/classes e da guarda de altura.
+- Se a validação visual humana for executada, conferir: 320/375/639 sem símbolo; 640/767 com
+  símbolo; 768/1024/1440 com sidebar e sem símbolo; nome de loja longo; drawer com logo e sem
+  assinatura; teclado/foco; logo sem retângulo; assinatura centralizada/discreta.
 - Nenhum push, deploy, merge ou ativação foi executado.
 - `npm test` completo não foi executado; a suíte global tem histórico não-verde e não foi adotada
   como baseline neste recorte.
