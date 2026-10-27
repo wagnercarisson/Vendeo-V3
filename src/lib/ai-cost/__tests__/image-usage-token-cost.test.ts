@@ -6,6 +6,7 @@ import {
   PRODUCT_1_1_IMAGE_USAGE_PARTIAL_NOTE,
 } from "../image-usage-token-cost";
 import type { UsageTokenPricing } from "../types";
+import type { ModelPricing } from "../ai-model-pricing";
 
 const PRICING: UsageTokenPricing = {
   inputCostUsd: 5,
@@ -223,9 +224,15 @@ describe("calculateProductOneToOneImageUsageCost — tokens reais × tarifas", (
   });
 
   it("image_unit_usd do pré-chamada não é usado no pós-chamada", () => {
+    // ModelPricing é o contrato que inclui `imageUnitCostUsd` (pré-chamada);
+    // o cálculo pós-chamada aceita UsageTokenPricing e deve ignorá-lo.
+    const pricingWithImageUnit: ModelPricing = {
+      ...PRICING,
+      imageUnitCostUsd: 0.041,
+    };
     const result = calculateProductOneToOneImageUsageCost({
       ...BASE,
-      pricing: { ...PRICING, imageUnitCostUsd: 0.041 },
+      pricing: pricingWithImageUnit,
       usage: {
         inputTextTokens: 464,
         inputImageTokens: 1784,

@@ -12,7 +12,8 @@ import { UpstreamImagesAdapter } from "@/lib/ai/adapters/upstream-images";
 import { DefaultAiTelemetrySink } from "@/lib/ai/telemetry-sink";
 import type { AiModelConfig, AiModelResolver } from "@/lib/ai/model-resolver";
 import type { AiEnvelopeInternalCost, AiTelemetryContext } from "@/lib/ai/types";
-import type { UsageTokenPricing } from "@/lib/ai-cost/types";
+import type { AiCostEvent, CostResolution, UsageTokenPricing } from "@/lib/ai-cost/types";
+import type { AiCostTracker } from "@/lib/ai-cost/tracker";
 
 const RAW_USAGE = {
   input_tokens: 2248,
@@ -91,7 +92,7 @@ function internalCostFor(params: {
 
 function telemetryWith(
   internalCost: AiEnvelopeInternalCost,
-  tracker: { record: ReturnType<typeof vi.fn> },
+  tracker: { record: (event: AiCostEvent) => Promise<void> },
 ): AiTelemetryContext {
   const sink = new DefaultAiTelemetrySink(
     {
@@ -103,7 +104,7 @@ function telemetryWith(
       attemptNumber: 1,
       internalCost,
     },
-    tracker as never,
+    tracker as unknown as AiCostTracker,
   );
   return {
     operationRunId: "run-1",
@@ -123,6 +124,20 @@ const REQUEST = {
   productImagesDataUrls: ["data:image/png;base64,AAAA"],
 };
 
+function requireEventCost(event: AiCostEvent): CostResolution {
+  if (!event.cost) {
+    throw new Error("evento registrado sem cost resolvido");
+  }
+  return event.cost;
+}
+
+function requireEventMetadata(event: AiCostEvent): Record<string, unknown> {
+  if (!event.metadata) {
+    throw new Error("evento registrado sem metadata");
+  }
+  return event.metadata;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -130,7 +145,7 @@ beforeEach(() => {
 describe("Produto 1:1 — fixture crua Images API → adapter → gateway → sink", () => {
   it("calcula custo por tokens reais e grava UM evento com usage bruto preservado", async () => {
     const { gateway } = makeGateway();
-    const record = vi.fn(async () => {});
+    const record = vi.fn(async (_event: AiCostEvent) => {});
     const internalCost = internalCostFor({
       model: "gpt-image-2.5-sunburst",
       quality: "medium",
@@ -154,7 +169,7 @@ describe("Produto 1:1 — fixture crua Images API → adapter → gateway → si
       imageToolComponentUsd: 0.027442,
       costFormulaVersion: "product_1_1_image_usage_tokens_v1",
     });
-    expect(event.cost.providerReportedCostUsd).toBeUndefined();
+    expect(requireEventCost(event).providerReportedCostUsd).toBeUndefined();
 
     expect(event.tokens).toEqual({
       promptTokens: 2248,
@@ -185,7 +200,7 @@ describe("Produto 1:1 — fixture crua Images API → adapter → gateway → si
 
   it("retry/fallback usam consumo, modelo, qualidade e tarifas próprios (2 eventos)", async () => {
     const { gateway } = makeGateway();
-    const record = vi.fn(async () => {});
+    const record = vi.fn(async (_event: AiCostEvent) => {});
     const tracker = { record };
 
     // Principal (medium) e fallback (low) com tarifas/versões diferentes.
@@ -220,16 +235,20 @@ describe("Produto 1:1 — fixture crua Images API → adapter → gateway → si
     expect(record).toHaveBeenCalledTimes(2);
     const [primaryEvent, fallbackEvent] = record.mock.calls.map((call) => call[0]);
 
-    expect(primaryEvent.cost.estimatedCostUsd).toBe(0.029762);
-    expect(primaryEvent.cost.pricingVersion).toBe("pricing-primary");
+    expect(requireEventCost(primaryEvent).estimatedCostUsd).toBe(0.029762);
+    expect(requireEventCost(primaryEvent).pricingVersion).toBe("pricing-primary");
     expect(primaryEvent.model).toBe("gpt-image-2.5-sunburst");
-    expect(primaryEvent.metadata.product_1_1_image_usage_quality).toBe("medium");
+    expect(
+      requireEventMetadata(primaryEvent).product_1_1_image_usage_quality,
+    ).toBe("medium");
 
     // 464×5 + 1784×8 + 439×15 = 0,00232 + 0,014272 + 0,006585 = 0,023177
-    expect(fallbackEvent.cost.estimatedCostUsd).toBe(0.023177);
-    expect(fallbackEvent.cost.pricingVersion).toBe("pricing-fallback");
+    expect(requireEventCost(fallbackEvent).estimatedCostUsd).toBe(0.023177);
+    expect(requireEventCost(fallbackEvent).pricingVersion).toBe("pricing-fallback");
     expect(fallbackEvent.model).toBe("gpt-image-2");
-    expect(fallbackEvent.metadata.product_1_1_image_usage_quality).toBe("low");
+    expect(
+      requireEventMetadata(fallbackEvent).product_1_1_image_usage_quality,
+    ).toBe("low");
   });
 
   it("cache textual e de imagem explícitos atravessam adapter e sink sem dupla contagem", async () => {
@@ -247,7 +266,7 @@ describe("Produto 1:1 — fixture crua Images API → adapter → gateway → si
       output_tokens_details: { image_tokens: 50 },
     };
     const { gateway } = makeGateway(cacheUsage);
-    const record = vi.fn(async () => {});
+    const record = vi.fn(async (_event: AiCostEvent) => {});
 
     await gateway.invoke(
       "campaign_product_image",
@@ -264,19 +283,21 @@ describe("Produto 1:1 — fixture crua Images API → adapter → gateway → si
     const event = record.mock.calls[0][0];
     // texto: 300×5 + 100×1,25 = 0,001625
     // imagem: 400×8 + 200×2 + 50×30 = 0,0051
-    expect(event.cost.estimatedCostUsd).toBe(0.006725);
-    expect(event.metadata.product_1_1_image_usage_cache_mode).toBe("explicit");
+    expect(requireEventCost(event).estimatedCostUsd).toBe(0.006725);
+    expect(
+      requireEventMetadata(event).product_1_1_image_usage_cache_mode,
+    ).toBe("explicit");
     expect(event.tokens).toMatchObject({
       cachedInputTokens: 300,
       cachedInputTextTokens: 100,
       cachedInputImageTokens: 200,
     });
-    expect(event.metadata.provider_usage_raw).toEqual(cacheUsage);
+    expect(requireEventMetadata(event).provider_usage_raw).toEqual(cacheUsage);
   });
 
   it("code_default é rejeitado como tarifa tabelada e vira not_available", async () => {
     const { gateway } = makeGateway();
-    const record = vi.fn(async () => {});
+    const record = vi.fn(async (_event: AiCostEvent) => {});
 
     await gateway.invoke(
       "campaign_product_image",
@@ -296,14 +317,14 @@ describe("Produto 1:1 — fixture crua Images API → adapter → gateway → si
       estimatedCostUsd: null,
       costSource: "not_available",
     });
-    expect(event.metadata.product_1_1_image_usage_missing).toContain(
-      "pricing_code_default",
-    );
+    expect(
+      requireEventMetadata(event).product_1_1_image_usage_missing,
+    ).toContain("pricing_code_default");
   });
 
   it("usage ausente → evento único com custo not_available (não image_unit)", async () => {
     const { gateway } = makeGateway(null);
-    const record = vi.fn(async () => {});
+    const record = vi.fn(async (_event: AiCostEvent) => {});
 
     await gateway.invoke(
       "campaign_product_image",
@@ -323,8 +344,12 @@ describe("Produto 1:1 — fixture crua Images API → adapter → gateway → si
       estimatedCostUsd: null,
       costSource: "not_available",
     });
-    expect(event.cost.imageToolComponentUsd).toBeUndefined();
-    expect(event.metadata.product_1_1_image_usage_missing).toContain("usage");
-    expect(event.metadata.internal_cost_pre_call_estimate_usd).toBe(0.041);
+    expect(requireEventCost(event).imageToolComponentUsd).toBeUndefined();
+    expect(requireEventMetadata(event).product_1_1_image_usage_missing).toContain(
+      "usage",
+    );
+    expect(
+      requireEventMetadata(event).internal_cost_pre_call_estimate_usd,
+    ).toBe(0.041);
   });
 });
