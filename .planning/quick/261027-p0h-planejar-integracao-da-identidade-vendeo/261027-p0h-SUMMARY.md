@@ -3,8 +3,15 @@ status: complete
 implementation_status: implemented
 revision: 2
 gate_status: automated_green
-acceptance: partial_visual
-visual_status: "desktop aprovado pelo responsável; mobile, telas baixas e zoom não verificados visualmente nesta rodada"
+acceptance: visual_approved_desktop_mobile_tablet
+visual_status: "desktop, mobile e tablet aprovados pelo responsável em 2026-10-27; telas baixas (559/560) e zoom 200% não verificados"
+visual_acceptance:
+  desktop: approved
+  mobile: approved
+  tablet: approved
+  low_screens: not_verified
+  zoom_200: not_verified
+  approved_on: 2026-10-27
 date: 2026-10-27
 quick_id: 261027-p0h
 phase: quick
@@ -22,7 +29,7 @@ verification:
   build: "PASS — check:cnae + next build; 91/91 páginas"
   asset: "PASS — public/brand/vendeo-signature.png em 1256x923 RGBA, cantos alpha 0 e 575.797 pixels transparentes"
   diff_check: "PASS — git diff --check sem erros"
-  visual: "PARCIAL — desktop aprovado pelo responsável; 320/375/639/640/767/768 revalidados por DOM/classes; mobile, telas baixas e zoom não verificados visualmente nesta rodada"
+  visual: "APROVADO (desktop, mobile e tablet) pelo responsável em 2026-10-27; 320/375/639/640/767/768 revalidados por DOM/classes; telas baixas (559/560) e zoom 200% não verificados"
 ---
 
 # Quick 261027-p0h — Identidade Vendeo no app shell
@@ -59,8 +66,8 @@ dependências, landing ou manifest/PWA**:
 - Revalidação automatizada de DOM/classes em 320/375/639/640/767/768 px; a media query em si
   não é avaliada pelo jsdom. A ordem das utilities no CSS compilado foi conferida:
   `.hidden` após `.inline-flex`, `sm:inline-flex` e `md:hidden` nas respectivas media queries.
-- **Aceite humano:** desktop aprovado pelo responsável. Mobile, telas baixas e zoom **não**
-  constam como verificados visualmente nesta rodada.
+- **Aceite humano:** desktop, mobile e tablet aprovados pelo responsável em 2026-10-27.
+  Telas baixas (559/560 px) e zoom 200% **não** constam como verificados visualmente nesta rodada.
 
 ## Medição aplicada
 
@@ -129,12 +136,16 @@ Caminho da montagem registrado no CONTEXT/PLAN para conferência.
 
 ## Aceite e pendências
 
-- **Desktop:** aprovado pelo responsável (sidebar, logo e assinatura).
-- **Mobile (320/375), telas baixas (559/560) e zoom 200%:** não verificados visualmente nesta
-  rodada; apenas revalidação automatizada de DOM/classes e da guarda de altura.
-- Se a validação visual humana for executada, conferir: 320/375/639 sem símbolo; 640/767 com
-  símbolo; 768/1024/1440 com sidebar e sem símbolo; nome de loja longo; drawer com logo e sem
-  assinatura; teclado/foco; logo sem retângulo; assinatura centralizada/discreta.
+- **Desktop:** aprovado pelo responsável — sidebar, logo e assinatura.
+- **Mobile (<640 px, incluindo 320/375):** aprovado pelo responsável — sem símbolo na topbar,
+  logotipo no drawer, nome da loja/hambúrguer/CTA/notificações/conta preservados.
+- **Tablet (640–1023 px):** aprovado pelo responsável — símbolo apenas em 640–767 px e composição
+  com sidebar a partir de 768 px.
+- **Telas baixas (559/560 px) e zoom 200%:** **não** verificados visualmente nesta rodada; apenas
+  revalidação automatizada de DOM/classes e da guarda de altura.
+- Se telas baixas/zoom forem conferidos depois, verificar: assinatura oculta em 559 e visível em
+  560 com texto normal; sem rolagem adicional; guarda medida ocultando a assinatura quando o
+  texto ampliado não couber.
 - Nenhum push, deploy, merge ou ativação foi executado.
 - `npm test` completo não foi executado; a suíte global tem histórico não-verde e não foi adotada
   como baseline neste recorte.

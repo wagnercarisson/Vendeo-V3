@@ -2,7 +2,7 @@
 
 **Gathered:** 2026-10-27
 **Revised:** 2026-10-27 (revisão de aprovação)
-**Status:** Approved and executed — automated gates green; desktop visual approved; mobile/low/zoom pending unless checked
+**Status:** Approved and executed — automated gates green; desktop, mobile and tablet visually approved; low screens/zoom not verified
 **Mode:** quick (no discussion; user-supplied decisions recorded as locked)
 
 <scope_note>
