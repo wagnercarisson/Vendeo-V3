@@ -234,3 +234,22 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 - Quick plans e summaries: `.planning/quick/`.
 - Propostas, specs e tasks arquivadas: `openspec/changes/archive/`.
 - Auditorias e decisões históricas: `.planning/` e `docs/`.
+
+## F57.2 — Planejamento (Persistência de preferências multimercado)
+
+**Fonte:** `openspec/changes/fase-57-2-persistencia-preferencias-multimercado/` (proposal, design, tasks e 6 specs; `validate --strict` valid; aprovada tecnicamente em `5adf6dcc`). **Status:** planejamento GSD em revisão; implementação não iniciada; sem migration executável, sem banco e sem habilitação PY.
+
+| REQ-ID | Requirement | Prova principal |
+|---|---|---|
+| REQ-57.2-01 | `user_preferences` e `store_market_settings` com país, mercado, idioma, moeda, fuso, proveniência por campo, `context_version` e versão de concorrência | Migration + testes de schema/CHECK |
+| REQ-57.2-02 | Legado sem escrita; ausência resolve BR/pt-BR/BRL `legacy_br`; erro de banco 503; linha inválida 500 | Serviço + rotas + banco |
+| REQ-57.2-03 | Mercado determina idioma/moeda derivados; país determina fuso; app independente; recomposição `default`/`legacy_br`; `explicit` preservado; ida e volta BR↔PY | Unitários + banco |
+| REQ-57.2-04 | Escrita somente por RPC `service_role`; RLS SELECT-only; CSRF; DTO allowlist; sem vazamento | Rotas + testes de RLS/segurança |
+| REQ-57.2-05 | `expectedVersion` obrigatório; linha existente e ausente; confirmação fiscal participa da versão; duas ordens | Testes de concorrência |
+| REQ-57.2-06 | Rotas `/api/preferences` e `/api/store/market-settings` com ownership dedicada (`loadOwnedStoreForMarketSettings`) | Testes de rota |
+| REQ-57.2-07 | Inicialização idempotente em draft, fiscal, admin | Testes de onboarding/banco |
+| REQ-57.2-08 | Confirmação fiscal atualiza país e preserva escolhas explícitas, inclusive BR + mercado PY | Testes de confirmação fiscal |
+| REQ-57.2-09 | Nenhuma alteração de créditos, benefícios, legal, auditoria, fiscal, readiness, geração ou campanhas entregues | Comparação antes/depois |
+| REQ-57.2-10 | Provas reais de banco isolado: RLS, grants, atomicidade, idempotência, concorrência | Harness + evidências |
+| REQ-57.2-11 | Gates locais: testes focados, 72 de market-context, typecheck, lint (cobertura real), build | Relatório de gates |
+| REQ-57.2-12 | Runbook de promoção/rollback e handoff, sem executar | Documento + checklist |
