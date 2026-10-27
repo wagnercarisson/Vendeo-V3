@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createRef } from "react";
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import {
   SIGNATURE_BLOCK_HEIGHT,
@@ -9,6 +9,55 @@ import {
   VendeoSignature,
   shouldShowSignature,
 } from "@/components/shell/vendeo-signature";
+
+interface MockObserver {
+  callback: ResizeObserverCallback;
+  observe: ReturnType<typeof vi.fn>;
+  disconnect: ReturnType<typeof vi.fn>;
+}
+
+function installResizeObserver(): MockObserver[] {
+  const observers: MockObserver[] = [];
+
+  class MockResizeObserver {
+    callback: ResizeObserverCallback;
+    observe = vi.fn();
+    disconnect = vi.fn();
+
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback;
+      observers.push(this);
+    }
+  }
+
+  vi.stubGlobal("ResizeObserver", MockResizeObserver);
+  return observers;
+}
+
+function renderSignature(
+  initial: { asideHeight?: number; headerHeight?: number; navHeight?: number } = {},
+) {
+  const aside = { clientHeight: initial.asideHeight ?? 560 };
+  const header = { offsetHeight: initial.headerHeight ?? 56 };
+  const nav = { offsetHeight: initial.navHeight ?? 248 };
+
+  const result = render(
+    <VendeoSignature
+      asideRef={{ current: aside as unknown as HTMLElement }}
+      headerRef={{ current: header as unknown as HTMLElement }}
+      navRef={{ current: nav as unknown as HTMLElement }}
+    />,
+  );
+
+  return {
+    ...result,
+    aside,
+    header,
+    nav,
+    wrapper: () =>
+      result.container.querySelector("[data-signature-visible]"),
+  };
+}
 
 describe("shouldShowSignature", () => {
   const fit = (asideHeight: number, headerHeight: number, navHeight: number) =>
@@ -65,66 +114,67 @@ describe("VendeoSignature", () => {
     expect(html).not.toContain("mt-auto");
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
+  it("shows the signature when the measured space fits", () => {
+    installResizeObserver();
+    const { wrapper } = renderSignature();
+
+    expect(wrapper()?.getAttribute("data-signature-visible")).toBe("true");
+    expect(wrapper()?.className).toContain("mt-auto");
   });
 
-  it("shows the signature when the measured space fits", () => {
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        observe() {}
-        disconnect() {}
-      },
-    );
+  it("hides when the nav grows and reappears when space returns", () => {
+    const observers = installResizeObserver();
+    const { nav, wrapper } = renderSignature();
 
-    const { container } = render(
-      <VendeoSignature
-        asideRef={{ current: { clientHeight: 560 } as HTMLElement }}
-        headerRef={{ current: { offsetHeight: 56 } as HTMLElement }}
-        navRef={{ current: { offsetHeight: 248 } as HTMLElement }}
-      />,
-    );
+    expect(wrapper()?.getAttribute("data-signature-visible")).toBe("true");
 
-    const wrapper = container.querySelector("[data-signature-visible]");
-    expect(wrapper?.getAttribute("data-signature-visible")).toBe("true");
-    expect(wrapper?.className).toContain("mt-auto");
+    nav.offsetHeight = 366;
+    act(() => {
+      observers[0]?.callback([], observers[0] as unknown as ResizeObserver);
+    });
+    expect(wrapper()?.getAttribute("data-signature-visible")).toBe("false");
+
+    nav.offsetHeight = 248;
+    act(() => {
+      observers[0]?.callback([], observers[0] as unknown as ResizeObserver);
+    });
+    expect(wrapper()?.getAttribute("data-signature-visible")).toBe("true");
+  });
+
+  it("stays hidden when the measured navigation leaves too little space", () => {
+    installResizeObserver();
+    const { wrapper } = renderSignature({ navHeight: 366 });
+
+    expect(wrapper()?.getAttribute("data-signature-visible")).toBe("false");
   });
 
   it("stays hidden when there is no ResizeObserver", () => {
     vi.stubGlobal("ResizeObserver", undefined);
+    const { wrapper } = renderSignature({ asideHeight: 900 });
 
-    const { container } = render(
-      <VendeoSignature
-        asideRef={{ current: { clientHeight: 900 } as HTMLElement }}
-        headerRef={{ current: { offsetHeight: 56 } as HTMLElement }}
-        navRef={{ current: { offsetHeight: 248 } as HTMLElement }}
-      />,
-    );
-
-    const wrapper = container.querySelector("[data-signature-visible]");
-    expect(wrapper?.getAttribute("data-signature-visible")).toBe("false");
-    expect(wrapper?.className).toContain("hidden");
+    expect(wrapper()?.getAttribute("data-signature-visible")).toBe("false");
+    expect(wrapper()?.className).toContain("hidden");
   });
 
-  it("stays hidden when the measured navigation leaves too little space", () => {
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        observe() {}
-        disconnect() {}
-      },
-    );
+  it("disconnects the observer and removes the resize listener on unmount", () => {
+    const observers = installResizeObserver();
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const removeSpy = vi.spyOn(window, "removeEventListener");
+    const { unmount } = renderSignature();
 
-    const { container } = render(
-      <VendeoSignature
-        asideRef={{ current: { clientHeight: 560 } as HTMLElement }}
-        headerRef={{ current: { offsetHeight: 56 } as HTMLElement }}
-        navRef={{ current: { offsetHeight: 366 } as HTMLElement }}
-      />,
-    );
+    const resizeCall = addSpy.mock.calls.find(([event]) => event === "resize");
+    expect(resizeCall).toBeDefined();
+    const resizeHandler = resizeCall?.[1];
 
-    const wrapper = container.querySelector("[data-signature-visible]");
-    expect(wrapper?.getAttribute("data-signature-visible")).toBe("false");
+    unmount();
+
+    expect(observers[0]?.disconnect).toHaveBeenCalledTimes(1);
+    expect(removeSpy).toHaveBeenCalledWith("resize", resizeHandler);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 });

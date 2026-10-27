@@ -161,7 +161,7 @@ describe("Topbar", () => {
     preventDefaultSpy.mockRestore();
   });
 
-  it("renders the mobile symbol as a /dashboard link", () => {
+  it("renders the intermediate-band symbol as a /dashboard link", () => {
     render(
       <Topbar
         user={{ claims: { email: "test@test.com" } }}
@@ -173,12 +173,30 @@ describe("Topbar", () => {
     const image = brand.querySelector("img");
 
     expect(brand.getAttribute("href")).toBe("/dashboard");
+    expect(brand.className).toContain("hidden");
+    expect(brand.className).toContain("sm:inline-flex");
     expect(brand.className).toContain("md:hidden");
     expect(brand.className).toContain("min-h-[44px]");
     expect(brand.className).toContain("min-w-[44px]");
     expect(image?.getAttribute("src")).toBe("/icons/icon-512x512.png");
     expect(image?.className).toContain("h-9");
     expect(image?.className).toContain("w-9");
+  });
+
+  it("keeps the symbol only in the 640-767px band", () => {
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+    const brand = screen.getByLabelText("Vendeo — ir para o dashboard");
+
+    // <640: hidden; 640-767: sm:inline-flex; >=768: md:hidden.
+    expect(brand.className).toContain("hidden");
+    expect(brand.className).toContain("sm:inline-flex");
+    expect(brand.className).toContain("md:hidden");
   });
 
   it("sits between the hamburger and the store name", () => {

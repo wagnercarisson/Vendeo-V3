@@ -43,7 +43,10 @@ export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButt
         >
           <Menu className="h-5 w-5" />
         </button>
-        <VendeoBrandLink variant="symbol" className="md:hidden" />
+        <VendeoBrandLink
+          variant="symbol"
+          className="hidden sm:inline-flex md:hidden"
+        />
         <span className="truncate text-lg font-bold text-text-primary font-heading">
           {storeName ?? "Vendeo"}
         </span>
