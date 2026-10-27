@@ -12,6 +12,7 @@
 
 | # | Phase | Goal / status |
 |---|---|---|
+| 57.2 | F57.2 — Persistência de preferências multimercado | Planejada; persistência por usuário/loja, proveniência, CAS, rotas autenticadas e inicialização nos fluxos existentes; sem UI e sem habilitação PY |
 | 23 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ TextProvider + Copy Director | ConcluÃƒÆ’Ã‚Â­da; fundaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de IA de texto e Copy Director intercambiÃƒÆ’Ã‚Â¡vel |
 | 24 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Credit Tables + CreditService | ConcluÃƒÆ’Ã‚Â­da; crÃƒÆ’Ã‚Â©ditos concedidos, consumidos e auditÃƒÆ’Ã‚Â¡veis |
 | 25 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Pipeline de GeraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o v1.5 | ConcluÃƒÆ’Ã‚Â­da; copy e crÃƒÆ’Ã‚Â©ditos integrados ao pipeline |
@@ -634,3 +635,29 @@ Plans:
 **Gate:** `all_stores` sÃƒÆ’Ã‚Â³ ÃƒÆ’Ã‚Â© ativado apÃƒÆ’Ã‚Â³s 5.3 + 5.7 + validaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de Luna + campanha completa + aceite humano + disposiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o D13. Luna aprovado ÃƒÆ’Ã‚Â© mantido; restauraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o somente em reprovaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/problema/decisÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita. As migrations sÃƒÆ’Ã‚Â£o provadas em Postgres local isolado antes da publicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o. A janela preserva `spent_usd`, configura o cap e ativa `test_stores` antes de gerar. ApÃƒÆ’Ã‚Â³s a abertura, a fase encerra ativa e monitorada salvo critÃƒÆ’Ã‚Â©rio de parada/decisÃƒÆ’Ã‚Â£o explÃƒÆ’Ã‚Â­cita.
 
 **Canonical refs:** `openspec/changes/fase-56-2-7-abertura-gradual-produto-1-1-luna/` (proposal, design D1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂD8, 4 specs, tasks), `.planning/phases/56.2.7-abertura-gradual-produto-1-1-luna/56.2.7-CONTEXT.md` e `56.2.7-PATTERNS.md`, `openspec/changes/archive/2026-10-19-fase-56-2b2d-piloto-hospedado-produto-1-1-test-stores/DEFERRED.md`.
+
+### Phase 57.2: F57.2 — Persistência de preferências multimercado
+
+**Status:** Planejada; planos GSD criados (6 planos, 4 waves); execução não iniciada. Fonte técnica aprovada: `openspec/changes/fase-57-2-persistencia-preferencias-multimercado/`.
+
+**Goal:** persistir o idioma do aplicativo por usuário e as configurações de mercado por loja (país cadastral, mercado padrão, idioma padrão do conteúdo, moeda anunciada e fuso), com proveniência por campo, controle de versão, leitura/escrita autenticadas e inicialização idempotente nos caminhos existentes de criação/confirmação fiscal, preservando integralmente créditos, benefícios, legal, auditoria, readiness, geração e campanhas entregues. Sem UI, sem habilitação do Paraguai, sem cobrança e sem snapshots de campanha.
+
+**Depends on:** F57.1 (`src/lib/market-context/**`, aprovada e versionada) e F58 (integrada em `5adf6dcc`). Branch `feature/fase-57-2-preferencias-multimercado`.
+
+**Requirements:** REQ-57.2-01, REQ-57.2-02, REQ-57.2-03, REQ-57.2-04, REQ-57.2-05, REQ-57.2-06, REQ-57.2-07, REQ-57.2-08, REQ-57.2-09, REQ-57.2-10, REQ-57.2-11, REQ-57.2-12
+
+**Requirement scope:** (01) tabelas com proveniência/versões; (02) legado sem escrita, erro 503/500; (03) padrões, recomposição e explicit; (04) escrita protegida (RPC service_role, RLS, CSRF, DTO); (05) CAS/linha ausente/confirmação fiscal; (06) rotas e ownership dedicada; (07) inicialização idempotente; (08) confirmação fiscal preserva escolhas; (09) não regressão de créditos/benefícios/legal/auditoria/fiscal; (10) provas de banco isolado; (11) gates e 72 testes market-context; (12) runbook e handoff.
+
+**Plans:** 6 planos em 4 waves.
+
+Plans:
+- [ ] 57.2-01-PLAN.md — migration aditiva: tabelas, RLS, grants, `ensure_store_market_settings` + RPCs de escrita + contrato de banco + harness Supabase descartável `scripts/f57-2/isolated-db.mjs` (wave 1; checkpoint de banco).
+- [ ] 57.2-02-PLAN.md — fundação `src/lib/market-preferences/` (errors/DTOs) + serviço e rota `/api/preferences` (wave 1).
+- [ ] 57.2-03-PLAN.md — serviço e rota `/api/store/market-settings`: loader dedicado, recomposição e CAS (wave 2).
+- [ ] 57.2-04-PLAN.md — 4 RPCs recriadas + criação administrativa via delegação (não recriada) na mesma migration + regressão de crédito (wave 2; checkpoint de banco).
+- [ ] 57.2-05-PLAN.md — provas de RLS/grants/atomicidade/concorrência e comparação base×novo usando o harness do plano 01 (wave 3; checkpoint de banco).
+- [ ] 57.2-06-PLAN.md — gates, revisão SQL/escopo, segurança ASVS L1, runbook e handoff (wave 4).
+
+**Waves:** `01/02 → 03/04 → 05 → 06`. O arquivo de migration é compartilhado por 01 e 04 em waves distintas (sequenciado, nunca paralelo).
+
+**Diretório:** `.planning/phases/57.2-f57-2-persist-ncia-de-prefer-ncias-multimercado/`.
