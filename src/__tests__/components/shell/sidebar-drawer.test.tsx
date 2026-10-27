@@ -129,4 +129,24 @@ describe("SidebarDrawer", () => {
     unmount();
     expect(document.body.style.overflow).toBe("auto");
   });
+
+  it("brand logo links to /dashboard and closes the drawer", () => {
+    const onClose = vi.fn();
+    render(<SidebarDrawer isOpen={true} onClose={onClose} />);
+    const brand = screen.getByRole("link", {
+      name: "Vendeo — ir para o dashboard",
+    });
+
+    expect(brand.getAttribute("href")).toBe("/dashboard");
+    fireEvent.click(brand);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render the signature in the drawer", () => {
+    const { container } = render(
+      <SidebarDrawer isOpen={true} onClose={() => {}} />,
+    );
+
+    expect(container.innerHTML).not.toContain("/brand/vendeo-signature.png");
+  });
 });

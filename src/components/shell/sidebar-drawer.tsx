@@ -3,6 +3,7 @@
 import { useEffect, useRef, useLayoutEffect, useState, useCallback } from "react";
 import { X } from "lucide-react";
 import { Sidebar } from "./sidebar";
+import { VendeoBrandLink } from "./vendeo-brand";
 import type { RefObject } from "react";
 
 interface SidebarDrawerProps {
@@ -123,9 +124,11 @@ export function SidebarDrawer({
           <X className="h-5 w-5" />
         </button>
         <div className="p-4">
-          <span className="mb-6 mt-2 block text-lg font-bold text-text-primary font-heading">
-            Vendeo
-          </span>
+          <VendeoBrandLink
+            variant="logo"
+            onNavigate={onClose}
+            className="mb-6 mt-2"
+          />
           <Sidebar isDrawer onNavigate={onClose} latestEntryId={latestEntryId} />
         </div>
       </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Menu, Plus } from "lucide-react";
 import { AccountMenu } from "./account-menu";
+import { VendeoBrandLink } from "./vendeo-brand";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import type { JwtPayload } from "@/types/auth";
 import type { RefObject, MouseEvent } from "react";
@@ -42,6 +43,7 @@ export function Topbar({ user, storeName, onToggleMenu, isDrawerOpen, toggleButt
         >
           <Menu className="h-5 w-5" />
         </button>
+        <VendeoBrandLink variant="symbol" className="md:hidden" />
         <span className="truncate text-lg font-bold text-text-primary font-heading">
           {storeName ?? "Vendeo"}
         </span>

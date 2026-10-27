@@ -160,4 +160,55 @@ describe("Topbar", () => {
     expect(reload).not.toHaveBeenCalled();
     preventDefaultSpy.mockRestore();
   });
+
+  it("renders the mobile symbol as a /dashboard link", () => {
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+    const brand = screen.getByLabelText("Vendeo — ir para o dashboard");
+    const image = brand.querySelector("img");
+
+    expect(brand.getAttribute("href")).toBe("/dashboard");
+    expect(brand.className).toContain("md:hidden");
+    expect(brand.className).toContain("min-h-[44px]");
+    expect(brand.className).toContain("min-w-[44px]");
+    expect(image?.getAttribute("src")).toBe("/icons/icon-512x512.png");
+    expect(image?.className).toContain("h-9");
+    expect(image?.className).toContain("w-9");
+  });
+
+  it("sits between the hamburger and the store name", () => {
+    const storeName = "Mercado Central da Vila Nova Esperança";
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        storeName={storeName}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+    const hamburger = screen.getByLabelText("Abrir menu de navegação");
+    const brand = screen.getByLabelText("Vendeo — ir para o dashboard");
+    const name = screen.getByText(storeName);
+
+    expect(hamburger.nextElementSibling).toBe(brand);
+    expect(brand.nextElementSibling).toBe(name);
+    expect(name.className).toContain("truncate");
+  });
+
+  it("preserves notifications", () => {
+    render(
+      <Topbar
+        user={{ claims: { email: "test@test.com" } }}
+        onToggleMenu={() => {}}
+        isDrawerOpen={false}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: /Notifica/ })).toBeTruthy();
+  });
 });
