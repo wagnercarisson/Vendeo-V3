@@ -8,9 +8,11 @@ branch: feature/fase-57-localizacao-e-expansao-multimercado
 acceptance: approved
 accepted_on: 2026-10-27
 review:
-  independent_reproduction: "2026-10-27 — usuário/Codex: 88 testes (16 + 72), typecheck e build; sem saída literal anexada a este artefato"
-  manual_agent_check: "CLI: carga de sharp/Gemini, versões de tsx/tsc/vitest/eslint, sonda de cobertura do ESLint e hashes de manifests; não há UI/UAT manual nesta fatia"
-  integration: "origin/main = 5df104c1; produção READY no mesmo commit; fast-forward possível; publicação NÃO executada"
+  independent_reproduction: "2026-10-27 — usuário/Codex: 88 testes (16 + 72) e typecheck; sem saída literal anexada a este artefato"
+  user_manual_regression: "2026-10-27 — relato do usuário: aplicativo local com a loja de administrador, campanhas e outras telas visitadas, funcionamento confirmado. Regressão manual relatada, NÃO UAT completo"
+  build_reproduction: "2026-10-27 — Codex, separado da execução original do executor: tentativa no sandbox bloqueada por spawn EPERM; 1ª tentativa fora do sandbox compilou mas falhou na checagem de tipos apontando arquivo de .next/types como ausente (arquivo presente na conferência seguinte); repetição fora do sandbox concluída com exit 0 e 91/91 páginas, sem alteração de código ou limpeza manual de cache; causa da falha intermediária NÃO determinada"
+  manual_agent_check: "CLI: carga de sharp/Gemini, versões de tsx/tsc/vitest/eslint, sonda de cobertura do ESLint e hashes de manifests"
+  integration: "fotografia de 2026-10-27 (Codex via API): branch de produção main, deploys por Git habilitados, deploy READY em 5df104c1 — não é estado permanentemente atual; publicação NÃO executada"
 commits:
   - 76c1ef02
 environment:
@@ -24,7 +26,7 @@ verification:
   tests_market_context: "PASS — 6 files / 72 tests"
   typecheck: "PASS — tsc -p tsconfig.typecheck.json --noEmit, exit 0, 0 erros"
   lint: "EXECUTA (exit 0), mas SEM cobertura TypeScript: arquivo .ts explícito retorna 'File ignored because no matching configuration was supplied'"
-  build: "PASS — npm run build exit 0 (check:cnae + next build; 81 rotas/middleware compilados)"
+  build: "PASS — execução ORIGINAL DO EXECUTOR: npm run build exit 0 (check:cnae + next build); contagem de páginas não registrada. A reprodução posterior do Codex está documentada separadamente, com uma falha intermediária"
   diff: "PASS — apenas os 2 arquivos de teste; git diff --check limpo"
 ---
 
@@ -38,16 +40,38 @@ gates executáveis passaram: **typecheck 0 erros**, **build concluído**, testes
 do repositório, explicitamente fora do escopo desta quick.
 
 **Aceite aprovado em 2026-10-27** pelo usuário/Codex, com as limitações registradas. A entrega
-foi considerada suficiente com 88 testes, typecheck, build e verificação manual; a publicação
-continua fora desta quick.
+foi considerada suficiente com 88 testes, typecheck, build, reprodução do build pelo Codex e
+teste manual de regressão relatado pelo usuário; a publicação continua fora desta quick.
 
 ## Reconciliação de encerramento (2026-10-27)
 
-### Reprodução independente (usuário/Codex)
+### Testes e typecheck (reprodução independente)
 
-- **88 testes** verdes (16 dos dois arquivos corrigidos + 72 de `market-context`), além de
-  `typecheck` e `build`. Registro declarativo: nenhuma saída literal dessa repetição foi anexada
-  a este artefato — as saídas literais aqui são as da execução do agente (tabela de gates).
+- **88 testes** verdes (16 dos dois arquivos corrigidos + 72 de `market-context`) e `typecheck`,
+  reproduzidos pelo usuário/Codex. Registro declarativo: nenhuma saída literal dessa reprodução
+  foi anexada a este artefato; as saídas literais da tabela de gates são da execução do agente.
+
+### Teste manual do usuário (regressão relatada)
+
+- **Relato do usuário:** executou o aplicativo local com a **loja de administrador**, visitou
+  **campanhas e outras telas** e confirmou o funcionamento.
+- Classificação: **verificação manual de regressão relatada pelo usuário**, não UAT completo.
+  Não amplia a cobertura formal nem substitui os gates automatizados.
+- É distinta das verificações CLI do agente (abaixo): o agente não executou navegação manual.
+
+### Reprodução do build pelo Codex — cronologia
+
+Registrada **separadamente** da execução original do executor, que permanece como resultado
+original (`npm run build` exit 0).
+
+1. **Tentativa no sandbox:** bloqueada por **spawn EPERM**.
+2. **Primeira tentativa fora do sandbox:** compilou, mas falhou na checagem de tipos apontando um
+   arquivo de `.next/types` como ausente. O arquivo **estava presente** na conferência seguinte.
+3. **Repetição fora do sandbox:** concluída com **exit 0** e **91/91 páginas geradas**, sem
+   alteração de código e sem limpeza manual de cache.
+
+A **causa da falha intermediária não foi determinada**. Este registro **não** deve ser lido como
+sucesso na primeira tentativa.
 
 ### Verificação manual (agente) — escopo real
 
@@ -56,21 +80,22 @@ continua fora desta quick.
 - Sonda de cobertura do lint: `.ts` explícito ⇒ `File ignored because no matching configuration
   was supplied`.
 - Hashes de `package.json`/`package-lock.json` idênticos ao baseline.
-- **Não houve UAT de interface**: esta fatia não expõe tela; a verificação manual é de CLI.
-  Nenhum teste manual de UI é declarado ou inferido.
+- Escopo do agente: **CLI**. O teste manual de regressão foi executado pelo **usuário**; esta
+  quick não adiciona tela nem UAT próprio.
 
-### Estado de integração observado
+### Estado de integração observado (fotografia de 2026-10-27)
 
 | Item | Estado |
 |---|---|
 | `origin/main` | `5df104c1` |
-| Produção (Vercel) | deploy `READY` em `5df104c1` (confirmado pelo usuário) |
-| Branch de produção | `main`, com deploys por Git habilitados |
-| Commits à frente | **8** até `b1ace4f7` (9 após este commit documental) — todos de biblioteca multimercado, testes e documentação |
+| Produção (Vercel) | deploy `READY` em `5df104c1` — **confirmado pelo Codex via API** |
+| Branch de produção | `main`, com deploys por Git habilitados — confirmado pelo Codex via API |
+| Commits à frente | **9** até `9dd7efe3` (10 após este commit documental) — biblioteca multimercado, testes e documentação |
 | Fast-forward | confirmado (`git merge-base --is-ancestor origin/main HEAD` = 0) |
 | Migrations/env/dependências | nenhuma nova exigência; sem alteração de config de deploy |
 | Worktree | limpa |
 
+Esta tabela é uma **fotografia daquela conferência**, não um estado permanentemente atual.
 **Publicação não executada.** Push para `main` dispara deploy e permanece como decisão separada
 do usuário.
 
