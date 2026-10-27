@@ -5,6 +5,7 @@ import type {
 } from "./types";
 import {
   createError,
+  findUnexpectedKey,
   isPlainObject,
   isSupportedLocale,
   receivedValue,
@@ -34,6 +35,19 @@ export function resolveUiLocale(input: unknown): UserLocaleResolution {
   const kind = input.kind;
 
   if (kind === "legacy") {
+    // Legado significa ausência TOTAL de preferência. Um `uiLocale` presente
+    // contradiz a declaração e não pode ser descartado em favor de pt-BR.
+    const extraKey = findUnexpectedKey(input, ["kind"]);
+    if (extraKey !== undefined) {
+      return failure(
+        createError("invalid_input", {
+          field: extraKey,
+          reason: "invalid_field",
+          received: receivedValue(input[extraKey]),
+        }),
+      );
+    }
+
     const result: UserLocaleResolution = {
       ok: true,
       uiLocale: "pt-BR",

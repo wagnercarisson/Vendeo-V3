@@ -33,6 +33,22 @@ describe("resolveUiLocale", () => {
     expect(result.provenance).toBe("legacy_br");
   });
 
+  it("rejects mixed legacy input instead of discarding explicit preferences", () => {
+    const withLocale = expectFailure(
+      resolveUiLocale({ kind: "legacy", uiLocale: "es-PY" }),
+    );
+    expect(withLocale.code).toBe("invalid_input");
+    expect(withLocale.field).toBe("uiLocale");
+    expect(withLocale.reason).toBe("invalid_field");
+    expect(withLocale.received).toBe("es-PY");
+
+    const withCountry = expectFailure(
+      resolveUiLocale({ kind: "legacy", country: "PY" }),
+    );
+    expect(withCountry.code).toBe("invalid_input");
+    expect(withCountry.field).toBe("country");
+  });
+
   it("never derives the app locale from market or country", () => {
     // Extra keys are ignored: there is no market/country input by design.
     const result = resolveUiLocale({

@@ -169,6 +169,34 @@ describe("resolveStoreMarketContext", () => {
     expect(result.sources.timeZone).toBe("legacy_br");
   });
 
+  it("rejects mixed legacy input instead of discarding configuration", () => {
+    const withCountry = expectFailure(
+      resolveStoreMarketContext({ kind: "legacy", country: "PY" }),
+    );
+    expect(withCountry.code).toBe("invalid_input");
+    expect(withCountry.field).toBe("country");
+    expect(withCountry.reason).toBe("invalid_field");
+    expect(withCountry.received).toBe("PY");
+
+    const withCurrency = expectFailure(
+      resolveStoreMarketContext({ kind: "legacy", defaultCurrency: "PYG" }),
+    );
+    expect(withCurrency.code).toBe("invalid_input");
+    expect(withCurrency.field).toBe("defaultCurrency");
+
+    // Mesmo um valor brasileiro explícito contradiz "ausência total".
+    const withBrazilianCountry = expectFailure(
+      resolveStoreMarketContext({ kind: "legacy", country: "BR" }),
+    );
+    expect(withBrazilianCountry.code).toBe("invalid_input");
+    expect(withBrazilianCountry.field).toBe("country");
+
+    const withUndefinedValue = expectFailure(
+      resolveStoreMarketContext({ kind: "legacy", country: undefined }),
+    );
+    expect(withUndefinedValue.field).toBe("country");
+  });
+
   it("rejects non-object input without throwing", () => {
     expect(expectFailure(resolveStoreMarketContext(null)).code).toBe(
       "invalid_input",

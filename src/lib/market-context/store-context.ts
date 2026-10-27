@@ -14,6 +14,7 @@ import {
 } from "./types";
 import {
   createError,
+  findUnexpectedKey,
   isPlainObject,
   isSupportedCurrency,
   isSupportedLocale,
@@ -89,6 +90,19 @@ export function resolveStoreMarketContext(
   const kind = input.kind;
 
   if (kind === "legacy") {
+    // Legado significa ausência TOTAL de configuração. Campos adicionais
+    // contradizem a declaração e não podem ser descartados em favor de BR.
+    const extraKey = findUnexpectedKey(input, ["kind"]);
+    if (extraKey !== undefined) {
+      return resolveFailure(
+        createError("invalid_input", {
+          field: extraKey,
+          reason: "invalid_field",
+          received: receivedValue(input[extraKey]),
+        }),
+      );
+    }
+
     const profile = MARKET_PROFILES.BR;
     const context = buildContext({
       country: profile.market,

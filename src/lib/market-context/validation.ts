@@ -56,6 +56,17 @@ export function isPlainObject(
 }
 
 /**
+ * Retorna a primeira chave própria não permitida, ou `undefined`.
+ * Usado para exigir ausência TOTAL de configuração no modo `legacy`.
+ */
+export function findUnexpectedKey(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+): string | undefined {
+  return Object.keys(value).find((key) => !allowed.includes(key));
+}
+
+/**
  * Sanitiza o valor recebido para o erro: nunca expõe referência à entrada.
  */
 export function receivedValue(value: unknown): unknown {
