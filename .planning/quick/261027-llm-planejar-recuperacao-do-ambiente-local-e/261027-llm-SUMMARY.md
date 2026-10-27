@@ -5,7 +5,12 @@ date: 2026-10-27
 quick_id: 261027-llm
 initiative: F57
 branch: feature/fase-57-localizacao-e-expansao-multimercado
-acceptance: pending_review
+acceptance: approved
+accepted_on: 2026-10-27
+review:
+  independent_reproduction: "2026-10-27 — usuário/Codex: 88 testes (16 + 72), typecheck e build; sem saída literal anexada a este artefato"
+  manual_agent_check: "CLI: carga de sharp/Gemini, versões de tsx/tsc/vitest/eslint, sonda de cobertura do ESLint e hashes de manifests; não há UI/UAT manual nesta fatia"
+  integration: "origin/main = 5df104c1; produção READY no mesmo commit; fast-forward possível; publicação NÃO executada"
 commits:
   - 76c1ef02
 environment:
@@ -32,7 +37,42 @@ gates executáveis passaram: **typecheck 0 erros**, **build concluído**, testes
 `market-context` verdes. O lint **executa**, mas continua **sem cobrir TypeScript** — limitação
 do repositório, explicitamente fora do escopo desta quick.
 
-Aceite **não declarado**: entrega devolvida para revisão do usuário/Codex.
+**Aceite aprovado em 2026-10-27** pelo usuário/Codex, com as limitações registradas. A entrega
+foi considerada suficiente com 88 testes, typecheck, build e verificação manual; a publicação
+continua fora desta quick.
+
+## Reconciliação de encerramento (2026-10-27)
+
+### Reprodução independente (usuário/Codex)
+
+- **88 testes** verdes (16 dos dois arquivos corrigidos + 72 de `market-context`), além de
+  `typecheck` e `build`. Registro declarativo: nenhuma saída literal dessa repetição foi anexada
+  a este artefato — as saídas literais aqui são as da execução do agente (tabela de gates).
+
+### Verificação manual (agente) — escopo real
+
+- Carga de `sharp` e `@google/generative-ai` (`modules ok`), versões de `tsx`/`tsc`/`vitest`/
+  `eslint` e `.bin` restaurado.
+- Sonda de cobertura do lint: `.ts` explícito ⇒ `File ignored because no matching configuration
+  was supplied`.
+- Hashes de `package.json`/`package-lock.json` idênticos ao baseline.
+- **Não houve UAT de interface**: esta fatia não expõe tela; a verificação manual é de CLI.
+  Nenhum teste manual de UI é declarado ou inferido.
+
+### Estado de integração observado
+
+| Item | Estado |
+|---|---|
+| `origin/main` | `5df104c1` |
+| Produção (Vercel) | deploy `READY` em `5df104c1` (confirmado pelo usuário) |
+| Branch de produção | `main`, com deploys por Git habilitados |
+| Commits à frente | **8** até `b1ace4f7` (9 após este commit documental) — todos de biblioteca multimercado, testes e documentação |
+| Fast-forward | confirmado (`git merge-base --is-ancestor origin/main HEAD` = 0) |
+| Migrations/env/dependências | nenhuma nova exigência; sem alteração de config de deploy |
+| Worktree | limpa |
+
+**Publicação não executada.** Push para `main` dispara deploy e permanece como decisão separada
+do usuário.
 
 ## Causa raiz confirmada
 
