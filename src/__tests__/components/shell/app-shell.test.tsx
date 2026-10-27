@@ -72,4 +72,49 @@ describe("AppShell", () => {
     expect(html).toContain("min-w-0");
     expect(html).toContain("min-h-0 min-w-0");
   });
+
+  it("renders the desktop brand link and keeps the nav non-shrinking", () => {
+    const html = renderToString(
+      <AppShell user={{ claims: { email: "test@test.com" } }}>
+        <p>Conteúdo</p>
+      </AppShell>,
+    );
+
+    expect(html).toContain('aria-label="Vendeo — ir para o dashboard"');
+    expect(html).toContain('src="/landing/vendeo-logo-dark.webp"');
+    expect(html).toContain("flex-col");
+    expect(html).toContain("md:flex");
+    expect(html).toContain("shrink-0");
+  });
+
+  it("renders exactly one signature, only in the desktop sidebar", () => {
+    const html = renderToString(
+      <AppShell user={{ claims: { email: "test@test.com" } }}>
+        <p>Conteúdo</p>
+      </AppShell>,
+    );
+    const signatureCount = (
+      html.match(/<img src="\/brand\/vendeo-signature\.png"/g) ?? []
+    ).length;
+
+    expect(signatureCount).toBe(1);
+    expect(html).toContain('data-signature-visible="false"');
+  });
+
+  it("keeps the mobile symbol in the topbar and the logo in the drawer", () => {
+    const html = renderToString(
+      <AppShell user={{ claims: { email: "test@test.com" } }}>
+        <p>Conteúdo</p>
+      </AppShell>,
+    );
+    const symbolCount = (
+      html.match(/<img src="\/icons\/icon-512x512\.png"/g) ?? []
+    ).length;
+    const logoCount = (
+      html.match(/<img src="\/landing\/vendeo-logo-dark\.webp"/g) ?? []
+    ).length;
+
+    expect(symbolCount).toBe(1);
+    expect(logoCount).toBe(2);
+  });
 });

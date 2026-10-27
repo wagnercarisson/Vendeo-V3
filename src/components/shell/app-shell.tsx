@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { Topbar } from "./topbar";
 import { Sidebar } from "./sidebar";
 import { SidebarDrawer } from "./sidebar-drawer";
+import { VendeoBrandLink } from "./vendeo-brand";
+import { VendeoSignature } from "./vendeo-signature";
 import type { JwtPayload } from "@/types/auth";
 
 interface AppShellProps {
@@ -21,16 +23,30 @@ export function AppShell({
 }: AppShellProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex min-h-dvh bg-bg-deep">
-      <aside className="sticky top-0 hidden h-dvh w-56 flex-shrink-0 overflow-y-auto border-r border-border bg-bg-surface md:block">
-        <div className="flex h-14 items-center border-b border-border px-4">
-          <span className="text-lg font-bold text-text-primary font-heading">
-            Vendeo
-          </span>
+      <aside
+        ref={asideRef}
+        className="sticky top-0 hidden h-dvh w-56 flex-shrink-0 flex-col overflow-y-auto border-r border-border bg-bg-surface md:flex"
+      >
+        <div
+          ref={headerRef}
+          className="flex h-14 shrink-0 items-center border-b border-border px-4"
+        >
+          <VendeoBrandLink variant="logo" />
         </div>
-        <Sidebar latestEntryId={latestChangelogEntryId} />
+        <div ref={navRef} className="shrink-0">
+          <Sidebar latestEntryId={latestChangelogEntryId} />
+        </div>
+        <VendeoSignature
+          asideRef={asideRef}
+          headerRef={headerRef}
+          navRef={navRef}
+        />
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
