@@ -30,6 +30,8 @@ idioma do conteúdo e moeda anunciada.
   incompletos, desconhecidos e versões diferentes.
 - **`legacy` é declaração explícita.** Nunca é inferido. Nada cai
   silenciosamente em BR; ausência de país configurado retorna `missing_country`.
+  Campos adicionais junto de `kind: "legacy"` são **rejeitados** (legado é
+  ausência total), em vez de descartados em favor de BR/pt-BR.
 - **Saídas são objetos novos e congelados.** Mutar entradas depois de resolver
   não altera o resultado.
 - **Leitura de entregues:** `null`/`undefined` → `missing_legacy`; objeto
