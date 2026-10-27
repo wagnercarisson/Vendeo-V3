@@ -65,3 +65,9 @@ export {
 } from "./store-context";
 
 export { resolveUiLocale } from "./user-preference";
+
+export {
+  resolveCampaignMarketContext,
+  parseCampaignMarketContext,
+  readCampaignMarketContext,
+} from "./campaign-context";
