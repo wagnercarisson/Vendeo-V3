@@ -209,11 +209,18 @@ Duas migrations aditivas, com timestamps UTC reais e únicos:
 2. `CREATE TABLE store_market_settings` + checks + trigger `updated_at`.
 3. `ensure_store_market_settings`, `write_store_market_settings` e
    `write_user_locale_preference` + grants.
-4. `CREATE OR REPLACE` de `create_store_draft`, `create_store_with_cnpj`,
+4. RLS/policies/grants.
+5. Bloco `-- REVERT` com drops e referência às definições anteriores.
+
+**(b) `YYYYMMDDHHmmss_f57_2_onboarding_market_settings.sql` (plano 04)**
+
+1. `CREATE OR REPLACE` de `create_store_draft`, `create_store_with_cnpj`,
    `create_store_with_initial_grant`, `update_store_cnpj` com a chamada de inicialização,
    preservando literalmente os ramos de crédito/entitlement vigentes.
-5. RLS/policies/grants.
-6. Bloco `-- REVERT` com drops e referência às definições anteriores.
+2. Bloco `-- REVERT` com restauração prévia das definições anteriores das 4 RPCs.
+
+Motivo da separação: a migration (a), uma vez aplicada no homolog, não pode ser reescrita; a
+recriação das RPCs de onboarding precisa ser uma segunda migration aditiva.
 
 Sem alterar tabelas existentes, sem backfill, sem renomear migrations aplicadas.
 

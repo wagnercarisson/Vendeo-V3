@@ -58,7 +58,6 @@ async function inTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise
     await client.query("begin");
     try {
       const result = await fn(client);
-      await client.query("rollback");
       return result;
     } catch (error) {
       await client.query("rollback").catch(() => undefined);
@@ -167,24 +166,27 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await withClient(async (client) => {
-    await client.query("begin");
-    try {
-      for (const storeId of createdStores.splice(0)) {
-        await client.query("delete from public.store_market_settings where store_id = $1", [storeId]);
-        await client.query("delete from public.stores where id = $1", [storeId]);
+  try {
+    await withClient(async (client) => {
+      await client.query("begin");
+      try {
+        for (const storeId of createdStores.splice(0)) {
+          await client.query("delete from public.store_market_settings where store_id = $1", [storeId]);
+          await client.query("delete from public.stores where id = $1", [storeId]);
+        }
+        for (const userId of createdUsers.splice(0)) {
+          await client.query("delete from public.user_preferences where user_id = $1", [userId]);
+          await client.query("delete from auth.users where id = $1", [userId]);
+        }
+        await client.query("commit");
+      } catch (error) {
+        await client.query("rollback").catch(() => undefined);
+        throw error;
       }
-      for (const userId of createdUsers.splice(0)) {
-        await client.query("delete from public.user_preferences where user_id = $1", [userId]);
-        await client.query("delete from auth.users where id = $1", [userId]);
-      }
-      await client.query("commit");
-    } catch (error) {
-      await client.query("rollback").catch(() => undefined);
-      throw error;
-    }
-  });
-  await pool.end();
+    });
+  } finally {
+    await pool.end();
+  }
 });
 
 describe("F57.2 schema, checks e grants", () => {
@@ -244,8 +246,7 @@ describe("F57.2 schema, checks e grants", () => {
       ];
     };
 
-    await withClient(async (client) => {
-      await client.query("begin");
+    await inTransaction(async (client) => {
       await expectSqlState(client, insertStore({}), values({ currency: "USD" }), "23514");
       await expectSqlState(client, insertStore({}), values({ locale: "es-AR" }), "23514");
       await expectSqlState(client, insertStore({}), values({ timeZone: "UTC" }), "23514");
@@ -253,11 +254,9 @@ describe("F57.2 schema, checks e grants", () => {
       await expectSqlState(client, insertStore({}), values({ countrySource: "fiscal" }), "23514");
       await expectSqlState(client, insertStore({}), values({ marketSource: "inferido" }), "23514");
       await expectSqlState(client, insertStore({}), values({ contextVersion: "2" }), "23514");
-      await client.query("rollback");
     });
 
-    await withClient(async (client) => {
-      await client.query("begin");
+    await inTransaction(async (client) => {
       await expectSqlState(
         client,
         "insert into public.user_preferences (user_id, ui_locale, ui_locale_source) values ($1,'pt-BR','legacy_br')",
@@ -270,7 +269,6 @@ describe("F57.2 schema, checks e grants", () => {
         [userId],
         "23514",
       );
-      await client.query("rollback");
     });
   });
 
@@ -290,8 +288,7 @@ describe("F57.2 schema, checks e grants", () => {
       expect(rows[0]).toMatchObject({ authd: false, anonymous: false, service: true });
     }
 
-    await withClient(async (client) => {
-      await client.query("begin");
+    await inTransaction(async (client) => {
       await client.query("set local role authenticated");
       await setJwt(client, createdUsers[0] ?? crypto.randomUUID());
       await expectSqlState(
@@ -300,11 +297,9 @@ describe("F57.2 schema, checks e grants", () => {
         [createdStores[0] ?? crypto.randomUUID()],
         "42501",
       );
-      await client.query("rollback");
     });
 
-    await withClient(async (client) => {
-      await client.query("begin");
+    await inTransaction(async (client) => {
       await client.query("set local role anon");
       await expectSqlState(
         client,
@@ -312,7 +307,6 @@ describe("F57.2 schema, checks e grants", () => {
         [crypto.randomUUID()],
         "42501",
       );
-      await client.query("rollback");
     });
   });
 });
@@ -348,8 +342,7 @@ describe("F57.2 RLS e isolamento", () => {
       expect(settingsB.rows.map((row) => row.store_id)).toEqual([storeB]);
     });
 
-    await withClient(async (client) => {
-      await client.query("begin");
+    await inTransaction(async (client) => {
       await client.query("set local role authenticated");
       await setJwt(client, userA);
       await expectSqlState(
@@ -388,7 +381,6 @@ describe("F57.2 RLS e isolamento", () => {
         [storeA],
         "42501",
       );
-      await client.query("rollback");
     });
   });
 });
@@ -470,6 +462,25 @@ describe("F57.2 RPCs: idempotência, CAS e proveniência", () => {
       [storeId],
     );
     expect(after[0].settings_version).toBe(before[0].settings_version);
+
+    const beforeCountry = await query<Row>(
+      "select default_campaign_market, default_content_locale, default_currency, time_zone, country_code, country_source, settings_version::int from public.store_market_settings where store_id = $1",
+      [storeId],
+    );
+    const countryChangeArgs = [
+      "BR", "explicit", "pt-BR", "default", "BRL", "default",
+      "America/Sao_Paulo", "default", "PY",
+    ] as const;
+    await expect(
+      rpcCall("write_store_market_settings", [storeId, ...countryChangeArgs, "fiscal_confirmation", 1, 2]),
+    ).rejects.toThrow(/country_not_mutable/);
+    const afterCountry = await query<Row>(
+      "select default_campaign_market, default_content_locale, default_currency, time_zone, country_code, country_source, settings_version::int from public.store_market_settings where store_id = $1",
+      [storeId],
+    );
+    expect(afterCountry[0]).toEqual(beforeCountry[0]);
+    expect(afterCountry[0].country_code).toBe("BR");
+    expect(afterCountry[0].country_source).toBe("legacy_br");
 
     const otherUser = await actor("store-write-other");
     const otherStore = await storeFor(otherUser);

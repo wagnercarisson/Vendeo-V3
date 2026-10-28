@@ -4,7 +4,7 @@
 - [ ] 1.2 Criar `supabase/migrations/<UTC>_f57_2_market_preferences.sql`: `user_preferences` e `store_market_settings` com `CHECK`s de mercado/locale/moeda/fuso/fontes, `context_version`, versões de concorrência, FKs e triggers `updated_at`. (2 h)
 - [ ] 1.3 Na mesma migration, criar `ensure_store_market_settings` (idempotente), `write_store_market_settings` (CAS por versão, país imutável quando a linha existe) e `write_user_locale_preference` (CAS), com `SECURITY DEFINER`, `search_path = ''`, `REVOKE` de `PUBLIC/anon/authenticated` e `GRANT` apenas `service_role`. (2 h)
 - [ ] 1.4 Adicionar RLS: `user_preferences` **somente SELECT** do próprio usuário (sem escrita direta); `store_market_settings` SELECT por ownership da loja; `service_role` ALL para escrita/RPC. Incluir `COMMENT` explicitando que billing/endereço não definem país cadastral. (1 h)
-- [ ] 1.5 Recriar `create_store_draft`, `create_store_with_cnpj`, `create_store_with_initial_grant` e `update_store_cnpj` copiando o corpo **vigente**, acrescentando a inicialização/atualização de configurações e preservando literalmente os ramos de crédito/entitlement existentes; `update_store_cnpj` trava a linha de configurações e incrementa `settings_version`. Incluir bloco `-- REVERT` com restauração prévia das RPCs. (2 h)
+- [ ] 1.5 Criar uma SEGUNDA migration aditiva (`<UTC>_f57_2_onboarding_market_settings.sql`) recriando `create_store_draft`, `create_store_with_cnpj`, `create_store_with_initial_grant` e `update_store_cnpj` a partir do corpo vigente, acrescentando a inicialização/atualização de configurações e preservando literalmente os ramos de crédito/entitlement; `update_store_cnpj` trava a linha e incrementa `settings_version`. Incluir `-- REVERT`. (2 h)
 
 ## 2. Contratos, DTOs e serviço do usuário
 
@@ -28,18 +28,18 @@
 - [ ] 4.4 Teste de idempotência: repetir inicialização/atualização não duplica linhas nem sobrescreve escolhas; falha simulada reverte loja + aceites + configurações + efeitos de crédito. (2 h)
 - [ ] 4.5 Teste de concorrência entre confirmação fiscal e PATCH de preferências: confirmação incrementa `settings_version`; PATCH com versão antiga recebe 409 sem sobrescrever. Cobrir também **linha ausente**: `INSERT ... ON CONFLICT DO NOTHING` + `FOR UPDATE`/advisory lock; duas primeiras escritas ⇒ uma cria (v1) e a outra recebe 409. (2 h)
 
-## 5. Testes de banco em ambiente isolado
+## 5. Testes de banco no homolog existente
 
-- [ ] 5.1 Definir e documentar o harness descartável (PostgreSQL local isolado, porta própria, migrations aplicadas em transação, `TEST_DATABASE_URL` explícito, checkpoint de autorização, destruição ao final). (1 h)
+- [ ] 5.1 Usar exclusivamente o homolog existente (127.0.0.1:57782, banco postgres) com `TEST_DATABASE_URL` explícito, fingerprint do ledger, cleanup por IDs `f572test-` e checkpoint de autorização; nenhum ambiente é criado/destruído e o backup não é restaurado. (1 h)
 - [ ] 5.2 Executar provas de RLS/grants: usuário A não lê/escreve B; `authenticated` **não** escreve diretamente em `user_preferences` nem em `store_market_settings`; `service_role` opera apenas pelas RPCs; país imutável na escrita genérica. (2 h)
 - [ ] 5.3 Provar idempotência, concorrência (duas escritas independentes ⇒ 1 aceita + 409; retry preserva; confirmação fiscal incrementa versão; **primeira escrita sem linha** ⇒ insert+lock, uma cria v1 e a outra recebe 409) e rollback transacional da criação. (2 h)
 - [ ] 5.4 Provar não regressão: contagens/hashes de `stores`, `store_billing_info`, créditos, `credit_transactions`, `freemium_entitlements`, campanhas e aceites iguais antes/depois; nenhuma loja PY criada; nenhum benefício criado/removido pelas preferências. (2 h)
-- [ ] 5.5 Versionar evidências (SQL/JSON/txt) em `.planning/phases/<fase>/evidence/` e destruir o ambiente; registrar saída literal. (1 h)
+- [ ] 5.5 Versionar evidências (JSON/txt/md) em `.planning/phases/<fase>/evidence/`; S0 read-only por `homolog-snapshot.mjs` antes/depois; cleanup por IDs e registro literal. (1 h)
 
 ## 6. Verificação, segurança e encerramento
 
 - [ ] 6.1 Rodar testes focados de `market-preferences`, rotas, onboarding e `market-context` (72/72); typecheck, lint (registrar cobertura TS real) e build; registrar saídas literais. (2 h)
-- [ ] 6.2 Revisar diff por caminho: nenhum arquivo de UI, catálogo, formatação, IA, campanha ou billing alterado; nenhuma migration aplicada fora do ambiente isolado; manifests/lockfile intactos. (1 h)
+- [ ] 6.2 Revisar diff por caminho: nenhum arquivo de UI, catálogo, formatação, IA, campanha ou billing alterado; nenhuma migration aplicada fora do homolog autorizado; manifests/lockfile intactos. (1 h)
 - [ ] 6.3 Verificação de segurança (ASVS L1): ownership, CSRF, service_role, RLS, ausência de vazamento em DTOs/erros e país ≠ autorização; registrar ameaças e disposição. (2 h)
 - [ ] 6.4 Revisar migração e runbook de rollback para promoção: timestamp/ordem, `-- REVERT` restaurando **primeiro** as RPCs anteriores, dependências entre funções, ordem migration → código, rollback preferencial apenas do código preservando tabelas/dados, reversão de banco somente com autorização e sem perda presumida; documentar que as rotas são API autenticada ativa sem UI. (2 h)
 - [ ] 6.5 Apresentar aceite técnico ao usuário/Codex; habilitação PY, telas, campanhas e cobrança permanecem explicitamente fora. (1 h)
