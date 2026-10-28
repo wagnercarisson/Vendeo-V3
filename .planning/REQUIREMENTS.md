@@ -235,9 +235,9 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 - Propostas, specs e tasks arquivadas: `openspec/changes/archive/`.
 - Auditorias e decisões históricas: `.planning/` e `docs/`.
 
-## F57.2 — Planejamento (Persistência de preferências multimercado)
+## F57.2 — Entrega (Persistência de preferências multimercado)
 
-**Fonte:** `openspec/changes/fase-57-2-persistencia-preferencias-multimercado/` (proposal, design, tasks e 6 specs; `validate --strict` valid; aprovada tecnicamente em `5adf6dcc`). **Status:** planejamento GSD em revisão; implementação não iniciada; sem migration executável, sem banco e sem habilitação PY.
+**Fonte:** `openspec/changes/archive/2026-10-28-fase-57-2-persistencia-preferencias-multimercado/` (archive; specs sincronizadas). **Status:** entregue, validada em produção e arquivada em 2026-10-28. Migrations aplicadas (ledger 151); deployment `558bbe4a` READY; smoke PASS; UAT 5/5. Sem UI, sem habilitação PY e sem cobrança.
 
 | REQ-ID | Requirement | Prova principal |
 |---|---|---|
@@ -250,6 +250,6 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-57.2-07 | Inicialização idempotente em draft, fiscal, admin | Testes de onboarding/banco |
 | REQ-57.2-08 | Confirmação fiscal atualiza país e preserva escolhas explícitas, inclusive BR + mercado PY | Testes de confirmação fiscal |
 | REQ-57.2-09 | Nenhuma alteração de créditos, benefícios, legal, auditoria, fiscal, readiness, geração ou campanhas entregues | Comparação antes/depois |
-| REQ-57.2-10 | Provas reais de banco isolado: RLS, grants, atomicidade, idempotência, concorrência | Harness + evidências |
-| REQ-57.2-11 | Gates locais: testes focados, 72 de market-context, typecheck, lint (cobertura real), build | Relatório de gates |
-| REQ-57.2-12 | Runbook de promoção/rollback e handoff, sem executar | Documento + checklist |
+| REQ-57.2-10 | Provas reais de banco no homolog existente: RLS, grants, atomicidade, idempotência, concorrência | Homolog + evidências |
+| REQ-57.2-11 | Gates locais: testes focados, 72 de market-context, typecheck, lint (limitação TS aceita) e build | Relatório de gates |
+| REQ-57.2-12 | Runbook de promoção/rollback e handoff | Documento + checklist + evidências de promoção |

@@ -12,7 +12,7 @@
 
 | # | Phase | Goal / status |
 |---|---|---|
-| 57.2 | F57.2 — Persistência de preferências multimercado | Planejada; persistência por usuário/loja, proveniência, CAS, rotas autenticadas e inicialização nos fluxos existentes; sem UI e sem habilitação PY |
+| 57.2 | F57.2 — Persistência de preferências multimercado | **Concluída, validada em produção e arquivada (2026-10-28).** Persistência por usuário/loja, proveniência, CAS, rotas autenticadas e inicialização nos fluxos; UAT 5/5; migrations aplicadas em produção; smoke PASS; sem UI e sem habilitação PY. |
 | 23 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ TextProvider + Copy Director | ConcluÃƒÆ’Ã‚Â­da; fundaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de IA de texto e Copy Director intercambiÃƒÆ’Ã‚Â¡vel |
 | 24 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Credit Tables + CreditService | ConcluÃƒÆ’Ã‚Â­da; crÃƒÆ’Ã‚Â©ditos concedidos, consumidos e auditÃƒÆ’Ã‚Â¡veis |
 | 25 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Pipeline de GeraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o v1.5 | ConcluÃƒÆ’Ã‚Â­da; copy e crÃƒÆ’Ã‚Â©ditos integrados ao pipeline |
@@ -638,7 +638,7 @@ Plans:
 
 ### Phase 57.2: F57.2 — Persistência de preferências multimercado
 
-**Status:** Planejada; planos GSD criados (6 planos, 4 waves); execução não iniciada. Fonte técnica aprovada: `openspec/changes/fase-57-2-persistencia-preferencias-multimercado/`.
+**Status:** **Concluída, validada em produção e arquivada (2026-10-28).** 6/6 planos; OpenSpec arquivado em `openspec/changes/archive/2026-10-28-fase-57-2-persistencia-preferencias-multimercado/`; UAT 5/5; suítes 9/9, 21/21 e 7/7; S1–S9 sem divergência; concorrência a–d; S0 sem drift; migrations aplicadas em produção (ledger 151); deployment `558bbe4a` READY; smoke PASS. Lint sem cobertura TS aceito como limitação preexistente.
 
 **Goal:** persistir o idioma do aplicativo por usuário e as configurações de mercado por loja (país cadastral, mercado padrão, idioma padrão do conteúdo, moeda anunciada e fuso), com proveniência por campo, controle de versão, leitura/escrita autenticadas e inicialização idempotente nos caminhos existentes de criação/confirmação fiscal, preservando integralmente créditos, benefícios, legal, auditoria, readiness, geração e campanhas entregues. Sem UI, sem habilitação do Paraguai, sem cobrança e sem snapshots de campanha.
 
@@ -648,15 +648,15 @@ Plans:
 
 **Requirement scope:** (01) tabelas com proveniência/versões; (02) legado sem escrita, erro 503/500; (03) padrões, recomposição e explicit; (04) escrita protegida (RPC service_role, RLS, CSRF, DTO); (05) CAS/linha ausente/confirmação fiscal; (06) rotas e ownership dedicada; (07) inicialização idempotente; (08) confirmação fiscal preserva escolhas; (09) não regressão de créditos/benefícios/legal/auditoria/fiscal; (10) provas de banco no homolog existente; (11) gates e 72 testes market-context; (12) runbook e handoff.
 
-**Plans:** 6 planos em 4 waves.
+**Plans:** 6/6 planos concluídos.
 
 Plans:
-- [ ] 57.2-01-PLAN.md — migration aditiva: tabelas, RLS, grants, `ensure_store_market_settings` + RPCs de escrita + contrato de banco + baseline read-only do homolog (wave 1; checkpoint de banco).
-- [ ] 57.2-02-PLAN.md — fundação `src/lib/market-preferences/` (errors/DTOs) + serviço e rota `/api/preferences` (wave 1).
-- [ ] 57.2-03-PLAN.md — serviço e rota `/api/store/market-settings`: loader dedicado, recomposição e CAS (wave 2).
-- [ ] 57.2-04-PLAN.md — segunda migration aditiva: 4 RPCs recriadas + criação administrativa via delegação (não recriada) + regressão de crédito (wave 2; checkpoint de banco).
-- [ ] 57.2-05-PLAN.md — provas de RLS/grants/atomicidade/concorrência e comparação base×novo no homolog existente, com baseline JSON (wave 3; checkpoint de banco).
-- [ ] 57.2-06-PLAN.md — gates, revisão SQL/escopo, segurança ASVS L1, runbook e handoff (wave 4).
+- [x] 57.2-01-PLAN.md — migration aditiva: tabelas, RLS, grants, `ensure_store_market_settings` + RPCs de escrita + contrato de banco + baseline read-only do homolog (wave 1; checkpoint de banco).
+- [x] 57.2-02-PLAN.md — fundação `src/lib/market-preferences/` (errors/DTOs) + serviço e rota `/api/preferences` (wave 1).
+- [x] 57.2-03-PLAN.md — serviço e rota `/api/store/market-settings`: loader dedicado, recomposição e CAS (wave 2).
+- [x] 57.2-04-PLAN.md — segunda migration aditiva: 4 RPCs recriadas + criação administrativa via delegação (não recriada) + regressão de crédito (wave 2; checkpoint de banco).
+- [x] 57.2-05-PLAN.md — provas de RLS/grants/atomicidade/concorrência e comparação base×novo no homolog existente, com baseline JSON (wave 3; checkpoint de banco).
+- [x] 57.2-06-PLAN.md — gates, revisão SQL/escopo, segurança ASVS L1, runbook e handoff (wave 4).
 
 **Waves:** `01/02 → 03/04 → 05 → 06`. As migrations são separadas: 01 (schema/RPCs base) e 04 (onboarding), aplicadas em waves distintas.
 
