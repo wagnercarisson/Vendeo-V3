@@ -15,6 +15,7 @@
 
 import fs from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { Client } from "pg";
 
 const ALLOWED_HOSTS = new Set(["127.0.0.1", "localhost"]);
@@ -71,11 +72,15 @@ function hash(label) {
   return createHash("sha256").update(label).digest("hex");
 }
 
+export { hash };
+
 function cnpjNormalized(label) {
   // Formato canônico F50.3: 12 alfanuméricos + 2 dígitos.
   const hex = hash(`f572proof-cnpj-${label}`).toUpperCase();
   return `${hex.slice(0, 12)}90`;
 }
+
+export { cnpjNormalized };
 
 function scenarioName(id) {
   return `f572proof-${id}`;
@@ -94,6 +99,8 @@ async function createUser(client, id, createdAt) {
   return userId;
 }
 
+export { createUser };
+
 async function createDraft(client) {
   const userId = await createUser(client, "draft", new Date().toISOString());
   const result = await client.query(
@@ -105,6 +112,8 @@ async function createDraft(client) {
   );
   return { storeId: result.rows[0].value.store[0].id, userId, value: result.rows[0].value };
 }
+
+export { createDraft };
 
 async function createWithCnpj(client, id, status, demo, createdAt) {
   const userId = await createUser(client, id, createdAt);
@@ -240,7 +249,7 @@ async function runScenario(client, id, settingsPresent, launch, fn) {
   });
 }
 
-async function collect(client, side) {
+export async function collect(client, side) {
   const settingsPresent = await tablePresent(client, "store_market_settings");
   const launch = await launchAt(client);
   const ledger = await client.query("select version, name from supabase_migrations.schema_migrations order by version");
@@ -429,4 +438,6 @@ async function main() {
   }
 }
 
-main().catch((error) => fail(error instanceof Error ? error.message : String(error)));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => fail(error instanceof Error ? error.message : String(error)));
+}
