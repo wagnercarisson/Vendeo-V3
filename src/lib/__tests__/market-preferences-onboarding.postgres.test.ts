@@ -104,6 +104,39 @@ async function waitForBlocked(
   throw new Error(`timeout aguardando bloqueio de ${marker}`);
 }
 
+async function readTrialOfferRow(): Promise<Record<string, unknown>> {
+  return withClient(async (client) => {
+    const result = await client.query<{ row: Record<string, unknown> }>(
+      "select to_jsonb(t) as row from public.trial_offer_settings t where offer_key='trial_28d_v1'",
+    );
+    if (!result.rows[0]) throw new Error("trial_offer_settings.trial_28d_v1 ausente");
+    return result.rows[0].row;
+  });
+}
+
+async function withTrialLaunchFixture<T>(
+  launchAt: string | null,
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const before = await readTrialOfferRow();
+  try {
+    return await withRollback(async (client) => {
+      const updated = await client.query<{ offer_key: string }>(
+        "update public.trial_offer_settings set launch_at=$2 where offer_key=$1 returning offer_key",
+        ["trial_28d_v1", launchAt],
+      );
+      if (updated.rows.length !== 1) {
+        throw new Error(`fixture: update de launch_at afetou ${updated.rows.length} linhas`);
+      }
+      return fn(client);
+    });
+  } finally {
+    // Executa mesmo se o fixture falhar; o ROLLBACK já restaurou a linha.
+    const after = await readTrialOfferRow();
+    expect(after).toEqual(before);
+  }
+}
+
 async function actor(client: PoolClient, label: string, createdAt?: string): Promise<string> {
   const id = crypto.randomUUID();
   const stamp = createdAt ?? new Date().toISOString();
@@ -267,13 +300,21 @@ describe("F57.2 onboarding — crédito e configurações", () => {
     });
   });
 
+  it("C0. configuração atual (launch_at NULL): demo concedida antes da ativação", async () => {
+    await withTrialLaunchFixture(null, async (client) => {
+      const userId = await actor(client, "demo-current-config");
+      const { value } = await createWithCnpj(client, userId, { status: "approved", demo: true });
+      const storeId = await storeIdOf(value);
+      expect(value.onboardingGranted).toBe(true);
+      expect(await scalar(client, "select count(*)::int from public.credit_transactions where store_id=$1 and type='demo'", [storeId])).toBe(1);
+      expect(await scalar(client, "select balance::int from public.credit_balances where store_id=$1", [storeId])).toBe(10);
+      expect(await scalar(client, "select count(*)::int from public.freemium_entitlements where store_id=$1 and benefit_type='demo'", [storeId])).toBe(1);
+    });
+  });
+
   it("C. coorte legada + approved/flag: demo real (entitlement demo, 10 créditos)", async () => {
-    await withRollback(async (client) => {
-      const launchAt = await scalar<string | null>(
-        client,
-        "select launch_at::text from public.trial_offer_settings where offer_key='trial_28d_v1'",
-      );
-      if (!launchAt) throw new Error("fixture indisponível: trial_offer_settings.launch_at ausente");
+    const launchAt = "2026-01-15T00:00:00.000Z";
+    await withTrialLaunchFixture(launchAt, async (client) => {
       const legacyCreatedAt = new Date(new Date(launchAt).getTime() - 86_400_000).toISOString();
       const userId = await actor(client, "demo-legacy", legacyCreatedAt);
       const { value } = await createWithCnpj(client, userId, { status: "approved", demo: true });
@@ -287,19 +328,16 @@ describe("F57.2 onboarding — crédito e configurações", () => {
   });
 
   it("C2. coorte pós-launch + approved/flag: demo bloqueada pela oferta 28d", async () => {
-    await withRollback(async (client) => {
-      const launchAt = await scalar<string | null>(
-        client,
-        "select launch_at::text from public.trial_offer_settings where offer_key='trial_28d_v1'",
-      );
-      if (!launchAt) throw new Error("fixture indisponível: trial_offer_settings.launch_at ausente");
-      const postLaunchCreatedAt = new Date(Math.max(Date.now(), new Date(launchAt).getTime() + 1000)).toISOString();
+    const launchAt = "2026-01-15T00:00:00.000Z";
+    await withTrialLaunchFixture(launchAt, async (client) => {
+      const postLaunchCreatedAt = new Date(new Date(launchAt).getTime() + 86_400_000).toISOString();
       const userId = await actor(client, "demo-post-launch", postLaunchCreatedAt);
       const { value } = await createWithCnpj(client, userId, { status: "approved", demo: true });
       const storeId = await storeIdOf(value);
       expect(value.onboardingGranted).toBe(false);
       expect(await scalar(client, "select count(*)::int from public.credit_transactions where store_id=$1", [storeId])).toBe(0);
       expect(await scalar(client, "select count(*)::int from public.freemium_entitlements where store_id=$1", [storeId])).toBe(0);
+      expect(await scalar(client, "select coalesce(max(balance),0)::int from public.credit_balances where store_id=$1", [storeId])).toBe(0);
     });
   });
 
