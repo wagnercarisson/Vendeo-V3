@@ -241,7 +241,12 @@ async function readStoreState(storeId: string): Promise<StoreMarketSettingsState
 
   if (error) throw new PreferencesUnavailableError();
   if (!data) return null;
-  return stateFromRow(data as Record<string, unknown>);
+  const state = stateFromRow(data as Record<string, unknown>);
+  // Estado persistido é validado por completo ANTES de qualquer retorno/PATCH.
+  // context_version desconhecida, versões inválidas ou combinação incoerente
+  // devem falhar fechado (500), nunca ser reinterpretadas como v1.
+  validateCompleteState(state);
+  return state;
 }
 
 async function requireStoreId(userId: string): Promise<string> {

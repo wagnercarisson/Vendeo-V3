@@ -142,6 +142,15 @@ describe("getStoreMarketSettings", () => {
     );
   });
 
+  it("context_version desconhecida no GET vira 500", async () => {
+    mockQueries({
+      settings: { data: rowFromState(state({ contextVersion: 2 })), error: null },
+    });
+    await expect(getStoreMarketSettings(USER_ID)).rejects.toBeInstanceOf(
+      StoredPreferencesInvalidError,
+    );
+  });
+
   it("(17) billing não é consultado e país BR permanece", async () => {
     mockQueries({ settings: { data: rowFromState(state()), error: null } });
     const dto = await getStoreMarketSettings(USER_ID);
@@ -283,6 +292,29 @@ describe("recomposeStoreMarketSettings", () => {
 });
 
 describe("updateStoreMarketSettings", () => {
+  it("context_version desconhecida no PATCH sem campos vira 500 sem RPC", async () => {
+    mockQueries({
+      settings: { data: rowFromState(state({ contextVersion: 2 })), error: null },
+    });
+    await expect(
+      updateStoreMarketSettings(USER_ID, { expectedVersion: 0 }),
+    ).rejects.toBeInstanceOf(StoredPreferencesInvalidError);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
+  it("context_version desconhecida no PATCH com alteração vira 500 sem RPC", async () => {
+    mockQueries({
+      settings: { data: rowFromState(state({ contextVersion: 2 })), error: null },
+    });
+    await expect(
+      updateStoreMarketSettings(USER_ID, {
+        defaultCurrency: "PYG",
+        expectedVersion: 0,
+      }),
+    ).rejects.toBeInstanceOf(StoredPreferencesInvalidError);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
   it("(9) PATCH sem campos só valida versão e não chama RPC", async () => {
     mockQueries({
       settings: { data: rowFromState(state({ settingsVersion: 2 })), error: null },
