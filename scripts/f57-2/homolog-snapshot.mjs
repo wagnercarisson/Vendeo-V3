@@ -66,6 +66,7 @@ const TABLES = [
   "stores",
   "store_billing_info",
   "credit_transactions",
+  "credit_balances",
   "freemium_entitlements",
   "legal_acceptances",
   "campaigns",

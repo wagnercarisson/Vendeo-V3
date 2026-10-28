@@ -170,15 +170,19 @@ afterAll(async () => {
     await withClient(async (client) => {
       await client.query("begin");
       try {
-        for (const storeId of createdStores.splice(0)) {
+        // Não esvaziar os arrays antes do commit: se uma exclusão falhar, os IDs
+        // continuam disponíveis para identificar os resíduos após o rollback.
+        for (const storeId of createdStores) {
           await client.query("delete from public.store_market_settings where store_id = $1", [storeId]);
           await client.query("delete from public.stores where id = $1", [storeId]);
         }
-        for (const userId of createdUsers.splice(0)) {
+        for (const userId of createdUsers) {
           await client.query("delete from public.user_preferences where user_id = $1", [userId]);
           await client.query("delete from auth.users where id = $1", [userId]);
         }
         await client.query("commit");
+        createdStores.length = 0;
+        createdUsers.length = 0;
       } catch (error) {
         await client.query("rollback").catch(() => undefined);
         throw error;
