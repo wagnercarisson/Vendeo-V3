@@ -177,7 +177,9 @@ async function fingerprint(client, storeId, settingsPresent) {
     [storeId],
   );
   const campaigns = await client.query(
-    `select count(*)::int as count from public.campaigns where store_id=$1 and status='delivered'`,
+    `select status, count(*)::int as count
+       from public.campaigns where store_id=$1
+      group by status order by status`,
     [storeId],
   );
   const audit = await client.query(
@@ -208,7 +210,8 @@ async function fingerprint(client, storeId, settingsPresent) {
     freemium_entitlements: entitlements.rows,
     legal_acceptances: legal.rows,
     store_billing_info: billing.rows[0] ?? null,
-    delivered_campaigns: Number(campaigns.rows[0]?.count ?? 0),
+    campaigns_by_status: campaigns.rows,
+    campaigns_ready: Number(campaigns.rows.find((row) => row.status === "ready")?.count ?? 0),
     admin_audit_log: audit.rows,
     store_market_settings: settings,
   };
@@ -359,11 +362,17 @@ async function collect(client, side) {
         [userId, scenarioName("S7")],
       );
       const storeId = draft.rows[0].value.store[0].id;
-      if (settingsPresent) {
-        await client.query(
-          "update public.store_market_settings set default_currency='PYG', default_currency_source='explicit' where store_id=$1",
-          [storeId],
-        );
+      if (!settingsPresent) {
+        throw new Error("S7 exige store_market_settings (migration 01 aplicada)");
+      }
+      // Materializa a mesma linha nos dois lados ANTES do override explícito.
+      await client.query("select public.ensure_store_market_settings($1,'BR','assumed_default')", [storeId]);
+      const override = await client.query(
+        "update public.store_market_settings set default_currency='PYG', default_currency_source='explicit' where store_id=$1",
+        [storeId],
+      );
+      if (override.rowCount !== 1) {
+        throw new Error(`S7: override de moeda afetou ${override.rowCount ?? 0} linhas (esperado 1)`);
       }
       const result = await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false) as value`,
@@ -373,7 +382,7 @@ async function collect(client, side) {
         storeId,
         result: {
           onboardingGranted: result.rows[0].value.onboardingGranted,
-          settings_present: settingsPresent,
+          settings_present: true,
         },
       };
     }),

@@ -643,85 +643,120 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
       return storeIdOf(draft);
     });
 
-    const fiscal = await pool.connect();
-    const writer = await pool.connect();
-    const observer = await pool.connect();
-    try {
-      // Ordem 1: fiscal segura a tabela; PATCH bloqueia e depois conflita.
-      await fiscal.query("begin");
-      await fiscal.query("lock table public.store_market_settings in access exclusive mode");
-      await fiscal.query(
-        `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
-        [first, cnpjNormalized("fiscal-overlap-a"), cnpjHash("fiscal-overlap-a")],
-      );
-      const blockedWrite = (async () => {
-        await writer.query("begin");
-        try {
-          await writer.query(
-            `select public.write_store_market_settings($1,'BR','explicit','pt-BR','explicit','BRL','explicit','America/Sao_Paulo','explicit','BR','assumed_default',1,1)`,
-            [first],
-          );
-          await writer.query("commit");
-        } catch (error) {
-          await writer.query("rollback").catch(() => undefined);
-          throw error;
-        }
-      })();
-      void blockedWrite.catch(() => undefined);
-      await waitForBlocked(observer, "write_store_market_settings");
-      await fiscal.query("commit");
-      await expect(blockedWrite).rejects.toThrow(/settings_version_conflict/);
-      const afterFirst = await withClient(async (client) =>
-        client.query<{ settings_version: number }>(
-          "select settings_version::int from public.store_market_settings where store_id=$1",
-          [first],
-        ),
-      );
-      expect(afterFirst.rows[0].settings_version).toBe(2);
-
-      // Ordem 2: PATCH segura a linha; fiscal bloqueia e depois incrementa.
-      await writer.query("begin");
-      await writer.query(
-        `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Sao_Paulo','explicit','BR','assumed_default',1,1)`,
-        [second],
-      );
-      const blockedFiscal = (async () => {
+    // Ordem 1: fiscal segura a tabela; PATCH bloqueia e depois conflita.
+    {
+      const fiscal = await pool.connect();
+      const writer = await pool.connect();
+      const observer = await pool.connect();
+      let blockedWrite: Promise<void> | undefined;
+      try {
+        await fiscal.query("set statement_timeout = '10000'");
+        await writer.query("set statement_timeout = '10000'");
+        await observer.query("set statement_timeout = '10000'");
         await fiscal.query("begin");
-        try {
-          await fiscal.query(
-            `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
-            [second, cnpjNormalized("fiscal-overlap-b"), cnpjHash("fiscal-overlap-b")],
-          );
-          await fiscal.query("commit");
-        } catch (error) {
-          await fiscal.query("rollback").catch(() => undefined);
-          throw error;
-        }
-      })();
-      void blockedFiscal.catch(() => undefined);
-      await waitForBlocked(observer, "update_store_cnpj");
-      await writer.query("commit");
-      await blockedFiscal;
-      const row = await withClient(async (client) =>
-        client.query<Record<string, unknown>>(
-          "select country_code,country_source,default_campaign_market,default_campaign_market_source,settings_version::int from public.store_market_settings where store_id=$1",
-          [second],
-        ),
-      );
-      expect(row.rows[0]).toMatchObject({
-        country_code: "BR",
-        country_source: "fiscal_confirmation",
-        default_campaign_market: "PY",
-        default_campaign_market_source: "explicit",
-        settings_version: 3,
-      });
-    } finally {
-      await fiscal.query("rollback").catch(() => undefined);
-      await writer.query("rollback").catch(() => undefined);
-      fiscal.release();
-      writer.release();
-      observer.release();
+        await fiscal.query("lock table public.store_market_settings in access exclusive mode");
+        await fiscal.query(
+          `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
+          [first, cnpjNormalized("fiscal-overlap-a"), cnpjHash("fiscal-overlap-a")],
+        );
+        blockedWrite = (async () => {
+          await writer.query("begin");
+          try {
+            await writer.query(
+              `select public.write_store_market_settings($1,'BR','explicit','pt-BR','explicit','BRL','explicit','America/Sao_Paulo','explicit','BR','assumed_default',1,1)`,
+              [first],
+            );
+            await writer.query("commit");
+          } catch (error) {
+            await writer.query("rollback").catch(() => undefined);
+            throw error;
+          }
+        })();
+        void blockedWrite.catch(() => undefined);
+        await waitForBlocked(observer, "write_store_market_settings");
+        await fiscal.query("commit");
+        await expect(blockedWrite).rejects.toThrow(/settings_version_conflict/);
+      } finally {
+        // O detentor do lock (fiscal) é liberado primeiro; só então a escrita
+        // pendente pode terminar. statement_timeout impede espera indefinida.
+        await fiscal.query("rollback").catch(() => undefined);
+        if (blockedWrite) await blockedWrite.catch(() => undefined);
+        await writer.query("rollback").catch(() => undefined);
+        await fiscal.query("set statement_timeout = 0").catch(() => undefined);
+        await writer.query("set statement_timeout = 0").catch(() => undefined);
+        await observer.query("set statement_timeout = 0").catch(() => undefined);
+        fiscal.release();
+        writer.release();
+        observer.release();
+      }
     }
+    const afterFirst = await withClient(async (client) =>
+      client.query<{ settings_version: number }>(
+        "select settings_version::int from public.store_market_settings where store_id=$1",
+        [first],
+      ),
+    );
+    expect(afterFirst.rows[0].settings_version).toBe(2);
+
+    // Ordem 2: PATCH segura a linha; fiscal bloqueia e depois incrementa.
+    {
+      const writer = await pool.connect();
+      const fiscal = await pool.connect();
+      const observer = await pool.connect();
+      let blockedFiscal: Promise<void> | undefined;
+      try {
+        await writer.query("set statement_timeout = '10000'");
+        await fiscal.query("set statement_timeout = '10000'");
+        await observer.query("set statement_timeout = '10000'");
+        await writer.query("begin");
+        await writer.query(
+          `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Sao_Paulo','explicit','BR','assumed_default',1,1)`,
+          [second],
+        );
+        blockedFiscal = (async () => {
+          await fiscal.query("begin");
+          try {
+            await fiscal.query(
+              `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
+              [second, cnpjNormalized("fiscal-overlap-b"), cnpjHash("fiscal-overlap-b")],
+            );
+            await fiscal.query("commit");
+          } catch (error) {
+            await fiscal.query("rollback").catch(() => undefined);
+            throw error;
+          }
+        })();
+        void blockedFiscal.catch(() => undefined);
+        await waitForBlocked(observer, "update_store_cnpj");
+        await writer.query("commit");
+        await blockedFiscal;
+      } finally {
+        // O PATCH detém a linha; ele é liberado primeiro. Se a espera falhar,
+        // o fiscal termina (ou estoura o timeout) antes do rollback final.
+        await writer.query("rollback").catch(() => undefined);
+        if (blockedFiscal) await blockedFiscal.catch(() => undefined);
+        await fiscal.query("rollback").catch(() => undefined);
+        await writer.query("set statement_timeout = 0").catch(() => undefined);
+        await fiscal.query("set statement_timeout = 0").catch(() => undefined);
+        await observer.query("set statement_timeout = 0").catch(() => undefined);
+        writer.release();
+        fiscal.release();
+        observer.release();
+      }
+    }
+    const row = await withClient(async (client) =>
+      client.query<Record<string, unknown>>(
+        "select country_code,country_source,default_campaign_market,default_campaign_market_source,settings_version::int from public.store_market_settings where store_id=$1",
+        [second],
+      ),
+    );
+    expect(row.rows[0]).toMatchObject({
+      country_code: "BR",
+      country_source: "fiscal_confirmation",
+      default_campaign_market: "PY",
+      default_campaign_market_source: "explicit",
+      settings_version: 3,
+    });
   });
 
   it("L. ensure repetido mantém uma linha e escolha explícita", async () => {
