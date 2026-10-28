@@ -6,7 +6,7 @@
 --
 -- Execute somente após revisão/autorização explícita e com o preflight do
 -- runbook 57.2-05-ADMIN-ACL-RECONCILIATION.md.
--- Use psql com --single-transaction (além do BEGIN/COMMIT abaixo).
+-- Use psql SEM --single-transaction: o arquivo controla BEGIN/COMMIT uma única vez.
 -- =============================================================================
 
 \set ON_ERROR_STOP on
