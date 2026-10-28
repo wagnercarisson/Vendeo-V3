@@ -3,11 +3,13 @@ import {
   isSupportedLocale,
   isSupportedMarket,
   isSupportedTimeZone,
+  resolveUiLocale,
   type SupportedContentLocale,
   type SupportedCurrency,
   type SupportedMarket,
   type SupportedTimeZone,
 } from "@/lib/market-context";
+import { StoredPreferencesInvalidError } from "./errors";
 
 /**
  * F57.2 — DTOs allowlisted das preferências de mercado.
@@ -85,9 +87,25 @@ function asCountrySource(value: unknown): DbCountrySource {
   return value as DbCountrySource;
 }
 
+/**
+ * Inteiro estrito de linha persistida: aceita número inteiro seguro >= 0 ou
+ * string composta apenas por dígitos. Rejeita null/boolean/""/float/negativo.
+ */
+export function parseStoredInteger(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+  if (typeof value === "string") {
+    if (!/^\d+$/.test(value)) return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+  }
+  return null;
+}
+
 function asInteger(value: unknown, field: string): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+  const parsed = parseStoredInteger(value);
+  if (parsed === null) {
     throw new Error(`Valor inteiro inválido persistido em ${field}`);
   }
   return parsed;
@@ -104,17 +122,22 @@ export function toUserLocalePreferenceDTO(
 ): UserLocalePreferenceDTO {
   const locale = raw.ui_locale;
   const source = raw.ui_locale_source;
-  if (locale !== null && !isSupportedLocale(locale)) {
-    throw new Error("Locale inválido persistido");
+  const version = parseStoredInteger(raw.version);
+  if (version === null) throw new StoredPreferencesInvalidError();
+
+  if (locale === null && source === "legacy_br") {
+    const resolution = resolveUiLocale({ kind: "legacy" });
+    if (!resolution.ok) throw new StoredPreferencesInvalidError(resolution.error);
+    return { uiLocale: resolution.uiLocale, source: "legacy_br", version };
   }
-  if (source !== "explicit" && source !== "legacy_br") {
-    throw new Error("Fonte inválida persistida");
+
+  if (locale !== null && source === "explicit") {
+    const resolution = resolveUiLocale({ kind: "explicit", uiLocale: locale });
+    if (!resolution.ok) throw new StoredPreferencesInvalidError(resolution.error);
+    return { uiLocale: resolution.uiLocale, source: "explicit", version };
   }
-  return {
-    uiLocale: (locale ?? "pt-BR") as SupportedContentLocale,
-    source,
-    version: asInteger(raw.version, "version"),
-  };
+
+  throw new StoredPreferencesInvalidError();
 }
 
 export function toStoreMarketSettingsDTO(

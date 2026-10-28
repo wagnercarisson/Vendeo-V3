@@ -14,6 +14,7 @@ import {
   versionFromPgError,
 } from "./errors";
 import type { UserLocalePreferenceDTO } from "./dtos";
+import { parseStoredInteger } from "./dtos";
 
 /**
  * F57.2 — serviço da preferência de idioma do aplicativo.
@@ -43,8 +44,8 @@ function asRow(value: unknown): RawPreferenceRow {
 }
 
 function versionOf(row: RawPreferenceRow): number {
-  const parsed = typeof row.version === "number" ? row.version : Number(row.version);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+  const parsed = parseStoredInteger(row.version);
+  if (parsed === null) {
     throw new StoredPreferencesInvalidError();
   }
   return parsed;

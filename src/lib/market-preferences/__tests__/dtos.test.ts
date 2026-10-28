@@ -70,6 +70,45 @@ describe("dtos", () => {
     expect(JSON.stringify(dto)).not.toContain("cnpj");
   });
 
+  it("rejeita pares incoerentes no conversor público", () => {
+    expect(() =>
+      toUserLocalePreferenceDTO({
+        ui_locale: null,
+        ui_locale_source: "explicit",
+        version: 1,
+      }),
+    ).toThrow();
+    expect(() =>
+      toUserLocalePreferenceDTO({
+        ui_locale: "es-PY",
+        ui_locale_source: "legacy_br",
+        version: 1,
+      }),
+    ).toThrow();
+  });
+
+  it.each([null, true, false, "", " 1", "1.5", -1, 1.5])(
+    "rejeita versão inválida %j",
+    (version) => {
+      expect(() =>
+        toUserLocalePreferenceDTO({
+          ui_locale: "pt-BR",
+          ui_locale_source: "explicit",
+          version,
+        }),
+      ).toThrow();
+    },
+  );
+
+  it("aceita versão como string decimal válida", () => {
+    const dto = toUserLocalePreferenceDTO({
+      ui_locale: "pt-BR",
+      ui_locale_source: "explicit",
+      version: "2",
+    });
+    expect(dto.version).toBe(2);
+  });
+
   it("assertSupportedUiLocale aceita apenas pt-BR/es-PY", () => {
     expect(assertSupportedUiLocale("pt-BR")).toBe(true);
     expect(assertSupportedUiLocale("es-PY")).toBe(true);

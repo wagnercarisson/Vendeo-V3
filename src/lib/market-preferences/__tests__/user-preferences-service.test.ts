@@ -80,6 +80,10 @@ describe("getUserLocalePreference", () => {
     { ui_locale: null, ui_locale_source: null, version: 1 },
     { ui_locale: "es-AR", ui_locale_source: "explicit", version: 1 },
     { ui_locale: "pt-BR", ui_locale_source: "explicit", version: -1 },
+    { ui_locale: "pt-BR", ui_locale_source: "explicit", version: null },
+    { ui_locale: "pt-BR", ui_locale_source: "explicit", version: true },
+    { ui_locale: "pt-BR", ui_locale_source: "explicit", version: "" },
+    { ui_locale: "pt-BR", ui_locale_source: "explicit", version: "1.5" },
   ])("par persistido corrompido vira 500: %j", async (row) => {
     mockRead({ data: row, error: null });
     await expect(getUserLocalePreference("user-a")).rejects.toBeInstanceOf(
