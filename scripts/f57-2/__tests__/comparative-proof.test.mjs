@@ -144,6 +144,25 @@ test("compare reprova S0 com tabela duplicada", () => {
   });
 });
 
+test("compare reprova contagens não numéricas/não seguras", () => {
+  withDir((dir) => {
+    for (const invalid of [null, false, "", 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      const tables = s0().tables.map((row) =>
+        row.table === "stores" ? { ...row, count: invalid } : row,
+      );
+      const result = run(dir, {
+        "base.json": scenarioDoc("base"),
+        "new.json": scenarioDoc("new"),
+        "s0-before.json": s0(tables),
+        "s0-after-01.json": s0(),
+        "s0-after-02.json": s0(),
+      });
+      assert.notEqual(result.status, 0, `count inválido aceito: ${String(invalid)}`);
+      assert.match(result.stderr, /count inválido/);
+    }
+  });
+});
+
 test("compare reprova fingerprints/scenarios incompletos", () => {
   withDir((dir) => {
     const base = scenarioDoc("base");

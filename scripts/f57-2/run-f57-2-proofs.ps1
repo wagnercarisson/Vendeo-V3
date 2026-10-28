@@ -114,8 +114,22 @@ const { Client } = require("pg");
   let deletedStores = 0;
   let deletedUsers = 0;
   try {
-    const stores = await c.query("select id from public.stores where name like '%f572test-%' or name like '%f572proof-%'");
-    const storeIds = stores.rows.map((row) => row.id);
+    const fs = require("fs");
+    const manifestPath = process.env.F57_2_CLEANUP_MANIFEST;
+    const outPath = process.env.F57_2_CLEANUP_MANIFEST_OUT;
+    if (!manifestPath || !fs.existsSync(manifestPath)) {
+      throw new Error("manifesto de fixtures da execução ausente");
+    }
+    const entries = fs.readFileSync(manifestPath, "utf8")
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+    const storeIds = [...new Set(entries.filter((entry) => entry.kind === "store").map((entry) => entry.id))];
+    const userIds = [...new Set(entries.filter((entry) => entry.kind === "user").map((entry) => entry.id))];
+    // Persiste o manifesto ANTES de qualquer exclusão; se a execução cair,
+    // os IDs permanecem disponíveis para inspeção/cleanup.
+    fs.writeFileSync(outPath, `${JSON.stringify({ stores: storeIds, users: userIds }, null, 2)}\n`, "utf8");
+
     for (const id of storeIds) {
       try {
         await c.query("delete from public.store_market_settings where store_id=$1", [id]);
@@ -127,8 +141,6 @@ const { Client } = require("pg");
         failures.push({ table: "stores", id, error: error.message });
       }
     }
-    const users = await c.query("select id from auth.users where email like '%f572test-%' or email like '%f572proof-%'");
-    const userIds = users.rows.map((row) => row.id);
     for (const id of userIds) {
       try {
         await c.query("delete from public.user_preferences where user_id=$1", [id]);
@@ -146,8 +158,8 @@ const { Client } = require("pg");
       (select count(*)::int from public.user_preferences p join auth.users u on u.id=p.user_id where u.email like '%f572test-%' or u.email like '%f572proof-%') as preferences`);
     const payload = {
       ...result.rows[0],
-      store_ids: storeIds,
-      user_ids: userIds,
+      registered_store_ids: storeIds,
+      registered_user_ids: userIds,
       deleted_stores: deletedStores,
       deleted_users: deletedUsers,
       failures,
@@ -157,13 +169,11 @@ const { Client } = require("pg");
   } finally { await c.end(); }
 })().catch(e => { console.error(e.message); process.exit(1); });
 '@
+  $env:F57_2_CLEANUP_MANIFEST_OUT = $ManifestPath
   $raw = & node -e $code
   $payload = $null
   if ($raw) {
     try { $payload = $raw | ConvertFrom-Json } catch { $payload = $null }
-    if ($ManifestPath -and $payload) {
-      $payload | ConvertTo-Json -Depth 6 | Set-Content -Path $ManifestPath -Encoding utf8
-    }
   }
   if ($LASTEXITCODE -ne 0) {
     $detail = if ($raw) { ($raw -join "`n") } else { "sem detalhe" }
@@ -195,6 +205,11 @@ $evidencePaths = [ordered]@{
   after = Join-Path $EvidenceDir "57.2-05-s1-s9-after.json"
   cleanup = Join-Path $EvidenceDir "57.2-05-cleanup-manifest.json"
 }
+$registry = Join-Path $EvidenceDir "57.2-05-cleanup-registry.jsonl"
+if (Test-Path $registry) { Remove-Item -Force $registry }
+New-Item -ItemType File -Path $registry | Out-Null
+$evidencePaths.registry = $registry
+$env:F57_2_CLEANUP_MANIFEST = $registry
 $residues = $null
 $proofError = $null
 $cleanupError = $null

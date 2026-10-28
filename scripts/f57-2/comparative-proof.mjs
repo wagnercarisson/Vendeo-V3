@@ -40,6 +40,12 @@ const TABLES = [
   "admin_audit_log",
 ];
 
+function registerFixture(kind, id) {
+  const manifest = process.env.F57_2_CLEANUP_MANIFEST;
+  if (!manifest) return;
+  fs.appendFileSync(manifest, `${JSON.stringify({ kind, id })}\n`, "utf8");
+}
+
 function usage() {
   return `Uso:
   node scripts/f57-2/comparative-proof.mjs snapshot --url <postgresql://...> --out <json>
@@ -140,6 +146,7 @@ async function snapshot(urlMasked, label) {
 async function createDraftFixture(client, label, createdStores, createdUsers) {
   const userId = await createUser(client, `conc-${label}`, new Date().toISOString());
   createdUsers.push(userId);
+  registerFixture("user", userId);
   const result = await client.query(
     `select public.create_store_draft(
        $1,$2,'outros','Cidade','SP',$1,'v1','v1','127.0.0.1','f572proof','#22C55E',
@@ -149,18 +156,21 @@ async function createDraftFixture(client, label, createdStores, createdUsers) {
   );
   const storeId = result.rows[0].value.store[0].id;
   createdStores.push(storeId);
+  registerFixture("store", storeId);
   return { storeId, userId };
 }
 
 async function createEmptyStore(client, label, createdStores, createdUsers) {
   const userId = await createUser(client, `conc-${label}`, new Date().toISOString());
   createdUsers.push(userId);
+  registerFixture("user", userId);
   const storeId = randomUUID();
   await client.query(
     "insert into public.stores (id,user_id,name,segment) values ($1,$2,$3,'outros')",
     [storeId, userId, `f572proof-conc-${label}`],
   );
   createdStores.push(storeId);
+  registerFixture("store", storeId);
   return { storeId, userId };
 }
 
@@ -488,7 +498,9 @@ function normalizeS0(file) {
     if (seen.has(row.table)) fail(`${file}: tabela duplicada em S0: ${row.table}`);
     seen.add(row.table);
     if (row.present !== true) fail(`${file}: tabela obrigatória ausente em S0: ${row.table}`);
-    if (!Number.isInteger(Number(row.count)) || Number(row.count) < 0) fail(`${file}: count inválido em ${row.table}`);
+    if (typeof row.count !== "number" || !Number.isSafeInteger(row.count) || row.count < 0) {
+      fail(`${file}: count inválido em ${row.table}`);
+    }
     const digest = row.md5 ?? row.sha256;
     if (typeof digest !== "string" || !/^[0-9a-f]{32}$|^[0-9a-f]{64}$/.test(digest)) {
       fail(`${file}: hash inválido em ${row.table}`);
@@ -503,7 +515,7 @@ function normalizeS0(file) {
   const normalized = {};
   for (const table of TABLES) {
     const row = byName[table];
-    normalized[table] = { count: Number(row.count), md5: row.md5 ?? row.sha256 };
+    normalized[table] = { count: row.count, md5: row.md5 ?? row.sha256 };
   }
   return normalized;
 }
@@ -519,8 +531,15 @@ export function compare(baseFile, newFile, s0Before, s0After01, s0After02, outMd
   if (typeof base.table_present !== "boolean" || typeof next.table_present !== "boolean") {
     fail("documento sem table_present booleano");
   }
-  if (!Number.isInteger(Number(base.counts_store_market_settings)) || !Number.isInteger(Number(next.counts_store_market_settings))) {
-    fail("documento sem counts_store_market_settings inteiro");
+  if (
+    typeof base.counts_store_market_settings !== "number" ||
+    !Number.isSafeInteger(base.counts_store_market_settings) ||
+    base.counts_store_market_settings < 0 ||
+    typeof next.counts_store_market_settings !== "number" ||
+    !Number.isSafeInteger(next.counts_store_market_settings) ||
+    next.counts_store_market_settings < 0
+  ) {
+    fail("documento sem counts_store_market_settings inteiro válido");
   }
   validateFingerprints(base, "base");
   validateFingerprints(next, "novo");

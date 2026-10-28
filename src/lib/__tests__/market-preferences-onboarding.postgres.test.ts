@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { registerFixture } from "./fixture-registry";
 
 /**
  * F57.2 — regressão de onboarding/confirmação fiscal no HOMOLOG existente.
@@ -145,6 +146,7 @@ async function actor(client: PoolClient, label: string, createdAt?: string): Pro
     [id, `${label}-${runId}-${id}@f57-2.test`, stamp],
   );
   createdUsers.push(id);
+  registerFixture("user", id);
   return id;
 }
 
@@ -197,6 +199,7 @@ async function storeIdOf(value: { store: Array<{ id: string }> }): Promise<strin
   const id = value.store?.[0]?.id;
   if (!id) throw new Error("store id ausente");
   createdStores.push(id);
+  registerFixture("store", id);
   return id;
 }
 
@@ -350,6 +353,7 @@ describe("F57.2 onboarding — crédito e configurações", () => {
       );
       const storeId = result.rows[0].value.id as string;
       createdStores.push(storeId);
+      registerFixture("store", storeId);
       expect(result.rows[0].value.balance).toBe(0);
       expect(await scalar(client, "select count(*)::int from public.credit_transactions where store_id=$1", [storeId])).toBe(0);
       expect(await scalar(client, "select count(*)::int from public.store_market_settings where store_id=$1 and country_source='assumed_default'", [storeId])).toBe(1);
@@ -359,6 +363,7 @@ describe("F57.2 onboarding — crédito e configurações", () => {
   it("F. criação administrativa por delegação: settings, balance 0, auditoria", async () => {
     await withRollback(async (client) => {
       const adminId = crypto.randomUUID();
+      registerFixture("user", adminId);
       await client.query(
         "insert into auth.users (id,aud,role,email) values ($1,'authenticated','authenticated',$2)",
         [adminId, `admin-${runId}@f57-2.test`],
@@ -370,6 +375,7 @@ describe("F57.2 onboarding — crédito e configurações", () => {
       );
       const storeId = result.rows[0].value.id as string;
       createdStores.push(storeId);
+      registerFixture("store", storeId);
       expect(result.rows[0].value.balance).toBe(0);
       expect(await scalar(client, "select count(*)::int from public.credit_transactions where store_id=$1", [storeId])).toBe(0);
       expect(await scalar(client, "select count(*)::int from public.store_market_settings where store_id=$1", [storeId])).toBe(1);
@@ -431,6 +437,7 @@ describe("F57.2 confirmação fiscal", () => {
         [storeId, userId, `Loja ${runId}`],
       );
       createdStores.push(storeId);
+      registerFixture("store", storeId);
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
         [storeId, cnpjNormalized("fiscal-h"), cnpjHash("fiscal-h")],
@@ -500,6 +507,7 @@ describe("F57.2 confirmação fiscal", () => {
       const storeId = crypto.randomUUID();
       await client.query("insert into public.stores (id,user_id,name,segment) values ($1,$2,$3,'outros')", [storeId, userId, `Loja ${runId}`]);
       createdStores.push(storeId);
+      registerFixture("store", storeId);
       await client.query("select public.ensure_store_market_settings($1,'PY','legacy_br')", [storeId]);
       const before = await scalar(client, "select settings_version::int from public.store_market_settings where store_id=$1", [storeId]);
       await expectReject(
@@ -608,6 +616,7 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
         `Loja ${runId} missing-a`,
       ]);
       createdStores.push(storeId);
+      registerFixture("store", storeId);
       return storeId;
     });
     await withCommitted(async (client) => {
@@ -642,6 +651,7 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
         `Loja ${runId} missing-b`,
       ]);
       createdStores.push(storeId);
+      registerFixture("store", storeId);
       return storeId;
     });
     await withCommitted(async (client) => {

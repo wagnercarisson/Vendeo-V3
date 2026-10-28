@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { registerFixture } from "./fixture-registry";
 
 /**
  * F57.2 — provas reais de RLS, grants, isolamento A/B e país imutável.
@@ -67,6 +68,7 @@ async function actor(client: PoolClient, label: string): Promise<string> {
     "insert into auth.users (id, aud, role, email, created_at, updated_at) values ($1,'authenticated','authenticated',$2,now(),now())",
     [id, `${label}-${runId}-${id}@f57-2.test`],
   );
+  registerFixture("user", id);
   return id;
 }
 
@@ -77,6 +79,7 @@ async function storeFor(client: PoolClient, userId: string, label: string): Prom
     [id, userId, `Loja ${label}-${runId}`],
   );
   await client.query("select public.ensure_store_market_settings($1,'BR','assumed_default')", [id]);
+  registerFixture("store", id);
   return id;
 }
 

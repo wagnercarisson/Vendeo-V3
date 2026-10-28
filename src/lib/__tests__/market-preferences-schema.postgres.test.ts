@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { registerFixture } from "./fixture-registry";
 
 /**
  * F57.2 — contrato de schema/RLS/grants/CAS no HOMOLOG EXISTENTE.
@@ -102,6 +103,7 @@ async function expectSqlState(
 async function actor(label: string): Promise<string> {
   const id = crypto.randomUUID();
   createdUsers.push(id);
+  registerFixture("user", id);
   await query(
     "insert into auth.users (id, aud, role, email, created_at, updated_at) values ($1, 'authenticated', 'authenticated', $2, now(), now())",
     [id, `${label}-${runId}-${id}@f57-2.test`],
@@ -112,6 +114,7 @@ async function actor(label: string): Promise<string> {
 async function storeFor(userId: string): Promise<string> {
   const id = crypto.randomUUID();
   createdStores.push(id);
+  registerFixture("store", id);
   await query(
     "insert into public.stores (id, user_id, name, segment) values ($1, $2, $3, 'outros')",
     [id, userId, `Loja ${runId}`],
