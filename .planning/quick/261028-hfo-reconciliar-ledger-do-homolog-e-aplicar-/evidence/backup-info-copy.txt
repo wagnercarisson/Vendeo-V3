@@ -1,0 +1,96 @@
+BACKUP LOCAL — HOMOLOG vendeo-homolog — PRÉ-F57.2
+====================================================
+
+Arquivo:            homolog-pre-f57-2-20261028T155314Z.dump
+Caminho local:      G:\Vendeo-Homolog\recovery\homolog-pre-f57-2-20261028T155314Z.dump
+Formato:            pg_dump custom (archive TOC: 1749 entradas, Compression: gzip)
+Tamanho (bytes):    1.467.161
+SHA-256:            d1b4e868cd819a3e9562fbd31102a6187c39d16bb5fb8f475a633854ba851a9f
+Criado (UTC):       2026-10-28T15:53:14Z
+Duração do dump:    1,32 s
+Exit code pg_dump:  0
+pg_restore --list:  exit 0 (1.757 linhas)
+
+Origem
+------
+Container:          supabase_db_vendeo-homolog
+Banco:              postgres (usuário postgres)
+PostgreSQL:         17.6 (servidor e cliente dentro do container)
+pg_dump:            17.6
+pg_restore:         17.6
+Tamanho do banco:   21.204.115 bytes (~20 MB)
+Porta local:        127.0.0.1:57782
+
+Escopo do dump
+--------------
+Schemas não sistêmicos incluídos: _realtime, auth, extensions, graphql,
+graphql_public, net, pgbouncer, public, realtime, storage, supabase_functions,
+supabase_migrations, vault.
+Inclui estrutura E dados (TABLE DATA) de public, auth, storage,
+supabase_migrations e demais schemas listados.
+
+Verificações de inventário (pg_restore --list)
+----------------------------------------------
+- TABLE DATA public stores ................ presente
+- TABLE DATA public campaigns ............. presente
+- TABLE DATA auth users ................... presente
+- TABLE DATA storage objects .............. presente
+- TABLE DATA supabase_migrations schema_migrations ... presente
+- SCHEMA auth / storage / supabase_migrations ...... presentes
+- SCHEMA public NÃO aparece no dump: o schema `public` é criado pelo
+  bootstrap do Supabase e deve pré-existir no destino da restauração.
+
+Contagens no momento do backup
+------------------------------
+stores=2
+auth_users=2
+campaigns=70
+storage_objects=149
+access_requests=2
+admin_audit_log=76
+ledger=149 (149 versões distintas)
+
+Limitação importante — Storage
+------------------------------
+O dump contém APENAS METADADOS do Storage (bucket_id, nome, tamanho, hashes
+etc.). Os arquivos físicos das imagens/ativos NÃO estão neste backup.
+Recuperar buckets/objetos exige os arquivos atuais do Storage ou um backup
+de Storage separado. Este complemento não copiou arquivos do Storage.
+
+Arquivos auxiliares neste diretório
+-----------------------------------
+homolog-pre-f57-2-20261028T155314Z-config.toml
+    Cópia fiel de G:\Vendeo-Homolog\supabase\config.toml (contém apenas
+    referências env(), sem segredos literais).
+
+homolog-pre-f57-2-20261028T155314Z-migrations-ledger-manifest.txt
+    Ledger (149 versões|nomes) e 149 arquivos de migration com SHA-256.
+
+homolog-pre-f57-2-20261028T155314Z-pg_restore-list.txt
+    Inventário completo do arquivo (pg_restore --list).
+
+Como restaurar futuramente (NÃO executado, NÃO testado)
+-------------------------------------------------------
+1. Prefira um banco/ambiente descartável, nunca a produção.
+2. Suba uma stack Supabase local equivalente (mesmas roles: postgres,
+   supabase_admin, pgbouncer etc.). O schema `public` deve existir.
+3. Transfira o dump para dentro do container:
+   docker cp "G:\Vendeo-Homolog\recovery\homolog-pre-f57-2-20261028T155314Z.dump" \
+     supabase_db_<destino>:/tmp/restore.dump
+4. Confira a integridade:
+   docker exec supabase_db_<destino> sha256sum /tmp/restore.dump
+   (deve ser d1b4e868cd819a3e9562fbd31102a6187c39d16bb5fb8f475a633854ba851a9f)
+5. Restaure (destino vazio):
+   docker exec supabase_db_<destino> pg_restore -U postgres -d postgres \
+     --exit-on-error --single-transaction /tmp/restore.dump
+6. Restaure separadamente os arquivos do Storage, se necessário.
+7. Valide contagens e constraints após a restauração.
+
+A leitura do inventário (pg_restore --list) NÃO equivale a um restore testado.
+Nenhuma restauração foi executada.
+
+Manuseio
+--------
+O dump contém dados sensíveis (Auth/lojas/campanhas). Manter somente em
+G:\Vendeo-Homolog\recovery (fora do Git). Não imprimir conteúdo, não anexar
+a issues e não copiar credenciais/.env para o repositório.

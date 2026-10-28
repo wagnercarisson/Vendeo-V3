@@ -461,3 +461,48 @@ Seção 3 do beta **não executada**. Comprovação de que seu objetivo já esta
 
 ### Evidências finais
 `ledger-before.txt`, `ledger-after.txt`, `counts-before.txt`, `counts-after.txt`, `storage-buckets-after.txt`, `file-hashes-before.txt`, `f47_1-ledger-row-before.json`.
+
+---
+
+## 12. Complemento (mesma quick) — alinhamento de arquivos + backup pré-F57.2
+
+### 12.1 Reconfirmação de identidade e ledger
+
+- Repo `C:\Projetos\Vendeo V3`, branch `feature/fase-57-2-preferencias-multimercado`, HEAD `8c00207b`, `git status` limpo.
+- Container `supabase_db_vendeo-homolog`, `postgres`/`postgres`, PG 17.6, `57782->5432`.
+- Ledger: **149 linhas / 149 versões distintas**; `20261020000005=beta_access_invite`, `20261021000001=f50_3_cnpj_alfanumerico`, `20261024141422=f47_1_visual_signature_model_config`; F57.2 ausente.
+- F47.1 antiga × atual: idênticas após remover BOM e normalizar quebras de linha (`normalized_equal=True`, 17.976 caracteres em ambas).
+
+### 12.2 Alinhamento da pasta `G:\Vendeo-Homolog\supabase\migrations`
+
+```
+20261021000001_f47_1_visual_signature_model_config.sql
+  -> 20261024141422_f47_1_visual_signature_model_config.sql   (File.Move, destino ausente)
+
+repo -> homolog (File.Copy, sem sobrescrita):
+  20261020000005_beta_access_invite.sql
+  20261021000001_f50_3_cnpj_alfanumerico.sql
+```
+
+Validação: **149 arquivos**, **0 prefixos duplicados**, conjunto de prefixos **idêntico** ao ledger (`set_diff_count=0`). F57.2 não copiada (`f57_2_present=False`). Hashes: F47.1 `b352f93e…` (inalterado), beta `5dba88ab…`, F50.3 `6d809763…` (iguais ao repo).
+
+Nenhum SQL foi executado e o ledger não foi alterado neste complemento.
+
+### 12.3 Backup
+
+- Banco: 21.204.115 bytes (~20 MB). Espaço livre em G: 41.860.931.584 bytes.
+- `pg_dump -Fc -Z 6` dentro do container, arquivo em `/tmp`, exit **0**, duração 1,32 s.
+- `pg_restore --list` exit **0**, 1.757 linhas.
+- Transferência por `docker cp`; SHA-256 local e no container **idênticos** (`d1b4e868…`).
+- Temporário do container removido após confirmação (`container_tmp_exists=no`).
+- Artefatos em `G:\Vendeo-Homolog\recovery\`:
+  - `homolog-pre-f57-2-20261028T155314Z.dump` (1.467.161 bytes)
+  - `...-BACKUP-INFO.txt`, `...-config.toml` (hash idêntico ao original), `...-migrations-ledger-manifest.txt` (149 ledger + 149 arquivos com SHA-256), `...-pg_restore-list.txt`
+- Escopo: todos os schemas não sistêmicos, com estrutura e dados; `public` não é emitido pelo pg_dump (pré-existe no bootstrap).
+- Limitação registrada: o dump contém **metadados** do Storage; os arquivos físicos não foram copiados.
+- Restauração **não executada nem testada**; procedimento documentado no BACKUP-INFO.
+- Nenhum `.env`/credencial copiado; backup mantido fora do Git.
+
+### 12.4 Evidências adicionais
+
+`evidence/migrations-alignment-after.txt`, `evidence/backup-verification.txt`, `evidence/backup-info-copy.txt`.

@@ -1,0 +1,9 @@
+﻿dump=G:\Vendeo-Homolog\recovery\homolog-pre-f57-2-20261028T155314Z.dump
+size_bytes=1467161
+sha256_local=d1b4e868cd819a3e9562fbd31102a6187c39d16bb5fb8f475a633854ba851a9f
+sha256_container=d1b4e868cd819a3e9562fbd31102a6187c39d16bb5fb8f475a633854ba851a9f
+match=true
+pg_dump_exit=0
+pg_restore_list_exit=0
+pg_restore_list_lines=1757
+duration_s=1.32
