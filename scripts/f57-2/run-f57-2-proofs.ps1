@@ -95,6 +95,7 @@ function Invoke-External {
   $psi.FileName = $FilePath
   $psi.Arguments = (($Arguments | ForEach-Object { ConvertTo-ProcessArgument $_ }) -join ' ')
   $psi.UseShellExecute = $false
+  $psi.WorkingDirectory = $RepoRoot
   $psi.RedirectStandardOutput = $true
   $psi.RedirectStandardError = $true
   $psi.CreateNoWindow = $true

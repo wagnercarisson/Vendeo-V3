@@ -93,7 +93,7 @@ console.log("SIM SNAPSHOT " + args[0]);
   return { root, evidence, script: path.join(scripts, "run-f57-2-proofs.ps1") };
 }
 
-function run(ctx, extra = [], mode = "success") {
+function run(ctx, extra = [], mode = "success", workdir = ctx.root) {
   const env = { ...process.env, TEST_DATABASE_URL: target, SIM_MODE: mode, SIM_MARKER: path.join(ctx.root, "emit.marker") };
   return spawnSync(powershell, [
     "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -104,7 +104,7 @@ function run(ctx, extra = [], mode = "success") {
     "-ExpectedLedgerSha256", sha,
     "-CommandTimeoutSeconds", "2",
     ...extra,
-  ], { cwd: ctx.root, env, encoding: "utf8", timeout: 30_000 });
+  ], { cwd: workdir, env, encoding: "utf8", timeout: 30_000 });
 }
 
 function cleanup(ctx) {
@@ -130,6 +130,19 @@ test("stderr com exit 0 não reprova", () => {
     const result = run(ctx, [], "stderr-zero");
     assert.equal(result.status, 0, result.stderr);
   } finally {
+    cleanup(ctx);
+  }
+});
+
+test("executa a partir de diretório diferente do repositório", () => {
+  const ctx = setup();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "f57 2 outside "));
+  try {
+    const result = run(ctx, [], "success", outside);
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(fs.existsSync(path.join(ctx.evidence, "57.2-05-s0-final.md")));
+  } finally {
+    fs.rmSync(outside, { recursive: true, force: true });
     cleanup(ctx);
   }
 });
