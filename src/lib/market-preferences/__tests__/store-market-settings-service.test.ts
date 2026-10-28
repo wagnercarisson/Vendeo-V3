@@ -130,6 +130,22 @@ describe("getStoreMarketSettings", () => {
     await expect(getStoreMarketSettings(USER_ID)).rejects.toBeInstanceOf(StoreNotFoundError);
   });
 
+  it("normaliza versões persistidas como string decimal", async () => {
+    mockQueries({
+      settings: {
+        data: {
+          ...rowFromState(state()),
+          context_version: "1",
+          settings_version: "2",
+        },
+        error: null,
+      },
+    });
+    const dto = await getStoreMarketSettings(USER_ID);
+    expect(dto.contextVersion).toBe(1);
+    expect(dto.settingsVersion).toBe(2);
+  });
+
   it("(11b) linha inválida vira 500", async () => {
     mockQueries({
       settings: {

@@ -22,6 +22,7 @@ import {
   versionFromPgError,
 } from "./errors";
 import {
+  parseStoredInteger,
   toStoreMarketSettingsDTO,
   type DbCountrySource,
   type DbStoreFieldSource,
@@ -132,8 +133,9 @@ function asTimeZone(value: unknown): SupportedTimeZone {
 }
 
 function asVersion(value: unknown): number {
-  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) return value;
-  throw new StoredPreferencesInvalidError();
+  const parsed = parseStoredInteger(value);
+  if (parsed === null) throw new StoredPreferencesInvalidError();
+  return parsed;
 }
 
 export function legacyStoreMarketSettingsState(): StoreMarketSettingsState {
