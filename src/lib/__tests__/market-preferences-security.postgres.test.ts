@@ -281,7 +281,7 @@ describe("F57.2 segurança — grants, país imutável e erros", () => {
       );
       await expectSqlError(
         client,
-        `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Asuncion','explicit','PY','explicit',1,1)`,
+        `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Asuncion','explicit','PY','assumed_default',1,1)`,
         [storeId],
         /country_not_mutable/,
       );
