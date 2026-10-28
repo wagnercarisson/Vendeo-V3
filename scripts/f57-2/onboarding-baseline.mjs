@@ -425,7 +425,13 @@ async function main() {
   const side = options.side ?? "unknown";
   if (!["base", "new", "unknown"].includes(side)) fail("--side deve ser base, new ou unknown");
 
-  const client = new Client({ connectionString: target.raw, ssl: false });
+  const client = new Client({
+    connectionString: target.raw,
+    ssl: false,
+    connectionTimeoutMillis: 10_000,
+    query_timeout: 15_000,
+    statement_timeout: 15_000,
+  });
   await client.connect();
   try {
     const payload = await collect(client, side);

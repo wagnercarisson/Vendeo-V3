@@ -198,7 +198,13 @@ async function main() {
   if (command !== "snapshot") fail("comando deve ser snapshot|compare");
   if (!options.url || !options.out) fail("snapshot exige --url e --out");
   const target = assertTarget(options.url);
-  const client = new Client({ connectionString: target, ssl: false });
+  const client = new Client({
+    connectionString: target,
+    ssl: false,
+    connectionTimeoutMillis: 10_000,
+    query_timeout: 15_000,
+    statement_timeout: 15_000,
+  });
   await client.connect();
   try {
     const payload = await snapshot(client, options.label);

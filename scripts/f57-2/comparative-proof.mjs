@@ -99,7 +99,13 @@ function assertTarget(rawUrl) {
 }
 
 async function openClient(url) {
-  const client = new Client({ connectionString: url, ssl: false });
+  const client = new Client({
+    connectionString: url,
+    ssl: false,
+    connectionTimeoutMillis: 10_000,
+    query_timeout: 15_000,
+    statement_timeout: 15_000,
+  });
   await client.connect();
   return client;
 }
