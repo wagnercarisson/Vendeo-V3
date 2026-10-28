@@ -94,9 +94,28 @@ async function resetRole(client: PoolClient): Promise<void> {
 async function expectDenied(client: PoolClient, sql: string, values: unknown[] = []): Promise<void> {
   await client.query("savepoint denied");
   try {
-    await expect(client.query(sql, values)).rejects.toThrow();
+    await client.query(sql, values);
+    throw new Error("esperava negação de privilégio, mas a operação passou");
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    expect((error as { code?: string }).code).toBe("42501");
   } finally {
     await client.query("rollback to savepoint denied");
+  }
+}
+
+async function expectSqlError(
+  client: PoolClient,
+  sql: string,
+  values: unknown[],
+  pattern: RegExp,
+): Promise<void> {
+  await client.query("savepoint expected_error");
+  try {
+    await expect(client.query(sql, values)).rejects.toThrow(pattern);
+  } finally {
+    // Recupera a transação mesmo quando a função esperada abortou o statement.
+    await client.query("rollback to savepoint expected_error");
   }
 }
 
@@ -221,7 +240,7 @@ describe("F57.2 segurança — grants, país imutável e erros", () => {
       "public.ensure_store_market_settings(uuid,text,text)",
       "public.write_store_market_settings(uuid,text,text,text,text,text,text,text,text,text,text,integer,bigint)",
       "public.write_user_locale_preference(uuid,text,bigint)",
-      "public.create_store_draft(text,text,text,text,text,uuid,text,text,text,text,text,text,text,text,text,text,text)",
+      "public.create_store_draft(uuid,text,text,text,text,uuid,text,text,text,text,text,text,text,text,text,text,text)",
       "public.create_store_with_cnpj(text,text,uuid,text,text,uuid,text,text,text,text,text,text,text,text,text,text,text,text,text,jsonb,text,text,text,jsonb,jsonb,text[],boolean)",
       "public.update_store_cnpj(uuid,text,text,text,text,jsonb,text,jsonb,jsonb,text[],boolean)",
       "public.create_store_with_initial_grant(text,text,uuid,text,text,text,text,text,text,text,text,text,integer)",
@@ -257,12 +276,12 @@ describe("F57.2 segurança — grants, país imutável e erros", () => {
         "select * from public.store_market_settings where store_id=$1",
         [storeId],
       );
-      await expect(
-        client.query(
-          `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Asuncion','explicit','PY','explicit',1,1)`,
-          [storeId],
-        ),
-      ).rejects.toThrow(/country_not_mutable/);
+      await expectSqlError(
+        client,
+        `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Asuncion','explicit','PY','explicit',1,1)`,
+        [storeId],
+        /country_not_mutable/,
+      );
       const after = await client.query<Record<string, unknown>>(
         "select * from public.store_market_settings where store_id=$1",
         [storeId],
@@ -294,12 +313,13 @@ describe("F57.2 segurança — grants, país imutável e erros", () => {
   });
 
   it("7. store_not_found não vaza detalhes para loja inexistente", async () => {
-    await withClient(async (client) => {
-      await expect(
-        client.query("select public.ensure_store_market_settings($1,'BR','assumed_default')", [
-          "00000000-0000-0000-0000-000000000000",
-        ]),
-      ).rejects.toThrow(/store_not_found/);
+    await inTransaction(async (client) => {
+      await expectSqlError(
+        client,
+        "select public.ensure_store_market_settings($1,'BR','assumed_default')",
+        ["00000000-0000-0000-0000-000000000000"],
+        /store_not_found/,
+      );
       console.log("PRIV store_not_found sem detalhes de tenant");
     });
   });

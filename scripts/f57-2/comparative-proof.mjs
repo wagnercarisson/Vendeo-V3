@@ -17,6 +17,7 @@
 
 import fs from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { Client } from "pg";
 import {
   collect,
@@ -229,7 +230,7 @@ async function concurrencyProof(url, outPath) {
         );
         const rejected = settled.filter((entry) => entry.status === "rejected");
         blocks.a = {
-          status: settled.filter((entry) => entry.status === "fulfilled").length === 1 && rejected.length === 1 ? "pass" : "fail",
+          status: settled.filter((entry) => entry.status === "fulfilled").length === 1 && rejected.length === 1 && /settings_version_conflict/.test(rejected[0]?.error ?? "") ? "pass" : "fail",
           results: settled,
           version: version.rows[0],
         };
@@ -249,6 +250,9 @@ async function concurrencyProof(url, outPath) {
             accepted_field_preserved: after.rows[0].default_currency === current,
             after: after.rows[0],
           };
+          if (repeat.status !== "fulfilled" || !blocks.a.repeat.accepted_field_preserved || after.rows[0].settings_version !== 3) {
+            blocks.a.status = "fail";
+          }
         }
       } finally {
         await c1.end().catch(() => undefined);
@@ -279,7 +283,7 @@ async function concurrencyProof(url, outPath) {
           [storeId],
         );
         blocks.b = {
-          status: settled.filter((entry) => entry.status === "fulfilled").length === 1 && settled.filter((entry) => entry.status === "rejected").length === 1 ? "pass" : "fail",
+          status: settled.filter((entry) => entry.status === "fulfilled").length === 1 && settled.filter((entry) => entry.status === "rejected").length === 1 && /settings_version_conflict/.test(settled.find((entry) => entry.status === "rejected")?.error ?? "") && version.rows[0]?.settings_version === 1 ? "pass" : "fail",
           results: settled,
           version: version.rows[0],
         };
@@ -323,6 +327,8 @@ async function concurrencyProof(url, outPath) {
         status:
           firstRow.rows[0]?.settings_version === 3 &&
           firstRow.rows[0]?.default_campaign_market_source === "explicit" &&
+          secondRow.rows[0]?.settings_version === 2 &&
+          secondRow.rows[0]?.country_source === "fiscal_confirmation" &&
           stale.status === "rejected" &&
           /settings_version_conflict/.test(stale.error ?? "")
             ? "pass"
@@ -350,6 +356,7 @@ async function concurrencyProof(url, outPath) {
         throw new Error("atomicidade forçada");
       } catch (error) {
         await client.query("rollback");
+        if (!(error instanceof Error) || error.message !== "atomicidade forçada") throw error;
         const counts = await client.query(
           `select
              (select count(*)::int from public.stores where id=$1) as stores,
@@ -357,25 +364,32 @@ async function concurrencyProof(url, outPath) {
              (select count(*)::int from public.store_market_settings where store_id=$1) as settings`,
           [storeId ?? "00000000-0000-0000-0000-000000000000"],
         );
-        blocks.d = { status: "pass", forced_error: error.message, counts: counts.rows[0] };
+        const row = counts.rows[0];
+        blocks.d = {
+          status:
+            error.message === "atomicidade forçada" &&
+            Number(row.stores) === 0 &&
+            Number(row.legal) === 0 &&
+            Number(row.settings) === 0
+              ? "pass"
+              : "fail",
+          forced_error: error.message,
+          counts: row,
+        };
       }
     }
   } finally {
     await cleanupFixtures(client, createdStores, createdUsers);
     await client.end();
   }
-  fs.writeFileSync(outPath, `${JSON.stringify({ side: "new", generated_at: new Date().toISOString(), blocks }, null, 2)}\n`, "utf8");
-  return blocks;
-}
-
-function normalizeS0(file) {
-  const payload = JSON.parse(fs.readFileSync(file, "utf8"));
-  const tables = Array.isArray(payload.tables) ? payload.tables : [];
-  return Object.fromEntries(
-    tables
-      .filter((row) => row.table !== "store_market_settings")
-      .map((row) => [row.table, { count: row.count, md5: row.md5 ?? row.sha256 ?? null }]),
+  const failures = ["a", "b", "c", "d"].filter((key) => blocks[key]?.status !== "pass");
+  fs.writeFileSync(
+    outPath,
+    `${JSON.stringify({ side: "new", generated_at: new Date().toISOString(), blocks, failures }, null, 2)}\n`,
+    "utf8",
   );
+  if (failures.length > 0) throw new Error(`blocos de concorrência/atomicidade falharam: ${failures.join(",")}`);
+  return blocks;
 }
 
 function stripSettings(fingerprint) {
@@ -384,29 +398,125 @@ function stripSettings(fingerprint) {
   return clone;
 }
 
-function compare(baseFile, newFile, s0Before, s0After01, s0After02, outMd) {
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, stable(value[key])]),
+    );
+  }
+  return value;
+}
+
+const REQUIRED_FINGERPRINT_KEYS = [
+  "store",
+  "credit_transactions",
+  "credit_balances",
+  "freemium_entitlements",
+  "legal_acceptances",
+  "store_billing_info",
+  "campaigns_by_status",
+  "campaigns_ready",
+  "admin_audit_log",
+  "store_market_settings",
+];
+const REQUIRED_SCENARIOS = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9"];
+
+function validateFingerprints(document, label) {
+  const fingerprints = document.fingerprints;
+  if (!fingerprints || typeof fingerprints !== "object" || Array.isArray(fingerprints)) {
+    fail(`${label}: fingerprints ausente ou inválido`);
+  }
+  const keys = Object.keys(fingerprints).sort();
+  if (JSON.stringify(keys) !== JSON.stringify(REQUIRED_SCENARIOS)) {
+    fail(`${label}: fingerprints incompletos (${keys.join(",")})`);
+  }
+  for (const scenario of REQUIRED_SCENARIOS) {
+    const fingerprint = fingerprints[scenario];
+    if (!fingerprint || typeof fingerprint !== "object" || Array.isArray(fingerprint)) {
+      fail(`${label}: fingerprint ${scenario} inválido`);
+    }
+    for (const required of REQUIRED_FINGERPRINT_KEYS) {
+      if (!(required in fingerprint)) fail(`${label}: fingerprint ${scenario} sem ${required}`);
+    }
+    if (!Array.isArray(fingerprint.credit_transactions)) fail(`${label}: ${scenario}.credit_transactions inválido`);
+    if (!Array.isArray(fingerprint.freemium_entitlements)) fail(`${label}: ${scenario}.freemium_entitlements inválido`);
+    if (!Array.isArray(fingerprint.legal_acceptances)) fail(`${label}: ${scenario}.legal_acceptances inválido`);
+  }
+  const scenarios = document.scenarios;
+  if (!scenarios || typeof scenarios !== "object" || Array.isArray(scenarios)) {
+    fail(`${label}: scenarios ausente ou inválido`);
+  }
+  const scenarioKeys = Object.keys(scenarios).sort();
+  if (JSON.stringify(scenarioKeys) !== JSON.stringify(REQUIRED_SCENARIOS)) {
+    fail(`${label}: scenarios incompletos (${scenarioKeys.join(",")})`);
+  }
+}
+
+function normalizeS0(file) {
+  const payload = JSON.parse(fs.readFileSync(file, "utf8"));
+  const tables = Array.isArray(payload.tables) ? payload.tables : [];
+  const byName = Object.fromEntries(tables.map((row) => [row.table, row]));
+  const expected = [...TABLES].sort();
+  const keys = Object.keys(byName).sort();
+  if (JSON.stringify(keys) !== JSON.stringify(expected)) {
+    fail(`${file}: S0 deve conter exatamente as oito tabelas (${keys.join(",")})`);
+  }
+  const normalized = {};
+  for (const table of TABLES) {
+    const row = byName[table];
+    if (row.present === false) {
+      normalized[table] = { count: 0, md5: null };
+      continue;
+    }
+    if (!Number.isInteger(Number(row.count)) || Number(row.count) < 0) fail(`${file}: count inválido em ${table}`);
+    const digest = row.md5 ?? row.sha256;
+    if (typeof digest !== "string" || !/^[0-9a-f]{32}$|^[0-9a-f]{64}$/.test(digest)) {
+      fail(`${file}: hash inválido em ${table}`);
+    }
+    normalized[table] = { count: Number(row.count), md5: digest };
+  }
+  return normalized;
+}
+
+export function compare(baseFile, newFile, s0Before, s0After01, s0After02, outMd) {
   const files = [baseFile, newFile, s0Before, s0After01, s0After02];
   for (const file of files) if (!fs.existsSync(file)) fail(`arquivo ausente: ${file}`);
 
   const base = JSON.parse(fs.readFileSync(baseFile, "utf8"));
   const next = JSON.parse(fs.readFileSync(newFile, "utf8"));
+  if (base.side !== "base") fail(`base inválido: side=${base.side ?? "ausente"}`);
+  if (next.side !== "new") fail(`novo inválido: side=${next.side ?? "ausente"}`);
+  if (typeof base.table_present !== "boolean" || typeof next.table_present !== "boolean") {
+    fail("documento sem table_present booleano");
+  }
+  if (!Number.isInteger(Number(base.counts_store_market_settings)) || !Number.isInteger(Number(next.counts_store_market_settings))) {
+    fail("documento sem counts_store_market_settings inteiro");
+  }
+  validateFingerprints(base, "base");
+  validateFingerprints(next, "novo");
+
   const s0a = normalizeS0(s0Before);
   const s0b = normalizeS0(s0After01);
   const s0c = normalizeS0(s0After02);
   const s0Equal = JSON.stringify(s0a) === JSON.stringify(s0b) && JSON.stringify(s0b) === JSON.stringify(s0c);
   if (!s0Equal) fail("S0 divergiu entre os três snapshots");
 
-  const baseKeys = Object.keys(base.fingerprints ?? {}).sort();
-  const nextKeys = Object.keys(next.fingerprints ?? {}).sort();
+  const baseKeys = Object.keys(base.fingerprints).sort();
+  const nextKeys = Object.keys(next.fingerprints).sort();
   if (JSON.stringify(baseKeys) !== JSON.stringify(nextKeys)) fail("conjunto de cenários difere entre base e novo");
 
   const rows = [];
   let mismatch = false;
   for (const key of baseKeys) {
-    const same = JSON.stringify(stripSettings(base.fingerprints[key])) === JSON.stringify(stripSettings(next.fingerprints[key]));
+    const same = JSON.stringify(stable(stripSettings(base.fingerprints[key]))) === JSON.stringify(stable(stripSettings(next.fingerprints[key])));
     if (!same) mismatch = true;
     rows.push(`| ${key} | ${same ? "igual" : "DIVERGIU"} |`);
   }
+  const scenariosEqual = JSON.stringify(stable(base.scenarios)) === JSON.stringify(stable(next.scenarios));
+  if (!scenariosEqual) mismatch = true;
   const md = [
     "# F57.2 — prova comparativa base × novo",
     "",
@@ -427,6 +537,8 @@ function compare(baseFile, newFile, s0Before, s0After01, s0After02, outMd) {
     "|---|---|",
     ...rows,
     "",
+    `Resultados dos cenários: **${scenariosEqual ? "iguais" : "DIVERGIRAM"}**.`,
+    "",
     "S8: `legacy_pre_f32_onboarding_consumed`, sem grant.",
     "S9: demo condicional.",
     "Linhas pré-existentes são preservadas; fixtures usam o prefixo `f572proof-`.",
@@ -436,6 +548,7 @@ function compare(baseFile, newFile, s0Before, s0After01, s0After02, outMd) {
   ].join("\n");
   fs.writeFileSync(outMd, md, "utf8");
   if (mismatch) process.exitCode = 1;
+  return { ok: !mismatch, md };
 }
 
 async function main() {
@@ -482,4 +595,6 @@ async function main() {
   fail(`comando desconhecido: ${command}`);
 }
 
-main().catch((error) => fail(error instanceof Error ? error.message : String(error)));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => fail(error instanceof Error ? error.message : String(error)));
+}
