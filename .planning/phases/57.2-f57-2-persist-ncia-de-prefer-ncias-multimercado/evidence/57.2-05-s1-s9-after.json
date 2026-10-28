@@ -1,0 +1,460 @@
+{
+  "collected_at": "2026-10-28T20:12:47.691Z",
+  "side": "new",
+  "target": "postgresql://***@127.0.0.1:57782/postgres",
+  "table_present": true,
+  "counts_store_market_settings": 0,
+  "ledger": {
+    "baseline_count": 149,
+    "baseline_sha256": "acc1ce62227e54b8cf0f2f9178e3b2e77f77b89d4582b904a7c1b11972c1e9a9"
+  },
+  "scenarios": {
+    "S1": {
+      "onboardingGranted": false
+    },
+    "S2": {
+      "onboardingGranted": false
+    },
+    "S3": {
+      "onboardingGranted": true
+    },
+    "S4": {
+      "onboardingGranted": false
+    },
+    "S5": {
+      "balance": 0
+    },
+    "S6": {
+      "balance": 0
+    },
+    "S8": {
+      "onboardingGranted": false
+    },
+    "S9": {
+      "onboardingGranted": true
+    },
+    "S7": {
+      "onboardingGranted": false,
+      "settings_present": true
+    }
+  },
+  "fingerprints": {
+    "S1": {
+      "store": {
+        "name": "f572proof-draft",
+        "segment": "outros",
+        "verification_status": "unverified",
+        "cnpj_valid": null,
+        "razao_present": false,
+        "root_present": false
+      },
+      "credit_transactions": [],
+      "credit_balances": [],
+      "freemium_entitlements": [],
+      "legal_acceptances": [
+        {
+          "document_type": "acceptable_use",
+          "document_version": "v1"
+        },
+        {
+          "document_type": "terms_of_service",
+          "document_version": "v1"
+        }
+      ],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "assumed_default",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "BRL",
+        "default_currency_source": "default",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "1"
+      }
+    },
+    "S2": {
+      "store": {
+        "name": "f572proof-S2",
+        "segment": "outros",
+        "verification_status": "unverified",
+        "cnpj_valid": true,
+        "razao_present": true,
+        "root_present": true
+      },
+      "credit_transactions": [],
+      "credit_balances": [],
+      "freemium_entitlements": [],
+      "legal_acceptances": [
+        {
+          "document_type": "acceptable_use",
+          "document_version": "v1"
+        },
+        {
+          "document_type": "terms_of_service",
+          "document_version": "v1"
+        }
+      ],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "fiscal_confirmation",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "BRL",
+        "default_currency_source": "default",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "1"
+      }
+    },
+    "S3": {
+      "store": {
+        "name": "f572proof-S3",
+        "segment": "outros",
+        "verification_status": "approved",
+        "cnpj_valid": true,
+        "razao_present": true,
+        "root_present": true
+      },
+      "credit_transactions": [
+        {
+          "type": "demo",
+          "amount": 10,
+          "balance_before": 0,
+          "balance_after": 10
+        }
+      ],
+      "credit_balances": [
+        {
+          "balance": 10,
+          "demo_balance": 10,
+          "bonus_balance": 0,
+          "purchased_balance": 0,
+          "demo_expiry_present": true,
+          "origin_present": true
+        }
+      ],
+      "freemium_entitlements": [
+        {
+          "benefit_type": "demo",
+          "reason": null,
+          "cycle": null,
+          "grant_present": true
+        }
+      ],
+      "legal_acceptances": [
+        {
+          "document_type": "acceptable_use",
+          "document_version": "v1"
+        },
+        {
+          "document_type": "terms_of_service",
+          "document_version": "v1"
+        }
+      ],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "fiscal_confirmation",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "BRL",
+        "default_currency_source": "default",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "1"
+      }
+    },
+    "S4": {
+      "store": {
+        "name": "f572proof-S4",
+        "segment": "outros",
+        "verification_status": "approved",
+        "cnpj_valid": true,
+        "razao_present": true,
+        "root_present": true
+      },
+      "credit_transactions": [],
+      "credit_balances": [],
+      "freemium_entitlements": [],
+      "legal_acceptances": [
+        {
+          "document_type": "acceptable_use",
+          "document_version": "v1"
+        },
+        {
+          "document_type": "terms_of_service",
+          "document_version": "v1"
+        }
+      ],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "fiscal_confirmation",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "BRL",
+        "default_currency_source": "default",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "1"
+      }
+    },
+    "S5": {
+      "store": {
+        "name": "f572proof-S5",
+        "segment": "outros",
+        "verification_status": "unverified",
+        "cnpj_valid": null,
+        "razao_present": false,
+        "root_present": false
+      },
+      "credit_transactions": [],
+      "credit_balances": [],
+      "freemium_entitlements": [],
+      "legal_acceptances": [],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "assumed_default",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "BRL",
+        "default_currency_source": "default",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "1"
+      }
+    },
+    "S6": {
+      "store": {
+        "name": "f572proof-S6",
+        "segment": "outros",
+        "verification_status": "unverified",
+        "cnpj_valid": null,
+        "razao_present": false,
+        "root_present": false
+      },
+      "credit_transactions": [],
+      "credit_balances": [],
+      "freemium_entitlements": [],
+      "legal_acceptances": [],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [
+        {
+          "action": "store_create_invite",
+          "target_type": "user"
+        }
+      ],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "assumed_default",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "BRL",
+        "default_currency_source": "default",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "1"
+      }
+    },
+    "S8": {
+      "store": {
+        "name": "f572proof-S8",
+        "segment": "outros",
+        "verification_status": "approved",
+        "cnpj_valid": true,
+        "razao_present": true,
+        "root_present": true
+      },
+      "credit_transactions": [
+        {
+          "type": "bonus_onboarding",
+          "amount": 5,
+          "balance_before": 0,
+          "balance_after": 5
+        }
+      ],
+      "credit_balances": [],
+      "freemium_entitlements": [
+        {
+          "benefit_type": "onboarding",
+          "reason": "legacy_pre_f32_onboarding_consumed",
+          "cycle": null,
+          "grant_present": false
+        }
+      ],
+      "legal_acceptances": [
+        {
+          "document_type": "acceptable_use",
+          "document_version": "v1"
+        },
+        {
+          "document_type": "terms_of_service",
+          "document_version": "v1"
+        }
+      ],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "fiscal_confirmation",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "BRL",
+        "default_currency_source": "default",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "2"
+      }
+    },
+    "S9": {
+      "store": {
+        "name": "f572proof-S9",
+        "segment": "outros",
+        "verification_status": "approved",
+        "cnpj_valid": true,
+        "razao_present": true,
+        "root_present": true
+      },
+      "credit_transactions": [
+        {
+          "type": "demo",
+          "amount": 10,
+          "balance_before": 0,
+          "balance_after": 10
+        }
+      ],
+      "credit_balances": [
+        {
+          "balance": 10,
+          "demo_balance": 10,
+          "bonus_balance": 0,
+          "purchased_balance": 0,
+          "demo_expiry_present": true,
+          "origin_present": true
+        }
+      ],
+      "freemium_entitlements": [
+        {
+          "benefit_type": "demo",
+          "reason": null,
+          "cycle": null,
+          "grant_present": true
+        }
+      ],
+      "legal_acceptances": [
+        {
+          "document_type": "acceptable_use",
+          "document_version": "v1"
+        },
+        {
+          "document_type": "terms_of_service",
+          "document_version": "v1"
+        }
+      ],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "fiscal_confirmation",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "BRL",
+        "default_currency_source": "default",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "2"
+      }
+    },
+    "S7": {
+      "store": {
+        "name": "f572proof-S7",
+        "segment": "outros",
+        "verification_status": "unverified",
+        "cnpj_valid": true,
+        "razao_present": true,
+        "root_present": true
+      },
+      "credit_transactions": [],
+      "credit_balances": [],
+      "freemium_entitlements": [],
+      "legal_acceptances": [
+        {
+          "document_type": "acceptable_use",
+          "document_version": "v1"
+        },
+        {
+          "document_type": "terms_of_service",
+          "document_version": "v1"
+        }
+      ],
+      "store_billing_info": null,
+      "campaigns_by_status": [],
+      "campaigns_ready": 0,
+      "admin_audit_log": [],
+      "store_market_settings": {
+        "country_code": "BR",
+        "country_source": "fiscal_confirmation",
+        "default_campaign_market": "BR",
+        "default_campaign_market_source": "default",
+        "default_content_locale": "pt-BR",
+        "default_content_locale_source": "default",
+        "default_currency": "PYG",
+        "default_currency_source": "explicit",
+        "time_zone": "America/Sao_Paulo",
+        "time_zone_source": "default",
+        "context_version": 1,
+        "settings_version": "2"
+      }
+    }
+  },
+  "label": "new"
+}

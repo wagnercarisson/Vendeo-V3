@@ -1,0 +1,63 @@
+{
+  "collected_at": "2026-10-28T20:08:55.024Z",
+  "label": "after-security",
+  "target": "127.0.0.1:57782/postgres",
+  "ledger": {
+    "f57_2_versions": [
+      "20261028145738|f57_2_market_preferences",
+      "20261028171746|f57_2_onboarding_market_settings"
+    ],
+    "baseline_count": 149,
+    "baseline_sha256": "acc1ce62227e54b8cf0f2f9178e3b2e77f77b89d4582b904a7c1b11972c1e9a9"
+  },
+  "tables": [
+    {
+      "table": "stores",
+      "present": true,
+      "count": 2,
+      "md5": "2bc1282294114205b914224fc6c0a831"
+    },
+    {
+      "table": "store_billing_info",
+      "present": true,
+      "count": 0,
+      "md5": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table": "credit_transactions",
+      "present": true,
+      "count": 98,
+      "md5": "cbf725a75be0ad6583770fb006a0653f"
+    },
+    {
+      "table": "credit_balances",
+      "present": true,
+      "count": 2,
+      "md5": "a37d102bba8592a591d8cac433b3458e"
+    },
+    {
+      "table": "freemium_entitlements",
+      "present": true,
+      "count": 1,
+      "md5": "3523d7c252742864768d2942c85176f8"
+    },
+    {
+      "table": "legal_acceptances",
+      "present": true,
+      "count": 9,
+      "md5": "cf25dd3617ff9c9de9020e75b45dd94b"
+    },
+    {
+      "table": "campaigns",
+      "present": true,
+      "count": 70,
+      "md5": "fb020f8c2a917c7f9ffd50f84e3d323a"
+    },
+    {
+      "table": "admin_audit_log",
+      "present": true,
+      "count": 76,
+      "md5": "eab1d1c172e5b9f754bc33d3ad810db7"
+    }
+  ]
+}

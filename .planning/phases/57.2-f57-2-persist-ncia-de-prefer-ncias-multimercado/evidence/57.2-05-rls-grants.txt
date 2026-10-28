@@ -54,24 +54,29 @@ stdout | src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 
 PRIV authenticated public.create_store_with_initial_grant = false
 PRIV service_role public.create_store_with_initial_grant = true
 
+stdout | src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 3. EXECUTE negado a authenticated e permitido a service_role
+PRIV authenticated public.admin_create_store_for_user = false
+PRIV service_role public.admin_create_store_for_user = true
+
+stdout | src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 4. pa├¡s imut├ível n├úo altera nenhum campo nem a vers├úo
+PRIV country_not_mutable preserva linha completa
+
 stdout | src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 6. nenhuma loja operacional fica com pa├¡s diferente de BR
 NO-PY loja BR com billing PY: country_code=BR
 
- Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö RLS e isolamento A/B > 1. authenticated l├¬ somente a pr├│pria prefer├¬ncia e a pr├│pria loja 24ms
- Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö RLS e isolamento A/B > 2. escrita direta de authenticated ├® negada nas duas tabelas 17ms
- Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö RLS e isolamento A/B > 5. duas lojas BR de donos diferentes permanecem isoladas 8ms
- ├ù src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 3. EXECUTE negado a authenticated e permitido a service_role 19ms
-   ÔåÆ expected true to be false // Object.is equality
- ├ù src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 4. pa├¡s imut├ível n├úo altera nenhum campo nem a vers├úo 11ms
-   ÔåÆ expected [Function] to throw error matching /country_not_mutable/ but got 'invalid_country_source'
- Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 6. nenhuma loja operacional fica com pa├¡s diferente de BR 8ms
 stdout | src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 7. store_not_found n├úo vaza detalhes para loja inexistente
 PRIV store_not_found sem detalhes de tenant
 
- Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 7. store_not_found n├úo vaza detalhes para loja inexistente 4ms
+ Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö RLS e isolamento A/B > 1. authenticated l├¬ somente a pr├│pria prefer├¬ncia e a pr├│pria loja 23ms
+ Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö RLS e isolamento A/B > 2. escrita direta de authenticated ├® negada nas duas tabelas 15ms
+ Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö RLS e isolamento A/B > 5. duas lojas BR de donos diferentes permanecem isoladas 9ms
+ Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 3. EXECUTE negado a authenticated e permitido a service_role 12ms
+ Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 4. pa├¡s imut├ível n├úo altera nenhum campo nem a vers├úo 8ms
+ Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 6. nenhuma loja operacional fica com pa├¡s diferente de BR 6ms
+ Ô£ô src/lib/__tests__/market-preferences-security.postgres.test.ts > F57.2 seguran├ºa ÔÇö grants, pa├¡s imut├ível e erros > 7. store_not_found n├úo vaza detalhes para loja inexistente 3ms
 
- Test Files  1 failed (1)
-      Tests  2 failed | 5 passed (7)
-   Start at  16:54:12
-   Duration  679ms (transform 52ms, setup 0ms, import 99ms, tests 113ms, environment 0ms)
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  17:12:46
+   Duration  680ms (transform 37ms, setup 0ms, import 86ms, tests 100ms, environment 0ms)
 

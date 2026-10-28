@@ -1,30 +1,30 @@
 
  RUN  v4.1.9 C:/Projetos/Vendeo V3
 
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > A. draft: 2 aceites, sem grant, settings BR assumed_default v1 18ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > B. cnpj unverified: sem grant 9ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > D. cnpj approved sem flag: sem grant 7ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > C0. configura├º├úo atual (launch_at NULL): demo concedida antes da ativa├º├úo 16ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > C. coorte legada + approved/flag: demo real (entitlement demo, 10 cr├®ditos) 11ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > A. draft: 2 aceites, sem grant, settings BR assumed_default v1 19ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > B. cnpj unverified: sem grant 7ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > D. cnpj approved sem flag: sem grant 8ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > C0. configura├º├úo atual (launch_at NULL): demo concedida antes da ativa├º├úo 13ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > C. coorte legada + approved/flag: demo real (entitlement demo, 10 cr├®ditos) 12ms
  Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > C2. coorte p├│s-launch + approved/flag: demo bloqueada pela oferta 28d 8ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > E. create_store_with_initial_grant direto: balance 0 e settings presentes 5ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > F. cria├º├úo administrativa por delega├º├úo: settings, balance 0, auditoria 14ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > G. currency PYG expl├¡cita ├® preservada na confirma├º├úo 9ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > E. create_store_with_initial_grant direto: balance 0 e settings presentes 4ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 onboarding ÔÇö cr├®dito e configura├º├Áes > F. cria├º├úo administrativa por delega├º├úo: settings, balance 0, auditoria 12ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > G. currency PYG expl├¡cita ├® preservada na confirma├º├úo 8ms
  Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > H. loja legada sem linha cria configura├º├Áes fiscais 6ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > I. BR + mercado PY expl├¡cito mant├®m es-PY/PYG e fuso BR 6ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > J. benef├¡cio anterior grava marcador legado sem novo grant 9ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > K. pa├¡s divergente falha sem alterar vers├úo 7ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > N. confirma├º├úo fiscal e PATCH concorrem nas duas ordens (CAS) 356ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > N2. disputa realmente sobreposta entre confirma├º├úo fiscal e PATCH 190ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > I. BR + mercado PY expl├¡cito mant├®m es-PY/PYG e fuso BR 7ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > J. benef├¡cio anterior grava marcador legado sem novo grant 10ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 confirma├º├úo fiscal > K. pa├¡s divergente falha sem alterar vers├úo 8ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > N. confirma├º├úo fiscal e PATCH concorrem nas duas ordens (CAS) 375ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > N2. disputa realmente sobreposta entre confirma├º├úo fiscal e PATCH 488ms
  Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > L. ensure repetido mant├®m uma linha e escolha expl├¡cita 6ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > M. rollback da cria├º├úo n├úo deixa loja/legal/settings/cr├®dito/auditoria 12ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > M. rollback da cria├º├úo n├úo deixa loja/legal/settings/cr├®dito/auditoria 18ms
  Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > O. nenhuma loja criada nesta su├¡te usa pa├¡s diferente de BR 1ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > P. billing PY n├úo define pa├¡s cadastral em nenhum fixture 19ms
- Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > Q. idioma do app e configura├º├Áes da loja permanecem independentes 10ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > P. billing PY n├úo define pa├¡s cadastral em nenhum fixture 15ms
+ Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > Q. idioma do app e configura├º├Áes da loja permanecem independentes 13ms
  Ô£ô src/lib/__tests__/market-preferences-onboarding.postgres.test.ts > F57.2 idempot├¬ncia, atomicidade e contrato > contrato: create_store_with_cnpj mant├®m 2 overloads; demais nomes 1 3ms
 
  Test Files  1 passed (1)
       Tests  21 passed (21)
-   Start at  16:54:10
-   Duration  1.44s (transform 54ms, setup 0ms, import 103ms, tests 872ms, environment 0ms)
+   Start at  17:12:44
+   Duration  1.79s (transform 57ms, setup 0ms, import 106ms, tests 1.19s, environment 0ms)
 

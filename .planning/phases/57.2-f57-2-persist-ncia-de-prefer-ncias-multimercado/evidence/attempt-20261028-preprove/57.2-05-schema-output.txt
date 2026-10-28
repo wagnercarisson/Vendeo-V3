@@ -1,0 +1,18 @@
+
+ RUN  v4.1.9 C:/Projetos/Vendeo V3
+
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 schema, checks e grants > 1. tabelas, colunas de vers├úo e proveni├¬ncia existem 12ms
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 schema, checks e grants > 2. CHECKs de valores, fontes e coer├¬ncia rejeitam o que ├® inv├ílido 101ms
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 schema, checks e grants > 3. EXECUTE ├® negado a anon/authenticated e permitido a service_role 14ms
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 RLS e isolamento > 4. authenticated l├¬ apenas o pr├│prio; INSERT/UPDATE/DELETE nas duas tabelas s├úo negados 161ms
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 RPCs: idempot├¬ncia, CAS e proveni├¬ncia > 5. ensure ├® idempotente e grava defaults BR em v1 63ms
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 RPCs: idempot├¬ncia, CAS e proveni├¬ncia > 6. prefer├¬ncia de usu├írio: 3 params, CAS, limpeza e conflito com vers├úo real 0 200ms
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 RPCs: idempot├¬ncia, CAS e proveni├¬ncia > 7. loja: pa├¡s imut├ível, country_source preservado e inser├º├úo s├│ legacy_br 173ms
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 RPCs: idempot├¬ncia, CAS e proveni├¬ncia > 8. primeira escrita concorrente usa conex├Áes independentes (loja e usu├írio) 167ms
+ Ô£ô src/lib/__tests__/market-preferences-schema.postgres.test.ts > F57.2 RPCs: idempot├¬ncia, CAS e proveni├¬ncia > 9. rollback de ensure/RPC n├úo deixa res├¡duo 55ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  16:54:08
+   Duration  1.53s (transform 45ms, setup 0ms, import 95ms, tests 1.08s, environment 0ms)
+
