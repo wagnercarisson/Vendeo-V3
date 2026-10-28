@@ -42,7 +42,7 @@
 - [x] 6.2 Revisar diff por caminho: nenhum arquivo de UI, catálogo, formatação, IA, campanha ou billing alterado; nenhuma migration aplicada fora do homolog autorizado; manifests/lockfile intactos. (1 h)
 - [x] 6.3 Verificação de segurança (ASVS L1): ownership, CSRF, service_role, RLS, ausência de vazamento em DTOs/erros e país ≠ autorização; registrar ameaças e disposição. (2 h)
 - [x] 6.4 Revisar migração e runbook de rollback para promoção: timestamp/ordem, `-- REVERT` restaurando **primeiro** as RPCs anteriores, dependências entre funções, ordem migration → código, rollback preferencial apenas do código preservando tabelas/dados, reversão de banco somente com autorização e sem perda presumida; documentar que as rotas são API autenticada ativa sem UI. (2 h)
-- [x]  (apresentado; aceite formal pendente)
+- [x] 6.5 Apresentar aceite técnico ao usuário/Codex; habilitação PY, telas, campanhas e cobrança permanecem explicitamente fora. (1 h) (aceite local/homolog aprovado em 2026-10-28; promoção pendente)
 
 ## 7. Registro de requisitos futuros (não implementar)
 
