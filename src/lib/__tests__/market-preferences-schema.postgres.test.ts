@@ -57,11 +57,11 @@ async function inTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise
   return withClient(async (client) => {
     await client.query("begin");
     try {
-      const result = await fn(client);
-      return result;
-    } catch (error) {
+      return await fn(client);
+    } finally {
+      // Todo uso atual é leitura/negativo: encerra sempre antes de liberar o
+      // client, para SET LOCAL ROLE / transação não vazarem no pool.
       await client.query("rollback").catch(() => undefined);
-      throw error;
     }
   });
 }
