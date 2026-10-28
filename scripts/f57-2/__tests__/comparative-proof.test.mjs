@@ -111,6 +111,39 @@ test("compare reprova S0 sem as oito tabelas", () => {
   });
 });
 
+test("compare reprova S0 com tabela obrigatória ausente (present=false)", () => {
+  withDir((dir) => {
+    const missing = s0().tables.map((row) =>
+      row.table === "campaigns" ? { ...row, present: false, count: 0, md5: null } : row,
+    );
+    const result = run(dir, {
+      "base.json": scenarioDoc("base"),
+      "new.json": scenarioDoc("new"),
+      "s0-before.json": s0(missing),
+      "s0-after-01.json": s0(),
+      "s0-after-02.json": s0(),
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /tabela obrigatória ausente/);
+  });
+});
+
+test("compare reprova S0 com tabela duplicada", () => {
+  withDir((dir) => {
+    const duplicated = s0().tables.slice();
+    duplicated[7] = duplicated[0];
+    const result = run(dir, {
+      "base.json": scenarioDoc("base"),
+      "new.json": scenarioDoc("new"),
+      "s0-before.json": s0(duplicated),
+      "s0-after-01.json": s0(),
+      "s0-after-02.json": s0(),
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /tabela duplicada/);
+  });
+});
+
 test("compare reprova fingerprints/scenarios incompletos", () => {
   withDir((dir) => {
     const base = scenarioDoc("base");

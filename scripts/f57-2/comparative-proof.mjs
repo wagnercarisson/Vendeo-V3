@@ -165,28 +165,45 @@ async function createEmptyStore(client, label, createdStores, createdUsers) {
 }
 
 async function cleanupFixtures(client, createdStores, createdUsers) {
+  const failures = [];
+  const attempt = async (table, id, sql, values) => {
+    try {
+      await client.query(sql, values);
+    } catch (error) {
+      failures.push({ table, id, error: error instanceof Error ? error.message : String(error) });
+    }
+  };
+
   for (const storeId of createdStores) {
-    await client.query("delete from public.store_market_settings where store_id=$1", [storeId]).catch(() => undefined);
-    await client.query("delete from public.store_billing_info where store_id=$1", [storeId]).catch(() => undefined);
-    await client.query("delete from public.legal_acceptances where store_id=$1", [storeId]).catch(() => undefined);
-    await client.query("delete from public.stores where id=$1", [storeId]).catch(() => undefined);
+    await attempt("store_market_settings", storeId, "delete from public.store_market_settings where store_id=$1", [storeId]);
+    await attempt("store_billing_info", storeId, "delete from public.store_billing_info where store_id=$1", [storeId]);
+    await attempt("legal_acceptances", storeId, "delete from public.legal_acceptances where store_id=$1", [storeId]);
+    await attempt("stores", storeId, "delete from public.stores where id=$1", [storeId]);
   }
   for (const userId of createdUsers) {
-    await client.query("delete from public.user_preferences where user_id=$1", [userId]).catch(() => undefined);
-    await client.query("delete from public.admin_audit_log where target_id=$1", [userId]).catch(() => undefined);
-    await client.query("delete from auth.users where id=$1", [userId]).catch(() => undefined);
+    await attempt("user_preferences", userId, "delete from public.user_preferences where user_id=$1", [userId]);
+    await attempt("admin_audit_log", userId, "delete from public.admin_audit_log where target_id=$1", [userId]);
+    await attempt("auth.users", userId, "delete from auth.users where id=$1", [userId]);
+  }
+
+  const residue = await client.query(
+    `select
+       (select count(*)::int from public.stores where name like '%f572proof-%') as stores,
+       (select count(*)::int from auth.users where email like '%f572proof-%') as users`,
+  );
+  const counts = residue.rows[0];
+  if (failures.length > 0 || Number(counts.stores) !== 0 || Number(counts.users) !== 0) {
+    throw new Error(
+      JSON.stringify({
+        failures,
+        counts,
+        remaining_stores: createdStores,
+        remaining_users: createdUsers,
+      }),
+    );
   }
   createdStores.length = 0;
   createdUsers.length = 0;
-  const residue = await client.query(
-    `select
-       (select count(*)::int from public.stores where name like 'f572test-%' or name like 'f572proof-%') as stores,
-       (select count(*)::int from auth.users where email like 'f572test-%' or email like 'f572proof-%') as users`,
-  );
-  const counts = residue.rows[0];
-  if (Number(counts.stores) !== 0 || Number(counts.users) !== 0) {
-    throw new Error(`resíduos após cleanup: ${JSON.stringify(counts)}`);
-  }
 }
 
 async function settleTx(client, sql, params) {
@@ -379,8 +396,11 @@ async function concurrencyProof(url, outPath) {
       }
     }
   } finally {
-    await cleanupFixtures(client, createdStores, createdUsers);
-    await client.end();
+    try {
+      await cleanupFixtures(client, createdStores, createdUsers);
+    } finally {
+      await client.end().catch(() => undefined);
+    }
   }
   const failures = ["a", "b", "c", "d"].filter((key) => blocks[key]?.status !== "pass");
   fs.writeFileSync(
@@ -458,7 +478,23 @@ function validateFingerprints(document, label) {
 function normalizeS0(file) {
   const payload = JSON.parse(fs.readFileSync(file, "utf8"));
   const tables = Array.isArray(payload.tables) ? payload.tables : [];
-  const byName = Object.fromEntries(tables.map((row) => [row.table, row]));
+  if (tables.length !== TABLES.length) {
+    fail(`${file}: S0 deve conter exatamente as oito tabelas`);
+  }
+  const seen = new Set();
+  const byName = {};
+  for (const row of tables) {
+    if (!row || typeof row.table !== "string") fail(`${file}: linha S0 sem nome de tabela`);
+    if (seen.has(row.table)) fail(`${file}: tabela duplicada em S0: ${row.table}`);
+    seen.add(row.table);
+    if (row.present !== true) fail(`${file}: tabela obrigatória ausente em S0: ${row.table}`);
+    if (!Number.isInteger(Number(row.count)) || Number(row.count) < 0) fail(`${file}: count inválido em ${row.table}`);
+    const digest = row.md5 ?? row.sha256;
+    if (typeof digest !== "string" || !/^[0-9a-f]{32}$|^[0-9a-f]{64}$/.test(digest)) {
+      fail(`${file}: hash inválido em ${row.table}`);
+    }
+    byName[row.table] = row;
+  }
   const expected = [...TABLES].sort();
   const keys = Object.keys(byName).sort();
   if (JSON.stringify(keys) !== JSON.stringify(expected)) {
@@ -467,16 +503,7 @@ function normalizeS0(file) {
   const normalized = {};
   for (const table of TABLES) {
     const row = byName[table];
-    if (row.present === false) {
-      normalized[table] = { count: 0, md5: null };
-      continue;
-    }
-    if (!Number.isInteger(Number(row.count)) || Number(row.count) < 0) fail(`${file}: count inválido em ${table}`);
-    const digest = row.md5 ?? row.sha256;
-    if (typeof digest !== "string" || !/^[0-9a-f]{32}$|^[0-9a-f]{64}$/.test(digest)) {
-      fail(`${file}: hash inválido em ${table}`);
-    }
-    normalized[table] = { count: Number(row.count), md5: digest };
+    normalized[table] = { count: Number(row.count), md5: row.md5 ?? row.sha256 };
   }
   return normalized;
 }

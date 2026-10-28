@@ -80,7 +80,31 @@ const { createHash } = require("crypto");
   return $status
 }
 
+function Invoke-PreflightResidues {
+  $code = @'
+const { Client } = require("pg");
+(async () => {
+  const c = new Client({ connectionString: process.env.TEST_DATABASE_URL, ssl: false });
+  await c.connect();
+  try {
+    const result = await c.query(`select
+      (select count(*)::int from public.stores where name like '%f572test-%' or name like '%f572proof-%') as stores,
+      (select count(*)::int from auth.users where email like '%f572test-%' or email like '%f572proof-%') as users,
+      (select count(*)::int from public.store_market_settings s join public.stores st on st.id=s.store_id where st.name like '%f572test-%' or st.name like '%f572proof-%') as settings,
+      (select count(*)::int from public.user_preferences p join auth.users u on u.id=p.user_id where u.email like '%f572test-%' or u.email like '%f572proof-%') as preferences,
+      (select coalesce(jsonb_agg(id), '[]'::jsonb) from public.stores where name like '%f572test-%' or name like '%f572proof-%') as store_ids,
+      (select coalesce(jsonb_agg(id), '[]'::jsonb) from auth.users where email like '%f572test-%' or email like '%f572proof-%') as user_ids`);
+    console.log(JSON.stringify(result.rows[0]));
+  } finally { await c.end(); }
+})().catch(e => { console.error(e.message); process.exit(1); });
+'@
+  $raw = & node -e $code
+  if ($LASTEXITCODE -ne 0) { throw "Falha no preflight de resíduos." }
+  return $raw | ConvertFrom-Json
+}
+
 function Invoke-Cleanup {
+  param([string]$ManifestPath)
   $code = @'
 const { Client } = require("pg");
 (async () => {
@@ -91,26 +115,28 @@ const { Client } = require("pg");
   let deletedUsers = 0;
   try {
     const stores = await c.query("select id from public.stores where name like '%f572test-%' or name like '%f572proof-%'");
-    for (const row of stores.rows) {
+    const storeIds = stores.rows.map((row) => row.id);
+    for (const id of storeIds) {
       try {
-        await c.query("delete from public.store_market_settings where store_id=$1", [row.id]);
-        await c.query("delete from public.store_billing_info where store_id=$1", [row.id]);
-        await c.query("delete from public.legal_acceptances where store_id=$1", [row.id]);
-        await c.query("delete from public.stores where id=$1", [row.id]);
+        await c.query("delete from public.store_market_settings where store_id=$1", [id]);
+        await c.query("delete from public.store_billing_info where store_id=$1", [id]);
+        await c.query("delete from public.legal_acceptances where store_id=$1", [id]);
+        await c.query("delete from public.stores where id=$1", [id]);
         deletedStores += 1;
       } catch (error) {
-        failures.push({ table: "stores", id: row.id, error: error.message });
+        failures.push({ table: "stores", id, error: error.message });
       }
     }
     const users = await c.query("select id from auth.users where email like '%f572test-%' or email like '%f572proof-%'");
-    for (const row of users.rows) {
+    const userIds = users.rows.map((row) => row.id);
+    for (const id of userIds) {
       try {
-        await c.query("delete from public.user_preferences where user_id=$1", [row.id]);
-        await c.query("delete from public.admin_audit_log where target_id=$1", [row.id]);
-        await c.query("delete from auth.users where id=$1", [row.id]);
+        await c.query("delete from public.user_preferences where user_id=$1", [id]);
+        await c.query("delete from public.admin_audit_log where target_id=$1", [id]);
+        await c.query("delete from auth.users where id=$1", [id]);
         deletedUsers += 1;
       } catch (error) {
-        failures.push({ table: "auth.users", id: row.id, error: error.message });
+        failures.push({ table: "auth.users", id, error: error.message });
       }
     }
     const result = await c.query(`select
@@ -118,18 +144,32 @@ const { Client } = require("pg");
       (select count(*)::int from auth.users where email like '%f572test-%' or email like '%f572proof-%') as users,
       (select count(*)::int from public.store_market_settings s join public.stores st on st.id=s.store_id where st.name like '%f572test-%' or st.name like '%f572proof-%') as settings,
       (select count(*)::int from public.user_preferences p join auth.users u on u.id=p.user_id where u.email like '%f572test-%' or u.email like '%f572proof-%') as preferences`);
-    const payload = { ...result.rows[0], deleted_stores: deletedStores, deleted_users: deletedUsers, failures };
+    const payload = {
+      ...result.rows[0],
+      store_ids: storeIds,
+      user_ids: userIds,
+      deleted_stores: deletedStores,
+      deleted_users: deletedUsers,
+      failures,
+    };
     console.log(JSON.stringify(payload));
     if (failures.length > 0) process.exit(2);
   } finally { await c.end(); }
 })().catch(e => { console.error(e.message); process.exit(1); });
 '@
   $raw = & node -e $code
+  $payload = $null
+  if ($raw) {
+    try { $payload = $raw | ConvertFrom-Json } catch { $payload = $null }
+    if ($ManifestPath -and $payload) {
+      $payload | ConvertTo-Json -Depth 6 | Set-Content -Path $ManifestPath -Encoding utf8
+    }
+  }
   if ($LASTEXITCODE -ne 0) {
     $detail = if ($raw) { ($raw -join "`n") } else { "sem detalhe" }
     throw "Falha no cleanup de fixtures (IDs preservados): $detail"
   }
-  return $raw | ConvertFrom-Json
+  return $payload
 }
 
 if ($Action -eq "status") {
@@ -142,6 +182,10 @@ if ($Action -eq "status") {
 
 if (-not (Test-Path $EvidenceDir)) { New-Item -ItemType Directory -Path $EvidenceDir | Out-Null }
 $status = Invoke-ProofStatus
+$preflight = Invoke-PreflightResidues
+if ($preflight.stores -ne 0 -or $preflight.users -ne 0 -or $preflight.settings -ne 0 -or $preflight.preferences -ne 0) {
+  throw "Preflight encontrou resíduos de execução anterior; não serão apagados automaticamente: $($preflight | ConvertTo-Json -Compress)"
+}
 $suiteCodes = [ordered]@{}
 $evidencePaths = [ordered]@{
   db = Join-Path $EvidenceDir "57.2-05-db-evidence.json"
@@ -149,6 +193,7 @@ $evidencePaths = [ordered]@{
   comparative = Join-Path $EvidenceDir "57.2-05-comparative-proof.md"
   concurrency = Join-Path $EvidenceDir "57.2-05-concurrency.json"
   after = Join-Path $EvidenceDir "57.2-05-s1-s9-after.json"
+  cleanup = Join-Path $EvidenceDir "57.2-05-cleanup-manifest.json"
 }
 $residues = $null
 $proofError = $null
@@ -194,7 +239,7 @@ try {
   $proofError = $_
 } finally {
   try {
-    $residues = Invoke-Cleanup
+    $residues = Invoke-Cleanup -ManifestPath $evidencePaths.cleanup
   } catch {
     $cleanupError = $_
   }
@@ -221,6 +266,7 @@ $evidence = [ordered]@{
   generated_at = (Get-Date).ToUniversalTime().ToString("o")
   target = $MaskedTarget
   ledger = [ordered]@{ count = $status.ledger_count; sha256 = $status.ledger_sha256; f57_2 = $status.f57_2 }
+  preflight = $preflight
   suites = $suiteCodes
   residues = $residues
   evidence = $evidencePaths
