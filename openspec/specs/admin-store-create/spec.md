@@ -1,8 +1,9 @@
 > Synced from `fase-26-admin-operacional` (ADDED).
+> Reconciled and extended by `fase-57-2-persistencia-preferencias-multimercado`: administrative creation preserves F50 behavior (`balance = 0`, no initial grant) and initializes `store_market_settings` by delegation.
 
 ## Purpose
 
-Permitir que administradores criem lojas para usuários sem loja (convite beta) via RPC atômica `admin_create_store_for_user` que encapsula criação da loja + grant inicial + audit log na mesma transação.
+Permitir que administradores criem lojas para usuários sem loja (convite beta) via RPC atômica `admin_create_store_for_user` que encapsula criação da loja + audit log na mesma transação e inicializa `store_market_settings` por delegação. A loja é criada com `balance = 0`, sem concessão inicial; a função preserva o comportamento de crédito vigente da F50.
 
 ## Requirements
 
@@ -13,7 +14,7 @@ O sistema SHALL criar a SQL function `public.admin_create_store_for_user(p_admin
 A função SHALL ser atômica — criação da loja + audit log na mesma transação.
 
 - Passo 1: Verifica se usuário já possui loja via SELECT em `stores WHERE user_id = p_user_id`. Se existir, lança exceção `usuario_ja_possui_loja`
-- Passo 2: Chama RPC existente `create_store_with_initial_grant(p_name := p_name, p_segment := p_segment, p_user_id := p_user_id)` e captura dados da loja criada
+- Passo 2: Chama a RPC existente `create_store_with_initial_grant(p_name := p_name, p_segment := p_segment, p_user_id := p_user_id)` e captura dados da loja criada. Essa função mantém `balance = 0` e não concede crédito inicial; a inicialização de `store_market_settings` é herdada por essa delegação.
 - Passo 3: INSERT em `admin_audit_log` com actor_id=p_admin_id, action='store_create_invite', target_type='user', target_id=p_user_id, reason='Criação de loja via admin (convite beta)', metadata contendo storeId e storeName
 - Passo 4: Se qualquer passo falhar → ROLLBACK (atomicidade real)
 - SECURITY DEFINER com SET search_path = ''
@@ -21,7 +22,8 @@ A função SHALL ser atômica — criação da loja + audit log na mesma transa�
 #### Scenario: admin_create_store_for_user creates store + audit log
 
 - **WHEN** `admin_create_store_for_user` é chamado com parâmetros válidos para usuário sem loja
-- **THEN** executa `create_store_with_initial_grant` criando loja com grant inicial
+- **THEN** executa `create_store_with_initial_grant` criando loja com `balance = 0`, sem grant inicial
+- **AND** a loja recebe `store_market_settings` com padrões BR e fonte `assumed_default`
 - **AND** insere entry em `admin_audit_log` com `action='store_create_invite'`
 - **AND** retorna JSON com dados da loja criada
 
@@ -34,6 +36,38 @@ A função SHALL ser atômica — criação da loja + audit log na mesma transa�
 
 - **WHEN** INSERT em `admin_audit_log` falha
 - **THEN** ROLLBACK desfaz a criação da loja (atomicidade)
+
+### Requirement: Criação administrativa inicializa configurações sem alterar créditos
+
+A RPC `admin_create_store_for_user` SHALL garantir, na mesma transação, a existência de
+`store_market_settings` para a loja criada, com país `BR`, fonte `assumed_default` e padrões
+`BR`/`pt-BR`/`BRL`/`America/Sao_Paulo`.
+
+A inicialização SHALL ser idempotente e SHALL NOT alterar o comportamento **vigente** de créditos:
+a implementação atual cria a loja com `balance = 0`, sem concessão inicial, mesmo que
+`create_store_with_initial_grant` receba um valor de grant. Auditoria (`store_create_invite`),
+verificação de loja única e `SECURITY DEFINER` também permanecem inalterados.
+
+Esta fatia SHALL NOT criar, remover ou modificar benefícios por causa das preferências de mercado.
+
+#### Scenario: Admin cria loja com configurações e sem grant
+
+- **WHEN** um administrador cria loja para usuário sem loja
+- **THEN** a loja é criada com `balance = 0`
+- **AND** existe linha de configurações com padrões BR e fonte `assumed_default`
+- **AND** o audit log registra `store_create_invite`
+- **AND** nenhum grant, entitlement ou transação de crédito é criado pela inicialização
+
+#### Scenario: Falha reverte loja, créditos e auditoria
+
+- **WHEN** a inicialização das configurações falha
+- **THEN** loja, eventuais efeitos de crédito e audit log não são persistidos
+
+#### Scenario: Loja já existente não é duplicada
+
+- **WHEN** o usuário já possui loja
+- **THEN** a criação falha com o erro existente
+- **AND** nenhuma configuração é criada
 
 ### Requirement: POST /api/admin/stores
 
@@ -49,7 +83,7 @@ O sistema SHALL expor `POST /api/admin/stores` para criação de loja para um us
 
 - **WHEN** admin POST `/api/admin/stores` com `{ userId, storeName: "Padaria do João", segment: "alimentacao" }`
 - **THEN** retorna 201 com dados da loja criada
-- **AND** loja é criada com grant inicial de créditos
+- **AND** loja é criada com `balance = 0`, sem grant inicial
 - **AND** audit log registra ação `store_create_invite`
 
 #### Scenario: Admin creates store for user that already has store
