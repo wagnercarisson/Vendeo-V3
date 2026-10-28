@@ -1,0 +1,4 @@
+Command: npx tsc -p tsconfig.typecheck.json --noEmit
+Exit: 0
+Output: (no diagnostics)
+Date: 2026-10-28
