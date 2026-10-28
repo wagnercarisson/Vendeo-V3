@@ -376,15 +376,22 @@ GRANT EXECUTE ON FUNCTION public.update_store_cnpj(UUID, TEXT, TEXT, TEXT, TEXT,
 -- =============================================================================
 -- REVERT (comentado; NÃO executa nada)
 -- =============================================================================
--- A reversão do banco exige AUTORIZAÇÃO explícita, backup/export se houver dados
--- e NÃO presume perda de preferências como aceitável.
--- Ordem obrigatória:
--- 1) Restaurar as definições anteriores das QUATRO RPCs recriadas:
---    - create_store_draft: 20260801000001_f36_create_store_draft.sql
---    - create_store_with_cnpj: 20260920000001_f50_demo_credits.sql
---    - create_store_with_initial_grant: 20260920000001_f50_demo_credits.sql
---    - update_store_cnpj: 20260920000001_f50_demo_credits.sql
---    (admin_create_store_for_user NÃO é restaurada: nunca foi recriada.)
--- 2) Só então dropar as funções de escrita novas (write_* / ensure).
--- 3) Dropar triggers e policies.
--- 4) Dropar as tabelas user_preferences e store_market_settings.
+-- A reversão exige AUTORIZAÇÃO explícita e NÃO presume perda de preferências
+-- como aceitável. Há DUAS reversões distintas; não confunda os escopos.
+--
+-- A) REVERT SOMENTE DO PLANO 57.2-04 (mantém tabelas/funções do plano 01):
+--    1) Restaurar as definições anteriores das QUATRO RPCs recriadas:
+--       - create_store_draft: 20260801000001_f36_create_store_draft.sql
+--       - create_store_with_cnpj: 20260920000001_f50_demo_credits.sql
+--       - create_store_with_initial_grant: 20260920000001_f50_demo_credits.sql
+--       - update_store_cnpj: 20260920000001_f50_demo_credits.sql
+--       (admin_create_store_for_user NÃO é restaurada: nunca foi recriada.)
+--    2) PARE AQUI. NÃO dropar ensure/write, triggers, policies, tabelas ou
+--       linhas de configurações: eles pertencem ao plano 01 e continuam válidos.
+--
+-- B) REVERT COMPLETO DA F57.2 (somente após A e com autorização separada):
+--    3) Dropar as funções de escrita da F57.2 (write_* / ensure).
+--    4) Dropar triggers e policies da F57.2.
+--    5) Dropar as tabelas user_preferences e store_market_settings, com
+--       backup/export explícito se houver dados que devam ser preservados.
+--    Executar B para desfazer apenas o plano 04 apagaria entregas do plano 01.

@@ -49,6 +49,20 @@ async function withRollback<T>(fn: (client: PoolClient) => Promise<T>): Promise<
   });
 }
 
+async function withCommitted<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  return withClient(async (client) => {
+    await client.query("begin");
+    try {
+      const result = await fn(client);
+      await client.query("commit");
+      return result;
+    } catch (error) {
+      await client.query("rollback").catch(() => undefined);
+      throw error;
+    }
+  });
+}
+
 async function scalar<T = number>(client: PoolClient, sql: string, values: unknown[] = []): Promise<T> {
   const result = await client.query(sql, values);
   return Object.values(result.rows[0] ?? {})[0] as T;
@@ -68,11 +82,34 @@ async function expectReject(
   }
 }
 
-async function actor(client: PoolClient, label: string): Promise<string> {
+async function waitForBlocked(
+  observer: PoolClient,
+  marker: "write_store_market_settings" | "update_store_cnpj",
+  timeoutMs = 5000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const waiting = await scalar<number>(
+      observer,
+      `select count(*)::int
+         from pg_stat_activity
+        where datname = current_database()
+          and wait_event_type = 'Lock'
+          and query ilike $1`,
+      [`%${marker}%`],
+    );
+    if (waiting > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`timeout aguardando bloqueio de ${marker}`);
+}
+
+async function actor(client: PoolClient, label: string, createdAt?: string): Promise<string> {
   const id = crypto.randomUUID();
+  const stamp = createdAt ?? new Date().toISOString();
   await client.query(
-    "insert into auth.users (id, aud, role, email, created_at, updated_at) values ($1,'authenticated','authenticated',$2,now(),now())",
-    [id, `${label}-${runId}-${id}@f57-2.test`],
+    "insert into auth.users (id, aud, role, email, created_at, updated_at) values ($1,'authenticated','authenticated',$2,$3,$3)",
+    [id, `${label}-${runId}-${id}@f57-2.test`, stamp],
   );
   createdUsers.push(id);
   return id;
@@ -80,6 +117,12 @@ async function actor(client: PoolClient, label: string): Promise<string> {
 
 function cnpjHash(label: string): string {
   return createHash("sha256").update(`${runId}-${label}`).digest("hex");
+}
+
+function cnpjNormalized(label: string): string {
+  // Formato canônico F50.3: 12 alfanuméricos + 2 dígitos, sem flexibilizar CHECK.
+  const hex = createHash("sha256").update(`${runId}-cnpj-${label}`).digest("hex").toUpperCase();
+  return `${hex.slice(0, 12)}90`;
 }
 
 async function createDraft(client: PoolClient, userId: string) {
@@ -95,9 +138,10 @@ async function createDraft(client: PoolClient, userId: string) {
 async function createWithCnpj(
   client: PoolClient,
   userId: string,
-  options: { status?: string; demo?: boolean; rootHash?: string } = {},
+  options: { status?: string; demo?: boolean; rootHash?: string; cnpj?: string } = {},
 ) {
   const rootHash = options.rootHash ?? cnpjHash(`cnpj-${crypto.randomUUID()}`);
+  const normalized = options.cnpj ?? cnpjNormalized(`cnpj-${crypto.randomUUID()}`);
   const result = await client.query<{ value: { store: Array<{ id: string }>; onboardingGranted: boolean } }>(
     `select public.create_store_with_cnpj(
        $1,$2,$3,$4,'outros',$3,'v1','v1','127.0.0.1','test',
@@ -105,7 +149,7 @@ async function createWithCnpj(
        null,'Empresa','Fantasia',$5,null,null,null,$6
      ) as value`,
     [
-      `${runId}-${crypto.randomUUID()}`,
+      normalized,
       rootHash,
       userId,
       `Loja ${runId}`,
@@ -113,7 +157,7 @@ async function createWithCnpj(
       options.demo ?? false,
     ],
   );
-  return { rootHash, value: result.rows[0].value as { store: Array<{ id: string }>; onboardingGranted: boolean } };
+  return { rootHash, normalized, value: result.rows[0].value as { store: Array<{ id: string }>; onboardingGranted: boolean } };
 }
 
 async function storeIdOf(value: { store: Array<{ id: string }> }): Promise<string> {
@@ -223,15 +267,39 @@ describe("F57.2 onboarding — crédito e configurações", () => {
     });
   });
 
-  it("C. approved + flag: demo condicional (10 créditos + entitlement)", async () => {
+  it("C. coorte legada + approved/flag: demo real (entitlement demo, 10 créditos)", async () => {
     await withRollback(async (client) => {
-      const userId = await actor(client, "demo");
+      const launchAt = await scalar<string | null>(
+        client,
+        "select launch_at::text from public.trial_offer_settings where offer_key='trial_28d_v1'",
+      );
+      if (!launchAt) throw new Error("fixture indisponível: trial_offer_settings.launch_at ausente");
+      const legacyCreatedAt = new Date(new Date(launchAt).getTime() - 86_400_000).toISOString();
+      const userId = await actor(client, "demo-legacy", legacyCreatedAt);
       const { value } = await createWithCnpj(client, userId, { status: "approved", demo: true });
       const storeId = await storeIdOf(value);
       expect(value.onboardingGranted).toBe(true);
       expect(await scalar(client, "select count(*)::int from public.credit_transactions where store_id=$1 and type='demo'", [storeId])).toBe(1);
       expect(await scalar(client, "select balance::int from public.credit_balances where store_id=$1", [storeId])).toBe(10);
-      expect(await scalar(client, "select count(*)::int from public.freemium_entitlements where store_id=$1 and benefit_type='onboarding'", [storeId])).toBe(1);
+      expect(await scalar(client, "select count(*)::int from public.freemium_entitlements where store_id=$1 and benefit_type='demo'", [storeId])).toBe(1);
+      expect(await scalar(client, "select count(*)::int from public.freemium_entitlements where store_id=$1 and benefit_type='onboarding'", [storeId])).toBe(0);
+    });
+  });
+
+  it("C2. coorte pós-launch + approved/flag: demo bloqueada pela oferta 28d", async () => {
+    await withRollback(async (client) => {
+      const launchAt = await scalar<string | null>(
+        client,
+        "select launch_at::text from public.trial_offer_settings where offer_key='trial_28d_v1'",
+      );
+      if (!launchAt) throw new Error("fixture indisponível: trial_offer_settings.launch_at ausente");
+      const postLaunchCreatedAt = new Date(Math.max(Date.now(), new Date(launchAt).getTime() + 1000)).toISOString();
+      const userId = await actor(client, "demo-post-launch", postLaunchCreatedAt);
+      const { value } = await createWithCnpj(client, userId, { status: "approved", demo: true });
+      const storeId = await storeIdOf(value);
+      expect(value.onboardingGranted).toBe(false);
+      expect(await scalar(client, "select count(*)::int from public.credit_transactions where store_id=$1", [storeId])).toBe(0);
+      expect(await scalar(client, "select count(*)::int from public.freemium_entitlements where store_id=$1", [storeId])).toBe(0);
     });
   });
 
@@ -300,7 +368,7 @@ describe("F57.2 confirmação fiscal", () => {
       const rootHash = cnpjHash("fiscal-g");
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'approved',null,null,null,false)`,
-        [storeId, `${runId}-g`, rootHash],
+        [storeId, cnpjNormalized("fiscal-g"), rootHash],
       );
       const row = await client.query<Record<string, unknown>>(
         "select country_code,country_source,default_currency,default_currency_source,settings_version::int from public.store_market_settings where store_id=$1",
@@ -327,7 +395,7 @@ describe("F57.2 confirmação fiscal", () => {
       createdStores.push(storeId);
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
-        [storeId, `${runId}-h`, cnpjHash("fiscal-h")],
+        [storeId, cnpjNormalized("fiscal-h"), cnpjHash("fiscal-h")],
       );
       expect(await scalar(client, "select count(*)::int from public.store_market_settings where store_id=$1 and country_source='fiscal_confirmation'", [storeId])).toBe(1);
     });
@@ -347,7 +415,7 @@ describe("F57.2 confirmação fiscal", () => {
       );
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'approved',null,null,null,false)`,
-        [storeId, `${runId}-i`, cnpjHash("fiscal-i")],
+        [storeId, cnpjNormalized("fiscal-i"), cnpjHash("fiscal-i")],
       );
       const row = await client.query(
         "select country_code,country_source,default_campaign_market,default_content_locale,default_currency,time_zone from public.store_market_settings where store_id=$1",
@@ -377,7 +445,7 @@ describe("F57.2 confirmação fiscal", () => {
       const before = await scalar(client, "select count(*)::int from public.credit_transactions where store_id=$1", [storeId]);
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'approved',null,null,null,true)`,
-        [storeId, `${runId}-j`, rootHash],
+        [storeId, cnpjNormalized("fiscal-j"), rootHash],
       );
       const marker = await client.query<{ reason: string }>(
         "select reason from public.freemium_entitlements where store_id=$1 and benefit_type='onboarding'",
@@ -399,7 +467,7 @@ describe("F57.2 confirmação fiscal", () => {
       await expectReject(
         client,
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'approved',null,null,null,false)`,
-        [storeId, `${runId}-k`, cnpjHash("fiscal-k")],
+        [storeId, cnpjNormalized("fiscal-k"), cnpjHash("fiscal-k")],
         /country_not_mutable/,
       );
       const after = await client.query<{ country_code: string; settings_version: number }>(
@@ -415,29 +483,23 @@ describe("F57.2 confirmação fiscal", () => {
 describe("F57.2 idempotência, atomicidade e contrato", () => {
   it("N. confirmação fiscal e PATCH concorrem nas duas ordens (CAS)", async () => {
     // (i) PATCH commitado antes do fiscal.
-    const first = await withClient(async (client) => {
-      await client.query("begin");
+    const first = await withCommitted(async (client) => {
       const userId = await actor(client, "concurrent-i");
       const draft = await createDraft(client, userId);
       const storeId = await storeIdOf(draft);
-      await client.query("commit");
       return { storeId, userId };
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       await client.query(
         `select public.write_store_market_settings($1,'BR','explicit','pt-BR','explicit','BRL','explicit','America/Sao_Paulo','explicit','BR','assumed_default',1,1)`,
         [first.storeId],
       );
-      await client.query("commit");
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
-        [first.storeId, `${runId}-ni`, cnpjHash("fiscal-ni")],
+        [first.storeId, cnpjNormalized("fiscal-ni"), cnpjHash("fiscal-ni")],
       );
-      await client.query("commit");
     });
     {
       const row = await withClient(async (client) =>
@@ -451,45 +513,37 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
         country_source: "fiscal_confirmation",
         default_campaign_market: "BR",
         default_campaign_market_source: "explicit",
-        settings_version: 2,
+        settings_version: 3,
       });
     }
 
     // (ii) Fiscal primeiro; PATCH com versão antiga falha e não altera nada.
-    const second = await withClient(async (client) => {
-      await client.query("begin");
+    const second = await withCommitted(async (client) => {
       const userId = await actor(client, "concurrent-ii");
       const draft = await createDraft(client, userId);
       const storeId = await storeIdOf(draft);
-      await client.query("commit");
       return { storeId, userId };
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
-        [second.storeId, `${runId}-nii`, cnpjHash("fiscal-nii")],
+        [second.storeId, cnpjNormalized("fiscal-nii"), cnpjHash("fiscal-nii")],
       );
-      await client.query("commit");
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       await expectReject(
         client,
         `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Asuncion','explicit','BR','assumed_default',1,1)`,
         [second.storeId],
         /settings_version_conflict/,
       );
-      await client.query("commit");
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       // Versão real é 2: a escrita correta deve observar exatamente essa versão.
       await client.query(
         `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Asuncion','explicit','BR','assumed_default',1,2)`,
         [second.storeId],
       );
-      await client.query("commit");
     });
     {
       const row = await withClient(async (client) =>
@@ -507,8 +561,7 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
     }
 
     // Linha ausente: PATCH legado antes do fiscal.
-    const missingA = await withClient(async (client) => {
-      await client.query("begin");
+    const missingA = await withCommitted(async (client) => {
       const userId = await actor(client, "concurrent-missing-a");
       const storeId = crypto.randomUUID();
       await client.query("insert into public.stores (id,user_id,name,segment) values ($1,$2,$3,'outros')", [
@@ -516,25 +569,20 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
         userId,
         `Loja ${runId} missing-a`,
       ]);
-      await client.query("commit");
       createdStores.push(storeId);
       return storeId;
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       await client.query(
         `select public.write_store_market_settings($1,'BR','legacy_br','pt-BR','legacy_br','BRL','legacy_br','America/Sao_Paulo','legacy_br','BR','legacy_br',1,0)`,
         [missingA],
       );
-      await client.query("commit");
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
-        [missingA, `${runId}-nma`, cnpjHash("fiscal-nma")],
+        [missingA, cnpjNormalized("fiscal-nma"), cnpjHash("fiscal-nma")],
       );
-      await client.query("commit");
     });
     {
       const row = await withClient(async (client) =>
@@ -547,8 +595,7 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
     }
 
     // Linha ausente: fiscal antes; PATCH com expected 0 conflita.
-    const missingB = await withClient(async (client) => {
-      await client.query("begin");
+    const missingB = await withCommitted(async (client) => {
       const userId = await actor(client, "concurrent-missing-b");
       const storeId = crypto.randomUUID();
       await client.query("insert into public.stores (id,user_id,name,segment) values ($1,$2,$3,'outros')", [
@@ -556,27 +603,22 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
         userId,
         `Loja ${runId} missing-b`,
       ]);
-      await client.query("commit");
       createdStores.push(storeId);
       return storeId;
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       await client.query(
         `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
-        [missingB, `${runId}-nmb`, cnpjHash("fiscal-nmb")],
+        [missingB, cnpjNormalized("fiscal-nmb"), cnpjHash("fiscal-nmb")],
       );
-      await client.query("commit");
     });
-    await withClient(async (client) => {
-      await client.query("begin");
+    await withCommitted(async (client) => {
       await expectReject(
         client,
         `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Asuncion','explicit','BR','legacy_br',1,0)`,
         [missingB],
         /settings_version_conflict/,
       );
-      await client.query("commit");
     });
     {
       const row = await withClient(async (client) =>
@@ -585,7 +627,100 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
           [missingB],
         ),
       );
-      expect(row.rows[0]).toMatchObject({ country_code: "BR", country_source: "fiscal_confirmation", settings_version: 1 });
+      expect(row.rows[0]).toMatchObject({ country_code: "BR", country_source: "fiscal_confirmation", settings_version: 2 });
+    }
+  });
+
+  it("N2. disputa realmente sobreposta entre confirmação fiscal e PATCH", async () => {
+    const first = await withCommitted(async (client) => {
+      const userId = await actor(client, "overlap-write-first");
+      const draft = await createDraft(client, userId);
+      return storeIdOf(draft);
+    });
+    const second = await withCommitted(async (client) => {
+      const userId = await actor(client, "overlap-fiscal-first");
+      const draft = await createDraft(client, userId);
+      return storeIdOf(draft);
+    });
+
+    const fiscal = await pool.connect();
+    const writer = await pool.connect();
+    const observer = await pool.connect();
+    try {
+      // Ordem 1: fiscal segura a tabela; PATCH bloqueia e depois conflita.
+      await fiscal.query("begin");
+      await fiscal.query("lock table public.store_market_settings in access exclusive mode");
+      await fiscal.query(
+        `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
+        [first, cnpjNormalized("fiscal-overlap-a"), cnpjHash("fiscal-overlap-a")],
+      );
+      const blockedWrite = (async () => {
+        await writer.query("begin");
+        try {
+          await writer.query(
+            `select public.write_store_market_settings($1,'BR','explicit','pt-BR','explicit','BRL','explicit','America/Sao_Paulo','explicit','BR','assumed_default',1,1)`,
+            [first],
+          );
+          await writer.query("commit");
+        } catch (error) {
+          await writer.query("rollback").catch(() => undefined);
+          throw error;
+        }
+      })();
+      void blockedWrite.catch(() => undefined);
+      await waitForBlocked(observer, "write_store_market_settings");
+      await fiscal.query("commit");
+      await expect(blockedWrite).rejects.toThrow(/settings_version_conflict/);
+      const afterFirst = await withClient(async (client) =>
+        client.query<{ settings_version: number }>(
+          "select settings_version::int from public.store_market_settings where store_id=$1",
+          [first],
+        ),
+      );
+      expect(afterFirst.rows[0].settings_version).toBe(2);
+
+      // Ordem 2: PATCH segura a linha; fiscal bloqueia e depois incrementa.
+      await writer.query("begin");
+      await writer.query(
+        `select public.write_store_market_settings($1,'PY','explicit','es-PY','explicit','PYG','explicit','America/Sao_Paulo','explicit','BR','assumed_default',1,1)`,
+        [second],
+      );
+      const blockedFiscal = (async () => {
+        await fiscal.query("begin");
+        try {
+          await fiscal.query(
+            `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
+            [second, cnpjNormalized("fiscal-overlap-b"), cnpjHash("fiscal-overlap-b")],
+          );
+          await fiscal.query("commit");
+        } catch (error) {
+          await fiscal.query("rollback").catch(() => undefined);
+          throw error;
+        }
+      })();
+      void blockedFiscal.catch(() => undefined);
+      await waitForBlocked(observer, "update_store_cnpj");
+      await writer.query("commit");
+      await blockedFiscal;
+      const row = await withClient(async (client) =>
+        client.query<Record<string, unknown>>(
+          "select country_code,country_source,default_campaign_market,default_campaign_market_source,settings_version::int from public.store_market_settings where store_id=$1",
+          [second],
+        ),
+      );
+      expect(row.rows[0]).toMatchObject({
+        country_code: "BR",
+        country_source: "fiscal_confirmation",
+        default_campaign_market: "PY",
+        default_campaign_market_source: "explicit",
+        settings_version: 3,
+      });
+    } finally {
+      await fiscal.query("rollback").catch(() => undefined);
+      await writer.query("rollback").catch(() => undefined);
+      fiscal.release();
+      writer.release();
+      observer.release();
     }
   });
 
@@ -683,6 +818,10 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
       const userA = await actor(client, "billing-a");
       const created = await createWithCnpj(client, userA, { status: "unverified" });
       const storeA = await storeIdOf(created.value);
+      await client.query(
+        "insert into public.store_billing_info (store_id, billing_address_country, billing_address_city) values ($1,'PY','Asunción')",
+        [storeA],
+      );
       await client.query("delete from public.store_market_settings where store_id=$1", [storeA]);
       await client.query("select public.ensure_store_market_settings($1,'BR','fiscal_confirmation')", [storeA]);
 
@@ -690,16 +829,13 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
       const draft = await createDraft(client, userB);
       const storeB = await storeIdOf(draft);
       await client.query(
-        `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
-        [storeB, `${runId}-pb`, cnpjHash("fiscal-pb")],
+        "insert into public.store_billing_info (store_id, billing_address_country, billing_address_city) values ($1,'PY','Asunción')",
+        [storeB],
       );
-
-      for (const storeId of [storeA, storeB]) {
-        await client.query(
-          "insert into public.store_billing_info (store_id, billing_address_country, billing_address_city) values ($1,'PY','Asunción')",
-          [storeId],
-        );
-      }
+      await client.query(
+        `select public.update_store_cnpj($1,$2,$3,'Empresa','Fantasia',null,'unverified',null,null,null,false)`,
+        [storeB, cnpjNormalized("fiscal-pb"), cnpjHash("fiscal-pb")],
+      );
 
       for (const storeId of [storeA, storeB]) {
         const settings = await client.query<Record<string, unknown>>(
