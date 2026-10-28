@@ -187,3 +187,19 @@ Evidências em `evidence/`: `ledger-before.txt`, `ledger-after.txt`, `counts-bef
 
 ### Evidências adicionais
 `evidence/migrations-alignment-after.txt`, `evidence/backup-verification.txt`, `evidence/backup-info-copy.txt`.
+
+## Complemento 2026-10-28 — estratégia de ambiente revisada
+
+**Correção documental (sem executar restore):** o `BACKUP-INFO` local
+(`G:\Vendeo-Homolog\recovery\homolog-pre-f57-2-20261028T155314Z-BACKUP-INFO.txt`) recomendava
+ambiente descartável para recuperação. Foi ajustado para **recuperação autorizada do próprio
+homolog existente** (`supabase_db_vendeo-homolog`, `127.0.0.1:57782`, workdir `G:\Vendeo-Homolog`).
+
+Limitações preservadas e reafirmadas:
+- restore **não foi executado nem testado**;
+- o dump contém metadados/estrutura/dados do banco, **não** os arquivos físicos do Storage;
+- `pg_restore --list` não equivale a restore testado;
+- cada etapa de restore exige autorização e checkpoint próprios.
+
+A cópia `evidence/backup-info-copy.txt` permanece como **histórico** da versão anterior; este
+complemento registra a correção sem reescrever a cronologia.

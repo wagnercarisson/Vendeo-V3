@@ -199,9 +199,11 @@ preparar o futuro, mas nenhuma rota/fluxo cria loja PY nesta fatia.
   (não vaza existência); 401 sem sessão; 403 CSRF.
 - Nenhuma autorização deriva de `country_code`.
 
-### 9. Migrations: uma entrega aditiva
+### 9. Migrations: duas entregas aditivas (01 schema; 04 onboarding)
 
-Uma migration `YYYYMMDDHHmmss_f57_2_market_preferences.sql` (timestamp UTC real na execução):
+Duas migrations aditivas, com timestamps UTC reais e únicos:
+
+**(a) `YYYYMMDDHHmmss_f57_2_market_preferences.sql` (plano 01)**
 
 1. `CREATE TABLE user_preferences` + checks + trigger `updated_at`.
 2. `CREATE TABLE store_market_settings` + checks + trigger `updated_at`.
@@ -263,12 +265,30 @@ ramo de crédito é reescrito, e os testes devem comparar transações/entitleme
   preservando tabelas/dados; reversão do banco exige autorização, restauração prévia das RPCs
   anteriores e backup/export quando houver dados. Nenhuma perda é presumida aceitável.
 
+## Environment Strategy Revision (2026-10-28)
+
+A estratégia inicial de harness descartável foi **substituída** por decisão de usar exclusivamente o
+homolog existente:
+
+- alvo único `vendeo-homolog` (`127.0.0.1:57782`, banco `postgres`, container
+  `supabase_db_vendeo-homolog`), ledger baseline 149, backup pré-F57.2 em
+  `G:\Vendeo-Homolog\recovery\`;
+- nenhum ambiente é criado/destruído; restauração do backup não faz parte da validação;
+- identidade do alvo = host/porta/banco + fingerprint do ledger (versões `f57_2_` excluídas);
+- S0 e comparação base×novo usam snapshots/evidências capturados antes e depois da migration no
+  MESMO homolog; não há segundo banco vivo;
+- `create_store_with_cnpj` tem dois overloads pré-existentes (20/27); a F57.2 não cria/remove
+  overload e não apaga funções legadas;
+- como a migration do plano 01 não pode ser reescrita após aplicada, a recriação das RPCs de
+  onboarding passa a ser uma **segunda migration aditiva** (plano 04).
+
 ## Migration Plan
 
 1. Revisão desta proposta e do design pelo usuário/Codex.
 2. Planejamento GSD (`/gsd-plan-phase`), com planos pequenos e checkpoints.
-3. Implementação local + testes unitários/rotas + testes de banco em **PostgreSQL descartável
-   isolado** (criar, migrar, provar, destruir), com evidência versionada.
+3. Implementação local + testes unitários/rotas + testes de banco no **homolog existente**
+   (`vendeo-homolog`, 127.0.0.1:57782), com fingerprint do ledger, cleanup por IDs e evidência
+   versionada. Nenhum ambiente é criado/destruído; restore do backup não faz parte da validação.
 4. Aplicação da migration no ambiente alvo **antes** do deploy do código; conferir unicidade do
    timestamp na branch, na `main` e no conjunto integrado.
 5. Deploy do código. As rotas novas são **superfície de API autenticada**: mesmo sem UI, ficam

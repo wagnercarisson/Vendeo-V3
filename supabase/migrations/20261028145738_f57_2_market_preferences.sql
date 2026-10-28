@@ -386,8 +386,9 @@ BEGIN
   IF v_inserted = 1 THEN
     IF p_expected_version IS DISTINCT FROM 0 THEN
       DELETE FROM public.store_market_settings WHERE store_id = p_store_id;
+      -- Não havia linha: a versão real vigente é 0 (não a temporária 1).
       RAISE EXCEPTION 'settings_version_conflict'
-        USING HINT = '1', DETAIL = '1';
+        USING HINT = '0', DETAIL = '0';
     END IF;
     SELECT * INTO v_settings
       FROM public.store_market_settings
@@ -485,8 +486,9 @@ BEGIN
   IF v_inserted = 1 THEN
     IF p_expected_version IS DISTINCT FROM 0 THEN
       DELETE FROM public.user_preferences WHERE user_id = p_user_id;
+      -- Não havia linha: a versão real vigente é 0 (não a temporária 1).
       RAISE EXCEPTION 'preferences_version_conflict'
-        USING HINT = '1', DETAIL = '1';
+        USING HINT = '0', DETAIL = '0';
     END IF;
     SELECT * INTO v_pref
       FROM public.user_preferences

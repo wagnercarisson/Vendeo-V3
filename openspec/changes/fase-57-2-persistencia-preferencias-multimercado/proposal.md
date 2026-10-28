@@ -70,6 +70,10 @@ Esta fatia persiste **preferências** — não conecta escolhas a telas nem à g
   Aplicar a migration antes do código. As rotas novas são API autenticada e ficam acessíveis
   mesmo sem UI — não são inertes. Rollback preferencial é só do código, preservando tabelas e
   dados; reversão do banco exige autorização e restauração prévia das RPCs anteriores.
+- **Ambiente de validação (revisão 2026-10-28):** usa exclusivamente o homolog existente
+  (`127.0.0.1:57782`, ledger 149, backup pré-F57.2). Nenhum stack/ambiente descartável é criado ou
+  destruído; S0 e base×novo usam snapshots/evidências do mesmo homolog. As RPCs de onboarding são
+  recriadas em **segunda migration aditiva**.
 - **Benefícios:** nenhum grant, entitlement ou marcador de crédito é criado, removido ou alterado
   por esta fatia. O comportamento condicional vigente de `create_store_with_cnpj` e
   `update_store_cnpj` é preservado; a criação administrativa continua sem concessão.

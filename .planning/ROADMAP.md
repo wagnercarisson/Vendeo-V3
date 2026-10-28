@@ -646,18 +646,18 @@ Plans:
 
 **Requirements:** REQ-57.2-01, REQ-57.2-02, REQ-57.2-03, REQ-57.2-04, REQ-57.2-05, REQ-57.2-06, REQ-57.2-07, REQ-57.2-08, REQ-57.2-09, REQ-57.2-10, REQ-57.2-11, REQ-57.2-12
 
-**Requirement scope:** (01) tabelas com proveniência/versões; (02) legado sem escrita, erro 503/500; (03) padrões, recomposição e explicit; (04) escrita protegida (RPC service_role, RLS, CSRF, DTO); (05) CAS/linha ausente/confirmação fiscal; (06) rotas e ownership dedicada; (07) inicialização idempotente; (08) confirmação fiscal preserva escolhas; (09) não regressão de créditos/benefícios/legal/auditoria/fiscal; (10) provas de banco isolado; (11) gates e 72 testes market-context; (12) runbook e handoff.
+**Requirement scope:** (01) tabelas com proveniência/versões; (02) legado sem escrita, erro 503/500; (03) padrões, recomposição e explicit; (04) escrita protegida (RPC service_role, RLS, CSRF, DTO); (05) CAS/linha ausente/confirmação fiscal; (06) rotas e ownership dedicada; (07) inicialização idempotente; (08) confirmação fiscal preserva escolhas; (09) não regressão de créditos/benefícios/legal/auditoria/fiscal; (10) provas de banco no homolog existente; (11) gates e 72 testes market-context; (12) runbook e handoff.
 
 **Plans:** 6 planos em 4 waves.
 
 Plans:
-- [ ] 57.2-01-PLAN.md — migration aditiva: tabelas, RLS, grants, `ensure_store_market_settings` + RPCs de escrita + contrato de banco + harness Supabase descartável `scripts/f57-2/isolated-db.mjs` (wave 1; checkpoint de banco).
+- [ ] 57.2-01-PLAN.md — migration aditiva: tabelas, RLS, grants, `ensure_store_market_settings` + RPCs de escrita + contrato de banco + baseline read-only do homolog (wave 1; checkpoint de banco).
 - [ ] 57.2-02-PLAN.md — fundação `src/lib/market-preferences/` (errors/DTOs) + serviço e rota `/api/preferences` (wave 1).
 - [ ] 57.2-03-PLAN.md — serviço e rota `/api/store/market-settings`: loader dedicado, recomposição e CAS (wave 2).
-- [ ] 57.2-04-PLAN.md — 4 RPCs recriadas + criação administrativa via delegação (não recriada) na mesma migration + regressão de crédito (wave 2; checkpoint de banco).
-- [ ] 57.2-05-PLAN.md — provas de RLS/grants/atomicidade/concorrência e comparação base×novo usando o harness do plano 01 (wave 3; checkpoint de banco).
+- [ ] 57.2-04-PLAN.md — segunda migration aditiva: 4 RPCs recriadas + criação administrativa via delegação (não recriada) + regressão de crédito (wave 2; checkpoint de banco).
+- [ ] 57.2-05-PLAN.md — provas de RLS/grants/atomicidade/concorrência e comparação base×novo no homolog existente, com baseline JSON (wave 3; checkpoint de banco).
 - [ ] 57.2-06-PLAN.md — gates, revisão SQL/escopo, segurança ASVS L1, runbook e handoff (wave 4).
 
-**Waves:** `01/02 → 03/04 → 05 → 06`. O arquivo de migration é compartilhado por 01 e 04 em waves distintas (sequenciado, nunca paralelo).
+**Waves:** `01/02 → 03/04 → 05 → 06`. As migrations são separadas: 01 (schema/RPCs base) e 04 (onboarding), aplicadas em waves distintas.
 
 **Diretório:** `.planning/phases/57.2-f57-2-persist-ncia-de-prefer-ncias-multimercado/`.
