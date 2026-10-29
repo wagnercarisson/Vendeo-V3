@@ -13,6 +13,7 @@
 | # | Phase | Goal / status |
 |---|---|---|
 | 57.2 | F57.2 — Persistência de preferências multimercado | **Concluída, validada em produção e arquivada (2026-10-28).** Persistência por usuário/loja, proveniência, CAS, rotas autenticadas e inicialização nos fluxos; UAT 5/5; migrations aplicadas em produção; smoke PASS; sem UI e sem habilitação PY. |
+| 57.4 | F57.4 — Base de tradução da interface e configurações | **Planejamento GSD concluído; aguardando revisão.** Catálogos `pt-BR`/`es-419`, shell traduzido, página `/configuracoes` e preferência persistida; 4 planos em 3 waves; sem implementação. |
 | 23 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ TextProvider + Copy Director | ConcluÃƒÆ’Ã‚Â­da; fundaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de IA de texto e Copy Director intercambiÃƒÆ’Ã‚Â¡vel |
 | 24 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Credit Tables + CreditService | ConcluÃƒÆ’Ã‚Â­da; crÃƒÆ’Ã‚Â©ditos concedidos, consumidos e auditÃƒÆ’Ã‚Â¡veis |
 | 25 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Pipeline de GeraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o v1.5 | ConcluÃƒÆ’Ã‚Â­da; copy e crÃƒÆ’Ã‚Â©ditos integrados ao pipeline |
@@ -661,3 +662,29 @@ Plans:
 **Waves:** `01/02 → 03/04 → 05 → 06`. As migrations são separadas: 01 (schema/RPCs base) e 04 (onboarding), aplicadas em waves distintas.
 
 **Diretório:** `.planning/phases/57.2-f57-2-persist-ncia-de-prefer-ncias-multimercado/`.
+
+### Phase 57.4: F57.4 — Base de tradução da interface e configurações
+
+**Status:** **Planejamento GSD concluído; aguardando revisão.** OpenSpec aprovado; 4 planos em 3 waves; nenhuma implementação iniciada.
+
+**Goal:** entregar a fundação de tradução da interface (`pt-BR`/`es-419`), traduzir o shell compartilhado do lojista, preservar `/admin` em português e criar `/configuracoes` autenticada com escolha persistida de idioma, mantendo conteúdo/campanhas em `pt-BR`/`es-PY` e sem alterar loja, moeda, cobrança ou créditos.
+
+**Depends on:** F57.3 (`SUPPORTED_UI_LOCALES`, `/api/preferences` e preferência validados em produção). Branch `feature/fase57-4-base-traducao-interface-configuracoes`.
+
+**Requirements:** REQ-57.4-01, REQ-57.4-02, REQ-57.4-03, REQ-57.4-04, REQ-57.4-05, REQ-57.4-06, REQ-57.4-07, REQ-57.4-08
+
+**Requirement scope:** (01) catálogos/paridade/interpolação; (02) resolução/payload/timeout/fallback; (03) shell traduzido e `lang` por região; (04) menu/entrada de configurações; (05) página autenticada sem loja/leitura sem escrita; (06) salvamento CAS/erros/router.refresh; (07) admin e logout preservados; (08) validação/gates/homolog.
+
+**Plans:** 4 plans in 3 waves (01 -> 02/03 -> 04).
+
+Plans:
+- [ ] 57.4-01-PLAN.md — fundação i18n (catálogos/paridade/interpolação), resolução server-side com timeout de 200 ms e contrato de payload do AppShell
+- [ ] 57.4-02-PLAN.md — shell traduzido (sidebar/drawer/topbar/menu/badge/sino), menu Conta -> Novidades -> Configurações -> Sair, admin em pt-BR e logout por prop
+- [ ] 57.4-03-PLAN.md — `/configuracoes` autenticada sem loja, leitura sem escrita e formulário de idioma com CAS e matriz de erros
+- [ ] 57.4-04-PLAN.md — gates locais, medições de payload/timeout, prova funcional real no homolog existente e aceite humano
+
+**Waves:** `01 -> 02/03 -> 04`. Planos 02 e 03 não compartilham arquivos; 04 é checkpoint humano.
+
+**Canonical refs:** `openspec/changes/fase-57-4-base-traducao-interface-configuracoes/` (proposal, design, tasks e seis delta specs), `.planning/phases/57.4-f57-4-base-de-tradu-o-da-interface-e-configura-es/57.4-CONTEXT.md`, `57.4-PATTERNS.md`.
+
+**Diretório:** `.planning/phases/57.4-f57-4-base-de-tradu-o-da-interface-e-configura-es/`.

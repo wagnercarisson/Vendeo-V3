@@ -51,7 +51,8 @@ Criar `src/lib/i18n/` com:
 - `translate.ts` — `formatMessage(template, params)` com interpolação `{name}`; sem avaliação
   dinâmica, sem HTML.
 - `server.ts` — leitura cacheada da preferência e montagem do contexto de renderização.
-- `client.tsx` — provider opcional para componentes cliente que não recebem messages por prop.
+- Sem provider de cliente: componentes recebem messages/locale por props; catálogos não são
+  buscados no navegador.
 
 Namespaces:
 - `common`: ações reutilizáveis de formulário (`save`, `retry`, `loading`).
