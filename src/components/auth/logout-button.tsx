@@ -6,9 +6,10 @@ import { clearAllDrafts } from "@/lib/store-onboarding/draft-store";
 
 interface LogoutButtonProps {
   className?: string;
+  label?: string;
 }
 
-export function LogoutButton({ className = "" }: LogoutButtonProps) {
+export function LogoutButton({ className = "", label }: LogoutButtonProps) {
   const [loading, setLoading] = useState(false);
 
   function clearStorage() {
@@ -45,7 +46,7 @@ export function LogoutButton({ className = "" }: LogoutButtonProps) {
         ) : (
           <LogOut className="h-4 w-4" />
         )}
-        Sair
+        {label ?? "Sair"}
       </button>
     </form>
   );

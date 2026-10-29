@@ -42,6 +42,7 @@ export function AppShell({
   const shellEffective =
     effectiveLocale === "es-419" ? (shellMessagesEs ?? shellMessages) : shellMessages;
   const lang = effectiveLocale === "es-419" ? "es-419" : undefined;
+  const isAdmin = pathname?.startsWith("/admin") ?? false;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const asideRef = useRef<HTMLElement>(null);
@@ -85,6 +86,10 @@ export function AppShell({
           onToggleMenu={() => setIsDrawerOpen(!isDrawerOpen)}
           isDrawerOpen={isDrawerOpen}
           toggleButtonRef={toggleButtonRef}
+          messages={shellEffective}
+          locale={effectiveLocale}
+          isAdmin={isAdmin}
+          lang={lang}
         />
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
       </div>

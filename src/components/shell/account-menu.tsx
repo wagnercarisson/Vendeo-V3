@@ -2,21 +2,36 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Settings, ChevronDown, Sparkles } from "lucide-react";
+import { Settings, ChevronDown, Sparkles, UserCircle } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import type { JwtPayload } from "@/types/auth";
+import type { ShellMessages, SupportedUiLocale } from "@/lib/i18n";
 
 interface AccountMenuProps {
   user: { claims: JwtPayload };
+  messages: ShellMessages;
+  locale?: SupportedUiLocale;
+  lang?: string;
+  isAdmin?: boolean;
 }
 
-export function AccountMenu({ user }: AccountMenuProps) {
+const itemClassName =
+  "flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body";
+
+export function AccountMenu({
+  user,
+  messages,
+  lang,
+  isAdmin,
+}: AccountMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const displayName =
-    user.claims.email || user.claims.sub?.slice(0, 8) || "Usuário";
+    user.claims.email ||
+    user.claims.sub?.slice(0, 8) ||
+    messages.account.fallbackUser;
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -43,7 +58,8 @@ export function AccountMenu({ user }: AccountMenuProps) {
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        aria-label="Menu da conta"
+        aria-label={messages.account.trigger}
+        lang={lang}
         className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-0 rounded-lg px-2 py-1.5 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body sm:gap-2 sm:px-3"
       >
         <span className="hidden sm:inline-block max-w-[120px] truncate">{displayName}</span>
@@ -62,24 +78,63 @@ export function AccountMenu({ user }: AccountMenuProps) {
           <div className="px-3 py-2 text-xs text-text-muted font-body border-b border-border mb-1">
             {displayName}
           </div>
-          <Link
-            href="/conta"
-            onClick={() => setIsOpen(false)}
-            className="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body"
+          {isAdmin ? (
+            <>
+              <Link
+                href="/conta"
+                lang={lang}
+                onClick={() => setIsOpen(false)}
+                className={itemClassName}
+              >
+                <Settings className="h-4 w-4" />
+                {messages.account.settings}
+              </Link>
+              <Link
+                href="/novidades"
+                lang={lang}
+                onClick={() => setIsOpen(false)}
+                className={itemClassName}
+              >
+                <Sparkles className="h-4 w-4" />
+                {messages.nav.news}
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/conta"
+                lang={lang}
+                onClick={() => setIsOpen(false)}
+                className={itemClassName}
+              >
+                <UserCircle className="h-4 w-4" />
+                {messages.nav.account}
+              </Link>
+              <Link
+                href="/novidades"
+                lang={lang}
+                onClick={() => setIsOpen(false)}
+                className={itemClassName}
+              >
+                <Sparkles className="h-4 w-4" />
+                {messages.nav.news}
+              </Link>
+              <Link
+                href="/configuracoes"
+                lang={lang}
+                onClick={() => setIsOpen(false)}
+                className={itemClassName}
+              >
+                <Settings className="h-4 w-4" />
+                {messages.account.settings}
+              </Link>
+            </>
+          )}
+          <div
+            lang={lang}
+            className="flex min-h-[44px] items-center rounded-lg px-1 text-sm text-text-secondary hover:bg-bg-elevated transition-colors duration-200 font-body"
           >
-            <Settings className="h-4 w-4" />
-            Configurações
-          </Link>
-          <Link
-            href="/novidades"
-            onClick={() => setIsOpen(false)}
-            className="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body"
-          >
-            <Sparkles className="h-4 w-4" />
-            Novidades
-          </Link>
-          <div className="flex min-h-[44px] items-center rounded-lg px-1 text-sm text-text-secondary hover:bg-bg-elevated transition-colors duration-200 font-body">
-            <LogoutButton />
+            <LogoutButton label={messages.account.logout} />
           </div>
         </div>
       )}
