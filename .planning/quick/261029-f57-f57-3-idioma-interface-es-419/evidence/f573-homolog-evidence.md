@@ -112,25 +112,22 @@ Não foram executados a suíte completa de onboarding nem as provas comparativas
   counts/MD5 iguais ao baseline. Único drift: ledger (esperado).
 - Ledger final: **152**.
 
-## Smoke de API — BLOQUEADO (tentativa de retomada em 2026-10-29)
+## Smoke de API — CONCLUÍDO (2026-10-29)
 
-- A aplicação Next.js está em execução em `127.0.0.1:3000` (PID 24012,
-  `next/dist/server/lib/start-server.js`).
-- `.env.local` aponta `SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_URL` para
-  `http://127.0.0.1:57781` (homolog), não para produção.
-- A sessão autenticada existe apenas no navegador do usuário. O shell do agente não possui
-  cookies de sessão: `GET http://127.0.0.1:3000/api/preferences` retornou **401**.
-- Não é possível usar a sessão existente a partir do shell sem extrair cookies do navegador,
-  o que foi explicitamente proibido. Nenhuma credencial foi procurada ou extraída.
-- Portanto, nenhum PATCH foi executado: os cenários de `es-419`, `es-PY` 400, 409, omitido,
-  `null` e independência da loja permanecem **não executados**.
-- Nenhuma alternativa em produção foi acessada.
-- Ação necessária: executar o smoke a partir do navegador autenticado ou disponibilizar um
-  mecanismo autorizado de sessão para o agente. Sem isso, o gate de API permanece aberto.
+- App confirmada em `127.0.0.1:3000`, apontando ao homolog (`127.0.0.1:57781`).
+- Conta de teste `teste@teste.com`; login por senha bloqueado por captcha local.
+- Com autorização, sessão one-time obtida via Admin API local (`generateLink` + `verifyOtp`);
+  nenhum cookie/token foi impresso, persistido ou versionado.
+- Resultados completos: `evidence/f573-api-smoke.md`.
+- Resumo: `es-419` 200 e persistido; `es-PY` 400 sem escrita; versão antiga 409; omitido sem
+  escrita; `null` → `pt-BR`/`legacy_br`; configurações da loja idênticas antes/depois.
+- Preferência inicial era legado sem linha (`v0`). A linha foi materializada e preservada:
+  estado final `pt-BR`/`legacy_br`, versão **3**, sem retrocesso.
+- Nenhuma produção foi acessada.
 
 ## Limites respeitados
 
 Sem produção, push, merge, deploy, restore, reinstalação de dependências, recriação de ambiente,
 `db reset`, `REVERT`, alteração de outras tabelas/RPCs/permissões, criação de fixtures ou
-extração de credenciais/cookies. Nenhuma migration foi reaplicada e nenhuma suíte de banco foi
-repetida.
+extração de credenciais/cookies do navegador. Nenhuma migration foi reaplicada e nenhuma suíte
+de banco foi repetida. O script temporário de smoke e os arquivos temporários foram removidos.
