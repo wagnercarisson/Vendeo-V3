@@ -3,11 +3,13 @@ import {
   isSupportedLocale,
   isSupportedMarket,
   isSupportedTimeZone,
+  isSupportedUiLocale,
   resolveUiLocale,
   type SupportedContentLocale,
   type SupportedCurrency,
   type SupportedMarket,
   type SupportedTimeZone,
+  type SupportedUiLocale,
 } from "@/lib/market-context";
 import { StoredPreferencesInvalidError } from "./errors";
 
@@ -41,7 +43,7 @@ export type DbCountrySource =
   | "legacy_br";
 
 export interface UserLocalePreferenceDTO {
-  uiLocale: SupportedContentLocale;
+  uiLocale: SupportedUiLocale;
   source: "explicit" | "legacy_br";
   version: number;
 }
@@ -113,8 +115,8 @@ function asInteger(value: unknown, field: string): number {
 
 export function assertSupportedUiLocale(
   value: unknown,
-): value is SupportedContentLocale {
-  return isSupportedLocale(value);
+): value is SupportedUiLocale {
+  return isSupportedUiLocale(value);
 }
 
 export function toUserLocalePreferenceDTO(

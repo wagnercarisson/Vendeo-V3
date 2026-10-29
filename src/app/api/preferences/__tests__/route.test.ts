@@ -47,12 +47,12 @@ beforeEach(() => {
 
 describe("GET /api/preferences", () => {
   it("200 com DTO allowlisted", async () => {
-    getMock.mockResolvedValue({ uiLocale: "es-PY", source: "explicit", version: 2 });
+    getMock.mockResolvedValue({ uiLocale: "es-419", source: "explicit", version: 2 });
     const { GET } = await handlers();
     const response = await GET();
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual({ uiLocale: "es-PY", source: "explicit", version: 2 });
+    expect(json).toEqual({ uiLocale: "es-419", source: "explicit", version: 2 });
     expect(Object.keys(json)).toEqual(["uiLocale", "source", "version"]);
     expect(getMock).toHaveBeenCalledWith("user-1");
   });
@@ -67,12 +67,12 @@ describe("GET /api/preferences", () => {
 
 describe("PATCH /api/preferences", () => {
   it("200 com atualização", async () => {
-    updateMock.mockResolvedValue({ uiLocale: "pt-BR", source: "explicit", version: 1 });
+    updateMock.mockResolvedValue({ uiLocale: "es-419", source: "explicit", version: 1 });
     const { PATCH } = await handlers();
-    const response = await PATCH(patchRequest({ uiLocale: "pt-BR", expectedVersion: 0 }));
+    const response = await PATCH(patchRequest({ uiLocale: "es-419", expectedVersion: 0 }));
     expect(response.status).toBe(200);
     expect(updateMock).toHaveBeenCalledWith("user-1", {
-      uiLocale: "pt-BR",
+      uiLocale: "es-419",
       expectedVersion: 0,
     });
   });
@@ -103,6 +103,17 @@ describe("PATCH /api/preferences", () => {
     expect(response.status).toBe(400);
     const json = await response.json();
     expect(json.fieldErrors.uiLocale).toBeDefined();
+  });
+
+  it("400 para es-PY na interface", async () => {
+    const { PATCH } = await handlers();
+    const response = await PATCH(
+      patchRequest({ uiLocale: "es-PY", expectedVersion: 0 }),
+    );
+    expect(response.status).toBe(400);
+    const json = await response.json();
+    expect(json.fieldErrors.uiLocale).toBeDefined();
+    expect(updateMock).not.toHaveBeenCalled();
   });
 
   it("400 sem expectedVersion", async () => {

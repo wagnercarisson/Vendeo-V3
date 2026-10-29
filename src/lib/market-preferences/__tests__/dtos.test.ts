@@ -8,13 +8,13 @@ import {
 describe("dtos", () => {
   it("renomeia ui_locale -> uiLocale e ui_locale_source -> source", () => {
     const dto = toUserLocalePreferenceDTO({
-      ui_locale: "es-PY",
+      ui_locale: "es-419",
       ui_locale_source: "explicit",
       version: 1,
       user_id: "u-1",
       created_at: "2026-01-01",
     });
-    expect(dto).toEqual({ uiLocale: "es-PY", source: "explicit", version: 1 });
+    expect(dto).toEqual({ uiLocale: "es-419", source: "explicit", version: 1 });
     expect(Object.keys(dto).sort()).toEqual(["source", "uiLocale", "version"]);
     expect(Object.keys(dto).some((key) => key.includes("_"))).toBe(false);
   });
@@ -85,6 +85,13 @@ describe("dtos", () => {
         version: 1,
       }),
     ).toThrow();
+    expect(() =>
+      toUserLocalePreferenceDTO({
+        ui_locale: "es-PY",
+        ui_locale_source: "explicit",
+        version: 1,
+      }),
+    ).toThrow();
   });
 
   it.each([null, true, false, "", " 1", "1.5", -1, 1.5])(
@@ -109,9 +116,10 @@ describe("dtos", () => {
     expect(dto.version).toBe(2);
   });
 
-  it("assertSupportedUiLocale aceita apenas pt-BR/es-PY", () => {
+  it("assertSupportedUiLocale aceita apenas pt-BR/es-419", () => {
     expect(assertSupportedUiLocale("pt-BR")).toBe(true);
-    expect(assertSupportedUiLocale("es-PY")).toBe(true);
+    expect(assertSupportedUiLocale("es-419")).toBe(true);
+    expect(assertSupportedUiLocale("es-PY")).toBe(false);
     expect(assertSupportedUiLocale("es-AR")).toBe(false);
     expect(assertSupportedUiLocale(null)).toBe(false);
   });

@@ -3,7 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import {
   resolveUiLocale,
-  type SupportedContentLocale,
+  type SupportedUiLocale,
 } from "@/lib/market-context";
 import {
   PreferencesUnavailableError,
@@ -112,7 +112,7 @@ export async function getUserLocalePreference(
 }
 
 export interface UpdateUserLocalePreferenceInput {
-  uiLocale?: SupportedContentLocale | null;
+  uiLocale?: SupportedUiLocale | null;
   expectedVersion: number;
 }
 
@@ -138,7 +138,7 @@ export async function updateUserLocalePreference(
     return current;
   }
 
-  let uiLocale: SupportedContentLocale | null;
+  let uiLocale: SupportedUiLocale | null;
   if (input.uiLocale === null) {
     uiLocale = null;
   } else {

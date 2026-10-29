@@ -20,7 +20,7 @@ import {
   mapStoredUserLocalePreference,
   updateUserLocalePreference,
 } from "../user-preferences-service";
-import type { SupportedContentLocale } from "@/lib/market-context";
+import type { SupportedUiLocale } from "@/lib/market-context";
 
 function mockRead(result: { data: unknown; error: unknown }) {
   const maybeSingle = vi.fn().mockResolvedValue(result);
@@ -45,11 +45,11 @@ describe("getUserLocalePreference", () => {
 
   it("linha explícita devolve o valor persistido", async () => {
     mockRead({
-      data: { ui_locale: "es-PY", ui_locale_source: "explicit", version: 3 },
+      data: { ui_locale: "es-419", ui_locale_source: "explicit", version: 3 },
       error: null,
     });
     await expect(getUserLocalePreference("user-a")).resolves.toEqual({
-      uiLocale: "es-PY",
+      uiLocale: "es-419",
       source: "explicit",
       version: 3,
     });
@@ -76,6 +76,7 @@ describe("getUserLocalePreference", () => {
 
   it.each([
     { ui_locale: "es-PY", ui_locale_source: "legacy_br", version: 1 },
+    { ui_locale: "es-PY", ui_locale_source: "explicit", version: 1 },
     { ui_locale: null, ui_locale_source: "explicit", version: 1 },
     { ui_locale: null, ui_locale_source: null, version: 1 },
     { ui_locale: "es-AR", ui_locale_source: "explicit", version: 1 },
@@ -113,12 +114,12 @@ describe("updateUserLocalePreference", () => {
 
   it("valor suportado grava explicit", async () => {
     db.rpc.mockResolvedValue({
-      data: { ui_locale: "es-PY", ui_locale_source: "explicit", version: 2 },
+      data: { ui_locale: "es-419", ui_locale_source: "explicit", version: 2 },
       error: null,
     });
     await expect(
-      updateUserLocalePreference("user-a", { uiLocale: "es-PY", expectedVersion: 1 }),
-    ).resolves.toEqual({ uiLocale: "es-PY", source: "explicit", version: 2 });
+      updateUserLocalePreference("user-a", { uiLocale: "es-419", expectedVersion: 1 }),
+    ).resolves.toEqual({ uiLocale: "es-419", source: "explicit", version: 2 });
   });
 
   it("omitido com versão válida não chama RPC", async () => {
@@ -133,7 +134,7 @@ describe("updateUserLocalePreference", () => {
 
   it("omitido com versão divergente devolve 409 sem RPC", async () => {
     mockRead({
-      data: { ui_locale: "es-PY", ui_locale_source: "explicit", version: 2 },
+      data: { ui_locale: "es-419", ui_locale_source: "explicit", version: 2 },
       error: null,
     });
     await expect(
@@ -145,7 +146,17 @@ describe("updateUserLocalePreference", () => {
   it("valor inválido não chama RPC", async () => {
     await expect(
       updateUserLocalePreference("user-a", {
-        uiLocale: "es-AR" as SupportedContentLocale,
+        uiLocale: "es-AR" as SupportedUiLocale,
+        expectedVersion: 0,
+      }),
+    ).rejects.toBeInstanceOf(PreferencesValidationError);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
+  it("es-PY não é aceito como idioma da interface", async () => {
+    await expect(
+      updateUserLocalePreference("user-a", {
+        uiLocale: "es-PY" as SupportedUiLocale,
         expectedVersion: 0,
       }),
     ).rejects.toBeInstanceOf(PreferencesValidationError);

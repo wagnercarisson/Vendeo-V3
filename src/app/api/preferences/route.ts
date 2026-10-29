@@ -16,7 +16,7 @@ import {
 
 const UpdatePreferenceSchema = z
   .object({
-    uiLocale: z.enum(["pt-BR", "es-PY"]).nullish(),
+    uiLocale: z.enum(["pt-BR", "es-419"]).nullish(),
     expectedVersion: z.number().int().min(0),
   })
   .strict();
