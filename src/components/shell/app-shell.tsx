@@ -31,12 +31,17 @@ export function AppShell({
   storeName,
   latestChangelogEntryId,
   locale,
+  shellMessages,
+  shellMessagesEs,
   children,
 }: AppShellProps) {
   const pathname = usePathname();
   const effectiveLocale: SupportedUiLocale = pathname?.startsWith("/admin")
     ? "pt-BR"
     : locale;
+  const shellEffective =
+    effectiveLocale === "es-419" ? (shellMessagesEs ?? shellMessages) : shellMessages;
+  const lang = effectiveLocale === "es-419" ? "es-419" : undefined;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const asideRef = useRef<HTMLElement>(null);
@@ -59,7 +64,12 @@ export function AppShell({
           <VendeoBrandLink variant="logo" />
         </div>
         <div ref={navRef} className="shrink-0">
-          <Sidebar latestEntryId={latestChangelogEntryId} />
+          <Sidebar
+            latestEntryId={latestChangelogEntryId}
+            messages={shellEffective}
+            locale={effectiveLocale}
+            lang={lang}
+          />
         </div>
         <VendeoSignature
           asideRef={asideRef}
@@ -87,6 +97,8 @@ export function AppShell({
         }}
         toggleButtonRef={toggleButtonRef}
         latestEntryId={latestChangelogEntryId}
+        messages={shellEffective}
+        locale={effectiveLocale}
       />
     </div>
   );

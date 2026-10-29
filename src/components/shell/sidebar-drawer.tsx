@@ -5,12 +5,15 @@ import { X } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { VendeoBrandLink } from "./vendeo-brand";
 import type { RefObject } from "react";
+import type { ShellMessages, SupportedUiLocale } from "@/lib/i18n";
 
 interface SidebarDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   toggleButtonRef?: RefObject<HTMLButtonElement | null>;
   latestEntryId?: string | null;
+  messages: ShellMessages;
+  locale?: SupportedUiLocale;
 }
 
 const focusableSelector =
@@ -21,6 +24,8 @@ export function SidebarDrawer({
   onClose,
   toggleButtonRef,
   latestEntryId,
+  messages,
+  locale,
 }: SidebarDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const originalOverflowRef = useRef<string>("");
@@ -96,7 +101,7 @@ export function SidebarDrawer({
             toggleButtonRef?.current?.focus();
           }}
           className="fixed inset-0 z-40 bg-black/50"
-          aria-label="Fechar menu"
+          aria-label={messages.drawer.close}
           tabIndex={-1}
         />
       )}
@@ -106,7 +111,8 @@ export function SidebarDrawer({
         id="mobile-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label="Menu de navegação"
+        aria-label={messages.drawer.dialogLabel}
+        lang={locale === "es-419" ? "es-419" : undefined}
         className={`fixed left-0 top-0 z-50 h-full w-72 max-w-[280px] border-r border-border bg-bg-surface transition-transform ${
           reducedMotion ? "duration-0" : "duration-300"
         } ease-in-out ${
@@ -119,7 +125,7 @@ export function SidebarDrawer({
             toggleButtonRef?.current?.focus();
           }}
           className="absolute right-4 top-4 rounded-lg p-1 text-text-secondary hover:bg-bg-elevated hover:text-text-primary"
-          aria-label="Fechar menu"
+          aria-label={messages.drawer.close}
         >
           <X className="h-5 w-5" />
         </button>
@@ -129,7 +135,13 @@ export function SidebarDrawer({
             onNavigate={onClose}
             className="mb-6 mt-2"
           />
-          <Sidebar isDrawer onNavigate={onClose} latestEntryId={latestEntryId} />
+          <Sidebar
+            isDrawer
+            onNavigate={onClose}
+            latestEntryId={latestEntryId}
+            messages={messages}
+            locale={locale}
+          />
         </div>
       </div>
     </>

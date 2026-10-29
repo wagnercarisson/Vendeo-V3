@@ -10,28 +10,46 @@ import {
   UserCircle,
 } from "lucide-react";
 import { SidebarBadge } from "@/components/changelog/sidebar-badge";
+import type { ShellMessages, SupportedUiLocale } from "@/lib/i18n";
 
 interface SidebarProps {
   isDrawer?: boolean;
   onNavigate?: () => void;
   latestEntryId?: string | null;
+  messages: ShellMessages;
+  locale?: SupportedUiLocale;
+  lang?: string;
 }
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/campanhas", label: "Campanhas", icon: Megaphone },
-  { href: "/loja", label: "Loja", icon: Store },
-  { href: "/conta", label: "Conta", icon: UserCircle },
-  { href: "/novidades", label: "Novidades", icon: Sparkles },
+type NavLabelKey = "dashboard" | "campaigns" | "store" | "account" | "news";
+
+const NAV_ITEMS: Array<{
+  href: string;
+  labelKey: NavLabelKey;
+  icon: typeof LayoutDashboard;
+}> = [
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/campanhas", labelKey: "campaigns", icon: Megaphone },
+  { href: "/loja", labelKey: "store", icon: Store },
+  { href: "/conta", labelKey: "account", icon: UserCircle },
+  { href: "/novidades", labelKey: "news", icon: Sparkles },
 ];
 
-export function Sidebar({ isDrawer, onNavigate, latestEntryId }: SidebarProps) {
+export function Sidebar({
+  isDrawer,
+  onNavigate,
+  latestEntryId,
+  messages,
+  locale,
+  lang,
+}: SidebarProps) {
   const pathname = usePathname();
 
   return (
     <nav
       className={`flex flex-col gap-1 ${isDrawer ? "" : "p-4"}`}
-      aria-label="Navegação principal"
+      aria-label={messages.nav.ariaLabel}
+      lang={lang ?? (locale === "es-419" ? "es-419" : undefined)}
     >
       {NAV_ITEMS.map((item) => {
         const isActive = pathname
@@ -51,9 +69,12 @@ export function Sidebar({ isDrawer, onNavigate, latestEntryId }: SidebarProps) {
             }`}
           >
             <Icon className="h-5 w-5" />
-            {item.label}
+            {messages.nav[item.labelKey]}
             {item.href === "/novidades" && (
-              <SidebarBadge latestEntryId={latestEntryId} />
+              <SidebarBadge
+                latestEntryId={latestEntryId}
+                messages={messages.badge}
+              />
             )}
           </Link>
         );
