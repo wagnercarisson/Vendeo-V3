@@ -49,6 +49,7 @@ const PRIVATE_APP_PREFIXES = [
   "/loja",
   "/campanhas",
   "/conta",
+  "/configuracoes",
   "/novidades",
   "/legal/reaccept",
   "/cadastro",
