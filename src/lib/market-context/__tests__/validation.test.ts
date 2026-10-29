@@ -5,6 +5,7 @@ import {
   isSupportedLocale,
   isSupportedMarket,
   isSupportedTimeZone,
+  isSupportedUiLocale,
 } from "../validation";
 
 describe("validation guards", () => {
@@ -25,15 +26,30 @@ describe("validation guards", () => {
   });
 
   describe("isSupportedLocale", () => {
-    it("accepts pt-BR and es-PY", () => {
+    it("accepts pt-BR and es-PY for content", () => {
       expect(isSupportedLocale("pt-BR")).toBe(true);
       expect(isSupportedLocale("es-PY")).toBe(true);
     });
 
-    it("rejects es-AR and malformed values", () => {
+    it("rejects es-AR, es-419 and malformed values for content", () => {
       expect(isSupportedLocale("es-AR")).toBe(false);
+      expect(isSupportedLocale("es-419")).toBe(false);
       expect(isSupportedLocale("pt")).toBe(false);
       expect(isSupportedLocale(undefined)).toBe(false);
+    });
+  });
+
+  describe("isSupportedUiLocale", () => {
+    it("accepts pt-BR and es-419 for the interface", () => {
+      expect(isSupportedUiLocale("pt-BR")).toBe(true);
+      expect(isSupportedUiLocale("es-419")).toBe(true);
+    });
+
+    it("rejects es-PY, es-AR and malformed values for the interface", () => {
+      expect(isSupportedUiLocale("es-PY")).toBe(false);
+      expect(isSupportedUiLocale("es-AR")).toBe(false);
+      expect(isSupportedUiLocale("pt")).toBe(false);
+      expect(isSupportedUiLocale(null)).toBe(false);
     });
   });
 

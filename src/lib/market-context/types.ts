@@ -9,9 +9,13 @@
 export const SUPPORTED_MARKETS = Object.freeze(["BR", "PY"] as const);
 export type SupportedMarket = (typeof SUPPORTED_MARKETS)[number];
 
-/** Idiomas de conteúdo/aplicativo suportados. */
+/** Idiomas de conteúdo/campanha suportados. NÃO é o contrato do idioma da interface. */
 export const SUPPORTED_CONTENT_LOCALES = Object.freeze(["pt-BR", "es-PY"] as const);
 export type SupportedContentLocale = (typeof SUPPORTED_CONTENT_LOCALES)[number];
+
+/** Idiomas da interface do aplicativo. Independente do conteúdo/campanha. */
+export const SUPPORTED_UI_LOCALES = Object.freeze(["pt-BR", "es-419"] as const);
+export type SupportedUiLocale = (typeof SUPPORTED_UI_LOCALES)[number];
 
 /** Moedas anunciadas suportadas. */
 export const SUPPORTED_CURRENCIES = Object.freeze(["BRL", "PYG"] as const);
@@ -110,7 +114,7 @@ export type StoreMarketContextParseResult =
 
 /** Preferência de idioma do aplicativo. Nunca recebe loja, país ou mercado. */
 export type UserLocalePreference =
-  | { readonly kind: "explicit"; readonly uiLocale: SupportedContentLocale }
+  | { readonly kind: "explicit"; readonly uiLocale: SupportedUiLocale }
   | { readonly kind: "legacy" };
 
 export type UiLocaleProvenance = "explicit" | "legacy_br";
@@ -118,7 +122,7 @@ export type UiLocaleProvenance = "explicit" | "legacy_br";
 export type UserLocaleResolution =
   | {
       readonly ok: true;
-      readonly uiLocale: SupportedContentLocale;
+      readonly uiLocale: SupportedUiLocale;
       readonly provenance: UiLocaleProvenance;
     }
   | { readonly ok: false; readonly error: MarketContextError };

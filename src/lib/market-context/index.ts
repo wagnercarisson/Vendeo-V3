@@ -7,6 +7,7 @@
 export {
   SUPPORTED_MARKETS,
   SUPPORTED_CONTENT_LOCALES,
+  SUPPORTED_UI_LOCALES,
   SUPPORTED_CURRENCIES,
   SUPPORTED_TIME_ZONES,
   STORE_CONTEXT_VERSION,
@@ -17,6 +18,7 @@ export {
 export type {
   SupportedMarket,
   SupportedContentLocale,
+  SupportedUiLocale,
   SupportedCurrency,
   SupportedTimeZone,
   StoreContextVersion,
@@ -53,6 +55,7 @@ export { MARKET_PROFILES } from "./market-profiles";
 export {
   isSupportedMarket,
   isSupportedLocale,
+  isSupportedUiLocale,
   isSupportedCurrency,
   isSupportedTimeZone,
   getMarketProfile,

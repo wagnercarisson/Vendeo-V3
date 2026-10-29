@@ -13,6 +13,7 @@ idioma do conteúdo e moeda anunciada.
 - `store-context.ts` — resolução da configuração da loja e parser estrito do
   valor resolvido.
 - `user-preference.ts` — idioma do aplicativo, independente de mercado/país.
+  Interface aceita `pt-BR`/`es-419`; conteúdo/campanha aceita `pt-BR`/`es-PY`.
 - `campaign-context.ts` — resolução de campanha nova, parser estrito e leitura
   de campanha entregue/legada.
 
@@ -22,7 +23,8 @@ idioma do conteúdo e moeda anunciada.
   habilita cadastro, geração, cobrança ou operação no Paraguai.
 - **Seis dimensões independentes.** Mercado não escolhe idioma de app; moeda
   anunciada não implica câmbio nem moeda de cobrança; país cadastral não
-  determina idioma/moeda do conteúdo.
+  determina idioma/moeda do conteúdo. O idioma da interface (`pt-BR`/`es-419`)
+  é um contrato próprio, separado do idioma do conteúdo (`pt-BR`/`es-PY`).
 - **Padrões:** idioma e moeda padrão da loja derivam do mercado padrão das
   campanhas; o fuso deriva do país cadastral; override explícito vence.
 - **Entrada ≠ valor resolvido.** A configuração aceita campos parciais e recebe

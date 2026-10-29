@@ -101,10 +101,10 @@ describe("cross-market campaigns", () => {
     expect(appPt.uiLocale).toBe("pt-BR");
     expect(campaignToPy.contentLocale).toBe("es-PY");
 
-    const appEs = resolveUiLocale({ kind: "explicit", uiLocale: "es-PY" });
+    const appEs = resolveUiLocale({ kind: "explicit", uiLocale: "es-419" });
     expect(appEs.ok).toBe(true);
     if (!appEs.ok) return;
-    expect(appEs.uiLocale).toBe("es-PY");
+    expect(appEs.uiLocale).toBe("es-419");
     expect(campaignToPy.contentLocale).toBe("es-PY");
   });
 

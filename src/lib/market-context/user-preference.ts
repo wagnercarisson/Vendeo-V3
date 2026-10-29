@@ -1,13 +1,13 @@
 import type {
   MarketContextError,
-  SupportedContentLocale,
+  SupportedUiLocale,
   UserLocaleResolution,
 } from "./types";
 import {
   createError,
   findUnexpectedKey,
   isPlainObject,
-  isSupportedLocale,
+  isSupportedUiLocale,
   receivedValue,
 } from "./validation";
 
@@ -75,7 +75,7 @@ export function resolveUiLocale(input: unknown): UserLocaleResolution {
       }),
     );
   }
-  if (!isSupportedLocale(uiLocale)) {
+  if (!isSupportedUiLocale(uiLocale)) {
     return failure(
       createError("unsupported_locale", {
         field: "uiLocale",
@@ -85,7 +85,7 @@ export function resolveUiLocale(input: unknown): UserLocaleResolution {
     );
   }
 
-  const locale: SupportedContentLocale = uiLocale;
+  const locale: SupportedUiLocale = uiLocale;
   const result: UserLocaleResolution = {
     ok: true,
     uiLocale: locale,

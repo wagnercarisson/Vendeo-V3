@@ -5,6 +5,7 @@ import {
   SUPPORTED_CURRENCIES,
   SUPPORTED_MARKETS,
   SUPPORTED_TIME_ZONES,
+  SUPPORTED_UI_LOCALES,
   type MarketContextError,
   type MarketContextErrorCode,
   type MarketContextErrorReason,
@@ -13,6 +14,7 @@ import {
   type SupportedCurrency,
   type SupportedMarket,
   type SupportedTimeZone,
+  type SupportedUiLocale,
 } from "./types";
 
 function includesValue<T extends string>(
@@ -30,6 +32,11 @@ export function isSupportedLocale(
   value: unknown,
 ): value is SupportedContentLocale {
   return includesValue(SUPPORTED_CONTENT_LOCALES, value);
+}
+
+/** Guard do idioma da interface; não deve ser usado para conteúdo/campanha. */
+export function isSupportedUiLocale(value: unknown): value is SupportedUiLocale {
+  return includesValue(SUPPORTED_UI_LOCALES, value);
 }
 
 export function isSupportedCurrency(

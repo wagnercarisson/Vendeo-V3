@@ -18,11 +18,20 @@ describe("resolveUiLocale", () => {
     expect(Object.isFrozen(result)).toBe(true);
   });
 
-  it("resolves es-PY explicitly", () => {
-    const result = resolveUiLocale({ kind: "explicit", uiLocale: "es-PY" });
+  it("resolves es-419 explicitly", () => {
+    const result = resolveUiLocale({ kind: "explicit", uiLocale: "es-419" });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.uiLocale).toBe("es-PY");
+    expect(result.uiLocale).toBe("es-419");
+  });
+
+  it("rejects es-PY as an interface locale", () => {
+    const error = expectFailure(
+      resolveUiLocale({ kind: "explicit", uiLocale: "es-PY" }),
+    );
+    expect(error.code).toBe("unsupported_locale");
+    expect(error.field).toBe("uiLocale");
+    expect(error.received).toBe("es-PY");
   });
 
   it("only resolves pt-BR for explicitly declared legacy", () => {
@@ -35,12 +44,12 @@ describe("resolveUiLocale", () => {
 
   it("rejects mixed legacy input instead of discarding explicit preferences", () => {
     const withLocale = expectFailure(
-      resolveUiLocale({ kind: "legacy", uiLocale: "es-PY" }),
+      resolveUiLocale({ kind: "legacy", uiLocale: "es-419" }),
     );
     expect(withLocale.code).toBe("invalid_input");
     expect(withLocale.field).toBe("uiLocale");
     expect(withLocale.reason).toBe("invalid_field");
-    expect(withLocale.received).toBe("es-PY");
+    expect(withLocale.received).toBe("es-419");
 
     const withCountry = expectFailure(
       resolveUiLocale({ kind: "legacy", country: "PY" }),
