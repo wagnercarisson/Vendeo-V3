@@ -112,18 +112,25 @@ Não foram executados a suíte completa de onboarding nem as provas comparativas
   counts/MD5 iguais ao baseline. Único drift: ledger (esperado).
 - Ledger final: **152**.
 
-## Smoke de API — NÃO EXECUTADO (limitação)
+## Smoke de API — BLOQUEADO (tentativa de retomada em 2026-10-29)
 
-- Nenhuma aplicação Next.js estava escutando em `127.0.0.1:3000`/`3001` no momento do gate.
+- A aplicação Next.js está em execução em `127.0.0.1:3000` (PID 24012,
+  `next/dist/server/lib/start-server.js`).
 - `.env.local` aponta `SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_URL` para
-  `http://127.0.0.1:57781` (homolog), mas não havia sessão autenticada disponível.
-- Por isso, os cenários de API (GET legado, PATCH `es-419`, PATCH `es-PY` 400, 409, `null`,
-  omitido e independência da loja) não foram executados.
+  `http://127.0.0.1:57781` (homolog), não para produção.
+- A sessão autenticada existe apenas no navegador do usuário. O shell do agente não possui
+  cookies de sessão: `GET http://127.0.0.1:3000/api/preferences` retornou **401**.
+- Não é possível usar a sessão existente a partir do shell sem extrair cookies do navegador,
+  o que foi explicitamente proibido. Nenhuma credencial foi procurada ou extraída.
+- Portanto, nenhum PATCH foi executado: os cenários de `es-419`, `es-PY` 400, 409, omitido,
+  `null` e independência da loja permanecem **não executados**.
 - Nenhuma alternativa em produção foi acessada.
-- Ação necessária: subir a aplicação local apontada ao homolog e fornecer uma sessão/credencial
-  de conta de teste, ou autorizar a criação de uma fixture autenticada e descartável.
+- Ação necessária: executar o smoke a partir do navegador autenticado ou disponibilizar um
+  mecanismo autorizado de sessão para o agente. Sem isso, o gate de API permanece aberto.
 
 ## Limites respeitados
 
 Sem produção, push, merge, deploy, restore, reinstalação de dependências, recriação de ambiente,
-`db reset`, `REVERT`, alteração de outras tabelas/RPCs/permissões ou criação de harness novo.
+`db reset`, `REVERT`, alteração de outras tabelas/RPCs/permissões, criação de fixtures ou
+extração de credenciais/cookies. Nenhuma migration foi reaplicada e nenhuma suíte de banco foi
+repetida.
