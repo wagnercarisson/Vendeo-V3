@@ -13,7 +13,7 @@
 | # | Phase | Goal / status |
 |---|---|---|
 | 57.2 | F57.2 — Persistência de preferências multimercado | **Concluída, validada em produção e arquivada (2026-10-28).** Persistência por usuário/loja, proveniência, CAS, rotas autenticadas e inicialização nos fluxos; UAT 5/5; migrations aplicadas em produção; smoke PASS; sem UI e sem habilitação PY. |
-| 57.4 | F57.4 — Base de tradução da interface e configurações | **Planos 01–02 executados localmente; aguardando revisão.** Fundação i18n e shell traduzido entregues; planos 03–04 não iniciados. |
+| 57.4 | F57.4 — Base de tradução da interface e configurações | **Planos 01–03 executados localmente; aguardando revisão.** Fundação i18n, shell traduzido e `/configuracoes` entregues; plano 04 (homolog/prova) não iniciado. |
 | 23 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ TextProvider + Copy Director | ConcluÃƒÆ’Ã‚Â­da; fundaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de IA de texto e Copy Director intercambiÃƒÆ’Ã‚Â¡vel |
 | 24 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Credit Tables + CreditService | ConcluÃƒÆ’Ã‚Â­da; crÃƒÆ’Ã‚Â©ditos concedidos, consumidos e auditÃƒÆ’Ã‚Â¡veis |
 | 25 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Pipeline de GeraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o v1.5 | ConcluÃƒÆ’Ã‚Â­da; copy e crÃƒÆ’Ã‚Â©ditos integrados ao pipeline |
@@ -665,7 +665,7 @@ Plans:
 
 ### Phase 57.4: F57.4 — Base de tradução da interface e configurações
 
-**Status:** **Planos 01–02 executados localmente; aguardando revisão.** OpenSpec aprovado; 4 planos em 3 waves; plano 01 (fundação i18n) e plano 02 (shell/menu/admin/logout) concluídos com gates locais; planos 03–04 não iniciados.
+**Status:** **Planos 01–03 executados localmente; aguardando revisão.** OpenSpec aprovado; 4 planos em 3 waves; planos 01 (fundação i18n), 02 (shell/menu/admin/logout) e 03 (`/configuracoes`) concluídos com gates locais; plano 04 (gates/homolog/prova) não iniciado.
 
 **Goal:** entregar a fundação de tradução da interface (`pt-BR`/`es-419`), traduzir o shell compartilhado do lojista, preservar `/admin` em português e criar `/configuracoes` autenticada com escolha persistida de idioma, mantendo conteúdo/campanhas em `pt-BR`/`es-PY` e sem alterar loja, moeda, cobrança ou créditos.
 
@@ -680,7 +680,7 @@ Plans:
 Plans:
 - [x] 57.4-01-PLAN.md — fundação i18n (catálogos/paridade/interpolação), resolução server-side com timeout de 200 ms e contrato de payload do AppShell
 - [x] 57.4-02-PLAN.md — shell traduzido (sidebar/drawer/topbar/menu/badge/sino), menu Conta -> Novidades -> Configurações -> Sair, admin em pt-BR e logout por prop
-- [ ] 57.4-03-PLAN.md — `/configuracoes` autenticada sem loja, leitura sem escrita e formulário de idioma com CAS e matriz de erros
+- [x] 57.4-03-PLAN.md — `/configuracoes` autenticada sem loja, leitura sem escrita e formulário de idioma com CAS e matriz de erros
 - [ ] 57.4-04-PLAN.md — gates locais, medições de payload/timeout, prova funcional real no homolog existente e aceite humano
 
 **Waves:** `01 -> 02/03 -> 04`. Planos 02 e 03 não compartilham arquivos; 04 é checkpoint humano.
