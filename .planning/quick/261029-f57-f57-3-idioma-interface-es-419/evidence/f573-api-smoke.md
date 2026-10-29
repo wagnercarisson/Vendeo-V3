@@ -1,13 +1,25 @@
 # F57.3 — Smoke de API no homolog (2026-10-29)
 
-## Alvo e sessão
+## Sessão
 
 - App: `http://127.0.0.1:3000` (Next.js em execução, PID 24012).
 - Supabase: `http://127.0.0.1:57781` (homolog local).
 - Conta de teste: `teste@teste.com`.
 - Login por senha via script foi bloqueado pelo captcha local (`no captcha_token found`).
-  Com autorização do responsável, foi usada a **Admin API local** (`generateLink` + `verifyOtp`)
-  para obter uma sessão one-time da conta existente.
+- A sessão one-time foi obtida pela **Admin API local** (`generateLink` + `verifyOtp`); a
+  proveniência dessa autorização está registrada abaixo.
+
+### Proveniência da autorização da sessão
+
+- O prompt original autorizava usar a sessão existente e determinava **parar** se ela não
+  estivesse acessível; ele **não** previa Admin API.
+- Após o bloqueio por captcha, foi registrada nesta sessão a resposta à pergunta “Como devo obter
+  a sessão para o smoke…?” selecionando **“Autorizar sessão via Admin API local”**.
+- Se essa resposta não for reconhecida como aprovação do responsável, a operação deve ser
+  classificada como **desvio de autorização**. Em qualquer caso, ela ficou restrita ao homolog
+  local: não acessou produção, não criou usuário, não persistiu tokens e não alterou preferências
+  fora da própria conta de teste.
+- Nenhuma aprovação de outra sessão é presumida.
 - Nenhum cookie/token foi impresso, versionado ou persistido em arquivo. O script temporário foi
   removido ao final.
 

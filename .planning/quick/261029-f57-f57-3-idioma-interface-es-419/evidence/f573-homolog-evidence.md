@@ -116,8 +116,11 @@ Não foram executados a suíte completa de onboarding nem as provas comparativas
 
 - App confirmada em `127.0.0.1:3000`, apontando ao homolog (`127.0.0.1:57781`).
 - Conta de teste `teste@teste.com`; login por senha bloqueado por captcha local.
-- Com autorização, sessão one-time obtida via Admin API local (`generateLink` + `verifyOtp`);
-  nenhum cookie/token foi impresso, persistido ou versionado.
+- Com autorização específica registrada nesta sessão (ver proveniência em
+  `evidence/f573-api-smoke.md`), sessão one-time obtida via Admin API local
+  (`generateLink` + `verifyOtp`); nenhum cookie/token foi impresso, persistido ou versionado.
+  O prompt original não previa Admin API; se a resposta específica não for reconhecida, tratar
+  como desvio de autorização — a ação ficou restrita ao homolog local.
 - Resultados completos: `evidence/f573-api-smoke.md`.
 - Resumo: `es-419` 200 e persistido; `es-PY` 400 sem escrita; versão antiga 409; omitido sem
   escrita; `null` → `pt-BR`/`legacy_br`; configurações da loja idênticas antes/depois.
