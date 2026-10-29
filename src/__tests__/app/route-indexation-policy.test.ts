@@ -53,6 +53,7 @@ const NOINDEX_SURFACES = [
   "/campanhas",
   "/campanhas/nova",
   "/conta",
+  "/configuracoes",
   "/novidades",
   "/legal/reaccept",
   "/cadastro",
