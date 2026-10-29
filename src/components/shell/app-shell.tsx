@@ -1,17 +1,28 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Topbar } from "./topbar";
 import { Sidebar } from "./sidebar";
 import { SidebarDrawer } from "./sidebar-drawer";
 import { VendeoBrandLink } from "./vendeo-brand";
 import { VendeoSignature } from "./vendeo-signature";
 import type { JwtPayload } from "@/types/auth";
+import type {
+  CommonMessages,
+  ShellMessages,
+  SupportedUiLocale,
+} from "@/lib/i18n";
 
 interface AppShellProps {
   user: { claims: JwtPayload };
   storeName?: string | null;
   latestChangelogEntryId?: string | null;
+  locale: SupportedUiLocale;
+  commonMessages: CommonMessages;
+  shellMessages: ShellMessages;
+  commonMessagesEs?: CommonMessages;
+  shellMessagesEs?: ShellMessages;
   children: React.ReactNode;
 }
 
@@ -19,8 +30,13 @@ export function AppShell({
   user,
   storeName,
   latestChangelogEntryId,
+  locale,
   children,
 }: AppShellProps) {
+  const pathname = usePathname();
+  const effectiveLocale: SupportedUiLocale = pathname?.startsWith("/admin")
+    ? "pt-BR"
+    : locale;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const asideRef = useRef<HTMLElement>(null);
@@ -28,7 +44,10 @@ export function AppShell({
   const navRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="flex min-h-dvh bg-bg-deep">
+    <div
+      className="flex min-h-dvh bg-bg-deep"
+      data-effective-locale={effectiveLocale}
+    >
       <aside
         ref={asideRef}
         className="sticky top-0 hidden h-dvh w-56 flex-shrink-0 flex-col overflow-y-auto border-r border-border bg-bg-surface md:flex"
