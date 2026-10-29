@@ -276,6 +276,21 @@ describe("F57.2 schema, checks e grants", () => {
         [userId],
         "23514",
       );
+      await expectSqlState(
+        client,
+        "insert into public.user_preferences (user_id, ui_locale, ui_locale_source) values ($1,'es-PY','explicit')",
+        [userId],
+        "23514",
+      );
+      await client.query(
+        "insert into public.user_preferences (user_id, ui_locale, ui_locale_source) values ($1,'es-419','explicit')",
+        [userId],
+      );
+      const accepted = await client.query<{ ui_locale: string }>(
+        "select ui_locale from public.user_preferences where user_id = $1",
+        [userId],
+      );
+      expect(accepted.rows[0]?.ui_locale).toBe("es-419");
     });
   });
 
@@ -325,7 +340,7 @@ describe("F57.2 RLS e isolamento", () => {
     const storeA = await storeFor(userA);
     const storeB = await storeFor(userB);
     await query(
-      "insert into public.user_preferences (user_id, ui_locale, ui_locale_source) values ($1,'pt-BR','explicit'), ($2,'es-PY','explicit')",
+      "insert into public.user_preferences (user_id, ui_locale, ui_locale_source) values ($1,'pt-BR','explicit'), ($2,'es-419','explicit')",
       [userA, userB],
     );
     await query("select public.ensure_store_market_settings($1,'BR','assumed_default')", [storeA]);
@@ -360,7 +375,7 @@ describe("F57.2 RLS e isolamento", () => {
       );
       await expectSqlState(
         client,
-        "update public.user_preferences set ui_locale = 'es-PY' where user_id = $1",
+        "update public.user_preferences set ui_locale = 'es-419' where user_id = $1",
         [userA],
         "42501",
       );
@@ -417,8 +432,12 @@ describe("F57.2 RPCs: idempotência, CAS e proveniência", () => {
 
   it("6. preferência de usuário: 3 params, CAS, limpeza e conflito com versão real 0", async () => {
     const userId = await actor("pref");
-    const first = await rpcCall<Row>("write_user_locale_preference", [userId, "es-PY", 0]);
-    expect(first).toMatchObject({ version: 1, ui_locale: "es-PY", ui_locale_source: "explicit" });
+    const first = await rpcCall<Row>("write_user_locale_preference", [userId, "es-419", 0]);
+    expect(first).toMatchObject({ version: 1, ui_locale: "es-419", ui_locale_source: "explicit" });
+
+    await expect(rpcCall("write_user_locale_preference", [userId, "es-PY", 1])).rejects.toThrow(
+      /invalid_locale/,
+    );
 
     await expect(rpcCall("write_user_locale_preference", [userId, "pt-BR", 0])).rejects.toThrow(
       /preferences_version_conflict/,
@@ -526,7 +545,7 @@ describe("F57.2 RPCs: idempotência, CAS e proveniência", () => {
 
     const prefUser = await actor("race-pref");
     const prefResults = await Promise.allSettled([
-      rpcCall("write_user_locale_preference", [prefUser, "es-PY", 0]),
+      rpcCall("write_user_locale_preference", [prefUser, "es-419", 0]),
       rpcCall("write_user_locale_preference", [prefUser, "pt-BR", 0]),
     ]);
     expect(prefResults.filter((result) => result.status === "fulfilled")).toHaveLength(1);
@@ -542,7 +561,7 @@ describe("F57.2 RPCs: idempotência, CAS e proveniência", () => {
     const storeId = await storeFor(userId);
     await inTransaction(async (client) => {
       await client.query("select public.ensure_store_market_settings($1,'BR','assumed_default')", [storeId]);
-      await client.query("select public.write_user_locale_preference($1,'es-PY',0)", [userId]);
+      await client.query("select public.write_user_locale_preference($1,'es-419',0)", [userId]);
     });
     expect(await query("select 1 from public.store_market_settings where store_id = $1", [storeId])).toHaveLength(0);
     expect(await query("select 1 from public.user_preferences where user_id = $1", [userId])).toHaveLength(0);

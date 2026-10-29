@@ -169,7 +169,7 @@ describe("F57.2 segurança — RLS e isolamento A/B", () => {
       const storeA = await storeFor(client, userA, "rls-a");
       const storeB = await storeFor(client, userB, "rls-b");
       await client.query("select public.write_user_locale_preference($1,'pt-BR',0)", [userA]);
-      await client.query("select public.write_user_locale_preference($1,'es-PY',0)", [userB]);
+      await client.query("select public.write_user_locale_preference($1,'es-419',0)", [userB]);
 
       await setAuthenticated(client, userA);
       const prefsA = await client.query<{ user_id: string }>("select user_id from public.user_preferences");
@@ -202,7 +202,7 @@ describe("F57.2 segurança — RLS e isolamento A/B", () => {
       await setAuthenticated(client, user);
       await expectDenied(client, "insert into public.user_preferences (user_id) values ($1)", [user]);
       console.log("RLS-DENY user_preferences INSERT");
-      await expectDenied(client, "update public.user_preferences set ui_locale='es-PY' where user_id=$1", [user]);
+      await expectDenied(client, "update public.user_preferences set ui_locale='es-419' where user_id=$1", [user]);
       console.log("RLS-DENY user_preferences UPDATE");
       await expectDenied(client, "delete from public.user_preferences where user_id=$1", [user]);
       console.log("RLS-DENY user_preferences DELETE");

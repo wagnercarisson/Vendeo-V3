@@ -954,20 +954,20 @@ describe("F57.2 idempotência, atomicidade e contrato", () => {
       const userId = await actor(client, "independent");
       const draft = await createDraft(client, userId);
       const storeId = await storeIdOf(draft);
-      await client.query("select public.write_user_locale_preference($1,'es-PY',0)", [userId]);
+      await client.query("select public.write_user_locale_preference($1,'es-419',0)", [userId]);
 
       const settingsBefore = await client.query<{ value: Record<string, unknown> }>(
         "select to_jsonb(s) as value from public.store_market_settings s where store_id=$1",
         [storeId],
       );
       await client.query("select public.write_user_locale_preference($1,'pt-BR',1)", [userId]);
-      await client.query("select public.write_user_locale_preference($1,'es-PY',2)", [userId]);
+      await client.query("select public.write_user_locale_preference($1,'es-419',2)", [userId]);
       const settingsAfter = await client.query<{ value: Record<string, unknown> }>(
         "select to_jsonb(s) as value from public.store_market_settings s where store_id=$1",
         [storeId],
       );
       expect(settingsAfter.rows[0].value).toEqual(settingsBefore.rows[0].value);
-      expect(await scalar(client, "select ui_locale from public.user_preferences where user_id=$1", [userId])).toBe("es-PY");
+      expect(await scalar(client, "select ui_locale from public.user_preferences where user_id=$1", [userId])).toBe("es-419");
       expect(
         await scalar(client, "select ui_locale_source from public.user_preferences where user_id=$1", [userId]),
       ).toBe("explicit");
