@@ -13,7 +13,7 @@
 | # | Phase | Goal / status |
 |---|---|---|
 | 57.2 | F57.2 — Persistência de preferências multimercado | **Concluída, validada em produção e arquivada (2026-10-28).** Persistência por usuário/loja, proveniência, CAS, rotas autenticadas e inicialização nos fluxos; UAT 5/5; migrations aplicadas em produção; smoke PASS; sem UI e sem habilitação PY. |
-| 57.4 | F57.4 — Base de tradução da interface e configurações | **Planejamento GSD concluído; aguardando revisão.** Catálogos `pt-BR`/`es-419`, shell traduzido, página `/configuracoes` e preferência persistida; 4 planos em 3 waves; sem implementação. |
+| 57.4 | F57.4 — Base de tradução da interface e configurações | **Plano 01 executado localmente; aguardando revisão.** Fundação i18n, contexto server-first e contrato do AppShell entregues; planos 02–04 não iniciados. |
 | 23 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ TextProvider + Copy Director | ConcluÃƒÆ’Ã‚Â­da; fundaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de IA de texto e Copy Director intercambiÃƒÆ’Ã‚Â¡vel |
 | 24 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Credit Tables + CreditService | ConcluÃƒÆ’Ã‚Â­da; crÃƒÆ’Ã‚Â©ditos concedidos, consumidos e auditÃƒÆ’Ã‚Â¡veis |
 | 25 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Pipeline de GeraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o v1.5 | ConcluÃƒÆ’Ã‚Â­da; copy e crÃƒÆ’Ã‚Â©ditos integrados ao pipeline |
@@ -665,7 +665,7 @@ Plans:
 
 ### Phase 57.4: F57.4 — Base de tradução da interface e configurações
 
-**Status:** **Planejamento GSD concluído; aguardando revisão.** OpenSpec aprovado; 4 planos em 3 waves; nenhuma implementação iniciada.
+**Status:** **Plano 01 executado localmente; aguardando revisão.** OpenSpec aprovado; 4 planos em 3 waves; plano 01 concluído com gates locais; planos 02–04 não iniciados.
 
 **Goal:** entregar a fundação de tradução da interface (`pt-BR`/`es-419`), traduzir o shell compartilhado do lojista, preservar `/admin` em português e criar `/configuracoes` autenticada com escolha persistida de idioma, mantendo conteúdo/campanhas em `pt-BR`/`es-PY` e sem alterar loja, moeda, cobrança ou créditos.
 
@@ -678,7 +678,7 @@ Plans:
 **Plans:** 4 plans in 3 waves (01 -> 02/03 -> 04).
 
 Plans:
-- [ ] 57.4-01-PLAN.md — fundação i18n (catálogos/paridade/interpolação), resolução server-side com timeout de 200 ms e contrato de payload do AppShell
+- [x] 57.4-01-PLAN.md — fundação i18n (catálogos/paridade/interpolação), resolução server-side com timeout de 200 ms e contrato de payload do AppShell
 - [ ] 57.4-02-PLAN.md — shell traduzido (sidebar/drawer/topbar/menu/badge/sino), menu Conta -> Novidades -> Configurações -> Sair, admin em pt-BR e logout por prop
 - [ ] 57.4-03-PLAN.md — `/configuracoes` autenticada sem loja, leitura sem escrita e formulário de idioma com CAS e matriz de erros
 - [ ] 57.4-04-PLAN.md — gates locais, medições de payload/timeout, prova funcional real no homolog existente e aceite humano
