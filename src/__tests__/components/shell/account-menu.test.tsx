@@ -2,11 +2,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, fireEvent, screen } from "@testing-library/react";
 import { AccountMenu } from "@/components/shell/account-menu";
+import { es419Messages, ptBRMessages } from "@/lib/i18n";
 
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) =>
     <a href={href} {...props}>{children}</a>,
 }));
+
+vi.mock("@/lib/store-onboarding/draft-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/store-onboarding/draft-store")>();
+  return { ...actual, clearAllDrafts: vi.fn(actual.clearAllDrafts) };
+});
 
 function mockMatchMedia(reduced: boolean) {
   const mql = {
@@ -19,6 +25,18 @@ function mockMatchMedia(reduced: boolean) {
   return mql;
 }
 
+function renderMenu(
+  overrides: Partial<React.ComponentProps<typeof AccountMenu>> = {},
+) {
+  return render(
+    <AccountMenu
+      user={{ claims: { email: "user@vendeo.tech" } }}
+      messages={ptBRMessages.shell}
+      {...overrides}
+    />,
+  );
+}
+
 describe("AccountMenu", () => {
   beforeEach(() => {
     mockMatchMedia(false);
@@ -29,46 +47,73 @@ describe("AccountMenu", () => {
   });
 
   it("shows user email", () => {
-    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    renderMenu();
     expect(screen.getByText("user@vendeo.tech")).toBeTruthy();
   });
 
   it("trigger has aria-label='Menu da conta'", () => {
-    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    renderMenu();
     const trigger = screen.getByRole("button");
     expect(trigger.getAttribute("aria-label")).toBe("Menu da conta");
   });
 
   it("email span is hidden on mobile via responsive class (hidden sm:inline-block)", () => {
-    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    renderMenu();
     const email = screen.getByText("user@vendeo.tech");
     expect(email.className).toContain("hidden");
     expect(email.className).toContain("sm:inline-block");
   });
 
   it("shows fallback when email unavailable", () => {
-    render(<AccountMenu user={{ claims: { sub: "abc-123-def" } }} />);
+    renderMenu({ user: { claims: { sub: "abc-123-def" } } });
     expect(screen.getByText("abc-123-")).toBeTruthy();
   });
 
-  it("shows Configurações and Sair when dropdown is open", () => {
-    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+  it("shows the approved storefront order: Conta, Novidades, Configurações, Sair", () => {
+    renderMenu();
     const trigger = screen.getByRole("button");
     fireEvent.click(trigger);
+
+    const links = screen.getAllByRole("link");
+    expect(links.map((l) => l.getAttribute("href"))).toEqual([
+      "/conta",
+      "/novidades",
+      "/configuracoes",
+    ]);
+    expect(screen.getByText("Conta")).toBeTruthy();
+    expect(screen.getByText("Novidades")).toBeTruthy();
     expect(screen.getByText("Configurações")).toBeTruthy();
     expect(screen.getByText("Sair")).toBeTruthy();
-    const link = screen.getByRole("link", { name: /Configurações/ });
-    expect(link.getAttribute("href")).toBe("/conta");
+
+    const conta = screen.getByRole("link", { name: /Conta/ });
+    expect(conta.getAttribute("href")).toBe("/conta");
+    const configuracoes = screen.getByRole("link", { name: /Configurações/ });
+    expect(configuracoes.getAttribute("href")).toBe("/configuracoes");
+  });
+
+  it("keeps the legacy admin menu: Configurações → /conta, Novidades, Sair", () => {
+    const { container } = renderMenu({ isAdmin: true });
+    fireEvent.click(screen.getByRole("button"));
+
+    const links = screen.getAllByRole("link");
+    expect(links.map((l) => l.getAttribute("href"))).toEqual([
+      "/conta",
+      "/novidades",
+    ]);
+    expect(container.querySelectorAll('a[href="/configuracoes"]').length).toBe(0);
+    const configuracoes = screen.getByRole("link", { name: /Configurações/ });
+    expect(configuracoes.getAttribute("href")).toBe("/conta");
+    expect(screen.getByText("Sair")).toBeTruthy();
   });
 
   it("trigger has aria-haspopup='true'", () => {
-    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    renderMenu();
     const trigger = screen.getByRole("button");
     expect(trigger.getAttribute("aria-haspopup")).toBe("true");
   });
 
   it("aria-expanded toggles between true and false", () => {
-    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    renderMenu();
     const trigger = screen.getByRole("button");
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(trigger);
@@ -76,7 +121,7 @@ describe("AccountMenu", () => {
   });
 
   it("Escape closes the menu", () => {
-    render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    renderMenu();
     const trigger = screen.getByRole("button");
     fireEvent.click(trigger);
     expect(screen.getByText("Configurações")).toBeTruthy();
@@ -87,10 +132,50 @@ describe("AccountMenu", () => {
 
   it("prefers-reduced-motion: reduce removes transition from chevron", () => {
     mockMatchMedia(true);
-    const { container } = render(<AccountMenu user={{ claims: { email: "user@vendeo.tech" } }} />);
+    const { container } = renderMenu();
     const trigger = screen.getByRole("button");
     fireEvent.click(trigger);
     const chevron = container.querySelector(".lucide-chevron-down");
     expect(chevron?.className).not.toContain("duration-200");
+  });
+
+  it("renders es-419 labels and scopes lang to translated items only", () => {
+    const { container } = renderMenu({
+      messages: es419Messages.shell,
+      locale: "es-419",
+      lang: "es-419",
+    });
+
+    const trigger = screen.getByRole("button");
+    expect(trigger.getAttribute("aria-label")).toBe("Menú de la cuenta");
+    expect(trigger.getAttribute("lang")).toBe("es-419");
+
+    fireEvent.click(trigger);
+
+    expect(screen.getByText("Cuenta")).toBeTruthy();
+    expect(screen.getByText("Novedades")).toBeTruthy();
+    expect(screen.getByText("Configuración")).toBeTruthy();
+    expect(screen.getByText("Cerrar sesión")).toBeTruthy();
+
+    const linkConta = screen.getByRole("link", { name: /Cuenta/ });
+    const linkNovidades = screen.getByRole("link", { name: /Novedades/ });
+    const linkConfiguracoes = screen.getByRole("link", { name: /Configuración/ });
+    expect(linkConta.getAttribute("lang")).toBe("es-419");
+    expect(linkConta.getAttribute("href")).toBe("/conta");
+    expect(linkNovidades.getAttribute("lang")).toBe("es-419");
+    expect(linkNovidades.getAttribute("href")).toBe("/novidades");
+    expect(linkConfiguracoes.getAttribute("lang")).toBe("es-419");
+    expect(linkConfiguracoes.getAttribute("href")).toBe("/configuracoes");
+
+    const logoutWrapper = container
+      .querySelector('form[action="/auth/signout"]')
+      ?.parentElement;
+    expect(logoutWrapper?.getAttribute("lang")).toBe("es-419");
+
+    const header = screen
+      .getAllByText("user@vendeo.tech")
+      .find((el) => el.tagName === "DIV");
+    expect(header).toBeTruthy();
+    expect(header?.getAttribute("lang")).not.toBe("es-419");
   });
 });
