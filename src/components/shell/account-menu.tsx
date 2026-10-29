@@ -32,6 +32,10 @@ export function AccountMenu({
     user.claims.email ||
     user.claims.sub?.slice(0, 8) ||
     messages.account.fallbackUser;
+  const isFallbackUser = !user.claims.email && !user.claims.sub;
+  // O e-mail/identificador não deve herdar es-419 do trigger; o fallback
+  // traduzido ("Usuario") mantém o idioma da interface.
+  const identifierLang = isFallbackUser ? lang : lang ? "" : undefined;
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -62,7 +66,7 @@ export function AccountMenu({
         lang={lang}
         className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-0 rounded-lg px-2 py-1.5 text-sm text-text-secondary hover:bg-bg-elevated hover:text-text-primary transition-colors duration-200 font-body sm:gap-2 sm:px-3"
       >
-        <span className="hidden sm:inline-block max-w-[120px] truncate">{displayName}</span>
+        <span lang={identifierLang} className="hidden sm:inline-block max-w-[120px] truncate">{displayName}</span>
         <ChevronDown
           className={`h-4 w-4 transition-transform ${reducedMotion ? "" : "duration-200"} ${isOpen ? "rotate-180" : ""}`}
         />

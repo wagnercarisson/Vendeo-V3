@@ -102,6 +102,7 @@ export function SidebarDrawer({
           }}
           className="fixed inset-0 z-40 bg-black/50"
           aria-label={messages.drawer.close}
+          lang={locale === "es-419" ? "es-419" : undefined}
           tabIndex={-1}
         />
       )}

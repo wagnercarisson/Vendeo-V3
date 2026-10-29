@@ -177,6 +177,12 @@ describe("SidebarDrawer", () => {
     expect(
       container.querySelector('[aria-label="Cerrar menú"].fixed'),
     ).toBeTruthy();
+    expect(
+      container.querySelector('[aria-label="Cerrar menú"].fixed')?.getAttribute("lang"),
+    ).toBe("es-419");
+    expect(
+      container.querySelector('[aria-label="Cerrar menú"].absolute')?.getAttribute("lang"),
+    ).toBeNull();
     expect(screen.getByText("Panel")).toBeTruthy();
     expect(screen.getByText("Campañas")).toBeTruthy();
     expect(container.querySelector('[role="dialog"]')?.getAttribute("lang")).toBe(

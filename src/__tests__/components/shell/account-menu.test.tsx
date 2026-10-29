@@ -65,8 +65,17 @@ describe("AccountMenu", () => {
   });
 
   it("shows fallback when email unavailable", () => {
-    renderMenu({ user: { claims: { sub: "abc-123-def" } } });
+    const { unmount } = renderMenu({ user: { claims: { sub: "abc-123-def" } } });
     expect(screen.getByText("abc-123-")).toBeTruthy();
+    unmount();
+
+    renderMenu({
+      user: { claims: {} },
+      messages: es419Messages.shell,
+      locale: "es-419",
+      lang: "es-419",
+    });
+    expect(screen.getByText("Usuario").getAttribute("lang")).toBe("es-419");
   });
 
   it("shows the approved storefront order: Conta, Novidades, Configurações, Sair", () => {
@@ -171,6 +180,12 @@ describe("AccountMenu", () => {
       .querySelector('form[action="/auth/signout"]')
       ?.parentElement;
     expect(logoutWrapper?.getAttribute("lang")).toBe("es-419");
+
+    const triggerEmail = screen
+      .getAllByText("user@vendeo.tech")
+      .find((el) => el.tagName === "SPAN");
+    expect(triggerEmail).toBeTruthy();
+    expect(triggerEmail?.getAttribute("lang")).not.toBe("es-419");
 
     const header = screen
       .getAllByText("user@vendeo.tech")
