@@ -94,7 +94,7 @@ da confirmação fiscal ou de inicialização explicitamente marcada como assumi
 
 #### Scenario: Idioma do app não define país
 
-- **WHEN** o usuário prefere `es-PY` e a loja é brasileira
+- **WHEN** o usuário prefere `es-419` e a loja é brasileira
 - **THEN** o país cadastral continua BR
 
 ### Requirement: Paraguai permanece inerte

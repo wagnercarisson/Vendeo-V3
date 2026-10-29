@@ -9,8 +9,12 @@ Define a preferência persistida de idioma do aplicativo por usuário, sua ausê
 ### Requirement: Preferência de idioma do aplicativo por usuário
 
 O sistema SHALL persistir o idioma do aplicativo em `public.user_preferences`, 1:1 com o usuário
-autenticado, com `ui_locale` validado (`pt-BR` | `es-PY`), `ui_locale_source`
+autenticado, com `ui_locale` validado (`pt-BR` | `es-419`), `ui_locale_source`
 (`explicit` | `legacy_br`), versão e timestamps.
+
+O contrato do idioma da interface SHALL ser separado do contrato do idioma do conteúdo: conteúdo
+e campanha continuam aceitando `pt-BR` | `es-PY`, e `es-419` NÃO SHALL ser aceito como idioma de
+conteúdo. `es-PY` NÃO SHALL ser aceito como idioma da interface.
 
 O idioma do aplicativo SHALL ser independente do país cadastral, do mercado padrão da loja e do
 idioma do conteúdo das campanhas. Nenhuma leitura ou escrita SHALL recalcular o idioma do app a
@@ -22,11 +26,19 @@ partir do país da loja.
 - **THEN** a preferência persistida e devolvida é `pt-BR`
 - **AND** o contexto da loja permanece PY
 
-#### Scenario: Loja BR com usuário em espanhol
+#### Scenario: Loja BR com usuário em espanhol LATAM
 
-- **WHEN** o usuário define `uiLocale = "es-PY"` em loja BR
-- **THEN** a preferência é persistida e devolvida como `es-PY`
+- **WHEN** o usuário define `uiLocale = "es-419"` em loja BR
+- **THEN** a preferência é persistida e devolvida como `es-419`
 - **AND** mercado, idioma do conteúdo e moeda da loja não são alterados
+- **AND** o idioma do conteúdo continua aceitando `es-PY`
+
+#### Scenario: es-PY não é idioma da interface
+
+- **WHEN** uma escrita tenta `uiLocale = "es-PY"`
+- **THEN** a resposta é `400` com erro em `uiLocale`
+- **AND** nenhuma preferência é alterada
+- **AND** `es-PY` permanece válido apenas no contrato de conteúdo
 
 ### Requirement: Ausência legada explícita
 
