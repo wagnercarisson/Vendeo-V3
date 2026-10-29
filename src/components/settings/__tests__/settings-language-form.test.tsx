@@ -255,3 +255,158 @@ describe("SettingsLanguageForm — seleção e salvamento", () => {
     ).toBeDisabled();
   });
 });
+
+describe("SettingsLanguageForm — matriz de erros", () => {
+  async function saveWithStatus(status: number, body: unknown) {
+    fetchMock.mockResolvedValue(jsonResponse(body, status));
+    renderForm();
+    fireEvent.click(screen.getByRole("radio", { name: messages.optionEs419 }));
+    await act(async () => {
+      fireEvent.click(saveButton());
+    });
+  }
+
+  it("409 exibe conflito, não reenvia automaticamente e recarrega sob demanda", async () => {
+    await saveWithStatus(409, {
+      code: "preferences_version_conflict",
+      currentVersion: 2,
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(messages.error.conflict);
+    const reload = screen.getByRole("button", { name: messages.reload });
+    expect((reload as HTMLButtonElement).disabled).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(refreshMock).not.toHaveBeenCalled();
+
+    // Seleção e reenvio manual continuam possíveis, mas nenhum PATCH automático.
+    expect(screen.getByRole("radio", { name: messages.optionEs419 })).toBeChecked();
+    expect(saveButton()).not.toBeDisabled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: messages.reload }));
+    });
+
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: messages.reload }),
+    ).toBeNull();
+  });
+
+  it("após recarregar o conflito, as novas props sincronizam seleção e versão", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(
+        { code: "preferences_version_conflict", currentVersion: 2 },
+        409,
+      ),
+    );
+    const view = renderForm();
+    fireEvent.click(screen.getByRole("radio", { name: messages.optionEs419 }));
+    await act(async () => {
+      fireEvent.click(saveButton());
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(messages.error.conflict);
+
+    view.rerender(
+      <SettingsLanguageForm
+        initialLocale="pt-BR"
+        initialVersion={2}
+        messages={messages}
+        common={common}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: messages.optionPtBr })).toBeChecked();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(saveButton()).toBeDisabled();
+  });
+
+  const STATUS_CASES: Array<[number, keyof typeof messages.error]> = [
+    [403, "forbidden"],
+    [400, "validation"],
+    [500, "unavailable"],
+    [503, "unavailable"],
+  ];
+
+  it.each(STATUS_CASES)(
+    "%i exibe %s, encerra o estado salvando e preserva a seleção",
+    async (status, key) => {
+      await saveWithStatus(status, { error: "falha" });
+
+      expect(screen.getByRole("alert")).toHaveTextContent(messages.error[key]);
+      expect(refreshMock).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("radio", { name: messages.optionEs419 }),
+      ).toBeChecked();
+      expect(
+        screen.getByRole("radio", { name: messages.optionEs419 }),
+      ).not.toBeDisabled();
+      expect(saveButton()).not.toBeDisabled();
+      expect(screen.queryByText(messages.saving)).toBeNull();
+    },
+  );
+
+  it("401 exibe sessão expirada e link para /login", async () => {
+    await saveWithStatus(401, { error: "unauthorized" });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(messages.error.session);
+    const loginLink = screen.getByRole("link", { name: messages.login });
+    expect(loginLink.getAttribute("href")).toBe("/login");
+    expect(refreshMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha de rede (TypeError) exibe conexão e reabilita os controles", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    renderForm();
+    fireEvent.click(screen.getByRole("radio", { name: messages.optionEs419 }));
+    await act(async () => {
+      fireEvent.click(saveButton());
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(messages.error.connection);
+    expect(refreshMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("radio", { name: messages.optionEs419 }),
+    ).not.toBeDisabled();
+    expect(saveButton()).not.toBeDisabled();
+    expect(screen.queryByText(messages.saving)).toBeNull();
+  });
+
+  it("novo clique após erro reenvia com a mesma versão (nova tentativa)", async () => {
+    await saveWithStatus(503, { code: "preferences_unavailable" });
+    expect(screen.getByRole("alert")).toHaveTextContent(messages.error.unavailable);
+
+    fetchMock.mockResolvedValue(
+      jsonResponse({ uiLocale: "es-419", source: "explicit", version: 1 }),
+    );
+    await act(async () => {
+      fireEvent.click(saveButton());
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [firstBody, secondBody] = [
+      JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string),
+      JSON.parse((fetchMock.mock.calls[1] as [string, RequestInit])[1].body as string),
+    ];
+    expect(firstBody.expectedVersion).toBe(0);
+    expect(secondBody).toEqual({ uiLocale: "es-419", expectedVersion: 0 });
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("router.refresh não é chamado em nenhum erro que não seja a recarga", async () => {
+    for (const [status] of STATUS_CASES) {
+      refreshMock.mockReset();
+      fetchMock.mockReset();
+      const view = renderForm();
+      fetchMock.mockResolvedValue(jsonResponse({ error: "x" }, status));
+      fireEvent.click(screen.getByRole("radio", { name: messages.optionEs419 }));
+      await act(async () => {
+        fireEvent.click(saveButton());
+      });
+      expect(refreshMock).not.toHaveBeenCalled();
+      view.unmount();
+    }
+  });
+});
