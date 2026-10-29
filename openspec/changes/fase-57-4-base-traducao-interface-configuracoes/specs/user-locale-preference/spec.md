@@ -25,9 +25,10 @@ usuários.
 ### Requirement: Fallback de renderização em falha de leitura
 
 O sistema SHALL resolver a renderização para `pt-BR` quando a leitura da preferência falhar com
-erro conhecido (`preferences_unavailable` ou `stored_preferences_invalid`), sem bloquear a página,
-sem criar/alterar preferência e sem expor detalhes técnicos ao usuário. O sistema SHALL registrar
-aviso operacional de falha de leitura, sem dados pessoais.
+erro conhecido (`preferences_unavailable`, `stored_preferences_invalid` ou
+`preferences_read_timeout`), sem bloquear a página, sem criar/alterar preferência e sem expor
+detalhes técnicos ao usuário. O timeout SHALL ser de 200 ms e não SHALL alterar o cliente Supabase
+global. O sistema SHALL registrar aviso operacional de falha de leitura, sem dados pessoais.
 
 O contrato de `/api/preferences` SHALL permanecer inalterado: indisponibilidade continua `503` e
 valor persistido inválido continua `500 stored_preferences_invalid`, sem fallback silencioso na
@@ -38,6 +39,13 @@ API.
 - **WHEN** a leitura da preferência falha por indisponibilidade
 - **THEN** a página é renderizada em `pt-BR`
 - **AND** a API continua respondendo `503 preferences_unavailable`
+
+#### Scenario: Leitura lenta na renderização
+
+- **WHEN** a leitura da preferência ultrapassa 200 ms
+- **THEN** a página é renderizada em `pt-BR`
+- **AND** `preferences_read_timeout` é registrado
+- **AND** a API não é alterada
 
 #### Scenario: Valor inválido persistido
 

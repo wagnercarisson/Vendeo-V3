@@ -94,12 +94,17 @@ SHALL ser expostos na interface; seus significados na API permanecem inalterados
 
 ### Requirement: Conflito, indisponibilidade e sessão
 
-A página SHALL tratar respostas de erro sem perder a seleção atual:
+A página SHALL tratar respostas e falhas sem perder a seleção atual:
 - `409`: informar conflito de versão e oferecer recarregar o valor vigente, sem regravar
   automaticamente;
+- `403`: informar falha de origem/CSRF e orientar recarregar a página;
+- falha de rede/interrupção: informar falha de conexão e permitir nova tentativa;
 - `503`/`500`: informar indisponibilidade e permitir nova tentativa;
 - `400`: informar validação inválida;
 - `401`: informar sessão expirada e orientar novo login, sem escrita.
+
+Em qualquer erro, o estado de salvamento SHALL ser encerrado, os controles SHALL ser
+reabilitados e a seleção SHALL permanecer. A página SHALL NOT ficar presa em “salvando”.
 
 #### Scenario: Conflito de versão
 
@@ -107,6 +112,19 @@ A página SHALL tratar respostas de erro sem perder a seleção atual:
 - **THEN** a página exibe a mensagem de conflito
 - **AND** não reenvia o PATCH automaticamente
 - **AND** oferece recarregar o valor e a versão atuais
+
+#### Scenario: Origem/CSRF inválida
+
+- **WHEN** o PATCH retorna `403`
+- **THEN** a página exibe a mensagem de origem inválida
+- **AND** mantém a seleção e permite recarregar/tentar novamente
+
+#### Scenario: Falha de rede
+
+- **WHEN** a requisição é interrompida ou falha antes de uma resposta
+- **THEN** a página exibe mensagem de conexão
+- **AND** o estado de salvamento é encerrado
+- **AND** a seleção permanece e pode ser reenviada
 
 #### Scenario: Preferências indisponíveis
 
@@ -116,9 +134,14 @@ A página SHALL tratar respostas de erro sem perder a seleção atual:
 
 ### Requirement: Aplicação do idioma após salvar
 
-Após um salvamento 200, a interface SHALL passar a exibir o novo idioma sem reload completo da
-aplicação, sem perda de campos preenchidos e sem navegação destrutiva. A confirmação SHALL ser
-exibida no idioma recém-aplicado.
+Após um salvamento 200, a interface SHALL atualizar o layout compartilhado e a página juntos por
+`router.refresh()`, sem reload completo da aplicação, sem perda de campos preenchidos e sem
+navegação destrutiva. A confirmação SHALL ser baseada no sucesso real do PATCH, não na presença de
+query string, e SHALL permanecer visível após o refresh.
+
+O formulário SHALL sincronizar seleção e versão com o DTO retornado e com as novas props do
+servidor após o refresh. Trocas repetidas `pt-BR → es-419 → pt-BR` SHALL funcionar com o mesmo
+fluxo. Após recarregar um conflito, seleção e versão SHALL voltar a corresponder ao valor vigente.
 
 A troca de idioma SHALL NOT alterar país da loja, mercado, moeda, conteúdo de campanha ou
 quaisquer outros dados.
@@ -126,9 +149,26 @@ quaisquer outros dados.
 #### Scenario: Shell muda para espanhol após salvar
 
 - **WHEN** o PATCH de `es-419` retorna 200
-- **THEN** o shell e a página de configurações passam a exibir espanhol
-- **AND** a confirmação de salvamento é exibida em espanhol
+- **THEN** `router.refresh()` atualiza shell e configurações para espanhol
+- **AND** a confirmação é exibida por ter havido salvamento real
 - **AND** não ocorre reload completo do navegador
+
+#### Scenario: Trocas repetidas
+
+- **WHEN** o usuário salva `es-419` e depois volta a salvar `pt-BR`
+- **THEN** shell e página são atualizados nas duas direções
+- **AND** seleção e versão permanecem sincronizadas após cada salvamento
+
+#### Scenario: Confirmação não vem de query string
+
+- **WHEN** a URL contém `?saved=1` sem um PATCH bem-sucedido nesta sessão
+- **THEN** nenhuma confirmação de salvamento é exibida
+
+#### Scenario: Conflito recarregado sincroniza o formulário
+
+- **WHEN** o usuário aciona recarregar após `409`
+- **THEN** a página busca o valor/versão vigentes
+- **AND** a seleção e a versão do formulário passam a corresponder a eles
 
 #### Scenario: Loja e campanhas não mudam
 

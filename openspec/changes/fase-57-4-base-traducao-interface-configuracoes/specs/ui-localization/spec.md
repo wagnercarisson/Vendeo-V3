@@ -76,6 +76,11 @@ para buscar traduções.
 A leitura SHALL ser cacheada por requisição e por usuário, sem estado mutável de módulo. Usuários
 diferentes na mesma instância SHALL receber idiomas e mensagens independentes.
 
+A leitura adicional no layout SHALL ter limite de espera de **200 ms**, implementado sem alterar
+o cliente Supabase global. Ao estourar o limite, a renderização SHALL usar `pt-BR`, registrar
+`preferences_read_timeout` sem PII e prosseguir; a promise original SHALL ser isolada para não
+gerar unhandled rejection.
+
 #### Scenario: Espanhol já vem no HTML inicial
 
 - **WHEN** um usuário com `uiLocale = "es-419"` acessa uma rota autenticada
@@ -87,6 +92,13 @@ diferentes na mesma instância SHALL receber idiomas e mensagens independentes.
 - **WHEN** dois usuários com preferências diferentes são renderizados em sequência
 - **THEN** cada resposta usa o idioma do respectivo usuário
 - **AND** nenhum cache de módulo reutiliza o idioma do primeiro
+
+#### Scenario: Leitura lenta não bloqueia a página
+
+- **WHEN** a leitura da preferência ultrapassa 200 ms
+- **THEN** a página prossegue em `pt-BR`
+- **AND** o evento `preferences_read_timeout` é registrado
+- **AND** o cliente Supabase global não é alterado
 
 ### Requirement: Fallback de renderização sem alterar a API
 
@@ -116,6 +128,10 @@ O shell autenticado SHALL receber apenas os namespaces necessários (`common` e 
 de configurações SHALL receber apenas `settings` e as ações comuns. Nenhum catálogo completo SHALL
 ser enviado ao navegador.
 
+O shell SHALL sempre receber o catálogo `pt-BR` (necessário para a exceção do admin) e SHALL
+receber o catálogo `es-419` somente quando o locale do usuário for `es-419`. Usuários em `pt-BR`
+NÃO SHALL receber o catálogo espanhol do shell.
+
 Os catálogos SHALL ser módulos estáticos; não SHALL haver endpoint, fetch ou arquivo JSON remoto
 para carregar traduções. O custo em bytes e JavaScript adicional SHALL ser medido antes da
 publicação.
@@ -124,6 +140,12 @@ publicação.
 
 - **WHEN** uma rota comum do lojista é carregada
 - **THEN** o payload do shell não contém o namespace `settings`
+
+#### Scenario: Usuário português não recebe espanhol
+
+- **WHEN** o usuário está em `pt-BR`
+- **THEN** o payload do shell contém apenas o catálogo português
+- **AND** não contém o catálogo `es-419` do shell
 
 #### Scenario: Sem requisição de tradução
 

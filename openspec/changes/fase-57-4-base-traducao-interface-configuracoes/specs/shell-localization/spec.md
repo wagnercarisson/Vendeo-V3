@@ -64,19 +64,50 @@ admin SHALL preservar o comportamento atual: “Configurações” aponta para `
 - **WHEN** o usuário altera o idioma da interface para `es-419`
 - **THEN** a área `/admin` continua em português
 
-### Requirement: Idioma declarado no documento
+### Requirement: Idioma declarado apenas nas regiões traduzidas
 
-O shell autenticado SHALL declarar o idioma efetivo no elemento raiz do shell (`lang`). Após a
-hidratação, o sistema SHALL ajustar `document.documentElement.lang` para o idioma efetivo, sem
-alterar o texto já renderizado. Em `/admin`, o idioma efetivo SHALL ser `pt-BR`.
+O documento SHALL permanecer em `pt-BR`. O sistema SHALL NOT alterar globalmente
+`document.documentElement.lang` nem declarar `es-419` em páginas cujo conteúdo continua em
+português.
 
-#### Scenario: Atributo lang em espanhol
+Apenas as regiões efetivamente traduzidas SHALL declarar `lang="es-419"`: sidebar, drawer, CTA,
+hamburger, sino, menu da conta e conteúdo traduzido de `/configuracoes`. Regiões com conteúdo
+dinâmico não traduzido (nome da loja, e-mail, notificações) SHALL NOT receber `lang` de espanhol.
+Em `/admin`, todas as regiões permanecem `pt-BR`.
+
+#### Scenario: Página não traduzida não é marcada como espanhola
+
+- **WHEN** dashboard, conta ou campanhas são renderizados para usuário em `es-419`
+- **THEN** o documento permanece `lang="pt-BR"`
+- **AND** o conteúdo português não é marcado como `es-419`
+
+#### Scenario: Região traduzida declara espanhol
 
 - **WHEN** o shell do lojista é renderizado em `es-419`
-- **THEN** o contêiner do shell declara `lang="es-419"`
-- **AND** o documento é ajustado para `es-419` após a hidratação
+- **THEN** somente as regiões traduzidas declaram `lang="es-419"`
+- **AND** o documento não é alterado globalmente
 
 #### Scenario: Admin declara português
 
 - **WHEN** uma rota `/admin` é renderizada
-- **THEN** o contêiner do shell declara `lang="pt-BR"`
+- **THEN** as regiões do shell permanecem em `pt-BR`
+
+### Requirement: Rótulo do botão de saída por propriedade
+
+O componente compartilhado `LogoutButton` SHALL aceitar um rótulo por propriedade, com padrão
+“Sair” em português. O shell SHALL passar o rótulo do catálogo no idioma efetivo.
+
+O componente SHALL NOT depender de provider de i18n, contexto obrigatório ou novo client. O
+logout, a limpeza de rascunhos e os demais usos em `/conta` e admin SHALL permanecer inalterados.
+
+#### Scenario: Shell traduz Sair
+
+- **WHEN** o shell é renderizado em `es-419`
+- **THEN** o botão de saída exibe o rótulo espanhol do catálogo
+- **AND** o logout continua limpando os rascunhos e encerrando a sessão
+
+#### Scenario: Consumidor não traduzido mantém português
+
+- **WHEN** `LogoutButton` é usado sem a propriedade de rótulo em `/conta` ou admin
+- **THEN** o texto permanece “Sair”
+- **AND** nenhum provider é exigido

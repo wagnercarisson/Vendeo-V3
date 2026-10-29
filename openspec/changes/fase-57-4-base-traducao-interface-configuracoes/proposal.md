@@ -56,11 +56,12 @@ notificações permanecem os mesmos; apenas seus rótulos passam a vir do catál
 ## Impact
 
 - **Código:** novo `src/lib/i18n/**`; `src/app/(app)/layout.tsx`; `src/app/(app)/configuracoes/`;
-  `src/components/shell/*`; `src/components/changelog/sidebar-badge.tsx`;
+  `src/components/shell/*`; `src/components/auth/logout-button.tsx`;
+  `src/components/changelog/sidebar-badge.tsx`;
   `src/components/notifications/notification-bell.tsx`; testes co-localizados.
 - **APIs:** nenhuma alteração de contrato; `/api/preferences` continua sendo a única escrita.
 - **Banco:** nenhuma migration ou alteração de schema; leitura existente via
-  `getUserLocalePreference`.
+  `getUserLocalePreference`, com timeout de renderização e sem alterar o cliente global.
 - **Dependências:** nenhuma nova dependência prevista.
 - **Sistemas:** conteúdo de campanhas, loja, cobrança, créditos, onboarding e admin permanecem
-  fora do escopo funcional.
+  fora do escopo funcional; `/admin` mantém a composição atual e não é movido de route group.
