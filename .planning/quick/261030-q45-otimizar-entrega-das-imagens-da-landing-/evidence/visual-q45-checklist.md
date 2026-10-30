@@ -1,18 +1,25 @@
 # Q45 — manual visual checklist (landing image delivery)
 
-No screenshot automation was added (that would require a new dependency). Use this checklist manually.
+No screenshot dependency was added: captures use Chrome DevTools Protocol directly. Use this checklist manually.
+
+## Important: the flag is baked into the prerendered HTML
+
+The home page is statically prerendered, so changing `VENDEO_PUBLIC_SIGNUP_ENABLED` only in the runtime environment (`$env:...; npm start`) does **not** change an already-built HTML. To switch modes you must build with the desired value:
+
+```powershell
+# flag off (explicit)
+$env:VENDEO_PUBLIC_SIGNUP_ENABLED="false"; npm run build; npm start
+
+# flag on (explicit)
+$env:VENDEO_PUBLIC_SIGNUP_ENABLED="true"; npm run build; npm start
+```
+
+Clear the variable afterwards (`Remove-Item Env:VENDEO_PUBLIC_SIGNUP_ENABLED`). The repository's `.env.local` must not be edited for this check.
 
 ## Modes / URLs
 
-- **Flag off (default):** `http://localhost:3000/`
-- **Flag on (temporary, no `.env` edit):** in PowerShell:
-  ```powershell
-  $env:PORT="3100"
-  $env:VENDEO_PUBLIC_SIGNUP_ENABLED="true"
-  npm start
-  ```
-  Open `http://localhost:3100/`. Afterwards stop the process on port 3100 and clear both variables (`Remove-Item Env:PORT`, `Remove-Item Env:VENDEO_PUBLIC_SIGNUP_ENABLED`).
-  Automated check already performed during execution: flag-on returned HTTP 200 with `data-public-signup-enabled="true"` (5 markers) and **no** `#acesso` form.
+- **Flag on:** current production build at `http://localhost:3000/` (5 × `data-public-signup-enabled="true"`, no `#acesso` form).
+- **Flag off:** built locally with `VENDEO_PUBLIC_SIGNUP_ENABLED=false`; served at `http://localhost:3000/` for capture (5 × `data-public-signup-enabled="false"`, `#acesso` form present, "Solicitar acesso free" CTAs). The original `.next` was preserved and restored, and the flag-on server was restarted and re-verified afterwards.
 
 ## Viewports
 
@@ -35,18 +42,16 @@ No screenshot automation was added (that would require a new dependency). Use th
 
 ## Captured evidence (agent pre-check)
 
-Real emulated captures from the current production build (flag ON), via Chrome DevTools Protocol — no new dependency:
+Real emulated captures via Chrome DevTools Protocol — no new dependency:
 
-- `screenshots/landing-flag-on-mobile-full.webp` — 390 × 844, DPR 2, full page.
-- `screenshots/landing-flag-on-desktop-full.webp` — 1440 × 900, DPR 1, full page.
-- `screenshots/mobile-*.webp` — native-resolution crops of the five campaign images visible in the mobile viewport (hero, transformação, apresentação, identidade, abordagens).
-- `screenshots/desktop-*.webp` — native-resolution crops of all nine campaign images.
+- `screenshots/landing-flag-on-mobile-full.webp` — flag ON, 390 × 844, DPR 2, full page.
+- `screenshots/landing-flag-on-desktop-full.webp` — flag ON, 1440 × 900, DPR 1, full page.
+- `screenshots/landing-flag-off-mobile-full.webp` — flag OFF build, 390 × 844, DPR 2, full page (beta badge, "Solicitar acesso free" CTAs, access form).
+- `screenshots/landing-flag-off-desktop-full.webp` — flag OFF build, 1440 × 900, DPR 1, full page.
+- `screenshots/mobile-*.webp` — native-resolution crops of the five campaign images visible in the mobile viewport (hero, transformação, apresentação, identidade, abordagens), from the flag-ON capture; the campaign markup/assets are identical in both modes.
+- `screenshots/desktop-*.webp` — native-resolution crops of all nine campaign images, flag ON.
 
-Pre-check result: campaign headlines, prices and disclaimers are sharp and legible; framing, 1:1 proportion and `object-contain` are unchanged; the mobile strips still show one legible tile + part of the next. This is **not** a substitute for human acceptance.
-
-### Flag-off limitation
-
-The current production build is statically prerendered with `VENDEO_PUBLIC_SIGNUP_ENABLED=true` (`.env.local`), so runtime env overrides do not change the frozen HTML. Capturing flag-off visually would require a second build with the flag frozen to `false` — out of this task's scope and would disturb the build measured above. Flag-off behavior is covered by the automated suite (`landing-page.test.tsx`, both flag modes) and must be confirmed manually by starting a flag-off build when convenient. The image delivery markup is flag-independent.
+Pre-check result: campaign headlines, prices and disclaimers are sharp and legible in both modes; framing, 1:1 proportion and `object-contain` are unchanged; the mobile strips still show one legible tile + part of the next. This is **not** a substitute for human acceptance.
 
 ## Notes
 

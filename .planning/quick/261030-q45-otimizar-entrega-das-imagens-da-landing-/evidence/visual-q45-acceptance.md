@@ -20,10 +20,13 @@
 
 ## Agent pre-check (not human acceptance)
 
-- Captures: `screenshots/landing-flag-on-mobile-full.webp` (390 @ DPR2) and `screenshots/landing-flag-on-desktop-full.webp` (1440 @ DPR1), plus native crops `screenshots/{mobile,desktop}-*.webp`.
-- Campaign headlines, prices and disclaimers remain sharp and legible at mobile DPR2; framing, 1:1 proportion and `object-contain` are unchanged; layout/copy/CTAs are visually identical.
+- Captures: both flag modes at mobile (390 @ DPR2) and desktop (1440 @ DPR1):
+  `screenshots/landing-flag-on-{mobile,desktop}-full.webp` and
+  `screenshots/landing-flag-off-{mobile,desktop}-full.webp`, plus native crops
+  `screenshots/{mobile,desktop}-*.webp`.
+- The flag-OFF build was produced explicitly with `VENDEO_PUBLIC_SIGNUP_ENABLED=false`, served, captured, then the original `.next` was restored and the flag-ON server restarted and re-verified (5 true markers, HTTP 200).
+- Campaign headlines, prices and disclaimers remain sharp and legible in both modes; framing, 1:1 proportion and `object-contain` are unchanged; layout/copy/CTAs are visually identical apart from the intended flag differences.
 - Candidate selection confirmed in the built app: 640w (mobile default), 480w/320w (desktop DPR1), 1024w original capped at DPR3; hero requested exactly once per run.
-- Limitation: the current build is prerendered with the flag ON, so the flag-OFF mode was not screenshot; it is covered by the automated both-modes tests and remains a manual check. See `visual-q45-checklist.md`.
 
 ## Acceptance record
 
