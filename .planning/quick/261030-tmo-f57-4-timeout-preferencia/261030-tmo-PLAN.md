@@ -1,5 +1,5 @@
 ---
-status: implemented_local_pending_publication
+status: complete
 date: 2026-10-30
 slug: f57-4-timeout-preferencia
 quick_id: 261030-tmo
@@ -10,7 +10,7 @@ type: plan-only
 wave: 1
 depends_on: []
 approval: pending_user_codex_review
-execution_status: local_complete_publication_pending
+execution_status: closed_production_accepted
 branch: feature/fase57-4-base-traducao-interface-configuracoes
 head: 39ef947e
 files_modified:
