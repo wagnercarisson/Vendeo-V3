@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: completed_with_limitations
-last_updated: "2026-10-30T21:25:00.000Z"
+last_updated: "2026-10-30T21:35:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 9
@@ -37,6 +37,7 @@ progress:
 
 ## Current Position
 
+- **PLANEJAMENTO QUICK 261030-tmo (2026-10-30) — correção do timeout de preferência da F57.4: PLANO CRIADO; EXECUÇÃO NÃO INICIADA.** Causa confirmada: `[i18n] preferences_read_timeout` em produção com `UI_LOCALE_READ_TIMEOUT_MS=200` (3× `/configuracoes`, 1× `/dashboard`); sem migration faltante. Plano em `.planning/quick/261030-tmo-f57-4-timeout-preferencia/261030-tmo-PLAN.md`: elevar o limite único para **1000 ms** (leitura pontual; p50/p95 homolog 5/7 ms), preservar timer limpo/rejeição tardia/cache, rejeitar timeouts distintos para layout/página, atualizar specs/design/tasks ativos, registrar incidente de produção e validar com testes focados + homolog curto + smoke pós-publicação. **Nenhum código, teste, spec, banco, push ou deploy alterado.** Aguardando revisão do usuário/Codex.
 - **REGISTRO DOCUMENTAL F57.4 (2026-10-30) — idiomas regionalizados de campanha: ADIADO; SEM IMPLEMENTAÇÃO.** Registrado em `openspec/.../design.md` e `57.4-CONTEXT.md`: futura seção em `/configuracoes` permitirá habilitar idiomas de campanha (`pt-BR`, `es-PY`; `es-AR` só após suporte aprovado); a composição mostrará apenas opções habilitadas e suportadas, uma por campanha, sem alterar padrões salvos. O idioma regionalizado orienta linguagem/contexto local, não preço/moeda/condições; é independente do idioma da interface. **Seletor de campanha, `es-AR`, contratos e escopo da F57.4 permanecem fora.**
 - **VERIFICAÇÃO F57.4 (2026-10-30) — GSD 18/18 must-haves, `human_needed` (limitação aceita); OpenSpec 45/47.** `57.4-VERIFICATION.md`: `closure_status=local_homolog_closed`, `production_ready=false`; 18/18 must-haves, 0 warnings documentais; status `human_needed` reflete **exclusivamente** a limitação aceita do leitor de tela real — **não há novo aceite aguardado**. Admin foi validado manualmente e aprovado; não é pendência. `57.4-OPENSPEC-VERIFY.md`: 45/47 tasks; 5.6 parcial (leitor de tela não executado; limitação aceita) e 6.7 aberta (publicação/smoke). Tasks comprovadas marcadas; 5.6/6.7 preservadas abertas. Nenhum sync/archive, push, deploy ou produção.
 - **ENCERRAMENTO LOCAL/HOMOLOG F57.4 (2026-10-30) — CONCLUÍDO; ACEITE HUMANO REGISTRADO; PUBLICAÇÃO NÃO EXECUTADA.** Planos 01–04 concluídos. Gates locais 174/174; conta com loja (HTTP/API + browser) e conta sem loja (browser 6/6); 409/rede/403; PerformanceResourceTiming; Slow 4G; teclado. Responsável testou manualmente `pt-BR → es-419 → admin em pt-BR → dashboard em es-419 → pt-BR` e aprovou textos/visual. Admin validado manualmente; leitor de tela real não executado, limitação conhecida e aceita (acessibilidade não declarada integralmente validada). Timeout: 15 amostras, p50≈5 ms, p95≈7 ms, 0 timeouts. Conta sem loja `c63e6c5b-48aa-43b4-a76e-81a62bfb6f58` mantida; `stores=0`. Evidência: `evidence/57.4-homolog-proof.md`; SUMMARY `57.4-04-SUMMARY.md`. **Pendentes para promoção:** merge/push/deploy, smoke de produção e autorização de publicação. **Nenhuma produção, migration, push, merge, deploy, sync ou archive.**
