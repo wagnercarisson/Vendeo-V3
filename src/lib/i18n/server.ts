@@ -15,13 +15,15 @@ import type { SupportedUiLocale } from "./locales";
  * Resolução server-first do idioma da interface (F57.4).
  *
  * - cache por requisição via `cache()` do React (nunca estado mutável de módulo);
- * - limite de espera de 200 ms sem alterar o cliente Supabase;
+ * - limite de espera finito (1000 ms) sem alterar o cliente Supabase;
+ *   o valor é uma margem a validar em produção, não uma garantia contra
+ *   falhas de infraestrutura;
  * - fallback `pt-BR` apenas para falhas conhecidas, sem bloquear a página;
  * - erro desconhecido propaga para não mascarar bug;
  * - logs sem PII.
  */
 
-export const UI_LOCALE_READ_TIMEOUT_MS = 200;
+export const UI_LOCALE_READ_TIMEOUT_MS = 1000;
 
 export type UiRenderErrorCode =
   | "preferences_unavailable"

@@ -77,7 +77,29 @@ describe("getUiRenderContext", () => {
     });
   });
 
-  it("aplica timeout de 200 ms, limpa o timer e isola rejeição tardia", async () => {
+  it("resolve leitura de 250 ms, acima do limite antigo de 200 ms", async () => {
+    vi.useFakeTimers();
+
+    let resolveRead: (value: UserLocalePreferenceDTO) => void = () => {};
+    const pending = new Promise<UserLocalePreferenceDTO>((resolve) => {
+      resolveRead = resolve;
+    });
+    service.getUserLocalePreference.mockReturnValue(pending);
+
+    const promise = getUiRenderContext("user-250");
+    await vi.advanceTimersByTimeAsync(250);
+    resolveRead(ES);
+    await vi.advanceTimersByTimeAsync(0);
+
+    await expect(promise).resolves.toEqual({
+      ok: true,
+      locale: "es-419",
+      preference: ES,
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("aplica timeout de 1000 ms, limpa o timer e isola rejeição tardia", async () => {
     vi.useFakeTimers();
 
     let rejectRead: (reason: unknown) => void = () => {};
@@ -98,7 +120,7 @@ describe("getUiRenderContext", () => {
       locale: "pt-BR",
       errorCode: "preferences_read_timeout",
     });
-    expect(UI_LOCALE_READ_TIMEOUT_MS).toBe(200);
+    expect(UI_LOCALE_READ_TIMEOUT_MS).toBe(1000);
     expect(vi.getTimerCount()).toBe(0);
 
     // Rejeição tardia da leitura original não pode virar unhandledRejection.
