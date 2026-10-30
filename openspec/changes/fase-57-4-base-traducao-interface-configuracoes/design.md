@@ -103,12 +103,13 @@ type UiRenderContext =
   exclusivo da renderização.
 
 **Limite de espera:** a leitura adicional no layout SHALL ser limitada por
-`UI_LOCALE_READ_TIMEOUT_MS = 200`. A implementação usa `Promise.race` entre a leitura existente e
+`UI_LOCALE_READ_TIMEOUT_MS = 1000`. A implementação usa `Promise.race` entre a leitura existente e
 um timer, sem alterar o cliente Supabase global, sem novo client e sem timeout em outras
 consultas. Se o limite estourar, o layout usa `pt-BR` e registra
 `preferences_read_timeout`; a promise original continua isolada com `catch` para não gerar
 unhandled rejection. Em `/configuracoes`, o timeout produz estado de erro com retry, pois a página
-precisa da versão para salvar. O valor de 200 ms é um orçamento de revisão e SHALL ser medido em
+precisa da versão para salvar. O valor de 1000 ms é uma margem a validar em produção — não uma
+garantia de sucesso sob falha de infraestrutura — e SHALL ser medido em
 homolog sob latência simulada.
 
 **Por que não buscar via HTTP no layout:** exigiria uma requisição interna por navegação e
@@ -225,7 +226,7 @@ dados gerados, mensagens de erro de outras páginas e qualquer texto do admin al
   sempre e o conjunto em `es-419` apenas quando o usuário estiver em espanhol. Medir bytes e
   First Load JS; orçamento de revisão: ≤ 6 KB gzip para o conjunto do shell. Não enviar catálogo
   completo e não reorganizar `/admin` nesta fase.
-- **Leitura de preferência lenta** → timeout de 200 ms no layout via `Promise.race`, fallback
+- **Leitura de preferência lenta** → timeout de 1000 ms no layout via `Promise.race`, fallback
   `pt-BR` e log `preferences_read_timeout`; sem alterar o cliente Supabase global. Medir em
   homolog com latência simulada; se o orçamento atrasar páginas, reduzir ou rever a estratégia.
 - **Flash de português** → textos renderizados no servidor; nenhuma troca client-side de

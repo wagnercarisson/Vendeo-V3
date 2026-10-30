@@ -76,10 +76,11 @@ para buscar traduções.
 A leitura SHALL ser cacheada por requisição e por usuário, sem estado mutável de módulo. Usuários
 diferentes na mesma instância SHALL receber idiomas e mensagens independentes.
 
-A leitura adicional no layout SHALL ter limite de espera de **200 ms**, implementado sem alterar
-o cliente Supabase global. Ao estourar o limite, a renderização SHALL usar `pt-BR`, registrar
-`preferences_read_timeout` sem PII e prosseguir; a promise original SHALL ser isolada para não
-gerar unhandled rejection.
+A leitura adicional no layout SHALL ter limite de espera de **1000 ms**, implementado sem alterar
+o cliente Supabase global. O valor é uma margem a validar em produção, não uma garantia de
+sucesso sob falha de infraestrutura. Ao estourar o limite, a renderização SHALL usar `pt-BR`,
+registrar `preferences_read_timeout` sem PII e prosseguir; a promise original SHALL ser isolada
+para não gerar unhandled rejection.
 
 #### Scenario: Espanhol já vem no HTML inicial
 
@@ -95,7 +96,7 @@ gerar unhandled rejection.
 
 #### Scenario: Leitura lenta não bloqueia a página
 
-- **WHEN** a leitura da preferência ultrapassa 200 ms
+- **WHEN** a leitura da preferência ultrapassa 1000 ms
 - **THEN** a página prossegue em `pt-BR`
 - **AND** o evento `preferences_read_timeout` é registrado
 - **AND** o cliente Supabase global não é alterado

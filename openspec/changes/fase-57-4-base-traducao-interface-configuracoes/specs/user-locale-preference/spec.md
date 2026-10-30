@@ -27,8 +27,9 @@ usuários.
 O sistema SHALL resolver a renderização para `pt-BR` quando a leitura da preferência falhar com
 erro conhecido (`preferences_unavailable`, `stored_preferences_invalid` ou
 `preferences_read_timeout`), sem bloquear a página, sem criar/alterar preferência e sem expor
-detalhes técnicos ao usuário. O timeout SHALL ser de 200 ms e não SHALL alterar o cliente Supabase
-global. O sistema SHALL registrar aviso operacional de falha de leitura, sem dados pessoais.
+detalhes técnicos ao usuário. O timeout SHALL ser de 1000 ms, valor a validar em produção, e não
+SHALL alterar o cliente Supabase global. O sistema SHALL registrar aviso operacional de falha de
+leitura, sem dados pessoais.
 
 O contrato de `/api/preferences` SHALL permanecer inalterado: indisponibilidade continua `503` e
 valor persistido inválido continua `500 stored_preferences_invalid`, sem fallback silencioso na
@@ -42,7 +43,7 @@ API.
 
 #### Scenario: Leitura lenta na renderização
 
-- **WHEN** a leitura da preferência ultrapassa 200 ms
+- **WHEN** a leitura da preferência ultrapassa 1000 ms
 - **THEN** a página é renderizada em `pt-BR`
 - **AND** `preferences_read_timeout` é registrado
 - **AND** a API não é alterada

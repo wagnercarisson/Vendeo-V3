@@ -11,7 +11,7 @@
 
 ## 2. Resolução server-side e payload
 
-- [x] 2.1 Criar `src/lib/i18n/server.ts` com `getUiRenderContext(userId)` usando `cache()` do React, `getUserLocalePreference` existente e timeout de 200 ms via `Promise.race`.
+- [x] 2.1 Criar `src/lib/i18n/server.ts` com `getUiRenderContext(userId)` usando `cache()` do React, `getUserLocalePreference` existente e timeout de 1000 ms via `Promise.race`.
 - [x] 2.2 Implementar fallback para `PreferencesUnavailableError`/`StoredPreferencesInvalidError`/timeout, com aviso sem PII; erros desconhecidos permanecem propagados e a promise isolada não gera unhandled rejection.
 - [x] 2.3 Atualizar `src/app/(app)/layout.tsx` para resolver o contexto e passar `locale`, `commonMessages`, `shellMessages` (pt-BR sempre; es-419 apenas se o usuário estiver em espanhol).
 - [x] 2.4 Garantir uma única leitura por requisição entre layout e `/configuracoes`; adicionar teste de isolamento entre dois usuários e de timeout.
@@ -57,7 +57,7 @@
 - [x] 6.1 Executar testes focados de i18n, shell, configurações e admin; corrigir regressões da suíte relacionada.
 - [x] 6.2 Executar `npm run typecheck`, `npm run lint` (limitação conhecida: não cobre TS), `npm run build` e `git diff --check`.
 - [x] 6.3 Medir First Load JS de `/configuracoes` e o tamanho dos catálogos; confirmar que usuários em pt-BR não recebem o shell espanhol e registrar o orçamento.
-- [x] 6.4 Validar em rede limitada (Slow 4G) que não há requisição de tradução, flash de português, atraso acima de 200 ms por preferência ou bloqueio de página.
+- [x] 6.4 Validar em rede limitada (Slow 4G) que não há requisição de tradução, flash de português, atraso acima de 1000 ms por preferência ou bloqueio de página.
 - [x] 6.5 Validar no homolog com usuário de teste com loja e sem loja; registrar evidências sem dados pessoais.
 - [x] 6.6 Revisar e aprovar os textos `es-419` com revisor humano antes da publicação.
 - [ ] 6.7 Publicar somente após autorização separada; executar smoke autenticado em produção e registrar evidência.
