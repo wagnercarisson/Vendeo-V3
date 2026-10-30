@@ -268,3 +268,25 @@ Nenhuma decisão pendente após a revisão:
 - **Rótulo:** “Configurações” / “Configuración” no singular.
 - **Textos espanhóis:** executor prepara; Codex revisa consistência; aprovação final do
   responsável na validação visual, sem revisor externo.
+
+## Deferred Ideas (registro futuro; fora da F57.4)
+
+Uma futura seção em `/configuracoes` permitirá escolher os **idiomas regionalizados habilitados
+para campanhas**, por exemplo:
+
+- Português (Brasil): `pt-BR`.
+- Español (Paraguay): `es-PY`.
+- Futuramente, Español (Argentina): `es-AR`, somente após suporte aprovado.
+
+Na composição de campanha, serão apresentadas somente as opções habilitadas pelo usuário nas
+configurações e efetivamente suportadas pelo gerador. Inicialmente, a campanha selecionará **uma
+única opção**, sem alterar os padrões salvos.
+
+O idioma regionalizado orientará linguagem e contexto comercial local; **não** determinará
+automaticamente preço, moeda ou condições comerciais.
+
+Os idiomas de campanha são independentes dos idiomas da interface. A interface pode permanecer
+`pt-BR`/`es-419` enquanto o gerador suporta outros idiomas regionalizados.
+
+**Fora do escopo desta fatia:** implementar o seletor de campanha, habilitar `es-AR`, ampliar
+contratos ou alterar o escopo da F57.4. Este registro é apenas documental.
