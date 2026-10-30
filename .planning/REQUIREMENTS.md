@@ -253,3 +253,18 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-57.2-10 | Provas reais de banco no homolog existente: RLS, grants, atomicidade, idempotência, concorrência | Homolog + evidências |
 | REQ-57.2-11 | Gates locais: testes focados, 72 de market-context, typecheck, lint (limitação TS aceita) e build | Relatório de gates |
 | REQ-57.2-12 | Runbook de promoção/rollback e handoff | Documento + checklist + evidências de promoção |
+
+## F57.4 — Entrega (Base de tradução da interface e configurações)
+
+**Fonte:** `openspec/changes/fase-57-4-base-traducao-interface-configuracoes/` (ativa; proposta aprovada para planejamento GSD). **Status:** planejamento concluído; sem implementação.
+
+| REQ-ID | Requirement | Prova principal |
+|---|---|---|
+| REQ-57.4-01 | Catálogos `pt-BR`/`es-419` versionados, namespaces `common`/`shell`/`settings`, paridade de chaves, strings não vazias, placeholders e fallback de chave ausente | Testes de catálogo/interpolação |
+| REQ-57.4-02 | Resolução server-first com cache por requisição/usuário, timeout de 200 ms, fallback `pt-BR` sem alterar a API, payload restrito e sem catálogo completo no cliente | Testes de contexto/payload + medição |
+| REQ-57.4-03 | Shell do lojista traduzido (sidebar, drawer, topbar, menu, badge, sino), `lang="es-419"` apenas nas regiões traduzidas e documento em `pt-BR` | Testes de shell/acessibilidade |
+| REQ-57.4-04 | Menu Conta → Novidades → Configurações → Sair; `/conta` renomeado para Conta; `/configuracoes` fora da sidebar | Testes de navegação |
+| REQ-57.4-05 | `/configuracoes` autenticada, disponível sem loja, somente idioma, leitura sem escrita e sem PATCH no mount | Testes de página |
+| REQ-57.4-06 | Salvamento via `/api/preferences` com CAS/CSRF, confirmação real, `router.refresh()`, sincronização de versão/seleção, trocas repetidas e recuperação de 400/401/403/409/500/503/rede | Testes de formulário + prova funcional |
+| REQ-57.4-07 | Admin preservado em `pt-BR`, sem seletor; `LogoutButton` com label por prop e logout/limpeza de rascunhos intactos | Testes de admin/logout |
+| REQ-57.4-08 | Validação proporcional, gates locais, homolog existente, medição de payload/timeout/rede limitada e separação dos gates de promoção | Evidência de gates/homolog |

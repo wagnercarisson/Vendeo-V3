@@ -3,9 +3,16 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { clearAllDrafts } from "@/lib/store-onboarding/draft-store";
+
+vi.mock("@/lib/store-onboarding/draft-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/store-onboarding/draft-store")>();
+  return { ...actual, clearAllDrafts: vi.fn(actual.clearAllDrafts) };
+});
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.mocked(clearAllDrafts).mockClear();
   sessionStorage.clear();
   localStorage.clear();
 });
@@ -92,11 +99,28 @@ describe("LogoutButton", () => {
     sessionStorage.removeItem = orig;
   });
 
-  it("renders logout button with Sair text", () => {
+  it("renders logout button with Sair text by default", () => {
     render(<LogoutButton />);
 
     expect(screen.getByText("Sair")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
+  });
+
+  it("renders a custom label from props", () => {
+    render(<LogoutButton label="Cerrar sesión" />);
+
+    expect(screen.getByText("Cerrar sesión")).toBeInTheDocument();
+    expect(screen.queryByText("Sair")).toBeNull();
+  });
+
+  it("calls clearAllDrafts on submit while preserving the signout form", () => {
+    render(<LogoutButton />);
+    const form = screen.getByRole("button").closest("form");
+    fireEvent.submit(form!);
+
+    expect(clearAllDrafts).toHaveBeenCalledTimes(1);
+    expect(form).toHaveAttribute("action", "/auth/signout");
+    expect(form).toHaveAttribute("method", "POST");
   });
 
   it("form action is /auth/signout with POST method", () => {

@@ -7,6 +7,8 @@ import { hasValidPrivacyAcknowledgement } from "@/lib/legal/privacy";
 import { getCurrentVersion } from "@/lib/legal/document-versions";
 import { buildDocumentInfo } from "@/lib/legal/document-content";
 import { PrivacyGate } from "@/components/legal/privacy-gate";
+import { es419Messages, ptBRMessages } from "@/lib/i18n";
+import { getUiRenderContext } from "@/lib/i18n/server";
 
 export default async function AppLayout({
   children,
@@ -14,6 +16,8 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requirePageUser();
+  const ui = await getUiRenderContext(user.userId);
+  const locale = ui.ok ? ui.locale : "pt-BR";
   const store = await getCurrentStore(user.userId);
   const entries = await getAllEntries();
   const latestEntryId = entries[0]?.frontmatter.id ?? null;
@@ -29,6 +33,11 @@ export default async function AppLayout({
       user={user}
       storeName={store?.name ?? null}
       latestChangelogEntryId={latestEntryId}
+      locale={locale}
+      commonMessages={ptBRMessages.common}
+      shellMessages={ptBRMessages.shell}
+      commonMessagesEs={locale === "es-419" ? es419Messages.common : undefined}
+      shellMessagesEs={locale === "es-419" ? es419Messages.shell : undefined}
     >
       {children}
       <PrivacyRecovery />
