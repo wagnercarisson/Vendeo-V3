@@ -1,24 +1,33 @@
 -- Publicação legal F50 (D13) — Termos v1.5, Privacidade v1.4, Uso Aceitável v1.2.
 -- Migration SEPARADA da migration estrutural (20260920000001). NÃO publica docs legais
--- na estrutural; esta migration é APLICADA APENAS NO CORTE (50-14), após a identificação
--- da PJ e a validação jurídica formal das três minutas (gate de corte).
+-- na estrutural; esta migration é APLICADA APENAS NA PUBLICAÇÃO, após a revisão do
+-- responsável e a revisão jurídica, com as condições de publicação atendidas.
 --
 -- Conteúdo (delta consolidado em public/docs/legal/):
---   - terms_of_service v1.5: substitui o freemium contínuo por Demonstração Gratuita
---     (10 créditos, 168h, irrepetível por raiz de CNPJ); sem bônus mensais automáticos;
---     sem cobrança/cartão; ordem de consumo demo→bônus→comprado; expiração; graça de 24h;
---     reaceite obrigatório da v1.5 sem bloquear histórico; identificação do fornecedor (12.4).
---   - privacy_policy v1.4: identificação da PJ (Controlador e Contato); email operacional
---     distinto de marketing; eventos de produto sem nomes internos; WhatsApp opcional;
---     papéis controlador/operador; inventário de fornecedores (Gemini condicional/lab);
---     retenção com janela de 30 dias no encerramento.
---   - acceptable_use v1.2: terminologia "Demonstração Gratuita"; proibição de conteúdo
---     ilegal/abusivo/exploratório e imagens de menores sem autorização; reaceite substancial.
+--   - terms_of_service v1.5: teste gratuito de 28 dias desde a conclusão do onboarding;
+--     quatro parcelas de 5 créditos nos dias 0, 7, 14 e 21; máximo de 20 créditos;
+--     vencimento comum ao final; elegibilidade individual por CNPJ completo; sem
+--     renovação ou cobrança automática; política de ofertas prospectiva, com preservação
+--     dos ciclos iniciados e sem prazo fixo de 30 dias; acesso após expiração sem
+--     encerramento automático da conta; janela de 24h para estorno após vencimento;
+--     identificação da PJ (14.7).
+--   - privacy_policy v1.4: identificação da PJ; CNPJ completo, elegibilidade e registros
+--     da oferta; eventos do teste e parcelas; papéis controlador/operador; inventário de
+--     fornecedores (Gemini condicional/lab); retenção com janela de 30 dias; remissão ao
+--     Anexo de Transferências Internacionais; petição à ANPD e reclamação consumerista;
+--     nova ciência distinta de consentimento de marketing.
+--   - acceptable_use v1.2: terminologia do Teste Gratuito de 28 Dias; critérios por CNPJ
+--     completo; salvaguarda de filiais legitimamente elegíveis; reaceite substancial;
+--     ofertas observam a cláusula 6.1 dos Termos.
 --
 -- Reaceite: terms v1.5 + acceptable_use v1.2 são CONTRATUAIS (requireLegalClearance,
 -- CAPABILITY_DOCUMENTS.content_generation, getAcceptanceStatus = outdated → gate 403 →
--- /legal/reaccept, grava em legal_acceptances). privacy_policy v1.4 é CIÊNCIA por usuário
--- (PrivacyGate/privacy_acknowledgements). Nenhum gate bloqueia histórico/campanhas/downloads.
+-- /legal/reaccept, grava em legal_acceptances) e alcançam todos os usuários abrangidos,
+-- inclusive beta testers. privacy_policy v1.4 é CIÊNCIA por usuário
+-- (PrivacyGate/privacy_acknowledgements), distinta de consentimento de marketing.
+-- A obrigação de reaceite da versão vigente permanece. O gate técnico de aceite antes
+-- de iniciar a oferta será tratado em etapa separada e não é bloqueio documental
+-- automático desta publicação. Nenhum gate bloqueia histórico/campanhas/downloads.
 --
 -- Idempotente: ON CONFLICT (document_type, version) DO UPDATE (padrão
 -- 20260731000004 / 20260817000001). Sem DDL/DROP/ALTER.
@@ -28,19 +37,19 @@ VALUES
   (
     'terms_of_service',
     'v1.5',
-    'Demonstracao Gratuita no lugar do freemium continuo: 10 creditos validos por 168h (7 dias), irrepetivel por raiz de CNPJ; fim dos creditos mensais automaticos; sem compra, assinatura ou cobranca automatica; ordem de consumo demonstracao→bonus→comprado; expiracao e janela de graca de 24h; reaceite obrigatorio da v1.5 sem bloquear historico/campanhas/downloads; identificacao do fornecedor (12.4).',
+    'Teste Gratuito de 28 dias desde a conclusao do onboarding: quatro parcelas de 5 creditos nos dias 0, 7, 14 e 21, que podem acumular dentro do ciclo, maximo de 20 creditos e vencimento comum, sem transferencia para novo ciclo; elegibilidade individual por CNPJ completo, com salvaguarda de filiais legitimamente elegiveis; sem renovacao ou cobranca automatica; politica de ofertas prospectiva, com preservacao dos creditos concedidos e dos ciclos iniciados, sem prazo fixo de 30 dias e sem renovacao futura; comunicacao previa com antecedencia razoavel; excecoes imediatas por fraude, abuso, erro material, obrigacao legal, seguranca ou impossibilidade tecnica/operacional relevante justificada, sem tratar conveniencia comercial como impossibilidade; acesso apos expiracao sem encerramento automatico da conta; janela de 24h para estorno apos vencimento; reaceite obrigatorio da v1.5 inclusive por beta testers; identificacao da PJ (14.7).',
     now()
   ),
   (
     'privacy_policy',
     'v1.4',
-    'Identificacao da PJ (Controlador e Contato); comunicacoes operacionais por email distintas de marketing; eventos de produto descritos sem nomes internos; WhatsApp opcional na solicitacao de acesso com descarte; papeis de controlador/operador; inventario de fornecedores (Gemini condicional/restrito ao laboratorio); retencao com janela de 30 dias no encerramento.',
+    'Identificacao da PJ (Controlador e Contato); CNPJ completo, elegibilidade e registros do Teste Gratuito de 28 dias, inclusive parcelas e vencimento; comunicacoes operacionais por email distintas de marketing; eventos de produto descritos sem nomes internos; papeis de controlador/operador; inventario de fornecedores (Gemini condicional/restrito ao laboratorio); retencao com janela de 30 dias no encerramento; remissao ao Anexo de Transferencias Internacionais, que integra a Politica; direito de peticao a ANPD e reclamacao aos orgaos de defesa do consumidor; nova ciencia da v1.4 inclusive por beta testers, distinta de consentimento de marketing.',
     now()
   ),
   (
     'acceptable_use',
     'v1.2',
-    'Terminologia Demonstracao Gratuita; proibicao de conteudo ilegal/abusivo/exploratorio e imagens de pessoas/menores sem autorizacao; reaceite substancial.',
+    'Terminologia do Teste Gratuito de 28 dias; criterios de elegibilidade, validade, parcelas, vencimento e controle de creditos por CNPJ completo; proibicao de multiplicar beneficios com salvaguarda de filiais legitimamente elegiveis; reaceite substancial inclusive por beta testers; ofertas e beneficios gratuitos observam a clausula 6.1 dos Termos, com preservacao dos ciclos iniciados.',
     now()
   )
 ON CONFLICT (document_type, version)

@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = new Set([
   "/login", "/signup", "/check-email", "/forgot-password",
-  "/termos", "/privacidade", "/uso-aceitavel",
+  "/termos", "/privacidade", "/privacidade/transferencias", "/uso-aceitavel",
 ]);
 
 const GUEST_ONLY_ROUTES = new Set(["/login", "/signup", "/check-email", "/forgot-password"]);
@@ -98,6 +98,7 @@ export const config = {
     "/admin/:path*",
     "/api/:path*",
     "/(termos|privacidade|uso-aceitavel)",
+    "/privacidade/transferencias",
     "/legal/:path*",
   ],
 };

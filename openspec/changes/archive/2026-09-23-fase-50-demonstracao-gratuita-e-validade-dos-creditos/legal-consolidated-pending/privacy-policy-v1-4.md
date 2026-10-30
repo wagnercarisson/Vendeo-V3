@@ -1,16 +1,13 @@
 # Política de Privacidade — Vendeo
 
 **Versão:** v1.4
-**Status:** minuta consolidada para publicação após a constituição da pessoa jurídica
-**Data de publicação:** [DATA DE PUBLICAÇÃO]
-
-> Esta minuta não é a versão vigente e não deve ser publicada ou ativada enquanto contiver placeholders. A publicação ocorrerá somente após a constituição da pessoa jurídica, o preenchimento dos dados do controlador e a conclusão dos gates jurídicos e operacionais aplicáveis.
+**Data de publicação:** 30/10/2026
 
 ---
 
 ## 1. Controlador e contato
 
-O controlador dos dados pessoais tratados no âmbito desta Política é **[RAZÃO SOCIAL]**, inscrita no CNPJ sob o nº **[CNPJ]**, com endereço profissional em **[ENDEREÇO PROFISSIONAL COMPLETO]** e contato eletrônico pelo endereço **suporte@vendeo.tech**.
+O controlador dos dados pessoais tratados no âmbito desta Política é **Sara Schmoelz Wagner**, inscrita no CNPJ sob o nº **15.696.769/0001-63**, com endereço profissional em **Rua José Wagner, 45, Ibirama - SC, CEP 89140-000** e contato eletrônico pelo endereço **suporte@vendeo.tech**.
 
 Dúvidas, solicitações relacionadas à privacidade ou pedidos de exercício dos direitos previstos na legislação brasileira poderão ser encaminhados a esse endereço.
 
@@ -65,7 +62,7 @@ Durante o uso poderão ser gerados:
 - prompts, parâmetros e respostas técnicas;
 - histórico de geração e revisão;
 - saldo, extrato e movimentações de créditos;
-- eventos relacionados à Demonstração Gratuita;
+- eventos do Teste Gratuito de 28 Dias, inclusive inscrição, concessão de cada parcela, esgotamento e vencimento comum;
 - registros de auditoria, ciência e aceite de documentos legais;
 - protocolos e registros de solicitações de suporte e privacidade.
 
@@ -81,9 +78,11 @@ O CNPJ informado poderá ser consultado em bases públicas oficiais ou serviços
 
 O CNPJ pode constituir dado pessoal quando relacionado a MEI, empresário individual, representantes, sócios ou outras pessoas identificáveis.
 
+O CNPJ completo poderá ser utilizado para verificar a elegibilidade da oferta, a existência de benefício anterior para o mesmo CNPJ e a prevenção a fraude. O compartilhamento de raiz cadastral por filiais com CNPJs distintos não é, por si só, indício automático de fraude nem impede a análise individual de elegibilidade.
+
 ### 3.6. Autenticação pelo Google
 
-Quando o Usuário escolher a autenticação pelo Google, o Vendeo receberá somente os dados necessários à autenticação e identificação da conta, como identificador, email, nome e, quando disponível, imagem de perfil.
+Quando o Usuário escolher a autenticação pelo Google, o Vendeo solicita os escopos `openid`, `email` e `profile` e recebe somente os dados necessários à autenticação e identificação da conta, como identificador, email, nome e, quando disponível, imagem de perfil.
 
 O Vendeo não solicita acesso ao Gmail, Google Drive ou a outros conteúdos da conta Google.
 
@@ -100,8 +99,8 @@ O Vendeo utiliza o Cloudflare Turnstile para prevenir acessos automatizados, fra
 - identificar a empresa cadastrada e seu representante;
 - prestar e executar as funcionalidades do Serviço;
 - gerar, armazenar, revisar e disponibilizar campanhas;
-- operar a Demonstração Gratuita;
-- controlar créditos, elegibilidade e validade por raiz de CNPJ;
+- operar o Teste Gratuito de 28 Dias, inclusive registrar a concessão de cada parcela e o vencimento comum;
+- controlar créditos, elegibilidade e validade por CNPJ completo;
 - impedir duplicidade de benefícios, fraude e abuso;
 - prestar suporte e responder solicitações;
 - preservar segurança, estabilidade e disponibilidade;
@@ -122,22 +121,23 @@ O Vendeo utiliza o Cloudflare Turnstile para prevenir acessos automatizados, fra
 
 4.4. Quando um tratamento depender de consentimento, o titular será informado sobre a possibilidade de não fornecê-lo e sobre as consequências da recusa.
 
-4.5. Emails necessários à autenticação, segurança, suporte, alterações contratuais e operação da Demonstração Gratuita são comunicações operacionais, distintas de publicidade ou marketing.
+4.5. Emails necessários à autenticação, segurança, suporte, alterações contratuais e operação do Teste Gratuito de 28 Dias são comunicações operacionais, distintas de publicidade ou marketing.
 
 ## 5. Demonstração Gratuita e eventos de produto
 
 5.1. O Vendeo poderá registrar os seguintes eventos:
 
-- concessão da Demonstração Gratuita;
+- inscrição no Teste Gratuito de 28 Dias;
+- concessão de cada uma das quatro parcelas;
 - primeira geração concluída;
 - consumo e esgotamento dos créditos;
-- expiração da demonstração;
+- expiração e vencimento comum;
 - solicitação de créditos ao suporte;
 - eventual contratação futura de créditos, planos ou outros serviços pagos, caso disponibilizados pelo Vendeo.
 
-5.2. Esses registros são utilizados para executar o Serviço, controlar elegibilidade e validade, prevenir fraude, solucionar problemas e avaliar o funcionamento da demonstração.
+5.2. Esses registros são utilizados para executar o Serviço, controlar elegibilidade e validade por CNPJ completo, prevenir fraude, solucionar problemas e avaliar o funcionamento da oferta.
 
-5.3. Decisões automatizadas de elegibilidade poderão considerar a raiz do CNPJ e benefícios anteriormente concedidos. O Usuário poderá solicitar esclarecimento ou reconsideração pelo email **suporte@vendeo.tech**.
+5.3. Decisões automatizadas de elegibilidade poderão considerar o CNPJ completo e benefícios anteriormente concedidos ao mesmo CNPJ. O compartilhamento de raiz cadastral por filiais com CNPJs distintos, por si só, não caracteriza fraude nem impede a análise individual de elegibilidade. O Usuário poderá solicitar esclarecimento ou reconsideração pelo email **suporte@vendeo.tech**.
 
 ## 6. Imagens e dados de terceiros
 
@@ -166,14 +166,14 @@ O Vendeo utiliza o Cloudflare Turnstile para prevenir acessos automatizados, fra
 | Infraestrutura em nuvem | Hospedagem, banco de dados, autenticação e armazenamento |
 | Inteligência artificial | Análise e geração de textos, imagens e campanhas |
 | Email e suporte | Recebimento e envio de comunicações operacionais |
-| Segurança e rede | Proteção, DNS, entrega de conteúdo e prevenção de abuso |
+| Segurança | Proteção e prevenção de abuso |
 | Consulta cadastral | Verificação de CNPJ e informações empresariais |
 | Observabilidade | Diagnóstico de erros, segurança e desempenho |
 
 7.3. Por serem serviços diretamente identificáveis pelo Usuário, o Vendeo informa expressamente o uso do:
 
-- **Google**, para autenticação pelo Google OAuth e, quando necessário, recursos tecnológicos de inteligência artificial;
-- **Cloudflare**, para DNS, entrega de conteúdo e verificação de segurança.
+- **Google**, para autenticação pelo Google OAuth, para carregamento de fontes por meio do Google Fonts e, quando necessário, recursos tecnológicos de inteligência artificial;
+- **Cloudflare**, exclusivamente para a verificação de segurança do Cloudflare Turnstile.
 
 7.4. Os demais fornecedores são mantidos em inventário interno de operadores e suboperadores. A identificação poderá ser fornecida ao titular ou à autoridade competente quando exigida pela legislação ou necessária ao exercício de direitos, preservadas as informações protegidas por sigilo comercial e industrial.
 
@@ -197,25 +197,21 @@ O Vendeo utiliza o Cloudflare Turnstile para prevenir acessos automatizados, fra
 
 ## 9. Transferência internacional de dados
 
-9.1. A parte principal do banco de dados e do armazenamento operacional está configurada em infraestrutura localizada em São Paulo, Brasil.
+> **Informação destacada.** A parte principal do banco de dados e do armazenamento está configurada no **Brasil**. As transferências internacionais e os países aplicáveis estão detalhados no **Anexo de Transferências Internacionais**, que integra esta Política e será disponibilizado em `/privacidade/transferencias`.
 
-9.2. Determinadas operações poderão ocorrer fora do Brasil, incluindo:
+9.1. A parte principal do banco de dados, da autenticação e do armazenamento operacional está configurada no Brasil, em São Paulo. A região do projeto não permite afirmar que todo o tratamento permaneça no Brasil. A entrega de email pode envolver os países indicados no Anexo.
 
-- execução da aplicação e hospedagem nos Estados Unidos;
-- processamento por provedores de inteligência artificial nos Estados Unidos e em outras localidades utilizadas por seus subprocessadores;
-- tráfego pela rede global de segurança e entrega de conteúdo;
-- processamento de email em países do Espaço Econômico Europeu, no Reino Unido ou em outras localidades utilizadas pelo fornecedor;
-- suporte técnico e subprocessamento realizado por fornecedores internacionais.
+9.2. Quando o Serviço utiliza fornecedores localizados ou com processamento fora do Brasil, os dados podem ser transferidos para os países identificados no Anexo de Transferências Internacionais, conforme a finalidade e o fluxo aplicável.
 
-9.3. As transferências internacionais ocorrem enquanto forem necessárias à execução das respectivas operações de tratamento e conforme os prazos de retenção aplicáveis a cada serviço.
+9.3. As transferências internacionais ocorrem enquanto forem necessárias à execução das respectivas operações e conforme os prazos de retenção aplicáveis a cada serviço.
 
-9.4. Os fornecedores internacionais tratam os dados de acordo com suas atribuições contratuais e com o papel assumido em cada operação. O Vendeo permanece responsável pelas obrigações que lhe cabem como controlador e exige dos operadores as medidas e obrigações compatíveis com o tratamento realizado.
+9.4. O Vendeo permanece responsável pelas obrigações que lhe cabem como controlador e exige dos operadores medidas compatíveis com o tratamento realizado.
 
-9.5. As transferências serão fundamentadas em hipótese legal e mecanismo de transferência admitidos pela LGPD e pela regulamentação da Autoridade Nacional de Proteção de Dados, conforme a operação efetivamente realizada e os instrumentos contratuais vigentes.
+9.5. As transferências serão fundamentadas em hipótese legal e mecanismo de transferência admitidos pela LGPD e pela regulamentação da ANPD, conforme a operação efetivamente realizada e os instrumentos contratuais vigentes.
 
-9.6. As medidas de proteção aplicáveis incluem controles de acesso, criptografia em trânsito, restrição de permissões, armazenamento privado, acesso temporário a arquivos e medidas previstas nesta Política e nos instrumentos contratuais aplicáveis.
+9.6. As medidas de proteção incluem controles de acesso, criptografia em trânsito, restrição de permissões, armazenamento privado, acesso temporário a arquivos e medidas previstas nesta Política e nos instrumentos contratuais aplicáveis.
 
-9.7. Informações adicionais sobre as categorias de fornecedores, países envolvidos, duração, responsabilidades e salvaguardas adotadas poderão ser solicitadas pelo titular por meio do canal indicado na Seção 1.
+9.7. O titular poderá solicitar informações adicionais sobre países, duração, responsabilidades, salvaguardas e mecanismo de transferência pelo canal indicado na Seção 1. Quando a transferência estiver fundamentada em cláusulas contratuais sujeitas à disponibilização ao titular, poderá solicitar sua íntegra, observados os segredos comercial e industrial e a regulamentação aplicável da ANPD.
 
 ## 10. Retenção e exclusão
 
@@ -228,7 +224,7 @@ O Vendeo utiliza o Cloudflare Turnstile para prevenir acessos automatizados, fra
 
 10.2. Produtos, imagens, campanhas e artes permanecem disponíveis para reutilização enquanto a conta estiver ativa, conforme as funcionalidades do Serviço.
 
-10.3. A ausência de atividade não representa pedido de encerramento ou exclusão.
+10.3. A ausência de atividade não representa pedido de encerramento ou exclusão. A expiração dos créditos não encerra a conta; os efeitos sobre o acesso ao aplicativo e ao conteúdo gerado são os definidos nos Termos de Uso.
 
 10.4. Quando o Usuário solicitar o encerramento da conta, será concedida uma janela de 30 dias para recuperação ou exportação, salvo solicitação de exclusão imediata juridicamente aplicável.
 
@@ -260,7 +256,7 @@ O Vendeo utiliza o Cloudflare Turnstile para prevenir acessos automatizados, fra
 - procedimentos de backup;
 - monitoramento técnico e prevenção de abuso.
 
-11.2. Para determinadas finalidades antifraude, o Vendeo utiliza representação criptográfica da raiz do CNPJ, evitando sua exposição desnecessária em eventos técnicos.
+11.2. Para determinadas finalidades antifraude, o Vendeo pode utilizar o CNPJ completo e, quando aplicável, representação criptográfica da raiz do CNPJ, evitando exposição desnecessária em eventos técnicos.
 
 11.3. Nenhum sistema é absolutamente imune a incidentes. Quando um incidente puder causar risco ou dano relevante, o Vendeo adotará as providências e comunicações exigidas pela legislação.
 
@@ -277,9 +273,11 @@ O Vendeo utiliza o Cloudflare Turnstile para prevenir acessos automatizados, fra
 - informação sobre a possibilidade de não fornecer consentimento e sobre as consequências da negativa, quando o tratamento depender dessa base legal;
 - revogação do consentimento;
 - oposição ao tratamento, quando aplicável;
-- revisão de decisões tomadas unicamente com base em tratamento automatizado, quando aplicável.
+- revisão de decisões tomadas unicamente com base em tratamento automatizado, quando aplicável;
+- peticionar contra o controlador perante a Autoridade Nacional de Proteção de Dados — ANPD, nos termos da legislação aplicável;
+- apresentar reclamação aos órgãos de defesa do consumidor, quando aplicável.
 
-12.2. Os pedidos devem ser enviados para **suporte@vendeo.tech**.
+12.2. Os pedidos devem ser enviados para **suporte@vendeo.tech**. O titular também poderá utilizar os canais oficiais da ANPD (https://www.gov.br/anpd) e dos órgãos de defesa do consumidor, inclusive o Consumidor.gov.br (https://www.consumidor.gov.br), para exercer os direitos previstos na legislação aplicável.
 
 12.3. O Vendeo poderá solicitar informações razoáveis para confirmar a identidade e impedir acesso indevido aos dados de outra pessoa.
 
@@ -294,6 +292,10 @@ O Vendeo utiliza o Cloudflare Turnstile para prevenir acessos automatizados, fra
 13.2. Alterações relevantes serão comunicadas e poderão exigir nova ciência do Usuário.
 
 13.3. A Política de Privacidade representa uma comunicação de transparência. A ciência de sua versão não transforma em consentimento os tratamentos fundamentados em outras bases legais.
+
+13.4. Alterações nas condições de ofertas e benefícios gratuitos são regidas pelos Termos de Uso, inclusive a comunicação prévia, a preservação dos ciclos já iniciados e as exceções legais, de segurança e de abuso.
+
+13.5. A publicação da v1.4 exige nova ciência de todos os usuários abrangidos, inclusive os participantes do beta (beta testers). Essa ciência é distinta do consentimento para comunicações comerciais e do reaceite contratual dos Termos de Uso e da Política de Uso Aceitável.
 
 ## 14. Legislação aplicável
 

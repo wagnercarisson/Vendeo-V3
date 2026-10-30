@@ -1,11 +1,8 @@
 # Termos de Uso — Vendeo
 
 **Versão:** v1.5
-**Status:** minuta consolidada para publicação após a constituição da pessoa jurídica
-**Data de publicação:** [DATA DE PUBLICAÇÃO]
-**Data de vigência:** [DATA E HORA DE VIGÊNCIA]
-
-> Esta minuta não está vigente e não deve ser publicada enquanto contiver placeholders. A publicação ocorrerá após a constituição da pessoa jurídica, o preenchimento dos dados do fornecedor e a conclusão dos gates jurídicos e operacionais aplicáveis.
+**Data de publicação:** 30/10/2026
+**Data de vigência:** 30/10/2026, a partir da ativação desta versão na Plataforma, após sua disponibilização pública (horário de Brasília — America/Sao_Paulo, UTC−03:00).
 
 ---
 
@@ -23,12 +20,12 @@ Para estes Termos:
 - **Política de Privacidade:** documento que informa como o Vendeo realiza o tratamento de dados pessoais.
 - **Condições Comerciais da Oferta:** informações apresentadas antes de uma contratação paga, incluindo preço, quantidade de créditos ou benefícios, validade, periodicidade, renovação, cancelamento e demais condições aplicáveis.
 - **Crédito:** unidade interna utilizada para mensurar e controlar operações da Plataforma. Créditos não são moeda, não são transferíveis entre usuários e não permitem saque ou livre conversão em dinheiro, ressalvados os estornos e reembolsos legal ou contratualmente devidos.
-- **Crédito de Demonstração:** crédito promocional concedido para utilização durante a Demonstração Gratuita, sujeito ao prazo destes Termos.
+- **Crédito de Demonstração:** crédito promocional concedido em parcelas durante o Teste Gratuito de 28 Dias, nos termos da seção 6.
 - **Crédito Bônus:** crédito promocional concedido manualmente pelo Vendeo, sem expiração pelo simples decurso do tempo, ressalvadas as hipóteses previstas nestes Termos.
 - **Crédito Comprado:** crédito adquirido mediante contratação paga, quando essa funcionalidade estiver disponível, sujeito às Condições Comerciais da Oferta aceita pelo Usuário em nome do Lojista.
 - **Plano ou Assinatura:** contratação periódica que poderá conferir créditos, funcionalidades ou outros benefícios durante determinado período.
 - **Saldo Disponível:** soma dos Créditos de Demonstração ainda válidos, dos Créditos Bônus e dos Créditos Comprados disponíveis para utilização.
-- **Demonstração Gratuita:** benefício promocional de 10 (dez) Créditos de Demonstração, válidos por 7 (sete) dias corridos, equivalentes a 168 (cento e sessenta e oito) horas, contadas da concessão efetiva.
+- **Demonstração Gratuita (Teste Gratuito de 28 Dias):** benefício promocional de teste gratuito cujos parâmetros, parcelas, limite, elegibilidade e vencimento são os definidos na seção 6.
 
 ## 2. Cadastro e conta
 
@@ -54,11 +51,11 @@ Para estes Termos:
 
 3.2. O envio de solicitação de acesso não garante aprovação, concessão de créditos ou disponibilidade imediata da Plataforma.
 
-3.3. A concessão da Demonstração Gratuita depende da criação de loja elegível, verificação do CNPJ, critérios cadastrais, técnicos, promocionais e de prevenção a fraude, além da inexistência de benefício anterior para a mesma raiz de CNPJ.
+3.3. A concessão da Demonstração Gratuita depende de loja elegível, verificação do CNPJ completo, critérios cadastrais, técnicos, promocionais e de prevenção a fraude, e da inexistência de benefício anterior para o mesmo CNPJ, nos termos da seção 6. Filiais com CNPJ próprio poderão ser elegíveis individualmente; o compartilhamento de raiz cadastral não é, por si só, fraude.
 
-3.4. O Vendeo poderá alterar prospectivamente critérios de elegibilidade, limites e condições de futuras concessões. Essas alterações não reduzirão retroativamente uma demonstração já concedida, ressalvados fraude, abuso, erro material, obrigação legal ou violação destes Termos.
+3.4. O Vendeo poderá alterar prospectivamente critérios de elegibilidade, limites e condições de futuras concessões. Essas alterações não reduzirão retroativamente uma demonstração já concedida, ressalvados fraude, abuso, erro material, obrigação legal ou violação destes Termos. Alterações de políticas de ofertas e benefícios gratuitos observarão a cláusula 6.1.
 
-3.5. O encerramento ou esgotamento da Demonstração Gratuita não encerra a conta. O Usuário poderá continuar acessando a loja, o histórico, as campanhas e os downloads existentes, observadas as regras de retenção e encerramento.
+3.5. Os efeitos do esgotamento ou da expiração dos créditos sobre a conta e o acesso ao aplicativo e ao conteúdo gerado são os definidos na seção 6.
 
 3.6. Quando utilizado o Google OAuth, o Vendeo receberá somente os dados necessários à autenticação e identificação, sem solicitar acesso a outros serviços, como Gmail ou Google Drive.
 
@@ -105,29 +102,33 @@ Para estes Termos:
 
 ## 6. Demonstração Gratuita e Créditos Bônus
 
-6.1. Cada raiz de CNPJ elegível poderá receber uma única Demonstração Gratuita de 10 (dez) créditos, válida por 7 (sete) dias corridos.
+6.1. O Vendeo poderá revisar, substituir, suspender ou descontinuar ofertas, benefícios gratuitos e políticas promocionais para períodos futuros. As alterações serão aplicadas prospectivamente, respeitando os créditos já efetivamente concedidos, conforme suas condições de utilização e validade, e as condições dos ciclos promocionais já iniciados. Concessões periódicas anteriores não geram direito à manutenção ou renovação futura do benefício. Alterações relevantes serão comunicadas previamente aos participantes afetados, com antecedência razoável e indicação da data de aplicação das novas condições. Medidas justificadas por fraude, abuso, erro material comprovado, obrigação legal, risco à segurança ou impossibilidade técnica ou operacional relevante, devidamente justificada, que impeça a continuidade da prestação poderão produzir efeitos imediatos, na extensão necessária e proporcional, com comunicação tão logo seja possível e observados os direitos legalmente assegurados. Não se considera impossibilidade técnica ou operacional a mera conveniência comercial.
 
-6.2. A raiz de CNPJ corresponde aos 8 (oito) primeiros dígitos do cadastro e é utilizada exclusivamente como critério técnico de elegibilidade promocional e prevenção a fraude. Esse critério não constitui definição de grupo econômico para outros efeitos jurídicos.
+6.2. A oferta vigente é o Teste Gratuito de 28 Dias: até 20 (vinte) créditos de demonstração, concedidos em quatro parcelas de 5 (cinco) créditos nos dias 0, 7, 14 e 21, contados da conclusão do onboarding da loja elegível, com vencimento comum ao final de 28 (vinte e oito) dias corridos.
 
-6.3. A criação da conta ou da loja não garante a concessão. O prazo começa somente quando os créditos forem efetivamente concedidos.
+6.3. A elegibilidade é individual por CNPJ completo. Cada CNPJ elegível poderá receber uma única Demonstração Gratuita, observados os critérios cadastrais, técnicos, promocionais e de prevenção a fraude e a inexistência de benefício anterior para o mesmo CNPJ. Filiais com CNPJ próprio poderão ser elegíveis individualmente; o compartilhamento de raiz cadastral não é, por si só, fraude nem impede a análise individual de elegibilidade.
 
-6.4. A data e a hora exatas de expiração serão informadas na Plataforma, com exibição adaptada ao fuso horário local do dispositivo, sem alterar o instante absoluto registrado pelo sistema.
+6.4. A criação da conta ou da loja, isoladamente, não garante a concessão. O prazo começa na conclusão do onboarding da loja elegível; a inscrição observa a janela de 28 dias.
 
-6.5. Créditos de Demonstração não utilizados expiram automaticamente. Eles não são acumulados, renovados, transferidos ou convertidos em Créditos Bônus ou Comprados.
+6.5. As parcelas são concedidas nos dias 0, 7, 14 e 21, até o máximo de 20 créditos, com vencimento comum ao final dos 28 dias. O processamento técnico pode ocorrer em rotina; eventual atraso não amplia o prazo, não cria parcela extra e não eleva o máximo de 20 créditos.
 
-6.6. Se um Crédito de Demonstração for estornado por falha técnica depois do vencimento original, o valor devolvido poderá ser utilizado por pelo menos 24 (vinte e quatro) horas contadas do estorno.
+6.6. Se um Crédito de Demonstração for estornado por falha técnica depois do vencimento original, o valor devolvido poderá ser utilizado por pelo menos 24 (vinte e quatro) horas contadas do estorno. Havendo mais de um estorno no mesmo ciclo, a janela compartilhada poderá estender o prazo dos demais Créditos de Demonstração restaurados.
 
-6.7. Créditos Bônus não expiram pelo simples decurso do tempo, mas poderão deixar de ser utilizados em caso de encerramento da conta, fraude, abuso, concessão manifestamente indevida ou aplicação proporcional das sanções destes Termos.
+6.7. As parcelas de Créditos de Demonstração podem acumular dentro do ciclo vigente. Créditos não utilizados expiram ao final do prazo e não são transferidos para um novo ciclo, renovados ou convertidos em Créditos Bônus ou Comprados.
 
-6.8. Créditos concedidos antes da vigência desta versão permanecem preservados conforme sua classificação histórica, sem direito a novas concessões mensais automáticas.
+6.8. O término da Demonstração Gratuita não inicia automaticamente compra, plano, assinatura, renovação ou cobrança. A oferta é sem renovação automática e sem cobrança automática, não exigindo cartão; qualquer oferta paga futura dependerá de condições comerciais e aceite específicos.
 
-6.9. Conta antiga que não tenha recebido benefício de onboarding nem Demonstração Gratuita poderá receber a demonstração, desde que cumpra os critérios de elegibilidade.
+6.9. A expiração não encerra a conta e não bloqueia, por si só, o acesso ao aplicativo e ao conteúdo gerado, observadas as regras de retenção, segurança, uso aceitável e encerramento do beta. Novas operações que consomem créditos dependerão de Saldo Disponível. Não há promessa de acesso eterno.
 
 6.10. Após o esgotamento ou a expiração, o Usuário poderá solicitar créditos ao suporte. A solicitação não representa compra nem garante concessão.
 
-6.11. O Vendeo poderá enviar comunicações operacionais sobre concessão, vencimento, esgotamento ou expiração por meio da Plataforma e do email cadastrado.
+6.11. Créditos Bônus não expiram pelo simples decurso do tempo, mas poderão deixar de ser utilizados em caso de encerramento da conta, fraude, abuso, concessão manifestamente indevida ou aplicação proporcional das sanções destes Termos.
 
-6.12. Recusas de elegibilidade poderão ser submetidas à reconsideração pelo suporte, sem obrigar o Vendeo a revelar mecanismos internos de prevenção a fraude.
+6.12. O Vendeo poderá enviar comunicações operacionais sobre concessão, parcelas, vencimento, esgotamento ou expiração por meio da Plataforma e do email cadastrado. Essas comunicações são operacionais e não constituem publicidade.
+
+6.13. Recusas de elegibilidade poderão ser submetidas à reconsideração pelo suporte, sem obrigar o Vendeo a revelar mecanismos internos de prevenção a fraude.
+
+6.14. A transição de ofertas observará: (i) para o teste atual, serão preservados os 28 (vinte e oito) dias e as quatro parcelas de 5 (cinco) créditos prometidas a quem já iniciou o ciclo, sem promessa de renovação futura; (ii) novas adesões passarão às novas condições, apresentadas de forma clara antes do início; (iii) quem ainda não concluiu o onboarding deverá aceitar os Termos então vigentes antes de iniciar a oferta. A transição observará a legislação aplicável, as exceções da cláusula 6.1 e não suprimirá direitos legalmente assegurados.
 
 ## 7. Créditos pagos, planos e assinaturas
 
@@ -148,7 +149,7 @@ Para estes Termos:
 
 7.3. A contratação será realizada em nome do Lojista identificado pelo respectivo CNPJ, representado pelo Usuário, e dependerá de manifestação expressa deste.
 
-7.4. O término da Demonstração Gratuita não iniciará automaticamente compra, plano, assinatura, renovação ou cobrança.
+7.4. O término do Teste Gratuito de 28 Dias não iniciará automaticamente compra, plano, assinatura, renovação ou cobrança.
 
 7.5. Créditos Comprados representam direito contratual de utilização da Plataforma nos limites da oferta aceita. Eles não são moeda, não são transferíveis e não permitem saque ou negociação entre usuários.
 
@@ -208,9 +209,9 @@ Para estes Termos:
 
 9.2. A Plataforma poderá apresentar erros, indisponibilidades ou limitações próprias de ambiente experimental, sem prejuízo das responsabilidades legais que não possam ser afastadas.
 
-9.3. O Vendeo poderá encerrar, suspender ou substituir o programa beta, mediante comunicação prévia razoável quando possível.
+9.3. O Vendeo poderá encerrar, suspender ou substituir o programa beta, mediante comunicação prévia razoável quando possível. Quando a medida afetar ofertas ou benefícios gratuitos, observar-se-á a cláusula 6.1, inclusive suas exceções, preservados os créditos já concedidos e as condições dos ciclos promocionais já iniciados.
 
-9.4. O encerramento geral do beta poderá tornar indisponíveis Créditos de Demonstração e Créditos Bônus não utilizados, sem conversão financeira.
+9.4. O encerramento geral do beta poderá tornar indisponíveis Créditos de Demonstração e Créditos Bônus não utilizados, sem conversão financeira, observada a cláusula 6.1, inclusive suas exceções, e a preservação dos ciclos promocionais já iniciados. O encerramento não converte a conta em plano pago nem gera cobrança automática.
 
 9.5. Quando tecnicamente possível e não houver impedimento legal ou de segurança, o Vendeo comunicará previamente o encerramento e concederá prazo razoável para acesso e download das campanhas existentes.
 
@@ -231,17 +232,17 @@ Para estes Termos:
 11.1. O Vendeo poderá negar, reverter, suspender ou cancelar benefícios promocionais ou restringir o acesso diante de:
 
 - fornecimento de CNPJ sem autorização;
-- utilização de múltiplas contas, lojas ou CNPJs para repetir benefícios;
+- utilização de múltiplas contas, lojas ou CNPJs com a finalidade de contornar restrições ou repetir ou multiplicar indevidamente benefícios, ressalvada a elegibilidade individual de CNPJs distintos que atendam aos critérios da oferta;
 - informações cadastrais falsas ou inválidas;
 - fraude, abuso ou risco à segurança;
 - violação destes Termos ou da Política de Uso Aceitável;
 - obrigação legal ou determinação de autoridade competente.
 
-11.2. As medidas observarão, conforme aplicável, gravidade, risco, reincidência, urgência, potencial de dano e cooperação do Usuário.
+11.2. As medidas observarão, conforme aplicável, gravidade, risco, reincidência, urgência, potencial de dano e cooperação do Usuário. O compartilhamento de raiz cadastral por filiais com CNPJs distintos, por si só, não caracteriza fraude nem impede a análise individual de elegibilidade.
 
 11.3. Em situações urgentes, medidas preventivas poderão ser aplicadas antes da manifestação do Usuário. Quando aplicável e juridicamente possível, o Vendeo informará a medida adotada e seu fundamento, preservando a possibilidade de posterior solicitação de revisão.
 
-11.4. Violações graves ou reincidentes poderão resultar no encerramento da conta e na perda dos créditos promocionais não utilizados, sem conversão financeira, sem prejuízo das demais medidas cabíveis.
+11.4. Violações graves ou reincidentes poderão resultar no encerramento da conta e na perda dos créditos promocionais não utilizados, sem conversão financeira, após análise proporcional e sem prejuízo das demais medidas cabíveis.
 
 11.5. A aplicação de sanções não autoriza a perda automática e indiscriminada de Créditos Comprados, que receberão o tratamento previsto nas cláusulas 7.17 e 7.19.
 
@@ -265,7 +266,7 @@ Para estes Termos:
 
 13.1. Estes Termos poderão ser atualizados periodicamente.
 
-13.2. Alterações que afetem substancialmente direitos, responsabilidades ou condições de uso poderão exigir novo aceite.
+13.2. A publicação desta versão v1.5 exigirá novo aceite destes Termos por todos os usuários abrangidos, inclusive os participantes do beta (beta testers). Alterações futuras que afetem substancialmente direitos, responsabilidades ou condições de uso poderão exigir novo aceite. Alterações de ofertas e benefícios gratuitos observarão a cláusula 6.1 e a transição 6.14, inclusive a comunicação prévia, a preservação dos ciclos já iniciados e as exceções legais, de segurança e de abuso.
 
 13.3. Caso não concorde com a nova versão, o Usuário poderá deixar de utilizar as funcionalidades sujeitas aos novos Termos e solicitar o encerramento da conta.
 
@@ -289,4 +290,4 @@ Para estes Termos:
 
 14.6. A eventual nulidade ou inexigibilidade de uma disposição não prejudicará as demais cláusulas destes Termos.
 
-14.7. O responsável pelo fornecimento da Plataforma é **[RAZÃO SOCIAL]**, inscrito no CNPJ sob nº **[CNPJ]**, com endereço em **[ENDEREÇO COMPLETO]** e contato eletrônico pelo endereço `suporte@vendeo.tech`.
+14.7. O responsável pelo fornecimento da Plataforma é **Sara Schmoelz Wagner**, inscrita no CNPJ sob nº **15.696.769/0001-63**, com endereço em **Rua José Wagner, 45, Ibirama - SC, CEP 89140-000** e contato eletrônico pelo endereço `suporte@vendeo.tech`.
