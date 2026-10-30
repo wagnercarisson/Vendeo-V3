@@ -60,5 +60,5 @@
 - [x] 6.4 Validar em rede limitada (Slow 4G) que não há requisição de tradução, flash de português, atraso acima de 1000 ms por preferência ou bloqueio de página.
 - [x] 6.5 Validar no homolog com usuário de teste com loja e sem loja; registrar evidências sem dados pessoais.
 - [x] 6.6 Revisar e aprovar os textos `es-419` com revisor humano antes da publicação.
-- [ ] 6.7 Publicar somente após autorização separada; executar smoke autenticado em produção e registrar evidência.
+- [x] 6.7 Publicar somente após autorização separada; executar smoke autenticado em produção e registrar evidência. *(Publicado em `86aac0e9`; aceite funcional do responsável confirmado em 2026-10-30; janela de logs 3× `/configuracoes` + 2× `/dashboard` 200, sem correspondência de timeout nos logs disponíveis; console logs não expostos.)*
 - [x] 6.8 Confirmar rollback documentado: reverter código mantém preferências persistidas e não exige migration reversa.

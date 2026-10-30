@@ -13,7 +13,7 @@
 | # | Phase | Goal / status |
 |---|---|---|
 | 57.2 | F57.2 — Persistência de preferências multimercado | **Concluída, validada em produção e arquivada (2026-10-28).** Persistência por usuário/loja, proveniência, CAS, rotas autenticadas e inicialização nos fluxos; UAT 5/5; migrations aplicadas em produção; smoke PASS; sem UI e sem habilitação PY. |
-| 57.4 | F57.4 — Base de tradução da interface e configurações | **Local/homolog concluídos e aceite humano registrado; verificação GSD 18/18 (`human_needed` por limitações aceitas); OpenSpec 45/47; publicação pendente.** |
+| 57.4 | F57.4 — Base de tradução da interface e configurações | **Concluída e aceita em produção (2026-10-30).** Correção do timeout 1000 ms publicada em `86aac0e9`; aceite funcional confirmado; limitação de leitor de tela aceita. |
 | 23 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ TextProvider + Copy Director | ConcluÃƒÆ’Ã‚Â­da; fundaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de IA de texto e Copy Director intercambiÃƒÆ’Ã‚Â¡vel |
 | 24 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Credit Tables + CreditService | ConcluÃƒÆ’Ã‚Â­da; crÃƒÆ’Ã‚Â©ditos concedidos, consumidos e auditÃƒÆ’Ã‚Â¡veis |
 | 25 | ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Pipeline de GeraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o v1.5 | ConcluÃƒÆ’Ã‚Â­da; copy e crÃƒÆ’Ã‚Â©ditos integrados ao pipeline |
@@ -665,7 +665,7 @@ Plans:
 
 ### Phase 57.4: F57.4 — Base de tradução da interface e configurações
 
-**Status:** **Local/homolog concluídos e aceite humano registrado; verificação GSD 18/18 (`human_needed` por limitações aceitas); OpenSpec 45/47; publicação pendente.** Planos 01–04 executados; admin manual e textos/visual aprovados; leitor de tela real aceito como limitação.
+**Status:** **Concluída e aceita em produção (2026-10-30).** Planos 01–04 executados; correção do timeout para 1000 ms publicada em `86aac0e9` e aceita; leitor de tela real permanece limitação aceita.
 
 **Goal:** entregar a fundação de tradução da interface (`pt-BR`/`es-419`), traduzir o shell compartilhado do lojista, preservar `/admin` em português e criar `/configuracoes` autenticada com escolha persistida de idioma, mantendo conteúdo/campanhas em `pt-BR`/`es-PY` e sem alterar loja, moeda, cobrança ou créditos.
 
@@ -685,6 +685,6 @@ Plans:
 
 **Waves:** `01 -> 02/03 -> 04`. Planos 02 e 03 não compartilham arquivos; 04 é checkpoint humano.
 
-**Canonical refs:** `openspec/changes/fase-57-4-base-traducao-interface-configuracoes/` (proposal, design, tasks e seis delta specs), `.planning/phases/57.4-f57-4-base-de-tradu-o-da-interface-e-configura-es/57.4-CONTEXT.md`, `57.4-PATTERNS.md`.
+**Canonical refs:** `openspec/changes/archive/2026-10-30-fase-57-4-base-traducao-interface-configuracoes/` (proposal, design, tasks e seis specs sincronizadas), `.planning/phases/57.4-f57-4-base-de-tradu-o-da-interface-e-configura-es/57.4-CONTEXT.md`, `57.4-PATTERNS.md`.
 
 **Diretório:** `.planning/phases/57.4-f57-4-base-de-tradu-o-da-interface-e-configura-es/`.

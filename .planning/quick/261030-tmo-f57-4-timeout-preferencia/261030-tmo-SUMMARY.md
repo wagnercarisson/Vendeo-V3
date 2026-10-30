@@ -1,12 +1,14 @@
 ---
-status: incomplete
+status: complete
 phase: quick
 plan: 261030-tmo
 initiative: F57.4
 date: 2026-10-30
 branch: feature/fase57-4-base-traducao-interface-configuracoes
 execution: local_complete
-publication: not_executed
+publication: executed_by_responsible
+production_acceptance: confirmed
+production_logs: checked_window_no_timeout_match
 homolog: not_repeated
 ---
 
@@ -44,14 +46,23 @@ publicação, migration, API/schema ou dependências.
 | `openspec validate --strict` | valid |
 | `git diff --check` | limpo |
 
+## Publicação e aceite em produção
+
+- Correção publicada pelo responsável em `main`; deployment de produção
+  `dpl_7rhQggN3sc5NGbLWnJrwivStyRos` (`86aac0e9`), status **READY**, alias `vendeo.tech`.
+- Aceite funcional da correção em produção **confirmado pelo responsável**.
+- Janela de smoke consultada em modo somente leitura: 50 entradas recentes; 3 requisições
+  `/configuracoes` e 2 `/dashboard`, todas **200**; **nenhuma** correspondência de
+  `preferences_read_timeout`/`outcome=timeout` nos logs disponíveis.
+- Ressalva: o endpoint de logs consultado não expôs os `console` logs dessas requisições
+  (`logs: []`); a ausência de correspondência não é prova de ausência de timeout. A contagem
+  deve continuar sendo observada por janela.
+
 ## Pendente
 
-- Revisão do usuário/Codex antes da publicação.
-- Publicação/merge/push/deploy exigem autorização separada.
-- Homolog curto opcional exige autorização própria; não repetido.
-- Smoke de produção: `/configuracoes`, `pt-BR → es-419`, reload/persistência, retorno a `pt-BR`,
-  `/dashboard`; contar `[i18n] preferences_read_timeout` por janela.
-- Se timeouts persistirem, investigar infraestrutura/cold start/latência.
+- Nenhuma implementação/migration pendente.
+- Limitação de leitor de tela permanece aceita (não é PASS de acessibilidade integral).
+- Rollback continua documentado abaixo; não executado.
 
 ## Rollback
 
