@@ -45,6 +45,16 @@ export default async function PrivacidadePage() {
           />
         )}
       </article>
+      {version?.version === "v1.4" && (
+        <nav className="mt-8 border-t border-border pt-6 text-sm">
+          <Link
+            href="/privacidade/transferencias"
+            className="text-accent-blue hover:underline"
+          >
+            Anexo de Transferências Internacionais
+          </Link>
+        </nav>
+      )}
     </main>
   );
 }

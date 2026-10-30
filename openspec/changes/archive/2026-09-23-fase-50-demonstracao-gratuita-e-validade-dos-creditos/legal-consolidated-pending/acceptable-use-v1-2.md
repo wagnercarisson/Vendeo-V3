@@ -1,8 +1,7 @@
 # Política de Uso Aceitável — Vendeo
 
 **Versão:** v1.2
-**Status:** minuta consolidada para validação final — não vigente
-**Data de publicação:** [DATA DE PUBLICAÇÃO]
+**Data de publicação:** 30/10/2026
 
 ---
 
@@ -62,13 +61,13 @@ O Usuário não poderá:
 
 **4.1.** Utilizar a Plataforma para enviar spam ou mensagens não solicitadas.
 
-**4.2.** Tentar burlar sistemas de rate limit, autenticação, segurança, critérios de elegibilidade da Demonstração Gratuita, validade, expiração ou controle de créditos.
+**4.2.** Tentar burlar sistemas de rate limit, autenticação, segurança, critérios de elegibilidade, validade, parcelas, vencimento ou controle de créditos do Teste Gratuito de 28 Dias, conforme definidos nos Termos de Uso.
 
 **4.3.** Realizar engenharia reversa, descompilar, contornar mecanismos técnicos ou tentar obter o código-fonte da Plataforma, salvo nas hipóteses expressamente permitidas pela legislação aplicável.
 
 **4.4.** Utilizar bots, scrapers ou qualquer meio automatizado para acessar a Plataforma fora dos mecanismos oficialmente previstos ou autorizados.
 
-**4.5.** Criar ou utilizar múltiplas contas, lojas, filiais, identidades ou CNPJs para contornar restrições ou obter, repetir ou multiplicar indevidamente Créditos de Demonstração ou outros benefícios promocionais.
+**4.5.** Criar ou utilizar múltiplas contas, lojas, filiais, identidades ou CNPJs **com a finalidade de contornar restrições ou obter, repetir ou multiplicar indevidamente** Créditos de Demonstração ou outros benefícios promocionais. A existência de filiais com CNPJs próprios e elegíveis, por si só, não configura violação desta Política.
 
 **4.6.** Enviar conteúdo ilegal, abusivo ou exploratório, imagens de pessoas, crianças ou bebês sem os direitos, bases legais, consentimentos, licenças e autorizações aplicáveis ou em desrespeito ao melhor interesse do menor.
 
@@ -78,7 +77,7 @@ O Usuário não poderá:
 
 ## 5. Sanções
 
-**5.1.** A violação desta Política poderá resultar em advertência, suspensão temporária, cancelamento de créditos promocionais, cancelamento da loja, encerramento da conta, remoção de campanhas ou outras medidas proporcionais.
+**5.1.** A violação desta Política poderá resultar em advertência, suspensão temporária, cancelamento de créditos promocionais, cancelamento da loja, encerramento da conta, remoção de campanhas ou outras medidas proporcionais. A análise deve distinguir filiais legítimas, com CNPJs próprios e elegíveis, de conduta abusiva.
 
 **5.2.** Na definição da medida aplicável, o Vendeo poderá considerar a gravidade, o risco, a reincidência, o potencial de dano, a urgência, a cooperação do Usuário e as obrigações legais aplicáveis.
 
@@ -102,9 +101,11 @@ O Usuário não poderá:
 
 **7.1.** Esta Política poderá ser atualizada periodicamente. As alterações entrarão em vigor na data informada na comunicação ou na própria versão publicada.
 
-**7.2.** Quando uma alteração afetar substancialmente direitos, responsabilidades ou condições de uso, o Vendeo poderá solicitar novo aceite. Caso o Usuário não concorde, poderá deixar de utilizar as funcionalidades sujeitas à versão atualizada e solicitar o encerramento da conta.
+**7.2.** A publicação desta versão v1.2 exigirá novo aceite desta Política por todos os usuários abrangidos, inclusive os participantes do beta (beta testers). Alterações futuras que afetem substancialmente direitos, responsabilidades ou condições de uso poderão exigir novo aceite. Caso o Usuário não concorde, poderá deixar de utilizar as funcionalidades sujeitas à versão atualizada e solicitar o encerramento da conta.
 
 **7.3.** Mudanças urgentes exigidas por lei, segurança, prevenção de abuso ou preservação da Plataforma poderão ter vigência imediata, com comunicação simultânea ou posterior quando razoavelmente possível.
+
+**7.4.** A revisão, substituição, suspensão ou descontinuidade de políticas de ofertas e benefícios gratuitos observará os Termos de Uso, inclusive a comunicação prévia, a preservação dos ciclos promocionais já iniciados e as exceções legais, de segurança e de abuso.
 
 ## 8. Disposições gerais
 

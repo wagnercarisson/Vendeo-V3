@@ -6,17 +6,48 @@ vi.mock("@/lib/legal/acceptance-service", () => ({ getAcceptanceStatus: vi.fn() 
 vi.mock("@/lib/legal/document-versions", () => ({ getCurrentVersion: vi.fn(async () => ({ version: "1.5" })) }));
 
 describe("F50 legal publication contract", () => {
-  it("keeps pending consolidated documents outside public and the catalog", () => {
-    const migration = readFileSync(resolve(process.cwd(), "supabase/migrations/20260920000001_f50_demo_credits.sql"), "utf8");
-    expect(migration).not.toMatch(/terms_of_service.*v1\.5|privacy_policy.*v1\.4|acceptable_use.*v1\.2/i);
+  it("publica os consolidados aprovados byte a byte e registra as versões no catálogo", () => {
     const catalog = readFileSync(resolve(process.cwd(), "src/lib/legal/document-content.ts"), "utf8");
     for (const [file, version] of [["terms-of-service-v1-5.md", "1.5"], ["privacy-policy-v1-4.md", "1.4"], ["acceptable-use-v1-2.md", "1.2"]]) {
       const content = readFileSync(resolve(process.cwd(), "openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending", file), "utf8");
-      expect(existsSync(resolve(process.cwd(), "public/docs/legal", file))).toBe(false);
-      expect(catalog).not.toContain(file);
+      const publicPath = resolve(process.cwd(), "public/docs/legal", file);
+      expect(existsSync(publicPath)).toBe(true);
+      expect(readFileSync(publicPath, "utf8")).toBe(content);
+      expect(catalog).toContain(file);
       expect(content).toContain(version);
       expect(content).toMatch(/Versão/);
+      expect(content).not.toMatch(/\[DATA[^\]]*\]/);
     }
+
+    const annex = "international-transfers-annex.md";
+    const annexSource = readFileSync(resolve(process.cwd(), "openspec/changes/archive/2026-09-23-fase-50-demonstracao-gratuita-e-validade-dos-creditos/legal-consolidated-pending", annex), "utf8");
+    expect(readFileSync(resolve(process.cwd(), "public/docs/legal", annex), "utf8")).toBe(annexSource);
+    expect(annexSource).not.toMatch(/nota interna|investigação interna|pendência interna/i);
+  });
+
+  it("expõe o anexo público e o mantém fora do catálogo contratual", () => {
+    const page = readFileSync(resolve(process.cwd(), "src/app/(marketing)/privacidade/transferencias/page.tsx"), "utf8");
+    const privacy = readFileSync(resolve(process.cwd(), "src/app/(marketing)/privacidade/page.tsx"), "utf8");
+    const middleware = readFileSync(resolve(process.cwd(), "src/middleware.ts"), "utf8");
+    const catalog = readFileSync(resolve(process.cwd(), "src/lib/legal/document-content.ts"), "utf8");
+
+    expect(page).toContain("/docs/legal/international-transfers-annex.md");
+    expect(privacy).toContain('href="/privacidade/transferencias"');
+    expect(middleware).toContain('"/privacidade/transferencias"');
+    expect(catalog).not.toContain("international-transfers-annex.md");
+  });
+
+  it("prepara a migration de publicação sem alterar a migration estrutural", () => {
+    const migrationPath = resolve(process.cwd(), "supabase/migrations/20261030185658_f50_legal_publication.sql");
+    expect(existsSync(migrationPath)).toBe(true);
+    const migration = readFileSync(migrationPath, "utf8");
+    expect(migration).toMatch(/terms_of_service[\s\S]*v1\.5/);
+    expect(migration).toMatch(/privacy_policy[\s\S]*v1\.4/);
+    expect(migration).toMatch(/acceptable_use[\s\S]*v1\.2/);
+    expect(migration).toContain("NÃO APLICAR ANTES DO CORTE AUTORIZADO");
+    expect(migration).toContain("now()");
+    const structural = readFileSync(resolve(process.cwd(), "supabase/migrations/20260920000001_f50_demo_credits.sql"), "utf8");
+    expect(structural).not.toMatch(/terms_of_service.*v1\.5|privacy_policy.*v1\.4|acceptable_use.*v1\.2/i);
   });
 
   it("keeps contractual reacceptance separate from privacy acknowledgement", () => {
