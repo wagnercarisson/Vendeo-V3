@@ -59,4 +59,4 @@ Extra diagnostic passes on the same build (`after-desktop.json`, `after-dpr3.jso
 
 - Single local machine, single production build; no throttled network profile beyond Lighthouse mobile defaults.
 - No production measurement was performed (out of scope; nothing was published).
-- Human visual acceptance remains **PENDING** (see `visual-q45-acceptance.md`).
+- Human visual acceptance was **approved on 2026-10-30** for the mobile DPR2 and desktop DPR1 captures in both flag modes; DPR3 was not human-evaluated (see `visual-q45-acceptance.md`).

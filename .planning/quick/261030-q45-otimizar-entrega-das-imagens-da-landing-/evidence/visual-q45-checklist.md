@@ -23,7 +23,7 @@ Clear the variable afterwards (`Remove-Item Env:VENDEO_PUBLIC_SIGNUP_ENABLED`). 
 
 ## Viewports
 
-- **Mobile:** 390 × 844, DPR 3
+- **Mobile:** 390 × 844, **DPR 2** (captured and reviewed; DPR 3 was only covered by the automated candidate-selection diagnostic, not by human evaluation)
 - **Desktop:** 1440 × 900, DPR 1
 
 ## Items to verify (both modes, both viewports)
@@ -56,4 +56,4 @@ Pre-check result: campaign headlines, prices and disclaimers are sharp and legib
 ## Notes
 
 - If a manual screenshot is captured, store it only if < 200 KB; otherwise keep the textual checklist.
-- This checklist is **PENDING** until a human performs it.
+- Checklist executed for the captured viewports and **approved on 2026-10-30** (mobile DPR2, desktop DPR1, both flag modes). DPR3 was not human-evaluated; only the automated candidate-selection diagnostic covered it.
