@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import {
+  LANDING_CAMPAIGN_BASENAMES,
   LANDING_IMAGE_WIDTHS,
   buildLandingSrcSet,
 } from "../landing-image-srcset";
@@ -92,6 +93,10 @@ describe("buildLandingSrcSet", () => {
     );
   });
 
+  it("expõe exatamente os nove basenames de campanha autorizados", () => {
+    expect([...LANDING_CAMPAIGN_BASENAMES]).toEqual(CAMPAIGN_BASENAMES);
+  });
+
   it("retorna string vazia para caminhos fora do padrão /landing/*.webp", () => {
     expect(buildLandingSrcSet("/landing/variants/hero-oferta-cafe-320w.webp")).toBe(
       "",
@@ -99,5 +104,12 @@ describe("buildLandingSrcSet", () => {
     expect(buildLandingSrcSet("/images/hero.webp")).toBe("");
     expect(buildLandingSrcSet("https://example.com/landing/hero.webp")).toBe("");
     expect(buildLandingSrcSet("")).toBe("");
+  });
+
+  it("recusa assets da landing que não têm variantes geradas", () => {
+    for (const basename of NON_CAMPAIGN_BASENAMES) {
+      expect(buildLandingSrcSet(`/landing/${basename}.webp`)).toBe("");
+    }
+    expect(buildLandingSrcSet("/landing/asset-inexistente.webp")).toBe("");
   });
 });
