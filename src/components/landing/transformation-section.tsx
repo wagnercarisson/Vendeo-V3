@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowRight } from "lucide-react";
 import { AcquisitionCta } from "./acquisition-cta";
 import { CampaignImage } from "./campaign-image";
+import { buildLandingSrcSet } from "./landing-image-srcset";
 
 /**
  * Transformation block (block 2 of the landing).
@@ -111,11 +112,14 @@ export function TransformationSection({
 
         {/* RESULT — complete 1:1 campaign, never cropped */}
         <div className="mx-auto w-full max-w-xs sm:mx-0 sm:max-w-none">
+          {/* Result column measures ~452px on desktop; min(320px, 100vw-48px) on mobile. */}
           <CampaignImage
             src="/landing/transformacao-petshop.webp"
             alt="Campanha da Pet Shop Bicho Fofo para ração Confiance Premium de 15 kg por R$ 114,90"
             contain
             loading="lazy"
+            srcSet={buildLandingSrcSet("/landing/transformacao-petshop.webp")}
+            sizes="(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(320px, calc(100vw - 48px))"
           />
         </div>
       </div>

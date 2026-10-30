@@ -21,6 +21,14 @@ interface CampaignImageProps {
   className?: string;
   contain?: boolean;
   loading?: "eager" | "lazy";
+  /**
+   * Optional responsive delivery props. They are forwarded only when provided,
+   * so existing call sites keep their current behavior. The fixed 1:1 box is
+   * unchanged — `srcSet`/`sizes` only affect which width the browser fetches.
+   */
+  srcSet?: string;
+  sizes?: string;
+  fetchPriority?: "high" | "low" | "auto";
 }
 
 export function CampaignImage({
@@ -29,6 +37,9 @@ export function CampaignImage({
   className = "",
   contain = false,
   loading = "lazy",
+  srcSet,
+  sizes,
+  fetchPriority,
 }: CampaignImageProps) {
   return (
     <div
@@ -40,6 +51,9 @@ export function CampaignImage({
           src={src}
           alt={alt}
           loading={loading}
+          srcSet={srcSet}
+          sizes={sizes}
+          fetchPriority={fetchPriority}
           className={`h-full w-full ${contain ? "object-contain" : "object-cover"}`}
         />
       ) : (

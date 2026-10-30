@@ -1,5 +1,6 @@
 import { AcquisitionCta } from "./acquisition-cta";
 import { CampaignImage } from "./campaign-image";
+import { buildLandingSrcSet } from "./landing-image-srcset";
 
 /**
  * Hero block (block 1 of the landing).
@@ -51,11 +52,15 @@ export function HeroSection({ publicSignupEnabled }: HeroSectionProps) {
           </div>
         </div>
         <div className="mx-auto w-full max-w-sm sm:mx-0 sm:max-w-none">
+          {/* Hero column measures ~468px on desktop; ~452px above 640px; min(384px, 100vw-48px) on mobile. */}
           <CampaignImage
             src="/landing/hero-oferta-cafe.webp"
             alt="Campanha de oferta de café da Mercearia Tio João"
             contain
             loading="eager"
+            fetchPriority="high"
+            srcSet={buildLandingSrcSet("/landing/hero-oferta-cafe.webp")}
+            sizes="(min-width: 1024px) 468px, (min-width: 640px) calc(50vw - 40px), min(384px, calc(100vw - 48px))"
           />
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { CampaignImage } from "./campaign-image";
+import { buildLandingSrcSet } from "./landing-image-srcset";
 import { RevealOnView } from "./reveal-on-view";
 
 /**
@@ -63,7 +64,15 @@ export function VariationsSection() {
               key={item.label}
               className="min-w-[78%] [scroll-snap-align:start] sm:min-w-0"
             >
-              <CampaignImage src={item.src} alt={item.alt} contain loading="lazy" />
+              {/* Tile measures ~315px on desktop, a third of the row above 640px, and ~78% of the mobile strip. */}
+              <CampaignImage
+                src={item.src}
+                alt={item.alt}
+                contain
+                loading="lazy"
+                srcSet={buildLandingSrcSet(item.src)}
+                sizes="(min-width: 1024px) 315px, (min-width: 640px) calc((100vw - 80px) / 3), calc(78vw - 38px)"
+              />
               <h3 className="mt-3 font-heading text-base font-semibold text-text-primary">
                 {item.label}
               </h3>

@@ -1,5 +1,6 @@
 import { AcquisitionCta } from "./acquisition-cta";
 import { CampaignImage } from "./campaign-image";
+import { buildLandingSrcSet } from "./landing-image-srcset";
 
 /**
  * Identity and control block (block 4 of the landing).
@@ -31,11 +32,14 @@ export function IdentityControlSection({
 
       <div className="mt-6 grid items-center gap-6 sm:grid-cols-2">
         <div className="mx-auto w-full max-w-xs sm:mx-0 sm:max-w-none">
+          {/* Identity column measures ~476px on desktop; min(320px, 100vw-48px) on mobile. */}
           <CampaignImage
             src="/landing/identidade-floricultura.webp"
             alt="Campanha de buquê de rosas da Floricultura Dona Flor"
             contain
             loading="lazy"
+            srcSet={buildLandingSrcSet("/landing/identidade-floricultura.webp")}
+            sizes="(min-width: 1024px) 476px, (min-width: 640px) calc(50vw - 36px), min(320px, calc(100vw - 48px))"
           />
         </div>
         <div>
