@@ -310,13 +310,55 @@ describe("Landing page — composição e copy (flag off)", () => {
     );
     expect(hero).not.toBeNull();
     expect(hero).toHaveAttribute("loading", "eager");
+    expect(hero).toHaveAttribute("fetchpriority", "high");
 
     expect(
       container.querySelectorAll('img[loading="eager"]').length,
     ).toBe(1);
+    // Priority hint is exclusive to the hero as well.
+    expect(
+      container.querySelectorAll('img[fetchpriority="high"]').length,
+    ).toBe(1);
     expect(
       container.querySelectorAll('img[loading="lazy"]').length,
     ).toBeGreaterThanOrEqual(6);
+  });
+
+  it("entrega as nove imagens de campanha com srcset e sizes", async () => {
+    const { container } = render(await Home());
+
+    const campaignImages = Array.from(
+      container.querySelectorAll("[data-campaign-image] img"),
+    );
+    expect(campaignImages).toHaveLength(9);
+
+    campaignImages.forEach((image) => {
+      expect(image.getAttribute("srcset")?.trim()).toBeTruthy();
+      expect(image.getAttribute("sizes")?.trim()).toBeTruthy();
+    });
+
+    const hero = container.querySelector(
+      'img[alt="Campanha de oferta de café da Mercearia Tio João"]',
+    ) as HTMLImageElement;
+    const heroSrcSet = hero.getAttribute("srcset") ?? "";
+    expect(heroSrcSet).toContain("/landing/variants/hero-oferta-cafe-320w.webp 320w");
+    expect(heroSrcSet.endsWith("/landing/hero-oferta-cafe.webp 1024w")).toBe(true);
+  });
+
+  it("mantém a miniatura da ração e o logo sem srcset", async () => {
+    const { container } = render(await Home());
+
+    const ration = container.querySelector(
+      'img[src="/landing/transformacao-produto-racao.webp"]',
+    );
+    expect(ration).not.toBeNull();
+    expect(ration).not.toHaveAttribute("srcset");
+
+    const logos = container.querySelectorAll('img[alt="Vendeo"]');
+    expect(logos.length).toBeGreaterThanOrEqual(2);
+    logos.forEach((logo) => {
+      expect(logo).not.toHaveAttribute("srcset");
+    });
   });
 
   it("usa o logo (imagem, alt 'Vendeo') no cabeçalho e no rodapé", async () => {
