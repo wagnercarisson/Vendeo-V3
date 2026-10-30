@@ -7,7 +7,7 @@
 | Approved by | _pending_ |
 | Date | _pending_ |
 | Viewports tested | _pending_ — mobile 390×844 DPR 3; desktop 1440×900 DPR 1 |
-| Modes tested | _pending_ — flag off (`localhost:3000`) and flag on (`localhost:3100`) |
+| Modes tested | _pending_ — flag on and flag off, each from its own explicit build served at `localhost:3000` (the flag is baked into the prerendered HTML) |
 | Text/price legibility confirmed | _pending_ |
 | Framing/proportion unchanged | _pending_ |
 
