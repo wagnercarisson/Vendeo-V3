@@ -318,7 +318,7 @@ export function product11GateStatus(env = process.env) {
 
 export function gateLine(name, status) {
   return status.ready
-    ? `[gates] ${name}: ambiente presente (executar pelo comando dedicado)`
+    ? `[gates] ${name}: ambiente presente — NÃO EXECUTADO (use o comando dedicado)`
     : `[gates] ${name}: GATE NÃO EXECUTADO — NÃO APROVADO (${status.reasons.join('; ')})`;
 }
 
@@ -339,7 +339,7 @@ function printTable(inventory) {
   for (const [label, key, statusFn] of GATE_ROWS) {
     const status = statusFn();
     console.log(
-      `${label} | ${inventory[key].length} | ${status.ready ? 'ambiente presente' : 'GATE NÃO EXECUTADO — NÃO APROVADO'}`,
+      `${label} | ${inventory[key].length} | ${status.ready ? 'ambiente presente (não executado)' : 'GATE NÃO EXECUTADO — NÃO APROVADO'}`,
     );
   }
   console.log(`\nTotal de arquivos de teste no repo: ${walkRepoTestFiles().length}`);
