@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { X } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { useChangelogState } from "@/hooks/use-changelog-state";
@@ -8,8 +9,17 @@ import { formatChangelogDate } from "@/lib/changelog/format-date";
 import { renderMarkdown } from "@/lib/changelog/render-markdown";
 import type { ChangelogEntry } from "@/lib/changelog/types";
 
+interface ChangelogAnnouncementLabels {
+  view?: string;
+  close?: string;
+  dialogLabel?: string;
+}
+
 interface ChangelogAnnouncementProps {
   entry: ChangelogEntry | null;
+  compact?: boolean;
+  excerpt?: string | null;
+  labels?: ChangelogAnnouncementLabels;
 }
 
 /**
@@ -17,8 +27,17 @@ interface ChangelogAnnouncementProps {
  * apenas quando `announcement !== "none"` e `isAnnouncementVisible(id)`.
  * "Ver novidades" → /novidades; × → dismissAnnouncement (não altera
  * lastSeenId). Entry null/none → null (não quebra).
+ *
+ * Modo compacto (F58): título, data e trecho editorial em texto React puro —
+ * nunca `renderMarkdown`/`dangerouslySetInnerHTML`. `lang="pt-BR"` apenas no
+ * título e no trecho; rótulos e ações permanecem no idioma da interface.
  */
-export function ChangelogAnnouncement({ entry }: ChangelogAnnouncementProps) {
+export function ChangelogAnnouncement({
+  entry,
+  compact = false,
+  excerpt = null,
+  labels,
+}: ChangelogAnnouncementProps) {
   const { dismissAnnouncement, isAnnouncementVisible } = useChangelogState();
 
   if (!entry || entry.frontmatter.announcement === "none") return null;
@@ -27,6 +46,71 @@ export function ChangelogAnnouncement({ entry }: ChangelogAnnouncementProps) {
   const isModal = entry.frontmatter.announcement === "modal";
 
   const dismiss = () => dismissAnnouncement(entry.frontmatter.id);
+
+  const viewLabel = labels?.view ?? "Ver novidades";
+  const closeLabel = labels?.close ?? "Fechar anúncio";
+  const dialogLabel = labels?.dialogLabel ?? entry.frontmatter.title;
+
+  if (compact) {
+    const compactExcerpt = typeof excerpt === "string" ? excerpt.trim() : "";
+
+    const compactContent = (
+      <div className="min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <h2
+            lang="pt-BR"
+            className="font-heading text-xl font-semibold leading-tight text-text-primary line-clamp-2"
+          >
+            {entry.frontmatter.title}
+          </h2>
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label={closeLabel}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-text-secondary transition-colors duration-200 hover:bg-bg-elevated hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep cursor-pointer"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        <p className="mt-1 whitespace-nowrap text-xs text-text-secondary font-body">
+          {formatChangelogDate(entry.frontmatter.date)}
+        </p>
+        {compactExcerpt !== "" && (
+          <p
+            lang="pt-BR"
+            className="mt-2 break-words text-sm leading-normal text-text-secondary font-body"
+          >
+            {compactExcerpt}
+          </p>
+        )}
+        <div className="mt-3">
+          <Link
+            href="/novidades"
+            className="inline-flex min-h-[44px] items-center text-sm font-semibold text-accent-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep cursor-pointer"
+          >
+            {viewLabel}
+          </Link>
+        </div>
+      </div>
+    );
+
+    if (isModal) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={dialogLabel}
+            className="w-full max-w-[480px] rounded-xl border border-border bg-bg-elevated p-6 shadow-xl"
+          >
+            {compactContent}
+          </div>
+        </div>
+      );
+    }
+
+    return <Card className="p-4">{compactContent}</Card>;
+  }
 
   const closeButton = (
     <button
