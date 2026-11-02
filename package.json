@@ -6,8 +6,12 @@
     "dev": "next dev",
     "build": "npm run check:cnae && next build",
     "start": "next start",
-    "test": "vitest run",
+    "test": "node scripts/testing/run-local-suite.mjs",
     "test:watch": "vitest",
+    "test:scripts": "node scripts/testing/run-node-tests.mjs",
+    "test:integration:postgres": "node scripts/testing/run-integration.mjs postgres",
+    "test:integration:product-1-1": "node scripts/testing/run-integration.mjs product-1-1",
+    "test:gates": "node scripts/testing/test-status.mjs",
     "check:cnae": "tsx scripts/check-cnae.ts",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit"
