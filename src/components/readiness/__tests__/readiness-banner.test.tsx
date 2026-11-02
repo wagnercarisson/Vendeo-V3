@@ -62,4 +62,35 @@ describe('ReadinessBanner', () => {
     }));
     expect(html).toContain('Sua loja não está pronta para gerar campanhas');
   });
+
+  it('renders localized es-419 title, items and CTA', () => {
+    const html = decodeHtml(renderToString(ReadinessBanner({
+      missing: [
+        { item: 'cadastro_fiscal', reason: 'CNPJ obrigatório' },
+        { item: 'brand_profile', reason: 'Direção visual não configurada' },
+      ],
+      messages: {
+        title: 'Tu tienda aún no está lista para generar campañas',
+        cta: 'Configurar ahora',
+        cadastroFiscal: 'Registro fiscal (CNPJ)',
+        brandProfile: 'Dirección visual',
+      },
+    })));
+    expect(html).toContain('Tu tienda aún no está lista para generar campañas');
+    expect(html).toContain('Registro fiscal (CNPJ)');
+    expect(html).toContain('Dirección visual');
+    expect(html).toContain('Configurar ahora');
+    expect(html).not.toContain('CNPJ cadastral');
+    expect(html).not.toContain('Configurar agora');
+  });
+
+  it('does not render the ❌ glyph', () => {
+    const html = renderToString(ReadinessBanner({
+      missing: [
+        { item: 'cadastro_fiscal', reason: 'CNPJ obrigatório' },
+        { item: 'brand_profile', reason: 'Direção visual não configurada' },
+      ],
+    }));
+    expect(html).not.toContain('❌');
+  });
 });
