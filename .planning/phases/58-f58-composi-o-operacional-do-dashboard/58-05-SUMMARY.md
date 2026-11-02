@@ -55,8 +55,8 @@ depends_on: ["58-04"]
 
 ## Pendências e limitações
 
-- UAT 14/14 observado como PASS, com ressalvas: leitor de tela real não executado e sem medição fina de performance.
-- Defeito encontrado e corrigido: fallback de miniatura pré-hidratação.
+- UAT 14/14 observado como PASS, com ressalvas: leitor de tela real não executado, sem medição fina de performance e sem injeção específica de atraso de autenticação.
+- Defeito encontrado e corrigido: fallback de miniatura pré-hidratação.\n- Falha de crédito, falha de fuso e readiness pendente foram observadas em harness de componentes, não como teste integrado completo do dashboard.
 - Capturas são de homolog local; não comprovam produção.
 - Este SUMMARY não declara produção aprovada nem autoriza publicação.
 

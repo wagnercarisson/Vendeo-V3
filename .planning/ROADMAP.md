@@ -727,4 +727,4 @@ Plans:
 
 **Canonical refs:** `openspec/changes/archive/2026-11-02-fase-58-composicao-operacional-do-dashboard/` (proposal, design, tasks, specs arquivadas), specs sincronizadas `openspec/specs/dashboard-operational-composition/`, `dashboard-localization/`, `dashboard-inteligente/`, `changelog-ui/`, `openspec/design-system/MASTER.md`, `openspec/design-system/pages/dashboard.md` (referência histórica; não prevalece sobre a F58).
 
-**Diretório:** `.planning/phases/58-f58-composicao-operacional-do-dashboard/`.
+**Diretório:** `.planning/phases/58-f58-composi-o-operacional-do-dashboard/`.

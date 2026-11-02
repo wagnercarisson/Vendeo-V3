@@ -153,6 +153,8 @@ None outstanding. All 14 items of the plan 58-05 human checklist were observed a
 
 No implementation gap remains. The operational composition, ready-only data boundary, credit exception handling, dashboard-only localization namespace, localized warnings, per-block `lang`, DOM/keyboard order, fixed creation band, localized loading state, preserved shell/admin and scope boundaries are present in the codebase and covered by passing tests, typecheck and build. The previously missing human validation is now evidenced across all 14 items, including tablet, slow 4G, loading timing, timezone, error campaigns, thumbnails, credits, readiness, contrast/zoom/truncation and admin. The UAT also surfaced and the pre-hydration thumbnail fallback fix is committed with the campaign action preserved.
 
+**Scope of the human evidence:** the auth-specific delay was not injected; credits-unavailable, timezone-failure and readiness-pending states were observed in a local component harness, not as a complete integrated dashboard path. Those are complementary visual/behavioral observations, not proof of full integration of those failure paths. Publication remains unauthorized and unexecuted; local evidence is not production proof.
+
 Publication remains unauthorized and unexecuted; local evidence is not production proof. Status is `passed` with the instrumental caveats above.
 
 ---

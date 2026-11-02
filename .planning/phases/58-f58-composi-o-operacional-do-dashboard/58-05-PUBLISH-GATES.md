@@ -36,6 +36,8 @@ Esses resultados são evidência local. Não comprovam produção, latência rea
 
 Detalhes em `evidence/58-05-human-visual.md`.
 
+**Escopo das observações:** o atraso específico de autenticação não foi injetado; falha de crédito, falha de fuso e readiness pendente foram observadas em harness de componentes, não como teste integrado completo desses caminhos.
+
 ## (c) Publicação
 
 **NÃO EXECUTADA E NÃO AUTORIZADA.**
