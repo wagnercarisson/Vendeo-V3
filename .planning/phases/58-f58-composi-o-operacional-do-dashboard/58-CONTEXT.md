@@ -46,7 +46,7 @@ Não faz parte: redesenho do shell, recomendações, matriz de prioridades, nova
 ### D-04 — Créditos
 - Usar `CreditService.getBalanceBreakdown`.
 - **Lacuna confirmada na pesquisa:** o método atual ignora `error` do Supabase e devolve zeros; `try/catch` no dashboard não detecta falha. Adicionar opção aditiva `getBalanceBreakdown(storeId, { throwOnError?: boolean })`, com default `false` para preservar todos os consumidores, e o dashboard usa `true`.
-- A opção aditiva não altera regras de crédito, cálculo de saldo, demo, bônus ou comprado; apenas propaga erro de leitura quando solicitado.
+- A opção aditiva não altera regras de crédito, cálculo de saldo, demo, bônus ou comprado; apenas propaga erro de leitura quando solicitado. `PGRST116` (nenhuma linha) continua sendo tratado como zeros, preservando o comportamento atual; demais erros são propagados quando `throwOnError: true`.
 - Sucesso: saldo disponível legível no idioma da interface + acesso a `/conta`.
 - Zero: exibir `0` créditos, nunca “indisponível”.
 - Falha: exibir “saldo indisponível” no idioma da interface, nunca `0`.

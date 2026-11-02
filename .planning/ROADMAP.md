@@ -298,6 +298,7 @@ Plans:
 **Plans:** 13/13 plans complete (10 originais + 3 gap closure)
 
 Plans:
+
 - [x] 50.4-01-PLAN.md - Baseline + Migration M1 (`individual_launch_at` + RPC de ativa��o auditada) e prova SQL de idempot�ncia/recusas.
 - [x] 50.4-02-PLAN.md - Harness de PostgreSQL descart�vel fail-closed, runner SQL, verificador de schema/ledger e regress�o do parser 2.75.0.
 - [x] 50.4-03-PLAN.md - Migration M2: identidade imut�vel, backfill fail-closed, unicidade por CNPJ + �ndice parcial legado, trigger e RPCs de coorte/elegibilidade/conclus�o/inscri��o.
@@ -652,6 +653,7 @@ Plans:
 **Plans:** 6/6 planos concluídos.
 
 Plans:
+
 - [x] 57.2-01-PLAN.md — migration aditiva: tabelas, RLS, grants, `ensure_store_market_settings` + RPCs de escrita + contrato de banco + baseline read-only do homolog (wave 1; checkpoint de banco).
 - [x] 57.2-02-PLAN.md — fundação `src/lib/market-preferences/` (errors/DTOs) + serviço e rota `/api/preferences` (wave 1).
 - [x] 57.2-03-PLAN.md — serviço e rota `/api/store/market-settings`: loader dedicado, recomposição e CAS (wave 2).
@@ -678,6 +680,7 @@ Plans:
 **Plans:** 4 plans in 3 waves (01 -> 02/03 -> 04).
 
 Plans:
+
 - [x] 57.4-01-PLAN.md — fundação i18n (catálogos/paridade/interpolação), resolução server-side com timeout de 200 ms e contrato de payload do AppShell
 - [x] 57.4-02-PLAN.md — shell traduzido (sidebar/drawer/topbar/menu/badge/sino), menu Conta -> Novidades -> Configurações -> Sair, admin em pt-BR e logout por prop
 - [x] 57.4-03-PLAN.md — `/configuracoes` autenticada sem loja, leitura sem escrita e formulário de idioma com CAS e matriz de erros
@@ -688,3 +691,40 @@ Plans:
 **Canonical refs:** `openspec/changes/archive/2026-10-30-fase-57-4-base-traducao-interface-configuracoes/` (proposal, design, tasks e seis specs sincronizadas), `.planning/phases/57.4-f57-4-base-de-tradu-o-da-interface-e-configura-es/57.4-CONTEXT.md`, `57.4-PATTERNS.md`.
 
 **Diretório:** `.planning/phases/57.4-f57-4-base-de-tradu-o-da-interface-e-configura-es/`.
+
+### Phase 58: F58 - Composição operacional do dashboard
+
+**Status:** **Planos criados; aguardando revisão.** Base técnica OpenSpec aprovada em `openspec/changes/fase-58-composicao-operacional-do-dashboard/`; 5 planos em 4 waves.
+
+**Goal:** tornar o dashboard útil, claro e orientado à operação do lojista: cabeçalho compacto com saudação, campanhas disponíveis (`status = "ready"`) com miniaturas reais, saldo de créditos legível e anúncio compacto de novidades. Excluir campanhas com erro/geração das consultas, cartões e contagens do dashboard; entregar todos os textos novos em `pt-BR`/`es-419` por namespace próprio; preservar avisos, navegação, acessibilidade, responsividade, admin e identidade aprovada. Sem recomendações, novas regras comerciais, migrations, APIs ou dependências.
+
+**Depends on:** F57.3, F57.4 e correção do timeout de preferência (`86aac0e9`), já integrados em `main` (`33c38702`). Branch `feature/fase-58-composicao-operacional-do-dashboard`.
+
+**Requirements:** REQ-58-01, REQ-58-02, REQ-58-03, REQ-58-04, REQ-58-05, REQ-58-06, REQ-58-07, REQ-58-08, REQ-58-09, REQ-58-10, REQ-58-11, REQ-58-12
+
+**Requirement scope:** (01) elegibilidade `ready` e exclusão de erro/geração na origem; (02) até três campanhas com miniatura assinada e fallback; (03) saldo legível, zero versus indisponível e detalhes; (04) anúncio compacto dispensável; (05) saudação com nome, `timeZone` e `uiLocale`; (06) namespace próprio pt-BR/es-419 e payload; (07) avisos de verificação/prontidão localizados; (08) `lang` por bloco e separação interface/conteúdo; (09) estados sem loja, sem campanhas elegíveis, loading, falha e parcial; (10) responsividade e prioridade mobile; (11) admin, shell, navegação e ações preservados; (12) validação automatizada, visual humana e gates de publicação separados.
+
+**Plans:** 5 plans
+Plans:
+**Wave 1**
+
+- [ ] 58-01-PLAN.md — dados do dashboard: campanhas ready, crédito com throwOnError, saudação e isolamento por seção
+- [ ] 58-02-PLAN.md — namespace i18n do dashboard e avisos localizáveis por props
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 58-03-PLAN.md — componentes visuais, cartão/miniatura e anúncio compacto
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 58-04-PLAN.md — integração da página, loading, estados, lang e responsividade
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 58-05-PLAN.md — gates automatizados, validação humana, payload e separação de publicação
+
+**Waves:** Wave 1: 58-01, 58-02; Wave 2: 58-03; Wave 3: 58-04; Wave 4: 58-05.
+
+**Canonical refs:** `openspec/changes/fase-58-composicao-operacional-do-dashboard/` (proposal, design, tasks, `dashboard-operational-composition`, `dashboard-localization`, `dashboard-inteligente`, `changelog-ui`), `openspec/design-system/MASTER.md`, `openspec/design-system/pages/dashboard.md` (referência histórica; não prevalece sobre a F58).
+
+**Diretório:** `.planning/phases/58-f58-composicao-operacional-do-dashboard/`.

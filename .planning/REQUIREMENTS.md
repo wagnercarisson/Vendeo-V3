@@ -268,3 +268,22 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-57.4-06 | Salvamento via `/api/preferences` com CAS/CSRF, confirmação real, `router.refresh()`, sincronização de versão/seleção, trocas repetidas e recuperação de 400/401/403/409/500/503/rede | Testes de formulário + prova funcional |
 | REQ-57.4-07 | Admin preservado em `pt-BR`, sem seletor; `LogoutButton` com label por prop e logout/limpeza de rascunhos intactos | Testes de admin/logout |
 | REQ-57.4-08 | Validação proporcional, gates locais, homolog existente, medição de payload/timeout/rede limitada e separação dos gates de promoção | Evidência de gates/homolog |
+
+## F58 - Cobertura planejada (Composição operacional do dashboard)
+
+**Fonte:** `openspec/changes/fase-58-composicao-operacional-do-dashboard/` (ativa; proposta, design, tasks e quatro specs). **Status:** planejamento GSD em andamento; sem implementação.
+
+| REQ-ID | Requirement | Prova principal |
+|---|---|---|
+| REQ-58-01 | Campanhas elegíveis são somente `status = "ready"`; erro/geração não entram nas consultas, cartões ou contagens do dashboard e continuam em `/campanhas`; serviços compartilhados preservam semântica | Testes de consulta + página |
+| REQ-58-02 | Até três campanhas disponíveis com miniatura real assinada, fallback quando indisponível, link para `/campanhas/[id]` e acesso a `/campanhas` | Testes de composição e cartão |
+| REQ-58-03 | Saldo de créditos legível no idioma da interface, acesso a `/conta`, distinção entre zero, disponível e indisponível | Testes de página + componente |
+| REQ-58-04 | Anúncio de novidades compacto e dispensável, com trecho editorial existente, link para `/novidades`, sem tradução ou resumo por IA | Testes de anúncio + estado |
+| REQ-58-05 | Saudação compacta com nome da loja, `timeZone` canônico e `uiLocale`; fallback neutro em falha de fuso, sem assumir Brasília | Testes unitários de fuso |
+| REQ-58-06 | Namespace próprio do dashboard em `pt-BR`/`es-419`, paridade estrutural e de placeholders, sem aumentar payload global do shell e sem resolvedor paralelo | Testes de catálogo + medição |
+| REQ-58-07 | Avisos `VerificationBanners` e `ReadinessBanner` localizados por props opcionais, mantendo português como padrão nos demais consumidores | Testes de avisos + admin |
+| REQ-58-08 | `lang` aplicado ao menor bloco: região traduzida, somente nome dinâmico na saudação/produto, somente título/trecho editorial em pt-BR; ações no idioma da interface; conteúdo comercial intacto | Testes de atributos + validação manual |
+| REQ-58-09 | Estados sem loja, sem campanhas elegíveis, carregamento, falha e indisponibilidade parcial isolada por seção | Testes de página + componentes |
+| REQ-58-10 | Responsividade mobile/tablet/desktop com prioridade mobile saldo -> campanhas -> novidades, alvos de toque e truncamento seguro | Testes de DOM + validação visual |
+| REQ-58-11 | Shell, identidade, navegação, ações existentes, acessibilidade e admin preservados; sem recomendações, taxa de sucesso ou próximo passo | Regressão + inspeção |
+| REQ-58-12 | Validação automatizada (testes/typecheck/lint/build/OpenSpec), visual humana e gates de publicação separados; testes locais não provam produção | Evidências + aceite |
