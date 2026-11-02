@@ -1,9 +1,9 @@
 # F58 — Capturas reais após reconciliação com as montagens
 
-**Data:** 2026-11-02  
-**Ambiente:** `npm.cmd run build` + `npm.cmd run start` em `http://localhost:3000` (produção local; sem dev overlay)  
-**Base:** Supabase homolog local `http://127.0.0.1:57781`  
-**Loja usada:** Padaria da Esquina (dados de homolog; e-mail da conta ocultado nas capturas)  
+**Data:** 2026-11-02
+**Ambiente:** `npm.cmd run build` + `npm.cmd run start` em `http://localhost:3000` (produção local; sem dev overlay)
+**Base:** Supabase homolog local `http://127.0.0.1:57781`
+**Loja usada:** Padaria da Esquina (dados de homolog; e-mail da conta ocultado nas capturas)
 **Natureza:** evidência visual para revisão; **não é aceite humano** e não comprova produção.
 
 ## Capturas pt-BR
