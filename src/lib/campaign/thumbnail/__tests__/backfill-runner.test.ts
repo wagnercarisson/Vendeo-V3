@@ -6,6 +6,10 @@ import {
   type BackfillDeps,
   type BackfillOptions,
 } from "../backfill-runner";
+import {
+  encodeBackfillCursor,
+  parseBackfillCursor,
+} from "../backfill-selection";
 import type { ThumbnailContext, ThumbnailResult } from "../thumbnail-generator";
 
 const STORE = "11111111-1111-4111-8111-111111111111";
@@ -296,6 +300,67 @@ describe("runBackfill", () => {
     });
     expect(seen).toEqual([null, cursor]);
     expect(second.report.cursor).toBeNull();
+  });
+
+  it("pagina de um em um preservando microssegundos e sem repetir item", async () => {
+    const items: BackfillCandidate[] = [
+      {
+        campaignId: uuidFor(1),
+        storeId: STORE,
+        originalPath: `${STORE}/${uuidFor(1)}.jpg`,
+        createdAt: "2026-11-02T12:00:00.123456+00:00",
+      },
+      {
+        campaignId: uuidFor(2),
+        storeId: STORE,
+        originalPath: `${STORE}/${uuidFor(2)}.jpg`,
+        createdAt: "2026-11-02T12:00:00.123457+00:00",
+      },
+    ];
+    const seen: Array<string | null> = [];
+
+    const deps = fakeDeps({
+      async listCampaignsPage({ after, limit }) {
+        seen.push(after);
+        const cursor = parseBackfillCursor(after);
+        const start = cursor
+          ? items.findIndex((item) => item.campaignId === cursor.campaignId) + 1
+          : 0;
+        const page = items.slice(start, start + limit);
+        const last = page[page.length - 1];
+        return {
+          items: page,
+          nextCursor:
+            page.length === limit && last
+              ? encodeBackfillCursor({
+                  createdAt: last.createdAt,
+                  campaignId: last.campaignId,
+                })
+              : null,
+        };
+      },
+      async inspectOriginal() {
+        return { format: "jpeg", width: 10, height: 10 };
+      },
+    });
+
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({ limit: 2, batchSize: 1, concurrency: 1 }),
+    });
+
+    expect(seen).toEqual([
+      null,
+      `2026-11-02T12:00:00.123456+00:00|${uuidFor(1)}`,
+    ]);
+    expect(result.report.items.map((item) => item.campaignId)).toEqual([
+      uuidFor(1),
+      uuidFor(2),
+    ]);
+    expect(result.report.counters.wouldCreate).toBe(2);
+    expect(result.report.cursor).toBe(
+      `2026-11-02T12:00:00.123457+00:00|${uuidFor(2)}`,
+    );
   });
 
   it("retoma de forma idempotente após timeout (objeto pode ter sido persistido)", async () => {

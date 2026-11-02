@@ -2,11 +2,13 @@
 import { describe, expect, it } from "vitest";
 import {
   addOutcome,
+  buildBackfillKeysetFilter,
   classifyStorageFailure,
   emptyCounters,
   encodeBackfillCursor,
   isEligibleInventoryPath,
   isMissingObjectError,
+  isValidBackfillTimestamp,
   parseBackfillCursor,
   type BackfillReportItem,
 } from "../backfill-selection";
@@ -87,6 +89,59 @@ describe("backfill-selection", () => {
     ]) {
       expect(parseBackfillCursor(invalid)).toBeNull();
     }
+  });
+
+  it("preserva microssegundos do PostgreSQL (6 casas) sem passar por Date", () => {
+    const createdAt = "2026-11-02T12:00:00.123456+00:00";
+    const cursor = encodeBackfillCursor({
+      createdAt,
+      campaignId: CAMPAIGN,
+    });
+
+    expect(cursor).toBe(`${createdAt}|${CAMPAIGN}`);
+    expect(parseBackfillCursor(cursor)).toEqual({ createdAt, campaignId: CAMPAIGN });
+    expect(buildBackfillKeysetFilter({ createdAt, campaignId: CAMPAIGN })).toBe(
+      `created_at.gt.${createdAt},and(created_at.eq.${createdAt},id.gt.${CAMPAIGN})`,
+    );
+
+    // O timestamp truncado NÃO é aceito como equivalente silencioso.
+    expect(
+      parseBackfillCursor(`2026-11-02T12:00:00.123Z|${CAMPAIGN}`)?.createdAt,
+    ).toBe("2026-11-02T12:00:00.123Z");
+  });
+
+  it("valida estritamente o timestamp antes de interpolar no filtro", () => {
+    for (const valid of [
+      "2026-11-02T12:00:00Z",
+      "2026-11-02T12:00:00.1Z",
+      "2026-11-02T12:00:00.123456Z",
+      "2026-11-02T12:00:00.123456+00:00",
+      "2024-02-29T23:59:59.999999-03:00",
+    ]) {
+      expect(isValidBackfillTimestamp(valid)).toBe(true);
+    }
+
+    for (const invalid of [
+      "2026-11-02T12:00:00.1234567Z", // 7 casas
+      "2026-11-02T12:00:00", // sem timezone
+      "2026-02-30T12:00:00Z", // data inexistente
+      "2026-13-01T12:00:00Z",
+      "2026-11-02T24:00:00Z",
+      "2026-11-02T12:60:00Z",
+      "2026-11-02T12:00:00+15:00",
+      "2026-11-02T12:00:00+14:30",
+      "2026-11-02T12:00:00Z|id", // injeção
+      "2026-11-02 12:00:00Z",
+    ]) {
+      expect(isValidBackfillTimestamp(invalid)).toBe(false);
+    }
+
+    expect(() =>
+      encodeBackfillCursor({
+        createdAt: "2026-11-02T12:00:00.1234567Z",
+        campaignId: CAMPAIGN,
+      }),
+    ).toThrow("invalid_cursor_timestamp");
   });
 
   it("agrega contadores por outcome", () => {

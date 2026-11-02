@@ -15,6 +15,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
+  buildBackfillKeysetFilter,
   encodeBackfillCursor,
   isMissingObjectError,
   parseBackfillCursor,
@@ -267,9 +268,7 @@ function makeDeps(client: SupabaseClient): BackfillDeps {
         .limit(limit);
 
       if (parsedCursor) {
-        query = query.or(
-          `created_at.gt.${parsedCursor.createdAt},and(created_at.eq.${parsedCursor.createdAt},id.gt.${parsedCursor.campaignId})`,
-        );
+        query = query.or(buildBackfillKeysetFilter(parsedCursor));
       }
       if (stores && stores.length > 0) query = query.in("store_id", stores);
       if (campaigns && campaigns.length > 0) query = query.in("id", campaigns);
@@ -283,7 +282,8 @@ function makeDeps(client: SupabaseClient): BackfillDeps {
           campaignId: String(row.id),
           storeId: String(row.store_id),
           originalPath: String(row.storage_path),
-          createdAt: new Date(String(row.created_at)).toISOString(),
+          // Texto EXATO do banco: preserva microssegundos (nunca `Date`).
+          createdAt: String(row.created_at),
         }));
 
       const last = items[items.length - 1];

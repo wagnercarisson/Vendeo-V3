@@ -8,35 +8,98 @@ import { deriveThumbnailPath } from "./thumbnail-path";
  */
 
 export interface BackfillCursor {
-  /** `created_at` normalizado em ISO 8601 UTC. */
+  /**
+   * `created_at` EXATAMENTE como persistido (texto), preservando
+   * microssegundos. NUNCA passar por `Date`/`toISOString()`: isso truncaria
+   * para milissegundos e repetiria a própria linha como "posterior".
+   */
   createdAt: string;
   campaignId: string;
 }
 
+const BACKFILL_CAMPAIGN_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Timestamp ISO 8601 aceito no cursor: data/hora com 1–6 casas fracionárias
+ * (PostgreSQL) e timezone `Z` ou `±HH:MM`. Validação ESTRITA antes de
+ * interpolar no filtro PostgREST.
+ */
+export function isValidBackfillTimestamp(value: string): boolean {
+  if (typeof value !== "string") return false;
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/,
+  );
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const offset = match[8];
+
+  if (year < 1 || month < 1 || month > 12) return false;
+  if (hour > 23 || minute > 59 || second > 59) return false;
+
+  const leap =
+    year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [
+    31,
+    leap ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
+  if (day < 1 || day > daysInMonth[month - 1]) return false;
+
+  if (offset !== "Z") {
+    const offsetHour = Number(offset.slice(1, 3));
+    const offsetMinute = Number(offset.slice(4, 6));
+    if (offsetHour > 14 || offsetMinute > 59) return false;
+    if (offsetHour === 14 && offsetMinute !== 0) return false;
+  }
+
+  return true;
+}
+
 /**
  * Cursor opaco ÚNICO do backfill: keyset por `(created_at, id)`.
- * Formato: `<createdAt ISO>|<campaignId>`.
+ * Formato: `<createdAt EXATO>|<campaignId>`.
  */
 export function encodeBackfillCursor(cursor: BackfillCursor): string {
-  return `${new Date(cursor.createdAt).toISOString()}|${cursor.campaignId}`;
+  if (!isValidBackfillTimestamp(cursor.createdAt)) {
+    throw new Error("invalid_cursor_timestamp");
+  }
+  if (!BACKFILL_CAMPAIGN_ID_RE.test(cursor.campaignId)) {
+    throw new Error("invalid_cursor_campaign_id");
+  }
+  // Concatenação pura: preserva os microssegundos do texto persistido.
+  return `${cursor.createdAt}|${cursor.campaignId}`;
 }
 
 export function parseBackfillCursor(raw: string | null): BackfillCursor | null {
   if (typeof raw !== "string" || raw.length === 0) return null;
   const separator = raw.lastIndexOf("|");
   if (separator <= 0) return null;
-  const createdAtRaw = raw.slice(0, separator);
+  const createdAt = raw.slice(0, separator);
   const campaignId = raw.slice(separator + 1);
-  const createdAt = new Date(createdAtRaw);
-  if (Number.isNaN(createdAt.getTime())) return null;
-  if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      campaignId,
-    )
-  ) {
-    return null;
-  }
-  return { createdAt: createdAt.toISOString(), campaignId };
+  if (!isValidBackfillTimestamp(createdAt)) return null;
+  if (!BACKFILL_CAMPAIGN_ID_RE.test(campaignId)) return null;
+  return { createdAt, campaignId };
+}
+
+/** Filtro PostgREST keyset, sempre com o timestamp EXATO do cursor. */
+export function buildBackfillKeysetFilter(cursor: BackfillCursor): string {
+  return `created_at.gt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.gt.${cursor.campaignId})`;
 }
 
 export type BackfillOutcome =
