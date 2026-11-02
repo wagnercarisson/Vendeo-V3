@@ -5,7 +5,7 @@ import path from "node:path";
 import React from "react";
 import { describe, expect, it } from "vitest";
 import RootLayout from "../../app/layout";
-import { FONT_ASSETS } from "../../lib/fonts/font-manifest";
+import { FONT_ASSETS, type FontAsset } from "../../lib/fonts/font-manifest";
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const FONTS_CSS_PATH = path.join(REPO_ROOT, "src/app/fonts.css");
@@ -155,7 +155,7 @@ describe("fonts.css — contrato tipográfico local", () => {
           asset.unicodeRange === block.unicodeRange,
       );
       expect(matches, `sem manifesto para ${family}/${weight}/${publicPath}`).toHaveLength(1);
-      const asset = matches[0];
+      const asset: FontAsset = matches[0];
       if (asset.stretch) {
         expect(block.stretch).toBe(asset.stretch);
       } else {
@@ -237,7 +237,8 @@ describe("layout raiz", () => {
     const elements = collectElements(element);
 
     const html = elements.find((node) => node.type === "html");
-    expect(html?.props.lang).toBe("pt-BR");
+    const htmlProps = html?.props as { lang?: string } | undefined;
+    expect(htmlProps?.lang).toBe("pt-BR");
     expect(elements.some((node) => node.type === "body")).toBe(true);
 
     for (const node of elements) {
