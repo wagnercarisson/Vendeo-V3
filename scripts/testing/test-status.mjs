@@ -23,7 +23,6 @@ const TEST_FILE_RE = /\.(test|spec)\.(mjs|js|ts|tsx|jsx)$/;
 const TEST_DIRS = ['src', 'scripts', 'tests'];
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git']);
 const INVENTORY_KEYS = ['nodeTest', 'integration.postgres', 'integration.product-1-1'];
-const INTEGRATION_KEYS = ['integration.postgres', 'integration.product-1-1'];
 
 // Heurística explícita (lista de padrões, não glob de exclusão).
 const INTEGRATION_PATTERNS = [
