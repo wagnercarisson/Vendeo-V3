@@ -170,4 +170,3 @@ Consumidores do admin SHALL continuar renderizando em `pt-BR`, mesmo quando comp
 - **WHEN** um componente compartilhado é usado no admin sem textos do dashboard
 - **THEN** seus rótulos padrão SHALL permanecer em português
 - **AND** o comportamento existente do admin NÃO SHALL regredir
-

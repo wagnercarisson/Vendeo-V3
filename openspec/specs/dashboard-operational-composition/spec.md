@@ -243,4 +243,3 @@ O dashboard SHALL manter hierarquia de títulos, foco visível, teclado, contras
 #### Scenario: Escopo não introduz recomendação
 - **WHEN** o dashboard é renderizado
 - **THEN** NÃO SHALL existir motor de recomendação, matriz de prioridades, taxa de sucesso ou cartão adaptativo de próximo passo
-
