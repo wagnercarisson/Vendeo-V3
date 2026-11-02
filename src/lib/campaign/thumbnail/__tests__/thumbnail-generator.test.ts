@@ -4,6 +4,7 @@ import sharp from "sharp";
 import {
   createTimedSupabaseUploader,
   generateCampaignThumbnail,
+  inspectOriginalImage,
   renderThumbnail,
   type ThumbnailContext,
   type ThumbnailUploader,
@@ -70,6 +71,29 @@ describe("renderThumbnail", () => {
     const out = await renderThumbnail(await jpeg(200, 200));
     expect(out.width).toBe(200);
     expect(out.height).toBe(200);
+  });
+});
+
+describe("inspectOriginalImage", () => {
+  it("reconhece JPEG/PNG/WebP por header e devolve dimensões", async () => {
+    const jpegMeta = await inspectOriginalImage(await jpeg(320, 240));
+    expect(jpegMeta).toMatchObject({ format: "jpeg", width: 320, height: 240 });
+
+    const png = await sharp({
+      create: { width: 10, height: 12, channels: 3, background: "#fff" },
+    })
+      .png()
+      .toBuffer();
+    expect(await inspectOriginalImage(png)).toMatchObject({
+      format: "png",
+      width: 10,
+      height: 12,
+    });
+  });
+
+  it("rejeita conteúdo arbitrário/vazio sem lançar", async () => {
+    expect(await inspectOriginalImage(Buffer.from("not-an-image"))).toBeNull();
+    expect(await inspectOriginalImage(Buffer.alloc(0))).toBeNull();
   });
 });
 

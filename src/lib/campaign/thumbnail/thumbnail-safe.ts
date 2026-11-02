@@ -23,7 +23,29 @@ export async function generateCampaignThumbnailSafely(input: {
   campaignId?: string;
 }): Promise<ThumbnailResult> {
   try {
-    return await generateCampaignThumbnail(input);
+    const result = await generateCampaignThumbnail(input);
+
+    // Falhas esperadas e desabilitações inesperadas não são silenciosas, mas
+    // também não lançam nem alteram a campanha. `ineligible_path` é esperado
+    // (ex.: chamada defensiva) e não gera ruído.
+    if (result.status === "failed") {
+      console.warn("[thumbnail] generation failed", {
+        campaignId: input.campaignId ?? null,
+        originalPath: input.originalPath,
+        reason: result.reason,
+      });
+    } else if (
+      result.status === "skipped" &&
+      result.reason !== "ineligible_path"
+    ) {
+      console.warn("[thumbnail] generation skipped", {
+        campaignId: input.campaignId ?? null,
+        originalPath: input.originalPath,
+        reason: result.reason,
+      });
+    }
+
+    return result;
   } catch (error) {
     console.warn("[thumbnail] unexpected failure", {
       campaignId: input.campaignId ?? null,

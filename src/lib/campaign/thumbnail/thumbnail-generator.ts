@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import {
   THUMBNAIL_BUCKET,
@@ -164,12 +164,46 @@ export async function renderThumbnail(buffer: Buffer): Promise<RenderedThumbnail
   };
 }
 
+const INSPECTABLE_FORMATS = new Set(["jpeg", "png", "webp"]);
+
+/**
+ * Inspeção SOMENTE LEITURA do original (header via sharp). Usada pelo dry-run
+ * do backfill para distinguir `invalid_format` de `would_create`, sem gerar,
+ * sem decodificar pixels e sem upload. Retorna `null` se o conteúdo não for
+ * uma imagem suportada/legível.
+ */
+export async function inspectOriginalImage(
+  buffer: Buffer,
+): Promise<{ format: string; width: number; height: number } | null> {
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) return null;
+  try {
+    const metadata = await sharp(buffer, {
+      failOn: "error",
+      limitInputPixels: 40_000_000,
+    }).metadata();
+    if (
+      !metadata.format ||
+      !INSPECTABLE_FORMATS.has(metadata.format) ||
+      !metadata.width ||
+      !metadata.height
+    ) {
+      return null;
+    }
+    return {
+      format: metadata.format,
+      width: metadata.width,
+      height: metadata.height,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface TimedUploaderOptions {
   timeoutMs?: number;
   url?: string;
   key?: string;
   fetchImpl?: typeof fetch;
-  client?: SupabaseClient;
 }
 
 /**
@@ -199,25 +233,25 @@ export function createTimedSupabaseUploader(
     options.fetchImpl ??
     ((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init));
 
-  const client =
-    options.client ??
-    createClient(rawUrl, key, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
+  // Sem opção de client injetado: TODO upload deste uploader passa pelo fetch
+  // com timeout. Fornecer um client externo contornaria a garantia anunciada.
+  const client = createClient(rawUrl, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      fetch: (input, init) => {
+        const timeoutSignal = AbortSignal.timeout(timeoutMs);
+        const signal =
+          init?.signal && typeof AbortSignal.any === "function"
+            ? AbortSignal.any([init.signal, timeoutSignal])
+            : timeoutSignal;
+        return baseFetch(input, { ...init, signal });
       },
-      global: {
-        fetch: (input, init) => {
-          const timeoutSignal = AbortSignal.timeout(timeoutMs);
-          const signal =
-            init?.signal && typeof AbortSignal.any === "function"
-              ? AbortSignal.any([init.signal, timeoutSignal])
-              : timeoutSignal;
-          return baseFetch(input, { ...init, signal });
-        },
-      },
-    });
+    },
+  });
 
   return {
     endpoint,
