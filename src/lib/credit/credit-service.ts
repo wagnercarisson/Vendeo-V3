@@ -18,12 +18,28 @@ export class CreditService {
     return availableBalance(data);
   }
 
-  async getBalanceBreakdown(storeId: string): Promise<CreditBalanceBreakdown> {
-    const { data } = await this.client
+  /**
+   * Lê o breakdown de crédito da loja.
+   *
+   * Extensão aditiva (F58/D-04): `opts.throwOnError` permite ao consumidor que
+   * precisa distinguir falha de leitura de saldo zero (dashboard) receber o erro
+   * do Supabase. O default (`false`) preserva byte a byte o comportamento de
+   * todos os chamadores existentes. `PGRST116` (nenhuma linha) continua sendo
+   * tratado como zeros mesmo com `throwOnError: true`.
+   */
+  async getBalanceBreakdown(
+    storeId: string,
+    opts?: { throwOnError?: boolean },
+  ): Promise<CreditBalanceBreakdown> {
+    const { data, error } = await this.client
       .from("credit_balances")
       .select("balance, demo_balance, demo_expires_at, origin_demo_grant_tx_id, bonus_balance, purchased_balance")
       .eq("store_id", storeId)
       .single();
+
+    if (error && opts?.throwOnError === true && error.code !== "PGRST116") {
+      throw error;
+    }
 
     return {
       balance: data?.balance ?? 0,
