@@ -13,6 +13,7 @@ import {
   artifactStoragePath,
   resizeToJpeg1024,
 } from "../artifact/artifact-store";
+import type { ThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
 
 // ---------------------------------------------------------------------------
 // F56.2b1b — Plano 05: arte real 1024×1024 do novo fluxo (F7, pipeline PRÓPRIO
@@ -61,9 +62,34 @@ async function jpegDataUrl(width: number, height: number): Promise<string> {
 interface FakeHandles {
   client: SupabaseClient;
   uploads: { path: string; buffer: Buffer; options: Record<string, unknown> }[];
+  thumbnails: {
+    path: string;
+    buffer: Buffer;
+    contentType: string;
+  }[];
   inserts: { table: string; row: Record<string, unknown> }[];
   downloads: string[];
   signed: { path: string; ttl: number }[];
+}
+
+function createFakeThumbnailContext(
+  handles: FakeHandles,
+  endpoint = "http://127.0.0.1:54321",
+): ThumbnailContext {
+  return {
+    endpoint,
+    uploader: {
+      endpoint,
+      async upload(input) {
+        handles.thumbnails.push({
+          path: input.path,
+          buffer: input.buffer,
+          contentType: input.contentType,
+        });
+        return { error: null };
+      },
+    },
+  };
 }
 
 function createFakeClient(
@@ -76,6 +102,7 @@ function createFakeClient(
   } = {},
 ): FakeHandles {
   const uploads: FakeHandles["uploads"] = [];
+  const thumbnails: FakeHandles["thumbnails"] = [];
   const inserts: FakeHandles["inserts"] = [];
   const downloads: FakeHandles["downloads"] = [];
   const signed: FakeHandles["signed"] = [];
@@ -127,7 +154,7 @@ function createFakeClient(
     from: tableFrom,
   } as unknown as SupabaseClient;
 
-  return { client, uploads, inserts, downloads, signed };
+  return { client, uploads, thumbnails, inserts, downloads, signed };
 }
 
 beforeEach(() => {
@@ -230,7 +257,10 @@ describe("F7 — resizeToJpeg1024 (pipeline próprio, dimensões reais)", () => 
 describe("Task 1 — storeArtifact (upload imutável + registro persistido)", () => {
   it("sobe com upsert:false e persiste as dimensões DECODIFICADAS dos BYTES", async () => {
     const handles = createFakeClient();
-    const store = new ProductOneToOneArtifactStore(handles.client);
+    const store = new ProductOneToOneArtifactStore(
+      handles.client,
+      createFakeThumbnailContext(handles),
+    );
 
     const ref = await store.storeArtifact({
       storeId: STORE_ID,
@@ -270,8 +300,60 @@ describe("Task 1 — storeArtifact (upload imutável + registro persistido)", ()
       mime_type: "image/jpeg",
     });
 
+    // Miniatura: um único upload no caminho derivado, WebP 288×288.
+    expect(handles.thumbnails).toHaveLength(1);
+    expect(handles.thumbnails[0].path).toBe(
+      `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.thumb-v1.webp`,
+    );
+    expect(handles.thumbnails[0].contentType).toBe("image/webp");
+    const thumbMeta = await sharp(handles.thumbnails[0].buffer).metadata();
+    expect(thumbMeta.format).toBe("webp");
+    expect(thumbMeta.width).toBe(288);
+    expect(thumbMeta.height).toBe(288);
+
     // storeArtifact NUNCA assina (I3).
     expect(handles.signed).toHaveLength(0);
+  });
+
+  it("client customizado sem contexto desabilita a miniatura (sem env/rede)", async () => {
+    const handles = createFakeClient();
+    const store = new ProductOneToOneArtifactStore(handles.client, null);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const ref = await store.storeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      imageDataUrl: await jpegDataUrl(512, 512),
+    });
+
+    expect(ref.storagePath).toBe(
+      artifactStoragePath(STORE_ID, CAMPAIGN_ID, OPERATION_ID),
+    );
+    expect(handles.uploads).toHaveLength(1);
+    expect(handles.thumbnails).toHaveLength(0);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("thumbnail disabled"),
+    );
+    warn.mockRestore();
+  });
+
+  it("contexto de origem divergente não chama o uploader da miniatura", async () => {
+    const handles = createFakeClient();
+    const store = new ProductOneToOneArtifactStore(handles.client, {
+      endpoint: "http://127.0.0.1:54322",
+      uploader: createFakeThumbnailContext(handles).uploader,
+    });
+
+    await store.storeArtifact({
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      imageDataUrl: await jpegDataUrl(512, 512),
+    });
+
+    expect(handles.uploads).toHaveLength(1);
+    expect(handles.thumbnails).toHaveLength(0);
   });
 
   it("conflito de path (objeto existente) ⇒ erro tipado, sem sobrescrever", async () => {

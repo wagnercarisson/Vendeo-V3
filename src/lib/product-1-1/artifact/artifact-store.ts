@@ -5,6 +5,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { dataUrlToCampaignImage } from "@/lib/campaign/persistence";
 import {
+  createDefaultThumbnailContext,
+  type ThumbnailContext,
+} from "@/lib/campaign/thumbnail/thumbnail-generator";
+import { generateCampaignThumbnailSafely } from "@/lib/campaign/thumbnail/thumbnail-safe";
+import {
   ProductOneToOneArtifactUploadError,
   type ArtifactProbe,
   type ProductOneToOneArtifactRef,
@@ -164,7 +169,17 @@ export interface StoreArtifactInput {
 }
 
 export class ProductOneToOneArtifactStore {
-  constructor(private readonly client: SupabaseClient = supabaseAdmin) {}
+  /**
+   * O contexto da miniatura precisa pertencer ao MESMO ambiente do client que
+   * grava o original. O padrão só é usado quando o client é o `supabaseAdmin`;
+   * com client injetado/customizado, a ausência de contexto desabilita a
+   * miniatura — nunca há fallback silencioso para as credenciais do ambiente.
+   */
+  constructor(
+    private readonly client: SupabaseClient = supabaseAdmin,
+    private readonly thumbnailContext: ThumbnailContext | null =
+      client === supabaseAdmin ? createDefaultThumbnailContext() : null,
+  ) {}
 
   /**
    * Produz a arte 1:1 1024×1024 (pipeline próprio), grava no caminho imutável
@@ -242,6 +257,25 @@ export class ProductOneToOneArtifactStore {
         "artifact_metadata_persist_failed",
         errorMessage(insertError),
       );
+    }
+
+    // Miniatura: best-effort e estritamente posterior ao original + metadados.
+    // Nunca lança; nunca altera o resultado da entrega/crédito.
+    if (!this.thumbnailContext) {
+      console.warn(
+        "[artifact-store] thumbnail disabled: custom client requires a matching ThumbnailContext",
+      );
+    } else {
+      try {
+        await generateCampaignThumbnailSafely({
+          originalPath: storagePath,
+          originalBuffer: jpeg.buffer,
+          context: this.thumbnailContext,
+          campaignId,
+        });
+      } catch {
+        // isolado: uma regressão do wrapper não invalida o artefato entregue
+      }
     }
 
     return ref;
