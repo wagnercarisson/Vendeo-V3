@@ -271,6 +271,7 @@ Ajustes visuais solicitados: lista compacta de três campanhas com miniaturas pe
 | OpenSpec strict | `openspec validate fase-58-composi-o-operacional-do-dashboard --strict` | **0** | valid |
 
 Capturas reais em produção local (`next build` + `next start`): `evidence/58-05-visual-desktop.png` e `evidence/58-05-visual-mobile.png`, com metadados em `evidence/58-05-visual-captures.md`. Nenhum deploy, push, merge, migration ou alteração de produção. As capturas aguardam aceite humano.
+
 ## 8. Reconciliação visual com as montagens (2026-11-02)
 
 A composição foi corrigida para a montagem aprovada: cabeçalho com subtítulo e sem botões internos; painel único “Campanhas recentes” com contagem secundária, “Ver todas” e ação visível “Abrir campanha”; orientação dentro do painel; créditos destacados; novidades abaixo dos créditos; faixa inferior de criação de largura total.
@@ -282,4 +283,4 @@ A composição foi corrigida para a montagem aprovada: cabeçalho com subtítulo
 | Build | `npm.cmd run build` | **0** | **95/95 páginas**; `/dashboard` **4,50 kB / 110 kB**; shared **102 kB** |
 | OpenSpec strict | `openspec validate fase-58-composicao-operacional-do-dashboard --strict` | **0** | valid |
 
-Capturas reais: `evidence/58-05-visual-desktop.png`, `evidence/58-05-visual-mobile.png` e `evidence/58-05-visual-mobile-320.png`. Metadados e limitações em `evidence/58-05-visual-captures.md`. Capturas es-419 não foram geradas porque isso exigiria alterar preferência no banco, proibido nesta rodada; a cobertura es-419 segue em testes automatizados. Nenhum push, merge, deploy, migration, alteração de banco ou de produção foi executado.
+Capturas reais pt-BR: `evidence/58-05-visual-desktop.png`, `evidence/58-05-visual-mobile.png` e `evidence/58-05-visual-mobile-320.png`. Capturas es-419: `evidence/58-05-visual-desktop-es.png` e `evidence/58-05-visual-mobile-es.png`. Metadados e restauração da preferência em `evidence/58-05-visual-captures.md`. Nenhum push, merge, deploy, migration, alteração de schema ou produção foi executado. A única escrita temporária foi a preferência de idioma do usuário de teste no homolog, autorizada, com restauração confirmada para `pt-BR`/`explicit`.

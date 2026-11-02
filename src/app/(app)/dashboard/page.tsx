@@ -141,15 +141,27 @@ export default async function DashboardPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-        <div className="min-w-0 lg:col-start-3 lg:row-start-1">
-          <DashboardCredits
-            state={credit.ok ? credit.data : { state: "unavailable" }}
-            messages={messages.credits}
-            locale={locale}
-          />
+        <div className="contents lg:col-start-3 lg:row-start-1 lg:flex lg:flex-col lg:gap-6">
+          <div className="order-1 min-w-0 lg:order-none">
+            <DashboardCredits
+              state={credit.ok ? credit.data : { state: "unavailable" }}
+              messages={messages.credits}
+              locale={locale}
+            />
+          </div>
+
+          {entry ? (
+            <div className="order-3 min-w-0 lg:order-none">
+              <DashboardNews
+                entry={entry}
+                excerpt={excerpt}
+                labels={messages.news}
+              />
+            </div>
+          ) : null}
         </div>
 
-        <div className="min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+        <div className="order-2 min-w-0 lg:order-none lg:col-span-2 lg:col-start-1 lg:row-start-1">
           <DashboardCampaigns
             count={campaign.ok ? campaign.data.count : 0}
             items={items}
@@ -159,16 +171,6 @@ export default async function DashboardPage() {
             openAriaLabels={openAriaLabels}
           />
         </div>
-
-        {entry ? (
-          <div className="min-w-0 lg:col-start-3 lg:row-start-2">
-            <DashboardNews
-              entry={entry}
-              excerpt={excerpt}
-              labels={messages.news}
-            />
-          </div>
-        ) : null}
       </div>
 
       <DashboardShortcut messages={messages.shortcut} />

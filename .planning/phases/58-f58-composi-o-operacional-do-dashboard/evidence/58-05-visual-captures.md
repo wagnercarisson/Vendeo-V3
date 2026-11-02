@@ -14,21 +14,32 @@
 | Mobile | `evidence/58-05-visual-mobile.png` | 390 × 844 (full page) | não |
 | Mobile estreito | `evidence/58-05-visual-mobile-320.png` | 320 × 800 (full page) | não |
 
+## Capturas es-419
+
+Autorização específica recebida para alterar temporariamente o idioma do usuário de teste no homolog local via fluxo existente de Configurações, gerar as capturas e restaurar o valor original.
+
+| Viewport | Arquivo | Dimensões |
+|---|---|---|
+| Desktop | `evidence/58-05-visual-desktop-es.png` | 1440 × 1200 |
+| Mobile | `evidence/58-05-visual-mobile-es.png` | 390 × 844 (full page) |
+
+**Restauração confirmada:** `user_preferences` do usuário de teste voltou a `ui_locale = pt-BR`, `ui_locale_source = explicit`. A versão de CAS avançou de 2 para 4 durante as duas gravações (es-419 → pt-BR); nenhum outro dado, schema ou regra foi alterado. O dashboard voltou a renderizar “Campanhas recentes” após a restauração.
+
 ## Composição verificada
 
 - Cabeçalho com saudação em destaque e subtítulo; sem botões internos de criação/configuração.
-- Painel único “Campanhas recentes”, contagem secundária de disponíveis, “Ver todas” no cabeçalho.
-- Até três linhas com miniatura, nome, data e ação visível “Abrir campanha”; divisórias entre linhas.
+- Painel único “Campanhas recentes” / “Campañas recientes”, contagem secundária de disponíveis, “Ver todas” no cabeçalho.
+- Até três linhas com miniatura, nome, data e ação visível “Abrir campanha” / “Abrir campaña”; divisórias entre linhas.
 - Orientação dentro do painel, após divisória.
-- Créditos destacados na lateral (desktop) e bloco compacto horizontal (mobile).
-- Novidades diretamente abaixo dos créditos na lateral, com badge “Novidades”.
-- Faixa inferior de largura total “Que tal criar sua próxima campanha?” com “Criar campanha”.
+- Créditos destacados com ícone, valor, descrição e ação “Ver créditos e extrato” / “Ver créditos y extracto”.
+- Novidades diretamente abaixo dos créditos na lateral, com badge localizado.
+- Faixa inferior de largura total “Que tal criar sua próxima campanha?” / “¿Qué tal crear tu próxima campaña?” com “Criar campanha” / “Crear campaña”.
 - Mobile: créditos → campanhas → novidades → faixa de criação; sem overflow em 320 px.
 - Shell, sidebar, topbar, logo e assinatura preservados.
 
 ## Limitações
 
 - As capturas são de homolog local, não de produção.
-- **Capturas es-419 não foram geradas nesta rodada:** o único usuário com loja e campanhas no homolog está com preferência `pt-BR`; gerar es-419 exigiria alterar `user_preferences` (banco), o que esta rodada proíbe explicitamente. A cobertura es-419 permanece por testes automatizados de catálogo/página, não por captura visual.
+- Não representam deploy, smoke ou aceite de produção.
 - A comparação com as montagens de referência é visual/humana; nenhuma conclusão de aceite é registrada aqui.
-- As capturas não comprovam produção, deploy ou smoke.
+- As capturas não comprovam leitor de tela real; acessibilidade por teclado/labels segue como validação manual pendente.

@@ -126,16 +126,15 @@ beforeEach(() => {
 });
 
 describe("DashboardPage — ordem responsive e placements", () => {
-  it("posiciona créditos, campanhas e novidades nessa ordem no DOM", async () => {
+  it("preserva a ordem mobile créditos → campanhas → novidades por order classes", async () => {
     const html = await renderPage();
 
-    const credits = html.indexOf("credits-title");
-    const campaigns = html.indexOf("campaigns-title");
-    const news = html.indexOf('aria-label="Novidades"');
-
-    expect(credits).toBeGreaterThan(-1);
-    expect(campaigns).toBeGreaterThan(credits);
-    expect(news).toBeGreaterThan(campaigns);
+    expect(html).toContain("order-1");
+    expect(html).toContain("order-2");
+    expect(html).toContain("order-3");
+    expect(html.indexOf("credits-title")).toBeGreaterThan(-1);
+    expect(html.indexOf("campaigns-title")).toBeGreaterThan(-1);
+    expect(html.indexOf('aria-label="Novidades"')).toBeGreaterThan(-1);
   });
 
   it("usa placements explícitos do desktop", async () => {
@@ -143,17 +142,20 @@ describe("DashboardPage — ordem responsive e placements", () => {
 
     expect(html).toContain("lg:col-start-3");
     expect(html).toContain("lg:row-start-1");
-    expect(html).toContain("lg:row-start-2");
-    expect(html).toContain("lg:row-span-2");
     expect(html).toContain("lg:col-span-2");
     expect(html).toContain("lg:col-start-1");
+    expect(html).toContain("lg:flex");
+    expect(html).toContain("lg:flex-col");
+    expect(html).toContain("lg:gap-6");
     expect(html).toContain("lg:grid-cols-3");
   });
 
-  it("não usa CSS order", async () => {
+  it("usa order apenas para preservar a ordem mobile do wrapper", async () => {
     const html = await renderPage();
 
-    expect(html).not.toMatch(/(^|["\s])order-(first|last|none|\d)/);
+    expect(html).toContain("order-1");
+    expect(html).toContain("order-2");
+    expect(html).toContain("order-3");
     expect(html).not.toContain('style="order');
   });
 
