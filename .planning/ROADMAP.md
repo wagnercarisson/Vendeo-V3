@@ -694,7 +694,7 @@ Plans:
 
 ### Phase 58: F58 - Composição operacional do dashboard
 
-**Status:** **Planos criados e revalidados; aguardando liberação.** Base técnica OpenSpec em `openspec/changes/fase-58-composicao-operacional-do-dashboard/` (design/tasks atualizados com a extensão aditiva de crédito); 5 planos em 4 waves; plan-checker revalidado sem blockers.
+**Status:** **EXECUÇÃO LOCAL 4/5 — AGUARDANDO CHECKPOINT HUMANO DO PLANO 58-05.** Planos 58-01..58-04 concluídos com summaries e gates locais verdes; 58-05 executou apenas a Task 1 (gates automatizados/payload) e está bloqueado na validação visual humana (Task 2). Sem push, merge, deploy, migration ou alteração de produção; fase ainda não concluída nem verificada.
 
 **Goal:** tornar o dashboard útil, claro e orientado à operação do lojista: cabeçalho compacto com saudação, campanhas disponíveis (`status = "ready"`) com miniaturas reais, saldo de créditos legível e anúncio compacto de novidades. Excluir campanhas com erro/geração das consultas, cartões e contagens do dashboard; entregar todos os textos novos em `pt-BR`/`es-419` por namespace próprio; preservar avisos, navegação, acessibilidade, responsividade, admin e identidade aprovada. Sem recomendações, novas regras comerciais, migrations, APIs ou dependências.
 
@@ -704,20 +704,20 @@ Plans:
 
 **Requirement scope:** (01) elegibilidade `ready` e exclusão de erro/geração na origem; (02) até três campanhas com miniatura assinada e fallback; (03) saldo legível, zero versus indisponível e detalhes; (04) anúncio compacto dispensável; (05) saudação com nome, `timeZone` e `uiLocale`; (06) namespace próprio pt-BR/es-419 e payload; (07) avisos de verificação/prontidão localizados; (08) `lang` por bloco e separação interface/conteúdo; (09) estados sem loja, sem campanhas elegíveis, loading, falha e parcial; (10) responsividade e prioridade mobile; (11) admin, shell, navegação e ações preservados; (12) validação automatizada, visual humana e gates de publicação separados.
 
-**Plans:** 5 plans
+**Plans:** 4/5 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 58-01-PLAN.md — dados do dashboard: campanhas ready, crédito com throwOnError, saudação e isolamento por seção
-- [ ] 58-02-PLAN.md — namespace i18n do dashboard e avisos localizáveis por props
+- [x] 58-01-PLAN.md — dados do dashboard: campanhas ready, crédito com throwOnError, saudação e isolamento por seção
+- [x] 58-02-PLAN.md — namespace i18n do dashboard e avisos localizáveis por props
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 58-03-PLAN.md — componentes visuais, cartão/miniatura e anúncio compacto
+- [x] 58-03-PLAN.md — componentes visuais, cartão/miniatura e anúncio compacto
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 58-04-PLAN.md — integração da página, loading, estados, lang e responsividade
+- [x] 58-04-PLAN.md — integração da página, loading, estados, lang e responsividade
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
