@@ -84,10 +84,34 @@ Tentativas com Edge headless:
    e `...('16px "Poppins Probe"', ...)` retornaram **false**. A API não é confiável nesse
    modo headless para múltiplas faces da mesma família.
 
-**Limitação registrada.** A evidência primária de cobertura é **declarativa**: o teste
+**Limitação do probe em `file://` registrada.** A evidência declarativa permanece: o teste
 `src/__tests__/fonts/local-fonts.test.ts` expande os `unicode-range` oficiais e verifica
 `U+00E1 U+00E3 U+00E7 U+00F1 U+00BF U+00A1 U+20B2 U+20AC U+0024` para as duas famílias.
 Artefatos: `evidence/glyph-probe.html`, `evidence/glyph-probe-dom.html`.
+
+### 5.1 Verificação independente do orquestrador (CDP, `next start` + Edge headless)
+
+O probe `file://` foi considerado limitação do modo, **não** da entrega. Uma verificação
+independente foi executada contra o build servido por `next start -p 3130`, com Edge headless
+controlado por CDP (`document.fonts.load`/`document.fonts.ready`, `getComputedStyle` e
+`PerformanceResourceTiming`):
+
+| Verificação | `/login` | `/` (landing) |
+|-------------|----------|---------------|
+| HTTP da página | 200 | 200 |
+| `body` renderizado | `"Open Sans", sans-serif` | `"Open Sans", sans-serif` |
+| `h1` renderizado | `"Open Sans", sans-serif` | `Poppins, sans-serif` |
+| `document.fonts.check` Open Sans (`áãçñ¿¡₲R$€`) | **true** | **true** |
+| `document.fonts.check` Poppins (`áãçñ¿¡`) | **true** | **true** |
+| Pesos carregados | Open Sans 300/400/500/700; Poppins 400/700 | Open Sans 300/400/500/700; Poppins 400/500/600/700 |
+| Recursos de fonte | 4 URLs `/fonts/**` | 6 URLs `/fonts/**` |
+| Requisições a `fonts.googleapis.com`/`fonts.gstatic.com` | **0** | **0** |
+| Downloads duplicados por URL | **0** | **0** |
+
+As faces reportadas como `unloaded` são as do outro subset (`latin`/`latin-ext`) não exigido
+pelos textos da página — comportamento esperado do `unicode-range`, não fallback. A fonte
+renderizada é a local (`/fonts/**`), com pesos e famílias corretos e cobertura dos glifos
+testados. Telas autenticadas continuam dependentes do aceite humano (seção 8).
 
 ## 6. Screenshots antes/depois
 
