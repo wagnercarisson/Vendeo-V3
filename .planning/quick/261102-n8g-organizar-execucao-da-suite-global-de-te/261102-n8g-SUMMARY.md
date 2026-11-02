@@ -8,6 +8,10 @@ commits:
   - 5dfe6f15
   - cf5b1af2
   - 33cc455e
+  - 461e186f
+  - eae55fa4
+  - 0df79724
+  - 14757a35
 files_created:
   - scripts/testing/test-categories.json
   - scripts/testing/test-status.mjs
@@ -101,6 +105,45 @@ Nenhuma dessas falhas é de coleta `node:test` nem de integração. O total de t
 - **Produto 1:1:** trio `F562A_ISOLATED_*` ausente → gate não executado (exit 2).
 - Nenhum banco foi provisionado, criado ou alterado; nenhum valor de segredo foi impresso.
 - Runners PowerShell de provisionamento e `scripts/f50-4/run-sql-tests.mjs` não foram executados.
+
+## Complemento corretivo pós-revisão (2026-11-02)
+
+Três achados de revisão foram corrigidos; nenhuma integração foi executada contra banco real.
+
+### 1. Perfis PostgreSQL separados e validados
+
+O perfil único que aceitava qualquer URL loopback foi dividido em três:
+
+- **`postgres-homolog`** (3 suítes F57.2): exige `TEST_DATABASE_URL` exatamente `127.0.0.1:57782/postgres`, `F57_2_EXPECTED_LEDGER_COUNT >= 149`, `F57_2_EXPECTED_LEDGER_SHA256` com 64 hex e ausência de `SUPABASE_ACCESS_TOKEN`/`SUPABASE_DB_URL`.
+- **`postgres-local`** (5 suítes antigas): exige `TEST_DATABASE_URL` loopback e `POSTGRES_LOCAL_ALLOW_WRITES=1`; recusa o alvo do homolog. Documentado que as suítes gravam/limpam fixtures, algumas com `session_replication_role=replica`.
+- **`postgres-f50-4`** (1 suíte): exige `F50_4_RUN_CONCURRENCY=1`, `F50_4_DB_URL` loopback na porta `F50_4_DB_PORT` (padrão 54422) e caminho `/postgres`.
+
+`npm.cmd run test:integration:postgres` passou a ser status/recusa: mostra a prontidão dos três perfis e sai 2 sem executar nada. Comandos explícitos: `:postgres:homolog`, `:postgres:local`, `:postgres:f50-4`.
+
+### 2. `operation-cost-service` isolado em `app-env`
+
+A suíte que relê `.env.local` saiu do conjunto PostgreSQL. O perfil `app-env` valida o alvo **efetivo** (arquivo e processo), exige URL loopback em `NEXT_PUBLIC_SUPABASE_URL` e as chaves `NEXT_PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`, rejeitando `*.supabase.co/in/com`. O parser normaliza CRLF para validar o arquivo como ele é lido no repositório. Nenhum valor de segredo é impresso.
+
+### 3. `npm test` encaminha argumentos
+
+`run-local-suite.mjs` passou a repassar `process.argv.slice(2)` ao Vitest. Verificado com `npm.cmd test -- src/lib/legal/__tests__/integration.test.ts --reporter=dot`: apenas 1 arquivo / 5 testes executados.
+
+### Verificação do complemento
+
+| Comando | Resultado |
+| --- | --- |
+| `node scripts/testing/test-status.mjs` | exit 0; 7 categorias; app-env "ambiente presente — NÃO EXECUTADO" (loopback), demais gates não executados |
+| `npm.cmd run test:scripts` | 73/73 |
+| `npm.cmd test` | 7501 passed / 6 failed / 10 skipped / 598 arquivos (apenas falhas conhecidas) |
+| `npm.cmd test -- <arquivo> --reporter=dot` | 1 arquivo / 5 testes; argumentos encaminhados |
+| preflight matrix (homolog 54322, local sem opt-in, local no alvo homolog, f50-4 porta errada, app-env remoto, `.env.local` remoto com processo loopback) | todos bloqueados |
+| `npm.cmd run test:integration:postgres` | exit 2, status/recusa, nada executado |
+| `node scripts/testing/run-integration.mjs nope` | exit 3 |
+| `npm.cmd run typecheck` | exit 0 |
+| `npm.cmd run lint` | exit 0 |
+| `git diff --check` | exit 0 |
+
+Nenhum banco foi provisionado ou alterado; nenhum perfil de integração foi executado.
 
 ## Limitações
 
