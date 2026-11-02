@@ -15,6 +15,8 @@ import type { CampaignInput, StoreIdentitySnapshot } from "@/components/campaign
 import { ImageGenerationService } from "@/lib/image-generation/services/image-generation-service";
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
+import { createDefaultThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
+import { generateCampaignThumbnailSafely } from "@/lib/campaign/thumbnail/thumbnail-safe";
 import type { GenerateImageRequest, GenerationPhaseEvent } from "@/lib/image-generation/schema";
 import { createDefaultTelemetryContext } from "@/lib/ai";
 import { dataUrlToCampaignImage, deleteCampaignImage } from "./persistence";
@@ -710,6 +712,21 @@ export async function generateCorrectionV2(
 
     if (completeError) {
       throw new Error(completeError.message);
+    }
+
+    // Miniatura da v2: somente após a conclusão atômica e estritamente
+    // best-effort. O try/catch local é defesa em profundidade para que uma
+    // regressão do wrapper NUNCA caia no catch que chama
+    // failCorrectionV2/remove e desfaça a v2 já persistida.
+    try {
+      await generateCampaignThumbnailSafely({
+        originalPath: storagePath,
+        originalBuffer: jpeg.buffer,
+        context: createDefaultThumbnailContext(),
+        campaignId,
+      });
+    } catch {
+      // isolado: campanha/v2/entrega permanecem válidas
     }
 
     const versionId =

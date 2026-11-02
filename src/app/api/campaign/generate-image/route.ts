@@ -20,6 +20,8 @@ import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput } from "@/components/campaign/types";
 import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from "@/lib/campaign/persistence";
+import { createDefaultThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
+import { generateCampaignThumbnailSafely } from "@/lib/campaign/thumbnail/thumbnail-safe";
 import { transcodeToJpeg } from "@/lib/campaign/image-processor";
 import { checkRateLimit, recordGenerationAttempt } from "@/lib/rate-limit/rate-limit";
 import { CreditService } from "@/lib/credit/credit-service";
@@ -1599,6 +1601,23 @@ export const POST = apiHandler(async (request: NextRequest) => {
               renderSnapshot,
               publicationCopySnapshot,
             });
+
+            // Miniatura: posterior à persistência confirmada e estritamente
+            // best-effort. O wrapper nunca lança; a campanha já está pronta.
+            {
+              const originalPath = storagePath!;
+              try {
+                await generateCampaignThumbnailSafely({
+                  originalPath,
+                  originalBuffer: jpegImage.buffer,
+                  context: createDefaultThumbnailContext(),
+                  campaignId: campaignId!,
+                });
+              } catch {
+                // isolado: a campanha já está pronta e não pode ser desfeita
+              }
+            }
+
             try {
               const grantTxId = await creditService.getOriginDemoGrantTxId(storeId);
               if (grantTxId) {

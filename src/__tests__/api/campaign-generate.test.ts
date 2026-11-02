@@ -91,6 +91,19 @@ vi.mock("@/lib/campaign/image-processor", () => ({
   buildPublicationCopySnapshot: mockBuildPublicationCopySnapshotImpl,
 }));
 
+const { mockGenerateThumbnailSafely } = vi.hoisted(() => ({
+  mockGenerateThumbnailSafely: vi.fn(async () => ({
+    status: "skipped",
+    reason: "thumbnail_disabled_no_context",
+  })),
+}));
+vi.mock("@/lib/campaign/thumbnail/thumbnail-safe", () => ({
+  generateCampaignThumbnailSafely: mockGenerateThumbnailSafely,
+}));
+vi.mock("@/lib/campaign/thumbnail/thumbnail-generator", () => ({
+  createDefaultThumbnailContext: vi.fn(() => null),
+}));
+
 vi.mock("@/lib/store-identity-service", () => ({
   resolveStoreIdentity: vi.fn(async () => mockResolveStoreIdentityImpl()),
   validateIdentityReference: vi.fn(async () => mockValidateIdentityReferenceImpl()),

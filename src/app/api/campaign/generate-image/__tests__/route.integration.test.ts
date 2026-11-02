@@ -228,6 +228,15 @@ vi.mock("@/lib/campaign/persistence", () => ({
   getCampaign: vi.fn(),
 }));
 vi.mock("@/lib/campaign/image-processor", () => ({ transcodeToJpeg: vi.fn(), buildPublicationCopySnapshot: vi.fn() }));
+vi.mock("@/lib/campaign/thumbnail/thumbnail-safe", () => ({
+  generateCampaignThumbnailSafely: vi.fn(async () => ({
+    status: "skipped",
+    reason: "thumbnail_disabled_no_context",
+  })),
+}));
+vi.mock("@/lib/campaign/thumbnail/thumbnail-generator", () => ({
+  createDefaultThumbnailContext: vi.fn(() => null),
+}));
 vi.mock("@/lib/store-identity-service", () => ({
   resolveStoreIdentity: vi.fn(),
   validateIdentityReference: vi.fn(),

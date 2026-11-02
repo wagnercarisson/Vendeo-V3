@@ -49,6 +49,19 @@ vi.mock('@/lib/campaign/image-processor', () => ({
   buildPublicationCopySnapshot: vi.fn(),
 }));
 
+const { mockGenerateThumbnailSafely } = vi.hoisted(() => ({
+  mockGenerateThumbnailSafely: vi.fn(async () => ({
+    status: 'skipped' as const,
+    reason: 'thumbnail_disabled_no_context' as const,
+  })),
+}));
+vi.mock('@/lib/campaign/thumbnail/thumbnail-safe', () => ({
+  generateCampaignThumbnailSafely: mockGenerateThumbnailSafely,
+}));
+vi.mock('@/lib/campaign/thumbnail/thumbnail-generator', () => ({
+  createDefaultThumbnailContext: vi.fn(() => null),
+}));
+
 // Quick 261017-cdi — o caminho do novo fluxo consulta o gate de gasto do piloto
 // (dependência de DB). Nos testes de ROTA ele é mockado para `inactive` (o fluxo
 // segue sem gate), preservando os re-exports do módulo. Sem este mock, a ausência
@@ -851,6 +864,38 @@ describe('POST /api/campaign/generate-image', () => {
         }),
       })
     );
+  });
+
+  // ── Test #5b: miniatura após persistência confirmada ─────────────
+
+  it('gera miniatura após updateCampaignReady com o buffer disponível', async () => {
+    await setupSuccessMocks();
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    await res.text();
+
+    expect(mockGenerateThumbnailSafely).toHaveBeenCalledTimes(1);
+    expect(mockGenerateThumbnailSafely).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originalPath: `${STORE_ID}/${CAMPAIGN_ID}.jpg`,
+        originalBuffer: expect.any(Buffer),
+        campaignId: CAMPAIGN_ID,
+      }),
+    );
+  });
+
+  it('falha injetada da miniatura não apaga o original nem estorna crédito', async () => {
+    await setupSuccessMocks();
+    mockGenerateThumbnailSafely.mockRejectedValueOnce(new Error('thumbnail boom'));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeRequest(VALID_REQUEST_BODY));
+    const body = await res.text();
+
+    expect(body).toContain('"type":"result"');
+    expect(deleteCampaignImage).not.toHaveBeenCalled();
+    expect(updateCampaignError).not.toHaveBeenCalled();
   });
 
   // ── Test #6: Paralelismo — ambos executam ───────────────────────

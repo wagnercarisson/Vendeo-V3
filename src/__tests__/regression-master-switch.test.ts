@@ -40,6 +40,15 @@ vi.mock("@/lib/campaign/image-processor", () => ({
   transcodeToJpeg: mockTranscodeToJpeg,
   buildPublicationCopySnapshot: vi.fn(),
 }));
+vi.mock("@/lib/campaign/thumbnail/thumbnail-safe", () => ({
+  generateCampaignThumbnailSafely: vi.fn(async () => ({
+    status: "skipped",
+    reason: "thumbnail_disabled_no_context",
+  })),
+}));
+vi.mock("@/lib/campaign/thumbnail/thumbnail-generator", () => ({
+  createDefaultThumbnailContext: vi.fn(() => null),
+}));
 
 vi.mock("@/lib/image-generation/config", () => ({
   IMAGE_GENERATION_GLOBAL_TIMEOUT_MS: 300000,
