@@ -258,3 +258,16 @@ Ajustes aplicados após a revisão técnica: (a) o anúncio compacto passou a re
 | Build | `npm.cmd run build` | **0** | **95/95 páginas**; `/dashboard` **4,29 kB / 110 kB**; shared **102 kB** |
 
 O payload RSC continua **não medido**; a conclusão segura permanece restrita ao JavaScript e ao isolamento estático do namespace. Nenhum push, merge, deploy, migration ou alteração de produção foi executado nesta revalidação.
+
+## 7. Correção visual pós-checkpoint (2026-11-02)
+
+Ajustes visuais solicitados: lista compacta de três campanhas com miniaturas pequenas, créditos destacados, novidades na lateral, atalho fixo “Que tal criar sua próxima campanha?” e orientação “Abra uma campanha para visualizar o conteúdo completo e baixá-lo para publicar.”, com mensagens em pt-BR/es-419.
+
+| Verificação | Comando | Exit | Resultado |
+|---|---|---|---|
+| Suítes focadas | `npx vitest run src/lib/dashboard src/lib/credit/__tests__/credit-service-throw-on-error.test.ts src/lib/i18n/dashboard src/lib/changelog src/components/dashboard src/components/changelog src/components/verification src/components/readiness src/__tests__/app/dashboard` | **0** | **30 arquivos / 177 testes PASS** |
+| Typecheck | `npm.cmd run typecheck` | **0** | PASS |
+| Build | `npm.cmd run build` | **0** | **95/95 páginas**; `/dashboard` **4,36 kB / 110 kB**; shared **102 kB** |
+| OpenSpec strict | `openspec validate fase-58-composi-o-operacional-do-dashboard --strict` | **0** | valid |
+
+Capturas reais em produção local (`next build` + `next start`): `evidence/58-05-visual-desktop.png` e `evidence/58-05-visual-mobile.png`, com metadados em `evidence/58-05-visual-captures.md`. Nenhum deploy, push, merge, migration ou alteração de produção. As capturas aguardam aceite humano.

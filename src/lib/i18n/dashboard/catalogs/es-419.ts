@@ -42,6 +42,12 @@ export const es419DashboardMessages = Object.freeze({
     failureTitle: "No se pudieron cargar las campañas",
     failureBody: "Inténtalo de nuevo en unos instantes o abre la lista completa.",
     cardAria: "Abrir campaña {product}, {date}",
+    orientation:
+      "Abre una campaña para ver el contenido completo y descargarlo para publicar.",
+  }),
+  shortcut: Object.freeze({
+    title: "¿Qué tal crear tu próxima campaña?",
+    cta: "Crear campaña",
   }),
   news: Object.freeze({
     sectionLabel: "Novedades",

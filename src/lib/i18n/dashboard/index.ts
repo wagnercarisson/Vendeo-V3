@@ -15,6 +15,7 @@ export type {
   DashboardMessages,
   DashboardNewsMessages,
   DashboardNoStoreMessages,
+  DashboardShortcutMessages,
 } from "./messages";
 
 export { ptBRDashboardMessages } from "./catalogs/pt-BR";

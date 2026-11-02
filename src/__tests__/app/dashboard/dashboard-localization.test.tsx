@@ -164,6 +164,11 @@ describe("DashboardPage — localização e lang", () => {
     expect(html).toContain("Ver detalles");
     expect(html).toContain("Ver novedades");
     expect(html).toContain('aria-label="Cerrar anuncio"');
+    expect(html).toContain("¿Qué tal crear tu próxima campaña?");
+    expect(html).toContain("Crear campaña");
+    expect(html).toContain(
+      "Abre una campaña para ver el contenido completo y descargarlo para publicar.",
+    );
     expect(html).not.toContain("Saldo indisponível");
   });
 

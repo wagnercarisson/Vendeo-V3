@@ -41,6 +41,12 @@ export const ptBRDashboardMessages: DashboardMessages = Object.freeze({
     failureTitle: "Não foi possível carregar as campanhas",
     failureBody: "Tente novamente em instantes ou abra a lista completa.",
     cardAria: "Abrir campanha {product}, {date}",
+    orientation:
+      "Abra uma campanha para visualizar o conteúdo completo e baixá-lo para publicar.",
+  }),
+  shortcut: Object.freeze({
+    title: "Que tal criar sua próxima campanha?",
+    cta: "Criar campanha",
   }),
   news: Object.freeze({
     sectionLabel: "Novidades",

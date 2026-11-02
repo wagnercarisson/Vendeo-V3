@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Coins } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import type { DashboardCreditState } from "@/lib/dashboard/credits";
@@ -27,11 +27,12 @@ export function DashboardCredits({
 }: DashboardCreditsProps) {
   return (
     <section aria-labelledby="credits-title" className="min-w-0">
-      <Card className="p-4 sm:p-6">
+      <Card className="border-accent-green/30 bg-accent-green/5 p-4 sm:p-6">
         <h2
           id="credits-title"
-          className="font-heading text-xs font-semibold uppercase tracking-wider text-text-secondary"
+          className="flex items-center gap-2 font-heading text-xs font-semibold uppercase tracking-wider text-text-secondary"
         >
+          <Coins className="h-4 w-4 text-accent-green" aria-hidden="true" />
           {messages.sectionLabel}
         </h2>
 

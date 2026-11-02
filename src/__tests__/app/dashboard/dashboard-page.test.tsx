@@ -182,6 +182,9 @@ describe("DashboardPage — estados operacionais", () => {
     expect(html).toContain("3 campanhas disponíveis");
     expect(html).toContain("Nova campanha");
     expect(html).toContain("Ver todas as campanhas");
+    expect(html).toContain("Que tal criar sua próxima campanha?");
+    expect(html).toContain("Abra uma campanha para visualizar o conteúdo completo e baixá-lo para publicar.");
+    expect(html).toContain('href="/campanhas/nova"');
   });
 
   it("respeita o limite de 3 cartões mesmo quando a contagem total é maior", async () => {

@@ -41,6 +41,12 @@ export interface DashboardCampaignsMessages {
   readonly failureTitle: string;
   readonly failureBody: string;
   readonly cardAria: string;
+  readonly orientation: string;
+}
+
+export interface DashboardShortcutMessages {
+  readonly title: string;
+  readonly cta: string;
 }
 
 export interface DashboardNewsMessages {
@@ -74,6 +80,7 @@ export interface DashboardMessages {
   readonly header: DashboardHeaderMessages;
   readonly credits: DashboardCreditsMessages;
   readonly campaigns: DashboardCampaignsMessages;
+  readonly shortcut: DashboardShortcutMessages;
   readonly news: DashboardNewsMessages;
   readonly banners: DashboardBannersMessages;
   readonly loading: DashboardLoadingMessages;

@@ -144,6 +144,8 @@ describe("DashboardPage — ordem responsive e placements", () => {
     expect(html).toContain("lg:col-start-3");
     expect(html).toContain("lg:row-start-1");
     expect(html).toContain("lg:row-start-2");
+    expect(html).toContain("lg:row-start-3");
+    expect(html).toContain("lg:row-span-3");
     expect(html).toContain("lg:col-span-2");
     expect(html).toContain("lg:col-start-1");
     expect(html).toContain("lg:grid-cols-3");
@@ -173,7 +175,9 @@ describe("DashboardPage — ordem responsive e placements", () => {
     expect(anchors.length).toBeGreaterThan(0);
     for (const anchor of anchors) {
       expect(
-        anchor.includes("min-h-[44px]") || anchor.includes("group block"),
+        anchor.includes("min-h-[44px]") ||
+          anchor.includes("group block") ||
+          anchor.includes("group flex"),
       ).toBe(true);
       expect(anchor).toContain("focus-visible:ring-2");
     }

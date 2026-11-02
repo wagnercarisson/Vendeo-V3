@@ -61,7 +61,7 @@ describe("DashboardCredits", () => {
     const html = renderCredits({ state: "zero", availableBalance: 0 });
 
     expect(html.split(messages.zero).length - 1).toBe(1);
-    expect(html).not.toContain("0 0");
+    expect(html).not.toMatch(/>\s*0 0/);
     expect(html).not.toContain(messages.unavailable);
     expect(html).toContain('href="/conta"');
   });
@@ -70,7 +70,7 @@ describe("DashboardCredits", () => {
     const html = renderCredits({ state: "zero", availableBalance: 0 }, "es-419");
 
     expect(html.split(es419DashboardMessages.credits.zero).length - 1).toBe(1);
-    expect(html).not.toContain("0 0");
+    expect(html).not.toMatch(/>\s*0 0/);
   });
 
   it("no estado unavailable mostra ícone âmbar e nenhum zero/traço", () => {

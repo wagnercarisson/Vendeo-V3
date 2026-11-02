@@ -76,7 +76,9 @@ describe("DashboardCampaigns", () => {
     expect(html.match(/href="\/campanhas\/c/g)?.length).toBe(3);
     expect(html).toContain("Produto 1");
     expect(html).toContain(messages.viewAll);
+    expect(html).toContain(messages.orientation);
     expect(html).toContain('href="/campanhas"');
+    expect(html).not.toContain("grid-cols-3");
   });
 
   it("usa o painel role=\"status\" na falha, sem contagem nem '0 campanhas'", () => {

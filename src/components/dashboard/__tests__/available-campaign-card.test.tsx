@@ -40,7 +40,7 @@ describe("AvailableCampaignCard", () => {
     expect(img).not.toBeNull();
     expect(img).toHaveAttribute("src", "https://cdn.test/thumb.jpg");
     expect(img).toHaveAttribute("alt", "");
-    expect(container.querySelector("svg")).toBeNull();
+    expect(container.querySelector(".lucide-image-off")).toBeNull();
   });
 
   it("troca para o fallback quando a imagem falha, preservando o link", () => {
@@ -50,7 +50,7 @@ describe("AvailableCampaignCard", () => {
     fireEvent.error(img);
 
     expect(container.querySelector("img")).toBeNull();
-    expect(container.querySelector("svg")).not.toBeNull();
+    expect(container.querySelector(".lucide-image-off")).not.toBeNull();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/campanhas/c1");
   });
 
@@ -58,7 +58,7 @@ describe("AvailableCampaignCard", () => {
     const { container } = renderCard(null);
 
     expect(container.querySelector("img")).toBeNull();
-    expect(container.querySelector("svg")).not.toBeNull();
+    expect(container.querySelector(".lucide-image-off")).not.toBeNull();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/campanhas/c1");
   });
 
@@ -78,6 +78,7 @@ describe("AvailableCampaignCard", () => {
 
     expect(link.className).toContain("focus-visible:ring-2");
     expect(link.className).toContain("focus-visible:ring-offset-2");
-    expect(link.className).toContain("overflow-hidden");
+    expect(link.className).toContain("items-center");
+    expect(link.className).toContain("min-h-[80px]");
   });
 });

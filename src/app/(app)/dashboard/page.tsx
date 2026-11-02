@@ -5,6 +5,7 @@ import { DashboardCampaigns } from "@/components/dashboard/dashboard-campaigns";
 import { DashboardCredits } from "@/components/dashboard/dashboard-credits";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DashboardNews } from "@/components/dashboard/dashboard-news";
+import { DashboardShortcut } from "@/components/dashboard/dashboard-shortcut";
 import { ReadinessCheckBanner } from "@/components/readiness/readiness-check-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { VerificationBanners } from "@/components/verification/verification-banners";
@@ -153,7 +154,7 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+        <div className="min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-3">
           <DashboardCampaigns
             count={campaign.ok ? campaign.data.count : 0}
             items={items}
@@ -164,8 +165,12 @@ export default async function DashboardPage() {
           />
         </div>
 
+        <div className="min-w-0 lg:col-start-3 lg:row-start-2">
+          <DashboardShortcut messages={messages.shortcut} />
+        </div>
+
         {entry ? (
-          <div className="min-w-0 lg:col-start-3 lg:row-start-2">
+          <div className="min-w-0 lg:col-start-3 lg:row-start-3">
             <DashboardNews
               entry={entry}
               excerpt={excerpt}
