@@ -10,6 +10,10 @@ const MIGRATION = readFileSync(
   "utf8",
 );
 
+// Normalização restrita ao teste: o line ending do checkout (CRLF no Windows)
+// não deve alterar a semântica do contrato. A migration permanece intocada.
+const MIGRATION_LF = MIGRATION.replace(/\r\n?/g, "\n");
+
 describe("migration 20261026191931 — contrato de pricing sync", () => {
   it("adiciona dimensões explícitas de entrada/cache de imagem", () => {
     expect(MIGRATION).toContain("image_input_token_usd_per_1m");
@@ -47,7 +51,7 @@ describe("migration 20261026191931 — contrato de pricing sync", () => {
       /INSERT INTO public\.ai_model_pricing \([\s\S]*?RETURNING id INTO v_new_id;/g,
     );
     expect(syncInsert?.length).toBeGreaterThan(0);
-    expect(MIGRATION).toContain("NULL\n      )\n      RETURNING id INTO v_new_id;");
+    expect(MIGRATION_LF).toContain("NULL\n      )\n      RETURNING id INTO v_new_id;");
   });
 
   it("start recupera execução interrompida sem apagar histórico", () => {
