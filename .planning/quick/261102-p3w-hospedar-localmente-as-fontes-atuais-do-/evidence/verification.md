@@ -155,7 +155,34 @@ Telas autenticadas não são capturáveis sem sessão. Verificar manualmente em 
 - [ ] Acentos/`ç`/`ñ`/`¿`/`¡`/`₲`/`R$`/`€` renderizam nos pontos onde aparecem.
 - [ ] DevTools → Network: zero requisições a `fonts.googleapis.com`/`fonts.gstatic.com`; fontes vêm de `/fonts/**` com 200.
 
-## 9. Status
+## 9. Comparação de carregamento antes/depois (laboratório local)
+
+Baseline reconstruído em worktree temporária no commit `b898f581` (build próprio, mesma
+`node_modules` por junction, `.env.local` copiado localmente e removido com a worktree).
+Depois medido no build atual. Servidores `next start` em portas dedicadas, Edge headless,
+3 execuções por página, cache limpo entre execuções.
+
+| Métrica (mediana de 3) | Landing antes | Landing depois | Login antes | Login depois |
+|------------------------|---------------|----------------|-------------|--------------|
+| FCP | 152 ms | 140 ms | 152 ms | 92 ms |
+| LCP | 152 ms | 140 ms | 152 ms | 92 ms |
+| CLS | 0,00213 | 0,00217 | 0,00215 | 0,00243 |
+| Transferência total medida | 305.691 B | 377.236 B | 220.202 B | 275.129 B |
+| Requisições a origem Google | 1 (CSS) | **0** | 1 (CSS) | **0** |
+| WOFF2 visíveis no Resource Timing | 0 (cross-origin) | 4 | 0 (cross-origin) | 2 |
+
+**Leitura correta:** as faces do Google **carregaram** no baseline (status `loaded` em
+`document.fonts`), mas os WOFF2 cross-origin não aparecem no `PerformanceResourceTiming`
+sem `Timing-Allow-Origin`; por isso a transferência do baseline parece menor. Somando os
+mesmos arquivos (hashes idênticos, §1/§4) ao baseline, a transferência fica praticamente
+igual: ~378,7 KB antes × 377,2 KB depois na landing. O CSS local cresce ~6,1 KB
+descomprimido (18 `@font-face`) e deixa de baixar o CSS do Google (~2,45 KB). FCP/LCP/CLS
+são medições de laboratório em `localhost`, com variância entre execuções; **não** são
+promessa de ganho de ranking nem representam produção (latência DNS/TLS e rede reais
+ausentes). O ganho verificável é a remoção da dependência externa e das conexões a
+`fonts.googleapis.com`/`fonts.gstatic.com`.
+
+## 10. Status
 
 **Aguardando aceite visual humano.** Não foi executado merge, push, deploy, tag, migration
 ou qualquer escrita em banco. Nenhuma dependência nova.

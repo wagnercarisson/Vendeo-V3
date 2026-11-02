@@ -106,6 +106,16 @@ Fontes servidas pelo próprio app via 18 `@font-face` locais e 10 WOFF2 oficiais
 
 `evidence/before/*.png` e `evidence/after/*.png` (landing e login, 1440×900 e 390×844) são **byte-idênticos** nos quatro pares.
 
+## Carregamento antes/depois (laboratório local)
+
+Baseline reconstruído em worktree temporária no commit `b898f581`; 3 execuções por página
+com Edge headless e cache limpo. Medianas: FCP/LCP landing **152→140 ms**, login
+**152→92 ms**; CLS ~**0,002** em ambos; zero requisições a origem Google depois. A
+transferência medida do baseline omite os WOFF2 cross-origin (sem `Timing-Allow-Origin`);
+somando os mesmos arquivos (hashes idênticos), fica ~**378,7 KB antes × 377,2 KB depois** na
+landing. São medições de laboratório em `localhost`, sem promessa de ganho de ranking.
+Detalhes em `evidence/verification.md` §9.
+
 ## Limitações registradas
 
 - **Telas autenticadas** (shell, `/dashboard`, `/configuracoes`, admin) não foram capturadas automaticamente — dependem do checklist de aceite visual humano em `evidence/verification.md`.
