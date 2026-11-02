@@ -12,6 +12,7 @@ commits:
   - eae55fa4
   - 0df79724
   - 14757a35
+  - 1e43fe07
 files_created:
   - scripts/testing/test-categories.json
   - scripts/testing/test-status.mjs
@@ -144,6 +145,15 @@ A suíte que relê `.env.local` saiu do conjunto PostgreSQL. O perfil `app-env` 
 | `git diff --check` | exit 0 |
 
 Nenhum banco foi provisionado ou alterado; nenhum perfil de integração foi executado.
+
+### Segundo complemento corretivo (revisão final)
+
+Dois achados adicionais foram corrigidos:
+
+1. **Recusa do homolog por aliases loopback.** `postgres-local` agora bloqueia `57782/postgres` quando o host é `127.0.0.1`, `localhost` ou `[::1]`/`::1`. Verificado por matriz: os três alvos retornam `ready=false`.
+2. **URL malformada do Produto 1:1 sem exceção.** `product11GateStatus` passou a usar `parsePostgresUrl` com retorno `null`; `F562A_ISOLATED_DATABASE_URL='postgresql://['` retorna status inválido, o runner sai 2 e não imprime a URL. Verificado também que `npm.cmd test` continua iniciando normalmente com essa variável malformada.
+
+Gates do segundo complemento: `node --check` exit 0, `test:gates` exit 0, `lint` exit 0, `git diff --check` limpo; nenhum banco ou integração executado.
 
 ## Limitações
 
