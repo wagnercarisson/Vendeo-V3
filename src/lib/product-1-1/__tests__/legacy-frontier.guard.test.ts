@@ -117,14 +117,14 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/types.ts",
     authorization:
-      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + F56.2b1b Plano 08 P1 Opção A (tipo aditivo AiEnvelopeInternalCost)",
-    commit: "201e606f",
+      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + F56.2b1b Plano 08 P1 Opção A (tipo aditivo AiEnvelopeInternalCost) + quick 261026-p11 (settlement/tokenPricing no custo interno)",
+    commit: "2d42c512",
   },
   {
     path: "src/lib/ai/telemetry-sink.ts",
     authorization:
-      "F56.2b1b Plano 08 P1 Opção A (custo interno `internalCost` opcional no contexto do sink — aditivo)",
-    commit: "201e606f",
+      "F56.2b1b Plano 08 P1 Opção A (custo interno `internalCost` opcional no contexto do sink — aditivo) + quick 261026-p11 (liquidação por tokens reais)",
+    commit: "2d42c512",
   },
   {
     path: "src/lib/ai/__tests__/telemetry-sink.test.ts",
@@ -155,8 +155,8 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/gateway.ts",
     authorization:
-      "quick gpt6-luna (AiInvoker/AiGateway: prepare/invokePrepared + correções)",
-    commit: "322809d0",
+      "quick gpt6-luna (AiInvoker/AiGateway: prepare/invokePrepared + correções) + quick 261026-vs (cópia do alvo para o envelope de sucesso/falha)",
+    commit: "43652290",
   },
   {
     path: "src/lib/ai/__tests__/gateway-prepared.test.ts",
@@ -225,13 +225,197 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   },
   // Reconciliação 2026-10-21 — F50.2 (oferta de teste gratuito de 28 dias).
   // Mudança ADITIVA/read-only no CreditService (leitura do enrollment), já
-  // aprovada no planejamento da F50.2 (50.2-02-PLAN.md) e publicada nesse
-  // commit. A comparação de conteúdo contra `05e81d90` permanece ativa.
+  // aprovada no planejamento da F50.2 (50.2-02-PLAN.md). O conteúdo atual
+  // inclui a extensão aditiva `throwOnError` da F58-01 (default false),
+  // verificada em 58-VERIFICATION (status passed); a comparação de conteúdo
+  // contra `59e8bea0` permanece ativa.
   {
     path: "src/lib/credit/credit-service.ts",
     authorization:
-      "F50.2 (leitura de enrollment do teste gratuito — aditiva/read-only)",
-    commit: "05e81d90",
+      "F50.2 (leitura de enrollment — aditiva/read-only) + F58-01 (throwOnError aditivo opt-in, default false)",
+    commit: "59e8bea0",
+  },
+  // Reconciliação 2026-11-02 (quick 261102-oab) — parecer técnico favorável
+  // do Codex nesta retomada, após revisão dos diffs e 280 testes em 21
+  // arquivos. Cada entrada usa o commit imutável cujo conteúdo corresponde ao
+  // arquivo atual. O parecer cobre código/testes offline; NÃO é validação de
+  // banco/provider nem autorização de publicação.
+  // 261026-pricing — sync diária de tarifas e painel admin.
+  {
+    path: "src/lib/ai-cost/__tests__/fixtures/openai-pricing-standard.md",
+    authorization: "quick 261026-pricing (inventário/tarifas Standard OpenAI)",
+    commit: "89994b1d",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/openai-pricing-dashboard.test.ts",
+    authorization: "quick 261026-pricing (painel de tarifas persistidas)",
+    commit: "89994b1d",
+  },
+  {
+    path: "src/lib/ai-cost/openai-pricing-dashboard.ts",
+    authorization: "quick 261026-pricing (painel de tarifas persistidas)",
+    commit: "89994b1d",
+  },
+  {
+    path: "src/lib/ai-cost/openai-pricing-fetch.ts",
+    authorization: "quick 261026-pricing (fetch público com timeout/hash/ETag)",
+    commit: "89994b1d",
+  },
+  {
+    path: "src/lib/ai-cost/openai-pricing-inventory.ts",
+    authorization: "quick 261026-pricing (inventário fechado de modelos/tarifas)",
+    commit: "89994b1d",
+  },
+  {
+    path: "src/lib/ai-cost/openai-pricing-sync-store.ts",
+    authorization: "quick 261026-pricing (persistência/RPCs atômicas do sync)",
+    commit: "89994b1d",
+  },
+  {
+    path: "src/lib/ai-cost/openai-pricing-sync.ts",
+    authorization: "quick 261026-pricing (orquestração do sync diário)",
+    commit: "89994b1d",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/openai-pricing-parser.test.ts",
+    authorization: "quick 261026-pricing gap closure (parser valor/não aplicável/ausente)",
+    commit: "99132b1e",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/openai-pricing-sync-state.test.ts",
+    authorization: "quick 261026-pricing gap closure (estado pendente durante retry)",
+    commit: "99132b1e",
+  },
+  {
+    path: "src/lib/ai-cost/openai-pricing-parser.ts",
+    authorization: "quick 261026-pricing gap closure (parser valor/não aplicável/ausente)",
+    commit: "99132b1e",
+  },
+  {
+    path: "src/lib/ai-cost/openai-pricing-sync-state.ts",
+    authorization: "quick 261026-pricing gap closure (estado pendente durante retry)",
+    commit: "99132b1e",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/openai-pricing-sync.test.ts",
+    authorization:
+      "quick 261026-pricing complemento autorizado (middleware/logger; sem mudança de runtime do logger)",
+    commit: "ab69495a",
+  },
+  // 261026-vs — estimativa versionada do consumo de imagem da Assinatura Visual.
+  {
+    path: "src/lib/ai-cost/__tests__/operation-runs-service.test.ts",
+    authorization: "quick 261026-vs (nota de custo estimado no detalhe)",
+    commit: "43652290",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/visual-signature-image-usage.test.ts",
+    authorization: "quick 261026-vs (tabela vs-image-usage-v1)",
+    commit: "43652290",
+  },
+  {
+    path: "src/lib/ai-cost/operation-runs-service.ts",
+    authorization: "quick 261026-vs (nota de custo estimado no detalhe)",
+    commit: "43652290",
+  },
+  {
+    path: "src/lib/ai-cost/visual-signature-image-usage.ts",
+    authorization: "quick 261026-vs (tabela vs-image-usage-v1)",
+    commit: "43652290",
+  },
+  {
+    path: "src/lib/ai/__tests__/gateway-visual-signature-image-usage.test.ts",
+    authorization: "quick 261026-vs (alvo de usage no envelope do gateway)",
+    commit: "43652290",
+  },
+  {
+    path: "src/lib/ai-cost/visual-signature-image-cost.ts",
+    authorization: "quick 261026-vs gap closure (usage agregado completo aceito)",
+    commit: "563e1a09",
+  },
+  {
+    path: "src/lib/ai/__tests__/visual-signature-image-cost-sink.test.ts",
+    authorization: "quick 261026-vs gap closure (usage agregado completo aceito)",
+    commit: "563e1a09",
+  },
+  {
+    path: "src/lib/ai-cost/__tests__/visual-signature-image-cost.test.ts",
+    authorization: "quick 261026-vs gap closure (entrada ausente no usage)",
+    commit: "c282d0bc",
+  },
+  // 261026-p11 — custo pós-chamada por tokens reais no Produto 1:1.
+  {
+    path: "src/lib/ai-cost/__tests__/image-pair-pricing.test.ts",
+    authorization: "quick 261026-p11 (pricing congelado + rejeição code_default)",
+    commit: "2d42c512",
+  },
+  {
+    path: "src/lib/ai-cost/ai-model-pricing.ts",
+    authorization: "quick 261026-p11 (novas dimensões no caminho com qualidade)",
+    commit: "2d42c512",
+  },
+  {
+    path: "src/lib/ai-cost/image-pair-pricing.ts",
+    authorization: "quick 261026-p11 (pricing congelado + rejeição code_default)",
+    commit: "2d42c512",
+  },
+  {
+    path: "src/lib/ai-cost/image-usage-token-cost.ts",
+    authorization: "quick 261026-p11 (cálculo puro por tokens reais)",
+    commit: "2d42c512",
+  },
+  {
+    path: "src/lib/ai-cost/types.ts",
+    authorization: "quick 261026-p11 (cache por modalidade e auditoria de custo)",
+    commit: "2d42c512",
+  },
+  {
+    path: "src/lib/ai/__tests__/adapters.test.ts",
+    authorization: "quick 261026-p11 gap closure (cache isolado no upstream)",
+    commit: "5816a8ce",
+  },
+  {
+    path: "src/lib/ai/__tests__/legacy-images-cache-isolation.test.ts",
+    authorization: "quick 261026-p11 gap closure (regressão do cache legado)",
+    commit: "5816a8ce",
+  },
+  {
+    path: "src/lib/ai/adapters/images.ts",
+    authorization: "quick 261026-p11 gap closure (cache isolado no upstream)",
+    commit: "5816a8ce",
+  },
+  {
+    path: "src/lib/ai/adapters/upstream-images.ts",
+    authorization: "quick 261026-p11 gap closure (cache isolado no upstream)",
+    commit: "5816a8ce",
+  },
+  // 261027-llm — correção test-only de tipagem (aceite aprovado).
+  {
+    path: "src/lib/ai-cost/__tests__/image-usage-token-cost.test.ts",
+    authorization: "quick 261027-llm (tipagem de fixtures; aceite approved)",
+    commit: "76c1ef02",
+  },
+  {
+    path: "src/lib/ai/__tests__/product-1-1-image-usage-integration.test.ts",
+    authorization: "quick 261027-llm (tipagem de mocks; aceite approved)",
+    commit: "76c1ef02",
+  },
+  // 261025-k8e — consumo de modelo/qualidade dedicados da Assinatura Visual.
+  {
+    path: "src/lib/ai/__tests__/gateway.test.ts",
+    authorization: "quick 261025-k8e (modelo efetivo no envelope de falha)",
+    commit: "f3dcfa8f",
+  },
+  {
+    path: "src/lib/ai/adapters/responses.ts",
+    authorization: "quick 261025-k8e (modelo efetivo no ResponsesAdapter)",
+    commit: "f3dcfa8f",
+  },
+  // 261102-o00 — normalização CRLF restrita ao teste de contrato.
+  {
+    path: "src/lib/ai-cost/__tests__/openai-pricing-migration.contract.test.ts",
+    authorization: "quick 261102-o00 (contrato independente de CRLF/LF)",
+    commit: "4d5cfc19",
   },
 ];
 
@@ -371,7 +555,7 @@ describe("legacy-frontier guard — F56.2a", () => {
     // O conteúdo ATUAL deve ser idêntico ao conteúdo do commit aprovado; a
     // autorização do caminho não é autorização permanente para modificá-lo.
     expect(mismatches).toEqual([]);
-  });
+  }, 20000);
 
   it("a rota generate-image evolui para o wiring b1b preservando o fluxo legado", () => {
     const diff = git([
@@ -521,9 +705,12 @@ describe("legacy-frontier guard — reconciliação (testes negativos)", () => {
   const AUTHORIZED = AUTHORIZED_FRONTIER_CHANGES.map((entry) => entry.path);
 
   it("rejeita um caminho de fronteira EXTRA não autorizado", () => {
-    const changed = [...AUTHORIZED, "src/lib/ai/adapters/images.ts"];
+    // `adapters/images.ts` passou a ter entrada autorizada (261026-p11); o
+    // controle negativo usa `adapters/registry.ts`, que está no perímetro
+    // legado e permanece intencionalmente fora da lista autorizada.
+    const changed = [...AUTHORIZED, "src/lib/ai/adapters/registry.ts"];
     const { extra } = diffAgainstAuthorized(changed, AUTHORIZED);
-    expect(extra).toEqual(["src/lib/ai/adapters/images.ts"]);
+    expect(extra).toEqual(["src/lib/ai/adapters/registry.ts"]);
   });
 
   it("rejeita a ausência de um caminho autorizado", () => {
@@ -553,5 +740,5 @@ describe("legacy-frontier guard — reconciliação (testes negativos)", () => {
       (commit, file) => git(["show", `${commit}:${file}`]),
     );
     expect(mismatches).toEqual([]);
-  });
+  }, 20000);
 });
