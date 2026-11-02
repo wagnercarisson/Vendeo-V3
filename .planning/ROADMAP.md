@@ -694,7 +694,7 @@ Plans:
 
 ### Phase 58: F58 - Composição operacional do dashboard
 
-**Status:** **EXECUÇÃO LOCAL 4/5 — AGUARDANDO CHECKPOINT HUMANO DO PLANO 58-05.** Planos 58-01..58-04 concluídos com summaries e gates locais verdes; 58-05 executou apenas a Task 1 (gates automatizados/payload) e está bloqueado na validação visual humana (Task 2). Sem push, merge, deploy, migration ou alteração de produção; fase ainda não concluída nem verificada.
+**Status:** **EXECUÇÃO LOCAL 5/5 — VERIFICAÇÃO `human_needed`; FASE NÃO CONCLUÍDA.** Planos 58-01..58-05 concluídos; `58-VERIFICATION.md` com **15/16 must-haves**, status `human_needed`; composição pt-BR/es-419 aprovada, mas 12 itens de observação humana permanecem pendentes em `58-HUMAN-UAT.md` (tablet, rede lenta, loading real, fuso, estados de erro/crédito/readiness, contraste/zoom e admin). Sem push, merge, deploy, migration ou alteração de produção; fase não arquivada nem marcada como concluída.
 
 **Goal:** tornar o dashboard útil, claro e orientado à operação do lojista: cabeçalho compacto com saudação, campanhas disponíveis (`status = "ready"`) com miniaturas reais, saldo de créditos legível e anúncio compacto de novidades. Excluir campanhas com erro/geração das consultas, cartões e contagens do dashboard; entregar todos os textos novos em `pt-BR`/`es-419` por namespace próprio; preservar avisos, navegação, acessibilidade, responsividade, admin e identidade aprovada. Sem recomendações, novas regras comerciais, migrations, APIs ou dependências.
 
@@ -704,7 +704,7 @@ Plans:
 
 **Requirement scope:** (01) elegibilidade `ready` e exclusão de erro/geração na origem; (02) até três campanhas com miniatura assinada e fallback; (03) saldo legível, zero versus indisponível e detalhes; (04) anúncio compacto dispensável; (05) saudação com nome, `timeZone` e `uiLocale`; (06) namespace próprio pt-BR/es-419 e payload; (07) avisos de verificação/prontidão localizados; (08) `lang` por bloco e separação interface/conteúdo; (09) estados sem loja, sem campanhas elegíveis, loading, falha e parcial; (10) responsividade e prioridade mobile; (11) admin, shell, navegação e ações preservados; (12) validação automatizada, visual humana e gates de publicação separados.
 
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 Plans:
 **Wave 1**
 
@@ -721,7 +721,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 58-05-PLAN.md — gates automatizados, validação humana, payload e separação de publicação
+- [x] 58-05-PLAN.md — gates automatizados, validação humana, payload e separação de publicação
 
 **Waves:** Wave 1: 58-01, 58-02; Wave 2: 58-03; Wave 3: 58-04; Wave 4: 58-05.
 
