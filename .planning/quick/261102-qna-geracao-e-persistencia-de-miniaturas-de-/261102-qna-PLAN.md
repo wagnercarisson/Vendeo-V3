@@ -346,11 +346,12 @@ interface ThumbnailContext  { readonly endpoint: string; readonly uploader: Thum
    - write: skip-existing, baixa o original e chama o gerador com `ThumbnailContext` cujo endpoint é o **mesmo** do client/`--expected-url`; falha de item não aborta o lote;
    - **timeout não prova ausência:** se o gerador retornar `thumbnail_upload_timeout`, o runner apenas registra a falha; a **próxima execução** consulta `thumbnailExists` primeiro e, se o objeto tiver sido persistido, classifica `already_exists` sem sobrescrever;
    - respeita `limit`, `batchSize`, `concurrency` (pool com máximo observável), cursor `after` **keyset opaco** e ordenação `created_at,id`;
-   - relatório com contadores/itens/cursor; retomada idempotente demonstrada por teste (segunda execução só processa pendentes); lote final parcial emite `null`, nunca UUID solto.
+   - relatório com contadores/itens/cursor; retomada idempotente demonstrada por teste (segunda execução só processa pendentes); lote final parcial emite `null`, nunca UUID solto;
+   - **precisão integral:** `created_at` é repassado como texto do PostgreSQL (até 6 casas) em encode/decode/filtro, sem `Date`/`toISOString`.
 3. `scripts/campaign-thumbnails/backfill.ts` (tsx, fino, versionado, reutilizável):
    - monta `deps` a partir do Supabase client **lazy** (após parse/config) e delega ao runner;
    - **inventário canônico:** keyset em `campaigns` (`id, store_id, storage_path, status, created_at`) com `storage_path IS NOT NULL` e `status='ready'`; **nunca** varre o bucket; default somente `campaigns.storage_path` (sem `campaign_art_versions`);
-   - **filtros:** `--store`, `--campaign`, `--limit` (50), `--batch-size` (25), `--concurrency` (2, máx. 4), `--after <createdAt ISO>|<campaignId>` (cursor keyset opaco; offset/UUID solto são rejeitados), `--report`, `--env local|homolog|production`, `--expected-url <origem exata>`, `--dry-run` (default)/`--write`, `--confirm-env <env>`, `--verbose`;
+   - **filtros:** `--store`, `--campaign`, `--limit` (50), `--batch-size` (25), `--concurrency` (2, máx. 4), `--after <createdAt EXATO>|<campaignId>` (cursor keyset opaco; offset/UUID solto/formato inválido rejeitados; timestamp validado estritamente antes do filtro), `--report`, `--env local|homolog|production`, `--expected-url <origem exata>`, `--dry-run` (default)/`--write`, `--confirm-env <env>`, `--verbose`;
    - **dry-run por padrão**, sem geração/upload;
    - **configuração/env:** `readDotEnv`/`parseDotEnv` de `scripts/testing/test-status.mjs` ou `--env-file`, nunca no topo; `process.env` tem precedência; `--help`/`--version` sem env/rede (exit 0); config ausente ⇒ exit 3;
    - **identificação de ambiente (endpoint completo):** comparar `new URL(actual).origin` **exatamente** com `--expected-url` (protocolo + host + porta; sem path/query). `--env local` exige adicionalmente host loopback. Origem divergente ⇒ exit 2 sem nenhuma chamada. `homolog`/`production` continuam **hard-blocked** nesta quick; `--write` exige `--confirm-env` igual ao `--env`;
@@ -362,8 +363,8 @@ interface ThumbnailContext  { readonly endpoint: string; readonly uploader: Thum
    - exclusão de `/inputs/`, logos, assinaturas, bench/lab, path de outro store;
    - `missing_original` (404 objeto) ≠ `access_error` (401/403/rede/timeout);
    - retomada: primeira execução falha 1 item; segunda execução ignora miniaturas existentes e reprocessa só o pendente, com cursor estável;
-   - cursor: lote final parcial emite `null`; `--after` keyset é repassado intacto e não vira `NaN`;
-   - dry-run inspeciona o header do original (somente leitura): conteúdo inválido ⇒ `invalid_format`, sem `generate`;
+   - cursor: lote final parcial emite `null`; `--after` keyset é repassado intacto e não vira `NaN`; timestamps com 6 casas preservam os microssegundos; paginação de 1 em 1 não repete item; retomada com o cursor exato;
+   - dry-run inspeciona o original (somente leitura; metadata + decode 1×1): conteúdo inválido/truncado ⇒ `invalid_format`, sem `generate`;
    - **timeout com objeto persistido:** primeira execução retorna `thumbnail_upload_timeout`; o fake passa a reportar `thumbnailExists = true`; segunda execução classifica `already_exists` e **não** chama `generate`/upload — prova de reparo idempotente após aborto HTTP;
    - **vínculo de ambiente no CLI:** `expectedUrl` A + client B (mesmo loopback, porta diferente) ⇒ `blocked`, zero chamadas a `listCampaignsPage`/`downloadOriginal`/`generate`;
    - inspeção estática do CLI apenas como complemento (default dry-run, env/confirm, `upsert:false`, client lazy, ausência de `.update(`/`.remove(`/`campaign_art_versions`/`storage.list`).

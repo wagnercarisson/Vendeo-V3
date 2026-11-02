@@ -45,7 +45,7 @@ Implementado e validado localmente:
 
 ## Ajustes pós-revisão (Gate B continua bloqueado)
 
-1. **Cursor único keyset:** `--after` agora é `<createdAt ISO>|<campaignId>`, emitido pelo inventário (`created_at,id`) e consumido sem offset. Lote final parcial emite `null`; UUID solto/offset é rejeitado (exit 3). Testes cobrem lote parcial e retomada com cursor opaco.
+1. **Cursor único keyset:** `--after` agora é `<createdAt EXATO>|<campaignId>`, emitido pelo inventário (`created_at,id`) e consumido sem offset. O `created_at` é preservado como **texto do PostgreSQL, com até 6 casas decimais**, sem passar por `Date`/`toISOString` (que truncaria para ms). Validação estrita do timestamp antes de interpolar no filtro. Lote final parcial emite `null`; UUID solto/offset/formato inválido é rejeitado (exit 3). Testes cobrem microssegundos, paginação de um em um e retomada.
 2. **Sem bypass de timeout:** removida a opção `client` de `createTimedSupabaseUploader`; todo upload passa pelo `global.fetch` com `AbortSignal`. `fetchImpl` permanece apenas para teste.
 3. **Falhas esperadas não silenciosas:** o wrapper registra `failed` (ex.: timeout) e `skipped` inesperado (ex.: endpoint mismatch) com warn sanitizado, sem lançar; `ineligible_path` continua sem ruído.
 4. **Dry-run inspeciona formato:** `inspectOriginalImage` (metadata + decode completo com saída 1×1, somente leitura) classifica conteúdo arbitrário **e JPEG truncado** como `invalid_format`; não gera nem envia.
@@ -54,10 +54,10 @@ Implementado e validado localmente:
 
 | Gate | Resultado |
 |---|---|
-| Módulo thumbnail (5 arquivos) | **42/42** |
-| Focados (thumbnail + artifact + correção + route) | **176/176** em 8 arquivos |
+| Módulo thumbnail (5 arquivos) | **45/45** |
+| Focados (thumbnail + artifact + correção + route) | **179/179** em 8 arquivos |
 | Regressão relacionada (10 arquivos) | **153/153** |
-| Suíte local completa | **603 passed / 2 skipped (605 arquivos)**; **7567 passed / 10 skipped** |
+| Suíte local completa | **603 passed / 2 skipped (605 arquivos)**; **7570 passed / 10 skipped** |
 | Typecheck | exit 0 |
 | Lint | exit 0 (**limitação conhecida: sem cobertura TS**) |
 | Build | exit 0; `/dashboard` 4.55 kB / 110 kB; shared 102 kB |
@@ -83,6 +83,7 @@ Fixture fotorrealista convertida para JPEG; 20 amostras após 3 warmups:
 - **Legado:** wrapper forçado a lançar ⇒ resposta `result`, sem `deleteCampaignImage`, sem `updateCampaignError`.
 - **Backfill:** dry-run sem `generate`; guardas com zero chamadas; limite/concorrência; `/inputs/` e store divergente excluídos; ausência ≠ acesso; retomada após timeout com objeto persistido ⇒ `already_exists` sem novo upload.
 - **Cursor:** lote final parcial ⇒ `null` (nunca UUID); `--after` keyset repassado intacto; offset inválido ⇒ exit 3.
+- **Precisão:** `created_at` com 6 casas (`...123456+00:00`) sobrevive a encode/decode/filtro sem truncar; paginação de 1 em 1 não repete o item anterior.
 - **Dry-run inválido:** bytes não-imagem ⇒ `invalid_format`, sem geração/upload.
 - **Warnings:** `failed/timeout` e `skipped/endpoint_mismatch` geram warn sanitizado; `created`/`already_exists`/`ineligible_path` não geram ruído.
 
