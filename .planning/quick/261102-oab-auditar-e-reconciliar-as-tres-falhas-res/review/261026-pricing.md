@@ -1,5 +1,10 @@
 # Revisão técnica — `261026-pricing`
 
+**Status nesta retomada (2026-11-02):** aprovado para reconciliação pelo parecer
+técnico do Codex, após revisão dos diffs e 280 testes em 21 arquivos. Esta
+autorização é nova e não retroage sobre o SUMMARY histórico, que registrava
+revisão pendente.
+
 ## Objetivo da quick
 
 Sincronização diária das tarifas OpenAI + painel `/admin` com valores

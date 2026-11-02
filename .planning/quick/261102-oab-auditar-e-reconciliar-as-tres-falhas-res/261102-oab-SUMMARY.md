@@ -3,93 +3,109 @@ quick_id: 261102-oab
 phase: quick
 plan: 01
 date: 2026-11-02
-status: incomplete
-reconciliation: blocked_pending_group_review
-guard_modified: false
+status: complete
+reconciliation: applied
+guard_modified: true
 base_sha: "335bfb70"
-guard_failures_before: 3
-guard_failures_after: 3
-commits: []
+commits:
+  - 3433a713
 ---
 
-# Quick 261102-oab — Auditoria do legacy-frontier guard
+# Quick 261102-oab — Reconciliação do legacy-frontier guard
 
 ## Resultado
 
-Auditoria concluída; **reconciliação bloqueada por decisão de governança**.
-Nenhum arquivo do guard, código funcional, runner, dependência, migration ou
-banco foi alterado. O `BASE_SHA` permanece `335bfb70`.
+Reconciliação concluída após o parecer técnico favorável do Codex e a
+autorização explícita desta retomada. O guard voltou a **10/10** e a suíte local
+ficou **verde** (7507 passed / 10 skipped / 0 failed), sem alterar código
+funcional, runners, configs, dependências, migrations ou banco.
 
-- Divergências recalculadas: **34 caminhos extras** + **4 conteúdos divergentes**.
-- `missing`: nenhum.
-- As 3 falhas do guard permanecem, agora com a matriz de auditoria e os pacotes
-  de revisão por grupo.
+- `BASE_SHA = 335bfb70` preservado.
+- 34 caminhos extras reconciliados + 4 conteúdos atualizados.
+- Nenhuma divergência nova fora dos grupos revisados.
+- Matriz final e pacotes em `261102-oab-AUDIT.md` e `review/`.
+- Parecer desta retomada em `261102-oab-RETOMADA.md`, separado das evidências
+  históricas.
 
-## Matriz resumida
+## Parecer e autorização
 
-| Grupo | Caminhos | Evidência | Classificação |
-| --- | ---: | --- | --- |
-| `261026-pricing` | 12 | SUMMARY “Parado para revisão do Codex”; complemento `ab69495a` com autorização humana explícita | 11 pendentes + 1 autorizado |
-| `261026-vs` | 8 + `gateway.ts` | SUMMARY “Parado para revisão do Codex antes de publicação”; gap closures sem aceite final | Pendente |
-| `261026-p11` | 5 + `types.ts`, `telemetry-sink.ts` | SUMMARY “Próximo passo: Revisão do Codex. Após aprovação…” | Pendente |
-| `261027-llm` | 2 | `acceptance: approved` (2026-10-27) | Aprovado |
-| `261025-k8e` | 2 | SUMMARY “Notes for review”; sem aceite | Pendente |
-| `261102-o00` | 1 | Quick declarada aprovada nesta tarefa | Aprovado |
-| `F58-01` | `credit-service.ts` | `58-VERIFICATION` `status: passed` + UAT | Aprovado |
+O parecer do Codex revisou os diffs dos quatro grupos pendentes e executou 280
+testes em 21 arquivos, além de typecheck, lint e `git diff --check`. O usuário
+autorizou a retomada. Esse parecer cobre **código/testes offline** para a
+reconciliação da fronteira; **não** é validação de banco/provider, não autoriza
+publicação e **não** atribui aprovação retroativa aos summaries históricos.
 
-Matriz completa: `261102-oab-AUDIT.md`.
+## Contagem corrigida
 
-## Pacotes de revisão preparados
+- Auditoria original: 34 caminhos extras + 4 conteúdos divergentes.
+- `261026-p11`: **11 caminhos** — 9 extras + `ai/types.ts` e
+  `ai/telemetry-sink.ts`. A tabela resumida anterior omitia os 4 caminhos de
+  `5816a8ce`; o detalhamento já os continha. A matriz foi recontada e confere
+  com 34/4.
 
-- `review/261026-pricing.md` — 12 caminhos, commits `89994b1d`/`99132b1e`/`ab69495a`, diff commands, 50/50 testes focados.
-- `review/261026-vs.md` — 9 caminhos, commits `43652290`/`b46fd472`/`563e1a09`/`c282d0bc`, diff commands, 77/77 testes focados.
-- `review/261026-p11.md` — 7 caminhos, commits `2d42c512`/`5816a8ce`, diff commands, 89/89 testes focados.
-- `review/261025-k8e.md` — 2 caminhos, commit `f3dcfa8f`, diff commands, 88/88 testes focados.
+## Mudanças no guard
 
-Cada pacote registra a evidência encontrada, a evidência faltante, as referências
-imutáveis, os comandos de diff e o critério de aceite para desbloquear a
-reconciliação. Nenhuma entrada foi aplicada ao guard.
+Arquivo: `src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts`
+(commit `3433a713`).
 
-## Validação executada
+- Adicionadas 34 entradas com `path` + `authorization` + `commit` imutável:
+  - `261026-pricing`: 12 caminhos (`89994b1d`, `99132b1e`, `ab69495a`).
+  - `261026-vs`: 8 caminhos (`43652290`, `563e1a09`, `c282d0bc`) + `gateway.ts`.
+  - `261026-p11`: 9 caminhos (`2d42c512`, `5816a8ce`) + `types.ts`/`telemetry-sink.ts`.
+  - `261025-k8e`: 2 caminhos (`f3dcfa8f`).
+  - `261027-llm`: 2 caminhos (`76c1ef02`).
+  - `261102-o00`: 1 caminho (`4d5cfc19`).
+- Atualizados 4 commits de conteúdo:
+  - `ai/types.ts` e `ai/telemetry-sink.ts`: `201e606f` → `2d42c512`.
+  - `ai/gateway.ts`: `322809d0` → `43652290`.
+  - `credit/credit-service.ts`: `05e81d90` → `59e8bea0` (F58-01).
+- Teste negativo de caminho extra passou a usar `src/lib/ai/adapters/registry.ts`
+  (intencionalmente não autorizado), pois `adapters/images.ts` agora tem entrada
+  própria.
+- Os dois testes que comparam conteúdo receberam timeout de **20 s** para
+  absorver ~64 `git show` sob carga da suíte completa. Nenhuma asserção foi
+  removida ou afrouxada.
+
+## Proteções preservadas
+
+- `BASE_SHA = 335bfb70` e a evidência histórica intocados.
+- Comparação exata de caminhos e de conteúdo contra commits imutáveis.
+- Nenhuma referência a `HEAD` para derivar conjunto ou conteúdo.
+- Testes negativos de caminho extra, ausente e conteúdo divergente mantidos.
+- Verificações específicas das rotas `generate-image` e download preservadas.
+
+## Validação
 
 | Comando | Resultado |
 | --- | --- |
-| Guard isolado | **3 failed / 7 passed** (estado inalterado) |
-| Focados `261026-pricing` | 5 arquivos / **50 passed** |
-| Focados `261026-vs` | 5 arquivos / **77 passed** |
-| Focados `261026-p11` | 5 arquivos / **89 passed** |
-| Focados `261025-k8e` | 5 arquivos / **88 passed** |
-| `npm.cmd test` | **7504 passed / 3 failed / 10 skipped / 598 arquivos**; as 3 falhas são o guard |
-| `npm.cmd run test:gates` | exit 0; app-env “ambiente presente — NÃO EXECUTADO”, demais gates não executados |
+| Guard isolado | **10/10 passed** |
+| `npm.cmd test` | **596 passed / 2 skipped (598 arquivos)**; **7507 passed / 10 skipped / 0 failed** |
+| `npm.cmd run test:scripts` | **73/73 passed** |
+| `npm.cmd run test:gates` | exit 0; gates de integração não executados |
 | `npm.cmd run typecheck` | exit 0 |
 | `npm.cmd run lint` | exit 0 |
 | `git diff --check` | exit 0 |
 
-Nenhum perfil de integração foi executado; nenhum banco/provider/migration foi
-tocado. `store-identity-form.direction-pending` não flutuou nesta execução.
+### Instabilidade observada e investigada
 
-## Decisão do usuário (2026-11-02)
+Na primeira execução da suíte completa após a reconciliação, o teste positivo
+“aceita caminhos e conteúdos quando idênticos ao autorizado” estourou o timeout
+padrão de 5 s (`Test timed out in 5000ms`), não por divergência de conteúdo. A
+causa é o custo de ~64 subprocessos `git show` sob a suíte completa. O timeout
+dos dois testes de conteúdo foi elevado para 20 s e a suíte foi repetida uma
+vez, passando. A primeira falha fica registrada aqui; não foi ocultada por
+repetições cegas.
 
-Não autorizar os quatro grupos por inferência e não alterar o guard por enquanto.
-Primeiro concluir as revisões técnicas individuais; após aceite explícito de cada
-grupo, retomar a reconciliação com referências imutáveis. Também não reconciliar
-isoladamente apenas os itens já aprovados, para evitar edição intermediária e
-outra rodada de guard vermelho.
+## Skips e gates pendentes
+
+- 10 testes ignorados pela própria suíte (skips legítimos já existentes).
+- Perfis de integração **não executados**: PostgreSQL/homolog, PostgreSQL/local,
+  PostgreSQL/f50-4, app-env e Produto 1:1. `app-env` está com ambiente presente,
+  mas permanece “NÃO EXECUTADO”.
+- Nenhum banco, provider, migration, integração, push, merge, deploy ou chamada
+  paga.
 
 ## Próximo passo
 
-1. Revisar os quatro pacotes em `review/`.
-2. Registrar aceite explícito por grupo (ou rejeição com ajuste).
-3. Retomar a reconciliação do guard com `path` + `commit` imutável por entrada.
-4. Só então executar `npm.cmd test` esperando suíte verde (descontando skips e
-   gates de integração pendentes).
-
-## Limitações
-
-- A suíte local continua não-verde por decisão de governança, não por regressão
-  desta quick.
-- Os summaries de `261026-pricing`, `261026-vs`, `261026-p11` e `261025-k8e`
-  registram revisão pendente; a auditoria não os trata como aprovados.
-- O único caminho de `261026-pricing` com autorização humana explícita
-  (`ab69495a`) também não foi aplicado, conforme a decisão de não reconciliar
-  parcialmente.
+Revisão final do conjunto completo (código + documentos). O push permanece
+reservado para depois dessa revisão.
