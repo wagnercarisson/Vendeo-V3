@@ -1,0 +1,39 @@
+{
+  "nodeTest": [
+    "scripts/f56-2b2a/__tests__/fixture-readiness.test.mjs",
+    "scripts/f56-2b2d/__tests__/release-gate.test.mjs",
+    "scripts/f56-2e/__tests__/hosted-proofs.test.mjs",
+    "scripts/f57-2/__tests__/comparative-proof.test.mjs",
+    "scripts/f57-2/__tests__/orchestrator.ps1.test.mjs",
+    "scripts/gsd/__tests__/validate-product-flow-gate.test.mjs"
+  ],
+  "integration.postgres": [
+    "src/lib/__tests__/access-request-limit.postgres.test.ts",
+    "src/lib/__tests__/data-subject-requests.postgres.test.ts",
+    "src/lib/__tests__/market-preferences-onboarding.postgres.test.ts",
+    "src/lib/__tests__/market-preferences-schema.postgres.test.ts",
+    "src/lib/__tests__/market-preferences-security.postgres.test.ts",
+    "src/lib/credit/__tests__/credit-concurrency.test.ts",
+    "src/lib/credit/__tests__/credit-f50-11-integration.test.ts",
+    "src/lib/credit/__tests__/credit-idempotency.test.ts",
+    "src/lib/credit/__tests__/f50-4-concurrency.test.ts",
+    "src/lib/credit/__tests__/operation-cost-service.integration.test.ts"
+  ],
+  "integration.product-1-1": [
+    "src/lib/ai/__tests__/image-generation-operations-repository.integration.test.ts",
+    "src/lib/product-1-1/__tests__/artifact-download.integration.test.ts",
+    "src/lib/product-1-1/__tests__/atomic-attempt.integration.test.ts",
+    "src/lib/product-1-1/__tests__/concurrent-route-submission.integration.test.ts",
+    "src/lib/product-1-1/__tests__/copy-recovery.integration.test.ts",
+    "src/lib/product-1-1/__tests__/copy-state.integration.test.ts",
+    "src/lib/product-1-1/__tests__/credit-delivery.integration.test.ts",
+    "src/lib/product-1-1/__tests__/failure-closure.integration.test.ts",
+    "src/lib/product-1-1/__tests__/integration-corrections.integration.test.ts",
+    "src/lib/product-1-1/__tests__/local-pilot-recovery.integration.test.ts",
+    "src/lib/product-1-1/__tests__/pending-resolution.integration.test.ts",
+    "src/lib/product-1-1/__tests__/persisted-campaign.integration.test.ts",
+    "src/lib/product-1-1/__tests__/publication-fence.integration.test.ts",
+    "src/lib/product-1-1/__tests__/recovery-seams.integration.test.ts",
+    "tests/integration/product-1-1-credit-transaction.test.ts"
+  ]
+}
