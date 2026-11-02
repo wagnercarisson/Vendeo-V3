@@ -189,6 +189,17 @@ export async function inspectOriginalImage(
     ) {
       return null;
     }
+
+    // Decodifica o arquivo inteiro (saída 1×1) para detectar truncamento que
+    // `metadata()` não vê. Continua somente leitura, sem gerar miniatura.
+    await sharp(buffer, {
+      failOn: "error",
+      limitInputPixels: 40_000_000,
+    })
+      .resize(1, 1, { fit: "inside" })
+      .raw()
+      .toBuffer();
+
     return {
       format: metadata.format,
       width: metadata.width,

@@ -95,6 +95,12 @@ describe("inspectOriginalImage", () => {
     expect(await inspectOriginalImage(Buffer.from("not-an-image"))).toBeNull();
     expect(await inspectOriginalImage(Buffer.alloc(0))).toBeNull();
   });
+
+  it("rejeita JPEG truncado (metadata não basta)", async () => {
+    const full = await jpeg(400, 400);
+    const truncated = full.subarray(0, Math.floor(full.length / 2));
+    expect(await inspectOriginalImage(truncated)).toBeNull();
+  });
 });
 
 describe("generateCampaignThumbnail", () => {

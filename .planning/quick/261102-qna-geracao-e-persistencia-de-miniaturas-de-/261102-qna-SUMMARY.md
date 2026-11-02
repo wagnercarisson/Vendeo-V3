@@ -48,16 +48,16 @@ Implementado e validado localmente:
 1. **Cursor único keyset:** `--after` agora é `<createdAt ISO>|<campaignId>`, emitido pelo inventário (`created_at,id`) e consumido sem offset. Lote final parcial emite `null`; UUID solto/offset é rejeitado (exit 3). Testes cobrem lote parcial e retomada com cursor opaco.
 2. **Sem bypass de timeout:** removida a opção `client` de `createTimedSupabaseUploader`; todo upload passa pelo `global.fetch` com `AbortSignal`. `fetchImpl` permanece apenas para teste.
 3. **Falhas esperadas não silenciosas:** o wrapper registra `failed` (ex.: timeout) e `skipped` inesperado (ex.: endpoint mismatch) com warn sanitizado, sem lançar; `ineligible_path` continua sem ruído.
-4. **Dry-run inspeciona formato:** `inspectOriginalImage` (sharp metadata, somente leitura) classifica conteúdo arbitrário como `invalid_format`; não gera nem envia.
+4. **Dry-run inspeciona formato:** `inspectOriginalImage` (metadata + decode completo com saída 1×1, somente leitura) classifica conteúdo arbitrário **e JPEG truncado** como `invalid_format`; não gera nem envia.
 
 ## Evidência (Gate A)
 
 | Gate | Resultado |
 |---|---|
-| Módulo thumbnail (5 arquivos) | **41/41** |
-| Focados (thumbnail + artifact + correção + route) | **175/175** em 8 arquivos |
+| Módulo thumbnail (5 arquivos) | **42/42** |
+| Focados (thumbnail + artifact + correção + route) | **176/176** em 8 arquivos |
 | Regressão relacionada (10 arquivos) | **153/153** |
-| Suíte local completa | **603 passed / 2 skipped (605 arquivos)**; **7566 passed / 10 skipped** |
+| Suíte local completa | **603 passed / 2 skipped (605 arquivos)**; **7567 passed / 10 skipped** |
 | Typecheck | exit 0 |
 | Lint | exit 0 (**limitação conhecida: sem cobertura TS**) |
 | Build | exit 0; `/dashboard` 4.55 kB / 110 kB; shared 102 kB |
