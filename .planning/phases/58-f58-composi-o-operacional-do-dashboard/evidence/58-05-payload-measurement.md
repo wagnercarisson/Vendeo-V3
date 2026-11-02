@@ -27,7 +27,19 @@ Trecho real do build atual:
   └ other shared chunks (total)                              2.01 kB
 ```
 
-**Leitura:** o First Load JS de `/dashboard` permanece **110 kB** e o compartilhado permanece **102 kB**. O route size caiu de 4,49 kB para 4,27 kB. Não houve aumento de payload global.
+**Leitura:** o **JavaScript** de First Load de `/dashboard` permanece **110 kB** e o compartilhado permanece **102 kB**. O route size de JS caiu de 4,49 kB para 4,27 kB. Esta medição cobre apenas JavaScript entregue ao cliente; **não mede o payload serializado de Server Components (RSC)**.
+
+### 1.1 O que esta medição cobre — e o que não cobre
+
+| Dimensão | Medida? | Evidência | Limite |
+|----------|---------|-----------|--------|
+| JavaScript de First Load | sim | saída do `next build` | não representa dados serializados pelo RSC |
+| Tamanho dos catálogos | sim, em fonte/gzip | `zlib.gzipSync` nos arquivos `.ts` | não representa tráfego real compilado nem payload de resposta |
+| Isolamento do namespace do dashboard | sim | `isolation.test.ts` 5/5 | prova estática de imports, não medição de bytes |
+| Payload RSC por requisição | **não medido** | — | requer instrumentação da resposta RSC/serialized flight data, fora do escopo desta Task |
+| Payload de produção | **não medido** | — | nenhum deploy, smoke ou acesso a produção foi executado |
+
+**Baseline histórico:** os valores “antes” de 4,49 kB/110 kB são uma **comparação documental** de build anterior (F57.4, 2026-10-29), não uma medição reexecutada neste working tree. Permanecem úteis para comparar JavaScript, mas não devem ser lidos como prova de payload RSC.
 
 ## 2. Tamanho gzip dos catálogos do dashboard
 
@@ -101,3 +113,11 @@ Saída: **vazia**.
 - Catálogos do dashboard: **0,96 KB gzip (pt-BR)** e **1,02 KB gzip (es-419)** em fonte, server-side.
 - Nenhum chunk compartilhado novo do dashboard nas rotas de shell/admin.
 - Isolamento do namespace provado de forma determinística pelo teste estático; a medição numérica acima é evidência **manual**, não prova de produção.
+
+### 5.1 Limites da conclusão
+
+- Os números de First Load JS medem **JavaScript**, não o conteúdo serializado dos Server Components (RSC).
+- O gzip dos arquivos-fonte dos catálogos não representa o tráfego real compilado nem o payload de resposta.
+- O **payload RSC não foi medido** nesta Task; qualquer afirmação sobre bytes serializados por requisição permanece **NÃO VERIFICADA**.
+- A conclusão segura é: não houve aumento observado no JavaScript compartilhado e o namespace está isolado estaticamente. Não se declara ausência de custo de RSC.
+- Revalidação após o ajuste de fronteira do anúncio (2026-11-02): `/dashboard` **4,29 kB / 110 kB**, shared **102 kB**. A variação de 0,02 kB é JavaScript de rota; o payload RSC continua **não medido**.

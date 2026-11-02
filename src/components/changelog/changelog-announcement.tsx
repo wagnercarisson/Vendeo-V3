@@ -15,8 +15,16 @@ interface ChangelogAnnouncementLabels {
   dialogLabel?: string;
 }
 
+/**
+ * No modo compacto o cliente recebe apenas os metadados do frontmatter; o
+ * corpo markdown só é exigido no modo completo.
+ */
+export type ChangelogAnnouncementEntry =
+  | ChangelogEntry
+  | { frontmatter: ChangelogEntry["frontmatter"] };
+
 interface ChangelogAnnouncementProps {
-  entry: ChangelogEntry | null;
+  entry: ChangelogAnnouncementEntry | null;
   compact?: boolean;
   excerpt?: string | null;
   labels?: ChangelogAnnouncementLabels;
@@ -112,6 +120,9 @@ export function ChangelogAnnouncement({
     return <Card className="p-4">{compactContent}</Card>;
   }
 
+  if (!("body" in entry)) return null;
+  const fullBody = entry.body;
+
   const closeButton = (
     <button
       type="button"
@@ -136,7 +147,7 @@ export function ChangelogAnnouncement({
       </p>
       <div
         className="mt-3 space-y-3 font-body text-sm text-text-secondary [&_h2]:font-heading [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-text-primary [&_ul]:list-disc [&_ul]:pl-5 [&_li]:text-text-secondary"
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(entry.body) }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(fullBody) }}
       />
       <div className="mt-4">
         <Link

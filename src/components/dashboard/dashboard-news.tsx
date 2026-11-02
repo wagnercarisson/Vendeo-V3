@@ -21,7 +21,7 @@ export function DashboardNews({ entry, excerpt, labels }: DashboardNewsProps) {
   return (
     <section aria-label={labels.sectionLabel}>
       <ChangelogAnnouncement
-        entry={entry}
+        entry={{ frontmatter: entry.frontmatter }}
         compact
         excerpt={excerpt}
         labels={{

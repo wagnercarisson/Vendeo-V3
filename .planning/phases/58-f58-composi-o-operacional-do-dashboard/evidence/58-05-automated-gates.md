@@ -199,7 +199,7 @@ Saída: **vazia**. Nenhuma alteração em shell, layout do grupo `(app)`, admin,
        .select("balance, demo_balance, demo_expires_at, origin_demo_grant_tx_id, bonus_balance, purchased_balance")
        .eq("store_id", storeId)
        .single();
- 
+
 +    if (error && opts?.throwOnError === true && error.code !== "PGRST116") {
 +      throw error;
 +    }
@@ -245,3 +245,16 @@ Resultado: **PASS**.
 ## 5. Conclusão da Task 1
 
 Todos os gates automatizados da Task 1 foram executados com resultado real e **PASS**. A inspeção estática confirma escopo preservado: zero migration/API/dependência/schema novos e zero alteração em shell/admin/`BalanceDisplay`/serviços compartilhados, exceto a opção aditiva autorizada `throwOnError` em `getBalanceBreakdown`, coberta por testes de default, modo estrito e `PGRST116`.
+
+## 6. Revalidação pós-revisão (2026-11-02)
+
+Ajustes aplicados após a revisão técnica: (a) o anúncio compacto passou a receber apenas `frontmatter` e trecho, sem `body`/`slug`; (b) a evidência de payload foi corrigida para separar JavaScript de payload RSC; (c) whitespace de `58-01-SUMMARY.md` e deste arquivo foi limpo.
+
+| Verificação | Comando | Exit | Resultado |
+|---|---|---|---|
+| Suítes focadas | `npx vitest run src/lib/dashboard src/lib/credit/__tests__/credit-service-throw-on-error.test.ts src/lib/i18n/dashboard src/lib/changelog src/components/dashboard src/components/changelog src/components/verification src/components/readiness src/__tests__/app/dashboard` | **0** | **29 arquivos / 176 testes PASS** |
+| Fronteira do anúncio compacto | incluída acima (`dashboard-news-boundary.test.tsx`) | **0** | envia somente `frontmatter` e trecho; sem `body`/`slug` |
+| Typecheck | `npm.cmd run typecheck` | **0** | PASS |
+| Build | `npm.cmd run build` | **0** | **95/95 páginas**; `/dashboard` **4,29 kB / 110 kB**; shared **102 kB** |
+
+O payload RSC continua **não medido**; a conclusão segura permanece restrita ao JavaScript e ao isolamento estático do namespace. Nenhum push, merge, deploy, migration ou alteração de produção foi executado nesta revalidação.

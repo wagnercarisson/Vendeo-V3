@@ -148,6 +148,20 @@ describe("ChangelogAnnouncement — modo compacto", () => {
     expect(screen.getByLabelText("Fechar anúncio")).not.toHaveAttribute("lang");
   });
 
+  it("aceita entrada compacta apenas com frontmatter, sem body", () => {
+    render(
+      <ChangelogAnnouncement
+        entry={{ frontmatter: makeEntry().frontmatter }}
+        compact
+        excerpt={COMPACT_EXCERPT}
+      />,
+    );
+
+    expect(screen.getByText("Freemium CNPJ")).toBeInTheDocument();
+    expect(screen.getByText(COMPACT_EXCERPT)).toBeInTheDocument();
+    expect(screen.getByText("31/07/2026")).toBeInTheDocument();
+  });
+
   it("usa rótulos localizados quando fornecidos", () => {
     render(
       <ChangelogAnnouncement
