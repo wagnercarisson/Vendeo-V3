@@ -6,145 +6,175 @@
 > Modified by `fase-34-store-readiness` (ADDED). Added readiness check banner when store is not ready.
 > Modified by `fase-35-changelog-novidades` (ADDED). Added contextual changelog announcement after banners.
 
-## Requirements
+## Purpose
 
+Dashboard operacional do lojista: saudação contextual, campanhas disponíveis com miniaturas, créditos, novidades e avisos, com estados de falha isolados e preservação dos contratos existentes.
+## Requirements
 ### Requirement: Dashboard as async server component with 3-state rendering
 
 The system SHALL provide a dashboard page at `src/app/(app)/dashboard/page.tsx` that:
-- Is an async Server Component
-- Calls `requirePageUser()` for authentication
-- Calls `getUserOnboardingState(user.userId)` to detect the user's onboarding state
-- Renders `<PageHeader title="Dashboard" />` in all states
-- Switches rendering based on `OnboardingState`:
-  - `"no_store"`: `<EmptyState>` with `DASHBOARD_NO_STORE` microcopy + CTA button → `/loja`
-  - `"has_store_no_campaigns"`: `<EmptyState>` with `DASHBOARD_NO_CAMPAIGNS` microcopy + CTA button → `/campanhas/nova`
-  - `"has_store_with_campaigns"`: DashboardContent with greeting, metrics, recent campaigns, next-step card, and links
 
-#### Scenario: Dashboard renders real content for store with campaigns
+- Is an async Server Component;
+- Calls `requirePageUser()` for authentication;
+- Calls `getCurrentStore(user.userId)` to resolve the store and its name;
+- Calls `getUiRenderContext(user.userId)` to resolve the interface locale through the F57.4 foundation;
+- Renders one of three operational states:
+  - `no_store`: neutral welcome and CTA to `/loja`;
+  - `no_eligible_campaigns`: store exists, but no campaign has `status = "ready"`;
+  - `has_eligible_campaigns`: store exists with at least one `ready` campaign.
+- Renders a compact greeting as the page's `h1` instead of a separate `PageHeader` titled “Dashboard”.
 
-- **WHEN** `getUserOnboardingState` returns `"has_store_with_campaigns"`
-- **THEN** the dashboard SHALL render `<PageHeader title="Dashboard" />`, greeting with store name and time-of-day, 3 metric cards (total, ready, success rate), recent campaigns section with 3-5 items, adaptive next-step card, link "Ver todas as campanhas →" to `/campanhas`, and link "Configurar loja" to `/loja`
-- **AND** no `<EmptyState>` with placeholder text SHALL be rendered
-- **AND** the dashboard SHALL call `getCurrentStore(user.userId)` to obtain `store.id` and `store.name` after confirming `has_store_with_campaigns`
+The dashboard SHALL NOT use `getUserOnboardingState` to decide whether error-only campaigns produce the with-campaigns state. Campaigns with `status = "error"` or `status = "generating"` SHALL NOT make the dashboard enter `has_eligible_campaigns`.
 
 #### Scenario: Dashboard renders no_store state
 
-- **WHEN** `getUserOnboardingState` returns `"no_store"`
-- **THEN** the dashboard SHALL render `<PageHeader title="Dashboard" />` + `<EmptyState>` with title "Configure sua loja"
-- **AND** a CTA button "Configurar loja" SHALL link to `/loja`
+- **WHEN** `getCurrentStore(user.userId)` returns `null`
+- **THEN** the dashboard SHALL render neutral welcome text and a CTA to `/loja`
+- **AND** SHALL NOT fetch campaign or credit data for a store
 
-#### Scenario: Dashboard renders has_store_no_campaigns state
+#### Scenario: Dashboard renders no_eligible_campaigns state
 
-- **WHEN** `getUserOnboardingState` returns `"has_store_no_campaigns"`
-- **THEN** the dashboard SHALL render `<PageHeader title="Dashboard" />` + `<EmptyState>` with title "Crie sua primeira campanha"
-- **AND** a CTA button "Criar campanha" SHALL link to `/campanhas/nova`
+- **WHEN** the store exists and has no campaign with `status = "ready"`
+- **THEN** the dashboard SHALL render the no-eligible-campaigns empty state with CTA to `/campanhas/nova`
+- **AND** SHALL NOT render campaign cards for error or generating campaigns
 
-#### Scenario: PageHeader is present in all 3 states
+#### Scenario: Dashboard renders has_eligible_campaigns state
 
-- **WHEN** the dashboard renders any state
-- **THEN** a `<PageHeader>` with title "Dashboard" SHALL be present
+- **WHEN** the store exists and has at least one campaign with `status = "ready"`
+- **THEN** the dashboard SHALL render the operational composition with greeting, credits, up to three available campaigns and the compact news announcement
 
-#### Scenario: Dashboard propagates errors to Next.js error boundary
+#### Scenario: Unknown errors still reach the error boundary
 
-- **WHEN** `getUserOnboardingState` throws an error
-- **THEN** the error SHALL bubble up to the default Next.js error boundary
+- **WHEN** authentication or an unexpected page-level error throws
+- **THEN** the error SHALL bubble up to the existing Next.js error boundary
+- **AND** data-section failures handled locally SHALL NOT be converted into a page-level error
 
 ### Requirement: Dashboard greeting shows time-appropriate salutation
 
-The system SHALL display a greeting in the `has_store_with_campaigns` state based on the server's current hour: "Bom dia" (6h-12h), "Boa tarde" (12h-18h), or "Boa noite" (18h-6h), followed by the store name. When `storeName` is null, it SHALL fall back to "Bem-vindo ao Vendeo".
+The system SHALL display a compact greeting as the dashboard's `h1`. The greeting SHALL combine:
 
-#### Scenario: Greeting shows "Bom dia" between 6h and 12h
-- **WHEN** the server hour is 10 (between 6 and 12)
-- **THEN** the greeting SHALL start with "Bom dia"
+- the time-of-day salutation: morning, afternoon or evening, calculated in the store's resolved `timeZone`;
+- the store name from the store registration, when available;
+- the wording from the user's `uiLocale` through the dashboard namespace.
 
-#### Scenario: Greeting shows "Boa tarde" between 12h and 18h
-- **WHEN** the server hour is 14 (between 12 and 18)
-- **THEN** the greeting SHALL start with "Boa tarde"
+The dashboard SHALL obtain the store time zone from the existing canonical store market settings contract. When the time-zone read fails, the dashboard SHALL render a neutral greeting instead of assuming `America/Sao_Paulo`. When the user has no store, the dashboard SHALL render neutral welcome text.
 
-#### Scenario: Greeting shows "Boa noite" between 18h and 6h
-- **WHEN** the server hour is 21 (between 18 and 6)
-- **THEN** the greeting SHALL start with "Boa noite"
+#### Scenario: Greeting uses the store time zone rather than the server time zone
 
-#### Scenario: Greeting includes store name when available
-- **WHEN** the store has a name
-- **THEN** the greeting SHALL include the store name after the salutation (e.g., "Bom dia, Loja XYZ")
+- **WHEN** the server time zone differs from the store's configured time zone
+- **THEN** the greeting period SHALL be calculated using the store time zone
 
-#### Scenario: Greeting shows fallback when store name is null
-- **WHEN** the store name is null
-- **THEN** the greeting SHALL display "Bem-vindo ao Vendeo"
+#### Scenario: Greeting is written in the interface locale
+
+- **WHEN** the user's `uiLocale` is `es-419`
+- **THEN** the greeting wording SHALL be rendered in `es-419`
+- **AND** the store name SHALL remain unchanged
+
+#### Scenario: Greeting falls back to neutral when the time zone read fails
+
+- **WHEN** the store time-zone read fails
+- **THEN** the dashboard SHALL render a neutral greeting in the interface locale
+- **AND** SHALL NOT silently use `America/Sao_Paulo`
+
+#### Scenario: Greeting shows neutral welcome when there is no store
+
+- **WHEN** the user has no store
+- **THEN** the dashboard SHALL render neutral welcome text
+- **AND** SHALL NOT display an invented store name
 
 ### Requirement: Dashboard displays 3 metric cards
 
-The system SHALL display 3 metric cards in a responsive grid (`grid-cols-1 md:grid-cols-3`) when in `has_store_with_campaigns` state: Total de Campanhas (count), Campanhas Prontas (ready count), and Taxa de Sucesso (success rate percentage).
+The system SHALL NOT display the three technical metric cards (“Total de Campanhas”, “Campanhas Prontas”, “Taxa de Sucesso”) on the operational dashboard. The available-campaigns count and the credits block replace them.
 
-#### Scenario: Metric cards render with correct values
-- **WHEN** the store has campaigns
-- **THEN** the dashboard SHALL render 3 `Card` components showing total, ready, and success rate values
+#### Scenario: Technical metric cards are absent
 
-#### Scenario: Metric grid is responsive
-- **WHEN** the dashboard renders metric cards
-- **THEN** the container SHALL have CSS classes `grid-cols-1 md:grid-cols-3 gap-4`
+- **WHEN** the dashboard renders a store with campaigns
+- **THEN** the three technical metric cards SHALL NOT be rendered
+- **AND** the “Campanhas disponíveis” count and the credits block SHALL be present
 
 ### Requirement: Dashboard shows recent campaigns section
 
-The system SHALL display a "Campanhas Recentes" section when in `has_store_with_campaigns` state, listing 3-5 most recent campaigns with product name, formatted date (dd/mm), status badge, and an "Abrir" link to `/campanhas/[id]`.
+The system SHALL display an available-campaigns section when the store has at least one campaign with `status = "ready"`. The section SHALL:
 
-#### Scenario: Recent campaigns section renders with campaign items
-- **WHEN** the store has campaigns
-- **THEN** recent campaigns SHALL be displayed with name, date, status badge, and "Abrir" link
+- query only campaigns with `status = "ready"`;
+- show at most three campaigns ordered by `created_at` descending;
+- render each campaign as a card with product name, date, real signed thumbnail and link to `/campanhas/[id]`;
+- render a visual fallback when the thumbnail is unavailable, without disabling the campaign link;
+- expose a link to the complete listing at `/campanhas`;
+- label the eligible count as “Campanhas disponíveis”.
 
-#### Scenario: Recent campaigns section has "Ver todas" link
-- **WHEN** recent campaigns are displayed
-- **THEN** a link "Ver todas as campanhas →" SHALL link to `/campanhas`
+The dashboard SHALL NOT render error badges or cards for campaigns with `status = "error"`.
+
+#### Scenario: Recent campaigns section renders up to three eligible campaigns
+
+- **WHEN** the store has more than three `ready` campaigns
+- **THEN** the section SHALL render exactly the three most recent `ready` campaigns
+- **AND** SHALL expose the link to `/campanhas`
+
+#### Scenario: Recent campaigns section ignores error campaigns
+
+- **WHEN** the most recent campaigns include `error` status
+- **THEN** those campaigns SHALL NOT appear in the section or in the “Campanhas disponíveis” count
+
+#### Scenario: Missing thumbnail keeps the campaign accessible
+
+- **WHEN** a campaign's signed thumbnail URL is unavailable
+- **THEN** the card SHALL show a fallback thumbnail
+- **AND** the link to `/campanhas/[id]` SHALL remain available
+
+#### Scenario: Recent campaigns section has link to the complete listing
+
+- **WHEN** available campaigns are displayed
+- **THEN** a link to `/campanhas` SHALL be present
 
 ### Requirement: Dashboard shows adaptive next-step card
 
-The system SHALL display an adaptive next-step card in the `has_store_with_campaigns` state. If `recentCampaigns[0]` exists, it SHALL show "Revise sua última campanha" with the product name and a CTA to `/campanhas/[últimoId]`. If the recent list is empty (edge case), it SHALL show "Criar nova campanha" with CTA to `/campanhas/nova`. A secondary "Nova" CTA SHALL always be available.
+The system SHALL NOT display an adaptive next-step card or recommendation on the operational dashboard. Campaign access and campaign creation remain available through the campaign rows, the fixed creation band and the shell.
 
-#### Scenario: Next-step card shows "Revise sua última campanha" when campaigns exist
-- **WHEN** `recentCampaigns[0]` exists
-- **THEN** the next-step card SHALL show "Revise sua última campanha" with the product name and a CTA link to `/campanhas/[latestId]`
+#### Scenario: Adaptive next-step card is absent
 
-#### Scenario: Next-step card falls back to "Criar nova campanha" when empty
-- **WHEN** `recentCampaigns` is empty
-- **THEN** the next-step card SHALL show "Criar nova campanha" with CTA to `/campanhas/nova`
+- **WHEN** the dashboard renders any store state
+- **THEN** no adaptive next-step card SHALL be rendered
+- **AND** no recommendation logic SHALL be introduced
 
 ### Requirement: Dashboard preserves F19 empty states
 
-The system SHALL preserve the F19 behavior for `no_store` (empty state "Configure sua loja" + CTA → `/loja`) and `has_store_no_campaigns` (empty state "Crie sua primeira campanha" + CTA → `/campanhas/nova`) without any modification.
+The system SHALL preserve the `no_store` empty state with CTA to `/loja`. For `no_eligible_campaigns`, the system SHALL render an empty state that explains that there are no available campaigns and offers CTA to `/campanhas/nova`, without showing error campaigns or a generic empty list.
 
 #### Scenario: no_store state preserves F19 empty state
-- **WHEN** `getUserOnboardingState` returns `"no_store"`
-- **THEN** the dashboard SHALL render `<EmptyState>` with title "Configure sua loja" and CTA to `/loja` (identical to F19)
 
-#### Scenario: has_store_no_campaigns state preserves F19 empty state
-- **WHEN** `getUserOnboardingState` returns `"has_store_no_campaigns"`
-- **THEN** the dashboard SHALL render `<EmptyState>` with title "Crie sua primeira campanha" and CTA to `/campanhas/nova` (identical to F19)
+- **WHEN** the user has no store
+- **THEN** the dashboard SHALL render the no-store empty state with CTA to `/loja`
+
+#### Scenario: no_eligible_campaigns state explains the absence of available campaigns
+
+- **WHEN** the store exists but has no `ready` campaign
+- **THEN** the dashboard SHALL render the no-eligible-campaigns empty state with CTA to `/campanhas/nova`
+- **AND** SHALL NOT display error or generating campaigns
 
 ### Requirement: Dashboard shows credit balance in metrics section
 
-O sistema SHALL exibir um indicador de saldo de créditos no dashboard quando o usuário tem loja (`has_store_with_campaigns` ou `has_store_no_campaigns`). O indicador SHALL usar o componente `BalanceDisplay` na variante `"badge"`, posicionado no grid de métricas.
+O sistema SHALL exibir o saldo disponível de créditos em um bloco próprio do dashboard, com valor legível no idioma da interface e acesso aos detalhes em `/conta`. O bloco SHALL distinguir saldo disponível, saldo zero e saldo indisponível. Falha de leitura NÃO SHALL ser exibida como `0` créditos.
 
-O saldo é obtido via `CreditService.getBalance(store.id)` usando cliente de sessão + RLS. Se o carregamento do saldo falhar, o dashboard SHALL exibir fallback "—" sem quebrar a página.
+#### Scenario: Dashboard shows available credits
 
-#### Scenario: Dashboard shows balance badge with campaigns
+- **WHEN** the credit balance is available
+- **THEN** the dashboard SHALL show the available credit value with an interface-language label
+- **AND** SHALL provide access to `/conta` for details
 
-- **WHEN** dashboard renderiza `has_store_with_campaigns`
-- **THEN** exibe `BalanceDisplay` com saldo da loja no grid de métricas
+#### Scenario: Dashboard shows zero credits as zero
 
-#### Scenario: Dashboard shows balance badge without campaigns
+- **WHEN** the available credit balance is `0`
+- **THEN** the dashboard SHALL show `0` credits
+- **AND** SHALL NOT label the balance as unavailable
 
-- **WHEN** dashboard renderiza `has_store_no_campaigns`
-- **THEN** exibe `BalanceDisplay` com saldo da loja no empty state
+#### Scenario: Dashboard shows unavailable balance without inventing zero
 
-#### Scenario: Dashboard does not show balance badge without store
-
-- **WHEN** dashboard renderiza `no_store`
-- **THEN** não exibe badge de saldo
+- **WHEN** the credit balance read fails
+- **THEN** the dashboard SHALL show an explicit unavailable state
+- **AND** SHALL NOT show `0` credits
 
 ### Requirement: Banner de prontidão no dashboard (ADDED)
-
-> Added by `fase-34-store-readiness`.
 
 O sistema SHALL exibir um banner de prontidão no dashboard quando `getStoreReadiness()` retorna `ready: false`. O banner SHALL:
 
@@ -179,40 +209,45 @@ O sistema SHALL exibir um banner de prontidão no dashboard quando `getStoreRead
 
 ### Requirement: Dashboard handles balance states
 
-O sistema SHALL tratar os estados de carregamento e erro do saldo sem quebrar a página.
+O sistema SHALL tratar carregamento, indisponibilidade e sucesso do saldo sem quebrar o restante da página. O estado de carregamento SHALL usar esqueleto compatível com o bloco de créditos. O estado de indisponibilidade SHALL ser explícito e oferecer acesso aos detalhes em `/conta`.
 
 #### Scenario: Dashboard handles credit loading state
 
-- **WHEN** dashboard está carregando o saldo
-- **THEN** exibe skeleton/shimmer no espaço do badge
+- **WHEN** the dashboard is loading the credit balance
+- **THEN** it SHALL show a skeleton in the credit block area
 
-#### Scenario: Dashboard handles credit error state
+#### Scenario: Dashboard handles credit unavailable state
 
-- **WHEN** carregamento do saldo falha
-- **THEN** exibe fallback "—" no lugar do badge sem quebrar a página
+- **WHEN** the credit balance read fails
+- **THEN** it SHALL show an explicit unavailable message
+- **AND** SHALL keep campaigns and news available when their own reads succeed
 
 ### Requirement: ChangelogAnnouncement no dashboard (ADDED)
 
-> Added by `fase-35-changelog-novidades`.
+O sistema SHALL renderizar o anúncio de novidades no dashboard em formato compacto, usando o contrato existente de `useChangelogState`. O anúncio SHALL:
 
-O sistema SHALL renderizar o componente `<ChangelogAnnouncement entry={latestAnnouncement} />` no dashboard (`src/app/(app)/dashboard/page.tsx`) quando o usuário tem loja. O dashboard SHALL:
+- aparecer apenas quando existir entry com `announcement !== "none"` e `isAnnouncementVisible(entry.frontmatter.id)` for verdadeiro;
+- exibir título, data e um trecho do conteúdo editorial existente, sem renderizar o corpo completo;
+- oferecer ação para `/novidades` e ação de dispensa;
+- manter o conteúdo editorial no idioma original e não gerar tradução ou resumo por IA;
+- retornar `null` quando não houver entry, sem quebrar a página.
 
-- Buscar a entry de anúncio via `getLatestAnnouncement()` (entry mais recente com `announcement !== "none"`)
-- Renderizar `<ChangelogAnnouncement>` após `<VerificationBanners>` e `<ReadinessCheckBanner>`, antes do conteúdo principal
-- Não quebrar quando `latestAnnouncement === null` — o componente retorna `null`
-- A visibilidade do card/modal é decidida pelo hook `useChangelogState` no client (`isAnnouncementVisible`); `/novidades` chama `markChangelogAsViewed`
+O anúncio NÃO SHALL ser posicionado antes do conteúdo principal; no mobile, SHALL aparecer depois das campanhas, preservando a prioridade saldo → campanhas → novidades.
 
-#### Scenario: Dashboard renderiza anúncio quando existe
+#### Scenario: Dashboard renderiza anúncio compacto quando existe entry
 
-- **WHEN** `getLatestAnnouncement()` retorna uma entry com `announcement: "card"` e ela não foi dispensada
-- **THEN** o dashboard renderiza `<ChangelogAnnouncement>` com o card visível, posicionado após os banners e antes do conteúdo principal
+- **WHEN** `getLatestAnnouncement()` retorna uma entry com `announcement !== "none"` e ela não foi dispensada
+- **THEN** o dashboard SHALL renderizar o anúncio compacto
+- **AND** SHALL exibir ação para `/novidades`
 
 #### Scenario: Dashboard não renderiza anúncio sem entry
 
 - **WHEN** `getLatestAnnouncement()` retorna `null`
-- **THEN** o dashboard renderiza normalmente sem card/modal (não quebra)
+- **THEN** o dashboard SHALL renderizar normalmente sem anúncio
+- **AND** NÃO SHALL quebrar a página
 
-#### Scenario: Dashboard posiciona anúncio após banners
+#### Scenario: Dispensa do anúncio preserva o badge de novidades
 
-- **WHEN** `latestAnnouncement` existe
-- **THEN** `<ChangelogAnnouncement>` é renderizado depois de `VerificationBanners` e `ReadinessCheckBanner` e antes do conteúdo principal do dashboard
+- **WHEN** o usuário dispensa o anúncio compacto
+- **THEN** o anúncio SHALL desaparecer
+- **AND** `lastSeenId` NÃO SHALL ser alterado

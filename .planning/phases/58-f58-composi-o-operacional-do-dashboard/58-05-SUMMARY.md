@@ -46,10 +46,10 @@ depends_on: ["58-04"]
 
 ## Gates resumidos
 
-- 30 arquivos / **176 testes** focados PASS.
+- 30 arquivos / **177 testes** focados PASS.
 - Regressões de contratos e shell/admin/localização PASS.
 - Typecheck exit 0; lint exit 0 com limitação de cobertura TS; build exit 0 (95/95).
-- `/dashboard` 4,50 kB / 110 kB; shared 102 kB.
+- `/dashboard` 4,55 kB / 110 kB; shared 102 kB.
 - OpenSpec strict valid; `git diff --check 77cc9413..HEAD` limpo.
 - Tab real pt-BR/es-419: créditos → campanhas → novidades, sem `order`/`tabindex` positivo.
 

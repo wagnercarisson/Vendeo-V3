@@ -159,7 +159,7 @@ O sistema SHALL tratar carregamento, indisponibilidade e sucesso do saldo sem qu
 - **THEN** it SHALL show an explicit unavailable message
 - **AND** SHALL keep campaigns and news available when their own reads succeed
 
-### Requirement: ChangelogAnnouncement no dashboard
+### Requirement: ChangelogAnnouncement no dashboard (ADDED)
 
 O sistema SHALL renderizar o anúncio de novidades no dashboard em formato compacto, usando o contrato existente de `useChangelogState`. O anúncio SHALL:
 
@@ -189,16 +189,22 @@ O anúncio NÃO SHALL ser posicionado antes do conteúdo principal; no mobile, S
 - **THEN** o anúncio SHALL desaparecer
 - **AND** `lastSeenId` NÃO SHALL ser alterado
 
-## REMOVED Requirements
-
 ### Requirement: Dashboard displays 3 metric cards
 
-**Reason**: A F58 substitui as três métricas técnicas pela contagem “Campanhas disponíveis” e pelo bloco de créditos, removendo a taxa técnica de sucesso.
+The system SHALL NOT display the three technical metric cards (“Total de Campanhas”, “Campanhas Prontas”, “Taxa de Sucesso”) on the operational dashboard. The available-campaigns count and the credits block replace them.
 
-**Migration**: Usar a seção de campanhas com a contagem “Campanhas disponíveis” e o bloco de créditos definidos em `dashboard-operational-composition`.
+#### Scenario: Technical metric cards are absent
+
+- **WHEN** the dashboard renders a store with campaigns
+- **THEN** the three technical metric cards SHALL NOT be rendered
+- **AND** the “Campanhas disponíveis” count and the credits block SHALL be present
 
 ### Requirement: Dashboard shows adaptive next-step card
 
-**Reason**: A F58 remove o cartão adaptativo de próximo passo para evitar recomendação e manter foco operacional.
+The system SHALL NOT display an adaptive next-step card or recommendation on the operational dashboard. Campaign access and campaign creation remain available through the campaign rows, the fixed creation band and the shell.
 
-**Migration**: As campanhas disponíveis passam a ser acessadas pelos cartões da seção principal; criar campanha e configurar loja permanecem acessíveis por ações existentes.
+#### Scenario: Adaptive next-step card is absent
+
+- **WHEN** the dashboard renders any store state
+- **THEN** no adaptive next-step card SHALL be rendered
+- **AND** no recommendation logic SHALL be introduced

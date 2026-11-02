@@ -7,12 +7,12 @@
 
 | Item | Status | Evidência |
 |---|---|---|
-| Suítes focadas do dashboard/crédito/i18n/changelog/avisos | **PASS** | `evidence/58-05-automated-gates.md` — 30 arquivos / 176 testes |
+| Suítes focadas do dashboard/crédito/i18n/changelog/avisos | **PASS** | `evidence/58-05-automated-gates.md` — 30 arquivos / 177 testes |
 | Regressão de contratos de campanha/onboarding | **PASS** | 3 arquivos / 38 testes |
 | Regressão shell/admin/configurações/localização | **PASS** | 37 arquivos / 396 testes |
 | Typecheck | **PASS** | exit 0 |
 | Lint | **PASS com limitação** | exit 0; ESLint sem cobertura TypeScript |
-| Build | **PASS** | exit 0; 95/95 páginas; `/dashboard` 4,50 kB / 110 kB |
+| Build | **PASS** | exit 0; 95/95 páginas; `/dashboard` 4,55 kB / 110 kB |
 | `git diff --check 77cc9413..HEAD` | **PASS** | limpo após correção de whitespace |
 | OpenSpec strict | **PASS** | `Change is valid` |
 | Inspeção de escopo | **PASS** | sem migration/API/dependência/schema novos; exceção autorizada apenas em `CreditService.getBalanceBreakdown` |

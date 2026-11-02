@@ -280,7 +280,7 @@ A composição foi corrigida para a montagem aprovada: cabeçalho com subtítulo
 |---|---|---|---|
 | Suítes focadas | `npx vitest run src/lib/dashboard src/lib/credit/__tests__/credit-service-throw-on-error.test.ts src/lib/i18n/dashboard src/lib/changelog src/components/dashboard src/components/changelog src/components/verification src/components/readiness src/__tests__/app/dashboard` | **0** | **30 arquivos / 176 testes PASS** |
 | Typecheck | `npm.cmd run typecheck` | **0** | PASS |
-| Build | `npm.cmd run build` | **0** | **95/95 páginas**; `/dashboard` **4,50 kB / 110 kB**; shared **102 kB** |
+| Build | `npm.cmd run build` | **0** | **95/95 páginas**; `/dashboard` **4,55 kB / 110 kB**; shared **102 kB** |
 | OpenSpec strict | `openspec validate fase-58-composicao-operacional-do-dashboard --strict` | **0** | valid |
 
 Capturas reais pt-BR: `evidence/58-05-visual-desktop.png`, `evidence/58-05-visual-mobile.png` e `evidence/58-05-visual-mobile-320.png`. Capturas es-419: `evidence/58-05-visual-desktop-es.png` e `evidence/58-05-visual-mobile-es.png`. Metadados e restauração da preferência em `evidence/58-05-visual-captures.md`. Nenhum push, merge, deploy, migration, alteração de schema ou produção foi executado. A única escrita temporária foi a preferência de idioma do usuário de teste no homolog, autorizada, com restauração confirmada para `pt-BR`/`explicit`.
