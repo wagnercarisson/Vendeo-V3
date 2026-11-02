@@ -252,15 +252,16 @@ interface ThumbnailContext  { readonly endpoint: string; readonly uploader: Thum
    - `deriveThumbnailPath(originalPath)`: valida elegibilidade, remove a extensão (`jpg`/`jpeg`) e acrescenta `.thumb-v<version>.webp`; retorna `null` para inelegível (sem lançar no caminho de produção).
 2. `thumbnail-generator.ts` (server utils, **sem** `server-only` para ser reutilizável pelo script):
    - `renderThumbnail(buffer)` com a recipe da §2.2; valida por metadados que o resultado é `webp`, tem maior aresta ≤ 288 e não ampliou a fonte;
+   - `inspectOriginalImage(buffer)`: inspeção **somente leitura** por header (sharp metadata), usada pelo dry-run do backfill; retorna `null` para conteúdo vazio/arbitrário/formato não suportado, sem gerar/upload;
    - tipos `ThumbnailUploader` (com `endpoint` readonly) e `ThumbnailContext` (endpoint + uploader), mais `normalizeEndpoint(origin)` puro;
-   - `createTimedSupabaseUploader({ timeoutMs = THUMBNAIL_UPLOAD_TIMEOUT_MS, url?, key?, fetchImpl? })`: cria **lazy** um client Supabase dedicado cujo `global.fetch` injeta `AbortSignal.timeout(timeoutMs)`; `url`/`key` default vêm do ambiente e são lidos somente na chamada (nunca no import); `endpoint` = origem normalizada. A promise é aguardada e o aborto encerra o `fetch` — sem tarefa solta. Exportado para o script;
+   - `createTimedSupabaseUploader({ timeoutMs = THUMBNAIL_UPLOAD_TIMEOUT_MS, url?, key?, fetchImpl? })`: cria **lazy** um client Supabase dedicado cujo `global.fetch` injeta `AbortSignal.timeout(timeoutMs)`; `url`/`key` default vêm do ambiente e são lidos somente na chamada (nunca no import); `endpoint` = origem normalizada. **Sem opção de `client` injetado** — todo upload passa obrigatoriamente pelo fetch abortável. A promise é aguardada e o aborto encerra o `fetch` — sem tarefa solta. Exportado para o script;
    - `createDefaultThumbnailContext()`: **lazy**; usa `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`; retorna `null` se ausentes. Nunca é chamado por client customizado;
    - `generateCampaignThumbnail({ originalPath, originalBuffer, context })` → `Promise<ThumbnailResult>` **nunca lança**; estados `created | already_exists | skipped | failed`. `context` nulo ⇒ `skipped` (`thumbnail_disabled_no_context`); endpoints divergentes ⇒ `skipped` (`thumbnail_endpoint_mismatch`); em ambos, **zero upload**;
    - upload no bucket privado com `contentType: "image/webp"`, `upsert: false`;
    - conflito/409/“already exists”/“duplicate” ⇒ `already_exists`; aborto/timeout ⇒ `failed` (`thumbnail_upload_timeout`), sem retry no request;
    - inelegível ⇒ `skipped` (`ineligible_path`); sharp/validação ⇒ `failed` (`thumbnail_generation_failed`/`thumbnail_invalid_output`); upload ⇒ `failed` (`thumbnail_upload_failed`);
    - nenhuma escrita em tabela, nenhuma chamada de crédito/status/IA, nenhum `setTimeout` flutuante/tarefa solta;
-   - `thumbnail-safe.ts` (`generateCampaignThumbnailSafely`): envolve o gerador em `try/catch` local, registra `console.warn` sanitizado (`campaignId`, path, código — nunca bytes/segredos) e **não deixa exceção escapar**, mesmo se o gerador regredir e lançar. É o único ponto usado pelos call sites de produção (módulo separado para permitir teste real com o gerador mockado).
+   - `thumbnail-safe.ts` (`generateCampaignThumbnailSafely`): envolve o gerador em `try/catch` local, registra `console.warn` sanitizado (`campaignId`, path, código — nunca bytes/segredos) e **não deixa exceção escapar**, mesmo se o gerador regredir e lançar. Também registra falhas esperadas (`failed`, ex. timeout) e desabilitações inesperadas (`skipped` ≠ `ineligible_path`), sem lançar nem afetar a campanha. É o único ponto usado pelos call sites de produção (módulo separado para permitir teste real com o gerador mockado).
 3. Testes:
    - derivação dos 3 shapes, versão no nome, unicidade por original;
    - rejeição de `/inputs/`, logo, assinatura, `bench/`, path arbitrário, path de miniatura, store divergente;
@@ -271,7 +272,9 @@ interface ThumbnailContext  { readonly endpoint: string; readonly uploader: Thum
    - **vínculo de ambiente:** `ThumbnailContext.endpoint = http://127.0.0.1:54321` com uploader `endpoint = http://127.0.0.1:54322` ⇒ `skipped thumbnail_endpoint_mismatch`, uploader com **zero** chamadas; `context = null` ⇒ `skipped thumbnail_disabled_no_context`, zero chamadas e nenhuma leitura de env (spy);
    - **cancelamento real:** `createTimedSupabaseUploader({ timeoutMs: 25, url: "http://127.0.0.1:54321", key: "test", fetchImpl: stalledFetch })` onde `stalledFetch` só rejeita ao receber `abort` ⇒ rejeita com `TimeoutError`/`AbortError` e o gerador devolve `failed` (`thumbnail_upload_timeout`) sem lançar e sem deixar promise pendente;
    - `generateCampaignThumbnailSafely` com `generateCampaignThumbnail` mockado para **lançar** ⇒ resolve sem exceção e registra warn sanitizado (prova de isolamento);
-   - `createDefaultThumbnailContext` é lazy: importar o módulo sem env não lança; só a chamada tenta ler env.
+   - `createDefaultThumbnailContext` é lazy: importar o módulo sem env não lança; só a chamada tenta ler env;
+   - `inspectOriginalImage` reconhece JPEG/PNG/WebP por header e rejeita bytes arbitrários/vazios sem lançar;
+   - o uploader com timeout não aceita `client` injetado (sem caminho que contorne o abort).
 
 **Verify**
 - `npm.cmd test -- src/lib/campaign/thumbnail/__tests__/thumbnail-path.test.ts src/lib/campaign/thumbnail/__tests__/thumbnail-generator.test.ts src/lib/campaign/thumbnail/__tests__/thumbnail-safely.test.ts`
@@ -342,12 +345,12 @@ interface ThumbnailContext  { readonly endpoint: string; readonly uploader: Thum
    - dry-run: `thumbnailExists` + `downloadOriginal` somente leitura, classifica `would_create/missing_original/access_error/invalid_format/ineligible/already_exists`; **nunca** chama `generate`/upload;
    - write: skip-existing, baixa o original e chama o gerador com `ThumbnailContext` cujo endpoint é o **mesmo** do client/`--expected-url`; falha de item não aborta o lote;
    - **timeout não prova ausência:** se o gerador retornar `thumbnail_upload_timeout`, o runner apenas registra a falha; a **próxima execução** consulta `thumbnailExists` primeiro e, se o objeto tiver sido persistido, classifica `already_exists` sem sobrescrever;
-   - respeita `limit`, `batchSize`, `concurrency` (pool com máximo observável), cursor `after`, ordenação `created_at,id`;
-   - relatório com contadores/itens/cursor; retomada idempotente demonstrada por teste (segunda execução só processa pendentes).
+   - respeita `limit`, `batchSize`, `concurrency` (pool com máximo observável), cursor `after` **keyset opaco** e ordenação `created_at,id`;
+   - relatório com contadores/itens/cursor; retomada idempotente demonstrada por teste (segunda execução só processa pendentes); lote final parcial emite `null`, nunca UUID solto.
 3. `scripts/campaign-thumbnails/backfill.ts` (tsx, fino, versionado, reutilizável):
    - monta `deps` a partir do Supabase client **lazy** (após parse/config) e delega ao runner;
    - **inventário canônico:** keyset em `campaigns` (`id, store_id, storage_path, status, created_at`) com `storage_path IS NOT NULL` e `status='ready'`; **nunca** varre o bucket; default somente `campaigns.storage_path` (sem `campaign_art_versions`);
-   - **filtros:** `--store`, `--campaign`, `--limit` (50), `--batch-size` (25), `--concurrency` (2, máx. 4), `--after`, `--report`, `--env local|homolog|production`, `--expected-url <origem exata>`, `--dry-run` (default)/`--write`, `--confirm-env <env>`, `--verbose`;
+   - **filtros:** `--store`, `--campaign`, `--limit` (50), `--batch-size` (25), `--concurrency` (2, máx. 4), `--after <createdAt ISO>|<campaignId>` (cursor keyset opaco; offset/UUID solto são rejeitados), `--report`, `--env local|homolog|production`, `--expected-url <origem exata>`, `--dry-run` (default)/`--write`, `--confirm-env <env>`, `--verbose`;
    - **dry-run por padrão**, sem geração/upload;
    - **configuração/env:** `readDotEnv`/`parseDotEnv` de `scripts/testing/test-status.mjs` ou `--env-file`, nunca no topo; `process.env` tem precedência; `--help`/`--version` sem env/rede (exit 0); config ausente ⇒ exit 3;
    - **identificação de ambiente (endpoint completo):** comparar `new URL(actual).origin` **exatamente** com `--expected-url` (protocolo + host + porta; sem path/query). `--env local` exige adicionalmente host loopback. Origem divergente ⇒ exit 2 sem nenhuma chamada. `homolog`/`production` continuam **hard-blocked** nesta quick; `--write` exige `--confirm-env` igual ao `--env`;
@@ -359,6 +362,8 @@ interface ThumbnailContext  { readonly endpoint: string; readonly uploader: Thum
    - exclusão de `/inputs/`, logos, assinaturas, bench/lab, path de outro store;
    - `missing_original` (404 objeto) ≠ `access_error` (401/403/rede/timeout);
    - retomada: primeira execução falha 1 item; segunda execução ignora miniaturas existentes e reprocessa só o pendente, com cursor estável;
+   - cursor: lote final parcial emite `null`; `--after` keyset é repassado intacto e não vira `NaN`;
+   - dry-run inspeciona o header do original (somente leitura): conteúdo inválido ⇒ `invalid_format`, sem `generate`;
    - **timeout com objeto persistido:** primeira execução retorna `thumbnail_upload_timeout`; o fake passa a reportar `thumbnailExists = true`; segunda execução classifica `already_exists` e **não** chama `generate`/upload — prova de reparo idempotente após aborto HTTP;
    - **vínculo de ambiente no CLI:** `expectedUrl` A + client B (mesmo loopback, porta diferente) ⇒ `blocked`, zero chamadas a `listCampaignsPage`/`downloadOriginal`/`generate`;
    - inspeção estática do CLI apenas como complemento (default dry-run, env/confirm, `upsert:false`, client lazy, ausência de `.update(`/`.remove(`/`campaign_art_versions`/`storage.list`).

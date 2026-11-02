@@ -43,13 +43,21 @@ Implementado e validado localmente:
 - `src/lib/campaign/correction-reports.ts`
 - testes: `artifact-store.contract`, `route.test`, `route.integration`, `campaign-generate`, `regression-master-switch`, `concurrency`, `correction-v2-persistence`
 
+## Ajustes pós-revisão (Gate B continua bloqueado)
+
+1. **Cursor único keyset:** `--after` agora é `<createdAt ISO>|<campaignId>`, emitido pelo inventário (`created_at,id`) e consumido sem offset. Lote final parcial emite `null`; UUID solto/offset é rejeitado (exit 3). Testes cobrem lote parcial e retomada com cursor opaco.
+2. **Sem bypass de timeout:** removida a opção `client` de `createTimedSupabaseUploader`; todo upload passa pelo `global.fetch` com `AbortSignal`. `fetchImpl` permanece apenas para teste.
+3. **Falhas esperadas não silenciosas:** o wrapper registra `failed` (ex.: timeout) e `skipped` inesperado (ex.: endpoint mismatch) com warn sanitizado, sem lançar; `ineligible_path` continua sem ruído.
+4. **Dry-run inspeciona formato:** `inspectOriginalImage` (sharp metadata, somente leitura) classifica conteúdo arbitrário como `invalid_format`; não gera nem envia.
+
 ## Evidência (Gate A)
 
 | Gate | Resultado |
 |---|---|
-| Testes focados (thumbnail + artifact + correção + route) | **166/166** em 8 arquivos |
+| Módulo thumbnail (5 arquivos) | **41/41** |
+| Focados (thumbnail + artifact + correção + route) | **175/175** em 8 arquivos |
 | Regressão relacionada (10 arquivos) | **153/153** |
-| Suíte local completa | **603 passed / 2 skipped (605 arquivos)**; **7557 passed / 10 skipped** |
+| Suíte local completa | **603 passed / 2 skipped (605 arquivos)**; **7566 passed / 10 skipped** |
 | Typecheck | exit 0 |
 | Lint | exit 0 (**limitação conhecida: sem cobertura TS**) |
 | Build | exit 0; `/dashboard` 4.55 kB / 110 kB; shared 102 kB |
@@ -74,6 +82,9 @@ Fixture fotorrealista convertida para JPEG; 20 amostras após 3 warmups:
 - **Correção v2:** wrapper forçado a lançar ⇒ `success: true`, `fail_campaign_correction_v2` não chamada, `storage.remove` não chamado, `complete_campaign_correction_v2` chamada.
 - **Legado:** wrapper forçado a lançar ⇒ resposta `result`, sem `deleteCampaignImage`, sem `updateCampaignError`.
 - **Backfill:** dry-run sem `generate`; guardas com zero chamadas; limite/concorrência; `/inputs/` e store divergente excluídos; ausência ≠ acesso; retomada após timeout com objeto persistido ⇒ `already_exists` sem novo upload.
+- **Cursor:** lote final parcial ⇒ `null` (nunca UUID); `--after` keyset repassado intacto; offset inválido ⇒ exit 3.
+- **Dry-run inválido:** bytes não-imagem ⇒ `invalid_format`, sem geração/upload.
+- **Warnings:** `failed/timeout` e `skipped/endpoint_mismatch` geram warn sanitizado; `created`/`already_exists`/`ineligible_path` não geram ruído.
 
 ## Limpeza avaliada
 
