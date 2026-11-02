@@ -160,9 +160,19 @@ pixel-diff automatizado nem dependência adicionada.
 `package-lock.json`: **sem diff**. `font-heading`/`font-body` e `body { font-family: "Open Sans", sans-serif }`
 permanecem intocados.
 
-## 8. Checklist de aceite visual humano
+## 8. Aceite visual humano
 
-Telas autenticadas não são capturáveis sem sessão. Verificar manualmente em `next dev`/`next start`:
+### 8.1 Registro de aceite (2026-11-02)
+
+O responsável **aprovou o aceite humano desta quick nesta conversa em 2026-11-02**. Essa
+aprovação é uma decisão humana e está separada das verificações automáticas/CDP das seções
+1–7 e 9. Esta conversa não registra quais telas, dispositivos ou itens do roteiro abaixo
+foram inspecionados manualmente; não foram inventadas observações além do aceite comunicado.
+A publicação continua pendente e será conduzida pelo responsável.
+
+### 8.2 Roteiro de verificação (referência, não evidência item a item)
+
+Telas autenticadas não são capturáveis sem sessão. Roteiro aplicável em `next dev`/`next start`:
 
 - [ ] `/login` e `/` (desktop) — títulos em **Poppins** e corpo em **Open Sans**, sem FOUC perceptível além do `font-display: swap`.
 - [ ] `/login` e `/` (mobile 390px) — mesmas famílias, sem salto de layout.
@@ -201,5 +211,9 @@ ausentes). O ganho verificável é a remoção da dependência externa e das con
 
 ## 10. Status
 
-**Aguardando aceite visual humano.** Não foi executado merge, push, deploy, tag, migration
-ou qualquer escrita em banco. Nenhuma dependência nova.
+**Execução concluída documentalmente. Aceite humano aprovado em 2026-11-02 (seção 8.1).
+Publicação pendente.**
+
+Não foi executado merge, push, deploy, tag, migration ou qualquer escrita em banco. Nenhuma
+dependência nova. Próximos passos do responsável: publicação, smoke visual/funcional em
+produção e novo PageSpeed.

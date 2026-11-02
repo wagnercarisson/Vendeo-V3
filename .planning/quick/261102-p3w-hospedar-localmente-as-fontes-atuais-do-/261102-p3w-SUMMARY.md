@@ -3,10 +3,13 @@ quick_id: 261102-p3w
 phase: quick
 plan: 01
 type: execute
-status: awaiting_human_visual_acceptance
+status: complete
+human_acceptance: approved
+acceptance_date: 2026-11-02
+publication: pending
 branch: perf/fontes-locais
 base_sha: b898f5817de88354698ff8b03f358136570fb922
-head_sha: b402cae8
+head_sha: b632aa5f
 subsystem: frontend/fonts
 tags: [fonts, local-hosting, web-performance, accessibility, supply-chain]
 requires: []
@@ -36,7 +39,7 @@ decisions:
 metrics:
   tasks: 3
   files_changed: 17
-  commits: 4
+  commits: 10
   completed: "2026-11-02"
 ---
 
@@ -136,11 +139,19 @@ Detalhes em `evidence/verification.md` §9.
 
 ## Status
 
-**Aguardando aceite visual humano.** Nenhum merge, push, deploy, tag, migration ou escrita em banco; nenhuma dependência nova.
+**Execução concluída documentalmente. Aceite humano aprovado nesta conversa em 2026-11-02. Publicação pendente.**
+
+Nenhum merge, push, deploy, tag, migration ou escrita em banco; nenhuma dependência nova. O aceite humano é distinto das verificações automáticas e CDP registradas acima; não foram adicionadas observações de telas ou testes manuais além do aceite comunicado.
+
+## Próximos passos do responsável
+
+1. Publicação (merge/push/deploy) — fora desta quick.
+2. Smoke visual/funcional em produção.
+3. Novo PageSpeed em produção.
 
 ## Self-Check: PASSED
 
-- Arquivos criados presentes (fonts.css, manifest, teste, PROVENANCE, SUMMARY).
-- Commits verificados: `6e3d89db`, `aea208a3`, `f1e6debd`, `b402cae8`.
-- `git diff --check b898f58..HEAD`: limpo no código; dois avisos apenas em conteúdo não-código — whitespace dentro do texto oficial `OFL-Poppins.txt` (preservado verbatim por ser licença) e linha em branco ao fim de `evidence/glyph-probe-dom.html` (saída gerada do probe).
-- `PLAN.md` e `SUMMARY.md` permanecem não commitados (commit documental é do orquestrador).
+- Arquivos criados presentes (fonts.css, manifest, teste, PROVENANCE, SUMMARY, evidências de viewport/CDP).
+- Commits de implementação/evidência: `6e3d89db`, `aea208a3`, `f1e6debd`, `b402cae8`, `1ebbe45c`, `d4162b16`, `3d4827c9`, `d4573089`, `b632aa5f`; o fechamento documental é o commit seguinte.
+- `git diff --check b898f58..HEAD`: limpo no código; avisos apenas em conteúdo não-código — whitespace dentro do texto oficial `OFL-Poppins.txt` (preservado verbatim por ser licença) e linha em branco ao fim de `evidence/glyph-probe-dom.html` (saída gerada do probe).
+- `PLAN.md`, `SUMMARY.md`, `STATE.md` e `evidence/verification.md` são versionados no commit documental de fechamento.
