@@ -16,7 +16,6 @@ const PROVENANCE_PATH = path.join(REPO_ROOT, "public/fonts/PROVENANCE.md");
 // a varredura de `src/` que ele executa.
 const GOOGLE_CSS_ORIGIN = "fonts." + "googleapis.com";
 const GOOGLE_STATIC_ORIGIN = "fonts." + "gstatic.com";
-const PRECONNECT_ATTR = "pre" + "connect";
 const EXTERNAL_ORIGINS = [GOOGLE_CSS_ORIGIN, GOOGLE_STATIC_ORIGIN];
 
 const LATIN_RANGE =
@@ -225,9 +224,9 @@ describe("manifesto e arquivos em disco", () => {
 });
 
 describe("layout raiz", () => {
-  it("importa fonts.css e não referencia origens externas", () => {
+  it("importa fonts.css e não referencia origens do Google Fonts", () => {
     expect(layoutSource).toContain('import "./fonts.css";');
-    for (const needle of [...EXTERNAL_ORIGINS, PRECONNECT_ATTR]) {
+    for (const needle of EXTERNAL_ORIGINS) {
       expect(layoutSource).not.toContain(needle);
     }
   });
@@ -243,7 +242,6 @@ describe("layout raiz", () => {
 
     for (const node of elements) {
       const props = node.props as Record<string, unknown>;
-      expect(props.rel).not.toBe(PRECONNECT_ATTR);
       for (const attribute of ["href", "src"]) {
         const value = props[attribute];
         if (typeof value === "string") {
@@ -257,9 +255,11 @@ describe("layout raiz", () => {
 });
 
 describe("varredura de src/", () => {
-  it("não contém origem de Google Fonts nem atributo de pré-conexão", () => {
+  // `preconnect` para outras origens legítimas é permitido; a proibição cobre
+  // exclusivamente as origens do Google Fonts removidas nesta quick.
+  it("não contém origem de Google Fonts", () => {
     const files = walkSourceFiles(path.join(REPO_ROOT, "src"));
-    const needles = [...EXTERNAL_ORIGINS, PRECONNECT_ATTR];
+    const needles = EXTERNAL_ORIGINS;
     const hits: string[] = [];
     for (const file of files) {
       const contents = readFileSync(file, "utf8");
