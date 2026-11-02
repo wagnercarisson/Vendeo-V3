@@ -4,8 +4,10 @@ import {
   addOutcome,
   classifyStorageFailure,
   emptyCounters,
+  encodeBackfillCursor,
   isEligibleInventoryPath,
   isMissingObjectError,
+  parseBackfillCursor,
   type BackfillReportItem,
 } from "../backfill-selection";
 
@@ -61,6 +63,29 @@ describe("backfill-selection", () => {
     ]) {
       expect(isMissingObjectError(error)).toBe(false);
       expect(classifyStorageFailure(error)).toBe("access_error");
+    }
+  });
+
+  it("cursor keyset é único, normalizado e rejeita lixo/offset", () => {
+    const cursor = encodeBackfillCursor({
+      createdAt: "2026-01-02T03:04:05.000Z",
+      campaignId: CAMPAIGN,
+    });
+    expect(cursor).toBe(`2026-01-02T03:04:05.000Z|${CAMPAIGN}`);
+    expect(parseBackfillCursor(cursor)).toEqual({
+      createdAt: "2026-01-02T03:04:05.000Z",
+      campaignId: CAMPAIGN,
+    });
+
+    for (const invalid of [
+      null,
+      "",
+      "42",
+      "2026-01-02T03:04:05.000Z",
+      `not-a-date|${CAMPAIGN}`,
+      "2026-01-02T03:04:05.000Z|not-a-uuid",
+    ]) {
+      expect(parseBackfillCursor(invalid)).toBeNull();
     }
   });
 

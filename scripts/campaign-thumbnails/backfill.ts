@@ -15,7 +15,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
+  encodeBackfillCursor,
   isMissingObjectError,
+  parseBackfillCursor,
   type BackfillStorageError,
 } from "../../src/lib/campaign/thumbnail/backfill-selection";
 import {
@@ -28,6 +30,7 @@ import {
 import {
   createTimedSupabaseUploader,
   generateCampaignThumbnail,
+  inspectOriginalImage,
   normalizeEndpoint,
   type ThumbnailContext,
 } from "../../src/lib/campaign/thumbnail/thumbnail-generator";
@@ -77,7 +80,8 @@ Escopo:
   --limit <n>                       Default 50 (máx. 500).
   --batch-size <n>                  Default 25.
   --concurrency <n>                 Default 2 (máx. 4).
-  --after <cursor>                  Retoma a partir de um cursor anterior.
+  --after <cursor>                  Retoma no cursor keyset <createdAt ISO>|<id>
+                                    emitido no relatório anterior.
   --report <path>                   Grava o relatório JSON.
   --verbose                         Loga cada item no stderr.
 
@@ -243,7 +247,14 @@ function loadEnv(file: string): Record<string, string | undefined> {
 function makeDeps(client: SupabaseClient): BackfillDeps {
   return {
     async listCampaignsPage({ after, limit, stores, campaigns }) {
-      const offset = Number(after ?? "0");
+      // Keyset consistente por (created_at, id): imune a inserções/remoções no
+      // meio do inventário. O cursor é opaco e sempre emitido/consumido no
+      // mesmo formato `<createdAt ISO>|<campaignId>`.
+      const parsedCursor = parseBackfillCursor(after);
+      if (after && !parsedCursor) {
+        throw new Error("invalid_cursor");
+      }
+
       let query = client
         .from("campaigns")
         .select("id, store_id, storage_path, status, created_at", {
@@ -253,8 +264,13 @@ function makeDeps(client: SupabaseClient): BackfillDeps {
         .not("storage_path", "is", null)
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
-        .range(offset, offset + limit - 1);
+        .limit(limit);
 
+      if (parsedCursor) {
+        query = query.or(
+          `created_at.gt.${parsedCursor.createdAt},and(created_at.eq.${parsedCursor.createdAt},id.gt.${parsedCursor.campaignId})`,
+        );
+      }
       if (stores && stores.length > 0) query = query.in("store_id", stores);
       if (campaigns && campaigns.length > 0) query = query.in("id", campaigns);
 
@@ -267,13 +283,19 @@ function makeDeps(client: SupabaseClient): BackfillDeps {
           campaignId: String(row.id),
           storeId: String(row.store_id),
           originalPath: String(row.storage_path),
-          createdAt: String(row.created_at),
+          createdAt: new Date(String(row.created_at)).toISOString(),
         }));
 
+      const last = items[items.length - 1];
       return {
         items,
         nextCursor:
-          items.length === limit ? String(offset + items.length) : null,
+          items.length === limit && last
+            ? encodeBackfillCursor({
+                createdAt: last.createdAt,
+                campaignId: last.campaignId,
+              })
+            : null,
       };
     },
 
@@ -298,6 +320,10 @@ function makeDeps(client: SupabaseClient): BackfillDeps {
       if (!error && data) return { exists: true };
       if (error && isMissingObjectError(error)) return { exists: false };
       return { exists: false, error: error ?? new Error("thumbnail_probe_failed") };
+    },
+
+    async inspectOriginal(buffer) {
+      return inspectOriginalImage(buffer);
     },
 
     async generate({ originalPath, originalBuffer, context }) {
@@ -341,6 +367,13 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
 
   if (!args.env || !args.expectedUrl) {
     console.error("config_error: --env e --expected-url são obrigatórios");
+    return 3;
+  }
+
+  if (args.after && !parseBackfillCursor(args.after)) {
+    console.error(
+      "config_error: --after inválido (formato <createdAt ISO>|<campaignId>)",
+    );
     return 3;
   }
 

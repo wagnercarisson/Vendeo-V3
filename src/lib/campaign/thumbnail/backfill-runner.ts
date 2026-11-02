@@ -53,6 +53,12 @@ export interface BackfillDeps {
     exists: boolean;
     error?: unknown;
   }>;
+  /** Inspeção somente leitura do original (header) para o dry-run. */
+  inspectOriginal(buffer: Buffer): Promise<{
+    format: string;
+    width: number;
+    height: number;
+  } | null>;
   generate(input: {
     originalPath: string;
     originalBuffer: Buffer;
@@ -220,7 +226,8 @@ export async function runBackfill(input: {
     });
 
     if (page.items.length === 0) {
-      cursor = page.nextCursor ?? cursor;
+      // Sem itens ⇒ fim do inventário: cursor nulo, nunca o cursor anterior.
+      cursor = page.nextCursor;
       break;
     }
 
@@ -324,6 +331,18 @@ export async function runBackfill(input: {
         }
 
         if (options.mode === "dry-run") {
+          const inspection = await deps.inspectOriginal(original.data);
+          if (!inspection) {
+            return {
+              campaignId: candidate.campaignId,
+              storeId: candidate.storeId,
+              originalPath: candidate.originalPath,
+              thumbnailPath,
+              outcome: "invalid_format" as const,
+              reason: "unsupported_or_corrupt_image",
+              durationMs: now() - itemStart,
+            };
+          }
           return {
             campaignId: candidate.campaignId,
             storeId: candidate.storeId,
@@ -358,9 +377,11 @@ export async function runBackfill(input: {
     }
 
     remaining -= page.items.length;
-    cursor = page.nextCursor ?? page.items[page.items.length - 1]?.campaignId ?? cursor;
 
-    if (page.nextCursor === null && page.items.length < pageLimit) {
+    // Cursor ÚNICO: sempre o cursor opaco fornecido pelo inventário
+    // (keyset `created_at|id`). Nunca derivar do UUID da campanha.
+    cursor = page.nextCursor;
+    if (page.nextCursor === null) {
       break;
     }
   }

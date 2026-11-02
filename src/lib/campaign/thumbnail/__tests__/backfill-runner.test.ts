@@ -80,6 +80,9 @@ function fakeDeps(overrides: Partial<BackfillDeps> = {}): BackfillDeps & {
       calls.exists += 1;
       return { exists: false };
     },
+    async inspectOriginal() {
+      return { format: "jpeg", width: 1024, height: 1024 };
+    },
     async generate() {
       calls.generate += 1;
       return { status: "created", thumbnailPath: "x", width: 288, height: 288 };
@@ -232,6 +235,67 @@ describe("runBackfill", () => {
     const result = await runBackfill({ deps, options: baseOptions() });
     expect(result.report.counters.missingOriginal).toBe(1);
     expect(result.report.counters.accessError).toBe(1);
+  });
+
+  it("dry-run classifica conteúdo inválido como invalid_format sem gerar", async () => {
+    const deps = fakeDeps({
+      async listCampaignsPage() {
+        return { items: [candidate(1)], nextCursor: null };
+      },
+      async inspectOriginal() {
+        return null;
+      },
+    });
+
+    const result = await runBackfill({ deps, options: baseOptions() });
+    expect(result.report.counters.invalidFormat).toBe(1);
+    expect(result.report.counters.wouldCreate).toBe(0);
+    expect(deps.calls.generate).toBe(0);
+  });
+
+  it("lote final parcial emite cursor nulo (nunca o UUID da campanha)", async () => {
+    const deps = fakeDeps({
+      async listCampaignsPage() {
+        return { items: [candidate(1), candidate(2)], nextCursor: null };
+      },
+    });
+
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({ limit: 5, batchSize: 5 }),
+    });
+
+    expect(result.report.cursor).toBeNull();
+    expect(result.report.counters.wouldCreate).toBe(2);
+  });
+
+  it("retoma com o cursor keyset opaco da página anterior", async () => {
+    const cursor = `2026-01-01T00:00:00.000Z|${uuidFor(2)}`;
+    const seen: Array<string | null> = [];
+    let call = 0;
+    const deps = fakeDeps({
+      async listCampaignsPage({ after }) {
+        seen.push(after);
+        call += 1;
+        if (call === 1) {
+          return { items: [candidate(1), candidate(2)], nextCursor: cursor };
+        }
+        return { items: [], nextCursor: null };
+      },
+    });
+
+    const first = await runBackfill({
+      deps,
+      options: baseOptions({ limit: 2, batchSize: 2 }),
+    });
+    expect(first.report.cursor).toBe(cursor);
+
+    const second = await runBackfill({
+      deps,
+      options: baseOptions({ limit: 2, batchSize: 2, after: cursor }),
+    });
+    expect(seen).toEqual([null, cursor]);
+    expect(second.report.cursor).toBeNull();
   });
 
   it("retoma de forma idempotente após timeout (objeto pode ter sido persistido)", async () => {

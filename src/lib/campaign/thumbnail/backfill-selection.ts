@@ -7,6 +7,38 @@ import { deriveThumbnailPath } from "./thumbnail-path";
  * bucket. Este módulo só classifica paths/erros e agrega o relatório.
  */
 
+export interface BackfillCursor {
+  /** `created_at` normalizado em ISO 8601 UTC. */
+  createdAt: string;
+  campaignId: string;
+}
+
+/**
+ * Cursor opaco ÚNICO do backfill: keyset por `(created_at, id)`.
+ * Formato: `<createdAt ISO>|<campaignId>`.
+ */
+export function encodeBackfillCursor(cursor: BackfillCursor): string {
+  return `${new Date(cursor.createdAt).toISOString()}|${cursor.campaignId}`;
+}
+
+export function parseBackfillCursor(raw: string | null): BackfillCursor | null {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  const separator = raw.lastIndexOf("|");
+  if (separator <= 0) return null;
+  const createdAtRaw = raw.slice(0, separator);
+  const campaignId = raw.slice(separator + 1);
+  const createdAt = new Date(createdAtRaw);
+  if (Number.isNaN(createdAt.getTime())) return null;
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      campaignId,
+    )
+  ) {
+    return null;
+  }
+  return { createdAt: createdAt.toISOString(), campaignId };
+}
+
 export type BackfillOutcome =
   | "would_create"
   | "created"
