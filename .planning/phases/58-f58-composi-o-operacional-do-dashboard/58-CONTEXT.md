@@ -44,6 +44,7 @@ Não faz parte: redesenho do shell, recomendações, matriz de prioridades, nova
 - Datas dos cartões usam o idioma da interface e o `timeZone` da loja quando disponível, evitando deslocamento de dia; sem fuso disponível, usar formatação estável sem inventar fuso.
 
 ### D-04 — Créditos
+- **Decisão confirmada pelo responsável em 2026-11-02:** a extensão aditiva abaixo é a exceção autorizada em serviço compartilhado.
 - Usar `CreditService.getBalanceBreakdown`.
 - **Lacuna confirmada na pesquisa:** o método atual ignora `error` do Supabase e devolve zeros; `try/catch` no dashboard não detecta falha. Adicionar opção aditiva `getBalanceBreakdown(storeId, { throwOnError?: boolean })`, com default `false` para preservar todos os consumidores, e o dashboard usa `true`.
 - A opção aditiva não altera regras de crédito, cálculo de saldo, demo, bônus ou comprado; apenas propaga erro de leitura quando solicitado. `PGRST116` (nenhuma linha) continua sendo tratado como zeros, preservando o comportamento atual; demais erros são propagados quando `throwOnError: true`.

@@ -86,6 +86,8 @@ A ausência de `storage_path`, falha de assinatura ou miniatura indisponível SH
 
 O dashboard SHALL exibir o saldo disponível de créditos de forma legível, usando o texto do idioma da interface, e SHALL oferecer acesso aos detalhes em `/conta`. Falha de leitura do saldo SHALL produzir um estado explícito de indisponibilidade, distinto de saldo zero.
 
+A leitura do dashboard SHALL usar a extensão aditiva `getBalanceBreakdown(storeId, { throwOnError: true })`. O default `false` SHALL preservar o comportamento dos demais consumidores, e `PGRST116` (nenhuma linha) SHALL continuar sendo tratado como zero, não como falha. Nenhuma regra de crédito, demo, bônus ou comprado SHALL ser alterada.
+
 #### Scenario: Saldo disponível é exibido
 - **WHEN** `getBalanceBreakdown` retorna `availableBalance = 7`
 - **THEN** o dashboard SHALL exibir o valor `7` com o rótulo de créditos no idioma da interface

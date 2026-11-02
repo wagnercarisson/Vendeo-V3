@@ -3,9 +3,10 @@
 - [ ] 1.1 Criar a consulta dedicada do dashboard para até 3 campanhas `ready`, ordenadas por `created_at` desc, selecionando somente `id`, `product_name`, `created_at` e `storage_path`; não selecionar `input_snapshot` e não incluir `error`/`generating`.
 - [ ] 1.2 Reutilizar `generateBatchThumbnailUrls` para gerar as miniaturas assinadas e retornar `thumbnailUrl: string | null`, sem expor `storage_path` ao cliente.
 - [ ] 1.3 Usar `countReadyCampaigns` como “Campanhas disponíveis”; não alterar `countCampaigns`, `countReadyCampaigns`, `getRecentCampaigns` nem `getUserOnboardingState`.
-- [ ] 1.4 Criar a composição segura de créditos com estados `available`, `zero` e `unavailable`, usando `CreditService.getBalanceBreakdown`; falha não pode virar `0`.
-- [ ] 1.5 Criar a função pura de saudação com `storeName`, `timeZone`, `locale`, `now` injetável e fallback neutro para fuso nulo/inválido/falha; não usar fuso do servidor nem Brasília como substituto de erro.
-- [ ] 1.6 Adicionar testes unitários da consulta elegível (filtro `ready`, limite 3, exclusão de erro/geração, miniatura nula) e da saudação nos fusos `America/Sao_Paulo`/`America/Asuncion` com servidor em UTC, além de falha de fuso.
+- [ ] 1.4 Formalizar e implementar a extensão aditiva `getBalanceBreakdown(storeId, { throwOnError?: boolean })`, com default `false`, propagação de erro apenas quando solicitada e `PGRST116` tratado como zeros; adicionar testes do default, do modo estrito e da ausência de linha.
+- [ ] 1.5 Criar a composição segura de créditos com estados `available`, `zero` e `unavailable`, usando `getBalanceBreakdown(..., { throwOnError: true })`; falha não pode virar `0`.
+- [ ] 1.6 Criar a função pura de saudação com `storeName`, `timeZone`, `locale`, `now` injetável e fallback neutro para fuso nulo/inválido/falha; não usar fuso do servidor nem Brasília como substituto de erro.
+- [ ] 1.7 Adicionar testes unitários da consulta elegível (filtro `ready`, limite 3, exclusão de erro/geração, miniatura nula), da extensão de crédito, da composição `available/zero/unavailable` e da saudação nos fusos `America/Sao_Paulo`/`America/Asuncion` com servidor em UTC, além de falha de fuso.
 
 ## 2. Namespace de localização do dashboard
 
@@ -49,13 +50,13 @@
 
 ## 6. Validação automatizada
 
-- [ ] 6.1 Executar os testes focados de dashboard, i18n, avisos de verificação/prontidão, changelog, admin e serviços reutilizados; corrigir regressões relacionadas.
+- [ ] 6.1 Executar os testes focados de dashboard, i18n, avisos de verificação/prontidão, changelog, admin e serviços reutilizados, incluindo explicitamente os testes da extensão `throwOnError` de `getBalanceBreakdown`; corrigir regressões relacionadas.
 - [ ] 6.2 Executar `npm run typecheck`.
 - [ ] 6.3 Executar `npm run lint`, registrando a limitação conhecida de cobertura de TypeScript.
 - [ ] 6.4 Executar `npm run build` e `git diff --check`.
 - [ ] 6.5 Medir o First Load JS de `/dashboard` e o tamanho dos catálogos; confirmar que o namespace do dashboard não aumenta o payload global do shell.
 - [ ] 6.6 Executar `openspec validate fase-58-composicao-operacional-do-dashboard --strict`.
-- [ ] 6.7 Confirmar por inspeção que não houve migration, nova API, nova dependência, alteração de schema, crédito, geração ou admin.
+- [ ] 6.7 Confirmar por inspeção que não houve migration, nova API, nova dependência, alteração de schema, regra de crédito, geração ou admin. A única exceção autorizada em serviço compartilhado é a opção aditiva `throwOnError` em `getBalanceBreakdown`, com default `false`, `PGRST116` como zero e testes próprios na revalidação final.
 
 ## 7. Validação manual e visual
 

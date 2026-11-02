@@ -445,7 +445,7 @@ const latestAnnouncement = await getLatestAnnouncement();
 // ...
 <ChangelogAnnouncement entry={latestAnnouncement} />
 ```
-F58 wraps it with server-derived `excerpt` + localized `labels`, and renders nothing when entry/excerpt is absent. Never pass `storage_path`/markdown body; never render markdown in compact mode.
+F58 wraps it with server-derived `excerpt` + localized `labels`, renders nothing when the entry is absent, and keeps title/date/actions when the excerpt is null. Never pass `storage_path`/markdown body; never render markdown in compact mode.
 
 ---
 

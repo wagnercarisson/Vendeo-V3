@@ -150,10 +150,10 @@ Rules:
 
 - `<section aria-labelledby="credits-title">` → `<Card className="p-4 sm:p-6">`.
 - `h2#credits-title`: `text-xs font-semibold uppercase tracking-wider text-text-secondary font-heading` = “Créditos disponíveis”.
-- Available / zero: value row `mt-2 flex items-baseline gap-2`:
+- Available: value row `mt-2 flex items-baseline gap-2`:
   - number: `font-heading text-2xl font-semibold leading-tight text-text-primary tabular-nums`;
   - unit: `text-sm text-text-secondary font-body` (“crédito”/“créditos”), rendered **without** repeating the number.
-  - Zero is rendered exactly as `0` + unit. No warning icon, no muted color.
+- Zero: render **only** `messages.zero` (full string `0 créditos` / `0 créditos`) in a single element; do not render a separate number or unit. No warning icon, no muted color, no “0 0 créditos”.
 - Unavailable: `mt-2 flex items-center gap-2`; `AlertCircle` `h-5 w-5 text-accent-amber aria-hidden="true"` + `text-sm font-semibold font-heading text-text-secondary` = “Saldo indisponível”. **Never render `0` or `—`.**
 - Details link always present (all three states): `mt-3 inline-flex min-h-[44px] items-center text-sm font-semibold text-accent-blue hover:underline focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep` → `/conta`.
 - Do **not** render `BalanceDisplay`. Do **not** show demo/bonus breakdown in the dashboard.
@@ -189,7 +189,7 @@ Rules:
   - Actions `mt-3`: “Ver novidades” link `text-sm font-semibold text-accent-blue`, 44px → `/novidades`.
 - Modal variant (`announcement: "modal"`): preserve existing overlay/dialog tokens (`fixed inset-0 z-50`, `bg-black/50 backdrop-blur-sm`, `max-w-[480px]`, `bg-bg-elevated`, `rounded-xl`, `p-6`, `shadow-xl`); compact modal renders title/date/excerpt/actions only. Do not downgrade modal to card.
 - Dismiss calls `dismissAnnouncement(id)`; does not change `lastSeenId`. `entry === null`, `announcement === "none"`, dismissed, or empty excerpt with no entry → render nothing.
-- The news wrapper is rendered only when an entry/excerpt exists. After client-side dismissal, the wrapper may remain in the DOM with no visible content and no reserved gap; this is accepted for the preserved dismissal contract.
+- The news wrapper is rendered when an entry exists. The excerpt may be `null`/empty; in that case the compact component keeps title, date and actions and omits only the excerpt paragraph. Do not gate the wrapper on `entry && excerpt`. After client-side dismissal, the wrapper may remain in the DOM with no visible content and no reserved gap; this is accepted for the preserved dismissal contract.
 - Do not render full markdown body, `<ul>`, or `dangerouslySetInnerHTML` in compact mode.
 
 ---
@@ -221,7 +221,7 @@ Additional rules:
 - Images: thumbnail is decorative (`alt=""`) because the campaign link carries a localized `aria-label` that identifies the campaign and date; the whole-card label is the accessible name, so `lang=""` on the visible product span does not cover pronunciation of the label. This limitation is accepted for this phase.
 - The preserved modal uses existing `role="dialog"`/`aria-modal="true"` but does not add a new focus trap, initial focus or focus return in F58; this is a documented accessibility limitation, not a new regression.
 - Failure panel: `role="status"` (not `alert`) to avoid an assertive announcement on every page load.
-- Loading: container `role="status" aria-label="{loading}"`; all skeleton shapes `aria-hidden="true"`.
+- Loading: container `role="status" aria-label="{loading}"` and `lang="es-419"` only in the Spanish resolved locale; all skeleton shapes `aria-hidden="true"`.
 - Modal: preserve existing `role="dialog" aria-modal="true"` and `aria-label`; do not add a new focus-trap implementation in this phase.
 - Contrast: text uses primary/secondary tokens only (≥7:1 target on `#020617`/`#0F172A`); `text-muted` is banned for dates, labels, and links.
 - Count chip `aria-hidden="true"` is intentional; a visually hidden localized sentence SHALL announce the count using the singular form for `1` and plural otherwise. Do not expose the bare chip number as the only accessible count.
@@ -311,7 +311,7 @@ Copy ownership:
 | Banners (title, description, pending items, CTA, close label) | dashboard namespace via optional props | yes, dashboard only; pt-BR default elsewhere. Close label belongs only to `ApprovedBanner`; `ReadinessBanner` has no dismiss action. |
 
 Formatting rules:
-- Credits: integer via `Intl.NumberFormat(uiLocale)`; no currency, no decimals, no conversion.
+- Credits: integer via `Intl.NumberFormat(uiLocale)`; no currency, no decimals, no conversion. Available uses number + unit; zero uses the full `messages.zero` string alone, never number+unit plus `messages.zero`.
 - Campaign dates: `Intl.DateTimeFormat(uiLocale, { day: "2-digit", month: "short", year: "numeric", timeZone: storeTimeZone ?? "UTC" })`; explicit `UTC` when the store timezone is unavailable (never server-local, never a guessed store zone).
 - Greeting period: computed with `Intl` in the store timezone; null/invalid → neutral phrase. Never `getHours()`, never silent `America/Sao_Paulo`.
 - Announcement excerpt: server-derived plain text, ≤~200 chars at a word boundary + `…`; no AI summary, no translation, no HTML.
@@ -326,7 +326,7 @@ Formatting rules:
 | `no_eligible_campaigns` | Header without primary “Nova campanha” + banners + credits + campaigns heading with count `0` + `EmptyState` (`Megaphone`) with the single primary “Criar campanha” + news. |
 | `has_eligible_campaigns` | Full header + banners + credits + campaigns heading + 1–3 cards + “Ver todas” + news. |
 | Credits available | Number + unit + `/conta` link. |
-| Credits zero | `0` + plural unit + `/conta` link; visually identical structure to available, **no** warning tone. |
+| Credits zero | Full `messages.zero` string (`0 créditos`/`0 créditos`) + `/conta` link, rendered once with no separate number/unit; visually identical structure to available, **no** warning tone. |
 | Credits unavailable | Amber `AlertCircle` + “Saldo indisponível” + `/conta` link; **no** number. |
 | Campaigns failure | Compact `role="status"` panel + `/campanhas` link; credits and news still render. |
 | Thumbnail null | Placeholder `bg-bg-elevated` + `ImageOff`; card link intact. |
@@ -339,7 +339,7 @@ Formatting rules:
 | Timezone failure | Neutral greeting (“Olá, {loja}” / “Hola, {tienda}”), same layout. |
 
 **Skeleton contract (`loading.tsx`):**
-- Root `role="status" aria-label={loading}`; children `aria-hidden="true"`.
+- Root `role="status" aria-label={loading}` with `lang="es-419"` only when the resolved locale is `es-419` (omit otherwise); children `aria-hidden="true"`.
 - Header: `h-8 w-56` title block + two `h-11` action blocks as a state-agnostic approximation (desktop right; stacked mobile acceptable). This may not match `no_store`/`no_eligible` exactly; no gross layout shift is allowed.
 - Grid identical classes to the final page.
 - Credits: card `h-32` (128px) in col 3 row 1.

@@ -15,7 +15,7 @@ Contratos existentes relevantes:
 - `CampaignStatus = "generating" | "ready" | "error"` em `src/lib/campaign/types.ts`. Não há outro status persistido para campanha.
 - `countReadyCampaigns` já conta exclusivamente `status = "ready"`.
 - `generateBatchThumbnailUrls` em `src/lib/campaign/list.ts` assina URLs do bucket `campaign-images` via `supabaseAdmin`, com fallback `null` por item.
-- `CreditService.getBalanceBreakdown` retorna `availableBalance`, demo, bônus e comprado; a leitura pode falhar.
+- `CreditService.getBalanceBreakdown` retorna `availableBalance`, demo, bônus e comprado. A implementação atual ignora o `error` do Supabase e devolve zeros; a F58 formaliza uma extensão aditiva para permitir que o dashboard distinga falha de saldo zero.
 - `getStoreMarketSettings(userId)` retorna o `timeZone` resolvido e já trata configuração explícita, defaults e legado.
 - `getUiRenderContext(userId)` é cacheado por requisição, usa `getUserLocalePreference` e faz fallback `pt-BR` para falhas conhecidas, com timeout de 1000 ms.
 - `getLatestAnnouncement`/`useChangelogState` governam o anúncio, a dispensa e o badge de novidades.
@@ -59,7 +59,7 @@ Após inspecionar o modelo, `CampaignStatus` possui apenas `generating`, `ready`
 
 **Alternativas consideradas:** contar `ready` + `error` (comportamento atual) — rejeitado por poluir a operação com falhas; filtrar apenas na renderização — rejeitado porque a exigência é excluir na origem.
 
-### 2. Composição própria do dashboard, sem mudar serviços compartilhados
+### 2. Composição própria do dashboard, sem mudar serviços compartilhados de campanha
 
 Criar um módulo server-only de composição do dashboard (por exemplo `src/lib/dashboard/overview.ts`) que:
 
@@ -141,6 +141,19 @@ O nome da loja entra como conteúdo dinâmico e não é traduzido.
 - demo/bônus: nesta fase, exibir apenas o saldo disponível e o acesso aos detalhes; a composição detalhada de demo permanece em `/conta`. Isso evita novo serviço ou regra de crédito.
 
 `formatCredits` existente não é reutilizado no `es-419`, pois é português. O namespace do dashboard fornece as formas singular/plural/zero.
+
+#### 7.1 Extensão aditiva para detectar falha de crédito
+
+O contrato atual de `getBalanceBreakdown` não distingue falha de leitura de saldo zero: em erro do Supabase, `data` fica nulo e o método devolve zeros. Para atender ao requisito sem alterar o comportamento dos consumidores existentes, a F58 formaliza:
+
+- `getBalanceBreakdown(storeId: string, opts?: { throwOnError?: boolean })`;
+- default `false`, preservando byte a byte o comportamento atual, inclusive o retorno de zeros;
+- quando `opts.throwOnError === true`, erros de leitura são propagados;
+- `PGRST116` (nenhuma linha) continua sendo tratado como zeros, pois ausência de linha não é falha de leitura;
+- o dashboard chama com `{ throwOnError: true }` e mapeia a rejeição para `unavailable`, nunca para `0`;
+- nenhuma regra de crédito, cálculo de `availableBalance`, demo, bônus ou comprado é alterada.
+
+Essa exceção é a única alteração autorizada em serviço compartilhado nesta fase e deve constar da revalidação final, com testes do default, do modo estrito e de `PGRST116`.
 
 ### 8. Anúncio compacto: variante retrocompatível do componente existente
 

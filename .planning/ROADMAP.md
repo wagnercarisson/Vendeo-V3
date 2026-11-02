@@ -694,7 +694,7 @@ Plans:
 
 ### Phase 58: F58 - Composição operacional do dashboard
 
-**Status:** **Planos criados; aguardando revisão.** Base técnica OpenSpec aprovada em `openspec/changes/fase-58-composicao-operacional-do-dashboard/`; 5 planos em 4 waves.
+**Status:** **Planos criados e revalidados; aguardando liberação.** Base técnica OpenSpec em `openspec/changes/fase-58-composicao-operacional-do-dashboard/` (design/tasks atualizados com a extensão aditiva de crédito); 5 planos em 4 waves; plan-checker revalidado sem blockers.
 
 **Goal:** tornar o dashboard útil, claro e orientado à operação do lojista: cabeçalho compacto com saudação, campanhas disponíveis (`status = "ready"`) com miniaturas reais, saldo de créditos legível e anúncio compacto de novidades. Excluir campanhas com erro/geração das consultas, cartões e contagens do dashboard; entregar todos os textos novos em `pt-BR`/`es-419` por namespace próprio; preservar avisos, navegação, acessibilidade, responsividade, admin e identidade aprovada. Sem recomendações, novas regras comerciais, migrations, APIs ou dependências.
 
