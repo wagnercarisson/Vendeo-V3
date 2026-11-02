@@ -1,7 +1,7 @@
 # F58-05 — Separação entre validação local, validação humana e publicação
 
-**Data:** 2026-11-02  
-**Estado:** validação local e composição visual executadas; validação funcional humana parcial; publicação não executada e não autorizada.
+**Data:** 2026-11-02
+**Estado:** validação local e UAT funcional executados; composição visual aprovada; publicação não executada e não autorizada.
 
 ## (a) Validação local
 
@@ -25,14 +25,14 @@ Esses resultados são evidência local. Não comprovam produção, latência rea
 |---|---|---|
 | Composição pt-BR desktop/mobile | **PASS** | Capturas e aceite explícito do responsável |
 | Composição es-419 desktop/mobile | **PASS** | Capturas e aceite explícito do responsável |
-| Tablet 640–1023 px | **PENDENTE** | Sem captura/observação humana |
-| Slow 4G (preferência resolvida/timout) | **PENDENTE** | Não observado no navegador |
-| Carregamento real com auth/preferência lentas | **PENDENTE** | Não observado no navegador |
-| Fuso distinto e falha de fuso | **PENDENTE** | Apenas cobertura unitária |
-| Campanhas com erro / miniaturas / créditos zero-indisponível | **PARCIAL** | Cobertura automatizada; inspeção visual dedicada incompleta |
-| Avisos de prontidão | **PARCIAL** | Banner de verificação visto; readiness pendente não observado |
-| Teclado/foco/contraste/truncamento | **PARCIAL** | Tab validado pt-BR/es-419; contraste/zoom/truncamento extremo pendentes |
-| Admin | **PARCIAL** | Shell preservado; `/admin` não aberto manualmente |
+| Tablet 640–1023 px | **PASS** | Painel único com linhas verticais, ações legíveis e sem sobreposição |
+| Slow 4G (preferência resolvida/timeout) | **PASS** | Resolvida em pt-BR/es-419; timeout caiu em pt-BR com log de timeout |
+| Carregamento real com auth/preferência lentas | **PASS com ressalva** | Esqueleto localizado observado; atraso específico de auth não injetado |
+| Fuso distinto e falha de fuso | **PASS** | Servidor TZ=Asia/Tokyo manteve fuso da loja; falha observada em harness neutro |
+| Campanhas com erro / miniaturas / créditos zero-indisponível | **PASS** | Erros acessíveis em /campanhas; fallback de miniatura; zero real e indisponível em harness |
+| Avisos de prontidão | **PASS** | Readiness pendente observado em pt-BR/es-419 em harness local |
+| Teclado/foco/contraste/truncamento | **PASS com ressalva** | Tab, zoom, truncamento e contraste medidos; leitor de tela real não executado |
+| Admin | **PASS** | `/admin` aberto manualmente com preferência es-419; permaneceu em pt-BR |
 
 Detalhes em `evidence/58-05-human-visual.md`.
 

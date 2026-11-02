@@ -55,10 +55,10 @@ depends_on: ["58-04"]
 
 ## Pendências e limitações
 
-- Tablet, Slow 4G, carregamento real, fuso distinto/falha, campanhas com erro em `/campanhas`, miniaturas nula/erro, créditos zero/indisponível, readiness, contraste/zoom/truncamento e admin permanecem PENDENTE/PARCIAL.
+- UAT 14/14 observado como PASS, com ressalvas: leitor de tela real não executado e sem medição fina de performance.
+- Defeito encontrado e corrigido: fallback de miniatura pré-hidratação.
 - Capturas são de homolog local; não comprovam produção.
-- Leitor de tela real não foi executado.
-- Este SUMMARY não marca STATE/ROADMAP como concluídos e não declara produção aprovada.
+- Este SUMMARY não declara produção aprovada nem autoriza publicação.
 
 ## Próximo passo
 

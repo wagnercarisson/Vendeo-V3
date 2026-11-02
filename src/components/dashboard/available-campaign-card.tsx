@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ImageOff } from "lucide-react";
 
 interface AvailableCampaignCardProps {
@@ -29,7 +29,17 @@ export function AvailableCampaignCard({
   openLabel,
 }: AvailableCampaignCardProps) {
   const [failed, setFailed] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
   const showImage = Boolean(thumbnailUrl) && !failed;
+
+  useEffect(() => {
+    // Se a imagem falhar antes da hidratação, o navegador não reemite `error`
+    // para o React. Detecta o estado quebrado no mount e aplica o fallback.
+    const image = imageRef.current;
+    if (image && image.complete && image.naturalWidth === 0) {
+      setFailed(true);
+    }
+  }, [thumbnailUrl]);
 
   return (
     <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
@@ -37,6 +47,7 @@ export function AvailableCampaignCard({
         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-bg-elevated sm:h-24 sm:w-24">
           {showImage && thumbnailUrl ? (
             <img
+              ref={imageRef}
               src={thumbnailUrl}
               alt=""
               className="h-full w-full object-cover"

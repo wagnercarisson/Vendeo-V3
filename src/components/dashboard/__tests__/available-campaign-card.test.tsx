@@ -83,3 +83,19 @@ describe("AvailableCampaignCard", () => {
     expect(link.className).toContain("min-h-[44px]");
   });
 });
+
+  it("aplica fallback quando a imagem já falhou antes da hidratação", () => {
+    const originalComplete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "complete");
+    const originalWidth = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "naturalWidth");
+    Object.defineProperty(HTMLImageElement.prototype, "complete", { configurable: true, get: () => true });
+    Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", { configurable: true, get: () => 0 });
+
+    try {
+      const { container } = renderCard();
+      expect(container.querySelector(".lucide-image-off")).not.toBeNull();
+      expect(screen.getByRole("link")).toHaveAttribute("href", "/campanhas/c1");
+    } finally {
+      if (originalComplete) Object.defineProperty(HTMLImageElement.prototype, "complete", originalComplete);
+      if (originalWidth) Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", originalWidth);
+    }
+  });
