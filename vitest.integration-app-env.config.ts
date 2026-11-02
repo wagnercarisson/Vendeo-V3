@@ -7,7 +7,7 @@ export default defineConfig({
   ...base,
   test: {
     ...base.test,
-    include: loadTestCategories()['integration.postgres'],
+    include: loadTestCategories()['integration.app-env'],
     testTimeout: 120000,
     hookTimeout: 60000,
   },

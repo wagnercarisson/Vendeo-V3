@@ -8,14 +8,29 @@ import inventory from './scripts/testing/test-categories.json';
  */
 export interface TestCategories {
   nodeTest: string[];
-  'integration.postgres': string[];
+  'integration.postgres-homolog': string[];
+  'integration.postgres-local': string[];
+  'integration.postgres-f50-4': string[];
+  'integration.app-env': string[];
   'integration.product-1-1': string[];
 }
+
+export const INTEGRATION_CATEGORY_KEYS = [
+  'integration.postgres-homolog',
+  'integration.postgres-local',
+  'integration.postgres-f50-4',
+  'integration.app-env',
+  'integration.product-1-1',
+] as const satisfies readonly (keyof TestCategories)[];
 
 const CATEGORIES = inventory as TestCategories;
 
 export function loadTestCategories(): TestCategories {
   return CATEGORIES;
+}
+
+export function integrationFiles(): string[] {
+  return INTEGRATION_CATEGORY_KEYS.flatMap((key) => CATEGORIES[key]);
 }
 
 function resolveServerOnly(): string {
@@ -50,8 +65,7 @@ export function localExcludePatterns(): string[] {
     'scripts/gsd/**',
     'scripts/f56-2b2a/**',
     ...CATEGORIES.nodeTest,
-    ...CATEGORIES['integration.postgres'],
-    ...CATEGORIES['integration.product-1-1'],
+    ...integrationFiles(),
   ];
 }
 

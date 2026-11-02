@@ -1,125 +1,132 @@
 #!/usr/bin/env node
 /**
- * Executa uma categoria de integração, validando o ambiente antes.
+ * Executa um perfil de integração, validando TODOS os pré-requisitos antes.
  *
- * Uso: node scripts/testing/run-integration.mjs <postgres|product-1-1>
+ * Uso: node scripts/testing/run-integration.mjs <perfil>
+ * Perfis: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1
+ *
+ * `postgres` sem perfil é apenas status/recusa: imprime a prontidão dos três
+ * perfis e sai 2, sem executar nada.
+ *
  * Exit 0 = Vitest executou (o exit code dele é repassado);
  * exit 2 = ambiente ausente/inválido ("GATE NÃO EXECUTADO — NÃO APROVADO");
- * exit 3 = categoria inválida.
- * Nunca provisiona/altera banco e nunca imprime valores de segredos.
+ * exit 3 = perfil inválido.
+ * Nunca provisiona/cria ambiente e nunca imprime valores de segredos.
  */
 import { spawnSync } from 'node:child_process';
-import { REPO_ROOT } from './test-status.mjs';
+import {
+  REPO_ROOT,
+  appEnvGateStatus,
+  gateLine,
+  postgresF504GateStatus,
+  postgresHomologGateStatus,
+  postgresLocalGateStatus,
+  product11GateStatus,
+  readDotEnv,
+} from './test-status.mjs';
 
-const CONFIGS = {
-  postgres: 'vitest.integration-postgres.config.ts',
-  'product-1-1': 'vitest.integration-product-1-1.config.ts',
+const POSTGRES_PROFILES = [
+  ['postgres-homolog', 'PostgreSQL/homolog (F57.2)', postgresHomologGateStatus],
+  ['postgres-local', 'PostgreSQL/local-disposable', postgresLocalGateStatus],
+  ['postgres-f50-4', 'PostgreSQL/f50-4', postgresF504GateStatus],
+];
+
+const PROFILES = {
+  'postgres-homolog': {
+    label: 'PostgreSQL/homolog (F57.2)',
+    config: 'vitest.integration-postgres-homolog.config.ts',
+    preflight: postgresHomologGateStatus,
+  },
+  'postgres-local': {
+    label: 'PostgreSQL/local-disposable',
+    config: 'vitest.integration-postgres-local.config.ts',
+    preflight: postgresLocalGateStatus,
+  },
+  'postgres-f50-4': {
+    label: 'PostgreSQL/f50-4',
+    config: 'vitest.integration-postgres-f50-4.config.ts',
+    preflight: postgresF504GateStatus,
+  },
+  'app-env': {
+    label: 'app-env (.env.local)',
+    config: 'vitest.integration-app-env.config.ts',
+    preflight: () => appEnvGateStatus(process.env, readDotEnv()),
+  },
+  'product-1-1': {
+    label: 'Produto 1:1',
+    config: 'vitest.integration-product-1-1.config.ts',
+    preflight: product11GateStatus,
+  },
 };
 
-const category = process.argv[2];
-const config = CONFIGS[category];
+const requested = process.argv[2];
 
-if (!config) {
-  console.error(`Categoria inválida: ${category ?? '(vazia)'}. Use: postgres | product-1-1`);
-  process.exit(3);
-}
-
-function parseLoopback(urlString, expectedPort) {
-  if (typeof urlString !== 'string') return false;
-  try {
-    const parsed = new URL(urlString);
-    if (!['127.0.0.1', 'localhost'].includes(parsed.hostname)) return false;
-    return !expectedPort || parsed.port === String(expectedPort);
-  } catch {
-    return false;
+if (requested === 'postgres') {
+  for (const [, label, statusFn] of POSTGRES_PROFILES) {
+    console.error(gateLine(label, statusFn()));
   }
-}
-
-function reportUnexecuted(missing) {
-  console.error(`GATE NÃO EXECUTADO — NÃO APROVADO (${category})`);
-  console.error('Variáveis ausentes ou inválidas (apenas nomes):');
-  for (const name of missing) console.error(`- ${name}`);
+  console.error(
+    'GATE NÃO EXECUTADO — NÃO APROVADO (postgres): escolha um perfil — npm.cmd run test:integration:postgres:homolog | :local | :f50-4.',
+  );
   process.exit(2);
 }
 
-function runVitest(env) {
-  const result = spawnSync(
-    process.execPath,
-    ['node_modules/vitest/vitest.mjs', 'run', '--config', config],
-    { cwd: REPO_ROOT, stdio: 'inherit', env },
+const profile = PROFILES[requested];
+
+if (!profile) {
+  console.error(
+    `Perfil inválido: ${requested ?? '(vazio)'}. Use: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1`,
   );
-  process.exit(result.status ?? 1);
+  process.exit(3);
 }
 
-if (category === 'postgres') {
-  const missing = [];
-  const url = process.env.TEST_DATABASE_URL;
-  if (typeof url !== 'string' || !url.startsWith('postgresql://') || !parseLoopback(url)) {
-    missing.push('TEST_DATABASE_URL');
-  }
-  if (missing.length > 0) reportUnexecuted(missing);
-
-  if (!process.env.F50_4_RUN_CONCURRENCY || !process.env.F50_4_DB_URL) {
-    console.error(
-      'Aviso: F50_4_RUN_CONCURRENCY/F50_4_DB_URL ausentes — gate condicional f50-4-concurrency ficará SKIPADO — NÃO APROVADO.',
-    );
-  }
-  runVitest(process.env);
+const status = profile.preflight();
+if (!status.ready) {
+  console.error(`GATE NÃO EXECUTADO — NÃO APROVADO (${requested})`);
+  console.error('Pré-requisitos ausentes ou inválidos (apenas nomes):');
+  for (const reason of status.reasons) console.error(`- ${reason}`);
+  process.exit(2);
 }
 
-if (category === 'product-1-1') {
+let childEnv = process.env;
+
+if (requested === 'product-1-1') {
   const f562a = {
     url: process.env.F562A_ISOLATED_SUPABASE_URL,
     key: process.env.F562A_ISOLATED_SERVICE_ROLE_KEY,
     db: process.env.F562A_ISOLATED_DATABASE_URL,
   };
-
-  const f562aValid =
-    f562a.url === 'http://127.0.0.1:56321' &&
-    typeof f562a.key === 'string' &&
-    f562a.key.length > 0 &&
-    typeof f562a.db === 'string' &&
-    f562a.db.startsWith('postgresql://') &&
-    parseLoopback(f562a.db, '56322');
-
-  if (!f562aValid) {
-    reportUnexecuted([
-      'F562A_ISOLATED_SUPABASE_URL',
-      'F562A_ISOLATED_SERVICE_ROLE_KEY',
-      'F562A_ISOLATED_DATABASE_URL',
-    ]);
-  }
-
   const p11 = {
     url: process.env.P1_1_ISOLATED_SUPABASE_URL,
     key: process.env.P1_1_ISOLATED_SERVICE_ROLE_KEY,
     db: process.env.P1_1_ISOLATED_DATABASE_URL,
   };
-  const p11Present = [p11.url, p11.key, p11.db].map(
+  const presentCount = [p11.url, p11.key, p11.db].filter(
     (value) => typeof value === 'string' && value.length > 0,
-  );
-  const presentCount = p11Present.filter(Boolean).length;
+  ).length;
 
-  const childEnv = { ...process.env };
+  childEnv = { ...process.env };
   if (presentCount === 0) {
     childEnv.P1_1_ISOLATED_SUPABASE_URL = f562a.url;
     childEnv.P1_1_ISOLATED_SERVICE_ROLE_KEY = f562a.key;
     childEnv.P1_1_ISOLATED_DATABASE_URL = f562a.db;
-    console.error(
-      'Aliases P1_1_ISOLATED_* derivados de F562A (mesma instância isolada).',
-    );
+    console.error('Aliases P1_1_ISOLATED_* derivados de F562A (mesma instância isolada).');
   } else if (
     presentCount !== 3 ||
     p11.url !== f562a.url ||
     p11.key !== f562a.key ||
     p11.db !== f562a.db
   ) {
-    reportUnexecuted([
-      'P1_1_ISOLATED_SUPABASE_URL',
-      'P1_1_ISOLATED_SERVICE_ROLE_KEY',
-      'P1_1_ISOLATED_DATABASE_URL',
-    ]);
+    console.error(`GATE NÃO EXECUTADO — NÃO APROVADO (${requested})`);
+    console.error('P1_1_ISOLATED_* parcial ou divergente de F562A_ISOLATED_* — nada foi executado.');
+    process.exit(2);
   }
-
-  runVitest(childEnv);
 }
+
+const result = spawnSync(
+  process.execPath,
+  ['node_modules/vitest/vitest.mjs', 'run', '--config', profile.config],
+  { cwd: REPO_ROOT, stdio: 'inherit', env: childEnv },
+);
+
+process.exit(result.status ?? 1);

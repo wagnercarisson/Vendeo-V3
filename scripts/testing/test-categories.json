@@ -7,16 +7,22 @@
     "scripts/f57-2/__tests__/orchestrator.ps1.test.mjs",
     "scripts/gsd/__tests__/validate-product-flow-gate.test.mjs"
   ],
-  "integration.postgres": [
-    "src/lib/__tests__/access-request-limit.postgres.test.ts",
-    "src/lib/__tests__/data-subject-requests.postgres.test.ts",
+  "integration.postgres-homolog": [
     "src/lib/__tests__/market-preferences-onboarding.postgres.test.ts",
     "src/lib/__tests__/market-preferences-schema.postgres.test.ts",
-    "src/lib/__tests__/market-preferences-security.postgres.test.ts",
+    "src/lib/__tests__/market-preferences-security.postgres.test.ts"
+  ],
+  "integration.postgres-local": [
+    "src/lib/__tests__/access-request-limit.postgres.test.ts",
+    "src/lib/__tests__/data-subject-requests.postgres.test.ts",
     "src/lib/credit/__tests__/credit-concurrency.test.ts",
     "src/lib/credit/__tests__/credit-f50-11-integration.test.ts",
-    "src/lib/credit/__tests__/credit-idempotency.test.ts",
-    "src/lib/credit/__tests__/f50-4-concurrency.test.ts",
+    "src/lib/credit/__tests__/credit-idempotency.test.ts"
+  ],
+  "integration.postgres-f50-4": [
+    "src/lib/credit/__tests__/f50-4-concurrency.test.ts"
+  ],
+  "integration.app-env": [
     "src/lib/credit/__tests__/operation-cost-service.integration.test.ts"
   ],
   "integration.product-1-1": [
