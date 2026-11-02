@@ -1,0 +1,622 @@
+{
+  "label": "after",
+  "root": "C:\\Projetos\\Vendeo V3",
+  "port": 3130,
+  "desktop": {
+    "login": {
+      "diagnostics": {
+        "h1s": [
+          {
+            "tag": "H1",
+            "text": "Vendeo",
+            "class": "text-3xl font-bold text-slate-50",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "700"
+          },
+          {
+            "tag": "H1",
+            "text": "Entrar na sua conta",
+            "class": "font-heading text-3xl font-bold text-slate-50 text-center",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          }
+        ],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Entrar na sua conta",
+            "class": "font-heading text-3xl font-bold text-slate-50 text-center",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          }
+        ],
+        "paragraphs": [
+          {
+            "tag": "P",
+            "text": "Acesse para gerar suas campanhas.",
+            "class": "mt-2 text-center text-sm text-slate-400",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Aguarde validação Cloudflare.",
+            "class": "mt-1 text-xs text-slate-400",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Ainda não tem acesso? Solicitar acesso free",
+            "class": "text-sm text-slate-400",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Esqueceu sua senha? Recuperar senha",
+            "class": "mt-2 text-sm text-slate-400",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          }
+        ],
+        "innerWidth": 1440,
+        "clientWidth": 1440,
+        "scrollWidth": 1440,
+        "bodyScrollWidth": 1440,
+        "innerHeight": 900,
+        "dpr": 1,
+        "visualViewportWidth": 1440
+      },
+      "probes": [
+        {
+          "selector": "h1.font-heading",
+          "found": true,
+          "text": "Entrar na sua conta",
+          "outerHTMLStart": "<h1 class=\"font-heading text-3xl font-bold text-slate-50 text-center\">Entrar na sua conta</h1>",
+          "fontFamily": "Poppins, sans-serif",
+          "fontWeight": "700",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Poppins",
+                "postScriptName": "Poppins-Bold",
+                "isCustomFont": true,
+                "glyphCount": 19
+              }
+            ]
+          }
+        },
+        {
+          "selector": "h1.font-heading + p",
+          "found": true,
+          "text": "Acesse para gerar suas campanhas.",
+          "outerHTMLStart": "<p class=\"mt-2 text-center text-sm text-slate-400\">Acesse para gerar suas campanhas.</p>",
+          "fontFamily": "\"Open Sans\", sans-serif",
+          "fontWeight": "400",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Open Sans",
+                "postScriptName": "Open-Sans",
+                "isCustomFont": true,
+                "glyphCount": 33
+              }
+            ]
+          }
+        },
+        {
+          "selector": "p.mt-2.text-center",
+          "found": true,
+          "text": "Acesse para gerar suas campanhas.",
+          "outerHTMLStart": "<p class=\"mt-2 text-center text-sm text-slate-400\">Acesse para gerar suas campanhas.</p>",
+          "fontFamily": "\"Open Sans\", sans-serif",
+          "fontWeight": "400",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Open Sans",
+                "postScriptName": "Open-Sans",
+                "isCustomFont": true,
+                "glyphCount": 33
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "landing": {
+      "diagnostics": {
+        "h1s": [
+          {
+            "tag": "H1",
+            "text": "O que seu negócio quer divulgar vira uma campanha pronta para publicar.",
+            "class": "mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          }
+        ],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "O que seu negócio quer divulgar vira uma campanha pronta para publicar.",
+            "class": "mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          },
+          {
+            "tag": "A",
+            "text": "Solicitar acesso free",
+            "class": "inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none",
+            "font": "Poppins, sans-serif",
+            "weight": "600"
+          },
+          {
+            "tag": "H2",
+            "text": "Da informação à campanha, sem complicação",
+            "class": "font-heading text-2xl font-bold text-text-primary sm:text-3xl",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          },
+          {
+            "tag": "SPAN",
+            "text": "Entrada",
+            "class": "font-heading text-xs font-semibold uppercase tracking-wide text-accent-green",
+            "font": "Poppins, sans-serif",
+            "weight": "600"
+          },
+          {
+            "tag": "SPAN",
+            "text": "1",
+            "class": "font-heading text-sm font-semibold text-accent-green",
+            "font": "Poppins, sans-serif",
+            "weight": "600"
+          }
+        ],
+        "paragraphs": [
+          {
+            "tag": "P",
+            "text": "Beta fechado — acesso liberado por convite. Solicite seu acesso free.",
+            "class": "inline-block rounded-full border border-border-light bg-bg-deep px-4 py-1.5 text-xs font-medium text-accent-amber",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "500"
+          },
+          {
+            "tag": "P",
+            "text": "Você informa o básico. O Vendeo prepara a campanha completa — com arte e texto —",
+            "class": "mt-5 max-w-xl text-base text-text-secondary sm:text-lg",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Você define como quer apresentar.",
+            "class": "mt-4 max-w-xl text-base text-text-secondary",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Produto, oferta, preço e alguns detalhes da campanha.",
+            "class": "mt-1 text-sm text-text-secondary",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          }
+        ],
+        "innerWidth": 1440,
+        "clientWidth": 1425,
+        "scrollWidth": 1425,
+        "bodyScrollWidth": 1425,
+        "innerHeight": 900,
+        "dpr": 1,
+        "visualViewportWidth": 1425
+      },
+      "probes": [
+        {
+          "selector": "main h1",
+          "found": true,
+          "text": "O que seu negócio quer divulgar vira uma campanha pronta para publicar.",
+          "outerHTMLStart": "<h1 id=\"hero-heading\" class=\"mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl\">O que seu negócio quer divulgar vira uma campanha pronta para publicar.</h1>",
+          "fontFamily": "Poppins, sans-serif",
+          "fontWeight": "700",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Poppins",
+                "postScriptName": "Poppins-Bold",
+                "isCustomFont": true,
+                "glyphCount": 67
+              }
+            ]
+          }
+        },
+        {
+          "selector": "h1",
+          "found": true,
+          "text": "O que seu negócio quer divulgar vira uma campanha pronta para publicar.",
+          "outerHTMLStart": "<h1 id=\"hero-heading\" class=\"mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl\">O que seu negócio quer divulgar vira uma campanha pronta para publicar.</h1>",
+          "fontFamily": "Poppins, sans-serif",
+          "fontWeight": "700",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Poppins",
+                "postScriptName": "Poppins-Bold",
+                "isCustomFont": true,
+                "glyphCount": 67
+              }
+            ]
+          }
+        },
+        {
+          "selector": "main p",
+          "found": true,
+          "text": "Beta fechado — acesso liberado por convite. Solicite seu acesso free.",
+          "outerHTMLStart": "<p class=\"inline-block rounded-full border border-border-light bg-bg-deep px-4 py-1.5 text-xs font-medium text-accent-amber\">Beta fechado — acesso liberado por convite. Solicite seu acesso free.</p>",
+          "fontFamily": "\"Open Sans\", sans-serif",
+          "fontWeight": "500",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Open Sans",
+                "postScriptName": "Open-Sans-Medium",
+                "isCustomFont": true,
+                "glyphCount": 69
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "mobile": {
+    "login": {
+      "diagnostics": {
+        "h1s": [
+          {
+            "tag": "H1",
+            "text": "Vendeo",
+            "class": "text-3xl font-bold text-slate-50",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "700"
+          },
+          {
+            "tag": "H1",
+            "text": "Entrar na sua conta",
+            "class": "font-heading text-3xl font-bold text-slate-50 text-center",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          }
+        ],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "Entrar na sua conta",
+            "class": "font-heading text-3xl font-bold text-slate-50 text-center",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          }
+        ],
+        "paragraphs": [
+          {
+            "tag": "P",
+            "text": "Acesse para gerar suas campanhas.",
+            "class": "mt-2 text-center text-sm text-slate-400",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Aguarde validação Cloudflare.",
+            "class": "mt-1 text-xs text-slate-400",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Ainda não tem acesso? Solicitar acesso free",
+            "class": "text-sm text-slate-400",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Esqueceu sua senha? Recuperar senha",
+            "class": "mt-2 text-sm text-slate-400",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          }
+        ],
+        "innerWidth": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "bodyScrollWidth": 390,
+        "innerHeight": 844,
+        "dpr": 1,
+        "visualViewportWidth": 390
+      },
+      "probes": [
+        {
+          "selector": "h1.font-heading",
+          "found": true,
+          "text": "Entrar na sua conta",
+          "outerHTMLStart": "<h1 class=\"font-heading text-3xl font-bold text-slate-50 text-center\">Entrar na sua conta</h1>",
+          "fontFamily": "Poppins, sans-serif",
+          "fontWeight": "700",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Poppins",
+                "postScriptName": "Poppins-Bold",
+                "isCustomFont": true,
+                "glyphCount": 19
+              }
+            ]
+          }
+        },
+        {
+          "selector": "h1.font-heading + p",
+          "found": true,
+          "text": "Acesse para gerar suas campanhas.",
+          "outerHTMLStart": "<p class=\"mt-2 text-center text-sm text-slate-400\">Acesse para gerar suas campanhas.</p>",
+          "fontFamily": "\"Open Sans\", sans-serif",
+          "fontWeight": "400",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Open Sans",
+                "postScriptName": "Open-Sans",
+                "isCustomFont": true,
+                "glyphCount": 33
+              }
+            ]
+          }
+        }
+      ],
+      "layoutMetrics": {
+        "layoutViewport": {
+          "pageX": 0,
+          "pageY": 0,
+          "clientWidth": 390,
+          "clientHeight": 844
+        },
+        "visualViewport": {
+          "offsetX": 0,
+          "offsetY": 0,
+          "pageX": 0,
+          "pageY": 0,
+          "clientWidth": 390,
+          "clientHeight": 844,
+          "scale": 1,
+          "zoom": 1
+        },
+        "contentSize": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        },
+        "cssLayoutViewport": {
+          "pageX": 0,
+          "pageY": 0,
+          "clientWidth": 390,
+          "clientHeight": 844
+        },
+        "cssVisualViewport": {
+          "offsetX": 0,
+          "offsetY": 0,
+          "pageX": 0,
+          "pageY": 0,
+          "clientWidth": 390,
+          "clientHeight": 844,
+          "scale": 1,
+          "zoom": 1
+        },
+        "cssContentSize": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        }
+      },
+      "fullImageSize": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    "landing": {
+      "diagnostics": {
+        "h1s": [
+          {
+            "tag": "H1",
+            "text": "O que seu negócio quer divulgar vira uma campanha pronta para publicar.",
+            "class": "mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          }
+        ],
+        "headings": [
+          {
+            "tag": "H1",
+            "text": "O que seu negócio quer divulgar vira uma campanha pronta para publicar.",
+            "class": "mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          },
+          {
+            "tag": "A",
+            "text": "Solicitar acesso free",
+            "class": "inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none",
+            "font": "Poppins, sans-serif",
+            "weight": "600"
+          },
+          {
+            "tag": "H2",
+            "text": "Da informação à campanha, sem complicação",
+            "class": "font-heading text-2xl font-bold text-text-primary sm:text-3xl",
+            "font": "Poppins, sans-serif",
+            "weight": "700"
+          },
+          {
+            "tag": "SPAN",
+            "text": "Entrada",
+            "class": "font-heading text-xs font-semibold uppercase tracking-wide text-accent-green",
+            "font": "Poppins, sans-serif",
+            "weight": "600"
+          },
+          {
+            "tag": "SPAN",
+            "text": "1",
+            "class": "font-heading text-sm font-semibold text-accent-green",
+            "font": "Poppins, sans-serif",
+            "weight": "600"
+          }
+        ],
+        "paragraphs": [
+          {
+            "tag": "P",
+            "text": "Beta fechado — acesso liberado por convite. Solicite seu acesso free.",
+            "class": "inline-block rounded-full border border-border-light bg-bg-deep px-4 py-1.5 text-xs font-medium text-accent-amber",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "500"
+          },
+          {
+            "tag": "P",
+            "text": "Você informa o básico. O Vendeo prepara a campanha completa — com arte e texto —",
+            "class": "mt-5 max-w-xl text-base text-text-secondary sm:text-lg",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Você define como quer apresentar.",
+            "class": "mt-4 max-w-xl text-base text-text-secondary",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          },
+          {
+            "tag": "P",
+            "text": "Produto, oferta, preço e alguns detalhes da campanha.",
+            "class": "mt-1 text-sm text-text-secondary",
+            "font": "\"Open Sans\", sans-serif",
+            "weight": "400"
+          }
+        ],
+        "innerWidth": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "bodyScrollWidth": 390,
+        "innerHeight": 844,
+        "dpr": 1,
+        "visualViewportWidth": 390
+      },
+      "probes": [
+        {
+          "selector": "main h1",
+          "found": true,
+          "text": "O que seu negócio quer divulgar vira uma campanha pronta para publicar.",
+          "outerHTMLStart": "<h1 id=\"hero-heading\" class=\"mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl\">O que seu negócio quer divulgar vira uma campanha pronta para publicar.</h1>",
+          "fontFamily": "Poppins, sans-serif",
+          "fontWeight": "700",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Poppins",
+                "postScriptName": "Poppins-Bold",
+                "isCustomFont": true,
+                "glyphCount": 68
+              }
+            ]
+          }
+        },
+        {
+          "selector": "h1",
+          "found": true,
+          "text": "O que seu negócio quer divulgar vira uma campanha pronta para publicar.",
+          "outerHTMLStart": "<h1 id=\"hero-heading\" class=\"mt-5 font-heading text-3xl font-bold leading-tight text-text-primary sm:text-5xl\">O que seu negócio quer divulgar vira uma campanha pronta para publicar.</h1>",
+          "fontFamily": "Poppins, sans-serif",
+          "fontWeight": "700",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Poppins",
+                "postScriptName": "Poppins-Bold",
+                "isCustomFont": true,
+                "glyphCount": 68
+              }
+            ]
+          }
+        },
+        {
+          "selector": "main p",
+          "found": true,
+          "text": "Beta fechado — acesso liberado por convite. Solicite seu acesso free.",
+          "outerHTMLStart": "<p class=\"inline-block rounded-full border border-border-light bg-bg-deep px-4 py-1.5 text-xs font-medium text-accent-amber\">Beta fechado — acesso liberado por convite. Solicite seu acesso free.</p>",
+          "fontFamily": "\"Open Sans\", sans-serif",
+          "fontWeight": "500",
+          "platformFonts": {
+            "fonts": [
+              {
+                "familyName": "Open Sans",
+                "postScriptName": "Open-Sans-Medium",
+                "isCustomFont": true,
+                "glyphCount": 68
+              }
+            ]
+          }
+        }
+      ],
+      "layoutMetrics": {
+        "layoutViewport": {
+          "pageX": 0,
+          "pageY": 0,
+          "clientWidth": 390,
+          "clientHeight": 844
+        },
+        "visualViewport": {
+          "offsetX": 0,
+          "offsetY": 0,
+          "pageX": 0,
+          "pageY": 0,
+          "clientWidth": 390,
+          "clientHeight": 844,
+          "scale": 1,
+          "zoom": 1
+        },
+        "contentSize": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 6198
+        },
+        "cssLayoutViewport": {
+          "pageX": 0,
+          "pageY": 0,
+          "clientWidth": 390,
+          "clientHeight": 844
+        },
+        "cssVisualViewport": {
+          "offsetX": 0,
+          "offsetY": 0,
+          "pageX": 0,
+          "pageY": 0,
+          "clientWidth": 390,
+          "clientHeight": 844,
+          "scale": 1,
+          "zoom": 1
+        },
+        "cssContentSize": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 6198
+        }
+      },
+      "fullImageSize": {
+        "width": 390,
+        "height": 6198
+      }
+    }
+  },
+  "http": 200
+}

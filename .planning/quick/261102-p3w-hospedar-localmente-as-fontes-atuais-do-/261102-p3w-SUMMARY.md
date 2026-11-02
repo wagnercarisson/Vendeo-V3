@@ -102,9 +102,15 @@ Fontes servidas pelo próprio app via 18 `@font-face` locais e 10 WOFF2 oficiais
 - CSS servido: 18 `@font-face`, 10 `url(/fonts/...)` distintos, **0** origine externa.
 - Servidor encerrado; portas 3123/3124 liberadas; sem processos órfãos.
 
-## Screenshots
+## Screenshots e viewport mobile
 
-`evidence/before/*.png` e `evidence/after/*.png` (landing e login, 1440×900 e 390×844) são **byte-idênticos** nos quatro pares.
+As capturas antigas `evidence/before|after/*-390.png` usavam `--window-size` e não
+correspondiam ao viewport de layout; foram **substituídas como evidência** por capturas CDP em
+`evidence/viewport/before|after/` com `Emulation.setDeviceMetricsOverride` (390×844, DPR 1,
+mobile). Medições efetivas antes e depois: `innerWidth=390`, `clientWidth=390`,
+`scrollWidth=390`, `body.scrollWidth=390`, DPR=1, `visualViewport.width=390` — **sem overflow
+horizontal**. O corte anterior era artefato da captura, não regressão de CSS. Desktop
+(landing `1440/1425/1425`, login `1440/1440/1440`) também sem overflow.
 
 ## Carregamento antes/depois (laboratório local)
 
@@ -120,8 +126,9 @@ Detalhes em `evidence/verification.md` §9.
 
 - **Telas autenticadas** (shell, `/dashboard`, `/configuracoes`, admin) não foram capturadas automaticamente — dependem do checklist de aceite visual humano em `evidence/verification.md`.
 - **Lint** executa com exit 0 mas não cobre TypeScript (limitação preexistente, não corrigida).
-- **Probe de glifos:** o probe `file://` retornou `false` (limitação do modo). A verificação independente do orquestrador, via CDP contra `next start`, confirmou `document.fonts.check` **true** para Open Sans e Poppins com acentos/`ç`/`ñ`/`¿`/`¡`/`₲`/`R$`/`€`; `body` em Open Sans e `h1` da landing em Poppins; zero requisições Google e zero downloads duplicados. Registro completo em `evidence/verification.md` §5.1.
-- Comparação before/after sem pixel-diff automatizado (não há dependência); as imagens são idênticas por hash.
+- **Fonte realmente rasterizada (correção):** a primeira sondagem leu por engano o `<h1>Vendeo</h1>` do shell. A verificação correta usa `CSS.getPlatformFontsForNode`: `h1.font-heading` “Entrar na sua conta” → **Poppins / Poppins-Bold (19 glifos)**; parágrafo do login → **Open Sans / Open-Sans (33)**; `main h1` da landing → **Poppins-Bold (67/68)**; `main p` → **Open Sans-Medium (69/68)**. Resultado idêntico antes/depois, com `isCustomFont:true`; `document.fonts.check` também **true** para acentos/`ç`/`ñ`/`¿`/`¡`/`₲`/`R$`/`€`, zero Google e zero downloads duplicados. Registro em `evidence/verification.md` §5.1.
+- **Escopo do teste ajustado:** a varredura de `src/` proíbe apenas as origens do Google Fonts, não qualquer `preconnect`; a conferência dos links removidos no layout permanece. Antes o teste era amplo demais e poderia rejeitar uma pré-conexão legítima futura para outro serviço.
+- Comparação before/after sem pixel-diff automatizado (não há dependência).
 
 ## Observação de escopo
 

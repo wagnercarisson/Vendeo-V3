@@ -89,43 +89,58 @@ Tentativas com Edge headless:
 `U+00E1 U+00E3 U+00E7 U+00F1 U+00BF U+00A1 U+20B2 U+20AC U+0024` para as duas famílias.
 Artefatos: `evidence/glyph-probe.html`, `evidence/glyph-probe-dom.html`.
 
-### 5.1 Verificação independente do orquestrador (CDP, `next start` + Edge headless)
+### 5.1 Verificação elementar da fonte realmente rasterizada (CDP)
 
-O probe `file://` foi considerado limitação do modo, **não** da entrega. Uma verificação
-independente foi executada contra o build servido por `next start -p 3130`, com Edge headless
-controlado por CDP (`document.fonts.load`/`document.fonts.ready`, `getComputedStyle` e
-`PerformanceResourceTiming`):
+Correção de escopo: a primeira sondagem usou `document.querySelector('h1')` e acabou lendo o
+`<h1>Vendeo</h1>` do shell de autenticação, não o título do formulário. A verificação correta
+usa seletores explícitos e `CSS.getPlatformFontsForNode` (equivalente a *Rendered Fonts* no
+DevTools), que informa a família e a contagem de glifos efetivamente desenhados:
 
-| Verificação | `/login` | `/` (landing) |
-|-------------|----------|---------------|
-| HTTP da página | 200 | 200 |
-| `body` renderizado | `"Open Sans", sans-serif` | `"Open Sans", sans-serif` |
-| `h1` renderizado | `"Open Sans", sans-serif` | `Poppins, sans-serif` |
-| `document.fonts.check` Open Sans (`áãçñ¿¡₲R$€`) | **true** | **true** |
-| `document.fonts.check` Poppins (`áãçñ¿¡`) | **true** | **true** |
-| Pesos carregados | Open Sans 300/400/500/700; Poppins 400/700 | Open Sans 300/400/500/700; Poppins 400/500/600/700 |
-| Recursos de fonte | 4 URLs `/fonts/**` | 6 URLs `/fonts/**` |
-| Requisições a `fonts.googleapis.com`/`fonts.gstatic.com` | **0** | **0** |
-| Downloads duplicados por URL | **0** | **0** |
+| Elemento | Texto | `font-family` computada | Fonte rasterizada (`CSS.getPlatformFontsForNode`) |
+|---|---|---|---|
+| `h1.font-heading` (login) | “Entrar na sua conta” | `Poppins, sans-serif` | `Poppins` / `Poppins-Bold`, 19 glifos |
+| `h1.font-heading + p` (login) | “Acesse para gerar suas campanhas.” | `"Open Sans", sans-serif` | `Open Sans` / `Open-Sans`, 33 glifos |
+| `main h1` (landing) | “O que seu negócio quer divulgar…” | `Poppins, sans-serif` | `Poppins` / `Poppins-Bold`, 67 glifos |
+| `main p` (landing) | “Beta fechado — acesso liberado…” | `"Open Sans", sans-serif` | `Open Sans` / `Open-Sans-Medium`, 69 glifos |
 
-As faces reportadas como `unloaded` são as do outro subset (`latin`/`latin-ext`) não exigido
-pelos textos da página — comportamento esperado do `unicode-range`, não fallback. A fonte
-renderizada é a local (`/fonts/**`), com pesos e famílias corretos e cobertura dos glifos
-testados. Telas autenticadas continuam dependentes do aceite humano (seção 8).
+O mesmo resultado foi obtido **antes e depois** (baseline com Google Fonts × entrega local),
+com `isCustomFont: true` nos dois estados. Isso prova que o texto foi desenhado com as fontes
+webfont, não com fallback do sistema. `document.fonts.check` continua registrado como
+evidência complementar: **true** para Open Sans (`áãçñ¿¡₲R$€`) e Poppins (`áãçñ¿¡`); zero
+requisições a `fonts.googleapis.com`/`fonts.gstatic.com`; zero downloads duplicados por URL.
+Telas autenticadas continuam dependentes do aceite humano (seção 8).
 
-## 6. Screenshots antes/depois
+Artefatos: `evidence/viewport/before|after/{login,landing}-evidence.json`.
 
-| Arquivo | Antes (SHA-256) | Depois (SHA-256) | Idêntico |
-|---------|-----------------|------------------|----------|
-| landing-1440.png | `9BC56AD817B82B48…` | `9BC56AD817B82B48…` | **sim** |
-| login-1440.png | `CF1ABA83636BD756…` | `CF1ABA83636BD756…` | **sim** |
-| landing-390.png | `8BE5CCBD7D834A6D…` | `8BE5CCBD7D834A6D…` | **sim** |
-| login-390.png | `00891F03FD5E8F37…` | `00891F03FD5E8F37…` | **sim** |
+## 6. Screenshots e viewport medido
 
-As imagens before/after são **byte-idênticas** nas quatro capturas públicas. Consistente com
-"nenhuma mudança visual" — ressalva: sem screenshot de rede, não se prova se o baseline usou
-o download do Google ou um fallback; a comparação apenas mostra ausência de regressão visual
-entre os dois estados.
+As capturas antigas feitas com `--window-size` foram **substituídas** como evidência de
+apresentação mobile, porque a janela do Edge headless não correspondia ao viewport de layout
+e a imagem de 390 px parecia cortada à direita. As novas capturas usam
+`Emulation.setDeviceMetricsOverride` (390×844, DPR 1, mobile) e registram o viewport efetivo.
+
+### 6.1 Mobile 390 — medições efetivas
+
+| Estado | Página | `innerWidth` | `clientWidth` | `scrollWidth` | `body.scrollWidth` | DPR | `visualViewport.width` | Overflow horizontal |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| antes | landing | 390 | 390 | 390 | 390 | 1 | 390 | **não** |
+| antes | login | 390 | 390 | 390 | 390 | 1 | 390 | **não** |
+| depois | landing | 390 | 390 | 390 | 390 | 1 | 390 | **não** |
+| depois | login | 390 | 390 | 390 | 390 | 1 | 390 | **não** |
+
+Não há overflow horizontal real em 390 px, nem antes nem depois; o corte anterior era
+artefato da captura. Desktop: landing `innerWidth=1440`, `clientWidth=1425`,
+`scrollWidth=1425` (barra de rolagem de 15 px) e login `1440/1440/1440`, também sem overflow.
+
+Arquivos: `evidence/viewport/before|after/{landing,login}-390-viewport.png` (viewport real) e
+`…-390-full.png` (conteúdo completo com a largura de layout), além de `…-1440.png`. As
+capturas antigas `evidence/before|after/*-390.png` permanecem apenas como histórico.
+
+### 6.2 Comparação visual
+
+As capturas públicas de desktop e mobile não mostram mudança de composição entre os estados;
+a tipografia e os pesos são os mesmos (seção 5.1). A verificação é visual/manual; não há
+pixel-diff automatizado nem dependência adicionada.
 
 ## 7. Escopo do diff
 
