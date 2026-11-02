@@ -52,7 +52,7 @@ Os runners novos chamam `process.execPath` + `node_modules/vitest/vitest.mjs`; n
 
 - `TEST_DATABASE_URL` PostgreSQL em `127.0.0.1`/`localhost`.
 - `POSTGRES_LOCAL_ALLOW_WRITES=1` como opt-in explícito: as suítes gravam, apagam e limpam fixtures, algumas com `session_replication_role=replica`.
-- O perfil recusa o alvo do homolog (`127.0.0.1:57782/postgres`).
+- O perfil recusa o alvo do homolog na porta `57782/postgres` por qualquer alias loopback equivalente (`127.0.0.1`, `localhost`, `::1`).
 
 ### PostgreSQL/f50-4
 
@@ -77,6 +77,8 @@ Os runners novos chamam `process.execPath` + `node_modules/vitest/vitest.mjs`; n
 ## Regra de gate
 
 **GATE NÃO EXECUTADO ≠ APROVADO.** Exit 2 nos comandos de integração significa ausência ou invalidez de ambiente, não falha de teste e nem aprovação parcial. `npm.cmd run test:integration:postgres` sem perfil apenas mostra a prontidão dos três perfis PostgreSQL e sai 2; ele não executa nenhum deles.
+
+O preflight nunca lança exceção por URL malformada: retorna status inválido, e o runner sai 2 sem imprimir a URL.
 
 ## Efeitos e runners existentes
 

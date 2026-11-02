@@ -195,17 +195,23 @@ export function postgresHomologGateStatus(env = process.env) {
   return { ready: reasons.length === 0, reasons };
 }
 
+/** O alvo reservado do homolog, por qualquer endereço loopback equivalente. */
+function isHomologTarget(target) {
+  return (
+    target !== null &&
+    isLoopbackHost(target.hostname) &&
+    target.port === '57782' &&
+    target.pathname === '/postgres'
+  );
+}
+
 export function postgresLocalGateStatus(env = process.env) {
   const reasons = [];
   const target = parsePostgresUrl(env.TEST_DATABASE_URL);
   if (!target || !isLoopbackHost(target.hostname)) {
     reasons.push('TEST_DATABASE_URL (PostgreSQL loopback)');
-  } else if (
-    target.hostname === '127.0.0.1' &&
-    target.port === '57782' &&
-    target.pathname === '/postgres'
-  ) {
-    reasons.push('TEST_DATABASE_URL (recusa o alvo do perfil homolog 127.0.0.1:57782/postgres)');
+  } else if (isHomologTarget(target)) {
+    reasons.push('TEST_DATABASE_URL (recusa o alvo do perfil homolog na porta 57782/postgres)');
   }
   if (env.POSTGRES_LOCAL_ALLOW_WRITES !== '1') {
     reasons.push('POSTGRES_LOCAL_ALLOW_WRITES=1 (as suítes gravam e limpam fixtures)');
@@ -304,15 +310,14 @@ export function appEnvGateStatus(env = process.env, dotenvContent = null) {
 export function product11GateStatus(env = process.env) {
   const url = env.F562A_ISOLATED_SUPABASE_URL;
   const serviceRoleKey = env.F562A_ISOLATED_SERVICE_ROLE_KEY;
-  const databaseUrl = env.F562A_ISOLATED_DATABASE_URL;
+  const databaseTarget = parsePostgresUrl(env.F562A_ISOLATED_DATABASE_URL);
   const ready =
     url === 'http://127.0.0.1:56321' &&
     typeof serviceRoleKey === 'string' &&
     serviceRoleKey.length > 0 &&
-    typeof databaseUrl === 'string' &&
-    databaseUrl.startsWith('postgresql://') &&
-    isLoopbackHost(new URL(databaseUrl).hostname) &&
-    new URL(databaseUrl).port === '56322';
+    databaseTarget !== null &&
+    isLoopbackHost(databaseTarget.hostname) &&
+    databaseTarget.port === '56322';
   return { ready, reasons: ready ? [] : ['F562A_ISOLATED_* (API 127.0.0.1:56321 / DB 56322)'] };
 }
 
