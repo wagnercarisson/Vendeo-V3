@@ -134,7 +134,9 @@ artefato da captura. Desktop: landing `innerWidth=1440`, `clientWidth=1425`,
 
 Arquivos: `evidence/viewport/before|after/{landing,login}-390-viewport.png` (viewport real) e
 `…-390-full.png` (conteúdo completo com a largura de layout), além de `…-1440.png`. As
-capturas antigas `evidence/before|after/*-390.png` permanecem apenas como histórico.
+capturas antigas `evidence/before|after/*-390.png` foram **substituídas no mesmo caminho**
+pelas capturas medidas; as versões cortadas permanecem apenas no histórico do Git. Os pares
+antes/depois continuam byte-idênticos.
 
 ### 6.2 Comparação visual
 

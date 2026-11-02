@@ -105,9 +105,9 @@ Fontes servidas pelo próprio app via 18 `@font-face` locais e 10 WOFF2 oficiais
 ## Screenshots e viewport mobile
 
 As capturas antigas `evidence/before|after/*-390.png` usavam `--window-size` e não
-correspondiam ao viewport de layout; foram **substituídas como evidência** por capturas CDP em
-`evidence/viewport/before|after/` com `Emulation.setDeviceMetricsOverride` (390×844, DPR 1,
-mobile). Medições efetivas antes e depois: `innerWidth=390`, `clientWidth=390`,
+correspondiam ao viewport de layout; os arquivos foram **substituídos no mesmo caminho** por
+capturas CDP em `evidence/viewport/before|after/` com `Emulation.setDeviceMetricsOverride`
+(390×844, DPR 1, mobile). Medições efetivas antes e depois: `innerWidth=390`, `clientWidth=390`,
 `scrollWidth=390`, `body.scrollWidth=390`, DPR=1, `visualViewport.width=390` — **sem overflow
 horizontal**. O corte anterior era artefato da captura, não regressão de CSS. Desktop
 (landing `1440/1425/1425`, login `1440/1440/1440`) também sem overflow.
