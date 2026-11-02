@@ -7,6 +7,7 @@ commits:
   - 7402417a
   - 5dfe6f15
   - cf5b1af2
+  - 33cc455e
 files_created:
   - scripts/testing/test-categories.json
   - scripts/testing/test-status.mjs
@@ -51,6 +52,7 @@ Separação da suíte em 4 categorias executáveis e verificáveis, com inventá
 | `node scripts/testing/run-integration.mjs postgres` | exit 2 + `GATE NÃO EXECUTADO — NÃO APROVADO`, sem valores |
 | `node scripts/testing/run-integration.mjs product-1-1` | exit 2 + `GATE NÃO EXECUTADO — NÃO APROVADO`, sem valores |
 | `node scripts/testing/run-integration.mjs nope` | exit 3 (categoria inválida) |
+| `npm.cmd run lint` | exit 0 (após remover 1 constante não usada em `test-status.mjs`) |
 | `git diff --check` | exit 0 |
 | `git status --short` | apenas arquivos das 3 tasks (+ artefatos de planejamento) |
 
