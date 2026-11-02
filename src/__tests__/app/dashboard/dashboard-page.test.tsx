@@ -1,47 +1,40 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
 const mockRequirePageUser = vi
   .fn()
-  .mockResolvedValue({
-    userId: "user-123",
-    claims: { sub: "user-123" },
-  });
-const mockGetUserOnboardingState = vi.fn();
+  .mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
 const mockGetCurrentStore = vi.fn();
-const mockCountCampaigns = vi.fn();
-const mockCountReadyCampaigns = vi.fn();
-const mockGetRecentCampaigns = vi.fn();
+const mockGetUiRenderContext = vi.fn();
+const mockGetStoreMarketSettings = vi.fn();
+const mockLoadCampaignSection = vi.fn();
+const mockLoadCreditSection = vi.fn();
+const mockGetLatestAnnouncement = vi.fn();
 
 vi.mock("@/lib/auth/require-user", () => ({
   requirePageUser: mockRequirePageUser,
-}));
-
-vi.mock("@/lib/onboarding/state", () => ({
-  getUserOnboardingState: mockGetUserOnboardingState,
 }));
 
 vi.mock("@/lib/auth/store-ownership", () => ({
   getCurrentStore: mockGetCurrentStore,
 }));
 
-vi.mock("@/lib/campaign/metrics", () => ({
-  countCampaigns: mockCountCampaigns,
-  countReadyCampaigns: mockCountReadyCampaigns,
-  getRecentCampaigns: mockGetRecentCampaigns,
+vi.mock("@/lib/i18n/server", () => ({
+  getUiRenderContext: mockGetUiRenderContext,
 }));
 
-const mockGetBalance = vi.fn().mockResolvedValue(10);
-vi.mock("@/lib/credit/credit-service", () => {
-  class MockCreditService {
-    getBalance = mockGetBalance;
-  }
-  return { CreditService: MockCreditService };
-});
+vi.mock("@/lib/market-preferences/store-market-settings-service", () => ({
+  getStoreMarketSettings: mockGetStoreMarketSettings,
+}));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createServerClient: vi.fn().mockResolvedValue({}),
+vi.mock("@/lib/dashboard/sections", () => ({
+  loadCampaignSection: mockLoadCampaignSection,
+  loadCreditSection: mockLoadCreditSection,
+}));
+
+vi.mock("@/lib/changelog/get-changelog", () => ({
+  getLatestAnnouncement: mockGetLatestAnnouncement,
 }));
 
 vi.mock("@/lib/store-readiness", () => ({
@@ -50,6 +43,10 @@ vi.mock("@/lib/store-readiness", () => ({
 
 vi.mock("@/components/readiness/readiness-check-banner", () => ({
   ReadinessCheckBanner: () => null,
+}));
+
+vi.mock("@/components/verification/verification-banners", () => ({
+  VerificationBanners: () => null,
 }));
 
 vi.mock("next/link", () => ({
@@ -62,321 +59,244 @@ vi.mock("next/link", () => ({
     children: React.ReactNode;
     href: string;
     className?: string;
-  }) => <a href={href} className={className} {...props}>{children}</a>,
+  }) => (
+    <a href={href} className={className} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
-function setupStoreWithCampaigns() {
-  mockGetCurrentStore.mockResolvedValue({ id: "store-1", name: "Loja Teste" });
-  mockCountCampaigns.mockResolvedValue(5);
-  mockCountReadyCampaigns.mockResolvedValue(3);
-  mockGetRecentCampaigns.mockResolvedValue([
-    { id: "c1", productName: "Tênis Runner Pro", status: "ready", createdAt: "2026-07-02T10:00:00Z" },
-    { id: "c2", productName: "Café Gourmet", status: "ready", createdAt: "2026-07-01T10:00:00Z" },
-    { id: "c3", productName: "Sofá 3 Lugares", status: "error", createdAt: "2026-06-30T10:00:00Z" },
-  ]);
-  mockGetUserOnboardingState.mockResolvedValue("has_store_with_campaigns");
+const okPtBr = {
+  ok: true as const,
+  locale: "pt-BR" as const,
+  preference: { uiLocale: "pt-BR" as const, source: "explicit" as const, version: 1 },
+};
+
+const ITEMS = [
+  {
+    id: "c1",
+    productName: "Tênis Runner Pro",
+    createdAt: "2026-07-02T10:00:00Z",
+    thumbnailUrl: "https://cdn.test/c1.jpg",
+  },
+  {
+    id: "c2",
+    productName: "Café Gourmet",
+    createdAt: "2026-07-01T10:00:00Z",
+    thumbnailUrl: null,
+  },
+  {
+    id: "c3",
+    productName: "Sofá 3 Lugares",
+    createdAt: "2026-06-30T10:00:00Z",
+    thumbnailUrl: "https://cdn.test/c3.jpg",
+  },
+];
+
+function setupStore() {
+  mockGetCurrentStore.mockResolvedValue({
+    id: "store-1",
+    name: "Loja Teste",
+    verification_status: "unverified",
+  });
+  mockGetUiRenderContext.mockResolvedValue(okPtBr);
+  mockGetStoreMarketSettings.mockResolvedValue({
+    timeZone: "America/Sao_Paulo",
+  });
+  mockLoadCampaignSection.mockResolvedValue({
+    ok: true,
+    data: { count: 3, items: ITEMS },
+  });
+  mockLoadCreditSection.mockResolvedValue({
+    ok: true,
+    data: { state: "available", availableBalance: 7 },
+  });
+  mockGetLatestAnnouncement.mockResolvedValue(null);
+}
+
+async function renderPage(): Promise<string> {
+  const { default: DashboardPage } = await import(
+    "@/app/(app)/dashboard/page"
+  );
+  return renderToString(await DashboardPage());
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRequirePageUser.mockResolvedValue({
+    userId: "user-123",
+    claims: { sub: "user-123" },
+  });
 });
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("DashboardPage — F19 states preserved", () => {
-  it("renders empty state 'Configure sua loja' with CTA /loja when no_store", async () => {
-    mockGetUserOnboardingState.mockResolvedValue("no_store");
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const result = await DashboardPage();
-    const html = renderToString(result);
-
-    expect(html).toContain("Configure sua loja");
-    expect(html).toContain("/loja");
-    expect(html).toContain("Configurar loja");
-  });
-
-  it("renders empty state 'Crie sua primeira campanha' with CTA /campanhas/nova when has_store_no_campaigns", async () => {
-    mockGetUserOnboardingState.mockResolvedValue("has_store_no_campaigns");
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const result = await DashboardPage();
-    const html = renderToString(result);
-
-    expect(html).toContain("Crie sua primeira campanha");
-    expect(html).toContain("/campanhas/nova");
-    expect(html).toContain("Criar campanha");
-  });
-
-  it("renders PageHeader with title 'Dashboard' in preserved states", async () => {
-    for (const state of ["no_store", "has_store_no_campaigns"]) {
-      mockGetUserOnboardingState.mockResolvedValue(state);
-
-      const { default: DashboardPage } = await import(
-        "@/app/(app)/dashboard/page"
-      );
-      const result = await DashboardPage();
-      const html = renderToString(result);
-      expect(html).toContain("Dashboard");
-    }
-  });
-
-  it("calls getUserOnboardingState with user.userId", async () => {
-    mockGetUserOnboardingState.mockResolvedValue("no_store");
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    await DashboardPage();
-
-    expect(mockGetUserOnboardingState).toHaveBeenCalledWith("user-123");
-  });
-
-  it("propagates error when getUserOnboardingState throws", async () => {
-    mockGetUserOnboardingState.mockRejectedValue(new Error("DB error"));
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-
-    await expect(DashboardPage()).rejects.toThrow("DB error");
-  });
-});
-
-describe("DashboardPage — greeting with mocked Date", () => {
-  it('shows "Bom dia, Loja Teste" at 10h', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 6, 13, 10, 0, 0));
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("Bom dia, Loja Teste");
-  });
-
-  it('shows "Boa tarde, Loja Teste" at 14h', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 6, 13, 14, 0, 0));
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("Boa tarde, Loja Teste");
-  });
-
-  it('shows "Boa noite, Loja Teste" at 21h', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 6, 13, 21, 0, 0));
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("Boa noite, Loja Teste");
-  });
-});
-
-describe("DashboardPage — metrics grid", () => {
-  it("renders 4 metric cards with correct values", async () => {
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("Total de Campanhas");
-    expect(html).toContain("Campanhas Prontas");
-    expect(html).toContain("Taxa de Sucesso");
-    expect(html).toContain("5");
-    expect(html).toContain("3");
-    expect(html).toMatch(/60.*%/);
-  });
-
-  it("has responsive grid classes", async () => {
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("grid-cols-1");
-    expect(html).toContain("md:grid-cols-4");
-    expect(html).toContain("gap-4");
-  });
-
-  it("Abrir link has min-h-[44px]", async () => {
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("min-h-[44px]");
-  });
-});
-
-describe("DashboardPage — recent campaigns", () => {
-  it("renders campaign items with product name and Abrir link", async () => {
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("Campanhas Recentes");
-    expect(html).toContain("Tênis Runner Pro");
-    expect(html).toContain("Café Gourmet");
-    expect(html).toContain("Sofá 3 Lugares");
-    expect(html).toContain("Ver todas as campanhas →");
-    expect(html).toContain('/campanhas/c1"');
-    expect(html).toContain("/campanhas");
-  });
-
-  it("does not include old placeholder text", async () => {
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).not.toContain("Seu dashboard está sendo preparado");
-  });
-});
-
-describe("DashboardPage — next-step card", () => {
-  it("shows 'Revise sua última campanha' with CTA to latest", async () => {
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("Próximo passo");
-    expect(html).toContain("Revise sua última campanha");
-    expect(html).toContain("Tênis Runner Pro");
-    expect(html).toContain("Abrir campanha");
-    expect(html).toContain('/campanhas/c1"');
-  });
-
-  it("shows 'Criar nova campanha' fallback when list is empty", async () => {
-    mockGetCurrentStore.mockResolvedValue({ id: "store-1", name: "Loja Teste" });
-    mockCountCampaigns.mockResolvedValue(0);
-    mockCountReadyCampaigns.mockResolvedValue(0);
-    mockGetRecentCampaigns.mockResolvedValue([]);
-    mockGetUserOnboardingState.mockResolvedValue("has_store_with_campaigns");
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("Criar nova campanha");
-    expect(html).not.toContain("Revise sua última campanha");
-  });
-});
-
-describe("DashboardPage — edge cases", () => {
-  it("renders without crashing when recent list is empty", async () => {
-    mockGetCurrentStore.mockResolvedValue({ id: "store-1", name: "Loja Teste" });
-    mockCountCampaigns.mockResolvedValue(3);
-    mockCountReadyCampaigns.mockResolvedValue(3);
-    mockGetRecentCampaigns.mockResolvedValue([]);
-    mockGetUserOnboardingState.mockResolvedValue("has_store_with_campaigns");
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-
-    await expect(DashboardPage()).resolves.not.toThrow();
-  });
-
-  it("displays 0% success rate", async () => {
-    mockGetCurrentStore.mockResolvedValue({ id: "store-1", name: "Loja Teste" });
-    mockCountCampaigns.mockResolvedValue(0);
-    mockCountReadyCampaigns.mockResolvedValue(0);
-    mockGetRecentCampaigns.mockResolvedValue([]);
-    mockGetUserOnboardingState.mockResolvedValue("has_store_with_campaigns");
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toMatch(/0.*%/);
-  });
-
-  it("displays 100% success rate", async () => {
-    mockGetCurrentStore.mockResolvedValue({ id: "store-1", name: "Loja Teste" });
-    mockCountCampaigns.mockResolvedValue(3);
-    mockCountReadyCampaigns.mockResolvedValue(3);
-    mockGetRecentCampaigns.mockResolvedValue([
-      { id: "c1", productName: "Produto", status: "ready", createdAt: "2026-07-02T10:00:00Z" },
-    ]);
-    mockGetUserOnboardingState.mockResolvedValue("has_store_with_campaigns");
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toMatch(/100.*%/);
-  });
-
-  it("handles null store with fallback EmptyState", async () => {
+describe("DashboardPage — no_store", () => {
+  it("renderiza boas-vindas e CTA /loja sem consultar créditos, campanhas, fuso ou anúncio", async () => {
     mockGetCurrentStore.mockResolvedValue(null);
-    mockGetUserOnboardingState.mockResolvedValue("has_store_with_campaigns");
+    mockGetUiRenderContext.mockResolvedValue(okPtBr);
 
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
+    const html = await renderPage();
 
-    expect(html).toContain("Configure sua loja");
-  });
+    expect(html).toContain("Bem-vindo ao Vendeo");
+    expect(html).toContain("Sua loja ainda não está configurada");
+    expect(html).toContain('href="/loja"');
+    expect(html).toContain("Configurar loja");
+    expect(html).not.toContain("credits-title");
+    expect(html).not.toContain("campaigns-title");
 
-  it("renders 'Nova campanha' secondary link", async () => {
-    setupStoreWithCampaigns();
-
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
-
-    expect(html).toContain("Nova campanha →");
-    expect(html).toContain("/campanhas/nova");
+    expect(mockLoadCampaignSection).not.toHaveBeenCalled();
+    expect(mockLoadCreditSection).not.toHaveBeenCalled();
+    expect(mockGetStoreMarketSettings).not.toHaveBeenCalled();
+    expect(mockGetLatestAnnouncement).not.toHaveBeenCalled();
   });
 });
 
-describe("DashboardPage — store config link", () => {
-  it("renders discreet 'Configurar loja' link", async () => {
-    setupStoreWithCampaigns();
+describe("DashboardPage — estados operacionais", () => {
+  it("no_eligible_campaigns mostra o EmptyState com CTA /campanhas/nova e sem cartões", async () => {
+    setupStore();
+    mockLoadCampaignSection.mockResolvedValue({
+      ok: true,
+      data: { count: 0, items: [] },
+    });
 
-    const { default: DashboardPage } = await import(
-      "@/app/(app)/dashboard/page"
-    );
-    const html = renderToString(await DashboardPage());
+    const html = await renderPage();
 
-    expect(html).toContain("Configurar loja");
-    expect(html).toContain("/loja");
+    expect(html).toContain("Nenhuma campanha disponível");
+    expect(html).toContain('href="/campanhas/nova"');
+    expect(html).toContain("Criar campanha");
+    expect(html).not.toContain("Nova campanha");
+    expect(html).not.toContain('href="/campanhas/c');
+    expect(html).toContain("0 campanhas disponíveis");
+  });
+
+  it("has_eligible_campaigns renderiza até 3 cartões com contagem correta", async () => {
+    setupStore();
+
+    const html = await renderPage();
+
+    expect(html).toContain("Campanhas disponíveis");
+    expect(html.match(/href="\/campanhas\/c/g)?.length).toBe(3);
+    expect(html).toContain("3 campanhas disponíveis");
+    expect(html).toContain("Nova campanha");
+    expect(html).toContain("Ver todas as campanhas");
+  });
+
+  it("respeita o limite de 3 cartões mesmo quando a contagem total é maior", async () => {
+    setupStore();
+    mockLoadCampaignSection.mockResolvedValue({
+      ok: true,
+      data: { count: 9, items: ITEMS },
+    });
+
+    const html = await renderPage();
+
+    expect(html.match(/href="\/campanhas\/c/g)?.length).toBe(3);
+    expect(html).toContain("9 campanhas disponíveis");
+  });
+});
+
+describe("DashboardPage — falhas parciais", () => {
+  it("falha de campanhas exibe painel role=status e mantém créditos", async () => {
+    setupStore();
+    mockLoadCampaignSection.mockResolvedValue({ ok: false });
+
+    const html = await renderPage();
+
+    expect(html).toContain('role="status"');
+    expect(html).toContain("Não foi possível carregar as campanhas");
+    expect(html).toContain('href="/campanhas"');
+    expect(html).not.toContain("0 campanhas disponíveis");
+    expect(html).not.toContain("sr-only");
+    expect(html).toContain("Créditos disponíveis");
+    expect(html).toContain("Ver detalhes");
+  });
+
+  it("falha de créditos exibe saldo indisponível e mantém campanhas", async () => {
+    setupStore();
+    mockLoadCreditSection.mockResolvedValue({ ok: false });
+
+    const html = await renderPage();
+
+    expect(html).toContain("Saldo indisponível");
+    expect(html).toContain('href="/conta"');
+    expect(html).toContain("Campanhas disponíveis");
+    expect(html).not.toContain("0 créditos");
+  });
+
+  it("anúncio sem trecho textual ainda renderiza título, data e ações", async () => {
+    setupStore();
+    mockGetLatestAnnouncement.mockResolvedValue({
+      frontmatter: {
+        id: "entry-1",
+        title: "Melhorias de outubro",
+        date: "2026-10-19",
+        category: "improvement",
+        importance: "minor",
+        announcement: "card",
+      },
+      body: "## O que mudou",
+      slug: "melhorias-de-outubro",
+    });
+
+    const html = await renderPage();
+
+    expect(html).toContain("Melhorias de outubro");
+    expect(html).toContain("19/10/2026");
+    expect(html).toContain('href="/novidades"');
+    expect(html).toContain("Ver novidades");
+    expect(html).toContain("Fechar anúncio");
+  });
+});
+
+describe("DashboardPage — créditos", () => {
+  it("disponível mostra o valor e a unidade", async () => {
+    setupStore();
+
+    const html = await renderPage();
+
+    expect(html).toContain(">7<");
+    expect(html).toContain("créditos");
+  });
+
+  it("zero renderiza a string completa uma única vez", async () => {
+    setupStore();
+    mockLoadCreditSection.mockResolvedValue({
+      ok: true,
+      data: { state: "zero", availableBalance: 0 },
+    });
+
+    const html = await renderPage();
+
+    expect(html.split("0 créditos").length - 1).toBe(1);
+    expect(html).not.toContain("Saldo indisponível");
+  });
+});
+
+describe("DashboardPage — sem métricas técnicas ou recomendação", () => {
+  it("não contém taxa, totais, campanhas prontas nem próximo passo", async () => {
+    setupStore();
+
+    const html = await renderPage();
+
+    expect(html).not.toContain("Taxa de Sucesso");
+    expect(html).not.toContain("Total de Campanhas");
+    expect(html).not.toContain("Campanhas Prontas");
+    expect(html).not.toContain("Próximo passo");
+    expect(html).not.toContain("Recomenda");
+  });
+
+  it("expõe os destinos operacionais esperados", async () => {
+    setupStore();
+
+    const html = await renderPage();
+
+    expect(html).toContain('href="/campanhas"');
+    expect(html).toContain('href="/campanhas/c1"');
+    expect(html).toContain('href="/conta"');
+    expect(html).toContain('href="/loja"');
+    expect(html).toContain('href="/campanhas/nova"');
   });
 });
