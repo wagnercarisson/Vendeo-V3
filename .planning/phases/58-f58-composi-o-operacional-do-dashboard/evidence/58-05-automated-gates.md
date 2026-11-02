@@ -284,3 +284,11 @@ A composição foi corrigida para a montagem aprovada: cabeçalho com subtítulo
 | OpenSpec strict | `openspec validate fase-58-composicao-operacional-do-dashboard --strict` | **0** | valid |
 
 Capturas reais pt-BR: `evidence/58-05-visual-desktop.png`, `evidence/58-05-visual-mobile.png` e `evidence/58-05-visual-mobile-320.png`. Capturas es-419: `evidence/58-05-visual-desktop-es.png` e `evidence/58-05-visual-mobile-es.png`. Metadados e restauração da preferência em `evidence/58-05-visual-captures.md`. Nenhum push, merge, deploy, migration, alteração de schema ou produção foi executado. A única escrita temporária foi a preferência de idioma do usuário de teste no homolog, autorizada, com restauração confirmada para `pt-BR`/`explicit`.
+
+## 9. Correção de ordem DOM da lateral (2026-11-02)
+
+A lateral voltou a ser posicionada por grade (`lg:grid-rows-[min-content_1fr]`), sem `order` e sem `tabindex` positivo. O DOM permanece créditos → campanhas → novidades → faixa de criação, com o mesmo resultado visual e o mesmo espaçamento fixo entre créditos e novidades.
+
+- Teste de DOM: créditos antes de campanhas; campanhas antes de novidades; ausência de `order-*` e `tabindex` positivo.
+- Tab real no navegador: pt-BR e es-419, índice 10 (créditos) → 12 (primeira campanha) → 16 (novidades), PASS.
+- Preferência es-419 alterada somente pelo fluxo de Configurações e restaurada para `pt-BR`/`explicit`; versão CAS 8. Nenhum outro dado alterado.

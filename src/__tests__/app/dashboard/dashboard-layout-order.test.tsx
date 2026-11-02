@@ -126,15 +126,16 @@ beforeEach(() => {
 });
 
 describe("DashboardPage — ordem responsive e placements", () => {
-  it("preserva a ordem mobile créditos → campanhas → novidades por order classes", async () => {
+  it("preserva a ordem real do DOM: créditos → campanhas → novidades", async () => {
     const html = await renderPage();
 
-    expect(html).toContain("order-1");
-    expect(html).toContain("order-2");
-    expect(html).toContain("order-3");
-    expect(html.indexOf("credits-title")).toBeGreaterThan(-1);
-    expect(html.indexOf("campaigns-title")).toBeGreaterThan(-1);
-    expect(html.indexOf('aria-label="Novidades"')).toBeGreaterThan(-1);
+    const credits = html.indexOf("credits-title");
+    const campaigns = html.indexOf("campaigns-title");
+    const news = html.indexOf('aria-label="Novidades"');
+
+    expect(credits).toBeGreaterThan(-1);
+    expect(campaigns).toBeGreaterThan(credits);
+    expect(news).toBeGreaterThan(campaigns);
   });
 
   it("usa placements explícitos do desktop", async () => {
@@ -144,19 +145,16 @@ describe("DashboardPage — ordem responsive e placements", () => {
     expect(html).toContain("lg:row-start-1");
     expect(html).toContain("lg:col-span-2");
     expect(html).toContain("lg:col-start-1");
-    expect(html).toContain("lg:flex");
-    expect(html).toContain("lg:flex-col");
-    expect(html).toContain("lg:gap-6");
     expect(html).toContain("lg:grid-cols-3");
+    expect(html).toContain("lg:grid-rows-[min-content_1fr]");
   });
 
-  it("usa order apenas para preservar a ordem mobile do wrapper", async () => {
+  it("não usa order nem tabindex positivo", async () => {
     const html = await renderPage();
 
-    expect(html).toContain("order-1");
-    expect(html).toContain("order-2");
-    expect(html).toContain("order-3");
+    expect(html).not.toMatch(/(^|["\s])order-(first|last|none|\d)/);
     expect(html).not.toContain('style="order');
+    expect(html).not.toMatch(/tabindex=["']?[1-9]/);
   });
 
   it("não expõe métricas técnicas nem recomendação", async () => {

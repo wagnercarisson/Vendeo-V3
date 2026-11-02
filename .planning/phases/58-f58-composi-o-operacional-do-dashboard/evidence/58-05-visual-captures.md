@@ -43,3 +43,16 @@ Autorização específica recebida para alterar temporariamente o idioma do usu�
 - Não representam deploy, smoke ou aceite de produção.
 - A comparação com as montagens de referência é visual/humana; nenhuma conclusão de aceite é registrada aqui.
 - As capturas não comprovam leitor de tela real; acessibilidade por teclado/labels segue como validação manual pendente.
+
+## Ordem real do DOM e teclado
+
+A lateral voltou a usar posicionamento de grade (`lg:grid-rows-[min-content_1fr]`), sem `order` e sem `tabindex` positivo. O DOM permanece créditos → campanhas → novidades → faixa de criação.
+
+Validação no navegador (produção local), com Tab real:
+
+| Idioma | Ordem no DOM | Tab: créditos → campanhas → novidades | Resultado |
+|---|---|---|---|
+| pt-BR | créditos antes de campanhas; campanhas antes de novidades | índices 10 → 12 → 16 | PASS |
+| es-419 | créditos antes de campanhas; campanhas antes de novidades | índices 10 → 12 → 16 | PASS |
+
+A preferência foi alterada pelo fluxo de Configurações e restaurada ao final para `ui_locale = pt-BR`, `ui_locale_source = explicit` (versão CAS 8). Nenhum outro dado foi alterado.

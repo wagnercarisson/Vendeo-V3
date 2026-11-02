@@ -142,9 +142,9 @@ Rules:
   - Campaigns: `lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-2` (primary column).
   - Credits: `lg:col-start-3 lg:row-start-1` (highlighted).
   - News: `lg:col-start-3 lg:row-start-2`.
-  - Use explicit `col-start`/`row-start` for desktop placement. Mobile may use scoped `order-1/2/3` only to preserve credits → campaigns → news while credits/news share an independent desktop stack.
+  - Use explicit `col-start`/`row-start` for desktop placement, with `lg:grid-rows-[min-content_1fr]` so news sits directly below credits while campaigns span both rows. Never use CSS `order` or positive `tabindex`; DOM order MUST remain credits → campaigns → news → fixed band.
 - The fixed creation band is a full-width section below the grid, never a sidebar card.
-- Mobile DOM order: credits → campaigns → news → fixed creation band. The shortcut never appears between credits and news.
+- DOM order (mobile and keyboard/reading): credits → campaigns → news → fixed creation band. The shortcut never appears between credits and news.
 - `no_store`: header (neutral welcome) + `EmptyState` only. **No** credits query, no campaigns query, no announcement, no banner. Header shows **no** action buttons; the single CTA lives in the empty state to avoid duplication.
 - `no_eligible_campaigns` / `has_eligible_campaigns`: full grid with credits and news; campaigns section shows empty state (count 0) or cards.
 
