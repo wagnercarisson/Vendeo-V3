@@ -206,22 +206,33 @@ describe("POST /api/store", () => {
 
   it("ignores user_id in body (uses claims.sub) — draft mode", async () => {
     mockRequireUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
-    let capturedName = "";
-    let capturedParams: any = null;
+    // A rota draft chama mais de uma RPC (`create_store_draft` e depois
+    // `record_onboarding_completion`). Acumular TODAS as chamadas evita que a
+    // última RPC sobrescreva a captura e esconda a primeira.
+    const rpcCalls: Array<{ name: string; params: any }> = [];
     mockSupabaseRpc.mockImplementation((rpcName: string, params: any) => {
-      capturedName = rpcName;
-      capturedParams = params;
-      return Promise.resolve({
-        data: { store: [{ ...mockStore, user_id: "user-123" }], onboardingGranted: false },
-        error: null,
-      });
+      rpcCalls.push({ name: rpcName, params });
+      if (rpcName === "create_store_draft") {
+        return Promise.resolve({
+          data: { store: [{ ...mockStore, user_id: "user-123" }], onboardingGranted: false },
+          error: null,
+        });
+      }
+      if (rpcName === "record_onboarding_completion") {
+        return Promise.resolve({ data: { completed: false, status: "not_ready" }, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
     });
 
     const { POST } = await import("@/app/api/store/route");
     const res = await POST(createReq("POST", { name: "Minha Loja", segment: "variedades", acceptedTerms: true, user_id: "hacker-id" }));
     expect(res.status).toBe(201);
-    expect(capturedName).toBe("create_store_draft");
-    expect(capturedParams.p_user_id).toBe("user-123");
+
+    const draftCall = rpcCalls.find((call) => call.name === "create_store_draft");
+    expect(draftCall).toBeDefined();
+    expect(draftCall!.params.p_user_id).toBe("user-123");
+    expect(draftCall!.params.p_accepted_by_user_id).toBe("user-123");
+    expect(JSON.stringify(rpcCalls)).not.toContain("hacker-id");
   });
 });
 
