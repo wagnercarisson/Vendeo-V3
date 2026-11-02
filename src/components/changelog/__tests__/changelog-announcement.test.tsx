@@ -102,3 +102,116 @@ describe("ChangelogAnnouncement", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+function makeCompactEntry(
+  overrides: Partial<ChangelogEntry["frontmatter"]> = {},
+): ChangelogEntry {
+  return {
+    ...makeEntry(overrides),
+    body: "## O que mudou\n\n- Primeiro item do corpo completo.",
+  };
+}
+
+const COMPACT_EXCERPT = "Trecho editorial derivado do conteúdo existente.";
+
+describe("ChangelogAnnouncement — modo compacto", () => {
+  it("exibe trecho e não renderiza o corpo markdown", () => {
+    const { container } = render(
+      <ChangelogAnnouncement
+        entry={makeCompactEntry()}
+        compact
+        excerpt={COMPACT_EXCERPT}
+      />,
+    );
+
+    expect(screen.getByText("Freemium CNPJ")).toBeInTheDocument();
+    expect(screen.getByText(COMPACT_EXCERPT)).toBeInTheDocument();
+    expect(screen.getByText("31/07/2026")).toBeInTheDocument();
+    expect(container.querySelector("ul")).toBeNull();
+    expect(screen.queryByText("Primeiro item do corpo completo.")).not.toBeInTheDocument();
+    expect(screen.queryByText("O que mudou")).not.toBeInTheDocument();
+  });
+
+  it('aplica lang="pt-BR" apenas no título e no trecho', () => {
+    render(
+      <ChangelogAnnouncement
+        entry={makeCompactEntry()}
+        compact
+        excerpt={COMPACT_EXCERPT}
+      />,
+    );
+
+    const title = screen.getByRole("heading", { level: 2, name: "Freemium CNPJ" });
+    expect(title).toHaveAttribute("lang", "pt-BR");
+    expect(screen.getByText(COMPACT_EXCERPT)).toHaveAttribute("lang", "pt-BR");
+    expect(screen.getByText("Ver novidades")).not.toHaveAttribute("lang");
+    expect(screen.getByLabelText("Fechar anúncio")).not.toHaveAttribute("lang");
+  });
+
+  it("usa rótulos localizados quando fornecidos", () => {
+    render(
+      <ChangelogAnnouncement
+        entry={makeCompactEntry()}
+        compact
+        excerpt={COMPACT_EXCERPT}
+        labels={{ view: "Ver novedades", close: "Cerrar anuncio" }}
+      />,
+    );
+
+    expect(screen.getByText("Ver novedades")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cerrar anuncio")).toBeInTheDocument();
+  });
+
+  it("mantém título, data e ações quando o trecho é nulo", () => {
+    const { container } = render(
+      <ChangelogAnnouncement
+        entry={makeCompactEntry()}
+        compact
+        excerpt={null}
+      />,
+    );
+
+    expect(screen.getByText("Freemium CNPJ")).toBeInTheDocument();
+    expect(screen.getByText("31/07/2026")).toBeInTheDocument();
+    expect(screen.getByText("Ver novidades")).toBeInTheDocument();
+    expect(container.querySelector("ul")).toBeNull();
+  });
+
+  it('preserva o modal quando announcement="modal"', () => {
+    render(
+      <ChangelogAnnouncement
+        entry={makeCompactEntry({ announcement: "modal" })}
+        compact
+        excerpt={COMPACT_EXCERPT}
+        labels={{ dialogLabel: "Novidades" }}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveAttribute("aria-label", "Novidades");
+    expect(screen.getByText(COMPACT_EXCERPT)).toBeInTheDocument();
+  });
+
+  it("dispensar no compacto não grava CHANGELOG_SEEN_KEY", () => {
+    localStorage.setItem(CHANGELOG_SEEN_KEY, "fase-34-store-readiness");
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    render(
+      <ChangelogAnnouncement
+        entry={makeCompactEntry()}
+        compact
+        excerpt={COMPACT_EXCERPT}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Fechar anúncio"));
+
+    expect(
+      setItemSpy.mock.calls.some(([key]) => key === CHANGELOG_SEEN_KEY),
+    ).toBe(false);
+    expect(screen.queryByText("Freemium CNPJ")).not.toBeInTheDocument();
+    expect(localStorage.getItem(CHANGELOG_DISMISSED_KEY)).toBe(
+      "fase-32-freemium-cnpj",
+    );
+  });
+});
