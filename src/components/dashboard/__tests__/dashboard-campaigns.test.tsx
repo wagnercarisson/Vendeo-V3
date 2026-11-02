@@ -95,15 +95,14 @@ describe("DashboardCampaigns", () => {
     expect(html).not.toContain(messages.emptyTitle);
   });
 
-  it("expõe o chip aria-hidden e a frase sr-only no singular", () => {
+  it("expõe a contagem secundária no singular", () => {
     const html = renderSection({ count: 1, items: makeItems("c1") });
 
-    expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain("sr-only");
+    expect(html).not.toContain("sr-only");
     expect(html).toContain("1 campanha disponível");
   });
 
-  it("expõe a frase sr-only no plural para count > 1", () => {
+  it("expõe a contagem secundária no plural para count > 1", () => {
     const html = renderSection({ count: 3, items: makeItems("c1", "c2", "c3") });
 
     expect(html).toContain("3 campanhas disponíveis");

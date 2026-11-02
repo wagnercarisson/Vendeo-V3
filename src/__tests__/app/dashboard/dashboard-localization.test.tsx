@@ -145,9 +145,9 @@ describe("DashboardPage — localização e lang", () => {
 
     const html = await renderPage();
 
-    expect(html).toContain("Campanhas disponíveis");
+    expect(html).toContain("Campanhas recentes");
     expect(html).toContain("Saldo indisponível");
-    expect(html).toContain("Ver detalhes");
+    expect(html).toContain("Ver créditos e extrato");
     expect(html).toContain("Ver novidades");
     expect(html).toContain("Fechar anúncio");
     expect(html).not.toContain('lang="es-419"');
@@ -159,9 +159,9 @@ describe("DashboardPage — localização e lang", () => {
     const html = await renderPage();
 
     expect(html).toContain('<div lang="es-419"');
-    expect(html).toContain("Campañas disponibles");
+    expect(html).toContain("Campañas recientes");
     expect(html).toContain("Saldo no disponible");
-    expect(html).toContain("Ver detalles");
+    expect(html).toContain("Ver créditos y extracto");
     expect(html).toContain("Ver novedades");
     expect(html).toContain('aria-label="Cerrar anuncio"');
     expect(html).toContain("¿Qué tal crear tu próxima campaña?");
@@ -197,9 +197,9 @@ describe("DashboardPage — localização e lang", () => {
 
     const html = await renderPage();
 
-    expect(html).toContain("Campanhas disponíveis");
+    expect(html).toContain("Campanhas recentes");
     expect(html).toContain("Saldo indisponível");
-    expect(html).not.toContain("Campañas disponibles");
+    expect(html).not.toContain("Campañas recientes");
     expect(html).not.toContain('lang="es-419"');
   });
 });

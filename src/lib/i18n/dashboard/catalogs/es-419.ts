@@ -18,8 +18,9 @@ export const es419DashboardMessages = Object.freeze({
     nameSeparator: ", ",
   }),
   header: Object.freeze({
-    primaryCta: "Nueva campaña",
-    secondaryCta: "Configurar tienda",
+    subtitleDesktop:
+      "Tus campañas e información esencial en un solo lugar.",
+    subtitleMobile: "Tus campañas en un solo lugar.",
   }),
   credits: Object.freeze({
     sectionLabel: "Créditos disponibles",
@@ -27,18 +28,20 @@ export const es419DashboardMessages = Object.freeze({
     unitPlural: "créditos",
     zero: "0 créditos",
     unavailable: "Saldo no disponible",
-    detailsLink: "Ver detalles",
-    detailsAria: "Ver detalles de los créditos",
+    description: "Saldo actual de tu tienda",
+    detailsLink: "Ver créditos y extracto",
+    detailsAria: "Ver créditos y extracto",
   }),
   campaigns: Object.freeze({
-    sectionLabel: "Campañas disponibles",
+    sectionLabel: "Campañas recientes",
     countSingular: "{count} campaña disponible",
     countPlural: "{count} campañas disponibles",
     emptyTitle: "No hay campañas disponibles",
     emptyBody:
       "Cuando una campaña esté lista, aparecerá aquí. Crea una nueva campaña para empezar.",
     emptyCta: "Crear campaña",
-    viewAll: "Ver todas las campañas",
+    viewAll: "Ver todas",
+    open: "Abrir campaña",
     failureTitle: "No se pudieron cargar las campañas",
     failureBody: "Inténtalo de nuevo en unos instantes o abre la lista completa.",
     cardAria: "Abrir campaña {product}, {date}",

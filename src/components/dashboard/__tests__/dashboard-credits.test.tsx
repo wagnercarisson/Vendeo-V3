@@ -40,21 +40,19 @@ function renderCredits(state: DashboardCreditState, locale: "pt-BR" | "es-419" =
 }
 
 describe("DashboardCredits", () => {
-  it("exibe número e unidade no estado available, com link para /conta", () => {
+  it("exibe o valor no estado available, com link para /conta", () => {
     const html = renderCredits({ state: "available", availableBalance: 7 });
 
     expect(html).toContain(">7<");
-    expect(html).toContain(messages.unitPlural);
     expect(html).toContain('href="/conta"');
     expect(html).toContain(`aria-label="${messages.detailsAria}"`);
     expect(html).toContain(messages.sectionLabel);
   });
 
-  it("usa o singular para saldo 1", () => {
+  it("exibe o valor 1 no estado available", () => {
     const html = renderCredits({ state: "available", availableBalance: 1 });
 
-    expect(html).toContain(`>${messages.unitSingular}</span>`);
-    expect(html).not.toContain(`>${messages.unitPlural}</span>`);
+    expect(html).toContain(">1<");
   });
 
   it("no estado zero renderiza apenas a string completa, sem número duplicado", () => {

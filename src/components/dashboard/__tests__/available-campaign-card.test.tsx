@@ -28,6 +28,7 @@ function renderCard(thumbnailUrl: string | null = "https://cdn.test/thumb.jpg") 
       dateLabel="19 de out. de 2026"
       thumbnailUrl={thumbnailUrl}
       openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
+      openLabel="Abrir campanha"
     />,
   );
 }
@@ -79,6 +80,6 @@ describe("AvailableCampaignCard", () => {
     expect(link.className).toContain("focus-visible:ring-2");
     expect(link.className).toContain("focus-visible:ring-offset-2");
     expect(link.className).toContain("items-center");
-    expect(link.className).toContain("min-h-[80px]");
+    expect(link.className).toContain("min-h-[44px]");
   });
 });

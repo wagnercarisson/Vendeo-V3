@@ -52,8 +52,6 @@ export default async function DashboardPage() {
           greeting={messages.greeting.welcome}
           storeName={null}
           nameSeparator={messages.greeting.nameSeparator}
-          showPrimaryCta={false}
-          showSecondaryCta={false}
           messages={messages.header}
         />
         <EmptyState
@@ -99,7 +97,6 @@ export default async function DashboardPage() {
     messages: messages.greeting,
   });
 
-  const hasEligible = campaign.ok && campaign.data.count > 0;
   const items = campaign.ok ? campaign.data.items : [];
 
   const dateLabels: Record<string, string> = {};
@@ -121,8 +118,6 @@ export default async function DashboardPage() {
         greeting={messages.greeting[greeting.period]}
         storeName={greeting.storeName}
         nameSeparator={messages.greeting.nameSeparator}
-        showPrimaryCta={hasEligible}
-        showSecondaryCta={true}
         messages={messages.header}
       />
 
@@ -154,7 +149,7 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-3">
+        <div className="min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-2">
           <DashboardCampaigns
             count={campaign.ok ? campaign.data.count : 0}
             items={items}
@@ -165,12 +160,8 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="min-w-0 lg:col-start-3 lg:row-start-2">
-          <DashboardShortcut messages={messages.shortcut} />
-        </div>
-
         {entry ? (
-          <div className="min-w-0 lg:col-start-3 lg:row-start-3">
+          <div className="min-w-0 lg:col-start-3 lg:row-start-2">
             <DashboardNews
               entry={entry}
               excerpt={excerpt}
@@ -179,6 +170,8 @@ export default async function DashboardPage() {
           </div>
         ) : null}
       </div>
+
+      <DashboardShortcut messages={messages.shortcut} />
     </div>
   );
 }

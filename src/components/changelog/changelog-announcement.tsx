@@ -13,6 +13,7 @@ interface ChangelogAnnouncementLabels {
   view?: string;
   close?: string;
   dialogLabel?: string;
+  badgeLabel?: string;
 }
 
 /**
@@ -64,6 +65,11 @@ export function ChangelogAnnouncement({
 
     const compactContent = (
       <div className="min-w-0">
+        {labels?.badgeLabel && (
+          <span className="mb-2 inline-flex items-center rounded-md bg-accent-green/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent-green font-heading">
+            {labels.badgeLabel}
+          </span>
+        )}
         <div className="flex items-start justify-between gap-3">
           <h2
             lang="pt-BR"

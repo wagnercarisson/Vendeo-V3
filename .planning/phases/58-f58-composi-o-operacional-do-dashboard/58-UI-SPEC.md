@@ -124,70 +124,69 @@ Rules:
   [ReadinessCheckBanner?]
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
     <section credits>   ← DOM 1st
-    <section campaigns> ← DOM 2nd
-    <section shortcut>  ← DOM 3rd
-    <section news>      ← DOM 4th
+    <section campaigns> ← DOM 2nd (single panel)
+    <section news>      ← DOM 3rd
   </div>
+  <section shortcut>    ← DOM 4th, full-width band below the grid
 </div>
 ```
 
 - **No `PageHeader`**, no `h1` “Dashboard”, no breadcrumbs, no date-range filter.
-- Header: `mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:mb-8`.
-  - `h1`: `min-w-0 flex-1 font-heading text-2xl font-semibold leading-tight text-text-primary break-words line-clamp-2`.
+- Header: `mb-6 flex flex-col gap-2 lg:mb-8`.
+  - `h1`: `min-w-0 font-heading text-3xl font-bold leading-tight text-text-primary break-words sm:text-4xl`.
   - Store name inside `h1` as `<span lang="">{storeName}</span>`; separator from namespace (`", "`). No store → welcome phrase only.
-  - Actions: `flex shrink-0 flex-wrap items-center gap-2`.
-    - Primary: link to `/campanhas/nova`, green fill, `min-h-[44px]`, `px-4`, `rounded-lg`, `text-sm font-semibold font-heading text-white`. Rendered only in `has_eligible_campaigns`.
-    - Secondary: link to `/loja`, transparent, `border border-border-light`, `text-text-primary`, 44px. Rendered in `has_eligible_campaigns` and `no_eligible_campaigns`.
+  - Subtitle below `h1`: desktop `text-base text-text-secondary font-body`; mobile short variant. Desktop copy: “Suas campanhas e informações essenciais em um só lugar.” Mobile short: “Suas campanhas em um só lugar.”
+  - **No internal header action buttons.** The existing creation action lives in the topbar/shell and is not changed. The no-store and readiness states keep their own required CTAs.
 - Banners render between header and grid, preserving their existing `mb-6` and visual tokens. In `es-419` all their strings come from the dashboard namespace via optional props.
 - Grid placements at `lg`:
-  - Campaigns: `lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-3` (primary column).
+  - Campaigns: `lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:row-span-2` (primary column).
   - Credits: `lg:col-start-3 lg:row-start-1` (highlighted).
-  - Shortcut: `lg:col-start-3 lg:row-start-2`.
-  - News: `lg:col-start-3 lg:row-start-3`.
+  - News: `lg:col-start-3 lg:row-start-2`.
   - Use explicit `col-start`/`row-start`, never CSS `order`.
-- Mobile DOM order: credits → campaigns → shortcut → news. The news remains after the campaign content; the fixed shortcut is a small invitation, not a recommendation.
+- The fixed creation band is a full-width section below the grid, never a sidebar card.
+- Mobile DOM order: credits → campaigns → news → fixed creation band. The shortcut never appears between credits and news.
 - `no_store`: header (neutral welcome) + `EmptyState` only. **No** credits query, no campaigns query, no announcement, no banner. Header shows **no** action buttons; the single CTA lives in the empty state to avoid duplication.
 - `no_eligible_campaigns` / `has_eligible_campaigns`: full grid with credits and news; campaigns section shows empty state (count 0) or cards.
 
 ### Credits block
 
 - `<section aria-labelledby="credits-title">` → `<Card className="border-accent-green/30 bg-accent-green/5 p-4 sm:p-6">` (highlighted).
-- `h2#credits-title`: `flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-secondary font-heading` with a green `Coins` icon (`h-4 w-4`, `aria-hidden`) = “Créditos disponíveis”.
-- Available: value row `mt-2 flex items-baseline gap-2`:
-  - number: `font-heading text-2xl font-semibold leading-tight text-text-primary tabular-nums`;
-  - unit: `text-sm text-text-secondary font-body` (“crédito”/“créditos”), rendered **without** repeating the number.
+- Desktop: title, icon/value row, secondary description and action stacked. Mobile: compact horizontal block with icon + title/action on the left and the value on the right; avoid a tall card with empty space.
+- `h2#credits-title`: `flex items-center gap-2 text-sm font-semibold text-text-primary font-heading` with a green `Coins` icon inside a green-tinted circle (`h-9 w-9`, icon `h-5 w-5`, `aria-hidden`) = “Créditos disponíveis”.
+- Available: value `font-heading text-3xl font-bold leading-none text-text-primary tabular-nums`; no repeated unit in the number. Secondary description below: “Saldo atual da sua loja”.
 - Zero: render **only** `messages.zero` (full string `0 créditos` / `0 créditos`) in a single element; do not render a separate number or unit. No warning icon, no muted color, no “0 0 créditos”.
-- Unavailable: `mt-2 flex items-center gap-2`; `AlertCircle` `h-5 w-5 text-accent-amber aria-hidden="true"` + `text-sm font-semibold font-heading text-text-secondary` = “Saldo indisponível”. **Never render `0` or `—`.**
-- Details link always present (all three states): `mt-3 inline-flex min-h-[44px] items-center text-sm font-semibold text-accent-blue hover:underline focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep` → `/conta`.
+- Unavailable: `AlertCircle` amber + “Saldo indisponível”; **never render `0` or `—`**.
+- Action always present (all three states): “Ver créditos e extrato” → `/conta`, `min-h-[44px]`, green text link with trailing arrow, focus visible.
 - Do **not** render `BalanceDisplay`. Do **not** show demo/bonus breakdown in the dashboard.
 
 ### Campaigns section
 
-- `<section aria-labelledby="campaigns-title" className="min-w-0 ...">`.
-- Heading row: `mb-4 flex items-center justify-between gap-3`.
-  - `h2#campaigns-title`: `text-xl font-semibold leading-tight text-text-primary font-heading` = “Campanhas disponíveis”.
-  - Count chip: `inline-flex shrink-0 min-w-[32px] items-center justify-center rounded-full bg-bg-elevated px-3 py-1 text-xs font-semibold text-text-secondary font-heading tabular-nums`, `aria-hidden="true"`. A visually hidden localized sentence SHALL be rendered next to the heading: singular when `count === 1`, plural otherwise, so the count is announced without reading the bare number twice.
-- Compact list: `flex flex-col gap-2` (vertical rows; no multi-column card grid).
-- Campaign row (whole row is one link):
-  - `<Link href={/campanhas/${id}} aria-label="{openAria with product and date}" className="group flex min-h-[80px] items-center gap-3 rounded-xl border border-border bg-bg-surface p-2.5 transition-colors duration-200 hover:border-border-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep sm:p-3">`.
-  - Thumbnail wrapper: `relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-bg-elevated sm:h-16 sm:w-16` (small thumbnail).
-  - Image: plain `<img>` (no `next/image`, no new domain), `h-full w-full object-cover`, `alt=""` (decorative; accessible name is the link `aria-label`).
-  - `onError` sets failed state and swaps to fallback **in place**, preserving the link.
-  - Fallback: `flex h-full w-full items-center justify-center`, `ImageOff` `h-5 w-5 text-text-disabled aria-hidden="true"`.
-  - Content: `min-w-0 flex-1`; product name `<span lang="" className="line-clamp-2 break-words text-sm font-semibold leading-normal text-text-primary font-heading">`; date `mt-0.5 block whitespace-nowrap text-xs text-text-secondary font-body`.
-  - Trailing `ChevronRight` icon `h-4 w-4 shrink-0 text-text-muted aria-hidden="true"`.
-  - No status badge, no action button inside the row, no overflow menu.
+- `<section aria-labelledby="campaigns-title" className="min-w-0">` wrapped in one `<Card className="p-4 sm:p-6">` panel.
+- Panel header: `flex items-start justify-between gap-3`.
+  - Left: `h2#campaigns-title` = “Campanhas recentes” (`text-xl sm:text-2xl font-semibold text-text-primary font-heading`), with secondary count below (“1 campanha disponível” / “{count} campanhas disponíveis”).
+  - Right: “Ver todas” link → `/campanhas`, green text link with trailing arrow, 44px.
+- Rows: `divide-y divide-border` inside the panel; up to three rows.
+- Campaign row: a non-interactive `div` with thumbnail + metadata + a single visible `Abrir campanha` link. No nested links/buttons.
+  - Thumbnail wrapper: `relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-bg-elevated sm:h-24 sm:w-24` (small-to-medium).
+  - Image: plain `<img>` (no `next/image`), `h-full w-full object-cover`, `alt=""`.
+  - `onError` sets failed state and swaps to fallback **in place**, preserving the action.
+  - Fallback: `ImageOff` `h-6 w-6 text-text-disabled aria-hidden="true"`.
+  - Metadata: product name `<span lang="" className="text-base sm:text-lg font-semibold text-text-primary font-heading">`; date `text-sm text-text-secondary font-body`.
+  - Action: `Abrir campanha` link with arrow, outlined on desktop (`border border-border-light rounded-lg min-h-[44px] px-4`) and placed below the metadata on mobile. Desktop: right-aligned.
+- No status badge, no technical metrics, no error/generating campaigns, no nested interactive elements.
 - Empty (`count = 0`): render `<EmptyState icon={Megaphone} title=… description=… action={<Link…>}/>` **directly in the section** (no wrapping `Card`, no extra padding). CTA = “Criar campanha” → `/campanhas/nova`, green, 44px.
 - Failure: compact panel `<Card role="status" className="p-4 sm:p-6">` with `AlertTriangle` `h-5 w-5 text-accent-red aria-hidden="true"`, title `text-sm font-semibold font-heading text-text-primary`, body `mt-1 text-sm text-text-secondary font-body`, and the same `/campanhas` link style. No retry button (server component), no red background.
-- Orientation text below the list: “Abra uma campanha para visualizar o conteúdo completo e baixá-lo para publicar.” (`mt-3 text-sm leading-normal text-text-secondary font-body`). This is guidance, not a review or publication action by Vendeo.
-- Footer link “Ver todas as campanhas” → `/campanhas`: below orientation with `mt-2`, `text-sm font-semibold text-accent-blue`, 44px.
+- Divider, then orientation text inside the same panel: “Abra uma campanha para visualizar o conteúdo completo e baixá-lo para publicar.” (`mt-4 border-t border-border pt-4 flex gap-2 text-sm leading-normal text-text-secondary font-body`, with info icon). This is guidance, not a review or publication action by Vendeo.
+- “Ver todas” lives in the panel header, not as a footer link.
 
-### Shortcut section
+### Fixed creation band (bottom)
 
+- Full-width, discrete band **below** the campaigns + sidebar grid, never inside the sidebar.
 - Fixed invitation, not a recommendation: “Que tal criar sua próxima campanha?” with action “Criar campanha” → `/campanhas/nova`.
-- `<section aria-labelledby="shortcut-title"><Card className="border-border-light bg-bg-surface p-4 sm:p-5">`.
-- Title `h2#shortcut-title`: `text-base font-semibold leading-tight text-text-primary font-heading`.
-- Action link: `mt-2 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-accent-green hover:underline`, trailing `ArrowRight` `h-4 w-4 aria-hidden`.
+- `<Card className="mt-6 flex flex-col gap-3 border-border-light bg-bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">`.
+- Title `h2`: `text-base font-semibold leading-tight text-text-primary font-heading`.
+- Action link: green, 44px, trailing arrow, focus visible.
+- Mobile: after news; DOM order credits → campaigns → news → band.
 - The copy is static and independent of balance, campaign history, review status or any other signal. It does not introduce recommendation logic.
 
 ### News section
@@ -196,6 +195,7 @@ Rules:
 - Render `<ChangelogAnnouncement entry={entry} compact excerpt={excerpt} labels={...} />`; the component owns the `Card`.
 - Compact card: `p-4`, no `mb-6` (grid gap governs spacing), `rounded-xl border border-border bg-bg-surface`.
 - Internal compact layout:
+  - Visible “Novidades”/“Novedades” badge at the top (green-tinted pill), then title.
   - Header row `flex items-start justify-between gap-3`: title `h2` `text-xl font-semibold leading-tight font-heading text-text-primary line-clamp-2` with `lang="pt-BR"`; close button `44×44`, ghost, `X` icon (`h-4 w-4`), `aria-label` localized.
   - Date `mt-1 whitespace-nowrap text-xs text-text-secondary font-body` (editorial date, unchanged formatting).
   - Excerpt `mt-2 text-sm leading-normal text-text-secondary font-body break-words` with `lang="pt-BR"`; plain React text only.
@@ -280,19 +280,21 @@ All UI strings below belong to the **dashboard namespace** (`pt-BR` is the sourc
 | Greeting — neutral (timezone failure) | `Olá` | `Hola` |
 | Greeting — no store | `Bem-vindo ao Vendeo` | `Bienvenido a Vendeo` |
 | Greeting name separator | `, ` | `, ` |
-| Primary CTA | `Nova campanha` | `Nueva campaña` |
-| Secondary action | `Configurar loja` | `Configurar tienda` |
+| Header subtitle — desktop | `Suas campanhas e informações essenciais em um só lugar.` | `Tus campañas e información esencial en un solo lugar.` |
+| Header subtitle — mobile | `Suas campanhas em um só lugar.` | `Tus campañas en un solo lugar.` |
 | Credits section label | `Créditos disponíveis` | `Créditos disponibles` |
 | Credits unit singular / plural | `crédito` / `créditos` (rendered next to the number) | `crédito` / `créditos` (rendered next to the number) |
 | Credits zero | `0 créditos` | `0 créditos` |
 | Credits unavailable | `Saldo indisponível` | `Saldo no disponible` |
-| Credits details link | `Ver detalhes` | `Ver detalles` |
-| Credits details accessible name | `Ver detalhes dos créditos` | `Ver detalles de los créditos` |
-| Campaigns section heading | `Campanhas disponíveis` | `Campañas disponibles` |
+| Credits secondary description | `Saldo atual da sua loja` | `Saldo actual de tu tienda` |
+| Credits details link | `Ver créditos e extrato` | `Ver créditos y extracto` |
+| Credits details accessible name | `Ver créditos e extrato` | `Ver créditos y extracto` |
+| Campaigns section heading | `Campanhas recentes` | `Campañas recientes` |
 | Campaigns empty title | `Nenhuma campanha disponível` | `No hay campañas disponibles` |
 | Campaigns empty body | `Quando uma campanha estiver pronta, ela aparece aqui. Crie uma nova campanha para começar.` | `Cuando una campaña esté lista, aparecerá aquí. Crea una nueva campaña para empezar.` |
 | Campaigns empty CTA | `Criar campanha` | `Crear campaña` |
-| Campaigns view-all link | `Ver todas as campanhas` | `Ver todas las campañas` |
+| Campaigns view-all link | `Ver todas` | `Ver todas` |
+| Campaign row action | `Abrir campanha` | `Abrir campaña` |
 | Campaigns orientation | `Abra uma campanha para visualizar o conteúdo completo e baixá-lo para publicar.` | `Abre una campaña para ver el contenido completo y descargarlo para publicar.` |
 | Shortcut invitation | `Que tal criar sua próxima campanha?` | `¿Qué tal crear tu próxima campaña?` |
 | Shortcut action | `Criar campanha` | `Crear campaña` |

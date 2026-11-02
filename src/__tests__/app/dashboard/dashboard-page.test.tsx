@@ -167,7 +167,6 @@ describe("DashboardPage — estados operacionais", () => {
     expect(html).toContain("Nenhuma campanha disponível");
     expect(html).toContain('href="/campanhas/nova"');
     expect(html).toContain("Criar campanha");
-    expect(html).not.toContain("Nova campanha");
     expect(html).not.toContain('href="/campanhas/c');
     expect(html).toContain("0 campanhas disponíveis");
   });
@@ -177,11 +176,13 @@ describe("DashboardPage — estados operacionais", () => {
 
     const html = await renderPage();
 
-    expect(html).toContain("Campanhas disponíveis");
+    expect(html).toContain("Campanhas recentes");
     expect(html.match(/href="\/campanhas\/c/g)?.length).toBe(3);
     expect(html).toContain("3 campanhas disponíveis");
-    expect(html).toContain("Nova campanha");
-    expect(html).toContain("Ver todas as campanhas");
+    expect(html).toContain("Campanhas recentes");
+    expect(html).toContain("Abrir campanha");
+    expect(html).toContain("Criar campanha");
+    expect(html).toContain("Ver todas");
     expect(html).toContain("Que tal criar sua próxima campanha?");
     expect(html).toContain("Abra uma campanha para visualizar o conteúdo completo e baixá-lo para publicar.");
     expect(html).toContain('href="/campanhas/nova"');
@@ -214,7 +215,7 @@ describe("DashboardPage — falhas parciais", () => {
     expect(html).not.toContain("0 campanhas disponíveis");
     expect(html).not.toContain("sr-only");
     expect(html).toContain("Créditos disponíveis");
-    expect(html).toContain("Ver detalhes");
+    expect(html).toContain("Ver créditos e extrato");
   });
 
   it("falha de créditos exibe saldo indisponível e mantém campanhas", async () => {
@@ -225,7 +226,7 @@ describe("DashboardPage — falhas parciais", () => {
 
     expect(html).toContain("Saldo indisponível");
     expect(html).toContain('href="/conta"');
-    expect(html).toContain("Campanhas disponíveis");
+    expect(html).toContain("Campanhas recentes");
     expect(html).not.toContain("0 créditos");
   });
 
@@ -299,7 +300,6 @@ describe("DashboardPage — sem métricas técnicas ou recomendação", () => {
     expect(html).toContain('href="/campanhas"');
     expect(html).toContain('href="/campanhas/c1"');
     expect(html).toContain('href="/conta"');
-    expect(html).toContain('href="/loja"');
     expect(html).toContain('href="/campanhas/nova"');
   });
 });

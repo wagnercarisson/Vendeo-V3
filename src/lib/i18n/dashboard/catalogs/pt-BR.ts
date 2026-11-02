@@ -17,8 +17,9 @@ export const ptBRDashboardMessages: DashboardMessages = Object.freeze({
     nameSeparator: ", ",
   }),
   header: Object.freeze({
-    primaryCta: "Nova campanha",
-    secondaryCta: "Configurar loja",
+    subtitleDesktop:
+      "Suas campanhas e informações essenciais em um só lugar.",
+    subtitleMobile: "Suas campanhas em um só lugar.",
   }),
   credits: Object.freeze({
     sectionLabel: "Créditos disponíveis",
@@ -26,18 +27,20 @@ export const ptBRDashboardMessages: DashboardMessages = Object.freeze({
     unitPlural: "créditos",
     zero: "0 créditos",
     unavailable: "Saldo indisponível",
-    detailsLink: "Ver detalhes",
-    detailsAria: "Ver detalhes dos créditos",
+    description: "Saldo atual da sua loja",
+    detailsLink: "Ver créditos e extrato",
+    detailsAria: "Ver créditos e extrato",
   }),
   campaigns: Object.freeze({
-    sectionLabel: "Campanhas disponíveis",
+    sectionLabel: "Campanhas recentes",
     countSingular: "{count} campanha disponível",
     countPlural: "{count} campanhas disponíveis",
     emptyTitle: "Nenhuma campanha disponível",
     emptyBody:
       "Quando uma campanha estiver pronta, ela aparece aqui. Crie uma nova campanha para começar.",
     emptyCta: "Criar campanha",
-    viewAll: "Ver todas as campanhas",
+    viewAll: "Ver todas",
+    open: "Abrir campanha",
     failureTitle: "Não foi possível carregar as campanhas",
     failureBody: "Tente novamente em instantes ou abra a lista completa.",
     cardAria: "Abrir campanha {product}, {date}",

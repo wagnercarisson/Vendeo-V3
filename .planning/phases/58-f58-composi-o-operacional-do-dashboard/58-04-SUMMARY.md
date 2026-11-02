@@ -110,3 +110,7 @@ None. Mitigações T-58-04-01…06 cobertas por `requirePageUser` no topo, DTOs 
 *Completed: 2026-11-02*
 
 ## Self-Check: PASSED
+
+## Reconciliação visual pós-checkpoint (2026-11-02)
+
+Após a comparação com as montagens aprovadas, a composição da página foi ajustada sem alterar os contratos funcionais: cabeçalho com subtítulo e sem CTAs internos; painel único “Campanhas recentes” com contagem de disponíveis, “Ver todas” e ação visível “Abrir campanha”; linhas compactas com miniaturas; orientação dentro do painel; créditos destacados; novidades abaixo dos créditos; e faixa inferior de criação de largura total. As mensagens foram adicionadas em pt-BR/es-419 no namespace do dashboard. As capturas e limitações estão em `evidence/58-05-visual-captures.md`.

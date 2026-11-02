@@ -16,8 +16,8 @@ export interface DashboardGreetingMessages {
 }
 
 export interface DashboardHeaderMessages {
-  readonly primaryCta: string;
-  readonly secondaryCta: string;
+  readonly subtitleDesktop: string;
+  readonly subtitleMobile: string;
 }
 
 export interface DashboardCreditsMessages {
@@ -26,6 +26,7 @@ export interface DashboardCreditsMessages {
   readonly unitPlural: string;
   readonly zero: string;
   readonly unavailable: string;
+  readonly description: string;
   readonly detailsLink: string;
   readonly detailsAria: string;
 }
@@ -38,6 +39,7 @@ export interface DashboardCampaignsMessages {
   readonly emptyBody: string;
   readonly emptyCta: string;
   readonly viewAll: string;
+  readonly open: string;
   readonly failureTitle: string;
   readonly failureBody: string;
   readonly cardAria: string;

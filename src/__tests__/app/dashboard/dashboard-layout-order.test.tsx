@@ -144,8 +144,7 @@ describe("DashboardPage — ordem responsive e placements", () => {
     expect(html).toContain("lg:col-start-3");
     expect(html).toContain("lg:row-start-1");
     expect(html).toContain("lg:row-start-2");
-    expect(html).toContain("lg:row-start-3");
-    expect(html).toContain("lg:row-span-3");
+    expect(html).toContain("lg:row-span-2");
     expect(html).toContain("lg:col-span-2");
     expect(html).toContain("lg:col-start-1");
     expect(html).toContain("lg:grid-cols-3");

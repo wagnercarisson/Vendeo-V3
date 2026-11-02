@@ -47,13 +47,13 @@ As funções compartilhadas `countCampaigns`, `countReadyCampaigns` e `getRecent
 - **WHEN** outro consumidor usa `countCampaigns` ou `getRecentCampaigns`
 - **THEN** o comportamento existente de contar ou listar `ready` + `error` SHALL permanecer inalterado
 
-### Requirement: Contagem “Campanhas disponíveis”
+### Requirement: Painel único “Campanhas recentes” com contagem de disponíveis
 
-O dashboard SHALL exibir o rótulo “Campanhas disponíveis” associado à quantidade de campanhas elegíveis. O dashboard NÃO SHALL exibir a taxa técnica de sucesso nem os rótulos “Total de Campanhas” e “Campanhas Prontas” como métricas separadas.
+O dashboard SHALL exibir as campanhas elegíveis em um único painel, com título “Campanhas recentes”, ação “Ver todas” no cabeçalho apontando para `/campanhas` e contagem secundária de campanhas disponíveis (“1 campanha disponível” / “{count} campanhas disponíveis”). O dashboard NÃO SHALL exibir a taxa técnica de sucesso nem os rótulos “Total de Campanhas” e “Campanhas Prontas” como métricas separadas.
 
 #### Scenario: Rótulo e valor da contagem
 - **WHEN** a loja possui 4 campanhas `ready` e 2 campanhas `error`
-- **THEN** o dashboard SHALL exibir “Campanhas disponíveis” com o valor `4`
+- **THEN** o painel SHALL exibir “Campanhas recentes” e a contagem secundária “4 campanhas disponíveis”
 - **AND** NÃO SHALL exibir “Taxa de Sucesso”
 
 #### Scenario: Contagem zero no estado sem campanhas elegíveis
@@ -61,30 +61,40 @@ O dashboard SHALL exibir o rótulo “Campanhas disponíveis” associado à qua
 - **THEN** a área de campanhas SHALL exibir o estado vazio elegível
 - **AND** a contagem exibida SHALL ser `0`, sem apresentar erro ou lista vazia sem explicação
 
-### Requirement: Até três campanhas disponíveis com miniatura real
+#### Scenario: Ver todas fica no cabeçalho do painel
+- **WHEN** o painel de campanhas é exibido
+- **THEN** a ação “Ver todas” SHALL estar no cabeçalho do painel e apontar para `/campanhas`
 
-No estado `has_eligible_campaigns`, o dashboard SHALL exibir no máximo três campanhas `ready`, ordenadas por `created_at` decrescente. Cada campanha SHALL ser apresentada em cartão com nome do produto, data e miniatura real obtida pela infraestrutura existente de URLs assinadas do bucket `campaign-images`.
+### Requirement: Até três campanhas disponíveis em linhas com miniatura real
 
-A ausência de `storage_path`, falha de assinatura ou miniatura indisponível SHALL renderizar um fallback visual. O cartão SHALL continuar navegando para `/campanhas/[id]` mesmo sem miniatura.
+No estado `has_eligible_campaigns`, o painel SHALL exibir no máximo três campanhas `ready`, ordenadas por `created_at` decrescente, como linhas verticais separadas por divisórias. Cada linha SHALL conter miniatura real, nome do produto, data e uma ação visível “Abrir campanha” para `/campanhas/[id]`.
+
+A ausência de `storage_path`, falha de assinatura ou miniatura indisponível SHALL renderizar um fallback visual. A ação “Abrir campanha” SHALL permanecer disponível mesmo sem miniatura. Linhas e ações NÃO SHALL aninhar links ou botões interativos.
 
 #### Scenario: Três campanhas elegíveis são exibidas
 - **WHEN** a loja possui mais de três campanhas `ready`
-- **THEN** o dashboard SHALL exibir exatamente as três mais recentes
-- **AND** SHALL exibir acesso para a listagem completa em `/campanhas`
+- **THEN** o painel SHALL exibir exatamente as três mais recentes
+- **AND** SHALL exibir a ação “Abrir campanha” em cada linha
+- **AND** SHALL exibir a ação “Ver todas” no cabeçalho
 
 #### Scenario: Miniatura indisponível não bloqueia a campanha
 - **WHEN** a URL assinada da miniatura é nula ou falha
-- **THEN** o cartão SHALL exibir o fallback de miniatura
-- **AND** o link para `/campanhas/[id]` SHALL permanecer disponível e acessível
+- **THEN** a linha SHALL exibir o fallback de miniatura
+- **AND** a ação “Abrir campanha” para `/campanhas/[id]` SHALL permanecer disponível e acessível
 
-#### Scenario: Erro não gera cartão de erro no dashboard
+#### Scenario: Erro não gera linha de erro no dashboard
 - **WHEN** as campanhas mais recentes incluem uma campanha `error`
 - **THEN** o dashboard SHALL ignorar essa campanha na seleção das três
-- **AND** NÃO SHALL renderizar badge ou cartão de erro na seção de campanhas
+- **AND** NÃO SHALL renderizar badge ou linha de erro no painel
+
+#### Scenario: Orientação dentro do painel
+- **WHEN** o painel exibe campanhas
+- **THEN** uma divisória SHALL anteceder a orientação “Abra uma campanha para visualizar o conteúdo completo e baixá-lo para publicar.”
+- **AND** a orientação NÃO SHALL sugerir revisão, edição ou publicação direta pelo Vendeo
 
 ### Requirement: Saldo de créditos legível, com detalhes e sem confundir indisponível com zero
 
-O dashboard SHALL exibir o saldo disponível de créditos de forma legível, usando o texto do idioma da interface, e SHALL oferecer acesso aos detalhes em `/conta`. Falha de leitura do saldo SHALL produzir um estado explícito de indisponibilidade, distinto de saldo zero.
+O dashboard SHALL exibir o saldo disponível de créditos em um bloco visualmente destacado, com título legível, ícone de créditos da identidade verde, valor numericamente destacado, descrição secundária do saldo e ação “Ver créditos e extrato” para `/conta`. Em mobile, o bloco SHALL ser compacto e horizontal. Falha de leitura do saldo SHALL produzir um estado explícito de indisponibilidade, distinto de saldo zero.
 
 A leitura do dashboard SHALL usar a extensão aditiva `getBalanceBreakdown(storeId, { throwOnError: true })`. O default `false` SHALL preservar o comportamento dos demais consumidores, e `PGRST116` (nenhuma linha) SHALL continuar sendo tratado como zero, não como falha. Nenhuma regra de crédito, demo, bônus ou comprado SHALL ser alterada.
 
@@ -106,7 +116,7 @@ A leitura do dashboard SHALL usar a extensão aditiva `getBalanceBreakdown(store
 
 ### Requirement: Anúncio compacto e dispensável de novidades
 
-O dashboard SHALL exibir o anúncio de novidades em formato compacto quando houver entry com `announcement !== "none"` e o anúncio não tiver sido dispensado. O anúncio SHALL apresentar título, data e um trecho do conteúdo editorial existente, com ação para `/novidades` e ação de dispensa. O conteúdo editorial NÃO SHALL ser traduzido automaticamente nem substituído por resumo gerado por IA.
+O dashboard SHALL exibir o anúncio de novidades em formato compacto quando houver entry com `announcement !== "none"` e o anúncio não tiver sido dispensado. O anúncio SHALL apresentar a identificação visual “Novidades”/“Novedades”, título, data e um trecho do conteúdo editorial existente, com ação para `/novidades` e ação de dispensa. O conteúdo editorial NÃO SHALL ser traduzido automaticamente nem substituído por resumo gerado por IA. Em desktop, o anúncio SHALL ficar diretamente abaixo dos créditos na coluna lateral; não SHALL haver atalho de criação entre eles.
 
 #### Scenario: Anúncio compacto é exibido
 - **WHEN** existe uma entry de anúncio não dispensada
@@ -125,7 +135,9 @@ O dashboard SHALL exibir o anúncio de novidades em formato compacto quando houv
 
 ### Requirement: Cabeçalho compacto com saudação contextual
 
-O dashboard SHALL renderizar um cabeçalho compacto com saudação como título principal da página. A saudação SHALL usar o nome cadastrado da loja quando disponível e SHALL usar o `timeZone` retornado pelo contrato canônico de configurações da loja para determinar o período do dia. O texto da saudação SHALL usar o `uiLocale` do usuário.
+O dashboard SHALL renderizar um cabeçalho com saudação em destaque e subtítulo explicativo. A saudação SHALL usar o nome cadastrado da loja quando disponível e SHALL usar o `timeZone` retornado pelo contrato canônico de configurações da loja para determinar o período do dia. O texto da saudação SHALL usar o `uiLocale` do usuário. O subtítulo desktop SHALL ser “Suas campanhas e informações essenciais em um só lugar.” e o mobile poderá usar “Suas campanhas em um só lugar.”.
+
+O cabeçalho interno do dashboard NÃO SHALL conter os botões “Nova campanha” nem “Configurar loja”; a ação de criação permanece na topbar/shell. Os estados sem loja e de prontidão SHALL manter seus CTAs próprios.
 
 Falha na leitura do fuso SHALL produzir saudação neutra. O dashboard NÃO SHALL substituir silenciosamente o fuso por `America/Sao_Paulo`, nem inferir fuso por idioma, IP, ambiente do servidor ou mercado da campanha.
 
@@ -143,6 +155,24 @@ Falha na leitura do fuso SHALL produzir saudação neutra. O dashboard NÃO SHAL
 - **WHEN** o usuário não possui loja
 - **THEN** o cabeçalho SHALL exibir boas-vindas neutras
 - **AND** NÃO SHALL exibir nome de loja inventado
+
+### Requirement: Faixa inferior fixa de criação
+
+O dashboard SHALL exibir, abaixo do conjunto campanhas + lateral, uma faixa de largura total com o convite fixo “Que tal criar sua próxima campanha?” e a ação “Criar campanha” para `/campanhas/nova`. A faixa NÃO SHALL depender de saldo, histórico, status de campanha ou qualquer sinal personalizado, nem SHALL ser posicionada entre créditos e novidades na coluna lateral. Em mobile, a faixa SHALL aparecer após as novidades. Nos estados vazios, o CTA próprio do estado NÃO SHALL ser duplicado pela faixa.
+
+#### Scenario: Faixa fixa é exibida abaixo do conjunto principal
+- **WHEN** a loja tem campanhas elegíveis
+- **THEN** a faixa “Que tal criar sua próxima campanha?” SHALL aparecer após o grid de campanhas + lateral
+- **AND** a ação “Criar campanha” SHALL apontar para `/campanhas/nova`
+
+#### Scenario: Faixa não é uma recomendação
+- **WHEN** o saldo ou o histórico de campanhas muda
+- **THEN** o texto e a ação da faixa SHALL permanecer os mesmos
+- **AND** NÃO SHALL haver lógica adaptativa ou personalizada
+
+#### Scenario: Mobile preserva a ordem principal
+- **WHEN** o dashboard é renderizado em mobile
+- **THEN** a ordem SHALL ser créditos → campanhas → novidades → faixa de criação
 
 ### Requirement: Preservação de avisos, navegação e ações existentes
 

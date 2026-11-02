@@ -28,6 +28,7 @@ export function DashboardNews({ entry, excerpt, labels }: DashboardNewsProps) {
           view: labels.view,
           close: labels.close,
           dialogLabel: labels.sectionLabel,
+          badgeLabel: labels.sectionLabel,
         }}
       />
     </section>
