@@ -167,3 +167,37 @@ O sistema SHALL verificar que o build está limpo:
 
 - **WHEN** `npm run build` é executado
 - **THEN** o build é bem-sucedido
+
+### Requirement: Testes de localização da listagem
+
+O sistema SHALL testar o namespace de textos da listagem e a renderização localizada de `/campanhas`:
+
+#### Scenario: Catálogos pt-BR e es-419 têm paridade
+
+- **WHEN** os catálogos do namespace da listagem são inspecionados
+- **THEN** ambos SHALL ter exatamente as mesmas chaves e namespaces
+- **AND** SHALL ter o mesmo conjunto de placeholders por chave e nenhum valor vazio
+
+#### Scenario: Renderização em es-419
+
+- **WHEN** a listagem é renderizada com `locale = "es-419"`
+- **THEN** título, busca, filtros, ordenação, estados vazios, status, ações e paginação SHALL aparecer em espanhol
+- **AND** os nomes acessíveis da busca, período e ordenação SHALL estar em espanhol
+
+#### Scenario: Busca, filtros, ordenação e paginação preservados
+
+- **WHEN** a listagem é renderizada nos dois idiomas
+- **THEN** os valores de URL, os argumentos de `listCampaigns`, o debounce, os `values` dos selects e o callback de paginação SHALL ser idênticos
+- **AND** o redirect de página vazia SHALL permanecer inalterado
+
+#### Scenario: Ações e fallback de miniatura preservados na localização
+
+- **WHEN** a listagem é renderizada em `es-419` com campanhas `ready` e `error`
+- **THEN** `Abrir` SHALL continuar navegando para o detalhe e `Descargar` SHALL continuar apontando para `/api/campaign/{id}/download`
+- **AND** placeholder, `loading` eager/lazy e recuperação da miniatura SHALL permanecer inalterados
+
+#### Scenario: Paginação mantém português como padrão
+
+- **WHEN** `<Pagination>` é renderizado sem rótulos localizados
+- **THEN** os botões SHALL continuar exibindo `"<< Anterior"` e `"Próximo >>"`
+- **AND** o consumidor do extrato de créditos NÃO SHALL regredir

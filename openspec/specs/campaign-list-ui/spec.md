@@ -154,3 +154,54 @@ O layout SHALL ser responsivo:
 - Busca + filtros empilhados em coluna no mobile (<768px)
 - Chips de status quebram para linha seguinte quando necessário
 - Pagination com botões compactos no mobile
+
+### Requirement: Localização da listagem (pt-BR e es-419)
+
+A listagem de campanhas SHALL exibir os textos fixos no idioma da interface resolvido no servidor pela fundação existente (`getUiRenderContext` + `SupportedUiLocale`), sem criar seletor, detector, preferência ou resolvedor paralelo. A página SHALL passar ao Client Component apenas o namespace de textos da listagem, e esse namespace NÃO SHALL ser incorporado ao catálogo global do shell nem ao payload de outras rotas.
+
+O namespace SHALL cobrir título, busca (placeholder e nome acessível), filtros de status e período (rótulos e nomes acessíveis), ordenação (rótulos e nome acessível), estados sem loja, sem campanhas e sem resultados de busca, rótulos de status do card, ações Abrir/Baixar, rótulos da paginação e formatação de datas.
+
+Identificadores de status, valores de parâmetros de URL, critérios de filtragem, ordenação, contagens, debounce, redirect de página vazia e regras de elegibilidade NÃO SHALL ser traduzidos ou alterados. Apenas os rótulos apresentados são localizados.
+
+Nomes de produto, dados persistidos de campanha, textos comerciais e artes NÃO SHALL ser traduzidos. A região traduzida SHALL declarar `lang="es-419"` quando o idioma da interface for `es-419`; o nome do produto e o texto alternativo da miniatura SHALL usar `lang=""` para não herdar espanhol.
+
+#### Scenario: Listagem em es-419 mantém as mesmas campanhas e ações
+
+- **WHEN** um usuário com `uiLocale = "es-419"` acessa `/campanhas`
+- **THEN** título, busca, filtros, ordenação, estados vazios, status, ações e paginação SHALL ser exibidos em `es-419`
+- **AND** a mesma loja SHALL ver as mesmas campanhas, na mesma ordem e com as mesmas contagens do que em `pt-BR`
+- **AND** os valores de URL, os filtros e o redirect de página vazia SHALL permanecer idênticos
+
+#### Scenario: Listagem em pt-BR preserva textos e comportamento
+
+- **WHEN** um usuário com `uiLocale = "pt-BR"` acessa `/campanhas`
+- **THEN** os textos fixos SHALL ser exatamente os anteriores à localização
+- **AND** nenhuma região SHALL declarar `lang="es-419"`
+
+#### Scenario: Status continuam distintos e com os mesmos critérios
+
+- **WHEN** a listagem é exibida em qualquer um dos idiomas
+- **THEN** `ready` SHALL exibir o rótulo de campanha pronta, campanha `error` do novo fluxo encerrada SHALL exibir o rótulo neutro de não concluída, e demais `error` SHALL exibir o rótulo de erro
+- **AND** as cores e a regra de exibição SHALL permanecer inalteradas
+
+#### Scenario: Nome do produto não herda o idioma da interface
+
+- **WHEN** a listagem é exibida em `es-419`
+- **THEN** o nome do produto e o texto alternativo da miniatura SHALL permanecer exatamente como persistidos
+- **AND** ambos SHALL declarar `lang=""`
+
+#### Scenario: Datas seguem o idioma sem nova política de fuso
+
+- **WHEN** a listagem é exibida em `pt-BR` ou `es-419`
+- **THEN** a data SHALL ser formatada no idioma da interface
+- **AND** a política de fuso existente NÃO SHALL ser alterada por esta localização
+
+### Requirement: Rótulos acessíveis localizados
+
+A busca e os selects de período e ordenação SHALL expor nomes acessíveis traduzidos no namespace da listagem, sem depender apenas do placeholder. Chips de status já possuem texto visível e NÃO SHALL receber rótulo de grupo nesta entrega.
+
+#### Scenario: Controles têm nome acessível em es-419
+
+- **WHEN** a listagem é exibida em `es-419`
+- **THEN** a busca, o select de período e o select de ordenação SHALL ter nomes acessíveis em espanhol
+- **AND** os mesmos controles SHALL manter seus valores e comportamentos

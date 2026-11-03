@@ -81,3 +81,21 @@ O componente SHALL ser puramente controlado:
 
 - **WHEN** usuário clica em "Anterior" na página 1
 - **THEN** `onPageChange` NÃO é chamado
+
+### Requirement: Rótulos opcionais com padrão pt-BR
+
+O componente SHALL aceitar `labels?: Partial<PaginationLabels>` para localizar os rótulos de navegação. Quando não fornecidos, os rótulos SHALL permanecer exatamente `"<< Anterior"` e `"Próximo >>"`, preservando os consumidores existentes em português (por exemplo, o extrato de créditos). Rótulos parciais SHALL ser completados com o padrão pt-BR.
+
+A localização SHALL afetar apenas o texto dos botões; lógica de páginas, elipses, estado desabilitado, variantes visuais e callback NÃO SHALL mudar.
+
+#### Scenario: Consumidor sem rótulos permanece em pt-BR
+
+- **WHEN** `<Pagination>` é renderizado sem a prop `labels`
+- **THEN** os botões SHALL exibir `"<< Anterior"` e `"Próximo >>"`
+- **AND** o comportamento existente SHALL permanecer inalterado
+
+#### Scenario: Rótulos localizados preservam o callback
+
+- **WHEN** `<Pagination labels={{ next: "Siguiente >>" }}>` é renderizado e o usuário clica no botão
+- **THEN** o botão SHALL exibir `"Siguiente >>"`
+- **AND** `onPageChange` SHALL ser chamado com a página esperada

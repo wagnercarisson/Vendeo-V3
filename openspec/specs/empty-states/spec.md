@@ -84,3 +84,27 @@ O sistema SHALL exibir empty state distinto quando o saldo do usuário está zer
 
 - **WHEN** um usuário com saldo zero tenta gerar uma campanha ou acessa área de saldo
 - **THEN** exibe `<EmptyState title="Créditos insuficientes" description="Você precisa de créditos para gerar uma campanha." action={{ label: "Solicitar créditos", href: "/conta#creditos" }} />`
+
+### Requirement: Empty states de `/campanhas` seguem o idioma da interface
+
+Os empty states de `/campanhas` (sem loja, sem campanhas e busca sem resultados) SHALL usar o namespace de textos da listagem no idioma da interface. O `pt-BR` SHALL permanecer o padrão e preservar exatamente títulos, descrições e CTAs atuais; `es-419` SHALL apresentar textos equivalentes em espanhol neutro LATAM.
+
+A localização NÃO SHALL alterar a condição que escolhe cada estado, a existência ou ausência de ação, o destino dos CTAs (`/loja`, `/campanhas/nova`) nem os ícones.
+
+#### Scenario: Empty state sem campanhas em pt-BR permanece igual
+
+- **WHEN** um usuário com `uiLocale = "pt-BR"` sem campanhas acessa `/campanhas`
+- **THEN** os textos SHALL permanecer "Nenhuma campanha ainda", "Crie sua primeira campanha e comece a divulgar seus produtos." e "Criar campanha"
+- **AND** o CTA SHALL apontar para `/campanhas/nova`
+
+#### Scenario: Empty state sem campanhas em es-419
+
+- **WHEN** um usuário com `uiLocale = "es-419"` sem campanhas acessa `/campanhas`
+- **THEN** os textos SHALL vir do catálogo `es-419` do namespace da listagem
+- **AND** o CTA SHALL continuar apontando para `/campanhas/nova`
+
+#### Scenario: Busca sem resultados em es-419
+
+- **WHEN** um usuário com `uiLocale = "es-419"` busca e nenhum resultado é encontrado
+- **THEN** o estado "sem resultados" SHALL ser exibido em espanhol
+- **AND** a condição de exibição SHALL continuar sendo a presença de filtros ativos com lista vazia
