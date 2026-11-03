@@ -5,9 +5,11 @@ date: 2026-11-03
 branch: perf/miniaturas-campanhas
 base_sha: c703acdf9249c221a0b66975d09408fb541fe246
 depends_on: ["261102-qna"]
-implementation: complete_local
+implementation: complete_production
 production_backfill: complete_production
-publication: pending_authorization
+publication: complete_production
+production_acceptance: approved_by_owner
+push_deploy: complete
 commit: a6d763c0
 docs_commit: e2499818
 final_gates: passed
@@ -42,13 +44,25 @@ Dashboard e listagem passaram a assinar e carregar a miniatura persistida (`.thu
 
 - Visual em pt-BR; es-419 não foi alternado visualmente (exigiria mudar preferência); testes de localização existentes verdes.
 - Localmente só há campanhas legadas; v2/v3 e novo fluxo cobertos por testes de derivação do contrato central.
-- Evidência de UI **local**; produção recebeu as **246/246** miniaturas via `261102-qna`, mas a UI desta quick ainda não foi validada em produção (publicação pendente).
-- **Versionado:** código em `a6d763c0`; documentação em `e2499818`; tracking final em `48d92e18`.
+- Evidência de UI local; produção recebeu **246/246** miniaturas via `261102-qna` e a **UI foi validada funcional/visualmente em produção**, com aceite aprovado pelo responsável.
+- **Versionado:** código em `a6d763c0`; documentação em `e2499818`.
 
 ## Sequência
 
 1. Implementação local — concluída.
 2. Liberação controlada do script para produção — preparada e executada na continuação operacional da `261102-qna` (`evidence/gate-b-production-release.md`).
 3. Backfill remoto — **concluído**: 246/246 miniaturas, 0 falhas; 0 campanhas novas na varredura final.
-4. Publicação das duas quicks juntas — pendente de autorização separada.
+4. Publicação das duas quicks juntas — **push/deploy realizados e aceite de produção aprovado**.
 5. Reexecução idempotente se necessário.
+
+## Encerramento e aceite de produção (2026-11-03)
+
+Conforme confirmação do responsável:
+
+- **Push e deploy realizados.**
+- **Validação funcional e visual em produção aprovada.**
+- **Original 1024×1024 preservado.**
+- **Miniaturas 288×288 funcionando.**
+- **As duas quicks (`261102-qna` + `261102-tnu`) concluídas e aceitas em produção.**
+
+Não foram inventadas evidências adicionais: sem registro de geração de campanha nova ou validação visual em es-419 na produção nesta rodada. Evidência: `261102-qna/evidence/production-ACCEPTANCE.md`.

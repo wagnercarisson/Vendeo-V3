@@ -12,7 +12,9 @@ gate_b_production: complete_production
 gate_b_homolog: pending
 production_release_guard: complete_local
 production_backfill: complete_production
-gate_c_publication: pending_authorization
+gate_c_publication: complete_production
+production_acceptance: approved_by_owner
+push_deploy: complete
 final_gates: passed
 ---
 
@@ -145,6 +147,18 @@ Evidência: `evidence/gate-b-production-release.md` (diff, comandos com placehol
 
 **Suporte a v3 implementado (2026-11-03):** `thumbnail-path.ts` aceita estritamente `v2.jpg`/`v3.jpg` (incluindo `.jpeg`) e deriva `v2.thumb-v1.webp`/`v3.thumb-v1.webp`. `v1.jpg`, `v4.jpg`, `v10.jpg`, `v02.jpg`, `v3.png` e paths malformados são rejeitados. Testes cobrem derivação, elegibilidade do backfill e assinatura por dashboard/listagem; consumidores não duplicam regra. Sem alteração de migrations, gerador automático ou fluxo histórico. Evidência: `evidence/v3-support-IMPLEMENTED.md`.
 
+## Encerramento e aceite de produção (2026-11-03)
+
+Conforme confirmação do responsável:
+
+- **Push e deploy realizados.**
+- **Validação funcional e visual em produção aprovada.**
+- **Original 1024×1024 preservado.**
+- **Miniaturas 288×288 funcionando.**
+- **As duas quicks (`261102-qna` + `261102-tnu`) concluídas e aceitas em produção.**
+
+Registro sem novas evidências inventadas: não foi observada geração de campanha nova nem validação visual em es-419 na produção nesta rodada. Evidência: `evidence/production-ACCEPTANCE.md`.
+
 ## Evidência (Gate A)
 
 | Gate | Resultado |
@@ -186,12 +200,13 @@ Fixture fotorrealista convertida para JPEG; 20 amostras após 3 warmups:
 
 Sem cascata/varredura nesta quick. Remoções existentes do original ocorrem antes do ponto de criação da miniatura. Aprovação/substituição não apaga versões. Órfãos por remoção manual futura ficam documentados como limitação; resíduos de testes de integração **não** são autorizados — suítes não executadas permanecem pendentes.
 
-## Pendências / gates
+## Pendências / gates — estado final (2026-11-03)
 
-- **Gate B (preenchimento):** não executado. Nenhuma escrita em Storage/banco. Requer dry-run revisado + autorização explícita.
-- **Gate C (publicação/consumidores):** fora desta quick. Dashboard/listagem continuam usando o original.
-- Suítes de integração Product 1:1 / PostgreSQL: não executadas (ambiente); permanecem **não aprovadas**.
+- **Gate B (preenchimento):** **concluído em produção** — 246/246 miniaturas, 0 falhas.
+- **Gate C (publicação/consumidores):** **concluído** — push e deploy realizados; dashboard/listagem consomem as miniaturas; aceite funcional/visual de produção aprovado pelo responsável.
+- Suítes de integração Product 1:1 / PostgreSQL: não executadas (ambiente); permanecem **não aprovadas** e isso não foi alterado pelo aceite de produção.
 - Lint sem cobertura TS: limitação preexistente registrada.
+- Não houve registro, nesta rodada, de geração de campanha nova ou validação visual em es-419 na produção.
 
 ## Desvios do plano
 

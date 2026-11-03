@@ -18,8 +18,10 @@ decisions_reviewed: 2026-11-02
 approval_required: true
 gate_a_authorized: 2026-11-02
 implementation_authorized: true
-backfill_authorized: false
-publication_authorized: false
+backfill_authorized: true
+publication_authorized: true
+gate_c_publication: complete_production
+production_acceptance: approved_by_owner
 base_sha: 6447f3441a47be5ca2271245d3aab4e23a7ced9e
 branch: perf/miniaturas-campanhas
 files_modified:
@@ -485,3 +487,15 @@ O gate B exige: dry-run revisado (contagens e amostra de paths), ambiente declar
 **Permitido:** implementar código/testes; executar validação local com mocks/fakes (sharp real, Storage simulado); rodar testes focados, typecheck, lint, build e `git diff --check`; commits atômicos da implementação, se o fluxo GSD exigir.
 
 **Não permitido:** executar o backfill com escrita; qualquer escrita em Storage/banco de homolog ou produção; migration; troca de consumidores; merge, push, deploy ou tag. O Gate B (preenchimento) e o Gate C (publicação) continuam bloqueados.
+
+## 11. Encerramento e aceite de produção (2026-11-03)
+
+Registro final, conforme confirmação do responsável:
+
+- **Push e deploy realizados.**
+- **Validação funcional e visual em produção aprovada.**
+- **Original 1024×1024 preservado.**
+- **Miniaturas 288×288 funcionando.**
+- **As duas quicks (`261102-qna` + `261102-tnu`) concluídas e aceitas em produção.**
+
+Este registro substitui as pendências de publicação do histórico acima. Não foram inventadas evidências adicionais: não houve registro de geração de campanha nova nem de validação visual em es-419 na produção nesta rodada. Evidência: `evidence/production-ACCEPTANCE.md`.

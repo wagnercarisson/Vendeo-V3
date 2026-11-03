@@ -10,9 +10,10 @@ status: complete
 decisions_reviewed: 2026-11-03
 approval_required: true
 implementation_authorized: true
-implementation_status: complete_local
-backfill_authorized: false
-publication_authorized: false
+implementation_status: complete_production
+backfill_authorized: true
+publication_authorized: true
+production_acceptance: approved_by_owner
 base_sha: c703acdf9249c221a0b66975d09408fb541fe246
 branch: perf/miniaturas-campanhas
 files_modified:
@@ -249,3 +250,15 @@ user_setup: []
 ## 8. Não fazer nesta rodada
 
 Sem implementação, execução de script, escrita em banco/Storage, commit, merge, push ou deploy. Aguardar aprovação explícita do plano e das decisões da §6.
+
+## 9. Encerramento e aceite de produção (2026-11-03)
+
+Registro final, conforme confirmação do responsável:
+
+- **Push e deploy realizados.**
+- **Validação funcional e visual em produção aprovada.**
+- **Original 1024×1024 preservado.**
+- **Miniaturas 288×288 funcionando.**
+- **As duas quicks (`261102-qna` + `261102-tnu`) concluídas e aceitas em produção.**
+
+Este registro substitui a pendência de publicação do histórico acima. Não foram inventadas evidências adicionais: não houve registro de geração de campanha nova nem de validação visual em es-419 na produção nesta rodada. Evidência: `261102-qna/evidence/production-ACCEPTANCE.md`.
