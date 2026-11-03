@@ -201,10 +201,11 @@ describe("render de /floriculturas — copy aprovada e composição", () => {
     expect(html).not.toContain("Copiar");
   });
 
-  it("oferece o caminho secundário Conheça o Vendeo para a home", async () => {
+  it("oferece o conjunto de acesso na abertura e no encerramento, com Conheça o Vendeo para a home", async () => {
     const html = await render();
 
-    expect(html).toMatch(/href="\/"[^>]*>Conheça o Vendeo</);
+    expect(html.match(/data-access-cta-group/g) ?? []).toHaveLength(2);
+    expect(html.match(/href="\/"[^>]*>Conheça o Vendeo</g) ?? []).toHaveLength(2);
     expect(html).not.toMatch(/href="\/#acesso"[^>]*>Conheça o Vendeo</);
   });
 

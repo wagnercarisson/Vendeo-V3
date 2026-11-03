@@ -36,7 +36,7 @@ export function DemonstrationPair() {
         Da foto no balcão à campanha pronta para publicar.
       </h2>
 
-      <div className="mt-6 grid items-center gap-6 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <div className="mt-6 grid items-start gap-6 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <figure className="mx-auto w-full max-w-xs sm:mx-0 sm:max-w-none">
           <figcaption className="mb-3 font-heading text-xs font-semibold uppercase tracking-wide text-accent-green">
             Foto enviada ao Vendeo
@@ -55,7 +55,10 @@ export function DemonstrationPair() {
           />
         </figure>
 
-        <div aria-hidden="true" className="flex items-center justify-center text-text-muted">
+        <div
+          aria-hidden="true"
+          className="flex items-center justify-center self-center text-text-muted"
+        >
           <svg
             viewBox="0 0 24 24"
             className="h-6 w-6 sm:hidden"

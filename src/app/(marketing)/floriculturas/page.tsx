@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AcquisitionCta } from "@/components/landing/acquisition-cta";
+import { AccessCtaGroup } from "@/components/landing/floriculturas/access-cta-group";
 import { DemonstrationPair } from "@/components/landing/floriculturas/demonstration-pair";
 import { FloriculturasHeader } from "@/components/landing/floriculturas/floriculturas-header";
 import { getLaunchConfig } from "@/lib/launch-config/config";
@@ -118,32 +118,23 @@ export default async function FloriculturasPage() {
               identidade da sua loja — sem você precisar saber design.
             </p>
             <div className="mt-8">
-              <AcquisitionCta
-                publicSignupEnabled={publicSignupEnabled}
-                accessHref="/#acesso"
-              />
+              <AccessCtaGroup publicSignupEnabled={publicSignupEnabled} />
             </div>
-            <Link
-              href="/"
-              className="mt-4 inline-flex min-h-[44px] items-center rounded text-sm font-medium text-accent-blue underline-offset-4 transition-colors hover:text-text-primary hover:underline focus:ring-2 focus:ring-accent-blue focus:outline-none"
-            >
-              Conheça o Vendeo
-            </Link>
           </div>
         </section>
 
         <DemonstrationPair />
 
-        {/* Explicação + texto gerado */}
+        {/* Explicação + texto gerado (sequência vertical, mesma coluna de leitura) */}
         <section className="mx-auto w-full max-w-5xl px-6 py-8 sm:py-12">
-          <div className="grid items-start gap-6 sm:grid-cols-2">
+          <div className="max-w-2xl">
             <p className="text-base text-text-secondary">
               Uma foto da orquídea, o nome da floricultura e as informações que você
               quer destacar. O Vendeo combina esses elementos em uma campanha com sua
               marca, apresentação do produto e mensagem para acompanhar a divulgação.
             </p>
 
-            <aside className="rounded-xl border border-border bg-bg-deep p-5">
+            <aside className="mt-6 rounded-xl border border-border bg-bg-deep p-5">
               <h2 className="font-heading text-lg font-semibold text-text-primary">
                 Além da arte, o texto para acompanhar sua publicação.
               </h2>
@@ -255,9 +246,8 @@ export default async function FloriculturasPage() {
               Comece com uma foto e as informações do que você quer divulgar.
             </p>
             <div className="mt-8">
-              <AcquisitionCta
+              <AccessCtaGroup
                 publicSignupEnabled={publicSignupEnabled}
-                accessHref="/#acesso"
                 align="center"
               />
             </div>
