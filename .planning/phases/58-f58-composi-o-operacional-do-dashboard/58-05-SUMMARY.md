@@ -8,6 +8,8 @@ depends_on: ["58-04"]
 
 # F58-05 — Gates, validação visual e separação de publicação
 
+> **Atualização 2026-11-03:** ver `58-PUBLICATION-RECONCILIATION.md`. A verificação da fase foi concluída (`58-VERIFICATION.md`, 16/16). A publicação do código foi confirmada pelo responsável via deploy das quicks de miniaturas; um smoke F58-específico não foi registrado. O texto abaixo permanece como histórico da rodada.
+
 ## Resultado
 
 - **Task 1:** concluída — gates automatizados, regressões, inspeção de escopo e medição de payload.
@@ -60,6 +62,6 @@ depends_on: ["58-04"]
 - Capturas são de homolog local; não comprovam produção.
 - Este SUMMARY não declara produção aprovada nem autoriza publicação.
 
-## Próximo passo
+## Próximo passo — histórico, superado em 2026-11-03
 
-Verificação da fase (`/gsd-verify-phase 58` ou etapa equivalente do workflow), com os itens pendentes acima explicitamente carregados. Publicação continua fora de escopo e não autorizada.
+A verificação da fase foi executada (`58-VERIFICATION.md`, `status: passed`, 16/16). A publicação do código e o aceite das superfícies de dashboard/listagem foram reconciliados no adendo `58-PUBLICATION-RECONCILIATION.md`; smoke F58-específico e demais limitações permanecem sem evidência. Este parágrafo registra o plano original, não o estado final.

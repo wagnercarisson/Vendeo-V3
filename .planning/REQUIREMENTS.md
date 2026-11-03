@@ -269,9 +269,9 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-57.4-07 | Admin preservado em `pt-BR`, sem seletor; `LogoutButton` com label por prop e logout/limpeza de rascunhos intactos | Testes de admin/logout |
 | REQ-57.4-08 | Validação proporcional, gates locais, homolog existente, medição de payload/timeout/rede limitada e separação dos gates de promoção | Evidência de gates/homolog |
 
-## F58 - Cobertura planejada (Composição operacional do dashboard)
+## F58 - Cobertura verificada (Composição operacional do dashboard)
 
-**Fonte:** `openspec/changes/fase-58-composicao-operacional-do-dashboard/` (ativa; proposta, design, tasks e quatro specs). **Status:** planejamento GSD em andamento; sem implementação.
+**Fonte (arquivada):** `openspec/changes/archive/2026-11-02-fase-58-composicao-operacional-do-dashboard/` (proposta, design, tasks e quatro specs). **Status:** concluída localmente, `58-VERIFICATION.md` com 16/16 must-haves e `passed`, arquivada e integrada na main. Publicação do código confirmada pelo deploy das quicks `261102-qna`/`261102-tnu`; aceite de produção das superfícies de dashboard/listagem registrado. Disposição da task histórica 8.3 e limitações em `.planning/phases/58-f58-composi-o-operacional-do-dashboard/58-PUBLICATION-RECONCILIATION.md`; smoke F58-específico não registrado.
 
 | REQ-ID | Requirement | Prova principal |
 |---|---|---|

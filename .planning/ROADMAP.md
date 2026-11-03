@@ -694,7 +694,7 @@ Plans:
 
 ### Phase 58: F58 - Composição operacional do dashboard
 
-**Status:** **CONCLUÍDA LOCALMENTE, VERIFICADA E ARQUIVADA (2026-11-02); PUBLICAÇÃO NÃO AUTORIZADA.** Planos 58-01..58-05 concluídos; UAT 14/14 observado com ressalvas instrumentais; `58-VERIFICATION.md` com **16/16 must-haves** e status `passed`; OpenSpec arquivado em `openspec/changes/archive/2026-11-02-fase-58-composicao-operacional-do-dashboard/`. Task de publicação permanece aberta por falta de autorização. Sem push, merge, deploy, migration ou alteração de produção.
+**Status:** **CONCLUÍDA LOCALMENTE, VERIFICADA, ARQUIVADA E INTEGRADA (2026-11-02); PUBLICAÇÃO DO CÓDIGO CONFIRMADA PELO DEPLOY DAS QUICKS DE MINIATURAS (2026-11-03); SMOKE F58-ESPECÍFICO NÃO REGISTRADO.** Planos 58-01..58-05 concluídos; UAT 14/14 observado com ressalvas instrumentais; `58-VERIFICATION.md` com **16/16 must-haves** e status `passed`; OpenSpec arquivado em `openspec/changes/archive/2026-11-02-fase-58-composicao-operacional-do-dashboard/`. A task histórica 8.3 permanece não marcada no arquivo; sua disposição posterior está em `.planning/phases/58-f58-composi-o-operacional-do-dashboard/58-PUBLICATION-RECONCILIATION.md`. Nenhuma migration ou alteração de schema; limitações originais e não comprovadas preservadas no adendo.
 
 **Goal:** tornar o dashboard útil, claro e orientado à operação do lojista: cabeçalho compacto com saudação, campanhas disponíveis (`status = "ready"`) com miniaturas reais, saldo de créditos legível e anúncio compacto de novidades. Excluir campanhas com erro/geração das consultas, cartões e contagens do dashboard; entregar todos os textos novos em `pt-BR`/`es-419` por namespace próprio; preservar avisos, navegação, acessibilidade, responsividade, admin e identidade aprovada. Sem recomendações, novas regras comerciais, migrations, APIs ou dependências.
 
@@ -725,6 +725,6 @@ Plans:
 
 **Waves:** Wave 1: 58-01, 58-02; Wave 2: 58-03; Wave 3: 58-04; Wave 4: 58-05.
 
-**Canonical refs:** `openspec/changes/archive/2026-11-02-fase-58-composicao-operacional-do-dashboard/` (proposal, design, tasks, specs arquivadas), specs sincronizadas `openspec/specs/dashboard-operational-composition/`, `dashboard-localization/`, `dashboard-inteligente/`, `changelog-ui/`, `openspec/design-system/MASTER.md`, `openspec/design-system/pages/dashboard.md` (referência histórica; não prevalece sobre a F58).
+**Canonical refs:** `openspec/changes/archive/2026-11-02-fase-58-composicao-operacional-do-dashboard/` (proposal, design, tasks, specs arquivadas), `58-PUBLICATION-RECONCILIATION.md` (adendo de integração/publicação/aceite), specs sincronizadas `openspec/specs/dashboard-operational-composition/`, `dashboard-localization/`, `dashboard-inteligente/`, `changelog-ui/`, `openspec/design-system/MASTER.md`, `openspec/design-system/pages/dashboard.md` (referência histórica; não prevalece sobre a F58).
 
 **Diretório:** `.planning/phases/58-f58-composi-o-operacional-do-dashboard/`.

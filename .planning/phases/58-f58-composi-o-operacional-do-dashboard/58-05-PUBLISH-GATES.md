@@ -1,7 +1,9 @@
 # F58-05 — Separação entre validação local, validação humana e publicação
 
 **Data:** 2026-11-02
-**Estado:** validação local e UAT funcional executados; composição visual aprovada; publicação não executada e não autorizada.
+**Estado:** validação local e UAT funcional executados; composição visual aprovada; publicação não executada e não autorizada **naquela rodada**.
+
+> **Atualização 2026-11-03:** ver `58-PUBLICATION-RECONCILIATION.md`. O responsável confirmou push/deploy e aceite funcional/visual de produção das quicks `261102-qna`/`261102-tnu`. A seção (c) abaixo permanece como registro histórico da rodada de 2026-11-02; não há deployment ID nem smoke F58-específico registrado.
 
 ## (a) Validação local
 
@@ -38,11 +40,12 @@ Detalhes em `evidence/58-05-human-visual.md`.
 
 **Escopo das observações:** o atraso específico de autenticação não foi injetado; falha de crédito, falha de fuso e readiness pendente foram observadas em harness de componentes, não como teste integrado completo desses caminhos.
 
-## (c) Publicação
+## (c) Publicação — registro histórico de 2026-11-02
 
-**NÃO EXECUTADA E NÃO AUTORIZADA.**
+**NÃO EXECUTADA E NÃO AUTORIZADA NAQUELA RODADA.**
+**Disposição posterior:** push/deploy confirmados pelo responsável via quicks `261102-qna`/`261102-tnu`; ver `58-PUBLICATION-RECONCILIATION.md`. Smoke F58-específico e deployment ID não registrados.
 
-- Nenhum push, merge, deploy ou smoke autenticado de produção.
+- Nenhum push, merge, deploy ou smoke autenticado de produção **nesta rodada**.
 - Nenhuma migration, alteração de schema ou de produção.
 - A única escrita em dados foi a preferência de idioma do usuário de teste no homolog, autorizada, via fluxo de Configurações, com restauração confirmada para `pt-BR`/`explicit` (versão CAS 8).
 - Testes locais e capturas de homolog **não** provam produção.

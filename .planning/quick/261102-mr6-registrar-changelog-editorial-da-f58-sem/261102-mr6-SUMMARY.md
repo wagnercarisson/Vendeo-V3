@@ -4,7 +4,7 @@ phase: quick
 date: 2026-11-02
 status: complete
 commit: included_in_task_commit
-publication: pending_authorization
+publication: integrated_main_deploy_confirmed_no_specific_smoke
 ---
 
 # Changelog editorial da F58 registrado localmente
@@ -28,7 +28,7 @@ publication: pending_authorization
 ## Limites e próximo gate
 
 - Versionamento local autorizado posteriormente pelo usuário e incluído no commit desta quick. Nenhum merge, push, deploy, migration ou escrita em banco.
-- A entrada passa a ser o anúncio mais recente quando esta árvore for publicada; não está publicada por esta tarefa.
+- A entrada está integrada na main (commit `7c3b888f` ancestral) e foi carregada pelo deploy confirmado das quicks `261102-qna`/`261102-tnu`; não há smoke específico do anúncio registrado.
 - A data editorial de 2026-11-02 deve ser revisada se o release ocorrer em outra data.
-- O fechamento local da F58 e a tarefa de publicação pendente permanecem inalterados. A quick de miniaturas continua em standby.
+- O fechamento da F58 foi reconciliado em `.planning/phases/58-f58-composi-o-operacional-do-dashboard/58-PUBLICATION-RECONCILIATION.md`; a quick de miniaturas foi concluída e aceita em produção posteriormente.
 - Validar visualmente o novo anúncio e a listagem `/novidades` no smoke autorizado do release; não foi aberta sessão autenticada nesta rodada.

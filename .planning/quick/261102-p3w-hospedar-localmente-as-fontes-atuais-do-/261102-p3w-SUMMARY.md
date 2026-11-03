@@ -6,7 +6,7 @@ type: execute
 status: complete
 human_acceptance: approved
 acceptance_date: 2026-11-02
-publication: pending
+publication: integrated_main_deploy_confirmed_no_specific_smoke
 branch: perf/fontes-locais
 base_sha: b898f5817de88354698ff8b03f358136570fb922
 head_sha: b632aa5f
@@ -139,15 +139,15 @@ Detalhes em `evidence/verification.md` §9.
 
 ## Status
 
-**Execução concluída documentalmente. Aceite humano aprovado nesta conversa em 2026-11-02. Publicação pendente.**
+**Execução concluída documentalmente. Aceite humano aprovado em 2026-11-02. Código integrado na main (`b632aa5f`) e carregado pelo deploy confirmado das quicks `261102-qna`/`261102-tnu`; smoke específico de fontes e PageSpeed de produção não registrados.**
 
-Nenhum merge, push, deploy, tag, migration ou escrita em banco; nenhuma dependência nova. O aceite humano é distinto das verificações automáticas e CDP registradas acima; não foram adicionadas observações de telas ou testes manuais além do aceite comunicado.
+Naquela rodada: nenhum merge, push, deploy, tag, migration ou escrita em banco; nenhuma dependência nova. O aceite humano é distinto das verificações automáticas e CDP registradas acima; não foram adicionadas observações de telas ou testes manuais além do aceite comunicado.
 
 ## Próximos passos do responsável
 
-1. Publicação (merge/push/deploy) — fora desta quick.
-2. Smoke visual/funcional em produção.
-3. Novo PageSpeed em produção.
+1. Integração/publicação: commit `b632aa5f` ancestral da main; deploy genérico confirmado pelas quicks `261102-qna`/`261102-tnu`; smoke específico de fontes não registrado.
+2. Smoke visual/funcional específico de fontes em produção — **não registrado**.
+3. Novo PageSpeed em produção — **não registrado**.
 
 ## Self-Check: PASSED
 

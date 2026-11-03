@@ -22,6 +22,8 @@ re_verification:
 **Status:** passed (with documented limitations; publication not authorized)
 **Re-verification:** Yes — after UAT completion and the pre-hydration thumbnail fallback fix
 
+> **Atualização 2026-11-03:** a publicação foi reconciliada em `58-PUBLICATION-RECONCILIATION.md`. O `status: passed` e as 16/16 verdades abaixo permanecem como validação original; o adendo separa integração, deploy confirmado e limitações que continuam sem evidência.
+
 ## Goal Achievement
 
 ### Observable Truths
