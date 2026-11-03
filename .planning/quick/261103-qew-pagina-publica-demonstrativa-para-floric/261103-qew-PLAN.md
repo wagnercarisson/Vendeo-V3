@@ -1,12 +1,12 @@
 ---
 quick_id: 261103-qew
 slug: pagina-publica-demonstrativa-para-floric
-status: awaiting_approval
-mode: plan_only
+status: implemented_awaiting_visual_review
+mode: implemented
 reconciled: 2026-11-03
-base_branch: main
-base_commit: c86889e3
-implementation_authorized: false
+base_branch: perf/pagina-campanha-florista
+base_commit: 03e13606
+implementation_authorized: true
 openspec_change: pagina-publica-demonstrativa-floriculturas
 ---
 

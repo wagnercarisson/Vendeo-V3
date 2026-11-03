@@ -7,7 +7,9 @@ A entrega também precisa ser descobrível sem alterar a home aprovada e sem tra
 ## What Changes
 
 - Criar a rota pública `/floriculturas` como página demonstrativa, em `pt-BR`, mobile-first, com a copy aprovada pelo responsável.
-- Compor a página em: abertura com CTA → demonstração (foto enviada / campanha criada + aviso demonstrativo) → explicação → segundo bloco → funcionamento em 4 passos → encerramento com CTA.
+- Compor a página em: abertura com CTA e link secundário “Conheça o Vendeo” → demonstração (foto enviada / campanha criada + aviso demonstrativo) → explicação com card do texto gerado → segundo bloco → funcionamento em 4 passos → encerramento com CTA.
+- Exibir o texto gerado para a publicação (título, legenda, hashtags e chamada final) em um card HTML secundário, sem captura de interface e sem botões “Copiar”.
+- Oferecer “Conheça o Vendeo” como link secundário para `/` na abertura, abaixo do CTA principal.
 - Usar **somente** o último par aprovado: foto sintética da orquídea roxa no balcão e campanha Donna Flor gerada no Vendeo. O par anterior (`identidade-floricultura.webp`, “Dona Flor”, buquê de rosas) não é reutilizado.
 - Exibir o aviso demonstrativo aprovado uma única vez, discreto, junto ao exemplo; sem bloco de advertência comercial adicional.
 - Não exibir tabela de entrada, legenda gerada ou dado de geração ausente.

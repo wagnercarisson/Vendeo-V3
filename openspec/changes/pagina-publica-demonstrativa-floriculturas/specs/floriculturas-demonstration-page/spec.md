@@ -31,17 +31,65 @@ A página SHALL usar exatamente a copy aprovada pelo responsável para H1, texto
 
 A página SHALL NOT acrescentar blocos ou frases de advertência comercial, incluindo “não promete vendas”, “não mede tempo de geração” e “foto criada com IA”. Restrições internas de planejamento SHALL permanecer fora da copy pública.
 
-A página SHALL NOT exibir tabela de entrada, legenda gerada pela campanha ou qualquer dado de geração não fornecido.
+A página SHALL NOT exibir tabela de entrada ou qualquer dado de geração não fornecido.
+
+A proibição de preço, oferta ou selo refere-se a **acrescentar à página informações não aprovadas**. Ela SHALL NOT ser interpretada como remoção, recorte ou ocultação de elementos que já fazem parte da imagem aprovada da campanha — por exemplo, o selo “Destaque da Semana” impresso na arte. A imagem aprovada SHALL ser exibida integralmente, sem corte.
 
 #### Scenario: Copy aprovada sem desvios
 - **WHEN** a página renderizada é comparada à copy aprovada
 - **THEN** os textos SHALL corresponder ao conteúdo aprovado
 - **AND** não SHALL existir bloco de advertência comercial adicional
 
-#### Scenario: Nenhum dado de geração inventado
+#### Scenario: Nenhuma informação não aprovada acrescentada à página
 - **WHEN** a página é revisada
-- **THEN** não SHALL existir tabela de entrada, preço, oferta, selo ou legenda gerada
+- **THEN** não SHALL existir tabela de entrada, preço, oferta ou selo **como texto novo da página**
 - **AND** nenhum texto SHALL afirmar dados de geração não fornecidos
+
+#### Scenario: Imagem aprovada exibida integralmente
+- **WHEN** a campanha aprovada é exibida
+- **THEN** elementos internos da arte, como o selo “Destaque da Semana”, SHALL permanecer visíveis
+- **AND** a imagem SHALL NOT ser recortada, coberta ou tratada para remover conteúdo
+
+### Requirement: Texto gerado exibido em HTML ao lado da explicação
+
+A página SHALL exibir, na mesma seção da explicação, um card com o título aprovado “Além da arte, o texto para acompanhar sua publicação.” e, dentro dele, o conteúdo exato gerado para a campanha demonstrativa: título, legenda, hashtags e chamada final.
+
+O card SHALL ser renderizado como texto HTML, não como captura de tela da interface, e SHALL NOT reproduzir botões “Copiar” nem qualquer controle operacional do aplicativo.
+
+No desktop, o card SHALL ficar ao lado do parágrafo de explicação; no mobile, logo abaixo dele. O card SHALL ser visualmente secundário em relação ao par de imagens.
+
+#### Scenario: Conteúdo gerado exibido integralmente
+- **WHEN** a página é renderizada
+- **THEN** o card SHALL conter o título “Além da arte, o texto para acompanhar sua publicação.”
+- **AND** SHALL conter o título “Orquídea Phalaenopsis: beleza em cada cor”
+- **AND** SHALL conter a legenda, as quatro hashtags e a chamada final exatas fornecidas
+
+#### Scenario: Texto em HTML, não captura de interface
+- **WHEN** o HTML da página é inspecionado
+- **THEN** o card SHALL ser composto por elementos de texto
+- **AND** SHALL NOT conter imagem do texto gerado nem botão “Copiar”
+
+#### Scenario: Card secundário e responsivo
+- **WHEN** a página é exibida em desktop e mobile
+- **THEN** o card SHALL aparecer ao lado do parágrafo no desktop e abaixo dele no mobile
+- **AND** SHALL NOT competir visualmente com o par foto/campanha
+
+### Requirement: Caminho secundário para conhecer o Vendeo
+
+A abertura SHALL oferecer um link secundário “Conheça o Vendeo” apontando para `/`, na mesma aba, sem âncora, de modo a abrir o topo da home.
+
+O link SHALL ficar abaixo do CTA principal de acesso, mantendo o CTA como ação de maior destaque. O encerramento SHALL manter apenas o CTA de acesso, sem repetir o link secundário. A página SHALL NOT alterar a home nem os CTAs dos demais consumidores.
+
+#### Scenario: Link secundário na abertura
+- **WHEN** a página é renderizada
+- **THEN** SHALL existir um link “Conheça o Vendeo” com `href="/"`
+- **AND** SHALL estar posicionado abaixo do CTA principal
+- **AND** SHALL NOT apontar para `/#acesso`
+
+#### Scenario: Encerramento sem link secundário
+- **WHEN** o bloco de encerramento é revisado
+- **THEN** SHALL conter apenas o CTA de acesso
+- **AND** SHALL NOT repetir o link “Conheça o Vendeo”
 
 ### Requirement: Aviso demonstrativo único e discreto
 
@@ -81,9 +129,9 @@ A página SHALL NOT reutilizar o par anterior `identidade-floricultura.webp` (�
 
 Cada uma das duas imagens SHALL ser entregue em duas variantes WebP — uma menor e uma maior — com `srcset` e `sizes`, proporção original preservada e sem upscale. A foto SHALL manter a proporção da origem (1312×1199) e a campanha SHALL permanecer 1:1 sem corte.
 
-A imagem identificada como LCP SHALL NOT receber `loading="lazy"`; a campanha SHALL usar `loading="eager"` e `fetchPriority="high"`.
+A imagem identificada como LCP SHALL NOT receber `loading="lazy"`. A prioridade de carregamento SHALL ser definida pela medição no navegador, não pela área aparente: a hipótese inicial de que a campanha seria o LCP foi **refutada** — o elemento medido foi o `h1` em desktop (1440×900) e mobile (390×844). Portanto, nenhuma imagem da demonstração recebe prioridade alta; ambas permanecem `eager`.
 
-A implementação SHALL registrar as dimensões e os pesos finais dos arquivos entregues.
+A implementação SHALL registrar as dimensões, os pesos finais dos arquivos entregues e a medição de LCP observada.
 
 #### Scenario: Duas variantes por imagem
 - **WHEN** os assets entregues são inspecionados
@@ -93,8 +141,13 @@ A implementação SHALL registrar as dimensões e os pesos finais dos arquivos e
 
 #### Scenario: LCP sem lazy-loading
 - **WHEN** o HTML renderizado é inspecionado
-- **THEN** a imagem da campanha SHALL ter `loading="eager"` e `fetchPriority="high"`
-- **AND** nenhuma das duas imagens da demonstração SHALL ter `loading="lazy"`
+- **THEN** nenhuma das duas imagens da demonstração SHALL ter `loading="lazy"`
+- **AND** nenhuma imagem SHALL competir com o `h1` por prioridade alta quando a medição indicar o texto como LCP
+
+#### Scenario: Prioridade confirmada por medição
+- **WHEN** o LCP é medido no navegador em desktop e mobile
+- **THEN** o elemento vencedor SHALL ser registrado
+- **AND** a prioridade de carregamento SHALL ser ajustada se o vencedor não for a campanha
 
 #### Scenario: Proporção preservada
 - **WHEN** a página é exibida em desktop ou mobile

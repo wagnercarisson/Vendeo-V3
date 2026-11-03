@@ -24,6 +24,11 @@ supersedes: versão anterior desta quick (não usar a copy antiga)
 
 **CTA #1** — componente `AcquisitionCta` (`align="responsive"`)
 
+**Link secundário**
+> Conheça o Vendeo
+
+→ `/` (mesma aba, topo da home). Abaixo do CTA principal; sem repetição no encerramento.
+
 ### 1.2 Demonstração
 
 **Título**
@@ -41,6 +46,20 @@ supersedes: versão anterior desta quick (não usar a copy antiga)
 ### 1.3 Explicação
 
 > Uma foto da orquídea, o nome da floricultura e as informações que você quer destacar. O Vendeo combina esses elementos em uma campanha com sua marca, apresentação do produto e mensagem para acompanhar a divulgação.
+
+**Card do texto gerado** (ao lado do parágrafo no desktop; abaixo no mobile)
+
+Título do card:
+> Além da arte, o texto para acompanhar sua publicação.
+
+Conteúdo exato, em HTML (sem botões “Copiar”, sem captura de interface):
+
+| Rótulo | Conteúdo |
+|---|---|
+| Título | Orquídea Phalaenopsis: beleza em cada cor |
+| Legenda | Em destaque na Floricultura Donna Flor, a Orquídea Phalaenopsis encanta com sua beleza natural. São várias cores para escolher e se encantar — um gesto delicado que transforma qualquer ambiente. |
+| Hashtags | #OrquídeaPhalaenopsis #Orquídeas #FloresEmDestaque #FloriculturaDonnaFlor |
+| Chamada final | Venha conhecer na loja! |
 
 ### 1.4 Segundo bloco
 
@@ -87,11 +106,11 @@ Sem segundo aviso demonstrativo (o aviso fica somente junto ao exemplo).
 
 ## 3. Composição desktop / mobile
 
-**Ordem (igual nos dois):** header → abertura (H1 + abertura + CTA #1) → demonstração (título + par de imagens + aviso) → explicação → segundo bloco → funcionamento → encerramento (chamada + apoio + CTA #2) → rodapé.
+**Ordem (igual nos dois):** header → abertura (H1 + abertura + CTA #1 + link “Conheça o Vendeo”) → demonstração (título + par de imagens + aviso) → explicação + card do texto gerado → segundo bloco → funcionamento → encerramento (chamada + apoio + CTA #2) → rodapé.
 
 ### Desktop (≥1024px)
 - Container `max-w-5xl px-6`; coluna de leitura `max-w-2xl` para H1, textos e passos.
-- Abertura: texto à esquerda, CTA #1 logo abaixo; sem imagem no hero (a demonstração é o bloco seguinte).
+- Abertura: texto à esquerda, CTA #1 logo abaixo e o link “Conheça o Vendeo” em seguida; sem imagem no hero (a demonstração é o bloco seguinte).
 - Demonstração: duas colunas `[minmax(0,1fr)_auto_minmax(0,1fr)]` com `gap-6`, seta `ArrowRight` (24px) no centro. Cada coluna ≈ 452px.
   - Esquerda: foto em proporção original (1312×1199 ≈ 1,094:1), `rounded-lg border border-border-light`.
   - Direita: campanha 1:1 em caixa `aspect-square` com `object-contain` (sem corte).
@@ -132,5 +151,6 @@ Saída (novos arquivos em `public/floriculturas/`, dois WebP por imagem):
 - `sizes`: `(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))`.
 - Larguras escolhidas pelo layout (~452px CSS) e DPR 2 (≈904px): 1024 cobre 2× com folga; 480 cobre 1× e serve telas menores. Sem upscale; proporção preservada.
 - WebP qualidade 82, `effort 6`, `smartSubsample` (mesmo pipeline Sharp já usado na landing). Sem dependência nova.
-- LCP: a campanha é o maior elemento pintado no desktop (452×452 > 452×413) → `loading="eager"` + `fetchPriority="high"`. A foto também fica acima da dobra e recebe `loading="eager"` sem prioridade alta. Nenhuma das duas recebe `lazy`.
+- LCP: **medido**, não presumido. O elemento vencedor foi o `h1` em desktop (1440×900) e mobile (390×844). Por isso nenhuma imagem recebe `fetchPriority="high"`; ambas ficam `loading="eager"`, sem `lazy`.
+- Medição registrada em `evidence/lcp-measurement.json`.
 - Registrar na implementação as dimensões e os pesos finais dos quatro arquivos.

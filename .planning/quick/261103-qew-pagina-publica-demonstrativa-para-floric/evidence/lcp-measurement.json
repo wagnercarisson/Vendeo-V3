@@ -1,0 +1,76 @@
+[
+  {
+    "label": "desktop-1440",
+    "viewport": "1440x900",
+    "screenshot": ".planning\\quick\\261103-qew-pagina-publica-demonstrativa-para-floric\\evidence\\floriculturas-desktop-1440.png",
+    "lcp": {
+      "lcp": [
+        {
+          "tag": "H1",
+          "src": null,
+          "size": 91635,
+          "time": 88,
+          "url": null
+        }
+      ],
+      "err": null
+    },
+    "resources": [
+      {
+        "name": "foto-orquidea-balcao-480w.webp",
+        "transfer": 300,
+        "decoded": 37076,
+        "duration": 13
+      },
+      {
+        "name": "campanha-donna-flor-480w.webp",
+        "transfer": 300,
+        "decoded": 44956,
+        "duration": 13
+      },
+      {
+        "name": "page-a7189ba7f6d948eb.js",
+        "transfer": 0,
+        "decoded": 6011,
+        "duration": 14
+      }
+    ]
+  },
+  {
+    "label": "mobile-390",
+    "viewport": "390x844",
+    "screenshot": ".planning\\quick\\261103-qew-pagina-publica-demonstrativa-para-floric\\evidence\\floriculturas-mobile-390.png",
+    "lcp": {
+      "lcp": [
+        {
+          "tag": "H1",
+          "src": null,
+          "size": 38982,
+          "time": 56,
+          "url": null
+        }
+      ],
+      "err": null
+    },
+    "resources": [
+      {
+        "name": "foto-orquidea-balcao-1024w.webp",
+        "transfer": 300,
+        "decoded": 101178,
+        "duration": 6
+      },
+      {
+        "name": "campanha-donna-flor-1024w.webp",
+        "transfer": 300,
+        "decoded": 135060,
+        "duration": 7
+      },
+      {
+        "name": "page-a7189ba7f6d948eb.js",
+        "transfer": 0,
+        "decoded": 6011,
+        "duration": 8
+      }
+    ]
+  }
+]

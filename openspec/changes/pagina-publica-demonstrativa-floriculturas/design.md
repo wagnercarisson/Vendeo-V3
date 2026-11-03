@@ -69,13 +69,27 @@ Pipeline Sharp já existente (`quality: 82`, `effort: 6`, `smartSubsample: true`
 
 Como `buildLandingSrcSet` exige original 1024 quadrado e 5 candidatos, a página usa um módulo local `image-sources.ts` com as duas strings de `srcset`. A allowlist da landing permanece intocada.
 
-### D6. LCP sem lazy-loading
+### D6. Prioridade de carregamento definida por medição
 
-No desktop, a campanha ocupa 452×452 e a foto 452×413; a campanha é o maior elemento pintado. Ambas ficam acima da dobra e usam `loading="eager"`; a campanha recebe `fetchPriority="high"`. Nenhuma das duas recebe `loading="lazy"`.
+A hipótese inicial era a campanha como LCP no desktop, por ocupar 452×452 contra 452×413 da foto. **A medição no navegador refutou a hipótese:** o LCP observado foi o `h1`, tanto em desktop (1440×900, 124 ms) quanto em mobile (390×844, 64 ms), com as fontes locais aplicando `font-display: swap`.
+
+Conduta adotada:
+
+1. Nenhuma imagem recebe `fetchPriority="high"` — a prioridade alta competiria com o texto que é o LCP real.
+2. Ambas permanecem `loading="eager"` (ficam na área do primeiro viewport/no topo da demonstração) e nenhuma usa `lazy`.
+3. A medição e o elemento vencedor ficam registrados em `evidence/lcp-measurement.json` e no SUMMARY.
+
+Se uma medição futura, em rede lenta ou outro viewport, apontar a campanha (ou a foto) como LCP, a prioridade deve ser reavaliada com base nessa medição — não na área aparente.
 
 ### D7. Dois CTAs, mesmo fluxo
 
 A contradição anterior (CTA só no encerramento) é resolvida com dois usos do mesmo `AcquisitionCta`: um imediatamente após a abertura e outro no encerramento. `GoogleButton` não usa `id` fixo, então duas instâncias não colidem. Com a flag desligada, ambos apontam para `/#acesso`; com a flag ligada, ambos oferecem Google e e-mail.
+
+Na abertura, abaixo do CTA principal, entra o link secundário “Conheça o Vendeo” → `/` (mesma aba, topo da home). O encerramento mantém apenas o CTA de acesso. O link é renderizado ao lado do `AcquisitionCta`, sem nova prop e sem alterar os demais consumidores.
+
+### D7.1 Texto gerado em card HTML
+
+A entrega não é só a arte. O texto gerado pela campanha (título, legenda, hashtags e chamada final) é exibido em um card na mesma seção da explicação — ao lado no desktop, abaixo no mobile. É texto HTML, não captura de interface, e não reproduz os botões “Copiar”: a página demonstra a entrega, não opera o aplicativo. O card é visualmente secundário em relação ao par antes/depois.
 
 ### D8. `accessHref` opcional no `AcquisitionCta`
 
