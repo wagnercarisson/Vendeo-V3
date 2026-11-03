@@ -55,6 +55,10 @@ vi.mock("@/lib/auth/require-user", () => ({
   requirePageUser: vi.fn().mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } }),
 }));
 
+vi.mock("@/lib/i18n/server", () => ({
+  getUiRenderContext: vi.fn().mockResolvedValue({ ok: true, locale: "pt-BR" }),
+}));
+
 const NEXT_CONTROL = new Error("NEXT_CONTROL");
 const notFoundFn = vi.fn(() => { throw NEXT_CONTROL; });
 const redirectFn = vi.fn(() => { throw NEXT_CONTROL; });

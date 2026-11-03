@@ -7,6 +7,9 @@ import { isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-serv
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { IMAGE_GENERATION_GLOBAL_TIMEOUT_MS } from "@/lib/image-generation/config";
 import { getCorrectionReport } from "@/lib/campaign/correction-reports";
+import { getCampaignDetailMessages } from "@/lib/i18n/campaign-detail";
+import type { SupportedUiLocale } from "@/lib/i18n/locales";
+import { getUiRenderContext } from "@/lib/i18n/server";
 import {
   getCampaignForDisplay,
   generateSignedPreviewUrl,
@@ -45,10 +48,16 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 
   const user = await requirePageUser();
 
-  const store = await getCurrentStore(user.userId);
+  const [store, ui] = await Promise.all([
+    getCurrentStore(user.userId),
+    getUiRenderContext(user.userId),
+  ]);
   if (!store) {
     notFound();
   }
+
+  const locale: SupportedUiLocale = ui.ok ? ui.locale : "pt-BR";
+  const messages = getCampaignDetailMessages(locale);
 
   let campaign = await getCampaignForDisplay(id);
   if (!campaign) {
@@ -95,7 +104,9 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       operationId: null,
       supportEmail: process.env.SUPPORT_EMAIL,
     };
-    return <CampaignPageClient {...props} />;
+    return (
+      <CampaignPageClient {...props} messages={messages} locale={locale} />
+    );
   }
 
   if (newFlowState && newFlowOperation) {
@@ -199,7 +210,9 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       recovery: newFlowRecovery,
       restoredForm,
     };
-    return <CampaignPageClient {...props} />;
+    return (
+      <CampaignPageClient {...props} messages={messages} locale={locale} />
+    );
   }
 
   if (campaign.status === "ready" && campaign.storage_path) {
@@ -286,5 +299,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     }
   }
 
-  return <CampaignPageClient {...props} />;
+  return (
+    <CampaignPageClient {...props} messages={messages} locale={locale} />
+  );
 }

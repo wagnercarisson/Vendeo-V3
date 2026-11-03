@@ -27,6 +27,10 @@ vi.mock("@/lib/auth/store-ownership", () => ({
   getCurrentStore: mockGetCurrentStore,
 }));
 
+vi.mock("@/lib/i18n/server", () => ({
+  getUiRenderContext: vi.fn().mockResolvedValue({ ok: true, locale: "pt-BR" }),
+}));
+
 vi.mock("@/lib/campaign/display", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/campaign/display")>();
   return {

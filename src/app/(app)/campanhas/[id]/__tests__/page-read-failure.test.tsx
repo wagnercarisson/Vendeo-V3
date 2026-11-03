@@ -27,6 +27,10 @@ vi.mock("@/lib/auth/store-ownership", () => ({
   getCurrentStore: vi.fn(async () => ({ id: STORE_ID })),
 }));
 
+vi.mock("@/lib/i18n/server", () => ({
+  getUiRenderContext: vi.fn(async () => ({ ok: true, locale: "pt-BR" })),
+}));
+
 vi.mock("@/lib/campaign/persistence", () => ({
   listArtVersions: vi.fn(async () => []),
 }));

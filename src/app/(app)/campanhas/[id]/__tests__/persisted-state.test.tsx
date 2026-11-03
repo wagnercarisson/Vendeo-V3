@@ -32,6 +32,12 @@ import type {
   NewFlowCopyRecoveryView,
 } from "@/lib/campaign/display";
 import {
+  es419CampaignDetailMessages,
+  ptBRCampaignDetailMessages,
+  type CampaignDetailMessages,
+} from "@/lib/i18n/campaign-detail";
+import type { SupportedUiLocale } from "@/lib/i18n/locales";
+import {
   registerCopyRecoveryDrivingHandle,
   clearCopyRecoveryDrivingHandle,
 } from "@/lib/campaign/copy-recovery-driving";
@@ -49,7 +55,12 @@ import { CopyRecoveryRequestSchema } from "@/lib/product-1-1/copy/recovery-schem
 const CAMPAIGN_ID = "22222222-2222-4222-8222-222222222222";
 const OPERATION_ID = "33333333-3333-4333-8333-333333333333";
 
-const BASE_PROPS: CampaignPageProps = {
+type ClientProps = CampaignPageProps & {
+  messages: CampaignDetailMessages;
+  locale: SupportedUiLocale;
+};
+
+const BASE_PROPS: ClientProps = {
   imageUrl: "https://img.example/art.jpg",
   caption: "Legenda",
   hashtags: ["#promo"],
@@ -61,6 +72,8 @@ const BASE_PROPS: CampaignPageProps = {
   downloadUrl: `/api/campaign/${CAMPAIGN_ID}/download`,
   campaignId: CAMPAIGN_ID,
   isPublicationCopyEdited: false,
+  messages: ptBRCampaignDetailMessages,
+  locale: "pt-BR",
 };
 
 const FORBIDDEN = ["Gerar novamente", "Tente novamente"];
@@ -1203,5 +1216,52 @@ describe("CR-01/WR-01 — corpo REAL do emissor satisfaz o schema REAL", () => {
       vi.advanceTimersByTime(20000);
     });
     expect(copyRecoveryCalls()).toHaveLength(0);
+  });
+});
+
+describe("localização es-419 da entrega pronta", () => {
+  it("marca o fragmento de recuperação em pt-BR sob interface es-419", () => {
+    const recovery: NewFlowCopyRecoveryView = {
+      state: "ativa",
+      autoAttempts: 0,
+      manualAttempts: 0,
+      waitRemainingMs: 0,
+      canRetry: false,
+    };
+
+    const { container } = render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        messages={es419CampaignDetailMessages}
+        locale="es-419"
+        newFlow={{ state: "delivered", operationId: OPERATION_ID, recovery }}
+      />,
+    );
+
+    expect(container.firstElementChild).toHaveAttribute("lang", "es-419");
+    expect(container.querySelector('[lang="pt-BR"]')).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Descargar original" }),
+    ).toBeInTheDocument();
+  });
+
+  it("marca o feedback de falha da copy em pt-BR", () => {
+    render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        messages={es419CampaignDetailMessages}
+        locale="es-419"
+        newFlow={{
+          state: "delivered",
+          operationId: OPERATION_ID,
+          copy: { state: "failed", caption: "", hashtags: [], ctaPost: "" },
+        }}
+      />,
+    );
+
+    const message = screen.getByText(
+      "Não foi possível gerar o texto desta campanha. A arte está pronta para uso.",
+    );
+    expect(message.closest('[lang="pt-BR"]')).not.toBeNull();
   });
 });

@@ -14,6 +14,11 @@ import {
   Loader2,
 } from "lucide-react";
 import type { CampaignPageProps, NewFlowCopyView } from "@/lib/campaign/display";
+import type {
+  CampaignDetailCopyMessages,
+  CampaignDetailMessages,
+} from "@/lib/i18n/campaign-detail/messages";
+import type { SupportedUiLocale } from "@/lib/i18n/locales";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +28,37 @@ import { UnknownResultPanel } from "@/components/flow/unknown-result-panel";
 import { RefundedPanel } from "@/components/flow/refunded-panel";
 import { CopyRecoveryPanel } from "@/components/flow/copy-recovery-panel";
 import { isDrivingCopyRecovery } from "@/lib/campaign/copy-recovery-driving";
+
+interface CampaignPageClientProps extends CampaignPageProps {
+  messages: CampaignDetailMessages;
+  locale: SupportedUiLocale;
+}
+
+/**
+ * Extração mínima das condições de renderização da página. O MESMO resultado
+ * decide qual tela aparece e se a interface da entrega pronta é localizada —
+ * assim as duas regras não podem divergir. Não altera precedência nem estado.
+ */
+type DeliverySurface = "ready" | "approval" | "regenerating" | "other";
+
+function resolveDeliverySurface(props: CampaignPageProps): DeliverySurface {
+  if (props.newFlow) {
+    return props.newFlow.state === "delivered" ? "ready" : "other";
+  }
+
+  if (props.displayStatus !== "ready") return "other";
+  if (props.approval?.state.status === "regenerating") return "regenerating";
+
+  if (
+    props.approval?.state.status === "pending" &&
+    props.approval.candidateImageUrl &&
+    props.approval.candidateVersionId
+  ) {
+    return "approval";
+  }
+
+  return "ready";
+}
 
 /**
  * F56.2b2a (B2.1 / Plano 04) — `requestToken` POR ACIONAMENTO (critério 27):
@@ -51,8 +87,26 @@ function newRequestToken(): string | null {
   return null;
 }
 
-export default function CampaignPageClient(props: CampaignPageProps) {
+export default function CampaignPageClient(props: CampaignPageClientProps) {
   const router = useRouter();
+
+  const surface = resolveDeliverySurface(props);
+  const isReadySurface = surface === "ready";
+  const interfaceLang =
+    isReadySurface && props.locale === "es-419" ? "es-419" : undefined;
+  const fallbackTitle = isReadySurface
+    ? props.messages.fallbackTitle
+    : "Campanha";
+  const displayTitle = props.productName || fallbackTitle;
+  const contentTitleLang =
+    isReadySurface && props.productName ? "" : undefined;
+  const breadcrumbs = [
+    {
+      label: isReadySurface ? props.messages.breadcrumbCampaigns : "Campanhas",
+      href: "/campanhas",
+    },
+    { label: displayTitle, lang: contentTitleLang },
+  ];
 
   const isNewFlowRunning = props.newFlow?.state === "running";
   const isLegacyGenerating = !props.newFlow && props.displayStatus === "generating";
@@ -89,20 +143,16 @@ export default function CampaignPageClient(props: CampaignPageProps) {
     return () => clearInterval(interval);
   }, [isLegacyGenerating, isNewFlowRunning, recoveryNeedsAccompaniment, router]);
 
-  const breadcrumbs = [
-    { label: "Campanhas", href: "/campanhas" },
-    { label: props.productName || "Campanha" },
-  ];
-
   // F56.2b1b (Plano 06, B1B-D7 / REQ-56.2.2-09): campanha do NOVO fluxo — o
   // estado exibido deriva da OPERAÇÃO PERSISTIDA (props.newFlow) e NUNCA cai nas
   // telas legadas (`StaleView`/`ErrorView`) nem expõe ação de regeneração. O poll
   // apenas reflete o estado persistido (não retoma/controla execução).
   if (props.newFlow) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div lang={interfaceLang} className="mx-auto max-w-2xl">
         <PageHeader
-          title={props.productName || "Campanha"}
+          title={displayTitle}
+          titleLang={contentTitleLang}
           breadcrumbs={breadcrumbs}
         />
 
@@ -129,9 +179,10 @@ export default function CampaignPageClient(props: CampaignPageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div lang={interfaceLang} className="mx-auto max-w-2xl">
       <PageHeader
-        title={props.productName || "Campanha"}
+        title={displayTitle}
+        titleLang={contentTitleLang}
         breadcrumbs={breadcrumbs}
       />
 
@@ -142,12 +193,10 @@ export default function CampaignPageClient(props: CampaignPageProps) {
       {props.displayStatus === "error" && (
         <ErrorView onNewCampaign={() => router.push("/campanhas/nova")} />
       )}
-      {props.displayStatus === "ready" &&
-      props.approval?.state.status === "regenerating" ? (
+      {surface === "regenerating" ? (
         <RegeneratingView />
-      ) : props.displayStatus === "ready" &&
-        props.approval?.state.status === "pending" &&
-        props.approval.candidateImageUrl &&
+      ) : surface === "approval" &&
+        props.approval?.candidateImageUrl &&
         props.approval.candidateVersionId ? (
         <CampaignApprovalView
           campaignId={props.campaignId}
@@ -158,14 +207,22 @@ export default function CampaignPageClient(props: CampaignPageProps) {
             props.approval.isV1 && props.approval.hasOpportunity
           )}
         />
-      ) : (
-        props.displayStatus === "ready" && <ReadyView {...props} />
-      )}
+      ) : surface === "ready" ? (
+        <ReadyView {...props} />
+      ) : null}
     </div>
   );
 }
 
-function CopyButton({ text, label }: { text: string; label: string }) {
+function CopyButton({
+  text,
+  label,
+  copyMessages,
+}: {
+  text: string;
+  label: string;
+  copyMessages: CampaignDetailCopyMessages;
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -181,16 +238,16 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       variant="ghost"
       size="sm"
       onClick={handleCopy}
-      aria-label={`Copiar ${label}`}
+      aria-label={`${copyMessages.ariaPrefix} ${label}`}
       className="shrink-0"
     >
       {copied ? <Check className="h-3.5 w-3.5 text-accent-green" /> : <Copy className="h-3.5 w-3.5" />}
-      {copied ? "Copiado!" : "Copiar"}
+      {copied ? copyMessages.copied : copyMessages.copy}
     </Button>
   );
 }
 
-function ReadyView(props: CampaignPageProps) {
+function ReadyView(props: CampaignPageClientProps) {
   const router = useRouter();
   const [currentCopy, setCurrentCopy] = useState({
     caption: props.caption,
@@ -301,13 +358,14 @@ function ReadyView(props: CampaignPageProps) {
       {props.imageUrl && (
         <img
           src={props.imageUrl}
-          alt={props.productName || "Campanha"}
+          alt={props.productName || props.messages.fallbackTitle}
+          lang=""
           className="w-full rounded-xl shadow-md"
         />
       )}
 
       <p className="text-sm text-text-muted font-body">
-        Criada em{" "}
+        {props.messages.createdAtLabel}{" "}
         {new Date(props.createdAt).toLocaleDateString("pt-BR")}
       </p>
 
@@ -315,12 +373,12 @@ function ReadyView(props: CampaignPageProps) {
         <div className="p-4">
           <div className="mb-4 flex items-center gap-2">
             <h2 className="text-xl font-semibold text-text-primary font-heading">
-              Kit de Publicação
+              {props.messages.publicationKit}
             </h2>
             {isEdited && !isEditing && (
               <Badge variant="ready">
                 <CheckCheck className="mr-1 h-3 w-3" />
-                Editado
+                {props.messages.editedBadge}
               </Badge>
             )}
           </div>
@@ -329,15 +387,19 @@ function ReadyView(props: CampaignPageProps) {
             <div className="space-y-3">
               {currentCopy.caption && (
                 <div className="flex items-start gap-2">
-                  <p className="flex-1 text-lg text-text-primary font-body">
+                  <p lang="" className="flex-1 text-lg text-text-primary font-body">
                     {currentCopy.caption}
                   </p>
-                  <CopyButton text={currentCopy.caption} label="caption" />
+                  <CopyButton
+                    text={currentCopy.caption}
+                    label={props.messages.copy.targets.caption}
+                    copyMessages={props.messages.copy}
+                  />
                 </div>
               )}
               {currentCopy.hashtags.length > 0 && (
                 <div className="flex items-start gap-2">
-                  <div className="flex flex-1 flex-wrap gap-2">
+                  <div lang="" className="flex flex-1 flex-wrap gap-2">
                     {currentCopy.hashtags.map((tag, index) => (
                       <span
                         key={`${tag}-${index}`}
@@ -347,15 +409,23 @@ function ReadyView(props: CampaignPageProps) {
                       </span>
                     ))}
                   </div>
-                  <CopyButton text={currentCopy.hashtags.join(" ")} label="hashtags" />
+                  <CopyButton
+                    text={currentCopy.hashtags.join(" ")}
+                    label={props.messages.copy.targets.hashtags}
+                    copyMessages={props.messages.copy}
+                  />
                 </div>
               )}
               {currentCopy.cta_post && (
                 <div className="flex items-start gap-2">
-                  <p className="flex-1 font-semibold text-accent-green font-heading">
+                  <p lang="" className="flex-1 font-semibold text-accent-green font-heading">
                     {currentCopy.cta_post}
                   </p>
-                  <CopyButton text={currentCopy.cta_post} label="Chamada" />
+                  <CopyButton
+                    text={currentCopy.cta_post}
+                    label={props.messages.copy.targets.cta}
+                    copyMessages={props.messages.copy}
+                  />
                 </div>
               )}
               <Button
@@ -368,12 +438,13 @@ function ReadyView(props: CampaignPageProps) {
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div lang="pt-BR" className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-text-primary font-heading">
                   Legenda
                 </label>
                 <textarea
+                  lang=""
                   value={editData.caption}
                   onChange={(e) =>
                     setEditData((prev) => ({
@@ -392,6 +463,7 @@ function ReadyView(props: CampaignPageProps) {
                   Hashtags (uma por linha)
                 </label>
                 <textarea
+                  lang=""
                   value={editData.hashtags.join("\n")}
                   onChange={(e) => handleHashtagsChange(e.target.value)}
                   className="w-full rounded-lg border border-border bg-bg-surface p-3 text-sm text-text-primary placeholder-text-muted focus:ring-2 focus:ring-accent-green focus:outline-none font-body"
@@ -404,6 +476,7 @@ function ReadyView(props: CampaignPageProps) {
                   CTA
                 </label>
                 <input
+                  lang=""
                   type="text"
                   value={editData.cta_post}
                   onChange={(e) =>
@@ -465,10 +538,10 @@ function ReadyView(props: CampaignPageProps) {
         onClick={() => { window.location.href = `/api/campaign/${props.campaignId}/download`; }}
       >
         <Download className="h-4 w-4" />
-        Baixar Original
+        {props.messages.downloadOriginal}
       </Button>
       <p className="text-xs text-text-muted">
-        Use apenas materiais que você tem autorização para divulgar. Revise textos, preços e imagens antes de publicar: a IA pode cometer erros.
+        {props.messages.disclaimer}
       </p>
     </div>
   );
@@ -513,7 +586,7 @@ function RegeneratingView() {
 // mapeada é não-nula E a copy está pendente/falha (a `concluída` remove a
 // recuperação e o texto entregue continua no `NewFlowCopyPanel`). O poll de 5s
 // segue preservado (apenas REFLETE o estado do servidor — não retoma/controla).
-function NewFlowDeliveredView(props: CampaignPageProps) {
+function NewFlowDeliveredView(props: CampaignPageClientProps) {
   const router = useRouter();
   const operationId = props.newFlow?.operationId ?? null;
   const recovery = props.newFlow?.recovery ?? null;
@@ -636,39 +709,46 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
       {props.imageUrl && (
         <img
           src={props.imageUrl}
-          alt={props.productName || "Campanha"}
+          alt={props.productName || props.messages.fallbackTitle}
+          lang=""
           className="w-full rounded-xl shadow-md"
         />
       )}
 
       <p className="text-sm text-text-muted font-body">
-        Criada em {new Date(props.createdAt).toLocaleDateString("pt-BR")}
+        {props.messages.createdAtLabel}{" "}
+        {new Date(props.createdAt).toLocaleDateString("pt-BR")}
       </p>
 
       {showRecovery && recovery ? (
         <>
-          <CopyRecoveryPanel
-            state={manualRecoveryReady ? "interrompida" : recovery.state}
-            autoAttempts={recovery.autoAttempts}
-            manualAttempts={recovery.manualAttempts}
-            waitRemainingMs={
-              recovery.state === "aguardando" ? remainingMs : recovery.waitRemainingMs
-            }
-            canRetry={recovery.canRetry}
-            onRecover={() => {
-              void emitAttempt("manual");
-            }}
-            onVerify={() => router.refresh()}
-            supportEmail={props.newFlow?.supportEmail}
-          />
+          <div lang="pt-BR">
+            <CopyRecoveryPanel
+              state={manualRecoveryReady ? "interrompida" : recovery.state}
+              autoAttempts={recovery.autoAttempts}
+              manualAttempts={recovery.manualAttempts}
+              waitRemainingMs={
+                recovery.state === "aguardando" ? remainingMs : recovery.waitRemainingMs
+              }
+              canRetry={recovery.canRetry}
+              onRecover={() => {
+                void emitAttempt("manual");
+              }}
+              onVerify={() => router.refresh()}
+              supportEmail={props.newFlow?.supportEmail}
+            />
+          </div>
           {actionError && (
-            <p role="alert" className="text-sm text-accent-red font-body">
+            <p lang="pt-BR" role="alert" className="text-sm text-accent-red font-body">
               {actionError}
             </p>
           )}
         </>
       ) : (
-        <NewFlowCopyPanel copy={props.newFlow?.copy ?? null} />
+        <NewFlowCopyPanel
+          copy={props.newFlow?.copy ?? null}
+          messages={props.messages}
+        />
       )}
 
       <Button
@@ -679,11 +759,10 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
         }}
       >
         <Download className="h-4 w-4" />
-        Baixar Original
+        {props.messages.downloadOriginal}
       </Button>
       <p className="text-xs text-text-muted">
-        Use apenas materiais que você tem autorização para divulgar. Revise textos,
-        preços e imagens antes de publicar: a IA pode cometer erros.
+        {props.messages.disclaimer}
       </p>
     </div>
   );
@@ -692,13 +771,19 @@ function NewFlowDeliveredView(props: CampaignPageProps) {
 // F56.2b1b (P3) — painel da copy do NOVO FLUXO. `delivered` ⇒ textos completos;
 // `failed`/`canceled` ⇒ feedback seguro (âmbar); `pending`/ausente ⇒ nada (a arte
 // continua exibida). Somente LEITURA — nunca gera/regenera/retenta.
-function NewFlowCopyPanel({ copy }: { copy: NewFlowCopyView | null }) {
+function NewFlowCopyPanel({
+  copy,
+  messages,
+}: {
+  copy: NewFlowCopyView | null;
+  messages: CampaignDetailMessages;
+}) {
   if (!copy) return null;
 
   if (copy.state === "failed" || copy.state === "canceled") {
     return (
       <Card>
-        <div className="p-4">
+        <div lang="pt-BR" className="p-4">
           <p className="text-sm text-accent-amber font-body">
             {copy.state === "canceled"
               ? "A geração do texto demorou mais que o esperado e foi interrompida. A arte está pronta para uso."
@@ -720,28 +805,36 @@ function NewFlowCopyPanel({ copy }: { copy: NewFlowCopyView | null }) {
     <Card>
       <div className="p-4">
         <h2 className="mb-4 text-xl font-semibold text-text-primary font-heading">
-          Kit de Publicação
+          {messages.publicationKit}
         </h2>
         <div className="space-y-3">
           {copy.title && (
             <div className="flex items-start gap-2">
-              <p className="flex-1 text-lg font-semibold text-text-primary font-heading">
+              <p lang="" className="flex-1 text-lg font-semibold text-text-primary font-heading">
                 {copy.title}
               </p>
-              <CopyButton text={copy.title} label="título" />
+              <CopyButton
+                text={copy.title}
+                label={messages.copy.targets.title}
+                copyMessages={messages.copy}
+              />
             </div>
           )}
           {copy.caption && (
             <div className="flex items-start gap-2">
-              <p className="flex-1 text-lg text-text-primary font-body">
+              <p lang="" className="flex-1 text-lg text-text-primary font-body">
                 {copy.caption}
               </p>
-              <CopyButton text={copy.caption} label="caption" />
+              <CopyButton
+                text={copy.caption}
+                label={messages.copy.targets.caption}
+                copyMessages={messages.copy}
+              />
             </div>
           )}
           {copy.hashtags.length > 0 && (
             <div className="flex items-start gap-2">
-              <div className="flex flex-1 flex-wrap gap-2">
+              <div lang="" className="flex flex-1 flex-wrap gap-2">
                 {copy.hashtags.map((tag, index) => (
                   <span
                     key={`${tag}-${index}`}
@@ -751,15 +844,23 @@ function NewFlowCopyPanel({ copy }: { copy: NewFlowCopyView | null }) {
                   </span>
                 ))}
               </div>
-              <CopyButton text={copy.hashtags.join(" ")} label="hashtags" />
+              <CopyButton
+                text={copy.hashtags.join(" ")}
+                label={messages.copy.targets.hashtags}
+                copyMessages={messages.copy}
+              />
             </div>
           )}
           {copy.ctaPost && (
             <div className="flex items-start gap-2">
-              <p className="flex-1 font-semibold text-accent-green font-heading">
+              <p lang="" className="flex-1 font-semibold text-accent-green font-heading">
                 {copy.ctaPost}
               </p>
-              <CopyButton text={copy.ctaPost} label="Chamada" />
+              <CopyButton
+                text={copy.ctaPost}
+                label={messages.copy.targets.cta}
+                copyMessages={messages.copy}
+              />
             </div>
           )}
         </div>

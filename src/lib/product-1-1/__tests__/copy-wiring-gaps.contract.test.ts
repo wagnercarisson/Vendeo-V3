@@ -753,7 +753,7 @@ describe("Plano 08 (correção P3) — a copy do novo fluxo é lida POR OPERAÇ�
 
   it("o client exibe os textos/copy e NUNCA oferece retry (`Gerar novamente`)", () => {
     expect(clientSource).toContain("NewFlowCopyPanel");
-    expect(clientSource).toContain("Kit de Publicação");
+    expect(clientSource).toContain("publicationKit");
     // Retry NÃO existe como texto de AÇÃO renderizado (o termo só pode aparecer
     // em comentários explicando a ausência).
     expect(clientSource).not.toMatch(/>\s*Gerar novamente/);

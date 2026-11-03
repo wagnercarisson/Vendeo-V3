@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -8,6 +8,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
+import {
+  es419CampaignDetailMessages,
+  ptBRCampaignDetailMessages,
+} from "@/lib/i18n/campaign-detail";
 
 const defaultProps = {
   imageUrl: "https://example.com/image.jpg",
@@ -21,6 +25,8 @@ const defaultProps = {
   downloadUrl: "/api/campaign/id-1/download",
   campaignId: "550e8400-e29b-41d4-a716-446655440000",
   isPublicationCopyEdited: false,
+  messages: ptBRCampaignDetailMessages,
+  locale: "pt-BR" as const,
 };
 
 beforeEach(() => {
@@ -212,5 +218,84 @@ describe("CampaignPageClient — Kit de Publicação", () => {
     expect(screen.getByText("Restaurar original")).toBeInTheDocument();
 
     vi.unstubAllGlobals();
+  });
+});
+
+describe("CampaignPageClient — localização da campanha pronta", () => {
+  it("pt-BR preserva os textos atuais e não declara es-419", () => {
+    const { container } = render(<CampaignPageClient {...defaultProps} />);
+
+    expect(screen.getByText("Kit de Publicação")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Baixar Original" })).toBeInTheDocument();
+    expect(container.querySelector('[lang="es-419"]')).toBeNull();
+  });
+
+  it("es-419 traduz a interface e marca o conteúdo persistido", () => {
+    const { container } = render(
+      <CampaignPageClient
+        {...defaultProps}
+        messages={es419CampaignDetailMessages}
+        locale="es-419"
+      />,
+    );
+
+    expect(screen.getByText("Kit de Publicación")).toBeInTheDocument();
+    expect(screen.getByText("Creada el", { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Descargar original" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Campañas" })).toHaveAttribute(
+      "href",
+      "/campanhas",
+    );
+    expect(container.firstElementChild).toHaveAttribute("lang", "es-419");
+    expect(screen.getByText("Caption original")).toHaveAttribute("lang", "");
+    expect(screen.getByText("#promocao")).toBeInTheDocument();
+  });
+
+  it("mantém o clipboard e usa ¡Copiado! como feedback es-419", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(
+      <CampaignPageClient
+        {...defaultProps}
+        messages={es419CampaignDetailMessages}
+        locale="es-419"
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Copiar texto de la publicación",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("¡Copiado!")).toBeInTheDocument();
+    });
+    expect(writeText).toHaveBeenCalledWith("Caption original");
+  });
+
+  it("mantém o modo de edição em pt-BR sob interface es-419", () => {
+    const { container } = render(
+      <CampaignPageClient
+        {...defaultProps}
+        messages={es419CampaignDetailMessages}
+        locale="es-419"
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Editar"));
+
+    expect(screen.getByText("Legenda")).toBeInTheDocument();
+    expect(container.querySelector('[lang="pt-BR"]')).not.toBeNull();
+    expect(screen.getByDisplayValue("Caption original")).toHaveAttribute(
+      "lang",
+      "",
+    );
   });
 });

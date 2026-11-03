@@ -3,16 +3,21 @@ import Link from "next/link";
 interface Breadcrumb {
   label: string;
   href?: string;
+  /** Idioma explícito do rótulo; ausente mantém o comportamento atual. */
+  lang?: string;
 }
 
 interface PageHeaderProps {
   title: string;
+  /** Idioma explícito do título; ausente mantém o comportamento atual. */
+  titleLang?: string;
   breadcrumbs?: Breadcrumb[];
   actions?: React.ReactNode;
 }
 
 export function PageHeader({
   title,
+  titleLang,
   breadcrumbs,
   actions,
 }: PageHeaderProps) {
@@ -26,19 +31,22 @@ export function PageHeader({
               {crumb.href ? (
                 <Link
                   href={crumb.href}
+                  lang={crumb.lang}
                   className="text-text-secondary hover:text-text-primary transition-colors"
                 >
                   {crumb.label}
                 </Link>
               ) : (
-                <span className="text-text-primary">{crumb.label}</span>
+                <span lang={crumb.lang} className="text-text-primary">
+                  {crumb.label}
+                </span>
               )}
             </span>
           ))}
         </nav>
       )}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary font-heading">
+        <h1 lang={titleLang} className="text-2xl font-bold text-text-primary font-heading">
           {title}
         </h1>
         {actions && <div className="flex items-center gap-2">{actions}</div>}

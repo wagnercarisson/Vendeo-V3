@@ -23,6 +23,12 @@ vi.mock("@/components/campaign/campaign-approval-view", () => ({
 import CampaignPageClient from "../client";
 import type { CampaignPageProps, NewFlowCopyRecoveryView } from "@/lib/campaign/display";
 import {
+  es419CampaignDetailMessages,
+  ptBRCampaignDetailMessages,
+  type CampaignDetailMessages,
+} from "@/lib/i18n/campaign-detail";
+import type { SupportedUiLocale } from "@/lib/i18n/locales";
+import {
   registerCopyRecoveryDrivingHandle,
   clearCopyRecoveryDrivingHandle,
 } from "@/lib/campaign/copy-recovery-driving";
@@ -44,7 +50,12 @@ const CAMPAIGN_ID = "22222222-2222-4222-8222-222222222222";
 const OPERATION_ID = "33333333-3333-4333-8333-333333333333";
 const CTA = "Gerar os textos novamente";
 
-const BASE_PROPS: CampaignPageProps = {
+type ClientProps = CampaignPageProps & {
+  messages: CampaignDetailMessages;
+  locale: SupportedUiLocale;
+};
+
+const BASE_PROPS: ClientProps = {
   imageUrl: "https://img.example/art.jpg",
   caption: "Legenda",
   hashtags: ["#promo"],
@@ -56,6 +67,8 @@ const BASE_PROPS: CampaignPageProps = {
   downloadUrl: `/api/campaign/${CAMPAIGN_ID}/download`,
   campaignId: CAMPAIGN_ID,
   isPublicationCopyEdited: false,
+  messages: ptBRCampaignDetailMessages,
+  locale: "pt-BR",
 };
 
 function recoveryView(
@@ -248,5 +261,28 @@ describe("copy-recovery-driving — só a aba iniciadora emite a 2ª automática
       String((copyRecoveryCalls()[0][1] as RequestInit).body),
     );
     expect(CopyRecoveryRequestSchema.safeParse(raw).success).toBe(true);
+  });
+});
+
+describe("localização es-419 da recuperação de copy", () => {
+  it("marca o painel de recuperação em pt-BR sob interface es-419", () => {
+    const { container } = render(
+      <CampaignPageClient
+        {...BASE_PROPS}
+        messages={es419CampaignDetailMessages}
+        locale="es-419"
+        newFlow={{
+          state: "delivered",
+          operationId: OPERATION_ID,
+          recovery: recoveryView({ state: "ativa", waitRemainingMs: 0 }),
+        }}
+      />,
+    );
+
+    expect(container.firstElementChild).toHaveAttribute("lang", "es-419");
+    expect(container.querySelector('[lang="pt-BR"]')).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Descargar original" }),
+    ).toBeInTheDocument();
   });
 });

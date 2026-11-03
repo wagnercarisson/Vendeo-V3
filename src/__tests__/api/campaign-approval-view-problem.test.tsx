@@ -12,6 +12,7 @@ import {
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import CampaignApprovalView from "@/components/campaign/campaign-approval-view";
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
+import { ptBRCampaignDetailMessages } from "@/lib/i18n/campaign-detail";
 
 const mockRefresh = vi.fn();
 const mockPush = vi.fn();
@@ -39,6 +40,8 @@ const pageProps = {
   downloadUrl: "/api/campaign/c1/download",
   campaignId: "c1",
   isPublicationCopyEdited: false,
+  messages: ptBRCampaignDetailMessages,
+  locale: "pt-BR" as const,
 };
 
 function openModal(): HTMLElement {

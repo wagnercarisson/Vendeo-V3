@@ -3,6 +3,10 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import CampaignPageClient from "@/app/(app)/campanhas/[id]/client";
+import {
+  es419CampaignDetailMessages,
+  ptBRCampaignDetailMessages,
+} from "@/lib/i18n/campaign-detail";
 
 const mockPush = vi.fn();
 const mockRefresh = vi.fn();
@@ -23,6 +27,8 @@ const defaultProps = {
   downloadUrl: "/api/campaign/123/download",
   campaignId: "123",
   isPublicationCopyEdited: false,
+  messages: ptBRCampaignDetailMessages,
+  locale: "pt-BR" as const,
 };
 
 beforeEach(() => {
@@ -119,6 +125,58 @@ describe("CampaignPageClient — display states", () => {
 
       expect(screen.getByRole("button", { name: /baixar/i })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /aprovar arte/i })).toBeNull();
+    });
+  });
+
+  describe("localização derivada da view realmente renderizada", () => {
+    it("pending SEM candidata cai em ReadyView e é localizado", () => {
+      const { container } = render(
+        <CampaignPageClient
+          {...defaultProps}
+          messages={es419CampaignDetailMessages}
+          locale="es-419"
+          approval={{ state: { status: "pending" } }}
+        />,
+      );
+
+      expect(screen.getByText("Kit de Publicación")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /aprobar arte/i })).toBeNull();
+      expect(container.firstElementChild).toHaveAttribute("lang", "es-419");
+    });
+
+    it("pending COM candidata mantém CampaignApprovalView sem localização", () => {
+      const { container } = render(
+        <CampaignPageClient
+          {...defaultProps}
+          messages={es419CampaignDetailMessages}
+          locale="es-419"
+          approval={{
+            state: { status: "pending" },
+            candidateImageUrl: "https://preview.example.com/art.jpg",
+            candidateVersionId: "v1",
+          }}
+        />,
+      );
+
+      expect(screen.getByRole("button", { name: /aprovar arte/i })).toBeInTheDocument();
+      expect(screen.queryByText("Kit de Publicación")).toBeNull();
+      expect(container.querySelector('[lang="es-419"]')).toBeNull();
+    });
+
+    it("estado generating continua em pt-BR e sem marcação es-419", () => {
+      const { container } = render(
+        <CampaignPageClient
+          {...defaultProps}
+          messages={es419CampaignDetailMessages}
+          locale="es-419"
+          displayStatus="generating"
+        />,
+      );
+
+      expect(
+        screen.getByText("Sua campanha está sendo gerada..."),
+      ).toBeInTheDocument();
+      expect(container.querySelector('[lang="es-419"]')).toBeNull();
     });
   });
 
