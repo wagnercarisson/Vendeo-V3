@@ -9,7 +9,7 @@
           "tag": "H1",
           "src": null,
           "size": 91635,
-          "time": 88,
+          "time": 748,
           "url": null
         }
       ],
@@ -17,22 +17,22 @@
     },
     "resources": [
       {
-        "name": "foto-orquidea-balcao-480w.webp",
-        "transfer": 300,
-        "decoded": 37076,
-        "duration": 13
+        "name": "campanha-donna-flor-480w.webp",
+        "transfer": 45256,
+        "decoded": 44956,
+        "duration": 39
       },
       {
-        "name": "campanha-donna-flor-480w.webp",
-        "transfer": 300,
-        "decoded": 44956,
-        "duration": 13
+        "name": "foto-orquidea-balcao-480w.webp",
+        "transfer": 37376,
+        "decoded": 37076,
+        "duration": 39
       },
       {
         "name": "page-a7189ba7f6d948eb.js",
-        "transfer": 0,
+        "transfer": 3124,
         "decoded": 6011,
-        "duration": 14
+        "duration": 239
       }
     ]
   },
@@ -46,7 +46,7 @@
           "tag": "H1",
           "src": null,
           "size": 38982,
-          "time": 56,
+          "time": 72,
           "url": null
         }
       ],
@@ -55,21 +55,21 @@
     "resources": [
       {
         "name": "foto-orquidea-balcao-1024w.webp",
-        "transfer": 300,
+        "transfer": 101478,
         "decoded": 101178,
-        "duration": 6
+        "duration": 8
       },
       {
         "name": "campanha-donna-flor-1024w.webp",
-        "transfer": 300,
+        "transfer": 135360,
         "decoded": 135060,
-        "duration": 7
+        "duration": 10
       },
       {
         "name": "page-a7189ba7f6d948eb.js",
         "transfer": 0,
         "decoded": 6011,
-        "duration": 8
+        "duration": 13
       }
     ]
   }

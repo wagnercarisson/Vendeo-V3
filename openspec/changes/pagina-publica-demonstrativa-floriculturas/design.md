@@ -81,15 +81,21 @@ Conduta adotada:
 
 Se uma medição futura, em rede lenta ou outro viewport, apontar a campanha (ou a foto) como LCP, a prioridade deve ser reavaliada com base nessa medição — não na área aparente.
 
-### D7. Dois CTAs, mesmo fluxo
+**Caveat:** os tempos locais observados (dezenas de ms) e os `transferSize` do Chrome local **não são resultado de PageSpeed em produção**. Servem apenas para decidir prioridade de carregamento no HTML; qualquer afirmação pública de performance exigirá medição em produção.
 
-A contradição anterior (CTA só no encerramento) é resolvida com dois usos do mesmo `AcquisitionCta`: um imediatamente após a abertura e outro no encerramento. `GoogleButton` não usa `id` fixo, então duas instâncias não colidem. Com a flag desligada, ambos apontam para `/#acesso`; com a flag ligada, ambos oferecem Google e e-mail.
+### D7. Dois CTAs agrupados, mesmo fluxo
 
-Na abertura, abaixo do CTA principal, entra o link secundário “Conheça o Vendeo” → `/` (mesma aba, topo da home). O encerramento mantém apenas o CTA de acesso. O link é renderizado ao lado do `AcquisitionCta`, sem nova prop e sem alterar os demais consumidores.
+O conjunto de acesso é composto pelo CTA principal e pelo link secundário “Conheça o Vendeo” → `/` (mesma aba, topo da home). No desktop ficam lado a lado, com a mesma altura de 48 px: o principal mantém a superfície verde; o secundário usa borda `border-border-light` e texto `text-text-primary`. No mobile empilham com a mesma largura.
+
+O conjunto se repete na abertura e no encerramento. A largura dos filhos é controlada pelo container (`[&_a]:w-full sm:[&_a]:w-auto`), sem alterar o `AcquisitionCta` nem a home.
 
 ### D7.1 Texto gerado em card HTML
 
-A entrega não é só a arte. O texto gerado pela campanha (título, legenda, hashtags e chamada final) é exibido em um card na mesma seção da explicação — ao lado no desktop, abaixo no mobile. É texto HTML, não captura de interface, e não reproduz os botões “Copiar”: a página demonstra a entrega, não opera o aplicativo. O card é visualmente secundário em relação ao par antes/depois.
+A entrega não é só a arte. O texto gerado pela campanha (título, legenda, hashtags e chamada final) é exibido em um card **abaixo** do parágrafo de explicação, no mesmo bloco de leitura com largura limitada (`max-w-2xl`). É texto HTML, não captura de interface, e não reproduz os botões “Copiar”: a página demonstra a entrega, não opera o aplicativo. O card é visualmente secundário em relação ao par antes/depois e não se estica por toda a largura da página.
+
+### D7.2 Comparação alinhada pelo topo
+
+A demonstração usa `items-start`: rótulos na mesma linha e imagens começando na mesma altura no desktop. A foto mantém a proporção original e a campanha permanece 1:1 com `contain`; a diferença de altura aparece na base, sem recorte. A seta decorativa usa `self-center` para ficar centralizada na altura da linha.
 
 ### D8. `accessHref` opcional no `AcquisitionCta`
 

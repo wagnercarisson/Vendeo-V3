@@ -56,7 +56,7 @@ A página SHALL exibir, na mesma seção da explicação, um card com o título 
 
 O card SHALL ser renderizado como texto HTML, não como captura de tela da interface, e SHALL NOT reproduzir botões “Copiar” nem qualquer controle operacional do aplicativo.
 
-No desktop, o card SHALL ficar ao lado do parágrafo de explicação; no mobile, logo abaixo dele. O card SHALL ser visualmente secundário em relação ao par de imagens.
+No desktop e no mobile, o card SHALL ficar em sequência vertical, abaixo do parágrafo de explicação, no mesmo bloco de leitura de largura limitada. O card SHALL ser visualmente secundário em relação ao par de imagens.
 
 #### Scenario: Conteúdo gerado exibido integralmente
 - **WHEN** a página é renderizada
@@ -69,27 +69,52 @@ No desktop, o card SHALL ficar ao lado do parágrafo de explicação; no mobile,
 - **THEN** o card SHALL ser composto por elementos de texto
 - **AND** SHALL NOT conter imagem do texto gerado nem botão “Copiar”
 
-#### Scenario: Card secundário e responsivo
-- **WHEN** a página é exibida em desktop e mobile
-- **THEN** o card SHALL aparecer ao lado do parágrafo no desktop e abaixo dele no mobile
+#### Scenario: Card secundário em coluna única
+- **WHEN** a seção de explicação é exibida
+- **THEN** o card SHALL aparecer abaixo do parágrafo, em desktop e mobile
 - **AND** SHALL NOT competir visualmente com o par foto/campanha
+
+### Requirement: Comparação alinhada pelo topo e leitura em coluna única
+
+Na demonstração, os rótulos SHALL ocupar a mesma linha e as imagens SHALL começar na mesma altura no desktop. A comparação SHALL alinhar pelo topo (`items-start`), preservar as proporções originais e não recortar; a diferença de altura entre a foto e a campanha SHALL aparecer na base.
+
+Na seção de explicação, o parágrafo e o card do texto gerado SHALL ficar em sequência vertical — parágrafo acima, card abaixo — dentro de um mesmo bloco de leitura com largura limitada. O card SHALL NOT se esticar por toda a largura da página.
+
+#### Scenario: Rótulos e imagens alinhados no desktop
+- **WHEN** a demonstração é exibida em desktop
+- **THEN** os dois rótulos SHALL estar na mesma linha
+- **AND** as duas imagens SHALL começar na mesma altura
+- **AND** nenhuma imagem SHALL ser recortada
+
+#### Scenario: Explicação e card em coluna única
+- **WHEN** a seção de explicação é exibida
+- **THEN** o parágrafo SHALL vir antes do card
+- **AND** ambos SHALL estar no mesmo bloco de leitura de largura limitada
+- **AND** o card SHALL NOT ocupar a largura total da página
 
 ### Requirement: Caminho secundário para conhecer o Vendeo
 
-A abertura SHALL oferecer um link secundário “Conheça o Vendeo” apontando para `/`, na mesma aba, sem âncora, de modo a abrir o topo da home.
+A abertura e o encerramento SHALL oferecer o mesmo conjunto de acesso: o CTA principal de aquisição e o link secundário “Conheça o Vendeo” apontando para `/`, na mesma aba, sem âncora, de modo a abrir o topo da home.
 
-O link SHALL ficar abaixo do CTA principal de acesso, mantendo o CTA como ação de maior destaque. O encerramento SHALL manter apenas o CTA de acesso, sem repetir o link secundário. A página SHALL NOT alterar a home nem os CTAs dos demais consumidores.
+No desktop, os dois SHALL ficar lado a lado, com a mesma altura: o CTA principal mantém a superfície verde e o secundário recebe borda e texto com contraste adequado. No mobile, SHALL empilhar com a mesma largura e o mesmo alinhamento.
 
-#### Scenario: Link secundário na abertura
+O link secundário SHALL NOT apontar para `/#acesso` e SHALL NOT alterar a home nem os CTAs dos demais consumidores.
+
+#### Scenario: Conjunto na abertura e no encerramento
 - **WHEN** a página é renderizada
-- **THEN** SHALL existir um link “Conheça o Vendeo” com `href="/"`
-- **AND** SHALL estar posicionado abaixo do CTA principal
-- **AND** SHALL NOT apontar para `/#acesso`
+- **THEN** SHALL existir o conjunto de acesso na abertura
+- **AND** SHALL existir o mesmo conjunto no encerramento
+- **AND** os dois SHALL conter “Conheça o Vendeo” com `href="/"`
 
-#### Scenario: Encerramento sem link secundário
-- **WHEN** o bloco de encerramento é revisado
-- **THEN** SHALL conter apenas o CTA de acesso
-- **AND** SHALL NOT repetir o link “Conheça o Vendeo”
+#### Scenario: Lado a lado no desktop e empilhado no mobile
+- **WHEN** a página é exibida em desktop
+- **THEN** CTA principal e link secundário SHALL ficar lado a lado com a mesma altura
+- **AND** em mobile SHALL empilhar com a mesma largura e alinhamento
+
+#### Scenario: Link secundário não usa a âncora de acesso
+- **WHEN** o link “Conheça o Vendeo” é inspecionado
+- **THEN** o destino SHALL ser `/`
+- **AND** SHALL NOT ser `/#acesso`
 
 ### Requirement: Aviso demonstrativo único e discreto
 

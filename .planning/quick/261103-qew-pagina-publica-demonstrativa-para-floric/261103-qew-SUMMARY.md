@@ -39,16 +39,16 @@ extensões aprovadas (card do texto gerado e link “Conheça o Vendeo”).
 ## LCP — hipótese refutada por medição
 
 - Hipótese inicial: campanha como LCP no desktop por área.
-- **Medição no navegador (Chrome headless, CDP):** LCP = `h1` em **desktop 1440×900** (91.635 px², ~88 ms) e em **mobile 390×844** (38.982 px², ~56 ms), com fontes locais em `font-display: swap`.
+- **Medição no navegador (Chrome headless, CDP, cache limpo):** LCP = `h1` em **desktop 1440×900** (91.635 px², ~748 ms) e em **mobile 390×844** (38.982 px², ~72 ms). O `h1` vence nos dois tamanhos.
 - **Ajuste aplicado:** removido `fetchPriority="high"` da campanha; ambas as imagens permanecem `loading="eager"`, nenhuma com `lazy`.
+- **Caveat:** os tempos locais e os `transferSize` do Chrome local **não são PageSpeed de produção** e não devem ser usados como métrica pública. A medição serve apenas para decidir prioridade no HTML.
 - Evidência: `evidence/lcp-measurement.json`.
-- Observação: a segunda medição usou o perfil de Chrome com cache já aquecido; os `transferSize` das imagens aparecem como ~300 B. Os pesos acima são os tamanhos reais dos arquivos.
 
 ## Gates
 
 | Gate | Resultado |
 |---|---|
-| Suíte focada + regressão de landing/SEO | **161/161** em 12 arquivos |
+| Suíte focada + regressão de landing/SEO | **161/161** em 12 arquivos; após os ajustes de composição, **105/105** nos 6 arquivos afetados |
 | Typecheck (`tsc -p tsconfig.typecheck.json --noEmit`) | **0 erros** |
 | Lint (`eslint .`) | exit **0** (sem cobertura de TypeScript — limitação preexistente) |
 | Build (`npm run build`) | **0**; `/floriculturas` = 2,82 kB / 173 kB; shared 102 kB |
@@ -58,7 +58,13 @@ extensões aprovadas (card do texto gerado e link “Conheça o Vendeo”).
 
 ## Composição entregue
 
-Header → abertura (H1 + texto + CTA + link “Conheça o Vendeo”) → demonstração (rótulos, foto, seta, campanha, aviso único) → explicação + card do texto gerado (título, legenda, hashtags, chamada final) → segundo bloco → funcionamento em 4 passos → encerramento com CTA → rodapé.
+Header → abertura (H1 + texto + **conjunto de acesso**: CTA verde + “Conheça o Vendeo” com borda, lado a lado no desktop e empilhados no mobile) → demonstração (rótulos na mesma linha, imagens alinhadas pelo topo, seta centralizada, aviso único) → explicação + card do texto gerado em coluna única (`max-w-2xl`) → segundo bloco → funcionamento em 4 passos → encerramento com o mesmo conjunto de acesso → rodapé.
+
+Medições de layout confirmadas no navegador:
+
+- Botões com 48 px de altura nos dois conjuntos (desktop) e 342 px de largura no mobile.
+- Rótulos da comparação em `y=676` e imagens iniciando em `y=704/705` (diferença de 1 px por borda), sem recorte e sem overflow horizontal.
+- Card do texto gerado com 443 px de largura no desktop, abaixo do parágrafo.
 
 ## Evidências
 
