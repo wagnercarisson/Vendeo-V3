@@ -6,17 +6,21 @@ type: plan
 wave: 1
 depends_on: []
 autonomous: false
-status: implemented_local
+status: complete
 revision: 2
 approval_required: true
 implementation_authorized: true
-implementation_status: complete_local_pending_review
+implementation_status: complete
 validation_homolog_authorized: true
 homolog_status: complete_pass_with_limitations
 homolog_date: 2026-11-03
-publication_authorized: false
+publication_authorized: true
+publication_status: executed_reported_by_owner
+production_acceptance: confirmed_reported_by_owner
+agent_production_smoke: not_executed
+sync_archive: not_executed
 base_sha: 948ee3e994e841d971034750f168888846f06ed5
-branch: feature/traducao-da-listagem-de-campanhas
+branch: feature/traducao-da-listagem-de-campanhas (integrada e enviada; worktree atual em main, HEAD dd82d5d6)
 files_modified:
   - src/lib/i18n/campaign-list/messages.ts
   - src/lib/i18n/campaign-list/catalogs/pt-BR.ts

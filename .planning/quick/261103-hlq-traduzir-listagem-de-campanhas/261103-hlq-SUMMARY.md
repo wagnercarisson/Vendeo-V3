@@ -3,13 +3,16 @@ status: complete
 phase: quick
 plan: 261103-hlq
 date: 2026-11-03
-branch: feature/traducao-da-listagem-de-campanhas
+branch: feature/traducao-da-listagem-de-campanhas (integrada e enviada; worktree atual em main, HEAD dd82d5d6)
 execution: local_complete
-review: pending
+review: accepted_by_owner
 homolog: executed_pass_with_limitations
 homolog_date: 2026-11-03
-publication: not_authorized
-production_acceptance: pending
+publication: executed_by_responsible
+publication_date: 2026-11-03
+production_acceptance: confirmed_reported_by_owner
+agent_production_smoke: not_executed
+sync_archive: not_executed
 ---
 
 # Quick 261103-hlq — traduzir a listagem de campanhas para pt-BR e es-419
@@ -104,11 +107,11 @@ Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
 - **Cobertura fora do recorte:** `campanhas/error.tsx` inexistente (boundary
   compartilhado segue em pt-BR) e skeleton de loading com layout pré-existente.
 - **`microcopy.ts`:** constantes `CAMPAIGNS_*` preservadas sem uso na rota.
-- **Publicação e smoke curto:** não autorizados; permanecem no Gate 5.
+- **Publicação:** realizada pelo responsável (merge/push/deploy informados). O **smoke de produção não foi executado pelo agente**; os cenários não revalidados permanecem com prova local/homolog.
 
 ## Gate 3 — homolog local
 
-- Build e start locais na branch atual (`96e4ef1b`), app em `127.0.0.1:3000`, Supabase local `57781`.
+- Build e start locais no HEAD então vigente (`96e4ef1b`), app em `127.0.0.1:3000`, Supabase local `57781`.
 - Sessão temporária via Admin API local; nenhum cookie/token impresso ou versionado; sessão descartada (`/auth/signout`, verificação 401).
 - Preferência: `pt-BR`/`explicit` v10 → `es-419` v11 → restaurada `pt-BR`/`explicit` **v12**.
 - Paridade pt-BR × es-419 em URL, contagem, ordem/produtos e status equivalentes nos 8 cenários.
@@ -119,16 +122,34 @@ Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
 - Payload: HTML pt 66.666 B / es 67.601 B; `/conta` sem strings exclusivas da listagem.
 - Limitações: `Não concluída` não observada nos dados (coberta por teste), empty state sem campanhas não observável, fallback simulado, leitor de tela real não executado.
 
+## Aceite de produção (relato do responsável)
+
+O responsável informou em 2026-11-03:
+
+- **merge, push e deploy realizados**;
+- **produção validada** para textos, busca, filtros, navegação e idiomas pt-BR/es-419;
+- **visual desktop/mobile aprovado anteriormente no homolog**.
+
+**Distinção de autoria das provas**
+
+- O agente **não executou** smoke, navegação ou medição em produção.
+- Não foram revalidados em produção: download da arte original, miniaturas/fallback, paginação, estado `Não concluída`/`No completada`, payload entregue e restauração de preferência. Essas provas permanecem **local/homolog** (`gate3-homolog.md`, `gate3-results.json`, `local-gates.md`).
+- Nenhum SHA de deploy ou identificador de deployment foi informado; não foram inferidos.
+- Nenhum novo teste foi executado nesta etapa; nenhum código foi alterado.
+
+**Fechamento:** quick **261103-hlq concluída**. Não foi criada fase F57.5. `sync`/`archive` **não executados** — os main specs foram atualizados diretamente na implementação.
+
 ## Artefatos
 
 - Plano: `.planning/quick/261103-hlq-traduzir-listagem-de-campanhas/261103-hlq-PLAN.md`
 - Evidências: `.planning/quick/261103-hlq-traduzir-listagem-de-campanhas/evidence/`
   - `gate3-homolog.md`, `gate3-results.json`, `gate3-shell-payload.json`
+  - `production-acceptance.md` (relato do responsável)
   - capturas `gate3-pt-desktop.png`, `gate3-es-desktop.png`, `gate3-es-desktop-empty.png`, `gate3-pt-mobile.png`, `gate3-es-mobile.png`
   - `local-gates.md`, `payload.md`
 - Resumo: este arquivo.
 
 ## Próximo gate
 
-Revisão do usuário/Codex sobre a implementação local + aceite visual do Gate 3.
-Nenhuma publicação, smoke de produção, merge, push ou deploy foi realizada.
+Nenhum gate automático pendente. Publicação, aceite funcional e visual foram
+informados pelo responsável; o agente não executou smoke de produção.
