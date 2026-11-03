@@ -41,7 +41,33 @@ describe("AvailableCampaignCard", () => {
     expect(img).not.toBeNull();
     expect(img).toHaveAttribute("src", "https://cdn.test/thumb.jpg");
     expect(img).toHaveAttribute("alt", "");
+    expect(img).toHaveAttribute("loading", "eager");
+    expect(img).toHaveAttribute("decoding", "async");
     expect(container.querySelector(".lucide-image-off")).toBeNull();
+  });
+
+  it("recupera a imagem quando thumbnailUrl muda após uma falha", () => {
+    const { container, rerender } = renderCard("https://cdn.test/broken.jpg");
+
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector(".lucide-image-off")).not.toBeNull();
+
+    rerender(
+      <AvailableCampaignCard
+        id="c1"
+        productName="Tênis Runner"
+        dateLabel="19 de out. de 2026"
+        thumbnailUrl="https://cdn.test/recovered.jpg"
+        openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
+        openLabel="Abrir campanha"
+      />,
+    );
+
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img).toHaveAttribute("src", "https://cdn.test/recovered.jpg");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/campanhas/c1");
   });
 
   it("troca para o fallback quando a imagem falha, preservando o link", () => {

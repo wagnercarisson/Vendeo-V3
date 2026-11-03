@@ -1,5 +1,6 @@
 import "server-only";
 import { createServerClient, supabaseAdmin } from "@/lib/supabase/server";
+import { deriveThumbnailPath } from "./thumbnail/thumbnail-path";
 import { classifyCampaignFlow } from "./new-flow-marker";
 import type { CampaignStatus } from "./types";
 
@@ -182,11 +183,22 @@ export async function generateBatchThumbnailUrls(
     thumbnails[item.id] = null;
   }
 
+  const signable = readyItems.flatMap((item) => {
+    // Caminho canônico da miniatura persistida (quick 261102-qna).
+    // Inelegível ⇒ placeholder; NUNCA assina a arte original.
+    const thumbnailPath = deriveThumbnailPath(item.storagePath);
+    if (!thumbnailPath) {
+      thumbnails[item.id] = null;
+      return [];
+    }
+    return [{ id: item.id, thumbnailPath }];
+  });
+
   const results = await Promise.allSettled(
-    readyItems.map((item) =>
+    signable.map((item) =>
       supabaseAdmin.storage
         .from("campaign-images")
-        .createSignedUrl(item.storagePath, 3600)
+        .createSignedUrl(item.thumbnailPath, 3600)
         .then((res) => ({ id: item.id, url: res.data?.signedUrl ?? null })),
     ),
   );

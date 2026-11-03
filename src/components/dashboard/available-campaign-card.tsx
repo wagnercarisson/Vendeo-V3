@@ -33,6 +33,10 @@ export function AvailableCampaignCard({
   const showImage = Boolean(thumbnailUrl) && !failed;
 
   useEffect(() => {
+    // Uma URL nova precisa limpar a falha anterior: depois de um erro, trocar
+    // por uma miniatura válida deve voltar a exibir a imagem.
+    setFailed(false);
+
     // Se a imagem falhar antes da hidratação, o navegador não reemite `error`
     // para o React. Detecta o estado quebrado no mount e aplica o fallback.
     const image = imageRef.current;
@@ -50,6 +54,8 @@ export function AvailableCampaignCard({
               ref={imageRef}
               src={thumbnailUrl}
               alt=""
+              loading="eager"
+              decoding="async"
               className="h-full w-full object-cover"
               onError={() => setFailed(true)}
             />

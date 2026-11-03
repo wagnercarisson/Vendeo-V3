@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CampaignListItem } from "@/lib/campaign/list";
 import { useDebounce } from "@/hooks/use-debounce";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -211,8 +211,8 @@ export default function CampaignListClient({
 
       {items.length > 0 && (
         <div className="space-y-4">
-          {items.map((campaign) => (
-            <CampaignCard key={campaign.id} campaign={campaign} />
+          {items.map((campaign, index) => (
+            <CampaignCard key={campaign.id} campaign={campaign} index={index} />
           ))}
         </div>
       )}
@@ -243,19 +243,43 @@ function campaignStatusDisplay(campaign: CampaignListItem): {
   return { text: "Erro", className: "text-accent-red" };
 }
 
-function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
+function CampaignCard({
+  campaign,
+  index,
+}: {
+  campaign: CampaignListItem;
+  index: number;
+}) {
   const router = useRouter();
   const formattedDate = formatDate(campaign.createdAt);
   const status = campaignStatusDisplay(campaign);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(campaign.thumbnailUrl) && !imageFailed;
+
+  useEffect(() => {
+    // URL nova limpa a falha anterior (recuperação após erro/404).
+    setImageFailed(false);
+
+    // Falha antes da hidratação não reemite `error` para o React.
+    const image = imageRef.current;
+    if (image && image.complete && image.naturalWidth === 0) {
+      setImageFailed(true);
+    }
+  }, [campaign.thumbnailUrl]);
 
   return (
     <div className="flex gap-4 rounded-xl border border-border bg-bg-surface p-4">
       <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg">
-        {campaign.thumbnailUrl ? (
+        {showImage && campaign.thumbnailUrl ? (
           <img
+            ref={imageRef}
             src={campaign.thumbnailUrl}
             alt={campaign.productName}
+            loading={index < 3 ? "eager" : "lazy"}
+            decoding="async"
             className="h-full w-full object-cover"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="h-full w-full bg-bg-elevated" />

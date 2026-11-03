@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -110,6 +110,125 @@ describe("CampaignListClient — display", () => {
     const img = screen.getByRole("img");
     expect(img).toHaveAttribute("src", "https://example.com/thumb.jpg");
     expect(img).toHaveAttribute("alt", "Produto Teste");
+    expect(img).toHaveAttribute("loading", "eager");
+    expect(img).toHaveAttribute("decoding", "async");
+  });
+
+  it("aplica eager nos 3 primeiros e lazy nos demais", () => {
+    const items = Array.from({ length: 5 }, (_, i) => ({
+      ...mockReadyCampaign,
+      id: `id-${i}`,
+      thumbnailUrl: `https://example.com/thumb-${i}.jpg`,
+    }));
+
+    render(
+      <CampaignListClient
+        items={items}
+        {...baseProps}
+        total={5}
+      />,
+    );
+
+    const images = screen.getAllByRole("img");
+    expect(images.slice(0, 3).every((img) => img.getAttribute("loading") === "eager")).toBe(true);
+    expect(images.slice(3).every((img) => img.getAttribute("loading") === "lazy")).toBe(true);
+  });
+
+  it("recupera a imagem quando thumbnailUrl muda após uma falha", () => {
+    const { rerender } = render(
+      <CampaignListClient
+        items={[mockReadyCampaign]}
+        {...baseProps}
+        total={1}
+      />,
+    );
+
+    fireEvent.error(screen.getByRole("img"));
+
+    rerender(
+      <CampaignListClient
+        items={[
+          {
+            ...mockReadyCampaign,
+            thumbnailUrl: "https://example.com/recovered.jpg",
+          },
+        ]}
+        {...baseProps}
+        total={1}
+      />,
+    );
+
+    const img = screen.getByRole("img");
+    expect(img).toHaveAttribute("src", "https://example.com/recovered.jpg");
+  });
+
+  it("troca para placeholder quando a imagem falha antes da hidratação", () => {
+    const originalComplete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "complete");
+    const originalWidth = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "naturalWidth");
+    Object.defineProperty(HTMLImageElement.prototype, "complete", { configurable: true, get: () => true });
+    Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", { configurable: true, get: () => 0 });
+
+    try {
+      render(
+        <CampaignListClient
+          items={[mockReadyCampaign]}
+          {...baseProps}
+          total={1}
+        />,
+      );
+
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Abrir" })).toBeInTheDocument();
+    } finally {
+      if (originalComplete) Object.defineProperty(HTMLImageElement.prototype, "complete", originalComplete);
+      if (originalWidth) Object.defineProperty(HTMLImageElement.prototype, "naturalWidth", originalWidth);
+    }
+  });
+
+  it("Baixar usa o endpoint do original mesmo com miniatura nula ou falha", () => {
+    const originalLocation = window.location;
+    let href = "";
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        ...originalLocation,
+        get href() {
+          return href;
+        },
+        set href(value: string) {
+          href = value;
+        },
+      },
+    });
+
+    try {
+      const { rerender } = render(
+        <CampaignListClient
+          items={[{ ...mockReadyCampaign, id: "id-null", thumbnailUrl: null }]}
+          {...baseProps}
+          total={1}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Baixar" }));
+      expect(href).toBe("/api/campaign/id-null/download");
+
+      rerender(
+        <CampaignListClient
+          items={[mockReadyCampaign]}
+          {...baseProps}
+          total={1}
+        />,
+      );
+      fireEvent.error(screen.getByRole("img"));
+      fireEvent.click(screen.getByRole("button", { name: "Baixar" }));
+      expect(href).toBe("/api/campaign/id-1/download");
+    } finally {
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
   });
 
   it("shows status text Pronta for ready", () => {

@@ -21,16 +21,21 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+const STORE_ID = "11111111-1111-4111-8111-111111111111";
+const CAMPAIGN_1 = "22222222-2222-4222-8222-222222222201";
+const CAMPAIGN_2 = "22222222-2222-4222-8222-222222222202";
+const CAMPAIGN_3 = "22222222-2222-4222-8222-222222222203";
+
 const mockReadyItem = {
   id: "id-1",
   status: "ready" as const,
-  storagePath: "store-123/id-1.jpg",
+  storagePath: `${STORE_ID}/${CAMPAIGN_1}.jpg`,
 };
 
 const mockErrorItem = {
   id: "id-2",
   status: "error" as const,
-  storagePath: "store-123/id-2.jpg",
+  storagePath: `${STORE_ID}/${CAMPAIGN_2}.jpg`,
 };
 
 function buildChain(
@@ -72,14 +77,14 @@ function mockDefaultRows() {
       product_name: "Produto 1",
       status: "ready",
       created_at: "2026-07-10T12:00:00Z",
-      storage_path: "store-123/id-1.jpg",
+      storage_path: `${STORE_ID}/${CAMPAIGN_1}.jpg`,
     },
     {
       id: "id-2",
       product_name: "Produto 2",
       status: "error",
       created_at: "2026-07-09T12:00:00Z",
-      storage_path: "store-123/id-2.jpg",
+      storage_path: `${STORE_ID}/${CAMPAIGN_2}.jpg`,
     },
   ];
 }
@@ -492,13 +497,19 @@ describe("generateBatchThumbnailUrls", () => {
     const { generateBatchThumbnailUrls } = await import("@/lib/campaign/list");
     const result = await generateBatchThumbnailUrls([
       mockReadyItem,
-      { ...mockReadyItem, id: "id-3", storagePath: "store-123/id-3.jpg" },
+      { ...mockReadyItem, id: "id-3", storagePath: `${STORE_ID}/${CAMPAIGN_3}.jpg` },
     ]);
 
     expect(Object.keys(result)).toHaveLength(2);
     expect(result["id-1"]).toBe("https://example.com/thumb-1.jpg");
     expect(result["id-3"]).toBe("https://example.com/thumb-1.jpg");
     expect(mockStorageFrom).toHaveBeenCalledWith("campaign-images");
+    expect(
+      createSignedUrlFn.mock.calls.map((call) => call[0]),
+    ).toEqual([
+      `${STORE_ID}/${CAMPAIGN_1}.thumb-v1.webp`,
+      `${STORE_ID}/${CAMPAIGN_3}.thumb-v1.webp`,
+    ]);
   });
 
   it("does NOT generate URLs for error campaigns", async () => {
@@ -530,11 +541,97 @@ describe("generateBatchThumbnailUrls", () => {
     const { generateBatchThumbnailUrls } = await import("@/lib/campaign/list");
     const result = await generateBatchThumbnailUrls([
       mockReadyItem,
-      { ...mockReadyItem, id: "id-3", storagePath: "store-123/id-3.jpg" },
+      { ...mockReadyItem, id: "id-3", storagePath: `${STORE_ID}/${CAMPAIGN_3}.jpg` },
     ]);
 
     expect(result["id-1"]).toBe("https://example.com/thumb-1.jpg");
     expect(result["id-3"]).toBeNull();
+  });
+
+  it("assina o caminho derivado para correção v2/v3 e novo fluxo", async () => {
+    const createSignedUrlFn = vi.fn(async (path: string) => ({
+      data: { signedUrl: `signed://${path}` },
+      error: null,
+    }));
+    mockStorageFrom.mockReturnValue({ createSignedUrl: createSignedUrlFn });
+
+    const operationId = "33333333-3333-4333-8333-333333333333";
+    const { generateBatchThumbnailUrls } = await import("@/lib/campaign/list");
+    const result = await generateBatchThumbnailUrls([
+      {
+        id: "v2",
+        status: "ready" as const,
+        storagePath: `${STORE_ID}/${CAMPAIGN_1}/v2.jpg`,
+      },
+      {
+        id: "v3",
+        status: "ready" as const,
+        storagePath: `${STORE_ID}/${CAMPAIGN_1}/v3.jpg`,
+      },
+      {
+        id: "novo",
+        status: "ready" as const,
+        storagePath: `${STORE_ID}/${CAMPAIGN_2}/product-1-1/${operationId}/art-1024.jpg`,
+      },
+    ]);
+
+    expect(result["v2"]).toBe(
+      `signed://${STORE_ID}/${CAMPAIGN_1}/v2.thumb-v1.webp`,
+    );
+    expect(result["v3"]).toBe(
+      `signed://${STORE_ID}/${CAMPAIGN_1}/v3.thumb-v1.webp`,
+    );
+    expect(result["novo"]).toBe(
+      `signed://${STORE_ID}/${CAMPAIGN_2}/product-1-1/${operationId}/art-1024.thumb-v1.webp`,
+    );
+    for (const [path] of createSignedUrlFn.mock.calls) {
+      expect(path).toMatch(/\.thumb-v1\.webp$/);
+      expect(path).not.toMatch(/\.jpe?g$/);
+    }
+  });
+
+  it("path inelegível vira placeholder sem assinar o original", async () => {
+    const createSignedUrlFn = vi.fn(async () => ({
+      data: { signedUrl: "https://example.com/original.jpg" },
+      error: null,
+    }));
+    mockStorageFrom.mockReturnValue({ createSignedUrl: createSignedUrlFn });
+
+    const { generateBatchThumbnailUrls } = await import("@/lib/campaign/list");
+    const result = await generateBatchThumbnailUrls([
+      {
+        id: "input",
+        status: "ready" as const,
+        storagePath: `${STORE_ID}/${CAMPAIGN_1}/inputs/33333333-3333-4333-8333-333333333333.jpg`,
+      },
+      {
+        id: "antigo",
+        status: "ready" as const,
+        storagePath: "store-123/id-1.jpg",
+      },
+      {
+        id: "v1",
+        status: "ready" as const,
+        storagePath: `${STORE_ID}/${CAMPAIGN_1}/v1.jpg`,
+      },
+      {
+        id: "v4",
+        status: "ready" as const,
+        storagePath: `${STORE_ID}/${CAMPAIGN_1}/v4.jpg`,
+      },
+      {
+        id: "v10",
+        status: "ready" as const,
+        storagePath: `${STORE_ID}/${CAMPAIGN_1}/v10.jpg`,
+      },
+    ]);
+
+    expect(result["input"]).toBeNull();
+    expect(result["antigo"]).toBeNull();
+    expect(result["v1"]).toBeNull();
+    expect(result["v4"]).toBeNull();
+    expect(result["v10"]).toBeNull();
+    expect(createSignedUrlFn).not.toHaveBeenCalled();
   });
 });
 
