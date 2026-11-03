@@ -7,7 +7,7 @@ wave: 1
 depends_on: []
 autonomous: false
 status: planned
-revision: 1
+revision: 2
 approval_required: true
 implementation_authorized: false
 validation_homolog_authorized: false
@@ -22,8 +22,6 @@ files_modified:
   - src/lib/i18n/novidades/index.ts
   - src/lib/i18n/novidades/__tests__/catalogs.test.ts
   - src/lib/i18n/novidades/__tests__/isolation.test.ts
-  - src/lib/changelog/format-date.ts
-  - src/lib/changelog/__tests__/format-date.test.ts
   - src/app/(app)/novidades/page.tsx
   - src/components/changelog/changelog-card.tsx
   - src/components/changelog/changelog-list.tsx
@@ -34,10 +32,10 @@ files_modified:
 requirements: [REQ-nov-01, REQ-nov-02, REQ-nov-03, REQ-nov-04, REQ-nov-05]
 must_haves:
   truths:
-    - "Usuário com uiLocale=es-419 vê título, breadcrumb, estado vazio, rótulos de categoria, indicador de importância e datas da página /novidades em espanhol neutro LATAM."
+    - "Usuário com uiLocale=es-419 vê título, breadcrumb, estado vazio, rótulos de categoria e indicador de importância da página /novidades em espanhol neutro LATAM; a data mantém o formato atual dd/mm/aaaa, igual nos dois idiomas."
     - "Título, corpo, milestone e demais conteúdos editoriais das entradas permanecem exatamente como publicados em pt-BR, sem tradução automática."
     - "Ordenação, seleção da entrada mais recente, anúncio ativo, marcação de visto, dispensa e badge não mudam."
-    - "ChangelogList e ChangelogCard continuam funcionando no landing em pt-BR e no dashboard (anúncio compacto) sem regressão."
+    - "ChangelogList e ChangelogCard continuam funcionando no landing em pt-BR; o dashboard preserva a localização existente da F58 e seus textos editoriais em português, sem mudança de comportamento."
     - "IDs de localStorage, rotas, links, foco, Escape e comportamento acessível existente são preservados."
     - "O catálogo de novidades não entra no payload global do shell nem no bundle de outras rotas."
   artifacts:
@@ -46,9 +44,7 @@ must_haves:
     - path: "src/app/(app)/novidades/page.tsx"
       provides: "Resolução server-first do idioma e entrega apenas do namespace da rota"
     - path: "src/components/changelog/changelog-card.tsx"
-      provides: "Rótulos/idioma por props com defaults pt-BR, preservando conteúdo editorial"
-    - path: "src/lib/changelog/format-date.ts"
-      provides: "Data civil formatada por locale, sem alterar a política de fuso"
+      provides: "Rótulos por props com defaults pt-BR, preservando conteúdo editorial e data atual"
   key_links:
     - from: "src/app/(app)/novidades/page.tsx"
       to: "src/lib/i18n/server.ts"
@@ -60,12 +56,8 @@ must_haves:
       pattern: "getNovidadesMessages"
     - from: "src/app/(app)/novidades/page.tsx"
       to: "src/components/changelog/changelog-list.tsx"
-      via: "labels/locale"
+      via: "labels"
       pattern: "ChangelogList"
-    - from: "src/components/changelog/changelog-card.tsx"
-      to: "src/lib/changelog/format-date.ts"
-      via: "formatChangelogDate(date, locale)"
-      pattern: "formatChangelogDate"
 user_setup: []
 ---
 
@@ -100,6 +92,7 @@ user_setup: []
 - `ChangelogList` também é usado por `src/components/landing/novidades-link.tsx` (modal da landing pública, pt-BR).
 - `ChangelogCard` é usado apenas por `ChangelogList` (e testes).
 - `formatChangelogDate` também é usado por `ChangelogAnnouncement` (dashboard e testes).
+- `DashboardNews` e `SidebarBadge` preservam a localização existente (F58/F57.4); nenhum catálogo novo é adicionado a eles.
 - `SidebarBadge` é usado pelo shell; já localizado.
 
 **Origem dos textos**
@@ -120,9 +113,9 @@ user_setup: []
    - rótulos de categoria (`Nova funcionalidade`, `Melhoria`, `Correção`);
    - `Importante`;
    - fallback de lista vazia do `ChangelogList`;
-   - data formatada por locale.
-4. `lang="es-419"` apenas na região traduzida; título/body editoriais com `lang="pt-BR"` (como no dashboard), sem herdar espanhol.
-5. Rótulos/idioma por props opcionais em `ChangelogList`/`ChangelogCard`, com defaults pt-BR, preservando landing e dashboard.
+   - data mantida no formato atual `dd/mm/aaaa` (o mesmo atende pt-BR e es-419).
+4. `lang="es-419"` apenas na região traduzida; título/body editoriais com `lang="pt-BR"` (como no dashboard), sem herdar espanhol; `milestone` com `lang=""`.
+5. Rótulos por props opcionais em `ChangelogList`/`ChangelogCard`, com defaults pt-BR, preservando a landing e a localização existente do dashboard.
 6. Atualização pontual do main spec `changelog-ui`.
 7. Testes de paridade, isolamento, página com/sem entradas, conteúdo editorial e consumidores compartilhados.
 8. Evidência local + roteiro da prova em homolog (execução só no Gate 3).
@@ -150,15 +143,15 @@ user_setup: []
 | `Nenhuma novidade por enquanto.` (ChangelogList) | UI fixa | catálogo `listEmpty` |
 | `Nova funcionalidade` / `Melhoria` / `Correção` | UI fixa | catálogo `card.categoryFeature/Improvement/Fix` |
 | `Importante` | UI fixa | catálogo `card.important` |
-| `formatChangelogDate(date)` | UI fixa | `formatChangelogDate(date, locale)` |
+| `formatChangelogDate(date)` | UI fixa | intocado (`dd/mm/aaaa` nos dois idiomas) |
 | `frontmatter.title`, `body`, `milestone`, `date` | Editorial | intocados |
 | `category`, `importance`, `announcement`, `id` | Editorial/metadado | intocados |
 
 **Decisões propostas**
 - `D1`: namespace `src/lib/i18n/novidades/**`, não reexportado por `src/lib/i18n/index.ts`.
-- `D2`: `ChangelogCard`/`ChangelogList` recebem `labels`/`locale` opcionais com defaults pt-BR; não importam o namespace da rota. Landing e dashboard permanecem em pt-BR sem alteração.
-- `D3`: `formatChangelogDate(dateIso, locale = "pt-BR")` usa `Intl.DateTimeFormat(locale, { day:"2-digit", month:"2-digit", year:"numeric", timeZone:"UTC" })` sobre a data civil `YYYY-MM-DD`; regex estrito e fallback para a string original. Preserva a política atual (sem fuso da loja, sem deslocamento de dia).
-- `D4`: título/body/milestone editoriais recebem `lang="pt-BR"` (título e wrapper do body); `milestone` é dado e não é traduzido. Categoria, `Importante`, data e breadcrumb herdam o idioma da interface.
+- `D2`: `ChangelogCard`/`ChangelogList` recebem `labels` opcionais com defaults pt-BR; não importam o namespace da rota. A landing permanece em pt-BR; o dashboard preserva a localização existente da F58 e seus textos editoriais em português, sem mudança de comportamento.
+- `D3`: o formatador de data permanece **intacto** (`dd/mm/aaaa` montado diretamente, sem `Date`/`Intl`/timezone), pois o mesmo formato atende pt-BR e es-419.
+- `D4`: título e corpo editoriais recebem `lang="pt-BR"` **sempre**; `milestone` recebe `lang=""` (identificador/dado, ex.: `v1.5`). Categoria, `Importante` e breadcrumb ficam no idioma da interface; a data permanece no formato atual `dd/mm/aaaa`.
 - `D5`: `ChangelogAnnouncement` e `SidebarBadge` não mudam; o modo completo do anúncio não pertence à rota.
 - `D6`: `NovidadesClient`, IDs de localStorage, ordenação e regras de anúncio não mudam.
 
@@ -178,15 +171,14 @@ user_setup: []
 
 **Alterados**
 - `src/app/(app)/novidades/page.tsx` — `requirePageUser` + `getUiRenderContext`, mensagens, `lang`, props para `ChangelogList`.
-- `src/components/changelog/changelog-list.tsx` — props opcionais `labels`/`locale`/`emptyLabel`; repasse ao card.
-- `src/components/changelog/changelog-card.tsx` — rótulos por props com defaults; data por locale; `lang="pt-BR"` no editorial.
-- `src/lib/changelog/format-date.ts` + teste — locale opcional com data civil preservada.
+- `src/components/changelog/changelog-list.tsx` — props opcionais `labels`/`emptyLabel`; repasse ao card.
+- `src/components/changelog/changelog-card.tsx` — rótulos por props com defaults; `lang="pt-BR"` no título/body editorial e `lang=""` no milestone; data inalterada.
 - `src/components/changelog/__tests__/changelog-list.test.tsx` — defaults + caso es-419.
 - `openspec/specs/changelog-ui/spec.md` — requisito de localização da página.
 
 **Preservados / não alterados**
-- `content/changelog/**`, `changelog-content`, `changelog-state`, `use-changelog-state`.
-- `ChangelogAnnouncement` (modo completo e compacto), `DashboardNews`, `SidebarBadge`, shell/admin.
+- `content/changelog/**`, `changelog-content`, `changelog-state`, `use-changelog-state`, `src/lib/changelog/format-date.ts`.
+- `ChangelogAnnouncement` (modo completo e compacto), `DashboardNews` (preserva a localização F58), `SidebarBadge`, shell/admin.
 - `landing/novidades-link.tsx` (usa defaults pt-BR).
 - `src/lib/i18n/index.ts`, `(app)/layout.tsx`, `app-shell.tsx`.
 
@@ -194,12 +186,10 @@ user_setup: []
 
 ## 5. Tasks
 
-### Task 1 — Namespace `novidades` e data localizada
+### Task 1 — Namespace `novidades`
 
 **Files**
 - `src/lib/i18n/novidades/**`
-- `src/lib/changelog/format-date.ts`
-- `src/lib/changelog/__tests__/format-date.test.ts`
 
 **Action**
 1. Criar `messages.ts` com interfaces explícitas e `NovidadesMessages`:
@@ -211,21 +201,16 @@ user_setup: []
    `Novedades`, `Panel`, `Aún no hay novedades`, `Cuando Vendeo lance algo nuevo, lo verás aquí.`, `Nueva funcionalidad`, `Mejora`, `Corrección`, `Importante`.
 3. `getNovidadesMessages(locale: SupportedUiLocale)`; catálogos congelados; `satisfies` no es-419.
 4. `index.ts` local; **não** reexportar pelo barrel global.
-5. `formatChangelogDate(dateIso, locale = "pt-BR")`:
-   - manter regex `^\d{4}-\d{2}-\d{2}$` e retorno intacto para inválidos;
-   - construir `Date.UTC(ano, mês-1, dia)` e formatar com `timeZone: "UTC"`;
-   - não usar fuso da loja nem `toLocaleDateString` sem UTC.
-6. Testes:
+5. Testes:
    - paridade de chaves/namespaces, congelamento, valores não vazios, placeholders vazios;
-   - isolamento estático: barrel global, layout, shell e admin não importam `i18n/novidades`;
-   - data: `2026-07-31` → `31/07/2026` em pt-BR e es-419; `2026-01-01` sem shift; inválidos intactos; default pt-BR idêntico ao anterior.
+   - isolamento estático: barrel global, layout, shell e admin não importam `i18n/novidades`.
 
 **Verify**
-- `npm.cmd test -- src/lib/i18n/novidades src/lib/changelog/__tests__/format-date.test.ts`
+- `npm.cmd test -- src/lib/i18n/novidades`
 - `npm.cmd run typecheck`
 
 **Done**
-- Namespace paritário, congelado e isolado; data localizada sem alterar a política de fuso.
+- Namespace paritário, congelado e isolado. O formatador de data permanece intocado.
 
 ---
 
@@ -246,18 +231,18 @@ user_setup: []
    - wrapper `<div lang={lang} className="mx-auto max-w-3xl">`;
    - `PageHeader` com `messages.title` e breadcrumb `messages.breadcrumbHome` → `/dashboard` + `messages.title`;
    - `EmptyState` com `messages.emptyTitle/emptyBody`;
-   - `ChangelogList entries={entries} labels={messages.card} locale={locale} emptyLabel={messages.listEmpty}`;
+   - `ChangelogList entries={entries} labels={messages.card} emptyLabel={messages.listEmpty}`;
    - preservar `latestEntryId`/`latestAnnouncementId` e `NovidadesClient`.
 2. `ChangelogCard`:
    - exportar `ChangelogCardLabels` e defaults pt-BR;
-   - `labels?: Partial<...>`, `locale?: SupportedUiLocale`;
+   - `labels?: Partial<...>`; sem prop de locale;
    - categoria por `labels`; `Importante` por `labels.important`;
-   - `formatChangelogDate(frontmatter.date, locale)`;
-   - `lang="pt-BR"` no `<h2>` editorial e no wrapper do body; `milestone` com `lang=""` (dado);
+   - manter `formatChangelogDate(frontmatter.date)` exatamente como hoje;
+   - `lang="pt-BR"` no `<h2>` editorial e no wrapper do body, sempre; `milestone` com `lang=""` (dado);
    - não alterar `renderMarkdown`/`dangerouslySetInnerHTML`.
-3. `ChangelogList`: props opcionais `labels`, `locale`, `emptyLabel`; default pt-BR; repassar ao card; landing sem props segue igual.
+3. `ChangelogList`: props opcionais `labels`, `emptyLabel`; default pt-BR; repassar ao card; landing sem props segue igual.
 4. Testes:
-   - `changelog-list.test.tsx`: testes atuais passam sem mudança; adicionar caso `es-419` com `Nueva funcionalidad/Mejora/Corrección`, `Importante`, data `31/07/2026`, título/body editoriais inalterados e `lang="pt-BR"`.
+   - `changelog-list.test.tsx`: testes atuais passam sem mudança; adicionar caso `es-419` com `Nueva funcionalidad/Mejora/Corrección`, `Importante`, data `31/07/2026`, título/body editoriais inalterados, `lang="pt-BR"` no editorial e `lang=""` no milestone.
    - `novidades-page.test.tsx`: mockar `requirePageUser`, `getUiRenderContext`, `getAllEntries`, `getLatestAnnouncement` e `NovidadesClient`; cenários pt-BR e es-419 com e sem entradas; verificar título/breadcrumb/empty state, categoria/data, `lang="es-419"`, `lang="pt-BR"` no editorial e repasse de `latestEntryId`/`latestAnnouncementId`.
    - regressão: `landing-page.test.tsx` e `dashboard-news.test.tsx` sem alteração de expectativa.
 
@@ -266,7 +251,7 @@ user_setup: []
 - `npm.cmd run typecheck`
 
 **Done**
-- `/novidades` traduz somente a interface nos dois idiomas; editorial intacto; landing/dashboard sem regressão.
+- `/novidades` traduz somente a interface nos dois idiomas; editorial intacto; landing em pt-BR e localização F58 do dashboard preservadas.
 
 ---
 
@@ -280,12 +265,12 @@ user_setup: []
 1. Atualizar `changelog-ui` com requisito de localização:
    - namespace próprio e isolado;
    - textos de UI traduzidos; conteúdo editorial e `content/changelog/**` intocados;
-   - `lang` escopado (`es-419` na região; `pt-BR` no editorial);
-   - data por locale sem nova política de fuso;
+   - `lang` escopado (`es-419` na região; `pt-BR` no título/body editorial; `lang=""` no milestone);
+   - data mantida no formato atual `dd/mm/aaaa`, sem alterar o formatador;
    - comportamento de visto/dispensa/badge/ordenação/links preservado;
-   - consumidores compartilhados mantêm pt-BR por default.
+   - consumidores compartilhados mantêm pt-BR por default; localização F58 do dashboard preservada.
 2. Gates automatizados:
-   - focados do namespace, data, lista e página;
+   - focados do namespace, lista e página;
    - regressão dirigida: `changelog-announcement`, `sidebar-badge`, `dashboard-news`, `landing-page`, `dashboard-localization`, `shell-localization`;
    - `npm.cmd run typecheck`, `npm.cmd run lint` (limitação conhecida: ESLint sem cobertura de `.ts`), `npm.cmd run build`, `git diff --check`;
    - `openspec validate changelog-ui --type spec --strict` (registrar falhas preexistentes, se houver).
@@ -302,7 +287,7 @@ user_setup: []
 5. Evidence: `evidence/local-gates.md`, `evidence/payload.md`, `evidence/gate3-homolog.md` (na execução).
 
 **Verify**
-- `npm.cmd test -- src/lib/i18n/novidades src/lib/changelog/__tests__/format-date.test.ts src/components/changelog src/__tests__/app/novidades src/components/landing/__tests__/landing-page.test.tsx src/components/dashboard/__tests__/dashboard-news.test.tsx`
+- `npm.cmd test -- src/lib/i18n/novidades src/components/changelog src/__tests__/app/novidades src/components/landing/__tests__/landing-page.test.tsx src/components/dashboard/__tests__/dashboard-news.test.tsx`
 - `npm.cmd run typecheck && npm.cmd run lint && npm.cmd run build`
 - `git diff --check`
 
@@ -313,13 +298,13 @@ user_setup: []
 
 ## 6. Critérios de aceite
 
-1. `es-419` exibe `Novedades`, breadcrumb `Panel > Novedades`, empty state espanhol, categorias `Nueva funcionalidad/Mejora/Corrección`, `Importante` e datas no idioma.
+1. `es-419` exibe `Novedades`, breadcrumb `Panel > Novedades`, empty state espanhol, categorias `Nueva funcionalidad/Mejora/Corrección`, `Importante`; a data permanece `dd/mm/aaaa`, igual nos dois idiomas.
 2. `pt-BR` mantém exatamente os textos atuais e não declara `lang="es-419"`.
 3. Título, body, milestone e datas editoriais permanecem idênticos; nenhum conteúdo editorial é traduzido.
-4. `lang="pt-BR"` apenas no título/body editoriais; categoria, `Importante`, data e breadcrumb no idioma da interface.
+4. `lang="pt-BR"` apenas no título/body editoriais; `milestone` usa `lang=""`; categoria, `Importante` e breadcrumb ficam no idioma da interface; a data não muda.
 5. Ordenação DESC, entrada mais recente, anúncio ativo, `last_seen_changelog_id`, `dismissed_changelog_announcement_id` e badge não mudam.
 6. Links, rotas, foco, Escape e markup seguro do Markdown preservados.
-7. `ChangelogList`/`ChangelogCard` no landing e `ChangelogAnnouncement` compacto no dashboard continuam em pt-BR sem regressão.
+7. A landing permanece em pt-BR; o dashboard preserva a localização existente da F58 (incluindo o anúncio compacto) e seus textos editoriais em português, sem mudança de comportamento.
 8. Catálogo de novidades não entra no payload global do shell nem no bundle de dashboard/landing/admin.
 9. Typecheck, testes focados, build e `git diff --check` verdes; lint com limitação conhecida.
 10. Nenhuma alteração em `content/changelog/**`, API, schema, migrations ou dependências.
@@ -330,25 +315,26 @@ user_setup: []
 
 | Spec | Mudança |
 |---|---|
-| `openspec/specs/changelog-ui/spec.md` | Requisito de localização da interface de `/novidades`; separação UI × editorial; `lang`; data por locale; defaults pt-BR em consumidores compartilhados |
+| `openspec/specs/changelog-ui/spec.md` | Requisito de localização da interface de `/novidades`; separação UI × editorial; `lang`; data mantida no formato atual; defaults pt-BR em consumidores compartilhados; localização F58 do dashboard preservada |
 
 Revisados e **sem alteração**: `changelog-state` (IDs/fluxo), `changelog-content` (editorial), `dashboard-localization` (anúncio compacto já localizado), `shell-localization` (badge já localizado).
 
 ---
 
-## 8. Riscos e decisões pendentes
+## 8. Riscos e decisões
 
 | # | Risco / pendência | Mitigação / recomendação |
 |---|---|---|
 | R1 | `ChangelogList` é usado na landing | Props opcionais com default pt-BR; teste de landing |
-| R2 | `formatChangelogDate` é usado pelo dashboard | Locale opcional default pt-BR; data civil com UTC; testes existentes mantidos |
-| R3 | Editorial não tem campo de idioma no frontmatter | Assumir `pt-BR`, como o dashboard já faz; se surgirem entradas em outro idioma, será necessária decisão futura (fora do recorte) |
-| R4 | Modo completo do `ChangelogAnnouncement` tem rótulos fixos pt-BR | Não é usado em `/novidades`; permanece intocado. Localizá-lo seria outro recorte |
-| R5 | Cenário “sem entradas” pode não existir no homolog | Registrar como não observado e citar teste automatizado; não remover conteúdo |
-| R6 | Preferência inicial `legacy_br` | Restaurar com `uiLocale: null` na versão vigente, sem apagar linha |
-| R7 | Data em es-419 tem o mesmo formato numérico de pt-BR | Correção é a semântica por locale + teste; não inventar formato diferente |
+| R2 | Editorial não tem campo de idioma no frontmatter | Assumir `pt-BR`, como o dashboard já faz; se surgirem entradas em outro idioma, será necessária decisão futura (fora do recorte) |
+| R3 | Modo completo do `ChangelogAnnouncement` tem rótulos fixos pt-BR | Não é usado em `/novidades`; permanece intocado. Localizá-lo seria outro recorte |
+| R4 | Cenário “sem entradas” pode não existir no homolog | Registrar como não observado e citar teste automatizado; não remover conteúdo |
+| R5 | Preferência inicial `legacy_br` | Restaurar com `uiLocale: null` na versão vigente, sem apagar linha |
 
-**Decisão pendente para o Gate 1:** manter `lang="pt-BR"` no editorial em ambos os idiomas (recomendado, igual ao dashboard) ou aplicá-lo apenas quando `es-419`. Recomendação: manter sempre, pois o conteúdo é português e a marcação é correta também em pt-BR.
+**Decisões aprovadas nesta revisão:**
+- `lang="pt-BR"` no título/body editorial **sempre**; `milestone` usa `lang=""`.
+- Formatador de data **intocado** (`dd/mm/aaaa`, sem `Intl`/`Date`/timezone), pois atende aos dois idiomas.
+- A landing permanece em pt-BR; o dashboard preserva a localização existente da F58 e seus textos editoriais em português, sem mudança de comportamento.
 
 ---
 
