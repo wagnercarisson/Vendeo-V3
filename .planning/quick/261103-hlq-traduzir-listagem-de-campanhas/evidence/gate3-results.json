@@ -1,0 +1,4491 @@
+{
+  "startedAt": "2026-11-03T16:20:52.698Z",
+  "errors": [],
+  "initialPreference": {
+    "uiLocale": "pt-BR",
+    "source": "explicit",
+    "version": 10
+  },
+  "pt": {
+    "default": {
+      "url": "/campanhas",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Prontas",
+          "active": false
+        },
+        {
+          "text": "Erro",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "<< Anterior",
+        "1",
+        "2",
+        "7",
+        "Próximo >>"
+      ],
+      "cards": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 66666,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15266,
+        "encodedBodySize": 14966,
+        "decodedBodySize": 69529
+      },
+      "cardsTruncated": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "status": "Pronta"
+        },
+        {
+          "product": "Rocambole de Morango",
+          "status": "Pronta"
+        },
+        {
+          "product": "Rocambole de Morango",
+          "status": "Pronta"
+        },
+        {
+          "product": "Rocambole de Morango",
+          "status": "Pronta"
+        },
+        {
+          "product": "Rocambole de Morango",
+          "status": "Pronta"
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "status": "Pronta"
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "status": "Pronta"
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "status": "Pronta"
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "status": "Pronta"
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "status": "Pronta"
+        }
+      ]
+    },
+    "searchHit": {
+      "url": "/campanhas?q=Rocambole",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Prontas",
+          "active": false
+        },
+        {
+          "text": "Erro",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar"
+      ],
+      "cards": [
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango (kg)",
+          "productLang": "",
+          "date": "14/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango (kg)",
+          "productLang": "",
+          "date": "09/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 56710,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15266,
+        "encodedBodySize": 14966,
+        "decodedBodySize": 69529
+      }
+    },
+    "searchMiss": {
+      "url": "/campanhas?q=zzzzzz-nao-existe",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Prontas",
+          "active": false
+        },
+        {
+          "text": "Erro",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro"
+      ],
+      "cards": [],
+      "emptyTitle": "Nenhuma campanha encontrada",
+      "emptyBody": "Tente ajustar sua busca ou limpar os filtros.",
+      "emptyCta": "Nova Campanha",
+      "langElements": [],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 46265,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1440
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 448,
+          "right": 728
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 744,
+          "right": 846
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 862,
+          "right": 999
+        }
+      },
+      "nav": {
+        "transferSize": 15261,
+        "encodedBodySize": 14961,
+        "decodedBodySize": 69529
+      }
+    },
+    "statusError": {
+      "url": "/campanhas?status=error",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": false
+        },
+        {
+          "text": "Prontas",
+          "active": false
+        },
+        {
+          "text": "Erro",
+          "active": true
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro",
+        "Abrir",
+        "Abrir",
+        "Abrir"
+      ],
+      "cards": [
+        {
+          "product": "Biscoito de Polvilho e Baunilia 400g",
+          "productLang": "",
+          "date": "14/08/2026",
+          "status": "Erro",
+          "hasImage": false,
+          "imageLoading": null,
+          "imageLang": null,
+          "actions": [
+            "Abrir"
+          ]
+        },
+        {
+          "product": "Pão de Queijo Dona Maria (kg)",
+          "productLang": "",
+          "date": "09/08/2026",
+          "status": "Erro",
+          "hasImage": false,
+          "imageLoading": null,
+          "imageLang": null,
+          "actions": [
+            "Abrir"
+          ]
+        },
+        {
+          "product": "Pão de Hambúrguer (pacote c/5)",
+          "productLang": "",
+          "date": "23/07/2026",
+          "status": "Erro",
+          "hasImage": false,
+          "imageLoading": null,
+          "imageLang": null,
+          "actions": [
+            "Abrir"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 48347,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1440
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 448,
+          "right": 728
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 744,
+          "right": 846
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 862,
+          "right": 999
+        }
+      },
+      "nav": {
+        "transferSize": 15246,
+        "encodedBodySize": 14946,
+        "decodedBodySize": 69529
+      }
+    },
+    "statusReady": {
+      "url": "/campanhas?status=ready",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": false
+        },
+        {
+          "text": "Prontas",
+          "active": true
+        },
+        {
+          "text": "Erro",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "<< Anterior",
+        "1",
+        "2",
+        "6",
+        "Próximo >>"
+      ],
+      "cards": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 66660,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15273,
+        "encodedBodySize": 14973,
+        "decodedBodySize": 69529
+      }
+    },
+    "period90d": {
+      "url": "/campanhas?date=90d",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Prontas",
+          "active": false
+        },
+        {
+          "text": "Erro",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "90d",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "<< Anterior",
+        "1",
+        "2",
+        "3",
+        "4",
+        "Próximo >>"
+      ],
+      "cards": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 66946,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15255,
+        "encodedBodySize": 14955,
+        "decodedBodySize": 69529
+      }
+    },
+    "sortNameAsc": {
+      "url": "/campanhas?sort=product_name&order=asc",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Prontas",
+          "active": false
+        },
+        {
+          "text": "Erro",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "product_name,asc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "<< Anterior",
+        "1",
+        "2",
+        "7",
+        "Próximo >>"
+      ],
+      "cards": [
+        {
+          "product": "Biscoit Champanhe Dona Maria 200g",
+          "productLang": "",
+          "date": "20/07/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Biscoito Champanhe (kg)",
+          "productLang": "",
+          "date": "15/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Biscoito Champanhe Dona Maria 200g",
+          "productLang": "",
+          "date": "22/07/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Biscoito de Polvilho e Baunilia 400g",
+          "productLang": "",
+          "date": "14/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Biscoito de Polvilho e Baunilia 400g",
+          "productLang": "",
+          "date": "14/08/2026",
+          "status": "Erro",
+          "hasImage": false,
+          "imageLoading": null,
+          "imageLang": null,
+          "actions": [
+            "Abrir"
+          ]
+        },
+        {
+          "product": "Biscoito de Polvilho e Leite Condensado 400g",
+          "productLang": "",
+          "date": "13/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Biscoito de Polvilho João & Maria 100g",
+          "productLang": "",
+          "date": "17/07/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Biscoitos Dona Maria 400gr",
+          "productLang": "",
+          "date": "15/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Bolo de Cenoura com Cobertura de Chocolate",
+          "productLang": "",
+          "date": "25/07/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Bolo de Chocolate Belga",
+          "productLang": "",
+          "date": "25/07/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 64515,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15259,
+        "encodedBodySize": 14959,
+        "decodedBodySize": 69529
+      }
+    },
+    "page2": {
+      "url": "/campanhas?page=2",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Prontas",
+          "active": false
+        },
+        {
+          "text": "Erro",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "<< Anterior",
+        "1",
+        "2",
+        "3",
+        "7",
+        "Próximo >>"
+      ],
+      "cards": [
+        {
+          "product": "Coxão Mole (bovino) kg",
+          "productLang": "",
+          "date": "15/09/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Quando você quer valorizar um produto, novidade ou benefício",
+          "productLang": "",
+          "date": "13/09/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Quando o preço e a condição comercial são o destaque.",
+          "productLang": "",
+          "date": "13/09/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Quando o preço e a condição comercial são o destaque.",
+          "productLang": "",
+          "date": "13/09/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Nem toda publicação precisa ser uma promoção.",
+          "productLang": "",
+          "date": "13/09/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Presunto Cozido Aurora 200g",
+          "productLang": "",
+          "date": "27/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Presunto Cozido Aurora 200g",
+          "productLang": "",
+          "date": "27/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Pastel de Nata Português (ud)",
+          "productLang": "",
+          "date": "25/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Pastel de Nata Português (ud)",
+          "productLang": "",
+          "date": "25/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Pastel de Nata Português (ud)",
+          "productLang": "",
+          "date": "25/08/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 65822,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15250,
+        "encodedBodySize": 14950,
+        "decodedBodySize": 69529
+      },
+      "firstSameAsPage1": false
+    },
+    "openPath": "/campanhas/22d4c990-91c8-4ea5-a4db-a59c7e559499",
+    "download": {
+      "status": 200,
+      "type": "image/jpeg",
+      "bytes": 251525
+    },
+    "thumbnail": {
+      "status": 200,
+      "type": "image/webp",
+      "bytes": 15678
+    },
+    "fallbackSimulated": {
+      "available": true,
+      "imageGone": true,
+      "placeholder": true
+    },
+    "focusAfterTab": {
+      "tag": "SELECT",
+      "aria": "Período"
+    },
+    "mobile": {
+      "url": "/campanhas",
+      "title": "Campanhas",
+      "placeholder": "Buscar campanhas...",
+      "ariaSearch": "Buscar campanhas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Prontas",
+          "active": false
+        },
+        {
+          "text": "Erro",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 dias",
+            "30 dias",
+            "90 dias",
+            "Este ano"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Mais recentes",
+            "Mais antigas",
+            "Nome A-Z",
+            "Nome Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Prontas",
+        "Erro",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "Abrir",
+        "Baixar",
+        "<< Anterior",
+        "1",
+        "2",
+        "7",
+        "Próximo >>"
+      ],
+      "cards": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Pronta",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Baixar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 66507,
+      "hasEsList": false,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": false,
+      "overflow": {
+        "innerWidth": 390,
+        "scrollWidth": 390
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 16,
+          "right": 374
+        },
+        "period": {
+          "top": 213,
+          "bottom": 257,
+          "left": 16,
+          "right": 374
+        },
+        "sort": {
+          "top": 273,
+          "bottom": 317,
+          "left": 16,
+          "right": 374
+        }
+      },
+      "nav": {
+        "transferSize": 15252,
+        "encodedBodySize": 14952,
+        "decodedBodySize": 69529
+      }
+    }
+  },
+  "patchEs": {
+    "status": 200,
+    "body": {
+      "uiLocale": "es-419",
+      "source": "explicit",
+      "version": 11
+    }
+  },
+  "afterPatchPreference": {
+    "status": 200,
+    "body": {
+      "uiLocale": "es-419",
+      "source": "explicit",
+      "version": 11
+    }
+  },
+  "es": {
+    "default": {
+      "url": "/campanhas",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Listas",
+          "active": false
+        },
+        {
+          "text": "Error",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "<< Anterior",
+        "1",
+        "2",
+        "7",
+        "Siguiente >>"
+      ],
+      "cards": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 67601,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15480,
+        "encodedBodySize": 15180,
+        "decodedBodySize": 70464
+      },
+      "cardsTruncated": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "status": "Lista"
+        },
+        {
+          "product": "Rocambole de Morango",
+          "status": "Lista"
+        },
+        {
+          "product": "Rocambole de Morango",
+          "status": "Lista"
+        },
+        {
+          "product": "Rocambole de Morango",
+          "status": "Lista"
+        },
+        {
+          "product": "Rocambole de Morango",
+          "status": "Lista"
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "status": "Lista"
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "status": "Lista"
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "status": "Lista"
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "status": "Lista"
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "status": "Lista"
+        }
+      ]
+    },
+    "searchHit": {
+      "url": "/campanhas?q=Rocambole",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Listas",
+          "active": false
+        },
+        {
+          "text": "Error",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar"
+      ],
+      "cards": [
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango (kg)",
+          "productLang": "",
+          "date": "14/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango (kg)",
+          "productLang": "",
+          "date": "09/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 57636,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15480,
+        "encodedBodySize": 15180,
+        "decodedBodySize": 70464
+      }
+    },
+    "searchMiss": {
+      "url": "/campanhas?q=zzzzzz-nao-existe",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Listas",
+          "active": false
+        },
+        {
+          "text": "Error",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error"
+      ],
+      "cards": [],
+      "emptyTitle": "No se encontraron campañas",
+      "emptyBody": "Intenta ajustar la búsqueda o limpiar los filtros.",
+      "emptyCta": "Nueva campaña",
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 47185,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1440
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 448,
+          "right": 728
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 744,
+          "right": 846
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 862,
+          "right": 999
+        }
+      },
+      "nav": {
+        "transferSize": 15472,
+        "encodedBodySize": 15172,
+        "decodedBodySize": 70464
+      }
+    },
+    "statusError": {
+      "url": "/campanhas?status=error",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": false
+        },
+        {
+          "text": "Listas",
+          "active": false
+        },
+        {
+          "text": "Error",
+          "active": true
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error",
+        "Abrir",
+        "Abrir",
+        "Abrir"
+      ],
+      "cards": [
+        {
+          "product": "Biscoito de Polvilho e Baunilia 400g",
+          "productLang": "",
+          "date": "14/08/2026",
+          "status": "Error",
+          "hasImage": false,
+          "imageLoading": null,
+          "imageLang": null,
+          "actions": [
+            "Abrir"
+          ]
+        },
+        {
+          "product": "Pão de Queijo Dona Maria (kg)",
+          "productLang": "",
+          "date": "09/08/2026",
+          "status": "Error",
+          "hasImage": false,
+          "imageLoading": null,
+          "imageLang": null,
+          "actions": [
+            "Abrir"
+          ]
+        },
+        {
+          "product": "Pão de Hambúrguer (pacote c/5)",
+          "productLang": "",
+          "date": "23/07/2026",
+          "status": "Error",
+          "hasImage": false,
+          "imageLoading": null,
+          "imageLang": null,
+          "actions": [
+            "Abrir"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 49264,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1440
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 448,
+          "right": 728
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 744,
+          "right": 846
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 862,
+          "right": 999
+        }
+      },
+      "nav": {
+        "transferSize": 15472,
+        "encodedBodySize": 15172,
+        "decodedBodySize": 70464
+      }
+    },
+    "statusReady": {
+      "url": "/campanhas?status=ready",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": false
+        },
+        {
+          "text": "Listas",
+          "active": true
+        },
+        {
+          "text": "Error",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "<< Anterior",
+        "1",
+        "2",
+        "6",
+        "Siguiente >>"
+      ],
+      "cards": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 67595,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 15472,
+        "encodedBodySize": 15172,
+        "decodedBodySize": 70464
+      }
+    },
+    "period90d": {
+      "url": "/campanhas?date=90d",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Listas",
+          "active": false
+        },
+        {
+          "text": "Error",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "90d",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "<< Anterior",
+        "1",
+        "2",
+        "3",
+        "4",
+        "Siguiente >>"
+      ],
+      "cards": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 67655,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 14938,
+        "encodedBodySize": 14638,
+        "decodedBodySize": 70181
+      }
+    },
+    "sortNameAsc": {
+      "url": "/campanhas?sort=product_name&order=asc",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Listas",
+          "active": false
+        },
+        {
+          "text": "Error",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "product_name,asc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "<< Anterior",
+        "1",
+        "2",
+        "7",
+        "Siguiente >>"
+      ],
+      "cards": [
+        {
+          "product": "Biscoit Champanhe Dona Maria 200g",
+          "productLang": "",
+          "date": "20/07/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Biscoito Champanhe (kg)",
+          "productLang": "",
+          "date": "15/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Biscoito Champanhe Dona Maria 200g",
+          "productLang": "",
+          "date": "22/07/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Biscoito de Polvilho e Baunilia 400g",
+          "productLang": "",
+          "date": "14/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Biscoito de Polvilho e Baunilia 400g",
+          "productLang": "",
+          "date": "14/08/2026",
+          "status": "Error",
+          "hasImage": false,
+          "imageLoading": null,
+          "imageLang": null,
+          "actions": [
+            "Abrir"
+          ]
+        },
+        {
+          "product": "Biscoito de Polvilho e Leite Condensado 400g",
+          "productLang": "",
+          "date": "13/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Biscoito de Polvilho João & Maria 100g",
+          "productLang": "",
+          "date": "17/07/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Biscoitos Dona Maria 400gr",
+          "productLang": "",
+          "date": "15/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Bolo de Cenoura com Cobertura de Chocolate",
+          "productLang": "",
+          "date": "25/07/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Bolo de Chocolate Belga",
+          "productLang": "",
+          "date": "25/07/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 65223,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 14934,
+        "encodedBodySize": 14634,
+        "decodedBodySize": 70181
+      }
+    },
+    "page2": {
+      "url": "/campanhas?page=2",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Listas",
+          "active": false
+        },
+        {
+          "text": "Error",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "<< Anterior",
+        "1",
+        "2",
+        "3",
+        "7",
+        "Siguiente >>"
+      ],
+      "cards": [
+        {
+          "product": "Coxão Mole (bovino) kg",
+          "productLang": "",
+          "date": "15/09/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Quando você quer valorizar um produto, novidade ou benefício",
+          "productLang": "",
+          "date": "13/09/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Quando o preço e a condição comercial são o destaque.",
+          "productLang": "",
+          "date": "13/09/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Quando o preço e a condição comercial são o destaque.",
+          "productLang": "",
+          "date": "13/09/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Nem toda publicação precisa ser uma promoção.",
+          "productLang": "",
+          "date": "13/09/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Presunto Cozido Aurora 200g",
+          "productLang": "",
+          "date": "27/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Presunto Cozido Aurora 200g",
+          "productLang": "",
+          "date": "27/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Pastel de Nata Português (ud)",
+          "productLang": "",
+          "date": "25/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Pastel de Nata Português (ud)",
+          "productLang": "",
+          "date": "25/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Pastel de Nata Português (ud)",
+          "productLang": "",
+          "date": "25/08/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 66531,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 1440,
+        "scrollWidth": 1425
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 440.5,
+          "right": 720.5
+        },
+        "period": {
+          "top": 153,
+          "bottom": 197,
+          "left": 736.5,
+          "right": 838.5
+        },
+        "sort": {
+          "top": 153,
+          "bottom": 197,
+          "left": 854.5,
+          "right": 991.5
+        }
+      },
+      "nav": {
+        "transferSize": 14945,
+        "encodedBodySize": 14645,
+        "decodedBodySize": 70181
+      },
+      "firstSameAsPage1": false
+    },
+    "mobile": {
+      "url": "/campanhas",
+      "title": "Campañas",
+      "placeholder": "Buscar campañas...",
+      "ariaSearch": "Buscar campañas",
+      "chips": [
+        {
+          "text": "Todas",
+          "active": true
+        },
+        {
+          "text": "Listas",
+          "active": false
+        },
+        {
+          "text": "Error",
+          "active": false
+        }
+      ],
+      "selects": [
+        {
+          "label": "Período",
+          "value": "all",
+          "options": [
+            "Todas",
+            "7 días",
+            "30 días",
+            "90 días",
+            "Este año"
+          ]
+        },
+        {
+          "label": "Ordenar por",
+          "value": "created_at,desc",
+          "options": [
+            "Más recientes",
+            "Más antiguas",
+            "Nombre A-Z",
+            "Nombre Z-A"
+          ]
+        }
+      ],
+      "buttons": [
+        "[redacted-email]",
+        "Todas",
+        "Listas",
+        "Error",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "Abrir",
+        "Descargar",
+        "<< Anterior",
+        "1",
+        "2",
+        "7",
+        "Siguiente >>"
+      ],
+      "cards": [
+        {
+          "product": "Pão Caseiro (kg)",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "eager",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Rocambole de Morango",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Morango & Pêssego",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        },
+        {
+          "product": "Red Bull Summer 250ml Figo & Maçã",
+          "productLang": "",
+          "date": "17/10/2026",
+          "status": "Lista",
+          "hasImage": true,
+          "imageLoading": "lazy",
+          "imageLang": "",
+          "actions": [
+            "Abrir",
+            "Descargar"
+          ]
+        }
+      ],
+      "emptyTitle": null,
+      "emptyBody": null,
+      "emptyCta": null,
+      "langElements": [
+        {
+          "tag": "DIV",
+          "lang": "es-419"
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        },
+        {
+          "tag": "H3",
+          "lang": ""
+        },
+        {
+          "tag": "IMG",
+          "lang": ""
+        }
+      ],
+      "htmlLang": "pt-BR",
+      "htmlBytes": 67314,
+      "hasEsList": true,
+      "hasPtList": true,
+      "hasDashboardOnly": false,
+      "hasShellEs": true,
+      "overflow": {
+        "innerWidth": 390,
+        "scrollWidth": 390
+      },
+      "layout": {
+        "search": {
+          "top": 153,
+          "bottom": 197,
+          "left": 16,
+          "right": 374
+        },
+        "period": {
+          "top": 213,
+          "bottom": 257,
+          "left": 16,
+          "right": 374
+        },
+        "sort": {
+          "top": 273,
+          "bottom": 317,
+          "left": 16,
+          "right": 374
+        }
+      },
+      "nav": {
+        "transferSize": 14939,
+        "encodedBodySize": 14639,
+        "decodedBodySize": 70181
+      }
+    }
+  },
+  "comparisons": {
+    "note": "Comparação corrigida: rótulos de status diferem por idioma por design; a paridade verifica URLs, contagem, ordem/produtos e equivalência de status.",
+    "default": {
+      "urlEqual": true,
+      "countEqual": true,
+      "productsEqual": true,
+      "statusesEquivalent": true,
+      "ptUrls": "/campanhas",
+      "esUrls": "/campanhas",
+      "ptStatuses": [
+        "Pronta"
+      ],
+      "esStatuses": [
+        "Lista"
+      ]
+    },
+    "searchHit": {
+      "urlEqual": true,
+      "countEqual": true,
+      "productsEqual": true,
+      "statusesEquivalent": true,
+      "ptUrls": "/campanhas?q=Rocambole",
+      "esUrls": "/campanhas?q=Rocambole",
+      "ptStatuses": [
+        "Pronta"
+      ],
+      "esStatuses": [
+        "Lista"
+      ]
+    },
+    "searchMiss": {
+      "urlEqual": true,
+      "bothEmpty": true
+    },
+    "statusError": {
+      "urlEqual": true,
+      "countEqual": true,
+      "productsEqual": true,
+      "statusesEquivalent": true,
+      "ptUrls": "/campanhas?status=error",
+      "esUrls": "/campanhas?status=error",
+      "ptStatuses": [
+        "Erro"
+      ],
+      "esStatuses": [
+        "Error"
+      ]
+    },
+    "statusReady": {
+      "urlEqual": true,
+      "countEqual": true,
+      "productsEqual": true,
+      "statusesEquivalent": true,
+      "ptUrls": "/campanhas?status=ready",
+      "esUrls": "/campanhas?status=ready",
+      "ptStatuses": [
+        "Pronta"
+      ],
+      "esStatuses": [
+        "Lista"
+      ]
+    },
+    "period90d": {
+      "urlEqual": true,
+      "countEqual": true,
+      "productsEqual": true,
+      "statusesEquivalent": true,
+      "ptUrls": "/campanhas?date=90d",
+      "esUrls": "/campanhas?date=90d",
+      "ptStatuses": [
+        "Pronta"
+      ],
+      "esStatuses": [
+        "Lista"
+      ]
+    },
+    "sortNameAsc": {
+      "urlEqual": true,
+      "countEqual": true,
+      "productsEqual": true,
+      "statusesEquivalent": true,
+      "ptUrls": "/campanhas?sort=product_name&order=asc",
+      "esUrls": "/campanhas?sort=product_name&order=asc",
+      "ptStatuses": [
+        "Pronta",
+        "Erro"
+      ],
+      "esStatuses": [
+        "Lista",
+        "Error"
+      ]
+    },
+    "page2": {
+      "urlEqual": true,
+      "countEqual": true,
+      "productsEqual": true,
+      "statusesEquivalent": true,
+      "ptUrls": "/campanhas?page=2",
+      "esUrls": "/campanhas?page=2",
+      "ptStatuses": [
+        "Pronta"
+      ],
+      "esStatuses": [
+        "Lista"
+      ]
+    }
+  },
+  "finalRestore": {
+    "skipped": true,
+    "current": {
+      "uiLocale": "pt-BR",
+      "source": "explicit",
+      "version": 12
+    }
+  },
+  "finalPreference": {
+    "uiLocale": "pt-BR",
+    "source": "explicit",
+    "version": 12
+  },
+  "signout": {
+    "status": 0
+  }
+}

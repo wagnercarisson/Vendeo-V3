@@ -1,0 +1,27 @@
+{
+  "result": {
+    "url": "/conta",
+    "prefsStatus": null,
+    "htmlBytes": 65767,
+    "listOnlyPresent": [],
+    "shellPresent": true,
+    "nav": {
+      "transferSize": 14932,
+      "encodedBodySize": 14632,
+      "decodedBodySize": 65756
+    }
+  },
+  "prefs": {
+    "status": 200,
+    "body": {
+      "uiLocale": "pt-BR",
+      "source": "explicit",
+      "version": 12
+    }
+  },
+  "signout": {
+    "status": 0,
+    "type": "opaqueredirect"
+  },
+  "afterSignoutStatus": 401
+}

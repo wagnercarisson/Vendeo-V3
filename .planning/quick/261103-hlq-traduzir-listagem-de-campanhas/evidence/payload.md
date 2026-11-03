@@ -22,9 +22,15 @@ Não há medição anterior de `/campanhas` registrada em `.planning/` que servi
 
 ## Conferência de HTML/RSC
 
-Pendente do Gate 3 (homolog, autorização específica). O roteiro exige conferir:
+Executada no Gate 3 (homolog local):
 
-- HTML/RSC de `/campanhas` em pt-BR e es-419;
-- presença apenas dos textos do namespace da listagem;
-- ausência de catálogos de outras rotas;
-- shell/payload global sem o catálogo da listagem.
+| Medida | pt-BR | es-419 |
+|---|---|---|
+| HTML decodificado de `/campanhas` | 66.666 B | 67.601 B |
+| `encodedBodySize` da navegação | 14.966 B | 15.180 B |
+| `decodedBodySize` da navegação | 69.529 B | 70.464 B |
+
+- Strings exclusivas do dashboard ausentes nos dois idiomas.
+- `/conta` não contém nenhuma string exclusiva da listagem → namespace não vazou para o payload global do shell.
+- Strings do shell em espanhol presentes, como esperado (pertencem ao shell).
+- Detalhes em `gate3-homolog.md` e `gate3-shell-payload.json`.

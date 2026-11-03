@@ -6,7 +6,8 @@ date: 2026-11-03
 branch: feature/traducao-da-listagem-de-campanhas
 execution: local_complete
 review: pending
-homolog: not_executed
+homolog: executed_pass_with_limitations
+homolog_date: 2026-11-03
 publication: not_authorized
 production_acceptance: pending
 ---
@@ -96,10 +97,8 @@ Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
 
 ## Limitações e pendências
 
-- **Gate 3 não executado:** prova funcional em homolog, conferência de HTML/RSC e
-  restauração da preferência inicial (DTO + API) dependem de autorização específica.
-- **Sem baseline de payload específico de `/campanhas`:** não houve troca de branch
-  nem rebuild de aplicação em execução; mediu-se apenas a entrega final.
+- **Gate 3 executado no homolog local** em 2026-11-03: PASS com limitações registradas em `evidence/gate3-homolog.md`.
+- **Sem baseline antigo de payload:** não houve troca de branch nem rebuild retroativo; mediu-se apenas a entrega atual (build + HTML/RSC).
 - **OpenSpec global não-verde:** 210 passed / 69 failed, dívida pré-existente;
   os quatro specs alterados foram avaliados individualmente.
 - **Cobertura fora do recorte:** `campanhas/error.tsx` inexistente (boundary
@@ -107,13 +106,29 @@ Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
 - **`microcopy.ts`:** constantes `CAMPAIGNS_*` preservadas sem uso na rota.
 - **Publicação e smoke curto:** não autorizados; permanecem no Gate 5.
 
+## Gate 3 — homolog local
+
+- Build e start locais na branch atual (`96e4ef1b`), app em `127.0.0.1:3000`, Supabase local `57781`.
+- Sessão temporária via Admin API local; nenhum cookie/token impresso ou versionado; sessão descartada (`/auth/signout`, verificação 401).
+- Preferência: `pt-BR`/`explicit` v10 → `es-419` v11 → restaurada `pt-BR`/`explicit` **v12**.
+- Paridade pt-BR × es-419 em URL, contagem, ordem/produtos e status equivalentes nos 8 cenários.
+- `lang="es-419"` apenas na região traduzida; produto/alt com `lang=""`; documento em `pt-BR`.
+- `Abrir` navegou para campanha existente; download original `image/jpeg` 251.525 B × miniatura `image/webp` 15.678 B.
+- Miniaturas: eager nos 3 primeiros, lazy nos demais; fallback simulado no DOM (não natural).
+- Desktop 1440×900 e mobile 390×844 sem overflow; controles empilhados.
+- Payload: HTML pt 66.666 B / es 67.601 B; `/conta` sem strings exclusivas da listagem.
+- Limitações: `Não concluída` não observada nos dados (coberta por teste), empty state sem campanhas não observável, fallback simulado, leitor de tela real não executado.
+
 ## Artefatos
 
 - Plano: `.planning/quick/261103-hlq-traduzir-listagem-de-campanhas/261103-hlq-PLAN.md`
 - Evidências: `.planning/quick/261103-hlq-traduzir-listagem-de-campanhas/evidence/`
+  - `gate3-homolog.md`, `gate3-results.json`, `gate3-shell-payload.json`
+  - capturas `gate3-pt-desktop.png`, `gate3-es-desktop.png`, `gate3-es-desktop-empty.png`, `gate3-pt-mobile.png`, `gate3-es-mobile.png`
+  - `local-gates.md`, `payload.md`
 - Resumo: este arquivo.
 
 ## Próximo gate
 
-Revisão do usuário/Codex sobre a implementação local (Gate 2). Nenhuma ação de
-homolog, merge, push ou deploy foi realizada.
+Revisão do usuário/Codex sobre a implementação local + aceite visual do Gate 3.
+Nenhuma publicação, smoke de produção, merge, push ou deploy foi realizada.

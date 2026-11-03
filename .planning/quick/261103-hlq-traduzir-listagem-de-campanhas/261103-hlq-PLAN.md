@@ -11,7 +11,9 @@ revision: 2
 approval_required: true
 implementation_authorized: true
 implementation_status: complete_local_pending_review
-validation_homolog_authorized: false
+validation_homolog_authorized: true
+homolog_status: complete_pass_with_limitations
+homolog_date: 2026-11-03
 publication_authorized: false
 base_sha: 948ee3e994e841d971034750f168888846f06ed5
 branch: feature/traducao-da-listagem-de-campanhas
