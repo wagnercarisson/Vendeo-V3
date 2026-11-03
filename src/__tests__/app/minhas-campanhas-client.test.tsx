@@ -9,6 +9,15 @@ vi.mock("next/navigation", () => ({
 
 import CampaignListClient from "@/app/(app)/campanhas/client";
 import type { CampaignListItem } from "@/lib/campaign/list";
+import { ptBRCampaignListMessages } from "@/lib/i18n/campaign-list/catalogs/pt-BR";
+import { es419CampaignListMessages } from "@/lib/i18n/campaign-list/catalogs/es-419";
+
+function expectedLocalDate(isoString: string): string {
+  const date = new Date(isoString);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getFullYear()}`;
+}
 
 const mockReadyCampaign: CampaignListItem = {
   id: "id-1",
@@ -45,6 +54,8 @@ const baseProps = {
   page: 1,
   totalPages: 1,
   searchParams: {},
+  messages: ptBRCampaignListMessages,
+  locale: "pt-BR" as const,
 };
 
 describe("CampaignListClient — display", () => {
@@ -58,8 +69,12 @@ describe("CampaignListClient — display", () => {
 
     expect(screen.getByText("Produto Teste")).toBeInTheDocument();
     expect(screen.getByText("Produto com Erro")).toBeInTheDocument();
-    expect(screen.getByText("10/07/2026")).toBeInTheDocument();
-    expect(screen.getByText("09/07/2026")).toBeInTheDocument();
+    expect(
+      screen.getByText(expectedLocalDate(mockReadyCampaign.createdAt)),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(expectedLocalDate(mockErrorCampaign.createdAt)),
+    ).toBeInTheDocument();
   });
 
   it("shows Baixar button only for ready campaigns", () => {
@@ -282,6 +297,8 @@ describe("CampaignListClient — display", () => {
         page={1}
         totalPages={0}
         searchParams={{}}
+        messages={ptBRCampaignListMessages}
+        locale="pt-BR"
       />,
     );
 
@@ -292,5 +309,88 @@ describe("CampaignListClient — display", () => {
     expect(
       screen.getByRole("link", { name: "Criar campanha" }),
     ).toHaveAttribute("href", "/campanhas/nova");
+  });
+
+  it("expõe os nomes acessíveis pt-BR da busca, período e ordenação", () => {
+    render(
+      <CampaignListClient items={[]} {...baseProps} total={0} totalPages={0} />,
+    );
+
+    expect(screen.getByLabelText("Buscar campanhas")).toBeInTheDocument();
+    expect(screen.getByLabelText("Período")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ordenar por")).toBeInTheDocument();
+  });
+
+  it("aplica lang vazio ao nome do produto e ao alt da miniatura", () => {
+    render(<CampaignListClient items={[mockReadyCampaign]} {...baseProps} total={1} />);
+
+    expect(
+      screen.getByRole("heading", { name: "Produto Teste" }),
+    ).toHaveAttribute("lang", "");
+    expect(screen.getByRole("img")).toHaveAttribute("lang", "");
+  });
+
+  it("renderiza a listagem em es-419 preservando campanhas, status e ações", () => {
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign, mockErrorCampaign, mockNewFlowClosedCampaign]}
+        total={3}
+        page={1}
+        totalPages={1}
+        searchParams={{}}
+        messages={es419CampaignListMessages}
+        locale="es-419"
+      />,
+    );
+
+    expect(screen.getByText("Campañas")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Buscar campañas...")).toBeInTheDocument();
+    expect(screen.getByLabelText("Buscar campañas")).toBeInTheDocument();
+    expect(screen.getByLabelText("Período")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ordenar por")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Listas" })).toBeInTheDocument();
+    expect(screen.getAllByText("Lista").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("No completada").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: "Error" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Abrir" })).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Descargar" })).toBeInTheDocument();
+    expect(screen.getByText("Más recientes")).toBeInTheDocument();
+    expect(screen.getByText("Este año")).toBeInTheDocument();
+  });
+
+  it("renderiza os estados vazios em es-419", () => {
+    const { rerender } = render(
+      <CampaignListClient
+        items={[]}
+        total={0}
+        page={1}
+        totalPages={0}
+        searchParams={{}}
+        messages={es419CampaignListMessages}
+        locale="es-419"
+      />,
+    );
+
+    expect(screen.getByText("Aún no hay campañas")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Crear campaña" }),
+    ).toHaveAttribute("href", "/campanhas/nova");
+
+    rerender(
+      <CampaignListClient
+        items={[]}
+        total={0}
+        page={1}
+        totalPages={0}
+        searchParams={{ q: "inexistente" }}
+        messages={es419CampaignListMessages}
+        locale="es-419"
+      />,
+    );
+
+    expect(screen.getByText("No se encontraron campañas")).toBeInTheDocument();
+    expect(
+      screen.getByText("Intenta ajustar la búsqueda o limpiar los filtros."),
+    ).toBeInTheDocument();
   });
 });

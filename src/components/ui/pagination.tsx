@@ -2,10 +2,21 @@
 
 import { Button } from "./button";
 
+export interface PaginationLabels {
+  previous: string;
+  next: string;
+}
+
+const DEFAULT_LABELS: PaginationLabels = {
+  previous: "<< Anterior",
+  next: "Próximo >>",
+};
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  labels?: Partial<PaginationLabels>;
 }
 
 function getPageNumbers(
@@ -42,10 +53,12 @@ export function Pagination({
   currentPage,
   totalPages,
   onPageChange,
+  labels,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
   const pages = getPageNumbers(currentPage, totalPages);
+  const text: PaginationLabels = { ...DEFAULT_LABELS, ...labels };
 
   return (
     <div className="flex items-center justify-center gap-1 flex-wrap">
@@ -55,7 +68,7 @@ export function Pagination({
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
       >
-        {"<< "}Anterior
+        {text.previous}
       </Button>
 
       {pages.map((page, index) =>
@@ -84,7 +97,7 @@ export function Pagination({
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
       >
-        Próximo{" >>"}
+        {text.next}
       </Button>
     </div>
   );

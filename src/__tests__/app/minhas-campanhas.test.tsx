@@ -6,6 +6,7 @@ const mockGetCurrentStore = vi.fn();
 const mockRedirect = vi.fn();
 const mockRequirePageUser = vi.fn().mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
 const mockParseCampaignListSearchParams = vi.fn();
+const mockGetUiRenderContext = vi.fn();
 
 const NEXT_CONTROL = new Error("NEXT_CONTROL");
 const redirectFn = vi.fn(() => { throw NEXT_CONTROL; });
@@ -42,9 +43,18 @@ vi.mock("@/lib/campaign/search-params", () => ({
   parseCampaignListSearchParams: mockParseCampaignListSearchParams,
 }));
 
+vi.mock("@/lib/i18n/server", () => ({
+  getUiRenderContext: mockGetUiRenderContext,
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockParseCampaignListSearchParams.mockReturnValue(defaultValidated);
+  mockGetUiRenderContext.mockResolvedValue({
+    ok: true,
+    locale: "pt-BR",
+    preference: { uiLocale: "pt-BR", source: "explicit", version: 1 },
+  });
 });
 
 describe("CampanhasPage (Server Component)", () => {

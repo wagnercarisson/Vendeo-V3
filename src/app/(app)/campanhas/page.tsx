@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Store } from "lucide-react";
 import { requirePageUser } from "@/lib/auth/require-user";
 import { getCurrentStore } from "@/lib/auth/store-ownership";
 import { listCampaigns } from "@/lib/campaign/list";
 import { parseCampaignListSearchParams } from "@/lib/campaign/search-params";
-import { CAMPAIGNS_NO_STORE } from "@/lib/onboarding/microcopy";
+import { getCampaignListMessages } from "@/lib/i18n/campaign-list";
+import type { SupportedUiLocale } from "@/lib/i18n/locales";
+import { getUiRenderContext } from "@/lib/i18n/server";
 import { EmptyState } from "@/components/ui/empty-state";
 import CampaignListClient from "./client";
 
@@ -17,18 +20,25 @@ export default async function CampanhasPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await requirePageUser();
-  const store = await getCurrentStore(user.userId);
+  const [store, ui] = await Promise.all([
+    getCurrentStore(user.userId),
+    getUiRenderContext(user.userId),
+  ]);
+
+  const locale: SupportedUiLocale = ui.ok ? ui.locale : "pt-BR";
+  const messages = getCampaignListMessages(locale);
+  const lang = locale === "es-419" ? "es-419" : undefined;
 
   if (!store) {
     return (
-      <div>
+      <div lang={lang}>
         <EmptyState
-          icon={CAMPAIGNS_NO_STORE.icon}
-          title={CAMPAIGNS_NO_STORE.title}
-          description={CAMPAIGNS_NO_STORE.description}
+          icon={Store}
+          title={messages.noStore.title}
+          description={messages.noStore.body}
           action={
-            <Link href={CAMPAIGNS_NO_STORE.ctaHref!} className={ctaClass}>
-              {CAMPAIGNS_NO_STORE.ctaLabel}
+            <Link href="/loja" className={ctaClass}>
+              {messages.noStore.cta}
             </Link>
           }
         />
@@ -59,12 +69,16 @@ export default async function CampanhasPage({
   }
 
   return (
-    <CampaignListClient
-      items={result.items}
-      total={result.total}
-      page={result.page}
-      totalPages={result.totalPages}
-      searchParams={params}
-    />
+    <div lang={lang}>
+      <CampaignListClient
+        items={result.items}
+        total={result.total}
+        page={result.page}
+        totalPages={result.totalPages}
+        searchParams={params}
+        messages={messages}
+        locale={locale}
+      />
+    </div>
   );
 }

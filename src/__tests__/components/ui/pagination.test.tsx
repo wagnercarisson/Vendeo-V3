@@ -95,4 +95,34 @@ describe("Pagination", () => {
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.className).toContain("flex-wrap");
   });
+
+  it("aceita rótulos localizados sem alterar o callback", () => {
+    const onPageChange = vi.fn();
+    render(
+      <Pagination
+        currentPage={1}
+        totalPages={3}
+        onPageChange={onPageChange}
+        labels={{ previous: "<< Anterior", next: "Siguiente >>" }}
+      />,
+    );
+
+    expect(screen.getByText("Siguiente >>")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Siguiente >>"));
+    expect(onPageChange).toHaveBeenCalledWith(2);
+  });
+
+  it("preenche apenas os rótulos ausentes com o padrão pt-BR", () => {
+    render(
+      <Pagination
+        currentPage={1}
+        totalPages={3}
+        onPageChange={() => {}}
+        labels={{ next: "Siguiente >>" }}
+      />,
+    );
+
+    expect(screen.getByText("<< Anterior")).toBeInTheDocument();
+    expect(screen.getByText("Siguiente >>")).toBeInTheDocument();
+  });
 });

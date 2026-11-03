@@ -3,18 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Megaphone, Search } from "lucide-react";
 import type { CampaignListItem } from "@/lib/campaign/list";
+import type { CampaignListMessages } from "@/lib/i18n/campaign-list/messages";
+import { formatCampaignListDate } from "@/lib/i18n/campaign-list/format-date";
+import type { SupportedUiLocale } from "@/lib/i18n/locales";
 import { useDebounce } from "@/hooks/use-debounce";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import {
-  CAMPAIGNS_NO_CAMPAIGNS,
-  CAMPAIGNS_SEARCH_EMPTY,
-} from "@/lib/onboarding/microcopy";
 import { Pagination } from "@/components/ui/pagination";
-import { Search } from "lucide-react";
 
 interface Props {
   items: CampaignListItem[];
@@ -22,6 +21,8 @@ interface Props {
   page: number;
   totalPages: number;
   searchParams: Record<string, string | string[] | undefined>;
+  messages: CampaignListMessages;
+  locale: SupportedUiLocale;
 }
 
 const DEFAULT_PARAMS = new Set([
@@ -72,6 +73,8 @@ export default function CampaignListClient({
   page,
   totalPages,
   searchParams: rawParams,
+  messages,
+  locale,
 }: Props) {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState(
@@ -116,9 +119,9 @@ export default function CampaignListClient({
   );
 
   const STATUS_OPTIONS = [
-    { label: "Todas", value: "ready,error" },
-    { label: "Prontas", value: "ready" },
-    { label: "Erro", value: "error" },
+    { label: messages.filters.statusAll, value: "ready,error" },
+    { label: messages.filters.statusReady, value: "ready" },
+    { label: messages.filters.statusError, value: "error" },
   ] as const;
 
   const currentStatus =
@@ -128,32 +131,35 @@ export default function CampaignListClient({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader title="Campanhas" />
+      <PageHeader title={messages.title} />
 
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="relative w-full md:w-auto md:min-w-[280px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <Input
-            placeholder="Buscar campanhas..."
+            placeholder={messages.search.placeholder}
+            aria-label={messages.search.ariaLabel}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full pl-10 md:w-auto"
           />
         </div>
         <select
+          aria-label={messages.filters.periodLabel}
           value={
             typeof rawParams.date === "string" ? rawParams.date : "all"
           }
           onChange={(e) => navigate({ date: e.target.value })}
           className="min-h-[44px] rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         >
-          <option value="all">Todas</option>
-          <option value="7d">7 dias</option>
-          <option value="30d">30 dias</option>
-          <option value="90d">90 dias</option>
-          <option value="year">Este ano</option>
+          <option value="all">{messages.filters.periodAll}</option>
+          <option value="7d">{messages.filters.period7d}</option>
+          <option value="30d">{messages.filters.period30d}</option>
+          <option value="90d">{messages.filters.period90d}</option>
+          <option value="year">{messages.filters.periodYear}</option>
         </select>
         <select
+          aria-label={messages.filters.sortLabel}
           value={`${typeof rawParams.sort === "string" ? rawParams.sort : "created_at"},${typeof rawParams.order === "string" ? rawParams.order : "desc"}`}
           onChange={(e) => {
             const [sort, order] = e.target.value.split(",");
@@ -161,10 +167,10 @@ export default function CampaignListClient({
           }}
           className="min-h-[44px] rounded-lg border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary"
         >
-          <option value="created_at,desc">Mais recentes</option>
-          <option value="created_at,asc">Mais antigas</option>
-          <option value="product_name,asc">Nome A-Z</option>
-          <option value="product_name,desc">Nome Z-A</option>
+          <option value="created_at,desc">{messages.filters.sortNewest}</option>
+          <option value="created_at,asc">{messages.filters.sortOldest}</option>
+          <option value="product_name,asc">{messages.filters.sortNameAsc}</option>
+          <option value="product_name,desc">{messages.filters.sortNameDesc}</option>
         </select>
       </div>
 
@@ -187,15 +193,15 @@ export default function CampaignListClient({
 
       {items.length === 0 && !hasActiveFilters && (
         <EmptyState
-          icon={CAMPAIGNS_NO_CAMPAIGNS.icon}
-          title={CAMPAIGNS_NO_CAMPAIGNS.title}
-          description={CAMPAIGNS_NO_CAMPAIGNS.description}
+          icon={Megaphone}
+          title={messages.empty.noCampaignsTitle}
+          description={messages.empty.noCampaignsBody}
           action={
             <Link
-              href={CAMPAIGNS_NO_CAMPAIGNS.ctaHref!}
+              href="/campanhas/nova"
               className="inline-flex items-center rounded-lg bg-accent-green px-6 py-2 text-sm font-semibold text-white font-heading hover:brightness-110 transition-all duration-200"
             >
-              {CAMPAIGNS_NO_CAMPAIGNS.ctaLabel}
+              {messages.empty.noCampaignsCta}
             </Link>
           }
         />
@@ -203,16 +209,22 @@ export default function CampaignListClient({
 
       {items.length === 0 && hasActiveFilters && (
         <EmptyState
-          icon={CAMPAIGNS_SEARCH_EMPTY.icon}
-          title={CAMPAIGNS_SEARCH_EMPTY.title}
-          description={CAMPAIGNS_SEARCH_EMPTY.description}
+          icon={Search}
+          title={messages.empty.searchTitle}
+          description={messages.empty.searchBody}
         />
       )}
 
       {items.length > 0 && (
         <div className="space-y-4">
           {items.map((campaign, index) => (
-            <CampaignCard key={campaign.id} campaign={campaign} index={index} />
+            <CampaignCard
+              key={campaign.id}
+              campaign={campaign}
+              index={index}
+              messages={messages}
+              locale={locale}
+            />
           ))}
         </div>
       )}
@@ -222,37 +234,45 @@ export default function CampaignListClient({
           currentPage={page}
           totalPages={totalPages}
           onPageChange={navigateToPage}
+          labels={messages.pagination}
         />
       )}
     </div>
   );
 }
 
-function campaignStatusDisplay(campaign: CampaignListItem): {
+function campaignStatusDisplay(
+  campaign: CampaignListItem,
+  messages: CampaignListMessages["status"],
+): {
   text: string;
   className: string;
 } {
   if (campaign.status === "ready") {
-    return { text: "Pronta", className: "text-accent-green" };
+    return { text: messages.ready, className: "text-accent-green" };
   }
   // Quick 261018-enc — campanha do NOVO fluxo encerrada com estorno: rótulo
   // NEUTRO (não “falha técnica”; o tratamento por motivo vive no detalhe).
   if (campaign.flow === "new") {
-    return { text: "Não concluída", className: "text-text-secondary" };
+    return { text: messages.incomplete, className: "text-text-secondary" };
   }
-  return { text: "Erro", className: "text-accent-red" };
+  return { text: messages.error, className: "text-accent-red" };
 }
 
 function CampaignCard({
   campaign,
   index,
+  messages,
+  locale,
 }: {
   campaign: CampaignListItem;
   index: number;
+  messages: CampaignListMessages;
+  locale: SupportedUiLocale;
 }) {
   const router = useRouter();
-  const formattedDate = formatDate(campaign.createdAt);
-  const status = campaignStatusDisplay(campaign);
+  const formattedDate = formatCampaignListDate(campaign.createdAt, locale);
+  const status = campaignStatusDisplay(campaign, messages.status);
   const imageRef = useRef<HTMLImageElement>(null);
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(campaign.thumbnailUrl) && !imageFailed;
@@ -276,6 +296,7 @@ function CampaignCard({
             ref={imageRef}
             src={campaign.thumbnailUrl}
             alt={campaign.productName}
+            lang=""
             loading={index < 3 ? "eager" : "lazy"}
             decoding="async"
             className="h-full w-full object-cover"
@@ -286,7 +307,10 @@ function CampaignCard({
         )}
       </div>
       <div className="flex flex-1 flex-col justify-center gap-1">
-        <h3 className="text-lg font-semibold text-text-primary font-heading">
+        <h3
+          lang=""
+          className="text-lg font-semibold text-text-primary font-heading"
+        >
           {campaign.productName}
         </h3>
         <span className="text-sm text-text-muted font-body">
@@ -302,7 +326,7 @@ function CampaignCard({
           size="sm"
           onClick={() => router.push(`/campanhas/${campaign.id}`)}
         >
-          Abrir
+          {messages.actions.open}
         </Button>
         {campaign.status === "ready" && (
           <Button
@@ -310,18 +334,10 @@ function CampaignCard({
             size="sm"
             onClick={() => { window.location.href = `/api/campaign/${campaign.id}/download`; }}
           >
-            Baixar
+            {messages.actions.download}
           </Button>
         )}
       </div>
     </div>
   );
-}
-
-function formatDate(isoString: string): string {
-  const date = new Date(isoString);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
 }

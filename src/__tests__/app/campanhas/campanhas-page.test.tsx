@@ -11,6 +11,7 @@ const mockRequirePageUser = vi
 const mockGetCurrentStore = vi.fn();
 const mockListCampaigns = vi.fn();
 const mockParseCampaignListSearchParams = vi.fn();
+const mockGetUiRenderContext = vi.fn();
 
 vi.mock("@/lib/auth/require-user", () => ({
   requirePageUser: mockRequirePageUser,
@@ -27,6 +28,22 @@ vi.mock("@/lib/campaign/list", () => ({
 vi.mock("@/lib/campaign/search-params", () => ({
   parseCampaignListSearchParams: mockParseCampaignListSearchParams,
 }));
+
+vi.mock("@/lib/i18n/server", () => ({
+  getUiRenderContext: mockGetUiRenderContext,
+}));
+
+const ptBrUiContext = {
+  ok: true,
+  locale: "pt-BR",
+  preference: { uiLocale: "pt-BR", source: "explicit", version: 1 },
+};
+
+const esUiContext = {
+  ok: true,
+  locale: "es-419",
+  preference: { uiLocale: "es-419", source: "explicit", version: 2 },
+};
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -57,6 +74,7 @@ const ctaHref = "/campanhas/nova";
 beforeEach(() => {
   vi.clearAllMocks();
   mockParseCampaignListSearchParams.mockReturnValue(defaultValidated);
+  mockGetUiRenderContext.mockResolvedValue(ptBrUiContext);
 });
 
 describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
@@ -311,5 +329,94 @@ describe("CampanhasPage (Server Component — SSR with searchParams)", () => {
         searchParams: Promise.resolve({ page: "999" }),
       }),
     ).rejects.toThrow("NEXT_REDIRECT");
+  });
+
+  it("renderiza a listagem em es-419 com lang escopado", async () => {
+    mockGetUiRenderContext.mockResolvedValue(esUiContext);
+    mockGetCurrentStore.mockResolvedValue({ id: "store-456" });
+    mockListCampaigns.mockResolvedValue(
+      mockCampaignsResult(
+        [
+          {
+            id: "c1",
+            productName: "Producto Teste",
+            status: "ready",
+            createdAt: "2026-01-01T00:00:00Z",
+            thumbnailUrl: null,
+            storagePath: "s/c1.jpg",
+          },
+        ],
+        1,
+      ),
+    );
+
+    const { default: CampanhasPage } = await import(
+      "@/app/(app)/campanhas/page"
+    );
+    const result = await CampanhasPage({ searchParams: Promise.resolve({}) });
+    const html = renderToString(result);
+
+    expect(html).toContain("Campañas");
+    expect(html).toContain("Buscar campañas");
+    expect(html).toContain("Período");
+    expect(html).toContain("Ordenar por");
+    expect(html).toContain("Lista");
+    expect(html).toContain('lang="es-419"');
+    expect(mockListCampaigns).toHaveBeenCalledWith("store-456", {
+      page: 1,
+      pageSize: 10,
+      search: undefined,
+      status: ["ready", "error"],
+      dateFrom: undefined,
+      dateTo: undefined,
+      sortBy: "created_at",
+      sortOrder: "desc",
+    });
+  });
+
+  it("renderiza o estado sem loja em es-419", async () => {
+    mockGetUiRenderContext.mockResolvedValue(esUiContext);
+    mockGetCurrentStore.mockResolvedValue(null);
+
+    const { default: CampanhasPage } = await import(
+      "@/app/(app)/campanhas/page"
+    );
+    const result = await CampanhasPage({ searchParams: Promise.resolve({}) });
+    const html = renderToString(result);
+
+    expect(html).toContain("Configura tu tienda");
+    expect(html).toContain("Configurar tienda");
+    expect(html).toContain('lang="es-419"');
+    expect(mockListCampaigns).not.toHaveBeenCalled();
+  });
+
+  it("mantém pt-BR sem lang=es-419", async () => {
+    mockGetCurrentStore.mockResolvedValue({ id: "store-456" });
+    mockListCampaigns.mockResolvedValue(
+      mockCampaignsResult(
+        [
+          {
+            id: "c1",
+            productName: "Produto Teste",
+            status: "ready",
+            createdAt: "2026-01-01T00:00:00Z",
+            thumbnailUrl: null,
+            storagePath: "s/c1.jpg",
+          },
+        ],
+        1,
+      ),
+    );
+
+    const { default: CampanhasPage } = await import(
+      "@/app/(app)/campanhas/page"
+    );
+    const result = await CampanhasPage({ searchParams: Promise.resolve({}) });
+    const html = renderToString(result);
+
+    expect(html).toContain("Campanhas");
+    expect(html).toContain("Buscar campanhas");
+    expect(html).toContain("Pronta");
+    expect(html).not.toContain('lang="es-419"');
   });
 });
