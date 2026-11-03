@@ -1,12 +1,13 @@
 ---
 quick_id: 261103-qew
 slug: pagina-publica-demonstrativa-para-floric
-status: awaiting_human_review
+status: complete
 date: 2026-11-03
 branch: perf/pagina-campanha-florista
 base_commit: 03e13606
 implementation_authorized: true
-checkpoint_visual: pending
+checkpoint_visual: approved
+accepted_on: 2026-11-03
 ---
 
 # Quick 261103-qew — Página pública demonstrativa para floriculturas
@@ -44,11 +45,18 @@ extensões aprovadas (card do texto gerado e link “Conheça o Vendeo”).
 - **Caveat:** os tempos locais e os `transferSize` do Chrome local **não são PageSpeed de produção** e não devem ser usados como métrica pública. A medição serve apenas para decidir prioridade no HTML.
 - Evidência: `evidence/lcp-measurement.json`.
 
+## Aceite visual
+
+Aprovado pelo responsável em **2026-11-03**, em desktop (1440×900) e mobile (390×844),
+sobre os commits `9a627b65` (composição) e `4a6b8579` (docs/evidências). Evidência:
+`evidence/visual-acceptance.md`. Nenhuma alteração de copy, composição ou código foi
+feita após o aceite.
+
 ## Gates
 
 | Gate | Resultado |
 |---|---|
-| Suíte focada + regressão de landing/SEO | **161/161** em 12 arquivos; após os ajustes de composição, **105/105** nos 6 arquivos afetados |
+| Suíte focada + regressão de landing/SEO | **197/197** em 15 arquivos (verificação final) |
 | Typecheck (`tsc -p tsconfig.typecheck.json --noEmit`) | **0 erros** |
 | Lint (`eslint .`) | exit **0** (sem cobertura de TypeScript — limitação preexistente) |
 | Build (`npm run build`) | **0**; `/floriculturas` = 2,82 kB / 173 kB; shared 102 kB |
@@ -75,8 +83,10 @@ Medições de layout confirmadas no navegador:
 
 ## Pendências / limites
 
-- **Checkpoint visual humano pendente** (desktop/mobile). Este SUMMARY não declara a quick concluída.
-- `STATE.md` e a tabela “Quick Tasks Completed” **não foram atualizados**: a conclusão depende da aprovação visual.
-- Sem merge, push, deploy, sync ou archive.
+- **Aceite visual concluído** em 2026-11-03 (desktop/mobile). Ver `evidence/visual-acceptance.md`.
+- `STATE.md` atualizado com a linha da quick, sem declarar merge/push/deploy.
+- Sync/archive do OpenSpec **não executados**: aguardam revisão conjunta, conforme o fluxo do projeto.
+- Sem merge, push ou deploy — etapas do responsável.
 - Imagem OG própria da página permanece follow-up (reutiliza a institucional).
 - Header/rodapé duplicados localmente; extração compartilhada permanece follow-up para não tocar a home.
+- `transferSize`/tempos do Chrome local não são PageSpeed de produção.

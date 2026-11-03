@@ -47,7 +47,7 @@ supersedes: versão anterior desta quick (não usar a copy antiga)
 
 > Uma foto da orquídea, o nome da floricultura e as informações que você quer destacar. O Vendeo combina esses elementos em uma campanha com sua marca, apresentação do produto e mensagem para acompanhar a divulgação.
 
-**Card do texto gerado** (ao lado do parágrafo no desktop; abaixo no mobile)
+**Card do texto gerado** (abaixo do parágrafo, no mesmo bloco de leitura; desktop e mobile)
 
 Título do card:
 > Além da arte, o texto para acompanhar sua publicação.

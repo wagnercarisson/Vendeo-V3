@@ -1,12 +1,13 @@
 ---
 quick_id: 261103-qew
 slug: pagina-publica-demonstrativa-para-floric
-status: implemented_awaiting_visual_review
+status: complete
 mode: implemented
 reconciled: 2026-11-03
 base_branch: perf/pagina-campanha-florista
 base_commit: 03e13606
 implementation_authorized: true
+checkpoint_visual: approved
 openspec_change: pagina-publica-demonstrativa-floriculturas
 ---
 
@@ -93,7 +94,7 @@ Saída em `public/floriculturas/`:
 - `sizes`: `(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))`.
 - Larguras derivadas de ~452px CSS × DPR 2 ≈ 904px: 1024 cobre 2×; 480 cobre 1× e telas menores. Sem upscale; proporção preservada.
 - Pipeline Sharp já existente (WebP q=82, effort 6, smartSubsample). Sem dependência nova.
-- LCP = campanha (maior área pintada: 452×452 vs 452×413) → `loading="eager"` + `fetchPriority="high"`. Foto `eager` sem prioridade alta. **Nenhuma das duas com `lazy`.**
+- LCP: medido no navegador. O elemento vencedor foi o `h1` em desktop (1440×900) e mobile (390×844); por isso nenhuma imagem recebe `fetchPriority="high"`. Ambas ficam `eager`, nenhuma com `lazy`. Medição local não é PageSpeed de produção.
 - Dimensões e pesos finais dos quatro arquivos são registrados no SUMMARY da implementação.
 
 ### 5.5 Indexação, canonical e sitemap
