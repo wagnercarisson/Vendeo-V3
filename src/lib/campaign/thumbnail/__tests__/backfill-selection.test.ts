@@ -22,6 +22,7 @@ describe("backfill-selection", () => {
   it("aceita apenas paths canônicos do próprio store", () => {
     expect(isEligibleInventoryPath(`${STORE}/${CAMPAIGN}.jpg`, STORE)).toBe(true);
     expect(isEligibleInventoryPath(`${STORE}/${CAMPAIGN}/v2.jpg`, STORE)).toBe(true);
+    expect(isEligibleInventoryPath(`${STORE}/${CAMPAIGN}/v3.jpg`, STORE)).toBe(true);
     expect(
       isEligibleInventoryPath(
         `${STORE}/${CAMPAIGN}/product-1-1/${OPERATION}/art-1024.jpg`,
@@ -39,6 +40,9 @@ describe("backfill-selection", () => {
       `bench/${CAMPAIGN}/inputs/1.jpg`,
       `lab/${CAMPAIGN}.jpg`,
       `${STORE}/${CAMPAIGN}.png`,
+      `${STORE}/${CAMPAIGN}/v1.jpg`,
+      `${STORE}/${CAMPAIGN}/v4.jpg`,
+      `${STORE}/${CAMPAIGN}/v10.jpg`,
     ]) {
       expect(isEligibleInventoryPath(path, STORE)).toBe(false);
     }

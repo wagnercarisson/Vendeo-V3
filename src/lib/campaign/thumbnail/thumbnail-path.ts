@@ -27,8 +27,15 @@ const UUID =
 /** Fluxo legado: `{storeId}/{campaignId}.jpg`. */
 const LEGACY_PATH_RE = new RegExp(`^${UUID}/${UUID}\\.jpe?g$`, "i");
 
-/** Correção v2: `{storeId}/{campaignId}/v2.jpg`. */
-const CORRECTION_V2_PATH_RE = new RegExp(`^${UUID}/${UUID}/v2\\.jpe?g$`, "i");
+/**
+ * Versões sucessivas do fluxo de correção/regeneração:
+ * `{storeId}/{campaignId}/v2.jpg` e o histórico `v3.jpg`.
+ * Estrito: v1/v4+ e versões malformadas NÃO são aceitos.
+ */
+const VERSIONED_ART_PATH_RE = new RegExp(
+  `^${UUID}/${UUID}/v(?:2|3)\\.jpe?g$`,
+  "i",
+);
 
 /** Novo fluxo 1:1: `{storeId}/{campaignId}/product-1-1/{operationId}/art-1024.jpg`. */
 const NEW_FLOW_PATH_RE = new RegExp(
@@ -46,7 +53,7 @@ function thumbnailPattern(original: RegExp): RegExp {
 
 const THUMBNAIL_PATH_RES = [
   thumbnailPattern(LEGACY_PATH_RE),
-  thumbnailPattern(CORRECTION_V2_PATH_RE),
+  thumbnailPattern(VERSIONED_ART_PATH_RE),
   thumbnailPattern(NEW_FLOW_PATH_RE),
 ] as const;
 
@@ -68,7 +75,7 @@ export function isEligibleCampaignArtPath(path: string): boolean {
   }
   return (
     LEGACY_PATH_RE.test(path) ||
-    CORRECTION_V2_PATH_RE.test(path) ||
+    VERSIONED_ART_PATH_RE.test(path) ||
     NEW_FLOW_PATH_RE.test(path)
   );
 }
