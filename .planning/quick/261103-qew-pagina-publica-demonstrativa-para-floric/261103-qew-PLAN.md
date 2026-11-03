@@ -3,128 +3,140 @@ quick_id: 261103-qew
 slug: pagina-publica-demonstrativa-para-floric
 status: awaiting_approval
 mode: plan_only
-created: 2026-11-03
+reconciled: 2026-11-03
 base_branch: main
 base_commit: c86889e3
 implementation_authorized: false
+openspec_change: pagina-publica-demonstrativa-floriculturas
 ---
 
-# Quick 261103-qew — Página pública demonstrativa para floriculturas (somente planejamento)
+# Quick 261103-qew — Página pública demonstrativa para floriculturas (planejamento reconciliado)
 
-## 1. Enquadramento e limites desta rodada
+## 1. O que mudou nesta reconciliação
 
-- **Somente investigação e planejamento.** Nenhum código de produto, migração, dependência, merge, push ou deploy nesta rodada.
-- Entrega de **uma página pública** que mostra a transformação foto de produto → campanha profissional, usando o par aprovado (orquídea roxa sintética + campanha Donna Flor gerada no Vendeo).
-- **Não integra** a quick `261103-cpv` (localização da campanha pronta). Base conferida: `main` em `c86889e3`, árvore limpa, sem branch de trabalho paralela.
-- **Não reutilizar** `public/landing/identidade-floricultura.webp` (par anterior: buquê de rosas, "Floricultura Dona Flor", grafia com um "n"). O novo material é "Donna Flor" (dois "n"), com orquídea roxa no balcão.
-- Sem geração paga, backend, créditos, oferta, localização, analytics/funil, dependências novas e sem corrigir o follow-up global de canonical/OG (`http://localhost:3000`).
-- Sem prometer aumento de vendas, tempo de geração não medido ou preservação exata do produto.
+A copy foi aprovada pelo responsável. Esta versão **substitui** integralmente a anterior:
 
-## 2. Estado atual relevante (evidência de leitura)
+- H1 e aviso demonstrativo aprovados substituem os textos propostos.
+- Title, meta description, abertura, títulos, rótulos, explicação, passos e encerramento seguem a versão aprovada (ver `261103-qew-COPY.md`).
+- **Removidos** da página: tabela de entrada, legenda gerada e qualquer advertência comercial (“não promete vendas”, “não mede tempo”, “foto criada com IA”). Restrições permanecem apenas como critério interno de aceite.
+- **Removido** o bloco de "informações ainda necessárias" como pendência de conteúdo: os arquivos-fonte foram entregues e as dimensões conferidas.
+- **Resolvida** a contradição do CTA: dois CTAs, um após a abertura e outro no encerramento, com o mesmo fluxo.
+- **Resolvido** o enquadramento OpenSpec sem criar fase 59: change descritiva `pagina-publica-demonstrativa-floriculturas`.
 
-| Item | Situação encontrada |
+Limites mantidos: uma página, sem geração paga, backend, créditos, oferta, localização, analytics, dependências novas, merge, push, deploy ou sync/archive.
+
+## 2. Base e isolamento (conferidos)
+
+| Item | Estado |
 |---|---|
-| Rota pública | Só `/` é indexável; `(marketing)` contém apenas páginas legais |
-| Indexação | `src/lib/seo/indexation-policy.ts` — default fail-closed `noindex, nofollow`; home é a única exceção |
-| Sitemap | `src/app/sitemap.ts` — somente `${origin}/` sob produção confirmada + origem canônica validada |
-| Robots | `src/app/robots.ts` — permissivo; referencia sitemap só na condição combinada |
-| Headers | `next.config.ts` + `buildRobotsHeaders` — `X-Robots-Tag: noindex` global fora de produção confirmada |
-| Middleware | `src/middleware.ts` — matcher explícito; rotas não listadas são públicas (novo path não exige entrada) |
-| Imagens | `CampaignImage` (caixa 1:1), `buildLandingSrcSet` + allowlist fechada de 9 basenames + variantes 320/480/640/768 |
-| CTA | `AcquisitionCta` (client) lê `publicSignupEnabled` via prop; com flag off aponta para `#acesso` (âncora que só existe na home) |
-| Fontes | Locais em `public/fonts/**` (Poppins + Open Sans), servidas por `src/app/fonts.css` |
-| Design | Tokens Tailwind `bg-surface`, `text-primary`, `accent-green`, `max-w-5xl`, `px-6` |
+| Branch | `main` |
+| HEAD de partida | `c86889e3` |
+| Árvore antes da rodada | limpa |
+| Quick de tradução `261103-cpv` | encerrada, não tocada |
+| Par anterior (`identidade-floricultura.webp`, Dona Flor, um “n”) | **não reutilizar** |
 
-## 3. Proposta de URL e SEO (candidatos, sem volume comprovado)
+## 3. Arquivos-fonte aprovados (conferidos)
 
-**Recomendado:** `/floriculturas`
-- Curto, não colide com prefixos privados (`/campanhas/**`, `/loja`, `/conta`) nem com o matcher do middleware.
-- Alternativas: `/exemplos/floriculturas` (mais explícito como demonstração) e `/para/floriculturas`.
+| Material | Caminho | Dimensões | Peso |
+|---|---|---|---|
+| Foto sintética da orquídea roxa no balcão | `C:\Users\wagne\Downloads\OpenAI Playground 2026-11-03 at 18.28.13.png` | 1312×1199 PNG sRGB | 2.266.014 B |
+| Campanha Donna Flor gerada no Vendeo | `C:\Users\wagne\Downloads\orqu_dea_phalaenopsis-2026-11-03 (1).jpg` | 1024×1024 JPEG sRGB | 254.571 B |
 
-| Campo | Proposta |
+Os originais não são alterados; a página consome apenas derivados WebP.
+
+## 4. SEO
+
+| Campo | Valor |
 |---|---|
-| URL | `https://vendeo.tech/floriculturas` |
-| Title | `Campanha para floricultura: da foto à arte \| Vendeo` |
-| Meta description | `Veja como uma foto de orquídea enviada por uma floricultura se transformou em uma campanha com arte e texto prontos para revisar e publicar.` |
-| H1 | `Sua foto vira uma campanha pronta para divulgar sua floricultura` |
-| Canonical | absoluto, emitido **somente** sob produção confirmada + origem canônica validada; nos demais ambientes, omitido |
-| OG/Twitter | `url` da página + imagem institucional atual `/seo/vendeo-og-1200x630.png` (imagem própria da página fica como follow-up) |
+| URL | `/floriculturas` |
+| Title | `Campanhas para floriculturas: crie artes com IA \| Vendeo` |
+| Description | `Transforme fotos de flores e arranjos em campanhas para divulgar sua floricultura nas redes sociais. Arte e texto com sua marca, sem precisar saber design.` |
+| H1 | `A beleza das suas flores merece uma divulgação de qualidade.` |
+| Canonical | absoluto (`https://vendeo.tech/floriculturas`) **somente** sob produção confirmada + origem canônica validada; omitido nos demais ambientes |
+| OG/Twitter | URL da página + `/seo/vendeo-og-1200x630.png` |
 
-Termos são **candidatos**, sem volume de busca comprovado. Não afirmar indexação, tráfego ou posição.
+Termos são candidatos, sem volume de busca comprovado. Não afirmar indexação, tráfego ou posição.
 
-## 4. Plano técnico
+## 5. Plano técnico
 
-### 4.1 Arquivo da página
-- `src/app/(marketing)/floriculturas/page.tsx` — server component.
-- O route group `(marketing)` não adiciona segmento de URL e não tem layout próprio: herda `src/app/layout.tsx` (fonts, tokens, `noindex` raiz).
-- A página lê `getLaunchConfig()` **uma vez** no servidor e passa `publicSignupEnabled` ao CTA.
-- Nenhuma alteração em `src/app/page.tsx` além do link interno do item 4.6.
+### 5.1 Rota e página
+- `src/app/(marketing)/floriculturas/page.tsx` — Server Component.
+- O route group `(marketing)` não adiciona segmento de URL e não tem layout próprio: herda `src/app/layout.tsx`.
+- `getLaunchConfig()` é lido **uma vez** no servidor; `publicSignupEnabled` vai para os dois CTAs.
+- Sem `export const dynamic`; sem fetch; conteúdo estático.
 
-### 4.2 Componentes
+### 5.2 Componentes
 Novos, locais em `src/components/landing/floriculturas/`:
-- `floriculturas-header.tsx` — logo `vendeo-logo-dark.webp` + `Entrar` (`/login`), mesmas classes do header da home (duplicação mínima; extração para componente compartilhado fica como follow-up).
-- `demo-notice.tsx` — aviso discreto de exemplo demonstrativo (topo e rodapé).
-- `transformation-pair.tsx` — foto enviada (proporcional, `<img>` puro) + seta decorativa + campanha gerada (`CampaignImage` 1:1 com `contain`).
+- `floriculturas-header.tsx` — logo `vendeo-logo-dark.webp` + `Entrar` (`/login`), mesmas classes do header da home.
+- `image-sources.ts` — constantes dos quatro arquivos + strings de `srcset`/`sizes` (módulo puro, sem framework novo).
+- `demonstration-pair.tsx` — rótulos, foto proporcional, seta decorativa, campanha 1:1 e aviso demonstrativo.
 
-Reutilizados sem redesenho: `CampaignImage`, `buildLandingSrcSet`, `AcquisitionCta`, tokens/fontes.
+Reutilizados sem redesenho: `AcquisitionCta` (com `accessHref`), tokens Tailwind e fontes locais (`src/app/fonts.css`). **Não** usar `buildLandingSrcSet` nesta página: ele exige o contrato de 5 variantes da landing; aqui são 2 variantes por imagem.
 
-### 4.3 CTA e acesso
-Problema encontrado: `AcquisitionCta` com flag off aponta para `#acesso`, inexistente fora da home.
+### 5.3 CTA e acesso
+- `AcquisitionCta` ganha prop opcional `accessHref?: string` com default `"#acesso"` — home preservada byte a byte no comportamento.
+- Página nova usa `accessHref="/#acesso"`.
+- Flag ligada: Google + e-mail (fluxo atual). Flag desligada: `Solicitar acesso free` → `/#acesso`.
+- Dois CTAs usam o mesmo componente e o mesmo destino. Sem alterar oferta, créditos ou fluxo de acesso.
+- `GoogleButton` não usa `id` fixo; duas instâncias não colidem.
 
-**Recomendado:** adicionar prop opcional `accessHref?: string` (default `"#acesso"`, preservando a home) e usar `accessHref="/#acesso"` na página nova. É uma extensão retrocompatível, sem redesenho da home.
-Alternativa (sem tocar componente compartilhado): CTA local na página nova, duplicando o contrato visual. Fica como decisão para aprovação.
+### 5.4 Imagens (duas versões por imagem)
+Saída em `public/floriculturas/`:
 
-### 4.4 Entrega responsiva de imagens
-- Campanha: exportar/redimensionar deterministicamente para **1024×1024 WebP** (a allowlist e `buildLandingSrcSet` assumem original 1024 quadrado). Registrar `nome-base.webp` em `landing-image-srcset.ts`, no gerador `scripts/generate-landing-image-variants.mjs` e em `landing-assets.test.ts`; gerar variantes 320/480/640/768 com o pipeline Sharp existente (sem dependência nova).
-- Foto enviada: `<img>` proporcional com `width`/`height` reais do arquivo (evita CLS), `loading="lazy"`, sem `srcset` (o pipeline atual só produz variantes quadradas — fora do escopo criar outro).
-- Ambos com `alt` descritivo, sem promessa de preservação exata.
+| Arquivo | Dimensão | Uso |
+|---|---|---|
+| `foto-orquidea-balcao-1024w.webp` | 1024×936 | candidato maior |
+| `foto-orquidea-balcao-480w.webp` | 480×439 | candidato menor |
+| `campanha-donna-flor-1024w.webp` | 1024×1024 | candidato maior |
+| `campanha-donna-flor-480w.webp` | 480×480 | candidato menor |
 
-### 4.5 Indexação, canonical e sitemap
-1. `src/lib/seo/indexation-policy.ts`: nova constante `FLORICULTURAS_CANONICAL_PATH = "/floriculturas"` e branch explícita retornando `INDEX_POLICY`; todo o resto continua `NOINDEX_POLICY`.
-2. `page.tsx`: `robots = isIndexableEnvironment() ? INDEX_ROBOTS : NOINDEX_ROBOTS`; `alternates.canonical` absoluto apenas quando indexável (`${origin}${path}`), omitido caso contrário.
-3. `src/app/sitemap.ts`: incluir a página **somente** sob a condição combinada, mantendo a home; fora dela, lista vazia como hoje.
-4. `src/app/robots.ts` e `robots-headers.ts`: **sem alteração** (fora de produção o `X-Robots-Tag` global `/(.*)` já cobre a rota; em produção não há regra extra necessária).
-5. `src/middleware.ts`: **sem alteração** (rota não casada permanece pública). Confirmar por teste que não há redirect para login.
-6. Preview/local: `noindex` explícito na metadata + header global + sitemap vazio.
+- `sizes`: `(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))`.
+- Larguras derivadas de ~452px CSS × DPR 2 ≈ 904px: 1024 cobre 2×; 480 cobre 1× e telas menores. Sem upscale; proporção preservada.
+- Pipeline Sharp já existente (WebP q=82, effort 6, smartSubsample). Sem dependência nova.
+- LCP = campanha (maior área pintada: 452×452 vs 452×413) → `loading="eager"` + `fetchPriority="high"`. Foto `eager` sem prioridade alta. **Nenhuma das duas com `lazy`.**
+- Dimensões e pesos finais dos quatro arquivos são registrados no SUMMARY da implementação.
 
-### 4.6 Link interno contextual
-Um único link discreto no rodapé da home (`Exemplo: campanha para floricultura` → `/floriculturas`), sem alterar blocos, ordem, H1 ou copy da landing.
-Alternativa sem tocar a home: apenas o sitemap + links de saída da página nova (descoberta mais fraca). Requer aprovação.
+### 5.5 Indexação, canonical e sitemap
+1. `src/lib/seo/indexation-policy.ts`: constante `FLORICULTURAS_CANONICAL_PATH = "/floriculturas"` e branch explícita `INDEX_POLICY`; todo o restante continua `NOINDEX_POLICY`.
+2. `page.tsx`: `robots = isIndexableEnvironment() ? INDEX_ROBOTS : NOINDEX_ROBOTS`; canonical absoluto só quando indexável, omitido caso contrário.
+3. `src/app/sitemap.ts`: home + `/floriculturas` **somente** na condição combinada; fora dela, lista vazia como hoje.
+4. `src/app/robots.ts` e `robots-headers.ts`: sem alteração (o header global `/(.*)` já cobre preview/local).
+5. `src/middleware.ts`: sem alteração (rota não casada permanece pública); teste confirma ausência de redirect para `/login`.
+6. Rotas privadas e legais permanecem `noindex` e fora do sitemap.
 
-### 4.7 Fora de escopo desta entrega
-Backend, geração, créditos, oferta, tradução/es-419, analytics, novas dependências, página por segmento, correção do canonical/OG global da home, redesign da home, remoção/substituição de `identidade-floricultura.webp`.
+### 5.6 Link interno contextual
+Um link no rodapé da home: `Exemplo: campanha para floricultura` → `/floriculturas`, na mesma `nav` dos links legais. Não altera blocos, ordem, H1, imagens ou CTAs da home.
 
-## 5. Testes e validação
+### 5.7 Fora de escopo
+Backend, geração, créditos, oferta, localização/es-419, analytics, novas dependências, páginas por segmento, correção do canonical/OG global, redesign da home, substituição de `identidade-floricultura.webp`.
 
-Novos/atualizados:
-- `src/__tests__/app/floriculturas-page.test.ts`: metadata index/noindex por ambiente; canonical absoluto só na condição combinada; H1 único; aviso de demonstração presente; ausência de chamada a API de geração; CTA sem âncora quebrada.
-- `src/__tests__/app/sitemap.test.ts`: 2 entradas sob produção válida (home + floriculturas); vazio nas demais combinações; lista de URLs proibidas inalterada.
-- `src/lib/seo/__tests__/indexation-policy.test.ts`: `/floriculturas` → `INDEX_ROBOTS` + `inSitemap: true`; `/rota-nova` continua noindex.
-- `src/components/landing/__tests__/landing-assets.test.ts`: novo basename e variantes.
+## 6. Testes e validação
 
-Comandos: suíte focada, `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check`.
-Limitações conhecidas a registrar, sem corrigir: lint não cobre TypeScript; exceção externa `ssl`/`pg` (F56), se persistir, impede declarar typecheck aprovado.
+- `src/__tests__/app/floriculturas-page.test.ts`: H1 único e exato; dois CTAs; `accessHref` correto com flag off; metadata index/noindex por ambiente; canonical absoluto só na condição combinada; aviso demonstrativo presente uma vez; ausência de tabela/legenda; ausência de chamada a API de geração.
+- `src/__tests__/app/sitemap.test.ts`: 2 entradas sob produção válida; vazio nas demais combinações; proibições atuais mantidas.
+- `src/lib/seo/__tests__/indexation-policy.test.ts`: `/floriculturas` → `INDEX_ROBOTS` + `inSitemap: true`; `/rota-nova` segue noindex.
+- `src/components/landing/floriculturas/__tests__/image-sources.test.ts`: quatro arquivos existem, são WebP, têm as dimensões contratadas, peso ≤ original e `srcset`/`sizes` exatos. LCP sem `loading="lazy"` verificado na página.
+- Gates: suíte focada, `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check`.
+- Limitações a registrar, sem corrigir: lint não cobre TypeScript; exceção externa `ssl`/`pg` (F56), se persistir, impede declarar typecheck aprovado.
 
-## 6. Checkpoint humano visual (antes do fechamento)
+## 7. Checkpoint humano visual (antes do fechamento)
 - Build local + screenshots desktop 1440 e mobile 390 em `evidence/`.
-- Conferir: aviso de demonstração visível e discreto; foto e campanha sem corte; ordem apresentação → par → explicação → como funciona → CTA; CTA nos dois estados da flag; sem overflow; contraste e foco de teclado.
+- Conferir: ordem dos blocos; dois CTAs; aviso demonstrativo único e discreto; foto sem distorção; campanha 1:1 sem corte; nenhuma tabela/legenda; sem overflow; foco de teclado e contraste.
 - Aprovação explícita do responsável antes de qualquer fechamento.
 
-## 7. Enquadramento OpenSpec
+## 8. OpenSpec
 
-Não existe change ativa em `openspec/changes/` (somente `archive/`). A spec vigente `seo-discovery-foundation` afirma que **somente a home** é indexável e que o sitemap contém **somente** `${origin}/`; adicionar outra página indexável contraria a spec. Portanto **é necessária uma nova change OpenSpec antes de implementar**:
+Change ativa proposta: `openspec/changes/pagina-publica-demonstrativa-floriculturas/`
+- `floriculturas-demonstration-page` (nova capability)
+- `seo-discovery-foundation` (MODIFIED: `/floriculturas` indexável; sitemap com home + página)
+- `landing-conversion-experience`: **sem delta** — o link de rodapé não cria bloco novo, não altera a ordem e preserva os links existentes; a permissão explícita fica na fronteira da `seo-discovery-foundation`.
 
-- **ID proposto:** `fase-59-pagina-publica-floriculturas`
-- **Delta `seo-discovery-foundation` (MODIFIED):** superfícies indexáveis passam a ser `/` e `/floriculturas`; sitemap pode conter as duas sob a condição combinada; canonical absoluto por página; default fail-closed e `noindex` das demais rotas inalterados.
-- **Nova capability `floriculturas-demonstration-page`:** conteúdo, aviso de exemplo demonstrativo, proibições de prova inventada e de geração paga.
-- **Delta `landing-conversion-experience` (MODIFIED, se aprovado o link na home):** permite um link contextual no rodapé sem alterar blocos, ordem ou copy.
-- Nenhum lifecycle (`propose`/`verify`/`sync`/`archive`) é executado nesta rodada.
+Nenhum lifecycle executado.
 
-## 8. Critérios de aceite do plano
-- [ ] Caminhos dos dois arquivos aprovados fornecidos e conferidos (orquídea sintética + campanha Donna Flor)
-- [ ] Dados reais da geração e a legenda entregue fornecidos, ou decisão explícita de omiti-los
-- [ ] URL, title/description/H1 e textos aprovados
-- [ ] Decisão sobre `accessHref` no `AcquisitionCta` vs CTA local
-- [ ] Decisão sobre o link contextual na home
-- [ ] OpenSpec change criada e aprovada
+## 9. Critérios de aceite
+- [ ] Change OpenSpec revisada e aprovada
+- [ ] Copy aprovada implementada sem acréscimos
+- [ ] Duas variantes WebP por imagem, com dimensões/pesos registrados
+- [ ] Dois CTAs com o mesmo fluxo e `accessHref` correto
+- [ ] Metadata/canonical/sitemap conforme a matriz de ambientes
 - [ ] Checkpoint visual humano aprovado

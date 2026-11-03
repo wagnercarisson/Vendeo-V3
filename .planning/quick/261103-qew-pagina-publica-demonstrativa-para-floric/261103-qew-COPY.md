@@ -1,136 +1,136 @@
 ---
 quick_id: 261103-qew
-artifact: copy-e-proposta-visual
-status: awaiting_approval
-created: 2026-11-03
-brand: Donna Flor (fictícia)
-product_photo: orquídea roxa sintética (arquivo pendente)
-campaign: campanha demonstrativa gerada no Vendeo (arquivo pendente)
+artifact: copy-e-composicao
+status: approved_by_owner
+approved_on: 2026-11-03
+supersedes: versão anterior desta quick (não usar a copy antiga)
 ---
 
-# Copy e proposta visual — `/floriculturas`
+# Copy aprovada e composição — `/floriculturas`
 
-> Nada aqui foi publicado. Não há depoimento, cliente real, resultado comercial ou número inventado.
-> Nenhum dado de geração (produto, preço, oferta, legenda) foi inventado: onde ele é necessário, está marcado como **PENDENTE**.
+> Esta é a única copy válida desta entrega. A versão anterior está substituída.
+> Nenhum dado de geração, tabela de entrada ou legenda gerada é exibido.
+> Aviso demonstrativo: uma única vez, discreto, junto ao exemplo.
 
-## 1. Identificação demonstrativa (obrigatória e discreta)
+## 1. Copy (texto final)
 
-**Aviso de topo (texto pequeno, abaixo do H1):**
-> Exemplo demonstrativo. A foto de orquídea foi criada artificialmente e a floricultura Donna Flor é fictícia — não representa uma loja, cliente ou resultado real.
+### 1.1 Abertura
 
-**Aviso de rodapé (reutilizando o mesmo tom da home):**
-> As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas. A foto deste exemplo é sintética e a marca Donna Flor é fictícia.
+**H1**
+> A beleza das suas flores merece uma divulgação de qualidade.
 
-## 2. Texto completo da página
+**Abertura**
+> Transforme fotos dos seus produtos em campanhas profissionais para divulgar sua floricultura. O Vendeo prepara a arte e o texto com a identidade da sua loja — sem você precisar saber design.
 
-### 2.1 Apresentação
+**CTA #1** — componente `AcquisitionCta` (`align="responsive"`)
 
-**H1:** Sua foto vira uma campanha pronta para divulgar sua floricultura
+### 1.2 Demonstração
 
-**Subheadline:**
-> O Vendeo transforma a foto de um produto e algumas informações da loja em uma campanha com arte e texto, pronta para você revisar e publicar — sem precisar saber design.
+**Título**
+> Da foto no balcão à campanha pronta para publicar.
 
-**Parágrafo curto:**
-> Você informa o básico. O Vendeo monta a peça: composição, marca, chamada e legenda. Você confere antes de publicar.
+**Rótulo da esquerda:** Foto enviada ao Vendeo
+**Rótulo da direita:** Campanha criada com o Vendeo
 
-**Aviso de demonstração** (bloco 1).
+**Alt da foto:** `Orquídea roxa sobre um balcão de floricultura`
+**Alt da campanha:** `Campanha da floricultura Donna Flor com a orquídea roxa`
 
-### 2.2 Foto enviada / campanha gerada
+**Aviso demonstrativo** (texto pequeno, uma única vez, abaixo do par):
+> As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas
 
-**Legenda da esquerda:** `Foto enviada`
-**Legenda da direita:** `Campanha gerada no Vendeo`
+### 1.3 Explicação
 
-**Alt da foto:** `Foto sintética de uma orquídea roxa sobre um balcão, usada como entrada deste exemplo`
+> Uma foto da orquídea, o nome da floricultura e as informações que você quer destacar. O Vendeo combina esses elementos em uma campanha com sua marca, apresentação do produto e mensagem para acompanhar a divulgação.
 
-**Alt da campanha:** `Campanha demonstrativa da floricultura fictícia Donna Flor gerada no Vendeo a partir da foto da orquídea`
+### 1.4 Segundo bloco
 
-**Texto de apoio abaixo do par:**
-> A mesma orquídea, a mesma loja fictícia: a foto de balcão vira uma peça 1:1 com identidade, texto e chamada para publicação.
+**Título**
+> Crie posts para sua floricultura sem começar do zero.
 
-### 2.3 Explicação da transformação
+**Texto**
+> Um arranjo para presentear, as flores que chegaram à loja ou o destaque da semana. Use as fotos dos seus produtos para criar campanhas e manter sua floricultura presente nas redes sociais.
 
-**H2:** O que mudou entre a foto e a campanha
+### 1.5 Funcionamento
 
-> A foto enviada mostra o produto como ele está na loja. A campanha reorganiza essa imagem em uma peça de divulgação: define o enquadramento, aplica a identidade da marca fictícia, escreve a chamada e a legenda, e prepara o arquivo para as redes sociais.
+**Título**
+> Você conhece seus produtos. O Vendeo ajuda a apresentá-los.
 
-> O que a campanha **não** faz: ela não garante que o produto apareça exatamente igual à foto, não mede tempo de geração e não promete aumento de vendas. O resultado é uma peça para você revisar e decidir se publica.
+1. **Envie a foto do produto.** Escolha a flor ou o arranjo que quer divulgar.
+2. **Conte o que deseja destacar.** Informe características, ocasião e preço, quando fizer parte da divulgação.
+3. **Gere sua campanha.** Receba a arte e o texto com a identidade da sua loja.
+4. **Revise, baixe e publique.** Confira os detalhes e leve a campanha para suas redes sociais.
 
-**Bloco "Entrada" (rótulos, sem valores inventados):**
+### 1.6 Encerramento
 
-| Campo | Conteúdo |
-|---|---|
-| Produto | **PENDENTE — dado informado na geração** |
-| Oferta / descrição | **PENDENTE — dado informado na geração** |
-| Preço | **PENDENTE — dado informado na geração** |
-| Selo ou intenção | **PENDENTE — dado informado na geração** |
-| Loja | Donna Flor (fictícia) |
-| Foto | Orquídea roxa sintética sobre balcão |
+**Chamada final**
+> Como ficaria uma campanha com os produtos da sua floricultura?
 
-**Legenda entregue pela campanha:** **PENDENTE — texto exato da legenda gerada**
-> Se a legenda não for exibida na página, remover este bloco em vez de resumir ou reescrever o conteúdo gerado.
+**Apoio**
+> Comece com uma foto e as informações do que você quer divulgar.
 
-### 2.4 Como funciona
+**CTA #2** — mesmo `AcquisitionCta` do CTA #1 (mesmo fluxo de acesso)
 
-**H2:** Como funciona
-
-1. **Você informa o básico** — produto, oferta, preço e alguns detalhes da campanha.
-2. **O Vendeo prepara a campanha** — o Vendeo cria a arte e o texto a partir dessas informações.
-3. **Você confere** — revisa a campanha e decide antes de publicar.
-4. **Basta baixar para publicar** — a campanha fica pronta para as redes sociais.
-
-*(Mesma redação da home, para não criar duas explicações divergentes do produto.)*
-
-### 2.5 CTA
-
-**H2:** Quer ver como fica com a sua loja?
-
-**Texto:**
-> Informe o produto, a oferta e o preço. O Vendeo prepara a campanha para você revisar.
-
-**Botão:** componente `AcquisitionCta`
-- Flag `publicSignupEnabled` ligada → Google / e-mail (`/signup`)
-- Flag desligada → `Solicitar acesso free` apontando para `/#acesso` (na home)
-
-### 2.6 Rodapé
+### 1.7 Rodapé
 
 Logo Vendeo · `Voltar ao Vendeo` (`/`) · `Termos de Uso` · `Política de Privacidade` · `Uso Aceitável` · `Entrar`
-Aviso demonstrativo do item 1.
+Sem segundo aviso demonstrativo (o aviso fica somente junto ao exemplo).
 
-## 3. Composição visual (simples, sem redesenhar a home)
+## 2. SEO
 
-**Container:** `max-w-5xl px-6`, fundo `bg-bg-surface`/`bg-bg-deep`, texto `text-text-primary`, fontes locais (Poppins headings, Open Sans body).
+| Campo | Texto |
+|---|---|
+| URL | `/floriculturas` |
+| Title | `Campanhas para floriculturas: crie artes com IA \| Vendeo` |
+| Meta description | `Transforme fotos de flores e arranjos em campanhas para divulgar sua floricultura nas redes sociais. Arte e texto com sua marca, sem precisar saber design.` |
+| Canonical | `https://vendeo.tech/floriculturas`, emitido somente sob produção confirmada + origem canônica validada |
+| OG/Twitter | URL da página + imagem institucional `/seo/vendeo-og-1200x630.png` |
 
-**Ordem no DOM (mobile):** header → H1 → subheadline → aviso → foto → campanha → explicação → como funciona → CTA → rodapé.
-(O CTA nunca fica abaixo de uma imagem grande no mobile; a página não repete o hero da home.)
+## 3. Composição desktop / mobile
 
-**Desktop (≥640px):**
-- Header enxuto (logo + Entrar).
-- Bloco 1: uma coluna de leitura, `max-w-2xl`.
-- Bloco 2: duas colunas — foto (proporcional, largura máx. ~320px) e campanha (`CampaignImage` 1:1, `contain`, sem corte), com seta `ArrowRight` entre elas.
-- Bloco 3: texto em `max-w-2xl` + tabela de entrada em card `border-border` `bg-bg-deep`.
-- Bloco 4: `ol` com 4 itens, mesmo padrão da home.
-- Bloco 5: CTA centralizado; rodapé com borda superior.
+**Ordem (igual nos dois):** header → abertura (H1 + abertura + CTA #1) → demonstração (título + par de imagens + aviso) → explicação → segundo bloco → funcionamento → encerramento (chamada + apoio + CTA #2) → rodapé.
 
-**Mobile (<640px):**
-- Tudo em coluna única.
-- Foto e campanha empilhadas com `ArrowDown` decorativa.
-- Campanha com largura `min(320px, calc(100vw - 48px))`.
-- Tipografia: H1 `text-3xl`, H2 `text-2xl`, corpo `text-base`.
+### Desktop (≥1024px)
+- Container `max-w-5xl px-6`; coluna de leitura `max-w-2xl` para H1, textos e passos.
+- Abertura: texto à esquerda, CTA #1 logo abaixo; sem imagem no hero (a demonstração é o bloco seguinte).
+- Demonstração: duas colunas `[minmax(0,1fr)_auto_minmax(0,1fr)]` com `gap-6`, seta `ArrowRight` (24px) no centro. Cada coluna ≈ 452px.
+  - Esquerda: foto em proporção original (1312×1199 ≈ 1,094:1), `rounded-lg border border-border-light`.
+  - Direita: campanha 1:1 em caixa `aspect-square` com `object-contain` (sem corte).
+  - Rótulos acima de cada imagem (`text-xs uppercase tracking-wide text-accent-green`); aviso abaixo do par em `text-xs text-text-secondary`, `max-w-3xl`.
+- Explicação e segundo bloco: `max-w-2xl`, `text-base text-text-secondary`.
+- Funcionamento: `ol` com 4 itens, mesmo padrão da home (número em `accent-green`, título `font-heading`, descrição `text-sm`), separadores `border-b border-border`.
+- Encerramento: centralizado, `max-w-2xl`, CTA #2 centralizado.
+- Rodapé: borda superior, links em `text-sm`.
 
-**Estados e acessibilidade:**
-- `alt` em ambas as imagens; aviso demonstrativo em texto (nunca só cor).
-- Foco visível (`focus:ring-2 focus:ring-accent-blue`), alvos ≥44px.
-- Sem animação de entrada; sem carrossel; sem modal.
+### Mobile (<640px)
+- Tudo em coluna única; conteúdo `100vw - 48px`.
+- Demonstração empilhada: rótulo → foto → `ArrowDown` → rótulo → campanha → aviso.
+- Campanha com largura `min(342px, calc(100vw - 48px))`; foto acompanha a mesma largura.
+- H1 `text-3xl`, H2 `text-2xl`, corpo `text-base`, passos `text-sm`.
+- CTAs em largura total (`max-w-sm`), alvos ≥48px.
 
-## 4. Informações ainda necessárias (bloqueiam a implementação fiel)
+### Acessibilidade
+- Um único `h1`; `h2` por bloco; `h3` nos passos.
+- Setas decorativas com `aria-hidden="true"`.
+- Foco visível nos links e botões (`focus:ring-2 focus:ring-accent-blue`).
+- Imagens com `alt` descritivo; nenhuma informação transmitida só por cor.
 
-1. **Caminho do arquivo da foto** da orquídea roxa sintética (formato, dimensões, peso) e confirmação de que é sintética e liberada para uso público.
-2. **Caminho do arquivo da campanha** da Donna Flor gerada no Vendeo (formato, dimensões; se não for 1024×1024, autorizar redimensionamento determinístico).
-3. **Dados informados na geração:** produto, descrição/oferta, preço, selo/intenção, formato/abordagem e identidade de marca informada (logo, cores, nome).
-4. **Legenda entregue** pela campanha: texto exato, se será exibida na página.
-5. **Confirmação da grafia da marca:** "Donna Flor" (dois "n") no material novo, distinta de "Dona Flor" (um "n") do asset antigo `identidade-floricultura.webp`.
-6. **Confirmação de que este par é o mais recente** e que o par anterior (buquê de rosas) não deve ser usado.
-7. **Decisão de OG:** reutilizar `/seo/vendeo-og-1200x630.png` ou produzir imagem própria da página (follow-up).
-8. **Decisão sobre o link na home:** autorizar um link de rodapé `Exemplo: campanha para floricultura` ou manter apenas sitemap + links de saída.
+## 4. Imagens — plano de entrega
 
-Sem esses itens, a página pode ser construída com placeholders, mas **não pode ser aprovada** — os blocos marcados como PENDENTE não devem ir ao ar com texto inventado.
+Fonte (não alterar os originais):
+- Foto: `C:\Users\wagne\Downloads\OpenAI Playground 2026-11-03 at 18.28.13.png` — 1312×1199 PNG sRGB, 2.266.014 B.
+- Campanha: `C:\Users\wagne\Downloads\orqu_dea_phalaenopsis-2026-11-03 (1).jpg` — 1024×1024 JPEG sRGB, 254.571 B.
+
+Saída (novos arquivos em `public/floriculturas/`, dois WebP por imagem):
+
+| Arquivo | Origem | Dimensão | Papel |
+|---|---|---|---|
+| `foto-orquidea-balcao-1024w.webp` | foto | 1024×936 | candidato maior |
+| `foto-orquidea-balcao-480w.webp` | foto | 480×439 | candidato menor |
+| `campanha-donna-flor-1024w.webp` | campanha | 1024×1024 | candidato maior |
+| `campanha-donna-flor-480w.webp` | campanha | 480×480 | candidato menor |
+
+- `sizes`: `(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))`.
+- Larguras escolhidas pelo layout (~452px CSS) e DPR 2 (≈904px): 1024 cobre 2× com folga; 480 cobre 1× e serve telas menores. Sem upscale; proporção preservada.
+- WebP qualidade 82, `effort 6`, `smartSubsample` (mesmo pipeline Sharp já usado na landing). Sem dependência nova.
+- LCP: a campanha é o maior elemento pintado no desktop (452×452 > 452×413) → `loading="eager"` + `fetchPriority="high"`. A foto também fica acima da dobra e recebe `loading="eager"` sem prioridade alta. Nenhuma das duas recebe `lazy`.
+- Registrar na implementação as dimensões e os pesos finais dos quatro arquivos.
