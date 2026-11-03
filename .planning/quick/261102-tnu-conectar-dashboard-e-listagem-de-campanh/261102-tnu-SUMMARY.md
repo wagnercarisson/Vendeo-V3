@@ -10,7 +10,7 @@ production_backfill: complete_production
 publication: pending_authorization
 commit: a6d763c0
 docs_commit: e2499818
-branch_head: 9e010265
+branch_head: d46d70a6
 final_gates: passed
 ---
 

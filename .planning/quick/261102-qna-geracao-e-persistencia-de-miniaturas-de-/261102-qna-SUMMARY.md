@@ -13,7 +13,7 @@ gate_b_homolog: pending
 production_release_guard: complete_local
 production_backfill: complete_production
 gate_c_publication: pending_authorization
-branch_head: 9e010265
+branch_head: d46d70a6
 final_gates: passed
 ---
 
