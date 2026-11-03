@@ -1,0 +1,396 @@
+{
+  "generatedAt": "2026-11-03T00:39:41.880Z",
+  "origin": "http://127.0.0.1:3000",
+  "dashboard": {
+    "label": "dashboard",
+    "imageResponses": [
+      {
+        "url": "http://127.0.0.1:3000/landing/vendeo-logo-dark.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 9314
+      },
+      {
+        "url": "http://127.0.0.1:3000/brand/vendeo-signature.png",
+        "status": 200,
+        "mimeType": "image/png",
+        "fromDiskCache": false,
+        "encodedDataLength": 454568
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 16079
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 22096
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 20144
+      },
+      {
+        "url": "http://127.0.0.1:3000/icons/icon-512x512.png",
+        "status": 200,
+        "mimeType": "image/png",
+        "fromDiskCache": false,
+        "encodedDataLength": 17227
+      }
+    ],
+    "thumbRequests": 3,
+    "originalRequests": 0,
+    "allOk": true,
+    "images": [
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "loading": null,
+        "decoding": null
+      },
+      {
+        "src": "/brand/vendeo-signature.png",
+        "loading": null,
+        "decoding": null
+      },
+      {
+        "src": "/icons/icon-512x512.png",
+        "loading": null,
+        "decoding": null
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.thumb-v1.webp",
+        "loading": "eager",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.thumb-v1.webp",
+        "loading": "eager",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.thumb-v1.webp",
+        "loading": "eager",
+        "decoding": "async"
+      },
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "loading": null,
+        "decoding": null
+      }
+    ]
+  },
+  "listing": {
+    "label": "campanhas-desktop",
+    "imageResponses": [
+      {
+        "url": "http://127.0.0.1:3000/landing/vendeo-logo-dark.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 9314
+      },
+      {
+        "url": "http://127.0.0.1:3000/brand/vendeo-signature.png",
+        "status": 200,
+        "mimeType": "image/png",
+        "fromDiskCache": false,
+        "encodedDataLength": 454568
+      },
+      {
+        "url": "http://127.0.0.1:3000/icons/icon-512x512.png",
+        "status": 200,
+        "mimeType": "image/png",
+        "fromDiskCache": false,
+        "encodedDataLength": 17227
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 20144
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 16080
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 22096
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/7030ed63-21df-4c3d-aef2-67b7c2e0ce07/product-1-1/26ab846e-d0f0-44bc-b06f-a6c65a382088/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 22232
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/6f70f51e-ef65-4d16-80dd-868682d81e43/product-1-1/849f092c-c4c2-4471-8777-6e4231058eeb/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 23988
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/2705c625-49c4-4ab5-b2a8-d4be3b9173f7/product-1-1/ba6ac5ee-4ba0-454d-b929-4f6dc564f569/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 24040
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/50d66249-9bba-45f3-a9c5-9379d2e6ce33/product-1-1/ecc343ac-569b-40d0-99f2-f806139f7410/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 18718
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/e043e52e-4df0-48b4-bd01-0d1b43b5de01/product-1-1/0b8642f4-7af4-4771-a9b0-d1ae8034fba9/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 20010
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/6ecef78c-0e7d-444c-871b-b8da722abb2d/product-1-1/d5fe3115-0315-4dd1-ae18-eded8576a124/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 21224
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/20d54b1d-f603-4dd1-8eac-051da18b5147/product-1-1/355cc9bb-8832-4e75-9218-e1af42fed806/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 14820
+      }
+    ],
+    "thumbRequests": 10,
+    "originalRequests": 0,
+    "allOk": true,
+    "images": [
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "loading": null,
+        "decoding": null
+      },
+      {
+        "src": "/brand/vendeo-signature.png",
+        "loading": null,
+        "decoding": null
+      },
+      {
+        "src": "/icons/icon-512x512.png",
+        "loading": null,
+        "decoding": null
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.thumb-v1.webp",
+        "loading": "eager",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.thumb-v1.webp",
+        "loading": "eager",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.thumb-v1.webp",
+        "loading": "eager",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/6f70f51e-ef65-4d16-80dd-868682d81e43/product-1-1/849f092c-c4c2-4471-8777-6e4231058eeb/art-1024.thumb-v1.webp",
+        "loading": "lazy",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/7030ed63-21df-4c3d-aef2-67b7c2e0ce07/product-1-1/26ab846e-d0f0-44bc-b06f-a6c65a382088/art-1024.thumb-v1.webp",
+        "loading": "lazy",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/2705c625-49c4-4ab5-b2a8-d4be3b9173f7/product-1-1/ba6ac5ee-4ba0-454d-b929-4f6dc564f569/art-1024.thumb-v1.webp",
+        "loading": "lazy",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/50d66249-9bba-45f3-a9c5-9379d2e6ce33/product-1-1/ecc343ac-569b-40d0-99f2-f806139f7410/art-1024.thumb-v1.webp",
+        "loading": "lazy",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/e043e52e-4df0-48b4-bd01-0d1b43b5de01/product-1-1/0b8642f4-7af4-4771-a9b0-d1ae8034fba9/art-1024.thumb-v1.webp",
+        "loading": "lazy",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/6ecef78c-0e7d-444c-871b-b8da722abb2d/product-1-1/d5fe3115-0315-4dd1-ae18-eded8576a124/art-1024.thumb-v1.webp",
+        "loading": "lazy",
+        "decoding": "async"
+      },
+      {
+        "src": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/20d54b1d-f603-4dd1-8eac-051da18b5147/product-1-1/355cc9bb-8832-4e75-9218-e1af42fed806/art-1024.thumb-v1.webp",
+        "loading": "lazy",
+        "decoding": "async"
+      },
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "loading": null,
+        "decoding": null
+      }
+    ]
+  },
+  "listingMobile": {
+    "label": "campanhas-mobile",
+    "imageResponses": [
+      {
+        "url": "http://127.0.0.1:3000/landing/vendeo-logo-dark.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 9314
+      },
+      {
+        "url": "http://127.0.0.1:3000/brand/vendeo-signature.png",
+        "status": 200,
+        "mimeType": "image/png",
+        "fromDiskCache": false,
+        "encodedDataLength": 454568
+      },
+      {
+        "url": "http://127.0.0.1:3000/icons/icon-512x512.png",
+        "status": 200,
+        "mimeType": "image/png",
+        "fromDiskCache": false,
+        "encodedDataLength": 17227
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 16080
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 22096
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 20144
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/6f70f51e-ef65-4d16-80dd-868682d81e43/product-1-1/849f092c-c4c2-4471-8777-6e4231058eeb/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 23988
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/7030ed63-21df-4c3d-aef2-67b7c2e0ce07/product-1-1/26ab846e-d0f0-44bc-b06f-a6c65a382088/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 22232
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/50d66249-9bba-45f3-a9c5-9379d2e6ce33/product-1-1/ecc343ac-569b-40d0-99f2-f806139f7410/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 18718
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/e043e52e-4df0-48b4-bd01-0d1b43b5de01/product-1-1/0b8642f4-7af4-4771-a9b0-d1ae8034fba9/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 20010
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/2705c625-49c4-4ab5-b2a8-d4be3b9173f7/product-1-1/ba6ac5ee-4ba0-454d-b929-4f6dc564f569/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 24040
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/6ecef78c-0e7d-444c-871b-b8da722abb2d/product-1-1/d5fe3115-0315-4dd1-ae18-eded8576a124/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 21224
+      },
+      {
+        "url": "http://127.0.0.1:57781/storage/v1/object/sign/campaign-images/48b212f8-2b0f-4679-b553-122a601bacac/20d54b1d-f603-4dd1-8eac-051da18b5147/product-1-1/355cc9bb-8832-4e75-9218-e1af42fed806/art-1024.thumb-v1.webp",
+        "status": 200,
+        "mimeType": "image/webp",
+        "fromDiskCache": false,
+        "encodedDataLength": 14819
+      }
+    ],
+    "thumbRequests": 10,
+    "originalRequests": 0,
+    "allOk": true
+  },
+  "downloadOriginal": {
+    "status": 200,
+    "contentType": "image/jpeg",
+    "contentDisposition": "attachment; filename=\"leite_aurora_1l_integral_-2026-07-13.jpg\"",
+    "bytes": 240415
+  },
+  "checks": {
+    "downloadOriginalOk": true,
+    "dashboardThumbsOnly": true,
+    "listingThumbsOnly": true,
+    "dashboardCampaignImages": 3,
+    "listingCampaignImages": 10,
+    "dashboardImgSrcsAreThumbs": true,
+    "listingImgSrcsAreThumbs": true,
+    "allImagesOk": true
+  },
+  "campaignThumbnailPaths": {
+    "dashboard": [
+      "48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.thumb-v1.webp"
+    ],
+    "listing": [
+      "48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/6f70f51e-ef65-4d16-80dd-868682d81e43/product-1-1/849f092c-c4c2-4471-8777-6e4231058eeb/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/7030ed63-21df-4c3d-aef2-67b7c2e0ce07/product-1-1/26ab846e-d0f0-44bc-b06f-a6c65a382088/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/2705c625-49c4-4ab5-b2a8-d4be3b9173f7/product-1-1/ba6ac5ee-4ba0-454d-b929-4f6dc564f569/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/50d66249-9bba-45f3-a9c5-9379d2e6ce33/product-1-1/ecc343ac-569b-40d0-99f2-f806139f7410/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/e043e52e-4df0-48b4-bd01-0d1b43b5de01/product-1-1/0b8642f4-7af4-4771-a9b0-d1ae8034fba9/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/6ecef78c-0e7d-444c-871b-b8da722abb2d/product-1-1/d5fe3115-0315-4dd1-ae18-eded8576a124/art-1024.thumb-v1.webp",
+      "48b212f8-2b0f-4679-b553-122a601bacac/20d54b1d-f603-4dd1-8eac-051da18b5147/product-1-1/355cc9bb-8832-4e75-9218-e1af42fed806/art-1024.thumb-v1.webp"
+    ]
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "origin": "http://127.0.0.1:57781",
+  "generatedAt": "2026-11-03T00:33:00.620Z",
+  "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+  "dashboard": {
+    "label": "dashboard (3)",
+    "requestLimit": 3,
+    "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+    "items": [
+      {
+        "id": "c06b16f5-f126-429c-b5b0-9567fe4adb95",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 14200,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.thumb-v1.webp"
+      },
+      {
+        "id": "48ba68a9-2769-4674-b39a-be91bb394d70",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 13118,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70.thumb-v1.webp"
+      },
+      {
+        "id": "0193e1ad-eda0-49c7-946e-c10b4c0ed4e4",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 13956,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/0193e1ad-eda0-49c7-946e-c10b4c0ed4e4.thumb-v1.webp"
+      }
+    ]
+  },
+  "listing": {
+    "label": "listagem (10)",
+    "requestLimit": 10,
+    "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+    "items": [
+      {
+        "id": "c06b16f5-f126-429c-b5b0-9567fe4adb95",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 14200,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.thumb-v1.webp"
+      },
+      {
+        "id": "48ba68a9-2769-4674-b39a-be91bb394d70",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 13118,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70.thumb-v1.webp"
+      },
+      {
+        "id": "0193e1ad-eda0-49c7-946e-c10b4c0ed4e4",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 13956,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/0193e1ad-eda0-49c7-946e-c10b4c0ed4e4.thumb-v1.webp"
+      },
+      {
+        "id": "c40f58b7-4b49-4291-bff7-ba9ce7f1af42",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 15460,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/c40f58b7-4b49-4291-bff7-ba9ce7f1af42.thumb-v1.webp"
+      },
+      {
+        "id": "d1328fd6-15a9-41a3-a708-d1131b1c1c58",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 16098,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/d1328fd6-15a9-41a3-a708-d1131b1c1c58.thumb-v1.webp"
+      },
+      {
+        "id": "98c7d323-4b39-48e9-bbb0-8900a625ef47",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 14296,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/98c7d323-4b39-48e9-bbb0-8900a625ef47.thumb-v1.webp"
+      },
+      {
+        "id": "2ee8abe2-5e90-406f-bd66-aec67490dff5",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 14878,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/2ee8abe2-5e90-406f-bd66-aec67490dff5.thumb-v1.webp"
+      },
+      {
+        "id": "a7105454-b5b6-4b39-a0b1-2936027b88cf",
+        "outcome": "ok",
+        "status": 200,
+        "contentType": "image/webp",
+        "bytes": 15020,
+        "format": "webp",
+        "width": 288,
+        "height": 288,
+        "signedPathHasThumb": true,
+        "signedPathHasOriginal": false,
+        "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/a7105454-b5b6-4b39-a0b1-2936027b88cf.thumb-v1.webp"
+      }
+    ]
+  },
+  "checks": {
+    "allOk": true,
+    "allWebp": true,
+    "all288": true,
+    "allSignedThumb": true,
+    "noOriginalSigned": true,
+    "uniqueItems": 8
+  }
+}
