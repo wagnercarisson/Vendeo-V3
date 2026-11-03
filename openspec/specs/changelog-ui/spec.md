@@ -173,3 +173,48 @@ O sistema SHALL prover o componente client `SidebarBadge` (`src/components/chang
 
 - **WHEN** `latestEntryId` é `null` ou vazio
 - **THEN** o componente não renderiza indicador e não lança erro
+
+### Requirement: Localização da interface de `/novidades`
+
+A página `/novidades` SHALL resolver o idioma da interface exclusivamente pela fundação existente (`getUiRenderContext` + `SupportedUiLocale`) e usar um namespace próprio da rota, não incorporado ao catálogo global do shell.
+
+Os textos fixos SHALL ser localizados em pt-BR e es-419: título, breadcrumb, estado vazio, fallback de lista vazia, rótulos de categoria (`feature`/`improvement`/`fix`), indicador `Importante` e data formatada. Identificadores de categoria, `id`, rotas e valores persistidos NÃO SHALL mudar.
+
+Título, corpo, milestone e data das entradas editoriais NÃO SHALL ser traduzidos nem alterados. `content/changelog/**` permanece a fonte editorial intacta. Título e corpo editoriais SHALL declarar `lang="pt-BR"` sempre; `milestone` (dado, ex.: `v1.5`) SHALL declarar `lang=""`. A região traduzida SHALL declarar `lang="es-419"` quando o idioma da interface for `es-419`; o documento base permanece `pt-BR`.
+
+A formatação de data SHALL permanecer `dd/mm/aaaa` a partir de `YYYY-MM-DD`, sem conversão de fuso, pois o mesmo formato atende aos dois idiomas. O comportamento de ordenação, seleção da entrada mais recente, anúncio, visto, dispensa, badge, links, foco e Escape NÃO SHALL mudar.
+
+`ChangelogList` e `ChangelogCard` SHALL manter português como padrão quando usados sem rótulos localizados (landing). O dashboard SHALL preservar a localização existente da F58 e seus textos editoriais em português, sem mudança de comportamento.
+
+#### Scenario: Página em es-419 traduz somente a interface
+
+- **WHEN** um usuário com `uiLocale = "es-419"` acessa `/novidades`
+- **THEN** título, breadcrumb, estado vazio, categorias, `Importante` e fallback de lista SHALL ser exibidos em `es-419`
+- **AND** título, corpo, milestone e data editoriais SHALL permanecer exatamente como publicados
+- **AND** a região traduzida SHALL declarar `lang="es-419"`
+
+#### Scenario: Editorial não herda espanhol
+
+- **WHEN** `/novidades` é exibida em `es-419`
+- **THEN** o título e o corpo editoriais SHALL declarar `lang="pt-BR"`
+- **AND** o `milestone` SHALL declarar `lang=""`
+- **AND** nenhum texto editorial SHALL passar por tradução automática
+
+#### Scenario: Data permanece no formato atual
+
+- **WHEN** a página é exibida em pt-BR ou es-419
+- **THEN** a data SHALL permanecer `dd/mm/aaaa`, sem deslocamento de dia
+- **AND** nenhuma política de fuso nova SHALL ser introduzida
+
+#### Scenario: Landing e dashboard preservados
+
+- **WHEN** `ChangelogList` é usado sem rótulos localizados na landing
+- **THEN** os rótulos e a data SHALL permanecer em pt-BR
+- **WHEN** o dashboard exibe o anúncio compacto
+- **THEN** sua localização F58 e seus textos editoriais em português SHALL permanecer inalterados
+
+#### Scenario: Estado vazio sem ações novas
+
+- **WHEN** `/novidades` não tem entradas
+- **THEN** o `EmptyState` SHALL ser exibido no idioma da interface
+- **AND** nenhuma ação, filtro ou controle novo SHALL ser criado

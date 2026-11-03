@@ -6,10 +6,11 @@ type: plan
 wave: 1
 depends_on: []
 autonomous: false
-status: planned
+status: implemented_local
 revision: 2
 approval_required: true
-implementation_authorized: false
+implementation_authorized: true
+implementation_status: complete_local_pending_review
 validation_homolog_authorized: false
 publication_authorized: false
 base_sha: bfd89bb6a9b4a067cf8111176a19e9f31a52d873
