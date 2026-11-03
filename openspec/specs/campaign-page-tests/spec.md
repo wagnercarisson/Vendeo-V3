@@ -121,3 +121,53 @@ O sistema SHALL verificar que o build está limpo:
 
 - **WHEN** `npm run build` é executado
 - **THEN** o build é bem-sucedido
+
+### Requirement: Testes da localização da campanha pronta
+
+O sistema SHALL testar o namespace `campaign-detail` e a localização da entrega pronta em `pt-BR` e `es-419`, sem enfraquecer as asserções existentes.
+
+#### Scenario: paridade e isolamento do catálogo
+
+- **WHEN** os catálogos `pt-BR` e `es-419` do namespace são comparados
+- **THEN** têm exatamente as mesmas chaves e placeholders
+- **AND** são congelados
+- **AND** o namespace não é reexportado pelo barrel global nem importado por layout, shell ou admin
+
+#### Scenario: render es-419 e marcação de idioma
+
+- **WHEN** o cliente renderiza a entrega pronta com `locale="es-419"`
+- **THEN** os textos fixos aparecem em espanhol
+- **AND** o contêiner declara `lang="es-419"` alcançando header/breadcrumb
+- **AND** o conteúdo persistido declara `lang=""`
+- **AND** copiar usa o texto exato e exibe `¡Copiado!`
+
+#### Scenario: pt-BR inalterado
+
+- **WHEN** o cliente renderiza a entrega pronta com `locale="pt-BR"`
+- **THEN** os textos fixos permanecem exatamente iguais aos atuais
+- **AND** nenhum `lang="es-419"` é declarado
+
+#### Scenario: gate da localização acompanha a view renderizada
+
+- **WHEN** a campanha legada `ready` tem aprovação `pending` sem candidata
+- **THEN** `ReadyView` é renderizada e localizada
+- **WHEN** a aprovação `pending` tem candidata (`candidateImageUrl` + `candidateVersionId`)
+- **THEN** `CampaignApprovalView` é renderizada sem localização
+
+#### Scenario: interface não traduzida usa pt-BR
+
+- **WHEN** a interface está em `es-419` e exibe edição, recuperação ou falha/cancelamento da copy
+- **THEN** o texto permanece em português e é marcado com `lang="pt-BR"`
+
+#### Scenario: estados fora do recorte não regridem
+
+- **WHEN** os testes renderizam `generating`, `stale`, `error`, `pending` com candidata, `regenerating`, `running`, `refunded` e `unknown`
+- **THEN** as telas e os textos continuam iguais
+- **AND** não recebem wrapper `lang="es-419"` novo
+
+#### Scenario: PageHeader opcional
+
+- **WHEN** `titleLang`/breadcrumb `lang` não são passados
+- **THEN** o DOM do `PageHeader` permanece sem atributo `lang`
+- **WHEN** são passados
+- **THEN** o atributo é aplicado apenas ao título/breadcrumb correspondente

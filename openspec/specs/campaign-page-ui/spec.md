@@ -249,3 +249,52 @@ O sistema SHALL renderizar um estado dedicado quando `computeApprovalState` deri
 
 - **WHEN** a v2 é persistida (v1 `superseded`, v2 `active`/`pending`, `correction_in_progress=false`)
 - **THEN** após refresh a página deriva `pending` (v2) e exibe [Aprovar arte]
+
+### Requirement: Localização da interface da campanha pronta (pt-BR/es-419)
+
+O sistema SHALL localizar os textos fixos da **entrega pronta** da campanha em `/campanhas/[id]` para `pt-BR` e `es-419`, reutilizando `getUiRenderContext` e `SupportedUiLocale` sem criar resolvedor concorrente nem alterar o timeout central. Os textos SHALL vir de um namespace próprio e isolado da rota, não reexportado pelo catálogo global do shell.
+
+- A localização SHALL derivar das **mesmas condições** que decidem qual view é renderizada. `ReadyView` (legado `ready`, inclusive `pending` sem `candidateImageUrl`/`candidateVersionId`) e `NewFlowDeliveredView` (`newFlow.state === "delivered"`) SHALL ser localizados; `CampaignApprovalView` (`pending` com candidata) e `RegeneratingView` NÃO SHALL ser localizados.
+- O contêiner que inclui header/breadcrumb e a view pronta SHALL declarar `lang="es-419"` quando o locale da interface for `es-419`, de modo que header e breadcrumb traduzidos também estejam cobertos.
+- Nome do produto, caption, hashtags, CTA, título da copy, data, imagem e arquivo SHALL NOT ser traduzidos, regenerados ou recalculados. Conteúdo persistido SHALL receber `lang=""` para não herdar o idioma da interface.
+- Textos de interface que permanecem em português (modo de edição do Kit, recuperação de copy e feedback de falha/cancelamento da copy) SHALL NOT ser traduzidos nesta entrega e SHALL receber `lang="pt-BR"` quando exibidos sob interface `es-419`. O `confirm()` nativo do navegador não é marcável.
+- O rótulo de criação SHALL ser traduzido, mas a data SHALL manter o formato atual `dd/mm/aaaa`.
+- A ação de copiar SHALL continuar escrevendo exatamente o conteúdo original no clipboard, com feedback `Copiado!` em pt-BR e `¡Copiado!` em es-419; a ação de baixar SHALL continuar usando `downloadUrl` e entregando o mesmo arquivo.
+- Estados fora do recorte (`generating`, `stale`, `error`, `running`, `refunded`, `unknown`, `regenerating`, aprovação com candidata) NÃO SHALL ser traduzidos.
+
+#### Scenario: es-419 na entrega pronta
+
+- **WHEN** um usuário com `uiLocale=es-419` abre uma campanha que renderiza `ReadyView` ou `NewFlowDeliveredView`
+- **THEN** breadcrumb, título de fallback, rótulo de criação, Kit de Publicación, badge, aviso fixo, ação de copiar e `Descargar original` aparecem em espanhol neutro LATAM
+- **AND** o contêiner da página declara `lang="es-419"`
+
+#### Scenario: pt-BR preservado
+
+- **WHEN** um usuário com `uiLocale=pt-BR` abre a mesma entrega pronta
+- **THEN** os textos fixos são exatamente os anteriores à localização
+- **AND** nenhum `lang="es-419"` é declarado
+
+#### Scenario: pending sem candidata continua em ReadyView e é localizado
+
+- **WHEN** uma campanha legada `ready` tem aprovação `pending` sem `candidateImageUrl`/`candidateVersionId`
+- **THEN** a página continua renderizando `ReadyView`
+- **AND** a interface da entrega é localizada conforme o locale
+
+#### Scenario: conteúdo persistido não é traduzido nem herda espanhol
+
+- **WHEN** a interface está em `es-419`
+- **THEN** nome do produto, caption, hashtags, CTA e título da copy permanecem idênticos
+- **AND** esses valores são marcados com `lang=""`
+- **AND** copiar entrega o texto exato e baixar entrega o mesmo arquivo
+
+#### Scenario: interface não traduzida sob es-419
+
+- **WHEN** a interface está em `es-419` e a entrega pronta exibe modo de edição, recuperação de copy ou feedback de falha/cancelamento
+- **THEN** esses textos permanecem em português
+- **AND** são marcados com `lang="pt-BR"`
+
+#### Scenario: estados fora do recorte não são localizados
+
+- **WHEN** a página exibe `generating`, `stale`, `error`, `running`, `refunded`, `unknown`, `regenerating` ou aprovação com candidata
+- **THEN** os textos e o comportamento permanecem como antes
+- **AND** nenhum wrapper `lang="es-419"` novo é aplicado

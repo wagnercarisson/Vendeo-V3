@@ -133,8 +133,10 @@ The system SHALL provide a `Skeleton` component at `src/components/ui/skeleton.t
 
 The system SHALL provide a `PageHeader` component at `src/components/ui/page-header.tsx` with:
 - `title` prop: heading text
-- `breadcrumbs` prop: optional array of `{ label: string; href?: string }`
+- `titleLang` prop: optional language tag applied to the `<h1>`; omitted keeps the current behavior (no attribute)
+- `breadcrumbs` prop: optional array of `{ label: string; href?: string; lang?: string }`
   - If `href` is present, render as `<Link>` — otherwise render as plain text (current page)
+  - `lang` is optional and applies to the breadcrumb element; omitted keeps the current behavior
 - `actions` prop: optional ReactNode slot for action buttons
 - Container with bottom border separator using `border-border`
 
@@ -149,6 +151,12 @@ The system SHALL provide a `PageHeader` component at `src/components/ui/page-hea
 
 - **WHEN** `<PageHeader title="Campanhas" actions={<Button>Nova</Button>} />` is rendered
 - **THEN** the action button SHALL be rendered in the actions area
+
+#### Scenario: PageHeader applies optional language tags
+
+- **WHEN** `titleLang` or a breadcrumb `lang` is provided
+- **THEN** the corresponding `<h1>`/breadcrumb element SHALL carry that `lang` attribute
+- **AND** when omitted, no `lang` attribute SHALL be added by `PageHeader`
 
 ### Requirement: Pagination component
 
