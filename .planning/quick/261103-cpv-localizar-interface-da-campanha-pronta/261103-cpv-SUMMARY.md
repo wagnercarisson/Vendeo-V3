@@ -5,7 +5,10 @@ plan: 261103-cpv
 date: 2026-11-03
 branch: feature/traducao-da-interface-da-campanha-pronta
 execution: local_complete
-review: awaiting_review
+gate2: local_complete
+diff_review: not_performed
+visual_acceptance: not_performed
+review: gate2_reported_pending_diff_review_and_visual_acceptance
 homolog: not_started
 homolog_date: null
 publication: not_started
@@ -24,6 +27,21 @@ pronta em `/campanhas/[id]` foi localizada em pt-BR/es-419 nos caminhos legado
 (`ReadyView`) e novo fluxo (`NewFlowDeliveredView`), sem traduzir conteúdo
 persistido e sem alterar arte, downloads, clipboard, handlers, polling, cobrança
 ou estados fora do recorte.
+
+**Escopo:** esta quick trata exclusivamente da localização da campanha pronta.
+A página de floriculturas **não** integra esta entrega; permanece apenas
+alinhada conceitualmente, sem implementação autorizada.
+
+## Estado da revisão e do aceite
+
+- Os resultados do Gate 2 foram **relatados**, mas o **diff não foi revisado**
+  pelo responsável nesta etapa e **não houve aceite visual**.
+- O **Gate 3 não foi iniciado**. A parada antes dele permanece.
+- A spec `ui-base-components` **NÃO está validada** (`openspec validate
+  --strict` falha por ausência de `## Purpose`/`## Requirements`; o arquivo usa
+  `> **Propósito**`). A falha é **anterior a esta quick**, é registrada
+  separadamente e **não** será corrigida implicitamente nem ampliará o escopo.
+- Nenhum merge, push, deploy ou acesso a homolog/produção foi realizado.
 
 ## Entregue
 
@@ -84,8 +102,9 @@ ou estados fora do recorte.
   **102 kB**.
 - `git diff --check`: limpo (apenas aviso LF→CRLF do Git).
 - OpenSpec: `campaign-page-ui` e `campaign-page-tests` strict **válidos**;
-  `ui-base-components` com falha estrutural **preexistente** (usa
-  `> **Propósito**`, sem `## Purpose`), não corrigida por estar fora do recorte.
+  **`ui-base-components` NÃO está validada** — falha estrutural preexistente
+  (usa `> **Propósito**`, sem `## Purpose`), registrada separadamente e não
+  corrigida por estar fora do recorte.
 
 Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
 
@@ -95,7 +114,10 @@ Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
   banco, app em execução, merge, push ou deploy.
 - Sem baseline de payload específico: mediu-se apenas a entrega final, sem troca
   de branch ou rebuild retroativo.
-- `ui-base-components` continua estruturalmente inválida no OpenSpec (preexistente).
+- **`ui-base-components` não está validada** (falha estrutural preexistente);
+  permanece registrada separadamente, sem correção implícita.
+- **Diff e aceite visual ainda não revisados** pelo responsável; os gates
+  automatizados não substituem essa revisão.
 - Modo de edição e `confirm()` nativo permanecem em pt-BR; o `confirm()` não
   aceita marcação de idioma.
 - Recuperação de copy e feedback de falha/cancelamento permanecem em pt-BR,
@@ -108,7 +130,49 @@ Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
 - Nenhuma prova com geração, aprovação, recuperação, edição de copy ou cobrança
   foi executada.
 
+## Roteiro do Gate 3 (para revisão, NÃO executado)
+
+O roteiro abaixo é o que deve ser conferido no homolog, com autorização
+específica. Ele **não** foi executado.
+
+**Seleção segura**
+- Usar campanha pronta existente que renderize `ReadyView`/`NewFlowDeliveredView`.
+- No novo fluxo, exigir `newFlow.recovery` **nulo ou `concluida`**; nunca
+  `ativa`/`aguardando`/`indeterminada`/`falha`/`falha_definitiva`/`interrompida`.
+- No legado, confirmar `displayStatus="ready"` e ausência de aprovação pendente
+  com candidata.
+- Se não houver exemplo seguro, registrar a limitação e usar os testes
+  automatizados; não criar campanha nem forçar estado por escrita.
+
+**Confirmações obrigatórias**
+1. Interface pronta em **pt-BR** e **es-419**, incluindo **header e breadcrumb**,
+   com `lang="es-419"` no contêiner correto.
+2. **Produto e texto da campanha preservados no idioma original**, sem tradução
+   automática; conferir nome, caption, hashtags, CTA e título da copy.
+3. **`pending` com e sem candidata** mantendo as telas corretas:
+   - sem `candidateImageUrl`/`candidateVersionId` → `ReadyView`, localizado;
+   - com ambos → `CampaignApprovalView`, não localizado.
+   Se um dos estados não existir no homolog, registrar como não observado e
+   citar o teste automatizado.
+4. **Edição, recuperação e erros preservados em português**, conforme o recorte,
+   com `lang="pt-BR"` quando sob interface es-419.
+5. **Ausência de regressões visuais e funcionais** nas ações existentes
+   (copiar e baixar), **sem executar operações pagas** para comprovar apenas a
+   interface.
+
+**Procedimento**
+- Registrar o DTO inicial de preferência (`GET /api/preferences`).
+- Alternar para `es-419` via API com CSRF e `expectedVersion`.
+- Validar desktop e mobile, sem overflow; conferir clipboard exato e arquivo
+  baixado com mesmo nome/tipo/tamanho.
+- Restaurar a preferência pela API (explícita → valor original; `legacy_br` →
+  `uiLocale:null`), sem apagar linha e sem retroceder versão.
+- **Proibido:** criar campanha, gerar/regenerar, aprovar, informar problema,
+  acionar recuperação, salvar edição, provider pago ou qualquer prova com
+  cobrança.
+
 ## Próximo gate
 
-Gate 3 — homolog existente, com autorização específica. Nenhum resultado desta
-entrega autoriza o Gate 3, publicação ou smoke.
+Gate 3 — homolog existente, com autorização específica. Antes dele, o próximo
+passo é **revisar o diff e este roteiro**. Nenhum resultado desta entrega
+autoriza o Gate 3, publicação ou smoke.

@@ -18,7 +18,11 @@
 | Diff check | `git diff --check` | limpo (apenas aviso LF→CRLF do Git em `page-header.tsx`) |
 | OpenSpec | `openspec validate campaign-page-ui --type spec --strict` | válido |
 | OpenSpec | `openspec validate campaign-page-tests --type spec --strict` | válido |
-| OpenSpec | `openspec validate ui-base-components --type spec --strict` | **falha estrutural preexistente** — spec usa `> **Propósito**` e não possui `## Purpose`/`## Requirements`; não corrigida (fora do recorte) |
+| OpenSpec | `openspec validate ui-base-components --type spec --strict` | **NÃO VALIDADA** — falha estrutural preexistente: spec usa `> **Propósito**` e não possui `## Purpose`/`## Requirements`; registrada separadamente e não corrigida (fora do recorte) |
+
+> **Revisão:** os números acima são resultados automatizados relatados. O diff
+> ainda não foi revisado pelo responsável e não houve aceite visual. Este
+> arquivo não declara o Gate 2 aceito.
 
 ## Payload de build (entrega final)
 
