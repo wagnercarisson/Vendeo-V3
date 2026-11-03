@@ -29,8 +29,8 @@
 - [x] 4.3 Garantir um único `h1`, `h2` por bloco e `h3` nos passos; setas decorativas com `aria-hidden`.
 - [x] 4.4 Implementar responsividade conforme o design (coluna única no mobile, duas colunas com seta no desktop, sem overflow).
 - [x] 4.5 Não incluir tabela de entrada, dado de geração ou advertência comercial adicional.
-- [x] 4.6 Implementar o card “Além da arte, o texto para acompanhar sua publicação.” com título, legenda, hashtags e chamada final exatos, em HTML, sem botões “Copiar” e sem captura de interface; ao lado no desktop e abaixo no mobile.
-- [x] 4.7 Adicionar o link secundário “Conheça o Vendeo” → `/` abaixo do CTA da abertura, sem repetir no encerramento e sem alterar os demais consumidores do `AcquisitionCta`.
+- [x] 4.6 Implementar o card “Além da arte, o texto para acompanhar sua publicação.” com título, legenda, hashtags e chamada final exatos, em HTML, sem botões “Copiar” e sem captura de interface; **abaixo do parágrafo, no mesmo bloco de leitura, em desktop e mobile** (revisão de composição aprovada em 2026-11-03).
+- [x] 4.7 Agrupar o CTA `Solicitar acesso free` e o link secundário “Conheça o Vendeo” → `/` no **mesmo conjunto de acesso, na abertura e no encerramento**: lado a lado com 48 px de altura no desktop, empilhados com largura total no mobile, sem alterar os demais consumidores do `AcquisitionCta` (revisão de composição aprovada em 2026-11-03).
 
 ## 5. SEO e indexação
 
@@ -52,7 +52,7 @@
 ## 7. Checkpoint humano visual
 
 - [x] 7.1 Build local e captura desktop 1440 e mobile 390 em `evidence/`.
-- [x] 7.2 Conferir ordem dos blocos, dois CTAs, aviso único, proporção/corte das imagens, ausência de tabela/legenda, overflow, foco e contraste.
+- [x] 7.2 Conferir ordem dos blocos, dois conjuntos de acesso, aviso único, texto gerado aprovado exibido em HTML, proporção/corte das imagens, ausência de tabela de entrada, overflow, foco e contraste.
 - [x] 7.3 Medir o LCP no navegador e registrar o elemento vencedor, ajustando a prioridade se necessário.
 - [x] 7.4 Obter aprovação explícita do responsável antes de qualquer fechamento.
 - [x] 7.5 Registrar o aceite visual em `evidence/visual-acceptance.md` e reconciliar PLAN/COPY/SUMMARY.

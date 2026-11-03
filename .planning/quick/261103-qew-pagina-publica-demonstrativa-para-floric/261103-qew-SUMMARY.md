@@ -81,11 +81,17 @@ Medições de layout confirmadas no navegador:
 - `evidence/lcp-measurement.json`
 - `evidence/capture.log`
 
+## OpenSpec
+
+- **Verify:** sem divergências (38/38 tasks; 15 requisitos; 43 cenários). Relatório em `261103-qew-OPENSPEC-VERIFY.md`.
+- **Sync:** `seo-discovery-foundation` atualizada (5 requisitos modificados) e `floriculturas-demonstration-page` criada em `openspec/specs/`.
+- **Archive:** `openspec/changes/archive/2026-11-03-pagina-publica-demonstrativa-floriculturas/`.
+- `openspec validate --specs`: 211 aprovadas; as 69 falhas restantes são preexistentes e não relacionadas.
+
 ## Pendências / limites
 
 - **Aceite visual concluído** em 2026-11-03 (desktop/mobile). Ver `evidence/visual-acceptance.md`.
-- `STATE.md` atualizado com a linha da quick, sem declarar merge/push/deploy.
-- Sync/archive do OpenSpec **não executados**: aguardam revisão conjunta, conforme o fluxo do projeto.
+- **OpenSpec verificado, sincronizado e arquivado**; tracking reconciliado como concluída na branch e **não publicada**.
 - Sem merge, push ou deploy — etapas do responsável.
 - Imagem OG própria da página permanece follow-up (reutiliza a institucional).
 - Header/rodapé duplicados localmente; extração compartilhada permanece follow-up para não tocar a home.

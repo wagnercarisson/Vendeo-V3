@@ -66,6 +66,8 @@ A indexabilidade SHALL depender de **produção confirmada (`VERCEL_ENV === "pro
 
 A home SHALL usar o título `Vendeo | Crie campanhas para redes sociais com IA` e a descrição `Crie campanhas para redes sociais sem precisar saber design ou marketing. Arte e texto com a identidade da sua loja, prontos para revisar, baixar e publicar.`. A aplicação SHALL NOT alterar o H1 aprovado (`O que seu negócio quer divulgar vira uma campanha pronta para publicar.`) nem o conteúdo visível da landing para atender à metadata.
 
+A única alteração visível permitida na landing por esta change é um link contextual no rodapé, com o rótulo `Exemplo: campanha para floricultura`, apontando para `/floriculturas`. Esse link SHALL NOT criar bloco novo, alterar a ordem dos blocos, substituir imagens, alterar CTAs ou reescrever textos existentes.
+
 #### Scenario: Título e descrição exatos
 
 - **WHEN** a metadata da home é gerada
@@ -77,6 +79,7 @@ A home SHALL usar o título `Vendeo | Crie campanhas para redes sociais com IA` 
 - **WHEN** a implementação é revisada
 - **THEN** o H1 permanece "O que seu negócio quer divulgar vira uma campanha pronta para publicar."
 - **AND** nenhum texto visível, layout, campanha, logo ou CTA da landing é alterado
+- **AND** a única adição visível é o link contextual `Exemplo: campanha para floricultura` no rodapé
 
 ### Requirement: Metadata de compartilhamento coerente
 
@@ -90,13 +93,14 @@ A home SHALL fornecer metadata de compartilhamento coerente (Open Graph e Twitte
 
 ### Requirement: Política de indexação por rota e superfície
 
-A aplicação SHALL definir explicitamente a indexação por superfície, com as superfícies abaixo `noindex` e fora do sitemap; nenhuma página nova SHALL ser incluída no índice ou no sitemap automaticamente.
+A aplicação SHALL definir explicitamente a indexação por superfície. As superfícies abaixo SHALL permanecer `noindex` e fora do sitemap; nenhuma página nova SHALL ser incluída no índice ou no sitemap automaticamente.
 
-A indexação da home SHALL depender de **produção confirmada (`VERCEL_ENV === "production"`) e origem canônica validada**; qualquer outra combinação — inclusive produção com origem ausente, inválida ou não canônica — SHALL resultar em `noindex`, sitemap sem URLs e diagnóstico identificável.
+As superfícies indexáveis SHALL ser exatamente duas, e somente sob **produção confirmada (`VERCEL_ENV === "production"`) e origem canônica validada**: a home `/` e a página demonstrativa `/floriculturas`. Qualquer outra combinação — inclusive produção com origem ausente, inválida ou não canônica — SHALL resultar em `noindex`, sitemap sem URLs e diagnóstico identificável.
 
 | Superfície | Indexação | Sitemap |
 |---|---|---|
 | `/` | `index, follow` (somente em produção confirmada **e** com origem canônica validada) | incluída somente nessa condição |
+| `/floriculturas` | `index, follow` (somente em produção confirmada **e** com origem canônica validada) | incluída somente nessa condição |
 | `/login`, `/signup`, `/check-email`, `/forgot-password`, `/update-password` | `noindex, nofollow` | fora |
 | `/auth/confirm`, `/auth/callback`, `/auth/signout` | `X-Robots-Tag: noindex` | fora |
 | `(app)/**`, incluindo `/dashboard`, `/loja`, `/campanhas/**`, `/conta`, `/novidades` e `/legal/reaccept` | `noindex, nofollow` | fora |
@@ -111,7 +115,7 @@ A indexação da home SHALL depender de **produção confirmada (`VERCEL_ENV ===
 
 - **WHEN** a política de indexação é aplicada em produção confirmada com origem validada
 - **THEN** autenticação, recuperação, callbacks, app, admin, documentos legais e APIs são `noindex`
-- **AND** somente a home é indexável
+- **AND** somente a home e `/floriculturas` são indexáveis
 
 #### Scenario: Novidades tratada como painel
 
@@ -122,6 +126,13 @@ A indexação da home SHALL depender de **produção confirmada (`VERCEL_ENV ===
 
 - **WHEN** uma rota ou superfície nova é adicionada
 - **THEN** ela não é incluída no índice nem no sitemap sem decisão explícita
+- **AND** `/floriculturas` é a única superfície nova aprovada por esta change
+
+#### Scenario: Política da página nova é explícita
+
+- **WHEN** `getSurfacePolicy("/floriculturas")` é avaliada
+- **THEN** o contrato retorna política indexável com `inSitemap: true`
+- **AND** qualquer path não aprovado continua retornando `noindex` e `inSitemap: false`
 
 ### Requirement: Distinção de ambiente fail-closed
 
@@ -180,7 +191,7 @@ A aplicação SHALL fornecer `robots.txt` que orienta o crawling e referencia o 
 
 ### Requirement: Padrão de não indexação para rotas não aprovadas
 
-A não indexação SHALL ser o comportamento padrão verificável de toda página sem aprovação explícita, com a home como **única exceção** nesta fatia. O default SHALL ser aplicado na raiz (`src/app/layout.tsx`) com `robots: noindex, nofollow`, e somente a home SHALL sobrescrever para `index, follow` sob a condição combinada (produção confirmada e origem canônica validada). A herança de metadata SHALL ser verificada por teste: páginas futuras herdam o `noindex` por padrão, e a exceção da home é explícita. Um sitemap vazio, isoladamente, SHALL NOT ser tratado como proteção contra indexação.
+A não indexação SHALL ser o comportamento padrão verificável de toda página sem aprovação explícita, com a home e `/floriculturas` como **únicas exceções** nesta fatia. O default SHALL ser aplicado na raiz (`src/app/layout.tsx`) com `robots: noindex, nofollow`, e somente as duas superfícies aprovadas SHALL sobrescrever para `index, follow` sob a condição combinada (produção confirmada e origem canônica validada). A herança de metadata SHALL ser verificada por teste: páginas futuras herdam o `noindex` por padrão, e as exceções são explícitas. Um sitemap vazio, isoladamente, SHALL NOT ser tratado como proteção contra indexação.
 
 #### Scenario: Rota sem aprovação herda noindex
 
@@ -188,17 +199,18 @@ A não indexação SHALL ser o comportamento padrão verificável de toda págin
 - **THEN** ela herda `noindex, nofollow` da raiz
 - **AND** não é incluída no sitemap
 
-#### Scenario: Home é a única exceção
+#### Scenario: Apenas as superfícies aprovadas são exceção
 
 - **WHEN** a política de indexação é revisada
-- **THEN** somente a home sobrescreve para `index, follow` sob a condição combinada
-- **AND** a sobrescrita é explícita e testada
+- **THEN** somente `/` e `/floriculturas` sobrescrevem para `index, follow` sob a condição combinada
+- **AND** cada sobrescrita é explícita e testada
 
 #### Scenario: Herança de metadata verificada por teste
 
 - **WHEN** os testes de metadata são executados
 - **THEN** existe um teste que confirma que o default da raiz é `noindex`
 - **AND** existe um teste que confirma que a home é indexável apenas sob a condição combinada (produção confirmada e origem canônica validada)
+- **AND** existe um teste que confirma o mesmo comportamento para `/floriculturas`
 
 #### Scenario: Sitemap vazio não é proteção suficiente
 
@@ -207,13 +219,14 @@ A não indexação SHALL ser o comportamento padrão verificável de toda págin
 
 ### Requirement: sitemap restrito a URLs canônicas indexáveis
 
-A aplicação SHALL fornecer `sitemap.xml` com URLs absolutas, públicas, canônicas e realmente indexáveis. Nesta fatia, o sitemap SHALL conter somente a home `${origin}/` sob **produção confirmada com origem canônica validada** e SHALL permanecer vazio fora de produção **ou** quando a origem estiver ausente, inválida ou não canônica. O sitemap SHALL NOT incluir `/api/**`, `/auth/**`, rotas autenticadas, admin, documentos legais, versões Markdown nem URLs com parâmetros.
+A aplicação SHALL fornecer `sitemap.xml` com URLs absolutas, públicas, canônicas e realmente indexáveis. O sitemap SHALL conter somente a home `${origin}/` e a página demonstrativa `${origin}/floriculturas`, sob **produção confirmada com origem canônica validada**, e SHALL permanecer vazio fora de produção **ou** quando a origem estiver ausente, inválida ou não canônica. O sitemap SHALL NOT incluir `/api/**`, `/auth/**`, rotas autenticadas, admin, documentos legais, versões Markdown nem URLs com parâmetros.
 
-#### Scenario: Sitemap contém apenas a home em produção com origem validada
+#### Scenario: Sitemap contém as duas URLs aprovadas em produção com origem validada
 
 - **WHEN** o sitemap é gerado em produção confirmada com origem canônica validada
-- **THEN** ele contém somente `${origin}/`
+- **THEN** ele contém `${origin}/` e `${origin}/floriculturas`
 - **AND** todas as URLs são absolutas
+- **AND** não contém nenhuma outra entrada
 
 #### Scenario: Sitemap vazio fora de produção ou com origem inválida
 
@@ -275,7 +288,9 @@ A imagem de compartilhamento SHALL ser uma composição institucional com ativos
 
 ### Requirement: Fronteira da fatia e proibição de prometer indexação
 
-A fundação SHALL ser implementada preferencialmente em `src/lib/seo/*`, `src/app/robots.ts`, `src/app/sitemap.ts`, metadata das páginas/layouts, `headers()` em `next.config.ts`, asset em `public/` e testes correspondentes. A fatia SHALL NOT alterar H1, copy visível, layout, campanhas, logos ou CTAs da landing, SHALL NOT alterar código da F56, ledger, migrations, crédito, onboarding, autenticação, `middleware.ts` ou o contrato de APIs de geração, e SHALL NOT prometer indexação, tráfego ou posição no Google.
+A change SHALL ser implementada preferencialmente em `src/app/(marketing)/floriculturas/**`, `src/components/landing/floriculturas/**`, `src/lib/seo/*`, `src/app/sitemap.ts`, metadata das páginas, `public/floriculturas/**` e testes correspondentes. A change SHALL NOT redesenhar a landing, alterar H1, layout, campanhas, logos ou CTAs da home, nem alterar código da F56, ledger, migrations, crédito, onboarding, autenticação, `middleware.ts` ou o contrato de APIs de geração. A única alteração visível na home SHALL ser o link contextual do rodapé definido nesta change.
+
+A change SHALL NOT prometer indexação, tráfego ou posição no Google, aumento de vendas, tempo de geração ou preservação exata do produto.
 
 #### Scenario: Landing aprovada preservada
 
@@ -288,7 +303,8 @@ A fundação SHALL ser implementada preferencialmente em `src/lib/seo/*`, `src/a
 - **WHEN** o conteúdo técnico e a comunicação da fatia são revisados
 - **THEN** nenhuma garantia de indexação, tráfego ou posição no Google é afirmada
 
-#### Scenario: Alteração compartilhada justificada
+#### Scenario: Sem promessa comercial na página pública
 
-- **WHEN** surge a necessidade de tocar `globals.css`, design system global, dependências, `middleware.ts` ou código da F56
-- **THEN** a necessidade é exposta e justificada antes da alteração
+- **WHEN** a copy pública de `/floriculturas` é revisada
+- **THEN** nenhuma frase promete aumento de vendas, tempo de geração ou preservação exata do produto
+- **AND** nenhuma advertência comercial adicional é publicada além do aviso demonstrativo aprovado
