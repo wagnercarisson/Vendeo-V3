@@ -24,6 +24,13 @@ import { GoogleButton } from "@/components/auth/google-button";
 interface AcquisitionCtaProps {
   publicSignupEnabled: boolean;
   /**
+   * Destination of the closed-beta "Solicitar acesso free" action. Defaults to
+   * the home anchor `#acesso`, preserving every existing consumer. Standalone
+   * public pages (e.g. `/floriculturas`) pass `/#acesso`, since the anchor only
+   * exists on the home.
+   */
+  accessHref?: string;
+  /**
    * Explicit per-instance alignment (no fragile selectors):
    * - "responsive" (default): centered on mobile, start/left on desktop.
    * - "center": centered on both mobile and desktop.
@@ -33,6 +40,7 @@ interface AcquisitionCtaProps {
 
 export function AcquisitionCta({
   publicSignupEnabled,
+  accessHref = "#acesso",
   align = "responsive",
 }: AcquisitionCtaProps) {
   const alignment =
@@ -59,7 +67,7 @@ export function AcquisitionCta({
         </>
       ) : (
         <a
-          href="#acesso"
+          href={accessHref}
           className="inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none"
         >
           Solicitar acesso free

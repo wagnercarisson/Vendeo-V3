@@ -8,9 +8,11 @@
  *
  * `getSurfacePolicy(pathname)` retorna o contrato único `{ robots, inSitemap }`,
  * com o default fail-closed `noindex, nofollow` + fora do sitemap para qualquer
- * pathname não reconhecido. A home é a única exceção (aplicável somente sob a
- * condição combinada de produção confirmada e origem validada — decisão do
- * consumidor via `isIndexableEnvironment()`).
+ * pathname não reconhecido. As superfícies indexáveis são explicitamente
+ * aprovadas (`INDEXABLE_CANONICAL_PATHS`): a home e a página demonstrativa
+ * `/floriculturas` (aplicável somente sob a condição combinada de produção
+ * confirmada e origem validada — decisão do consumidor via
+ * `isIndexableEnvironment()`).
  */
 
 import type { Metadata } from "next";
@@ -21,8 +23,17 @@ export const INDEX_ROBOTS = { index: true, follow: true } as const satisfies Met
 /** `robots` não indexável (objeto — nunca a string `"noindex, nofollow"`). */
 export const NOINDEX_ROBOTS = { index: false, follow: false } as const satisfies Metadata["robots"];
 
-/** Caminho canônico da home (única superfície candidata ao índice). */
+/** Caminho canônico da home. */
 export const HOME_CANONICAL_PATH = "/";
+
+/** Caminho canônico da página pública demonstrativa para floriculturas. */
+export const FLORICULTURAS_CANONICAL_PATH = "/floriculturas";
+
+/** Superfícies públicas explicitamente aprovadas para indexação. */
+export const INDEXABLE_CANONICAL_PATHS = [
+  HOME_CANONICAL_PATH,
+  FLORICULTURAS_CANONICAL_PATH,
+] as const;
 
 /** Valor de `X-Robots-Tag` para superfícies transitórias/privadas. */
 export const NOINDEX_TAG = "noindex";
@@ -91,6 +102,10 @@ export function getSurfacePolicy(pathname: string): SurfacePolicy {
   const path = normalizePathname(pathname);
 
   if (path === HOME_CANONICAL_PATH) {
+    return INDEX_POLICY;
+  }
+
+  if (path === FLORICULTURAS_CANONICAL_PATH) {
     return INDEX_POLICY;
   }
 
