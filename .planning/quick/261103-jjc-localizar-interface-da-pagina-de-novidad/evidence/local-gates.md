@@ -32,4 +32,4 @@ O runner local informou, antes e depois, que os gates de PostgreSQL/homolog, Pos
 
 ## Payload
 
-Ver `payload.md`. A conferência de HTML/RSC entregue depende do Gate 3 e **não foi executada**.
+Ver `payload.md`. O Gate 3 foi executado no homolog local em 2026-11-03; resultados em `gate3-homolog.md`.

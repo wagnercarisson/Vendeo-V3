@@ -1,0 +1,1715 @@
+{
+  "startedAt": "2026-11-03T17:44:07.090Z",
+  "errors": [],
+  "initialPreference": {
+    "uiLocale": "pt-BR",
+    "source": "explicit",
+    "version": 12
+  },
+  "initialBrowserState": {
+    "badge": {
+      "aria": "Novidades disponíveis",
+      "title": "Ver novidades"
+    },
+    "storage": {
+      "seen": null,
+      "dismissed": null
+    },
+    "htmlLang": "pt-BR",
+    "shellHasPt": true,
+    "shellHasEs": false,
+    "htmlBytes": 59997
+  },
+  "pt": {
+    "url": "/novidades",
+    "title": "Novidades",
+    "breadcrumbs": [
+      {
+        "tag": "SPAN",
+        "text": "Dashboard",
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/dashboard"
+      },
+      {
+        "tag": "SPAN",
+        "text": "/Novidades",
+        "href": null
+      },
+      {
+        "tag": "SPAN",
+        "text": "/",
+        "href": null
+      },
+      {
+        "tag": "SPAN",
+        "text": "Novidades",
+        "href": null
+      }
+    ],
+    "categories": [
+      "Melhoria",
+      "Nova funcionalidade",
+      "Melhoria",
+      "Melhoria",
+      "Melhoria",
+      "Nova funcionalidade",
+      "Nova funcionalidade",
+      "Nova funcionalidade",
+      "Melhoria",
+      "Melhoria",
+      "Nova funcionalidade",
+      "Melhoria",
+      "Nova funcionalidade",
+      "Nova funcionalidade"
+    ],
+    "importantCount": 11,
+    "dates": [
+      "02/11/2026",
+      "19/10/2026",
+      "19/09/2026",
+      "21/08/2026",
+      "20/08/2026",
+      "19/08/2026",
+      "15/08/2026",
+      "14/08/2026",
+      "12/08/2026",
+      "06/08/2026",
+      "31/07/2026",
+      "30/07/2026",
+      "29/07/2026",
+      "28/07/2026"
+    ],
+    "milestones": [
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5"
+    ],
+    "editorialTitles": [
+      {
+        "text": "Seu painel mais organizado e fácil de usar",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Campanhas com mais qualidade e novos cenários",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Escolha o tom de voz com mais clareza",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Revise a campanha antes de gerar",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Criacao de campanhas mais clara e confiavel",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que voce precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Entre com o Google e cadastro aberto com verificação",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Crie campanhas com várias fotos e tire foto direto pela câmera",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Mais controle na criação de campanha: validade da oferta e aviso ilustrativo",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Vendeo em novo endereço, com acesso mais simples pelo celular",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Onboarding da loja mais claro e flexível",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Novidades no Vendeo",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Loja mais pronta para gerar campanhas",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Freemium CNPJ",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Fundação Legal",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      }
+    ],
+    "editorialBody": [
+      "Suas campanhas recentes, créditos e novidades agora estão reunidos em um painel ",
+      "O que mudou\nA geração de campanhas ficou mais ágil, sem mudar o que você precisa",
+      "O que mudou\nAo escolher o tom de voz da sua loja, cada opção agora mostra uma de",
+      "O que mudou\nAntes de gerar a campanha, você agora vê um resumo completo do que s",
+      "O que mudou\nA validade da oferta agora usa data completa com ano e bloqueia data",
+      "O que mudou\nAgora você pode entrar no Vendeo com \"Continuar com Google\" — o aces",
+      "O que mudou\nAgora você pode enviar até 4 fotos do produto na criação de campanha",
+      "O que mudou\nNova seção \"Validade da oferta\" na criação de campanha: agora você e",
+      "O que mudou\nO Vendeo agora está em um novo endereço: vendeo.tech.A página inicia",
+      "O que mudou\nO cadastro da loja agora é organizado em abas: Dados, Posicionamento",
+      "O que mudou\nAgora o Vendeo tem um espaço de Novidades para você ficar por dentro",
+      "O que mudou\nAgora o Vendeo mostra quais dados da loja precisam estar completos a",
+      "O que mudou\nAgora você cria sua loja com CNPJ e ganha 10 créditos de boas-vindas",
+      "O que mudou\nO Vendeo agora tem Termos de Uso, Política de Privacidade e Política"
+    ],
+    "langElements": [
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Seu painel mais organizado e fácil de us"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "Suas campanhas recentes, créditos e novi"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Campanhas com mais qualidade e novos cen"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nA geração de campanhas ficou"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Escolha o tom de voz com mais clareza"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nAo escolher o tom de voz da "
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Revise a campanha antes de gerar"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nAntes de gerar a campanha, v"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      }
+    ],
+    "htmlLang": "pt-BR",
+    "htmlBytes": 95586,
+    "hasEsCatalog": false,
+    "hasPtCatalog": true,
+    "hasDashboardOnly": false,
+    "hasEditorialTitle": true,
+    "hasEditorialBody": true,
+    "overflow": {
+      "innerWidth": 1440,
+      "scrollWidth": 1425
+    },
+    "nav": {
+      "transferSize": 29892,
+      "encodedBodySize": 29592,
+      "decodedBodySize": 96008
+    }
+  },
+  "afterVisitBrowserState": {
+    "badge": null,
+    "storage": {
+      "seen": "painel-mais-organizado-facil-de-usar",
+      "dismissed": "painel-mais-organizado-facil-de-usar"
+    },
+    "htmlLang": "pt-BR",
+    "shellHasPt": true,
+    "shellHasEs": false,
+    "htmlBytes": 95586
+  },
+  "keyboard": {
+    "link": true,
+    "href": "/dashboard",
+    "text": "Dashboard",
+    "focused": true,
+    "afterTab": {
+      "tag": "BUTTON",
+      "text": "",
+      "href": null
+    }
+  },
+  "landing": {
+    "opened": true,
+    "modal": {
+      "title": "Novidades",
+      "hasPtCategory": true,
+      "hasEsCategory": false,
+      "date": "02/11/2026"
+    },
+    "closed": true,
+    "focusReturned": "Novidades"
+  },
+  "patchEs": {
+    "status": 200,
+    "body": {
+      "uiLocale": "es-419",
+      "source": "explicit",
+      "version": 13
+    }
+  },
+  "afterPatchPreference": {
+    "uiLocale": "es-419",
+    "source": "explicit",
+    "version": 13
+  },
+  "es": {
+    "url": "/novidades",
+    "title": "Novedades",
+    "breadcrumbs": [
+      {
+        "tag": "SPAN",
+        "text": "Panel",
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "Panel",
+        "href": "/dashboard"
+      },
+      {
+        "tag": "SPAN",
+        "text": "/Novedades",
+        "href": null
+      },
+      {
+        "tag": "SPAN",
+        "text": "/",
+        "href": null
+      },
+      {
+        "tag": "SPAN",
+        "text": "Novedades",
+        "href": null
+      }
+    ],
+    "categories": [
+      "Mejora",
+      "Nueva funcionalidad",
+      "Mejora",
+      "Mejora",
+      "Mejora",
+      "Nueva funcionalidad",
+      "Nueva funcionalidad",
+      "Nueva funcionalidad",
+      "Mejora",
+      "Mejora",
+      "Nueva funcionalidad",
+      "Mejora",
+      "Nueva funcionalidad",
+      "Nueva funcionalidad"
+    ],
+    "importantCount": 11,
+    "dates": [
+      "02/11/2026",
+      "19/10/2026",
+      "19/09/2026",
+      "21/08/2026",
+      "20/08/2026",
+      "19/08/2026",
+      "15/08/2026",
+      "14/08/2026",
+      "12/08/2026",
+      "06/08/2026",
+      "31/07/2026",
+      "30/07/2026",
+      "29/07/2026",
+      "28/07/2026"
+    ],
+    "milestones": [
+      "[redacted-email]",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5"
+    ],
+    "editorialTitles": [
+      {
+        "text": "Seu painel mais organizado e fácil de usar",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Campanhas com mais qualidade e novos cenários",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Escolha o tom de voz com mais clareza",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Revise a campanha antes de gerar",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Criacao de campanhas mais clara e confiavel",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que voce precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Entre com o Google e cadastro aberto com verificação",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Crie campanhas com várias fotos e tire foto direto pela câmera",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Mais controle na criação de campanha: validade da oferta e aviso ilustrativo",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Vendeo em novo endereço, com acesso mais simples pelo celular",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Onboarding da loja mais claro e flexível",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Novidades no Vendeo",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Loja mais pronta para gerar campanhas",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Freemium CNPJ",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Fundação Legal",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      }
+    ],
+    "editorialBody": [
+      "Suas campanhas recentes, créditos e novidades agora estão reunidos em um painel ",
+      "O que mudou\nA geração de campanhas ficou mais ágil, sem mudar o que você precisa",
+      "O que mudou\nAo escolher o tom de voz da sua loja, cada opção agora mostra uma de",
+      "O que mudou\nAntes de gerar a campanha, você agora vê um resumo completo do que s",
+      "O que mudou\nA validade da oferta agora usa data completa com ano e bloqueia data",
+      "O que mudou\nAgora você pode entrar no Vendeo com \"Continuar com Google\" — o aces",
+      "O que mudou\nAgora você pode enviar até 4 fotos do produto na criação de campanha",
+      "O que mudou\nNova seção \"Validade da oferta\" na criação de campanha: agora você e",
+      "O que mudou\nO Vendeo agora está em um novo endereço: vendeo.tech.A página inicia",
+      "O que mudou\nO cadastro da loja agora é organizado em abas: Dados, Posicionamento",
+      "O que mudou\nAgora o Vendeo tem um espaço de Novidades para você ficar por dentro",
+      "O que mudou\nAgora o Vendeo mostra quais dados da loja precisam estar completos a",
+      "O que mudou\nAgora você cria sua loja com CNPJ e ganha 10 créditos de boas-vindas",
+      "O que mudou\nO Vendeo agora tem Termos de Uso, Política de Privacidade e Política"
+    ],
+    "langElements": [
+      {
+        "tag": "DIV",
+        "lang": "es-419",
+        "text": "Panel/NovedadesNovedadesMejoraSeu painel"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Seu painel mais organizado e fácil de us"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "Suas campanhas recentes, créditos e novi"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Campanhas com mais qualidade e novos cen"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nA geração de campanhas ficou"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Escolha o tom de voz com mais clareza"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nAo escolher o tom de voz da "
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Revise a campanha antes de gerar"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nAntes de gerar a campanha, v"
+      }
+    ],
+    "htmlLang": "pt-BR",
+    "htmlBytes": 96535,
+    "hasEsCatalog": true,
+    "hasPtCatalog": false,
+    "hasDashboardOnly": false,
+    "hasEditorialTitle": true,
+    "hasEditorialBody": true,
+    "overflow": {
+      "innerWidth": 1440,
+      "scrollWidth": 1425
+    },
+    "nav": {
+      "transferSize": 30121,
+      "encodedBodySize": 29821,
+      "decodedBodySize": 96857
+    }
+  },
+  "dashboardEs": {
+    "shellEs": true,
+    "dashboardEs": true,
+    "leakedNovidadesCatalog": false,
+    "htmlLang": "pt-BR"
+  },
+  "contaEs": {
+    "url": "/conta",
+    "leakedNovidadesCatalog": false,
+    "htmlBytes": 65977
+  },
+  "esMobile": {
+    "url": "/novidades",
+    "title": "Novedades",
+    "breadcrumbs": [
+      {
+        "tag": "SPAN",
+        "text": "Panel",
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "Panel",
+        "href": "/dashboard"
+      },
+      {
+        "tag": "SPAN",
+        "text": "/Novedades",
+        "href": null
+      },
+      {
+        "tag": "SPAN",
+        "text": "/",
+        "href": null
+      },
+      {
+        "tag": "SPAN",
+        "text": "Novedades",
+        "href": null
+      }
+    ],
+    "categories": [
+      "Mejora",
+      "Nueva funcionalidad",
+      "Mejora",
+      "Mejora",
+      "Mejora",
+      "Nueva funcionalidad",
+      "Nueva funcionalidad",
+      "Nueva funcionalidad",
+      "Mejora",
+      "Mejora",
+      "Nueva funcionalidad",
+      "Mejora",
+      "Nueva funcionalidad",
+      "Nueva funcionalidad"
+    ],
+    "importantCount": 11,
+    "dates": [
+      "02/11/2026",
+      "19/10/2026",
+      "19/09/2026",
+      "21/08/2026",
+      "20/08/2026",
+      "19/08/2026",
+      "15/08/2026",
+      "14/08/2026",
+      "12/08/2026",
+      "06/08/2026",
+      "31/07/2026",
+      "30/07/2026",
+      "29/07/2026",
+      "28/07/2026"
+    ],
+    "milestones": [
+      "[redacted-email]",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5"
+    ],
+    "editorialTitles": [
+      {
+        "text": "Seu painel mais organizado e fácil de usar",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Campanhas com mais qualidade e novos cenários",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Escolha o tom de voz com mais clareza",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Revise a campanha antes de gerar",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Criacao de campanhas mais clara e confiavel",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que voce precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Entre com o Google e cadastro aberto com verificação",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Crie campanhas com várias fotos e tire foto direto pela câmera",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Mais controle na criação de campanha: validade da oferta e aviso ilustrativo",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Vendeo em novo endereço, com acesso mais simples pelo celular",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Onboarding da loja mais claro e flexível",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Novidades no Vendeo",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Loja mais pronta para gerar campanhas",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Freemium CNPJ",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Fundação Legal",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      }
+    ],
+    "editorialBody": [
+      "Suas campanhas recentes, créditos e novidades agora estão reunidos em um painel ",
+      "O que mudou\nA geração de campanhas ficou mais ágil, sem mudar o que você precisa",
+      "O que mudou\nAo escolher o tom de voz da sua loja, cada opção agora mostra uma de",
+      "O que mudou\nAntes de gerar a campanha, você agora vê um resumo completo do que s",
+      "O que mudou\nA validade da oferta agora usa data completa com ano e bloqueia data",
+      "O que mudou\nAgora você pode entrar no Vendeo com \"Continuar com Google\" — o aces",
+      "O que mudou\nAgora você pode enviar até 4 fotos do produto na criação de campanha",
+      "O que mudou\nNova seção \"Validade da oferta\" na criação de campanha: agora você e",
+      "O que mudou\nO Vendeo agora está em um novo endereço: vendeo.tech.A página inicia",
+      "O que mudou\nO cadastro da loja agora é organizado em abas: Dados, Posicionamento",
+      "O que mudou\nAgora o Vendeo tem um espaço de Novidades para você ficar por dentro",
+      "O que mudou\nAgora o Vendeo mostra quais dados da loja precisam estar completos a",
+      "O que mudou\nAgora você cria sua loja com CNPJ e ganha 10 créditos de boas-vindas",
+      "O que mudou\nO Vendeo agora tem Termos de Uso, Política de Privacidade e Política"
+    ],
+    "langElements": [
+      {
+        "tag": "DIV",
+        "lang": "es-419",
+        "text": "Panel/NovedadesNovedadesMejoraSeu painel"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Seu painel mais organizado e fácil de us"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "Suas campanhas recentes, créditos e novi"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Campanhas com mais qualidade e novos cen"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nA geração de campanhas ficou"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Escolha o tom de voz com mais clareza"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nAo escolher o tom de voz da "
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Revise a campanha antes de gerar"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nAntes de gerar a campanha, v"
+      }
+    ],
+    "htmlLang": "pt-BR",
+    "htmlBytes": 96474,
+    "hasEsCatalog": true,
+    "hasPtCatalog": false,
+    "hasDashboardOnly": false,
+    "hasEditorialTitle": true,
+    "hasEditorialBody": true,
+    "overflow": {
+      "innerWidth": 390,
+      "scrollWidth": 390
+    },
+    "nav": {
+      "transferSize": 30121,
+      "encodedBodySize": 29821,
+      "decodedBodySize": 96857
+    }
+  },
+  "patchBackPt": {
+    "status": 200,
+    "body": {
+      "uiLocale": "pt-BR",
+      "source": "explicit",
+      "version": 14
+    }
+  },
+  "ptMobile": {
+    "url": "/novidades",
+    "title": "Novidades",
+    "breadcrumbs": [
+      {
+        "tag": "SPAN",
+        "text": "Dashboard",
+        "href": null
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/dashboard"
+      },
+      {
+        "tag": "SPAN",
+        "text": "/Novidades",
+        "href": null
+      },
+      {
+        "tag": "SPAN",
+        "text": "/",
+        "href": null
+      },
+      {
+        "tag": "SPAN",
+        "text": "Novidades",
+        "href": null
+      }
+    ],
+    "categories": [
+      "Melhoria",
+      "Nova funcionalidade",
+      "Melhoria",
+      "Melhoria",
+      "Melhoria",
+      "Nova funcionalidade",
+      "Nova funcionalidade",
+      "Nova funcionalidade",
+      "Melhoria",
+      "Melhoria",
+      "Nova funcionalidade",
+      "Melhoria",
+      "Nova funcionalidade",
+      "Nova funcionalidade"
+    ],
+    "importantCount": 11,
+    "dates": [
+      "02/11/2026",
+      "19/10/2026",
+      "19/09/2026",
+      "21/08/2026",
+      "20/08/2026",
+      "19/08/2026",
+      "15/08/2026",
+      "14/08/2026",
+      "12/08/2026",
+      "06/08/2026",
+      "31/07/2026",
+      "30/07/2026",
+      "29/07/2026",
+      "28/07/2026"
+    ],
+    "milestones": [
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5",
+      "v1.5"
+    ],
+    "editorialTitles": [
+      {
+        "text": "Seu painel mais organizado e fácil de usar",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Campanhas com mais qualidade e novos cenários",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Escolha o tom de voz com mais clareza",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Revise a campanha antes de gerar",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Criacao de campanhas mais clara e confiavel",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que voce precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Entre com o Google e cadastro aberto com verificação",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Crie campanhas com várias fotos e tire foto direto pela câmera",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Mais controle na criação de campanha: validade da oferta e aviso ilustrativo",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Vendeo em novo endereço, com acesso mais simples pelo celular",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Onboarding da loja mais claro e flexível",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Novidades no Vendeo",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Loja mais pronta para gerar campanhas",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Freemium CNPJ",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      },
+      {
+        "text": "Fundação Legal",
+        "lang": "pt-BR"
+      },
+      {
+        "text": "O que mudou",
+        "lang": null
+      },
+      {
+        "text": "Por que isso importa",
+        "lang": null
+      },
+      {
+        "text": "O que você precisa fazer",
+        "lang": null
+      }
+    ],
+    "editorialBody": [
+      "Suas campanhas recentes, créditos e novidades agora estão reunidos em um painel ",
+      "O que mudou\nA geração de campanhas ficou mais ágil, sem mudar o que você precisa",
+      "O que mudou\nAo escolher o tom de voz da sua loja, cada opção agora mostra uma de",
+      "O que mudou\nAntes de gerar a campanha, você agora vê um resumo completo do que s",
+      "O que mudou\nA validade da oferta agora usa data completa com ano e bloqueia data",
+      "O que mudou\nAgora você pode entrar no Vendeo com \"Continuar com Google\" — o aces",
+      "O que mudou\nAgora você pode enviar até 4 fotos do produto na criação de campanha",
+      "O que mudou\nNova seção \"Validade da oferta\" na criação de campanha: agora você e",
+      "O que mudou\nO Vendeo agora está em um novo endereço: vendeo.tech.A página inicia",
+      "O que mudou\nO cadastro da loja agora é organizado em abas: Dados, Posicionamento",
+      "O que mudou\nAgora o Vendeo tem um espaço de Novidades para você ficar por dentro",
+      "O que mudou\nAgora o Vendeo mostra quais dados da loja precisam estar completos a",
+      "O que mudou\nAgora você cria sua loja com CNPJ e ganha 10 créditos de boas-vindas",
+      "O que mudou\nO Vendeo agora tem Termos de Uso, Política de Privacidade e Política"
+    ],
+    "langElements": [
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Seu painel mais organizado e fácil de us"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "Suas campanhas recentes, créditos e novi"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Campanhas com mais qualidade e novos cen"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nA geração de campanhas ficou"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Escolha o tom de voz com mais clareza"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nAo escolher o tom de voz da "
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      },
+      {
+        "tag": "H2",
+        "lang": "pt-BR",
+        "text": "Revise a campanha antes de gerar"
+      },
+      {
+        "tag": "DIV",
+        "lang": "pt-BR",
+        "text": "O que mudou\nAntes de gerar a campanha, v"
+      },
+      {
+        "tag": "SPAN",
+        "lang": "",
+        "text": "v1.5"
+      }
+    ],
+    "htmlLang": "pt-BR",
+    "htmlBytes": 95623,
+    "hasEsCatalog": false,
+    "hasPtCatalog": true,
+    "hasDashboardOnly": false,
+    "hasEditorialTitle": true,
+    "hasEditorialBody": true,
+    "overflow": {
+      "innerWidth": 390,
+      "scrollWidth": 390
+    },
+    "nav": {
+      "transferSize": 29892,
+      "encodedBodySize": 29592,
+      "decodedBodySize": 96008
+    }
+  },
+  "restore": {
+    "skipped": true,
+    "current": {
+      "uiLocale": "pt-BR",
+      "source": "explicit",
+      "version": 14
+    }
+  },
+  "finalPreference": {
+    "uiLocale": "pt-BR",
+    "source": "explicit",
+    "version": 14
+  },
+  "finalBrowserState": {
+    "badge": null,
+    "storage": {
+      "seen": "painel-mais-organizado-facil-de-usar",
+      "dismissed": "painel-mais-organizado-facil-de-usar"
+    },
+    "htmlLang": "pt-BR",
+    "shellHasPt": true,
+    "shellHasEs": false,
+    "htmlBytes": 95623
+  },
+  "signout": {
+    "status": 0,
+    "type": "opaqueredirect"
+  },
+  "afterSignout": 401
+}

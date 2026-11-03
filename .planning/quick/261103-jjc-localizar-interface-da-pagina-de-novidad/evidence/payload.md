@@ -22,9 +22,15 @@ Não foi localizada medição anterior específica de `/novidades` em `.planning
 
 ## Conferência de HTML/RSC
 
-Pendente do Gate 3 (homolog, autorização específica). O roteiro exige:
+Executada no Gate 3 (homolog local):
 
-- HTML/RSC de `/novidades` em pt-BR e es-419;
-- somente textos do namespace da rota, sem catálogo global adicional;
-- editorial em `lang="pt-BR"` e região traduzida em `lang="es-419"`;
-- `/dashboard` e `/conta` sem o catálogo de novidades.
+| Medida | pt-BR | es-419 |
+|---|---|---|
+| HTML de `/novidades` | 95.586 B | 96.535 B |
+| `encodedBodySize` da navegação | 29.592 B | 29.821 B |
+| `decodedBodySize` da navegação | 96.008 B | 96.857 B |
+
+- Strings exclusivas do dashboard ausentes em `/novidades`.
+- `/dashboard` e `/conta` não contêm `Nueva funcionalidad`, `Corrección` ou `Aún no hay novedades`.
+- Shell em espanhol presente no dashboard, como esperado (pertence ao shell/F58).
+- Detalhes em `gate3-homolog.md` e `gate3-results.json`.

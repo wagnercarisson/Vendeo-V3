@@ -6,7 +6,8 @@ date: 2026-11-03
 branch: feature/traducao-da-listagem-de-novidades
 execution: local_complete
 review: pending
-homolog: not_executed
+homolog: executed_pass_with_limitations
+homolog_date: 2026-11-03
 publication: not_authorized
 production_acceptance: pending
 sync_archive: not_executed
@@ -73,24 +74,35 @@ Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
 
 ## Limitações e pendências
 
-- **Gate 3 não executado:** homolog, prova visual/navegação, HTML/RSC entregue
-  e restauração de preferência/estado de leitura dependem de autorização específica.
-- **Sem baseline específico de `/novidades`:** mediu-se apenas a entrega atual;
-  `shared` segue em 102 kB.
-- **Cenário sem entradas** pode não existir no homolog: se ausente, registrar
-  como não observado e citar o teste automatizado.
-- **Leitor de tela real** não executado; foco por teclado será verificado no Gate 3.
-- `ChangelogAnnouncement` no modo completo mantém rótulos pt-BR fixos; não é
-  renderizado por `/novidades` e ficou fora do recorte.
+- **Gate 3 executado no homolog local** em 2026-11-03: PASS com limitações em `evidence/gate3-homolog.md`.
+- **Sem baseline específico de `/novidades`:** mediu-se apenas a entrega atual; `shared` segue em 102 kB.
+- **`Correção`/`Corrección` não observada** (não há entrada `fix` no conteúdo atual); coberta pelo teste automatizado.
+- **Cenário sem entradas** não observado (há 14 entradas); coberto pelo teste automatizado, sem remover conteúdo.
+- **Leitor de tela real** não executado; foco por teclado e Escape do modal da landing verificados.
+- `ChangelogAnnouncement` no modo completo mantém rótulos pt-BR fixos; não é renderizado por `/novidades` e ficou fora do recorte.
 - `sync`/`archive` não executados; o main spec foi atualizado diretamente.
+
+## Gate 3 — homolog local
+
+- App reiniciado sobre o build atual (`tLGQjcPHxHdtHGx2mxsdu`), sem rebuild/troca de branch.
+- Preferência: `pt-BR`/`explicit` v12 → `es-419` v13 → restaurada `pt-BR`/`explicit` **v14**.
+- pt-BR: título/breadcrumb, `Melhoria`/`Nova funcionalidade`, 11 `Importante`, datas `02/11/2026` etc., editorial intacto.
+- es-419: `Novedades`, `Panel`, `Mejora`/`Nueva funcionalidad`, `Importante`, mesmas datas; editorial em `lang="pt-BR"`, milestone `v1.5` com `lang=""`, região `lang="es-419"` e documento `pt-BR`.
+- Badge: visível antes da visita; removido após `/novidades`, com `last_seen_changelog_id` e `dismissed_changelog_announcement_id` atualizados.
+- Landing pt-BR: modal mantém categorias/datas em português, fecha com Escape e devolve foco ao botão.
+- Dashboard es-419 mantém localização F58; `/dashboard` e `/conta` sem catálogo de novidades.
+- Desktop/mobile sem overflow; payload em `evidence/payload.md`.
+- Sessão descartada (`/auth/signout`, 401) e perfil temporário removido.
 
 ## Artefatos
 
 - Plano: `.planning/quick/261103-jjc-localizar-interface-da-pagina-de-novidad/261103-jjc-PLAN.md`
 - Evidências: `.planning/quick/261103-jjc-localizar-interface-da-pagina-de-novidad/evidence/`
+  - `gate3-homolog.md`, `gate3-results.json`, `local-gates.md`, `payload.md`
+  - capturas `gate3-novidades-pt-desktop.png`, `gate3-novidades-es-desktop.png`, `gate3-novidades-pt-mobile.png`, `gate3-novidades-es-mobile.png`, `gate3-landing-pt-modal.png`
 - Resumo: este arquivo.
 
 ## Próximo gate
 
-Revisão do usuário/Codex sobre a implementação local (Gate 2). Nenhuma ação de
-homolog, sessão, preferência, push, merge ou deploy foi realizada.
+Revisão do usuário/Codex e aceite visual do Gate 3. Publicação e smoke de produção
+não iniciados; nenhum push, merge ou deploy foi realizado.

@@ -6,12 +6,14 @@ type: plan
 wave: 1
 depends_on: []
 autonomous: false
-status: implemented_local
+status: homolog_complete
 revision: 2
 approval_required: true
 implementation_authorized: true
-implementation_status: complete_local_pending_review
-validation_homolog_authorized: false
+implementation_status: complete
+validation_homolog_authorized: true
+homolog_status: complete_pass_with_limitations
+homolog_date: 2026-11-03
 publication_authorized: false
 base_sha: bfd89bb6a9b4a067cf8111176a19e9f31a52d873
 branch: feature/traducao-da-listagem-de-novidades
