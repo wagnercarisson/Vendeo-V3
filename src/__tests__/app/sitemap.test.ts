@@ -69,15 +69,16 @@ afterEach(() => {
   vi.resetModules();
 });
 
-describe("sitemap.ts — apenas a home sob a condição combinada (D-03/D-08)", () => {
-  it("produção + origem canônica ⇒ exatamente 1 entrada com URL absoluta e barra final", async () => {
+describe("sitemap.ts — home + /floriculturas sob a condição combinada (D-03/D-08)", () => {
+  it("produção + origem canônica ⇒ exatamente 2 entradas com URL absoluta", async () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", CANONICAL);
 
     const entries = await getSitemap();
 
-    expect(entries).toHaveLength(1);
+    expect(entries).toHaveLength(2);
     expect(entries[0].url).toBe("https://vendeo.tech/");
+    expect(entries[1].url).toBe("https://vendeo.tech/floriculturas");
   });
 });
 

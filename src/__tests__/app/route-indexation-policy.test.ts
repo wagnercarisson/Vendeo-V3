@@ -85,6 +85,12 @@ describe("getSurfacePolicy — matriz D-05 (todas as superfícies privadas/legai
     expect(policy.robots).toEqual(INDEX_ROBOTS);
     expect(policy.inSitemap).toBe(true);
   });
+
+  it("/floriculturas ⇒ INDEX_ROBOTS e no sitemap (segunda superfície aprovada)", () => {
+    const policy = getSurfacePolicy("/floriculturas");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
 });
 
 const LEGAL_METADATA: Array<[string, { robots?: unknown }]> = [

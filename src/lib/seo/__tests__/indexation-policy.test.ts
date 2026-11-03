@@ -5,6 +5,8 @@ import {
   INDEX_ROBOTS,
   NOINDEX_ROBOTS,
   HOME_CANONICAL_PATH,
+  FLORICULTURAS_CANONICAL_PATH,
+  INDEXABLE_CANONICAL_PATHS,
   NOINDEX_TAG,
   NOINDEX_TAG_GLOBAL,
 } from "@/lib/seo/indexation-policy";
@@ -76,7 +78,7 @@ describe("getSurfacePolicy — superfícies noindex (fail-closed)", () => {
   }
 });
 
-describe("getSurfacePolicy — home (única exceção)", () => {
+describe("getSurfacePolicy — home (única exceção original)", () => {
   it('"/" → INDEX_ROBOTS e no sitemap', () => {
     const policy = getSurfacePolicy("/");
     expect(policy.robots).toEqual(INDEX_ROBOTS);
@@ -93,5 +95,38 @@ describe("getSurfacePolicy — home (única exceção)", () => {
     const policy = getSurfacePolicy("/#acesso");
     expect(policy.robots).toEqual(INDEX_ROBOTS);
     expect(policy.inSitemap).toBe(true);
+  });
+});
+
+describe("getSurfacePolicy — /floriculturas (segunda superfície aprovada)", () => {
+  it("FLORICULTURAS_CANONICAL_PATH é '/floriculturas'", () => {
+    expect(FLORICULTURAS_CANONICAL_PATH).toBe("/floriculturas");
+  });
+
+  it("expõe exatamente duas superfícies indexáveis aprovadas", () => {
+    expect([...INDEXABLE_CANONICAL_PATHS]).toEqual(["/", "/floriculturas"]);
+  });
+
+  it("path direto → INDEX_ROBOTS e no sitemap", () => {
+    const policy = getSurfacePolicy("/floriculturas");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("barra final normalizada → mesma política", () => {
+    const policy = getSurfacePolicy("/floriculturas/");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("query/fragmento ignorados → mesma política", () => {
+    expect(getSurfacePolicy("/floriculturas?utm=1").inSitemap).toBe(true);
+    expect(getSurfacePolicy("/floriculturas#demo").inSitemap).toBe(true);
+  });
+
+  it("subcaminho não aprovado continua fail-closed", () => {
+    const policy = getSurfacePolicy("/floriculturas/exemplo");
+    expect(policy.robots).toEqual(NOINDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(false);
   });
 });
