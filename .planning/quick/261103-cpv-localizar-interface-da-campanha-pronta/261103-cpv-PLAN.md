@@ -6,8 +6,12 @@ type: plan
 wave: 1
 depends_on: []
 autonomous: false
-status: implemented
+status: complete
 revision: 2
+diff_review: complete
+visual_acceptance: accepted_by_owner_local
+visual_acceptance_date: 2026-11-03
+closure: documentary_complete_with_open_gates
 revision_notes: "Revisão 2 (2026-11-03): gate derivado das condições reais de renderização; marcação es-419 alcança header/breadcrumb e interface fora do recorte recebe lang=pt-BR; homolog exige campanha sem recuperação pendente/ativa; espanhol unificado (¡Copiado! / texto de la publicación); P1 e P2 decididos."
 approval_required: true
 implementation_authorized: true

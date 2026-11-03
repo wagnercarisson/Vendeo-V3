@@ -6,11 +6,16 @@ date: 2026-11-03
 branch: feature/traducao-da-interface-da-campanha-pronta
 execution: local_complete
 gate2: local_complete
-diff_review: not_performed
-visual_acceptance: not_performed
-review: gate2_reported_pending_diff_review_and_visual_acceptance
+diff_review: complete
+diff_review_findings: "0 bloqueantes; O1-O3 Low/Info registradas em evidence/diff-review.md"
+visual_acceptance: accepted_by_owner_local
+visual_acceptance_date: 2026-11-03
+visual_acceptance_scope: "pt-BR e es-419, ambiente local"
+review: accepted_local
+closure: documentary_complete_with_open_gates
 homolog: not_started
 homolog_date: null
+gate3: not_started
 publication: not_started
 publication_date: null
 production_acceptance: not_requested
@@ -34,9 +39,12 @@ alinhada conceitualmente, sem implementação autorizada.
 
 ## Estado da revisão e do aceite
 
-- Os resultados do Gate 2 foram **relatados**, mas o **diff não foi revisado**
-  pelo responsável nesta etapa e **não houve aceite visual**.
-- O **Gate 3 não foi iniciado**. A parada antes dele permanece.
+- **Revisão read-only do diff concluída** em 2026-11-03: **0 achados
+  bloqueantes**; observações O1–O3 (Low/Info) registradas em
+  `evidence/diff-review.md`, sem alteração de código.
+- **Aceite visual local registrado** por relato do responsável, em **pt-BR e
+  es-419**, no ambiente local. Não é aceite de produção e não substitui o Gate 3.
+- **Gate 3 / homolog NÃO iniciados.** A parada antes deles permanece preservada.
 - A spec `ui-base-components` **NÃO está validada** (`openspec validate
   --strict` falha por ausência de `## Purpose`/`## Requirements`; o arquivo usa
   `> **Propósito**`). A falha é **anterior a esta quick**, é registrada
@@ -106,18 +114,24 @@ alinhada conceitualmente, sem implementação autorizada.
   (usa `> **Propósito**`, sem `## Purpose`), registrada separadamente e não
   corrigida por estar fora do recorte.
 
-Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
+Evidências: `evidence/local-gates.md`, `evidence/payload.md`,
+`evidence/diff-review.md` e `evidence/visual-acceptance-local.md`.
 
 ## Limitações e pendências
 
-- **Gate 3 não iniciado.** Nenhum acesso a homolog/produção, sessão, preferência,
-  banco, app em execução, merge, push ou deploy.
+- **Gate 3 / homolog não iniciados.** Nenhum acesso a homolog/produção, sessão,
+  preferência, banco, app em execução, merge, push ou deploy.
+- **Nenhuma validação em produção é declarada.** O aceite é **local** e não
+  autoriza publicação nem smoke.
 - Sem baseline de payload específico: mediu-se apenas a entrega final, sem troca
   de branch ou rebuild retroativo.
 - **`ui-base-components` não está validada** (falha estrutural preexistente);
   permanece registrada separadamente, sem correção implícita.
-- **Diff e aceite visual ainda não revisados** pelo responsável; os gates
-  automatizados não substituem essa revisão.
+- **Revisão do diff concluída sem achados bloqueantes.** Observações não
+  bloqueantes: O1 (alt de fallback sob `lang=""` quando o produto não tem nome),
+  O2 (contêiner `lang="pt-BR"` ao redor da recuperação, sem mudança de
+  espaçamento) e O3 (stub de clipboard não restaurado em teste). Detalhes em
+  `evidence/diff-review.md`; nenhuma alteração de código nesta rodada.
 - Modo de edição e `confirm()` nativo permanecem em pt-BR; o `confirm()` não
   aceita marcação de idioma.
 - Recuperação de copy e feedback de falha/cancelamento permanecem em pt-BR,
@@ -171,8 +185,14 @@ específica. Ele **não** foi executado.
   acionar recuperação, salvar edição, provider pago ou qualquer prova com
   cobrança.
 
-## Próximo gate
+## Fechamento
 
-Gate 3 — homolog existente, com autorização específica. Antes dele, o próximo
-passo é **revisar o diff e este roteiro**. Nenhum resultado desta entrega
-autoriza o Gate 3, publicação ou smoke.
+A quick está **documentalmente encerrada** com:
+- Gate 2 implementado e validado localmente;
+- revisão read-only do diff concluída, sem achados bloqueantes;
+- aceite visual **local** do responsável em pt-BR e es-419.
+
+Permanecem **não executados**: Gate 3/homolog, publicação, smoke de produção e
+validação em produção. O roteiro do Gate 3 acima fica preservado para uma
+autorização específica futura. Nenhum resultado desta quick autoriza publicação
+ou declara produção validada.
