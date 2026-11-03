@@ -13,6 +13,8 @@ gate_b_homolog: pending
 production_release_guard: complete_local
 production_backfill: complete_production
 gate_c_publication: pending_authorization
+branch_head: 9e010265
+final_gates: passed
 ---
 
 # Miniaturas de campanhas — geração e persistência (Gate A)
@@ -135,6 +137,8 @@ Evidência: `evidence/gate-b-production-release.md` (diff, comandos com placehol
 **Investigação read-only do v3 (2026-11-03):** v3 é arte final **aprovada/ativa** e referenciada por `campaigns.storage_path`; v1/v2 foram descartadas; objeto JPEG 1080×1080 (245.151 B). É caso **isolado** (1 campanha com `/v3.jpg`, 0 `/v4.jpg`), mas **legítimo** do fluxo histórico de regeneração (schema 1..3 / RPC `complete_campaign_regeneration`). Menor ajuste recomendado: aceitar `v2.jpg` e `v3.jpg` no contrato de caminho; impacto no gerador automático é nulo no código atual, no backfill é gerar `v3.thumb-v1.webp`, e nos consumidores é automático via `deriveThumbnailPath`. Evidência: `evidence/investigate-v3-REPORT.md` + `investigate-v3.json`.
 
 **Inventário de produção completo (2026-11-03, somente leitura):** reinspeção do v3 ⇒ `would_create`; continuação a partir do cursor do lote 09 até `cursor: null`. **246 campanhas `ready`, 246 paths únicos, 246 `would_create`**, 0 duplicados, 0 ineligible/missing/access/invalid/failed, cursor final `null`. O item v3 anterior foi substituído, sem dupla contagem. Produção não alterada; piloto com escrita continua pendente de autorização. Evidência: `evidence/production-dry-run-FINAL.md` + `production-dry-run-FINAL.json`.
+
+**Gates finais (2026-11-03):** typecheck 0, lint 0, build 0 (95/95), suíte local **7583 passed / 10 skipped / 0 failed** (605 arquivos), `test:scripts` 73/73, `test:gates` exit 0, `git diff --check` limpo, varredura de credenciais/URLs assinadas nas evidências limpa.
 
 **Piloto de produção com escrita (2026-11-03):** 10 campanhas, lote 5, concorrência 2, `--write --confirm-env production`, sem `--after`. **10 `created`**, 0 falhas; WebP 288×288 (12.228–18.920 B), bucket privado, originais/campanhas/créditos intactos (hashes/contagens). Reexecução dos 10 ⇒ **10 `already_exists`**, 0 `created`, hashes idênticos. Restam **236** campanhas; nenhum lote ampliado. Evidência: `evidence/production-write-PILOT.md` + `production-write-pilot-*.json`.
 

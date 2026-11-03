@@ -8,7 +8,10 @@ depends_on: ["261102-qna"]
 implementation: complete_local
 production_backfill: complete_production
 publication: pending_authorization
-commit: pending_this_round
+commit: a6d763c0
+docs_commit: e2499818
+branch_head: 9e010265
+final_gates: passed
 ---
 
 # Miniaturas no dashboard e na listagem — resumo
@@ -28,7 +31,7 @@ Dashboard e listagem passaram a assinar e carregar a miniatura persistida (`.thu
 |---|---|
 | Focados | **79/79** |
 | Regressão relacionada | **155/155** |
-| Suíte local | **7577 passed / 10 skipped / 0 failed** |
+| Suíte local | **7583 passed / 10 skipped / 0 failed** |
 | Typecheck / lint / build | **0 / 0 / 95/95** |
 | `git diff --check` | limpo |
 
