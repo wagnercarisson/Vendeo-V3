@@ -17,6 +17,7 @@ const OTHER = "99999999-9999-4999-8999-999999999999";
 const CAMPAIGN = "22222222-2222-4222-8222-222222222222";
 const OPERATION = "33333333-3333-4333-8333-333333333333";
 const ENDPOINT = "http://127.0.0.1:54321";
+const PROD_ENDPOINT = "https://prod.example.com";
 
 function uuidFor(index: number): string {
   return `22222222-2222-4222-8222-${String(index).padStart(12, "0")}`;
@@ -31,11 +32,11 @@ function candidate(index: number, storeId = STORE): BackfillCandidate {
   };
 }
 
-function context(): ThumbnailContext {
+function context(endpoint = ENDPOINT): ThumbnailContext {
   return {
-    endpoint: ENDPOINT,
+    endpoint,
     uploader: {
-      endpoint: ENDPOINT,
+      endpoint,
       upload: vi.fn(async () => ({ error: null })),
     },
   };
@@ -138,16 +139,115 @@ describe("runBackfill", () => {
     });
   });
 
-  it("homolog/produção permanecem bloqueados nesta quick", async () => {
-    for (const env of ["homolog", "production"] as const) {
-      const deps = fakeDeps();
-      const result = await runBackfill({
-        deps,
-        options: baseOptions({ env, mode: "write", confirmEnv: env }),
-      });
-      expect(result.blockedReason).toBe("target_env_blocked");
-      expect(deps.calls.list).toBe(0);
-    }
+  it("homolog permanece bloqueado e não faz chamadas", async () => {
+    const deps = fakeDeps();
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({
+        env: "homolog",
+        mode: "write",
+        confirmEnv: "homolog",
+        expectedEndpoint: PROD_ENDPOINT,
+        actualEndpoint: PROD_ENDPOINT,
+        context: context(PROD_ENDPOINT),
+      }),
+    });
+    expect(result.blockedReason).toBe("target_env_blocked");
+    expect(deps.calls.list).toBe(0);
+  });
+
+  it("produção em dry-run é permitida com origem exata e não loopback", async () => {
+    const deps = fakeDeps();
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({
+        env: "production",
+        mode: "dry-run",
+        expectedEndpoint: PROD_ENDPOINT,
+        actualEndpoint: PROD_ENDPOINT,
+      }),
+    });
+
+    expect(result.blockedReason).toBeUndefined();
+    expect(deps.calls.list).toBe(1);
+  });
+
+  it("produção com write confirmado é permitida", async () => {
+    const deps = fakeDeps();
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({
+        env: "production",
+        mode: "write",
+        confirmEnv: "production",
+        expectedEndpoint: PROD_ENDPOINT,
+        actualEndpoint: PROD_ENDPOINT,
+        context: context(PROD_ENDPOINT),
+      }),
+    });
+
+    expect(result.blockedReason).toBeUndefined();
+    expect(deps.calls.list).toBe(1);
+  });
+
+  it("produção com write sem confirmação bloqueia antes de chamadas", async () => {
+    const deps = fakeDeps();
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({
+        env: "production",
+        mode: "write",
+        confirmEnv: null,
+        expectedEndpoint: PROD_ENDPOINT,
+        actualEndpoint: PROD_ENDPOINT,
+        context: context(PROD_ENDPOINT),
+      }),
+    });
+
+    expect(result.blockedReason).toBe("write_not_confirmed");
+    expect(deps.calls.list).toBe(0);
+  });
+
+  it("produção em loopback bloqueia antes de chamadas", async () => {
+    const deps = fakeDeps();
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({
+        env: "production",
+        expectedEndpoint: ENDPOINT,
+        actualEndpoint: ENDPOINT,
+      }),
+    });
+
+    expect(result.blockedReason).toBe("production_loopback_blocked");
+    expect(deps.calls.list).toBe(0);
+  });
+
+  it("produção com endpoint divergente bloqueia antes de chamadas", async () => {
+    const deps = fakeDeps();
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({
+        env: "production",
+        expectedEndpoint: PROD_ENDPOINT,
+        actualEndpoint: "https://other.example.com",
+      }),
+    });
+    expect(result.blockedReason).toBe("endpoint_mismatch");
+    expect(deps.calls.list).toBe(0);
+  });
+
+  it("local exige loopback", async () => {
+    const deps = fakeDeps();
+    const result = await runBackfill({
+      deps,
+      options: baseOptions({
+        expectedEndpoint: PROD_ENDPOINT,
+        actualEndpoint: PROD_ENDPOINT,
+      }),
+    });
+    expect(result.blockedReason).toBe("local_requires_loopback");
+    expect(deps.calls.list).toBe(0);
   });
 
   it("write exige confirmação e contexto compatível", async () => {

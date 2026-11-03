@@ -23,6 +23,7 @@ import {
 } from "../../src/lib/campaign/thumbnail/backfill-selection";
 import {
   runBackfill,
+  validateBackfillPreflight,
   type BackfillCandidate,
   type BackfillDeps,
   type BackfillEnv,
@@ -66,14 +67,14 @@ Uso:
   tsx scripts/campaign-thumbnails/backfill.ts [opções]
 
 Ambiente:
-  --env <local|homolog|production>  Obrigatório. Nesta quick, somente local.
+  --env <local|homolog|production>  Obrigatório. Homolog permanece bloqueado.
   --expected-url <origem>           Obrigatório. Protocolo+host+porta exatos.
   --env-file <path>                 Default: ${DEFAULT_ENV_FILE}
   --confirm-env <env>               Obrigatório com --write; igual ao --env.
 
 Modo:
   --dry-run                         Padrão. Lê e classifica; NÃO gera nem envia.
-  --write                           Preenche miniaturas ausentes (somente local).
+  --write                           Preenche miniaturas ausentes (local ou produção).
 
 Escopo:
   --store <uuid>                    Repetível. Filtra por loja.
@@ -87,8 +88,11 @@ Escopo:
   --verbose                         Loga cada item no stderr.
 
 Segurança:
-  - local = somente host loopback E origem exata de --expected-url;
-  - homolog/produção bloqueados nesta quick (exit 2);
+  - origem exata de --expected-url (protocolo+host+porta) é obrigatória;
+  - local exige loopback; produção NÃO aceita loopback;
+  - homolog permanece bloqueado nesta autorização (exit 2);
+  - escrita exige --write E --confirm-env igual ao --env;
+  - guardas são avaliadas antes de criar client/rede (zero chamadas externas);
   - miniaturas existentes são ignoradas (idempotente);
   - timeout de upload não prova ausência: a próxima execução confere antes.
 
@@ -336,15 +340,6 @@ function makeDeps(client: SupabaseClient): BackfillDeps {
   };
 }
 
-function isLoopbackOrigin(endpoint: string): boolean {
-  try {
-    const url = new URL(endpoint);
-    return ["127.0.0.1", "localhost", "[::1]", "::1"].includes(url.hostname);
-  } catch {
-    return false;
-  }
-}
-
 export async function main(argv = process.argv.slice(2)): Promise<number> {
   let args: ParsedArgs;
   try {
@@ -394,8 +389,17 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     return 3;
   }
 
-  if (args.env === "local" && !isLoopbackOrigin(actualEndpoint)) {
-    console.error("guard: --env local exige origem loopback");
+  const mode = args.write ? "write" : "dry-run";
+  const preflight = validateBackfillPreflight({
+    mode,
+    env: args.env,
+    expectedEndpoint,
+    actualEndpoint,
+    confirmEnv: args.confirmEnv ?? null,
+  });
+  if (preflight) {
+    // Antes de criar qualquer client: zero chamadas externas.
+    console.error(`guard: ${preflight}`);
     return 2;
   }
 
@@ -405,10 +409,6 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
 
   let context: ThumbnailContext | null = null;
   if (args.write) {
-    if (args.env !== "local") {
-      console.error("guard: --write bloqueado fora de local nesta quick");
-      return 2;
-    }
     try {
       const uploader = createTimedSupabaseUploader({ url, key });
       context = { endpoint: uploader.endpoint, uploader };

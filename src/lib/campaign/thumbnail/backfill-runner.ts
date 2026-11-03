@@ -102,17 +102,59 @@ export interface BackfillResult {
 const MAX_CONCURRENCY = 4;
 const MAX_LIMIT = 500;
 
-function validateGuard(options: BackfillOptions): string | null {
-  if (options.env === "homolog" || options.env === "production") {
-    return "target_env_blocked";
+function isLoopbackEndpoint(endpoint: string): boolean {
+  try {
+    return ["127.0.0.1", "localhost", "[::1]", "::1"].includes(
+      new URL(endpoint).hostname,
+    );
+  } catch {
+    return false;
   }
-  const expected = normalizeEndpoint(options.expectedEndpoint);
-  const actual = normalizeEndpoint(options.actualEndpoint);
+}
+
+/**
+ * Guardas independentes de contexto/rede. O CLI chama isto ANTES de criar
+ * qualquer client, garantindo zero chamadas externas quando bloqueado.
+ */
+export interface BackfillGuardInput {
+  mode: "dry-run" | "write";
+  env: BackfillEnv;
+  expectedEndpoint: string;
+  actualEndpoint: string;
+  confirmEnv?: string | null;
+}
+
+export function validateBackfillPreflight(
+  input: BackfillGuardInput,
+): string | null {
+  // Homolog permanece fora desta autorização.
+  if (input.env === "homolog") return "target_env_blocked";
+
+  const expected = normalizeEndpoint(input.expectedEndpoint);
+  const actual = normalizeEndpoint(input.actualEndpoint);
   if (!expected || !actual || expected !== actual) {
     return "endpoint_mismatch";
   }
+
+  if (input.env === "production" && isLoopbackEndpoint(actual)) {
+    return "production_loopback_blocked";
+  }
+  if (input.env === "local" && !isLoopbackEndpoint(actual)) {
+    return "local_requires_loopback";
+  }
+
+  if (input.mode === "write" && input.confirmEnv !== input.env) {
+    return "write_not_confirmed";
+  }
+  return null;
+}
+
+function validateGuard(options: BackfillOptions): string | null {
+  const preflight = validateBackfillPreflight(options);
+  if (preflight) return preflight;
+
+  const actual = normalizeEndpoint(options.actualEndpoint)!;
   if (options.mode === "write") {
-    if (options.confirmEnv !== options.env) return "write_not_confirmed";
     if (!options.context) return "thumbnail_context_missing";
     const contextEndpoint = normalizeEndpoint(options.context.endpoint);
     const uploaderEndpoint = normalizeEndpoint(options.context.uploader.endpoint);
