@@ -5,6 +5,7 @@
 **Branch/HEAD:** `feature/traducao-da-listagem-de-novidades` / `5206147c`
 **Ambiente:** app `http://127.0.0.1:3000` (build atual `tLGQjcPHxHdtHGx2mxsdu`), Supabase `http://127.0.0.1:57781`, banco `127.0.0.1:57782/postgres`.
 **Resultado:** **PASS com limitações registradas.** Sem produção, SQL de escrita, migration, geração, merge, push ou deploy.
+**Produção:** aceite posterior informado pelo responsável em `production-acceptance.md`; o agente não executou smoke de produção.
 
 ## Preparação
 

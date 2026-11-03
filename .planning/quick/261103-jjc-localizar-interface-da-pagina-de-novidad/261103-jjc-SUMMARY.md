@@ -3,13 +3,15 @@ status: complete
 phase: quick
 plan: 261103-jjc
 date: 2026-11-03
-branch: feature/traducao-da-listagem-de-novidades
+branch: feature/traducao-da-listagem-de-novidades (integrada e enviada; worktree atual em main)
 execution: local_complete
-review: pending
+review: accepted_by_owner
 homolog: executed_pass_with_limitations
 homolog_date: 2026-11-03
-publication: not_authorized
-production_acceptance: pending
+publication: executed_by_responsible
+publication_date: 2026-11-03
+production_acceptance: confirmed_reported_by_owner
+agent_production_smoke: not_executed
 sync_archive: not_executed
 ---
 
@@ -94,15 +96,28 @@ Evidências: `evidence/local-gates.md` e `evidence/payload.md`.
 - Desktop/mobile sem overflow; payload em `evidence/payload.md`.
 - Sessão descartada (`/auth/signout`, 401) e perfil temporário removido.
 
+## Aceite de produção (relato do responsável)
+
+O responsável informou em 2026-11-03:
+
+- quick **aprovada**;
+- **merge, push e deploy realizados**;
+- **textos e navegação validados em produção**;
+- **aceite visual** aprovado anteriormente no homolog (desktop/mobile).
+
+**Distinção de autoria:** o agente **não executou** smoke, navegação ou medição em produção. Não são declarados como testados em produção download, payload, leitor de tela ou cenários não citados. As provas de interface permanecem em `evidence/gate3-homolog.md` e `gate3-results.json`. Nenhum SHA/deployment foi informado.
+
+**Encerramento:** quick **261103-jjc concluída**. O main spec `changelog-ui` já contempla a entrega; **não há change OpenSpec própria**, portanto `sync`/`archive` não foram executados. Nenhuma fase F57.5/F57.6 ou REQ-ID foi criada.
+
 ## Artefatos
 
 - Plano: `.planning/quick/261103-jjc-localizar-interface-da-pagina-de-novidad/261103-jjc-PLAN.md`
 - Evidências: `.planning/quick/261103-jjc-localizar-interface-da-pagina-de-novidad/evidence/`
-  - `gate3-homolog.md`, `gate3-results.json`, `local-gates.md`, `payload.md`
+  - `gate3-homolog.md`, `gate3-results.json`, `production-acceptance.md`, `local-gates.md`, `payload.md`
   - capturas `gate3-novidades-pt-desktop.png`, `gate3-novidades-es-desktop.png`, `gate3-novidades-pt-mobile.png`, `gate3-novidades-es-mobile.png`, `gate3-landing-pt-modal.png`
 - Resumo: este arquivo.
 
 ## Próximo gate
 
-Revisão do usuário/Codex e aceite visual do Gate 3. Publicação e smoke de produção
-não iniciados; nenhum push, merge ou deploy foi realizado.
+Nenhum gate automático pendente. Publicação e validação de textos/navegação em
+produção foram informadas pelo responsável; o agente não executou smoke de produção.
