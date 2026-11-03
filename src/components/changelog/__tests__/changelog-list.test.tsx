@@ -49,6 +49,13 @@ describe("ChangelogList", () => {
     const html = renderToString(<ChangelogList entries={[]} />);
     expect(html).toContain("Nenhuma novidade por enquanto");
   });
+
+  it("aceita emptyLabel localizado sem alterar o comportamento", () => {
+    const html = renderToString(
+      <ChangelogList entries={[]} emptyLabel="Aún no hay novedades." />,
+    );
+    expect(html).toContain("Aún no hay novedades.");
+  });
 });
 
 describe("ChangelogCard", () => {
@@ -71,5 +78,39 @@ describe("ChangelogCard", () => {
     expect(html).toContain("<ul>");
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>alert");
+  });
+
+  it("renderiza rótulos es-419 preservando editorial, milestone e data", () => {
+    const entry = makeEntry(
+      {
+        title: "Título editorial em português",
+        date: "2026-07-31",
+        milestone: "v1.5",
+        category: "improvement",
+        importance: "major",
+      },
+      "## O que mudou\n\nConteúdo editorial preservado.",
+    );
+
+    const html = renderToString(
+      <ChangelogCard
+        entry={entry}
+        labels={{
+          categoryFeature: "Nueva funcionalidad",
+          categoryImprovement: "Mejora",
+          categoryFix: "Corrección",
+          important: "Importante",
+        }}
+      />,
+    );
+
+    expect(html).toContain("Mejora");
+    expect(html).toContain("Importante");
+    expect(html).toContain("v1.5");
+    expect(html).toContain('lang=""');
+    expect(html).toContain('lang="pt-BR"');
+    expect(html).toContain("Título editorial em português");
+    expect(html).toContain("Conteúdo editorial preservado.");
+    expect(html).toContain("31/07/2026");
   });
 });

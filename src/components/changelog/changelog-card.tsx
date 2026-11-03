@@ -6,10 +6,27 @@ import type {
   ChangelogEntry,
 } from "@/lib/changelog/types";
 
-const CATEGORY_LABEL: Record<ChangelogCategory, string> = {
-  feature: "Nova funcionalidade",
-  improvement: "Melhoria",
-  fix: "Correção",
+const CATEGORY_KEY: Record<
+  ChangelogCategory,
+  keyof ChangelogCardLabels
+> = {
+  feature: "categoryFeature",
+  improvement: "categoryImprovement",
+  fix: "categoryFix",
+};
+
+export interface ChangelogCardLabels {
+  categoryFeature: string;
+  categoryImprovement: string;
+  categoryFix: string;
+  important: string;
+}
+
+const DEFAULT_LABELS: ChangelogCardLabels = {
+  categoryFeature: "Nova funcionalidade",
+  categoryImprovement: "Melhoria",
+  categoryFix: "Correção",
+  important: "Importante",
 };
 
 const CATEGORY_BADGE_CLASSES: Record<ChangelogCategory, string> = {
@@ -20,10 +37,12 @@ const CATEGORY_BADGE_CLASSES: Record<ChangelogCategory, string> = {
 
 interface ChangelogCardProps {
   entry: ChangelogEntry;
+  labels?: Partial<ChangelogCardLabels>;
 }
 
-export function ChangelogCard({ entry }: ChangelogCardProps) {
+export function ChangelogCard({ entry, labels }: ChangelogCardProps) {
   const { frontmatter } = entry;
+  const text = { ...DEFAULT_LABELS, ...labels };
 
   return (
     <Card className="p-6">
@@ -31,16 +50,19 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
         <span
           className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium font-heading ${CATEGORY_BADGE_CLASSES[frontmatter.category]}`}
         >
-          {CATEGORY_LABEL[frontmatter.category]}
+          {text[CATEGORY_KEY[frontmatter.category]]}
         </span>
         {frontmatter.milestone && (
-          <span className="text-xs text-text-muted font-body">
+          <span lang="" className="text-xs text-text-muted font-body">
             {frontmatter.milestone}
           </span>
         )}
       </div>
 
-      <h2 className="font-heading text-lg font-semibold text-text-primary">
+      <h2
+        lang="pt-BR"
+        className="font-heading text-lg font-semibold text-text-primary"
+      >
         {frontmatter.title}
       </h2>
 
@@ -50,12 +72,13 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
         </span>
         {frontmatter.importance === "major" && (
           <span className="text-xs font-semibold text-accent-green">
-            Importante
+            {text.important}
           </span>
         )}
       </div>
 
       <div
+        lang="pt-BR"
         className="space-y-3 font-body text-sm text-text-secondary [&_h2]:font-heading [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-text-primary [&_ul]:list-disc [&_ul]:pl-5 [&_li]:text-text-secondary"
         dangerouslySetInnerHTML={{ __html: renderMarkdown(entry.body) }}
       />
