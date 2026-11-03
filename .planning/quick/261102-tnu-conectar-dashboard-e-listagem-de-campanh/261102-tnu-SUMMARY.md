@@ -42,14 +42,14 @@ Dashboard e listagem passaram a assinar e carregar a miniatura persistida (`.thu
 ## Limitações
 
 - Visual em pt-BR; es-419 não foi alternado visualmente (exigiria mudar preferência); testes de localização existentes verdes.
-- Localmente só há campanhas legadas; v2/novo fluxo cobertos por testes de derivação.
-- Evidência local; produção não preenchida/validada.
-- **Sem commit** nesta rodada.
+- Localmente só há campanhas legadas; v2/v3 e novo fluxo cobertos por testes de derivação do contrato central.
+- Evidência de UI **local**; produção recebeu as **246/246** miniaturas via `261102-qna`, mas a UI desta quick ainda não foi validada em produção (publicação pendente).
+- **Versionado:** código em `a6d763c0`; documentação em `e2499818`; tracking final em `48d92e18`.
 
 ## Sequência
 
 1. Implementação local — concluída.
-2. Liberação controlada do script para produção — preparada na continuação operacional da `261102-qna` (`evidence/gate-b-production-release.md`); ainda sem acesso remoto.
-3. Backfill remoto — pendente de autorização.
-4. Publicação das duas quicks juntas — pendente.
+2. Liberação controlada do script para produção — preparada e executada na continuação operacional da `261102-qna` (`evidence/gate-b-production-release.md`).
+3. Backfill remoto — **concluído**: 246/246 miniaturas, 0 falhas; 0 campanhas novas na varredura final.
+4. Publicação das duas quicks juntas — pendente de autorização separada.
 5. Reexecução idempotente se necessário.
