@@ -11,19 +11,22 @@ revision: 2
 diff_review: complete
 visual_acceptance: accepted_by_owner_local
 visual_acceptance_date: 2026-11-03
-closure: documentary_complete_with_open_gates
+closure: complete
+production_acceptance: confirmed_reported_by_owner
+production_acceptance_date: 2026-11-03
 revision_notes: "Revisão 2 (2026-11-03): gate derivado das condições reais de renderização; marcação es-419 alcança header/breadcrumb e interface fora do recorte recebe lang=pt-BR; homolog exige campanha sem recuperação pendente/ativa; espanhol unificado (¡Copiado! / texto de la publicación); P1 e P2 decididos."
 approval_required: true
 implementation_authorized: true
 implementation_status: complete
 implementation_date: 2026-11-03
 validation_homolog_authorized: false
-homolog_status: not_started
-publication_authorized: false
-publication_status: not_started
-production_acceptance: not_requested
+homolog_status: not_executed_by_agent
+gate3: not_executed_by_agent
+publication_authorized: true
+publication_status: executed_reported_by_owner
+publication_date: 2026-11-03
 agent_production_smoke: not_executed
-sync_archive: not_executed
+sync_archive: not_applicable_main_specs_updated_directly
 base_sha: cfb729b38eed1d9fde5d08a7fcf763f2e6aef209
 head_at_planning: 62c2f341d4dc1314bde420b1a70ad3adf55419a7
 branch: feature/traducao-da-interface-da-campanha-pronta
@@ -507,14 +510,23 @@ Revisados e **sem alteração**: `campaign-download-route`, `campaign-approval-g
 
 Nenhum gate autoriza o seguinte. Esta etapa **não** implementa, não acessa homolog/produção, não cria sessão, não altera preferências, não inicia/reinicia app, não instala dependências, não faz push/merge/deploy e não cria commit.
 
+### Publicação e aceite de produção (relato do responsável)
+
+- Em **2026-11-03**, o responsável informou **merge, push e deploy realizados** e **conteúdo validado em produção nos dois idiomas**.
+- **Autoria:** resultado **relatado pelo responsável**. O agente **não** executou smoke de produção, **não** acessou homolog/produção e **não** validou conteúdo em produção.
+- **Cronologia preservada:** implementação e gates locais → revisão read-only do diff → aceite visual local (pt-BR/es-419) → publicação pelo responsável → aceite de produção relatado. A validação local ocorreu **antes** da publicação.
+- **Gate 3 formal NÃO executado pelo agente.** A decisão registrada foi seguir com validação manual e aceite posterior em produção; isso **não** converte o Gate 3 em PASS.
+- **Sync/archive não aplicável:** os main specs foram atualizados diretamente nesta quick.
+- Limitações conhecidas e observações O1–O3 preservadas como registro, sem tratá-las como implementação pendente.
+
 ---
 
 ## 11. Artefatos e estado do Git
 
 - Plano: `.planning/quick/261103-cpv-localizar-interface-da-campanha-pronta/261103-cpv-PLAN.md`
-- Evidence (a criar na execução): `.planning/quick/261103-cpv-localizar-interface-da-campanha-pronta/evidence/`
-- Summary (a criar na execução): `261103-cpv-SUMMARY.md`
-- Branch: `feature/traducao-da-interface-da-campanha-pronta` (base `origin/main` `cfb729b3`; inclui o commit documental `62c2f341` da quick `261103-jjc`, preservado).
-- `ROADMAP.md`/`REQUIREMENTS.md`/`STATE.md`: **não alterados** neste planejamento; a linha de quick em `STATE.md` será adicionada somente após execução.
+- Evidence: `.planning/quick/261103-cpv-localizar-interface-da-campanha-pronta/evidence/` (`local-gates`, `payload`, `diff-review`, `visual-acceptance-local`, `production-acceptance`).
+- Summary: `261103-cpv-SUMMARY.md`
+- Branch/merge: implementação na `feature/traducao-da-interface-da-campanha-pronta`; **merge e push realizados pelo responsável**; fechamento documental final na `main`, sem push automático.
+- `STATE.md`: linha da quick atualizada para concluída e aceita em produção (relato do responsável).
 - Revisão 2 (2026-11-03): incorpora os quatro ajustes solicitados — gate derivado das condições reais de renderização; marcação es-419 no contêiner do header/breadcrumb e `lang="pt-BR"` para interface não traduzida; seleção segura de campanha no homolog (sem recuperação pendente/ativa); espanhol unificado em `¡Copiado!`/`texto de la publicación`. P1 e P2 decididos; nenhuma decisão pendente.
-- Nenhum código, teste, catálogo, spec, campanha, preferência, banco, dependência, push ou deploy foi tocado nesta etapa. Nenhum commit foi criado.
+- **Fechamento:** documentação concluída. Nenhum código, teste, catálogo ou spec foi alterado nesta etapa; nenhum ambiente foi acessado; nenhum push automático foi realizado.

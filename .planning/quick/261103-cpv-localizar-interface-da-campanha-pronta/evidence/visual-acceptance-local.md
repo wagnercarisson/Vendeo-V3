@@ -21,3 +21,7 @@ copiar/baixar, aviso fixo e conteúdo preservado), conforme o recorte da quick.
 - O aceite não reabre as limitações registradas (`ui-base-components` não
   validada, lint sem cobertura TS, ausência de baseline de payload, O1–O3 da
   revisão do diff).
+
+**Posteriormente**, o responsável relatou merge, push, deploy e validação do
+conteúdo em produção nos dois idiomas. Esse registro está em
+`production-acceptance.md` e não altera a natureza local deste aceite.

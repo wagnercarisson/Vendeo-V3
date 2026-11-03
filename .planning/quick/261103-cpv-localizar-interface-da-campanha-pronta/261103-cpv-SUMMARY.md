@@ -3,7 +3,7 @@ status: complete
 phase: quick
 plan: 261103-cpv
 date: 2026-11-03
-branch: feature/traducao-da-interface-da-campanha-pronta
+branch: feature/traducao-da-interface-da-campanha-pronta (merge/push pelo responsável; fechamento na main)
 execution: local_complete
 gate2: local_complete
 diff_review: complete
@@ -12,15 +12,16 @@ visual_acceptance: accepted_by_owner_local
 visual_acceptance_date: 2026-11-03
 visual_acceptance_scope: "pt-BR e es-419, ambiente local"
 review: accepted_local
-closure: documentary_complete_with_open_gates
-homolog: not_started
+closure: complete
+homolog: not_executed_by_agent
 homolog_date: null
-gate3: not_started
-publication: not_started
-publication_date: null
-production_acceptance: not_requested
+gate3: not_executed_by_agent
+publication: executed_reported_by_owner
+publication_date: 2026-11-03
+production_acceptance: confirmed_reported_by_owner
+production_acceptance_date: 2026-11-03
 agent_production_smoke: not_executed
-sync_archive: not_executed
+sync_archive: not_applicable_main_specs_updated_directly
 ---
 
 # Quick 261103-cpv — localizar a interface da campanha pronta
@@ -39,17 +40,27 @@ alinhada conceitualmente, sem implementação autorizada.
 
 ## Estado da revisão e do aceite
 
+**Cronologia preservada:** implementação e gates locais → revisão read-only do
+diff → aceite visual local (pt-BR/es-419) → publicação pelo responsável →
+aceite de produção relatado.
+
 - **Revisão read-only do diff concluída** em 2026-11-03: **0 achados
   bloqueantes**; observações O1–O3 (Low/Info) registradas em
   `evidence/diff-review.md`, sem alteração de código.
 - **Aceite visual local registrado** por relato do responsável, em **pt-BR e
-  es-419**, no ambiente local. Não é aceite de produção e não substitui o Gate 3.
-- **Gate 3 / homolog NÃO iniciados.** A parada antes deles permanece preservada.
+  es-419**, no ambiente local.
+- **Gate 3 formal NÃO executado pelo agente.** A decisão registrada foi seguir
+  com validação manual e aceite posterior em produção; isso **não** converte o
+  Gate 3 em PASS.
+- **Publicação e aceite de produção relatados pelo responsável** em 2026-11-03:
+  merge, push e deploy realizados; conteúdo validado em produção nos dois
+  idiomas. O agente **não** executou smoke de produção, **não** acessou
+  homolog/produção e **não** validou conteúdo em produção.
 - A spec `ui-base-components` **NÃO está validada** (`openspec validate
   --strict` falha por ausência de `## Purpose`/`## Requirements`; o arquivo usa
   `> **Propósito**`). A falha é **anterior a esta quick**, é registrada
   separadamente e **não** será corrigida implicitamente nem ampliará o escopo.
-- Nenhum merge, push, deploy ou acesso a homolog/produção foi realizado.
+- **Sync/archive não aplicável:** os main specs foram atualizados diretamente.
 
 ## Entregue
 
@@ -115,14 +126,17 @@ alinhada conceitualmente, sem implementação autorizada.
   corrigida por estar fora do recorte.
 
 Evidências: `evidence/local-gates.md`, `evidence/payload.md`,
-`evidence/diff-review.md` e `evidence/visual-acceptance-local.md`.
+`evidence/diff-review.md`, `evidence/visual-acceptance-local.md` e
+`evidence/production-acceptance.md`.
 
 ## Limitações e pendências
 
-- **Gate 3 / homolog não iniciados.** Nenhum acesso a homolog/produção, sessão,
-  preferência, banco, app em execução, merge, push ou deploy.
-- **Nenhuma validação em produção é declarada.** O aceite é **local** e não
-  autoriza publicação nem smoke.
+- **Gate 3 formal não executado pelo agente.** A decisão registrada foi seguir
+  com validação manual e aceite posterior em produção; não é PASS de Gate 3.
+- **Publicação e aceite de produção são relatos do responsável** (merge, push,
+  deploy e validação do conteúdo nos dois idiomas). O agente **não** executou
+  smoke de produção, **não** acessou homolog/produção e **não** declara validação
+  de produção como execução própria.
 - Sem baseline de payload específico: mediu-se apenas a entrega final, sem troca
   de branch ou rebuild retroativo.
 - **`ui-base-components` não está validada** (falha estrutural preexistente);
@@ -136,13 +150,12 @@ Evidências: `evidence/local-gates.md`, `evidence/payload.md`,
   aceita marcação de idioma.
 - Recuperação de copy e feedback de falha/cancelamento permanecem em pt-BR,
   marcados com `lang="pt-BR"`.
-- Homolog deve escolher campanha pronta **sem recuperação pendente/ativa**
-  (`newFlow.recovery` nulo ou `concluida`); se não houver exemplo seguro,
-  registrar limitação e usar os testes automatizados.
+- O roteiro do Gate 3 permanece registrado abaixo, mas **não foi executado**.
 - Suíte global completa e integrações PostgreSQL/Produto 1:1 não executadas; não
   são gates desta quick.
 - Nenhuma prova com geração, aprovação, recuperação, edição de copy ou cobrança
   foi executada.
+- **Sync/archive não aplicável:** os main specs foram atualizados diretamente.
 
 ## Roteiro do Gate 3 (para revisão, NÃO executado)
 
@@ -187,12 +200,23 @@ específica. Ele **não** foi executado.
 
 ## Fechamento
 
-A quick está **documentalmente encerrada** com:
-- Gate 2 implementado e validado localmente;
-- revisão read-only do diff concluída, sem achados bloqueantes;
-- aceite visual **local** do responsável em pt-BR e es-419.
+A quick **261103-cpv está concluída e aceita em produção** conforme relato do
+responsável, preservando a cronologia:
 
-Permanecem **não executados**: Gate 3/homolog, publicação, smoke de produção e
-validação em produção. O roteiro do Gate 3 acima fica preservado para uma
-autorização específica futura. Nenhum resultado desta quick autoriza publicação
-ou declara produção validada.
+1. implementação e gates locais;
+2. revisão read-only do diff, sem achados bloqueantes;
+3. aceite visual **local** em pt-BR e es-419;
+4. **merge, push e deploy realizados pelo responsável**;
+5. **conteúdo validado em produção nos dois idiomas**, conforme relato do
+   responsável.
+
+O **Gate 3 formal não foi executado pelo agente**. A decisão registrada foi
+seguir com validação manual e aceite posterior em produção; isso **não** é
+declarado como PASS de Gate 3. O agente **não** executou smoke de produção,
+**não** acessou homolog/produção e **não** valida conteúdo em produção por conta
+própria. Não são declarados testes específicos adicionais além do que foi
+relatado.
+
+Limitações conhecidas e observações O1–O3 permanecem registradas como
+conhecimento, sem tratá-las como implementação pendente. **Sync/archive não
+aplicável:** os main specs foram atualizados diretamente nesta quick.
