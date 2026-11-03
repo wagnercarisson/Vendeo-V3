@@ -1,0 +1,52 @@
+{
+  "origin": "http://127.0.0.1:57781",
+  "generatedAt": "2026-11-02T23:54:33.801Z",
+  "inventory": {
+    "totalReady": 67,
+    "readyWithStoragePath": 67,
+    "dbProblems": []
+  },
+  "reports": {
+    "files": [
+      "gate-b-dry-run-01.json",
+      "gate-b-dry-run-02.json",
+      "gate-b-dry-run-03.json",
+      "gate-b-dry-run-04.json"
+    ],
+    "counters": {
+      "seen": 67,
+      "eligible": 67,
+      "ineligible": 0,
+      "wouldCreate": 67,
+      "created": 0,
+      "alreadyExists": 0,
+      "missingOriginal": 0,
+      "accessError": 0,
+      "invalidFormat": 0,
+      "failed": 0
+    },
+    "items": 67,
+    "uniquePaths": 67,
+    "duplicatePaths": [],
+    "cursors": [
+      "2026-07-20T01:10:12.249074+00:00|748a7b29-5bbf-4d4a-adfd-66aea6fb19c1",
+      "2026-08-14T21:33:43.321887+00:00|5bfe8cc1-e516-416e-9814-20f32ef054c4",
+      "2026-10-18T00:19:05.569938+00:00|50d66249-9bba-45f3-a9c5-9379d2e6ce33",
+      null
+    ],
+    "cursorsWithMicroseconds": 3,
+    "finalCursor": null
+  },
+  "checks": {
+    "coverageMatches": true,
+    "reportProblems": [],
+    "secretLeak": false,
+    "samplePaths": [
+      "48b212f8-2b0f-4679-b553-122a601bacac/c5dbccd2-419a-4019-8617-06ac2569f880.jpg",
+      "48b212f8-2b0f-4679-b553-122a601bacac/4c34d320-ed68-4864-acae-6d1adfc07c82.jpg",
+      "48b212f8-2b0f-4679-b553-122a601bacac/ee68456a-94b0-49c3-bafa-b8100ef2d512.jpg",
+      "48b212f8-2b0f-4679-b553-122a601bacac/5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5.jpg",
+      "48b212f8-2b0f-4679-b553-122a601bacac/91aee995-b6a3-45bd-92d6-5419f725ad88.jpg"
+    ]
+  }
+}

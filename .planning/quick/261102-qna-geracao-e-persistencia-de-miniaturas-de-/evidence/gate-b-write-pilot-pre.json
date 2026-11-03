@@ -1,0 +1,199 @@
+{
+  "phase": "pre",
+  "origin": "http://127.0.0.1:57781",
+  "generatedAt": "2026-11-02T23:57:16.186Z",
+  "campaigns": [
+    {
+      "id": "4c34d320-ed68-4864-acae-6d1adfc07c82",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/4c34d320-ed68-4864-acae-6d1adfc07c82.jpg",
+      "updated_at": "2026-07-12T16:20:27.530372+00:00",
+      "product_name": "Pão caseiro kg"
+    },
+    {
+      "id": "5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5.jpg",
+      "updated_at": "2026-07-13T15:24:58.590651+00:00",
+      "product_name": "Bolo de maçã (fatia)"
+    },
+    {
+      "id": "748a7b29-5bbf-4d4a-adfd-66aea6fb19c1",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/748a7b29-5bbf-4d4a-adfd-66aea6fb19c1.jpg",
+      "updated_at": "2026-07-20T01:11:18.945816+00:00",
+      "product_name": "Pão Francês Kg"
+    },
+    {
+      "id": "76c1751e-80b4-442f-ac52-38b23e04cdf2",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/76c1751e-80b4-442f-ac52-38b23e04cdf2.jpg",
+      "updated_at": "2026-07-17T20:08:40.93962+00:00",
+      "product_name": "Biscoito de Polvilho João & Maria 100g"
+    },
+    {
+      "id": "91aee995-b6a3-45bd-92d6-5419f725ad88",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/91aee995-b6a3-45bd-92d6-5419f725ad88.jpg",
+      "updated_at": "2026-07-14T16:31:32.760222+00:00",
+      "product_name": "Kit Dermafeme c/2un"
+    },
+    {
+      "id": "bb4bf598-b359-423e-9e4d-91589d66a927",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/bb4bf598-b359-423e-9e4d-91589d66a927.jpg",
+      "updated_at": "2026-07-17T20:59:08.175362+00:00",
+      "product_name": "Sonho Purapan 2k (congelado)"
+    },
+    {
+      "id": "c5dbccd2-419a-4019-8617-06ac2569f880",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/c5dbccd2-419a-4019-8617-06ac2569f880.jpg",
+      "updated_at": "2026-07-10T20:43:03.030565+00:00",
+      "product_name": "Pão Francês Kg"
+    },
+    {
+      "id": "e937155b-5126-4f42-af10-42c97148712d",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/e937155b-5126-4f42-af10-42c97148712d.jpg",
+      "updated_at": "2026-07-16T19:57:41.318124+00:00",
+      "product_name": "Pão Francês Kg"
+    },
+    {
+      "id": "ee68456a-94b0-49c3-bafa-b8100ef2d512",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/ee68456a-94b0-49c3-bafa-b8100ef2d512.jpg",
+      "updated_at": "2026-07-13T12:05:55.872383+00:00",
+      "product_name": "Leite Aurora 1l integral "
+    },
+    {
+      "id": "f8be1eef-9d00-4ab4-84b6-4522113a7324",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/f8be1eef-9d00-4ab4-84b6-4522113a7324.jpg",
+      "updated_at": "2026-07-17T20:03:21.454427+00:00",
+      "product_name": "Pão de Hambúrguer (pacote c/5)"
+    }
+  ],
+  "credits": [],
+  "creditTransactionsCount": 75,
+  "bucketPublic": false,
+  "storeIds": [
+    "undefined",
+    "48b212f8-2b0f-4679-b553-122a601bacac"
+  ],
+  "originals": {
+    "c5dbccd2-419a-4019-8617-06ac2569f880": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/c5dbccd2-419a-4019-8617-06ac2569f880.jpg",
+      "bytes": 265862,
+      "sha256": "fa6fc0b86ab3a4a0bdcbe53a04568c044d95e7bc069381ddcfc19864ebcb9c1a",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "4c34d320-ed68-4864-acae-6d1adfc07c82": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/4c34d320-ed68-4864-acae-6d1adfc07c82.jpg",
+      "bytes": 299481,
+      "sha256": "4645035e2131b59ac53a42ec3d5e1d8d74262b0726258111a9fe97a602f131d5",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "ee68456a-94b0-49c3-bafa-b8100ef2d512": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/ee68456a-94b0-49c3-bafa-b8100ef2d512.jpg",
+      "bytes": 240415,
+      "sha256": "9b6c7cea67f23527de34782d5d84a87652a29dc4ab2d5d16bde455b35e300f0f",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5.jpg",
+      "bytes": 301598,
+      "sha256": "8722e370dd227e65d88b5aba39752da89f21d5c6e742aac0c1bd9e793ae88108",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "91aee995-b6a3-45bd-92d6-5419f725ad88": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/91aee995-b6a3-45bd-92d6-5419f725ad88.jpg",
+      "bytes": 178930,
+      "sha256": "51f8c54aa60eceec6e6e8ba8cda36e36ef0f6eae65a2263b274d0a3b12982ac4",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "e937155b-5126-4f42-af10-42c97148712d": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/e937155b-5126-4f42-af10-42c97148712d.jpg",
+      "bytes": 297373,
+      "sha256": "6ff4139534e0729020122869820c7729174cae7037f97589d53347a20b38aa90",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "f8be1eef-9d00-4ab4-84b6-4522113a7324": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/f8be1eef-9d00-4ab4-84b6-4522113a7324.jpg",
+      "bytes": 282374,
+      "sha256": "7c76773e0b8ff9be22386897bba7ad0522cc6350785ae79139cb8b987f6ba798",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "76c1751e-80b4-442f-ac52-38b23e04cdf2": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/76c1751e-80b4-442f-ac52-38b23e04cdf2.jpg",
+      "bytes": 209969,
+      "sha256": "b6943c5b269ca124e1dae0b506196b66449051f8a295513ce015ca2c86616e73",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "bb4bf598-b359-423e-9e4d-91589d66a927": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/bb4bf598-b359-423e-9e4d-91589d66a927.jpg",
+      "bytes": 195447,
+      "sha256": "849f3a3256bcf7129ec3ebb9335c35ebdb8a1255ea3da13dcc69b9270cf30a26",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "748a7b29-5bbf-4d4a-adfd-66aea6fb19c1": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/748a7b29-5bbf-4d4a-adfd-66aea6fb19c1.jpg",
+      "bytes": 295912,
+      "sha256": "8ea1d850bfcf52a5a21bf958120d24f995576a7437d5afecc4f66e055388d4aa",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    }
+  },
+  "thumbnails": {
+    "c5dbccd2-419a-4019-8617-06ac2569f880": {
+      "exists": false
+    },
+    "4c34d320-ed68-4864-acae-6d1adfc07c82": {
+      "exists": false
+    },
+    "ee68456a-94b0-49c3-bafa-b8100ef2d512": {
+      "exists": false
+    },
+    "5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5": {
+      "exists": false
+    },
+    "91aee995-b6a3-45bd-92d6-5419f725ad88": {
+      "exists": false
+    },
+    "e937155b-5126-4f42-af10-42c97148712d": {
+      "exists": false
+    },
+    "f8be1eef-9d00-4ab4-84b6-4522113a7324": {
+      "exists": false
+    },
+    "76c1751e-80b4-442f-ac52-38b23e04cdf2": {
+      "exists": false
+    },
+    "bb4bf598-b359-423e-9e4d-91589d66a927": {
+      "exists": false
+    },
+    "748a7b29-5bbf-4d4a-adfd-66aea6fb19c1": {
+      "exists": false
+    }
+  },
+  "thumbnailsExisting": 0
+}

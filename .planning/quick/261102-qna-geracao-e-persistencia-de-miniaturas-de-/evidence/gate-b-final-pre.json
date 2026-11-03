@@ -1,0 +1,1303 @@
+{
+  "origin": "http://127.0.0.1:57781",
+  "generatedAt": "2026-11-03T00:00:57.320Z",
+  "campaigns": [
+    {
+      "id": "016ad838-f499-4fb2-97b2-6c9629f4b2b0",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/016ad838-f499-4fb2-97b2-6c9629f4b2b0.jpg",
+      "updated_at": "2026-08-27T16:23:13.411544+00:00",
+      "product_name": "Presunto Cozido Aurora 200g"
+    },
+    {
+      "id": "0193e1ad-eda0-49c7-946e-c10b4c0ed4e4",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/0193e1ad-eda0-49c7-946e-c10b4c0ed4e4.jpg",
+      "updated_at": "2026-09-27T19:05:05.306477+00:00",
+      "product_name": "Fone Bluetooth NovaSound X1"
+    },
+    {
+      "id": "0354733c-cac5-4d0a-987a-07a9faf3b3d7",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/0354733c-cac5-4d0a-987a-07a9faf3b3d7.jpg",
+      "updated_at": "2026-08-12T17:35:24.016691+00:00",
+      "product_name": "Pão de Queijo Mineiro (porção)"
+    },
+    {
+      "id": "05b0abe8-fbb6-40ed-9149-de17b09c1b45",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/05b0abe8-fbb6-40ed-9149-de17b09c1b45.jpg",
+      "updated_at": "2026-08-25T18:15:58.662196+00:00",
+      "product_name": "Pastel de Nata Português (ud)"
+    },
+    {
+      "id": "06f56b14-fe66-4827-b7bb-faee105879de",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/06f56b14-fe66-4827-b7bb-faee105879de.jpg",
+      "updated_at": "2026-08-09T22:43:58.550089+00:00",
+      "product_name": "Pão Caseiro de Fubá (kg)"
+    },
+    {
+      "id": "0b09cc63-e167-4b17-90fc-d8c27e4bc4ea",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/0b09cc63-e167-4b17-90fc-d8c27e4bc4ea.jpg",
+      "updated_at": "2026-08-04T20:04:00.817833+00:00",
+      "product_name": "Tênis democrata "
+    },
+    {
+      "id": "11fe9cba-1c17-4788-b82e-4c8b6458f851",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/11fe9cba-1c17-4788-b82e-4c8b6458f851.jpg",
+      "updated_at": "2026-08-09T18:39:41.718215+00:00",
+      "product_name": "Pão Francês (kg)"
+    },
+    {
+      "id": "16e62c97-389a-48ac-89e7-e404a89ad32c",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/16e62c97-389a-48ac-89e7-e404a89ad32c.jpg",
+      "updated_at": "2026-07-23T22:25:07.578334+00:00",
+      "product_name": "Pão Caseiro de Arroz (kg)"
+    },
+    {
+      "id": "1828e5be-069a-415f-9d3d-c1d72d2d4962",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/1828e5be-069a-415f-9d3d-c1d72d2d4962.jpg",
+      "updated_at": "2026-08-13T20:36:17.450358+00:00",
+      "product_name": "Rosca de Polvilho (kg)"
+    },
+    {
+      "id": "1932f240-51d1-43a5-93b7-521ec9a7f930",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/1932f240-51d1-43a5-93b7-521ec9a7f930.jpg",
+      "updated_at": "2026-08-25T18:06:10.263295+00:00",
+      "product_name": "Pastel de Nata Português (ud)"
+    },
+    {
+      "id": "1e730b02-2b8c-427f-af31-81ff4ecc8469",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/1e730b02-2b8c-427f-af31-81ff4ecc8469.jpg",
+      "updated_at": "2026-08-09T17:35:17.749485+00:00",
+      "product_name": "Brioche Marmorizado (kg)"
+    },
+    {
+      "id": "206bf9d6-bbc4-48b3-abd1-3df45a40b475",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/206bf9d6-bbc4-48b3-abd1-3df45a40b475.jpg",
+      "updated_at": "2026-07-27T18:09:48.604112+00:00",
+      "product_name": "Creme Protetor Protege 300g"
+    },
+    {
+      "id": "20d54b1d-f603-4dd1-8eac-051da18b5147",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/20d54b1d-f603-4dd1-8eac-051da18b5147/product-1-1/355cc9bb-8832-4e75-9218-e1af42fed806/art-1024.jpg",
+      "updated_at": "2026-10-18T00:12:08.344234+00:00",
+      "product_name": "Red Bull Summer 250ml Figo & Maçã"
+    },
+    {
+      "id": "22027428-9668-4523-8e28-5fea9feea6b4",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/22027428-9668-4523-8e28-5fea9feea6b4.jpg",
+      "updated_at": "2026-07-23T22:49:01.94664+00:00",
+      "product_name": "Pão de Hambúrguer (pacote c/5)"
+    },
+    {
+      "id": "22d4c990-91c8-4ea5-a4db-a59c7e559499",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.jpg",
+      "updated_at": "2026-10-18T01:00:35.94996+00:00",
+      "product_name": "Pão Caseiro (kg)"
+    },
+    {
+      "id": "2705c625-49c4-4ab5-b2a8-d4be3b9173f7",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/2705c625-49c4-4ab5-b2a8-d4be3b9173f7/product-1-1/ba6ac5ee-4ba0-454d-b929-4f6dc564f569/art-1024.jpg",
+      "updated_at": "2026-10-18T00:21:03.311426+00:00",
+      "product_name": "Red Bull Summer 250ml Morango & Pêssego"
+    },
+    {
+      "id": "2ee8abe2-5e90-406f-bd66-aec67490dff5",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/2ee8abe2-5e90-406f-bd66-aec67490dff5.jpg",
+      "updated_at": "2026-09-02T16:07:21.676779+00:00",
+      "product_name": "Ração Confiance 15kg - Adultos"
+    },
+    {
+      "id": "31d4c488-9450-4553-86b3-ae320bb62ba5",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/31d4c488-9450-4553-86b3-ae320bb62ba5.jpg",
+      "updated_at": "2026-07-25T20:56:58.391394+00:00",
+      "product_name": "Bolo de Cenoura com Cobertura de Chocolate"
+    },
+    {
+      "id": "345b608a-076d-4e07-ac56-b9bfb7dc8c44",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/345b608a-076d-4e07-ac56-b9bfb7dc8c44.jpg",
+      "updated_at": "2026-08-14T21:20:51.617719+00:00",
+      "product_name": "Rocambole de Morango (kg)"
+    },
+    {
+      "id": "3621e46b-4916-468e-b664-6fa061362a0c",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/3621e46b-4916-468e-b664-6fa061362a0c.jpg",
+      "updated_at": "2026-09-15T20:16:48.062036+00:00",
+      "product_name": "Coxão Mole (bovino) kg"
+    },
+    {
+      "id": "39093264-a33c-47a3-aece-a6d02a6c8c87",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/39093264-a33c-47a3-aece-a6d02a6c8c87.jpg",
+      "updated_at": "2026-08-06T17:08:59.334967+00:00",
+      "product_name": "Croissant Dona Maria (kg)"
+    },
+    {
+      "id": "3b9c4dbc-d077-44db-8c1b-c39f49f6edff",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/3b9c4dbc-d077-44db-8c1b-c39f49f6edff.jpg",
+      "updated_at": "2026-07-20T19:04:02.814545+00:00",
+      "product_name": "Biscoit Champanhe Dona Maria 200g"
+    },
+    {
+      "id": "48ba68a9-2769-4674-b39a-be91bb394d70",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70.jpg",
+      "updated_at": "2026-09-30T17:54:07.464254+00:00",
+      "product_name": "Mouse Sem Fio Recarregável"
+    },
+    {
+      "id": "4c34d320-ed68-4864-acae-6d1adfc07c82",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/4c34d320-ed68-4864-acae-6d1adfc07c82.jpg",
+      "updated_at": "2026-07-12T16:20:27.530372+00:00",
+      "product_name": "Pão caseiro kg"
+    },
+    {
+      "id": "4ca2c963-43da-42bf-86bc-0220d7d507fb",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/4ca2c963-43da-42bf-86bc-0220d7d507fb.jpg",
+      "updated_at": "2026-09-14T00:52:40.051501+00:00",
+      "product_name": "Quando você quer valorizar um produto, novidade ou benefício"
+    },
+    {
+      "id": "4cb7af0d-6a62-47ef-900a-d0c0ae80b0ae",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/4cb7af0d-6a62-47ef-900a-d0c0ae80b0ae.jpg",
+      "updated_at": "2026-07-25T21:40:34.072292+00:00",
+      "product_name": "Bolo de Chocolate Belga"
+    },
+    {
+      "id": "50d66249-9bba-45f3-a9c5-9379d2e6ce33",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/50d66249-9bba-45f3-a9c5-9379d2e6ce33/product-1-1/ecc343ac-569b-40d0-99f2-f806139f7410/art-1024.jpg",
+      "updated_at": "2026-10-18T00:19:25.949119+00:00",
+      "product_name": "Red Bull Summer 250ml Morango & Pêssego"
+    },
+    {
+      "id": "59ed8c52-fe42-492d-bdbe-6e502d6c56c2",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/59ed8c52-fe42-492d-bdbe-6e502d6c56c2.jpg",
+      "updated_at": "2026-08-27T16:35:04.182978+00:00",
+      "product_name": "Presunto Cozido Aurora 200g"
+    },
+    {
+      "id": "5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5.jpg",
+      "updated_at": "2026-07-13T15:24:58.590651+00:00",
+      "product_name": "Bolo de maçã (fatia)"
+    },
+    {
+      "id": "5bfe8cc1-e516-416e-9814-20f32ef054c4",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/5bfe8cc1-e516-416e-9814-20f32ef054c4.jpg",
+      "updated_at": "2026-08-14T21:34:46.046238+00:00",
+      "product_name": "Pão de Queijo Mineiro 500gr"
+    },
+    {
+      "id": "60760e6d-9e76-4104-8179-17217ca3831e",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/60760e6d-9e76-4104-8179-17217ca3831e.jpg",
+      "updated_at": "2026-08-13T20:49:28.959939+00:00",
+      "product_name": "Croissant de Côco 500g"
+    },
+    {
+      "id": "6ecef78c-0e7d-444c-871b-b8da722abb2d",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/6ecef78c-0e7d-444c-871b-b8da722abb2d/product-1-1/d5fe3115-0315-4dd1-ae18-eded8576a124/art-1024.jpg",
+      "updated_at": "2026-10-18T00:12:08.396929+00:00",
+      "product_name": "Red Bull Summer 250ml Morango & Pêssego"
+    },
+    {
+      "id": "6f70f51e-ef65-4d16-80dd-868682d81e43",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/6f70f51e-ef65-4d16-80dd-868682d81e43/product-1-1/849f092c-c4c2-4471-8777-6e4231058eeb/art-1024.jpg",
+      "updated_at": "2026-10-18T00:29:15.433673+00:00",
+      "product_name": "Rocambole de Morango "
+    },
+    {
+      "id": "7030ed63-21df-4c3d-aef2-67b7c2e0ce07",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/7030ed63-21df-4c3d-aef2-67b7c2e0ce07/product-1-1/26ab846e-d0f0-44bc-b06f-a6c65a382088/art-1024.jpg",
+      "updated_at": "2026-10-18T00:26:57.595837+00:00",
+      "product_name": "Rocambole de Morango "
+    },
+    {
+      "id": "748a7b29-5bbf-4d4a-adfd-66aea6fb19c1",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/748a7b29-5bbf-4d4a-adfd-66aea6fb19c1.jpg",
+      "updated_at": "2026-07-20T01:11:18.945816+00:00",
+      "product_name": "Pão Francês Kg"
+    },
+    {
+      "id": "76c1751e-80b4-442f-ac52-38b23e04cdf2",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/76c1751e-80b4-442f-ac52-38b23e04cdf2.jpg",
+      "updated_at": "2026-07-17T20:08:40.93962+00:00",
+      "product_name": "Biscoito de Polvilho João & Maria 100g"
+    },
+    {
+      "id": "80338e7f-41c9-4422-a6fd-28df4b27c95a",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/80338e7f-41c9-4422-a6fd-28df4b27c95a.jpg",
+      "updated_at": "2026-08-10T00:11:25.904427+00:00",
+      "product_name": "Rocambole de Morango (kg)"
+    },
+    {
+      "id": "82da394c-28c3-472c-97af-f7f7f136db8c",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/82da394c-28c3-472c-97af-f7f7f136db8c.jpg",
+      "updated_at": "2026-07-20T18:17:20.131654+00:00",
+      "product_name": "Pão Caseiro de Milho (kg)"
+    },
+    {
+      "id": "8ac562a9-8ce5-4633-9056-1510831508db",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/8ac562a9-8ce5-4633-9056-1510831508db.jpg",
+      "updated_at": "2026-08-14T21:53:53.226023+00:00",
+      "product_name": "Biscoito de Polvilho e Baunilia 400g"
+    },
+    {
+      "id": "8f2af719-5565-4460-a939-85b7dff8f35c",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/8f2af719-5565-4460-a939-85b7dff8f35c.jpg",
+      "updated_at": "2026-09-14T00:26:06.253251+00:00",
+      "product_name": "Quando o preço e a condição comercial são o destaque."
+    },
+    {
+      "id": "91aee995-b6a3-45bd-92d6-5419f725ad88",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/91aee995-b6a3-45bd-92d6-5419f725ad88.jpg",
+      "updated_at": "2026-07-14T16:31:32.760222+00:00",
+      "product_name": "Kit Dermafeme c/2un"
+    },
+    {
+      "id": "94959460-b50e-40e2-8b6f-c0fcc6fe5cad",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/94959460-b50e-40e2-8b6f-c0fcc6fe5cad.jpg",
+      "updated_at": "2026-08-25T18:02:12.942079+00:00",
+      "product_name": "Pastel de Nata Português (ud)"
+    },
+    {
+      "id": "98c7d323-4b39-48e9-bbb0-8900a625ef47",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/98c7d323-4b39-48e9-bbb0-8900a625ef47.jpg",
+      "updated_at": "2026-09-02T17:02:41.526785+00:00",
+      "product_name": "Mordedor Haltere 12cm"
+    },
+    {
+      "id": "9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.jpg",
+      "updated_at": "2026-10-18T00:55:49.222811+00:00",
+      "product_name": "Rocambole de Morango "
+    },
+    {
+      "id": "a7105454-b5b6-4b39-a0b1-2936027b88cf",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/a7105454-b5b6-4b39-a0b1-2936027b88cf.jpg",
+      "updated_at": "2026-09-02T15:58:10.001485+00:00",
+      "product_name": "Ração Confiance 15kg - Adultos"
+    },
+    {
+      "id": "b1f75489-82d7-4420-936f-a7c24ec9b4a1",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.jpg",
+      "updated_at": "2026-10-18T00:57:49.718359+00:00",
+      "product_name": "Rocambole de Morango "
+    },
+    {
+      "id": "b2e99696-410a-4f56-829c-6101bc548aff",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/b2e99696-410a-4f56-829c-6101bc548aff.jpg",
+      "updated_at": "2026-08-15T21:14:58.896147+00:00",
+      "product_name": "Biscoitos Dona Maria 400gr"
+    },
+    {
+      "id": "b79f3f7c-5098-4195-952a-6e10bfb74cd3",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/b79f3f7c-5098-4195-952a-6e10bfb74cd3.jpg",
+      "updated_at": "2026-08-04T19:19:43.280238+00:00",
+      "product_name": "Queijo colonial (kg)"
+    },
+    {
+      "id": "b905a1d6-c3cd-48bb-99e0-33ce10d164b5",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/b905a1d6-c3cd-48bb-99e0-33ce10d164b5.jpg",
+      "updated_at": "2026-08-20T17:28:54.384296+00:00",
+      "product_name": "Brioche Marmorizado "
+    },
+    {
+      "id": "bb4bf598-b359-423e-9e4d-91589d66a927",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/bb4bf598-b359-423e-9e4d-91589d66a927.jpg",
+      "updated_at": "2026-07-17T20:59:08.175362+00:00",
+      "product_name": "Sonho Purapan 2k (congelado)"
+    },
+    {
+      "id": "bc18437b-99f6-48e1-97b1-25bb2f465266",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/bc18437b-99f6-48e1-97b1-25bb2f465266.jpg",
+      "updated_at": "2026-07-22T22:18:47.696984+00:00",
+      "product_name": "Biscoito Champanhe Dona Maria 200g"
+    },
+    {
+      "id": "bd43c96d-2ea3-4123-abc2-1c151604c210",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/bd43c96d-2ea3-4123-abc2-1c151604c210.jpg",
+      "updated_at": "2026-08-14T21:17:21.670427+00:00",
+      "product_name": "Rosca de Polvilho (kg)"
+    },
+    {
+      "id": "bd6275ec-d607-4dd9-b495-a7faef7489f9",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/bd6275ec-d607-4dd9-b495-a7faef7489f9.jpg",
+      "updated_at": "2026-08-09T16:54:34.605936+00:00",
+      "product_name": "Pão de Queijo Dona Maria (kg)"
+    },
+    {
+      "id": "c06b16f5-f126-429c-b5b0-9567fe4adb95",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.jpg",
+      "updated_at": "2026-10-26T21:50:10.666092+00:00",
+      "product_name": "Jarra Finesse 1l"
+    },
+    {
+      "id": "c40f58b7-4b49-4291-bff7-ba9ce7f1af42",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/c40f58b7-4b49-4291-bff7-ba9ce7f1af42.jpg",
+      "updated_at": "2026-09-02T18:18:34.51609+00:00",
+      "product_name": "Mordedor Haltere 12cm"
+    },
+    {
+      "id": "c5dbccd2-419a-4019-8617-06ac2569f880",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/c5dbccd2-419a-4019-8617-06ac2569f880.jpg",
+      "updated_at": "2026-07-10T20:43:03.030565+00:00",
+      "product_name": "Pão Francês Kg"
+    },
+    {
+      "id": "c94f37b2-7582-4fff-b4d2-a35866182581",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/c94f37b2-7582-4fff-b4d2-a35866182581.jpg",
+      "updated_at": "2026-08-14T21:26:14.233816+00:00",
+      "product_name": "Pão Francês Kg"
+    },
+    {
+      "id": "c977f9fa-e4ad-49b7-85a0-fc96fc29b797",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/c977f9fa-e4ad-49b7-85a0-fc96fc29b797.jpg",
+      "updated_at": "2026-07-26T21:15:30.155939+00:00",
+      "product_name": "Canarinho Belga"
+    },
+    {
+      "id": "d1328fd6-15a9-41a3-a708-d1131b1c1c58",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/d1328fd6-15a9-41a3-a708-d1131b1c1c58.jpg",
+      "updated_at": "2026-09-02T17:08:26.510134+00:00",
+      "product_name": "Mordedor Haltere 12cm"
+    },
+    {
+      "id": "e043e52e-4df0-48b4-bd01-0d1b43b5de01",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/e043e52e-4df0-48b4-bd01-0d1b43b5de01/product-1-1/0b8642f4-7af4-4771-a9b0-d1ae8034fba9/art-1024.jpg",
+      "updated_at": "2026-10-18T00:12:08.444926+00:00",
+      "product_name": "Red Bull Summer 250ml Morango & Pêssego"
+    },
+    {
+      "id": "e0c02a54-6827-4a39-9301-208f1661756a",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/e0c02a54-6827-4a39-9301-208f1661756a.jpg",
+      "updated_at": "2026-08-13T20:42:54.023152+00:00",
+      "product_name": "Biscoito de Polvilho e Leite Condensado 400g"
+    },
+    {
+      "id": "e353c783-1b97-4293-ba28-1cf12f931e1a",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/e353c783-1b97-4293-ba28-1cf12f931e1a.jpg",
+      "updated_at": "2026-08-15T22:01:21.132062+00:00",
+      "product_name": "Biscoito Champanhe (kg)"
+    },
+    {
+      "id": "e5568b44-f13d-4661-808c-8beb937c4ebe",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/e5568b44-f13d-4661-808c-8beb937c4ebe.jpg",
+      "updated_at": "2026-09-13T23:42:51.751692+00:00",
+      "product_name": "Quando o preço e a condição comercial são o destaque."
+    },
+    {
+      "id": "e937155b-5126-4f42-af10-42c97148712d",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/e937155b-5126-4f42-af10-42c97148712d.jpg",
+      "updated_at": "2026-07-16T19:57:41.318124+00:00",
+      "product_name": "Pão Francês Kg"
+    },
+    {
+      "id": "eb5b4ed4-442c-429a-a393-700b6147d307",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/eb5b4ed4-442c-429a-a393-700b6147d307.jpg",
+      "updated_at": "2026-09-13T23:33:26.46544+00:00",
+      "product_name": "Nem toda publicação precisa ser uma promoção."
+    },
+    {
+      "id": "ee68456a-94b0-49c3-bafa-b8100ef2d512",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/ee68456a-94b0-49c3-bafa-b8100ef2d512.jpg",
+      "updated_at": "2026-07-13T12:05:55.872383+00:00",
+      "product_name": "Leite Aurora 1l integral "
+    },
+    {
+      "id": "f8be1eef-9d00-4ab4-84b6-4522113a7324",
+      "status": "ready",
+      "storage_path": "48b212f8-2b0f-4679-b553-122a601bacac/f8be1eef-9d00-4ab4-84b6-4522113a7324.jpg",
+      "updated_at": "2026-07-17T20:03:21.454427+00:00",
+      "product_name": "Pão de Hambúrguer (pacote c/5)"
+    }
+  ],
+  "credits": [
+    {
+      "store_id": "3dc7d274-0b57-45ba-883a-7b235056feda",
+      "balance": 1,
+      "bonus_balance": 1,
+      "purchased_balance": 0
+    },
+    {
+      "store_id": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "balance": 4,
+      "bonus_balance": 4,
+      "purchased_balance": 0
+    }
+  ],
+  "creditTransactionsCount": 98,
+  "bucketPublic": false,
+  "originals": {
+    "c5dbccd2-419a-4019-8617-06ac2569f880": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/c5dbccd2-419a-4019-8617-06ac2569f880.jpg",
+      "bytes": 265862,
+      "sha256": "fa6fc0b86ab3a4a0bdcbe53a04568c044d95e7bc069381ddcfc19864ebcb9c1a",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "4c34d320-ed68-4864-acae-6d1adfc07c82": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/4c34d320-ed68-4864-acae-6d1adfc07c82.jpg",
+      "bytes": 299481,
+      "sha256": "4645035e2131b59ac53a42ec3d5e1d8d74262b0726258111a9fe97a602f131d5",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "ee68456a-94b0-49c3-bafa-b8100ef2d512": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/ee68456a-94b0-49c3-bafa-b8100ef2d512.jpg",
+      "bytes": 240415,
+      "sha256": "9b6c7cea67f23527de34782d5d84a87652a29dc4ab2d5d16bde455b35e300f0f",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5.jpg",
+      "bytes": 301598,
+      "sha256": "8722e370dd227e65d88b5aba39752da89f21d5c6e742aac0c1bd9e793ae88108",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "91aee995-b6a3-45bd-92d6-5419f725ad88": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/91aee995-b6a3-45bd-92d6-5419f725ad88.jpg",
+      "bytes": 178930,
+      "sha256": "51f8c54aa60eceec6e6e8ba8cda36e36ef0f6eae65a2263b274d0a3b12982ac4",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "e937155b-5126-4f42-af10-42c97148712d": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/e937155b-5126-4f42-af10-42c97148712d.jpg",
+      "bytes": 297373,
+      "sha256": "6ff4139534e0729020122869820c7729174cae7037f97589d53347a20b38aa90",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "f8be1eef-9d00-4ab4-84b6-4522113a7324": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/f8be1eef-9d00-4ab4-84b6-4522113a7324.jpg",
+      "bytes": 282374,
+      "sha256": "7c76773e0b8ff9be22386897bba7ad0522cc6350785ae79139cb8b987f6ba798",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "76c1751e-80b4-442f-ac52-38b23e04cdf2": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/76c1751e-80b4-442f-ac52-38b23e04cdf2.jpg",
+      "bytes": 209969,
+      "sha256": "b6943c5b269ca124e1dae0b506196b66449051f8a295513ce015ca2c86616e73",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "bb4bf598-b359-423e-9e4d-91589d66a927": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/bb4bf598-b359-423e-9e4d-91589d66a927.jpg",
+      "bytes": 195447,
+      "sha256": "849f3a3256bcf7129ec3ebb9335c35ebdb8a1255ea3da13dcc69b9270cf30a26",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "748a7b29-5bbf-4d4a-adfd-66aea6fb19c1": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/748a7b29-5bbf-4d4a-adfd-66aea6fb19c1.jpg",
+      "bytes": 295912,
+      "sha256": "8ea1d850bfcf52a5a21bf958120d24f995576a7437d5afecc4f66e055388d4aa",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "82da394c-28c3-472c-97af-f7f7f136db8c": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/82da394c-28c3-472c-97af-f7f7f136db8c.jpg",
+      "bytes": 261446,
+      "sha256": "6d02772b20fbada319caa7ab8f6e5cbcc761b443f9a2342675fa55a53db0784d",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "3b9c4dbc-d077-44db-8c1b-c39f49f6edff": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/3b9c4dbc-d077-44db-8c1b-c39f49f6edff.jpg",
+      "bytes": 316302,
+      "sha256": "c3c4946fc3293db548fa301606881113fad2a694e9c0a3e895dd7e021f2e1192",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "bc18437b-99f6-48e1-97b1-25bb2f465266": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/bc18437b-99f6-48e1-97b1-25bb2f465266.jpg",
+      "bytes": 290399,
+      "sha256": "69d608e68298238f34277dea272d68534d55896dab8c31afe3a571aeb02bc894",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "16e62c97-389a-48ac-89e7-e404a89ad32c": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/16e62c97-389a-48ac-89e7-e404a89ad32c.jpg",
+      "bytes": 267866,
+      "sha256": "2d57b44d602e2ceb91f009cfb84e97920b875e616d3143e529221fabd4af4dce",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "22027428-9668-4523-8e28-5fea9feea6b4": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/22027428-9668-4523-8e28-5fea9feea6b4.jpg",
+      "bytes": 265346,
+      "sha256": "7593dba6dbcf9591ba757dd576026c7d7a0b2491b4f427ea0f8a20fa727642d1",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "31d4c488-9450-4553-86b3-ae320bb62ba5": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/31d4c488-9450-4553-86b3-ae320bb62ba5.jpg",
+      "bytes": 271820,
+      "sha256": "08790358fb300621fd7cc16e1fac4d6828d47a67e40d45e3b5a647d416e93b94",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "4cb7af0d-6a62-47ef-900a-d0c0ae80b0ae": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/4cb7af0d-6a62-47ef-900a-d0c0ae80b0ae.jpg",
+      "bytes": 293333,
+      "sha256": "2b394a3a470f1a712ea8c74d5c5ed3a6b13862eed9ba4cbc73cc7d8c32f1a88d",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "c977f9fa-e4ad-49b7-85a0-fc96fc29b797": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/c977f9fa-e4ad-49b7-85a0-fc96fc29b797.jpg",
+      "bytes": 225845,
+      "sha256": "efc9a7d0e46140cdff2203d1f04ce75c7fc452a4dbd782131f979cf53e8ff4a5",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "206bf9d6-bbc4-48b3-abd1-3df45a40b475": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/206bf9d6-bbc4-48b3-abd1-3df45a40b475.jpg",
+      "bytes": 209082,
+      "sha256": "4848ea77ec3e5c75cc102d541f9204986df2eeb8cc12ba4826d668074d65f1b8",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "b79f3f7c-5098-4195-952a-6e10bfb74cd3": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/b79f3f7c-5098-4195-952a-6e10bfb74cd3.jpg",
+      "bytes": 221928,
+      "sha256": "2b708b434088505b3ea737fb507a76480254c0f104bce25e67c1c926de933fe7",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "0b09cc63-e167-4b17-90fc-d8c27e4bc4ea": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/0b09cc63-e167-4b17-90fc-d8c27e4bc4ea.jpg",
+      "bytes": 231842,
+      "sha256": "75117951c226ae1e7143666320a8b97a97203a6faa950af171d8049d2023a294",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "39093264-a33c-47a3-aece-a6d02a6c8c87": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/39093264-a33c-47a3-aece-a6d02a6c8c87.jpg",
+      "bytes": 345796,
+      "sha256": "4194eda51326bef2c8aa9d42fee4980fd461be434df8980338861cd2b610df7d",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "bd6275ec-d607-4dd9-b495-a7faef7489f9": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/bd6275ec-d607-4dd9-b495-a7faef7489f9.jpg",
+      "bytes": 238677,
+      "sha256": "5dd814d63903384f7afb401f6b98eac44a5e2ad0dec9da182e4766694c213928",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "1e730b02-2b8c-427f-af31-81ff4ecc8469": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/1e730b02-2b8c-427f-af31-81ff4ecc8469.jpg",
+      "bytes": 313789,
+      "sha256": "51858df8897aa7213bcf315e2d5bea097453a45f755477af2edbcde0b2ab24c3",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "11fe9cba-1c17-4788-b82e-4c8b6458f851": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/11fe9cba-1c17-4788-b82e-4c8b6458f851.jpg",
+      "bytes": 260595,
+      "sha256": "1af8b5c9e16a2fd50ccbb2029c0062d7a2185d545043ec86169bbb29e7c8d15f",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "06f56b14-fe66-4827-b7bb-faee105879de": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/06f56b14-fe66-4827-b7bb-faee105879de.jpg",
+      "bytes": 289675,
+      "sha256": "b08ac8dddfa6a81e0fb06f9594c66b2fbbeeeeecd9180cd62becbefdf276415d",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "80338e7f-41c9-4422-a6fd-28df4b27c95a": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/80338e7f-41c9-4422-a6fd-28df4b27c95a.jpg",
+      "bytes": 292693,
+      "sha256": "bcf3d6e329865fc4309554fb05021145706f6a26413f9b9109539b6a11c094a0",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "0354733c-cac5-4d0a-987a-07a9faf3b3d7": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/0354733c-cac5-4d0a-987a-07a9faf3b3d7.jpg",
+      "bytes": 275103,
+      "sha256": "0c30c6cac0cf81df678e0870cc5a85c28d843fa184a33ff3fd62b8dd750849ae",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "1828e5be-069a-415f-9d3d-c1d72d2d4962": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/1828e5be-069a-415f-9d3d-c1d72d2d4962.jpg",
+      "bytes": 259358,
+      "sha256": "24693f45a440cc0b86d446ac2e1d25bb8b996ae6e98d1be87e2c7fb7f61f2ad1",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "e0c02a54-6827-4a39-9301-208f1661756a": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/e0c02a54-6827-4a39-9301-208f1661756a.jpg",
+      "bytes": 313878,
+      "sha256": "e65bcd751b422cb4e09df77e744a10643c6bd2635a963cfa1a37e41aa6fac19a",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "60760e6d-9e76-4104-8179-17217ca3831e": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/60760e6d-9e76-4104-8179-17217ca3831e.jpg",
+      "bytes": 306793,
+      "sha256": "e62354c266439f5d3d9966cff3f3901097f4017d8e3954630223181b8e3a86f1",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "bd43c96d-2ea3-4123-abc2-1c151604c210": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/bd43c96d-2ea3-4123-abc2-1c151604c210.jpg",
+      "bytes": 289779,
+      "sha256": "9a032d34580bbc50b79c2a6a3ccc7994c0e7587ddf8ab67d0a7e1c69aaac67f5",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "345b608a-076d-4e07-ac56-b9bfb7dc8c44": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/345b608a-076d-4e07-ac56-b9bfb7dc8c44.jpg",
+      "bytes": 327350,
+      "sha256": "bce4f760f34a3bafecef70a31bd1a0a8932ae109b79bf7e40ed25e9616259b10",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "c94f37b2-7582-4fff-b4d2-a35866182581": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/c94f37b2-7582-4fff-b4d2-a35866182581.jpg",
+      "bytes": 280471,
+      "sha256": "a9312013a3f679fea0feeadd4028ed61f0209d52da424b8a7fd727600e2a5138",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "5bfe8cc1-e516-416e-9814-20f32ef054c4": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/5bfe8cc1-e516-416e-9814-20f32ef054c4.jpg",
+      "bytes": 284262,
+      "sha256": "43ebccde41fc640342b75000a933991d7d874cf117329d6e9b399819f49899da",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "8ac562a9-8ce5-4633-9056-1510831508db": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/8ac562a9-8ce5-4633-9056-1510831508db.jpg",
+      "bytes": 239515,
+      "sha256": "888c53f3894f7a5c1e3562d748b95d17c9e9e64181c0e0112544574c3ea2f9ac",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "b2e99696-410a-4f56-829c-6101bc548aff": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/b2e99696-410a-4f56-829c-6101bc548aff.jpg",
+      "bytes": 327419,
+      "sha256": "7d88a13bd3cef8ed70a6f36a0d152eea425dce6fe02ad033f637786a2fe39609",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "e353c783-1b97-4293-ba28-1cf12f931e1a": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/e353c783-1b97-4293-ba28-1cf12f931e1a.jpg",
+      "bytes": 339241,
+      "sha256": "3f2909bc95abe3b6da35352318ab0c07a4f56a537778955405bbc5f23ec108fe",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "b905a1d6-c3cd-48bb-99e0-33ce10d164b5": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/b905a1d6-c3cd-48bb-99e0-33ce10d164b5.jpg",
+      "bytes": 289639,
+      "sha256": "44fd75131c7b031f16bb7f54fb3a1fbf60921bcac0065732b862be8a97d4973b",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "94959460-b50e-40e2-8b6f-c0fcc6fe5cad": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/94959460-b50e-40e2-8b6f-c0fcc6fe5cad.jpg",
+      "bytes": 239620,
+      "sha256": "0fa9ab92fe601f383740d77fe4ca02725a3514004fcced52f40a5175dc56ec09",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "1932f240-51d1-43a5-93b7-521ec9a7f930": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/1932f240-51d1-43a5-93b7-521ec9a7f930.jpg",
+      "bytes": 279938,
+      "sha256": "1fd6a7b3f7c1c66344f0f9c3f046e1a6dabc7c88b1f7c6bef90843fe8df9a8a2",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "05b0abe8-fbb6-40ed-9149-de17b09c1b45": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/05b0abe8-fbb6-40ed-9149-de17b09c1b45.jpg",
+      "bytes": 225437,
+      "sha256": "08659eb54f493cfa47fbee14572353d9fa54d02572947474386598afe65e5daa",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "016ad838-f499-4fb2-97b2-6c9629f4b2b0": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/016ad838-f499-4fb2-97b2-6c9629f4b2b0.jpg",
+      "bytes": 279999,
+      "sha256": "7f45e2aeacdb943a4bf337420dbc92ff4ea7afffa1d4c6f0bc26e43985b031c3",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "59ed8c52-fe42-492d-bdbe-6e502d6c56c2": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/59ed8c52-fe42-492d-bdbe-6e502d6c56c2.jpg",
+      "bytes": 336189,
+      "sha256": "41d66a1bba26b40baa74f971b513da365fba5fabd229484abe22740c5e0b73c8",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "a7105454-b5b6-4b39-a0b1-2936027b88cf": {
+      "path": "3dc7d274-0b57-45ba-883a-7b235056feda/a7105454-b5b6-4b39-a0b1-2936027b88cf.jpg",
+      "bytes": 206255,
+      "sha256": "bc0f11dc6967a1eb19a03299c60dea922f7879789583cf88655a871db6c1d427",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "2ee8abe2-5e90-406f-bd66-aec67490dff5": {
+      "path": "3dc7d274-0b57-45ba-883a-7b235056feda/2ee8abe2-5e90-406f-bd66-aec67490dff5.jpg",
+      "bytes": 199959,
+      "sha256": "44bf44032bd7069f8a0d611e9a9f14312b63156270fdfbf048d1351e735fc97e",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "98c7d323-4b39-48e9-bbb0-8900a625ef47": {
+      "path": "3dc7d274-0b57-45ba-883a-7b235056feda/98c7d323-4b39-48e9-bbb0-8900a625ef47.jpg",
+      "bytes": 185404,
+      "sha256": "dfb1f5ff9d6546a07f1acbaae43698a5c064688c8aff7e714919b372f9ab0cdc",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "d1328fd6-15a9-41a3-a708-d1131b1c1c58": {
+      "path": "3dc7d274-0b57-45ba-883a-7b235056feda/d1328fd6-15a9-41a3-a708-d1131b1c1c58.jpg",
+      "bytes": 203304,
+      "sha256": "071f288fe0e72fef6c0c4af2cfb30234d37ffe7c42166a99392eedd34b1ac5fc",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "c40f58b7-4b49-4291-bff7-ba9ce7f1af42": {
+      "path": "3dc7d274-0b57-45ba-883a-7b235056feda/c40f58b7-4b49-4291-bff7-ba9ce7f1af42.jpg",
+      "bytes": 191866,
+      "sha256": "d8aa38de3b03efae8c10d89756ece6593db578da47e55f421ae95ee0c632b55f",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "eb5b4ed4-442c-429a-a393-700b6147d307": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/eb5b4ed4-442c-429a-a393-700b6147d307.jpg",
+      "bytes": 153810,
+      "sha256": "0b404a119f062eabe8762d81c2bef84b92dab60d5b52d8c88d939b163bc29194",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "e5568b44-f13d-4661-808c-8beb937c4ebe": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/e5568b44-f13d-4661-808c-8beb937c4ebe.jpg",
+      "bytes": 160221,
+      "sha256": "fea285fc5dcfeea315d0b16acd7110447db2a12f334afcaf411484ae7178eb75",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "8f2af719-5565-4460-a939-85b7dff8f35c": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/8f2af719-5565-4460-a939-85b7dff8f35c.jpg",
+      "bytes": 161863,
+      "sha256": "fb4f0a0765cab804ef061eb7123925e89ac0312a4572b3cab1fc2dd6f0a5bbe3",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "4ca2c963-43da-42bf-86bc-0220d7d507fb": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/4ca2c963-43da-42bf-86bc-0220d7d507fb.jpg",
+      "bytes": 161696,
+      "sha256": "63b750576751789b275f70aee23494ee38ff1b5ad8908c13aafb8cc71c595d9a",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "3621e46b-4916-468e-b664-6fa061362a0c": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/3621e46b-4916-468e-b664-6fa061362a0c.jpg",
+      "bytes": 233635,
+      "sha256": "87eec6969aacaa7bc0b55bcd88fb51653ef50ed8ec39f90a28019196a54a4d09",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "0193e1ad-eda0-49c7-946e-c10b4c0ed4e4": {
+      "path": "3dc7d274-0b57-45ba-883a-7b235056feda/0193e1ad-eda0-49c7-946e-c10b4c0ed4e4.jpg",
+      "bytes": 181413,
+      "sha256": "1e18c6d13b7ffa90cbe2d417c4ce5224f1e48e3bd68858bb4acb89f984cc9b67",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "48ba68a9-2769-4674-b39a-be91bb394d70": {
+      "path": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70.jpg",
+      "bytes": 170088,
+      "sha256": "dd51df730ab0659337d8ce7e122a599cd671844c48b84a28240b0035020037d0",
+      "format": "jpeg",
+      "width": 1080,
+      "height": 1080
+    },
+    "20d54b1d-f603-4dd1-8eac-051da18b5147": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/20d54b1d-f603-4dd1-8eac-051da18b5147/product-1-1/355cc9bb-8832-4e75-9218-e1af42fed806/art-1024.jpg",
+      "bytes": 211048,
+      "sha256": "4501407a82509a4456ad94eb9f0484ae6ab1ef486b3235689a3be455a88c641e",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "6ecef78c-0e7d-444c-871b-b8da722abb2d": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/6ecef78c-0e7d-444c-871b-b8da722abb2d/product-1-1/d5fe3115-0315-4dd1-ae18-eded8576a124/art-1024.jpg",
+      "bytes": 268944,
+      "sha256": "d72b547e55326ab92ac709cb5b68aab53c801bec83d683da8a08c847738f7fac",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "e043e52e-4df0-48b4-bd01-0d1b43b5de01": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/e043e52e-4df0-48b4-bd01-0d1b43b5de01/product-1-1/0b8642f4-7af4-4771-a9b0-d1ae8034fba9/art-1024.jpg",
+      "bytes": 249948,
+      "sha256": "da854aa54edde64a24f414a571732427fd75c7d653e71b4b137218b3a93f5385",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "50d66249-9bba-45f3-a9c5-9379d2e6ce33": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/50d66249-9bba-45f3-a9c5-9379d2e6ce33/product-1-1/ecc343ac-569b-40d0-99f2-f806139f7410/art-1024.jpg",
+      "bytes": 243070,
+      "sha256": "ce4c85d4c82ee301e66857a7baa8fccc0f6ef70bd5e16e91d9a693bdfc230bc4",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "2705c625-49c4-4ab5-b2a8-d4be3b9173f7": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/2705c625-49c4-4ab5-b2a8-d4be3b9173f7/product-1-1/ba6ac5ee-4ba0-454d-b929-4f6dc564f569/art-1024.jpg",
+      "bytes": 313766,
+      "sha256": "eafdf2817b23c55f5d619fa9fefb52b710b4020b8972a0b0c14a02422d05de78",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "7030ed63-21df-4c3d-aef2-67b7c2e0ce07": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/7030ed63-21df-4c3d-aef2-67b7c2e0ce07/product-1-1/26ab846e-d0f0-44bc-b06f-a6c65a382088/art-1024.jpg",
+      "bytes": 308908,
+      "sha256": "afbeb452639a65bfc697cc0143b20daaa649c40ff753c9348c1759139830c8d5",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "6f70f51e-ef65-4d16-80dd-868682d81e43": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/6f70f51e-ef65-4d16-80dd-868682d81e43/product-1-1/849f092c-c4c2-4471-8777-6e4231058eeb/art-1024.jpg",
+      "bytes": 326338,
+      "sha256": "4e231143c3f526621f8d69a305b0649633e72e6dfae77e6e3fde70953f82e0dd",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.jpg",
+      "bytes": 302386,
+      "sha256": "f10cdb216b46b85479f69b082d39dd383a09e247c37a1e7ddda0e1084590b944",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "b1f75489-82d7-4420-936f-a7c24ec9b4a1": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.jpg",
+      "bytes": 291556,
+      "sha256": "c5d0836938b8cb899a3473bd62020558e582a813bdef04b8b10ca5de0169e8a8",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "22d4c990-91c8-4ea5-a4db-a59c7e559499": {
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.jpg",
+      "bytes": 251525,
+      "sha256": "eb06c7dd2e29332d3f401cef88db062d0b23a040186ec24a0c1a92011d4a646e",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    },
+    "c06b16f5-f126-429c-b5b0-9567fe4adb95": {
+      "path": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.jpg",
+      "bytes": 178723,
+      "sha256": "f9ed34703ae84f41694bbe265d654616d4b8cdc8b0670149b1c914e8c30970d4",
+      "format": "jpeg",
+      "width": 1024,
+      "height": 1024
+    }
+  },
+  "thumbnails": {
+    "c5dbccd2-419a-4019-8617-06ac2569f880": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/c5dbccd2-419a-4019-8617-06ac2569f880.thumb-v1.webp",
+      "bytes": 17340,
+      "sha256": "07f61fb6057fed0c6ea78a1020a2cbf30690af55db02e98f7ec459c255bf5acf",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "4c34d320-ed68-4864-acae-6d1adfc07c82": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/4c34d320-ed68-4864-acae-6d1adfc07c82.thumb-v1.webp",
+      "bytes": 18066,
+      "sha256": "fb3b3111ac4093cf9a115d40ea23bea44353aade80ff30f2630895c9d7b38e41",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "ee68456a-94b0-49c3-bafa-b8100ef2d512": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/ee68456a-94b0-49c3-bafa-b8100ef2d512.thumb-v1.webp",
+      "bytes": 18920,
+      "sha256": "1925af418a92d05a06c52af503f546511e2b347d1185b317b007d3fde9d184ee",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5.thumb-v1.webp",
+      "bytes": 17642,
+      "sha256": "2d298ca562bb1a7d0fae1d85b1f72dc285643e37d82a52e95b33ffaf6a3ffc29",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "91aee995-b6a3-45bd-92d6-5419f725ad88": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/91aee995-b6a3-45bd-92d6-5419f725ad88.thumb-v1.webp",
+      "bytes": 13030,
+      "sha256": "5da818829f01f92868473010bcb9fba6fe56c04a669d92a541d06520b3a10cfe",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "e937155b-5126-4f42-af10-42c97148712d": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/e937155b-5126-4f42-af10-42c97148712d.thumb-v1.webp",
+      "bytes": 17332,
+      "sha256": "47e81f7f8d071acb5f6988147882d601f02c830af68f17cd4fa2334012278707",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "f8be1eef-9d00-4ab4-84b6-4522113a7324": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/f8be1eef-9d00-4ab4-84b6-4522113a7324.thumb-v1.webp",
+      "bytes": 16530,
+      "sha256": "eae0f560df88e51cd12e890c2abf5a49681afd147cdbd9f9a43d04ed13bdb83e",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "76c1751e-80b4-442f-ac52-38b23e04cdf2": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/76c1751e-80b4-442f-ac52-38b23e04cdf2.thumb-v1.webp",
+      "bytes": 15524,
+      "sha256": "150a29c64555588754e6a22fbf67f48f649e713fe9ddeda77e538522925b1e0c",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "bb4bf598-b359-423e-9e4d-91589d66a927": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/bb4bf598-b359-423e-9e4d-91589d66a927.thumb-v1.webp",
+      "bytes": 13138,
+      "sha256": "4c0c1c54a8bb33f8a92123a1432841b6c0b86c5f3b6b1411672da46e32efff6b",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "748a7b29-5bbf-4d4a-adfd-66aea6fb19c1": {
+      "exists": true,
+      "path": "48b212f8-2b0f-4679-b553-122a601bacac/748a7b29-5bbf-4d4a-adfd-66aea6fb19c1.thumb-v1.webp",
+      "bytes": 15786,
+      "sha256": "296b50ce72ada51f89ffe27827596b1dd383fb7565bb372a3455f581d17628c9",
+      "format": "webp",
+      "width": 288,
+      "height": 288,
+      "signedUrlAvailable": true
+    },
+    "82da394c-28c3-472c-97af-f7f7f136db8c": {
+      "exists": false
+    },
+    "3b9c4dbc-d077-44db-8c1b-c39f49f6edff": {
+      "exists": false
+    },
+    "bc18437b-99f6-48e1-97b1-25bb2f465266": {
+      "exists": false
+    },
+    "16e62c97-389a-48ac-89e7-e404a89ad32c": {
+      "exists": false
+    },
+    "22027428-9668-4523-8e28-5fea9feea6b4": {
+      "exists": false
+    },
+    "31d4c488-9450-4553-86b3-ae320bb62ba5": {
+      "exists": false
+    },
+    "4cb7af0d-6a62-47ef-900a-d0c0ae80b0ae": {
+      "exists": false
+    },
+    "c977f9fa-e4ad-49b7-85a0-fc96fc29b797": {
+      "exists": false
+    },
+    "206bf9d6-bbc4-48b3-abd1-3df45a40b475": {
+      "exists": false
+    },
+    "b79f3f7c-5098-4195-952a-6e10bfb74cd3": {
+      "exists": false
+    },
+    "0b09cc63-e167-4b17-90fc-d8c27e4bc4ea": {
+      "exists": false
+    },
+    "39093264-a33c-47a3-aece-a6d02a6c8c87": {
+      "exists": false
+    },
+    "bd6275ec-d607-4dd9-b495-a7faef7489f9": {
+      "exists": false
+    },
+    "1e730b02-2b8c-427f-af31-81ff4ecc8469": {
+      "exists": false
+    },
+    "11fe9cba-1c17-4788-b82e-4c8b6458f851": {
+      "exists": false
+    },
+    "06f56b14-fe66-4827-b7bb-faee105879de": {
+      "exists": false
+    },
+    "80338e7f-41c9-4422-a6fd-28df4b27c95a": {
+      "exists": false
+    },
+    "0354733c-cac5-4d0a-987a-07a9faf3b3d7": {
+      "exists": false
+    },
+    "1828e5be-069a-415f-9d3d-c1d72d2d4962": {
+      "exists": false
+    },
+    "e0c02a54-6827-4a39-9301-208f1661756a": {
+      "exists": false
+    },
+    "60760e6d-9e76-4104-8179-17217ca3831e": {
+      "exists": false
+    },
+    "bd43c96d-2ea3-4123-abc2-1c151604c210": {
+      "exists": false
+    },
+    "345b608a-076d-4e07-ac56-b9bfb7dc8c44": {
+      "exists": false
+    },
+    "c94f37b2-7582-4fff-b4d2-a35866182581": {
+      "exists": false
+    },
+    "5bfe8cc1-e516-416e-9814-20f32ef054c4": {
+      "exists": false
+    },
+    "8ac562a9-8ce5-4633-9056-1510831508db": {
+      "exists": false
+    },
+    "b2e99696-410a-4f56-829c-6101bc548aff": {
+      "exists": false
+    },
+    "e353c783-1b97-4293-ba28-1cf12f931e1a": {
+      "exists": false
+    },
+    "b905a1d6-c3cd-48bb-99e0-33ce10d164b5": {
+      "exists": false
+    },
+    "94959460-b50e-40e2-8b6f-c0fcc6fe5cad": {
+      "exists": false
+    },
+    "1932f240-51d1-43a5-93b7-521ec9a7f930": {
+      "exists": false
+    },
+    "05b0abe8-fbb6-40ed-9149-de17b09c1b45": {
+      "exists": false
+    },
+    "016ad838-f499-4fb2-97b2-6c9629f4b2b0": {
+      "exists": false
+    },
+    "59ed8c52-fe42-492d-bdbe-6e502d6c56c2": {
+      "exists": false
+    },
+    "a7105454-b5b6-4b39-a0b1-2936027b88cf": {
+      "exists": false
+    },
+    "2ee8abe2-5e90-406f-bd66-aec67490dff5": {
+      "exists": false
+    },
+    "98c7d323-4b39-48e9-bbb0-8900a625ef47": {
+      "exists": false
+    },
+    "d1328fd6-15a9-41a3-a708-d1131b1c1c58": {
+      "exists": false
+    },
+    "c40f58b7-4b49-4291-bff7-ba9ce7f1af42": {
+      "exists": false
+    },
+    "eb5b4ed4-442c-429a-a393-700b6147d307": {
+      "exists": false
+    },
+    "e5568b44-f13d-4661-808c-8beb937c4ebe": {
+      "exists": false
+    },
+    "8f2af719-5565-4460-a939-85b7dff8f35c": {
+      "exists": false
+    },
+    "4ca2c963-43da-42bf-86bc-0220d7d507fb": {
+      "exists": false
+    },
+    "3621e46b-4916-468e-b664-6fa061362a0c": {
+      "exists": false
+    },
+    "0193e1ad-eda0-49c7-946e-c10b4c0ed4e4": {
+      "exists": false
+    },
+    "48ba68a9-2769-4674-b39a-be91bb394d70": {
+      "exists": false
+    },
+    "20d54b1d-f603-4dd1-8eac-051da18b5147": {
+      "exists": false
+    },
+    "6ecef78c-0e7d-444c-871b-b8da722abb2d": {
+      "exists": false
+    },
+    "e043e52e-4df0-48b4-bd01-0d1b43b5de01": {
+      "exists": false
+    },
+    "50d66249-9bba-45f3-a9c5-9379d2e6ce33": {
+      "exists": false
+    },
+    "2705c625-49c4-4ab5-b2a8-d4be3b9173f7": {
+      "exists": false
+    },
+    "7030ed63-21df-4c3d-aef2-67b7c2e0ce07": {
+      "exists": false
+    },
+    "6f70f51e-ef65-4d16-80dd-868682d81e43": {
+      "exists": false
+    },
+    "9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98": {
+      "exists": false
+    },
+    "b1f75489-82d7-4420-936f-a7c24ec9b4a1": {
+      "exists": false
+    },
+    "22d4c990-91c8-4ea5-a4db-a59c7e559499": {
+      "exists": false
+    },
+    "c06b16f5-f126-429c-b5b0-9567fe4adb95": {
+      "exists": false
+    }
+  },
+  "thumbnailsExisting": 10
+}

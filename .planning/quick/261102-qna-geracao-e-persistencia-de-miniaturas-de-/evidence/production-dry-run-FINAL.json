@@ -1,0 +1,90 @@
+{
+  "generatedAt": "2026-11-03T13:51:57.587Z",
+  "origin": "https://gvbzwihwgzujwsviufgy.supabase.co",
+  "batches": [
+    {
+      "file": "production-dry-run-01.json",
+      "seen": 10,
+      "cursor": "2026-07-15T19:18:39.222192+00:00|bb33fc7b-8176-4e2e-855d-4d9c7d2bac85"
+    },
+    {
+      "file": "production-dry-run-02.json",
+      "seen": 25,
+      "cursor": "2026-07-23T22:23:56.392024+00:00|16e62c97-389a-48ac-89e7-e404a89ad32c"
+    },
+    {
+      "file": "production-dry-run-03.json",
+      "seen": 25,
+      "cursor": "2026-08-06T11:14:36.656051+00:00|414fe65f-e3bf-4ec6-b0f5-9a48d8f2c145"
+    },
+    {
+      "file": "production-dry-run-04.json",
+      "seen": 25,
+      "cursor": "2026-08-09T22:42:56.345561+00:00|06f56b14-fe66-4827-b7bb-faee105879de"
+    },
+    {
+      "file": "production-dry-run-05.json",
+      "seen": 25,
+      "cursor": "2026-08-15T21:14:09.421427+00:00|b2e99696-410a-4f56-829c-6101bc548aff"
+    },
+    {
+      "file": "production-dry-run-06.json",
+      "seen": 25,
+      "cursor": "2026-08-26T18:06:01.029935+00:00|25890cc4-bdda-47ad-bb63-d234c0362258"
+    },
+    {
+      "file": "production-dry-run-07.json",
+      "seen": 25,
+      "cursor": "2026-08-30T22:44:57.613249+00:00|d484abe5-4acc-4d3c-9830-000f0e12463b"
+    },
+    {
+      "file": "production-dry-run-08.json",
+      "seen": 25,
+      "cursor": "2026-09-04T17:26:35.378012+00:00|c01dc819-38d4-4322-8b50-4b4d3b03b712"
+    },
+    {
+      "file": "production-dry-run-09.json",
+      "seen": 25,
+      "cursor": "2026-10-06T17:41:37.11533+00:00|d0907e36-250b-4834-a5f7-553286d87687"
+    },
+    {
+      "file": "production-dry-run-10.json",
+      "seen": 25,
+      "cursor": "2026-10-22T22:22:13.22972+00:00|64ed7079-2997-474e-aba5-3258a992cfbc"
+    },
+    {
+      "file": "production-dry-run-11.json",
+      "seen": 11,
+      "cursor": null
+    }
+  ],
+  "reclassified": {
+    "campaignId": "830d104a-4982-4832-8824-1ddca688fd63",
+    "previous": "ineligible",
+    "current": "would_create",
+    "originalPath": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/830d104a-4982-4832-8824-1ddca688fd63/v3.jpg",
+    "thumbnailPath": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/830d104a-4982-4832-8824-1ddca688fd63/v3.thumb-v1.webp"
+  },
+  "counters": {
+    "seen": 246,
+    "eligible": 246,
+    "ineligible": 0,
+    "would_create": 246,
+    "already_exists": 0,
+    "missing_original": 0,
+    "access_error": 0,
+    "invalid_format": 0,
+    "failed": 0,
+    "created": 0
+  },
+  "outcomes": {
+    "would_create": 246
+  },
+  "totalItems": 246,
+  "uniquePaths": 246,
+  "duplicates": [],
+  "invalidPaths": [],
+  "forbiddenPaths": [],
+  "finalCursor": null,
+  "inventoryComplete": true
+}

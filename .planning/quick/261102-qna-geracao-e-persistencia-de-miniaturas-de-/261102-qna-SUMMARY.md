@@ -5,7 +5,13 @@ date: 2026-11-02
 branch: perf/miniaturas-campanhas
 base_sha: 6447f3441a47be5ca2271245d3aab4e23a7ced9e
 gate_a: complete
-gate_b_backfill: pending_authorization
+gate_b_dry_run: complete
+gate_b_pilot: complete
+gate_b_backfill: complete_local
+gate_b_production: complete_production
+gate_b_homolog: pending
+production_release_guard: complete_local
+production_backfill: complete_production
 gate_c_publication: pending_authorization
 ---
 
@@ -49,6 +55,92 @@ Implementado e validado localmente:
 2. **Sem bypass de timeout:** removida a opção `client` de `createTimedSupabaseUploader`; todo upload passa pelo `global.fetch` com `AbortSignal`. `fetchImpl` permanece apenas para teste.
 3. **Falhas esperadas não silenciosas:** o wrapper registra `failed` (ex.: timeout) e `skipped` inesperado (ex.: endpoint mismatch) com warn sanitizado, sem lançar; `ineligible_path` continua sem ruído.
 4. **Dry-run inspeciona formato:** `inspectOriginalImage` (metadata + decode completo com saída 1×1, somente leitura) classifica conteúdo arbitrário **e JPEG truncado** como `invalid_format`; não gera nem envia.
+
+## Dry-run preparatório do Gate B (2026-11-02)
+
+Executado **somente leitura** no Supabase local `http://127.0.0.1:57781` (loopback exato de `--expected-url`), sem `--write` e sem iniciar serviços. Inventário **completo**: **67/67 campanhas `ready`**, 67 paths únicos, cobertura idêntica ao banco, cursor final `null`.
+
+| Outcome | Contagem |
+|---|---|
+| `would_create` | **67** |
+| `already_exists` | 0 |
+| `missing_original` | 0 |
+| `access_error` | 0 |
+| `invalid_format` | 0 |
+| `ineligible` | 0 |
+| `failed` | 0 |
+| `created` | 0 |
+
+- Nenhum `/inputs/`, logo, assinatura, `bench/` ou `lab/`; todos os paths são legado canônico.
+- Cursors preservaram microssegundos (`...249074+00:00`, `...321887+00:00`, `...569938+00:00`).
+- Nenhum segredo/URL assinada nos relatórios; nenhuma alteração em campanha, crédito, Storage ou original.
+- Evidência: `evidence/gate-b-dry-run-REPORT.md`, `gate-b-dry-run-01..04.json`, `gate-b-inventory-verification.json`.
+- **Gate B continua pendente**: nenhuma execução com `--write`.
+
+## Piloto local com escrita — 10 campanhas (2026-11-02)
+
+Executado **somente no fluxo legado local**, com autorização explícita: 10 itens, lote 5, concorrência 2, `--write --confirm-env local`.
+
+| Resultado | Valor |
+|---|---|
+| `created` | **10** |
+| `failed` / `access_error` / `missing_original` / `invalid_format` | 0 |
+| WebP 288×288 | **10/10** |
+| Peso | 13.030–18.920 bytes |
+| Bucket privado / signed URL disponível | true / true |
+| Originais intactos (SHA-256/bytes) | true |
+| Campanhas e créditos inalterados | true |
+| Reexecução dos 10 | **10 `already_exists`**, 0 `created` |
+| Hashes das miniaturas após reexecução | idênticos (sem sobrescrita) |
+
+- **Limitação:** validação real apenas do fluxo legado; v2/novo fluxo seguem em testes automatizados.
+- **57 restantes processadas na sequência final** (25/25/7 pelo cursor do piloto): **57 `created`**, 0 falhas.
+- Evidência: `evidence/gate-b-write-PILOT.md`, `gate-b-write-01.json`, `gate-b-write-01-rerun.json`, `gate-b-write-pilot-pre/post/rerun.json`.
+
+## Fechamento do Gate B local — 67 campanhas (2026-11-02)
+
+| Resultado final | Valor |
+|---|---|
+| Miniaturas existentes | **67/67** |
+| WebP 288×288 | **67/67** |
+| Peso | 10.562–23.638 bytes |
+| Bucket privado / signed URL | true / true |
+| Originais intactos (SHA-256/bytes) | true |
+| Campanhas e créditos inalterados | true |
+| Hashes do piloto após as 57 | idênticos (sem sobrescrita) |
+| Varredura final (somente leitura) | **67 `already_exists`**, 0 falhas, cursor `null` |
+
+- Gate B **local** concluído para o fluxo legado. **Não** representa prontidão de homolog/produção.
+- Consumidores, commit, merge, push e deploy exigem autorização separada.
+- Evidência: `evidence/gate-b-write-FINAL.md`, `gate-b-write-02/03/04.json`, `gate-b-final-pre/post.json`, `gate-b-final-dry-run.json`.
+
+## Preparação da liberação de produção (2026-11-03)
+
+Guardas ajustadas e testadas localmente, **sem acesso à produção**:
+
+- `production` permitido apenas com `--env production`, `--expected-url` exato e origem **não loopback**;
+- dry-run padrão; `--write` exige `--confirm-env production`;
+- `homolog` continua bloqueado;
+- preflight é executado **antes de criar client** (zero chamadas externas em bloqueio);
+- inventário/allowlist/skip-existing/limites/cursor/relatórios preservados.
+
+Testes: **51/51** no módulo (runner 18/18), typecheck 0, lint 0, `git diff --check` limpo.
+
+Evidência: `evidence/gate-b-production-release.md` (diff, comandos com placeholders, fornecimento seguro de credenciais, plano dry-run → piloto → restante → publicação e critérios de parada).
+
+**Dry-run de produção 01 (2026-11-03, somente leitura):** projeto `gvbzwihwgzujwsviufgy`, origem exata `https://gvbzwihwgzujwsviufgy.supabase.co`, 10 itens / batch 5 / concorrência 2. Contadores: **would_create 10**, `already_exists/missing_original/access_error/invalid_format/ineligible/failed/created = 0`; cursor com microssegundos. Nenhum path inesperado ou segredo. **Inventário não ampliado; aguardando revisão.** Evidência: `evidence/production-dry-run-01-REPORT.md` + JSON.
+
+**Dry-run de produção ampliado (2026-11-03, somente leitura):** lotes 02–09 em 25 itens, concorrência 2. Total parcial **210 itens / 210 paths únicos**, `would_create 209`, `ineligible 1`, demais contadores 0, sem duplicatas. **PARADO no lote 09** por caminho inesperado `{store}/{campaign}/v3.jpg` (campanha `830d104a…`), fora da allowlist atual. Cursor final emitido, cobertura **parcial**, nenhuma escrita. Evidência: `evidence/production-dry-run-PARTIAL.md` + `production-dry-run-02..09.json`.
+
+**Investigação read-only do v3 (2026-11-03):** v3 é arte final **aprovada/ativa** e referenciada por `campaigns.storage_path`; v1/v2 foram descartadas; objeto JPEG 1080×1080 (245.151 B). É caso **isolado** (1 campanha com `/v3.jpg`, 0 `/v4.jpg`), mas **legítimo** do fluxo histórico de regeneração (schema 1..3 / RPC `complete_campaign_regeneration`). Menor ajuste recomendado: aceitar `v2.jpg` e `v3.jpg` no contrato de caminho; impacto no gerador automático é nulo no código atual, no backfill é gerar `v3.thumb-v1.webp`, e nos consumidores é automático via `deriveThumbnailPath`. Evidência: `evidence/investigate-v3-REPORT.md` + `investigate-v3.json`.
+
+**Inventário de produção completo (2026-11-03, somente leitura):** reinspeção do v3 ⇒ `would_create`; continuação a partir do cursor do lote 09 até `cursor: null`. **246 campanhas `ready`, 246 paths únicos, 246 `would_create`**, 0 duplicados, 0 ineligible/missing/access/invalid/failed, cursor final `null`. O item v3 anterior foi substituído, sem dupla contagem. Produção não alterada; piloto com escrita continua pendente de autorização. Evidência: `evidence/production-dry-run-FINAL.md` + `production-dry-run-FINAL.json`.
+
+**Piloto de produção com escrita (2026-11-03):** 10 campanhas, lote 5, concorrência 2, `--write --confirm-env production`, sem `--after`. **10 `created`**, 0 falhas; WebP 288×288 (12.228–18.920 B), bucket privado, originais/campanhas/créditos intactos (hashes/contagens). Reexecução dos 10 ⇒ **10 `already_exists`**, 0 `created`, hashes idênticos. Restam **236** campanhas; nenhum lote ampliado. Evidência: `evidence/production-write-PILOT.md` + `production-write-pilot-*.json`.
+
+**Restante de produção concluído (2026-11-03):** 236 campanhas em 9×25 + 11, cursor do piloto, pré-checagem por lote contra o inventário aprovado. **236 `created`**, 0 falhas. Consolidação: **246/246 WebP 288×288** (7.392–26.010 B), bucket privado, originais/campanhas/créditos intactos, hashes do piloto inalterados; varredura final read-only **246 `already_exists`**, cursor `null`, **0 campanhas novas**. v3 `830d104a…` ⇒ `already_exists` (288×288, 15.408 B). Evidência: `evidence/production-write-FINAL.md` + `production-batch-*`/`production-final-*`.
+
+**Suporte a v3 implementado (2026-11-03):** `thumbnail-path.ts` aceita estritamente `v2.jpg`/`v3.jpg` (incluindo `.jpeg`) e deriva `v2.thumb-v1.webp`/`v3.thumb-v1.webp`. `v1.jpg`, `v4.jpg`, `v10.jpg`, `v02.jpg`, `v3.png` e paths malformados são rejeitados. Testes cobrem derivação, elegibilidade do backfill e assinatura por dashboard/listagem; consumidores não duplicam regra. Sem alteração de migrations, gerador automático ou fluxo histórico. Evidência: `evidence/v3-support-IMPLEMENTED.md`.
 
 ## Evidência (Gate A)
 

@@ -8,6 +8,12 @@ depends_on: []
 autonomous: false
 status: complete
 gate_a_status: complete
+gate_b_dry_run: complete
+gate_b_pilot: complete
+gate_b_local: complete
+gate_b_production: complete_production
+gate_b_homolog: pending
+production_release_guard: complete_local
 decisions_reviewed: 2026-11-02
 approval_required: true
 gate_a_authorized: 2026-11-02
@@ -140,10 +146,12 @@ Shapes canônicos aceitos (allowlist fechada):
 | Fluxo | Original | Miniatura |
 |---|---|---|
 | Legado | `{storeId}/{campaignId}.jpg` | `{storeId}/{campaignId}.thumb-v1.webp` |
-| Correção v2 | `{storeId}/{campaignId}/v2.jpg` | `{storeId}/{campaignId}/v2.thumb-v1.webp` |
+| Correção v2/v3 (histórico) | `{storeId}/{campaignId}/v2.jpg` ou `v3.jpg` | `{storeId}/{campaignId}/v2.thumb-v1.webp` ou `v3.thumb-v1.webp` |
 | Novo fluxo 1:1 | `{storeId}/{campaignId}/product-1-1/{operationId}/art-1024.jpg` | `.../art-1024.thumb-v1.webp` |
 
-Qualquer outro path é **inelegível** (`skipped_ineligible`): `/inputs/`, logos, assinaturas, `bench/`, laboratório, arquivos de outro bucket, paths sem vínculo canônico e o próprio path de miniatura. A allowlist reutiliza `NEW_FLOW_ARTIFACT_PATH_RE` e adiciona regexes fechadas para legado e v2.
+**Descoberta do contrato histórico (2026-11-03):** o schema permite `version_number` 1..3 e o RPC histórico `complete_campaign_regeneration` aceita v2/v3; produção tem **1** campanha com `v3.jpg` aprovada/ativa e referenciada por `campaigns.storage_path`. Por isso a allowlist aceita estritamente **v2.jpg e v3.jpg**, derivando `v3.thumb-v1.webp` pelo mesmo contrato central. `v1.jpg`, `v4.jpg`, versões arbitrárias e formas malformadas permanecem inelegíveis.
+
+Qualquer outro path é **inelegível** (`skipped_ineligible`): `/inputs/`, logos, assinaturas, `bench/`, laboratório, arquivos de outro bucket, paths sem vínculo canônico e o próprio path de miniatura. A allowlist reutiliza `NEW_FLOW_ARTIFACT_PATH_RE` e adiciona regexes fechadas para legado e versões v2/v3.
 
 ### 2.2 Formato, dimensões e recipe
 
@@ -399,7 +407,7 @@ interface ThumbnailContext  { readonly endpoint: string; readonly uploader: Thum
 ## 6. Validação planejada
 
 **Cobertura por requisito**
-- `REQ-qna-01` — formatos de entrada realmente usados: JPEG 1080×1080 (legado), JPEG 1024×1024 (novo fluxo), JPEG v2 (correção); PNG/WebP de entrada são convertidos antes de chegar ao gerador.
+- `REQ-qna-01` — formatos de entrada realmente usados: JPEG 1080×1080 (legado), JPEG 1024×1024 (novo fluxo), JPEG v2/v3 (correção/regeneração histórica); PNG/WebP de entrada são convertidos antes de chegar ao gerador.
 - `REQ-qna-02` — derivada: WebP, maior aresta 288, proporção preservada, sem upscale, sem metadados, peso medido no teste; original com hash/bytes inalterados.
 - `REQ-qna-03` — geração após persistência nos 3 pontos; ordem comprovada por teste.
 - `REQ-qna-04` — falha/timeout de miniatura (sharp, validação, upload, 2 s) sem falha comercial, sem crédito, sem status; aborto real comprovado por teste com `fetch` fake.

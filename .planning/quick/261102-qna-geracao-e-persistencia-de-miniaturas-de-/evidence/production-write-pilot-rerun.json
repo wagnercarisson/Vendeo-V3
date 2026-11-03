@@ -1,0 +1,62 @@
+{
+  "phase": "rerun",
+  "generatedAt": "2026-11-03T13:54:05.525Z",
+  "originalsEqual": true,
+  "campaignsEqual": true,
+  "creditsEqual": true,
+  "txEqual": true,
+  "bucketPrivate": true,
+  "thumbnails": {
+    "c5dbccd2-419a-4019-8617-06ac2569f880": {
+      "exists": true,
+      "bytes": 17340,
+      "sha256": "07f61fb6057fed0c6ea78a1020a2cbf30690af55db02e98f7ec459c255bf5acf"
+    },
+    "4c34d320-ed68-4864-acae-6d1adfc07c82": {
+      "exists": true,
+      "bytes": 18066,
+      "sha256": "fb3b3111ac4093cf9a115d40ea23bea44353aade80ff30f2630895c9d7b38e41"
+    },
+    "ee68456a-94b0-49c3-bafa-b8100ef2d512": {
+      "exists": true,
+      "bytes": 18920,
+      "sha256": "1925af418a92d05a06c52af503f546511e2b347d1185b317b007d3fde9d184ee"
+    },
+    "5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5": {
+      "exists": true,
+      "bytes": 17642,
+      "sha256": "2d298ca562bb1a7d0fae1d85b1f72dc285643e37d82a52e95b33ffaf6a3ffc29"
+    },
+    "4bf0376c-814f-4428-a5ff-a7c2305eec8e": {
+      "exists": true,
+      "bytes": 12228,
+      "sha256": "6c580947987f57b455c0c5d4ef04d719d29f656172581037d7cfe3feb8832154"
+    },
+    "f6a85ce2-3611-4142-849f-6f5e461092c9": {
+      "exists": true,
+      "bytes": 15846,
+      "sha256": "626b2888ecf9e6521f0d5b5cb69b42e01ed0a7cf5c7ee07548a37b61168c5680"
+    },
+    "1b41018e-3ebc-4c58-bd5a-89794652eacc": {
+      "exists": true,
+      "bytes": 13086,
+      "sha256": "39c28fa68e19abf51f72e6fe475ea99155569115c486862ec04703cec9b9adc3"
+    },
+    "91439d22-ea32-46a3-a474-4615544ad40b": {
+      "exists": true,
+      "bytes": 12774,
+      "sha256": "15f9ad6f7a811ac09c853fc70624d1d923798353f6f2bbbcdc0dcc75e5ed1434"
+    },
+    "91aee995-b6a3-45bd-92d6-5419f725ad88": {
+      "exists": true,
+      "bytes": 13030,
+      "sha256": "5da818829f01f92868473010bcb9fba6fe56c04a669d92a541d06520b3a10cfe"
+    },
+    "bb33fc7b-8176-4e2e-855d-4d9c7d2bac85": {
+      "exists": true,
+      "bytes": 13392,
+      "sha256": "8740a90da56917a4a35c544f696a9f471d155fc9801ece446dc6f3394ea25e78"
+    }
+  },
+  "hashesEqual": true
+}

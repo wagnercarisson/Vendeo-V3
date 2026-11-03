@@ -1,0 +1,62 @@
+{
+  "phase": "rerun",
+  "generatedAt": "2026-11-02T23:57:40.312Z",
+  "originalsEqual": true,
+  "campaignsEqual": true,
+  "creditsEqual": true,
+  "creditTransactionsEqual": true,
+  "bucketPrivate": true,
+  "thumbnails": {
+    "c5dbccd2-419a-4019-8617-06ac2569f880": {
+      "exists": true,
+      "bytes": 17340,
+      "sha256": "07f61fb6057fed0c6ea78a1020a2cbf30690af55db02e98f7ec459c255bf5acf"
+    },
+    "4c34d320-ed68-4864-acae-6d1adfc07c82": {
+      "exists": true,
+      "bytes": 18066,
+      "sha256": "fb3b3111ac4093cf9a115d40ea23bea44353aade80ff30f2630895c9d7b38e41"
+    },
+    "ee68456a-94b0-49c3-bafa-b8100ef2d512": {
+      "exists": true,
+      "bytes": 18920,
+      "sha256": "1925af418a92d05a06c52af503f546511e2b347d1185b317b007d3fde9d184ee"
+    },
+    "5bce5f2b-e8f8-43f4-aab2-7f2d9b65f4a5": {
+      "exists": true,
+      "bytes": 17642,
+      "sha256": "2d298ca562bb1a7d0fae1d85b1f72dc285643e37d82a52e95b33ffaf6a3ffc29"
+    },
+    "91aee995-b6a3-45bd-92d6-5419f725ad88": {
+      "exists": true,
+      "bytes": 13030,
+      "sha256": "5da818829f01f92868473010bcb9fba6fe56c04a669d92a541d06520b3a10cfe"
+    },
+    "e937155b-5126-4f42-af10-42c97148712d": {
+      "exists": true,
+      "bytes": 17332,
+      "sha256": "47e81f7f8d071acb5f6988147882d601f02c830af68f17cd4fa2334012278707"
+    },
+    "f8be1eef-9d00-4ab4-84b6-4522113a7324": {
+      "exists": true,
+      "bytes": 16530,
+      "sha256": "eae0f560df88e51cd12e890c2abf5a49681afd147cdbd9f9a43d04ed13bdb83e"
+    },
+    "76c1751e-80b4-442f-ac52-38b23e04cdf2": {
+      "exists": true,
+      "bytes": 15524,
+      "sha256": "150a29c64555588754e6a22fbf67f48f649e713fe9ddeda77e538522925b1e0c"
+    },
+    "bb4bf598-b359-423e-9e4d-91589d66a927": {
+      "exists": true,
+      "bytes": 13138,
+      "sha256": "4c0c1c54a8bb33f8a92123a1432841b6c0b86c5f3b6b1411672da46e32efff6b"
+    },
+    "748a7b29-5bbf-4d4a-adfd-66aea6fb19c1": {
+      "exists": true,
+      "bytes": 15786,
+      "sha256": "296b50ce72ada51f89ffe27827596b1dd383fb7565bb372a3455f581d17628c9"
+    }
+  },
+  "rerunHashesEqual": true
+}

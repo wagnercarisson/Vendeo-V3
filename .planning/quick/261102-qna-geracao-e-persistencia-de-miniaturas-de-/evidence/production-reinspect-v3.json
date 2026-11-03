@@ -1,0 +1,30 @@
+{
+  "mode": "dry-run",
+  "env": "production",
+  "endpoint": "https://gvbzwihwgzujwsviufgy.supabase.co",
+  "startedAt": "2026-11-03T13:51:03.148Z",
+  "finishedAt": "2026-11-03T13:51:04.327Z",
+  "cursor": "2026-09-07T21:34:14.134069+00:00|830d104a-4982-4832-8824-1ddca688fd63",
+  "counters": {
+    "seen": 1,
+    "eligible": 1,
+    "ineligible": 0,
+    "wouldCreate": 1,
+    "created": 0,
+    "alreadyExists": 0,
+    "missingOriginal": 0,
+    "accessError": 0,
+    "invalidFormat": 0,
+    "failed": 0
+  },
+  "items": [
+    {
+      "campaignId": "830d104a-4982-4832-8824-1ddca688fd63",
+      "storeId": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147",
+      "originalPath": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/830d104a-4982-4832-8824-1ddca688fd63/v3.jpg",
+      "thumbnailPath": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/830d104a-4982-4832-8824-1ddca688fd63/v3.thumb-v1.webp",
+      "outcome": "would_create",
+      "durationMs": 701
+    }
+  ]
+}

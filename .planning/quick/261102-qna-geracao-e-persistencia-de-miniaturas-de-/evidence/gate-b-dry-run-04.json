@@ -1,0 +1,78 @@
+{
+  "mode": "dry-run",
+  "env": "local",
+  "endpoint": "http://127.0.0.1:57781",
+  "startedAt": "2026-11-02T23:54:12.890Z",
+  "finishedAt": "2026-11-02T23:54:13.040Z",
+  "cursor": null,
+  "counters": {
+    "seen": 7,
+    "eligible": 7,
+    "ineligible": 0,
+    "wouldCreate": 7,
+    "created": 0,
+    "alreadyExists": 0,
+    "missingOriginal": 0,
+    "accessError": 0,
+    "invalidFormat": 0,
+    "failed": 0
+  },
+  "items": [
+    {
+      "campaignId": "2705c625-49c4-4ab5-b2a8-d4be3b9173f7",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/2705c625-49c4-4ab5-b2a8-d4be3b9173f7/product-1-1/ba6ac5ee-4ba0-454d-b929-4f6dc564f569/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/2705c625-49c4-4ab5-b2a8-d4be3b9173f7/product-1-1/ba6ac5ee-4ba0-454d-b929-4f6dc564f569/art-1024.thumb-v1.webp",
+      "outcome": "would_create",
+      "durationMs": 45
+    },
+    {
+      "campaignId": "7030ed63-21df-4c3d-aef2-67b7c2e0ce07",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/7030ed63-21df-4c3d-aef2-67b7c2e0ce07/product-1-1/26ab846e-d0f0-44bc-b06f-a6c65a382088/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/7030ed63-21df-4c3d-aef2-67b7c2e0ce07/product-1-1/26ab846e-d0f0-44bc-b06f-a6c65a382088/art-1024.thumb-v1.webp",
+      "outcome": "would_create",
+      "durationMs": 43
+    },
+    {
+      "campaignId": "6f70f51e-ef65-4d16-80dd-868682d81e43",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/6f70f51e-ef65-4d16-80dd-868682d81e43/product-1-1/849f092c-c4c2-4471-8777-6e4231058eeb/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/6f70f51e-ef65-4d16-80dd-868682d81e43/product-1-1/849f092c-c4c2-4471-8777-6e4231058eeb/art-1024.thumb-v1.webp",
+      "outcome": "would_create",
+      "durationMs": 35
+    },
+    {
+      "campaignId": "9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/9c2133ce-2fc9-4171-bd76-5d4d4fdd2f98/product-1-1/4351264b-880d-43f5-9ac7-3ad1f7e60053/art-1024.thumb-v1.webp",
+      "outcome": "would_create",
+      "durationMs": 35
+    },
+    {
+      "campaignId": "b1f75489-82d7-4420-936f-a7c24ec9b4a1",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/b1f75489-82d7-4420-936f-a7c24ec9b4a1/product-1-1/2006b8fc-475d-48ad-8e50-7c240b5f4bd5/art-1024.thumb-v1.webp",
+      "outcome": "would_create",
+      "durationMs": 26
+    },
+    {
+      "campaignId": "22d4c990-91c8-4ea5-a4db-a59c7e559499",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/22d4c990-91c8-4ea5-a4db-a59c7e559499/product-1-1/8c83fae4-9e46-4f77-83d9-a7152b5c973f/art-1024.thumb-v1.webp",
+      "outcome": "would_create",
+      "durationMs": 26
+    },
+    {
+      "campaignId": "c06b16f5-f126-429c-b5b0-9567fe4adb95",
+      "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+      "originalPath": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.jpg",
+      "thumbnailPath": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.thumb-v1.webp",
+      "outcome": "would_create",
+      "durationMs": 19
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "origin": "https://gvbzwihwgzujwsviufgy.supabase.co",
+  "campaign": {
+    "id": "830d104a-4982-4832-8824-1ddca688fd63",
+    "status": "ready",
+    "approval_status": "approved",
+    "rejection_count": 2,
+    "approved_version_id": "c85f5eac-ddd3-46ca-9b06-327212bf75d8",
+    "approved_at": "2026-09-07T23:28:48.554894+00:00",
+    "updated_at": "2026-09-07T23:28:48.554894+00:00",
+    "storage_path": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/830d104a-4982-4832-8824-1ddca688fd63/v3.jpg"
+  },
+  "versions": [
+    {
+      "id": "f752e7d5-235d-4339-8584-0395dcc56014",
+      "campaign_id": "830d104a-4982-4832-8824-1ddca688fd63",
+      "version_number": 1,
+      "status": "rejected",
+      "asset_status": "discarded",
+      "storage_path": null,
+      "asset_deleted_at": "2026-09-07T21:48:12.396867+00:00",
+      "created_at": "2026-09-07T21:34:14.296649+00:00"
+    },
+    {
+      "id": "d00d3af6-2616-4759-aa8f-f242dcd5fe3a",
+      "campaign_id": "830d104a-4982-4832-8824-1ddca688fd63",
+      "version_number": 2,
+      "status": "rejected",
+      "asset_status": "discarded",
+      "storage_path": null,
+      "asset_deleted_at": "2026-09-07T23:20:30.514628+00:00",
+      "created_at": "2026-09-07T21:48:12.396867+00:00"
+    },
+    {
+      "id": "c85f5eac-ddd3-46ca-9b06-327212bf75d8",
+      "campaign_id": "830d104a-4982-4832-8824-1ddca688fd63",
+      "version_number": 3,
+      "status": "approved",
+      "asset_status": "active",
+      "storage_path": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/830d104a-4982-4832-8824-1ddca688fd63/v3.jpg",
+      "asset_deleted_at": null,
+      "created_at": "2026-09-07T23:20:30.514628+00:00"
+    }
+  ],
+  "storageObjects": [
+    {
+      "name": "inputs",
+      "size": null,
+      "mimetype": null,
+      "updated_at": null
+    },
+    {
+      "name": "v3.jpg",
+      "size": 245151,
+      "mimetype": "image/jpeg",
+      "updated_at": "2026-09-07T23:20:30.370Z"
+    }
+  ],
+  "counts": {
+    "campaignsStorageV3": 1,
+    "campaignsStorageV4": 0,
+    "campaignsStorageV2": 2
+  },
+  "v3ArtVersionRows": [
+    {
+      "campaign_id": "830d104a-4982-4832-8824-1ddca688fd63",
+      "version_number": 3,
+      "status": "approved",
+      "asset_status": "active",
+      "storage_path": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/830d104a-4982-4832-8824-1ddca688fd63/v3.jpg"
+    }
+  ],
+  "objectImage": {
+    "format": "jpeg",
+    "width": 1080,
+    "height": 1080,
+    "bytes": 245151,
+    "space": "srgb",
+    "hasAlpha": false
+  }
+}

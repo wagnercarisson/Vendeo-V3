@@ -1,0 +1,110 @@
+{
+  "mode": "write",
+  "env": "production",
+  "endpoint": "https://gvbzwihwgzujwsviufgy.supabase.co",
+  "startedAt": "2026-11-03T14:04:35.640Z",
+  "finishedAt": "2026-11-03T14:04:37.729Z",
+  "cursor": "2026-10-31T00:35:49.628146+00:00|ca9c3851-6268-4d83-b70b-cf6b125cd6f6",
+  "counters": {
+    "seen": 11,
+    "eligible": 11,
+    "ineligible": 0,
+    "wouldCreate": 0,
+    "created": 11,
+    "alreadyExists": 0,
+    "missingOriginal": 0,
+    "accessError": 0,
+    "invalidFormat": 0,
+    "failed": 0
+  },
+  "items": [
+    {
+      "campaignId": "4e174848-30bd-43d4-83a5-785e33a15487",
+      "storeId": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38",
+      "originalPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/4e174848-30bd-43d4-83a5-785e33a15487/product-1-1/4ebe4224-9c68-4125-a6c2-824912efbb15/art-1024.jpg",
+      "thumbnailPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/4e174848-30bd-43d4-83a5-785e33a15487/product-1-1/4ebe4224-9c68-4125-a6c2-824912efbb15/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 359
+    },
+    {
+      "campaignId": "e497d2a0-f874-4f36-96c0-5b9dc0c4e8d4",
+      "storeId": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38",
+      "originalPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/e497d2a0-f874-4f36-96c0-5b9dc0c4e8d4/product-1-1/ab82c4c6-1dbc-4c16-92d6-78d6a3365480/art-1024.jpg",
+      "thumbnailPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/e497d2a0-f874-4f36-96c0-5b9dc0c4e8d4/product-1-1/ab82c4c6-1dbc-4c16-92d6-78d6a3365480/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 340
+    },
+    {
+      "campaignId": "6067e04d-9cab-4a3a-b845-b1a5fbb6836c",
+      "storeId": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38",
+      "originalPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/6067e04d-9cab-4a3a-b845-b1a5fbb6836c/product-1-1/6d6125c6-d9e7-40a2-8108-1c44897219ea/art-1024.jpg",
+      "thumbnailPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/6067e04d-9cab-4a3a-b845-b1a5fbb6836c/product-1-1/6d6125c6-d9e7-40a2-8108-1c44897219ea/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 313
+    },
+    {
+      "campaignId": "f6389254-980c-47b2-8381-eed4bff8c1f0",
+      "storeId": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38",
+      "originalPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/f6389254-980c-47b2-8381-eed4bff8c1f0/product-1-1/aa6070ef-e127-429b-b7d0-b749831ba991/art-1024.jpg",
+      "thumbnailPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/f6389254-980c-47b2-8381-eed4bff8c1f0/product-1-1/aa6070ef-e127-429b-b7d0-b749831ba991/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 654
+    },
+    {
+      "campaignId": "27916113-c506-45e1-bc64-bf1641807034",
+      "storeId": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38",
+      "originalPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/27916113-c506-45e1-bc64-bf1641807034/product-1-1/bc231923-2e00-4b7c-ab7f-02f916d7e26c/art-1024.jpg",
+      "thumbnailPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/27916113-c506-45e1-bc64-bf1641807034/product-1-1/bc231923-2e00-4b7c-ab7f-02f916d7e26c/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 260
+    },
+    {
+      "campaignId": "ce330df3-09f2-4108-92ea-470b5bf63333",
+      "storeId": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38",
+      "originalPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/ce330df3-09f2-4108-92ea-470b5bf63333/product-1-1/b79bc717-9fa4-46c7-9da5-4bd44b1febc8/art-1024.jpg",
+      "thumbnailPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/ce330df3-09f2-4108-92ea-470b5bf63333/product-1-1/b79bc717-9fa4-46c7-9da5-4bd44b1febc8/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 269
+    },
+    {
+      "campaignId": "a7157472-37ef-4a0e-b873-7ca1e511228e",
+      "storeId": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38",
+      "originalPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/a7157472-37ef-4a0e-b873-7ca1e511228e/product-1-1/81ba8b2b-6031-45ad-a22b-5c135e14781d/art-1024.jpg",
+      "thumbnailPath": "eaf7775b-0c62-4132-90e0-fcf4c8b7da38/a7157472-37ef-4a0e-b873-7ca1e511228e/product-1-1/81ba8b2b-6031-45ad-a22b-5c135e14781d/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 310
+    },
+    {
+      "campaignId": "4348999e-585a-46de-a643-8c557dd01c59",
+      "storeId": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147",
+      "originalPath": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/4348999e-585a-46de-a643-8c557dd01c59/product-1-1/0127fa3b-5e8c-4317-8b35-0ab885eeb1a3/art-1024.jpg",
+      "thumbnailPath": "6e1b0fb1-2855-4ee7-bc6f-c9b74ae97147/4348999e-585a-46de-a643-8c557dd01c59/product-1-1/0127fa3b-5e8c-4317-8b35-0ab885eeb1a3/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 358
+    },
+    {
+      "campaignId": "4054717a-7788-4afb-ba5c-cb52b817ca11",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/4054717a-7788-4afb-ba5c-cb52b817ca11/product-1-1/3976de3a-6893-4dc7-9557-3df0bb1e4029/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/4054717a-7788-4afb-ba5c-cb52b817ca11/product-1-1/3976de3a-6893-4dc7-9557-3df0bb1e4029/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 314
+    },
+    {
+      "campaignId": "7246f016-f064-4416-9f97-db1b49ce3546",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/7246f016-f064-4416-9f97-db1b49ce3546/product-1-1/dbed8b0f-4bd8-4e1c-be02-6ce629204f4c/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/7246f016-f064-4416-9f97-db1b49ce3546/product-1-1/dbed8b0f-4bd8-4e1c-be02-6ce629204f4c/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 288
+    },
+    {
+      "campaignId": "ca9c3851-6268-4d83-b70b-cf6b125cd6f6",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/ca9c3851-6268-4d83-b70b-cf6b125cd6f6/product-1-1/09098733-d20e-4c87-9e88-330cbf28efdb/art-1024.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/ca9c3851-6268-4d83-b70b-cf6b125cd6f6/product-1-1/09098733-d20e-4c87-9e88-330cbf28efdb/art-1024.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 354
+    }
+  ]
+}

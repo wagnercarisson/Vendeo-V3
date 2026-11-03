@@ -1,0 +1,222 @@
+{
+  "mode": "write",
+  "env": "local",
+  "endpoint": "http://127.0.0.1:57781",
+  "startedAt": "2026-11-03T00:01:02.424Z",
+  "finishedAt": "2026-11-03T00:01:04.115Z",
+  "cursor": "2026-08-14T21:33:43.321887+00:00|5bfe8cc1-e516-416e-9814-20f32ef054c4",
+  "counters": {
+    "seen": 25,
+    "eligible": 25,
+    "ineligible": 0,
+    "wouldCreate": 0,
+    "created": 25,
+    "alreadyExists": 0,
+    "missingOriginal": 0,
+    "accessError": 0,
+    "invalidFormat": 0,
+    "failed": 0
+  },
+  "items": [
+    {
+      "campaignId": "82da394c-28c3-472c-97af-f7f7f136db8c",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/82da394c-28c3-472c-97af-f7f7f136db8c.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/82da394c-28c3-472c-97af-f7f7f136db8c.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 176
+    },
+    {
+      "campaignId": "3b9c4dbc-d077-44db-8c1b-c39f49f6edff",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/3b9c4dbc-d077-44db-8c1b-c39f49f6edff.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/3b9c4dbc-d077-44db-8c1b-c39f49f6edff.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 155
+    },
+    {
+      "campaignId": "bc18437b-99f6-48e1-97b1-25bb2f465266",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/bc18437b-99f6-48e1-97b1-25bb2f465266.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/bc18437b-99f6-48e1-97b1-25bb2f465266.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 123
+    },
+    {
+      "campaignId": "16e62c97-389a-48ac-89e7-e404a89ad32c",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/16e62c97-389a-48ac-89e7-e404a89ad32c.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/16e62c97-389a-48ac-89e7-e404a89ad32c.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 134
+    },
+    {
+      "campaignId": "22027428-9668-4523-8e28-5fea9feea6b4",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/22027428-9668-4523-8e28-5fea9feea6b4.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/22027428-9668-4523-8e28-5fea9feea6b4.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 91
+    },
+    {
+      "campaignId": "31d4c488-9450-4553-86b3-ae320bb62ba5",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/31d4c488-9450-4553-86b3-ae320bb62ba5.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/31d4c488-9450-4553-86b3-ae320bb62ba5.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 133
+    },
+    {
+      "campaignId": "4cb7af0d-6a62-47ef-900a-d0c0ae80b0ae",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/4cb7af0d-6a62-47ef-900a-d0c0ae80b0ae.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/4cb7af0d-6a62-47ef-900a-d0c0ae80b0ae.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 134
+    },
+    {
+      "campaignId": "c977f9fa-e4ad-49b7-85a0-fc96fc29b797",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/c977f9fa-e4ad-49b7-85a0-fc96fc29b797.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/c977f9fa-e4ad-49b7-85a0-fc96fc29b797.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 98
+    },
+    {
+      "campaignId": "206bf9d6-bbc4-48b3-abd1-3df45a40b475",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/206bf9d6-bbc4-48b3-abd1-3df45a40b475.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/206bf9d6-bbc4-48b3-abd1-3df45a40b475.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 87
+    },
+    {
+      "campaignId": "b79f3f7c-5098-4195-952a-6e10bfb74cd3",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/b79f3f7c-5098-4195-952a-6e10bfb74cd3.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/b79f3f7c-5098-4195-952a-6e10bfb74cd3.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 83
+    },
+    {
+      "campaignId": "0b09cc63-e167-4b17-90fc-d8c27e4bc4ea",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/0b09cc63-e167-4b17-90fc-d8c27e4bc4ea.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/0b09cc63-e167-4b17-90fc-d8c27e4bc4ea.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 83
+    },
+    {
+      "campaignId": "39093264-a33c-47a3-aece-a6d02a6c8c87",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/39093264-a33c-47a3-aece-a6d02a6c8c87.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/39093264-a33c-47a3-aece-a6d02a6c8c87.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 124
+    },
+    {
+      "campaignId": "bd6275ec-d607-4dd9-b495-a7faef7489f9",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/bd6275ec-d607-4dd9-b495-a7faef7489f9.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/bd6275ec-d607-4dd9-b495-a7faef7489f9.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 124
+    },
+    {
+      "campaignId": "1e730b02-2b8c-427f-af31-81ff4ecc8469",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/1e730b02-2b8c-427f-af31-81ff4ecc8469.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/1e730b02-2b8c-427f-af31-81ff4ecc8469.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 132
+    },
+    {
+      "campaignId": "11fe9cba-1c17-4788-b82e-4c8b6458f851",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/11fe9cba-1c17-4788-b82e-4c8b6458f851.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/11fe9cba-1c17-4788-b82e-4c8b6458f851.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 114
+    },
+    {
+      "campaignId": "06f56b14-fe66-4827-b7bb-faee105879de",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/06f56b14-fe66-4827-b7bb-faee105879de.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/06f56b14-fe66-4827-b7bb-faee105879de.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 124
+    },
+    {
+      "campaignId": "80338e7f-41c9-4422-a6fd-28df4b27c95a",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/80338e7f-41c9-4422-a6fd-28df4b27c95a.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/80338e7f-41c9-4422-a6fd-28df4b27c95a.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 125
+    },
+    {
+      "campaignId": "0354733c-cac5-4d0a-987a-07a9faf3b3d7",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/0354733c-cac5-4d0a-987a-07a9faf3b3d7.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/0354733c-cac5-4d0a-987a-07a9faf3b3d7.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 132
+    },
+    {
+      "campaignId": "1828e5be-069a-415f-9d3d-c1d72d2d4962",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/1828e5be-069a-415f-9d3d-c1d72d2d4962.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/1828e5be-069a-415f-9d3d-c1d72d2d4962.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 124
+    },
+    {
+      "campaignId": "e0c02a54-6827-4a39-9301-208f1661756a",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/e0c02a54-6827-4a39-9301-208f1661756a.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/e0c02a54-6827-4a39-9301-208f1661756a.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 132
+    },
+    {
+      "campaignId": "60760e6d-9e76-4104-8179-17217ca3831e",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/60760e6d-9e76-4104-8179-17217ca3831e.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/60760e6d-9e76-4104-8179-17217ca3831e.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 160
+    },
+    {
+      "campaignId": "bd43c96d-2ea3-4123-abc2-1c151604c210",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/bd43c96d-2ea3-4123-abc2-1c151604c210.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/bd43c96d-2ea3-4123-abc2-1c151604c210.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 136
+    },
+    {
+      "campaignId": "345b608a-076d-4e07-ac56-b9bfb7dc8c44",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/345b608a-076d-4e07-ac56-b9bfb7dc8c44.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/345b608a-076d-4e07-ac56-b9bfb7dc8c44.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 123
+    },
+    {
+      "campaignId": "c94f37b2-7582-4fff-b4d2-a35866182581",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/c94f37b2-7582-4fff-b4d2-a35866182581.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/c94f37b2-7582-4fff-b4d2-a35866182581.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 132
+    },
+    {
+      "campaignId": "5bfe8cc1-e516-416e-9814-20f32ef054c4",
+      "storeId": "48b212f8-2b0f-4679-b553-122a601bacac",
+      "originalPath": "48b212f8-2b0f-4679-b553-122a601bacac/5bfe8cc1-e516-416e-9814-20f32ef054c4.jpg",
+      "thumbnailPath": "48b212f8-2b0f-4679-b553-122a601bacac/5bfe8cc1-e516-416e-9814-20f32ef054c4.thumb-v1.webp",
+      "outcome": "created",
+      "durationMs": 126
+    }
+  ]
+}
