@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
-status: milestone_complete
-last_updated: 2026-11-04T15:10:56.303Z
+status: in_progress
+last_updated: "2026-11-04T20:05:42.050Z"
 progress:
-  total_phases: 15
-  completed_phases: 12
-  total_plans: 108
-  completed_plans: 463
-  percent: 80
-stopped_at: Milestone complete (Phase 58 was final phase)
+  total_phases: 16
+  completed_phases: 13
+  total_plans: 118
+  completed_plans: 107
+  percent: 81
 ---
 
 # Project State
@@ -38,6 +37,8 @@ stopped_at: Milestone complete (Phase 58 was final phase)
 - **EXECUÇÃO QUICK 261027-k4d (2026-10-27) — primeira fatia da fundação multimercado (F57): IMPLEMENTADA E APROVADA PELO USUÁRIO.** Biblioteca pura em `src/lib/market-context/**` (14 arquivos, 3 commits atômicos `b545bc98`, `35a1c5f4`, `00c95b1b`, correção `beec4e67` e doc `7d029eb0`). Suíte nova **72/72**; tsc direcionado aos arquivos novos **exit 0**; guard de imports produtivos vazio; `git diff --check` limpo. Correção pós-revisão Codex: `kind: "legacy"` só é aceito sem campos adicionais; entradas mistas retornam erro tipado em vez de descartar configuração e aplicar BR/pt-BR. Gates globais **não verdes por ambiente**: `npm run typecheck`/`build` não executam (sem `node_modules/.bin`, sem `tsx` e sem `@google/generative-ai`); tsc completo acusa **29 erros em arquivos não tocados** e **zero** em `market-context`; ESLint quebrado por módulo ausente e, de todo modo, não cobre TS. **Aceite registrado em 2026-10-27 com essas limitações conhecidas; revalidar os gates globais é ação própria e controlada.** **Gates globais recuperados pela quick `261027-llm` em 2026-10-27** (`npm ci` + correção de 2 testes: typecheck 0 erros, build OK, lint sem cobertura TS). Sem migration, banco, env, dependência, push, deploy ou ativação.
 
 ## Current Position
+
+- **PLANEJAMENTO F59 (2026-11-04) — Campanhas de Produto vertical 9:16: PLANOS CRIADOS E VERIFICADOS; EXECUÇÃO NÃO INICIADA.** Fase registrada no ROADMAP/REQUIREMENTS (`REQ-59-01..14`); `59-CONTEXT.md`, `59-UI-SPEC.md`, `59-PATTERNS.md` e **10 planos** (`59-01..59-10`, 8 waves) em `.planning/phases/59-f59-campanhas-de-produto-vertical-9-16/`. `gsd-plan-checker`: **VERIFICATION PASSED** após 1 rodada de revisão (5 blockers corrigidos: cadeia de props do form, primeira submissão vertical, ciclo restore/display, rota admin de pendências e isolamento do adaptador vertical). Cobertura **14/14 REQ-IDs**; D-01..D-15 citados. Checkpoints explícitos: prova paga (14 chamadas, teto US$ 3,00, estimativa conservadora antes da 1ª chamada), seed data-only da flag em homolog e homolog/aceite; produção é gate separado. **Nenhum código, migration, chamada paga, push, deploy ou operação de produção.** Próximo: revisão dos planos pelo Codex/usuário; execução somente após aprovação.
 
 - **QUICK 261104-kal (2026-11-04) — Enriquecimento da seção de exemplos de `/floriculturas`: CONCLUÍDA, VERIFICADA, SINCRONIZADA E ARQUIVADA; ACEITE VISUAL APROVADO; NÃO PUBLICADA.** O bloco “Crie posts para sua floricultura sem começar do zero.” mantém o título e passa a exibir lista de três itens com marcadores simples; na sequência, um único exemplo complementar da Flor Kalandiva (Donna Flor), com subtítulo, parágrafo único e campanha integral. No desktop, texto à esquerda e imagem à direita, com o bloco textual centralizado verticalmente e linhas à esquerda; no mobile, título → lista → subtítulo → parágrafo → imagem → aviso. Aviso demonstrativo único movido para o fim do bloco; apoio do encerramento trocado por “Suas flores, sua marca, uma campanha pronta para divulgar.”. Duas variantes WebP: 480w (43.372 B) e 1024w (121.074 B), `loading="lazy"`, `srcset`/`sizes` reconciliados; original 1024×1024/242.089 B preservado em `evidence/source/` (SHA-256 `CF0FD93E…AA5F91`). Em DPR 3 o navegador usa 1024w, sem upscale. Gates: **38 testes focados**, **7.717 testes na suíte local** (10 skipped), typecheck **0**, lint **0** (sem TS), build **exit 0**, OpenSpec change e spec **valid (`--strict`)**, `git diff --check` limpo. CDP 1440×900 e 390×844 (DPR 1 e 3): 0 px de overflow, imagem 468×468/342×342, 1 card, 7 IDs únicos, 1 aviso, `R$` ausente do texto HTML. Implementação no commit `0a4541a8`; fechamento documental no commit seguinte. OpenSpec arquivado em `openspec/changes/archive/2026-11-04-enriquecer-exemplos-floriculturas/`; spec `floriculturas-demonstration-page` sincronizada. Home, oferta centralizada, acesso, CTAs, card único, metadata, canonical e sitemap preservados. **Sem merge, push, deploy ou tag.** Evidência: `.planning/quick/261104-kal-enriquecer-secao-de-floriculturas/`.
 
