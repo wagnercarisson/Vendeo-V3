@@ -77,6 +77,7 @@ describe("F59 — estimativa vertical e orçamento da prova", () => {
       totalChargedUsd: 0,
       deviationUsd: 0,
       unknownCalls: 0,
+      costUnverifiedCalls: 0,
       retryCalls: 0,
       fallbackCalls: 0,
       requiresReconciliation: false,
@@ -162,6 +163,19 @@ describe("F59 — estimativa vertical e orçamento da prova", () => {
     expect(remainingBudgetBlocks(after, 0.075)).toBe("cost_unknown");
     expect(Object.isFrozen(after)).toBe(true);
     expect(budget.unknownCalls).toBe(0);
+  });
+
+  it("custo não apurado exige reconciliação e para a prova", () => {
+    const budget = createProofBudget({ capUsd: 3, plannedCalls: 14 });
+    const after = recordCall(budget, {
+      estimatedUsd: 0.075,
+      target: "primary",
+      costVerified: false,
+    });
+    expect(after.costUnverifiedCalls).toBe(1);
+    expect(after.requiresReconciliation).toBe(true);
+    expect(after.stopReason).toBe("cost_unknown");
+    expect(remainingBudgetBlocks(after, 0.075)).toBe("cost_unknown");
   });
 
   it("não muta o input e preserva a parada anterior", () => {

@@ -104,6 +104,7 @@ export interface ProofBudget {
   readonly totalChargedUsd: number;
   readonly deviationUsd: number;
   readonly unknownCalls: number;
+  readonly costUnverifiedCalls: number;
   readonly retryCalls: number;
   readonly fallbackCalls: number;
   readonly requiresReconciliation: boolean;
@@ -117,6 +118,7 @@ export interface ProofBudgetCallInput {
   readonly calculatedFromUsageUsd?: number | null;
   readonly target: string;
   readonly isRetry?: boolean;
+  readonly costVerified?: boolean;
 }
 
 export interface ProofUnknownOutcomeInput {
@@ -179,6 +181,7 @@ export function createProofBudget(input: {
     totalChargedUsd: 0,
     deviationUsd: 0,
     unknownCalls: 0,
+    costUnverifiedCalls: 0,
     retryCalls: 0,
     fallbackCalls: 0,
     requiresReconciliation: false,
@@ -231,8 +234,13 @@ export function recordCall(
   const chargedUsd = highestKnownCost(input);
   const executedCalls = budget.executedCalls + 1;
   const remainingUsd = round6(Math.max(0, budget.remainingUsd - chargedUsd));
-  const stopReason: ProofStopReason =
-    budget.stopReason ?? (remainingUsd <= 0 ? "proof_budget_exceeded" : null);
+  const costUnverified = input.costVerified === false;
+  const stopReason: ProofStopReason = budget.stopReason
+    ?? (costUnverified
+      ? "cost_unknown"
+      : remainingUsd <= 0
+        ? "proof_budget_exceeded"
+        : null);
 
   return Object.freeze({
     ...budget,
@@ -243,8 +251,11 @@ export function recordCall(
     deviationUsd: round6(
       budget.deviationUsd + (chargedUsd - input.estimatedUsd),
     ),
+    costUnverifiedCalls:
+      budget.costUnverifiedCalls + (costUnverified ? 1 : 0),
     retryCalls: budget.retryCalls + (input.isRetry === true ? 1 : 0),
     fallbackCalls: budget.fallbackCalls + (input.target === "fallback" ? 1 : 0),
+    requiresReconciliation: budget.requiresReconciliation || costUnverified,
     stopReason,
     exhausted: remainingUsd <= 0,
   });

@@ -39,6 +39,8 @@ import {
   recordUnknownOutcome,
   remainingBudgetBlocks,
 } from "../../src/lib/product-vertical-9-16/cost/vertical-estimate";
+import { evaluateProofCall } from "../../src/lib/product-vertical-9-16/cost/proof-call-outcome";
+import { createProofSdkLoader } from "../../src/lib/product-vertical-9-16/cost/proof-openai-loader";
 import { PROVIDER_SIZE } from "../../src/lib/product-vertical-9-16/dimensions";
 
 const PROOF_CAP_USD = 3;
@@ -95,7 +97,12 @@ interface CallEvidence {
   requestedSize: string;
   pricingVersionId: string;
   configVersionId: string;
-  status: "succeeded" | "unknown" | "unsupported_dimension";
+  status:
+    | "succeeded"
+    | "unknown"
+    | "unsupported_dimension"
+    | "dimension_mismatch"
+    | "cost_unverified";
   returnedWidth: number | null;
   returnedHeight: number | null;
   expectedSizeMatches: boolean | null;
@@ -381,24 +388,6 @@ async function fileToDataUrl(filePath: string): Promise<string> {
   return `data:${mime};base64,${bytes.toString("base64")}`;
 }
 
-function maxKnownCost(
-  estimatedUsd: number,
-  providerReportedUsd: number | null,
-  calculatedFromUsageUsd: number | null,
-): number {
-  const candidates = [estimatedUsd];
-  if (providerReportedUsd !== null && Number.isFinite(providerReportedUsd)) {
-    candidates.push(providerReportedUsd);
-  }
-  if (
-    calculatedFromUsageUsd !== null &&
-    Number.isFinite(calculatedFromUsageUsd)
-  ) {
-    candidates.push(calculatedFromUsageUsd);
-  }
-  return Number(Math.max(...candidates).toFixed(6));
-}
-
 function writeJsonAtomic(filePath: string, payload: unknown): void {
   const tempPath = `${filePath}.tmp`;
   writeFileSync(tempPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
@@ -520,7 +509,9 @@ async function runApply(
     `References: primary=present identity=${identityDataUrl === null ? "ausente" : "present"}`,
   );
 
-  const adapter = new UpstreamImagesAdapter();
+  const adapter = new UpstreamImagesAdapter(
+    createProofSdkLoader(credential),
+  );
   let budget = createProofBudget({
     capUsd: PROOF_CAP_USD,
     plannedCalls: matrix.length,
@@ -554,6 +545,7 @@ async function runApply(
       primaryImage: "present",
       identityImage: identityDataUrl === null ? "absent" : "present",
       promptSource: "fixed",
+      sdkMaxRetries: 0,
       budget,
       calls,
       finishedAt,
@@ -563,6 +555,8 @@ async function runApply(
 
   let stoppedForUnknown = false;
   let stoppedForUnsupportedDimension = false;
+  let stoppedForDimensionMismatch = false;
+  let stoppedForUnverifiedCost = false;
   let stoppedForBudget = false;
 
   for (const call of matrix) {
@@ -607,10 +601,6 @@ async function runApply(
       ).metadata();
       const returnedWidth = decoded.width ?? null;
       const returnedHeight = decoded.height ?? null;
-      const expectedSizeMatches =
-        call.requestedSize === PROVIDER_SIZE
-          ? returnedWidth === 1152 && returnedHeight === 2048
-          : returnedWidth === 1024 && returnedHeight === 1024;
 
       const calculated = calculateProductOneToOneImageUsageCost({
         usage: result.usage,
@@ -622,17 +612,21 @@ async function runApply(
       });
       const calculatedFromUsageUsd = calculated.estimatedCostUsd;
       const providerReportedUsd = result.providerReportedCostUsd ?? null;
-      const chargedUsd = maxKnownCost(
-        call.estimatedUsd,
+      const evaluation = evaluateProofCall({
+        requestedSize: call.requestedSize,
+        returnedWidth,
+        returnedHeight,
         providerReportedUsd,
         calculatedFromUsageUsd,
-      );
+        estimatedUsd: call.estimatedUsd,
+      });
 
       budget = recordCall(budget, {
         estimatedUsd: call.estimatedUsd,
         providerReportedUsd,
         calculatedFromUsageUsd,
         target: call.target,
+        costVerified: evaluation.costVerified,
       });
 
       calls.push({
@@ -645,10 +639,10 @@ async function runApply(
         requestedSize: call.requestedSize,
         pricingVersionId: pairPricing.versionId,
         configVersionId: source.configVersionId,
-        status: "succeeded",
+        status: evaluation.outcome,
         returnedWidth,
         returnedHeight,
-        expectedSizeMatches,
+        expectedSizeMatches: evaluation.dimensionMatches,
         mimeType: result.mimeType ?? null,
         latencyMs: Date.now() - startedMs,
         providerReportedUsd,
@@ -656,16 +650,25 @@ async function runApply(
         calculatedCoverage: calculated.productOneToOneImageUsage.coverage,
         calculatedMissing: calculated.productOneToOneImageUsage.missing,
         estimatedUsd: call.estimatedUsd,
-        chargedUsd,
-        deviationUsd: Number((chargedUsd - call.estimatedUsd).toFixed(6)),
+        chargedUsd: evaluation.chargedUsd,
+        deviationUsd: Number(
+          (evaluation.chargedUsd - call.estimatedUsd).toFixed(6),
+        ),
         providerUsagePresent: result.usage !== undefined,
         startedAt,
         finishedAt,
       });
       persist(null);
       console.log(
-        `[${String(call.index).padStart(2, "0")}/${matrix.length}] succeeded ${call.model} | ${call.quality} | ${call.requestedSize} | chargedUsd=${chargedUsd.toFixed(6)}`,
+        `[${String(call.index).padStart(2, "0")}/${matrix.length}] ${evaluation.outcome} ${call.model} | ${call.quality} | ${call.requestedSize} | chargedUsd=${evaluation.chargedUsd.toFixed(6)}`,
       );
+
+      if (evaluation.stop) {
+        stoppedForDimensionMismatch =
+          evaluation.outcome === "dimension_mismatch";
+        stoppedForUnverifiedCost = evaluation.outcome === "cost_unverified";
+        break;
+      }
     } catch (error) {
       const finishedAt = new Date().toISOString();
       const unsupportedDimension = isVerticalDimensionEvidence(error);
@@ -719,6 +722,12 @@ async function runApply(
 
   const executed = calls.length;
   const succeeded = calls.filter((call) => call.status === "succeeded");
+  const unverifiedCostCalls = calls.filter(
+    (call) => call.status === "cost_unverified",
+  ).length;
+  const dimensionMismatchCalls = calls.filter(
+    (call) => call.status === "dimension_mismatch",
+  ).length;
   const maxRatio = succeeded.reduce((max, call) => {
     const ratio = call.chargedUsd / call.estimatedUsd;
     return Number.isFinite(ratio) ? Math.max(max, ratio) : max;
@@ -726,13 +735,17 @@ async function runApply(
   const calibrationVerdict =
     stoppedForUnsupportedDimension
       ? "parada por dimensão vertical não suportada; configuração NÃO alterada"
-      : stoppedForUnknown
-        ? "reconciliação pendente; multiplicador NÃO confirmado"
-        : executed === 0
-          ? "não calibrado (nenhuma chamada executada)"
-          : maxRatio <= 1
-            ? "confirmado conservador (custo real não superou a estimativa)"
-            : `ajuste proposto: multiplicador >= ${(2.5 * maxRatio).toFixed(2)}`;
+      : stoppedForDimensionMismatch
+        ? "reprovado: dimensão devolvida divergente; configuração NÃO alterada"
+        : stoppedForUnverifiedCost
+          ? "custo real indisponível; reconciliação exigida; multiplicador NÃO confirmado"
+          : stoppedForUnknown
+            ? "reconciliação pendente; multiplicador NÃO confirmado"
+            : executed === 0
+              ? "não calibrado (nenhuma chamada executada)"
+              : maxRatio <= 1
+                ? "confirmado conservador (custo real não superou a estimativa)"
+                : `ajuste proposto: multiplicador >= ${(2.5 * maxRatio).toFixed(2)}`;
 
   const calibrationPath = path.resolve(
     process.cwd(),
@@ -756,6 +769,8 @@ async function runApply(
       `- Desvio acumulado vs. estimativa: **US$${budget.deviationUsd.toFixed(6)}**`,
       `- Maior razão cobrado/estimado: **${maxRatio.toFixed(4)}**`,
       `- Unknown: **${budget.unknownCalls}**; reconciliação exigida: **${budget.requiresReconciliation ? "sim" : "não"}**`,
+      `- Custo não apurado: **${budget.costUnverifiedCalls}**; dimensão divergente: **${dimensionMismatchCalls}**`,
+      `- Retries automáticos do SDK: **0** (loader da prova com maxRetries: 0)`,
       "",
       `## Veredito`,
       "",
@@ -800,19 +815,26 @@ async function runApply(
     pending,
     stoppedForUnknown,
     stoppedForUnsupportedDimension,
+    stoppedForDimensionMismatch,
+    stoppedForUnverifiedCost,
     stoppedForBudget,
+    unverifiedCostCalls,
+    dimensionMismatchCalls,
+    sdkMaxRetries: 0,
     calibrationVerdict,
     evidencePath,
     finishedAt,
   });
 
   console.log(
-    `Summary: executed=${budget.executedCalls}/${matrix.length} chargedUsd=${budget.totalChargedUsd.toFixed(6)} remainingUsd=${budget.remainingUsd.toFixed(6)} pending=${pending.length} unknown=${budget.unknownCalls}`,
+    `Summary: executed=${budget.executedCalls}/${matrix.length} chargedUsd=${budget.totalChargedUsd.toFixed(6)} remainingUsd=${budget.remainingUsd.toFixed(6)} pending=${pending.length} unknown=${budget.unknownCalls} costUnverified=${unverifiedCostCalls} dimensionMismatch=${dimensionMismatchCalls} sdkMaxRetries=0`,
   );
   console.log(`Evidence: ${evidencePath}`);
   console.log(`Calibration: ${calibrationPath}`);
 
   if (stoppedForUnsupportedDimension) process.exitCode = 6;
+  else if (stoppedForDimensionMismatch) process.exitCode = 7;
+  else if (stoppedForUnverifiedCost) process.exitCode = 8;
   else if (stoppedForUnknown) process.exitCode = 4;
   else if (stoppedForBudget) process.exitCode = 5;
 }
