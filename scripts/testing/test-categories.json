@@ -20,7 +20,8 @@
     "src/lib/credit/__tests__/credit-idempotency.test.ts"
   ],
   "integration.postgres-f50-4": [
-    "src/lib/credit/__tests__/f50-4-concurrency.test.ts"
+    "src/lib/credit/__tests__/f50-4-concurrency.test.ts",
+    "src/lib/credit/__tests__/trial-offer-installments.integration.test.ts"
   ],
   "integration.app-env": [
     "src/lib/credit/__tests__/operation-cost-service.integration.test.ts"
