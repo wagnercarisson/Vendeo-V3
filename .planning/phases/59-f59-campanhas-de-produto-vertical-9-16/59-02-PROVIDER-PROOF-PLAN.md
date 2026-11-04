@@ -129,7 +129,24 @@ Sem qualquer um desses itens: exit **2** com
 | Custo vs estimativa | `estimatedUsd`, `providerReportedUsd`, `calculatedFromUsageUsd`, `deviationUsd` |
 | Rastreabilidade | `model`, `quality`, versão da configuração e versão de pricing |
 
-## 9. Regras de parada
+## 9. Segurança da contagem e validade da prova
+
+- **Retries automáticos:** o harness injeta um loader `openai` com **`maxRetries: 0`**. O SDK instalado
+  usa 2 retries por padrão; para a prova, cada chamada contabilizada deve corresponder a UMA
+  requisição. O loader padrão do runtime 1:1 não é alterado.
+- **Credencial:** o preflight valida `OPENAI_API_KEY` e a MESMA credencial é passada explicitamente
+  ao loader da prova (closure). O harness não confia na releitura de ambiente feita pelo adapter e
+  nunca imprime a chave.
+- **Dimensão divergente:** se a imagem devolvida não tiver exatamente a dimensão solicitada, a
+  chamada é registrada como `dimension_mismatch`, o custo já incorrido é preservado, a matriz PARA e
+  a prova é reprovada. Nunca vira `succeeded`.
+- **Custo não apurado:** se não houver custo reportado NEM custo calculado por usage, a chamada é
+  registrada como `cost_unverified`, cobra a estimativa, exige reconciliação e PARA. A calibração
+  NÃO declara “confirmado conservador” sem custo real apurado.
+- **Testes simulados:** `proof-openai-loader.test.ts` e `proof-call-outcome.test.ts` cobrem esses
+  caminhos sem chamada ao provider.
+
+## 10. Regras de parada
 
 - **Orçamento insuficiente:** PARA antes da próxima chamada; restantes ficam `pending`.
 - **Resultado `unknown`** (timeout/abort/erro sem usage): persistir `unknown`, cobrar a estimativa
@@ -139,7 +156,7 @@ Sem qualquer um desses itens: exit **2** com
   provider, **PARAR** e exigir revisão. **Nunca trocar modelo, qualidade ou configuração.**
 - **Dimensão inesperada:** registrar falha fechada; não há upscale, crop, pad ou aceite silencioso.
 
-## 10. Evidências e separação de orçamento
+## 11. Evidências e separação de orçamento
 
 Evidência incremental em `scripts/f59/evidence/vertical-provider-proof-<runId>.json`, com:
 
@@ -153,7 +170,7 @@ Evidência incremental em `scripts/f59/evidence/vertical-provider-proof-<runId>.
 O orçamento da prova é **separado** do orçamento da UAT funcional; nenhuma despesa de UAT entra
 no teto de US$ 3,00.
 
-## 11. Gate humano pendente
+## 12. Gate humano pendente
 
 A execução paga é um **checkpoint humano bloqueante**. Antes dela, o responsável deve confirmar:
 ambiente = homolog, loja de teste, chave de homolog, saldo suficiente, teto aprovado e o token

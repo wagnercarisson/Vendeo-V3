@@ -80,6 +80,21 @@ If the effective configuration is absent, incomplete or divergent, or a configur
 - **AND** it MUST NOT replace the model, quality or configuration silently
 - **AND** the remaining combinations SHALL be reported as pending
 
+#### Scenario: Proof counts one provider request per call and uses the validated credential
+
+- **WHEN** the proof harness invokes the production adapter
+- **THEN** the injected SDK loader SHALL disable automatic retries (`maxRetries: 0`)
+- **AND** it SHALL use exactly the credential validated in the preflight
+- **AND** the default `1:1` runtime loader SHALL remain unchanged
+
+#### Scenario: Divergent dimension or unverified cost fails the proof
+
+- **WHEN** the returned image dimensions differ from the requested size
+- **THEN** the call SHALL be recorded as `dimension_mismatch`, the incurred cost preserved, and the proof SHALL stop without success
+- **WHEN** neither provider-reported nor usage-calculated cost is available
+- **THEN** the call SHALL be recorded as `cost_unverified`, the conservative estimate charged, reconciliation required, and the proof SHALL stop
+- **AND** the multiplier SHALL NOT be confirmed without an actually resolved cost
+
 #### Scenario: Proof criteria are explicit
 
 - **WHEN** the proof is evaluated

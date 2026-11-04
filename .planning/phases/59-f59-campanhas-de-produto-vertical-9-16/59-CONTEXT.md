@@ -58,7 +58,7 @@ Fora do escopo: fluxo antigo, Serviços/Informativos, geração simultânea dos 
 - O vertical usa `openai.images.edit` via `UpstreamImagesAdapter`, com `size: "1152x2048"` e qualidade do par. A configuração de modelos é a MESMA do fluxo 1:1 (`image_model_pair_config`, principal/fallback); a prova não cria catálogo, seleção, tabela de preços ou tarifa exclusiva de 9:16.
 - A prova usa o par principal/fallback efetivo e a fonte de pricing compartilhada (`ai_model_pricing` por modelo+qualidade), com 3 amostras por par único + 1 controle 1024 × 1024 por par; o número de chamadas é derivado da configuração. Teto de US$ 3,00. Se uma combinação não suportar 1152 × 2048, a prova para e apresenta a evidência, sem trocar modelos/configuração.
 - A estimativa conservadora vertical deve existir **antes da primeira chamada paga**; a calibração posterior só confirma/ajusta.
-- Teto de US$ 3,00; a matriz é condicionada ao saldo; retries e fallback contam; combinações não executadas ficam pendentes.
+- Teto de US$ 3,00; a matriz é condicionada ao saldo; retries e fallback contam; combinações não executadas ficam pendentes. O loader da prova usa `maxRetries: 0` e a credencial validada; dimensão divergente (`dimension_mismatch`) e custo não apurado (`cost_unverified`) reprovam/param a prova.
 - Orçamento da prova separado do orçamento da UAT.
 - A prova antecede a consolidação do pipeline.
 - **REQ:** REQ-59-05.

@@ -288,6 +288,8 @@ A matriz é **condicionada ao saldo do orçamento**: antes de cada chamada, o ga
 
 Critérios: request aceito; bytes decodificáveis; dimensão real registrada; ausência de evidência de crop do provider; custo dentro do teto; fallback observável; estimativa vertical compatível com o custo real. Se uma combinação configurada não suportar 1152 × 2048, a prova **para e apresenta a evidência**, sem trocar modelos ou configuração silenciosamente.
 
+A prova usa um loader do SDK com **`maxRetries: 0`** e a credencial validada no preflight, de modo que cada chamada contabilizada corresponda a UMA requisição; o loader do runtime 1:1 permanece intocado. Dimensão devolvida divergente é registrada como `dimension_mismatch`, preserva o custo já incorrido e PARA a prova. Sem custo reportado E sem custo calculado por usage, a chamada é `cost_unverified`, exige reconciliação e PARA; a calibração só confirma o multiplicador com custo real apurado.
+
 Nenhuma chamada paga, migration ou operação de produção nesta fase de proposta.
 
 ### D-19 — Política de migration

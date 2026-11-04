@@ -37,6 +37,10 @@ derivada da configuração efetiva do 1:1, dentro do teto de **US$ 3,00**.
 ## 5. Critério de confirmação futura
 
 - Se o maior custo real conhecido não superar a estimativa, o multiplicador 2,5 é **confirmado conservador**.
+- A confirmação EXIGE custo real apurado (reportado ou calculado por usage). Sem nenhum deles, o
+  resultado é `cost_unverified`: a prova para e exige reconciliação.
+- Dimensão devolvida divergente é `dimension_mismatch`: reprova a chamada, preserva o custo e para a
+  prova.
 - Se superar, o relatório deve propor `multiplicador >= 2,5 × (maior razão cobrado/estimado)`.
 - Qualquer `unknown` exige **reconciliação** antes de nova chamada.
 - Qualquer `unsupported_dimension` **para a prova** e exige revisão da configuração; não há troca

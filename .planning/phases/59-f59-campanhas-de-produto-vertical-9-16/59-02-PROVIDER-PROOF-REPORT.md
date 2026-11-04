@@ -72,6 +72,9 @@ Resultado:
 | `deviationUsd` | **0** |
 | `unknown` | **0** |
 | `unsupported_dimension` | **0** |
+| `dimension_mismatch` | **0** |
+| `cost_unverified` | **0** |
+| Retries automáticos do SDK | **0** (`maxRetries: 0` no loader da prova) |
 
 Nenhum valor de custo real é inferido a partir do dry-run.
 
