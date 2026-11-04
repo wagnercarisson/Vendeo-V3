@@ -59,7 +59,14 @@ import {
   type ProductOneToOneEvidenceReference,
   type BuildProductOneToOneSnapshotContext,
 } from "../snapshot/persist-snapshot";
-import { composeProductPrompt, PROMPT_BLOCK_LABELS } from "../prompt-composition";
+import {
+  composeProductPrompt,
+  PROMPT_BLOCK_LABELS,
+} from "../prompt-composition";
+import type {
+  ProductPromptComposition,
+  ProductPromptCompositionInput,
+} from "../prompt-composition";
 import { PRODUCT_1_1_PROMPT_BASE } from "../prompt-base";
 import type { ProductOneToOneBackgroundDirection } from "../background-direction";
 import type { ProductOneToOneIntent } from "../intent-selection";
@@ -427,6 +434,18 @@ export interface ProductOneToOneGenerationDeps {
    */
   readonly projectClosedCampaign?: typeof projectClosedCampaign;
   /**
+   * F59/D-01 — extensões ADITIVAS do vertical, com defaults 1:1:
+   * - `composePrompt`: default `composeProductPrompt`;
+   * - `imageSize`: default `"1024x1024"`;
+   * - `beforeReservation`: default `undefined` (nenhuma etapa nova).
+   * Sem esses campos a sequência 1:1 é idêntica.
+   */
+  readonly composePrompt?: (input: ProductPromptCompositionInput) => ProductPromptComposition;
+  readonly imageSize?: string;
+  readonly beforeReservation?: (
+    config: ImageModelPairConfig,
+  ) => Promise<void>;
+  /**
    * F56.2b2c (B2.3) — estimativa aprovada (USD) da CALL DE COPY (decisão humana,
    * Plan 04). Sem valor, a copy é BLOQUEADA quando o gate está armado.
    */
@@ -595,6 +614,10 @@ export async function runProductOneToOneGeneration(
   const projectCampaign = deps.projectDeliveredCampaign ?? projectDeliveredCampaign;
   const projectClosed =
     deps.projectClosedCampaign ?? projectClosedCampaign;
+  const composePrompt =
+    deps.composePrompt ?? ((compositionInput: ProductPromptCompositionInput) => composeProductPrompt(compositionInput));
+  const imageSize = deps.imageSize ?? "1024x1024";
+  const beforeReservation = deps.beforeReservation;
   const newSupportReference = deps.generateSupportReference ?? generateSupportReference;
   const recordDiagnosis =
     deps.recordDiagnosis ??
@@ -1180,8 +1203,21 @@ export async function runProductOneToOneGeneration(
           return;
         }
 
-        // ── (2) compor/congelar prompt + snapshot (par COMPLETO) ──────────
-        const composition = composeProductPrompt({
+        // ── (2) guarda pré-reserva ADITIVA (vertical); default undefined ──
+        if (beforeReservation) {
+          try {
+            await beforeReservation(preflight.config);
+          } catch {
+            await emitOperationalFailure({
+              internalCategory: "vertical_pre_reservation_blocked",
+              normalizedError: "unknown_provider_error",
+            });
+            return;
+          }
+        }
+
+        // ── (3) compor/congelar prompt + snapshot (par COMPLETO) ──────────
+        const composition = composePrompt({
           briefing: input.briefing,
           promptBase: input.promptBase ?? PRODUCT_1_1_PROMPT_BASE.content,
           references: productReferenceIds(input),
@@ -1204,7 +1240,7 @@ export async function runProductOneToOneGeneration(
           policyVersions: composition.policyVersions,
         });
 
-        // ── (3) persistir snapshot/evidência ANTES de qualquer efeito ────
+        // ── (4) persistir snapshot/evidência ANTES de qualquer efeito ────
         // (inclui o REPARO de um estado `repairable`: a evidência é completada
         //  para o MESMO snapshot ANTES de reserva/provider.)
         if (!canWriteDurable()) {
@@ -1224,7 +1260,7 @@ export async function runProductOneToOneGeneration(
           return;
         }
 
-        // ── (4) reserva b1a ──────────────────────────────────────────────
+        // ── (5) reserva b1a ──────────────────────────────────────────────
         if (!canWriteDurable()) {
           await emitUnknownPending({ internalCategory: "persistence_reserve_reached" });
           return;
@@ -1425,7 +1461,7 @@ export async function runProductOneToOneGeneration(
               prompt: composition.text,
               quality:
                 target === "fallback" ? snapshot.fallbackQuality : snapshot.primaryQuality,
-              size: "1024x1024",
+              size: imageSize,
               signal: controllerAbort.signal,
             };
             // F56.2b2c (B2.3) — gate de gasto do piloto POR CHAMADA (INATIVO se ausente).

@@ -47,6 +47,11 @@ export interface ProjectDeliveredCampaignInput {
   readonly storeId: string;
   readonly campaignId: string;
   readonly operationId: string;
+  /**
+   * F59/D-15 — path esperado explícito (vertical). Ausente ⇒ default histórico
+   * `product-1-1/.../art-1024.jpg`, preservando o 1:1.
+   */
+  readonly expectedArtifactPath?: string;
 }
 
 export interface ProjectDeliveredCampaignDeps {
@@ -113,11 +118,13 @@ export async function projectDeliveredCampaign(
 
     // (3) A ARTE precisa existir e bater com o caminho determinístico do novo
     //     fluxo (nunca marca `ready` sem arte persistida).
-    const expectedArtifactPath = artifactStoragePath(
-      input.storeId,
-      input.campaignId,
-      input.operationId,
-    );
+    const expectedArtifactPath =
+      input.expectedArtifactPath ??
+      artifactStoragePath(
+        input.storeId,
+        input.campaignId,
+        input.operationId,
+      );
     const { data: artifact, error: artifactError } = await client
       .from(ARTIFACT_TABLE)
       .select("storage_path, campaign_id, operation_id")

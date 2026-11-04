@@ -17,6 +17,7 @@ const OPERATION_ID = "33333333-3333-4333-8333-333333333333";
 const CREDIT_OPS = "product_1_1_campaign_credit_operations";
 const ARTIFACT = "product_1_1_campaign_artifacts";
 const EXPECTED_PATH = `${STORE_ID}/${CAMPAIGN_ID}/product-1-1/${OPERATION_ID}/art-1024.jpg`;
+const VERTICAL_PATH = `${STORE_ID}/${CAMPAIGN_ID}/product-9-16/${OPERATION_ID}/art-1080x1920.jpg`;
 
 interface FakeState {
   op?: unknown;
@@ -94,12 +95,17 @@ const artifactRow = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-function run(state: FakeState) {
+function run(state: FakeState, expectedArtifactPath?: string) {
   const { client, updates } = makeClient(state);
   return {
     updates,
     promise: projectDeliveredCampaign(
-      { storeId: STORE_ID, campaignId: CAMPAIGN_ID, operationId: OPERATION_ID },
+      {
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        ...(expectedArtifactPath === undefined ? {} : { expectedArtifactPath }),
+      },
       { client: client as never, log: () => {} },
     ),
   };
@@ -124,6 +130,61 @@ describe("projectDeliveredCampaign (quick 261017-cdi)", () => {
     });
     expect(updates[0].values).not.toHaveProperty("approval_status");
     expect(updates[0].filters).toEqual({ id: CAMPAIGN_ID, store_id: STORE_ID });
+  });
+
+  it("F59: expectedArtifactPath vertical projeta ready com o path vertical", async () => {
+    const { promise, updates } = run(
+      {
+        op: deliveredOp(),
+        campaign: generatingCampaign(),
+        artifact: artifactRow({ storage_path: VERTICAL_PATH }),
+      },
+      VERTICAL_PATH,
+    );
+    const result = await promise;
+
+    expect(result).toEqual({ projected: true, reason: "projected" });
+    expect(updates).toHaveLength(1);
+    expect(updates[0].values).toEqual({
+      status: "ready",
+      error_message: null,
+      storage_path: VERTICAL_PATH,
+    });
+  });
+
+  it("F59: linha de artefato 1:1 não projeta campanha vertical", async () => {
+    const { promise, updates } = run(
+      {
+        op: deliveredOp(),
+        campaign: generatingCampaign(),
+        artifact: artifactRow({ storage_path: EXPECTED_PATH }),
+      },
+      VERTICAL_PATH,
+    );
+    expect(await promise).toEqual({
+      projected: false,
+      reason: "artifact_missing",
+    });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("F59: projeção vertical já pronta é idempotente", async () => {
+    const { promise, updates } = run(
+      {
+        op: deliveredOp(),
+        campaign: generatingCampaign({
+          status: "ready",
+          storage_path: VERTICAL_PATH,
+        }),
+        artifact: artifactRow({ storage_path: VERTICAL_PATH }),
+      },
+      VERTICAL_PATH,
+    );
+    expect(await promise).toEqual({
+      projected: true,
+      reason: "already_projected",
+    });
+    expect(updates).toHaveLength(0);
   });
 
   it("repetição idempotente: já projetada ⇒ no-op", async () => {
