@@ -731,7 +731,7 @@ Plans:
 
 ### Phase 59: F59 - Campanhas de Produto vertical 9:16
 
-**Status:** **PLANEJADA, VERIFICADA E APROVADA TECNICAMENTE; EXECUÇÃO NÃO AUTORIZADA (2026-11-04).** `gsd-plan-checker`: **VERIFICATION PASSED** após 3 rodadas de correção (5 blockers iniciais + 2 blockers e 6 warnings técnicos + varredura final) e 2 P2 finais (preservação de `versionId`/`costSource`/`pricing` e `tokenPricing`; `beforeReservation` registrado no OpenSpec). Ressalva editorial residual removida em `59-05-PLAN.md`. Base OpenSpec aprovada; 10 planos em 8 waves; 14/14 REQ-IDs cobertos. Nenhum código, migration, chamada paga, push ou deploy.
+**Status:** **EM EXECUÇÃO CONTROLADA POR WAVES — WAVE 1 (59-01) CONCLUÍDA LOCALMENTE; AGUARDANDO REVISÃO; WAVE 2 NÃO AUTORIZADA (2026-11-04).** Planejamento aprovado tecnicamente pelo `gsd-plan-checker` (10 planos em 8 waves; 14/14 REQ-IDs). Execução da Wave 1: contratos puros de formato/versão, dimensões, área segura, path vertical e miniatura; **65/65** testes focados, **108/108** regressão 1:1 focada, typecheck 0, lint 0 (sem TS), diff check limpo; `src/lib/product-1-1/**` e migrations intocados. Commits `bf51df3d`, `38ffca38`, `dea770e3`; SUMMARY `59-01-SUMMARY.md`. **Sem chamada paga, migration aplicada, flag, push, deploy ou produção.**
 
 **Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
 
@@ -739,7 +739,7 @@ Plans:
 
 **Depends on:** Phase 58 (dashboard integrado), F56.2b1b/F56.2b2b (fluxo novo Produto 1:1, artefato, crédito e recuperação), F57.4 (localização) e base OpenSpec aprovada da F59.
 
-**Plans:** 10 planos em 8 waves
+**Plans:** 1/10 plans executed
 
 **Source:** `openspec/changes/fase-59-campanhas-produto-vertical-9-16/` - proposal, design, tasks e delta specs. Esta é a fonte técnica aprovada; o GSD não reabre decisões de produto.
 
@@ -753,7 +753,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 59-01-PLAN.md — Contratos puros: formato/versão, dimensões 1152×2048→1080×1920, paths verticais, política safe-area-9-16-v1 e reconhecimento de path de miniatura
+- [x] 59-01-PLAN.md — Contratos puros: formato/versão, dimensões 1152×2048→1080×1920, paths verticais, política safe-area-9-16-v1 e reconhecimento de path de miniatura
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
