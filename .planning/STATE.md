@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-04T22:54:00.000Z"
+last_updated: "2026-11-04T23:10:00.000Z"
 progress:
   total_phases: 16
   completed_phases: 13
   total_plans: 118
-  completed_plans: 109
-  percent: 92
+  completed_plans: 110
+  percent: 93
 ---
 
 # Project State
@@ -38,7 +38,7 @@ progress:
 
 ## Current Position
 
-- **EXECUÇÃO F59 / WAVE 2 (2026-11-04) — 59-03 concluído; 59-02 preparado até o checkpoint pago; PARADO PARA REVISÃO.** `59-03`: política `f59-9-16-v1`, resolvedor vertical explícito, compositor `f59-vertical-9-16-composer-v1`, seam aditivo no compositor 1:1 e fixtures 3×3; **120/120** testes de prompt, typecheck 0, Copy Director intocado. `59-02`: estimativa vertical `2,5` provisória (2,25 + margem) e orçamento que cobra o maior custo conhecido; harness TypeScript reutilizando `image_model_pair_config` e `ai_model_pricing` (mesma configuração/pricing do 1:1), com dry-run de **8 chamadas** derivadas (sunburst/medium + gpt-image-2/low), total estimado **US$ 0,86** e teto **US$ 3,00**, registrando versões de configuração/pricing. Correções de segurança: loader com `maxRetries: 0`/credencial validada, dimensão divergente (`dimension_mismatch`) reprova e para, custo não apurado (`cost_unverified`) exige reconciliação e para. Ajuste reconciliado em OpenSpec/planos/harness/docs; **173/173** testes focados, typecheck 0, OpenSpec strict válido. **Nenhuma chamada paga executada.** Commits `68b2e035`, `b8c7dff0`. Commits `8f1446e9`, `ebe65187`, `dadb05bc`, `3f2583b1`. Próximo passo: aceite humano da matriz/estimativa/ambiente/teto e fornecimento do token de `--authorized`; depois a Task 3 paga do 59-02 e a Wave 3.
+- **EXECUÇÃO F59 / WAVE 2 (2026-11-04) — CONCLUÍDA; PROVA PAGA EXECUTADA 8/8; WAVE 3 NÃO AUTORIZADA.** `59-03`: política `f59-9-16-v1`, resolvedor vertical explícito, compositor `f59-vertical-9-16-composer-v1`, seam aditivo no compositor 1:1 e fixtures 3×3; **120/120** testes de prompt, typecheck 0, Copy Director intocado. `59-02`: harness reutilizando `image_model_pair_config` e `ai_model_pricing`; **8/8 chamadas** executadas (sunburst/medium + gpt-image-2/low), todas na dimensão exata; custo real **US$ 0,211210**, cobrado contra o teto **US$ 0,860000**, teto **US$ 3,00**, restante **US$ 2,14**; **0** unknown, **0** cost_unverified, **0** dimension_mismatch, **0** retries automáticos. Calibração: razão máxima **0,284955**, multiplicador **2,5 confirmado conservador**. Evidência `scripts/f59/evidence/vertical-provider-proof-2026-11-04T23-01-50-264Z.json`; SUMMARY `59-02-SUMMARY.md`. **UAT, produção e Wave 3 NÃO autorizadas.** Commits `8f1446e9`, `ebe65187`, `dadb05bc`, `3f2583b1`. Próximo passo: aceite humano da matriz/estimativa/ambiente/teto e fornecimento do token de `--authorized`; depois a Task 3 paga do 59-02 e a Wave 3.
 
 - **EXECUÇÃO F59 / WAVE 1 (2026-11-04) — plano 59-01 (contratos puros): CONCLUÍDO LOCALMENTE; AGUARDANDO REVISÃO; WAVE 2 NÃO AUTORIZADA.** Criados `src/lib/campaign/format-resolution.ts` (tabela única e fail-closed de formato/versão), reexport vertical, dimensões 1152×2048→1080×1920 com proporção por inteiros, política `safe-area-9-16-v1` (percentuais + pixels por canvas + proveniência), path vertical exclusivo e reconhecimento aditivo na miniatura. Inventário read-only conclui **“Nenhuma migration estrutural necessária”**. Commits `bf51df3d`, `38ffca38`, `dea770e3`. Gates: **65/65** testes focados, **108/108** regressão 1:1 focada, typecheck **0**, lint **0** (sem cobertura TS), `git diff --check` limpo; `src/lib/product-1-1/**` e `supabase/migrations/**` intocados; 0 imports do vertical no runtime 1:1. Área segura topo/base/laterais permanece `pending` (fonte oficial Meta não legível sem JS). **Sem chamada paga, migration aplicada, flag, push, deploy ou produção.** Próxima wave (59-02/59-03) exige revisão e autorização; 59-02 exige checkpoint pago.
 
@@ -383,7 +383,7 @@ e uma geração no localhost para conferir a contabilização.
 
 ## Session Continuity
 
-- **Sessão 2026-11-04 — F59 Wave 2 (59-03 + 59-02 dry-run).** Composição vertical concluída com seleção explícita de políticas, 9 fixtures e diferença controlada. Prova de provider ajustada para reutilizar integralmente a configuração/pricing do 1:1: harness lê `image_model_pair_config` e `ai_model_pricing`, deriva **8 chamadas** (sunburst/medium + gpt-image-2/low), total estimado **US$ 0,86**, teto US$ 3,00, e registra versões de configuração/pricing. Correções de segurança: `maxRetries: 0` e credencial validada no loader da prova; `dimension_mismatch` reprova/para; `cost_unverified` exige reconciliação/para. Gates: **173/173** testes focados, typecheck 0, OpenSpec strict válido; **nenhuma chamada paga**. Checkpoint pago preparado: ambiente local `127.0.0.1:57781`, loja de teste **Loja Mega Vale**, primária `primary.jpg` (Fone Bluetooth NovaSound X1, 1080×1080, SHA-256 `307538f1…`) e identidade `identity.png` (1024×1024, SHA-256 `c0dd2d5b…`), ambas em diretório temporário; dry-run 8 chamadas/US$ 0,86/teto US$ 3,00. **Aguardando aceite dos insumos e do gasto.** Commits `8f1446e9`, `ebe65187`, `dadb05bc`, `3f2583b1`, `68b2e035`, `b8c7dff0`, `80e7a057`, `f088d589`.
+- **Sessão 2026-11-04 — F59 Wave 2 (59-03 + 59-02 prova paga).** Composição vertical concluída com seleção explícita de políticas, 9 fixtures e diferença controlada. Prova de provider executada com a configuração/pricing do 1:1: **8/8 chamadas**, oito dimensões exatas, custo real **US$ 0,211210**, cobrado contra o teto **US$ 0,86** de **US$ 3,00**, **0** unknown/cost_unverified/dimension_mismatch/retries. Calibração confirmou o multiplicador 2,5 conservador (razão máxima 0,284955). Evidência em `scripts/f59/evidence/vertical-provider-proof-2026-11-04T23-01-50-264Z.json`; SUMMARY `59-02-SUMMARY.md`. **UAT, produção e Wave 3 não autorizadas.**
 
 - **Sessão 2026-11-04 — F59 Wave 1 / plano 59-01.** Contratos puros de formato/versão, dimensões, área segura, path vertical e reconhecimento na miniatura; inventário read-only sem migration estrutural. **65/65** testes focados e **108/108** regressão 1:1 focada; typecheck 0; lint 0 (limitação TS conhecida); diff check limpo. Commits `bf51df3d`, `38ffca38`, `dea770e3`; SUMMARY `59-01-SUMMARY.md`. **Parado para revisão; Wave 2 não iniciada.** Sem chamada paga, migration aplicada, flag, push, deploy ou produção.
 

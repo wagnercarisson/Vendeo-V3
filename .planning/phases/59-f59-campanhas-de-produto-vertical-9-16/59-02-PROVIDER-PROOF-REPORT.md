@@ -1,136 +1,91 @@
 # 59-02 — Relatório da prova de provider vertical 9:16
 
 **Data:** 2026-11-04
-**Status:** **DRY-RUN CONCLUÍDO — NENHUMA CHAMADA PAGA EXECUTADA.**
-**Checkpoint:** aguardando autorização humana específica para a matriz paga.
+**Status:** **PROVA EXECUTADA — 8/8 chamadas; nenhuma falha; nenhum unknown.**
+**Teto:** **US$ 3,00** · **Custo real apurado:** **US$ 0,211210** · **Cobrado contra o teto:** **US$ 0,860000**
+**UAT/produção:** **NÃO autorizadas.**
 
-## 1. Fonte compartilhada (reutilizada integralmente)
+## 1. Fonte compartilhada
 
-| Item | Valor observado |
+| Item | Valor |
 |---|---|
-| Tabela de configuração | `image_model_pair_config` (`scope = new_flow`) |
+| Configuração | `image_model_pair_config` (`scope = new_flow`) |
 | Config version | `0c8925d5-5aff-4c90-a007-9dd32750b80f` |
 | Origem | `human_decision` |
 | Primário | `gpt-image-2.5-sunburst` / `medium` |
 | Fallback | `gpt-image-2` / `low` |
-| Tabela de pricing | `ai_model_pricing` (vigente, `effective_until IS NULL`) |
 | Pricing principal | `386fb02c-b0e8-4ec9-a8c6-573b4ca58f19` — `image_unit_usd` 0,044 |
 | Pricing fallback | `d25c9ecc-0c91-44db-a4b9-e057a0a78215` — `image_unit_usd` 0,042 |
 
-Nenhum catálogo, seleção, tabela ou tarifa exclusiva de 9:16 foi criado. A leitura foi somente
-leitura; nenhuma escrita em banco, flag ou campanha.
+Nenhum catálogo, seleção, tabela ou tarifa exclusiva de 9:16 foi criado.
 
-## 2. Ambiente
+## 2. Ambiente e insumos
 
-| Item | Situação |
+| Item | Valor |
 |---|---|
-| Ambiente | local/homolog `127.0.0.1:57781` (Supabase local; sem produção) |
-| Loja | `Loja Mega Vale` (`3dc7d274-0b57-45ba-883a-7b235056feda`), `is_test_store = true` |
-| Credencial | `OPENAI_API_KEY` presente no `.env.local` (não exibida; não é chave de produção) |
-| Provider | `openai.images.edit` via `UpstreamImagesAdapter` |
-| Produção | **proibida** |
-| Banco/flag/migration | **não escritos** |
+| Ambiente | local/homolog `127.0.0.1:57781` |
+| Loja de teste | `Loja Mega Vale` — `3dc7d274-0b57-45ba-883a-7b235056feda` |
+| Primária | `C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\primary.jpg` — JPEG 1080×1080, SHA-256 `307538f1…d0b62d1d` |
+| Identidade | `C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\identity.png` — PNG 1024×1024, SHA-256 `c0dd2d5b…bdbf07d8` |
+| Credencial | `OPENAI_API_KEY` do `.env.local` (não exibida) |
 
-**Ambiente não executado:** nenhuma chamada foi feita; a linha acima é o alvo proposto.
+A identidade coincide com a referência congelada `c0dd2d5b…` do `input_snapshot` da loja.
 
-## 2.1 Insumos escolhidos para o checkpoint
+## 3. Resultado por chamada
 
-**Loja de teste:** `Loja Mega Vale` — `3dc7d274-0b57-45ba-883a-7b235056feda`.
+| # | Modelo | Qualidade | Solicitado | Devolvido | Latência | Custo real (usage) | Estimativa | Cobrado | Status |
+|---:|---|---|---|---|---:|---:|---:|---:|---|
+| 1 | `gpt-image-2.5-sunburst` | `medium` | `1152x2048` | 1152×2048 | 29,1 s | 0,029185 | 0,110 | 0,110 | succeeded |
+| 2 | `gpt-image-2.5-sunburst` | `medium` | `1152x2048` | 1152×2048 | 20,9 s | 0,029185 | 0,110 | 0,110 | succeeded |
+| 3 | `gpt-image-2.5-sunburst` | `medium` | `1152x2048` | 1152×2048 | 17,7 s | 0,029185 | 0,110 | 0,110 | succeeded |
+| 4 | `gpt-image-2.5-sunburst` | `medium` | `1024x1024` | 1024×1024 | 22,5 s | 0,031345 | 0,110 | 0,110 | succeeded |
+| 5 | `gpt-image-2` | `low` | `1152x2048` | 1152×2048 | 16,7 s | 0,022785 | 0,105 | 0,105 | succeeded |
+| 6 | `gpt-image-2` | `low` | `1152x2048` | 1152×2048 | 15,9 s | 0,022785 | 0,105 | 0,105 | succeeded |
+| 7 | `gpt-image-2` | `low` | `1152x2048` | 1152×2048 | 15,7 s | 0,022785 | 0,105 | 0,105 | succeeded |
+| 8 | `gpt-image-2` | `low` | `1024x1024` | 1024×1024 | 14,6 s | 0,023955 | 0,105 | 0,105 | succeeded |
 
-| Insumo | Origem | Arquivo local | Metadados |
-|---|---|---|---|
-| Primária | `campaign-images/3dc7d274.../0193e1ad.../inputs/7dd7057c-...jpg` | `C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\primary.jpg` | JPEG, 1080×1080, sRGB, 248.650 B, SHA-256 `307538f1…d0b62d1d` |
-| Identidade | `visual-signatures/3dc7d274.../270a11b4-...png` | `C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\identity.png` | PNG, 1024×1024, sRGB, 810.119 B, SHA-256 `c0dd2d5b…bdbf07d8` |
+- **Dimensão:** todas as 8 chamadas devolveram exatamente o tamanho solicitado.
+- **Custo reportado pelo provider:** `null` em todas.
+- **Custo calculado por usage:** completo em todas; total **US$ 0,211210**.
+- **Retries automáticos:** **0** (`maxRetries: 0`).
+- **Unknown / cost_unverified / dimension_mismatch / unsupported_dimension:** **0**.
 
-- Produto da primária: **Fone Bluetooth NovaSound X1** (campanha `0193e1ad-eda0-49c7-946e-c10b4c0ed4e4`).
-- A identidade é a assinatura visual da loja; o SHA-256 coincide com a referência congelada `c0dd2d5b…` do `input_snapshot`.
-- Nenhum byte de imagem foi persistido no repositório; os arquivos ficam apenas no diretório temporário acima.
-- A chave `OPENAI_API_KEY` está presente no `.env.local` (valor não exibido; `process.env` não a contém).
+## 4. Orçamento
 
-## 3. Matriz derivada (8 chamadas)
-
-| # | Modelo | Qualidade | Tamanho | Papel | Status |
-|---:|---|---|---|---|---|
-| 1–3 | `gpt-image-2.5-sunburst` | `medium` | `1152x2048` | principal | `pending` |
-| 4 | `gpt-image-2.5-sunburst` | `medium` | `1024x1024` | principal | `pending` |
-| 5–7 | `gpt-image-2` | `low` | `1152x2048` | fallback | `pending` |
-| 8 | `gpt-image-2` | `low` | `1024x1024` | fallback | `pending` |
-
-**Todas as 8 chamadas estão `pending`.** Nenhuma combinação foi comprovada.
-A matriz é derivada da configuração vigente; se ela mudar, a matriz muda com ela.
-
-## 4. Dry-run observado
-
-```powershell
-npx tsx --tsconfig tsconfig.json scripts/f59/vertical-provider-proof.ts --dry-run
-```
-
-Resultado:
-
-- chamadas planejadas: **8** (3 amostras + 1 controle por par único);
-- estimativa principal: **0,110000** por chamada (0,044 × 2,5);
-- estimativa fallback: **0,105000** por chamada (0,042 × 2,5);
-- total estimado: **US$ 0,860000**;
-- teto: **US$ 3,00**;
-- chamadas ao provider: **0**;
-- exit code: **0**.
-
-## 5. Custos por chamada (campos a preencher no apply)
-
-| Campo | Situação nesta rodada |
+| Métrica | Valor |
 |---|---|
-| `estimatedUsd` | 0,110000 (principal) / 0,105000 (fallback) |
-| `providerReportedUsd` | **null** — nenhuma chamada |
-| `calculatedFromUsageUsd` | **null** — nenhuma chamada |
-| `chargedUsd` | **0** — nenhuma chamada |
-| `deviationUsd` | **0** |
-| `unknown` | **0** |
-| `unsupported_dimension` | **0** |
-| `dimension_mismatch` | **0** |
-| `cost_unverified` | **0** |
-| Retries automáticos do SDK | **0** (`maxRetries: 0` no loader da prova) |
+| Teto | US$ 3,00 |
+| Cobrado contra o teto (maior custo conhecido) | **US$ 0,860000** |
+| Restante do teto | **US$ 2,140000** |
+| Custo real apurado | **US$ 0,211210** |
+| Desvio real vs. estimativa | **−US$ 0,648790** |
+| Chamadas pendentes | **0** |
+| Requer reconciliação | **não** |
 
-Nenhum valor de custo real é inferido a partir do dry-run.
+O valor cobrado contra o teto é conservador (usa o maior entre estimativa e custo real). O custo
+real apurado é menor e está registrado separadamente.
+
+## 5. Calibração
+
+**Confirmado conservador.** Maior razão custo real/estimado: **0,284955**. O multiplicador 2,5
+permanece o valor pré-definido; nenhum ajuste automático foi aplicado. A folga observada (~3,5×)
+pode justificar uma redução futura, mas isso exige decisão explícita e nova versão.
 
 ## 6. Evidência
 
-- O harness grava JSON incremental apenas em `--apply`.
-- Nesta rodada, **nenhum arquivo de evidência de chamada foi criado**.
+- JSON incremental: `scripts/f59/evidence/vertical-provider-proof-2026-11-04T23-01-50-264Z.json`.
+- Calibração: `59-02-VERTICAL-ESTIMATE-CALIBRATION.md`.
 - Nenhum prompt, chave, byte de imagem ou conteúdo do usuário foi registrado.
 
-## 7. Itens obrigatórios para o checkpoint pago
+## 7. Declarações
 
-1. Confirmar **ambiente local/homolog** (`127.0.0.1:57781`) e a **Loja Mega Vale** como loja de teste.
-2. Confirmar a **chave de homolog** presente no `.env.local` e o saldo/orçamento disponível.
-3. Aprovar o **teto de US$ 3,00** e a matriz derivada de **8 chamadas**.
-4. Aprovar os insumos escolhidos: primária `primary.jpg` (Fone Bluetooth NovaSound X1) e identidade `identity.png` (assinatura da Loja Mega Vale).
-5. Confirmar que configuração/pricing observados são os vigentes no momento da execução.
-6. Fornecer o **token literal** de `--authorized`.
+- **Prova técnica executada e concluída dentro do teto.**
+- **UAT funcional e produção NÃO estão autorizadas.**
+- Nenhuma campanha, crédito, banco, flag ou migration foi alterada.
+- Nenhuma troca silenciosa de modelo/configuração; nenhuma dimensão divergente.
+- Wave 3 **não iniciada**.
 
-## 8. Declarações
+## 8. Próximo passo
 
-- **Nenhuma chamada paga foi executada.**
-- **Nenhuma campanha, crédito, banco, flag ou migration foi alterada.**
-- **UAT funcional e produção NÃO estão autorizadas** por este relatório.
-- O orçamento da prova é **separado** do orçamento da UAT.
-- Se uma combinação não suportar `1152x2048`, a prova para e apresenta a evidência; não há troca
-  silenciosa de modelo/configuração.
-
-## 8.1 Comando final proposto
-
-```powershell
-npx tsx --tsconfig tsconfig.json scripts/f59/vertical-provider-proof.ts `
-  --apply `
-  --authorized=<token-literal-do-responsavel> `
-  --primary-image="C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\primary.jpg" `
-  --identity-image="C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\identity.png"
-```
-
-- A credencial é lida do `.env.local` e passada explicitamente ao loader da prova.
-- `maxRetries: 0` e a credencial validada já estão no harness.
-- O comando só deve ser executado após o aceite explícito dos insumos e do gasto.
-
-## 9. Próximo passo
-
-Apresentar este relatório no checkpoint humano. Somente após o aceite explícito o executor poderá
-rodar `--apply` com o token autorizado, dentro da matriz e do teto acima.
+Apresentar o resultado ao responsável e aguardar decisão sobre UAT/homolog. A prova não autoriza
+produção, ativação de flag ou Wave 3.

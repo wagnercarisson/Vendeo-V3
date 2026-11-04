@@ -1,6 +1,6 @@
 # 59-02 — Calibração do multiplicador vertical
 
-**Status:** **NÃO CALIBRADO — nenhuma chamada paga executada.**
+**Status:** **PROVA EXECUTADA — 8/8 chamadas; calibração concluída.**
 **Multiplicador provisório:** **2,5** (razão de área **2,25** + margem de segurança **0,25**).
 **Versão:** `f59-vertical-9-16-v1`.
 
@@ -8,11 +8,10 @@
 
 `estimado = image_unit_usd × 2,5`
 
-O `image_unit_usd` é a tarifa REAL da fonte compartilhada (`ai_model_pricing` vigente por
-modelo+qualidade) — a mesma usada pelo fluxo 1:1. O multiplicador foi definido **antes** da
-primeira chamada paga; a calibração posterior só pode confirmar ou propor ajuste com evidência.
+O `image_unit_usd` veio da fonte compartilhada (`ai_model_pricing` vigente por modelo+qualidade),
+a mesma usada pelo fluxo 1:1. O multiplicador foi definido **antes** da primeira chamada paga.
 
-## 2. Configuração e pricing observados (dry-run)
+## 2. Configuração e pricing usados
 
 | Papel | Modelo | Qualidade | `image_unit_usd` | Estimativa/chamada | Pricing version |
 |---|---|---|---:|---:|---|
@@ -21,34 +20,62 @@ primeira chamada paga; a calibração posterior só pode confirmar ou propor aju
 
 Config version: `0c8925d5-5aff-4c90-a007-9dd32750b80f`.
 
-## 3. Evidência disponível
+## 3. Resultado real da prova
 
-| Chamadas | Custo estimado | Custo reportado | Custo calculado | Desvio |
-|---:|---|---|---|---|
-| 0 | US$ 0,86 (matriz derivada) | — | — | — |
+| Métrica | Valor |
+|---|---|
+| Chamadas executadas | **8/8** |
+| Custo total cobrado contra o teto (conservador) | **US$ 0,860000** de US$ 3,00 |
+| Custo real apurado (usage) | **US$ 0,211210** |
+| Estimativa das chamadas com custo real | **US$ 0,860000** |
+| Desvio real vs. estimativa | **−US$ 0,648790** |
+| Maior razão custo real/estimado | **0,284955** |
+| Unknown | **0** |
+| Custo não apurado | **0** |
+| Dimensão divergente | **0** |
+| Retries automáticos do SDK | **0** (`maxRetries: 0`) |
 
-Nenhuma linha de chamada real existe. Não há base para confirmar ou ajustar o multiplicador.
+## 4. Custo real por chamada
 
-## 4. Veredito
+| # | Modelo/qualidade | Tamanho | Custo real (usage) | Estimativa | Razão |
+|---:|---|---|---:|---:|---:|
+| 1 | `gpt-image-2.5-sunburst` / `medium` | `1152x2048` | 0,029185 | 0,110 | 0,2653 |
+| 2 | `gpt-image-2.5-sunburst` / `medium` | `1152x2048` | 0,029185 | 0,110 | 0,2653 |
+| 3 | `gpt-image-2.5-sunburst` / `medium` | `1152x2048` | 0,029185 | 0,110 | 0,2653 |
+| 4 | `gpt-image-2.5-sunburst` / `medium` | `1024x1024` | 0,031345 | 0,110 | 0,2849 |
+| 5 | `gpt-image-2` / `low` | `1152x2048` | 0,022785 | 0,105 | 0,2170 |
+| 6 | `gpt-image-2` / `low` | `1152x2048` | 0,022785 | 0,105 | 0,2170 |
+| 7 | `gpt-image-2` / `low` | `1152x2048` | 0,022785 | 0,105 | 0,2170 |
+| 8 | `gpt-image-2` / `low` | `1024x1024` | 0,023955 | 0,105 | 0,2281 |
 
-**Não calibrado.** O valor **2,5** permanece provisório e conservador até a execução da matriz
-derivada da configuração efetiva do 1:1, dentro do teto de **US$ 3,00**.
+Todas as chamadas devolveram exatamente a dimensão solicitada
+(`1152×2048` nas amostras e `1024×1024` nos controles).
 
-## 5. Critério de confirmação futura
+## 5. Veredito
+
+**Confirmado conservador.** O custo real (US$ 0,211210) ficou **abaixo** da estimativa
+(US$ 0,860000); a maior razão real/estimado foi **0,284955**. O multiplicador **2,5** permanece
+válido como estimativa pré-chamada conservadora.
+
+O valor cobrado contra o teto foi US$ 0,86 porque o orçamento cobra o MAIOR custo conhecido
+(estimativa × real); isso preserva o teto, mas não é o custo real. A calibração usa o custo real
+apurado por usage, não o valor cobrado.
+
+**Nenhum ajuste automático foi aplicado.** A folga observada (~3,5×) pode justificar uma redução
+futura do multiplicador, mas isso exige decisão explícita e nova versão de pricing — fora desta
+prova.
+
+## 6. Critério de confirmação futura
 
 - Se o maior custo real conhecido não superar a estimativa, o multiplicador 2,5 é **confirmado conservador**.
-- A confirmação EXIGE custo real apurado (reportado ou calculado por usage). Sem nenhum deles, o
-  resultado é `cost_unverified`: a prova para e exige reconciliação.
-- Dimensão devolvida divergente é `dimension_mismatch`: reprova a chamada, preserva o custo e para a
-  prova.
-- Se superar, o relatório deve propor `multiplicador >= 2,5 × (maior razão cobrado/estimado)`.
+- Se superar, o relatório deve propor `multiplicador >= 2,5 × (maior razão custo real/estimado)`.
 - Qualquer `unknown` exige **reconciliação** antes de nova chamada.
-- Qualquer `unsupported_dimension` **para a prova** e exige revisão da configuração; não há troca
-  silenciosa de modelo/qualidade.
-- Combinações não executadas permanecem **`pending`**; o relatório nunca as trata como comprovadas.
+- Qualquer `unsupported_dimension` ou `dimension_mismatch` **para a prova** e exige revisão da
+  configuração; não há troca silenciosa de modelo/qualidade.
+- Combinações não executadas permanecem **`pending`**.
 
-## 6. Limites
+## 7. Limites
 
 - A calibração é da prova técnica; não é orçamento de UAT nem de produção.
-- Nenhum custo real é inferido do dry-run.
-- Nenhuma configuração, catálogo, tabela ou tarifa exclusiva de 9:16 é criada.
+- Nenhuma configuração, catálogo, tabela ou tarifa exclusiva de 9:16 foi criada.
+- UAT funcional e produção **não estão autorizadas** por esta prova.
