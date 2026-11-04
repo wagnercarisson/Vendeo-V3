@@ -1,7 +1,8 @@
 /**
  * Contrato PURO da miniatura de arte final de campanha.
  *
- * Sem `server-only`, sem sharp e sem Supabase: pode ser reutilizado pelo app,
+ * Sem dependência de runtime de servidor, sem sharp e sem banco: pode ser
+ * reutilizado pelo app,
  * pelo script de reparo e por testes sem carregar runtime de servidor.
  *
  * A miniatura é derivada do caminho do original efetivamente persistido:
@@ -43,6 +44,12 @@ const NEW_FLOW_PATH_RE = new RegExp(
   "i",
 );
 
+/** Novo fluxo 9:16: `{storeId}/{campaignId}/product-9-16/{operationId}/art-1080x1920.jpg`. */
+const VERTICAL_FLOW_PATH_RE = new RegExp(
+  `^${UUID}/${UUID}/product-9-16/${UUID}/art-1080x1920\\.jpe?g$`,
+  "i",
+);
+
 function thumbnailPattern(original: RegExp): RegExp {
   const source = original.source.replace(/\\\.jpe\?g\$$/i, "");
   return new RegExp(
@@ -55,6 +62,7 @@ const THUMBNAIL_PATH_RES = [
   thumbnailPattern(LEGACY_PATH_RE),
   thumbnailPattern(VERSIONED_ART_PATH_RE),
   thumbnailPattern(NEW_FLOW_PATH_RE),
+  thumbnailPattern(VERTICAL_FLOW_PATH_RE),
 ] as const;
 
 /** Caminho é uma arte final canônica e elegível para miniatura. */
@@ -76,7 +84,8 @@ export function isEligibleCampaignArtPath(path: string): boolean {
   return (
     LEGACY_PATH_RE.test(path) ||
     VERSIONED_ART_PATH_RE.test(path) ||
-    NEW_FLOW_PATH_RE.test(path)
+    NEW_FLOW_PATH_RE.test(path) ||
+    VERTICAL_FLOW_PATH_RE.test(path)
   );
 }
 
