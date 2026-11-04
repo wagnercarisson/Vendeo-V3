@@ -40,6 +40,7 @@ import {
   remainingBudgetBlocks,
 } from "../../src/lib/product-vertical-9-16/cost/vertical-estimate";
 import { evaluateProofCall } from "../../src/lib/product-vertical-9-16/cost/proof-call-outcome";
+import { summarizeProofCalibration } from "../../src/lib/product-vertical-9-16/cost/proof-calibration";
 import { createProofSdkLoader } from "../../src/lib/product-vertical-9-16/cost/proof-openai-loader";
 import { PROVIDER_SIZE } from "../../src/lib/product-vertical-9-16/dimensions";
 
@@ -721,17 +722,20 @@ async function runApply(
   persist(finishedAt);
 
   const executed = calls.length;
-  const succeeded = calls.filter((call) => call.status === "succeeded");
   const unverifiedCostCalls = calls.filter(
     (call) => call.status === "cost_unverified",
   ).length;
   const dimensionMismatchCalls = calls.filter(
     (call) => call.status === "dimension_mismatch",
   ).length;
-  const maxRatio = succeeded.reduce((max, call) => {
-    const ratio = call.chargedUsd / call.estimatedUsd;
-    return Number.isFinite(ratio) ? Math.max(max, ratio) : max;
-  }, 1);
+  const calibration = summarizeProofCalibration(
+    calls.map((call) => ({
+      status: call.status,
+      estimatedUsd: call.estimatedUsd,
+      providerReportedUsd: call.providerReportedUsd,
+      calculatedFromUsageUsd: call.calculatedFromUsageUsd,
+    })),
+  );
   const calibrationVerdict =
     stoppedForUnsupportedDimension
       ? "parada por dimensão vertical não suportada; configuração NÃO alterada"
@@ -741,11 +745,11 @@ async function runApply(
           ? "custo real indisponível; reconciliação exigida; multiplicador NÃO confirmado"
           : stoppedForUnknown
             ? "reconciliação pendente; multiplicador NÃO confirmado"
-            : executed === 0
-              ? "não calibrado (nenhuma chamada executada)"
-              : maxRatio <= 1
-                ? "confirmado conservador (custo real não superou a estimativa)"
-                : `ajuste proposto: multiplicador >= ${(2.5 * maxRatio).toFixed(2)}`;
+            : calibration.verdict === "not_calibrated"
+              ? "não calibrado (nenhuma chamada com custo real apurado)"
+              : calibration.verdict === "confirmed_conservative"
+                ? `confirmado conservador (custo real abaixo da estimativa; razão máxima ${calibration.maxActualRatio.toFixed(4)})`
+                : `ajuste proposto: multiplicador >= ${calibration.proposedMultiplier?.toFixed(2)}`;
 
   const calibrationPath = path.resolve(
     process.cwd(),
@@ -765,9 +769,12 @@ async function runApply(
       `- Pares: ${source.pairs.map((pair) => `${pair.targets.join("+")}=${pair.model}/${pair.quality} (pricing ${pair.pricing.versionId})`).join("; ")}`,
       `- Multiplicador provisório: **2,5** (2,25 de área + 0,25 de margem)`,
       `- Chamadas executadas: **${executed}/${matrix.length}**`,
-      `- Custo total cobrado: **US$${budget.totalChargedUsd.toFixed(6)}** de US$${PROOF_CAP_USD.toFixed(2)}`,
-      `- Desvio acumulado vs. estimativa: **US$${budget.deviationUsd.toFixed(6)}**`,
-      `- Maior razão cobrado/estimado: **${maxRatio.toFixed(4)}**`,
+      `- Custo total cobrado contra o teto (conservador): **US$${budget.totalChargedUsd.toFixed(6)}** de US$${PROOF_CAP_USD.toFixed(2)}`,
+      `- Custo real apurado (reportado/usage): **US$${calibration.totalActualUsd.toFixed(6)}**`,
+      `- Estimativa das chamadas com custo real: **US$${calibration.totalEstimatedUsd.toFixed(6)}**`,
+      `- Desvio real vs. estimativa: **US$${calibration.actualDeviationUsd.toFixed(6)}**`,
+      `- Maior razão custo real/estimado: **${calibration.maxActualRatio.toFixed(4)}**`,
+      `- Multiplicador proposto: **${calibration.proposedMultiplier?.toFixed(2) ?? "n/a"}**`,
       `- Unknown: **${budget.unknownCalls}**; reconciliação exigida: **${budget.requiresReconciliation ? "sim" : "não"}**`,
       `- Custo não apurado: **${budget.costUnverifiedCalls}**; dimensão divergente: **${dimensionMismatchCalls}**`,
       `- Retries automáticos do SDK: **0** (loader da prova com maxRetries: 0)`,
@@ -821,6 +828,7 @@ async function runApply(
     unverifiedCostCalls,
     dimensionMismatchCalls,
     sdkMaxRetries: 0,
+    calibration,
     calibrationVerdict,
     evidencePath,
     finishedAt,
