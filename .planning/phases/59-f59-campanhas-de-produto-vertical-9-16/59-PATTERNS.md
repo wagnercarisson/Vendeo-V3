@@ -22,6 +22,10 @@
 | `src/lib/product-vertical-9-16/prompt/registry.ts` + `composition.ts` (new) | service (pure) | transform | `src/lib/product-1-1/policies/registry.ts`, `prompt-composition.ts` | exact |
 | `src/lib/product-vertical-9-16/orchestration/entrypoint.ts` (new) | service/orchestrator profile | request-response (NDJSON) | `src/lib/product-1-1/orchestration/generation-orchestrator.ts` (call site) | role-match |
 | `src/lib/product-vertical-9-16/cost/vertical-estimate.ts` (new) | service | transform | `src/lib/ai-cost/image-pair-pricing.ts` + `pilot/spend-control.ts` | role-match |
+| `src/lib/product-vertical-9-16/recovery/format-dispatch.ts` (new) | utility (pure decision) | transform | `src/lib/product-1-1/artifact/download-gate.ts` + `src/lib/campaign/new-flow-marker.ts` | role-match |
+| `src/lib/product-vertical-9-16/recovery/pending-adapter.ts` (new) | service (server-only adapter) | CRUD read | `src/lib/product-1-1/pending/pending-operations-repository.ts` | role-match |
+| `src/lib/product-vertical-9-16/telemetry/format-attempt.ts` (new) | utility (pure telemetry) | transform | `src/lib/ai/telemetry-sink.ts` (`buildCallMetadata`) | role-match |
+| `src/lib/product-vertical-9-16/telemetry/vertical-images-adapter.ts` (new) | service (server-only adapter) | transform | `src/lib/ai/adapters/upstream-images.ts` + `telemetry-sink.ts` | role-match |
 | `src/lib/product-1-1/orchestration/generation-orchestrator.ts` (mod) | service/orchestrator | request-response | itself (lines 359-440, 1184-1205, 1423-1430) | exact |
 | `src/lib/product-1-1/prompt-composition.ts` (mod) | service (pure) | transform | itself (lines 120-171) | exact |
 | `src/lib/product-1-1/policies/registry.ts` (mod, optional resolver seam) | config | transform | itself (108-155) | exact |
@@ -77,9 +81,9 @@ Vertical resolver must return a **discriminated union**, not booleans: absence o
 **Test analog:** `src/lib/product-1-1/__tests__/snapshot-preflight.contract.test.ts` (table-driven fail-closed cases) and `prompt-composition.contract.test.ts` (asserts exact version strings).
 
 **Landmines:**
-- `classifyCampaignFlow` is the flow gate for download/recovery/detail. Format resolution is a **second, orthogonal** read; do not fold format into `classifyCampaignFlow` (would reclassify legacy campaigns and break `correction-thumbnail-isolation`/download tests).
+- `classifyCampaignFlow` is the flow gate for download/recovery/detail. Format resolution is a **second, orthogonal** read; do not fold format into `classifyCampaignFlow` (would reclassify legacy campaigns and break the download/thumbnail-safely tests).
 - `1:1` new-flow campaigns must return `1:1` without requiring version keys — `snapshot-preflight` and route idempotency compare persisted snapshots byte-for-byte.
-- Empty-string / `undefined` / `null` values inside `input_snapshot` must all map to "missing", not "malformed" → "malformed" only for non-string present values.
+- Empty-string / `undefined` / `null` inside `input_snapshot`: **only absent keys mean the historical 1:1**. Both keys absent ⇒ `1:1`; a PRESENT `campaignFormat` with `null`/`""`/non-string ⇒ malformed/unavailable; a present `formatContractVersion` without `campaignFormat` ⇒ incoherent/unavailable; a version-only or `9:16`-without-recognized-version ⇒ unavailable. Never treat a present-but-empty value as "missing". 59-08 restore uses this same table.
 
 ---
 
@@ -227,7 +231,7 @@ readonly projectDeliveredCampaign?: typeof projectDeliveredCampaign;
 readonly pilotSpend?: PilotSpendGate;
 ```
 
-**Defaults resolution** (579-648): `const artifact = deps.artifact ?? new ProductOneToOneArtifactStore();`, etc. The vertical entrypoint must call `runProductOneToOneGeneration(verticalInput, { artifact: verticalStore, projectDeliveredCampaign: verticalProjection, pilotSpend, ... })`, adding only two **new** optional deps: `composePrompt` and `imageSize`.
+**Defaults resolution** (579-648): `const artifact = deps.artifact ?? new ProductOneToOneArtifactStore();`, etc. The vertical entrypoint must call `runProductOneToOneGeneration(verticalInput, { artifact: verticalStore, projectDeliveredCampaign: verticalProjection, pilotSpend, ... })`, adding three **new** optional deps: `composePrompt`, `imageSize` and `beforeReservation` (the vertical pre-reservation estimate/budget guard; default `undefined` keeps 1:1 identical).
 
 **Provider call** (1423-1430) — the hardcoded size to parameterize:
 
@@ -244,9 +248,9 @@ const request: AiInvocationRequest = {
 Change to `size: imageSize ?? "1024x1024"` where `imageSize` comes from deps with default `"1024x1024"`. Composition at line 1184 must become `const composition = composePrompt ? composePrompt(input) : composeProductPrompt({...})`, default preserving today's args exactly.
 
 **Landmines:**
-- `imageSize` must be declared on `AiInvocationRequest` (adapter already reads `request.size ?? "1024x1024"`, upstream-images.ts:123).
+- `AiInvocationRequest.size?: string` **already exists** (`src/lib/ai/types.ts` ~75; adapter reads `request.size ?? "1024x1024"`, upstream-images.ts:123). Parameterize only the orchestrator literal; do not re-declare the field.
 - `storeArtifact` input type is `{storeId, campaignId, operationId, imageDataUrl}` (270-287). The vertical store must accept the **same shape** so injection is structural; don't add a `format` field to the shared `ProductOneToOneArtifactOps` (would break 1:1 fakes).
-- `projectCampaign({storeId,campaignId,operationId})` is called at 1668; the vertical projection must already be bound to the vertical expected path. Prefer a small wrapper that calls `projectDeliveredCampaign(input, {expectedArtifactPath})` over changing the shared deps type signature.
+- `projectCampaign({storeId,campaignId,operationId})` is called at 1668; the vertical projection must already be bound to the vertical expected path. `expectedArtifactPath` belongs to the **input** type, and the second argument is `deps` (`{ client }`): `projectDeliveredCampaign({ ...input, expectedArtifactPath }, { client })`. Never pass it as the second argument; the implementation reads `input.expectedArtifactPath ?? artifactStoragePath(...)`.
 - The orchestrator emits NDJSON and must keep exactly one terminal event. The vertical entrypoint must return the same `Response`; do not wrap/re-serialize.
 - Credit/fence order is inside the orchestrator (reserve 1232-1240 → beginPublication 1583-1592 → storeArtifact 1594-1600 → markArtUploaded 1636-1643 → deliver 1644 → project 1667-1676). Do not re-implement; only inject ops.
 
@@ -311,7 +315,7 @@ constructor(client = supabaseAdmin, deps = {}) {
 }
 ```
 
-These seams already support vertical injection. The route must pass `{ artifacts: new VerticalArtifactStore(), projectDeliveredCampaign: (i) => projectDeliveredCampaign(i, {expectedArtifactPath: verticalPath(...)}) }`. `recoverDelivery` semantics (invalid/indeterminate ⇒ unresolved, absent ⇒ absent, integral ⇒ credit boundary then `confirmExistingArt("integral")` then safe project) stay identical.
+These seams already support vertical injection. The route must pass the SAME client as the first constructor argument and a deps object as the second: `new ProductOneToOneArtifactRecovery(client, { artifacts: new VerticalArtifactStore({ client }), projectDeliveredCampaign: (i) => projectDeliveredCampaign({ ...i, expectedArtifactPath: verticalPath(...) }, { client }) })`. The constructor is `(client, deps)` — never pass the deps object first. `recoverDelivery` semantics (invalid/indeterminate ⇒ unresolved, absent ⇒ absent, integral ⇒ credit boundary then `confirmExistingArt("integral")` then safe project) stay identical.
 
 **Test analog:** `artifact-recovery.contract.test.ts` (fake probe + strict credit ops; asserts `integral` never calls `storeArtifact`/provider).
 
@@ -336,7 +340,7 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
 }
 ```
 
-Replace the field type with a minimal **`ArtifactProber`** interface `{ probeArtifact(input:{storeId;campaignId;operationId}): Promise<ArtifactProbe> }` (the same shape as `ArtifactRecoveryProbe`) and add an optional resolver `(campaignId) => Promise<ArtifactProber | null>` so the list can select the vertical store per campaign based on `campaigns.input_snapshot`.
+Replace the concrete field type with a minimal **`ArtifactProber`** interface `{ probeArtifact(input:{storeId;campaignId;operationId}): Promise<ArtifactProbe> }` (the same shape as `ArtifactRecoveryProbe`). Add the format-aware options `{ resolveFormat(campaignId): Promise<{kind:"1:1"|"9:16"|"unavailable"}>; verticalArtifacts: ArtifactProber }` used by 59-06; the list selects the vertical probe per campaign from the persisted `campaigns.input_snapshot`.
 
 **Landmines:**
 - `listPendingOperations` (197-218) calls `findPendingOperation` then `probeArtifact`; using the wrong probe across formats produces false `absent`/`invalid`. Resolve format per row from the persisted `input_snapshot` (one query or join), never from the credit row.
@@ -361,18 +365,11 @@ It already accepts `projectDeliveredCampaign` as a dependency. Two changes: (a) 
 
 **Analog:** itself (24-58, 61-98).
 
-Add one regex:
-
-```ts
-/** Novo fluxo 1:1: `{storeId}/{campaignId}/product-1-1/{operationId}/art-1024.jpg`. */
-const NEW_FLOW_PATH_RE = new RegExp(`^${UUID}/${UUID}/product-1-1/${UUID}/art-1024\\.jpe?g$`, "i");
-```
-
-Add `VERTICAL_FLOW_PATH_RE = ^${UUID}/${UUID}/product-9-16/${UUID}/art-1080x1920\.jpe?g$` and include it in **both** `isEligibleCampaignArtPath` (76-81) and `THUMBNAIL_PATH_RES` (54-58). Keep the explicit denylist (`/inputs/`, `/logo`, `signature`, `bench/`, `lab/`) untouched.
+`NEW_FLOW_PATH_RE` **already exists** (24-44) and must not be re-added. Add only `VERTICAL_FLOW_PATH_RE = ^${UUID}/${UUID}/product-9-16/${UUID}/art-1080x1920\.jpe?g$` and include it in **both** `isEligibleCampaignArtPath` (76-81) and `THUMBNAIL_PATH_RES` (54-58). Keep the explicit denylist (`/inputs/`, `/logo`, `signature`, `bench/`, `lab/`) untouched.
 
 **Generator needs no change**: `renderThumbnail` uses `fit:"inside"`, `withoutEnlargement:true`, max edge 288, WebP 78 (113-139) → 162×288 automatically.
 
-**Test analog:** `thumbnail-path.test.ts` (positive/negative patterns, derived path) and `thumbnail-generator.test.ts` (162×288, no upscale, `upsert:false`), plus `correction-thumbnail-isolation.test.ts`.
+**Test analog:** `thumbnail-path.test.ts` (positive/negative patterns, derived path) and `thumbnail-generator.test.ts` (162×288, no upscale, `upsert:false`), plus `thumbnail-safely.test.ts` for failure isolation. (`correction-thumbnail-isolation.test.ts` does not exist.)
 
 **Landmines:**
 - Do not reuse `NEW_FLOW_PATH_RE` name; a careless edit that makes the 1:1 regex accept `product-9-16` would let `deriveThumbnailPath` sign a vertical artifact under 1:1 rules and break isolation tests.
@@ -400,7 +397,7 @@ export interface CampaignFormRestore {
 
 Extend with `campaignFormat?: "1:1" | "9:16"` and `formatContractVersion?: string | null`, mapped from `snap.campaignFormat`/`snap.formatContractVersion` with strict validation (absent both ⇒ `"1:1"`; `9:16` without recognized version ⇒ leave `null` + a `formatUnavailable` flag so the form blocks; malformed ⇒ same). `mapRestoredForm` must keep returning `null` when the snapshot/product name is unusable (485-491).
 
-Also add a **pure** `readCampaignFormatFromSnapshot(inputSnapshot)` if a non-server consumer needs it, or keep resolution in the vertical module and pass the resolved string structurally from the page (preferred: page resolves, display maps).
+The format table lives in the **neutral** `src/lib/campaign/format-resolution.ts` (re-exported by `product-vertical-9-16/format.ts`). The page resolves it server-side and passes the discriminated value structurally; `display.ts` must not import the vertical module. Add a pure `readCampaignFormatFromSnapshot(inputSnapshot)` only in that neutral module.
 
 **Test analog:** `src/__tests__/lib/...` display tests + `refunded-recovery.test.tsx` (restore flows).
 
@@ -485,7 +482,7 @@ Add format resolution from `campaign.input_snapshot` immediately after `flowClas
 
 **Analog:** itself (151-220).
 
-Flow already does: `classifyCampaignFlow` → legacy 403 / indeterminate 409 → load operation → identity match → `resolveProductFlowAuthorization` → `new ProductOneToOneArtifactRecovery().recoverDelivery(...)`.
+Flow already does: `classifyCampaignFlow` → legacy 403 / indeterminate 409 → load operation → identity match → `resolveProductFlowAuthorization` → `new ProductOneToOneArtifactRecovery(client, deps).recoverDelivery(...)`. The constructor is `(client, deps)` — client first, never the deps object.
 
 Changes: resolve persisted format after the flow checks; if `9:16` + recognized version ⇒ instantiate recovery with **vertical probe** and **vertical-bound projection**; malformed/unrecognized ⇒ fail closed (503/409) and **never** consult `product_9_16_enabled`. `operationId` continues to come from the server-side persisted operation, never the body.
 
