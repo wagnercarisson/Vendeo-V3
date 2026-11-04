@@ -24,14 +24,28 @@ leitura; nenhuma escrita em banco, flag ou campanha.
 
 | Item | Situação |
 |---|---|
-| Ambiente alvo | homolog (`vendeo-homolog`) |
-| Loja | loja de teste autorizada (definir no aceite) |
-| Credencial | chave de homolog existente (não criar/usar produção) |
+| Ambiente | local/homolog `127.0.0.1:57781` (Supabase local; sem produção) |
+| Loja | `Loja Mega Vale` (`3dc7d274-0b57-45ba-883a-7b235056feda`), `is_test_store = true` |
+| Credencial | `OPENAI_API_KEY` presente no `.env.local` (não exibida; não é chave de produção) |
 | Provider | `openai.images.edit` via `UpstreamImagesAdapter` |
 | Produção | **proibida** |
 | Banco/flag/migration | **não escritos** |
 
 **Ambiente não executado:** nenhuma chamada foi feita; a linha acima é o alvo proposto.
+
+## 2.1 Insumos escolhidos para o checkpoint
+
+**Loja de teste:** `Loja Mega Vale` — `3dc7d274-0b57-45ba-883a-7b235056feda`.
+
+| Insumo | Origem | Arquivo local | Metadados |
+|---|---|---|---|
+| Primária | `campaign-images/3dc7d274.../0193e1ad.../inputs/7dd7057c-...jpg` | `C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\primary.jpg` | JPEG, 1080×1080, sRGB, 248.650 B, SHA-256 `307538f1…d0b62d1d` |
+| Identidade | `visual-signatures/3dc7d274.../270a11b4-...png` | `C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\identity.png` | PNG, 1024×1024, sRGB, 810.119 B, SHA-256 `c0dd2d5b…bdbf07d8` |
+
+- Produto da primária: **Fone Bluetooth NovaSound X1** (campanha `0193e1ad-eda0-49c7-946e-c10b4c0ed4e4`).
+- A identidade é a assinatura visual da loja; o SHA-256 coincide com a referência congelada `c0dd2d5b…` do `input_snapshot`.
+- Nenhum byte de imagem foi persistido no repositório; os arquivos ficam apenas no diretório temporário acima.
+- A chave `OPENAI_API_KEY` está presente no `.env.local` (valor não exibido; `process.env` não a contém).
 
 ## 3. Matriz derivada (8 chamadas)
 
@@ -86,11 +100,11 @@ Nenhum valor de custo real é inferido a partir do dry-run.
 
 ## 7. Itens obrigatórios para o checkpoint pago
 
-1. Confirmar **ambiente = homolog** e **loja de teste**.
-2. Confirmar **chave de homolog** e saldo/orçamento disponível.
-3. Aprovar o **teto de US$ 3,00** e a matriz derivada (8 chamadas na configuração atual).
-4. Confirmar que a configuração/pricing observados são os vigentes no momento da execução.
-5. Fornecer os caminhos da imagem primária e, se houver, da identidade.
+1. Confirmar **ambiente local/homolog** (`127.0.0.1:57781`) e a **Loja Mega Vale** como loja de teste.
+2. Confirmar a **chave de homolog** presente no `.env.local` e o saldo/orçamento disponível.
+3. Aprovar o **teto de US$ 3,00** e a matriz derivada de **8 chamadas**.
+4. Aprovar os insumos escolhidos: primária `primary.jpg` (Fone Bluetooth NovaSound X1) e identidade `identity.png` (assinatura da Loja Mega Vale).
+5. Confirmar que configuração/pricing observados são os vigentes no momento da execução.
 6. Fornecer o **token literal** de `--authorized`.
 
 ## 8. Declarações
@@ -101,6 +115,20 @@ Nenhum valor de custo real é inferido a partir do dry-run.
 - O orçamento da prova é **separado** do orçamento da UAT.
 - Se uma combinação não suportar `1152x2048`, a prova para e apresenta a evidência; não há troca
   silenciosa de modelo/configuração.
+
+## 8.1 Comando final proposto
+
+```powershell
+npx tsx --tsconfig tsconfig.json scripts/f59/vertical-provider-proof.ts `
+  --apply `
+  --authorized=<token-literal-do-responsavel> `
+  --primary-image="C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\primary.jpg" `
+  --identity-image="C:\Users\wagne\AppData\Local\Temp\f59-proof-inputs\identity.png"
+```
+
+- A credencial é lida do `.env.local` e passada explicitamente ao loader da prova.
+- `maxRetries: 0` e a credencial validada já estão no harness.
+- O comando só deve ser executado após o aceite explícito dos insumos e do gasto.
 
 ## 9. Próximo passo
 
