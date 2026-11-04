@@ -124,6 +124,14 @@ describe("metadata de /floriculturas — indexação e canonical por ambiente", 
       "Transforme fotos de flores e arranjos em campanhas para divulgar sua floricultura nas redes sociais. Arte e texto com sua marca, sem precisar saber design.",
     );
   });
+
+  it("metadata não incorpora o preço demonstrativo", async () => {
+    const { metadata } = await loadPage();
+    const serialized = JSON.stringify(metadata);
+
+    expect(serialized).not.toContain("4,99");
+    expect(serialized).not.toMatch(/R\$/);
+  });
 });
 
 describe("render de /floriculturas — copy aprovada e composição", () => {
@@ -162,7 +170,84 @@ describe("render de /floriculturas — copy aprovada e composição", () => {
       "Como ficaria uma campanha com os produtos da sua floricultura?",
     );
     expect(html).toContain(
+      "Suas flores, sua marca, uma campanha pronta para divulgar.",
+    );
+    expect(html).not.toContain(
       "Comece com uma foto e as informações do que você quer divulgar.",
+    );
+  });
+
+  it("enriquece o segundo bloco com a lista e o exemplo complementar aprovados", async () => {
+    const html = await render();
+
+    expect(html).toContain("<ul class=\"mt-4 max-w-2xl list-disc");
+    expect(html).toContain("<li>Apresente novos buquês e arranjos.</li>");
+    expect(html).toContain(
+      "<li>Destaque as flores disponíveis na semana.</li>",
+    );
+    expect(html).toContain(
+      "<li>Divulgue opções para presentear em ocasiões especiais.</li>",
+    );
+    expect(html).not.toContain(
+      "Apresente novos buquês e arranjos, destaque",
+    );
+    expect(html).not.toContain(
+      "Um arranjo para presentear, as flores que chegaram",
+    );
+
+    expect(html).toContain(
+      "Uma oferta da sua floricultura, pronta para divulgar.",
+    );
+    expect(html).toContain(
+      "Quando tiver uma oferta sazonal, transforme a foto do produto, o preço e as condições em uma campanha para suas redes sociais. Destaque o produto, informe o preço e apresente as condições da oferta com a identidade da sua loja.",
+    );
+    expect(
+      html.match(/Uma oferta da sua floricultura, pronta para divulgar\./g) ?? [],
+    ).toHaveLength(1);
+
+    // Quatro passos + o exemplo complementar.
+    expect(html.match(/<h3/g) ?? []).toHaveLength(5);
+  });
+
+  it("entrega o exemplo complementar em duas variantes WebP, lazy e sem recorte", async () => {
+    const html = await render();
+
+    expect(html).toContain(
+      'src="/floriculturas/campanha-kalandiva-donna-flor-1024w.webp"',
+    );
+    expect(html).toContain(
+      "/floriculturas/campanha-kalandiva-donna-flor-480w.webp 480w",
+    );
+    expect(html).toContain(
+      "/floriculturas/campanha-kalandiva-donna-flor-1024w.webp 1024w",
+    );
+    expect(html).toContain("(min-width: 1024px) 468px");
+
+    const tag =
+      html.match(/<img[^>]*campanha-kalandiva[^>]*>/)?.[0] ?? "";
+    expect(tag).toContain('width="1024"');
+    expect(tag).toContain('height="1024"');
+    expect(tag).toContain('loading="lazy"');
+    expect(tag).toContain('decoding="async"');
+    expect(tag).toContain(
+      'alt="Campanha da floricultura Donna Flor com a Flor Kalandiva em pote, com preço e condição de estoque"',
+    );
+    expect(tag).not.toContain("object-cover");
+    expect(tag).not.toContain("R$");
+  });
+
+  it("mantém o aviso demonstrativo único após o conjunto de exemplos", async () => {
+    const html = await render();
+    const notice =
+      "As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas";
+    const noticeIndex = html.indexOf(notice);
+
+    expect(html.split(notice)).toHaveLength(2);
+    expect(noticeIndex).toBeGreaterThan(
+      html.indexOf("/floriculturas/campanha-donna-flor-1024w.webp"),
+    );
+    expect(noticeIndex).toBeGreaterThan(
+      html.indexOf("/floriculturas/campanha-kalandiva-donna-flor-1024w.webp"),
     );
   });
 

@@ -17,11 +17,9 @@ import {
  * priority. Both stay in the first viewport area and use `eager` to avoid a late
  * paint when scrolling; none uses `lazy`.
  *
- * The approved demonstrative notice appears here exactly once.
+ * The unique demonstrative notice is rendered by the page after the complete set
+ * of examples, not inside this pair.
  */
-
-export const DEMO_NOTICE =
-  "As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas";
 
 export function DemonstrationPair() {
   return (
@@ -99,8 +97,6 @@ export function DemonstrationPair() {
           />
         </figure>
       </div>
-
-      <p className="mt-6 max-w-3xl text-xs text-text-secondary">{DEMO_NOTICE}</p>
     </section>
   );
 }

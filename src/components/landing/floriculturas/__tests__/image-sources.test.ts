@@ -6,6 +6,8 @@ import sharp from "sharp";
 import {
   CAMPAIGN_IMAGE,
   FLORICULTURAS_IMAGE_SIZES,
+  KALANDIVA_IMAGE,
+  KALANDIVA_IMAGE_SIZES,
   SUBMITTED_PHOTO_IMAGE,
 } from "../image-sources";
 
@@ -24,10 +26,12 @@ const PUBLIC_DIR = path.resolve("public");
  * `Downloads`:
  * - foto: 1312×1199 PNG, 2.266.014 B
  * - campanha: 1024×1024 JPEG, 254.571 B
+ * - Kalandiva: 1024×1024 JPEG, 242.089 B
  */
 const ORIGINAL_BYTES = {
   photo: 2266014,
   campaign: 254571,
+  kalandiva: 242089,
 } as const;
 
 const CASES = [
@@ -49,6 +53,21 @@ const CASES = [
     ratio: 1,
     originalBytes: ORIGINAL_BYTES.campaign,
   },
+  {
+    label: "Kalandiva",
+    sizes: [
+      {
+        file: "/floriculturas/campanha-kalandiva-donna-flor-480w.webp",
+        width: 480,
+      },
+      {
+        file: "/floriculturas/campanha-kalandiva-donna-flor-1024w.webp",
+        width: 1024,
+      },
+    ],
+    ratio: 1,
+    originalBytes: ORIGINAL_BYTES.kalandiva,
+  },
 ] as const;
 
 function resolvePublic(url: string): string {
@@ -59,8 +78,10 @@ describe("variantes WebP de /floriculturas", () => {
   it("expõe duas variantes por imagem com srcset de dois candidatos", () => {
     expect(SUBMITTED_PHOTO_IMAGE.srcSet.split(", ")).toHaveLength(2);
     expect(CAMPAIGN_IMAGE.srcSet.split(", ")).toHaveLength(2);
+    expect(KALANDIVA_IMAGE.srcSet.split(", ")).toHaveLength(2);
     expect(SUBMITTED_PHOTO_IMAGE.sizes).toBe(FLORICULTURAS_IMAGE_SIZES);
     expect(CAMPAIGN_IMAGE.sizes).toBe(FLORICULTURAS_IMAGE_SIZES);
+    expect(KALANDIVA_IMAGE.sizes).toBe(KALANDIVA_IMAGE_SIZES);
   });
 
   it.each(CASES)(
@@ -90,12 +111,17 @@ describe("variantes WebP de /floriculturas", () => {
     expect(CAMPAIGN_IMAGE.src).toBe(
       "/floriculturas/campanha-donna-flor-1024w.webp",
     );
+    expect(KALANDIVA_IMAGE.src).toBe(
+      "/floriculturas/campanha-kalandiva-donna-flor-1024w.webp",
+    );
     expect(SUBMITTED_PHOTO_IMAGE.srcSet.startsWith("/floriculturas/foto-orquidea-balcao-480w.webp 480w")).toBe(true);
     expect(CAMPAIGN_IMAGE.srcSet.startsWith("/floriculturas/campanha-donna-flor-480w.webp 480w")).toBe(true);
+    expect(KALANDIVA_IMAGE.srcSet.startsWith("/floriculturas/campanha-kalandiva-donna-flor-480w.webp 480w")).toBe(true);
   });
 
   it("a campanha permanece quadrada (1:1) e a foto preserva 1312×1199", () => {
     expect(CAMPAIGN_IMAGE.width).toBe(CAMPAIGN_IMAGE.height);
+    expect(KALANDIVA_IMAGE.width).toBe(KALANDIVA_IMAGE.height);
     expect(SUBMITTED_PHOTO_IMAGE.width / SUBMITTED_PHOTO_IMAGE.height).toBeCloseTo(
       1312 / 1199,
       2,

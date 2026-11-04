@@ -40,3 +40,23 @@ export const CAMPAIGN_IMAGE: FloriculturasImage = {
   width: 1024,
   height: 1024,
 };
+
+/**
+ * Complementary offer example (Flor Kalandiva — Pote 6).
+ *
+ * Square 1:1 art, approved as-is. The layout gives the image a full column on
+ * desktop (~468px at 1440) and the full content width on mobile (342px at 390).
+ * Two candidates cover 1x and 2x; at DPR 3 the original 1024px is the ceiling —
+ * no upscale is applied. `sizes` mirrors the real grid width, not a guess.
+ */
+export const KALANDIVA_IMAGE_SIZES =
+  "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))";
+
+export const KALANDIVA_IMAGE: FloriculturasImage = {
+  src: "/floriculturas/campanha-kalandiva-donna-flor-1024w.webp",
+  srcSet:
+    "/floriculturas/campanha-kalandiva-donna-flor-480w.webp 480w, /floriculturas/campanha-kalandiva-donna-flor-1024w.webp 1024w",
+  sizes: KALANDIVA_IMAGE_SIZES,
+  width: 1024,
+  height: 1024,
+};

@@ -4,6 +4,7 @@ import { AccessCtaGroup } from "@/components/landing/floriculturas/access-cta-gr
 import { OfferCard } from "@/components/landing/offer-card";
 import { DemonstrationPair } from "@/components/landing/floriculturas/demonstration-pair";
 import { FloriculturasHeader } from "@/components/landing/floriculturas/floriculturas-header";
+import { OfferExample } from "@/components/landing/floriculturas/offer-example";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { isIndexableEnvironment } from "@/lib/seo/environment";
 import {
@@ -16,9 +17,9 @@ import { resolveCanonicalOrigin } from "@/lib/seo/origin";
 /**
  * Página pública demonstrativa `/floriculturas`.
  *
- * Conteúdo estático aprovado: foto sintética da orquídea roxa no balcão e campanha
- * da floricultura fictícia Donna Flor. Nenhuma geração, provider, crédito ou dado
- * de campanha é acessado.
+ * Conteúdo estático aprovado: foto sintética da orquídea roxa no balcão, campanha
+ * da floricultura fictícia Donna Flor e exemplo complementar da Flor Kalandiva.
+ * Nenhuma geração, provider, crédito ou dado de campanha é acessado.
  *
  * Indexação: `index, follow` e canonical absoluto somente sob produção confirmada
  * + origem canônica validada. Fora disso, `noindex` explícito e canonical omitido
@@ -36,6 +37,10 @@ const SHARE_IMAGE_ALT = "Vendeo — crie campanhas para redes sociais com IA";
 
 /** Destino estável da prévia de acesso da abertura (card único no encerramento). */
 const FLORICULTURAS_OFFER_ANCHOR = "floriculturas-oferta";
+
+/** Aviso demonstrativo único, exibido após o conjunto de exemplos. */
+const DEMO_NOTICE =
+  "As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas";
 
 const indexable = isIndexableEnvironment();
 const { origin } = resolveCanonicalOrigin();
@@ -197,10 +202,16 @@ export default async function FloriculturasPage() {
           >
             Crie posts para sua floricultura sem começar do zero.
           </h2>
-          <p className="mt-4 max-w-2xl text-base text-text-secondary">
-            Um arranjo para presentear, as flores que chegaram à loja ou o destaque
-            da semana. Use as fotos dos seus produtos para criar campanhas e manter
-            sua floricultura presente nas redes sociais.
+          <ul className="mt-4 max-w-2xl list-disc space-y-1 pl-5 text-base text-text-secondary">
+            <li>Apresente novos buquês e arranjos.</li>
+            <li>Destaque as flores disponíveis na semana.</li>
+            <li>Divulgue opções para presentear em ocasiões especiais.</li>
+          </ul>
+
+          <OfferExample />
+
+          <p className="mt-8 max-w-3xl text-xs text-text-secondary">
+            {DEMO_NOTICE}
           </p>
         </section>
 
@@ -250,7 +261,7 @@ export default async function FloriculturasPage() {
               Como ficaria uma campanha com os produtos da sua floricultura?
             </h2>
             <p className="mt-4 text-base text-text-secondary">
-              Comece com uma foto e as informações do que você quer divulgar.
+              Suas flores, sua marca, uma campanha pronta para divulgar.
             </p>
             <div className="mt-8">
               <OfferCard
