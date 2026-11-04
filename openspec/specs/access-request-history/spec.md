@@ -8,28 +8,42 @@ A tabela `access_requests` preservada como histórico, fila comercial e canal de
 ## Requirements
 ### Requirement: CTA da landing conforme a flag
 
-A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL apresentar **todos** os CTAs de aquisição — inclusive os dos blocos de transformação, identidade e oferta, além do hero — conforme `VENDEO_PUBLIC_SIGNUP_ENABLED` — D4/D5:
+A landing pública (`src/app/page.tsx` + `src/components/landing/*`) SHALL
+apresentar todos os CTAs de aquisição — hero, transformação, identidade e oferta
+— conforme `VENDEO_PUBLIC_SIGNUP_ENABLED` — D4/D5:
 
-- **Flag on:** CTA principal "Continuar com Google" (→ `signInWithOAuth('google')`) + CTA secundário "Continuar com email" (→ `/signup`).
-- **Flag off (estado atual):** "Solicitar acesso free" + formulário de solicitação, comportamento idêntico ao atual.
-- A flag SHALL ser lida **server-side** na rota/página que controla (não só no cliente) e reutilizada em todos os CTAs de aquisição.
-- O contrato do `POST /api/access-requests` e o formulário de solicitação SHALL permanecer inalterados.
-- "Entrar" SHALL ser ação secundária destinada a quem já possui conta, nunca a ação universal de aquisição.
+- **Flag on:** CTA principal “Continuar com Google” (→ `signInWithOAuth('google')`)
+  + CTA secundário “Continuar com email” (→ `/signup`).
+- **Flag off:** CTA “Solicitar acesso gratuito” (→ `#acesso`) + formulário de
+  solicitação preservado. O card de oferta SHALL exibir o apoio “Solicite seu
+  convite para experimentar o Vendeo.”.
+- Os rótulos SHALL vir da fonte local única
+  `src/components/landing/public-offer-copy.ts`.
+- A flag SHALL ser lida **server-side** uma vez na página que controla e
+  reutilizada em todos os CTAs de aquisição.
+- O contrato do `POST /api/access-requests` e o formulário de solicitação SHALL
+  permanecer inalterados.
+- “Entrar” SHALL ser ação secundária destinada a quem já possui conta, nunca a
+  ação universal de aquisição.
 
 #### Scenario: Flag on renderiza CTAs de signup
 
 - **WHEN** `VENDEO_PUBLIC_SIGNUP_ENABLED=true` está configurado
-- **THEN** a landing exibe "Continuar com Google" (principal) e "Continuar com email" (secundário)
+- **THEN** a landing exibe “Continuar com Google” (principal) e “Continuar com email” (secundário)
+- **AND** nenhum CTA “Solicitar acesso gratuito” é renderizado
 
-#### Scenario: Flag off preserva solicitação de acesso
+#### Scenario: Flag off preserva solicitação de acesso com o novo rótulo
 
 - **WHEN** `VENDEO_PUBLIC_SIGNUP_ENABLED` está desligado (default)
-- **THEN** a landing exibe "Solicitar acesso free" + formulário de solicitação (comportamento atual idêntico)
+- **THEN** os CTAs de aquisição exibem “Solicitar acesso gratuito” apontando para `#acesso`
+- **AND** o formulário de solicitação permanece presente e funcional
+- **AND** o card de oferta exibe o apoio “Solicite seu convite para experimentar o Vendeo.”
 
 #### Scenario: CTAs de transformação, identidade e oferta respeitam a flag
 
-- **WHEN** a landing renovada é renderizada
-- **THEN** os CTAs de aquisição do hero, da transformação, da identidade e da oferta obedecem ao mesmo modo da flag
+- **WHEN** a landing é renderizada
+- **THEN** os CTAs de aquisição do hero, da transformação, da identidade e da
+  oferta obedecem ao mesmo modo da flag e ao mesmo rótulo da fonte única
 - **AND** o contrato do `POST /api/access-requests` permanece inalterado
 
 ### Requirement: access_requests preservado como histórico, fila comercial e canal de contato — NÃO autorização
