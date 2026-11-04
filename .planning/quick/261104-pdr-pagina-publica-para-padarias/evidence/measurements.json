@@ -1,0 +1,534 @@
+[
+  {
+    "scenario": "closed-desktop-1440",
+    "url": "http://127.0.0.1:3000/padarias",
+    "requested": {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1
+    },
+    "contentSize": {
+      "width": 1425,
+      "height": 3468
+    },
+    "title": "Crie posts e campanhas para padarias com IA | Vendeo",
+    "h1": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+    "noticeCount": 1,
+    "offerCards": 1,
+    "accessGroups": 2,
+    "anchorMode": 1,
+    "realMode": 1,
+    "localAccess": 1,
+    "offerId": 1,
+    "scrollWidth": 1425,
+    "clientWidth": 1425,
+    "overflow": 0,
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1
+    },
+    "lcp": {
+      "tag": "H1",
+      "text": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+      "url": null,
+      "startTime": 104,
+      "size": 93572
+    },
+    "googleTexts": [],
+    "padariasImages": [
+      {
+        "src": "/padarias/foto-bolo-naked-fruit-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/foto-bolo-naked-fruit-480w.webp",
+        "alt": "Bolo naked fruit com frutas vermelhas sobre um balcão de padaria",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 452,
+        "cssHeight": 452,
+        "naturalWidth": 452,
+        "naturalHeight": 452,
+        "objectFit": "fill"
+      },
+      {
+        "src": "/padarias/campanha-bolo-naked-fruit-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/campanha-bolo-naked-fruit-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Bolo Naked Fruit, com selo Novidade e descrição da massa e do recheio",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 450,
+        "cssHeight": 450,
+        "naturalWidth": 452,
+        "naturalHeight": 452,
+        "objectFit": "contain"
+      },
+      {
+        "src": "/padarias/campanha-pao-frances-fresquinho-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/campanha-pao-frances-fresquinho-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Pão Francês Fresquinho, com a chamada “Saiu uma nova fornada, corre!”",
+        "loading": "lazy",
+        "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+        "cssWidth": 468,
+        "cssHeight": 468,
+        "naturalWidth": 467,
+        "naturalHeight": 467,
+        "objectFit": "fill"
+      }
+    ]
+  },
+  {
+    "scenario": "closed-tablet-834",
+    "url": "http://127.0.0.1:3000/padarias",
+    "requested": {
+      "width": 834,
+      "height": 1112,
+      "dpr": 1
+    },
+    "contentSize": {
+      "width": 819,
+      "height": 3263
+    },
+    "title": "Crie posts e campanhas para padarias com IA | Vendeo",
+    "h1": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+    "noticeCount": 1,
+    "offerCards": 1,
+    "accessGroups": 2,
+    "anchorMode": 1,
+    "realMode": 1,
+    "localAccess": 1,
+    "offerId": 1,
+    "scrollWidth": 819,
+    "clientWidth": 819,
+    "overflow": 0,
+    "viewport": {
+      "width": 834,
+      "height": 1112,
+      "dpr": 1
+    },
+    "lcp": {
+      "tag": "H1",
+      "text": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+      "url": null,
+      "startTime": 44,
+      "size": 141159
+    },
+    "googleTexts": [],
+    "padariasImages": [
+      {
+        "src": "/padarias/foto-bolo-naked-fruit-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/foto-bolo-naked-fruit-480w.webp",
+        "alt": "Bolo naked fruit com frutas vermelhas sobre um balcão de padaria",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 349.5,
+        "cssHeight": 349.5,
+        "naturalWidth": 357,
+        "naturalHeight": 357,
+        "objectFit": "fill"
+      },
+      {
+        "src": "/padarias/campanha-bolo-naked-fruit-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/campanha-bolo-naked-fruit-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Bolo Naked Fruit, com selo Novidade e descrição da massa e do recheio",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 347.5,
+        "cssHeight": 347.5,
+        "naturalWidth": 357,
+        "naturalHeight": 357,
+        "objectFit": "contain"
+      },
+      {
+        "src": "/padarias/campanha-pao-frances-fresquinho-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/campanha-pao-frances-fresquinho-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Pão Francês Fresquinho, com a chamada “Saiu uma nova fornada, corre!”",
+        "loading": "lazy",
+        "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+        "cssWidth": 365.5,
+        "cssHeight": 365.5,
+        "naturalWidth": 372,
+        "naturalHeight": 372,
+        "objectFit": "fill"
+      }
+    ]
+  },
+  {
+    "scenario": "closed-mobile-390",
+    "url": "http://127.0.0.1:3000/padarias",
+    "requested": {
+      "width": 390,
+      "height": 844,
+      "dpr": 1
+    },
+    "contentSize": {
+      "width": 390,
+      "height": 4528
+    },
+    "title": "Crie posts e campanhas para padarias com IA | Vendeo",
+    "h1": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+    "noticeCount": 1,
+    "offerCards": 1,
+    "accessGroups": 2,
+    "anchorMode": 1,
+    "realMode": 1,
+    "localAccess": 1,
+    "offerId": 1,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "overflow": 0,
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "dpr": 1
+    },
+    "lcp": {
+      "tag": "H1",
+      "text": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+      "url": null,
+      "startTime": 36,
+      "size": 61181
+    },
+    "googleTexts": [],
+    "padariasImages": [
+      {
+        "src": "/padarias/foto-bolo-naked-fruit-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/foto-bolo-naked-fruit-480w.webp",
+        "alt": "Bolo naked fruit com frutas vermelhas sobre um balcão de padaria",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 320,
+        "cssHeight": 320,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "fill"
+      },
+      {
+        "src": "/padarias/campanha-bolo-naked-fruit-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/campanha-bolo-naked-fruit-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Bolo Naked Fruit, com selo Novidade e descrição da massa e do recheio",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 318,
+        "cssHeight": 318,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "contain"
+      },
+      {
+        "src": "/padarias/campanha-pao-frances-fresquinho-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/campanha-pao-frances-fresquinho-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Pão Francês Fresquinho, com a chamada “Saiu uma nova fornada, corre!”",
+        "loading": "lazy",
+        "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+        "cssWidth": 342,
+        "cssHeight": 342,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "fill"
+      }
+    ]
+  },
+  {
+    "scenario": "closed-mobile-390-dpr3",
+    "url": "http://127.0.0.1:3000/padarias",
+    "requested": {
+      "width": 390,
+      "height": 844,
+      "dpr": 3
+    },
+    "contentSize": {
+      "width": 390,
+      "height": 4528
+    },
+    "title": "Crie posts e campanhas para padarias com IA | Vendeo",
+    "h1": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+    "noticeCount": 1,
+    "offerCards": 1,
+    "accessGroups": 2,
+    "anchorMode": 1,
+    "realMode": 1,
+    "localAccess": 1,
+    "offerId": 1,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "overflow": 0,
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "dpr": 3
+    },
+    "lcp": {
+      "tag": "H1",
+      "text": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+      "url": null,
+      "startTime": 24,
+      "size": 61181
+    },
+    "googleTexts": [],
+    "padariasImages": [
+      {
+        "src": "/padarias/foto-bolo-naked-fruit-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/foto-bolo-naked-fruit-1024w.webp",
+        "alt": "Bolo naked fruit com frutas vermelhas sobre um balcão de padaria",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 320,
+        "cssHeight": 320,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "fill"
+      },
+      {
+        "src": "/padarias/campanha-bolo-naked-fruit-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/campanha-bolo-naked-fruit-dona-maria-1024w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Bolo Naked Fruit, com selo Novidade e descrição da massa e do recheio",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 318,
+        "cssHeight": 318,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "contain"
+      },
+      {
+        "src": "/padarias/campanha-pao-frances-fresquinho-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3000/padarias/campanha-pao-frances-fresquinho-dona-maria-1024w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Pão Francês Fresquinho, com a chamada “Saiu uma nova fornada, corre!”",
+        "loading": "lazy",
+        "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+        "cssWidth": 342,
+        "cssHeight": 342,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "fill"
+      }
+    ]
+  },
+  {
+    "scenario": "open-desktop-1440",
+    "url": "http://127.0.0.1:3001/padarias",
+    "requested": {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1
+    },
+    "contentSize": {
+      "width": 1425,
+      "height": 3468
+    },
+    "title": "Crie posts e campanhas para padarias com IA | Vendeo",
+    "h1": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+    "noticeCount": 1,
+    "offerCards": 1,
+    "accessGroups": 2,
+    "anchorMode": 1,
+    "realMode": 1,
+    "localAccess": 1,
+    "offerId": 1,
+    "scrollWidth": 1425,
+    "clientWidth": 1425,
+    "overflow": 0,
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1
+    },
+    "lcp": {
+      "tag": "H1",
+      "text": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+      "url": null,
+      "startTime": 48,
+      "size": 93572
+    },
+    "googleTexts": [],
+    "padariasImages": [
+      {
+        "src": "/padarias/foto-bolo-naked-fruit-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/foto-bolo-naked-fruit-480w.webp",
+        "alt": "Bolo naked fruit com frutas vermelhas sobre um balcão de padaria",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 452,
+        "cssHeight": 452,
+        "naturalWidth": 452,
+        "naturalHeight": 452,
+        "objectFit": "fill"
+      },
+      {
+        "src": "/padarias/campanha-bolo-naked-fruit-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/campanha-bolo-naked-fruit-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Bolo Naked Fruit, com selo Novidade e descrição da massa e do recheio",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 450,
+        "cssHeight": 450,
+        "naturalWidth": 452,
+        "naturalHeight": 452,
+        "objectFit": "contain"
+      },
+      {
+        "src": "/padarias/campanha-pao-frances-fresquinho-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/campanha-pao-frances-fresquinho-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Pão Francês Fresquinho, com a chamada “Saiu uma nova fornada, corre!”",
+        "loading": "lazy",
+        "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+        "cssWidth": 468,
+        "cssHeight": 468,
+        "naturalWidth": 467,
+        "naturalHeight": 467,
+        "objectFit": "fill"
+      }
+    ]
+  },
+  {
+    "scenario": "open-tablet-834",
+    "url": "http://127.0.0.1:3001/padarias",
+    "requested": {
+      "width": 834,
+      "height": 1112,
+      "dpr": 1
+    },
+    "contentSize": {
+      "width": 819,
+      "height": 3263
+    },
+    "title": "Crie posts e campanhas para padarias com IA | Vendeo",
+    "h1": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+    "noticeCount": 1,
+    "offerCards": 1,
+    "accessGroups": 2,
+    "anchorMode": 1,
+    "realMode": 1,
+    "localAccess": 1,
+    "offerId": 1,
+    "scrollWidth": 819,
+    "clientWidth": 819,
+    "overflow": 0,
+    "viewport": {
+      "width": 834,
+      "height": 1112,
+      "dpr": 1
+    },
+    "lcp": {
+      "tag": "H1",
+      "text": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+      "url": null,
+      "startTime": 40,
+      "size": 141159
+    },
+    "googleTexts": [],
+    "padariasImages": [
+      {
+        "src": "/padarias/foto-bolo-naked-fruit-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/foto-bolo-naked-fruit-480w.webp",
+        "alt": "Bolo naked fruit com frutas vermelhas sobre um balcão de padaria",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 349.5,
+        "cssHeight": 349.5,
+        "naturalWidth": 357,
+        "naturalHeight": 357,
+        "objectFit": "fill"
+      },
+      {
+        "src": "/padarias/campanha-bolo-naked-fruit-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/campanha-bolo-naked-fruit-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Bolo Naked Fruit, com selo Novidade e descrição da massa e do recheio",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 347.5,
+        "cssHeight": 347.5,
+        "naturalWidth": 357,
+        "naturalHeight": 357,
+        "objectFit": "contain"
+      },
+      {
+        "src": "/padarias/campanha-pao-frances-fresquinho-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/campanha-pao-frances-fresquinho-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Pão Francês Fresquinho, com a chamada “Saiu uma nova fornada, corre!”",
+        "loading": "lazy",
+        "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+        "cssWidth": 365.5,
+        "cssHeight": 365.5,
+        "naturalWidth": 372,
+        "naturalHeight": 372,
+        "objectFit": "fill"
+      }
+    ]
+  },
+  {
+    "scenario": "open-mobile-390",
+    "url": "http://127.0.0.1:3001/padarias",
+    "requested": {
+      "width": 390,
+      "height": 844,
+      "dpr": 1
+    },
+    "contentSize": {
+      "width": 390,
+      "height": 4528
+    },
+    "title": "Crie posts e campanhas para padarias com IA | Vendeo",
+    "h1": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+    "noticeCount": 1,
+    "offerCards": 1,
+    "accessGroups": 2,
+    "anchorMode": 1,
+    "realMode": 1,
+    "localAccess": 1,
+    "offerId": 1,
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "overflow": 0,
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "dpr": 1
+    },
+    "lcp": {
+      "tag": "H1",
+      "text": "Transforme os produtos da sua padaria em campanhas prontas para divulgar.",
+      "url": null,
+      "startTime": 32,
+      "size": 61181
+    },
+    "googleTexts": [],
+    "padariasImages": [
+      {
+        "src": "/padarias/foto-bolo-naked-fruit-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/foto-bolo-naked-fruit-480w.webp",
+        "alt": "Bolo naked fruit com frutas vermelhas sobre um balcão de padaria",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 320,
+        "cssHeight": 320,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "fill"
+      },
+      {
+        "src": "/padarias/campanha-bolo-naked-fruit-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/campanha-bolo-naked-fruit-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Bolo Naked Fruit, com selo Novidade e descrição da massa e do recheio",
+        "loading": "eager",
+        "sizes": "(min-width: 1024px) 452px, (min-width: 640px) calc(50vw - 60px), min(342px, calc(100vw - 48px))",
+        "cssWidth": 318,
+        "cssHeight": 318,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "contain"
+      },
+      {
+        "src": "/padarias/campanha-pao-frances-fresquinho-dona-maria-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3001/padarias/campanha-pao-frances-fresquinho-dona-maria-480w.webp",
+        "alt": "Campanha da Panificadora Dona Maria para o Pão Francês Fresquinho, com a chamada “Saiu uma nova fornada, corre!”",
+        "loading": "lazy",
+        "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+        "cssWidth": 342,
+        "cssHeight": 342,
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "objectFit": "fill"
+      }
+    ]
+  }
+]
