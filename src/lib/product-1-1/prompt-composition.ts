@@ -8,11 +8,19 @@ import {
   PRODUCT_PROMPT_BLOCK_LABELS,
   type ProductPromptBlockLabel,
   type ProductPromptCompositionBriefing,
+  type ProductPromptPolicyResolutionInput,
   type PromptPolicyContribution,
+  type ResolvedProductPromptPolicies,
 } from "./policies/types";
 import { resolveProductOneToOnePromptPolicies } from "./policies/registry";
 
 export const COMPOSER_VERSION = "48.2.4-prompt-composer-v7";
+
+/**
+ * F59 — `options` é uma extensão aditiva: sem ela, a saída é byte-idêntica ao
+ * contrato 1:1. O vertical fornece `resolver` explícito e `composerVersion`
+ * própria, sem alterar `COMPOSER_VERSION` nem o texto de qualquer bloco 1:1.
+ */
 
 /**
  * Orientação fixa da instrução de nome. Fica separada da lógica de composição
@@ -47,9 +55,21 @@ export interface ProductPromptCompositionInput {
 export interface ProductPromptComposition {
   readonly text: string;
   readonly blocks: Readonly<Record<string, string>>;
-  readonly composerVersion: typeof COMPOSER_VERSION;
+  readonly composerVersion: string;
   readonly promptBaseVersion: typeof PROMPT_BASE_VERSION;
   readonly policyVersions: Readonly<Record<string, string>>;
+}
+
+/**
+ * Extensão ADITIVA do compositor (F59). Sem opções, o comportamento é
+ * byte-idêntico ao Produto 1:1 aprovado; o vertical injeta seu próprio resolvedor
+ * explícito e sua própria versão de compositor.
+ */
+export interface ComposeProductPromptOptions {
+  readonly resolver?: (
+    input: ProductPromptPolicyResolutionInput,
+  ) => ResolvedProductPromptPolicies;
+  readonly composerVersion?: string;
 }
 
 function pushLine(
@@ -119,6 +139,7 @@ function constraintsLines(briefing: ProductPromptCompositionBriefing): string[] 
 /** Pure deterministic serializer for the frozen Product 1:1 prompt contract. */
 export function composeProductPrompt(
   input: ProductPromptCompositionInput,
+  options: ComposeProductPromptOptions = {},
 ): ProductPromptComposition {
   const {
     briefing,
@@ -126,7 +147,9 @@ export function composeProductPrompt(
     references,
     contributions = [],
   } = input;
-  const resolvedPolicies = resolveProductOneToOnePromptPolicies({
+  const resolvedPolicies = (
+    options.resolver ?? resolveProductOneToOnePromptPolicies
+  )({
     briefing,
     references,
   });
@@ -164,7 +187,7 @@ export function composeProductPrompt(
   return {
     text: parts.join("\n\n"),
     blocks: Object.freeze(blocks),
-    composerVersion: COMPOSER_VERSION,
+    composerVersion: options.composerVersion ?? COMPOSER_VERSION,
     promptBaseVersion: PROMPT_BASE_VERSION,
     policyVersions: Object.freeze({ ...resolvedPolicies.versions }),
   };
