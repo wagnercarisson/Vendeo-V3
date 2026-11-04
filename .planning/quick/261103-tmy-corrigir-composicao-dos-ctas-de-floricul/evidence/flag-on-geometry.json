@@ -1,0 +1,184 @@
+[
+  {
+    "viewport": 1440,
+    "state": "enabled",
+    "groups": [
+      {
+        "state": "enabled",
+        "rect": {
+          "x": 232,
+          "y": 436,
+          "w": 672,
+          "h": 108
+        },
+        "links": [
+          {
+            "text": "Continuar com email",
+            "rect": {
+              "x": 574,
+              "y": 436,
+              "w": 330,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+          },
+          {
+            "text": "Conheça o Vendeo",
+            "rect": {
+              "x": 466,
+              "y": 496,
+              "w": 205,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border-light px-6 font-heading text-base font-semibold text-text-primary transition-colors hover:border-accent-green focus:ring-2 focus:ring-accent-blue focus:outline-none sm:w-auto"
+          }
+        ],
+        "buttons": [
+          {
+            "text": "Continuar com Google",
+            "rect": {
+              "x": 232,
+              "y": 436,
+              "w": 330,
+              "h": 48
+            }
+          }
+        ]
+      },
+      {
+        "state": "enabled",
+        "rect": {
+          "x": 384,
+          "y": 2777,
+          "w": 672,
+          "h": 108
+        },
+        "links": [
+          {
+            "text": "Continuar com email",
+            "rect": {
+              "x": 726,
+              "y": 2777,
+              "w": 330,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+          },
+          {
+            "text": "Conheça o Vendeo",
+            "rect": {
+              "x": 618,
+              "y": 2837,
+              "w": 205,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border-light px-6 font-heading text-base font-semibold text-text-primary transition-colors hover:border-accent-green focus:ring-2 focus:ring-accent-blue focus:outline-none sm:w-auto"
+          }
+        ],
+        "buttons": [
+          {
+            "text": "Continuar com Google",
+            "rect": {
+              "x": 384,
+              "y": 2777,
+              "w": 330,
+              "h": 48
+            }
+          }
+        ]
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "viewport": 390,
+    "state": "enabled",
+    "groups": [
+      {
+        "state": "enabled",
+        "rect": {
+          "x": 24,
+          "y": 462,
+          "w": 342,
+          "h": 168
+        },
+        "links": [
+          {
+            "text": "Continuar com email",
+            "rect": {
+              "x": 24,
+              "y": 522,
+              "w": 342,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+          },
+          {
+            "text": "Conheça o Vendeo",
+            "rect": {
+              "x": 24,
+              "y": 582,
+              "w": 342,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border-light px-6 font-heading text-base font-semibold text-text-primary transition-colors hover:border-accent-green focus:ring-2 focus:ring-accent-blue focus:outline-none sm:w-auto"
+          }
+        ],
+        "buttons": [
+          {
+            "text": "Continuar com Google",
+            "rect": {
+              "x": 24,
+              "y": 462,
+              "w": 342,
+              "h": 48
+            }
+          }
+        ]
+      },
+      {
+        "state": "enabled",
+        "rect": {
+          "x": 24,
+          "y": 3408,
+          "w": 342,
+          "h": 168
+        },
+        "links": [
+          {
+            "text": "Continuar com email",
+            "rect": {
+              "x": 24,
+              "y": 3468,
+              "w": 342,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+          },
+          {
+            "text": "Conheça o Vendeo",
+            "rect": {
+              "x": 24,
+              "y": 3528,
+              "w": 342,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border-light px-6 font-heading text-base font-semibold text-text-primary transition-colors hover:border-accent-green focus:ring-2 focus:ring-accent-blue focus:outline-none sm:w-auto"
+          }
+        ],
+        "buttons": [
+          {
+            "text": "Continuar com Google",
+            "rect": {
+              "x": 24,
+              "y": 3408,
+              "w": 342,
+              "h": 48
+            }
+          }
+        ]
+      }
+    ],
+    "overflow": false
+  }
+]

@@ -1,0 +1,144 @@
+[
+  {
+    "viewport": 1440,
+    "state": "closed",
+    "groups": [
+      {
+        "state": "closed",
+        "rect": {
+          "x": 232,
+          "y": 436,
+          "w": 672,
+          "h": 48
+        },
+        "links": [
+          {
+            "text": "Solicitar acesso free",
+            "rect": {
+              "x": 232,
+              "y": 436,
+              "w": 212,
+              "h": 48
+            },
+            "cls": "inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none w-full sm:w-auto"
+          },
+          {
+            "text": "Conheça o Vendeo",
+            "rect": {
+              "x": 456,
+              "y": 436,
+              "w": 205,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border-light px-6 font-heading text-base font-semibold text-text-primary transition-colors hover:border-accent-green focus:ring-2 focus:ring-accent-blue focus:outline-none sm:w-auto"
+          }
+        ],
+        "buttons": []
+      },
+      {
+        "state": "closed",
+        "rect": {
+          "x": 384,
+          "y": 2717,
+          "w": 672,
+          "h": 48
+        },
+        "links": [
+          {
+            "text": "Solicitar acesso free",
+            "rect": {
+              "x": 506,
+              "y": 2717,
+              "w": 212,
+              "h": 48
+            },
+            "cls": "inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none w-full sm:w-auto"
+          },
+          {
+            "text": "Conheça o Vendeo",
+            "rect": {
+              "x": 730,
+              "y": 2717,
+              "w": 205,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border-light px-6 font-heading text-base font-semibold text-text-primary transition-colors hover:border-accent-green focus:ring-2 focus:ring-accent-blue focus:outline-none sm:w-auto"
+          }
+        ],
+        "buttons": []
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "viewport": 390,
+    "state": "closed",
+    "groups": [
+      {
+        "state": "closed",
+        "rect": {
+          "x": 24,
+          "y": 462,
+          "w": 342,
+          "h": 108
+        },
+        "links": [
+          {
+            "text": "Solicitar acesso free",
+            "rect": {
+              "x": 24,
+              "y": 462,
+              "w": 342,
+              "h": 48
+            },
+            "cls": "inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none w-full sm:w-auto"
+          },
+          {
+            "text": "Conheça o Vendeo",
+            "rect": {
+              "x": 24,
+              "y": 522,
+              "w": 342,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border-light px-6 font-heading text-base font-semibold text-text-primary transition-colors hover:border-accent-green focus:ring-2 focus:ring-accent-blue focus:outline-none sm:w-auto"
+          }
+        ],
+        "buttons": []
+      },
+      {
+        "state": "closed",
+        "rect": {
+          "x": 24,
+          "y": 3348,
+          "w": 342,
+          "h": 108
+        },
+        "links": [
+          {
+            "text": "Solicitar acesso free",
+            "rect": {
+              "x": 24,
+              "y": 3348,
+              "w": 342,
+              "h": 48
+            },
+            "cls": "inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none w-full sm:w-auto"
+          },
+          {
+            "text": "Conheça o Vendeo",
+            "rect": {
+              "x": 24,
+              "y": 3408,
+              "w": 342,
+              "h": 48
+            },
+            "cls": "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border-light px-6 font-heading text-base font-semibold text-text-primary transition-colors hover:border-accent-green focus:ring-2 focus:ring-accent-blue focus:outline-none sm:w-auto"
+          }
+        ],
+        "buttons": []
+      }
+    ],
+    "overflow": false
+  }
+]
