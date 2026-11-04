@@ -19,17 +19,17 @@
 
 ## 3. Geração, arte e persistência
 
-- [ ] 3.1 Criar módulo de path vertical `{store}/{campaign}/product-9-16/{operation}/art-1080x1920.jpg` com testes de pattern e isolamento do path 1:1.
-- [ ] 3.2 Implementar pipeline `resizeVerticalToJpeg1080x1920` (fonte exata 1152 × 2048, fator 0,9375, sRGB, JPEG 90) com testes de dimensão, proporção, sem faixas e decode completo.
-- [ ] 3.3 Implementar store vertical (upload imutável, metadados reais em `product_1_1_campaign_artifacts`, probe tipado, download, URL assinada) com testes de integridade e path.
-- [ ] 3.4 Adicionar reconhecimento do path vertical ao mecanismo de miniaturas e provar WebP 162 × 288, `upsert:false`, sem crop/upscale e falha isolada.
+- [x] 3.1 Criar módulo de path vertical `{store}/{campaign}/product-9-16/{operation}/art-1080x1920.jpg` com testes de pattern e isolamento do path 1:1.
+- [x] 3.2 Implementar pipeline `resizeVerticalToJpeg1080x1920` (fonte exata 1152 × 2048, fator 0,9375, sRGB, JPEG 90) com testes de dimensão, proporção, sem faixas e decode completo.
+- [x] 3.3 Implementar store vertical (upload imutável, metadados reais em `product_1_1_campaign_artifacts`, probe tipado, download, URL assinada) com testes de integridade e path.
+- [x] 3.4 Adicionar reconhecimento do path vertical ao mecanismo de miniaturas e provar WebP 162 × 288, `upsert:false`, sem crop/upscale e falha isolada.
 - [ ] 3.5 Adicionar `imageSize`, `composePrompt` e `beforeReservation` opcionais à engine, com defaults 1:1, e provar por testes que o caminho 1:1 não muda; a guarda pré-reserva exige estimativa vertical e teto antes de reserva/provider.
 - [ ] 3.6 Criar o entrypoint vertical (perfil de formato) injetando gateway 1152 × 2048, store vertical, compositor vertical e path esperado de projeção.
 - [ ] 3.7 Adicionar `expectedArtifactPath` opcional à projeção de entrega, com default 1:1, e testar projeção vertical `ready`/`error`.
 - [ ] 3.8 Integrar crédito no perfil vertical e testar reserva, `art_uploaded`, `delivered`, estorno único e resultado desconhecido com fakes.
 - [ ] 3.9 Tornar a recuperação/pendências ciente do formato (interface mínima de probe + injeção vertical), sem alterar o comportamento 1:1.
 - [ ] 3.10 Testar idempotência por `campaignId`/`operationId`, conflito de formato (409), concorrência sem dupla cobrança e reenvio sem provider.
-- [ ] 3.11 Implementar estimativa de custo ciente de 1152 × 2048 (multiplicador vertical versionado ou prova de equivalência) e gate por chamada que bloqueia sem estimativa ou sem saldo; retries contam no teto.
+- [x] 3.11 Implementar estimativa de custo ciente de 1152 × 2048 (multiplicador vertical versionado ou prova de equivalência) e gate por chamada que bloqueia sem estimativa ou sem saldo; retries contam no teto.
 - [ ] 3.12 Propagar o formato e o path esperado pela cadeia de recuperação: rota `image-recovery`, `ProductOneToOneArtifactRecovery`, repositório/resolução de pendências e `projectDeliveredCampaign`; teste ponta a ponta até detalhe/listagem sem nova geração.
 
 ## 4. Integração da criação e entrega

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-04T23:10:00.000Z"
+last_updated: "2026-11-04T23:20:00.000Z"
 progress:
   total_phases: 16
   completed_phases: 13
   total_plans: 118
-  completed_plans: 110
-  percent: 93
+  completed_plans: 111
+  percent: 94
 ---
 
 # Project State
@@ -37,6 +37,8 @@ progress:
 - **EXECUÇÃO QUICK 261027-k4d (2026-10-27) — primeira fatia da fundação multimercado (F57): IMPLEMENTADA E APROVADA PELO USUÁRIO.** Biblioteca pura em `src/lib/market-context/**` (14 arquivos, 3 commits atômicos `b545bc98`, `35a1c5f4`, `00c95b1b`, correção `beec4e67` e doc `7d029eb0`). Suíte nova **72/72**; tsc direcionado aos arquivos novos **exit 0**; guard de imports produtivos vazio; `git diff --check` limpo. Correção pós-revisão Codex: `kind: "legacy"` só é aceito sem campos adicionais; entradas mistas retornam erro tipado em vez de descartar configuração e aplicar BR/pt-BR. Gates globais **não verdes por ambiente**: `npm run typecheck`/`build` não executam (sem `node_modules/.bin`, sem `tsx` e sem `@google/generative-ai`); tsc completo acusa **29 erros em arquivos não tocados** e **zero** em `market-context`; ESLint quebrado por módulo ausente e, de todo modo, não cobre TS. **Aceite registrado em 2026-10-27 com essas limitações conhecidas; revalidar os gates globais é ação própria e controlada.** **Gates globais recuperados pela quick `261027-llm` em 2026-10-27** (`npm ci` + correção de 2 testes: typecheck 0 erros, build OK, lint sem cobertura TS). Sem migration, banco, env, dependência, push, deploy ou ativação.
 
 ## Current Position
+
+- **EXECUÇÃO F59 / WAVE 3 (2026-11-04) — plano 59-04 concluído; WAVE 4 NÃO AUTORIZADA.** Pipeline vertical validado: `resizeVerticalToJpeg1080x1920` (1152×2048 → JPEG sRGB 1080×1920 q90, decode completo), store com upload imutável em `product-9-16`, metadados reais, probe discriminado sem assinatura, download validado, URL assinada separada e miniatura 162×288 best-effort. Gates: **248/248** testes (19 arquivos, inclui regressão 1:1 de store), typecheck 0, `src/lib/product-1-1/artifact` e `supabase/migrations` intocados. Commits `a319bf26`, `b7826fb2`, `33da1ee2`; SUMMARY `59-04-SUMMARY.md`. **Sem chamada paga, migration, flag, push, deploy ou produção.** Próxima wave (59-05) exige autorização.
 
 - **EXECUÇÃO F59 / WAVE 2 (2026-11-04) — CONCLUÍDA; PROVA PAGA EXECUTADA 8/8; WAVE 3 NÃO AUTORIZADA.** `59-03`: política `f59-9-16-v1`, resolvedor vertical explícito, compositor `f59-vertical-9-16-composer-v1`, seam aditivo no compositor 1:1 e fixtures 3×3; **120/120** testes de prompt, typecheck 0, Copy Director intocado. `59-02`: harness reutilizando `image_model_pair_config` e `ai_model_pricing`; **8/8 chamadas** executadas (sunburst/medium + gpt-image-2/low), todas na dimensão exata; custo real **US$ 0,211210**, cobrado contra o teto **US$ 0,860000**, teto **US$ 3,00**, restante **US$ 2,14**; **0** unknown, **0** cost_unverified, **0** dimension_mismatch, **0** retries automáticos. Calibração: razão máxima **0,284955**, multiplicador **2,5 confirmado conservador**. Evidência `scripts/f59/evidence/vertical-provider-proof-2026-11-04T23-01-50-264Z.json`; SUMMARY `59-02-SUMMARY.md`. **UAT, produção e Wave 3 NÃO autorizadas.** Commits `8f1446e9`, `ebe65187`, `dadb05bc`, `3f2583b1`. Próximo passo: aceite humano da matriz/estimativa/ambiente/teto e fornecimento do token de `--authorized`; depois a Task 3 paga do 59-02 e a Wave 3.
 
@@ -382,6 +384,8 @@ e uma geração no localhost para conferir a contabilização.
 | 261009-vap | 2026-10-10 | Isolamento de compilação do laboratório local 3002: `next.config.ts` usa `distDir=supabase/.temp/landing-lab/.next-web` e tsconfig dedicado apenas sob sentinel `VENDEO_LAB_ISOLATED_DIST=true` (definido só pelo `start-web.mjs`); `start-web.mjs` gera `tsconfig.landing-lab.json`, faz snapshot/restaura `next-env.d.ts` em `finally`; tsconfigs raiz/typecheck e ESLint excluem o cache. Baseline typecheck/lint exit 0 → pós exit 0; teste focado 7/7; UAT com loja descartável (`is_test_store=true`, sem IA paga) GET/PATCH/POST-logo 200/201, 6 variantes persistidas, perfil `mock — desenvolvimento`; Adega/NovaTek intocadas; commit `82f26e9c`; sem provider/migrations/deploy |
 
 ## Session Continuity
+
+- **Sessão 2026-11-04 — F59 Wave 3 / plano 59-04.** Pipeline JPEG vertical 1080×1920 q90 com decode completo; store/probe/download/URL assinada e miniatura 162×288. **248/248** testes focados (inclui regressão 1:1 de store), typecheck 0, sem alteração em `src/lib/product-1-1/artifact` ou migrations. Commits `a319bf26`, `b7826fb2`, `33da1ee2`; SUMMARY `59-04-SUMMARY.md`. **Parado para revisão; Wave 4 não autorizada.**
 
 - **Sessão 2026-11-04 — F59 Wave 2 (59-03 + 59-02 prova paga).** Composição vertical concluída com seleção explícita de políticas, 9 fixtures e diferença controlada. Prova de provider executada com a configuração/pricing do 1:1: **8/8 chamadas**, oito dimensões exatas, custo real **US$ 0,211210**, cobrado contra o teto **US$ 0,86** de **US$ 3,00**, **0** unknown/cost_unverified/dimension_mismatch/retries. Calibração confirmou o multiplicador 2,5 conservador (razão máxima 0,284955). Evidência em `scripts/f59/evidence/vertical-provider-proof-2026-11-04T23-01-50-264Z.json`; SUMMARY `59-02-SUMMARY.md`. **UAT, produção e Wave 3 não autorizadas.**
 
