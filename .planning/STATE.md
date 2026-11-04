@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-04T22:06:34.441Z"
+last_updated: "2026-11-04T22:30:00.000Z"
 progress:
   total_phases: 16
   completed_phases: 13
   total_plans: 118
-  completed_plans: 108
-  percent: 81
+  completed_plans: 109
+  percent: 92
 ---
 
 # Project State
@@ -37,6 +37,8 @@ progress:
 - **EXECUÇÃO QUICK 261027-k4d (2026-10-27) — primeira fatia da fundação multimercado (F57): IMPLEMENTADA E APROVADA PELO USUÁRIO.** Biblioteca pura em `src/lib/market-context/**` (14 arquivos, 3 commits atômicos `b545bc98`, `35a1c5f4`, `00c95b1b`, correção `beec4e67` e doc `7d029eb0`). Suíte nova **72/72**; tsc direcionado aos arquivos novos **exit 0**; guard de imports produtivos vazio; `git diff --check` limpo. Correção pós-revisão Codex: `kind: "legacy"` só é aceito sem campos adicionais; entradas mistas retornam erro tipado em vez de descartar configuração e aplicar BR/pt-BR. Gates globais **não verdes por ambiente**: `npm run typecheck`/`build` não executam (sem `node_modules/.bin`, sem `tsx` e sem `@google/generative-ai`); tsc completo acusa **29 erros em arquivos não tocados** e **zero** em `market-context`; ESLint quebrado por módulo ausente e, de todo modo, não cobre TS. **Aceite registrado em 2026-10-27 com essas limitações conhecidas; revalidar os gates globais é ação própria e controlada.** **Gates globais recuperados pela quick `261027-llm` em 2026-10-27** (`npm ci` + correção de 2 testes: typecheck 0 erros, build OK, lint sem cobertura TS). Sem migration, banco, env, dependência, push, deploy ou ativação.
 
 ## Current Position
+
+- **EXECUÇÃO F59 / WAVE 2 (2026-11-04) — 59-03 concluído; 59-02 preparado até o checkpoint pago; PARADO PARA REVISÃO.** `59-03`: política `f59-9-16-v1`, resolvedor vertical explícito, compositor `f59-vertical-9-16-composer-v1`, seam aditivo no compositor 1:1 e fixtures 3×3; **120/120** testes de prompt, typecheck 0, Copy Director intocado. `59-02`: estimativa vertical `2,5` provisória (2,25 + margem) e orçamento que cobra o maior custo conhecido; harness TypeScript com dry-run de **14** chamadas, total estimado **US$ 1,05** e teto **US$ 3,00**. **Nenhuma chamada paga executada.** Commits `8f1446e9`, `ebe65187`, `dadb05bc`, `3f2583b1`. Próximo passo: aceite humano da matriz/estimativa/ambiente/teto e fornecimento do token de `--authorized`; depois a Task 3 paga do 59-02 e a Wave 3.
 
 - **EXECUÇÃO F59 / WAVE 1 (2026-11-04) — plano 59-01 (contratos puros): CONCLUÍDO LOCALMENTE; AGUARDANDO REVISÃO; WAVE 2 NÃO AUTORIZADA.** Criados `src/lib/campaign/format-resolution.ts` (tabela única e fail-closed de formato/versão), reexport vertical, dimensões 1152×2048→1080×1920 com proporção por inteiros, política `safe-area-9-16-v1` (percentuais + pixels por canvas + proveniência), path vertical exclusivo e reconhecimento aditivo na miniatura. Inventário read-only conclui **“Nenhuma migration estrutural necessária”**. Commits `bf51df3d`, `38ffca38`, `dea770e3`. Gates: **65/65** testes focados, **108/108** regressão 1:1 focada, typecheck **0**, lint **0** (sem cobertura TS), `git diff --check` limpo; `src/lib/product-1-1/**` e `supabase/migrations/**` intocados; 0 imports do vertical no runtime 1:1. Área segura topo/base/laterais permanece `pending` (fonte oficial Meta não legível sem JS). **Sem chamada paga, migration aplicada, flag, push, deploy ou produção.** Próxima wave (59-02/59-03) exige revisão e autorização; 59-02 exige checkpoint pago.
 
@@ -126,7 +128,7 @@ progress:
 - **Fechamento 56.2.3 (2026-10-15) — B2.1 INATIVA, 6/6 planos/summaries.** Checkpoint humano **APROVADO** (`56.2.3-UAT.md`, `[x] approved`, 2026-10-15) **EXCLUSIVAMENTE no escopo inativo** (recuperação de copy; flags `false`/sem habilitação; **NÃO** autoriza habilitação/piloto, `db push`, deploy, provider pago, reset ou GSD). Métodos distinguidos: **inspeção VISUAL** humana (cenários percorridos) + **VALIDADO POR TESTE AUTOMATIZADO COM ERRO SIMULADO** (falhas raras; incl. `indeterminada`/leitura indisponível) + **janela de 30s somente na fixture local** (não é prova humana dos tempos 5s/10s; política de runtime inalterada). **Code review** (`56.2.3-REVIEW.md`): HIGH CR-01 + MEDIUM WR-01 **RESOLVIDOS** em `7dee0866`; WR-02/WR-03 (LOW) = **dívida não-bloqueante**. **Security** (`56.2.3-SECURITY.md`): **69/69 fechados, 0 abertos**. **Backfill:** prova ao vivo LIMPA **PASS** em instância separada (`vendeo-f562b-isolated`); incidente da 1ª execução (`f562a`) preservado como histórico. **Nyquist:** NÃO executado por configuração (`workflow.nyquist_validation=false`). **D13** = gate operacional da próxima fatia (imagem/habilitação — B2.2). **Lifecycle OpenSpec CONCLUÍDO (2026-10-15):** verify → sync → archive; **46/46 tasks**; change **ARQUIVADA** em `openspec/changes/archive/2026-10-15-fase-56-2b2a-recuperacao-de-copy-produto-1-1/`. **B2.2/B2.3/F56.3 NÃO iniciados.** Trackings reconciliados (ROADMAP/STATE/REQUIREMENTS); front-matter counters registram a base **ESCOPADA** do milestone (6 fases / 5 completas · 43/43 planos · 83% — **NÃO** são totais globais recalculados). Commits docs `3c8dfae9`, `5f798b45`, `1671fd93`.
 
 Phase: 59
-Plan: 01 concluído (Wave 1); Wave 2 não autorizada
+Plan: 59-01 e 59-03 concluídos; 59-02 até o checkpoint pago (execução não autorizada)
 Fase anterior (concluída): 56.2.1 / F56.2b1a — **CONCLUÍDA, VERIFICADA, SINCRONIZADA e ARQUIVADA (2026-10-08) como fundação inativa; UAT humano aprovado/reconfirmado; lifecycle OpenSpec concluído; b1b agora concluída (INATIVA) e b2/F56.3 permanecem não iniciados**
 Última fase concluída: **F56.2a — Preparação não operacional do Produto 1:1** — **6/6 planos/summaries; OpenSpec 31/31; UAT 4 pass + 1 N/A; segurança 20/20 fechadas, 0 abertas**. Verificada, sincronizada e arquivada em `openspec/changes/archive/2026-10-07-fase-56-2a-preparacao-nao-operacional-produto-1-1/`. Warning preservado: reset final isolado retornou exit 1/HTTP 502 após listar migrations; causa/upstream desconhecido, não é sucesso e não foi repetido. Consulta somente leitura posterior confirmou migrations F56.2a, flags `false`, fixtures registradas ausentes e schema esperado; checkpoint humano aprovado.
 **F56.2b1a / GSD 56.2.1:** change OpenSpec commitada; 6 planos em 4 waves e `56.2.1-CONTEXT.md` criados para revisão humana. Plano 01 é diagnóstico read-only HTTP 502 + gate de identidade/isolamento/serviços/schema; registra serviços obrigatórios (Postgres/db e API admin de autorização), exclusões intencionais (Analytics desabilitado) e execução elevada (CLI Supabase/Docker), e inclui checkpoint humano antes de migrations/testes transacionais. Plano 05 copia as migrations com hash para o workdir isolado e aplica via `--workdir` antes dos testes Postgres reais. Nenhuma execução/implementação iniciada. Não foram registrados fases/diretórios/artefatos GSD de b1b ou b2. Sem `db push`, provider/chamada paga, ativação ou alteração de produção.
@@ -380,6 +382,8 @@ e uma geração no localhost para conferir a contabilização.
 | 261009-vap | 2026-10-10 | Isolamento de compilação do laboratório local 3002: `next.config.ts` usa `distDir=supabase/.temp/landing-lab/.next-web` e tsconfig dedicado apenas sob sentinel `VENDEO_LAB_ISOLATED_DIST=true` (definido só pelo `start-web.mjs`); `start-web.mjs` gera `tsconfig.landing-lab.json`, faz snapshot/restaura `next-env.d.ts` em `finally`; tsconfigs raiz/typecheck e ESLint excluem o cache. Baseline typecheck/lint exit 0 → pós exit 0; teste focado 7/7; UAT com loja descartável (`is_test_store=true`, sem IA paga) GET/PATCH/POST-logo 200/201, 6 variantes persistidas, perfil `mock — desenvolvimento`; Adega/NovaTek intocadas; commit `82f26e9c`; sem provider/migrations/deploy |
 
 ## Session Continuity
+
+- **Sessão 2026-11-04 — F59 Wave 2 (59-03 + 59-02 dry-run).** Composição vertical concluída com seleção explícita de políticas, 9 fixtures e diferença controlada; **120/120** testes de prompt, typecheck 0. Prova de provider preparada: estimativa 2,5 e orçamento de US$ 3,00, harness dry-run com 14 chamadas e total estimado US$ 1,05; **nenhuma chamada paga**. Commits `8f1446e9`, `ebe65187`, `dadb05bc`, `3f2583b1`. **Parado no checkpoint humano do 59-02.**
 
 - **Sessão 2026-11-04 — F59 Wave 1 / plano 59-01.** Contratos puros de formato/versão, dimensões, área segura, path vertical e reconhecimento na miniatura; inventário read-only sem migration estrutural. **65/65** testes focados e **108/108** regressão 1:1 focada; typecheck 0; lint 0 (limitação TS conhecida); diff check limpo. Commits `bf51df3d`, `38ffca38`, `dea770e3`; SUMMARY `59-01-SUMMARY.md`. **Parado para revisão; Wave 2 não iniciada.** Sem chamada paga, migration aplicada, flag, push, deploy ou produção.
 
