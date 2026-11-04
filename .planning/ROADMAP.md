@@ -731,7 +731,7 @@ Plans:
 
 ### Phase 59: F59 - Campanhas de Produto vertical 9:16
 
-**Status:** **PLANEJADA E VERIFICADA; EXECUÇÃO NÃO INICIADA (2026-11-04).** `gsd-plan-checker`: **VERIFICATION PASSED** após 3 rodadas de correção (5 blockers iniciais + 2 blockers e 6 warnings técnicos + varredura final). Base OpenSpec aprovada; 10 planos em 8 waves; 14/14 REQ-IDs cobertos. Nenhum código, migration, chamada paga, push ou deploy.
+**Status:** **PLANEJADA E VERIFICADA; EXECUÇÃO NÃO INICIADA (2026-11-04).** `gsd-plan-checker`: **VERIFICATION PASSED** após 3 rodadas de correção (5 blockers iniciais + 2 blockers e 6 warnings técnicos + varredura final) e 2 P2 finais (preservação de `versionId`/`costSource`/`pricing` e `tokenPricing`; `beforeReservation` registrado no OpenSpec). Base OpenSpec aprovada; 10 planos em 8 waves; 14/14 REQ-IDs cobertos. Nenhum código, migration, chamada paga, push ou deploy.
 
 **Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
 
@@ -766,7 +766,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 59-05-PLAN.md — Engine/perfil vertical: `composePrompt`/`imageSize` aditivos, crédito, fence, falha/desconhecido, projeção com expected path
+- [ ] 59-05-PLAN.md - Engine/perfil vertical: `composePrompt`/`imageSize`/`beforeReservation` aditivos, crédito, fence, falha/desconhecido, projeção com expected path
 
 **Wave 5** *(blocked on Wave 4 completion)*
 

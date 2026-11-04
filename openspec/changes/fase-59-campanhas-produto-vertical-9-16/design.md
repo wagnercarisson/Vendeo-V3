@@ -46,10 +46,11 @@ Esta change adiciona o formato vertical sem tocar no fluxo antigo e **preservand
 
 Criar `src/lib/product-vertical-9-16/**` para formato, política de área segura, prompt, arte e orquestração de entrada. O runtime `1:1` NÃO importa nada do vertical.
 
-Para não duplicar a lógica crítica de crédito, fence e recuperação, o vertical chama a engine existente de `generation-orchestrator.ts` com um perfil explícito. Serão adicionados apenas dois pontos de extensão opcionais e com default preservado:
+Para não duplicar a lógica crítica de crédito, fence e recuperação, o vertical chama a engine existente de `generation-orchestrator.ts` com um perfil explícito. Serão adicionados apenas três pontos de extensão opcionais e com default preservado:
 
 - `composePrompt` (default: compositor 1:1 atual);
-- `imageSize` (default: `"1024x1024"`).
+- `imageSize` (default: `"1024x1024"`);
+- `beforeReservation` (default: `undefined`): guarda pré-reserva chamada após o preflight e antes da reserva/provider, usada pelo vertical para exigir estimativa vertical e teto de gasto antes de qualquer efeito financeiro. Sua ausência mantém a sequência 1:1 byte-idêntica.
 
 O `storeArtifact`, o probe, a projeção e o snapshot já são injetáveis. Nenhum call site 1:1 passa os novos parâmetros; os testes de default provam saída idêntica.
 
@@ -303,7 +304,7 @@ Um prompt que produza duas artes similares, uma por formato, fica como investiga
 | Rota de geração | `src/app/api/campaign/generate-image/route.ts` | congelar formato, validar mismatch, despachar vertical, passar perfil |
 | Formulário | `src/components/flow/use-campaign-form.ts`, `campaign-input-form.tsx` | estado, body, seletor e fingerprint |
 | Elegibilidade da página | `src/app/(app)/campanhas/nova/page.tsx` | expor flag vertical ao cliente |
-| Engine | `src/lib/product-1-1/orchestration/generation-orchestrator.ts` | `composePrompt` e `imageSize` opcionais, defaults 1:1 |
+| Engine | `src/lib/product-1-1/orchestration/generation-orchestrator.ts` | `composePrompt`, `imageSize` e `beforeReservation` opcionais, defaults 1:1 |
 | Prompt | `src/lib/product-1-1/prompt-composition.ts` | resolver opcional, default 1:1 |
 | Arte vertical | novo `src/lib/product-vertical-9-16/artifact/*` | pipeline, path, probe, download |
 | Miniatura | `src/lib/campaign/thumbnail/thumbnail-path.ts` | reconhecer padrão vertical |

@@ -23,7 +23,7 @@
 - [ ] 3.2 Implementar pipeline `resizeVerticalToJpeg1080x1920` (fonte exata 1152 × 2048, fator 0,9375, sRGB, JPEG 90) com testes de dimensão, proporção, sem faixas e decode completo.
 - [ ] 3.3 Implementar store vertical (upload imutável, metadados reais em `product_1_1_campaign_artifacts`, probe tipado, download, URL assinada) com testes de integridade e path.
 - [ ] 3.4 Adicionar reconhecimento do path vertical ao mecanismo de miniaturas e provar WebP 162 × 288, `upsert:false`, sem crop/upscale e falha isolada.
-- [ ] 3.5 Adicionar `imageSize` e `composePrompt` opcionais à engine, com defaults 1:1, e provar por testes que o caminho 1:1 não muda.
+- [ ] 3.5 Adicionar `imageSize`, `composePrompt` e `beforeReservation` opcionais à engine, com defaults 1:1, e provar por testes que o caminho 1:1 não muda; a guarda pré-reserva exige estimativa vertical e teto antes de reserva/provider.
 - [ ] 3.6 Criar o entrypoint vertical (perfil de formato) injetando gateway 1152 × 2048, store vertical, compositor vertical e path esperado de projeção.
 - [ ] 3.7 Adicionar `expectedArtifactPath` opcional à projeção de entrega, com default 1:1, e testar projeção vertical `ready`/`error`.
 - [ ] 3.8 Integrar crédito no perfil vertical e testar reserva, `art_uploaded`, `delivered`, estorno único e resultado desconhecido com fakes.

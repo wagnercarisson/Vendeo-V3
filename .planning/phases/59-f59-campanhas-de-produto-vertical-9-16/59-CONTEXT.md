@@ -31,7 +31,7 @@ Fora do escopo: fluxo antigo, Serviços/Informativos, geração simultânea dos 
 ### D-01 — Isolamento e engine compartilhada
 - Criar `src/lib/product-vertical-9-16/**` e manter o fluxo antigo excluído.
 - O runtime 1:1 não importa o vertical. O vertical pode usar a engine existente com perfil explícito.
-- A engine recebe apenas `composePrompt` e `imageSize` opcionais, com defaults que preservam o comportamento 1:1.
+- A engine recebe `composePrompt`, `imageSize` e `beforeReservation` opcionais, com defaults que preservam o comportamento 1:1. `beforeReservation` é a guarda pré-reserva que exige estimativa vertical e teto de gasto antes da reserva/provider; default `undefined` mantém a sequência 1:1 idêntica.
 - **REQ:** REQ-59-02.
 
 ### D-02 — Formato e versão congelados
