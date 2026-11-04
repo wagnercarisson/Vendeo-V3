@@ -9,10 +9,10 @@ import { NOINDEX_ROBOTS } from "@/lib/seo/indexation-policy";
  * módulo com `vi.resetModules()` + import dinâmico após reconfigurar o ambiente
  * com `vi.stubEnv(...)`.
  *
- * Cobre produção válida (apenas a home), todas as combinações fail-closed, a
- * ausência de URLs privadas/legais/parametrizadas e, num único teste
- * consolidado, a coerência fail-closed entre home (`noindex`), `robots()` (sem
- * sitemap) e `sitemap()` (vazio) sob origem não canônica.
+ * Cobre produção válida (home, `/floriculturas` e `/padarias`), todas as
+ * combinações fail-closed, a ausência de URLs privadas/legais/parametrizadas e,
+ * num único teste consolidado, a coerência fail-closed entre home (`noindex`),
+ * `robots()` (sem sitemap) e `sitemap()` (vazio) sob origem não canônica.
  */
 
 const CANONICAL = "https://vendeo.tech";
@@ -69,16 +69,17 @@ afterEach(() => {
   vi.resetModules();
 });
 
-describe("sitemap.ts — home + /floriculturas sob a condição combinada (D-03/D-08)", () => {
-  it("produção + origem canônica ⇒ exatamente 2 entradas com URL absoluta", async () => {
+describe("sitemap.ts — home + /floriculturas + /padarias sob a condição combinada (D-03/D-08)", () => {
+  it("produção + origem canônica ⇒ exatamente 3 entradas com URL absoluta", async () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", CANONICAL);
 
     const entries = await getSitemap();
 
-    expect(entries).toHaveLength(2);
+    expect(entries).toHaveLength(3);
     expect(entries[0].url).toBe("https://vendeo.tech/");
     expect(entries[1].url).toBe("https://vendeo.tech/floriculturas");
+    expect(entries[2].url).toBe("https://vendeo.tech/padarias");
   });
 });
 

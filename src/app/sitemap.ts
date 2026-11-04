@@ -4,14 +4,15 @@ import { isIndexableEnvironment } from "@/lib/seo/environment";
 import {
   FLORICULTURAS_CANONICAL_PATH,
   HOME_CANONICAL_PATH,
+  PADARIAS_CANONICAL_PATH,
 } from "@/lib/seo/indexation-policy";
 
 /**
  * `sitemap.xml` (F51.2 / D-08).
  *
- * As superfícies indexáveis aprovadas — a home e a página demonstrativa
- * `/floriculturas` — e somente sob produção confirmada + origem canônica
- * validada. Nada mais é indexável: `/api/**`, `/auth/**`, `(app)/**`,
+ * As superfícies indexáveis aprovadas — a home e as páginas demonstrativas
+ * `/floriculturas` e `/padarias` — e somente sob produção confirmada + origem
+ * canônica validada. Nada mais é indexável: `/api/**`, `/auth/**`, `(app)/**`,
  * `/admin/**`, documentos legais, versões Markdown e URLs com parâmetros ficam
  * de fora (D-08). Fora da condição combinada retorna lista vazia.
  *
@@ -28,5 +29,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${origin}${HOME_CANONICAL_PATH}` },
     { url: `${origin}${FLORICULTURAS_CANONICAL_PATH}` },
+    { url: `${origin}${PADARIAS_CANONICAL_PATH}` },
   ];
 }

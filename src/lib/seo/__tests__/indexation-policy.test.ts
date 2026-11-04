@@ -6,6 +6,7 @@ import {
   NOINDEX_ROBOTS,
   HOME_CANONICAL_PATH,
   FLORICULTURAS_CANONICAL_PATH,
+  PADARIAS_CANONICAL_PATH,
   INDEXABLE_CANONICAL_PATHS,
   NOINDEX_TAG,
   NOINDEX_TAG_GLOBAL,
@@ -103,8 +104,12 @@ describe("getSurfacePolicy — /floriculturas (segunda superfície aprovada)", (
     expect(FLORICULTURAS_CANONICAL_PATH).toBe("/floriculturas");
   });
 
-  it("expõe exatamente duas superfícies indexáveis aprovadas", () => {
-    expect([...INDEXABLE_CANONICAL_PATHS]).toEqual(["/", "/floriculturas"]);
+  it("expõe exatamente três superfícies indexáveis aprovadas", () => {
+    expect([...INDEXABLE_CANONICAL_PATHS]).toEqual([
+      "/",
+      "/floriculturas",
+      "/padarias",
+    ]);
   });
 
   it("path direto → INDEX_ROBOTS e no sitemap", () => {
@@ -126,6 +131,35 @@ describe("getSurfacePolicy — /floriculturas (segunda superfície aprovada)", (
 
   it("subcaminho não aprovado continua fail-closed", () => {
     const policy = getSurfacePolicy("/floriculturas/exemplo");
+    expect(policy.robots).toEqual(NOINDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(false);
+  });
+});
+
+describe("getSurfacePolicy — /padarias (terceira superfície aprovada)", () => {
+  it("PADARIAS_CANONICAL_PATH é '/padarias'", () => {
+    expect(PADARIAS_CANONICAL_PATH).toBe("/padarias");
+  });
+
+  it("path direto → INDEX_ROBOTS e no sitemap", () => {
+    const policy = getSurfacePolicy("/padarias");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("barra final normalizada → mesma política", () => {
+    const policy = getSurfacePolicy("/padarias/");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("query/fragmento ignorados → mesma política", () => {
+    expect(getSurfacePolicy("/padarias?utm=1").inSitemap).toBe(true);
+    expect(getSurfacePolicy("/padarias#demo").inSitemap).toBe(true);
+  });
+
+  it("subcaminho não aprovado continua fail-closed", () => {
+    const policy = getSurfacePolicy("/padarias/exemplo");
     expect(policy.robots).toEqual(NOINDEX_ROBOTS);
     expect(policy.inSitemap).toBe(false);
   });

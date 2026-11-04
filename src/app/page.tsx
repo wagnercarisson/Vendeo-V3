@@ -140,6 +140,12 @@ export default async function Home() {
               Floriculturas
             </Link>
             <Link
+              href="/padarias"
+              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
+            >
+              Padarias
+            </Link>
+            <Link
               href={`mailto:${process.env.SUPPORT_EMAIL ?? "suporte@vendeo.tech"}`}
               className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
             >

@@ -10,8 +10,8 @@ import {
  * Matriz D-05 de política de indexação por superfície (F51.2 / D-05 / D-09).
  *
  * Verifica por teste que **todas** as superfícies privadas/legais/transitórias
- * são `noindex, nofollow` e ficam fora do sitemap, que a home é a única exceção
- * (`index, follow` + no sitemap) e que o default é fail-closed.
+ * são `noindex, nofollow` e ficam fora do sitemap, que a home, `/floriculturas`
+ * e `/padarias` são indexáveis e que o default é fail-closed.
  *
  * Também confirma que as 3 páginas legais declaram `robots: NOINDEX_ROBOTS`
  * explicitamente e que a raiz herda o default `noindex` para rotas sem
@@ -90,6 +90,18 @@ describe("getSurfacePolicy — matriz D-05 (todas as superfícies privadas/legai
     const policy = getSurfacePolicy("/floriculturas");
     expect(policy.robots).toEqual(INDEX_ROBOTS);
     expect(policy.inSitemap).toBe(true);
+  });
+
+  it("/padarias ⇒ INDEX_ROBOTS e no sitemap (terceira superfície aprovada)", () => {
+    const policy = getSurfacePolicy("/padarias");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("/padarias/exemplo ⇒ NOINDEX_ROBOTS e fora do sitemap", () => {
+    const policy = getSurfacePolicy("/padarias/exemplo");
+    expect(policy.robots).toEqual(NOINDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(false);
   });
 });
 
