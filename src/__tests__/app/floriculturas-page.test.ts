@@ -7,6 +7,10 @@ import {
   NOINDEX_ROBOTS,
   FLORICULTURAS_CANONICAL_PATH,
 } from "@/lib/seo/indexation-policy";
+import {
+  PUBLIC_ACCESS_COPY,
+  PUBLIC_OFFER_COPY,
+} from "@/components/landing/public-offer-copy";
 
 /**
  * Página pública `/floriculturas`.
@@ -23,8 +27,12 @@ import {
 const CANONICAL = "https://vendeo.tech";
 const PREVIEW_URL = "vendeo-git-x.vercel.app";
 
+const flag = vi.hoisted(() => ({ publicSignupEnabled: false }));
+
 vi.mock("@/lib/launch-config/config", () => ({
-  getLaunchConfig: vi.fn(async () => ({ publicSignupEnabled: false })),
+  getLaunchConfig: vi.fn(async () => ({
+    publicSignupEnabled: flag.publicSignupEnabled,
+  })),
 }));
 
 vi.mock("@/components/auth/google-button", () => ({
@@ -44,6 +52,7 @@ function resetEnv(): void {
 }
 
 beforeEach(() => {
+  flag.publicSignupEnabled = false;
   vi.resetModules();
   resetEnv();
 });
@@ -166,13 +175,17 @@ describe("render de /floriculturas — copy aprovada e composição", () => {
     expect(html).toContain("Revise, baixe e publique.");
   });
 
-  it("exibe exatamente dois CTAs, ambos apontando para /#acesso com a flag desligada", async () => {
+  it("mantém dois grupos de acesso, mas somente o card final aponta para /#acesso", async () => {
     const html = await render();
 
+    expect(html.match(/data-access-cta-group/g) ?? []).toHaveLength(2);
+    expect(html.match(/data-access-mode="anchor"/g) ?? []).toHaveLength(1);
+    expect(html.match(/data-access-mode="real"/g) ?? []).toHaveLength(1);
     expect(
       html.match(/data-public-signup-enabled="false"/g) ?? [],
     ).toHaveLength(2);
-    expect(html.match(/href="\/#acesso"/g) ?? []).toHaveLength(2);
+    expect(html.match(/href="\/#acesso"/g) ?? []).toHaveLength(1);
+    expect(html.match(/href="#floriculturas-oferta"/g) ?? []).toHaveLength(1);
   });
 
   it("exibe o aviso demonstrativo aprovado uma única vez", async () => {
@@ -207,6 +220,50 @@ describe("render de /floriculturas — copy aprovada e composição", () => {
     expect(html.match(/data-access-cta-group/g) ?? []).toHaveLength(2);
     expect(html.match(/href="\/"[^>]*>Conheça o Vendeo</g) ?? []).toHaveLength(2);
     expect(html).not.toMatch(/href="\/#acesso"[^>]*>Conheça o Vendeo</);
+  });
+
+  it("renderiza um único card de oferta, no encerramento, com ID estável de âncora", async () => {
+    const html = await render();
+
+    expect(html.match(/data-offer-card="compact"/g) ?? []).toHaveLength(1);
+    expect(html.split(PUBLIC_OFFER_COPY.summary)).toHaveLength(2);
+    expect(html.split(PUBLIC_OFFER_COPY.complement)).toHaveLength(2);
+    expect(html.split(PUBLIC_OFFER_COPY.detailsLabel)).toHaveLength(2);
+    expect(html.split(PUBLIC_ACCESS_COPY.closedSupport)).toHaveLength(2);
+    expect(html.split(PUBLIC_OFFER_COPY.closedDetailsNote)).toHaveLength(2);
+    expect(html.match(/id="floriculturas-oferta"/g) ?? []).toHaveLength(1);
+    expect(html).toMatch(/id="floriculturas-oferta"[^>]*tabindex="-1"/);
+    expect(html).toContain("scroll-mt-24");
+  });
+
+  it("a abertura usa apenas âncoras locais; as ações reais ficam no card final", async () => {
+    const html = await render();
+
+    expect(html.match(/data-local-access="true"/g) ?? []).toHaveLength(1);
+    expect(html.match(/href="#floriculturas-oferta"/g) ?? []).toHaveLength(1);
+    expect(html.match(/href="\/#acesso"/g) ?? []).toHaveLength(1);
+    expect(html).not.toMatch(/href="\/signup"/);
+  });
+
+  it("não produz IDs duplicados", async () => {
+    const html = await render();
+    const ids = Array.from(html.matchAll(/\sid="([^"]+)"/g), (match) => match[1]);
+
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("flag ligada: abertura local e ações reais somente no card final", async () => {
+    flag.publicSignupEnabled = true;
+    const html = await render();
+
+    expect(html).not.toContain(PUBLIC_ACCESS_COPY.closedCta);
+    expect(html).not.toContain(PUBLIC_ACCESS_COPY.closedSupport);
+    expect(html).not.toContain(PUBLIC_OFFER_COPY.closedDetailsNote);
+    expect(html.match(new RegExp(PUBLIC_ACCESS_COPY.email, "g")) ?? []).toHaveLength(2);
+    expect(html.match(/href="\/signup"/g) ?? []).toHaveLength(1);
+    expect(html.match(/data-local-access="true"/g) ?? []).toHaveLength(1);
+    expect(html.match(/href="#floriculturas-oferta"/g) ?? []).toHaveLength(2);
+    expect(html.match(/id="floriculturas-oferta"/g) ?? []).toHaveLength(1);
   });
 
   it("não exibe tabela de entrada nem dados de geração não aprovados", async () => {

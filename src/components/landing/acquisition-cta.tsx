@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { GoogleButton } from "@/components/auth/google-button";
+import { GoogleGGlyph } from "./google-g-glyph";
+import { PUBLIC_ACCESS_COPY } from "./public-offer-copy";
 
 /**
  * Shared, flag-aware acquisition CTA consumed by the hero, transformação,
@@ -24,10 +26,10 @@ import { GoogleButton } from "@/components/auth/google-button";
 interface AcquisitionCtaProps {
   publicSignupEnabled: boolean;
   /**
-   * Destination of the closed-beta "Solicitar acesso free" action. Defaults to
-   * the home anchor `#acesso`, preserving every existing consumer. Standalone
-   * public pages (e.g. `/floriculturas`) pass `/#acesso`, since the anchor only
-   * exists on the home.
+   * Destination of the closed-beta access action. Defaults to the home anchor
+   * `#acesso`, preserving every existing consumer. Standalone public pages
+   * (e.g. `/floriculturas`) pass `/#acesso`, since the anchor only exists on
+   * the home.
    */
   accessHref?: string;
   /**
@@ -45,6 +47,13 @@ interface AcquisitionCtaProps {
    *   access group, which composes the secondary institutional link explicitly.
    */
   layout?: "stacked" | "inline";
+  /**
+   * When set, every acquisition action becomes a local anchor to this target
+   * (e.g. `#floriculturas-oferta`). Used only by the `/floriculturas` opening
+   * preview: no OAuth, no `/signup`, no navigation away from the page. The
+   * closing card keeps the real actions (no `localHref`).
+   */
+  localHref?: string;
 }
 
 export function AcquisitionCta({
@@ -52,7 +61,10 @@ export function AcquisitionCta({
   accessHref = "#acesso",
   align = "responsive",
   layout = "stacked",
+  localHref,
 }: AcquisitionCtaProps) {
+  const isLocal = Boolean(localHref);
+  const accessDestination = localHref ?? accessHref;
   const alignment =
     align === "center"
       ? "items-center justify-center"
@@ -71,6 +83,7 @@ export function AcquisitionCta({
     <div
       data-public-signup-enabled={String(publicSignupEnabled)}
       data-acquisition-layout={layout}
+      data-local-access={isLocal ? "true" : undefined}
       className={containerClass}
     >
       {publicSignupEnabled ? (
@@ -82,27 +95,55 @@ export function AcquisitionCta({
                 : "w-full max-w-sm [&_button]:!min-h-[48px]"
             }
           >
-            <GoogleButton variant="solid" fullWidth />
+            {isLocal ? (
+              <a
+                href={localHref}
+                aria-label={PUBLIC_ACCESS_COPY.google}
+                className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-lg bg-accent-green py-3 font-medium text-slate-950 transition-colors duration-200 hover:bg-accent-green/90 focus:ring-2 focus:ring-accent-blue focus:outline-none"
+              >
+                <GoogleGGlyph className="h-[18px] w-[18px]" />
+                <span>{PUBLIC_ACCESS_COPY.google}</span>
+              </a>
+            ) : (
+              <GoogleButton
+                variant="solid"
+                fullWidth
+                label={PUBLIC_ACCESS_COPY.google}
+              />
+            )}
           </div>
-          <Link
-            href="/signup"
-            className={
-              inline
-                ? "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
-                : "inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
-            }
-          >
-            Continuar com email
-          </Link>
+          {isLocal ? (
+            <a
+              href={localHref}
+              className={
+                inline
+                  ? "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+                  : "inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+              }
+            >
+              {PUBLIC_ACCESS_COPY.email}
+            </a>
+          ) : (
+            <Link
+              href="/signup"
+              className={
+                inline
+                  ? "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+                  : "inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+              }
+            >
+              {PUBLIC_ACCESS_COPY.email}
+            </Link>
+          )}
         </>
       ) : (
         <a
-          href={accessHref}
+          href={accessDestination}
           className={`inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none ${
             inline ? "w-full sm:w-auto" : ""
           }`}
         >
-          Solicitar acesso free
+          {PUBLIC_ACCESS_COPY.closedCta}
         </a>
       )}
     </div>

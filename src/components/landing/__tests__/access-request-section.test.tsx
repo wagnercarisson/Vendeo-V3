@@ -94,10 +94,10 @@ describe("Teste 10b - AccessRequestSection flag on", () => {
 });
 
 describe("Teste 10c - CTAs de aquisição nos dois modos da flag (hero, transformação, identidade e oferta)", () => {
-  it("flag off: hero, transformação, identidade e oferta renderizam 'Solicitar acesso free' → #acesso e o formulário presente", () => {
+  it("flag off: hero, transformação, identidade e oferta renderizam 'Solicitar acesso gratuito' → #acesso e o formulário presente", () => {
     const { container } = renderAcquisitionTree(false);
 
-    const ctas = screen.getAllByRole("link", { name: "Solicitar acesso free" });
+    const ctas = screen.getAllByRole("link", { name: "Solicitar acesso gratuito" });
     expect(ctas).toHaveLength(4);
     ctas.forEach((cta) => expect(cta).toHaveAttribute("href", "#acesso"));
 
@@ -121,7 +121,7 @@ describe("Teste 10c - CTAs de aquisição nos dois modos da flag (hero, transfor
 
     expect(screen.queryByTestId("access-request-form")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Solicitar acesso free" }),
+      screen.queryByRole("link", { name: "Solicitar acesso gratuito" }),
     ).not.toBeInTheDocument();
   });
 
@@ -132,7 +132,7 @@ describe("Teste 10c - CTAs de aquisição nos dois modos da flag (hero, transfor
     expect(screen.queryByRole("link", { name: "Entrar" })).not.toBeInTheDocument();
     // …e nenhum CTA de aquisição aponta para /login (ação secundária de login).
     screen
-      .getAllByRole("link", { name: "Solicitar acesso free" })
+      .getAllByRole("link", { name: "Solicitar acesso gratuito" })
       .forEach((cta) => expect(cta).not.toHaveAttribute("href", "/login"));
   });
 });

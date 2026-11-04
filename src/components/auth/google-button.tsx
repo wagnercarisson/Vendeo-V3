@@ -10,6 +10,11 @@ interface GoogleButtonProps {
   variant?: "outline" | "solid";
   /** full-width em auth surfaces; inline em landing */
   fullWidth?: boolean;
+  /**
+   * Rótulo opcional. O default preserva exatamente o texto aprovado das telas
+   * de login/cadastro; apenas o landing passa o valor da fonte pública.
+   */
+  label?: string;
 }
 
 function GoogleGIcon({ className }: { className?: string }) {
@@ -38,6 +43,7 @@ function GoogleGIcon({ className }: { className?: string }) {
 export function GoogleButton({
   variant = "outline",
   fullWidth = true,
+  label = "Continuar com Google",
 }: GoogleButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +82,7 @@ export function GoogleButton({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        aria-label="Continuar com Google"
+        aria-label={label}
         className={`flex items-center justify-center gap-3 rounded-lg py-3 font-medium transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses} ${fullWidth ? "w-full" : ""}`}
         style={{ minHeight: "44px" }}
       >
@@ -85,7 +91,7 @@ export function GoogleButton({
         ) : (
           <>
             <GoogleGIcon className="h-[18px] w-[18px]" />
-            <span>Continuar com Google</span>
+            <span>{label}</span>
           </>
         )}
       </button>

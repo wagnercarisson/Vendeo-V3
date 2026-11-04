@@ -20,7 +20,7 @@ describe("AcquisitionCta — destino do acesso no beta fechado", () => {
   it("mantém o default #acesso quando a prop não é fornecida", () => {
     render(<AcquisitionCta publicSignupEnabled={false} />);
 
-    expect(screen.getByRole("link", { name: "Solicitar acesso free" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Solicitar acesso gratuito" })).toHaveAttribute(
       "href",
       "#acesso",
     );
@@ -29,7 +29,7 @@ describe("AcquisitionCta — destino do acesso no beta fechado", () => {
   it("usa accessHref fornecido (página independente)", () => {
     render(<AcquisitionCta publicSignupEnabled={false} accessHref="/#acesso" />);
 
-    expect(screen.getByRole("link", { name: "Solicitar acesso free" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Solicitar acesso gratuito" })).toHaveAttribute(
       "href",
       "/#acesso",
     );
@@ -44,7 +44,7 @@ describe("AcquisitionCta — destino do acesso no beta fechado", () => {
       "/signup",
     );
     expect(
-      screen.queryByRole("link", { name: "Solicitar acesso free" }),
+      screen.queryByRole("link", { name: "Solicitar acesso gratuito" }),
     ).toBeNull();
   });
 
@@ -76,8 +76,43 @@ describe("AcquisitionCta — destino do acesso no beta fechado", () => {
   it("layout inline no cadastro fechado mantém a largura total no mobile", () => {
     render(<AcquisitionCta publicSignupEnabled={false} layout="inline" />);
 
-    const link = screen.getByRole("link", { name: "Solicitar acesso free" });
+    const link = screen.getByRole("link", { name: "Solicitar acesso gratuito" });
     expect(link.className).toContain("w-full");
     expect(link.className).toContain("sm:w-auto");
+  });
+
+  it("localHref no cadastro aberto troca Google/e-mail por âncoras locais", () => {
+    render(
+      <AcquisitionCta
+        publicSignupEnabled
+        layout="inline"
+        localHref="#floriculturas-oferta"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Continuar com Google" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Continuar com Google" }),
+    ).toHaveAttribute("href", "#floriculturas-oferta");
+    expect(
+      screen.getByRole("link", { name: "Continuar com email" }),
+    ).toHaveAttribute("href", "#floriculturas-oferta");
+  });
+
+  it("localHref no cadastro fechado troca o CTA por âncora local", () => {
+    render(
+      <AcquisitionCta
+        publicSignupEnabled={false}
+        layout="inline"
+        localHref="#floriculturas-oferta"
+        accessHref="/#acesso"
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Solicitar acesso gratuito" }),
+    ).toHaveAttribute("href", "#floriculturas-oferta");
   });
 });

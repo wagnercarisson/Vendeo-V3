@@ -109,7 +109,7 @@ const BLOCK_HEADINGS = [
   "Escolha como apresentar seu produto.", // apresentação do produto (h2)
   "Fica com a cara da sua loja — e você decide", // identidade e controle (h2)
   "Uma campanha para cada jeito de divulgar.", // abordagens de divulgação (h2)
-  "Teste gratuitamente, sem cartão de crédito", // oferta (h2)
+  "Teste gratuitamente.", // oferta (h2)
   "Perguntas frequentes", // FAQ / CTA final (h2)
 ];
 
@@ -265,10 +265,10 @@ describe("Landing page — composição e copy (flag off)", () => {
     expect(container.querySelectorAll("[data-auto-advance]").length).toBe(0);
   });
 
-  it("flag off: hero/transformação/identidade/oferta renderizam 'Solicitar acesso free' → #acesso com texto escuro (D-19) e o formulário presente", async () => {
+  it("flag off: hero/transformação/identidade/oferta renderizam 'Solicitar acesso gratuito' → #acesso com texto escuro (D-19) e o formulário presente", async () => {
     const { container } = render(await Home());
 
-    const ctas = screen.getAllByRole("link", { name: "Solicitar acesso free" });
+    const ctas = screen.getAllByRole("link", { name: "Solicitar acesso gratuito" });
     expect(ctas).toHaveLength(4);
     ctas.forEach((cta) => {
       expect(cta).toHaveAttribute("href", "#acesso");
@@ -298,7 +298,7 @@ describe("Landing page — composição e copy (flag off)", () => {
     entrar.forEach((link) => expect(link).toHaveAttribute("href", "/login"));
 
     screen
-      .getAllByRole("link", { name: "Solicitar acesso free" })
+      .getAllByRole("link", { name: "Solicitar acesso gratuito" })
       .forEach((cta) => expect(cta).not.toHaveAttribute("href", "/login"));
   });
 
@@ -413,7 +413,7 @@ describe("Landing page — ambos os modos da flag para hero/oferta/final", () =>
 
     expect(container.querySelector("#acesso")).toBeNull();
     expect(
-      screen.queryByRole("link", { name: "Solicitar acesso free" }),
+      screen.queryByRole("link", { name: "Solicitar acesso gratuito" }),
     ).not.toBeInTheDocument();
     expect(container.querySelectorAll('[data-public-signup-enabled="true"]').length).toBeGreaterThanOrEqual(1);
   });

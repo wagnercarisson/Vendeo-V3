@@ -27,7 +27,7 @@ describe("AccessCtaGroup — cadastro fechado (composição aprovada)", () => {
     const group = container.querySelector("[data-access-cta-group]")!;
 
     expect(group.className).toContain("sm:flex-row");
-    expect(screen.getByRole("link", { name: "Solicitar acesso free" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Solicitar acesso gratuito" })).toHaveAttribute(
       "href",
       "/#acesso",
     );
@@ -46,6 +46,55 @@ describe("AccessCtaGroup — cadastro fechado (composição aprovada)", () => {
     expect(
       container.querySelector("[data-access-cta-group]")!.className,
     ).toContain("sm:justify-center");
+  });
+});
+
+describe("AccessCtaGroup — modo âncora (abertura de /floriculturas)", () => {
+  it("cadastro fechado: CTA local e institucional para a home", () => {
+    const { container } = render(
+      <AccessCtaGroup
+        publicSignupEnabled={false}
+        anchorHref="#floriculturas-oferta"
+      />,
+    );
+
+    expect(
+      container.querySelector("[data-access-cta-group]")!.getAttribute(
+        "data-access-mode",
+      ),
+    ).toBe("anchor");
+    expect(
+      screen.getByRole("link", { name: "Solicitar acesso gratuito" }),
+    ).toHaveAttribute("href", "#floriculturas-oferta");
+    expect(screen.getByRole("link", { name: "Conheça o Vendeo" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+  });
+
+  it("cadastro aberto: Google e e-mail viram âncoras locais, sem botão OAuth", () => {
+    const { container } = render(
+      <AccessCtaGroup publicSignupEnabled anchorHref="#floriculturas-oferta" />,
+    );
+
+    expect(
+      container.querySelector("[data-access-cta-group]")!.getAttribute(
+        "data-access-mode",
+      ),
+    ).toBe("anchor");
+    expect(
+      screen.queryByRole("button", { name: "Continuar com Google" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Continuar com Google" }),
+    ).toHaveAttribute("href", "#floriculturas-oferta");
+    expect(
+      screen.getByRole("link", { name: "Continuar com email" }),
+    ).toHaveAttribute("href", "#floriculturas-oferta");
+    expect(screen.getByRole("link", { name: "Conheça o Vendeo" })).toHaveAttribute(
+      "href",
+      "/",
+    );
   });
 });
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccessCtaGroup } from "@/components/landing/floriculturas/access-cta-group";
+import { OfferCard } from "@/components/landing/offer-card";
 import { DemonstrationPair } from "@/components/landing/floriculturas/demonstration-pair";
 import { FloriculturasHeader } from "@/components/landing/floriculturas/floriculturas-header";
 import { getLaunchConfig } from "@/lib/launch-config/config";
@@ -32,6 +33,9 @@ const SHARE_IMAGE_PATH = "/seo/vendeo-og-1200x630.png";
 const SHARE_IMAGE_WIDTH = 1200;
 const SHARE_IMAGE_HEIGHT = 630;
 const SHARE_IMAGE_ALT = "Vendeo — crie campanhas para redes sociais com IA";
+
+/** Destino estável da prévia de acesso da abertura (card único no encerramento). */
+const FLORICULTURAS_OFFER_ANCHOR = "floriculturas-oferta";
 
 const indexable = isIndexableEnvironment();
 const { origin } = resolveCanonicalOrigin();
@@ -118,7 +122,10 @@ export default async function FloriculturasPage() {
               identidade da sua loja — sem você precisar saber design.
             </p>
             <div className="mt-8">
-              <AccessCtaGroup publicSignupEnabled={publicSignupEnabled} />
+              <AccessCtaGroup
+                publicSignupEnabled={publicSignupEnabled}
+                anchorHref={`#${FLORICULTURAS_OFFER_ANCHOR}`}
+              />
             </div>
           </div>
         </section>
@@ -246,10 +253,17 @@ export default async function FloriculturasPage() {
               Comece com uma foto e as informações do que você quer divulgar.
             </p>
             <div className="mt-8">
-              <AccessCtaGroup
+              <OfferCard
+                id={FLORICULTURAS_OFFER_ANCHOR}
+                variant="compact"
                 publicSignupEnabled={publicSignupEnabled}
                 align="center"
-              />
+              >
+                <AccessCtaGroup
+                  publicSignupEnabled={publicSignupEnabled}
+                  align="center"
+                />
+              </OfferCard>
             </div>
           </div>
         </section>
