@@ -8,9 +8,14 @@ const LOOKAHEAD_HOURS = 48;
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  if (!secret) {
+    return NextResponse.json(
+      { ok: false, error: "cron_secret_not_configured" },
+      { status: 500 },
+    );
+  }
   if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
   const now = new Date();
@@ -27,7 +32,12 @@ export async function GET(request: NextRequest) {
     .from("credit_balances")
     .select("store_id, demo_balance, demo_expires_at, demo_cycle_id, origin_demo_grant_tx_id")
     .gt("demo_balance", 0);
-  if (balanceError) return NextResponse.json({ error: balanceError.message }, { status: 500 });
+  if (balanceError) {
+    return NextResponse.json(
+      { ok: false, error: "balance_query_failed" },
+      { status: 500 },
+    );
+  }
 
   let materialized = 0;
   for (const balance of balances ?? []) {
@@ -76,13 +86,43 @@ export async function GET(request: NextRequest) {
     await processClaimedEmail(claimed);
     emails += 1;
   }
+
+  const trialOffer = normalizeTrialOffer(trialOfferData);
+  const processingFailed = Boolean(trialOfferError);
+  const processingErrors = trialOffer.errors > 0;
+
+  // A reconciliação acima sempre executa; só depois o status reflete a falha
+  // do RPC de parcelas, com código estável e agregados numéricos apenas.
+  if (processingFailed || processingErrors) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: processingFailed
+          ? "trial_offer_processing_failed"
+          : "trial_offer_processing_errors",
+        materialized,
+        repaired,
+        emails,
+        trialOffer,
+      },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     materialized,
     repaired,
     emails,
-    trialOffer: trialOfferError
-      ? { error: "trial_offer_processing_failed" }
-      : (trialOfferData ?? { granted: 0, skipped: 0, errors: 0 }),
+    trialOffer,
   });
+}
+
+function normalizeTrialOffer(data: unknown): { granted: number; skipped: number; errors: number } {
+  const value = (data ?? {}) as { granted?: unknown; skipped?: unknown; errors?: unknown };
+  return {
+    granted: Number(value.granted ?? 0),
+    skipped: Number(value.skipped ?? 0),
+    errors: Number(value.errors ?? 0),
+  };
 }

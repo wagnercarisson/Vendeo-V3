@@ -13,6 +13,8 @@ const ALWAYS_PASSTHROUGH = new Set(["/auth/confirm"]);
 const API_PASSTHROUGH = new Set([
   "/api/cron/monthly-credits",
   // A rota valida CRON_SECRET; agendamentos não possuem sessão de usuário.
+  "/api/cron/demo-credits",
+  // A rota valida CRON_SECRET; agendamentos não possuem sessão de usuário.
   "/api/cron/sync-openai-pricing",
   "/api/legal/current-versions",
 ]);
