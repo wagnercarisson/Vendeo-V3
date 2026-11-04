@@ -1,0 +1,209 @@
+[
+  {
+    "label": "desktop-1440",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "scrollWidth": 1425,
+    "clientWidth": 1425,
+    "bodyScrollWidth": 1425,
+    "documentHeight": 3714,
+    "section": {
+      "x": 201,
+      "y": 1730,
+      "width": 1024,
+      "height": 812
+    },
+    "heading": "Crie posts para sua floricultura sem começar do zero.",
+    "exampleHeading": "Uma oferta da sua floricultura, pronta para divulgar.",
+    "image": {
+      "rect": {
+        "x": 733,
+        "y": 1978,
+        "width": 468,
+        "height": 468
+      },
+      "naturalWidth": 467,
+      "naturalHeight": 467,
+      "currentSrc": "http://127.0.0.1:3000/floriculturas/campanha-kalandiva-donna-flor-480w.webp",
+      "complete": true,
+      "loading": "lazy",
+      "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+      "srcset": "/floriculturas/campanha-kalandiva-donna-flor-480w.webp 480w, /floriculturas/campanha-kalandiva-donna-flor-1024w.webp 1024w",
+      "alt": "Campanha da floricultura Donna Flor com a Flor Kalandiva em pote, com preço e condição de estoque"
+    },
+    "notice": {
+      "rect": {
+        "x": 225,
+        "y": 2478,
+        "width": 768,
+        "height": 16
+      },
+      "text": "As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas",
+      "count": 1
+    },
+    "offerCards": 1,
+    "accessGroups": [
+      {
+        "mode": "anchor",
+        "publicSignup": null,
+        "hrefs": [
+          "#floriculturas-oferta",
+          "/"
+        ]
+      },
+      {
+        "mode": "real",
+        "publicSignup": null,
+        "hrefs": [
+          "/#acesso",
+          "/"
+        ]
+      }
+    ],
+    "ids": {
+      "total": 7,
+      "unique": 7
+    },
+    "textHasPrice": false
+  },
+  {
+    "label": "mobile-390",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "bodyScrollWidth": 390,
+    "documentHeight": 4663,
+    "section": {
+      "x": 0,
+      "y": 2181,
+      "width": 390,
+      "height": 970
+    },
+    "heading": "Crie posts para sua floricultura sem começar do zero.",
+    "exampleHeading": "Uma oferta da sua floricultura, pronta para divulgar.",
+    "image": {
+      "rect": {
+        "x": 24,
+        "y": 2697,
+        "width": 342,
+        "height": 342
+      },
+      "naturalWidth": 342,
+      "naturalHeight": 342,
+      "currentSrc": "http://127.0.0.1:3000/floriculturas/campanha-kalandiva-donna-flor-480w.webp",
+      "complete": true,
+      "loading": "lazy",
+      "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+      "srcset": "/floriculturas/campanha-kalandiva-donna-flor-480w.webp 480w, /floriculturas/campanha-kalandiva-donna-flor-1024w.webp 1024w",
+      "alt": "Campanha da floricultura Donna Flor com a Flor Kalandiva em pote, com preço e condição de estoque"
+    },
+    "notice": {
+      "rect": {
+        "x": 24,
+        "y": 3071,
+        "width": 342,
+        "height": 48
+      },
+      "text": "As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas",
+      "count": 1
+    },
+    "offerCards": 1,
+    "accessGroups": [
+      {
+        "mode": "anchor",
+        "publicSignup": null,
+        "hrefs": [
+          "#floriculturas-oferta",
+          "/"
+        ]
+      },
+      {
+        "mode": "real",
+        "publicSignup": null,
+        "hrefs": [
+          "/#acesso",
+          "/"
+        ]
+      }
+    ],
+    "ids": {
+      "total": 7,
+      "unique": 7
+    },
+    "textHasPrice": false
+  },
+  {
+    "label": "mobile-390-dpr3",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "bodyScrollWidth": 390,
+    "documentHeight": 4663,
+    "section": {
+      "x": 0,
+      "y": 2181,
+      "width": 390,
+      "height": 970
+    },
+    "heading": "Crie posts para sua floricultura sem começar do zero.",
+    "exampleHeading": "Uma oferta da sua floricultura, pronta para divulgar.",
+    "image": {
+      "rect": {
+        "x": 24,
+        "y": 2697,
+        "width": 342,
+        "height": 342
+      },
+      "naturalWidth": 342,
+      "naturalHeight": 342,
+      "currentSrc": "http://127.0.0.1:3000/floriculturas/campanha-kalandiva-donna-flor-1024w.webp",
+      "complete": true,
+      "loading": "lazy",
+      "sizes": "(min-width: 1024px) 468px, (min-width: 768px) calc(50vw - 44px), min(448px, calc(100vw - 48px))",
+      "srcset": "/floriculturas/campanha-kalandiva-donna-flor-480w.webp 480w, /floriculturas/campanha-kalandiva-donna-flor-1024w.webp 1024w",
+      "alt": "Campanha da floricultura Donna Flor com a Flor Kalandiva em pote, com preço e condição de estoque"
+    },
+    "notice": {
+      "rect": {
+        "x": 24,
+        "y": 3071,
+        "width": 342,
+        "height": 48
+      },
+      "text": "As lojas e campanhas apresentadas são exemplos demonstrativos e não representam lojas reais nem ofertas comerciais válidas",
+      "count": 1
+    },
+    "offerCards": 1,
+    "accessGroups": [
+      {
+        "mode": "anchor",
+        "publicSignup": null,
+        "hrefs": [
+          "#floriculturas-oferta",
+          "/"
+        ]
+      },
+      {
+        "mode": "real",
+        "publicSignup": null,
+        "hrefs": [
+          "/#acesso",
+          "/"
+        ]
+      }
+    ],
+    "ids": {
+      "total": 7,
+      "unique": 7
+    },
+    "textHasPrice": false
+  }
+]
