@@ -728,3 +728,37 @@ Plans:
 **Canonical refs:** `openspec/changes/archive/2026-11-02-fase-58-composicao-operacional-do-dashboard/` (proposal, design, tasks, specs arquivadas), `58-PUBLICATION-RECONCILIATION.md` (adendo de integração/publicação/aceite), specs sincronizadas `openspec/specs/dashboard-operational-composition/`, `dashboard-localization/`, `dashboard-inteligente/`, `changelog-ui/`, `openspec/design-system/MASTER.md`, `openspec/design-system/pages/dashboard.md` (referência histórica; não prevalece sobre a F58).
 
 **Diretório:** `.planning/phases/58-f58-composi-o-operacional-do-dashboard/`.
+
+### Phase 59: F59 - Campanhas de Produto vertical 9:16
+
+**Status:** Planejamento em andamento. Base OpenSpec aprovada para o GSD em 2026-11-04.
+
+**Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
+
+**Requirements**: REQ-59-01, REQ-59-02, REQ-59-03, REQ-59-04, REQ-59-05, REQ-59-06, REQ-59-07, REQ-59-08, REQ-59-09, REQ-59-10, REQ-59-11, REQ-59-12, REQ-59-13, REQ-59-14
+
+**Depends on:** Phase 58 (dashboard integrado), F56.2b1b/F56.2b2b (fluxo novo Produto 1:1, artefato, crédito e recuperação), F57.4 (localização) e base OpenSpec aprovada da F59.
+
+**Plans:** 10 plans in 8 waves
+
+**Source:** `openspec/changes/fase-59-campanhas-produto-vertical-9-16/` - proposal, design, tasks e delta specs. Esta é a fonte técnica aprovada; o GSD não reabre decisões de produto.
+
+**Canonical refs:** `AGENTS.md`; `docs/fluxo-de-desenvolvimento.md`; `openspec/changes/fase-59-campanhas-produto-vertical-9-16/proposal.md`, `design.md`, `tasks.md` e `specs/**`; `openspec/specs/product-1-1-artifact-delivery/`, `product-1-1-generation-orchestration/`, `product-1-1-campaign-credit-billing/`, `product-1-1-copy-recovery/`, `product-1-1-flow-activation/`, `campaign-input-ui/`, `copy-director/`, `ai-image-generation/`, `image-generation-model-pair-config/`, `image-generation-config-snapshot/`; `openspec/design-system/CAMPAIGN_VISUAL_SYSTEM.md`; `openspec/design-system/pages/campaign-input.md`, `campaign-preview.md`, `review-export.md`.
+
+**Código de referência:** `src/lib/product-1-1/**`, `src/app/api/campaign/generate-image/route.ts`, `src/app/api/campaign/[id]/download/route.ts`, `src/app/api/campaign/[id]/image-recovery/route.ts`, `src/app/(app)/campanhas/[id]/page.tsx`, `src/lib/campaign/display.ts`, `src/lib/campaign/thumbnail/**`, `src/lib/feature-flags/feature-flag-service.ts`, `src/lib/ai/adapters/upstream-images.ts`, `src/lib/ai-cost/image-pair-pricing.ts`, `src/lib/product-1-1/pilot/**`.
+
+**Bloqueios e checkpoints:** prova de provider paga (14 chamadas planejadas, teto US$ 3,00, estimativa conservadora antes da primeira chamada, retries contabilizados) exige autorização específica; migration data-only da flag exige checkpoint próprio; homolog com lojas de teste; produção é gate posterior. Nenhuma implementação, migration, chamada paga, push ou deploy nesta fase de planejamento.
+
+**Diretório:** `.planning/phases/59-f59-campanhas-de-produto-vertical-9-16/`.
+
+Plans:
+- [ ] 59-01-PLAN.md — Contratos puros: formato/versão, dimensões 1152×2048→1080×1920, paths verticais, política safe-area-9-16-v1 e reconhecimento de path de miniatura
+- [ ] 59-02-PLAN.md — Prova de provider em homolog: estimativa vertical conservadora antes da primeira chamada, matriz de 14 chamadas e teto US$ 3,00 (checkpoint pago)
+- [ ] 59-03-PLAN.md — Composição vertical: políticas, prompt derivado, fixtures 3 intenções × 3 fundos, Copy Director intacto e timing
+- [ ] 59-04-PLAN.md — Pipeline de arte vertical: JPEG 1080×1920, store/probe/download/signed URL, metadados e miniatura vertical
+- [ ] 59-05-PLAN.md — Engine/perfil vertical: `composePrompt`/`imageSize` aditivos, crédito, fence, falha/desconhecido, projeção com expected path
+- [ ] 59-06-PLAN.md — Recuperação vertical completa: image-recovery, recovery service, pending/admin, projeção e teste ponta a ponta
+- [ ] 59-07-PLAN.md — Criação: schema `campaignFormat`, congelamento/hash, despacho 409, flag global + seed data-only, seletor UI/estado
+- [ ] 59-08-PLAN.md — Restauração do formulário e entrega por formato: download, detalhe, listagem e miniaturas
+- [ ] 59-09-PLAN.md — Telemetria de formato/dimensões, runbook, gates locais e regressão 1:1
+- [ ] 59-10-PLAN.md — Homolog/aceite: lojas de teste, matriz funcional, sobreposições, falhas/recuperação, 1:1 manual e relatório; gate de produção separado

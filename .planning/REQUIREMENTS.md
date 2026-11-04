@@ -287,3 +287,24 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-58-10 | Responsividade mobile/tablet/desktop com prioridade mobile saldo -> campanhas -> novidades, alvos de toque e truncamento seguro | Testes de DOM + validação visual |
 | REQ-58-11 | Shell, identidade, navegação, ações existentes, acessibilidade e admin preservados; sem recomendações, taxa de sucesso ou próximo passo | Regressão + inspeção |
 | REQ-58-12 | Validação automatizada (testes/typecheck/lint/build/OpenSpec), visual humana e gates de publicação separados; testes locais não provam produção | Evidências + aceite |
+
+## F59 - Planejamento (Campanhas de Produto vertical 9:16)
+
+**Fonte aprovada:** `openspec/changes/fase-59-campanhas-produto-vertical-9-16/` (proposal, design, tasks e delta specs). **Status:** base OpenSpec aprovada para planejamento GSD em 2026-11-04; implementação, gasto pago, migration e produção não autorizados. **Escopo:** fluxo NOVO de Produto; fluxo antigo integralmente fora.
+
+| REQ-ID | Requirement | Prova principal |
+|---|---|---|
+| REQ-59-01 | Exatamente um formato por campanha (`1:1` ou `9:16`), rótulos explícitos, formato e versão de contrato congelados no `input_snapshot`, validação do par formato/versão, ausência das chaves = `1:1` histórico e versão desconhecida fail-closed; sem conversão ou troca após geração | Testes puros + rota + snapshot + UI |
+| REQ-59-02 | Comportamento do Produto 1:1 preservado e fluxo antigo excluído; módulo vertical isolado e engine compartilhada apenas com extensões aditivas de default 1:1 | Regressão 1:1 + testes de default + inspeção de imports |
+| REQ-59-03 | Política versionada `safe-area-9-16-v1` (topo 14%, base 35%, laterais 6%, proteção inferior direita), canvas 1080 × 1920 preenchido, essencial protegido, sem guias/faixas/letterbox e compreensível sem legenda externa | Testes da política + fixtures + revisão com sobreposições |
+| REQ-59-04 | Copy Director existente reutilizado sem alteração de prompt, schema, regra ou contrato; timing preservado (após aquisição da tentativa e antes da resposta da imagem) e falha de copy não bloqueia a arte | Testes de contrato + integração |
+| REQ-59-05 | Prova de provider antes da consolidação do pipeline, em homolog, com `gpt-image-2.5-sunburst` e `gpt-image-2` em `low`/`medium`, 1152 × 2048 e controle 1024 × 1024; estimativa conservadora definida antes da primeira chamada; matriz de 14 chamadas condicionada ao teto de US$ 3,00; retries/fallback contam; orçamento da prova separado da UAT | Evidência de 14 chamadas + custo/dimensão + decisão de pares |
+| REQ-59-06 | Entrega JPEG sRGB 1080 × 1920 qualidade 90, reduzida proporcionalmente de 1152 × 2048 sem distorção, corte ou faixas; dimensões reais verificadas por decode completo | Testes de pipeline + bytes reais |
+| REQ-59-07 | Path vertical próprio `{store}/{campaign}/product-9-16/{operation}/art-1080x1920.jpg`, upload imutável, metadados reais em `product_1_1_campaign_artifacts`, miniatura WebP 162 × 288 best-effort e reconhecimento pelo mecanismo de miniaturas | Testes de path/store/probe/thumbnail |
+| REQ-59-08 | Crédito atual reutilizado: 1 por campanha entregue, reserva antes do provider, `art_uploaded`/`delivered` sob fence, estorno único em falha confirmada, resultado desconhecido sem estorno/retry cego, idempotência e conflito de formato 409 | Testes de crédito/fakes + idempotência |
+| REQ-59-09 | Recuperação vertical completa: `image-recovery`, serviço de recuperação, resolução administrativa e projeção com path esperado, chegando a detalhe/listagem sem nova geração e sem path 1:1 | Teste ponta a ponta + homolog |
+| REQ-59-10 | Download, detalhe e listagem reconhecem o formato persistido; gate `delivered` + arte integral; 1:1 e legado byte-compatíveis; formato/versão inválidos fail-closed | Testes de rota/página/lista |
+| REQ-59-11 | Uma única flag global `product_9_16_enabled` (OFF por padrão, seed data-only) bloqueia apenas novas gerações; campanhas existentes seguem consultáveis, baixáveis, recuperáveis e resolvíveis; gerações em andamento chegam ao terminal; sem segmentação/ativação paralela | Testes de flag + ciclo ON→OFF + auditoria |
+| REQ-59-12 | Restauração do formulário carrega formato/versão, preserva a escolha no rascunho/revisão/nova tentativa e, com flag OFF, mantém a seleção vertical visível e bloqueia submissão sem troca silenciosa para 1:1 | Testes de restauração + UI |
+| REQ-59-13 | Telemetria registra formato e dimensões solicitada/devolvida/entregue por tentativa sem prompt/chave/bytes; documentação operacional e runbook atualizados com flag, paths, safe area e rollback | Testes de telemetria + revisão de docs |
+| REQ-59-14 | Homolog primeiro com lojas de teste, saldo controlado, sobreposições reais de Stories/Reels e regressão 1:1 automatizada/manual; gates de produção (deploy, ativação, smoke, rollback) separados e não executados nesta fase | Relatório de homolog + aceite + gate separado |
