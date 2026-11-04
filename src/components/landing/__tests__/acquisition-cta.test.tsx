@@ -47,4 +47,37 @@ describe("AcquisitionCta — destino do acesso no beta fechado", () => {
       screen.queryByRole("link", { name: "Solicitar acesso free" }),
     ).toBeNull();
   });
+
+  it("mantém o layout padrão empilhado (consumidores existentes)", () => {
+    const { container } = render(<AcquisitionCta publicSignupEnabled />);
+    const root = container.querySelector("[data-acquisition-layout]")!;
+
+    expect(root.getAttribute("data-acquisition-layout")).toBe("stacked");
+    expect(root.className).not.toContain("sm:flex-row");
+    expect(container.querySelector(".max-w-sm")).not.toBeNull();
+  });
+
+  it("layout inline coloca as ações lado a lado com largura equivalente", () => {
+    const { container } = render(
+      <AcquisitionCta publicSignupEnabled layout="inline" />,
+    );
+
+    const root = container.querySelector("[data-acquisition-layout]")!;
+    expect(root.className).toContain("sm:grid-cols-2");
+
+    const googleWrapper = container.querySelector("[data-acquisition-layout] > div");
+    expect(googleWrapper?.className).toContain("w-full");
+    expect(
+      screen.getByRole("link", { name: "Continuar com email" }).className,
+    ).toContain("w-full");
+    expect(container.querySelector(".max-w-sm")).toBeNull();
+  });
+
+  it("layout inline no cadastro fechado mantém a largura total no mobile", () => {
+    render(<AcquisitionCta publicSignupEnabled={false} layout="inline" />);
+
+    const link = screen.getByRole("link", { name: "Solicitar acesso free" });
+    expect(link.className).toContain("w-full");
+    expect(link.className).toContain("sm:w-auto");
+  });
 });

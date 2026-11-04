@@ -36,31 +36,61 @@ interface AcquisitionCtaProps {
    * - "center": centered on both mobile and desktop.
    */
   align?: "responsive" | "center";
+  /**
+   * Composition of the acquisition actions:
+   * - "stacked" (default): current behaviour — actions stacked vertically with
+   *   `max-w-sm` wrappers. Preserved for every existing consumer (home included).
+   * - "inline": Google and e-mail side by side on desktop with equal width and
+   *   48px height, stacked with full width on mobile. Used by the `/floriculturas`
+   *   access group, which composes the secondary institutional link explicitly.
+   */
+  layout?: "stacked" | "inline";
 }
 
 export function AcquisitionCta({
   publicSignupEnabled,
   accessHref = "#acesso",
   align = "responsive",
+  layout = "stacked",
 }: AcquisitionCtaProps) {
   const alignment =
     align === "center"
       ? "items-center justify-center"
       : "items-center justify-center sm:items-start sm:justify-start";
 
+  const inline = layout === "inline";
+  const containerClass = !inline
+    ? `flex flex-col gap-3 ${alignment}`
+    : publicSignupEnabled
+      ? "grid w-full grid-cols-1 gap-3 sm:grid-cols-2"
+      : `flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center ${
+          align === "center" ? "sm:justify-center" : "sm:justify-start"
+        }`;
+
   return (
     <div
       data-public-signup-enabled={String(publicSignupEnabled)}
-      className={`flex flex-col gap-3 ${alignment}`}
+      data-acquisition-layout={layout}
+      className={containerClass}
     >
       {publicSignupEnabled ? (
         <>
-          <div className="w-full max-w-sm [&_button]:!min-h-[48px]">
+          <div
+            className={
+              inline
+                ? "w-full [&_button]:!min-h-[48px]"
+                : "w-full max-w-sm [&_button]:!min-h-[48px]"
+            }
+          >
             <GoogleButton variant="solid" fullWidth />
           </div>
           <Link
             href="/signup"
-            className="inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+            className={
+              inline
+                ? "inline-flex h-12 w-full items-center justify-center rounded-lg border border-border px-6 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+                : "inline-flex min-h-[48px] w-full max-w-sm items-center justify-center rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-light hover:text-text-primary focus:ring-2 focus:ring-accent-blue focus:outline-none"
+            }
           >
             Continuar com email
           </Link>
@@ -68,7 +98,9 @@ export function AcquisitionCta({
       ) : (
         <a
           href={accessHref}
-          className="inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none"
+          className={`inline-flex min-h-[48px] items-center justify-center rounded-lg bg-accent-green px-6 py-3 font-heading text-base font-semibold text-bg-deep transition-all hover:brightness-110 focus:ring-2 focus:ring-accent-green focus:outline-none ${
+            inline ? "w-full sm:w-auto" : ""
+          }`}
         >
           Solicitar acesso free
         </a>
