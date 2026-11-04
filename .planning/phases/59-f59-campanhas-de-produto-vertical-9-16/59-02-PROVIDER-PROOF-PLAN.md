@@ -1,85 +1,108 @@
-# 59-02 — Plano da prova de provider vertical 9:16
+# 59-02 � Plano da prova de provider vertical 9:16
 
-**Versão:** 1 (dry-run preparado em 2026-11-04)
-**Estado:** **NÃO EXECUTADA — nenhuma chamada paga realizada.**
+**Versão:** 2 (reutiliza a configuração/pricing compartilhados do 1:1)
+**Data:** 2026-11-04
+**Estado:** **DRY-RUN CONCLUÍDO � NENHUMA CHAMADA PAGA REALIZADA.**
 **Ambiente previsto:** homolog (`vendeo-homolog`), loja de teste autorizada, chave de homolog.
-**Proibido:** produção, chave de produção, banco, flag, migration, campanha real.
+**Proibido:** produção, chave de produção, escrita em banco, flag, migration, campanha real.
 
-## 1. Objetivo
+## 1. Princípio
 
-Provar, antes de consolidar o pipeline vertical, que `openai.images.edit` aceita o tamanho
-**`1152x2048`** e devolve bytes 9:16 decodificáveis, com dimensão real, custo e falhas observáveis.
-O controle **`1024x1024`** de cada modelo isola o efeito do tamanho novo.
+A prova **NÒO cria** catálogo, seleção, tabela de preços, tarifa ou configuração exclusiva de 9:16.
+Ela reutiliza integralmente:
 
-## 2. Matriz (14 chamadas planejadas)
+1. o par principal/fallback e as qualidades da **mesma** `image_model_pair_config`
+   (`scope = new_flow`) usada pelo fluxo 1:1;
+2. a **mesma** linha vigente de `ai_model_pricing` por `provider + model + quality`
+   (`effective_until IS NULL`) usada pelo 1:1, incluindo `image_unit_usd`, tarifas de token e
+   `id` da linha (versão de pricing).
 
-| Modelo | Qualidade | Amostras `1152x2048` | Controle `1024x1024` |
-|---|---|---:|---:|
-| `gpt-image-2.5-sunburst` | `low` | 3 | 1 |
-| `gpt-image-2.5-sunburst` | `medium` | 3 | — |
-| `gpt-image-2` | `low` | 3 | 1 |
-| `gpt-image-2` | `medium` | 3 | — |
+Se a configuração estiver ausente/incompleta/divergente, ou um par não tiver pricing aplicável,
+a prova **falha fechado** e apresenta a evidência; nunca inventa matriz, preço ou troca a
+configuração.
 
-- **Amostras:** 3 por combinação modelo × qualidade = 12.
-- **Controles:** 1 por modelo = 2.
-- **Total:** **14 chamadas planejadas**.
-- Retries e fallback contam na matriz e no teto.
-- Combinação não executada por orçamento/erro fica explicitamente **`pending`** (nunca “comprovada”).
+## 2. Configuração efetiva observada (2026-11-04)
 
-## 3. Teto e estimativa pré-definida
+Fonte: `image_model_pair_config` local (`scope = new_flow`), lida em modo somente leitura.
 
-- **Teto da prova:** **US$ 3,00** (três dólares), separado do orçamento da UAT funcional.
-- **Estimativa vertical:** `estimado = image_unit_usd × 2,5`.
-  - **`2,5`** é PROVISÓRIO e conservador: **2,25** (razão de área 1152×2048 / 1024×1024) + **0,25** de margem.
-  - Versão: `f59-vertical-9-16-v1`.
-  - O valor só é calibrado DEPOIS da medição; nunca é apresentado como custo real.
-- Antes de cada chamada: `canAfford`/`remainingBudgetBlocks`; sem saldo ⇒ PARA e marca restantes como `pending`.
-- Cobrança: sempre o **maior** custo conhecido (`providerReportedUsd`, `calculatedFromUsageUsd` ou `estimatedUsd`).
+| Papel | Modelo | Qualidade | `image_unit_usd` | Pricing version |
+|---|---|---|---:|---|
+| principal | `gpt-image-2.5-sunburst` | `medium` | 0,044 | `386fb02c-b0e8-4ec9-a8c6-573b4ca58f19` |
+| fallback | `gpt-image-2` | `low` | 0,042 | `d25c9ecc-0c91-44db-a4b9-e057a0a78215` |
 
-## 4. Insumos de referência
+**Config version:** `0c8925d5-5aff-4c90-a007-9dd32750b80f` (origem `human_decision`).
 
-Ordem de referências: **`[primary, identity]`**.
+> Esta tabela é uma **fotografia** da fonte vigente, não uma lista fixa. O harness deriva a matriz
+> a cada execução; se a configuração mudar, a matriz e as estimativas mudam com ela.
+
+## 3. Matriz derivada (8 chamadas)
+
+Regra: **3 amostras `1152x2048` + 1 controle `1024x1024` por par único configurado**.
+Pares repetidos entre principal/fallback são deduplicados.
+
+| # | Modelo | Qualidade | Tamanho | Papel | Estimativa |
+|---:|---|---|---|---|---:|
+| 1�3 | `gpt-image-2.5-sunburst` | `medium` | `1152x2048` | principal | 0,110 cada |
+| 4 | `gpt-image-2.5-sunburst` | `medium` | `1024x1024` | principal | 0,110 |
+| 5�7 | `gpt-image-2` | `low` | `1152x2048` | fallback | 0,105 cada |
+| 8 | `gpt-image-2` | `low` | `1024x1024` | fallback | 0,105 |
+
+**Total estimado:** **US$ 0,86** · **Teto:** **US$ 3,00**.
+**Chamadas planejadas:** **8** (derivadas da configuração acima).
+
+Retries e fallback contam na matriz e no teto. Combinação não executada por orçamento/erro fica
+explicitamente **`pending`** (nunca �Scomprovada⬝).
+
+## 4. Estimativa pré-chamada � custo final
+
+- `estimatedUsd = image_unit_usd real da fonte compartilhada � 2,5`.
+- **`2,5`** é PROVIS�RIO e conservador: **2,25** (razão de área 1152�2048 / 1024�1024) + **0,25**
+  de margem. Versão: `f59-vertical-9-16-v1`.
+- A estimativa é separada do custo final: `providerReportedUsd` e `calculatedFromUsageUsd` são
+  coletados por chamada; o orçamento cobra o **maior** custo conhecido.
+- O valor 2,5 não é custo real; a calibração só confirma ou propõe ajuste após a medição.
+
+## 5. Insumos de referência
+
+Ordem: **`[primary, identity]`**.
 
 1. **Primária:** 1 imagem real de produto da loja de teste autorizada.
 2. **Identidade:** 1 imagem de identidade da mesma loja, se existir.
 
-- Formato de envio: data URL (`data:image/png;base64,...`), montada em memória pelo harness.
+- Formato: data URL (`data:image/png;base64,...`), montada em memória.
 - Se a identidade não existir: registrar **`identityImageUrl: ausente`** e executar somente com a primária.
 - **NUNCA fabricar identidade**, logo ou produto.
 - Nenhum byte de imagem é persistido na evidência.
 
-## 5. Prompt
+## 6. Prompt
 
 `promptSource: "fixed"`.
 
 A prova é focada em PROVIDER/CUSTO e usa um briefing fixture FIXO e versionado no harness,
 derivado do baseline 1:1. O harness **não** importa `prompt/composition` nem
 `composeVerticalProductPrompt`; a composição vertical real é exercitada nos planos de
-composição/geração. O valor `"vertical"` fica reservado para uma execução futura que já
-disponha do compositor.
+composição/geração.
 
-## 6. Comandos
+## 7. Comandos
 
 ### Dry-run (seguro, sem provider)
 
 ```powershell
-npx tsx --tsconfig tsconfig.json scripts/f59/vertical-provider-proof.ts --dry-run --unit-usd=0.03
+npx tsx --tsconfig tsconfig.json scripts/f59/vertical-provider-proof.ts --dry-run
 ```
 
-Saída esperada: **14** chamadas, total estimado **0,03 × 2,5 × 14 = 1,05** e teto **US$ 3,00**.
-
-Sem `--unit-usd`/`--unit-usd-file`, o harness imprime a matriz com **“estimativa indisponível”**
-e sai com código **2**.
+Lê `image_model_pair_config`/`ai_model_pricing` da instância configurada em `.env.local`
+(ou `--dotenv=<arquivo>`), deriva a matriz e imprime pares, versões, estimativas e teto.
+NÒO chama provider.
 
 ### Apply (somente com autorização humana registrada)
 
 ```powershell
 npx tsx --tsconfig tsconfig.json scripts/f59/vertical-provider-proof.ts `
   --apply --authorized=<token-literal-do-responsavel> `
-  --unit-usd=<valor> `
-  --pricing-file=<json-da-linha-ai_model_pricing> `
   --primary-image=<caminho-da-imagem-primaria> `
-  [--identity-image=<caminho-da-imagem-de-identidade>]
+  [--identity-image=<caminho-da-imagem-de-identidade>] `
+  [--dotenv=.env.local]
 ```
 
 Exige, cumulativamente:
@@ -87,22 +110,11 @@ Exige, cumulativamente:
 - `--apply`;
 - `--authorized=<token>` não vazio;
 - `OPENAI_API_KEY` de homolog presente (nunca impressa);
-- fonte de `image_unit_usd` (dry-run e apply);
+- configuração e pricing compartilhados legíveis;
 - imagem primária legível.
 
 Sem qualquer um desses itens: exit **2** com
-**`PROVA NÃO AUTORIZADA - NENHUMA CHAMADA EXECUTADA`**.
-
-## 7. Fontes de custo
-
-- **Unit cost (`image_unit_usd`):** `--unit-usd=0.03` ou `--unit-usd-file` no formato
-  `{"modelo|qualidade": valor}`. Obrigatório nos dois modos; nunca inventado.
-- **Token pricing (`ai_model_pricing`):** `--pricing-file` com a linha real
-  (`input_token_usd_per_1m`, `output_token_usd_per_1m`, `cached_input_token_usd_per_1m`,
-  `image_unit_usd`, `image_token_usd_per_1m`, `image_input_token_usd_per_1m`,
-  `image_cached_input_token_usd_per_1m`, `version_id`/`id`).
-  - Sem o arquivo, `calculatedFromUsageUsd` fica `null` (não inventado) e o relatório registra `calc: null`.
-  - Se, ao final, não houver custo reportado, calculado nem usage, o resultado é **`cost_unknown`** e a prova PARA.
+**`PROVA NÒO AUTORIZADA - NENHUMA CHAMADA EXECUTADA`**.
 
 ## 8. Critérios de aceite por chamada
 
@@ -110,11 +122,12 @@ Sem qualquer um desses itens: exit **2** com
 |---|---|
 | Request aceito | `status = succeeded` |
 | Bytes decodificáveis | decode completo via `sharp` |
-| Dimensão real registrada | `returnedWidth × returnedHeight` |
+| Dimensão real registrada | `returnedWidth � returnedHeight` |
 | Sem evidência de crop | dimensão devolvida registrada; desvio de proporção explícito |
 | Custo dentro do teto | `chargedUsd` e `remainingUsd` |
 | Fallback observável | `target`/`isRetry` registrados |
 | Custo vs estimativa | `estimatedUsd`, `providerReportedUsd`, `calculatedFromUsageUsd`, `deviationUsd` |
+| Rastreabilidade | `model`, `quality`, versão da configuração e versão de pricing |
 
 ## 9. Regras de parada
 
@@ -122,16 +135,18 @@ Sem qualquer um desses itens: exit **2** com
 - **Resultado `unknown`** (timeout/abort/erro sem usage): persistir `unknown`, cobrar a estimativa
   conservadora, marcar `requiresReconciliation: true`, **PARAR** e exigir reconciliação.
   **Nenhum retry cego.**
+- **Dimensão vertical não suportada:** persistir `unsupported_dimension` com a evidência do
+  provider, **PARAR** e exigir revisão. **Nunca trocar modelo, qualidade ou configuração.**
 - **Dimensão inesperada:** registrar falha fechada; não há upscale, crop, pad ou aceite silencioso.
-- **Combinação que não produza 9:16:** excluída COM evidência; nunca substituída silenciosamente.
 
 ## 10. Evidências e separação de orçamento
 
 Evidência incremental em `scripts/f59/evidence/vertical-provider-proof-<runId>.json`, com:
 
-`model`, `quality`, `requestedSize`, `returnedWidth`, `returnedHeight`, `latencyMs`,
-`providerReportedUsd`, `calculatedFromUsageUsd`, `estimatedUsd`, `chargedUsd`, `deviationUsd`,
-`target`, `isRetry`, `status`, `startedAt`, `finishedAt`.
+`configVersionId`, `origin`, `model`, `quality`, `pricingVersionId`, `requestedSize`,
+`returnedWidth`, `returnedHeight`, `latencyMs`, `providerReportedUsd`, `calculatedFromUsageUsd`,
+`estimatedUsd`, `chargedUsd`, `deviationUsd`, `target`, `isRetry`, `status`, `startedAt`,
+`finishedAt`.
 
 **Nunca** registra prompt, chave, bytes de imagem ou conteúdo do usuário.
 

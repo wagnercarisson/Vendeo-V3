@@ -731,7 +731,7 @@ Plans:
 
 ### Phase 59: F59 - Campanhas de Produto vertical 9:16
 
-**Status:** **EM EXECUÇÃO CONTROLADA POR WAVES — WAVE 1 CONCLUÍDA; WAVE 2 EM ANDAMENTO COM CHECKPOINT PAGO PENDENTE (2026-11-04).** `59-01` (contratos puros) e `59-03` (composição vertical) concluídos localmente; `59-02` teve estimativa/orçamento, plano e harness dry-run concluídos, mas **NÃO executou nenhuma chamada paga** — a matriz de 14 chamadas, o teto de US$ 3,00 e o ambiente aguardam aceite humano. Gates 59-03: **120/120** testes de prompt (8 arquivos), typecheck 0, diff check limpo, Copy Director intocado, registry 1:1 com apenas 3 exports aditivos. **Sem chamada paga, migration aplicada, flag, push, deploy ou produção.**
+**Status:** **EM EXECUÇÃO CONTROLADA POR WAVES — WAVE 1 CONCLUÍDA; WAVE 2 EM ANDAMENTO COM CHECKPOINT PAGO PENDENTE (2026-11-04).** `59-01` (contratos puros) e `59-03` (composição vertical) concluídos localmente; `59-02` teve estimativa/orçamento, plano e harness dry-run concluídos reutilizando a configuração de modelos e a fonte de pricing do 1:1, mas **NÃO executou nenhuma chamada paga** — a matriz derivada (8 chamadas na configuração vigente), o teto de US$ 3,00 e o ambiente aguardam aceite humano. Gates 59-03: **120/120** testes de prompt (8 arquivos), typecheck 0, diff check limpo, Copy Director intocado, registry 1:1 com apenas 3 exports aditivos. Ajuste da prova reconciliado em OpenSpec/planos/harness/docs: OpenSpec strict válido e **158/158** testes focados. **Sem chamada paga, migration aplicada, flag, push, deploy ou produção.**
 
 **Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
 
@@ -747,7 +747,7 @@ Plans:
 
 **Código de referência:** `src/lib/product-1-1/**`, `src/app/api/campaign/generate-image/route.ts`, `src/app/api/campaign/[id]/download/route.ts`, `src/app/api/campaign/[id]/image-recovery/route.ts`, `src/app/(app)/campanhas/[id]/page.tsx`, `src/lib/campaign/display.ts`, `src/lib/campaign/thumbnail/**`, `src/lib/feature-flags/feature-flag-service.ts`, `src/lib/ai/adapters/upstream-images.ts`, `src/lib/ai-cost/image-pair-pricing.ts`, `src/lib/product-1-1/pilot/**`.
 
-**Bloqueios e checkpoints:** prova de provider paga (14 chamadas planejadas, teto US$ 3,00, estimativa conservadora antes da primeira chamada, retries contabilizados) exige autorização específica; migration data-only da flag exige checkpoint próprio; homolog com lojas de teste; produção é gate posterior. Nenhuma implementação, migration, chamada paga, push ou deploy nesta fase de planejamento.
+**Bloqueios e checkpoints:** prova de provider paga (matriz derivada do par principal/fallback efetivo do 1:1 e do pricing compartilhado, teto US$ 3,00, estimativa conservadora antes da primeira chamada, retries contabilizados) exige autorização específica; migration data-only da flag exige checkpoint próprio; homolog com lojas de teste; produção é gate posterior. Nenhuma implementação, migration, chamada paga, push ou deploy nesta fase de planejamento.
 
 **Diretório:** `.planning/phases/59-f59-campanhas-de-produto-vertical-9-16/`.
 Plans:
@@ -757,7 +757,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 59-02-PLAN.md — Prova de provider em homolog: estimativa vertical conservadora antes da primeira chamada, matriz de 14 chamadas e teto US$ 3,00 (checkpoint pago) — **Tasks 1–2 concluídas; dry-run 14 chamadas/US$ 1,05/teto US$ 3,00; execução paga PENDENTE de aceite**
+- [ ] 59-02-PLAN.md — Prova de provider em homolog: estimativa vertical conservadora antes da primeira chamada, matriz derivada do par 1:1 efetivo e teto US$ 3,00 (checkpoint pago) — **Tasks 1–2 concluídas; dry-run 8 chamadas/US$ 0,86/teto US$ 3,00; execução paga PENDENTE de aceite**
 - [x] 59-03-PLAN.md — Composição vertical: políticas, prompt derivado, fixtures 3 intenções × 3 fundos, Copy Director intacto e timing
 
 **Wave 3** *(blocked on Wave 2 completion)*

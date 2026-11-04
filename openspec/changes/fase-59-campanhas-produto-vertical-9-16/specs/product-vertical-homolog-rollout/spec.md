@@ -57,24 +57,35 @@ If the global key does not exist in `feature_flags`, a data-only migration SHALL
 
 ### Requirement: Provider proof precedes implementation of the generation pipeline
 
-Before consolidating the generation pipeline, the team SHALL prove the production adapter behavior in homolog with the primary and fallback models and all applicable qualities. The proof MUST cover the primary `gpt-image-2.5-sunburst` and the fallback `gpt-image-2` at qualities `low` and `medium`, using the real `images.edit` path. It MUST confirm acceptance of `1152x2048`, the real returned dimensions, latency, failure modes and cost. A `1024x1024` control call per model SHALL confirm that the current `1:1` behavior remains unchanged.
+Before consolidating the generation pipeline, the team SHALL prove the production adapter behavior in homolog using the **same effective primary/fallback model configuration and the same pricing source** used by the Product `1:1` flow. The proof SHALL derive the configured pairs and qualities from `image_model_pair_config` (`scope = new_flow`) and resolve `image_unit_usd`, token tariffs and the pricing version from the same current `ai_model_pricing` row used by `1:1`. The system MUST NOT create a `9:16`-specific model catalog, model selection, pricing table, tariff or configuration override. It MUST confirm acceptance of `1152x2048`, the real returned dimensions, latency, failure modes and cost. A `1024x1024` control call per unique configured pair SHALL confirm that the current `1:1` behavior remains unchanged.
 
-The proof plan SHALL be: 3 generated samples per model/quality combination at `1152x2048` (12 calls) plus 1 control sample per model at `1024x1024` (2 calls), totaling **14 planned paid calls**. The budget cap SHALL be **US$ 3.00**. The matrix SHALL be conditional on the remaining budget: before each call, the gate MUST check the vertical estimate and the cap; retries and fallback SHALL count toward both the matrix and the cap. If the budget cannot cover the next call, the proof SHALL stop and report the untested combinations as pending.
+The proof plan SHALL be: 3 generated samples per unique configured pair at `1152x2048` plus 1 control sample per unique pair at `1024x1024`, with the total number of planned calls **derived from the effective configuration** (not a fixed model list). The budget cap SHALL be **US$ 3.00**. The matrix SHALL be conditional on the remaining budget: before each call, the gate MUST check the vertical estimate and the cap; retries and fallback SHALL count toward both the matrix and the cap. If the budget cannot cover the next call, the proof SHALL stop and report the untested combinations as pending.
 
-The estimate SHALL be explicit for `1152x2048` and MUST be defined **before the first paid call**. The current `image_unit_usd` is keyed by model and quality only, so the proof MUST either demonstrate that it applies to the larger size or calibrate a conservative, versioned vertical multiplier; later calibration only confirms or adjusts the pre-defined estimate. The proof SHALL compare the pre-call estimate with the provider-reported cost and record the deviation. The proof budget SHALL be separate from the functional UAT budget, which requires its own approval. No paid call is authorized in the planning phase that produces this spec.
+The estimate SHALL be explicit for `1152x2048` and MUST be defined **before the first paid call**, using the real `image_unit_usd` from the shared pricing source. The proof MUST either demonstrate that the shared `image_unit` applies to the larger size or calibrate a conservative, versioned vertical multiplier; later calibration only confirms or adjusts the pre-defined estimate. The proof SHALL compare the pre-call estimate with the provider-reported cost and record the deviation, together with the model/quality pair, configuration version and pricing version used. The proof budget SHALL be separate from the functional UAT budget, which requires its own approval. No paid call is authorized in the planning phase that produces this spec.
+
+If the effective configuration is absent, incomplete or divergent, or a configured pair lacks applicable pricing, the proof SHALL fail closed and present the evidence without inventing a matrix or price and without changing the configuration. If a configured combination cannot produce `1152x2048`, the proof SHALL stop and present the provider evidence; it MUST NOT silently switch models or configuration.
 
 #### Scenario: Proof matrix is recorded
 
 - **WHEN** the provider proof is executed in homolog
-- **THEN** every executed call SHALL be recorded with model, quality, requested size, returned size, latency and cost
-- **AND** the plan SHALL target 14 calls
+- **THEN** every executed call SHALL be recorded with model, quality, requested size, returned size, latency, estimate, provider-reported cost, calculated usage cost and cost charged
+- **AND** the matrix SHALL be derived from the same primary/fallback configuration used by `1:1`
+- **AND** the configuration version and pricing version SHALL be recorded
 - **AND** any unexecuted combination SHALL be reported as pending, not assumed
+
+#### Scenario: Unsupported vertical dimension stops the proof
+
+- **WHEN** a configured model/quality combination rejects or cannot produce `1152x2048`
+- **THEN** the proof SHALL stop and present the provider evidence
+- **AND** it MUST NOT replace the model, quality or configuration silently
+- **AND** the remaining combinations SHALL be reported as pending
 
 #### Scenario: Proof criteria are explicit
 
 - **WHEN** the proof is evaluated
 - **THEN** acceptance SHALL require: request accepted at 1152 × 2048; returned image decodable; real dimensions recorded; no provider-side crop evidence; cost within the approved cap; fallback behavior observable
-- **AND** a model/quality that cannot produce the intended 9:16 image SHALL be excluded with evidence, not silently replaced
+- **AND** a configured model/quality that cannot produce the intended 9:16 image SHALL stop the proof with evidence, not be silently replaced
+- **AND** the proof SHALL NOT create or switch to a `9:16`-specific model configuration
 
 #### Scenario: Proof stops when the budget cannot cover the next call
 

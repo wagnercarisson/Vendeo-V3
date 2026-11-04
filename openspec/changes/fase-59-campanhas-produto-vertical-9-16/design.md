@@ -126,7 +126,7 @@ Após a resposta:
 
 **Fatos comprovados:** o SDK local tipa `size` como `(string & {})` e documenta a regra de 16 px, proporção 1:3–3:1 e máximo 3840 × 2160. O adapter atual envia `size` e `quality` explicitamente.
 
-**Prova pendente:** aceitação real de 1152 × 2048 pelos modelos `gpt-image-2.5-sunburst` e `gpt-image-2`, nas qualidades `low` e `medium`, com dimensão devolvida e custo reais. Nenhuma chamada paga é feita nesta fase.
+**Prova pendente:** aceitação real de 1152 × 2048 pela configuração efetiva do fluxo 1:1 (par principal/fallback vigente em `image_model_pair_config` e suas qualidades), com dimensão devolvida e custo reais. A prova NÃO cria catálogo, seleção, tabela de preços ou configuração exclusiva de 9:16; se o par vigente não suportar a dimensão, a prova para e apresenta a evidência sem trocar a configuração. Nenhuma chamada paga é feita nesta fase.
 
 ### D-06 — Pipeline final 1080 × 1920, JPEG sRGB qualidade 90
 
@@ -270,21 +270,23 @@ Ela não altera schema, constraints, RPCs, grants ou linhas existentes. A criaç
 
 ### D-18 — Prova de provider antes de consolidar o pipeline
 
-Matriz planejada: 3 amostras por combinação `modelo × qualidade` em 1152 × 2048 (12 chamadas) + 1 controle 1024 × 1024 por modelo (2 chamadas) = **14 chamadas pagas**, teto **US$ 3,00**. Modelos: `gpt-image-2.5-sunburst` e `gpt-image-2`; qualidades `low` e `medium`.
+Matriz **derivada da configuração compartilhada vigente**: o par principal/fallback e as respectivas qualidades vêm da MESMA `image_model_pair_config` (scope `new_flow`) usada pelo fluxo 1:1, e `image_unit_usd`/versão de pricing vêm da MESMA linha vigente de `ai_model_pricing` por `modelo + qualidade`. NÃO se cria catálogo, seleção, tabela de preços, tarifa ou configuração exclusiva de 9:16.
+
+Por par único configurado: 3 amostras em 1152 × 2048 + 1 controle 1024 × 1024. O número de chamadas é derivado da configuração efetiva (pares repetidos são deduplicados), com teto **US$ 3,00**. Se a configuração estiver ausente/incompleta/divergente ou um par não tiver pricing aplicável, a prova falha fechada e apresenta a evidência, sem inventar matriz, preço ou trocar a configuração.
 
 A matriz é **condicionada ao saldo do orçamento**: antes de cada chamada, o gate consulta o teto e a estimativa; se o saldo restante não cobrir a próxima chamada, a prova para e registra o que ficou pendente. Retries e repetições de `rate_limit` também consomem orçamento e entram na contagem e no teto.
 
-**Estimativa ciente da resolução:** o pricing atual resolve `image_unit_usd` por `modelo + qualidade`, sem dimensão. Para 1152 × 2048, o vertical NÃO pode reutilizar cegamente a estimativa de 1024 × 1024. A implementação deve:
+**Estimativa ciente da resolução:** a tarifa real `image_unit_usd` continua vindo da fonte compartilhada por `modelo + qualidade`; para 1152 × 2048, o vertical NÃO pode reutilizar cegamente a estimativa de 1024 × 1024. A implementação deve:
 
 - definir uma estimativa conservadora **antes da primeira chamada paga**; a calibração posterior apenas confirma ou ajusta essa estimativa, nunca a substitui por um valor inventado depois do gasto;
 - calibrar na prova a diferença entre estimativa e custo reportado para 1152 × 2048;
-- introduzir um multiplicador/estimativa vertical versionado, conservador e documentado, ou provar que o `image_unit` da tabela é válido para o tamanho;
+- aplicar um multiplicador vertical versionado, conservador e documentado sobre a tarifa real da fonte compartilhada;
 - bloquear a chamada paga quando não houver estimativa vertical explícita (fail-closed), sem inventar valor;
-- registrar estimativa, custo reportado e desvio por tentativa.
+- registrar `modelo`, `qualidade`, versão da configuração, versão de pricing, estimativa, custo reportado e desvio por tentativa.
 
 **Orçamento separado:** o teto de US$ 3,00 cobre apenas a prova técnica. A UAT funcional em homolog tem orçamento próprio, aprovado separadamente, e não é contabilizada nesse teto.
 
-Critérios: request aceito; bytes decodificáveis; dimensão real registrada; ausência de evidência de crop do provider; custo dentro do teto; fallback observável; estimativa vertical compatível com o custo real. Combinação que não produza 9:16 é excluída com evidência, nunca substituída silenciosamente.
+Critérios: request aceito; bytes decodificáveis; dimensão real registrada; ausência de evidência de crop do provider; custo dentro do teto; fallback observável; estimativa vertical compatível com o custo real. Se uma combinação configurada não suportar 1152 × 2048, a prova **para e apresenta a evidência**, sem trocar modelos ou configuração silenciosamente.
 
 Nenhuma chamada paga, migration ou operação de produção nesta fase de proposta.
 
@@ -325,7 +327,7 @@ Um prompt que produza duas artes similares, uma por formato, fica como investiga
 **Dependencies:**
 
 - aprovação desta base OpenSpec antes de qualquer planejamento GSD;
-- prova de provider em homolog (14 chamadas, teto US$ 3,00) antes de consolidar o pipeline;
+- prova de provider em homolog (matriz derivada do par 1:1 vigente, teto US$ 3,00) antes de consolidar o pipeline;
 - definição final da fonte de áreas seguras e das sobreposições usadas no aceite visual;
 - decisão sobre o seed data-only da flag global;
 - lojas de teste com saldo controlado e flag OFF/ON em homolog;
@@ -372,7 +374,7 @@ Um prompt que produza duas artes similares, uma por formato, fica como investiga
 
 ## Validation strategy
 
-- **Contrato/prova técnica:** testes puros de formato, safe area, dimensões, paths e resolução; prova de provider em homolog (14 chamadas, US$ 3,00).
+- **Contrato/prova técnica:** testes puros de formato, safe area, dimensões, paths e resolução; prova de provider em homolog (matriz derivada do par 1:1 vigente, US$ 3,00).
 - **Composição:** fixture vertical vs 1:1 provando que só formato/área segura mudam; revisão visual com sobreposições.
 - **Geração e persistência:** arte 1080 × 1920, JPEG real, path, metadados, miniatura, crédito e recuperação.
 - **Integração da criação e entrega:** seletor, payload, congelamento, despacho, download, detalhe, lista e projeção.
@@ -383,7 +385,7 @@ Um prompt que produza duas artes similares, uma por formato, fica como investiga
 1. A página oficial da Meta será acessível para confirmar 14/35/6 e a proteção do canto inferior direito? Se não, o aceite usa capturas de sobreposição e mantém a classificação “documentado a confirmar”.
 2. O provider aceita 1152 × 2048 nos dois modelos e qualidades com dimensão devolvida estável? A prova de homolog responde.
 3. A migration data-only da flag é aprovada ou a chave será operada por inserção administrativa controlada?
-4. O custo real por chamada em 1152 × 2048 cabe no teto de US$ 3,00 para as 14 chamadas? O pricing registrado e a prova respondem. Se o `image_unit` atual não valer para o tamanho maior, qual multiplicador conservador será adotado?
+4. O custo real por chamada em 1152 × 2048 cabe no teto de US$ 3,00 para a matriz derivada da configuração 1:1 vigente? O pricing registrado e a prova respondem. Se o `image_unit` atual não valer para o tamanho maior, qual multiplicador conservador será adotado?
 5. Alguma constraint/RPC atual impede reutilizar `product_1_1_campaign_artifacts` e as RPCs de crédito? A inspeção read-only responde antes da implementação.
 6. A barreira de autorização atual em `image-recovery` continua suficiente quando a flag vertical está OFF, ou será necessário distinguir explicitamente “operação existente” de “nova geração” na decisão? A matriz de testes de flag OFF responde.
 7. O `CampaignFormRestore` precisa carregar também a versão do contrato para exibição/diagnóstico, ou o formato basta para a UI e a versão fica só na validação server-side?

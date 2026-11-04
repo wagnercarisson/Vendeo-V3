@@ -55,8 +55,8 @@ Fora do escopo: fluxo antigo, Serviços/Informativos, geração simultânea dos 
 - **REQ:** REQ-59-01, REQ-59-08.
 
 ### D-05 — Provider, estimativa e teto
-- O vertical usa `openai.images.edit` via `UpstreamImagesAdapter`, com `size: "1152x2048"` e qualidade do par.
-- A prova cobre `gpt-image-2.5-sunburst` e `gpt-image-2`, qualidades `low`/`medium`, 3 amostras por combinação + 1 controle 1024 × 1024 por modelo (14 planejadas).
+- O vertical usa `openai.images.edit` via `UpstreamImagesAdapter`, com `size: "1152x2048"` e qualidade do par. A configuração de modelos é a MESMA do fluxo 1:1 (`image_model_pair_config`, principal/fallback); a prova não cria catálogo, seleção, tabela de preços ou tarifa exclusiva de 9:16.
+- A prova usa o par principal/fallback efetivo e a fonte de pricing compartilhada (`ai_model_pricing` por modelo+qualidade), com 3 amostras por par único + 1 controle 1024 × 1024 por par; o número de chamadas é derivado da configuração. Teto de US$ 3,00. Se uma combinação não suportar 1152 × 2048, a prova para e apresenta a evidência, sem trocar modelos/configuração.
 - A estimativa conservadora vertical deve existir **antes da primeira chamada paga**; a calibração posterior só confirma/ajusta.
 - Teto de US$ 3,00; a matriz é condicionada ao saldo; retries e fallback contam; combinações não executadas ficam pendentes.
 - Orçamento da prova separado do orçamento da UAT.
@@ -193,7 +193,7 @@ Fora do escopo: fluxo antigo, Serviços/Informativos, geração simultânea dos 
   - Wave 5: 59-08 restauração/download/detalhe/lista.
   - Wave 6: 59-09 telemetria/docs/gates/regressão.
   - Wave 7: 59-10 homolog/aceite/gate de produção.
-- **Prova paga:** 14 chamadas planejadas, teto US$ 3,00, condicionada ao saldo; retries contam; estimativa conservadora antes da primeira chamada; não executar no planejamento.
+- **Prova paga:** matriz derivada do par principal/fallback efetivo do 1:1 (3 amostras 1152 × 2048 + 1 controle por par único), teto US$ 3,00, condicionada ao saldo; retries contam; estimativa conservadora antes da primeira chamada; sem catálogo/preço exclusivo de 9:16; não executar no planejamento.
 - **Dimensões:** provider 1152 × 2048 (divisível por 16); entrega 1080 × 1920 (não enviar 1080 ao provider).
 - **Path:** `{storeId}/{campaignId}/product-9-16/{operationId}/art-1080x1920.jpg`.
 - **Flag:** `product_9_16_enabled`, OFF por padrão, seed data-only.

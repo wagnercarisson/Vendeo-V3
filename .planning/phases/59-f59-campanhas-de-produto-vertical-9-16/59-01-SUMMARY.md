@@ -164,7 +164,7 @@ None - nenhuma configuração externa ou variável de ambiente nova nesta wave.
 
 - Wave 1 concluída no limite autorizado; **Wave 2 não iniciada**.
 - Próximos passos dependentes de autorização:
-  - **59-02** exige **checkpoint pago** (14 chamadas, teto US$ 3,00, estimativa vertical antes da primeira chamada, matriz/ambiente).
+  - **59-02** exige **checkpoint pago** (matriz derivada do par 1:1 efetivo, teto US$ 3,00, estimativa vertical antes da primeira chamada, ambiente).
   - **59-03** (composição) não é paga, mas só deve iniciar após revisão desta wave e liberação da Wave 2.
 - Pendências: confirmar os números da área segura em fonte oficial citável; validação visual com sobreposições reais continua em homolog.
 

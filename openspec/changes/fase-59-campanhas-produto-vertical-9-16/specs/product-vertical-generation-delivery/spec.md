@@ -125,7 +125,7 @@ The vertical path SHALL follow the current new-flow credit rules: exactly **1 cr
 
 The vertical path SHALL NOT reuse the `1024 × 1024` cost estimate blindly for a `1152 × 2048` request. Before every paid image call — including retries and fallback — the system MUST resolve an explicit vertical estimate, compare it with the remaining budget and block the call when the estimate is missing or the budget is insufficient. The provider proof SHALL compare the pre-call estimate with the provider-reported cost and record the deviation.
 
-The proof budget (US$ 3.00 for 14 planned calls) SHALL be separate from the functional UAT budget; retries count against the proof cap and against the planned call matrix. Stopping early for budget reasons SHALL be reported as pending, never as proof of the untested combination.
+The proof budget (US$ 3.00 for the matrix derived from the effective `1:1` primary/fallback configuration) SHALL be separate from the functional UAT budget; retries count against the proof cap and against the planned call matrix. The pre-call estimate SHALL use the real `image_unit_usd` from the same shared pricing source used by `1:1`, with a versioned conservative vertical multiplier; the proof MUST NOT create a `9:16`-specific pricing table or model configuration. Stopping early for budget reasons SHALL be reported as pending, never as proof of the untested combination.
 
 #### Scenario: Missing vertical estimate blocks the call
 

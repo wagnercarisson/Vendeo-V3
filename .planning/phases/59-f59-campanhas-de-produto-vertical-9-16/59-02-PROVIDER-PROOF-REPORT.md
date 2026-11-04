@@ -4,7 +4,23 @@
 **Status:** **DRY-RUN CONCLUÍDO — NENHUMA CHAMADA PAGA EXECUTADA.**
 **Checkpoint:** aguardando autorização humana específica para a matriz paga.
 
-## 1. Ambiente
+## 1. Fonte compartilhada (reutilizada integralmente)
+
+| Item | Valor observado |
+|---|---|
+| Tabela de configuração | `image_model_pair_config` (`scope = new_flow`) |
+| Config version | `0c8925d5-5aff-4c90-a007-9dd32750b80f` |
+| Origem | `human_decision` |
+| Primário | `gpt-image-2.5-sunburst` / `medium` |
+| Fallback | `gpt-image-2` / `low` |
+| Tabela de pricing | `ai_model_pricing` (vigente, `effective_until IS NULL`) |
+| Pricing principal | `386fb02c-b0e8-4ec9-a8c6-573b4ca58f19` — `image_unit_usd` 0,044 |
+| Pricing fallback | `d25c9ecc-0c91-44db-a4b9-e057a0a78215` — `image_unit_usd` 0,042 |
+
+Nenhum catálogo, seleção, tabela ou tarifa exclusiva de 9:16 foi criado. A leitura foi somente
+leitura; nenhuma escrita em banco, flag ou campanha.
+
+## 2. Ambiente
 
 | Item | Situação |
 |---|---|
@@ -13,82 +29,77 @@
 | Credencial | chave de homolog existente (não criar/usar produção) |
 | Provider | `openai.images.edit` via `UpstreamImagesAdapter` |
 | Produção | **proibida** |
-| Banco/flag/migration | **não tocados** |
+| Banco/flag/migration | **não escritos** |
 
-**Ambiente não executado:** nenhuma chamada foi feita; a linha acima é o alvo proposto, não uma
-execução.
+**Ambiente não executado:** nenhuma chamada foi feita; a linha acima é o alvo proposto.
 
-## 2. Matriz planejada (14 chamadas)
+## 3. Matriz derivada (8 chamadas)
 
-| # | Modelo | Qualidade | Tamanho | Tipo | Status |
+| # | Modelo | Qualidade | Tamanho | Papel | Status |
 |---:|---|---|---|---|---|
-| 1–3 | `gpt-image-2.5-sunburst` | `low` | `1152x2048` | amostra | `pending` |
-| 4–6 | `gpt-image-2.5-sunburst` | `medium` | `1152x2048` | amostra | `pending` |
-| 7 | `gpt-image-2.5-sunburst` | `low` | `1024x1024` | controle | `pending` |
-| 8–10 | `gpt-image-2` | `low` | `1152x2048` | amostra | `pending` |
-| 11–13 | `gpt-image-2` | `medium` | `1152x2048` | amostra | `pending` |
-| 14 | `gpt-image-2` | `low` | `1024x1024` | controle | `pending` |
+| 1–3 | `gpt-image-2.5-sunburst` | `medium` | `1152x2048` | principal | `pending` |
+| 4 | `gpt-image-2.5-sunburst` | `medium` | `1024x1024` | principal | `pending` |
+| 5–7 | `gpt-image-2` | `low` | `1152x2048` | fallback | `pending` |
+| 8 | `gpt-image-2` | `low` | `1024x1024` | fallback | `pending` |
 
-**Todas as 14 combinações estão `pending`.** Nenhuma combinação foi comprovada.
+**Todas as 8 chamadas estão `pending`.** Nenhuma combinação foi comprovada.
+A matriz é derivada da configuração vigente; se ela mudar, a matriz muda com ela.
 
-## 3. Dry-run observado
-
-Comando executado:
+## 4. Dry-run observado
 
 ```powershell
-npx tsx --tsconfig tsconfig.json scripts/f59/vertical-provider-proof.ts --dry-run --unit-usd=0.03
+npx tsx --tsconfig tsconfig.json scripts/f59/vertical-provider-proof.ts --dry-run
 ```
 
 Resultado:
 
-- chamadas planejadas: **14**;
-- estimativa por chamada: **0,075000** (0,03 × 2,5);
-- total estimado: **US$ 1,050000**;
+- chamadas planejadas: **8** (3 amostras + 1 controle por par único);
+- estimativa principal: **0,110000** por chamada (0,044 × 2,5);
+- estimativa fallback: **0,105000** por chamada (0,042 × 2,5);
+- total estimado: **US$ 0,860000**;
 - teto: **US$ 3,00**;
 - chamadas ao provider: **0**;
 - exit code: **0**.
 
-A fonte `--unit-usd=0.03` é apenas um exercício de dry-run. No apply, a fonte real de
-`image_unit_usd` deve ser fornecida pelo operador (`--unit-usd` ou `--unit-usd-file`) e conferida
-no checkpoint.
-
-## 4. Custos por chamada (campos a preencher no apply)
+## 5. Custos por chamada (campos a preencher no apply)
 
 | Campo | Situação nesta rodada |
 |---|---|
-| `estimatedUsd` | 0,075000 (estimativa provisória de dry-run) |
+| `estimatedUsd` | 0,110000 (principal) / 0,105000 (fallback) |
 | `providerReportedUsd` | **null** — nenhuma chamada |
-| `calculatedFromUsageUsd` | **null** — nenhuma chamada; token pricing não fornecido |
+| `calculatedFromUsageUsd` | **null** — nenhuma chamada |
 | `chargedUsd` | **0** — nenhuma chamada |
 | `deviationUsd` | **0** |
-| `unknown` | **0** — nenhum resultado desconhecido |
+| `unknown` | **0** |
+| `unsupported_dimension` | **0** |
 
 Nenhum valor de custo real é inferido a partir do dry-run.
 
-## 5. Evidência
+## 6. Evidência
 
 - O harness grava JSON incremental apenas em `--apply`.
 - Nesta rodada, **nenhum arquivo de evidência de chamada foi criado**.
 - Nenhum prompt, chave, byte de imagem ou conteúdo do usuário foi registrado.
 
-## 6. Itens obrigatórios para o checkpoint pago
+## 7. Itens obrigatórios para o checkpoint pago
 
 1. Confirmar **ambiente = homolog** e **loja de teste**.
 2. Confirmar **chave de homolog** e saldo/orçamento disponível.
-3. Aprovar o **teto de US$ 3,00** e a matriz de 14 chamadas.
-4. Fornecer/confirmar a fonte real de `image_unit_usd` por modelo+qualidade.
-5. Fornecer o `--pricing-file` da linha `ai_model_pricing` (para `calculatedFromUsageUsd`).
-6. Fornecer os caminhos da imagem primária e, se houver, da identidade.
-7. Fornecer o **token literal** de `--authorized`.
+3. Aprovar o **teto de US$ 3,00** e a matriz derivada (8 chamadas na configuração atual).
+4. Confirmar que a configuração/pricing observados são os vigentes no momento da execução.
+5. Fornecer os caminhos da imagem primária e, se houver, da identidade.
+6. Fornecer o **token literal** de `--authorized`.
 
-## 7. Declarações
+## 8. Declarações
 
 - **Nenhuma chamada paga foi executada.**
 - **Nenhuma campanha, crédito, banco, flag ou migration foi alterada.**
 - **UAT funcional e produção NÃO estão autorizadas** por este relatório.
 - O orçamento da prova é **separado** do orçamento da UAT.
+- Se uma combinação não suportar `1152x2048`, a prova para e apresenta a evidência; não há troca
+  silenciosa de modelo/configuração.
 
-## 8. Próximo passo
+## 9. Próximo passo
 
 Apresentar este relatório no checkpoint humano. Somente após o aceite explícito o executor poderá
 rodar `--apply` com o token autorizado, dentro da matriz e do teto acima.
