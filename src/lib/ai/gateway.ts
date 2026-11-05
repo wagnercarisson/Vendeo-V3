@@ -162,6 +162,7 @@ export class AiGateway {
         quality: request.quality,
         target: prepared.target,
         attemptNumber: telemetry.attemptNumber,
+        ...(result.metadata ? { metadata: result.metadata } : {}),
         ...(visualSignatureImageUsage ? { visualSignatureImageUsage } : {}),
       });
       return result;

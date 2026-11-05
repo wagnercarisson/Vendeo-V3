@@ -2,8 +2,11 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { AiGateway } from "@/lib/ai/gateway";
 import type { ImageModelPairConfig } from "@/lib/ai/image-model-pair";
+import { NewFlowImageModelResolver } from "@/lib/ai/upstream-images-runtime";
 import { ImagePairPricingService } from "@/lib/ai-cost/image-pair-pricing";
+import { buildAttemptTelemetry } from "@/lib/product-1-1/orchestration/instrumentation";
 import {
   runProductOneToOneGeneration,
   type ProductOneToOneArtifactOps,
@@ -22,6 +25,8 @@ import {
   composeVerticalProductPrompt,
 } from "../prompt/composition";
 import { PROVIDER_SIZE } from "../dimensions";
+import { withVerticalCallMetadata } from "../telemetry/format-attempt";
+import { VerticalImagesAdapter } from "../telemetry/vertical-images-adapter";
 import type { ProofBudget } from "../cost/vertical-estimate";
 import {
   createVerticalAttemptCostResolver,
@@ -107,6 +112,32 @@ export async function runProductVertical9x16Generation(
     ),
     beforeReservation: createVerticalCostGuard({ resolvePair, budget }),
     resolveAttemptCost: createVerticalAttemptCostResolver({ resolvePair }),
+    createGateway:
+      deps.createGateway ??
+      ((pair: ImageModelPairConfig) =>
+        new AiGateway(new NewFlowImageModelResolver(pair), {
+          get: (protocol) =>
+            protocol === "images" ? new VerticalImagesAdapter() : undefined,
+        })),
+    createTelemetry: (telemetryInput) =>
+      withVerticalCallMetadata(
+        deps.createTelemetry
+          ? deps.createTelemetry(telemetryInput)
+          : buildAttemptTelemetry({
+              operationRunId:
+                telemetryInput.runId ?? telemetryInput.campaignId,
+              traceId: telemetryInput.traceId ?? telemetryInput.campaignId,
+              storeId: telemetryInput.storeId,
+              campaignId: telemetryInput.campaignId,
+              attemptNumber: telemetryInput.attemptNumber,
+              usdBrlRateAtGeneration:
+                telemetryInput.usdBrlRateAtGeneration ?? null,
+              creditValueBrlAtGeneration:
+                telemetryInput.creditValueBrlAtGeneration ?? null,
+              internalCost: telemetryInput.internalCost,
+            }),
+        { format: "9:16", requestedSize: PROVIDER_SIZE },
+      ),
     client: deps.client,
   };
 

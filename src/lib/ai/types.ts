@@ -118,6 +118,11 @@ export interface AiInvocationResult {
   imageBase64?: string;
   mimeType?: string;
   model: string;
+  /**
+   * Metadata de auditoria por tentativa (ex.: dimensões devolvidas pelo
+   * provider). Aditivo: ausente ⇒ envelope de telemetria idêntico ao atual.
+   */
+  metadata?: Record<string, unknown>;
   usage?: TokenUsage;
   usageMeta?: AiInvocationUsageMeta;
   providerReportedCostUsd?: number;
