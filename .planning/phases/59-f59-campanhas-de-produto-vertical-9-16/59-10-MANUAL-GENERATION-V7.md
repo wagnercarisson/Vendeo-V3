@@ -58,9 +58,10 @@ Prompt de referência: 1.798 caracteres, 34 linhas.
    `21e5e037f6605bb9c6fb3365959b4cc9c162bd9cb9121165f395e8872b7ea759`.
    Se mudou, **parar e informar antes do teste**.
 4. Confirmar crédito disponível: **1 crédito** na loja.
-5. Confirmar margem do piloto: cap **US$ 1,10**, gasto **US$ 0,8258**,
-   margem **US$ 0,2742** — acima da estimativa da imagem (US$ 0,11) e da copy
-   (US$ 0,0007).
+5. Confirmar margem do piloto: cap **US$ 1,10**, gasto **US$ 0,9365**,
+   margem **US$ 0,1635**. A estimativa da imagem é US$ 0,11 e a da copy
+   US$ 0,0007; a margem cobre a chamada primária e uma eventual fallback
+   estimada em US$ 0,044, mas **não** cobre retries adicionais.
 6. Nenhuma migration, flag, concessão de crédito, push ou deploy.
 
 ## Execução (manual, uma única vez)
