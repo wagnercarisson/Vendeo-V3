@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
+import { createPendingFormatAdapter } from "@/lib/product-vertical-9-16/recovery/pending-adapter";
 import {
   SupabasePendingOperationsRepository,
   type PendingOperationView,
@@ -37,6 +38,8 @@ function mapItem(view: PendingOperationView): PendingOperationItem {
     supportReference: view.supportReference,
     createdAt: view.createdAt,
     latestAttemptAt: view.latestAttemptAt,
+    format: view.format ?? null,
+    formatUnavailable: view.formatUnavailable === true,
   };
 }
 
@@ -44,7 +47,15 @@ export default async function AdminProductOneToOnePendingPage() {
   let views: PendingOperationView[] = [];
   let readError = false;
   try {
-    views = await new SupabasePendingOperationsRepository().listPendingOperations();
+    const adapter = createPendingFormatAdapter();
+    views = await new SupabasePendingOperationsRepository(
+      undefined,
+      undefined,
+      {
+        resolveFormat: adapter.resolveFormat,
+        verticalArtifacts: adapter.verticalArtifacts,
+      },
+    ).listPendingOperations();
   } catch {
     readError = true;
   }

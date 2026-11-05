@@ -4,6 +4,9 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import { ProductOneToOnePendingResolutionSchema } from "@/lib/admin/schemas";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { requireSameOrigin } from "@/lib/auth/csrf";
+import { supabaseAdmin } from "@/lib/supabase/server";
+import { createPendingFormatAdapter } from "@/lib/product-vertical-9-16/recovery/pending-adapter";
+import { SupabasePendingOperationsRepository } from "@/lib/product-1-1/pending/pending-operations-repository";
 import {
   listPendingOperations,
   PendingOperationResolutionError,
@@ -51,7 +54,16 @@ function resolutionError(error: unknown): Response {
 export const GET = apiHandler(async () => {
   await requireAdmin();
   try {
-    const operations = await listPendingOperations();
+    const adapter = createPendingFormatAdapter();
+    const repository = new SupabasePendingOperationsRepository(
+      supabaseAdmin,
+      undefined,
+      {
+        resolveFormat: adapter.resolveFormat,
+        verticalArtifacts: adapter.verticalArtifacts,
+      },
+    );
+    const operations = await listPendingOperations({ repository });
     return NextResponse.json({ operations });
   } catch {
     return NextResponse.json(
@@ -82,23 +94,60 @@ export const POST = apiHandler(async (request: NextRequest) => {
   }
 
   try {
-    const resolution = await resolvePendingOperation({
-      actorId: admin.userId,
-      campaignId: body.campaignId,
-      operationId: body.operationId,
-      action: body.action,
-      reason: body.reason,
-      resolutionOperationId: body.resolutionOperationId,
-      // C1 (B2B-D4) — caminho AUTORIZADO/auditado: o operador admin autenticado
-      // (após `requireAdmin` + `requireSameOrigin`) AUTORIZA explicitamente o
-      // abandono do claim `in_progress` residual. Este é o ÚNICO invocador que
-      // fornece o sinal; qualquer outro omite-o (default `false`).
-      authorizeAbandon: true,
-      // Recorte 1 — exceção RESTRITA ao inconclusivo: o operador admin autoriza
-      // encerrar `in_flight`/`result_unknown` (nunca `published`; não desabilita o
-      // frescor). Marcado na evidência e auditado.
-      authorizePublicationClosure: true,
-    });
+    const adapter = createPendingFormatAdapter();
+    const format = await adapter.resolveFormat(body.campaignId);
+    if (format.kind === "unavailable") {
+      return NextResponse.json(
+        { error: { code: "format_unavailable", message: "Formato da campanha indisponível." } },
+        { status: 503 },
+      );
+    }
+    const repository = new SupabasePendingOperationsRepository(
+      supabaseAdmin,
+      undefined,
+      {
+        resolveFormat: adapter.resolveFormat,
+        verticalArtifacts: adapter.verticalArtifacts,
+      },
+    );
+    let projection: ReturnType<typeof adapter.projectionFor> | undefined;
+    if (format.kind === "9:16") {
+      const state = await repository.findPendingOperation(
+        body.campaignId,
+        body.operationId,
+      );
+      if (state) {
+        projection = adapter.projectionFor(
+          state.storeId,
+          body.campaignId,
+          body.operationId,
+        );
+      }
+    }
+
+    const resolution = await resolvePendingOperation(
+      {
+        actorId: admin.userId,
+        campaignId: body.campaignId,
+        operationId: body.operationId,
+        action: body.action,
+        reason: body.reason,
+        resolutionOperationId: body.resolutionOperationId,
+        // C1 (B2B-D4) — caminho AUTORIZADO/auditado: o operador admin autenticado
+        // (após `requireAdmin` + `requireSameOrigin`) AUTORIZA explicitamente o
+        // abandono do claim `in_progress` residual. Este é o ÚNICO invocador que
+        // fornece o sinal; qualquer outro omite-o (default `false`).
+        authorizeAbandon: true,
+        // Recorte 1 — exceção RESTRITA ao inconclusivo: o operador admin autoriza
+        // encerrar `in_flight`/`result_unknown` (nunca `published`; não desabilita o
+        // frescor). Marcado na evidência e auditado.
+        authorizePublicationClosure: true,
+      },
+      {
+        repository,
+        ...(projection ? { projectDeliveredCampaign: projection } : {}),
+      },
+    );
     return NextResponse.json({ resolution });
   } catch (error) {
     return resolutionError(error);

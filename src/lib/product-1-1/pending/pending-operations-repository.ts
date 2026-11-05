@@ -76,12 +76,42 @@ export interface PendingOperationState {
   readonly createdAt: string | null;
   readonly updatedAt: string | null;
   readonly latestAttemptAt: string | null;
+  /** F59 — formato resolvido quando o repositório recebe o resolvedor. */
+  readonly format?: "1:1" | "9:16" | null;
+}
+
+export interface PendingArtifactProber {
+  probeArtifact(input: {
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+  }): Promise<ArtifactProbe>;
+}
+
+export type PendingFormatKind = "1:1" | "9:16" | "unavailable";
+
+export class FormatUnavailableError extends Error {
+  readonly code = "format_unavailable" as const;
+
+  constructor() {
+    super("format_unavailable");
+    this.name = "FormatUnavailableError";
+  }
+}
+
+export interface PendingRepositoryOptions {
+  readonly resolveFormat?: (
+    campaignId: string,
+  ) => Promise<{ kind: PendingFormatKind }>;
+  readonly verticalArtifacts?: PendingArtifactProber;
 }
 
 /** Estado de uma operação para a LISTA (pendências + evidência derivada). */
 export interface PendingOperationView extends PendingOperationState {
   /** C2 — resultado TIPADO da sonda de arte (server-side). */
   readonly artifactKind: ArtifactProbe["kind"];
+  readonly format?: "1:1" | "9:16" | null;
+  readonly formatUnavailable?: boolean;
 }
 
 /** Contrato estrutural consumido pelo serviço de resolução. */
@@ -100,14 +130,28 @@ export interface PendingOperationsRepository {
 
 export class SupabasePendingOperationsRepository implements PendingOperationsRepository {
   private readonly client: SupabaseClient;
-  private readonly artifacts: ProductOneToOneArtifactStore;
+  private readonly artifacts: PendingArtifactProber;
+  private readonly resolveFormat?: PendingRepositoryOptions["resolveFormat"];
+  private readonly verticalArtifacts?: PendingArtifactProber;
 
   constructor(
     client: SupabaseClient = supabaseAdmin,
-    artifacts: ProductOneToOneArtifactStore = new ProductOneToOneArtifactStore(client),
+    artifacts: PendingArtifactProber = new ProductOneToOneArtifactStore(client),
+    options: PendingRepositoryOptions = {},
   ) {
     this.client = client;
     this.artifacts = artifacts;
+    this.resolveFormat = options.resolveFormat;
+    this.verticalArtifacts = options.verticalArtifacts;
+  }
+
+  private async formatFor(campaignId: string): Promise<PendingFormatKind> {
+    if (!this.resolveFormat) return "1:1";
+    try {
+      return (await this.resolveFormat(campaignId)).kind;
+    } catch {
+      return "unavailable";
+    }
   }
 
   private async readClaims(campaignId: string, operationId: string): Promise<ClaimRow[]> {
@@ -160,6 +204,7 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     const failed = outcome?.outcome === "failed" && !terminal;
     const processing = claims.some((claim) => claim.status === "in_progress");
     const latestAttemptAt = claims.length > 0 ? (claims[0].updated_at ?? null) : null;
+    const formatKind = await this.formatFor(campaignId);
 
     return Object.freeze({
       campaignId: row.campaign_id,
@@ -179,6 +224,7 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
       createdAt: row.created_at ?? null,
       updatedAt: row.updated_at ?? null,
       latestAttemptAt,
+      format: formatKind === "unavailable" ? null : formatKind,
     });
   }
 
@@ -187,6 +233,12 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     campaignId: string,
     operationId: string,
   ): Promise<ArtifactProbe> {
+    const format = await this.formatFor(campaignId);
+    if (format === "unavailable") throw new FormatUnavailableError();
+    if (format === "9:16") {
+      if (!this.verticalArtifacts) throw new FormatUnavailableError();
+      return this.verticalArtifacts.probeArtifact({ storeId, campaignId, operationId });
+    }
     return this.artifacts.probeArtifact({ storeId, campaignId, operationId });
   }
 
@@ -207,12 +259,30 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     for (const row of rows) {
       const state = await this.findPendingOperation(row.campaign_id, row.operation_id);
       if (!state) continue;
-      const probe = await this.probeArtifact(
-        state.storeId,
-        state.campaignId,
-        state.operationId,
-      );
-      views.push(Object.freeze({ ...state, artifactKind: probe.kind }));
+      try {
+        const probe = await this.probeArtifact(
+          state.storeId,
+          state.campaignId,
+          state.operationId,
+        );
+        views.push(
+          Object.freeze({
+            ...state,
+            format: state.format ?? null,
+            artifactKind: probe.kind,
+          }),
+        );
+      } catch (error) {
+        if (!(error instanceof FormatUnavailableError)) throw error;
+        views.push(
+          Object.freeze({
+            ...state,
+            format: null,
+            formatUnavailable: true,
+            artifactKind: "indeterminate" as const,
+          }),
+        );
+      }
     }
     return views;
   }

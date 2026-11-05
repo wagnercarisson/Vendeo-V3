@@ -105,6 +105,3 @@ export function createVerticalCostGuard(deps: {
     }
   };
 }
-
-/** Reexport para inspeção/teste sem acoplar ao módulo de estimativa. */
-
