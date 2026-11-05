@@ -16,6 +16,10 @@ import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestrati
 import { readProductOneToOneBackgroundDirection } from "@/lib/product-1-1/snapshot/persist-snapshot";
 import { getCampaignForDisplay, mapRestoredForm } from "@/lib/campaign/display";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
+import {
+  resolveCampaignFormat,
+  type CampaignFormatResolution,
+} from "@/lib/campaign/format-resolution";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
 interface NovaCampanhaPageProps {
@@ -96,6 +100,7 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
   // indisponível ⇒ `null` (sem promessa falsa). O CLIENTE NUNCA fornece o snapshot;
   // NUNCA inicia geração/cobrança.
   let restoredForm: CampaignFormRestore | null = null;
+  let restoredFormatResolution: CampaignFormatResolution | null = null;
   if (searchParams) {
     const resolved = await searchParams;
     const restoreFrom =
@@ -125,6 +130,9 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
           } catch {
             backgroundDirection = null;
           }
+          restoredFormatResolution = resolveCampaignFormat(
+            campaign.input_snapshot,
+          );
           restoredForm = mapRestoredForm({
             campaignId: campaign.id,
             inputSnapshot: campaign.input_snapshot,
@@ -146,9 +154,17 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
     verticalEnabled = false;
   }
 
+  // F59/D-03 — formato indisponível OU rascunho vertical com a flag OFF bloqueia
+  // a submissão SEM trocar o formato do lojista.
+  const campaignFormatPaused =
+    restoredForm?.formatUnavailable === true ||
+    ((restoredForm?.campaignFormat === "9:16" ||
+      restoredFormatResolution?.kind === "9:16") &&
+      !verticalEnabled);
+
   return (
     <main>
-      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} restoredForm={restoredForm} verticalEnabled={verticalEnabled} />
+      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} restoredForm={restoredForm} verticalEnabled={verticalEnabled} campaignFormatPaused={campaignFormatPaused} />
     </main>
   );
 }

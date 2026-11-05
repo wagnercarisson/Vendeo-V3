@@ -147,6 +147,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         identity={identity}
         balance={balance}
         supportEmail={supportEmail}
+        eligible={eligible}
+        campaignFormat={fields.campaignFormat ?? "1:1"}
         onBack={exitReview}
         onConfirm={confirmReview}
       />
@@ -816,7 +818,7 @@ function FormContent({
             </div>
           )}
           <CampaignFormatSelector
-            value={campaignFormatPaused ? "9:16" : (fields.campaignFormat ?? "1:1")}
+            value={fields.campaignFormat ?? "1:1"}
             onChange={(format) => setField("campaignFormat", format)}
             disabled={isSubmitting || campaignFormatPaused}
           />

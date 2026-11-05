@@ -740,6 +740,10 @@ function restoredFormToFields(
   if (restored.backgroundDirection) {
     fields.backgroundDirection = restored.backgroundDirection;
   }
+  // F59/D-03 — hidrata o formato PERSISTIDO. Vertical NUNCA cai para 1:1.
+  if (restored.campaignFormat === "9:16" || restored.campaignFormat === "1:1") {
+    fields.campaignFormat = restored.campaignFormat;
+  }
   return fields;
 }
 

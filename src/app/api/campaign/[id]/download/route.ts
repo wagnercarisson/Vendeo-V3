@@ -12,6 +12,7 @@ import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestrati
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
 import { decideNewFlowDownload } from "@/lib/product-1-1/artifact/download-gate";
 import { buildSafeDownloadFilename } from "@/lib/campaign/download-filename";
+import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -69,7 +70,19 @@ export const GET = apiHandler(async (
   }
 
   if (newFlowOperation) {
-    const artifactStore = new ProductOneToOneArtifactStore();
+    // F59/D-12 — dispatch pelo formato PERSISTIDO. Formato inválido/versão
+    // desconhecida falha fechado; NUNCA cai para o caminho quadrado.
+    const formatResolution = resolveCampaignFormat(campaign.input_snapshot);
+    if (formatResolution.kind === "unavailable") {
+      return NextResponse.json(
+        { error: { code: "format_unavailable", message: "Formato da campanha indisponível." } },
+        { status: 503 },
+      );
+    }
+    const artifactStore =
+      formatResolution.kind === "9:16"
+        ? new (await import("@/lib/product-vertical-9-16/artifact/artifact-store")).VerticalArtifactStore()
+        : new ProductOneToOneArtifactStore();
     const probe = await artifactStore.probeArtifact({
       storeId: campaign.store_id,
       campaignId: id,

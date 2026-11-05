@@ -355,14 +355,24 @@ function ReadyView(props: CampaignPageClientProps) {
 
   return (
     <div className="space-y-6">
-      {props.imageUrl && (
-        <img
-          src={props.imageUrl}
-          alt={props.productName || props.messages.fallbackTitle}
-          lang=""
-          className="w-full rounded-xl shadow-md"
-        />
-      )}
+      {props.imageUrl &&
+        (props.newFlowFormat === "9:16" ? (
+          <div className="mx-auto w-auto max-h-[70vh] aspect-[9/16] rounded-xl bg-bg-elevated overflow-hidden">
+            <img
+              src={props.imageUrl}
+              alt={props.productName || props.messages.fallbackTitle}
+              lang=""
+              className="h-full w-full object-contain"
+            />
+          </div>
+        ) : (
+          <img
+            src={props.imageUrl}
+            alt={props.productName || props.messages.fallbackTitle}
+            lang=""
+            className="w-full rounded-xl shadow-md"
+          />
+        ))}
 
       <p className="text-sm text-text-muted font-body">
         {props.messages.createdAtLabel}{" "}
@@ -706,14 +716,24 @@ function NewFlowDeliveredView(props: CampaignPageClientProps) {
 
   return (
     <div className="space-y-6">
-      {props.imageUrl && (
-        <img
-          src={props.imageUrl}
-          alt={props.productName || props.messages.fallbackTitle}
-          lang=""
-          className="w-full rounded-xl shadow-md"
-        />
-      )}
+      {props.imageUrl &&
+        (props.newFlowFormat === "9:16" ? (
+          <div className="mx-auto w-auto max-h-[70vh] aspect-[9/16] rounded-xl bg-bg-elevated overflow-hidden">
+            <img
+              src={props.imageUrl}
+              alt={props.productName || props.messages.fallbackTitle}
+              lang=""
+              className="h-full w-full object-contain"
+            />
+          </div>
+        ) : (
+          <img
+            src={props.imageUrl}
+            alt={props.productName || props.messages.fallbackTitle}
+            lang=""
+            className="w-full rounded-xl shadow-md"
+          />
+        ))}
 
       <p className="text-sm text-text-muted font-body">
         {props.messages.createdAtLabel}{" "}

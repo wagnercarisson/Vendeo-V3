@@ -34,6 +34,9 @@ interface CampaignBriefReviewProps {
   identity?: StoreIdentitySnapshot | null;
   balance?: number | null;
   supportEmail?: string;
+  /** F59 — a linha `Formato` só existe no fluxo novo elegível. */
+  eligible?: boolean;
+  campaignFormat?: "1:1" | "9:16";
   onBack: () => void;
   onConfirm: () => Promise<void>;
 }
@@ -47,6 +50,8 @@ export function CampaignBriefReview({
   identity,
   balance,
   supportEmail,
+  eligible = false,
+  campaignFormat,
   onBack,
   onConfirm,
 }: CampaignBriefReviewProps) {
@@ -154,6 +159,17 @@ export function CampaignBriefReview({
             <dt className="text-text-muted text-sm font-body w-28 shrink-0">Tipo</dt>
             <dd className="text-text-primary text-sm font-body">{INTENT_LABELS[intent] ?? intent}</dd>
           </div>
+          {eligible && (
+            <div className="flex items-center gap-2">
+              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Formato</dt>
+              <dd className="text-text-primary text-sm font-body">
+                {campaignFormat === "9:16" ? "Vertical 9:16" : "Quadrado 1:1"}
+                {campaignFormat === "9:16" && (
+                  <span className="ml-1 text-text-muted">1080 × 1920 px</span>
+                )}
+              </dd>
+            </div>
+          )}
           {fields.badge && (
             <div className="flex items-center gap-2">
               <dt className="text-text-muted text-sm font-body w-28 shrink-0">Selo</dt>

@@ -191,4 +191,37 @@ describe("CampaignBriefReview — Testes 11-16 (F43)", () => {
     const cells = document.querySelectorAll(".aspect-square");
     expect(cells.length).toBeGreaterThanOrEqual(2);
   });
+
+  it("F59: linha Formato aparece no fluxo elegível com hint vertical", () => {
+    renderReview({ eligible: true, campaignFormat: "9:16" });
+
+    expect(screen.getByText("Formato")).toBeInTheDocument();
+    expect(screen.getByText("Vertical 9:16")).toBeInTheDocument();
+    expect(screen.getByText("1080 × 1920 px")).toBeInTheDocument();
+  });
+
+  it("F59: 1:1 elegível mostra Quadrado e o legado não mostra a linha", () => {
+    const { rerender } = renderReview({
+      eligible: true,
+      campaignFormat: "1:1",
+    });
+    expect(screen.getByText("Quadrado 1:1")).toBeInTheDocument();
+    expect(screen.queryByText("1080 × 1920 px")).not.toBeInTheDocument();
+
+    rerender(
+      <CampaignBriefReview
+        fields={FIELDS}
+        preparedImages={[PRIMARY, REFERENCE]}
+        preparing={false}
+        error={null}
+        store={STORE}
+        identity={null}
+        balance={5}
+        eligible={false}
+        onBack={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("Formato")).not.toBeInTheDocument();
+  });
 });

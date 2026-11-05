@@ -43,6 +43,7 @@ vi.mock("@/components/flow/use-campaign-form", async (importOriginal) => {
         validityStartDate: "",
         validityEndDate: "",
         validityCustomText: "",
+        campaignFormat: "9:16",
       },
       fieldErrors: {
         validityEndDate: "Informe uma data válida (dd/mm/aaaa)",

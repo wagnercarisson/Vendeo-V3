@@ -26,6 +26,7 @@ import type {
   NewFlowCopyRecoveryRecord,
   NewFlowCopyRecoveryView,
 } from "@/lib/campaign/display";
+import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
 import { readProductOneToOneBackgroundDirection } from "@/lib/product-1-1/snapshot/persist-snapshot";
@@ -110,6 +111,12 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   }
 
   if (newFlowState && newFlowOperation) {
+    // F59/D-12 — formato PERSISTIDO, resolvido server-side. Indisponível ⇒ sem
+    // frame vertical e sem URL assinada (fail-closed).
+    const formatResolution = resolveCampaignFormat(campaign.input_snapshot);
+    if (formatResolution.kind !== "unavailable") {
+      props.newFlowFormat = formatResolution.kind;
+    }
     let newFlowCopy: ReturnType<typeof mapNewFlowCopy> = null;
     let newFlowRecovery: NewFlowCopyRecoveryView | null = null;
     // F56.2b2b (B2.2 / C4 / B2B-D9) — no ramo `refunded`, lê o snapshot
@@ -139,18 +146,23 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       }
     }
     if (newFlowState === "delivered") {
-      try {
-        const artifactStore = new ProductOneToOneArtifactStore();
-        const probe = await artifactStore.probeArtifact({
-          storeId: campaign.store_id,
-          campaignId: id,
-          operationId: newFlowOperation.operationId,
-        });
-        if (probe.kind === "integral") {
-          props.imageUrl = await artifactStore.getSignedArtifactUrl(probe.storagePath);
+      if (formatResolution.kind !== "unavailable") {
+        try {
+          const artifactStore =
+            formatResolution.kind === "9:16"
+              ? new (await import("@/lib/product-vertical-9-16/artifact/artifact-store")).VerticalArtifactStore()
+              : new ProductOneToOneArtifactStore();
+          const probe = await artifactStore.probeArtifact({
+            storeId: campaign.store_id,
+            campaignId: id,
+            operationId: newFlowOperation.operationId,
+          });
+          if (probe.kind === "integral") {
+            props.imageUrl = await artifactStore.getSignedArtifactUrl(probe.storagePath);
+          }
+        } catch {
+          // Melhor esforço: sem arte íntegra a página não promete recuperação.
         }
-      } catch {
-        // Melhor esforço: sem arte íntegra a página não promete recuperação.
       }
 
       // F56.2b1b (P3) — a copy entregue é lida POR OPERAÇÃO (nunca dos campos
