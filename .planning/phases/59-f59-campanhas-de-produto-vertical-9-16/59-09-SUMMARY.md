@@ -50,12 +50,12 @@ requirements-completed: [REQ-59-13]
 
 duration: 55min
 completed: 2026-11-05
-status: blocked
+status: local-complete
 ---
 
 # Phase 59 Plan 09: Telemetria, runbook e gates locais
 
-**Parte local implementada; Wave 7 NÃO aprovada porque a regressão 1:1 tem bloqueios.**
+**Parte local implementada e gates verdes; seed/homologação seguem bloqueados.**
 
 ## Accomplishments
 
@@ -74,6 +74,9 @@ status: blocked
 ## Task Commits
 
 1. **Task 1: telemetria por tentativa vertical** — `98cabd39`
+2. **Reconciliação: loader da prova movido** — `67bb3f9e`
+3. **Reconciliação: fixtures/allowlists 1:1** — `6e5a4e8c`
+4. **Reconciliação: import consolidado + loader autorizado** — `d4d7008f`
 
 ## Validation
 
@@ -81,7 +84,8 @@ status: blocked
 |---|---|
 | Suítes verticais | **17 arquivos / 199 testes passando; exit 0** |
 | Suítes tocadas | **59 arquivos / 550 testes passando; exit 0** |
-| Regressão 1:1 | **exit 1 — 929 passed / 13 failed; bloqueio** |
+| Regressão 1:1 | **49 arquivos / 943 testes passando; exit 0 — expectativas preservadas** |
+| Suíte de IA | **39 arquivos + 1 skipped / 389 testes + 7 skipped; exit 0** |
 | `npm run typecheck` | exit 0 |
 | `npm run lint` | exit 0 |
 | `npm run build` | exit 0 — 96 páginas |
@@ -89,26 +93,26 @@ status: blocked
 | `git diff --check` | limpo |
 | Isolamento `product-1-1 → vertical` | 0 ocorrências |
 
-## Blockers
+## Correções de reconciliação
 
-- `legacy-frontier.guard`: precisa de reconciliação autorizada para as mudanças
-  aditivas em `ai/types.ts`/`ai/gateway.ts` e para caminhos já pendentes da
-  fronteira.
-- `non-activation.contract`: allowlist não reconhece imports das Waves 5/6.
-- `result-states.contract`: fixtures sem `input_snapshot` agora recebem `503`
-  fail-closed do dispatch por formato (59-08), em vez de `403`/`200`.
+- Fixtures de download receberam `input_snapshot: {}`; expectativas `403`/`200`
+  preservadas e caso `503` malformado adicionado separadamente.
+- `non-activation` autoriza somente os pares exatos da F59, sem liberar diretórios.
+- `legacy-frontier` preserva `BASE_SHA` e conteúdo, com commits fixos por entrada.
+- `proof-openai-loader` movido para `src/lib/ai/adapters/`, sem alterar o loader 1:1.
+
+## Blockers restantes
+
 - Seed data-only da flag não criado/aplicado; flag não ativada.
+- Homologação, UAT, produção e validação visual não executadas.
+- Nenhuma chamada paga, push ou deploy.
 
 ## Deviations from Plan
 
-- Task 4 (seed/migration) **não executada**: é checkpoint humano e o seed/flag
-  permanecem bloqueados pela autorização.
-- Adicionei o gate extra de `src/lib/ai/__tests__`; ele revelou uma falha
-  pré-existente do `proof-openai-loader`, registrada no documento de gates.
-- Nenhum teste 1:1 foi alterado para passar.
+- Task 4 (seed/migration) **não executada**: checkpoint humano mantido bloqueado.
+- Nenhum teste 1:1 teve expectativa alterada.
 
 ## Next Phase Readiness
 
-- Telemetria/runbook prontos para revisão.
-- Wave 7 permanece bloqueada até a regressão 1:1 ser reconciliada com autorização.
-- Homologação, UAT, produção, seed e ativação continuam gates separados.
+- Telemetria/runbook prontos para revisão humana.
+- Seed, homologação, validação visual e produção continuam gates separados.
