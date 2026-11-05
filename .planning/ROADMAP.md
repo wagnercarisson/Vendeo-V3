@@ -731,7 +731,7 @@ Plans:
 
 ### Phase 59: F59 - Campanhas de Produto vertical 9:16
 
-**Status:** **WAVES 1-6 IMPLEMENTADAS; WAVE 7 NÃO AUTORIZADA (2026-11-04).** `59-01` a `59-05` concluídos; `59-06`/`59-07` entregaram recuperação/criação por formato persistido; `59-08` fechou restore, download, detalhe 9:16 e miniatura sem troca silenciosa para 1:1. **721 testes focados na Wave 6**, typecheck/lint 0, `display.ts` sem import vertical. **Sem chamada paga nova, migration, flag aplicada, push, deploy ou produção.** Wave 7, homologação e build exigem autorização.
+**Status:** **WAVES 1-6 IMPLEMENTADAS; WAVE 7 NÃO AUTORIZADA (2026-11-04).** `59-01` a `59-05` concluídos; `59-06`/`59-07` entregaram recuperação/criação por formato persistido; `59-08` fechou restore, download, detalhe 9:16 e miniatura sem troca silenciosa para 1:1. **724 testes focados na Wave 6**, typecheck/lint 0, `display.ts` sem import vertical. **Sem chamada paga nova, migration, flag aplicada, push, deploy ou produção.** Wave 7, homologação e build exigem autorização.
 
 **Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
 

@@ -66,6 +66,8 @@ completed: 2026-11-04
 - `CampaignFormRestore` ganhou formato, versão e indisponibilidade.
 - `display.ts` classifica exclusivamente por `resolveCampaignFormat`, sem variante local e sem import vertical.
 - O restore hidrata 1:1/9:16 e nunca converte vertical em 1:1; formato indisponível pausa.
+- Rascunho local antigo sem `campaignFormat` herda o formato persistido do restore (9:16 permanece 9:16 no estado, revisão e payload).
+- Formato indisponível usa banner próprio (“Formato indisponível”), sem afirmar que o rascunho é vertical.
 - A página nova resolve o formato server-side e bloqueia rascunho vertical com a flag OFF.
 - A revisão do brief mostra `Formato` com hint `1080 × 1920 px` só no vertical e some no legado.
 - O download usa probe/download verticais no 9:16, preserva o gate `delivered + integral` e falha 503 em formato inválido.
@@ -76,12 +78,13 @@ completed: 2026-11-04
 
 1. **Task 1-3: restore/download/detalhe por formato** — `3664736c`
 2. **Fix pós-revisão: pausa apenas rascunho restaurado** — `d08d71b1`
+3. **Fix pós-revisão P2: fallback de formato local ausente + banner próprio de indisponibilidade** — `8dae195c`
 
 ## Validation
 
 | Gate | Resultado |
 |---|---|
-| Suítes de restore/display/download/detalhe/lista/flow | **73 arquivos / 721 testes passando** |
+| Suítes de restore/display/download/detalhe/lista/flow | **73 arquivos / 724 testes passando** |
 | `npm run typecheck` | exit 0 |
 | `npm run lint` | exit 0 |
 | `git diff --check` | limpo |
