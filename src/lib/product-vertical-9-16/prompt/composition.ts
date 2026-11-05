@@ -40,23 +40,55 @@ const INTENT_OBJECTIVE = Object.freeze({
     "Crie uma campanha exclusiva em imagem estática vertical 9:16, em peça única.",
 } as const);
 
-const INTENT_RULES = Object.freeze({
-  offer: [
-    "Destaque o produto e o preço de venda.",
-    "Não invente informações comerciais.",
-  ],
-  spotlight: [
-    "Priorize a apresentação do produto; o preço informado é secundário.",
-    "Não invente informações comerciais.",
-  ],
-  exclusive: [
-    "Apresente o produto sem preço, em composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais.",
-    "Não invente informações.",
-  ],
-} as const);
+function intentRules(
+  input: ProductPromptCompositionInput,
+): readonly string[] {
+  const { commercial } = input.briefing;
+  const hasOriginal = Boolean(commercial.originalPriceText?.trim());
+  const hasDiscounted = Boolean(commercial.discountedPriceText?.trim());
 
-const PALETTE_LINE =
-  /^Paleta da loja(?:\s+"([^"]*)")?:\s*cor principal\s+(#[0-9A-Fa-f]{6})(?:;\s*cor de apoio\s+(#[0-9A-Fa-f]{6}))?\.?$/;
+  if (commercial.intent === "exclusive") {
+    return [
+      "Apresente o produto sem preço, em composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais.",
+      "Não invente informações.",
+    ];
+  }
+
+  if (commercial.intent === "spotlight") {
+    return [
+      hasOriginal || hasDiscounted
+        ? "Priorize a apresentação do produto; o preço informado é secundário."
+        : "Priorize a apresentação do produto.",
+      "Não invente informações comerciais.",
+    ];
+  }
+
+  if (hasOriginal && hasDiscounted) {
+    return [
+      "Destaque o preço de venda; apresente o preço original como secundário.",
+      "Não invente informações comerciais.",
+    ];
+  }
+  if (hasDiscounted) {
+    return [
+      "Destaque o preço de venda.",
+      "Não invente informações comerciais.",
+    ];
+  }
+  if (hasOriginal) {
+    return [
+      "Destaque o preço original.",
+      "Não invente informações comerciais.",
+    ];
+  }
+  return ["Não invente informações comerciais."];
+}
+
+const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
+const PALETTE_LINE_PREFIX = "Paleta da loja";
+const PALETTE_PRIMARY = /cor principal\s+(#[0-9A-Fa-f]{6})/;
+const PALETTE_ACCENT = /cor de apoio\s+(#[0-9A-Fa-f]{6})/;
+const PALETTE_STORE = /^Paleta da loja\s+(.+?):\s*cor principal/;
 
 interface VerticalIdentityData {
   readonly storeName: string | null;
@@ -98,6 +130,23 @@ function effectiveAttachments(
 function readIdentityData(
   input: ProductPromptCompositionInput,
 ): VerticalIdentityData {
+  // Dados estruturados (briefing congelado) têm precedência: nomes com aspas,
+  // dois-pontos ou quebras de linha não afetam a paleta.
+  const structured = input.briefing.identity;
+  if (structured) {
+    return {
+      storeName: structured.storeName?.trim() || null,
+      primary:
+        structured.palettePrimary && HEX_COLOR.test(structured.palettePrimary)
+          ? structured.palettePrimary
+          : null,
+      accent:
+        structured.paletteAccent && HEX_COLOR.test(structured.paletteAccent)
+          ? structured.paletteAccent
+          : null,
+    };
+  }
+
   const lines = (input.contributions ?? [])
     .filter(
       (contribution) =>
@@ -108,14 +157,20 @@ function readIdentityData(
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
+  // Fallback textual: ancora nos tokens de cor, não no nome. Assim um nome com
+  // aspas (ou até com "cor principal" no meio) não apaga a paleta.
   for (const line of lines) {
-    const match = PALETTE_LINE.exec(line);
-    if (!match) continue;
-    return {
-      storeName: match[1]?.trim() || null,
-      primary: match[2] ?? null,
-      accent: match[3] ?? null,
-    };
+    if (!line.startsWith(PALETTE_LINE_PREFIX)) continue;
+    const primary = PALETTE_PRIMARY.exec(line)?.[1] ?? null;
+    if (!primary) continue;
+    const accent = PALETTE_ACCENT.exec(line)?.[1] ?? null;
+    const rawStore = PALETTE_STORE.exec(line)?.[1]?.trim() ?? null;
+    const storeName = rawStore
+      ? rawStore.startsWith('"') && rawStore.endsWith('"')
+        ? rawStore.slice(1, -1).trim() || null
+        : rawStore
+      : null;
+    return { storeName, primary, accent };
   }
 
   return { storeName: null, primary: null, accent: null };
@@ -217,7 +272,7 @@ function compositionLines(
   const base = promptBase.trim();
   if (base.length > 0) rules.push(base);
 
-  rules.push(...INTENT_RULES[briefing.commercial.intent]);
+  rules.push(...intentRules(input));
   rules.push(backgroundRule(briefing.backgroundDirection, hasPalette));
 
   if (identityImage !== null) {
@@ -237,7 +292,10 @@ function compositionLines(
   }
 
   rules.push(
-    "Preserve o conteúdo dos textos e apresente cada um uma única vez; use português correto e natural, sem caracteres ou pontuação duplicados, e não corrija silenciosamente os textos de entrada.",
+    "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
+  );
+  rules.push(
+    "Use português correto e natural, sem caracteres ou pontuação duplicados, e não corrija silenciosamente os textos de entrada.",
   );
 
   return rules;

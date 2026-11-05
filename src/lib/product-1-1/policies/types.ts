@@ -35,6 +35,16 @@ export interface ProductPromptCompositionBriefing {
   readonly constraints: {
     readonly mandatoryArtworkText: string | null;
   };
+  /**
+   * Identidade canônica já resolvida server-side. Aditiva e opcional: o 1:1 a
+   * ignora; o vertical a prefere à leitura textual da diretiva, evitando
+   * ambiguidade em nomes de loja com aspas.
+   */
+  readonly identity?: {
+    readonly storeName: string;
+    readonly palettePrimary: string | null;
+    readonly paletteAccent: string | null;
+  };
 }
 
 export interface ProductPromptPolicyContext {

@@ -87,9 +87,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v4",
+      composerVersion: "f59-vertical-9-16-composer-v5",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v4");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v5");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -171,7 +171,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
   it("compõe a estrutura editorial na ordem e com versão própria", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v4");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v5");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
     expect(composition.promptBaseVersion).toBe("48.2.6-produto-1-1-v1");
     expect(composition.text.startsWith("Crie uma campanha de oferta")).toBe(
@@ -304,8 +304,57 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(withoutPalette.text).not.toContain("Loja:");
   });
 
+  it("prefere a identidade estruturada quando o nome da loja tem aspas", () => {
+    const base = defaultInput();
+    const composition = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        identity: {
+          storeName: 'Padaria "da" Esquina',
+          palettePrimary: "#3B2418",
+          paletteAccent: "#D59D5E",
+        },
+      },
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+      // Diretiva textual deliberadamente ambígua: os dados estruturados vencem.
+      contributions: [
+        {
+          block: PROMPT_BLOCK_LABELS.identity,
+          lines: ['Paleta da loja "Padaria "da" Esquina": cor principal #000000.'],
+        },
+      ],
+    });
+    expect(composition.text).toContain('Loja: "Padaria \\"da\\" Esquina"');
+    expect(composition.text).toContain(
+      "Paleta: principal #3B2418; apoio #D59D5E.",
+    );
+    expect(composition.text).toContain("na paleta da loja");
+  });
+
+  it("fallback textual lê a paleta mesmo com aspas no nome da loja", () => {
+    const base = defaultInput();
+    const composition = composeVerticalProductPrompt({
+      ...base,
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+      contributions: [
+        {
+          block: PROMPT_BLOCK_LABELS.identity,
+          lines: [
+            'Paleta da loja "Padaria "da" Esquina": cor principal #3B2418; cor de apoio #D59D5E.',
+          ],
+        },
+      ],
+    });
+    expect(composition.text).toContain('Loja: "Padaria \\"da\\" Esquina"');
+    expect(composition.text).toContain(
+      "Paleta: principal #3B2418; apoio #D59D5E.",
+    );
+    expect(composition.text).toContain("na paleta da loja");
+  });
+
   it.each([
-    ["offer", "Crie uma campanha de oferta", "Destaque o produto e o preço de venda."],
+    ["offer", "Crie uma campanha de oferta", "Destaque o preço de venda; apresente o preço original como secundário."],
     ["spotlight", "Crie uma campanha de destaque", "Priorize a apresentação do produto"],
     ["exclusive", "Crie uma campanha exclusiva", "Apresente o produto sem preço"],
   ] as const)("cobre a intenção %s", (intent, objective, rule) => {
@@ -364,6 +413,53 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(exclusive.text).not.toContain("Preço original:");
   });
 
+  it("preserva a hierarquia do preço original quando os dois existem", () => {
+    const base = defaultInput();
+    const both = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        commercial: {
+          ...base.briefing.commercial,
+          intent: "offer",
+          originalPriceText: "R$ 99,90",
+          discountedPriceText: "R$ 69,90",
+        },
+      },
+    });
+    expect(both.text).toContain(
+      "Destaque o preço de venda; apresente o preço original como secundário.",
+    );
+
+    const onlyDiscounted = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        commercial: {
+          ...base.briefing.commercial,
+          intent: "offer",
+          originalPriceText: null,
+          discountedPriceText: "R$ 69,90",
+        },
+      },
+    });
+    expect(onlyDiscounted.text).toContain("Destaque o preço de venda.");
+    expect(onlyDiscounted.text).not.toContain("preço original");
+  });
+
+  it("a regra de textos não torna a descrição obrigatória", () => {
+    const composition = composeVerticalProductPrompt(defaultInput());
+    expect(composition.text).toContain(
+      "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
+    );
+    expect(composition.text).toContain(
+      "A descrição é opcional e pode ser adaptada ou omitida",
+    );
+    expect(composition.text).not.toContain(
+      "Preserve o conteúdo dos textos e apresente cada um",
+    );
+  });
+
   it("omite campos vazios e regras sobre descrição ausente", () => {
     const base = defaultInput();
     const composition = composeVerticalProductPrompt({
@@ -415,7 +511,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     });
     for (const rule of [
       "Não invente informações comerciais.",
-      "Preserve o conteúdo dos textos e apresente cada um uma única vez",
+      "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
       "Antes de alterar as cores do ativo",
       "O fundo deve preencher também essas regiões.",
     ]) {
