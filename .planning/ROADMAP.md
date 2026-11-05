@@ -731,7 +731,7 @@ Plans:
 
 ### Phase 59: F59 - Campanhas de Produto vertical 9:16
 
-**Status:** **WAVES 1-6 IMPLEMENTADAS; WAVE 7 COM PARTE LOCAL VERDE (2026-11-05).** `59-09` entregou telemetria por tentativa, runbook, build e reconciliação dos gates: **943 testes 1:1, 389 testes de IA e 199 verticais passando**. Seed OFF aplicado em homolog (`20261105162052_f59_product_9_16_flag.sql`): ledger **153 × 153**, `product_9_16_enabled=false`, painel autenticado mostrando **Desligada**. Baseline e matriz manual propostos (5 gerações, teto US$ 2,00) aguardam aprovação; flag não ativada, nenhuma geração paga, push, deploy ou produção.
+**Status:** **WAVES 1-6 IMPLEMENTADAS; WAVE 7 COM PARTE LOCAL VERDE (2026-11-05).** `59-09` entregou telemetria por tentativa, runbook, build e reconciliação dos gates: **943 testes 1:1, 389 testes de IA e 199 verticais passando**. Seed OFF aplicado em homolog (`20261105162052_f59_product_9_16_flag.sql`): ledger **153 × 153**, `product_9_16_enabled=false`, painel autenticado mostrando **Desligada**. Baseline e matriz manual propostos (5 submissões; ciclo de flag durante G4; estimativa operacional ~US$ 0,20, envelope com retries ~US$ 5,10, sem hard cap garantido) aguardam aprovação; flag não ativada, nenhuma geração paga, push, deploy ou produção.
 
 **Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
 
