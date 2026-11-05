@@ -731,7 +731,7 @@ Plans:
 
 ### Phase 59: F59 - Campanhas de Produto vertical 9:16
 
-**Status:** **WAVES 1-6 IMPLEMENTADAS; WAVE 7 NÃO AUTORIZADA (2026-11-04).** `59-01` a `59-05` concluídos; `59-06`/`59-07` entregaram recuperação/criação por formato persistido; `59-08` fechou restore, download, detalhe 9:16 e miniatura sem troca silenciosa para 1:1. **724 testes focados na Wave 6**, typecheck/lint 0, `display.ts` sem import vertical. **Sem chamada paga nova, migration, flag aplicada, push, deploy ou produção.** Wave 7, homologação e build exigem autorização.
+**Status:** **WAVES 1-6 IMPLEMENTADAS; WAVE 7 COM PARTE LOCAL IMPLEMENTADA E BLOQUEADA (2026-11-05).** `59-09` entregou telemetria por tentativa, runbook e build (exit 0), mas a regressão 1:1 segue vermelha (929 passed / 13 failed) e bloqueia a aprovação. **Sem seed/flag, chamada paga, push, deploy ou produção.**
 
 **Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
 
@@ -779,7 +779,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 59-09-PLAN.md — Telemetria de formato/dimensões, runbook, gates locais e regressão 1:1
+- [ ] 59-09-PLAN.md — Telemetria de formato/dimensões, runbook, gates locais e regressão 1:1 — **parte local feita; bloqueada pela regressão 1:1 e pelo seed/flag não aplicados**
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
