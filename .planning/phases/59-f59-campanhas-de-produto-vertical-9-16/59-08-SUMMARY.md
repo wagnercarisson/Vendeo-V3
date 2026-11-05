@@ -75,6 +75,7 @@ completed: 2026-11-04
 ## Task Commits
 
 1. **Task 1-3: restore/download/detalhe por formato** — `3664736c`
+2. **Fix pós-revisão: pausa apenas rascunho restaurado** — `d08d71b1`
 
 ## Validation
 
