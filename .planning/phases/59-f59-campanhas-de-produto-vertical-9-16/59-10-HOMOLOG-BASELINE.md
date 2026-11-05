@@ -66,24 +66,59 @@ de origem e destino conferem nos três casos.
 Não foi copiado o seed F59 `20261105162052_f59_product_9_16_flag.sql`
 (`seed_copied=0`).
 
-## 6. Estado após a reconciliação
+## 6. Aplicação do seed F59 (autorizada nesta etapa)
 
-- `supabase migration list --local --workdir "G:\Vendeo-Homolog"`:
-  **152 locais × 152 no ledger, sem lacunas**.
-- ledger: **152 versões**.
-- `product_9_16_enabled`: **ABSENT**.
-- versão alvo F59 `20261105162052`: **ABSENT**.
+Pré-condições reconfirmadas antes da cópia:
 
-## 7. Ações NÃO executadas
+- 152 arquivos locais × 152 versões no ledger;
+- versão `20261105162052`: **ABSENT**;
+- `product_9_16_enabled`: **ABSENT**;
+- SHA-256 de origem: `734FF930CE96625208C472CC11D4AE6673B78EC7E9AB5E74929F0470B172FBC2`;
+- SHA-256 de destino após cópia: idêntico (`match=true`);
+- única migration pendente na listagem: `20261105162052`.
 
-- nenhum SQL das três migrations foi executado;
-- nenhum `migration repair`, reset, `db push` ou alteração de ledger;
-- seed F59 não copiado/aplicado;
-- flag não criada/alterada;
-- nenhuma chamada paga, geração, push, deploy ou acesso à produção.
+Aplicação pelo procedimento do projeto:
 
-## 8. Próximo passo
+`supabase migration up --local --workdir "G:\Vendeo-Homolog"`
 
-O ledger está reconciliado. A próxima autorização necessária é específica para
-copiar/aplicar o seed F59 **somente em homolog**, registrar o baseline completo e
-seguir para a matriz manual.
+Saída: `Applying migration 20261105162052_f59_product_9_16_flag.sql...` →
+`Local database is up to date.`
+
+## 7. Estado após a aplicação
+
+- ledger: **153 versões**;
+- versão F59 presente com nome `f59_product_9_16_flag`;
+- `supabase migration list`: **153 locais × 153 no ledger**, sem lacunas;
+- flag:
+  `product_9_16_enabled | false | Registra a preparação inativa do Produto
+  vertical 9:16. Não ativa geração, roteamento, provider, crédito, entrega ou
+  download; apenas permite administração futura da flag.`
+- nenhuma outra migration pendente foi aplicada.
+
+## 8. Painel admin
+
+A chave é renderizada pelo painel existente:
+
+- a página `/admin/feature-flags` consulta `feature_flags` por
+  `ALL_FEATURE_FLAG_KEYS`;
+- `product_9_16_enabled` está em `ALL_FEATURE_FLAG_KEYS`;
+- a linha existe no banco com `enabled=false`;
+- `FLAG_LABELS.product_9_16_enabled` existe;
+- a chave não é filtrada pelo bloco exclusivo do Produto 1:1.
+
+Não foi aberta sessão autenticada de navegador; a comprovação é por linha
+persistida + caminho de renderização/label do painel.
+
+## 9. Ações NÃO executadas
+
+- nenhum SQL das três migrations reconciliadas foi executado;
+- nenhum `migration repair`, reset, `db push` ou alteração manual de ledger;
+- flag não ativada;
+- nenhuma chamada paga, geração, push, deploy ou acesso à produção;
+- nenhuma campanha gerada.
+
+## 10. Próximo passo
+
+O seed OFF está aplicado e comprovado. A próxima autorização necessária cobre o
+baseline completo de lojas/saldos/campanhas, orçamento de UAT e a matriz manual
+acompanhada.
