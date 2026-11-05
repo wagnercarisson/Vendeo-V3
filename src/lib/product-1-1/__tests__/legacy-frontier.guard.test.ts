@@ -159,6 +159,12 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
     commit: "98cabd39",
   },
   {
+    path: "src/lib/ai/adapters/proof-openai-loader.ts",
+    authorization:
+      "F59/59-02 + correção 59-09 (loader da prova movido para a fronteira permitida de adapters, sem alterar o loader 1:1)",
+    commit: "67bb3f9e",
+  },
+  {
     path: "src/lib/ai/image-model-pair-config-row.ts",
     authorization:
       "F59/59-02 (extração pura do contrato de linha do par modelo/qualidade)",

@@ -49,12 +49,10 @@ import { NewFlowGenerateImageRequestSchema } from "@/lib/image-generation/schema
 import {
   runProductOneToOneGeneration,
   readProductOneToOneOperation,
+  type ProductOneToOneGenerationDeps,
+  type ProductOneToOneGenerationInput,
 } from "@/lib/product-1-1/orchestration/generation-orchestrator";
 import type { ProductOneToOneCopyContext } from "@/lib/product-1-1/copy/default-copy-runner";
-import type {
-  ProductOneToOneGenerationDeps,
-  ProductOneToOneGenerationInput,
-} from "@/lib/product-1-1/orchestration/generation-orchestrator";
 import { validateOriginalBackground, countProductImages, ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE } from "@/lib/product-1-1/selection-validation";
 import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
 import {
