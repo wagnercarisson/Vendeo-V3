@@ -3,8 +3,13 @@
 ## Status
 
 **PREPARADO PARA A SUBMISSÃO MANUAL.** A flag `product_9_16_enabled` está ON; o
-seletor 1:1 / 9:16 está visível. Nenhuma geração paga foi executada nesta
+seletor 1:1 / 9:16 está visível. O teto do piloto foi elevado de 0.8454 para
+1.10 (margem atual 0.2742). Nenhuma geração paga foi executada nesta
 preparação. Desativar a flag imediatamente após a geração única.
+
+> Incidente anterior: as duas tentativas de 22:39/22:40 falharam antes do
+> provider porque a margem do piloto (0.0196) era menor que a estimativa da
+> imagem (0.11). Detalhes em `59-10-GENERATION-INCIDENT-2026-11-05.md`.
 
 ## Objetivo
 
@@ -43,7 +48,9 @@ Prompt de referência: 1.737 caracteres, 30 linhas.
    `21e5e037f6605bb9c6fb3365959b4cc9c162bd9cb9121165f395e8872b7ea759`
    (arquivo `5ced8af3-…png`). Se mudou, **parar e informar antes do teste**.
 4. Confirmar o mesmo produto/briefing e os mesmos arquivos de referência acima.
-5. Confirmar saldo de crédito e ausência de operação em andamento.
+5. Confirmar saldo de crédito, ausência de operação em andamento e margem do
+   piloto (`cap_usd - spent_usd`) maior que a estimativa da imagem (0.11).
+   Estado atual: cap 1.10, spent 0.8258, margem 0.2742.
 
 ## Execução (manual, uma única vez)
 
