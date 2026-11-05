@@ -64,6 +64,7 @@ import {
   PROMPT_BLOCK_LABELS,
 } from "../prompt-composition";
 import type {
+  ProductPromptAttachment,
   ProductPromptComposition,
   ProductPromptCompositionInput,
 } from "../prompt-composition";
@@ -579,6 +580,22 @@ function identityContributions(
  * referências adicionais legítimas (variações/combo) continuam contando.
  * Quando não há seleções, cai no `references` legado (compatibilidade de testes).
  */
+/**
+ * Ordem REAL dos anexos no provider: produto primário, referências adicionais e,
+ * por último, o ativo de identidade. O 1:1 ignora este campo; o vertical usa para
+ * numerar cada anexo deterministicamente no prompt.
+ */
+function productPromptAttachments(
+  input: ProductOneToOneGenerationInput,
+): readonly ProductPromptAttachment[] {
+  const products = (input.productImagesDataUrls ?? []).map((_, index) => ({
+    kind: index === 0 ? ("product" as const) : ("reference" as const),
+  }));
+  return input.identityImageUrl
+    ? [...products, { kind: "identity" as const }]
+    : products;
+}
+
 function productReferenceIds(
   input: ProductOneToOneGenerationInput,
 ): readonly string[] | undefined {
@@ -1222,6 +1239,7 @@ export async function runProductOneToOneGeneration(
           promptBase: input.promptBase ?? PRODUCT_1_1_PROMPT_BASE.content,
           references: productReferenceIds(input),
           contributions: identityContributions(input),
+          attachments: productPromptAttachments(input),
         });
         const snapshot = buildSnapshot(preflight.config, {
           campaignId,

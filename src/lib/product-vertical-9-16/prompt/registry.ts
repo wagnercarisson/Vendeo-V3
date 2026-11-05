@@ -11,17 +11,13 @@ import {
   pecaUnicaPolicy,
   temaNenhumPolicy,
 } from "@/lib/product-1-1/policies/registry";
-import {
-  PRODUCT_PROMPT_BLOCK_LABELS,
-  type ProductPromptPolicy,
-  type ProductPromptPolicyResolutionInput,
-  type PromptPolicyContribution,
-  type ResolvedProductPromptPolicies,
+import type {
+  ProductPromptPolicy,
+  ProductPromptPolicyResolutionInput,
+  PromptPolicyContribution,
+  ResolvedProductPromptPolicies,
 } from "@/lib/product-1-1/policies/types";
-import {
-  SAFE_AREA_9_16_VERSION,
-  safeAreaPromptLines,
-} from "../safe-area";
+import { SAFE_AREA_9_16_VERSION } from "../safe-area";
 import {
   FORMATO_9_16_POLICY_VERSION,
   formato916Policy,
@@ -35,14 +31,8 @@ import {
  * políticas de intenção, produto, estrutura, tema e integridade são os MESMOS
  * objetos do 1:1; apenas o formato e a área segura são verticais.
  */
-export const VERTICAL_SAFE_AREA_CONTRIBUTION: PromptPolicyContribution =
-  Object.freeze({
-    block: PRODUCT_PROMPT_BLOCK_LABELS.constraints,
-    lines: safeAreaPromptLines(),
-  });
-
 export const VERTICAL_COMPOSER_VERSION =
-  "f59-vertical-9-16-composer-v1" as const;
+  "f59-vertical-9-16-composer-v2" as const;
 
 function pushPolicy(
   contributions: PromptPolicyContribution[],
@@ -80,7 +70,6 @@ export function resolveVerticalPromptPolicies(
   versions.fundo = PRODUCT_1_1_BACKGROUND_DIRECTION_VERSION;
   versions.identidade = PRODUCT_1_1_IDENTITY_CONTEXT_VERSION;
 
-  contributions.push(VERTICAL_SAFE_AREA_CONTRIBUTION);
   versions.safeArea = SAFE_AREA_9_16_VERSION;
 
   return Object.freeze({

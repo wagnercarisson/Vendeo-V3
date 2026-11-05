@@ -268,7 +268,11 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
   },
   ["src/lib/product-vertical-9-16/prompt/composition.ts"]: {
     prefixes: [],
-    exact: ["@/lib/product-1-1/prompt-composition"],
+    exact: [
+      "@/lib/product-1-1/prompt-composition",
+      // F59 prompt v2 — rótulos de bloco/identidade para anexos determinísticos.
+      "@/lib/product-1-1/policies/types",
+    ],
   },
   ["src/lib/product-vertical-9-16/prompt/policy-formato-9-16.ts"]: {
     prefixes: [],

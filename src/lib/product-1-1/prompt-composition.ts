@@ -43,6 +43,11 @@ export const PROMPT_BLOCK_ORDER: readonly PromptBlockLabel[] = Object.freeze([
   PROMPT_BLOCK_LABELS.constraints,
 ]);
 
+export interface ProductPromptAttachment {
+  /** Papel do anexo na ordem REAL enviada ao provider. */
+  readonly kind: "product" | "reference" | "identity";
+}
+
 export interface ProductPromptCompositionInput {
   readonly briefing: ProductPromptCompositionBriefing;
   /** The selected baseline text is preserved verbatim. */
@@ -50,6 +55,11 @@ export interface ProductPromptCompositionInput {
   readonly references?: readonly string[];
   /** Extra non-dimensional blocks (for example, identity/typography context). */
   readonly contributions?: readonly PromptPolicyContribution[];
+  /**
+   * Ordem REAL dos anexos enviados ao provider. Aditivo: consumido somente por
+   * compositores que optarem por descrever os anexos (F59 vertical). O 1:1 ignora.
+   */
+  readonly attachments?: readonly ProductPromptAttachment[];
 }
 
 export interface ProductPromptComposition {
@@ -70,6 +80,13 @@ export interface ComposeProductPromptOptions {
     input: ProductPromptPolicyResolutionInput,
   ) => ResolvedProductPromptPolicies;
   readonly composerVersion?: string;
+  /** F59 vertical: omite a contagem genérica de referências (substituída por anexos). */
+  readonly omitReferenceCount?: boolean;
+  /**
+   * F59 vertical: linha de contraste do bloco comercial. `undefined` preserva a
+   * linha 1:1; `null` remove; string substitui pelo texto do vertical.
+   */
+  readonly commercialIdentityLine?: string | null;
 }
 
 function pushLine(
@@ -86,6 +103,7 @@ function pushLine(
 function productLines(
   briefing: ProductPromptCompositionBriefing,
   references: readonly string[] | undefined,
+  omitReferenceCount: boolean,
 ): string[] {
   const lines: string[] = [];
   if (briefing.product.name.trim()) {
@@ -94,13 +112,16 @@ function productLines(
     lines.push(NAME_ARTWORK_GUIDANCE);
   }
   pushLine(lines, "Descrição", briefing.product.description);
-  if (references && references.length > 0) {
+  if (!omitReferenceCount && references && references.length > 0) {
     lines.push(`Imagens de referência: ${references.length}`);
   }
   return lines;
 }
 
-function commercialLines(briefing: ProductPromptCompositionBriefing): string[] {
+function commercialLines(
+  briefing: ProductPromptCompositionBriefing,
+  options: ComposeProductPromptOptions,
+): string[] {
   const lines: string[] = [];
   pushLine(
     lines,
@@ -112,7 +133,17 @@ function commercialLines(briefing: ProductPromptCompositionBriefing): string[] {
   // Orientação comum de contraste — emitida UMA única vez e SOMENTE quando o
   // fundo é recriado (estúdio/ambientado). Não é emitida para `original`.
   if (isRecreatedBackgroundDirection(briefing.backgroundDirection)) {
-    lines.push(PRODUCT_1_1_BACKGROUND_COMMON_ORIENTATION);
+    if (options.commercialIdentityLine === null) {
+      // O vertical sem ativo não menciona logo/assinatura.
+      lines.push(
+        "Garanta contraste para destacar o produto.",
+      );
+    } else {
+      lines.push(
+        options.commercialIdentityLine ??
+          PRODUCT_1_1_BACKGROUND_COMMON_ORIENTATION,
+      );
+    }
   }
   pushLine(lines, "Preço original", briefing.commercial.originalPriceText);
   pushLine(lines, "Preço de venda", briefing.commercial.discountedPriceText);
@@ -155,8 +186,12 @@ export function composeProductPrompt(
   });
 
   const dataLines: Partial<Record<PromptBlockLabel, string[]>> = {
-    [PROMPT_BLOCK_LABELS.product]: productLines(briefing, references),
-    [PROMPT_BLOCK_LABELS.commercial]: commercialLines(briefing),
+    [PROMPT_BLOCK_LABELS.product]: productLines(
+      briefing,
+      references,
+      options.omitReferenceCount === true,
+    ),
+    [PROMPT_BLOCK_LABELS.commercial]: commercialLines(briefing, options),
     [PROMPT_BLOCK_LABELS.promptBase]: promptBaseLines(promptBase),
     [PROMPT_BLOCK_LABELS.constraints]: constraintsLines(briefing),
   };

@@ -11,7 +11,6 @@ import type { CopyDirectorInput } from "@/lib/copy/schema";
 import type { ProductPromptPolicyResolutionInput } from "@/lib/product-1-1/policies/types";
 import { composeVerticalProductPrompt } from "../prompt/composition";
 import { formato916Policy } from "../prompt/policy-formato-9-16";
-import { safeAreaPromptLines } from "../safe-area";
 import { VERTICAL_COMPOSITION_FIXTURES } from "./fixtures/vertical-briefings";
 
 const PARITY_BLOCKS = [
@@ -92,7 +91,7 @@ describe("F59 — diferença controlada entre prompt 1:1 e vertical", () => {
       expect(vertical.blocks[PROMPT_BLOCK_LABELS.intent]).not.toBe(
         square.blocks[PROMPT_BLOCK_LABELS.intent],
       );
-      expect(vertical.blocks[PROMPT_BLOCK_LABELS.constraints]).not.toBe(
+      expect(vertical.blocks[PROMPT_BLOCK_LABELS.constraints]).toBe(
         square.blocks[PROMPT_BLOCK_LABELS.constraints],
       );
 
@@ -107,36 +106,23 @@ describe("F59 — diferença controlada entre prompt 1:1 e vertical", () => {
       for (const line of intentDifference) {
         expect(expectedIntentDifference.has(line)).toBe(true);
       }
-
-      const constraintsDifference = symmetricDifference(
-        linesOf(square, PROMPT_BLOCK_LABELS.constraints),
-        linesOf(vertical, PROMPT_BLOCK_LABELS.constraints),
-      );
-      const expectedConstraintsDifference = new Set(safeAreaPromptLines());
-      for (const line of constraintsDifference) {
-        expect(expectedConstraintsDifference.has(line)).toBe(true);
-      }
     },
   );
 
   it.each(VERTICAL_COMPOSITION_FIXTURES.map((f) => [f.id, f] as const))(
-    "%s contém percentuais e pixels sempre rotulados como entrega",
+    "%s contém percentuais uma única vez e NÃO vaza pixels/downscale/homologação",
     (_id, fixture) => {
       const vertical = composeVerticalProductPrompt({
         briefing: fixture.briefing,
         promptBase: fixture.promptBase,
         references: fixture.references,
       });
-      expect(vertical.text).toMatch(/14%/);
-      expect(vertical.text).toMatch(/35%/);
-      expect(vertical.text).toMatch(/6%/);
-      expect(vertical.text).toMatch(/30%/);
-
-      for (const line of vertical.text.split("\n")) {
-        if (/(269|672|65|324 × 768) px/.test(line)) {
-          expect(line).toContain("referência de entrega 1080 × 1920");
-        }
-      }
+      expect(vertical.text.match(/14%/g)).toHaveLength(1);
+      expect(vertical.text.match(/35%/g)).toHaveLength(1);
+      expect(vertical.text.match(/6%/g)).toHaveLength(1);
+      expect(vertical.text.match(/30%/g)).toHaveLength(1);
+      expect(vertical.text).not.toMatch(/269|672|324 × 768|1152|2048|0,9375/);
+      expect(vertical.text).not.toMatch(/homologa/i);
     },
   );
 
@@ -152,7 +138,7 @@ describe("F59 — diferença controlada entre prompt 1:1 e vertical", () => {
 
     expect(square.policyVersions.formato).toBe("48.2.4-formato-1-1-v1");
     expect(square.policyVersions.safeArea).toBeUndefined();
-    expect(vertical.policyVersions.formato).toBe("f59-9-16-v1");
+    expect(vertical.policyVersions.formato).toBe("f59-9-16-v2");
     expect(vertical.policyVersions.safeArea).toBe("safe-area-9-16-v1");
     expect(vertical.policyVersions.intencao).toBe(square.policyVersions.intencao);
     expect(vertical.policyVersions.tipoConteudo).toBe(
