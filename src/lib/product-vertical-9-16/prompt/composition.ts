@@ -1,23 +1,77 @@
-import {
-  composeProductPrompt,
-  type ProductPromptComposition,
-  type ProductPromptCompositionInput,
-  type ProductPromptAttachment,
+import type {
+  ProductPromptAttachment,
+  ProductPromptComposition,
+  ProductPromptCompositionInput,
 } from "@/lib/product-1-1/prompt-composition";
-import {
-  PRODUCT_PROMPT_BLOCK_LABELS,
-  type PromptPolicyContribution,
-} from "@/lib/product-1-1/policies/types";
+import { PROMPT_BASE_VERSION } from "@/lib/product-1-1/prompt-base";
+import { PRODUCT_PROMPT_BLOCK_LABELS } from "@/lib/product-1-1/policies/types";
+import { SAFE_AREA_PERCENT } from "../safe-area";
 import {
   FORMATO_9_16_POLICY_VERSION,
   VERTICAL_COMPOSER_VERSION,
-  resolveVerticalPromptPolicies,
+  resolveVerticalPromptPolicyVersions,
 } from "./registry";
 
-function attachmentLabel(kind: ProductPromptAttachment["kind"]): string {
-  if (kind === "product") return "produto anunciado";
-  if (kind === "reference") return "referência adicional do produto";
-  return "ativo da loja";
+/**
+ * F59 — Compositor EDITORIAL do prompt vertical 9:16.
+ *
+ * Serializador próprio (não reutiliza o layout de blocos do 1:1) para produzir
+ * um prompt curto, separando DADOS de INSTRUÇÕES. Cada orientação aparece uma
+ * única vez e só é emitida quando o elemento existe. As políticas compartilhadas
+ * do 1:1 permanecem intocadas; o vertical apenas registra suas versões.
+ */
+
+export const VERTICAL_PROMPT_BLOCK_LABELS = Object.freeze({
+  objective: "OBJETIVO",
+  references: "REFERÊNCIAS",
+  data: "DADOS DA CAMPANHA",
+  composition: "COMPOSIÇÃO",
+  reservedAreas: "ÁREAS RESERVADAS",
+} as const);
+
+type VerticalBlockLabel =
+  (typeof VERTICAL_PROMPT_BLOCK_LABELS)[keyof typeof VERTICAL_PROMPT_BLOCK_LABELS];
+
+const INTENT_OBJECTIVE = Object.freeze({
+  offer: "Crie uma campanha de oferta em imagem estática vertical 9:16, em peça única.",
+  spotlight:
+    "Crie uma campanha de destaque em imagem estática vertical 9:16, em peça única.",
+  exclusive:
+    "Crie uma campanha exclusiva em imagem estática vertical 9:16, em peça única.",
+} as const);
+
+const INTENT_RULES = Object.freeze({
+  offer: [
+    "Destaque o produto e o preço de venda.",
+    "Não invente informações comerciais.",
+  ],
+  spotlight: [
+    "Priorize a apresentação do produto; o preço informado é secundário.",
+    "Não invente informações comerciais.",
+  ],
+  exclusive: [
+    "Apresente o produto sem preço, em composição editorial, sóbria e arejada, com hierarquia discreta e sem chamadas promocionais.",
+    "Não invente informações.",
+  ],
+} as const);
+
+const PALETTE_LINE =
+  /^Paleta da loja(?:\s+"([^"]*)")?:\s*cor principal\s+(#[0-9A-Fa-f]{6})(?:;\s*cor de apoio\s+(#[0-9A-Fa-f]{6}))?\.?$/;
+
+interface VerticalIdentityData {
+  readonly storeName: string | null;
+  readonly primary: string | null;
+  readonly accent: string | null;
+}
+
+interface VerticalPromptBlock {
+  readonly label: VerticalBlockLabel;
+  readonly lines: readonly string[];
+}
+
+/** Delimitação inequívoca: aspas, quebras de linha e barras são escapadas. */
+function quote(value: string): string {
+  return JSON.stringify(value.trim());
 }
 
 function attachmentPosition(
@@ -28,114 +82,237 @@ function attachmentPosition(
   return index >= 0 ? index + 1 : null;
 }
 
-function buildAttachmentLines(
-  attachments: readonly ProductPromptAttachment[],
-): string[] {
-  if (attachments.length === 0) return [];
-  const lines = ["Anexos enviados ao modelo, nesta ordem:"];
-  attachments.forEach((attachment, index) => {
-    lines.push(`- Imagem ${index + 1}: ${attachmentLabel(attachment.kind)}.`);
-  });
-  return lines;
+/**
+ * A ordem REAL chega do adapter. Sem metadados (chamadas legadas), deriva de
+ * `references`: a primeira é o produto e as demais são referências adicionais.
+ */
+function effectiveAttachments(
+  input: ProductPromptCompositionInput,
+): readonly ProductPromptAttachment[] {
+  if ((input.attachments?.length ?? 0) > 0) return input.attachments!;
+  return (input.references ?? []).map((_, index) => ({
+    kind: index === 0 ? ("product" as const) : ("reference" as const),
+  }));
 }
 
-function buildIdentityLines(
+function readIdentityData(
   input: ProductPromptCompositionInput,
-  attachments: readonly ProductPromptAttachment[],
-): string[] {
-  const original = input.contributions?.find(
-    (contribution) => contribution.block === PRODUCT_PROMPT_BLOCK_LABELS.identity,
-  );
-  const originalLines = (original?.lines ?? [])
+): VerticalIdentityData {
+  const lines = (input.contributions ?? [])
+    .filter(
+      (contribution) =>
+        contribution.block === PRODUCT_PROMPT_BLOCK_LABELS.identity,
+    )
+    .flatMap((contribution) => contribution.lines)
     .flatMap((line) => line.split("\n"))
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
-  const paletteLines = originalLines.filter(
-    (line) =>
-      line.startsWith("Paleta da loja") ||
-      line.startsWith("Sem paleta da loja"),
-  );
-  const hasPalette = paletteLines.some((line) =>
-    line.startsWith("Paleta da loja"),
-  );
-  const identityImage = attachmentPosition(attachments, "identity");
 
-  const lines: string[] = [];
-  if (identityImage !== null) {
-    const paletteClause = hasPalette
-      ? "use a paleta fornecida ou uma aplicação monocromática adequada."
-      : "use uma aplicação monocromática adequada.";
-    lines.push(
-      `Use o ativo da loja da imagem ${identityImage} como referência de identidade. Preserve o nome, o lettering e os elementos gráficos característicos. Adapte escala, posição e espaçamento à composição. Quando indispensável para legibilidade e contraste, ajuste as cores e a disposição dos componentes, mantendo a identidade reconhecível e sem inventar, substituir ou omitir seus elementos característicos. Prefira as cores originais; se precisar adaptá-las, ${paletteClause}`,
-    );
-    if (input.briefing.backgroundDirection === "original") {
-      lines.push(
-        "Não altere o produto nem o cenário para resolver o contraste; priorize posição, escala e adaptação cromática do ativo.",
-      );
-    } else {
-      lines.push(
-        "Antes de alterar as cores do ativo, priorize o posicionamento e a adequação do fundo para preservar contraste e legibilidade.",
-      );
-    }
-  } else {
-    lines.push("Não há ativo da loja anexado; não invente identidade visual.");
+  for (const line of lines) {
+    const match = PALETTE_LINE.exec(line);
+    if (!match) continue;
+    return {
+      storeName: match[1]?.trim() || null,
+      primary: match[2] ?? null,
+      accent: match[3] ?? null,
+    };
   }
-  lines.push(...paletteLines);
+
+  return { storeName: null, primary: null, accent: null };
+}
+
+function referenceLines(
+  attachments: readonly ProductPromptAttachment[],
+): string[] {
+  return attachments.map((attachment, index) => {
+    const position = index + 1;
+    if (attachment.kind === "product") {
+      return `Imagem ${position}: produto anunciado. Preserve sua aparência e use-o como protagonista.`;
+    }
+    if (attachment.kind === "reference") {
+      return `Imagem ${position}: referência adicional do produto. Use como apoio visual.`;
+    }
+    return `Imagem ${position}: ativo da loja. Preserve sua identidade, adaptando sua aplicação à composição e ao contraste, sem descaracterizá-lo.`;
+  });
+}
+
+function dataLines(
+  input: ProductPromptCompositionInput,
+  identity: VerticalIdentityData,
+): string[] {
+  const { briefing } = input;
+  const intent = briefing.commercial.intent;
+  const lines: string[] = [];
+
+  if (identity.storeName) lines.push(`Loja: ${quote(identity.storeName)}`);
+  if (briefing.product.name.trim()) {
+    lines.push(`Produto: ${quote(briefing.product.name)}`);
+  }
+  if (briefing.product.description?.trim()) {
+    lines.push(`Descrição: ${quote(briefing.product.description)}`);
+  }
+
+  // Exclusivo não exibe preço; oferta/destaque preservam o valor informado e o
+  // preço original só aparece quando realmente existe.
+  if (intent !== "exclusive") {
+    if (briefing.commercial.originalPriceText?.trim()) {
+      lines.push(`Preço original: ${quote(briefing.commercial.originalPriceText)}`);
+    }
+    if (briefing.commercial.discountedPriceText?.trim()) {
+      lines.push(`Preço: ${quote(briefing.commercial.discountedPriceText)}`);
+    }
+  }
+
+  if (briefing.commercial.badge?.trim()) {
+    lines.push(`Selo: ${quote(briefing.commercial.badge)}`);
+  }
+  if (briefing.commercial.validity?.trim()) {
+    lines.push(`Validade: ${quote(briefing.commercial.validity)}`);
+  }
+  if (briefing.constraints.mandatoryArtworkText?.trim()) {
+    lines.push(
+      `Aviso obrigatório: ${quote(briefing.constraints.mandatoryArtworkText)}`,
+    );
+  }
+  if (identity.primary) {
+    lines.push(
+      `Paleta: principal ${identity.primary}${
+        identity.accent ? `; apoio ${identity.accent}` : ""
+      }.`,
+    );
+  }
+
+  // A numeração das referências é derivada dos anexos reais; sem anexos, o dado
+  // continua sendo emitido, mas nenhuma referência é inventada.
   return lines;
 }
 
-/**
- * F59 — Compositor do prompt vertical.
- *
- * Reutiliza o serializador aprovado do 1:1 e injeta o resolvedor vertical
- * explícito + versão própria. Nenhum rótulo/bloco novo é criado.
- *
- * Versões registradas na saída: `f59-vertical-9-16-composer-v3` (compositor),
- * `f59-9-16-v2` (formato), `safe-area-9-16-v1` (área segura) e a versão da base
- * 1:1 congelada.
- */
+function backgroundRule(
+  direction: ProductPromptCompositionInput["briefing"]["backgroundDirection"],
+  hasPalette: boolean,
+): string {
+  if (direction === "studio") {
+    return hasPalette
+      ? "Use fundo de estúdio liso ou gradiente suave na paleta da loja, com bom contraste e sem objetos de apoio."
+      : "Use fundo de estúdio liso ou gradiente suave, com bom contraste e sem objetos de apoio.";
+  }
+  if (direction === "ambient") {
+    return hasPalette
+      ? "Crie um cenário coerente com o produto, incorporando a paleta da loja em elementos do ambiente, sem prejudicar a leitura."
+      : "Crie um cenário coerente com o produto, sem prejudicar a leitura.";
+  }
+  return "Mantenha o cenário da imagem enviada como base; não substitua o ambiente por outro.";
+}
+
+function compositionLines(
+  input: ProductPromptCompositionInput,
+  identity: VerticalIdentityData,
+  attachments: readonly ProductPromptAttachment[],
+): string[] {
+  const { briefing, promptBase } = input;
+  const identityImage = attachmentPosition(attachments, "identity");
+  const hasPalette = identity.primary !== null;
+
+  const rules: string[] = [];
+  const base = promptBase.trim();
+  if (base.length > 0) rules.push(base);
+
+  rules.push(...INTENT_RULES[briefing.commercial.intent]);
+  rules.push(backgroundRule(briefing.backgroundDirection, hasPalette));
+
+  if (identityImage !== null) {
+    rules.push(
+      briefing.backgroundDirection === "original"
+        ? "Não altere o produto nem o cenário para resolver contraste; ajuste posição, escala ou a aplicação do ativo."
+        : "Antes de alterar as cores do ativo, ajuste posicionamento e fundo para obter contraste.",
+    );
+  } else {
+    rules.push("Não invente identidade visual.");
+  }
+
+  if (briefing.product.description?.trim()) {
+    rules.push(
+      "A descrição é opcional e pode ser adaptada ou omitida, preservando seu significado.",
+    );
+  }
+
+  rules.push(
+    "Preserve o conteúdo dos textos e apresente cada um uma única vez; use português correto e natural, sem caracteres ou pontuação duplicados, e não corrija silenciosamente os textos de entrada.",
+  );
+
+  return rules;
+}
+
+function reservedAreaLines(
+  attachments: readonly ProductPromptAttachment[],
+): string[] {
+  const hasIdentity = attachmentPosition(attachments, "identity") !== null;
+  const subject = hasIdentity
+    ? "textos, ativo da loja ou partes essenciais do produto"
+    : "textos ou partes essenciais do produto";
+  return [
+    `Deixe sem ${subject}: ${SAFE_AREA_PERCENT.top}% do topo, ${SAFE_AREA_PERCENT.bottom}% da base, ${SAFE_AREA_PERCENT.sides}% de cada lateral e o retângulo inferior direito de ${SAFE_AREA_PERCENT.bottomRightWidth}% da largura por ${SAFE_AREA_PERCENT.bottomRightHeight}% da altura.`,
+    "O fundo deve preencher também essas regiões. Não desenhe guias, demarcações ou faixas vazias.",
+  ];
+}
+
+function renderBlocks(blocks: readonly VerticalPromptBlock[]): {
+  text: string;
+  record: Record<string, string>;
+} {
+  const parts: string[] = [];
+  const record: Record<string, string> = {};
+  for (const block of blocks) {
+    if (block.lines.length === 0) continue;
+    const content = block.lines.join("\n");
+    record[block.label] = content;
+    parts.push(
+      block.label === VERTICAL_PROMPT_BLOCK_LABELS.objective
+        ? content
+        : `[${block.label}]\n${content}`,
+    );
+  }
+  return { text: parts.join("\n\n"), record };
+}
+
 export function composeVerticalProductPrompt(
   input: ProductPromptCompositionInput,
 ): ProductPromptComposition {
-  const attachments = input.attachments ?? [];
-  const hasAttachmentMetadata = attachments.length > 0;
-  const identityImage = attachmentPosition(attachments, "identity");
+  const attachments = effectiveAttachments(input);
+  const identity = readIdentityData(input);
 
-  const contributions: PromptPolicyContribution[] = [];
-  if (hasAttachmentMetadata) {
-    contributions.push({
-      block: PRODUCT_PROMPT_BLOCK_LABELS.product,
-      lines: buildAttachmentLines(attachments),
-    });
-    for (const contribution of input.contributions ?? []) {
-      if (contribution.block === PRODUCT_PROMPT_BLOCK_LABELS.identity) continue;
-      contributions.push(contribution);
-    }
-    contributions.push({
-      block: PRODUCT_PROMPT_BLOCK_LABELS.identity,
-      lines: buildIdentityLines(input, attachments),
-    });
-  } else {
-    contributions.push(...(input.contributions ?? []));
-  }
-
-  return composeProductPrompt(
+  const blocks: VerticalPromptBlock[] = [
     {
-      ...input,
-      contributions,
+      label: VERTICAL_PROMPT_BLOCK_LABELS.objective,
+      lines: [INTENT_OBJECTIVE[input.briefing.commercial.intent]],
     },
     {
-      resolver: resolveVerticalPromptPolicies,
-      composerVersion: VERTICAL_COMPOSER_VERSION,
-      omitReferenceCount: hasAttachmentMetadata,
-      commercialIdentityLine:
-        hasAttachmentMetadata
-          ? identityImage !== null
-            ? "Garanta contraste para destacar o produto e manter legível o ativo da loja."
-            : null
-          : undefined,
+      label: VERTICAL_PROMPT_BLOCK_LABELS.references,
+      lines: referenceLines(attachments),
     },
-  );
+    {
+      label: VERTICAL_PROMPT_BLOCK_LABELS.data,
+      lines: dataLines(input, identity),
+    },
+    {
+      label: VERTICAL_PROMPT_BLOCK_LABELS.composition,
+      lines: compositionLines(input, identity, attachments),
+    },
+    {
+      label: VERTICAL_PROMPT_BLOCK_LABELS.reservedAreas,
+      lines: reservedAreaLines(attachments),
+    },
+  ];
+
+  const rendered = renderBlocks(blocks);
+
+  return {
+    text: rendered.text,
+    blocks: Object.freeze(rendered.record),
+    composerVersion: VERTICAL_COMPOSER_VERSION,
+    promptBaseVersion: PROMPT_BASE_VERSION,
+    policyVersions: resolveVerticalPromptPolicyVersions(input),
+  };
 }
 
 export { FORMATO_9_16_POLICY_VERSION, VERTICAL_COMPOSER_VERSION };

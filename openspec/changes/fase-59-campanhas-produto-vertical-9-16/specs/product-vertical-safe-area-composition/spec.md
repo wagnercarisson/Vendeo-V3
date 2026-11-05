@@ -82,15 +82,23 @@ The vertical path SHALL reuse the existing `CopyDirectorService`, its prompts, s
 - **THEN** the copy attempt SHALL start after the execution attempt is acquired and before the image response
 - **AND** the vertical path MUST NOT delay copy until after the art is delivered
 
-### Requirement: Vertical prompt derives from the approved 1:1 baseline
+### Requirement: Vertical prompt is an editorial restatement of the approved 1:1 policies
 
-The vertical prompt SHALL reuse the approved Product `1:1` base and commercial/visual policies, changing only what is necessary for the 9:16 format and safe areas. The prompt MUST state the vertical format, the canvas proportions, the safe-area policy and the requirement to fill the frame without guides or empty bands, while preserving creative freedom of composition. The change MUST be versioned and MUST NOT alter the `1:1` prompt contract.
+The vertical prompt SHALL be produced by a vertical-only serializer that restates the approved Product `1:1` commercial and visual rules in a short editorial structure: campaign objective and format, references in real attachment order, campaign data, composition rules and reserved areas. The restatement MUST preserve every functional requirement (intent, background direction, product fidelity, store-asset identity, optional description, mandatory text, language integrity and reserved-area percentages) while emitting each orientation only once and omitting empty fields or rules about absent elements. The serializer MUST NOT modify the `1:1` prompt, its composer, its policies or the shared policy registry, and the safe-area percentages MUST come from the frozen `safe-area-9-16-v1` policy.
 
-#### Scenario: Only format and safe-area guidance change
+#### Scenario: Only the vertical composition changes
 
 - **WHEN** the vertical and `1:1` prompt compositions are compared for the same briefing
-- **THEN** identity, product fidelity, commercial matrix, intent and mandatory-text rules SHALL be equivalent
-- **AND** the vertical prompt SHALL differ only in format, canvas and safe-area guidance
+- **THEN** the `1:1` prompt SHALL remain byte-identical to its frozen baseline
+- **AND** shared policies SHALL remain unmodified
+- **AND** the vertical prompt SHALL preserve the same intent, product fidelity, commercial and mandatory-text rules in condensed form
+
+#### Scenario: Editorial structure separates data from instructions
+
+- **WHEN** a vertical prompt is composed
+- **THEN** campaign values SHALL be delimited as data without embedded instructions
+- **AND** each composition rule SHALL appear once and only when its element exists
+- **AND** reference images SHALL be numbered according to the real adapter order
 
 #### Scenario: Prompt versions are recorded
 

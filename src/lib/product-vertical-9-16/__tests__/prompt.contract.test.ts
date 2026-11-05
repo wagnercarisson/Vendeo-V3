@@ -18,14 +18,16 @@ import type {
   ResolvedProductPromptPolicies,
 } from "@/lib/product-1-1/policies/types";
 import { formato11Policy } from "@/lib/product-1-1/policies/formato-1-1";
-import { SAFE_AREA_9_16_VERSION } from "../safe-area";
-import { composeVerticalProductPrompt } from "../prompt/composition";
+import { SAFE_AREA_9_16_VERSION, SAFE_AREA_PERCENT } from "../safe-area";
+import {
+  VERTICAL_PROMPT_BLOCK_LABELS,
+  composeVerticalProductPrompt,
+} from "../prompt/composition";
 import {
   FORMATO_9_16_POLICY_VERSION,
   VERTICAL_COMPOSER_VERSION,
-  resolveVerticalPromptPolicies,
+  resolveVerticalPromptPolicyVersions,
 } from "../prompt/registry";
-import { formato916Policy } from "../prompt/policy-formato-9-16";
 
 interface FrozenCase {
   readonly briefing: ProductPromptCompositionBriefing;
@@ -53,6 +55,18 @@ function defaultInput() {
   };
 }
 
+const PALETTE_CONTRIBUTION = {
+  block: PROMPT_BLOCK_LABELS.identity,
+  lines: [
+    'Regra legada\nPaleta da loja "Loja": cor principal #000000; cor de apoio #FFFFFF.',
+  ],
+} as const;
+
+const NO_PALETTE_CONTRIBUTION = {
+  block: PROMPT_BLOCK_LABELS.identity,
+  lines: ["Regra legada sem paleta."],
+} as const;
+
 describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () => {
   it("sem opções é deep-equal a opções vazias e ao baseline 1:1", () => {
     const withoutOptions = composeProductPrompt(defaultInput());
@@ -73,9 +87,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v3",
+      composerVersion: "f59-vertical-9-16-composer-v4",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v3");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v4");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -126,39 +140,20 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
   });
 });
 
-describe("F59 — política de formato 9:16, resolvedor e compositor vertical", () => {
-  it("define a política vertical versionada com uma única contribuição consolidada", () => {
-    expect(FORMATO_9_16_POLICY_VERSION).toBe("f59-9-16-v2");
-    expect(formato916Policy.id).toBe("policy.formato.9-16");
-    expect(formato916Policy.dimension).toBe("formato");
-    expect(formato916Policy.value).toBe("9:16");
-    const contributions = formato916Policy.contributions(defaultInput());
-    expect(contributions).toHaveLength(1);
-    expect(contributions[0].block).toBe(PROMPT_BLOCK_LABELS.intent);
-    const joined = contributions[0].lines.join(" ");
-    expect(joined).toContain("proporção 9:16");
-    expect(joined).toMatch(/14%/);
-    expect(joined).toMatch(/35%/);
-    expect(joined).toMatch(/6%/);
-    expect(joined).toMatch(/30%/);
-    expect(joined).not.toMatch(/px|1080 × 1920|1152|2048|homologa/i);
-  });
-
-  it("resolve as 9 versões esperadas sem mutar o registry 1:1", () => {
+describe("F59 — compositor editorial vertical 9:16", () => {
+  it("registra as 9 versões sem mutar o registry 1:1", () => {
     const registryBefore = PRODUCT_1_1_PROMPT_POLICY_REGISTRY;
     const formatoBefore = PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato;
-    const intencaoBefore = PRODUCT_1_1_PROMPT_POLICY_REGISTRY.intencao;
-    const resolved = resolveVerticalPromptPolicies({
+    const versions = resolveVerticalPromptPolicyVersions({
       briefing: fixture.briefing,
       references: baseline.references,
     });
 
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY).toBe(registryBefore);
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato).toBe(formatoBefore);
-    expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.intencao).toBe(intencaoBefore);
-    expect(resolved.versions).toEqual({
+    expect(versions).toEqual({
       intencao: "48.2.6-oferta-v2",
-      formato: "f59-9-16-v2",
+      formato: "f59-9-16-v3",
       tipoConteudo: "48.2.6-produto-v4",
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
@@ -167,80 +162,92 @@ describe("F59 — política de formato 9:16, resolvedor e compositor vertical", 
       identidade: "48.2.6-identity-context-v1",
       safeArea: SAFE_AREA_9_16_VERSION,
     });
-    expect(Object.keys(resolved.versions)).toHaveLength(9);
-    expect(resolved.versions.formato).not.toBe("48.2.4-formato-1-1-v1");
-    expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato?.["1:1"]).toBe(
-      formato11Policy,
-    );
+    expect(Object.keys(versions)).toHaveLength(9);
+    expect(versions.formato).toBe(FORMATO_9_16_POLICY_VERSION);
+    expect(versions.formato).not.toBe(formato11Policy.version);
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato?.["9:16"]).toBeUndefined();
   });
 
-  it("compõe o prompt vertical com versão própria e base 1:1 reaproveitada", () => {
+  it("compõe a estrutura editorial na ordem e com versão própria", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
-    const standard = composeProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v3");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v4");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
-    expect(composition.promptBaseVersion).toBe(standard.promptBaseVersion);
-    expect(composition.text).toContain("9:16");
-    expect(composition.text).toMatch(/14%/);
-    expect(composition.text).toMatch(/35%/);
-    expect(composition.text).toMatch(/6%/);
-    expect(composition.text).toMatch(/30%/);
-    expect(composition.text).toMatch(/sem bordas ou faixas vazias/);
-    expect(composition.text).toMatch(/guias ou marcas de corte/);
-    expect(composition.text).not.toMatch(/px|1080 × 1920|1152|2048|homologa/i);
-  });
-
-  it("mantém 7 blocos na ordem, sem pixels nem repetição de área reservada", () => {
-    const composition = composeVerticalProductPrompt(defaultInput());
-    const present = PROMPT_BLOCK_ORDER.filter(
-      (label) => composition.blocks[label] !== undefined,
+    expect(composition.promptBaseVersion).toBe("48.2.6-produto-1-1-v1");
+    expect(composition.text.startsWith("Crie uma campanha de oferta")).toBe(
+      true,
     );
-    expect(Object.keys(composition.blocks)).toEqual(present);
-    expect(Object.keys(composition.blocks).length).toBeLessThanOrEqual(7);
 
-    expect(composition.text).not.toMatch(/px|1080 × 1920|1152|2048|homologa/i);
-    for (const token of ["14%", "35%", "6%", "30%"]) {
-      expect(composition.text.match(new RegExp(token, "g"))).toHaveLength(1);
+    const labels = Object.keys(VERTICAL_PROMPT_BLOCK_LABELS);
+    expect(labels).toEqual([
+      "objective",
+      "references",
+      "data",
+      "composition",
+      "reservedAreas",
+    ]);
+    const order = [
+      "[REFERÊNCIAS]",
+      "[DADOS DA CAMPANHA]",
+      "[COMPOSIÇÃO]",
+      "[ÁREAS RESERVADAS]",
+    ];
+    let cursor = -1;
+    for (const header of order) {
+      const next = composition.text.indexOf(header);
+      expect(next).toBeGreaterThan(cursor);
+      cursor = next;
     }
-    expect(composition.text).not.toMatch(/Formato: vertical 9:16/);
+
+    expect(Object.keys(composition.blocks)).toEqual([
+      "OBJETIVO",
+      "REFERÊNCIAS",
+      "DADOS DA CAMPANHA",
+      "COMPOSIÇÃO",
+      "ÁREAS RESERVADAS",
+    ]);
+    expect(composition.text).not.toContain("[IDENTIDADE E DIREÇÃO VISUAL]");
+    expect(composition.text).not.toContain("[PRODUTO E IMAGENS DE REFERÊNCIA]");
+    expect(composition.text).not.toContain("[INSTRUÇÕES DO PROMPT-BASE]");
   });
 
-  it("identifica anexos na ordem real: produto + ativo", () => {
+  it("emite as áreas reservadas uma única vez, só em percentuais", () => {
+    const composition = composeVerticalProductPrompt(defaultInput());
+    expect(composition.text.match(/14%/g)).toHaveLength(1);
+    expect(composition.text.match(/35%/g)).toHaveLength(1);
+    expect(composition.text.match(/6%/g)).toHaveLength(1);
+    expect(composition.text.match(/30%/g)).toHaveLength(1);
+    expect(composition.text.match(/40%/g)).toHaveLength(1);
+    expect(composition.text).toContain(
+      `${SAFE_AREA_PERCENT.top}% do topo, ${SAFE_AREA_PERCENT.bottom}% da base, ${SAFE_AREA_PERCENT.sides}% de cada lateral`,
+    );
+    expect(composition.text).not.toMatch(
+      /px|1080 × 1920|1152|2048|0,9375|homologa/i,
+    );
+  });
+
+  it("identifica anexos na ordem real e orienta o ativo uma única vez", () => {
     const composition = composeVerticalProductPrompt({
       ...defaultInput(),
       attachments: [{ kind: "product" }, { kind: "identity" }],
-      contributions: [
-        {
-          block: PROMPT_BLOCK_LABELS.identity,
-          lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
-        },
-      ],
+      contributions: [PALETTE_CONTRIBUTION],
     });
-    expect(composition.text).toContain("- Imagem 1: produto anunciado.");
-    expect(composition.text).toContain("- Imagem 2: ativo da loja.");
+
     expect(composition.text).toContain(
-      "Use o ativo da loja da imagem 2 como referência de identidade.",
+      "Imagem 1: produto anunciado. Preserve sua aparência e use-o como protagonista.",
     );
     expect(composition.text).toContain(
-      "Preserve o nome, o lettering e os elementos gráficos característicos.",
+      "Imagem 2: ativo da loja. Preserve sua identidade, adaptando sua aplicação à composição e ao contraste, sem descaracterizá-lo.",
     );
-    expect(composition.text).toContain(
-      "Quando indispensável para legibilidade e contraste, ajuste as cores e a disposição dos componentes",
-    );
-    expect(composition.text).toContain("use a paleta fornecida");
-    expect(composition.text).toContain(
-      "Antes de alterar as cores do ativo, priorize o posicionamento e a adequação do fundo",
-    );
+    expect(
+      composition.text.match(/Preserve sua identidade, adaptando sua aplicação/g),
+    ).toHaveLength(1);
     expect(composition.text).not.toContain("Imagens de referência:");
-    expect(composition.text).toContain("manter legível o ativo da loja");
     expect(composition.text).not.toContain("logo ou a assinatura");
     expect(composition.text).not.toContain("Não adicionar logotipo");
-    expect(composition.text).toContain('Paleta da loja "Loja"');
   });
 
-  it("calcula a posição do ativo com múltiplas referências de produto", () => {
+  it("calcula a posição do ativo com múltiplas referências", () => {
     const composition = composeVerticalProductPrompt({
       ...defaultInput(),
       attachments: [
@@ -248,138 +255,178 @@ describe("F59 — política de formato 9:16, resolvedor e compositor vertical", 
         { kind: "reference" },
         { kind: "identity" },
       ],
-      contributions: [
-        {
-          block: PROMPT_BLOCK_LABELS.identity,
-          lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
-        },
-      ],
+      contributions: [PALETTE_CONTRIBUTION],
     });
-    expect(composition.text).toContain("- Imagem 1: produto anunciado.");
+
     expect(composition.text).toContain(
-      "- Imagem 2: referência adicional do produto.",
+      "Imagem 2: referência adicional do produto. Use como apoio visual.",
     );
-    expect(composition.text).toContain("- Imagem 3: ativo da loja.");
     expect(composition.text).toContain(
-      "Use o ativo da loja da imagem 3 como referência de identidade.",
+      "Imagem 3: ativo da loja. Preserve sua identidade",
     );
+    expect(composition.text).not.toContain("Imagem 3: produto anunciado");
   });
 
-  it("sem ativo não anuncia anexo inexistente nem pede para reproduzi-lo", () => {
+  it("sem ativo não anuncia anexo nem inventa identidade", () => {
     const composition = composeVerticalProductPrompt({
       ...defaultInput(),
       attachments: [{ kind: "product" }, { kind: "reference" }],
-      contributions: [
-        {
-          block: PROMPT_BLOCK_LABELS.identity,
-          lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
-        },
-      ],
+      contributions: [PALETTE_CONTRIBUTION],
     });
-    expect(composition.text).toContain("- Imagem 1: produto anunciado.");
+
+    expect(composition.text).not.toContain("ativo da loja. Preserve sua identidade");
+    expect(composition.text).toContain("Não invente identidade visual.");
     expect(composition.text).toContain(
-      "- Imagem 2: referência adicional do produto.",
+      "Deixe sem textos ou partes essenciais do produto:",
     );
-    expect(composition.text).not.toContain("ativo da loja da imagem");
-    expect(composition.text).not.toContain(
-      "Use o ativo da loja da imagem",
-    );
-    expect(composition.text).toContain(
-      "Não há ativo da loja anexado; não invente identidade visual.",
-    );
-    expect(composition.text).not.toContain("logo ou a assinatura");
+    expect(composition.text).not.toContain("textos, ativo da loja");
   });
 
-  it("sem paleta não afirma que ela existe", () => {
+  it("com paleta informa loja e paleta, sem inventar quando ausente", () => {
+    const withPalette = composeVerticalProductPrompt({
+      ...defaultInput(),
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+      contributions: [PALETTE_CONTRIBUTION],
+    });
+    expect(withPalette.text).toContain('Loja: "Loja"');
+    expect(withPalette.text).toContain(
+      "Paleta: principal #000000; apoio #FFFFFF.",
+    );
+    expect(withPalette.text).toContain("na paleta da loja");
+
+    const withoutPalette = composeVerticalProductPrompt({
+      ...defaultInput(),
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+      contributions: [NO_PALETTE_CONTRIBUTION],
+    });
+    expect(withoutPalette.text).not.toContain("Paleta:");
+    expect(withoutPalette.text).not.toContain("paleta da loja");
+    expect(withoutPalette.text).not.toContain("Loja:");
+  });
+
+  it.each([
+    ["offer", "Crie uma campanha de oferta", "Destaque o produto e o preço de venda."],
+    ["spotlight", "Crie uma campanha de destaque", "Priorize a apresentação do produto"],
+    ["exclusive", "Crie uma campanha exclusiva", "Apresente o produto sem preço"],
+  ] as const)("cobre a intenção %s", (intent, objective, rule) => {
+    const base = defaultInput();
+    const composition = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        commercial: { ...base.briefing.commercial, intent },
+      },
+    });
+    expect(composition.text.startsWith(objective)).toBe(true);
+    expect(composition.text).toContain(rule);
+  });
+
+  it.each([
+    ["studio", "Use fundo de estúdio liso ou gradiente suave"],
+    ["ambient", "Crie um cenário coerente com o produto"],
+    ["original", "Mantenha o cenário da imagem enviada como base"],
+  ] as const)("cobre a direção de fundo %s", (direction, rule) => {
+    const base = defaultInput();
+    const composition = composeVerticalProductPrompt({
+      ...base,
+      briefing: { ...base.briefing, backgroundDirection: direction },
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+      contributions: [PALETTE_CONTRIBUTION],
+    });
+    expect(composition.text).toContain(rule);
+  });
+
+  it("não menciona preço original quando ausente e omite preço em exclusivo", () => {
+    const base = defaultInput();
+    const withoutOriginal = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        commercial: {
+          ...base.briefing.commercial,
+          originalPriceText: null,
+        },
+      },
+    });
+    expect(withoutOriginal.text).not.toContain("Preço original:");
+
+    const exclusive = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        commercial: {
+          ...base.briefing.commercial,
+          intent: "exclusive",
+        },
+      },
+    });
+    expect(exclusive.text).not.toContain("Preço:");
+    expect(exclusive.text).not.toContain("Preço original:");
+  });
+
+  it("omite campos vazios e regras sobre descrição ausente", () => {
+    const base = defaultInput();
+    const composition = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        product: { ...base.briefing.product, description: null },
+        commercial: {
+          ...base.briefing.commercial,
+          badge: null,
+          validity: null,
+        },
+        constraints: { mandatoryArtworkText: null },
+      },
+    });
+    expect(composition.text).not.toContain("Descrição:");
+    expect(composition.text).not.toContain("A descrição é opcional");
+    expect(composition.text).not.toContain("Selo:");
+    expect(composition.text).not.toContain("Validade:");
+    expect(composition.text).not.toContain("Aviso obrigatório:");
+  });
+
+  it("delimita descrição multilinha e aspas de forma inequívoca", () => {
+    const base = defaultInput();
+    const composition = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        product: {
+          name: 'Bolo "Naked" Fruit',
+          description: 'Massa de pão de ló\nRecheio "especial"\nCobertura',
+        },
+      },
+    });
+    expect(composition.text).toContain(
+      'Produto: "Bolo \\"Naked\\" Fruit"',
+    );
+    expect(composition.text).toContain(
+      'Descrição: "Massa de pão de ló\\nRecheio \\"especial\\"\\nCobertura"',
+    );
+    expect(composition.text.split("\n")).not.toContain("Cobertura");
+  });
+
+  it("não repete orientações essenciais", () => {
     const composition = composeVerticalProductPrompt({
       ...defaultInput(),
       attachments: [{ kind: "product" }, { kind: "identity" }],
-      contributions: [
-        {
-          block: PROMPT_BLOCK_LABELS.identity,
-          lines: ["Regra legada sem paleta."],
-        },
-      ],
+      contributions: [PALETTE_CONTRIBUTION],
     });
-    expect(composition.text).toContain("use uma aplicação monocromática adequada.");
-    expect(composition.text).not.toContain("paleta fornecida");
-    expect(composition.text).not.toContain("Paleta da loja");
-  });
-
-  it("Original prioriza posição/escala e não altera produto ou cenário", () => {
-    const input = defaultInput();
-    const composition = composeVerticalProductPrompt({
-      ...input,
-      briefing: { ...input.briefing, backgroundDirection: "original" },
-      attachments: [{ kind: "product" }, { kind: "identity" }],
-      contributions: [
-        {
-          block: PROMPT_BLOCK_LABELS.identity,
-          lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
-        },
-      ],
-    });
-    expect(composition.text).toContain(
-      "Não altere o produto nem o cenário para resolver o contraste; priorize posição, escala e adaptação cromática do ativo.",
-    );
-    expect(composition.text).not.toContain(
+    for (const rule of [
+      "Não invente informações comerciais.",
+      "Preserve o conteúdo dos textos e apresente cada um uma única vez",
       "Antes de alterar as cores do ativo",
-    );
-  });
-
-  it.each(["studio", "ambient"] as const)(
-    "%s prioriza posicionamento/fundo antes de alterar cores",
-    (backgroundDirection) => {
-      const input = defaultInput();
-      const composition = composeVerticalProductPrompt({
-        ...input,
-        briefing: { ...input.briefing, backgroundDirection },
-        attachments: [{ kind: "product" }, { kind: "identity" }],
-        contributions: [
-          {
-            block: PROMPT_BLOCK_LABELS.identity,
-            lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
-          },
-        ],
-      });
-      expect(composition.text).toContain(
-        "Antes de alterar as cores do ativo, priorize o posicionamento e a adequação do fundo",
-      );
-      expect(composition.text).not.toContain(
-        "Não altere o produto nem o cenário",
-      );
-    },
-  );
-
-  it("orientação do ativo aparece uma vez, sem proibição absoluta nem duplicação", () => {
-    const composition = composeVerticalProductPrompt({
-      ...defaultInput(),
-      attachments: [{ kind: "product" }, { kind: "identity" }],
-      contributions: [
-        {
-          block: PROMPT_BLOCK_LABELS.identity,
-          lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
-        },
-      ],
-    });
-    expect(
-      composition.text.match(/Use o ativo da loja da imagem 2/g),
-    ).toHaveLength(1);
-    expect(composition.text).not.toContain("Não redesenhe");
-    expect(composition.text).not.toContain("não reorganize");
-    expect(composition.text).not.toContain("logo ou a assinatura");
-    expect(composition.text).not.toContain("Não adicionar logotipo");
-  });
-
-  it("a versão custom não altera os blocos 1:1 de identidade/produto/comercial", () => {
-    const vertical = composeVerticalProductPrompt(defaultInput());
-    const standard = composeProductPrompt(defaultInput());
-    for (const label of [
-      PROMPT_BLOCK_LABELS.identity,
-      PROMPT_BLOCK_LABELS.product,
-      PROMPT_BLOCK_LABELS.commercial,
+      "O fundo deve preencher também essas regiões.",
     ]) {
-      expect(vertical.blocks[label]).toBe(standard.blocks[label]);
+      expect(composition.text.split(rule)).toHaveLength(2);
     }
+  });
+
+  it("a versão 1:1 permanece byte-idêntica ao baseline", () => {
+    const standard = composeProductPrompt(defaultInput());
+    expect(standard.text).toBe(fixture.expected.text);
+    expect(standard.blocks).toEqual(fixture.expected.blocks);
+    expect(standard.composerVersion).toBe(COMPOSER_VERSION);
   });
 });
