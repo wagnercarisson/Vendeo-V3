@@ -731,7 +731,7 @@ Plans:
 
 ### Phase 59: F59 - Campanhas de Produto vertical 9:16
 
-**Status:** **WAVES 1-5 IMPLEMENTADAS; WAVE 6 NÃO AUTORIZADA (2026-11-04).** `59-01` a `59-05` concluídos; `59-06`/`59-07` implementados localmente: recuperação/admin e criação despacham pelo formato persistido com fail-closed, snapshot vertical congelado, 409 só com campanha divergente, flag `product_9_16_enabled` pré-reserva e seletor UI. **823 testes focados passando**, typecheck/lint 0, runtime 1:1 sem import vertical. **Sem chamada paga nova, migration, flag aplicada, push, deploy ou produção.** Wave 6 e homologação exigem autorização.
+**Status:** **WAVES 1-6 IMPLEMENTADAS; WAVE 7 NÃO AUTORIZADA (2026-11-04).** `59-01` a `59-05` concluídos; `59-06`/`59-07` entregaram recuperação/criação por formato persistido; `59-08` fechou restore, download, detalhe 9:16 e miniatura sem troca silenciosa para 1:1. **721 testes focados na Wave 6**, typecheck/lint 0, `display.ts` sem import vertical. **Sem chamada paga nova, migration, flag aplicada, push, deploy ou produção.** Wave 7, homologação e build exigem autorização.
 
 **Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
 
@@ -739,7 +739,7 @@ Plans:
 
 **Depends on:** Phase 58 (dashboard integrado), F56.2b1b/F56.2b2b (fluxo novo Produto 1:1, artefato, crédito e recuperação), F57.4 (localização) e base OpenSpec aprovada da F59.
 
-**Plans:** 7/10 plans executed (59-01..59-07)
+**Plans:** 8/10 plans executed (59-01..59-08)
 
 **Source:** `openspec/changes/fase-59-campanhas-produto-vertical-9-16/` - proposal, design, tasks e delta specs. Esta é a fonte técnica aprovada; o GSD não reabre decisões de produto.
 
@@ -773,9 +773,9 @@ Plans:
 - [x] 59-06-PLAN.md - Recuperação vertical completa: image-recovery, recovery service, pending/admin, projeção e teste ponta a ponta
 - [x] 59-07-PLAN.md - Criação: schema `campaignFormat`, congelamento/hash, despacho 409, flag global + seed data-only, seletor UI/estado
 
-**Wave 6** *(blocked on Wave 5 completion)*
+**Wave 6** *(implemented; pending review)*
 
-- [ ] 59-08-PLAN.md — Restauração do formulário e entrega por formato: download, detalhe, listagem e miniaturas
+- [x] 59-08-PLAN.md — Restauração do formulário e entrega por formato: download, detalhe, listagem e miniaturas
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
