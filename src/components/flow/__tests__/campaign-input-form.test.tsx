@@ -124,6 +124,24 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
     expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
   });
 
+  it("F59/59-08: formato indisponível usa banner próprio, sem afirmar que o rascunho é vertical", () => {
+    render(
+      <CampaignInputForm
+        storeId="store-1"
+        balance={5}
+        eligible
+        campaignFormatPaused
+        campaignFormatUnavailable
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Formato indisponível");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Não foi possível confirmar o formato desta campanha. Nada foi cobrado.",
+    );
+    expect(screen.queryByText("Novo envio vertical pausado")).not.toBeInTheDocument();
+  });
+
   it("F59/D-03: pausa via prop mantém vertical selecionado, radios desabilitados e subtítulo exato", () => {
     render(
       <CampaignInputForm

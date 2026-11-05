@@ -67,10 +67,11 @@ interface CampaignInputFormProps {
   restoredForm?: CampaignFormRestore | null;
   verticalEnabled?: boolean;
   campaignFormatPaused?: boolean;
+  campaignFormatUnavailable?: boolean;
   onReviewModeChange?: (active: boolean) => void;
 }
 
-export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, eligible = false, restoredForm = null, verticalEnabled = false, campaignFormatPaused = false, onReviewModeChange }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, eligible = false, restoredForm = null, verticalEnabled = false, campaignFormatPaused = false, campaignFormatUnavailable = false, onReviewModeChange }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -327,6 +328,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         backgroundDirectionRequired={backgroundDirectionRequired}
         verticalEnabled={verticalEnabled}
         campaignFormatPaused={campaignFormatPaused}
+        campaignFormatUnavailable={campaignFormatUnavailable}
       />
     </div>
   );
@@ -354,6 +356,7 @@ interface FormContentProps {
   backgroundDirectionRequired?: boolean;
   verticalEnabled?: boolean;
   campaignFormatPaused?: boolean;
+  campaignFormatUnavailable?: boolean;
 }
 
 function IntentSelector({
@@ -429,6 +432,7 @@ function FormContent({
   backgroundDirectionRequired = false,
   verticalEnabled = false,
   campaignFormatPaused = false,
+  campaignFormatUnavailable = false,
 }: FormContentProps) {
   const { costs, status: costStatus } = useOperationCosts();
 
@@ -809,11 +813,15 @@ function FormContent({
               role="alert"
               className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
             >
-              <p className="font-semibold">Novo envio vertical pausado</p>
+              <p className="font-semibold">
+                {campaignFormatUnavailable
+                  ? "Formato indisponível"
+                  : "Novo envio vertical pausado"}
+              </p>
               <p className="mt-1">
-                Este rascunho foi criado no formato Vertical 9:16. O envio de novas
-                campanhas verticais está temporariamente indisponível. Sua escolha de
-                formato foi preservada.
+                {campaignFormatUnavailable
+                  ? "Não foi possível confirmar o formato desta campanha. Nada foi cobrado."
+                  : "Este rascunho foi criado no formato Vertical 9:16. O envio de novas campanhas verticais está temporariamente indisponível. Sua escolha de formato foi preservada."}
               </p>
             </div>
           )}

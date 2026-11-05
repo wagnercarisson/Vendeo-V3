@@ -922,10 +922,19 @@ export function useCampaignForm(
             restoredForm.backgroundDirection,
           )
         : undefined;
+      // F59/D-03 — o rascunho local pode ser ANTERIOR ao campo de formato. Se ele
+      // não trouxer um formato válido, o formato PERSISTIDO do restore é o
+      // fallback; NUNCA o default 1:1 do formulário.
+      const savedFormat =
+        saved.campaignFormat === "1:1" || saved.campaignFormat === "9:16"
+          ? saved.campaignFormat
+          : undefined;
+      const resolvedFormat = savedFormat ?? restoredForm?.campaignFormat;
       setFields((prev) => ({
         ...prev,
         ...restored,
         ...(restoredForm ? { backgroundDirection: resolvedDirection } : {}),
+        ...(resolvedFormat ? { campaignFormat: resolvedFormat } : {}),
       }));
       // Recorte 3 (Plano 10): a intenção HIDRATADA é uma SELEÇÃO EXPLÍCITA — evita
       // que a inferência por preço a sobrescreva no primeiro ciclo.

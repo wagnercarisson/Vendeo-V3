@@ -123,6 +123,7 @@ describe("F59/59-08 — página nova pausa o rascunho vertical", () => {
     expect(element.props.children.props).toMatchObject({
       verticalEnabled: false,
       campaignFormatPaused: true,
+      campaignFormatUnavailable: false,
       restoredForm: { campaignFormat: "9:16" },
     });
   });
@@ -143,6 +144,9 @@ describe("F59/59-08 — página nova pausa o rascunho vertical", () => {
       formatUnavailableReason: "incoherent_pair",
     });
     const element = await renderPage();
-    expect(element.props.children.props).toMatchObject({ campaignFormatPaused: true });
+    expect(element.props.children.props).toMatchObject({
+      campaignFormatPaused: true,
+      campaignFormatUnavailable: true,
+    });
   });
 });

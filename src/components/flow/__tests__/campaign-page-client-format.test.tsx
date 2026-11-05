@@ -41,6 +41,7 @@ describe("CampaignPageClient — cadeia de props do formato (F59)", () => {
     render(<CampaignPageClient store={STORE} balance={10} />);
     expect(lastProps().verticalEnabled).toBe(false);
     expect(lastProps().campaignFormatPaused).toBe(false);
+    expect(lastProps().campaignFormatUnavailable).toBe(false);
   });
 
   it("repassa `verticalEnabled` e `campaignFormatPaused` ao formulário", () => {
@@ -57,6 +58,22 @@ describe("CampaignPageClient — cadeia de props do formato (F59)", () => {
       eligible: true,
       verticalEnabled: true,
       campaignFormatPaused: true,
+    });
+  });
+
+  it("repassa `campaignFormatUnavailable` separadamente da pausa vertical", () => {
+    render(
+      <CampaignPageClient
+        store={STORE}
+        balance={10}
+        eligible
+        campaignFormatPaused
+        campaignFormatUnavailable
+      />,
+    );
+    expect(lastProps()).toMatchObject({
+      campaignFormatPaused: true,
+      campaignFormatUnavailable: true,
     });
   });
 });
