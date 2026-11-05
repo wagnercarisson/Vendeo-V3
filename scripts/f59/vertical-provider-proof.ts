@@ -41,7 +41,7 @@ import {
 } from "../../src/lib/product-vertical-9-16/cost/vertical-estimate";
 import { evaluateProofCall } from "../../src/lib/product-vertical-9-16/cost/proof-call-outcome";
 import { summarizeProofCalibration } from "../../src/lib/product-vertical-9-16/cost/proof-calibration";
-import { createProofSdkLoader } from "../../src/lib/product-vertical-9-16/cost/proof-openai-loader";
+import { createProofSdkLoader } from "../../src/lib/ai/adapters/proof-openai-loader";
 import { PROVIDER_SIZE } from "../../src/lib/product-vertical-9-16/dimensions";
 
 const PROOF_CAP_USD = 3;

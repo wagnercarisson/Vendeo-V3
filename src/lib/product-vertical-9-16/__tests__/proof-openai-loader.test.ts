@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { createProofSdkLoader } from "../cost/proof-openai-loader";
+import { createProofSdkLoader } from "@/lib/ai/adapters/proof-openai-loader";
 import type { UpstreamImagesSdk } from "@/lib/ai/adapters/upstream-images";
 
 interface CapturedOptions {
