@@ -2,9 +2,9 @@
 
 ## Status
 
-**PREPARADO, NÃO EXECUTADO.** Nenhuma flag ativada, nenhuma chamada paga,
-nenhum push/deploy. A ativação da flag e a geração dependem de autorização
-explícita posterior.
+**PREPARADO PARA A GERAÇÃO MANUAL.** A flag `product_9_16_enabled` foi
+temporariamente ligada para este teste. Nenhuma chamada paga foi executada,
+nenhum push/deploy. Desativar a flag imediatamente após a geração.
 
 ## Objetivo
 
@@ -43,8 +43,8 @@ falha sem antes conferir os dados congelados.
 
 ## Pré-condições
 
-1. Autorização explícita para ativar `product_9_16_enabled` e executar UMA
-   geração paga.
+1. Confirmar que `product_9_16_enabled` está ON (já está ligada para este
+   teste) e que a geração será única.
 2. Confirmar saldo de crédito e ausência de operação em andamento.
 3. Confirmar que o ativo da loja selecionado é o arquivo aprovado (hash do
    conteúdo igual ao `frozenContentReferences`).
@@ -52,9 +52,13 @@ falha sem antes conferir os dados congelados.
    produto primeiro, referências adicionais e ativo por último.
 5. Nenhuma alteração em banco/migrations nesta etapa.
 
+> **Seletor de formato:** ele permanece visível para lojas elegíveis. Com a flag
+> ON, os dois rádios ficam habilitados. Após o teste, desligar a flag
+> imediatamente.
+
 ## Execução (somente após autorização)
 
-1. Ativar a flag `product_9_16_enabled` pelo painel administrativo.
+1. Confirmar a flag `product_9_16_enabled` ON no painel administrativo.
 2. Executar UMA única geração do caso acima.
 3. **Não repetir** a submissão em caso de falha; registrar e parar.
 4. Desativar a flag imediatamente após o término (sucesso ou falha).
