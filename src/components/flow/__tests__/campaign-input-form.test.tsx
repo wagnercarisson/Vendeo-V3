@@ -117,4 +117,40 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
     render(<CampaignInputForm storeId="store-1" balance={5} />);
     expect(screen.getByText("Informe uma data válida (dd/mm/aaaa)")).toBeInTheDocument();
   });
+
+  it("F59/D-03: flag OFF sem rascunho vertical não monta o seletor", () => {
+    render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
+    expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
+  });
+
+  it("F59/D-03: pausa via prop mantém vertical selecionado, radios desabilitados e subtítulo exato", () => {
+    render(
+      <CampaignInputForm
+        storeId="store-1"
+        balance={5}
+        eligible
+        campaignFormatPaused
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Novo envio vertical pausado");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Este rascunho foi criado no formato Vertical 9:16. O envio de novas campanhas verticais está temporariamente indisponível. Sua escolha de formato foi preservada.",
+    );
+    const vertical = screen.getByRole("radio", {
+      name: "Vertical 9:16 - Stories e Reels (imagem estática)",
+    });
+    const square = screen.getByRole("radio", { name: "Quadrado 1:1 - feed" });
+    expect(vertical).toBeChecked();
+    expect(vertical).toBeDisabled();
+    expect(square).toBeDisabled();
+
+    const submit = screen.getByRole("button", { name: /revisar|gerar/i });
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute("aria-disabled", "true");
+    expect(submit).toHaveAttribute(
+      "title",
+      "O envio de novas campanhas verticais está indisponível no momento.",
+    );
+  });
 });

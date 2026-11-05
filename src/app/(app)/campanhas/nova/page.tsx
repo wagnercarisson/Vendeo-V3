@@ -11,6 +11,7 @@ import { getStoreReadiness } from "@/lib/store-readiness";
 import { resolveStoreIdentity, validateIdentityReference } from "@/lib/store-identity-service";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
+import { FeatureFlagService } from "@/lib/feature-flags/feature-flag-service";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { readProductOneToOneBackgroundDirection } from "@/lib/product-1-1/snapshot/persist-snapshot";
 import { getCampaignForDisplay, mapRestoredForm } from "@/lib/campaign/display";
@@ -138,9 +139,16 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
     }
   }
 
+  let verticalEnabled = false;
+  try {
+    verticalEnabled = await new FeatureFlagService().isProduct9x16Enabled();
+  } catch {
+    verticalEnabled = false;
+  }
+
   return (
     <main>
-      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} restoredForm={restoredForm} />
+      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} restoredForm={restoredForm} verticalEnabled={verticalEnabled} />
     </main>
   );
 }

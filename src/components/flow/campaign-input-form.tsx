@@ -8,6 +8,9 @@ import { GenerationProgress } from "./generation-progress";
 import { UnknownResultPanel } from "./unknown-result-panel";
 import { CampaignBriefReview } from "./campaign-brief-review";
 import { BackgroundDirectionSelector } from "./background-direction-selector";
+import {
+  CampaignFormatSelector,
+} from "./campaign-format-selector";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
@@ -62,10 +65,12 @@ interface CampaignInputFormProps {
    * PROP (elo da cadeia) até `useCampaignForm`. SEM import `product-1-1` (G-NA).
    */
   restoredForm?: CampaignFormRestore | null;
+  verticalEnabled?: boolean;
+  campaignFormatPaused?: boolean;
   onReviewModeChange?: (active: boolean) => void;
 }
 
-export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, eligible = false, restoredForm = null, onReviewModeChange }: CampaignInputFormProps) {
+export function CampaignInputForm({ storeId, balance, supportEmail, store, identity, eligible = false, restoredForm = null, verticalEnabled = false, campaignFormatPaused = false, onReviewModeChange }: CampaignInputFormProps) {
   const {
     fields,
     fieldErrors,
@@ -100,7 +105,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     restorationNotice,
     backgroundDirectionNotice,
     backgroundDirectionRequired,
-  } = useCampaignForm(storeId, { eligible, restoredForm });
+  } = useCampaignForm(storeId, { eligible, restoredForm, campaignFormatPaused });
 
   // Recorte 2 (Plano 09): o resultado TERMINAL `refunded` é apresentado pelo
   // DETALHE (reutiliza o `RefundedPanel`) — NÃO há mais superfície paralela aqui.
@@ -318,6 +323,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         supportEmail={supportEmail}
         eligible={eligible}
         backgroundDirectionRequired={backgroundDirectionRequired}
+        verticalEnabled={verticalEnabled}
+        campaignFormatPaused={campaignFormatPaused}
       />
     </div>
   );
@@ -343,6 +350,8 @@ interface FormContentProps {
   eligible: boolean;
   /** F56.2b2b (P1): direção de fundo exige escolha explícita — bloqueia o avanço. */
   backgroundDirectionRequired?: boolean;
+  verticalEnabled?: boolean;
+  campaignFormatPaused?: boolean;
 }
 
 function IntentSelector({
@@ -416,6 +425,8 @@ function FormContent({
   supportEmail,
   eligible,
   backgroundDirectionRequired = false,
+  verticalEnabled = false,
+  campaignFormatPaused = false,
 }: FormContentProps) {
   const { costs, status: costStatus } = useOperationCosts();
 
@@ -485,7 +496,8 @@ function FormContent({
     costDisabled ||
     insufficientBalance ||
     balance === null ||
-    backgroundDirectionRequired;
+    backgroundDirectionRequired ||
+    campaignFormatPaused;
 
   return (
     <form
@@ -788,6 +800,29 @@ function FormContent({
         />
       )}
 
+      {eligible && (verticalEnabled || campaignFormatPaused) && (
+        <div className="space-y-3">
+          {campaignFormatPaused && (
+            <div
+              role="alert"
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
+            >
+              <p className="font-semibold">Novo envio vertical pausado</p>
+              <p className="mt-1">
+                Este rascunho foi criado no formato Vertical 9:16. O envio de novas
+                campanhas verticais está temporariamente indisponível. Sua escolha de
+                formato foi preservada.
+              </p>
+            </div>
+          )}
+          <CampaignFormatSelector
+            value={campaignFormatPaused ? "9:16" : (fields.campaignFormat ?? "1:1")}
+            onChange={(format) => setField("campaignFormat", format)}
+            disabled={isSubmitting || campaignFormatPaused}
+          />
+        </div>
+      )}
+
       {/* F56.2b1b (B1B-D1): a checkbox legada só existe fora do novo fluxo.
           Sob elegibilidade, `backgroundDirection` (Estúdio/Ambientado/Original)
           é o ÚNICO controle dessa escolha — a checkbox seria redundante e
@@ -880,8 +915,11 @@ function FormContent({
         <button
           type="submit"
           disabled={submitDisabled}
+          aria-disabled={campaignFormatPaused || undefined}
           title={
-            costUnavailable
+            campaignFormatPaused
+              ? "O envio de novas campanhas verticais está indisponível no momento."
+              : costUnavailable
               ? (costStatus === "loading"
                   ? "Verificando custo da geração..."
                   : "Serviço indisponível no momento. Tente novamente em alguns instantes.")

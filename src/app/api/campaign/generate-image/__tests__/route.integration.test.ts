@@ -323,7 +323,8 @@ function crossTenantCampaignsQuery(storeId: string) {
     select: vi.fn(() => ({
       eq: vi.fn(() => ({
         maybeSingle: vi.fn(async () => ({
-          data: { id: CAMPAIGN_ID, store_id: storeId, input_snapshot: null },
+          // F59: campanha histórica do novo fluxo sem as chaves de formato ⇒ 1:1.
+          data: { id: CAMPAIGN_ID, store_id: storeId, input_snapshot: {} },
           error: null,
         })),
       })),

@@ -30,9 +30,11 @@ interface CampaignPageClientProps {
    * Repassado ao `CampaignInputForm` (elo 2). SEM import `product-1-1` (G-NA).
    */
   restoredForm?: CampaignFormRestore | null;
+  verticalEnabled?: boolean;
+  campaignFormatPaused?: boolean;
 }
 
-export function CampaignPageClient({ store, balance, supportEmail, generationPaused, identity, eligible = false, restoredForm = null }: CampaignPageClientProps) {
+export function CampaignPageClient({ store, balance, supportEmail, generationPaused, identity, eligible = false, restoredForm = null, verticalEnabled = false, campaignFormatPaused = false }: CampaignPageClientProps) {
   const [isReviewActive, setIsReviewActive] = useState(false);
   // F56.2b2b (C4 / B2B-D9) — mount-clear SOMENTE das chaves LEGADAS GLOBAIS
   // (`campaign_draft`/`campaign_draft_image`/`campaign_preview`). Os rascunhos
@@ -79,7 +81,7 @@ export function CampaignPageClient({ store, balance, supportEmail, generationPau
         Informe os dados do produto e da oferta
       </p>
 
-      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} store={store as { name: string; segment: string; brand_color: string; id: string }} identity={identity} eligible={eligible} restoredForm={restoredForm} onReviewModeChange={setIsReviewActive} />
+      <CampaignInputForm storeId={store.id} balance={balance} supportEmail={supportEmail} store={store as { name: string; segment: string; brand_color: string; id: string }} identity={identity} eligible={eligible} restoredForm={restoredForm} verticalEnabled={verticalEnabled} campaignFormatPaused={campaignFormatPaused} onReviewModeChange={setIsReviewActive} />
     </div>
   );
 }

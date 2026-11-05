@@ -123,13 +123,19 @@ const { mockInputValidationValidate } = vi.hoisted(() => ({
 // F43 (D5): mock do serviço de leitura da flag force_brief_vision_check.
 // F37.1 (D1): mock de isCampaignApprovalEnabled — default false (flag off
 // preserva o comportamento atual; cenários flag on no plano 37-1-12).
-const { mockIsForceBriefVisionCheckEnabled, mockIsCampaignApprovalEnabled } = vi.hoisted(() => ({
+const {
+  mockIsForceBriefVisionCheckEnabled,
+  mockIsCampaignApprovalEnabled,
+  mockIsProduct9x16Enabled,
+} = vi.hoisted(() => ({
   mockIsForceBriefVisionCheckEnabled: vi.fn(async () => false),
   mockIsCampaignApprovalEnabled: vi.fn(async () => false),
+  mockIsProduct9x16Enabled: vi.fn(async () => false),
 }));
 vi.mock('@/lib/feature-flags/feature-flag-service', () => ({
   isForceBriefVisionCheckEnabled: mockIsForceBriefVisionCheckEnabled,
   isCampaignApprovalEnabled: mockIsCampaignApprovalEnabled,
+  isProduct9x16Enabled: mockIsProduct9x16Enabled,
   FORCE_BRIEF_VISION_CHECK_KEY: "force_brief_vision_check",
   FeatureFlagService: vi.fn(),
 }));
@@ -313,6 +319,18 @@ vi.mock('@/lib/product-1-1/orchestration/generation-orchestrator', () => ({
   readProductOneToOneOperation: mockReadProductOneToOneOperation,
 }));
 
+const { mockRunProductVertical9x16Generation } = vi.hoisted(() => ({
+  mockRunProductVertical9x16Generation: vi.fn(async (_input?: unknown, _deps?: unknown) =>
+    new Response('{"type":"result"}\n', {
+      status: 200,
+      headers: { "Content-Type": "application/x-ndjson" },
+    }),
+  ),
+}));
+vi.mock('@/lib/product-vertical-9-16/orchestration/entrypoint', () => ({
+  runProductVertical9x16Generation: mockRunProductVertical9x16Generation,
+}));
+
 const { mockResolveProductFlowAuthorization } = vi.hoisted(() => ({
   mockResolveProductFlowAuthorization: vi.fn(async () => ({ allowed: true })),
 }));
@@ -428,6 +446,7 @@ beforeEach(() => {
   mockHasFallback.mockResolvedValue(true);
   mockRpc.mockResolvedValue({ data: { ready: true, missing: [] }, error: null });
   mockIsForceBriefVisionCheckEnabled.mockResolvedValue(false);
+  mockIsProduct9x16Enabled.mockResolvedValue(false);
   // B1 — por padrão a identidade NÃO é convertida (text-only) nos testes legados.
   (resolveIdentityImageAsDataUrl as any).mockResolvedValue(null);
   mockGetCost.mockResolvedValue({
@@ -2114,12 +2133,23 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
   });
 
   it('C3: MESMA identidade já persistida para a MESMA loja ⇒ reusa (NÃO cria 2ª campanha)', async () => {
-    setupNewFlowMocks({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID } });
+    // F59: a campanha histórica precisa do `input_snapshot` REAL (sem chaves de
+    // formato ⇒ 1:1). Captura o snapshot de uma primeira submissão idêntica.
+    setupNewFlowMocks();
+    const { POST: FirstPost } = await import('../route');
+    await (await FirstPost(makeRequest(VALID_NEW_FLOW_BODY))).text();
+    const stored = (createCampaign as any).mock.calls[0][1]
+      .inputSnapshot as Record<string, unknown>;
+    (createCampaign as any).mockClear();
+    mockRunProductOneToOneGeneration.mockClear();
+
+    setupNewFlowMocks({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: stored } });
     const { POST } = await import('../route');
     const res = await POST(makeRequest(VALID_NEW_FLOW_BODY));
     expect(res.status).toBe(200);
     expect(createCampaign).not.toHaveBeenCalled();
     expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
+    expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
   });
 
   it('C3: MESMA identidade com loja DIVERGENTE ⇒ 409 operation_identity_conflict (sem 2ª campanha)', async () => {
@@ -2470,6 +2500,190 @@ describe('POST /api/campaign/generate-image — novo fluxo Produto 1:1 (b1b)', (
     expect(persistedWithImage.signature.url).toBe('https://signed.example/logo-a.png');
     const inputWithImage = mockRunProductOneToOneGeneration.mock.calls[0][0] as any;
     expect(inputWithImage.identityImageUrl).toBe('data:image/png;base64,AAA');
+  });
+});
+
+// ── F59 (59-07): formato do fluxo novo, congelamento, flag e despacho ────────
+describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', () => {
+  const NEW_FLOW_CAMPAIGN_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const NEW_FLOW_OPERATION_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+  const BASE_NEW_FLOW_BODY = {
+    storeId: STORE_ID,
+    productName: 'Produto Novo',
+    discountedPriceCents: 1990,
+    badgeText: 'Oferta',
+    campaignIntent: 'offer',
+    backgroundDirection: 'studio',
+    campaignId: NEW_FLOW_CAMPAIGN_ID,
+    operationId: NEW_FLOW_OPERATION_ID,
+    productImages: [
+      { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: 'data:image/jpeg;base64,primary' },
+    ],
+  };
+
+  function setup(options?: {
+    existingCampaign?: { id: string; store_id: string; input_snapshot?: Record<string, unknown> | null } | null;
+  }) {
+    mockStoreFrom.mockImplementation((table: string) => {
+      if (table === 'stores') {
+        return { select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: { id: STORE_ID, name: 'Loja Teste', segment: 'outros' }, error: null })) })) })) };
+      }
+      if (table === 'campaigns') {
+        return { select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: vi.fn(() => Promise.resolve({ data: options?.existingCampaign ?? null, error: null })) })) })) };
+      }
+      return {};
+    });
+    (resolveStoreIdentity as any).mockResolvedValue({ storeName: 'Loja Teste', storeSegment: 'outros', brandColor: '#000000' });
+    (validateIdentityReference as any).mockResolvedValue({ storeName: 'Loja Teste', storeSegment: 'outros', brandColor: '#000000' });
+    (buildCampaignBrief as any).mockResolvedValue({ store: { name: 'Loja Teste', segment: 'outros' } });
+    (requireLegalClearance as any).mockResolvedValue({ ok: true });
+    (requireOwnership as any).mockResolvedValue(undefined);
+    mockResolveProductFlowAuthorization.mockResolvedValue({ allowed: true });
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: {}, resetTime: null });
+    mockRecordGenerationAttempt.mockResolvedValue(undefined);
+    mockGetCost.mockResolvedValue({ operationKey: 'campaign_generation', costCredits: 1, enabled: true, source: 'table' });
+    mockGetBalance.mockResolvedValue(10);
+    mockInputValidationValidate.mockResolvedValue({ classification: 'ok' });
+    (createCampaign as any).mockResolvedValue({ id: NEW_FLOW_CAMPAIGN_ID, storagePath: `${STORE_ID}/${NEW_FLOW_CAMPAIGN_ID}.jpg` });
+  }
+
+  const persistedSnapshot = (callIndex = 0) =>
+    (createCampaign as any).mock.calls[callIndex][1].inputSnapshot as Record<string, unknown>;
+
+  it('primeira submissão 9:16 (sem campanha persistida): sem 409, chaves congeladas, motor vertical', async () => {
+    setup();
+    mockIsProduct9x16Enabled.mockResolvedValue(true);
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
+    expect(res.status).toBe(200);
+    await res.text();
+
+    expect(mockRunProductVertical9x16Generation).toHaveBeenCalledTimes(1);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+    expect(createCampaign).toHaveBeenCalledTimes(1);
+    expect(persistedSnapshot()).toMatchObject({
+      campaignFormat: '9:16',
+      formatContractVersion: 'f59-vertical-9-16-v1',
+    });
+  });
+
+  it('primeira submissão 1:1: snapshot byte-compatível (nenhuma chave nova) e motor 1:1', async () => {
+    setup();
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest(BASE_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+    await res.text();
+
+    expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
+    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
+    const snapshot = persistedSnapshot();
+    expect((snapshot as any).campaignFormat).toBeUndefined();
+    expect((snapshot as any).formatContractVersion).toBeUndefined();
+    expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
+  });
+
+  it('flag OFF + 9:16 nova geração ⇒ 503 antes de campanha/reserva/provider', async () => {
+    setup();
+    mockIsProduct9x16Enabled.mockResolvedValue(false);
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error.code).toBe('format_unavailable');
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
+  });
+
+  it('flag com erro de leitura ⇒ 503 (fail-closed), sem efeitos', async () => {
+    setup();
+    mockIsProduct9x16Enabled.mockRejectedValue(new Error('db down'));
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
+    expect(res.status).toBe(503);
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
+  });
+
+  it('campanha persistida 1:1 + pedido 9:16 ⇒ 409 antes de reserva/provider e sem nova campanha', async () => {
+    setup({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: {} } });
+    mockIsProduct9x16Enabled.mockResolvedValue(true);
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error.code).toBe('operation_identity_conflict');
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
+    expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
+  });
+
+  it('campanha persistida 9:16 + pedido 1:1 ⇒ 409 antes de reserva/provider', async () => {
+    setup({
+      existingCampaign: {
+        id: NEW_FLOW_CAMPAIGN_ID,
+        store_id: STORE_ID,
+        input_snapshot: { campaignFormat: '9:16', formatContractVersion: 'f59-vertical-9-16-v1' },
+      },
+    });
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest(BASE_NEW_FLOW_BODY));
+    expect(res.status).toBe(409);
+    expect(createCampaign).not.toHaveBeenCalled();
+    expect(mockReserveCredit).not.toHaveBeenCalled();
+    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
+  });
+
+  it('campanha persistida com formato malformado ⇒ 503 fail-closed', async () => {
+    setup({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: { campaignFormat: '16:9' } } });
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest(BASE_NEW_FLOW_BODY));
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error.code).toBe('format_unavailable');
+    expect(createCampaign).not.toHaveBeenCalled();
+  });
+
+  it('reenvio 9:16 com flag OFF NÃO é bloqueado e continua no motor vertical', async () => {
+    setup({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: { campaignFormat: '9:16', formatContractVersion: 'f59-vertical-9-16-v1' } } });
+    mockIsProduct9x16Enabled.mockResolvedValue(false);
+    mockReadProductOneToOneOperation.mockResolvedValue({ campaignId: NEW_FLOW_CAMPAIGN_ID } as never);
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
+    expect(res.status).toBe(200);
+    await res.text();
+
+    expect(mockRunProductVertical9x16Generation).toHaveBeenCalledTimes(1);
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+    expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
+    expect(createCampaign).not.toHaveBeenCalled();
+  });
+
+  it('reenvio 1:1 não consulta a flag vertical nem carrega o motor vertical', async () => {
+    setup({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: {} } });
+    mockReadProductOneToOneOperation.mockResolvedValue({ campaignId: NEW_FLOW_CAMPAIGN_ID } as never);
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest(BASE_NEW_FLOW_BODY));
+    expect(res.status).toBe(200);
+    await res.text();
+
+    expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
+    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
+    expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
+    expect(createCampaign).not.toHaveBeenCalled();
   });
 });
 

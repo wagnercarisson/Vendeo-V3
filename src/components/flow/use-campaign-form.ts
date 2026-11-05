@@ -159,6 +159,8 @@ export interface CampaignFormFields {
    * preservar rascunhos/consumidores legados; na ausência assume-se `studio`.
    */
   backgroundDirection?: ProductOneToOneBackgroundDirection;
+  /** F59/D-03 — formato do fluxo novo; default `1:1`. */
+  campaignFormat?: "1:1" | "9:16";
 }
 
 export type FieldErrors = Partial<
@@ -178,7 +180,8 @@ export type FieldErrors = Partial<
     | "validityStartDate"
     | "validityEndDate"
     | "validityCustomText"
-    | "backgroundDirection",
+    | "backgroundDirection"
+    | "campaignFormat",
     string
   >
 >;
@@ -279,6 +282,7 @@ const EMPTY_FIELDS: CampaignFormFields = {
   validityEndDate: "",
   validityCustomText: "",
   backgroundDirection: "studio",
+  campaignFormat: "1:1",
 };
 
 function validateProductName(value: string): string | null {
@@ -697,6 +701,9 @@ export function buildCampaignGenerationBody(
   // byte-compatível com o legado (mesmas chaves, mesma ordem).
   if (options?.eligible) {
     body.backgroundDirection = fields.backgroundDirection ?? "studio";
+    if (fields.campaignFormat === "9:16") {
+      body.campaignFormat = "9:16";
+    }
     if (options.identity) {
       body.campaignId = options.identity.campaignId;
       body.operationId = options.identity.operationId;
@@ -761,9 +768,15 @@ function resolveHydratedBackgroundDirection(
 
 export function useCampaignForm(
   storeId?: string,
-  options?: { eligible?: boolean; restoredForm?: CampaignFormRestore | null },
+  options?: {
+    eligible?: boolean;
+    restoredForm?: CampaignFormRestore | null;
+    /** F59/D-03 — rascunho vertical pausado: bloqueia retry/reenvio. */
+    campaignFormatPaused?: boolean;
+  },
 ): UseCampaignFormReturn {
   const eligible = options?.eligible === true;
+  const campaignFormatPaused = options?.campaignFormatPaused === true;
   // F56.2b2b (C4 / B2B-D9): snapshot server-side + escopo do rascunho pela
   // campanha-ORIGEM. `restoredForm` NUNCA carrega a operação estornada (sem
   // `operationId`): a nova submissão gera NOVOS ids.
@@ -791,6 +804,7 @@ export function useCampaignForm(
     validityEndDate: false,
     validityCustomText: false,
     backgroundDirection: false,
+    campaignFormat: false,
   });
   const [rawOriginalPrice, setRawOriginalPrice] = useState("");
   const [rawDiscountedPrice, setRawDiscountedPrice] = useState("");
@@ -1456,6 +1470,7 @@ export function useCampaignForm(
         validityEndDate: true,
         validityCustomText: true,
         backgroundDirection: true,
+        campaignFormat: true,
       });
       setIsSubmitting(false);
       return;
@@ -1690,6 +1705,7 @@ export function useCampaignForm(
         validityEndDate: true,
         validityCustomText: true,
         backgroundDirection: true,
+        campaignFormat: true,
       });
       return false;
     }
@@ -1774,6 +1790,7 @@ export function useCampaignForm(
   // (fields + preparedImages congelados; body imutável) e dispara o submit real
   // com inputValidationOverride.productImageCheck = "brief_review_confirmed".
   const confirmReview = useCallback(async (): Promise<void> => {
+    if (campaignFormatPaused) return;
     if (!storeId || !preparedImages) return;
     prePersistedIdentityRef.current = false;
     const frozenFields = { ...fields };
@@ -1810,13 +1827,15 @@ export function useCampaignForm(
     setPhases([]);
     setUnknownResult(null);
     await consumeStream(body, new AbortController());
-  }, [storeId, preparedImages, fields, eligible]);
+  }, [storeId, preparedImages, fields, eligible, campaignFormatPaused]);
 
-  // F43 (mini-fix): "Tentar novamente" pós-falha — reutiliza o ÚLTIMO body
+  // F43 (mini-fix): "Tentar novamente" pós-falha - reutiliza o ÚLTIMO body
   // confirmado (snapshot revisado + brief_review_confirmed) em vez do caminho
   // legado handleSubmit (que reativaria a IA de visão e contornaria o gate de
   // revisão). Sem snapshot confirmado, cai no fluxo padrão do formulário.
   const retrySubmit = useCallback(async (): Promise<void> => {
+    // F59/D-03 — pausa vertical NUNCA reenvia o body 1:1 anterior.
+    if (campaignFormatPaused) return;
     const body = confirmedBodyRef.current;
     if (!body) {
       await handleSubmit();
@@ -1828,7 +1847,7 @@ export function useCampaignForm(
     setPhases([]);
     setUnknownResult(null);
     await consumeStream(body, new AbortController());
-  }, [handleSubmit]);
+  }, [handleSubmit, campaignFormatPaused]);
 
   // F56.2b1b (Plano 06, C1/F8): limpa o estado de resultado desconhecido (ação
   // do consumidor — nunca inicia geração).

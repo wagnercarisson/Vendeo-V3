@@ -85,6 +85,9 @@ export const NewFlowGenerateImageRequestSchema = GenerateImageRequestSchema.exte
   backgroundDirection: z.enum(["studio", "ambient", "original"]),
   campaignId: z.string().uuid(),
   operationId: z.string().uuid(),
+  // F59/D-03 — opcional e exclusivo do fluxo NOVO. O `1:1` NÃO envia o campo;
+  // o `format: string` legado acima NÃO é reutilizado.
+  campaignFormat: z.enum(["1:1", "9:16"]).optional(),
 });
 
 export type NewFlowGenerateImageRequest = z.infer<

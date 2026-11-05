@@ -25,6 +25,8 @@ const FLAG_LABELS: Record<string, string> = {
     "Produto 1:1 — habilitar lojas de teste (preparação inativa)",
   product_1_1_all_stores_enabled:
     "Produto 1:1 — habilitar todas as lojas (preparação inativa)",
+  product_9_16_enabled:
+    "Produto 9:16 - habilitar novas gerações verticais (preparação inativa)",
 };
 
 interface FlagRow {
