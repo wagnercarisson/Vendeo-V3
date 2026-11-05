@@ -387,7 +387,9 @@ e uma geração no localhost para conferir a contabilização.
 
 ## Session Continuity
 
-- **Sessão 2026-11-04 — F59 Wave 4 / plano 59-05.** Seams aditivos na engine, projeção com path esperado, entrypoint vertical, guarda pré-reserva e crédito reutilizado. **231/231** testes focados, typecheck 0, sem import vertical no runtime 1:1. SUMMARY `59-05-SUMMARY.md`. **Parado para revisão; Wave 5 não autorizada.**
+- **Sessão 2026-11-04 - F59 Wave 5 / planos 59-06 e 59-07.** Recuperação e criação passam a despachar pelo formato PERSISTIDO no `campaigns.input_snapshot`, com probes/projeções verticais e path esperado; admin/lista marcam formato e falham fechado por linha. A rota de criação congela `campaignFormat`/`formatContractVersion` apenas no 9:16, valida divergência com 409 apenas com campanha existente, bloqueia novas gerações com `product_9_16_enabled` OFF antes da reserva e mantém reenvio; UI tem seletor com labels/helper do UI-SPEC e pausa sem troca silenciosa. **823 testes focados passando (70 arquivos)**, typecheck 0, lint 0, OpenSpec strict válido, `git diff --check` limpo. SUMMARYs `59-06-SUMMARY.md`/`59-07-SUMMARY.md`. **Parado para revisão; Wave 6, seed, flag, chamadas pagas, migrations e produção não executados.**
+
+- **Sessão 2026-11-04 - F59 Wave 4 / plano 59-05.** Seams aditivos na engine, projeção com path esperado, entrypoint vertical, guarda pré-reserva e crédito reutilizado. **231/231** testes focados, typecheck 0, sem import vertical no runtime 1:1. SUMMARY `59-05-SUMMARY.md`. **Parado para revisão; Wave 5 não autorizada.**
 
 - **Sessão 2026-11-04 — F59 Wave 3 / plano 59-04.** Pipeline JPEG vertical 1080×1920 q90 com decode completo; store/probe/download/URL assinada e miniatura 162×288. **248/248** testes focados (inclui regressão 1:1 de store), typecheck 0, sem alteração em `src/lib/product-1-1/artifact` ou migrations. Commits `a319bf26`, `b7826fb2`, `33da1ee2`; SUMMARY `59-04-SUMMARY.md`. **Parado para revisão; Wave 4 não autorizada.**
 
