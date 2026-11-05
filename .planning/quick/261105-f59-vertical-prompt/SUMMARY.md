@@ -61,6 +61,8 @@ monocromática adequada”, sem afirmar que a paleta existe.
 ## Commit
 
 - `1e1e21b8` — `feat(59-10): consolidate vertical prompt and attachment identity`
+- `3f1701d2` — `feat(59-10): allow functional asset adaptation in vertical prompt`
+- `6fe95a21` — `docs(59-10): record vertical prompt v3 asset guidance`
 
 ## Verificação
 
