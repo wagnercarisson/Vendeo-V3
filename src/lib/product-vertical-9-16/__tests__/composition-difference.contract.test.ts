@@ -55,19 +55,20 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
   );
 
   it.each(VERTICAL_COMPOSITION_FIXTURES.map((f) => [f.id, f] as const))(
-    "%s contém percentuais uma única vez e nenhum detalhe técnico",
+    "%s emite coordenadas em pixels e nenhum percentual no bloco reservado",
     (_id, fixture) => {
       const vertical = composeVerticalProductPrompt({
         briefing: fixture.briefing,
         promptBase: fixture.promptBase,
         references: fixture.references,
       });
-      for (const token of ["14%", "65%", "6%", "94%", "30%", "40%"]) {
-        expect(vertical.text.match(new RegExp(token, "g"))).toHaveLength(1);
-      }
-      expect(vertical.text).not.toMatch(
-        /px|1080 × 1920|1152|2048|0,9375|homologa/i,
-      );
+      const block = vertical.blocks["ÁREAS RESERVADAS"];
+      expect(block).toContain("Canvas: 1152×2048 pixels");
+      expect(block).toContain("x=69 a 1083, y=287 a 1331");
+      expect(block).toContain("x=806 a 1152, y=1229 a 2048");
+      expect(block).not.toMatch(/%/);
+      expect(vertical.text.match(/Canvas: 1152×2048 pixels/g)).toHaveLength(1);
+      expect(vertical.text).not.toMatch(/1080×1920|1080 × 1920|0,9375|homologa/i);
     },
   );
 
@@ -105,7 +106,7 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
 
     expect(square.policyVersions.formato).toBe(formato11Policy.version);
     expect(square.policyVersions.safeArea).toBeUndefined();
-    expect(vertical.policyVersions.formato).toBe("f59-9-16-v4");
+    expect(vertical.policyVersions.formato).toBe("f59-9-16-v5");
     expect(vertical.policyVersions.safeArea).toBe("safe-area-9-16-v1");
     expect(vertical.policyVersions.intencao).toBe(square.policyVersions.intencao);
     expect(vertical.policyVersions.tipoConteudo).toBe(

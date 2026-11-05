@@ -18,7 +18,7 @@ import type {
   ResolvedProductPromptPolicies,
 } from "@/lib/product-1-1/policies/types";
 import { formato11Policy } from "@/lib/product-1-1/policies/formato-1-1";
-import { SAFE_AREA_9_16_VERSION, SAFE_AREA_PERCENT } from "../safe-area";
+import { SAFE_AREA_9_16_VERSION } from "../safe-area";
 import {
   VERTICAL_PROMPT_BLOCK_LABELS,
   composeVerticalProductPrompt,
@@ -87,9 +87,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v6",
+      composerVersion: "f59-vertical-9-16-composer-v7",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v6");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v7");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -153,7 +153,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato).toBe(formatoBefore);
     expect(versions).toEqual({
       intencao: "48.2.6-oferta-v2",
-      formato: "f59-9-16-v4",
+      formato: "f59-9-16-v5",
       tipoConteudo: "48.2.6-produto-v4",
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
@@ -171,7 +171,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
   it("compõe a estrutura editorial na ordem e com versão própria", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v6");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v7");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
     expect(composition.promptBaseVersion).toBe("48.2.6-produto-1-1-v1");
     expect(composition.text.startsWith("Crie uma campanha de oferta")).toBe(
@@ -211,25 +211,105 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(composition.text).not.toContain("[INSTRUÇÕES DO PROMPT-BASE]");
   });
 
-  it("emite o bloco único de saída/área protegida, só com percentuais", () => {
+  it("emite o bloco único em pixels do canvas de geração, sem percentuais", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
     const block = [
-      "Saída: arte estática para Instagram, vertical 9:16, com fundo preenchendo todo o quadro.",
+      "Canvas: 1152×2048 pixels, vertical 9:16. A origem das coordenadas é o canto superior esquerdo; x cresce para a direita e y para baixo. Preencha todo o canvas com o fundo.",
       "",
-      `Área protegida: mantenha textos, preço, ativo da loja e partes essenciais do produto entre ${SAFE_AREA_PERCENT.sides}% e ${100 - SAFE_AREA_PERCENT.sides}% da largura e entre ${SAFE_AREA_PERCENT.top}% e ${100 - SAFE_AREA_PERCENT.bottom}% da altura. Dentro dessa região, preserve também o canto inferior direito reservado — últimos ${SAFE_AREA_PERCENT.bottomRightWidth}% da largura e ${SAFE_AREA_PERCENT.bottomRightHeight}% da altura. Fora da área protegida, use apenas fundo e elementos não essenciais. Não desenhe guias ou faixas.`,
+      "Mantenha textos, preço, ativo da loja e partes essenciais do produto integralmente dentro do retângulo x=69 a 1083, y=287 a 1331.",
+      "",
+      "Exclua também a região inferior direita x=806 a 1152, y=1229 a 2048.",
+      "",
+      "Fora da área permitida, use apenas fundo e elementos não essenciais. Não desenhe guias, faixas ou marcações das áreas reservadas.",
     ].join("\n");
 
     expect(composition.blocks["ÁREAS RESERVADAS"]).toBe(block);
     expect(composition.text.split(block)).toHaveLength(2);
-    expect(composition.text.match(/Saída: arte estática para Instagram/g)).toHaveLength(1);
-    expect(composition.text.match(/Área protegida:/g)).toHaveLength(1);
-    expect(composition.text.match(/vertical 9:16/g)).toHaveLength(1);
+    expect(composition.text.match(/Canvas: 1152×2048 pixels/g)).toHaveLength(1);
+    expect(composition.text.match(/x=69 a 1083, y=287 a 1331/g)).toHaveLength(1);
+    expect(composition.text.match(/x=806 a 1152, y=1229 a 2048/g)).toHaveLength(1);
+    expect(composition.blocks["ÁREAS RESERVADAS"]).not.toMatch(/%/);
+    expect(composition.text).not.toMatch(/1080×1920|1080 × 1920|0,9375/);
+    expect(composition.text).not.toContain("Saída: arte estática");
+    expect(composition.text).not.toContain("Área protegida:");
+    expect(composition.text).not.toContain("Fora da área protegida");
     expect(composition.text).not.toContain("Deixe sem textos");
     expect(composition.text).not.toContain(
       "O fundo deve preencher também essas regiões",
     );
-    expect(composition.text).not.toMatch(
-      /px|1080 × 1920|1152|2048|0,9375|homologa/i,
+    expect(composition.text).not.toMatch(/homologa/i);
+  });
+
+  it("mantém os demais blocos byte-idênticos para a mesma entrada", () => {
+    const briefing = {
+      backgroundDirection: "studio",
+      product: { name: "Bolo Naked Fruit", description: "Massa de pão de ló" },
+      commercial: {
+        intent: "offer",
+        originalPriceText: null,
+        discountedPriceText: "R$ 69,90",
+        badge: "Imperdível",
+        validity: "enquanto durarem os estoques",
+      },
+      constraints: {
+        mandatoryArtworkText:
+          "Imagem meramente ilustrativa\nRecheio e cobertura de frutas",
+      },
+      identity: {
+        storeName: "Padaria da Esquina",
+        palettePrimary: "#3B2418",
+        paletteAccent: "#D59D5E",
+      },
+    } as const;
+    const composition = composeVerticalProductPrompt({
+      briefing: briefing as never,
+      promptBase: baseline.promptBase,
+      references: [
+        "9110f31a5528ead0201e1ef35e6f1431e6a4a7437f5067ff2253df62eec7a304",
+      ],
+      contributions: [
+        {
+          block: PROMPT_BLOCK_LABELS.identity,
+          lines: [
+            'Assinar a campanha com a assinatura visual da loja fornecida como imagem de referência. Manter fidelidade ao arquivo fornecido. Não adicionar logotipo.\nPaleta da loja "Padaria da Esquina": cor principal #3B2418; cor de apoio #D59D5E.',
+          ],
+        },
+      ],
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+    });
+
+    expect(composition.blocks["OBJETIVO"]).toBe(
+      "Crie uma campanha de oferta, em peça única.",
+    );
+    expect(composition.blocks["REFERÊNCIAS"]).toBe(
+      [
+        "Imagem 1: produto anunciado. Preserve sua aparência e use-o como protagonista.",
+        "Imagem 2: ativo da loja. Preserve sua identidade, adaptando sua aplicação à composição e ao contraste, sem descaracterizá-lo.",
+      ].join("\n"),
+    );
+    expect(composition.blocks["DADOS DA CAMPANHA"]).toBe(
+      [
+        'Loja: "Padaria da Esquina"',
+        'Produto: "Bolo Naked Fruit"',
+        'Descrição: "Massa de pão de ló"',
+        'Preço: "R$ 69,90"',
+        'Selo: "Imperdível"',
+        'Validade: "enquanto durarem os estoques"',
+        'Aviso obrigatório: "Imagem meramente ilustrativa\\nRecheio e cobertura de frutas"',
+        "Paleta: principal #3B2418; apoio #D59D5E.",
+      ].join("\n"),
+    );
+    expect(composition.blocks["COMPOSIÇÃO"]).toBe(
+      [
+        "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
+        "Destaque o preço de venda.",
+        "Não invente informações comerciais.",
+        "Use fundo de estúdio liso ou gradiente suave na paleta da loja, com bom contraste e sem objetos de apoio.",
+        "Antes de alterar as cores do ativo, ajuste posicionamento e fundo para obter contraste.",
+        "A descrição é opcional e pode ser adaptada ou omitida, preservando seu significado.",
+        "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
+        "Use português correto e natural, sem caracteres ou pontuação duplicados, e não corrija silenciosamente os textos de entrada.",
+      ].join("\n"),
     );
   });
 
@@ -283,7 +363,9 @@ describe("F59 — compositor editorial vertical 9:16", () => {
 
     expect(composition.text).not.toContain("Imagem 2: ativo da loja");
     expect(composition.text).toContain("Não invente identidade visual.");
-    expect(composition.text).toContain("Área protegida: mantenha textos, preço, ativo da loja");
+    expect(composition.text).toContain(
+      "Mantenha textos, preço, ativo da loja e partes essenciais do produto",
+    );
   });
 
   it("com paleta informa loja e paleta, sem inventar quando ausente", () => {
@@ -517,8 +599,8 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       "Não invente informações comerciais.",
       "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
       "Antes de alterar as cores do ativo",
-      "Fora da área protegida, use apenas fundo e elementos não essenciais.",
-      "Não desenhe guias ou faixas.",
+      "Fora da área permitida, use apenas fundo e elementos não essenciais.",
+      "Não desenhe guias, faixas ou marcações das áreas reservadas.",
     ]) {
       expect(composition.text.split(rule)).toHaveLength(2);
     }
