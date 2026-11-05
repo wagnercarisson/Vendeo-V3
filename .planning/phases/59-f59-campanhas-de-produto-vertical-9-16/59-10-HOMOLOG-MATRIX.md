@@ -1,7 +1,8 @@
 # F59 / 59-10 — Matriz manual proposta (NÃO EXECUTADA)
 
-Data: 2026-11-05. Status: **aguardando aprovação da matriz e do orçamento**.
-Nenhuma geração paga foi executada; a flag continua OFF.
+Data: 2026-11-05. Status: **PAUSADA após a submissão 1 — defeito visual**.
+A submissão 1 foi executada manualmente e reprovada; 2–5 não executadas. Flag
+devolvida para OFF. Ver `59-10-HOMOLOG-FUNCTIONAL.md`.
 
 ## 1. Limite operacional
 

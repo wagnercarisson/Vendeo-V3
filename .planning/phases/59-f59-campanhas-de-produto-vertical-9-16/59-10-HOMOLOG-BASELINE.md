@@ -151,14 +151,17 @@ Servidor local iniciado apontando para o homolog `127.0.0.1:57781`.
 
 ## 13. Ativação temporária da flag (autorizada)
 
-- Flag `product_9_16_enabled`: **ON** em homolog.
+- Flag `product_9_16_enabled`: ativada temporariamente e depois **desligada**.
 - Ativação via `PUT /api/admin/feature-flags` → RPC auditado
   `admin_update_feature_flag`.
-- `operationId`: `dbba9ae0-b13b-434a-a38d-335fd8960f07`.
+- `operationId` de ativação: `dbba9ae0-b13b-434a-a38d-335fd8960f07`.
 - Ator: `1273d07b-c2d1-48c9-88ca-9acfe6c0ac14`.
 - Motivo: UAT homolog autorizada para teste manual acompanhado.
-- `updated_at` no banco: `2026-11-05 16:53:45.741538+00`.
-- Painel autenticado exibiu a chave como **Ligada**.
+- `updated_at` da ativação: `2026-11-05 16:53:45.741538+00`.
+- Painel autenticado exibiu a chave como **Ligada** durante o teste.
+- Defeito visual na submissão 1 ⇒ parada e desativação:
+  `operationId abe4ee17-b68c-4a13-8cc3-7bf262c5d562`.
+- Estado final da flag: **OFF**; painel exibiu **Desligada**.
 - Nenhuma campanha foi gerada pelo executor.
 
 ## 14. Próximo passo
