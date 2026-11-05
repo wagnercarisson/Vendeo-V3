@@ -55,14 +55,28 @@ function buildIdentityLines(
       line.startsWith("Paleta da loja") ||
       line.startsWith("Sem paleta da loja"),
   );
+  const hasPalette = paletteLines.some((line) =>
+    line.startsWith("Paleta da loja"),
+  );
   const identityImage = attachmentPosition(attachments, "identity");
 
   const lines: string[] = [];
   if (identityImage !== null) {
-    lines.push(`Ativo da loja anexado na imagem ${identityImage}.`);
+    const paletteClause = hasPalette
+      ? "use a paleta fornecida ou uma aplicação monocromática adequada."
+      : "use uma aplicação monocromática adequada.";
     lines.push(
-      `Reproduza o ativo da loja fornecido na imagem ${identityImage}, preservando símbolo, lettering, proporções e organização interna. Não redesenhe, simplifique, substitua nem reorganize seus componentes.`,
+      `Use o ativo da loja da imagem ${identityImage} como referência de identidade. Preserve o nome, o lettering e os elementos gráficos característicos. Adapte escala, posição e espaçamento à composição. Quando indispensável para legibilidade e contraste, ajuste as cores e a disposição dos componentes, mantendo a identidade reconhecível e sem inventar, substituir ou omitir seus elementos característicos. Prefira as cores originais; se precisar adaptá-las, ${paletteClause}`,
     );
+    if (input.briefing.backgroundDirection === "original") {
+      lines.push(
+        "Não altere o produto nem o cenário para resolver o contraste; priorize posição, escala e adaptação cromática do ativo.",
+      );
+    } else {
+      lines.push(
+        "Antes de alterar as cores do ativo, priorize o posicionamento e a adequação do fundo para preservar contraste e legibilidade.",
+      );
+    }
   } else {
     lines.push("Não há ativo da loja anexado; não invente identidade visual.");
   }
@@ -76,8 +90,8 @@ function buildIdentityLines(
  * Reutiliza o serializador aprovado do 1:1 e injeta o resolvedor vertical
  * explícito + versão própria. Nenhum rótulo/bloco novo é criado.
  *
- * Versões registradas na saída: `f59-vertical-9-16-composer-v1` (compositor),
- * `f59-9-16-v1` (formato), `safe-area-9-16-v1` (área segura) e a versão da base
+ * Versões registradas na saída: `f59-vertical-9-16-composer-v3` (compositor),
+ * `f59-9-16-v2` (formato), `safe-area-9-16-v1` (área segura) e a versão da base
  * 1:1 congelada.
  */
 export function composeVerticalProductPrompt(

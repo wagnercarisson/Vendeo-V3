@@ -73,9 +73,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v2",
+      composerVersion: "f59-vertical-9-16-composer-v3",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v2");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v3");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -179,7 +179,7 @@ describe("F59 — política de formato 9:16, resolvedor e compositor vertical", 
     const composition = composeVerticalProductPrompt(defaultInput());
     const standard = composeProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v2");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v3");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
     expect(composition.promptBaseVersion).toBe(standard.promptBaseVersion);
     expect(composition.text).toContain("9:16");
@@ -221,7 +221,17 @@ describe("F59 — política de formato 9:16, resolvedor e compositor vertical", 
     expect(composition.text).toContain("- Imagem 1: produto anunciado.");
     expect(composition.text).toContain("- Imagem 2: ativo da loja.");
     expect(composition.text).toContain(
-      "Reproduza o ativo da loja fornecido na imagem 2, preservando símbolo, lettering, proporções e organização interna.",
+      "Use o ativo da loja da imagem 2 como referência de identidade.",
+    );
+    expect(composition.text).toContain(
+      "Preserve o nome, o lettering e os elementos gráficos característicos.",
+    );
+    expect(composition.text).toContain(
+      "Quando indispensável para legibilidade e contraste, ajuste as cores e a disposição dos componentes",
+    );
+    expect(composition.text).toContain("use a paleta fornecida");
+    expect(composition.text).toContain(
+      "Antes de alterar as cores do ativo, priorize o posicionamento e a adequação do fundo",
     );
     expect(composition.text).not.toContain("Imagens de referência:");
     expect(composition.text).toContain("manter legível o ativo da loja");
@@ -250,7 +260,9 @@ describe("F59 — política de formato 9:16, resolvedor e compositor vertical", 
       "- Imagem 2: referência adicional do produto.",
     );
     expect(composition.text).toContain("- Imagem 3: ativo da loja.");
-    expect(composition.text).toContain("fornecido na imagem 3");
+    expect(composition.text).toContain(
+      "Use o ativo da loja da imagem 3 como referência de identidade.",
+    );
   });
 
   it("sem ativo não anuncia anexo inexistente nem pede para reproduzi-lo", () => {
@@ -268,12 +280,95 @@ describe("F59 — política de formato 9:16, resolvedor e compositor vertical", 
     expect(composition.text).toContain(
       "- Imagem 2: referência adicional do produto.",
     );
-    expect(composition.text).not.toContain("ativo da loja anexado na imagem");
-    expect(composition.text).not.toContain("Reproduza o ativo da loja");
+    expect(composition.text).not.toContain("ativo da loja da imagem");
+    expect(composition.text).not.toContain(
+      "Use o ativo da loja da imagem",
+    );
     expect(composition.text).toContain(
       "Não há ativo da loja anexado; não invente identidade visual.",
     );
     expect(composition.text).not.toContain("logo ou a assinatura");
+  });
+
+  it("sem paleta não afirma que ela existe", () => {
+    const composition = composeVerticalProductPrompt({
+      ...defaultInput(),
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+      contributions: [
+        {
+          block: PROMPT_BLOCK_LABELS.identity,
+          lines: ["Regra legada sem paleta."],
+        },
+      ],
+    });
+    expect(composition.text).toContain("use uma aplicação monocromática adequada.");
+    expect(composition.text).not.toContain("paleta fornecida");
+    expect(composition.text).not.toContain("Paleta da loja");
+  });
+
+  it("Original prioriza posição/escala e não altera produto ou cenário", () => {
+    const input = defaultInput();
+    const composition = composeVerticalProductPrompt({
+      ...input,
+      briefing: { ...input.briefing, backgroundDirection: "original" },
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+      contributions: [
+        {
+          block: PROMPT_BLOCK_LABELS.identity,
+          lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
+        },
+      ],
+    });
+    expect(composition.text).toContain(
+      "Não altere o produto nem o cenário para resolver o contraste; priorize posição, escala e adaptação cromática do ativo.",
+    );
+    expect(composition.text).not.toContain(
+      "Antes de alterar as cores do ativo",
+    );
+  });
+
+  it.each(["studio", "ambient"] as const)(
+    "%s prioriza posicionamento/fundo antes de alterar cores",
+    (backgroundDirection) => {
+      const input = defaultInput();
+      const composition = composeVerticalProductPrompt({
+        ...input,
+        briefing: { ...input.briefing, backgroundDirection },
+        attachments: [{ kind: "product" }, { kind: "identity" }],
+        contributions: [
+          {
+            block: PROMPT_BLOCK_LABELS.identity,
+            lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
+          },
+        ],
+      });
+      expect(composition.text).toContain(
+        "Antes de alterar as cores do ativo, priorize o posicionamento e a adequação do fundo",
+      );
+      expect(composition.text).not.toContain(
+        "Não altere o produto nem o cenário",
+      );
+    },
+  );
+
+  it("orientação do ativo aparece uma vez, sem proibição absoluta nem duplicação", () => {
+    const composition = composeVerticalProductPrompt({
+      ...defaultInput(),
+      attachments: [{ kind: "product" }, { kind: "identity" }],
+      contributions: [
+        {
+          block: PROMPT_BLOCK_LABELS.identity,
+          lines: ['Regra legada\nPaleta da loja "Loja": cor principal #000000.'],
+        },
+      ],
+    });
+    expect(
+      composition.text.match(/Use o ativo da loja da imagem 2/g),
+    ).toHaveLength(1);
+    expect(composition.text).not.toContain("Não redesenhe");
+    expect(composition.text).not.toContain("não reorganize");
+    expect(composition.text).not.toContain("logo ou a assinatura");
+    expect(composition.text).not.toContain("Não adicionar logotipo");
   });
 
   it("a versão custom não altera os blocos 1:1 de identidade/produto/comercial", () => {

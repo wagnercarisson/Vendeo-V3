@@ -32,7 +32,7 @@ import {
  * objetos do 1:1; apenas o formato e a área segura são verticais.
  */
 export const VERTICAL_COMPOSER_VERSION =
-  "f59-vertical-9-16-composer-v2" as const;
+  "f59-vertical-9-16-composer-v3" as const;
 
 function pushPolicy(
   contributions: PromptPolicyContribution[],
