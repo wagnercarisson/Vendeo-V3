@@ -157,10 +157,11 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
   // F59/D-03 — formato indisponível OU rascunho vertical com a flag OFF bloqueia
   // a submissão SEM trocar o formato do lojista.
   const campaignFormatPaused =
-    restoredForm?.formatUnavailable === true ||
-    ((restoredForm?.campaignFormat === "9:16" ||
-      restoredFormatResolution?.kind === "9:16") &&
-      !verticalEnabled);
+    restoredForm !== null &&
+    (restoredForm.formatUnavailable === true ||
+      ((restoredForm.campaignFormat === "9:16" ||
+        restoredFormatResolution?.kind === "9:16") &&
+        !verticalEnabled));
 
   return (
     <main>

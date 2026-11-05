@@ -124,6 +124,6 @@ describe("F59/59-08 — restore do formato persistido (display.ts)", () => {
     );
     expect(source).toMatch(/resolveCampaignFormat/);
     expect(source).toMatch(/campaignFormatPaused/);
-    expect(source).toMatch(/restoredForm\?\.formatUnavailable/);
+    expect(source).toMatch(/restoredForm\.formatUnavailable/);
   });
 });
