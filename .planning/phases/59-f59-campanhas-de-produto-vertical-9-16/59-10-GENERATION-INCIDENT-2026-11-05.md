@@ -55,6 +55,18 @@ executada nesta correção.
 - artes das gerações anteriores (`01a66557…` e `0166cbb9…`) intactas;
 - auditoria do novo teto em `product_1_1_pilot_cap_audit`.
 
+## Resolução
+
+Após a elevação do teto, a execução de 22:46 UTC concluiu com sucesso:
+
+- campanha `bc10ce42-d330-4332-a7e9-9045bd80b72b`;
+- operação `1b31c766-a1f6-4e2b-9fdf-ebdb33b8f15e`;
+- composer `f59-vertical-9-16-composer-v6` / formato `f59-9-16-v4`;
+- arte 1080 × 1920 entregue.
+
+O prompt efetivamente composto está reconstruído e registrado em
+`59-10-PROMPT-EFFECTIVE-V6.md`.
+
 ## Observação
 
 O teto do piloto é um guarda de gasto operacional, não um feature flag. Para o
