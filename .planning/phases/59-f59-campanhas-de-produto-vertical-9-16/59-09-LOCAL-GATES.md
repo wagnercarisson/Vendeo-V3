@@ -42,7 +42,7 @@ foram executados.
 
 ## Bloqueios e limites
 
-- Seed data-only da flag `product_9_16_enabled` não criado/aplicado.
+- Seed data-only da flag `product_9_16_enabled` criado em `20261105162052_f59_product_9_16_flag.sql`, mas **não aplicado**.
 - Flag não ativada.
 - Nenhuma chamada paga nova.
 - Push/deploy não executados.

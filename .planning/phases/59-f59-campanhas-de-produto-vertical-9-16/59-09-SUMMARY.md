@@ -103,13 +103,13 @@ status: local-complete
 
 ## Blockers restantes
 
-- Seed data-only da flag não criado/aplicado; flag não ativada.
+- Seed data-only da flag preparado em `20261105162052_f59_product_9_16_flag.sql`, mas não aplicado; flag não ativada.
 - Homologação, UAT, produção e validação visual não executadas.
 - Nenhuma chamada paga, push ou deploy.
 
 ## Deviations from Plan
 
-- Task 4 (seed/migration) **não executada**: checkpoint humano mantido bloqueado.
+- Task 4: arquivo de seed preparado; **aplicação não executada** — checkpoint humano mantido bloqueado.
 - Nenhum teste 1:1 teve expectativa alterada.
 
 ## Next Phase Readiness
