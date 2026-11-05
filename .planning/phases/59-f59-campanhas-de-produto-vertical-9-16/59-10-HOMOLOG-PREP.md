@@ -9,7 +9,8 @@ ativado, gerado ou publicado.**
 - Código local: Wave 7 local aprovada; suítes 1:1, IA e vertical verdes.
 - Seed: arquivo criado, **não aplicado**.
 - Flag `product_9_16_enabled`: **OFF**; ativação não autorizada.
-- Homologação: não iniciada.
+- Homologação: bloqueada na preparação por divergência de ledger (ver
+  `59-10-HOMOLOG-BASELINE.md`).
 - Produção: não acessada.
 - Chamadas pagas novas: nenhuma.
 
