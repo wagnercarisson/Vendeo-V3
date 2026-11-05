@@ -806,7 +806,7 @@ function FormContent({
         />
       )}
 
-      {eligible && (verticalEnabled || campaignFormatPaused) && (
+      {eligible && (
         <div className="space-y-3">
           {campaignFormatPaused && (
             <div
@@ -829,6 +829,7 @@ function FormContent({
             value={fields.campaignFormat ?? "1:1"}
             onChange={(format) => setField("campaignFormat", format)}
             disabled={isSubmitting || campaignFormatPaused}
+            verticalEnabled={verticalEnabled && !campaignFormatPaused}
           />
         </div>
       )}

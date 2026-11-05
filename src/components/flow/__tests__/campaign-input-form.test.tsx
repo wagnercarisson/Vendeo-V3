@@ -119,9 +119,22 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
     expect(screen.getByText("Informe uma data válida (dd/mm/aaaa)")).toBeInTheDocument();
   });
 
-  it("F59/D-03: flag OFF sem rascunho vertical não monta o seletor", () => {
+  it("F59/D-03: flag OFF mantém o seletor visível com 9:16 desabilitado", () => {
     render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
-    expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("flow-campaign-format-selector"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", { name: "Quadrado 1:1 - feed" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("radio", {
+        name: "Vertical 9:16 - Stories e Reels (imagem estática)",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByTestId("flow-campaign-format-vertical-disabled"),
+    ).toBeInTheDocument();
   });
 
   it("F59/59-08: formato indisponível usa banner próprio, sem afirmar que o rascunho é vertical", () => {

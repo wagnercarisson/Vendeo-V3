@@ -2,7 +2,7 @@
 
 ### Requirement: Exactly one format per new-flow campaign
 
-The campaign creation screen for the NEW Product flow SHALL offer exactly one format per campaign, chosen before generation: `1:1` (Quadrado) or `9:16` (Vertical). The selector MUST be rendered only when the store is eligible for the new flow and the global vertical flag is enabled. The default selection SHALL be `1:1`. The client MUST NOT allow zero or two formats to be submitted.
+The campaign creation screen for the NEW Product flow SHALL offer exactly one format per campaign, chosen before generation: `1:1` (Quadrado) or `9:16` (Vertical). The selector MUST be rendered whenever the store is eligible for the new flow. The `9:16` option MUST be enabled only when the global vertical flag is enabled (or when a persisted vertical draft is being restored, in which case submission is paused). The default selection SHALL be `1:1`. The client MUST NOT allow zero or two formats to be submitted.
 
 #### Scenario: Selector appears for eligible store with vertical enabled
 
@@ -11,12 +11,13 @@ The campaign creation screen for the NEW Product flow SHALL offer exactly one fo
 - **THEN** the form SHALL render exactly one format selector with the options `1:1` and `9:16`
 - **AND** `1:1` SHALL be selected by default
 
-#### Scenario: Selector is absent when vertical is disabled for a new draft
+#### Scenario: Vertical option is disabled when vertical is off for a new draft
 
 - **WHEN** `product_9_16_enabled` is off
 - **AND** the draft has no persisted vertical format to restore
-- **THEN** the form SHALL NOT offer the vertical option for a new submission
-- **AND** the submission SHALL remain the current `1:1` new-flow payload
+- **THEN** the form SHALL keep the format selector visible
+- **AND** the `9:16` option SHALL be disabled with an explanation
+- **AND** the `1:1` option SHALL remain selected and submittable
 
 #### Scenario: Restored vertical draft is not hidden by the flag
 

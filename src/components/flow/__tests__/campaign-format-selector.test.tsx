@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   CAMPAIGN_FORMAT_HELPER,
+  CAMPAIGN_FORMAT_VERTICAL_DISABLED_HELPER,
   CampaignFormatSelector,
 } from "../campaign-format-selector";
 
@@ -76,5 +77,28 @@ describe("CampaignFormatSelector (F59/D-03)", () => {
     expect(
       screen.getByRole("radio", { name: "Quadrado 1:1 - feed" }).closest("label"),
     ).toHaveClass("cursor-not-allowed");
+  });
+
+  it("verticalEnabled=false mantém o seletor visível e desabilita só o 9:16", () => {
+    renderSelector({ verticalEnabled: false });
+    expect(
+      screen.getByTestId("flow-campaign-format-selector"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Quadrado 1:1 - feed" })).toBeEnabled();
+    expect(
+      screen.getByRole("radio", {
+        name: "Vertical 9:16 - Stories e Reels (imagem estática)",
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByTestId("flow-campaign-format-vertical-disabled"),
+    ).toHaveTextContent(CAMPAIGN_FORMAT_VERTICAL_DISABLED_HELPER);
+  });
+
+  it("verticalEnabled=true não exibe o aviso de indisponibilidade", () => {
+    renderSelector({ verticalEnabled: true });
+    expect(
+      screen.queryByTestId("flow-campaign-format-vertical-disabled"),
+    ).not.toBeInTheDocument();
   });
 });
