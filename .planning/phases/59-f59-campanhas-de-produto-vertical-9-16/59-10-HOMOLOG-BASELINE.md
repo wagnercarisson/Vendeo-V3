@@ -106,8 +106,9 @@ A chave é renderizada pelo painel existente:
 - `FLAG_LABELS.product_9_16_enabled` existe;
 - a chave não é filtrada pelo bloco exclusivo do Produto 1:1.
 
-Não foi aberta sessão autenticada de navegador; a comprovação é por linha
-persistida + caminho de renderização/label do painel.
+Painel autenticado aberto em `http://127.0.0.1:3000/admin/feature-flags`:
+HTTP 200, chave e label presentes no HTML, estado exibido **Desligada**. Nenhuma
+ação de escrita foi executada no painel.
 
 ## 9. Ações NÃO executadas
 
@@ -117,8 +118,38 @@ persistida + caminho de renderização/label do painel.
 - nenhuma chamada paga, geração, push, deploy ou acesso à produção;
 - nenhuma campanha gerada.
 
-## 10. Próximo passo
+## 10. Lojas de teste e saldos
 
-O seed OFF está aplicado e comprovado. A próxima autorização necessária cobre o
-baseline completo de lojas/saldos/campanhas, orçamento de UAT e a matriz manual
-acompanhada.
+| Loja | store_id | is_test_store | Saldo | Bônus | Comprado | Demo |
+|---|---|---:|---:|---:|---:|---:|
+| Loja Mega Vale | `3dc7d274-0b57-45ba-883a-7b235056feda` | true | 1 | 1 | 0 | 0 |
+| Padaria da Esquina | `48b212f8-2b0f-4679-b553-122a601bacac` | true | 4 | 4 | 0 | 0 |
+
+Campanhas das lojas de teste: **70** no total; **0 verticais**.
+- Loja Mega Vale: 8 campanhas, 8 ready.
+- Padaria da Esquina: 62 campanhas, 59 ready, 3 error.
+
+## 11. Campanhas de referência (1:1)
+
+| Loja | Campanha | Produto | Status | Operação | Path |
+|---|---|---|---|---|---|
+| Padaria da Esquina | `22d4c990-91c8-4ea5-a4db-a59c7e559499` | Pão Caseiro (kg) | ready/delivered | `8c83fae4-9e46-4f77-83d9-a7152b5c973f` | `.../product-1-1/.../art-1024.jpg` |
+| Loja Mega Vale | `c06b16f5-f126-429c-b5b0-9567fe4adb95` | Jarra Finesse 1l | ready/delivered | `41c3f33f-3be0-4086-b04e-710258643609` | `.../product-1-1/.../art-1024.jpg` |
+
+Não há campanha vertical existente. Nenhum estado `unknown`/`refunded` está
+disponível nas lojas de teste; os cenários de falha que exigem esses estados
+permanecem PENDING até existir um procedimento autorizado.
+
+## 12. Aplicação para acompanhamento
+
+- URL local: **`http://127.0.0.1:3000`**
+- Login: `/login`
+- Painel de flags: `http://127.0.0.1:3000/admin/feature-flags`
+- Nova campanha: `http://127.0.0.1:3000/campanhas/nova`
+
+Servidor local iniciado apontando para o homolog `127.0.0.1:57781`.
+
+## 13. Próximo passo
+
+A matriz manual e o orçamento estão em `59-10-HOMOLOG-MATRIX.md`, aguardando
+aprovação. Nenhuma geração paga foi executada.
