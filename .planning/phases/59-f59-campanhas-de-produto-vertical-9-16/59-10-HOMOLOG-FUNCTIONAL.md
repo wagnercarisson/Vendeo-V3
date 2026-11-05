@@ -101,14 +101,18 @@ Aguardando aprovação do prompt antes de uma única geração acompanhada.
 
 ### Simplificação editorial do prompt vertical
 
-Nova composição local `f59-vertical-9-16-composer-v4` / `f59-9-16-v3`,
+Nova composição local `f59-vertical-9-16-composer-v5` / `f59-9-16-v3`,
 serializada isoladamente e sem alterar o 1:1: objetivo + formato, referências na
 ordem real, dados delimitados, composição condicional curta e áreas reservadas
-em percentuais. Prompt do caso Bolo reduz de 2.972 para 1.571 caracteres
-(−47%), sem perda de requisitos funcionais. Cobertura: 3 intenções × 3 fundos,
-ativo/paleta presentes e ausentes, campos opcionais, descrição multilinha e
-múltiplos anexos. **Nenhuma geração paga.** Detalhes em
-`quick/261105-f59-vertical-editorial/SUMMARY.md`; flag continua OFF.
+em percentuais. Prompt do caso Bolo em 1.600 caracteres (−46% vs. v3), sem perda
+de requisitos funcionais. Correções da revisão: identidade estruturada com
+precedência (nomes com aspas não apagam a paleta), descrição opcional sem
+conflito com a regra de textos e hierarquia explícita do preço original.
+Cobertura: 3 intenções × 3 fundos, ativo/paleta presentes e ausentes, campos
+opcionais, descrição multilinha, múltiplos anexos e preço com 0/1/2 valores.
+**Nenhuma geração paga.** Detalhes em
+`quick/261105-f59-vertical-editorial/SUMMARY.md`; geração manual preparada em
+`59-10-MANUAL-GENERATION-V5.md`; flag continua OFF.
 
 ### C. Demais verificações da submissão 1
 

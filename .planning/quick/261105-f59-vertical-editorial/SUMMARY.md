@@ -36,11 +36,23 @@ banco, flag e campanhas anteriores não foram alterados. Nenhuma geração paga.
 
 ## Versões
 
-- compositor: `f59-vertical-9-16-composer-v4`;
+- compositor: `f59-vertical-9-16-composer-v5` (v4 + correções P1–P3 da revisão);
 - formato editorial: `f59-9-16-v3`;
 - safe area técnica: `safe-area-9-16-v1` (inalterada);
 - versões semânticas de intenção/produto/estrutura/tema/integridade/fundo/
   identidade permanecem as do 1:1, apenas registradas na evidência.
+
+## Correções pós-revisão (v5)
+
+1. **Loja/paleta com aspas:** o compositor prefere `briefing.identity`
+   estruturado; no fallback textual, ancora a leitura nos tokens de cor em vez
+   do nome, preservando paleta e loja mesmo com aspas no nome.
+2. **Descrição opcional:** a regra de preservação passa a citar apenas nome do
+   produto, textos comerciais e textos obrigatórios. A descrição mantém regra
+   própria; loja e paleta são contexto, não textos para imprimir.
+3. **Hierarquia de preço:** com dois preços, a regra é “Destaque o preço de
+   venda; apresente o preço original como secundário.” Com apenas um preço, a
+   orientação se ajusta ao valor existente; sem preço, não há regra de preço.
 
 ## Arquivos
 
@@ -80,7 +92,8 @@ Não invente informações comerciais.
 Use fundo de estúdio liso ou gradiente suave na paleta da loja, com bom contraste e sem objetos de apoio.
 Antes de alterar as cores do ativo, ajuste posicionamento e fundo para obter contraste.
 A descrição é opcional e pode ser adaptada ou omitida, preservando seu significado.
-Preserve o conteúdo dos textos e apresente cada um uma única vez; use português correto e natural, sem caracteres ou pontuação duplicados, e não corrija silenciosamente os textos de entrada.
+Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.
+Use português correto e natural, sem caracteres ou pontuação duplicados, e não corrija silenciosamente os textos de entrada.
 
 [ÁREAS RESERVADAS]
 Deixe sem textos, ativo da loja ou partes essenciais do produto: 14% do topo, 35% da base, 6% de cada lateral e o retângulo inferior direito de 30% da largura por 40% da altura.
@@ -89,10 +102,10 @@ O fundo deve preencher também essas regiões. Não desenhe guias, demarcações
 
 ## Redução editorial
 
-| Métrica | v3 anterior | Editorial v4 |
+| Métrica | v3 anterior | Editorial v5 |
 |---|---|---|
-| Caracteres | 2.972 | **1.571** (−47%) |
-| Linhas | 42 | **28** |
+| Caracteres | 2.972 | **1.600** (−46%) |
+| Linhas | 42 | **29** |
 | Blocos | 6 | **5** (4 com cabeçalho + objetivo) |
 
 O prompt 1:1 equivalente tem 1.894 caracteres e 35 linhas; permanece
@@ -112,7 +125,7 @@ byte-idêntico ao baseline congelado.
 
 | Gate | Resultado |
 |---|---|
-| Verticais | **18 arquivos / 214 testes passando** |
+| Verticais | **18 arquivos / 218 testes passando** |
 | 1:1 | **49 arquivos / 943 testes passando** |
 | IA | **39 arquivos + 1 skipped / 389 testes + 7 skipped** |
 | `npm run typecheck` | exit 0 |
@@ -126,6 +139,8 @@ Cobertura adicionada:
 - três intenções e três direções de fundo;
 - ativo presente/ausente e múltiplas referências;
 - paleta presente/ausente (sem afirmar paleta inexistente);
+- nome de loja com aspas, com identidade estruturada e no fallback textual;
+- hierarquia de preço com dois preços, um preço e nenhum preço;
 - campos opcionais, descrição multilinha e aspas;
 - ausência de duplicação das regras essenciais;
 - 1:1 byte-idêntico ao baseline congelado;
