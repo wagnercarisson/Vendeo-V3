@@ -85,6 +85,16 @@ Observações na arte:
 Os elementos essenciais não estão contidos no retângulo protegido
 `{xMin:65, xMax:1015, yMin:269, yMax:1248}`.
 
+### Correção de prompt pós-defeito
+
+A composição vertical foi corrigida localmente e versionada para
+`f59-vertical-9-16-composer-v2` / `f59-9-16-v2`:
+formato/área reservada consolidados uma única vez, sem pixels/downscale/notas
+internas; anexos numerados pela ordem real; termo neutro “ativo da loja”; e
+fidelidade vinculada à imagem correta. **Nenhuma nova geração foi executada.**
+Detalhes e prompt completo em `quick/261105-f59-vertical-prompt/SUMMARY.md`.
+Aguardando aprovação do prompt antes de uma única geração acompanhada.
+
 ### C. Demais verificações da submissão 1
 
 - arte JPEG 1080×1920, sRGB: **PASS**;
