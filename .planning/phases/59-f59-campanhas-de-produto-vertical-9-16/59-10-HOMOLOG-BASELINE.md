@@ -149,7 +149,20 @@ permanecem PENDING até existir um procedimento autorizado.
 
 Servidor local iniciado apontando para o homolog `127.0.0.1:57781`.
 
-## 13. Próximo passo
+## 13. Ativação temporária da flag (autorizada)
 
-A matriz manual e o orçamento estão em `59-10-HOMOLOG-MATRIX.md`, aguardando
-aprovação. Nenhuma geração paga foi executada.
+- Flag `product_9_16_enabled`: **ON** em homolog.
+- Ativação via `PUT /api/admin/feature-flags` → RPC auditado
+  `admin_update_feature_flag`.
+- `operationId`: `dbba9ae0-b13b-434a-a38d-335fd8960f07`.
+- Ator: `1273d07b-c2d1-48c9-88ca-9acfe6c0ac14`.
+- Motivo: UAT homolog autorizada para teste manual acompanhado.
+- `updated_at` no banco: `2026-11-05 16:53:45.741538+00`.
+- Painel autenticado exibiu a chave como **Ligada**.
+- Nenhuma campanha foi gerada pelo executor.
+
+## 14. Próximo passo
+
+Executar a matriz manual em `59-10-HOMOLOG-MATRIX.md`, com no máximo 5
+submissões e orçamento operacional de US$ 2,00. Os resultados serão registrados
+em `59-10-HOMOLOG-FUNCTIONAL.md`.
