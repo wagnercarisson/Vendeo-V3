@@ -88,11 +88,15 @@ Os elementos essenciais não estão contidos no retângulo protegido
 ### Correção de prompt pós-defeito
 
 A composição vertical foi corrigida localmente e versionada para
-`f59-vertical-9-16-composer-v2` / `f59-9-16-v2`:
+`f59-vertical-9-16-composer-v3` / `f59-9-16-v2`:
 formato/área reservada consolidados uma única vez, sem pixels/downscale/notas
-internas; anexos numerados pela ordem real; termo neutro “ativo da loja”; e
-fidelidade vinculada à imagem correta. **Nenhuma nova geração foi executada.**
-Detalhes e prompt completo em `quick/261105-f59-vertical-prompt/SUMMARY.md`.
+internas; anexos numerados pela ordem real; termo neutro “ativo da loja”; e, na
+v3, orientação de aplicação que permite adaptar escala/posição/espaçamento e,
+quando indispensável, cores/disposição, mantendo a identidade reconhecível.
+Complementos de fundo: estúdio/ambientado priorizam posicionamento e adequação
+do fundo; original prioriza o ativo sem alterar produto/cenário.
+**Nenhuma nova geração foi executada.** Detalhes e prompt completo em
+`quick/261105-f59-vertical-prompt/SUMMARY.md`.
 Aguardando aprovação do prompt antes de uma única geração acompanhada.
 
 ### C. Demais verificações da submissão 1

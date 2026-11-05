@@ -16,14 +16,37 @@ alterados.
   - `Imagem 1: produto anunciado`;
   - referências adicionais numeradas;
   - ativo da loja calculado dinamicamente, nunca fixado como imagem 2.
-- Quando há ativo anexado, a fidelidade é orientada na imagem correta.
+- Quando há ativo anexado, a orientação de aplicação é vinculada à imagem
+  correta (v3).
 - Quando não há ativo, não há anúncio de anexo nem pedido de reprodução.
 - Termos `logo`/`assinatura visual` removidos do caminho vertical genérico;
   usa-se `ativo da loja`.
 - Versões:
-  - compositor: `f59-vertical-9-16-composer-v2`;
+  - compositor: `f59-vertical-9-16-composer-v3`;
   - formato: `f59-9-16-v2`;
   - safe area técnica permanece `safe-area-9-16-v1`.
+
+## Aplicação do ativo (v3)
+
+A proibição absoluta de recomposição foi substituída por uma orientação única:
+
+> Use o ativo da loja da imagem N como referência de identidade. Preserve o
+> nome, o lettering e os elementos gráficos característicos. Adapte escala,
+> posição e espaçamento à composição. Quando indispensável para legibilidade e
+> contraste, ajuste as cores e a disposição dos componentes, mantendo a
+> identidade reconhecível e sem inventar, substituir ou omitir seus elementos
+> característicos. Prefira as cores originais; se precisar adaptá-las, use a
+> paleta fornecida ou uma aplicação monocromática adequada.
+
+Complementos por direção de fundo (emitidos somente quando há ativo):
+
+- `studio`/`ambient`: “Antes de alterar as cores do ativo, priorize o
+  posicionamento e a adequação do fundo para preservar contraste e legibilidade.”
+- `original`: “Não altere o produto nem o cenário para resolver o contraste;
+  priorize posição, escala e adaptação cromática do ativo.”
+
+Sem paleta fornecida, a cláusula condicional usa apenas “uma aplicação
+monocromática adequada”, sem afirmar que a paleta existe.
 
 ## Arquivos
 
@@ -43,23 +66,24 @@ alterados.
 
 | Gate | Resultado |
 |---|---|
-| Verticais | **18 arquivos / 204 testes passando** |
+| Verticais | **18 arquivos / 209 testes passando** |
 | 1:1 | **49 arquivos / 943 testes passando** |
 | IA | **39 arquivos + 1 skipped / 389 testes + 7 skipped** |
 | `npm run typecheck` | exit 0 |
 | `npm run lint` | exit 0 |
+| `npm run build` | exit 0 — 96 páginas |
 | OpenSpec `--strict` | valid |
 | `git diff --check` | limpo |
 
 ## Prompt — caso Bolo Naked Fruit
 
-Gerado com composer v2, anexos `[produto, ativo]` e a mesma evidência congelada
+Gerado com composer v3, anexos `[produto, ativo]` e a mesma evidência congelada
 da campanha original.
 
 ```text
 [IDENTIDADE E DIREÇÃO VISUAL]
-Ativo da loja anexado na imagem 2.
-Reproduza o ativo da loja fornecido na imagem 2, preservando símbolo, lettering, proporções e organização interna. Não redesenhe, simplifique, substitua nem reorganize seus componentes.
+Use o ativo da loja da imagem 2 como referência de identidade. Preserve o nome, o lettering e os elementos gráficos característicos. Adapte escala, posição e espaçamento à composição. Quando indispensável para legibilidade e contraste, ajuste as cores e a disposição dos componentes, mantendo a identidade reconhecível e sem inventar, substituir ou omitir seus elementos característicos. Prefira as cores originais; se precisar adaptá-las, use a paleta fornecida ou uma aplicação monocromática adequada.
+Antes de alterar as cores do ativo, priorize o posicionamento e a adequação do fundo para preservar contraste e legibilidade.
 Paleta da loja "Padaria da Esquina": cor principal #3B2418; cor de apoio #D59D5E.
 
 [PRODUTO E IMAGENS DE REFERÊNCIA]
@@ -101,15 +125,25 @@ Evite caracteres, símbolos ou pontuação duplicados ou anômalos.
 Não corrija silenciosamente os textos de entrada.
 ```
 
-## Diferenças autorizadas vs. prompt anterior
+## Diferenças autorizadas vs. prompt v2
 
-- identidade: termo neutro + vínculo explícito à imagem 2;
-- produto: contagem genérica substituída por lista ordenada de anexos;
-- comercial: `logo ou assinatura` → `ativo da loja`;
-- formato: instruções consolidadas, sem pixels/downscale/notas internas;
-- restrições: instruções duplicadas e nota de homologação removidas.
+Somente o bloco de identidade mudou:
 
-Nenhuma diferença fora desse escopo foi introduzida.
+```diff
+ [IDENTIDADE E DIREÇÃO VISUAL]
+-Ativo da loja anexado na imagem 2.
+-Reproduza o ativo da loja fornecido na imagem 2, preservando símbolo, lettering, proporções e organização interna. Não redesenhe, simplifique, substitua nem reorganize seus componentes.
++Use o ativo da loja da imagem 2 como referência de identidade. Preserve o nome, o lettering e os elementos gráficos característicos. Adapte escala, posição e espaçamento à composição. Quando indispensável para legibilidade e contraste, ajuste as cores e a disposição dos componentes, mantendo a identidade reconhecível e sem inventar, substituir ou omitir seus elementos característicos. Prefira as cores originais; se precisar adaptá-las, use a paleta fornecida ou uma aplicação monocromática adequada.
++Antes de alterar as cores do ativo, priorize o posicionamento e a adequação do fundo para preservar contraste e legibilidade.
+ Paleta da loja "Padaria da Esquina": cor principal #3B2418; cor de apoio #D59D5E.
+```
+
+O segundo complemento varia por fundo: em `original` ele é substituído por
+“Não altere o produto nem o cenário para resolver o contraste; priorize posição,
+escala e adaptação cromática do ativo.”
+
+Nenhuma outra diferença foi introduzida; produto, comercial, formato, prompt-base
+e restrições permanecem idênticos ao v2.
 
 ## Limitações
 
