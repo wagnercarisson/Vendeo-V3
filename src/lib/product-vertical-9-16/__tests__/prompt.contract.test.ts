@@ -87,9 +87,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v5",
+      composerVersion: "f59-vertical-9-16-composer-v6",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v5");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v6");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -153,7 +153,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato).toBe(formatoBefore);
     expect(versions).toEqual({
       intencao: "48.2.6-oferta-v2",
-      formato: "f59-9-16-v3",
+      formato: "f59-9-16-v4",
       tipoConteudo: "48.2.6-produto-v4",
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
@@ -171,7 +171,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
   it("compõe a estrutura editorial na ordem e com versão própria", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v5");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v6");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
     expect(composition.promptBaseVersion).toBe("48.2.6-produto-1-1-v1");
     expect(composition.text.startsWith("Crie uma campanha de oferta")).toBe(
@@ -211,15 +211,22 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(composition.text).not.toContain("[INSTRUÇÕES DO PROMPT-BASE]");
   });
 
-  it("emite as áreas reservadas uma única vez, só em percentuais", () => {
+  it("emite o bloco único de saída/área protegida, só com percentuais", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
-    expect(composition.text.match(/14%/g)).toHaveLength(1);
-    expect(composition.text.match(/35%/g)).toHaveLength(1);
-    expect(composition.text.match(/6%/g)).toHaveLength(1);
-    expect(composition.text.match(/30%/g)).toHaveLength(1);
-    expect(composition.text.match(/40%/g)).toHaveLength(1);
-    expect(composition.text).toContain(
-      `${SAFE_AREA_PERCENT.top}% do topo, ${SAFE_AREA_PERCENT.bottom}% da base, ${SAFE_AREA_PERCENT.sides}% de cada lateral`,
+    const block = [
+      "Saída: arte estática para Instagram, vertical 9:16, com fundo preenchendo todo o quadro.",
+      "",
+      `Área protegida: mantenha textos, preço, ativo da loja e partes essenciais do produto entre ${SAFE_AREA_PERCENT.sides}% e ${100 - SAFE_AREA_PERCENT.sides}% da largura e entre ${SAFE_AREA_PERCENT.top}% e ${100 - SAFE_AREA_PERCENT.bottom}% da altura. Dentro dessa região, preserve também o canto inferior direito reservado — últimos ${SAFE_AREA_PERCENT.bottomRightWidth}% da largura e ${SAFE_AREA_PERCENT.bottomRightHeight}% da altura. Fora da área protegida, use apenas fundo e elementos não essenciais. Não desenhe guias ou faixas.`,
+    ].join("\n");
+
+    expect(composition.blocks["ÁREAS RESERVADAS"]).toBe(block);
+    expect(composition.text.split(block)).toHaveLength(2);
+    expect(composition.text.match(/Saída: arte estática para Instagram/g)).toHaveLength(1);
+    expect(composition.text.match(/Área protegida:/g)).toHaveLength(1);
+    expect(composition.text.match(/vertical 9:16/g)).toHaveLength(1);
+    expect(composition.text).not.toContain("Deixe sem textos");
+    expect(composition.text).not.toContain(
+      "O fundo deve preencher também essas regiões",
     );
     expect(composition.text).not.toMatch(
       /px|1080 × 1920|1152|2048|0,9375|homologa/i,
@@ -274,12 +281,9 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       contributions: [PALETTE_CONTRIBUTION],
     });
 
-    expect(composition.text).not.toContain("ativo da loja. Preserve sua identidade");
+    expect(composition.text).not.toContain("Imagem 2: ativo da loja");
     expect(composition.text).toContain("Não invente identidade visual.");
-    expect(composition.text).toContain(
-      "Deixe sem textos ou partes essenciais do produto:",
-    );
-    expect(composition.text).not.toContain("textos, ativo da loja");
+    expect(composition.text).toContain("Área protegida: mantenha textos, preço, ativo da loja");
   });
 
   it("com paleta informa loja e paleta, sem inventar quando ausente", () => {
@@ -513,7 +517,8 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       "Não invente informações comerciais.",
       "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
       "Antes de alterar as cores do ativo",
-      "O fundo deve preencher também essas regiões.",
+      "Fora da área protegida, use apenas fundo e elementos não essenciais.",
+      "Não desenhe guias ou faixas.",
     ]) {
       expect(composition.text.split(rule)).toHaveLength(2);
     }

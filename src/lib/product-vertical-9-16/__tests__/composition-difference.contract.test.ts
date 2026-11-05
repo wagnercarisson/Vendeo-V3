@@ -62,7 +62,7 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
         promptBase: fixture.promptBase,
         references: fixture.references,
       });
-      for (const token of ["14%", "35%", "6%", "30%", "40%"]) {
+      for (const token of ["14%", "65%", "6%", "94%", "30%", "40%"]) {
         expect(vertical.text.match(new RegExp(token, "g"))).toHaveLength(1);
       }
       expect(vertical.text).not.toMatch(
@@ -105,7 +105,7 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
 
     expect(square.policyVersions.formato).toBe(formato11Policy.version);
     expect(square.policyVersions.safeArea).toBeUndefined();
-    expect(vertical.policyVersions.formato).toBe("f59-9-16-v3");
+    expect(vertical.policyVersions.formato).toBe("f59-9-16-v4");
     expect(vertical.policyVersions.safeArea).toBe("safe-area-9-16-v1");
     expect(vertical.policyVersions.intencao).toBe(square.policyVersions.intencao);
     expect(vertical.policyVersions.tipoConteudo).toBe(

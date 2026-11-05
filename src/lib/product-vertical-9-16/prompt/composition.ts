@@ -33,11 +33,9 @@ type VerticalBlockLabel =
   (typeof VERTICAL_PROMPT_BLOCK_LABELS)[keyof typeof VERTICAL_PROMPT_BLOCK_LABELS];
 
 const INTENT_OBJECTIVE = Object.freeze({
-  offer: "Crie uma campanha de oferta em imagem estática vertical 9:16, em peça única.",
-  spotlight:
-    "Crie uma campanha de destaque em imagem estática vertical 9:16, em peça única.",
-  exclusive:
-    "Crie uma campanha exclusiva em imagem estática vertical 9:16, em peça única.",
+  offer: "Crie uma campanha de oferta, em peça única.",
+  spotlight: "Crie uma campanha de destaque, em peça única.",
+  exclusive: "Crie uma campanha exclusiva, em peça única.",
 } as const);
 
 function intentRules(
@@ -301,16 +299,11 @@ function compositionLines(
   return rules;
 }
 
-function reservedAreaLines(
-  attachments: readonly ProductPromptAttachment[],
-): string[] {
-  const hasIdentity = attachmentPosition(attachments, "identity") !== null;
-  const subject = hasIdentity
-    ? "textos, ativo da loja ou partes essenciais do produto"
-    : "textos ou partes essenciais do produto";
+function reservedAreaLines(): string[] {
   return [
-    `Deixe sem ${subject}: ${SAFE_AREA_PERCENT.top}% do topo, ${SAFE_AREA_PERCENT.bottom}% da base, ${SAFE_AREA_PERCENT.sides}% de cada lateral e o retângulo inferior direito de ${SAFE_AREA_PERCENT.bottomRightWidth}% da largura por ${SAFE_AREA_PERCENT.bottomRightHeight}% da altura.`,
-    "O fundo deve preencher também essas regiões. Não desenhe guias, demarcações ou faixas vazias.",
+    "Saída: arte estática para Instagram, vertical 9:16, com fundo preenchendo todo o quadro.",
+    "",
+    `Área protegida: mantenha textos, preço, ativo da loja e partes essenciais do produto entre ${SAFE_AREA_PERCENT.sides}% e ${100 - SAFE_AREA_PERCENT.sides}% da largura e entre ${SAFE_AREA_PERCENT.top}% e ${100 - SAFE_AREA_PERCENT.bottom}% da altura. Dentro dessa região, preserve também o canto inferior direito reservado — últimos ${SAFE_AREA_PERCENT.bottomRightWidth}% da largura e ${SAFE_AREA_PERCENT.bottomRightHeight}% da altura. Fora da área protegida, use apenas fundo e elementos não essenciais. Não desenhe guias ou faixas.`,
   ];
 }
 
@@ -358,7 +351,7 @@ export function composeVerticalProductPrompt(
     },
     {
       label: VERTICAL_PROMPT_BLOCK_LABELS.reservedAreas,
-      lines: reservedAreaLines(attachments),
+      lines: reservedAreaLines(),
     },
   ];
 

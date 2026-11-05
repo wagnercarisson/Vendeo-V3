@@ -4,4 +4,4 @@
  * O prompt artístico usa apenas percentuais; a política TÉCNICA de áreas seguras
  * (`safe-area.ts`) permanece intacta e versionada em separado.
  */
-export const FORMATO_9_16_POLICY_VERSION = "f59-9-16-v3" as const;
+export const FORMATO_9_16_POLICY_VERSION = "f59-9-16-v4" as const;
