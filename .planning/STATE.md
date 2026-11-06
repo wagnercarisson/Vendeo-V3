@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-04T23:30:00.000Z"
+last_updated: "2026-11-06T22:00:00.000Z"
 progress:
   total_phases: 16
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 118
-  completed_plans: 112
-  percent: 95
+  completed_plans: 114
+  percent: 97
 ---
 
 # Project State
@@ -38,7 +38,9 @@ progress:
 
 ## Current Position
 
-- **EXECUÇÃO F59 / WAVE 4 (2026-11-04) — plano 59-05 concluído; WAVE 5 NÃO AUTORIZADA.** Engine 1:1 recebeu apenas `composePrompt`/`imageSize`/`beforeReservation` aditivos (defaults 1:1); projeção aceita `expectedArtifactPath` no input. Entrypoint vertical compõe compositor 9:16, `1152x2048`, store vertical, guarda pré-reserva e projeção com `client`; crédito/fence/estorno/desconhecido reutilizados sem duplicação. Gates: **231/231** testes (17 arquivos, inclui orchestration/projeção/credit 1:1), typecheck 0, lint 0 (sem TS), runtime 1:1 sem import vertical. Commits `e7121c09`, `52df6ca3`, `04f12ffb`; SUMMARY `59-05-SUMMARY.md`. **Sem chamada paga, migration, flag, push, deploy ou produção.**
+- **FECHAMENTO F59 (2026-11-06) — CONCLUÍDA TÉCNICA E EM HOMOLOGAÇÃO NO ESCOPO 9:16; PRODUÇÃO NÃO AUTORIZADA.** 53/53 tasks OpenSpec; **69 arquivos / 1196 testes**; typecheck/lint/OpenSpec strict/diff check verdes. OpenSpec verificado, sincronizado e arquivado em `openspec/changes/archive/2026-11-06-fase-59-campanhas-produto-vertical-9-16/`; specs principais `campaign-input-ui` e `product-vertical-*` atualizadas/criadas. Reels aceito com ressalva observada no Facebook; custo **calculado por usage e pricing** 0,030441 (não fatura); auditoria do replay terminal aceita formalmente como exceção de rastreabilidade em `.planning/issues/59-AUDIT-REPLAY-GAP.md` (**não corrigida**); proteção contra perda de dados fora de escopo; gate de produção separado, não executado. Nenhuma flag, crédito, geração, migration, push ou deploy nesta etapa.
+
+- **EXECUÇÃO F59 / WAVE 4 (2026-11-04) - plano 59-05 concluído; WAVE 5 NÃO AUTORIZADA.** Engine 1:1 recebeu apenas `composePrompt`/`imageSize`/`beforeReservation` aditivos (defaults 1:1); projeção aceita `expectedArtifactPath` no input. Entrypoint vertical compõe compositor 9:16, `1152x2048`, store vertical, guarda pré-reserva e projeção com `client`; crédito/fence/estorno/desconhecido reutilizados sem duplicação. Gates: **231/231** testes (17 arquivos, inclui orchestration/projeção/credit 1:1), typecheck 0, lint 0 (sem TS), runtime 1:1 sem import vertical. Commits `e7121c09`, `52df6ca3`, `04f12ffb`; SUMMARY `59-05-SUMMARY.md`. **Sem chamada paga, migration, flag, push, deploy ou produção.**
 
 - **EXECUÇÃO F59 / WAVE 3 (2026-11-04) — plano 59-04 concluído; WAVE 4 NÃO AUTORIZADA.** Pipeline vertical validado: `resizeVerticalToJpeg1080x1920` (1152×2048 → JPEG sRGB 1080×1920 q90, decode completo), store com upload imutável em `product-9-16`, metadados reais, probe discriminado sem assinatura, download validado, URL assinada separada e miniatura 162×288 best-effort. Gates: **248/248** testes (19 arquivos, inclui regressão 1:1 de store), typecheck 0, `src/lib/product-1-1/artifact` e `supabase/migrations` intocados. Commits `a319bf26`, `b7826fb2`, `33da1ee2`; SUMMARY `59-04-SUMMARY.md`. **Sem chamada paga, migration, flag, push, deploy ou produção.** Próxima wave (59-05) exige autorização.
 

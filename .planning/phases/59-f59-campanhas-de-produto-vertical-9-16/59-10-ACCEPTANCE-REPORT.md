@@ -81,9 +81,9 @@ Aceite manual não substitui teste simulado nem integração real.
 
 ## 6. Pendências que impedem o aceite integral
 
-1. **Decisão de auditoria:** aceitar a lacuna do replay terminal idempotente nesta
-   fase (recomendado) ou ajustar o mecanismo em trabalho separado. **Aceite formal
-   pendente; não resolvida.**
+1. **Auditoria do replay terminal:** aceita formalmente nesta fase como exceção de
+   rastreabilidade; pendência separada em `.planning/issues/59-AUDIT-REPLAY-GAP.md`;
+   **não corrigida**; correção em trabalho separado.
 2. Gate de produção separado — não executado por desenho.
 
 **Fora do escopo da F59:** proteção contra perda de dados no reload, intenção de nova

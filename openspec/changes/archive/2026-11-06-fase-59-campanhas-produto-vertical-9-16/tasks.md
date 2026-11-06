@@ -56,12 +56,21 @@
 - [x] 5.4 Rodar `openspec validate --strict` nesta change e nas specs principais afetadas.
 - [x] 5.5 Preparar homolog com lojas de teste, saldo controlado e flag vertical ligada; registrar baseline e ambiente.
 - [x] 5.6 Executar a matriz funcional vertical em homolog (intenções e fundos acordados): geração, arte 1080 × 1920, crédito, download, miniatura e projeção.
-- [x] 5.7 Executar a revisão visual com sobreposições de Stories/Reels: essencial dentro da área segura, sem faixas/guias, fundo preenchendo o canvas, peça compreensível sem legenda. **Reels aceito com ressalva observada no Facebook; máscara antiga é análise de risco, não validação irrestrita.** **Reels revisado e não aprovado; correções na quick pós-F59.**
+- [x] 5.7 Executar a revisão visual com sobreposições de Stories/Reels: essencial dentro da área segura, sem faixas/guias, fundo preenchendo o canvas, peça compreensível sem legenda.
+ **Reels revisado e não aprovado; correções na quick pós-F59.**
 - [x] 5.8 Executar cenários de falha/recuperação em homolog: resultado desconhecido, falha confirmada com estorno único, reenvio e operação já entregue.
 - [x] 5.9 Executar uma geração manual 1:1 em homolog e comparar com o comportamento atual.
 - [x] 5.10 Emitir relatório de aceite de homolog com evidências, limitações e critérios pendentes; **não** declarar produção aprovada.
 - [x] 5.11 Preparar o gate separado de produção (deploy, ativação da flag, smoke e rollback) sem executá-lo nesta fase.
-- [x] 5.12 Testar o ciclo de flag: iniciar geração com ON, desligar e comprovar consulta, download, recuperação de imagem/copy e resolução administrativa preservados, com geração em andamento chegando ao terminal. **Recuperação com flag OFF verificada em runtime (operação terminal); copy-recovery e resolução não consultam a flag.** **Parcial: consulta/download/restauração e in-flight comprovados; recuperação/resolução com flag OFF não executadas.**
+- [x] 5.12 Testar o ciclo de flag: iniciar geração com ON, desligar e comprovar consulta, download, recuperação de imagem/copy e resolução administrativa preservados, com geração em andamento chegando ao terminal.
+ **Parcial: consulta/download/restauração e in-flight comprovados; recuperação/resolução com flag OFF não executadas.**
 - [x] 5.13 Testar recuperação vertical completa (imagem + resolução administrativa) até detalhe/listagem, sem nova geração e sem projeção com path 1:1.
-- [x] 5.14 Testar restauração vertical com flag ON e OFF, incluindo bloqueio explicado e ausência de troca silenciosa para `1:1`. **Coberto no escopo F59: `restoreFrom` com flag OFF, revisão→edição e retorno após erro. Persistência automática no reload/proteção contra perda de dados é melhoria transversal fora da F59, não implementada.** **Parcial: restauração com flag OFF comprovada; ON coberto por teste.**
-- [x] 5.15 Validar a estimativa vertical contra o custo reportado na prova e registrar o desvio; confirmar que o orçamento da UAT é separado do teto da prova. **Custo calculado por usage e pricing: piloto 0,1107; usage 0,030441; desvio 0,080259; provider-reported nulo; não é fatura.** **Parcial: incremento contábil 0,1107; custo real por usage não reconciliado.**
+- [x] 5.14 Testar restauração vertical com flag ON e OFF, incluindo bloqueio explicado e ausência de troca silenciosa para `1:1`.
+ **Parcial: restauração com flag OFF comprovada; ON coberto por teste.**
+- [x] 5.15 Validar a estimativa vertical contra o custo reportado na prova e registrar o desvio; confirmar que o orçamento da UAT é separado do teto da prova.
+## Notas de reconciliação (fora dos checkboxes)
+
+- 5.7: Reels aceito com a ressalva observada no Facebook; a máscara antiga é análise conservadora de risco, não validação irrestrita.
+- 5.12: recuperação com flag OFF verificada em runtime (operação terminal); copy-recovery e resolução não consultam a flag.
+- 5.14: coberto no escopo F59 por `restoreFrom` com flag OFF, revisão→edição e retorno após erro; proteção contra perda de dados no reload é melhoria transversal fora da F59, não implementada.
+- 5.15: custo calculado por usage e pricing (piloto 0,1107; usage 0,030441; desvio 0,080259); provider-reported nulo; não é fatura.

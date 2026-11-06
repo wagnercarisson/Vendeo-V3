@@ -1,7 +1,8 @@
 # 59-10 — Parecer de fechamento da F59
 
-Data: 2026-11-06. Status: **pronto para decisão de fechamento no escopo 9:16; não
-encerrado automaticamente.** Produção permanece um gate separado e não executado.
+Data: 2026-11-06. Status: **FECHADA TECNICAMENTE E EM HOMOLOGAÇÃO NO ESCOPO 9:16;
+PRODUÇÃO NÃO AUTORIZADA.** OpenSpec verificado, sincronizado e arquivado em
+`openspec/changes/archive/2026-11-06-fase-59-campanhas-produto-vertical-9-16/`.
 
 ## 1. Bloqueadores específicos do 9:16
 
@@ -20,14 +21,15 @@ Gates reais executados no homolog:
 - concorrência SQL de reserva/tentativa;
 - regressão 1:1.
 
-## 2. Decisão pendente (não é falha de estorno)
+## 2. Decisão de auditoria — aceita como exceção
 
 - Auditoria do replay terminal idempotente: a RPC retorna `refunded + refund_once`
   antes do `INSERT` em `admin_audit_log`. A campanha D foi encerrada em `error`,
   operação permaneceu `refunded`, `refund_tx_id`/ledger/saldo inalterados.
-- Recomendação: **aceitar a lacuna nesta fase** como exceção de rastreabilidade do
-  replay administrativo e corrigir em trabalho separado.
-- **Aceite formal do responsável ainda pendente.** A lacuna não está resolvida.
+- **Aceite formal registrado em 2026-11-06**: exceção de rastreabilidade do replay
+  administrativo, **não** falha de estorno. Pendência separada em
+  `.planning/issues/59-AUDIT-REPLAY-GAP.md`, com evidência e mecanismo responsável.
+- **Não corrigida** nesta fase; correção em trabalho separado.
 
 ## 3. Ressalvas aceitas
 
@@ -55,10 +57,11 @@ Gates reais executados no homolog:
 - Exige deploy, ativação auditada, smoke, monitoramento e rollback, com autorização
   específica. O aceite de homolog não autoriza produção.
 
-## 6. Decisão solicitada
+## 6. Decisões registradas
 
-1. Aceitar formalmente a lacuna de auditoria do replay terminal nesta fase?
-2. Autorizar o encerramento da F59 no escopo 9:16, mantendo produção como gate
-   separado e a proteção de dados como melhoria transversal?
-
-Sem essas duas decisões, a F59 permanece aberta.
+1. Lacuna de auditoria do replay terminal: **aceita formalmente nesta fase** como
+   exceção de rastreabilidade; correção separada; não resolvida.
+2. Fechamento técnico e de homologação da F59 no escopo 9:16: **autorizado**,
+   preservando ressalvas, exclusões e produção como gate separado.
+3. Proteção contra perda de dados/“Limpar dados”: escopo transversal separado.
+4. Três ajustes de UI: quick pós-F59.
