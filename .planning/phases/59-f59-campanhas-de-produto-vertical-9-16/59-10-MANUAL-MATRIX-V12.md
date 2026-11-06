@@ -3,8 +3,8 @@
 ## Estado antes da matriz
 
 - Prompt congelado: `59-10-PROMPT-FROZEN-V12.md`.
-- Compositor: `f59-vertical-9-16-composer-v12`.
-- Commit congelado: `80137b2d7648c83c4960d4df0d6c0255e29eb205`.
+- Compositor: `f59-vertical-9-16-composer-v12` (commit `9ced84cb`).
+- Estado de preparação: `80137b2d`; registro de congelamento: `739ef3b7` (docs only).
 - Créditos da loja: **5**.
 - Teto do piloto: **US$ 2,20**; gasto **US$ 1,6007**; margem **US$ 0,5993**.
 - O teto foi ampliado de US$ 1,70 para US$ 2,20 via RPC

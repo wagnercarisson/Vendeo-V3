@@ -17,8 +17,9 @@
 
 | Campo | Valor |
 |---|---|
-| Commit HEAD | `80137b2d7648c83c4960d4df0d6c0255e29eb205` |
 | Commit do compositor | `9ced84cb` |
+| Estado de preparação no momento da geração | `80137b2d` |
+| Registro de congelamento (docs) | `739ef3b7` (sem alteração de código) |
 | `composer_version` | `f59-vertical-9-16-composer-v12` |
 | `base_version` | `48.2.6-produto-1-1-v1` |
 | intenção | `48.2.6-oferta-v2` |
