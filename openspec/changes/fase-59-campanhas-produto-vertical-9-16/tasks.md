@@ -56,7 +56,7 @@
 - [x] 5.4 Rodar `openspec validate --strict` nesta change e nas specs principais afetadas.
 - [x] 5.5 Preparar homolog com lojas de teste, saldo controlado e flag vertical ligada; registrar baseline e ambiente.
 - [x] 5.6 Executar a matriz funcional vertical em homolog (intenções e fundos acordados): geração, arte 1080 × 1920, crédito, download, miniatura e projeção.
-- [x] 5.7 Executar a revisão visual com sobreposições de Stories/Reels: essencial dentro da área segura, sem faixas/guias, fundo preenchendo o canvas, peça compreensível sem legenda. **Reels revisado e não aprovado; correções na quick pós-F59.** **Reels revisado e não aprovado; correções na quick pós-F59.**
+- [ ] 5.7 Executar a revisão visual com sobreposições de Stories/Reels: essencial dentro da área segura, sem faixas/guias, fundo preenchendo o canvas, peça compreensível sem legenda. **Reels pendente de preview real; máscara antiga é análise conservadora de risco, não validação de interface.** **Reels revisado e não aprovado; correções na quick pós-F59.**
 - [x] 5.8 Executar cenários de falha/recuperação em homolog: resultado desconhecido, falha confirmada com estorno único, reenvio e operação já entregue.
 - [x] 5.9 Executar uma geração manual 1:1 em homolog e comparar com o comportamento atual.
 - [x] 5.10 Emitir relatório de aceite de homolog com evidências, limitações e critérios pendentes; **não** declarar produção aprovada.

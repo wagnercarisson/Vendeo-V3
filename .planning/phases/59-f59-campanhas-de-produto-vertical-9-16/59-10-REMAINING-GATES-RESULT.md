@@ -94,57 +94,65 @@ que todas as suítes antigas de concorrência tenham sido executadas; elas não 
 
 ## 7. Pendências
 
-- Revisão visual de Reels/overlays: **executada e não aprovada** (ver seção 9).
-- Caso D: campanha `generating` com operação `refunded`; encerramento proposto na
-  seção 8, **não executado**.
+- Reels: **pendente de preview real**; a máscara conservadora antiga identifica
+  riscos, mas não valida a interface real (ver seção 9).
+- Caso D: encerrado para `error`; operação `refunded`; **auditoria da resolução
+  idempotente não registrada** — decisão pendente sobre ajuste do mecanismo ou
+  aceite da lacuna (ver seção 8).
+- Custo real do provider por usage: reconciliação pendente; o incremento de 0,1107
+  é contábil do piloto.
 - Gate de produção continua **não executado** por desenho.
 - Retries HTTP internos do SDK não são observáveis diretamente; a evidência é a
   contagem de invocações pagas.
 - A F59 **não** é encerrada por este resultado.
 
-## 8. Caso D — proposta de encerramento (não executada)
+## 8. Caso D — encerramento executado (com divergência de auditoria)
 
-Estado atual: campanha `e5ac1195-eb96-4076-b93c-06ec32962b88` em `generating`,
+Estado anterior: campanha `e5ac1195-eb96-4076-b93c-06ec32962b88` em `generating`,
 `error_message` nulo, operação `964c323b-c0c1-4249-974f-3f5386aa06a0` `refunded`,
 `publication_state=none`, claim `failed`, zero artefatos.
 
-Menor procedimento, pelo mecanismo existente:
+Execução autorizada via `POST /api/admin/product-1-1-pending` com `refund_once`,
+`resolutionOperationId` `dd7ddce5-2be4-47bd-b310-c0f87a6d72eb` e motivo auditável.
+Resposta HTTP 200: `status=refunded`, `artifactKind=absent`, `idempotent=true`.
 
-1. `POST /api/admin/product-1-1-pending` com:
-   - `campaignId` e `operationId` acima;
-   - `action: "refund_once"`;
-   - `resolutionOperationId` novo;
-   - `reason: "F59 D - encerramento de projecao residual (59-10)"`.
-2. O serviço chama a RPC auditada `admin_resolve_product_1_1_pending`; para operação
-   já `refunded`, o replay equivalente é idempotente.
-3. Em seguida, `projectClosedCampaign` altera **somente** `campaigns.status` de
-   `generating` para `error` e grava `error_message` neutro.
-4. Não toca crédito, `refund_tx_id`, ledger, artefatos, snapshots ou auditoria
-   anterior; não chama provider.
+Verificação:
 
-Verificação esperada: campanha `error`; operação continua `refunded`; `refund_tx_id`
-inalterado; nenhuma nova transação de crédito; uma nova linha de auditoria
-`product_1_1_pending_resolution`; nenhuma operação em andamento.
+- campanha: **`error`**, mensagem “Esta geração foi encerrada e o crédito foi
+  estornado.”;
+- operação: permanece **`refunded`**; `refund_tx_id` `35ed3cde…` e `credit_tx_id`
+  `c402b0c9…` inalterados;
+- saldo: **0**; transações de crédito: **102** (sem nova);
+- `paid_calls`: **0** (sem provider);
+- campanhas sintéticas em `generating`: **0**;
+- claims `in_progress`: **0**; créditos em aberto: **0**.
 
-Se o POST retornar conflito/terminal divergente ou a projeção falhar, parar e
-informar. **Não executar atualização direta de banco.**
+**Divergência:** a RPC retornou replay idempotente e **não inseriu nova linha em
+`admin_audit_log`** para esta resolução. Não foi feito UPDATE direto nem inserção
+manual de auditoria. O encerramento da campanha foi aplicado, mas o requisito de
+“auditoria registrada” nesta chamada **não foi comprovado**. Necessária decisão
+sobre ajuste do mecanismo para auditar replay terminal idempotente, ou aceite
+explícito da lacuna.
 
-## 9. Reels — revisão com as artes existentes
+## 9. Reels — análise conservadora de risco
 
-Sobreposição local (sem publicação): topo 14% (269 px), base 35% (672 px), laterais
-6% (65 px), ações 324×768 no canto inferior direito.
+Sobreposição local com a máscara conservadora antiga (topo 14%, base 35%, laterais
+6%, recorte 324×768), **sem publicação e sem preview real de Reels**.
 
-| Arte | Resultado |
+| Arte | Interseção observada |
 |---|---|
-| Bolo | Identidade no topo; validade na base; aviso vertical na base/lateral. **Não aprovado.** |
-| Pão de Queijo | Identidade no topo; “Pré assado”, “Rápido e prático” e validade na base; aviso sob ações. **Não aprovado.** |
-| Pão Francês | Identidade no topo; base apenas com produto. **Ressalva no topo.** |
+| Bolo | Identidade no topo; validade na base; aviso vertical na base/lateral. |
+| Pão de Queijo | Identidade no topo; “Pré assado”, “Rápido e prático” e validade na base; aviso sob o recorte de ações. |
+| Pão Francês | Identidade no topo; base apenas com produto. |
 
-Stories FB/IG permanece aprovado separadamente; Reels não herda esse aceite. As
-correções ficam para a quick pós-F59; prompt congelado não foi alterado.
+**Classificação:** há interseções com a máscara conservadora. A compatibilidade no
+posicionamento real de Reels permanece **pendente de preview real**; não há
+aprovação nem reprovação definitiva. Stories FB/IG permanece aprovado
+separadamente. A quick pós-F59 cobre apenas seletor, identificação na listagem e
+direção de fundo na revisão; prompt congelado.
 
 ## 10. Operações em andamento
 
 Confirmado no estado final: **0** claims `in_progress` e **0** créditos
-`reserved/art_uploaded`. O caso D tem operação `refunded`, claim `failed` e nenhum
-artefato; não é operação em andamento.
+`reserved/art_uploaded`. O caso D tem operação `refunded`, claim `failed`, campanha
+`error` e nenhum artefato; não é operação em andamento.

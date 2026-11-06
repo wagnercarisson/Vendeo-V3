@@ -49,24 +49,29 @@ responsável. Política registrada: `safe-area-9-16-experimental-v3`
 
 ## 5. Reels
 
-Revisão executada em 2026-11-06 sobre as artes verticais existentes (Bolo, Pão de
-Queijo e Pão Francês), **sem nova geração e sem publicação**. Sobreposição local
-com as zonas de Reels: topo 14% (269 px), base 35% (672 px), laterais 6% (65 px) e
-pilha de ações inferior direita 324×768.
+Revisão executada em 2026-11-06 sobre as artes verticais existentes, **sem nova
+geração e sem publicação**, usando a máscara conservadora antiga (topo 14%/269 px,
+base 35%/672 px, laterais 6%/65 px e recorte 324×768). Essa máscara **não é** o
+preview real da interface de Reels.
 
-| Arte | Achado |
+| Arte | Interseção com a máscara antiga |
 |---|---|
-| Bolo | Identidade da loja no topo (14%); validade na base (35%); aviso obrigatório vertical invade base/lateral esquerda. **Reprovado para Reels.** |
-| Pão de Queijo | Identidade da loja no topo; “Pré assado”, “Rápido e prático” e validade na base; “Imagem meramente ilustrativa” sob a pilha de ações. **Reprovado para Reels.** |
-| Pão Francês | Identidade da loja no topo; base coberta apenas por produto. Sem texto essencial na base. **Ressalva apenas no topo.** |
+| Bolo | Identidade no topo; validade na base; aviso vertical na base/lateral. |
+| Pão de Queijo | Identidade no topo; “Pré assado”, “Rápido e prático” e validade na base; aviso sob o recorte de ações. |
+| Pão Francês | Identidade no topo; base apenas com produto. |
 
-O Stories FB/IG permanece aprovado separadamente. Reels **não** herda esse aceite.
-As correções de composição/UI ficam para a quick pós-F59; o prompt congelado não foi
-alterado.
+**Classificação:** há interseções com a máscara conservadora antiga. A
+compatibilidade visual no posicionamento real de Reels permanece **pendente de
+preview real**; não há aprovação nem reprovação definitiva. Stories FB/IG permanece
+aprovado separadamente.
+
+A quick pós-F59 contém apenas: (1) posição do seletor de formato; (2) identificação
+do formato na listagem; (3) direção de fundo na revisão. Não inclui reformulação de
+margens nem do prompt; o prompt permanece congelado.
 
 ## 6. Status
 
 - Stories FB/IG no recorte apresentado: **aceito manualmente**.
-- Reels: **revisado e não aprovado** (identidade no topo em todas; base em Bolo e
-  Pão de Queijo).
+- Reels: **pendente de preview real**; a máscara antiga é análise conservadora de
+  risco, não validação de interface.
 - O aceite visual não autoriza conclusão da fase, arquivamento ou produção.

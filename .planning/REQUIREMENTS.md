@@ -317,7 +317,7 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-59-09 | Comprovado: A1 recuperação vertical e A2 resolução administrativa até detalhe/lista, sem nova geração e sem path 1:1. |
 | REQ-59-11 | Comprovado: ciclo OFF/ON auditado, 503 antes de reserva/provider, campanhas existentes atendidas e geração em andamento concluída. Recuperação/resolução com flag OFF não foi executada. |
 | REQ-59-12 | Parcial: restauração vertical com flag OFF comprovada; restauração com flag ON coberta por teste. |
-| REQ-59-14 | Parcial: Stories FB/IG aceitos; Reels revisado e não aprovado; gate de produção separado e não executado. |
+| REQ-59-14 | Parcial: Stories FB/IG aceitos; Reels pendente de preview real (máscara antiga é análise de risco); gate de produção separado e não executado. |
 
 O incremento de US$ 0,1107 é contabilizado no piloto; não é custo real do provider
 reconciliado por usage.

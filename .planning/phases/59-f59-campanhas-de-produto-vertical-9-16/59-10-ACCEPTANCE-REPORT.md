@@ -66,8 +66,9 @@ Aceite manual não substitui teste simulado nem integração real.
 - Bolo: validade na faixa inferior; exceção pontual, proteção mantida no prompt.
 - Pão Francês: “garanti” é erro de entrada; arte não publicável com o erro.
 - Faixa superior efetiva de 5%; a região entre 5% e 15% não é protegida.
-- Reels **revisado e não aprovado**: identidade no topo em todas; base comprometida no
-  Bolo e no Pão de Queijo. Stories FB/IG permanece aprovado separadamente.
+- Reels: **pendente de preview real**. A máscara conservadora antiga indica
+  interseções de risco, mas não equivale à validação na interface real. Stories
+  FB/IG permanece aprovado separadamente.
 - O incremento de **+US$ 0,1107** é o valor contabilizado no piloto, **não** custo real
   do provider reconciliado por usage.
 - Os cenários concorrentes executados passaram; isso **não** equivale a executar todas
@@ -77,9 +78,9 @@ Aceite manual não substitui teste simulado nem integração real.
 
 ## 6. Pendências que impedem o aceite integral
 
-1. Reels/overlays: correções de composição na quick pós-F59.
-2. Caso D: campanha `generating` com operação `refunded`; encerramento proposto,
-   aguardando autorização.
+1. Reels: preview real da interface pendente; máscara antiga é análise de risco.
+2. Caso D: campanha encerrada em `error`; **auditoria da resolução idempotente não
+   registrada** — decisão pendente (ajuste do mecanismo ou aceite da lacuna).
 3. Reconciliação do custo real do provider por usage (o piloto registra 0,1107).
 4. Gate de produção separado — não executado por desenho.
 
