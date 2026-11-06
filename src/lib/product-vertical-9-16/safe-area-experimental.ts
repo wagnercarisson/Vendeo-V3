@@ -67,3 +67,52 @@ export function instagramProtectedBandsForCanvas(
     isGenerationCanvas: isGeneration,
   });
 }
+
+/**
+ * Versão seguinte da política experimental: protege SOMENTE a faixa inferior
+ * de 20%. A faixa superior de 15% deixa de ser uma restrição de informação;
+ * não há máscara lateral nem recorte de canto.
+ *
+ * `safe-area-9-16-experimental-v1` permanece histórica para campanhas anteriores.
+ */
+export const SAFE_AREA_9_16_BOTTOM_ONLY_VERSION =
+  "safe-area-9-16-experimental-v2" as const;
+
+/** Percentual experimental da faixa inferior protegida. */
+export const INSTAGRAM_BOTTOM_BAND_PERCENT = Object.freeze({
+  bottom: 20 as const,
+});
+
+export interface InstagramBottomBand {
+  readonly width: number;
+  readonly height: number;
+  readonly bottomPx: number;
+  /** Fim da região permitida para informações protegidas. */
+  readonly protectedYMax: number;
+  readonly isGenerationCanvas: boolean;
+}
+
+/**
+ * Faixa inferior para EXATAMENTE `1152 × 2048` (geração) ou `1080 × 1920`
+ * (entrega). Qualquer outro canvas ⇒ `null` (fail-closed).
+ */
+export function instagramBottomBandForCanvas(
+  width: number,
+  height: number,
+): InstagramBottomBand | null {
+  const isGeneration = width === 1152 && height === 2048;
+  const isDelivery = width === 1080 && height === 1920;
+  if (!isGeneration && !isDelivery) return null;
+
+  const bottomPx = Math.round(
+    (INSTAGRAM_BOTTOM_BAND_PERCENT.bottom / 100) * height,
+  );
+
+  return Object.freeze({
+    width,
+    height,
+    bottomPx,
+    protectedYMax: height - bottomPx,
+    isGenerationCanvas: isGeneration,
+  });
+}

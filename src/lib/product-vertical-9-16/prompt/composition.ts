@@ -300,7 +300,7 @@ function compositionLines(
 
 function compositionPolicyLines(): string[] {
   return [
-    "Mantenha os textos, preço, oferta, CTA quando houver, condições comerciais e ativo da loja fora dos 15% superiores e dos 20% inferiores da imagem.",
+    "Os 20% inferiores da imagem são exclusivos para fundo, produto e seus complementos visuais. É PROIBIDO colocar nessa faixa qualquer texto, preço, selo, CTA ou ativo da loja, inclusive avisos obrigatórios e validade. Posicione esses elementos integralmente acima da faixa inferior, sem encostar no limite.",
     "",
     "Posicione o produto preferencialmente na parte inferior da composição. Produto, embalagem e complementos podem avançar nessas faixas, desde que permaneçam reconhecíveis e que nenhuma informação necessária para identificá-los fique comprometida.",
     "",

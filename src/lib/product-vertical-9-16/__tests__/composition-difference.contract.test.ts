@@ -64,17 +64,18 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
       });
       const block = vertical.blocks["COMPOSIÇÃO PARA INSTAGRAM"];
       expect(block).toContain(
-        "Mantenha os textos, preço, oferta, CTA quando houver, condições comerciais e ativo da loja fora dos 15% superiores e dos 20% inferiores da imagem.",
+        "Os 20% inferiores da imagem são exclusivos para fundo, produto e seus complementos visuais.",
       );
       expect(block).toContain(
-        "Posicione o produto preferencialmente na parte inferior da composição.",
+        "É PROIBIDO colocar nessa faixa qualquer texto, preço, selo, CTA ou ativo da loja",
       );
+      expect(block).not.toContain("15%");
       for (const oldToken of ["14%", "35%", "6%", "30%", "40%"]) {
         expect(block).not.toContain(oldToken);
       }
       expect(block).not.toMatch(/px|1152×2048|1080×1920|x=|y=|0,9375/);
       expect(
-        vertical.text.match(/Mantenha os textos, preço, oferta, CTA/g),
+        vertical.text.match(/Os 20% inferiores da imagem são exclusivos/g),
       ).toHaveLength(1);
       expect(vertical.text).not.toMatch(/1152×2048|1080×1920|0,9375|homologa/i);
     },
@@ -114,9 +115,9 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
 
     expect(square.policyVersions.formato).toBe(formato11Policy.version);
     expect(square.policyVersions.safeArea).toBeUndefined();
-    expect(vertical.policyVersions.formato).toBe("f59-9-16-v7");
+    expect(vertical.policyVersions.formato).toBe("f59-9-16-v8");
     expect(vertical.policyVersions.safeArea).toBe(
-      "safe-area-9-16-experimental-v1",
+      "safe-area-9-16-experimental-v2",
     );
     expect(vertical.policyVersions.intencao).toBe(square.policyVersions.intencao);
     expect(vertical.policyVersions.tipoConteudo).toBe(

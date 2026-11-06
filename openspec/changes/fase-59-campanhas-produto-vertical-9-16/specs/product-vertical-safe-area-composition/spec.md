@@ -33,31 +33,31 @@ This policy remains the FROZEN HISTORICAL contract (`safe-area-9-16-v1`). New ve
 
 ### Requirement: Experimental Instagram protected bands for new vertical compositions
 
-The new vertical composition SHALL use the experimental Vendeo policy `safe-area-9-16-experimental-v1`, based on the responsible's manual observation, with only two protected information bands:
+The new vertical composition SHALL use the experimental Vendeo policy `safe-area-9-16-experimental-v2`, based on the responsible's manual observation, with only one protected information band:
 
-- top: 15% of height;
 - bottom: 20% of height.
 
-There MUST be no lateral margin mask and no specific bottom-right cutout. The policy MUST NOT be presented as official Instagram guidance or a universal guarantee. The prompt SHALL express the policy as a single visual block, without pixel coordinates; the numeric calculations for the generation canvas `1152 × 2048` and the delivery canvas `1080 × 1920` SHALL remain in code for validation and analysis overlays.
+The earlier `safe-area-9-16-experimental-v1` (15% top + 20% bottom) remains historical for campaigns composed with it. There MUST be no lateral margin mask and no specific bottom-right cutout. The policy MUST NOT be presented as official Instagram guidance or a universal guarantee. The prompt SHALL express the policy as a single visual block, without pixel coordinates; the numeric calculations for the generation canvas `1152 × 2048` and the delivery canvas `1080 × 1920` SHALL remain in code for validation and analysis overlays.
 
 #### Scenario: Prompt uses one visual block without old geometry
 
 - **WHEN** a new vertical prompt is composed
 - **THEN** it SHALL contain one `[COMPOSIÇÃO PARA INSTAGRAM]` block
-- **AND** the block SHALL mention only the 15% top and 20% bottom bands
-- **AND** it MUST NOT contain pixel coordinates, lateral masks, the 30% × 40% bottom-right cutout, or instructions to leave those bands empty
+- **AND** the block SHALL mention only the bottom 20% band
+- **AND** it MUST NOT contain the 15% top band, pixel coordinates, lateral masks, the 30% × 40% bottom-right cutout, or instructions to leave that band empty
 
-#### Scenario: Product may extend into protected bands
+#### Scenario: Product may extend into the bottom band
 
-- **WHEN** the product, packaging or complements extend into the 15%/20% bands
+- **WHEN** the product, packaging or complements extend into the bottom 20% band
 - **THEN** the art SHALL NOT be rejected solely for that extension
 - **AND** the product SHALL remain recognizable and its essential identifying information uncompromised
+- **AND** texts, price, badge, CTA, store asset, mandatory notices and validity MUST remain fully above the band
 
-#### Scenario: Analysis overlay uses only the vertical bands
+#### Scenario: Analysis overlay uses only the bottom band
 
 - **WHEN** an analyst overlays the new policy on the delivered image
-- **THEN** only the top 15% and bottom 20% bands SHALL be marked
-- **AND** no lateral mask or additional bottom-right mask SHALL be applied
+- **THEN** only the bottom 20% band SHALL be marked
+- **AND** no top band, lateral mask or additional bottom-right mask SHALL be applied
 
 ### Requirement: Background fills the vertical canvas
 
@@ -77,17 +77,17 @@ The vertical composition SHALL fill the entire 1080 × 1920 canvas with backgrou
 
 ### Requirement: Essential elements remain protected
 
-For the new vertical composition, texts, price, offer, CTA when present, commercial conditions and store identity MUST remain outside the top 15% and bottom 20% bands. Product, packaging and complements MAY extend into those bands, provided they remain recognizable and no essential identifying information is compromised. Non-essential decorative elements MAY occupy any area. The piece MUST communicate the offer, product and identity without depending on an external caption.
+For the new vertical composition, texts, price, offer, badge, CTA when present, commercial conditions, mandatory notices, validity and store identity MUST remain fully above the bottom 20% band. Product, packaging and complements MAY extend into that band, provided they remain recognizable and no essential identifying information is compromised. Non-essential decorative elements MAY occupy any area. The piece MUST communicate the offer, product and identity without depending on an external caption.
 
-#### Scenario: Commercial information avoids protected bands
+#### Scenario: Commercial information avoids the bottom band
 
-- **WHEN** a vertical art is reviewed against the experimental bands overlay
-- **THEN** texts, price, offer, CTA, commercial conditions and store identity SHALL be outside the top 15% and bottom 20%
-- **AND** the product MAY extend into those bands without automatic rejection
+- **WHEN** a vertical art is reviewed against the experimental bottom-band overlay
+- **THEN** texts, price, offer, badge, CTA, commercial conditions, mandatory notices, validity and store identity SHALL be fully above the bottom 20%
+- **AND** the product MAY extend into that band without automatic rejection
 
 #### Scenario: Product remains identifiable
 
-- **WHEN** product, packaging or complements occupy part of a protected band
+- **WHEN** product, packaging or complements occupy part of the bottom band
 - **THEN** the product SHALL remain recognizable
 - **AND** essential identifying information MUST NOT be compromised
 
@@ -120,7 +120,7 @@ The vertical path SHALL reuse the existing `CopyDirectorService`, its prompts, s
 
 ### Requirement: Vertical prompt is an editorial restatement of the approved 1:1 policies
 
-The vertical prompt SHALL be produced by a vertical-only serializer that restates the approved Product `1:1` commercial and visual rules in a short editorial structure: campaign objective and format, references in real attachment order, campaign data, composition rules and the single `[COMPOSIÇÃO PARA INSTAGRAM]` block. The restatement MUST preserve every functional requirement (intent, background direction, product fidelity, store-asset identity, optional description, mandatory text and language integrity) while emitting each orientation only once and omitting empty fields or rules about absent elements. The serializer MUST NOT modify the `1:1` prompt, its composer, its policies or the shared policy registry. The new vertical composition records `safe-area-9-16-experimental-v1`; the historical `safe-area-9-16-v1` remains frozen for prior campaigns.
+The vertical prompt SHALL be produced by a vertical-only serializer that restates the approved Product `1:1` commercial and visual rules in a short editorial structure: campaign objective and format, references in real attachment order, campaign data, composition rules and the single `[COMPOSIÇÃO PARA INSTAGRAM]` block. The restatement MUST preserve every functional requirement (intent, background direction, product fidelity, store-asset identity, optional description, mandatory text and language integrity) while emitting each orientation only once and omitting empty fields or rules about absent elements. The serializer MUST NOT modify the `1:1` prompt, its composer, its policies or the shared policy registry. The new vertical composition records `safe-area-9-16-experimental-v2`; the historical `safe-area-9-16-experimental-v1` and `safe-area-9-16-v1` remain frozen for prior campaigns.
 
 #### Scenario: Only the vertical composition changes
 

@@ -19,8 +19,8 @@ import type {
 } from "@/lib/product-1-1/policies/types";
 import { formato11Policy } from "@/lib/product-1-1/policies/formato-1-1";
 import {
-  SAFE_AREA_9_16_EXPERIMENTAL_VERSION,
-  instagramProtectedBandsForCanvas,
+  SAFE_AREA_9_16_BOTTOM_ONLY_VERSION,
+  instagramBottomBandForCanvas,
 } from "../safe-area-experimental";
 import {
   VERTICAL_PROMPT_BLOCK_LABELS,
@@ -90,9 +90,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v9",
+      composerVersion: "f59-vertical-9-16-composer-v10",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v9");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v10");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -156,14 +156,14 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato).toBe(formatoBefore);
     expect(versions).toEqual({
       intencao: "48.2.6-oferta-v2",
-      formato: "f59-9-16-v7",
+      formato: "f59-9-16-v8",
       tipoConteudo: "48.2.6-produto-v4",
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
       geral: "48.2.5-general-integrity-v1",
       fundo: "48.2.6-background-direction-v2",
       identidade: "48.2.6-identity-context-v1",
-      safeArea: SAFE_AREA_9_16_EXPERIMENTAL_VERSION,
+      safeArea: SAFE_AREA_9_16_BOTTOM_ONLY_VERSION,
     });
     expect(Object.keys(versions)).toHaveLength(9);
     expect(versions.formato).toBe(FORMATO_9_16_POLICY_VERSION);
@@ -174,7 +174,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
   it("compõe a estrutura editorial na ordem e com versão própria", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v9");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v10");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
     expect(composition.promptBaseVersion).toBe("48.2.6-produto-1-1-v1");
     expect(composition.text.startsWith("Crie uma campanha de oferta")).toBe(
@@ -214,10 +214,10 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(composition.text).not.toContain("[INSTRUÇÕES DO PROMPT-BASE]");
   });
 
-  it("emite o bloco único de composição para Instagram, sem geometria antiga", () => {
+  it("emite o bloco único com a faixa inferior de 20%, sem geometria antiga", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
     const block = [
-      "Mantenha os textos, preço, oferta, CTA quando houver, condições comerciais e ativo da loja fora dos 15% superiores e dos 20% inferiores da imagem.",
+      "Os 20% inferiores da imagem são exclusivos para fundo, produto e seus complementos visuais. É PROIBIDO colocar nessa faixa qualquer texto, preço, selo, CTA ou ativo da loja, inclusive avisos obrigatórios e validade. Posicione esses elementos integralmente acima da faixa inferior, sem encostar no limite.",
       "",
       "Posicione o produto preferencialmente na parte inferior da composição. Produto, embalagem e complementos podem avançar nessas faixas, desde que permaneçam reconhecíveis e que nenhuma informação necessária para identificá-los fique comprometida.",
       "",
@@ -229,11 +229,16 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(composition.blocks["COMPOSIÇÃO PARA INSTAGRAM"]).toBe(block);
     expect(composition.text.split(block)).toHaveLength(2);
     expect(
-      composition.text.match(/Mantenha os textos, preço, oferta, CTA/g),
+      composition.text.match(/Os 20% inferiores da imagem são exclusivos/g),
     ).toHaveLength(1);
-    for (const token of ["15%", "20%"]) {
-      expect(block.match(new RegExp(token, "g"))).toHaveLength(1);
-    }
+    expect(composition.text.match(/É PROIBIDO colocar nessa faixa/g)).toHaveLength(
+      1,
+    );
+    expect(block.match(/20%/g)).toHaveLength(1);
+    expect(block).not.toContain("15%");
+    expect(block).not.toContain(
+      "Mantenha os textos, preço, oferta, CTA",
+    );
     for (const oldToken of ["14%", "35%", "6%", "30%", "40%"]) {
       expect(block).not.toContain(oldToken);
     }
@@ -319,34 +324,28 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     );
   });
 
-  it("mantém as faixas experimentais para geração e entrega, fora do prompt", () => {
-    const generation = instagramProtectedBandsForCanvas(1152, 2048);
-    expect(generation).toMatchObject({
+  it("mantém a faixa inferior experimental para geração e entrega, fora do prompt", () => {
+    const generation = instagramBottomBandForCanvas(1152, 2048);
+    expect(generation).toEqual({
       width: 1152,
       height: 2048,
-      topPx: 307,
       bottomPx: 410,
-      protectedYMin: 307,
       protectedYMax: 1638,
       isGenerationCanvas: true,
     });
     expect(Object.keys(generation!)).toEqual([
       "width",
       "height",
-      "topPx",
       "bottomPx",
-      "protectedYMin",
       "protectedYMax",
       "isGenerationCanvas",
     ]);
 
-    const delivery = instagramProtectedBandsForCanvas(1080, 1920);
-    expect(delivery).toMatchObject({
+    const delivery = instagramBottomBandForCanvas(1080, 1920);
+    expect(delivery).toEqual({
       width: 1080,
       height: 1920,
-      topPx: 288,
       bottomPx: 384,
-      protectedYMin: 288,
       protectedYMax: 1536,
       isGenerationCanvas: false,
     });
@@ -406,7 +405,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(composition.text).not.toContain("Imagem 2: ativo da loja");
     expect(composition.text).toContain("Não invente identidade visual.");
     expect(composition.text).toContain(
-      "ativo da loja fora dos 15% superiores",
+      "qualquer texto, preço, selo, CTA ou ativo da loja",
     );
   });
 
@@ -641,7 +640,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       "Não invente informações comerciais.",
       "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
       "Antes de alterar as cores do ativo",
-      "Mantenha os textos, preço, oferta, CTA quando houver, condições comerciais e ativo da loja fora dos 15% superiores e dos 20% inferiores da imagem.",
+      "Os 20% inferiores da imagem são exclusivos para fundo, produto e seus complementos visuais. É PROIBIDO colocar nessa faixa qualquer texto, preço, selo, CTA ou ativo da loja, inclusive avisos obrigatórios e validade. Posicione esses elementos integralmente acima da faixa inferior, sem encostar no limite.",
       "Posicione o produto preferencialmente na parte inferior da composição.",
       "Utilize todo o quadro para construir uma composição contínua e equilibrada.",
     ]) {
