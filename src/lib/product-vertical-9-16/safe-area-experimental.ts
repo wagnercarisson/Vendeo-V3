@@ -116,3 +116,59 @@ export function instagramBottomBandForCanvas(
     isGenerationCanvas: isGeneration,
   });
 }
+
+/**
+ * Versão seguinte da política experimental: 5% superiores + 20% inferiores.
+ * A faixa superior passa a existir como restrição de informação, mas é estreita
+ * (5%, não 15%). Não há máscara lateral nem recorte de canto.
+ *
+ * `safe-area-9-16-experimental-v1` e `v2` permanecem históricas.
+ */
+export const SAFE_AREA_9_16_TOP_BOTTOM_VERSION =
+  "safe-area-9-16-experimental-v3" as const;
+
+/** Percentuais experimentais das faixas superior e inferior. */
+export const INSTAGRAM_TOP_BOTTOM_BANDS_PERCENT = Object.freeze({
+  top: 5 as const,
+  bottom: 20 as const,
+});
+
+export interface InstagramTopBottomBands {
+  readonly width: number;
+  readonly height: number;
+  readonly topPx: number;
+  readonly bottomPx: number;
+  readonly protectedYMin: number;
+  readonly protectedYMax: number;
+  readonly isGenerationCanvas: boolean;
+}
+
+/**
+ * Faixas para EXATAMENTE `1152 × 2048` (geração) ou `1080 × 1920` (entrega).
+ * Qualquer outro canvas ⇒ `null` (fail-closed).
+ */
+export function instagramTopBottomBandsForCanvas(
+  width: number,
+  height: number,
+): InstagramTopBottomBands | null {
+  const isGeneration = width === 1152 && height === 2048;
+  const isDelivery = width === 1080 && height === 1920;
+  if (!isGeneration && !isDelivery) return null;
+
+  const topPx = Math.round(
+    (INSTAGRAM_TOP_BOTTOM_BANDS_PERCENT.top / 100) * height,
+  );
+  const bottomPx = Math.round(
+    (INSTAGRAM_TOP_BOTTOM_BANDS_PERCENT.bottom / 100) * height,
+  );
+
+  return Object.freeze({
+    width,
+    height,
+    topPx,
+    bottomPx,
+    protectedYMin: topPx,
+    protectedYMax: height - bottomPx,
+    isGenerationCanvas: isGeneration,
+  });
+}

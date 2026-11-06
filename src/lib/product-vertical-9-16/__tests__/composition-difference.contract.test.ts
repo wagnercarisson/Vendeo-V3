@@ -64,7 +64,7 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
       });
       const block = vertical.blocks["COMPOSIÇÃO PARA INSTAGRAM"];
       expect(block).toContain(
-        "Os 20% inferiores são exclusivos para fundo, produto e seus complementos visuais.",
+        "Os 5% superiores e os 20% inferiores são exclusivos para fundo.",
       );
       expect(block).toContain(
         "É PROIBIDO colocar qualquer texto nessa faixa, inclusive textos obrigatórios, avisos legais e validade da oferta.",
@@ -75,7 +75,7 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
       }
       expect(block).not.toMatch(/px|1152×2048|1080×1920|x=|y=|0,9375/);
       expect(
-        vertical.text.match(/Os 20% inferiores são exclusivos/g),
+        vertical.text.match(/Os 5% superiores e os 20% inferiores/g),
       ).toHaveLength(1);
       expect(vertical.text).not.toMatch(/1152×2048|1080×1920|0,9375|homologa/i);
     },
@@ -115,9 +115,9 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
 
     expect(square.policyVersions.formato).toBe(formato11Policy.version);
     expect(square.policyVersions.safeArea).toBeUndefined();
-    expect(vertical.policyVersions.formato).toBe("f59-9-16-v10");
+    expect(vertical.policyVersions.formato).toBe("f59-9-16-v11");
     expect(vertical.policyVersions.safeArea).toBe(
-      "safe-area-9-16-experimental-v2",
+      "safe-area-9-16-experimental-v3",
     );
     expect(vertical.policyVersions.intencao).toBe(square.policyVersions.intencao);
     expect(vertical.policyVersions.tipoConteudo).toBe(

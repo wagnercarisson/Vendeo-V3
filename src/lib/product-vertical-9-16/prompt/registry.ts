@@ -9,7 +9,7 @@ import {
   temaNenhumPolicy,
 } from "@/lib/product-1-1/policies/registry";
 import type { ProductPromptPolicyResolutionInput } from "@/lib/product-1-1/policies/types";
-import { SAFE_AREA_9_16_BOTTOM_ONLY_VERSION } from "../safe-area-experimental";
+import { SAFE_AREA_9_16_TOP_BOTTOM_VERSION } from "../safe-area-experimental";
 import { FORMATO_9_16_POLICY_VERSION } from "./policy-formato-9-16";
 
 /**
@@ -21,7 +21,7 @@ import { FORMATO_9_16_POLICY_VERSION } from "./policy-formato-9-16";
  * segura. Nenhum valor é lido de um contrato mutável.
  */
 export const VERTICAL_COMPOSER_VERSION =
-  "f59-vertical-9-16-composer-v12" as const;
+  "f59-vertical-9-16-composer-v13" as const;
 
 export function resolveVerticalPromptPolicyVersions(
   input: ProductPromptPolicyResolutionInput,
@@ -43,7 +43,7 @@ export function resolveVerticalPromptPolicyVersions(
     geral: GENERAL_INTEGRITY_POLICY_VERSION,
     fundo: PRODUCT_1_1_BACKGROUND_DIRECTION_VERSION,
     identidade: PRODUCT_1_1_IDENTITY_CONTEXT_VERSION,
-    safeArea: SAFE_AREA_9_16_BOTTOM_ONLY_VERSION,
+    safeArea: SAFE_AREA_9_16_TOP_BOTTOM_VERSION,
   });
 }
 
