@@ -50,31 +50,31 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
       expect(vertical.text).toContain("[REFERÊNCIAS]");
       expect(vertical.text).toContain("[DADOS DA CAMPANHA]");
       expect(vertical.text).toContain("[COMPOSIÇÃO]");
-      expect(vertical.text).toContain("[ÁREA DE COMPOSIÇÃO]");
+      expect(vertical.text).toContain("[COMPOSIÇÃO PARA INSTAGRAM]");
     },
   );
 
   it.each(VERTICAL_COMPOSITION_FIXTURES.map((f) => [f.id, f] as const))(
-    "%s emite o bloco compacto sem coordenadas em pixels",
+    "%s emite o bloco para Instagram sem geometria antiga",
     (_id, fixture) => {
       const vertical = composeVerticalProductPrompt({
         briefing: fixture.briefing,
         promptBase: fixture.promptBase,
         references: fixture.references,
       });
-      const block = vertical.blocks["ÁREA DE COMPOSIÇÃO"];
+      const block = vertical.blocks["COMPOSIÇÃO PARA INSTAGRAM"];
       expect(block).toContain(
-        "Crie uma composição publicitária compacta na região central superior da imagem.",
+        "Mantenha os textos, preço, oferta, CTA quando houver, condições comerciais e ativo da loja fora dos 15% superiores e dos 20% inferiores da imagem.",
       );
       expect(block).toContain(
-        "Reserve os 14% superiores, os 35% inferiores e 6% de cada lateral",
+        "Posicione o produto preferencialmente na parte inferior da composição.",
       );
-      expect(block).toContain(
-        "últimos 30% da largura e 40% da altura",
-      );
+      for (const oldToken of ["14%", "35%", "6%", "30%", "40%"]) {
+        expect(block).not.toContain(oldToken);
+      }
       expect(block).not.toMatch(/px|1152×2048|1080×1920|x=|y=|0,9375/);
       expect(
-        vertical.text.match(/Crie uma composição publicitária compacta/g),
+        vertical.text.match(/Mantenha os textos, preço, oferta, CTA/g),
       ).toHaveLength(1);
       expect(vertical.text).not.toMatch(/1152×2048|1080×1920|0,9375|homologa/i);
     },
@@ -114,8 +114,10 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
 
     expect(square.policyVersions.formato).toBe(formato11Policy.version);
     expect(square.policyVersions.safeArea).toBeUndefined();
-    expect(vertical.policyVersions.formato).toBe("f59-9-16-v6");
-    expect(vertical.policyVersions.safeArea).toBe("safe-area-9-16-v1");
+    expect(vertical.policyVersions.formato).toBe("f59-9-16-v7");
+    expect(vertical.policyVersions.safeArea).toBe(
+      "safe-area-9-16-experimental-v1",
+    );
     expect(vertical.policyVersions.intencao).toBe(square.policyVersions.intencao);
     expect(vertical.policyVersions.tipoConteudo).toBe(
       square.policyVersions.tipoConteudo,

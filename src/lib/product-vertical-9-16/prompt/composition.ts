@@ -25,7 +25,7 @@ export const VERTICAL_PROMPT_BLOCK_LABELS = Object.freeze({
   references: "REFERÊNCIAS",
   data: "DADOS DA CAMPANHA",
   composition: "COMPOSIÇÃO",
-  reservedAreas: "ÁREA DE COMPOSIÇÃO",
+  compositionPolicy: "COMPOSIÇÃO PARA INSTAGRAM",
 } as const);
 
 type VerticalBlockLabel =
@@ -298,13 +298,15 @@ function compositionLines(
   return rules;
 }
 
-function reservedAreaLines(): string[] {
+function compositionPolicyLines(): string[] {
   return [
-    "Crie uma composição publicitária compacta na região central superior da imagem. Concentre nela o ativo da loja, textos, preço, selo e partes essenciais do produto.",
+    "Mantenha os textos, preço, oferta, CTA quando houver, condições comerciais e ativo da loja fora dos 15% superiores e dos 20% inferiores da imagem.",
     "",
-    "Reserve os 14% superiores, os 35% inferiores e 6% de cada lateral exclusivamente para a continuação do fundo. Mantenha também os últimos 30% da largura e 40% da altura, no canto inferior direito, livres de elementos importantes.",
+    "Posicione o produto preferencialmente na parte inferior da composição. Produto, embalagem e complementos podem avançar nessas faixas, desde que permaneçam reconhecíveis e que nenhuma informação necessária para identificá-los fique comprometida.",
     "",
-    "Organize a campanha para caber nessa área, sem cortar informações. Complete o restante do quadro com o fundo, sem desenhar guias ou faixas.",
+    "Evite concentrar informações importantes junto à borda inferior direita, onde podem aparecer controles da plataforma, sem reservar um espaço vazio específico para eles.",
+    "",
+    "Utilize todo o quadro para construir uma composição contínua e equilibrada. As margens protegem informações; não são faixas que devem ficar vazias.",
   ];
 }
 
@@ -351,8 +353,8 @@ export function composeVerticalProductPrompt(
       lines: compositionLines(input, identity, attachments),
     },
     {
-      label: VERTICAL_PROMPT_BLOCK_LABELS.reservedAreas,
-      lines: reservedAreaLines(),
+      label: VERTICAL_PROMPT_BLOCK_LABELS.compositionPolicy,
+      lines: compositionPolicyLines(),
     },
   ];
 

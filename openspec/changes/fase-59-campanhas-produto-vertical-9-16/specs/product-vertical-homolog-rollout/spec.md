@@ -123,16 +123,16 @@ If the effective configuration is absent, incomplete or divergent, or a configur
 
 ### Requirement: Homolog validation uses test stores and real overlays
 
-Functional acceptance SHALL happen first in homolog with test stores (`is_test_store = true`), never in production. It MUST include: vertical generation for each supported intent/background combination used in the acceptance sample; artifact dimensions and format checks; download; recovery; credit behavior; thumbnail; list/detail projection; and a visual review with Stories/Reels overlays applied to the delivered art.
+Functional acceptance SHALL happen first in homolog with test stores (`is_test_store = true`), never in production. It MUST include: vertical generation for each supported intent/background combination used in the acceptance sample; artifact dimensions and format checks; download; recovery; credit behavior; thumbnail; list/detail projection; and a visual review with the overlay of the policy version recorded for the campaign.
 
-The visual review MUST verify that essential content stays inside the protected area, that no empty band or guide is visible, that the background fills the canvas, and that the piece is understandable without the external caption.
+For campaigns composed with the new vertical version, the visual review MUST verify that texts, price, offer, CTA, commercial conditions and store identity stay outside the experimental top 15% and bottom 20% bands; product, packaging and complements MAY extend into those bands if recognizable. The review MUST also verify that no empty band or guide is visible, that the background fills the canvas, and that the piece is understandable without the external caption. Historical `safe-area-9-16-v1` campaigns retain their original overlay contract.
 
 #### Scenario: Homolog acceptance covers the vertical path
 
 - **WHEN** the homolog acceptance runs
 - **THEN** it SHALL use test stores and a controlled credit balance
 - **AND** it SHALL produce evidence for dimensions, download, recovery, credit and thumbnail
-- **AND** it SHALL include at least one visual review with the safe-area overlay
+- **AND** it SHALL include at least one visual review with the overlay of the campaign's recorded policy version
 
 #### Scenario: Vertical recovery reaches detail and list
 
