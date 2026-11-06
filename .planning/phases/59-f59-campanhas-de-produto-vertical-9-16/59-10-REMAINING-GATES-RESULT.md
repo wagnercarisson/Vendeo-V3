@@ -207,9 +207,27 @@ revisão → edição; não substitui o teste de restauração a partir de rascu
   formato); nenhum crédito/provider.
 - **Risco identificado:** `campaignFormatPaused` é calculado no servidor apenas a
   partir de `restoredForm`; um draft local não tem `restoredForm`, então a pausa
-  visual pode não aparecer no reload com flag OFF. Isso precisa de verificação e,
-  se confirmado, de correção de UI fora da quick acordada (que tem apenas seletor,
-  listagem e direção de fundo).
+  visual pode não aparecer no reload com flag OFF.
+- **Defeito confirmado por código (não executado em navegador):**
+  1. O rascunho de campanha nova é salvo nas chaves globais
+     `campaign_draft`/`campaign_draft_image` (`draftScope = null`).
+  2. `CampaignPageClient` remove essas chaves globais em `useLayoutEffect` a cada
+     montagem/reload, **antes** do `useEffect` de restauração do
+     `useCampaignForm`. Portanto o reload apaga o draft antes de restaurá-lo.
+  3. Mesmo que o draft sobrevivesse, `campaignFormatPaused` só é derivado de
+     `restoredForm` no servidor; com draft local e flag OFF, não há banner nem
+     bloqueio visual da submissão (o servidor ainda rejeitaria com 503).
+- **Menor correção proposta (não editada):**
+  - preservar as chaves globais no mount quando não houver `restoredForm`/escopo
+    de campanha (o draft novo é justamente o global), mantendo a limpeza apenas
+    para o caminho com snapshot server-side;
+  - derivar no cliente um `formatPaused` a partir de
+    `fields.campaignFormat === "9:16" && !verticalEnabled` (OR com
+    `campaignFormatPaused`) e usá-lo no banner, no `disabled` do seletor e no
+    botão de revisão.
+- **Critério de aprovação após correção:** reload com ON restaura
+  campos/imagem/9:16; reload com OFF mantém 9:16 e exibe bloqueio explicado, sem
+  submissão nem crédito/provider.
 
 ## 13. Recuperação com flag OFF — verificação técnica
 
@@ -224,3 +242,20 @@ revisão → edição; não substitui o teste de restauração a partir de rascu
   operação pendente; a ausência de referência à flag nos caminhos indica que ele não
   é bloqueado. Se for exigida prova ponta a ponta, seria um caso sintético novo
   (1 crédito, sem provider).
+
+## 14. Reconciliação de custo (dados existentes)
+
+| Fonte | Copy | Imagem | Total |
+|---|---|---|---|
+| `pilot_paid_calls` (pré-chamada) | 0,0007 | 0,1100 | **0,1107** |
+| `generation_events` / `admin_campaign_delivery_costs` (usage/pricing) | 0,000172 | 0,030269 | **0,030441** |
+
+- `provider_reported_cost_usd`: **nulo** nas duas linhas; o custo pós-chamada é
+  estimativa por usage/pricing table, não fatura do provider.
+- Incremento efetivamente contabilizado no piloto: **0,1107**.
+- Custo pós-chamada apurado: **0,030441**.
+- Diferença a reconciliar: **0,080259** (o piloto ficou acima do usage apurado).
+- Gasto do piloto: 2,1989; se reconciliado ao usage, seria 2,118641. Nenhum ajuste
+  foi executado.
+- Conclusão: a reconciliação está **concluída com os dados existentes**, mas sem
+  fatura do provider; o valor de 0,1107 é contábil do piloto, não “custo real”.

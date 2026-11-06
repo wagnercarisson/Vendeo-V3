@@ -70,8 +70,10 @@ Aceite manual não substitui teste simulado nem integração real.
 - Reels: **aceito pelo responsável com a ressalva observada no Facebook**. A máscara
   conservadora antiga indicou interseções de risco; não é aprovação irrestrita.
   Stories FB/IG permanece aprovado separadamente.
-- O incremento de **+US$ 0,1107** é o valor contabilizado no piloto, **não** custo real
-  do provider reconciliado por usage.
+- O incremento de **+US$ 0,1107** é o valor contabilizado no piloto. A reconciliação
+  com os dados existentes apurou **US$ 0,030441** por usage/pricing
+  (`0,000172` copy + `0,030269` imagem); `provider_reported_cost_usd` está nulo. A
+  diferença de **US$ 0,080259** permanece contábil, sem ajuste executado.
 - Os cenários concorrentes executados passaram; isso **não** equivale a executar todas
   as suítes antigas.
 - O prompt bruto do provider não é persistido; hashes são reconstruções
@@ -79,11 +81,13 @@ Aceite manual não substitui teste simulado nem integração real.
 
 ## 6. Pendências que impedem o aceite integral
 
-1. Restauração de **rascunho local persistido** 9:16 com flag OFF: falta confirmar a
-   pausa explicada no reload (o `restoreFrom` e a revisão→edição já estão cobertos).
+1. **Defeito confirmado no reload do rascunho local 9:16:** o draft novo usa chaves
+   globais, que `CampaignPageClient` remove no mount antes da restauração; além
+   disso, com flag OFF a pausa não é derivada para draft local. Correção mínima
+   proposta, **não editada** (ver `59-10-REMAINING-GATES-RESULT.md`, seção 12).
 2. Caso D: campanha encerrada em `error`; **auditoria da resolução idempotente não
-   registrada** — decisão pendente (ajuste do mecanismo ou aceite da lacuna).
-3. Reconciliação do custo real do provider por usage (o piloto registra 0,1107).
+   registrada** — decisão pendente de aceite do responsável; RPC não alterada.
+3. Reconciliação de custo concluída com dados existentes; sem fatura do provider.
 4. Gate de produção separado — não executado por desenho.
 
 ## 7. Declaração

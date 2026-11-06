@@ -14,8 +14,8 @@ Este gate é separado do aceite de homolog e **não** é autorizado por ele.
 
 ## 2. Pré-requisitos de entrada
 
-1. Restauração de rascunho local persistido 9:16 com flag OFF: confirmar pausa
-   explicada no reload (ou aceitar como limitação).
+1. **Defeito no reload do rascunho local 9:16** (chave global removida no mount +
+   pausa OFF não derivada); correção mínima proposta, não editada.
 2. Caso D fechado em `error`; auditoria da resolução idempotente pendente de
    decisão (ajuste do mecanismo ou aceite da lacuna).
 3. Reels: **aceito com ressalva observada no Facebook**; não é aprovação irrestrita

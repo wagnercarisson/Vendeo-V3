@@ -316,8 +316,9 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-59-08 | Cenários executados: concorrência de rota com 1 campanha/1 dedução/1 imagem; reserva e tentativa SQL com 1 vencedor. Não representa a execução de todas as suítes antigas. |
 | REQ-59-09 | Comprovado: A1 recuperação vertical e A2 resolução administrativa até detalhe/lista, sem nova geração e sem path 1:1. |
 | REQ-59-11 | Comprovado: ciclo OFF/ON auditado, 503 antes de reserva/provider, campanhas existentes atendidas e geração em andamento concluída. Recuperação/resolução com flag OFF não foi executada. |
-| REQ-59-12 | Parcial: revisão→edição e `restoreFrom` com flag OFF comprovados; falta o reload de rascunho local persistido 9:16 com flag OFF (pausa explicada). |
+| REQ-59-12 | Parcial: revisão→edição e `restoreFrom` com flag OFF comprovados; **defeito confirmado** no reload de rascunho local 9:16 (chave global removida no mount + pausa OFF não derivada), correção mínima proposta e não editada. |
 | REQ-59-14 | Parcial: Stories e Reels aceitos (Reels com ressalva observada no Facebook); gate de produção separado e não executado. |
 
-O incremento de US$ 0,1107 é contabilizado no piloto; não é custo real do provider
-reconciliado por usage.
+O incremento de US$ 0,1107 é contabilizado no piloto. A reconciliação com dados
+existentes apurou US$ 0,030441 por usage/pricing (copy 0,000172 + imagem 0,030269);
+`provider_reported_cost_usd` está nulo. Desvio: US$ 0,080259, sem ajuste executado.
