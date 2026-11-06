@@ -5,8 +5,6 @@ import type {
 } from "@/lib/product-1-1/prompt-composition";
 import { PROMPT_BASE_VERSION } from "@/lib/product-1-1/prompt-base";
 import { PRODUCT_PROMPT_BLOCK_LABELS } from "@/lib/product-1-1/policies/types";
-import { PROVIDER_SIZE } from "../dimensions";
-import { safeAreaForCanvas } from "../safe-area";
 import {
   FORMATO_9_16_POLICY_VERSION,
   VERTICAL_COMPOSER_VERSION,
@@ -27,7 +25,7 @@ export const VERTICAL_PROMPT_BLOCK_LABELS = Object.freeze({
   references: "REFERÊNCIAS",
   data: "DADOS DA CAMPANHA",
   composition: "COMPOSIÇÃO",
-  reservedAreas: "ÁREAS RESERVADAS",
+  reservedAreas: "ÁREA DE COMPOSIÇÃO",
 } as const);
 
 type VerticalBlockLabel =
@@ -301,29 +299,12 @@ function compositionLines(
 }
 
 function reservedAreaLines(): string[] {
-  const [width, height] = PROVIDER_SIZE.split("x").map(Number);
-  const safe = safeAreaForCanvas(width, height);
-  if (!safe || !safe.isGenerationCanvas) {
-    throw new Error(
-      "[product-vertical-9-16] provider canvas without a safe-area contract",
-    );
-  }
-
-  const xMin = safe.sidesPx;
-  const xMax = safe.width - safe.sidesPx;
-  const yMin = safe.topPx;
-  const yMax = safe.height - safe.bottomPx;
-  const bottomRightXMin = safe.width - safe.bottomRightWidth;
-  const bottomRightYMin = safe.height - safe.bottomRightHeight;
-
   return [
-    `Canvas: ${safe.width}×${safe.height} pixels, vertical 9:16. A origem das coordenadas é o canto superior esquerdo; x cresce para a direita e y para baixo. Preencha todo o canvas com o fundo.`,
+    "Crie uma composição publicitária compacta na região central superior da imagem. Concentre nela o ativo da loja, textos, preço, selo e partes essenciais do produto.",
     "",
-    `Mantenha textos, preço, ativo da loja e partes essenciais do produto integralmente dentro do retângulo x=${xMin} a ${xMax}, y=${yMin} a ${yMax}.`,
+    "Reserve os 14% superiores, os 35% inferiores e 6% de cada lateral exclusivamente para a continuação do fundo. Mantenha também os últimos 30% da largura e 40% da altura, no canto inferior direito, livres de elementos importantes.",
     "",
-    `Exclua também a região inferior direita x=${bottomRightXMin} a ${safe.width}, y=${bottomRightYMin} a ${safe.height}.`,
-    "",
-    "Fora da área permitida, use apenas fundo e elementos não essenciais. Não desenhe guias, faixas ou marcações das áreas reservadas.",
+    "Organize a campanha para caber nessa área, sem cortar informações. Complete o restante do quadro com o fundo, sem desenhar guias ou faixas.",
   ];
 }
 

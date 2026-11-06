@@ -18,7 +18,11 @@ import type {
   ResolvedProductPromptPolicies,
 } from "@/lib/product-1-1/policies/types";
 import { formato11Policy } from "@/lib/product-1-1/policies/formato-1-1";
-import { SAFE_AREA_9_16_VERSION } from "../safe-area";
+import {
+  SAFE_AREA_9_16_VERSION,
+  protectedRect,
+  safeAreaForCanvas,
+} from "../safe-area";
 import {
   VERTICAL_PROMPT_BLOCK_LABELS,
   composeVerticalProductPrompt,
@@ -87,9 +91,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v7",
+      composerVersion: "f59-vertical-9-16-composer-v8",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v7");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v8");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -153,7 +157,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato).toBe(formatoBefore);
     expect(versions).toEqual({
       intencao: "48.2.6-oferta-v2",
-      formato: "f59-9-16-v5",
+      formato: "f59-9-16-v6",
       tipoConteudo: "48.2.6-produto-v4",
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
@@ -171,7 +175,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
   it("compõe a estrutura editorial na ordem e com versão própria", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v7");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v8");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
     expect(composition.promptBaseVersion).toBe("48.2.6-produto-1-1-v1");
     expect(composition.text.startsWith("Crie uma campanha de oferta")).toBe(
@@ -190,7 +194,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       "[REFERÊNCIAS]",
       "[DADOS DA CAMPANHA]",
       "[COMPOSIÇÃO]",
-      "[ÁREAS RESERVADAS]",
+      "[ÁREA DE COMPOSIÇÃO]",
     ];
     let cursor = -1;
     for (const header of order) {
@@ -204,39 +208,35 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       "REFERÊNCIAS",
       "DADOS DA CAMPANHA",
       "COMPOSIÇÃO",
-      "ÁREAS RESERVADAS",
+      "ÁREA DE COMPOSIÇÃO",
     ]);
     expect(composition.text).not.toContain("[IDENTIDADE E DIREÇÃO VISUAL]");
     expect(composition.text).not.toContain("[PRODUTO E IMAGENS DE REFERÊNCIA]");
     expect(composition.text).not.toContain("[INSTRUÇÕES DO PROMPT-BASE]");
   });
 
-  it("emite o bloco único em pixels do canvas de geração, sem percentuais", () => {
+  it("emite o bloco único de composição compacta, sem coordenadas em pixels", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
     const block = [
-      "Canvas: 1152×2048 pixels, vertical 9:16. A origem das coordenadas é o canto superior esquerdo; x cresce para a direita e y para baixo. Preencha todo o canvas com o fundo.",
+      "Crie uma composição publicitária compacta na região central superior da imagem. Concentre nela o ativo da loja, textos, preço, selo e partes essenciais do produto.",
       "",
-      "Mantenha textos, preço, ativo da loja e partes essenciais do produto integralmente dentro do retângulo x=69 a 1083, y=287 a 1331.",
+      "Reserve os 14% superiores, os 35% inferiores e 6% de cada lateral exclusivamente para a continuação do fundo. Mantenha também os últimos 30% da largura e 40% da altura, no canto inferior direito, livres de elementos importantes.",
       "",
-      "Exclua também a região inferior direita x=806 a 1152, y=1229 a 2048.",
-      "",
-      "Fora da área permitida, use apenas fundo e elementos não essenciais. Não desenhe guias, faixas ou marcações das áreas reservadas.",
+      "Organize a campanha para caber nessa área, sem cortar informações. Complete o restante do quadro com o fundo, sem desenhar guias ou faixas.",
     ].join("\n");
 
-    expect(composition.blocks["ÁREAS RESERVADAS"]).toBe(block);
+    expect(composition.blocks["ÁREA DE COMPOSIÇÃO"]).toBe(block);
     expect(composition.text.split(block)).toHaveLength(2);
-    expect(composition.text.match(/Canvas: 1152×2048 pixels/g)).toHaveLength(1);
-    expect(composition.text.match(/x=69 a 1083, y=287 a 1331/g)).toHaveLength(1);
-    expect(composition.text.match(/x=806 a 1152, y=1229 a 2048/g)).toHaveLength(1);
-    expect(composition.blocks["ÁREAS RESERVADAS"]).not.toMatch(/%/);
-    expect(composition.text).not.toMatch(/1080×1920|1080 × 1920|0,9375/);
+    expect(
+      composition.text.match(/Crie uma composição publicitária compacta/g),
+    ).toHaveLength(1);
+    for (const token of ["14%", "35%", "6%", "30%", "40%"]) {
+      expect(block.match(new RegExp(token, "g"))).toHaveLength(1);
+    }
+    expect(block).not.toMatch(/px|1152×2048|1080×1920|x=|y=|0,9375/);
+    expect(composition.text).not.toContain("Canvas:");
+    expect(composition.text).not.toContain("ÁREAS RESERVADAS");
     expect(composition.text).not.toContain("Saída: arte estática");
-    expect(composition.text).not.toContain("Área protegida:");
-    expect(composition.text).not.toContain("Fora da área protegida");
-    expect(composition.text).not.toContain("Deixe sem textos");
-    expect(composition.text).not.toContain(
-      "O fundo deve preencher também essas regiões",
-    );
     expect(composition.text).not.toMatch(/homologa/i);
   });
 
@@ -313,6 +313,29 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     );
   });
 
+  it("mantém o cálculo da região segura para geração e entrega, fora do prompt", () => {
+    const generation = safeAreaForCanvas(1152, 2048);
+    expect(generation).toMatchObject({
+      width: 1152,
+      height: 2048,
+      topPx: 287,
+      bottomPx: 717,
+      sidesPx: 69,
+      bottomRightWidth: 346,
+      bottomRightHeight: 819,
+      isGenerationCanvas: true,
+    });
+    expect(protectedRect()).toEqual({
+      xMin: 65,
+      xMax: 1015,
+      yMin: 269,
+      yMax: 1248,
+    });
+
+    const composition = composeVerticalProductPrompt(defaultInput());
+    expect(composition.text).not.toMatch(/1152|2048|1080|1920|px|x=|y=/);
+  });
+
   it("identifica anexos na ordem real e orienta o ativo uma única vez", () => {
     const composition = composeVerticalProductPrompt({
       ...defaultInput(),
@@ -364,7 +387,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(composition.text).not.toContain("Imagem 2: ativo da loja");
     expect(composition.text).toContain("Não invente identidade visual.");
     expect(composition.text).toContain(
-      "Mantenha textos, preço, ativo da loja e partes essenciais do produto",
+      "Concentre nela o ativo da loja",
     );
   });
 
@@ -599,8 +622,9 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       "Não invente informações comerciais.",
       "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
       "Antes de alterar as cores do ativo",
-      "Fora da área permitida, use apenas fundo e elementos não essenciais.",
-      "Não desenhe guias, faixas ou marcações das áreas reservadas.",
+      "Crie uma composição publicitária compacta na região central superior da imagem.",
+      "Reserve os 14% superiores, os 35% inferiores e 6% de cada lateral",
+      "Organize a campanha para caber nessa área, sem cortar informações.",
     ]) {
       expect(composition.text.split(rule)).toHaveLength(2);
     }
