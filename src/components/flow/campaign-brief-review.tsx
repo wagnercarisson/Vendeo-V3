@@ -15,6 +15,7 @@ import { formatCurrencyBRL } from "@/lib/formatters";
 import { ILLUSTRATIVE_NOTICE_TEXT } from "@/lib/campaign/constants";
 import { MANDATORY_ARTWORK_LABEL } from "@/lib/campaign/field-guidance";
 import { StoreIdentityBlock } from "./store-identity-block";
+import { FLOW_BACKGROUND_DIRECTION_LABELS } from "./background-direction-selector";
 import { useOperationCosts } from "@/hooks/use-operation-costs";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 import { CreditCta } from "@/components/credit/credit-cta";
@@ -167,6 +168,16 @@ export function CampaignBriefReview({
                 {campaignFormat === "9:16" && (
                   <span className="ml-1 text-text-muted">1080 × 1920 px</span>
                 )}
+              </dd>
+            </div>
+          )}
+          {eligible && fields.backgroundDirection && (
+            <div className="flex items-center gap-2">
+              <dt className="text-text-muted text-sm font-body w-28 shrink-0">
+                Direção de fundo
+              </dt>
+              <dd className="text-text-primary text-sm font-body">
+                {FLOW_BACKGROUND_DIRECTION_LABELS[fields.backgroundDirection]}
               </dd>
             </div>
           )}

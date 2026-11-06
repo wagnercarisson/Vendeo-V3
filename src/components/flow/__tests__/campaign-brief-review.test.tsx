@@ -223,5 +223,39 @@ describe("CampaignBriefReview — Testes 11-16 (F43)", () => {
       />,
     );
     expect(screen.queryByText("Formato")).not.toBeInTheDocument();
+    expect(screen.queryByText("Direção de fundo")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["studio", "Estúdio"],
+    ["ambient", "Ambientado"],
+    ["original", "Original"],
+  ] as const)(
+    "Quick 261106-qxn: direção de fundo %s aparece após Formato",
+    (backgroundDirection, label) => {
+      renderReview({
+        eligible: true,
+        campaignFormat: "9:16",
+        fields: { ...FIELDS, backgroundDirection },
+      });
+
+      const format = screen.getByText("Formato");
+      const direction = screen.getByText("Direção de fundo");
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(
+        format.compareDocumentPosition(direction) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    },
+  );
+
+  it("Quick 261106-qxn: legado não mostra direção de fundo mesmo com valor no estado", () => {
+    renderReview({
+      eligible: false,
+      fields: { ...FIELDS, backgroundDirection: "original" },
+    });
+
+    expect(screen.queryByText("Formato")).not.toBeInTheDocument();
+    expect(screen.queryByText("Direção de fundo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Original")).not.toBeInTheDocument();
   });
 });

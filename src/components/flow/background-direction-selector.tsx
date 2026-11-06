@@ -9,13 +9,19 @@ import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/backg
  * (enums internos permanecem internos). Só é montado sob elegibilidade
  * server-side — em `off` o formulário legado segue intacto.
  */
+export const FLOW_BACKGROUND_DIRECTION_LABELS = Object.freeze({
+  studio: "Estúdio",
+  ambient: "Ambientado",
+  original: "Original",
+} as const satisfies Record<ProductOneToOneBackgroundDirection, string>);
+
 const BACKGROUND_DIRECTION_OPTIONS: ReadonlyArray<{
   readonly value: ProductOneToOneBackgroundDirection;
   readonly label: string;
 }> = [
-  { value: "studio", label: "Estúdio" },
-  { value: "ambient", label: "Ambientado" },
-  { value: "original", label: "Original" },
+  { value: "studio", label: FLOW_BACKGROUND_DIRECTION_LABELS.studio },
+  { value: "ambient", label: FLOW_BACKGROUND_DIRECTION_LABELS.ambient },
+  { value: "original", label: FLOW_BACKGROUND_DIRECTION_LABELS.original },
 ];
 
 interface BackgroundDirectionSelectorProps {
