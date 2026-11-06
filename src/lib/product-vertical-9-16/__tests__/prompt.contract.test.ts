@@ -90,9 +90,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v11",
+      composerVersion: "f59-vertical-9-16-composer-v12",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v11");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v12");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -156,7 +156,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato).toBe(formatoBefore);
     expect(versions).toEqual({
       intencao: "48.2.6-oferta-v2",
-      formato: "f59-9-16-v9",
+      formato: "f59-9-16-v10",
       tipoConteudo: "48.2.6-produto-v4",
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
@@ -174,7 +174,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
   it("compõe a estrutura editorial na ordem e com versão própria", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v11");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v12");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
     expect(composition.promptBaseVersion).toBe("48.2.6-produto-1-1-v1");
     expect(composition.text.startsWith("Crie uma campanha de oferta")).toBe(
@@ -321,17 +321,87 @@ describe("F59 — compositor editorial vertical 9:16", () => {
         "Paleta: principal #3B2418; apoio #D59D5E.",
       ].join("\n"),
     );
-    expect(composition.blocks["COMPOSIÇÃO"]).toBe(
+    expect(composition.blocks["COMPOSIÇÃO PARA INSTAGRAM"]).toBe(
       [
-        "Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.",
-        "Destaque o preço de venda.",
-        "Não invente informações comerciais.",
-        "Use fundo de estúdio liso ou gradiente suave na paleta da loja, com bom contraste e sem objetos de apoio.",
-        "Antes de alterar as cores do ativo, ajuste posicionamento e fundo para obter contraste.",
-        "A descrição é opcional e pode ser adaptada ou omitida, preservando seu significado.",
-        "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
-        "Use português correto e natural, sem caracteres ou pontuação duplicados, e não corrija silenciosamente os textos de entrada.",
+        "Os 20% inferiores são exclusivos para fundo, produto e seus complementos visuais. É PROIBIDO colocar qualquer texto nessa faixa, inclusive textos obrigatórios, avisos legais e validade da oferta. Preço, selo, CTA e ativo da loja também devem permanecer integralmente acima dela. Os textos obrigatórios devem integrar a composição acima dessa faixa, não funcionar como rodapé da imagem.",
+        "",
+        "Posicione o produto preferencialmente na parte inferior da composição. Produto, embalagem e complementos podem avançar nessas faixas, desde que permaneçam reconhecíveis e que nenhuma informação necessária para identificá-los fique comprometida.",
+        "",
+        "Evite concentrar informações importantes junto à borda inferior direita, onde podem aparecer controles da plataforma, sem reservar um espaço vazio específico para eles.",
+        "",
+        "Utilize todo o quadro para construir uma composição contínua e equilibrada. As margens protegem informações; não são faixas que devem ficar vazias.",
       ].join("\n"),
+    );
+  });
+
+  it("emite a liberdade criativa uma única vez no bloco de composição", () => {
+    const composition = composeVerticalProductPrompt(defaultInput());
+    const line =
+      "Exerça liberdade criativa na composição: explore enquadramento, iluminação, profundidade e hierarquia visual para criar uma campanha expressiva e comercialmente atraente, respeitando as informações fornecidas, o ativo da loja e as áreas protegidas.";
+
+    expect(composition.blocks["COMPOSIÇÃO"]).toContain(line);
+    expect(composition.text.split(line)).toHaveLength(2);
+    expect(composition.blocks["COMPOSIÇÃO PARA INSTAGRAM"]).not.toContain(line);
+  });
+
+  it("emite a orientação do aviso somente quando a frase está presente", () => {
+    const base = defaultInput();
+    const noticeRule =
+      "O aviso ‘Imagem meramente ilustrativa’ pode ser aplicado horizontalmente ou rotacionado em 90°, conforme favorecer a composição. Preserve a frase integral, legível, com contraste adequado e dentro da área protegida. Não empilhe as letras.";
+
+    const withNotice = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        constraints: { mandatoryArtworkText: "Imagem meramente ilustrativa" },
+      },
+    });
+    expect(withNotice.blocks["COMPOSIÇÃO"]).toContain(noticeRule);
+    expect(withNotice.text.split(noticeRule)).toHaveLength(2);
+    expect(withNotice.blocks["DADOS DA CAMPANHA"]).toContain(
+      'Aviso obrigatório: "Imagem meramente ilustrativa"',
+    );
+
+    const withOtherOnly = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        constraints: { mandatoryArtworkText: "Válido para retirada na loja" },
+      },
+    });
+    expect(withOtherOnly.text).not.toContain(noticeRule);
+    expect(withOtherOnly.blocks["DADOS DA CAMPANHA"]).toContain(
+      'Aviso obrigatório: "Válido para retirada na loja"',
+    );
+
+    const withNoticeAndOther = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        constraints: {
+          mandatoryArtworkText:
+            "Imagem meramente ilustrativa\nRecheio e cobertura de frutas",
+        },
+      },
+    });
+    expect(withNoticeAndOther.text.split(noticeRule)).toHaveLength(2);
+    expect(withNoticeAndOther.blocks["DADOS DA CAMPANHA"]).toContain(
+      'Aviso obrigatório: "Imagem meramente ilustrativa\\nRecheio e cobertura de frutas"',
+    );
+    expect(withNoticeAndOther.blocks["COMPOSIÇÃO"]).not.toContain(
+      "Recheio e cobertura de frutas",
+    );
+
+    const withoutMandatory = composeVerticalProductPrompt({
+      ...base,
+      briefing: {
+        ...base.briefing,
+        constraints: { mandatoryArtworkText: null },
+      },
+    });
+    expect(withoutMandatory.text).not.toContain(noticeRule);
+    expect(withoutMandatory.blocks["DADOS DA CAMPANHA"]).not.toContain(
+      "Aviso obrigatório:",
     );
   });
 
@@ -648,6 +718,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
       contributions: [PALETTE_CONTRIBUTION],
     });
     for (const rule of [
+      "Exerça liberdade criativa na composição: explore enquadramento, iluminação, profundidade e hierarquia visual para criar uma campanha expressiva e comercialmente atraente, respeitando as informações fornecidas, o ativo da loja e as áreas protegidas.",
       "Não invente informações comerciais.",
       "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
       "Antes de alterar as cores do ativo",

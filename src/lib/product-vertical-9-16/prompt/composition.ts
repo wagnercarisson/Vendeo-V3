@@ -269,6 +269,10 @@ function compositionLines(
   const base = promptBase.trim();
   if (base.length > 0) rules.push(base);
 
+  rules.push(
+    "Exerça liberdade criativa na composição: explore enquadramento, iluminação, profundidade e hierarquia visual para criar uma campanha expressiva e comercialmente atraente, respeitando as informações fornecidas, o ativo da loja e as áreas protegidas.",
+  );
+
   rules.push(...intentRules(input));
   rules.push(backgroundRule(briefing.backgroundDirection, hasPalette));
 
@@ -291,6 +295,15 @@ function compositionLines(
   rules.push(
     "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
   );
+
+  const mandatoryText =
+    briefing.constraints.mandatoryArtworkText?.trim() ?? "";
+  if (mandatoryText.includes("Imagem meramente ilustrativa")) {
+    rules.push(
+      "O aviso ‘Imagem meramente ilustrativa’ pode ser aplicado horizontalmente ou rotacionado em 90°, conforme favorecer a composição. Preserve a frase integral, legível, com contraste adequado e dentro da área protegida. Não empilhe as letras.",
+    );
+  }
+
   rules.push(
     "Use português correto e natural, sem caracteres ou pontuação duplicados, e não corrija silenciosamente os textos de entrada.",
   );

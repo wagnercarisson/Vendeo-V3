@@ -141,3 +141,28 @@ The vertical prompt SHALL be produced by a vertical-only serializer that restate
 - **WHEN** a vertical prompt is composed
 - **THEN** its composer version, base version, format policy version and safe-area policy version SHALL be recorded
 - **AND** the `1:1` composer and policy versions SHALL remain unchanged
+
+### Requirement: Creative freedom and optional notice orientation
+
+The vertical prompt SHALL include, once in the general composition block, a creative-freedom instruction covering framing, lighting, depth and visual hierarchy. This freedom MUST NOT authorize inventing commercial information, changing the product appearance or expanding the current store-asset application permissions. When the mandatory artwork text contains the exact phrase `Imagem meramente ilustrativa`, the prompt SHALL include once an optional orientation allowing the notice to be applied horizontally or rotated 90°, preserving the full phrase, legibility, contrast and the protected area, and without stacking letters. The orientation MUST NOT be emitted when the phrase is absent, MUST NOT extend to the rest of the mandatory-text field, and MUST NOT be presented as artwork text.
+
+#### Scenario: Creative freedom appears once
+
+- **WHEN** a vertical prompt is composed
+- **THEN** the creative-freedom instruction SHALL appear exactly once in the composition block
+- **AND** it MUST NOT appear in the Instagram composition block or in the campaign data
+
+#### Scenario: Notice orientation is conditional
+
+- **WHEN** the mandatory artwork text contains `Imagem meramente ilustrativa`
+- **THEN** the optional orientation SHALL appear exactly once
+- **AND** the notice SHALL remain in the campaign data and be preserved in full
+- **WHEN** the phrase is absent
+- **THEN** the orientation MUST NOT be emitted
+- **AND** other mandatory texts SHALL remain intact
+
+#### Scenario: Other mandatory texts are not broadened
+
+- **WHEN** the mandatory-text field contains the notice and additional texts
+- **THEN** only the notice SHALL receive the rotation permission
+- **AND** the additional texts MUST remain integral and must not be treated as a footer

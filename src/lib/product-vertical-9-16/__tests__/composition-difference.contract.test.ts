@@ -115,7 +115,7 @@ describe("F59 — composição editorial vertical vs. contrato 1:1", () => {
 
     expect(square.policyVersions.formato).toBe(formato11Policy.version);
     expect(square.policyVersions.safeArea).toBeUndefined();
-    expect(vertical.policyVersions.formato).toBe("f59-9-16-v9");
+    expect(vertical.policyVersions.formato).toBe("f59-9-16-v10");
     expect(vertical.policyVersions.safeArea).toBe(
       "safe-area-9-16-experimental-v2",
     );
