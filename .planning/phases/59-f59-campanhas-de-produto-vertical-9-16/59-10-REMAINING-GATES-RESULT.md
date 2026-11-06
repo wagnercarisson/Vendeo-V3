@@ -143,6 +143,11 @@ Opções: (a) ajustar o mecanismo para auditar replay terminal idempotente (muda
 de código, exige autorização) ou (b) aceitar o `refund_tx_id`/ledger como evidência
 do encerramento e registrar a lacuna de auditoria da projeção.
 
+**Recomendação registrada:** aceitar explicitamente esta lacuna nesta fase como
+exceção de rastreabilidade do replay administrativo, **não** como falha de estorno,
+e corrigir em trabalho separado. A aceitação formal é do responsável e permanece
+**pendente**; a lacuna não está marcada como resolvida.
+
 ## 9. Reels — análise conservadora de risco
 
 Sobreposição local com a máscara conservadora antiga (topo 14%, base 35%, laterais
@@ -257,5 +262,7 @@ revisão → edição; não substitui o teste de restauração a partir de rascu
 - Diferença a reconciliar: **0,080259** (o piloto ficou acima do usage apurado).
 - Gasto do piloto: 2,1989; se reconciliado ao usage, seria 2,118641. Nenhum ajuste
   foi executado.
-- Conclusão: a reconciliação está **concluída com os dados existentes**, mas sem
-  fatura do provider; o valor de 0,1107 é contábil do piloto, não “custo real”.
+- Conclusão: **custo calculado por usage e pricing**, não valor confirmado em
+  fatura (`provider_reported_cost_usd` nulo). O piloto registrou 0,1107; o usage
+  calculado é 0,030441; desvio 0,080259, sem ajuste. O contador conservador do
+  piloto não precisa ser alterado para fechar a fase.

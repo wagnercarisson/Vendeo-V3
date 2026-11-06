@@ -319,6 +319,7 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-59-12 | Parcial: revisão→edição e `restoreFrom` com flag OFF comprovados; **defeito confirmado** no reload de rascunho local 9:16 (chave global removida no mount + pausa OFF não derivada), correção mínima proposta e não editada. |
 | REQ-59-14 | Parcial: Stories e Reels aceitos (Reels com ressalva observada no Facebook); gate de produção separado e não executado. |
 
-O incremento de US$ 0,1107 é contabilizado no piloto. A reconciliação com dados
-existentes apurou US$ 0,030441 por usage/pricing (copy 0,000172 + imagem 0,030269);
-`provider_reported_cost_usd` está nulo. Desvio: US$ 0,080259, sem ajuste executado.
+O incremento de US$ 0,1107 é contabilizado no piloto. O custo **calculado por usage
+e pricing** é US$ 0,030441 (copy 0,000172 + imagem 0,030269); `provider_reported_cost_usd`
+está nulo, portanto não é valor confirmado em fatura. Desvio: US$ 0,080259, sem
+ajuste; o contador conservador do piloto não precisa ser alterado para fechar a fase.

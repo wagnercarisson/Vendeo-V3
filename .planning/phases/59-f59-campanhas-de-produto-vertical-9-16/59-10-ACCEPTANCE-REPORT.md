@@ -70,10 +70,10 @@ Aceite manual não substitui teste simulado nem integração real.
 - Reels: **aceito pelo responsável com a ressalva observada no Facebook**. A máscara
   conservadora antiga indicou interseções de risco; não é aprovação irrestrita.
   Stories FB/IG permanece aprovado separadamente.
-- O incremento de **+US$ 0,1107** é o valor contabilizado no piloto. A reconciliação
-  com os dados existentes apurou **US$ 0,030441** por usage/pricing
-  (`0,000172` copy + `0,030269` imagem); `provider_reported_cost_usd` está nulo. A
-  diferença de **US$ 0,080259** permanece contábil, sem ajuste executado.
+- Custo **calculado por usage e pricing**: copy 0,000172 + imagem 0,030269 =
+  **0,030441**. `provider_reported_cost_usd` nulo; **não é valor confirmado em
+  fatura**. O piloto registrou 0,1107; desvio 0,080259, sem ajuste. O contador
+  conservador do piloto não precisa ser alterado para fechar a fase.
 - Os cenários concorrentes executados passaram; isso **não** equivale a executar todas
   as suítes antigas.
 - O prompt bruto do provider não é persistido; hashes são reconstruções
@@ -86,7 +86,8 @@ Aceite manual não substitui teste simulado nem integração real.
    disso, com flag OFF a pausa não é derivada para draft local. Correção mínima
    proposta, **não editada** (ver `59-10-REMAINING-GATES-RESULT.md`, seção 12).
 2. Caso D: campanha encerrada em `error`; **auditoria da resolução idempotente não
-   registrada** — decisão pendente de aceite do responsável; RPC não alterada.
+   registrada**. Recomendação: aceitar a lacuna nesta fase como exceção de
+   rastreabilidade e corrigir em trabalho separado; **aceite formal pendente**.
 3. Reconciliação de custo concluída com dados existentes; sem fatura do provider.
 4. Gate de produção separado — não executado por desenho.
 
