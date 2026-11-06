@@ -21,7 +21,7 @@ import { FORMATO_9_16_POLICY_VERSION } from "./policy-formato-9-16";
  * segura. Nenhum valor é lido de um contrato mutável.
  */
 export const VERTICAL_COMPOSER_VERSION =
-  "f59-vertical-9-16-composer-v10" as const;
+  "f59-vertical-9-16-composer-v11" as const;
 
 export function resolveVerticalPromptPolicyVersions(
   input: ProductPromptPolicyResolutionInput,
