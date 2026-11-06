@@ -90,9 +90,9 @@ describe("F59 — seam aditivo do compositor (default 1:1 byte-idêntico)", () =
     expect(COMPOSER_VERSION).toBe("48.2.4-prompt-composer-v7");
 
     const custom = composeProductPrompt(defaultInput(), {
-      composerVersion: "f59-vertical-9-16-composer-v13",
+      composerVersion: "f59-vertical-9-16-composer-v14",
     });
-    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v13");
+    expect(custom.composerVersion).toBe("f59-vertical-9-16-composer-v14");
     expect(custom.text).toBe(standard.text);
   });
 
@@ -156,7 +156,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(PRODUCT_1_1_PROMPT_POLICY_REGISTRY.formato).toBe(formatoBefore);
     expect(versions).toEqual({
       intencao: "48.2.6-oferta-v2",
-      formato: "f59-9-16-v11",
+      formato: "f59-9-16-v12",
       tipoConteudo: "48.2.6-produto-v4",
       estrutura: "48.2.4-peca-unica-v1",
       tema: "48.2.4-tema-nenhum-v1",
@@ -174,7 +174,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
   it("compõe a estrutura editorial na ordem e com versão própria", () => {
     const composition = composeVerticalProductPrompt(defaultInput());
 
-    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v13");
+    expect(VERTICAL_COMPOSER_VERSION).toBe("f59-vertical-9-16-composer-v14");
     expect(composition.composerVersion).toBe(VERTICAL_COMPOSER_VERSION);
     expect(composition.promptBaseVersion).toBe("48.2.6-produto-1-1-v1");
     expect(composition.text.startsWith("Crie uma campanha de oferta")).toBe(
@@ -404,6 +404,60 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     expect(withoutMandatory.blocks["DADOS DA CAMPANHA"]).not.toContain(
       "Aviso obrigatório:",
     );
+  });
+
+  it("emite a regra monetária uma vez e não reformata os preços", () => {
+    const base = defaultInput();
+    const rule =
+      "Trate cada preço como uma única expressão monetária. Use exatamente uma vírgula entre a parte inteira e os centavos, quando houver centavos, mesmo quando tiverem tamanhos ou alinhamentos diferentes. Não repita a vírgula ao separar visualmente os centavos.";
+
+    const cases: ReadonlyArray<{
+      readonly original: string | null;
+      readonly discounted: string | null;
+      readonly expected: readonly string[];
+    }> = [
+      {
+        original: null,
+        discounted: "R$ 49,90",
+        expected: ['Preço: "R$ 49,90"'],
+      },
+      {
+        original: "R$ 99,90",
+        discounted: "R$ 49,90",
+        expected: ['Preço original: "R$ 99,90"', 'Preço: "R$ 49,90"'],
+      },
+      {
+        original: null,
+        discounted: "R$ 70",
+        expected: ['Preço: "R$ 70"'],
+      },
+      {
+        original: null,
+        discounted: "R$ 1.299,90",
+        expected: ['Preço: "R$ 1.299,90"'],
+      },
+    ];
+
+    for (const testCase of cases) {
+      const composition = composeVerticalProductPrompt({
+        ...base,
+        briefing: {
+          ...base.briefing,
+          commercial: {
+            ...base.briefing.commercial,
+            originalPriceText: testCase.original,
+            discountedPriceText: testCase.discounted,
+          },
+        },
+      });
+      expect(composition.text.split(rule)).toHaveLength(2);
+      const data = composition.blocks["DADOS DA CAMPANHA"];
+      for (const line of testCase.expected) {
+        expect(data).toContain(line);
+      }
+      expect(data).not.toContain("R$ 4990");
+      expect(data).not.toContain("R$ 1299,90");
+    }
   });
 
   it("mantém as faixas experimentais 5%/20% para geração e entrega, fora do prompt", () => {
@@ -726,6 +780,7 @@ describe("F59 — compositor editorial vertical 9:16", () => {
     });
     for (const rule of [
       "Exerça liberdade criativa na composição: explore enquadramento, iluminação, profundidade e hierarquia visual para criar uma campanha expressiva e comercialmente atraente, respeitando as informações fornecidas, o ativo da loja e as áreas protegidas.",
+      "Trate cada preço como uma única expressão monetária. Use exatamente uma vírgula entre a parte inteira e os centavos, quando houver centavos, mesmo quando tiverem tamanhos ou alinhamentos diferentes. Não repita a vírgula ao separar visualmente os centavos.",
       "Não invente informações comerciais.",
       "Preserve o nome do produto, os textos comerciais e os textos obrigatórios, exibindo cada um uma única vez.",
       "Antes de alterar as cores do ativo",

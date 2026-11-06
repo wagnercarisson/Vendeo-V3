@@ -274,6 +274,9 @@ function compositionLines(
   );
 
   rules.push(...intentRules(input));
+  rules.push(
+    "Trate cada preço como uma única expressão monetária. Use exatamente uma vírgula entre a parte inteira e os centavos, quando houver centavos, mesmo quando tiverem tamanhos ou alinhamentos diferentes. Não repita a vírgula ao separar visualmente os centavos.",
+  );
   rules.push(backgroundRule(briefing.backgroundDirection, hasPalette));
 
   if (identityImage !== null) {

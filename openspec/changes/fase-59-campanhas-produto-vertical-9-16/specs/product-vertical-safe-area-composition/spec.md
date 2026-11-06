@@ -168,3 +168,25 @@ The vertical prompt SHALL include, once in the general composition block, a crea
 - **WHEN** the mandatory-text field contains the notice and additional texts
 - **THEN** only the notice SHALL receive the rotation permission
 - **AND** the additional texts MUST remain integral and must not be treated as a footer
+
+### Requirement: Monetary expressions preserve the informed value
+
+The vertical prompt SHALL include, once in the general composition block, an instruction treating each price as a single monetary expression: exactly one comma between the integer part and the cents when cents exist, even when they use different sizes or alignments; no repeated comma when separating reais and centavos visually. The instruction SHALL apply to the original and sale prices, MUST preserve the exact informed value, MUST NOT add cents to values without cents, and MUST NOT confuse a thousands separator with a decimal separator. The production prompt MUST NOT include fixed price examples.
+
+#### Scenario: Price rule appears once
+
+- **WHEN** a vertical prompt is composed
+- **THEN** the monetary-expression instruction SHALL appear exactly once in the composition block
+- **AND** it MUST NOT appear in the campaign data or in the Instagram composition block
+
+#### Scenario: Prices are not reformatted
+
+- **WHEN** the briefing contains a sale price, an original price, a value without cents or a value with a thousands separator
+- **THEN** the campaign data SHALL preserve the exact informed strings
+- **AND** the prompt MUST NOT add cents, remove separators or reformat the values
+
+#### Scenario: Visual separation does not duplicate the comma
+
+- **WHEN** reais and centavos are rendered with different sizes or alignments
+- **THEN** the instruction SHALL require exactly one comma
+- **AND** it MUST NOT repeat the comma to create the visual separation
