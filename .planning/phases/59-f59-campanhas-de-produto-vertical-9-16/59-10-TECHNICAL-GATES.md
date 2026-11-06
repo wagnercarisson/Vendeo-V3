@@ -25,6 +25,11 @@ O aceite é específico das artes apresentadas; não representa cumprimento inte
 margens. A proteção da validade no prompt permanece. O erro “garanti” não é falha de
 geração e a arte não está pronta para publicação com ele.
 
+**Reconciliação:** os cinco itens acima são aceites manuais confirmados e estão
+**removidos da lista de pendências**. Eles não substituem teste simulado nem
+integração real. Em particular, a falha por saldo insuficiente não aprova
+concorrência, idempotência ou integração de crédito.
+
 ### Suporte de código ao teste manual de saldo insuficiente
 
 - `src/components/flow/use-campaign-form.ts` mantém `campaignFormat` no estado e no
@@ -148,45 +153,43 @@ prova simulada ou de leitura, mas falta a execução real; **PENDENTE** = não e
 | 18 | Telemetria identifica formato/dimensões sem dados sensíveis | `generation_events` reais com 9:16 e 1152×2048; contratos de telemetria verdes | **PASS** | — |
 | 19 | Aceite em homolog, loja de teste, sem produção | `is_test_store = t`; docker `vendeo-homolog`; nenhuma escrita nesta etapa | **PASS** | — |
 | 20 | Produção é gate separado, não executado | — | **N/A (por desenho)** | Documento de produção futuro |
+| 21 | Falha por saldo insuficiente retorna aos dados com campos e formato preservados | Confirmação do responsável + estado/draft do formulário no código | **PASS (manual)** | Não aprova concorrência/idempotência real |
 
 ## 6. Procedimento mínimo para autorização
 
 Nenhuma das ações abaixo foi executada. Todas alteram estado e exigem autorização
 específica. Nenhuma usa crédito, provider ou produção.
 
-### A. Gate real de idempotência/concorrência/recuperação (recomendado)
+### A. Gate real de idempotência/concorrência/recuperação (não obrigatório agora)
 
-1. Subir a instância isolada descartável já suportada pelo repositório
-   (`scripts/run-f56-2b1b-isolated-integration.ps1`, API `56321` / DB `56322`).
-   Efeito: cria um stack Docker isolado, aplica o schema e o destrói ao final; não
-   toca homolog nem produção.
-2. Executar `npm.cmd run test:integration:product-1-1` (15 arquivos).
-3. Registrar o resultado por arquivo, incluindo `atomic-attempt`,
-   `concurrent-route-submission`, `pending-resolution`, `copy-recovery`,
-   `failure-closure`, `credit-delivery` e `publication-fence`.
-4. Critério de aprovação: 15/15 arquivos verdes, sem skip, e nenhum resíduo no
-   ambiente isolado.
+Inspeção do runner (2026-11-06): `scripts/run-f56-2b1b-isolated-integration.ps1`
+**não cria** ambiente; ele exige containers F56.2a já ativos, workdir existente e
+falha fechado se faltar. Também está defasado: só aceita 5 migrations pendentes,
+enquanto o repositório tem 39 migrations posteriores; aplicaria `migration up --local`.
+O workdir e os containers não existem hoje.
+
+Portanto, **não reconstruir o laboratório antigo** como pré-requisito. Se um dia for
+autorizado, o caminho mínimo é um alvo descartável novo, com o schema atual, e
+`npm.cmd run test:integration:product-1-1` (15 arquivos), sem reaproveitar o runner
+antigo sem revisão.
 
 ### B. Gate SQL de crédito (idempotência/concorrência)
 
-1. Subir um PostgreSQL descartável em loopback (porta diferente de `57782`).
+1. Um PostgreSQL descartável em loopback (porta diferente de `57782`).
 2. Aplicar as migrations e definir `TEST_DATABASE_URL` + `POSTGRES_LOCAL_ALLOW_WRITES=1`.
 3. Executar `npm.cmd run test:integration:postgres:local` (5 arquivos).
 4. Critério: 5/5 verdes e cleanup sem fixtures (`f50-*`, `f572test-*`).
 
+Esse alvo cobre apenas SQL de crédito; não cobre rota nem Storage.
+
 ### C. Ciclo de flag OFF em homolog
 
-1. Registrar o estado atual (`product_9_16_enabled = true`) e o motivo.
-2. Desligar via `admin_update_feature_flag` com motivo auditado.
-3. Sem gerar nada: abrir detalhe, listagem, miniatura e download das campanhas v14;
-   abrir restauração de um rascunho vertical; tentar uma submissão 9:16 e confirmar
-   503 antes de reserva/provider.
-4. Religar a flag com motivo auditado e confirmar o estado anterior.
-5. Critério: nenhuma campanha existente perde acesso; nenhuma cobrança; log de
-   auditoria com as duas mudanças.
-
-Risco: a flag é global; durante a janela, novas gerações verticais ficam bloqueadas.
-Com saldo 0 e nenhuma geração em voo, não há risco de abortar operação em andamento.
+Procedimento detalhado e pronto para execução em `59-10-FLAG-OFF-PROCEDURE.md`.
+Resumo: confirmar ambiente/estado/ausência de operações em andamento; controle com a
+flag ON (esperado 402 por saldo, **não** prova a flag); desligar pela via auditada;
+tentar nova submissão 9:16 e exigir 503 `format_unavailable` (se vier 402, classificar
+como saldo); verificar detalhe/listagem/download/restauração; religar e conferir as
+duas linhas de auditoria. **Preparado, não executado.**
 
 ### D. Recuperação/resolução real
 
@@ -194,14 +197,25 @@ Não existe operação pendente/unknown no homolog. Para exercitar o caminho rea
 fabricar estado, usar o ambiente isolado da opção A. No homolog, a única alternativa
 seria provocar uma falha paga — **não autorizada e não recomendada**.
 
+### E. Reenvio de operação (bloco separado)
+
+Alvo exato: campanha `72ab9ddb-9e5d-4bc7-a994-c1dc0ec3bb88` / operação
+`b703b7c5-4dda-4038-9cba-7d471c98f278` (9:16, `delivered`). O curto-circuito deve
+devolver o estado persistido sem provider, crédito, upload, claim ou evento. Detalhes
+e riscos em `59-10-FLAG-OFF-PROCEDURE.md`, seção 10. Não faz parte do bloco read-only.
+
 ## 7. Parecer
 
-- **Aceite visual:** aprovado com ressalvas específicas, já registrado.
+- **Aceite visual e manual:** aprovado com ressalvas específicas; reconciliado e fora
+  das pendências.
 - **Gates técnicos:** flag OFF, recuperação/resolução, idempotência e concorrência
   têm **cobertura simulada verde**, mas **não estão aprovados como integração real**.
-- **Fase F59:** permanece **PENDENTE**.
-- **Próximo gate recomendado:** opção A (isolado) para idempotência/concorrência/
-  recuperação; em seguida, com autorização, opção C (ciclo real de flag OFF).
+- **Fase F59:** permanece **PENDENTE**; nenhum gate não executado foi aprovado.
+- **Próximo gate recomendado:** com autorização, executar
+  `59-10-FLAG-OFF-PROCEDURE.md` (flag OFF no homolog atual) e o bloco read-only de
+  detalhe/listagem/download/miniatura. O reenvio fica em bloco separado. A cobertura
+  real isolada não é obrigatória para o ciclo de flag, mas continua necessária para
+  idempotência/concorrência/recuperação real.
 - **Sem** geração paga, crédito, migration, alteração de flag, push, deploy ou
   produção nesta etapa. Ajustes de identificação de formato na listagem e direção de
   fundo na revisão ficam para quick posterior.

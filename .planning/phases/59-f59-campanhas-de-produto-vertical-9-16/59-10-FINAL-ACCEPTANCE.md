@@ -96,6 +96,22 @@ Todos são reconstruções determinísticas; não há captura literal do provide
 - 1:1 do Pão Francês: arte 1024×1024, path `product-1-1/.../art-1024.jpg`, miniatura presente.
 - Suíte 1:1 (943 testes) e testes verticais (238) verdes; typecheck, lint, build, OpenSpec e diff check verdes.
 
+### Aceites manuais confirmados (fora de pendências)
+
+Estes itens foram confirmados pelo responsável e **não** constam mais como pendência
+manual. Eles não substituem teste automatizado nem integração real.
+
+| Item | Evidência | Natureza |
+|---|---|---|
+| Bolo Naked Fruit v14 | composição, preço e aviso ilustrativo aprovados; validade na faixa inferior aceita como exceção | aceite manual |
+| Pão de Queijo Mineiro 500gr v14 | composição, cenário, separador decimal único e legibilidade aprovados | aceite manual |
+| Pão Francês “Fresquinho” v14 | composição aprovada; “garanti” classificado como erro de entrada | aceite manual |
+| Pão Francês 1:1 | fluxo quadrado aprovado em evidência manual separada | aceite manual |
+| Falha por saldo insuficiente | retorno à tela de dados com campos e formato preservados | aceite manual |
+
+O teste manual de saldo insuficiente **não** aprova concorrência, idempotência nem
+integração real de crédito; esses gates continuam pendentes.
+
 ### Pendente
 
 - Ciclo de flag OFF: consulta/download/recuperação de campanhas existentes e rejeição de nova submissão antes de reserva/provider.
@@ -128,6 +144,7 @@ Todos são reconstruções determinísticas; não há captura literal do provide
 ## 6. Parecer consolidado
 
 - **Aceite visual:** aprovado com ressalvas específicas (Bolo: validade na faixa inferior; Pão Francês: erro de entrada).
-- **Fase F59:** **PENDENTE** — faltam verificações de flag OFF, recuperação/resolução, restauração e UI manual.
-- **Próximo gate recomendado:** verificações de leitura/manuais de detalhe, listagem, miniatura, download e restauração; depois, com autorização específica, ciclo de flag OFF e recuperação/resolução.
+- **Aceites manuais:** aprovados e reconciliados (artes v14, 1:1 e falha por saldo insuficiente); não aprovam gates técnicos.
+- **Fase F59:** **PENDENTE** — faltam flag OFF real, recuperação/resolução real, restauração com flag OFF, UI manual de detalhe/listagem/download/miniatura, concorrência e idempotência real.
+- **Próximo gate recomendado:** executar o procedimento `59-10-FLAG-OFF-PROCEDURE.md` com autorização (flag OFF no homolog atual) e o bloco read-only de detalhe/listagem/download/miniatura; depois avaliar a cobertura real isolada.
 - O aceite visual **não** autoriza conclusão da fase, arquivamento, ativação em produção ou publicação.
