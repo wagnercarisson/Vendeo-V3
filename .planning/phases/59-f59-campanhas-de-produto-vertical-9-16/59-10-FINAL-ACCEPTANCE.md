@@ -95,6 +95,11 @@ Todos são reconstruções determinísticas; não há captura literal do provide
 - Regra monetária validada visualmente no Bolo e no Pão de Queijo (separador único).
 - 1:1 do Pão Francês: arte 1024×1024, path `product-1-1/.../art-1024.jpg`, miniatura presente.
 - Suíte 1:1 (943 testes) e testes verticais (238) verdes; typecheck, lint, build, OpenSpec e diff check verdes.
+- Ciclo de flag OFF real: 503 `format_unavailable`, zero efeitos; OFF/ON auditados; acesso a detalhe/listagem/download/restauração comprovado.
+- Miniaturas validadas manualmente pelo responsável; Reels permanece separado de Stories.
+
+Consolidação: `59-10-ACCEPTANCE-REPORT.md`, `59-10-VISUAL-REVIEW.md` e
+`59-10-PRODUCTION-GATE.md` (não executado).
 
 ### Aceites manuais confirmados (fora de pendências)
 

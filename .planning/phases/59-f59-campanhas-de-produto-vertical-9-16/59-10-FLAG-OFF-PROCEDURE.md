@@ -353,3 +353,22 @@ gasto `2.0882`, quatro campanhas de referência `ready`. Duas linhas de auditori
 - acesso a campanhas existentes, download e restauração: **comprovados**;
 - bloqueio de nova geração pela flag: **NÃO comprovado** (400 pré-flag);
 - ausência de efeitos: **comprovada**.
+
+### Repetição corrigida (autorizada) — 2026-11-06
+
+- payload validado localmente por `NewFlowGenerateImageRequestSchema`:
+  `SCHEMA_OK=true`, `productImages` com 1 `primary`, sem `productImageDataUrl`;
+- IDs novos: campanha `51c5679c-34d0-4148-b432-2074ed5b28e2`,
+  operação `90822cf8-0c11-48bc-abc0-b5932852ea09`;
+- OFF auditado: `26a5eb1b-4f00-49ae-9228-81287cdc8f40` (`true → false`);
+- resposta da tentativa única: **HTTP 503**, código **`format_unavailable`**;
+- efeitos para os IDs: campanhas `0`, credit_ops `0`, claims `0`, outcomes `0`,
+  generation_events `0`, paid_calls `0`, rate_events `0`;
+- ON auditado no `finally`: `cf53e7e9-1a3d-408d-8b64-56e73bfe9357`
+  (`false → true`);
+- antes e depois idênticos (`86/27/27/2/366/52/27`, saldo `0`, teto `2.20`,
+  gasto `2.0882`, zero operações em andamento).
+
+**Conclusão:** o bloqueio de nova geração vertical pela flag foi **comprovado** nesta
+repetição, sem efeitos. Os demais gates (recuperação/resolução, idempotência e
+concorrência) continuam fora deste aceite.

@@ -133,7 +133,7 @@ prova simulada ou de leitura, mas falta a execução real; **PENDENTE** = não e
 
 | # | Requisito / cenário | Evidência | Resultado | Pendência |
 |---|---|---|---|---|
-| 1 | Flag OFF bloqueia nova geração 9:16 antes de reserva/provider | `route.test.ts` (flag mockada): 503 `format_unavailable`, sem campanha/reserva/provider; erro de leitura falha fechado. Execução real em 2026-11-06 retornou **400 pré-flag** (corpo sem imagem) | **PASS (simulado) / real NÃO comprovado** | Uma única tentativa corrigida, com autorização |
+| 1 | Flag OFF bloqueia nova geração 9:16 antes de reserva/provider | `route.test.ts` (flag mockada); **real 2026-11-06:** 503 `format_unavailable`, zero campanha/reserva/claim/evento/paid call/provider | **PASS (real + simulado)** | — |
 | 2 | Flag OFF não bloqueia consulta/download/recuperação/detalhe/listagem de campanha existente | Download não consulta a flag; detalhe/lista não consultam; reenvio 9:16 com flag OFF segue no motor vertical sem criar campanha. Real: detalhe vertical e 1:1, listagem, downloads e restauração vertical verificados com a flag OFF | **PASS (leitura real)** | Recuperação/resolução de pendência não exercitadas |
 | 3 | Geração em andamento não é abortada pela flag | — | **PENDENTE** | Exige geração em voo + mudança de flag |
 | 4 | Rascunho vertical restaurado não troca silenciosamente para 1:1 com flag OFF | `nova-format-paused.test.tsx` e `use-campaign-form-restore-format.test.ts` | **PASS (simulado)** | Verificação manual da UI |
@@ -184,11 +184,13 @@ Esse alvo cobre apenas SQL de crédito; não cobre rota nem Storage.
 
 ### C. Ciclo de flag OFF em homolog
 
-**Executado em 2026-11-06.** Resultado: flag OFF/ON e auditoria comprovadas; acesso a
-detalhe/listagem/download/restauração com OFF comprovado; **bloqueio de nova geração
-NÃO comprovado** — a única tentativa retornou 400 antes da flag (corpo sem imagem).
-Nenhum efeito: contagens, saldo, teto e gasto idênticos. Detalhes em
-`59-10-FLAG-OFF-PROCEDURE.md`, seção 12. A repetição corrigida exige nova autorização.
+**Executado em 2026-11-06.** Primeira tentativa: 400 pré-flag (corpo sem imagem),
+sem efeitos. **Repetição corrigida autorizada:** payload validado pelo schema da rota,
+503 `format_unavailable`, zero campanha/reserva/claim/evento/paid call/provider;
+flag OFF/ON auditadas (`26a5eb1b…`/`cf53e7e9…`); antes/depois idênticos. Acesso a
+detalhe/listagem/download/restauração com OFF comprovado na primeira execução.
+Detalhes em `59-10-FLAG-OFF-PROCEDURE.md`, seções 12–13. Bloqueio pela flag:
+**comprovado**.
 
 ### D. Recuperação/resolução real
 
@@ -209,12 +211,12 @@ e riscos em `59-10-FLAG-OFF-PROCEDURE.md`, seção 10. Não faz parte do bloco r
   das pendências.
 - **Ciclo de flag OFF (2026-11-06):** flag OFF/ON e auditoria **comprovadas**;
   acesso a campanhas existentes, download e restauração **comprovados**; bloqueio de
-  nova geração **NÃO comprovado** (400 pré-flag, uma única tentativa, sem efeitos).
+  nova geração **comprovado** na repetição corrigida (503, zero efeitos).
 - **Gates técnicos:** recuperação/resolução, idempotência e concorrência continuam
   **não aprovados como integração real**.
 - **Fase F59:** permanece **PENDENTE**; nenhum gate não executado foi aprovado.
-- **Próximo gate recomendado:** autorizar **uma** repetição corrigida da tentativa
-  9:16 com `productImages` (sem POST de controle), mantendo flag OFF/ON auditadas.
+- **Próximos gates:** consolidar documentos de aceite/visual/produção; decidir sobre
+  alvo descartável para mecanismos compartilhados e sobre a suíte vertical específica.
 - **Sem** geração paga, crédito, migration, alteração de flag, push, deploy ou
   produção nesta etapa. Ajustes de identificação de formato na listagem e direção de
   fundo na revisão ficam para quick posterior.
