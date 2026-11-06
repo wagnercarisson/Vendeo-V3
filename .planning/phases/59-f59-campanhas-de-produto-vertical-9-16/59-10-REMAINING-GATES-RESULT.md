@@ -156,3 +156,23 @@ direção de fundo na revisão; prompt congelado.
 Confirmado no estado final: **0** claims `in_progress` e **0** créditos
 `reserved/art_uploaded`. O caso D tem operação `refunded`, claim `failed`, campanha
 `error` e nenhum artefato; não é operação em andamento.
+
+## 11. Teste manual — revisão → edição durante mudança de flag
+
+Executado em 2026-11-06 com acompanhamento do executor:
+
+1. Flag ON, formato 9:16, dados preenchidos, avanço somente até a revisão.
+2. Flag OFF auditada: `f6b4cb4a-b02a-4b56-aa86-e293aea1df08` (`true → false`).
+3. “Voltar e editar” sem confirmar geração.
+4. Resultado confirmado pelo responsável: **campos, imagens e formato 9:16
+   preservados**; seletor mantido.
+5. Flag ON restaurada: `427ce649-4f7c-4824-92e0-73d92e700ee6` (`false → true`).
+
+O banner de pausa **não apareceu** na página já aberta. Isso é esperado:
+`campaignFormatPaused` é calculado no servidor a cada carregamento de
+`/campanhas/nova`; não há polling da flag. A ausência do banner nesse cenário não é
+defeito e não foi usada como evidência de bloqueio.
+
+Sem consumo: saldo permaneceu **10**, nenhuma campanha criada nos 10 minutos
+seguintes e nenhuma chamada paga. O teste cobre preservação de dados na transição
+revisão → edição; não substitui o teste de restauração a partir de rascunho.

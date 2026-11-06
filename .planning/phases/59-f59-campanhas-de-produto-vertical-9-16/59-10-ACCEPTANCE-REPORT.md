@@ -44,6 +44,7 @@ e gate de produção separado (não executado).
 | Pão Francês v14 | composição aprovada; “garanti” = erro de entrada |
 | Pão Francês 1:1 | fluxo quadrado aprovado |
 | Saldo insuficiente | retorno à tela de dados com campos e formato preservados |
+| Revisão → edição durante mudança de flag | campos, imagens e 9:16 preservados; banner não atualiza em página já aberta (esperado); sem consumo |
 | Miniaturas | validação manual do responsável |
 
 Aceite manual não substitui teste simulado nem integração real.
