@@ -133,8 +133,8 @@ prova simulada ou de leitura, mas falta a execução real; **PENDENTE** = não e
 
 | # | Requisito / cenário | Evidência | Resultado | Pendência |
 |---|---|---|---|---|
-| 1 | Flag OFF bloqueia nova geração 9:16 antes de reserva/provider | `route.test.ts` (flag mockada): 503 `format_unavailable`, sem campanha/reserva/provider; erro de leitura falha fechado | **PASS (simulado)** | Execução real com flag OFF |
-| 2 | Flag OFF não bloqueia consulta/download/recuperação/detalhe/listagem de campanha existente | Download não consulta a flag (teste estrutural + código); detalhe/lista não consultam a flag; reenvio 9:16 com flag OFF segue no motor vertical sem criar campanha | **PARCIAL** | Ciclo real OFF em homolog |
+| 1 | Flag OFF bloqueia nova geração 9:16 antes de reserva/provider | `route.test.ts` (flag mockada): 503 `format_unavailable`, sem campanha/reserva/provider; erro de leitura falha fechado. Execução real em 2026-11-06 retornou **400 pré-flag** (corpo sem imagem) | **PASS (simulado) / real NÃO comprovado** | Uma única tentativa corrigida, com autorização |
+| 2 | Flag OFF não bloqueia consulta/download/recuperação/detalhe/listagem de campanha existente | Download não consulta a flag; detalhe/lista não consultam; reenvio 9:16 com flag OFF segue no motor vertical sem criar campanha. Real: detalhe vertical e 1:1, listagem, downloads e restauração vertical verificados com a flag OFF | **PASS (leitura real)** | Recuperação/resolução de pendência não exercitadas |
 | 3 | Geração em andamento não é abortada pela flag | — | **PENDENTE** | Exige geração em voo + mudança de flag |
 | 4 | Rascunho vertical restaurado não troca silenciosamente para 1:1 com flag OFF | `nova-format-paused.test.tsx` e `use-campaign-form-restore-format.test.ts` | **PASS (simulado)** | Verificação manual da UI |
 | 5 | Flag única, global, fail-closed | `feature-flag-service.test.ts`; leitura real `true`; migration data-only | **PASS** | — |
@@ -184,12 +184,11 @@ Esse alvo cobre apenas SQL de crédito; não cobre rota nem Storage.
 
 ### C. Ciclo de flag OFF em homolog
 
-Procedimento detalhado e pronto para execução em `59-10-FLAG-OFF-PROCEDURE.md`.
-Resumo: confirmar ambiente/estado/ausência de operações em andamento; controle com a
-flag ON (esperado 402 por saldo, **não** prova a flag); desligar pela via auditada;
-tentar nova submissão 9:16 e exigir 503 `format_unavailable` (se vier 402, classificar
-como saldo); verificar detalhe/listagem/download/restauração; religar e conferir as
-duas linhas de auditoria. **Preparado, não executado.**
+**Executado em 2026-11-06.** Resultado: flag OFF/ON e auditoria comprovadas; acesso a
+detalhe/listagem/download/restauração com OFF comprovado; **bloqueio de nova geração
+NÃO comprovado** — a única tentativa retornou 400 antes da flag (corpo sem imagem).
+Nenhum efeito: contagens, saldo, teto e gasto idênticos. Detalhes em
+`59-10-FLAG-OFF-PROCEDURE.md`, seção 12. A repetição corrigida exige nova autorização.
 
 ### D. Recuperação/resolução real
 
@@ -208,14 +207,14 @@ e riscos em `59-10-FLAG-OFF-PROCEDURE.md`, seção 10. Não faz parte do bloco r
 
 - **Aceite visual e manual:** aprovado com ressalvas específicas; reconciliado e fora
   das pendências.
-- **Gates técnicos:** flag OFF, recuperação/resolução, idempotência e concorrência
-  têm **cobertura simulada verde**, mas **não estão aprovados como integração real**.
+- **Ciclo de flag OFF (2026-11-06):** flag OFF/ON e auditoria **comprovadas**;
+  acesso a campanhas existentes, download e restauração **comprovados**; bloqueio de
+  nova geração **NÃO comprovado** (400 pré-flag, uma única tentativa, sem efeitos).
+- **Gates técnicos:** recuperação/resolução, idempotência e concorrência continuam
+  **não aprovados como integração real**.
 - **Fase F59:** permanece **PENDENTE**; nenhum gate não executado foi aprovado.
-- **Próximo gate recomendado:** com autorização, executar
-  `59-10-FLAG-OFF-PROCEDURE.md` (flag OFF no homolog atual) e o bloco read-only de
-  detalhe/listagem/download/miniatura. O reenvio fica em bloco separado. A cobertura
-  real isolada não é obrigatória para o ciclo de flag, mas continua necessária para
-  idempotência/concorrência/recuperação real.
+- **Próximo gate recomendado:** autorizar **uma** repetição corrigida da tentativa
+  9:16 com `productImages` (sem POST de controle), mantendo flag OFF/ON auditadas.
 - **Sem** geração paga, crédito, migration, alteração de flag, push, deploy ou
   produção nesta etapa. Ajustes de identificação de formato na listagem e direção de
   fundo na revisão ficam para quick posterior.

@@ -1,8 +1,10 @@
 # 59-10 — Procedimento mínimo: flag OFF no homolog atual
 
-Status: **preparado, NÃO executado**. Nenhuma flag foi alterada, nenhum crédito foi
-usado, nenhuma operação foi manipulada e nenhuma infraestrutura foi criada ou
-reparada.
+Status: **executado em 2026-11-06; tentativa bloqueada NÃO comprovada**. A flag foi
+desligada e restaurada pela via auditada. A única tentativa retornou **400 antes da
+checagem da flag** (corpo sem imagem), portanto o gate de bloqueio **não foi provado**.
+Nenhum crédito foi usado, nenhuma operação foi manipulada e nenhuma infraestrutura foi
+criada ou reparada.
 
 ## 1. Escopo
 
@@ -290,3 +292,64 @@ Não faz parte do bloco read-only nem do ciclo de flag. Exige autorização pró
 - Não prova idempotência/concorrência de banco.
 - Não substitui a integração real isolada.
 - Não autoriza conclusão da F59, arquivamento, produção ou publicação.
+
+## 12. Execução de 2026-11-06
+
+### Estado antes
+
+- flag `product_9_16_enabled = true`;
+- `claims in_progress = 0`, créditos `reserved/art_uploaded = 0`, campanhas não
+  terminais `= 0`;
+- saldo `0`; teto `2.20`; gasto `2.0882`;
+- contagens: campanhas `86`, credit_ops `27`, claims `27`, outcomes `2`,
+  generation_events `366`, paid_calls `52`, rate_events `27`.
+
+### Desligamento auditado
+
+- `operationId`: `3e4d3669-4e47-498a-aead-5ead2b20ed54`;
+- `old_value=true`, `new_value=false`; flag `false` às `20:28:05 UTC`.
+
+### Tentativa única (flag OFF)
+
+- IDs novos: campanha `198a4a61-693d-4e2b-9ad0-de7fa1242e81`,
+  operação `17ac25d4-5fda-41dd-a702-de6edee1bd93`;
+- resposta: **HTTP 400** — `"Imagem do produto é obrigatória para gerar a campanha
+  visual."`;
+- classificação: **validação de payload; a requisição não alcançou a checagem da
+  flag**; o gate **não foi provado**;
+- nenhuma nova tentativa (a autorização previa uma única).
+
+### Ausência de efeitos
+
+Para os IDs acima: campanhas `0`, credit_ops `0`, claims `0`, outcomes `0`,
+generation_events `0`, paid_calls `0`, rate_events `0`. Saldo `0`, teto e gasto
+inalterados.
+
+### Campanhas existentes com a flag OFF
+
+| Verificação | Resultado |
+|---|---|
+| Detalhe vertical (Pão de Queijo) | 200, produto e path vertical presentes |
+| Detalhe 1:1 (Pão Francês) | 200, produto presente |
+| Listagem | 200, Pão de Queijo e Bolo presentes |
+| Download 9:16 | 200, `image/jpeg`, `attachment`, JPEG `FFD8FF`, 614.755 B |
+| Download 1:1 | 200, `image/jpeg`, `attachment`, JPEG `FFD8FF`, 278.311 B |
+| Restauração vertical | 200, “Novo envio vertical pausado”, “Sua escolha de formato foi preservada”, “Vertical 9:16” |
+
+### Restauração auditada
+
+- `operationId`: `168d582f-0130-4195-99bf-78e2f82468f8`;
+- `old_value=false`, `new_value=true`; flag `true` às `20:29:03 UTC`.
+
+### Estado depois
+
+Contagens idênticas ao estado antes (`86/27/27/2/366/52/27`), saldo `0`, teto `2.20`,
+gasto `2.0882`, quatro campanhas de referência `ready`. Duas linhas de auditoria
+(OFF e ON) presentes.
+
+### Conclusão do ciclo
+
+- flag OFF/ON e auditoria: **comprovados**;
+- acesso a campanhas existentes, download e restauração: **comprovados**;
+- bloqueio de nova geração pela flag: **NÃO comprovado** (400 pré-flag);
+- ausência de efeitos: **comprovada**.
