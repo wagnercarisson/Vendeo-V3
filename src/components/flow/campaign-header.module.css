@@ -1,0 +1,22 @@
+/*
+ * Quick 261106-qxn — cabeçalho de /campanhas/nova.
+ *
+ * O grid decide pelo espaço REAL do conteúdo (main já sem a sidebar), não por
+ * um breakpoint de viewport. Duas colunas só existem quando cada uma comporta
+ * pelo menos 29rem; caso contrário, os filhos empilham naturalmente.
+ *
+ * 29rem foi calibrado contra a largura máxima real do conteúdo:
+ * 1440 px → 992 px de cabeçalho (2 × 484 px); 1280 px → 976 px
+ * (2 × 476 px); 1024 px → 720 px (empilhado). O valor anterior de 30rem
+ * deixava 1280 px sempre empilhado (976 < 2 × 480 + 24).
+ */
+.header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 29rem), 1fr));
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.column {
+  min-width: 0;
+}

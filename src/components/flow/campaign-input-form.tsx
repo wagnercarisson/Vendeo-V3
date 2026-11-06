@@ -8,9 +8,8 @@ import { GenerationProgress } from "./generation-progress";
 import { UnknownResultPanel } from "./unknown-result-panel";
 import { CampaignBriefReview } from "./campaign-brief-review";
 import { BackgroundDirectionSelector } from "./background-direction-selector";
-import {
-  CampaignFormatSelector,
-} from "./campaign-format-selector";
+import { CampaignFormatSelector } from "./campaign-format-selector";
+import styles from "./campaign-header.module.css";
 import { BADGE_OPTIONS, BADGE_OPTIONS_BY_INTENT } from "@/lib/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/image-generation/config";
 import { MandatoryArtworkField } from "@/components/campaign/mandatory-artwork-field";
@@ -127,32 +126,84 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     onReviewModeChange?.(reviewMode);
   }, [reviewMode, onReviewModeChange]);
 
+  // Quick 261106-qxn — o título/subtítulo é o mesmo em todos os estados.
+  // O seletor interativo só é montado na edição normal; revisão, geração e
+  // resultado desconhecido mantêm o cabeçalho sem oferecer troca de formato.
+  const showFormatSelector =
+    eligible && !isSubmitting && !reviewMode && !preparing && !unknownResult;
+
+  const pageHeader = (
+    <div className={`mb-8 ${styles.header}`}>
+      <div className={styles.column}>
+        <h1 className="text-2xl font-heading font-bold text-text-primary mb-1">
+          Dados da Campanha
+        </h1>
+        <p className="text-text-secondary text-sm font-body">
+          Informe os dados do produto e da oferta
+        </p>
+      </div>
+      {showFormatSelector && (
+        <div className={`${styles.column} space-y-3`}>
+          {campaignFormatPaused && (
+            <div
+              role="alert"
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
+            >
+              <p className="font-semibold">
+                {campaignFormatUnavailable
+                  ? "Formato indisponível"
+                  : "Novo envio vertical pausado"}
+              </p>
+              <p className="mt-1">
+                {campaignFormatUnavailable
+                  ? "Não foi possível confirmar o formato desta campanha. Nada foi cobrado."
+                  : "Este rascunho foi criado no formato Vertical 9:16. O envio de novas campanhas verticais está temporariamente indisponível. Sua escolha de formato foi preservada."}
+              </p>
+            </div>
+          )}
+          <CampaignFormatSelector
+            value={fields.campaignFormat ?? "1:1"}
+            onChange={(format) => setField("campaignFormat", format)}
+            disabled={isSubmitting || campaignFormatPaused}
+            verticalEnabled={verticalEnabled && !campaignFormatPaused}
+          />
+        </div>
+      )}
+    </div>
+  );
+
   if (isSubmitting) {
     return (
-      <GenerationProgress
-        phases={phases}
-        error={submitError}
-        onRetry={submitError ? retrySubmit : undefined}
-      />
+      <div>
+        {pageHeader}
+        <GenerationProgress
+          phases={phases}
+          error={submitError}
+          onRetry={submitError ? retrySubmit : undefined}
+        />
+      </div>
     );
   }
 
   if (reviewMode) {
     return (
-      <CampaignBriefReview
-        fields={fields}
-        preparedImages={preparedImages}
-        preparing={preparing}
-        error={reviewError}
-        store={store}
-        identity={identity}
-        balance={balance}
-        supportEmail={supportEmail}
-        eligible={eligible}
-        campaignFormat={fields.campaignFormat ?? "1:1"}
-        onBack={exitReview}
-        onConfirm={confirmReview}
-      />
+      <div>
+        {pageHeader}
+        <CampaignBriefReview
+          fields={fields}
+          preparedImages={preparedImages}
+          preparing={preparing}
+          error={reviewError}
+          store={store}
+          identity={identity}
+          balance={balance}
+          supportEmail={supportEmail}
+          eligible={eligible}
+          campaignFormat={fields.campaignFormat ?? "1:1"}
+          onBack={exitReview}
+          onConfirm={confirmReview}
+        />
+      </div>
     );
   }
 
@@ -161,20 +212,25 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
   // (query-only). Nunca permanece preso em `isSubmitting` sem feedback.
   if (unknownResult) {
     return (
-      <div className="space-y-4">
-        <UnknownResultPanel
-          supportReference={unknownResult.supportReference}
-          supportEmail={supportEmail}
-          campaignId={unknownResult.campaignId}
-          operationId={unknownResult.operationId}
-          onResolved={handleUnknownResolved}
-        />
+      <div>
+        {pageHeader}
+        <div className="space-y-4">
+          <UnknownResultPanel
+            supportReference={unknownResult.supportReference}
+            supportEmail={supportEmail}
+            campaignId={unknownResult.campaignId}
+            operationId={unknownResult.operationId}
+            onResolved={handleUnknownResolved}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div>
+      {pageHeader}
+      <div className="space-y-4">
       {submitError && !pendingConflict && (
         <ErrorState
           role="alert"
@@ -326,10 +382,9 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         supportEmail={supportEmail}
         eligible={eligible}
         backgroundDirectionRequired={backgroundDirectionRequired}
-        verticalEnabled={verticalEnabled}
         campaignFormatPaused={campaignFormatPaused}
-        campaignFormatUnavailable={campaignFormatUnavailable}
       />
+      </div>
     </div>
   );
 }
@@ -354,9 +409,7 @@ interface FormContentProps {
   eligible: boolean;
   /** F56.2b2b (P1): direção de fundo exige escolha explícita — bloqueia o avanço. */
   backgroundDirectionRequired?: boolean;
-  verticalEnabled?: boolean;
   campaignFormatPaused?: boolean;
-  campaignFormatUnavailable?: boolean;
 }
 
 function IntentSelector({
@@ -430,9 +483,7 @@ function FormContent({
   supportEmail,
   eligible,
   backgroundDirectionRequired = false,
-  verticalEnabled = false,
   campaignFormatPaused = false,
-  campaignFormatUnavailable = false,
 }: FormContentProps) {
   const { costs, status: costStatus } = useOperationCosts();
 
@@ -804,34 +855,6 @@ function FormContent({
             touched.backgroundDirection ? (fieldErrors.backgroundDirection ?? null) : null
           }
         />
-      )}
-
-      {eligible && (
-        <div className="space-y-3">
-          {campaignFormatPaused && (
-            <div
-              role="alert"
-              className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900"
-            >
-              <p className="font-semibold">
-                {campaignFormatUnavailable
-                  ? "Formato indisponível"
-                  : "Novo envio vertical pausado"}
-              </p>
-              <p className="mt-1">
-                {campaignFormatUnavailable
-                  ? "Não foi possível confirmar o formato desta campanha. Nada foi cobrado."
-                  : "Este rascunho foi criado no formato Vertical 9:16. O envio de novas campanhas verticais está temporariamente indisponível. Sua escolha de formato foi preservada."}
-              </p>
-            </div>
-          )}
-          <CampaignFormatSelector
-            value={fields.campaignFormat ?? "1:1"}
-            onChange={(format) => setField("campaignFormat", format)}
-            disabled={isSubmitting || campaignFormatPaused}
-            verticalEnabled={verticalEnabled && !campaignFormatPaused}
-          />
-        </div>
       )}
 
       {/* F56.2b1b (B1B-D1): a checkbox legada só existe fora do novo fluxo.

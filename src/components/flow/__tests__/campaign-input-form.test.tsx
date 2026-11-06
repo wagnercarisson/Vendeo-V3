@@ -18,6 +18,25 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+const hookState = vi.hoisted(() => ({
+  reviewMode: false,
+  isSubmitting: false,
+  preparing: false,
+  unknownResult: null as null | {
+    supportReference: string | null;
+    operationId: string | null;
+    campaignId: string | null;
+  },
+}));
+
+vi.mock("../campaign-brief-review", () => ({
+  CampaignBriefReview: () => <div>Revisão</div>,
+}));
+
+vi.mock("../unknown-result-panel", () => ({
+  UnknownResultPanel: () => <div>Resultado desconhecido</div>,
+}));
+
 // useCampaignForm é mockado com estado de erro de data, mas o MÓDULO real é
 // preservado (importOriginal) para que o ValidityField REAL renderize com seus
 // helpers de máscara — valida o wiring hook → UI sem mockar o componente.
@@ -44,6 +63,7 @@ vi.mock("@/components/flow/use-campaign-form", async (importOriginal) => {
         validityEndDate: "",
         validityCustomText: "",
         campaignFormat: "9:16",
+        backgroundDirection: "studio",
       },
       fieldErrors: {
         validityEndDate: "Informe uma data válida (dd/mm/aaaa)",
@@ -58,7 +78,7 @@ vi.mock("@/components/flow/use-campaign-form", async (importOriginal) => {
       handlePriceOriginalChange: vi.fn(),
       handlePriceDiscountedChange: vi.fn(),
       imagePreviewUrl: null,
-      isSubmitting: false,
+      isSubmitting: hookState.isSubmitting,
       submitError: null,
       setSubmitError: vi.fn(),
       handleSubmit: vi.fn(),
@@ -67,6 +87,19 @@ vi.mock("@/components/flow/use-campaign-form", async (importOriginal) => {
       handleConflictCorrect: vi.fn(),
       handleConflictCancel: vi.fn(),
       phases: [],
+      reviewMode: hookState.reviewMode,
+      preparing: hookState.preparing,
+      preparedImages: null,
+      reviewError: null,
+      enterReview: vi.fn(),
+      exitReview: vi.fn(),
+      confirmReview: vi.fn(),
+      unknownResult: hookState.unknownResult,
+      resetUnknownResult: vi.fn(),
+      invalidateTerminalIdentity: vi.fn(),
+      restorationNotice: null,
+      backgroundDirectionNotice: null,
+      backgroundDirectionRequired: false,
     }),
   };
 });
@@ -107,6 +140,10 @@ vi.mock("@/components/flow/generation-progress", () => ({
 describe("CampaignInputForm — erro de data chega à UI via ValidityField real", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    hookState.reviewMode = false;
+    hookState.isSubmitting = false;
+    hookState.preparing = false;
+    hookState.unknownResult = null;
     mockUseOperationCosts.mockReturnValue({
       costs: { campaign_generation: { costCredits: 1, enabled: true } },
       status: "loaded",
@@ -184,5 +221,50 @@ describe("CampaignInputForm — erro de data chega à UI via ValidityField real"
       "title",
       "O envio de novas campanhas verticais está indisponível no momento.",
     );
+  });
+
+  it("edição normal: título/subtítulo e um único seletor, na ordem do cabeçalho", () => {
+    render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
+
+    const title = screen.getByRole("heading", { level: 1, name: "Dados da Campanha" });
+    const selector = screen.getByTestId("flow-campaign-format-selector");
+    expect(screen.getByText("Informe os dados do produto e da oferta")).toBeInTheDocument();
+    expect(screen.getAllByTestId("flow-campaign-format-selector")).toHaveLength(1);
+    expect(
+      title.compareDocumentPosition(selector) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("revisão: mantém título/subtítulo, remove o seletor interativo", () => {
+    hookState.reviewMode = true;
+    render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Dados da Campanha" })).toBeInTheDocument();
+    expect(screen.getByText("Informe os dados do produto e da oferta")).toBeInTheDocument();
+    expect(screen.getByText("Revisão")).toBeInTheDocument();
+    expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
+  });
+
+  it("geração: mantém título/subtítulo, remove o seletor interativo", () => {
+    hookState.isSubmitting = true;
+    render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Dados da Campanha" })).toBeInTheDocument();
+    expect(screen.getByText("Informe os dados do produto e da oferta")).toBeInTheDocument();
+    expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
+  });
+
+  it("resultado desconhecido: mantém título/subtítulo, remove o seletor interativo", () => {
+    hookState.unknownResult = {
+      supportReference: null,
+      operationId: "op-1",
+      campaignId: "campaign-1",
+    };
+    render(<CampaignInputForm storeId="store-1" balance={5} eligible />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Dados da Campanha" })).toBeInTheDocument();
+    expect(screen.getByText("Informe os dados do produto e da oferta")).toBeInTheDocument();
+    expect(screen.getByText("Resultado desconhecido")).toBeInTheDocument();
+    expect(screen.queryByTestId("flow-campaign-format-selector")).not.toBeInTheDocument();
   });
 });

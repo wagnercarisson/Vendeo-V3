@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCampaignGenerationBody,
   buildEligibleDraftFingerprint,
+  isCampaignFormatLocked,
   type CampaignFormFields,
 } from "../use-campaign-form";
 
@@ -81,5 +82,27 @@ describe("F59/D-03 — campaignFormat no estado/body/fingerprint", () => {
 
     expect(square).toBe(defaultFormat);
     expect(vertical).not.toBe(square);
+  });
+});
+
+describe("Quick 261106-qxn — bloqueio de mutação do formato", () => {
+  const unlocked = {
+    reviewMode: false,
+    preparing: false,
+    isSubmitting: false,
+    unknownResult: null,
+  };
+
+  it("libera apenas na edição normal", () => {
+    expect(isCampaignFormatLocked(unlocked)).toBe(false);
+  });
+
+  it.each([
+    ["revisão", { ...unlocked, reviewMode: true }],
+    ["preparação", { ...unlocked, preparing: true }],
+    ["geração", { ...unlocked, isSubmitting: true }],
+    ["resultado desconhecido", { ...unlocked, unknownResult: { operationId: "op-1" } }],
+  ])("bloqueia durante %s", (_label, state) => {
+    expect(isCampaignFormatLocked(state)).toBe(true);
   });
 });

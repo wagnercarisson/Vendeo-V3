@@ -137,6 +137,25 @@ export interface PreparedCampaignImage {
   dataUrl: string;
 }
 
+/**
+ * Quick 261106-qxn — o formato não pode mudar depois que a revisão começa
+ * (inclui a preparação), durante a submissão ou enquanto o resultado é
+ * desconhecido. Função pura para manter o guard do `setField` testável.
+ */
+export function isCampaignFormatLocked(state: {
+  reviewMode: boolean;
+  preparing: boolean;
+  isSubmitting: boolean;
+  unknownResult: unknown;
+}): boolean {
+  return (
+    state.reviewMode ||
+    state.preparing ||
+    state.isSubmitting ||
+    state.unknownResult !== null
+  );
+}
+
 export interface CampaignFormFields {
   productName: string;
   description: string;
@@ -1120,6 +1139,21 @@ export function useCampaignForm(
 
   const setField = useCallback(
     (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => {
+      // Quick 261106-qxn — o formato é congelado assim que a revisão começa
+      // (preparação inclusa) e permanece congelado durante a geração/resultado
+      // desconhecido. Para trocar de formato, o usuário volta à edição pelo
+      // caminho explícito "Voltar e editar".
+      if (
+        field === "campaignFormat" &&
+        isCampaignFormatLocked({
+          reviewMode,
+          preparing,
+          isSubmitting,
+          unknownResult,
+        })
+      ) {
+        return;
+      }
       setFields((prev) => {
         const next = { ...prev, [field]: value as never };
         if (field === "mandatoryArtworkText") next.mandatoryArtworkTextFree = value as string;
@@ -1133,7 +1167,7 @@ export function useCampaignForm(
         return next;
       });
     },
-    []
+    [reviewMode, preparing, isSubmitting, unknownResult]
   );
 
   const handleBlur = useCallback(

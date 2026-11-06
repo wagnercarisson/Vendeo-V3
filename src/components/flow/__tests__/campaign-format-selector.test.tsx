@@ -17,11 +17,14 @@ function renderSelector(overrides: Partial<React.ComponentProps<typeof CampaignF
 }
 
 describe("CampaignFormatSelector (F59/D-03)", () => {
-  it("renderiza a estrutura, a legenda sr-only e os labels exatos", () => {
+  it("renderiza a estrutura, o rótulo visível, a legenda sr-only e os labels exatos", () => {
     renderSelector();
 
     const section = screen.getByTestId("flow-campaign-format-selector");
-    expect(section).toHaveAttribute("aria-labelledby", "campaignFormat-legend");
+    expect(section).toHaveAttribute("aria-labelledby", "campaignFormat-heading");
+    expect(
+      screen.getByRole("heading", { name: "Formato da campanha" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Selecione o formato da campanha")).toHaveClass("sr-only");
     expect(screen.getByRole("radio", { name: "Quadrado 1:1 - feed" })).toBeInTheDocument();
     expect(

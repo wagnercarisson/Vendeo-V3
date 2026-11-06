@@ -41,13 +41,17 @@ export function CampaignFormatSelector({
   return (
     <section
       data-testid="flow-campaign-format-selector"
-      aria-labelledby="campaignFormat-legend"
+      aria-labelledby="campaignFormat-heading"
       className="space-y-2"
     >
+      <h2
+        id="campaignFormat-heading"
+        className="text-text-muted text-xs font-heading font-medium uppercase tracking-wider mb-2"
+      >
+        Formato da campanha
+      </h2>
       <fieldset className="space-y-2">
-        <legend id="campaignFormat-legend" className="sr-only">
-          Selecione o formato da campanha
-        </legend>
+        <legend className="sr-only">Selecione o formato da campanha</legend>
         <div className="space-y-2">
           {FORMAT_OPTIONS.map((option) => {
             const optionDisabled =
@@ -71,7 +75,7 @@ export function CampaignFormatSelector({
                   aria-describedby="campaignFormat-helper"
                   className="mt-0.5 h-4 w-4 accent-accent-green"
                 />
-                <span className="flex-1 text-sm font-body text-text-primary">
+                <span className="min-w-0 flex-1 break-words text-sm font-body text-text-primary">
                   {option.label}
                 </span>
               </label>
