@@ -31,6 +31,7 @@ function makeItems(...ids: string[]): EligibleCampaignCard[] {
     productName: `Produto ${index + 1}`,
     createdAt: "2026-10-19T10:00:00.000Z",
     thumbnailUrl: `https://cdn.test/${id}.jpg`,
+    format: index % 2 === 0 ? "1:1" : "9:16",
   }));
 }
 
@@ -107,6 +108,23 @@ describe("DashboardCampaigns", () => {
 
     expect(html).toContain("3 campanhas disponíveis");
     expect(html).not.toContain("3 campanha disponível");
+  });
+
+  it("Quick 261106-qxn: exibe os rótulos de formato nos cartões", () => {
+    const html = renderSection({ count: 2, items: makeItems("c1", "c2") });
+
+    expect(html).toContain("1:1 quadrado");
+    expect(html).toContain("9:16 vertical");
+  });
+
+  it("Quick 261106-qxn: formato indisponível não exibe identificador", () => {
+    const html = renderSection({
+      count: 1,
+      items: [{ ...makeItems("c1")[0], format: null }],
+    });
+
+    expect(html).not.toContain("1:1 quadrado");
+    expect(html).not.toContain("9:16 vertical");
   });
 
   it("não renderiza badges de status técnico nos cartões", () => {

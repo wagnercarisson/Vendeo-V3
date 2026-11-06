@@ -102,6 +102,13 @@ export function DashboardCampaigns({
                   id={item.id}
                   productName={item.productName}
                   dateLabel={dateLabels[item.id] ?? item.createdAt}
+                  formatLabel={
+                    item.format === "1:1"
+                      ? messages.format.square
+                      : item.format === "9:16"
+                        ? messages.format.vertical
+                        : null
+                  }
                   thumbnailUrl={item.thumbnailUrl}
                   openAria={openAriaLabels[item.id] ?? item.productName}
                   openLabel={messages.open}

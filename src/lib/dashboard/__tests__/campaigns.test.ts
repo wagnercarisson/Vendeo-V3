@@ -25,6 +25,7 @@ interface Row {
   product_name: string;
   created_at: string;
   storage_path: string;
+  input_snapshot: Record<string, unknown> | null;
 }
 
 interface QueryChain {
@@ -63,12 +64,17 @@ const rows: Row[] = [
     product_name: "Tênis Runner",
     created_at: "2026-07-13T12:00:00Z",
     storage_path: "store-1/campaign-1.jpg",
+    input_snapshot: {},
   },
   {
     id: "campaign-2",
     product_name: "Camiseta Dry",
     created_at: "2026-07-12T12:00:00Z",
     storage_path: "store-1/campaign-2.jpg",
+    input_snapshot: {
+      campaignFormat: "9:16",
+      formatContractVersion: "f59-vertical-9-16-v1",
+    },
   },
 ];
 
@@ -82,7 +88,7 @@ describe("DASHBOARD_CAMPAIGN_LIMIT", () => {
 });
 
 describe("queryEligibleCampaigns", () => {
-  it("selects only id, product_name, created_at, storage_path (no input_snapshot)", async () => {
+  it("selects input_snapshot only server-side for format resolution", async () => {
     const chain = buildChain(rows);
 
     const { queryEligibleCampaigns } = await import(
@@ -92,8 +98,9 @@ describe("queryEligibleCampaigns", () => {
 
     expect(chain.selectFn).toHaveBeenCalledTimes(1);
     const selectArg = chain.selectFn.mock.calls[0][0] as string;
-    expect(selectArg).toBe("id, product_name, created_at, storage_path");
-    expect(selectArg).not.toContain("input_snapshot");
+    expect(selectArg).toBe(
+      "id, product_name, created_at, storage_path, input_snapshot",
+    );
   });
 
   it("filters by store_id and status=ready, orders desc and limits to 3", async () => {
@@ -130,12 +137,33 @@ describe("queryEligibleCampaigns", () => {
       productName: "Tênis Runner",
       createdAt: "2026-07-13T12:00:00Z",
       thumbnailUrl: "https://signed/1.jpg",
+      format: "1:1",
     });
+    expect(result[1]).toMatchObject({ format: "9:16" });
     expect(result[0]).not.toHaveProperty("storagePath");
     expect(result[0]).not.toHaveProperty("storage_path");
     expect(result[0]).not.toHaveProperty("status");
     expect(result[0]).not.toHaveProperty("input_snapshot");
     expect(result[0]).not.toHaveProperty("error_message");
+  });
+
+  it("Quick 261106-qxn: formato indisponível permanece null, sem fallback para 1:1", async () => {
+    buildChain([
+      {
+        id: "campaign-invalid",
+        product_name: "Produto inválido",
+        created_at: "2026-07-13T12:00:00Z",
+        storage_path: "store-1/campaign-invalid.jpg",
+        input_snapshot: { campaignFormat: "9:16" },
+      },
+    ]);
+
+    const { queryEligibleCampaigns } = await import(
+      "@/lib/dashboard/campaigns"
+    );
+    const result = await queryEligibleCampaigns("store-1");
+
+    expect(result[0].format).toBeNull();
   });
 
   it("passes status ready and storagePath to the signing helper", async () => {

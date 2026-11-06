@@ -40,6 +40,8 @@ const EXPECTED_PT_KEYS = [
   "credits.detailsLink",
   "credits.detailsAria",
   "campaigns.sectionLabel",
+  "campaigns.format.square",
+  "campaigns.format.vertical",
   "campaigns.countSingular",
   "campaigns.countPlural",
   "campaigns.emptyTitle",

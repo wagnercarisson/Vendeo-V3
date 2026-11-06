@@ -33,6 +33,10 @@ export const ptBRDashboardMessages: DashboardMessages = Object.freeze({
   }),
   campaigns: Object.freeze({
     sectionLabel: "Campanhas recentes",
+    format: Object.freeze({
+      square: "1:1 quadrado",
+      vertical: "9:16 vertical",
+    }),
     countSingular: "{count} campanha disponível",
     countPlural: "{count} campanhas disponíveis",
     emptyTitle: "Nenhuma campanha disponível",

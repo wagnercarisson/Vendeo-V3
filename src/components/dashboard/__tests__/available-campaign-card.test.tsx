@@ -20,12 +20,16 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-function renderCard(thumbnailUrl: string | null = "https://cdn.test/thumb.jpg") {
+function renderCard(
+  thumbnailUrl: string | null = "https://cdn.test/thumb.jpg",
+  formatLabel: string | null = "1:1 quadrado",
+) {
   return render(
     <AvailableCampaignCard
       id="c1"
       productName="Tênis Runner"
       dateLabel="19 de out. de 2026"
+      formatLabel={formatLabel}
       thumbnailUrl={thumbnailUrl}
       openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
       openLabel="Abrir campanha"
@@ -58,6 +62,7 @@ describe("AvailableCampaignCard", () => {
         id="c1"
         productName="Tênis Runner"
         dateLabel="19 de out. de 2026"
+        formatLabel="1:1 quadrado"
         thumbnailUrl="https://cdn.test/recovered.jpg"
         openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
         openLabel="Abrir campanha"
@@ -94,6 +99,27 @@ describe("AvailableCampaignCard", () => {
 
     expect(screen.getByText("Tênis Runner")).toHaveAttribute("lang", "");
     expect(screen.getByText("19 de out. de 2026")).not.toHaveAttribute("lang");
+    expect(screen.getByText("1:1 quadrado")).not.toHaveAttribute("lang");
+  });
+
+  it("Quick 261106-qxn: exibe o rótulo de formato e omite quando indisponível", () => {
+    const { rerender } = renderCard();
+    expect(screen.getByText("1:1 quadrado")).toBeInTheDocument();
+
+    rerender(
+      <AvailableCampaignCard
+        id="c1"
+        productName="Tênis Runner"
+        dateLabel="19 de out. de 2026"
+        formatLabel={null}
+        thumbnailUrl="https://cdn.test/thumb.jpg"
+        openAria="Abrir campanha Tênis Runner, 19 de out. de 2026"
+        openLabel="Abrir campanha"
+      />,
+    );
+
+    expect(screen.queryByText("1:1 quadrado")).not.toBeInTheDocument();
+    expect(screen.queryByText("9:16 vertical")).not.toBeInTheDocument();
   });
 
   it("expõe nome acessível e alvo de foco no link do cartão", () => {

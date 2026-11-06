@@ -31,8 +31,14 @@ export interface DashboardCreditsMessages {
   readonly detailsAria: string;
 }
 
+export interface DashboardCampaignFormatMessages {
+  readonly square: string;
+  readonly vertical: string;
+}
+
 export interface DashboardCampaignsMessages {
   readonly sectionLabel: string;
+  readonly format: DashboardCampaignFormatMessages;
   readonly countSingular: string;
   readonly countPlural: string;
   readonly emptyTitle: string;

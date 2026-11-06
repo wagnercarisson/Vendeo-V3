@@ -36,6 +36,10 @@ export const es419CampaignListMessages = Object.freeze({
     incomplete: "No completada",
     error: "Error",
   }),
+  format: Object.freeze({
+    square: "1:1 cuadrado",
+    vertical: "9:16 vertical",
+  }),
   actions: Object.freeze({
     open: "Abrir",
     download: "Descargar",
