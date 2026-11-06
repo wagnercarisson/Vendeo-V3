@@ -60,10 +60,10 @@ preview real da interface de Reels.
 | Pão de Queijo | Identidade no topo; “Pré assado”, “Rápido e prático” e validade na base; aviso sob o recorte de ações. |
 | Pão Francês | Identidade no topo; base apenas com produto. |
 
-**Classificação:** há interseções com a máscara conservadora antiga. A
-compatibilidade visual no posicionamento real de Reels permanece **pendente de
-preview real**; não há aprovação nem reprovação definitiva. Stories FB/IG permanece
-aprovado separadamente.
+**Classificação:** o responsável **aceitou Reels com a ressalva observada no
+Facebook**. A máscara conservadora antiga indicou interseções de risco, mas não é
+preview real nem aprovação irrestrita. Stories FB/IG permanece aprovado
+separadamente.
 
 A quick pós-F59 contém apenas: (1) posição do seletor de formato; (2) identificação
 do formato na listagem; (3) direção de fundo na revisão. Não inclui reformulação de
@@ -72,6 +72,6 @@ margens nem do prompt; o prompt permanece congelado.
 ## 6. Status
 
 - Stories FB/IG no recorte apresentado: **aceito manualmente**.
-- Reels: **pendente de preview real**; a máscara antiga é análise conservadora de
-  risco, não validação de interface.
+- Reels: **aceito com ressalva observada no Facebook**; a máscara antiga é análise
+  conservadora de risco, não validação de interface.
 - O aceite visual não autoriza conclusão da fase, arquivamento ou produção.

@@ -94,14 +94,15 @@ que todas as suítes antigas de concorrência tenham sido executadas; elas não 
 
 ## 7. Pendências
 
-- Reels: **pendente de preview real**; a máscara conservadora antiga identifica
-  riscos, mas não valida a interface real (ver seção 9).
 - Caso D: encerrado para `error`; operação `refunded`; **auditoria da resolução
-  idempotente não registrada** — decisão pendente sobre ajuste do mecanismo ou
-  aceite da lacuna (ver seção 8).
+  idempotente não registrada** — decisão pendente (ajuste do mecanismo ou aceite da
+  lacuna).
+- Restauração de **rascunho local persistido** 9:16 com flag OFF: falta confirmar a
+  pausa explicada no reload (ver seção 12).
 - Custo real do provider por usage: reconciliação pendente; o incremento de 0,1107
   é contábil do piloto.
 - Gate de produção continua **não executado** por desenho.
+- Reels: **aceito com ressalva observada no Facebook** (ver seção 9).
 - Retries HTTP internos do SDK não são observáveis diretamente; a evidência é a
   contagem de invocações pagas.
 - A F59 **não** é encerrada por este resultado.
@@ -130,9 +131,17 @@ Verificação:
 **Divergência:** a RPC retornou replay idempotente e **não inseriu nova linha em
 `admin_audit_log`** para esta resolução. Não foi feito UPDATE direto nem inserção
 manual de auditoria. O encerramento da campanha foi aplicado, mas o requisito de
-“auditoria registrada” nesta chamada **não foi comprovado**. Necessária decisão
-sobre ajuste do mecanismo para auditar replay terminal idempotente, ou aceite
-explícito da lacuna.
+“auditoria registrada” nesta chamada **não foi comprovado**.
+
+**Diagnóstico:** em `admin_resolve_product_1_1_pending`, o bloco
+`IF v_credit.status = 'refunded' AND p_action = 'refund_once'` retorna
+`success:true, idempotent:true` **antes** do `INSERT INTO admin_audit_log`. O replay
+terminal é, por desenho, sem nova auditoria. O serviço ainda executa
+`projectClosedCampaign`, por isso a campanha mudou para `error`.
+
+Opções: (a) ajustar o mecanismo para auditar replay terminal idempotente (mudança
+de código, exige autorização) ou (b) aceitar o `refund_tx_id`/ledger como evidência
+do encerramento e registrar a lacuna de auditoria da projeção.
 
 ## 9. Reels — análise conservadora de risco
 
@@ -145,11 +154,11 @@ Sobreposição local com a máscara conservadora antiga (topo 14%, base 35%, lat
 | Pão de Queijo | Identidade no topo; “Pré assado”, “Rápido e prático” e validade na base; aviso sob o recorte de ações. |
 | Pão Francês | Identidade no topo; base apenas com produto. |
 
-**Classificação:** há interseções com a máscara conservadora. A compatibilidade no
-posicionamento real de Reels permanece **pendente de preview real**; não há
-aprovação nem reprovação definitiva. Stories FB/IG permanece aprovado
-separadamente. A quick pós-F59 cobre apenas seletor, identificação na listagem e
-direção de fundo na revisão; prompt congelado.
+**Classificação:** o responsável **aceitou Reels com a ressalva observada no
+Facebook**. A máscara conservadora identifica risco, mas não é preview real nem
+aprovação irrestrita. Stories FB/IG permanece aprovado separadamente. A quick
+pós-F59 cobre apenas seletor, identificação na listagem e direção de fundo na
+revisão; prompt congelado.
 
 ## 10. Operações em andamento
 
@@ -176,3 +185,42 @@ defeito e não foi usada como evidência de bloqueio.
 Sem consumo: saldo permaneceu **10**, nenhuma campanha criada nos 10 minutos
 seguintes e nenhuma chamada paga. O teste cobre preservação de dados na transição
 revisão → edição; não substitui o teste de restauração a partir de rascunho.
+
+## 12. Task 5.14 — cruzamento das evidências
+
+| Evidência | Cobre |
+|---|---|
+| Retorno após saldo insuficiente | campos e formato preservados no retorno à tela de dados |
+| Revisão → edição com flag OFF | campos, imagem e 9:16 preservados; sem troca para 1:1 |
+| `restoreFrom` de campanha vertical com flag OFF | 9:16 preservado, aviso de pausa, sem troca para 1:1 |
+
+**Cenário distinto ainda não coberto:** reload de um **rascunho local persistido**
+(sessionStorage), não de uma campanha `restoreFrom`.
+
+- **Ponto de entrada:** `/campanhas/nova` com flag ON; preencher 9:16 + imagem; ir
+  à revisão; “Voltar e editar” (persiste o draft); recarregar a página.
+- **Procedimento:** conferir restauração com flag ON; depois desligar a flag pela
+  via auditada e recarregar o mesmo draft; conferir 9:16 preservado e bloqueio
+  explicado, sem troca silenciosa para 1:1; restaurar a flag.
+- **Critério de aprovação:** campos/imagem/9:16 restaurados; com flag OFF, submissão
+  bloqueada com explicação (ou, no mínimo, rejeição server-side 503 sem troca de
+  formato); nenhum crédito/provider.
+- **Risco identificado:** `campaignFormatPaused` é calculado no servidor apenas a
+  partir de `restoredForm`; um draft local não tem `restoredForm`, então a pausa
+  visual pode não aparecer no reload com flag OFF. Isso precisa de verificação e,
+  se confirmado, de correção de UI fora da quick acordada (que tem apenas seletor,
+  listagem e direção de fundo).
+
+## 13. Recuperação com flag OFF — verificação técnica
+
+- Nenhum dos caminhos `image-recovery`, `copy-recovery`, repositório de pendências,
+  resolução administrativa, `projectDeliveredCampaign` ou `projectClosedCampaign`
+  referencia `product_9_16_enabled`/`isProduct9x16Enabled`.
+- Verificação em runtime: flag OFF auditada `ae4718a8-5697-4343-bae1-3041112f5c43`;
+  `POST /api/campaign/557460a6…/image-recovery` retornou **200**
+  `operation_terminal`/`delivered`/`integral`; flag ON restaurada
+  `a87aa32b-eecd-4abb-a384-87d543a14d3f`.
+- O cenário de operação **pendente** com flag OFF não foi executado porque não há
+  operação pendente; a ausência de referência à flag nos caminhos indica que ele não
+  é bloqueado. Se for exigida prova ponta a ponta, seria um caso sintético novo
+  (1 crédito, sem provider).

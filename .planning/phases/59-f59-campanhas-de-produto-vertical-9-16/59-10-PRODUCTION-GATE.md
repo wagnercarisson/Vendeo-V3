@@ -14,13 +14,13 @@ Este gate é separado do aceite de homolog e **não** é autorizado por ele.
 
 ## 2. Pré-requisitos de entrada
 
-1. F59 sem gates pendentes de recuperação/resolução, idempotência e concorrência, ou
-   aceite explícito de risco pelo responsável.
-2. Relatório de aceite aprovado e limitações conhecidas registradas.
-3. Revisão de Reels/overlays: **pendente de preview real**; a máscara conservadora
-   antiga é análise de risco, não validação de interface.
-4. Caso D encerrado em `error`; auditoria da resolução idempotente pendente de
+1. Restauração de rascunho local persistido 9:16 com flag OFF: confirmar pausa
+   explicada no reload (ou aceitar como limitação).
+2. Caso D fechado em `error`; auditoria da resolução idempotente pendente de
    decisão (ajuste do mecanismo ou aceite da lacuna).
+3. Reels: **aceito com ressalva observada no Facebook**; não é aprovação irrestrita
+   de todas as interfaces.
+4. Custo real do provider por usage: reconciliação pendente.
 4. Migration do seed da flag revisada e com timestamp único.
 5. Plano de rollback testado em homolog.
 6. Janela, responsável e critério de aborto definidos.
