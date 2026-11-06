@@ -49,13 +49,24 @@ responsável. Política registrada: `safe-area-9-16-experimental-v3`
 
 ## 5. Reels
 
-**Não revisado.** A revisão cobre Stories Facebook/Instagram. Previews de Reels,
-sobreposições reais e demais interfaces permanecem separados e pendentes. Não se
-transporta o aceite de Stories para Reels.
+Revisão executada em 2026-11-06 sobre as artes verticais existentes (Bolo, Pão de
+Queijo e Pão Francês), **sem nova geração e sem publicação**. Sobreposição local
+com as zonas de Reels: topo 14% (269 px), base 35% (672 px), laterais 6% (65 px) e
+pilha de ações inferior direita 324×768.
+
+| Arte | Achado |
+|---|---|
+| Bolo | Identidade da loja no topo (14%); validade na base (35%); aviso obrigatório vertical invade base/lateral esquerda. **Reprovado para Reels.** |
+| Pão de Queijo | Identidade da loja no topo; “Pré assado”, “Rápido e prático” e validade na base; “Imagem meramente ilustrativa” sob a pilha de ações. **Reprovado para Reels.** |
+| Pão Francês | Identidade da loja no topo; base coberta apenas por produto. Sem texto essencial na base. **Ressalva apenas no topo.** |
+
+O Stories FB/IG permanece aprovado separadamente. Reels **não** herda esse aceite.
+As correções de composição/UI ficam para a quick pós-F59; o prompt congelado não foi
+alterado.
 
 ## 6. Status
 
 - Stories FB/IG no recorte apresentado: **aceito manualmente**.
-- Reels: **pendente**.
-- Sobreposições reais em todas as interfaces: **não executadas**.
+- Reels: **revisado e não aprovado** (identidade no topo em todas; base em Bolo e
+  Pão de Queijo).
 - O aceite visual não autoriza conclusão da fase, arquivamento ou produção.

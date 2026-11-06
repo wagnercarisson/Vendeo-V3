@@ -17,7 +17,9 @@ Este gate é separado do aceite de homolog e **não** é autorizado por ele.
 1. F59 sem gates pendentes de recuperação/resolução, idempotência e concorrência, ou
    aceite explícito de risco pelo responsável.
 2. Relatório de aceite aprovado e limitações conhecidas registradas.
-3. Revisão de Reels/overlays concluída ou aceita como limitação.
+3. Revisão de Reels/overlays: executada e **não aprovada**; correção na quick pós-F59
+   ou aceite explícito de limitação.
+4. Caso D encerrado pelo mecanismo auditado (proposta pendente de autorização).
 4. Migration do seed da flag revisada e com timestamp único.
 5. Plano de rollback testado em homolog.
 6. Janela, responsável e critério de aborto definidos.

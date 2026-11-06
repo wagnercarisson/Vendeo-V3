@@ -308,3 +308,16 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-59-12 | Restauração do formulário carrega formato/versão, preserva a escolha no rascunho/revisão/nova tentativa e, com flag OFF, mantém a seleção vertical visível e bloqueia submissão sem troca silenciosa para 1:1 | Testes de restauração + UI |
 | REQ-59-13 | Telemetria registra formato e dimensões solicitada/devolvida/entregue por tentativa sem prompt/chave/bytes; documentação operacional e runbook atualizados com flag, paths, safe area e rollback | Testes de telemetria + revisão de docs |
 | REQ-59-14 | Homolog primeiro com lojas de teste, saldo controlado, sobreposições reais de Stories/Reels e regressão 1:1 automatizada/manual; gates de produção (deploy, ativação, smoke, rollback) separados e não executados nesta fase | Relatório de homolog + aceite + gate separado |
+
+## F59 — evidência real no homolog (2026-11-06)
+
+| REQ | Status da evidência |
+|---|---|
+| REQ-59-08 | Cenários executados: concorrência de rota com 1 campanha/1 dedução/1 imagem; reserva e tentativa SQL com 1 vencedor. Não representa a execução de todas as suítes antigas. |
+| REQ-59-09 | Comprovado: A1 recuperação vertical e A2 resolução administrativa até detalhe/lista, sem nova geração e sem path 1:1. |
+| REQ-59-11 | Comprovado: ciclo OFF/ON auditado, 503 antes de reserva/provider, campanhas existentes atendidas e geração em andamento concluída. Recuperação/resolução com flag OFF não foi executada. |
+| REQ-59-12 | Parcial: restauração vertical com flag OFF comprovada; restauração com flag ON coberta por teste. |
+| REQ-59-14 | Parcial: Stories FB/IG aceitos; Reels revisado e não aprovado; gate de produção separado e não executado. |
+
+O incremento de US$ 0,1107 é contabilizado no piloto; não é custo real do provider
+reconciliado por usage.

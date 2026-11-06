@@ -45,6 +45,9 @@ nada foi alterado por isso.
 | D — concorrência SQL de tentativa | **PASS** | duas chamadas concorrentes: uma `acquired=true`, uma `out_of_sequence`; **1** claim |
 | D — estorno da reserva | **PASS** | `refunded`; saldo restaurado |
 
+Os gates concorrentes acima passaram **nos cenários executados**. Isso não significa
+que todas as suítes antigas de concorrência tenham sido executadas; elas não foram.
+
 ## 4. Créditos, saldo e custos
 
 | Etapa | Ação | Saldo |
@@ -61,7 +64,7 @@ nada foi alterado por isso.
 - Concessão: `admin_grant_credits`, operação `1563e756-845a-4301-8251-e6428af1c464`, +3, auditoria `credit_grant`.
 - Teto: `product_1_1_pilot_set_cap` para **3,40**, operação `5f6d2d00-7cc2-4859-a01b-f8e52982ffd9`; **sem restauração para 2,20**.
 - Gasto antes: **2,0882**; depois: **2,1989**; delta **0,1107**.
-- Run B: 1 `copy_initial` (0,0007) + 1 `image_primary` (0,1100) = **0,1107**.
+- Run B: 1 `copy_initial` (0,0007) + 1 `image_primary` (0,1100) = **0,1107**. Esse valor é o **incremento contabilizado no piloto**, não o custo real do provider reconciliado por usage.
 - Saldo final: **0**. Nenhum crédito adicional foi concedido.
 - Invocações lógicas observadas: **1 imagem + 1 copy**. Retries HTTP do SDK **não são diretamente observáveis**; a contagem de `pilot_paid_calls` permaneceu em 1 por tipo, sem fallback.
 
@@ -91,7 +94,57 @@ nada foi alterado por isso.
 
 ## 7. Pendências
 
-- Revisão visual de Reels/overlays continua separada e pendente; Stories FB/IG já aceitos.
+- Revisão visual de Reels/overlays: **executada e não aprovada** (ver seção 9).
+- Caso D: campanha `generating` com operação `refunded`; encerramento proposto na
+  seção 8, **não executado**.
 - Gate de produção continua **não executado** por desenho.
-- Retries HTTP internos do SDK não são observáveis diretamente; a evidência é a contagem de invocações pagas.
+- Retries HTTP internos do SDK não são observáveis diretamente; a evidência é a
+  contagem de invocações pagas.
 - A F59 **não** é encerrada por este resultado.
+
+## 8. Caso D — proposta de encerramento (não executada)
+
+Estado atual: campanha `e5ac1195-eb96-4076-b93c-06ec32962b88` em `generating`,
+`error_message` nulo, operação `964c323b-c0c1-4249-974f-3f5386aa06a0` `refunded`,
+`publication_state=none`, claim `failed`, zero artefatos.
+
+Menor procedimento, pelo mecanismo existente:
+
+1. `POST /api/admin/product-1-1-pending` com:
+   - `campaignId` e `operationId` acima;
+   - `action: "refund_once"`;
+   - `resolutionOperationId` novo;
+   - `reason: "F59 D - encerramento de projecao residual (59-10)"`.
+2. O serviço chama a RPC auditada `admin_resolve_product_1_1_pending`; para operação
+   já `refunded`, o replay equivalente é idempotente.
+3. Em seguida, `projectClosedCampaign` altera **somente** `campaigns.status` de
+   `generating` para `error` e grava `error_message` neutro.
+4. Não toca crédito, `refund_tx_id`, ledger, artefatos, snapshots ou auditoria
+   anterior; não chama provider.
+
+Verificação esperada: campanha `error`; operação continua `refunded`; `refund_tx_id`
+inalterado; nenhuma nova transação de crédito; uma nova linha de auditoria
+`product_1_1_pending_resolution`; nenhuma operação em andamento.
+
+Se o POST retornar conflito/terminal divergente ou a projeção falhar, parar e
+informar. **Não executar atualização direta de banco.**
+
+## 9. Reels — revisão com as artes existentes
+
+Sobreposição local (sem publicação): topo 14% (269 px), base 35% (672 px), laterais
+6% (65 px), ações 324×768 no canto inferior direito.
+
+| Arte | Resultado |
+|---|---|
+| Bolo | Identidade no topo; validade na base; aviso vertical na base/lateral. **Não aprovado.** |
+| Pão de Queijo | Identidade no topo; “Pré assado”, “Rápido e prático” e validade na base; aviso sob ações. **Não aprovado.** |
+| Pão Francês | Identidade no topo; base apenas com produto. **Ressalva no topo.** |
+
+Stories FB/IG permanece aprovado separadamente; Reels não herda esse aceite. As
+correções ficam para a quick pós-F59; prompt congelado não foi alterado.
+
+## 10. Operações em andamento
+
+Confirmado no estado final: **0** claims `in_progress` e **0** créditos
+`reserved/art_uploaded`. O caso D tem operação `refunded`, claim `failed` e nenhum
+artefato; não é operação em andamento.

@@ -7,8 +7,10 @@ acessada.
 
 ## 1. Status
 
-**Homolog-ready apenas no recorte comprovado. NÃO é homolog-ready integral e NÃO é
-produção-aprovado.** A F59 permanece **PENDENTE** nos gates listados na seção 6.
+**Homolog-ready apenas no recorte comprovado. NÃO é produção-aprovado.** Os gates
+técnicos principais foram executados no homolog em 2026-11-06 (ver
+`59-10-REMAINING-GATES-RESULT.md`). Permanecem: Reels não aprovado, resíduo do caso D
+e gate de produção separado (não executado).
 
 ## 2. Escopo comprovado
 
@@ -26,6 +28,12 @@ produção-aprovado.** A F59 permanece **PENDENTE** nos gates listados na seçã
 | Regressão 1:1 | 958 testes locais; entrega real 1024×1024, `art-1024.jpg`, miniatura 288×288 |
 | Telemetria | `generation_events` com `format=9:16`, `requested/returned=1152x2048` |
 | Ciclo de flag OFF | 503 `format_unavailable`, zero efeitos; OFF/ON auditados |
+| Recuperação vertical real | A1 `delivered`, `ready`, path vertical, detalhe/lista |
+| Resolução administrativa | A2 `deliver_existing_art` → `delivered`; A3 `refund_once` → `refunded`; rechecagem 409 |
+| Concorrência de rota | 2 submissões simultâneas → 1 campanha, 1 dedução, 1 imagem + 1 copy |
+| Geração em andamento + flag OFF | flag OFF durante `image_primary`; geração concluiu; flag ON restaurada |
+| Reenvio | terminal `result`, sem provider/crédito, contagens inalteradas |
+| Concorrência SQL | reserva e tentativa com 1 vencedor; estorno da reserva |
 
 ## 3. Aceites manuais
 
@@ -58,19 +66,22 @@ Aceite manual não substitui teste simulado nem integração real.
 - Bolo: validade na faixa inferior; exceção pontual, proteção mantida no prompt.
 - Pão Francês: “garanti” é erro de entrada; arte não publicável com o erro.
 - Faixa superior efetiva de 5%; a região entre 5% e 15% não é protegida.
-- Reels não revisado; somente Stories Facebook/Instagram.
+- Reels **revisado e não aprovado**: identidade no topo em todas; base comprometida no
+  Bolo e no Pão de Queijo. Stories FB/IG permanece aprovado separadamente.
+- O incremento de **+US$ 0,1107** é o valor contabilizado no piloto, **não** custo real
+  do provider reconciliado por usage.
+- Os cenários concorrentes executados passaram; isso **não** equivale a executar todas
+  as suítes antigas.
 - O prompt bruto do provider não é persistido; hashes são reconstruções
   determinísticas.
-- Recuperação/resolução, idempotência e concorrência reais não foram executadas.
 
 ## 6. Pendências que impedem o aceite integral
 
-1. Recuperação/resolução vertical real até detalhe/lista.
-2. Idempotência/concorrência real de rota (Postgres/Storage).
-3. Idempotência/concorrência SQL de crédito.
-4. Geração em andamento + flag OFF.
-5. Revisão visual de Reels/overlays.
-6. Documento de gate de produção (não executado).
+1. Reels/overlays: correções de composição na quick pós-F59.
+2. Caso D: campanha `generating` com operação `refunded`; encerramento proposto,
+   aguardando autorização.
+3. Reconciliação do custo real do provider por usage (o piloto registra 0,1107).
+4. Gate de produção separado — não executado por desenho.
 
 ## 7. Declaração
 
