@@ -14,8 +14,8 @@ Este gate é separado do aceite de homolog e **não** é autorizado por ele.
 
 ## 2. Pré-requisitos de entrada
 
-1. **Defeito no reload do rascunho local 9:16** (chave global removida no mount +
-   pausa OFF não derivada); correção mínima proposta, não editada.
+1. Fora do escopo da F59: proteção contra perda de dados no reload e intenção de
+   nova campanha são melhoria transversal separada, não implementada.
 2. Caso D fechado em `error`; auditoria da resolução idempotente pendente de
    decisão (ajuste do mecanismo ou aceite da lacuna).
 3. Reels: **aceito com ressalva observada no Facebook**; não é aprovação irrestrita

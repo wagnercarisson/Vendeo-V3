@@ -316,7 +316,7 @@ Os 11 REQ-IDs abaixo derivam dos **11 requirements normativos** das tres specs (
 | REQ-59-08 | Cenários executados: concorrência de rota com 1 campanha/1 dedução/1 imagem; reserva e tentativa SQL com 1 vencedor. Não representa a execução de todas as suítes antigas. |
 | REQ-59-09 | Comprovado: A1 recuperação vertical e A2 resolução administrativa até detalhe/lista, sem nova geração e sem path 1:1. |
 | REQ-59-11 | Comprovado: ciclo OFF/ON auditado, 503 antes de reserva/provider, campanhas existentes atendidas e geração em andamento concluída. Recuperação/resolução com flag OFF não foi executada. |
-| REQ-59-12 | Parcial: revisão→edição e `restoreFrom` com flag OFF comprovados; **defeito confirmado** no reload de rascunho local 9:16 (chave global removida no mount + pausa OFF não derivada), correção mínima proposta e não editada. |
+| REQ-59-12 | Coberto no escopo F59: `restoreFrom` com flag OFF, revisão→edição e retorno após erro preservam formato/9:16. Persistência automática no reload/proteção contra perda de dados é melhoria transversal fora da F59, não implementada. |
 | REQ-59-14 | Parcial: Stories e Reels aceitos (Reels com ressalva observada no Facebook); gate de produção separado e não executado. |
 
 O incremento de US$ 0,1107 é contabilizado no piloto. O custo **calculado por usage

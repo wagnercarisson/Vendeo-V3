@@ -81,15 +81,15 @@ Aceite manual não substitui teste simulado nem integração real.
 
 ## 6. Pendências que impedem o aceite integral
 
-1. **Defeito confirmado no reload do rascunho local 9:16:** o draft novo usa chaves
-   globais, que `CampaignPageClient` remove no mount antes da restauração; além
-   disso, com flag OFF a pausa não é derivada para draft local. Correção mínima
-   proposta, **não editada** (ver `59-10-REMAINING-GATES-RESULT.md`, seção 12).
-2. Caso D: campanha encerrada em `error`; **auditoria da resolução idempotente não
-   registrada**. Recomendação: aceitar a lacuna nesta fase como exceção de
-   rastreabilidade e corrigir em trabalho separado; **aceite formal pendente**.
-3. Reconciliação de custo concluída com dados existentes; sem fatura do provider.
-4. Gate de produção separado — não executado por desenho.
+1. **Decisão de auditoria:** aceitar a lacuna do replay terminal idempotente nesta
+   fase (recomendado) ou ajustar o mecanismo em trabalho separado. **Aceite formal
+   pendente; não resolvida.**
+2. Gate de produção separado — não executado por desenho.
+
+**Fora do escopo da F59:** proteção contra perda de dados no reload, intenção de nova
+campanha e botão “Limpar dados” são melhoria transversal separada
+(`59-OUT-OF-SCOPE-DATA-PRESERVATION.md`), não implementada. Os três ajustes de UI
+permanecem na quick pós-F59.
 
 ## 7. Declaração
 

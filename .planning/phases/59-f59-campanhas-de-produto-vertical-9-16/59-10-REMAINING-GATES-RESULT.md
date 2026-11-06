@@ -95,14 +95,17 @@ que todas as suítes antigas de concorrência tenham sido executadas; elas não 
 ## 7. Pendências
 
 - Caso D: encerrado para `error`; operação `refunded`; **auditoria da resolução
-  idempotente não registrada** — decisão pendente (ajuste do mecanismo ou aceite da
-  lacuna).
-- Restauração de **rascunho local persistido** 9:16 com flag OFF: falta confirmar a
-  pausa explicada no reload (ver seção 12).
-- Custo real do provider por usage: reconciliação pendente; o incremento de 0,1107
-  é contábil do piloto.
+  idempotente não registrada** — recomendação de aceite nesta fase; **aceite formal
+  pendente**; RPC não alterada.
+- Custo: **calculado por usage e pricing** (0,030441), não fatura; piloto 0,1107;
+  desvio 0,080259; sem ajuste. Não é bloqueador.
 - Gate de produção continua **não executado** por desenho.
 - Reels: **aceito com ressalva observada no Facebook** (ver seção 9).
+
+**Fora do escopo da F59:** proteção contra perda de dados no reload e distinção de
+nova campanha (`59-OUT-OF-SCOPE-DATA-PRESERVATION.md`). A task 5.14 está reconciliada
+com os cenários comprovados de formato/restauração; o comportamento ausente não é
+marcado como implementado.
 - Retries HTTP internos do SDK não são observáveis diretamente; a evidência é a
   contagem de invocações pagas.
 - A F59 **não** é encerrada por este resultado.
@@ -233,6 +236,10 @@ revisão → edição; não substitui o teste de restauração a partir de rascu
 - **Critério de aprovação após correção:** reload com ON restaura
   campos/imagem/9:16; reload com OFF mantém 9:16 e exibe bloqueio explicado, sem
   submissão nem crédito/provider.
+- **Decisão de escopo:** esta proteção contra perda de dados no reload é **melhoria
+  transversal fora da F59** (`59-OUT-OF-SCOPE-DATA-PRESERVATION.md`), não
+  implementada. A task 5.14 fica reconciliada com os cenários comprovados de
+  formato/restauração; o comportamento ausente não é marcado como implementado.
 
 ## 13. Recuperação com flag OFF — verificação técnica
 
