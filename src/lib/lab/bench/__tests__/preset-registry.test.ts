@@ -31,13 +31,15 @@ const CONFIRMED_PRESET_IDS = [
   "gpt-image-2.5-flare-medium",
   "gpt-image-2.5-sunburst-low",
   "gpt-image-2.5-sunburst-medium",
+  "gpt-image-2.6-sunburst-medium",
 ] as const;
 
-/** Modelos confirmados no caminho direto `images` (spike + F48.2.4 Sunburst). */
+/** Modelos confirmados no caminho direto `images` (spike + F48.2.4 Sunburst + 2.6). */
 const CONFIRMED_MODELS = [
   "gpt-image-2",
   "gpt-image-2.5-flare",
   "gpt-image-2.5-sunburst",
+  "gpt-image-2.6-sunburst",
 ] as const;
 
 const DISABLED_PRESET_IDS = ["gpt-image-2-responses", "gpt-image-2.5-flare-responses"] as const;
@@ -103,7 +105,7 @@ function createReadOnlyCatalogClient(rows: CatalogRow[]): {
 }
 
 describe("preset-registry — presets confirmados pelo spike", () => {
-  it("os seis presets do caminho direto `images` existem e estão habilitados", () => {
+  it("os sete presets do caminho direto `images` existem e estão habilitados", () => {
     for (const id of CONFIRMED_PRESET_IDS) {
       const preset = findPreset(id);
       expect(preset.enabled, id).toBe(true);
@@ -229,11 +231,11 @@ describe("preset-registry — validação contra a allowlist própria da bancada
 });
 
 describe("preset-registry — gpt-image-2.6-sunburst (quick 261107-hcx)", () => {
-  it("está na allowlist da bancada e no preset, mas desabilitado até o CHECKPOINT B", () => {
+  it("está na allowlist da bancada e habilitado no CHECKPOINT B", () => {
     const preset = findPreset("gpt-image-2.6-sunburst-medium");
     expect(BENCH_MODEL_ALLOWLIST.openai["gpt-image-2.6-sunburst"]).toEqual(["images"]);
-    expect(preset.enabled).toBe(false);
-    expect(preset.reason).toBe("checkpoint_b_pendente");
+    expect(preset.enabled).toBe(true);
+    expect(preset.reason).toBeUndefined();
     expect(preset.quality).toBe("medium");
     expect(preset.protocol).toBe("images");
     expect(validatePresetAgainstAllowlist(preset)).toEqual({ ok: true });
@@ -243,9 +245,9 @@ describe("preset-registry — gpt-image-2.6-sunburst (quick 261107-hcx)", () => 
     expect(MODEL_ALLOWLIST.openai["gpt-image-2.6-sunburst"]).toBeUndefined();
   });
 
-  it("resolveBenchPreset recusa o preset desabilitado com o motivo", () => {
-    expect(() => resolveBenchPreset("gpt-image-2.6-sunburst-medium")).toThrow(
-      /preset_not_enabled/,
+  it("resolveBenchPreset devolve o preset 2.6 habilitado", () => {
+    expect(resolveBenchPreset("gpt-image-2.6-sunburst-medium").model).toBe(
+      "gpt-image-2.6-sunburst",
     );
   });
 });

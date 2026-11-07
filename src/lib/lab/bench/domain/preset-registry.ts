@@ -123,8 +123,8 @@ export const BENCH_PRESETS: readonly BenchPreset[] = [
     size: "1024x1024",
     enabled: true,
   },
-  // Quick 261107-hcx: 2.6 experimental — cadastro na bancada no CHECKPOINT A,
-  // desabilitado até a ativação autorizada do CHECKPOINT B.
+  // Quick 261107-hcx: 2.6 experimental — habilitado no CHECKPOINT B após
+  // autorização, com o schema local aplicado e a chave exclusiva confirmada.
   {
     id: "gpt-image-2.6-sunburst-medium",
     label: "GPT Image 2.6 Sunburst · medium",
@@ -134,8 +134,7 @@ export const BENCH_PRESETS: readonly BenchPreset[] = [
     protocol: "images",
     quality: "medium",
     size: "1024x1024",
-    enabled: false,
-    reason: "checkpoint_b_pendente",
+    enabled: true,
   },
   // Caminho `responses`: nenhum modelo confirmado o exige ⇒ desabilitado com motivo.
   {

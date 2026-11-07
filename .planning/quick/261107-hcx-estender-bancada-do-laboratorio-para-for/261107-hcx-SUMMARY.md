@@ -2,7 +2,7 @@
 id: 261107-hcx
 title: Estender a bancada do laboratório para 9:16 e comparar o modelo atual com gpt-image-2.6-sunburst
 status: incomplete
-checkpoint: A
+checkpoint: B-ready
 date: 2026-11-07
 branch: feat/quick-extensao-laboratorio-9-16
 ---
@@ -102,17 +102,48 @@ não inicia stack nem acessa banco. O motivo está documentado no próprio arqui
    preservar o contrato de UI existente; o hint agora explicita que o texto é o
    prompt final editável e pode ser substituído integralmente.
 
+## CHECKPOINT B — preparação e validação (sem chamadas pagas)
+
+Data: 2026-11-07. Ambiente existente: Docker Compose `vendeo-homolog`
+(API `127.0.0.1:57781`, Postgres `127.0.0.1:57782`).
+
+- `VENDEO_LAB_ENABLED=true` definido no `.env.local`.
+- `OPENAI_BENCH_API_KEY` preenchida pelo responsável (valor não lido/registrado).
+- `supabase/lab/bench-schema.sql` aplicado no DB do `vendeo-homolog`:
+  `lab_bench_runs`, `lab_bench_artifacts` e `lab_bench_store_imports` presentes;
+  índice global de geração ativa e policies criados.
+- Preset `gpt-image-2.6-sunburst-medium` habilitado na bancada.
+- Nenhum cadastro em `ai_model_catalog`; nenhuma alteração de produção; nenhum
+  stack novo.
+
+Validação executada sem confirmar geração:
+
+- acesso administrativo e página da bancada (`200`);
+- loja Padaria da Esquina materializada e assinatura visual ativa;
+- upload de 2 referências em `draft` (`runId` de validação
+  `bde8c90b-42f6-4c8e-aacb-b3e83fd150ec`, 2 artefatos de entrada, 0 saídas);
+- composição `9:16` com o preset 2.6 (`compiledPrompt` de 2.648 caracteres,
+  `policyVersions.formato = 261107-formato-9-16-v1`);
+- estimativa 2.6/9:16 retornando `size=1152x2048`, cobertura `partial` e
+  `estimatedUsd=null` (sem valor inventado);
+- gate de aprovação com composição divergente retornando `409
+  approval_invalidated` antes de qualquer chamada paga;
+- `POST /runs` sem `confirmed: true` retornando `422 confirmation_required`.
+
+**Ainda não executado:** as 4 chamadas pagas da matriz e a confirmação
+financeira. Nenhum run saiu de `draft`, nenhum `usage`/custo foi gerado.
+
+**Servidor Next local:** em execução em `http://localhost:3000`; bancada
+disponível em `http://localhost:3000/admin/laboratorio/bancada`.
+
 ## Próximo passo
 
-CHECKPOINT B, somente após autorização específica:
+Bancada pronta para as chamadas pagas. Restante, somente após autorização
+específica de gasto:
 
-1. localizar o ambiente existente da F59 e conferir os alvos em read-only;
-2. confirmar schema/bucket e, se faltar schema da bancada, aplicar apenas
-   `supabase/lab/bench-schema.sql` (idempotente);
-3. confirmar `OPENAI_BENCH_API_KEY` e `VENDEO_LAB_ENABLED=true`;
-4. habilitar o preset 2.6;
-5. executar a matriz de 4 chamadas (2 modelos Sunburst `medium` × 2 formatos),
-   uma por vez, com orçamento/referência conservadora previamente definidos.
+1. confirmar a matriz de 4 chamadas (2 modelos Sunburst `medium` × 2 formatos);
+2. confirmar o prompt/referências e a referência conservadora de US$ 1,00;
+3. executar uma chamada por vez, registrando dimensão retornada, `usage`, custo
+   calculado e custo reportado (se houver), com a regra de parada acordada.
 
-Parar para revisão antes do CHECKPOINT B. A quick **não** está integralmente
-validada.
+A quick **não** está integralmente validada: nenhuma chamada paga foi feita.
