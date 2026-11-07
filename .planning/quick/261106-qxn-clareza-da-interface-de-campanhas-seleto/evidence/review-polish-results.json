@@ -1,0 +1,77 @@
+{
+  "desktop1440": {
+    "viewport": 1440,
+    "cardWidth": 992,
+    "directionLabelWidth": 128,
+    "directionLabelHeight": 20,
+    "directionLabelScrollHeight": 20,
+    "directionLabelLines": 1,
+    "directionValueText": "Estúdio",
+    "formatValueText": "Vertical 9:161080 × 1920 px",
+    "horizontalOverflow": false,
+    "screenshot": {
+      "width": 1440,
+      "height": 1537
+    }
+  },
+  "desktop1280": {
+    "viewport": 1280,
+    "cardWidth": 976,
+    "directionLabelWidth": 128,
+    "directionLabelHeight": 20,
+    "directionLabelScrollHeight": 20,
+    "directionLabelLines": 1,
+    "directionValueText": "Estúdio",
+    "formatValueText": "Vertical 9:161080 × 1920 px",
+    "horizontalOverflow": false,
+    "screenshot": {
+      "width": 1280,
+      "height": 1532
+    }
+  },
+  "mobile390": {
+    "viewport": 390,
+    "cardWidth": 326,
+    "directionLabelWidth": 128,
+    "directionLabelHeight": 20,
+    "directionLabelScrollHeight": 20,
+    "directionLabelLines": 1,
+    "directionValueText": "Estúdio",
+    "formatValueText": "Vertical 9:161080 × 1920 px",
+    "horizontalOverflow": false,
+    "screenshot": {
+      "width": 390,
+      "height": 1462
+    }
+  },
+  "mobile375": {
+    "viewport": 375,
+    "cardWidth": 311,
+    "directionLabelWidth": 128,
+    "directionLabelHeight": 20,
+    "directionLabelScrollHeight": 20,
+    "directionLabelLines": 1,
+    "directionValueText": "Estúdio",
+    "formatValueText": "Vertical 9:161080 × 1920 px",
+    "horizontalOverflow": false,
+    "screenshot": {
+      "width": 375,
+      "height": 1455
+    }
+  },
+  "mobile320": {
+    "viewport": 320,
+    "cardWidth": 256,
+    "directionLabelWidth": 128,
+    "directionLabelHeight": 20,
+    "directionLabelScrollHeight": 20,
+    "directionLabelLines": 1,
+    "directionValueText": "Estúdio",
+    "formatValueText": "Vertical 9:161080 × 1920 px",
+    "horizontalOverflow": false,
+    "screenshot": {
+      "width": 320,
+      "height": 1599
+    }
+  }
+}

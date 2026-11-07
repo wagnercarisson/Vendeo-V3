@@ -70,6 +70,20 @@ completed_at: 2026-11-06
 
 **Nota de ambiente:** o comando `npm` global é um shim de 0 byte em `C:\WINDOWS\system32\npm`. Os gates reais foram executados com `C:\Program Files\nodejs\npm.cmd`.
 
+### 2.1 Acabamento pós-aceite — card Oferta
+
+- Coluna de rótulos ampliada uniformemente de `w-28` (112 px) para `w-32` (128 px).
+- Gap e alinhamento dos valores preservados; valores com `min-w-0 break-words`.
+- “Direção de fundo” confirmado em **uma linha a 128 px** no desktop (1440/1280).
+- Revisão vertical (`Vertical 9:16` + `1080 × 1920 px`) validada em 390/375/320 px,
+  sem overflow horizontal.
+- Teste focado da revisão: **1 arquivo / 12 testes passed**.
+- Typecheck e `git diff --check` reexecutados: **exit 0 / limpo**.
+- Build: a primeira tentativa falhou por cache `.next` obsoleto
+  (`PageNotFoundError` em rotas admin); após remover o cache gerado e rebuildar,
+  **96/96 páginas, exit 0**. Nenhuma alteração de código foi feita para contornar
+  o erro.
+
 ---
 
 ## 3. Evidência visual
@@ -81,11 +95,14 @@ Pasta: `.planning/quick/261106-qxn-clareza-da-interface-de-campanhas-seleto/evid
 - `desktop-1024-formulario.png` — 1024 px, empilhado com sidebar.
 - `mobile-formulario.png` — 390 px.
 - `mobile-375-formulario.png` e `mobile-320-formulario.png` — sem overflow.
-- `desktop-revisao.png` e `mobile-revisao.png` — título/subtítulo, sem seletor; Formato → Direção de fundo.
+- `desktop-revisao.png`, `desktop-1280-revisao.png`, `mobile-revisao.png`,
+  `mobile375-revisao.png` e `mobile320-revisao.png` — revisão vertical,
+  título/subtítulo sem seletor; Formato → Direção de fundo; coluna de 128 px.
 - `desktop-listagem.png` e `mobile-listagem.png` — rótulos “9:16 vertical”/“1:1 quadrado” nos cards.
 - `desktop-dashboard.png` e `mobile-dashboard.png` — rótulo junto aos metadados.
 - `visual-review.md` — observações e medições.
-- `capture-results.json`, `threshold-results.json`, `mobile-threshold-results.json` — medições.
+- `capture-results.json`, `threshold-results.json`, `mobile-threshold-results.json`,
+  `review-polish-results.json` — medições.
 
 **Calibração do grid:** 30rem deixava 1280 px sempre empilhado (976 px de cabeçalho). O limiar foi reduzido para 29rem após medição; 1280/1440 passam a duas colunas, 1024 e abaixo empilham.
 

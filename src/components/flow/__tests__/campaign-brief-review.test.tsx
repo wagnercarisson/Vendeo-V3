@@ -241,7 +241,10 @@ describe("CampaignBriefReview — Testes 11-16 (F43)", () => {
 
       const format = screen.getByText("Formato");
       const direction = screen.getByText("Direção de fundo");
-      expect(screen.getByText(label)).toBeInTheDocument();
+      const value = screen.getByText(label);
+      expect(value).toBeInTheDocument();
+      expect(direction).toHaveClass("w-32");
+      expect(value).toHaveClass("min-w-0", "break-words");
       expect(
         format.compareDocumentPosition(direction) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();

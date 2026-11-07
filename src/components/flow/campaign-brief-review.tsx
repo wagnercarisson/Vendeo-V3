@@ -157,13 +157,13 @@ export function CampaignBriefReview({
         </h3>
         <dl className="space-y-2">
           <div className="flex items-center gap-2">
-            <dt className="text-text-muted text-sm font-body w-28 shrink-0">Tipo</dt>
-            <dd className="text-text-primary text-sm font-body">{INTENT_LABELS[intent] ?? intent}</dd>
+            <dt className="text-text-muted text-sm font-body w-32 shrink-0">Tipo</dt>
+            <dd className="min-w-0 break-words text-text-primary text-sm font-body">{INTENT_LABELS[intent] ?? intent}</dd>
           </div>
           {eligible && (
             <div className="flex items-center gap-2">
-              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Formato</dt>
-              <dd className="text-text-primary text-sm font-body">
+              <dt className="text-text-muted text-sm font-body w-32 shrink-0">Formato</dt>
+              <dd className="min-w-0 break-words text-text-primary text-sm font-body">
                 {campaignFormat === "9:16" ? "Vertical 9:16" : "Quadrado 1:1"}
                 {campaignFormat === "9:16" && (
                   <span className="ml-1 text-text-muted">1080 × 1920 px</span>
@@ -173,40 +173,40 @@ export function CampaignBriefReview({
           )}
           {eligible && fields.backgroundDirection && (
             <div className="flex items-center gap-2">
-              <dt className="text-text-muted text-sm font-body w-28 shrink-0">
+              <dt className="text-text-muted text-sm font-body w-32 shrink-0">
                 Direção de fundo
               </dt>
-              <dd className="text-text-primary text-sm font-body">
+              <dd className="min-w-0 break-words text-text-primary text-sm font-body">
                 {FLOW_BACKGROUND_DIRECTION_LABELS[fields.backgroundDirection]}
               </dd>
             </div>
           )}
           {fields.badge && (
             <div className="flex items-center gap-2">
-              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Selo</dt>
-              <dd className="text-text-primary text-sm font-body">{fields.badge}</dd>
+              <dt className="text-text-muted text-sm font-body w-32 shrink-0">Selo</dt>
+              <dd className="min-w-0 break-words text-text-primary text-sm font-body">{fields.badge}</dd>
             </div>
           )}
           {fields.originalPriceCents > 0 && (
             <div className="flex items-center gap-2">
-              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Preço anterior</dt>
-              <dd className="text-text-secondary text-sm font-body line-through">
+              <dt className="text-text-muted text-sm font-body w-32 shrink-0">Preço anterior</dt>
+              <dd className="min-w-0 break-words text-text-secondary text-sm font-body line-through">
                 {formatCurrencyBRL(fields.originalPriceCents)}
               </dd>
             </div>
           )}
           {fields.discountedPriceCents !== undefined && fields.discountedPriceCents > 0 && (
             <div className="flex items-center gap-2">
-              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Preço de venda</dt>
-              <dd className="text-text-primary text-sm font-body font-semibold">
+              <dt className="text-text-muted text-sm font-body w-32 shrink-0">Preço de venda</dt>
+              <dd className="min-w-0 break-words text-text-primary text-sm font-body font-semibold">
                 {formatCurrencyBRL(fields.discountedPriceCents)}
               </dd>
             </div>
           )}
           {validity && (
             <div className="flex items-center gap-2">
-              <dt className="text-text-muted text-sm font-body w-28 shrink-0">Validade</dt>
-              <dd className="text-text-primary text-sm font-body">{validity}</dd>
+              <dt className="text-text-muted text-sm font-body w-32 shrink-0">Validade</dt>
+              <dd className="min-w-0 break-words text-text-primary text-sm font-body">{validity}</dd>
             </div>
           )}
         </dl>

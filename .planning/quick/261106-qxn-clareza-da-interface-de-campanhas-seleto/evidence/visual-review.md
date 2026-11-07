@@ -18,8 +18,11 @@
 | `mobile-formulario.png` | `/campanhas/nova` — edição normal | 390 × 844 |
 | `mobile-375-formulario.png` | `/campanhas/nova` — edição normal | 375 × 844 |
 | `mobile-320-formulario.png` | `/campanhas/nova` — edição normal | 320 × 844 |
-| `desktop-revisao.png` | revisão do brief | 1440 × 900 |
-| `mobile-revisao.png` | revisão do brief | 390 × 844 |
+| `desktop-revisao.png` | revisão do brief — vertical | 1440 × 900 |
+| `desktop-1280-revisao.png` | revisão do brief — vertical | 1280 × 900 |
+| `mobile-revisao.png` | revisão do brief — vertical | 390 × 844 |
+| `mobile375-revisao.png` | revisão do brief — vertical | 375 × 844 |
+| `mobile320-revisao.png` | revisão do brief — vertical | 320 × 844 |
 | `desktop-listagem.png` | `/campanhas` | 1440 × 900 |
 | `mobile-listagem.png` | `/campanhas` | 390 × 844 |
 | `desktop-dashboard.png` | `/dashboard` | 1440 × 900 |
@@ -64,6 +67,20 @@ compressão do label longo.
 - **Dashboard:** rótulo “9:16 vertical” aparece junto à data, fora da miniatura.
 - **Sem overflow horizontal** em 1440, 1280, 1024, 900, 390 e 320 px.
 - Nenhuma geração foi confirmada; nenhuma chamada paga foi feita.
+
+### 3.1 Acabamento do card Oferta — coluna de rótulos em 128 px
+
+- A coluna dos rótulos passou de `w-28` (112 px) para `w-32` (128 px) uniformemente
+  em todas as linhas do card Oferta; o `gap` e o alinhamento dos valores foram
+  mantidos.
+- “Direção de fundo” mede **128 px de largura e 20 px de altura (1 linha)** em
+  1440 px e 1280 px. O mesmo ocorre em 390/375/320 px.
+- Os valores ganharam `min-w-0 break-words`; não há `nowrap`, truncamento ou
+  redução de fonte. O valor vertical quebra naturalmente:
+  “Vertical 9:16 1080 × 1920 px”.
+- Em 320 px, o card Oferta tem 256 px de largura; o valor do formato quebra em
+  linhas e não há overflow horizontal.
+- Medições em `review-polish-results.json`.
 
 ---
 
