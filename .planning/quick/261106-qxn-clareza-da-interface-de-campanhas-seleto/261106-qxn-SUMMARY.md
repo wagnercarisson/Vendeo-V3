@@ -3,19 +3,24 @@ quick_id: 261106-qxn
 phase: quick
 plan: 01
 type: summary
-status: awaiting_review
-implementation_status: complete_pending_review
-verification_status: not_run
+status: complete
+implementation_status: complete
+verification_status: manual_accepted
+acceptance_status: manual_accepted
+accepted_by: responsável (aceite manual)
+accepted_at: 2026-11-06
+final_review_status: accepted
 production_authorized: false
 base_sha: e272516a5cd6d258b8123b8ee2ef8e7c6a81d0d6
 completed_at: 2026-11-06
+closed_at: 2026-11-06
 ---
 
 # Quick 261106-qxn — resumo de implementação
 
 **Objetivo:** dar clareza ao formato da campanha e à direção de fundo sem alterar geração, prompt, crédito ou produção.
 
-**Estado:** implementação local concluída, gates executados e evidência visual coletada. **Aguardando revisão antes de concluir a quick.** `STATE.md`/`ROADMAP.md` não foram atualizados.
+**Estado:** implementação local concluída, gates executados, evidência visual coletada, **aceite manual dos três ajustes confirmado pelo responsável** e **revisão final do acabamento aprovada**. Quick concluída em 2026-11-06; `STATE.md` e `ROADMAP.md` reconciliados. **Produção não autorizada.**
 
 ---
 
@@ -132,6 +137,32 @@ Pasta: `.planning/quick/261106-qxn-clareza-da-interface-de-campanhas-seleto/evid
 
 ---
 
-## 6. Próximo passo
+## 6. Aceite e fechamento
 
-Revisão do diff e da evidência pelo Codex/responsável. Após aprovação explícita, concluir a quick (atualização de tracking, se aplicável) e seguir para os gates de publicação separados. **Produção continua não autorizada.**
+- **Aceite manual do responsável:** confirmado em 2026-11-06 para os três ajustes
+  originais (seletor no cabeçalho, formato nos cards e direção de fundo na revisão).
+- **Revisão final do acabamento:** confirmada em 2026-11-06 para a coluna de rótulos
+  do card Oferta em `w-32` (128 px), com “Direção de fundo” em uma linha no desktop
+  e revisão vertical adequada em 320/375 px.
+- **Sem novos ajustes de interface** após o aceite.
+- **Implementação:** commits `b1023060`, `93b66434`, `b82f913f` e `af04e7ce`.
+- **Documentação e evidência:** commit de fechamento desta quick.
+- **Produção:** não autorizada; nenhum push, deploy, migration, flag, crédito ou
+  geração paga foi executado.
+
+## 7. Próximo gate — preparação para produção da F59 + quick
+
+O próximo passo é um gate **separado e não executado** de preparação para produção,
+envolvendo F59 + quick 261106-qxn:
+
+1. preflight read-only de produção (branch, commits, migrations, flag e ambiente);
+2. reconciliação de branch/commits e confirmação de que a quick está integrada ao
+   conjunto que será promovido;
+3. plano explícito de migration data-only da flag `product_9_16_enabled`, com
+   autorização própria, rollback e janela;
+4. autorização separada para deploy, ativação e smoke de produção;
+5. evidência de rollback e critérios de aceite de produção.
+
+Esse gate não foi iniciado. **Produção continua não autorizada.** O filtro por formato
+permanece apenas como evolução futura; proteção de saída e “Limpar dados” continuam
+itens separados.

@@ -6,12 +6,14 @@ type: plan
 wave: 1
 depends_on: []
 autonomous: false
-status: implemented_pending_review
-revision: 2
+status: complete
+revision: 3
 approval_required: true
 implementation_authorized: true
-implementation_status: complete_pending_review
+implementation_status: complete
 approval_date: 2026-11-06
+acceptance_status: manual_accepted
+accepted_at: 2026-11-06
 production_authorized: false
 base_sha: e272516a5cd6d258b8123b8ee2ef8e7c6a81d0d6
 branch: feat/fase-59-campanhas-produto-vertical-9-16
