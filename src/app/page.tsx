@@ -146,6 +146,12 @@ export default async function Home() {
               Padarias
             </Link>
             <Link
+              href="/campanhas-para-sua-loja"
+              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
+            >
+              Campanhas sem complicação
+            </Link>
+            <Link
               href={`mailto:${process.env.SUPPORT_EMAIL ?? "suporte@vendeo.tech"}`}
               className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
             >

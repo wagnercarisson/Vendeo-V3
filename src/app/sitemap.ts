@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { resolveCanonicalOrigin } from "@/lib/seo/origin";
 import { isIndexableEnvironment } from "@/lib/seo/environment";
 import {
+  CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH,
   FLORICULTURAS_CANONICAL_PATH,
   HOME_CANONICAL_PATH,
   PADARIAS_CANONICAL_PATH,
@@ -11,7 +12,7 @@ import {
  * `sitemap.xml` (F51.2 / D-08).
  *
  * As superfícies indexáveis aprovadas — a home e as páginas demonstrativas
- * `/floriculturas` e `/padarias` — e somente sob produção confirmada + origem
+ * `/floriculturas`, `/padarias` e `/campanhas-para-sua-loja` — e somente sob produção confirmada + origem
  * canônica validada. Nada mais é indexável: `/api/**`, `/auth/**`, `(app)/**`,
  * `/admin/**`, documentos legais, versões Markdown e URLs com parâmetros ficam
  * de fora (D-08). Fora da condição combinada retorna lista vazia.
@@ -30,5 +31,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${origin}${HOME_CANONICAL_PATH}` },
     { url: `${origin}${FLORICULTURAS_CANONICAL_PATH}` },
     { url: `${origin}${PADARIAS_CANONICAL_PATH}` },
+    { url: `${origin}${CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH}` },
   ];
 }

@@ -7,6 +7,7 @@ import {
   HOME_CANONICAL_PATH,
   FLORICULTURAS_CANONICAL_PATH,
   PADARIAS_CANONICAL_PATH,
+  CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH,
   INDEXABLE_CANONICAL_PATHS,
   NOINDEX_TAG,
   NOINDEX_TAG_GLOBAL,
@@ -104,11 +105,12 @@ describe("getSurfacePolicy — /floriculturas (segunda superfície aprovada)", (
     expect(FLORICULTURAS_CANONICAL_PATH).toBe("/floriculturas");
   });
 
-  it("expõe exatamente três superfícies indexáveis aprovadas", () => {
+  it("expõe exatamente quatro superfícies indexáveis aprovadas", () => {
     expect([...INDEXABLE_CANONICAL_PATHS]).toEqual([
       "/",
       "/floriculturas",
       "/padarias",
+      "/campanhas-para-sua-loja",
     ]);
   });
 
@@ -160,6 +162,41 @@ describe("getSurfacePolicy — /padarias (terceira superfície aprovada)", () =>
 
   it("subcaminho não aprovado continua fail-closed", () => {
     const policy = getSurfacePolicy("/padarias/exemplo");
+    expect(policy.robots).toEqual(NOINDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(false);
+  });
+});
+
+describe("getSurfacePolicy — /campanhas-para-sua-loja (quarta superfície aprovada)", () => {
+  it("CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH é '/campanhas-para-sua-loja'", () => {
+    expect(CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH).toBe(
+      "/campanhas-para-sua-loja",
+    );
+  });
+
+  it("path direto → INDEX_ROBOTS e no sitemap", () => {
+    const policy = getSurfacePolicy("/campanhas-para-sua-loja");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("barra final normalizada → mesma política", () => {
+    const policy = getSurfacePolicy("/campanhas-para-sua-loja/");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("query/fragmento ignorados → mesma política", () => {
+    expect(getSurfacePolicy("/campanhas-para-sua-loja?utm=1").inSitemap).toBe(
+      true,
+    );
+    expect(getSurfacePolicy("/campanhas-para-sua-loja#demo").inSitemap).toBe(
+      true,
+    );
+  });
+
+  it("subcaminho não aprovado continua fail-closed", () => {
+    const policy = getSurfacePolicy("/campanhas-para-sua-loja/exemplo");
     expect(policy.robots).toEqual(NOINDEX_ROBOTS);
     expect(policy.inSitemap).toBe(false);
   });

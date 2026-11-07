@@ -3,11 +3,12 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 /**
- * Rodapé da home após a inclusão de `/padarias`.
+ * Rodapé da home após a inclusão de `/padarias` e da página de campanhas.
  *
- * A change permite uma única alteração visível na home: o link “Padarias” ao
- * lado de “Floriculturas”. O teste renderiza a home com as dependências
- * irrelevantes mockadas e confirma rótulos, destinos e ordem relativa.
+ * A change permite uma única alteração visível na home: o link
+ * “Campanhas sem complicação” ao lado de “Floriculturas” e “Padarias”. O teste
+ * renderiza a home com as dependências irrelevantes mockadas e confirma
+ * rótulos, destinos e ordem relativa.
  */
 
 vi.mock("@/lib/launch-config/config", () => ({
@@ -26,20 +27,26 @@ vi.mock("@/components/auth/google-button", () => ({
   GoogleButton: () => null,
 }));
 
-describe("home — rodapé com Padarias ao lado de Floriculturas", () => {
-  it("renderiza os dois links na ordem aprovada e com os destinos corretos", async () => {
+describe("home — rodapé com as páginas públicas na ordem aprovada", () => {
+  it("renderiza os três links na ordem aprovada e com os destinos corretos", async () => {
     vi.resetModules();
     const { default: Home } = await import("@/app/page");
     const html = renderToStaticMarkup(await Home());
 
     const floriculturas = html.indexOf('href="/floriculturas"');
     const padarias = html.indexOf('href="/padarias"');
+    const campanhas = html.indexOf('href="/campanhas-para-sua-loja"');
 
     expect(floriculturas).toBeGreaterThan(-1);
     expect(padarias).toBeGreaterThan(floriculturas);
+    expect(campanhas).toBeGreaterThan(padarias);
     expect(html).toContain(">Floriculturas</a>");
     expect(html).toContain(">Padarias</a>");
+    expect(html).toContain(">Campanhas sem complicação</a>");
     expect(html.match(/href="\/padarias"/g) ?? []).toHaveLength(1);
+    expect(
+      html.match(/href="\/campanhas-para-sua-loja"/g) ?? [],
+    ).toHaveLength(1);
   });
 
   it("preserva os demais links do rodapé", async () => {
@@ -53,6 +60,7 @@ describe("home — rodapé com Padarias ao lado de Floriculturas", () => {
       "/uso-aceitavel",
       "/floriculturas",
       "/padarias",
+      "/campanhas-para-sua-loja",
       "/login",
     ]) {
       expect(html).toContain(`href="${href}"`);
