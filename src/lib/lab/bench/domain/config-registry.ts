@@ -55,6 +55,7 @@ export const BENCH_CONFIG_REGISTRY: Record<BenchRegistryDimension, readonly Benc
   formato: [
     { id: "1:1", label: "Quadrado 1:1", enabled: true },
     { id: "9:16", label: "Vertical 9:16", enabled: true },
+    { id: "4:5", label: "Vertical 4:5", enabled: true },
   ],
   intencao: [
     { id: "oferta", label: "Oferta", enabled: true },

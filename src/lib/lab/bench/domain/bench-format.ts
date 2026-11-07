@@ -14,7 +14,7 @@
  * solicitado e o que deve ser validado nos bytes devolvidos.
  */
 
-export const BENCH_FORMAT_IDS = ["1:1", "9:16"] as const;
+export const BENCH_FORMAT_IDS = ["1:1", "9:16", "4:5"] as const;
 
 export type BenchFormatId = (typeof BENCH_FORMAT_IDS)[number];
 
@@ -42,6 +42,13 @@ export const BENCH_FORMAT_SPECS: Readonly<Record<BenchFormatId, BenchFormatSpec>
       width: 1152,
       height: 2048,
       aspectRatio: 9 / 16,
+    }),
+    "4:5": Object.freeze({
+      id: "4:5",
+      size: "1152x1440",
+      width: 1152,
+      height: 1440,
+      aspectRatio: 4 / 5,
     }),
   });
 

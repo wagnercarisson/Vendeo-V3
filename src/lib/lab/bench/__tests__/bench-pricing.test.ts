@@ -154,6 +154,31 @@ describe("bench-pricing — 9:16 e gpt-image-2.6-sunburst", () => {
     }
   });
 
+  it("4:5 dos modelos existentes e do 2.6 mantém tarifas oficiais e não inventa estimativa", () => {
+    for (const [model, quality] of [
+      ["gpt-image-2", "low"],
+      ["gpt-image-2", "medium"],
+      ["gpt-image-2.5-flare", "low"],
+      ["gpt-image-2.5-flare", "medium"],
+      ["gpt-image-2.5-sunburst", "low"],
+      ["gpt-image-2.5-sunburst", "medium"],
+      ["gpt-image-2.6-sunburst", "medium"],
+    ] as const) {
+      const resolution = resolveBenchPricing({
+        provider: "openai",
+        protocol: "images",
+        model,
+        quality,
+        size: "1152x1440",
+      });
+      expect(resolution.mode, `${model}/${quality}`).toBe("token_based");
+      expect(resolution.coverage, `${model}/${quality}`).toBe("partial");
+      expect(resolution.tokenRates, `${model}/${quality}`).toEqual(OFFICIAL_RATES);
+      expect(resolution.estimatedOutputTokens, `${model}/${quality}`).toBeUndefined();
+      expect(resolution.unitPriceUsd, `${model}/${quality}`).toBeUndefined();
+    }
+  });
+
   it("2.6 medium em 1:1 e 9:16 usa 5/8/30 e fica sem estimativa inventada", () => {
     for (const size of ["1024x1024", "1152x2048"]) {
       const resolution = resolveBenchPricing({

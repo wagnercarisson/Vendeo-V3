@@ -89,6 +89,20 @@ function formatoFromConfig(config: unknown): string | null {
   return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
 }
 
+/** Operação persistida em `config.operation` (`campaign`/`expand`). */
+function operationFromConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as { operation?: unknown }).operation;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+/** Versão do prompt de expansão persistida em `config.promptVersion`. */
+function promptVersionFromConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as { promptVersion?: unknown }).promptVersion;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
 /** Extensão do path de entrada → MIME canônico aceito pelo bucket. */
 const INPUT_MIME_BY_EXTENSION: Record<string, string> = {
   png: "image/png",
@@ -259,6 +273,12 @@ export const POST = apiHandler(async (request: Request) => {
   if (existing.status === "pending" || existing.status === "running") {
     return NextResponse.json(
       { error: "bench_run_already_active" },
+      { status: 409 },
+    );
+  }
+  if (operationFromConfig(existing.config) === "expand") {
+    return NextResponse.json(
+      { error: "bench_operation_mismatch" },
       { status: 409 },
     );
   }
@@ -606,6 +626,8 @@ export const GET = apiHandler(async (request: Request) => {
         promptBaseVersion: run.promptBaseVersion,
         estimatedCostUsd: run.estimatedCostUsd,
         formato: formatoFromConfig(run.config),
+        operation: operationFromConfig(run.config),
+        promptVersion: promptVersionFromConfig(run.config),
         size: run.size,
       })),
     })),

@@ -57,13 +57,13 @@ describe("config-registry — primeiro recorte habilitado", () => {
     for (const dimension of BENCH_REGISTRY_DIMENSIONS) {
       const enabled = BENCH_CONFIG_REGISTRY[dimension].filter((entry) => entry.enabled);
       expect(enabled, `${dimension} habilitadas`).toHaveLength(
-        dimension === "intencao" ? 3 : dimension === "formato" ? 2 : 1,
+        dimension === "intencao" ? 3 : dimension === "formato" ? 3 : 1,
       );
     }
     expect(BENCH_CONFIG_REGISTRY.intencao.filter((entry) => entry.enabled).map((entry) => entry.id))
       .toEqual(["oferta", "destaque", "exclusivo"]);
     expect(BENCH_CONFIG_REGISTRY.formato.filter((entry) => entry.enabled).map((entry) => entry.id))
-      .toEqual(["1:1", "9:16"]);
+      .toEqual(["1:1", "9:16", "4:5"]);
   });
 
   it("todas as entradas desabilitadas declaram motivo", () => {
@@ -124,8 +124,7 @@ describe("config-registry — valor fora do registry é recusado", () => {
   it("listBenchConfigOptions expõe formatos habilitados e desabilitados com motivo", () => {
     const formats = listBenchConfigOptions("formato");
     expect(formats.some((entry) => entry.id === "1:1" && entry.enabled)).toBe(true);
-    const vertical = formats.find((entry) => entry.id === "9:16");
-    expect(vertical?.enabled).toBe(true);
-    expect(vertical?.reason).toBeUndefined();
+    expect(formats.some((entry) => entry.id === "9:16" && entry.enabled)).toBe(true);
+    expect(formats.some((entry) => entry.id === "4:5" && entry.enabled)).toBe(true);
   });
 });

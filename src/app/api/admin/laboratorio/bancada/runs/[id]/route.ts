@@ -54,6 +54,22 @@ function formatoFromConfig(config: unknown): string | null {
   return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
 }
 
+/** Campo textual de `config` (ou `null`). */
+function configText(config: unknown, key: string): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as Record<string, unknown>)[key];
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+/** Objeto de `config` (ou `null`). */
+function configObject(config: unknown, key: string): Record<string, unknown> | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as Record<string, unknown>)[key];
+  return candidate && typeof candidate === "object" && !Array.isArray(candidate)
+    ? (candidate as Record<string, unknown>)
+    : null;
+}
+
 export const GET = apiHandler(
   async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
     await requireAdmin();
@@ -113,6 +129,11 @@ export const GET = apiHandler(
         finishedAt: run.finishedAt,
         config: run.config,
         formato: formatoFromConfig(run.config),
+        operation: configText(run.config, "operation"),
+        promptVersion: configText(run.config, "promptVersion"),
+        sourceDimensions: configObject(run.config, "source"),
+        targetDimensions: configObject(run.config, "target"),
+        geometry: configObject(run.config, "geometry"),
         campaignSnapshot: run.campaignSnapshot,
         brandingSnapshot: run.brandingSnapshot,
         promptSent: run.promptSent,

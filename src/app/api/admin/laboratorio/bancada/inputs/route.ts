@@ -10,6 +10,7 @@ import { persistBenchArtifact } from "@/lib/lab/bench/persistence/bench-artifact
 import {
   BenchRunError,
   finalizeBenchRun,
+  markBenchRunOperation,
   reserveBenchRun,
 } from "@/lib/lab/bench/persistence/bench-run-service";
 import {
@@ -74,9 +75,19 @@ export const POST = apiHandler(async (request: Request) => {
     .getAll("files")
     .filter((entry): entry is File => typeof entry !== "string");
 
+  const operation = form.get("operation");
+  const isExpandOperation = operation === "expand";
+
   if (files.length === 0) {
     return NextResponse.json(
       { error: "invalid_payload", details: ["files"] },
+      { status: 400 },
+    );
+  }
+
+  if (isExpandOperation && files.length !== 1) {
+    return NextResponse.json(
+      { error: "bench_expand_requires_single_image" },
       { status: 400 },
     );
   }
@@ -112,6 +123,29 @@ export const POST = apiHandler(async (request: Request) => {
     bytes: number;
     checksum: string;
   }> = [];
+
+  try {
+    await markBenchRunOperation({
+      client,
+      runId,
+      operation: isExpandOperation ? "expand" : "campaign",
+    });
+  } catch {
+    try {
+      await finalizeBenchRun({
+        client,
+        runId,
+        status: "failed",
+        errorType: "bench_run_transition_failed",
+      });
+    } catch {
+      // Terminal imutável; nada a fazer.
+    }
+    return NextResponse.json(
+      { error: "bench_run_transition_failed" },
+      { status: 409 },
+    );
+  }
 
   try {
     for (let index = 0; index < files.length; index += 1) {
@@ -167,5 +201,8 @@ export const POST = apiHandler(async (request: Request) => {
     );
   }
 
-  return NextResponse.json({ runId, inputs }, { status: 201 });
+  return NextResponse.json(
+    { runId, operation: isExpandOperation ? "expand" : "campaign", inputs },
+    { status: 201 },
+  );
 });

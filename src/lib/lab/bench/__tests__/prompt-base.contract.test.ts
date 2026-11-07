@@ -163,6 +163,12 @@ describe("prompt-base — carregamento e resolução por configuração", () => 
     expect(base.version).toBe(BENCH_DEFAULT_PROMPT_BASE_VERSION);
   });
 
+  it("4:5 resolve o mesmo conteúdo complementar (a especificidade fica na política)", () => {
+    const base = resolveBenchDefaultPromptBase({ ...DEFAULT_BENCH_CONFIG, formato: "4:5" });
+    expect(base).toBe(BENCH_DEFAULT_PROMPT_BASE);
+    expect(base.version).toBe(BENCH_DEFAULT_PROMPT_BASE_VERSION);
+  });
+
   it("recorte sem padrão falha de forma determinística", () => {
     const unsupported = { ...DEFAULT_BENCH_CONFIG, tipoConteudo: "servico" };
 

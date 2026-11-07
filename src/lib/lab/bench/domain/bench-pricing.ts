@@ -312,6 +312,57 @@ export const BENCH_PRICING_ENTRIES: readonly BenchPricingEntry[] = [
     tokenRates: GPT_IMAGE_2_5_SUNBURST_RATES,
     coverage: "partial",
   }),
+  // Quick 261107-qvo — 4:5 (`1152x1440`). Tarifas oficiais, sem estimativa de
+  // tokens de saída comprovada para esse tamanho.
+  tokenBasedEntry({
+    model: "gpt-image-2",
+    quality: "low",
+    size: "1152x1440",
+    tokenRates: GPT_IMAGE_2_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2",
+    quality: "medium",
+    size: "1152x1440",
+    tokenRates: GPT_IMAGE_2_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.5-flare",
+    quality: "low",
+    size: "1152x1440",
+    tokenRates: GPT_IMAGE_2_5_FLARE_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.5-flare",
+    quality: "medium",
+    size: "1152x1440",
+    tokenRates: GPT_IMAGE_2_5_FLARE_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.5-sunburst",
+    quality: "low",
+    size: "1152x1440",
+    tokenRates: GPT_IMAGE_2_5_SUNBURST_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.5-sunburst",
+    quality: "medium",
+    size: "1152x1440",
+    tokenRates: GPT_IMAGE_2_5_SUNBURST_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.6-sunburst",
+    quality: "medium",
+    size: "1152x1440",
+    tokenRates: GPT_IMAGE_2_6_SUNBURST_RATES,
+    coverage: "partial",
+  }),
   // Quick 261107-hcx — 2.6 experimental (medium), 1:1 e 9:16. Sem estimativa de
   // tokens de saída: só o cálculo pós-`usage` fica disponível.
   tokenBasedEntry({

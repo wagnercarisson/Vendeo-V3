@@ -78,7 +78,7 @@ function recorteSignature(config: BenchPromptBaseConfig): string {
  * formato vive na política `formato-*`), extensível sem reescrever o módulo.
  */
 const BENCH_PROMPT_BASE_REGISTRY: ReadonlyMap<string, BenchDefaultPromptBase> = new Map(
-  (["1:1", "9:16"] as const).flatMap((formato) =>
+  (["1:1", "9:16", "4:5"] as const).flatMap((formato) =>
     (["oferta", "destaque", "exclusivo"] as const).map(
       (intencao) =>
         [

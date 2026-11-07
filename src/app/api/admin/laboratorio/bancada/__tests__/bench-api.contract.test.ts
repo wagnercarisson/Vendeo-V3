@@ -43,6 +43,7 @@ const {
   mockDuplicateBenchRunInputs,
   MockBenchDuplicateError,
   mockReserveBenchRun,
+  mockMarkBenchRunOperation,
   mockGetBenchRunByOperationId,
   mockSetBenchRunInput,
   mockConfirmBenchRun,
@@ -185,6 +186,7 @@ const {
     mockDuplicateBenchRunInputs: vi.fn(),
     MockBenchDuplicateError,
     mockReserveBenchRun: vi.fn(),
+    mockMarkBenchRunOperation: vi.fn(),
     mockGetBenchRunByOperationId: vi.fn(),
     mockSetBenchRunInput: vi.fn(),
     mockConfirmBenchRun: vi.fn(),
@@ -356,6 +358,7 @@ vi.mock("@/lib/lab/bench/execution/bench-identity-transport", () => ({
 
 vi.mock("@/lib/lab/bench/persistence/bench-run-service", () => ({
   reserveBenchRun: (...args: unknown[]) => mockReserveBenchRun(...args),
+  markBenchRunOperation: (...args: unknown[]) => mockMarkBenchRunOperation(...args),
   getBenchRunByOperationId: (...args: unknown[]) => mockGetBenchRunByOperationId(...args),
   setBenchRunInput: (...args: unknown[]) => mockSetBenchRunInput(...args),
   confirmBenchRun: (...args: unknown[]) => mockConfirmBenchRun(...args),
@@ -730,6 +733,7 @@ function anyServiceCalled(): boolean {
     mockBuildBenchExperimentalBriefing,
     mockComposePromptBlocks,
     mockReserveBenchRun,
+  mockMarkBenchRunOperation,
     mockGetBenchRunByOperationId,
     mockSetBenchRunInput,
     mockConfirmBenchRun,
@@ -905,6 +909,7 @@ beforeEach(() => {
   });
 
   mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: false });
+  mockMarkBenchRunOperation.mockResolvedValue(undefined);
   mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN });
   mockSetBenchRunInput.mockResolvedValue(undefined);
   mockConfirmBenchRun.mockResolvedValue(undefined);
@@ -2421,6 +2426,29 @@ describe("contrato da API da bancada — nova tentativa", () => {
     const assertIdx = mockAssertBenchTestStore.mock.invocationCallOrder[0];
     const dupIdx = mockDuplicateBenchRunInputs.mock.invocationCallOrder[0];
     expect(assertIdx).toBeLessThan(dupIdx);
+  });
+
+  it("mantém a nova tentativa de expansão identificada como expand", async () => {
+    mockGetBenchRun.mockResolvedValue({
+      ...DETAIL_RUN,
+      config: { operation: "expand", formato: "9:16" },
+    });
+
+    const res = await postAttempt();
+    await res.json();
+
+    expect(mockMarkBenchRunOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: RUN_ID, operation: "expand" }),
+    );
+  });
+
+  it("nova tentativa comercial continua como campaign", async () => {
+    const res = await postAttempt();
+    await res.json();
+
+    expect(mockMarkBenchRunOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: RUN_ID, operation: "campaign" }),
+    );
   });
 
   it("run de origem não terminal ⇒ 409 attempt_source_not_terminal sem reservar", async () => {

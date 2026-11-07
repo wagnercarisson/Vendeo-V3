@@ -55,6 +55,9 @@ export class BenchRunError extends Error {
 /** Estados terminais da geração (nenhum deles volta a ser executado). */
 export type BenchTerminalRunStatus = "succeeded" | "failed" | "cancelled" | "timeout";
 
+/** Operação da bancada: criação comercial ou expansão de campanha pronta. */
+export type BenchRunOperation = "campaign" | "expand";
+
 // ─── Cutoffs de staleness (reconciliação preguiçosa, sem scheduler) ──────────
 
 /**
@@ -271,6 +274,36 @@ export async function reserveBenchRun(params: {
   }
 
   return { runId: (data as { id: string }).id, idempotent: false };
+}
+
+// ─── Marcador de operação em draft ───────────────────────────────────────────
+
+/**
+ * Marca a operação do run **em `draft`** (antes de qualquer configuração
+ * comercial/expansão). Usado pelo upload e pela nova tentativa para que a rota
+ * de execução correta reconheça o draft e a operação não seja trocada.
+ *
+ * O `config` é sobrescrito depois por `setBenchRunInput` com a configuração
+ * completa da operação (que também carrega `operation`).
+ */
+export async function markBenchRunOperation(params: {
+  client: SupabaseClient;
+  runId: string;
+  operation: BenchRunOperation;
+}): Promise<void> {
+  const { data, error } = await params.client
+    .from(BENCH_RUNS_TABLE)
+    .update({
+      config: { operation: params.operation },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.runId)
+    .eq("status", "draft")
+    .select("id");
+
+  if (error || affectedRows({ data, error }) !== 1) {
+    throw new BenchRunError("bench_run_transition_failed");
+  }
 }
 
 // ─── Fixação da configuração em draft ────────────────────────────────────────

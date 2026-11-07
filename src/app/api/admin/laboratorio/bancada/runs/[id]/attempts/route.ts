@@ -13,6 +13,7 @@ import {
 import {
   BenchRunError,
   getBenchRun,
+  markBenchRunOperation,
   reserveBenchRun,
 } from "@/lib/lab/bench/persistence/bench-run-service";
 import {
@@ -65,6 +66,20 @@ function storeIdFromBrandingSnapshot(snapshot: unknown): string | null {
 function formatoFromConfig(config: unknown): string | null {
   if (!config || typeof config !== "object") return null;
   const candidate = (config as { formato?: unknown }).formato;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+/** Operação persistida em `config.operation` (ou `null`). */
+function operationFromConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as { operation?: unknown }).operation;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+/** Versão do prompt de expansão persistida em `config.promptVersion`. */
+function promptVersionFromConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as { promptVersion?: unknown }).promptVersion;
   return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
 }
 
@@ -157,6 +172,23 @@ export const POST = apiHandler(
       throw error;
     }
 
+    // A tentativa de expansão continua identificada como expansão; a tentativa
+    // comercial continua como campanha. O marcador é gravado no novo draft.
+    if (!reserved.idempotent) {
+      try {
+        await markBenchRunOperation({
+          client: supabaseAdmin,
+          runId: reserved.runId,
+          operation: operationFromConfig(source.config) === "expand" ? "expand" : "campaign",
+        });
+      } catch {
+        return NextResponse.json(
+          { error: "bench_run_transition_failed" },
+          { status: 409 },
+        );
+      }
+    }
+
     // Cópia segura das entradas (download + persist) com máquina de estados por
     // `operationId` e compensação de falha parcial.
     let duplicated;
@@ -208,6 +240,8 @@ export const POST = apiHandler(
         config: source.config,
         size: source.size,
         formato: formatoFromConfig(source.config),
+        operation: operationFromConfig(source.config),
+        promptVersion: promptVersionFromConfig(source.config),
       },
       { status: 201 },
     );

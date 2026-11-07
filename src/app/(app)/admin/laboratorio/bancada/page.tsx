@@ -136,6 +136,12 @@ export default async function BancadaPage() {
         branding completo como fonte de verdade, prompt manual e caminho direto
         single-shot. Nenhuma promoção/publicação ocorre nesta fase.
       </p>
+      <a
+        href="/admin/laboratorio/bancada/expandir"
+        className="inline-flex items-center gap-2 rounded-lg border border-border bg-bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-elevated"
+      >
+        Expandir campanha pronta
+      </a>
       <BenchWorkbench
         stores={stores}
         presets={presets}

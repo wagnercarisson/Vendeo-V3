@@ -21,9 +21,11 @@ interface BenchPresetSelectorProps {
   presets: BenchPresetOption[];
   config: BenchConfigOptions;
   presetId: string;
-  /** Formato selecionado (`1:1`/`9:16`). Default: `config.defaults.formato`. */
+  /** Formato selecionado (`1:1`/`9:16`/`4:5`). Default: `config.defaults.formato`. */
   formato?: string;
   onFormatChange?: (formato: string) => void;
+  /** Exibe o seletor de formato (default `true`). Expansão usa `false`. */
+  showFormat?: boolean;
   onChange: (presetId: string) => void;
   disabled?: boolean;
 }
@@ -45,6 +47,7 @@ export function BenchPresetSelector({
   presetId,
   formato,
   onFormatChange,
+  showFormat = true,
   onChange,
   disabled = false,
 }: BenchPresetSelectorProps) {
@@ -106,21 +109,23 @@ export function BenchPresetSelector({
         Formato, modelo e qualidade
       </h2>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <LabSelect
-          label="Formato"
-          value={formatValue}
-          disabled={disabled}
-          onChange={(event) => onFormatChange?.(event.target.value)}
-        >
-          {formatOptions.map((option) => (
-            <option key={option.id} value={option.id} disabled={!option.enabled}>
-              {option.enabled
-                ? option.label
-                : `${option.label} — indisponível: ${option.reason ?? "indisponível"}`}
-            </option>
-          ))}
-        </LabSelect>
+      <div className={`grid gap-4 ${showFormat ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {showFormat ? (
+          <LabSelect
+            label="Formato"
+            value={formatValue}
+            disabled={disabled}
+            onChange={(event) => onFormatChange?.(event.target.value)}
+          >
+            {formatOptions.map((option) => (
+              <option key={option.id} value={option.id} disabled={!option.enabled}>
+                {option.enabled
+                  ? option.label
+                  : `${option.label} — indisponível: ${option.reason ?? "indisponível"}`}
+              </option>
+            ))}
+          </LabSelect>
+        ) : null}
 
         <LabSelect
           label="Modelo"

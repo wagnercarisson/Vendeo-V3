@@ -185,6 +185,17 @@ describe("políticas — resolução explícita e versionada", () => {
     expect(text).not.toContain("Formato: quadrado 1:1");
   });
 
+  it("resolve 4:5 com política vertical própria", () => {
+    const config = { ...CONFIG, formato: "4:5" } as BenchConfig;
+    const resolved = resolveBenchPromptPolicies(config);
+    expect(resolved.versions.formato).toBe("261107-formato-4-5-v1");
+    const text = composeResolved(config);
+    expect(text).toContain(
+      "Formato: vertical 4:5, com composição vertical e equilibrada (sem congelar o layout).",
+    );
+    expect(text).not.toContain("Formato: quadrado 1:1");
+  });
+
   it.each([
     { intent: "oferta", policy: ofertaPolicy, line: "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais." },
     { intent: "destaque", policy: destaquePolicy, line: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
