@@ -78,6 +78,7 @@ export function BenchSingleImageUpload({
     setFile(null);
     setInputs([]);
     setError(null);
+    setUploading(false);
     if (inputRef.current) inputRef.current.value = "";
   }, [storeId]);
 

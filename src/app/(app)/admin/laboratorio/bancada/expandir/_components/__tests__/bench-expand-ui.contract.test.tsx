@@ -126,12 +126,16 @@ describe("expand UI — upload único e sem identidade", () => {
     expect(onUploaded).not.toHaveBeenCalled();
   });
 
-  it("trocar a loja descarta upload atrasado da loja anterior", async () => {
-    let resolveUpload!: (value: unknown) => void;
-    const pending = new Promise((resolve) => {
-      resolveUpload = resolve;
+  it("trocar a loja encerra o loading e permite novo upload; resposta antiga não altera a entrada nem o loading novo", async () => {
+    let resolveA!: (value: unknown) => void;
+    let resolveB!: (value: unknown) => void;
+    const pendingA = new Promise((resolve) => {
+      resolveA = resolve;
     });
-    mockFetch.mockReturnValueOnce(pending);
+    const pendingB = new Promise((resolve) => {
+      resolveB = resolve;
+    });
+    mockFetch.mockReturnValueOnce(pendingA).mockReturnValueOnce(pendingB);
     const onUploaded = vi.fn();
     const { rerender } = render(
       <BenchSingleImageUpload
@@ -141,7 +145,8 @@ describe("expand UI — upload único e sem identidade", () => {
       />,
     );
 
-    fireEvent.change(screen.getByTestId("bench-expand-image-input"), {
+    const input = screen.getByTestId("bench-expand-image-input");
+    fireEvent.change(input, {
       target: { files: [new File([new Uint8Array([1])], "campanha-a.jpg", { type: "image/jpeg" })] },
     });
     fireEvent.click(screen.getByTestId("bench-expand-upload-button"));
@@ -155,8 +160,19 @@ describe("expand UI — upload único e sem identidade", () => {
       />,
     );
 
+    // A troca de loja encerra o loading e libera o seletor para o novo upload.
+    await waitFor(() => expect(input).not.toBeDisabled());
+
+    fireEvent.change(input, {
+      target: { files: [new File([new Uint8Array([2])], "campanha-b.jpg", { type: "image/jpeg" })] },
+    });
+    fireEvent.click(screen.getByTestId("bench-expand-upload-button"));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+    expect(input).toBeDisabled();
+
+    // Resposta atrasada da loja A é descartada e não encerra o loading de B.
     await act(async () => {
-      resolveUpload({
+      resolveA({
         ok: true,
         status: 201,
         json: async () => ({
@@ -177,6 +193,36 @@ describe("expand UI — upload único e sem identidade", () => {
     });
 
     expect(onUploaded).not.toHaveBeenCalled();
+    expect(input).toBeDisabled();
+
+    // A resposta da loja B conclui o upload correto.
+    await act(async () => {
+      resolveB({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          runId: "run-b",
+          inputs: [
+            {
+              path: "bench/run-b/inputs/0.jpg",
+              mimeType: "image/jpeg",
+              width: 1152,
+              height: 1440,
+              bytes: 1,
+              checksum: "b".repeat(64),
+            },
+          ],
+        }),
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(onUploaded).toHaveBeenCalledTimes(1));
+    expect(onUploaded.mock.calls[0][0].runId).toBe("run-b");
+    expect(onUploaded.mock.calls[0][0].inputs[0].path).toBe(
+      "bench/run-b/inputs/0.jpg",
+    );
+    expect(input).not.toBeDisabled();
   });
 });
 

@@ -51,6 +51,10 @@ branch: feat/quick-extensao-laboratorio-9-16
 - **Troca de arquivo no upload de expansão:** selecionar outro arquivo limpa a
   entrada efetiva no pai e invalida aprovação/confirmação; respostas atrasadas
   de upload são descartadas após troca de arquivo ou de loja.
+- **Loading ao trocar de loja:** o efeito de troca encerra `uploading`; uma
+  resposta antiga não encerra o loading de uma requisição nova. Teste cobre
+  upload A em voo, troca para B, novo upload B e descarte de A sem alterar a
+  entrada/loading de B.
 
 ## Gates executados
 
