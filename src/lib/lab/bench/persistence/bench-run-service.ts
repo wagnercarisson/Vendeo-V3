@@ -299,6 +299,7 @@ export async function markBenchRunOperation(params: {
     })
     .eq("id", params.runId)
     .eq("status", "draft")
+    .is("config", null)
     .select("id");
 
   if (error || affectedRows({ data, error }) !== 1) {

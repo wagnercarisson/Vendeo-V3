@@ -85,6 +85,15 @@ export function BenchExpandWorkbench({
     setExecutionConfigRevision((revision) => revision + 1);
   }
 
+  function handleSelectionInvalidated() {
+    setUpload(null);
+    setSelectedRunId(null);
+    setPromptStatus("idle");
+    setApprovalError(null);
+    setAttemptError(null);
+    setExecutionConfigRevision((revision) => revision + 1);
+  }
+
   function handlePresetChange(nextPresetId: string) {
     setPresetId(nextPresetId);
     // Modelo/qualidade não alteram o texto: a aprovação do prompt permanece.
@@ -204,6 +213,7 @@ export function BenchExpandWorkbench({
           storeId={storeId}
           getOperationId={getOperationId}
           onUploaded={handleUploaded}
+          onSelectionInvalidated={handleSelectionInvalidated}
         />
         <BenchPresetSelector
           presets={presets}

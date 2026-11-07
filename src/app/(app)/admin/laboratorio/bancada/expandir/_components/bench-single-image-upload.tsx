@@ -20,6 +20,8 @@ interface BenchSingleImageUploadProps {
   storeId: string;
   getOperationId: (fingerprint: string) => string;
   onUploaded: (result: BenchUploadResult) => void;
+  /** Invalida a entrada efetiva no pai ao selecionar outro arquivo. */
+  onSelectionInvalidated?: () => void;
   disabled?: boolean;
 }
 
@@ -47,9 +49,13 @@ export function BenchSingleImageUpload({
   storeId,
   getOperationId,
   onUploaded,
+  onSelectionInvalidated,
   disabled = false,
 }: BenchSingleImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const requestIdRef = useRef(0);
+  const storeIdRef = useRef(storeId);
+  storeIdRef.current = storeId;
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -66,10 +72,23 @@ export function BenchSingleImageUpload({
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  useEffect(() => {
+    // Troca de loja invalida o arquivo, metadados e respostas em voo.
+    requestIdRef.current += 1;
+    setFile(null);
+    setInputs([]);
+    setError(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }, [storeId]);
+
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    // Um novo arquivo invalida a entrada efetiva anterior e qualquer upload
+    // ainda em voo; o preview novo não pode conviver com aprovação antiga.
+    requestIdRef.current += 1;
     setError(null);
     setInputs([]);
     setFile(event.target.files?.[0] ?? null);
+    onSelectionInvalidated?.();
   }
 
   async function handleUpload() {
@@ -86,6 +105,8 @@ export function BenchSingleImageUpload({
     const operationId = getOperationId(
       benchExpandUploadFingerprint(storeId, file),
     );
+    const requestId = ++requestIdRef.current;
+    const expectedStoreId = storeId;
     const form = new FormData();
     form.append("operationId", operationId);
     form.append("operation", "expand");
@@ -102,6 +123,12 @@ export function BenchSingleImageUpload({
         inputs?: BenchInputMetadata[];
         error?: string;
       };
+      if (
+        requestId !== requestIdRef.current ||
+        expectedStoreId !== storeIdRef.current
+      ) {
+        return;
+      }
       if (!response.ok || !data.runId || !Array.isArray(data.inputs)) {
         setError(
           data.error === "bench_expand_requires_single_image"
@@ -121,6 +148,12 @@ export function BenchSingleImageUpload({
         inputs: data.inputs,
       });
     } catch {
+      if (
+        requestId !== requestIdRef.current ||
+        expectedStoreId !== storeIdRef.current
+      ) {
+        return;
+      }
       setError("Não foi possível enviar a campanha. Tente novamente.");
       setUploading(false);
     }

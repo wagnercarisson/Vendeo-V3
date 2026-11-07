@@ -39,6 +39,19 @@ branch: feat/quick-extensao-laboratorio-9-16
 - Distinção explícita: sucesso técnico ≠ preservação visual; checksum do original
   ≠ preservação do centro.
 
+## Correções pós-revisão
+
+- **Replay de upload:** a rota `/inputs` agora valida autoria/estado/operação do
+  run existente antes de qualquer mutação. Replay em `pending`/`running` ou
+  terminal retorna `409 bench_upload_not_draft` sem finalizar o run; operação
+  incompatível retorna `409 bench_operation_mismatch` sem sobrescrever
+  `config`; replay de draft com a mesma operação devolve as entradas existentes
+  sem remarcar/reenviar. `markBenchRunOperation` só grava quando `config` é
+  nulo.
+- **Troca de arquivo no upload de expansão:** selecionar outro arquivo limpa a
+  entrada efetiva no pai e invalida aprovação/confirmação; respostas atrasadas
+  de upload são descartadas após troca de arquivo ou de loja.
+
 ## Gates executados
 
 | Gate | Resultado |
@@ -48,7 +61,7 @@ branch: feat/quick-extensao-laboratorio-9-16
 | `npm test` | passou |
 | `npm run build` | passou |
 | `git diff --check` | sem erros |
-| Suíte direcionada (bancada + expansão + API/UI + 4:5) | 827 passed, 1 skipped |
+| Suíte direcionada (bancada + expansão + API/UI + 4:5) | 838 passed, 1 skipped |
 
 **Teste pulado:** `src/lib/lab/bench/__tests__/bench-import.integration.test.ts`
 — integração real opt-in que exige `BENCH_IMPORT_REAL_INTEGRATION=1` e o stack

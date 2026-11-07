@@ -6,10 +6,11 @@ import {
   LAB_ALLOWED_ARTIFACT_MIME_TYPES,
   type LabArtifactMimeType,
 } from "@/lib/lab/persistence/artifact-service";
-import { persistBenchArtifact } from "@/lib/lab/bench/persistence/bench-artifact-service";
+import { listBenchArtifacts, persistBenchArtifact } from "@/lib/lab/bench/persistence/bench-artifact-service";
 import {
   BenchRunError,
   finalizeBenchRun,
+  getBenchRunByOperationId,
   markBenchRunOperation,
   reserveBenchRun,
 } from "@/lib/lab/bench/persistence/bench-run-service";
@@ -37,6 +38,29 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Operação persistida no marcador de draft (`config.operation`). */
+function operationFromConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as { operation?: unknown }).operation;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
+const INPUT_ARTIFACT_TO_INPUT = (artifact: {
+  storagePath: string;
+  mimeType: string | null;
+  width: number | null;
+  height: number | null;
+  bytes: number | null;
+  checksum: string | null;
+}) => ({
+  path: artifact.storagePath,
+  mimeType: artifact.mimeType ?? "image/png",
+  width: artifact.width,
+  height: artifact.height,
+  bytes: artifact.bytes ?? 0,
+  checksum: artifact.checksum ?? "",
+});
 
 export const POST = apiHandler(async (request: Request) => {
   const admin = await requireAdmin();
@@ -75,8 +99,8 @@ export const POST = apiHandler(async (request: Request) => {
     .getAll("files")
     .filter((entry): entry is File => typeof entry !== "string");
 
-  const operation = form.get("operation");
-  const isExpandOperation = operation === "expand";
+  const formOperation = form.get("operation");
+  const isExpandOperation = formOperation === "expand";
 
   if (files.length === 0) {
     return NextResponse.json(
@@ -114,6 +138,72 @@ export const POST = apiHandler(async (request: Request) => {
     throw error;
   }
 
+  const requestedOperation = isExpandOperation ? "expand" : "campaign";
+  const existing = await getBenchRunByOperationId({ client, operationId });
+  if (!existing) {
+    return NextResponse.json(
+      { error: "bench_run_transition_failed" },
+      { status: 409 },
+    );
+  }
+  if (existing.createdBy !== admin.userId) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const existingOperation = operationFromConfig(existing.config);
+  let operation = existingOperation ?? requestedOperation;
+
+  if (reserved.idempotent) {
+    // Reenvio: nunca altera um run ativo/terminal nem troca a operação.
+    if (existing.status !== "draft") {
+      return NextResponse.json(
+        {
+          error: "bench_upload_not_draft",
+          runId: existing.id,
+          status: existing.status,
+          operation: existingOperation,
+        },
+        { status: 409 },
+      );
+    }
+    if (existingOperation !== null && existingOperation !== requestedOperation) {
+      return NextResponse.json(
+        { error: "bench_operation_mismatch" },
+        { status: 409 },
+      );
+    }
+    if (existing.config !== null && existingOperation === null) {
+      return NextResponse.json(
+        { error: "bench_operation_mismatch" },
+        { status: 409 },
+      );
+    }
+
+    const existingInputs = (
+      await listBenchArtifacts({ client, runId: existing.id })
+    )
+      .filter((artifact) => artifact.kind === "input")
+      .map(INPUT_ARTIFACT_TO_INPUT);
+    if (existingInputs.length > 0) {
+      if (existingOperation === null) {
+        // Draft legado sem marcador e com arquivos: não reclassificar.
+        return NextResponse.json(
+          { error: "bench_operation_mismatch", reason: "operation_unknown" },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json(
+        {
+          runId: existing.id,
+          operation,
+          inputs: existingInputs,
+          idempotent: true,
+        },
+        { status: 200 },
+      );
+    }
+  }
+
   const runId = reserved.runId;
   const inputs: Array<{
     path: string;
@@ -124,27 +214,34 @@ export const POST = apiHandler(async (request: Request) => {
     checksum: string;
   }> = [];
 
-  try {
-    await markBenchRunOperation({
-      client,
-      runId,
-      operation: isExpandOperation ? "expand" : "campaign",
-    });
-  } catch {
+  if (existingOperation === null) {
     try {
-      await finalizeBenchRun({
+      await markBenchRunOperation({
         client,
         runId,
-        status: "failed",
-        errorType: "bench_run_transition_failed",
+        operation: requestedOperation,
       });
+      operation = requestedOperation;
     } catch {
-      // Terminal imutável; nada a fazer.
+      // Reenvio de um draft existente não pode finalizar nada; só um draft
+      // recém-reservado pode ser encerrado com segurança.
+      if (!reserved.idempotent) {
+        try {
+          await finalizeBenchRun({
+            client,
+            runId,
+            status: "failed",
+            errorType: "bench_run_transition_failed",
+          });
+        } catch {
+          // Terminal imutável; nada a fazer.
+        }
+      }
+      return NextResponse.json(
+        { error: "bench_run_transition_failed" },
+        { status: 409 },
+      );
     }
-    return NextResponse.json(
-      { error: "bench_run_transition_failed" },
-      { status: 409 },
-    );
   }
 
   try {
@@ -202,7 +299,7 @@ export const POST = apiHandler(async (request: Request) => {
   }
 
   return NextResponse.json(
-    { runId, operation: isExpandOperation ? "expand" : "campaign", inputs },
+    { runId, operation, inputs },
     { status: 201 },
   );
 });

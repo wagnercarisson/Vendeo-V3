@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { computeExpandGeometry } from "@/lib/lab/bench/domain/expand-geometry";
@@ -70,6 +70,113 @@ describe("expand UI — upload único e sem identidade", () => {
       height: 1440,
     });
     expect(screen.getByText(/1152×1440/)).toBeInTheDocument();
+  });
+
+  it("trocar o arquivo invalida a entrada anterior e descarta upload atrasado", async () => {
+    let resolveUpload!: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      resolveUpload = resolve;
+    });
+    mockFetch.mockReturnValueOnce(pending);
+    const onUploaded = vi.fn();
+    const onSelectionInvalidated = vi.fn();
+
+    render(
+      <BenchSingleImageUpload
+        storeId="33333333-3333-4333-8333-333333333333"
+        getOperationId={() => "22222222-2222-4222-8222-222222222222"}
+        onUploaded={onUploaded}
+        onSelectionInvalidated={onSelectionInvalidated}
+      />,
+    );
+
+    const input = screen.getByTestId("bench-expand-image-input");
+    fireEvent.change(input, {
+      target: { files: [new File([new Uint8Array([1])], "campanha-a.jpg", { type: "image/jpeg" })] },
+    });
+    fireEvent.click(screen.getByTestId("bench-expand-upload-button"));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(input, {
+      target: { files: [new File([new Uint8Array([2])], "campanha-b.jpg", { type: "image/jpeg" })] },
+    });
+    expect(onSelectionInvalidated).toHaveBeenCalled();
+
+    await act(async () => {
+      resolveUpload({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          runId: RUN_ID,
+          inputs: [
+            {
+              path: `bench/${RUN_ID}/inputs/0.jpg`,
+              mimeType: "image/jpeg",
+              width: 1152,
+              height: 1440,
+              bytes: 1,
+              checksum: "a".repeat(64),
+            },
+          ],
+        }),
+      });
+      await Promise.resolve();
+    });
+
+    expect(onUploaded).not.toHaveBeenCalled();
+  });
+
+  it("trocar a loja descarta upload atrasado da loja anterior", async () => {
+    let resolveUpload!: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      resolveUpload = resolve;
+    });
+    mockFetch.mockReturnValueOnce(pending);
+    const onUploaded = vi.fn();
+    const { rerender } = render(
+      <BenchSingleImageUpload
+        storeId="33333333-3333-4333-8333-333333333333"
+        getOperationId={() => "22222222-2222-4222-8222-222222222222"}
+        onUploaded={onUploaded}
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId("bench-expand-image-input"), {
+      target: { files: [new File([new Uint8Array([1])], "campanha-a.jpg", { type: "image/jpeg" })] },
+    });
+    fireEvent.click(screen.getByTestId("bench-expand-upload-button"));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+
+    rerender(
+      <BenchSingleImageUpload
+        storeId="44444444-4444-4444-8444-444444444444"
+        getOperationId={() => "22222222-2222-4222-8222-222222222222"}
+        onUploaded={onUploaded}
+      />,
+    );
+
+    await act(async () => {
+      resolveUpload({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          runId: RUN_ID,
+          inputs: [
+            {
+              path: `bench/${RUN_ID}/inputs/0.jpg`,
+              mimeType: "image/jpeg",
+              width: 1152,
+              height: 1440,
+              bytes: 1,
+              checksum: "a".repeat(64),
+            },
+          ],
+        }),
+      });
+      await Promise.resolve();
+    });
+
+    expect(onUploaded).not.toHaveBeenCalled();
   });
 });
 

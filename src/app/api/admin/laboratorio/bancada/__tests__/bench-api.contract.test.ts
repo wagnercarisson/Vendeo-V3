@@ -1684,6 +1684,102 @@ describe("contrato da API da bancada — upload multipart", () => {
     expect(mockReserveBenchRun).not.toHaveBeenCalled();
   });
 
+  it("replay idempotente em draft com a mesma operação devolve a entrada existente sem remarcar", async () => {
+    mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: true });
+    mockGetBenchRunByOperationId.mockResolvedValue({
+      ...DRAFT_RUN,
+      config: { operation: "expand" },
+    });
+    mockListBenchArtifacts.mockResolvedValue([
+      {
+        id: "input-1",
+        kind: "input",
+        storagePath: `bench/${RUN_ID}/inputs/0.png`,
+        mimeType: "image/png",
+        width: 1152,
+        height: 1440,
+        bytes: 3,
+        checksum: "checksum-input",
+        createdAt: "2026-09-28T00:00:00.000Z",
+      },
+    ]);
+
+    const form = new FormData();
+    form.append("operationId", OP_ID);
+    form.append("operation", "expand");
+    form.append("files", new File([new Uint8Array([1])], "a.png", { type: "image/png" }));
+
+    const res = await postInputs(form);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ runId: RUN_ID, operation: "expand", idempotent: true });
+    expect(body.inputs[0].path).toBe(`bench/${RUN_ID}/inputs/0.png`);
+    expect(mockMarkBenchRunOperation).not.toHaveBeenCalled();
+    expect(mockPersistBenchArtifact).not.toHaveBeenCalled();
+    expect(mockFinalizeBenchRun).not.toHaveBeenCalled();
+  });
+
+  it.each(["pending", "running", "succeeded", "failed", "cancelled", "timeout"])(
+    "replay em %s ⇒ 409 bench_upload_not_draft sem mutação/finalização",
+    async (status) => {
+      mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: true });
+      mockGetBenchRunByOperationId.mockResolvedValue({
+        ...DRAFT_RUN,
+        status,
+        config: { operation: "expand" },
+      });
+
+      const form = new FormData();
+      form.append("operationId", OP_ID);
+      form.append("operation", "expand");
+      form.append("files", new File([new Uint8Array([1])], "a.png", { type: "image/png" }));
+
+      const res = await postInputs(form);
+      expect(res.status).toBe(409);
+      expect((await res.json()).error).toBe("bench_upload_not_draft");
+      expect(mockMarkBenchRunOperation).not.toHaveBeenCalled();
+      expect(mockFinalizeBenchRun).not.toHaveBeenCalled();
+      expect(mockPersistBenchArtifact).not.toHaveBeenCalled();
+    },
+  );
+
+  it("replay com operação incompatível ⇒ 409 sem sobrescrever config/finalizar", async () => {
+    mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: true });
+    mockGetBenchRunByOperationId.mockResolvedValue({
+      ...DRAFT_RUN,
+      config: { operation: "campaign" },
+    });
+
+    const form = new FormData();
+    form.append("operationId", OP_ID);
+    form.append("operation", "expand");
+    form.append("files", new File([new Uint8Array([1])], "a.png", { type: "image/png" }));
+
+    const res = await postInputs(form);
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("bench_operation_mismatch");
+    expect(mockMarkBenchRunOperation).not.toHaveBeenCalled();
+    expect(mockFinalizeBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("falha ao marcar operação em replay idempotente não finaliza o draft", async () => {
+    mockReserveBenchRun.mockResolvedValue({ runId: RUN_ID, idempotent: true });
+    mockGetBenchRunByOperationId.mockResolvedValue({ ...DRAFT_RUN, config: null });
+    mockListBenchArtifacts.mockResolvedValue([]);
+    mockMarkBenchRunOperation.mockRejectedValue(new Error("conflict"));
+
+    const form = new FormData();
+    form.append("operationId", OP_ID);
+    form.append("operation", "expand");
+    form.append("files", new File([new Uint8Array([1])], "a.png", { type: "image/png" }));
+
+    const res = await postInputs(form);
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("bench_run_transition_failed");
+    expect(mockFinalizeBenchRun).not.toHaveBeenCalled();
+  });
+
   it("falha na persistência de metadados finaliza o run (draft) como failed sem órfão", async () => {
     mockPersistBenchArtifact.mockRejectedValue(new Error("artifact_persistence_failed"));
 
