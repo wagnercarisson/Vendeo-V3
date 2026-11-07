@@ -1004,7 +1004,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
       "Prompt não composto",
     );
     // Sem composição, o prompt compilado não é exibido e aprovar fica desabilitado.
-    expect(screen.queryByRole("textbox", { name: "Prompt compilado" })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Prompt final (editável)" })).toBeNull();
     expect(screen.getByTestId("bench-approve-button")).toBeDisabled();
   });
 
@@ -1070,7 +1070,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     expect(review).not.toHaveTextContent("Mouseeee sem fio");
     expect(review).not.toHaveTextContent("character_repeated_suspicious");
     expect(review).not.toHaveTextContent(mouseAlert.excerpt);
-    expect(screen.queryByRole("textbox", { name: "Prompt compilado" })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Prompt final (editável)" })).toBeNull();
 
     const productField = screen.getByLabelText("Nome do produto");
     const scrollIntoView = vi.fn();
@@ -1086,7 +1086,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
 
     fireEvent.click(screen.getByTestId("bench-keep-text-exactly-button"));
     await waitFor(() =>
-      expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
+      expect(screen.getByRole("textbox", { name: "Prompt final (editável)" })).toHaveValue(
         "PROMPT APÓS KEEP",
       ),
     );
@@ -1280,7 +1280,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     render(await BancadaPage());
     chooseNoPriceExclusiveIntent();
     fireEvent.click(screen.getByTestId("bench-compose-button"));
-    await screen.findByRole("textbox", { name: "Prompt compilado" });
+    await screen.findByRole("textbox", { name: "Prompt final (editável)" });
     fireEvent.click(screen.getByTestId("bench-approve-button"));
     await waitFor(() =>
       expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado"),
@@ -1318,7 +1318,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     render(await BancadaPage());
     chooseNoPriceExclusiveIntent();
     fireEvent.click(screen.getByTestId("bench-compose-button"));
-    await screen.findByRole("textbox", { name: "Prompt compilado" });
+    await screen.findByRole("textbox", { name: "Prompt final (editável)" });
     fireEvent.click(screen.getByTestId("bench-approve-button"));
     await waitFor(() =>
       expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado"),
@@ -1449,7 +1449,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
       />,
     );
 
-    expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Prompt final (editável)" })).toBeInTheDocument();
     expect(screen.getByTestId("bench-approve-button")).toBeEnabled();
 
     rerender(
@@ -1487,7 +1487,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
       />,
     );
 
-    const preserved = screen.getByRole("textbox", { name: "Prompt compilado" });
+    const preserved = screen.getByRole("textbox", { name: "Prompt final (editável)" });
     expect(preserved).toHaveValue("BASELINE PRODUTIVO MANUAL");
     expect(preserved).toBeDisabled();
     expect(screen.queryByTestId("bench-reset-final-prompt")).toBeNull();
@@ -1583,7 +1583,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     await waitFor(() => expect(mockFetch.mock.calls.some(([url]) => String(url).includes("/inputs"))).toBe(true));
 
     fireEvent.click(screen.getByTestId("bench-compose-button"));
-    await screen.findByRole("textbox", { name: "Prompt compilado" });
+    await screen.findByRole("textbox", { name: "Prompt final (editável)" });
     fireEvent.click(screen.getByTestId("bench-approve-button"));
     await waitFor(() =>
       expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado"),
@@ -1710,7 +1710,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
 
     fireEvent.click(screen.getByTestId("bench-compose-button"));
     await waitFor(() =>
-      expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
+      expect(screen.getByRole("textbox", { name: "Prompt final (editável)" })).toHaveValue(
         "PROMPT COMPILADO",
       ),
     );
@@ -1725,7 +1725,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     fireEvent.change(screen.getByLabelText("Qualidade"), { target: { value: "medium" } });
 
     expect(screen.getByTestId("bench-preflight-status")).toHaveTextContent("Prompt aprovado");
-    expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: "Prompt final (editável)" })).toHaveValue(
       "PROMPT COMPILADO",
     );
   });
@@ -1778,7 +1778,7 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
 
     fireEvent.click(screen.getByTestId("bench-compose-button"));
     await waitFor(() =>
-      expect(screen.getByRole("textbox", { name: "Prompt compilado" })).toHaveValue(
+      expect(screen.getByRole("textbox", { name: "Prompt final (editável)" })).toHaveValue(
         "PROMPT COMPILADO",
       ),
     );
@@ -2037,6 +2037,66 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
     expect(body.formato).toBe("9:16");
   });
 
+  it("descarta resposta atrasada de estimativa após troca de configuração", async () => {
+    let resolveFirst!: (value: Response) => void;
+    const first = new Promise<Response>((resolve) => {
+      resolveFirst = resolve;
+    });
+    mockFetch.mockReturnValueOnce(first);
+
+    const { rerender } = render(
+      <BenchExecutionPanel
+        storeId={STORE_A.id}
+        presetId={PRESET_ENABLED.id}
+        configRevision={0}
+        approvedPrompt="Foto do produto em fundo claro"
+        preflightEvidence={PREFLIGHT_EVIDENCE}
+        product={{ name: "Café especial" }}
+        offer={{}}
+        runId={RUN_ID}
+        references={REFERENCES}
+        operationId={OPERATION_ID}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("bench-generate-button"));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+
+    // Troca de configuração enquanto a resposta anterior está em voo.
+    rerender(
+      <BenchExecutionPanel
+        storeId={STORE_A.id}
+        presetId={PRESET_ENABLED.id}
+        configRevision={1}
+        approvedPrompt="Foto do produto em fundo claro"
+        preflightEvidence={PREFLIGHT_EVIDENCE}
+        product={{ name: "Café especial" }}
+        offer={{}}
+        runId={RUN_ID}
+        references={REFERENCES}
+        operationId={OPERATION_ID}
+      />,
+    );
+
+    resolveFirst(jsonResponse({ ...ESTIMATE, coverage: "partial", estimatedUsd: 0.99 }));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // A resposta antiga não reabre a confirmação nem exibe valor obsoleto.
+    expect(screen.queryByTestId("lab-confirm-button")).toBeNull();
+    expect(screen.queryByText("saída: US$ 0.99")).toBeNull();
+
+    // Uma nova estimativa da revisão atual abre a confirmação normalmente.
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ ...ESTIMATE, coverage: "partial", estimatedUsd: 0.04 }),
+    );
+    fireEvent.click(screen.getByTestId("bench-generate-button"));
+    await screen.findByTestId("lab-confirm-button");
+    expect(screen.getByText("saída: US$ 0.04")).toBeInTheDocument();
+  });
+
   it("bloqueia a geração sem prompt aprovado", () => {
     render(
       <BenchExecutionPanel
@@ -2053,7 +2113,7 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
     );
 
     expect(
-      screen.getByText("Aprove o prompt compilado antes de estimar ou gerar."),
+      screen.getByText("Aprove o prompt final antes de estimar ou gerar."),
     ).toBeInTheDocument();
     expect(screen.getByTestId("bench-generate-button")).toBeDisabled();
   });

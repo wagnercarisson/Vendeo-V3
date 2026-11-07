@@ -161,7 +161,7 @@ export function BenchPreflightPanel({
           id="bench-preflight-title"
           className="font-heading text-lg font-semibold text-text-primary"
         >
-          Prompt compilado
+          Prompt final (editável)
         </h2>
         {composerVersion ? (
           <span className="font-mono text-xs text-text-muted">{composerVersion}</span>
@@ -311,7 +311,7 @@ export function BenchPreflightPanel({
 
       {showFinal && (
         <LabTextarea
-          label="Prompt compilado"
+          label="Prompt final (editável)"
           value={finalPrompt}
           rows={12}
           disabled={disabled || composing || !canEditFinal}
@@ -322,7 +322,7 @@ export function BenchPreflightPanel({
 
       {!showFinal && compiledPrompt.length > 0 ? (
         <LabTextarea
-          label="Prompt compilado"
+          label="Prompt compilado (referência)"
           value={compiledPrompt}
           rows={12}
           disabled

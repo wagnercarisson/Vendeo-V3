@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, CheckCircle2, Loader2, Play, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "../../_components/confirm-dialog";
@@ -109,12 +109,23 @@ export function BenchExecutionPanel({
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Trocar a configuração de execução (preset/modelo/qualidade) invalida apenas a
-  // estimativa e a confirmação financeira — o prompt aprovado permanece válido
-  // (correção de UAT). A próxima estimativa será recalculada para a nova config.
+  // Revisão efetiva da configuração e revisão usada pela estimativa exibida.
+  // Atribuída no render para vencer a corrida entre uma resposta atrasada e a
+  // troca de configuração.
+  const configRevisionRef = useRef(configRevision);
+  configRevisionRef.current = configRevision;
+  const estimateRequestIdRef = useRef(0);
+  const estimateRevisionRef = useRef<number | null>(null);
+
+  // Trocar a configuração de execução (preset/modelo/qualidade/formato) invalida
+  // a estimativa e a confirmação financeira — o prompt aprovado permanece válido
+  // (correção de UAT). Requisições em voo são descartadas.
   useEffect(() => {
+    estimateRequestIdRef.current += 1;
+    estimateRevisionRef.current = null;
     setEstimate(null);
     setConfirmOpen(false);
+    setEstimating(false);
     setError(null);
     setStatus(null);
   }, [configRevision]);
@@ -123,14 +134,14 @@ export function BenchExecutionPanel({
     typeof approvedPrompt === "string" && approvedPrompt.trim().length > 0;
   const uploadReady = runId !== null && operationId !== null && references.length > 0;
   const disabledReason = !promptApproved
-    ? "Aprove o prompt compilado antes de estimar ou gerar."
+    ? "Aprove o prompt final antes de estimar ou gerar."
     : !uploadReady
       ? "Envie as imagens do produto antes de gerar."
       : null;
   const generateDisabled = disabled || running || estimating || disabledReason !== null;
 
   function validateBeforeGenerate(): string | null {
-    if (!promptApproved) return "Aprove o prompt compilado antes de estimar ou gerar.";
+    if (!promptApproved) return "Aprove o prompt final antes de estimar ou gerar.";
     if (!uploadReady) return "Envie as imagens do produto antes de gerar.";
     if (product.name.trim().length === 0) return "Informe o nome do produto.";
     return null;
@@ -147,6 +158,9 @@ export function BenchExecutionPanel({
     }
 
     setEstimating(true);
+    const requestId = estimateRequestIdRef.current + 1;
+    estimateRequestIdRef.current = requestId;
+    const revision = configRevisionRef.current;
     try {
       const response = await fetch(
         `/api/admin/laboratorio/bancada/estimate?storeId=${encodeURIComponent(
@@ -158,6 +172,14 @@ export function BenchExecutionPanel({
         | (BenchEstimate & { error?: string })
         | { error?: string };
 
+      // Resposta de revisão/requisição antiga nunca reabre a confirmação.
+      if (
+        requestId !== estimateRequestIdRef.current ||
+        revision !== configRevisionRef.current
+      ) {
+        return;
+      }
+
       if (!response.ok) {
         setError("Não foi possível calcular a estimativa. Tente novamente.");
         setEstimating(false);
@@ -165,9 +187,16 @@ export function BenchExecutionPanel({
       }
 
       setEstimate(data as BenchEstimate);
+      estimateRevisionRef.current = revision;
       setEstimating(false);
       setConfirmOpen(true);
     } catch {
+      if (
+        requestId !== estimateRequestIdRef.current ||
+        revision !== configRevisionRef.current
+      ) {
+        return;
+      }
       setError("Não foi possível calcular a estimativa. Tente novamente.");
       setEstimating(false);
     }
@@ -215,13 +244,27 @@ export function BenchExecutionPanel({
   }
 
   async function handleConfirm() {
+    // Exige que a estimativa exibida pertença à revisão ATUAL. Uma resposta
+    // atrasada de configuração anterior nunca autoriza a confirmação.
+    if (
+      estimate === null ||
+      estimateRevisionRef.current === null ||
+      estimateRevisionRef.current !== configRevisionRef.current
+    ) {
+      setConfirmOpen(false);
+      setError(
+        "A estimativa ficou desatualizada. Gere novamente para confirmar o valor atual.",
+      );
+      return;
+    }
+
     if (
       runId === null ||
       operationId === null ||
       approvedPrompt === null ||
       preflightEvidence === null
     ) {
-      setError("Aprove o prompt compilado antes de estimar ou gerar.");
+      setError("Aprove o prompt final antes de estimar ou gerar.");
       setConfirmOpen(false);
       return;
     }

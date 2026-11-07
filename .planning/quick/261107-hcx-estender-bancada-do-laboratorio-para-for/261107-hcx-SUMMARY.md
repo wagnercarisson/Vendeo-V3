@@ -54,9 +54,15 @@ branch: feat/quick-extensao-laboratorio-9-16
 | `npm test` | passou |
 | `npm run build` | passou |
 | `git diff --check` | sem erros |
-| Suíte direcionada (bancada + technical-validation + API/UI) | 797 passed, 1 skipped |
+| Suíte direcionada (bancada + technical-validation + API/UI) | 798 passed, 1 skipped |
 
 Todos os testes rodaram com fakes/`vi.mock`, sem provider e sem rede.
+
+**Teste pulado:** `src/lib/lab/bench/__tests__/bench-import.integration.test.ts`
+— integração real opt-in que exige `BENCH_IMPORT_REAL_INTEGRATION=1` e o stack
+Supabase local (PostgreSQL + Storage). Não foi habilitado porque o CHECKPOINT A
+não inicia stack nem acessa banco. O motivo está documentado no próprio arquivo
+(linhas 15–20).
 
 ## Preservação de produção e escopo
 
@@ -68,6 +74,16 @@ Todos os testes rodaram com fakes/`vi.mock`, sem provider e sem rede.
   paga.
 - Nenhum fallback para credenciais produtivas; `OPENAI_BENCH_API_KEY`
   permanece a única fonte do adapter da bancada.
+
+## Ajustes pós-revisão (antes do CHECKPOINT B)
+
+- **Estimativa atrasada:** o painel de execução descarta respostas de revisões
+  antigas (request id + revisão efetiva), limpa a estimativa em voo ao trocar a
+  configuração e exige, na confirmação, que a revisão estimada seja a atual.
+  Coberto por teste de resposta atrasada.
+- **Nome do editor:** “Prompt compilado” passou a “Prompt final (editável)” no
+  título e no editor; o bloco somente leitura do compilado virou “Prompt
+  compilado (referência)”. Testes de rótulo atualizados.
 
 ## Limitações e ressalvas
 
