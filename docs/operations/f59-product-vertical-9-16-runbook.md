@@ -9,9 +9,11 @@ O vertical é oferecido apenas para **novas gerações** quando a flag global es
 ligada. Recuperação, consulta, detalhe, listagem, download e resolução
 administrativa continuam funcionando independentemente da flag.
 
-Estado desta fase: implementação e homologação funcional concluídas; a quick
-`261106-qxn` de clareza da interface foi concluída e aceita. Ativação e produção
-continuam gates separados e **não executados**.
+Estado desta fase: implementação, homologação funcional e promoção de produção
+realizadas pelo responsável. Deploy `READY`, migration `20261105162052` presente no
+ledger remoto e flag `product_9_16_enabled=true`. A quick `261106-qxn` de clareza da
+interface foi concluída e aceita. Ressalvas de download específico, cobrança/fatura
+e auditoria do replay terminal permanecem registradas.
 
 ## 2. Flag
 
@@ -127,10 +129,15 @@ caminho. Se um código público for necessário no futuro, registre-o em
 
 ## 10. Gate de produção (NÃO executado nesta fase)
 
-A homologação funcional foi concluída. Deploy, ativação da flag, smoke test e
-rollback de produção NÃO foram executados. Homologação não é aprovação de
-produção. O gate de produção exige autorização específica, evidência de smoke real
-e plano de rollback aprovado.
+A homologação funcional foi concluída e a produção foi promovida pelo responsável.
+O deploy `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld` está `READY`, a migration
+`20261105162052` está no ledger remoto e a flag está `ON`. A campanha de smoke
+vertical foi `fa2ebf20-43c8-4313-8e60-179ab6940bbc` (JPEG 1080×1920, 1 crédito).
+Rollback não foi executado.
+
+Download específico, cobrança/fatura e auditoria do replay terminal não têm
+confirmação técnica independente nesta consulta; a confirmação do responsável cobre
+deploy, fluxo e telas.
 
 Checklist de integração/promoção:
 `docs/operations/f59-quick-261106-qxn-promotion-checklist.md`.
@@ -144,5 +151,5 @@ Checklist de integração/promoção:
 - A prova técnica de provider já registrada não substitui o smoke de produção.
 - Novas gerações pagas exigem acompanhamento do executor e inspeção manual da
   arte, copy, margens e download.
-- O seed da flag está aplicado no homolog; a aplicação em produção e a ativação
-  permanecem bloqueadas até autorização específica.
+- O seed da flag está aplicado no homolog e a migration está presente no ledger de
+  produção; a flag está ativa. Rollback permanece disponível pela RPC auditada.

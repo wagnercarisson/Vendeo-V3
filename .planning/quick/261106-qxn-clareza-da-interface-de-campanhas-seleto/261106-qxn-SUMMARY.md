@@ -11,6 +11,9 @@ accepted_by: responsável (aceite manual)
 accepted_at: 2026-11-06
 final_review_status: accepted
 production_authorized: false
+production_deployed_reported: true
+production_deployed_by: responsável
+production_deployment_commit: 37bfb5277f7d48789526ef4e855cfd0dedf3e58d
 base_sha: e272516a5cd6d258b8123b8ee2ef8e7c6a81d0d6
 completed_at: 2026-11-06
 closed_at: 2026-11-06
@@ -166,3 +169,33 @@ envolvendo F59 + quick 261106-qxn:
 Esse gate não foi iniciado. **Produção continua não autorizada.** O filtro por formato
 permanece apenas como evolução futura; proteção de saída e “Limpar dados” continuam
 itens separados.
+
+## 8. Produção — registro pós-fechamento (2026-11-06/07)
+
+Registro posterior ao fechamento da quick, com **confirmação manual do responsável**
+para deploy realizado e fluxo/telas validados. A evidência técnica consultada está
+separada na tabela abaixo.
+
+| Campo | Registro | Origem |
+|---|---|---|
+| Deploy | `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld` — status `READY`, produção, alias `vendeo.tech` | Vercel, consulta read-only |
+| Horário | criado `2026-11-07T01:04:15.604Z`; pronto `2026-11-07T01:06:15.195Z` | Vercel |
+| Commit publicado | `37bfb5277f7d48789526ef4e855cfd0dedf3e58d` — “merge: integrar F59 vertical 9:16 e quick de interface” | Vercel metadata + Git |
+| Deploy/fluxo/telas | realizados e validados manualmente | **Confirmação do responsável** |
+| Flag `product_9_16_enabled` | `true` (atualizada em `2026-11-07T01:08:02.454264+00:00`) | Supabase read-only |
+| Migration `20261105162052` | presente no ledger remoto | `supabase migration list --linked` |
+| Campanha de smoke | `fa2ebf20-43c8-4313-8e60-179ab6940bbc` — “Orquídea Phalaenopsis”, loja Floricultura Donna Flor | Supabase read-only |
+| Operação | `e6f91009-9fb2-489e-93e0-fb0303f1623e` | Supabase read-only |
+| Formato | `9:16` / `f59-vertical-9-16-v1` | Snapshot persistido |
+| Artefato | JPEG `1080×1920`; objeto presente com 455.524 B | DB + Storage info |
+| Download | **não confirmado especificamente**; apenas fluxo/telas pelo responsável | Limitação explícita |
+| Crédito | 1 crédito; operação `delivered`; saldo 5 → 4 | Credit operations + transactions |
+| Custo calculado (usage/pricing) | US$ 0,033221 = imagem 0,033047 + copy 0,000174 | `generation_events` |
+| Custo contabilizado no piloto | US$ 0,1107 = imagem 0,11 + copy 0,0007 | `product_1_1_pilot_paid_calls` |
+| Custo informado pelo provider | não registrado (`provider_reported_cost_usd` nulo) | Metadata |
+| Candidatos | apenas a campanha acima é posterior ao deploy; campanhas anteriores da Donna Flor são pré-deploy e não foram tratadas como smoke | Consulta read-only |
+
+**Ressalvas preservadas:** auditoria do replay terminal continua aceita como exceção
+não corrigida; o custo é calculado por usage/pricing, não fatura; download e cobrança
+não têm confirmação técnica independente nesta consulta. Deploy realizado não
+significa aceite integral de todos os cenários de produção.

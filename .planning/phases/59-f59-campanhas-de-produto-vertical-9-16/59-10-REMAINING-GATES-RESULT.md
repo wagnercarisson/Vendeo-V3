@@ -286,5 +286,25 @@ revisão → edição; não substitui o teste de restauração a partir de rascu
 - Custo permanece **calculado por usage e pricing** (0,030441), não valor de
   fatura; o piloto registrado é 0,1107, com desvio documentado de 0,080259.
 - As pendências deste resultado não são mais gates funcionais de homolog abertos.
-  O gate de produção (deploy, migration data-only, ativação da flag, smoke e
-  rollback) permanece **não executado** e exige autorização separada.
+  O gate de produção foi posteriormente executado pelo responsável; ver seção 16.
+
+## 16. Promoção de produção (registro posterior — 2026-11-07)
+
+- Deploy de produção `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld`, status `READY`, alias
+  `vendeo.tech`, commit `37bfb5277f7d48789526ef4e855cfd0dedf3e58d`.
+  Criado em `2026-11-07T01:04:15.604Z` e pronto em `2026-11-07T01:06:15.195Z`
+  (Vercel, consulta read-only).
+- Migration `20261105162052` presente no ledger remoto.
+- Flag `product_9_16_enabled=true`.
+- Campanha de smoke: `fa2ebf20-43c8-4313-8e60-179ab6940bbc` (“Orquídea
+  Phalaenopsis”, Floricultura Donna Flor), operação
+  `e6f91009-9fb2-489e-93e0-fb0303f1623e`; JPEG 1080×1920; 1 crédito; saldo 5 → 4.
+- Custo calculado por usage/pricing: US$ 0,033221 (imagem 0,033047 + copy
+  0,000174). Custo contabilizado no piloto: US$ 0,1107. Custo do provider não
+  registrado (`provider_reported_cost_usd` nulo).
+- **Confirmação manual do responsável:** deploy realizado e fluxo/telas validados.
+- **Não confirmado nesta consulta:** evento específico de download e
+  cobrança/fatura. O artefato existe no Storage (455.524 B), mas isso não é prova de
+  download pelo usuário.
+- Auditoria do replay terminal permanece como exceção aceita, não corrigida.
+- Rollback não foi executado.

@@ -1,52 +1,67 @@
-# 59-10 — Gate de produção (NÃO EXECUTADO)
+# 59-10 — Gate de produção (EXECUTADO)
 
-Status: **documento de planejamento; homologação concluída; nenhuma ação de produção foi executada**.
-Este gate é separado do aceite de homolog e **não** é autorizado por ele.
+**Status:** deploy de produção realizado pelo responsável em 2026-11-06/07; flag
+`product_9_16_enabled` **ON**; migration `20261105162052` presente no ledger
+remoto. O fluxo e as telas foram validados manualmente pelo responsável. A
+evidência técnica consultada e as ressalvas estão separadas abaixo.
 
-> Atualização 2026-11-06: os gates funcionais de homolog da F59 foram concluídos
-> e a fase foi encerrada tecnicamente. As pendências abaixo são exclusivamente de
-> preparação/promoção de produção, não de validação funcional em homolog.
+> Este documento substitui o estado “NÃO EXECUTADO” anterior. O gate de homolog
+> permaneceu separado; a produção foi promovida depois da integração de F59 +
+> quick `261106-qxn`.
 
-## 1. Estado atual
+## 1. Estado da produção
 
-- `product_9_16_enabled` em produção: **deve permanecer OFF** até autorização
-  específica.
-- Nenhum deploy, migration, ativação, smoke ou rollback de produção foi executado.
-- Nenhuma campanha, crédito, Storage ou flag de produção foi alterado.
-- O homolog está apto no recorte comprovado; os gates funcionais da F59 foram
-  concluídos. Permanecem apenas os passos de produção descritos neste documento.
-- A migration data-only `20261105162052_f59_product_9_16_flag.sql` foi aplicada
-  no homolog com a flag `enabled=false`; a aplicação em produção continua pendente
-  de autorização específica.
+| Campo | Registro | Origem |
+|---|---|---|
+| Deploy | `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld`, produção, `READY`, alias `vendeo.tech` | Vercel, consulta read-only |
+| Horário | criado `2026-11-07T01:04:15.604Z`; pronto `2026-11-07T01:06:15.195Z` | Vercel |
+| Commit publicado | `37bfb5277f7d48789526ef4e855cfd0dedf3e58d` — merge de F59 + quick | Vercel + Git |
+| Confirmação manual | deploy realizado; fluxo e telas validados | **Responsável** |
+| Flag `product_9_16_enabled` | `true`; atualizada em `2026-11-07T01:08:02.454264+00:00` | Supabase, consulta read-only |
+| Migration `20261105162052` | presente no ledger remoto; `enabled=false` na criação | `supabase migration list --linked` |
+| Campanha de smoke | `fa2ebf20-43c8-4313-8e60-179ab6940bbc` — “Orquídea Phalaenopsis”, Floricultura Donna Flor | Supabase, consulta read-only |
+| Operação | `e6f91009-9fb2-489e-93e0-fb0303f1623e` | Supabase |
+| Formato | `9:16` / `f59-vertical-9-16-v1` | Snapshot persistido |
+| Artefato | JPEG `1080×1920`; objeto presente com 455.524 B | DB + Storage info |
+| Download | **não confirmado especificamente**; artefato presente; fluxo/telas confirmados manualmente | Limitação explícita |
+| Crédito | 1 crédito; operação `delivered`; saldo 5 → 4 | Credit operations/transactions |
+| Custo calculado (usage/pricing) | US$ 0,033221 = imagem 0,033047 + copy 0,000174 | `generation_events` |
+| Custo contabilizado no piloto | US$ 0,1107 = imagem 0,11 + copy 0,0007 | `product_1_1_pilot_paid_calls` |
+| Custo informado pelo provider | não registrado (`provider_reported_cost_usd` nulo) | Metadata |
 
-## 2. Pré-requisitos de entrada
+Apenas a campanha acima é posterior ao deploy. Campanhas anteriores da Donna Flor
+são pré-deploy e não foram tratadas como smoke.
+
+## 2. Pré-requisitos e ressalvas
 
 1. Fora do escopo da F59: proteção contra perda de dados no reload e intenção de
-   nova campanha são melhoria transversal separada, não implementada.
+   nova campanha continuam melhoria transversal separada, não implementada.
 2. Caso D fechado em `error`; lacuna de auditoria do replay terminal aceita
    formalmente como exceção em `.planning/issues/59-AUDIT-REPLAY-GAP.md`
    (**não corrigida**).
 3. Reels: **aceito com ressalva observada no Facebook**; não é aprovação irrestrita
    de todas as interfaces.
-4. Custo: **calculado por usage e pricing** (0,030441 no Run B; piloto 0,1107),
-   não é valor faturado; reconciliação de fatura permanece fora deste gate.
-5. Migration do seed da flag revisada, com timestamp único e já aplicada no
-   homolog; a aplicação em produção é uma autorização separada.
-6. Plano de rollback definido; o teste de rollback em produção permanece parte do
-   gate de produção, não do homolog.
-7. Janela, responsável e critério de aborto definidos.
+4. Custo permanece **calculado por usage e pricing**, não valor de fatura.
+   `provider_reported_cost_usd` está nulo.
+5. A migration data-only foi aplicada no homolog e em produção; o arquivo foi
+   preservado sem alteração de SQL, timestamp ou nome.
+6. O plano de rollback está definido; o teste de rollback em produção não foi
+   executado nesta rodada.
+7. Download não tem confirmação técnica independente; a confirmação do responsável
+   cobre o fluxo e as telas, não um evento específico de download.
+8. O deploy não equivale a aceite integral de todos os cenários de produção.
 
-## 3. Sequência proposta (não executar sem autorização)
+## 3. Sequência executada (histórico)
 
-| Etapa | Ação | Evidência exigida |
+| Etapa | Ação | Evidência |
 |---|---|---|
-| 1 | Confirmar branch/commit e build | hash do commit, build ID |
-| 2 | Deploy do código com flag OFF | registro de deploy `READY` |
-| 3 | Smoke 1:1 em loja de teste de produção | arte 1024×1024, crédito, download |
-| 4 | Ativar a flag por RPC auditada, com motivo | linha de auditoria, ator |
-| 5 | Smoke vertical em loja de teste | 1080×1920, path vertical, crédito 1 |
-| 6 | Monitorar erros, custo e crédito | logs/telemetria por 24 h |
-| 7 | Comunicar liberação ou rollback | decisão registrada |
+| 1 | Branch/commit e build confirmados | merge `37bfb527`; deployment `READY` |
+| 2 | Deploy do código com flag OFF | `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld` |
+| 3 | Smoke 1:1 em loja de teste | confirmação manual do responsável; sem evidência técnica específica nesta consulta |
+| 4 | Ativação da flag por RPC auditada | `product_9_16_enabled=true`; `updated_at` registrado |
+| 5 | Smoke vertical em loja de teste | campanha `fa2ebf20...`; JPEG 1080×1920; 1 crédito |
+| 6 | Monitoramento de erros/custo/crédito | custo calculado e piloto registrados; evento de provider nulo |
+| 7 | Comunicação/rollback | deploy mantido; rollback não executado |
 
 ## 4. Rollback
 
@@ -55,6 +70,7 @@ Este gate é separado do aceite de homolog e **não** é autorizado por ele.
 - **Não** reverter dados/ledger/Storage por rollback de código.
 - Campanhas verticais já entregues permanecem consultáveis e baixáveis com a flag OFF.
 - Registrar horário, ator, motivo e evidência do rollback.
+- O rollback não foi executado nesta rodada.
 
 ## 5. Critérios de aborto
 
@@ -70,12 +86,14 @@ Este gate é separado do aceite de homolog e **não** é autorizado por ele.
 - Ativar o formato para todas as lojas sem decisão de produto.
 - Publicação automática em redes sociais.
 - Alterar o prompt congelado, o pipeline ou o modelo.
+- Filtro por formato na listagem, proteção de saída e “Limpar dados”.
 
 ## 7. Declaração
 
-Este documento **não aprova produção**. A ativação exige autorização específica,
-registro de deploy, evidência de smoke e caminho de rollback. Até lá, a flag
-permanece OFF em produção.
+O deploy de produção foi realizado e a flag está ON. A confirmação do responsável
+cobre deploy, fluxo e telas. **Download específico e cobrança/fatura não foram
+confirmados por evidência técnica independente nesta consulta.** A auditoria do
+replay terminal permanece como exceção aceita e não corrigida.
 
 Checklist de integração/promoção:
 `docs/operations/f59-quick-261106-qxn-promotion-checklist.md`.
