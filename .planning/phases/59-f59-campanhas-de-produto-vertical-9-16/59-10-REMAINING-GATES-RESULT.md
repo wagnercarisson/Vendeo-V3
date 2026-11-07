@@ -292,10 +292,12 @@ revisão → edição; não substitui o teste de restauração a partir de rascu
 
 - Deploy de produção `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld`, status `READY`, alias
   `vendeo.tech`, commit `37bfb5277f7d48789526ef4e855cfd0dedf3e58d`.
-  Criado em `2026-11-07T01:04:15.604Z` e pronto em `2026-11-07T01:06:15.195Z`
-  (Vercel, consulta read-only).
+  Criado em `2026-11-06 22:04:15 BRT` (`2026-11-07T01:04:15.604Z`) e pronto em
+  `2026-11-06 22:06:15 BRT` (`2026-11-07T01:06:15.195Z`) — Vercel, read-only.
 - Migration `20261105162052` presente no ledger remoto.
-- Flag `product_9_16_enabled=true`.
+- Flag `product_9_16_enabled=true`; ativação registrada em `admin_audit_log`
+  (`feature_flag_update`, `old_value=false` → `true`, operação `b8477c83-...`,
+  motivo “Habilitar para produção - 01”).
 - Campanha de smoke: `fa2ebf20-43c8-4313-8e60-179ab6940bbc` (“Orquídea
   Phalaenopsis”, Floricultura Donna Flor), operação
   `e6f91009-9fb2-489e-93e0-fb0303f1623e`; JPEG 1080×1920; 1 crédito; saldo 5 → 4.
@@ -303,8 +305,12 @@ revisão → edição; não substitui o teste de restauração a partir de rascu
   0,000174). Custo contabilizado no piloto: US$ 0,1107. Custo do provider não
   registrado (`provider_reported_cost_usd` nulo).
 - **Confirmação manual do responsável:** deploy realizado e fluxo/telas validados.
-- **Não confirmado nesta consulta:** evento específico de download e
-  cobrança/fatura. O artefato existe no Storage (455.524 B), mas isso não é prova de
-  download pelo usuário.
+- **Crédito comprovado pelo ledger:** 1 dedução, saldo 5 → 4.
+- **Não confirmado nesta consulta:** evento específico de download e fatura/custo
+  informado pelo provider. O artefato existe no Storage (455.524 B), mas isso não é
+  prova de download pelo usuário.
+- **Não comprovados:** deploy com flag OFF e smoke 1:1 em produção. O audit log
+  mostra `old_value=false` imediatamente antes da ativação, mas não prova o estado
+  durante o deploy; nenhuma campanha 1:1 posterior ao deploy foi encontrada.
 - Auditoria do replay terminal permanece como exceção aceita, não corrigida.
 - Rollback não foi executado.

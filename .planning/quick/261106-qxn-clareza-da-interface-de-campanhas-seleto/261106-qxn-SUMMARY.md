@@ -23,7 +23,7 @@ closed_at: 2026-11-06
 
 **Objetivo:** dar clareza ao formato da campanha e à direção de fundo sem alterar geração, prompt, crédito ou produção.
 
-**Estado:** implementação local concluída, gates executados, evidência visual coletada, **aceite manual dos três ajustes confirmado pelo responsável** e **revisão final do acabamento aprovada**. Quick concluída em 2026-11-06; `STATE.md` e `ROADMAP.md` reconciliados. **Produção promovida pelo responsável em 2026-11-07**, com ressalvas de download específico, cobrança/fatura e auditoria do replay terminal.
+**Estado:** implementação local concluída, gates executados, evidência visual coletada, **aceite manual dos três ajustes confirmado pelo responsável** e **revisão final do acabamento aprovada**. Quick concluída em 2026-11-06; `STATE.md` e `ROADMAP.md` reconciliados. **Produção promovida pelo responsável em 2026-11-07**, com ressalvas de download específico, fatura/custo informado pelo provider e auditoria do replay terminal. O crédito de 1 unidade está comprovado pelo ledger.
 
 ---
 
@@ -164,10 +164,12 @@ O gate de produção da F59 + quick foi executado pelo responsável em 2026-11-0
 5. smoke vertical com JPEG 1080×1920 e 1 crédito;
 6. confirmação manual de deploy, fluxo e telas.
 
-Permanecem como ressalvas: download específico e cobrança/fatura sem evidência
-independente; auditoria do replay terminal como exceção aceita; rollback não
-executado. O filtro por formato permanece apenas como evolução futura; proteção de
-saída e “Limpar dados” continuam itens separados.
+Permanecem como ressalvas: download específico e fatura/custo informado pelo
+provider sem evidência independente; auditoria do replay terminal como exceção
+aceita; rollback não executado. O crédito de 1 unidade está comprovado pelo ledger.
+O deploy com flag OFF e o smoke 1:1 não estão comprovados. O filtro por formato
+permanece apenas como evolução futura; proteção de saída e “Limpar dados” continuam
+itens separados.
 
 ## 8. Produção — registro pós-fechamento (2026-11-06/07)
 
@@ -178,23 +180,26 @@ separada na tabela abaixo.
 | Campo | Registro | Origem |
 |---|---|---|
 | Deploy | `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld` — status `READY`, produção, alias `vendeo.tech` | Vercel, consulta read-only |
-| Horário | criado `2026-11-07T01:04:15.604Z`; pronto `2026-11-07T01:06:15.195Z` | Vercel |
+| Horário | criado `2026-11-06 22:04:15 BRT` / `2026-11-07T01:04:15.604Z`; pronto `2026-11-06 22:06:15 BRT` / `2026-11-07T01:06:15.195Z` | Vercel |
 | Commit publicado | `37bfb5277f7d48789526ef4e855cfd0dedf3e58d` — “merge: integrar F59 vertical 9:16 e quick de interface” | Vercel metadata + Git |
 | Deploy/fluxo/telas | realizados e validados manualmente | **Confirmação do responsável** |
-| Flag `product_9_16_enabled` | `true` (atualizada em `2026-11-07T01:08:02.454264+00:00`) | Supabase read-only |
+| Flag `product_9_16_enabled` | `true` (atualizada em `2026-11-06 22:08:02 BRT` / `2026-11-07T01:08:02.454264+00:00`) | Supabase read-only |
+| Ativação auditada | `admin_audit_log` `a92f8fd0-...`: `feature_flag_update`, `old_value=false` → `true`, operação `b8477c83-...`, motivo “Habilitar para produção - 01” | Supabase read-only |
 | Migration `20261105162052` | presente no ledger remoto | `supabase migration list --linked` |
 | Campanha de smoke | `fa2ebf20-43c8-4313-8e60-179ab6940bbc` — “Orquídea Phalaenopsis”, loja Floricultura Donna Flor | Supabase read-only |
 | Operação | `e6f91009-9fb2-489e-93e0-fb0303f1623e` | Supabase read-only |
 | Formato | `9:16` / `f59-vertical-9-16-v1` | Snapshot persistido |
 | Artefato | JPEG `1080×1920`; objeto presente com 455.524 B | DB + Storage info |
 | Download | **não confirmado especificamente**; apenas fluxo/telas pelo responsável | Limitação explícita |
-| Crédito | 1 crédito; operação `delivered`; saldo 5 → 4 | Credit operations + transactions |
+| Crédito | 1 crédito deduzido; operação `delivered`; saldo 5 → 4 | Credit operations + transactions — **comprovado** |
 | Custo calculado (usage/pricing) | US$ 0,033221 = imagem 0,033047 + copy 0,000174 | `generation_events` |
 | Custo contabilizado no piloto | US$ 0,1107 = imagem 0,11 + copy 0,0007 | `product_1_1_pilot_paid_calls` |
 | Custo informado pelo provider | não registrado (`provider_reported_cost_usd` nulo) | Metadata |
 | Candidatos | apenas a campanha acima é posterior ao deploy; campanhas anteriores da Donna Flor são pré-deploy e não foram tratadas como smoke | Consulta read-only |
 
 **Ressalvas preservadas:** auditoria do replay terminal continua aceita como exceção
-não corrigida; o custo é calculado por usage/pricing, não fatura; download e cobrança
-não têm confirmação técnica independente nesta consulta. Deploy realizado não
-significa aceite integral de todos os cenários de produção.
+não corrigida; o custo é calculado por usage/pricing, não fatura; download específico
+e fatura/custo informado pelo provider não têm confirmação técnica independente nesta
+consulta. O crédito de 1 unidade está comprovado pelo ledger. Deploy com flag OFF e
+smoke 1:1 não estão comprovados. Deploy realizado não significa aceite integral de
+todos os cenários de produção.

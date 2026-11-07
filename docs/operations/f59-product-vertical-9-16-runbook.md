@@ -12,8 +12,8 @@ administrativa continuam funcionando independentemente da flag.
 Estado desta fase: implementação, homologação funcional e promoção de produção
 realizadas pelo responsável. Deploy `READY`, migration `20261105162052` presente no
 ledger remoto e flag `product_9_16_enabled=true`. A quick `261106-qxn` de clareza da
-interface foi concluída e aceita. Ressalvas de download específico, cobrança/fatura
-e auditoria do replay terminal permanecem registradas.
+interface foi concluída e aceita. Ressalvas de download específico, fatura/custo
+informado pelo provider e auditoria do replay terminal permanecem registradas.
 
 ## 2. Flag
 
@@ -22,8 +22,8 @@ e auditoria do replay terminal permanecem registradas.
 - Leitura: server-side, sem env override e sem coorte/estágio/loja.
 - Operação: RPC `admin_update_feature_flag` com motivo obrigatório e auditoria.
 - Seed: data-only, `INSERT ... ON CONFLICT (key) DO NOTHING` com `enabled=false`.
-  A migration `20261105162052_f59_product_9_16_flag.sql` foi aplicada no homolog;
-  a aplicação em produção exige autorização específica e permanece pendente.
+  A migration `20261105162052_f59_product_9_16_flag.sql` foi aplicada no homolog e
+  em produção; a flag foi ativada pelo responsável.
 
 ## 3. O que a flag NÃO bloqueia
 
@@ -127,17 +127,18 @@ caminho. Se um código público for necessário no futuro, registre-o em
    explícito da decisão. Não remova histórico de auditoria.
 3. **Deploy**: rollback de aplicação é gate separado, com evidência própria.
 
-## 10. Gate de produção (NÃO executado nesta fase)
+## 10. Gate de produção (executado em 2026-11-07)
 
 A homologação funcional foi concluída e a produção foi promovida pelo responsável.
-O deploy `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld` está `READY`, a migration
-`20261105162052` está no ledger remoto e a flag está `ON`. A campanha de smoke
-vertical foi `fa2ebf20-43c8-4313-8e60-179ab6940bbc` (JPEG 1080×1920, 1 crédito).
+O deploy `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld` ficou `READY` em **2026-11-06 22:06
+BRT (2026-11-07 01:06 UTC)**; a migration `20261105162052` está no ledger remoto e
+a flag está `ON`. A campanha de smoke vertical foi
+`fa2ebf20-43c8-4313-8e60-179ab6940bbc` (JPEG 1080×1920, 1 crédito comprovado).
 Rollback não foi executado.
 
-Download específico, cobrança/fatura e auditoria do replay terminal não têm
-confirmação técnica independente nesta consulta; a confirmação do responsável cobre
-deploy, fluxo e telas.
+Download específico e fatura/custo informado pelo provider não têm confirmação
+técnica independente nesta consulta; a confirmação do responsável cobre deploy,
+fluxo e telas. O deploy com flag OFF e o smoke 1:1 não estão comprovados.
 
 Checklist de integração/promoção:
 `docs/operations/f59-quick-261106-qxn-promotion-checklist.md`.
@@ -148,7 +149,8 @@ Checklist de integração/promoção:
 - A validação visual de homolog foi aceita com as ressalvas registradas na F59
   (incluindo a observação de Reels no Facebook); não é aprovação irrestrita de
   todas as interfaces.
-- A prova técnica de provider já registrada não substitui o smoke de produção.
+- A prova técnica de provider já registrada não substitui o registro de smoke/aceite
+  de produção.
 - Novas gerações pagas exigem acompanhamento do executor e inspeção manual da
   arte, copy, margens e download.
 - O seed da flag está aplicado no homolog e a migration está presente no ledger de

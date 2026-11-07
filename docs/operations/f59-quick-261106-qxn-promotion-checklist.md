@@ -4,7 +4,7 @@
 **Status:** preparação documental concluída e **execução posterior realizada pelo
 responsável**: merge, push, deploy, migration e ativação da flag.
 **Produção:** deploy `READY`; flag `product_9_16_enabled=true`; ressalvas de
-download/cobrança e auditoria preservadas.
+download específico, fatura/custo do provider e auditoria preservadas.
 
 ---
 
@@ -14,13 +14,14 @@ download/cobrança e auditoria preservadas.
 |---|---|---|
 | Integração | commit `37bfb5277f7d48789526ef4e855cfd0dedf3e58d` | Git |
 | Deploy | `dpl_BBKyLDs5VFs5G9FgzusmpYHXN6Ld`, produção, `READY`, alias `vendeo.tech` | Vercel, read-only |
-| Horário do deploy | criado `2026-11-07T01:04:15.604Z`; pronto `2026-11-07T01:06:15.195Z` | Vercel |
+| Horário do deploy | criado `2026-11-06 22:04:15 BRT` / `2026-11-07T01:04:15.604Z`; pronto `2026-11-06 22:06:15 BRT` / `2026-11-07T01:06:15.195Z` | Vercel |
 | Confirmação manual | deploy realizado; fluxo e telas validados | **Responsável** |
 | Migration `20261105162052` | presente no ledger remoto | `supabase migration list --linked` |
-| Flag | `product_9_16_enabled=true` | Supabase, read-only |
+| Flag | `product_9_16_enabled=true`, atualizada em `2026-11-06 22:08:02 BRT` / `2026-11-07T01:08:02.454264+00:00` | Supabase, read-only |
+| Ativação auditada | `admin_audit_log` `a92f8fd0-...`: `feature_flag_update`, `old_value=false` → `true`, operação `b8477c83-...`, motivo “Habilitar para produção - 01” | Supabase, read-only |
 | Smoke | campanha `fa2ebf20-43c8-4313-8e60-179ab6940bbc`, operação `e6f91009-9fb2-489e-93e0-fb0303f1623e` | Supabase, read-only |
 | Formato/artefato | `9:16`; JPEG `1080×1920`; objeto 455.524 B | DB + Storage info |
-| Crédito | 1 crédito; saldo 5 → 4 | `credit_transactions` |
+| Crédito | 1 crédito deduzido; saldo 5 → 4 | `credit_transactions` — **comprovado** |
 | Custo usage/pricing | US$ 0,033221 (imagem 0,033047 + copy 0,000174) | `generation_events` |
 | Custo no piloto | US$ 0,1107 (imagem 0,11 + copy 0,0007) | `product_1_1_pilot_paid_calls` |
 | Custo do provider | não registrado (`provider_reported_cost_usd` nulo) | Metadata |
@@ -131,13 +132,16 @@ Executar/registrar contra o conjunto integrado:
 - A migration foi aplicada; o smoke vertical usou a campanha
   `fa2ebf20-43c8-4313-8e60-179ab6940bbc`.
 - Ativação/smoke/rollback posteriores continuam exigindo autorização específica.
-- Ordem executada:
+- Ordem registrada:
   1. merge autorizado — `37bfb527`;
   2. deploy de produção — `dpl_BBKy...`, `READY`;
   3. migration `20261105162052` presente no ledger;
-  4. ativação da flag — `product_9_16_enabled=true`;
-  5. smoke vertical — campanha `fa2ebf20...`, JPEG 1080×1920, 1 crédito;
+  4. ativação da flag — comprovada pelo `admin_audit_log` (`old_value=false` → `true`);
+  5. smoke vertical — campanha `fa2ebf20...`, JPEG 1080×1920, 1 crédito comprovado;
   6. monitoramento/rollback — rollback não executado.
+- **Não comprovados:** deploy com flag OFF e smoke 1:1 em produção. O audit log
+  mostra `old_value=false` imediatamente antes da ativação, mas não prova o estado
+  durante o deploy; nenhuma campanha 1:1 posterior ao deploy foi encontrada.
 
 ---
 
