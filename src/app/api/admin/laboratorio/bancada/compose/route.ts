@@ -5,10 +5,12 @@ import { apiHandler } from "@/lib/auth/api-handler";
 import { buildBrandingPromptContributions } from "@/lib/lab/bench/domain/branding-prompt-mapping";
 import { buildBenchCampaignSnapshot } from "@/lib/lab/bench/domain/campaign-snapshot";
 import {
+  BenchConfigRegistryError,
   DEFAULT_BENCH_CONFIG,
   resolveBenchPolicyIntent,
   resolveBenchConfig,
 } from "@/lib/lab/bench/domain/config-registry";
+import { sizeForFormat } from "@/lib/lab/bench/domain/bench-format";
 import { buildBenchExperimentalBriefing } from "@/lib/lab/bench/domain/experimental-briefing";
 import { buildIdentityDirectionContributions } from "@/lib/lab/bench/domain/identity-direction";
 import {
@@ -141,6 +143,10 @@ export const POST = apiHandler(async (request: Request) => {
   }
 
   const promptBase = typeof raw.promptBase === "string" ? raw.promptBase : "";
+  const formato =
+    typeof raw.formato === "string" && raw.formato.length > 0
+      ? raw.formato
+      : DEFAULT_BENCH_CONFIG.formato;
   const references = Array.isArray(raw.references)
     ? raw.references.filter((entry): entry is string => typeof entry === "string")
     : [];
@@ -193,12 +199,24 @@ export const POST = apiHandler(async (request: Request) => {
     }
     throw error;
   }
-  const config = resolveBenchConfig({
-    ...DEFAULT_BENCH_CONFIG,
-    intencao: resolveBenchPolicyIntent(campaignIntent),
-    modelo: preset.model,
-    qualidade: preset.quality,
-  });
+  let config;
+  try {
+    config = resolveBenchConfig({
+      ...DEFAULT_BENCH_CONFIG,
+      formato,
+      intencao: resolveBenchPolicyIntent(campaignIntent),
+      modelo: preset.model,
+      qualidade: preset.quality,
+    });
+  } catch (error) {
+    if (error instanceof BenchConfigRegistryError && error.dimension === "formato") {
+      return NextResponse.json(
+        { error: "bench_format_not_enabled", reason: error.reason ?? error.code },
+        { status: 400 },
+      );
+    }
+    throw error;
+  }
 
   // Resolução **fail-closed** das políticas do recorte (D2/D15): combinação não
   // suportada falha com `bench_policy_not_implemented` **antes** de qualquer I/O
@@ -261,6 +279,8 @@ export const POST = apiHandler(async (request: Request) => {
     compiledPrompt: composition.text,
     blocks: composition.blocks,
     composerVersion: COMPOSER_VERSION,
+    formato: config.formato,
+    size: sizeForFormat(config.formato),
     // Versões das políticas resolvidas (evidência — D14/D15).
     policyVersions: policies.versions,
     // Versão e conteúdo do prompt-base PADRÃO — apenas informativos (D6).

@@ -24,7 +24,7 @@ import type { AiProtocol, AiProvider } from "@/lib/ai/model-resolver";
  * tokens de saída estimados), usada quando o `usage` real ainda não existe —
  * **nunca** como multiplicação genérica de `usage × unitPriceUsd` (D11).
  *
- * ## Estimativas de saída (regra 2026-10-bench-3)
+ * ## Estimativas de saída (regra 2026-11-bench-4)
  *
  * Modelos diferentes consomem **quantidades diferentes** de tokens na mesma
  * qualidade, portanto a estimativa de tokens de saída é chaveada por
@@ -40,14 +40,14 @@ import type { AiProtocol, AiProvider } from "@/lib/ai/model-resolver";
 /**
  * Versão da regra de pricing local (rastreada em `cost_rule_version`).
  *
- * `2026-10-bench-3` (F48.2.5): preserva as tarifas oficiais Standard e registra
- * estimativas oficiais de saída low/1024x1024 dos três modelos. As estimativas
- * são somente de saída — não custo total, teto ou orçamento garantido; tokens de
- * texto/imagem de entrada e imagens parciais em streaming são adicionais.
- * `2026-09-bench-2` e `2026-09-bench-1` **não** são reescritas — runs antigos
- * preservam a versão registrada na época.
+ * `2026-11-bench-4` (quick 261107-hcx): preserva as tarifas oficiais Standard e
+ * adiciona o modelo experimental `gpt-image-2.6-sunburst` e as combinações
+ * `9:16` (`1152x2048`). **Nenhuma** estimativa de tokens de saída é inventada
+ * para o 2.6 nem para `1152x2048`; somente o cálculo pós-`usage` fica disponível
+ * pelas tarifas publicadas. As versões anteriores **não** são reescritas — runs
+ * antigos preservam a versão registrada na época.
  */
-export const BENCH_PRICING_RULE_VERSION = "2026-10-bench-3";
+export const BENCH_PRICING_RULE_VERSION = "2026-11-bench-4";
 
 /** Modo de cobrança do preset. `unknown` é usado quando não há entrada de pricing. */
 export type BenchPricingMode = "per_image" | "token_based" | "unknown";
@@ -104,7 +104,7 @@ export interface BenchPricingKey {
   size: string;
 }
 
-// ─── Taxas por token (pricing público oficial — regra 2026-10-bench-3) ───────
+// ─── Taxas por token (pricing público oficial — regra 2026-11-bench-4) ───────
 //
 // Standard, por 1M tokens: texto US$5, imagem de entrada US$8 e imagem de saída
 // US$30 para `gpt-image-2`, `gpt-image-2.5-flare` e `gpt-image-2.5-sunburst`. As
@@ -132,6 +132,13 @@ const GPT_IMAGE_2_5_SUNBURST_RATES: BenchTokenRates = {
   outputImageUsdPerMillion: 30,
 };
 
+/** `gpt-image-2.6-sunburst`: texto US$5/M, imagem entrada US$8/M, saída US$30/M. */
+const GPT_IMAGE_2_6_SUNBURST_RATES: BenchTokenRates = {
+  inputTextUsdPerMillion: 5,
+  inputImageUsdPerMillion: 8,
+  outputImageUsdPerMillion: 30,
+};
+
 // ─── Estimativas de saída por preset (model + quality + size) ────────────────
 
 /**
@@ -146,7 +153,7 @@ interface BenchOutputEstimate {
 /**
  * Estimativas comprovadas, chaveadas por `model + quality + size`.
  *
- * **Regra `2026-10-bench-3`:** estimativas antigas de `gpt-image-2` (400/3533
+ * **Regra `2026-11-bench-4`:** estimativas antigas de `gpt-image-2` (400/3533
  * tokens) foram derivadas da tarifa **antiga** de US$15/M e não são reutilizadas.
  * Capturas do calculador oficial fornecidas pelo responsável confirmam `low`,
  * `1024x1024`, 196 tokens de saída (~US$0,00588 pela tarifa Standard US$30/M)
@@ -209,12 +216,13 @@ function tokenBasedEntry(params: {
  * Pricing local da bancada, chaveado por `provider + model + protocol + quality
  * + size`. `low` e `medium` têm entradas distintas.
  *
- * Cobertura (`2026-10-bench-3`): `partial` para os três modelos — as estimativas
- * oficiais de saída existem para os três em `low`/`1024x1024`; custos de texto/
- * imagem de entrada e streaming parcial permanecem adicionais. O valor de saída
- * não é custo total, fatura ou teto. Estimativas `medium` sem prova ficam
- * ausentes (nunca inventadas). A revisão e confirmação financeira cabem ao
- * usuário, separadamente para cada geração manual.
+ * Cobertura (`2026-11-bench-4`): `partial` para os modelos e tamanhos
+ * cadastrados — estimativas oficiais de saída existem apenas para
+ * `low`/`1024x1024` dos três modelos anteriores; `medium`, `9:16` e o 2.6 ficam
+ * **sem** estimativa de saída (nunca inventada). Custos de texto/imagem de
+ * entrada e streaming parcial permanecem adicionais. O valor não é custo total,
+ * fatura ou teto. A revisão e confirmação financeira cabem ao usuário,
+ * separadamente para cada geração manual.
  */
 export const BENCH_PRICING_ENTRIES: readonly BenchPricingEntry[] = [
   tokenBasedEntry({
@@ -257,6 +265,67 @@ export const BENCH_PRICING_ENTRIES: readonly BenchPricingEntry[] = [
     quality: "medium",
     size: "1024x1024",
     tokenRates: GPT_IMAGE_2_5_SUNBURST_RATES,
+    coverage: "partial",
+  }),
+  // Quick 261107-hcx — 9:16 (`1152x2048`). Tarifas oficiais, **sem** estimativa
+  // de tokens de saída (nenhum valor comprovado para esse tamanho). O custo
+  // pós-`usage` continua disponível; a estimativa prévia fica ausente.
+  tokenBasedEntry({
+    model: "gpt-image-2",
+    quality: "low",
+    size: "1152x2048",
+    tokenRates: GPT_IMAGE_2_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2",
+    quality: "medium",
+    size: "1152x2048",
+    tokenRates: GPT_IMAGE_2_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.5-flare",
+    quality: "low",
+    size: "1152x2048",
+    tokenRates: GPT_IMAGE_2_5_FLARE_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.5-flare",
+    quality: "medium",
+    size: "1152x2048",
+    tokenRates: GPT_IMAGE_2_5_FLARE_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.5-sunburst",
+    quality: "low",
+    size: "1152x2048",
+    tokenRates: GPT_IMAGE_2_5_SUNBURST_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.5-sunburst",
+    quality: "medium",
+    size: "1152x2048",
+    tokenRates: GPT_IMAGE_2_5_SUNBURST_RATES,
+    coverage: "partial",
+  }),
+  // Quick 261107-hcx — 2.6 experimental (medium), 1:1 e 9:16. Sem estimativa de
+  // tokens de saída: só o cálculo pós-`usage` fica disponível.
+  tokenBasedEntry({
+    model: "gpt-image-2.6-sunburst",
+    quality: "medium",
+    size: "1024x1024",
+    tokenRates: GPT_IMAGE_2_6_SUNBURST_RATES,
+    coverage: "partial",
+  }),
+  tokenBasedEntry({
+    model: "gpt-image-2.6-sunburst",
+    quality: "medium",
+    size: "1152x2048",
+    tokenRates: GPT_IMAGE_2_6_SUNBURST_RATES,
     coverage: "partial",
   }),
 ];

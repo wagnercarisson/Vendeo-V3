@@ -33,6 +33,7 @@ export const LAB_TECHNICAL_ALERTS = [
   "unexpected_mime_type",
   "mime_mismatch",
   "aspect_ratio_mismatch",
+  "dimensions_mismatch",
   "uniform_image",
   "stats_unavailable",
 ] as const;
@@ -89,13 +90,16 @@ function corruptResult(bytes: number, alert: LabTechnicalAlert): LabTechnicalVal
  * Valida o buffer do artefato de forma objetiva.
  *
  * `declaredMimeType` é o MIME informado pelo provider (comparado ao real, que
- * prevalece) e `expectedAspectRatio` é a proporção esperada da modalidade do
- * cenário (nesta fase, `1` para o formato `1:1`).
+ * prevalece), `expectedAspectRatio` é a proporção esperada da modalidade do
+ * cenário e `expectedWidth`/`expectedHeight`, quando informados, exigem a
+ * **dimensão exata** (sem tolerância e sem resize).
  */
 export async function validateArtifactTechnically(params: {
   buffer: Buffer;
   declaredMimeType?: string | null;
   expectedAspectRatio?: number;
+  expectedWidth?: number;
+  expectedHeight?: number;
 }): Promise<LabTechnicalValidation> {
   const buffer = params.buffer;
   const bytes = buffer?.byteLength ?? 0;
@@ -130,6 +134,15 @@ export async function validateArtifactTechnically(params: {
     Math.abs(aspectRatio - params.expectedAspectRatio) > ASPECT_RATIO_TOLERANCE
   ) {
     alerts.push("aspect_ratio_mismatch");
+  }
+
+  if (
+    width !== null &&
+    height !== null &&
+    ((typeof params.expectedWidth === "number" && width !== params.expectedWidth) ||
+      (typeof params.expectedHeight === "number" && height !== params.expectedHeight))
+  ) {
+    alerts.push("dimensions_mismatch");
   }
 
   let uniform: boolean | null = null;

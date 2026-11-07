@@ -27,6 +27,8 @@ export interface BenchRunEvidence {
   provider: string | null;
   protocol: string | null;
   model: string | null;
+  /** Formato persistido (`1:1`/`9:16`) — run antigo pode ser `null`. */
+  formato?: string | null;
   size: string | null;
   quality: string | null;
   latencyMs: number | null;
@@ -170,7 +172,7 @@ export function BenchEvidencePanel({
               />
               <Row
                 label="Formato / tamanho"
-                value={run.size ?? "—"}
+                value={`${run.formato ?? "—"} / ${run.size ?? "—"}`}
               />
               <Row label="Qualidade" value={run.quality ?? "—"} />
               <Row label="Latência" value={formatLatency(run.latencyMs)} />
@@ -213,6 +215,10 @@ export function BenchEvidencePanel({
               <div className="space-y-2 rounded-lg border border-border bg-bg-deep/40 p-4">
                 <p className="text-xs font-medium uppercase tracking-wider text-text-muted font-heading">
                   Resultado
+                </p>
+                <p className="font-mono text-xs text-text-muted">
+                  {output.width ?? "?"}×{output.height ?? "?"} ·{" "}
+                  {typeof output.bytes === "number" ? `${output.bytes} bytes` : "bytes indisponíveis"}
                 </p>
                 <img
                   src={output.signedUrl ?? ""}

@@ -33,6 +33,8 @@ export const BENCH_MODEL_ALLOWLIST: Record<AiProvider, Record<string, readonly A
     // F48.2.4 (correção cirúrgica): Sunburst — **somente** no caminho isolado da
     // bancada (nunca no `MODEL_ALLOWLIST` produtivo).
     "gpt-image-2.5-sunburst": ["images"],
+    // Quick 261107-hcx: 2.6 experimental, **somente** na bancada.
+    "gpt-image-2.6-sunburst": ["images"],
   },
   gemini: {},
 };

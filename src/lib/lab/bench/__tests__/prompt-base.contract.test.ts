@@ -157,6 +157,12 @@ describe("prompt-base — carregamento e resolução por configuração", () => 
     expect(base.content).toBe("Crie uma peça profissional e visualmente coerente. Evite elementos decorativos que distraiam do conteúdo principal.");
   });
 
+  it("9:16 resolve o mesmo conteúdo complementar (a especificidade fica na política)", () => {
+    const base = resolveBenchDefaultPromptBase({ ...DEFAULT_BENCH_CONFIG, formato: "9:16" });
+    expect(base).toBe(BENCH_DEFAULT_PROMPT_BASE);
+    expect(base.version).toBe(BENCH_DEFAULT_PROMPT_BASE_VERSION);
+  });
+
   it("recorte sem padrão falha de forma determinística", () => {
     const unsupported = { ...DEFAULT_BENCH_CONFIG, tipoConteudo: "servico" };
 

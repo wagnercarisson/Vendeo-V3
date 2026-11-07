@@ -202,6 +202,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   const [presetId, setPresetId] = useState(
     presets.find((preset) => preset.enabled)?.id ?? presets[0]?.id ?? "",
   );
+  // Formato da geração (`1:1`/`9:16`). Entrada de composição: trocar invalida
+  // aprovação e confirmação financeira, preservando o texto manual.
+  const [formato, setFormato] = useState(config.defaults.formato ?? "1:1");
   // Revisão da configuração de execução (preset/modelo/qualidade). Trocar a
   // configuração NÃO invalida o prompt aprovado; invalida apenas a estimativa e a
   // confirmação financeira no painel de execução (correção de UAT).
@@ -222,6 +225,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
   const [preflightStatus, setPreflightStatus] = useState<BenchPreflightStatus>("idle");
   const [compiledPrompt, setCompiledPrompt] = useState("");
   const [finalPrompt, setFinalPrompt] = useState("");
+  // Texto final substituído/editado manualmente: recompor atualiza o compilado e
+  // as evidências, mas não sobrescreve a edição do operador.
+  const [finalPromptEdited, setFinalPromptEdited] = useState(false);
   const [promptBlocks, setPromptBlocks] = useState<Record<string, string>>({});
   const [composerVersion, setComposerVersion] = useState("");
   const [policyVersions, setPolicyVersions] = useState<Record<string, string>>({});
@@ -264,7 +270,8 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     setPreflightRevision(nextRevision);
     setPreflightStatus(hasComposedRef.current ? "invalidated" : "idle");
     setCompiledPrompt("");
-    setFinalPrompt("");
+    // O texto final (inclusive uma substituição manual) é preservado. A
+    // recomposição atualiza o compilado/evidências sem apagar a edição.
     setPromptBlocks({});
     setComposerVersion("");
     setPolicyVersions({});
@@ -282,6 +289,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     setEvidenceError(null);
     operationRef.current = null;
     invalidatePreflight();
+    // Texto final é específico da loja; não o carregue entre lojas.
+    setFinalPrompt("");
+    setFinalPromptEdited(false);
   }
 
   function handleCampaignChange(next: BenchCampaignFormValue) {
@@ -304,6 +314,14 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
     // Preset/modelo/qualidade NÃO compõem o texto: o prompt aprovado permanece
     // válido byte a byte. Apenas a estimativa e a confirmação financeira são
     // invalidadas (o painel de execução reinicia ao ver a nova revisão).
+    setExecutionConfigRevision((revision) => revision + 1);
+  }
+
+  function handleFormatChange(nextFormato: string) {
+    setFormato(nextFormato);
+    // Formato participa da composição e do snapshot: invalida aprovação e
+    // confirmação financeira. O texto final manual é preservado.
+    invalidatePreflight();
     setExecutionConfigRevision((revision) => revision + 1);
   }
 
@@ -342,6 +360,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         body: JSON.stringify({
           storeId,
           presetId,
+          formato,
           product: buildProductPayload(campaign),
           offer: buildOfferPayload(campaign),
           promptBase: prompt,
@@ -375,7 +394,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         data.textIntegrityReview
       ) {
         setCompiledPrompt("");
-        setFinalPrompt("");
+        if (!finalPromptEdited) setFinalPrompt("");
         setPromptBlocks({});
         setComposerVersion("");
         setPolicyVersions({});
@@ -408,7 +427,9 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
 
       hasComposedRef.current = true;
       setCompiledPrompt(data.compiledPrompt);
-      setFinalPrompt(data.compiledPrompt);
+      if (!finalPromptEdited) {
+        setFinalPrompt(data.compiledPrompt);
+      }
       setPromptBlocks(data.blocks ?? {});
       setComposerVersion(data.composerVersion ?? composerVersionConstant);
       setPolicyVersions(data.policyVersions ?? {});
@@ -449,8 +470,19 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
 
   function handleEditFinal(value: string) {
     setFinalPrompt(value);
-    // Editar o prompt final após a aprovação invalida a aprovação (D17).
+    setFinalPromptEdited(value !== compiledPrompt);
+    // Editar o prompt final invalida a aprovação **e** a confirmação financeira
+    // (o conteúdo e os tokens de entrada mudaram).
     setPreflightStatus("edited");
+    setExecutionConfigRevision((revision) => revision + 1);
+  }
+
+  function handleResetFinalToCompiled() {
+    if (compiledPrompt.trim().length === 0) return;
+    setFinalPrompt(compiledPrompt);
+    setFinalPromptEdited(false);
+    setPreflightStatus("composed");
+    setExecutionConfigRevision((revision) => revision + 1);
   }
 
   function handleApprove() {
@@ -549,6 +581,8 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
       const data = (await response.json().catch(() => ({}))) as {
         runId?: string;
         references?: string[];
+        formato?: string | null;
+        config?: { formato?: unknown } | null;
       };
 
       if (!response.ok || !data.runId || !Array.isArray(data.references)) {
@@ -557,6 +591,13 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         return;
       }
 
+      const sourceFormato =
+        typeof data.config?.formato === "string"
+          ? data.config.formato
+          : typeof data.formato === "string"
+            ? data.formato
+            : formato;
+      setFormato(sourceFormato);
       setUpload({
         runId: data.runId,
         references: data.references,
@@ -566,6 +607,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
       setRunEvidence(null);
       setEvidenceError(null);
       invalidatePreflight();
+      setExecutionConfigRevision((revision) => revision + 1);
       setStartingAttempt(false);
     } catch {
       setAttemptsError("Não foi possível iniciar uma nova tentativa. Tente novamente.");
@@ -653,6 +695,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           onCompose={handleCompose}
           onEditFinal={handleEditFinal}
           onApprove={handleApprove}
+          onResetToCompiled={handleResetFinalToCompiled}
           textIntegrityReview={textIntegrityReview}
           onKeepExactly={handleKeepTextExactly}
           onVerifyField={handleVerifyTextField}
@@ -661,6 +704,8 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
           presets={presets}
           config={config}
           presetId={presetId}
+          formato={formato}
+          onFormatChange={handleFormatChange}
           onChange={handlePresetChange}
         />
       </div>
@@ -668,6 +713,7 @@ export function BenchWorkbench(props: BenchWorkbenchProps) {
         <BenchExecutionPanel
           storeId={storeId}
           presetId={presetId}
+          formato={formato}
           configRevision={executionConfigRevision}
           approvedPrompt={approvedPrompt}
           preflightEvidence={preflightEvidence}

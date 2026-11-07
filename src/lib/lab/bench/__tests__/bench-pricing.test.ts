@@ -28,8 +28,8 @@ const OFFICIAL_RATES = {
 };
 
 describe("bench-pricing — versionamento", () => {
-  it("a versão vigente é 2026-10-bench-3 e é propagada na resolução", () => {
-    expect(BENCH_PRICING_RULE_VERSION).toBe("2026-10-bench-3");
+  it("a versão vigente é 2026-11-bench-4 e é propagada na resolução", () => {
+    expect(BENCH_PRICING_RULE_VERSION).toBe("2026-11-bench-4");
     const resolution = resolveBenchPricing({ ...BASE, model: "gpt-image-2", quality: "low" });
     expect(resolution.ruleVersion).toBe(BENCH_PRICING_RULE_VERSION);
   });
@@ -130,6 +130,44 @@ describe("bench-pricing — combinação ausente e modo confirmado", () => {
       expect(entry.mode).toBe("token_based");
       expect(entry.tokenRates).toEqual(OFFICIAL_RATES);
       expect(entry.coverage).toBe("partial");
+    }
+  });
+});
+
+describe("bench-pricing — 9:16 e gpt-image-2.6-sunburst", () => {
+  it("9:16 dos modelos existentes mantém tarifas oficiais e não inventa estimativa de saída", () => {
+    for (const model of ["gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst"]) {
+      for (const quality of ["low", "medium"]) {
+        const resolution = resolveBenchPricing({
+          provider: "openai",
+          protocol: "images",
+          model,
+          quality,
+          size: "1152x2048",
+        });
+        expect(resolution.mode, `${model}/${quality}`).toBe("token_based");
+        expect(resolution.coverage, `${model}/${quality}`).toBe("partial");
+        expect(resolution.tokenRates, `${model}/${quality}`).toEqual(OFFICIAL_RATES);
+        expect(resolution.estimatedOutputTokens, `${model}/${quality}`).toBeUndefined();
+        expect(resolution.unitPriceUsd, `${model}/${quality}`).toBeUndefined();
+      }
+    }
+  });
+
+  it("2.6 medium em 1:1 e 9:16 usa 5/8/30 e fica sem estimativa inventada", () => {
+    for (const size of ["1024x1024", "1152x2048"]) {
+      const resolution = resolveBenchPricing({
+        provider: "openai",
+        protocol: "images",
+        model: "gpt-image-2.6-sunburst",
+        quality: "medium",
+        size,
+      });
+      expect(resolution.mode, size).toBe("token_based");
+      expect(resolution.coverage, size).toBe("partial");
+      expect(resolution.tokenRates, size).toEqual(OFFICIAL_RATES);
+      expect(resolution.estimatedOutputTokens, size).toBeUndefined();
+      expect(resolution.unitPriceUsd, size).toBeUndefined();
     }
   });
 });

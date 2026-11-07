@@ -58,6 +58,8 @@ export interface BenchOfferPayload {
 interface BenchExecutionPanelProps {
   storeId: string;
   presetId: string;
+  /** Formato da geração (`1:1`/`9:16`). Default: `1:1`. */
+  formato?: string;
   /**
    * Revisão da configuração de execução (preset/modelo/qualidade). Ao mudar,
    * invalida apenas a estimativa e a confirmação financeira — o prompt aprovado
@@ -88,6 +90,7 @@ interface BenchStreamEvent {
 export function BenchExecutionPanel({
   storeId,
   presetId,
+  formato = "1:1",
   configRevision = 0,
   approvedPrompt,
   preflightEvidence,
@@ -148,7 +151,7 @@ export function BenchExecutionPanel({
       const response = await fetch(
         `/api/admin/laboratorio/bancada/estimate?storeId=${encodeURIComponent(
           storeId,
-        )}&presetId=${encodeURIComponent(presetId)}`,
+        )}&presetId=${encodeURIComponent(presetId)}&formato=${encodeURIComponent(formato)}`,
         { method: "GET" },
       );
       const data = (await response.json().catch(() => ({}))) as
@@ -236,6 +239,7 @@ export function BenchExecutionPanel({
           runId,
           storeId,
           presetId,
+          formato,
           prompt: approvedPrompt,
           references,
           confirmed: true,
@@ -376,6 +380,7 @@ export function BenchExecutionPanel({
               Esta ação dispara uma chamada paga de geração de imagem no caminho
               direto single-shot.
             </p>
+            <p className="font-mono text-xs text-text-muted">Formato: {formato}</p>
             {estimate && (
               <p className="font-mono text-xs text-text-muted">
                 Cobertura de pricing: {estimate.coverage}

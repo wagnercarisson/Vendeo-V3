@@ -61,6 +61,13 @@ function storeIdFromBrandingSnapshot(snapshot: unknown): string | null {
   return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
 }
 
+/** Formato persistido em `config.formato` (ou `null` para runs antigos). */
+function formatoFromConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as { formato?: unknown }).formato;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
 export const POST = apiHandler(
   async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
     const admin = await requireAdmin();
@@ -198,6 +205,9 @@ export const POST = apiHandler(
         references: duplicated.references,
         campaignSnapshot: source.campaignSnapshot,
         brandingSnapshot: source.brandingSnapshot,
+        config: source.config,
+        size: source.size,
+        formato: formatoFromConfig(source.config),
       },
       { status: 201 },
     );

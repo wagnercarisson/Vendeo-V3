@@ -320,6 +320,8 @@ export const BenchRunInputSchema = z
     runId: z.string().uuid(),
     storeId: z.string().uuid(),
     presetId: z.string().min(1),
+    /** Formato da execução (`1:1`/`9:16`). Ausente ⇒ `1:1` na rota. */
+    formato: z.string().min(1).optional(),
     prompt: z.string().min(1),
     references: z.array(z.string().min(1)),
     /** Confirmação explícita obrigatória antes de qualquer geração paga (D12). */

@@ -3,23 +3,27 @@
 import { Lock } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { BENCH_FORMAT_SPECS, isBenchFormat } from "@/lib/lab/bench/domain/bench-format";
 import { LabSelect } from "../../_components/lab-select";
 import type { BenchConfigOptions, BenchPresetOption } from "./bench-workbench";
 
 /**
  * Seletor de formato/modelo/qualidade e dimensões travadas da bancada (F48.2.2, D6/D7).
  *
- * `formato` (`1:1`), `modelo` e `qualidade` são selecionáveis **entre os presets
- * habilitados**; presets não confirmados aparecem desabilitados **com motivo
- * explícito**. As dimensões `intenção`, `tipo de conteúdo`, `estrutura` e `tema`
- * estão **travadas no primeiro recorte** e são exibidas como fixas (badges, não
- * editáveis). O caminho é direto single-shot — sem fallback.
+ * `formato` (`1:1`/`9:16`), `modelo` e `qualidade` são selecionáveis **entre os
+ * presets habilitados**; presets não confirmados aparecem desabilitados **com
+ * motivo explícito**. As dimensões `intenção`, `tipo de conteúdo`, `estrutura` e
+ * `tema` estão **travadas no primeiro recorte** e são exibidas como fixas
+ * (badges, não editáveis). O caminho é direto single-shot — sem fallback.
  */
 
 interface BenchPresetSelectorProps {
   presets: BenchPresetOption[];
   config: BenchConfigOptions;
   presetId: string;
+  /** Formato selecionado (`1:1`/`9:16`). Default: `config.defaults.formato`. */
+  formato?: string;
+  onFormatChange?: (formato: string) => void;
   onChange: (presetId: string) => void;
   disabled?: boolean;
 }
@@ -39,6 +43,8 @@ export function BenchPresetSelector({
   presets,
   config,
   presetId,
+  formato,
+  onFormatChange,
   onChange,
   disabled = false,
 }: BenchPresetSelectorProps) {
@@ -84,7 +90,8 @@ export function BenchPresetSelector({
   }
 
   const formatOptions = config.dimensions.formato ?? [];
-  const formatValue = config.defaults.formato ?? "1:1";
+  const formatValue = formato ?? config.defaults.formato ?? "1:1";
+  const formatSpec = isBenchFormat(formatValue) ? BENCH_FORMAT_SPECS[formatValue] : null;
 
   return (
     <section
@@ -100,7 +107,12 @@ export function BenchPresetSelector({
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <LabSelect label="Formato" value={formatValue} disabled={disabled} onChange={() => {}}>
+        <LabSelect
+          label="Formato"
+          value={formatValue}
+          disabled={disabled}
+          onChange={(event) => onFormatChange?.(event.target.value)}
+        >
           {formatOptions.map((option) => (
             <option key={option.id} value={option.id} disabled={!option.enabled}>
               {option.enabled
@@ -142,6 +154,13 @@ export function BenchPresetSelector({
           })}
         </LabSelect>
       </div>
+
+      {formatSpec ? (
+        <p className="text-xs text-text-muted font-body">
+          Tamanho solicitado: {formatSpec.width}×{formatSpec.height}{" "}
+          <span className="font-mono">({formatSpec.size})</span>
+        </p>
+      ) : null}
 
       <div className="space-y-2">
         <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-text-muted font-heading">

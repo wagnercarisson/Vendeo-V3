@@ -73,6 +73,8 @@ export function createBenchGateway(params: {
 export function buildBenchInvocationRequest(params: {
   preset: BenchPreset;
   prompt: string;
+  /** Tamanho efetivo do formato (default: `preset.size`). */
+  size?: string;
   productImagesDataUrls?: readonly string[];
   identityImageUrl?: string;
   signal?: AbortSignal;
@@ -81,7 +83,7 @@ export function buildBenchInvocationRequest(params: {
   return {
     prompt: params.prompt,
     productImagesDataUrls: params.productImagesDataUrls ? [...params.productImagesDataUrls] : [],
-    size: params.preset.size,
+    size: params.size ?? params.preset.size,
     quality: params.preset.quality,
     ...(params.identityImageUrl ? { identityImageUrl: params.identityImageUrl } : {}),
     ...(params.signal ? { signal: params.signal } : {}),

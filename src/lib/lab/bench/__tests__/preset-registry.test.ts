@@ -228,8 +228,29 @@ describe("preset-registry — validação contra a allowlist própria da bancada
   });
 });
 
-describe("preset-registry — validação contra o catálogo ativo (somente leitura)", () => {
-  it("aceita um preset cujo alvo existe como linha ativa do catálogo", async () => {
+describe("preset-registry — gpt-image-2.6-sunburst (quick 261107-hcx)", () => {
+  it("está na allowlist da bancada e no preset, mas desabilitado até o CHECKPOINT B", () => {
+    const preset = findPreset("gpt-image-2.6-sunburst-medium");
+    expect(BENCH_MODEL_ALLOWLIST.openai["gpt-image-2.6-sunburst"]).toEqual(["images"]);
+    expect(preset.enabled).toBe(false);
+    expect(preset.reason).toBe("checkpoint_b_pendente");
+    expect(preset.quality).toBe("medium");
+    expect(preset.protocol).toBe("images");
+    expect(validatePresetAgainstAllowlist(preset)).toEqual({ ok: true });
+  });
+
+  it("não altera o MODEL_ALLOWLIST produtivo", () => {
+    expect(MODEL_ALLOWLIST.openai["gpt-image-2.6-sunburst"]).toBeUndefined();
+  });
+
+  it("resolveBenchPreset recusa o preset desabilitado com o motivo", () => {
+    expect(() => resolveBenchPreset("gpt-image-2.6-sunburst-medium")).toThrow(
+      /preset_not_enabled/,
+    );
+  });
+});
+
+describe("preset-registry — validação contra o catálogo ativo (somente leitura)", () => {  it("aceita um preset cujo alvo existe como linha ativa do catálogo", async () => {
     const preset = findPreset("gpt-image-2-low");
     const { client, mutations } = createReadOnlyCatalogClient([
       {

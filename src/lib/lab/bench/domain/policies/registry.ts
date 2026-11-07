@@ -1,5 +1,6 @@
 import { BENCH_CONFIG_REGISTRY } from "../config-registry";
 import { formato11Policy } from "./formato-1-1";
+import { formato916Policy } from "./formato-9-16";
 import { destaquePolicy } from "./destaque";
 import { exclusivoPolicy } from "./exclusivo";
 import { ofertaPolicy } from "./oferta";
@@ -14,8 +15,9 @@ import type { BenchPromptPolicy } from "./types";
  * Módulo **puro** — sem I/O, sem `process.env`, sem provider e sem client
  * Supabase. Mapeia dimensão → valor → política habilitada.
  *
- * Somente as três intenções em `produto` + `1:1` + peça única + tema neutro
- * estão habilitadas; demais valores continuam desabilitados no config-registry.
+ * Somente as três intenções em `produto` + `1:1`/`9:16` + peça única + tema
+ * neutro estão habilitadas; demais valores continuam desabilitados no
+ * config-registry.
  */
 
 /** Dimensões governadas por políticas de prompt (o `pipeline` não altera o texto). */
@@ -36,7 +38,7 @@ export type BenchPromptPolicyRegistry = Readonly<
 
 export const BENCH_PROMPT_POLICY_REGISTRY: BenchPromptPolicyRegistry = {
   intencao: { oferta: ofertaPolicy, destaque: destaquePolicy, exclusivo: exclusivoPolicy },
-  formato: { "1:1": formato11Policy },
+  formato: { "1:1": formato11Policy, "9:16": formato916Policy },
   tipoConteudo: { produto: produtoPolicy },
   estrutura: { "peca-unica": pecaUnicaPolicy },
   tema: { nenhum: temaNenhumPolicy },

@@ -102,6 +102,8 @@ interface BenchPreflightPanelProps {
   onCompose: () => void;
   onEditFinal: (value: string) => void;
   onApprove: () => void;
+  /** Reposição explícita do texto final pelo prompt compilado. */
+  onResetToCompiled?: () => void;
   textIntegrityReview?: BenchTextIntegrityReviewView | null;
   onKeepExactly?: () => void;
   onVerifyField?: (field: BenchTextIntegrityField) => void;
@@ -128,14 +130,19 @@ export function BenchPreflightPanel({
   onCompose,
   onEditFinal,
   onApprove,
+  onResetToCompiled,
   textIntegrityReview = null,
   onKeepExactly,
   onVerifyField,
 }: BenchPreflightPanelProps) {
   const showCompiled = status === "composed" || status === "edited" || status === "approved";
+  const invalidated = status === "invalidated";
+  // Em estado invalidado o texto final é preservado e exibido (read-only) para
+  // que o operador não perca uma substituição manual ao recompor.
+  const showFinal = showCompiled || (invalidated && finalPrompt.length > 0);
+  const canEditFinal = showCompiled;
   const canApprove =
     (status === "composed" || status === "edited") && finalPrompt.trim().length > 0;
-  const invalidated = status === "invalidated";
   const policyVersionsText =
     policyVersions && Object.keys(policyVersions).length > 0
       ? Object.entries(policyVersions)
@@ -302,18 +309,18 @@ export function BenchPreflightPanel({
         </div>
       </dl>
 
-      {showCompiled && (
+      {showFinal && (
         <LabTextarea
           label="Prompt compilado"
           value={finalPrompt}
           rows={12}
-          disabled={disabled || composing}
-          hint="Revise e edite o prompt final. A aprovação é explícita e a geração envia exatamente este texto."
+          disabled={disabled || composing || !canEditFinal}
+          hint="Prompt final editável: você pode substituir integralmente o texto pelo baseline produtivo ou por uma variante manual. A aprovação é explícita e a geração envia exatamente este texto."
           onChange={(event) => onEditFinal(event.target.value)}
         />
       )}
 
-      {!showCompiled && compiledPrompt.length > 0 ? (
+      {!showFinal && compiledPrompt.length > 0 ? (
         <LabTextarea
           label="Prompt compilado"
           value={compiledPrompt}
@@ -321,6 +328,21 @@ export function BenchPreflightPanel({
           disabled
           onChange={() => {}}
         />
+      ) : null}
+
+      {onResetToCompiled &&
+      compiledPrompt.trim().length > 0 &&
+      finalPrompt !== compiledPrompt ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          data-testid="bench-reset-final-prompt"
+          onClick={onResetToCompiled}
+          disabled={disabled || composing}
+        >
+          Usar texto compilado
+        </Button>
       ) : null}
 
       {composing && (

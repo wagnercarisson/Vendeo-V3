@@ -679,6 +679,50 @@ describe("contrato de UI — branding, upload, prompt e presets", () => {
     ).toBeInTheDocument();
   });
 
+  it("torna o seletor de formato funcional e exibe o tamanho efetivo", () => {
+    const onFormatChange = vi.fn();
+    const config = {
+      ...CONFIG,
+      dimensions: {
+        ...CONFIG.dimensions,
+        formato: [
+          { id: "1:1", label: "Quadrado 1:1", enabled: true },
+          { id: "9:16", label: "Vertical 9:16", enabled: true },
+        ],
+      },
+    };
+    const { rerender } = render(
+      <BenchPresetSelector
+        presets={PRESETS}
+        config={config}
+        presetId={PRESET_ENABLED.id}
+        formato="1:1"
+        onFormatChange={onFormatChange}
+        onChange={() => {}}
+      />,
+    );
+
+    const select = screen.getByRole("combobox", { name: "Formato" });
+    expect(select).toHaveValue("1:1");
+    expect(screen.getByText(/1024×1024/)).toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: "9:16" } });
+    expect(onFormatChange).toHaveBeenCalledWith("9:16");
+
+    rerender(
+      <BenchPresetSelector
+        presets={PRESETS}
+        config={config}
+        presetId={PRESET_ENABLED.id}
+        formato="9:16"
+        onFormatChange={onFormatChange}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Formato" })).toHaveValue("9:16");
+    expect(screen.getByText(/1152×2048/)).toBeInTheDocument();
+  });
+
   it("mantém o prompt manual sem concatenar o branding", () => {
     render(
       <BenchPromptEditor
@@ -1426,6 +1470,47 @@ describe("contrato de UI — preflight (compor/editar/aprovar)", () => {
     );
   });
 
+  it("preserva o texto manual invalidado e oferece voltar ao compilado", () => {
+    const onResetToCompiled = vi.fn();
+    const { rerender } = render(
+      <BenchPreflightPanel
+        status="invalidated"
+        compiledPrompt=""
+        finalPrompt="BASELINE PRODUTIVO MANUAL"
+        composerVersion=""
+        composing={false}
+        error={null}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+        onResetToCompiled={onResetToCompiled}
+      />,
+    );
+
+    const preserved = screen.getByRole("textbox", { name: "Prompt compilado" });
+    expect(preserved).toHaveValue("BASELINE PRODUTIVO MANUAL");
+    expect(preserved).toBeDisabled();
+    expect(screen.queryByTestId("bench-reset-final-prompt")).toBeNull();
+
+    rerender(
+      <BenchPreflightPanel
+        status="edited"
+        compiledPrompt="PROMPT COMPILADO"
+        finalPrompt="VARIANTE MANUAL"
+        composerVersion=""
+        composing={false}
+        error={null}
+        onCompose={() => {}}
+        onEditFinal={() => {}}
+        onApprove={() => {}}
+        onResetToCompiled={onResetToCompiled}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("bench-reset-final-prompt"));
+    expect(onResetToCompiled).toHaveBeenCalledTimes(1);
+  });
+
   it("encaminha a evidência no_alerts recebida de compose até /runs", async () => {
     let composedPromptBase = "";
     mockFetch.mockImplementation(async (url: unknown, init?: RequestInit) => {
@@ -1832,11 +1917,12 @@ function runCalls() {
   return mockFetch.mock.calls.filter(([url]) => String(url).endsWith("/runs"));
 }
 
-function renderExecutionPanel(onCompleted = vi.fn()) {
+function renderExecutionPanel(onCompleted = vi.fn(), formato = "1:1") {
   render(
     <BenchExecutionPanel
       storeId={STORE_A.id}
       presetId={PRESET_ENABLED.id}
+      formato={formato}
       approvedPrompt="Foto do produto em fundo claro"
       preflightEvidence={PREFLIGHT_EVIDENCE}
       product={{ name: "Café especial" }}
@@ -1931,6 +2017,24 @@ describe("contrato de UI — estimativa, confirmação, execução e evidências
     expect(body.preflight).toEqual(PREFLIGHT_EVIDENCE);
 
     await waitFor(() => expect(onCompleted).toHaveBeenCalledWith(RUN_ID));
+  });
+
+  it("propaga o formato 9:16 para a estimativa e para o POST /runs", async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ ...ESTIMATE, coverage: "partial", estimatedUsd: null }))
+      .mockResolvedValueOnce(ndjsonResponse([{ type: "done", runId: RUN_ID }]));
+    renderExecutionPanel(vi.fn(), "9:16");
+
+    await openConfirmation();
+    const estimateCall = mockFetch.mock.calls.find(([url]) =>
+      String(url).includes("/estimate"),
+    );
+    expect(String(estimateCall?.[0])).toContain("formato=9%3A16");
+
+    fireEvent.click(screen.getByTestId("lab-confirm-button"));
+    await waitFor(() => expect(runCalls()).toHaveLength(1));
+    const body = JSON.parse(String(runCalls()[0][1].body));
+    expect(body.formato).toBe("9:16");
   });
 
   it("bloqueia a geração sem prompt aprovado", () => {

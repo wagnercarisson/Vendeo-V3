@@ -7,8 +7,14 @@ import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { LabTelemetrySink } from "@/lib/ai/lab-telemetry-sink";
 import { LAB_ARTIFACT_BUCKET } from "@/lib/lab/persistence/artifact-service";
+import {
+  expectedAspectRatioForFormat,
+  expectedDimensionsForFormat,
+  sizeForFormat,
+} from "@/lib/lab/bench/domain/bench-format";
 import { buildBenchCampaignSnapshot } from "@/lib/lab/bench/domain/campaign-snapshot";
 import {
+  BenchConfigRegistryError,
   DEFAULT_BENCH_CONFIG,
   resolveBenchPolicyIntent,
   resolveBenchConfig,
@@ -75,6 +81,13 @@ const CONFLICT_CODES: readonly string[] = ["bench_run_already_active"];
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Formato persistido em `config.formato` (ou `null` para runs antigos). */
+function formatoFromConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as { formato?: unknown }).formato;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
 
 /** Extensão do path de entrada → MIME canônico aceito pelo bucket. */
 const INPUT_MIME_BY_EXTENSION: Record<string, string> = {
@@ -275,14 +288,29 @@ export const POST = apiHandler(async (request: Request) => {
   }
 
   // Derivação explícita: dimensões travadas do primeiro recorte (registry em
-  // código) + `modelo`/`qualidade` do preset. O `BenchPreset` não possui campo
-  // `config` — a configuração nunca é lida dele.
-  const config = resolveBenchConfig({
-    ...DEFAULT_BENCH_CONFIG,
-    intencao: resolveBenchPolicyIntent(intent),
-    modelo: preset.model,
-    qualidade: preset.quality,
-  });
+  // código) + `modelo`/`qualidade` do preset + formato da execução. O
+  // `BenchPreset` não possui campo `config` — a configuração nunca é lida dele.
+  let config;
+  try {
+    config = resolveBenchConfig({
+      ...DEFAULT_BENCH_CONFIG,
+      formato: input.formato ?? DEFAULT_BENCH_CONFIG.formato,
+      intencao: resolveBenchPolicyIntent(intent),
+      modelo: preset.model,
+      qualidade: preset.quality,
+    });
+  } catch (error) {
+    if (error instanceof BenchConfigRegistryError && error.dimension === "formato") {
+      return NextResponse.json(
+        { error: "bench_format_not_enabled", reason: error.reason ?? error.code },
+        { status: 400 },
+      );
+    }
+    throw error;
+  }
+  const size = sizeForFormat(config.formato);
+  const expectedDimensions = expectedDimensionsForFormat(config.formato);
+  const expectedAspectRatio = expectedAspectRatioForFormat(config.formato);
   const campaignSnapshot = buildBenchCampaignSnapshot({
     product: input.product,
     offer: input.offer,
@@ -411,7 +439,7 @@ export const POST = apiHandler(async (request: Request) => {
       provider: preset.provider,
       protocol: preset.protocol,
       model: preset.model,
-      size: preset.size,
+      size,
       quality: preset.quality,
       intent: config.intencao,
       contentType: config.tipoConteudo,
@@ -481,6 +509,10 @@ export const POST = apiHandler(async (request: Request) => {
           preset,
           request: {
             prompt: approvedPrompt,
+            size,
+            expectedAspectRatio,
+            expectedWidth: expectedDimensions.width,
+            expectedHeight: expectedDimensions.height,
             productImagesDataUrls,
             // Identidade canônica já resolvida (última referência; ausente em
             // `text_only`). Nunca re-resolvida aqui (D10).
@@ -573,6 +605,8 @@ export const GET = apiHandler(async (request: Request) => {
         finishedAt: run.finishedAt,
         promptBaseVersion: run.promptBaseVersion,
         estimatedCostUsd: run.estimatedCostUsd,
+        formato: formatoFromConfig(run.config),
+        size: run.size,
       })),
     })),
   });

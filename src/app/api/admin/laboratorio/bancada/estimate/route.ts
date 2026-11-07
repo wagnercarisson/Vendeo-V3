@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { apiHandler } from "@/lib/auth/api-handler";
+import { sizeForFormat } from "@/lib/lab/bench/domain/bench-format";
+import {
+  BenchConfigRegistryError,
+  DEFAULT_BENCH_CONFIG,
+  resolveBenchConfig,
+} from "@/lib/lab/bench/domain/config-registry";
 import { resolveBenchCost } from "@/lib/lab/bench/execution/bench-cost-resolver";
 import { BenchPresetError, resolveBenchPreset } from "@/lib/lab/bench/domain/preset-registry";
 import {
@@ -38,6 +44,7 @@ export const GET = apiHandler(async (request: Request) => {
   const searchParams = new URL(request.url).searchParams;
   const storeId = searchParams.get("storeId") ?? "";
   const presetId = searchParams.get("presetId") ?? "";
+  const formato = searchParams.get("formato") ?? DEFAULT_BENCH_CONFIG.formato;
   if (!storeId || !presetId) {
     return NextResponse.json(
       { error: "invalid_payload", details: ["storeId", "presetId"] },
@@ -68,10 +75,31 @@ export const GET = apiHandler(async (request: Request) => {
     throw error;
   }
 
-  const cost = resolveBenchCost({ preset });
+  let size: string;
+  try {
+    const config = resolveBenchConfig({
+      ...DEFAULT_BENCH_CONFIG,
+      formato,
+      modelo: preset.model,
+      qualidade: preset.quality,
+    });
+    size = sizeForFormat(config.formato);
+  } catch (error) {
+    if (error instanceof BenchConfigRegistryError && error.dimension === "formato") {
+      return NextResponse.json(
+        { error: "bench_format_not_enabled", reason: error.reason ?? error.code },
+        { status: 400 },
+      );
+    }
+    throw error;
+  }
+
+  const cost = resolveBenchCost({ preset, size });
 
   return NextResponse.json({
     presetId: preset.id,
+    formato,
+    size,
     estimatedUsd: cost.estimatedCostUsd,
     coverage: cost.coverage,
     mode: cost.mode,

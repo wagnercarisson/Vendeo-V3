@@ -66,6 +66,8 @@ export interface BenchCostResolution {
 
 export interface ResolveBenchCostParams {
   preset: BenchPreset;
+  /** Tamanho efetivo do formato da bancada (default: `preset.size`). */
+  size?: string;
   /** Usage do provider (opcional — ausente aciona o ramo estimado). */
   usage?: TokenUsage;
   /** Custo reportado pelo provider (opcional — mantido separado). */
@@ -131,7 +133,7 @@ export function resolveBenchCost(params: ResolveBenchCostParams): BenchCostResol
       model: params.preset.model,
       protocol: params.preset.protocol,
       quality: params.preset.quality,
-      size: params.preset.size,
+      size: params.size ?? params.preset.size,
     });
 
   const base: Omit<

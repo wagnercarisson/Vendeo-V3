@@ -174,6 +174,17 @@ describe("políticas — resolução explícita e versionada", () => {
     expect(resolved.versions.fundo).toBe(BENCH_BACKGROUND_DIRECTION_VERSION);
   });
 
+  it("resolve 9:16 com política vertical sem reutilizar o texto do 1:1", () => {
+    const config = { ...CONFIG, formato: "9:16" } as BenchConfig;
+    const resolved = resolveBenchPromptPolicies(config);
+    expect(resolved.versions.formato).toBe("261107-formato-9-16-v1");
+    const text = composeResolved(config);
+    expect(text).toContain(
+      "Formato: vertical 9:16, com composição vertical e equilibrada (sem congelar o layout).",
+    );
+    expect(text).not.toContain("Formato: quadrado 1:1");
+  });
+
   it.each([
     { intent: "oferta", policy: ofertaPolicy, line: "Oferta: destaque o preço por e mantenha o preço de como secundário, quando informado. Não invente informações comerciais." },
     { intent: "destaque", policy: destaquePolicy, line: "Destaque: priorize a apresentação do produto; preço informado é secundário." },
@@ -526,7 +537,6 @@ describe("políticas — golden do prompt completo (Oferta 1:1)", () => {
 
 describe("políticas — negativos: combinações não habilitadas falham antes da chamada paga", () => {
   const disabled = [
-    { name: "9:16", config: { ...CONFIG, formato: "9:16" } },
     { name: "serviço", config: { ...CONFIG, tipoConteudo: "servico" } },
     { name: "informativo", config: { ...CONFIG, tipoConteudo: "informativo" } },
     { name: "tema", config: { ...CONFIG, tema: "datas-comemorativas" } },

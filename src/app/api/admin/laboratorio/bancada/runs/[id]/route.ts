@@ -47,6 +47,13 @@ function reportedCostFromDetail(costDetail: unknown): number | null {
   return typeof candidate === "number" && Number.isFinite(candidate) ? candidate : null;
 }
 
+/** Formato persistido em `config.formato` (ou `null` para runs antigos). */
+function formatoFromConfig(config: unknown): string | null {
+  if (!config || typeof config !== "object") return null;
+  const candidate = (config as { formato?: unknown }).formato;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : null;
+}
+
 export const GET = apiHandler(
   async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
     await requireAdmin();
@@ -105,6 +112,7 @@ export const GET = apiHandler(
         startedAt: run.startedAt,
         finishedAt: run.finishedAt,
         config: run.config,
+        formato: formatoFromConfig(run.config),
         campaignSnapshot: run.campaignSnapshot,
         brandingSnapshot: run.brandingSnapshot,
         promptSent: run.promptSent,

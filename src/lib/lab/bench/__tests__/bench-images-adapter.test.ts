@@ -22,8 +22,9 @@ import { resolveBenchPreset } from "@/lib/lab/bench/domain/preset-registry";
  * O SDK `openai` é **mockado** — nenhuma chamada de rede e nenhuma chamada paga.
  */
 
-const { editCalls } = vi.hoisted(() => ({
+const { editCalls, clientOptions } = vi.hoisted(() => ({
   editCalls: [] as Array<{ params: Record<string, unknown>; options: Record<string, unknown> }>,
+  clientOptions: [] as unknown[],
 }));
 
 vi.mock("openai", () => {
@@ -37,7 +38,9 @@ vi.mock("openai", () => {
         };
       },
     };
-    constructor(_options: unknown) {}
+    constructor(options: unknown) {
+      clientOptions.push(options);
+    }
   }
   const toFile = async (data: Buffer, name: string, options: { type: string }) => ({
     data,
@@ -58,6 +61,7 @@ const ORIGINAL_BENCH_KEY = process.env.OPENAI_BENCH_API_KEY;
 
 beforeEach(() => {
   editCalls.length = 0;
+  clientOptions.length = 0;
   // Chave exclusiva da bancada (D21) — o adapter nunca usa a chave produtiva.
   process.env.OPENAI_BENCH_API_KEY = "sk-bench-test";
 });
@@ -68,6 +72,21 @@ afterEach(() => {
 });
 
 describe("BenchImagesAdapter — quality propagado e referências explícitas", () => {
+  it("cria o cliente com a chave exclusiva da bancada e maxRetries: 0", async () => {
+    const adapter = new BenchImagesAdapter();
+    await adapter.invoke(
+      { prompt: "p", productImagesDataUrls: [PNG_A], size: "1152x2048", quality: "medium" },
+      TARGET,
+    );
+
+    expect(clientOptions).toHaveLength(1);
+    expect(clientOptions[0]).toMatchObject({
+      apiKey: "sk-bench-test",
+      maxRetries: 0,
+    });
+    expect(editCalls[0].params.size).toBe("1152x2048");
+  });
+
   it("propaga quality/model/size/n e as referências na ordem recebida", async () => {
     const adapter = new BenchImagesAdapter();
     const controller = new AbortController();

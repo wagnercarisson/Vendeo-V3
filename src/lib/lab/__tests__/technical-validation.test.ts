@@ -104,6 +104,30 @@ describe("validateArtifactTechnically — fatos objetivos com sharp", () => {
     expect(result.alerts).toContain("aspect_ratio_mismatch");
   });
 
+  it("dimensão exata divergente emite dimensions_mismatch (sem resize)", async () => {
+    const result = await validateArtifactTechnically({
+      buffer: await solidPng(64, 64),
+      expectedAspectRatio: 9 / 16,
+      expectedWidth: 1152,
+      expectedHeight: 2048,
+    });
+
+    expect(result.width).toBe(64);
+    expect(result.height).toBe(64);
+    expect(result.alerts).toContain("dimensions_mismatch");
+    expect(result.alerts).toContain("aspect_ratio_mismatch");
+  });
+
+  it("dimensão exata correta não emite dimensions_mismatch", async () => {
+    const result = await validateArtifactTechnically({
+      buffer: await solidPng(64, 64),
+      expectedWidth: 64,
+      expectedHeight: 64,
+    });
+
+    expect(result.alerts).not.toContain("dimensions_mismatch");
+  });
+
   it("MIME declarado divergente emite mime_mismatch e o MIME real prevalece", async () => {
     const result = await validateArtifactTechnically({
       buffer: await solidPng(),

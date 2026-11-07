@@ -50,7 +50,12 @@ export class BenchImagesAdapter implements AiAdapter {
     const { default: OpenAI, toFile } = await import("openai");
     // Chave **exclusiva da bancada** (`OPENAI_BENCH_API_KEY`) — nunca a chave
     // produtiva (`getApiKey`). Ausente/vazia ⇒ falha aqui, antes do cliente/rede.
-    const openai = new OpenAI({ apiKey: getBenchApiKey(target.provider) });
+    // `maxRetries: 0` somente na bancada: testes manuais não repetem a chamada
+    // HTTP automaticamente (a execução continua single-shot).
+    const openai = new OpenAI({
+      apiKey: getBenchApiKey(target.provider),
+      maxRetries: 0,
+    });
 
     const productImages = request.productImagesDataUrls ?? [];
     const primaryDataUrl = productImages[0];

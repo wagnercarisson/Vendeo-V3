@@ -635,9 +635,13 @@ async function getPresets(): Promise<Response> {
 async function getEstimate(
   storeId: string = STORE_ID,
   presetId: string = PRESET_ID,
+  formato?: string,
 ): Promise<Response> {
   const { GET } = await import("@/app/api/admin/laboratorio/bancada/estimate/route");
-  return GET(new NextRequest(`${BASE}/estimate?storeId=${storeId}&presetId=${presetId}`));
+  const suffix = formato ? `&formato=${encodeURIComponent(formato)}` : "";
+  return GET(
+    new NextRequest(`${BASE}/estimate?storeId=${storeId}&presetId=${presetId}${suffix}`),
+  );
 }
 
 async function getBriefing(storeId: string = STORE_ID): Promise<Response> {
@@ -1086,6 +1090,18 @@ describe("contrato da API da bancada — leitura", () => {
     expect(mockResolveBenchCost).toHaveBeenCalledTimes(1);
   });
 
+  it("GET /estimate propaga formato 9:16 e o size efetivo ao pricing local", async () => {
+    const res = await getEstimate(STORE_ID, PRESET_ID, "9:16");
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.formato).toBe("9:16");
+    expect(body.size).toBe("1152x2048");
+    expect(mockResolveBenchCost).toHaveBeenCalledWith(
+      expect.objectContaining({ size: "1152x2048" }),
+    );
+  });
+
   it("GET /estimate com cobertura partial e valor estimado continua 200 (não bloqueia)", async () => {
     mockResolveBenchCost.mockReturnValue({
       costSource: "bench_local_pricing",
@@ -1501,6 +1517,19 @@ describe("contrato da API da bancada — composição/preview do prompt", () => 
       }),
     );
     // Composição pura: nenhuma geração paga disparada.
+    expect(mockExecuteBenchRun).not.toHaveBeenCalled();
+  });
+
+  it("POST /compose aceita formato 9:16 e devolve o size vertical", async () => {
+    const res = await postCompose({ ...VALID_COMPOSE_BODY, formato: "9:16" });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.formato).toBe("9:16");
+    expect(body.size).toBe("1152x2048");
+    expect(mockResolveBenchConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ formato: "9:16" }),
+    );
     expect(mockExecuteBenchRun).not.toHaveBeenCalled();
   });
 
@@ -2139,6 +2168,34 @@ describe("contrato da API da bancada — execução com confirmação", () => {
     );
   });
 
+  it("propaga formato 9:16 para config/size e para a requisição de execução", async () => {
+    const res = await postRun({ ...VALID_RUN_BODY, formato: "9:16" });
+    await res.text();
+
+    const setCall = mockSetBenchRunInput.mock.calls[0][0] as {
+      config: Record<string, string>;
+      size: string;
+    };
+    expect(setCall.config.formato).toBe("9:16");
+    expect(setCall.size).toBe("1152x2048");
+    expect(mockResolveBenchConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ formato: "9:16" }),
+    );
+
+    const execCall = mockExecuteBenchRun.mock.calls[0][0] as {
+      request: {
+        size: string;
+        expectedAspectRatio: number;
+        expectedWidth: number;
+        expectedHeight: number;
+      };
+    };
+    expect(execCall.request.size).toBe("1152x2048");
+    expect(execCall.request.expectedAspectRatio).toBeCloseTo(9 / 16, 10);
+    expect(execCall.request.expectedWidth).toBe(1152);
+    expect(execCall.request.expectedHeight).toBe(2048);
+  });
+
   it("execução confirmada ⇒ NDJSON com exatamente 1 evento terminal e o runId", async () => {
     const res = await postRun(VALID_RUN_BODY);
 
@@ -2338,6 +2395,9 @@ describe("contrato da API da bancada — nova tentativa", () => {
     expect(body.references).toEqual([`bench/${RUN_ID}/inputs/0.png`]);
     expect(body.campaignSnapshot).toBeDefined();
     expect(body.brandingSnapshot).toBeDefined();
+    expect(body.config).toMatchObject({ formato: "1:1" });
+    expect(body.size).toBe("1024x1024");
+    expect(body.formato).toBe("1:1");
 
     // Novo draft com linhagem explícita (novo operationId).
     expect(mockReserveBenchRun).toHaveBeenCalledWith(
@@ -2455,6 +2515,7 @@ describe("contrato da API da bancada — detalhe e artefatos", () => {
 
     expect(res.status).toBe(200);
     expect(body.run.config).toMatchObject({ pipeline: "manual-direto" });
+    expect(body.run.formato).toBe("1:1");
     expect(body.run.promptSent).toBe("prompt manual");
     expect(body.run.latencyMs).toBe(12);
     expect(body.run.usage).toMatchObject({ promptTokens: 1000 });

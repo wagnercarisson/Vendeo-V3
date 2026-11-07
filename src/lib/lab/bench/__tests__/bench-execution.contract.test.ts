@@ -220,6 +220,29 @@ describe("harness — parâmetros explícitos e exatamente uma chamada", () => {
     expect(call.request.signal).toBe(controller.signal);
   });
 
+  it("9:16 leva size efetivo 1152x2048 ao adapter, sem mutar o preset", async () => {
+    const preset = resolveBenchPreset("gpt-image-2.5-sunburst-medium");
+    const gateway = createBenchGateway({
+      preset,
+      adapters,
+      fallbackResolver: createFallbackResolver(),
+    });
+    const sink = new CountingSink();
+
+    const request = buildBenchInvocationRequest({
+      preset,
+      prompt: "prompt vertical",
+      size: "1152x2048",
+      productImagesDataUrls: [PNG_A],
+    });
+
+    await gateway.invoke("campaign_image", request, telemetryContext(sink));
+
+    expect(adapter.calls).toHaveLength(1);
+    expect(adapter.calls[0].request.size).toBe("1152x2048");
+    expect(preset.size).toBe("1024x1024");
+  });
+
   it("transporta a identidade (identityImageUrl) quando resolvida, sem inventá-la", async () => {
     const preset = resolveBenchPreset("gpt-image-2-low");
     const withoutIdentity = buildBenchInvocationRequest({
@@ -284,7 +307,7 @@ describe("resolveBenchCost — resolvedor local chaveado pelo preset completo", 
   it("carrega cost_source bench_local_pricing e cost_rule_version vigente", () => {
     const resolution = resolveBenchCost({ preset: low });
     expect(resolution.costSource).toBe("bench_local_pricing");
-    expect(resolution.costRuleVersion).toBe("2026-10-bench-3");
+    expect(resolution.costRuleVersion).toBe("2026-11-bench-4");
     expect(resolution.mode).toBe("token_based");
     // Pricing v3 mantém partial: estimativa de saída comprovada, inputs adicionais.
     expect(resolution.coverage).toBe("partial");
@@ -675,7 +698,7 @@ describe("executeBenchRun — single-shot, custo local e erro sanitizado", () =>
     expect(typeof runUpdate?.values.latency_ms).toBe("number");
     expect(runUpdate?.values.usage).toMatchObject({ promptTokens: 1000 });
     expect(runUpdate?.values.cost_source).toBe("bench_local_pricing");
-    expect(runUpdate?.values.cost_rule_version).toBe("2026-10-bench-3");
+    expect(runUpdate?.values.cost_rule_version).toBe("2026-11-bench-4");
     const detail = runUpdate?.values.cost_detail as Record<string, unknown>;
     expect(detail).toMatchObject({
       provider: "openai",
@@ -740,6 +763,52 @@ describe("executeBenchRun — single-shot, custo local e erro sanitizado", () =>
     const runUpdate = fake.updates.filter((update) => update.table === "lab_bench_runs").at(-1);
     const detail = runUpdate?.values.cost_detail as Record<string, unknown>;
     expect(detail.is_estimate).toBe(true);
+  });
+
+  it("dimensão divergente falha sem resize e persiste usage/custo/dimensões reais", async () => {
+    fakeGateway.result = {
+      imageBase64: testPng.toString("base64"),
+      mimeType: "image/png",
+      model: "gpt-image-2",
+      usage: { promptTokens: 1000, completionTokens: 2000 },
+    };
+    const { client, telemetry } = setup();
+
+    const outcome = await executeBenchRun({
+      client,
+      gateway: fakeGateway,
+      telemetrySink: sink,
+      run: { id: RUN_ID },
+      preset,
+      request: {
+        prompt: "p",
+        size: "1152x2048",
+        expectedAspectRatio: 9 / 16,
+        expectedWidth: 1152,
+        expectedHeight: 2048,
+        productImagesDataUrls: [PNG_A],
+      },
+      telemetry,
+    });
+
+    expect(outcome.status).toBe("failed");
+    expect(outcome.errorType).toBe("bench_dimensions_mismatch");
+    // Nenhum artefato é persistido como saída de sucesso.
+    expect(fake.uploads).toHaveLength(0);
+
+    const runUpdate = fake.updates.filter((update) => update.table === "lab_bench_runs").at(-1);
+    expect(runUpdate?.values.status).toBe("failed");
+    expect(runUpdate?.values.error_type).toBe("bench_dimensions_mismatch");
+    expect(runUpdate?.values.usage).toMatchObject({ promptTokens: 1000 });
+    const technical = runUpdate?.values.technical_validation as Record<string, unknown>;
+    expect(technical).toMatchObject({ width: 4, height: 4 });
+    const detail = runUpdate?.values.cost_detail as Record<string, unknown>;
+    expect(detail).toMatchObject({
+      size: "1152x2048",
+      returned_width: 4,
+      returned_height: 4,
+    });
+    expect(detail.usage_reported).toMatchObject({ promptTokens: 1000 });
   });
 
   it("erro do provider é sanitizado antes de persistir e não há segunda chamada", async () => {
