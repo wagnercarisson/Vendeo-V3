@@ -27,7 +27,7 @@ export const PRODUCT_PROMPT_POLICY_DIMENSIONS = Object.freeze([
   "tema",
 ] as const satisfies readonly ProductPromptPolicyDimension[]);
 
-const pecaUnicaPolicy: ProductPromptPolicy = Object.freeze({
+export const pecaUnicaPolicy: ProductPromptPolicy = Object.freeze({
   id: "policy.estrutura.peca-unica",
   dimension: "estrutura",
   value: "peca-unica",
@@ -42,7 +42,7 @@ const pecaUnicaPolicy: ProductPromptPolicy = Object.freeze({
   },
 });
 
-const temaNenhumPolicy: ProductPromptPolicy = Object.freeze({
+export const temaNenhumPolicy: ProductPromptPolicy = Object.freeze({
   id: "policy.tema.nenhum",
   dimension: "tema",
   value: "nenhum",
@@ -98,7 +98,7 @@ export function validateProductOneToOnePromptPolicyRegistry(
   }
 }
 
-const INTENT_POLICY_VALUES: Readonly<Record<ProductOneToOneIntent, string>> = {
+export const INTENT_POLICY_VALUES: Readonly<Record<ProductOneToOneIntent, string>> = {
   offer: "oferta",
   spotlight: "destaque",
   exclusive: "exclusivo",

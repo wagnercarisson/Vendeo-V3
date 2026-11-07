@@ -8,6 +8,7 @@ import { ImageGenerationService } from "@/lib/image-generation/services/image-ge
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { isForceBriefVisionCheckEnabled, isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-service";
+import { isProduct9x16Enabled } from "@/lib/feature-flags/feature-flag-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
 import { resolveIdentityImageAsDataUrl } from "@/lib/store-identity/identity-image";
@@ -48,6 +49,8 @@ import { NewFlowGenerateImageRequestSchema } from "@/lib/image-generation/schema
 import {
   runProductOneToOneGeneration,
   readProductOneToOneOperation,
+  type ProductOneToOneGenerationDeps,
+  type ProductOneToOneGenerationInput,
 } from "@/lib/product-1-1/orchestration/generation-orchestrator";
 import type { ProductOneToOneCopyContext } from "@/lib/product-1-1/copy/default-copy-runner";
 import { validateOriginalBackground, countProductImages, ORIGINAL_BACKGROUND_REQUIRES_ONE_PRODUCT_IMAGE_MESSAGE } from "@/lib/product-1-1/selection-validation";
@@ -61,6 +64,10 @@ import {
   positiveCentsOrUndefined,
   positivePriceTextBRL,
 } from "@/lib/product-1-1/commercial-price";
+import {
+  resolveCampaignFormat,
+  FORMAT_CONTRACT_VERSION,
+} from "@/lib/campaign/format-resolution";
 
 export const runtime = "nodejs";
 
@@ -122,6 +129,25 @@ function computeFrozenContentHash(
   return createHash("sha256")
     .update(stableStringify(normalized))
     .digest("hex");
+}
+
+/**
+ * F59/D-04 — despacho do novo fluxo pelo formato efetivo. O único import do
+ * runtime vertical permanece DINÂMICO e é executado apenas no ramo 9:16; o
+ * caminho 1:1 não carrega o módulo vertical.
+ */
+async function runNewFlowGeneration(
+  requestedFormat: "1:1" | "9:16",
+  input: ProductOneToOneGenerationInput,
+  pilotSpend: ProductOneToOneGenerationDeps["pilotSpend"],
+): Promise<Response> {
+  if (requestedFormat === "9:16") {
+    const { runProductVertical9x16Generation } = await import(
+      "@/lib/product-vertical-9-16/orchestration/entrypoint"
+    );
+    return await runProductVertical9x16Generation(input, { pilotSpend });
+  }
+  return await runProductOneToOneGeneration(input, { pilotSpend });
 }
 
 export const POST = apiHandler(async (request: NextRequest) => {
@@ -364,6 +390,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         );
       }
       const newFlow = newFlowParsed.data;
+      const requestedFormat = newFlow.campaignFormat ?? "1:1";
       const newFlowBackgroundDirection: ProductOneToOneBackgroundDirection =
         newFlow.backgroundDirection;
       // Loja AUTORIZADA do pedido (`rawStoreId === newFlow.storeId`, já validada por
@@ -410,6 +437,31 @@ export const POST = apiHandler(async (request: NextRequest) => {
           },
           { status: 409 },
         );
+      }
+
+      // F59/D-02/D-04 — formato persistido é a fonte única. Campanha NOVA não
+      // tem formato persistido; nesse caso o formato solicitado é o de criação.
+      if (existingNewFlowCampaign.data) {
+        const persistedFormat = resolveCampaignFormat(
+          existingNewFlowCampaign.data.input_snapshot,
+        );
+        if (persistedFormat.kind === "unavailable") {
+          return Response.json(
+            { error: { code: "format_unavailable", message: "Formato da campanha indisponível." } },
+            { status: 503 },
+          );
+        }
+        if (persistedFormat.kind !== requestedFormat) {
+          return Response.json(
+            {
+              error: {
+                code: "operation_identity_conflict",
+                message: "Formato da campanha divergente.",
+              },
+            },
+            { status: 409 },
+          );
+        }
       }
 
       // (F6/I1 — achado 3) Reenvio = SOMENTE consulta. Reconhece uma operação JÁ
@@ -512,11 +564,37 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
       if (existingNewFlowOperation) {
         // Operação existe ⇒ NENHUMA checagem pré-reserva, validação de entrada,
-        // registro de tentativa ou criação de campanha roda.
-        return await runProductOneToOneGeneration(newFlowOrchestrationInput, {
-          pilotSpend: pilotSpendDep,
-          // (estimativa derivada no runner)
-        });
+        // registro de tentativa ou criação de campanha roda. A flag vertical NÃO
+        // bloqueia reenvio; o formato pedido (já consistente com o persistido)
+        // apenas escolhe o motor que continua a operação.
+        return await runNewFlowGeneration(
+          requestedFormat,
+          newFlowOrchestrationInput,
+          pilotSpendDep,
+        );
+      }
+
+      // F59/D-13 — flag global limita APENAS novas gerações verticais. Reenvio
+      // (bloco acima) não é bloqueado. Fail-closed: ausente/erro ⇒ OFF.
+      if (requestedFormat === "9:16") {
+        let verticalEnabled = false;
+        try {
+          verticalEnabled = await isProduct9x16Enabled();
+        } catch {
+          verticalEnabled = false;
+        }
+        if (!verticalEnabled) {
+          return Response.json(
+            {
+              error: {
+                code: "format_unavailable",
+                message:
+                  "Novas gerações no formato vertical estão temporariamente pausadas.",
+              },
+            },
+            { status: 503 },
+          );
+        }
       }
 
       // Quick 261017-cdi — Oferta: revalidação SERVER-SIDE ANTES de qualquer efeito
@@ -832,6 +910,14 @@ export const POST = apiHandler(async (request: NextRequest) => {
         // Quick 261017-cdi — a paleta canônica resolvida entra no fingerprint do
         // conteúdo congelado das novas campanhas (evidências históricas intactas).
         identityContext: newFlowIdentityContextFrozen,
+        // F59 — SOMENTE o vertical ganha as duas chaves, ANTES do hash. O 1:1
+        // permanece byte-idêntico (sem chaves novas).
+        ...(requestedFormat === "9:16"
+          ? {
+              campaignFormat: "9:16" as const,
+              formatContractVersion: FORMAT_CONTRACT_VERSION,
+            }
+          : {}),
       };
       const newFlowFrozenContentHash = computeFrozenContentHash(
         newFlowFrozenSnapshot,
@@ -968,23 +1054,25 @@ export const POST = apiHandler(async (request: NextRequest) => {
       const newFlowFrozenBriefing = newFlowIdentityContextFrozen
         ? { ...newFlowBriefing, identity: newFlowIdentityContextFrozen }
         : newFlowBriefing;
-      return await runProductOneToOneGeneration(
-        {
-          ...newFlowOrchestrationInput,
-          briefing: newFlowFrozenBriefing,
-          briefingText: JSON.stringify(newFlowFrozenBriefing),
-          references: newFlowEvidenceReferenceSelections.map((selection) => selection.id),
-          referenceSelections: newFlowEvidenceReferenceSelections,
-          identityImageUrl: newFlowIdentityImage?.dataUrl ?? undefined,
-          identityDirective: newFlowIdentityDirective ?? undefined,
-          copyContext: newFlowCopyContext,
-          // F46-04 (D3) — snapshot econômico do run propagado (copy + tentativas).
-          usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
-          creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
-        },
-        // F56.2b2c (B2.3) — conexão server-side OBRIGATÓRIA do gate de gasto do
-        // piloto (null ⇒ piloto INATIVO; preserva o legado).
-        { pilotSpend: pilotSpendDep },
+
+      const verticalOrOneToOneInput = {
+        ...newFlowOrchestrationInput,
+        briefing: newFlowFrozenBriefing,
+        briefingText: JSON.stringify(newFlowFrozenBriefing),
+        references: newFlowEvidenceReferenceSelections.map((selection) => selection.id),
+        referenceSelections: newFlowEvidenceReferenceSelections,
+        identityImageUrl: newFlowIdentityImage?.dataUrl ?? undefined,
+        identityDirective: newFlowIdentityDirective ?? undefined,
+        copyContext: newFlowCopyContext,
+        // F46-04 (D3) — snapshot econômico do run propagado (copy + tentativas).
+        usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+        creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
+      };
+
+      return await runNewFlowGeneration(
+        requestedFormat,
+        verticalOrOneToOneInput,
+        pilotSpendDep,
       );
     }
   }

@@ -73,6 +73,7 @@
 
 ## Current State
 
+- **Quick 261106-qxn (2026-11-06) — CONCLUÍDA; ACEITE MANUAL E REVISÃO FINAL DO ACABAMENTO APROVADOS; PRODUÇÃO NÃO AUTORIZADA.** Clareza da interface de campanhas: seletor de formato no cabeçalho, formato identificado nos cards da listagem/dashboard via contrato persistido, direção de fundo após Formato na revisão e coluna de rótulos do card Oferta em 128 px. Gates focados verdes, typecheck/lint/build e diff check limpos; evidência visual desktop/mobile sem overflow. Commit de acabamento `af04e7ce`; evidência em `.planning/quick/261106-qxn-clareza-da-interface-de-campanhas-seleto/`. Próximo gate: preparação de produção da F59 + quick, ainda não iniciada. Filtro por formato permanece evolução futura; proteção de saída e “Limpar dados” seguem separados.
 - F50 permanece encerrada: 17/17 planos e 17/17 summaries, em 10 waves; OpenSpec arquivado.
 - F48.2.6 concluÃƒÆ’Ã‚Â­da, verificada, sincronizada e arquivada em 2026-10-05 (10/10 planos, UAT 5/5, CHECKPOINT B `approved_with_limitations`, 42/42 tasks). `/opsx-verify`, `/opsx-sync` e `/opsx-archive` executados; **8 specs principais sincronizados** (6 atualizados + 2 criados). LimitaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes e critÃƒÆ’Ã‚Â©rios UAT sem evidÃƒÆ’Ã‚Âªncia permanecem `pending`; sem promoÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o produtiva.
 - DemonstraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o pÃƒÆ’Ã‚Âºblica, e-mail e signup pÃƒÆ’Ã‚Âºblico permanecem desativados; o beta fechado estÃƒÆ’Ã‚Â¡ preservado.
@@ -728,3 +729,61 @@ Plans:
 **Canonical refs:** `openspec/changes/archive/2026-11-02-fase-58-composicao-operacional-do-dashboard/` (proposal, design, tasks, specs arquivadas), `58-PUBLICATION-RECONCILIATION.md` (adendo de integração/publicação/aceite), specs sincronizadas `openspec/specs/dashboard-operational-composition/`, `dashboard-localization/`, `dashboard-inteligente/`, `changelog-ui/`, `openspec/design-system/MASTER.md`, `openspec/design-system/pages/dashboard.md` (referência histórica; não prevalece sobre a F58).
 
 **Diretório:** `.planning/phases/58-f58-composi-o-operacional-do-dashboard/`.
+
+### Phase 59: F59 - Campanhas de Produto vertical 9:16
+
+**Status:** **CONCLUÍDA TECNICAMENTE E EM HOMOLOGAÇÃO NO ESCOPO 9:16 (2026-11-06).** Gates reais executados no homolog: geração/entrega 1080×1920, crédito, download, detalhe/lista, miniatura, recuperação, resolução administrativa, `unknown`→`refunded`, flag OFF, in-flight, concorrência de rota e SQL, reenvio e regressão 1:1. **53/53 tasks**; **69 arquivos / 1196 testes**; typecheck/lint/OpenSpec strict/diff check verdes. Reels aceito com ressalva observada no Facebook; custo calculado por usage e pricing 0,030441 (não é fatura); auditoria do replay terminal aceita como exceção em `.planning/issues/59-AUDIT-REPLAY-GAP.md`; proteção contra perda de dados fora de escopo. **Produção não autorizada.** OpenSpec arquivado em `openspec/changes/archive/2026-11-06-fase-59-campanhas-produto-vertical-9-16/`. A quick `261106-qxn` foi concluída e aceita em 2026-11-06 como pré-requisito de clareza da interface (seletor, formato nos cards e direção de fundo na revisão); evidência em `.planning/quick/261106-qxn-clareza-da-interface-de-campanhas-seleto/`.
+
+**Próximo gate — preparação para produção da F59 + quick 261106-qxn (não iniciado):** preflight read-only de produção; reconciliação de branch/commits e confirmação de que a quick está integrada ao conjunto promovido; plano explícito da migration data-only da flag `product_9_16_enabled`, com autorização própria, rollback e janela; autorização separada para deploy, ativação e smoke; evidência de rollback e critérios de aceite de produção. Nenhuma etapa de produção foi iniciada. **Deploy automático ao push na main: não verificado nesta preparação.** Checklist: `docs/operations/f59-quick-261106-qxn-promotion-checklist.md`. Filtro por formato permanece evolução futura; proteção de saída e “Limpar dados” continuam itens separados.
+
+**Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
+
+**Requirements**: REQ-59-01, REQ-59-02, REQ-59-03, REQ-59-04, REQ-59-05, REQ-59-06, REQ-59-07, REQ-59-08, REQ-59-09, REQ-59-10, REQ-59-11, REQ-59-12, REQ-59-13, REQ-59-14
+
+**Depends on:** Phase 58 (dashboard integrado), F56.2b1b/F56.2b2b (fluxo novo Produto 1:1, artefato, crédito e recuperação), F57.4 (localização) e base OpenSpec aprovada da F59.
+
+**Plans:** 10/10 plans executed (59-01..59-10)
+
+**Source:** `openspec/changes/archive/2026-11-06-fase-59-campanhas-produto-vertical-9-16/` — proposal, design, tasks e delta specs arquivados; specs principais sincronizadas.
+
+**Canonical refs:** `AGENTS.md`; `docs/fluxo-de-desenvolvimento.md`; `openspec/changes/fase-59-campanhas-produto-vertical-9-16/proposal.md`, `design.md`, `tasks.md` e `specs/**`; `openspec/specs/product-1-1-artifact-delivery/`, `product-1-1-generation-orchestration/`, `product-1-1-campaign-credit-billing/`, `product-1-1-copy-recovery/`, `product-1-1-flow-activation/`, `campaign-input-ui/`, `copy-director/`, `ai-image-generation/`, `image-generation-model-pair-config/`, `image-generation-config-snapshot/`; `openspec/design-system/CAMPAIGN_VISUAL_SYSTEM.md`; `openspec/design-system/pages/campaign-input.md`, `campaign-preview.md`, `review-export.md`.
+
+**Código de referência:** `src/lib/product-1-1/**`, `src/app/api/campaign/generate-image/route.ts`, `src/app/api/campaign/[id]/download/route.ts`, `src/app/api/campaign/[id]/image-recovery/route.ts`, `src/app/(app)/campanhas/[id]/page.tsx`, `src/lib/campaign/display.ts`, `src/lib/campaign/thumbnail/**`, `src/lib/feature-flags/feature-flag-service.ts`, `src/lib/ai/adapters/upstream-images.ts`, `src/lib/ai-cost/image-pair-pricing.ts`, `src/lib/product-1-1/pilot/**`.
+
+**Bloqueios e checkpoints:** prova de provider paga (matriz derivada do par principal/fallback efetivo do 1:1 e do pricing compartilhado, teto US$ 3,00, estimativa conservadora antes da primeira chamada, retries contabilizados) exige autorização específica; migration data-only da flag exige checkpoint próprio; homolog com lojas de teste; produção é gate posterior. Nenhuma implementação, migration, chamada paga, push ou deploy nesta fase de planejamento.
+
+**Diretório:** `.planning/phases/59-f59-campanhas-de-produto-vertical-9-16/`.
+Plans:
+**Wave 1**
+
+- [x] 59-01-PLAN.md — Contratos puros: formato/versão, dimensões 1152×2048→1080×1920, paths verticais, política safe-area-9-16-v1 e reconhecimento de path de miniatura
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 59-02-PLAN.md — Prova de provider em homolog: estimativa vertical conservadora antes da primeira chamada, matriz derivada do par 1:1 efetivo e teto US$ 3,00 (checkpoint pago) — **8/8 chamadas; custo real US$ 0,211210; cobrado US$ 0,86; nenhum unknown/dimension_mismatch**
+- [x] 59-03-PLAN.md — Composição vertical: políticas, prompt derivado, fixtures 3 intenções × 3 fundos, Copy Director intacto e timing
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 59-04-PLAN.md — Pipeline de arte vertical: JPEG 1080×1920, store/probe/download/signed URL, metadados e miniatura vertical
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 59-05-PLAN.md - Engine/perfil vertical: `composePrompt`/`imageSize`/`beforeReservation` aditivos, crédito, fence, falha/desconhecido, projeção com expected path
+
+**Wave 5** *(completed; homologated)*
+
+- [x] 59-06-PLAN.md - Recuperação vertical completa: image-recovery, recovery service, pending/admin, projeção e teste ponta a ponta
+- [x] 59-07-PLAN.md - Criação: schema `campaignFormat`, congelamento/hash, despacho 409, flag global + seed data-only, seletor UI/estado
+
+**Wave 6** *(completed; homologated)*
+
+- [x] 59-08-PLAN.md — Restauração do formulário e entrega por formato: download, detalhe, listagem e miniaturas
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [x] 59-09-PLAN.md — Telemetria de formato/dimensões, runbook, gates locais e regressão 1:1 — **concluído; homologação executada; sem pendências locais**
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [x] 59-10-PLAN.md — Homolog/aceite: lojas de teste, matriz funcional, sobreposições, falhas/recuperação, 1:1 manual e relatório; gate de produção separado — **concluído; 53/53 tasks; produção não autorizada**

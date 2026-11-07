@@ -27,6 +27,7 @@ const mockReadyCampaign: CampaignListItem = {
   thumbnailUrl: "https://example.com/thumb.jpg",
   storagePath: "store-123/id-1.jpg",
   flow: "legacy",
+  format: "1:1",
 };
 
 const mockErrorCampaign: CampaignListItem = {
@@ -37,6 +38,7 @@ const mockErrorCampaign: CampaignListItem = {
   thumbnailUrl: null,
   storagePath: "store-123/id-2.jpg",
   flow: "legacy",
+  format: "9:16",
 };
 
 const mockNewFlowClosedCampaign: CampaignListItem = {
@@ -47,6 +49,7 @@ const mockNewFlowClosedCampaign: CampaignListItem = {
   thumbnailUrl: null,
   storagePath: "store-123/id-3.jpg",
   flow: "new",
+  format: null,
 };
 
 const baseProps = {
@@ -75,6 +78,41 @@ describe("CampaignListClient — display", () => {
     expect(
       screen.getByText(expectedLocalDate(mockErrorCampaign.createdAt)),
     ).toBeInTheDocument();
+  });
+
+  it("Quick 261106-qxn: exibe os rótulos de formato junto aos metadados", () => {
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign, mockErrorCampaign]}
+        {...baseProps}
+      />,
+    );
+
+    expect(screen.getByText("1:1 quadrado")).toBeInTheDocument();
+    expect(screen.getByText("9:16 vertical")).toBeInTheDocument();
+  });
+
+  it("Quick 261106-qxn: formato indisponível não exibe identificador", () => {
+    render(
+      <CampaignListClient items={[mockNewFlowClosedCampaign]} {...baseProps} total={1} />,
+    );
+
+    expect(screen.queryByText("1:1 quadrado")).not.toBeInTheDocument();
+    expect(screen.queryByText("9:16 vertical")).not.toBeInTheDocument();
+  });
+
+  it("Quick 261106-qxn: traduz os rótulos de formato em es-419", () => {
+    render(
+      <CampaignListClient
+        items={[mockReadyCampaign, mockErrorCampaign]}
+        {...baseProps}
+        messages={es419CampaignListMessages}
+        locale="es-419"
+      />,
+    );
+
+    expect(screen.getByText("1:1 cuadrado")).toBeInTheDocument();
+    expect(screen.getByText("9:16 vertical")).toBeInTheDocument();
   });
 
   it("shows Baixar button only for ready campaigns", () => {

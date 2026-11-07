@@ -32,6 +32,8 @@ const EXPECTED_PT_KEYS = [
   "empty.noCampaignsTitle",
   "empty.searchBody",
   "empty.searchTitle",
+  "format.square",
+  "format.vertical",
   "filters.period30d",
   "filters.period7d",
   "filters.period90d",
@@ -63,6 +65,7 @@ const NAMESPACES = [
   "search",
   "filters",
   "status",
+  "format",
   "actions",
   "empty",
   "noStore",
@@ -148,6 +151,10 @@ describe("catálogos do namespace da listagem pt-BR e es-419", () => {
     expect(ptBRCampaignListMessages.status.ready).toBe("Pronta");
     expect(ptBRCampaignListMessages.status.incomplete).toBe("Não concluída");
     expect(ptBRCampaignListMessages.status.error).toBe("Erro");
+    expect(ptBRCampaignListMessages.format.square).toBe("1:1 quadrado");
+    expect(ptBRCampaignListMessages.format.vertical).toBe("9:16 vertical");
+    expect(es419CampaignListMessages.format.square).toBe("1:1 cuadrado");
+    expect(es419CampaignListMessages.format.vertical).toBe("9:16 vertical");
     expect(ptBRCampaignListMessages.actions.open).toBe("Abrir");
     expect(ptBRCampaignListMessages.actions.download).toBe("Baixar");
     expect(ptBRCampaignListMessages.pagination.previous).toBe("<< Anterior");

@@ -3,6 +3,10 @@ import "server-only";
 import { createServerClient } from "@/lib/supabase/server";
 import { generateBatchThumbnailUrls } from "@/lib/campaign/list";
 import { countReadyCampaigns } from "@/lib/campaign/metrics";
+import {
+  resolveCampaignFormat,
+  type CampaignFormat,
+} from "@/lib/campaign/format-resolution";
 
 export const DASHBOARD_CAMPAIGN_LIMIT = 3;
 
@@ -15,6 +19,8 @@ export interface EligibleCampaignCard {
   productName: string;
   createdAt: string;
   thumbnailUrl: string | null;
+  /** Quick 261106-qxn — resolvido no servidor; `null` = indisponível. */
+  format: CampaignFormat | null;
 }
 
 export interface EligibleCampaignOverview {
@@ -27,6 +33,7 @@ interface EligibleCampaignRow {
   product_name: string;
   created_at: string;
   storage_path: string;
+  input_snapshot: Record<string, unknown> | null;
 }
 
 /**
@@ -42,7 +49,7 @@ export async function queryEligibleCampaigns(
 
   const { data, error } = await supabase
     .from("campaigns")
-    .select("id, product_name, created_at, storage_path")
+    .select("id, product_name, created_at, storage_path, input_snapshot")
     .eq("store_id", storeId)
     .eq("status", "ready")
     .order("created_at", { ascending: false })
@@ -60,12 +67,17 @@ export async function queryEligibleCampaigns(
     })),
   );
 
-  return rows.map((row) => ({
-    id: row.id,
-    productName: row.product_name,
-    createdAt: row.created_at,
-    thumbnailUrl: thumbnails[row.id] ?? null,
-  }));
+  return rows.map((row) => {
+    const formatResolution = resolveCampaignFormat(row.input_snapshot);
+    return {
+      id: row.id,
+      productName: row.product_name,
+      createdAt: row.created_at,
+      thumbnailUrl: thumbnails[row.id] ?? null,
+      format:
+        formatResolution.kind === "unavailable" ? null : formatResolution.kind,
+    };
+  });
 }
 
 /**

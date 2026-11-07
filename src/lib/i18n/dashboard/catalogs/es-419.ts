@@ -34,6 +34,10 @@ export const es419DashboardMessages = Object.freeze({
   }),
   campaigns: Object.freeze({
     sectionLabel: "Campañas recientes",
+    format: Object.freeze({
+      square: "1:1 cuadrado",
+      vertical: "9:16 vertical",
+    }),
     countSingular: "{count} campaña disponible",
     countPlural: "{count} campañas disponibles",
     emptyTitle: "No hay campañas disponibles",

@@ -8,6 +8,11 @@ import type {
   CampaignRecord,
   CampaignStatus,
 } from "./types";
+import {
+  CAMPAIGN_FORMAT_KEY,
+  resolveCampaignFormat,
+  type CampaignFormatUnavailableReason,
+} from "./format-resolution";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -59,6 +64,11 @@ export interface CampaignPageProps {
   downloadUrl: string;
   campaignId: string;
   isPublicationCopyEdited: boolean;
+  /**
+   * F59/D-12 — formato PERSISTIDO do novo fluxo, resolvido server-side. Ausente
+   * em legado/formato indisponível ⇒ tratamento 1:1 atual.
+   */
+  newFlowFormat?: "1:1" | "9:16";
   /**
    * F56.2b1b (B1B-D7 / REQ-56.2.2-09): estado do NOVO fluxo Product 1:1, derivado
    * da OPERAÇÃO PERSISTIDA (`getCampaignOperation`) — nunca de `campaign.status`.
@@ -445,6 +455,19 @@ export interface CampaignFormRestore {
   readonly referenceSelections: ReadonlyArray<unknown>;
   /** LIMITAÇÃO HONESTA: a imagem do produto/referências é client-only. */
   readonly imageRestoreLimited: true;
+  /**
+   * F59/D-03 — formato PERSISTIDO do rascunho. Ausência das duas chaves no
+   * snapshot ⇒ `1:1` (contrato histórico). Nunca inferido pelo cliente.
+   */
+  readonly campaignFormat?: "1:1" | "9:16";
+  readonly formatContractVersion?: string | null;
+  /**
+   * `true` quando o par formato/versão persistido é malformado/incoerente. O
+   * formulário BLOQUEIA a submissão e nunca troca silenciosamente para 1:1.
+   */
+  readonly formatUnavailable?: boolean;
+  /** Diagnóstico/telemetria — nunca exibido ao lojista. */
+  readonly formatUnavailableReason?: CampaignFormatUnavailableReason;
 }
 
 export interface RestorableSnapshotInput {
@@ -489,6 +512,32 @@ export function mapRestoredForm(
   const product = asRecord(snap.product);
   const name = typeof product?.name === "string" ? product.name : "";
   if (!name.trim()) return null;
+
+  // F59 — MESMA tabela neutra usada pela criação/recuperação. Nenhuma variante
+  // local: pares malformados/incoerentes viram `formatUnavailable` (bloqueio).
+  const formatResolution = resolveCampaignFormat(snap);
+  const rawFormat = snap[CAMPAIGN_FORMAT_KEY];
+  const displayFormat: "1:1" | "9:16" | undefined =
+    rawFormat === "9:16" || rawFormat === "1:1" ? rawFormat : undefined;
+  const formatFields =
+    formatResolution.kind === "9:16"
+      ? {
+          campaignFormat: "9:16" as const,
+          formatContractVersion: formatResolution.contractVersion,
+          formatUnavailable: false,
+        }
+      : formatResolution.kind === "1:1"
+        ? {
+            campaignFormat: "1:1" as const,
+            formatContractVersion: null,
+            formatUnavailable: false,
+          }
+        : {
+            ...(displayFormat ? { campaignFormat: displayFormat } : {}),
+            formatContractVersion: null,
+            formatUnavailable: true,
+            formatUnavailableReason: formatResolution.reason,
+          };
 
   const commercial = asRecord(snap.commercial) ?? {};
   const creative = asRecord(snap.creativeContext) ?? {};
@@ -554,6 +603,7 @@ export function mapRestoredForm(
     identityDirective,
     referenceSelections,
     imageRestoreLimited: true,
+    ...formatFields,
   };
 }
 

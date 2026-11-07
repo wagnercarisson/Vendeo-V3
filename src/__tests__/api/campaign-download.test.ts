@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -31,6 +33,22 @@ vi.mock("@/lib/product-1-1/artifact/artifact-store", () => ({
     }
     downloadArtifact(...args: unknown[]) {
       return mockNewFlow.downloadArtifact(...args);
+    }
+  },
+}));
+
+const mockVerticalFlow = vi.hoisted(() => ({
+  probeArtifact: vi.fn(),
+  downloadArtifact: vi.fn(),
+}));
+
+vi.mock("@/lib/product-vertical-9-16/artifact/artifact-store", () => ({
+  VerticalArtifactStore: class {
+    probeArtifact(...args: unknown[]) {
+      return mockVerticalFlow.probeArtifact(...args);
+    }
+    downloadArtifact(...args: unknown[]) {
+      return mockVerticalFlow.downloadArtifact(...args);
     }
   },
 }));
@@ -113,6 +131,8 @@ beforeEach(() => {
   mockNewFlow.getCampaignOperation.mockResolvedValue(null);
   mockNewFlow.probeArtifact.mockResolvedValue({ kind: "absent" });
   mockNewFlow.downloadArtifact.mockRejectedValue(new Error("not expected"));
+  mockVerticalFlow.probeArtifact.mockResolvedValue({ kind: "absent" });
+  mockVerticalFlow.downloadArtifact.mockRejectedValue(new Error("not expected"));
 });
 
 describe("GET /api/campaign/[id]/download", () => {
@@ -406,9 +426,37 @@ describe("F56.2.6 — download do novo fluxo (proxy, não redirect)", () => {
     },
   };
 
-  function ready(operation: unknown = DELIVERED_OPERATION, probe: unknown = INTEGRAL_PROBE) {
+  const VERTICAL_CAMPAIGN = {
+    ...NEW_FLOW_CAMPAIGN,
+    storage_path: `${VALID_UUID}/${VALID_UUID}/product-9-16/${VALID_UUID}/art-1080x1920.jpg`,
+    input_snapshot: {
+      frozenContentReferences: [],
+      campaignFormat: "9:16",
+      formatContractVersion: "f59-vertical-9-16-v1",
+    },
+  };
+
+  const VERTICAL_INTEGRAL_PROBE = {
+    kind: "integral",
+    storagePath: VERTICAL_CAMPAIGN.storage_path,
+    width: 1080,
+    height: 1920,
+    mimeType: "image/jpeg",
+    ref: {
+      storagePath: VERTICAL_CAMPAIGN.storage_path,
+      width: 1080,
+      height: 1920,
+      mimeType: "image/jpeg",
+    },
+  };
+
+  function ready(
+    operation: unknown = DELIVERED_OPERATION,
+    probe: unknown = INTEGRAL_PROBE,
+    campaign: unknown = NEW_FLOW_CAMPAIGN,
+  ) {
     mockRequireApiUserImpl.mockResolvedValue({ userId: "user-123", claims: { sub: "user-123" } });
-    mockGetCampaignImpl.mockResolvedValue(NEW_FLOW_CAMPAIGN);
+    mockGetCampaignImpl.mockResolvedValue(campaign);
     mockRequireOwnershipImpl.mockResolvedValue({ id: "store-1" });
     mockNewFlow.getCampaignOperation.mockResolvedValue(operation);
     mockNewFlow.probeArtifact.mockResolvedValue(probe);
@@ -466,6 +514,66 @@ describe("F56.2.6 — download do novo fluxo (proxy, não redirect)", () => {
     expect(response.status).toBe(502);
   });
 
+  it("F59: 9:16 entregue + arte vertical íntegra → 200 via store vertical", async () => {
+    ready(DELIVERED_OPERATION, VERTICAL_INTEGRAL_PROBE, VERTICAL_CAMPAIGN);
+    mockVerticalFlow.probeArtifact.mockResolvedValue(VERTICAL_INTEGRAL_PROBE);
+    mockVerticalFlow.downloadArtifact.mockResolvedValue({
+      buffer: Buffer.from("vertical-bytes"),
+      mimeType: "image/jpeg",
+    });
+
+    const response = await call();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(response.headers.get("Content-Disposition")).toContain("attachment;");
+    expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("vertical-bytes");
+    expect(mockVerticalFlow.probeArtifact).toHaveBeenCalledTimes(1);
+    expect(mockVerticalFlow.downloadArtifact).toHaveBeenCalledWith(
+      VERTICAL_CAMPAIGN.storage_path,
+    );
+    expect(mockNewFlow.probeArtifact).not.toHaveBeenCalled();
+    expect(mockNewFlow.downloadArtifact).not.toHaveBeenCalled();
+  });
+
+  it("F59: 9:16 não entregue → 403 sem download", async () => {
+    ready(
+      { ...DELIVERED_OPERATION, status: "art_uploaded", terminal: false },
+      VERTICAL_INTEGRAL_PROBE,
+      VERTICAL_CAMPAIGN,
+    );
+    mockVerticalFlow.probeArtifact.mockResolvedValue(VERTICAL_INTEGRAL_PROBE);
+    const response = await call();
+    expect(response.status).toBe(403);
+    expect(mockVerticalFlow.downloadArtifact).not.toHaveBeenCalled();
+  });
+
+  it("F59: 9:16 com probe invalid → 403 sem download", async () => {
+    ready(DELIVERED_OPERATION, { kind: "invalid" }, VERTICAL_CAMPAIGN);
+    mockVerticalFlow.probeArtifact.mockResolvedValue({ kind: "invalid" });
+    const response = await call();
+    expect(response.status).toBe(403);
+    expect(mockVerticalFlow.downloadArtifact).not.toHaveBeenCalled();
+  });
+
+  it("F59: formato malformado → 503, sem sonda e sem fallback para 1:1", async () => {
+    ready(DELIVERED_OPERATION, INTEGRAL_PROBE, {
+      ...NEW_FLOW_CAMPAIGN,
+      input_snapshot: {
+        frozenContentReferences: [],
+        campaignFormat: "16:9",
+      },
+    });
+    const response = await call();
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("format_unavailable");
+    expect(mockNewFlow.probeArtifact).not.toHaveBeenCalled();
+    expect(mockVerticalFlow.probeArtifact).not.toHaveBeenCalled();
+    expect(mockNewFlow.downloadArtifact).not.toHaveBeenCalled();
+    expect(mockVerticalFlow.downloadArtifact).not.toHaveBeenCalled();
+  });
+
   it("marcador novo sem operação → 503 (fail-closed)", async () => {
     ready(null);
     const response = await call();
@@ -509,5 +617,18 @@ describe("F56.2.6 — download do novo fluxo (proxy, não redirect)", () => {
     expect(response.headers.get("Content-Disposition")).toBe(
       'attachment; filename="produto_teste-2026-07-10.jpg"',
     );
+  });
+});
+
+describe("F59/59-08 — contrato estrutural do download", () => {
+  it("despacha o vertical por import dinâmico, sem assinar URL e sem consultar a flag", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/app/api/campaign/[id]/download/route.ts"),
+      "utf8",
+    );
+    expect(source).toMatch(/product-vertical-9-16/);
+    expect(source).toMatch(/VerticalArtifactStore/);
+    expect(source).not.toMatch(/createSignedUrl|getSignedArtifactUrl/);
+    expect(source).not.toMatch(/FeatureFlagService/);
   });
 });

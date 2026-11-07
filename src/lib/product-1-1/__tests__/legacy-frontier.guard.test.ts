@@ -117,8 +117,8 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/types.ts",
     authorization:
-      "quick 261010-rsp (diagnóstico aditivo de identidade visual) + F56.2b1b Plano 08 P1 Opção A (tipo aditivo AiEnvelopeInternalCost) + quick 261026-p11 (settlement/tokenPricing no custo interno)",
-    commit: "2d42c512",
+      "quick 261010-rsp + F56.2b1b Plano 08 P1 Opção A + quick 261026-p11 + F59/59-09 (metadata aditivo de auditoria por tentativa)",
+    commit: "98cabd39",
   },
   {
     path: "src/lib/ai/telemetry-sink.ts",
@@ -155,8 +155,26 @@ const AUTHORIZED_FRONTIER_CHANGES: readonly AuthorizedFrontierChange[] = [
   {
     path: "src/lib/ai/gateway.ts",
     authorization:
-      "quick gpt6-luna (AiInvoker/AiGateway: prepare/invokePrepared + correções) + quick 261026-vs (cópia do alvo para o envelope de sucesso/falha)",
-    commit: "43652290",
+      "quick gpt6-luna + quick 261026-vs + F59/59-09 (metadata aditivo do result apenas no envelope de sucesso)",
+    commit: "98cabd39",
+  },
+  {
+    path: "src/lib/ai/adapters/proof-openai-loader.ts",
+    authorization:
+      "F59/59-02 + correção 59-09 (loader da prova movido para a fronteira permitida de adapters, sem alterar o loader 1:1)",
+    commit: "67bb3f9e",
+  },
+  {
+    path: "src/lib/ai/image-model-pair-config-row.ts",
+    authorization:
+      "F59/59-02 (extração pura do contrato de linha do par modelo/qualidade)",
+    commit: "68b2e035",
+  },
+  {
+    path: "src/lib/ai/image-model-pair-config-service.ts",
+    authorization:
+      "F59/59-02 (serviço de leitura do par preservando o contrato existente)",
+    commit: "68b2e035",
   },
   {
     path: "src/lib/ai/__tests__/gateway-prepared.test.ts",

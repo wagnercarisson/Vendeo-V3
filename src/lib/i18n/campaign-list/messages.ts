@@ -34,6 +34,11 @@ export interface CampaignListStatusMessages {
   readonly error: string;
 }
 
+export interface CampaignListFormatMessages {
+  readonly square: string;
+  readonly vertical: string;
+}
+
 export interface CampaignListActionMessages {
   readonly open: string;
   readonly download: string;
@@ -63,6 +68,7 @@ export interface CampaignListMessages {
   readonly search: CampaignListSearchMessages;
   readonly filters: CampaignListFilterMessages;
   readonly status: CampaignListStatusMessages;
+  readonly format: CampaignListFormatMessages;
   readonly actions: CampaignListActionMessages;
   readonly empty: CampaignListEmptyMessages;
   readonly noStore: CampaignListNoStoreMessages;

@@ -112,6 +112,50 @@ describe("listCampaigns", () => {
     expect(rangeFn).toHaveBeenCalledWith(0, 9);
   });
 
+  it("Quick 261106-qxn: resolve o formato do snapshot persistido, sem inferir pelo path", async () => {
+    const rows = [
+      {
+        id: "id-square",
+        product_name: "Produto 1:1",
+        status: "ready",
+        created_at: "2026-07-10T12:00:00Z",
+        storage_path: `${STORE_ID}/${CAMPAIGN_1}.jpg`,
+        input_snapshot: {},
+      },
+      {
+        id: "id-vertical",
+        product_name: "Produto 9:16",
+        status: "ready",
+        created_at: "2026-07-09T12:00:00Z",
+        storage_path: `${STORE_ID}/${CAMPAIGN_2}.jpg`,
+        input_snapshot: {
+          campaignFormat: "9:16",
+          formatContractVersion: "f59-vertical-9-16-v1",
+        },
+      },
+      {
+        id: "id-invalid",
+        product_name: "Produto inválido",
+        status: "error",
+        created_at: "2026-07-08T12:00:00Z",
+        storage_path: `${STORE_ID}/${CAMPAIGN_3}.jpg`,
+        input_snapshot: {
+          campaignFormat: "9:16",
+        },
+      },
+    ];
+    buildChain(rows);
+
+    const { listCampaigns } = await import("@/lib/campaign/list");
+    const result = await listCampaigns("store-123");
+
+    expect(result.items.map((item) => item.format)).toEqual([
+      "1:1",
+      "9:16",
+      null,
+    ]);
+  });
+
   it("filters by status IN ('ready', 'error') via .in() call", async () => {
     const rows = mockDefaultRows();
     let capturedInArgs: [string, string[]] | null = null;

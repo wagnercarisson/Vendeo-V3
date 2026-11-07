@@ -137,6 +137,25 @@ export interface PreparedCampaignImage {
   dataUrl: string;
 }
 
+/**
+ * Quick 261106-qxn — o formato não pode mudar depois que a revisão começa
+ * (inclui a preparação), durante a submissão ou enquanto o resultado é
+ * desconhecido. Função pura para manter o guard do `setField` testável.
+ */
+export function isCampaignFormatLocked(state: {
+  reviewMode: boolean;
+  preparing: boolean;
+  isSubmitting: boolean;
+  unknownResult: unknown;
+}): boolean {
+  return (
+    state.reviewMode ||
+    state.preparing ||
+    state.isSubmitting ||
+    state.unknownResult !== null
+  );
+}
+
 export interface CampaignFormFields {
   productName: string;
   description: string;
@@ -159,6 +178,8 @@ export interface CampaignFormFields {
    * preservar rascunhos/consumidores legados; na ausência assume-se `studio`.
    */
   backgroundDirection?: ProductOneToOneBackgroundDirection;
+  /** F59/D-03 — formato do fluxo novo; default `1:1`. */
+  campaignFormat?: "1:1" | "9:16";
 }
 
 export type FieldErrors = Partial<
@@ -178,7 +199,8 @@ export type FieldErrors = Partial<
     | "validityStartDate"
     | "validityEndDate"
     | "validityCustomText"
-    | "backgroundDirection",
+    | "backgroundDirection"
+    | "campaignFormat",
     string
   >
 >;
@@ -279,6 +301,7 @@ const EMPTY_FIELDS: CampaignFormFields = {
   validityEndDate: "",
   validityCustomText: "",
   backgroundDirection: "studio",
+  campaignFormat: "1:1",
 };
 
 function validateProductName(value: string): string | null {
@@ -697,6 +720,9 @@ export function buildCampaignGenerationBody(
   // byte-compatível com o legado (mesmas chaves, mesma ordem).
   if (options?.eligible) {
     body.backgroundDirection = fields.backgroundDirection ?? "studio";
+    if (fields.campaignFormat === "9:16") {
+      body.campaignFormat = "9:16";
+    }
     if (options.identity) {
       body.campaignId = options.identity.campaignId;
       body.operationId = options.identity.operationId;
@@ -733,6 +759,10 @@ function restoredFormToFields(
   if (restored.backgroundDirection) {
     fields.backgroundDirection = restored.backgroundDirection;
   }
+  // F59/D-03 — hidrata o formato PERSISTIDO. Vertical NUNCA cai para 1:1.
+  if (restored.campaignFormat === "9:16" || restored.campaignFormat === "1:1") {
+    fields.campaignFormat = restored.campaignFormat;
+  }
   return fields;
 }
 
@@ -761,9 +791,15 @@ function resolveHydratedBackgroundDirection(
 
 export function useCampaignForm(
   storeId?: string,
-  options?: { eligible?: boolean; restoredForm?: CampaignFormRestore | null },
+  options?: {
+    eligible?: boolean;
+    restoredForm?: CampaignFormRestore | null;
+    /** F59/D-03 — rascunho vertical pausado: bloqueia retry/reenvio. */
+    campaignFormatPaused?: boolean;
+  },
 ): UseCampaignFormReturn {
   const eligible = options?.eligible === true;
+  const campaignFormatPaused = options?.campaignFormatPaused === true;
   // F56.2b2b (C4 / B2B-D9): snapshot server-side + escopo do rascunho pela
   // campanha-ORIGEM. `restoredForm` NUNCA carrega a operação estornada (sem
   // `operationId`): a nova submissão gera NOVOS ids.
@@ -791,6 +827,7 @@ export function useCampaignForm(
     validityEndDate: false,
     validityCustomText: false,
     backgroundDirection: false,
+    campaignFormat: false,
   });
   const [rawOriginalPrice, setRawOriginalPrice] = useState("");
   const [rawDiscountedPrice, setRawDiscountedPrice] = useState("");
@@ -904,10 +941,19 @@ export function useCampaignForm(
             restoredForm.backgroundDirection,
           )
         : undefined;
+      // F59/D-03 — o rascunho local pode ser ANTERIOR ao campo de formato. Se ele
+      // não trouxer um formato válido, o formato PERSISTIDO do restore é o
+      // fallback; NUNCA o default 1:1 do formulário.
+      const savedFormat =
+        saved.campaignFormat === "1:1" || saved.campaignFormat === "9:16"
+          ? saved.campaignFormat
+          : undefined;
+      const resolvedFormat = savedFormat ?? restoredForm?.campaignFormat;
       setFields((prev) => ({
         ...prev,
         ...restored,
         ...(restoredForm ? { backgroundDirection: resolvedDirection } : {}),
+        ...(resolvedFormat ? { campaignFormat: resolvedFormat } : {}),
       }));
       // Recorte 3 (Plano 10): a intenção HIDRATADA é uma SELEÇÃO EXPLÍCITA — evita
       // que a inferência por preço a sobrescreva no primeiro ciclo.
@@ -1093,6 +1139,21 @@ export function useCampaignForm(
 
   const setField = useCallback(
     (field: keyof CampaignFormFields, value: string | number | boolean | File | null | undefined | CampaignProductFormImage[]) => {
+      // Quick 261106-qxn — o formato é congelado assim que a revisão começa
+      // (preparação inclusa) e permanece congelado durante a geração/resultado
+      // desconhecido. Para trocar de formato, o usuário volta à edição pelo
+      // caminho explícito "Voltar e editar".
+      if (
+        field === "campaignFormat" &&
+        isCampaignFormatLocked({
+          reviewMode,
+          preparing,
+          isSubmitting,
+          unknownResult,
+        })
+      ) {
+        return;
+      }
       setFields((prev) => {
         const next = { ...prev, [field]: value as never };
         if (field === "mandatoryArtworkText") next.mandatoryArtworkTextFree = value as string;
@@ -1106,7 +1167,7 @@ export function useCampaignForm(
         return next;
       });
     },
-    []
+    [reviewMode, preparing, isSubmitting, unknownResult]
   );
 
   const handleBlur = useCallback(
@@ -1456,6 +1517,7 @@ export function useCampaignForm(
         validityEndDate: true,
         validityCustomText: true,
         backgroundDirection: true,
+        campaignFormat: true,
       });
       setIsSubmitting(false);
       return;
@@ -1690,6 +1752,7 @@ export function useCampaignForm(
         validityEndDate: true,
         validityCustomText: true,
         backgroundDirection: true,
+        campaignFormat: true,
       });
       return false;
     }
@@ -1774,6 +1837,7 @@ export function useCampaignForm(
   // (fields + preparedImages congelados; body imutável) e dispara o submit real
   // com inputValidationOverride.productImageCheck = "brief_review_confirmed".
   const confirmReview = useCallback(async (): Promise<void> => {
+    if (campaignFormatPaused) return;
     if (!storeId || !preparedImages) return;
     prePersistedIdentityRef.current = false;
     const frozenFields = { ...fields };
@@ -1810,13 +1874,15 @@ export function useCampaignForm(
     setPhases([]);
     setUnknownResult(null);
     await consumeStream(body, new AbortController());
-  }, [storeId, preparedImages, fields, eligible]);
+  }, [storeId, preparedImages, fields, eligible, campaignFormatPaused]);
 
-  // F43 (mini-fix): "Tentar novamente" pós-falha — reutiliza o ÚLTIMO body
+  // F43 (mini-fix): "Tentar novamente" pós-falha - reutiliza o ÚLTIMO body
   // confirmado (snapshot revisado + brief_review_confirmed) em vez do caminho
   // legado handleSubmit (que reativaria a IA de visão e contornaria o gate de
   // revisão). Sem snapshot confirmado, cai no fluxo padrão do formulário.
   const retrySubmit = useCallback(async (): Promise<void> => {
+    // F59/D-03 — pausa vertical NUNCA reenvia o body 1:1 anterior.
+    if (campaignFormatPaused) return;
     const body = confirmedBodyRef.current;
     if (!body) {
       await handleSubmit();
@@ -1828,7 +1894,7 @@ export function useCampaignForm(
     setPhases([]);
     setUnknownResult(null);
     await consumeStream(body, new AbortController());
-  }, [handleSubmit]);
+  }, [handleSubmit, campaignFormatPaused]);
 
   // F56.2b1b (Plano 06, C1/F8): limpa o estado de resultado desconhecido (ação
   // do consumidor — nunca inicia geração).

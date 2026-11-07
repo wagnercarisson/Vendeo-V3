@@ -12,6 +12,12 @@ import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestrati
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
 import { ProductOneToOneArtifactRecovery } from "@/lib/product-1-1/artifact/artifact-recovery";
+import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
+import { projectDeliveredCampaign } from "@/lib/product-1-1/orchestration/project-delivered-campaign";
+import { supabaseAdmin } from "@/lib/supabase/server";
+import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
+import { resolveRecoveryProfile } from "@/lib/product-vertical-9-16/recovery/format-dispatch";
+import type { RecoveryProfile } from "@/lib/product-vertical-9-16/recovery/format-dispatch";
 
 export const runtime = "nodejs";
 
@@ -168,6 +174,16 @@ export const POST = apiHandler(
       );
     }
 
+    // F59/D-11 — formato do snapshot persistido, nunca do cliente. Fail-closed
+    // antes de qualquer sonda; a flag vertical NÃO é consultada aqui.
+    const formatResolution = resolveCampaignFormat(campaign.input_snapshot);
+    if (formatResolution.kind === "unavailable") {
+      return NextResponse.json(
+        { error: { code: "format_unavailable", message: "Formato da campanha indisponível." } },
+        { status: 503 },
+      );
+    }
+
     const load = await loadCampaignOperation(id);
     if (load.status === "error") {
       // Falha de LEITURA da identidade persistida (≠ ausência): 503.
@@ -207,7 +223,50 @@ export const POST = apiHandler(
     // Delegar ao serviço (lojista APENAS solicita). A operação autoritativa vem
     // do servidor, nunca do corpo.
     try {
-      const result = await new ProductOneToOneArtifactRecovery().recoverDelivery({
+      const client = supabaseAdmin;
+      const oneToOne = {
+        format: "1:1" as const,
+        prober: new ProductOneToOneArtifactStore(client),
+        projection: projectDeliveredCampaign,
+      };
+
+      let profile: RecoveryProfile = oneToOne;
+      if (formatResolution.kind === "9:16") {
+        // Único carregamento do runtime vertical, apenas neste ramo.
+        const { VerticalArtifactStore } = await import(
+          "@/lib/product-vertical-9-16/artifact/artifact-store"
+        );
+        const { makeVerticalProjection } = await import(
+          "@/lib/product-vertical-9-16/orchestration/entrypoint"
+        );
+        profile = {
+          format: "9:16" as const,
+          prober: new VerticalArtifactStore({ client }),
+          projection: makeVerticalProjection(
+            campaign.store_id,
+            id,
+            load.operation.operationId,
+            { client },
+          ),
+        };
+      }
+
+      const resolved = resolveRecoveryProfile({
+        resolution: formatResolution,
+        oneToOne,
+        vertical: profile,
+      });
+      if (resolved.kind === "unavailable") {
+        return NextResponse.json(
+          { error: { code: "format_unavailable", message: "Formato da campanha indisponível." } },
+          { status: 503 },
+        );
+      }
+
+      const result = await new ProductOneToOneArtifactRecovery(client, {
+        artifacts: resolved.profile.prober,
+        projectDeliveredCampaign: resolved.profile.projection,
+      }).recoverDelivery({
         storeId: campaign.store_id,
         campaignId: id,
         operationId: load.operation.operationId,

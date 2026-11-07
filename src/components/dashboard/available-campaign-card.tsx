@@ -8,6 +8,7 @@ interface AvailableCampaignCardProps {
   id: string;
   productName: string;
   dateLabel: string;
+  formatLabel: string | null;
   thumbnailUrl: string | null;
   openAria: string;
   openLabel: string;
@@ -24,6 +25,7 @@ export function AvailableCampaignCard({
   id,
   productName,
   dateLabel,
+  formatLabel,
   thumbnailUrl,
   openAria,
   openLabel,
@@ -75,9 +77,15 @@ export function AvailableCampaignCard({
           >
             {productName}
           </span>
-          <span className="mt-1 block whitespace-nowrap text-sm text-text-secondary font-body">
-            {dateLabel}
-          </span>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-secondary font-body">
+            <span className="whitespace-nowrap">{dateLabel}</span>
+            {formatLabel && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{formatLabel}</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

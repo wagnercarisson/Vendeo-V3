@@ -11,10 +11,15 @@ import { getStoreReadiness } from "@/lib/store-readiness";
 import { resolveStoreIdentity, validateIdentityReference } from "@/lib/store-identity-service";
 import { resolveProductFlowAuthorization } from "@/lib/product-1-1/authorization/authorization-service";
 import { resolveEligibilityContext } from "@/lib/product-1-1/submission/eligibility-context";
+import { FeatureFlagService } from "@/lib/feature-flags/feature-flag-service";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { readProductOneToOneBackgroundDirection } from "@/lib/product-1-1/snapshot/persist-snapshot";
 import { getCampaignForDisplay, mapRestoredForm } from "@/lib/campaign/display";
 import type { CampaignFormRestore } from "@/lib/campaign/display";
+import {
+  resolveCampaignFormat,
+  type CampaignFormatResolution,
+} from "@/lib/campaign/format-resolution";
 import type { StoreIdentitySnapshot } from "@/components/campaign/types";
 
 interface NovaCampanhaPageProps {
@@ -95,6 +100,7 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
   // indisponível ⇒ `null` (sem promessa falsa). O CLIENTE NUNCA fornece o snapshot;
   // NUNCA inicia geração/cobrança.
   let restoredForm: CampaignFormRestore | null = null;
+  let restoredFormatResolution: CampaignFormatResolution | null = null;
   if (searchParams) {
     const resolved = await searchParams;
     const restoreFrom =
@@ -124,6 +130,9 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
           } catch {
             backgroundDirection = null;
           }
+          restoredFormatResolution = resolveCampaignFormat(
+            campaign.input_snapshot,
+          );
           restoredForm = mapRestoredForm({
             campaignId: campaign.id,
             inputSnapshot: campaign.input_snapshot,
@@ -138,9 +147,26 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
     }
   }
 
+  let verticalEnabled = false;
+  try {
+    verticalEnabled = await new FeatureFlagService().isProduct9x16Enabled();
+  } catch {
+    verticalEnabled = false;
+  }
+
+  // F59/D-03 — formato indisponível OU rascunho vertical com a flag OFF bloqueia
+  // a submissão SEM trocar o formato do lojista.
+  const campaignFormatUnavailable = restoredForm?.formatUnavailable === true;
+  const campaignFormatPaused =
+    restoredForm !== null &&
+    (campaignFormatUnavailable ||
+      ((restoredForm.campaignFormat === "9:16" ||
+        restoredFormatResolution?.kind === "9:16") &&
+        !verticalEnabled));
+
   return (
     <main>
-      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} restoredForm={restoredForm} />
+      <CampaignPageClient store={store} balance={balance} supportEmail={supportEmail} generationPaused={generationPaused} identity={identity} eligible={eligible} restoredForm={restoredForm} verticalEnabled={verticalEnabled} campaignFormatPaused={campaignFormatPaused} campaignFormatUnavailable={campaignFormatUnavailable} />
     </main>
   );
 }

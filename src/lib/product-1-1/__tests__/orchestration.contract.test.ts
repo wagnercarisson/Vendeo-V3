@@ -560,6 +560,80 @@ describe("F56.2b1b — orquestrador NDJSON no ciclo da requisição (Plano 04)",
     expect(request.productImagesDataUrls).toEqual(["data:image/png;base64,primary"]);
   });
 
+  it("F59/D-01: sem imageSize o request continua exatamente 1024x1024", async () => {
+    const harness = await buildHarness();
+    await runOrchestrator(harness);
+    expect(harness.calls.gatewayRequests[0].size).toBe("1024x1024");
+  });
+
+  it("F59/D-01: imageSize vertical chega ao principal e ao fallback", async () => {
+    const harness = await buildHarness();
+    harness.setProviderSequence([
+      Object.assign(new Error("model overloaded"), { code: "model_overloaded" }),
+      { imageBase64: "BBBB", mimeType: "image/png", model: "gpt-image-2" },
+    ]);
+    await runOrchestrator(harness, {}, { imageSize: "1152x2048" });
+
+    expect(harness.calls.gatewayRequests.length).toBeGreaterThanOrEqual(2);
+    for (const request of harness.calls.gatewayRequests) {
+      expect(request.size).toBe("1152x2048");
+    }
+  });
+
+  it("F59/D-01: composePrompt injetado substitui o compositor default só naquela geração", async () => {
+    const harness = await buildHarness();
+    const composition = {
+      text: "PROMPT VERTICAL INJETADO",
+      blocks: {},
+      composerVersion: "custom",
+      promptBaseVersion: "base",
+      policyVersions: {},
+    };
+    await runOrchestrator(
+      harness,
+      {},
+      { composePrompt: () => composition },
+    );
+    expect(harness.calls.gatewayRequests[0].prompt).toBe(
+      "PROMPT VERTICAL INJETADO",
+    );
+  });
+
+  it("F59/D-01: beforeReservation roda depois do preflight e antes de persist/reserve", async () => {
+    const harness = await buildHarness();
+    const guard = vi.fn(async () => {
+      harness.calls.order.push("beforeReservation");
+    });
+    await runOrchestrator(harness, {}, { beforeReservation: guard });
+
+    const idx = (needle: string) => harness.calls.order.indexOf(needle);
+    expect(guard).toHaveBeenCalledTimes(1);
+    expect(idx("beforeReservation")).toBeGreaterThan(idx("preflight"));
+    expect(idx("beforeReservation")).toBeLessThan(idx("persist"));
+    expect(idx("beforeReservation")).toBeLessThan(idx("reserve"));
+  });
+
+  it("F59/D-01: beforeReservation rejeitada ⇒ 0 persist/reserve/acquire/provider", async () => {
+    const harness = await buildHarness();
+    const guard = vi.fn(async () => {
+      throw new Error("vertical_estimate_missing");
+    });
+    const { terminal } = await runOrchestrator(
+      harness,
+      {},
+      { beforeReservation: guard },
+    );
+
+    expect(terminal).toMatchObject({ type: "error" });
+    expect(harness.calls.persist).not.toHaveBeenCalled();
+    expect(harness.calls.reserve).not.toHaveBeenCalled();
+    expect(harness.calls.acquire).not.toHaveBeenCalled();
+    expect(harness.calls.providerCalls).toBe(0);
+    expect(harness.calls.diagnosisRecords.at(-1)).toMatchObject({
+      internalCategory: "vertical_pre_reservation_blocked",
+    });
+  });
+
   it("Quick 261017-cdi: entrega confirmada projeta a campanha (status ready + arte)", async () => {
     const harness = await buildHarness();
     const project = vi.fn(async () => ({ projected: true, reason: "projected" }));

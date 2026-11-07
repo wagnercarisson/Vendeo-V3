@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GenerateImageRequestSchema } from '../schema';
+import { GenerateImageRequestSchema, NewFlowGenerateImageRequestSchema } from '../schema';
 
 const STORE_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -39,5 +39,35 @@ describe('GenerateImageRequestSchema — override productImageCheck (F43 D5)', (
       inputValidationOverride: { productImageCheck: 'some_unknown_value' },
     });
     expect(result.success).toBe(false);
+  });
+});
+describe("F59/D-03 - campaignFormat no schema do fluxo novo", () => {
+  const NEW_FLOW_BODY = {
+    ...VALID_BODY,
+    backgroundDirection: "studio",
+    campaignId: "00000000-0000-4000-8000-000000000002",
+    operationId: "00000000-0000-4000-8000-000000000003",
+  };
+
+  it("aceita 9:16 e 1:1", () => {
+    expect(NewFlowGenerateImageRequestSchema.safeParse({ ...NEW_FLOW_BODY, campaignFormat: "9:16" }).success).toBe(true);
+    expect(NewFlowGenerateImageRequestSchema.safeParse({ ...NEW_FLOW_BODY, campaignFormat: "1:1" }).success).toBe(true);
+  });
+
+  it("rejeita formato desconhecido/null/numerico", () => {
+    for (const campaignFormat of ["16:9", "vertical", null, 123]) {
+      expect(NewFlowGenerateImageRequestSchema.safeParse({ ...NEW_FLOW_BODY, campaignFormat }).success).toBe(false);
+    }
+  });
+
+  it("payload 1:1 sem a chave continua valido e nao ganha a chave", () => {
+    const result = NewFlowGenerateImageRequestSchema.safeParse(NEW_FLOW_BODY);
+    expect(result.success).toBe(true);
+    if (result.success) expect("campaignFormat" in result.data).toBe(false);
+  });
+
+  it("schema legado continua rejeitando campaignFormat/backgroundDirection", () => {
+    expect(GenerateImageRequestSchema.safeParse({ ...VALID_BODY, campaignFormat: "9:16" }).success).toBe(false);
+    expect(GenerateImageRequestSchema.safeParse({ ...VALID_BODY, backgroundDirection: "studio" }).success).toBe(false);
   });
 });

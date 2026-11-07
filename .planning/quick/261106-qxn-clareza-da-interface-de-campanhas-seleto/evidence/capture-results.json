@@ -1,0 +1,72 @@
+{
+  "results": {
+    "desktop-dashboard": {
+      "file": ".planning\\quick\\261106-qxn-clareza-da-interface-de-campanhas-seleto\\evidence\\desktop-dashboard.png",
+      "width": 1440,
+      "height": 958
+    },
+    "desktop-listagem": {
+      "file": ".planning\\quick\\261106-qxn-clareza-da-interface-de-campanhas-seleto\\evidence\\desktop-listagem.png",
+      "width": 1440,
+      "height": 1825
+    },
+    "desktop-formulario": {
+      "file": ".planning\\quick\\261106-qxn-clareza-da-interface-de-campanhas-seleto\\evidence\\desktop-formulario.png",
+      "width": 1440,
+      "height": 2346
+    },
+    "mobile-dashboard": {
+      "file": ".planning\\quick\\261106-qxn-clareza-da-interface-de-campanhas-seleto\\evidence\\mobile-dashboard.png",
+      "width": 390,
+      "height": 1540
+    },
+    "mobile-listagem": {
+      "file": ".planning\\quick\\261106-qxn-clareza-da-interface-de-campanhas-seleto\\evidence\\mobile-listagem.png",
+      "width": 390,
+      "height": 2321
+    },
+    "mobile-formulario": {
+      "file": ".planning\\quick\\261106-qxn-clareza-da-interface-de-campanhas-seleto\\evidence\\mobile-formulario.png",
+      "width": 390,
+      "height": 2645
+    }
+  },
+  "gridMeasurements": {
+    "900": {
+      "viewport": 900,
+      "mainWidth": 676,
+      "headerWidth": 596,
+      "gridTemplateColumns": "596px",
+      "selectorWidth": 596,
+      "selectorHeight": 172,
+      "horizontalOverflow": false
+    },
+    "1024": {
+      "viewport": 1024,
+      "mainWidth": 800,
+      "headerWidth": 720,
+      "gridTemplateColumns": "720px",
+      "selectorWidth": 720,
+      "selectorHeight": 156,
+      "horizontalOverflow": false
+    },
+    "1280": {
+      "viewport": 1280,
+      "mainWidth": 1056,
+      "headerWidth": 976,
+      "gridTemplateColumns": "476px 476px",
+      "selectorWidth": 476,
+      "selectorHeight": 172,
+      "horizontalOverflow": false
+    },
+    "1440": {
+      "viewport": 1440,
+      "mainWidth": 1216,
+      "headerWidth": 992,
+      "gridTemplateColumns": "484px 484px",
+      "selectorWidth": 484,
+      "selectorHeight": 172,
+      "horizontalOverflow": false
+    }
+  }
+}

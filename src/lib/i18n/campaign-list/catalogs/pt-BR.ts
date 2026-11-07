@@ -35,6 +35,10 @@ export const ptBRCampaignListMessages: CampaignListMessages = Object.freeze({
     incomplete: "Não concluída",
     error: "Erro",
   }),
+  format: Object.freeze({
+    square: "1:1 quadrado",
+    vertical: "9:16 vertical",
+  }),
   actions: Object.freeze({
     open: "Abrir",
     download: "Baixar",

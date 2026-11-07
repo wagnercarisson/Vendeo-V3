@@ -200,7 +200,9 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     prefixes: [],
     exact: [
       "@/lib/product-1-1/artifact/artifact-recovery",
+      "@/lib/product-1-1/artifact/artifact-store",
       "@/lib/product-1-1/orchestration/attempt-start-client",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
       "@/lib/product-1-1/authorization/authorization-service",
       "@/lib/product-1-1/submission/eligibility-context",
     ],
@@ -231,7 +233,11 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
   },
   [AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE]: {
     prefixes: [],
-    exact: ["@/lib/product-1-1/pending/resolve-pending-operation"],
+    exact: [
+      "@/lib/product-1-1/pending/resolve-pending-operation",
+      // F59/59-06 — composição format-aware da fila (par exato).
+      "@/lib/product-1-1/pending/pending-operations-repository",
+    ],
   },
   [AUTHORIZED_ADMIN_PRODUCT_PENDING_PAGE]: {
     prefixes: [],
@@ -240,6 +246,61 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
   [AUTHORIZED_ADMIN_PRODUCT_PENDING_FORM]: {
     prefixes: [],
     exact: [],
+  },
+  // F59 — o runtime vertical é uma camada NOVA sobre a engine/políticas 1:1.
+  // Cada arquivo abaixo recebe SOMENTE os pares exatos que realmente importa;
+  // nenhum diretório `product-vertical-9-16/**` é liberado em bloco.
+  ["src/lib/product-vertical-9-16/artifact/types.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/artifact/types"],
+  },
+  ["src/lib/product-vertical-9-16/orchestration/cost-profile.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/orchestration/instrumentation"],
+  },
+  ["src/lib/product-vertical-9-16/orchestration/entrypoint.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/orchestration/generation-orchestrator",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+      "@/lib/product-1-1/orchestration/instrumentation",
+    ],
+  },
+  ["src/lib/product-vertical-9-16/prompt/composition.ts"]: {
+    prefixes: [],
+    exact: [
+      // Somente TIPOS do contrato de composição (nenhum serializer 1:1).
+      "@/lib/product-1-1/prompt-composition",
+      "@/lib/product-1-1/prompt-base",
+      // Rótulos de identidade usados para extrair paleta/loja determinísticas.
+      "@/lib/product-1-1/policies/types",
+    ],
+  },
+  ["src/lib/product-vertical-9-16/prompt/policy-formato-9-16.ts"]: {
+    prefixes: [],
+    exact: [],
+  },
+  ["src/lib/product-vertical-9-16/prompt/registry.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/identity-context",
+      "@/lib/product-1-1/policies/general-integrity",
+      "@/lib/product-1-1/policies/produto",
+      "@/lib/product-1-1/policies/registry",
+      "@/lib/product-1-1/policies/types",
+    ],
+  },
+  ["src/lib/product-vertical-9-16/recovery/format-dispatch.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/orchestration/project-delivered-campaign"],
+  },
+  ["src/lib/product-vertical-9-16/recovery/pending-adapter.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/pending/pending-operations-repository",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+    ],
   },
   // F56.2b2c (B2.3) — o resolver server-side do gate de gasto do piloto é um
   // módulo `product-1-1` que importa PARES EXATOS de autorização/elegibilidade e
@@ -892,15 +953,21 @@ describe("Product 1:1 — reconciliação G-NA (Plano 06, F56.2b1b)", () => {
 });
 
 describe("Product 1:1 — reconciliação G-NA (Plano 07 — fim da sequência, F56.2b1b)", () => {
-  it("rota admin de pendências: autoriza SOMENTE `pending/resolve-pending-operation`", () => {
-    expect(
-      isAuthorizedAdminAuthorizationImport(
-        AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE,
-        "@/lib/product-1-1/pending/resolve-pending-operation",
-      ),
-    ).toBe(true);
+  it("rota admin de pendências: autoriza SOMENTE os dois pares exatos", () => {
     for (const specifier of [
+      "@/lib/product-1-1/pending/resolve-pending-operation",
+      // F59/59-06 — repositório format-aware injetado na resolução.
       "@/lib/product-1-1/pending/pending-operations-repository",
+    ]) {
+      expect(
+        isAuthorizedAdminAuthorizationImport(
+          AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE,
+          specifier,
+        ),
+        specifier,
+      ).toBe(true);
+    }
+    for (const specifier of [
       "@/lib/product-1-1/pending",
       "@/lib/product-1-1/pending/**",
       "@/lib/product-1-1/orchestration/generation-orchestrator",
@@ -987,7 +1054,7 @@ describe("Product 1:1 — reconciliação G-NA (Plano 07 — fim da sequência, 
     expect(
       hasUnauthorizedProductFlowImport(
         AUTHORIZED_ADMIN_PRODUCT_PENDING_ROUTE,
-        'import { x } from "@/lib/product-1-1/pending/pending-operations-repository";',
+        'import { x } from "@/lib/product-1-1/orchestration/generation-orchestrator";',
       ),
     ).toBe(true);
   });
@@ -1112,6 +1179,9 @@ describe("Product 1:1 — reconciliação G-NA (Plano 02 — F56.2b2b rota da re
   it("rota image-recovery: autoriza SOMENTE os pares exatos (sem prefixo amplo)", () => {
     for (const specifier of [
       "@/lib/product-1-1/artifact/artifact-recovery",
+      // F59/59-06 — sonda/projeção escolhidas pelo formato persistido.
+      "@/lib/product-1-1/artifact/artifact-store",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
       "@/lib/product-1-1/orchestration/attempt-start-client",
       "@/lib/product-1-1/authorization/authorization-service",
       "@/lib/product-1-1/submission/eligibility-context",
@@ -1125,7 +1195,6 @@ describe("Product 1:1 — reconciliação G-NA (Plano 02 — F56.2b2b rota da re
       ).toBe(true);
     }
     for (const specifier of [
-      "@/lib/product-1-1/artifact/artifact-store",
       "@/lib/product-1-1/credit-operation/credit-operation-client",
       "@/lib/product-1-1/orchestration/generation-orchestrator",
       "@/lib/product-1-1",
@@ -1167,7 +1236,7 @@ describe("Product 1:1 — reconciliação G-NA (Plano 02 — F56.2b2b rota da re
     expect(
       hasUnauthorizedProductFlowImport(
         AUTHORIZED_CAMPAIGN_IMAGE_RECOVERY_ROUTE,
-        'import { x } from "@/lib/product-1-1/artifact/artifact-store";',
+        'import { x } from "@/lib/product-1-1/credit-operation/credit-operation-client";',
       ),
     ).toBe(true);
   });

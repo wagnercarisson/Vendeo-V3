@@ -1,0 +1,26 @@
+{
+  "1024": {
+    "viewport": 1024,
+    "mainWidth": 800,
+    "headerWidth": 720,
+    "gridTemplateColumns": "720px",
+    "selectorWidth": 720,
+    "horizontalOverflow": false,
+    "screenshot": {
+      "width": 1024,
+      "height": 2461
+    }
+  },
+  "1280": {
+    "viewport": 1280,
+    "mainWidth": 1056,
+    "headerWidth": 976,
+    "gridTemplateColumns": "476px 476px",
+    "selectorWidth": 476,
+    "horizontalOverflow": false,
+    "screenshot": {
+      "width": 1280,
+      "height": 2346
+    }
+  }
+}

@@ -40,6 +40,8 @@ export interface PendingOperationItem {
   readonly supportReference: string | null;
   readonly createdAt: string | null;
   readonly latestAttemptAt: string | null;
+  readonly format?: "1:1" | "9:16" | null;
+  readonly formatUnavailable?: boolean;
 }
 
 const CONTROL_CLASS =
@@ -64,6 +66,11 @@ function artifactLabel(kind: PendingArtifactKind): string {
   if (kind === "absent") return "Arte ausente (confirmada)";
   if (kind === "invalid") return "Arte presente e inválida";
   return "Não foi possível verificar a arte";
+}
+
+function formatLabel(item: PendingOperationItem): string {
+  if (item.formatUnavailable || item.format == null) return "Formato indisponível";
+  return item.format === "9:16" ? "Vertical 9:16" : "Quadrado 1:1";
 }
 
 /**
@@ -417,6 +424,12 @@ export function ResolutionForm({ item }: { item: PendingOperationItem }) {
         <fieldset className="rounded-lg border border-border p-4">
           <legend className={`px-1 ${LABEL_CLASS}`}>Evidência (verificada no servidor)</legend>
           <dl className="grid gap-3 text-xs sm:grid-cols-2">
+            <div>
+              <dt className="font-semibold uppercase tracking-wider text-text-muted">
+                Formato
+              </dt>
+              <dd className="mt-1 text-text-secondary">{formatLabel(item)}</dd>
+            </div>
             <div>
               <dt className="font-semibold uppercase tracking-wider text-text-muted">
                 Arte existente?

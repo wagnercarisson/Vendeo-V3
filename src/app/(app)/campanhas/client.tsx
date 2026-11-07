@@ -273,6 +273,12 @@ function CampaignCard({
   const router = useRouter();
   const formattedDate = formatCampaignListDate(campaign.createdAt, locale);
   const status = campaignStatusDisplay(campaign, messages.status);
+  const formatLabel =
+    campaign.format === "1:1"
+      ? messages.format.square
+      : campaign.format === "9:16"
+        ? messages.format.vertical
+        : null;
   const imageRef = useRef<HTMLImageElement>(null);
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(campaign.thumbnailUrl) && !imageFailed;
@@ -313,9 +319,15 @@ function CampaignCard({
         >
           {campaign.productName}
         </h3>
-        <span className="text-sm text-text-muted font-body">
-          {formattedDate}
-        </span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted font-body">
+          <span>{formattedDate}</span>
+          {formatLabel && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{formatLabel}</span>
+            </>
+          )}
+        </div>
         <span className={`text-sm font-medium font-heading ${status.className}`}>
           {status.text}
         </span>

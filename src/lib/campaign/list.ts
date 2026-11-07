@@ -2,6 +2,10 @@ import "server-only";
 import { createServerClient, supabaseAdmin } from "@/lib/supabase/server";
 import { deriveThumbnailPath } from "./thumbnail/thumbnail-path";
 import { classifyCampaignFlow } from "./new-flow-marker";
+import {
+  resolveCampaignFormat,
+  type CampaignFormat,
+} from "./format-resolution";
 import type { CampaignStatus } from "./types";
 
 /** Classificação PERSISTIDA do fluxo (novo fluxo × legado) para exibição. */
@@ -20,6 +24,11 @@ export interface CampaignListItem {
    * `input_snapshot` inteiro. Legado/indeterminado ⇒ `"legacy"` (conservador).
    */
   flow: CampaignListFlow;
+  /**
+   * Quick 261106-qxn — formato resolvido SERVER-SIDE pelo contrato persistido.
+   * `null` = indisponível (fail-closed); nunca inferido pela imagem ou path.
+   */
+  format: CampaignFormat | null;
 }
 
 export interface ListCampaignsParams {
@@ -52,6 +61,7 @@ function mapToListItem(row: {
   // A classificação é feita AQUI (servidor); o `input_snapshot` NÃO é retornado.
   const flow: CampaignListFlow =
     classifyCampaignFlow(row.input_snapshot) === "new_flow" ? "new" : "legacy";
+  const formatResolution = resolveCampaignFormat(row.input_snapshot);
   return {
     id: row.id,
     productName: row.product_name,
@@ -60,6 +70,7 @@ function mapToListItem(row: {
     thumbnailUrl: null,
     storagePath: row.storage_path,
     flow,
+    format: formatResolution.kind === "unavailable" ? null : formatResolution.kind,
   };
 }
 

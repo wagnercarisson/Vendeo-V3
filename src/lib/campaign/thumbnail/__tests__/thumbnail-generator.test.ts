@@ -13,7 +13,9 @@ import { THUMBNAIL_MAX_EDGE_PX } from "../thumbnail-path";
 
 const STORE = "11111111-1111-4111-8111-111111111111";
 const CAMPAIGN = "22222222-2222-4222-8222-222222222222";
+const OPERATION = "33333333-3333-4333-8333-333333333333";
 const LEGACY = `${STORE}/${CAMPAIGN}.jpg`;
+const VERTICAL = `${STORE}/${CAMPAIGN}/product-9-16/${OPERATION}/art-1080x1920.jpg`;
 
 async function jpeg(width: number, height: number): Promise<Buffer> {
   return sharp({
@@ -67,6 +69,20 @@ describe("renderThumbnail", () => {
     expect(out.height).toBe(144);
   });
 
+  it("gera miniatura vertical 162×288 sem crop", async () => {
+    const out = await renderThumbnail(await jpeg(1080, 1920));
+    expect(out.width).toBe(162);
+    expect(out.height).toBe(288);
+    expect(out.sourceWidth).toBe(1080);
+    expect(out.sourceHeight).toBe(1920);
+  });
+
+  it("não amplia imagem vertical menor que 288 px", async () => {
+    const out = await renderThumbnail(await jpeg(100, 178));
+    expect(out.width).toBe(100);
+    expect(out.height).toBe(178);
+  });
+
   it("não amplia imagem menor que 288 px", async () => {
     const out = await renderThumbnail(await jpeg(200, 200));
     expect(out.width).toBe(200);
@@ -116,6 +132,30 @@ describe("generateCampaignThumbnail", () => {
     expect(uploader.calls).toHaveLength(1);
     expect(uploader.calls[0].path).toBe(
       `${STORE}/${CAMPAIGN}.thumb-v1.webp`,
+    );
+    expect(uploader.calls[0].contentType).toBe("image/webp");
+    expect((await sharp(uploader.calls[0].buffer).metadata()).format).toBe(
+      "webp",
+    );
+  });
+
+  it("faz upload da miniatura vertical no caminho irmão", async () => {
+    const uploader = fakeUploader();
+    const result = await generateCampaignThumbnail({
+      originalPath: VERTICAL,
+      originalBuffer: await jpeg(1080, 1920),
+      context: contextFor(uploader),
+    });
+
+    expect(result).toMatchObject({
+      status: "created",
+      width: 162,
+      height: 288,
+      thumbnailPath: `${STORE}/${CAMPAIGN}/product-9-16/${OPERATION}/art-1080x1920.thumb-v1.webp`,
+    });
+    expect(uploader.calls).toHaveLength(1);
+    expect(uploader.calls[0].path).toBe(
+      `${STORE}/${CAMPAIGN}/product-9-16/${OPERATION}/art-1080x1920.thumb-v1.webp`,
     );
     expect(uploader.calls[0].contentType).toBe("image/webp");
     expect((await sharp(uploader.calls[0].buffer).metadata()).format).toBe(

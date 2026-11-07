@@ -180,6 +180,9 @@ beforeEach(() => {
     storage_path: `${STORE_ID}/${CAMPAIGN_ID}.jpg`,
     product_name: "Produto Teste",
     created_at: "2026-01-01T00:00:00.000Z",
+    // F59 — `campaigns.input_snapshot` é NOT NULL DEFAULT '{}'. Um snapshot vazio
+    // é o contrato histórico 1:1 e preserva o gate/expectativas deste fixture.
+    input_snapshot: {},
   });
   mockListArtVersions.mockResolvedValue([]);
   mockRequireOwnership.mockResolvedValue(undefined);
@@ -362,6 +365,34 @@ describe("GET /api/campaign/[id]/download — classificação PERSISTIDA do flux
     const res = await callRoute();
 
     expect(res.status).toBe(403);
+    expect(mockDownloadArtifact).not.toHaveBeenCalled();
+    expect(mockStorageDownload).not.toHaveBeenCalled();
+  });
+
+  it("(d) formato PERSISTIDO malformado ⇒ 503 fail-closed, sem sonda/bytes", async () => {
+    mockGetCampaign.mockResolvedValue({
+      id: CAMPAIGN_ID,
+      store_id: STORE_ID,
+      storage_path: `${STORE_ID}/${CAMPAIGN_ID}.jpg`,
+      product_name: "Produto Teste",
+      created_at: "2026-01-01T00:00:00.000Z",
+      input_snapshot: {
+        frozenContentReferences: [],
+        campaignFormat: "16:9",
+      },
+    });
+    mockGetCampaignOperation.mockResolvedValue({
+      operationId: OPERATION_ID,
+      status: "delivered",
+      unknown: false,
+      terminal: true,
+    });
+
+    const res = await callRoute();
+
+    expect(res.status).toBe(503);
+    expect((await res.json()).error.code).toBe("format_unavailable");
+    expect(mockProbeArtifact).not.toHaveBeenCalled();
     expect(mockDownloadArtifact).not.toHaveBeenCalled();
     expect(mockStorageDownload).not.toHaveBeenCalled();
   });
