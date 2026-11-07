@@ -23,7 +23,7 @@ closed_at: 2026-11-06
 
 **Objetivo:** dar clareza ao formato da campanha e à direção de fundo sem alterar geração, prompt, crédito ou produção.
 
-**Estado:** implementação local concluída, gates executados, evidência visual coletada, **aceite manual dos três ajustes confirmado pelo responsável** e **revisão final do acabamento aprovada**. Quick concluída em 2026-11-06; `STATE.md` e `ROADMAP.md` reconciliados. **Produção não autorizada.**
+**Estado:** implementação local concluída, gates executados, evidência visual coletada, **aceite manual dos três ajustes confirmado pelo responsável** e **revisão final do acabamento aprovada**. Quick concluída em 2026-11-06; `STATE.md` e `ROADMAP.md` reconciliados. **Produção promovida pelo responsável em 2026-11-07**, com ressalvas de download específico, cobrança/fatura e auditoria do replay terminal.
 
 ---
 
@@ -150,25 +150,24 @@ Pasta: `.planning/quick/261106-qxn-clareza-da-interface-de-campanhas-seleto/evid
 - **Sem novos ajustes de interface** após o aceite.
 - **Implementação:** commits `b1023060`, `93b66434`, `b82f913f` e `af04e7ce`.
 - **Documentação e evidência:** commit de fechamento desta quick.
-- **Produção:** não autorizada; nenhum push, deploy, migration, flag, crédito ou
-  geração paga foi executado.
+- **Produção posterior:** deploy realizado pelo responsável em 2026-11-07; ver
+  seção 8. Nenhuma geração paga foi executada pelo agente nesta etapa.
 
-## 7. Próximo gate — preparação para produção da F59 + quick
+## 7. Gate de produção — executado
 
-O próximo passo é um gate **separado e não executado** de preparação para produção,
-envolvendo F59 + quick 261106-qxn:
+O gate de produção da F59 + quick foi executado pelo responsável em 2026-11-07:
 
-1. preflight read-only de produção (branch, commits, migrations, flag e ambiente);
-2. reconciliação de branch/commits e confirmação de que a quick está integrada ao
-   conjunto que será promovido;
-3. plano explícito de migration data-only da flag `product_9_16_enabled`, com
-   autorização própria, rollback e janela;
-4. autorização separada para deploy, ativação e smoke de produção;
-5. evidência de rollback e critérios de aceite de produção.
+1. integração e commit publicado `37bfb527`;
+2. deploy `READY` (`dpl_BBKy...`, alias `vendeo.tech`);
+3. migration `20261105162052` presente no ledger remoto;
+4. flag `product_9_16_enabled=true`;
+5. smoke vertical com JPEG 1080×1920 e 1 crédito;
+6. confirmação manual de deploy, fluxo e telas.
 
-Esse gate não foi iniciado. **Produção continua não autorizada.** O filtro por formato
-permanece apenas como evolução futura; proteção de saída e “Limpar dados” continuam
-itens separados.
+Permanecem como ressalvas: download específico e cobrança/fatura sem evidência
+independente; auditoria do replay terminal como exceção aceita; rollback não
+executado. O filtro por formato permanece apenas como evolução futura; proteção de
+saída e “Limpar dados” continuam itens separados.
 
 ## 8. Produção — registro pós-fechamento (2026-11-06/07)
 

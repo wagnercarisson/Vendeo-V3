@@ -786,4 +786,4 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [x] 59-10-PLAN.md — Homolog/aceite: lojas de teste, matriz funcional, sobreposições, falhas/recuperação, 1:1 manual e relatório; gate de produção separado — **concluído; 53/53 tasks; produção não autorizada**
+- [x] 59-10-PLAN.md — Homolog/aceite: lojas de teste, matriz funcional, sobreposições, falhas/recuperação, 1:1 manual e relatório; gate de produção separado — **concluído; 53/53 tasks; produção promovida pelo responsável em 2026-11-07, com ressalvas de download/cobrança e auditoria**
