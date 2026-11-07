@@ -95,8 +95,9 @@ que todas as suítes antigas de concorrência tenham sido executadas; elas não 
 ## 7. Pendências
 
 - Caso D: encerrado para `error`; operação `refunded`; **auditoria da resolução
-  idempotente não registrada** — recomendação de aceite nesta fase; **aceite formal
-  pendente**; RPC não alterada.
+  idempotente não registrada** — recomendação de aceite nesta fase; aceite formal
+  posteriormente registrado como exceção na reconciliação de 2026-11-06 (seção 15);
+  RPC não alterada.
 - Custo: **calculado por usage e pricing** (0,030441), não fatura; piloto 0,1107;
   desvio 0,080259; sem ajuste. Não é bloqueador.
 - Gate de produção continua **não executado** por desenho.
@@ -108,7 +109,8 @@ com os cenários comprovados de formato/restauração; o comportamento ausente n
 marcado como implementado.
 - Retries HTTP internos do SDK não são observáveis diretamente; a evidência é a
   contagem de invocações pagas.
-- A F59 **não** é encerrada por este resultado.
+- Este resultado foi posteriormente incorporado ao fechamento técnico da F59
+  (ver seção 15).
 
 ## 8. Caso D — encerramento executado (com divergência de auditoria)
 
@@ -273,3 +275,16 @@ revisão → edição; não substitui o teste de restauração a partir de rascu
   fatura (`provider_reported_cost_usd` nulo). O piloto registrou 0,1107; o usage
   calculado é 0,030441; desvio 0,080259, sem ajuste. O contador conservador do
   piloto não precisa ser alterado para fechar a fase.
+
+## 15. Reconciliação de fechamento (2026-11-06)
+
+- A F59 foi encerrada tecnicamente e em homologação no escopo 9:16; a quick
+  `261106-qxn` foi concluída e aceita como pré-requisito de clareza da interface.
+- Caso D: a lacuna de auditoria do replay terminal foi formalmente aceita como
+  exceção de rastreabilidade em `.planning/issues/59-AUDIT-REPLAY-GAP.md`; não foi
+  corrigida.
+- Custo permanece **calculado por usage e pricing** (0,030441), não valor de
+  fatura; o piloto registrado é 0,1107, com desvio documentado de 0,080259.
+- As pendências deste resultado não são mais gates funcionais de homolog abertos.
+  O gate de produção (deploy, migration data-only, ativação da flag, smoke e
+  rollback) permanece **não executado** e exige autorização separada.

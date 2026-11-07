@@ -9,8 +9,9 @@ O vertical é oferecido apenas para **novas gerações** quando a flag global es
 ligada. Recuperação, consulta, detalhe, listagem, download e resolução
 administrativa continuam funcionando independentemente da flag.
 
-Estado desta fase: implementação local concluída. Homologação funcional, UAT,
-ativação e produção são gates separados e não foram executados.
+Estado desta fase: implementação e homologação funcional concluídas; a quick
+`261106-qxn` de clareza da interface foi concluída e aceita. Ativação e produção
+continuam gates separados e **não executados**.
 
 ## 2. Flag
 
@@ -19,7 +20,8 @@ ativação e produção são gates separados e não foram executados.
 - Leitura: server-side, sem env override e sem coorte/estágio/loja.
 - Operação: RPC `admin_update_feature_flag` com motivo obrigatório e auditoria.
 - Seed: data-only, `INSERT ... ON CONFLICT (key) DO NOTHING` com `enabled=false`.
-  A aplicação do seed exige autorização e ocorre somente em homolog.
+  A migration `20261105162052_f59_product_9_16_flag.sql` foi aplicada no homolog;
+  a aplicação em produção exige autorização específica e permanece pendente.
 
 ## 3. O que a flag NÃO bloqueia
 
@@ -125,15 +127,22 @@ caminho. Se um código público for necessário no futuro, registre-o em
 
 ## 10. Gate de produção (NÃO executado nesta fase)
 
-Deploy, ativação da flag, smoke test e rollback de produção NÃO foram
-executados. Homologação não é aprovação de produção. O gate de produção exige
-autorização específica, evidência de smoke real e plano de rollback aprovado.
+A homologação funcional foi concluída. Deploy, ativação da flag, smoke test e
+rollback de produção NÃO foram executados. Homologação não é aprovação de
+produção. O gate de produção exige autorização específica, evidência de smoke real
+e plano de rollback aprovado.
+
+Checklist de integração/promoção:
+`docs/operations/f59-quick-261106-qxn-promotion-checklist.md`.
 
 ## 11. Limitações conhecidas
 
 - Números de área segura ainda dependem de confirmação em fonte oficial.
-- Validação visual com sobreposições reais de Stories/Reels está pendente.
-- A prova técnica de provider já registrada não substitui aceite visual.
+- A validação visual de homolog foi aceita com as ressalvas registradas na F59
+  (incluindo a observação de Reels no Facebook); não é aprovação irrestrita de
+  todas as interfaces.
+- A prova técnica de provider já registrada não substitui o smoke de produção.
 - Novas gerações pagas exigem acompanhamento do executor e inspeção manual da
   arte, copy, margens e download.
-- O seed da flag e a ativação permanecem bloqueados até autorização.
+- O seed da flag está aplicado no homolog; a aplicação em produção e a ativação
+  permanecem bloqueadas até autorização específica.

@@ -31,7 +31,7 @@ Saída: arte estática para Instagram, vertical 9:16, com fundo preenchendo todo
 ```diff
 -Crie uma campanha de oferta em imagem estática vertical 9:16, em peça única.
 +Crie uma campanha de oferta, em peça única.
- 
+
  [ÁREAS RESERVADAS]
 -Deixe sem textos, ativo da loja ou partes essenciais do produto: 14% do topo, 35% da base, 6% de cada lateral e o retângulo inferior direito de 30% da largura por 40% da altura.
 -O fundo deve preencher também essas regiões. Não desenhe guias, demarcações ou faixas vazias.

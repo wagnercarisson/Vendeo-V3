@@ -256,4 +256,3 @@ The vertical path SHALL preserve the new-flow identity contract: `campaignId` + 
 - **WHEN** two vertical requests race for the same identity
 - **THEN** only one attempt SHALL acquire the start
 - **AND** the other SHALL observe the existing operation
-

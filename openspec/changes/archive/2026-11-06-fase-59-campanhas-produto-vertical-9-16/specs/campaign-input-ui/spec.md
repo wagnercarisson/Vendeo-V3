@@ -148,4 +148,3 @@ The server-side restore SHALL carry `campaignFormat` (and the recognized contrac
 - **THEN** the vertical selection SHALL remain visible with an explanation that new vertical submissions are paused
 - **AND** submission SHALL be blocked
 - **AND** the UI MUST NOT select or submit `1:1` without the user's explicit choice
-

@@ -193,4 +193,3 @@ The vertical prompt SHALL include, once in the general composition block, an ins
 - **WHEN** reais and centavos are rendered with different sizes or alignments
 - **THEN** the instruction SHALL require exactly one comma
 - **AND** it MUST NOT repeat the comma to create the visual separation
-

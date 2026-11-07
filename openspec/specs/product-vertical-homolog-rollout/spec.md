@@ -204,4 +204,3 @@ Telemetry and diagnostics for the vertical path SHALL identify the format `9:16`
 - **WHEN** vertical diagnostics are inspected
 - **THEN** prompts, keys and image bytes SHALL be absent
 - **AND** the existing support-reference rules SHALL apply
-

@@ -734,7 +734,7 @@ Plans:
 
 **Status:** **CONCLUÍDA TECNICAMENTE E EM HOMOLOGAÇÃO NO ESCOPO 9:16 (2026-11-06).** Gates reais executados no homolog: geração/entrega 1080×1920, crédito, download, detalhe/lista, miniatura, recuperação, resolução administrativa, `unknown`→`refunded`, flag OFF, in-flight, concorrência de rota e SQL, reenvio e regressão 1:1. **53/53 tasks**; **69 arquivos / 1196 testes**; typecheck/lint/OpenSpec strict/diff check verdes. Reels aceito com ressalva observada no Facebook; custo calculado por usage e pricing 0,030441 (não é fatura); auditoria do replay terminal aceita como exceção em `.planning/issues/59-AUDIT-REPLAY-GAP.md`; proteção contra perda de dados fora de escopo. **Produção não autorizada.** OpenSpec arquivado em `openspec/changes/archive/2026-11-06-fase-59-campanhas-produto-vertical-9-16/`. A quick `261106-qxn` foi concluída e aceita em 2026-11-06 como pré-requisito de clareza da interface (seletor, formato nos cards e direção de fundo na revisão); evidência em `.planning/quick/261106-qxn-clareza-da-interface-de-campanhas-seleto/`.
 
-**Próximo gate — preparação para produção da F59 + quick 261106-qxn (não iniciado):** preflight read-only de produção; reconciliação de branch/commits e confirmação de que a quick está integrada ao conjunto promovido; plano explícito da migration data-only da flag `product_9_16_enabled`, com autorização própria, rollback e janela; autorização separada para deploy, ativação e smoke; evidência de rollback e critérios de aceite de produção. Nenhuma etapa de produção foi iniciada. Filtro por formato permanece evolução futura; proteção de saída e “Limpar dados” continuam itens separados.
+**Próximo gate — preparação para produção da F59 + quick 261106-qxn (não iniciado):** preflight read-only de produção; reconciliação de branch/commits e confirmação de que a quick está integrada ao conjunto promovido; plano explícito da migration data-only da flag `product_9_16_enabled`, com autorização própria, rollback e janela; autorização separada para deploy, ativação e smoke; evidência de rollback e critérios de aceite de produção. Nenhuma etapa de produção foi iniciada. **Deploy automático ao push na main: não verificado nesta preparação.** Checklist: `docs/operations/f59-quick-261106-qxn-promotion-checklist.md`. Filtro por formato permanece evolução futura; proteção de saída e “Limpar dados” continuam itens separados.
 
 **Goal:** Oferecer campanhas de Produto no formato vertical 9:16 no fluxo NOVO, com entrega JPEG sRGB 1080 × 1920, formato/versão congelados, composição com áreas seguras versionadas, recuperação completa até projeção/detalhe/listagem e flag global que bloqueia apenas novas gerações, preservando o comportamento do Produto 1:1 e excluindo o fluxo antigo.
 
@@ -771,12 +771,12 @@ Plans:
 
 - [x] 59-05-PLAN.md - Engine/perfil vertical: `composePrompt`/`imageSize`/`beforeReservation` aditivos, crédito, fence, falha/desconhecido, projeção com expected path
 
-**Wave 5** *(implemented; pending review)*
+**Wave 5** *(completed; homologated)*
 
 - [x] 59-06-PLAN.md - Recuperação vertical completa: image-recovery, recovery service, pending/admin, projeção e teste ponta a ponta
 - [x] 59-07-PLAN.md - Criação: schema `campaignFormat`, congelamento/hash, despacho 409, flag global + seed data-only, seletor UI/estado
 
-**Wave 6** *(implemented; pending review)*
+**Wave 6** *(completed; homologated)*
 
 - [x] 59-08-PLAN.md — Restauração do formulário e entrega por formato: download, detalhe, listagem e miniaturas
 

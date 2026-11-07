@@ -1,9 +1,9 @@
 # Evidência visual — quick 261106-qxn
 
-**Data:** 2026-11-06  
-**Ambiente:** build local de produção (`next start` em `127.0.0.1:3000`), Supabase local (`127.0.0.1:57781`)  
-**Conta:** loja existente “Padaria da Esquina” (`is_test_store = true`)  
-**Dados:** campanhas existentes; nenhuma geração foi confirmada ou disparada  
+**Data:** 2026-11-06
+**Ambiente:** build local de produção (`next start` em `127.0.0.1:3000`), Supabase local (`127.0.0.1:57781`)
+**Conta:** loja existente “Padaria da Esquina” (`is_test_store = true`)
+**Dados:** campanhas existentes; nenhuma geração foi confirmada ou disparada
 **Produção:** intocada
 
 ---

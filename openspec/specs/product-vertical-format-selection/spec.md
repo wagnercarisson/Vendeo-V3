@@ -176,4 +176,3 @@ The change MUST preserve the current Product `1:1` behavior: prompt, validators,
 
 - **WHEN** the focused regression suite runs
 - **THEN** the existing `1:1` tests for prompt, credit, artifact, download and recovery SHALL pass without changed expectations
-
