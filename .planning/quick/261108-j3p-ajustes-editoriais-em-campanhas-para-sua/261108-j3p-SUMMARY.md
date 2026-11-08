@@ -8,7 +8,9 @@ base_commit: 2bda3e51
 implementation: complete-local
 visual_checkpoint: approved
 accepted_on: 2026-11-08
-commit: 153ce9f2 (implementação) + fechamento documental
+commit: 153ce9f2 (implementação) + e232e603 (documentação) + commit complementar OpenSpec
+openspec_sync: complete
+openspec_archive: openspec/changes/archive/2026-11-08-ajustes-editoriais-e-rodape-publico-compartilhado
 ---
 
 # Quick 261108-j3p — Summary
@@ -82,10 +84,13 @@ commit: 153ce9f2 (implementação) + fechamento documental
 
 ### Typecheck
 
-`npm run typecheck` falhou por **erro preexistente e não relacionado** em
+`npm run typecheck` apresentou um erro em
 `src/app/(app)/admin/laboratorio/bancada/_components/__tests__/bench-ui.contract.test.tsx`
-(`Response` incompleto no mock). O arquivo não foi tocado por esta quick. Nenhum
-erro de tipo foi reportado nos arquivos alterados.
+(`Response` incompleto no mock). O arquivo não foi tocado por esta quick e nenhum
+erro de tipo foi reportado nos arquivos alterados. A **origem não foi determinada**
+nesta verificação e **não é atribuída a esta quick nem à fase como fato
+confirmado**. Fica registrado como **pendência externa, a ser tratada no contexto
+da F59**.
 
 ## Capturas
 
@@ -104,8 +109,8 @@ Medições: 0 px de overflow nos 8 cenários; rodapé com 177 px (internas deskt
 
 - **Validação local apenas.** Nada foi publicado ou verificado em produção.
 - O lint não cobre TypeScript neste projeto (limitação preexistente).
-- O typecheck global está bloqueado por erro preexistente em teste alheio ao
-  escopo.
+- O typecheck global apresenta erro em teste de bancada não tocado por esta
+  quick; origem não determinada e pendência externa reservada ao contexto da F59.
 - Capturas foram feitas com Chrome headless + CDP em `next start` local;
   leitor de tela real não executado.
 - `aria-current` é semântico e não recebe estilo visual diferenciado nesta
@@ -115,6 +120,10 @@ Medições: 0 px de overflow nos 8 cenários; rodapé com 177 px (internas deskt
 
 - Implementação local concluída.
 - **Aceite visual aprovado pelo responsável em 2026-11-08.**
-- Commit local de implementação (`153ce9f2`) e fechamento documental.
-- Sem merge, push, deploy, tag, sync/archive ou acesso à produção; essas etapas
-  permanecem com o responsável.
+- Commits locais: `153ce9f2` (implementação) e `e232e603` (documentação), mais o
+  commit complementar OpenSpec.
+- OpenSpec verificado, sincronizado e arquivado em
+  `openspec/changes/archive/2026-11-08-ajustes-editoriais-e-rodape-publico-compartilhado/`;
+  specs afetadas validadas em modo strict.
+- Sem merge, push, deploy, tag ou acesso à produção; essas etapas permanecem com
+  o responsável.

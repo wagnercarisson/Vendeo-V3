@@ -3,9 +3,7 @@
 ## Purpose
 
 Página pública demonstrativa /padarias: composição e copy aprovadas, demonstração estática do Bolo Naked Fruit com kit de publicação em HTML, situações comerciais de padaria, exemplo complementar do pão, aviso único, entrega responsiva de duas variantes WebP por imagem, oferta central e metadata própria com indexação fail-closed.
-
 ## Requirements
-
 ### Requirement: Rota pública `/padarias` com composição aprovada
 
 O sistema SHALL disponibilizar a página pública `/padarias` em `pt-BR`, como
@@ -406,22 +404,30 @@ A inclusão de `/padarias` SHALL NOT alterar `/floriculturas`, a política de
 oferta, créditos, elegibilidade, onboarding, autenticação, APIs, banco, migrations,
 flags ou configuração externa.
 
-A home SHALL permanecer inalterada, exceto pelo link “Padarias” no rodapé. O
-`middleware.ts` SHALL NOT ser alterado para esta rota.
+A home SHALL preservar H1, copy, blocos, imagens, CTAs, ordem e metadata. O
+rodapé da home SHALL poder ser renderizado pelo componente público compartilhado,
+com os links “Floriculturas”, “Padarias” e “Campanhas sem complicação” agrupados
+sob “Explore o Vendeo”. Essa composição SHALL NOT alterar o conteúdo visível da
+home além do rodapé nem os contratos de indexação. O `middleware.ts` SHALL NOT ser
+alterado para esta rota.
 
 #### Scenario: `/floriculturas` preservada
 
 - **WHEN** a implementação é revisada
 - **THEN** a página, os componentes, os assets, os CTAs, o card e a metadata de
-  `/floriculturas` SHALL permanecer inalterados
+  `/floriculturas` SHALL permanecer inalterados, exceto pelo rodapé compartilhado
+  previsto nesta change
 
-#### Scenario: Home preservada exceto pelo link de rodapé
+#### Scenario: Home preservada exceto pelo rodapé compartilhado
 
 - **WHEN** a home é comparada ao estado anterior
 - **THEN** H1, copy, blocos, imagens, CTAs, ordem e metadata SHALL permanecer
   inalterados
-- **AND** a única adição visível SHALL ser o link “Padarias” ao lado de
-  “Floriculturas” no rodapé
+- **AND** o link “Padarias” SHALL permanecer apontando para `/padarias`
+- **AND** a única área visível alterada SHALL ser o rodapé, com os destinos de
+  conteúdo agrupados sob “Explore o Vendeo”
+- **AND** Termos, Privacidade, Uso Aceitável, Novidades, Contato, Entrar e o aviso
+  legal demonstrativo SHALL permanecer disponíveis
 
 #### Scenario: Rotas privadas permanecem noindex
 
