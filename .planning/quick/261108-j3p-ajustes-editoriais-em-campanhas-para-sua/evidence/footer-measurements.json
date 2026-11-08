@@ -1,0 +1,252 @@
+{
+  "generatedAt": "2026-11-08T17:00:04.157Z",
+  "base": "http://127.0.0.1:3100",
+  "results": [
+    {
+      "page": "/",
+      "viewport": "desktop-1440",
+      "file": "home-footer-desktop-1440.png",
+      "overflowPx": 0,
+      "footerHeight": 257,
+      "ariaCurrent": [],
+      "explore": [
+        {
+          "href": "/floriculturas",
+          "label": "Floriculturas"
+        },
+        {
+          "href": "/padarias",
+          "label": "Padarias"
+        },
+        {
+          "href": "/campanhas-para-sua-loja",
+          "label": "Campanhas sem complicação"
+        }
+      ],
+      "institutional": [
+        "Termos de Uso",
+        "Política de Privacidade",
+        "Uso Aceitável",
+        "Contato",
+        "Novidades",
+        "Entrar"
+      ]
+    },
+    {
+      "page": "/floriculturas",
+      "viewport": "desktop-1440",
+      "file": "floriculturas-footer-desktop-1440.png",
+      "overflowPx": 0,
+      "footerHeight": 177,
+      "ariaCurrent": [
+        "/floriculturas"
+      ],
+      "explore": [
+        {
+          "href": "/floriculturas",
+          "label": "Floriculturas"
+        },
+        {
+          "href": "/padarias",
+          "label": "Padarias"
+        },
+        {
+          "href": "/campanhas-para-sua-loja",
+          "label": "Campanhas sem complicação"
+        }
+      ],
+      "institutional": [
+        "Voltar ao Vendeo",
+        "Termos de Uso",
+        "Política de Privacidade",
+        "Uso Aceitável",
+        "Entrar"
+      ]
+    },
+    {
+      "page": "/padarias",
+      "viewport": "desktop-1440",
+      "file": "padarias-footer-desktop-1440.png",
+      "overflowPx": 0,
+      "footerHeight": 177,
+      "ariaCurrent": [
+        "/padarias"
+      ],
+      "explore": [
+        {
+          "href": "/floriculturas",
+          "label": "Floriculturas"
+        },
+        {
+          "href": "/padarias",
+          "label": "Padarias"
+        },
+        {
+          "href": "/campanhas-para-sua-loja",
+          "label": "Campanhas sem complicação"
+        }
+      ],
+      "institutional": [
+        "Voltar ao Vendeo",
+        "Termos de Uso",
+        "Política de Privacidade",
+        "Uso Aceitável",
+        "Entrar"
+      ]
+    },
+    {
+      "page": "/campanhas-para-sua-loja",
+      "viewport": "desktop-1440",
+      "file": "campanhas-footer-desktop-1440.png",
+      "overflowPx": 0,
+      "footerHeight": 177,
+      "ariaCurrent": [
+        "/campanhas-para-sua-loja"
+      ],
+      "explore": [
+        {
+          "href": "/floriculturas",
+          "label": "Floriculturas"
+        },
+        {
+          "href": "/padarias",
+          "label": "Padarias"
+        },
+        {
+          "href": "/campanhas-para-sua-loja",
+          "label": "Campanhas sem complicação"
+        }
+      ],
+      "institutional": [
+        "Voltar ao Vendeo",
+        "Termos de Uso",
+        "Política de Privacidade",
+        "Uso Aceitável",
+        "Entrar"
+      ]
+    },
+    {
+      "page": "/",
+      "viewport": "mobile-390",
+      "file": "home-footer-mobile-390.png",
+      "overflowPx": 0,
+      "footerHeight": 553,
+      "ariaCurrent": [],
+      "explore": [
+        {
+          "href": "/floriculturas",
+          "label": "Floriculturas"
+        },
+        {
+          "href": "/padarias",
+          "label": "Padarias"
+        },
+        {
+          "href": "/campanhas-para-sua-loja",
+          "label": "Campanhas sem complicação"
+        }
+      ],
+      "institutional": [
+        "Termos de Uso",
+        "Política de Privacidade",
+        "Uso Aceitável",
+        "Contato",
+        "Novidades",
+        "Entrar"
+      ]
+    },
+    {
+      "page": "/floriculturas",
+      "viewport": "mobile-390",
+      "file": "floriculturas-footer-mobile-390.png",
+      "overflowPx": 0,
+      "footerHeight": 425,
+      "ariaCurrent": [
+        "/floriculturas"
+      ],
+      "explore": [
+        {
+          "href": "/floriculturas",
+          "label": "Floriculturas"
+        },
+        {
+          "href": "/padarias",
+          "label": "Padarias"
+        },
+        {
+          "href": "/campanhas-para-sua-loja",
+          "label": "Campanhas sem complicação"
+        }
+      ],
+      "institutional": [
+        "Voltar ao Vendeo",
+        "Termos de Uso",
+        "Política de Privacidade",
+        "Uso Aceitável",
+        "Entrar"
+      ]
+    },
+    {
+      "page": "/padarias",
+      "viewport": "mobile-390",
+      "file": "padarias-footer-mobile-390.png",
+      "overflowPx": 0,
+      "footerHeight": 425,
+      "ariaCurrent": [
+        "/padarias"
+      ],
+      "explore": [
+        {
+          "href": "/floriculturas",
+          "label": "Floriculturas"
+        },
+        {
+          "href": "/padarias",
+          "label": "Padarias"
+        },
+        {
+          "href": "/campanhas-para-sua-loja",
+          "label": "Campanhas sem complicação"
+        }
+      ],
+      "institutional": [
+        "Voltar ao Vendeo",
+        "Termos de Uso",
+        "Política de Privacidade",
+        "Uso Aceitável",
+        "Entrar"
+      ]
+    },
+    {
+      "page": "/campanhas-para-sua-loja",
+      "viewport": "mobile-390",
+      "file": "campanhas-footer-mobile-390.png",
+      "overflowPx": 0,
+      "footerHeight": 425,
+      "ariaCurrent": [
+        "/campanhas-para-sua-loja"
+      ],
+      "explore": [
+        {
+          "href": "/floriculturas",
+          "label": "Floriculturas"
+        },
+        {
+          "href": "/padarias",
+          "label": "Padarias"
+        },
+        {
+          "href": "/campanhas-para-sua-loja",
+          "label": "Campanhas sem complicação"
+        }
+      ],
+      "institutional": [
+        "Voltar ao Vendeo",
+        "Termos de Uso",
+        "Política de Privacidade",
+        "Uso Aceitável",
+        "Entrar"
+      ]
+    }
+  ]
+}
