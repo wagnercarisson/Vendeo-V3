@@ -1889,12 +1889,10 @@ const OUTPUT_ARTIFACT = {
 };
 
 function jsonResponse(payload: unknown, status = 200) {
-  return {
-    ok: status >= 200 && status < 300,
+  return new Response(JSON.stringify(payload), {
     status,
-    headers: new Headers({ "Content-Type": "application/json" }),
-    json: async () => payload,
-  };
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 function ndjsonResponse(events: unknown[]) {
