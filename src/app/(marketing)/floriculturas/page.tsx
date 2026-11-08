@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AccessCtaGroup } from "@/components/landing/floriculturas/access-cta-group";
 import { OfferCard } from "@/components/landing/offer-card";
 import { DemonstrationPair } from "@/components/landing/floriculturas/demonstration-pair";
 import { FloriculturasHeader } from "@/components/landing/floriculturas/floriculturas-header";
 import { OfferExample } from "@/components/landing/floriculturas/offer-example";
+import { PublicFooter } from "@/components/landing/public-footer";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import { isIndexableEnvironment } from "@/lib/seo/environment";
 import {
@@ -280,51 +280,7 @@ export default async function FloriculturasPage() {
         </section>
       </main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-text-secondary sm:flex-row">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/landing/vendeo-logo-dark.webp"
-            alt="Vendeo"
-            width={384}
-            height={82}
-            loading="lazy"
-            className="h-6 w-auto shrink-0 self-center"
-          />
-          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            <Link
-              href="/"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Voltar ao Vendeo
-            </Link>
-            <Link
-              href="/termos"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Termos de Uso
-            </Link>
-            <Link
-              href="/privacidade"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Política de Privacidade
-            </Link>
-            <Link
-              href="/uso-aceitavel"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Uso Aceitável
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Entrar
-            </Link>
-          </nav>
-        </div>
-      </footer>
+      <PublicFooter currentPath="/floriculturas" context="marketing" />
     </div>
   );
 }

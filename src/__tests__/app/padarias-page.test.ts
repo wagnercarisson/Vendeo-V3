@@ -446,6 +446,22 @@ describe("acessibilidade estrutural de /padarias", () => {
     expect(html).toContain("min-h-[44px]");
     expect(html).toContain("h-12");
   });
+
+  it("renderiza o rodapé compartilhado com o destino atual marcado", async () => {
+    const html = await render();
+
+    expect(html).toContain("Explore o Vendeo");
+    expect(html).toContain("Institucional");
+    expect(html).toContain('href="/floriculturas"');
+    expect(html).toContain('href="/campanhas-para-sua-loja"');
+    expect(html).toMatch(
+      /<a[^>]*aria-current="page"[^>]*href="\/padarias"/,
+    );
+    expect(html.match(/aria-current="page"/g) ?? []).toHaveLength(1);
+    for (const href of ["/", "/termos", "/privacidade", "/uso-aceitavel", "/login"]) {
+      expect(html).toContain(`href="${href}"`);
+    }
+  });
 });
 
 describe("metadata type contract", () => {

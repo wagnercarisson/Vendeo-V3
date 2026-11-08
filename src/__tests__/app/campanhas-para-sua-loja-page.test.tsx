@@ -233,8 +233,18 @@ describe("render de /campanhas-para-sua-loja — copy aprovada e composição", 
     const html = await render();
 
     expect(html).toContain(
+      "Feito para a rotina de quem atende, repõe e ainda divulga.",
+    );
+    expect(html).toContain(
+      "Quem administra uma loja precisa conciliar atendimento, estoque, fornecedores e divulgação.",
+    );
+    expect(html).toContain(
+      "O Vendeo encurta o caminho entre o produto que está na vitrine e a publicação que precisa sair.",
+    );
+    expect(html).not.toContain(
       "Feita para a rotina de quem atende, repõe e ainda divulga.",
     );
+    expect(html).not.toContain("Quem toca uma loja pequena acumula funções.");
     expect(html).toContain("A foto pode ser a do celular.");
     expect(html).toContain("Poucas informações bastam.");
     expect(html).toContain("Arte e texto preparados pelo Vendeo.");
@@ -480,6 +490,22 @@ describe("acessibilidade estrutural de /campanhas-para-sua-loja", () => {
     expect(html).toContain("focus:ring-2");
     expect(html).toContain("min-h-[44px]");
     expect(html).toContain("h-12");
+  });
+
+  it("renderiza o rodapé compartilhado com o destino atual marcado", async () => {
+    const html = await render();
+
+    expect(html).toContain("Explore o Vendeo");
+    expect(html).toContain("Institucional");
+    expect(html).toContain('href="/floriculturas"');
+    expect(html).toContain('href="/padarias"');
+    expect(html).toMatch(
+      /<a[^>]*aria-current="page"[^>]*href="\/campanhas-para-sua-loja"/,
+    );
+    expect(html.match(/aria-current="page"/g) ?? []).toHaveLength(1);
+    for (const href of ["/", "/termos", "/privacidade", "/uso-aceitavel", "/login"]) {
+      expect(html).toContain(`href="${href}"`);
+    }
   });
 });
 

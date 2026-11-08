@@ -381,6 +381,22 @@ describe("render de /floriculturas — copy aprovada e composição", () => {
     // prioridade alta para não competir com o texto.
     expect(html).not.toMatch(/fetchpriority="high"/i);
   });
+
+  it("renderiza o rodapé compartilhado com o destino atual marcado", async () => {
+    const html = await render();
+
+    expect(html).toContain("Explore o Vendeo");
+    expect(html).toContain("Institucional");
+    expect(html).toContain('href="/padarias"');
+    expect(html).toContain('href="/campanhas-para-sua-loja"');
+    expect(html).toMatch(
+      /<a[^>]*aria-current="page"[^>]*href="\/floriculturas"/,
+    );
+    expect(html.match(/aria-current="page"/g) ?? []).toHaveLength(1);
+    for (const href of ["/", "/termos", "/privacidade", "/uso-aceitavel", "/login"]) {
+      expect(html).toContain(`href="${href}"`);
+    }
+  });
 });
 
 describe("metadata type contract", () => {

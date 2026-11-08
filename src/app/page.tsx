@@ -8,7 +8,7 @@ import { IdentityControlSection } from "@/components/landing/identity-control-se
 import { ApproachSection } from "@/components/landing/approach-section";
 import { OfferSection } from "@/components/landing/offer-section";
 import { FaqFinalCtaSection } from "@/components/landing/faq-final-cta-section";
-import { NovidadesLink } from "@/components/landing/novidades-link";
+import { PublicFooter } from "@/components/landing/public-footer";
 import { getAllEntries } from "@/lib/changelog/get-changelog";
 import { getLaunchConfig } from "@/lib/launch-config/config";
 import {
@@ -103,78 +103,11 @@ export default async function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-text-secondary sm:flex-row">
-          <img
-            src="/landing/vendeo-logo-dark.webp"
-            alt="Vendeo"
-            width={384}
-            height={82}
-            loading="lazy"
-            className="h-6 w-auto shrink-0 self-center"
-          />
-          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-            <Link
-              href="/termos"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Termos de Uso
-            </Link>
-            <Link
-              href="/privacidade"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Política de Privacidade
-            </Link>
-            <Link
-              href="/uso-aceitavel"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Uso Aceitável
-            </Link>
-            <NovidadesLink variant="footer" entries={recentEntries} />
-            <Link
-              href="/floriculturas"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Floriculturas
-            </Link>
-            <Link
-              href="/padarias"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Padarias
-            </Link>
-            <Link
-              href="/campanhas-para-sua-loja"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Campanhas sem complicação
-            </Link>
-            <Link
-              href={`mailto:${process.env.SUPPORT_EMAIL ?? "suporte@vendeo.tech"}`}
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Contato
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex min-h-[44px] items-center rounded px-2 transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:outline-none"
-            >
-              Entrar
-            </Link>
-          </nav>
-        </div>
-        <div className="mx-auto w-full max-w-5xl px-6 pb-8">
-          <p className="mx-auto max-w-3xl text-center text-xs text-text-secondary">
-            As lojas e campanhas apresentadas são exemplos demonstrativos e não
-            representam lojas reais nem ofertas comerciais válidas. As marcas de
-            produtos pertencem aos respectivos titulares. O Vendeo não possui
-            vínculo, parceria, patrocínio ou endosso das marcas ou dos
-            fabricantes utilizados para ilustrar as campanhas.
-          </p>
-        </div>
-      </footer>
+      <PublicFooter
+        currentPath="/"
+        context="home"
+        novidadesEntries={recentEntries}
+      />
     </div>
   );
 }

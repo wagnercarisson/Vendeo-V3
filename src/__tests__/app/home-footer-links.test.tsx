@@ -66,4 +66,21 @@ describe("home — rodapé com as páginas públicas na ordem aprovada", () => {
       expect(html).toContain(`href="${href}"`);
     }
   });
+
+  it("agrupa a navegação e preserva contato, novidades e aviso legal", async () => {
+    vi.resetModules();
+    const { default: Home } = await import("@/app/page");
+    const html = renderToStaticMarkup(await Home());
+
+    expect(html).toContain("Explore o Vendeo");
+    expect(html).toContain("Institucional");
+    expect(html).toContain(">Contato</a>");
+    expect(html).toContain(">Novidades</button>");
+    expect(html).toContain(">Entrar</a>");
+    expect(html).toContain(
+      "As lojas e campanhas apresentadas são exemplos demonstrativos",
+    );
+    expect(html).not.toContain(">Voltar ao Vendeo</a>");
+    expect(html).not.toContain('aria-current="page"');
+  });
 });
