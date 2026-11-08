@@ -92,6 +92,20 @@ nesta verificação e **não é atribuída a esta quick nem à fase como fato
 confirmado**. Fica registrado como **pendência externa, a ser tratada no contexto
 da F59**.
 
+### Reconciliação (2026-11-08 — quick `261108-kli`)
+
+O erro TS2345 foi **reproduzido** e **corrigido** fora desta quick, sem apagar o
+registro acima:
+
+- causa: `jsonResponse` devolvia um objeto parcial, mas `resolveFirst` exigia
+  `Response`; trecho introduzido no commit `f79f4559`;
+- correção: o helper passou a devolver `new Response(...)` real, sem casts,
+  `@ts-ignore` ou relaxamento do TypeScript;
+- estado atual: `npm run typecheck` exit 0, teste focado **75/75**, lint exit 0 e
+  `git diff --check` limpo;
+- a atribuição anterior (“origem não determinada”) permanece registrada como o
+  estado então observado; a origem agora é conhecida (`f79f4559`).
+
 ## Capturas
 
 Em `evidence/`:
@@ -111,6 +125,8 @@ Medições: 0 px de overflow nos 8 cenários; rodapé com 177 px (internas deskt
 - O lint não cobre TypeScript neste projeto (limitação preexistente).
 - O typecheck global apresenta erro em teste de bancada não tocado por esta
   quick; origem não determinada e pendência externa reservada ao contexto da F59.
+  **Resolvido em 2026-11-08 pela quick `261108-kli`** (causa `f79f4559`, helper
+  `jsonResponse` agora devolve `Response` real); o registro original é preservado.
 - Capturas foram feitas com Chrome headless + CDP em `next start` local;
   leitor de tela real não executado.
 - `aria-current` é semântico e não recebe estilo visual diferenciado nesta

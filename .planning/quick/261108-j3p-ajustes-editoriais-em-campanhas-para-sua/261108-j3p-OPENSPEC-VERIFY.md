@@ -87,6 +87,18 @@ Nenhum.
   fase como fato confirmado.
 - Pendência externa a ser tratada no contexto da **F59**.
 
+### Reconciliação (2026-11-08 — quick `261108-kli`)
+
+A pendência foi **resolvida fora desta change**, preservando o registro acima:
+
+- erro TS2345 em `bench-ui.contract.test.tsx:2081`, introduzido no commit
+  `f79f4559`;
+- `jsonResponse` passou a devolver `new Response(...)` real, sem casts,
+  `@ts-ignore` ou relaxamento do TypeScript;
+- `npm run typecheck` exit 0, teste focado **75/75**, lint exit 0 e
+  `git diff --check` limpo;
+- evidência: `.planning/quick/261108-kli-corrigir-typecheck-do-mock-de-estimativa/`.
+
 ## Validação OpenSpec
 
 ```

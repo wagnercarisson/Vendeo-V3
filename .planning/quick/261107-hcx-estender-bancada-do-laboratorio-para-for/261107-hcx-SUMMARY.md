@@ -58,6 +58,17 @@ branch: feat/quick-extensao-laboratorio-9-16
 
 Todos os testes rodaram com fakes/`vi.mock`, sem provider e sem rede.
 
+### Reconciliação (2026-11-08 — quick `261108-kli`)
+
+O commit `f79f4559` (teste de descarte de estimativa atrasada) introduziu um
+`jsonResponse` parcial incompatível com `Promise<Response>` em
+`bench-ui.contract.test.tsx:2081`. O gate `typecheck` acima refletia o estado
+anterior a esse trecho. A quick `261108-kli` corrigiu o helper para devolver
+`Response` real, sem casts, `@ts-ignore` ou relaxamento, mantendo o cenário de
+descarte de estimativa atrasada. Estado atual: typecheck exit 0, teste focado
+**75/75**, lint exit 0 e `git diff --check` limpo. O registro histórico acima é
+preservado.
+
 **Teste pulado:** `src/lib/lab/bench/__tests__/bench-import.integration.test.ts`
 — integração real opt-in que exige `BENCH_IMPORT_REAL_INTEGRATION=1` e o stack
 Supabase local (PostgreSQL + Storage). Não foi habilitado porque o CHECKPOINT A
