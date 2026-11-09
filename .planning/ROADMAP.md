@@ -787,3 +787,24 @@ Plans:
 **Wave 8** *(blocked on Wave 7 completion)*
 
 - [x] 59-10-PLAN.md — Homolog/aceite: lojas de teste, matriz funcional, sobreposições, falhas/recuperação, 1:1 manual e relatório; gate de produção separado — **concluído; 53/53 tasks; produção promovida pelo responsável em 2026-11-07, com ressalvas de download específico, fatura/custo do provider e auditoria**
+
+
+### Phase 60: F60 — Controle da operação 9:16 em duas etapas e integração financeira
+
+**Status:** **60-01 APROVADO; 60-02 CONCLUÍDO E APROVADO; 60-03 CONCLUÍDO E APROVADO — offline + Postgres (RUN 2 26/26 PASS, exit 0); 60-04 CONCLUÍDO, VERIFICADO, SINCRONIZADO E ARQUIVADO.** Gates offline verdes (42/42, 10/10, tsc/lint/build/diff/OpenSpec); suíte global **8282 PASS / 4 FAIL**, somente as 4 falhas conhecidas. GSD `PASS_WITH_FINDINGS` (11/11); OpenSpec **PASS** (55/55 tarefas, 35/35 requisitos); sync aplicado (2 specs atualizadas + 3 criadas) e archive em `openspec/changes/archive/2026-11-09-product-9-16-two-stage-operation-control/`. Produção, deploy, flag e IA não autorizados.
+
+**Goal:** Controlar uma operação 9:16 de duas etapas (base quadrada e expansão) como um único pedido de 1 crédito, com integração aos serviços financeiros existentes, proteção contra concorrência/respostas tardias e prova transacional em homolog antes de completar o módulo. Sem geração real, expansão, armazenamento de artefatos, UI, flag ou ativação nesta fatia.
+
+**Source:** `openspec/changes/product-9-16-two-stage-operation-control/` (proposal, design, specs e tasks; OpenSpec `--strict` válido).
+
+**Plans:**
+- `60-01-PLAN.md` — prova transacional bloqueante em homolog (schema mínimo, harness sem IA, 13 cenários) — **EXECUTADO; 13/13 PASS; APROVADO**
+- `60-02-PLAN.md` — módulo de controle da operação (pós-aprovação da prova)
+- `60-03-PLAN.md` — integração financeira, leitura compartilhada e compatibilidade 1:1 / 9:16 direto
+- `60-04-PLAN.md` — gates finais, segurança e separação de estágios
+
+**Dependências:** F59 (9:16 direto e base financeira), F56.2b1b/F56.2b2b (operação de crédito, claims, encerramento e resolução) e OpenSpec aprovado desta change. `60-01`, `60-02` e `60-03` estão aprovados. O aceite do `60-03` libera a **revisão do `60-04`**, não sua execução automática; execução de `60-04`, produção, deploy e IA exigem autorização separada.
+
+**Checkpoint:** a prova em homolog exige quatro autorizações separadas (aplicar, escrever dados de teste, executar, limpar), janela de exclusividade das RPCs compartilhadas coordenada e evidência S0/delta. O resultado da prova **não é aceitação produtiva**.
+
+**Diretório:** `.planning/phases/60-f60-controle-das-duas-etapas-9-16-e-integracao-financeira/`.

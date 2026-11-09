@@ -1,0 +1,25 @@
+# F60 — Snapshot status
+
+- Run: `f60-20261109-status`
+- Alvo: `127.0.0.1:57782/postgres`
+- Capturado em: 2026-11-09T18:28:26.981Z
+- Ledger: 153 (20261105162052); F60 aplicada: false
+- SHA-256 do snapshot: `18079098dbcd72a65bd6dcef553671cf402c33e1112234d083ade34ed4216bfa`
+
+| Tabela | Linhas |
+|---|---:|
+| `auth.users` | 5 |
+| `public.stores` | 4 |
+| `public.credit_balances` | 3 |
+| `public.credit_transactions` | 127 |
+| `public.campaigns` | 91 |
+| `public.product_1_1_campaign_credit_operations` | 32 |
+| `public.product_1_1_generation_attempt_claims` | 29 |
+| `public.product_1_1_generation_outcomes` | 3 |
+| `public.admin_audit_log` | 95 |
+| `public.product_9_16_two_stage_operations` | 0 |
+| `public.product_9_16_two_stage_steps` | 0 |
+| `public.product_9_16_two_stage_attempt_claims` | 0 |
+| `public.product_9_16_two_stage_outcomes` | 0 |
+
+> Somente leitura. Nenhuma linha foi criada, alterada ou removida.

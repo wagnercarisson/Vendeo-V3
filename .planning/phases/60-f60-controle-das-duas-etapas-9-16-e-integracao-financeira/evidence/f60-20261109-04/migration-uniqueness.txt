@@ -1,0 +1,15 @@
+Migration uniqueness check (static, no DB)
+
+Worktree:
+- 155 SQL files under supabase/migrations
+- 155 distinct 14-digit prefixes
+- duplicate prefixes: 0
+- F60 prefix 20261109174110 present once
+
+Branches (git ls-tree -r --name-only <branch> -- supabase/migrations):
+- backup/antes-reversao-f47-20261025-114407: 145 files, duplicate prefixes: 0, F60 prefix: absent
+- feat/fase-59-1-entrega-de-um-formato-por-solicitacao: 154 files, duplicate prefixes: 0, F60 prefix: absent
+- feature/fase-44-temas-de-campanha-v2: 77 files, duplicate prefixes: 0, F60 prefix: absent
+- main: 154 files, duplicate prefixes: 0, F60 prefix: absent
+
+Result: PASS. No migration was applied, renamed, or modified.

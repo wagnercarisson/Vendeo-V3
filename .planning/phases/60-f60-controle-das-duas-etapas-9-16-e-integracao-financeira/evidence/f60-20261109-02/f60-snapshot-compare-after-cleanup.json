@@ -1,0 +1,118 @@
+{
+  "kind": "f60-homolog-compare",
+  "run_id": "f60-20261109-02",
+  "compared_at": "2026-11-09T18:29:45.390Z",
+  "pre_existing_integrity": "PASS",
+  "expected_delta_status": "PASS",
+  "expected_delta_by_table": {
+    "auth.users": {
+      "expected_count": 18,
+      "added_count": 18,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.stores": {
+      "expected_count": 18,
+      "added_count": 18,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.credit_balances": {
+      "expected_count": 18,
+      "added_count": 18,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.credit_transactions": {
+      "expected_count": 41,
+      "added_count": 41,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.campaigns": {
+      "expected_count": 18,
+      "added_count": 18,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.product_1_1_campaign_credit_operations": {
+      "expected_count": 19,
+      "added_count": 19,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.product_1_1_generation_attempt_claims": {
+      "expected_count": 2,
+      "added_count": 2,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.product_1_1_generation_outcomes": {
+      "expected_count": 2,
+      "added_count": 2,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.admin_audit_log": {
+      "expected_count": 2,
+      "added_count": 2,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.product_9_16_two_stage_operations": {
+      "expected_count": 14,
+      "added_count": 14,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.product_9_16_two_stage_steps": {
+      "expected_count": 28,
+      "added_count": 28,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.product_9_16_two_stage_attempt_claims": {
+      "expected_count": 24,
+      "added_count": 24,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    },
+    "public.product_9_16_two_stage_outcomes": {
+      "expected_count": 3,
+      "added_count": 3,
+      "extras": [],
+      "missing": [],
+      "matches": true
+    }
+  },
+  "ledger_status": "PASS",
+  "unexpected_removals": [],
+  "unexpected_changes": [],
+  "unexpected_additions": [],
+  "missing_expected_additions": [],
+  "unknown_expected_tables": [],
+  "unknown_snapshot_tables": [],
+  "ledger_observed": {
+    "count": 154,
+    "count_excluding_f60": 153,
+    "last": "20261109174110",
+    "sha256_excluding_f60": "3861f7a0a65717a07a2184554ecd11118e7662fb8c59f7573c2a6d5a78e59f6d",
+    "f60_applied": true
+  },
+  "ledger_expected": {
+    "count_excluding_f60": 153,
+    "sha256_excluding_f60": "3861f7a0a65717a07a2184554ecd11118e7662fb8c59f7573c2a6d5a78e59f6d"
+  }
+}

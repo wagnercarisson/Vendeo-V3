@@ -302,6 +302,20 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/orchestration/project-delivered-campaign",
     ],
   },
+  // F60 — o serviço financeiro do fluxo de duas etapas REUTILIZA a autoridade
+  // financeira, a leitura de pendências e as projeções do Produto 1:1; nenhum
+  // diretório é liberado em bloco.
+  ["src/lib/product-9-16-two-stage/two-stage-financial-service.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/credit-operation/credit-operation-client",
+      "@/lib/product-1-1/credit-operation/types",
+      "@/lib/product-1-1/pending/pending-operations-repository",
+      "@/lib/product-1-1/pending/resolve-pending-operation",
+      "@/lib/product-1-1/orchestration/project-delivered-campaign",
+      "@/lib/product-1-1/orchestration/project-closed-campaign",
+    ],
+  },
   // F56.2b2c (B2.3) — o resolver server-side do gate de gasto do piloto é um
   // módulo `product-1-1` que importa PARES EXATOS de autorização/elegibilidade e
   // o próprio gate. (Consumido EXCLUSIVAMENTE pelas duas rotas acima.)

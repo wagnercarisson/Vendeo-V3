@@ -1,0 +1,330 @@
+{
+  "kind": "f60-two-stage-proof",
+  "run_id": "f60-20261109-02",
+  "run_at": "2026-11-09T18:29:30.882Z",
+  "artifact_evidence_ref": "sha256:f60-simulated-artifact-v1",
+  "artifact_sha256": "a1fbf8a5585d774f2226f71d0f2162b2a3f561e07ce9c9c546726ac9576ce7a2",
+  "manifest": {
+    "users": [
+      "3a53de77-6a17-4a31-926f-58c8d1e338a9",
+      "aa0656d5-0e54-43c5-be6f-9cdac8a92d03",
+      "016c6907-610f-4626-aba1-31c73d6bbedb",
+      "1f2498df-dd23-4ab0-bac1-55f0385c545c",
+      "a374bc56-fc3c-4034-a545-590dca2ac3d5",
+      "9ad0cffc-c655-4c7e-9bcb-5258d3c3e649",
+      "8709c022-b78c-4801-a388-663e99f462aa",
+      "dd241086-c6eb-4faa-aa4a-6c44e5671c9a",
+      "a0400143-744d-45e4-a6d2-b69d879d2007",
+      "9b5e9cf6-6e83-4719-849c-43846ed0800a",
+      "70ead31f-05f1-47b4-9ffa-7caf453f31d8",
+      "4332fa5e-73ec-46b5-8b05-36a2d910bd82",
+      "8dd41a0f-f555-4be8-b1c9-dfedf2712f4d",
+      "dc119f4d-4a15-47a4-a1b5-b453d9c592da",
+      "28ec5944-8dfa-4a66-bfa0-9a3cc081bd45",
+      "0495f176-6265-4161-a48d-72aa5b04ff5e",
+      "3eca7d6f-1f0c-41cf-9e47-f971b46485e4",
+      "5ae53666-673c-4c26-9b33-55b198319b84"
+    ],
+    "stores": [
+      "d13b3209-b4f3-4e07-9991-0e3d26825c1b",
+      "a12a6ac4-b748-416b-a56a-e26aa0699e79",
+      "660ba69a-e816-417c-954c-294fcb5a21b5",
+      "1484d66f-b69b-4f8a-acf0-0b10f2ab9c8e",
+      "678f0d85-fa85-42d1-b4db-e955e685f6dd",
+      "72c92f04-14e0-4078-970a-779c179f18bb",
+      "507faf1b-01d8-4929-8530-2aa676ffbf0e",
+      "f0c32234-21e9-4a81-9b27-d937473bdf87",
+      "7125beaf-0061-4ef8-b0cb-b92bcfe81622",
+      "29565985-c564-45dd-9836-d9139b8ac7c8",
+      "c9ba9600-d3f7-4c4e-a6de-8c55d934446a",
+      "4176e753-c8a5-4dc2-a696-c84b70dad561",
+      "1bc66e40-ad67-4a91-a960-acdf2bae8f86",
+      "eb7fe2ba-0f6f-42e3-9fb3-2ab794b8dd11",
+      "08b885c9-ad1a-46c7-b17d-0c04ff5dbdf3",
+      "b40e6832-9808-4ed8-a0c7-78a46bfc109c",
+      "2720c544-6558-49e1-a579-000519dde02a",
+      "70673213-4515-4495-9c04-160cd4cff73c"
+    ],
+    "campaigns": [
+      "b0ec3fbd-f004-416b-85e1-806f467c872b",
+      "2a64ab2f-e9e5-4087-8c5c-40a15155542a",
+      "7c116982-b668-4ef7-94e0-1744d1fc724a",
+      "fedb84c1-e350-466d-9aa2-3d45b532881c",
+      "5db97227-614d-497c-96f7-1b2ea154df3b",
+      "dd2e8844-89ef-4373-954e-c746882a6a10",
+      "b5d4db2c-b9e5-4f8d-aec8-4949ba3b564a",
+      "abbb4dac-513c-44ae-803a-ee4d144e07a8",
+      "314f11e1-592b-4926-be32-484fe8a1106f",
+      "2b06009f-b05c-4c0b-a089-8739f5fe0faf",
+      "52b33167-6f2f-415d-a46e-a3b4b2860707",
+      "d4917c9b-93cf-493f-b6ff-2e5876afdac7",
+      "dedba3ce-33c7-4e11-b9f8-4278a75df6bd",
+      "df440c3a-b44f-4a71-b07d-0a8c081dc3a7",
+      "8a9247b4-416d-4037-8bfb-c1479d1a7198",
+      "b31dbcd5-391a-4115-9d9d-88bd5f0aad55",
+      "57a0757e-ee4c-4966-a4b7-f705abb9e795",
+      "ed358990-3cac-45ed-96f5-0da47256e57a"
+    ],
+    "operations": [
+      {
+        "campaignId": "b0ec3fbd-f004-416b-85e1-806f467c872b",
+        "operationId": "9a97d3dc-79ec-49ca-8b17-4c5db5302301"
+      },
+      {
+        "campaignId": "2a64ab2f-e9e5-4087-8c5c-40a15155542a",
+        "operationId": "ae720f1a-e104-4d19-8b47-be85486ecdb7"
+      },
+      {
+        "campaignId": "7c116982-b668-4ef7-94e0-1744d1fc724a",
+        "operationId": "bdd79a5e-5099-4e65-9ea0-80a750cea60e"
+      },
+      {
+        "campaignId": "fedb84c1-e350-466d-9aa2-3d45b532881c",
+        "operationId": "22b7ee0b-9d50-4621-8848-7f4678b597c5"
+      },
+      {
+        "campaignId": "5db97227-614d-497c-96f7-1b2ea154df3b",
+        "operationId": "d6cf2355-4a3f-47a7-b424-aae2f0c8e014"
+      },
+      {
+        "campaignId": "dd2e8844-89ef-4373-954e-c746882a6a10",
+        "operationId": "6aafc086-a0da-4418-8e08-b70e6a4c2d34"
+      },
+      {
+        "campaignId": "b5d4db2c-b9e5-4f8d-aec8-4949ba3b564a",
+        "operationId": "9bc3878f-7531-4ad1-a2e6-1c66cef120f5"
+      },
+      {
+        "campaignId": "abbb4dac-513c-44ae-803a-ee4d144e07a8",
+        "operationId": "e572c70f-f5ce-44a6-8cc0-4f99d70c2888"
+      },
+      {
+        "campaignId": "314f11e1-592b-4926-be32-484fe8a1106f",
+        "operationId": "c5f1d5fc-31ff-418a-8f89-6d0e3ee2c022"
+      },
+      {
+        "campaignId": "2b06009f-b05c-4c0b-a089-8739f5fe0faf",
+        "operationId": "69d03956-7d48-4c07-8dfe-678462b7ddce"
+      },
+      {
+        "campaignId": "52b33167-6f2f-415d-a46e-a3b4b2860707",
+        "operationId": "63ce26f7-f354-4a8e-a1bd-516a65c9f802"
+      },
+      {
+        "campaignId": "b31dbcd5-391a-4115-9d9d-88bd5f0aad55",
+        "operationId": "cfd14d18-220a-4592-b21b-06ad4c96b495"
+      },
+      {
+        "campaignId": "57a0757e-ee4c-4966-a4b7-f705abb9e795",
+        "operationId": "46245e18-783a-432c-a016-bb4072701885"
+      },
+      {
+        "campaignId": "ed358990-3cac-45ed-96f5-0da47256e57a",
+        "operationId": "dd5bb17f-f963-4155-b5ab-df51aae19439"
+      }
+    ],
+    "legacyOperations": [
+      {
+        "campaignId": "52b33167-6f2f-415d-a46e-a3b4b2860707",
+        "operationId": "6160450a-ea9d-4b31-81b6-a99a2b967508"
+      },
+      {
+        "campaignId": "d4917c9b-93cf-493f-b6ff-2e5876afdac7",
+        "operationId": "9d1fd435-3984-4c1f-9a47-b6b2b7eb847c"
+      },
+      {
+        "campaignId": "dedba3ce-33c7-4e11-b9f8-4278a75df6bd",
+        "operationId": "e4502382-fb10-455d-af06-a8f37c66c27f"
+      },
+      {
+        "campaignId": "df440c3a-b44f-4a71-b07d-0a8c081dc3a7",
+        "operationId": "417c670a-ab96-4a80-86fd-57c11aaf4c92"
+      },
+      {
+        "campaignId": "8a9247b4-416d-4037-8bfb-c1479d1a7198",
+        "operationId": "42e33b0d-7200-4e37-afaa-9fdf8eb08d66"
+      }
+    ],
+    "auditResolutionIds": [
+      "784b621f-ea0c-47ee-adf1-09a532ae2845",
+      "5c7828fa-1803-4cf8-9062-7193ecb7ac65"
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "S01",
+      "name": "abertura atômica + entrega com 1 crédito",
+      "status": "PASS",
+      "result": {
+        "operationId": "9a97d3dc-79ec-49ca-8b17-4c5db5302301",
+        "campaignId": "b0ec3fbd-f004-416b-85e1-806f467c872b",
+        "status": "delivered",
+        "artifactEvidenceRef": "sha256:f60-simulated-artifact-v1",
+        "ledger": {
+          "deductions": 1,
+          "refunds": 0,
+          "net": -1
+        }
+      }
+    },
+    {
+      "id": "S02",
+      "name": "falha definitiva + 1 estorno",
+      "status": "PASS",
+      "result": {
+        "operationId": "ae720f1a-e104-4d19-8b47-be85486ecdb7",
+        "campaignId": "2a64ab2f-e9e5-4087-8c5c-40a15155542a",
+        "status": "refunded",
+        "refundTxId": "0232c32f-cd27-4146-8490-fa7638ab80fd",
+        "ledger": {
+          "deductions": 1,
+          "refunds": 1,
+          "net": 0
+        }
+      }
+    },
+    {
+      "id": "S03",
+      "name": "concorrência distinta",
+      "status": "PASS",
+      "result": {
+        "operationId": "cfd14d18-220a-4592-b21b-06ad4c96b495",
+        "campaignId": "b31dbcd5-391a-4115-9d9d-88bd5f0aad55",
+        "authorizations": [
+          "execute",
+          "query_only"
+        ]
+      }
+    },
+    {
+      "id": "S04",
+      "name": "repetição da mesma requisição",
+      "status": "PASS",
+      "result": {
+        "operationId": "bdd79a5e-5099-4e65-9ea0-80a750cea60e",
+        "campaignId": "7c116982-b668-4ef7-94e0-1744d1fc724a",
+        "claims": 1
+      }
+    },
+    {
+      "id": "S05",
+      "name": "mesmo request_id simultâneo",
+      "status": "PASS",
+      "result": {
+        "operationId": "46245e18-783a-432c-a016-bb4072701885",
+        "campaignId": "57a0757e-ee4c-4966-a4b7-f705abb9e795",
+        "authorizations": [
+          "execute",
+          "query_only"
+        ]
+      }
+    },
+    {
+      "id": "S06",
+      "name": "retomada após base sem regenerar",
+      "status": "PASS",
+      "result": {
+        "operationId": "22b7ee0b-9d50-4621-8848-7f4678b597c5",
+        "campaignId": "fedb84c1-e350-466d-9aa2-3d45b532881c",
+        "baseAttempts": 1
+      }
+    },
+    {
+      "id": "S07",
+      "name": "limite de expansão entre retomadas",
+      "status": "PASS",
+      "result": {
+        "operationId": "6aafc086-a0da-4418-8e08-b70e6a4c2d34",
+        "campaignId": "dd2e8844-89ef-4373-954e-c746882a6a10",
+        "thirdReason": "attempt_limit_reached"
+      }
+    },
+    {
+      "id": "S08",
+      "name": "resultado desconhecido sem retry/estorno",
+      "status": "PASS",
+      "result": {
+        "operationId": "9bc3878f-7531-4ad1-a2e6-1c66cef120f5",
+        "campaignId": "b5d4db2c-b9e5-4f8d-aec8-4949ba3b564a",
+        "status": "reserved"
+      }
+    },
+    {
+      "id": "S09",
+      "name": "resposta tardia após entrega",
+      "status": "PASS",
+      "result": {
+        "operationId": "c5f1d5fc-31ff-418a-8f89-6d0e3ee2c022",
+        "campaignId": "314f11e1-592b-4926-be32-484fe8a1106f",
+        "lateReason": "operation_terminal"
+      }
+    },
+    {
+      "id": "S10",
+      "name": "admin encerra/estorna e bloqueia efeitos",
+      "status": "PASS",
+      "result": {
+        "operationId": "69d03956-7d48-4c07-8dfe-678462b7ddce",
+        "campaignId": "2b06009f-b05c-4c0b-a089-8739f5fe0faf",
+        "resolvedStatus": "refunded"
+      }
+    },
+    {
+      "id": "S11",
+      "name": "encerramento concorrente com etapa ativa",
+      "status": "PASS",
+      "result": {
+        "operationId": "dd5bb17f-f963-4155-b5ab-df51aae19439",
+        "campaignId": "ed358990-3cac-45ed-96f5-0da47256e57a",
+        "overlapObserved": true,
+        "closeError": "operation_in_progress",
+        "status": "reserved"
+      }
+    },
+    {
+      "id": "S12",
+      "name": "origem canônica e recusa de adoção",
+      "status": "PASS",
+      "result": {
+        "campaignId": "52b33167-6f2f-415d-a46e-a3b4b2860707",
+        "legacyOperationId": "6160450a-ea9d-4b31-81b6-a99a2b967508",
+        "newOperationId": "63ce26f7-f354-4a8e-a1bd-516a65c9f802",
+        "legacyClaimVisible": "legacy"
+      }
+    },
+    {
+      "id": "S13",
+      "name": "compatibilidade 1:1 e 9:16 direto",
+      "status": "PASS",
+      "result": {
+        "results": [
+          {
+            "format": "1:1",
+            "operationId": "9d1fd435-3984-4c1f-9a47-b6b2b7eb847c",
+            "status": "delivered",
+            "path": "delivery"
+          },
+          {
+            "format": "9:16",
+            "operationId": "e4502382-fb10-455d-af06-a8f37c66c27f",
+            "status": "delivered",
+            "path": "delivery"
+          },
+          {
+            "operationId": "417c670a-ab96-4a80-86fd-57c11aaf4c92",
+            "status": "refunded",
+            "path": "close_failed_operation"
+          },
+          {
+            "operationId": "42e33b0d-7200-4e37-afaa-9fdf8eb08d66",
+            "status": "refunded",
+            "path": "admin_resolve"
+          }
+        ]
+      }
+    }
+  ],
+  "passed": 13,
+  "failed": 0,
+  "approved": true
+}

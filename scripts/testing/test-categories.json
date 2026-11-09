@@ -5,6 +5,8 @@
     "scripts/f56-2e/__tests__/hosted-proofs.test.mjs",
     "scripts/f57-2/__tests__/comparative-proof.test.mjs",
     "scripts/f57-2/__tests__/orchestrator.ps1.test.mjs",
+    "scripts/f60/__tests__/snapshot-compare.test.mjs",
+    "scripts/f60/__tests__/f60-window.test.mjs",
     "scripts/gsd/__tests__/validate-product-flow-gate.test.mjs"
   ],
   "integration.postgres-homolog": [
@@ -42,5 +44,11 @@
     "src/lib/product-1-1/__tests__/publication-fence.integration.test.ts",
     "src/lib/product-1-1/__tests__/recovery-seams.integration.test.ts",
     "tests/integration/product-1-1-credit-transaction.test.ts"
+  ],
+  "integration.f60": [
+    "src/lib/product-9-16-two-stage/__tests__/two-stage-control.postgres.test.ts",
+    "src/lib/product-9-16-two-stage/__tests__/financial-integration.integration.test.ts",
+    "src/lib/product-9-16-two-stage/__tests__/shared-reading-compatibility.integration.test.ts",
+    "src/lib/product-9-16-two-stage/__tests__/origin-views.postgres.test.ts"
   ]
 }

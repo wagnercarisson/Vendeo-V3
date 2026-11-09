@@ -1,0 +1,29 @@
+{
+  "kind": "f60-cleanup-manifest",
+  "run_id": "f60-20261109-01",
+  "executed_at": "2026-11-09T15:31:00-03:00",
+  "policy": "orphan_test_users_only",
+  "reason": "A execução 01 falhou antes de criar stores/campaigns por segmento inválido. Foram removidos somente usuários de teste sem loja, restritos ao padrão p916test-%@f60.test.",
+  "deleted": [
+    "d7a5d194-111c-4439-b871-44b2a4bc6c29",
+    "c7a713df-7908-4244-b47e-c3effa1cc768",
+    "7553ae5e-501b-4f1a-a139-b969295eb29c",
+    "9f5484e6-7624-4ebd-9272-9a62f58b999c",
+    "fc553635-efa0-4adc-ac7c-d7c4fe7fd409",
+    "5d08b9d9-d11b-496c-967e-989d32b07d49",
+    "eb1d7580-c4c1-4541-bf5d-6b286a3cf893",
+    "a0b6be1b-33bd-4615-94e7-9d1e01508252",
+    "6db10ee2-0fea-48a9-bd77-cf65009e39fc",
+    "fb51c19a-6a81-456a-8630-5668874aad9c",
+    "d4c75308-ca0a-4e8c-847d-6ca0fc37bf93",
+    "ad0b5c35-944c-416f-9efe-c47a20b14036",
+    "39a308e5-873e-417d-9310-b23a3ec9a02e"
+  ],
+  "retained": [],
+  "expected_financial_delta": {
+    "credit_transactions": 0,
+    "amount": 0,
+    "note": "Nenhuma transação financeira foi criada na execução 01."
+  },
+  "unclassified": []
+}

@@ -150,7 +150,10 @@ function createRepoClient(input: {
       if (table === "product_1_1_campaign_credit_operations") {
         return input.credit ? [input.credit] : [];
       }
-      if (table === "product_1_1_generation_outcomes") {
+      if (
+        table === "product_1_1_generation_outcomes" ||
+        table === "product_generation_operation_outcomes_v"
+      ) {
         return input.outcome ? [input.outcome] : [];
       }
       return [];

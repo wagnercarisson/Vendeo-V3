@@ -1,0 +1,2 @@
+command: npx tsc -p tsconfig.typecheck.json --noEmit
+result: exit 0 (sem saída de erro)

@@ -255,8 +255,19 @@ function createFakeClient(tables: {
       if (table === "product_1_1_campaign_credit_operations") {
         return tables.creditList ?? (tables.credit ? [tables.credit] : []);
       }
-      if (table === "product_1_1_generation_attempt_claims") return tables.claims ?? [];
-      if (table === "product_1_1_generation_outcomes") {
+      if (
+        table === "product_1_1_generation_attempt_claims" ||
+        table === "product_generation_claim_history_v"
+      ) {
+        return tables.claims ?? [];
+      }
+      if (table === "product_generation_active_claims_v") {
+        return (tables.claims ?? []).filter((claim) => claim.status === "in_progress");
+      }
+      if (
+        table === "product_1_1_generation_outcomes" ||
+        table === "product_generation_operation_outcomes_v"
+      ) {
         return tables.outcome ? [tables.outcome] : [];
       }
       return [];

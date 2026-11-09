@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "failures": [],
+  "ledger": {
+    "count": 153,
+    "count_excluding_f60": 153,
+    "last": "20261105162052",
+    "sha256_excluding_f60": "3861f7a0a65717a07a2184554ecd11118e7662fb8c59f7573c2a6d5a78e59f6d",
+    "f60_applied": false
+  }
+}

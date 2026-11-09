@@ -17,6 +17,7 @@ import { spawnSync } from 'node:child_process';
 import {
   REPO_ROOT,
   appEnvGateStatus,
+  f60GateStatus,
   gateLine,
   postgresF504GateStatus,
   postgresHomologGateStatus,
@@ -57,6 +58,11 @@ const PROFILES = {
     config: 'vitest.integration-product-1-1.config.ts',
     preflight: product11GateStatus,
   },
+  f60: {
+    label: 'F60 duas etapas',
+    config: 'vitest.integration-f60.config.ts',
+    preflight: f60GateStatus,
+  },
 };
 
 const requested = process.argv[2];
@@ -75,7 +81,7 @@ const profile = PROFILES[requested];
 
 if (!profile) {
   console.error(
-    `Perfil inválido: ${requested ?? '(vazio)'}. Use: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1`,
+    `Perfil inválido: ${requested ?? '(vazio)'}. Use: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1 | f60`,
   );
   process.exit(3);
 }

@@ -1,0 +1,583 @@
+{
+  "kind": "f60-cleanup-manifest",
+  "run_id": "f60-20261109-02",
+  "executed_at": "2026-11-09T18:29:40.167Z",
+  "policy": "retain_all_non_disposable",
+  "deleted": [],
+  "retained": [
+    {
+      "kind": "operation",
+      "campaignId": "b0ec3fbd-f004-416b-85e1-806f467c872b",
+      "operationId": "9a97d3dc-79ec-49ca-8b17-4c5db5302301",
+      "credit_status": "delivered",
+      "reasons": [
+        "canonical_origin",
+        "financial_authority_reference"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "2a64ab2f-e9e5-4087-8c5c-40a15155542a",
+      "operationId": "ae720f1a-e104-4d19-8b47-be85486ecdb7",
+      "credit_status": "refunded",
+      "reasons": [
+        "canonical_origin",
+        "financial_authority_reference",
+        "immutable_outcome"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "7c116982-b668-4ef7-94e0-1744d1fc724a",
+      "operationId": "bdd79a5e-5099-4e65-9ea0-80a750cea60e",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "fedb84c1-e350-466d-9aa2-3d45b532881c",
+      "operationId": "22b7ee0b-9d50-4621-8848-7f4678b597c5",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "5db97227-614d-497c-96f7-1b2ea154df3b",
+      "operationId": "d6cf2355-4a3f-47a7-b424-aae2f0c8e014",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "dd2e8844-89ef-4373-954e-c746882a6a10",
+      "operationId": "6aafc086-a0da-4418-8e08-b70e6a4c2d34",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "b5d4db2c-b9e5-4f8d-aec8-4949ba3b564a",
+      "operationId": "9bc3878f-7531-4ad1-a2e6-1c66cef120f5",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation",
+        "immutable_outcome"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "abbb4dac-513c-44ae-803a-ee4d144e07a8",
+      "operationId": "e572c70f-f5ce-44a6-8cc0-4f99d70c2888",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "314f11e1-592b-4926-be32-484fe8a1106f",
+      "operationId": "c5f1d5fc-31ff-418a-8f89-6d0e3ee2c022",
+      "credit_status": "delivered",
+      "reasons": [
+        "canonical_origin",
+        "financial_authority_reference"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "2b06009f-b05c-4c0b-a089-8739f5fe0faf",
+      "operationId": "69d03956-7d48-4c07-8dfe-678462b7ddce",
+      "credit_status": "refunded",
+      "reasons": [
+        "canonical_origin",
+        "financial_authority_reference",
+        "audit_reference"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "52b33167-6f2f-415d-a46e-a3b4b2860707",
+      "operationId": "63ce26f7-f354-4a8e-a1bd-516a65c9f802",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "b31dbcd5-391a-4115-9d9d-88bd5f0aad55",
+      "operationId": "cfd14d18-220a-4592-b21b-06ad4c96b495",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "57a0757e-ee4c-4966-a4b7-f705abb9e795",
+      "operationId": "46245e18-783a-432c-a016-bb4072701885",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "ed358990-3cac-45ed-96f5-0da47256e57a",
+      "operationId": "dd5bb17f-f963-4155-b5ab-df51aae19439",
+      "credit_status": "reserved",
+      "reasons": [
+        "canonical_origin",
+        "pending_financial_operation",
+        "immutable_outcome"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "52b33167-6f2f-415d-a46e-a3b4b2860707",
+      "operationId": "6160450a-ea9d-4b31-81b6-a99a2b967508",
+      "credit_status": "reserved",
+      "reasons": [
+        "pending_financial_operation"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "d4917c9b-93cf-493f-b6ff-2e5876afdac7",
+      "operationId": "9d1fd435-3984-4c1f-9a47-b6b2b7eb847c",
+      "credit_status": "delivered",
+      "reasons": [
+        "financial_authority_reference"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "dedba3ce-33c7-4e11-b9f8-4278a75df6bd",
+      "operationId": "e4502382-fb10-455d-af06-a8f37c66c27f",
+      "credit_status": "delivered",
+      "reasons": [
+        "financial_authority_reference"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "df440c3a-b44f-4a71-b07d-0a8c081dc3a7",
+      "operationId": "417c670a-ab96-4a80-86fd-57c11aaf4c92",
+      "credit_status": "refunded",
+      "reasons": [
+        "financial_authority_reference"
+      ]
+    },
+    {
+      "kind": "operation",
+      "campaignId": "8a9247b4-416d-4037-8bfb-c1479d1a7198",
+      "operationId": "42e33b0d-7200-4e37-afaa-9fdf8eb08d66",
+      "credit_status": "refunded",
+      "reasons": [
+        "financial_authority_reference",
+        "audit_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "b0ec3fbd-f004-416b-85e1-806f467c872b",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "2a64ab2f-e9e5-4087-8c5c-40a15155542a",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "7c116982-b668-4ef7-94e0-1744d1fc724a",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "fedb84c1-e350-466d-9aa2-3d45b532881c",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "5db97227-614d-497c-96f7-1b2ea154df3b",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "dd2e8844-89ef-4373-954e-c746882a6a10",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "b5d4db2c-b9e5-4f8d-aec8-4949ba3b564a",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "abbb4dac-513c-44ae-803a-ee4d144e07a8",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "314f11e1-592b-4926-be32-484fe8a1106f",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "2b06009f-b05c-4c0b-a089-8739f5fe0faf",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "52b33167-6f2f-415d-a46e-a3b4b2860707",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "d4917c9b-93cf-493f-b6ff-2e5876afdac7",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "dedba3ce-33c7-4e11-b9f8-4278a75df6bd",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "df440c3a-b44f-4a71-b07d-0a8c081dc3a7",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "8a9247b4-416d-4037-8bfb-c1479d1a7198",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "b31dbcd5-391a-4115-9d9d-88bd5f0aad55",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "57a0757e-ee4c-4966-a4b7-f705abb9e795",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "campaign",
+      "id": "ed358990-3cac-45ed-96f5-0da47256e57a",
+      "reasons": [
+        "financial_operation_reference"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "d13b3209-b4f3-4e07-9991-0e3d26825c1b",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "a12a6ac4-b748-416b-a56a-e26aa0699e79",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "660ba69a-e816-417c-954c-294fcb5a21b5",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "1484d66f-b69b-4f8a-acf0-0b10f2ab9c8e",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "678f0d85-fa85-42d1-b4db-e955e685f6dd",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "72c92f04-14e0-4078-970a-779c179f18bb",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "507faf1b-01d8-4929-8530-2aa676ffbf0e",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "f0c32234-21e9-4a81-9b27-d937473bdf87",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "7125beaf-0061-4ef8-b0cb-b92bcfe81622",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "29565985-c564-45dd-9836-d9139b8ac7c8",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "c9ba9600-d3f7-4c4e-a6de-8c55d934446a",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "4176e753-c8a5-4dc2-a696-c84b70dad561",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "1bc66e40-ad67-4a91-a960-acdf2bae8f86",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "eb7fe2ba-0f6f-42e3-9fb3-2ab794b8dd11",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "08b885c9-ad1a-46c7-b17d-0c04ff5dbdf3",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "b40e6832-9808-4ed8-a0c7-78a46bfc109c",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "2720c544-6558-49e1-a579-000519dde02a",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "store",
+      "id": "70673213-4515-4495-9c04-160cd4cff73c",
+      "reasons": [
+        "ledger_append_only_and_balance"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "3a53de77-6a17-4a31-926f-58c8d1e338a9",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "aa0656d5-0e54-43c5-be6f-9cdac8a92d03",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "016c6907-610f-4626-aba1-31c73d6bbedb",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "1f2498df-dd23-4ab0-bac1-55f0385c545c",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "a374bc56-fc3c-4034-a545-590dca2ac3d5",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "9ad0cffc-c655-4c7e-9bcb-5258d3c3e649",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "8709c022-b78c-4801-a388-663e99f462aa",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "dd241086-c6eb-4faa-aa4a-6c44e5671c9a",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "a0400143-744d-45e4-a6d2-b69d879d2007",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "9b5e9cf6-6e83-4719-849c-43846ed0800a",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "70ead31f-05f1-47b4-9ffa-7caf453f31d8",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "4332fa5e-73ec-46b5-8b05-36a2d910bd82",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "8dd41a0f-f555-4be8-b1c9-dfedf2712f4d",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "dc119f4d-4a15-47a4-a1b5-b453d9c592da",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "28ec5944-8dfa-4a66-bfa0-9a3cc081bd45",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "0495f176-6265-4161-a48d-72aa5b04ff5e",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "3eca7d6f-1f0c-41cf-9e47-f971b46485e4",
+      "reasons": [
+        "store_ownership"
+      ]
+    },
+    {
+      "kind": "user",
+      "id": "5ae53666-673c-4c26-9b33-55b198319b84",
+      "reasons": [
+        "store_ownership"
+      ]
+    }
+  ],
+  "expected_financial_delta": {
+    "credit_transactions": 41,
+    "amount": 345,
+    "note": "Append-only; retido por design, nunca apagado."
+  },
+  "unclassified": []
+}

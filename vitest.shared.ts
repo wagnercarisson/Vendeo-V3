@@ -13,6 +13,7 @@ export interface TestCategories {
   'integration.postgres-f50-4': string[];
   'integration.app-env': string[];
   'integration.product-1-1': string[];
+  'integration.f60': string[];
 }
 
 export const INTEGRATION_CATEGORY_KEYS = [
@@ -21,6 +22,7 @@ export const INTEGRATION_CATEGORY_KEYS = [
   'integration.postgres-f50-4',
   'integration.app-env',
   'integration.product-1-1',
+  'integration.f60',
 ] as const satisfies readonly (keyof TestCategories)[];
 
 const CATEGORIES = inventory as TestCategories;

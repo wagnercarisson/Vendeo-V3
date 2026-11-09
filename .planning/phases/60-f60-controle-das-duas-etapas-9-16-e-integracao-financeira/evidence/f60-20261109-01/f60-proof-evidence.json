@@ -1,0 +1,153 @@
+{
+  "kind": "f60-two-stage-proof",
+  "run_id": "f60-20261109-01",
+  "run_at": "2026-11-09T18:29:09.091Z",
+  "artifact_evidence_ref": "sha256:f60-simulated-artifact-v1",
+  "artifact_sha256": "a1fbf8a5585d774f2226f71d0f2162b2a3f561e07ce9c9c546726ac9576ce7a2",
+  "manifest": {
+    "users": [
+      "d7a5d194-111c-4439-b871-44b2a4bc6c29",
+      "c7a713df-7908-4244-b47e-c3effa1cc768",
+      "7553ae5e-501b-4f1a-a139-b969295eb29c",
+      "9f5484e6-7624-4ebd-9272-9a62f58b999c",
+      "fc553635-efa0-4adc-ac7c-d7c4fe7fd409",
+      "5d08b9d9-d11b-496c-967e-989d32b07d49",
+      "eb1d7580-c4c1-4541-bf5d-6b286a3cf893",
+      "a0b6be1b-33bd-4615-94e7-9d1e01508252",
+      "6db10ee2-0fea-48a9-bd77-cf65009e39fc",
+      "fb51c19a-6a81-456a-8630-5668874aad9c",
+      "d4c75308-ca0a-4e8c-847d-6ca0fc37bf93",
+      "ad0b5c35-944c-416f-9efe-c47a20b14036",
+      "39a308e5-873e-417d-9310-b23a3ec9a02e"
+    ],
+    "stores": [
+      "9c2ececf-fdfd-4623-bea4-54f5598c37a6",
+      "38f97c80-3eab-4c49-ad53-c3065372676f",
+      "97d101e2-be6c-4355-85bf-2f3119767639",
+      "cc7e7e39-4412-43c6-aca7-f635e36d7170",
+      "42e7e19e-68ab-483b-ad31-c676d6439647",
+      "0cb315dd-7ed9-433e-8856-8770de3d89fc",
+      "e9537792-5cde-47ba-aba7-29b825a5bc31",
+      "db2631e7-af04-4bf1-ab84-dbc155a81873",
+      "23f3147d-09db-4bf6-b7fc-8a8a5aaf83d5",
+      "0bde4f93-33ab-4c8c-840a-c2d2d6d6651c",
+      "2144e530-424d-40fb-9fc4-ff1a2d08dcb9",
+      "5bc3006f-0141-436e-b953-31bbf66663a2",
+      "7253aaf1-5cc6-4299-8818-9bddd82d055e"
+    ],
+    "campaigns": [
+      "a030b088-f2d3-4baa-ae98-7d07a80875a5",
+      "b2ae923e-3933-43f8-8555-5dc24724bcb8",
+      "a8955fd9-58f2-4fa4-96c5-60428d15f159",
+      "4dfd58e8-1bdc-44e8-b135-2c751e2b8e29",
+      "8f58cb09-fde5-43bf-b432-64c3de418bd8",
+      "142ffcc9-862f-4de1-9c9d-d737a5102a08",
+      "b0b715d2-914e-4dcd-8925-036234b38016",
+      "2ccf5bcd-59b2-4c96-880d-6a78933efe1f",
+      "b956c0de-ec17-41db-86cd-d7b8fceb2fee",
+      "8c76e395-7488-4db3-8beb-a021dbe0c1e3",
+      "a54c931e-586a-4368-ab1e-cbb65dc18d45",
+      "75db3bbc-ee0d-44f0-ad97-4e2c51a565b2",
+      "20976148-0e23-4b15-8aa4-dd200fd053cf"
+    ],
+    "operations": [],
+    "legacyOperations": [],
+    "auditResolutionIds": []
+  },
+  "scenarios": [
+    {
+      "id": "S01",
+      "name": "abertura atômica + entrega com 1 crédito",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S02",
+      "name": "falha definitiva + 1 estorno",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S03",
+      "name": "concorrência distinta",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S04",
+      "name": "repetição da mesma requisição",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S05",
+      "name": "mesmo request_id simultâneo",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S06",
+      "name": "retomada após base sem regenerar",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S07",
+      "name": "limite de expansão entre retomadas",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S08",
+      "name": "resultado desconhecido sem retry/estorno",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S09",
+      "name": "resposta tardia após entrega",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S10",
+      "name": "admin encerra/estorna e bloqueia efeitos",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S11",
+      "name": "encerramento concorrente com etapa ativa",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S12",
+      "name": "origem canônica e recusa de adoção",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    },
+    {
+      "id": "S13",
+      "name": "compatibilidade 1:1 e 9:16 direto",
+      "status": "FAIL",
+      "error": "new row for relation \"stores\" violates check constraint \"stores_segment_check\"",
+      "details": null
+    }
+  ],
+  "passed": 0,
+  "failed": 13,
+  "approved": false
+}

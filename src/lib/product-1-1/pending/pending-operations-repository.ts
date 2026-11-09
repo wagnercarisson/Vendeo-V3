@@ -22,13 +22,17 @@ import type { CreditOperationStatus } from "../credit-operation/types";
  */
 
 const CREDIT_TABLE = "product_1_1_campaign_credit_operations";
-const CLAIMS_TABLE = "product_1_1_generation_attempt_claims";
-const OUTCOMES_TABLE = "product_1_1_generation_outcomes";
+const CLAIM_HISTORY_VIEW = "product_generation_claim_history_v";
+const ACTIVE_CLAIMS_VIEW = "product_generation_active_claims_v";
+const OUTCOMES_VIEW = "product_generation_operation_outcomes_v";
+const CANONICAL_OPERATIONS_TABLE = "product_9_16_two_stage_operations";
+const CANONICAL_STEPS_TABLE = "product_9_16_two_stage_steps";
 
 const CREDIT_COLUMNS =
   "campaign_id, operation_id, store_id, amount, status, state_epoch, publication_state, created_at, updated_at";
-const CLAIMS_COLUMNS = "status, attempt_number, updated_at";
-const OUTCOME_COLUMNS = "outcome, support_reference";
+const CLAIM_COLUMNS = "source, stage, status, attempt_number, updated_at";
+const OUTCOME_COLUMNS = "source, outcome, stage, support_reference";
+const STEP_COLUMNS = "stage, status, attempts_used, updated_at";
 
 interface CreditRow {
   campaign_id: string;
@@ -43,14 +47,30 @@ interface CreditRow {
 }
 
 interface ClaimRow {
+  source: "legacy" | "9_16_two_stage";
+  stage: "base" | "expansion" | null;
   status: string;
   attempt_number: number;
   updated_at: string | null;
 }
 
 interface OutcomeRow {
+  source: "legacy" | "9_16_two_stage";
   outcome: string;
+  stage: "base" | "expansion" | null;
   support_reference: string | null;
+}
+
+interface StepRow {
+  stage: "base" | "expansion";
+  status: "pending" | "in_progress" | "done" | "failed" | "abandoned";
+  attempts_used: number;
+  updated_at: string | null;
+}
+
+interface CanonicalOperation {
+  readonly origin: "legacy" | "9_16_two_stage";
+  readonly stage: "base" | "expansion" | null;
 }
 
 /** Estado persistido TIPADO de uma operação pendente (sem assinatura — I3). */
@@ -76,8 +96,28 @@ export interface PendingOperationState {
   readonly createdAt: string | null;
   readonly updatedAt: string | null;
   readonly latestAttemptAt: string | null;
+  /** F60 — origem canônica da operação. */
+  readonly origin?: "legacy" | "9_16_two_stage";
+  /** F60 — etapa corrente do novo fluxo; `null` para legado/terminal sem pendência. */
+  readonly stage?: "base" | "expansion" | null;
   /** F59 — formato resolvido quando o repositório recebe o resolvedor. */
   readonly format?: "1:1" | "9:16" | null;
+}
+
+function stageRank(stage: ClaimRow["stage"]): number {
+  return stage === "expansion" ? 1 : 0;
+}
+
+function currentStage(steps: readonly StepRow[], terminal = false): "base" | "expansion" | null {
+  if (terminal) return null;
+  const base = steps.find((step) => step.stage === "base");
+  const expansion = steps.find((step) => step.stage === "expansion");
+  if (base && base.status !== "done") return "base";
+  if (base?.status === "done" && expansion && expansion.status !== "done") {
+    return "expansion";
+  }
+  if (expansion?.status === "done") return "expansion";
+  return null;
 }
 
 export interface PendingArtifactProber {
@@ -154,15 +194,30 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     }
   }
 
-  private async readClaims(campaignId: string, operationId: string): Promise<ClaimRow[]> {
+  private async readClaimHistory(
+    campaignId: string,
+    operationId: string,
+  ): Promise<ClaimRow[]> {
     const { data, error } = await this.client
-      .from(CLAIMS_TABLE)
-      .select(CLAIMS_COLUMNS)
+      .from(CLAIM_HISTORY_VIEW)
+      .select(CLAIM_COLUMNS)
       .eq("campaign_id", campaignId)
-      .eq("operation_id", operationId)
-      .order("attempt_number", { ascending: false });
-    if (error) throw new Error(`pending_operation_claims_read_failed:${error.message}`);
+      .eq("operation_id", operationId);
+    if (error) throw new Error(`pending_operation_claim_history_read_failed:${error.message}`);
     return (data ?? []) as ClaimRow[];
+  }
+
+  private async hasActiveExecution(
+    campaignId: string,
+    operationId: string,
+  ): Promise<boolean> {
+    const { data, error } = await this.client
+      .from(ACTIVE_CLAIMS_VIEW)
+      .select("status")
+      .eq("campaign_id", campaignId)
+      .eq("operation_id", operationId);
+    if (error) throw new Error(`pending_operation_active_read_failed:${error.message}`);
+    return (data ?? []).length > 0;
   }
 
   private async readOutcome(
@@ -170,13 +225,56 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     operationId: string,
   ): Promise<OutcomeRow | null> {
     const { data, error } = await this.client
-      .from(OUTCOMES_TABLE)
+      .from(OUTCOMES_VIEW)
       .select(OUTCOME_COLUMNS)
       .eq("campaign_id", campaignId)
       .eq("operation_id", operationId)
       .maybeSingle();
     if (error) throw new Error(`pending_operation_outcome_read_failed:${error.message}`);
     return (data as OutcomeRow | null) ?? null;
+  }
+
+  private async readCanonicalOperation(
+    campaignId: string,
+    operationId: string,
+    terminal: boolean,
+  ): Promise<CanonicalOperation> {
+    const { data, error } = await this.client
+      .from(CANONICAL_OPERATIONS_TABLE)
+      .select("campaign_id, operation_id")
+      .eq("campaign_id", campaignId)
+      .eq("operation_id", operationId)
+      .maybeSingle();
+    if (error) throw new Error(`pending_operation_canonical_read_failed:${error.message}`);
+    if (!data) return { origin: "legacy", stage: null };
+
+    const { data: steps, error: stepsError } = await this.client
+      .from(CANONICAL_STEPS_TABLE)
+      .select(STEP_COLUMNS)
+      .eq("campaign_id", campaignId)
+      .eq("operation_id", operationId);
+    if (stepsError) {
+      throw new Error(`pending_operation_steps_read_failed:${stepsError.message}`);
+    }
+    return {
+      origin: "9_16_two_stage",
+      stage: currentStage((steps ?? []) as StepRow[], terminal),
+    };
+  }
+
+  private orderHistory(claims: ClaimRow[], origin: "legacy" | "9_16_two_stage"): ClaimRow[] {
+    return [...claims].sort((a, b) => {
+      if (origin === "legacy") {
+        const byNumber = b.attempt_number - a.attempt_number;
+        if (byNumber !== 0) return byNumber;
+        return (b.updated_at ?? "").localeCompare(a.updated_at ?? "");
+      }
+      const byTime = (b.updated_at ?? "").localeCompare(a.updated_at ?? "");
+      if (byTime !== 0) return byTime;
+      const rank = stageRank(b.stage) - stageRank(a.stage);
+      if (rank !== 0) return rank;
+      return b.attempt_number - a.attempt_number;
+    });
   }
 
   async findPendingOperation(
@@ -193,16 +291,20 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     if (!data) return null;
 
     const row = data as CreditRow;
-    const claims = await this.readClaims(campaignId, operationId);
+    const terminal = row.status === "delivered" || row.status === "refunded";
+    const canonical = await this.readCanonicalOperation(campaignId, operationId, terminal);
+    const claims = this.orderHistory(
+      await this.readClaimHistory(campaignId, operationId),
+      canonical.origin,
+    );
+    const processing = await this.hasActiveExecution(campaignId, operationId);
     const outcome = await this.readOutcome(campaignId, operationId);
 
-    const terminal = row.status === "delivered" || row.status === "refunded";
     // I2 — precedência terminal: o marcador `unknown` só governa operação NÃO
     // terminal (a linha histórica é imutável, não governa o estado terminal).
     const unknown = outcome?.outcome === "unknown" && !terminal;
     // P2 — falha FINAL persistida (`failed`) só governa operação NÃO terminal.
     const failed = outcome?.outcome === "failed" && !terminal;
-    const processing = claims.some((claim) => claim.status === "in_progress");
     const latestAttemptAt = claims.length > 0 ? (claims[0].updated_at ?? null) : null;
     const formatKind = await this.formatFor(campaignId);
 
@@ -224,6 +326,8 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
       createdAt: row.created_at ?? null,
       updatedAt: row.updated_at ?? null,
       latestAttemptAt,
+      origin: canonical.origin,
+      stage: canonical.stage,
       format: formatKind === "unavailable" ? null : formatKind,
     });
   }
@@ -233,6 +337,15 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     campaignId: string,
     operationId: string,
   ): Promise<ArtifactProbe> {
+    // F60 — a origem canônica MANDA sobre o formato resolvido. Uma operação do
+    // fluxo de duas etapas só pode ser comprovada pela sonda VERTICAL final;
+    // sem essa sonda o resultado é INCONCLUSIVO (nunca cai na sonda quadrada).
+    const canonical = await this.readCanonicalOperation(campaignId, operationId, false);
+    if (canonical.origin === "9_16_two_stage") {
+      if (!this.verticalArtifacts) throw new FormatUnavailableError();
+      return this.verticalArtifacts.probeArtifact({ storeId, campaignId, operationId });
+    }
+
     const format = await this.formatFor(campaignId);
     if (format === "unavailable") throw new FormatUnavailableError();
     if (format === "9:16") {

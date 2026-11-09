@@ -1,0 +1,9 @@
+# F60 evidence directory
+
+Artefatos gerados somente no checkpoint autorizado de 60-01:
+- `f60-snapshot-before.json` / `f60-snapshot-after.json`
+- `f60-snapshot-compare.json` / `.md`
+- `f60-proof-evidence.json`
+- `cleanup-manifest.json` / `.md`
+
+Nenhum artefato foi gerado nesta preparação.

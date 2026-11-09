@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { evaluateF60Target, isHomologTarget } from './f60-window.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '../..');
@@ -30,6 +31,7 @@ const INTEGRATION_KEYS = [
   'integration.postgres-f50-4',
   'integration.app-env',
   'integration.product-1-1',
+  'integration.f60',
 ];
 const INVENTORY_KEYS = ['nodeTest', ...INTEGRATION_KEYS];
 
@@ -42,6 +44,7 @@ const INTEGRATION_PATTERNS = [
   /operation-cost-service\.integration/,
   /f50-4-concurrency/,
   /product-1-1\/.*\.integration\.test\.ts$/,
+  /product-9-16-two-stage\/.*\.postgres\.test\.ts$/,
   /image-generation-operations-repository\.integration/,
   /tests\/integration\/product-1-1-credit-transaction/,
 ];
@@ -195,16 +198,6 @@ export function postgresHomologGateStatus(env = process.env) {
   return { ready: reasons.length === 0, reasons };
 }
 
-/** O alvo reservado do homolog, por qualquer endereço loopback equivalente. */
-function isHomologTarget(target) {
-  return (
-    target !== null &&
-    isLoopbackHost(target.hostname) &&
-    target.port === '57782' &&
-    target.pathname === '/postgres'
-  );
-}
-
 export function postgresLocalGateStatus(env = process.env) {
   const reasons = [];
   const target = parsePostgresUrl(env.TEST_DATABASE_URL);
@@ -307,6 +300,15 @@ export function appEnvGateStatus(env = process.env, dotenvContent = null) {
   return { ready: reasons.length === 0, reasons };
 }
 
+/**
+ * Perfil F60: por padrão local/isolado; homolog só com NOVA autorização e
+ * janela vigente (a janela do 60-01 terminou e não é reutilizável).
+ */
+export function f60GateStatus(env = process.env) {
+  const result = evaluateF60Target(env.TEST_DATABASE_URL, env);
+  return { ready: result.ok, reasons: result.errors };
+}
+
 export function product11GateStatus(env = process.env) {
   const url = env.F562A_ISOLATED_SUPABASE_URL;
   const serviceRoleKey = env.F562A_ISOLATED_SERVICE_ROLE_KEY;
@@ -333,6 +335,7 @@ export const GATE_ROWS = [
   ['PostgreSQL/f50-4', 'integration.postgres-f50-4', postgresF504GateStatus],
   ['app-env (.env.local)', 'integration.app-env', () => appEnvGateStatus(process.env, readDotEnv())],
   ['Produto 1:1', 'integration.product-1-1', product11GateStatus],
+  ['F60 duas etapas', 'integration.f60', f60GateStatus],
 ];
 
 function printTable(inventory) {

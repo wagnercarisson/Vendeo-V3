@@ -1,0 +1,155 @@
+{
+  "kind": "f60-final-conference",
+  "run_id": "f60-20261109-02",
+  "executed_at": "2026-11-09T18:47:45.773Z",
+  "removed_uuids": [
+    "d7a5d194-111c-4439-b871-44b2a4bc6c29",
+    "c7a713df-7908-4244-b47e-c3effa1cc768",
+    "7553ae5e-501b-4f1a-a139-b969295eb29c",
+    "9f5484e6-7624-4ebd-9272-9a62f58b999c",
+    "fc553635-efa0-4adc-ac7c-d7c4fe7fd409",
+    "5d08b9d9-d11b-496c-967e-989d32b07d49",
+    "eb1d7580-c4c1-4541-bf5d-6b286a3cf893",
+    "a0b6be1b-33bd-4615-94e7-9d1e01508252",
+    "6db10ee2-0fea-48a9-bd77-cf65009e39fc",
+    "fb51c19a-6a81-456a-8630-5668874aad9c",
+    "d4c75308-ca0a-4e8c-847d-6ca0fc37bf93",
+    "ad0b5c35-944c-416f-9efe-c47a20b14036",
+    "39a308e5-873e-417d-9310-b23a3ec9a02e"
+  ],
+  "removed_uuids_absent": true,
+  "pre_existing_integrity": "PASS",
+  "expected_delta_status": "PASS",
+  "ledger_status": "PASS",
+  "authorized_removals": {
+    "run_id": "f60-20261109-01",
+    "count": 13,
+    "reason": "usuários de teste órfãos criados antes da falha de fixture; sem loja, campanha ou transação financeira",
+    "verified_absent": true
+  },
+  "unexpected_removals": [],
+  "unexpected_changes": [],
+  "unexpected_additions": [],
+  "missing_expected_additions": [],
+  "ledger_before": {
+    "count": 153,
+    "count_excluding_f60": 153,
+    "last": "20261105162052",
+    "sha256_excluding_f60": "3861f7a0a65717a07a2184554ecd11118e7662fb8c59f7573c2a6d5a78e59f6d",
+    "f60_applied": false
+  },
+  "ledger_after": {
+    "count": 154,
+    "count_excluding_f60": 153,
+    "last": "20261109174110",
+    "sha256_excluding_f60": "3861f7a0a65717a07a2184554ecd11118e7662fb8c59f7573c2a6d5a78e59f6d",
+    "f60_applied": true
+  },
+  "tables": {
+    "auth.users": {
+      "baseline_exists": true,
+      "baseline_count": 5,
+      "current_count": 23,
+      "expected_additions": 18,
+      "added": 18,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.stores": {
+      "baseline_exists": true,
+      "baseline_count": 4,
+      "current_count": 22,
+      "expected_additions": 18,
+      "added": 18,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.credit_balances": {
+      "baseline_exists": true,
+      "baseline_count": 3,
+      "current_count": 21,
+      "expected_additions": 18,
+      "added": 18,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.credit_transactions": {
+      "baseline_exists": true,
+      "baseline_count": 127,
+      "current_count": 168,
+      "expected_additions": 41,
+      "added": 41,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.campaigns": {
+      "baseline_exists": true,
+      "baseline_count": 91,
+      "current_count": 109,
+      "expected_additions": 18,
+      "added": 18,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.product_1_1_campaign_credit_operations": {
+      "baseline_exists": true,
+      "baseline_count": 32,
+      "current_count": 51,
+      "expected_additions": 19,
+      "added": 19,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.product_1_1_generation_attempt_claims": {
+      "baseline_exists": true,
+      "baseline_count": 29,
+      "current_count": 31,
+      "expected_additions": 2,
+      "added": 2,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.product_1_1_generation_outcomes": {
+      "baseline_exists": true,
+      "baseline_count": 3,
+      "current_count": 5,
+      "expected_additions": 2,
+      "added": 2,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.admin_audit_log": {
+      "baseline_exists": true,
+      "baseline_count": 95,
+      "current_count": 97,
+      "expected_additions": 2,
+      "added": 2,
+      "extras": 0,
+      "missing": 0
+    },
+    "public.product_9_16_two_stage_operations": {
+      "baseline_exists": false,
+      "current_count": 14,
+      "expected_count": 14,
+      "extras": 0
+    },
+    "public.product_9_16_two_stage_steps": {
+      "baseline_exists": false,
+      "current_count": 28,
+      "expected_count": 28,
+      "extras": 0
+    },
+    "public.product_9_16_two_stage_attempt_claims": {
+      "baseline_exists": false,
+      "current_count": 24,
+      "expected_count": 24,
+      "extras": 0
+    },
+    "public.product_9_16_two_stage_outcomes": {
+      "baseline_exists": false,
+      "current_count": 3,
+      "expected_count": 3,
+      "extras": 0
+    }
+  }
+}

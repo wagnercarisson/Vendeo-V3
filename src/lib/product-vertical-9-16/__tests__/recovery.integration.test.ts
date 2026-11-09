@@ -83,15 +83,18 @@ function createFakeClient(options: {
           error: null,
         };
       }
-      return {
-        data:
-          rows.find(
-            (row) =>
-              row.campaign_id === filters.campaign_id &&
-              row.operation_id === filters.operation_id,
-          ) ?? null,
-        error: null,
-      };
+      if (table === "product_1_1_campaign_credit_operations") {
+        return {
+          data:
+            rows.find(
+              (row) =>
+                row.campaign_id === filters.campaign_id &&
+                row.operation_id === filters.operation_id,
+            ) ?? null,
+          error: null,
+        };
+      }
+      return { data: null, error: null };
     });
     chain.then = (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
       Promise.resolve(
