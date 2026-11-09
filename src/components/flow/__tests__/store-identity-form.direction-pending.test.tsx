@@ -437,19 +437,23 @@ describe("StoreIdentityForm — direção visual pendente (261025-svt)", () => {
 
     await waitFor(() => expect(screen.getByText("Direção visual pendente")).toBeInTheDocument());
 
-    const readinessBefore = fetchMock.mock.calls.filter(
-      ([u]) => String(u) === "/api/store/check-readiness",
-    ).length;
+    const readinessCalls = () =>
+      fetchMock.mock.calls.filter(
+        ([u]) => String(u) === "/api/store/check-readiness",
+      ).length;
+
+    const readinessBefore = readinessCalls();
 
     fireEvent.click(screen.getByRole("button", { name: "Realinhar direção visual" }));
 
+    // O banner some antes do efeito que dispara o novo check-readiness. Aguardar
+    // as duas condições evita a corrida sem sleep e preserva a asserção.
     await waitFor(() => {
       expect(screen.queryByText("Direção visual pendente")).not.toBeInTheDocument();
+      expect(readinessCalls()).toBeGreaterThan(readinessBefore);
     });
 
-    const readinessAfter = fetchMock.mock.calls.filter(
-      ([u]) => String(u) === "/api/store/check-readiness",
-    ).length;
+    const readinessAfter = readinessCalls();
     expect(readinessAfter).toBeGreaterThan(readinessBefore);
     expect(
       fetchMock.mock.calls.some(
