@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { createHash, randomUUID } from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
@@ -20,10 +19,22 @@ import { persistCompositionArtifact } from "../persist";
 import { retrieveCompositionArtifact } from "../retrieve";
 import { resolveReusableSquareSource } from "../resolve-source";
 import { CAMPAIGN_IMAGES_BUCKET } from "../storage";
+import {
+  applyReconciliation,
+  createFixtureManifest,
+  markStatus,
+  planIdentity,
+  upsertArtifact,
+  upsertObject,
+  writeManifest,
+  type FixtureManifest,
+  type ManifestStatus,
+} from "./support/fixture-manifest";
 import type {
   ArtifactIdentity,
   ArtifactRole,
   PersistArtifactInput,
+  PersistArtifactResult,
 } from "../types";
 
 /**
@@ -60,10 +71,6 @@ interface Fixture {
   readonly otherUserId: string;
 }
 
-interface ArtifactRow {
-  readonly id: string;
-}
-
 interface CountRow {
   readonly n: number;
 }
@@ -80,38 +87,6 @@ const EVIDENCE_DIR = path.resolve(
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-type ManifestStatus = "in_progress" | "completed" | "incomplete" | "failed";
-
-interface FixtureManifest {
-  runId: string;
-  startedAt: string;
-  target: {
-    kind: string;
-    dbPort: string;
-    apiPort: string;
-  };
-  status: ManifestStatus;
-  error?: string;
-  referenceBaselineSha256?: string;
-  users: Array<{ id: string; created: boolean }>;
-  stores: Array<{ id: string; created: boolean }>;
-  campaigns: Array<{
-    id: string;
-    kind: string;
-    storagePath: string;
-  }>;
-  artifacts: Array<{
-    id?: string;
-    storeId: string;
-    campaignId: string;
-    operationId: string;
-    role: string;
-    storagePath: string;
-  }>;
-  objects: Array<{ bucket: string; path: string }>;
-  completedAt?: string;
-}
 
 let manifest: FixtureManifest | null = null;
 let manifestPath = "";
@@ -139,12 +114,7 @@ function requireEnv(name: (typeof REQUIRED_ENV)[number]): string {
 
 function persistManifest(): void {
   if (!manifest || !manifestPath) return;
-  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
-  fs.writeFileSync(
-    manifestPath,
-    `${JSON.stringify(manifest, null, 2)}\n`,
-    "utf8",
-  );
+  writeManifest(manifestPath, manifest);
 }
 
 function initManifest(
@@ -154,21 +124,14 @@ function initManifest(
     expected?: { dbPort?: string; apiPort?: string } | null;
   },
 ): void {
-  manifest = {
+  manifest = createFixtureManifest({
     runId,
-    startedAt: new Date().toISOString(),
     target: {
       kind: gate.targetKind ?? "unknown",
       dbPort: gate.expected?.dbPort ?? "unknown",
       apiPort: gate.expected?.apiPort ?? "unknown",
     },
-    status: "in_progress",
-    users: [],
-    stores: [],
-    campaigns: [],
-    artifacts: [],
-    objects: [],
-  };
+  });
   manifestPath = path.join(EVIDENCE_DIR, `60.1-04-fixtures-${runId}.json`);
   persistManifest();
 }
@@ -203,52 +166,87 @@ function recordArtifact(entry: {
   role: string;
   storagePath: string;
 }): void {
-  if (
-    !manifest ||
-    manifest.artifacts.some(
-      (current) =>
-        current.storeId === entry.storeId &&
-        current.campaignId === entry.campaignId &&
-        current.operationId === entry.operationId &&
-        current.role === entry.role,
-    )
-  ) {
-    return;
-  }
-  manifest.artifacts.push(entry);
+  if (!manifest) return;
+  upsertArtifact(manifest, entry, "confirmed");
   persistManifest();
 }
 
 function recordObject(bucket: string, objectPath: string): void {
-  if (
-    !manifest ||
-    manifest.objects.some(
-      (entry) => entry.bucket === bucket && entry.path === objectPath,
-    )
-  ) {
-    return;
-  }
-  manifest.objects.push({ bucket, path: objectPath });
+  if (!manifest) return;
+  upsertObject(manifest, bucket, objectPath, "confirmed");
   persistManifest();
 }
 
-function recordIdentityArtifact(identity: ArtifactIdentity): void {
+function planIdentityArtifact(identity: ArtifactIdentity): void {
+  if (!manifest) return;
   const storagePath = compositionArtifactStoragePath(identity);
-  recordArtifact({
-    storeId: identity.storeId,
-    campaignId: identity.campaignId,
-    operationId: identity.operationId,
-    role: identity.role,
-    storagePath,
+  planIdentity(manifest, INTERNAL_BUCKET, identity, storagePath);
+  persistManifest();
+}
+
+function isStorageAbsence(error: unknown): boolean {
+  if (error === null || typeof error !== "object") return false;
+  const record = error as { statusCode?: unknown; message?: unknown };
+  if (String(record.statusCode ?? "") !== "404") return false;
+  const text = String(record.message ?? "").toLowerCase();
+  if (text.includes("bucket")) return false;
+  return /object not found/i.test(text) || /object does not exist/i.test(text);
+}
+
+async function reconcileIdentityArtifact(identity: ArtifactIdentity): Promise<void> {
+  if (!manifest) return;
+  const storagePath = compositionArtifactStoragePath(identity);
+
+  let rowExists: boolean | null = null;
+  try {
+    rowExists = (await artifactRowCount(identity)) > 0;
+  } catch {
+    rowExists = null;
+  }
+
+  let objectExists: boolean | null = null;
+  try {
+    const info = await service.storage.from(INTERNAL_BUCKET).info(storagePath);
+    if (info.error) {
+      objectExists = isStorageAbsence(info.error) ? false : null;
+    } else {
+      objectExists = true;
+    }
+  } catch {
+    objectExists = null;
+  }
+
+  applyReconciliation(manifest, INTERNAL_BUCKET, identity, storagePath, {
+    rowExists,
+    objectExists,
   });
-  recordObject(INTERNAL_BUCKET, storagePath);
+  persistManifest();
+}
+
+/**
+ * Planeja antes da chamada e reconcilia com o banco/Storage ANTES de devolver
+ * o resultado. Assim, uma asserção posterior que falhe não deixa resíduo fora
+ * do manifesto.
+ */
+async function persistTracked(
+  identity: ArtifactIdentity,
+  input: PersistArtifactInput,
+  client: SupabaseClient,
+): Promise<PersistArtifactResult> {
+  planIdentityArtifact(identity);
+  try {
+    const result = await persistCompositionArtifact(input, { client });
+    await reconcileIdentityArtifact(identity).catch(() => undefined);
+    return result;
+  } catch (error) {
+    await reconcileIdentityArtifact(identity).catch(() => undefined);
+    throw error;
+  }
 }
 
 function markManifest(status: ManifestStatus, error?: string): void {
   if (!manifest) return;
-  manifest.status = status;
-  if (error !== undefined) manifest.error = error;
-  if (status === "completed") manifest.completedAt = new Date().toISOString();
+  markStatus(manifest, status, error);
   persistManifest();
 }
 
@@ -1182,12 +1180,12 @@ describe("F60.1 integration — fluxos reais", () => {
     const identity = identityFor(fixture.newFlowCampaignId, "square_original");
     const instrumented = instrumentedClient(service);
 
-    const created = await persistCompositionArtifact(
+    const created = await persistTracked(
+      identity,
       inputFor(identity, originalJpeg),
-      { client: instrumented.client },
+      instrumented.client,
     );
     expect(created).toEqual({ kind: "created" });
-    recordIdentityArtifact(identity);
 
     const path = compositionArtifactStoragePath(identity);
     const metadata = await readMetadata(path);
@@ -1226,13 +1224,13 @@ describe("F60.1 integration — fluxos reais", () => {
     const instrumented = instrumentedClient(service);
     const failing = failingInsertClient(instrumented.client, TABLE);
 
-    const first = await persistCompositionArtifact(
+    const first = await persistTracked(
+      identity,
       inputFor(identity, originalJpeg),
-      { client: failing },
+      failing,
     );
     expect(first.kind).toBe("persistence_failure");
     expect(await artifactRowCount(identity)).toBe(0);
-    recordObject(INTERNAL_BUCKET, compositionArtifactStoragePath(identity));
 
     const path = compositionArtifactStoragePath(identity);
     const payload = evidencePayload(await readMetadata(path));
@@ -1240,12 +1238,12 @@ describe("F60.1 integration — fluxos reais", () => {
     expect(String(payload?.evidenceDigest ?? "")).toMatch(/^[0-9a-f]{64}$/);
     expect(await downloadBytes(path)).toEqual(originalJpeg);
 
-    const second = await persistCompositionArtifact(
+    const second = await persistTracked(
+      identity,
       inputFor(identity, originalJpeg),
-      { client: instrumented.client },
+      instrumented.client,
     );
     expect(second).toEqual({ kind: "reused", adoption: true });
-    recordIdentityArtifact(identity);
     expect(await artifactRowCount(identity)).toBe(1);
     expect(instrumented.calls.uploads).toHaveLength(1);
     expect(instrumented.calls.remove).toBe(0);
@@ -1255,6 +1253,7 @@ describe("F60.1 integration — fluxos reais", () => {
 
   it("converge em concorrência idêntica para uma linha", async () => {
     const identity = identityFor(fixture.newFlowCampaignId, "square_original");
+    planIdentityArtifact(identity);
     const results = await Promise.allSettled([
       persistCompositionArtifact(inputFor(identity, originalJpeg), {
         client: service,
@@ -1263,18 +1262,19 @@ describe("F60.1 integration — fluxos reais", () => {
         client: service,
       }),
     ]);
+    await reconcileIdentityArtifact(identity);
     const kinds = results
       .map((result) =>
         result.status === "fulfilled" ? result.value.kind : "rejected",
       )
       .sort();
     expect(kinds).toEqual(["created", "reused"]);
-    recordIdentityArtifact(identity);
     expect(await artifactRowCount(identity)).toBe(1);
   });
 
   it("recusa proveniências divergentes na concorrência", async () => {
     const identity = identityFor(fixture.newFlowCampaignId, "square_original");
+    planIdentityArtifact(identity);
     const results = await Promise.allSettled([
       persistCompositionArtifact(
         inputFor(identity, originalJpeg, {
@@ -1289,6 +1289,7 @@ describe("F60.1 integration — fluxos reais", () => {
         { client: service },
       ),
     ]);
+    await reconcileIdentityArtifact(identity);
     const kinds = results
       .map((result) =>
         result.status === "fulfilled" ? result.value.kind : "rejected",
@@ -1296,12 +1297,12 @@ describe("F60.1 integration — fluxos reais", () => {
       .sort();
     expect(kinds).toContain("provenance_conflict");
     expect(kinds).toContain("created");
-    recordIdentityArtifact(identity);
     expect(await artifactRowCount(identity)).toBe(1);
   });
 
   it("recusa bytes divergentes na concorrência sem sobrescrever", async () => {
     const identity = identityFor(fixture.newFlowCampaignId, "square_original");
+    planIdentityArtifact(identity);
     const results = await Promise.allSettled([
       persistCompositionArtifact(inputFor(identity, originalJpeg), {
         client: service,
@@ -1310,6 +1311,7 @@ describe("F60.1 integration — fluxos reais", () => {
         client: service,
       }),
     ]);
+    await reconcileIdentityArtifact(identity);
     const kinds = results
       .map((result) =>
         result.status === "fulfilled" ? result.value.kind : "rejected",
@@ -1323,7 +1325,6 @@ describe("F60.1 integration — fluxos reais", () => {
     expect([originalJpeg, differentJpeg].some((bytes) => bytes.equals(winner))).toBe(
       true,
     );
-    recordIdentityArtifact(identity);
     expect(await artifactRowCount(identity)).toBe(1);
   });
 
