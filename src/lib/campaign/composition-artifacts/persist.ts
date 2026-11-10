@@ -202,6 +202,43 @@ async function classifyAfterConflict(
   });
 }
 
+async function adoptOrReclassify(
+  decision: Extract<PersistArtifactResult, { kind: "reused" }>,
+  input: PersistArtifactInput,
+  identity: ArtifactIdentity,
+  storage: CompositionArtifactStorage,
+  client: SupabaseClient,
+  path: string,
+  computed: ComputedArtifact,
+  presented: PresentedProvenance,
+  expectedEvidence: ObjectEvidence,
+): Promise<PersistArtifactResult> {
+  const insert = await insertArtifactRow(
+    toInsertInput(input, identity, computed, presented.provenance, path),
+    client,
+  );
+  if (insert.kind === "insert_failed") {
+    return persistenceFailure(path, insert.message);
+  }
+  if (insert.kind === "unique_violation") {
+    const reclassified = await classifyAfterConflict(
+      input,
+      identity,
+      storage,
+      client,
+      path,
+      computed,
+      presented,
+      expectedEvidence,
+    );
+    if (reclassified.kind === "reused" && reclassified.adoption) {
+      return persistenceFailure(path, "adoption_row_missing_after_unique_violation");
+    }
+    return reclassified;
+  }
+  return decision;
+}
+
 /**
  * Persiste um artefato de composição de forma idempotente. Não sobrescreve,
  * não apaga, não cria URL e não toca crédito/campanha.
@@ -346,26 +383,17 @@ export async function persistCompositionArtifact(
 
   // (6b) Adoção de órfão íntegro: a linha precisa ser criada agora.
   if (decision.kind === "reused" && decision.adoption) {
-    const adoptionInsert = await insertArtifactRow(
-      toInsertInput(input, identity, computed, provenance, path),
+    return adoptOrReclassify(
+      decision,
+      input,
+      identity,
+      storage,
       client,
+      path,
+      computed,
+      presented,
+      evidence,
     );
-    if (adoptionInsert.kind === "insert_failed") {
-      return persistenceFailure(path, adoptionInsert.message);
-    }
-    if (adoptionInsert.kind === "unique_violation") {
-      return classifyAfterConflict(
-        input,
-        identity,
-        storage,
-        client,
-        path,
-        computed,
-        presented,
-        evidence,
-      );
-    }
-    return decision;
   }
 
   // (7) Upload imutável com evidência.
@@ -378,7 +406,7 @@ export async function persistCompositionArtifact(
     return persistenceFailure(path, upload.message);
   }
   if (upload.kind === "path_conflict") {
-    return classifyAfterConflict(
+    const conflictDecision = await classifyAfterConflict(
       input,
       identity,
       storage,
@@ -388,6 +416,20 @@ export async function persistCompositionArtifact(
       presented,
       evidence,
     );
+    if (conflictDecision.kind === "reused" && conflictDecision.adoption) {
+      return adoptOrReclassify(
+        conflictDecision,
+        input,
+        identity,
+        storage,
+        client,
+        path,
+        computed,
+        presented,
+        evidence,
+      );
+    }
+    return conflictDecision;
   }
 
   // (8) A evidência precisa sobreviver ao upload antes do insert.
@@ -410,7 +452,7 @@ export async function persistCompositionArtifact(
     return persistenceFailure(path, insert.message);
   }
   if (insert.kind === "unique_violation") {
-    return classifyAfterConflict(
+    const reclassified = await classifyAfterConflict(
       input,
       identity,
       storage,
@@ -420,6 +462,20 @@ export async function persistCompositionArtifact(
       presented,
       evidence,
     );
+    if (reclassified.kind === "reused" && reclassified.adoption) {
+      return adoptOrReclassify(
+        reclassified,
+        input,
+        identity,
+        storage,
+        client,
+        path,
+        computed,
+        presented,
+        evidence,
+      );
+    }
+    return reclassified;
   }
 
   return Object.freeze({ kind: "created" as const });

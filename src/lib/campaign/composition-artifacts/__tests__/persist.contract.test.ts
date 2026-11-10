@@ -40,6 +40,7 @@ interface FakeState {
   removeObject: (path: string) => void;
   replaceObjectBytes: (path: string, bytes: Buffer) => void;
   removeObjectMetadata: (path: string) => void;
+  hideObjectOnce: (path: string) => void;
   seedRow: (row: Row) => void;
 }
 
@@ -56,6 +57,7 @@ function createFakeState(): FakeState {
   };
   const rows: Row[] = [];
   const objects = new Map<string, { bytes: Buffer; metadata: Record<string, unknown> }>();
+  const hiddenOnce = new Set<string>();
   let failNextInsert = false;
   let uploadThrows = false;
   let infoError: unknown = null;
@@ -166,6 +168,10 @@ function createFakeState(): FakeState {
           }),
           info: vi.fn(async (path: string) => {
             handles.infos.push(path);
+            if (hiddenOnce.has(path)) {
+              hiddenOnce.delete(path);
+              return { data: null, error: { statusCode: "404", message: "Object not found" } };
+            }
             if (infoError !== null) return { data: null, error: infoError };
             const object = objects.get(key(path));
             if (!object) {
@@ -241,6 +247,9 @@ function createFakeState(): FakeState {
     removeObjectMetadata: (path: string) => {
       const object = objects.get(key(path));
       if (object) object.metadata = {};
+    },
+    hideObjectOnce: (path: string) => {
+      hiddenOnce.add(path);
     },
     seedRow: (row: Row) => {
       rows.push({ ...row, __table: "campaign_composition_artifacts" });
@@ -428,6 +437,31 @@ describe("persistCompositionArtifact", () => {
     expect(state.handles.uploads).toHaveLength(1);
     expect(state.handles.removes).toBe(0);
     expect(state.rows.filter((row) => row.__table === "campaign_composition_artifacts")).toHaveLength(1);
+  });
+
+  it("adopts after path_conflict when the winner uploaded but its insert failed", async () => {
+    const state = createFakeState();
+    const path = compositionArtifactStoragePath(baseInput(image).identity);
+
+    state.setFailNextInsert();
+    const winner = await persistCompositionArtifact(baseInput(image), {
+      client: state.client,
+    });
+    expect(winner).toMatchObject({ kind: "persistence_failure" });
+    expect(state.rows.filter((row) => row.__table === "campaign_composition_artifacts")).toHaveLength(0);
+    expect(state.objects.size).toBe(1);
+
+    // A segunda chamada verifica o objeto como ausente (corrida), recebe 409
+    // no upload e precisa concluir a adoção inserindo a linha.
+    state.hideObjectOnce(path);
+    const adopter = await persistCompositionArtifact(baseInput(image), {
+      client: state.client,
+    });
+
+    expect(adopter).toEqual({ kind: "reused", adoption: true });
+    expect(state.rows.filter((row) => row.__table === "campaign_composition_artifacts")).toHaveLength(1);
+    expect(state.handles.uploads).toHaveLength(2);
+    expect(state.handles.removes).toBe(0);
   });
 
   it("returns indeterminate when info is unavailable and does not upload", async () => {
