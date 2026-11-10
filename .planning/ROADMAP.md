@@ -811,7 +811,7 @@ Plans:
 
 ### Phase 60.1: F60.1 - Persistência e recuperação de artefatos reutilizáveis
 
-**Status:** **PLANEJAMENTO CONCLUÍDO — 6 planos criados (waves 1–5; 60.1-06 na wave 1 em paralelo com 60.1-01); verificação de planos com 0 blockers; aguardando revisão/aprovação humana. Execução, migration aplicada, banco e produção NÃO autorizados.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
+**Status:** **60.1-01 E 60.1-06 CONCLUÍDOS E AGUARDANDO REVISÃO; 60.1-02..05 NÃO INICIADOS. Migration autorada e não aplicada; nenhum banco, Storage real ou produção tocado.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
 
 **Goal:** Criar um módulo compartilhado, sem orquestrador, para persistir, localizar, recuperar e validar artefatos de composição com identidade loja/campanha/operação, papéis `square_original`/`square_prepared`/`vertical`, metadados reais, checksum, proveniência, idempotência, conflito explícito, evidência durável de órfão, privacidade interna e reconhecimento seguro de fonte de campanha entregue e base interna. Preservar integralmente o fluxo 1:1, o 9:16 direto e os contratos da F60.
 
@@ -825,8 +825,8 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 60.1-01-PLAN.md — Contratos puros (identidade, autorização, papéis/dimensões, path, evidência canônica, decisão de conflito)
-- [ ] 60.1-06-PLAN.md — Migration aditiva local-only e contrato estático do schema (wave 1, em paralelo com 60.1-01; não aplicada)
+- [x] 60.1-01-PLAN.md - Contratos puros (identidade, autorização, papéis/dimensões, path, evidência canônica, decisão de conflito) — **CONCLUÍDO; 43 testes verdes; typecheck 0**
+- [x] 60.1-06-PLAN.md - Migration aditiva local-only e contrato estático do schema (wave 1, em paralelo com 60.1-01; não aplicada) — **CONCLUÍDO; 20261110202749; contrato estático verde**
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
