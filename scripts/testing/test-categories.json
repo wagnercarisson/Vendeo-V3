@@ -50,5 +50,8 @@
     "src/lib/product-9-16-two-stage/__tests__/financial-integration.integration.test.ts",
     "src/lib/product-9-16-two-stage/__tests__/shared-reading-compatibility.integration.test.ts",
     "src/lib/product-9-16-two-stage/__tests__/origin-views.postgres.test.ts"
+  ],
+  "integration.f60-1": [
+    "src/lib/campaign/composition-artifacts/__tests__/composition-artifacts.integration.test.ts"
   ]
 }

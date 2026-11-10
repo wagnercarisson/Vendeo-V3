@@ -3,7 +3,7 @@
  * Executa um perfil de integração, validando TODOS os pré-requisitos antes.
  *
  * Uso: node scripts/testing/run-integration.mjs <perfil>
- * Perfis: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1
+ * Perfis: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1 | f60 | f60-1
  *
  * `postgres` sem perfil é apenas status/recusa: imprime a prontidão dos três
  * perfis e sai 2, sem executar nada.
@@ -18,6 +18,7 @@ import {
   REPO_ROOT,
   appEnvGateStatus,
   f60GateStatus,
+  f601GateStatus,
   gateLine,
   postgresF504GateStatus,
   postgresHomologGateStatus,
@@ -63,6 +64,11 @@ const PROFILES = {
     config: 'vitest.integration-f60.config.ts',
     preflight: f60GateStatus,
   },
+  'f60-1': {
+    label: 'F60.1 artefatos de composição',
+    config: 'vitest.integration-f60-1.config.ts',
+    preflight: f601GateStatus,
+  },
 };
 
 const requested = process.argv[2];
@@ -81,7 +87,7 @@ const profile = PROFILES[requested];
 
 if (!profile) {
   console.error(
-    `Perfil inválido: ${requested ?? '(vazio)'}. Use: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1 | f60`,
+    `Perfil inválido: ${requested ?? '(vazio)'}. Use: postgres-homolog | postgres-local | postgres-f50-4 | app-env | product-1-1 | f60 | f60-1`,
   );
   process.exit(3);
 }

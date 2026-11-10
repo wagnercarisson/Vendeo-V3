@@ -14,6 +14,7 @@ export interface TestCategories {
   'integration.app-env': string[];
   'integration.product-1-1': string[];
   'integration.f60': string[];
+  'integration.f60-1': string[];
 }
 
 export const INTEGRATION_CATEGORY_KEYS = [
@@ -23,6 +24,7 @@ export const INTEGRATION_CATEGORY_KEYS = [
   'integration.app-env',
   'integration.product-1-1',
   'integration.f60',
+  'integration.f60-1',
 ] as const satisfies readonly (keyof TestCategories)[];
 
 const CATEGORIES = inventory as TestCategories;

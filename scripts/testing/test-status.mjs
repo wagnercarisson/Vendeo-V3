@@ -15,6 +15,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { evaluateF60Target, isHomologTarget } from './f60-window.mjs';
+import { f601GateStatus } from './f60-1-gate.mjs';
+
+export { f601GateStatus };
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '../..');
@@ -32,6 +35,7 @@ const INTEGRATION_KEYS = [
   'integration.app-env',
   'integration.product-1-1',
   'integration.f60',
+  'integration.f60-1',
 ];
 const INVENTORY_KEYS = ['nodeTest', ...INTEGRATION_KEYS];
 
@@ -336,6 +340,7 @@ export const GATE_ROWS = [
   ['app-env (.env.local)', 'integration.app-env', () => appEnvGateStatus(process.env, readDotEnv())],
   ['Produto 1:1', 'integration.product-1-1', product11GateStatus],
   ['F60 duas etapas', 'integration.f60', f60GateStatus],
+  ['F60.1 artefatos de composição', 'integration.f60-1', f601GateStatus],
 ];
 
 function printTable(inventory) {
