@@ -34,6 +34,7 @@ function createFakeState(options: {
   artifact?: Row | null;
   downloadError?: unknown;
   downloadThrows?: boolean;
+  artifactReadThrows?: boolean;
 } = {}) {
   const handles: FakeHandles = { downloads: [], tables: [], signed: 0 };
   const rows: Row[] = [
@@ -61,6 +62,12 @@ function createFakeState(options: {
         return builder;
       },
       maybeSingle: async () => {
+        if (
+          options.artifactReadThrows &&
+          table === "campaign_composition_artifacts"
+        ) {
+          throw new Error("artifact_read_timeout");
+        }
         const row = rows.find(
           (entry) => entry.__table === table && match(entry, filters),
         );
@@ -239,6 +246,20 @@ describe("retrieveCompositionArtifact", () => {
         { client: throwing.client },
       ),
     ).toEqual({ kind: "indeterminate" });
+  });
+
+  it("returns indeterminate when the artifact read rejects", async () => {
+    const state = createFakeState({
+      artifact: seededArtifact(),
+      artifactReadThrows: true,
+    });
+    const result = await retrieveCompositionArtifact(
+      { identity: IDENTITY, authorization: SYSTEM },
+      { client: state.client },
+    );
+
+    expect(result).toEqual({ kind: "indeterminate" });
+    expect(state.handles.downloads).toHaveLength(0);
   });
 
   it("classifies truncated JPEG, PNG and wrong dimensions as invalid", async () => {

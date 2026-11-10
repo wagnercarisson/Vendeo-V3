@@ -139,7 +139,17 @@ function mapRow(row: unknown): ArtifactRecord | null {
 async function readOne(
   query: PromiseLike<{ data: unknown; error: unknown }>,
 ): Promise<ArtifactReadResult> {
-  const { data, error } = await query;
+  let data: unknown;
+  let error: unknown;
+  try {
+    ({ data, error } = await query);
+  } catch (readError) {
+    return {
+      kind: "read_failed",
+      message:
+        readError instanceof Error ? readError.message : String(readError),
+    };
+  }
   if (error) {
     const message =
       error instanceof Error ? error.message : String(error);

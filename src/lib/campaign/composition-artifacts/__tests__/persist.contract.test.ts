@@ -20,6 +20,7 @@ const CAMPAIGN_ID = "2b3c4d5e-2b3c-4d5e-8f6a-2b3c4d5e6f7a";
 const OPERATION_ID = "3c4d5e6f-3c4d-4e5f-8a7b-3c4d5e6f7a8b";
 const OTHER_OPERATION_ID = "4d5e6f7a-4d5e-4f6a-8b8c-4d5e6f7a8b9c";
 const OTHER_CAMPAIGN_ID = "8b9c0d1e-8b9c-4d1e-8f0a-8b9c0d1e2f3a";
+const OTHER_STORE_ID = "6f7a8b9c-6f7a-4b9c-8d9e-6f7a8b9c0d1e";
 const SOURCE_ARTIFACT_ID = "5e6f7a8b-5e6f-4a8b-9c8d-5e6f7a8b9c0d";
 
 type Row = Record<string, unknown>;
@@ -737,6 +738,60 @@ describe("persistCompositionArtifact", () => {
       kind: "metadata_conflict",
       reason: "source_mismatch",
     });
+    expect(state.handles.uploads).toHaveLength(0);
+    expect(state.handles.inserts).toHaveLength(0);
+  });
+
+  it("rejects a delivered source from another store before download and upload", async () => {
+    const state = createFakeState();
+    const otherPath = `${OTHER_STORE_ID}/${OTHER_CAMPAIGN_ID}.jpg`;
+    state.rows.push({
+      __table: "stores",
+      id: OTHER_STORE_ID,
+      user_id: "user-2",
+    });
+    state.rows.push({
+      __table: "campaigns",
+      id: OTHER_CAMPAIGN_ID,
+      store_id: OTHER_STORE_ID,
+      status: "ready",
+      storage_path: otherPath,
+      input_snapshot: {},
+    });
+    state.addObject(CAMPAIGN_IMAGES_BUCKET, otherPath, legacyImage);
+
+    const descriptor = {
+      origin: "legacy_campaign" as const,
+      storeId: OTHER_STORE_ID,
+      campaignId: OTHER_CAMPAIGN_ID,
+      bucket: CAMPAIGN_IMAGES_BUCKET,
+      storagePath: otherPath,
+      width: 1080,
+      height: 1080,
+      mimeType: "image/jpeg",
+      byteSize: legacyImage.byteLength,
+      checksumSha256: computeChecksumSha256(legacyImage),
+    };
+
+    const result = await persistCompositionArtifact(
+      baseInput(preparedImage, {
+        identity: {
+          storeId: STORE_ID,
+          campaignId: CAMPAIGN_ID,
+          operationId: OPERATION_ID,
+          role: "square_prepared",
+        },
+        origin: "deterministic_preparation",
+        source: { kind: "delivered_campaign_source", descriptor },
+      }),
+      { client: state.client },
+    );
+
+    expect(result).toMatchObject({
+      kind: "identity_conflict",
+      reason: "store_mismatch",
+    });
+    expect(state.handles.downloads).toHaveLength(0);
     expect(state.handles.uploads).toHaveLength(0);
     expect(state.handles.inserts).toHaveLength(0);
   });

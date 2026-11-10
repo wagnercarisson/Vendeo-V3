@@ -46,7 +46,7 @@ interface FakeHandles {
   updates: number;
 }
 
-function createFakeState(options: { campaign?: Row } = {}) {
+function createFakeState(options: { campaign?: Row; artifactReadThrows?: boolean } = {}) {
   const handles: FakeHandles = {
     uploads: [],
     inserts: [],
@@ -86,6 +86,12 @@ function createFakeState(options: { campaign?: Row } = {}) {
         return builder;
       },
       maybeSingle: async () => {
+        if (
+          options.artifactReadThrows &&
+          table === "campaign_composition_artifacts"
+        ) {
+          throw new Error("artifact_read_timeout");
+        }
         const row = rows.find(
           (entry) => entry.__table === table && match(entry, filters),
         );
@@ -510,6 +516,27 @@ describe("resolveReusableSquareSource — internal base", () => {
 
     expect(result.kind).toBe("reusable");
     expect(state.handles.inserts).toHaveLength(0);
+  });
+
+  it("returns artifact_indeterminate when the artifact read rejects", async () => {
+    const state = createFakeState({ artifactReadThrows: true });
+    const result = await resolveReusableSquareSource(
+      {
+        kind: "composition_artifact",
+        storeId: STORE_ID,
+        campaignId: CAMPAIGN_ID,
+        operationId: OPERATION_ID,
+        role: "square_original",
+        authorization: SYSTEM,
+      },
+      { client: state.client },
+    );
+
+    expect(result).toEqual({
+      kind: "not_reusable",
+      reason: "artifact_indeterminate",
+    });
+    expect(state.handles.downloads).toHaveLength(0);
   });
 
   it("distinguishes absent, truncated and storage error", async () => {

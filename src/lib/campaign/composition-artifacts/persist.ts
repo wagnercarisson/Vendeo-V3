@@ -164,6 +164,15 @@ async function validatePersistSource(
     return { ok: false, result: invalidInput("source_origin_invalid") };
   }
 
+  // O descritor é dado do chamador: a loja da fonte precisa ser a mesma do
+  // derivado antes de qualquer leitura/download ou upload.
+  if (
+    typeof descriptor.storeId !== "string" ||
+    descriptor.storeId.toLowerCase() !== identity.storeId.toLowerCase()
+  ) {
+    return { ok: false, result: identityConflict("store_mismatch") };
+  }
+
   const validation = await validateDeliveredCampaignSource(
     {
       origin: descriptor.origin,
