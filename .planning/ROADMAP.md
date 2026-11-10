@@ -808,3 +808,31 @@ Plans:
 **Checkpoint:** a prova em homolog exige quatro autorizações separadas (aplicar, escrever dados de teste, executar, limpar), janela de exclusividade das RPCs compartilhadas coordenada e evidência S0/delta. O resultado da prova **não é aceitação produtiva**.
 
 **Diretório:** `.planning/phases/60-f60-controle-das-duas-etapas-9-16-e-integracao-financeira/`.
+
+### Phase 60.1: F60.1 - Persistência e recuperação de artefatos reutilizáveis
+
+**Status:** **PLANEJAMENTO EM REVISÃO — 6 planos criados (waves 1→5; 60.1-06 na wave 1 em paralelo com 60.1-01); execução, migration aplicada, banco e produção NÃO autorizados.** Revisão do plan-checker em andamento; o status só volta a "concluído" após o checker passar. Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
+
+**Goal:** Criar um módulo compartilhado, sem orquestrador, para persistir, localizar, recuperar e validar artefatos de composição com identidade loja/campanha/operação, papéis `square_original`/`square_prepared`/`vertical`, metadados reais, checksum, proveniência, idempotência, conflito explícito, evidência durável de órfão, privacidade interna e reconhecimento seguro de fonte de campanha entregue e base interna. Preservar integralmente o fluxo 1:1, o 9:16 direto e os contratos da F60.
+
+**Requirements**: REQ-60.1-01, REQ-60.1-02, REQ-60.1-03, REQ-60.1-04, REQ-60.1-05, REQ-60.1-06, REQ-60.1-07, REQ-60.1-08, REQ-60.1-09, REQ-60.1-10
+
+**Depends on:** Phase 60 (controle da operação em duas etapas), F59 (artefato vertical 9:16), F56.2b1b/F56.2b2b (artefato 1:1, crédito, recuperação) e OpenSpec aprovado desta change.
+
+**Source:** `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/` (proposal, design, specs e tasks; OpenSpec `--strict` válido).
+
+**Plans:** 6 plans (waves 1→5; 60.1-06 na wave 1 em paralelo com 60.1-01).
+
+Plans:
+- [ ] 60.1-01-PLAN.md — Contratos puros (identidade, autorização, papéis/dimensões, path, evidência canônica, decisão de conflito)
+- [ ] 60.1-06-PLAN.md — Migration aditiva local-only e contrato estático do schema (wave 1, em paralelo com 60.1-01; não aplicada)
+- [ ] 60.1-02-PLAN.md — Storage imutável com `info(path)` e bucket parametrizado, integridade por decode completo, repositório e persistência idempotente/concorrência/adoção de órfão
+- [ ] 60.1-03-PLAN.md — Recuperação tipada, revalidação de origem e resolução de fonte reutilizável (legado, novo fluxo 1:1, base interna)
+- [ ] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais
+- [ ] 60.1-05-PLAN.md — Gates, matriz de evidências e fechamento com stop explícito antes de produção
+
+**Canonical refs:** `AGENTS.md`; `docs/fluxo-de-desenvolvimento.md`; `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/proposal.md`, `design.md`, `tasks.md` e `specs/campaign-composition-artifacts/spec.md`; `openspec/specs/product-1-1-artifact-delivery/`, `product-1-1-generation-orchestration/`, `product-1-1-campaign-credit-billing/`, `product-vertical-generation-delivery/`, `product-9-16-two-stage-operation-control/`, `product-9-16-two-stage-financial-integration/`; `src/lib/product-1-1/artifact/**`, `src/lib/product-vertical-9-16/artifact/**`, `src/lib/campaign/format-resolution.ts`, `src/lib/campaign/thumbnail/thumbnail-path.ts`, `supabase/migrations/20261009000004_f56_2b1b_campaign_artifacts.sql`, `supabase/migrations/20260708000002_create_campaign_images_bucket.sql`.
+
+**Checkpoint:** esta rodada cria somente planos. Nenhum código, migration, SQL, acesso a banco, chamada paga, ativação ou deploy. A migration futura será aditiva, com timestamp real e unicidade verificada; a integração real exige autorização e ambiente descartável/homolog, nunca produção.
+
+**Diretório:** `.planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/`.

@@ -323,3 +323,22 @@ O incremento de US$ 0,1107 é contabilizado no piloto. O custo **calculado por u
 e pricing** é US$ 0,030441 (copy 0,000172 + imagem 0,030269); `provider_reported_cost_usd`
 está nulo, portanto não é valor confirmado em fatura. Desvio: US$ 0,080259, sem
 ajuste; o contador conservador do piloto não precisa ser alterado para fechar a fase.
+
+## F60.1 - Planejamento (Persistência e recuperação de artefatos reutilizáveis)
+
+**Fonte aprovada:** `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/` (proposal, design, spec e tasks; `--strict` válido). **Status:** base OpenSpec aprovada para planejamento GSD; implementação, migration, banco e produção não autorizados. **Escopo:** módulo compartilhado de artefatos de composição; sem orquestrador, UI, entrega ou crédito.
+
+| REQ-ID | Requirement | Prova principal |
+|---|---|---|
+| REQ-60.1-01 | Identidade `(store_id, campaign_id, operation_id, role)` com vínculo validado server-side; autorização `owner`/`system` em toda leitura/escrita; caminho nunca aceito do cliente como autorização | Testes de identidade/autorização + vínculo composto |
+| REQ-60.1-02 | Papéis `square_original` 1024×1024, `square_prepared` 1152×1152 e `vertical` 1080×1920; JPEG; decode completo com limites de bytes/pixels antes do decode | Testes com decodificador real e fixtures determinísticas |
+| REQ-60.1-03 | Persistência imutável com dimensões/MIME/bytes/checksum/proveniência derivados dos bytes; caminho determinístico; upload `upsert:false`; evidência durável normalizada nos metadados do objeto | Testes de metadados/evidência + inspeção de linha imutável |
+| REQ-60.1-04 | Idempotência por identidade + conteúdo + proveniência; upload disputado converge por releitura; órfão só é adotado com evidência compatível; sem duplicar ou sobrescrever | Testes de repetição, concorrência de upload/insert e órfão |
+| REQ-60.1-05 | Recusa explícita de conflito de conteúdo, identidade, metadados, proveniência e evidência de órfão ausente/malformada/incompatível | Testes de conflito + resultados tipados |
+| REQ-60.1-06 | Recuperação server-side por identidade com resultado tipado; ausência provada; erro/ambiguidade = `indeterminate`; validação de bytes/checksum/metadados; sem URL assinada/pública | Testes de recuperação + prova de ausência/erro |
+| REQ-60.1-07 | Privacidade interna para `anon`/`authenticated` por política de bucket; imutabilidade da linha por grants/trigger; não sobrescrita do objeto pelo módulo; `service_role` não tratado como garantia de imutabilidade | Teste comportamental de leitura negada + contrato de escrita |
+| REQ-60.1-08 | Fonte reutilizável separa campanha entregue (legado 1080×1080 e 1:1 atual 1024×1024) de base interna; base interna não exige campanha `ready`/formato 1:1; vertical em processamento com quadrado interno íntegro é reutilizável | Testes de resolução de fonte + fluxo 1:1 atual → preparado |
+| REQ-60.1-09 | Persistência não é entrega nem crédito: sem reserva/confirmação/estorno, sem alterar `campaigns`, sem UI/rota/flag/orquestrador/download e sem exclusão automática | Testes de ausência de efeitos + inspeção de chamadas |
+| REQ-60.1-10 | Verificação separada em offline com decodificador real, integração autorizada em ambiente descartável/homolog e promoção produtiva como gate separado; integração prova evidência via `info(path)`, concorrência e leitura negada | Evidências de testes/gates + autorização |
+
+**Não executar nesta rodada de planejamento:** código, migration, SQL, banco, chamada paga, ativação, deploy ou push.
