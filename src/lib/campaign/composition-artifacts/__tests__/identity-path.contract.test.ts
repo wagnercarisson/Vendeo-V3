@@ -163,6 +163,28 @@ describe("identity", () => {
     }
   });
 
+  it("canonicalizes UUIDs to lowercase in identities and paths", () => {
+    const upper = {
+      storeId: STORE_ID.toUpperCase(),
+      campaignId: CAMPAIGN_ID.toUpperCase(),
+      operationId: OPERATION_ID.toUpperCase(),
+      role: "square_original" as const,
+    };
+    const validated = validateArtifactIdentity(upper);
+    expect(validated.ok).toBe(true);
+    if (validated.ok) {
+      expect(validated.identity).toEqual(identity("square_original"));
+    }
+
+    const upperPath = `${STORE_ID.toUpperCase()}/${CAMPAIGN_ID.toUpperCase()}/${OPERATION_ID.toUpperCase()}/square_original.jpg`;
+    expect(compositionArtifactStoragePath(upper)).toBe(
+      compositionArtifactStoragePath(identity("square_original")),
+    );
+    expect(parseCompositionArtifactPath(upperPath)).toEqual(
+      identity("square_original"),
+    );
+  });
+
   it("validates UUIDs case-insensitively and rejects malformed values", () => {
     expect(isArtifactUuid(STORE_ID.toUpperCase())).toBe(true);
     expect(isArtifactUuid("not-a-uuid")).toBe(false);

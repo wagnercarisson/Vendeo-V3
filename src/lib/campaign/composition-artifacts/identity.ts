@@ -87,7 +87,12 @@ export function validateArtifactIdentity(input: unknown): IdentityValidation {
 
   return Object.freeze({
     ok: true as const,
-    identity: Object.freeze({ storeId, campaignId, operationId, role }),
+    identity: Object.freeze({
+      storeId: storeId.toLowerCase(),
+      campaignId: campaignId.toLowerCase(),
+      operationId: operationId.toLowerCase(),
+      role,
+    }),
   });
 }
 
@@ -146,7 +151,7 @@ export function checkCampaignStoreBinding(
   if (
     typeof campaignStoreId !== "string" ||
     typeof identityStoreId !== "string" ||
-    campaignStoreId !== identityStoreId
+    campaignStoreId.toLowerCase() !== identityStoreId.toLowerCase()
   ) {
     return Object.freeze({ ok: false as const, reason: "store_mismatch" as const });
   }

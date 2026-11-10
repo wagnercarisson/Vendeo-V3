@@ -27,11 +27,11 @@ const ARTIFACT_ROLES = new Set<ArtifactRole>([
   "vertical",
 ]);
 
-/** Constrói o caminho canônico a partir da identidade. */
+/** Constrói o caminho canônico a partir da identidade (UUIDs em minúsculas). */
 export function compositionArtifactStoragePath(
   identity: ArtifactIdentity,
 ): string {
-  return `${identity.storeId}/${identity.campaignId}/${identity.operationId}/${identity.role}.jpg`;
+  return `${identity.storeId.toLowerCase()}/${identity.campaignId.toLowerCase()}/${identity.operationId.toLowerCase()}/${identity.role}.jpg`;
 }
 
 /**
@@ -57,7 +57,12 @@ export function parseCompositionArtifactPath(
   const role = fileName.replace(/\.jpg$/i, "") as ArtifactRole;
   if (!ARTIFACT_ROLES.has(role)) return null;
 
-  return Object.freeze({ storeId, campaignId, operationId, role });
+  return Object.freeze({
+    storeId: storeId.toLowerCase(),
+    campaignId: campaignId.toLowerCase(),
+    operationId: operationId.toLowerCase(),
+    role,
+  });
 }
 
 /** `true` somente para o caminho canônico do módulo. Nunca lança. */

@@ -21,7 +21,19 @@ export interface PresentedProvenance {
   readonly sourceCampaignId?: string;
   readonly sourceOrigin?: SourceOrigin;
   readonly sourceChecksumSha256?: string;
+  readonly provenance: Record<string, unknown>;
+  readonly provenanceDigest: string;
 }
+
+const PROVENANCE_KEYS = [
+  "sourceOrigin",
+  "sourceStoragePath",
+  "sourceWidth",
+  "sourceHeight",
+  "sourceMimeType",
+  "sourceChecksumSha256",
+  "derivedFromArtifactId",
+] as const;
 
 export type ObjectState =
   | { readonly kind: "absent" }
@@ -48,13 +60,13 @@ export interface DecidePersistOutcomeInput {
   readonly presented: PresentedProvenance;
 }
 
-function provenanceValue(
-  row: ArtifactRecord,
-  key: string,
-): unknown {
-  const provenance = row.provenance;
-  if (provenance === null || typeof provenance !== "object") return undefined;
-  return (provenance as Record<string, unknown>)[key];
+function provenanceEquals(
+  existing: Record<string, unknown>,
+  presented: Record<string, unknown>,
+): boolean {
+  return PROVENANCE_KEYS.every(
+    (key) => existing[key] === presented[key],
+  );
 }
 
 function sameOptional(
@@ -75,18 +87,7 @@ function existingProvenanceMatches(
   if (!sameOptional(row.sourceCampaignId ?? undefined, presented.sourceCampaignId)) {
     return false;
   }
-  if (!sameOptional(provenanceValue(row, "sourceOrigin"), presented.sourceOrigin)) {
-    return false;
-  }
-  if (
-    !sameOptional(
-      provenanceValue(row, "sourceChecksumSha256"),
-      presented.sourceChecksumSha256,
-    )
-  ) {
-    return false;
-  }
-  return true;
+  return provenanceEquals(row.provenance, presented.provenance);
 }
 
 function metadataMismatchReason(
@@ -107,6 +108,26 @@ export function decidePersistOutcome(
   input: DecidePersistOutcomeInput,
 ): PersistArtifactResult {
   const { existingRow, objectState, computed, presented } = input;
+
+  if (presented.provenanceDigest !== computed.provenanceDigest) {
+    return Object.freeze({
+      kind: "provenance_conflict" as const,
+      existing: existingRow,
+      reason: "provenance_mismatch" as const,
+    });
+  }
+
+  if (
+    presented.provenance.sourceOrigin !== presented.sourceOrigin ||
+    presented.provenance.sourceChecksumSha256 !== presented.sourceChecksumSha256 ||
+    presented.provenance.derivedFromArtifactId !== presented.sourceArtifactId
+  ) {
+    return Object.freeze({
+      kind: "provenance_conflict" as const,
+      existing: existingRow,
+      reason: "provenance_mismatch" as const,
+    });
+  }
 
   if (existingRow !== null) {
     if (objectState.kind === "absent") {
@@ -147,6 +168,14 @@ export function decidePersistOutcome(
         kind: "provenance_conflict" as const,
         existing: existingRow,
         reason: "provenance_mismatch" as const,
+      });
+    }
+
+    if (!objectState.evidence.ok) {
+      return Object.freeze({
+        kind: "provenance_conflict" as const,
+        existing: existingRow,
+        reason: objectState.evidence.reason,
       });
     }
 

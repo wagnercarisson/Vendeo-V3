@@ -46,6 +46,8 @@ const computed = {
 const presented = {
   origin: "provider_generation" as const,
   sourceKind: "none" as const,
+  provenance: {},
+  provenanceDigest: SHA,
 };
 
 describe("decidePersistOutcome", () => {
@@ -62,6 +64,31 @@ describe("decidePersistOutcome", () => {
     });
     expect(result).toEqual({ kind: "reused", adoption: false });
     expect(Object.isFrozen(result)).toBe(true);
+  });
+
+  it("rejects an existing row when the object evidence is missing or invalid", () => {
+    for (const reason of [
+      "evidence_missing",
+      "evidence_invalid",
+      "evidence_mismatch",
+    ] as const) {
+      expect(
+        decidePersistOutcome({
+          existingRow: row(),
+          objectState: {
+            kind: "present",
+            checksumSha256: SHA,
+            evidence: { ok: false, reason },
+          },
+          computed,
+          presented,
+        }),
+      ).toEqual({
+        kind: "provenance_conflict",
+        existing: row(),
+        reason,
+      });
+    }
   });
 
   it("reports integrity failure when the existing row's object is absent", () => {
@@ -136,6 +163,54 @@ describe("decidePersistOutcome", () => {
         sourceKind: "internal_artifact",
         sourceArtifactId: "99999999-9999-4999-8999-999999999999",
         sourceOrigin: "composition_artifact",
+        sourceChecksumSha256: SHA,
+        provenance: {
+          sourceOrigin: "composition_artifact",
+          sourceChecksumSha256: SHA,
+          derivedFromArtifactId: "99999999-9999-4999-8999-999999999999",
+          sourceStoragePath: "different/source.jpg",
+        },
+        provenanceDigest: SHA,
+      },
+    });
+    expect(result.kind).toBe("provenance_conflict");
+    if (result.kind === "provenance_conflict") {
+      expect(result.reason).toBe("provenance_mismatch");
+    }
+  });
+
+  it("detects changes in allowed provenance fields such as sourceStoragePath", () => {
+    const sourceArtifactId = "99999999-9999-4999-8999-999999999999";
+    const result = decidePersistOutcome({
+      existingRow: row({
+        origin: "deterministic_preparation",
+        derivedFromArtifactId: sourceArtifactId,
+        provenance: {
+          sourceOrigin: "composition_artifact",
+          sourceStoragePath: "original/source.jpg",
+          sourceChecksumSha256: SHA,
+          derivedFromArtifactId: sourceArtifactId,
+        },
+      }),
+      objectState: {
+        kind: "present",
+        checksumSha256: SHA,
+        evidence: { ok: true },
+      },
+      computed,
+      presented: {
+        origin: "deterministic_preparation",
+        sourceKind: "internal_artifact",
+        sourceArtifactId,
+        sourceOrigin: "composition_artifact",
+        sourceChecksumSha256: SHA,
+        provenance: {
+          sourceOrigin: "composition_artifact",
+          sourceStoragePath: "different/source.jpg",
+          sourceChecksumSha256: SHA,
+          derivedFromArtifactId: sourceArtifactId,
+        },
+        provenanceDigest: SHA,
       },
     });
     expect(result.kind).toBe("provenance_conflict");
