@@ -23,10 +23,11 @@ function render(
 }
 
 describe("rodapé público compartilhado", () => {
-  it("centraliza exatamente os três destinos aprovados, na ordem aprovada", () => {
+  it("centraliza exatamente os quatro destinos aprovados, na ordem aprovada", () => {
     expect(PUBLIC_FOOTER_EXPLORE_LINKS).toEqual([
       { href: "/floriculturas", label: "Floriculturas" },
       { href: "/padarias", label: "Padarias" },
+      { href: "/ofertas-para-mercados", label: "Mercados e mercearias" },
       {
         href: "/campanhas-para-sua-loja",
         label: "Campanhas sem complicação",
@@ -36,17 +37,20 @@ describe("rodapé público compartilhado", () => {
     const html = render("/floriculturas", "marketing");
     const floriculturas = html.indexOf('href="/floriculturas"');
     const padarias = html.indexOf('href="/padarias"');
+    const mercados = html.indexOf('href="/ofertas-para-mercados"');
     const campanhas = html.indexOf('href="/campanhas-para-sua-loja"');
 
     expect(floriculturas).toBeGreaterThan(-1);
     expect(padarias).toBeGreaterThan(floriculturas);
-    expect(campanhas).toBeGreaterThan(padarias);
+    expect(mercados).toBeGreaterThan(padarias);
+    expect(campanhas).toBeGreaterThan(mercados);
   });
 
   it("marca somente o destino atual com aria-current", () => {
     const labels: Record<string, string> = {
       "/floriculturas": "Floriculturas",
       "/padarias": "Padarias",
+      "/ofertas-para-mercados": "Mercados e mercearias",
       "/campanhas-para-sua-loja": "Campanhas sem complicação",
     };
 
@@ -105,7 +109,7 @@ describe("rodapé público compartilhado", () => {
     const html = render("/padarias", "marketing");
 
     expect(html.match(/<footer/g) ?? []).toHaveLength(1);
-    expect(html.match(/<a\s/g) ?? []).toHaveLength(8);
+    expect(html.match(/<a\s/g) ?? []).toHaveLength(9);
     expect(html).toContain('href="/termos"');
     expect(html).toContain("min-h-[44px]");
     expect(html).toContain("focus-visible:ring-2");

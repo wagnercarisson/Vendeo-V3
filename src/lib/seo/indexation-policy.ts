@@ -10,9 +10,10 @@
  * com o default fail-closed `noindex, nofollow` + fora do sitemap para qualquer
  * pathname não reconhecido. As superfícies indexáveis são explicitamente
  * aprovadas (`INDEXABLE_CANONICAL_PATHS`): a home e as páginas demonstrativas
- * `/floriculturas`, `/padarias` e `/campanhas-para-sua-loja` (aplicável somente
- * sob a condição combinada de produção confirmada e origem validada — decisão do
- * consumidor via `isIndexableEnvironment()`).
+ * `/floriculturas`, `/padarias`, `/ofertas-para-mercados` e
+ * `/campanhas-para-sua-loja` (aplicável somente sob a condição combinada de
+ * produção confirmada e origem validada — decisão do consumidor via
+ * `isIndexableEnvironment()`).
  */
 
 import type { Metadata } from "next";
@@ -32,6 +33,9 @@ export const FLORICULTURAS_CANONICAL_PATH = "/floriculturas";
 /** Caminho canônico da página pública demonstrativa para padarias. */
 export const PADARIAS_CANONICAL_PATH = "/padarias";
 
+/** Caminho canônico da página pública demonstrativa para mercados e mercearias. */
+export const OFERTAS_PARA_MERCADOS_CANONICAL_PATH = "/ofertas-para-mercados";
+
 /** Caminho canônico da página pública de praticidade e identidade. */
 export const CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH = "/campanhas-para-sua-loja";
 
@@ -40,6 +44,7 @@ export const INDEXABLE_CANONICAL_PATHS = [
   HOME_CANONICAL_PATH,
   FLORICULTURAS_CANONICAL_PATH,
   PADARIAS_CANONICAL_PATH,
+  OFERTAS_PARA_MERCADOS_CANONICAL_PATH,
   CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH,
 ] as const;
 
@@ -118,6 +123,10 @@ export function getSurfacePolicy(pathname: string): SurfacePolicy {
   }
 
   if (path === PADARIAS_CANONICAL_PATH) {
+    return INDEX_POLICY;
+  }
+
+  if (path === OFERTAS_PARA_MERCADOS_CANONICAL_PATH) {
     return INDEX_POLICY;
   }
 

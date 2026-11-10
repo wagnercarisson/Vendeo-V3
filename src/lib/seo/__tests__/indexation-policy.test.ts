@@ -7,6 +7,7 @@ import {
   HOME_CANONICAL_PATH,
   FLORICULTURAS_CANONICAL_PATH,
   PADARIAS_CANONICAL_PATH,
+  OFERTAS_PARA_MERCADOS_CANONICAL_PATH,
   CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH,
   INDEXABLE_CANONICAL_PATHS,
   NOINDEX_TAG,
@@ -105,11 +106,12 @@ describe("getSurfacePolicy — /floriculturas (segunda superfície aprovada)", (
     expect(FLORICULTURAS_CANONICAL_PATH).toBe("/floriculturas");
   });
 
-  it("expõe exatamente quatro superfícies indexáveis aprovadas", () => {
+  it("expõe exatamente cinco superfícies indexáveis aprovadas", () => {
     expect([...INDEXABLE_CANONICAL_PATHS]).toEqual([
       "/",
       "/floriculturas",
       "/padarias",
+      "/ofertas-para-mercados",
       "/campanhas-para-sua-loja",
     ]);
   });
@@ -167,7 +169,36 @@ describe("getSurfacePolicy — /padarias (terceira superfície aprovada)", () =>
   });
 });
 
-describe("getSurfacePolicy — /campanhas-para-sua-loja (quarta superfície aprovada)", () => {
+describe("getSurfacePolicy — /ofertas-para-mercados (quarta superfície aprovada)", () => {
+  it("OFERTAS_PARA_MERCADOS_CANONICAL_PATH é '/ofertas-para-mercados'", () => {
+    expect(OFERTAS_PARA_MERCADOS_CANONICAL_PATH).toBe("/ofertas-para-mercados");
+  });
+
+  it("path direto → INDEX_ROBOTS e no sitemap", () => {
+    const policy = getSurfacePolicy("/ofertas-para-mercados");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("barra final normalizada → mesma política", () => {
+    const policy = getSurfacePolicy("/ofertas-para-mercados/");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("query/fragmento ignorados → mesma política", () => {
+    expect(getSurfacePolicy("/ofertas-para-mercados?utm=1").inSitemap).toBe(true);
+    expect(getSurfacePolicy("/ofertas-para-mercados#demo").inSitemap).toBe(true);
+  });
+
+  it("subcaminho não aprovado continua fail-closed", () => {
+    const policy = getSurfacePolicy("/ofertas-para-mercados/exemplo");
+    expect(policy.robots).toEqual(NOINDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(false);
+  });
+});
+
+describe("getSurfacePolicy — /campanhas-para-sua-loja (quinta superfície aprovada)", () => {
   it("CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH é '/campanhas-para-sua-loja'", () => {
     expect(CAMPANHAS_PARA_SUA_LOJA_CANONICAL_PATH).toBe(
       "/campanhas-para-sua-loja",

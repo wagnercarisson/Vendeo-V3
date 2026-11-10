@@ -9,8 +9,8 @@ import { NOINDEX_ROBOTS } from "@/lib/seo/indexation-policy";
  * módulo com `vi.resetModules()` + import dinâmico após reconfigurar o ambiente
  * com `vi.stubEnv(...)`.
  *
- * Cobre produção válida (home, `/floriculturas`, `/padarias` e
- * `/campanhas-para-sua-loja`), todas as
+ * Cobre produção válida (home, `/floriculturas`, `/padarias`,
+ * `/ofertas-para-mercados` e `/campanhas-para-sua-loja`), todas as
  * combinações fail-closed, a ausência de URLs privadas/legais/parametrizadas e,
  * num único teste consolidado, a coerência fail-closed entre home (`noindex`),
  * `robots()` (sem sitemap) e `sitemap()` (vazio) sob origem não canônica.
@@ -70,18 +70,19 @@ afterEach(() => {
   vi.resetModules();
 });
 
-describe("sitemap.ts — quatro superfícies sob a condição combinada (D-03/D-08)", () => {
-  it("produção + origem canônica ⇒ exatamente 4 entradas com URL absoluta", async () => {
+describe("sitemap.ts — cinco superfícies sob a condição combinada (D-03/D-08)", () => {
+  it("produção + origem canônica ⇒ exatamente 5 entradas com URL absoluta", async () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", CANONICAL);
 
     const entries = await getSitemap();
 
-    expect(entries).toHaveLength(4);
+    expect(entries).toHaveLength(5);
     expect(entries[0].url).toBe("https://vendeo.tech/");
     expect(entries[1].url).toBe("https://vendeo.tech/floriculturas");
     expect(entries[2].url).toBe("https://vendeo.tech/padarias");
-    expect(entries[3].url).toBe(
+    expect(entries[3].url).toBe("https://vendeo.tech/ofertas-para-mercados");
+    expect(entries[4].url).toBe(
       "https://vendeo.tech/campanhas-para-sua-loja",
     );
   });

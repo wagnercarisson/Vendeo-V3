@@ -8,6 +8,7 @@
 export const PUBLIC_FOOTER_EXPLORE_LINKS = [
   { href: "/floriculturas", label: "Floriculturas" },
   { href: "/padarias", label: "Padarias" },
+  { href: "/ofertas-para-mercados", label: "Mercados e mercearias" },
   { href: "/campanhas-para-sua-loja", label: "Campanhas sem complicação" },
 ] as const;
 

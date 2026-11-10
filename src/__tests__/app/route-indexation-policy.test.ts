@@ -104,7 +104,19 @@ describe("getSurfacePolicy — matriz D-05 (todas as superfícies privadas/legai
     expect(policy.inSitemap).toBe(false);
   });
 
-  it("/campanhas-para-sua-loja ⇒ INDEX_ROBOTS e no sitemap (quarta superfície aprovada)", () => {
+  it("/ofertas-para-mercados ⇒ INDEX_ROBOTS e no sitemap (quarta superfície aprovada)", () => {
+    const policy = getSurfacePolicy("/ofertas-para-mercados");
+    expect(policy.robots).toEqual(INDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(true);
+  });
+
+  it("/ofertas-para-mercados/exemplo ⇒ NOINDEX_ROBOTS e fora do sitemap", () => {
+    const policy = getSurfacePolicy("/ofertas-para-mercados/exemplo");
+    expect(policy.robots).toEqual(NOINDEX_ROBOTS);
+    expect(policy.inSitemap).toBe(false);
+  });
+
+  it("/campanhas-para-sua-loja ⇒ INDEX_ROBOTS e no sitemap (quinta superfície aprovada)", () => {
     const policy = getSurfacePolicy("/campanhas-para-sua-loja");
     expect(policy.robots).toEqual(INDEX_ROBOTS);
     expect(policy.inSitemap).toBe(true);

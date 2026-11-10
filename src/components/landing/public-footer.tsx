@@ -28,8 +28,8 @@ interface PublicFooterProps {
 }
 
 /**
- * Rodapé público compartilhado por `/`, `/floriculturas`, `/padarias` e
- * `/campanhas-para-sua-loja`.
+ * Rodapé público compartilhado por `/`, `/floriculturas`, `/padarias`,
+ * `/ofertas-para-mercados` e `/campanhas-para-sua-loja`.
  *
  * Server Component: todos os links são HTML com `href` real. O único limite
  * cliente é o `NovidadesLink` da home.
