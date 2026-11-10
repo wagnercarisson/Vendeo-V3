@@ -6,14 +6,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
-import { compositionArtifactStoragePath } from "../artifact-path";
+import {
+  COMPOSITION_ARTIFACT_BUCKET,
+  compositionArtifactStoragePath,
+} from "../artifact-path";
+import { computeChecksumSha256 } from "../integrity";
 import { persistCompositionArtifact } from "../persist";
+import { CAMPAIGN_IMAGES_BUCKET } from "../storage";
 import type { PersistArtifactInput } from "../types";
 
 const STORE_ID = "1a2b3c4d-1a2b-4c3d-8e4f-1a2b3c4d5e6f";
 const CAMPAIGN_ID = "2b3c4d5e-2b3c-4d5e-8f6a-2b3c4d5e6f7a";
 const OPERATION_ID = "3c4d5e6f-3c4d-4e5f-8a7b-3c4d5e6f7a8b";
 const OTHER_OPERATION_ID = "4d5e6f7a-4d5e-4f6a-8b8c-4d5e6f7a8b9c";
+const OTHER_CAMPAIGN_ID = "8b9c0d1e-8b9c-4d1e-8f0a-8b9c0d1e2f3a";
 const SOURCE_ARTIFACT_ID = "5e6f7a8b-5e6f-4a8b-9c8d-5e6f7a8b9c0d";
 
 type Row = Record<string, unknown>;
@@ -43,6 +49,13 @@ interface FakeState {
   hideObjectOnce: (path: string) => void;
   clearArtifactRows: () => void;
   clearObjectOnNextPathConflict: (path: string) => void;
+  addObject: (
+    bucket: string,
+    path: string,
+    bytes: Buffer,
+    metadata?: Record<string, unknown>,
+  ) => void;
+  updateCampaign: (fields: Row) => void;
   seedRow: (row: Row) => void;
 }
 
@@ -64,8 +77,9 @@ function createFakeState(): FakeState {
   let failNextInsert = false;
   let uploadThrows = false;
   let infoError: unknown = null;
+  let rowCounter = 0;
 
-  const key = (path: string) => `campaign-internal-artifacts:${path}`;
+  const key = (bucket: string, path: string) => `${bucket}:${path}`;
 
   const match = (row: Row, filters: [string, unknown][]): boolean =>
     filters.every(([column, value]) => row[column] === value);
@@ -130,7 +144,7 @@ function createFakeState(): FakeState {
     const stored: Row = {
       ...row,
       __table: table,
-      id: "99999999-9999-4999-8999-999999999999",
+      id: `99999999-9999-4999-8999-${String((rowCounter += 1)).padStart(12, "0")}`,
       created_at: "2026-11-10T00:00:00.000Z",
     };
     rows.push(stored);
@@ -149,15 +163,15 @@ function createFakeState(): FakeState {
       };
     },
     storage: {
-      from(_bucket: string) {
+      from(bucket: string) {
         return {
           upload: vi.fn(async (path: string, bytes: Buffer, options: Record<string, unknown>) => {
             handles.uploads.push({ path, options });
             if (uploadThrows) throw new Error("upload_timeout");
-            if (objects.has(key(path))) {
+            if (objects.has(key(bucket, path))) {
               if (clearOnConflict.has(path)) {
                 clearOnConflict.delete(path);
-                objects.delete(key(path));
+                objects.delete(key(bucket, path));
                 for (let index = rows.length - 1; index >= 0; index -= 1) {
                   if (rows[index].__table === "campaign_composition_artifacts") {
                     rows.splice(index, 1);
@@ -167,12 +181,12 @@ function createFakeState(): FakeState {
               return { data: null, error: { statusCode: "409", message: "already exists" } };
             }
             const metadata = options.metadata as Record<string, unknown>;
-            objects.set(key(path), { bytes: Buffer.from(bytes), metadata });
+            objects.set(key(bucket, path), { bytes: Buffer.from(bytes), metadata });
             return { data: { path }, error: null };
           }),
           download: vi.fn(async (path: string) => {
             handles.downloads.push(path);
-            const object = objects.get(key(path));
+            const object = objects.get(key(bucket, path));
             if (!object) {
               return { data: null, error: { statusCode: "404", message: "Object not found" } };
             }
@@ -185,7 +199,7 @@ function createFakeState(): FakeState {
               return { data: null, error: { statusCode: "404", message: "Object not found" } };
             }
             if (infoError !== null) return { data: null, error: infoError };
-            const object = objects.get(key(path));
+            const object = objects.get(key(bucket, path));
             if (!object) {
               return { data: null, error: { statusCode: "404", message: "Object not found" } };
             }
@@ -250,14 +264,14 @@ function createFakeState(): FakeState {
       infoError = error;
     },
     removeObject: (path: string) => {
-      objects.delete(key(path));
+      objects.delete(key(COMPOSITION_ARTIFACT_BUCKET, path));
     },
     replaceObjectBytes: (path: string, bytes: Buffer) => {
-      const object = objects.get(key(path));
+      const object = objects.get(key(COMPOSITION_ARTIFACT_BUCKET, path));
       if (object) object.bytes = bytes;
     },
     removeObjectMetadata: (path: string) => {
-      const object = objects.get(key(path));
+      const object = objects.get(key(COMPOSITION_ARTIFACT_BUCKET, path));
       if (object) object.metadata = {};
     },
     hideObjectOnce: (path: string) => {
@@ -272,6 +286,20 @@ function createFakeState(): FakeState {
     },
     clearObjectOnNextPathConflict: (path: string) => {
       clearOnConflict.add(path);
+    },
+    addObject: (
+      bucket: string,
+      path: string,
+      bytes: Buffer,
+      metadata: Record<string, unknown> = {},
+    ) => {
+      objects.set(key(bucket, path), { bytes: Buffer.from(bytes), metadata });
+    },
+    updateCampaign: (fields: Row) => {
+      const campaign = rows.find(
+        (entry) => entry.__table === "campaigns" && entry.id === CAMPAIGN_ID,
+      );
+      if (campaign) Object.assign(campaign, fields);
     },
     seedRow: (row: Row) => {
       rows.push({ ...row, __table: "campaign_composition_artifacts" });
@@ -298,6 +326,9 @@ function baseInput(bytes: Buffer, overrides: Partial<PersistArtifactInput> = {})
 
 let image: Buffer;
 let differentImage: Buffer;
+let preparedImage: Buffer;
+let verticalImage: Buffer;
+let legacyImage: Buffer;
 
 beforeAll(async () => {
   image = await sharp({
@@ -307,6 +338,21 @@ beforeAll(async () => {
     .toBuffer();
   differentImage = await sharp({
     create: { width: 1024, height: 1024, channels: 3, background: { r: 200, g: 20, b: 30 } },
+  })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+  preparedImage = await sharp({
+    create: { width: 1152, height: 1152, channels: 3, background: { r: 30, g: 120, b: 60 } },
+  })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+  verticalImage = await sharp({
+    create: { width: 1080, height: 1920, channels: 3, background: { r: 60, g: 80, b: 120 } },
+  })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+  legacyImage = await sharp({
+    create: { width: 1080, height: 1080, channels: 3, background: { r: 120, g: 60, b: 40 } },
   })
     .jpeg({ quality: 90 })
     .toBuffer();
@@ -405,16 +451,292 @@ describe("persistCompositionArtifact", () => {
     expect(state.handles.inserts).toHaveLength(0);
   });
 
-  it("keeps the temporary source_required branch without upload", async () => {
+  it("requires a source for deterministic_preparation and ai_expansion", async () => {
+    for (const origin of ["deterministic_preparation", "ai_expansion"] as const) {
+      const state = createFakeState();
+      const result = await persistCompositionArtifact(
+        baseInput(image, { origin, source: { kind: "none" } }),
+        { client: state.client },
+      );
+      expect(result).toEqual({ kind: "invalid_input", reason: "source_required" });
+      expect(state.handles.uploads).toHaveLength(0);
+      expect(state.handles.inserts).toHaveLength(0);
+    }
+  });
+
+  it("rejects a source on provider_generation", async () => {
     const state = createFakeState();
     const result = await persistCompositionArtifact(
       baseInput(image, {
+        origin: "provider_generation",
+        source: { kind: "internal_artifact", artifactId: SOURCE_ARTIFACT_ID },
+      }),
+      { client: state.client },
+    );
+    expect(result).toEqual({ kind: "invalid_input", reason: "source_not_allowed" });
+    expect(state.handles.uploads).toHaveLength(0);
+    expect(state.handles.inserts).toHaveLength(0);
+  });
+
+  it("rejects an internal source from another campaign without upload", async () => {
+    const state = createFakeState();
+    state.seedRow({
+      id: SOURCE_ARTIFACT_ID,
+      store_id: STORE_ID,
+      campaign_id: OTHER_CAMPAIGN_ID,
+      operation_id: OTHER_OPERATION_ID,
+      role: "square_original",
+      format: "1:1",
+      origin: "provider_generation",
+      derived_from_artifact_id: null,
+      source_campaign_id: null,
+      storage_bucket: "campaign-internal-artifacts",
+      storage_path: `${STORE_ID}/${OTHER_CAMPAIGN_ID}/${OTHER_OPERATION_ID}/square_original.jpg`,
+      width: 1024,
+      height: 1024,
+      mime_type: "image/jpeg",
+      byte_size: image.byteLength,
+      checksum_sha256: computeChecksumSha256(image),
+      provenance: {},
+      created_at: "2026-11-10T00:00:00.000Z",
+    });
+
+    const result = await persistCompositionArtifact(
+      baseInput(preparedImage, {
+        identity: {
+          storeId: STORE_ID,
+          campaignId: CAMPAIGN_ID,
+          operationId: OPERATION_ID,
+          role: "square_prepared",
+        },
         origin: "deterministic_preparation",
         source: { kind: "internal_artifact", artifactId: SOURCE_ARTIFACT_ID },
       }),
       { client: state.client },
     );
-    expect(result).toEqual({ kind: "invalid_input", reason: "source_required" });
+
+    expect(result).toMatchObject({
+      kind: "identity_conflict",
+      reason: "invalid_identity",
+    });
+    expect(state.handles.uploads).toHaveLength(0);
+    expect(state.handles.inserts).toHaveLength(0);
+  });
+
+  it("persists a prepared derivative from an internal square_original", async () => {
+    const state = createFakeState();
+    const originalIdentity = {
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      role: "square_original" as const,
+    };
+    await persistCompositionArtifact(baseInput(image, { identity: originalIdentity }), {
+      client: state.client,
+    });
+    const originalRow = state.rows.find(
+      (row) =>
+        row.__table === "campaign_composition_artifacts" &&
+        row.role === "square_original",
+    );
+    expect(originalRow).toBeTruthy();
+
+    const preparedIdentity = {
+      ...originalIdentity,
+      operationId: OTHER_OPERATION_ID,
+      role: "square_prepared" as const,
+    };
+    const preparedInput = baseInput(preparedImage, {
+      identity: preparedIdentity,
+      origin: "deterministic_preparation",
+      source: {
+        kind: "internal_artifact",
+        artifactId: originalRow!.id as string,
+      },
+    });
+
+    const result = await persistCompositionArtifact(preparedInput, {
+      client: state.client,
+    });
+    expect(result).toEqual({ kind: "created" });
+    expect(state.handles.uploads).toHaveLength(2);
+
+    const preparedRow = state.rows.find(
+      (row) =>
+        row.__table === "campaign_composition_artifacts" &&
+        row.role === "square_prepared",
+    );
+    expect(preparedRow).toMatchObject({
+      derived_from_artifact_id: originalRow!.id,
+      source_campaign_id: null,
+      origin: "deterministic_preparation",
+    });
+    const provenance = preparedRow!.provenance as Record<string, unknown>;
+    expect(provenance.sourceOrigin).toBe("composition_artifact");
+    expect(provenance.sourceChecksumSha256).toBe(computeChecksumSha256(image));
+
+    const repeat = await persistCompositionArtifact(preparedInput, {
+      client: state.client,
+    });
+    expect(repeat).toEqual({ kind: "reused", adoption: false });
+    expect(state.handles.uploads).toHaveLength(2);
+  });
+
+  it("persists a vertical derivative from an internal prepared source", async () => {
+    const state = createFakeState();
+    const baseIdentity = {
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      role: "square_original" as const,
+    };
+    await persistCompositionArtifact(baseInput(image, { identity: baseIdentity }), {
+      client: state.client,
+    });
+    const originalRow = state.rows.find(
+      (row) =>
+        row.__table === "campaign_composition_artifacts" &&
+        row.role === "square_original",
+    );
+
+    await persistCompositionArtifact(
+      baseInput(preparedImage, {
+        identity: { ...baseIdentity, role: "square_prepared" },
+        origin: "deterministic_preparation",
+        source: {
+          kind: "internal_artifact",
+          artifactId: originalRow!.id as string,
+        },
+      }),
+      { client: state.client },
+    );
+    const preparedRow = state.rows.find(
+      (row) =>
+        row.__table === "campaign_composition_artifacts" &&
+        row.role === "square_prepared",
+    );
+
+    const result = await persistCompositionArtifact(
+      baseInput(verticalImage, {
+        identity: { ...baseIdentity, role: "vertical" },
+        origin: "ai_expansion",
+        source: {
+          kind: "internal_artifact",
+          artifactId: preparedRow!.id as string,
+        },
+      }),
+      { client: state.client },
+    );
+    expect(result).toEqual({ kind: "created" });
+
+    const verticalRow = state.rows.find(
+      (row) =>
+        row.__table === "campaign_composition_artifacts" && row.role === "vertical",
+    );
+    expect(verticalRow).toMatchObject({
+      derived_from_artifact_id: preparedRow!.id,
+      source_campaign_id: null,
+      origin: "ai_expansion",
+      format: "9:16",
+    });
+    expect(state.handles.uploads).toHaveLength(3);
+  });
+
+  it("persists a prepared derivative from a delivered legacy campaign source", async () => {
+    const state = createFakeState();
+    const legacyPath = `${STORE_ID}/${CAMPAIGN_ID}.jpg`;
+    state.updateCampaign({
+      status: "ready",
+      storage_path: legacyPath,
+      input_snapshot: {},
+    });
+    state.addObject(CAMPAIGN_IMAGES_BUCKET, legacyPath, legacyImage);
+
+    const descriptor = {
+      origin: "legacy_campaign" as const,
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      bucket: CAMPAIGN_IMAGES_BUCKET,
+      storagePath: legacyPath,
+      width: 1080,
+      height: 1080,
+      mimeType: "image/jpeg",
+      byteSize: legacyImage.byteLength,
+      checksumSha256: computeChecksumSha256(legacyImage),
+    };
+
+    const preparedIdentity = {
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      operationId: OPERATION_ID,
+      role: "square_prepared" as const,
+    };
+    const result = await persistCompositionArtifact(
+      baseInput(preparedImage, {
+        identity: preparedIdentity,
+        origin: "deterministic_preparation",
+        source: { kind: "delivered_campaign_source", descriptor },
+      }),
+      { client: state.client },
+    );
+
+    expect(result).toEqual({ kind: "created" });
+    expect(state.handles.uploads).toHaveLength(1);
+
+    const row = state.rows.find(
+      (entry) => entry.__table === "campaign_composition_artifacts",
+    );
+    expect(row).toMatchObject({
+      source_campaign_id: CAMPAIGN_ID,
+      derived_from_artifact_id: null,
+    });
+    const provenance = row!.provenance as Record<string, unknown>;
+    expect(provenance.sourceOrigin).toBe("legacy_campaign");
+    expect(provenance.sourceStoragePath).toBe(legacyPath);
+    expect(provenance.sourceChecksumSha256).toBe(computeChecksumSha256(legacyImage));
+  });
+
+  it("rejects a delivered descriptor with divergent checksum without upload", async () => {
+    const state = createFakeState();
+    const legacyPath = `${STORE_ID}/${CAMPAIGN_ID}.jpg`;
+    state.updateCampaign({
+      status: "ready",
+      storage_path: legacyPath,
+      input_snapshot: {},
+    });
+    state.addObject(CAMPAIGN_IMAGES_BUCKET, legacyPath, legacyImage);
+
+    const descriptor = {
+      origin: "legacy_campaign" as const,
+      storeId: STORE_ID,
+      campaignId: CAMPAIGN_ID,
+      bucket: CAMPAIGN_IMAGES_BUCKET,
+      storagePath: legacyPath,
+      width: 1080,
+      height: 1080,
+      mimeType: "image/jpeg",
+      byteSize: legacyImage.byteLength,
+      checksumSha256: "b".repeat(64),
+    };
+
+    const result = await persistCompositionArtifact(
+      baseInput(preparedImage, {
+        identity: {
+          storeId: STORE_ID,
+          campaignId: CAMPAIGN_ID,
+          operationId: OPERATION_ID,
+          role: "square_prepared",
+        },
+        origin: "deterministic_preparation",
+        source: { kind: "delivered_campaign_source", descriptor },
+      }),
+      { client: state.client },
+    );
+
+    expect(result).toMatchObject({
+      kind: "metadata_conflict",
+      reason: "source_mismatch",
+    });
     expect(state.handles.uploads).toHaveLength(0);
     expect(state.handles.inserts).toHaveLength(0);
   });

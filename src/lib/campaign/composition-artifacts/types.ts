@@ -157,7 +157,9 @@ export type MetadataConflictReason =
   | "width_mismatch"
   | "height_mismatch"
   | "mime_mismatch"
-  | "byte_size_mismatch";
+  | "byte_size_mismatch"
+  | "checksum_mismatch"
+  | "source_mismatch";
 
 export type ProvenanceConflictReason =
   | "provenance_mismatch"

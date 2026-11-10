@@ -25,6 +25,11 @@ import {
   type InsertArtifactRowInput,
 } from "./repository";
 import { ROLE_POLICY } from "./role-policy";
+import {
+  validateDeliveredCampaignSource,
+  validateInternalArtifactSource,
+  type SourceValidationFailureReason,
+} from "./source-validation";
 import { CompositionArtifactStorage } from "./storage";
 import type {
   ArtifactIdentity,
@@ -32,6 +37,7 @@ import type {
   ObjectEvidence,
   PersistArtifactInput,
   PersistArtifactResult,
+  ReusableSquareSource,
   SourceOrigin,
 } from "./types";
 
@@ -48,30 +54,40 @@ interface ComputedArtifact {
   readonly provenanceDigest: string;
 }
 
-function provenanceSourceOrigin(
-  provenance: Record<string, unknown>,
-): SourceOrigin | undefined {
-  const value = provenance.sourceOrigin;
-  return typeof value === "string" ? (value as SourceOrigin) : undefined;
+function isDeliveredOrigin(
+  origin: SourceOrigin,
+): origin is "legacy_campaign" | "new_flow_1_1" {
+  return origin === "legacy_campaign" || origin === "new_flow_1_1";
 }
 
-function provenanceSourceChecksum(
-  provenance: Record<string, unknown>,
-): string | undefined {
-  const value = provenance.sourceChecksumSha256;
-  return typeof value === "string" ? value : undefined;
+function sourceProvenance(
+  source: ReusableSquareSource,
+): Record<string, unknown> {
+  const provenance: Record<string, unknown> = {
+    sourceOrigin: source.origin,
+    sourceStoragePath: source.storagePath,
+    sourceWidth: source.width,
+    sourceHeight: source.height,
+    sourceMimeType: source.mimeType,
+    sourceChecksumSha256: source.checksumSha256,
+  };
+  if (source.origin === "composition_artifact" && source.artifactId !== undefined) {
+    provenance.derivedFromArtifactId = source.artifactId;
+  }
+  return provenance;
 }
 
 function presentedProvenance(
   input: PersistArtifactInput,
   provenance: Record<string, unknown>,
   evidence: ObjectEvidence,
+  source: ReusableSquareSource | null,
 ): PresentedProvenance {
   const sourceArtifactId =
-    input.source.kind === "internal_artifact" ? input.source.artifactId : undefined;
+    source?.origin === "composition_artifact" ? source.artifactId : undefined;
   const sourceCampaignId =
-    input.source.kind === "delivered_campaign_source"
-      ? input.source.descriptor.campaignId
+    source !== null && source.origin !== "composition_artifact"
+      ? source.campaignId
       : undefined;
 
   return {
@@ -79,11 +95,93 @@ function presentedProvenance(
     sourceKind: input.source.kind,
     sourceArtifactId,
     sourceCampaignId,
-    sourceOrigin: provenanceSourceOrigin(provenance),
-    sourceChecksumSha256: provenanceSourceChecksum(provenance),
+    sourceOrigin: source?.origin,
+    sourceChecksumSha256: source?.checksumSha256,
     provenance,
     provenanceDigest: evidence.provenanceDigest,
   };
+}
+
+function mapSourceFailure(
+  reason: SourceValidationFailureReason,
+): PersistArtifactResult {
+  switch (reason) {
+    case "not_owner":
+    case "store_mismatch":
+      return identityConflict(reason);
+    case "identity_conflict":
+      return identityConflict("invalid_identity");
+    case "metadata_conflict":
+      return Object.freeze({
+        kind: "metadata_conflict" as const,
+        existing: null,
+        reason: "source_mismatch" as const,
+      });
+    case "artifact_absent":
+    case "artifact_invalid":
+    case "artifact_indeterminate":
+      return Object.freeze({ kind: "integrity_failure" as const, reason });
+    default:
+      return invalidInput(reason);
+  }
+}
+
+type PersistSourceOutcome =
+  | { readonly ok: true; readonly source: ReusableSquareSource | null }
+  | { readonly ok: false; readonly result: PersistArtifactResult };
+
+async function validatePersistSource(
+  input: PersistArtifactInput,
+  identity: ArtifactIdentity,
+  authorization: PersistArtifactInput["authorization"],
+  client: SupabaseClient,
+): Promise<PersistSourceOutcome> {
+  if (input.source.kind === "none") {
+    if (input.origin !== "provider_generation") {
+      return { ok: false, result: invalidInput("source_required") };
+    }
+    return { ok: true, source: null };
+  }
+
+  if (input.origin === "provider_generation") {
+    return { ok: false, result: invalidInput("source_not_allowed") };
+  }
+
+  if (input.source.kind === "internal_artifact") {
+    const validation = await validateInternalArtifactSource(
+      input.source.artifactId,
+      { storeId: identity.storeId, campaignId: identity.campaignId },
+      authorization,
+      { client },
+    );
+    return validation.ok
+      ? { ok: true, source: validation.source }
+      : { ok: false, result: mapSourceFailure(validation.reason) };
+  }
+
+  const descriptor = input.source.descriptor;
+  if (!isDeliveredOrigin(descriptor.origin)) {
+    return { ok: false, result: invalidInput("source_origin_invalid") };
+  }
+
+  const validation = await validateDeliveredCampaignSource(
+    {
+      origin: descriptor.origin,
+      storeId: descriptor.storeId,
+      campaignId: descriptor.campaignId,
+      storagePath: descriptor.storagePath,
+      width: descriptor.width,
+      height: descriptor.height,
+      mimeType: descriptor.mimeType,
+      byteSize: descriptor.byteSize,
+      checksumSha256: descriptor.checksumSha256,
+    },
+    authorization,
+    { client },
+  );
+  return validation.ok
+    ? { ok: true, source: validation.source }
+    : { ok: false, result: mapSourceFailure(validation.reason) };
 }
 
 async function loadObjectState(
@@ -145,7 +243,7 @@ function persistenceFailure(
 }
 
 function toInsertInput(
-  input: PersistArtifactInput,
+  presented: PresentedProvenance,
   identity: ArtifactIdentity,
   computed: ComputedArtifact,
   provenance: Record<string, unknown>,
@@ -157,13 +255,9 @@ function toInsertInput(
     operationId: identity.operationId,
     role: identity.role,
     format: ROLE_POLICY[identity.role].format,
-    origin: input.origin,
-    derivedFromArtifactId:
-      input.source.kind === "internal_artifact" ? input.source.artifactId : null,
-    sourceCampaignId:
-      input.source.kind === "delivered_campaign_source"
-        ? input.source.descriptor.campaignId
-        : null,
+    origin: presented.origin,
+    derivedFromArtifactId: presented.sourceArtifactId ?? null,
+    sourceCampaignId: presented.sourceCampaignId ?? null,
     storageBucket: COMPOSITION_ARTIFACT_BUCKET,
     storagePath: path,
     width: computed.width,
@@ -214,7 +308,7 @@ async function adoptOrReclassify(
   expectedEvidence: ObjectEvidence,
 ): Promise<PersistArtifactResult> {
   const insert = await insertArtifactRow(
-    toInsertInput(input, identity, computed, presented.provenance, path),
+    toInsertInput(presented, identity, computed, presented.provenance, path),
     client,
   );
   if (insert.kind === "insert_failed") {
@@ -335,15 +429,30 @@ export async function persistCompositionArtifact(
     });
   }
 
-  // (4) Evidência/proveniência. Fonte não-none é habilitada no plano 03.
-  if (input.source.kind !== "none") {
-    return invalidInput("source_required");
+  // (4) Revalidação da origem antes de qualquer upload.
+  const sourceOutcome = await validatePersistSource(
+    input,
+    identity,
+    authorization,
+    client,
+  );
+  if (!sourceOutcome.ok) {
+    return sourceOutcome.result;
   }
-  const normalized = normalizeProvenance(input.provenance ?? {});
-  if (!normalized.ok) {
-    return invalidInput(normalized.reason);
+  const validatedSource = sourceOutcome.source;
+
+  // (5) Proveniência allowlisted derivada da fonte VALIDADA, nunca do
+  // descritor bruto. Para `provider_generation`, vale a proveniência recebida.
+  let provenance: Record<string, unknown>;
+  if (validatedSource !== null) {
+    provenance = sourceProvenance(validatedSource);
+  } else {
+    const normalized = normalizeProvenance(input.provenance ?? {});
+    if (!normalized.ok) {
+      return invalidInput(normalized.reason);
+    }
+    provenance = normalized.provenance as Record<string, unknown>;
   }
-  const provenance = normalized.provenance as Record<string, unknown>;
 
   const evidenceResult = buildObjectEvidence({
     storeId: identity.storeId,
@@ -352,6 +461,16 @@ export async function persistCompositionArtifact(
     role: identity.role,
     origin: input.origin,
     sourceKind: input.source.kind,
+    sourceArtifactId:
+      validatedSource?.origin === "composition_artifact"
+        ? validatedSource.artifactId
+        : undefined,
+    sourceCampaignId:
+      validatedSource !== null && validatedSource.origin !== "composition_artifact"
+        ? validatedSource.campaignId
+        : undefined,
+    sourceOrigin: validatedSource?.origin,
+    sourceChecksumSha256: validatedSource?.checksumSha256,
     width: integrity.width,
     height: integrity.height,
     mimeType: integrity.mimeType,
@@ -372,7 +491,12 @@ export async function persistCompositionArtifact(
     checksumSha256: integrity.checksumSha256,
     provenanceDigest: evidence.provenanceDigest,
   };
-  const presented = presentedProvenance(input, provenance, evidence);
+  const presented = presentedProvenance(
+    input,
+    provenance,
+    evidence,
+    validatedSource,
+  );
   const path = compositionArtifactStoragePath(identity);
 
   // (5) Estado atual da linha e do objeto.
@@ -474,7 +598,7 @@ export async function persistCompositionArtifact(
 
   // (9) Insert imutável da linha.
   const insert = await insertArtifactRow(
-    toInsertInput(input, identity, computed, provenance, path),
+    toInsertInput(presented, identity, computed, provenance, path),
     client,
   );
 
