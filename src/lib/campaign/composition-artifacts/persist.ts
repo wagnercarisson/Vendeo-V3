@@ -231,10 +231,43 @@ async function adoptOrReclassify(
       presented,
       expectedEvidence,
     );
+    if (reclassified.kind === "created") {
+      return persistenceFailure(path, "conflict_without_persisted_artifact");
+    }
     if (reclassified.kind === "reused" && reclassified.adoption) {
       return persistenceFailure(path, "adoption_row_missing_after_unique_violation");
     }
     return reclassified;
+  }
+  return decision;
+}
+
+async function settleConflictResult(
+  decision: PersistArtifactResult,
+  input: PersistArtifactInput,
+  identity: ArtifactIdentity,
+  storage: CompositionArtifactStorage,
+  client: SupabaseClient,
+  path: string,
+  computed: ComputedArtifact,
+  presented: PresentedProvenance,
+  expectedEvidence: ObjectEvidence,
+): Promise<PersistArtifactResult> {
+  if (decision.kind === "created") {
+    return persistenceFailure(path, "conflict_without_persisted_artifact");
+  }
+  if (decision.kind === "reused" && decision.adoption) {
+    return adoptOrReclassify(
+      decision,
+      input,
+      identity,
+      storage,
+      client,
+      path,
+      computed,
+      presented,
+      expectedEvidence,
+    );
   }
   return decision;
 }
@@ -416,20 +449,17 @@ export async function persistCompositionArtifact(
       presented,
       evidence,
     );
-    if (conflictDecision.kind === "reused" && conflictDecision.adoption) {
-      return adoptOrReclassify(
-        conflictDecision,
-        input,
-        identity,
-        storage,
-        client,
-        path,
-        computed,
-        presented,
-        evidence,
-      );
-    }
-    return conflictDecision;
+    return settleConflictResult(
+      conflictDecision,
+      input,
+      identity,
+      storage,
+      client,
+      path,
+      computed,
+      presented,
+      evidence,
+    );
   }
 
   // (8) A evidência precisa sobreviver ao upload antes do insert.
@@ -462,20 +492,17 @@ export async function persistCompositionArtifact(
       presented,
       evidence,
     );
-    if (reclassified.kind === "reused" && reclassified.adoption) {
-      return adoptOrReclassify(
-        reclassified,
-        input,
-        identity,
-        storage,
-        client,
-        path,
-        computed,
-        presented,
-        evidence,
-      );
-    }
-    return reclassified;
+    return settleConflictResult(
+      reclassified,
+      input,
+      identity,
+      storage,
+      client,
+      path,
+      computed,
+      presented,
+      evidence,
+    );
   }
 
   return Object.freeze({ kind: "created" as const });

@@ -41,6 +41,8 @@ interface FakeState {
   replaceObjectBytes: (path: string, bytes: Buffer) => void;
   removeObjectMetadata: (path: string) => void;
   hideObjectOnce: (path: string) => void;
+  clearArtifactRows: () => void;
+  clearObjectOnNextPathConflict: (path: string) => void;
   seedRow: (row: Row) => void;
 }
 
@@ -58,6 +60,7 @@ function createFakeState(): FakeState {
   const rows: Row[] = [];
   const objects = new Map<string, { bytes: Buffer; metadata: Record<string, unknown> }>();
   const hiddenOnce = new Set<string>();
+  const clearOnConflict = new Set<string>();
   let failNextInsert = false;
   let uploadThrows = false;
   let infoError: unknown = null;
@@ -152,6 +155,15 @@ function createFakeState(): FakeState {
             handles.uploads.push({ path, options });
             if (uploadThrows) throw new Error("upload_timeout");
             if (objects.has(key(path))) {
+              if (clearOnConflict.has(path)) {
+                clearOnConflict.delete(path);
+                objects.delete(key(path));
+                for (let index = rows.length - 1; index >= 0; index -= 1) {
+                  if (rows[index].__table === "campaign_composition_artifacts") {
+                    rows.splice(index, 1);
+                  }
+                }
+              }
               return { data: null, error: { statusCode: "409", message: "already exists" } };
             }
             const metadata = options.metadata as Record<string, unknown>;
@@ -250,6 +262,16 @@ function createFakeState(): FakeState {
     },
     hideObjectOnce: (path: string) => {
       hiddenOnce.add(path);
+    },
+    clearArtifactRows: () => {
+      for (let index = rows.length - 1; index >= 0; index -= 1) {
+        if (rows[index].__table === "campaign_composition_artifacts") {
+          rows.splice(index, 1);
+        }
+      }
+    },
+    clearObjectOnNextPathConflict: (path: string) => {
+      clearOnConflict.add(path);
     },
     seedRow: (row: Row) => {
       rows.push({ ...row, __table: "campaign_composition_artifacts" });
@@ -461,6 +483,29 @@ describe("persistCompositionArtifact", () => {
     expect(adopter).toEqual({ kind: "reused", adoption: true });
     expect(state.rows.filter((row) => row.__table === "campaign_composition_artifacts")).toHaveLength(1);
     expect(state.handles.uploads).toHaveLength(2);
+    expect(state.handles.removes).toBe(0);
+  });
+
+  it("fails when conflict is followed by absent row and object", async () => {
+    const state = createFakeState();
+    const path = compositionArtifactStoragePath(baseInput(image).identity);
+
+    await persistCompositionArtifact(baseInput(image), { client: state.client });
+    state.clearArtifactRows();
+    state.hideObjectOnce(path);
+    state.clearObjectOnNextPathConflict(path);
+
+    const result = await persistCompositionArtifact(baseInput(image), {
+      client: state.client,
+    });
+
+    expect(result).toEqual({
+      kind: "persistence_failure",
+      storagePath: path,
+      reason: "conflict_without_persisted_artifact",
+    });
+    expect(state.rows.filter((row) => row.__table === "campaign_composition_artifacts")).toHaveLength(0);
+    expect(state.objects.size).toBe(0);
     expect(state.handles.removes).toBe(0);
   });
 
