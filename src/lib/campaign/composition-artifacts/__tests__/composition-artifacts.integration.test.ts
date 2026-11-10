@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { createHash, randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { Client as PostgresClient } from "pg";
@@ -36,6 +38,7 @@ import type {
 const TABLE = "campaign_composition_artifacts";
 const INTERNAL_BUCKET = COMPOSITION_ARTIFACT_BUCKET;
 const REQUIRED_ENV = [
+  "F60_1_TARGET",
   "TEST_DATABASE_URL",
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
@@ -70,6 +73,50 @@ interface ErrorWithCode {
   readonly message?: string;
 }
 
+const EVIDENCE_DIR = path.resolve(
+  process.cwd(),
+  ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence",
+);
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type ManifestStatus = "in_progress" | "completed" | "incomplete" | "failed";
+
+interface FixtureManifest {
+  runId: string;
+  startedAt: string;
+  target: {
+    kind: string;
+    dbPort: string;
+    apiPort: string;
+  };
+  status: ManifestStatus;
+  error?: string;
+  referenceBaselineSha256?: string;
+  users: Array<{ id: string; created: boolean }>;
+  stores: Array<{ id: string; created: boolean }>;
+  campaigns: Array<{
+    id: string;
+    kind: string;
+    storagePath: string;
+  }>;
+  artifacts: Array<{
+    id?: string;
+    storeId: string;
+    campaignId: string;
+    operationId: string;
+    role: string;
+    storagePath: string;
+  }>;
+  objects: Array<{ bucket: string; path: string }>;
+  completedAt?: string;
+}
+
+let manifest: FixtureManifest | null = null;
+let manifestPath = "";
+let manifestFailed = false;
+
 let service: SupabaseClient;
 let anon: SupabaseClient;
 let authenticated: SupabaseClient;
@@ -90,13 +137,129 @@ function requireEnv(name: (typeof REQUIRED_ENV)[number]): string {
   return value;
 }
 
-function assertAuthorizedTarget(): void {
+function persistManifest(): void {
+  if (!manifest || !manifestPath) return;
+  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+  fs.writeFileSync(
+    manifestPath,
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    "utf8",
+  );
+}
+
+function initManifest(
+  runId: string,
+  gate: {
+    targetKind?: string | null;
+    expected?: { dbPort?: string; apiPort?: string } | null;
+  },
+): void {
+  manifest = {
+    runId,
+    startedAt: new Date().toISOString(),
+    target: {
+      kind: gate.targetKind ?? "unknown",
+      dbPort: gate.expected?.dbPort ?? "unknown",
+      apiPort: gate.expected?.apiPort ?? "unknown",
+    },
+    status: "in_progress",
+    users: [],
+    stores: [],
+    campaigns: [],
+    artifacts: [],
+    objects: [],
+  };
+  manifestPath = path.join(EVIDENCE_DIR, `60.1-04-fixtures-${runId}.json`);
+  persistManifest();
+}
+
+function recordUser(id: string, created: boolean): void {
+  if (!manifest || manifest.users.some((entry) => entry.id === id)) return;
+  manifest.users.push({ id, created });
+  persistManifest();
+}
+
+function recordStore(id: string, created: boolean): void {
+  if (!manifest || manifest.stores.some((entry) => entry.id === id)) return;
+  manifest.stores.push({ id, created });
+  persistManifest();
+}
+
+function recordCampaign(
+  id: string,
+  kind: string,
+  storagePath: string,
+): void {
+  if (!manifest || manifest.campaigns.some((entry) => entry.id === id)) return;
+  manifest.campaigns.push({ id, kind, storagePath });
+  persistManifest();
+}
+
+function recordArtifact(entry: {
+  id?: string;
+  storeId: string;
+  campaignId: string;
+  operationId: string;
+  role: string;
+  storagePath: string;
+}): void {
+  if (
+    !manifest ||
+    manifest.artifacts.some(
+      (current) =>
+        current.storeId === entry.storeId &&
+        current.campaignId === entry.campaignId &&
+        current.operationId === entry.operationId &&
+        current.role === entry.role,
+    )
+  ) {
+    return;
+  }
+  manifest.artifacts.push(entry);
+  persistManifest();
+}
+
+function recordObject(bucket: string, objectPath: string): void {
+  if (
+    !manifest ||
+    manifest.objects.some(
+      (entry) => entry.bucket === bucket && entry.path === objectPath,
+    )
+  ) {
+    return;
+  }
+  manifest.objects.push({ bucket, path: objectPath });
+  persistManifest();
+}
+
+function recordIdentityArtifact(identity: ArtifactIdentity): void {
+  const storagePath = compositionArtifactStoragePath(identity);
+  recordArtifact({
+    storeId: identity.storeId,
+    campaignId: identity.campaignId,
+    operationId: identity.operationId,
+    role: identity.role,
+    storagePath,
+  });
+  recordObject(INTERNAL_BUCKET, storagePath);
+}
+
+function markManifest(status: ManifestStatus, error?: string): void {
+  if (!manifest) return;
+  manifest.status = status;
+  if (error !== undefined) manifest.error = error;
+  if (status === "completed") manifest.completedAt = new Date().toISOString();
+  persistManifest();
+}
+
+function requireAuthorizedTarget(): ReturnType<typeof evaluateF601Target> {
   const gate = evaluateF601Target(process.env);
   if (!gate.ready) {
     throw new Error(
       `f60_1_integration_gate_refused:${gate.reasons.join("; ")}`,
     );
   }
+  return gate;
 }
 
 function assertNoError(
@@ -131,12 +294,39 @@ async function uploadFixture(
   if (result.error) {
     throw new Error(`fixture_upload_failed:${bucket}:${result.error.message}`);
   }
+  recordObject(bucket, path);
 }
 
 async function resolveTestStore(userId: string): Promise<{
   storeId: string;
   created: boolean;
 }> {
+  const authorizedStoreId = process.env.F60_1_TEST_STORE_ID;
+  if (authorizedStoreId) {
+    if (!UUID_RE.test(authorizedStoreId)) {
+      throw new Error("f60_1_test_store_id_invalid");
+    }
+    const existing = await service
+      .from("stores")
+      .select("id, user_id, is_test_store")
+      .eq("id", authorizedStoreId)
+      .maybeSingle<{
+        id: string;
+        user_id: string;
+        is_test_store: boolean;
+      }>();
+    assertNoError(existing, "fixture_authorized_store_lookup_failed");
+    if (
+      !existing.data ||
+      existing.data.user_id !== userId ||
+      existing.data.is_test_store !== true
+    ) {
+      throw new Error("f60_1_authorized_store_not_a_test_fixture");
+    }
+    recordStore(existing.data.id, false);
+    return { storeId: existing.data.id, created: false };
+  }
+
   const existing = await service
     .from("stores")
     .select("id")
@@ -144,8 +334,9 @@ async function resolveTestStore(userId: string): Promise<{
     .maybeSingle<{ id: string }>();
   assertNoError(existing, "fixture_store_lookup_failed");
   if (existing.data?.id) {
-    return { storeId: existing.data.id, created: false };
+    throw new Error("f60_1_existing_store_requires_F60_1_TEST_STORE_ID");
   }
+
   const created = await insertOne<{ id: string }>(
     "stores",
     {
@@ -156,29 +347,55 @@ async function resolveTestStore(userId: string): Promise<{
     },
     "id",
   );
+  recordStore(created.id, true);
   return { storeId: created.id, created: true };
 }
 
-async function createOtherStore(): Promise<{ storeId: string; userId: string }> {
-  const user = await service.auth.admin.createUser({
-    email: `f60-1-${randomUUID()}@example.invalid`,
-    password: randomUUID(),
-    email_confirm: true,
-  });
-  if (user.error || !user.data.user) {
-    throw new Error(`fixture_other_user_failed:${user.error?.message}`);
+async function createOtherStore(): Promise<{
+  storeId: string;
+  userId: string;
+  createdUser: boolean;
+}> {
+  const providedUserId = process.env.F60_1_SECOND_TEST_USER_ID;
+  let userId: string;
+  let createdUser = false;
+
+  if (providedUserId) {
+    if (!UUID_RE.test(providedUserId)) {
+      throw new Error("f60_1_second_user_id_invalid");
+    }
+    userId = providedUserId;
+    recordUser(userId, false);
+  } else if (process.env.F60_1_ALLOW_TEST_USER_CREATION === "1") {
+    const user = await service.auth.admin.createUser({
+      email: `f60-1-${randomUUID()}@example.invalid`,
+      password: randomUUID(),
+      email_confirm: true,
+    });
+    if (user.error || !user.data.user) {
+      throw new Error(`fixture_other_user_failed:${user.error?.message}`);
+    }
+    userId = user.data.user.id;
+    createdUser = true;
+    recordUser(userId, true);
+  } else {
+    throw new Error(
+      "f60_1_second_user_not_authorized:F60_1_SECOND_TEST_USER_ID_or_F60_1_ALLOW_TEST_USER_CREATION",
+    );
   }
+
   const store = await insertOne<{ id: string }>(
     "stores",
     {
-      user_id: user.data.user.id,
+      user_id: userId,
       name: `F60.1 other ${randomUUID().slice(0, 8)}`,
       segment: "outros",
       is_test_store: true,
     },
     "id",
   );
-  return { storeId: store.id, userId: user.data.user.id };
+  recordStore(store.id, true);
+  return { storeId: store.id, userId, createdUser };
 }
 
 async function referenceHash(campaignIds: readonly string[]): Promise<string> {
@@ -322,6 +539,14 @@ async function insertArtifactRow(
      values (${placeholders})`,
     values,
   );
+  recordArtifact({
+    id: row.id,
+    storeId: row.store_id,
+    campaignId: row.campaign_id,
+    operationId: row.operation_id,
+    role: row.role,
+    storagePath: row.storage_path,
+  });
   return row.id;
 }
 
@@ -492,8 +717,11 @@ async function readMetadata(path: string): Promise<Record<string, unknown>> {
 }
 
 beforeAll(async () => {
-  assertAuthorizedTarget();
+  const gate = requireAuthorizedTarget();
+  const runId = `${Date.now()}-${randomUUID()}`;
+  initManifest(runId, gate);
 
+  try {
   const url = requireEnv("SUPABASE_URL");
   const serviceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
   const anonKey = requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
@@ -515,6 +743,7 @@ beforeAll(async () => {
   if (signIn.error || !signIn.data.user) {
     throw new Error(`f60_1_integration_sign_in_failed:${signIn.error?.message}`);
   }
+  recordUser(signIn.data.user.id, false);
 
   postgres = new PostgresClient({
     connectionString: requireEnv("TEST_DATABASE_URL"),
@@ -524,7 +753,6 @@ beforeAll(async () => {
 
   const testStore = await resolveTestStore(signIn.data.user.id);
   const otherStore = await createOtherStore();
-  const runId = `${Date.now()}-${randomUUID()}`;
 
   originalJpeg = await sharp({
     create: {
@@ -602,6 +830,10 @@ beforeAll(async () => {
     newFlowCampaignId,
     otherCampaignId,
   ]);
+  if (manifest) {
+    manifest.referenceBaselineSha256 = baselineHash;
+    persistManifest();
+  }
 
   const legacyPath = `${testStore.storeId}/${legacyCampaignId}.jpg`;
   const newFlowPath = `${testStore.storeId}/${newFlowCampaignId}/product-1-1/${newFlowOperationId}/art-1024.jpg`;
@@ -614,6 +846,7 @@ beforeAll(async () => {
     storage_path: legacyPath,
     input_snapshot: {},
   }, "id");
+  recordCampaign(legacyCampaignId, "legacy_campaign", legacyPath);
   await insertOne("campaigns", {
     id: newFlowCampaignId,
     store_id: testStore.storeId,
@@ -622,6 +855,7 @@ beforeAll(async () => {
     storage_path: newFlowPath,
     input_snapshot: {},
   }, "id");
+  recordCampaign(newFlowCampaignId, "new_flow_1_1", newFlowPath);
   await insertOne("campaigns", {
     id: otherCampaignId,
     store_id: otherStore.storeId,
@@ -630,12 +864,33 @@ beforeAll(async () => {
     storage_path: `${otherStore.storeId}/${otherCampaignId}.jpg`,
     input_snapshot: {},
   }, "id");
+  recordCampaign(
+    otherCampaignId,
+    "other_store",
+    `${otherStore.storeId}/${otherCampaignId}.jpg`,
+  );
 
   await uploadFixture(CAMPAIGN_IMAGES_BUCKET, legacyPath, legacyJpeg);
   await uploadFixture(CAMPAIGN_IMAGES_BUCKET, newFlowPath, newFlowJpeg);
+  } catch (error) {
+    markManifest(
+      "failed",
+      error instanceof Error ? error.message : String(error),
+    );
+    throw error;
+  }
+});
+
+afterEach((context) => {
+  if (context.task.result?.state === "fail") {
+    manifestFailed = true;
+  }
 });
 
 afterAll(async () => {
+  if (manifest && manifest.status === "in_progress") {
+    markManifest(manifestFailed ? "failed" : "completed");
+  }
   // Nenhum objeto/linha de `campaign_composition_artifacts` é apagado: a linha
   // é imutável e a repetição usa UUIDs novos. Resíduos ficam na evidência.
   await postgres?.end().catch(() => undefined);
@@ -932,6 +1187,7 @@ describe("F60.1 integration — fluxos reais", () => {
       { client: instrumented.client },
     );
     expect(created).toEqual({ kind: "created" });
+    recordIdentityArtifact(identity);
 
     const path = compositionArtifactStoragePath(identity);
     const metadata = await readMetadata(path);
@@ -976,6 +1232,7 @@ describe("F60.1 integration — fluxos reais", () => {
     );
     expect(first.kind).toBe("persistence_failure");
     expect(await artifactRowCount(identity)).toBe(0);
+    recordObject(INTERNAL_BUCKET, compositionArtifactStoragePath(identity));
 
     const path = compositionArtifactStoragePath(identity);
     const payload = evidencePayload(await readMetadata(path));
@@ -988,6 +1245,7 @@ describe("F60.1 integration — fluxos reais", () => {
       { client: instrumented.client },
     );
     expect(second).toEqual({ kind: "reused", adoption: true });
+    recordIdentityArtifact(identity);
     expect(await artifactRowCount(identity)).toBe(1);
     expect(instrumented.calls.uploads).toHaveLength(1);
     expect(instrumented.calls.remove).toBe(0);
@@ -1011,6 +1269,7 @@ describe("F60.1 integration — fluxos reais", () => {
       )
       .sort();
     expect(kinds).toEqual(["created", "reused"]);
+    recordIdentityArtifact(identity);
     expect(await artifactRowCount(identity)).toBe(1);
   });
 
@@ -1037,6 +1296,7 @@ describe("F60.1 integration — fluxos reais", () => {
       .sort();
     expect(kinds).toContain("provenance_conflict");
     expect(kinds).toContain("created");
+    recordIdentityArtifact(identity);
     expect(await artifactRowCount(identity)).toBe(1);
   });
 
@@ -1063,6 +1323,7 @@ describe("F60.1 integration — fluxos reais", () => {
     expect([originalJpeg, differentJpeg].some((bytes) => bytes.equals(winner))).toBe(
       true,
     );
+    recordIdentityArtifact(identity);
     expect(await artifactRowCount(identity)).toBe(1);
   });
 

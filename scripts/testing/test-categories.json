@@ -7,7 +7,8 @@
     "scripts/f57-2/__tests__/orchestrator.ps1.test.mjs",
     "scripts/f60/__tests__/snapshot-compare.test.mjs",
     "scripts/f60/__tests__/f60-window.test.mjs",
-    "scripts/gsd/__tests__/validate-product-flow-gate.test.mjs"
+    "scripts/gsd/__tests__/validate-product-flow-gate.test.mjs",
+    "scripts/testing/__tests__/f60-1-gate.test.mjs"
   ],
   "integration.postgres-homolog": [
     "src/lib/__tests__/market-preferences-onboarding.postgres.test.ts",
