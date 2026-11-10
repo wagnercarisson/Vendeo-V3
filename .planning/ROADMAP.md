@@ -830,7 +830,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [x] 60.1-02-PLAN.md - Storage imutável com `info(path)` e bucket parametrizado, integridade por decode completo, repositório e persistência idempotente/concorrência/adoção de órfão — **CONCLUÍDO; 26 testes focados / 73 no módulo; typecheck 0**
+- [x] 60.1-02-PLAN.md - Storage imutável com `info(path)` e bucket parametrizado, integridade por decode completo, repositório e persistência idempotente/concorrência/adoção de órfão — **CONCLUÍDO; 27 testes focados / 74 no módulo; typecheck 0**
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
