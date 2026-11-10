@@ -811,7 +811,7 @@ Plans:
 
 ### Phase 60.1: F60.1 - Persistência e recuperação de artefatos reutilizáveis
 
-**Status:** **60.1-01, 60.1-06 E 60.1-02 CONCLUÍDOS E AGUARDANDO REVISÃO; 60.1-03..05 NÃO INICIADOS. Migration autorada e não aplicada; nenhum banco, Storage real ou produção tocado.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
+**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E AGUARDANDO REVISÃO; 60.1-04..05 NÃO INICIADOS. Migration autorada e não aplicada; nenhum banco, Storage real ou produção tocado.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
 
 **Goal:** Criar um módulo compartilhado, sem orquestrador, para persistir, localizar, recuperar e validar artefatos de composição com identidade loja/campanha/operação, papéis `square_original`/`square_prepared`/`vertical`, metadados reais, checksum, proveniência, idempotência, conflito explícito, evidência durável de órfão, privacidade interna e reconhecimento seguro de fonte de campanha entregue e base interna. Preservar integralmente o fluxo 1:1, o 9:16 direto e os contratos da F60.
 
@@ -834,7 +834,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 60.1-03-PLAN.md — Recuperação tipada, revalidação de origem e resolução de fonte reutilizável (legado, novo fluxo 1:1, base interna)
+- [x] 60.1-03-PLAN.md — Recuperação tipada, revalidação de origem e resolução de fonte reutilizável (legado, novo fluxo 1:1, base interna) — **CONCLUÍDO; 35 novos testes no módulo / 110 totais; typecheck 0**
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
