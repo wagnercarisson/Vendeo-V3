@@ -834,7 +834,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [x] 60.1-03-PLAN.md — Recuperação tipada, revalidação de origem e resolução de fonte reutilizável (legado, novo fluxo 1:1, base interna) — **CONCLUÍDO; 35 novos testes no módulo / 110 totais; typecheck 0**
+- [x] 60.1-03-PLAN.md — Recuperação tipada, revalidação de origem e resolução de fonte reutilizável (legado, novo fluxo 1:1, base interna) — **CONCLUÍDO; 38 novos testes no módulo / 113 totais; typecheck 0**
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
