@@ -64,7 +64,7 @@ A indexabilidade SHALL depender de **produção confirmada (`VERCEL_ENV === "pro
 
 A home SHALL usar o título `Vendeo | Crie campanhas para redes sociais com IA` e a descrição `Crie campanhas para redes sociais sem precisar saber design ou marketing. Arte e texto com a identidade da sua loja, prontos para revisar, baixar e publicar.`. A aplicação SHALL NOT alterar o H1 aprovado (`O que seu negócio quer divulgar vira uma campanha pronta para publicar.`) nem o conteúdo visível da landing para atender à metadata.
 
-O rodapé da home SHALL poder ser renderizado pelo componente público compartilhado, agrupando `Floriculturas` (`/floriculturas`), `Padarias` (`/padarias`) e `Campanhas sem complicação` (`/campanhas-para-sua-loja`) sob “Explore o Vendeo”. A composição SHALL preservar os demais links e o aviso legal existentes. A alteração SHALL NOT criar bloco de conteúdo, alterar a ordem dos blocos, substituir imagens, alterar CTAs ou reescrever textos existentes. Nenhum destino do rodapé SHALL controlar sitemap, robots, canonical ou a política fail-closed.
+O rodapé da home SHALL poder ser renderizado pelo componente público compartilhado, agrupando `Floriculturas` (`/floriculturas`), `Padarias` (`/padarias`), `Mercados e mercearias` (`/ofertas-para-mercados`) e `Campanhas sem complicação` (`/campanhas-para-sua-loja`) sob “Explore o Vendeo”. A composição SHALL preservar os demais links e o aviso legal existentes. A alteração SHALL NOT criar bloco de conteúdo, alterar a ordem dos blocos, substituir imagens, alterar CTAs ou reescrever textos existentes. Nenhum destino do rodapé SHALL controlar sitemap, robots, canonical ou a política fail-closed.
 
 #### Scenario: Título e descrição exatos
 
@@ -77,14 +77,14 @@ O rodapé da home SHALL poder ser renderizado pelo componente público compartil
 - **WHEN** a implementação é revisada
 - **THEN** o H1 permanece "O que seu negócio quer divulgar vira uma campanha pronta para publicar."
 - **AND** nenhum texto visível, layout, campanha, logo ou CTA da landing é alterado fora do rodapé
-- **AND** os links `Floriculturas`, `Padarias` e `Campanhas sem complicação` permanecem no rodapé, agora agrupados sob “Explore o Vendeo”
+- **AND** os links `Floriculturas`, `Padarias`, `Mercados e mercearias` e `Campanhas sem complicação` permanecem no rodapé, agrupados sob “Explore o Vendeo”
 - **AND** Termos, Privacidade, Uso Aceitável, Novidades, Contato, Entrar e o aviso legal permanecem disponíveis
 
 #### Scenario: Indexação não é afetada pela navegação
 
 - **WHEN** sitemap, robots e canonical são inspecionados
 - **THEN** a lista de navegação do rodapé não é usada como fonte
-- **AND** somente `/`, `/floriculturas`, `/padarias` e `/campanhas-para-sua-loja` permanecem como exceções indexáveis sob a condição combinada já existente
+- **AND** somente `/`, `/floriculturas`, `/padarias`, `/ofertas-para-mercados` e `/campanhas-para-sua-loja` permanecem como exceções indexáveis sob a condição combinada já existente
 - **AND** os contratos fail-closed permanecem inalterados
 
 ### Requirement: Metadata de compartilhamento coerente
@@ -101,13 +101,14 @@ A home SHALL fornecer metadata de compartilhamento coerente (Open Graph e Twitte
 
 A aplicação SHALL definir explicitamente a indexação por superfície. As superfícies abaixo SHALL permanecer `noindex` e fora do sitemap; nenhuma página nova SHALL ser incluída no índice ou no sitemap automaticamente.
 
-As superfícies indexáveis SHALL ser exatamente quatro, e somente sob **produção confirmada (`VERCEL_ENV === "production"`) e origem canônica validada**: a home `/`, a página demonstrativa `/floriculturas`, a página demonstrativa `/padarias` e a página demonstrativa `/campanhas-para-sua-loja`. Qualquer outra combinação — inclusive produção com origem ausente, inválida ou não canônica — SHALL resultar em `noindex`, sitemap sem URLs e diagnóstico identificável.
+As superfícies indexáveis SHALL ser exatamente cinco, e somente sob **produção confirmada (`VERCEL_ENV === "production"`) e origem canônica validada**: a home `/`, a página demonstrativa `/floriculturas`, a página demonstrativa `/padarias`, a página demonstrativa `/ofertas-para-mercados` e a página demonstrativa `/campanhas-para-sua-loja`. Qualquer outra combinação — inclusive produção com origem ausente, inválida ou não canônica — SHALL resultar em `noindex`, sitemap sem URLs e diagnóstico identificável.
 
 | Superfície | Indexação | Sitemap |
 |---|---|---|
 | `/` | `index, follow` (somente em produção confirmada **e** com origem canônica validada) | incluída somente nessa condição |
 | `/floriculturas` | `index, follow` (somente em produção confirmada **e** com origem canônica validada) | incluída somente nessa condição |
 | `/padarias` | `index, follow` (somente em produção confirmada **e** com origem canônica validada) | incluída somente nessa condição |
+| `/ofertas-para-mercados` | `index, follow` (somente em produção confirmada **e** com origem canônica validada) | incluída somente nessa condição |
 | `/campanhas-para-sua-loja` | `index, follow` (somente em produção confirmada **e** com origem canônica validada) | incluída somente nessa condição |
 | `/campanhas`, `/campanhas/**` | `noindex, nofollow` (painel autenticado) | fora |
 | `/login`, `/signup`, `/check-email`, `/forgot-password`, `/update-password` | `noindex, nofollow` | fora |
@@ -124,13 +125,14 @@ As superfícies indexáveis SHALL ser exatamente quatro, e somente sob **produç
 
 - **WHEN** a política de indexação é aplicada em produção confirmada com origem validada
 - **THEN** autenticação, recuperação, callbacks, app, admin, documentos legais e APIs são `noindex`
-- **AND** somente a home, `/floriculturas`, `/padarias` e `/campanhas-para-sua-loja` são indexáveis
+- **AND** somente a home, `/floriculturas`, `/padarias`, `/ofertas-para-mercados` e `/campanhas-para-sua-loja` são indexáveis
 
 #### Scenario: Rota privada de campanhas preservada
 
 - **WHEN** `/campanhas` ou qualquer subcaminho de `/campanhas` é avaliado
 - **THEN** a política retorna `noindex` e `inSitemap: false`
-- **AND** a nova rota pública `/campanhas-para-sua-loja` não é confundida com o prefixo privado
+- **AND** a rota pública `/campanhas-para-sua-loja` não é confundida com o prefixo privado
+- **AND** a nova rota `/ofertas-para-mercados` não é confundida com o prefixo privado
 
 #### Scenario: Novidades tratada como painel
 
@@ -141,11 +143,11 @@ As superfícies indexáveis SHALL ser exatamente quatro, e somente sob **produç
 
 - **WHEN** uma rota ou superfície nova é adicionada
 - **THEN** ela não é incluída no índice nem no sitemap sem decisão explícita
-- **AND** `/campanhas-para-sua-loja` é a superfície nova aprovada por esta change
+- **AND** `/ofertas-para-mercados` é a superfície nova aprovada por esta change
 
 #### Scenario: Política da página nova é explícita
 
-- **WHEN** `getSurfacePolicy("/campanhas-para-sua-loja")` é chamado
+- **WHEN** `getSurfacePolicy("/ofertas-para-mercados")` é chamado
 - **THEN** o contrato retorna política indexável com `inSitemap: true`
 - **AND** qualquer path não aprovado continua retornando `noindex` e `inSitemap: false`
 
@@ -206,7 +208,7 @@ A aplicação SHALL fornecer `robots.txt` que orienta o crawling e referencia o 
 
 ### Requirement: Padrão de não indexação para rotas não aprovadas
 
-A não indexação SHALL ser o comportamento padrão verificável de toda página sem aprovação explícita, com a home, `/floriculturas`, `/padarias` e `/campanhas-para-sua-loja` como **únicas exceções** nesta fatia. O default SHALL ser aplicado na raiz (`src/app/layout.tsx`) com `robots: noindex, nofollow`, e somente as quatro superfícies aprovadas SHALL sobrescrever para `index, follow` sob a condição combinada (produção confirmada e origem canônica validada). A herança de metadata SHALL ser verificada por teste: páginas futuras herdam o `noindex` por padrão, e as exceções são explícitas. Um sitemap vazio, isoladamente, SHALL NOT ser tratado como proteção contra indexação.
+A não indexação SHALL ser o comportamento padrão verificável de toda página sem aprovação explícita, com a home, `/floriculturas`, `/padarias`, `/ofertas-para-mercados` e `/campanhas-para-sua-loja` como **únicas exceções** nesta fatia. O default SHALL ser aplicado na raiz (`src/app/layout.tsx`) com `robots: noindex, nofollow`, e somente as cinco superfícies aprovadas SHALL sobrescrever para `index, follow` sob a condição combinada (produção confirmada e origem canônica validada). A herança de metadata SHALL ser verificada por teste: páginas futuras herdam o `noindex` por padrão, e as exceções são explícitas. Um sitemap vazio, isoladamente, SHALL NOT ser tratado como proteção contra indexação.
 
 #### Scenario: Rota sem aprovação herda noindex
 
@@ -217,7 +219,7 @@ A não indexação SHALL ser o comportamento padrão verificável de toda págin
 #### Scenario: Apenas as superfícies aprovadas são exceção
 
 - **WHEN** a política de indexação é revisada
-- **THEN** somente `/`, `/floriculturas`, `/padarias` e `/campanhas-para-sua-loja` sobrescrevem para `index, follow` sob a condição combinada
+- **THEN** somente `/`, `/floriculturas`, `/padarias`, `/ofertas-para-mercados` e `/campanhas-para-sua-loja` sobrescrevem para `index, follow` sob a condição combinada
 - **AND** cada sobrescrita é explícita e testada
 
 #### Scenario: Herança de metadata verificada por teste
@@ -225,7 +227,7 @@ A não indexação SHALL ser o comportamento padrão verificável de toda págin
 - **WHEN** os testes de metadata são executados
 - **THEN** existe um teste que confirma que o default da raiz é `noindex`
 - **AND** existe um teste que confirma que a home é indexável apenas sob a condição combinada (produção confirmada e origem canônica validada)
-- **AND** existe um teste que confirma o mesmo comportamento para `/floriculturas`, `/padarias` e `/campanhas-para-sua-loja`
+- **AND** existe um teste que confirma o mesmo comportamento para `/floriculturas`, `/padarias`, `/ofertas-para-mercados` e `/campanhas-para-sua-loja`
 
 #### Scenario: Sitemap vazio não é proteção suficiente
 
@@ -234,12 +236,12 @@ A não indexação SHALL ser o comportamento padrão verificável de toda págin
 
 ### Requirement: sitemap restrito a URLs canônicas indexáveis
 
-A aplicação SHALL fornecer `sitemap.xml` com URLs absolutas, públicas, canônicas e realmente indexáveis. O sitemap SHALL conter somente a home `${origin}/`, a página demonstrativa `${origin}/floriculturas`, a página demonstrativa `${origin}/padarias` e a página demonstrativa `${origin}/campanhas-para-sua-loja`, sob **produção confirmada com origem canônica validada**, e SHALL permanecer vazio fora de produção **ou** quando a origem estiver ausente, inválida ou não canônica. O sitemap SHALL NOT incluir `/api/**`, `/auth/**`, rotas autenticadas, admin, documentos legais, versões Markdown nem URLs com parâmetros.
+A aplicação SHALL fornecer `sitemap.xml` com URLs absolutas, públicas, canônicas e realmente indexáveis. O sitemap SHALL conter somente a home `${origin}/`, a página demonstrativa `${origin}/floriculturas`, a página demonstrativa `${origin}/padarias`, a página demonstrativa `${origin}/ofertas-para-mercados` e a página demonstrativa `${origin}/campanhas-para-sua-loja`, sob **produção confirmada com origem canônica validada**, e SHALL permanecer vazio fora de produção **ou** quando a origem estiver ausente, inválida ou não canônica. O sitemap SHALL NOT incluir `/api/**`, `/auth/**`, rotas autenticadas, admin, documentos legais, versões Markdown nem URLs com parâmetros.
 
-#### Scenario: Sitemap contém as quatro URLs aprovadas em produção com origem validada
+#### Scenario: Sitemap contém as cinco URLs aprovadas em produção com origem validada
 
 - **WHEN** o sitemap é gerado em produção confirmada com origem canônica validada
-- **THEN** ele contém exatamente `/`, `/floriculturas`, `/padarias` e `/campanhas-para-sua-loja`
+- **THEN** ele contém exatamente `/`, `/floriculturas`, `/padarias`, `/ofertas-para-mercados` e `/campanhas-para-sua-loja`
 - **AND** todas as URLs são absolutas e canônicas
 
 #### Scenario: Sitemap vazio fora de produção ou com origem inválida
@@ -302,23 +304,23 @@ A imagem de compartilhamento SHALL ser uma composição institucional com ativos
 
 ### Requirement: Fronteira da fatia e proibição de prometer indexação
 
-A change SHALL ser implementada preferencialmente em `src/app/(marketing)/padarias/**`, `src/components/landing/padarias/**`, `src/lib/seo/*`, `src/app/sitemap.ts`, metadata das páginas, `public/padarias/**` e testes correspondentes. A change SHALL NOT redesenhar a landing, alterar H1, layout, campanhas, logos ou CTAs da home, nem alterar código da F56, ledger, migrations, crédito, onboarding, autenticação, `middleware.ts`, `/floriculturas` ou o contrato de APIs de geração. A única alteração visível na home SHALL ser o link `Padarias` no rodapé, ao lado do link existente `Floriculturas`.
+A change SHALL ser implementada preferencialmente em `src/app/(marketing)/ofertas-para-mercados/**`, `src/components/landing/mercados/**`, `src/lib/seo/*`, `src/app/sitemap.ts`, `src/components/landing/public-footer-nav.ts`, metadata das páginas, `public/mercados/**` e testes correspondentes. A change SHALL NOT redesenhar a landing, alterar H1, layout, campanhas, logos ou CTAs da home, nem alterar código da F56, ledger, migrations, crédito, onboarding, autenticação, `middleware.ts`, `/floriculturas`, `/padarias` ou `/campanhas-para-sua-loja`. A única alteração visível na home SHALL ser o novo destino `Mercados e mercearias` no rodapé compartilhado.
 
-A change SHALL NOT prometer indexação, tráfego ou posição no Google, aumento de vendas, tempo de geração ou preservação exata do produto.
+A change SHALL NOT prometer indexação, tráfego ou posição no Google, aumento de vendas, conversão, tempo de geração ou preservação exata do produto.
 
 #### Scenario: Landing aprovada preservada
 
 - **WHEN** a implementação é revisada
 - **THEN** H1, copy visível, layout, campanhas, logos e CTAs da landing permanecem inalterados
-- **AND** nenhum código da F56, migration, crédito, onboarding, autenticação, `/floriculturas` ou `middleware.ts` é alterado
+- **AND** nenhum código da F56, migration, crédito, onboarding, autenticação, `/floriculturas`, `/padarias`, `/campanhas-para-sua-loja` ou `middleware.ts` é alterado
 
 #### Scenario: Sem promessa de indexação, tráfego ou posição
 
 - **WHEN** o conteúdo técnico e a comunicação da fatia são revisados
-- **THEN** nenhuma garantia de indexação, tráfego ou posição no Google é afirmada
+- **THEN** nenhuma garantia de indexação, tráfego, posição no Google, conversão ou vendas é afirmada
 
 #### Scenario: Sem promessa comercial na página pública
 
-- **WHEN** a copy pública de `/padarias` é revisada
-- **THEN** nenhuma frase promete aumento de vendas, alcance, tráfego, posição no Google, tempo de geração ou preservação exata do produto
+- **WHEN** a copy pública de `/ofertas-para-mercados` é revisada
+- **THEN** nenhuma frase promete aumento de vendas, alcance, tráfego, posição no Google, conversão, tempo de geração ou preservação exata do produto
 - **AND** nenhuma advertência comercial adicional é publicada além do aviso demonstrativo aprovado

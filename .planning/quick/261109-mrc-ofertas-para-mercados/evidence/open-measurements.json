@@ -1,0 +1,442 @@
+{
+  "desktop-1440": {
+    "url": "http://127.0.0.1:3104/ofertas-para-mercados",
+    "title": "Crie artes de ofertas para mercados e mercearias | Vendeo",
+    "h1": "Sua oferta merece chamar atenção. Sem complicar sua rotina.",
+    "h2": [
+      "Da foto do produto à campanha pronta para divulgar.",
+      "Uma oferta clara, com a identidade da sua loja.",
+      "Além da arte, o texto para acompanhar a publicação.",
+      "Outra categoria, a mesma identidade.",
+      "Como ficaria uma campanha com a oferta da sua loja?"
+    ],
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "scrollHeight": 3235,
+    "overflow": 0,
+    "themeColor": "rgb(2, 6, 23)",
+    "offer": {
+      "variant": "compact",
+      "state": "enabled",
+      "id": "ofertas-mercados-oferta"
+    },
+    "accessGroups": [
+      {
+        "mode": "anchor",
+        "state": "enabled"
+      },
+      {
+        "mode": "real",
+        "state": "enabled"
+      }
+    ],
+    "noticeCount": 1,
+    "copyPresent": {
+      "h1": true,
+      "explanation": true,
+      "kit": true,
+      "coffee": true
+    },
+    "images": [
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/vendeo-logo-dark.webp",
+        "alt": "Vendeo",
+        "naturalWidth": 384,
+        "naturalHeight": 82,
+        "renderedWidth": 206.05,
+        "renderedHeight": 44,
+        "complete": true,
+        "loading": "auto",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/mercados/foto-coxao-mole-acougue-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3104/mercados/foto-coxao-mole-acougue-480w.webp",
+        "alt": "Coxão mole bovino sobre a bancada de um açougue, com peça inteira e fatia à mostra.",
+        "naturalWidth": 360,
+        "naturalHeight": 240,
+        "renderedWidth": 360,
+        "renderedHeight": 240.66,
+        "complete": true,
+        "loading": "eager",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/mercados/campanha-coxao-mole-tio-joao-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3104/mercados/campanha-coxao-mole-tio-joao-480w.webp",
+        "alt": "Campanha da Mercearia Tio João para o Coxão Mole Bovino, com preço anterior riscado, R$ 39,90/kg em destaque, selo Oferta e validade de 10 a 13 de novembro de 2026.",
+        "naturalWidth": 480,
+        "naturalHeight": 480,
+        "renderedWidth": 480,
+        "renderedHeight": 480,
+        "complete": true,
+        "loading": "eager",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/landing/hero-oferta-cafe.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/variants/hero-oferta-cafe-480w.webp",
+        "alt": "Campanha da Mercearia Tio João para o Café Melitta 500 g Tradicional, com preço promocional em destaque e a marca da loja.",
+        "naturalWidth": 467,
+        "naturalHeight": 467,
+        "renderedWidth": 468,
+        "renderedHeight": 468,
+        "complete": true,
+        "loading": "lazy",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/vendeo-logo-dark.webp",
+        "alt": "Vendeo",
+        "naturalWidth": 384,
+        "naturalHeight": 82,
+        "renderedWidth": 112.38,
+        "renderedHeight": 24,
+        "complete": true,
+        "loading": "lazy",
+        "fetchPriority": "auto"
+      }
+    ],
+    "lcp": [
+      {
+        "element": "IMG",
+        "id": "",
+        "url": "http://127.0.0.1:3104/mercados/campanha-coxao-mole-tio-joao-480w.webp",
+        "time": 580,
+        "size": 97034
+      }
+    ]
+  },
+  "tablet-834": {
+    "url": "http://127.0.0.1:3104/ofertas-para-mercados",
+    "title": "Crie artes de ofertas para mercados e mercearias | Vendeo",
+    "h1": "Sua oferta merece chamar atenção. Sem complicar sua rotina.",
+    "h2": [
+      "Da foto do produto à campanha pronta para divulgar.",
+      "Uma oferta clara, com a identidade da sua loja.",
+      "Além da arte, o texto para acompanhar a publicação.",
+      "Outra categoria, a mesma identidade.",
+      "Como ficaria uma campanha com a oferta da sua loja?"
+    ],
+    "scrollWidth": 834,
+    "clientWidth": 834,
+    "scrollHeight": 3228,
+    "overflow": 0,
+    "themeColor": "rgb(2, 6, 23)",
+    "offer": {
+      "variant": "compact",
+      "state": "enabled",
+      "id": "ofertas-mercados-oferta"
+    },
+    "accessGroups": [
+      {
+        "mode": "anchor",
+        "state": "enabled"
+      },
+      {
+        "mode": "real",
+        "state": "enabled"
+      }
+    ],
+    "noticeCount": 1,
+    "copyPresent": {
+      "h1": true,
+      "explanation": true,
+      "kit": true,
+      "coffee": true
+    },
+    "images": [
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/vendeo-logo-dark.webp",
+        "alt": "Vendeo",
+        "naturalWidth": 384,
+        "naturalHeight": 82,
+        "renderedWidth": 206.05,
+        "renderedHeight": 44,
+        "complete": true,
+        "loading": "auto",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/mercados/foto-coxao-mole-acougue-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3104/mercados/foto-coxao-mole-acougue-480w.webp",
+        "alt": "Coxão mole bovino sobre a bancada de um açougue, com peça inteira e fatia à mostra.",
+        "naturalWidth": 305,
+        "naturalHeight": 203,
+        "renderedWidth": 306,
+        "renderedHeight": 204.66,
+        "complete": true,
+        "loading": "eager",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/mercados/campanha-coxao-mole-tio-joao-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3104/mercados/campanha-coxao-mole-tio-joao-480w.webp",
+        "alt": "Campanha da Mercearia Tio João para o Coxão Mole Bovino, com preço anterior riscado, R$ 39,90/kg em destaque, selo Oferta e validade de 10 a 13 de novembro de 2026.",
+        "naturalWidth": 408,
+        "naturalHeight": 408,
+        "renderedWidth": 408,
+        "renderedHeight": 408,
+        "complete": true,
+        "loading": "eager",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/landing/hero-oferta-cafe.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/variants/hero-oferta-cafe-480w.webp",
+        "alt": "Campanha da Mercearia Tio João para o Café Melitta 500 g Tradicional, com preço promocional em destaque e a marca da loja.",
+        "naturalWidth": 372,
+        "naturalHeight": 372,
+        "renderedWidth": 373,
+        "renderedHeight": 373,
+        "complete": true,
+        "loading": "lazy",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/vendeo-logo-dark.webp",
+        "alt": "Vendeo",
+        "naturalWidth": 384,
+        "naturalHeight": 82,
+        "renderedWidth": 112.38,
+        "renderedHeight": 24,
+        "complete": true,
+        "loading": "lazy",
+        "fetchPriority": "auto"
+      }
+    ],
+    "lcp": [
+      {
+        "element": "IMG",
+        "id": "",
+        "url": "http://127.0.0.1:3104/mercados/campanha-coxao-mole-tio-joao-480w.webp",
+        "time": 40,
+        "size": 123018
+      }
+    ]
+  },
+  "mobile-390": {
+    "url": "http://127.0.0.1:3104/ofertas-para-mercados",
+    "title": "Crie artes de ofertas para mercados e mercearias | Vendeo",
+    "h1": "Sua oferta merece chamar atenção. Sem complicar sua rotina.",
+    "h2": [
+      "Da foto do produto à campanha pronta para divulgar.",
+      "Uma oferta clara, com a identidade da sua loja.",
+      "Além da arte, o texto para acompanhar a publicação.",
+      "Outra categoria, a mesma identidade.",
+      "Como ficaria uma campanha com a oferta da sua loja?"
+    ],
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "scrollHeight": 4310,
+    "overflow": 0,
+    "themeColor": "rgb(2, 6, 23)",
+    "offer": {
+      "variant": "compact",
+      "state": "enabled",
+      "id": "ofertas-mercados-oferta"
+    },
+    "accessGroups": [
+      {
+        "mode": "anchor",
+        "state": "enabled"
+      },
+      {
+        "mode": "real",
+        "state": "enabled"
+      }
+    ],
+    "noticeCount": 1,
+    "copyPresent": {
+      "h1": true,
+      "explanation": true,
+      "kit": true,
+      "coffee": true
+    },
+    "images": [
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/vendeo-logo-dark.webp",
+        "alt": "Vendeo",
+        "naturalWidth": 384,
+        "naturalHeight": 82,
+        "renderedWidth": 168.58,
+        "renderedHeight": 36,
+        "complete": true,
+        "loading": "auto",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/mercados/foto-coxao-mole-acougue-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3104/mercados/foto-coxao-mole-acougue-480w.webp",
+        "alt": "Coxão mole bovino sobre a bancada de um açougue, com peça inteira e fatia à mostra.",
+        "naturalWidth": 342,
+        "naturalHeight": 228,
+        "renderedWidth": 342,
+        "renderedHeight": 228.66,
+        "complete": true,
+        "loading": "eager",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/mercados/campanha-coxao-mole-tio-joao-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3104/mercados/campanha-coxao-mole-tio-joao-480w.webp",
+        "alt": "Campanha da Mercearia Tio João para o Coxão Mole Bovino, com preço anterior riscado, R$ 39,90/kg em destaque, selo Oferta e validade de 10 a 13 de novembro de 2026.",
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "renderedWidth": 342,
+        "renderedHeight": 342,
+        "complete": true,
+        "loading": "eager",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/landing/hero-oferta-cafe.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/variants/hero-oferta-cafe-480w.webp",
+        "alt": "Campanha da Mercearia Tio João para o Café Melitta 500 g Tradicional, com preço promocional em destaque e a marca da loja.",
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "renderedWidth": 342,
+        "renderedHeight": 342,
+        "complete": true,
+        "loading": "lazy",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/vendeo-logo-dark.webp",
+        "alt": "Vendeo",
+        "naturalWidth": 384,
+        "naturalHeight": 82,
+        "renderedWidth": 112.38,
+        "renderedHeight": 24,
+        "complete": true,
+        "loading": "lazy",
+        "fetchPriority": "auto"
+      }
+    ],
+    "lcp": [
+      {
+        "element": "P",
+        "id": "",
+        "url": null,
+        "time": 32,
+        "size": 58710
+      }
+    ]
+  },
+  "mobile-390-dpr3": {
+    "url": "http://127.0.0.1:3104/ofertas-para-mercados",
+    "title": "Crie artes de ofertas para mercados e mercearias | Vendeo",
+    "h1": "Sua oferta merece chamar atenção. Sem complicar sua rotina.",
+    "h2": [
+      "Da foto do produto à campanha pronta para divulgar.",
+      "Uma oferta clara, com a identidade da sua loja.",
+      "Além da arte, o texto para acompanhar a publicação.",
+      "Outra categoria, a mesma identidade.",
+      "Como ficaria uma campanha com a oferta da sua loja?"
+    ],
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "scrollHeight": 4310,
+    "overflow": 0,
+    "themeColor": "rgb(2, 6, 23)",
+    "offer": {
+      "variant": "compact",
+      "state": "enabled",
+      "id": "ofertas-mercados-oferta"
+    },
+    "accessGroups": [
+      {
+        "mode": "anchor",
+        "state": "enabled"
+      },
+      {
+        "mode": "real",
+        "state": "enabled"
+      }
+    ],
+    "noticeCount": 1,
+    "copyPresent": {
+      "h1": true,
+      "explanation": true,
+      "kit": true,
+      "coffee": true
+    },
+    "images": [
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/vendeo-logo-dark.webp",
+        "alt": "Vendeo",
+        "naturalWidth": 384,
+        "naturalHeight": 82,
+        "renderedWidth": 168.58,
+        "renderedHeight": 36,
+        "complete": true,
+        "loading": "auto",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/mercados/foto-coxao-mole-acougue-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3104/mercados/foto-coxao-mole-acougue-1024w.webp",
+        "alt": "Coxão mole bovino sobre a bancada de um açougue, com peça inteira e fatia à mostra.",
+        "naturalWidth": 342,
+        "naturalHeight": 228,
+        "renderedWidth": 342,
+        "renderedHeight": 228.77,
+        "complete": true,
+        "loading": "eager",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/mercados/campanha-coxao-mole-tio-joao-1024w.webp",
+        "currentSrc": "http://127.0.0.1:3104/mercados/campanha-coxao-mole-tio-joao-1024w.webp",
+        "alt": "Campanha da Mercearia Tio João para o Coxão Mole Bovino, com preço anterior riscado, R$ 39,90/kg em destaque, selo Oferta e validade de 10 a 13 de novembro de 2026.",
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "renderedWidth": 342,
+        "renderedHeight": 342,
+        "complete": true,
+        "loading": "eager",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/landing/hero-oferta-cafe.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/hero-oferta-cafe.webp",
+        "alt": "Campanha da Mercearia Tio João para o Café Melitta 500 g Tradicional, com preço promocional em destaque e a marca da loja.",
+        "naturalWidth": 342,
+        "naturalHeight": 342,
+        "renderedWidth": 342,
+        "renderedHeight": 342,
+        "complete": true,
+        "loading": "lazy",
+        "fetchPriority": "auto"
+      },
+      {
+        "src": "/landing/vendeo-logo-dark.webp",
+        "currentSrc": "http://127.0.0.1:3104/landing/vendeo-logo-dark.webp",
+        "alt": "Vendeo",
+        "naturalWidth": 384,
+        "naturalHeight": 82,
+        "renderedWidth": 112.38,
+        "renderedHeight": 24,
+        "complete": true,
+        "loading": "lazy",
+        "fetchPriority": "auto"
+      }
+    ],
+    "lcp": [
+      {
+        "element": "P",
+        "id": "",
+        "url": null,
+        "time": 24,
+        "size": 53291
+      }
+    ]
+  }
+}

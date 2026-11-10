@@ -10,18 +10,18 @@ explícita entre navegação e regras de sitemap/indexação.
 ### Requirement: Rodapé público compartilhado nas quatro páginas
 
 O sistema SHALL renderizar o rodapé das páginas públicas `/`,
-`/floriculturas`, `/padarias` e `/campanhas-para-sua-loja` por um único
-componente compartilhado, em Server Component, preferencialmente em
-`src/components/landing/public-footer.tsx`.
+`/floriculturas`, `/padarias`, `/ofertas-para-mercados` e
+`/campanhas-para-sua-loja` por um único componente compartilhado, em Server
+Component, preferencialmente em `src/components/landing/public-footer.tsx`.
 
 O componente SHALL preservar a identidade visual existente: logo Vendeo, fontes,
 cores, borda superior, espaçamento, alturas de toque de no mínimo 44 px e foco
 visível. O componente SHALL NOT alterar header, oferta, CTAs de aquisição,
 autenticação ou conteúdo principal das páginas.
 
-#### Scenario: Quatro páginas usam o mesmo componente
+#### Scenario: Cinco páginas usam o mesmo componente
 
-- **WHEN** as quatro páginas públicas são renderizadas
+- **WHEN** as cinco páginas públicas são renderizadas
 - **THEN** cada uma SHALL exibir exatamente um `footer`
 - **AND** o rodapé SHALL ser produzido pelo componente compartilhado
 - **AND** a página SHALL fornecer apenas o caminho atual e o contexto necessário
@@ -40,16 +40,18 @@ O sistema SHALL centralizar os destinos e rótulos da navegação de conteúdo e
 
 - `Floriculturas` → `/floriculturas`
 - `Padarias` → `/padarias`
+- `Mercados e mercearias` → `/ofertas-para-mercados`
 - `Campanhas sem complicação` → `/campanhas-para-sua-loja`
 
 Adicionar um destino futuro SHALL exigir alteração somente dessa lista e dos
 testes correspondentes. A lista SHALL NOT controlar automaticamente sitemap,
 robots, canonical, metadata ou qualquer política de indexação.
 
-#### Scenario: Lista contém exatamente os três destinos aprovados
+#### Scenario: Lista contém exatamente os quatro destinos aprovados
 
 - **WHEN** a lista de navegação é inspecionada
-- **THEN** ela SHALL conter exatamente os três pares rótulo/destino aprovados
+- **THEN** ela SHALL conter exatamente os quatro pares rótulo/destino aprovados,
+  nesta ordem
 - **AND** nenhuma rota privada ou não aprovada SHALL estar presente
 
 #### Scenario: Navegação não controla indexação
@@ -73,8 +75,8 @@ apontando para `/`, nenhum item de “Explore o Vendeo” SHALL receber
 
 #### Scenario: Destino atual identificado
 
-- **WHEN** `/floriculturas`, `/padarias` ou `/campanhas-para-sua-loja` é
-  renderizada
+- **WHEN** `/floriculturas`, `/padarias`, `/ofertas-para-mercados` ou
+  `/campanhas-para-sua-loja` é renderizada
 - **THEN** o link correspondente em “Explore o Vendeo” SHALL receber
   `aria-current="page"`
 - **AND** os demais links de conteúdo SHALL NOT receber `aria-current`
@@ -82,7 +84,7 @@ apontando para `/`, nenhum item de “Explore o Vendeo” SHALL receber
 #### Scenario: Home sem item artificial
 
 - **WHEN** `/` é renderizada
-- **THEN** “Explore o Vendeo” SHALL exibir os três destinos aprovados
+- **THEN** “Explore o Vendeo” SHALL exibir os quatro destinos aprovados
 - **AND** nenhum deles SHALL receber `aria-current="page"`
 - **AND** nenhum item “Início” SHALL ser adicionado sem aprovação
 
