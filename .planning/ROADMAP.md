@@ -788,7 +788,6 @@ Plans:
 
 - [x] 59-10-PLAN.md — Homolog/aceite: lojas de teste, matriz funcional, sobreposições, falhas/recuperação, 1:1 manual e relatório; gate de produção separado — **concluído; 53/53 tasks; produção promovida pelo responsável em 2026-11-07, com ressalvas de download específico, fatura/custo do provider e auditoria**
 
-
 ### Phase 60: F60 — Controle da operação 9:16 em duas etapas e integração financeira
 
 **Status:** **60-01 APROVADO; 60-02 CONCLUÍDO E APROVADO; 60-03 CONCLUÍDO E APROVADO — offline + Postgres (RUN 2 26/26 PASS, exit 0); 60-04 CONCLUÍDO, VERIFICADO, SINCRONIZADO E ARQUIVADO.** Gates offline verdes (42/42, 10/10, tsc/lint/build/diff/OpenSpec); suíte global **8282 PASS / 4 FAIL**, somente as 4 falhas conhecidas. GSD `PASS_WITH_FINDINGS` (11/11); OpenSpec **PASS** (55/55 tarefas, 35/35 requisitos); sync aplicado (2 specs atualizadas + 3 criadas) e archive em `openspec/changes/archive/2026-11-09-product-9-16-two-stage-operation-control/`. Produção, deploy, flag e IA não autorizados.
@@ -798,6 +797,7 @@ Plans:
 **Source:** `openspec/changes/product-9-16-two-stage-operation-control/` (proposal, design, specs e tasks; OpenSpec `--strict` válido).
 
 **Plans:**
+
 - `60-01-PLAN.md` — prova transacional bloqueante em homolog (schema mínimo, harness sem IA, 13 cenários) — **EXECUTADO; 13/13 PASS; APROVADO**
 - `60-02-PLAN.md` — módulo de controle da operação (pós-aprovação da prova)
 - `60-03-PLAN.md` — integração financeira, leitura compartilhada e compatibilidade 1:1 / 9:16 direto
@@ -811,7 +811,7 @@ Plans:
 
 ### Phase 60.1: F60.1 - Persistência e recuperação de artefatos reutilizáveis
 
-**Status:** **PLANEJAMENTO EM REVISÃO — 6 planos criados (waves 1→5; 60.1-06 na wave 1 em paralelo com 60.1-01); execução, migration aplicada, banco e produção NÃO autorizados.** Revisão do plan-checker em andamento; o status só volta a "concluído" após o checker passar. Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
+**Status:** **PLANEJAMENTO CONCLUÍDO — 6 planos criados (waves 1–5; 60.1-06 na wave 1 em paralelo com 60.1-01); verificação de planos com 0 blockers; aguardando revisão/aprovação humana. Execução, migration aplicada, banco e produção NÃO autorizados.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
 
 **Goal:** Criar um módulo compartilhado, sem orquestrador, para persistir, localizar, recuperar e validar artefatos de composição com identidade loja/campanha/operação, papéis `square_original`/`square_prepared`/`vertical`, metadados reais, checksum, proveniência, idempotência, conflito explícito, evidência durável de órfão, privacidade interna e reconhecimento seguro de fonte de campanha entregue e base interna. Preservar integralmente o fluxo 1:1, o 9:16 direto e os contratos da F60.
 
@@ -822,13 +822,26 @@ Plans:
 **Source:** `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/` (proposal, design, specs e tasks; OpenSpec `--strict` válido).
 
 **Plans:** 6 plans (waves 1→5; 60.1-06 na wave 1 em paralelo com 60.1-01).
+Plans:
+**Wave 1**
 
-Plans:
 - [ ] 60.1-01-PLAN.md — Contratos puros (identidade, autorização, papéis/dimensões, path, evidência canônica, decisão de conflito)
 - [ ] 60.1-06-PLAN.md — Migration aditiva local-only e contrato estático do schema (wave 1, em paralelo com 60.1-01; não aplicada)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 60.1-02-PLAN.md — Storage imutável com `info(path)` e bucket parametrizado, integridade por decode completo, repositório e persistência idempotente/concorrência/adoção de órfão
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 60.1-03-PLAN.md — Recuperação tipada, revalidação de origem e resolução de fonte reutilizável (legado, novo fluxo 1:1, base interna)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 60.1-05-PLAN.md — Gates, matriz de evidências e fechamento com stop explícito antes de produção
 
 **Canonical refs:** `AGENTS.md`; `docs/fluxo-de-desenvolvimento.md`; `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/proposal.md`, `design.md`, `tasks.md` e `specs/campaign-composition-artifacts/spec.md`; `openspec/specs/product-1-1-artifact-delivery/`, `product-1-1-generation-orchestration/`, `product-1-1-campaign-credit-billing/`, `product-vertical-generation-delivery/`, `product-9-16-two-stage-operation-control/`, `product-9-16-two-stage-financial-integration/`; `src/lib/product-1-1/artifact/**`, `src/lib/product-vertical-9-16/artifact/**`, `src/lib/campaign/format-resolution.ts`, `src/lib/campaign/thumbnail/thumbnail-path.ts`, `supabase/migrations/20261009000004_f56_2b1b_campaign_artifacts.sql`, `supabase/migrations/20260708000002_create_campaign_images_bucket.sql`.
