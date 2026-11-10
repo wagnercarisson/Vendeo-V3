@@ -77,10 +77,7 @@ describe("verifyCompositionArtifactBytes", () => {
       truncated,
       "square_original",
     );
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(["decode_failed", "not_jpeg"]).toContain(result.reason);
-    }
+    expect(result).toEqual({ ok: false, reason: "decode_failed" });
   });
 
   it("applies the byte limit before attempting to decode", async () => {
