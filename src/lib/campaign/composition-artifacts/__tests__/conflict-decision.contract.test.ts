@@ -179,6 +179,24 @@ describe("decidePersistOutcome", () => {
     }
   });
 
+  it("rejects a presented provenance digest that does not match the computed digest", () => {
+    const result = decidePersistOutcome({
+      existingRow: row(),
+      objectState: {
+        kind: "present",
+        checksumSha256: SHA,
+        evidence: { ok: true },
+      },
+      computed,
+      presented: { ...presented, provenanceDigest: OTHER_SHA },
+    });
+    expect(result).toEqual({
+      kind: "provenance_conflict",
+      existing: row(),
+      reason: "provenance_mismatch",
+    });
+  });
+
   it("detects changes in allowed provenance fields such as sourceStoragePath", () => {
     const sourceArtifactId = "99999999-9999-4999-8999-999999999999";
     const result = decidePersistOutcome({
