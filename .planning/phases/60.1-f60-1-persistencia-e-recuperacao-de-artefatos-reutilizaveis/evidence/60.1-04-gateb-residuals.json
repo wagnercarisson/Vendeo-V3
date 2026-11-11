@@ -1,25 +1,66 @@
 {
-  "runId": "gateb-20261111T011539Z",
-  "capturedAt": "2026-11-11T01:15:39Z",
-  "status": "blocked_before_migration",
-  "stopReason": "remote_migration_versions_not_found_in_local_migrations_directory",
-  "migrationFile": {
-    "workdirPath": "G:\\Vendeo-Homolog\\supabase\\migrations\\20261110202749_f60_1_composition_artifacts.sql",
+  "runId": "gateb-20261111T013116Z-460e7b2d48d5",
+  "capturedAt": "2026-11-11T01:32:09Z",
+  "status": "blocked_at_suite_sign_in_captcha",
+  "migration": {
+    "version": "20261110202749",
+    "name": "f60_1_composition_artifacts",
+    "file": "G:\\Vendeo-Homolog\\supabase\\migrations\\20261110202749_f60_1_composition_artifacts.sql",
     "sha256": "4961592fac67dac1841ac520a43a4acf116962a948c793b9bc8d62084541bfd0",
-    "copiedToWorkdir": true,
-    "applied": false
+    "applied": true
   },
-  "missingLocalMigration": {
+  "restoredHistoricalMigration": {
     "version": "20261109174110",
     "name": "f60_9_16_two_stage_control",
-    "repoFile": "supabase/migrations/20261109174110_f60_9_16_two_stage_control.sql",
-    "repoSha256": "6178e56156a7ddbc556ca57586da97c7834e85ee8608b678253bd5cc75d01760",
-    "workdirPresent": false
+    "file": "G:\\Vendeo-Homolog\\supabase\\migrations\\20261109174110_f60_9_16_two_stage_control.sql",
+    "rawSha256": "6178e56156a7ddbc556ca57586da97c7834e85ee8608b678253bd5cc75d01760",
+    "lfSha256": "4c50e9741fa1a6f236254cd64cbf54e8efd7f1b05b6b712bad5641a9fb3d6a3e",
+    "reapplied": false
   },
-  "users": [],
-  "stores": [],
+  "ledger": {
+    "before": {
+      "count": 154,
+      "maxVersion": "20261109174110",
+      "fingerprintSha256": "83588410bed158f4e620ad6bc041c62ebbc22162a229e3ae99ca90c69d583e7f"
+    },
+    "after": {
+      "count": 155,
+      "maxVersion": "20261110202749",
+      "fingerprintSha256": "2d0581c683d2bcdf6de8987a11c91e79aff9c664f0523c5942f457ecf62ad39a"
+    },
+    "newVersions": ["20261110202749"]
+  },
+  "users": [
+    {
+      "role": "primary_test_user",
+      "id": "21085257-56cb-4ce7-ad9b-a37bbeb07068",
+      "email": "f60-1-primary-20261110T223116Z-642ee60a0fdd@example.invalid",
+      "created": true
+    }
+  ],
+  "stores": [
+    {
+      "role": "primary_test_store",
+      "id": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "created": true
+    }
+  ],
   "campaigns": [],
   "artifacts": [],
   "objects": [],
-  "notes": "Nenhuma fixture, usuário, loja, campanha, linha de artefato ou objeto foi criado. Nenhuma migration foi aplicada. O único resíduo é o arquivo aprovado copiado ao workdir, pendente e não aplicado."
+  "manifests": {
+    "bootstrap": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-fixtures-gateb-bootstrap-gateb-20261110T223116Z-460e7b2d48d5.json",
+    "suite": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-fixtures-1794360682709-e38772a0-d894-4b3e-936c-2b351d45d3e7.json",
+    "suiteLog": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-gateb-suite.log.txt"
+  },
+  "suite": {
+    "command": "node scripts/testing/run-integration.mjs f60-1",
+    "exitCode": 1,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 13,
+    "failedSuites": 1,
+    "error": "f60_1_integration_sign_in_failed:captcha protection: request disallowed (no captcha_token found)"
+  },
+  "notes": "Migration aplicada. Usuário primário e loja primária criados. Suíte bloqueada no sign-in por captcha; nenhuma campanha, objeto ou linha de artefato de fixture foi criada. Nenhuma correção, desativação de captcha ou retry foi executada."
 }

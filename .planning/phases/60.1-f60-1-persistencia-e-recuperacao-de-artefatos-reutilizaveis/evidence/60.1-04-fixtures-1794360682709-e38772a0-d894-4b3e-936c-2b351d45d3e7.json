@@ -1,0 +1,16 @@
+{
+  "runId": "1794360682709-e38772a0-d894-4b3e-936c-2b351d45d3e7",
+  "startedAt": "2026-11-11T01:31:22.709Z",
+  "target": {
+    "kind": "homolog-existing",
+    "dbPort": "57782",
+    "apiPort": "57781"
+  },
+  "status": "failed",
+  "users": [],
+  "stores": [],
+  "campaigns": [],
+  "artifacts": [],
+  "objects": [],
+  "error": "f60_1_integration_sign_in_failed:captcha protection: request disallowed (no captcha_token found)"
+}

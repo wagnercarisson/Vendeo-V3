@@ -811,7 +811,7 @@ Plans:
 
 ### Phase 60.1: F60.1 - Persistência e recuperação de artefatos reutilizáveis
 
-**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E APROVADOS; 60.1-04 COM GATE A CONCLUÍDO E ACEITO; GATE B AUTORIZADO, MAS BLOQUEADO NA MIGRATION — CLI RECUSOU POR HISTÓRICO LOCAL SEM `20261109174110` NO WORKDIR; NENHUMA MIGRATION APLICADA; AÇÃO MÍNIMA PROPOSTA AGUARDANDO AUTORIZAÇÃO; 60.1-05 BLOQUEADO. Migration autorada, mas não aplicada; nenhum banco, Storage real ou produção tocado.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
+**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E APROVADOS; 60.1-04 COM MIGRATION `20261110202749` APLICADA E FIXTURES PARCIAIS (USUÁRIO/LOJA PRIMÁRIOS); SUÍTE `f60-1` BLOQUEADA NO SIGN-IN POR CAPTCHA; NENHUMA CAMPANHA/OBJETO/ARTEFATO DE FIXTURE; 60.1-05 BLOQUEADO. Nenhum Storage de produção ou produção tocado.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
 
 **Goal:** Criar um módulo compartilhado, sem orquestrador, para persistir, localizar, recuperar e validar artefatos de composição com identidade loja/campanha/operação, papéis `square_original`/`square_prepared`/`vertical`, metadados reais, checksum, proveniência, idempotência, conflito explícito, evidência durável de órfão, privacidade interna e reconhecimento seguro de fonte de campanha entregue e base interna. Preservar integralmente o fluxo 1:1, o 9:16 direto e os contratos da F60.
 
@@ -838,7 +838,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais — **GATE A CONCLUÍDO E ACEITO; GATE B BLOQUEADO NA MIGRATION POR MISMATCH DE HISTÓRICO LOCAL; NENHUMA MIGRATION APLICADA; AÇÃO MÍNIMA AGUARDANDO AUTORIZAÇÃO**
+- [ ] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais — **MIGRATION APLICADA; SUÍTE BLOQUEADA NO SIGN-IN POR CAPTCHA; FIXTURES PARCIAIS (USUÁRIO/LOJA PRIMÁRIOS); 60.1-05 BLOQUEADO**
 
 **Wave 5** *(blocked on Wave 4 completion)*
 

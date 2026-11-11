@@ -1,0 +1,21 @@
+{
+  "runId": "gateb-20261110T223116Z-460e7b2d48d5",
+  "startedAt": "2026-11-11T01:31:16.549Z",
+  "status": "bootstrap_completed",
+  "users": [
+    {
+      "role": "primary_test_user",
+      "email": "f60-1-primary-20261110T223116Z-642ee60a0fdd@example.invalid",
+      "status": "confirmed",
+      "id": "21085257-56cb-4ce7-ad9b-a37bbeb07068"
+    }
+  ],
+  "stores": [
+    {
+      "role": "primary_test_store",
+      "status": "confirmed",
+      "id": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a"
+    }
+  ],
+  "completedAt": "2026-11-11T01:31:17.110Z"
+}

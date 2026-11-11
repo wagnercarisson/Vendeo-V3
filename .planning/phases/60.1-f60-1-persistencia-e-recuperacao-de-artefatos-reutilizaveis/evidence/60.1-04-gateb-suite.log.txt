@@ -1,0 +1,25 @@
+
+ RUN  v4.1.9 C:/Projetos/Vendeo V3
+
+ ❯ src/lib/campaign/composition-artifacts/__tests__/composition-artifacts.integration.test.ts (13 tests | 13 skipped) 43ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/campaign/composition-artifacts/__tests__/composition-artifacts.integration.test.ts [ src/lib/campaign/composition-artifacts/__tests__/composition-artifacts.integration.test.ts ]
+Error: f60_1_integration_sign_in_failed:captcha protection: request disallowed (no captcha_token found)
+ ❯ src/lib/campaign/composition-artifacts/__tests__/composition-artifacts.integration.test.ts:742:11
+    740|   });
+    741|   if (signIn.error || !signIn.data.user) {
+    742|     throw new Error(`f60_1_integration_sign_in_failed:${signIn.error?.…
+       |           ^
+    743|   }
+    744|   recordUser(signIn.data.user.id, false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  13 skipped (13)
+   Start at  22:31:21
+   Duration  964ms (transform 210ms, setup 0ms, import 394ms, tests 43ms, environment 0ms)
+
