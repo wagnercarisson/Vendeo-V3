@@ -1,0 +1,151 @@
+{
+  "runId": "1794409990903-d2beb34f-3f4c-4bd1-8c79-e691113676e5",
+  "startedAt": "2026-11-11T15:13:10.903Z",
+  "target": {
+    "kind": "homolog-existing",
+    "dbPort": "57782",
+    "apiPort": "57781"
+  },
+  "status": "completed",
+  "users": [
+    {
+      "id": "21085257-56cb-4ce7-ad9b-a37bbeb07068",
+      "created": false
+    },
+    {
+      "id": "6dec0b5f-79a2-4ae5-8f4f-f889727569ee",
+      "created": true
+    }
+  ],
+  "stores": [
+    {
+      "id": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "created": false
+    },
+    {
+      "id": "cf3911a3-5678-436a-81e5-ae1ae9cc134d",
+      "created": true
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "4a8d3bf1-0273-4d16-8805-33af11c03f5c",
+      "kind": "legacy_campaign",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/4a8d3bf1-0273-4d16-8805-33af11c03f5c.jpg"
+    },
+    {
+      "id": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "kind": "new_flow_1_1",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/product-1-1/c6a8457e-480b-4f67-b744-f93ba6dd7e03/art-1024.jpg"
+    },
+    {
+      "id": "09349a19-fe44-467e-abf4-5318007450bb",
+      "kind": "other_store",
+      "storagePath": "cf3911a3-5678-436a-81e5-ae1ae9cc134d/09349a19-fe44-467e-abf4-5318007450bb.jpg"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "4e8703cc-c5be-4f2c-809f-a9e85745bb8b",
+      "storeId": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "campaignId": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "operationId": "833f0be0-41e8-4980-b4bf-4252b47aa2d7",
+      "role": "square_original",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/833f0be0-41e8-4980-b4bf-4252b47aa2d7/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "id": "0dbe7f07-d378-4fb6-a597-ee32e96b9233",
+      "storeId": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "campaignId": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "operationId": "128d949f-e5dd-42dd-878f-ab0f0321c967",
+      "role": "square_original",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/d054d582-fb8e-47bb-9b0b-705aba5e03ee/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "storeId": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "campaignId": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "operationId": "dfaa33d2-c1bb-4f68-a435-a7ea63a66eef",
+      "role": "square_original",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/dfaa33d2-c1bb-4f68-a435-a7ea63a66eef/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "storeId": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "campaignId": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "operationId": "4b83a76c-781e-4182-ae2d-b476d90ad4d4",
+      "role": "square_original",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/4b83a76c-781e-4182-ae2d-b476d90ad4d4/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "storeId": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "campaignId": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "operationId": "2704a9df-db12-46d2-a7af-05c98875c7ed",
+      "role": "square_original",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/2704a9df-db12-46d2-a7af-05c98875c7ed/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "storeId": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "campaignId": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "operationId": "337927cf-e254-4807-9a04-bb0403760da4",
+      "role": "square_original",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/337927cf-e254-4807-9a04-bb0403760da4/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "storeId": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
+      "campaignId": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "operationId": "1c3299b4-be5b-4e54-93df-3a1a1378257d",
+      "role": "square_original",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/1c3299b4-be5b-4e54-93df-3a1a1378257d/square_original.jpg",
+      "status": "confirmed"
+    }
+  ],
+  "objects": [
+    {
+      "bucket": "campaign-images",
+      "path": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/4a8d3bf1-0273-4d16-8805-33af11c03f5c.jpg",
+      "status": "confirmed"
+    },
+    {
+      "bucket": "campaign-images",
+      "path": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/product-1-1/c6a8457e-480b-4f67-b744-f93ba6dd7e03/art-1024.jpg",
+      "status": "confirmed"
+    },
+    {
+      "bucket": "campaign-internal-artifacts",
+      "path": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/39e44b61-cd1c-4955-bd83-2bbccf4bbd2b/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "bucket": "campaign-internal-artifacts",
+      "path": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/dfaa33d2-c1bb-4f68-a435-a7ea63a66eef/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "bucket": "campaign-internal-artifacts",
+      "path": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/4b83a76c-781e-4182-ae2d-b476d90ad4d4/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "bucket": "campaign-internal-artifacts",
+      "path": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/2704a9df-db12-46d2-a7af-05c98875c7ed/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "bucket": "campaign-internal-artifacts",
+      "path": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/337927cf-e254-4807-9a04-bb0403760da4/square_original.jpg",
+      "status": "confirmed"
+    },
+    {
+      "bucket": "campaign-internal-artifacts",
+      "path": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/1c3299b4-be5b-4e54-93df-3a1a1378257d/square_original.jpg",
+      "status": "confirmed"
+    }
+  ],
+  "referenceBaselineSha256": "563a23e2bc5509d1b7d8264fb21e18de49606cecc10595310c3712680841f435",
+  "completedAt": "2026-11-11T15:13:13.005Z"
+}

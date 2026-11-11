@@ -1,7 +1,7 @@
 {
-  "runId": "gateb-20261111T013116Z-460e7b2d48d5",
-  "capturedAt": "2026-11-11T01:32:09Z",
-  "status": "blocked_at_suite_sign_in_captcha",
+  "runId": "1794409990903-d2beb34f-3f4c-4bd1-8c79-e691113676e5",
+  "capturedAt": "2026-11-11T15:15:24Z",
+  "status": "completed",
   "migration": {
     "version": "20261110202749",
     "name": "f60_1_composition_artifacts",
@@ -18,12 +18,17 @@
     "reapplied": false
   },
   "ledger": {
-    "before": {
+    "beforeMigration": {
       "count": 154,
       "maxVersion": "20261109174110",
       "fingerprintSha256": "83588410bed158f4e620ad6bc041c62ebbc22162a229e3ae99ca90c69d583e7f"
     },
-    "after": {
+    "afterMigration": {
+      "count": 155,
+      "maxVersion": "20261110202749",
+      "fingerprintSha256": "2d0581c683d2bcdf6de8987a11c91e79aff9c664f0523c5942f457ecf62ad39a"
+    },
+    "afterSuite": {
       "count": 155,
       "maxVersion": "20261110202749",
       "fingerprintSha256": "2d0581c683d2bcdf6de8987a11c91e79aff9c664f0523c5942f457ecf62ad39a"
@@ -35,32 +40,88 @@
       "role": "primary_test_user",
       "id": "21085257-56cb-4ce7-ad9b-a37bbeb07068",
       "email": "f60-1-primary-20261110T223116Z-642ee60a0fdd@example.invalid",
-      "created": true
+      "createdByGateB": true,
+      "reusedInSuite": true
+    },
+    {
+      "role": "secondary_test_user",
+      "id": "6dec0b5f-79a2-4ae5-8f4f-f889727569ee",
+      "createdByGateB": true,
+      "reusedInSuite": false
     }
   ],
   "stores": [
     {
       "role": "primary_test_store",
       "id": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a",
-      "created": true
+      "createdByGateB": true,
+      "reusedInSuite": true
+    },
+    {
+      "role": "secondary_test_store",
+      "id": "cf3911a3-5678-436a-81e5-ae1ae9cc134d",
+      "createdByGateB": true,
+      "reusedInSuite": false
     }
   ],
-  "campaigns": [],
-  "artifacts": [],
-  "objects": [],
+  "campaigns": [
+    {
+      "id": "4a8d3bf1-0273-4d16-8805-33af11c03f5c",
+      "kind": "legacy_campaign",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/4a8d3bf1-0273-4d16-8805-33af11c03f5c.jpg"
+    },
+    {
+      "id": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "kind": "new_flow_1_1",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/product-1-1/c6a8457e-480b-4f67-b744-f93ba6dd7e03/art-1024.jpg"
+    },
+    {
+      "id": "09349a19-fe44-467e-abf4-5318007450bb",
+      "kind": "other_store",
+      "storagePath": "cf3911a3-5678-436a-81e5-ae1ae9cc134d/09349a19-fe44-467e-abf4-5318007450bb.jpg"
+    }
+  ],
+  "artifacts": {
+    "count": 7,
+    "details": "Ver suiteManifest (identidades, operations, roles e paths)."
+  },
+  "objects": {
+    "count": 8,
+    "campaignImages": 2,
+    "internalArtifacts": 6,
+    "details": "Ver suiteManifest (bucket/path/status)."
+  },
+  "counts": {
+    "stores": 24,
+    "campaigns": 112,
+    "product_1_1_campaign_artifacts": 28,
+    "campaign_art_versions": 0,
+    "campaign_composition_artifacts": 7,
+    "internal_objects": 6
+  },
+  "baselineComparison": {
+    "campaignsExcludingFixturesSha256": "877db711928d58f95cd76f98baf31012197e6b74b0849afca6bc284e64ddf580",
+    "product_1_1_campaign_artifactsSha256": "89380b38819f6d4b13c89a7d71f390561efeb7b9acff97798431cbf39f38502e",
+    "campaign_art_versionsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "identicalToGateA": true
+  },
   "manifests": {
     "bootstrap": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-fixtures-gateb-bootstrap-gateb-20261110T223116Z-460e7b2d48d5.json",
-    "suite": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-fixtures-1794360682709-e38772a0-d894-4b3e-936c-2b351d45d3e7.json",
-    "suiteLog": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-gateb-suite.log.txt"
+    "suiteManifest": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-fixtures-1794409990903-d2beb34f-3f4c-4bd1-8c79-e691113676e5.json",
+    "suitePassLog": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-gateb-suite-pass.log.txt"
   },
   "suite": {
     "command": "node scripts/testing/run-integration.mjs f60-1",
-    "exitCode": 1,
-    "passed": 0,
+    "exitCode": 0,
+    "passed": 13,
     "failed": 0,
-    "skipped": 13,
-    "failedSuites": 1,
-    "error": "f60_1_integration_sign_in_failed:captcha protection: request disallowed (no captcha_token found)"
+    "skipped": 0,
+    "failedSuites": 0
   },
-  "notes": "Migration aplicada. Usuário primário e loja primária criados. Suíte bloqueada no sign-in por captcha; nenhuma campanha, objeto ou linha de artefato de fixture foi criada. Nenhuma correção, desativação de captcha ou retry foi executada."
+  "history": {
+    "blockedCaptchaManifest": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-fixtures-1794360682709-e38772a0-d894-4b3e-936c-2b351d45d3e7.json",
+    "blockedCaptchaLog": ".planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/evidence/60.1-04-gateb-suite.log.txt",
+    "blockedError": "f60_1_integration_sign_in_failed:captcha protection: request disallowed (no captcha_token found)"
+  },
+  "notes": "Gate B executado: migration aplicada, fixtures criadas e suíte 13/13. O histórico da execução bloqueada por captcha foi preservado. Nenhuma migration reaplicada/reparada, sem reset/reprovisionamento, sem produção. 60.1-05 permanece bloqueado até revisão."
 }
