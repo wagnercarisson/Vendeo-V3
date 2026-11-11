@@ -342,3 +342,24 @@ ajuste; o contador conservador do piloto não precisa ser alterado para fechar a
 | REQ-60.1-10 | Verificação separada em offline com decodificador real, integração autorizada em ambiente descartável/homolog e promoção produtiva como gate separado; integração prova evidência via `info(path)`, concorrência e leitura negada | Evidências de testes/gates + autorização |
 
 **Não executar nesta rodada de planejamento:** código, migration, SQL, banco, chamada paga, ativação, deploy ou push.
+
+## F60.3 - Planejamento (Expansão por IA da campanha 9:16)
+
+**Fonte aprovada:** `openspec/changes/fase-60-3-expansao-ia-9-16/` (proposal, design, spec e tasks; `--strict` válido). **Status:** base OpenSpec aprovada para planejamento GSD; implementação, prova paga, migration, banco e produção não autorizados. **Escopo:** módulo server-only de expansão; sem UI, crédito, entrega ou orquestrador público.
+
+| REQ-ID | Requirement | Prova principal |
+|---|---|---|
+| REQ-60.3-01 | Módulo server-only com contrato explícito de entrada/saída; rejeita path/url/bytes/modelo/qualidade/prompt/tamanho; sem crédito, `campaigns`, entrega ou download | Testes de contrato + ausência de efeitos |
+| REQ-60.3-02 | Fonte `square_prepared` 1152×1152 recuperada e validada exclusivamente pela F60.1, com autorização server-side e original/preparado intactos | Testes de fonte/autorização + snapshot |
+| REQ-60.3-03 | Sunburst low resolvido por linha ativa de `campaign_product_image`; qualidade elegível; sem seletor/fallback; fail-closed antes da chamada | Testes de catálogo/qualidade |
+| REQ-60.3-04 | Linha e objeto consultados separadamente; só linha ausente + objeto comprovadamente ausente permite chamada paga; linha existente com objeto desaparecido bloqueia | Teste dedicado `row_object_missing` + zero chamadas |
+| REQ-60.3-05 | Reutilização/adoção de órfão somente com bytes, proveniência e evidência durável compatíveis; vertical incompatível bloqueia sem chamada | Testes de reuso/órfão/evidência |
+| REQ-60.3-06 | No máximo uma chamada paga por invocação, `maxRetries: 0`, sem fallback; timeout 180 s respeitando prazo menor | Testes de chamada única, loader e timeout |
+| REQ-60.3-07 | Falhas transitórias/definitivas/desconhecidas classificadas; auth/quota/billing/capacidade da requisição/conteúdo/entrada são definitivas; desconhecido não vira definitivo nem retry | Testes de classificação + ausência de retry |
+| REQ-60.3-08 | Retorno validado por conteúdo 1152×2048/9:16 e exportado 1080×1920 sem crop; bruto não persistido; saída inválida/truncada não vira vertical | Testes com Sharp real |
+| REQ-60.3-09 | Persistência `vertical`/`ai_expansion` via F60.1, proveniência revalidada e readback; conflitos/falhas tipados; sem sobrescrever/apagar | Testes de persistência/conflito/readback |
+| REQ-60.3-10 | Um evento por chamada real, flush protegido em todos os desfechos posteriores; cobertura de pricing por usage exigida; custo desconhecido `null`/`not_available`; correlação por `operationId` | Testes de telemetria/custo sem duplicação |
+| REQ-60.3-11 | Sem crédito, `campaigns`, URL assinada, download ou entrega; chamador decide repetição e responsabilidade operacional | Testes de fronteiras proibidas |
+| REQ-60.3-12 | Offline primeiro com provider/DB/Storage simulados e Sharp real; prova real separada, homolog/infra existente, sem login de lojista, migration ou reconstrução; fonte/credencial/chamadas/orçamento definidos e uma chamada autorizada, sem retry | Matriz offline + autorização/manifesto da prova |
+
+**Não executar nesta rodada de planejamento:** código, migration, SQL, banco, chamada paga, ativação, deploy ou push.

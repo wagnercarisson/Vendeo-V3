@@ -849,3 +849,31 @@ Plans:
 **Checkpoint:** Fase concluída localmente/homolog: migration `20261110202749` aplicada em homolog, suíte `f60-1` 13/13, evidências e spec principal validadas, change arquivada. Lint sem TS e 4 falhas globais preexistentes preservados; produção, publicação, deploy, flag, merge/push e ativação não executados. Conclusão local/homolog não é aprovação de produção.
 
 **Diretório:** `.planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/`.
+
+### Phase 60.3: F60.3 - Expansao por IA da campanha 9:16
+
+**Status:** **PLANEJAMENTO CONCLUÍDO — 4 PLANOS CRIADOS E VERIFICADOS; IMPLEMENTAÇÃO, PROVA PAGA E PRODUÇÃO NÃO AUTORIZADAS.** Fatia independente da iniciativa 60; F60, F60.1 e a quick 261111-idz permanecem encerradas e não são redesenhadas. O plan-checker retornou `VERIFICATION PASSED` (0 blockers / 0 majors).
+
+**Goal:** Criar um módulo server-only, sem UI, crédito ou orquestrador público, que expande um `square_prepared` 1152×1152 em `vertical` JPEG 1080×1920 usando uma única chamada Sunburst low, com reutilização segura por linha+objeto+proveniência+evidência, validação por conteúdo, persistência `ai_expansion` via F60.1, falhas tipadas e telemetria/custo por chamada correlacionável. A prova real paga é um gate separado, reutilizando homolog/infra existente, sem login de lojista, nova migration ou reconstrução de ambiente.
+
+**Requirements**: REQ-60.3-01, REQ-60.3-02, REQ-60.3-03, REQ-60.3-04, REQ-60.3-05, REQ-60.3-06, REQ-60.3-07, REQ-60.3-08, REQ-60.3-09, REQ-60.3-10, REQ-60.3-11, REQ-60.3-12
+
+**Depends on:** Phase 60 (controle da operação em duas etapas), Phase 60.1 (artefatos de composição), quick 261111-idz (preparação 1024→1152), F59 (exportação vertical), migration F60.1 aplicada em homolog e OpenSpec `fase-60-3-expansao-ia-9-16` aprovada.
+
+**Plans:** 4 plans (waves 1→4; 60.3-04 é a prova real paga, `autonomous: false`, somente após autorização explícita).
+Plans:
+**Wave 1**
+
+- [ ] 60.3-01-PLAN.md — Contratos puros, política/prompt, modelo/catálogo, cobertura de pricing, timeout e classificação de falhas
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 60.3-02-PLAN.md — Transporte single-shot sem retry oculto, validação/exportação, telemetria e orquestração do núcleo
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 60.3-03-PLAN.md — Probe linha/objeto, reutilização/evidência, persistência/readback F60.1, suíte offline, concorrência e fronteiras proibidas
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 60.3-04-PLAN.md — Prova real paga separada (preflight não pago, fonte/credencial/chamadas/orçamento definidos, uma chamada, sem retry, aceite técnico e visual)

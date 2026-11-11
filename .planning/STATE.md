@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-11T17:03:32.855Z"
+last_updated: "2026-11-11T19:44:11.750Z"
 progress:
-  total_phases: 16
+  total_phases: 19
   completed_phases: 14
-  total_plans: 118
-  completed_plans: 114
-  percent: 97
+  total_plans: 136
+  completed_plans: 127
+  percent: 74
 ---
 
 # Project State
@@ -37,6 +37,8 @@ progress:
 - **EXECUÇÃO QUICK 261027-k4d (2026-10-27) — primeira fatia da fundação multimercado (F57): IMPLEMENTADA E APROVADA PELO USUÁRIO.** Biblioteca pura em `src/lib/market-context/**` (14 arquivos, 3 commits atômicos `b545bc98`, `35a1c5f4`, `00c95b1b`, correção `beec4e67` e doc `7d029eb0`). Suíte nova **72/72**; tsc direcionado aos arquivos novos **exit 0**; guard de imports produtivos vazio; `git diff --check` limpo. Correção pós-revisão Codex: `kind: "legacy"` só é aceito sem campos adicionais; entradas mistas retornam erro tipado em vez de descartar configuração e aplicar BR/pt-BR. Gates globais **não verdes por ambiente**: `npm run typecheck`/`build` não executam (sem `node_modules/.bin`, sem `tsx` e sem `@google/generative-ai`); tsc completo acusa **29 erros em arquivos não tocados** e **zero** em `market-context`; ESLint quebrado por módulo ausente e, de todo modo, não cobre TS. **Aceite registrado em 2026-10-27 com essas limitações conhecidas; revalidar os gates globais é ação própria e controlada.** **Gates globais recuperados pela quick `261027-llm` em 2026-10-27** (`npm ci` + correção de 2 testes: typecheck 0 erros, build OK, lint sem cobertura TS). Sem migration, banco, env, dependência, push, deploy ou ativação.
 
 ## Current Position
+
+- **PLANEJAMENTO F60.3 (2026-11-11) — 4 PLANOS CRIADOS E VERIFICADOS; EXECUÇÃO NÃO INICIADA; PROVA PAGA NÃO AUTORIZADA.** OpenSpec `fase-60-3-expansao-ia-9-16` aprovada como fonte técnica; fase GSD `60.3` registrada em `.planning/ROADMAP.md` com 12 requisitos `REQ-60.3-01..12`. Planos em `.planning/phases/60.3-f60-3-expansao-por-ia-da-campanha-9-16/`: `60.3-01` contratos/modelo/pricing/timeout/falhas; `60.3-02` transporte single-shot, validação/exportação, telemetria e núcleo; `60.3-03` probe linha/objeto, reuso/evidência, persistência/readback e suíte offline; `60.3-04` prova real paga separada, `autonomous: false`, com checkpoint de autorização. `gsd-plan-checker`: **VERIFICATION PASSED** (0 blockers / 0 majors; 10 minors aplicados em texto). Nenhum código, migration, banco/Storage, chamada paga, commit de implementação ou produção. Próximo passo: revisão dos planos → `/gsd-execute-phase 60.3` (waves 1→3); `60.3-04` só avança após autorização explícita de fonte, credencial, 1 chamada e teto de orçamento.
 
 - **60.1-04/05 (2026-11-11) — Gate B executado no homolog; migration `20261110202749` aplicada (ledger 154→155), suíte `f60-1` **13/13 PASS**; evidências de schema/privacidade e fluxos reais consolidadas; matriz dos 10 REQs, `60.1-CLOSURE.md`, `60.1-04-SUMMARY.md` e `60.1-05-SUMMARY.md` preparados; gates offline verdes (módulo 118/118; `npm test` com 4 falhas preexistentes `landing-page`/`legacy-frontier`; typecheck/lint/build/diff/OpenSpec change exit 0). **60.1-05 aceito e verificado:** GSD UAT 1/1 (`60.1-UAT.md`) e OpenSpec verify 53/53 tarefas / 10/10 requisitos sem issues críticos (`60.1-OPSX-VERIFY.md`). **Sync/archive concluídos:** spec principal `openspec/specs/campaign-composition-artifacts/spec.md` validada (exit 0); change arquivada em `openspec/changes/archive/2026-11-11-fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/`. Aceite manual do localhost registrado separadamente. **Lint sem TS e 4 falhas globais preexistentes preservados; publicação e promoção produtiva não executadas; produção intocada.**
 
