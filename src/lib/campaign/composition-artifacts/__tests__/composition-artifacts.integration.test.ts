@@ -737,6 +737,7 @@ beforeAll(async () => {
   const signIn = await authenticated.auth.signInWithPassword({
     email: requireEnv("F60_1_TEST_USER_EMAIL"),
     password: requireEnv("F60_1_TEST_USER_PASSWORD"),
+    options: { captchaToken: "XXXX.DUMMY.TOKEN" },
   });
   if (signIn.error || !signIn.data.user) {
     throw new Error(`f60_1_integration_sign_in_failed:${signIn.error?.message}`);
