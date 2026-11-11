@@ -10,6 +10,7 @@ tags:
   - f60.1-reuse
 status: complete
 completed: "2026-11-11"
+accepted: "2026-11-11"
 duration_minutes: 22
 tasks_completed: 3
 tasks_total: 3
@@ -61,6 +62,21 @@ Nenhum arquivo existente foi modificado (`git diff --name-status d442c973..HEAD`
 | Worktree | `git status --porcelain` | apenas `?? .planning/quick/261111-idz-preparacao-deterministica-1024-para-1152/` (PLAN/SUMMARY); nenhum arquivo rastreado tocado |
 
 Per-file counts: `reuse-compatibility` **15/15**, `transform` **8/8**, `prepare` **35/35**.
+
+## Acceptance
+
+**Status:** accepted in local review on **2026-11-11**, with no blockers found.
+
+Reviewer evidence:
+
+- **176/176 testes PASS**: 58 da preparação (`square-preparation`) + 118 da F60.1.
+- **TypeScript:** exit 0.
+- **Diff completo:** sem erros; worktree limpo.
+- **F60.1, migrations e configurações anteriores:** intactas.
+- **Original:** preservado.
+- **Reutilização:** condicionada à evidência durável do objeto.
+
+Sem OpenSpec, sem repetição da homologação de infraestrutura, sem push/merge/deploy. A quick está concluída no tracking local; publicação/integração permanecem gates separados.
 
 `git diff --name-status d442c973..HEAD`:
 
@@ -122,6 +138,7 @@ Sem alteração de escopo, sem enfraquecimento de teste, sem tocar F60.1.
 ## Self-Check
 
 - Arquivos criados existem: PASSED (11/11 presentes na árvore e nos commits).
-- Commits existem na branch atual: PASSED (`8b483a03`, `1f43506f`, `73cff523`).
+- Commits existem na branch atual: PASSED (`8b483a03`, `1f43506f`, `73cff523`; documentais `ca0d7a67`, `ccda71c1` e o commit de aceite).
 - Nenhum arquivo F60.1/migration/dependência/config alterado: PASSED (`git diff --name-status d442c973..HEAD` só com `A` no diretório novo).
 - Suíte focada 58/58, typecheck 0, lint 0, `git diff --check` limpo: PASSED.
+- Aceite local registrado no SUMMARY e no `STATE.md`: PASSED (176/176 testes na revisão do responsável).
