@@ -868,7 +868,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 60.3-02-PLAN.md — Transporte single-shot sem retry oculto, validação/exportação, telemetria e orquestração do núcleo
+- [x] 60.3-02-PLAN.md — Transporte single-shot sem retry oculto, validação/exportação, telemetria e orquestração do núcleo — **executado em 2026-11-11** (4 arquivos de produção + 1 mudança aditiva no adapter de imagens + 5 suítes novas, 168 testes do plano/1:1 e 176 de regressão F60.1/F60.2 verdes, typecheck 0; gate conservador de destino; evidência em `60.3-02-SUMMARY.md`). Waves 3–4 não autorizadas.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
