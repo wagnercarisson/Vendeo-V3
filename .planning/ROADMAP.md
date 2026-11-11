@@ -877,3 +877,24 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 60.3-04-PLAN.md — Prova real paga separada (preflight não pago, fonte/credencial/chamadas/orçamento definidos, uma chamada, sem retry, aceite técnico e visual) — **CONCLUÍDO E ACEITO em 2026-11-11 (Tasks 1–6).** Pricing **esclarecido**: `output_token_usd_per_1m` é textual e não se aplica a `images`; linha ativa completa (`pricingVersion=f9a278bb…`, `imageUnitUsd=0.036`, `pricingMissing=[]`), sem escrita em `ai_model_pricing`. Fonte real da Loja Mega Vale (`3dc7d274-…`, campanha `c06b16f5-…`, “Jarra Finesse 1l”) **registrada e preparada no homolog**: `square_original` `5ff1c350-…` e `square_prepared` `5381ff8c-…`. Preflight da chamada **10/10 PASS**, `ready: true`. **Chamada paga única executada:** `completed`, 1 provider call, sem retry, `callId=af1b93f8-…`, vertical `232fc372-…` 1080×1920 JPEG 315.116 B SHA-256 `a742da38…13af`; **`observedCostUsd=0.016553`** (≤ `0.10` autorizado). `campaigns`, `campaign-images`, originais e créditos preservados; exatamente 1 `generation_events`. Evidências: `proof-intent-4b3d4f49-….json`, `proof-2026-11-11T21-44-36-907Z.json`, `proof-latest.json`, `preflight-2026-11-11T21-44-10-326Z.json`; relatório `60.3-04-PROOF-REPORT.md`. **Aceite visual humano confirmado**; verificações em `60.3-UAT.md` (6/6) e `60.3-OPSX-VERIFY.md` (40/40 tasks, 10/10 requisitos, 0 críticos). Sync/archive concluídos em `openspec/changes/archive/2026-11-11-fase-60-3-expansao-ia-9-16/`; promoção produtiva continua fora deste aceite.
+
+
+### Phase 60.4: F60.4 - Composicao e persistencia da base quadrada
+
+**Status:** **PLANEJAMENTO EM ANDAMENTO; NENHUM CODIGO IMPLEMENTADO; AGUARDANDO REVISAO DOS PLANOS.** Fatia independente da iniciativa 60; F60, F60.1, F60.3 e o fluxo 1:1 permanecem encerrados e nao sao redesenhados. A change OpenSpec esta valida em --strict; a prova real permanece gate separado, sem homolog/banco/provider nesta rodada.
+
+**Goal:** Entregar a geracao de copy e arte quadrada como etapa interna reutilizavel pelo futuro orquestrador 9:16, preservando o fluxo 1:1 atual. O modulo recebe identidade/autorizacao e tentativa F60 explicitas, reutiliza compositor, snapshot/evidencia, copy, gateway/adapter de imagem, conversao JPEG 1024, F60.1 square_original e telemetria existentes; distingue primeira composicao de retomada com conteudo congelado; garante uma chamada de imagem e uma requisicao de copy sem retry oculto; devolve copy e arte distinguiveis ou falhas tipadas. Sem credito, entrega publica, UI, ativacao, expansao, preparacao 1152, migration ou chamada paga nesta fatia.
+
+**Source:** openspec/changes/fase-60-4-composicao-e-persistencia-da-base-quadrada/ (proposal, design, 10 requisitos / 45 cenarios e 42 tarefas; OpenSpec --strict valido).
+
+**Plans:** 4 plans (waves 1-4; `60.4-04` e a prova real autorizada, `autonomous: false`, somente apos checkpoint explicito e sem executar nesta rodada).
+
+Plans:
+- [ ] 60.4-01-PLAN.md — Contratos puros, politica/validacao fail-closed, estado congelado + payload canonico, prompt 1:1 e configuracao congelada (primeira composicao x retomada)
+- [ ] 60.4-02-PLAN.md — Gate linha/objeto, compatibilidade/adocao F60.1, transporte single-shot sem retry oculto, classificacao F60 e conversao/persistencia/readback JPEG 1024
+- [ ] 60.4-03-PLAN.md — Copy com conteudo congelado e sem retry oculto (+ opcao aditiva `maxRetries`), orquestracao/resultado tipado, telemetria, fronteiras/regressao/concorrencia e gates
+- [ ] 60.4-04-PLAN.md — Prova real autorizada separada (checkpoint bloqueante; nao executar nesta rodada)
+
+**Depends on:** Phase 60 (controle da operacao em duas etapas), Phase 60.1 (artefatos de composicao), Phase 60.3 (expansao 9:16 e opcoes de transporte sem retry), migration F60.1 aplicada em homolog e OpenSpec desta change aprovado.
+
+**Directory:** .planning/phases/60.4-f60-4-composicao-e-persistencia-da-base-quadrada/.
