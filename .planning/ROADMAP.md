@@ -811,7 +811,7 @@ Plans:
 
 ### Phase 60.1: F60.1 - Persistência e recuperação de artefatos reutilizáveis
 
-**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E APROVADOS; 60.1-04 COM GATE A PARCIAL — DB/LEDGER/BASELINE CAPTURADOS, API/STORAGE BLOQUEADO POR REDIRECIONAMENTO HOST/WSL; GATE B NÃO AUTORIZADO; 60.1-05 BLOQUEADO. Migration autorada e não aplicada; nenhum banco, Storage real ou produção tocado.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
+**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E APROVADOS; 60.1-04 COM GATE A PARCIAL — DB/LEDGER/BASELINE CAPTURADOS, FALHA HTTP LOCALIZADA ANTES DO KONG (HOST/WSL PORT FORWARDING); REINÍCIO DO DOCKER DESKTOP PROPOSTO, AGUARDANDO AUTORIZAÇÃO SEPARADA; GATE B NÃO AUTORIZADO; 60.1-05 BLOQUEADO. Migration autorada e não aplicada; nenhum banco, Storage real ou produção tocado.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
 
 **Goal:** Criar um módulo compartilhado, sem orquestrador, para persistir, localizar, recuperar e validar artefatos de composição com identidade loja/campanha/operação, papéis `square_original`/`square_prepared`/`vertical`, metadados reais, checksum, proveniência, idempotência, conflito explícito, evidência durável de órfão, privacidade interna e reconhecimento seguro de fonte de campanha entregue e base interna. Preservar integralmente o fluxo 1:1, o 9:16 direto e os contratos da F60.
 
@@ -838,7 +838,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais — **GATE A PARCIAL: DB/LEDGER/BASELINE CAPTURADOS; API/STORAGE BLOQUEADO POR REDIRECIONAMENTO HOST/WSL; GATE B NÃO AUTORIZADO**
+- [ ] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais — **GATE A PARCIAL: DB/LEDGER/BASELINE CAPTURADOS; FALHA HTTP LOCALIZADA ANTES DO KONG; INTERVENÇÃO MÍNIMA PROPOSTA AGUARDANDO AUTORIZAÇÃO; GATE B NÃO AUTORIZADO**
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
