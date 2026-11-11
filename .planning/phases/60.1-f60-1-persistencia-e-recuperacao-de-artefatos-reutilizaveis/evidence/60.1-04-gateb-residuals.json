@@ -1,0 +1,25 @@
+{
+  "runId": "gateb-20261111T011539Z",
+  "capturedAt": "2026-11-11T01:15:39Z",
+  "status": "blocked_before_migration",
+  "stopReason": "remote_migration_versions_not_found_in_local_migrations_directory",
+  "migrationFile": {
+    "workdirPath": "G:\\Vendeo-Homolog\\supabase\\migrations\\20261110202749_f60_1_composition_artifacts.sql",
+    "sha256": "4961592fac67dac1841ac520a43a4acf116962a948c793b9bc8d62084541bfd0",
+    "copiedToWorkdir": true,
+    "applied": false
+  },
+  "missingLocalMigration": {
+    "version": "20261109174110",
+    "name": "f60_9_16_two_stage_control",
+    "repoFile": "supabase/migrations/20261109174110_f60_9_16_two_stage_control.sql",
+    "repoSha256": "6178e56156a7ddbc556ca57586da97c7834e85ee8608b678253bd5cc75d01760",
+    "workdirPresent": false
+  },
+  "users": [],
+  "stores": [],
+  "campaigns": [],
+  "artifacts": [],
+  "objects": [],
+  "notes": "Nenhuma fixture, usuário, loja, campanha, linha de artefato ou objeto foi criado. Nenhuma migration foi aplicada. O único resíduo é o arquivo aprovado copiado ao workdir, pendente e não aplicado."
+}
