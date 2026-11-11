@@ -4,9 +4,10 @@ import "server-only";
  * F60.3 — Entrada pública server-only do expansor 1:1 → 9:16.
  *
  * Fluxo (uma chamada paga no máximo): entrada validada → autorização →
- * `square_prepared` pela F60.1 → gate conservador do destino (linha + objeto) →
- * alvo do catálogo + pricing → UMA `images.edit` → classificação → validação por
- * conteúdo → exportação 1080×1920 → persistência `ai_expansion` → readback F60.1.
+ * `square_prepared` pela F60.1 → gate pré-chamada `probeExpansionTarget` (linha e
+ * objeto como perguntas distintas) → alvo do catálogo + pricing → UMA
+ * `images.edit` → classificação → validação por conteúdo → exportação 1080×1920 →
+ * persistência `ai_expansion` → readback F60.1.
  *
  * Regras invioláveis:
  * - o resultado é calculado LOCALMENTE dentro do caminho protegido; o `finally`
@@ -28,11 +29,8 @@ import type { ModelPricing } from "@/lib/ai-cost/ai-model-pricing";
 import type { TokenUsage } from "@/lib/ai-cost/types";
 import { AiInvocationError, type AiInvocationRequest } from "@/lib/ai/types";
 import { verifyCampaignAccess } from "@/lib/campaign/composition-artifacts/access";
-import { compositionArtifactStoragePath } from "@/lib/campaign/composition-artifacts/artifact-path";
 import { persistCompositionArtifact } from "@/lib/campaign/composition-artifacts/persist";
-import { getArtifactByIdentity } from "@/lib/campaign/composition-artifacts/repository";
 import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
-import { CompositionArtifactStorage } from "@/lib/campaign/composition-artifacts/storage";
 import type {
   ArtifactIdentity,
   PersistArtifactResult,
@@ -63,6 +61,7 @@ import {
   parseExpandVerticalInput,
 } from "./policy";
 import { EXPANSION_PROMPT } from "./prompt";
+import { probeExpansionTarget } from "./probe";
 import {
   createExpansionTelemetry,
   expansionOutcomeFor,
@@ -96,6 +95,8 @@ export interface ExpandVerticalDeps {
   readonly persist?: typeof persistCompositionArtifact;
   /** Costura de teste: falha/ausência no readback. Default = F60.1 real. */
   readonly retrieve?: typeof retrieveCompositionArtifact;
+  /** Costura de teste: gate pré-chamada. Default = probe linha/objeto real. */
+  readonly probe?: typeof probeExpansionTarget;
 }
 
 type WithoutCall<T> = Omit<T, "call">;
@@ -260,6 +261,7 @@ export async function expandVerticalToNineSixteen(
   const retrieve = deps.retrieve ?? retrieveCompositionArtifact;
   const persist = deps.persist ?? persistCompositionArtifact;
   const exportImage = deps.exportJpeg ?? exportVerticalJpeg;
+  const probe = deps.probe ?? probeExpansionTarget;
   const authorization = valid.authorization;
 
   // (2) Autorização + vínculo loja↔campanha antes de qualquer leitura.
@@ -328,7 +330,8 @@ export async function expandVerticalToNineSixteen(
   }
   const sourceBytes = sourceProbe.bytes;
 
-  // (4) Gate conservador do destino (linha + objeto). Nenhum ramo chama provider.
+  // (4) Gate pré-chamada: linha e objeto são perguntas distintas. Nenhum ramo
+  // do probe chama provider; só `proceed` autoriza a chamada paga.
   const destination: ArtifactIdentity = {
     storeId: valid.source.storeId,
     campaignId: valid.source.campaignId,
@@ -336,60 +339,42 @@ export async function expandVerticalToNineSixteen(
     role: DESTINATION_ROLE,
   };
 
-  const destinationRow = await getArtifactByIdentity(destination, client);
-  if (destinationRow.kind === "read_failed") {
-    return blocked();
-  }
+  const probeOutcome = await probe(
+    { destination, source: sourceArtifact, authorization },
+    { client },
+  );
 
-  if (destinationRow.kind === "found") {
-    const probe = await retrieve({ identity: destination, authorization }, { client });
-    if (probe.kind === "integral") {
-      return Object.freeze({
-        kind: "existing_artifact_conflict" as const,
-        reason: "incompatible" as const,
-        artifact: probe.artifact,
-      });
-    }
-    if (probe.kind === "absent") {
-      return Object.freeze({
-        kind: "existing_artifact_conflict" as const,
-        reason: "row_object_missing" as const,
-        artifact: destinationRow.record,
-      });
-    }
-    if (probe.kind === "metadata_conflict") {
-      return Object.freeze({
-        kind: "existing_artifact_conflict" as const,
-        reason: "incompatible" as const,
-        artifact: probe.artifact,
-      });
-    }
-    if (probe.kind === "invalid") {
-      return Object.freeze({
-        kind: "existing_artifact_conflict" as const,
-        reason: "object_invalid" as const,
-        artifact: destinationRow.record,
-      });
-    }
+  if (probeOutcome.kind === "reused") {
     return Object.freeze({
-      kind: "existing_artifact_conflict" as const,
-      reason: "object_unverified" as const,
-      artifact: destinationRow.record,
+      kind: "reused" as const,
+      artifact: probeOutcome.artifact,
+      bytes: probeOutcome.bytes,
+      adoption: false,
+      call: null,
     });
   }
 
-  const destinationStorage = new CompositionArtifactStorage(client);
-  const destinationObject = await destinationStorage.readObjectInfo(
-    compositionArtifactStoragePath(destination),
-  );
-  if (destinationObject.kind === "indeterminate") {
+  if (probeOutcome.kind === "adopted") {
+    return Object.freeze({
+      kind: "reused" as const,
+      artifact: probeOutcome.artifact,
+      bytes: probeOutcome.bytes,
+      adoption: true,
+      call: null,
+    });
+  }
+
+  if (probeOutcome.kind === "blocked") {
     return blocked();
   }
-  if (destinationObject.kind === "found") {
-    // Objeto presente (mesmo válido, sem evidência) bloqueia nesta wave.
+
+  if (probeOutcome.kind === "conflict") {
     return Object.freeze({
       kind: "existing_artifact_conflict" as const,
-      reason: "object_unverified" as const,
+      reason: probeOutcome.reason,
+      ...(probeOutcome.artifact === undefined
+        ? {}
+        : { artifact: probeOutcome.artifact }),
     });
   }
 
