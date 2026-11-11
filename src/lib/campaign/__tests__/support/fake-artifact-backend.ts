@@ -100,6 +100,14 @@ export interface FakeArtifactBackend {
    */
   hideNextObjectInfoWhenPresent: (path: string) => void;
   hideNextObjectDownload: (path: string) => void;
+  /**
+   * Define bytes de download explícitos para um path (sem criar objeto
+   * observável em `info`/Storage). Útil para simular conteúdo divergente.
+   */
+  setDownloadBytes: (path: string, bytes: Buffer, bucket?: string) => void;
+  removeDownloadBytes: (path: string, bucket?: string) => void;
+  /** Faz o próximo insert da tabela falhar com violação de unicidade (23505). */
+  setInsertUniqueViolationOnce: (table: string) => void;
 }
 
 function sha256(bytes: Buffer): string {
@@ -143,6 +151,8 @@ export function createFakeArtifactBackend(): FakeArtifactBackend {
   const hiddenInfoWhenPresent = new Set<string>();
   const hiddenDownload = new Set<string>();
   const downloadErrors = new Map<string, unknown>();
+  const downloadOverrides = new Map<string, Buffer>();
+  const uniqueViolationOnce = new Set<string>();
 
   let failNextInsert = false;
   let uploadThrows = false;
@@ -153,17 +163,32 @@ export function createFakeArtifactBackend(): FakeArtifactBackend {
 
   function selectBuilder(table: string) {
     const filters: Array<[string, unknown]> = [];
+    const matches = (entry: FakeRow): boolean =>
+      entry.__table === table &&
+      filters.every(([column, value]) =>
+        value === null || value === undefined
+          ? entry[column] === null || entry[column] === undefined
+          : entry[column] === value,
+      );
     const builder = {
       eq(column: string, value: unknown) {
         filters.push([column, value]);
         return builder;
       },
+      /** `is(column, null)` — mesmo efeito de `eq` para nulo/ausente. */
+      is(column: string, value: unknown) {
+        filters.push([column, value]);
+        return builder;
+      },
+      /** Ordenação é irrelevante para o subconjunto imitado: no-op encadeável. */
+      order(_column?: string, _options?: unknown) {
+        return builder;
+      },
+      limit(_count?: number) {
+        return builder;
+      },
       async maybeSingle() {
-        const row = rows.find(
-          (entry) =>
-            entry.__table === table &&
-            filters.every(([column, value]) => entry[column] === value),
-        );
+        const row = rows.find(matches);
         return { data: row ? copyRow(row) : null, error: null };
       },
       async single() {
@@ -182,6 +207,9 @@ export function createFakeArtifactBackend(): FakeArtifactBackend {
     if (failNextInsert) {
       failNextInsert = false;
       error = { message: "injected_insert_failure" };
+    } else if (uniqueViolationOnce.has(table)) {
+      uniqueViolationOnce.delete(table);
+      error = { code: "23505", message: "duplicate key value (injected)" };
     } else {
       const conflict =
         table === ARTIFACT_TABLE &&
@@ -269,6 +297,10 @@ export function createFakeArtifactBackend(): FakeArtifactBackend {
             }
             if (downloadErrors.has(bucket)) {
               return { data: null, error: downloadErrors.get(bucket) };
+            }
+            const override = downloadOverrides.get(key(bucket, path));
+            if (override !== undefined) {
+              return { data: Buffer.from(override), error: null };
             }
             const object = objects.get(key(bucket, path));
             if (!object) {
@@ -454,6 +486,15 @@ export function createFakeArtifactBackend(): FakeArtifactBackend {
     },
     hideNextObjectDownload: (path) => {
       hiddenDownload.add(path);
+    },
+    setDownloadBytes: (path, bytes, bucket = DEFAULT_BUCKET) => {
+      downloadOverrides.set(key(bucket, path), Buffer.from(bytes));
+    },
+    removeDownloadBytes: (path, bucket = DEFAULT_BUCKET) => {
+      downloadOverrides.delete(key(bucket, path));
+    },
+    setInsertUniqueViolationOnce: (table) => {
+      uniqueViolationOnce.add(table);
     },
   };
 }

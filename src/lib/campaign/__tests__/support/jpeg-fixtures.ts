@@ -155,3 +155,17 @@ export async function buildVertical1080x1920Fixture(): Promise<Buffer> {
     .jpeg({ quality: 90, chromaSubsampling: "4:4:4" })
     .toBuffer();
 }
+
+/**
+ * Vertical ENTREGUE truncado (metade do JPEG): `metadata()` pode reconhecer o
+ * header, mas o decode COMPLETO falha. Usado para provar que o gate não aceita
+ * objeto ilegível e que a validação de retorno não persiste lixo.
+ */
+export async function buildTruncatedVerticalFixture(): Promise<Buffer> {
+  return truncateJpeg(await buildVertical1080x1920Fixture());
+}
+
+/** Bytes que não são imagem: nenhum decoder reconhece este conteúdo. */
+export function buildNonImageBuffer(): Buffer {
+  return Buffer.from("vendeo-f60.3-not-an-image", "utf8");
+}
