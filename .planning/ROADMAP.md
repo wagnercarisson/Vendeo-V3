@@ -819,14 +819,14 @@ Plans:
 
 **Depends on:** Phase 60 (controle da operação em duas etapas), F59 (artefato vertical 9:16), F56.2b1b/F56.2b2b (artefato 1:1, crédito, recuperação) e OpenSpec aprovado desta change.
 
-**Source:** `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/` (proposal, design, specs e tasks; OpenSpec `--strict` válido).
+**Source:** `openspec/changes/archive/2026-11-11-fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/` (proposal, design, specs e tasks arquivados; OpenSpec `--strict` válido); spec principal `openspec/specs/campaign-composition-artifacts/spec.md`.
 
 **Plans:** 6 plans (waves 1→5; 60.1-06 na wave 1 em paralelo com 60.1-01).
 Plans:
 **Wave 1**
 
 - [x] 60.1-01-PLAN.md - Contratos puros (identidade, autorização, papéis/dimensões, path, evidência canônica, decisão de conflito) — **CONCLUÍDO; 43 testes verdes; typecheck 0**
-- [x] 60.1-06-PLAN.md - Migration aditiva local-only e contrato estático do schema (wave 1, em paralelo com 60.1-01; não aplicada) — **CONCLUÍDO; 20261110202749; contrato estático verde**
+- [x] 60.1-06-PLAN.md - Migration aditiva local-only e contrato estático do schema (wave 1, em paralelo com 60.1-01) — **CONCLUÍDO; 20261110202749; MIGRATION APLICADA EM HOMOLOG; contrato estático e schema/privacidade verdes**
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -838,14 +838,14 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [x] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais — **GATE B EXECUTADO: MIGRATION APLICADA, SUÍTE 13/13 PASS; AGUARDANDO REVISÃO; 60.1-05 BLOQUEADO**
+- [x] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais — **ACEITO; MIGRATION APLICADA; SUÍTE 13/13; EVIDÊNCIAS CONSOLIDADAS; 60.1-05 CONCLUÍDO E ARQUIVADO**
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 60.1-05-PLAN.md — Gates, matriz de evidências e fechamento com stop explícito antes de produção — **ACEITO, VERIFICADO, SINCRONIZADO E ARQUIVADO EM `openspec/changes/archive/2026-11-11-fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/`; SPEC PRINCIPAL VALIDADA; PRODUÇÃO/PUBLICAÇÃO NÃO EXECUTADAS**
 
-**Canonical refs:** `AGENTS.md`; `docs/fluxo-de-desenvolvimento.md`; `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/proposal.md`, `design.md`, `tasks.md` e `specs/campaign-composition-artifacts/spec.md`; `openspec/specs/product-1-1-artifact-delivery/`, `product-1-1-generation-orchestration/`, `product-1-1-campaign-credit-billing/`, `product-vertical-generation-delivery/`, `product-9-16-two-stage-operation-control/`, `product-9-16-two-stage-financial-integration/`; `src/lib/product-1-1/artifact/**`, `src/lib/product-vertical-9-16/artifact/**`, `src/lib/campaign/format-resolution.ts`, `src/lib/campaign/thumbnail/thumbnail-path.ts`, `supabase/migrations/20261009000004_f56_2b1b_campaign_artifacts.sql`, `supabase/migrations/20260708000002_create_campaign_images_bucket.sql`.
+**Canonical refs:** `AGENTS.md`; `docs/fluxo-de-desenvolvimento.md`; `openspec/changes/archive/2026-11-11-fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/proposal.md`, `design.md`, `tasks.md` e `specs/campaign-composition-artifacts/spec.md`; `openspec/specs/campaign-composition-artifacts/spec.md`; `openspec/specs/product-1-1-artifact-delivery/`, `product-1-1-generation-orchestration/`, `product-1-1-campaign-credit-billing/`, `product-vertical-generation-delivery/`, `product-9-16-two-stage-operation-control/`, `product-9-16-two-stage-financial-integration/`; `src/lib/product-1-1/artifact/**`, `src/lib/product-vertical-9-16/artifact/**`, `src/lib/campaign/format-resolution.ts`, `src/lib/campaign/thumbnail/thumbnail-path.ts`, `supabase/migrations/20261009000004_f56_2b1b_campaign_artifacts.sql`, `supabase/migrations/20260708000002_create_campaign_images_bucket.sql`.
 
-**Checkpoint:** esta rodada cria somente planos. Nenhum código, migration, SQL, acesso a banco, chamada paga, ativação ou deploy. A migration futura será aditiva, com timestamp real e unicidade verificada; a integração real exige autorização e ambiente descartável/homolog, nunca produção.
+**Checkpoint:** Fase concluída localmente/homolog: migration `20261110202749` aplicada em homolog, suíte `f60-1` 13/13, evidências e spec principal validadas, change arquivada. Lint sem TS e 4 falhas globais preexistentes preservados; produção, publicação, deploy, flag, merge/push e ativação não executados. Conclusão local/homolog não é aprovação de produção.
 
 **Diretório:** `.planning/phases/60.1-f60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/`.
