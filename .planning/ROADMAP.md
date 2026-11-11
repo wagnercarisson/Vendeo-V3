@@ -852,7 +852,7 @@ Plans:
 
 ### Phase 60.3: F60.3 - Expansao por IA da campanha 9:16
 
-**Status:** **PLANEJAMENTO CONCLUÍDO — 4 PLANOS CRIADOS E VERIFICADOS; IMPLEMENTAÇÃO, PROVA PAGA E PRODUÇÃO NÃO AUTORIZADAS.** Fatia independente da iniciativa 60; F60, F60.1 e a quick 261111-idz permanecem encerradas e não são redesenhadas. O plan-checker retornou `VERIFICATION PASSED` (0 blockers / 0 majors).
+**Status:** **WAVES 1–3 EXECUTADAS LOCALMENTE; PROVA PAGA (WAVE 4) E PRODUÇÃO NÃO AUTORIZADAS.** Fatia independente da iniciativa 60; F60, F60.1 e a quick 261111-idz permanecem encerradas e não são redesenhadas. O plan-checker retornou `VERIFICATION PASSED` (0 blockers / 0 majors). O plano 60.3-03 fechou o gate pré-chamada linha/objeto (reuso por evidência durável, adoção de órfão pela F60.1 e bloqueio conservador) com matriz offline completa, concorrência e fronteiras provadas; nenhuma chamada de provider, acesso a homolog/DB/Storage ou migration foi executado.
 
 **Goal:** Criar um módulo server-only, sem UI, crédito ou orquestrador público, que expande um `square_prepared` 1152×1152 em `vertical` JPEG 1080×1920 usando uma única chamada Sunburst low, com reutilização segura por linha+objeto+proveniência+evidência, validação por conteúdo, persistência `ai_expansion` via F60.1, falhas tipadas e telemetria/custo por chamada correlacionável. A prova real paga é um gate separado, reutilizando homolog/infra existente, sem login de lojista, nova migration ou reconstrução de ambiente.
 
@@ -872,7 +872,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 60.3-03-PLAN.md — Probe linha/objeto, reutilização/evidência, persistência/readback F60.1, suíte offline, concorrência e fronteiras proibidas
+- [x] 60.3-03-PLAN.md — Probe linha/objeto, reutilização/evidência, persistência/readback F60.1, suíte offline, concorrência e fronteiras proibidas — **executado em 2026-11-11** (3 arquivos de produção novos + `expand.ts` religado + suporte de testes aditivo + 6 suítes, 81 testes novos e **442/442** na suíte focada, typecheck/lint 0; evidência em `60.3-03-SUMMARY.md`). Wave 4 (prova paga) não autorizada.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
