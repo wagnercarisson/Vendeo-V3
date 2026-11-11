@@ -1,0 +1,67 @@
+{
+  "kind": "f60.3-vertical-expansion-proof",
+  "mode": "apply",
+  "status": "completed",
+  "operationId": "4b3d4f49-cd62-4e22-a079-6b056f8ca93b",
+  "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+  "campaignId": "c06b16f5-f126-429c-b5b0-9567fe4adb95",
+  "sourceOperationId": "b960bdbd-4b75-4b55-a22c-837945bf69a3",
+  "attemptRef": "f60.3-paid-proof-2026-11-11",
+  "callId": "af1b93f8-3b6d-4399-bf0f-0fcb2a8d541b",
+  "outcomeKind": "expanded",
+  "errorType": null,
+  "provider": "openai",
+  "model": "gpt-image-2.5-sunburst",
+  "quality": "low",
+  "requestedSize": "1152x2048",
+  "returnedSize": "1152x2048",
+  "durationMs": 26505,
+  "usage": {
+    "promptTokens": 1591,
+    "completionTokens": 157,
+    "totalTokens": 1748,
+    "inputTextTokens": 295,
+    "inputImageTokens": 1296,
+    "outputTextTokens": 0,
+    "outputImageTokens": 157
+  },
+  "cost": {
+    "observedCostUsd": 0.016553,
+    "costSource": "pricing_table"
+  },
+  "observedCostUsd": 0.016553,
+  "costSource": "pricing_table",
+  "estimatedPreCallUsd": 0.09,
+  "authorizedBudgetUsd": 0.1,
+  "maxCalls": 1,
+  "pricingVersion": "f9a278bb-c8ef-4ac4-bada-bf4bb886e041",
+  "providerCalls": 1,
+  "artifact": {
+    "id": "232fc372-6e40-4fe6-b372-671569c3fdd6",
+    "role": "vertical",
+    "format": "9:16",
+    "origin": "ai_expansion",
+    "width": 1080,
+    "height": 1920,
+    "mimeType": "image/jpeg",
+    "byteSize": 315116,
+    "checksumSha256": "a742da389ef28ace5f8f7569994eb9ed2ab5169573db15d45adb668f4bf813af",
+    "derivedFromArtifactId": "5381ff8c-fb18-4636-8e9e-dade5232110d",
+    "sourceCampaignId": null,
+    "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/4b3d4f49-cd62-4e22-a079-6b056f8ca93b/vertical.jpg",
+    "storageBucket": "campaign-internal-artifacts"
+  },
+  "campaignsBefore": {
+    "id": "c06b16f5-f126-429c-b5b0-9567fe4adb95",
+    "status": "ready",
+    "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.jpg"
+  },
+  "campaignsAfter": {
+    "id": "c06b16f5-f126-429c-b5b0-9567fe4adb95",
+    "status": "ready",
+    "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.jpg"
+  },
+  "campaignsUnchanged": true,
+  "intentPath": "scripts\\f60.3\\evidence\\proof-intent-4b3d4f49-cd62-4e22-a079-6b056f8ca93b.json",
+  "createdAt": "2026-11-11T21:44:36.907Z"
+}
