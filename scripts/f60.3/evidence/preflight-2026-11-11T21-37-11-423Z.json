@@ -1,0 +1,102 @@
+{
+  "kind": "f60.3-preflight",
+  "mode": "dry-run",
+  "checkedAt": "2026-11-11T21:37:11.423Z",
+  "ready": true,
+  "providerCalls": 0,
+  "credential": "product",
+  "declaration": "sem chamada paga",
+  "checks": [
+    {
+      "id": "module_import",
+      "name": "Import do módulo",
+      "status": "PASS",
+      "detail": "expandVerticalToNineSixteen carregado por import dinâmico SEM executar (server-only resolvido)"
+    },
+    {
+      "id": "f60_1_target",
+      "name": "Alvo F60.1",
+      "status": "PASS",
+      "detail": "homolog-existing autorizado (DB 127.0.0.1:57782/postgres, API 127.0.0.1:57781)"
+    },
+    {
+      "id": "supabase_env",
+      "name": "Env do Supabase do módulo",
+      "status": "PASS",
+      "detail": "NEXT_PUBLIC_SUPABASE_URL=127.0.0.1:57781 e SUPABASE_URL=127.0.0.1:57781 concordantes (loopback 57781)"
+    },
+    {
+      "id": "credentials",
+      "name": "Chaves",
+      "status": "PASS",
+      "detail": "serviceRoleKey: present(164); anonKey: present; openai: product(present)"
+    },
+    {
+      "id": "f60_1_applied",
+      "name": "F60.1 aplicada",
+      "status": "PASS",
+      "detail": "tabela com 18 colunas de ARTIFACT_SELECT_COLUMNS, bucket campaign-internal-artifacts e versão 20261110202749 no ledger (somente leitura)"
+    },
+    {
+      "id": "catalog_pricing",
+      "name": "Catálogo/pricing",
+      "status": "PASS",
+      "detail": "openai/gpt-image-2.5-sunburst/images quality=low; pricingVersion=f9a278bb-c8ef-4ac4-bada-bf4bb886e041; imageUnitUsd=0.036000; cobertura completa"
+    },
+    {
+      "id": "source",
+      "name": "Fonte",
+      "status": "PASS",
+      "detail": "square_prepared 1152x1152 JPEG íntegro (artifactId=5381ff8c-fb18-4636-8e9e-dade5232110d; byteSize=282716; checksum=5632779c450a…)"
+    },
+    {
+      "id": "destination",
+      "name": "Destino",
+      "status": "PASS",
+      "detail": "linha e objeto do vertical comprovadamente ausentes (somente leitura)"
+    },
+    {
+      "id": "campaigns_snapshot",
+      "name": "Snapshot de campaigns",
+      "status": "PASS",
+      "detail": "campaignsBefore: status=ready; storagePath presente=sim"
+    },
+    {
+      "id": "pre_call_cost",
+      "name": "Custo pré-chamada",
+      "status": "PASS",
+      "detail": "estimatedPreCallUsd=0.090000 (pré-chamada; não é limite rígido do custo final); pricingVersion=f9a278bb-c8ef-4ac4-bada-bf4bb886e041"
+    }
+  ],
+  "summary": {
+    "sourceStatus": "prepared",
+    "provider": "openai",
+    "model": "gpt-image-2.5-sunburst",
+    "protocol": "images",
+    "quality": "low",
+    "pricingVersion": "f9a278bb-c8ef-4ac4-bada-bf4bb886e041",
+    "imageUnitUsd": 0.036,
+    "estimatedPreCallUsd": 0.09,
+    "estimateSource": "imageUnitUsd x 2.5 (f59-vertical-9-16-v1)",
+    "pricingMissing": [],
+    "sourceArtifactId": "5381ff8c-fb18-4636-8e9e-dade5232110d",
+    "sourceChecksumSha256": "5632779c450aefb909463e503d2b3de4c6053ec317b554cfb4b9002d72a6dec5",
+    "sourceByteSize": 282716,
+    "destinationStatus": "absent",
+    "credential": "product",
+    "campaignsBefore": {
+      "id": "c06b16f5-f126-429c-b5b0-9567fe4adb95",
+      "status": "ready",
+      "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/c06b16f5-f126-429c-b5b0-9567fe4adb95/product-1-1/41c3f33f-3be0-4086-b04e-710258643609/art-1024.jpg"
+    }
+  },
+  "environment": {
+    "targetKind": "homolog-existing",
+    "dbTarget": "127.0.0.1:57782/postgres",
+    "apiTarget": "127.0.0.1:57781",
+    "originsConcordant": true,
+    "serviceRoleKey": "present",
+    "anonKey": "present",
+    "credential": "product"
+  }
+}

@@ -70,6 +70,8 @@ export const PREFLIGHT_MD = path.join(
 
 const F60_1_MIGRATION_VERSION = "20261110202749";
 const COMPOSITION_BUCKET = "campaign-internal-artifacts";
+/** Bucket privado da arte 1:1 de campanha; somente leitura neste harness. */
+const SOURCE_BUCKET = "campaign-images";
 const EXPANSION_ARTIFACT_TABLE = "campaign_composition_artifacts";
 const DECLARATION_NO_PAID_CALL = "sem chamada paga";
 const REQUESTED_SIZE = "1152x2048" as const;
@@ -220,6 +222,77 @@ export interface PrepareSourceResultLike {
   readonly detail?: string;
 }
 
+export type RetrieveSourceArtifactFn = (
+  input: {
+    readonly identity: {
+      readonly storeId: string;
+      readonly campaignId: string;
+      readonly operationId: string;
+      readonly role: "square_original" | "square_prepared";
+    };
+    readonly authorization: { readonly kind: "system" };
+  },
+  deps: { readonly client?: SupabaseClient },
+) => Promise<
+  | { readonly kind: "integral"; readonly artifact: ArtifactRecord; readonly bytes: Buffer }
+  | { readonly kind: "absent" }
+  | { readonly kind: "invalid"; readonly reason: string }
+  | { readonly kind: "metadata_conflict"; readonly reason: string; readonly artifact?: ArtifactRecord }
+  | { readonly kind: "indeterminate" }
+>;
+
+export type PersistSourceArtifactFn = (
+  input: {
+    readonly identity: {
+      readonly storeId: string;
+      readonly campaignId: string;
+      readonly operationId: string;
+      readonly role: "square_original";
+    };
+    readonly authorization: { readonly kind: "system" };
+    readonly bytes: Buffer;
+    readonly origin: "provider_generation";
+    readonly source: { readonly kind: "none" };
+  },
+  deps: { readonly client?: SupabaseClient },
+) => Promise<
+  | { readonly kind: "created" }
+  | { readonly kind: "reused"; readonly adoption: boolean }
+  | {
+      readonly kind:
+        | "content_conflict"
+        | "identity_conflict"
+        | "metadata_conflict"
+        | "provenance_conflict";
+      readonly reason: string;
+      readonly existing?: ArtifactRecord | null;
+    }
+  | { readonly kind: "invalid_input"; readonly reason: string }
+  | { readonly kind: "integrity_failure"; readonly reason: string }
+  | { readonly kind: "persistence_failure"; readonly reason: string; readonly storagePath?: string }
+  | { readonly kind: "indeterminate"; readonly reason: string }
+>;
+
+export type VerifySourceBytesFn = (
+  bytes: Buffer,
+  role: "square_original",
+) => Promise<
+  | {
+      readonly ok: true;
+      readonly width: number;
+      readonly height: number;
+      readonly mimeType: string;
+      readonly byteSize: number;
+      readonly checksumSha256: string;
+    }
+  | { readonly ok: false; readonly reason: string }
+>;
+
+export type DownloadSourceObjectFn = (
+  bucket: string,
+  objectPath: string,
+) => Promise<Buffer>;
+
 export interface HarnessDeps {
   /** Costura de teste: relógio determinístico. */
   readonly now?: () => Date;
@@ -234,6 +307,14 @@ export interface HarnessDeps {
   readonly expand?: ExpandFn;
   /** Costura de teste: substitui `prepareSquareForExpansion`. */
   readonly prepareSource?: PrepareSourceFn;
+  /** Costura de teste: retrieve de `square_original`/`square_prepared`. */
+  readonly retrieve?: RetrieveSourceArtifactFn;
+  /** Costura de teste: leitura read-only do objeto em `campaign-images`. */
+  readonly downloadSourceObject?: DownloadSourceObjectFn;
+  /** Costura de teste: `persistCompositionArtifact` do `square_original`. */
+  readonly persistSource?: PersistSourceArtifactFn;
+  /** Costura de teste: `verifyCompositionArtifactBytes` da arte real. */
+  readonly verifySourceBytes?: VerifySourceBytesFn;
 }
 
 export type ProofTerminalStatus = "completed" | "failed" | "unknown";
@@ -276,6 +357,11 @@ export interface PrepareSourceOutcome {
   readonly checksumSha256?: string | null;
   readonly origin?: string | null;
   readonly evidencePath?: string | null;
+  readonly registrationResult?: "created" | "reused" | "existing";
+  readonly registrationArtifactId?: string | null;
+  readonly registrationChecksumSha256?: string | null;
+  readonly sourceBucket?: string;
+  readonly sourceObjectPath?: string;
   readonly declaration: string;
 }
 
@@ -1574,9 +1660,30 @@ export async function runProof(
 /* runPrepareSource — Task 2 (escrita determinística via F60.1)                */
 /* ------------------------------------------------------------------------- */
 
+/** Path canônico da arte de campanha: dentro da loja/campanha e sem segmentos perigosos. */
+function isSafeSourceObjectPath(
+  objectPath: string,
+  storeId: string,
+  campaignId: string,
+): boolean {
+  return (
+    objectPath.length > 0 &&
+    !objectPath.startsWith("/") &&
+    !objectPath.startsWith("\\") &&
+    !objectPath.includes("\\") &&
+    !objectPath.includes("..") &&
+    !objectPath.includes("://") &&
+    objectPath.startsWith(`${storeId}/${campaignId}/`) &&
+    /\.jpe?g$/i.test(objectPath)
+  );
+}
+
 /**
  * Prepara a fonte 1024→1152 de forma DETERMINÍSTICA (sem IA, sem provider) sob
- * `F60_3_PREPARE_AUTHORIZED=1`. Se a fonte prepared já existir, não escreve.
+ * `F60_3_PREPARE_AUTHORIZED=1`. Se a arte real ainda não existir como
+ * `square_original`, registra os bytes canônicos de `campaigns.storage_path`
+ * (bucket `campaign-images`, somente leitura) pela F60.1 antes de preparar.
+ * Se a fonte prepared já existir, não reescreve.
  */
 export async function runPrepareSource(
   env: NodeJS.ProcessEnv = process.env,
@@ -1636,32 +1743,151 @@ export async function runPrepareSource(
   const admin = createAdminClient(env);
   if (admin === null) return refuse("admin_client_unavailable");
 
-  // (2) Se a fonte prepared já existir, não reescreve.
-  try {
-    const retrieveModule = (await import(
-      "../../src/lib/campaign/composition-artifacts/retrieve"
-    )) as {
-      retrieveCompositionArtifact: (
-        input: {
-          identity: {
-            storeId: string;
-            campaignId: string;
-            operationId: string;
-            role: "square_prepared";
-          };
-          authorization: { kind: "system" };
-        },
-        deps: { client?: SupabaseClient },
-      ) => Promise<
-        | { kind: "integral"; artifact: ArtifactRecord }
-        | { kind: "absent" }
-        | { kind: "invalid"; reason: string }
-        | { kind: "metadata_conflict"; reason: string }
-        | { kind: "indeterminate" }
-      >;
-    };
+  // (2) Arte real de campanha: só leitura em `campaign-images`, depois o
+  // registro `square_original` pela F60.1 quando ele ainda não existir.
+  const sourceStoragePath =
+    preflightResult.summary.campaignsBefore?.storagePath ?? null;
+  if (
+    sourceStoragePath === null ||
+    !isSafeSourceObjectPath(sourceStoragePath, storeId, campaignId)
+  ) {
+    return refuse("source_storage_path_invalid");
+  }
 
-    const preparedProbe = await retrieveModule.retrieveCompositionArtifact(
+  const retrieve: RetrieveSourceArtifactFn =
+    deps.retrieve ??
+    (async (input, retrieveDeps) => {
+      const retrieveModule = (await import(
+        "../../src/lib/campaign/composition-artifacts/retrieve"
+      )) as { retrieveCompositionArtifact: RetrieveSourceArtifactFn };
+      return retrieveModule.retrieveCompositionArtifact(input, retrieveDeps);
+    });
+
+  const downloadSource: DownloadSourceObjectFn =
+    deps.downloadSourceObject ??
+    (async (bucket, objectPath) => {
+      const { data, error } = await admin.client.storage
+        .from(bucket)
+        .download(objectPath);
+      if (error || !data) {
+        throw new Error(error?.message ?? "source_download_failed");
+      }
+      return Buffer.from(await data.arrayBuffer());
+    });
+
+  const verifySource: VerifySourceBytesFn =
+    deps.verifySourceBytes ??
+    (async (bytes, role) => {
+      const integrityModule = (await import(
+        "../../src/lib/campaign/composition-artifacts/integrity"
+      )) as { verifyCompositionArtifactBytes: VerifySourceBytesFn };
+      return integrityModule.verifyCompositionArtifactBytes(bytes, role);
+    });
+
+  const persistSource: PersistSourceArtifactFn =
+    deps.persistSource ??
+    (async (input, persistDeps) => {
+      const persistModule = (await import(
+        "../../src/lib/campaign/composition-artifacts/persist"
+      )) as { persistCompositionArtifact: PersistSourceArtifactFn };
+      return persistModule.persistCompositionArtifact(input, persistDeps);
+    });
+
+  let sourceBytes: Buffer;
+  try {
+    sourceBytes = await downloadSource(SOURCE_BUCKET, sourceStoragePath);
+  } catch (error) {
+    return refuse(`source_download_failed:${describeError(error)}`);
+  }
+
+  const sourceVerification = await verifySource(sourceBytes, "square_original");
+  if (!sourceVerification.ok) {
+    return refuse(`source_verify_failed:${sourceVerification.reason}`);
+  }
+  if (
+    sourceVerification.width !== 1024 ||
+    sourceVerification.height !== 1024 ||
+    sourceVerification.mimeType !== "image/jpeg"
+  ) {
+    return refuse("source_policy_mismatch");
+  }
+
+  const sourceIdentity = {
+    storeId,
+    campaignId,
+    operationId: sourceOperationId,
+    role: "square_original" as const,
+  };
+  const sourceProbe = await retrieve(
+    { identity: sourceIdentity, authorization: { kind: "system" } },
+    { client: admin.client },
+  );
+
+  let registrationResult: "created" | "reused" | "existing";
+  let registrationArtifactId: string | null;
+  let registrationChecksumSha256: string | null;
+
+  if (sourceProbe.kind === "integral") {
+    if (
+      sourceProbe.artifact.checksumSha256.toLowerCase() !==
+      sourceVerification.checksumSha256.toLowerCase()
+    ) {
+      return refuse("source_checksum_mismatch");
+    }
+    registrationResult = "existing";
+    registrationArtifactId = sourceProbe.artifact.id;
+    registrationChecksumSha256 = sourceProbe.artifact.checksumSha256;
+  } else if (sourceProbe.kind === "absent") {
+    const persisted = await persistSource(
+      {
+        identity: sourceIdentity,
+        authorization: { kind: "system" },
+        bytes: sourceBytes,
+        origin: "provider_generation",
+        source: { kind: "none" },
+      },
+      { client: admin.client },
+    );
+    if (persisted.kind !== "created" && persisted.kind !== "reused") {
+      return refuse(`source_registration_${persisted.kind}:${persisted.reason}`);
+    }
+    registrationResult = persisted.kind;
+    const readback = await retrieve(
+      { identity: sourceIdentity, authorization: { kind: "system" } },
+      { client: admin.client },
+    );
+    if (readback.kind !== "integral") {
+      return refuse(`source_registration_readback_${readback.kind}`);
+    }
+    if (
+      readback.artifact.checksumSha256.toLowerCase() !==
+      sourceVerification.checksumSha256.toLowerCase()
+    ) {
+      return refuse("source_registration_checksum_mismatch");
+    }
+    registrationArtifactId = readback.artifact.id;
+    registrationChecksumSha256 = readback.artifact.checksumSha256;
+  } else {
+    const detail =
+      "reason" in sourceProbe ? sourceProbe.reason : sourceProbe.kind;
+    return refuse(`source_probe_${sourceProbe.kind}:${detail}`);
+  }
+
+  const registrationEvidence = {
+    result: registrationResult,
+    artifactId: registrationArtifactId,
+    checksumSha256: registrationChecksumSha256,
+    width: sourceVerification.width,
+    height: sourceVerification.height,
+    mimeType: sourceVerification.mimeType,
+    byteSize: sourceVerification.byteSize,
+    sourceBucket: SOURCE_BUCKET,
+    sourceObjectPath: sourceStoragePath,
+  };
+
+  // (3) Se a fonte prepared já existir, não reescreve.
+  try {
+    const preparedProbe = await retrieve(
       {
         identity: {
           storeId,
@@ -1693,6 +1919,7 @@ export async function runPrepareSource(
         byteSize: artifact.byteSize,
         checksumSha256: artifact.checksumSha256,
         origin: artifact.origin,
+        registration: registrationEvidence,
         declaration: "fonte já preparada; nenhuma escrita e nenhuma IA",
       });
       return Object.freeze({
@@ -1711,6 +1938,11 @@ export async function runPrepareSource(
         checksumSha256: artifact.checksumSha256,
         origin: artifact.origin,
         evidencePath,
+        registrationResult,
+        registrationArtifactId,
+        registrationChecksumSha256,
+        sourceBucket: SOURCE_BUCKET,
+        sourceObjectPath: sourceStoragePath,
         declaration: "fonte já preparada; nenhuma escrita e nenhuma IA",
       });
     }
@@ -1762,6 +1994,7 @@ export async function runPrepareSource(
       preparedOperationId,
       sourceOperationId,
       reason,
+      registration: registrationEvidence,
       declaration: "preparação falhou; nenhuma IA e nenhuma chamada paga",
     });
     return Object.freeze({
@@ -1774,6 +2007,11 @@ export async function runPrepareSource(
       preparedOperationId,
       sourceOperationId,
       evidencePath,
+      registrationResult,
+      registrationArtifactId,
+      registrationChecksumSha256,
+      sourceBucket: SOURCE_BUCKET,
+      sourceObjectPath: sourceStoragePath,
       declaration: "preparação falhou; nenhuma IA e nenhuma chamada paga",
     });
   }
@@ -1795,6 +2033,7 @@ export async function runPrepareSource(
     byteSize: artifact?.byteSize ?? null,
     checksumSha256: artifact?.checksumSha256 ?? null,
     origin: artifact?.origin ?? null,
+    registration: registrationEvidence,
     declaration: "preparação determinística via F60.1; sem IA e sem chamada paga",
   });
 
@@ -1814,6 +2053,11 @@ export async function runPrepareSource(
     checksumSha256: artifact?.checksumSha256 ?? null,
     origin: artifact?.origin ?? null,
     evidencePath,
+    registrationResult,
+    registrationArtifactId,
+    registrationChecksumSha256,
+    sourceBucket: SOURCE_BUCKET,
+    sourceObjectPath: sourceStoragePath,
     declaration: "preparação determinística via F60.1; sem IA e sem chamada paga",
   });
 }
