@@ -460,9 +460,9 @@ Não executar a suíte global, a suíte de integração real (`npm.cmd run test:
 </out_of_scope>
 
 <stop_for_review>
-**PARAR PARA REVISÃO — nenhuma implementação nesta rodada.**
+**PLANO EXECUTADO — PARAR PARA REVISÃO.**
 
-Este arquivo é somente o plano. Não escrever código, não executar testes, não criar/alterar migrations, não acessar banco ou Storage, não commitar, não atualizar `STATE.md`/`ROADMAP.md` e não abrir/alterar OpenSpec. A branch permanece `feat/fase-60-2-praparacao-deterministica-imagem-para-expansao`, sem upstream e sem alterações de código; o único artefato novo é este PLAN não versionado. A execução depende de aprovação explícita do usuário/Codex.
+A execução está registrada em `261111-idz-SUMMARY.md` e nos commits `8b483a03`, `1f43506f`, `73cff523` e no commit documental. Foram criados apenas os 11 arquivos previstos em `src/lib/campaign/square-preparation/`; nenhuma alteração em F60.1, migrations, rotas, UI, banco/Storage real, Docker, IA ou chamada paga. A branch permanece `feat/fase-60-2-praparacao-deterministica-imagem-para-expansao`, sem upstream; não houve push, merge ou deploy. A revisão humana/Codex é o próximo gate antes de qualquer integração.
 </stop_for_review>
 
 <output>
