@@ -852,7 +852,7 @@ Plans:
 
 ### Phase 60.3: F60.3 - Expansao por IA da campanha 9:16
 
-**Status:** **WAVES 1–3 EXECUTADAS LOCALMENTE; PROVA PAGA (WAVE 4) E PRODUÇÃO NÃO AUTORIZADAS.** Fatia independente da iniciativa 60; F60, F60.1 e a quick 261111-idz permanecem encerradas e não são redesenhadas. O plan-checker retornou `VERIFICATION PASSED` (0 blockers / 0 majors). O plano 60.3-03 fechou o gate pré-chamada linha/objeto (reuso por evidência durável, adoção de órfão pela F60.1 e bloqueio conservador) com matriz offline completa, concorrência e fronteiras provadas; nenhuma chamada de provider, acesso a homolog/DB/Storage ou migration foi executado.
+**Status:** **WAVES 1–3 EXECUTADAS E ACEITAS PELO RESPONSÁVEL EM 2026-11-11; PROVA PAGA (WAVE 4) E PRODUÇÃO NÃO AUTORIZADAS; FASE NÃO ENCERRADA.** Fatia independente da iniciativa 60; F60, F60.1 e a quick 261111-idz permanecem encerradas e não são redesenhadas. O plan-checker retornou `VERIFICATION PASSED` (0 blockers / 0 majors). O plano 60.3-03 fechou o gate pré-chamada linha/objeto (reuso por evidência durável, adoção de órfão pela F60.1 e bloqueio conservador) com matriz offline completa, concorrência e fronteiras provadas; nenhuma chamada de provider, acesso a homolog/DB/Storage ou migration foi executado. Aceite da revisão: **448/448** testes focados em 32 arquivos, validação de saída **18/18** com Sharp real, typecheck 0, diff/worktree limpos. Próxima etapa: preparar 60.3-04 somente até o pedido de autorização; preparação persistente da fonte e chamada paga exigem autorização separada.
 
 **Goal:** Criar um módulo server-only, sem UI, crédito ou orquestrador público, que expande um `square_prepared` 1152×1152 em `vertical` JPEG 1080×1920 usando uma única chamada Sunburst low, com reutilização segura por linha+objeto+proveniência+evidência, validação por conteúdo, persistência `ai_expansion` via F60.1, falhas tipadas e telemetria/custo por chamada correlacionável. A prova real paga é um gate separado, reutilizando homolog/infra existente, sem login de lojista, nova migration ou reconstrução de ambiente.
 
@@ -864,15 +864,15 @@ Plans:
 Plans:
 **Wave 1**
 
-- [x] 60.3-01-PLAN.md — Contratos puros, política/prompt, modelo/catálogo, cobertura de pricing, timeout e classificação de falhas — **executado em 2026-11-11** (5 arquivos de produção + 5 suítes, 94 testes puros verdes, typecheck 0; evidência em `60.3-01-SUMMARY.md`). Waves 2–4 não autorizadas.
+- [x] 60.3-01-PLAN.md — Contratos puros, política/prompt, modelo/catálogo, cobertura de pricing, timeout e classificação de falhas — **executado e aceito em 2026-11-11** (5 arquivos de produção + 5 suítes, 94 testes puros verdes, typecheck 0; evidência em `60.3-01-SUMMARY.md`). Waves 2–4 não autorizadas.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [x] 60.3-02-PLAN.md — Transporte single-shot sem retry oculto, validação/exportação, telemetria e orquestração do núcleo — **executado em 2026-11-11** (4 arquivos de produção + 1 mudança aditiva no adapter de imagens + 5 suítes novas, 168 testes do plano/1:1 e 176 de regressão F60.1/F60.2 verdes, typecheck 0; gate conservador de destino; evidência em `60.3-02-SUMMARY.md`). Waves 3–4 não autorizadas.
+- [x] 60.3-02-PLAN.md — Transporte single-shot sem retry oculto, validação/exportação, telemetria e orquestração do núcleo — **executado e aceito em 2026-11-11** (4 arquivos de produção + 1 mudança aditiva no adapter de imagens + 5 suítes novas, 168 testes do plano/1:1 e 176 de regressão F60.1/F60.2 verdes, typecheck 0; gate conservador de destino; evidência em `60.3-02-SUMMARY.md`). Waves 3–4 não autorizadas.
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [x] 60.3-03-PLAN.md — Probe linha/objeto, reutilização/evidência, persistência/readback F60.1, suíte offline, concorrência e fronteiras proibidas — **executado em 2026-11-11** (3 arquivos de produção novos + `expand.ts` religado + suporte de testes aditivo + 6 suítes, 81 testes novos e **442/442** na suíte focada, typecheck/lint 0; evidência em `60.3-03-SUMMARY.md`). Wave 4 (prova paga) não autorizada.
+- [x] 60.3-03-PLAN.md — Probe linha/objeto, reutilização/evidência, persistência/readback F60.1, suíte offline, concorrência e fronteiras proibidas — **executado e aceito em 2026-11-11** (3 arquivos de produção novos + `expand.ts` religado + suporte de testes aditivo + 6 suítes, 81 testes novos e **442/442** na suíte focada, typecheck/lint 0; evidência em `60.3-03-SUMMARY.md`). Wave 4 (prova paga) não autorizada.
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
