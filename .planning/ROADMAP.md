@@ -811,7 +811,7 @@ Plans:
 
 ### Phase 60.1: F60.1 - Persistência e recuperação de artefatos reutilizáveis
 
-**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E APROVADOS; 60.1-04 COM GATE B EXECUTADO — MIGRATION `20261110202749` APLICADA, SUÍTE `f60-1` 13/13 PASS, FIXTURES E MANIFESTO REGISTRADOS; ACEITE MANUAL LOCALHOST REGISTRADO SEPARADAMENTE; AGUARDANDO REVISÃO; 60.1-05 BLOQUEADO. Nenhuma produção tocada.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
+**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E APROVADOS; 60.1-04 ACEITO — MIGRATION `20261110202749` APLICADA E SUÍTE `f60-1` 13/13; 60.1-05 EXECUTADO (GATES OFFLINE, MATRIZ, CLOSURE E SUMMARY) E AGUARDANDO REVISÃO; FECHAMENTO FORMAL, SYNC/ARCHIVE E PUBLICAÇÃO NÃO EXECUTADOS. Nenhuma produção tocada.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
 
 **Goal:** Criar um módulo compartilhado, sem orquestrador, para persistir, localizar, recuperar e validar artefatos de composição com identidade loja/campanha/operação, papéis `square_original`/`square_prepared`/`vertical`, metadados reais, checksum, proveniência, idempotência, conflito explícito, evidência durável de órfão, privacidade interna e reconhecimento seguro de fonte de campanha entregue e base interna. Preservar integralmente o fluxo 1:1, o 9:16 direto e os contratos da F60.
 
@@ -838,11 +838,11 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais — **GATE B EXECUTADO: MIGRATION APLICADA, SUÍTE 13/13 PASS; AGUARDANDO REVISÃO; 60.1-05 BLOQUEADO**
+- [x] 60.1-04-PLAN.md — Prova de integração autorizada em ambiente descartável/homolog (perfil dedicado `f60-1`): evidência via `info`, concorrência, leitura negada, fontes reais — **GATE B EXECUTADO: MIGRATION APLICADA, SUÍTE 13/13 PASS; AGUARDANDO REVISÃO; 60.1-05 BLOQUEADO**
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 60.1-05-PLAN.md — Gates, matriz de evidências e fechamento com stop explícito antes de produção
+- [ ] 60.1-05-PLAN.md — Gates, matriz de evidências e fechamento com stop explícito antes de produção — **EXECUTADO: GATES OFFLINE, MATRIZ, CLOSURE E SUMMARY; AGUARDANDO REVISÃO; FECHAMENTO FORMAL/SYNC/ARCHIVE/PUBLICAÇÃO NÃO EXECUTADOS**
 
 **Canonical refs:** `AGENTS.md`; `docs/fluxo-de-desenvolvimento.md`; `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/proposal.md`, `design.md`, `tasks.md` e `specs/campaign-composition-artifacts/spec.md`; `openspec/specs/product-1-1-artifact-delivery/`, `product-1-1-generation-orchestration/`, `product-1-1-campaign-credit-billing/`, `product-vertical-generation-delivery/`, `product-9-16-two-stage-operation-control/`, `product-9-16-two-stage-financial-integration/`; `src/lib/product-1-1/artifact/**`, `src/lib/product-vertical-9-16/artifact/**`, `src/lib/campaign/format-resolution.ts`, `src/lib/campaign/thumbnail/thumbnail-path.ts`, `supabase/migrations/20261009000004_f56_2b1b_campaign_artifacts.sql`, `supabase/migrations/20260708000002_create_campaign_images_bucket.sql`.
 
