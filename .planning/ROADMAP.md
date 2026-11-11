@@ -811,7 +811,7 @@ Plans:
 
 ### Phase 60.1: F60.1 - Persistência e recuperação de artefatos reutilizáveis
 
-**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E APROVADOS; 60.1-04 ACEITO — MIGRATION `20261110202749` APLICADA E SUÍTE `f60-1` 13/13; 60.1-05 ACEITO E VERIFICADO — GSD UAT 1/1, OPENSPEC 53/53 TAREFAS E 10/10 REQUISITOS, SEM ISSUES CRÍTICOS; AGUARDANDO REVISÃO ANTES DE SYNC/ARCHIVE/PUBLICAÇÃO. Nenhuma produção tocada.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
+**Status:** **60.1-01, 60.1-06, 60.1-02 E 60.1-03 CONCLUÍDOS E APROVADOS; 60.1-04 ACEITO — MIGRATION `20261110202749` APLICADA E SUÍTE `f60-1` 13/13; 60.1-05 ACEITO, VERIFICADO, SINCRONIZADO E ARQUIVADO EM `openspec/changes/archive/2026-11-11-fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/`; SPEC PRINCIPAL VALIDADA; LINT SEM TS E 4 FALHAS GLOBAIS PREEXISTENTES PRESERVADAS; PRODUÇÃO/PUBLICAÇÃO NÃO EXECUTADAS. Nenhuma produção tocada.** Fatia independente da iniciativa 60; a F60 original permanece encerrada e publicada.
 
 **Goal:** Criar um módulo compartilhado, sem orquestrador, para persistir, localizar, recuperar e validar artefatos de composição com identidade loja/campanha/operação, papéis `square_original`/`square_prepared`/`vertical`, metadados reais, checksum, proveniência, idempotência, conflito explícito, evidência durável de órfão, privacidade interna e reconhecimento seguro de fonte de campanha entregue e base interna. Preservar integralmente o fluxo 1:1, o 9:16 direto e os contratos da F60.
 
@@ -842,7 +842,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [x] 60.1-05-PLAN.md — Gates, matriz de evidências e fechamento com stop explícito antes de produção — **ACEITO E VERIFICADO: GATES OFFLINE, MATRIZ, CLOSURE, SUMMARY, UAT 1/1 E OPENSPEC 53/53; SYNC/ARCHIVE/PUBLICAÇÃO NÃO EXECUTADOS**
+- [x] 60.1-05-PLAN.md — Gates, matriz de evidências e fechamento com stop explícito antes de produção — **ACEITO, VERIFICADO, SINCRONIZADO E ARQUIVADO EM `openspec/changes/archive/2026-11-11-fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/`; SPEC PRINCIPAL VALIDADA; PRODUÇÃO/PUBLICAÇÃO NÃO EXECUTADAS**
 
 **Canonical refs:** `AGENTS.md`; `docs/fluxo-de-desenvolvimento.md`; `openspec/changes/fase-60-1-persistencia-e-recuperacao-de-artefatos-reutilizaveis/proposal.md`, `design.md`, `tasks.md` e `specs/campaign-composition-artifacts/spec.md`; `openspec/specs/product-1-1-artifact-delivery/`, `product-1-1-generation-orchestration/`, `product-1-1-campaign-credit-billing/`, `product-vertical-generation-delivery/`, `product-9-16-two-stage-operation-control/`, `product-9-16-two-stage-financial-integration/`; `src/lib/product-1-1/artifact/**`, `src/lib/product-vertical-9-16/artifact/**`, `src/lib/campaign/format-resolution.ts`, `src/lib/campaign/thumbnail/thumbnail-path.ts`, `supabase/migrations/20261009000004_f56_2b1b_campaign_artifacts.sql`, `supabase/migrations/20260708000002_create_campaign_images_bucket.sql`.
 
