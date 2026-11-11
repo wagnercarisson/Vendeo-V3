@@ -876,4 +876,4 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 60.3-04-PLAN.md — Prova real paga separada (preflight não pago, fonte/credencial/chamadas/orçamento definidos, uma chamada, sem retry, aceite técnico e visual)
+- [ ] 60.3-04-PLAN.md — Prova real paga separada (preflight não pago, fonte/credencial/chamadas/orçamento definidos, uma chamada, sem retry, aceite técnico e visual) — **Task 1 concluída; pedidos de preparação da fonte e de autorização paga registrados; Tasks 2–6 não executadas.** Bloqueios read-only: `sourceStatus: "original_only"` (fonte ainda não preparada) e `catalog_pricing: incomplete_coverage: ["outputCostUsd"]` (linha ativa Sunburst low sem `output_token_usd_per_1m`); `estimatedPreCallUsd`/`pricingVersion` ainda `null`. Nenhuma escrita, migration, provider ou chamada paga.
