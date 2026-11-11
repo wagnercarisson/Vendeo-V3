@@ -11,9 +11,13 @@ import "server-only";
  * bancada nem configuração paralela de par de modelos.
  *
  * Pricing: a cobertura pré-chamada exige a linha vigente da qualidade (nunca
- * `code_default`) e TODAS as tarifas de usage (entrada/saída textual,
- * entrada/saída de imagem e cache textual/imagem) além de `image_unit_usd`
- * positivo. Qualquer ausência bloqueia antes da chamada (T-60.3-05).
+ * `code_default`) e as tarifas de usage APLICÁVEIS ao protocolo, além de
+ * `image_unit_usd` positivo. Para `images.edit`, a saída é imagem
+ * (`imageTokenUsdPer1M`); `outputCostUsd` é tarifa de saída TEXTUAL e só é
+ * exigida quando o protocolo/modelo pode produzir tokens textuais positivos.
+ * O calculador pós-chamada (`calculateProductOneToOneImageUsageCost`) segue a
+ * mesma regra: só exige `outputCostUsd` quando `outputTextTokens > 0`. Qualquer
+ * ausência aplicável bloqueia antes da chamada (T-60.3-05).
  *
  * Este módulo é server-only porque constrói serviços com `supabaseAdmin` como
  * default; os leitores são injetáveis nos testes (`catalog`/`pricing`).
@@ -104,15 +108,29 @@ export type ExpansionPricingResolution =
       readonly missing: readonly string[];
     };
 
-/** Tarifas obrigatórias para o cálculo por usage tokens (D9/F60.3). */
+/**
+ * Tarifas obrigatórias para o cálculo por usage tokens no protocolo `images`:
+ * entrada textual, cache textual, entrada de imagem, saída de imagem e cache de
+ * imagem. `outputCostUsd` (saída textual) NÃO entra por padrão: modelos de
+ * imagem usam `-` nessa dimensão e o calculador só a exige quando há tokens
+ * textuais de saída positivos.
+ */
 const REQUIRED_PRICING_FIELDS = Object.freeze([
   "inputCostUsd",
-  "outputCostUsd",
   "cachedInputCostUsd",
   "imageInputTokenUsdPer1M",
   "imageTokenUsdPer1M",
   "imageCachedInputTokenUsdPer1M",
 ] as const);
+
+export interface PricingCoverageOptions {
+  /**
+   * `true` somente quando o protocolo/modelo pode produzir saída textual
+   * positiva e, portanto, `outputCostUsd` é aplicável. Default `false` para
+   * `images.edit`.
+   */
+  readonly requiresTextOutputRate?: boolean;
+}
 
 function targetFailure(
   reason: ExpandTargetFailureReason,
@@ -205,12 +223,14 @@ export async function resolveExpansionTarget(
 
 /**
  * Cobertura de pricing pré-chamada (T-60.3-05): a linha precisa existir, não
- * pode ser `code_default` e precisa cobrir as seis tarifas de usage mais um
- * `image_unit_usd` positivo. `image_unit_usd` sozinho nunca é completo.
+ * pode ser `code_default` e precisa cobrir as tarifas aplicáveis ao protocolo
+ * mais um `image_unit_usd` positivo. `outputCostUsd` é exigida apenas quando
+ * `requiresTextOutputRate` é `true`; `image_unit_usd` sozinho nunca é completo.
  */
 export function evaluatePricingCoverage(
   pricing: ModelPricing | null,
   versionId: string | null,
+  options: PricingCoverageOptions = {},
 ): ExpansionPricingCoverage {
   if (versionId === "code_default") {
     return Object.freeze({
@@ -230,7 +250,12 @@ export function evaluatePricingCoverage(
 
   const missing: string[] = [];
 
-  for (const field of REQUIRED_PRICING_FIELDS) {
+  const requiredFields: readonly (keyof ModelPricing)[] =
+    options.requiresTextOutputRate === true
+      ? [...REQUIRED_PRICING_FIELDS, "outputCostUsd"]
+      : REQUIRED_PRICING_FIELDS;
+
+  for (const field of requiredFields) {
     const value = pricing[field];
     if (typeof value !== "number" || !Number.isFinite(value)) {
       missing.push(field);

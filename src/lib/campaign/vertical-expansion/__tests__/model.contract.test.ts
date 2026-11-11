@@ -238,13 +238,35 @@ describe("F60.3 model — cobertura de pricing pré-chamada", () => {
     expect([...coverage.missing].sort()).toEqual(
       [
         "inputCostUsd",
-        "outputCostUsd",
         "cachedInputCostUsd",
         "imageInputTokenUsdPer1M",
         "imageTokenUsdPer1M",
         "imageCachedInputTokenUsdPer1M",
       ].sort(),
     );
+  });
+
+  it("images.edit não exige outputCostUsd (tarifa textual) por padrão", () => {
+    const { outputCostUsd: _omitted, ...withoutTextOutput } = COMPLETE_PRICING;
+
+    expect(evaluatePricingCoverage(withoutTextOutput, "version-1")).toEqual({
+      complete: true,
+      missing: [],
+    });
+  });
+
+  it("outputCostUsd só é exigida quando o protocolo pode produzir texto", () => {
+    const { outputCostUsd: _omitted, ...withoutTextOutput } = COMPLETE_PRICING;
+
+    expect(
+      evaluatePricingCoverage(withoutTextOutput, "version-1", {
+        requiresTextOutputRate: true,
+      }),
+    ).toEqual({
+      complete: false,
+      reason: "incomplete_coverage",
+      missing: ["outputCostUsd"],
+    });
   });
 
   it("lista exatamente os campos ausentes quando só parte das tarifas existe", () => {
@@ -361,7 +383,7 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
     expect(resolution.ok).toBe(false);
     if (resolution.ok) return;
     expect(resolution.reason).toBe("incomplete_coverage");
-    expect(resolution.missing).toHaveLength(6);
+    expect(resolution.missing).toHaveLength(5);
   });
 
   it("leitor que lança devolve row_missing sem lançar", async () => {

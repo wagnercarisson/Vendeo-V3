@@ -241,7 +241,7 @@ O módulo SHALL distinguir falha definitiva, transitória e desconhecida, sem co
 
 ### Requirement: Telemetria por chamada e custo com origem, sem duplicação
 
-O módulo SHALL emitir exatamente um evento de chamada por chamada real para o mecanismo existente de telemetria/custo, com `operationId`, `callId`, etapa `expansion`, provider, modelo/qualidade efetivos, tamanho solicitado/recebido, duração, resultado, usage disponível e custo com sua origem. Antes da chamada, o módulo SHALL exigir a cobertura das tarifas necessárias ao cálculo por usage — entrada/saída textual, entrada/saída de imagem e cache textual/imagem — além de `image_unit_usd`; `image_unit_usd` sozinho SHALL NOT comprovar cobertura e cobertura incompleta SHALL bloquear antes da chamada. O custo SHALL usar o mecanismo existente de custo calculado/reportado; custo desconhecido SHALL ser `null` e `not_available`, nunca zero. Custo conhecido SHALL ser registrado mesmo quando a saída for inválida ou a chamada falhar com usage disponível. O módulo SHALL manter a correlação necessária para agregar custo de base + expansão posteriormente e SHALL NOT duplicar o evento da chamada. O flush SHALL ocorrer também quando decode, exportação, persistência ou readback falharem, ou quando ocorrer exceção inesperada após a chamada. A gravação durável SHALL ser a do mecanismo existente, best-effort por contrato, sem um segundo evento de compensação; falha do flush SHALL NOT provocar outra geração paga.
+O módulo SHALL emitir exatamente um evento de chamada por chamada real para o mecanismo existente de telemetria/custo, com `operationId`, `callId`, etapa `expansion`, provider, modelo/qualidade efetivos, tamanho solicitado/recebido, duração, resultado, usage disponível e custo com sua origem. Antes da chamada, o módulo SHALL exigir a cobertura das tarifas **aplicáveis** ao cálculo por usage — entrada textual, entrada de imagem, saída de imagem e cache textual/imagem — além de `image_unit_usd`; `outputCostUsd` (saída textual) SHALL ser exigida apenas quando o protocolo/modelo pode produzir tokens textuais de saída positivos e NÃO é aplicável ao protocolo `images`. `image_unit_usd` sozinho SHALL NOT comprovar cobertura e cobertura incompleta SHALL bloquear antes da chamada. O custo SHALL usar o mecanismo existente de custo calculado/reportado; custo desconhecido SHALL ser `null` e `not_available`, nunca zero. Custo conhecido SHALL ser registrado mesmo quando a saída for inválida ou a chamada falhar com usage disponível. O módulo SHALL manter a correlação necessária para agregar custo de base + expansão posteriormente e SHALL NOT duplicar o evento da chamada. O flush SHALL ocorrer também quando decode, exportação, persistência ou readback falharem, ou quando ocorrer exceção inesperada após a chamada. A gravação durável SHALL ser a do mecanismo existente, best-effort por contrato, sem um segundo evento de compensação; falha do flush SHALL NOT provocar outra geração paga.
 
 #### Scenario: Chamada bem-sucedida emite um único evento
 
@@ -257,9 +257,15 @@ O módulo SHALL emitir exatamente um evento de chamada por chamada real para o m
 
 #### Scenario: Cobertura incompleta de tarifas bloqueia antes da chamada
 
-- **WHEN** a linha de pricing de Sunburst low cobre `image_unit_usd`, mas falta qualquer tarifa necessária ao cálculo por usage
+- **WHEN** a linha de pricing de Sunburst low cobre `image_unit_usd`, mas falta qualquer tarifa **aplicável** ao cálculo por usage
 - **THEN** o módulo SHALL devolver `pricing_unavailable` (`incomplete_coverage`)
 - **AND** SHALL NOT executar chamada paga
+
+#### Scenario: Tarifa de saída textual não aplicável ao protocolo `images`
+
+- **WHEN** a linha de pricing cobre as tarifas de imagem e entrada/cache aplicáveis, mas não tem `output_token_usd_per_1m`, e o protocolo é `images.edit`
+- **THEN** a cobertura SHALL ser considerada completa para as dimensões aplicáveis
+- **AND** a ausência da tarifa textual SHALL NOT ser mascarada: se o pós-chamada reportar tokens textuais positivos, o custo SHALL permanecer desconhecido (`not_available`)
 
 #### Scenario: Custo desconhecido não vira zero
 

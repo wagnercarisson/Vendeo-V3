@@ -778,7 +778,7 @@ describe("expandVerticalToNineSixteen — modelo/pricing", () => {
           getModelPricing: async () => ({
             pricing: {
               ...COMPLETE_PRICING,
-              outputCostUsd: Number.NaN,
+              imageTokenUsdPer1M: Number.NaN,
               imageUnitCostUsd: 0.04,
             },
             versionId: "pricing-version-1",
