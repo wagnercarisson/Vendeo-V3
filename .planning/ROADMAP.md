@@ -864,7 +864,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 60.3-01-PLAN.md — Contratos puros, política/prompt, modelo/catálogo, cobertura de pricing, timeout e classificação de falhas
+- [x] 60.3-01-PLAN.md — Contratos puros, política/prompt, modelo/catálogo, cobertura de pricing, timeout e classificação de falhas — **executado em 2026-11-11** (5 arquivos de produção + 5 suítes, 94 testes puros verdes, typecheck 0; evidência em `60.3-01-SUMMARY.md`). Waves 2–4 não autorizadas.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

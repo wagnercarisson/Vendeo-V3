@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-11T19:44:11.750Z"
+last_updated: "2026-11-11T20:15:00.647Z"
 progress:
   total_phases: 19
   completed_phases: 14
@@ -37,6 +37,8 @@ progress:
 - **EXECUÇÃO QUICK 261027-k4d (2026-10-27) — primeira fatia da fundação multimercado (F57): IMPLEMENTADA E APROVADA PELO USUÁRIO.** Biblioteca pura em `src/lib/market-context/**` (14 arquivos, 3 commits atômicos `b545bc98`, `35a1c5f4`, `00c95b1b`, correção `beec4e67` e doc `7d029eb0`). Suíte nova **72/72**; tsc direcionado aos arquivos novos **exit 0**; guard de imports produtivos vazio; `git diff --check` limpo. Correção pós-revisão Codex: `kind: "legacy"` só é aceito sem campos adicionais; entradas mistas retornam erro tipado em vez de descartar configuração e aplicar BR/pt-BR. Gates globais **não verdes por ambiente**: `npm run typecheck`/`build` não executam (sem `node_modules/.bin`, sem `tsx` e sem `@google/generative-ai`); tsc completo acusa **29 erros em arquivos não tocados** e **zero** em `market-context`; ESLint quebrado por módulo ausente e, de todo modo, não cobre TS. **Aceite registrado em 2026-10-27 com essas limitações conhecidas; revalidar os gates globais é ação própria e controlada.** **Gates globais recuperados pela quick `261027-llm` em 2026-10-27** (`npm ci` + correção de 2 testes: typecheck 0 erros, build OK, lint sem cobertura TS). Sem migration, banco, env, dependência, push, deploy ou ativação.
 
 ## Current Position
+
+- **EXECUÇÃO 60.3-01 (2026-11-11) — camada pura pré-chamada do módulo `vertical-expansion`: CONCLUÍDA LOCALMENTE; WAVES 2–4 NÃO AUTORIZADAS.** Criados `src/lib/campaign/vertical-expansion/{types,policy,prompt,model,failure}.ts` e cinco suítes `__tests__/*.contract.test.ts` em 6 commits atômicos (`4dd3046f`, `1af8cfb2`, `bad27416`, `fa8d8d81`, `9893c566`, `cd43810d`), no padrão RED→GREEN por task. Gates: **94/94** testes puros (sem rede, banco, Storage ou IA), `npm run typecheck` exit 0, `npm run lint` exit 0 (limitação preexistente: ESLint sem cobertura TS), `git diff --check` limpo, nenhum arquivo existente alterado. Cobertura do contrato: união fechada de 17 variantes (16 + `blocked`), 15 motivos de entrada inválida, 16 chaves proibidas recusadas por `hasOwnProperty`, papéis/dimensões/MIME derivados de `ROLE_POLICY` e `PROVIDER_SIZE`, timeout efetivo `min(prazo, 180 s)` com inválido → `null`/`timeout_invalid`, alvo Sunburst low resolvido só por linha ativa de `ai_model_catalog` (sem seletor/alternativa/preset), pricing pré-chamada exigindo seis tarifas de usage + `image_unit_usd` positivo (nunca `code_default`) e classificação transitória/definitiva/desconhecida delegada a `classifyProviderFailure` da F60, sem repetição. **Nenhuma chamada de provider/OpenAI, acesso a homolog/Supabase/Storage, migration, crédito, campanha, UI, rota, merge, push ou deploy.** Evidência: `.planning/phases/60.3-f60-3-expansao-por-ia-da-campanha-9-16/60.3-01-SUMMARY.md`.
 
 - **PLANEJAMENTO F60.3 (2026-11-11) — 4 PLANOS CRIADOS E VERIFICADOS; EXECUÇÃO NÃO INICIADA; PROVA PAGA NÃO AUTORIZADA.** OpenSpec `fase-60-3-expansao-ia-9-16` aprovada como fonte técnica; fase GSD `60.3` registrada em `.planning/ROADMAP.md` com 12 requisitos `REQ-60.3-01..12`. Planos em `.planning/phases/60.3-f60-3-expansao-por-ia-da-campanha-9-16/`: `60.3-01` contratos/modelo/pricing/timeout/falhas; `60.3-02` transporte single-shot, validação/exportação, telemetria e núcleo; `60.3-03` probe linha/objeto, reuso/evidência, persistência/readback e suíte offline; `60.3-04` prova real paga separada, `autonomous: false`, com checkpoint de autorização. `gsd-plan-checker`: **VERIFICATION PASSED** (0 blockers / 0 majors; 10 minors aplicados em texto). Nenhum código, migration, banco/Storage, chamada paga, commit de implementação ou produção. Próximo passo: revisão dos planos → `/gsd-execute-phase 60.3` (waves 1→3); `60.3-04` só avança após autorização explícita de fonte, credencial, 1 chamada e teto de orçamento.
 
@@ -502,3 +504,4 @@ e uma geração no localhost para conferir a contabilização.
 | Phase 56.2 P05 | 6m | 3 tasks | 2 files |
 | Phase 56.2.2 P01 | 35min | 4 tasks | 9 files |
 | Phase 56.2.6 P02 | 14min | 3 tasks | 4 files |
+| Phase 60.3 P01 | ~15 min | 3 tasks | 10 files |
