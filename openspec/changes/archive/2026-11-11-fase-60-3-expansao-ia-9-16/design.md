@@ -350,7 +350,7 @@ Nenhuma pendência bloqueante. As decisões abaixo foram fechadas na revisão da
 | Ponto | Decisão |
 |---|---|
 | Vertical incompatível existente | **Bloquear sem chamada paga**; nunca sobrescrever/regerar. |
-| Pricing pré-chamada | **Exigir cobertura das tarifas necessárias ao cálculo por usage** (entrada/saída textual, entrada/saída de imagem e cache textual/imagem) **além de `image_unit_usd`**; `image_unit_usd` sozinho não comprova cobertura. Cobertura incompleta → zero chamadas. |
+| Pricing pré-chamada | **Exigir cobertura das tarifas aplicáveis ao cálculo por usage** (entrada textual, entrada/saída de imagem e cache textual/imagem; `outputCostUsd` apenas quando o protocolo/modelo puder produzir saída textual) **além de `image_unit_usd`**; `image_unit_usd` sozinho não comprova cobertura. Cobertura incompleta → zero chamadas. |
 | Timeout | **Padrão de 180 s**, respeitando prazo menor informado pelo chamador. |
 | Capability do catálogo | **Reutilizar `campaign_product_image`**; sem capability nova/migration. |
 | Credencial paga | **Caminho de credencial do produto já existente**, autorizado no gate; **não** usar silenciosamente a chave da bancada. |

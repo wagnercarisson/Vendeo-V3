@@ -18,7 +18,7 @@
 
 - [x] 2.1 Criar `model.ts` puro com a tupla esperada de Sunburst low e validação contra `ELIGIBLE_IMAGE_MODELS`/`ELIGIBLE_IMAGE_QUALITIES`; não importar `BENCH_PRESETS`, seletor administrativo ou par principal/fallback do 1:1.
 - [x] 2.2 Implementar a resolução server-only da linha ativa de `ai_model_catalog` na capacidade `campaign_product_image`, provider `openai`, protocolo `images`, retornando provider/modelo/protocolo efetivos da linha; falhar fechado em ausência/inatividade/protocolo incompatível.
-- [x] 2.3 Implementar a resolução de pricing específico de `provider + model + quality` reutilizando `AiModelPricingService`; exigir linha de qualidade (não `code_default`), cobertura das tarifas necessárias ao cálculo por usage (entrada/saída textual, entrada/saída de imagem e cache textual/imagem) e `image_unit_usd`; `image_unit_usd` sozinho não comprova cobertura; não inventar valor.
+- [x] 2.3 Implementar a resolução de pricing específico de `provider + model + quality` reutilizando `AiModelPricingService`; exigir linha de qualidade (não `code_default`), cobertura das tarifas **aplicáveis** ao cálculo por usage (entrada textual, entrada/saída de imagem e cache textual/imagem; saída textual apenas quando o protocolo/modelo puder produzi-la) e `image_unit_usd`; `image_unit_usd` sozinho não comprova cobertura; não inventar valor.
 - [x] 2.4 Cobrir offline: linha ativa resolve; ausente/inativa/qualidade inválida/pricing ausente/`code_default`/cobertura incompleta (mesmo com `image_unit`) bloqueiam com zero chamadas.
 
 ## 3. Transporte sem retry oculto
