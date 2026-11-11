@@ -48,7 +48,7 @@ export interface UpstreamImagesClient {
   };
 }
 
-type UpstreamImagesToFile = (
+export type UpstreamImagesToFile = (
   data: Buffer,
   name: string,
   options: { type: string },
@@ -66,18 +66,81 @@ export interface UpstreamImagesSdk {
  */
 export type UpstreamImagesSdkLoader = (apiKey: string) => Promise<UpstreamImagesSdk>;
 
-async function loadOpenAiSdk(apiKey: string): Promise<UpstreamImagesSdk> {
-  const { default: OpenAI, toFile } = await import("openai");
+/**
+ * Opções ADITIVAS do adapter (F60.3). Ausentes ⇒ comportamento atual
+ * byte-idêntico do fluxo 1:1.
+ *
+ * - `maxRetries`: número de retries automáticos do SDK. `0` desliga o retry
+ *   oculto para o caminho de gasto único.
+ * - `preserveUsageWithoutImage`: quando `true`, uma resposta HTTP sem imagem
+ *   devolve `imageBase64: ""` + `usage` em vez de lançar, preservando o custo
+ *   conhecido de uma saída inválida.
+ */
+export interface UpstreamImagesAdapterOptions {
+  readonly maxRetries?: number;
+  readonly preserveUsageWithoutImage?: boolean;
+}
+
+/** Módulo mínimo do SDK aceito pelo loader (injetável em testes). */
+export interface UpstreamImagesSdkModule {
+  readonly default: new (config: Record<string, unknown>) => unknown;
+  readonly toFile: UpstreamImagesToFile;
+}
+
+export interface CreateOpenAiImagesSdkLoaderOptions {
+  /** Retries automáticos do cliente. Ausente ⇒ cliente sem a chave extra. */
+  readonly maxRetries?: number;
+  /** Importador do pacote `openai` (testes). Default: `import("openai")`. */
+  readonly importModule?: () => Promise<UpstreamImagesSdkModule>;
+}
+
+async function importOpenAiModule(): Promise<UpstreamImagesSdkModule> {
+  const mod = await import("openai");
   return {
-    client: new OpenAI({ apiKey }) as unknown as UpstreamImagesClient,
-    toFile: toFile as unknown as UpstreamImagesToFile,
+    default: mod.default as unknown as UpstreamImagesSdkModule["default"],
+    toFile: mod.toFile as unknown as UpstreamImagesToFile,
   };
 }
+
+/**
+ * Cria o loader padrão de `images`. A credencial é SEMPRE o argumento recebido
+ * do adapter (`getApiKey("openai")` no chamador) — o loader nunca lê ambiente,
+ * nunca re-resolve credencial e nunca lê `OPENAI_BENCH_API_KEY`.
+ *
+ * Sem `maxRetries`, o cliente é construído com exatamente `{ apiKey }`.
+ */
+export function createOpenAiImagesSdkLoader(
+  options: CreateOpenAiImagesSdkLoaderOptions = {},
+): UpstreamImagesSdkLoader {
+  const importModule = options.importModule ?? importOpenAiModule;
+  return async (apiKey: string): Promise<UpstreamImagesSdk> => {
+    const { default: OpenAI, toFile } = await importModule();
+    const clientConfig: Record<string, unknown> =
+      options.maxRetries === undefined
+        ? { apiKey }
+        : { apiKey, maxRetries: options.maxRetries };
+    return {
+      client: new OpenAI(clientConfig) as unknown as UpstreamImagesClient,
+      toFile,
+    };
+  };
+}
+
+const loadOpenAiSdk: UpstreamImagesSdkLoader = createOpenAiImagesSdkLoader();
 
 export class UpstreamImagesAdapter implements AiAdapter {
   readonly protocol = "images" as const;
 
-  constructor(private readonly loadSdk: UpstreamImagesSdkLoader = loadOpenAiSdk) {}
+  private readonly loadSdk: UpstreamImagesSdkLoader;
+  private readonly options: UpstreamImagesAdapterOptions;
+
+  constructor(
+    loadSdk: UpstreamImagesSdkLoader = loadOpenAiSdk,
+    options: UpstreamImagesAdapterOptions = {},
+  ) {
+    this.loadSdk = loadSdk;
+    this.options = options;
+  }
 
   async invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult> {
     // A qualidade é obrigatória no novo fluxo: ausente/em branco é defeito e
@@ -128,13 +191,30 @@ export class UpstreamImagesAdapter implements AiAdapter {
         { signal: request.signal },
       );
 
-      const imageBase64 = (response as { data?: Array<{ b64_json?: string }> }).data?.[0]?.b64_json;
-      if (!imageBase64) {
-        throw new MalformedResponseError("Image API returned no image data");
-      }
-
       const rawUsage = (response as { usage?: unknown }).usage;
       const usage = normalizeUpstreamImagesUsage(rawUsage);
+      const imageBase64 = (response as { data?: Array<{ b64_json?: string }> }).data?.[0]
+        ?.b64_json;
+
+      if (!imageBase64) {
+        // Aditivo (F60.3): opt-in preserva o `usage` de uma resposta sem imagem
+        // para registrar custo conhecido. Sem a opção, o caminho é o atual.
+        if (this.options.preserveUsageWithoutImage === true) {
+          return {
+            imageBase64: "",
+            mimeType: "image/png",
+            model: target.model,
+            usage,
+            usageMeta: {
+              providerUsageSource: "images.edit",
+              ...(rawUsage && typeof rawUsage === "object"
+                ? { providerUsageRaw: rawUsage as Record<string, unknown> }
+                : {}),
+            },
+          };
+        }
+        throw new MalformedResponseError("Image API returned no image data");
+      }
 
       return {
         imageBase64,
