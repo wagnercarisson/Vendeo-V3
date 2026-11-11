@@ -1,0 +1,104 @@
+{
+  "kind": "f60.3-preflight",
+  "mode": "dry-run",
+  "checkedAt": "2026-11-11T21:02:38.463Z",
+  "ready": false,
+  "providerCalls": 0,
+  "credential": "product",
+  "declaration": "sem chamada paga",
+  "checks": [
+    {
+      "id": "module_import",
+      "name": "Import do módulo",
+      "status": "PASS",
+      "detail": "expandVerticalToNineSixteen carregado por import dinâmico SEM executar (server-only resolvido)"
+    },
+    {
+      "id": "f60_1_target",
+      "name": "Alvo F60.1",
+      "status": "PASS",
+      "detail": "homolog-existing autorizado (DB 127.0.0.1:57782/postgres, API 127.0.0.1:57781)"
+    },
+    {
+      "id": "supabase_env",
+      "name": "Env do Supabase do módulo",
+      "status": "PASS",
+      "detail": "NEXT_PUBLIC_SUPABASE_URL=127.0.0.1:57781 e SUPABASE_URL=127.0.0.1:57781 concordantes (loopback 57781)"
+    },
+    {
+      "id": "credentials",
+      "name": "Chaves",
+      "status": "PASS",
+      "detail": "serviceRoleKey: present(164); anonKey: present; openai: product(present)"
+    },
+    {
+      "id": "f60_1_applied",
+      "name": "F60.1 aplicada",
+      "status": "PASS",
+      "detail": "tabela com 18 colunas de ARTIFACT_SELECT_COLUMNS, bucket campaign-internal-artifacts e versão 20261110202749 no ledger (somente leitura)"
+    },
+    {
+      "id": "catalog_pricing",
+      "name": "Catálogo/pricing",
+      "status": "FAIL",
+      "detail": "pricing incomplete_coverage: outputCostUsd"
+    },
+    {
+      "id": "source",
+      "name": "Fonte",
+      "status": "FAIL",
+      "detail": "sourceStatus: original_only — só existe a arte 1024; rode a preparação autorizada (--prepare-source com F60_3_PREPARE_AUTHORIZED=1) antes do preflight final"
+    },
+    {
+      "id": "destination",
+      "name": "Destino",
+      "status": "PASS",
+      "detail": "linha e objeto do vertical comprovadamente ausentes (somente leitura)"
+    },
+    {
+      "id": "campaigns_snapshot",
+      "name": "Snapshot de campaigns",
+      "status": "PASS",
+      "detail": "campaignsBefore: status=ready; storagePath presente=sim"
+    },
+    {
+      "id": "pre_call_cost",
+      "name": "Custo pré-chamada",
+      "status": "FAIL",
+      "detail": "estimativa indisponível (pricing incompleto ou image_unit_usd ausente/≤ 0)"
+    }
+  ],
+  "summary": {
+    "sourceStatus": "original_only",
+    "provider": "openai",
+    "model": "gpt-image-2.5-sunburst",
+    "protocol": "images",
+    "quality": "low",
+    "pricingVersion": null,
+    "imageUnitUsd": null,
+    "estimatedPreCallUsd": null,
+    "estimateSource": null,
+    "pricingMissing": [
+      "outputCostUsd"
+    ],
+    "sourceArtifactId": null,
+    "sourceChecksumSha256": null,
+    "sourceByteSize": null,
+    "destinationStatus": "absent",
+    "credential": "product",
+    "campaignsBefore": {
+      "id": "ec1bd3fa-36d7-43d3-b7de-9405a83eb74e",
+      "status": "ready",
+      "storagePath": "0189ed0a-83ad-4d52-bcef-2f0db0f9dd0a/ec1bd3fa-36d7-43d3-b7de-9405a83eb74e/product-1-1/c6a8457e-480b-4f67-b744-f93ba6dd7e03/art-1024.jpg"
+    }
+  },
+  "environment": {
+    "targetKind": "homolog-existing",
+    "dbTarget": "127.0.0.1:57782/postgres",
+    "apiTarget": "127.0.0.1:57781",
+    "originsConcordant": true,
+    "serviceRoleKey": "present",
+    "anonKey": "present",
+    "credential": "product"
+  }
+}
