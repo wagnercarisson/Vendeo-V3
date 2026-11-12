@@ -731,6 +731,21 @@ describe("runSquareBaseCopy — conteúdo congelado e desfechos próprios", () =
     expect(callCount()).toBe(0);
   });
 
+  it("invoker ausente falha fechado e nunca usa o gateway padrão", async () => {
+    const { client, rpcNames } = makeClient(db);
+    const acquire = vi.fn();
+
+    const outcome = await runSquareBaseCopy(inputFor(), {
+      client,
+      invoker: undefined as unknown as AiInvoker,
+      acquireAttempt: acquire,
+    });
+
+    expect(outcome).toEqual({ kind: "unavailable", reason: "not_attempted" });
+    expect(acquire).not.toHaveBeenCalled();
+    expect(rpcNames).toEqual([]);
+  });
+
   it("falha da copy nunca lança e não altera o desfecho da arte (fake combinado)", async () => {
     const { client } = makeClient(db);
     const { invoker } = makeCountingInvoker(async () => {

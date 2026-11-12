@@ -270,6 +270,12 @@ export async function runSquareBaseCopy(
     return { kind: "not_requested" };
   }
 
+  // O invoker é OBRIGATÓRIO: sem ele a fábrica cairia no gateway padrão (retry
+  // oculto). Falha fechada — nada é adquirido nem chamado.
+  if (!deps.invoker || typeof deps.invoker.invoke !== "function") {
+    return { kind: "unavailable", reason: "not_attempted" };
+  }
+
   const client = deps.client ?? supabaseAdmin;
   const acquireAttempt =
     deps.acquireAttempt ??
