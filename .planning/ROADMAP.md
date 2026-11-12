@@ -881,19 +881,20 @@ Plans:
 
 ### Phase 60.4: F60.4 - Composicao e persistencia da base quadrada
 
-**Status:** **PLANEJAMENTO EM ANDAMENTO; NENHUM CODIGO IMPLEMENTADO; AGUARDANDO REVISAO DOS PLANOS.** Fatia independente da iniciativa 60; F60, F60.1, F60.3 e o fluxo 1:1 permanecem encerrados e nao sao redesenhados. A change OpenSpec esta valida em --strict; a prova real permanece gate separado, sem homolog/banco/provider nesta rodada.
+**Status:** **PLANEJAMENTO ACEITO EM 2026-11-12; 5 PLANOS EM 4 WAVES; WAVE 1 (60.4-01) AUTORIZADA; NENHUM CODIGO IMPLEMENTADO AINDA; 60.4-05 BLOQUEADO.** Fatia independente da iniciativa 60; F60, F60.1, F60.3 e o fluxo 1:1 permanecem encerrados e nao sao redesenhados. A change OpenSpec esta valida em --strict; a prova real permanece gate separado, sem homolog/banco/provider nesta rodada.
 
 **Goal:** Entregar a geracao de copy e arte quadrada como etapa interna reutilizavel pelo futuro orquestrador 9:16, preservando o fluxo 1:1 atual. O modulo recebe identidade/autorizacao e tentativa F60 explicitas, reutiliza compositor, snapshot/evidencia, copy, gateway/adapter de imagem, conversao JPEG 1024, F60.1 square_original e telemetria existentes; distingue primeira composicao de retomada com conteudo congelado; garante uma chamada de imagem e uma requisicao de copy sem retry oculto; devolve copy e arte distinguiveis ou falhas tipadas. Sem credito, entrega publica, UI, ativacao, expansao, preparacao 1152, migration ou chamada paga nesta fatia.
 
 **Source:** openspec/changes/fase-60-4-composicao-e-persistencia-da-base-quadrada/ (proposal, design, 10 requisitos / 45 cenarios e 42 tarefas; OpenSpec --strict valido).
 
-**Plans:** 4 plans (waves 1-4; `60.4-04` e a prova real autorizada, `autonomous: false`, somente apos checkpoint explicito e sem executar nesta rodada).
+**Plans:** 5 plans (waves 1-4; `60.4-05` e a prova real autorizada, `autonomous: false`, somente apos checkpoint explicito e sem executar nesta rodada).
 
 Plans:
-- [ ] 60.4-01-PLAN.md — Contratos puros, politica/validacao fail-closed, estado congelado + payload canonico, prompt 1:1 e configuracao congelada (primeira composicao x retomada)
+- [ ] 60.4-01-PLAN.md — Contratos puros, politica/validacao fail-closed, estado congelado + payload canonico, prompt 1:1 e configuracao congelada (primeira composicao x retomada, preflight falho tipado)
 - [ ] 60.4-02-PLAN.md — Gate linha/objeto, compatibilidade/adocao F60.1, transporte single-shot sem retry oculto, classificacao F60 e conversao/persistencia/readback JPEG 1024
-- [ ] 60.4-03-PLAN.md — Copy com conteudo congelado e sem retry oculto (+ opcao aditiva `maxRetries`), orquestracao/resultado tipado, telemetria, fronteiras/regressao/concorrencia e gates
-- [ ] 60.4-04-PLAN.md — Prova real autorizada separada (checkpoint bloqueante; nao executar nesta rodada)
+- [ ] 60.4-03-PLAN.md — Copy com conteudo congelado e desfechos fechados, invoker sem retry oculto e opcao aditiva `maxRetries` nos adapters textuais
+- [ ] 60.4-04-PLAN.md — `runSquareBase` (ordem do design, autorizacao negada sem leitura, preflight falho sem excecao, `snapshotOriginalId`), telemetria do sink unico, fronteiras/regressao/concorrencia e suite focada completa + typecheck/lint/diff
+- [ ] 60.4-05-PLAN.md — Prova real autorizada separada (checkpoint bloqueante; nao executar nesta rodada)
 
 **Depends on:** Phase 60 (controle da operacao em duas etapas), Phase 60.1 (artefatos de composicao), Phase 60.3 (expansao 9:16 e opcoes de transporte sem retry), migration F60.1 aplicada em homolog e OpenSpec desta change aprovado.
 
