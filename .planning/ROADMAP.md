@@ -894,7 +894,7 @@ Plans:
 - [x] 60.4-02-PLAN.md — Gate linha/objeto, compatibilidade/adocao F60.1, transporte single-shot sem retry oculto, classificacao F60 e conversao/persistencia/readback JPEG 1024
 - [x] 60.4-03-PLAN.md — Copy com conteudo congelado e desfechos fechados, invoker sem retry oculto e opcao aditiva `maxRetries` nos adapters textuais
 - [x] 60.4-04-PLAN.md — `runSquareBase` (ordem do design, autorização negada sem leitura, preflight falho sem exceção, `snapshotOriginalId`), telemetria do sink único, fronteiras/regressão/concorrência, deadline ÚNICO (orçamento restante em config/reparo/transporte) e suíte focada completa + typecheck/lint/diff — **EXECUTADO EM 2026-11-12; ACEITO EM 2026-11-12 (773/773 testes; typecheck 0; diff limpo)**
-- [x] 60.4-05-PLAN.md — Prova real autorizada separada (checkpoint bloqueante) — **CONCLUÍDO E ACEITO EM 2026-11-12: 1 imagem + 1 copy, technical PASS, custo US$ 0,042885 <= US$ 0,100000; aceite humano aprovado; sync/archive pendentes**
+- [x] 60.4-05-PLAN.md — Prova real autorizada separada (checkpoint bloqueante) — **CONCLUÍDO E ACEITO EM 2026-11-12: 1 imagem + 1 copy, technical PASS, custo US$ 0,042885 <= US$ 0,100000; aceite humano aprovado; sync/archive concluídos**
 
 **Depends on:** Phase 60 (controle da operacao em duas etapas), Phase 60.1 (artefatos de composicao), Phase 60.3 (expansao 9:16 e opcoes de transporte sem retry), migration F60.1 aplicada em homolog e OpenSpec desta change aprovado.
 
