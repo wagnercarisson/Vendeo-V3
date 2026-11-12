@@ -900,12 +900,15 @@ export async function runSquareBase(
           });
         } else {
           const persist = deps.persistArtifact ?? persistSquareBaseArtifact;
-          const persisted = await persist({
-            identity: destination,
-            authorization: valid.authorization,
-            bytes: converted.bytes,
-            snapshotOriginalId,
-          });
+          const persisted = await persist(
+            {
+              identity: destination,
+              authorization: valid.authorization,
+              bytes: converted.bytes,
+              snapshotOriginalId,
+            },
+            deps.client === undefined ? {} : { client: deps.client },
+          );
           if (persisted.kind === "created" || persisted.kind === "reused") {
             const art = artifactOutcomeFromPersist(persisted);
             pending =
