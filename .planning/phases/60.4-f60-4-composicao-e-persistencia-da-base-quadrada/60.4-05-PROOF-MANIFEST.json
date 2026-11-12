@@ -2,7 +2,7 @@
   "kind": "f60.4-proof-manifest",
   "plan": "60.4-05",
   "phase": "60.4-f60-4-composicao-e-persistencia-da-base-quadrada",
-  "status": "awaiting_authorization",
+  "status": "awaiting_visual_acceptance",
   "createdAt": "2026-11-12T19:02:58.000Z",
   "environment": {
     "target": "homolog-existing",
@@ -113,23 +113,197 @@
     "proposedBudgetUsd": 0.1
   },
   "authorization": {
-    "decision": "pending",
-    "decidedAt": null,
-    "decidedBy": null,
+    "decision": "approved",
+    "decidedAt": "2026-11-12T19:10:00.000Z",
+    "decidedBy": "operator",
     "requestedAt": "2026-11-12T19:02:58.000Z",
+    "authorizedBudgetUsd": 0.1,
+    "maxImageCalls": 1,
+    "maxCopyRequests": 1,
     "requestedBudgetUsd": 0.1,
     "requestedMaxImageCalls": 1,
     "requestedMaxCopyRequests": 1,
-    "notes": "Awaiting explicit operator decision: authorize, reject or change-source."
+    "notes": "Autorizado explicitamente pelo operador em 2026-11-12; teto US$ 0,100000; 1 imagem + no máximo 1 copy."
   },
   "preflight": {
-    "status": "not_executed",
-    "reason": "requires explicit authorization"
+    "status": "passed",
+    "executedAt": "2026-11-12T19:16:46.357Z",
+    "items": [
+      {
+        "id": "environment",
+        "label": "Homolog existente",
+        "status": "PASS",
+        "detail": "API 127.0.0.1:57781; DB 127.0.0.1:57782/postgres; produção não consultada",
+        "critical": true
+      },
+      {
+        "id": "credential_product",
+        "label": "Credencial de produto",
+        "status": "PASS",
+        "detail": "OPENAI_API_KEY presente; OPENAI_BENCH_API_KEY não é usada silenciosamente",
+        "critical": true
+      },
+      {
+        "id": "credential_supabase",
+        "label": "Credenciais Supabase",
+        "status": "PASS",
+        "detail": "service role e anon presentes",
+        "critical": true
+      },
+      {
+        "id": "module_import",
+        "label": "Módulo importável",
+        "status": "PASS",
+        "detail": "runSquareBase importado sem executar",
+        "critical": true
+      },
+      {
+        "id": "campaign",
+        "label": "Campanha fonte",
+        "status": "PASS",
+        "detail": "status=ready; product=Mouse Sem Fio Recarregável; storagePath presente",
+        "critical": true
+      },
+      {
+        "id": "store_link",
+        "label": "Vínculo loja↔campanha",
+        "status": "PASS",
+        "detail": "store=Loja Mega Vale",
+        "critical": true
+      },
+      {
+        "id": "frozen_absent",
+        "label": "Estado congelado ausente",
+        "status": "PASS",
+        "detail": "snapshots=0; bindings=0; evidences=0",
+        "critical": true
+      },
+      {
+        "id": "square_original_absent",
+        "label": "square_original ausente",
+        "status": "PASS",
+        "detail": "linhas=0",
+        "critical": true
+      },
+      {
+        "id": "config",
+        "label": "Configuração ativa",
+        "status": "PASS",
+        "detail": "gpt-image-2.5-sunburst/medium; fallback gpt-image-2/low",
+        "critical": true
+      },
+      {
+        "id": "pricing",
+        "label": "Pricing completo",
+        "status": "PASS",
+        "detail": "primary=0.044; fallback=0.042",
+        "critical": true
+      },
+      {
+        "id": "budget",
+        "label": "Orçamento autorizado",
+        "status": "PASS",
+        "detail": "authorized=0.1; imageEstimate=0.044",
+        "critical": true
+      },
+      {
+        "id": "bucket",
+        "label": "Bucket F60.1",
+        "status": "PASS",
+        "detail": "campaign-internal-artifacts",
+        "critical": true
+      },
+      {
+        "id": "telemetry_table",
+        "label": "Telemetria existente",
+        "status": "PASS",
+        "detail": "generation_events acessível",
+        "critical": true
+      },
+      {
+        "id": "credits",
+        "label": "Créditos legíveis",
+        "status": "PASS",
+        "detail": "balance=1",
+        "critical": true
+      },
+      {
+        "id": "product_images",
+        "label": "Imagens de produto",
+        "status": "PASS",
+        "detail": "primary:true; reference:true",
+        "critical": true
+      },
+      {
+        "id": "identity_asset",
+        "label": "Assinatura visual",
+        "status": "INFO",
+        "detail": "lida do homolog-bucket (image/png, 884182 B)",
+        "critical": false
+      }
+    ],
+    "ready": true
   },
-  "calls": [],
-  "providerCalls": 0,
-  "aiCalls": 0,
-  "writesPerformed": 0,
+  "calls": [
+    {
+      "callId": "de1bddcd-3304-4951-8251-cfdb24c8b1ed",
+      "operationId": "ca2fed59-2786-4833-8357-4f14838921d2",
+      "attemptNumber": 1,
+      "attemptReference": "f60.4-base-5cd45cd3-98d9-4efd-be79-f34ca222c60e",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "protocol": "images",
+      "quality": "medium",
+      "requestedSize": "1024x1024",
+      "durationMs": 31913,
+      "callStatus": "success",
+      "outcome": "generated",
+      "usage": {
+        "promptTokens": 3909,
+        "completionTokens": 439,
+        "totalTokens": 4348,
+        "inputTextTokens": 573,
+        "inputImageTokens": 3336,
+        "outputTextTokens": 0,
+        "outputImageTokens": 439
+      },
+      "cost": {
+        "estimatedCostUsd": 0.042723,
+        "costSource": "pricing_table",
+        "pricingVersion": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+        "costFormulaVersion": "product_1_1_image_usage_tokens_v1",
+        "costEstimationNote": "product_1_1_image_usage_tokens",
+        "textComponentUsd": 0.002865,
+        "imageToolComponentUsd": 0.039858,
+        "imageToolPricingProvider": "openai",
+        "imageToolPricingModel": "gpt-image-2.5-sunburst",
+        "imageToolPricingVersion": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+        "productOneToOneImageUsage": {
+          "origin": "usage_tokens",
+          "formulaVersion": "product_1_1_image_usage_tokens_v1",
+          "pricingVersion": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+          "pricingSource": "pricing_table",
+          "model": "gpt-image-2.5-sunburst",
+          "quality": "medium",
+          "inputTextTokens": 573,
+          "cachedInputTextTokens": 0,
+          "inputImageTokens": 3336,
+          "cachedInputImageTokens": 0,
+          "outputTextTokens": 0,
+          "outputImageTokens": 439,
+          "textComponentUsd": 0.002865,
+          "imageComponentUsd": 0.039858,
+          "coverage": "complete",
+          "missing": [],
+          "cacheMode": "none",
+          "usageBreakdown": "detailed"
+        }
+      }
+    }
+  ],
+  "providerCalls": 1,
+  "aiCalls": 1,
+  "writesPerformed": true,
   "writesAuthorizedAfterApproval": [
     "image_generation_config_snapshots (1 row)",
     "product_1_1_snapshot_content_binding (1 row)",
@@ -147,5 +321,288 @@
     "campaigns before != after",
     "unknown result: stop, preserve evidence, never retry"
   ],
-  "declaration": "Preparation only. No provider/OpenAI call, no paid call, no database/Storage write, no migration, no reset, no campaign/credit/delivery change. providerCalls=0, aiCalls=0, writesPerformed=0."
+  "declaration": "Uma única chamada de imagem executada; arte criada e evidência preservada; aguardando aceite visual humano.",
+  "executedAt": "2026-11-12T19:16:46.357Z",
+  "result": {
+    "kind": "completed",
+    "reason": null,
+    "detail": null,
+    "durationMs": 32152,
+    "thrown": null
+  },
+  "copyOutcome": {
+    "kind": "completed",
+    "attemptSeq": 1,
+    "text": "Mais conforto e liberdade para sua rotina! O Mouse Sem Fio Recarregável tem design ergonômico e bateria durável para acompanhar suas horas de uso. De R$ 24,50 por R$ 19,90 na NovaTek Eletrônicos. Aproveite e confira na loja!",
+    "payload": {
+      "title": "Mouse Sem Fio: conforto por R$ 19,90",
+      "caption": "Mais conforto e liberdade para sua rotina! O Mouse Sem Fio Recarregável tem design ergonômico e bateria durável para acompanhar suas horas de uso. De R$ 24,50 por R$ 19,90 na NovaTek Eletrônicos. Aproveite e confira na loja!",
+      "cta_post": "Confira essa oferta na NovaTek!",
+      "hashtags": [
+        "#MouseSemFio",
+        "#Eletrônicos",
+        "#Oferta",
+        "#NovaTekEletrônicos"
+      ],
+      "toneDescription": "Moderno, confiável e direto"
+    },
+    "origin": "generated"
+  },
+  "artifact": {
+    "id": "3ef5d3ef-771c-4939-8560-65779efe0b99",
+    "storageBucket": "campaign-internal-artifacts",
+    "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70/ca2fed59-2786-4833-8357-4f14838921d2/square_original.jpg",
+    "byteSize": 227001,
+    "checksumSha256": "2aa93123fa22b9caf7fe19aa32d365254daef6ed0f2069c4e489df886106f663",
+    "width": 1024,
+    "height": 1024,
+    "mimeType": "image/jpeg",
+    "origin": "provider_generation",
+    "snapshotOriginalId": "96d05407-b69d-402c-a54d-36616d677cd7",
+    "localImagePath": "C:\\Projetos\\Vendeo V3\\.planning\\phases\\60.4-f60-4-composicao-e-persistencia-da-base-quadrada\\evidence\\square-original-1024.jpg"
+  },
+  "telemetry": {
+    "imageEvents": [
+      {
+        "id": "967b95ed-2ed3-4ed7-ab8d-f5ff6746e2c5",
+        "operation_run_id": "ca2fed59-2786-4833-8357-4f14838921d2",
+        "trace_id": "de1bddcd-3304-4951-8251-cfdb24c8b1ed",
+        "provider": "openai",
+        "model": "gpt-image-2.5-sunburst",
+        "attempt_number": 1,
+        "status": "success",
+        "estimated_cost_usd": 0.042723,
+        "cost_source": "pricing_table",
+        "pricing_version": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+        "error_type": null
+      }
+    ],
+    "allOperationEvents": [
+      {
+        "id": "1116537b-dfc5-4950-a16e-aebf94d6b9f2",
+        "operation_run_id": "ca2fed59-2786-4833-8357-4f14838921d2",
+        "trace_id": "48ba68a9-2769-4674-b39a-be91bb394d70",
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "attempt_number": 0,
+        "status": "success",
+        "estimated_cost_usd": 0.000162,
+        "cost_source": "pricing_table",
+        "pricing_version": "1f8a61f1-e965-43e9-9700-5dc029bf2338",
+        "error_type": null
+      },
+      {
+        "id": "967b95ed-2ed3-4ed7-ab8d-f5ff6746e2c5",
+        "operation_run_id": "ca2fed59-2786-4833-8357-4f14838921d2",
+        "trace_id": "de1bddcd-3304-4951-8251-cfdb24c8b1ed",
+        "provider": "openai",
+        "model": "gpt-image-2.5-sunburst",
+        "attempt_number": 1,
+        "status": "success",
+        "estimated_cost_usd": 0.042723,
+        "cost_source": "pricing_table",
+        "pricing_version": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+        "error_type": null
+      }
+    ],
+    "error": null
+  },
+  "preservation": {
+    "campaignsBefore": {
+      "id": "48ba68a9-2769-4674-b39a-be91bb394d70",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70.jpg",
+      "updated_at": "2026-09-30T17:54:07.464254+00:00"
+    },
+    "campaignsAfter": {
+      "id": "48ba68a9-2769-4674-b39a-be91bb394d70",
+      "status": "ready",
+      "storage_path": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70.jpg",
+      "updated_at": "2026-09-30T17:54:07.464254+00:00"
+    },
+    "campaignsUnchanged": true,
+    "creditsBefore": {
+      "balance": 1,
+      "updated_at": "2026-10-26T21:49:49.824856+00:00"
+    },
+    "creditsAfter": {
+      "balance": 1,
+      "updated_at": "2026-10-26T21:49:49.824856+00:00"
+    },
+    "creditsUnchanged": true,
+    "inputImagesBefore": [
+      {
+        "path": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70/inputs/e1ca1f1a-cc64-4303-9b70-21f746822fc5.jpg",
+        "role": "primary",
+        "mimeType": "image/jpeg",
+        "exists": true,
+        "byteSize": 54523,
+        "contentType": "image/jpeg",
+        "lastModified": "2026-10-16T20:37:08.460Z"
+      },
+      {
+        "path": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70/inputs/693bec9d-8741-4c93-af74-fa5b42079ef3.jpg",
+        "role": "reference",
+        "mimeType": "image/jpeg",
+        "exists": true,
+        "byteSize": 87532,
+        "contentType": "image/jpeg",
+        "lastModified": "2026-10-16T20:37:08.133Z"
+      }
+    ],
+    "inputImagesAfter": [
+      {
+        "path": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70/inputs/e1ca1f1a-cc64-4303-9b70-21f746822fc5.jpg",
+        "role": "primary",
+        "mimeType": "image/jpeg",
+        "exists": true,
+        "byteSize": 54523,
+        "contentType": "image/jpeg",
+        "lastModified": "2026-10-16T20:37:08.460Z"
+      },
+      {
+        "path": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70/inputs/693bec9d-8741-4c93-af74-fa5b42079ef3.jpg",
+        "role": "reference",
+        "mimeType": "image/jpeg",
+        "exists": true,
+        "byteSize": 87532,
+        "contentType": "image/jpeg",
+        "lastModified": "2026-10-16T20:37:08.133Z"
+      }
+    ]
+  },
+  "technical": {
+    "status": "pass",
+    "items": [
+      {
+        "id": "result",
+        "label": "Resultado tipado",
+        "status": "PASS",
+        "detail": "kind=completed",
+        "critical": true
+      },
+      {
+        "id": "one_image_call",
+        "label": "Uma chamada de imagem",
+        "status": "PASS",
+        "detail": "providerCalls=1",
+        "critical": true
+      },
+      {
+        "id": "copy",
+        "label": "Copy",
+        "status": "PASS",
+        "detail": "kind=completed",
+        "critical": true
+      },
+      {
+        "id": "campaigns_unchanged",
+        "label": "campaigns preservada",
+        "status": "PASS",
+        "detail": "sem diferença",
+        "critical": true
+      },
+      {
+        "id": "credits_unchanged",
+        "label": "Créditos preservados",
+        "status": "PASS",
+        "detail": "sem diferença",
+        "critical": true
+      },
+      {
+        "id": "input_images_unchanged",
+        "label": "Imagens de entrada preservadas",
+        "status": "PASS",
+        "detail": "sem diferença",
+        "critical": true
+      },
+      {
+        "id": "art_created",
+        "label": "Arte criada",
+        "status": "PASS",
+        "detail": "artifact=3ef5d3ef-771c-4939-8560-65779efe0b99",
+        "critical": true
+      },
+      {
+        "id": "artifact_checksum",
+        "label": "Checksum do artefato",
+        "status": "PASS",
+        "detail": "2aa93123fa22b9caf7fe19aa32d365254daef6ed0f2069c4e489df886106f663 vs 2aa93123fa22b9caf7fe19aa32d365254daef6ed0f2069c4e489df886106f663",
+        "critical": true
+      },
+      {
+        "id": "artifact_dimensions",
+        "label": "Dimensões 1024x1024",
+        "status": "PASS",
+        "detail": "1024x1024",
+        "critical": true
+      },
+      {
+        "id": "artifact_mime",
+        "label": "MIME JPEG",
+        "status": "PASS",
+        "detail": "jpeg",
+        "critical": true
+      },
+      {
+        "id": "snapshot_original_id",
+        "label": "snapshotOriginalId",
+        "status": "PASS",
+        "detail": "96d05407-b69d-402c-a54d-36616d677cd7",
+        "critical": true
+      },
+      {
+        "id": "cost_known",
+        "label": "Custo conhecido e dentro do teto",
+        "status": "PASS",
+        "detail": "0.042723 <= 0.1 (pricing_table)",
+        "critical": true
+      },
+      {
+        "id": "telemetry",
+        "label": "Telemetria da imagem",
+        "status": "PASS",
+        "detail": "events=2; imageEvents=1",
+        "critical": true
+      },
+      {
+        "id": "total_cost",
+        "label": "Custo total conhecido e dentro do teto",
+        "status": "PASS",
+        "detail": "0.042885 <= 0.1",
+        "critical": true
+      }
+    ]
+  },
+  "visual": {
+    "status": "pending",
+    "responsible": "operador",
+    "localImagePath": "C:\\Projetos\\Vendeo V3\\.planning\\phases\\60.4-f60-4-composicao-e-persistencia-da-base-quadrada\\evidence\\square-original-1024.jpg",
+    "checkedAt": null,
+    "notes": null
+  },
+  "decision": "pending_visual_acceptance",
+  "writesVerified": {
+    "imageGenerationConfigSnapshots": 1,
+    "snapshotContentBindings": 1,
+    "snapshotFrozenEvidence": 1,
+    "campaignCompositionArtifacts": 1,
+    "artifactStorageObjects": 1,
+    "copyState": 1,
+    "generationEvents": 2
+  },
+  "copyCostUsd": 0.000162,
+  "totalObservedCostUsd": 0.042885,
+  "verification": {
+    "snapshotOriginalId": "96d05407-b69d-402c-a54d-36616d677cd7",
+    "operationId": "ca2fed59-2786-4833-8357-4f14838921d2",
+    "artifactRows": 1,
+    "copyStateRows": 1,
+    "generationEvents": 2,
+    "imageEvents": 1,
+    "copyEvents": 1,
+    "campaignsUnchanged": true,
+    "creditsUnchanged": true,
+    "inputImagesUnchanged": true
+  }
 }
