@@ -327,6 +327,82 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
       "@/lib/product-1-1/pilot/spend-control",
     ],
   },
+  // F60.4 — a base quadrada REUTILIZA a engine/políticas/copy/artefato do 1:1.
+  // SOMENTE pares EXPLÍCITOS por importador de RUNTIME do módulo `square-base`;
+  // nunca um prefixo `square-base/**` nem `product-1-1/**`. O teste de conjunto
+  // abaixo é a autoridade contra o fonte real.
+  ["src/lib/campaign/square-base/types.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/copy/default-copy-runner",
+      "@/lib/product-1-1/intent-selection",
+      "@/lib/product-1-1/policies/types",
+      "@/lib/product-1-1/snapshot/persist-snapshot",
+    ],
+  },
+  ["src/lib/campaign/square-base/validation.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/copy/default-copy-runner",
+      "@/lib/product-1-1/intent-selection",
+      "@/lib/product-1-1/policies/types",
+      "@/lib/product-1-1/snapshot/persist-snapshot",
+    ],
+  },
+  ["src/lib/campaign/square-base/frozen-state.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/background-direction",
+      "@/lib/product-1-1/intent-selection",
+      "@/lib/product-1-1/snapshot/persist-snapshot",
+    ],
+  },
+  ["src/lib/campaign/square-base/prompt.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/policies/types",
+      "@/lib/product-1-1/prompt-base",
+      "@/lib/product-1-1/prompt-composition",
+      "@/lib/product-1-1/snapshot/persist-snapshot",
+    ],
+  },
+  ["src/lib/campaign/square-base/config.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/orchestration/deadline",
+      "@/lib/product-1-1/orchestration/preflight",
+      "@/lib/product-1-1/prompt-composition",
+      "@/lib/product-1-1/snapshot/persist-snapshot",
+    ],
+  },
+  ["src/lib/campaign/square-base/artifact.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/artifact/artifact-store"],
+  },
+  ["src/lib/campaign/square-base/copy.ts"]: {
+    prefixes: [],
+    exact: [
+      "@/lib/product-1-1/copy/copy-acquisition-client",
+      "@/lib/product-1-1/copy/copy-recovery",
+      "@/lib/product-1-1/copy/copy-state",
+      "@/lib/product-1-1/copy/default-copy-runner",
+      "@/lib/product-1-1/orchestration/deadline",
+    ],
+  },
+  ["src/lib/campaign/square-base/transport.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/orchestration/deadline"],
+  },
+  ["src/lib/campaign/square-base/run-square-base.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/orchestration/deadline"],
+  },
+  ["src/lib/campaign/square-base/telemetry.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/orchestration/instrumentation"],
+  },
 });
 const SIDE_EFFECT_IMPORT_RE =
   /(?:from\s*|import\s*\(\s*)["'][^"']*(?:\/api\/campaign|\/adapters?(?:\/|$)|\/gateway(?:\/|$)|provider|\/credit(?:\/|$)|delivery|download|image-generation-operations-repository|prompt-composition)[^"']*["']/i;
@@ -1280,5 +1356,72 @@ describe("Product 1:1 — reconciliação G-NA (Plano 02 — F56.2b2b rota da re
     );
     expect(collectProductFlowImports(source)).toEqual([]);
     expect(source).not.toMatch(/from\s+["'][^"']*product-1-1/);
+  });
+});
+
+// F60.4 — a base quadrada é um importador NOVO de `product-1-1`. A
+// reconciliação é TEST-ONLY: apenas o mapa de pares importer→specifier acima e
+// este bloco; nenhuma regra existente é alterada e nenhum runtime muda.
+const SQUARE_BASE_PRODUCT_FLOW_IMPORTERS: readonly string[] = Object.freeze([
+  "src/lib/campaign/square-base/types.ts",
+  "src/lib/campaign/square-base/validation.ts",
+  "src/lib/campaign/square-base/frozen-state.ts",
+  "src/lib/campaign/square-base/prompt.ts",
+  "src/lib/campaign/square-base/config.ts",
+  "src/lib/campaign/square-base/artifact.ts",
+  "src/lib/campaign/square-base/copy.ts",
+  "src/lib/campaign/square-base/transport.ts",
+  "src/lib/campaign/square-base/run-square-base.ts",
+  "src/lib/campaign/square-base/telemetry.ts",
+]);
+
+describe("F60.4 — pares exatos square-base ↔ product-1-1 (test-only)", () => {
+  it("cada importador registrado corresponde EXATAMENTE ao conjunto real de specifiers", () => {
+    for (const importer of SQUARE_BASE_PRODUCT_FLOW_IMPORTERS) {
+      const source = readFileSync(path.resolve(process.cwd(), importer), "utf8");
+      const actual = new Set(collectProductFlowImports(source));
+      const rule = AUTHORIZED_PRODUCT_FLOW_IMPORTS[importer];
+
+      expect(rule, importer).toBeDefined();
+      expect(rule.prefixes, importer).toEqual([]);
+      expect(new Set(rule.exact ?? []), importer).toEqual(actual);
+    }
+  });
+
+  it("nenhum runtime square-base importa product-1-1 sem par registrado", () => {
+    const sources = collectRuntimeSources(
+      path.resolve(SOURCE_ROOT, "lib/campaign/square-base"),
+    );
+    const missing = sources
+      .filter(
+        ({ absolutePath }) =>
+          collectProductFlowImports(readFileSync(absolutePath, "utf8")).length > 0,
+      )
+      .map(({ relativePath }) => relativePath)
+      .filter((relativePath) => !SQUARE_BASE_PRODUCT_FLOW_IMPORTERS.includes(relativePath));
+
+    expect(missing).toEqual([]);
+  });
+
+  it("o mapa square-base não contém prefixo amplo nem exceção por diretório", () => {
+    for (const importer of SQUARE_BASE_PRODUCT_FLOW_IMPORTERS) {
+      const rule = AUTHORIZED_PRODUCT_FLOW_IMPORTS[importer];
+      expect(rule.prefixes, importer).toEqual([]);
+      for (const exact of rule.exact ?? []) {
+        expect(exact, `${importer}::${exact}`).not.toBe("@/lib/product-1-1/");
+        expect(exact.endsWith("/product-1-1/"), `${importer}::${exact}`).toBe(false);
+      }
+    }
+  });
+
+  it("um importador square-base novo (fora do mapa) é violação", () => {
+    const source =
+      'import { runProductOneToOneGeneration } from "@/lib/product-1-1/orchestration/generation-orchestrator";';
+    expect(
+      hasUnauthorizedProductFlowImport(
+        "src/lib/campaign/square-base/novo-runtime.ts",
+        source,
+      ),
+    ).toBe(true);
   });
 });

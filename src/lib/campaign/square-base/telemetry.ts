@@ -6,8 +6,8 @@ import "server-only";
  * O gateway emite EXATAMENTE um envelope por chamada real. Este módulo
  * bufferiza esse envelope até o desfecho da base ser conhecido, decora apenas os
  * campos da allowlist `SQUARE_BASE_TELEMETRY_FIELDS` e entrega o evento ao sink
- * ÚNICO (`DefaultAiTelemetrySink`) — nenhuma escrita direta em
- * `generation_events` e nenhum sink paralelo.
+ * ÚNICO (`DefaultAiTelemetrySink`) — nenhuma escrita direta de eventos e nenhum
+ * sink paralelo.
  *
  * Regras (design D9 / T-60.4-19):
  * - `operationRunId = operationId` da operação e `traceId = callId` correlacionam
