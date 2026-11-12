@@ -881,7 +881,7 @@ Plans:
 
 ### Phase 60.4: F60.4 - Composicao e persistencia da base quadrada
 
-**Status:** **60.4-01 (WAVE 1) EXECUTADO EM 2026-11-12; 157 TESTES OFFLINE + TYPECHECK 0; AGUARDANDO REVISÃO; WAVE 2 NÃO INICIADA; 60.4-05 BLOQUEADO.** Fatia independente da iniciativa 60; F60, F60.1, F60.3 e o fluxo 1:1 permanecem encerrados e nao sao redesenhados. A change OpenSpec esta valida em --strict; a prova real permanece gate separado, sem homolog/banco/provider nesta rodada. `PHASE_BASE_SHA=55276323648797b79a121f3075b83b9469e25a69`.
+**Status:** **60.4-01 (WAVE 1) EXECUTADO EM 2026-11-12; 161 TESTES OFFLINE + TYPECHECK 0; CORREÇÃO PÓS-REVISÃO DE REFERÊNCIAS APLICADA; AGUARDANDO REVISÃO; WAVE 2 NÃO INICIADA; 60.4-05 BLOQUEADO.** Fatia independente da iniciativa 60; F60, F60.1, F60.3 e o fluxo 1:1 permanecem encerrados e nao sao redesenhados. A change OpenSpec esta valida em --strict; a prova real permanece gate separado, sem homolog/banco/provider nesta rodada. `PHASE_BASE_SHA=55276323648797b79a121f3075b83b9469e25a69`.
 
 **Goal:** Entregar a geracao de copy e arte quadrada como etapa interna reutilizavel pelo futuro orquestrador 9:16, preservando o fluxo 1:1 atual. O modulo recebe identidade/autorizacao e tentativa F60 explicitas, reutiliza compositor, snapshot/evidencia, copy, gateway/adapter de imagem, conversao JPEG 1024, F60.1 square_original e telemetria existentes; distingue primeira composicao de retomada com conteudo congelado; garante uma chamada de imagem e uma requisicao de copy sem retry oculto; devolve copy e arte distinguiveis ou falhas tipadas. Sem credito, entrega publica, UI, ativacao, expansao, preparacao 1152, migration ou chamada paga nesta fatia.
 
