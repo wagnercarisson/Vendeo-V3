@@ -377,6 +377,8 @@ export type FrozenStateReadResult =
   | {
       readonly kind: "repairable";
       readonly snapshot: FrozenSnapshotRecord;
+      /** `operation_id` do binding (mesma operação da entrada, já verificado). */
+      readonly operationId: string;
       readonly fingerprint: string;
       readonly snapshotOriginalId: string;
     }

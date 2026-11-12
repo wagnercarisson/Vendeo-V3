@@ -669,6 +669,7 @@ export async function readSquareBaseFrozenState(
     return Object.freeze({
       kind: "repairable" as const,
       snapshot,
+      operationId: input.operationId,
       fingerprint: bindingRow.content_fingerprint,
       snapshotOriginalId,
     });

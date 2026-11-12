@@ -367,7 +367,7 @@ describe("F60.4 contract — estado congelado e payload", () => {
     const states: FrozenStateReadResult[] = [
       { kind: "absent" },
       { kind: "complete", snapshot, evidence, fingerprint: "f", payload: FROZEN_PAYLOAD, snapshotOriginalId: "snap-1" },
-      { kind: "repairable", snapshot, fingerprint: "f", snapshotOriginalId: "snap-1" },
+      { kind: "repairable", snapshot, operationId: "op-1", fingerprint: "f", snapshotOriginalId: "snap-1" },
       { kind: "bound_to_other_operation", snapshot, operationId: "op-other", snapshotOriginalId: "snap-1" },
       { kind: "unproven", snapshot, snapshotOriginalId: "snap-1" },
       { kind: "corrupt", reason: "frozen_content_invalid" },
