@@ -1,0 +1,151 @@
+{
+  "kind": "f60.4-proof-manifest",
+  "plan": "60.4-05",
+  "phase": "60.4-f60-4-composicao-e-persistencia-da-base-quadrada",
+  "status": "awaiting_authorization",
+  "createdAt": "2026-11-12T19:02:58.000Z",
+  "environment": {
+    "target": "homolog-existing",
+    "api": "http://127.0.0.1:57781",
+    "db": "127.0.0.1:57782/postgres",
+    "productionConsulted": false,
+    "infrastructureReused": true,
+    "migrationsCreatedOrApplied": 0,
+    "containersCreatedOrReset": 0,
+    "preparationMode": "read-only"
+  },
+  "source": {
+    "kind": "existing-campaign",
+    "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+    "storeNameCurrent": "Loja Mega Vale",
+    "campaignId": "48ba68a9-2769-4674-b39a-be91bb394d70",
+    "productName": "Mouse Sem Fio Recarregável",
+    "campaignStatus": "ready",
+    "campaignOperationRunId": "6554373b-e847-4024-adca-4e670424c0bf",
+    "campaignStoragePath": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70.jpg",
+    "operationIdProposed": "ca2fed59-2786-4833-8357-4f14838921d2",
+    "attemptReferenceProposed": "f60.4-base-5cd45cd3-98d9-4efd-be79-f34ca222c60e",
+    "frozenState": "absent",
+    "snapshotRows": 0,
+    "bindingRows": 0,
+    "evidenceRows": 0,
+    "squareOriginalRows": 0,
+    "content": {
+      "productName": "Mouse Sem Fio Recarregável",
+      "description": "Desenvolvido para oferecer conforto e ergonomia, com bateria durável permitindo longas horas de uso.",
+      "intent": "offer",
+      "originalPriceCents": 2450,
+      "discountedPriceCents": 1990,
+      "badgeText": "Oferta",
+      "validityDisplayText": "até 10/10/2026",
+      "validityEnabled": true,
+      "legalNotice": "Imagem meramente ilustrativa\nConectividade Bluetooth e USB \nIluminação Led RGB Colorida\nIdeal para uso em Notebook e Desktop",
+      "legalNoticeEnabled": true
+    },
+    "media": {
+      "bucket": "campaign-images",
+      "images": [
+        {
+          "id": "6a3cd58a-dfe9-45b2-b4bb-0658e9e3527c",
+          "role": "primary",
+          "mimeType": "image/jpeg",
+          "provided": true,
+          "byteSize": 54523,
+          "exists": true,
+          "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70/inputs/e1ca1f1a-cc64-4303-9b70-21f746822fc5.jpg"
+        },
+        {
+          "id": "2eef1f43-4337-436b-adb3-7f85e90d6cb2",
+          "role": "reference",
+          "mimeType": "image/jpeg",
+          "provided": true,
+          "byteSize": 87532,
+          "exists": true,
+          "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/48ba68a9-2769-4674-b39a-be91bb394d70/inputs/693bec9d-8741-4c93-af74-fa5b42079ef3.jpg"
+        }
+      ]
+    },
+    "identity": {
+      "storeName": "NovaTek Eletrônicos",
+      "storeSegment": "eletronicos-tecnologia",
+      "subsegment": "eletronicos-tecnologia",
+      "toneOfVoice": "moderno",
+      "identityState": "visual_signature",
+      "signatureType": "visual_signature",
+      "signatureUrlPersisted": false,
+      "signatureReadPlan": "read-only download and data-URL conversion; fallback to identityDirective if unavailable"
+    }
+  },
+  "target": {
+    "attemptNumber": 1,
+    "target": "primary",
+    "model": "gpt-image-2.5-sunburst",
+    "quality": "medium",
+    "requestedSize": "1024x1024",
+    "protocol": "images",
+    "configVersionId": "0c8925d5-5aff-4c90-a007-9dd32750b80f",
+    "configOrigin": "human_decision",
+    "fallbackModel": "gpt-image-2",
+    "fallbackQuality": "low",
+    "fallbackWillBeCalled": false,
+    "pricingVersion": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+    "imageUnitUsd": 0.044
+  },
+  "credential": {
+    "provider": "openai",
+    "reference": "OPENAI_API_KEY via getApiKey(\"openai\")",
+    "benchKeyAllowed": false,
+    "secretPrinted": false
+  },
+  "limits": {
+    "maxImageCalls": 1,
+    "maxCopyRequests": 1,
+    "copyOnlyIfEnabled": true,
+    "maxTotalProviderCalls": 2,
+    "noRetry": true,
+    "noFallback": true
+  },
+  "estimate": {
+    "imagePreCallUsd": 0.044,
+    "copyPreCallUsd": null,
+    "copyNote": "not fixed at authorization; bounded by the total cap and reconciled after the call",
+    "estimatedTotalUsd": 0.044,
+    "proposedBudgetUsd": 0.1
+  },
+  "authorization": {
+    "decision": "pending",
+    "decidedAt": null,
+    "decidedBy": null,
+    "requestedAt": "2026-11-12T19:02:58.000Z",
+    "requestedBudgetUsd": 0.1,
+    "requestedMaxImageCalls": 1,
+    "requestedMaxCopyRequests": 1,
+    "notes": "Awaiting explicit operator decision: authorize, reject or change-source."
+  },
+  "preflight": {
+    "status": "not_executed",
+    "reason": "requires explicit authorization"
+  },
+  "calls": [],
+  "providerCalls": 0,
+  "aiCalls": 0,
+  "writesPerformed": 0,
+  "writesAuthorizedAfterApproval": [
+    "image_generation_config_snapshots (1 row)",
+    "product_1_1_snapshot_content_binding (1 row)",
+    "product_1_1_snapshot_frozen_evidence (1 row)",
+    "campaign_composition_artifacts square_original (1 row + 1 storage object)",
+    "copy state/telemetry and image cost event through existing paths, if copy runs"
+  ],
+  "stopConditions": [
+    "preflight FAIL",
+    "missing product credential or bench-key-only",
+    "existing square_original row or object for the destination",
+    "existing intent/terminal manifest for the operation",
+    "authorizedBudgetUsd < estimatedPreCallUsd",
+    "unknown cost (null/not_available) or observed cost above budget",
+    "campaigns before != after",
+    "unknown result: stop, preserve evidence, never retry"
+  ],
+  "declaration": "Preparation only. No provider/OpenAI call, no paid call, no database/Storage write, no migration, no reset, no campaign/credit/delivery change. providerCalls=0, aiCalls=0, writesPerformed=0."
+}
