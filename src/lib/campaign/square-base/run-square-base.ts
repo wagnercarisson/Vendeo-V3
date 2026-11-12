@@ -41,6 +41,7 @@ import type {
 import {
   canStartDurableWrite,
   deadlineAt,
+  remainingBudget,
 } from "@/lib/product-1-1/orchestration/deadline";
 
 import {
@@ -664,10 +665,12 @@ export async function runSquareBase(
   }
 
   // (6) Configuração: primeira composição congela; retomada usa o congelado.
-  const configDeps: SquareBaseConfigDeps = {
+  // O orçamento passado é SEMPRE o restante do deadline ÚNICO da entrada —
+  // configurar/reparar nunca reinicia o relógio.
+  const configDepsForNow = (): SquareBaseConfigDeps => ({
     ...(deps.client === undefined ? {} : { client: deps.client }),
     clock,
-    deadlineMs: valid.timeoutMs,
+    deadlineMs: remainingBudget(clock(), deadlineAtMs),
     ...(deps.runPreflight === undefined ? {} : { runPreflight: deps.runPreflight }),
     ...(deps.buildSnapshot === undefined ? {} : { buildSnapshot: deps.buildSnapshot }),
     ...(deps.persistSnapshot === undefined
@@ -681,7 +684,7 @@ export async function runSquareBase(
     ...(deps.assertExecutable === undefined
       ? {}
       : { assertExecutable: deps.assertExecutable }),
-  };
+  });
 
   let pair: ImageModelPairConfig;
 
@@ -689,7 +692,7 @@ export async function runSquareBase(
     const resolveFirst = deps.resolveFirstComposition ?? resolveFirstComposition;
     let first: FirstCompositionResult;
     try {
-      first = await resolveFirst(valid, configDeps);
+      first = await resolveFirst(valid, configDepsForNow());
     } catch {
       return blocked("preflight_failed", notRequested());
     }
@@ -712,7 +715,10 @@ export async function runSquareBase(
     const resolveResume = deps.resolveResumeConfig ?? resolveResumeConfig;
     let resume: ResumeConfigResult;
     try {
-      resume = await resolveResume({ frozen: { snapshot: frozen.snapshot } }, configDeps);
+      resume = await resolveResume(
+        { frozen: { snapshot: frozen.snapshot } },
+        configDepsForNow(),
+      );
     } catch {
       return blocked("preflight_failed", notRequested());
     }
@@ -735,7 +741,7 @@ export async function runSquareBase(
               payload: frozenPayload,
             },
           },
-          configDeps,
+          configDepsForNow(),
         );
       } catch {
         return blocked("pre_call_probe_indeterminate");
@@ -812,6 +818,7 @@ export async function runSquareBase(
 
   const startedAt = clock();
   let pending: PostCallOutcome | null = null;
+  let preCallBlockReason: BlockedReason = "pre_call_probe_indeterminate";
   let attempted = false;
   let callStatus: SquareBaseCallEvidence["callStatus"] = "failed";
   let usage: TokenUsage | undefined;
@@ -835,92 +842,102 @@ export async function runSquareBase(
       telemetryDeps,
     );
 
-    let once: Awaited<ReturnType<typeof invokeSquareBaseOnce>>;
-    try {
-      once = await invokeSquareBaseOnce({
-        gateway,
-        capability: SQUARE_BASE_CAPABILITY,
-        target,
-        request,
-        telemetry: telemetryHandle.context,
-        timeoutMs: valid.timeoutMs,
-        signal: valid.signal,
-        quality: targetPair.quality,
-        expectedIdentity,
-      });
-    } catch (error) {
-      once = Object.freeze({
-        error,
-        prepared: null,
-        sendEvidence: "not_sent" as const,
-      });
+    // (9b) Orçamento RESTANTE do deadline ÚNICO. Esgotado ⇒ nenhum novo efeito
+    // (o transporte nunca recebe um prazo renovado).
+    const imageBudgetMs = remainingBudget(clock(), deadlineAtMs);
+    let once: Awaited<ReturnType<typeof invokeSquareBaseOnce>> | undefined;
+
+    if (imageBudgetMs <= 0) {
+      preCallBlockReason = RESERVE_REACHED_REASON;
+    } else {
+      try {
+        once = await invokeSquareBaseOnce({
+          gateway,
+          capability: SQUARE_BASE_CAPABILITY,
+          target,
+          request,
+          telemetry: telemetryHandle.context,
+          timeoutMs: imageBudgetMs,
+          signal: valid.signal,
+          quality: targetPair.quality,
+          expectedIdentity,
+        });
+      } catch (error) {
+        once = Object.freeze({
+          error,
+          prepared: null,
+          sendEvidence: "not_sent" as const,
+        });
+      }
     }
 
-    attempted = true;
+    if (once !== undefined) {
+      attempted = true;
 
-    if ("error" in once) {
-      const classification = classifySquareBaseFailure(once.error, {
-        sendEvidence: once.sendEvidence,
-      });
-      pending = pendingFromClassification(classification);
-      errorType = describeClassification(classification);
-      callStatus =
-        once.error instanceof AiInvocationError && once.error.kind === "timeout"
-          ? "timeout"
-          : "failed";
-    } else {
-      callStatus = "success";
-      usage = once.result.usage;
-
-      const imageBase64 = once.result.imageBase64 ?? "";
-      if (imageBase64.length === 0) {
-        pending = Object.freeze({
-          kind: "invalid_output" as const,
-          reason: "empty_image" as const,
+      if ("error" in once) {
+        const classification = classifySquareBaseFailure(once.error, {
+          sendEvidence: once.sendEvidence,
         });
+        pending = pendingFromClassification(classification);
+        errorType = describeClassification(classification);
+        callStatus =
+          once.error instanceof AiInvocationError && once.error.kind === "timeout"
+            ? "timeout"
+            : "failed";
       } else {
-        const convert = deps.convertImage ?? convertProviderImage;
-        const converted = await convert({
-          imageBase64,
-          ...(once.result.mimeType === undefined
-            ? {}
-            : { mimeType: once.result.mimeType }),
-        });
+        callStatus = "success";
+        usage = once.result.usage;
 
-        if (!converted.ok) {
+        const imageBase64 = once.result.imageBase64 ?? "";
+        if (imageBase64.length === 0) {
           pending = Object.freeze({
             kind: "invalid_output" as const,
-            reason: converted.reason,
-          });
-        } else if (snapshotOriginalId === null) {
-          pending = Object.freeze({
-            kind: "persistence_failed" as const,
-            reason: "persistence_failure" as const,
-            detail: "missing_snapshot_original_id",
+            reason: "empty_image" as const,
           });
         } else {
-          const persist = deps.persistArtifact ?? persistSquareBaseArtifact;
-          const persisted = await persist(
-            {
-              identity: destination,
-              authorization: valid.authorization,
-              bytes: converted.bytes,
-              snapshotOriginalId,
-            },
-            deps.client === undefined ? {} : { client: deps.client },
-          );
-          if (persisted.kind === "created" || persisted.kind === "reused") {
-            const art = artifactOutcomeFromPersist(persisted);
-            pending =
-              art === null
-                ? Object.freeze({
-                    kind: "persistence_failed" as const,
-                    reason: "persistence_failure" as const,
-                    detail: "artifact_outcome_missing",
-                  })
-                : Object.freeze({ kind: "completed" as const, art });
+          const convert = deps.convertImage ?? convertProviderImage;
+          const converted = await convert({
+            imageBase64,
+            ...(once.result.mimeType === undefined
+              ? {}
+              : { mimeType: once.result.mimeType }),
+          });
+
+          if (!converted.ok) {
+            pending = Object.freeze({
+              kind: "invalid_output" as const,
+              reason: converted.reason,
+            });
+          } else if (snapshotOriginalId === null) {
+            pending = Object.freeze({
+              kind: "persistence_failed" as const,
+              reason: "persistence_failure" as const,
+              detail: "missing_snapshot_original_id",
+            });
           } else {
-            pending = pendingFromArtifactFailure(persisted);
+            const persist = deps.persistArtifact ?? persistSquareBaseArtifact;
+            const persisted = await persist(
+              {
+                identity: destination,
+                authorization: valid.authorization,
+                bytes: converted.bytes,
+                snapshotOriginalId,
+              },
+              deps.client === undefined ? {} : { client: deps.client },
+            );
+            if (persisted.kind === "created" || persisted.kind === "reused") {
+              const art = artifactOutcomeFromPersist(persisted);
+              pending =
+                art === null
+                  ? Object.freeze({
+                      kind: "persistence_failed" as const,
+                      reason: "persistence_failure" as const,
+                      detail: "artifact_outcome_missing",
+                    })
+                  : Object.freeze({ kind: "completed" as const, art });
+            } else {
+              pending = pendingFromArtifactFailure(persisted);
+            }
           }
         }
       }
@@ -971,7 +988,7 @@ export async function runSquareBase(
   }
 
   if (pending === null) {
-    return blocked("pre_call_probe_indeterminate", copyOutcome);
+    return blocked(preCallBlockReason, copyOutcome);
   }
 
   // (10) Materialização ÚNICA: `call` com custo já resolvido pelo flush e `copy`
