@@ -620,5 +620,13 @@
     "openspecStatus": "isComplete:true",
     "uatResult": "5 pass, 1 skip (9:16 fora de escopo), 0 issues",
     "opsxCritical": 0
+  },
+  "archive": {
+    "path": "openspec/changes/archive/2026-11-12-fase-60-4-composicao-e-persistencia-da-base-quadrada/",
+    "syncedSpec": "openspec/specs/campaign-square-base-composition/spec.md",
+    "specRequirements": 10,
+    "specScenarios": 45,
+    "activeChanges": 0,
+    "mode": "openspec archive --skip-specs --yes"
   }
 }
