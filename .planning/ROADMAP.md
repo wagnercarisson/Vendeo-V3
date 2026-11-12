@@ -881,7 +881,7 @@ Plans:
 
 ### Phase 60.4: F60.4 - Composicao e persistencia da base quadrada
 
-**Status:** **60.4-01, 60.4-02 E 60.4-03 ACEITOS EM 2026-11-12; 291 TESTES OFFLINE + TYPECHECK 0 NO ACEITE DA WAVE 2; 60.4-04 EM EXECUÇÃO (SOMENTE OFFLINE); 60.4-05 BLOQUEADO.** Fatia independente da iniciativa 60; F60, F60.1, F60.3 e o fluxo 1:1 permanecem encerrados e nao sao redesenhados. A change OpenSpec esta valida em --strict; a prova real permanece gate separado, sem homolog/banco/provider nesta rodada. `PHASE_BASE_SHA=55276323648797b79a121f3075b83b9469e25a69`.
+**Status:** **60.4-01, 60.4-02 E 60.4-03 ACEITOS EM 2026-11-12; 60.4-04 EXECUTADO EM 2026-11-12 (SOMENTE OFFLINE) E AGUARDANDO REVISÃO; GATE FOCADO 49 ARQUIVOS / 769 TESTES + TYPECHECK 0 + LINT 0; 60.4-05 BLOQUEADO.** Fatia independente da iniciativa 60; F60, F60.1, F60.3 e o fluxo 1:1 permanecem encerrados e nao sao redesenhados. A change OpenSpec esta valida em --strict; a prova real permanece gate separado, sem homolog/banco/provider nesta rodada. `PHASE_BASE_SHA=55276323648797b79a121f3075b83b9469e25a69`.
 
 **Goal:** Entregar a geracao de copy e arte quadrada como etapa interna reutilizavel pelo futuro orquestrador 9:16, preservando o fluxo 1:1 atual. O modulo recebe identidade/autorizacao e tentativa F60 explicitas, reutiliza compositor, snapshot/evidencia, copy, gateway/adapter de imagem, conversao JPEG 1024, F60.1 square_original e telemetria existentes; distingue primeira composicao de retomada com conteudo congelado; garante uma chamada de imagem e uma requisicao de copy sem retry oculto; devolve copy e arte distinguiveis ou falhas tipadas. Sem credito, entrega publica, UI, ativacao, expansao, preparacao 1152, migration ou chamada paga nesta fatia.
 
@@ -893,7 +893,7 @@ Plans:
 - [x] 60.4-01-PLAN.md — Contratos puros, politica/validacao fail-closed, estado congelado + payload canonico, prompt 1:1 e configuracao congelada (primeira composicao x retomada, preflight falho tipado)
 - [x] 60.4-02-PLAN.md — Gate linha/objeto, compatibilidade/adocao F60.1, transporte single-shot sem retry oculto, classificacao F60 e conversao/persistencia/readback JPEG 1024
 - [x] 60.4-03-PLAN.md — Copy com conteudo congelado e desfechos fechados, invoker sem retry oculto e opcao aditiva `maxRetries` nos adapters textuais
-- [ ] 60.4-04-PLAN.md — `runSquareBase` (ordem do design, autorizacao negada sem leitura, preflight falho sem excecao, `snapshotOriginalId`), telemetria do sink unico, fronteiras/regressao/concorrencia e suite focada completa + typecheck/lint/diff
+- [x] 60.4-04-PLAN.md — `runSquareBase` (ordem do design, autorizacao negada sem leitura, preflight falho sem excecao, `snapshotOriginalId`), telemetria do sink unico, fronteiras/regressao/concorrencia e suite focada completa + typecheck/lint/diff — **EXECUTADO EM 2026-11-12; ACEITE PENDENTE DE REVISAO**
 - [ ] 60.4-05-PLAN.md — Prova real autorizada separada (checkpoint bloqueante; nao executar nesta rodada)
 
 **Depends on:** Phase 60 (controle da operacao em duas etapas), Phase 60.1 (artefatos de composicao), Phase 60.3 (expansao 9:16 e opcoes de transporte sem retry), migration F60.1 aplicada em homolog e OpenSpec desta change aprovado.
