@@ -5,6 +5,16 @@ import { AiInvocationError } from "../types";
 import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../types";
 
 /**
+ * Opções ADITIVAS do adapter de texto. `maxRetries` é opt-in: quando ausente o
+ * cliente é criado exatamente como antes (`{ apiKey }`), preservando o default
+ * legado byte-idêntico. Só o invoker dedicado do módulo de base quadrada passa
+ * o valor explícito (0 = sem retry HTTP oculto do SDK).
+ */
+export interface ResponsesAdapterOptions {
+  readonly maxRetries?: number;
+}
+
+/**
  * Adapter do protocolo `responses` (OpenAI Responses API).
  *
  * Cobre visão e a tool `image_generation`. Normaliza o breakdown granular de
@@ -15,9 +25,18 @@ import type { AiAdapter, AiInvocationRequest, AiInvocationResult } from "../type
 export class ResponsesAdapter implements AiAdapter {
   readonly protocol = "responses" as const;
 
+  constructor(private readonly options: ResponsesAdapterOptions = {}) {}
+
   async invoke(request: AiInvocationRequest, target: AiModelTarget): Promise<AiInvocationResult> {
     const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: getApiKey(target.provider) });
+    const apiKey = getApiKey(target.provider);
+    // Aditivo: sem a opção, o cliente é construído com APENAS `apiKey` (mesmo
+    // payload de antes). Com a opção, `maxRetries` é enviado literalmente.
+    const openai = new OpenAI(
+      this.options.maxRetries === undefined
+        ? { apiKey }
+        : { apiKey, maxRetries: this.options.maxRetries },
+    );
 
     const content: unknown[] = [{ type: "input_text", text: request.prompt }];
     for (const url of request.productImagesDataUrls ?? []) {
