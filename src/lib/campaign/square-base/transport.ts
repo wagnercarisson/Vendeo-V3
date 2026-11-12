@@ -262,9 +262,12 @@ export async function invokeSquareBaseOnce(
 ): Promise<SquareBaseOnceOutcome> {
   const clock = deps.clock ?? (() => Date.now());
   const handle = createSquareBaseAbortHandle(input.timeoutMs, input.signal);
+  const startedAt = clock();
+  const deadlineAtMs = deadlineAt(startedAt, handle.limitMs);
 
   let prepared: PreparedInvocation | null = null;
   let rejection: ReturnType<typeof createDeadlineRejection> | null = null;
+  let invoked = false;
 
   try {
     // (1) Request adulterado nunca chega ao gateway.
@@ -273,19 +276,53 @@ export async function invokeSquareBaseOnce(
       expectedIdentity: input.expectedIdentity,
     });
 
-    // (2) Alvo explícito preparado UMA vez.
-    prepared = await input.gateway.prepare(input.capability, input.target);
+    if (handle.signal.aborted) {
+      return Object.freeze({
+        error: new Error("square_base_not_sent_aborted"),
+        prepared: null,
+        sendEvidence: "not_sent" as const,
+      });
+    }
 
-    // (3) Uma única invocação, correndo contra o deadline local.
-    const now = clock();
-    const deadlineAtMs = deadlineAt(now, handle.limitMs);
-    rejection = createDeadlineRejection(deadlineAtMs, now);
+    // (2) Deadline ÚNICO desde a entrada: prepare também corre contra ele.
+    rejection = createDeadlineRejection(deadlineAtMs, startedAt);
+    const preparePromise = input.gateway.prepare(input.capability, input.target);
+    prepared = await Promise.race([preparePromise, rejection.promise]);
+
+    // (3) Cancelamento/expiração durante o prepare recusa o ENVIO.
+    if (
+      handle.signal.aborted ||
+      handle.timedOut() ||
+      rejection.didHit() ||
+      clock() >= deadlineAtMs
+    ) {
+      return Object.freeze({
+        error: new Error("square_base_not_sent_deadline"),
+        prepared,
+        sendEvidence: "not_sent" as const,
+      });
+    }
+
+    // (4) Uma única invocação, correndo contra o MESMO deadline local.
+    if (
+      handle.signal.aborted ||
+      handle.timedOut() ||
+      rejection.didHit() ||
+      clock() >= deadlineAtMs
+    ) {
+      return Object.freeze({
+        error: new Error("square_base_not_sent_deadline"),
+        prepared,
+        sendEvidence: "not_sent" as const,
+      });
+    }
 
     const request: AiInvocationRequest = {
       ...input.request,
       signal: handle.signal,
     };
 
+    invoked = true;
     const result = await Promise.race([
       input.gateway.invokePrepared(prepared, request, input.telemetry),
       rejection.promise,
@@ -297,7 +334,7 @@ export async function invokeSquareBaseOnce(
       sendEvidence: "confirmed_sent" as const,
     });
   } catch (error) {
-    if (prepared === null) {
+    if (prepared === null || !invoked) {
       return Object.freeze({
         error,
         prepared: null,

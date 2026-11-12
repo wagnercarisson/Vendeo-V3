@@ -313,6 +313,60 @@ describe("invokeSquareBaseOnce — deadline e dispose", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("abort do chamador durante prepare nao invoca (not_sent)", async () => {
+    let releasePrepare!: (value: PreparedInvocation) => void;
+    const preparePromise = new Promise<PreparedInvocation>((resolve) => {
+      releasePrepare = resolve;
+    });
+    const invokePrepared = vi.fn();
+    const gateway: SquareBaseImageGateway = {
+      prepare: vi.fn(() => preparePromise),
+      invokePrepared: invokePrepared as unknown as SquareBaseImageGateway["invokePrepared"],
+    };
+    const caller = new AbortController();
+
+    const outcomePromise = invokeSquareBaseOnce(
+      invokeInput(gateway, { timeoutMs: 60_000, signal: caller.signal }),
+      { clock: () => 0 },
+    );
+
+    caller.abort();
+    releasePrepare(preparedInvocation("primary"));
+    const outcome = await outcomePromise;
+
+    expect(outcome.sendEvidence).toBe("not_sent");
+    expect(invokePrepared).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("deadline expirado durante prepare nao invoca (not_sent)", async () => {
+    let releasePrepare!: (value: PreparedInvocation) => void;
+    const preparePromise = new Promise<PreparedInvocation>((resolve) => {
+      releasePrepare = resolve;
+    });
+    const invokePrepared = vi.fn();
+    const gateway: SquareBaseImageGateway = {
+      prepare: vi.fn(() => preparePromise),
+      invokePrepared: invokePrepared as unknown as SquareBaseImageGateway["invokePrepared"],
+    };
+
+    const outcomePromise = invokeSquareBaseOnce(
+      invokeInput(gateway, { timeoutMs: 1_000 }),
+      { clock: () => 0 },
+    );
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    const outcome = await outcomePromise;
+
+    expect(outcome.sendEvidence).toBe("not_sent");
+    expect(invokePrepared).not.toHaveBeenCalled();
+
+    releasePrepare(preparedInvocation("primary"));
+    await Promise.resolve();
+    expect(invokePrepared).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("dispose() sempre limpa o timer, inclusive no sucesso", async () => {
     const fake = fakeGateway(async () => ({
       imageBase64: "IMG",

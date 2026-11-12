@@ -36,6 +36,10 @@ import {
   verifyObjectEvidence,
 } from "@/lib/campaign/composition-artifacts/evidence";
 import { computeChecksumSha256 } from "@/lib/campaign/composition-artifacts/integrity";
+import {
+  MAX_ARTIFACT_BYTES,
+  MAX_ARTIFACT_PIXELS,
+} from "@/lib/campaign/composition-artifacts/role-policy";
 import { persistCompositionArtifact } from "@/lib/campaign/composition-artifacts/persist";
 import { getArtifactByIdentity } from "@/lib/campaign/composition-artifacts/repository";
 import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
@@ -250,14 +254,46 @@ function reused(
 }
 
 /**
- * JPEG 1024×1024 verificado por decode COMPLETO (não apenas header). Rejeita
- * truncamento, formato divergente e dimensão divergente. Nunca lança.
+ * JPEG 1024×1024 verificado por decode COMPLETO (não apenas header). Aplica
+ * limites de bytes/pixels e exige 1024×1024 ANTES do decode completo; imagens
+ * admissíveis continuam passando pelo decode completo. Nunca lança.
  */
-async function isSquareJpeg1024(bytes: Buffer): Promise<boolean> {
+export async function isSquareJpeg1024(bytes: Buffer): Promise<boolean> {
+  if (
+    !Buffer.isBuffer(bytes) ||
+    bytes.byteLength === 0 ||
+    bytes.byteLength > MAX_ARTIFACT_BYTES
+  ) {
+    return false;
+  }
+
+  let metadata: { format?: string; width?: number; height?: number };
   try {
-    const metadata = await sharp(bytes).metadata();
-    if (metadata.format !== "jpeg") return false;
-    const decoded = await sharp(bytes, { failOn: "error" })
+    metadata = await sharp(bytes).metadata();
+  } catch {
+    return false;
+  }
+  if (metadata.format !== "jpeg") return false;
+
+  const width = metadata.width;
+  const height = metadata.height;
+  if (
+    !width ||
+    !height ||
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width * height > MAX_ARTIFACT_PIXELS ||
+    width !== SQUARE_BASE_TARGET.width ||
+    height !== SQUARE_BASE_TARGET.height
+  ) {
+    return false;
+  }
+
+  try {
+    const decoded = await sharp(bytes, {
+      failOn: "error",
+      limitInputPixels: MAX_ARTIFACT_PIXELS,
+    })
       .raw()
       .toBuffer({ resolveWithObject: true });
     return (
