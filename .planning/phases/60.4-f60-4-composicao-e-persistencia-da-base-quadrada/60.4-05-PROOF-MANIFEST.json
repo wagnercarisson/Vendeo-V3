@@ -2,7 +2,7 @@
   "kind": "f60.4-proof-manifest",
   "plan": "60.4-05",
   "phase": "60.4-f60-4-composicao-e-persistencia-da-base-quadrada",
-  "status": "awaiting_visual_acceptance",
+  "status": "accepted",
   "createdAt": "2026-11-12T19:02:58.000Z",
   "environment": {
     "target": "homolog-existing",
@@ -575,13 +575,13 @@
     ]
   },
   "visual": {
-    "status": "pending",
+    "status": "approved",
     "responsible": "operador",
+    "checkedAt": "2026-11-12T19:25:00.000Z",
     "localImagePath": "C:\\Projetos\\Vendeo V3\\.planning\\phases\\60.4-f60-4-composicao-e-persistencia-da-base-quadrada\\evidence\\square-original-1024.jpg",
-    "checkedAt": null,
-    "notes": null
+    "notes": "O responsável aprovou a prova real: a arte quadrada e a copy comprovam a execução do novo módulo, com reutilização dos componentes existentes e sem alterar o fluxo legado. Não foram declaradas avaliações visuais individuais; a conexão com preparação/expansão 9:16 não foi testada."
   },
-  "decision": "pending_visual_acceptance",
+  "decision": "accepted",
   "writesVerified": {
     "imageGenerationConfigSnapshots": 1,
     "snapshotContentBindings": 1,
@@ -604,5 +604,21 @@
     "campaignsUnchanged": true,
     "creditsUnchanged": true,
     "inputImagesUnchanged": true
+  },
+  "acceptedAt": "2026-11-12T19:25:00.000Z",
+  "acceptance": {
+    "technical": "pass",
+    "human": "approved",
+    "meaning": "integração de geração/persistência da base quadrada e copy aprovada",
+    "individualVisualCriteriaDeclared": false,
+    "nineSixteenConnectionTested": false
+  },
+  "verificationReports": {
+    "uat": "60.4-UAT.md",
+    "opsx": "60.4-OPSX-VERIFY.md",
+    "openspecValidate": "valid",
+    "openspecStatus": "isComplete:true",
+    "uatResult": "5 pass, 1 skip (9:16 fora de escopo), 0 issues",
+    "opsxCritical": 0
   }
 }

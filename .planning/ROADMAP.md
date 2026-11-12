@@ -881,20 +881,20 @@ Plans:
 
 ### Phase 60.4: F60.4 - Composicao e persistencia da base quadrada
 
-**Status:** **60.4-01..04 ACEITOS; 60.4-05 EXECUTADO EM 2026-11-12 COM UMA ÚNICA CHAMADA PAGA; ACEITE TÉCNICO PASS; ACEITE VISUAL HUMANO PENDENTE; FASE NÃO ENCERRADA.** Custo observado **US$ 0,042885** (imagem `0,042723` + copy `0,000162`) dentro do teto **US$ 0,100000**; arte `square_original` 1024×1024 JPEG criada, checksum válido; `campaigns`, créditos e imagens de entrada preservados; uma imagem + uma copy, sem retry/fallback. Nenhuma segunda chamada será feita. `PHASE_BASE_SHA=55276323648797b79a121f3075b83b9469e25a69`. Fatia independente da iniciativa 60; F60, F60.1, F60.3 e o fluxo 1:1 permanecem encerrados e nao sao redesenhados. A change OpenSpec esta valida em --strict; a prova real permanece gate separado, sem homolog/banco/provider nesta rodada. `PHASE_BASE_SHA=55276323648797b79a121f3075b83b9469e25a69`.
+**Status:** **F60.4 CONCLUÍDA E ACEITA EM 2026-11-12; 60.4-05 COM PROVA REAL ÚNICA E ACEITE HUMANO; SYNC/ARCHIVE PENDENTES DE REVISÃO.** Custo observado **US$ 0,042885** (imagem `0,042723` + copy `0,000162`) dentro do teto **US$ 0,100000**; arte `square_original` 1024×1024 JPEG criada, checksum válido; `campaigns`, créditos e imagens de entrada preservados; uma imagem + uma copy, sem retry/fallback. O aceite humano cobre a prova como um todo; **não foram declaradas avaliações visuais individuais** e a conexão com preparação/expansão 9:16 **não foi testada**. Nenhuma nova chamada será feita. `PHASE_BASE_SHA=55276323648797b79a121f3075b83b9469e25a69`. A change OpenSpec está válida em `--strict`; `60.4-UAT.md` (GSD verify-work) e `60.4-OPSX-VERIFY.md` foram gerados; sync/archive aguardam revisão.
 
 **Goal:** Entregar a geracao de copy e arte quadrada como etapa interna reutilizavel pelo futuro orquestrador 9:16, preservando o fluxo 1:1 atual. O modulo recebe identidade/autorizacao e tentativa F60 explicitas, reutiliza compositor, snapshot/evidencia, copy, gateway/adapter de imagem, conversao JPEG 1024, F60.1 square_original e telemetria existentes; distingue primeira composicao de retomada com conteudo congelado; garante uma chamada de imagem e uma requisicao de copy sem retry oculto; devolve copy e arte distinguiveis ou falhas tipadas. Sem credito, entrega publica, UI, ativacao, expansao, preparacao 1152, migration ou chamada paga nesta fatia.
 
 **Source:** openspec/changes/fase-60-4-composicao-e-persistencia-da-base-quadrada/ (proposal, design, 10 requisitos / 45 cenarios e 42 tarefas; OpenSpec --strict valido).
 
-**Plans:** 5 plans (waves 1-4; `60.4-05` e a prova real autorizada, `autonomous: false`, somente apos checkpoint explicito e sem executar nesta rodada).
+**Plans:** 5 plans (waves 1-4; **5/5 executados**; `60.4-05` foi executado como prova real autorizada, `autonomous: false`, após checkpoint explícito).
 
 Plans:
 - [x] 60.4-01-PLAN.md — Contratos puros, politica/validacao fail-closed, estado congelado + payload canonico, prompt 1:1 e configuracao congelada (primeira composicao x retomada, preflight falho tipado)
 - [x] 60.4-02-PLAN.md — Gate linha/objeto, compatibilidade/adocao F60.1, transporte single-shot sem retry oculto, classificacao F60 e conversao/persistencia/readback JPEG 1024
 - [x] 60.4-03-PLAN.md — Copy com conteudo congelado e desfechos fechados, invoker sem retry oculto e opcao aditiva `maxRetries` nos adapters textuais
 - [x] 60.4-04-PLAN.md — `runSquareBase` (ordem do design, autorização negada sem leitura, preflight falho sem exceção, `snapshotOriginalId`), telemetria do sink único, fronteiras/regressão/concorrência, deadline ÚNICO (orçamento restante em config/reparo/transporte) e suíte focada completa + typecheck/lint/diff — **EXECUTADO EM 2026-11-12; ACEITO EM 2026-11-12 (773/773 testes; typecheck 0; diff limpo)**
-- [ ] 60.4-05-PLAN.md — Prova real autorizada separada (checkpoint bloqueante) — **EXECUTADO EM 2026-11-12: 1 imagem + 1 copy, technical PASS, custo US$ 0,042885 <= US$ 0,100000; ACEITE VISUAL HUMANO PENDENTE; nenhuma segunda chamada**
+- [x] 60.4-05-PLAN.md — Prova real autorizada separada (checkpoint bloqueante) — **CONCLUÍDO E ACEITO EM 2026-11-12: 1 imagem + 1 copy, technical PASS, custo US$ 0,042885 <= US$ 0,100000; aceite humano aprovado; sync/archive pendentes**
 
 **Depends on:** Phase 60 (controle da operacao em duas etapas), Phase 60.1 (artefatos de composicao), Phase 60.3 (expansao 9:16 e opcoes de transporte sem retry), migration F60.1 aplicada em homolog e OpenSpec desta change aprovado.
 
