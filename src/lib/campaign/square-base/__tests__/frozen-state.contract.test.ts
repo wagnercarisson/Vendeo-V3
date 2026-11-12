@@ -600,7 +600,7 @@ describe("F60.4 frozen-state — fingerprint e comparação de retomada", () => 
     );
   });
 
-  it("retomada que mistura referenceSelections do chamador com data URLs equivalentes NÃO diverge", async () => {
+  it("referenceSelections declaradas divergentes das imagens recebidas devolvem references", async () => {
     const { compareFrozenContent } = moduleExports();
     const payload = buildPayload();
 
@@ -612,6 +612,25 @@ describe("F60.4 frozen-state — fingerprint e comparação de retomada", () => 
         referenceSelections: [
           { kind: "product", id: "id-declarado-pelo-chamador", index: 0 },
           { kind: "identity", id: "outro-id-declarado", index: 1 },
+        ],
+      },
+    });
+
+    expect(comparison).toEqual({ ok: false, reason: "references" });
+  });
+
+  it("referenceSelections declaradas correspondentes as imagens recebidas nao divergem", async () => {
+    const { compareFrozenContent } = moduleExports();
+    const payload = buildPayload();
+
+    const comparison = compareFrozenContent({
+      frozen: payload,
+      received: {
+        productImagesDataUrls: [PRODUCT_URL],
+        identityImageUrl: IDENTITY_URL,
+        referenceSelections: [
+          { kind: "product", id: hashRaw(PRODUCT_URL), index: 0 },
+          { kind: "identity", id: hashRaw(IDENTITY_URL), index: 1 },
         ],
       },
     });
@@ -814,7 +833,7 @@ describe("F60.4 frozen-state — fingerprint e comparação de retomada", () => 
     );
   });
 
-  it("sem referenceSelections, references é comparado e preenchido pelo congelado", async () => {
+  it("sem referenceSelections congeladas, imagens recebidas sao recusadas; references legado so compara sem imagens", async () => {
     const { compareFrozenContent } = moduleExports();
     const payload = buildPayload({
       referenceSelections: [],
@@ -823,14 +842,25 @@ describe("F60.4 frozen-state — fingerprint e comparação de retomada", () => 
 
     const omitted = compareFrozenContent({
       frozen: payload,
-      received: { productImagesDataUrls: [PRODUCT_URL] },
+      received: {},
     });
     expect(omitted.ok).toBe(true);
+
+    const withImages = compareFrozenContent({
+      frozen: payload,
+      received: { productImagesDataUrls: [PRODUCT_URL] },
+    });
+    expect(withImages).toEqual({ ok: false, reason: "references" });
+
+    const withLogo = compareFrozenContent({
+      frozen: payload,
+      received: { identityImageUrl: IDENTITY_URL },
+    });
+    expect(withLogo).toEqual({ ok: false, reason: "references" });
 
     const divergent = compareFrozenContent({
       frozen: payload,
       received: {
-        productImagesDataUrls: [PRODUCT_URL],
         references: ["ref-b", "ref-a"],
       },
     });

@@ -822,7 +822,7 @@ export function deriveReferenceSelections(
   return Object.freeze(selections);
 }
 
-function selectionShapesMatch(
+export function referenceSelectionsMatch(
   left: readonly ProductOneToOneEvidenceReference[],
   right: readonly ProductOneToOneEvidenceReference[],
 ): boolean {
@@ -852,17 +852,45 @@ function compareReferences(
   frozen: FrozenContentPayload,
   received: SquareBaseReceivedContent,
 ): boolean {
+  const productImages = received.productImagesDataUrls ?? [];
+  const hasReceivedImages =
+    productImages.length > 0 || received.identityImageUrl !== undefined;
+
   if (frozen.referenceSelections.length > 0) {
-    const productImages = received.productImagesDataUrls ?? [];
-    const hasReceivedImages =
-      productImages.length > 0 || received.identityImageUrl !== undefined;
+    // Sem bytes das imagens nao ha como provar que produto/logo sao os mesmos.
+    if (!hasReceivedImages) return false;
 
-    const candidate = hasReceivedImages
-      ? deriveReferenceSelections(productImages, received.identityImageUrl)
-      : received.referenceSelections;
+    const actual = deriveReferenceSelections(
+      productImages,
+      received.identityImageUrl,
+    );
 
-    if (!candidate) return false;
-    return selectionShapesMatch(frozen.referenceSelections, candidate);
+    // Selecoes declaradas pelo chamador precisam corresponder as imagens reais.
+    if (
+      received.referenceSelections !== undefined &&
+      received.referenceSelections.length > 0 &&
+      !referenceSelectionsMatch(
+        actual,
+        received.referenceSelections.map((selection, index) =>
+          Object.freeze({ ...selection, index: selection.index ?? index }),
+        ),
+      )
+    ) {
+      return false;
+    }
+
+    return referenceSelectionsMatch(frozen.referenceSelections, actual);
+  }
+
+  // Sem selecoes congeladas verificaveis, qualquer imagem/logo recebido e uma
+  // troca nao comprovavel: recusar. Apenas o caminho legado sem imagens pode
+  // comparar a lista textual de referencias.
+  if (hasReceivedImages) return false;
+  if (
+    received.referenceSelections !== undefined &&
+    received.referenceSelections.length > 0
+  ) {
+    return false;
   }
 
   const frozenReferences = frozen.references ?? [];

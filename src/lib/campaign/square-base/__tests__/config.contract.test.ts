@@ -20,7 +20,7 @@ import {
 } from "@/lib/product-1-1/snapshot/persist-snapshot";
 import type { FrozenContentComparison, FrozenStateReadResult, SquareBaseResult } from "../types";
 import { parseSquareBaseInput } from "../validation";
-import { serializeFrozenPayload } from "../frozen-state";
+import { hashImageDataUrl, serializeFrozenPayload } from "../frozen-state";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
@@ -410,6 +410,96 @@ describe("F60.4 config — primeira composição congela antes de qualquer efeit
     expect(result.composition.composerVersion).toBe(result.frozenPayload.composerVersion);
     expect(result.frozenPayload.referenceSelections).toHaveLength(2);
     expect(result.frozenPayload.referenceSelections[1].kind).toBe("identity");
+  });
+
+  it("referenceSelections vazio deriva os hashes reais de produto e identidade", async () => {
+    const { resolveFirstComposition } = await loadConfig();
+    const client = createFakeClient();
+
+    const result = await resolveFirstComposition(
+      parsedInput({ referenceSelections: [] }),
+      {
+        client: asClient(client),
+        runPreflight: async () => preflightResult(),
+        clock: () => 1_000,
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.frozenPayload.referenceSelections).toEqual([
+      {
+        kind: "product",
+        id: hashImageDataUrl(PRODUCT_URL),
+        index: 0,
+      },
+      {
+        kind: "identity",
+        id: hashImageDataUrl(IDENTITY_URL),
+        index: 1,
+      },
+    ]);
+    expect(client.insertCalls[0].row.reference_selections).toEqual(
+      result.frozenPayload.referenceSelections,
+    );
+  });
+
+  it("referenceSelections divergentes das imagens falham antes de preflight e persistencia", async () => {
+    const { resolveFirstComposition } = await loadConfig();
+    const client = createFakeClient();
+    const runPreflight = vi.fn(async () => preflightResult());
+    const persistSnapshot = vi.fn();
+
+    const result = await resolveFirstComposition(
+      parsedInput({
+        referenceSelections: [
+          { kind: "product", id: "f".repeat(64), index: 0 },
+          { kind: "identity", id: hashImageDataUrl(IDENTITY_URL), index: 1 },
+        ],
+      }),
+      {
+        client: asClient(client),
+        runPreflight,
+        persistSnapshot,
+        clock: () => 1_000,
+      },
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "reference_selection_mismatch",
+    });
+    expect(runPreflight).not.toHaveBeenCalled();
+    expect(persistSnapshot).not.toHaveBeenCalled();
+    expect(client.rpcCalls).toEqual([]);
+    expect(client.insertCalls).toEqual([]);
+  });
+
+  it("referenceSelections correspondentes as imagens sao aceitas e congeladas pelos hashes reais", async () => {
+    const { resolveFirstComposition } = await loadConfig();
+    const client = createFakeClient();
+
+    const result = await resolveFirstComposition(
+      parsedInput({
+        referenceSelections: [
+          { kind: "product", id: hashImageDataUrl(PRODUCT_URL), index: 0 },
+          { kind: "identity", id: hashImageDataUrl(IDENTITY_URL), index: 1 },
+        ],
+      }),
+      {
+        client: asClient(client),
+        runPreflight: async () => preflightResult(),
+        clock: () => 1_000,
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.frozenPayload.referenceSelections).toEqual([
+      { kind: "product", id: hashImageDataUrl(PRODUCT_URL), index: 0 },
+      { kind: "identity", id: hashImageDataUrl(IDENTITY_URL), index: 1 },
+    ]);
   });
 
   it("reserva de persistência atingida devolve snapshot_failed sem nenhuma escrita", async () => {

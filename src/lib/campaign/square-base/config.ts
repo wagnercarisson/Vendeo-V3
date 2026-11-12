@@ -33,6 +33,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 import {
   deriveReferenceSelections,
+  referenceSelectionsMatch,
   serializeFrozenPayload,
 } from "./frozen-state";
 import {
@@ -112,7 +113,10 @@ export type FirstCompositionResult =
     }
   | {
       readonly ok: false;
-      readonly reason: "preflight_failed" | SnapshotFailedReason;
+      readonly reason:
+        | "preflight_failed"
+        | "reference_selection_mismatch"
+        | SnapshotFailedReason;
     };
 
 export type ResumeConfigResult =
@@ -164,20 +168,34 @@ function snapshotFailureReason(error: unknown): SnapshotFailedReason {
   return "snapshot_persist_failed";
 }
 
-function freezeSelections(
-  input: SquareBaseInput,
-): readonly ProductOneToOneEvidenceReference[] {
-  if (input.referenceSelections !== undefined) {
-    return Object.freeze(
-      input.referenceSelections.map((selection, index) =>
-        Object.freeze({ ...selection, index: selection.index ?? index }),
-      ),
-    );
-  }
-  return deriveReferenceSelections(
+type FrozenSelectionsResult =
+  | {
+      readonly ok: true;
+      readonly selections: readonly ProductOneToOneEvidenceReference[];
+    }
+  | { readonly ok: false; readonly reason: "reference_selection_mismatch" };
+
+function freezeSelections(input: SquareBaseInput): FrozenSelectionsResult {
+  // A fonte de verdade e SEMPRE o conteudo real das imagens recebidas. Lista
+  // vazia e tratada como ausencia de selecoes (nunca como "sem imagens").
+  const actual = deriveReferenceSelections(
     input.productImagesDataUrls,
     input.identityImageUrl,
   );
+
+  if (
+    input.referenceSelections !== undefined &&
+    input.referenceSelections.length > 0
+  ) {
+    const provided = input.referenceSelections.map((selection, index) =>
+      Object.freeze({ ...selection, index: selection.index ?? index }),
+    );
+    if (!referenceSelectionsMatch(actual, provided)) {
+      return { ok: false, reason: "reference_selection_mismatch" };
+    }
+  }
+
+  return { ok: true, selections: actual };
 }
 
 function toConfigSnapshot(
@@ -220,6 +238,12 @@ export async function resolveFirstComposition(
   let composition: ProductPromptComposition | null = null;
   let frozenPayload: FrozenContentPayload | null = null;
 
+  const frozenSelections = freezeSelections(input);
+  if (!frozenSelections.ok) {
+    return Object.freeze({ ok: false as const, reason: frozenSelections.reason });
+  }
+  const referenceSelections = frozenSelections.selections;
+
   try {
     const runPreflight =
       deps.runPreflight ??
@@ -228,7 +252,6 @@ export async function resolveFirstComposition(
 
     preflight = await runPreflight({ campaignId: input.campaignId });
 
-    const referenceSelections = freezeSelections(input);
     const content: SquareBasePromptContent = {
       briefing: input.briefing,
       identityDirective: input.identityDirective ?? null,
