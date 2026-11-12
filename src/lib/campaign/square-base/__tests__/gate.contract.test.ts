@@ -13,6 +13,7 @@ import {
   buildObjectEvidence,
 } from "@/lib/campaign/composition-artifacts/evidence";
 import { computeChecksumSha256 } from "@/lib/campaign/composition-artifacts/integrity";
+import { persistCompositionArtifact } from "@/lib/campaign/composition-artifacts/persist";
 import type { PersistArtifactResult } from "@/lib/campaign/composition-artifacts/types";
 import type {
   ArtifactIdentity,
@@ -199,13 +200,17 @@ describe("probeSquareBaseTarget — linha encontrada", () => {
     const backend = createBackend();
     seedRow(backend, squareRecord(), null);
     const rowsBefore = backend.rowsFor(destination()).length;
+    const persistSpy = vi.fn(persistCompositionArtifact);
 
-    const outcome = await probe(backend, true);
+    const outcome = await probe(backend, true, {
+      persist: persistSpy as unknown as typeof persistCompositionArtifact,
+    });
 
     expect(outcome.kind).toBe("conflict");
     if (outcome.kind !== "conflict") return;
     expect(outcome.reason).toBe("row_object_missing");
     expect(outcome.artifact?.id).toBe(ARTIFACT_ID);
+    expect(persistSpy).not.toHaveBeenCalled();
     expect(backend.rowsFor(destination())).toHaveLength(rowsBefore);
     expectNoWrites(backend);
   });
@@ -280,8 +285,11 @@ describe("probeSquareBaseTarget — linha ausente", () => {
   it("órfão íntegro é adotado pela F60.1 uma única vez com allowAdoption true", async () => {
     const backend = createBackend();
     seedOrphan(backend);
+    const persistSpy = vi.fn(persistCompositionArtifact);
 
-    const outcome = await probe(backend, true);
+    const outcome = await probe(backend, true, {
+      persist: persistSpy as unknown as typeof persistCompositionArtifact,
+    });
 
     expect(outcome.kind).toBe("reused");
     if (outcome.kind !== "reused") return;
@@ -291,6 +299,7 @@ describe("probeSquareBaseTarget — linha ausente", () => {
     expect(outcome.artifact.provenance).toEqual({});
     expect(outcome.bytes.equals(squareBytes)).toBe(true);
 
+    expect(persistSpy).toHaveBeenCalledTimes(1);
     expect(backend.handles.inserts).toHaveLength(1);
     expect(backend.handles.uploads).toHaveLength(0);
     expect(backend.handles.removes).toBe(0);
