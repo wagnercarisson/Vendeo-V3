@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: — Lançamento Externo Controlado ◆
 status: in_progress
-last_updated: "2026-11-12T16:07:26.000Z"
+last_updated: "2026-11-12T16:34:18.000Z"
 progress:
   total_phases: 19
   completed_phases: 14
@@ -38,7 +38,7 @@ progress:
 
 ## Current Position
 
-- **PLANEJAMENTO F60.4 ACEITO (2026-11-12) — 5 PLANOS EM 4 WAVES; WAVE 1 (60.4-01) AUTORIZADA; 60.4-05 BLOQUEADO.** Os 5 planos foram revisados e aceitos: `60.4-01` contratos/validação/estado congelado/prompt/config; `60.4-02` gate/transporte/artefato; `60.4-03` copy/adaptações `maxRetries`; `60.4-04` orquestração/telemetria/fronteiras/regressão/gates; `60.4-05` prova real autorizada separada, `autonomous: false`, checkpoint bloqueante e **não executada**. A rodada atual executa **somente o 60.4-01 (Wave 1)**, com testes offline e typecheck, sem homolog/banco/Storage/provider, chamadas pagas ou migrations. `PHASE_BASE_SHA` deve ser capturado antes da implementação e registrado no summary. A change OpenSpec está válida em `--strict`; as 42 tarefas, 10 requisitos e 45 cenários permanecem mapeados nos planos.
+- **EXECUÇÃO 60.4-01 / WAVE 1 (2026-11-12) — CONCLUÍDA LOCALMENTE; AGUARDANDO REVISÃO; WAVE 2 NÃO INICIADA; 60.4-05 BLOQUEADO.** `PHASE_BASE_SHA=55276323648797b79a121f3075b83b9469e25a69`. Criados `src/lib/campaign/square-base/{types,policy,validation,frozen-state,prompt,config}.ts` e 6 suítes de contrato, com **157 testes offline** verdes, `npm.cmd run typecheck` exit 0 e `git diff --check` limpo. Commits `20f745b3`, `7d8afddd`, `66408d1a` e summary `7f34b30a`. A rodada cobriu contratos fechados (14 kinds), validação fail-closed, estado congelado de 7 estados via `snapshot_original_id`, payload canônico/fingerprint, prompt byte-equivalente ao 1:1 e configuração congelada (primeira composição × retomada, preflight falho tipado). Nenhum homolog/banco/Storage/provider/OpenAI, chamada paga, migration, crédito, campanha, rota, UI ou flag. `60.4-05` permanece separado e não executado. Próximo passo: revisão do diff/summary antes de qualquer Wave 2.
 
 - **ACEITE E VERIFICAÇÃO 60.3-04 (2026-11-11) — VISUAL HUMANO CONFIRMADO; PLANO CONCLUÍDO E ACEITO; GSD UAT E OPSX VERIFY EXECUTADOS; SYNC/ARCHIVE CONCLUÍDOS; PRODUÇÃO NÃO AUTORIZADA.** O responsável confirmou a expansão correta e a preservação da campanha original. Aceite registrado em `60.3-04-PROOF-REPORT.md` §8.1, `60.3-04-AUTHORIZATION-REQUEST.md`, `60.3-04-SUMMARY.md`, STATE e ROADMAP. Verificações reutilizando as evidências existentes, **sem nova chamada paga e sem repetir a prova**: `60.3-UAT.md` (GSD verify-work) **6/6 PASS**, 0 issues; `60.3-OPSX-VERIFY.md` (OpenSpec verify) **40/40 tasks**, 10/10 requisitos, 45 cenários mapeados, 0 CRITICAL; `openspec validate --strict --type change fase-60-3-expansao-ia-9-16` **exit 0**; `openspec status` `isComplete: true`. Evidências da prova reutilizadas: preflight 10/10, intento `completed`, manifesto `proof-2026-11-11T21-44-36-907Z.json`, vertical `232fc372-…` (1080×1920, 315.116 B), custo `0.016553 <= 0.10`, 1 `generation_events`, `campaigns`/originais/créditos preservados. Sync concluído com a criação de `openspec/specs/campaign-vertical-ai-expansion/spec.md` (10 requisitos, 45 cenários; `--strict` exit 0); archive em `openspec/changes/archive/2026-11-11-fase-60-3-expansao-ia-9-16/`; nenhuma change ativa. **Merge, push, deploy, ativação e produção não executados.**
 
