@@ -76,7 +76,6 @@ import {
 import { describeDurableInput } from "@/lib/product-9-16-two-stage/orchestration/durable-input";
 import { buildNineSixteenResumeContext } from "@/lib/product-9-16-two-stage/orchestration/resume-context";
 import { identityReferenceId } from "@/lib/product-9-16-two-stage/orchestration/identity-id";
-import { VerticalArtifactStore } from "@/lib/product-vertical-9-16/artifact/artifact-store";
 import type { RunNineSixteenInput } from "@/lib/product-9-16-two-stage/orchestration/types";
 import type { DurableInputDescriptor } from "@/lib/product-9-16-two-stage/orchestration/types";
 
@@ -246,6 +245,9 @@ async function respondHistoricalVertical(input: {
     });
   }
   if (status === "delivered") {
+    const { VerticalArtifactStore } = await import(
+      "@/lib/product-vertical-9-16/artifact/artifact-store"
+    );
     const store = new VerticalArtifactStore({ client: supabaseAdmin });
     const probe = await store.probeArtifact(input);
     if (probe.kind === "integral") {

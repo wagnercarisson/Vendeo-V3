@@ -261,6 +261,14 @@ export interface UseCampaignFormReturn {
    */
   unknownResult: UnknownResultState | null;
   resetUnknownResult: () => void;
+  /** F60.5 — processamento (distinto de unknown/sucesso) com retomada manual. */
+  processingResult: {
+    campaignId: string | null;
+    operationId: string | null;
+    canContinue: boolean;
+    stepInProgress: boolean;
+  } | null;
+  continueGeneration: () => Promise<void>;
   /** Recorte 2 (Plano 09): invalida a identidade terminal (não reenvia os IDs estornados). */
   invalidateTerminalIdentity: () => void;
   /**
@@ -838,6 +846,14 @@ export function useCampaignForm(
   const [phases, setPhases] = useState<GenerationPhaseEvent[]>([]);
   // F56.2b1b (Plano 06, C1/F8): resultado desconhecido do envio ao vivo.
   const [unknownResult, setUnknownResult] = useState<UnknownResultState | null>(null);
+  // F60.5 — processamento (distinto de unknown/sucesso), com retomada manual.
+  const [processingResult, setProcessingResult] = useState<{
+    campaignId: string | null;
+    operationId: string | null;
+    canContinue: boolean;
+    stepInProgress: boolean;
+  } | null>(null);
+  const continueInFlightRef = useRef(false);
   // F43 (D2/D3): estado da revisão do brief em tela intermediária (não modal).
   const [reviewMode, setReviewMode] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -1306,6 +1322,29 @@ export function useCampaignForm(
         };
         onPhaseChange(phaseEvent);
         return false;
+      }
+
+      if (event.type === "processing") {
+        const processing = event as {
+          campaignId?: string;
+          operationId?: string;
+          state?: string;
+          canContinue?: boolean;
+        };
+        setProcessingResult({
+          campaignId:
+            typeof processing.campaignId === "string"
+              ? processing.campaignId
+              : lastCampaignId,
+          operationId:
+            typeof processing.operationId === "string"
+              ? processing.operationId
+              : lastOperationId,
+          canContinue: processing.canContinue === true,
+          stepInProgress: processing.state === "step_in_progress",
+        });
+        setIsSubmitting(false);
+        return true;
       }
 
       if (event.type === "result" && "campaignId" in event) {
@@ -1903,6 +1942,66 @@ export function useCampaignForm(
   }, []);
 
   /**
+   * F60.5 — retomada MANUAL e limitada. Só chama /continue quando há estado
+   * processing elegível e nenhuma chamada em voo (sem paralelismo).
+   */
+  const continueGeneration = useCallback(async () => {
+    const current = processingResult;
+    if (
+      !current ||
+      !current.campaignId ||
+      !current.operationId ||
+      !current.canContinue ||
+      current.stepInProgress ||
+      continueInFlightRef.current
+    ) {
+      return;
+    }
+    continueInFlightRef.current = true;
+    try {
+      const requestIds = {
+        base: crypto.randomUUID(),
+        expansion: crypto.randomUUID(),
+      };
+      const response = await fetch(
+        `/api/campaign/${current.campaignId}/continue`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            operationId: current.operationId,
+            requestIds,
+          }),
+        },
+      );
+      if (!response.ok) {
+        setSubmitError("Não foi possível retomar agora. Tente novamente.");
+        return;
+      }
+      const text = await response.text();
+      const lastLine = text.trim().split("\n").filter(Boolean).at(-1);
+      const event = lastLine ? JSON.parse(lastLine) : null;
+      if (event?.type === "result") {
+        setProcessingResult(null);
+        router.push(event.campaignUrl ?? `/campanhas/${current.campaignId}`);
+      } else if (event?.type === "unknown") {
+        setProcessingResult(null);
+        setUnknownResult({
+          supportReference: event.reference ?? null,
+          operationId: current.operationId,
+          campaignId: current.campaignId,
+        });
+      } else if (event?.type === "error") {
+        setSubmitError(event.message ?? "A geração falhou.");
+      }
+    } catch {
+      setSubmitError("Não foi possível retomar agora. Tente novamente.");
+    } finally {
+      continueInFlightRef.current = false;
+    }
+  }, [processingResult, router]);
+
+  /**
    * Recorte 2 (Plano 09): invalida a IDENTIDADE TERMINAL (não reenvia os mesmos
    * IDs). Preserva os campos/rascunhos (não limpa nada além da identidade).
    */
@@ -1946,6 +2045,8 @@ export function useCampaignForm(
     confirmReview,
     unknownResult,
     resetUnknownResult,
+    processingResult,
+    continueGeneration,
     restorationNotice,
     backgroundDirectionNotice,
     backgroundDirectionRequired,

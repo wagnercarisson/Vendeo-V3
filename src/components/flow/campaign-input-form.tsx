@@ -100,6 +100,8 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     exitReview,
     confirmReview,
     unknownResult,
+    processingResult,
+    continueGeneration,
     resetUnknownResult,
     invalidateTerminalIdentity,
     restorationNotice,
@@ -172,6 +174,42 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     </div>
   );
 
+  if (processingResult) {
+    return (
+      <div>
+        {pageHeader}
+        <GenerationProgress
+          phases={phases}
+          variant="processing"
+          flowKind={
+            (fields.campaignFormat ?? "1:1") === "9:16"
+              ? "two_stage_9_16"
+              : "one_to_one"
+          }
+        />
+        <div className="flex flex-wrap gap-2 justify-center pb-8">
+          <button
+            type="button"
+            className="text-xs text-text-secondary underline"
+            onClick={() => window.location.reload()}
+          >
+            Verificar novamente
+          </button>
+          <button
+            type="button"
+            className="text-xs text-accent-blue underline disabled:opacity-50"
+            onClick={() => void continueGeneration()}
+            disabled={
+              !processingResult.canContinue || processingResult.stepInProgress
+            }
+          >
+            Retomar quando autorizado
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isSubmitting) {
     return (
       <div>
@@ -220,6 +258,9 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             supportEmail={supportEmail}
             campaignId={unknownResult.campaignId}
             operationId={unknownResult.operationId}
+            imageRecoveryAvailable={
+              (fields.campaignFormat ?? "1:1") !== "9:16"
+            }
             onResolved={handleUnknownResolved}
           />
         </div>
