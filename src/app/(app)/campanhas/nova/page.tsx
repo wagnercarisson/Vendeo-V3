@@ -149,7 +149,7 @@ export default async function NovaCampanhaPage({ searchParams }: NovaCampanhaPag
 
   let verticalEnabled = false;
   try {
-    verticalEnabled = await new FeatureFlagService().isProduct9x16Enabled();
+    verticalEnabled = await new FeatureFlagService().isProduct9_16TwoStageEnabled();
   } catch {
     verticalEnabled = false;
   }

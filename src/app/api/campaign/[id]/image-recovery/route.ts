@@ -18,6 +18,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 import { resolveRecoveryProfile } from "@/lib/product-vertical-9-16/recovery/format-dispatch";
 import type { RecoveryProfile } from "@/lib/product-vertical-9-16/recovery/format-dispatch";
+import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
 
 export const runtime = "nodejs";
 
@@ -93,6 +94,23 @@ export const GET = apiHandler(
     }
 
     await requireOwnership(campaign.store_id, user.userId);
+
+  // F60.5 — recuperacao de imagem NAO existe no fluxo 9:16 por expansao; a
+  // entrega/reparo ocorre pela continuacao. Recusa antes de qualquer geracao.
+  if (
+    resolveCampaignGenerationOrigin(campaign.input_snapshot).kind ===
+    "two_stage_9_16"
+  ) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "image_recovery_unavailable",
+          message: "A recuperação de imagem não se aplica a este fluxo.",
+        },
+      },
+      { status: 409 },
+    );
+  }
 
     const load = await loadCampaignOperation(id);
     if (load.status === "error") {

@@ -17,6 +17,8 @@ export const PRODUCT_1_1_TEST_STORES_ENABLED_KEY =
 export const PRODUCT_1_1_ALL_STORES_ENABLED_KEY =
   "product_1_1_all_stores_enabled";
 export const PRODUCT_9_16_ENABLED_KEY = "product_9_16_enabled";
+export const PRODUCT_9_16_TWO_STAGE_ENABLED_KEY =
+  "product_9_16_two_stage_enabled";
 
 export type ProductOneToOneFlagReadStatus =
   | "valid"
@@ -198,6 +200,15 @@ export class FeatureFlagService {
   }
 
   /**
+   * F60.5 — flag do fluxo 9:16 por expansao (duas etapas). Fail-closed, sem
+   * envOverride e sem coortes: ausente/erro ⇒ false. Nao entra em
+   * `ALL_FEATURE_FLAG_KEYS` (ativacao e checkpoint proprio).
+   */
+  isProduct9_16TwoStageEnabled(): Promise<boolean> {
+    return this.readFlag(PRODUCT_9_16_TWO_STAGE_ENABLED_KEY, false);
+  }
+
+  /**
    * Reads both new-flow flags while preserving the distinction between a valid
    * false value and an unavailable/malformed row. The resolver must fail closed
    * for the entire pair if either status is not `valid`.
@@ -281,4 +292,8 @@ export async function isProductOneToOneAllStoresEnabled(): Promise<boolean> {
 
 export async function isProduct9x16Enabled(): Promise<boolean> {
   return new FeatureFlagService().isProduct9x16Enabled();
+}
+
+export async function isProduct9_16TwoStageEnabled(): Promise<boolean> {
+  return new FeatureFlagService().isProduct9_16TwoStageEnabled();
 }

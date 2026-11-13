@@ -24,8 +24,11 @@ interface GenerationProgressProps {
   /**
    * F56.2b1b: distingue o estado `unknown` (âmbar) da falha confirmada
    * (`error`, vermelho). `running` é o estado padrão (informativo/azul).
+   * F60.5: `processing` é neutro (não é erro nem sucesso).
    */
-  variant?: "running" | "unknown";
+  variant?: "running" | "unknown" | "processing";
+  /** F60.5 — detector explícito do fluxo de duas etapas. */
+  flowKind?: "one_to_one" | "two_stage_9_16";
 }
 
 const PHASE_LABELS: Record<string, { label: string; running: string }> = {
@@ -64,7 +67,9 @@ const PHASE_FRIENDLY_LABELS: Record<string, string> = {
   done: "Concluído",
   // F56.2b2c (B2.3) — fases do novo fluxo (trabalho REAL; sem “revisão” inexistente).
   campaign_validation: "Validação dos dados da campanha",
+  campaign_base: "Geração da base quadrada",
   campaign_preparation: "Preparação do briefing e do snapshot",
+  campaign_expansion: "Expansão para o vertical 9:16",
   campaign_image: "Geração da imagem com IA",
   campaign_copy: "Geração do texto da campanha",
   campaign_delivery: "Entrega da campanha",
@@ -87,6 +92,34 @@ const NEW_FLOW_PHASE_LABELS: Record<string, { label: string; running: string }> 
   campaign_delivery: { label: "Entrega", running: "Entregando a campanha..." },
 };
 
+/** F60.5 — ordem e rótulos do fluxo 9:16 por expansão. */
+export const TWO_STAGE_PHASE_ORDER = [
+  "campaign_validation",
+  "campaign_base",
+  "campaign_preparation",
+  "campaign_expansion",
+  "campaign_copy",
+  "campaign_delivery",
+] as const;
+
+export const TWO_STAGE_PHASE_LABELS: Record<
+  string,
+  { label: string; running: string }
+> = {
+  campaign_validation: { label: "Validação", running: "Validando dados..." },
+  campaign_base: { label: "Base", running: "Gerando a base quadrada..." },
+  campaign_preparation: { label: "Preparação", running: "Preparando o 1152..." },
+  campaign_expansion: { label: "Vertical", running: "Expandindo para 9:16..." },
+  campaign_copy: { label: "Texto", running: "Gerando texto da campanha..." },
+  campaign_delivery: { label: "Entrega", running: "Entregando a campanha..." },
+};
+
+function isTwoStagePhases(phases: GenerationPhaseEvent[]): boolean {
+  return phases.some(
+    (p) => p.phase === "campaign_base" || p.phase === "campaign_expansion",
+  );
+}
+
 function isNewFlowPhases(phases: GenerationPhaseEvent[]): boolean {
   return phases.some((p) => (NEW_FLOW_PHASE_ORDER as readonly string[]).includes(p.phase));
 }
@@ -105,16 +138,23 @@ function buildPhaseStatus(phases: GenerationPhaseEvent[]): { phase: string; stat
     }));
 }
 
-export function GenerationProgress({ phases, error, onRetry, variant = "running" }: GenerationProgressProps) {
+export function GenerationProgress({ phases, error, onRetry, variant = "running", flowKind }: GenerationProgressProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const latestPhase = phases.length > 0 ? phases[phases.length - 1] : null;
   const currentMessage = latestPhase?.message || GENERATION_STATE_MESSAGES.running;
 
-  const isNewFlow = isNewFlowPhases(phases);
-  const phaseOrder: readonly string[] = isNewFlow
-    ? NEW_FLOW_PHASE_ORDER
-    : ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
-  const phaseLabels = isNewFlow ? NEW_FLOW_PHASE_LABELS : PHASE_LABELS;
+  const isTwoStage = flowKind === "two_stage_9_16" || isTwoStagePhases(phases);
+  const isNewFlow = !isTwoStage && isNewFlowPhases(phases);
+  const phaseOrder: readonly string[] = isTwoStage
+    ? TWO_STAGE_PHASE_ORDER
+    : isNewFlow
+      ? NEW_FLOW_PHASE_ORDER
+      : ["input_validation", "prompt_assembly", "image_generation", "quality_review"];
+  const phaseLabels = isTwoStage
+    ? TWO_STAGE_PHASE_LABELS
+    : isNewFlow
+      ? NEW_FLOW_PHASE_LABELS
+      : PHASE_LABELS;
 
   const phaseStatus = buildPhaseStatus(phases);
 
@@ -201,6 +241,21 @@ export function GenerationProgress({ phases, error, onRetry, variant = "running"
               />
               <p className="text-accent-amber text-sm font-body">
                 {GENERATION_STATE_MESSAGES.unknown}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* F60.5 — processing: neutro (não é erro nem sucesso). */}
+        {variant === "processing" && (
+          <div
+            role="status"
+            className="mt-4 rounded-lg border border-border-light bg-bg-surface px-4 py-3"
+          >
+            <div className="flex items-start gap-2">
+              <Loader2 className="w-4 h-4 text-text-muted shrink-0 mt-0.5 animate-spin" aria-hidden="true" />
+              <p className="text-text-secondary text-sm font-body">
+                A geração continua em processamento. Você pode verificar novamente ou retomar quando autorizado.
               </p>
             </div>
           </div>

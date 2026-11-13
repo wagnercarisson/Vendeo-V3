@@ -12,6 +12,9 @@ import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestrati
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
 import { decideNewFlowDownload } from "@/lib/product-1-1/artifact/download-gate";
 import { buildSafeDownloadFilename } from "@/lib/campaign/download-filename";
+import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
+import { nineSixteenVerticalAccess } from "@/lib/product-9-16-two-stage/orchestration/vertical-access";
+import { ProductTwoStageOperationClient } from "@/lib/product-9-16-two-stage/two-stage-operation-client";
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
 
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -34,6 +37,90 @@ export const GET = apiHandler(async (
   }
 
   await requireOwnership(campaign.store_id, user.userId);
+
+  // F60.5 — ramo 9:16 por expansao ANTES do gate F56.2b1b/store direto.
+  const generationOrigin = resolveCampaignGenerationOrigin(
+    campaign.input_snapshot,
+  );
+  if (generationOrigin.kind === "two_stage_9_16") {
+    const operationRow = await supabaseAdmin
+      .from("product_9_16_two_stage_operations")
+      .select("operation_id")
+      .eq("campaign_id", id)
+      .maybeSingle<{ operation_id: string }>();
+    if (operationRow.error) {
+      return NextResponse.json(
+        { error: { code: "operation_unavailable", message: "Operação indisponível." } },
+        { status: 503 },
+      );
+    }
+    const operationId = operationRow.data?.operation_id;
+    if (!operationId) {
+      return NextResponse.json(
+        { error: { code: "operation_not_found", message: "Operação não encontrada." } },
+        { status: 404 },
+      );
+    }
+    const control = new ProductTwoStageOperationClient(supabaseAdmin as never);
+    const lookup = await control.getOperationView({
+      campaignId: id,
+      operationId,
+    });
+    if (lookup.kind === "read_failed") {
+      return NextResponse.json(
+        { error: { code: "operation_unavailable", message: "Operação indisponível." } },
+        { status: 503 },
+      );
+    }
+    if (lookup.kind === "absent") {
+      return NextResponse.json(
+        { error: { code: "operation_not_found", message: "Operação não encontrada." } },
+        { status: 404 },
+      );
+    }
+    const access = await nineSixteenVerticalAccess(
+      {
+        storeId: campaign.store_id,
+        campaignId: id,
+        operationId,
+        mode: "download",
+      },
+      { client: supabaseAdmin },
+    );
+    if (access.kind === "not_available") {
+      if (access.reason === "indeterminate") {
+        return NextResponse.json(
+          { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+          { status: 502 },
+        );
+      }
+      return NextResponse.json(
+        { error: { code: access.reason, message: "Download não autorizado." } },
+        { status: 403 },
+      );
+    }
+    if (access.kind !== "downloadBytes") {
+      return NextResponse.json(
+        { error: { code: "artifact_unavailable", message: "Arte indisponível." } },
+        { status: 403 },
+      );
+    }
+    const filename = buildSafeDownloadFilename({
+      productName: campaign.product_name,
+      createdAt: campaign.created_at,
+      extension: "jpg",
+    });
+    return new NextResponse(
+      new Blob([new Uint8Array(access.bytes)], { type: access.mimeType }),
+      {
+        headers: {
+          "Content-Type": access.mimeType,
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "private, no-store",
+        },
+      },
+    );
+  }
 
   // F56.2b1b (Plano 06, B1B-D6 / C2 / F4 / I3) — campanha do NOVO fluxo: o
   // download é governado pelo estado PERSISTIDO da operação (`delivered`) +

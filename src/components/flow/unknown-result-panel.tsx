@@ -43,6 +43,11 @@ interface UnknownResultPanelProps {
    * leva à página da campanha.
    */
   onResolved?: (outcome: UnknownResolution) => void;
+  /**
+   * F60.5 — no fluxo 9:16 por expansao a recuperacao de imagem nao existe.
+   * Default `true` preserva 1:1/historico.
+   */
+  imageRecoveryAvailable?: boolean;
 }
 
 export function UnknownResultPanel({
@@ -51,6 +56,7 @@ export function UnknownResultPanel({
   campaignId,
   operationId,
   onResolved,
+  imageRecoveryAvailable = true,
 }: UnknownResultPanelProps) {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
@@ -186,15 +192,17 @@ export function UnknownResultPanel({
             >
               Verificar novamente
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleRecoverImage}
-              loading={recovering}
-              disabled={recovering || checking}
-            >
-              Recuperar imagem salva
-            </Button>
+            {imageRecoveryAvailable && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleRecoverImage}
+                loading={recovering}
+                disabled={recovering || checking}
+              >
+                Recuperar imagem salva
+              </Button>
+            )}
             {supportEmail && (
               <Button
                 variant="ghost"

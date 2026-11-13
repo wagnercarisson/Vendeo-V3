@@ -31,11 +31,14 @@ describe("F59/59-07 — contrato estrutural da rota generate-image", () => {
     expect(source).not.toContain('from "@/lib/product-vertical-9-16/format"');
   });
 
-  it("carrega o entrypoint vertical APENAS por um import dinâmico", () => {
+  it("despacha o 9:16 por import dinâmico do orquestrador de duas etapas", () => {
     const dynamicImports = source.match(
-      /import\(\s*["']@\/lib\/product-vertical-9-16\/orchestration\/entrypoint["']\s*\)/g,
+      /import\(\s*["']@\/lib\/product-9-16-two-stage\/orchestration\/run-nine-sixteen["']\s*\)/g,
     );
     expect(dynamicImports).toHaveLength(1);
+    expect(source).not.toMatch(
+      /import\(\s*["']@\/lib\/product-vertical-9-16\/orchestration\/entrypoint["']\s*\)/,
+    );
     expect(source).not.toMatch(
       /from\s+["']@\/lib\/product-vertical-9-16\/orchestration\/entrypoint["']/,
     );

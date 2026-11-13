@@ -136,6 +136,7 @@ vi.mock('@/lib/feature-flags/feature-flag-service', () => ({
   isForceBriefVisionCheckEnabled: mockIsForceBriefVisionCheckEnabled,
   isCampaignApprovalEnabled: mockIsCampaignApprovalEnabled,
   isProduct9x16Enabled: mockIsProduct9x16Enabled,
+  isProduct9_16TwoStageEnabled: vi.fn(async () => false),
   FORCE_BRIEF_VISION_CHECK_KEY: "force_brief_vision_check",
   FeatureFlagService: vi.fn(),
 }));
@@ -2551,24 +2552,6 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
   const persistedSnapshot = (callIndex = 0) =>
     (createCampaign as any).mock.calls[callIndex][1].inputSnapshot as Record<string, unknown>;
 
-  it('primeira submissão 9:16 (sem campanha persistida): sem 409, chaves congeladas, motor vertical', async () => {
-    setup();
-    mockIsProduct9x16Enabled.mockResolvedValue(true);
-    const { POST } = await import('../route');
-
-    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
-    expect(res.status).toBe(200);
-    await res.text();
-
-    expect(mockRunProductVertical9x16Generation).toHaveBeenCalledTimes(1);
-    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
-    expect(createCampaign).toHaveBeenCalledTimes(1);
-    expect(persistedSnapshot()).toMatchObject({
-      campaignFormat: '9:16',
-      formatContractVersion: 'f59-vertical-9-16-v1',
-    });
-  });
-
   it('primeira submissão 1:1: snapshot byte-compatível (nenhuma chave nova) e motor 1:1', async () => {
     setup();
     const { POST } = await import('../route');
@@ -2652,22 +2635,6 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body.error.code).toBe('format_unavailable');
-    expect(createCampaign).not.toHaveBeenCalled();
-  });
-
-  it('reenvio 9:16 com flag OFF NÃO é bloqueado e continua no motor vertical', async () => {
-    setup({ existingCampaign: { id: NEW_FLOW_CAMPAIGN_ID, store_id: STORE_ID, input_snapshot: { campaignFormat: '9:16', formatContractVersion: 'f59-vertical-9-16-v1' } } });
-    mockIsProduct9x16Enabled.mockResolvedValue(false);
-    mockReadProductOneToOneOperation.mockResolvedValue({ campaignId: NEW_FLOW_CAMPAIGN_ID } as never);
-    const { POST } = await import('../route');
-
-    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
-    expect(res.status).toBe(200);
-    await res.text();
-
-    expect(mockRunProductVertical9x16Generation).toHaveBeenCalledTimes(1);
-    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
-    expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
     expect(createCampaign).not.toHaveBeenCalled();
   });
 

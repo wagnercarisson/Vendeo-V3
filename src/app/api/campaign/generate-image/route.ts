@@ -8,7 +8,7 @@ import { ImageGenerationService } from "@/lib/image-generation/services/image-ge
 import type { GenerateImageServiceResult } from "@/lib/image-generation/services/image-generation-service";
 import { InputValidationService } from "@/lib/image-generation/services/input-validation-service";
 import { isForceBriefVisionCheckEnabled, isCampaignApprovalEnabled } from "@/lib/feature-flags/feature-flag-service";
-import { isProduct9x16Enabled } from "@/lib/feature-flags/feature-flag-service";
+import { isProduct9_16TwoStageEnabled } from "@/lib/feature-flags/feature-flag-service";
 import { createImageProvider } from "@/lib/image-generation/providers/factory";
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from "@/lib/store-identity-service";
 import { resolveIdentityImageAsDataUrl } from "@/lib/store-identity/identity-image";
@@ -20,7 +20,7 @@ import { getStoreReadiness } from "@/lib/store-readiness";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CampaignInput } from "@/components/campaign/types";
-import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from "@/lib/campaign/persistence";
+import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion, uploadCampaignInputFile } from "@/lib/campaign/persistence";
 import { createDefaultThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
 import { generateCampaignThumbnailSafely } from "@/lib/campaign/thumbnail/thumbnail-safe";
 import { transcodeToJpeg } from "@/lib/campaign/image-processor";
@@ -68,6 +68,12 @@ import {
   resolveCampaignFormat,
   FORMAT_CONTRACT_VERSION,
 } from "@/lib/campaign/format-resolution";
+import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
+import { describeDurableInput } from "@/lib/product-9-16-two-stage/orchestration/durable-input";
+import { buildNineSixteenResumeContext } from "@/lib/product-9-16-two-stage/orchestration/resume-context";
+import { VerticalArtifactStore } from "@/lib/product-vertical-9-16/artifact/artifact-store";
+import type { RunNineSixteenInput } from "@/lib/product-9-16-two-stage/orchestration/types";
+import type { DurableInputDescriptor } from "@/lib/product-9-16-two-stage/orchestration/types";
 
 export const runtime = "nodejs";
 
@@ -137,17 +143,122 @@ function computeFrozenContentHash(
  * caminho 1:1 não carrega o módulo vertical.
  */
 async function runNewFlowGeneration(
-  requestedFormat: "1:1" | "9:16",
   input: ProductOneToOneGenerationInput,
   pilotSpend: ProductOneToOneGenerationDeps["pilotSpend"],
 ): Promise<Response> {
-  if (requestedFormat === "9:16") {
-    const { runProductVertical9x16Generation } = await import(
-      "@/lib/product-vertical-9-16/orchestration/entrypoint"
-    );
-    return await runProductVertical9x16Generation(input, { pilotSpend });
-  }
   return await runProductOneToOneGeneration(input, { pilotSpend });
+}
+
+/** F60.5 — despacho do fluxo 9:16 por expansao (import dinamico). */
+async function runTwoStageGeneration(
+  input: RunNineSixteenInput,
+  pilotSpend: unknown,
+): Promise<Response> {
+  const { runNineSixteenTwoStageGeneration } = await import(
+    "@/lib/product-9-16-two-stage/orchestration/run-nine-sixteen"
+  );
+  const { createNineSixteenDeps } = await import(
+    "@/lib/product-9-16-two-stage/orchestration/delivery-deps"
+  );
+  return runNineSixteenTwoStageGeneration(
+    input,
+    createNineSixteenDeps({ client: supabaseAdmin, pilotSpend }),
+  );
+}
+
+function buildTwoStageInput(input: {
+  readonly storeId: string;
+  readonly campaignId: string;
+  readonly operationId: string;
+  readonly userId: string;
+  readonly requestStartedAtMs: number;
+  readonly runId?: string;
+  readonly traceId?: string;
+  readonly allowNewPaidStep?: boolean;
+}): RunNineSixteenInput {
+  return {
+    mode: "initial",
+    storeId: input.storeId,
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+    authorization: { kind: "owner", userId: input.userId },
+    requestStartedAtMs: input.requestStartedAtMs,
+    ...(input.runId === undefined ? {} : { runId: input.runId }),
+    ...(input.traceId === undefined ? {} : { traceId: input.traceId }),
+    ...(input.allowNewPaidStep === undefined
+      ? {}
+      : { allowNewPaidStep: input.allowNewPaidStep }),
+  };
+}
+
+function singleNdjson(event: Record<string, unknown>): Response {
+  return new Response(`${JSON.stringify(event)}\n`, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+/**
+ * Campanha 9:16 HISTORICA (sem marcador de origem): devolve somente estado
+ * persistido seguro, sem marcador novo, sem reserva, sem provider e sem
+ * chegar ao orquestrador novo.
+ */
+async function respondHistoricalVertical(input: {
+  storeId: string;
+  campaignId: string;
+  operationId: string;
+}): Promise<Response> {
+  let status: string | null = null;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("product_1_1_campaign_credit_operations")
+      .select("status")
+      .eq("campaign_id", input.campaignId)
+      .eq("operation_id", input.operationId)
+      .maybeSingle();
+    if (error) throw error;
+    status = typeof data?.status === "string" ? data.status : null;
+  } catch {
+    return singleNdjson({
+      type: "error",
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      code: "legacy_vertical_pending",
+      message: "Estado da campanha vertical indisponível.",
+    });
+  }
+
+  if (status === "refunded") {
+    return singleNdjson({
+      type: "error",
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      code: "operation_refunded",
+      message: "A geração foi encerrada e o crédito devolvido.",
+      refunded: true,
+    });
+  }
+  if (status === "delivered") {
+    const store = new VerticalArtifactStore({ client: supabaseAdmin });
+    const probe = await store.probeArtifact(input);
+    if (probe.kind === "integral") {
+      return singleNdjson({
+        type: "result",
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        campaignUrl: `/campanhas/${input.campaignId}`,
+      });
+    }
+  }
+  return singleNdjson({
+    type: "error",
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+    code: "legacy_vertical_pending",
+    message: "Campanha vertical histórica aguardando resolução.",
+  });
 }
 
 export const POST = apiHandler(async (request: NextRequest) => {
@@ -464,6 +575,34 @@ export const POST = apiHandler(async (request: NextRequest) => {
         }
       }
 
+      // F60.5 — campanha 9:16 HISTORICA (sem marcador) e classificada pela
+      // origem PERSISTIDA antes do fast path/leitura da operacao 1:1. Recebe
+      // somente estado persistido seguro; nunca marcador, reserva ou geracao.
+      if (
+        existingNewFlowCampaign.data &&
+        requestedFormat === "9:16"
+      ) {
+        const origin = resolveCampaignGenerationOrigin(
+          existingNewFlowCampaign.data.input_snapshot,
+        );
+        if (origin.kind === "historical") {
+          return await respondHistoricalVertical({
+            storeId: newFlow.storeId,
+            campaignId: newFlow.campaignId,
+            operationId: newFlow.operationId,
+          });
+        }
+        if (origin.kind === "indeterminate") {
+          return singleNdjson({
+            type: "error",
+            campaignId: newFlow.campaignId,
+            operationId: newFlow.operationId,
+            code: "legacy_vertical_pending",
+            message: "Origem da campanha indisponível.",
+          });
+        }
+      }
+
       // (F6/I1 — achado 3) Reenvio = SOMENTE consulta. Reconhece uma operação JÁ
       // EXISTENTE para `campaignId` ANTES de qualquer checagem pré-reserva,
       // `InputValidationService`, `recordGenerationAttempt` ou `createCampaign`.
@@ -564,22 +703,41 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
       if (existingNewFlowOperation) {
         // Operação existe ⇒ NENHUMA checagem pré-reserva, validação de entrada,
-        // registro de tentativa ou criação de campanha roda. A flag vertical NÃO
-        // bloqueia reenvio; o formato pedido (já consistente com o persistido)
-        // apenas escolhe o motor que continua a operação.
+        // registro de tentativa ou criação de campanha roda. Reenvio é QUERY-ONLY:
+        // a continuação real é exclusiva de POST /api/campaign/[id]/continue.
+        if (requestedFormat === "9:16") {
+          let enabled = false;
+          try {
+            enabled = await isProduct9_16TwoStageEnabled();
+          } catch {
+            enabled = false;
+          }
+          return await runTwoStageGeneration(
+            buildTwoStageInput({
+              storeId: newFlow.storeId,
+              campaignId: newFlow.campaignId,
+              operationId: newFlow.operationId,
+              userId: guardUser.userId,
+              requestStartedAtMs,
+              runId: operationRunId,
+              traceId,
+              allowNewPaidStep: enabled,
+            }),
+            pilotSpendDep,
+          );
+        }
         return await runNewFlowGeneration(
-          requestedFormat,
           newFlowOrchestrationInput,
           pilotSpendDep,
         );
       }
 
-      // F59/D-13 — flag global limita APENAS novas gerações verticais. Reenvio
-      // (bloco acima) não é bloqueado. Fail-closed: ausente/erro ⇒ OFF.
+      // F60.5 — flag fail-closed limita APENAS novas gerações verticais.
+      // Reenvio (bloco acima) não é bloqueado.
       if (requestedFormat === "9:16") {
         let verticalEnabled = false;
         try {
-          verticalEnabled = await isProduct9x16Enabled();
+          verticalEnabled = await isProduct9_16TwoStageEnabled();
         } catch {
           verticalEnabled = false;
         }
@@ -899,6 +1057,75 @@ export const POST = apiHandler(async (request: NextRequest) => {
         ...(newFlowIdentityReference ? [newFlowIdentityReference] : []),
       ];
 
+      // F60.5 — descritores duraveis (produto na ordem + identidade) para o
+      // fluxo 9:16. Calculados ANTES do hash e persistidos em `resumeContext`
+      // (fora do hash). Data URL nao reconstruivel e recusado antes de criar
+      // campanha/reservar.
+      const newFlowDurableInputs: DurableInputDescriptor[] = [];
+      const newFlowDurableUploads: Array<{
+        descriptor: DurableInputDescriptor;
+        buffer: Buffer;
+      }> = [];
+      if (requestedFormat === "9:16") {
+        const describe = (
+          kind: "product" | "identity",
+          role: string,
+          index: number,
+          dataUrl: string,
+        ) => {
+          const mimeType = mimeTypeFromDataUrl(dataUrl);
+          const parsed = describeDurableInput({
+            kind,
+            role: role as never,
+            index,
+            storagePath: "",
+            mimeType: mimeType ?? "image/jpeg",
+            dataUrl,
+          });
+          if (!parsed.ok) return null;
+          const extension =
+            parsed.descriptor.mimeType === "image/png"
+              ? "png"
+              : parsed.descriptor.mimeType === "image/webp"
+                ? "webp"
+                : "jpg";
+          const descriptor = {
+            ...parsed.descriptor,
+            storagePath: `${newFlow.storeId}/${newFlow.campaignId}/inputs/${parsed.descriptor.contentId}.${extension}`,
+          };
+          const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+          return { descriptor, buffer: Buffer.from(base64, "base64") };
+        };
+
+        for (const [index, image] of newFlowProductImages.entries()) {
+          const item = describe("product", image.role, index, image.dataUrl);
+          if (!item) {
+            return Response.json(
+              { error: { code: "invalid_input", message: "Imagem de entrada não reconstruível." } },
+              { status: 400 },
+            );
+          }
+          newFlowDurableInputs.push(item.descriptor);
+          newFlowDurableUploads.push(item);
+        }
+        if (newFlowIdentityImage) {
+          const item = describe(
+            "identity",
+            "identity",
+            newFlowProductImages.length,
+            newFlowIdentityImage.dataUrl,
+          );
+          if (!item) {
+            return Response.json(
+              { error: { code: "invalid_input", message: "Identidade não reconstruível." } },
+              { status: 400 },
+            );
+          }
+          newFlowDurableInputs.push(item.descriptor);
+          newFlowDurableUploads.push(item);
+        }
+      }
+
       // (4c) gap 2 / B2 — fingerprint do conteúdo congelado (snapshot canônico +
       // seleções por CONTEÚDO + a direção de identidade textual efetivamente
       // enviada). Fonte ÚNICA da comparação de reuso da campanha.
@@ -916,6 +1143,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
           ? {
               campaignFormat: "9:16" as const,
               formatContractVersion: FORMAT_CONTRACT_VERSION,
+              inputFiles: newFlowDurableInputs,
             }
           : {}),
       };
@@ -923,6 +1151,38 @@ export const POST = apiHandler(async (request: NextRequest) => {
         newFlowFrozenSnapshot,
         newFlowEvidenceReferenceSelections,
       );
+
+      // F60.5 — `resumeContext` duravel (FORA do hash) com briefing identico ao
+      // da rota, identidade em campos proprios, copy/economia congeladas e os
+      // descritores. A reconstrucao usa somente este snapshot + arquivos.
+      const newFlowResumeContext =
+        requestedFormat === "9:16"
+          ? buildNineSixteenResumeContext({
+              briefing: newFlowBriefing,
+              campaignIntent: newFlow.campaignIntent,
+              backgroundDirection: newFlowBackgroundDirection,
+              identityDirective: newFlowIdentityDirective,
+              identityContext: newFlowIdentityContextFrozen,
+              copyContext: newFlowCopyContext ?? null,
+              economicSnapshot: {
+                usdBrlRateAtGeneration: economicSnapshot.usdBrlRateAtGeneration,
+                creditValueBrlAtGeneration:
+                  economicSnapshot.creditValueBrlAtGeneration,
+              },
+              inputFiles: newFlowDurableInputs,
+            })
+          : null;
+      if (newFlowResumeContext && !newFlowResumeContext.ok) {
+        return Response.json(
+          {
+            error: {
+              code: "invalid_input",
+              message: "Contexto de retomada inválido.",
+            },
+          },
+          { status: 400 },
+        );
+      }
 
       // (5) C3/F6 — campanha IDEMPOTENTE por `campaignId` do corpo (nunca uma
       // segunda campanha; loja E CONTEÚDO divergentes ⇒ conflito). O binding
@@ -941,6 +1201,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             : [];
           const storedBriefSnapshot = { ...storedSnapshots };
           delete storedBriefSnapshot[FROZEN_CONTENT_REFERENCES_KEY];
+          delete storedBriefSnapshot.resumeContext;
           if (
             computeFrozenContentHash(storedBriefSnapshot, storedReferences) !==
             newFlowFrozenContentHash
@@ -965,6 +1226,10 @@ export const POST = apiHandler(async (request: NextRequest) => {
               productName: newFlow.productName,
               inputSnapshot: {
                 ...newFlowFrozenSnapshot,
+                ...(requestedFormat === "9:16" &&
+                newFlowResumeContext?.ok === true
+                  ? { resumeContext: newFlowResumeContext.context }
+                  : {}),
                 [FROZEN_CONTENT_REFERENCES_KEY]: newFlowEvidenceReferenceSelections,
               } as unknown as Record<string, unknown>,
               // I2 — persiste a identidade EFETIVAMENTE usada (imagem REMOVIDA
@@ -1009,6 +1274,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 : [];
               const racedBriefSnapshot = { ...racedSnapshot };
               delete racedBriefSnapshot[FROZEN_CONTENT_REFERENCES_KEY];
+              delete racedBriefSnapshot.resumeContext;
               racedContentMatches =
                 computeFrozenContentHash(racedBriefSnapshot, racedReferences) ===
                 newFlowFrozenContentHash;
@@ -1040,6 +1306,45 @@ export const POST = apiHandler(async (request: NextRequest) => {
       }
       await recordGenerationAttempt(newFlowStoreId, newFlowUser.userId);
 
+      // F60.5 — upload dos inputs ORIGINAIS (sem transcode) depois da campanha e
+      // ANTES da delegacao/reserva. Falha impede reserva/credito.
+      if (requestedFormat === "9:16" && !existingNewFlowCampaign.data) {
+        for (const item of newFlowDurableUploads) {
+          const uploaded = await uploadCampaignInputFile(
+            newFlow.storeId,
+            newFlow.campaignId,
+            {
+              contentId: item.descriptor.contentId,
+              mimeType: item.descriptor.mimeType,
+              dataUrlPrefix: item.descriptor.dataUrlPrefix,
+              buffer: item.buffer,
+            },
+          );
+          if (uploaded.kind === "conflict") {
+            return Response.json(
+              {
+                error: {
+                  code: "input_conflict",
+                  message: "Conteúdo de entrada divergente.",
+                },
+              },
+              { status: 409 },
+            );
+          }
+          if (uploaded.kind === "indeterminate") {
+            return Response.json(
+              {
+                error: {
+                  code: "input_unavailable",
+                  message: "Não foi possível armazenar as imagens de entrada.",
+                },
+              },
+              { status: 503 },
+            );
+          }
+        }
+      }
+
       // (6) Delegação ao orquestrador NDJSON (snapshot → reserva → tentativa →
       // política 2+1 → arte → delivered), preservando a identidade da operação, o
       // conteúdo congelado COMPLETO (briefing íntegro + seleções por conteúdo) e a
@@ -1069,8 +1374,22 @@ export const POST = apiHandler(async (request: NextRequest) => {
         creditValueBrlAtGeneration: economicSnapshot.creditValueBrlAtGeneration,
       };
 
+      if (requestedFormat === "9:16") {
+        return await runTwoStageGeneration(
+          buildTwoStageInput({
+            storeId: newFlow.storeId,
+            campaignId: newFlow.campaignId,
+            operationId: newFlow.operationId,
+            userId: guardUser.userId,
+            requestStartedAtMs,
+            runId: operationRunId,
+            traceId,
+            allowNewPaidStep: true,
+          }),
+          pilotSpendDep,
+        );
+      }
       return await runNewFlowGeneration(
-        requestedFormat,
         verticalOrOneToOneInput,
         pilotSpendDep,
       );

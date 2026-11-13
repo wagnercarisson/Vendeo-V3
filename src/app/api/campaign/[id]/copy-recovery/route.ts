@@ -20,6 +20,9 @@ import {
   type CopyRecoveryStateView,
 } from "@/lib/product-1-1/copy/copy-recovery";
 import { CopyRecoveryRequestSchema } from "@/lib/product-1-1/copy/recovery-schemas";
+import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
+import { buildTwoStageCopyRunner } from "@/lib/product-9-16-two-stage/orchestration/copy-recovery-runner";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
@@ -254,6 +257,54 @@ export const POST = apiHandler(
       );
     }
     const recoveryRequest = parsed.data;
+
+    // F60.5 — copy do fluxo 9:16 por expansao usa SOMENTE o conteudo congelado.
+    if (
+      resolveCampaignGenerationOrigin(campaign.input_snapshot).kind ===
+      "two_stage_9_16"
+    ) {
+      const built = await buildTwoStageCopyRunner({
+        storeId: campaign.store_id,
+        campaignId: id,
+        operationId: recoveryRequest.operationId,
+        client: supabaseAdmin,
+      });
+      if (!built.ok) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "copy_recovery_unavailable",
+              message: "Recuperação de copy indisponível.",
+            },
+          },
+          { status: 409 },
+        );
+      }
+      try {
+        const result =
+          await new ProductOneToOneCopyRecoveryClient().recoverCopyAttempt({
+            campaignId: id,
+            operationId: recoveryRequest.operationId,
+            mode: toAcquisitionMode(recoveryRequest.mode),
+            requestToken: recoveryRequest.requestToken,
+            runner: built.runner,
+          });
+        return NextResponse.json({ recovery: result });
+      } catch (error) {
+        if (error instanceof ProductOneToOneCopyRecoveryError) {
+          return NextResponse.json(
+            {
+              error: {
+                code: error.code,
+                message: "Não foi possível executar a recuperação.",
+              },
+            },
+            { status: error.code === "missing_request_token" ? 400 : 409 },
+          );
+        }
+        throw error;
+      }
+    }
 
     // ── BARREIRA DE NÃO-ATIVAÇÃO/IDENTIDADE (lacuna 6) — ANTES de qualquer IA ─
     const flowClassification = classifyCampaignFlow(campaign.input_snapshot);
