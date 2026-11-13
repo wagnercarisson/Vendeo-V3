@@ -544,9 +544,18 @@ async function execute(
       });
       if (expansion.kind === "completed") {
         await deliverAndEmit(input, deps, stream);
-      } else if (expansion.kind === "processing" || expansion.kind === "skipped") {
+      } else if (expansion.kind === "processing") {
         stream.emitTerminal(
-          processingEvent(input, "between_steps", "expansion", expansion.kind !== "skipped"),
+          processingEvent(
+            input,
+            expansion.state,
+            expansion.nextStep ?? "expansion",
+            expansion.canContinue,
+          ),
+        );
+      } else if (expansion.kind === "skipped") {
+        stream.emitTerminal(
+          processingEvent(input, "between_steps", "expansion", false),
         );
       } else {
         await handleStepFailure(input, deps, stream, expansion, "expansion");
@@ -569,8 +578,14 @@ async function execute(
     deadlineAtMs,
     allowNewPaidStep,
   });
-  if (base.kind === "processing" || base.kind === "skipped") {
-    stream.emitTerminal(processingEvent(input, "between_steps", "base", base.kind !== "skipped"));
+  if (base.kind === "processing") {
+    stream.emitTerminal(
+      processingEvent(input, base.state, base.nextStep ?? "base", base.canContinue),
+    );
+    return;
+  }
+  if (base.kind === "skipped") {
+    stream.emitTerminal(processingEvent(input, "between_steps", "base", false));
     return;
   }
   if (base.kind !== "completed") {
@@ -595,10 +610,19 @@ async function execute(
     deadlineAtMs,
     allowNewPaidStep,
   });
-  if (expansion.kind === "processing" || expansion.kind === "skipped") {
+  if (expansion.kind === "processing") {
     stream.emitTerminal(
-      processingEvent(input, "between_steps", "expansion", expansion.kind !== "skipped"),
+      processingEvent(
+        input,
+        expansion.state,
+        expansion.nextStep ?? "expansion",
+        expansion.canContinue,
+      ),
     );
+    return;
+  }
+  if (expansion.kind === "skipped") {
+    stream.emitTerminal(processingEvent(input, "between_steps", "expansion", false));
     return;
   }
   if (expansion.kind !== "completed") {
