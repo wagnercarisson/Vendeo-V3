@@ -1,18 +1,166 @@
 {
   "kind": "f60.5-preflight",
   "plan": "60.5-04",
-  "status": "not_run",
-  "ready": false,
-  "executedAt": null,
+  "status": "ready",
+  "ready": true,
+  "executedAt": "2026-11-13T22:12:30.743Z",
   "providerCalls": 0,
   "aiCalls": 0,
   "writesPerformed": 0,
-  "items": [],
+  "items": [
+    {
+      "id": "environment",
+      "label": "Homolog existente",
+      "status": "PASS",
+      "detail": "API 127.0.0.1:57781; DB 127.0.0.1:57782/postgres; producao nao consultada",
+      "critical": true
+    },
+    {
+      "id": "authorization",
+      "label": "Autorizacao explicita",
+      "status": "PASS",
+      "detail": "approved; budget=0.12; maxPaidCalls=3",
+      "critical": true
+    },
+    {
+      "id": "credential_product",
+      "label": "Credencial de produto",
+      "status": "PASS",
+      "detail": "OPENAI_API_KEY presente; OPENAI_BENCH_API_KEY nao e usada silenciosamente",
+      "critical": true
+    },
+    {
+      "id": "credential_supabase",
+      "label": "Credenciais Supabase",
+      "status": "PASS",
+      "detail": "service role presente",
+      "critical": true
+    },
+    {
+      "id": "source_campaign",
+      "label": "Campanha-fonte existente e pertencente",
+      "status": "PASS",
+      "detail": "status=ready; store=3dc7d274-0b57-45ba-883a-7b235056feda",
+      "critical": true
+    },
+    {
+      "id": "source_media",
+      "label": "Imagens de produto legiveis",
+      "status": "PASS",
+      "detail": "images=2",
+      "critical": true
+    },
+    {
+      "id": "identity",
+      "label": "Identidade acessivel ou fallback explicito",
+      "status": "PASS",
+      "detail": "identityAsset=homolog-bucket",
+      "critical": true
+    },
+    {
+      "id": "config",
+      "label": "Configuracao ativa do par",
+      "status": "PASS",
+      "detail": "gpt-image-2.5-sunburst/medium; fallback gpt-image-2/low",
+      "critical": true
+    },
+    {
+      "id": "pricing_base",
+      "label": "Pricing base completo",
+      "status": "PASS",
+      "detail": "base=0.044",
+      "critical": true
+    },
+    {
+      "id": "pricing_expansion",
+      "label": "Pricing expansao completo",
+      "status": "PASS",
+      "detail": "expansion=0.036",
+      "critical": true
+    },
+    {
+      "id": "budget",
+      "label": "Orcamento autorizado cobre a estimativa",
+      "status": "PASS",
+      "detail": "authorized=0.12; estimate=0.0805",
+      "critical": true
+    },
+    {
+      "id": "target_absent",
+      "label": "Campanha/operacao/artefatos alvo ausentes",
+      "status": "PASS",
+      "detail": "campaign=absent; operations=0; artifacts=0; credit=0; copy=0",
+      "critical": true
+    },
+    {
+      "id": "bucket",
+      "label": "Bucket F60.1 acessivel",
+      "status": "PASS",
+      "detail": "campaign-internal-artifacts",
+      "critical": true
+    },
+    {
+      "id": "code_sha",
+      "label": "Codigo aceito e SHAs registrados",
+      "status": "PASS",
+      "detail": "phaseBaseSha=35b0aa4e; acceptedHead=e35b5a1d",
+      "critical": true
+    },
+    {
+      "id": "window_owners",
+      "label": "Responsavel pelo aceite humano definido",
+      "status": "PASS",
+      "detail": "humanAcceptanceOwner=operator",
+      "critical": true
+    }
+  ],
   "observed": {
-    "note": "Preflight sera reexecutado apos a autorizacao da segunda tentativa; os IDs alvo sao novos.",
+    "source": {
+      "campaignId": "48ba68a9-2769-4674-b39a-be91bb394d70",
+      "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+      "productName": "Mouse Sem Fio Recarregável",
+      "status": "ready",
+      "imageCount": 2,
+      "images": [
+        {
+          "role": "primary",
+          "mimeType": "image/jpeg",
+          "byteSize": 54523,
+          "contentId": "84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb"
+        },
+        {
+          "role": "reference",
+          "mimeType": "image/jpeg",
+          "byteSize": 87532,
+          "contentId": "01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e"
+        }
+      ],
+      "identityState": "visual_signature",
+      "identityAsset": {
+        "mimeType": "image/png",
+        "byteSize": 884182,
+        "source": "homolog-bucket",
+        "contentId": "e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44"
+      }
+    },
+    "pricing": {
+      "configVersionId": "0c8925d5-5aff-4c90-a007-9dd32750b80f",
+      "primary": "gpt-image-2.5-sunburst/medium",
+      "fallback": "gpt-image-2/low",
+      "baseUnitUsd": 0.044,
+      "expansionUnitUsd": 0.036,
+      "basePricingId": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+      "expansionPricingId": "f9a278bb-c8ef-4ac4-bada-bf4bb886e041"
+    },
     "target": {
       "campaignId": "b953eb33-8714-4c04-a489-f56ab437b38e",
-      "operationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68"
+      "operationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+      "campaignAbsent": true,
+      "operations": 0,
+      "steps": 0,
+      "artifacts": 0,
+      "creditRows": 0,
+      "copyRows": 0
     }
   }
 }

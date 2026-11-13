@@ -2,8 +2,8 @@
   "kind": "f60.5-proof-manifest",
   "plan": "60.5-04",
   "phase": "60.5-f60-5-integracao-e-entrega-9-16-por-expansao",
-  "status": "failed",
-  "createdAt": "2026-11-13T20:51:58.411Z",
+  "status": "technical-pass-human-pending",
+  "createdAt": "2026-11-13T22:09:02.798Z",
   "offlinePreparation": true,
   "environment": {
     "target": "homolog-existing",
@@ -79,11 +79,11 @@
   },
   "targetCampaign": {
     "mode": "created",
-    "campaignIdProposed": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
-    "operationIdProposed": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+    "campaignIdProposed": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operationIdProposed": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
     "attemptNumber": 1,
     "attemptTarget": "primary",
-    "attemptReference": "f60.5-proof-c51d24d6-7e76-48bd-9a7d-b5ea525ac898",
+    "attemptReference": "f60.5-proof-290104e3-b66a-4963-8c73-323e824b8cce",
     "generationOrigin": "9_16_two_stage",
     "generationContractVersion": "f60.5-two-stage-9-16-v1",
     "campaignFormat": "9:16",
@@ -187,8 +187,8 @@
   },
   "authorization": {
     "decision": "approved",
-    "requestedAt": "2026-11-13T20:51:58.411Z",
-    "decidedAt": "2026-11-13T21:00:00.000Z",
+    "requestedAt": "2026-11-13T22:09:02.798Z",
+    "decidedAt": "2026-11-13T22:12:26.814Z",
     "decidedBy": "operator",
     "requestedBudgetUsd": 0.12,
     "authorizedBudgetUsd": 0.12,
@@ -197,13 +197,13 @@
     "requestedExecutionMode": "authorize-server",
     "authorizedExecutionMode": "authorize-server",
     "humanAcceptanceOwner": "operator",
-    "notes": "Autorizacao explicita: homolog existente, campanha/operacao propostas, ate 1 base + 1 copy + 1 expansao, teto US$ 0,12, sem retry/fallback; revalidar antes de escrita/gasto e preservar a fonte."
+    "notes": "Tentativa 2 autorizada em modo authorize-server; campanha/operacao novas; 1 base + ate 1 copy + 1 expansao; teto US$ 0,12; sem retry/fallback."
   },
   "preflight": {
     "path": "60.5-04-PREFLIGHT.json",
     "status": "ready",
     "ready": true,
-    "executedAt": "2026-11-13T21:05:19.783Z"
+    "executedAt": "2026-11-13T22:12:30.743Z"
   },
   "writesAfterApproval": [
     "campaigns: 1 campanha-alvo nova com origem/inputFiles/resumeContext/identity_snapshot",
@@ -266,34 +266,151 @@
     "retry/fallback",
     "URL assinada/publica ou segredo no manifesto/relatorio"
   ],
-  "providerCalls": 0,
-  "aiCalls": 0,
+  "priorAttempts": [
+    {
+      "attempt": 1,
+      "status": "failed-before-provider",
+      "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
+      "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+      "startedAt": "2026-11-13T21:06:34.796Z",
+      "finishedAt": "2026-11-13T21:06:37.441Z",
+      "terminal": {
+        "type": "error",
+        "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
+        "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+        "code": "generation_failed",
+        "message": "A geração falhou e o crédito foi devolvido.",
+        "refunded": true
+      },
+      "paidCalls": 0,
+      "credit": {
+        "status": "refunded",
+        "amount": 1,
+        "reservations": 1,
+        "confirmations": 0,
+        "refunds": 1,
+        "stateEpoch": 1,
+        "publicationState": "none"
+      },
+      "rootCause": "reconstructFirstExecution compares resumeContext.briefingText (JSON.stringify at write time) with JSON.stringify(briefing) after the campaigns.input_snapshot JSONB round-trip. PostgreSQL JSONB returns object keys in a different order, so the strings differ although the content is semantically identical.",
+      "evidence": [
+        "evidence/proof-manifest-attempt-1.json",
+        "evidence/preflight-attempt-1.json",
+        "evidence/proof-report-attempt-1.md",
+        "evidence/diagnosis-resume-context.json"
+      ],
+      "remediation": "60.5-04-REVIEW-FIX.md",
+      "remediationStatus": "approved-offline-2026-11-13",
+      "reused": false
+    }
+  ],
+  "remediation": {
+    "status": "approved-offline",
+    "doc": "60.5-04-REVIEW-FIX.md",
+    "approvedAt": "2026-11-13",
+    "newCallAuthorized": false,
+    "operationReuseAllowed": false
+  },
+  "providerCalls": 3,
+  "aiCalls": 3,
   "readsPerformed": 0,
   "writesPerformed": 1,
   "flagChanges": 0,
   "execution": {
-    "startedAt": "2026-11-13T21:06:34.796Z",
-    "invokeStartedAt": "2026-11-13T21:06:36.928Z",
-    "invokeEndedAt": "2026-11-13T21:06:37.389Z",
-    "finishedAt": "2026-11-13T21:06:37.441Z",
+    "startedAt": "2026-11-13T22:12:49.405Z",
+    "invokeStartedAt": "2026-11-13T22:12:50.805Z",
+    "invokeEndedAt": "2026-11-13T22:13:39.197Z",
+    "finishedAt": "2026-11-13T22:13:39.246Z",
     "executionError": null,
-    "status": "error"
+    "status": "result"
   },
-  "calls": [],
-  "invocations": [],
+  "calls": [
+    {
+      "id": "5c905fe0-596d-4bee-851f-dc7bb89df9c8",
+      "operationRunId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+      "callId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+      "model": "gpt-6-luna",
+      "attemptNumber": 0,
+      "status": "success",
+      "costUsd": 0.000161,
+      "costSource": "pricing_table",
+      "pricingVersion": "1f8a61f1-e965-43e9-9700-5dc029bf2338",
+      "tokens": {
+        "prompt": 903,
+        "completion": 141,
+        "total": 1044,
+        "image": null
+      },
+      "errorType": null
+    },
+    {
+      "id": "ba0ea6d6-bd78-4d5f-9d72-72cf497b57d5",
+      "operationRunId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+      "callId": "0f166aa0-320e-4d74-a9d4-0e8914d79815",
+      "model": "gpt-image-2.5-sunburst",
+      "attemptNumber": 1,
+      "status": "success",
+      "costUsd": 0.042728,
+      "costSource": "pricing_table",
+      "pricingVersion": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+      "tokens": {
+        "prompt": 3910,
+        "completion": 439,
+        "total": 4349,
+        "image": null
+      },
+      "errorType": null
+    },
+    {
+      "id": "33c02605-937d-457c-9f6e-bb32e2f31c44",
+      "operationRunId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+      "callId": "ee1c071a-77cd-4548-a44b-146060c45824",
+      "model": "gpt-image-2.5-sunburst",
+      "attemptNumber": 1,
+      "status": "success",
+      "costUsd": 0.016553,
+      "costSource": "pricing_table",
+      "pricingVersion": "f9a278bb-c8ef-4ac4-bada-bf4bb886e041",
+      "tokens": {
+        "prompt": 1591,
+        "completion": 157,
+        "total": 1748,
+        "image": null
+      },
+      "errorType": null
+    }
+  ],
+  "invocations": [
+    {
+      "stage": "base",
+      "attemptNumber": 1,
+      "target": "primary",
+      "requestId": "c5bdaedc-a1b7-4645-895c-d9e5097bfbb0",
+      "status": "completed",
+      "failureClass": null,
+      "createdAt": "2026-11-13T22:12:50.907498+00:00"
+    },
+    {
+      "stage": "expansion",
+      "attemptNumber": 1,
+      "target": "initial",
+      "requestId": "6fc7022a-bf52-4a45-bf08-d0eae40b1300",
+      "status": "completed",
+      "failureClass": null,
+      "createdAt": "2026-11-13T22:13:22.478014+00:00"
+    }
+  ],
   "freeInvocations": [],
   "terminal": {
-    "type": "error",
-    "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
-    "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
-    "code": "generation_failed",
-    "message": "A geração falhou e o crédito foi devolvido.",
-    "refunded": true
+    "type": "result",
+    "campaignId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+    "campaignUrl": "/campanhas/b953eb33-8714-4c04-a489-f56ab437b38e"
   },
   "preparation": {
     "mode": "created",
-    "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
-    "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+    "campaignId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
     "generationOrigin": "9_16_two_stage",
     "generationContractVersion": "f60.5-two-stage-9-16-v1",
     "campaignFormat": "9:16",
@@ -303,7 +420,7 @@
         "role": "primary",
         "index": 0,
         "contentId": "84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb",
-        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/98925e2c-5032-4544-8ae8-06fe6a4a7ebd/inputs/84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb.jpg",
+        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/b953eb33-8714-4c04-a489-f56ab437b38e/inputs/84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb.jpg",
         "mimeType": "image/jpeg",
         "dataUrlPrefix": "data:image/jpeg;base64,",
         "byteSize": 54523
@@ -313,7 +430,7 @@
         "role": "reference",
         "index": 1,
         "contentId": "01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e",
-        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/98925e2c-5032-4544-8ae8-06fe6a4a7ebd/inputs/01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e.jpg",
+        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/b953eb33-8714-4c04-a489-f56ab437b38e/inputs/01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e.jpg",
         "mimeType": "image/jpeg",
         "dataUrlPrefix": "data:image/jpeg;base64,",
         "byteSize": 87532
@@ -323,7 +440,7 @@
         "role": "identity",
         "index": 2,
         "contentId": "e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44",
-        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/98925e2c-5032-4544-8ae8-06fe6a4a7ebd/inputs/e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44.png",
+        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/b953eb33-8714-4c04-a489-f56ab437b38e/inputs/e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44.png",
         "mimeType": "image/png",
         "dataUrlPrefix": "data:image/png;base64,",
         "byteSize": 884182
@@ -344,7 +461,7 @@
     "inputHashVerified": true,
     "resumeContextHashExcluded": true,
     "identityContentIdStrategy": "sha256_data_url",
-    "preparedAt": "2026-11-13T21:06:36.928Z",
+    "preparedAt": "2026-11-13T22:12:50.805Z",
     "campaignCreated": true,
     "frozenContentReferences": [
       {
@@ -368,87 +485,143 @@
     ]
   },
   "delivery": {
-    "beginPublicationCalls": 0,
-    "confirmations": 0,
-    "order": "not_observed",
-    "deliveryCompleted": false
+    "beginPublicationCalls": 1,
+    "confirmations": 1,
+    "order": "beginPublication_before_confirm",
+    "deliveryCompleted": true
   },
   "copy": {
-    "rows": [],
-    "completed": false
+    "rows": [
+      {
+        "attemptSeq": 1,
+        "state": "completed",
+        "copyText": "Mais conforto para suas horas no computador! O Mouse Sem Fio Recarregável tem bateria durável e agora está de R$ 24,50 por R$ 19,90. Aproveite essa oferta e venha conferir na Loja Mega Vale!",
+        "hasPayload": true
+      }
+    ],
+    "completed": true
   },
   "credit": {
-    "status": "refunded",
+    "status": "delivered",
     "amount": 1,
     "reservations": 1,
-    "confirmations": 0,
-    "refunds": 1,
-    "stateEpoch": 1,
-    "publicationState": "none"
+    "confirmations": 1,
+    "refunds": 0,
+    "stateEpoch": 3,
+    "publicationState": "published"
   },
-  "artifact": null,
-  "baseArtifact": null,
-  "preparedArtifact": null,
+  "artifact": {
+    "id": "6853b262-552f-4f45-be6b-141a784d2e05",
+    "role": "vertical",
+    "width": 1080,
+    "height": 1920,
+    "mimeType": "image/jpeg",
+    "byteSize": 392707,
+    "checksumSha256": "fd1f6afc4d54e2af6c31abf6e42e7a152801bcbab6dd4b1a45623beef108d2dc",
+    "checksumVerified": true,
+    "storagePresent": true,
+    "localEvidencePath": "C:\\Projetos\\Vendeo V3\\.planning\\phases\\60.5-f60-5-integracao-e-entrega-9-16-por-expansao\\evidence\\vertical-eff8ebec-d5ea-4ff2-b313-27aece35fd68.jpg",
+    "thumbnail": {
+      "present": true,
+      "pathKind": "derived_thumb_v1"
+    }
+  },
+  "baseArtifact": {
+    "id": "3620864d-28d3-4086-8731-47f12e5f6a8d",
+    "width": 1024,
+    "height": 1024,
+    "mimeType": "image/jpeg"
+  },
+  "preparedArtifact": {
+    "id": "02d75548-e169-4840-bf22-527043e502ef",
+    "width": 1152,
+    "height": 1152,
+    "mimeType": "image/jpeg"
+  },
   "steps": [
     {
       "stage": "base",
-      "status": "pending",
-      "attempts_used": 0,
+      "status": "done",
+      "attempts_used": 1,
       "failure_class": null
     },
     {
       "stage": "expansion",
-      "status": "pending",
-      "attempts_used": 0,
+      "status": "done",
+      "attempts_used": 1,
       "failure_class": null
     }
   ],
-  "claims": [],
-  "outcome": {
-    "outcome": "failed",
-    "stage": "base",
-    "support_reference": null
+  "claims": [
+    {
+      "stage": "base",
+      "attempt_number": 1,
+      "target": "primary",
+      "request_id": "c5bdaedc-a1b7-4645-895c-d9e5097bfbb0",
+      "status": "completed",
+      "failure_class": null,
+      "attempt_token": "5bbeaab9-db90-4bb9-a158-6c742b1a8f36",
+      "created_at": "2026-11-13T22:12:50.907498+00:00"
+    },
+    {
+      "stage": "expansion",
+      "attempt_number": 1,
+      "target": "initial",
+      "request_id": "6fc7022a-bf52-4a45-bf08-d0eae40b1300",
+      "status": "completed",
+      "failure_class": null,
+      "attempt_token": "cda686a0-75bb-4856-ba78-282a1d86a4ca",
+      "created_at": "2026-11-13T22:13:22.478014+00:00"
+    }
+  ],
+  "outcome": null,
+  "operation": {
+    "campaign_id": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operation_id": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+    "store_id": "3dc7d274-0b57-45ba-883a-7b235056feda",
+    "origin": "9_16_two_stage",
+    "contract_version": 1
   },
   "cost": {
-    "observedCostUsd": 0,
+    "observedCostUsd": 0.059442,
     "costAvailable": true,
     "withinBudget": true,
     "budgetUsd": 0.12,
-    "callCount": 0
+    "callCount": 3
   },
   "technical": {
-    "pass": false,
-    "checkedAt": "2026-11-13T21:06:37.441Z",
+    "pass": true,
+    "checkedAt": "2026-11-13T22:13:39.246Z",
     "checks": [
       {
         "id": "terminal",
         "label": "Terminal resultado entregue",
-        "status": "FAIL",
-        "detail": "error:generation_failed"
+        "status": "PASS",
+        "detail": "result"
       },
       {
         "id": "campaign_projected",
         "label": "Campanha projetada ready",
-        "status": "FAIL",
-        "detail": "status=error"
+        "status": "PASS",
+        "detail": "status=ready"
       },
       {
         "id": "vertical_row",
         "label": "Vertical persistido 1080x1920 JPEG",
-        "status": "FAIL",
-        "detail": "missing"
+        "status": "PASS",
+        "detail": "1080x1920 image/jpeg"
       },
       {
         "id": "vertical_checksum",
         "label": "Checksum do vertical confere",
-        "status": "FAIL",
-        "detail": "mismatch"
+        "status": "PASS",
+        "detail": "sha256 ok"
       },
       {
         "id": "thumbnail",
         "label": "Miniatura derivada presente",
-        "status": "FAIL",
-        "detail": "missing"
+        "status": "PASS",
+        "detail": "present"
       },
       {
         "id": "no_integral_in_campaign_images",
@@ -460,31 +633,31 @@
         "id": "copy",
         "label": "Copy entregue ou falha nao bloqueante",
         "status": "PASS",
-        "detail": "copyRows=0; completed=false"
+        "detail": "copyRows=1; completed=true"
       },
       {
         "id": "credit",
         "label": "Credito: reserva/confirmacao coerentes",
         "status": "PASS",
-        "detail": "status=refunded; amount=1"
+        "detail": "status=delivered; amount=1"
       },
       {
         "id": "cost_available",
         "label": "Custo disponivel e dentro do teto",
         "status": "PASS",
-        "detail": "calls=0; observed=0; budget=0.12"
+        "detail": "calls=3; observed=0.059442; budget=0.12"
       },
       {
         "id": "paid_calls_cap",
         "label": "Chamadas pagas <= 3",
         "status": "PASS",
-        "detail": "calls=0"
+        "detail": "calls=3"
       },
       {
         "id": "operation_correlation",
         "label": "generation_events correlacionados",
         "status": "PASS",
-        "detail": "events=0"
+        "detail": "events=3"
       },
       {
         "id": "source_preserved",
@@ -502,38 +675,38 @@
   },
   "acceptance": {
     "technical": {
-      "pass": false,
-      "checkedAt": "2026-11-13T21:06:37.441Z",
+      "pass": true,
+      "checkedAt": "2026-11-13T22:13:39.246Z",
       "checks": [
         {
           "id": "terminal",
           "label": "Terminal resultado entregue",
-          "status": "FAIL",
-          "detail": "error:generation_failed"
+          "status": "PASS",
+          "detail": "result"
         },
         {
           "id": "campaign_projected",
           "label": "Campanha projetada ready",
-          "status": "FAIL",
-          "detail": "status=error"
+          "status": "PASS",
+          "detail": "status=ready"
         },
         {
           "id": "vertical_row",
           "label": "Vertical persistido 1080x1920 JPEG",
-          "status": "FAIL",
-          "detail": "missing"
+          "status": "PASS",
+          "detail": "1080x1920 image/jpeg"
         },
         {
           "id": "vertical_checksum",
           "label": "Checksum do vertical confere",
-          "status": "FAIL",
-          "detail": "mismatch"
+          "status": "PASS",
+          "detail": "sha256 ok"
         },
         {
           "id": "thumbnail",
           "label": "Miniatura derivada presente",
-          "status": "FAIL",
-          "detail": "missing"
+          "status": "PASS",
+          "detail": "present"
         },
         {
           "id": "no_integral_in_campaign_images",
@@ -545,31 +718,31 @@
           "id": "copy",
           "label": "Copy entregue ou falha nao bloqueante",
           "status": "PASS",
-          "detail": "copyRows=0; completed=false"
+          "detail": "copyRows=1; completed=true"
         },
         {
           "id": "credit",
           "label": "Credito: reserva/confirmacao coerentes",
           "status": "PASS",
-          "detail": "status=refunded; amount=1"
+          "detail": "status=delivered; amount=1"
         },
         {
           "id": "cost_available",
           "label": "Custo disponivel e dentro do teto",
           "status": "PASS",
-          "detail": "calls=0; observed=0; budget=0.12"
+          "detail": "calls=3; observed=0.059442; budget=0.12"
         },
         {
           "id": "paid_calls_cap",
           "label": "Chamadas pagas <= 3",
           "status": "PASS",
-          "detail": "calls=0"
+          "detail": "calls=3"
         },
         {
           "id": "operation_correlation",
           "label": "generation_events correlacionados",
           "status": "PASS",
-          "detail": "events=0"
+          "detail": "events=3"
         },
         {
           "id": "source_preserved",
@@ -586,44 +759,9 @@
       ]
     },
     "human": {
-      "status": "blocked_until_remediation",
+      "status": "pending",
       "owner": "operator",
-      "notes": "No vertical delivered; human acceptance cannot be requested. Root cause recorded; new authorization required after remediation."
+      "notes": "Aceite humano do vertical/copy/miniatura/credito deve ser registrado pelo operador."
     }
-  },
-  "failureAnalysis": {
-    "kind": "f60.5-failure-diagnosis",
-    "createdAt": "2026-11-13T21:08:07.818Z",
-    "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
-    "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
-    "frozenState": "absent",
-    "reconstruction": {
-      "ok": false,
-      "reason": "resume_context_malformed",
-      "definitive": true
-    },
-    "rootCause": "reconstructFirstExecution compares resumeContext.briefingText (JSON.stringify at write time) with JSON.stringify(briefing) after the campaigns.input_snapshot JSONB round-trip. PostgreSQL JSONB returns object keys in a different order, so the strings differ although the content is semantically identical.",
-    "evidence": {
-      "briefingTextEqualsJsonStringify": false,
-      "briefingKeysPersisted": [
-        "product",
-        "commercial",
-        "constraints",
-        "backgroundDirection"
-      ],
-      "briefingTextKeyOrder": [
-        "backgroundDirection",
-        "product",
-        "commercial",
-        "constraints"
-      ],
-      "claims": 0,
-      "generationEvents": 0,
-      "paidCalls": 0,
-      "creditStatus": "refunded",
-      "refunds": 1
-    },
-    "impact": "Base step failed definitively before acquire/provider. No vertical, copy, thumbnail or provider call. Source campaign preserved. Target campaign is error and credit refunded once.",
-    "minimalNextDecision": "Fix resumeContext.briefingText comparison to use canonical JSON (or persist/read canonical text) and then request a NEW authorization for a NEW operation; do not reuse this operation and do not retry under the current authorization."
   }
 }

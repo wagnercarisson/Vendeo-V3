@@ -2,7 +2,7 @@
   "kind": "f60.5-proof-manifest",
   "plan": "60.5-04",
   "phase": "60.5-f60-5-integracao-e-entrega-9-16-por-expansao",
-  "status": "awaiting-authorization",
+  "status": "technical-pass-human-pending",
   "createdAt": "2026-11-13T22:09:02.798Z",
   "offlinePreparation": true,
   "environment": {
@@ -186,26 +186,24 @@
     "estimateIsNotProviderHardLimit": true
   },
   "authorization": {
-    "decision": "pending",
+    "decision": "approved",
     "requestedAt": "2026-11-13T22:09:02.798Z",
-    "decidedAt": null,
-    "decidedBy": null,
+    "decidedAt": "2026-11-13T22:12:26.814Z",
+    "decidedBy": "operator",
     "requestedBudgetUsd": 0.12,
-    "authorizedBudgetUsd": null,
+    "authorizedBudgetUsd": 0.12,
     "requestedMaxPaidCalls": 3,
-    "authorizedMaxPaidCalls": null,
+    "authorizedMaxPaidCalls": 3,
     "requestedExecutionMode": "authorize-server",
-    "authorizedExecutionMode": null,
+    "authorizedExecutionMode": "authorize-server",
     "humanAcceptanceOwner": "operator",
-    "notes": "Segunda tentativa: campanha e operacao novas; a operacao anterior falhou/estornada e nao sera reutilizada. Nenhuma chamada autorizada nesta preparacao."
+    "notes": "Tentativa 2 autorizada em modo authorize-server; campanha/operacao novas; 1 base + ate 1 copy + 1 expansao; teto US$ 0,12; sem retry/fallback."
   },
   "preflight": {
-    "status": "not_run",
-    "ready": false,
-    "executedAt": null,
-    "providerCalls": 0,
-    "writesPerformed": 0,
-    "items": []
+    "path": "60.5-04-PREFLIGHT.json",
+    "status": "ready",
+    "ready": true,
+    "executedAt": "2026-11-13T22:12:30.743Z"
   },
   "writesAfterApproval": [
     "campaigns: 1 campanha-alvo nova com origem/inputFiles/resumeContext/identity_snapshot",
@@ -313,9 +311,459 @@
     "newCallAuthorized": false,
     "operationReuseAllowed": false
   },
-  "providerCalls": 0,
-  "aiCalls": 0,
+  "providerCalls": 3,
+  "aiCalls": 3,
   "readsPerformed": 0,
-  "writesPerformed": 0,
-  "flagChanges": 0
+  "writesPerformed": 1,
+  "flagChanges": 0,
+  "execution": {
+    "startedAt": "2026-11-13T22:12:49.405Z",
+    "invokeStartedAt": "2026-11-13T22:12:50.805Z",
+    "invokeEndedAt": "2026-11-13T22:13:39.197Z",
+    "finishedAt": "2026-11-13T22:13:39.246Z",
+    "executionError": null,
+    "status": "result"
+  },
+  "calls": [
+    {
+      "id": "5c905fe0-596d-4bee-851f-dc7bb89df9c8",
+      "operationRunId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+      "callId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+      "model": "gpt-6-luna",
+      "attemptNumber": 0,
+      "status": "success",
+      "costUsd": 0.000161,
+      "costSource": "pricing_table",
+      "pricingVersion": "1f8a61f1-e965-43e9-9700-5dc029bf2338",
+      "tokens": {
+        "prompt": 903,
+        "completion": 141,
+        "total": 1044,
+        "image": null
+      },
+      "errorType": null
+    },
+    {
+      "id": "ba0ea6d6-bd78-4d5f-9d72-72cf497b57d5",
+      "operationRunId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+      "callId": "0f166aa0-320e-4d74-a9d4-0e8914d79815",
+      "model": "gpt-image-2.5-sunburst",
+      "attemptNumber": 1,
+      "status": "success",
+      "costUsd": 0.042728,
+      "costSource": "pricing_table",
+      "pricingVersion": "386fb02c-b0e8-4ec9-a8c6-573b4ca58f19",
+      "tokens": {
+        "prompt": 3910,
+        "completion": 439,
+        "total": 4349,
+        "image": null
+      },
+      "errorType": null
+    },
+    {
+      "id": "33c02605-937d-457c-9f6e-bb32e2f31c44",
+      "operationRunId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+      "callId": "ee1c071a-77cd-4548-a44b-146060c45824",
+      "model": "gpt-image-2.5-sunburst",
+      "attemptNumber": 1,
+      "status": "success",
+      "costUsd": 0.016553,
+      "costSource": "pricing_table",
+      "pricingVersion": "f9a278bb-c8ef-4ac4-bada-bf4bb886e041",
+      "tokens": {
+        "prompt": 1591,
+        "completion": 157,
+        "total": 1748,
+        "image": null
+      },
+      "errorType": null
+    }
+  ],
+  "invocations": [
+    {
+      "stage": "base",
+      "attemptNumber": 1,
+      "target": "primary",
+      "requestId": "c5bdaedc-a1b7-4645-895c-d9e5097bfbb0",
+      "status": "completed",
+      "failureClass": null,
+      "createdAt": "2026-11-13T22:12:50.907498+00:00"
+    },
+    {
+      "stage": "expansion",
+      "attemptNumber": 1,
+      "target": "initial",
+      "requestId": "6fc7022a-bf52-4a45-bf08-d0eae40b1300",
+      "status": "completed",
+      "failureClass": null,
+      "createdAt": "2026-11-13T22:13:22.478014+00:00"
+    }
+  ],
+  "freeInvocations": [],
+  "terminal": {
+    "type": "result",
+    "campaignId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+    "campaignUrl": "/campanhas/b953eb33-8714-4c04-a489-f56ab437b38e"
+  },
+  "preparation": {
+    "mode": "created",
+    "campaignId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+    "generationOrigin": "9_16_two_stage",
+    "generationContractVersion": "f60.5-two-stage-9-16-v1",
+    "campaignFormat": "9:16",
+    "inputFiles": [
+      {
+        "kind": "product",
+        "role": "primary",
+        "index": 0,
+        "contentId": "84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb",
+        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/b953eb33-8714-4c04-a489-f56ab437b38e/inputs/84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb.jpg",
+        "mimeType": "image/jpeg",
+        "dataUrlPrefix": "data:image/jpeg;base64,",
+        "byteSize": 54523
+      },
+      {
+        "kind": "product",
+        "role": "reference",
+        "index": 1,
+        "contentId": "01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e",
+        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/b953eb33-8714-4c04-a489-f56ab437b38e/inputs/01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e.jpg",
+        "mimeType": "image/jpeg",
+        "dataUrlPrefix": "data:image/jpeg;base64,",
+        "byteSize": 87532
+      },
+      {
+        "kind": "identity",
+        "role": "identity",
+        "index": 2,
+        "contentId": "e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44",
+        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/b953eb33-8714-4c04-a489-f56ab437b38e/inputs/e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44.png",
+        "mimeType": "image/png",
+        "dataUrlPrefix": "data:image/png;base64,",
+        "byteSize": 884182
+      }
+    ],
+    "resumeContext": {
+      "briefing": true,
+      "briefingText": true,
+      "campaignIntent": true,
+      "backgroundDirection": true,
+      "identityDirective": true,
+      "identityContext": true,
+      "copyContext": true,
+      "economicSnapshot": true,
+      "inputFiles": true
+    },
+    "inputsUploaded": 3,
+    "inputHashVerified": true,
+    "resumeContextHashExcluded": true,
+    "identityContentIdStrategy": "sha256_data_url",
+    "preparedAt": "2026-11-13T22:12:50.805Z",
+    "campaignCreated": true,
+    "frozenContentReferences": [
+      {
+        "kind": "product",
+        "id": "84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb",
+        "role": "primary",
+        "index": 0
+      },
+      {
+        "kind": "reference",
+        "id": "01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e",
+        "role": "reference",
+        "index": 1
+      },
+      {
+        "kind": "identity",
+        "id": "e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44",
+        "role": "identity",
+        "index": 2
+      }
+    ]
+  },
+  "delivery": {
+    "beginPublicationCalls": 1,
+    "confirmations": 1,
+    "order": "beginPublication_before_confirm",
+    "deliveryCompleted": true
+  },
+  "copy": {
+    "rows": [
+      {
+        "attemptSeq": 1,
+        "state": "completed",
+        "copyText": "Mais conforto para suas horas no computador! O Mouse Sem Fio Recarregável tem bateria durável e agora está de R$ 24,50 por R$ 19,90. Aproveite essa oferta e venha conferir na Loja Mega Vale!",
+        "hasPayload": true
+      }
+    ],
+    "completed": true
+  },
+  "credit": {
+    "status": "delivered",
+    "amount": 1,
+    "reservations": 1,
+    "confirmations": 1,
+    "refunds": 0,
+    "stateEpoch": 3,
+    "publicationState": "published"
+  },
+  "artifact": {
+    "id": "6853b262-552f-4f45-be6b-141a784d2e05",
+    "role": "vertical",
+    "width": 1080,
+    "height": 1920,
+    "mimeType": "image/jpeg",
+    "byteSize": 392707,
+    "checksumSha256": "fd1f6afc4d54e2af6c31abf6e42e7a152801bcbab6dd4b1a45623beef108d2dc",
+    "checksumVerified": true,
+    "storagePresent": true,
+    "localEvidencePath": "C:\\Projetos\\Vendeo V3\\.planning\\phases\\60.5-f60-5-integracao-e-entrega-9-16-por-expansao\\evidence\\vertical-eff8ebec-d5ea-4ff2-b313-27aece35fd68.jpg",
+    "thumbnail": {
+      "present": true,
+      "pathKind": "derived_thumb_v1",
+      "localEvidencePath": ".planning/phases/60.5-f60-5-integracao-e-entrega-9-16-por-expansao/evidence/thumbnail-eff8ebec-d5ea-4ff2-b313-27aece35fd68.webp",
+      "byteSize": 9340
+    }
+  },
+  "baseArtifact": {
+    "id": "3620864d-28d3-4086-8731-47f12e5f6a8d",
+    "width": 1024,
+    "height": 1024,
+    "mimeType": "image/jpeg"
+  },
+  "preparedArtifact": {
+    "id": "02d75548-e169-4840-bf22-527043e502ef",
+    "width": 1152,
+    "height": 1152,
+    "mimeType": "image/jpeg"
+  },
+  "steps": [
+    {
+      "stage": "base",
+      "status": "done",
+      "attempts_used": 1,
+      "failure_class": null
+    },
+    {
+      "stage": "expansion",
+      "status": "done",
+      "attempts_used": 1,
+      "failure_class": null
+    }
+  ],
+  "claims": [
+    {
+      "stage": "base",
+      "attempt_number": 1,
+      "target": "primary",
+      "request_id": "c5bdaedc-a1b7-4645-895c-d9e5097bfbb0",
+      "status": "completed",
+      "failure_class": null,
+      "attempt_token": "5bbeaab9-db90-4bb9-a158-6c742b1a8f36",
+      "created_at": "2026-11-13T22:12:50.907498+00:00"
+    },
+    {
+      "stage": "expansion",
+      "attempt_number": 1,
+      "target": "initial",
+      "request_id": "6fc7022a-bf52-4a45-bf08-d0eae40b1300",
+      "status": "completed",
+      "failure_class": null,
+      "attempt_token": "cda686a0-75bb-4856-ba78-282a1d86a4ca",
+      "created_at": "2026-11-13T22:13:22.478014+00:00"
+    }
+  ],
+  "outcome": null,
+  "operation": {
+    "campaign_id": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operation_id": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+    "store_id": "3dc7d274-0b57-45ba-883a-7b235056feda",
+    "origin": "9_16_two_stage",
+    "contract_version": 1
+  },
+  "cost": {
+    "observedCostUsd": 0.059442,
+    "costAvailable": true,
+    "withinBudget": true,
+    "budgetUsd": 0.12,
+    "callCount": 3
+  },
+  "technical": {
+    "pass": true,
+    "checkedAt": "2026-11-13T22:13:39.246Z",
+    "checks": [
+      {
+        "id": "terminal",
+        "label": "Terminal resultado entregue",
+        "status": "PASS",
+        "detail": "result"
+      },
+      {
+        "id": "campaign_projected",
+        "label": "Campanha projetada ready",
+        "status": "PASS",
+        "detail": "status=ready"
+      },
+      {
+        "id": "vertical_row",
+        "label": "Vertical persistido 1080x1920 JPEG",
+        "status": "PASS",
+        "detail": "1080x1920 image/jpeg"
+      },
+      {
+        "id": "vertical_checksum",
+        "label": "Checksum do vertical confere",
+        "status": "PASS",
+        "detail": "sha256 ok"
+      },
+      {
+        "id": "thumbnail",
+        "label": "Miniatura derivada presente",
+        "status": "PASS",
+        "detail": "present"
+      },
+      {
+        "id": "no_integral_in_campaign_images",
+        "label": "Nenhum vertical integral em campaign-images",
+        "status": "PASS",
+        "detail": "ok"
+      },
+      {
+        "id": "copy",
+        "label": "Copy entregue ou falha nao bloqueante",
+        "status": "PASS",
+        "detail": "copyRows=1; completed=true"
+      },
+      {
+        "id": "credit",
+        "label": "Credito: reserva/confirmacao coerentes",
+        "status": "PASS",
+        "detail": "status=delivered; amount=1"
+      },
+      {
+        "id": "cost_available",
+        "label": "Custo disponivel e dentro do teto",
+        "status": "PASS",
+        "detail": "calls=3; observed=0.059442; budget=0.12"
+      },
+      {
+        "id": "paid_calls_cap",
+        "label": "Chamadas pagas <= 3",
+        "status": "PASS",
+        "detail": "calls=3"
+      },
+      {
+        "id": "operation_correlation",
+        "label": "generation_events correlacionados",
+        "status": "PASS",
+        "detail": "events=3"
+      },
+      {
+        "id": "source_preserved",
+        "label": "Campanha-fonte/imagens preservadas",
+        "status": "PASS",
+        "detail": "snapshot=true; identity=true; images=true; status=true"
+      },
+      {
+        "id": "uploads_verified",
+        "label": "Inputs enviados e verificados",
+        "status": "PASS",
+        "detail": "uploadsVerified=3"
+      }
+    ]
+  },
+  "acceptance": {
+    "technical": {
+      "pass": true,
+      "checkedAt": "2026-11-13T22:13:39.246Z",
+      "checks": [
+        {
+          "id": "terminal",
+          "label": "Terminal resultado entregue",
+          "status": "PASS",
+          "detail": "result"
+        },
+        {
+          "id": "campaign_projected",
+          "label": "Campanha projetada ready",
+          "status": "PASS",
+          "detail": "status=ready"
+        },
+        {
+          "id": "vertical_row",
+          "label": "Vertical persistido 1080x1920 JPEG",
+          "status": "PASS",
+          "detail": "1080x1920 image/jpeg"
+        },
+        {
+          "id": "vertical_checksum",
+          "label": "Checksum do vertical confere",
+          "status": "PASS",
+          "detail": "sha256 ok"
+        },
+        {
+          "id": "thumbnail",
+          "label": "Miniatura derivada presente",
+          "status": "PASS",
+          "detail": "present"
+        },
+        {
+          "id": "no_integral_in_campaign_images",
+          "label": "Nenhum vertical integral em campaign-images",
+          "status": "PASS",
+          "detail": "ok"
+        },
+        {
+          "id": "copy",
+          "label": "Copy entregue ou falha nao bloqueante",
+          "status": "PASS",
+          "detail": "copyRows=1; completed=true"
+        },
+        {
+          "id": "credit",
+          "label": "Credito: reserva/confirmacao coerentes",
+          "status": "PASS",
+          "detail": "status=delivered; amount=1"
+        },
+        {
+          "id": "cost_available",
+          "label": "Custo disponivel e dentro do teto",
+          "status": "PASS",
+          "detail": "calls=3; observed=0.059442; budget=0.12"
+        },
+        {
+          "id": "paid_calls_cap",
+          "label": "Chamadas pagas <= 3",
+          "status": "PASS",
+          "detail": "calls=3"
+        },
+        {
+          "id": "operation_correlation",
+          "label": "generation_events correlacionados",
+          "status": "PASS",
+          "detail": "events=3"
+        },
+        {
+          "id": "source_preserved",
+          "label": "Campanha-fonte/imagens preservadas",
+          "status": "PASS",
+          "detail": "snapshot=true; identity=true; images=true; status=true"
+        },
+        {
+          "id": "uploads_verified",
+          "label": "Inputs enviados e verificados",
+          "status": "PASS",
+          "detail": "uploadsVerified=3"
+        }
+      ]
+    },
+    "human": {
+      "status": "pending",
+      "owner": "operator",
+      "notes": "Aceite humano do vertical/copy/miniatura/credito deve ser registrado pelo operador."
+    }
+  }
 }

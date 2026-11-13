@@ -1,0 +1,15 @@
+{
+  "kind": "f60.5-proof-intent",
+  "status": "finished",
+  "startedAt": "2026-11-13T22:12:49.405Z",
+  "finishedAt": "2026-11-13T22:13:39.248Z",
+  "operationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+  "campaignId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+  "providerCalls": 3,
+  "terminal": {
+    "type": "result",
+    "campaignId": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operationId": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
+    "campaignUrl": "/campanhas/b953eb33-8714-4c04-a489-f56ab437b38e"
+  }
+}
