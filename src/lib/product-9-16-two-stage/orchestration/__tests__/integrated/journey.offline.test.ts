@@ -1,8 +1,16 @@
 // @vitest-environment node
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+vi.mock("@/lib/ai-cost/tracker", () => ({
+  AiCostTracker: class {
+    async record(event: unknown) {
+      const store = globalThis as { __vendeoTelemetryEvents?: unknown[] };
+      store.__vendeoTelemetryEvents = [...(store.__vendeoTelemetryEvents ?? []), event];
+    }
+  },
+}));
 
 import {
   CAMPAIGN_ID,
@@ -11,13 +19,19 @@ import {
   createOfflineDeps,
   createOfflineWorld,
   initialInput,
+  resetTelemetryEvents,
   runOffline,
+  telemetryEvents,
   terminalOf,
 } from "./offline-harness";
 
 describe("percurso integrado offline (deps reais, DB/Storage/provider simulados)", () => {
   beforeAll(() => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://offline.supabase.test";
+  });
+
+  beforeEach(() => {
+    resetTelemetryEvents();
   });
 
   it("executa base -> preparacao -> expansao -> entrega com uma reserva, uma confirmacao e um vertical", async () => {
@@ -55,6 +69,27 @@ describe("percurso integrado offline (deps reais, DB/Storage/provider simulados)
     );
     const selections = evidence?.reference_selections as Array<{ id: string }>;
     expect(selections[0]?.id).toBe(PRODUCT_CONTENT_ID);
+
+    // Copy REAL persistida (estado/texto no caminho produtivo).
+    const copy = world.copyState()[0];
+    expect(copy).toMatchObject({
+      state: "completed",
+      copy_text: "Copy entregue congelada",
+    });
+
+    // Telemetria REAL: custo derivado de usage x pricing, nao um valor fixo.
+    const baseEvent = telemetryEvents().find(
+      (event) => event.cost?.costSource === "pricing_table",
+    );
+    expect(counters.telemetryEmits).toBe(1);
+    expect(baseEvent).toBeDefined();
+    expect(baseEvent?.cost?.pricingVersion).toBe("pricing-1");
+    expect(baseEvent?.tokens?.promptTokens).toBe(120);
+    expect(baseEvent?.tokens?.completionTokens).toBe(80);
+    expect(baseEvent?.tokens?.totalTokens).toBe(200);
+    expect(baseEvent?.tokens?.imageTokens).toBe(80);
+    expect(baseEvent?.cost?.estimatedCostUsd).toBeGreaterThan(0);
+    expect(baseEvent?.cost?.estimatedCostUsd).not.toBe(0.04);
   });
 
   it("reenvio inicial de operacao existente e query-only (zero provisao/provider/reserva)", async () => {

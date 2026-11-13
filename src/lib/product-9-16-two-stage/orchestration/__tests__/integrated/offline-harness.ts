@@ -345,6 +345,12 @@ export function createOfflineWorld() {
         return creditRow()?.state_epoch ?? null;
       case "product_1_1_close_failed_operation":
         return closeFailed(params);
+      case "product_1_1_acquire_copy_attempt":
+        return acquireCopyAttempt(params);
+      case "product_1_1_apply_copy_state":
+        return applyCopyState(params);
+      case "product_1_1_cancel_copy":
+        return cancelCopy(params);
       default:
         return null;
     }
@@ -828,6 +834,100 @@ export function createOfflineWorld() {
     };
   }
 
+  const copyRows = () => tableRows("product_1_1_copy_state");
+
+  function acquireCopyAttempt(params: Record<string, unknown>) {
+    const existing = copyRows().sort(
+      (a, b) => Number(a.attempt_seq) - Number(b.attempt_seq),
+    );
+    const completed = existing.find((row) => row.state === "completed");
+    if (completed) {
+      return { acquired: false, reason: "attempt_already_completed" };
+    }
+    const pending = existing.find((row) => row.state === "pending");
+    if (pending) {
+      return {
+        acquired: false,
+        reason: "already_acquired",
+        attempt_seq: pending.attempt_seq,
+        attempt_token: pending.attempt_token,
+      };
+    }
+    const attemptSeq = existing.length + 1;
+    const attemptToken = `copy-token-${attemptSeq}`;
+    rows.push({
+      __table: "product_1_1_copy_state",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      attempt_seq: attemptSeq,
+      attempt_token: attemptToken,
+      state: "pending",
+      copy_text: null,
+      copy_payload: null,
+      request_token: params.p_request_token ?? null,
+      lease_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    return {
+      acquired: true,
+      attempt_seq: attemptSeq,
+      attempt_token: attemptToken,
+      mode: params.p_mode,
+    };
+  }
+
+  function applyCopyState(params: Record<string, unknown>) {
+    const row = copyRows().find(
+      (candidate) =>
+        candidate.attempt_seq === params.p_attempt_seq &&
+        candidate.attempt_token === params.p_attempt_token,
+    );
+    if (!row) {
+      return { applied: false, outcome: "stale_attempt", state: null };
+    }
+    const nextState = params.p_state;
+    if (row.state === "completed" && nextState === "completed") {
+      return { applied: false, outcome: "idempotent", state: "completed" };
+    }
+    if (nextState !== "pending" && nextState !== "completed" && nextState !== "failed") {
+      return { applied: false, outcome: "rejected", state: row.state };
+    }
+    if (nextState === "completed" && (typeof params.p_copy_text !== "string" || params.p_copy_text.length === 0)) {
+      return { applied: false, outcome: "invalid_content", state: row.state };
+    }
+    row.state = nextState;
+    if (typeof params.p_copy_text === "string") row.copy_text = params.p_copy_text;
+    if (params.p_copy_payload !== null && params.p_copy_payload !== undefined) {
+      row.copy_payload = params.p_copy_payload;
+    }
+    row.updated_at = new Date().toISOString();
+    return { applied: true, outcome: "applied", state: nextState };
+  }
+
+  function cancelCopy(params: Record<string, unknown>) {
+    const row = copyRows().find(
+      (candidate) =>
+        candidate.attempt_seq === params.p_attempt_seq &&
+        candidate.attempt_token === params.p_attempt_token,
+    );
+    if (!row) return { applied: false, canceled: false, state: null };
+    if (row.state === "completed") {
+      return { applied: false, canceled: false, state: "completed" };
+    }
+    row.state = "failed";
+    row.copy_payload = params.p_copy_payload ?? { recovery: { failureClass: "transient" } };
+    row.updated_at = new Date().toISOString();
+    return {
+      applied: true,
+      canceled: true,
+      state: "failed",
+      outcome: "applied",
+      attempt_seq: row.attempt_seq,
+      attempt_token: row.attempt_token,
+    };
+  }
+
   interface StorageStore {
     upload: (...args: unknown[]) => Promise<unknown>;
     download: (path: string) => Promise<{ data: unknown; error: unknown }>;
@@ -887,6 +987,7 @@ export function createOfflineWorld() {
     seedScenario,
     seedFrozenState,
     credit: creditRow,
+    copyState: () => copyRows().map(copy),
     step: (stage: "base" | "expansion") =>
       step(stage) as { status: TwoStageStepStatus; attempts_used: number } | undefined,
     claims,
@@ -906,6 +1007,7 @@ export interface OfflineProviderOptions {
     | "transient_always"
     | "definitive"
     | "invalid_output";
+  /** Texto devolvido pelo invoker SIMULADO da copy (provider). */
   readonly copyText?: string;
   /** Avanca o relogio injetado depois da chamada da base (orcamento). */
   readonly baseClockAdvanceMs?: number;
@@ -965,6 +1067,7 @@ export async function createOfflineDeps(
     expansionProviderCalls: 0,
     copyCalls: 0,
     copyInputs: [] as unknown[],
+    telemetryEmits: 0,
   };
   let expansionAttempt = 0;
   let now = world.clock();
@@ -973,7 +1076,16 @@ export async function createOfflineDeps(
     imageBase64: await imageBase64(1024, 1024, "png"),
     mimeType: "image/png",
     model: "gpt-image-2.5-sunburst",
-    usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 } as never,
+    usage: {
+      promptTokens: 120,
+      completionTokens: 80,
+      totalTokens: 200,
+      inputTextTokens: 20,
+      inputImageTokens: 100,
+      outputTextTokens: 0,
+      outputImageTokens: 80,
+      imageTokens: 80,
+    },
   };
 
   const baseSeams: SquareBaseDeps = {
@@ -1063,35 +1175,73 @@ export async function createOfflineDeps(
         protocol: "images",
         resolved: { provider: "openai", model: "gpt-image-2.5-sunburst", protocol: "images" },
       }),
-      invokePrepared: async () => {
+      invokePrepared: async (
+        _prepared: unknown,
+        _request: unknown,
+        telemetry: {
+          sink: {
+            emit: (envelope: Record<string, unknown>) => Promise<void>;
+          };
+        },
+      ) => {
         counters.baseProviderCalls += 1;
         if (options.baseClockAdvanceMs !== undefined) {
           now += options.baseClockAdvanceMs;
         }
+        counters.telemetryEmits += 1;
+        await telemetry.sink.emit({
+          capability: "campaign_product_image",
+          protocol: "images",
+          status: "success",
+          provider: "openai",
+          model: "gpt-image-2.5-sunburst",
+          quality: "medium",
+          attemptNumber: 1,
+          durationMs: 0,
+          usage: squareResult.usage,
+        });
         return squareResult;
       },
     } as never,
-    runCopy: (async (copyInput: unknown) => {
-      counters.copyCalls += 1;
-      counters.copyInputs.push(copyInput);
-      return options.copyText === undefined
-        ? { kind: "not_requested" }
-        : { kind: "completed", text: options.copyText, call: null };
-    }) as never,
-    createTelemetry: ((input: { operationId: string; callId: string; storeId: string; campaignId: string; attemptNumber: number }) => ({
-      context: {
-        operationRunId: input.operationId,
-        operationRunType: "campaign_delivery",
-        traceId: input.callId,
-        storeId: input.storeId,
-        campaignId: input.campaignId,
-        attemptNumber: input.attemptNumber,
-        sink: { emit: async () => undefined },
+    // Copy REAL (runSquareBaseCopy): apenas o provider (invoker) e o sink de
+    // telemetria sao simulados; persistencia/estado usam o caminho produtivo.
+    copyDirectorEnabled: true,
+    copyInvoker: {
+      hasFallback: () => false,
+      invoke: async () => {
+        counters.copyCalls += 1;
+        counters.copyInputs.push({ call: "copy" });
+        const caption = options.copyText ?? "Copy entregue congelada";
+        return {
+          content: JSON.stringify({
+            title: "Oferta da loja",
+            caption,
+            hashtags: ["#oferta"],
+            cta_post: "Aproveite hoje",
+          }),
+          model: "gpt-4.1-mini",
+        };
       },
-      bufferedEnvelopes: () => 0,
-      finalize: () => undefined,
-      resolvedCost: () => ({ estimatedCostUsd: 0.04, costSource: "pricing_table" }),
-      flush: async () => undefined,
+    } as never,
+    // Telemetria REAL (createSquareBaseTelemetry) com custo derivado do par de
+    // pricing; somente a persistencia final (sink/tracker) e simulada no teste.
+    resolveTelemetryCost: (async (pair: { primary: { model: string; quality: string }; fallback: { model: string; quality: string } }) => ({
+      primary: {
+        model: pair.primary.model,
+        quality: pair.primary.quality,
+        costUsd: COMPLETE_PRICING.imageUnitCostUsd ?? null,
+        versionId: "pricing-1",
+        costSource: "pricing_table",
+        pricing: COMPLETE_PRICING,
+      },
+      fallback: {
+        model: pair.fallback.model,
+        quality: pair.fallback.quality,
+        costUsd: COMPLETE_PRICING.imageUnitCostUsd ?? null,
+        versionId: "pricing-1",
+        costSource: "pricing_table",
+        pricing: COMPLETE_PRICING,
+      },
     })) as never,
   };
 
@@ -1223,3 +1373,38 @@ export function terminalOf(events: Array<Record<string, unknown>>) {
 }
 
 export const COMPOSITION_BUCKET = COMPOSITION_ARTIFACT_BUCKET;
+
+/**
+ * Sink simulado: o teste mocka `AiCostTracker` para gravar aqui, mantendo o
+ * `DefaultAiTelemetrySink`/resolucao de custo REAIS.
+ */
+export interface TelemetryEvent {
+  readonly cost?: {
+    readonly estimatedCostUsd?: number | null;
+    readonly costSource?: string | null;
+    readonly pricingVersion?: string | null;
+  } | null;
+  readonly tokens?: {
+    readonly promptTokens?: number | null;
+    readonly completionTokens?: number | null;
+    readonly totalTokens?: number | null;
+    readonly imageTokens?: number | null;
+  } | null;
+}
+
+interface TelemetryGlobal {
+  __vendeoTelemetryEvents?: TelemetryEvent[];
+}
+
+export function telemetryEvents(): TelemetryEvent[] {
+  return (globalThis as unknown as TelemetryGlobal).__vendeoTelemetryEvents ?? [];
+}
+
+export function resetTelemetryEvents(): void {
+  (globalThis as unknown as TelemetryGlobal).__vendeoTelemetryEvents = [];
+}
+
+export function recordTelemetryEvent(event: TelemetryEvent): void {
+  const store = globalThis as unknown as TelemetryGlobal;
+  store.__vendeoTelemetryEvents = [...(store.__vendeoTelemetryEvents ?? []), event];
+}

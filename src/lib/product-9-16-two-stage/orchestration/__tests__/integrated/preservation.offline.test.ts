@@ -3,6 +3,14 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+vi.mock("@/lib/ai-cost/tracker", () => ({
+  AiCostTracker: class {
+    async record(event: unknown) {
+      const store = globalThis as { __vendeoTelemetryEvents?: unknown[] };
+      store.__vendeoTelemetryEvents = [...(store.__vendeoTelemetryEvents ?? []), event];
+    }
+  },
+}));
 
 import { deriveTwoStageStatus } from "../../status-view";
 import {

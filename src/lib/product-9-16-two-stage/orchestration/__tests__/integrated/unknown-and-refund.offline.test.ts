@@ -3,6 +3,14 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
+vi.mock("@/lib/ai-cost/tracker", () => ({
+  AiCostTracker: class {
+    async record(event: unknown) {
+      const store = globalThis as { __vendeoTelemetryEvents?: unknown[] };
+      store.__vendeoTelemetryEvents = [...(store.__vendeoTelemetryEvents ?? []), event];
+    }
+  },
+}));
 
 import {
   createOfflineDeps,
@@ -169,7 +177,15 @@ describe("resultado desconhecido, estorno e arte tardia (offline)", () => {
     const first = await runOffline(initialInput(), deps);
     expect(terminalOf(first).type).toBe("processing");
     expect(counters.copyCalls).toBe(1);
-    const frozenCopyInput = counters.copyInputs[0];
+    const persistedCopy = world.copyState();
+    expect(persistedCopy).toHaveLength(1);
+    expect(persistedCopy[0]).toMatchObject({
+      state: "completed",
+      copy_text: "Copy entregue congelada",
+    });
+    expect(
+      world.rpcCounts.product_1_1_acquire_copy_attempt,
+    ).toBe(1);
 
     const resumed = await runOffline(
       continueInput({
@@ -179,6 +195,7 @@ describe("resultado desconhecido, estorno e arte tardia (offline)", () => {
     );
     expect(terminalOf(resumed)).toMatchObject({ type: "result" });
     expect(counters.copyCalls).toBe(1);
-    expect(counters.copyInputs[0]).toEqual(frozenCopyInput);
+    expect(world.rpcCounts.product_1_1_acquire_copy_attempt).toBe(1);
+    expect(world.copyState()).toEqual(persistedCopy);
   });
 });
