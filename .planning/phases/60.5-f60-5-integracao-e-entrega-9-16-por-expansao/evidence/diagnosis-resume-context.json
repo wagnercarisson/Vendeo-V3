@@ -1,0 +1,35 @@
+{
+  "kind": "f60.5-failure-diagnosis",
+  "createdAt": "2026-11-13T21:08:07.818Z",
+  "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
+  "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+  "frozenState": "absent",
+  "reconstruction": {
+    "ok": false,
+    "reason": "resume_context_malformed",
+    "definitive": true
+  },
+  "rootCause": "reconstructFirstExecution compares resumeContext.briefingText (JSON.stringify at write time) with JSON.stringify(briefing) after the campaigns.input_snapshot JSONB round-trip. PostgreSQL JSONB returns object keys in a different order, so the strings differ although the content is semantically identical.",
+  "evidence": {
+    "briefingTextEqualsJsonStringify": false,
+    "briefingKeysPersisted": [
+      "product",
+      "commercial",
+      "constraints",
+      "backgroundDirection"
+    ],
+    "briefingTextKeyOrder": [
+      "backgroundDirection",
+      "product",
+      "commercial",
+      "constraints"
+    ],
+    "claims": 0,
+    "generationEvents": 0,
+    "paidCalls": 0,
+    "creditStatus": "refunded",
+    "refunds": 1
+  },
+  "impact": "Base step failed definitively before acquire/provider. No vertical, copy, thumbnail or provider call. Source campaign preserved. Target campaign is error and credit refunded once.",
+  "minimalNextDecision": "Fix resumeContext.briefingText comparison to use canonical JSON (or persist/read canonical text) and then request a NEW authorization for a NEW operation; do not reuse this operation and do not retry under the current authorization."
+}

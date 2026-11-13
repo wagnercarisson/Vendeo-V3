@@ -1,0 +1,17 @@
+{
+  "kind": "f60.5-proof-intent",
+  "status": "finished",
+  "startedAt": "2026-11-13T21:06:34.796Z",
+  "finishedAt": "2026-11-13T21:06:37.441Z",
+  "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+  "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
+  "providerCalls": 0,
+  "terminal": {
+    "type": "error",
+    "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
+    "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+    "code": "generation_failed",
+    "message": "A geração falhou e o crédito foi devolvido.",
+    "refunded": true
+  }
+}
