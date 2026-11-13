@@ -2,7 +2,7 @@
   "kind": "f60.5-proof-manifest",
   "plan": "60.5-04",
   "phase": "60.5-f60-5-integracao-e-entrega-9-16-por-expansao",
-  "status": "technical-pass-human-pending",
+  "status": "accepted-with-limitations",
   "createdAt": "2026-11-13T22:09:02.798Z",
   "offlinePreparation": true,
   "environment": {
@@ -761,9 +761,38 @@
       ]
     },
     "human": {
-      "status": "pending",
-      "owner": "operator",
-      "notes": "Aceite humano do vertical/copy/miniatura/credito deve ser registrado pelo operador."
-    }
+      "status": "pass_with_limitations",
+      "acceptedAt": "2026-11-13T23:18:47.452Z",
+      "acceptedBy": "operator",
+      "observations": [
+        "Vertical 1080x1920 aprovado visualmente.",
+        "Copy, preco, selo, validade e aviso coerentes com o briefing congelado.",
+        "Miniatura derivada presente e nao usada como arte de entrega.",
+        "Credito: 1 reserva e 1 confirmacao, sem segundo debito."
+      ],
+      "limitations": [
+        "Identidade visual NovaTek Eletronicos x copy Loja Mega Vale: perfis nao coincidem."
+      ],
+      "diagnosis": {
+        "observedVisualIdentity": "NovaTek Eletronicos",
+        "observedCopyStore": "Loja Mega Vale",
+        "sourceIdentity": "source campaign identity_snapshot (frozen)",
+        "copyContextSource": "current store row",
+        "impact": "A peca entregue usa a identidade visual congelada da campanha-fonte (NovaTek) e a copy do perfil atual da loja (Loja Mega Vale); aprovada apenas com essa ressalva de coerencia de perfil.",
+        "classification": "profile mismatch do harness server-side (fonte de identidade vs contexto de copy), nao falha dos modulos de vertical/copy/credito",
+        "followUp": "60.5-05 deve conferir identidade visual e copy pela jornada normal com um perfil coerente (mesma loja/identidade para arte e copy)."
+      },
+      "followUp": "60.5-05 deve conferir identidade visual e copy pela jornada normal com um perfil coerente (mesma loja/identidade para arte e copy)."
+    },
+    "decision": "accepted_with_limitations"
+  },
+  "visualDiagnosis": {
+    "observedVisualIdentity": "NovaTek Eletronicos",
+    "observedCopyStore": "Loja Mega Vale",
+    "sourceIdentity": "source campaign identity_snapshot (frozen)",
+    "copyContextSource": "current store row",
+    "impact": "A peca entregue usa a identidade visual congelada da campanha-fonte (NovaTek) e a copy do perfil atual da loja (Loja Mega Vale); aprovada apenas com essa ressalva de coerencia de perfil.",
+    "classification": "profile mismatch do harness server-side (fonte de identidade vs contexto de copy), nao falha dos modulos de vertical/copy/credito",
+    "followUp": "60.5-05 deve conferir identidade visual e copy pela jornada normal com um perfil coerente (mesma loja/identidade para arte e copy)."
   }
 }
