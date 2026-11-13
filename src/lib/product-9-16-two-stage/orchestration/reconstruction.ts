@@ -27,6 +27,7 @@ export type ReconstructionReason =
   | "frozen_state_not_absent"
   | "snapshot_missing"
   | "snapshot_malformed"
+  | "snapshot_indeterminate"
   | "resume_context_missing"
   | "resume_context_malformed"
   | "copy_context_missing"
@@ -127,12 +128,13 @@ function referencesMatch(
 async function reconstructContent(
   input: { campaignId: string; operationId: string; storeId: string; frozen: FrozenStateReadResult },
   deps: ReconstructionDeps,
-  options: { allowRepairable: boolean },
+  options: { allowRepairable: boolean; allowComplete?: boolean },
 ): Promise<ReconstructResult> {
   const frozen = input.frozen;
   const acceptedState =
     frozen.kind === "absent" ||
-    (options.allowRepairable && frozen.kind === "repairable");
+    (options.allowRepairable && frozen.kind === "repairable") ||
+    (options.allowComplete === true && frozen.kind === "complete");
   if (!acceptedState) return failed("frozen_state_not_absent");
 
   const client = deps.client ?? (supabaseAdmin as unknown as SupabaseClient);
@@ -143,10 +145,12 @@ async function reconstructContent(
       .select("input_snapshot, identity_snapshot")
       .eq("id", input.campaignId)
       .maybeSingle<CampaignRow>();
-    if (result.error) return failed("snapshot_malformed");
+    // Erro de leitura NAO e corrupcao comprovada: indisponibilidade permite
+    // recuperacao segura (nao definitiva, sem estorno).
+    if (result.error) return failed("snapshot_indeterminate", false);
     row = result.data ?? null;
   } catch {
-    return failed("snapshot_malformed");
+    return failed("snapshot_indeterminate", false);
   }
   if (!row) return failed("snapshot_missing");
   if (!isRecord(row.input_snapshot)) return failed("snapshot_malformed");
@@ -232,6 +236,12 @@ async function reconstructContent(
 
   if (frozen.kind === "absent") {
     return Object.freeze({ ok: true as const, content, frozenState: "absent" as const });
+  }
+
+  // `complete`: o conteudo vem do estado duravel (a rota `/continue` nao envia
+  // briefing/imagens). Nao ha reparo a fazer.
+  if (frozen.kind === "complete") {
+    return Object.freeze({ ok: true as const, content, frozenState: "complete" as const });
   }
 
   const candidateInput: SquareBaseInput = {
@@ -336,6 +346,19 @@ export async function reconstructFirstExecution(
   return reconstructContent(input, deps, {
     allowRepairable: options.allowRepairable === true,
   });
+}
+
+/**
+ * Reconstrucao do conteudo duravel para retomada com congelado `complete`.
+ * A rota `/continue` nao envia briefing/imagens; tudo sai do snapshot + arquivos
+ * verificados, sem reparo e sem chamada paga.
+ */
+export async function reconstructForComplete(
+  input: { campaignId: string; operationId: string; storeId: string; frozen: FrozenStateReadResult },
+  deps: ReconstructionDeps = {},
+): Promise<ReconstructResult> {
+  if (input.frozen.kind !== "complete") return failed("frozen_state_not_absent");
+  return reconstructContent(input, deps, { allowRepairable: false, allowComplete: true });
 }
 
 export async function reconstructForRepair(

@@ -51,4 +51,12 @@ describe("reconcileBaseArtifact", () => {
     });
     expect(result).toEqual({ kind: "unknown", reason: "pre_call_probe_indeterminate" });
   });
+
+  it("maps an indeterminate frozen state to unknown, not definitive", async () => {
+    const result = await reconcileBaseArtifact(baseInput, {
+      readFrozenState: async () => ({ kind: "indeterminate" }) as never,
+      probeBase: async () => ({ kind: "proceed" }),
+    });
+    expect(result).toEqual({ kind: "unknown", reason: "frozen_state_indeterminate" });
+  });
 });

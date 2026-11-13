@@ -10,10 +10,12 @@ import { mapModuleOutcomeToControl, type ModuleOutcome } from "./failure-mapping
 import { reconcileBaseArtifact } from "./reconciliation";
 import {
   reconstructFirstExecution,
+  reconstructForComplete,
   reconstructForRepair,
   type ReconstructionDeps,
   type ReconstructedContent,
 } from "./reconstruction";
+import { finishStepWithAck } from "./finish-ack";
 import type { StepExecutionOutcome } from "./types";
 
 export interface BaseStepInput {
@@ -35,7 +37,7 @@ export interface BaseStepInput {
 }
 
 export interface BaseStepDeps extends ReconstructionDeps {
-  readonly control: Pick<ProductTwoStageOperationClient, "acquire" | "finish">;
+  readonly control: Pick<ProductTwoStageOperationClient, "acquire" | "finish" | "getOperationView">;
   readonly base: (input: SquareBaseInput) => Promise<SquareBaseResult>;
   readonly clock: () => number;
   readonly reconcile?: typeof reconcileBaseArtifact;
@@ -162,7 +164,27 @@ export async function runBaseStep(
         : { kind: "unknown", reason: reconstruction.reason };
     }
     content = reconstruction.content;
-  } else if (input.frozenState.kind !== "complete") {
+  } else if (input.frozenState.kind === "complete") {
+    // Retomada/replay: a rota `/continue` nao envia conteudo. Reconstruir do
+    // estado duravel em vez de confiar no que veio do chamador.
+    const reconstruction = await reconstructForComplete(
+      {
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        storeId: input.storeId,
+        frozen: input.frozenState,
+      },
+      deps,
+    );
+    if (!reconstruction.ok) {
+      return reconstruction.definitive
+        ? { kind: "definitive", reason: reconstruction.reason }
+        : { kind: "unknown", reason: reconstruction.reason };
+    }
+    content = reconstruction.content;
+  } else if (input.frozenState.kind === "indeterminate") {
+    return { kind: "unknown", reason: "frozen_state_indeterminate" };
+  } else {
     return { kind: "definitive", reason: "artifact_without_frozen_state" };
   }
 
@@ -197,14 +219,26 @@ export async function runBaseStep(
   );
 
   if (result.kind === "completed") {
-    await deps.control.finish({
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      attemptToken: acquire.attemptToken,
-      expectedStatus: "in_progress",
-      status: "completed",
-    });
-    return { kind: "completed" };
+    const ack = await finishStepWithAck(
+      {
+        stage: "base",
+        request: {
+          campaignId: input.campaignId,
+          operationId: input.operationId,
+          attemptToken: acquire.attemptToken,
+          expectedStatus: "in_progress",
+          status: "completed",
+        },
+      },
+      deps,
+    );
+    if (ack.kind === "accepted" || ack.kind === "already_done") {
+      return { kind: "completed" };
+    }
+    return {
+      kind: "unknown",
+      reason: ack.kind === "rejected" ? `finish_rejected_${ack.reason}` : ack.reason,
+    };
   }
 
   const mapped = mapModuleOutcomeToControl(outcomeForFailure(result));
@@ -220,31 +254,58 @@ export async function runBaseStep(
       deps,
     );
     if (reconciled.kind === "completed") {
-      await deps.control.finish({
-        campaignId: input.campaignId,
-        operationId: input.operationId,
-        attemptToken: acquire.attemptToken,
-        expectedStatus: "in_progress",
-        status: "completed",
-      });
-      return { kind: "completed" };
+      const ack = await finishStepWithAck(
+        {
+          stage: "base",
+          request: {
+            campaignId: input.campaignId,
+            operationId: input.operationId,
+            attemptToken: acquire.attemptToken,
+            expectedStatus: "in_progress",
+            status: "completed",
+          },
+        },
+        deps,
+      );
+      if (ack.kind === "accepted" || ack.kind === "already_done") {
+        return { kind: "completed" };
+      }
+      return {
+        kind: "unknown",
+        reason: ack.kind === "rejected" ? `finish_rejected_${ack.reason}` : ack.reason,
+      };
     }
     if (reconciled.kind === "unknown") {
       return { kind: "unknown", reason: reconciled.reason };
     }
   }
 
-  try {
-    await deps.control.finish({
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      attemptToken: acquire.attemptToken,
-      expectedStatus: "in_progress",
-      status: "failed",
-      failureClass: mapped.finishFailureClass,
-    });
-  } catch {
-    return { kind: "unknown", reason: "late_finish_rejected" };
+  const failedAck = await finishStepWithAck(
+    {
+      stage: "base",
+      request: {
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        attemptToken: acquire.attemptToken,
+        expectedStatus: "in_progress",
+        status: "failed",
+        failureClass: mapped.finishFailureClass,
+      },
+    },
+    deps,
+  );
+  if (failedAck.kind === "already_done") {
+    // Execucao tardia ja persistida como concluida: nao regride a etapa.
+    return { kind: "completed" };
+  }
+  if (failedAck.kind !== "accepted") {
+    return {
+      kind: "unknown",
+      reason:
+        failedAck.kind === "rejected"
+          ? `finish_rejected_${failedAck.reason}`
+          : failedAck.reason,
+    };
   }
 
   if (mapped.finishFailureClass === "unknown") {

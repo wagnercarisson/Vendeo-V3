@@ -9,6 +9,7 @@ import type { ProductTwoStageOperationClient } from "../two-stage-operation-clie
 import type { AttemptTarget, TwoStageStepStatus } from "../types";
 import { canAffordStep, remainingForStep } from "./deadline-budget";
 import { mapModuleOutcomeToControl, type ModuleOutcome } from "./failure-mapping";
+import { finishStepWithAck } from "./finish-ack";
 import { reconcileExpansionArtifact } from "./reconciliation";
 import type { StepExecutionOutcome } from "./types";
 
@@ -27,7 +28,7 @@ export interface ExpansionStepInput {
 }
 
 export interface ExpansionStepDeps {
-  readonly control: Pick<ProductTwoStageOperationClient, "acquire" | "finish">;
+  readonly control: Pick<ProductTwoStageOperationClient, "acquire" | "finish" | "getOperationView">;
   readonly expand: (input: {
     source: {
       storeId: string;
@@ -167,14 +168,26 @@ export async function runExpansionStep(
   });
 
   if (result.kind === "expanded" || result.kind === "reused") {
-    await deps.control.finish({
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      attemptToken: acquire.attemptToken,
-      expectedStatus: "in_progress",
-      status: "completed",
-    });
-    return { kind: "completed" };
+    const ack = await finishStepWithAck(
+      {
+        stage: "expansion",
+        request: {
+          campaignId: input.campaignId,
+          operationId: input.operationId,
+          attemptToken: acquire.attemptToken,
+          expectedStatus: "in_progress",
+          status: "completed",
+        },
+      },
+      deps,
+    );
+    if (ack.kind === "accepted" || ack.kind === "already_done") {
+      return { kind: "completed" };
+    }
+    return {
+      kind: "unknown",
+      reason: ack.kind === "rejected" ? `finish_rejected_${ack.reason}` : ack.reason,
+    };
   }
 
   const mapped = mapModuleOutcomeToControl(outcomeForFailure(result));
@@ -190,29 +203,55 @@ export async function runExpansionStep(
       deps.client === undefined ? {} : { client: deps.client as never },
     );
     if (reconciled.kind === "completed") {
-      await deps.control.finish({
-        campaignId: input.campaignId,
-        operationId: input.operationId,
-        attemptToken: acquire.attemptToken,
-        expectedStatus: "in_progress",
-        status: "completed",
-      });
-      return { kind: "completed" };
+      const ack = await finishStepWithAck(
+        {
+          stage: "expansion",
+          request: {
+            campaignId: input.campaignId,
+            operationId: input.operationId,
+            attemptToken: acquire.attemptToken,
+            expectedStatus: "in_progress",
+            status: "completed",
+          },
+        },
+        deps,
+      );
+      if (ack.kind === "accepted" || ack.kind === "already_done") {
+        return { kind: "completed" };
+      }
+      return {
+        kind: "unknown",
+        reason: ack.kind === "rejected" ? `finish_rejected_${ack.reason}` : ack.reason,
+      };
     }
     if (reconciled.kind === "unknown") return { kind: "unknown", reason: reconciled.reason };
   }
 
-  try {
-    await deps.control.finish({
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      attemptToken: acquire.attemptToken,
-      expectedStatus: "in_progress",
-      status: "failed",
-      failureClass: mapped.finishFailureClass,
-    });
-  } catch {
-    return { kind: "unknown", reason: "late_finish_rejected" };
+  const failedAck = await finishStepWithAck(
+    {
+      stage: "expansion",
+      request: {
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        attemptToken: acquire.attemptToken,
+        expectedStatus: "in_progress",
+        status: "failed",
+        failureClass: mapped.finishFailureClass,
+      },
+    },
+    deps,
+  );
+  if (failedAck.kind === "already_done") {
+    return { kind: "completed" };
+  }
+  if (failedAck.kind !== "accepted") {
+    return {
+      kind: "unknown",
+      reason:
+        failedAck.kind === "rejected"
+          ? `finish_rejected_${failedAck.reason}`
+          : failedAck.reason,
+    };
   }
   if (mapped.finishFailureClass === "unknown") return { kind: "unknown", reason: "provider_unknown" };
   if (mapped.finishFailureClass === "transient") return { kind: "retryable", reason: "transient" };

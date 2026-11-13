@@ -5,7 +5,11 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import { describeDurableInput } from "../durable-input";
-import { reconstructFirstExecution, reconstructForRepair } from "../reconstruction";
+import {
+  reconstructFirstExecution,
+  reconstructForComplete,
+  reconstructForRepair,
+} from "../reconstruction";
 
 const BYTES = Buffer.from("image-bytes");
 const DATA_URL = `data:image/png;base64,${BYTES.toString("base64")}`;
@@ -107,5 +111,90 @@ describe("reconstructFirstExecution", () => {
       {},
     );
     expect(result).toEqual({ ok: false, reason: "frozen_state_not_absent", definitive: true });
+  });
+
+  it("treats a snapshot read error as indeterminate, not corruption", async () => {
+    const failingClient = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: null, error: { message: "boom" } }),
+          }),
+        }),
+      }),
+    } as never;
+    const result = await reconstructFirstExecution(
+      {
+        campaignId: "c",
+        operationId: "o",
+        storeId: "s",
+        frozen: { kind: "absent" },
+      },
+      { client: failingClient },
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: "snapshot_indeterminate",
+      definitive: false,
+    });
+  });
+
+  it("treats a thrown query as indeterminate, not corruption", async () => {
+    const throwingClient = {
+      from: () => {
+        throw new Error("network");
+      },
+    } as never;
+    const result = await reconstructFirstExecution(
+      {
+        campaignId: "c",
+        operationId: "o",
+        storeId: "s",
+        frozen: { kind: "absent" },
+      },
+      { client: throwingClient },
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "snapshot_indeterminate",
+      definitive: false,
+    });
+  });
+
+  it("reconstructs durable content for frozen complete without repair", async () => {
+    const result = await reconstructForComplete(
+      {
+        campaignId: "c",
+        operationId: "o",
+        storeId: "s",
+        frozen: { kind: "complete" } as never,
+      },
+      {
+        client: fakeClient({
+          input_snapshot: { resumeContext, frozenContentReferences },
+          identity_snapshot: null,
+        }),
+        readInputBytes: async () => ({ kind: "bytes", bytes: BYTES }),
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.frozenState).toBe("complete");
+    expect(result.content.productImagesDataUrls).toEqual([DATA_URL]);
+    expect(result.repaired).toBeUndefined();
+  });
+
+  it("reconstructForComplete refuses absent/repairable", async () => {
+    for (const frozen of [{ kind: "absent" }, { kind: "repairable" }] as const) {
+      const result = await reconstructForComplete(
+        { campaignId: "c", operationId: "o", storeId: "s", frozen: frozen as never },
+        {},
+      );
+      expect(result).toEqual({
+        ok: false,
+        reason: "frozen_state_not_absent",
+        definitive: true,
+      });
+    }
   });
 });

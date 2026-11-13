@@ -136,7 +136,25 @@ export interface RunNineSixteenDeps {
   readonly projectDelivered: typeof import("@/lib/product-1-1/orchestration/project-delivered-campaign").projectDeliveredCampaign;
   readonly projectClosed: typeof import("@/lib/product-1-1/orchestration/project-closed-campaign").projectClosedCampaign;
   readonly probeVertical: VerticalArtifactProbe;
-  readonly generateThumbnail: typeof import("@/lib/campaign/thumbnail/thumbnail-safe").generateCampaignThumbnailSafely;
+  /** Costuras read-only da expansao (fonte preparada + sonda do vertical). */
+  readonly retrieveCompositionArtifact?: typeof import("@/lib/campaign/composition-artifacts/retrieve").retrieveCompositionArtifact;
+  readonly probeExpansion?: typeof import("@/lib/campaign/vertical-expansion/probe").probeExpansionTarget;
+  /**
+   * O adaptador real (60.5-02) recupera os bytes e o contexto do vertical a
+   * partir do caminho autoritativo e delega a `generateCampaignThumbnailSafely`.
+   * O orquestrador nunca fabrica buffer/contexto.
+   */
+  readonly generateThumbnail: (input: {
+    readonly storeId: string;
+    readonly campaignId: string;
+    readonly operationId: string;
+    readonly storagePath: string;
+  }) => Promise<unknown>;
+  /**
+   * Costuras da reconstrucao duravel (cliente/leitor de bytes/frozen state).
+   * Permite retomada com congelado `complete` sem conteudo do navegador.
+   */
+  readonly reconstruction?: import("./reconstruction").ReconstructionDeps;
   readonly pilotSpend?: unknown;
 }
 

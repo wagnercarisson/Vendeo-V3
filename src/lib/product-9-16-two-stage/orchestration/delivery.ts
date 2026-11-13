@@ -3,7 +3,6 @@ import "server-only";
 import type { AuthorizationContext } from "@/lib/campaign/composition-artifacts/types";
 import type { ProjectDeliveredCampaignResult } from "@/lib/product-1-1/orchestration/project-delivered-campaign";
 import type { ProjectClosedCampaignResult } from "@/lib/product-1-1/orchestration/project-closed-campaign";
-import type { ThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
 import type {
   TwoStageFinancialService,
   VerticalArtifactProbe,
@@ -42,10 +41,10 @@ export interface DeliveryDeps {
     operationId: string;
   }) => Promise<ProjectClosedCampaignResult>;
   readonly generateThumbnail: (input: {
-    originalPath: string;
-    originalBuffer: Buffer;
-    context: ThumbnailContext | null;
-    campaignId: string;
+    readonly storeId: string;
+    readonly campaignId: string;
+    readonly operationId: string;
+    readonly storagePath: string;
   }) => Promise<unknown>;
   readonly clock: () => number;
 }
@@ -63,6 +62,37 @@ export type DeliveryOutcome =
   | { readonly kind: "unknown"; readonly reason: string }
   | { readonly kind: "definitive"; readonly reason: string };
 
+async function projectDeliveredAndThumbnail(
+  input: DeliveryInput,
+  deps: DeliveryDeps,
+  storagePath: string | null,
+): Promise<DeliveryOutcome> {
+  // A projecao e idempotente e SEMPRE reexecutada em replay: se falhou na
+  // execucao anterior, a continuacao a repara sem nova chamada paga.
+  const projection = await deps.projectDelivered({
+    storeId: input.storeId,
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+  });
+  if (!projection.projected) return { kind: "processing", reason: "delivery_pending" };
+
+  if (storagePath !== null) {
+    try {
+      // O adaptador real recupera os bytes/contexto do vertical a partir do
+      // caminho; nenhum buffer vazio e fabricado aqui.
+      await deps.generateThumbnail({
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        storagePath,
+      });
+    } catch {
+      // Thumbnail is best-effort and never blocks delivery.
+    }
+  }
+  return { kind: "completed" };
+}
+
 export async function deliverVertical(
   input: DeliveryInput,
   deps: DeliveryDeps,
@@ -72,8 +102,21 @@ export async function deliverVertical(
     operationId: input.operationId,
   });
   if (!resume.success) return { kind: "unknown", reason: resume.reason };
-  if (resume.creditStatus === "delivered") return { kind: "completed" };
   if (resume.creditStatus === "refunded") return { kind: "definitive", reason: "operation_terminal" };
+  if (resume.creditStatus === "delivered") {
+    // Replay entregue: reparar a projecao (e a miniatura) antes de declarar
+    // sucesso. A sonda e read-only e so fornece o caminho do vertical.
+    const probe = await deps.probeVertical.probeVerticalArtifact({
+      storeId: input.storeId,
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+    });
+    return projectDeliveredAndThumbnail(
+      input,
+      deps,
+      probe.kind === "integral" ? probe.storagePath : null,
+    );
+  }
   if (resume.baseStatus !== "done" || resume.expansionStatus !== "done") {
     return { kind: "processing", reason: "delivery_pending" };
   }
@@ -95,7 +138,9 @@ export async function deliverVertical(
       input.campaignId,
       input.operationId,
     );
-    if (authority?.delivered) return { kind: "completed" };
+    if (authority?.delivered) {
+      return projectDeliveredAndThumbnail(input, deps, probe.storagePath);
+    }
     return { kind: "processing", reason: "delivery_pending" };
   }
 
@@ -107,30 +152,39 @@ export async function deliverVertical(
     verticalArtifactProbe: deps.probeVertical,
   });
 
-  const projection = await deps.projectDelivered({
-    storeId: input.storeId,
-    campaignId: input.campaignId,
-    operationId: input.operationId,
-  });
-  if (!projection.projected) return { kind: "processing", reason: "delivery_pending" };
-
-  try {
-    await deps.generateThumbnail({
-      originalPath: probe.storagePath,
-      originalBuffer: Buffer.alloc(0),
-      context: null,
-      campaignId: input.campaignId,
-    });
-  } catch {
-    // Thumbnail is best-effort and never blocks delivery.
-  }
-  return { kind: "completed" };
+  return projectDeliveredAndThumbnail(input, deps, probe.storagePath);
 }
 
 export type FinalizeFailureResult =
   | { readonly kind: "refunded" }
   | { readonly kind: "delivery_required"; readonly probe: VerticalArtifactProbeResult & { kind: "integral" } }
   | { readonly kind: "unknown"; readonly reason: string };
+
+async function recordFinalOutcome(
+  input: {
+    readonly campaignId: string;
+    readonly operationId: string;
+    readonly stage: TwoStageStage;
+    readonly outcome: "failed" | "unknown";
+    readonly supportReference?: string | null;
+  },
+  deps: DeliveryDeps,
+): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }> {
+  let result: Awaited<ReturnType<ProductTwoStageOperationClient["recordOutcome"]>>;
+  try {
+    result = await deps.control.recordOutcome({
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      stage: input.stage,
+      outcome: input.outcome,
+      supportReference: input.supportReference ?? null,
+    });
+  } catch {
+    return { ok: false, reason: "record_outcome_threw" };
+  }
+  if (result.success) return { ok: true };
+  return { ok: false, reason: `record_outcome_${result.reason}` };
+}
 
 export async function finalizeDefinitiveFailure(
   input: DeliveryInput & {
@@ -164,23 +218,31 @@ export async function finalizeDefinitiveFailure(
     return { kind: "delivery_required", probe };
   }
   if (probe.kind === "invalid" || probe.kind === "indeterminate") {
-    await deps.control.recordOutcome({
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      stage: input.stage,
-      outcome: "unknown",
-      supportReference: input.supportReference ?? null,
-    });
+    const recorded = await recordFinalOutcome(
+      {
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        stage: input.stage,
+        outcome: "unknown",
+        supportReference: input.supportReference,
+      },
+      deps,
+    );
+    if (!recorded.ok) return { kind: "unknown", reason: recorded.reason };
     return { kind: "unknown", reason: `vertical_${probe.kind}` };
   }
 
-  await deps.control.recordOutcome({
-    campaignId: input.campaignId,
-    operationId: input.operationId,
-    stage: input.stage,
-    outcome: "failed",
-    supportReference: input.supportReference ?? null,
-  });
+  const recorded = await recordFinalOutcome(
+    {
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      stage: input.stage,
+      outcome: "failed",
+      supportReference: input.supportReference,
+    },
+    deps,
+  );
+  if (!recorded.ok) return { kind: "unknown", reason: recorded.reason };
   const refund = await deps.financial.refundOnDefinitiveFailure({
     storeId: input.storeId,
     campaignId: input.campaignId,
@@ -226,23 +288,31 @@ export async function finalizeExhaustedLimit(
     return { kind: "unknown", reason: "delivered_without_integral_vertical" };
   }
   if (probe.kind === "invalid" || probe.kind === "indeterminate") {
-    await deps.control.recordOutcome({
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      stage: input.stage,
-      outcome: "unknown",
-      supportReference: input.supportReference ?? null,
-    });
+    const recorded = await recordFinalOutcome(
+      {
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        stage: input.stage,
+        outcome: "unknown",
+        supportReference: input.supportReference,
+      },
+      deps,
+    );
+    if (!recorded.ok) return { kind: "unknown", reason: recorded.reason };
     return { kind: "unknown", reason: `vertical_${probe.kind}` };
   }
 
-  await deps.control.recordOutcome({
-    campaignId: input.campaignId,
-    operationId: input.operationId,
-    stage: input.stage,
-    outcome: "failed",
-    supportReference: input.supportReference ?? null,
-  });
+  const recorded = await recordFinalOutcome(
+    {
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      stage: input.stage,
+      outcome: "failed",
+      supportReference: input.supportReference,
+    },
+    deps,
+  );
+  if (!recorded.ok) return { kind: "unknown", reason: recorded.reason };
   const refund = await deps.financial.refundOnDefinitiveFailure({
     storeId: input.storeId,
     campaignId: input.campaignId,

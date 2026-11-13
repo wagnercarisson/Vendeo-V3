@@ -1,7 +1,7 @@
 import "server-only";
 
 import { verifyCampaignAccess } from "@/lib/campaign/composition-artifacts/access";
-import type { ProductTwoStageOperationError } from "../types";
+import type { FrozenStateReadResult } from "@/lib/campaign/square-base/types";
 import type { AcquireStepResult, ResumeOperationResult } from "../types";
 import { newAcquisitionIds, parseAcquisitionIds } from "./acquisition-ids";
 import { runBaseStep } from "./base-step";
@@ -21,6 +21,8 @@ import {
 } from "./status-view";
 import type {
   NineSixteenEvent,
+  NineSixteenPhase,
+  NineSixteenProcessingState,
   RunNineSixteenDeps,
   RunNineSixteenInput,
   StepExecutionOutcome,
@@ -28,6 +30,8 @@ import type {
 import type { TwoStageOperationView } from "../types";
 
 export type { RunNineSixteenDeps };
+
+type Stream = ReturnType<typeof createNineSixteenStream>;
 
 function errorEvent(
   input: RunNineSixteenInput,
@@ -56,7 +60,7 @@ function unknownEvent(input: RunNineSixteenInput, reference: string): NineSixtee
 
 function processingEvent(
   input: RunNineSixteenInput,
-  state: "between_steps" | "step_in_progress" | "delivery_pending" | "preparation_retry" | "suspended",
+  state: NineSixteenProcessingState,
   nextStep: "base" | "expansion" | "delivery" | null,
   canContinue: boolean,
 ): NineSixteenEvent {
@@ -79,7 +83,11 @@ function resultEvent(input: RunNineSixteenInput): NineSixteenEvent {
   };
 }
 
-function statusEvent(input: RunNineSixteenInput, view: TwoStageOperationView, allow: boolean): NineSixteenEvent {
+function statusEvent(
+  input: RunNineSixteenInput,
+  view: TwoStageOperationView,
+  allow: boolean,
+): NineSixteenEvent {
   const status = deriveTwoStageStatus(view, { allowNewPaidStep: allow });
   if (status.state === "delivered") return resultEvent(input);
   if (status.state === "refunded") {
@@ -127,14 +135,74 @@ function defaultView(input: RunNineSixteenInput): TwoStageOperationView {
   };
 }
 
-function asAcquireTarget(target: AcquireStepResult["target"]): "primary" | "fallback" | "initial" | "retry" {
-  return target ?? "primary";
+function withReconstruction(deps: RunNineSixteenDeps): RunNineSixteenDeps {
+  if (deps.reconstruction === undefined) return deps;
+  return { ...deps, ...deps.reconstruction };
+}
+
+async function readFrozenSafe(
+  input: RunNineSixteenInput,
+  deps: RunNineSixteenDeps,
+): Promise<FrozenStateReadResult | null> {
+  try {
+    return await deps.readFrozenState({
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+    });
+  } catch {
+    return null;
+  }
+}
+
+function phaseDone(stream: Stream, phase: NineSixteenPhase, outcome: StepExecutionOutcome): void {
+  if (outcome.kind === "completed") stream.emitPhase(phase, "complete");
+  else if (outcome.kind === "skipped") stream.emitPhase(phase, "skipped");
+  // `processing` deixa a fase em `running`; o terminal a fecha como `skipped`.
+}
+
+async function deliverAndEmit(
+  input: RunNineSixteenInput,
+  deps: RunNineSixteenDeps,
+  stream: Stream,
+): Promise<void> {
+  stream.emitPhase("campaign_delivery", "running");
+  const delivered = await deliverVertical(input, deps);
+  if (delivered.kind === "completed") {
+    stream.emitPhase("campaign_delivery", "complete");
+    stream.emitTerminal(resultEvent(input));
+  } else if (delivered.kind === "processing") {
+    stream.emitTerminal(processingEvent(input, "delivery_pending", "delivery", true));
+  } else if (delivered.kind === "unknown") {
+    stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
+  } else {
+    stream.emitTerminal(errorEvent(input, "delivery_failed", delivered.reason));
+  }
+}
+
+async function handleFinalizedFailure(
+  input: RunNineSixteenInput,
+  deps: RunNineSixteenDeps,
+  stream: Stream,
+  finalized: Awaited<ReturnType<typeof finalizeDefinitiveFailure>>,
+): Promise<void> {
+  if (finalized.kind === "refunded") {
+    stream.emitTerminal(
+      errorEvent(input, "generation_failed", "A geração falhou e o crédito foi devolvido.", true),
+    );
+    return;
+  }
+  if (finalized.kind === "delivery_required") {
+    // Vertical integro: entregar/reparar projecao em vez de estornar.
+    await deliverAndEmit(input, deps, stream);
+    return;
+  }
+  stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
 }
 
 async function handleStepFailure(
   input: RunNineSixteenInput,
   deps: RunNineSixteenDeps,
-  stream: ReturnType<typeof createNineSixteenStream>,
+  stream: Stream,
   outcome: Extract<StepExecutionOutcome, { kind: "definitive" | "unknown" | "retryable" }>,
   stage: "base" | "expansion",
 ): Promise<void> {
@@ -157,15 +225,7 @@ async function handleStepFailure(
           },
           deps,
         );
-        if (finalized.kind === "refunded") {
-          stream.emitTerminal(
-            errorEvent(input, "generation_failed", "A geração falhou e o crédito foi devolvido.", true),
-          );
-        } else if (finalized.kind === "delivery_required") {
-          stream.emitTerminal(processingEvent(input, "delivery_pending", "delivery", true));
-        } else {
-          stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
-        }
+        await handleFinalizedFailure(input, deps, stream, finalized);
         return;
       }
     }
@@ -199,29 +259,118 @@ async function handleStepFailure(
     },
     deps,
   );
-  if (finalized.kind === "refunded") {
-    stream.emitTerminal(
-      errorEvent(input, "generation_failed", "A geração falhou e o crédito foi devolvido.", true),
-    );
-    return;
-  }
-  if (finalized.kind === "delivery_required") {
-    stream.emitTerminal(
-      processingEvent(input, "delivery_pending", "delivery", true),
-    );
-    return;
-  }
-  stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
+  await handleFinalizedFailure(input, deps, stream, finalized);
 }
 
-export async function runNineSixteenTwoStageGeneration(
+function contentFromInput(input: RunNineSixteenInput) {
+  return {
+    briefing: input.briefing as never,
+    briefingText: input.briefingText ?? "",
+    campaignIntent: input.campaignIntent as never,
+    backgroundDirection: input.backgroundDirection as never,
+    productImagesDataUrls: input.productImagesDataUrls ?? [],
+    ...(input.identityImageUrl === undefined ? {} : { identityImageUrl: input.identityImageUrl }),
+    ...(input.identityDirective === undefined
+      ? {}
+      : { identityDirective: input.identityDirective }),
+    ...(input.references === undefined ? {} : { references: input.references }),
+    referenceSelections: input.referenceSelections,
+    ...(input.copyContext === undefined ? {} : { copyContext: input.copyContext }),
+    usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
+    creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
+  };
+}
+
+async function runBase(
   input: RunNineSixteenInput,
   deps: RunNineSixteenDeps,
-): Promise<Response> {
-  const stream = createNineSixteenStream({
-    campaignId: input.campaignId,
-    operationId: input.operationId,
-  });
+  stream: Stream,
+  options: {
+    frozen: FrozenStateReadResult;
+    acquisitionId: string;
+    attemptTarget: AcquireStepResult["target"] | null;
+    baseStatus: TwoStageOperationView["base"]["status"];
+    deadlineAtMs: number;
+    allowNewPaidStep: boolean;
+  },
+): Promise<StepExecutionOutcome> {
+  stream.emitPhase("campaign_base", "running");
+  const outcome = await runBaseStep(
+    {
+      storeId: input.storeId,
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      authorization: input.authorization,
+      content: contentFromInput(input) as never,
+      acquisitionId: options.acquisitionId,
+      attemptReference: deps.callIdFactory(),
+      attemptTarget: options.attemptTarget ?? "primary",
+      deadlineAtMs: options.deadlineAtMs,
+      baseStatus: options.baseStatus,
+      allowNewPaidStep: options.allowNewPaidStep,
+      frozenState: options.frozen,
+    },
+    withReconstruction(deps),
+  );
+  phaseDone(stream, "campaign_base", outcome);
+  return outcome;
+}
+
+async function runPreparation(
+  input: RunNineSixteenInput,
+  deps: RunNineSixteenDeps,
+  stream: Stream,
+): Promise<StepExecutionOutcome> {
+  stream.emitPhase("campaign_preparation", "running");
+  const outcome = await runPreparationStep(input, deps);
+  phaseDone(stream, "campaign_preparation", outcome);
+  return outcome;
+}
+
+async function runExpansion(
+  input: RunNineSixteenInput,
+  deps: RunNineSixteenDeps,
+  stream: Stream,
+  options: {
+    acquisitionId: string;
+    attemptTarget: AcquireStepResult["target"] | null;
+    expansionStatus: TwoStageOperationView["expansion"]["status"];
+    deadlineAtMs: number;
+    allowNewPaidStep: boolean;
+  },
+): Promise<StepExecutionOutcome> {
+  stream.emitPhase("campaign_expansion", "running");
+  const outcome = await runExpansionStep(
+    {
+      storeId: input.storeId,
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      authorization: input.authorization,
+      acquisitionId: options.acquisitionId,
+      attemptReference: deps.callIdFactory(),
+      attemptTarget: options.attemptTarget ?? "initial",
+      deadlineAtMs: options.deadlineAtMs,
+      expansionStatus: options.expansionStatus,
+      allowNewPaidStep: options.allowNewPaidStep,
+    },
+    {
+      ...withReconstruction(deps),
+      ...(deps.retrieveCompositionArtifact === undefined
+        ? {}
+        : { retrieve: deps.retrieveCompositionArtifact }),
+      ...(deps.probeExpansion === undefined ? {} : { probe: deps.probeExpansion }),
+    },
+  );
+  phaseDone(stream, "campaign_expansion", outcome);
+  return outcome;
+}
+
+async function execute(
+  input: RunNineSixteenInput,
+  deps: RunNineSixteenDeps,
+  stream: Stream,
+): Promise<void> {
+  stream.emitPhase("campaign_validation", "running");
 
   const access = await verifyCampaignAccess(
     {
@@ -232,8 +381,9 @@ export async function runNineSixteenTwoStageGeneration(
     (deps as { client?: never }).client as never,
   );
   if (!access.ok) {
+    stream.emitPhase("campaign_validation", "failed");
     stream.emitTerminal(errorEvent(input, "authorization_denied", "Acesso negado."));
-    return stream.response;
+    return;
   }
 
   const deadlineAtMs = computeInvocationDeadline(input.requestStartedAtMs, input.timeoutMs);
@@ -245,8 +395,9 @@ export async function runNineSixteenTwoStageGeneration(
   } else {
     const parsed = parseAcquisitionIds(input.acquisitionIds);
     if (!parsed.ok) {
+      stream.emitPhase("campaign_validation", "failed");
       stream.emitTerminal(errorEvent(input, "invalid_acquisition_ids", parsed.reason));
-      return stream.response;
+      return;
     }
     acquisitionIds = parsed.ids;
   }
@@ -256,16 +407,15 @@ export async function runNineSixteenTwoStageGeneration(
     operationId: input.operationId,
   });
   if (lookup.kind === "read_failed") {
-    stream.emitTerminal(
-      processingEvent(input, "between_steps", null, false),
-    );
-    return stream.response;
+    stream.emitTerminal(processingEvent(input, "between_steps", null, false));
+    return;
   }
 
   if (input.mode === "initial") {
     if (lookup.kind === "found") {
+      stream.emitPhase("campaign_validation", "complete");
       stream.emitTerminal(statusEvent(input, lookup.view, allowNewPaidStep));
-      return stream.response;
+      return;
     }
     try {
       await deps.financial.reserveOperationOnce({
@@ -274,15 +424,18 @@ export async function runNineSixteenTwoStageGeneration(
         operationId: input.operationId,
       });
     } catch {
+      stream.emitPhase("campaign_validation", "failed");
       stream.emitTerminal(errorEvent(input, "reservation_failed", "Não foi possível reservar o crédito."));
-      return stream.response;
+      return;
     }
   } else if (lookup.kind === "absent") {
+    stream.emitPhase("campaign_validation", "failed");
     stream.emitTerminal(errorEvent(input, "operation_not_found", "Operação não encontrada."));
-    return stream.response;
+    return;
   }
+  stream.emitPhase("campaign_validation", "complete");
 
-  let view: TwoStageOperationView = lookup.kind === "found" ? lookup.view : defaultView(input);
+  const view: TwoStageOperationView = lookup.kind === "found" ? lookup.view : defaultView(input);
 
   if (input.mode === "continue") {
     let resume: ResumeOperationResult;
@@ -293,15 +446,15 @@ export async function runNineSixteenTwoStageGeneration(
       });
     } catch {
       stream.emitTerminal(processingEvent(input, "between_steps", null, false));
-      return stream.response;
+      return;
     }
     if (!resume.success) {
       stream.emitTerminal(errorEvent(input, "operation_not_found", resume.reason));
-      return stream.response;
+      return;
     }
     if (resume.action === "wait") {
       stream.emitTerminal(processingEvent(input, "step_in_progress", null, false));
-      return stream.response;
+      return;
     }
     if (resume.action === "blocked") {
       const reason = classifyBlockedState(view);
@@ -317,191 +470,138 @@ export async function runNineSixteenTwoStageGeneration(
           },
           deps,
         );
-        if (finalized.kind === "refunded") {
-          stream.emitTerminal(
-            errorEvent(input, "generation_failed", "A geração falhou e o crédito foi devolvido.", true),
-          );
-        } else if (finalized.kind === "delivery_required") {
-          stream.emitTerminal(processingEvent(input, "delivery_pending", "delivery", true));
-        } else {
-          stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
-        }
+        await handleFinalizedFailure(input, deps, stream, finalized);
       } else {
         stream.emitTerminal(processingEvent(input, "between_steps", null, false));
       }
-      return stream.response;
+      return;
     }
     if (resume.action === "deliver") {
-      const delivered = await deliverVertical(input, deps);
-      if (delivered.kind === "completed") stream.emitTerminal(resultEvent(input));
-      else if (delivered.kind === "processing") {
-        stream.emitTerminal(processingEvent(input, "delivery_pending", "delivery", true));
-      } else if (delivered.kind === "unknown") {
-        stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
-      } else {
-        stream.emitTerminal(errorEvent(input, "delivery_failed", delivered.reason));
-      }
-      return stream.response;
+      await deliverAndEmit(input, deps, stream);
+      return;
     }
     if (resume.action === "acquire_base" || resume.action === "retry_base") {
-      const frozen = await deps.readFrozenState({
-        campaignId: input.campaignId,
-        operationId: input.operationId,
+      const frozen = await readFrozenSafe(input, deps);
+      if (frozen === null || frozen.kind === "indeterminate") {
+        stream.emitTerminal(processingEvent(input, "between_steps", "base", true));
+        return;
+      }
+      const base = await runBase(input, deps, stream, {
+        frozen,
+        acquisitionId: acquisitionIds.base,
+        attemptTarget: resume.nextTarget,
+        baseStatus: view.base.status,
+        deadlineAtMs,
+        allowNewPaidStep,
       });
-      const base = await runBaseStep(
-        {
-          storeId: input.storeId,
-          campaignId: input.campaignId,
-          operationId: input.operationId,
-          authorization: input.authorization,
-          content: {
-            briefing: input.briefing as never,
-            briefingText: input.briefingText ?? "",
-            campaignIntent: input.campaignIntent as never,
-            backgroundDirection: input.backgroundDirection as never,
-            productImagesDataUrls: input.productImagesDataUrls ?? [],
-            ...(input.identityImageUrl === undefined ? {} : { identityImageUrl: input.identityImageUrl }),
-            ...(input.identityDirective === undefined ? {} : { identityDirective: input.identityDirective }),
-            ...(input.references === undefined ? {} : { references: input.references }),
-            referenceSelections: input.referenceSelections,
-            ...(input.copyContext === undefined ? {} : { copyContext: input.copyContext }),
-            usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
-            creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
-          },
-          acquisitionId: acquisitionIds.base,
-          attemptReference: deps.callIdFactory(),
-          attemptTarget: resume.nextTarget ?? "primary",
-          deadlineAtMs,
-          baseStatus: view.base.status,
-          allowNewPaidStep,
-          frozenState: frozen,
-        },
-        deps,
-      );
       if (base.kind === "completed" || base.kind === "skipped") {
+        // A proxima continuacao executa a preparacao gratuita antes da expansao.
         stream.emitTerminal(processingEvent(input, "between_steps", "expansion", true));
       } else if (base.kind === "processing") {
         stream.emitTerminal(processingEvent(input, base.state, base.nextStep, base.canContinue));
       } else {
         await handleStepFailure(input, deps, stream, base, "base");
       }
-      return stream.response;
+      return;
     }
     if (resume.action === "acquire_expansion" || resume.action === "retry_expansion") {
-      const expansion = await runExpansionStep(
-        {
-          storeId: input.storeId,
-          campaignId: input.campaignId,
-          operationId: input.operationId,
-          authorization: input.authorization,
-          acquisitionId: acquisitionIds.expansion,
-          attemptReference: deps.callIdFactory(),
-          attemptTarget: resume.nextTarget ?? "initial",
-          deadlineAtMs,
-          expansionStatus: view.expansion.status,
-          allowNewPaidStep,
-        },
-        deps,
-      );
+      // Preparacao 1152 SEMPRE antes da expansao paga (gratuita e reutilizavel).
+      const preparation = await runPreparation(input, deps, stream);
+      if (preparation.kind === "processing") {
+        stream.emitTerminal(processingEvent(input, "preparation_retry", "expansion", true));
+        return;
+      }
+      if (preparation.kind === "definitive") {
+        await handleStepFailure(input, deps, stream, preparation, "expansion");
+        return;
+      }
+      const expansion = await runExpansion(input, deps, stream, {
+        acquisitionId: acquisitionIds.expansion,
+        attemptTarget: resume.nextTarget,
+        expansionStatus: view.expansion.status,
+        deadlineAtMs,
+        allowNewPaidStep,
+      });
       if (expansion.kind === "completed") {
-        const delivered = await deliverVertical(input, deps);
-        if (delivered.kind === "completed") stream.emitTerminal(resultEvent(input));
-        else if (delivered.kind === "processing") {
-          stream.emitTerminal(processingEvent(input, "delivery_pending", "delivery", true));
-        } else {
-          stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
-        }
+        await deliverAndEmit(input, deps, stream);
       } else if (expansion.kind === "processing" || expansion.kind === "skipped") {
-        stream.emitTerminal(processingEvent(input, "between_steps", "expansion", expansion.kind !== "skipped"));
+        stream.emitTerminal(
+          processingEvent(input, "between_steps", "expansion", expansion.kind !== "skipped"),
+        );
       } else {
         await handleStepFailure(input, deps, stream, expansion, "expansion");
       }
-      return stream.response;
+      return;
     }
   }
 
   // initial: base -> preparation -> expansion -> delivery
-  const base = await runBaseStep(
-    {
-      storeId: input.storeId,
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      authorization: input.authorization,
-      content: {
-        briefing: input.briefing as never,
-        briefingText: input.briefingText ?? "",
-        campaignIntent: input.campaignIntent as never,
-        backgroundDirection: input.backgroundDirection as never,
-        productImagesDataUrls: input.productImagesDataUrls ?? [],
-        ...(input.identityImageUrl === undefined ? {} : { identityImageUrl: input.identityImageUrl }),
-        ...(input.identityDirective === undefined ? {} : { identityDirective: input.identityDirective }),
-        ...(input.references === undefined ? {} : { references: input.references }),
-        referenceSelections: input.referenceSelections,
-        ...(input.copyContext === undefined ? {} : { copyContext: input.copyContext }),
-        usdBrlRateAtGeneration: input.usdBrlRateAtGeneration ?? null,
-        creditValueBrlAtGeneration: input.creditValueBrlAtGeneration ?? null,
-      },
-      acquisitionId: acquisitionIds.base,
-      attemptReference: deps.callIdFactory(),
-      attemptTarget: "primary",
-      deadlineAtMs,
-      baseStatus: view.base.status,
-      allowNewPaidStep,
-      frozenState: { kind: "absent" },
-    },
-    deps,
-  );
+  const frozen = await readFrozenSafe(input, deps);
+  if (frozen === null || frozen.kind === "indeterminate") {
+    stream.emitTerminal(processingEvent(input, "between_steps", "base", true));
+    return;
+  }
+  const base = await runBase(input, deps, stream, {
+    frozen,
+    acquisitionId: acquisitionIds.base,
+    attemptTarget: "primary",
+    baseStatus: view.base.status,
+    deadlineAtMs,
+    allowNewPaidStep,
+  });
   if (base.kind === "processing" || base.kind === "skipped") {
     stream.emitTerminal(processingEvent(input, "between_steps", "base", base.kind !== "skipped"));
-    return stream.response;
+    return;
   }
   if (base.kind !== "completed") {
     await handleStepFailure(input, deps, stream, base, "base");
-    return stream.response;
+    return;
   }
 
-  const preparation = await runPreparationStep(input, deps);
+  const preparation = await runPreparation(input, deps, stream);
   if (preparation.kind === "processing") {
     stream.emitTerminal(processingEvent(input, "preparation_retry", "expansion", true));
-    return stream.response;
+    return;
   }
   if (preparation.kind === "definitive") {
     await handleStepFailure(input, deps, stream, preparation, "expansion");
-    return stream.response;
+    return;
   }
 
-  const expansion = await runExpansionStep(
-    {
-      storeId: input.storeId,
-      campaignId: input.campaignId,
-      operationId: input.operationId,
-      authorization: input.authorization,
-      acquisitionId: acquisitionIds.expansion,
-      attemptReference: deps.callIdFactory(),
-      attemptTarget: "initial",
-      deadlineAtMs,
-      expansionStatus: view.expansion.status,
-      allowNewPaidStep,
-    },
-    deps,
-  );
+  const expansion = await runExpansion(input, deps, stream, {
+    acquisitionId: acquisitionIds.expansion,
+    attemptTarget: "initial",
+    expansionStatus: view.expansion.status,
+    deadlineAtMs,
+    allowNewPaidStep,
+  });
   if (expansion.kind === "processing" || expansion.kind === "skipped") {
-    stream.emitTerminal(processingEvent(input, "between_steps", "expansion", expansion.kind !== "skipped"));
-    return stream.response;
+    stream.emitTerminal(
+      processingEvent(input, "between_steps", "expansion", expansion.kind !== "skipped"),
+    );
+    return;
   }
   if (expansion.kind !== "completed") {
     await handleStepFailure(input, deps, stream, expansion, "expansion");
-    return stream.response;
+    return;
   }
 
-  const delivered = await deliverVertical(input, deps);
-  if (delivered.kind === "completed") stream.emitTerminal(resultEvent(input));
-  else if (delivered.kind === "processing") {
-    stream.emitTerminal(processingEvent(input, "delivery_pending", "delivery", true));
-  } else if (delivered.kind === "unknown") {
-    stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
-  } else {
-    stream.emitTerminal(errorEvent(input, "delivery_failed", delivered.reason));
-  }
+  await deliverAndEmit(input, deps, stream);
+}
+
+/**
+ * Devolve a `Response` NDJSON IMEDIATAMENTE; o trabalho continua em background,
+ * emitindo fases durante a geracao. Qualquer excecao nao tratada vira um unico
+ * terminal seguro (`unknown`), sem retry/estorno.
+ */
+export async function runNineSixteenTwoStageGeneration(
+  input: RunNineSixteenInput,
+  deps: RunNineSixteenDeps,
+): Promise<Response> {
+  const stream = createNineSixteenStream({
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+  });
+  stream.start(() => execute(input, deps, stream));
   return stream.response;
 }

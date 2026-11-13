@@ -12,6 +12,15 @@ export interface NineSixteenStream {
   readonly emit: (event: NineSixteenEvent) => void;
   readonly emitTerminal: (event: NineSixteenEvent) => void;
   readonly terminalSent: () => boolean;
+  /**
+   * Agenda o trabalho DEPOIS de a `Response` ser devolvida ao chamador, para
+   * que as fases cheguem ao cliente enquanto a geracao acontece. Uma excecao
+   * nao tratada produz exatamente um terminal seguro (`unknown`), nunca um
+   * stream aberto.
+   */
+  readonly start: (work: () => Promise<void>) => void;
+  /** Resolve quando o stream foi encerrado (terminal escrito e controller fechado). */
+  readonly done: Promise<void>;
 }
 
 export function createNineSixteenStream(input: {
@@ -22,6 +31,11 @@ export function createNineSixteenStream(input: {
   let controllerRef: ReadableStreamDefaultController<Uint8Array> | null = null;
   let closed = false;
   let terminal = false;
+  let started = false;
+  let resolveDone: () => void = () => {};
+  const done = new Promise<void>((resolve) => {
+    resolveDone = resolve;
+  });
   const phases = new Map<NineSixteenPhase, "running" | "complete" | "failed" | "skipped">();
 
   const write = (event: NineSixteenEvent): void => {
@@ -39,6 +53,7 @@ export function createNineSixteenStream(input: {
     },
     cancel() {
       closed = true;
+      resolveDone();
     },
   });
 
@@ -81,6 +96,28 @@ export function createNineSixteenStream(input: {
     } catch {
       // already closed
     }
+    resolveDone();
+  };
+
+  const safeUnknown = (): NineSixteenEvent => ({
+    type: "unknown",
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+    reference: input.operationId,
+  });
+
+  const start: NineSixteenStream["start"] = (work) => {
+    if (started) return;
+    started = true;
+    void Promise.resolve()
+      .then(work)
+      .catch(() => {
+        if (!terminal) emitTerminal(safeUnknown());
+      })
+      .finally(() => {
+        if (!terminal) emitTerminal(safeUnknown());
+        resolveDone();
+      });
   };
 
   return {
@@ -94,5 +131,7 @@ export function createNineSixteenStream(input: {
     emit,
     emitTerminal,
     terminalSent: () => terminal,
+    start,
+    done,
   };
 }

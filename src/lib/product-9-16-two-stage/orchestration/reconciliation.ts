@@ -45,13 +45,11 @@ export async function reconcileBaseArtifact(
       deps.client === undefined ? {} : { client: deps.client },
     );
     if (frozen.kind !== "complete" && frozen.kind !== "repairable") {
-      return {
-        kind: "definitive",
-        reason:
-          frozen.kind === "indeterminate"
-            ? "frozen_state_indeterminate"
-            : "artifact_without_frozen_state",
-      };
+      // Indisponibilidade nao e corrupcao comprovada: preservar a incerteza.
+      if (frozen.kind === "indeterminate") {
+        return { kind: "unknown", reason: "frozen_state_indeterminate" };
+      }
+      return { kind: "definitive", reason: "artifact_without_frozen_state" };
     }
     const outcome = await probe(
       {
