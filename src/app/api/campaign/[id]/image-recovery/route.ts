@@ -151,6 +151,23 @@ export const POST = apiHandler(
     // Ownership ANTES de qualquer IA/recuperação.
     const store = await requireOwnership(campaign.store_id, user.userId);
 
+    // F60.5 — a recuperacao de imagem NAO existe no 9:16 por expansao; recusa
+    // antes de qualquer recuperacao/efeito tambem no POST.
+    if (
+      resolveCampaignGenerationOrigin(campaign.input_snapshot).kind ===
+      "two_stage_9_16"
+    ) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "image_recovery_unavailable",
+            message: "A recuperação de imagem não se aplica a este fluxo.",
+          },
+        },
+        { status: 409 },
+      );
+    }
+
     // ── Corpo (.strict()): `operationId` OBRIGATÓRIO (ausência ⇒ 400) ───────
     let body: unknown;
     try {

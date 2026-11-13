@@ -69,8 +69,13 @@ import {
   FORMAT_CONTRACT_VERSION,
 } from "@/lib/campaign/format-resolution";
 import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
+import {
+  GENERATION_CONTRACT_VERSION,
+  GENERATION_ORIGIN,
+} from "@/lib/product-9-16-two-stage/orchestration/origin";
 import { describeDurableInput } from "@/lib/product-9-16-two-stage/orchestration/durable-input";
 import { buildNineSixteenResumeContext } from "@/lib/product-9-16-two-stage/orchestration/resume-context";
+import { identityReferenceId } from "@/lib/product-9-16-two-stage/orchestration/identity-id";
 import { VerticalArtifactStore } from "@/lib/product-vertical-9-16/artifact/artifact-store";
 import type { RunNineSixteenInput } from "@/lib/product-9-16-two-stage/orchestration/types";
 import type { DurableInputDescriptor } from "@/lib/product-9-16-two-stage/orchestration/types";
@@ -1046,7 +1051,13 @@ export const POST = apiHandler(async (request: NextRequest) => {
       const newFlowIdentityReference = newFlowIdentityImage
         ? {
             kind: "identity" as const,
-            id: newFlowIdentityImage.contentId,
+            // F60.5 — o 9:16 usa o hash EXATO do data URL (contrato do
+            // descritor durável); o 1:1 preserva o hash de bytes.
+            id: identityReferenceId({
+              format: requestedFormat,
+              contentId: newFlowIdentityImage.contentId,
+              dataUrl: newFlowIdentityImage.dataUrl,
+            }),
             role: "identity",
             index: newFlowProductImages.length,
             directive: newFlowIdentityDirective ?? null,
@@ -1143,6 +1154,8 @@ export const POST = apiHandler(async (request: NextRequest) => {
           ? {
               campaignFormat: "9:16" as const,
               formatContractVersion: FORMAT_CONTRACT_VERSION,
+              generationOrigin: GENERATION_ORIGIN,
+              generationContractVersion: GENERATION_CONTRACT_VERSION,
               inputFiles: newFlowDurableInputs,
             }
           : {}),
@@ -1306,9 +1319,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
       }
       await recordGenerationAttempt(newFlowStoreId, newFlowUser.userId);
 
-      // F60.5 — upload dos inputs ORIGINAIS (sem transcode) depois da campanha e
-      // ANTES da delegacao/reserva. Falha impede reserva/credito.
-      if (requestedFormat === "9:16" && !existingNewFlowCampaign.data) {
+      // F60.5 — upload idempotente dos inputs ORIGINAIS (sem transcode) depois da
+      // campanha e ANTES da delegacao/reserva. Roda tambem no reenvio de campanha
+      // sem operacao aberta (retoma upload parcial); operacao existente ja
+      // retornou query-only acima. Falha impede reserva/credito.
+      if (requestedFormat === "9:16") {
         for (const item of newFlowDurableUploads) {
           const uploaded = await uploadCampaignInputFile(
             newFlow.storeId,

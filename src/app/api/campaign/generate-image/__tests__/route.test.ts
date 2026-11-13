@@ -37,6 +37,7 @@ vi.mock('@/lib/campaign/persistence', () => ({
   dataUrlToCampaignImage: vi.fn(),
   uploadCampaignImage: vi.fn(),
   uploadCampaignInputImage: vi.fn(),
+  uploadCampaignInputFile: vi.fn(async () => ({ kind: "uploaded" as const })),
   removeCampaignInputs: vi.fn(),
   updateCampaignReady: vi.fn(),
   updateCampaignError: vi.fn(),
@@ -127,16 +128,18 @@ const {
   mockIsForceBriefVisionCheckEnabled,
   mockIsCampaignApprovalEnabled,
   mockIsProduct9x16Enabled,
+  mockIsProduct9_16TwoStageEnabled,
 } = vi.hoisted(() => ({
   mockIsForceBriefVisionCheckEnabled: vi.fn(async () => false),
   mockIsCampaignApprovalEnabled: vi.fn(async () => false),
   mockIsProduct9x16Enabled: vi.fn(async () => false),
+  mockIsProduct9_16TwoStageEnabled: vi.fn(async () => false),
 }));
 vi.mock('@/lib/feature-flags/feature-flag-service', () => ({
   isForceBriefVisionCheckEnabled: mockIsForceBriefVisionCheckEnabled,
   isCampaignApprovalEnabled: mockIsCampaignApprovalEnabled,
   isProduct9x16Enabled: mockIsProduct9x16Enabled,
-  isProduct9_16TwoStageEnabled: vi.fn(async () => false),
+  isProduct9_16TwoStageEnabled: mockIsProduct9_16TwoStageEnabled,
   FORCE_BRIEF_VISION_CHECK_KEY: "force_brief_vision_check",
   FeatureFlagService: vi.fn(),
 }));
@@ -344,7 +347,7 @@ vi.mock('@/lib/product-1-1/submission/eligibility-context', () => ({
 
 import { resolveStoreIdentity, validateIdentityReference, buildCampaignBrief } from '@/lib/store-identity-service';
 import { resolveIdentityImageAsDataUrl } from '@/lib/store-identity/identity-image';
-import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from '@/lib/campaign/persistence';
+import { createCampaign, dataUrlToCampaignImage, uploadCampaignImage, uploadCampaignInputImage, uploadCampaignInputFile, removeCampaignInputs, updateCampaignReady, updateCampaignError, deleteCampaignImage, createArtVersion } from '@/lib/campaign/persistence';
 import { transcodeToJpeg } from '@/lib/campaign/image-processor';
 import { requireLegalClearance } from '@/lib/legal/clearance';
 import { requireOwnership } from '@/lib/auth/store-ownership';
@@ -2526,6 +2529,7 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
   function setup(options?: {
     existingCampaign?: { id: string; store_id: string; input_snapshot?: Record<string, unknown> | null } | null;
   }) {
+    mockIsProduct9_16TwoStageEnabled.mockResolvedValue(false);
     mockStoreFrom.mockImplementation((table: string) => {
       if (table === 'stores') {
         return { select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: { id: STORE_ID, name: 'Loja Teste', segment: 'outros' }, error: null })) })) })) };
@@ -2568,9 +2572,33 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
   });
 
+  const CANONICAL_PRIMARY_IMAGE = `data:image/jpeg;base64,${Buffer.from("primary-image").toString("base64")}`;
+  const NINE_SIXTEEN_IMAGES = [
+    { role: 'primary', source: 'upload', mimeType: 'image/jpeg', dataUrl: CANONICAL_PRIMARY_IMAGE },
+  ];
+
+  it('9:16 nova persiste origem/versão e executa upload durável antes da delegação', async () => {
+    setup();
+    mockIsProduct9_16TwoStageEnabled.mockResolvedValue(true);
+    const { POST } = await import('../route');
+
+    const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16', productImages: NINE_SIXTEEN_IMAGES }));
+    expect(res.status).toBe(200);
+    await res.text();
+
+    expect(persistedSnapshot()).toMatchObject({
+      campaignFormat: '9:16',
+      formatContractVersion: 'f59-vertical-9-16-v1',
+      generationOrigin: '9_16_two_stage',
+      generationContractVersion: 'f60.5-two-stage-9-16-v1',
+    });
+    expect(uploadCampaignInputFile).toHaveBeenCalled();
+    expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
+  });
+
   it('flag OFF + 9:16 nova geração ⇒ 503 antes de campanha/reserva/provider', async () => {
     setup();
-    mockIsProduct9x16Enabled.mockResolvedValue(false);
+    mockIsProduct9_16TwoStageEnabled.mockResolvedValue(false);
     const { POST } = await import('../route');
 
     const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
@@ -2585,7 +2613,7 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
 
   it('flag com erro de leitura ⇒ 503 (fail-closed), sem efeitos', async () => {
     setup();
-    mockIsProduct9x16Enabled.mockRejectedValue(new Error('db down'));
+    mockIsProduct9_16TwoStageEnabled.mockRejectedValue(new Error('db down'));
     const { POST } = await import('../route');
 
     const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));

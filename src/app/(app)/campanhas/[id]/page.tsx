@@ -27,6 +27,8 @@ import type {
   NewFlowCopyRecoveryView,
 } from "@/lib/campaign/display";
 import { resolveCampaignFormat } from "@/lib/campaign/format-resolution";
+import { resolveCampaignGenerationOrigin } from "@/lib/product-9-16-two-stage/orchestration/origin";
+import { nineSixteenVerticalAccess } from "@/lib/product-9-16-two-stage/orchestration/vertical-access";
 import { ProductOneToOneAttemptStartClient } from "@/lib/product-1-1/orchestration/attempt-start-client";
 import { ProductOneToOneArtifactStore } from "@/lib/product-1-1/artifact/artifact-store";
 import { readProductOneToOneBackgroundDirection } from "@/lib/product-1-1/snapshot/persist-snapshot";
@@ -146,7 +148,21 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       }
     }
     if (newFlowState === "delivered") {
-      if (formatResolution.kind !== "unavailable") {
+      const generationOrigin = resolveCampaignGenerationOrigin(
+        campaign.input_snapshot,
+      );
+      if (generationOrigin.kind === "two_stage_9_16") {
+        const access = await nineSixteenVerticalAccess(
+          {
+            storeId: campaign.store_id,
+            campaignId: id,
+            operationId: newFlowOperation.operationId,
+            mode: "preview",
+          },
+          { client: supabaseAdmin },
+        );
+        if (access.kind === "previewUrl") props.imageUrl = access.url;
+      } else if (formatResolution.kind !== "unavailable") {
         try {
           const artifactStore =
             formatResolution.kind === "9:16"
