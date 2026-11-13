@@ -323,18 +323,6 @@ vi.mock('@/lib/product-1-1/orchestration/generation-orchestrator', () => ({
   readProductOneToOneOperation: mockReadProductOneToOneOperation,
 }));
 
-const { mockRunProductVertical9x16Generation } = vi.hoisted(() => ({
-  mockRunProductVertical9x16Generation: vi.fn(async (_input?: unknown, _deps?: unknown) =>
-    new Response('{"type":"result"}\n', {
-      status: 200,
-      headers: { "Content-Type": "application/x-ndjson" },
-    }),
-  ),
-}));
-vi.mock('@/lib/product-vertical-9-16/orchestration/entrypoint', () => ({
-  runProductVertical9x16Generation: mockRunProductVertical9x16Generation,
-}));
-
 const { mockResolveProductFlowAuthorization } = vi.hoisted(() => ({
   mockResolveProductFlowAuthorization: vi.fn(async () => ({ allowed: true })),
 }));
@@ -2565,7 +2553,6 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     await res.text();
 
     expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
-    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
     const snapshot = persistedSnapshot();
     expect((snapshot as any).campaignFormat).toBeUndefined();
     expect((snapshot as any).formatContractVersion).toBeUndefined();
@@ -2608,7 +2595,6 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     expect(createCampaign).not.toHaveBeenCalled();
     expect(mockReserveCredit).not.toHaveBeenCalled();
     expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
-    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
   });
 
   it('flag com erro de leitura ⇒ 503 (fail-closed), sem efeitos', async () => {
@@ -2619,7 +2605,6 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     const res = await POST(makeRequest({ ...BASE_NEW_FLOW_BODY, campaignFormat: '9:16' }));
     expect(res.status).toBe(503);
     expect(createCampaign).not.toHaveBeenCalled();
-    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
   });
 
   it('campanha persistida 1:1 + pedido 9:16 ⇒ 409 antes de reserva/provider e sem nova campanha', async () => {
@@ -2634,7 +2619,6 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     expect(createCampaign).not.toHaveBeenCalled();
     expect(mockReserveCredit).not.toHaveBeenCalled();
     expect(mockRunProductOneToOneGeneration).not.toHaveBeenCalled();
-    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
     expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
   });
 
@@ -2652,7 +2636,6 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     expect(res.status).toBe(409);
     expect(createCampaign).not.toHaveBeenCalled();
     expect(mockReserveCredit).not.toHaveBeenCalled();
-    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
   });
 
   it('campanha persistida com formato malformado ⇒ 503 fail-closed', async () => {
@@ -2676,7 +2659,6 @@ describe('POST /api/campaign/generate-image — formato vertical 9:16 (F59)', ()
     await res.text();
 
     expect(mockRunProductOneToOneGeneration).toHaveBeenCalledTimes(1);
-    expect(mockRunProductVertical9x16Generation).not.toHaveBeenCalled();
     expect(mockIsProduct9x16Enabled).not.toHaveBeenCalled();
     expect(createCampaign).not.toHaveBeenCalled();
   });
