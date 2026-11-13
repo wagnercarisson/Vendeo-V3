@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { transcodeToJpeg } from "./image-processor";
 import type {
@@ -297,11 +298,14 @@ function isAbsentStorageError(error: unknown): boolean {
   return /object not found|object does not exist/.test(text);
 }
 
-async function downloadInputBytes(storagePath: string): Promise<CampaignInputDownloadResult> {
+async function downloadInputBytes(
+  storagePath: string,
+  client: SupabaseClient,
+): Promise<CampaignInputDownloadResult> {
   let data: Blob | null = null;
   let error: unknown = null;
   try {
-    const result = await supabaseAdmin.storage.from("campaign-images").download(storagePath);
+    const result = await client.storage.from("campaign-images").download(storagePath);
     data = result.data;
     error = result.error;
   } catch {
@@ -318,10 +322,21 @@ async function downloadInputBytes(storagePath: string): Promise<CampaignInputDow
   }
 }
 
+/**
+ * Download dos inputs duraveis VINCULADO ao cliente informado. Usado pela
+ * reconstrucao para que snapshot e arquivos venham do MESMO alvo.
+ */
+export async function downloadCampaignInputFileWithClient(
+  client: SupabaseClient,
+  storagePath: string,
+): Promise<CampaignInputDownloadResult> {
+  return downloadInputBytes(storagePath, client);
+}
+
 export async function downloadCampaignInputFile(
   storagePath: string,
 ): Promise<CampaignInputDownloadResult> {
-  return downloadInputBytes(storagePath);
+  return downloadInputBytes(storagePath, supabaseAdmin as unknown as SupabaseClient);
 }
 
 export async function uploadCampaignInputFile(
@@ -349,7 +364,10 @@ export async function uploadCampaignInputFile(
   }
   if (!uploadError) return { kind: "uploaded" };
 
-  const existing = await downloadInputBytes(storagePath);
+  const existing = await downloadInputBytes(
+    storagePath,
+    supabaseAdmin as unknown as SupabaseClient,
+  );
   if (existing.kind === "absent") return { kind: "indeterminate" };
   if (existing.kind === "indeterminate") return { kind: "indeterminate" };
   if (!existing.bytes.equals(input.buffer)) {

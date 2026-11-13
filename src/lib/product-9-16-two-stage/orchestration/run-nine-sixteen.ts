@@ -381,7 +381,7 @@ async function execute(
       campaignId: input.campaignId,
       authorization: input.authorization,
     },
-    (deps as { client?: never }).client as never,
+    deps.client,
   );
   if (!access.ok) {
     stream.emitPhase("campaign_validation", "failed");

@@ -120,6 +120,11 @@ export type StepExecutionOutcome =
   | { readonly kind: "skipped" };
 
 export interface RunNineSixteenDeps {
+  /**
+   * Cliente autorizado da composicao. O orquestrador o usa para a checagem
+   * inicial de acesso; ausente apenas em testes que injetam tudo.
+   */
+  readonly client?: import("@supabase/supabase-js").SupabaseClient;
   readonly control: ProductTwoStageOperationClient;
   readonly financial: TwoStageFinancialService;
   readonly credit: Pick<

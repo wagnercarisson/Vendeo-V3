@@ -7,6 +7,7 @@ import { getArtifactByIdentity } from "@/lib/campaign/composition-artifacts/repo
 import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
 import { readSquareBaseFrozenState } from "@/lib/campaign/square-base/frozen-state";
 import { runSquareBase, type SquareBaseDeps } from "@/lib/campaign/square-base/run-square-base";
+import { downloadCampaignInputFileWithClient } from "@/lib/campaign/persistence";
 import { prepareSquareForExpansion } from "@/lib/campaign/square-preparation/prepare";
 import { expandVerticalToNineSixteen } from "@/lib/campaign/vertical-expansion/expand";
 import { createDefaultThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
@@ -172,6 +173,7 @@ export function createNineSixteenDeps(
     ((input) => projectCompositionDelivery(client, input));
 
   return Object.freeze({
+    client,
     control,
     financial,
     credit,
@@ -186,7 +188,11 @@ export function createNineSixteenDeps(
     projectClosed,
     probeVertical,
     generateThumbnail,
-    reconstruction: { client },
+    reconstruction: {
+      client,
+      readInputBytes: (storagePath: string) =>
+        downloadCampaignInputFileWithClient(client, storagePath),
+    },
     ...(options.pilotSpend === undefined ? {} : { pilotSpend: options.pilotSpend }),
   });
 }
