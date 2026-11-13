@@ -101,6 +101,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     confirmReview,
     unknownResult,
     processingResult,
+    flowKind,
     continueGeneration,
     retryProcessingStatus,
     resetUnknownResult,
@@ -182,11 +183,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
         <GenerationProgress
           phases={phases}
           variant="processing"
-          flowKind={
-            (fields.campaignFormat ?? "1:1") === "9:16"
-              ? "two_stage_9_16"
-              : "one_to_one"
-          }
+          flowKind={flowKind}
         />
         <div className="flex flex-wrap gap-2 justify-center pb-8">
           <button
@@ -201,7 +198,9 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             className="text-xs text-accent-blue underline disabled:opacity-50"
             onClick={() => void continueGeneration()}
             disabled={
-              !processingResult.canContinue || processingResult.stepInProgress
+              !processingResult.canContinue ||
+              processingResult.stepInProgress ||
+              processingResult.continuationsExhausted === true
             }
           >
             Retomar quando autorizado
@@ -259,9 +258,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             supportEmail={supportEmail}
             campaignId={unknownResult.campaignId}
             operationId={unknownResult.operationId}
-            imageRecoveryAvailable={
-              (fields.campaignFormat ?? "1:1") !== "9:16"
-            }
+            imageRecoveryAvailable={flowKind !== "two_stage_9_16"}
             onResolved={handleUnknownResolved}
           />
         </div>

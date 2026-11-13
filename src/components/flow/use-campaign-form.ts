@@ -103,6 +103,29 @@ function compressImage(file: File, maxSizeBytes: number = 1024 * 1024): Promise<
 
 export type ValidityMode = "" | "until-date" | "range" | "today" | "stock" | "custom";
 
+/** F60.5 — teto de continuacoes EFETIVAMENTE iniciadas por operacao. */
+const MAX_CONTINUATIONS = 3;
+
+type ProcessingState = {
+  campaignId: string | null;
+  operationId: string | null;
+  canContinue: boolean;
+  stepInProgress: boolean;
+  continuationsExhausted?: boolean;
+};
+
+type StatusOutcome =
+  | "delivered"
+  | "refunded"
+  | "unknown"
+  | "processing"
+  | "unavailable";
+
+/** Chave escopada da identidade da operacao (reidratacao no reload). */
+function scopedIdentityDraftKey(campaignId: string): string {
+  return `campaign_draft_identity:${campaignId}`;
+}
+
 /**
  * F56.2b2b (P1) — copy do aviso quando a direção de fundo NÃO pôde ser
  * recuperada da evidência congelada. Honesto sobre a limitação; exige escolha.
@@ -267,7 +290,10 @@ export interface UseCampaignFormReturn {
     operationId: string | null;
     canContinue: boolean;
     stepInProgress: boolean;
+    continuationsExhausted?: boolean;
   } | null;
+  /** F60.5 — fluxo efetivo da submissao/restauracao (decide UI e status). */
+  flowKind: "one_to_one" | "two_stage_9_16";
   continueGeneration: () => Promise<void>;
   retryProcessingStatus: () => Promise<void>;
   /** Recorte 2 (Plano 09): invalida a identidade terminal (não reenvia os IDs estornados). */
@@ -848,22 +874,15 @@ export function useCampaignForm(
   // F56.2b1b (Plano 06, C1/F8): resultado desconhecido do envio ao vivo.
   const [unknownResult, setUnknownResult] = useState<UnknownResultState | null>(null);
   // F60.5 — processamento (distinto de unknown/sucesso), com retomada manual.
-  const [processingResult, setProcessingResult] = useState<{
-    campaignId: string | null;
-    operationId: string | null;
-    canContinue: boolean;
-    stepInProgress: boolean;
-  } | null>(null);
+  const [processingResult, setProcessingResult] = useState<ProcessingState | null>(null);
   const continueInFlightRef = useRef(false);
   const autoContinueRef = useRef(0);
+  const pendingContinuationRef = useRef<ProcessingState | null>(null);
+  const flowKindRef = useRef<"one_to_one" | "two_stage_9_16">("one_to_one");
+  const rehydratedRef = useRef(false);
   const continueOnceRef = useRef<
-    (current: {
-      campaignId: string | null;
-      operationId: string | null;
-      canContinue: boolean;
-      stepInProgress: boolean;
-    }) => Promise<void>
-  >(async () => {});
+    (current: ProcessingState) => Promise<boolean>
+  >(async () => false);
   // F43 (D2/D3): estado da revisão do brief em tela intermediária (não modal).
   const [reviewMode, setReviewMode] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -920,11 +939,24 @@ export function useCampaignForm(
    * do autosave (500 ms). Preserva A e qualquer outro escopo (só escreve em B).
    */
   const persistSubmittedDraft = useCallback(
-    (id: string | null, snapshotFields: CampaignFormFields, imageDataUrl: string | null) => {
+    (
+      id: string | null,
+      snapshotFields: CampaignFormFields,
+      imageDataUrl: string | null,
+      operationId?: string | null,
+    ) => {
       if (!id) return;
       try {
         sessionStorage.setItem(scopedDraftKey(id), JSON.stringify(snapshotFields));
         if (imageDataUrl) sessionStorage.setItem(scopedImageDraftKey(id), imageDataUrl);
+        // F60.5 — identidade duravel da operacao: permite reidratar o estado no
+        // reload sem iniciar geracao.
+        if (typeof operationId === "string" && operationId.length > 0) {
+          sessionStorage.setItem(
+            scopedIdentityDraftKey(id),
+            JSON.stringify({ campaignId: id, operationId }),
+          );
+        }
       } catch {
         /* storage indisponível */
       }
@@ -1358,10 +1390,22 @@ export function useCampaignForm(
         if (
           nextProcessing.canContinue &&
           !nextProcessing.stepInProgress &&
-          autoContinueRef.current < 3
+          autoContinueRef.current < MAX_CONTINUATIONS
         ) {
-          autoContinueRef.current += 1;
+          // O CONTADOR e o `inFlight` vivem dentro de `continueOnce`: so conta
+          // uma continuacao EFETIVAMENTE iniciada.
+          setProcessingResult((prev) =>
+            prev ? { ...prev, continuationsExhausted: false } : prev,
+          );
           void continueOnceRef.current(nextProcessing);
+        } else if (
+          nextProcessing.canContinue &&
+          !nextProcessing.stepInProgress &&
+          autoContinueRef.current >= MAX_CONTINUATIONS
+        ) {
+          setProcessingResult((prev) =>
+            prev ? { ...prev, continuationsExhausted: true } : prev,
+          );
         }
         return true;
       }
@@ -1393,6 +1437,11 @@ export function useCampaignForm(
         }
 
         // Navigate to campaign page — draft data preserved in sessionStorage
+        try {
+          sessionStorage.removeItem(scopedIdentityDraftKey(result.campaignId));
+        } catch {
+          /* storage indisponível */
+        }
         router.push(result.campaignUrl);
         return true;
       }
@@ -1472,13 +1521,39 @@ export function useCampaignForm(
       // O chunk final pode chegar sem `\n` — processa a linha remanescente.
       if (consumeLine(buffer)) return;
 
+      // F60.5 (#9): fechamento ANORMAL do stream two-stage ⇒ NO MAXIMO UMA
+      // consulta read-only de status. `processing` mantem a tela; terminal e
+      // aplicado pela propria consulta; indisponibilidade cai no fallback seguro.
+      const observedCampaignId =
+        lastCampaignId ??
+        (typeof body.campaignId === "string" ? body.campaignId : null);
+      const observedOperationId =
+        lastOperationId ??
+        (typeof body.operationId === "string" ? body.operationId : null);
+      if (
+        flowKindRef.current === "two_stage_9_16" &&
+        observedCampaignId &&
+        observedOperationId
+      ) {
+        const outcome = await refreshStatus({
+          campaignId: observedCampaignId,
+          operationId: observedOperationId,
+          canContinue: false,
+          stepInProgress: false,
+        });
+        if (outcome !== "unavailable") {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // F8 — o stream fechou SEM evento terminal (`result`|`error`|`unknown`):
       // fail-safe — trata como DESCONHECIDO (nunca sucesso), limpa o envio e
       // exibe a Superfície 3. NUNCA permanece preso em `isSubmitting`.
       setUnknownResult({
         supportReference: null,
-        operationId: lastOperationId,
-        campaignId: lastCampaignId,
+        operationId: observedOperationId,
+        campaignId: observedCampaignId,
       });
       setIsSubmitting(false);
     } catch (err) {
@@ -1518,6 +1593,10 @@ export function useCampaignForm(
     setPendingConflict(null);
     setPhases([]);
     setUnknownResult(null);
+    // F60.5 — nova submissao zera o estado de processamento/continuacoes.
+    setProcessingResult(null);
+    autoContinueRef.current = 0;
+    pendingContinuationRef.current = null;
     // Recorte 3 (Plano 10): nova submissão ⇒ ainda NÃO pré-persistida.
     prePersistedIdentityRef.current = false;
 
@@ -1628,10 +1707,18 @@ export function useCampaignForm(
 
       // Recorte 3 (Plano 10): persiste o snapshot/imagem ENVIADOS sob a identidade
       // B ANTES da requisição (identidade já no corpo no novo fluxo).
+      flowKindRef.current =
+        eligible && (frozenFields.campaignFormat ?? "1:1") === "9:16"
+          ? "two_stage_9_16"
+          : "one_to_one";
       persistSubmittedDraft(
         typeof body.campaignId === "string" ? body.campaignId : null,
         frozenFields,
         resolvedImages[0]?.dataUrl ?? restoredImageDataUrl ?? null,
+        flowKindRef.current === "two_stage_9_16" &&
+          typeof body.operationId === "string"
+          ? body.operationId
+          : null,
       );
 
       await consumeStream(body, abortController);
@@ -1647,6 +1734,9 @@ export function useCampaignForm(
     setFieldErrors({});
     setPhases([]);
     setUnknownResult(null);
+    setProcessingResult(null);
+    autoContinueRef.current = 0;
+    pendingContinuationRef.current = null;
     confirmedBodyRef.current = null;
     prePersistedIdentityRef.current = false;
     draftIdentityRef.current = null;
@@ -1656,6 +1746,13 @@ export function useCampaignForm(
     setRestoredImageDataUrl(null);
     clearFormState(draftScope);
     try { sessionStorage.removeItem(imageDraftKey); } catch { /* ignore */ }
+    if (draftScope) {
+      try {
+        sessionStorage.removeItem(scopedIdentityDraftKey(draftScope));
+      } catch {
+        /* ignore */
+      }
+    }
     if (imagePreviewUrl) {
       URL.revokeObjectURL(imagePreviewUrl);
       objectUrlRef.current = null;
@@ -1961,16 +2058,12 @@ export function useCampaignForm(
   }, []);
 
   /**
-   * F60.5 — consulta read-only do status; nunca inicia geração.
+   * F60.5 — consulta read-only do status; nunca inicia geração. Bounded: quem
+   * chama decide (1 por fechamento anormal, 1 por clique manual).
    */
   const refreshStatus = useCallback(
-    async (target: {
-      campaignId: string | null;
-      operationId: string | null;
-      canContinue: boolean;
-      stepInProgress: boolean;
-    } | null) => {
-      if (!target?.campaignId || !target.operationId) return;
+    async (target: ProcessingState | null): Promise<StatusOutcome> => {
+      if (!target?.campaignId || !target.operationId) return "unavailable";
       try {
         const response = await fetch("/api/campaign/generation-status", {
           method: "POST",
@@ -1981,8 +2074,9 @@ export function useCampaignForm(
           }),
         });
         if (!response.ok) {
-          setSubmitError("Não foi possível verificar agora. Tente novamente.");
-          return;
+          // 503 `status_unavailable`/404: mantem o processamento com retry
+          // manual — nunca vira sucesso, unknown ou nova geracao.
+          return "unavailable";
         }
         const data = (await response.json()) as {
           operation?: {
@@ -1995,13 +2089,13 @@ export function useCampaignForm(
         if (state === "delivered") {
           setProcessingResult(null);
           router.push(`/campanhas/${target.campaignId}`);
-          return;
+          return "delivered";
         }
         if (state === "refunded") {
           setProcessingResult(null);
           confirmedBodyRef.current = null;
           setSubmitError("A geração foi encerrada e o crédito devolvido.");
-          return;
+          return "refunded";
         }
         if (state === "unknown") {
           setProcessingResult(null);
@@ -2010,16 +2104,18 @@ export function useCampaignForm(
             operationId: target.operationId,
             campaignId: target.campaignId,
           });
-          return;
+          return "unknown";
         }
         setProcessingResult({
           ...target,
           canContinue: data.operation?.canContinue === true,
           stepInProgress:
             data.operation?.processingPhase === "step_in_progress",
+          continuationsExhausted: autoContinueRef.current >= MAX_CONTINUATIONS,
         });
+        return "processing";
       } catch {
-        setSubmitError("Não foi possível verificar agora. Tente novamente.");
+        return "unavailable";
       }
     },
     [router],
@@ -2027,16 +2123,11 @@ export function useCampaignForm(
 
   /**
    * F60.5 — uma continuação autorizada, consumindo NDJSON incrementalmente e
-   * atualizando o estado a cada terminal `processing`. Sem paralelismo; falha
-   * ambígua consulta o status read-only antes de qualquer nova tentativa.
+   * atualizando o estado a cada terminal `processing`. Sem paralelismo; o
+   * agendamento da proxima continuacao acontece DEPOIS de liberar `inFlight`.
    */
   const continueOnce = useCallback(
-    async (current: {
-      campaignId: string | null;
-      operationId: string | null;
-      canContinue: boolean;
-      stepInProgress: boolean;
-    }) => {
+    async (current: ProcessingState): Promise<boolean> => {
       if (
         !current.campaignId ||
         !current.operationId ||
@@ -2044,9 +2135,18 @@ export function useCampaignForm(
         current.stepInProgress ||
         continueInFlightRef.current
       ) {
-        return;
+        return false;
+      }
+      // Limite de continuacoes EFETIVAMENTE iniciadas.
+      if (autoContinueRef.current >= MAX_CONTINUATIONS) {
+        setProcessingResult((prev) =>
+          prev ? { ...prev, continuationsExhausted: true } : prev,
+        );
+        return false;
       }
       continueInFlightRef.current = true;
+      autoContinueRef.current += 1;
+      let terminalSeen = false;
       try {
         const requestIds = {
           base: crypto.randomUUID(),
@@ -2065,12 +2165,12 @@ export function useCampaignForm(
         );
         if (!response.ok) {
           await refreshStatus(current);
-          return;
+          return true;
         }
         const reader = response.body?.getReader();
         if (!reader) {
           await refreshStatus(current);
-          return;
+          return true;
         }
         const decoder = new TextDecoder();
         let buffer = "";
@@ -2092,7 +2192,8 @@ export function useCampaignForm(
               continue;
             }
             if (event.type === "processing") {
-              const next = {
+              terminalSeen = true;
+              const next: ProcessingState = {
                 campaignId:
                   typeof event.campaignId === "string"
                     ? event.campaignId
@@ -2105,26 +2206,34 @@ export function useCampaignForm(
                 stepInProgress: event.state === "step_in_progress",
               };
               setProcessingResult(next);
-              if (
-                next.canContinue &&
-                !next.stepInProgress &&
-                autoContinueRef.current < 3
-              ) {
-                autoContinueRef.current += 1;
-                void continueOnceRef.current(next);
+              if (next.canContinue && !next.stepInProgress) {
+                // `inFlight` ainda esta tomado: agenda para o `finally` — nunca
+                // chama em paralelo.
+                pendingContinuationRef.current = next;
+              } else {
+                pendingContinuationRef.current = null;
               }
               continue;
             }
             if (event.type === "result") {
+              terminalSeen = true;
               setProcessingResult(null);
+              try {
+                sessionStorage.removeItem(
+                  scopedIdentityDraftKey(current.campaignId),
+                );
+              } catch {
+                /* storage indisponível */
+              }
               router.push(
                 typeof event.campaignUrl === "string"
                   ? event.campaignUrl
                   : `/campanhas/${current.campaignId}`,
               );
-              return;
+              return true;
             }
             if (event.type === "unknown") {
+              terminalSeen = true;
               setProcessingResult(null);
               setUnknownResult({
                 supportReference:
@@ -2132,9 +2241,10 @@ export function useCampaignForm(
                 operationId: current.operationId,
                 campaignId: current.campaignId,
               });
-              return;
+              return true;
             }
             if (event.type === "error") {
+              terminalSeen = true;
               setProcessingResult(null);
               if (event.refunded === true) {
                 confirmedBodyRef.current = null;
@@ -2144,14 +2254,32 @@ export function useCampaignForm(
                   ? event.message
                   : "A geração falhou.",
               );
-              return;
+              return true;
             }
           }
         }
+        // Fechamento ANORMAL sem terminal ⇒ UMA consulta read-only.
+        if (!terminalSeen) {
+          await refreshStatus(current);
+        }
+        return true;
       } catch {
         await refreshStatus(current);
+        return true;
       } finally {
         continueInFlightRef.current = false;
+        const pending = pendingContinuationRef.current;
+        pendingContinuationRef.current = null;
+        if (pending) {
+          if (autoContinueRef.current < MAX_CONTINUATIONS) {
+            // Agora sim (inFlight liberado): agenda a proxima continuacao.
+            void continueOnceRef.current(pending);
+          } else {
+            setProcessingResult((prev) =>
+              prev ? { ...prev, continuationsExhausted: true } : prev,
+            );
+          }
+        }
       }
     },
     [onPhaseChange, refreshStatus, router],
@@ -2166,6 +2294,44 @@ export function useCampaignForm(
   const retryProcessingStatus = useCallback(async () => {
     await refreshStatus(processingResult);
   }, [processingResult, refreshStatus]);
+
+  /**
+   * F60.5 (#9) — REIDRATACAO no reload: com a identidade duravel da operacao
+   * persistida, faz UMA consulta read-only e restaura processing/unknown/
+   * terminal. Status NUNCA inicia geracao; a retomada continua sendo manual.
+   */
+  useEffect(() => {
+    if (rehydratedRef.current || processingResult || unknownResult) return;
+    const scope = restoredForm?.campaignId ?? draftScope;
+    if (!scope) return;
+    let identity: { campaignId: string; operationId: string } | null = null;
+    try {
+      const raw = sessionStorage.getItem(scopedIdentityDraftKey(scope));
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          campaignId?: unknown;
+          operationId?: unknown;
+        };
+        if (
+          parsed.campaignId === scope &&
+          typeof parsed.operationId === "string" &&
+          parsed.operationId.length > 0
+        ) {
+          identity = { campaignId: scope, operationId: parsed.operationId };
+        }
+      }
+    } catch {
+      /* storage indisponível */
+    }
+    if (!identity) return;
+    rehydratedRef.current = true;
+    flowKindRef.current = "two_stage_9_16";
+    void refreshStatus({
+      ...identity,
+      canContinue: false,
+      stepInProgress: false,
+    });
+  }, [draftScope, restoredForm?.campaignId, processingResult, unknownResult, refreshStatus]);
 
   /**
    * Recorte 2 (Plano 09): invalida a IDENTIDADE TERMINAL (não reenvia os mesmos
@@ -2212,6 +2378,10 @@ export function useCampaignForm(
     unknownResult,
     resetUnknownResult,
     processingResult,
+    flowKind:
+      eligible && (fields.campaignFormat ?? "1:1") === "9:16"
+        ? "two_stage_9_16"
+        : "one_to_one",
     continueGeneration,
     retryProcessingStatus,
     restorationNotice,
