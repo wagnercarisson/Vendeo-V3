@@ -266,3 +266,100 @@ export async function listArtVersions(
 
   return (data ?? []) as CampaignArtVersion[];
 }
+
+// ─── F60.5 — inputs duráveis para reconstrução da primeira execução ──────────
+// Bytes ORIGINAIS, sem transcode, para que `dataUrlPrefix + base64(bytes)`
+// reproduza o hash exato do data URL congelado. Nunca sobrescreve.
+
+export type CampaignInputDownloadResult =
+  | { readonly kind: "bytes"; readonly bytes: Buffer }
+  | { readonly kind: "absent" }
+  | { readonly kind: "indeterminate" };
+
+export type CampaignInputUploadResult =
+  | { readonly kind: "uploaded" }
+  | { readonly kind: "reused" }
+  | { readonly kind: "conflict"; readonly reason: "content_mismatch" }
+  | { readonly kind: "indeterminate" };
+
+function inputFileExtension(mimeType: string): "png" | "webp" | "jpg" {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  return "jpg";
+}
+
+function isAbsentStorageError(error: unknown): boolean {
+  if (error === null || typeof error !== "object") return false;
+  const record = error as { message?: unknown; statusCode?: unknown };
+  if (String(record.statusCode ?? "") !== "404") return false;
+  const text = String(record.message ?? "").toLowerCase();
+  if (text.includes("bucket")) return false;
+  return /object not found|object does not exist/.test(text);
+}
+
+async function downloadInputBytes(storagePath: string): Promise<CampaignInputDownloadResult> {
+  let data: Blob | null = null;
+  let error: unknown = null;
+  try {
+    const result = await supabaseAdmin.storage.from("campaign-images").download(storagePath);
+    data = result.data;
+    error = result.error;
+  } catch {
+    return { kind: "indeterminate" };
+  }
+  if (error) {
+    return isAbsentStorageError(error) ? { kind: "absent" } : { kind: "indeterminate" };
+  }
+  if (!data) return { kind: "indeterminate" };
+  try {
+    return { kind: "bytes", bytes: Buffer.from(await data.arrayBuffer()) };
+  } catch {
+    return { kind: "indeterminate" };
+  }
+}
+
+export async function downloadCampaignInputFile(
+  storagePath: string,
+): Promise<CampaignInputDownloadResult> {
+  return downloadInputBytes(storagePath);
+}
+
+export async function uploadCampaignInputFile(
+  storeId: string,
+  campaignId: string,
+  input: {
+    readonly contentId: string;
+    readonly mimeType: string;
+    readonly dataUrlPrefix: string;
+    readonly buffer: Buffer;
+  },
+): Promise<CampaignInputUploadResult> {
+  const extension = inputFileExtension(input.mimeType);
+  const storagePath = `${storeId}/${campaignId}/inputs/${input.contentId}.${extension}`;
+  let uploadError: unknown = null;
+  try {
+    const uploaded = await supabaseAdmin.storage.from("campaign-images").upload(
+      storagePath,
+      input.buffer,
+      { contentType: input.mimeType, upsert: false },
+    );
+    uploadError = uploaded.error;
+  } catch {
+    return { kind: "indeterminate" };
+  }
+  if (!uploadError) return { kind: "uploaded" };
+
+  const existing = await downloadInputBytes(storagePath);
+  if (existing.kind === "absent") return { kind: "indeterminate" };
+  if (existing.kind === "indeterminate") return { kind: "indeterminate" };
+  if (!existing.bytes.equals(input.buffer)) {
+    return { kind: "conflict", reason: "content_mismatch" };
+  }
+  const expected = `${input.dataUrlPrefix}${existing.bytes.toString("base64")}`;
+  const { createHash } = await import("node:crypto");
+  const hash = createHash("sha256").update(expected).digest("hex");
+  if (hash !== input.contentId) {
+    return { kind: "conflict", reason: "content_mismatch" };
+  }
+  return { kind: "reused" };
+}

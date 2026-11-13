@@ -309,7 +309,7 @@ function receivedContent(valid: SquareBaseInput) {
  * será comparado ao fingerprint persistido. `null` quando as seleções declaradas
  * divergem das imagens recebidas (fail-closed).
  */
-function buildCandidatePayload(
+export function buildCandidatePayload(
   valid: SquareBaseInput,
   deps: SquareBaseDeps,
 ): FrozenContentPayload | null {
