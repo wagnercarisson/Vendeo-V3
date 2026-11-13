@@ -899,3 +899,24 @@ Plans:
 **Depends on:** Phase 60 (controle da operacao em duas etapas), Phase 60.1 (artefatos de composicao), Phase 60.3 (expansao 9:16 e opcoes de transporte sem retry), migration F60.1 aplicada em homolog e OpenSpec desta change aprovado.
 
 **Directory:** .planning/phases/60.4-f60-4-composicao-e-persistencia-da-base-quadrada/.
+
+### Phase 60.5: F60.5 - Integracao e entrega do fluxo 9:16 por expansao
+
+**Status:** **PLANEJAMENTO ACEITO EM 2026-11-13; SOMENTE 60.5-01 LIBERADO PARA EXECUCAO; 60.5-02/03 SOB REVISAO; 60.5-04/05 COM AUTORIZACAO SEPARADA.** A change OpenSpec `fase-60-5-integracao-e-entrega-9-16-por-expansao` e a autoridade aprovada (`--strict` valido; 2 capabilities; 56 tarefas). Nenhum codigo de producao, migration, banco/Storage/provider, chamada paga, merge, push, deploy ou flag foi tocado nesta rodada. Prova real (`60.5-04`) e ativacao (`60.5-05`) sao planos `autonomous: false` com checkpoint bloqueante e dependem de autorizacao explicita. Os warnings do plan-check foram corrigidos nos planos existentes e confirmados por checagem dirigida (W1 tracking resolvido; W2 absent x read-failure; W3 writer SQL da flag; W4 export aditivo de `buildCandidatePayload`; W5 testes de regressao existentes; I1/I2 ajustados; retry por `resume`; reenvio query-only; UI com retomada bounded; upload de inputs idempotente; `npm run build` no gate final). Nenhum blocker/major permanece; a execucao nao foi iniciada.
+
+**Goal:** Entregar o percurso integrado do 9:16 por expansao — selecionar formato, gerar base quadrada + copy, preparar 1152, expandir, apresentar/baixar o vertical e confirmar 1 credito — reutilizando F60/F60.1/F60.2/F60.3/F60.4, com orquestrador proprio, continuacao autorizada entre requisicoes, entrega vertical unica com miniatura derivada, inputs duraveis/hash exato, copy congelada, historico preservado e desligamento do 9:16 direto antigo. `1:1` permanece inalterado. Sem migration estrutural; prova real e ativacao sao checkpoints separados.
+
+**Source:** `openspec/changes/fase-60-5-integracao-e-entrega-9-16-por-expansao/` (proposal, design, specs `product-9-16-two-stage-orchestration` + `product-9-16-two-stage-delivery`, 56 tarefas; `--strict` valido).
+
+**Plans:** 5 plans in 5 waves; **0/5 executed**; `60.5-04` and `60.5-05` are `autonomous: false` with blocking checkpoints.
+
+Plans:
+- [ ] 60.5-01-PLAN.md — Orquestracao/retomada: contratos, origem, `getOperationView`/status read-only, `requestIds` por etapa, inputs duraveis/hash exato, reconstrucao/`repairable`, base/preparacao/expansao, financeiro/unknown/reconciliacao, NDJSON. Wave 1, sem dependencias.
+- [ ] 60.5-02-PLAN.md — Entrega/recuperacao: sonda vertical de composicao (dois formatos), projecao `composition`, acesso vertical/miniatura, `createNineSixteenDeps`, copy recovery congelada, admin por origem, historico. Wave 2, depende de 60.5-01.
+- [ ] 60.5-03-PLAN.md — Jornada integrada: `generate-image`/`continue`/status/download/recuperacoes, flag fail-closed, UI processing/continuacao/unknown, detalhe/listagem, guard de arquitetura e matriz offline. Wave 3, depende de 60.5-01 e 60.5-02.
+- [ ] 60.5-04-PLAN.md — Prova real integrada autorizada (checkpoint bloqueante; homolog existente; sem reset/migration reaplicada; manifesto/aceite tecnico x humano). Wave 4, `autonomous: false`, depende de 60.5-03.
+- [ ] 60.5-05-PLAN.md — Ativacao autorizada (checkpoint bloqueante; flag data-only, prova manual assistida pelo app, credito unico, 1:1/historico, rollback). Wave 5, `autonomous: false`, depende de 60.5-04.
+
+**Depends on:** Phase 60, 60.1, 60.3 and 60.4; F60.1 migration applied in the authorized environment; approved OpenSpec change; plan-check PASS_WITH_FINDINGS. Proof/activation additionally require explicit authorization.
+
+**Directory:** .planning/phases/60.5-f60-5-integracao-e-entrega-9-16-por-expansao/.
