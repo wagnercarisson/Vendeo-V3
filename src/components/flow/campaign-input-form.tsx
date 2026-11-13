@@ -102,6 +102,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
     unknownResult,
     processingResult,
     continueGeneration,
+    retryProcessingStatus,
     resetUnknownResult,
     invalidateTerminalIdentity,
     restorationNotice,
@@ -191,7 +192,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
           <button
             type="button"
             className="text-xs text-text-secondary underline"
-            onClick={() => window.location.reload()}
+            onClick={() => void retryProcessingStatus()}
           >
             Verificar novamente
           </button>
