@@ -1,0 +1,285 @@
+{
+  "kind": "f60.5-proof-manifest",
+  "plan": "60.5-04",
+  "phase": "60.5-f60-5-integracao-e-entrega-9-16-por-expansao",
+  "status": "awaiting-authorization",
+  "createdAt": "2026-11-13T20:51:58.411Z",
+  "offlinePreparation": true,
+  "environment": {
+    "target": "homolog-existing",
+    "apiReference": "127.0.0.1:57781",
+    "dbReference": "127.0.0.1:57782/postgres",
+    "productionConsulted": false,
+    "infrastructureReused": true,
+    "migrationsCreatedOrApplied": 0,
+    "containersCreatedOrReset": 0,
+    "readsPerformed": 0,
+    "writesPerformed": 0,
+    "providerCalls": 0,
+    "aiCalls": 0,
+    "flagChanges": 0
+  },
+  "executionMode": {
+    "requested": "authorize-server",
+    "recommended": "authorize-server",
+    "alternatives": [
+      "authorize-app-window",
+      "reject",
+      "change-source"
+    ],
+    "authorizeServerNotes": "Orquestrador e adaptadores reais com contexto server-side autorizado; campanha-alvo criada/verificada pelas funcoes de persistencia do app. Sem deploy e sem flag global.",
+    "authorizeAppWindowNotes": "Exige homolog ja executando o build de 60.5-03 e janela de flag ON restaurada OFF; deploy proibido neste plano."
+  },
+  "phaseBaseSha": "35b0aa4e",
+  "implementation": {
+    "acceptedPlan": "60.5-03",
+    "acceptedHead": "e35b5a1d",
+    "acceptedAt": "2026-11-13",
+    "baseShaOfAcceptedPlan": "2af1e253",
+    "reviewStatus": "approved"
+  },
+  "source": {
+    "kind": "content-source-existing-campaign",
+    "evidenceRef": "60.4-05-PROOF-MANIFEST.json (accepted 2026-11-12)",
+    "requiresPreflightRevalidation": true,
+    "storeId": "3dc7d274-0b57-45ba-883a-7b235056feda",
+    "storeNameCurrent": "Loja Mega Vale",
+    "campaignId": "48ba68a9-2769-4674-b39a-be91bb394d70",
+    "productName": "Mouse Sem Fio Recarregavel",
+    "campaignStatusAtEvidence": "ready",
+    "content": {
+      "intent": "offer",
+      "originalPriceCents": 2450,
+      "discountedPriceCents": 1990,
+      "badgeText": "Oferta",
+      "validityDisplayText": "ate 10/10/2026",
+      "legalNotice": "Imagem meramente ilustrativa; especificacoes do produto"
+    },
+    "media": {
+      "bucket": "campaign-images",
+      "images": [
+        {
+          "role": "primary",
+          "mimeType": "image/jpeg",
+          "byteSizeAtEvidence": 54523
+        },
+        {
+          "role": "reference",
+          "mimeType": "image/jpeg",
+          "byteSizeAtEvidence": 87532
+        }
+      ]
+    },
+    "identity": {
+      "storeName": "NovaTek Eletronicos",
+      "identityState": "visual_signature",
+      "strategy": "hashImageDataUrl(identityDataUrl)",
+      "fallback": "identityDirective sem inventar logo; limitacao registrada no aceite"
+    }
+  },
+  "targetCampaign": {
+    "mode": "created",
+    "campaignIdProposed": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
+    "operationIdProposed": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+    "attemptNumber": 1,
+    "attemptTarget": "primary",
+    "attemptReference": "f60.5-proof-c51d24d6-7e76-48bd-9a7d-b5ea525ac898",
+    "generationOrigin": "9_16_two_stage",
+    "generationContractVersion": "f60.5-two-stage-9-16-v1",
+    "campaignFormat": "9:16",
+    "mustNeverUseHistoricalCampaign": true
+  },
+  "preparationPlan": {
+    "createCampaignWithOriginMarker": true,
+    "hashedFields": [
+      "generationOrigin",
+      "generationContractVersion",
+      "campaignFormat",
+      "backgroundDirection",
+      "inputFiles",
+      "userContent"
+    ],
+    "hashExcludes": [
+      "resumeContext",
+      "copyContext",
+      "economicSnapshot"
+    ],
+    "resumeContextFields": [
+      "briefing",
+      "briefingText",
+      "campaignIntent",
+      "backgroundDirection",
+      "identityDirective",
+      "identityContext",
+      "copyContext",
+      "economicSnapshot",
+      "inputFiles"
+    ],
+    "briefingIdentityKeyExcluded": true,
+    "inputUpload": {
+      "mode": "original-bytes-no-transcode",
+      "upsert": false,
+      "verifySha256DataUrl": true,
+      "verifyByteSize": true,
+      "beforeReservation": true
+    },
+    "identityContentIdStrategy": "sha256_data_url",
+    "resumeContextHashExcluded": true
+  },
+  "target": {
+    "base": {
+      "model": "gpt-image-2.5-sunburst",
+      "quality": "medium",
+      "requestedSize": "1024x1024",
+      "maxImageCalls": 1
+    },
+    "copy": {
+      "runner": "real",
+      "maxRequests": 1,
+      "onlyIfEnabled": true
+    },
+    "expansion": {
+      "model": "gpt-image-2.5-sunburst",
+      "quality": "low",
+      "providerSize": "1152x2048",
+      "finalVertical": "1080x1920",
+      "mimeType": "image/jpeg",
+      "maxImageCalls": 1
+    },
+    "preparation": {
+      "deterministic": true,
+      "providerCalls": 0,
+      "size": "1152x1152"
+    },
+    "fallback": {
+      "model": "gpt-image-2",
+      "quality": "low",
+      "willBeCalled": false
+    },
+    "noRetry": true,
+    "noFallback": true
+  },
+  "credential": {
+    "provider": "openai",
+    "reference": "OPENAI_API_KEY via getApiKey(\"openai\")",
+    "benchKeyAllowed": false,
+    "secretPrinted": false
+  },
+  "limits": {
+    "maxPaidCallsTotal": 3,
+    "maxBaseImageCalls": 1,
+    "maxCopyRequests": 1,
+    "maxExpansionImageCalls": 1,
+    "noRetry": true,
+    "noFallback": true,
+    "maxOperations": 1,
+    "freeInvocationsAllowed": true,
+    "freeInvocationsCountedInCap": false
+  },
+  "estimate": {
+    "baseImageUnitUsd": 0.044,
+    "copyEstimateUsd": 0.0005,
+    "expansionImageUnitUsd": 0.036,
+    "estimatedTotalUsd": 0.0805,
+    "requestedBudgetUsd": 0.12,
+    "reconciliation": "observedCostUsd <= authorizedBudgetUsd; null/not_available or over-budget fails technical acceptance and blocks new calls",
+    "estimateIsNotProviderHardLimit": true
+  },
+  "authorization": {
+    "decision": "pending",
+    "requestedAt": "2026-11-13T20:51:58.411Z",
+    "decidedAt": null,
+    "decidedBy": null,
+    "requestedBudgetUsd": 0.12,
+    "authorizedBudgetUsd": null,
+    "requestedMaxPaidCalls": 3,
+    "authorizedMaxPaidCalls": null,
+    "requestedExecutionMode": "authorize-server",
+    "humanAcceptanceOwner": "operator",
+    "notes": "Nenhuma autorizacao concedida nesta preparacao; tasks 2-7 bloqueadas."
+  },
+  "preflight": {
+    "status": "not_run",
+    "ready": false,
+    "executedAt": null,
+    "providerCalls": 0,
+    "items": [
+      { "id": "infra_f60_1", "label": "F60.1 aplicada e bucket internal", "status": "pending" },
+      { "id": "catalog_pricing", "label": "Pricing completo base medium e expansao low", "status": "pending" },
+      { "id": "source_binding", "label": "Loja/campanha-fonte e vinculo validos", "status": "pending" },
+      { "id": "source_media", "label": "2 imagens de produto legiveis", "status": "pending" },
+      { "id": "identity", "label": "Identidade acessivel ou fallback explicito", "status": "pending" },
+      { "id": "target_absent", "label": "Campanha/operacao/vertical alvo ausentes", "status": "pending" },
+      { "id": "orphan_artifacts", "label": "Sem artefatos orfaos para a identidade", "status": "pending" },
+      { "id": "code_sha", "label": "Codigo 60.5-03 presente e SHAs registrados", "status": "pending" },
+      { "id": "credential", "label": "Credencial disponivel por referencia", "status": "pending" },
+      { "id": "window_owners", "label": "Janela e responsaveis definidos", "status": "pending" }
+    ]
+  },
+  "writesAfterApproval": [
+    "campaigns: 1 campanha-alvo nova com origem/inputFiles/resumeContext/identity_snapshot",
+    "campaign-images: uploads originais dos inputs da campanha-alvo (sem transcode, upsert false)",
+    "image_generation_config_snapshots: 1",
+    "product_1_1_snapshot_content_binding: 1",
+    "product_1_1_snapshot_frozen_evidence: 1",
+    "campaign_composition_artifacts: square_original (1024x1024), square_prepared (1152x1152), vertical (1080x1920)",
+    "product_9_16_two_stage_operations/steps/attempt_claims/outcomes",
+    "product_1_1_campaign_credit_operations: 1 reserva e 1 confirmacao (ou 1 estorno em falha definitiva)",
+    "product_1_1_copy_state: 1 tentativa/copy quando habilitada",
+    "generation_events: 1 por chamada paga real",
+    "campaigns: projecao ready + thumbnail vertical.thumb-v1.webp"
+  ],
+  "validations": {
+    "technical": [
+      "vertical JPEG 1080x1920 com checksum e evidencia",
+      "somente papel vertical entregue; nenhuma copia integral em campaign-images",
+      "projecao ready e miniatura derivada presente ou ausencia justificada",
+      "copy entregue ou falha nao bloqueante",
+      "1 reserva e 1 confirmacao; 0 segundo debito; 0/1 estorno conforme desfecho",
+      "beginPublication antes de confirmOnVerticalDelivery",
+      "custo observado dentro do teto e operation_run_id == operationId",
+      "calls pagas <= 3; freeInvocations registradas",
+      "campanha-fonte e imagens originais preservadas"
+    ],
+    "human": [
+      "vertical original 1080x1920: enquadramento, nitidez, produto, preco, selo, validade e texto obrigatorio",
+      "copy entregue contra o briefing congelado",
+      "miniatura do card nao usada como arte de entrega",
+      "credito: 1 reserva/1 confirmacao sem segundo debito",
+      "registrar pass/fail, observacoes e horario em acceptance.human"
+    ],
+    "separateAcceptances": true
+  },
+  "stopCriteria": [
+    "preflight com qualquer FAIL",
+    "credencial ausente ou somente OPENAI_BENCH_API_KEY",
+    "fonte/campanha/conteudo/imagens/identidade divergentes",
+    "campanha/operacao/vertical alvo ja existente",
+    "orcamento autorizado abaixo da estimativa pre-chamada",
+    "custo null/not_available, acima do teto ou pricing divergente",
+    "campaigns/imagens originais/creditos alterados fora do esperado",
+    "resultado unknown/timeout/indisponivel: preservar evidencia e parar sem retry",
+    "falha definitiva: no maximo 1 estorno, sem nova operacao",
+    "qualquer segunda chamada/reserva/debito",
+    "reprovacao humana nao dispara nova chamada"
+  ],
+  "nonScope": [
+    "producao",
+    "merge",
+    "push",
+    "deploy",
+    "ativacao permanente da flag",
+    "60.5-05",
+    "migration",
+    "reset/reprovisionamento de ambiente",
+    "limpeza ou correcao de dados",
+    "segunda operacao",
+    "retry/fallback",
+    "URL assinada/publica ou segredo no manifesto/relatorio"
+  ],
+  "providerCalls": 0,
+  "aiCalls": 0,
+  "readsPerformed": 0,
+  "writesPerformed": 0,
+  "flagChanges": 0
+}
