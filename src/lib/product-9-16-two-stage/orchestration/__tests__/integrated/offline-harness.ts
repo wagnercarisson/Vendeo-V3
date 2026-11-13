@@ -1340,7 +1340,8 @@ export async function createOfflineDeps(
 
   const deps: RunNineSixteenDeps = {
     ...real,
-    base: (input) => real.base(input, baseSeams),
+    base: (input, inner) =>
+      real.base(input, { ...baseSeams, ...(inner ?? {}) }),
     prepare: (input, inner) => real.prepare(input, inner),
     expand: (input, inner) => real.expand(input, { ...inner, ...expandSeams }),
   };

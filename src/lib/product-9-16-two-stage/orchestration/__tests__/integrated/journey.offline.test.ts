@@ -42,6 +42,13 @@ describe("percurso integrado offline (deps reais, DB/Storage/provider simulados)
     const events = await runOffline(initialInput(), deps);
 
     expect(terminalOf(events)).toMatchObject({ type: "result", campaignId: CAMPAIGN_ID });
+    const copyPhases = events.filter(
+      (event) => event.type === "phase" && event.phase === "campaign_copy",
+    );
+    expect(copyPhases.map((event) => event.status)).toEqual(["running", "complete"]);
+    expect(copyPhases.at(-1)).toMatchObject({
+      message: "Texto da campanha gerado.",
+    });
     expect(world.rpcCounts.product_9_16_open_operation).toBe(1);
     expect(world.rpcCounts.product_1_1_deliver_campaign_credit_operation).toBe(1);
     expect(world.rpcCounts.product_1_1_close_failed_operation ?? 0).toBe(0);

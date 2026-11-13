@@ -180,6 +180,9 @@ export interface SquareBaseDeps {
   readonly clock?: () => number;
   readonly callIdFactory?: () => string;
 
+  /** F60.5 — progresso REAL do ciclo de copy (inicio/desfecho), nunca simulado. */
+  readonly onCopyPhase?: (event: CopyProgressEvent) => void;
+
   // Estado congelado / configuração / gate.
   readonly readFrozenState?: typeof readSquareBaseFrozenState;
   readonly resolveFirstComposition?: typeof resolveFirstComposition;
@@ -232,6 +235,71 @@ function blocked(
 
 function notRequested(): CopyOutcome {
   return Object.freeze({ kind: "not_requested" as const });
+}
+
+/**
+ * F60.5 — traduz o desfecho REAL da copy para o evento de progresso consumido
+ * pela UI. Nunca promove falha/indisponibilidade a sucesso e nunca deixa um
+ * estado de espera como `running` indefinidamente.
+ */
+export type CopyProgressEvent =
+  | { readonly status: "running" }
+  | {
+      readonly status: "complete";
+      readonly origin: "generated" | "reused";
+    }
+  | {
+      readonly status: "failed";
+      readonly reason: string;
+      readonly failureClass?: "transient" | "definitive" | null;
+      readonly unconfirmed?: boolean;
+    }
+  | {
+      readonly status: "skipped";
+      readonly reason:
+        | "not_requested"
+        | "in_progress"
+        | "waiting"
+        | "budget_exhausted";
+    };
+
+export function copyProgressFor(outcome: CopyOutcome): CopyProgressEvent {
+  switch (outcome.kind) {
+    case "completed":
+      return {
+        status: "complete",
+        origin: outcome.origin,
+      };
+    case "failed":
+      return {
+        status: "failed",
+        reason: outcome.unconfirmed ? "copy_unconfirmed" : "copy_failed",
+        failureClass: outcome.failureClass,
+        unconfirmed: outcome.unconfirmed,
+      };
+    case "in_progress":
+      return { status: "skipped", reason: "in_progress" };
+    case "waiting":
+      return { status: "skipped", reason: "waiting" };
+    case "not_requested":
+      return { status: "skipped", reason: "not_requested" };
+    case "unavailable":
+      return {
+        status: "failed",
+        reason: `copy_unavailable:${outcome.reason}`,
+      };
+  }
+}
+
+function emitCopyProgress(
+  deps: SquareBaseDeps,
+  event: CopyProgressEvent,
+): void {
+  try {
+    deps.onCopyPhase?.(event);
+  } catch {
+    // Progresso e observabilidade: nunca altera o resultado da copy/arte.
+  }
 }
 
 function snapshotFailed(reason: SnapshotFailedReason): SquareBaseResult {
@@ -476,11 +544,37 @@ function startCopy(
     ...(valid.traceId === undefined ? {} : { traceId: valid.traceId }),
   };
 
+  // Copy ausente do conteúdo congelado: NÃO simula progresso de geração. O
+  // runner real devolve `not_requested`; o desfecho será reportado como skipped.
+  const copyRequested = valid.copyContext != null;
+  if (copyRequested) {
+    emitCopyProgress(deps, { status: "running" });
+  }
+
+  const finish = (outcome: CopyOutcome): CopyOutcome => {
+    emitCopyProgress(deps, copyProgressFor(outcome));
+    return outcome;
+  };
+
   try {
-    return Promise.resolve(runCopy(copyInput, copyDeps));
+    return Promise.resolve(runCopy(copyInput, copyDeps)).then(
+      (outcome) => finish(outcome),
+      () =>
+        finish(
+          Object.freeze({
+            kind: "unavailable" as const,
+            reason: "read_failed" as const,
+          }),
+        ),
+    );
   } catch {
     return Promise.resolve(
-      Object.freeze({ kind: "unavailable" as const, reason: "not_attempted" }),
+      finish(
+        Object.freeze({
+          kind: "unavailable" as const,
+          reason: "not_attempted" as const,
+        }),
+      ),
     );
   }
 }

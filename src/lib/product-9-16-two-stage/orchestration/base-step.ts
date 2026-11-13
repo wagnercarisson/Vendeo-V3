@@ -2,6 +2,10 @@ import "server-only";
 
 import type { AuthorizationContext } from "@/lib/campaign/composition-artifacts/types";
 import type { SquareBaseInput, SquareBaseResult } from "@/lib/campaign/square-base/types";
+import type {
+  CopyProgressEvent,
+  SquareBaseDeps,
+} from "@/lib/campaign/square-base/run-square-base";
 import type { FrozenStateReadResult } from "@/lib/campaign/square-base/types";
 import type { ProductTwoStageOperationClient } from "../two-stage-operation-client";
 import type { AttemptTarget, TwoStageStepStatus } from "../types";
@@ -38,7 +42,11 @@ export interface BaseStepInput {
 
 export interface BaseStepDeps extends ReconstructionDeps {
   readonly control: Pick<ProductTwoStageOperationClient, "acquire" | "finish" | "getOperationView">;
-  readonly base: (input: SquareBaseInput) => Promise<SquareBaseResult>;
+  readonly base: (
+    input: SquareBaseInput,
+    deps?: SquareBaseDeps,
+  ) => Promise<SquareBaseResult>;
+  readonly onCopyPhase?: (event: CopyProgressEvent) => void;
   readonly clock: () => number;
   readonly reconcile?: typeof reconcileBaseArtifact;
 }
@@ -236,6 +244,9 @@ export async function runBaseStep(
       },
       remaining,
     ),
+    deps.onCopyPhase === undefined
+      ? undefined
+      : { onCopyPhase: deps.onCopyPhase },
   );
 
   if (result.kind === "completed") {

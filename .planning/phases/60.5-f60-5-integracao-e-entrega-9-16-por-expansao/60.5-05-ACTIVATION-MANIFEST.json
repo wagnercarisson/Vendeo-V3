@@ -1,0 +1,173 @@
+{
+  "kind": "f60.5-manual-activation",
+  "plan": "60.5-05",
+  "status": "manual_generation_completed_ui_fix_offline_pending_review_flag_off",
+  "workflow": "/gsd-execute-phase 60.5-05 (authorized manual homolog slice)",
+  "authorization": {
+    "decision": "approved",
+    "source": "User confirmed sim after the request to enable only the homolog flag for one manual generation, up to USD 0.12, then disable it.",
+    "actor": "user/operator",
+    "executor": "Codex",
+    "window": "Current assisted manual session; disable on completion, failure or cancellation.",
+    "maxOperations": 1,
+    "maxPaidCalls": 3,
+    "authorizedBudgetUsd": 0.12,
+    "retryOrFallbackAuthorized": false,
+    "finalFlagValue": false
+  },
+  "precondition": {
+    "proof60_5_04": "accepted-with-limitations",
+    "limitation": "Prior server-side harness mixed the historical visual identity with current store copy context; manual app proof must verify a coherent store profile."
+  },
+  "environment": {
+    "target": "homolog-existing",
+    "api": "http://127.0.0.1:57781",
+    "db": "127.0.0.1:57782/postgres",
+    "workdir": "G:/Vendeo-Homolog",
+    "ledgerCount": 155,
+    "ledgerMax": "20261110202749",
+    "production": "not_accessed"
+  },
+  "store": {
+    "id": "48b212f8-2b0f-4679-b553-122a601bacac",
+    "name": "Padaria da Esquina",
+    "isTestStore": true,
+    "eligibility": "test_stores granted for 127.0.0.1:57781, no expiry; applicable test-store flag ON",
+    "profileCoherence": "confirmed_by_user_copy_aligned_with_selected_store"
+  },
+  "flag": {
+    "key": "product_9_16_two_stage_enabled",
+    "previous": "absent",
+    "current": false,
+    "beforeUpdatedAt": null,
+    "afterUpdatedAt": "2026-11-13T23:32:23.715Z",
+    "writtenAt": "2026-11-13T23:32:23.715Z",
+    "verifiedAt": "2026-11-13T23:32:23.759Z",
+    "insertRowCount": 1,
+    "rowCount": 1,
+    "oldFlagUnchanged": true,
+    "statements": [
+      "SELECT key, enabled, updated_at FROM public.feature_flags WHERE key = $1 FOR UPDATE",
+      "INSERT INTO public.feature_flags (key, enabled, description) VALUES ($1, false, $2) ON CONFLICT (key) DO NOTHING",
+      "UPDATE public.feature_flags SET enabled = true, updated_at = now() WHERE key = $1 RETURNING key, enabled, updated_at",
+      "SELECT key, enabled, updated_at FROM public.feature_flags WHERE key = $1"
+    ],
+    "oldDirectFlag": {
+      "key": "product_9_16_enabled",
+      "enabled": true,
+      "mustRemainUntouched": true
+    },
+    "mechanism": "Explicit parameterized SQL, existing local PostgreSQL; INSERT false ON CONFLICT DO NOTHING, UPDATE true RETURNING; transaction checks rowCount = 1."
+  },
+  "creditBaseline": {
+    "readAt": "2026-11-13T23:28:51.971Z",
+    "balance": 10,
+    "demoBalance": 0,
+    "bonusBalance": 10,
+    "purchasedBalance": 0
+  },
+  "manualProof": {
+    "status": "functional_pass_with_ui_finding",
+    "campaignId": "351cde93-df22-4172-b438-e8472af12f26",
+    "operationId": "fdb62a54-2ad8-472f-a9a6-4fe1b6dd21c3",
+    "campaignStatus": "ready",
+    "creditStatus": "delivered",
+    "publicationState": "published",
+    "baseAttemptsUsed": 1,
+    "expansionAttemptsUsed": 1,
+    "vertical": {
+      "id": "eb4ff947-8178-4270-9b0e-a8c5f03fcb20",
+      "width": 1080,
+      "height": 1920,
+      "mimeType": "image/jpeg",
+      "bytes": 376477
+    },
+    "copyState": "completed",
+    "creditBalanceAfter": 9,
+    "paidCalls": 3,
+    "observedCostUsd": 0.048644,
+    "budgetCheck": "pass",
+    "humanReport": "9:16 delivery and limits respected; copy coherent with selected store. Visual composition disliked for the supplied bakery-photo/scenery request; not recorded as visual-quality approval.",
+    "uiFinding": {
+      "phase": "campaign_copy",
+      "label": "Texto",
+      "status": "fixed_offline_pending_app_revalidation",
+      "diagnosis": "run-nine-sixteen nao emitia campaign_copy; corrigido para refletir inicio/desfecho reais da copy.",
+      "codeChanged": true,
+      "fixedAt": "2026-11-13T23:52:35.613Z"
+    },
+    "notConfirmed": [
+      "download",
+      "card rendering",
+      "existing 1:1 and historical access checks",
+      "new-generation refusal after flag OFF"
+    ],
+    "pendingManualRevalidation": [
+      "copy campaign_copy na jornada normal (running/complete/reused/failed)",
+      "download",
+      "card rendering/miniatura na listagem",
+      "acesso a campanhas 1:1 e historicas",
+      "recusa de nova geracao 9:16 apos flag OFF"
+    ]
+  },
+  "rollback": {
+    "status": "completed",
+    "finalValue": false,
+    "writtenAt": "2026-11-13T23:40:44.108Z",
+    "verifiedAt": "2026-11-13T23:40:44.142Z",
+    "rowCount": 1,
+    "oldFlagUnchanged": true
+  },
+  "acceptance": {
+    "technical": "functional_pass_with_ui_fix_pending_real_revalidation",
+    "human": "delivery_and_copy_accepted_visual_quality_not_approved",
+    "fullPlan": "not_complete"
+  },
+  "activation": {
+    "production": "not_executed"
+  },
+  "providerCallsByExecutor": 0,
+  "nonScope": [
+    "production",
+    "migration",
+    "reset",
+    "deploy",
+    "merge",
+    "push",
+    "other flag or stage changes",
+    "second campaign",
+    "paid 1:1 generation"
+  ],
+  "copyProgressFix": {
+    "status": "implemented_offline_pending_review",
+    "implementedAt": "2026-11-13T23:52:35.613Z",
+    "paidCalls": 0,
+    "homologRevalidated": false,
+    "files": [
+      "src/lib/campaign/square-base/run-square-base.ts",
+      "src/lib/product-9-16-two-stage/orchestration/base-step.ts",
+      "src/lib/product-9-16-two-stage/orchestration/run-nine-sixteen.ts"
+    ],
+    "behavior": [
+      "running quando a copy realmente inicia",
+      "complete generated/reused com mensagens distintas",
+      "failed em falha/indisponibilidade; skipped em espera/nao solicitado",
+      "sem spinner indefinido",
+      "copy nao bloqueia arte",
+      "1:1 legado intocado"
+    ],
+    "tests": [
+      "src/lib/campaign/square-base/__tests__/copy-progress.contract.test.ts",
+      "run-nine-sixteen.contract.test.ts (running/complete/reused/failed)",
+      "integrated journey (copy real)",
+      "generation-progress.two-stage.test.tsx (running/complete-reused/failed)"
+    ],
+    "gates": {
+      "focused": "118 arquivos / 1141 testes PASS",
+      "typecheck": "PASS",
+      "lint": "PASS",
+      "build": "PASS",
+      "diffCheck": "limpo"
+    }
+  }
+}

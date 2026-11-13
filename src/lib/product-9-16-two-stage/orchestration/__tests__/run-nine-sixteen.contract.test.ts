@@ -254,6 +254,98 @@ describe("runNineSixteenTwoStageGeneration", () => {
     expect(calls(d, "base")).toHaveLength(0);
   });
 
+  it("emite campaign_copy running/complete conectado ao ciclo real da base", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(async () => deliveryResume()),
+        acquire: vi.fn(async (request: { stage: string }) => ({
+          acquired: true,
+          authorization: "execute",
+          reason: null,
+          attemptToken: "t",
+          attemptNumber: 1,
+          stage: request.stage,
+          target: request.stage === "base" ? "primary" : "initial",
+        })),
+        finish: vi.fn(async () => ({
+          success: true,
+          idempotent: false,
+          status: "completed",
+          stage: "base",
+          attemptNumber: 1,
+        })),
+        recordOutcome: vi.fn(),
+      },
+      base: vi.fn(async (_input: unknown, baseDeps?: {
+        onCopyPhase?: (event: {
+          status: "running" | "complete";
+          origin?: "generated" | "reused";
+        }) => void;
+      }) => {
+        baseDeps?.onCopyPhase?.({ status: "running" });
+        baseDeps?.onCopyPhase?.({ status: "complete", origin: "reused" });
+        return completedBase;
+      }) as never,
+    });
+
+    const events = await run(initialInput(), d);
+    const copyPhases = events.filter(
+      (event) => event.type === "phase" && event.phase === "campaign_copy",
+    );
+    expect(copyPhases).toEqual([
+      expect.objectContaining({ status: "running", message: "Gerando texto da campanha..." }),
+      expect.objectContaining({
+        status: "complete",
+        message: "Texto da campanha reaproveitado.",
+      }),
+    ]);
+    expect(terminal(events)).toMatchObject({ type: "result" });
+  });
+
+  it("falha da copy aparece como failed e nao bloqueia a entrega da arte", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(async () => deliveryResume()),
+        acquire: vi.fn(async (request: { stage: string }) => ({
+          acquired: true,
+          authorization: "execute",
+          reason: null,
+          attemptToken: "t",
+          attemptNumber: 1,
+          stage: request.stage,
+          target: request.stage === "base" ? "primary" : "initial",
+        })),
+        finish: vi.fn(async () => ({
+          success: true,
+          idempotent: false,
+          status: "completed",
+          stage: "base",
+          attemptNumber: 1,
+        })),
+        recordOutcome: vi.fn(),
+      },
+      base: vi.fn(async (_input: unknown, baseDeps?: {
+        onCopyPhase?: (event: { status: "failed"; reason: string }) => void;
+      }) => {
+        baseDeps?.onCopyPhase?.({ status: "failed", reason: "copy_failed" });
+        return completedBase;
+      }) as never,
+    });
+
+    const events = await run(initialInput(), d);
+    expect(
+      events.find(
+        (event) => event.type === "phase" && event.phase === "campaign_copy",
+      ),
+    ).toMatchObject({
+      status: "failed",
+      message: "Não foi possível gerar o texto; a arte continua.",
+    });
+    expect(terminal(events)).toMatchObject({ type: "result" });
+  });
+
   it("initial reserves once and runs base -> preparation -> expansion -> delivery with phases", async () => {
     const d = deps({
       control: {

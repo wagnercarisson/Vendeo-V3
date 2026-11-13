@@ -1,6 +1,7 @@
 import "server-only";
 
 import { verifyCampaignAccess } from "@/lib/campaign/composition-artifacts/access";
+import type { CopyProgressEvent } from "@/lib/campaign/square-base/run-square-base";
 import type { FrozenStateReadResult } from "@/lib/campaign/square-base/types";
 import type { AcquireStepResult, ResumeOperationResult } from "../types";
 import { newAcquisitionIds, parseAcquisitionIds } from "./acquisition-ids";
@@ -160,6 +161,62 @@ function phaseDone(stream: Stream, phase: NineSixteenPhase, outcome: StepExecuti
   // `processing` deixa a fase em `running`; o terminal a fecha como `skipped`.
 }
 
+/**
+ * F60.5 — conecta o ciclo REAL da copy ao progresso NDJSON. A copy roda dentro
+ * da base; este callback só traduz os desfechos observados. Falha/indisponibilidade
+ * NÃO viram sucesso e estados de espera não ficam `running` indefinidamente.
+ */
+function emitCopyPhase(stream: Stream, event: CopyProgressEvent): void {
+  switch (event.status) {
+    case "running":
+      stream.emitPhase("campaign_copy", "running", "Gerando texto da campanha...");
+      return;
+    case "complete":
+      stream.emitPhase(
+        "campaign_copy",
+        "complete",
+        event.origin === "reused"
+          ? "Texto da campanha reaproveitado."
+          : "Texto da campanha gerado.",
+      );
+      return;
+    case "failed":
+      stream.emitPhase(
+        "campaign_copy",
+        "failed",
+        "Não foi possível gerar o texto; a arte continua.",
+      );
+      return;
+    case "skipped":
+      switch (event.reason) {
+        case "not_requested":
+          stream.emitPhase("campaign_copy", "skipped", "Texto não solicitado.");
+          return;
+        case "in_progress":
+          stream.emitPhase(
+            "campaign_copy",
+            "skipped",
+            "Texto em processamento em outra requisição.",
+          );
+          return;
+        case "waiting":
+          stream.emitPhase(
+            "campaign_copy",
+            "skipped",
+            "Texto aguardando nova janela; a arte continua.",
+          );
+          return;
+        case "budget_exhausted":
+          stream.emitPhase(
+            "campaign_copy",
+            "skipped",
+            "Texto não iniciado por orçamento; a arte continua.",
+          );
+          return;
+      }
+  }
+}
+
 async function deliverAndEmit(
   input: RunNineSixteenInput,
   deps: RunNineSixteenDeps,
@@ -312,7 +369,10 @@ async function runBase(
       frozenState: options.frozen,
       ...(input.signal === undefined ? {} : { signal: input.signal }),
     },
-    withReconstruction(deps),
+    {
+      ...withReconstruction(deps),
+      onCopyPhase: (event) => emitCopyPhase(stream, event),
+    },
   );
   phaseDone(stream, "campaign_base", outcome);
   return outcome;
