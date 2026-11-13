@@ -2,7 +2,11 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
-import { deliverVertical, finalizeExhaustedLimit } from "../delivery";
+import {
+  deliverVertical,
+  finalizeDefinitiveFailure,
+  finalizeExhaustedLimit,
+} from "../delivery";
 
 const input = { storeId: "s", campaignId: "c", operationId: "o", authorization: { kind: "system" } as const };
 const probe = {
@@ -85,5 +89,63 @@ describe("delivery", () => {
     expect(result).toEqual({ kind: "refunded" });
     const record = (d as never as { control: { recordOutcome: { mock: { calls: unknown[] } } } }).control;
     expect(record.recordOutcome.mock.calls).toHaveLength(1);
+  });
+
+  it("definitive failure with absent vertical refunds once and closes", async () => {
+    const absentProbe = {
+      probeVerticalArtifact: vi.fn(async () => ({ kind: "absent" as const })),
+    };
+    const d = deps({ probeVertical: absentProbe });
+    const result = await finalizeDefinitiveFailure(
+      { ...input, stage: "base", supportReference: "r" },
+      d,
+    );
+    expect(result).toEqual({ kind: "refunded" });
+    const control = (d as never as {
+      control: { recordOutcome: { mock: { calls: unknown[] } }; finish: { mock: { calls: unknown[] } } };
+    }).control;
+    const financial = (d as never as {
+      financial: { refundOnDefinitiveFailure: { mock: { calls: unknown[] } } };
+    }).financial;
+    const projection = (d as never as { projectClosed: { mock: { calls: unknown[] } } }).projectClosed;
+    expect(control.recordOutcome.mock.calls).toHaveLength(1);
+    expect(financial.refundOnDefinitiveFailure.mock.calls).toHaveLength(1);
+    expect(projection.mock.calls).toHaveLength(1);
+  });
+
+  it("definitive failure with integral vertical requires delivery and never refunds", async () => {
+    const d = deps();
+    const result = await finalizeDefinitiveFailure(
+      { ...input, stage: "expansion", supportReference: "r" },
+      d,
+    );
+    expect(result).toMatchObject({ kind: "delivery_required" });
+    const control = (d as never as { control: { recordOutcome: { mock: { calls: unknown[] } } } }).control;
+    const financial = (d as never as {
+      financial: { refundOnDefinitiveFailure: { mock: { calls: unknown[] } } };
+    }).financial;
+    expect(control.recordOutcome.mock.calls).toHaveLength(0);
+    expect(financial.refundOnDefinitiveFailure.mock.calls).toHaveLength(0);
+  });
+
+  it("definitive failure with indeterminate vertical records unknown without refund", async () => {
+    const indeterminateProbe = {
+      probeVerticalArtifact: vi.fn(async () => ({ kind: "indeterminate" as const })),
+    };
+    const d = deps({ probeVertical: indeterminateProbe });
+    const result = await finalizeDefinitiveFailure(
+      { ...input, stage: "expansion", supportReference: "r" },
+      d,
+    );
+    expect(result).toMatchObject({ kind: "unknown", reason: "vertical_indeterminate" });
+    const control = (d as never as {
+      control: { recordOutcome: { mock: { calls: Array<[{ outcome?: string }]> } } };
+    }).control;
+    const financial = (d as never as {
+      financial: { refundOnDefinitiveFailure: { mock: { calls: unknown[] } } };
+    }).financial;
+    expect(control.recordOutcome.mock.calls).toHaveLength(1);
+    expect(control.recordOutcome.mock.calls[0][0]).toMatchObject({ outcome: "unknown" });
+    expect(financial.refundOnDefinitiveFailure.mock.calls).toHaveLength(0);
   });
 });

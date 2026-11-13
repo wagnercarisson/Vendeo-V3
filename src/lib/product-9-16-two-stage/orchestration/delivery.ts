@@ -63,10 +63,6 @@ export type DeliveryOutcome =
   | { readonly kind: "unknown"; readonly reason: string }
   | { readonly kind: "definitive"; readonly reason: string };
 
-function isIntegral(probe: VerticalArtifactProbeResult): boolean {
-  return probe.kind === "integral";
-}
-
 export async function deliverVertical(
   input: DeliveryInput,
   deps: DeliveryDeps,
@@ -158,6 +154,26 @@ export async function finalizeDefinitiveFailure(
       // Late finish has no effect; finality is still recorded below.
     }
   }
+
+  const probe = await deps.probeVertical.probeVerticalArtifact({
+    storeId: input.storeId,
+    campaignId: input.campaignId,
+    operationId: input.operationId,
+  });
+  if (probe.kind === "integral") {
+    return { kind: "delivery_required", probe };
+  }
+  if (probe.kind === "invalid" || probe.kind === "indeterminate") {
+    await deps.control.recordOutcome({
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      stage: input.stage,
+      outcome: "unknown",
+      supportReference: input.supportReference ?? null,
+    });
+    return { kind: "unknown", reason: `vertical_${probe.kind}` };
+  }
+
   await deps.control.recordOutcome({
     campaignId: input.campaignId,
     operationId: input.operationId,
