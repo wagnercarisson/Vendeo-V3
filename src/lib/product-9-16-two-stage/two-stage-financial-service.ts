@@ -8,6 +8,7 @@ import {
 import type { CreditOperationState, CreditOperationStatus } from "@/lib/product-1-1/credit-operation/types";
 import {
   SupabasePendingOperationsRepository,
+  type PendingArtifactProber,
   type PendingOperationsRepository,
 } from "@/lib/product-1-1/pending/pending-operations-repository";
 import {
@@ -15,7 +16,10 @@ import {
   type ResolvePendingInput,
   type PendingResolutionResult,
 } from "@/lib/product-1-1/pending/resolve-pending-operation";
-import { projectDeliveredCampaign } from "@/lib/product-1-1/orchestration/project-delivered-campaign";
+import {
+  projectDeliveredCampaign,
+  type DeliveredArtifactSource,
+} from "@/lib/product-1-1/orchestration/project-delivered-campaign";
 import { projectClosedCampaign } from "@/lib/product-1-1/orchestration/project-closed-campaign";
 import { ProductTwoStageOperationClient } from "./two-stage-operation-client";
 import type { ProductTwoStageOperationError } from "./types";
@@ -328,6 +332,17 @@ export class TwoStageFinancialService {
      * ela, `decision='deliver'` falha fechado em vez de presumir `art-1024.jpg`.
      */
     verticalArtifactProbe?: VerticalArtifactProbe;
+    /**
+     * F60.5 — fonte aditiva repassada integralmente à projeção. Default
+     * `product_1_1`, preservando o comportamento legado.
+     */
+    deliveredArtifactSource?: DeliveredArtifactSource;
+    /**
+     * F60.5 — overrides por chamada para a resolução administrativa. Quando
+     * informados, garantem que o probe de two-stage use composição.
+     */
+    repository?: PendingOperationsRepository;
+    twoStageArtifacts?: PendingArtifactProber;
   }): Promise<PendingResolutionResult> {
     const action = input.decision === "deliver" ? "deliver_existing_art" : "refund_once";
 
@@ -367,15 +382,25 @@ export class TwoStageFinancialService {
       authorizePublicationClosure: true,
     };
     return this.resolvePending(resolutionInput, {
-      repository: this.repository,
+      repository:
+        input.repository ??
+        (input.twoStageArtifacts
+          ? new SupabasePendingOperationsRepository(this.client, undefined, {
+              twoStageArtifacts: input.twoStageArtifacts,
+            })
+          : this.repository),
       client: this.client,
       // A projeção pós-resolução deve usar o MESMO cliente injetado (nunca o
       // global) e, na entrega, o caminho VERTICAL validado — nunca o default 1:1.
       projectDeliveredCampaign: (projectionInput, deps = {}) =>
         projectDeliveredCampaign(
-          expectedArtifactPath
-            ? { ...projectionInput, expectedArtifactPath }
-            : projectionInput,
+          {
+            ...projectionInput,
+            ...(expectedArtifactPath ? { expectedArtifactPath } : {}),
+            ...(input.deliveredArtifactSource === undefined
+              ? {}
+              : { source: input.deliveredArtifactSource }),
+          },
           { ...deps, client: this.client },
         ),
       projectClosedCampaign: (projectionInput, deps = {}) =>

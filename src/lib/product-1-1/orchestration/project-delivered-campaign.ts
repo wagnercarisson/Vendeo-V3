@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { artifactStoragePath } from "../artifact/artifact-path";
+import { compositionArtifactStoragePath } from "@/lib/campaign/composition-artifacts/artifact-path";
 
 /**
  * Quick 261017-cdi — Projeção da campanha após ENTREGA CONFIRMADA (Produto 1:1).
@@ -28,6 +29,15 @@ import { artifactStoragePath } from "../artifact/artifact-path";
 
 const CREDIT_OPS_TABLE = "product_1_1_campaign_credit_operations";
 const ARTIFACT_TABLE = "product_1_1_campaign_artifacts";
+const COMPOSITION_ARTIFACT_TABLE = "campaign_composition_artifacts";
+
+export type DeliveredArtifactSource =
+  | { readonly kind: "product_1_1" }
+  | {
+      readonly kind: "composition";
+      readonly role: "vertical";
+      readonly expectedPath: string;
+    };
 
 export type ProjectDeliveredCampaignReason =
   | "projected"
@@ -36,6 +46,7 @@ export type ProjectDeliveredCampaignReason =
   | "campaign_not_found"
   | "store_mismatch"
   | "artifact_missing"
+  | "artifact_incompatible"
   | "projection_update_failed";
 
 export interface ProjectDeliveredCampaignResult {
@@ -52,6 +63,11 @@ export interface ProjectDeliveredCampaignInput {
    * `product-1-1/.../art-1024.jpg`, preservando o 1:1.
    */
   readonly expectedArtifactPath?: string;
+  /**
+   * F60.5 — fonte aditiva. Ausente ou `product_1_1` preserva exatamente o
+   * comportamento legado; `composition` projeta o vertical da F60.1.
+   */
+  readonly source?: DeliveredArtifactSource;
 }
 
 export interface ProjectDeliveredCampaignDeps {
@@ -116,34 +132,89 @@ export async function projectDeliveredCampaign(
       return { projected: false, reason: "store_mismatch" };
     }
 
-    // (3) A ARTE precisa existir e bater com o caminho determinístico do novo
-    //     fluxo (nunca marca `ready` sem arte persistida).
-    const expectedArtifactPath =
-      input.expectedArtifactPath ??
-      artifactStoragePath(
-        input.storeId,
-        input.campaignId,
-        input.operationId,
-      );
-    const { data: artifact, error: artifactError } = await client
-      .from(ARTIFACT_TABLE)
-      .select("storage_path, campaign_id, operation_id")
-      .eq("campaign_id", input.campaignId)
-      .eq("operation_id", input.operationId)
-      .maybeSingle();
-    if (artifactError) {
-      return { projected: false, reason: "artifact_missing" };
-    }
-    const artifactRecord = artifact as
-      | { storage_path?: unknown; campaign_id?: unknown; operation_id?: unknown }
-      | null;
-    if (
-      !artifactRecord ||
-      artifactRecord.storage_path !== expectedArtifactPath ||
-      artifactRecord.campaign_id !== input.campaignId ||
-      artifactRecord.operation_id !== input.operationId
-    ) {
-      return { projected: false, reason: "artifact_missing" };
+    // (3) A ARTE precisa existir e bater com o caminho determinístico da fonte
+    //     declarada (nunca marca `ready` sem arte persistida).
+    const source: DeliveredArtifactSource = input.source ?? { kind: "product_1_1" };
+    let expectedArtifactPath: string;
+    if (source.kind === "composition") {
+      const canonicalPath = compositionArtifactStoragePath({
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        role: source.role,
+      });
+      if (source.expectedPath !== canonicalPath) {
+        return { projected: false, reason: "artifact_incompatible" };
+      }
+      expectedArtifactPath = source.expectedPath;
+
+      const { data: artifact, error: artifactError } = await client
+        .from(COMPOSITION_ARTIFACT_TABLE)
+        .select(
+          "store_id, campaign_id, operation_id, role, storage_path, width, height, mime_type",
+        )
+        .eq("campaign_id", input.campaignId)
+        .eq("operation_id", input.operationId)
+        .eq("role", source.role)
+        .maybeSingle();
+      if (artifactError) {
+        return { projected: false, reason: "artifact_missing" };
+      }
+      const compositionRecord = artifact as
+        | {
+            store_id?: unknown;
+            campaign_id?: unknown;
+            operation_id?: unknown;
+            role?: unknown;
+            storage_path?: unknown;
+            width?: unknown;
+            height?: unknown;
+            mime_type?: unknown;
+          }
+        | null;
+      if (!compositionRecord) {
+        return { projected: false, reason: "artifact_missing" };
+      }
+      if (
+        compositionRecord.store_id !== input.storeId ||
+        compositionRecord.campaign_id !== input.campaignId ||
+        compositionRecord.operation_id !== input.operationId ||
+        compositionRecord.role !== "vertical" ||
+        compositionRecord.storage_path !== expectedArtifactPath ||
+        compositionRecord.width !== 1080 ||
+        compositionRecord.height !== 1920 ||
+        compositionRecord.mime_type !== "image/jpeg"
+      ) {
+        return { projected: false, reason: "artifact_incompatible" };
+      }
+    } else {
+      expectedArtifactPath =
+        input.expectedArtifactPath ??
+        artifactStoragePath(
+          input.storeId,
+          input.campaignId,
+          input.operationId,
+        );
+      const { data: artifact, error: artifactError } = await client
+        .from(ARTIFACT_TABLE)
+        .select("storage_path, campaign_id, operation_id")
+        .eq("campaign_id", input.campaignId)
+        .eq("operation_id", input.operationId)
+        .maybeSingle();
+      if (artifactError) {
+        return { projected: false, reason: "artifact_missing" };
+      }
+      const artifactRecord = artifact as
+        | { storage_path?: unknown; campaign_id?: unknown; operation_id?: unknown }
+        | null;
+      if (
+        !artifactRecord ||
+        artifactRecord.storage_path !== expectedArtifactPath ||
+        artifactRecord.campaign_id !== input.campaignId ||
+        artifactRecord.operation_id !== input.operationId
+      ) {
+        return { projected: false, reason: "artifact_missing" };
+      }
     }
 
     // (4) Idempotência: já projetada corretamente ⇒ no-op (reparo seguro).
