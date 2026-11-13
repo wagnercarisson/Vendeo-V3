@@ -18,6 +18,7 @@ import {
   serializeFrozenPayload,
 } from "@/lib/campaign/square-base/frozen-state";
 import { repairFrozenEvidence } from "@/lib/campaign/square-base/config";
+import { canonicalJson } from "@/lib/campaign/composition-artifacts/evidence";
 import { downloadCampaignInputFile } from "@/lib/campaign/persistence";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { parseResumeContext, verifyReconstructedInput } from "./durable-input";
@@ -86,6 +87,27 @@ function failed(reason: ReconstructionReason, definitive = true): ReconstructRes
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Compara o `briefingText` persistido com o briefing estruturado de forma
+ * SEMANTICA. O JSONB do Postgres reordena chaves no round-trip; a string bruta
+ * nao pode ser comparada. JSON invalido ou conteudo divergente continua
+ * recusado. A string ORIGINAL nunca e reescrita: o conteudo reconstruido usa
+ * exatamente `context.briefingText`.
+ */
+function briefingTextMatches(briefingText: string, briefing: unknown): boolean {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(briefingText);
+  } catch {
+    return false;
+  }
+  try {
+    return canonicalJson(parsed) === canonicalJson(briefing);
+  } catch {
+    return false;
+  }
 }
 
 function referenceEntry(
@@ -163,7 +185,7 @@ async function reconstructContent(
   }
   const context = parsedContext.context;
   if (!context.copyContext) return failed("copy_context_missing");
-  if (context.briefingText !== JSON.stringify(context.briefing)) {
+  if (!briefingTextMatches(context.briefingText, context.briefing)) {
     return failed("resume_context_malformed");
   }
 

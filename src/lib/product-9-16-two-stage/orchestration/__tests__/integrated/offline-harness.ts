@@ -110,6 +110,40 @@ function copy(row: Row): Row {
   return JSON.parse(JSON.stringify(row)) as Row;
 }
 
+/**
+ * Simula o round-trip JSONB do Postgres: objetos voltam com as chaves em outra
+ * ordem (aqui, invertida recursivamente). Arrays preservam a ordem; strings
+ * (inclusive `briefingText`) NAO sao tocadas.
+ */
+function reorderJsonbKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(reorderJsonbKeys);
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    return Object.fromEntries(
+      entries
+        .slice()
+        .reverse()
+        .map(([key, entry]) => [key, reorderJsonbKeys(entry)]),
+    );
+  }
+  return value;
+}
+
+function shapeRow(row: Row): Row {
+  if (row.__table !== "campaigns") return row;
+  return {
+    ...row,
+    input_snapshot:
+      row.input_snapshot === null || row.input_snapshot === undefined
+        ? row.input_snapshot
+        : reorderJsonbKeys(row.input_snapshot),
+    identity_snapshot:
+      row.identity_snapshot === null || row.identity_snapshot === undefined
+        ? row.identity_snapshot
+        : reorderJsonbKeys(row.identity_snapshot),
+  };
+}
+
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -153,7 +187,7 @@ export function createOfflineWorld() {
       const comparator = orderers[order[0]];
       if (comparator) matched = [...matched].sort(order[1] ? comparator : (a, b) => comparator(b, a));
     }
-    return matched.map(copy);
+    return matched.map((row) => copy(shapeRow(row)));
   }
 
   function builder(table: string, filters: [string, unknown][] = [], order?: [string, boolean]) {

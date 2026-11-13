@@ -625,5 +625,14 @@
     },
     "impact": "Base step failed definitively before acquire/provider. No vertical, copy, thumbnail or provider call. Source campaign preserved. Target campaign is error and credit refunded once.",
     "minimalNextDecision": "Fix resumeContext.briefingText comparison to use canonical JSON (or persist/read canonical text) and then request a NEW authorization for a NEW operation; do not reuse this operation and do not retry under the current authorization."
+  },
+  "remediation": {
+    "status": "fix-applied-awaiting-review",
+    "doc": "60.5-04-REVIEW-FIX.md",
+    "appliedAt": "2026-11-13T21:55:58.739Z",
+    "scope": "offline",
+    "newCallAuthorized": false,
+    "operationReuseAllowed": false,
+    "summary": "Comparacao de briefingText passou a usar JSON canonico; briefingText original preservado; regressoes e harness com reordenacao JSONB adicionados."
   }
 }

@@ -85,10 +85,6 @@ function check(items, id, label, ok, detail, options = {}) {
   return ok;
 }
 
-function info(items, id, label, detail) {
-  items.push({ id, label, status: "INFO", detail, critical: false });
-}
-
 function makeClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -644,7 +640,7 @@ async function apply(manifest, preflight) {
   const { createCampaign, uploadCampaignInputFile } = await import(
     "../../src/lib/campaign/persistence.ts"
   );
-  const { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot, mimeTypeFromDataUrl } =
+  const { buildCampaignBriefFromFlat, buildCampaignBriefSnapshot } =
     await import("../../src/lib/campaign/brief.ts");
   const { describeDurableInput, verifyReconstructedInput } = await import(
     "../../src/lib/product-9-16-two-stage/orchestration/durable-input.ts"
@@ -673,7 +669,6 @@ async function apply(manifest, preflight) {
   const { createNineSixteenDeps } = await import(
     "../../src/lib/product-9-16-two-stage/orchestration/delivery-deps.ts"
   );
-  const { createHash } = await import("node:crypto");
 
   const campaignId = manifest.targetCampaign.campaignIdProposed;
   const operationId = manifest.targetCampaign.operationIdProposed;
@@ -683,10 +678,6 @@ async function apply(manifest, preflight) {
   const identitySnapshot = source.identitySnapshot ?? {};
   const brandProfile = identitySnapshot?.brandProfile ?? null;
   const identityStoreName = identitySnapshot?.storeName ?? source.store.name;
-  const identityStoreSegment =
-    identitySnapshot?.storeSegment ??
-    identitySnapshot?.subsegment ??
-    source.store.segment;
   const backgroundDirection = "studio";
 
   const legacyDirective =
@@ -1494,6 +1485,7 @@ async function snapshotExecution(
     steps: steps ?? [],
     claims: claims ?? [],
     outcome: outcome ?? null,
+    operation: operation ?? null,
     cost: {
       observedCostUsd,
       costAvailable,

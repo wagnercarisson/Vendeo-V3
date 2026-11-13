@@ -81,6 +81,110 @@ describe("reconstructFirstExecution", () => {
     expect(result.frozenState).toBe("absent");
   });
 
+  async function reconstructWithResume(
+    resume: Record<string, unknown>,
+  ) {
+    return reconstructFirstExecution(
+      {
+        campaignId: "c",
+        operationId: "o",
+        storeId: "s",
+        frozen: { kind: "absent" },
+      },
+      {
+        client: fakeClient({
+          input_snapshot: { resumeContext: resume, frozenContentReferences },
+          identity_snapshot: null,
+        }),
+        readInputBytes: async () => ({ kind: "bytes", bytes: BYTES }),
+      },
+    );
+  }
+
+  it("aceita briefing com chaves reordenadas (JSONB round-trip), inclusive aninhadas", async () => {
+    const reorderedBriefing = {
+      constraints: { mandatoryArtworkText: null },
+      commercial: { intent: "offer" },
+      product: { name: "Produto" },
+      backgroundDirection: "studio",
+    };
+    const result = await reconstructWithResume({
+      ...resumeContext,
+      briefing: reorderedBriefing,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // A string ORIGINAL e preservada (nao reescrita pelo canonicalizador).
+    expect(result.content.briefingText).toBe(JSON.stringify(briefing));
+    expect(result.content.briefing).toEqual(reorderedBriefing);
+  });
+
+  it.each([
+    ["produto", { ...briefing, product: { name: "Outro Produto" } }],
+    [
+      "preco",
+      {
+        ...briefing,
+        commercial: { intent: "offer", discountedPriceText: "R$ 9,90" },
+      },
+    ],
+    [
+      "texto obrigatorio",
+      {
+        ...briefing,
+        constraints: { mandatoryArtworkText: "Texto diferente" },
+      },
+    ],
+  ])("recusa conteudo realmente diferente (%s)", async (_label, changedBriefing) => {
+    const result = await reconstructWithResume({
+      ...resumeContext,
+      briefing: changedBriefing,
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason: "resume_context_malformed",
+      definitive: true,
+    });
+  });
+
+  it("recusa briefingText com JSON invalido", async () => {
+    const result = await reconstructWithResume({
+      ...resumeContext,
+      briefingText: "{not-json",
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason: "resume_context_malformed",
+      definitive: true,
+    });
+  });
+
+  it("mantem arrays sensiveis a ordem (nao canonicaliza a ordem dos itens)", async () => {
+    const arrayBriefing = {
+      ...briefing,
+      constraints: {
+        mandatoryArtworkText: null,
+        notes: ["primeiro", "segundo"],
+      },
+    };
+    const result = await reconstructWithResume({
+      ...resumeContext,
+      briefing: arrayBriefing,
+      briefingText: JSON.stringify({
+        ...briefing,
+        constraints: {
+          mandatoryArtworkText: null,
+          notes: ["segundo", "primeiro"],
+        },
+      }),
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason: "resume_context_malformed",
+      definitive: true,
+    });
+  });
+
   it("fails closed for missing input file", async () => {
     const result = await reconstructFirstExecution(
       {
