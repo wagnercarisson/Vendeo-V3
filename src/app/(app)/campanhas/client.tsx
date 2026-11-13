@@ -259,7 +259,7 @@ function campaignStatusDisplay(
   return { text: messages.error, className: "text-accent-red" };
 }
 
-function CampaignCard({
+export function CampaignCard({
   campaign,
   index,
   messages,
