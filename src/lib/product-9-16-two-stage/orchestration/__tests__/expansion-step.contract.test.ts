@@ -133,8 +133,7 @@ describe("runExpansionStep", () => {
     expect(calls(d, "control.finish")).toHaveLength(1);
   });
 
-  it("does not advance when finish is refused", async () => {
-    const d = deps({
+  it("does not advance when finish is refused", async () => {    const d = deps({
       control: {
         acquire: vi.fn(async () => ({
           acquired: true,
@@ -189,5 +188,41 @@ describe("runExpansionStep", () => {
     expect(result).toMatchObject({ kind: "unknown" });
     expect(result).not.toMatchObject({ kind: "completed" });
     expect(calls(d, "control.getOperationView")).toHaveLength(1);
+  });
+
+  it("treats an indeterminate prepared source as recoverable pre-call processing", async () => {
+    const d = deps({
+      retrieve: vi.fn(async () => ({ kind: "indeterminate" })),
+    });
+    const result = await runExpansionStep(expansionInput(), d);
+    expect(result).toMatchObject({
+      kind: "processing",
+      state: "between_steps",
+      nextStep: "expansion",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+  });
+
+  it("rechecks cancellation after the source read and before acquire", async () => {
+    const controller = new AbortController();
+    const d = deps({
+      retrieve: vi.fn(async () => {
+        controller.abort();
+        return { kind: "integral", artifact: sourceArtifact, bytes: Buffer.alloc(0) };
+      }),
+    });
+    const result = await runExpansionStep(
+      { ...(expansionInput() as object), signal: controller.signal } as never,
+      d,
+    );
+    expect(result).toMatchObject({
+      kind: "processing",
+      reason: "aborted",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
   });
 });

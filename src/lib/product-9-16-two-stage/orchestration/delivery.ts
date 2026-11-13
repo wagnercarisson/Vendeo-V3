@@ -105,17 +105,19 @@ export async function deliverVertical(
   if (resume.creditStatus === "refunded") return { kind: "definitive", reason: "operation_terminal" };
   if (resume.creditStatus === "delivered") {
     // Replay entregue: reparar a projecao (e a miniatura) antes de declarar
-    // sucesso. A sonda e read-only e so fornece o caminho do vertical.
+    // sucesso. A sonda e read-only e so fornece o caminho do vertical; sem
+    // vertical integral NAO se anuncia entrega integra.
     const probe = await deps.probeVertical.probeVerticalArtifact({
       storeId: input.storeId,
       campaignId: input.campaignId,
       operationId: input.operationId,
     });
-    return projectDeliveredAndThumbnail(
-      input,
-      deps,
-      probe.kind === "integral" ? probe.storagePath : null,
-    );
+    if (probe.kind !== "integral") {
+      return probe.kind === "indeterminate"
+        ? { kind: "unknown", reason: "vertical_indeterminate" }
+        : { kind: "unknown", reason: `delivered_without_integral_vertical_${probe.kind}` };
+    }
+    return projectDeliveredAndThumbnail(input, deps, probe.storagePath);
   }
   if (resume.baseStatus !== "done" || resume.expansionStatus !== "done") {
     return { kind: "processing", reason: "delivery_pending" };

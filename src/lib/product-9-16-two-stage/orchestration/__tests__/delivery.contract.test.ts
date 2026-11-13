@@ -136,6 +136,33 @@ describe("delivery", () => {
     expect(calls(d, "financial.confirmOnVerticalDelivery")).toHaveLength(0);
   });
 
+  it("does not announce an integral delivery when the vertical is absent on replay", async () => {
+    const d = deps({
+      control: {
+        resume: vi.fn(async () => ({
+          success: true,
+          action: "blocked",
+          nextTarget: null,
+          origin: "9_16_two_stage",
+          creditStatus: "delivered",
+          baseStatus: "done",
+          baseAttempts: 1,
+          expansionStatus: "done",
+          expansionAttempts: 1,
+          unknown: false,
+          failedOutcome: false,
+        })),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      probeVertical: { probeVerticalArtifact: vi.fn(async () => ({ kind: "absent" })) },
+    });
+    const result = await deliverVertical(input, d);
+    expect(result).toMatchObject({ kind: "unknown" });
+    expect(result).not.toMatchObject({ kind: "completed" });
+    expect(calls(d, "projectDelivered")).toHaveLength(0);
+  });
+
   it("keeps a failed projection pending and repairs it on the next replay", async () => {
     const projectDelivered = vi
       .fn()

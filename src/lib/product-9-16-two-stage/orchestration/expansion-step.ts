@@ -81,6 +81,27 @@ function outcomeForFailure(result: Exclude<ExpandVerticalResult, { kind: "expand
   }
 }
 
+function recoverable(reason: string): StepExecutionOutcome {
+  return {
+    kind: "processing",
+    state: "between_steps",
+    nextStep: "expansion",
+    canContinue: true,
+    reason,
+  };
+}
+
+function preCallGate(
+  input: ExpansionStepInput,
+  deps: ExpansionStepDeps,
+): StepExecutionOutcome | null {
+  if (input.signal?.aborted) return recoverable("aborted");
+  if (!canAffordStep(deps.clock(), input.deadlineAtMs, "expansion")) {
+    return recoverable("deadline_exceeded");
+  }
+  return null;
+}
+
 export async function runExpansionStep(
   input: ExpansionStepInput,
   deps: ExpansionStepDeps,
@@ -92,49 +113,63 @@ export async function runExpansionStep(
   if (input.expansionStatus === "in_progress") {
     return { kind: "processing", state: "step_in_progress", nextStep: "expansion", canContinue: false };
   }
-  if (!canAffordStep(deps.clock(), input.deadlineAtMs, "expansion")) {
-    return { kind: "processing", state: "between_steps", nextStep: "expansion", canContinue: true };
-  }
+  const initialGate = preCallGate(input, deps);
+  if (initialGate) return initialGate;
 
   const retrieve = deps.retrieve ?? retrieveCompositionArtifact;
-  const source = await retrieve(
-    {
-      identity: {
-        storeId: input.storeId,
-        campaignId: input.campaignId,
-        operationId: input.operationId,
-        role: "square_prepared",
+  let source: Awaited<ReturnType<typeof retrieve>>;
+  try {
+    source = await retrieve(
+      {
+        identity: {
+          storeId: input.storeId,
+          campaignId: input.campaignId,
+          operationId: input.operationId,
+          role: "square_prepared",
+        },
+        authorization: input.authorization,
       },
-      authorization: input.authorization,
-    },
-    deps.client === undefined ? {} : { client: deps.client as never },
-  );
+      deps.client === undefined ? {} : { client: deps.client as never },
+    );
+  } catch {
+    return recoverable("source_read_failed");
+  }
   if (source.kind !== "integral") {
+    // Leitura indeterminada da fonte e pre-chamada: recuperavel, sem desfecho.
     return source.kind === "indeterminate"
-      ? { kind: "unknown", reason: "source_indeterminate" }
+      ? recoverable("source_indeterminate")
       : { kind: "definitive", reason: `source_${source.kind}` };
   }
   const sourceArtifact: ArtifactRecord = source.artifact;
   const probe = deps.probe ?? probeExpansionTarget;
-  const probeResult = await probe(
-    {
-      destination: {
-        storeId: input.storeId,
-        campaignId: input.campaignId,
-        operationId: input.operationId,
-        role: "vertical",
+  let probeResult: Awaited<ReturnType<typeof probe>>;
+  try {
+    probeResult = await probe(
+      {
+        destination: {
+          storeId: input.storeId,
+          campaignId: input.campaignId,
+          operationId: input.operationId,
+          role: "vertical",
+        },
+        source: sourceArtifact,
+        authorization: input.authorization,
       },
-      source: sourceArtifact,
-      authorization: input.authorization,
-    },
-    deps.client === undefined ? {} : { client: deps.client as never },
-  );
+      deps.client === undefined ? {} : { client: deps.client as never },
+    );
+  } catch {
+    return recoverable("probe_read_failed");
+  }
   if (probeResult.kind === "blocked") {
-    return { kind: "processing", state: "between_steps", nextStep: "expansion", canContinue: true, reason: "probe_indeterminate" };
+    return recoverable("probe_indeterminate");
   }
   if (probeResult.kind === "conflict") {
     return { kind: "definitive", reason: probeResult.reason };
   }
+
+  // Revalidar cancelamento/orcamento apos as leituras lentas, antes de adquirir.
+  const gate = preCallGate(input, deps);
+  if (gate) return gate;
 
   const acquire = await deps.control.acquire({
     campaignId: input.campaignId,

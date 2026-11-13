@@ -75,7 +75,7 @@ function deps(overrides: Record<string, unknown> = {}) {
   } as never;
 }
 
-function stepInput(frozenState: unknown) {
+function stepInput(frozenState: unknown, overrides: Record<string, unknown> = {}) {
   return {
     storeId: "s",
     campaignId: "c",
@@ -89,6 +89,7 @@ function stepInput(frozenState: unknown) {
     baseStatus: "pending",
     allowNewPaidStep: true,
     frozenState,
+    ...overrides,
   } as never;
 }
 
@@ -169,5 +170,62 @@ describe("runBaseStep", () => {
     await expect(runBaseStep(stepInput({ kind: "complete" }), d)).resolves.toEqual({
       kind: "completed",
     });
+  });
+
+  it("treats a pre-call reconstruction read failure as recoverable processing", async () => {
+    const failingClient = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: null, error: { message: "boom" } }),
+          }),
+        }),
+      }),
+    } as never;
+    const d = deps({ client: failingClient, readInputBytes: undefined });
+    const result = await runBaseStep(stepInput({ kind: "absent" }), d);
+    expect(result).toMatchObject({
+      kind: "processing",
+      state: "between_steps",
+      nextStep: "base",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+  });
+
+  it("rechecks cancellation after reconstruction and before acquire", async () => {
+    const controller = new AbortController();
+    const d = deps({
+      readInputBytes: async () => {
+        controller.abort();
+        return { kind: "bytes", bytes: Buffer.from("durable-image-bytes") };
+      },
+    });
+    const result = await runBaseStep(
+      stepInput({ kind: "complete" }, { signal: controller.signal }),
+      d,
+    );
+    expect(result).toMatchObject({
+      kind: "processing",
+      reason: "aborted",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+  });
+
+  it("rechecks the deadline after reconstruction and before acquire", async () => {
+    let clockCalls = 0;
+    const d = deps({
+      clock: () => (clockCalls++ === 0 ? 0 : 999_999),
+    });
+    const result = await runBaseStep(stepInput({ kind: "complete" }), d);
+    expect(result).toMatchObject({
+      kind: "processing",
+      reason: "deadline_exceeded",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
   });
 });

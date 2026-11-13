@@ -192,8 +192,9 @@ async function handleFinalizedFailure(
     return;
   }
   if (finalized.kind === "delivery_required") {
-    // Vertical integro: entregar/reparar projecao em vez de estornar.
-    await deliverAndEmit(input, deps, stream);
+    // Vertical integro com etapa ja falhada: resolucao administrativa, sem
+    // prometer continuacao automatica e sem novo efeito financeiro.
+    stream.emitTerminal(processingEvent(input, "delivery_pending", "delivery", false));
     return;
   }
   stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
@@ -309,6 +310,7 @@ async function runBase(
       baseStatus: options.baseStatus,
       allowNewPaidStep: options.allowNewPaidStep,
       frozenState: options.frozen,
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
     },
     withReconstruction(deps),
   );
@@ -352,6 +354,7 @@ async function runExpansion(
       deadlineAtMs: options.deadlineAtMs,
       expansionStatus: options.expansionStatus,
       allowNewPaidStep: options.allowNewPaidStep,
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
     },
     {
       ...withReconstruction(deps),
@@ -457,6 +460,23 @@ async function execute(
       return;
     }
     if (resume.action === "blocked") {
+      // A RPC devolve `blocked` tambem para credito terminal e desfecho
+      // desconhecido; o estado duravel decide o desfecho correto.
+      if (view.credit.delivered) {
+        // Entregue: reparar projecao sem nova cobranca/confirmacao.
+        await deliverAndEmit(input, deps, stream);
+        return;
+      }
+      if (view.credit.refunded) {
+        stream.emitTerminal(
+          errorEvent(input, "operation_refunded", "A geração foi encerrada e o crédito devolvido.", true),
+        );
+        return;
+      }
+      if (view.unknown) {
+        stream.emitTerminal(unknownEvent(input, view.supportReference ?? input.operationId));
+        return;
+      }
       const reason = classifyBlockedState(view);
       if (reason === "attempt_limit_exhausted" || reason === "known_final_failure") {
         const finalized = await finalizeExhaustedLimit(

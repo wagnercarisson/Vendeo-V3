@@ -491,9 +491,22 @@ describe("runNineSixteenTwoStageGeneration", () => {
       control: {
         getOperationView: vi.fn(async () => ({
           kind: "found",
-          view: makeView({ nextAction: "deliver" }),
+          view: makeView({
+            credit: {
+              status: "delivered",
+              terminal: true,
+              delivered: true,
+              refunded: false,
+              reserved: false,
+            },
+            nextAction: "blocked",
+            canContinue: false,
+          }),
         })),
-        resume: vi.fn(async () => resumeResult("deliver", { creditStatus: "delivered" })),
+        // Envelope REAL da RPC: credito entregue tambem devolve `blocked`.
+        resume: vi.fn(async () =>
+          resumeResult("blocked", { creditStatus: "delivered" }),
+        ),
         acquire: vi.fn(),
         finish: vi.fn(),
         recordOutcome: vi.fn(),
@@ -503,6 +516,7 @@ describe("runNineSixteenTwoStageGeneration", () => {
     expect(terminal(events)).toMatchObject({ type: "result" });
     expect(calls(d, "projectDelivered")).toHaveLength(1);
     expect(calls(d, "credit.beginPublication")).toHaveLength(0);
+    expect(calls(d, "financial.confirmOnVerticalDelivery")).toHaveLength(0);
   });
 
   it("exhausted limit with absent vertical refunds once and never retries", async () => {
@@ -544,7 +558,7 @@ describe("runNineSixteenTwoStageGeneration", () => {
     expect(calls(d, "control.acquire")).toHaveLength(0);
   });
 
-  it("exhausted limit with an integral vertical delivers instead of refunding", async () => {
+  it("exhausted limit with an integral vertical routes to administrative resolution without refund or auto-continuation", async () => {
     const d = deps({
       control: {
         getOperationView: vi.fn(async () => ({
@@ -558,21 +572,24 @@ describe("runNineSixteenTwoStageGeneration", () => {
             canContinue: false,
           }),
         })),
-        resume: vi
-          .fn()
-          .mockResolvedValueOnce(
-            resumeResult("blocked", { expansionStatus: "failed", expansionAttempts: 2 }),
-          )
-          .mockResolvedValueOnce(deliveryResume()),
+        resume: vi.fn(async () =>
+          resumeResult("blocked", { expansionStatus: "failed", expansionAttempts: 2 }),
+        ),
         acquire: vi.fn(),
         finish: vi.fn(),
         recordOutcome: vi.fn(),
       },
     });
     const events = await run(continueInput(), d);
-    expect(terminal(events)).toMatchObject({ type: "result" });
+    expect(terminal(events)).toMatchObject({
+      type: "processing",
+      state: "delivery_pending",
+      nextStep: "delivery",
+      canContinue: false,
+    });
     expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
-    expect(calls(d, "projectDelivered")).toHaveLength(1);
+    expect(calls(d, "projectDelivered")).toHaveLength(0);
+    expect(calls(d, "credit.beginPublication")).toHaveLength(0);
   });
 
   it("exhausted limit with indeterminate evidence records unknown without refund", async () => {
@@ -765,6 +782,203 @@ describe("runNineSixteenTwoStageGeneration", () => {
       rest += decoder.decode(chunk.value);
     }
     expect(rest).toContain('"type":"result"');
+  });
+
+  it("blocked with refunded credit returns a terminal closure", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            credit: {
+              status: "refunded",
+              terminal: true,
+              delivered: false,
+              refunded: true,
+              reserved: false,
+            },
+            nextAction: "blocked",
+            canContinue: false,
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("blocked", { creditStatus: "refunded" }),
+        ),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+    });
+    const events = await run(continueInput(), d);
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "operation_refunded",
+      refunded: true,
+    });
+    expect(calls(d, "control.recordOutcome")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+  });
+
+  it("blocked with a persisted unknown outcome returns unknown with its support reference", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            unknown: true,
+            supportReference: "sup-1",
+            nextAction: "blocked",
+            canContinue: false,
+          }),
+        })),
+        resume: vi.fn(async () => resumeResult("blocked")),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+    });
+    const events = await run(continueInput(), d);
+    expect(terminal(events)).toMatchObject({ type: "unknown", reference: "sup-1" });
+    expect(calls(d, "control.recordOutcome")).toHaveLength(0);
+  });
+
+  it("pre-call read failure is recoverable: no acquire/provider/outcome, next read continues", async () => {
+    const failingClient = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: null, error: { message: "boom" } }),
+          }),
+        }),
+      }),
+    } as never;
+    const first = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "pending"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_base",
+          }),
+        })),
+        resume: vi.fn(async () => resumeResult("acquire_base")),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      reconstruction: { client: failingClient },
+    });
+    const firstEvents = await run(continueInput(), first);
+    expect(terminal(firstEvents)).toMatchObject({
+      type: "processing",
+      state: "between_steps",
+      nextStep: "base",
+      canContinue: true,
+    });
+    expect(calls(first, "control.acquire")).toHaveLength(0);
+    expect(calls(first, "base")).toHaveLength(0);
+    expect(calls(first, "control.recordOutcome")).toHaveLength(0);
+    expect(calls(first, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+
+    const second = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "pending"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_base",
+          }),
+        })),
+        resume: vi.fn(async () => resumeResult("acquire_base")),
+        acquire: vi.fn(async () => ({
+          acquired: true,
+          authorization: "execute",
+          reason: null,
+          attemptToken: "t",
+          attemptNumber: 1,
+          stage: "base",
+          target: "primary",
+        })),
+        finish: vi.fn(async () => ({
+          success: true,
+          idempotent: false,
+          status: "completed",
+          stage: "base",
+          attemptNumber: 1,
+        })),
+        recordOutcome: vi.fn(),
+      },
+      reconstruction: durableReconstruction(),
+    });
+    const secondEvents = await run(continueInput(), second);
+    expect(terminal(secondEvents)).toMatchObject({
+      type: "processing",
+      nextStep: "expansion",
+    });
+    expect(calls(second, "base")).toHaveLength(1);
+    expect(calls(second, "control.acquire")).toHaveLength(1);
+  });
+
+  it("propagates cancellation to the base before any paid call", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "pending"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_base",
+          }),
+        })),
+        resume: vi.fn(async () => resumeResult("acquire_base")),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+    });
+    const events = await run(continueInput({ signal: controller.signal }), d);
+    expect(terminal(events)).toMatchObject({
+      type: "processing",
+      nextStep: "base",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+  });
+
+  it("propagates cancellation to the expansion before any paid call", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "done"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_expansion",
+          }),
+        })),
+        resume: vi.fn(async () => resumeResult("acquire_expansion")),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+    });
+    const events = await run(continueInput({ signal: controller.signal }), d);
+    expect(terminal(events)).toMatchObject({
+      type: "processing",
+      nextStep: "expansion",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    // A preparacao gratuita pode rodar; a expansao paga nao.
+    expect(calls(d, "prepare")).toHaveLength(1);
   });
 
   it("turns an unhandled exception into exactly one safe terminal", async () => {
