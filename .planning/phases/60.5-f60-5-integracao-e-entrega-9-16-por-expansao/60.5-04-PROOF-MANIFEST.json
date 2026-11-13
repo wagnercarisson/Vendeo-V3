@@ -2,8 +2,8 @@
   "kind": "f60.5-proof-manifest",
   "plan": "60.5-04",
   "phase": "60.5-f60-5-integracao-e-entrega-9-16-por-expansao",
-  "status": "failed",
-  "createdAt": "2026-11-13T20:51:58.411Z",
+  "status": "awaiting-authorization",
+  "createdAt": "2026-11-13T22:09:02.798Z",
   "offlinePreparation": true,
   "environment": {
     "target": "homolog-existing",
@@ -79,11 +79,11 @@
   },
   "targetCampaign": {
     "mode": "created",
-    "campaignIdProposed": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
-    "operationIdProposed": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+    "campaignIdProposed": "b953eb33-8714-4c04-a489-f56ab437b38e",
+    "operationIdProposed": "eff8ebec-d5ea-4ff2-b313-27aece35fd68",
     "attemptNumber": 1,
     "attemptTarget": "primary",
-    "attemptReference": "f60.5-proof-c51d24d6-7e76-48bd-9a7d-b5ea525ac898",
+    "attemptReference": "f60.5-proof-290104e3-b66a-4963-8c73-323e824b8cce",
     "generationOrigin": "9_16_two_stage",
     "generationContractVersion": "f60.5-two-stage-9-16-v1",
     "campaignFormat": "9:16",
@@ -186,24 +186,26 @@
     "estimateIsNotProviderHardLimit": true
   },
   "authorization": {
-    "decision": "approved",
-    "requestedAt": "2026-11-13T20:51:58.411Z",
-    "decidedAt": "2026-11-13T21:00:00.000Z",
-    "decidedBy": "operator",
+    "decision": "pending",
+    "requestedAt": "2026-11-13T22:09:02.798Z",
+    "decidedAt": null,
+    "decidedBy": null,
     "requestedBudgetUsd": 0.12,
-    "authorizedBudgetUsd": 0.12,
+    "authorizedBudgetUsd": null,
     "requestedMaxPaidCalls": 3,
-    "authorizedMaxPaidCalls": 3,
+    "authorizedMaxPaidCalls": null,
     "requestedExecutionMode": "authorize-server",
-    "authorizedExecutionMode": "authorize-server",
+    "authorizedExecutionMode": null,
     "humanAcceptanceOwner": "operator",
-    "notes": "Autorizacao explicita: homolog existente, campanha/operacao propostas, ate 1 base + 1 copy + 1 expansao, teto US$ 0,12, sem retry/fallback; revalidar antes de escrita/gasto e preservar a fonte."
+    "notes": "Segunda tentativa: campanha e operacao novas; a operacao anterior falhou/estornada e nao sera reutilizada. Nenhuma chamada autorizada nesta preparacao."
   },
   "preflight": {
-    "path": "60.5-04-PREFLIGHT.json",
-    "status": "ready",
-    "ready": true,
-    "executedAt": "2026-11-13T21:05:19.783Z"
+    "status": "not_run",
+    "ready": false,
+    "executedAt": null,
+    "providerCalls": 0,
+    "writesPerformed": 0,
+    "items": []
   },
   "writesAfterApproval": [
     "campaigns: 1 campanha-alvo nova com origem/inputFiles/resumeContext/identity_snapshot",
@@ -266,373 +268,54 @@
     "retry/fallback",
     "URL assinada/publica ou segredo no manifesto/relatorio"
   ],
+  "priorAttempts": [
+    {
+      "attempt": 1,
+      "status": "failed-before-provider",
+      "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
+      "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+      "startedAt": "2026-11-13T21:06:34.796Z",
+      "finishedAt": "2026-11-13T21:06:37.441Z",
+      "terminal": {
+        "type": "error",
+        "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
+        "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
+        "code": "generation_failed",
+        "message": "A geração falhou e o crédito foi devolvido.",
+        "refunded": true
+      },
+      "paidCalls": 0,
+      "credit": {
+        "status": "refunded",
+        "amount": 1,
+        "reservations": 1,
+        "confirmations": 0,
+        "refunds": 1,
+        "stateEpoch": 1,
+        "publicationState": "none"
+      },
+      "rootCause": "reconstructFirstExecution compares resumeContext.briefingText (JSON.stringify at write time) with JSON.stringify(briefing) after the campaigns.input_snapshot JSONB round-trip. PostgreSQL JSONB returns object keys in a different order, so the strings differ although the content is semantically identical.",
+      "evidence": [
+        "evidence/proof-manifest-attempt-1.json",
+        "evidence/preflight-attempt-1.json",
+        "evidence/proof-report-attempt-1.md",
+        "evidence/diagnosis-resume-context.json"
+      ],
+      "remediation": "60.5-04-REVIEW-FIX.md",
+      "remediationStatus": "approved-offline-2026-11-13",
+      "reused": false
+    }
+  ],
+  "remediation": {
+    "status": "approved-offline",
+    "doc": "60.5-04-REVIEW-FIX.md",
+    "approvedAt": "2026-11-13",
+    "newCallAuthorized": false,
+    "operationReuseAllowed": false
+  },
   "providerCalls": 0,
   "aiCalls": 0,
   "readsPerformed": 0,
-  "writesPerformed": 1,
-  "flagChanges": 0,
-  "execution": {
-    "startedAt": "2026-11-13T21:06:34.796Z",
-    "invokeStartedAt": "2026-11-13T21:06:36.928Z",
-    "invokeEndedAt": "2026-11-13T21:06:37.389Z",
-    "finishedAt": "2026-11-13T21:06:37.441Z",
-    "executionError": null,
-    "status": "error"
-  },
-  "calls": [],
-  "invocations": [],
-  "freeInvocations": [],
-  "terminal": {
-    "type": "error",
-    "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
-    "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
-    "code": "generation_failed",
-    "message": "A geração falhou e o crédito foi devolvido.",
-    "refunded": true
-  },
-  "preparation": {
-    "mode": "created",
-    "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
-    "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
-    "generationOrigin": "9_16_two_stage",
-    "generationContractVersion": "f60.5-two-stage-9-16-v1",
-    "campaignFormat": "9:16",
-    "inputFiles": [
-      {
-        "kind": "product",
-        "role": "primary",
-        "index": 0,
-        "contentId": "84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb",
-        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/98925e2c-5032-4544-8ae8-06fe6a4a7ebd/inputs/84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb.jpg",
-        "mimeType": "image/jpeg",
-        "dataUrlPrefix": "data:image/jpeg;base64,",
-        "byteSize": 54523
-      },
-      {
-        "kind": "product",
-        "role": "reference",
-        "index": 1,
-        "contentId": "01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e",
-        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/98925e2c-5032-4544-8ae8-06fe6a4a7ebd/inputs/01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e.jpg",
-        "mimeType": "image/jpeg",
-        "dataUrlPrefix": "data:image/jpeg;base64,",
-        "byteSize": 87532
-      },
-      {
-        "kind": "identity",
-        "role": "identity",
-        "index": 2,
-        "contentId": "e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44",
-        "storagePath": "3dc7d274-0b57-45ba-883a-7b235056feda/98925e2c-5032-4544-8ae8-06fe6a4a7ebd/inputs/e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44.png",
-        "mimeType": "image/png",
-        "dataUrlPrefix": "data:image/png;base64,",
-        "byteSize": 884182
-      }
-    ],
-    "resumeContext": {
-      "briefing": true,
-      "briefingText": true,
-      "campaignIntent": true,
-      "backgroundDirection": true,
-      "identityDirective": true,
-      "identityContext": true,
-      "copyContext": true,
-      "economicSnapshot": true,
-      "inputFiles": true
-    },
-    "inputsUploaded": 3,
-    "inputHashVerified": true,
-    "resumeContextHashExcluded": true,
-    "identityContentIdStrategy": "sha256_data_url",
-    "preparedAt": "2026-11-13T21:06:36.928Z",
-    "campaignCreated": true,
-    "frozenContentReferences": [
-      {
-        "kind": "product",
-        "id": "84c078f5e217387500ff7d00e8fef15085f98ff1179aa7fe1f7e72804e9bd0cb",
-        "role": "primary",
-        "index": 0
-      },
-      {
-        "kind": "reference",
-        "id": "01ab1ae1c4576f5d847e0fcebc89bdd1e7cd2141b1318bf17f61e40e147ec05e",
-        "role": "reference",
-        "index": 1
-      },
-      {
-        "kind": "identity",
-        "id": "e6d315d4528f86637745b5c12947526412a8f35b64583a66cc695895036daf44",
-        "role": "identity",
-        "index": 2
-      }
-    ]
-  },
-  "delivery": {
-    "beginPublicationCalls": 0,
-    "confirmations": 0,
-    "order": "not_observed",
-    "deliveryCompleted": false
-  },
-  "copy": {
-    "rows": [],
-    "completed": false
-  },
-  "credit": {
-    "status": "refunded",
-    "amount": 1,
-    "reservations": 1,
-    "confirmations": 0,
-    "refunds": 1,
-    "stateEpoch": 1,
-    "publicationState": "none"
-  },
-  "artifact": null,
-  "baseArtifact": null,
-  "preparedArtifact": null,
-  "steps": [
-    {
-      "stage": "base",
-      "status": "pending",
-      "attempts_used": 0,
-      "failure_class": null
-    },
-    {
-      "stage": "expansion",
-      "status": "pending",
-      "attempts_used": 0,
-      "failure_class": null
-    }
-  ],
-  "claims": [],
-  "outcome": {
-    "outcome": "failed",
-    "stage": "base",
-    "support_reference": null
-  },
-  "cost": {
-    "observedCostUsd": 0,
-    "costAvailable": true,
-    "withinBudget": true,
-    "budgetUsd": 0.12,
-    "callCount": 0
-  },
-  "technical": {
-    "pass": false,
-    "checkedAt": "2026-11-13T21:06:37.441Z",
-    "checks": [
-      {
-        "id": "terminal",
-        "label": "Terminal resultado entregue",
-        "status": "FAIL",
-        "detail": "error:generation_failed"
-      },
-      {
-        "id": "campaign_projected",
-        "label": "Campanha projetada ready",
-        "status": "FAIL",
-        "detail": "status=error"
-      },
-      {
-        "id": "vertical_row",
-        "label": "Vertical persistido 1080x1920 JPEG",
-        "status": "FAIL",
-        "detail": "missing"
-      },
-      {
-        "id": "vertical_checksum",
-        "label": "Checksum do vertical confere",
-        "status": "FAIL",
-        "detail": "mismatch"
-      },
-      {
-        "id": "thumbnail",
-        "label": "Miniatura derivada presente",
-        "status": "FAIL",
-        "detail": "missing"
-      },
-      {
-        "id": "no_integral_in_campaign_images",
-        "label": "Nenhum vertical integral em campaign-images",
-        "status": "PASS",
-        "detail": "ok"
-      },
-      {
-        "id": "copy",
-        "label": "Copy entregue ou falha nao bloqueante",
-        "status": "PASS",
-        "detail": "copyRows=0; completed=false"
-      },
-      {
-        "id": "credit",
-        "label": "Credito: reserva/confirmacao coerentes",
-        "status": "PASS",
-        "detail": "status=refunded; amount=1"
-      },
-      {
-        "id": "cost_available",
-        "label": "Custo disponivel e dentro do teto",
-        "status": "PASS",
-        "detail": "calls=0; observed=0; budget=0.12"
-      },
-      {
-        "id": "paid_calls_cap",
-        "label": "Chamadas pagas <= 3",
-        "status": "PASS",
-        "detail": "calls=0"
-      },
-      {
-        "id": "operation_correlation",
-        "label": "generation_events correlacionados",
-        "status": "PASS",
-        "detail": "events=0"
-      },
-      {
-        "id": "source_preserved",
-        "label": "Campanha-fonte/imagens preservadas",
-        "status": "PASS",
-        "detail": "snapshot=true; identity=true; images=true; status=true"
-      },
-      {
-        "id": "uploads_verified",
-        "label": "Inputs enviados e verificados",
-        "status": "PASS",
-        "detail": "uploadsVerified=3"
-      }
-    ]
-  },
-  "acceptance": {
-    "technical": {
-      "pass": false,
-      "checkedAt": "2026-11-13T21:06:37.441Z",
-      "checks": [
-        {
-          "id": "terminal",
-          "label": "Terminal resultado entregue",
-          "status": "FAIL",
-          "detail": "error:generation_failed"
-        },
-        {
-          "id": "campaign_projected",
-          "label": "Campanha projetada ready",
-          "status": "FAIL",
-          "detail": "status=error"
-        },
-        {
-          "id": "vertical_row",
-          "label": "Vertical persistido 1080x1920 JPEG",
-          "status": "FAIL",
-          "detail": "missing"
-        },
-        {
-          "id": "vertical_checksum",
-          "label": "Checksum do vertical confere",
-          "status": "FAIL",
-          "detail": "mismatch"
-        },
-        {
-          "id": "thumbnail",
-          "label": "Miniatura derivada presente",
-          "status": "FAIL",
-          "detail": "missing"
-        },
-        {
-          "id": "no_integral_in_campaign_images",
-          "label": "Nenhum vertical integral em campaign-images",
-          "status": "PASS",
-          "detail": "ok"
-        },
-        {
-          "id": "copy",
-          "label": "Copy entregue ou falha nao bloqueante",
-          "status": "PASS",
-          "detail": "copyRows=0; completed=false"
-        },
-        {
-          "id": "credit",
-          "label": "Credito: reserva/confirmacao coerentes",
-          "status": "PASS",
-          "detail": "status=refunded; amount=1"
-        },
-        {
-          "id": "cost_available",
-          "label": "Custo disponivel e dentro do teto",
-          "status": "PASS",
-          "detail": "calls=0; observed=0; budget=0.12"
-        },
-        {
-          "id": "paid_calls_cap",
-          "label": "Chamadas pagas <= 3",
-          "status": "PASS",
-          "detail": "calls=0"
-        },
-        {
-          "id": "operation_correlation",
-          "label": "generation_events correlacionados",
-          "status": "PASS",
-          "detail": "events=0"
-        },
-        {
-          "id": "source_preserved",
-          "label": "Campanha-fonte/imagens preservadas",
-          "status": "PASS",
-          "detail": "snapshot=true; identity=true; images=true; status=true"
-        },
-        {
-          "id": "uploads_verified",
-          "label": "Inputs enviados e verificados",
-          "status": "PASS",
-          "detail": "uploadsVerified=3"
-        }
-      ]
-    },
-    "human": {
-      "status": "blocked_until_remediation",
-      "owner": "operator",
-      "notes": "No vertical delivered; human acceptance cannot be requested. Root cause recorded; new authorization required after remediation."
-    }
-  },
-  "failureAnalysis": {
-    "kind": "f60.5-failure-diagnosis",
-    "createdAt": "2026-11-13T21:08:07.818Z",
-    "campaignId": "98925e2c-5032-4544-8ae8-06fe6a4a7ebd",
-    "operationId": "68264a54-66c4-41ec-bc6f-a5961820c8fb",
-    "frozenState": "absent",
-    "reconstruction": {
-      "ok": false,
-      "reason": "resume_context_malformed",
-      "definitive": true
-    },
-    "rootCause": "reconstructFirstExecution compares resumeContext.briefingText (JSON.stringify at write time) with JSON.stringify(briefing) after the campaigns.input_snapshot JSONB round-trip. PostgreSQL JSONB returns object keys in a different order, so the strings differ although the content is semantically identical.",
-    "evidence": {
-      "briefingTextEqualsJsonStringify": false,
-      "briefingKeysPersisted": [
-        "product",
-        "commercial",
-        "constraints",
-        "backgroundDirection"
-      ],
-      "briefingTextKeyOrder": [
-        "backgroundDirection",
-        "product",
-        "commercial",
-        "constraints"
-      ],
-      "claims": 0,
-      "generationEvents": 0,
-      "paidCalls": 0,
-      "creditStatus": "refunded",
-      "refunds": 1
-    },
-    "impact": "Base step failed definitively before acquire/provider. No vertical, copy, thumbnail or provider call. Source campaign preserved. Target campaign is error and credit refunded once.",
-    "minimalNextDecision": "Fix resumeContext.briefingText comparison to use canonical JSON (or persist/read canonical text) and then request a NEW authorization for a NEW operation; do not reuse this operation and do not retry under the current authorization."
-  },
-  "remediation": {
-    "status": "fix-applied-awaiting-review",
-    "doc": "60.5-04-REVIEW-FIX.md",
-    "appliedAt": "2026-11-13T21:55:58.739Z",
-    "scope": "offline",
-    "newCallAuthorized": false,
-    "operationReuseAllowed": false,
-    "summary": "Comparacao de briefingText passou a usar JSON canonico; briefingText original preservado; regressoes e harness com reordenacao JSONB adicionados."
-  }
+  "writesPerformed": 0,
+  "flagChanges": 0
 }

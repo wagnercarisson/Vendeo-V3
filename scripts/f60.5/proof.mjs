@@ -601,6 +601,29 @@ function refuseApply(manifest, preflight) {
   if (preflight?.ready !== true) {
     fail("preflight nao esta ready");
   }
+  const expectedCampaign = manifest.targetCampaign?.campaignIdProposed;
+  const expectedOperation = manifest.targetCampaign?.operationIdProposed;
+  const observedTarget = preflight?.observed?.target;
+  if (
+    !observedTarget ||
+    observedTarget.campaignId !== expectedCampaign ||
+    observedTarget.operationId !== expectedOperation
+  ) {
+    fail("preflight nao pertence a campanha/operacao autorizadas; rode --preflight novamente");
+  }
+  if (
+    typeof manifest.authorization?.decidedAt === "string" &&
+    typeof preflight.executedAt === "string" &&
+    preflight.executedAt < manifest.authorization.decidedAt
+  ) {
+    fail("preflight anterior a autorizacao; rode --preflight novamente");
+  }
+  if (
+    (preflight.providerCalls ?? 0) !== 0 ||
+    (preflight.writesPerformed ?? 0) !== 0
+  ) {
+    fail("preflight deve ser read-only (providerCalls/writesPerformed=0)");
+  }
   if (
     (manifest.providerCalls ?? 0) > 0 ||
     (manifest.calls ?? []).length > 0
