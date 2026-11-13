@@ -3,7 +3,6 @@ import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useCampaignForm } from "../use-campaign-form";
-import type { CampaignFormRestore } from "@/lib/campaign/display";
 
 const mockPush = vi.fn();
 const mockRefresh = vi.fn();
@@ -22,6 +21,10 @@ vi.mock("@/hooks/use-input-preservation", () => ({
     restoreFormState: mockRestoreFormState,
     clearFormState: mockClearFormState,
   }),
+  scopedDraftKey: (scope?: string | null) =>
+    scope ? `campaign_draft:${scope}` : "campaign_draft",
+  scopedImageDraftKey: (scope?: string | null) =>
+    scope ? `campaign_draft_image:${scope}` : "campaign_draft_image",
 }));
 
 const VALID_DATA_URL =
@@ -182,7 +185,7 @@ describe("useCampaignForm — processing (F60.5)", () => {
     const result = await submitEligible();
 
     await waitFor(() => expect(routes.continueCalls()).toBe(3));
-    // Deixa o microtask/finally drenar: nunca dispara uma quarta chamada.
+    // Deixa o microtask/finally drenar: nunca dispara uma quarta chamada AUTOMATICA.
     await act(async () => {});
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(routes.continueCalls()).toBe(3);
@@ -202,6 +205,30 @@ describe("useCampaignForm — processing (F60.5)", () => {
       expect(pair.base.length).toBeGreaterThan(0);
     }
     expect(new Set(pairs.map((pair) => `${pair.base}:${pair.expansion}`)).size).toBe(3);
+
+    // Consulta autoritativa favoravel libera a RETOMADA MANUAL mesmo no cap.
+    await act(async () => {
+      await result.current.retryProcessingStatus();
+    });
+    expect(routes.statusCalls()).toBe(1);
+    expect(result.current.processingResult?.canContinue).toBe(true);
+
+    await act(async () => {
+      await result.current.continueGeneration();
+    });
+    expect(routes.continueCalls()).toBe(4);
+    const manualPair = routes.continueBodies()[3].requestIds as {
+      base: string;
+      expansion: string;
+    };
+    expect(manualPair.base).not.toBe(manualPair.expansion);
+    expect(pairs.map((pair) => `${pair.base}:${pair.expansion}`)).not.toContain(
+      `${manualPair.base}:${manualPair.expansion}`,
+    );
+
+    // A manual iniciou EXATAMENTE uma chamada (sem nova cadeia automatica).
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(routes.continueCalls()).toBe(4);
   });
 
   it("stream sem terminal dois estagios faz UMA consulta de status e mantem processing", async () => {
@@ -274,15 +301,42 @@ describe("useCampaignForm — processing (F60.5)", () => {
     await waitFor(() => expect(routes.continueCalls()).toBeGreaterThan(1));
   });
 
-  it("reidrata no reload com UMA consulta read-only e nunca inicia geracao", async () => {
+  it("reidrata no reload REAL (sem restoredForm artificial) com UMA consulta read-only", async () => {
     sessionStorage.setItem("campaign_draft_image", VALID_DATA_URL);
-    sessionStorage.setItem(
-      `campaign_draft_identity:${CAMPAIGN_ID}`,
-      JSON.stringify({ campaignId: CAMPAIGN_ID, operationId: OPERATION_ID }),
-    );
     mockRestoreFormState.mockReturnValue(DRAFT);
 
+    // 1) Submissao normal: stream termina em processing sem continuacao.
     const routes = installFetch({
+      generate: () => createNdjsonResponse([processingEvent("between_steps", false)]),
+    });
+    const first = renderHook(() => useCampaignForm("store-123", { eligible: true }));
+    await act(async () => {});
+    await act(async () => {
+      await first.result.current.handleSubmit();
+    });
+    await waitFor(() => expect(first.result.current.processingResult).not.toBeNull());
+
+    const generateCall = routes.fetchMock.mock.calls.find(
+      ([url]) => String(url) === "/api/campaign/generate-image",
+    );
+    const submitted = bodyOf(generateCall?.[1]);
+    expect(typeof submitted.campaignId).toBe("string");
+    expect(typeof submitted.operationId).toBe("string");
+
+    // O ponteiro de operacao ativa e gravado no escopo da LOJA.
+    const pointerRaw = sessionStorage.getItem("campaign_active_operation:store-123");
+    expect(pointerRaw).not.toBeNull();
+    const pointer = JSON.parse(pointerRaw as string) as {
+      campaignId: string;
+      operationId: string;
+    };
+    expect(pointer.campaignId).toBe(submitted.campaignId);
+    expect(pointer.operationId).toBe(submitted.operationId);
+
+    // 2) Reload: desmonta e remonta SEM fornecer restoredForm.
+    first.unmount();
+    mockRestoreFormState.mockReturnValue(null);
+    const reloadRoutes = installFetch({
       status: () =>
         jsonResponse({
           operation: {
@@ -293,32 +347,29 @@ describe("useCampaignForm — processing (F60.5)", () => {
         }),
     });
 
-    const restoredForm = {
-      campaignId: CAMPAIGN_ID,
-      productName: DRAFT.productName,
-      description: DRAFT.description,
-      originalPriceCents: DRAFT.originalPriceCents,
-      discountedPriceCents: DRAFT.discountedPriceCents,
-      badge: DRAFT.badge,
-      campaignIntent: DRAFT.campaignIntent,
-      preserveImageContext: DRAFT.preserveImageContext,
-      mandatoryArtworkTextFree: "",
-      referenceSelections: [],
-      imageRestoreLimited: true,
-      campaignFormat: "9:16",
-    } as unknown as CampaignFormRestore;
-
     const { result } = renderHook(() =>
-      useCampaignForm("store-123", { eligible: true, restoredForm }),
+      useCampaignForm("store-123", { eligible: true }),
     );
 
-    await waitFor(() => expect(routes.statusCalls()).toBe(1));
+    await waitFor(() => expect(reloadRoutes.statusCalls()).toBe(1));
     await act(async () => {});
-    expect(routes.statusCalls()).toBe(1);
-    expect(routes.fetchMock.mock.calls.every(([url]) => !String(url).includes("generate-image"))).toBe(
-      true,
+    expect(reloadRoutes.statusCalls()).toBe(1);
+    expect(
+      reloadRoutes.fetchMock.mock.calls.some(([url]) =>
+        String(url).includes("generate-image"),
+      ),
+    ).toBe(false);
+
+    const statusCall = reloadRoutes.fetchMock.mock.calls.find(([url]) =>
+      String(url) === "/api/campaign/generation-status",
     );
-    expect(result.current.processingResult?.operationId).toBe(OPERATION_ID);
+    expect(bodyOf(statusCall?.[1])).toMatchObject({
+      campaignId: pointer.campaignId,
+      operationId: pointer.operationId,
+    });
+    expect(result.current.processingResult?.operationId).toBe(
+      pointer.operationId,
+    );
     expect(result.current.flowKind).toBe("two_stage_9_16");
     expect(result.current.unknownResult).toBeNull();
     expect(mockPush).not.toHaveBeenCalled();

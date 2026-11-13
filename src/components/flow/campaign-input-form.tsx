@@ -198,9 +198,7 @@ export function CampaignInputForm({ storeId, balance, supportEmail, store, ident
             className="text-xs text-accent-blue underline disabled:opacity-50"
             onClick={() => void continueGeneration()}
             disabled={
-              !processingResult.canContinue ||
-              processingResult.stepInProgress ||
-              processingResult.continuationsExhausted === true
+              !processingResult.canContinue || processingResult.stepInProgress
             }
           >
             Retomar quando autorizado

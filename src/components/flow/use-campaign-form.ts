@@ -126,6 +126,15 @@ function scopedIdentityDraftKey(campaignId: string): string {
   return `campaign_draft_identity:${campaignId}`;
 }
 
+/** Ponteiro da operacao ATIVA no escopo da loja (reload sem `restoredForm`). */
+function activeOperationKey(storeId?: string): string {
+  return storeId
+    ? `campaign_active_operation:${storeId}`
+    : "campaign_active_operation";
+}
+
+type PendingOperationIdentity = { campaignId: string; operationId: string };
+
 /**
  * F56.2b2b (P1) — copy do aviso quando a direção de fundo NÃO pôde ser
  * recuperada da evidência congelada. Honesto sobre a limitação; exige escolha.
@@ -881,7 +890,7 @@ export function useCampaignForm(
   const flowKindRef = useRef<"one_to_one" | "two_stage_9_16">("one_to_one");
   const rehydratedRef = useRef(false);
   const continueOnceRef = useRef<
-    (current: ProcessingState) => Promise<boolean>
+    (current: ProcessingState, options?: { manual?: boolean }) => Promise<boolean>
   >(async () => false);
   // F43 (D2/D3): estado da revisão do brief em tela intermediária (não modal).
   const [reviewMode, setReviewMode] = useState(false);
@@ -952,10 +961,11 @@ export function useCampaignForm(
         // F60.5 — identidade duravel da operacao: permite reidratar o estado no
         // reload sem iniciar geracao.
         if (typeof operationId === "string" && operationId.length > 0) {
-          sessionStorage.setItem(
-            scopedIdentityDraftKey(id),
-            JSON.stringify({ campaignId: id, operationId }),
-          );
+          const identity = JSON.stringify({ campaignId: id, operationId });
+          sessionStorage.setItem(scopedIdentityDraftKey(id), identity);
+          // Ponteiro de escopo da LOJA: o reload de /campanhas/nova nao recebe
+          // `restoredForm`, entao esta e a unica forma de achar a operacao ativa.
+          sessionStorage.setItem(activeOperationKey(storeId), identity);
         }
       } catch {
         /* storage indisponível */
@@ -963,10 +973,24 @@ export function useCampaignForm(
       prePersistedIdentityRef.current = true;
       setDraftScope((prev) => (prev === id ? prev : id));
     },
-    [],
+    [storeId],
   );
-  const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);
-  // F56.2b2b (B2B-D9): aviso HONESTO de que a imagem do produto/referências
+
+  /** Remove a identidade ativa (terminal/reset) sem tocar nos campos. */
+  const clearActiveOperation = useCallback(
+    (campaignId: string | null) => {
+      try {
+        if (campaignId) {
+          sessionStorage.removeItem(scopedIdentityDraftKey(campaignId));
+        }
+        sessionStorage.removeItem(activeOperationKey(storeId));
+      } catch {
+        /* storage indisponível */
+      }
+    },
+    [storeId],
+  );
+  const [restoredImageDataUrl, setRestoredImageDataUrl] = useState<string | null>(null);  // F56.2b2b (B2B-D9): aviso HONESTO de que a imagem do produto/referências
   // (client-only) pode precisar ser re-adicionada quando o texto foi restaurado
   // do SERVIDOR (sem rascunho escopado). NUNCA promete restauração de imagem.
   const [restorationNotice, setRestorationNotice] = useState<string | null>(null);
@@ -1437,11 +1461,7 @@ export function useCampaignForm(
         }
 
         // Navigate to campaign page — draft data preserved in sessionStorage
-        try {
-          sessionStorage.removeItem(scopedIdentityDraftKey(result.campaignId));
-        } catch {
-          /* storage indisponível */
-        }
+        clearActiveOperation(result.campaignId);
         router.push(result.campaignUrl);
         return true;
       }
@@ -1746,19 +1766,13 @@ export function useCampaignForm(
     setRestoredImageDataUrl(null);
     clearFormState(draftScope);
     try { sessionStorage.removeItem(imageDraftKey); } catch { /* ignore */ }
-    if (draftScope) {
-      try {
-        sessionStorage.removeItem(scopedIdentityDraftKey(draftScope));
-      } catch {
-        /* ignore */
-      }
-    }
+    clearActiveOperation(draftScope);
     if (imagePreviewUrl) {
       URL.revokeObjectURL(imagePreviewUrl);
       objectUrlRef.current = null;
     }
     sessionStorage.removeItem("campaign_preview");
-  }, [imagePreviewUrl, clearFormState, draftScope, imageDraftKey]);
+  }, [imagePreviewUrl, clearFormState, draftScope, imageDraftKey, clearActiveOperation]);
 
   const handleConflictContinue = useCallback(async () => {
     if (!pendingConflict || !storeId) return;
@@ -2088,11 +2102,13 @@ export function useCampaignForm(
         const state = data.operation?.state;
         if (state === "delivered") {
           setProcessingResult(null);
+          clearActiveOperation(target.campaignId);
           router.push(`/campanhas/${target.campaignId}`);
           return "delivered";
         }
         if (state === "refunded") {
           setProcessingResult(null);
+          clearActiveOperation(target.campaignId);
           confirmedBodyRef.current = null;
           setSubmitError("A geração foi encerrada e o crédito devolvido.");
           return "refunded";
@@ -2118,7 +2134,7 @@ export function useCampaignForm(
         return "unavailable";
       }
     },
-    [router],
+    [clearActiveOperation, router],
   );
 
   /**
@@ -2127,7 +2143,10 @@ export function useCampaignForm(
    * agendamento da proxima continuacao acontece DEPOIS de liberar `inFlight`.
    */
   const continueOnce = useCallback(
-    async (current: ProcessingState): Promise<boolean> => {
+    async (
+      current: ProcessingState,
+      options: { manual?: boolean } = {},
+    ): Promise<boolean> => {
       if (
         !current.campaignId ||
         !current.operationId ||
@@ -2137,15 +2156,16 @@ export function useCampaignForm(
       ) {
         return false;
       }
-      // Limite de continuacoes EFETIVAMENTE iniciadas.
-      if (autoContinueRef.current >= MAX_CONTINUATIONS) {
+      // Limite da CADEIA AUTOMATICA (a acao manual autorizada nao e bloqueada
+      // por ele; apos uma consulta favoravel o usuario pode retomar).
+      if (!options.manual && autoContinueRef.current >= MAX_CONTINUATIONS) {
         setProcessingResult((prev) =>
           prev ? { ...prev, continuationsExhausted: true } : prev,
         );
         return false;
       }
       continueInFlightRef.current = true;
-      autoContinueRef.current += 1;
+      if (!options.manual) autoContinueRef.current += 1;
       let terminalSeen = false;
       try {
         const requestIds = {
@@ -2218,13 +2238,7 @@ export function useCampaignForm(
             if (event.type === "result") {
               terminalSeen = true;
               setProcessingResult(null);
-              try {
-                sessionStorage.removeItem(
-                  scopedIdentityDraftKey(current.campaignId),
-                );
-              } catch {
-                /* storage indisponível */
-              }
+              clearActiveOperation(current.campaignId);
               router.push(
                 typeof event.campaignUrl === "string"
                   ? event.campaignUrl
@@ -2288,7 +2302,7 @@ export function useCampaignForm(
 
   const continueGeneration = useCallback(async () => {
     if (!processingResult) return;
-    await continueOnce(processingResult);
+    await continueOnce(processingResult, { manual: true });
   }, [continueOnce, processingResult]);
 
   const retryProcessingStatus = useCallback(async () => {
@@ -2303,25 +2317,54 @@ export function useCampaignForm(
   useEffect(() => {
     if (rehydratedRef.current || processingResult || unknownResult) return;
     const scope = restoredForm?.campaignId ?? draftScope;
-    if (!scope) return;
-    let identity: { campaignId: string; operationId: string } | null = null;
-    try {
-      const raw = sessionStorage.getItem(scopedIdentityDraftKey(scope));
-      if (raw) {
+    let identity: PendingOperationIdentity | null = null;
+    const readScoped = (campaignId: string) => {
+      try {
+        const raw = sessionStorage.getItem(scopedIdentityDraftKey(campaignId));
+        if (!raw) return null;
         const parsed = JSON.parse(raw) as {
           campaignId?: unknown;
           operationId?: unknown;
         };
         if (
-          parsed.campaignId === scope &&
+          parsed.campaignId === campaignId &&
           typeof parsed.operationId === "string" &&
           parsed.operationId.length > 0
         ) {
-          identity = { campaignId: scope, operationId: parsed.operationId };
+          return { campaignId, operationId: parsed.operationId };
         }
+      } catch {
+        /* storage indisponível */
       }
-    } catch {
-      /* storage indisponível */
+      return null;
+    };
+    if (scope) {
+      identity = readScoped(scope);
+    } else {
+      // Reload REAL de /campanhas/nova: sem `restoredForm` e sem escopo local,
+      // o ponteiro da operacao ativa (escopo da loja) e a unica fonte.
+      try {
+        const raw = sessionStorage.getItem(activeOperationKey(storeId));
+        if (raw) {
+          const parsed = JSON.parse(raw) as {
+            campaignId?: unknown;
+            operationId?: unknown;
+          };
+          if (
+            typeof parsed.campaignId === "string" &&
+            parsed.campaignId.length > 0 &&
+            typeof parsed.operationId === "string" &&
+            parsed.operationId.length > 0
+          ) {
+            identity = {
+              campaignId: parsed.campaignId,
+              operationId: parsed.operationId,
+            };
+          }
+        }
+      } catch {
+        /* storage indisponível */
+      }
     }
     if (!identity) return;
     rehydratedRef.current = true;
@@ -2331,7 +2374,14 @@ export function useCampaignForm(
       canContinue: false,
       stepInProgress: false,
     });
-  }, [draftScope, restoredForm?.campaignId, processingResult, unknownResult, refreshStatus]);
+  }, [
+    draftScope,
+    restoredForm?.campaignId,
+    processingResult,
+    unknownResult,
+    refreshStatus,
+    storeId,
+  ]);
 
   /**
    * Recorte 2 (Plano 09): invalida a IDENTIDADE TERMINAL (não reenvia os mesmos
@@ -2379,7 +2429,9 @@ export function useCampaignForm(
     resetUnknownResult,
     processingResult,
     flowKind:
-      eligible && (fields.campaignFormat ?? "1:1") === "9:16"
+      eligible &&
+      (flowKindRef.current === "two_stage_9_16" ||
+        (fields.campaignFormat ?? "1:1") === "9:16")
         ? "two_stage_9_16"
         : "one_to_one",
     continueGeneration,
