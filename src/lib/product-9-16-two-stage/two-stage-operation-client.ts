@@ -11,16 +11,21 @@ import {
   type FinishStepResult,
   type OpenOperationRequest,
   type OpenOperationResult,
+  type OperationViewLookup,
   type RecordOutcomeRequest,
   type RecordOutcomeResult,
   type ResumeAction,
   type ResumeOperationRequest,
   type ResumeOperationResult,
   type StepState,
+  type StepView,
+  type TwoStageOperationView,
   type TwoStageReason,
   type TwoStageStage,
   type TwoStageStepStatus,
 } from "./types";
+import { deriveDurableNextAction } from "./orchestration/status-view";
+import { deriveFinancialView } from "./two-stage-operation-service";
 
 const KNOWN_REASONS: readonly TwoStageReason[] = [
   "operation_terminal",
@@ -423,5 +428,139 @@ export class ProductTwoStageOperationClient {
     });
     if (error) throw mapError(error.message);
     return parseResumeOperation(data);
+  }
+
+  /**
+   * Leitura read-only da operação para status/retomada. Nunca chama RPC, nunca
+   * abre/adquire/finaliza/registra outcome. Erro de leitura NUNCA vira ausência.
+   */
+  async getOperationView(input: {
+    campaignId: string;
+    operationId: string;
+  }): Promise<OperationViewLookup> {
+    try {
+      const opResult = await this.client
+        .from("product_9_16_two_stage_operations")
+        .select("campaign_id, operation_id, origin")
+        .eq("campaign_id", input.campaignId)
+        .eq("operation_id", input.operationId)
+        .maybeSingle();
+      if (opResult.error) {
+        return { kind: "read_failed", reason: opResult.error.message };
+      }
+      if (!opResult.data) return { kind: "absent" };
+
+      const [stepsResult, claimsResult, outcomeResult, creditResult] = await Promise.all([
+        this.client
+          .from("product_9_16_two_stage_steps")
+          .select("stage, status, attempts_used, failure_class, updated_at")
+          .eq("campaign_id", input.campaignId)
+          .eq("operation_id", input.operationId),
+        this.client
+          .from("product_9_16_two_stage_attempt_claims")
+          .select("stage, attempt_number, created_at")
+          .eq("campaign_id", input.campaignId)
+          .eq("operation_id", input.operationId)
+          .order("attempt_number", { ascending: false }),
+        this.client
+          .from("product_9_16_two_stage_outcomes")
+          .select("outcome, support_reference")
+          .eq("campaign_id", input.campaignId)
+          .eq("operation_id", input.operationId)
+          .maybeSingle(),
+        this.client
+          .from("product_1_1_campaign_credit_operations")
+          .select("status")
+          .eq("campaign_id", input.campaignId)
+          .eq("operation_id", input.operationId)
+          .maybeSingle(),
+      ]);
+
+      if (
+        stepsResult.error ||
+        claimsResult.error ||
+        outcomeResult.error ||
+        creditResult.error
+      ) {
+        return {
+          kind: "read_failed",
+          reason:
+            stepsResult.error?.message ??
+            claimsResult.error?.message ??
+            outcomeResult.error?.message ??
+            creditResult.error?.message ??
+            "read_failed",
+        };
+      }
+
+      const steps = (stepsResult.data ?? []) as Array<{
+        stage: TwoStageStage;
+        status: TwoStageStepStatus;
+        attempts_used: number;
+        failure_class: string | null;
+        updated_at: string | null;
+      }>;
+      const claims = (claimsResult.data ?? []) as Array<{
+        stage: TwoStageStage;
+        attempt_number: number;
+        created_at: string | null;
+      }>;
+      const stepView = (stage: TwoStageStage): StepView => {
+        const row = steps.find((step) => step.stage === stage);
+        const claim = claims.find((candidate) => candidate.stage === stage);
+        const failure = row?.failure_class;
+        return Object.freeze({
+          stage,
+          status: row?.status ?? "pending",
+          attemptsUsed: Number(row?.attempts_used ?? 0),
+          failureClass:
+            failure === "transient" || failure === "definitive" || failure === "unknown"
+              ? failure
+              : null,
+          attemptNumber: claim?.attempt_number ?? null,
+          claimedAt: claim?.created_at ?? row?.updated_at ?? null,
+        });
+      };
+
+      const creditStatus = String(creditResult.data?.status ?? "reserved");
+      const financial = deriveFinancialView({ status: creditStatus });
+      const outcome = outcomeResult.data as
+        | { outcome?: string; support_reference?: string | null }
+        | null;
+      const unknown = outcome?.outcome === "unknown" && !financial.terminal;
+      const failedOutcome = outcome?.outcome === "failed" && !financial.terminal;
+      const base = stepView("base");
+      const expansion = stepView("expansion");
+      const baseView = {
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        origin: "9_16_two_stage" as const,
+        credit: {
+          status: financial.status,
+          terminal: financial.terminal,
+          delivered: financial.delivered,
+          refunded: financial.refunded,
+          reserved: financial.reserved,
+        },
+        base,
+        expansion,
+        unknown,
+        failedOutcome,
+        supportReference: outcome?.support_reference ?? null,
+      };
+      const nextAction = deriveDurableNextAction(baseView);
+      const view: TwoStageOperationView = Object.freeze({
+        ...baseView,
+        nextAction,
+        canContinue: nextAction !== "wait" && nextAction !== "blocked",
+        processingPhase: null,
+      });
+      return { kind: "found", view };
+    } catch (error) {
+      return {
+        kind: "read_failed",
+        reason: error instanceof Error ? error.message : "read_failed",
+      };
+    }
   }
 }

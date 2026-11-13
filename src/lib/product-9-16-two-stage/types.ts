@@ -256,3 +256,64 @@ export class ProductTwoStageOperationError extends Error {
     this.name = "ProductTwoStageOperationError";
   }
 }
+
+export interface StepView {
+  readonly stage: TwoStageStage;
+  readonly status: TwoStageStepStatus;
+  readonly attemptsUsed: number;
+  readonly failureClass: ProviderFailureClass | null;
+  readonly attemptNumber: number | null;
+  readonly claimedAt: string | null;
+}
+
+export type TwoStageProcessingPhase =
+  | "step_in_progress"
+  | "between_steps"
+  | "delivery_pending"
+  | "preparation_retry"
+  | "suspended";
+
+export type TwoStageStatusState = "delivered" | "refunded" | "unknown" | "processing";
+
+export interface TwoStageActivationInput {
+  readonly allowNewPaidStep: boolean;
+}
+
+export interface TwoStageOperationView {
+  readonly campaignId: string;
+  readonly operationId: string;
+  readonly origin: "9_16_two_stage";
+  readonly credit: {
+    readonly status: string;
+    readonly terminal: boolean;
+    readonly delivered: boolean;
+    readonly refunded: boolean;
+    readonly reserved: boolean;
+  };
+  readonly base: StepView;
+  readonly expansion: StepView;
+  readonly unknown: boolean;
+  readonly failedOutcome: boolean;
+  readonly supportReference: string | null;
+  readonly nextAction: ResumeAction;
+  readonly canContinue: boolean;
+  readonly processingPhase: TwoStageProcessingPhase | null;
+}
+
+export type OperationViewLookup =
+  | { readonly kind: "found"; readonly view: TwoStageOperationView }
+  | { readonly kind: "absent" }
+  | { readonly kind: "read_failed"; readonly reason: string };
+
+export type TwoStageStatusView = TwoStageOperationView & {
+  readonly state: TwoStageStatusState;
+  readonly terminal: boolean;
+};
+
+export type BlockedStateReason =
+  | "known_final_failure"
+  | "attempt_limit_exhausted"
+  | "unknown"
+  | "terminal"
+  | "in_progress"
+  | "other_blocked";

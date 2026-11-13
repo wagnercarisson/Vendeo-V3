@@ -106,6 +106,29 @@ export const GenerationStatusRequestSchema = z
 
 export type GenerationStatusRequest = z.infer<typeof GenerationStatusRequestSchema>;
 
+// ─── Two-stage continuation request (F60.5) ───────────────────────────────
+// Corpo estrito: identidade + um par de IDs de aquisição DISTINTOS. Nenhum
+// conteúdo do navegador é aceito; a execução só ocorre pela rota /continue.
+export const ContinueGenerationRequestSchema = z
+  .object({
+    operationId: z.string().uuid(),
+    requestIds: z
+      .object({
+        base: z.string().uuid(),
+        expansion: z.string().uuid(),
+      })
+      .strict(),
+  })
+  .strict()
+  .refine((value) => value.requestIds.base !== value.requestIds.expansion, {
+    message: "requestIds must be distinct",
+    path: ["requestIds"],
+  });
+
+export type ContinueGenerationRequest = z.infer<
+  typeof ContinueGenerationRequestSchema
+>;
+
 // ─── Success Response (200) ───────────────────────────────────────────────
 // Normal success or auto-fix success.
 
@@ -194,7 +217,18 @@ export type NewFlowGenerationPhase =
   | "campaign_copy"
   | "campaign_delivery";
 
-export type GenerationPhase = LegacyGenerationPhase | NewFlowGenerationPhase;
+export type TwoStageGenerationPhase =
+  | "campaign_validation"
+  | "campaign_base"
+  | "campaign_preparation"
+  | "campaign_expansion"
+  | "campaign_copy"
+  | "campaign_delivery";
+
+export type GenerationPhase =
+  | LegacyGenerationPhase
+  | NewFlowGenerationPhase
+  | TwoStageGenerationPhase;
 
 export type GenerationPhaseStatus = "pending" | "running" | "complete" | "skipped" | "failed";
 
