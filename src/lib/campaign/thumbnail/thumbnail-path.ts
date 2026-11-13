@@ -50,6 +50,15 @@ const VERTICAL_FLOW_PATH_RE = new RegExp(
   "i",
 );
 
+/**
+ * F60.5 — vertical de composição (bucket interno):
+ * `{storeId}/{campaignId}/{operationId}/vertical.jpg`.
+ */
+export const COMPOSITION_VERTICAL_PATH_RE = new RegExp(
+  `^${UUID}/${UUID}/${UUID}/vertical\\.jpe?g$`,
+  "i",
+);
+
 function thumbnailPattern(original: RegExp): RegExp {
   const source = original.source.replace(/\\\.jpe\?g\$$/i, "");
   return new RegExp(
@@ -63,6 +72,7 @@ const THUMBNAIL_PATH_RES = [
   thumbnailPattern(VERSIONED_ART_PATH_RE),
   thumbnailPattern(NEW_FLOW_PATH_RE),
   thumbnailPattern(VERTICAL_FLOW_PATH_RE),
+  thumbnailPattern(COMPOSITION_VERTICAL_PATH_RE),
 ] as const;
 
 /** Caminho é uma arte final canônica e elegível para miniatura. */
@@ -85,7 +95,8 @@ export function isEligibleCampaignArtPath(path: string): boolean {
     LEGACY_PATH_RE.test(path) ||
     VERSIONED_ART_PATH_RE.test(path) ||
     NEW_FLOW_PATH_RE.test(path) ||
-    VERTICAL_FLOW_PATH_RE.test(path)
+    VERTICAL_FLOW_PATH_RE.test(path) ||
+    COMPOSITION_VERTICAL_PATH_RE.test(path)
   );
 }
 
