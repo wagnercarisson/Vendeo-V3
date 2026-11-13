@@ -8,14 +8,12 @@ import {
   COMPOSITION_ARTIFACT_BUCKET,
   compositionArtifactStoragePath,
 } from "@/lib/campaign/composition-artifacts/artifact-path";
-import {
-  buildObjectEvidence,
-  verifyObjectEvidence,
-} from "@/lib/campaign/composition-artifacts/evidence";
 import { getArtifactByIdentity } from "@/lib/campaign/composition-artifacts/repository";
 import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
 import { ROLE_POLICY } from "@/lib/campaign/composition-artifacts/role-policy";
 import { CompositionArtifactStorage } from "@/lib/campaign/composition-artifacts/storage";
+import { isCompatibleExpansionArtifact } from "@/lib/campaign/vertical-expansion/reuse-compatibility";
+import { verifyExpansionReuseEvidence } from "@/lib/campaign/vertical-expansion/reuse-evidence";
 import type {
   ArtifactIdentity,
   ArtifactRecord,
@@ -36,52 +34,6 @@ type ProbeOutcome =
   | { readonly kind: "absent" }
   | { readonly kind: "invalid" }
   | { readonly kind: "indeterminate" };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-/**
- * Evidência esperada do objeto `vertical`, reconstruída EXCLUSIVAMENTE dos
- * campos persistidos na linha F60.1. Nunca inventa origem/proveniência.
- */
-function expectedEvidence(
-  artifact: ArtifactRecord,
-): ReturnType<typeof buildObjectEvidence> {
-  const provenance = isRecord(artifact.provenance) ? artifact.provenance : {};
-  const sourceOrigin = provenance.sourceOrigin;
-  const sourceArtifactId = artifact.derivedFromArtifactId;
-  const sourceChecksum = provenance.sourceChecksumSha256;
-  const base = {
-    storeId: artifact.storeId,
-    campaignId: artifact.campaignId,
-    operationId: artifact.operationId,
-    role: "vertical" as const,
-    origin: artifact.origin,
-    width: artifact.width,
-    height: artifact.height,
-    mimeType: artifact.mimeType,
-    byteSize: artifact.byteSize,
-    checksumSha256: artifact.checksumSha256,
-    provenance,
-  };
-
-  if (
-    typeof sourceArtifactId === "string" &&
-    sourceOrigin === "composition_artifact" &&
-    typeof sourceChecksum === "string"
-  ) {
-    return buildObjectEvidence({
-      ...base,
-      sourceKind: "internal_artifact",
-      sourceArtifactId,
-      sourceOrigin,
-      sourceChecksumSha256: sourceChecksum,
-    });
-  }
-
-  return buildObjectEvidence({ ...base, sourceKind: "none" });
-}
 
 export class CompositionVerticalProbe
   implements VerticalArtifactProbe
@@ -113,13 +65,24 @@ export class CompositionVerticalProbe
     );
     if (!access.ok) return { kind: "indeterminate" };
 
-    // (1) Linha ANTES do objeto: linha ausente != objeto ausente.
+    // (1) Linha ANTES do objeto. Linha ausente NAO prova ausencia de arte:
+    //     consultar o path canonico e so devolver `absent` com o objeto ausente.
     const row = await getArtifactByIdentity(identity, this.client);
     if (row.kind === "read_failed") return { kind: "indeterminate" };
-    if (row.kind === "absent") return { kind: "absent" };
+    if (row.kind === "absent") {
+      const storage = new CompositionArtifactStorage(this.client);
+      const info = await storage.readObjectInfo(
+        compositionArtifactStoragePath(identity),
+      );
+      if (info.kind === "indeterminate") return { kind: "indeterminate" };
+      // Objeto presente sem linha: estado conservador para reconciliacao —
+      // nunca autoriza entrega nem estorno.
+      if (info.kind === "found") return { kind: "invalid" };
+      return { kind: "absent" };
+    }
     const artifact = row.record;
 
-    // (2) Conteúdo integral + path/bucket/dimensão/MIME conferidos.
+    // (2) Conteudo integral + path/bucket/dimensao/MIME conferidos.
     const retrieved = await retrieveCompositionArtifact(
       { identity, authorization: { kind: "system" } },
       { client: this.client },
@@ -143,15 +106,38 @@ export class CompositionVerticalProbe
       return { kind: "invalid" };
     }
 
-    // (3) Evidência durável do objeto confere com a linha.
-    const storage = new CompositionArtifactStorage(this.client);
-    const info = await storage.readObjectInfo(artifact.storagePath);
-    if (info.kind === "indeterminate") return { kind: "indeterminate" };
-    if (info.kind === "absent") return { kind: "absent" };
-    const expected = expectedEvidence(artifact);
-    if (!expected.ok) return { kind: "invalid" };
-    if (!verifyObjectEvidence(info.metadata, expected.evidence).ok) {
+    // (3) A linha precisa ser COMPROVADAMENTE uma expansao da fonte preparada.
+    if (artifact.origin !== "ai_expansion") return { kind: "invalid" };
+    const sourceRow = await getArtifactByIdentity(
+      {
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        role: "square_prepared",
+      },
+      this.client,
+    );
+    if (sourceRow.kind === "read_failed") return { kind: "indeterminate" };
+    if (sourceRow.kind === "absent") return { kind: "invalid" };
+    if (
+      !isCompatibleExpansionArtifact({
+        artifact,
+        source: sourceRow.record,
+      })
+    ) {
       return { kind: "invalid" };
+    }
+
+    // (4) Evidencia durável do objeto conferida pelo verificador da F60.3.
+    const evidence = await verifyExpansionReuseEvidence(
+      artifact,
+      sourceRow.record,
+      { client: this.client },
+    );
+    if (evidence.kind !== "verified") {
+      return evidence.reason === "indeterminate"
+        ? { kind: "indeterminate" }
+        : { kind: "invalid" };
     }
 
     return { kind: "integral", artifact };

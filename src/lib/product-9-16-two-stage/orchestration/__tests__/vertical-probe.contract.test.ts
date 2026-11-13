@@ -56,13 +56,25 @@ describe("CompositionVerticalProbe", () => {
     expect(backend.handles.tables).not.toContain("product_1_1_campaign_artifacts");
   });
 
-  it("returns absent when the row is absent", async () => {
-    const backend = await createVerticalBackend({ row: false });
+  it("returns absent only when both row and canonical object are absent", async () => {
+    const backend = await createVerticalBackend({
+      row: false,
+      object: "absent",
+    });
     const probe = new CompositionVerticalProbe({ client: backend.client });
     await expect(probe.probeVerticalArtifact(input)).resolves.toEqual({
       kind: "absent",
     });
     await expect(probe.probeArtifact(input)).resolves.toEqual({ kind: "absent" });
+  });
+
+  it("treats an object without a row as a conservative reconciliation state", async () => {
+    const backend = await createVerticalBackend({ row: false });
+    const probe = new CompositionVerticalProbe({ client: backend.client });
+    await expect(probe.probeVerticalArtifact(input)).resolves.toEqual({
+      kind: "invalid",
+    });
+    expect(backend.handles.infos).toBe(1);
   });
 
   it("returns absent when the row exists but the object is absent", async () => {
@@ -130,6 +142,42 @@ describe("CompositionVerticalProbe", () => {
     await expect(probe.probeVerticalArtifact(input)).resolves.toEqual({
       kind: "invalid",
     });
+  });
+
+  it("requires the ai_expansion origin and a compatible prepared source", async () => {
+    const wrongOrigin = await createVerticalBackend({
+      origin: "provider_generation",
+      provenance: {},
+      derivedFromArtifactId: null,
+    });
+    await expect(
+      new CompositionVerticalProbe({
+        client: wrongOrigin.client,
+      }).probeVerticalArtifact(input),
+    ).resolves.toEqual({ kind: "invalid" });
+
+    const missingSource = await createVerticalBackend({ sourceRow: "absent" });
+    await expect(
+      new CompositionVerticalProbe({
+        client: missingSource.client,
+      }).probeVerticalArtifact(input),
+    ).resolves.toEqual({ kind: "invalid" });
+
+    const divergentSource = await createVerticalBackend({
+      sourceRow: "divergent",
+    });
+    await expect(
+      new CompositionVerticalProbe({
+        client: divergentSource.client,
+      }).probeVerticalArtifact(input),
+    ).resolves.toEqual({ kind: "invalid" });
+
+    const emptyProvenance = await createVerticalBackend({ provenance: {} });
+    await expect(
+      new CompositionVerticalProbe({
+        client: emptyProvenance.client,
+      }).probeVerticalArtifact(input),
+    ).resolves.toEqual({ kind: "invalid" });
   });
 
   it("never returns integral for a campaign bound to another store", async () => {

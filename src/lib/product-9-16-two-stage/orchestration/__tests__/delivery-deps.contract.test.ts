@@ -65,8 +65,14 @@ vi.mock("@/lib/campaign/square-base/frozen-state", () => ({
 
 import { createNineSixteenDeps } from "../delivery-deps";
 import { getArtifactByIdentity } from "@/lib/campaign/composition-artifacts/repository";
+import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
 import { projectDeliveredCampaign } from "@/lib/product-1-1/orchestration/project-delivered-campaign";
+import { projectClosedCampaign } from "@/lib/product-1-1/orchestration/project-closed-campaign";
 import { runSquareBase } from "@/lib/campaign/square-base/run-square-base";
+import { prepareSquareForExpansion } from "@/lib/campaign/square-preparation/prepare";
+import { expandVerticalToNineSixteen } from "@/lib/campaign/vertical-expansion/expand";
+import { readSquareBaseFrozenState } from "@/lib/campaign/square-base/frozen-state";
+import { generateCampaignThumbnailSafely } from "@/lib/campaign/thumbnail/thumbnail-safe";
 
 const STORE = "11111111-1111-4111-8111-111111111111";
 const CAMPAIGN = "22222222-2222-4222-8222-222222222222";
@@ -151,6 +157,81 @@ describe("createNineSixteenDeps", () => {
         copyInvoker,
         copyDirectorEnabled: true,
       }),
+    );
+  });
+
+  it("binds the injected client to every delegated path", async () => {
+    const client = { marker: "injected" } as never;
+    const deps = createNineSixteenDeps({ client });
+
+    await deps.base({} as never);
+    expect(runSquareBase).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ client }),
+    );
+
+    await deps.prepare({} as never);
+    expect(prepareSquareForExpansion).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ client }),
+    );
+
+    await deps.expand({} as never);
+    expect(expandVerticalToNineSixteen).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ client }),
+    );
+
+    await deps.readFrozenState({} as never);
+    expect(readSquareBaseFrozenState).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ client }),
+    );
+
+    await deps.projectClosed({
+      storeId: STORE,
+      campaignId: CAMPAIGN,
+      operationId: OPERATION,
+    });
+    expect(projectClosedCampaign).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ client }),
+    );
+
+    expect(deps.reconstruction).toEqual({ client });
+  });
+
+  it("builds the thumbnail uploader from the injected client, not the global env", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    const upload = vi.fn(async () => ({ error: null }));
+    const client = {
+      storage: { from: () => ({ upload }) },
+    } as never;
+    vi.mocked(retrieveCompositionArtifact).mockResolvedValue({
+      kind: "integral",
+      artifact: { storagePath: `${STORE}/${CAMPAIGN}/${OPERATION}/vertical.jpg` },
+      bytes: Buffer.from("bytes"),
+    } as never);
+
+    const deps = createNineSixteenDeps({ client });
+    await deps.generateThumbnail({
+      storeId: STORE,
+      campaignId: CAMPAIGN,
+      operationId: OPERATION,
+      storagePath: `${STORE}/${CAMPAIGN}/${OPERATION}/vertical.jpg`,
+    });
+
+    const input = vi.mocked(generateCampaignThumbnailSafely).mock.calls.at(-1)?.[0];
+    expect(input?.context?.endpoint).toBe("https://example.supabase.co");
+    await input?.context?.uploader.upload({
+      path: "thumb.webp",
+      buffer: Buffer.from("thumb"),
+      contentType: "image/webp",
+    });
+    expect(upload).toHaveBeenCalledWith(
+      "thumb.webp",
+      Buffer.from("thumb"),
+      expect.objectContaining({ contentType: "image/webp" }),
     );
   });
 });

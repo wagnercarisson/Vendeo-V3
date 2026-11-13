@@ -10,6 +10,11 @@ import { runSquareBase, type SquareBaseDeps } from "@/lib/campaign/square-base/r
 import { prepareSquareForExpansion } from "@/lib/campaign/square-preparation/prepare";
 import { expandVerticalToNineSixteen } from "@/lib/campaign/vertical-expansion/expand";
 import { createDefaultThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
+import type {
+  ThumbnailContext,
+  ThumbnailUploader,
+} from "@/lib/campaign/thumbnail/thumbnail-generator";
+import { THUMBNAIL_BUCKET } from "@/lib/campaign/thumbnail/thumbnail-path";
 import { generateCampaignThumbnailSafely } from "@/lib/campaign/thumbnail/thumbnail-safe";
 import { generateSupportReference } from "@/lib/ai/image-generation-support-reference";
 import { ProductOneToOneCreditOperationClient } from "@/lib/product-1-1/credit-operation/credit-operation-client";
@@ -66,6 +71,35 @@ async function projectCompositionDelivery(
 }
 
 /**
+ * Contexto da miniatura SEMPRE vinculado ao cliente autorizado. Com o cliente
+ * global, preserva o uploader com timeout; com um cliente injetado, o upload
+ * passa pelo MESMO cliente (nunca pelo ambiente global).
+ */
+function thumbnailContextFor(client: SupabaseClient): ThumbnailContext | null {
+  if (client === supabaseAdmin) return createDefaultThumbnailContext();
+
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  let endpoint: string;
+  try {
+    endpoint = new URL(raw).origin;
+  } catch {
+    return null;
+  }
+
+  const uploader: ThumbnailUploader = {
+    endpoint,
+    async upload({ path, buffer, contentType }) {
+      const { error } = await client.storage
+        .from(THUMBNAIL_BUCKET)
+        .upload(path, buffer, { contentType, upsert: false });
+      return { error: error ?? null };
+    },
+  };
+  return { endpoint, uploader };
+}
+
+/**
  * Composição ÚNICA das dependências reais do orquestrador. Nenhuma rota
  * two-stage deve montar `RunNineSixteenDeps` à mão nem usar o store vertical
  * direto.
@@ -82,6 +116,7 @@ export function createNineSixteenDeps(
 
   const base: RunNineSixteenDeps["base"] = (input, deps) =>
     runSquareBase(input, {
+      client,
       ...(deps ?? {}),
       ...(options.copyOps === undefined ? {} : { copyOps: options.copyOps }),
       ...(options.copyInvoker === undefined
@@ -91,6 +126,20 @@ export function createNineSixteenDeps(
         ? {}
         : { copyDirectorEnabled: options.copyDirectorEnabled }),
     });
+
+  const prepare: RunNineSixteenDeps["prepare"] = (input, deps) =>
+    prepareSquareForExpansion(input, { client, ...(deps ?? {}) });
+
+  const expand: RunNineSixteenDeps["expand"] = (input, deps) =>
+    expandVerticalToNineSixteen(input, { client, ...(deps ?? {}) });
+
+  const readFrozen: RunNineSixteenDeps["readFrozenState"] = (input, deps) =>
+    readSquareBaseFrozenState(input, { client, ...(deps ?? {}) });
+
+  const projectClosed: RunNineSixteenDeps["projectClosed"] = (input, deps) =>
+    projectClosedCampaign(input, { client, ...(deps ?? {}) });
+
+  const thumbnailContext = thumbnailContextFor(client);
 
   const generateThumbnail: RunNineSixteenDeps["generateThumbnail"] =
     options.generateThumbnail ??
@@ -113,7 +162,7 @@ export function createNineSixteenDeps(
       return generateCampaignThumbnailSafely({
         originalPath: retrieved.artifact.storagePath,
         originalBuffer: retrieved.bytes,
-        context: createDefaultThumbnailContext(),
+        context: thumbnailContext,
         campaignId: input.campaignId,
       });
     });
@@ -130,13 +179,14 @@ export function createNineSixteenDeps(
     callIdFactory: options.callIdFactory ?? (() => crypto.randomUUID()),
     newSupportReference: generateSupportReference,
     base,
-    prepare: prepareSquareForExpansion,
-    expand: expandVerticalToNineSixteen,
-    readFrozenState: readSquareBaseFrozenState,
+    prepare,
+    expand,
+    readFrozenState: readFrozen,
     projectDelivered,
-    projectClosed: projectClosedCampaign,
+    projectClosed,
     probeVertical,
     generateThumbnail,
+    reconstruction: { client },
     ...(options.pilotSpend === undefined ? {} : { pilotSpend: options.pilotSpend }),
   });
 }

@@ -16,10 +16,11 @@ export const OPERATION_ID = "3c4d5e6f-3c4d-4e5f-8a7b-3c4d5e6f7a8b";
 export const ARTIFACT_ID = "4d5e6f7a-4d5e-4f6a-8b8c-4d5e6f7a8b9c";
 export const SOURCE_ID = "5e6f7a8b-5e6f-4a8b-9c8d-5e6f7a8b9c0d";
 export const SOURCE_CHECKSUM = "a".repeat(64);
+export const SOURCE_PATH = `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/square_prepared.jpg`;
 
 export const VERTICAL_PROVENANCE = Object.freeze({
   sourceOrigin: "composition_artifact",
-  sourceStoragePath: `${STORE_ID}/${CAMPAIGN_ID}/${OPERATION_ID}/square_prepared.jpg`,
+  sourceStoragePath: SOURCE_PATH,
   sourceWidth: 1152,
   sourceHeight: 1152,
   sourceMimeType: "image/jpeg",
@@ -59,6 +60,10 @@ export interface VerticalBackendOptions {
   readonly bytes?: Buffer;
   readonly rowOverrides?: Record<string, unknown>;
   readonly campaignStoreId?: string;
+  readonly origin?: string;
+  readonly provenance?: Record<string, unknown>;
+  readonly derivedFromArtifactId?: string | null;
+  readonly sourceRow?: "present" | "absent" | "divergent";
 }
 
 export interface FakeHandles {
@@ -81,6 +86,13 @@ export async function createVerticalBackend(
     role: "vertical" as const,
   };
 
+  const origin = options.origin ?? "ai_expansion";
+  const provenance = options.provenance ?? VERTICAL_PROVENANCE;
+  const derivedFromArtifactId =
+    options.derivedFromArtifactId === undefined
+      ? SOURCE_ID
+      : options.derivedFromArtifactId;
+
   const row: Record<string, unknown> = {
     id: ARTIFACT_ID,
     store_id: STORE_ID,
@@ -88,8 +100,8 @@ export async function createVerticalBackend(
     operation_id: OPERATION_ID,
     role: "vertical",
     format: "9:16",
-    origin: "ai_expansion",
-    derived_from_artifact_id: SOURCE_ID,
+    origin,
+    derived_from_artifact_id: derivedFromArtifactId,
     source_campaign_id: null,
     storage_bucket: "campaign-internal-artifacts",
     storage_path: compositionArtifactStoragePath(identity),
@@ -98,9 +110,31 @@ export async function createVerticalBackend(
     mime_type: "image/jpeg",
     byte_size: bytes.byteLength,
     checksum_sha256: checksum,
-    provenance: VERTICAL_PROVENANCE,
+    provenance,
     created_at: "2026-11-13T00:00:00.000Z",
     ...options.rowOverrides,
+  };
+
+  const sourceRow: Record<string, unknown> = {
+    id: SOURCE_ID,
+    store_id: STORE_ID,
+    campaign_id: CAMPAIGN_ID,
+    operation_id: OPERATION_ID,
+    role: "square_prepared",
+    format: "1:1",
+    origin: "deterministic_preparation",
+    derived_from_artifact_id: null,
+    source_campaign_id: null,
+    storage_bucket: "campaign-internal-artifacts",
+    storage_path: SOURCE_PATH,
+    width: 1152,
+    height: 1152,
+    mime_type: "image/jpeg",
+    byte_size: 200,
+    checksum_sha256:
+      options.sourceRow === "divergent" ? "b".repeat(64) : SOURCE_CHECKSUM,
+    provenance: {},
+    created_at: "2026-11-13T00:00:00.000Z",
   };
 
   const evidenceResult = buildObjectEvidence({
@@ -108,9 +142,10 @@ export async function createVerticalBackend(
     campaignId: CAMPAIGN_ID,
     operationId: OPERATION_ID,
     role: "vertical",
-    origin: "ai_expansion",
+    origin: origin as never,
     sourceKind: "internal_artifact",
-    sourceArtifactId: SOURCE_ID,
+    sourceArtifactId:
+      typeof derivedFromArtifactId === "string" ? derivedFromArtifactId : SOURCE_ID,
     sourceOrigin: "composition_artifact",
     sourceChecksumSha256: SOURCE_CHECKSUM,
     width: 1080,
@@ -118,7 +153,7 @@ export async function createVerticalBackend(
     mimeType: "image/jpeg",
     byteSize: bytes.byteLength,
     checksumSha256: checksum,
-    provenance: VERTICAL_PROVENANCE,
+    provenance,
   });
   if (!evidenceResult.ok) throw new Error("fixture evidence failed");
 
@@ -151,6 +186,9 @@ export async function createVerticalBackend(
     ...(options.row === false
       ? []
       : [{ __table: "campaign_composition_artifacts", ...row }]),
+    ...(options.sourceRow === "absent"
+      ? []
+      : [{ __table: "campaign_composition_artifacts", ...sourceRow }]),
   ];
   const handles: FakeHandles = {
     signed: 0,
@@ -209,7 +247,7 @@ export async function createVerticalBackend(
           info: async () => {
             handles.infos += 1;
             if (options.infoError) throw new Error("info_timeout");
-            if (options.infoAbsent) {
+            if (options.infoAbsent || options.object === "absent") {
               return {
                 data: null,
                 error: { statusCode: "404", message: "Object not found" },
