@@ -51,36 +51,40 @@ const canonical = {
 };
 
 describe("sonda de arte por origem canônica", () => {
-  it("origem nova SEM sonda vertical falha fechado e nunca usa a sonda quadrada", async () => {
+  it("origem nova SEM sonda de composicao falha fechado e nunca usa a sonda quadrada/direta", async () => {
     const square = { probeArtifact: vi.fn(async () => integral) };
+    const direct = { probeArtifact: vi.fn(async () => integral) };
     const repository = new SupabasePendingOperationsRepository(
       clientFrom(canonical),
       square,
-      {},
+      { verticalArtifacts: direct },
     );
 
     await expect(repository.probeArtifact("s", "c", "o")).rejects.toBeInstanceOf(
       FormatUnavailableError,
     );
     expect(square.probeArtifact).not.toHaveBeenCalled();
+    expect(direct.probeArtifact).not.toHaveBeenCalled();
   });
 
-  it("origem nova usa SOMENTE a sonda vertical final", async () => {
+  it("origem nova usa SOMENTE a sonda de composicao", async () => {
     const square = { probeArtifact: vi.fn(async () => integral) };
-    const vertical = { probeArtifact: vi.fn(async () => integral) };
+    const direct = { probeArtifact: vi.fn(async () => integral) };
+    const composition = { probeArtifact: vi.fn(async () => integral) };
     const repository = new SupabasePendingOperationsRepository(
       clientFrom(canonical),
       square,
-      { verticalArtifacts: vertical },
+      { verticalArtifacts: direct, twoStageArtifacts: composition },
     );
 
     await expect(repository.probeArtifact("s", "c", "o")).resolves.toBe(integral);
-    expect(vertical.probeArtifact).toHaveBeenCalledWith({
+    expect(composition.probeArtifact).toHaveBeenCalledWith({
       storeId: "s",
       campaignId: "c",
       operationId: "o",
     });
     expect(square.probeArtifact).not.toHaveBeenCalled();
+    expect(direct.probeArtifact).not.toHaveBeenCalled();
   });
 
   it("origem legada preserva a sonda por formato (1:1 e 9:16 direto)", async () => {

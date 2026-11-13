@@ -144,6 +144,11 @@ export interface PendingRepositoryOptions {
     campaignId: string,
   ) => Promise<{ kind: PendingFormatKind }>;
   readonly verticalArtifacts?: PendingArtifactProber;
+  /**
+   * F60.5 — sonda de composição para a origem canônica `9_16_two_stage`.
+   * Ausente ⇒ `FormatUnavailableError` (nunca cai no prober direto).
+   */
+  readonly twoStageArtifacts?: PendingArtifactProber;
 }
 
 /** Estado de uma operação para a LISTA (pendências + evidência derivada). */
@@ -173,6 +178,7 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
   private readonly artifacts: PendingArtifactProber;
   private readonly resolveFormat?: PendingRepositoryOptions["resolveFormat"];
   private readonly verticalArtifacts?: PendingArtifactProber;
+  private readonly twoStageArtifacts?: PendingArtifactProber;
 
   constructor(
     client: SupabaseClient = supabaseAdmin,
@@ -183,6 +189,7 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     this.artifacts = artifacts;
     this.resolveFormat = options.resolveFormat;
     this.verticalArtifacts = options.verticalArtifacts;
+    this.twoStageArtifacts = options.twoStageArtifacts;
   }
 
   private async formatFor(campaignId: string): Promise<PendingFormatKind> {
@@ -342,8 +349,12 @@ export class SupabasePendingOperationsRepository implements PendingOperationsRep
     // sem essa sonda o resultado é INCONCLUSIVO (nunca cai na sonda quadrada).
     const canonical = await this.readCanonicalOperation(campaignId, operationId, false);
     if (canonical.origin === "9_16_two_stage") {
-      if (!this.verticalArtifacts) throw new FormatUnavailableError();
-      return this.verticalArtifacts.probeArtifact({ storeId, campaignId, operationId });
+      if (!this.twoStageArtifacts) throw new FormatUnavailableError();
+      return this.twoStageArtifacts.probeArtifact({
+        storeId,
+        campaignId,
+        operationId,
+      });
     }
 
     const format = await this.formatFor(campaignId);

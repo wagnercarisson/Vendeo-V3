@@ -1,10 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
-import { createPendingFormatAdapter } from "@/lib/product-vertical-9-16/recovery/pending-adapter";
 import {
-  SupabasePendingOperationsRepository,
-  type PendingOperationView,
-} from "@/lib/product-1-1/pending/pending-operations-repository";
+  buildAdminPendingRepository,
+  createPendingFormatAdapter,
+} from "@/lib/product-vertical-9-16/recovery/pending-adapter";
+import type { PendingOperationView } from "@/lib/product-1-1/pending/pending-operations-repository";
 import {
   PendingOperationsList,
   PendingReadOnlyNotice,
@@ -48,14 +48,7 @@ export default async function AdminProductOneToOnePendingPage() {
   let readError = false;
   try {
     const adapter = createPendingFormatAdapter();
-    views = await new SupabasePendingOperationsRepository(
-      undefined,
-      undefined,
-      {
-        resolveFormat: adapter.resolveFormat,
-        verticalArtifacts: adapter.verticalArtifacts,
-      },
-    ).listPendingOperations();
+    views = await buildAdminPendingRepository(adapter).listPendingOperations();
   } catch {
     readError = true;
   }

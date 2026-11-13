@@ -5,8 +5,10 @@ import { ProductOneToOnePendingResolutionSchema } from "@/lib/admin/schemas";
 import { apiHandler } from "@/lib/auth/api-handler";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { createPendingFormatAdapter } from "@/lib/product-vertical-9-16/recovery/pending-adapter";
-import { SupabasePendingOperationsRepository } from "@/lib/product-1-1/pending/pending-operations-repository";
+import {
+  buildAdminPendingRepository,
+  createPendingFormatAdapter,
+} from "@/lib/product-vertical-9-16/recovery/pending-adapter";
 import {
   listPendingOperations,
   PendingOperationResolutionError,
@@ -55,14 +57,7 @@ export const GET = apiHandler(async () => {
   await requireAdmin();
   try {
     const adapter = createPendingFormatAdapter();
-    const repository = new SupabasePendingOperationsRepository(
-      supabaseAdmin,
-      undefined,
-      {
-        resolveFormat: adapter.resolveFormat,
-        verticalArtifacts: adapter.verticalArtifacts,
-      },
-    );
+    const repository = buildAdminPendingRepository(adapter, supabaseAdmin);
     const operations = await listPendingOperations({ repository });
     return NextResponse.json({ operations });
   } catch {
@@ -102,14 +97,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
         { status: 503 },
       );
     }
-    const repository = new SupabasePendingOperationsRepository(
-      supabaseAdmin,
-      undefined,
-      {
-        resolveFormat: adapter.resolveFormat,
-        verticalArtifacts: adapter.verticalArtifacts,
-      },
-    );
+    const repository = buildAdminPendingRepository(adapter, supabaseAdmin);
     let projection: ReturnType<typeof adapter.projectionFor> | undefined;
     if (format.kind === "9:16") {
       const state = await repository.findPendingOperation(

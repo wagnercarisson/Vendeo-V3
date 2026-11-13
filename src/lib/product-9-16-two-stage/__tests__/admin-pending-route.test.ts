@@ -27,9 +27,16 @@ vi.mock("@/lib/supabase/server", () => {
   );
   return { supabaseAdmin: proxy };
 });
-vi.mock("@/lib/product-vertical-9-16/recovery/pending-adapter", () => ({
-  createPendingFormatAdapter: () => h.adapter,
-}));
+vi.mock("@/lib/product-vertical-9-16/recovery/pending-adapter", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/lib/product-vertical-9-16/recovery/pending-adapter")
+    >();
+  return {
+    ...actual,
+    createPendingFormatAdapter: () => h.adapter,
+  };
+});
 vi.mock("@/lib/product-1-1/artifact/artifact-store", () => ({
   ProductOneToOneArtifactStore: class {
     probeArtifact(input: unknown) {
@@ -94,9 +101,9 @@ function tables(): Record<string, Row[]> {
   };
 }
 
-function client() {
+function client(rpcResult: unknown = null) {
   const data = tables();
-  const rpc = vi.fn(async () => ({ data: null, error: null }));
+  const rpc = vi.fn(async () => ({ data: rpcResult, error: null }));
   return { from: (table: string) => chain(data[table] ?? []), rpc };
 }
 
@@ -126,8 +133,10 @@ describe("rota administrativa x origem de duas etapas", () => {
     }));
     h.adapter = {
       resolveFormat: vi.fn(async () => ({ kind: "9:16" })),
-      // A sonda VERTICAL não encontra a arte 9:16 final.
-      verticalArtifacts: { probeArtifact: vi.fn(async () => ({ kind: "absent" })) },
+      // A sonda DIRETA não é usada para a origem de duas etapas.
+      verticalArtifacts: { probeArtifact: vi.fn(async () => ({ kind: "integral" })) },
+      // A sonda de COMPOSIÇÃO não encontra a arte vertical final.
+      twoStageArtifacts: { probeArtifact: vi.fn(async () => ({ kind: "absent" })) },
       projectionFor: vi.fn(() => vi.fn()),
     };
   });
@@ -144,5 +153,39 @@ describe("rota administrativa x origem de duas etapas", () => {
     // Nunca cai na sonda quadrada nem chama a RPC administrativa.
     expect(h.squareProbe).not.toHaveBeenCalled();
     expect(controlled.rpc).not.toHaveBeenCalled();
+  });
+
+  it("composicao integral resolve a entrega sem tocar a sonda quadrada/direta", async () => {
+    h.adapter = {
+      resolveFormat: vi.fn(async () => ({ kind: "9:16" })),
+      verticalArtifacts: { probeArtifact: vi.fn(async () => ({ kind: "absent" })) },
+      twoStageArtifacts: { probeArtifact: vi.fn(async () => ({ kind: "integral" })) },
+      projectionFor: vi.fn(() => vi.fn(async () => ({ projected: true, reason: "projected" }))),
+    };
+    const controlled = client({
+      success: true,
+      campaign_id: CAMPAIGN,
+      operation_id: OPERATION,
+      action: "deliver_existing_art",
+      status: "delivered",
+      idempotent: false,
+    });
+    h.client = controlled as unknown as Record<string, unknown>;
+    const { POST } = await import("@/app/api/admin/product-1-1-pending/route");
+
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(
+      (h.adapter as { twoStageArtifacts: { probeArtifact: { mock: { calls: unknown[] } } } })
+        .twoStageArtifacts.probeArtifact.mock.calls,
+    ).toHaveLength(1);
+    expect(
+      (h.adapter as { verticalArtifacts: { probeArtifact: { mock: { calls: unknown[] } } } })
+        .verticalArtifacts.probeArtifact.mock.calls,
+    ).toHaveLength(0);
+    expect(h.squareProbe).not.toHaveBeenCalled();
+    expect(
+      (h.adapter as { projectionFor: { mock: { calls: unknown[] } } }).projectionFor.mock.calls,
+    ).toHaveLength(1);
   });
 });
