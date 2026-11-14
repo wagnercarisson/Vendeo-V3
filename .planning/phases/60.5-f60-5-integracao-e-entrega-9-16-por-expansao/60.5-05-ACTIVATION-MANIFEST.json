@@ -107,7 +107,8 @@
       "download",
       "card rendering/miniatura na listagem",
       "acesso a campanhas 1:1 e historicas",
-      "recusa de nova geracao 9:16 apos flag OFF"
+      "recusa de nova geracao 9:16 apos flag OFF",
+      "painel admin exibindo product_9_16_two_stage_enabled e sem o seletor antigo"
     ]
   },
   "rollback": {
@@ -163,7 +164,38 @@
       "generation-progress.two-stage.test.tsx (running/complete-reused/failed)"
     ],
     "gates": {
-      "focused": "118 arquivos / 1141 testes PASS",
+      "focused": "124 arquivos / 1195 testes PASS (conjunto 60.5-05: copy + admin)",
+      "typecheck": "PASS",
+      "lint": "PASS",
+      "build": "PASS",
+      "diffCheck": "limpo"
+    }
+  },
+  "adminPanelUpdate": {
+    "status": "implemented_offline_pending_review",
+    "implementedAt": "2026-11-13T23:57:45.262Z",
+    "enabledRealFlags": false,
+    "newFlag": {
+      "key": "product_9_16_two_stage_enabled",
+      "label": "Geração 9:16 por expansão",
+      "displayed": true,
+      "read": "FeatureFlagService.isProduct9_16TwoStageEnabled (fail-closed)",
+      "update": "PUT /api/admin/feature-flags + RPC admin_update_feature_flag (motivo obrigatorio + auditoria)"
+    },
+    "legacyFlag": {
+      "key": "product_9_16_enabled",
+      "selectorRemoved": true,
+      "databaseKeyPreserved": true,
+      "historicalAccessUnchanged": true,
+      "serviceReadPreserved": true
+    },
+    "tests": [
+      "page.test.tsx: nova flag renderizada, seletor antigo ausente",
+      "route.test.ts: GET consulta a nova chave, PUT da nova flag audita e autorizacao 403 preservada",
+      "feature-flag-service.test.ts: leitura fail-closed e lista canonica"
+    ],
+    "gates": {
+      "focused": "124 arquivos / 1195 testes PASS",
       "typecheck": "PASS",
       "lint": "PASS",
       "build": "PASS",
