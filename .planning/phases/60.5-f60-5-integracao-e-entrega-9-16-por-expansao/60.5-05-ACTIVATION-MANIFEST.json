@@ -1,7 +1,7 @@
 {
   "kind": "f60.5-manual-activation",
   "plan": "60.5-05",
-  "status": "manual_acceptance_recorded_pending_review_flag_off",
+  "status": "accepted_with_documented_exception_flag_off_ready_for_review",
   "workflow": "/gsd-execute-phase 60.5-05 (authorized manual homolog slice)",
   "authorization": {
     "decision": "approved",
@@ -105,10 +105,7 @@
       "existing 1:1 and historical access checks",
       "new-generation refusal after flag OFF"
     ],
-    "pendingManualRevalidation": [
-      "preview do vertical no detalhe/listagem (tarefa OpenSpec 8.2)",
-      "campanha 9:16 historica em pendencia em estado seguro somente leitura (tarefa OpenSpec 8.4)"
-    ],
+    "pendingManualRevalidation": [],
     "notConfirmedNote": "Lista historica da campanha 351cde93. Itens equivalentes foram confirmados pelo usuario na jornada normal posterior (campanha 1ff7949f), exceto a pendencia historica 9:16; ver finalManualAcceptance e 60.5-UAT.md."
   },
   "rollback": {
@@ -121,8 +118,8 @@
   },
   "acceptance": {
     "technical": "partial_user_confirmed_no_db_reread",
-    "human": "pass_user_confirmed_journey_normal_visual_quality_not_approved",
-    "fullPlan": "accepted_with_limitations_open_manual_items"
+    "human": "pass_functional_final_visual_caveat_separate",
+    "fullPlan": "accepted_with_documented_exception_ready_for_sync_archive_review"
   },
   "activation": {
     "production": "not_executed"
@@ -212,7 +209,7 @@
   },
   "finalManualAcceptance": {
     "source": "user",
-    "recordedAt": "2026-11-14T00:27:57.252Z",
+    "recordedAt": "2026-11-14T00:36:58.999Z",
     "environment": "homolog",
     "campaignId": "1ff7949f-0167-4f49-87df-2a71a1a23ef8",
     "confirmed": [
@@ -224,7 +221,8 @@
       "miniatura correta",
       "campanhas legadas 1:1 e 9:16 continuam funcionais",
       "flag nova desligada: nova geracao 9:16 indisponivel",
-      "aviso 'Imagem meramente ilustrativa' nao solicitado nesta geracao; ausencia correta"
+      "aviso 'Imagem meramente ilustrativa' nao solicitado nesta geracao; ausencia correta",
+      "preview do vertical aprovado"
     ],
     "copyCoherence": "confirmed_by_user_in_normal_journey_copy_coherent_with_store",
     "notReRead": [
@@ -233,10 +231,33 @@
       "checksum e dimensoes do vertical da campanha 1ff7949f",
       "contadores de reserva/confirmacao lidos do banco"
     ],
-    "note": "Aceite da jornada normal/homolog. Nenhuma leitura adicional de banco/Storage, nenhuma nova chamada paga e nenhuma alteracao de flag nesta rodada. Campos nao relidos permanecem apenas confirmados pelo usuario e nao sao apresentados como verificacao automatica."
+    "note": "Aceite da jornada normal/homolog. Nenhuma leitura adicional de banco/Storage, nenhuma nova chamada paga e nenhuma alteracao de flag nesta rodada. Campos nao relidos permanecem apenas confirmados pelo usuario e nao sao apresentados como verificacao automatica.",
+    "preview": {
+      "status": "pass_user_confirmed",
+      "confirmedAt": "2026-11-14T00:36:58.999Z",
+      "note": "Preview do vertical confirmado explicitamente pelo usuário; separado do download já confirmado."
+    },
+    "legacyPendingScenario": {
+      "status": "not_manually_exercised_no_case",
+      "manualPass": false,
+      "deliveredHistorical": "confirmed_functional_by_user",
+      "reason": "Ausencia de campanha 9:16 historica em pendencia disponivel para exercitar manualmente nesta rodada.",
+      "offlineCoverage": [
+        "src/lib/product-9-16-two-stage/orchestration/__tests__/historical-access.contract.test.ts",
+        "src/lib/product-9-16-two-stage/orchestration/__tests__/integrated/preservation.offline.test.ts",
+        "src/__tests__/app/campaign-detail-format.test.tsx",
+        "src/__tests__/lib/campaign/list.test.ts",
+        "src/app/api/campaign/__tests__/architecture-guard.test.ts"
+      ],
+      "exception": {
+        "decision": "accepted_explicitly",
+        "acceptedAt": "2026-11-14T00:36:58.999Z",
+        "scope": "Fechamento F60.5: cenario manual nao exercitado por ausencia de caso; cenarios da spec cobertos por automacao; registro NAO e PASS manual."
+      }
+    }
   },
   "closingVerification": {
-    "executedAt": "2026-11-14T00:27:57.252Z",
+    "executedAt": "2026-11-14T00:36:58.999Z",
     "gates": {
       "focused": "124 arquivos / 1195 testes PASS",
       "typecheck": "PASS",
@@ -246,12 +267,10 @@
       "openspecStrict": "valid"
     },
     "openspecTasks": {
-      "completed": 54,
+      "completed": 56,
       "total": 56,
-      "pending": [
-        "8.2 preview do vertical nao declarado",
-        "8.4 pendencia historica 9:16 nao declarada"
-      ]
+      "pending": [],
+      "exception": "8.4 nao exercitado manualmente por ausencia de caso; excecao aceita explicitamente"
     },
     "gsdVerifyWork": "60.5-UAT.md",
     "openspecVerify": "60.5-OPSX-VERIFY.md",
@@ -261,5 +280,12 @@
       "src/lib/product-1-1/__tests__/non-activation.contract.test.ts",
       "src/app/api/admin/product-1-1-pending/__tests__/route-format.test.ts"
     ]
+  },
+  "visualCaveat": {
+    "campaignId": "351cde93-df22-4172-b438-e8472af12f26",
+    "status": "not_approved",
+    "scope": "Composicao visual (foto de fornada/pedido de cenario) da campanha anterior/harness.",
+    "separateFromFinalFunctionalAcceptance": true,
+    "note": "Ressalva visual preservada e separada do aceite funcional final da campanha 1ff7949f; nao integra os criterios funcionais aprovados."
   }
 }

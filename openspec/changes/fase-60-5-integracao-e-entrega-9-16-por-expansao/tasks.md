@@ -72,9 +72,9 @@
 ## 8. Prova final manual assistida e ativação
 
 - [x] 8.1 Com autorização, ligar `product_9_16_two_stage_enabled` apenas no checkpoint de ativação e registrar a decisão; não ligar a flag em implementação/teste offline.
-- [ ] 8.2 Selecionar 9:16 pelo aplicativo, acompanhar a tela de processamento (incluindo continuação real se houver), receber vertical + copy e abrir detalhe/listagem/preview.
+- [x] 8.2 Selecionar 9:16 pelo aplicativo, acompanhar a tela de processamento (incluindo continuação real se houver), receber vertical + copy e abrir detalhe/listagem/preview. **Preview confirmado pelo usuário em 2026-11-14.**
 - [x] 8.3 Baixar o vertical, conferir JPEG 1080×1920, crédito único (1 reserva/1 confirmação), ausência de segundo débito e preservação do fluxo 1:1.
-- [ ] 8.4 Verificar uma campanha histórica 9:16 entregue e uma pendência histórica, confirmando leitura/download e ausência de nova geração/conversão.
+- [x] 8.4 Verificar uma campanha histórica 9:16 entregue e uma pendência histórica, confirmando leitura/download e ausência de nova geração/conversão. **EXCEÇÃO ACEITA (2026-11-14): campanha histórica entregue confirmada; cenário de pendência NÃO exercitado manualmente por ausência de caso. Não é PASS manual. Cobertura offline dos cenários preservada; exceção submetida e aceita explicitamente para o fechamento.**
 - [x] 8.5 Separar e registrar aceite técnico, aceite humano e ativação produtiva; documentar rollback por desligamento da flag e resolução administrativa de operações em andamento.
 - [x] 8.6 Se faltar ação/decisão humana, solicitar instrução direta ao usuário; não repetir tentativas automáticas improdutivas, chamadas pagas ou alterações de ambiente sem autorização.
 
@@ -141,16 +141,23 @@ rodada.
 | 7.3 | `60.5-04-PROOF-REPORT.md` (tentativa 2, 3 chamadas, US$ 0,059442) |
 | 7.4 | `60.5-04-PROOF-MANIFEST.json` + `60.5-05-ACTIVATION-MANIFEST.json` |
 | 8.1 | flag ligada em 2026-11-13T23:32:23Z e desligada em 2026-11-13T23:40:44Z; valor final OFF |
+| 8.2 | preview do vertical confirmado pelo usuário em 2026-11-14 |
+| 8.4 | histórico entregue confirmado; pendência sem caso manual; exceção aceita; cobertura offline preservada |
 | 8.3 | aceite manual: download correto, exatamente 1 crédito, 1:1 preservado |
 | 8.5 | aceites separados em `60.5-05-ACTIVATION-REPORT.md`; rollback por flag OFF |
 | 8.6 | decisão humana registrada; nenhuma repetição automática |
 
-### Lacunas mantidas em aberto (não marcadas)
+### Exceção documentada (aceita explicitamente)
 
-- **8.2** — seleção, processamento (spinner), vertical+copy, detalhe via download e
-  listagem via miniatura estão confirmados; **o preview do vertical não foi
-  declarado explicitamente** pelo usuário. Não marcado para não inventar a
-  verificação.
-- **8.4** — campanhas legadas 1:1 e 9:16 funcionais foram confirmadas, mas **uma
-  campanha 9:16 histórica em pendência** (estado somente leitura, sem nova geração
-  ou conversão) não foi declarada. Não marcado.
+- **8.2 — preview aprovado.** O usuário confirmou o preview do vertical em
+  2026-11-14; a tarefa foi marcada com evidência manual.
+- **8.4 — cenário legado pendente não exercitado manualmente.** A campanha
+  histórica 9:16 **entregue** foi confirmada como funcional. Não havia caso de
+  campanha histórica **em pendência** disponível para exercitar manualmente, então
+  o cenário foi registrado como **não exercitado** — explicitamente **não** como
+  PASS manual. A cobertura offline permanece nos testes de acesso histórico e de
+  estado seguro somente leitura (`historical-access.contract`,
+  `campaign-detail-format`, `list.test`, `architecture-guard`, suítes de
+  preservação). A exceção foi documentada e aceita explicitamente para o
+  fechamento; os cenários da spec continuam cobertos pela automação, sem
+  alegação de validação manual.
