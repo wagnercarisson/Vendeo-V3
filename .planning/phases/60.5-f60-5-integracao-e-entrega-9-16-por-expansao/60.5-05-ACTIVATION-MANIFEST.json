@@ -1,7 +1,7 @@
 {
   "kind": "f60.5-manual-activation",
   "plan": "60.5-05",
-  "status": "accepted_with_documented_exception_flag_off_ready_for_review",
+  "status": "accepted_with_documented_exception_archived",
   "workflow": "/gsd-execute-phase 60.5-05 (authorized manual homolog slice)",
   "authorization": {
     "decision": "approved",
@@ -119,7 +119,7 @@
   "acceptance": {
     "technical": "partial_user_confirmed_no_db_reread",
     "human": "pass_functional_final_visual_caveat_separate",
-    "fullPlan": "accepted_with_documented_exception_ready_for_sync_archive_review"
+    "fullPlan": "accepted_with_documented_exception_synced_archived_no_productive_activation"
   },
   "activation": {
     "production": "not_executed"
@@ -279,7 +279,8 @@
       "src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts",
       "src/lib/product-1-1/__tests__/non-activation.contract.test.ts",
       "src/app/api/admin/product-1-1-pending/__tests__/route-format.test.ts"
-    ]
+    ],
+    "syncArchive": "completed"
   },
   "visualCaveat": {
     "campaignId": "351cde93-df22-4172-b438-e8472af12f26",
@@ -287,5 +288,18 @@
     "scope": "Composicao visual (foto de fornada/pedido de cenario) da campanha anterior/harness.",
     "separateFromFinalFunctionalAcceptance": true,
     "note": "Ressalva visual preservada e separada do aceite funcional final da campanha 1ff7949f; nao integra os criterios funcionais aprovados."
+  },
+  "syncArchive": {
+    "status": "completed",
+    "executedAt": "2026-11-14T00:43:04.519Z",
+    "scope": "somente fase-60-5-integracao-e-entrega-9-16-por-expansao",
+    "mainSpecs": [
+      "openspec/specs/product-9-16-two-stage-orchestration/spec.md",
+      "openspec/specs/product-9-16-two-stage-delivery/spec.md"
+    ],
+    "specValidation": "strict_valid_for_synced_specs",
+    "archivePath": "openspec/changes/archive/2026-11-14-fase-60-5-integracao-e-entrega-9-16-por-expansao",
+    "activeChangesAfter": 0,
+    "note": "Specs principais sincronizadas por merge agent-driven a partir da delta ADDED; change movida para archive. Nenhuma alteracao de codigo, banco, flag, provider, deploy, merge ou push."
   }
 }
