@@ -61,7 +61,7 @@ function mockFlags(featureFlags: unknown[]) {
 }
 
 describe("Admin FeatureFlags page (Controles operacionais — multi-flags QCW)", () => {
-  it("renderiza as 4 flags com labels humanizados + keys mono + descrições", async () => {
+  it("renderiza as 5 flags com labels humanizados + keys mono + descrições e sem o seletor antigo", async () => {
     mockFlags([
       {
         id: "f1",
@@ -96,6 +96,14 @@ describe("Admin FeatureFlags page (Controles operacionais — multi-flags QCW)",
         updated_by: null,
         updated_at: null,
       },
+      {
+        id: "f5",
+        key: "product_9_16_two_stage_enabled",
+        enabled: false,
+        description: "Gate do fluxo 9:16 por expansão.",
+        updated_by: null,
+        updated_at: null,
+      },
     ]);
 
     const { default: Page } = await import("../page");
@@ -107,11 +115,15 @@ describe("Admin FeatureFlags page (Controles operacionais — multi-flags QCW)",
     expect(html).toContain("Captcha (Turnstile) em login, cadastro e recuperação de senha");
     expect(html).toContain("Geração de campanhas");
     expect(html).toContain("Geração de assinatura visual");
+    expect(html).toContain("Geração 9:16 por expansão");
     // Keys técnicas como subtexto mono
     expect(html).toContain("force_brief_vision_check");
     expect(html).toContain("captcha_enabled");
     expect(html).toContain("campaign_generation_enabled");
     expect(html).toContain("visual_signature_generation_enabled");
+    expect(html).toContain("product_9_16_two_stage_enabled");
+    // O seletor do gerador direto antigo não é mais renderizado.
+    expect(html).not.toContain("product_9_16_enabled");
     // Descrição do banco (limite honesto do captcha sobre o Supabase Auth)
     expect(html).toContain("continuara exigindo token valido");
     // Badge genérico

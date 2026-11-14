@@ -184,4 +184,85 @@ describe("F43 admin feature-flags (Testes 24-25)", () => {
     expect(body.key).toBe("campaign_approval_enabled");
     expect(body.enabled).toBe(true);
   });
+
+  it("GET consulta a nova flag 9:16 por expansão e não a chave antiga", async () => {
+    const inSpy = vi.fn((_column: string, _keys: string[]) =>
+      Promise.resolve({
+        data: [
+          {
+            id: "flag-id-9",
+            key: "product_9_16_two_stage_enabled",
+            enabled: false,
+            description: "Gate do fluxo 9:16 por expansão.",
+            updated_by: null,
+            updated_at: null,
+          },
+        ],
+        error: null,
+      }),
+    );
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "feature_flags") {
+        return { select: vi.fn(() => ({ in: inSpy })) };
+      }
+      return {};
+    });
+
+    const res = await getFlag();
+    expect(res.status).toBe(200);
+    const queriedKeys = inSpy.mock.calls[0][1];
+    expect(queriedKeys).toContain("product_9_16_two_stage_enabled");
+    expect(queriedKeys).not.toContain("product_9_16_enabled");
+    const body = await res.json();
+    expect(body.flags).toHaveLength(1);
+    expect(body.flags[0].key).toBe("product_9_16_two_stage_enabled");
+  });
+
+  it("PUT da nova flag product_9_16_two_stage_enabled preserva autorização, motivo e auditoria", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        id: "flag-id-9",
+        key: "product_9_16_two_stage_enabled",
+        enabled: false,
+        idempotent: false,
+      },
+      error: null,
+    });
+
+    const res = await putFlag({
+      key: "product_9_16_two_stage_enabled",
+      enabled: false,
+      reason: "Rollback do gate após validação manual",
+      operationId: "op-two-stage-1",
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockRequireAdmin).toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledWith("admin_update_feature_flag", {
+      p_key: "product_9_16_two_stage_enabled",
+      p_enabled: false,
+      p_reason: "Rollback do gate após validação manual",
+      p_actor_id: "admin-1",
+      p_operation_id: "op-two-stage-1",
+    });
+    const body = await res.json();
+    expect(body.key).toBe("product_9_16_two_stage_enabled");
+    expect(body.enabled).toBe(false);
+  });
+
+  it("PUT sem autorização administrativa continua bloqueado antes do RPC", async () => {
+    const { ForbiddenError } = await import("@/lib/auth/errors");
+    mockRequireAdmin.mockRejectedValue(
+      new ForbiddenError("Acesso restrito a administradores"),
+    );
+
+    const res = await putFlag({
+      key: "product_9_16_two_stage_enabled",
+      enabled: true,
+      reason: "tentativa sem autorização",
+    });
+
+    expect(res.status).toBe(403);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
 });

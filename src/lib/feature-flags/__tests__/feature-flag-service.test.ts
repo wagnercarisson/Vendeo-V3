@@ -5,6 +5,7 @@ import {
   PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
   PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
   PRODUCT_9_16_ENABLED_KEY,
+  PRODUCT_9_16_TWO_STAGE_ENABLED_KEY,
 } from "../feature-flag-service";
 
 vi.mock("server-only", () => ({}));
@@ -323,12 +324,13 @@ describe("FeatureFlagService — chaves Produto 1:1 F56.2a (fail-closed)", () =>
     });
   }
 
-  it("registra as duas chaves 1:1 e a chave 9:16 ao final da ordem canônica", () => {
+  it("registra as duas chaves 1:1 e a chave 9:16 por expansão ao final da ordem canônica", () => {
     expect(ALL_FEATURE_FLAG_KEYS.slice(-3)).toEqual([
       PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
       PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
-      PRODUCT_9_16_ENABLED_KEY,
+      PRODUCT_9_16_TWO_STAGE_ENABLED_KEY,
     ]);
+    expect(ALL_FEATURE_FLAG_KEYS).not.toContain(PRODUCT_9_16_ENABLED_KEY);
   });
 
   it("retorna false quando as linhas das duas chaves não existem", async () => {
@@ -389,9 +391,10 @@ describe("F59/D-13 - flag global product_9_16_enabled", () => {
     });
   }
 
-  it("chave canonica e label presente na lista", () => {
+  it("chave legada mantida no serviço, mas fora da lista exibida no painel", () => {
     expect(PRODUCT_9_16_ENABLED_KEY).toBe("product_9_16_enabled");
-    expect(ALL_FEATURE_FLAG_KEYS).toContain(PRODUCT_9_16_ENABLED_KEY);
+    expect(ALL_FEATURE_FLAG_KEYS).not.toContain(PRODUCT_9_16_ENABLED_KEY);
+    expect(ALL_FEATURE_FLAG_KEYS).toContain(PRODUCT_9_16_TWO_STAGE_ENABLED_KEY);
   });
 
   it("true somente com enabled true", async () => {
@@ -407,6 +410,58 @@ describe("F59/D-13 - flag global product_9_16_enabled", () => {
     await expect(new FeatureFlagService().isProduct9x16Enabled()).resolves.toBe(false);
     mockFlag({ enabled: "yes" });
     await expect(new FeatureFlagService().isProduct9x16Enabled()).resolves.toBe(false);
+    warn.mockRestore();
+  });
+});
+
+describe("F60.5 - flag product_9_16_two_stage_enabled (painel administrativo)", () => {
+  function mockFlag(data: unknown, error: unknown = null) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "feature_flags") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(() => Promise.resolve({ data, error })),
+            })),
+          })),
+        };
+      }
+      return {};
+    });
+  }
+
+  it("chave canonica identificada como Geração 9:16 por expansão", () => {
+    expect(PRODUCT_9_16_TWO_STAGE_ENABLED_KEY).toBe(
+      "product_9_16_two_stage_enabled",
+    );
+    expect(ALL_FEATURE_FLAG_KEYS).toContain(PRODUCT_9_16_TWO_STAGE_ENABLED_KEY);
+  });
+
+  it("leitura: true somente com enabled true", async () => {
+    mockFlag({ enabled: true });
+    await expect(
+      new FeatureFlagService().isProduct9_16TwoStageEnabled(),
+    ).resolves.toBe(true);
+    mockFlag({ enabled: false });
+    await expect(
+      new FeatureFlagService().isProduct9_16TwoStageEnabled(),
+    ).resolves.toBe(false);
+  });
+
+  it("ausente/erro/invalido => false (fail-closed)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFlag(null);
+    await expect(
+      new FeatureFlagService().isProduct9_16TwoStageEnabled(),
+    ).resolves.toBe(false);
+    mockFlag(null, { message: "boom" });
+    await expect(
+      new FeatureFlagService().isProduct9_16TwoStageEnabled(),
+    ).resolves.toBe(false);
+    mockFlag({ enabled: "yes" });
+    await expect(
+      new FeatureFlagService().isProduct9_16TwoStageEnabled(),
+    ).resolves.toBe(false);
     warn.mockRestore();
   });
 });

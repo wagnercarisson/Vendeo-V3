@@ -25,8 +25,7 @@ const FLAG_LABELS: Record<string, string> = {
     "Produto 1:1 — habilitar lojas de teste (preparação inativa)",
   product_1_1_all_stores_enabled:
     "Produto 1:1 — habilitar todas as lojas (preparação inativa)",
-  product_9_16_enabled:
-    "Produto 9:16 - habilitar novas gerações verticais (preparação inativa)",
+  product_9_16_two_stage_enabled: "Geração 9:16 por expansão",
 };
 
 interface FlagRow {
@@ -156,9 +155,10 @@ export default async function AdminFeatureFlagsPage() {
       </div>
       {missingKeys.length > 0 && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-500">
-          Atenção: a migration de seeds não foi aplicada neste ambiente — as
-          flags {missingKeys.join(", ")} não foram encontradas. Aplicar
-          {" "}20260821000002_qcw_operational_flags.sql para ativá-las.
+          Atenção: a migration de seeds não foi aplicada neste ambiente (ou a
+          chave não existe) — as flags {missingKeys.join(", ")} não foram
+          encontradas. Verifique as migrations/seeds de flags deste ambiente
+          para criá-las.
         </div>
       )}
       <TrialOfferPanel

@@ -34,6 +34,11 @@ export interface ProductOneToOneFlagsRead {
 }
 
 // Ordem canônica de exibição na tela "Controles operacionais".
+//
+// F60.5 — a chave antiga `product_9_16_enabled` (gerador vertical direto) NÃO é
+// exibida nesta lista: o controle visual foi removido. A chave permanece no
+// banco e `isProduct9x16Enabled()` continua disponível para leitura fail-closed
+// (compatibilidade histórica); nada é apagado nem perde auditoria.
 export const ALL_FEATURE_FLAG_KEYS = [
   FORCE_BRIEF_VISION_CHECK_KEY,
   CAPTCHA_ENABLED_KEY,
@@ -42,7 +47,7 @@ export const ALL_FEATURE_FLAG_KEYS = [
   CAMPAIGN_APPROVAL_ENABLED_KEY,
   PRODUCT_1_1_TEST_STORES_ENABLED_KEY,
   PRODUCT_1_1_ALL_STORES_ENABLED_KEY,
-  PRODUCT_9_16_ENABLED_KEY,
+  PRODUCT_9_16_TWO_STAGE_ENABLED_KEY,
 ];
 
 // Env vars emergenciais opcionais (fail-safe de infra) — nunca são a decisão
@@ -192,8 +197,12 @@ export class FeatureFlagService {
   }
 
   /**
-   * F59/D-13 — flag global do Produto vertical 9:16.
+   * F59/D-13 — flag global do Produto vertical 9:16 (gerador direto antigo).
    * Fail-closed, sem envOverride e sem coortes: ausente/erro ⇒ false.
+   *
+   * O controle visual desta chave foi removido do painel administrativo em
+   * F60.5. A leitura permanece para compatibilidade/histórico e a linha no
+   * banco não é alterada.
    */
   isProduct9x16Enabled(): Promise<boolean> {
     return this.readFlag(PRODUCT_9_16_ENABLED_KEY, false);
@@ -201,8 +210,8 @@ export class FeatureFlagService {
 
   /**
    * F60.5 — flag do fluxo 9:16 por expansao (duas etapas). Fail-closed, sem
-   * envOverride e sem coortes: ausente/erro ⇒ false. Nao entra em
-   * `ALL_FEATURE_FLAG_KEYS` (ativacao e checkpoint proprio).
+   * envOverride e sem coortes: ausente/erro ⇒ false. É a chave exibida no
+   * painel administrativo como "Geração 9:16 por expansão".
    */
   isProduct9_16TwoStageEnabled(): Promise<boolean> {
     return this.readFlag(PRODUCT_9_16_TWO_STAGE_ENABLED_KEY, false);
