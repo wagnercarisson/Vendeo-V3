@@ -102,4 +102,3 @@ A comparação de `briefingText` foi corrigida para JSON canônico e as regress�
 offline foram acrescentadas. Detalhes e gates em `60.5-04-REVIEW-FIX.md`.
 Nenhuma nova operação/chamada foi executada; a operação estornada permanece
 preservada e não será reutilizada.
-
