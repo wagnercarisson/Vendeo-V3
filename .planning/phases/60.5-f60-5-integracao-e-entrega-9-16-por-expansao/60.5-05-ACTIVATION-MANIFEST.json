@@ -1,7 +1,7 @@
 {
   "kind": "f60.5-manual-activation",
   "plan": "60.5-05",
-  "status": "manual_generation_completed_ui_fix_offline_pending_review_flag_off",
+  "status": "manual_acceptance_recorded_pending_review_flag_off",
   "workflow": "/gsd-execute-phase 60.5-05 (authorized manual homolog slice)",
   "authorization": {
     "decision": "approved",
@@ -57,7 +57,10 @@
       "enabled": true,
       "mustRemainUntouched": true
     },
-    "mechanism": "Explicit parameterized SQL, existing local PostgreSQL; INSERT false ON CONFLICT DO NOTHING, UPDATE true RETURNING; transaction checks rowCount = 1."
+    "mechanism": "Explicit parameterized SQL, existing local PostgreSQL; INSERT false ON CONFLICT DO NOTHING, UPDATE true RETURNING; transaction checks rowCount = 1.",
+    "finalState": "off_user_confirmed",
+    "finalValueUserConfirmed": false,
+    "finalStateNote": "Estado final desligado confirmado pelo usuario na jornada normal; a leitura SQL nao foi repetida nesta rodada por limite de acesso."
   },
   "creditBaseline": {
     "readAt": "2026-11-13T23:28:51.971Z",
@@ -91,7 +94,7 @@
     "uiFinding": {
       "phase": "campaign_copy",
       "label": "Texto",
-      "status": "fixed_offline_pending_app_revalidation",
+      "status": "confirmed_by_user_in_normal_journey",
       "diagnosis": "run-nine-sixteen nao emitia campaign_copy; corrigido para refletir inicio/desfecho reais da copy.",
       "codeChanged": true,
       "fixedAt": "2026-11-13T23:52:35.613Z"
@@ -103,13 +106,10 @@
       "new-generation refusal after flag OFF"
     ],
     "pendingManualRevalidation": [
-      "copy campaign_copy na jornada normal (running/complete/reused/failed)",
-      "download",
-      "card rendering/miniatura na listagem",
-      "acesso a campanhas 1:1 e historicas",
-      "recusa de nova geracao 9:16 apos flag OFF",
-      "painel admin exibindo product_9_16_two_stage_enabled e sem o seletor antigo"
-    ]
+      "preview do vertical no detalhe/listagem (tarefa OpenSpec 8.2)",
+      "campanha 9:16 historica em pendencia em estado seguro somente leitura (tarefa OpenSpec 8.4)"
+    ],
+    "notConfirmedNote": "Lista historica da campanha 351cde93. Itens equivalentes foram confirmados pelo usuario na jornada normal posterior (campanha 1ff7949f), exceto a pendencia historica 9:16; ver finalManualAcceptance e 60.5-UAT.md."
   },
   "rollback": {
     "status": "completed",
@@ -120,9 +120,9 @@
     "oldFlagUnchanged": true
   },
   "acceptance": {
-    "technical": "functional_pass_with_ui_fix_pending_real_revalidation",
-    "human": "delivery_and_copy_accepted_visual_quality_not_approved",
-    "fullPlan": "not_complete"
+    "technical": "partial_user_confirmed_no_db_reread",
+    "human": "pass_user_confirmed_journey_normal_visual_quality_not_approved",
+    "fullPlan": "accepted_with_limitations_open_manual_items"
   },
   "activation": {
     "production": "not_executed"
@@ -140,7 +140,7 @@
     "paid 1:1 generation"
   ],
   "copyProgressFix": {
-    "status": "implemented_offline_pending_review",
+    "status": "confirmed_by_user_pending_review",
     "implementedAt": "2026-11-13T23:52:35.613Z",
     "paidCalls": 0,
     "homologRevalidated": false,
@@ -172,7 +172,7 @@
     }
   },
   "adminPanelUpdate": {
-    "status": "implemented_offline_pending_review",
+    "status": "confirmed_by_user_pending_review",
     "implementedAt": "2026-11-13T23:57:45.262Z",
     "enabledRealFlags": false,
     "newFlag": {
@@ -200,6 +200,66 @@
       "lint": "PASS",
       "build": "PASS",
       "diffCheck": "limpo"
+    },
+    "manualValidation": {
+      "status": "pass_user_confirmed",
+      "confirmedAt": "2026-11-14T00:27:57.252Z",
+      "items": [
+        "product_9_16_two_stage_enabled visivel e liga/desliga corretamente",
+        "seletor de product_9_16_enabled ausente"
+      ]
     }
+  },
+  "finalManualAcceptance": {
+    "source": "user",
+    "recordedAt": "2026-11-14T00:27:57.252Z",
+    "environment": "homolog",
+    "campaignId": "1ff7949f-0167-4f49-87df-2a71a1a23ef8",
+    "confirmed": [
+      "nova flag aparece no admin e liga/desliga corretamente",
+      "seletor da flag legada removido",
+      "etapa Texto mostra o spinner",
+      "campanha 9:16 persistida; download e copy corretos",
+      "consumo de exatamente 1 credito",
+      "miniatura correta",
+      "campanhas legadas 1:1 e 9:16 continuam funcionais",
+      "flag nova desligada: nova geracao 9:16 indisponivel",
+      "aviso 'Imagem meramente ilustrativa' nao solicitado nesta geracao; ausencia correta"
+    ],
+    "copyCoherence": "confirmed_by_user_in_normal_journey_copy_coherent_with_store",
+    "notReRead": [
+      "operationId da campanha 1ff7949f",
+      "custo observado da campanha 1ff7949f",
+      "checksum e dimensoes do vertical da campanha 1ff7949f",
+      "contadores de reserva/confirmacao lidos do banco"
+    ],
+    "note": "Aceite da jornada normal/homolog. Nenhuma leitura adicional de banco/Storage, nenhuma nova chamada paga e nenhuma alteracao de flag nesta rodada. Campos nao relidos permanecem apenas confirmados pelo usuario e nao sao apresentados como verificacao automatica."
+  },
+  "closingVerification": {
+    "executedAt": "2026-11-14T00:27:57.252Z",
+    "gates": {
+      "focused": "124 arquivos / 1195 testes PASS",
+      "typecheck": "PASS",
+      "lint": "PASS",
+      "build": "PASS",
+      "diffCheck": "limpo",
+      "openspecStrict": "valid"
+    },
+    "openspecTasks": {
+      "completed": 54,
+      "total": 56,
+      "pending": [
+        "8.2 preview do vertical nao declarado",
+        "8.4 pendencia historica 9:16 nao declarada"
+      ]
+    },
+    "gsdVerifyWork": "60.5-UAT.md",
+    "openspecVerify": "60.5-OPSX-VERIFY.md",
+    "globalSuite": "not_green_known_preexisting_failures",
+    "knownPreexistingFailures": [
+      "src/lib/product-1-1/__tests__/legacy-frontier.guard.test.ts",
+      "src/lib/product-1-1/__tests__/non-activation.contract.test.ts",
+      "src/app/api/admin/product-1-1-pending/__tests__/route-format.test.ts"
+    ]
   }
 }
