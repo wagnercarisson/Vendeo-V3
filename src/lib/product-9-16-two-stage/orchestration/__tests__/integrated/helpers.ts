@@ -104,6 +104,7 @@ export function makeIntegratedDeps(overrides: Record<string, unknown> = {}): Run
         evidenceRef: "e",
       })),
     },
+    preflightExpansion: vi.fn(async () => ({ ok: true })),
     generateThumbnail: vi.fn(async () => ({ status: "created" })),
     reconstruction: durableReconstruction(),
     ...overrides,

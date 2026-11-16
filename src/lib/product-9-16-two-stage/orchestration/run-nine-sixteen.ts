@@ -3,6 +3,7 @@ import "server-only";
 import { verifyCampaignAccess } from "@/lib/campaign/composition-artifacts/access";
 import type { CopyProgressEvent } from "@/lib/campaign/square-base/run-square-base";
 import type { FrozenStateReadResult } from "@/lib/campaign/square-base/types";
+import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
 import type { AcquireStepResult, ResumeOperationResult } from "../types";
 import { newAcquisitionIds, parseAcquisitionIds } from "./acquisition-ids";
 import { runBaseStep } from "./base-step";
@@ -21,6 +22,7 @@ import {
   nextStepFromAction,
 } from "./status-view";
 import type {
+  ExpansionConfigurationPreflight,
   NineSixteenEvent,
   NineSixteenPhase,
   NineSixteenProcessingState,
@@ -39,6 +41,7 @@ function errorEvent(
   code: string,
   message: string,
   refunded?: boolean,
+  reason?: string,
 ): NineSixteenEvent {
   return {
     type: "error",
@@ -47,6 +50,7 @@ function errorEvent(
     code,
     message,
     ...(refunded === undefined ? {} : { refunded }),
+    ...(reason === undefined ? {} : { reason }),
   };
 }
 
@@ -241,10 +245,17 @@ async function handleFinalizedFailure(
   deps: RunNineSixteenDeps,
   stream: Stream,
   finalized: Awaited<ReturnType<typeof finalizeDefinitiveFailure>>,
+  safeReason?: string,
 ): Promise<void> {
   if (finalized.kind === "refunded") {
     stream.emitTerminal(
-      errorEvent(input, "generation_failed", "A geração falhou e o crédito foi devolvido.", true),
+      errorEvent(
+        input,
+        "generation_failed",
+        "A geração falhou e o crédito foi devolvido.",
+        true,
+        safeReason ?? "generation_failed",
+      ),
     );
     return;
   }
@@ -257,13 +268,93 @@ async function handleFinalizedFailure(
   stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
 }
 
+/**
+ * Motivo seguro e fechado para diagnóstico. Combina a classificação estrutural
+ * (modelo/pricing/leitura) com o motivo retornado pelo módulo. Nunca inclui
+ * payload, prompt, URL ou credencial.
+ */
+function safeFailureLabel(
+  outcome: Extract<StepExecutionOutcome, { kind: "definitive" | "unknown" | "retryable" }>,
+  diagnosis?: Extract<ExpansionConfigurationPreflight, { ok: false }>,
+): string {
+  if (diagnosis !== undefined) {
+    return `${diagnosis.failure}:${diagnosis.reason}`;
+  }
+  return outcome.reason;
+}
+
+function logFailureDiagnosis(params: {
+  readonly input: RunNineSixteenInput;
+  readonly stage: "base" | "expansion";
+  readonly outcomeKind: "definitive" | "unknown" | "retryable";
+  readonly label: string;
+  readonly supportReference: string;
+  readonly missing: readonly string[];
+  readonly event: string;
+  readonly phase: "pre_stream" | "post_parallel";
+}): void {
+  logPipelineEvent({
+    event: params.event,
+    traceId: params.input.traceId ?? params.input.operationId,
+    campaignId: params.input.campaignId,
+    storeId: params.input.storeId,
+    ...(params.input.authorization.kind === "owner"
+      ? { userId: params.input.authorization.userId }
+      : {}),
+    phase: params.phase,
+    status: "failed",
+    errorCode: params.label,
+    metadata: {
+      stage: params.stage,
+      outcome: params.outcomeKind,
+      supportReference: params.supportReference,
+      ...(params.missing.length === 0 ? {} : { missing: [...params.missing] }),
+    },
+  });
+}
+
+async function readExpansionConfiguration(
+  deps: RunNineSixteenDeps,
+): Promise<ExpansionConfigurationPreflight> {
+  try {
+    return await deps.preflightExpansion();
+  } catch {
+    // Leitura inesperada permanece fail-closed e NÃO é reportada como pricing
+    // ausente: a classificação própria evita inventar causa.
+    return {
+      ok: false,
+      failure: "configuration_read_failed",
+      reason: "preflight_read_failed",
+      missing: [],
+    };
+  }
+}
+
+const CONFIGURATION_UNAVAILABLE_MESSAGE =
+  "A geração não foi iniciada porque a configuração de geração está indisponível. Nenhum crédito foi consumido.";
+
 async function handleStepFailure(
   input: RunNineSixteenInput,
   deps: RunNineSixteenDeps,
   stream: Stream,
   outcome: Extract<StepExecutionOutcome, { kind: "definitive" | "unknown" | "retryable" }>,
   stage: "base" | "expansion",
+  diagnosis?: Extract<ExpansionConfigurationPreflight, { ok: false }>,
 ): Promise<void> {
+  const label = safeFailureLabel(outcome, diagnosis);
+  const missing = diagnosis === undefined ? [] : diagnosis.missing;
+  const supportReference = deps.newSupportReference();
+  logFailureDiagnosis({
+    input,
+    stage,
+    outcomeKind: outcome.kind,
+    label,
+    supportReference,
+    missing,
+    event: "generation_failed",
+    phase: "post_parallel",
+  });
+
   if (outcome.kind === "retryable") {
     const lookup = await deps.control.getOperationView({
       campaignId: input.campaignId,
@@ -279,11 +370,11 @@ async function handleStepFailure(
             operationId: input.operationId,
             authorization: input.authorization,
             stage,
-            supportReference: deps.newSupportReference(),
+            supportReference,
           },
           deps,
         );
-        await handleFinalizedFailure(input, deps, stream, finalized);
+        await handleFinalizedFailure(input, deps, stream, finalized, label);
         return;
       }
     }
@@ -299,12 +390,12 @@ async function handleStepFailure(
         operationId: input.operationId,
         stage,
         outcome: "unknown",
-        supportReference: deps.newSupportReference(),
+        supportReference,
       });
     } catch {
       // safe resolution remains
     }
-    stream.emitTerminal(unknownEvent(input, deps.newSupportReference()));
+    stream.emitTerminal(unknownEvent(input, supportReference));
     return;
   }
   const finalized = await finalizeDefinitiveFailure(
@@ -314,10 +405,11 @@ async function handleStepFailure(
       operationId: input.operationId,
       authorization: input.authorization,
       stage,
+      supportReference,
     },
     deps,
   );
-  await handleFinalizedFailure(input, deps, stream, finalized);
+  await handleFinalizedFailure(input, deps, stream, finalized, label);
 }
 
 function contentFromInput(input: RunNineSixteenInput) {
@@ -480,6 +572,40 @@ async function execute(
       stream.emitTerminal(statusEvent(input, lookup.view, allowNewPaidStep));
       return;
     }
+
+    // Gate de gasto: a configuração da expansão (modelo + tarifas de usage) é
+    // verificada ANTES da primeira chamada paga da base e ANTES de reservar.
+    // Falha ⇒ nenhuma reserva é criada (nada a estornar) e nenhuma chamada de
+    // base/copy/expansão acontece.
+    if (allowNewPaidStep) {
+      const configuration = await readExpansionConfiguration(deps);
+      if (!configuration.ok) {
+        const label = `${configuration.failure}:${configuration.reason}`;
+        const supportReference = deps.newSupportReference();
+        logFailureDiagnosis({
+          input,
+          stage: "base",
+          outcomeKind: "definitive",
+          label,
+          supportReference,
+          missing: configuration.missing,
+          event: "expansion_preflight_failed",
+          phase: "pre_stream",
+        });
+        stream.emitPhase("campaign_validation", "failed");
+        stream.emitTerminal(
+          errorEvent(
+            input,
+            "configuration_unavailable",
+            CONFIGURATION_UNAVAILABLE_MESSAGE,
+            undefined,
+            label,
+          ),
+        );
+        return;
+      }
+    }
+
     try {
       await deps.financial.reserveOperationOnce({
         storeId: input.storeId,
@@ -561,6 +687,23 @@ async function execute(
       return;
     }
     if (resume.action === "acquire_base" || resume.action === "retry_base") {
+      // Mesma proteção de gasto num retry/continuação que AINDA vai executar
+      // uma nova chamada paga da base. Falha ⇒ encerra a operação com estorno
+      // único (sem reserva abandonada) e zero chamadas.
+      if (allowNewPaidStep && view.credit.reserved) {
+        const configuration = await readExpansionConfiguration(deps);
+        if (!configuration.ok) {
+          await handleStepFailure(
+            input,
+            deps,
+            stream,
+            { kind: "definitive", reason: "configuration_unavailable" },
+            "base",
+            configuration,
+          );
+          return;
+        }
+      }
       const frozen = await readFrozenSafe(input, deps);
       if (frozen === null || frozen.kind === "indeterminate") {
         stream.emitTerminal(processingEvent(input, "between_steps", "base", true));

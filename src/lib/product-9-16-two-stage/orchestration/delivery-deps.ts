@@ -10,6 +10,7 @@ import { runSquareBase, type SquareBaseDeps } from "@/lib/campaign/square-base/r
 import { downloadCampaignInputFileWithClient } from "@/lib/campaign/persistence";
 import { prepareSquareForExpansion } from "@/lib/campaign/square-preparation/prepare";
 import { expandVerticalToNineSixteen } from "@/lib/campaign/vertical-expansion/expand";
+import { preflightExpansionToNineSixteen } from "@/lib/campaign/vertical-expansion/model";
 import { createDefaultThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
 import type {
   ThumbnailContext,
@@ -134,6 +135,24 @@ export function createNineSixteenDeps(
   const expand: RunNineSixteenDeps["expand"] = (input, deps) =>
     expandVerticalToNineSixteen(input, { client, ...(deps ?? {}) });
 
+  /**
+   * Gate pré-chamada da expansão (modelo + tarifas de usage). Read-only,
+   * fail-closed e sem provider; a estimativa `image_unit_usd` é reportada à
+   * parte e pode estar indisponível sem bloquear a cobertura de usage.
+   */
+  const preflightExpansion: RunNineSixteenDeps["preflightExpansion"] = async () => {
+    const outcome = await preflightExpansionToNineSixteen({ client });
+    if (outcome.ok) return { ok: true };
+    const missing =
+      outcome.failure === "pricing_unavailable" ? outcome.missing : [];
+    return {
+      ok: false,
+      failure: outcome.failure,
+      reason: outcome.reason,
+      missing,
+    };
+  };
+
   const readFrozen: RunNineSixteenDeps["readFrozenState"] = (input, deps) =>
     readSquareBaseFrozenState(input, { client, ...(deps ?? {}) });
 
@@ -187,6 +206,7 @@ export function createNineSixteenDeps(
     projectDelivered,
     projectClosed,
     probeVertical,
+    preflightExpansion,
     generateThumbnail,
     reconstruction: {
       client,

@@ -69,6 +69,9 @@ vi.mock("@/lib/campaign/square-preparation/prepare", () => ({
 vi.mock("@/lib/campaign/vertical-expansion/expand", () => ({
   expandVerticalToNineSixteen: vi.fn(),
 }));
+vi.mock("@/lib/campaign/vertical-expansion/model", () => ({
+  preflightExpansionToNineSixteen: vi.fn(async () => ({ ok: true })),
+}));
 vi.mock("@/lib/campaign/square-base/frozen-state", () => ({
   readSquareBaseFrozenState: vi.fn(),
   hashImageDataUrl: (dataUrl: string) =>
@@ -77,6 +80,7 @@ vi.mock("@/lib/campaign/square-base/frozen-state", () => ({
 
 import { createNineSixteenDeps } from "../delivery-deps";
 import { runNineSixteenTwoStageGeneration } from "../run-nine-sixteen";
+import { preflightExpansionToNineSixteen } from "@/lib/campaign/vertical-expansion/model";
 import {
   DURABLE_BYTES,
   DURABLE_DATA_URL,
@@ -113,12 +117,43 @@ describe("createNineSixteenDeps", () => {
       "projectDelivered",
       "projectClosed",
       "probeVertical",
+      "preflightExpansion",
       "generateThumbnail",
     ] as const) {
       expect(deps[key]).toBeDefined();
     }
     expect(Object.isFrozen(deps)).toBe(true);
     expect(deps.newSupportReference()).toBe("support-ref");
+  });
+
+  it("maps the real preflight result without inventing missing rates", async () => {
+    const deps = createNineSixteenDeps({ client: {} as never });
+    await expect(deps.preflightExpansion()).resolves.toEqual({ ok: true });
+
+    vi.mocked(preflightExpansionToNineSixteen).mockResolvedValueOnce({
+      ok: false,
+      failure: "pricing_unavailable",
+      reason: "incomplete_coverage",
+      missing: ["imageTokenUsdPer1M"],
+    });
+    await expect(deps.preflightExpansion()).resolves.toEqual({
+      ok: false,
+      failure: "pricing_unavailable",
+      reason: "incomplete_coverage",
+      missing: ["imageTokenUsdPer1M"],
+    });
+
+    vi.mocked(preflightExpansionToNineSixteen).mockResolvedValueOnce({
+      ok: false,
+      failure: "model_unavailable",
+      reason: "catalog_row_missing",
+    });
+    await expect(deps.preflightExpansion()).resolves.toEqual({
+      ok: false,
+      failure: "model_unavailable",
+      reason: "catalog_row_missing",
+      missing: [],
+    });
   });
 
   it("projects the composition source with the persisted vertical path", async () => {

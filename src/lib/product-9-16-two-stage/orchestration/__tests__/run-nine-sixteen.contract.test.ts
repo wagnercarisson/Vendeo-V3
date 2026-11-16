@@ -1,9 +1,15 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 vi.mock("@/lib/campaign/composition-artifacts/access", () => ({
   verifyCampaignAccess: async () => ({ ok: true, authorization: { kind: "system" } }),
+}));
+const logged = vi.hoisted(() => ({ events: [] as Record<string, unknown>[] }));
+vi.mock("@/lib/logging/pipeline-logger", () => ({
+  logPipelineEvent: (event: Record<string, unknown>) => {
+    logged.events.push(event);
+  },
 }));
 import { runNineSixteenTwoStageGeneration } from "../run-nine-sixteen";
 import type { RunNineSixteenDeps, RunNineSixteenInput } from "../types";
@@ -167,6 +173,7 @@ function deps(overrides: Record<string, unknown> = {}): RunNineSixteenDeps {
     projectDelivered: vi.fn(async () => ({ projected: true, reason: "projected" })),
     projectClosed: vi.fn(async () => ({ projected: true, reason: "projected" })),
     probeVertical: { probeVerticalArtifact: vi.fn(async () => integralProbe) },
+    preflightExpansion: vi.fn(async () => ({ ok: true })),
     generateThumbnail: vi.fn(async () => ({ status: "created" })),
     reconstruction: durableReconstruction(),
     ...overrides,
@@ -230,7 +237,11 @@ function calls(d: unknown, path: string): unknown[] {
 }
 
 describe("runNineSixteenTwoStageGeneration", () => {
-  it("initial with an existing operation is query-only (no reserve/resume/provider)", async () => {
+  beforeEach(() => {
+    logged.events.length = 0;
+  });
+
+  it("initial with an existing operation is query-only (no reserve/resume/provider/preflight)", async () => {
     const d = deps({
       control: {
         getOperationView: vi.fn(async () => ({
@@ -252,6 +263,227 @@ describe("runNineSixteenTwoStageGeneration", () => {
     expect(calls(d, "control.resume")).toHaveLength(0);
     expect(calls(d, "control.acquire")).toHaveLength(0);
     expect(calls(d, "base")).toHaveLength(0);
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
+  });
+
+  it("preflight de pricing falho bloqueia ANTES da reserva e de qualquer chamada paga", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "pricing_unavailable",
+        reason: "incomplete_coverage",
+        missing: ["imageTokenUsdPer1M"],
+      })),
+    });
+
+    const events = await run(initialInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "configuration_unavailable",
+      reason: "pricing_unavailable:incomplete_coverage",
+    });
+    expect(calls(d, "financial.reserveOperationOnce")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+    expect(calls(d, "prepare")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(logged.events).toEqual([
+      expect.objectContaining({
+        event: "expansion_preflight_failed",
+        errorCode: "pricing_unavailable:incomplete_coverage",
+        metadata: expect.objectContaining({
+          stage: "base",
+          missing: ["imageTokenUsdPer1M"],
+        }),
+      }),
+    ]);
+  });
+
+  it("preflight de modelo falho distingue modelo de pricing e não reserva", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "model_unavailable",
+        reason: "catalog_row_missing",
+        missing: [],
+      })),
+    });
+
+    const events = await run(initialInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "configuration_unavailable",
+      reason: "model_unavailable:catalog_row_missing",
+    });
+    expect(calls(d, "financial.reserveOperationOnce")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+    expect(logged.events[0]).toMatchObject({
+      event: "expansion_preflight_failed",
+      errorCode: "model_unavailable:catalog_row_missing",
+    });
+  });
+
+  it("continuação que ainda geraria a base também é bloqueada e estornada sem chamadas", async () => {
+    const d = deps({
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "pricing_unavailable",
+        reason: "incomplete_coverage",
+        missing: ["imageInputTokenUsdPer1M"],
+      })),
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "pending"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_base",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_base", {
+            baseStatus: "pending",
+            baseAttempts: 0,
+          }),
+        ),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(async (request: { outcome: string }) => ({
+          success: true,
+          idempotent: false,
+          outcome: request.outcome,
+          stage: "base",
+          supportReference: "ref",
+        })),
+      },
+      probeVertical: { probeVerticalArtifact: vi.fn(async () => ({ kind: "absent" })) },
+    });
+
+    const events = await run(continueInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "generation_failed",
+      refunded: true,
+      reason: "pricing_unavailable:incomplete_coverage",
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(1);
+    const recorded = calls(d, "control.recordOutcome")[0] as [
+      { supportReference?: string; outcome?: string },
+    ];
+    expect(recorded[0]).toMatchObject({
+      outcome: "failed",
+      supportReference: "ref",
+    });
+    expect(logged.events[0]).toMatchObject({
+      event: "generation_failed",
+      errorCode: "pricing_unavailable:incomplete_coverage",
+      metadata: expect.objectContaining({ supportReference: "ref", stage: "base" }),
+    });
+  });
+
+  it("replay entregue e entrega comprovada não dependem do pricing atual", async () => {
+    const deliverDeps = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "found", view: makeView() })),
+        resume: vi.fn(async () => deliveryResume()),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "pricing_unavailable",
+        reason: "row_missing",
+        missing: ["pricing_row"],
+      })),
+    });
+
+    const events = await run(continueInput(), deliverDeps);
+
+    expect(terminal(events)).toMatchObject({ type: "result" });
+    expect(calls(deliverDeps, "preflightExpansion")).toHaveLength(0);
+    expect(calls(deliverDeps, "control.acquire")).toHaveLength(0);
+    expect(calls(deliverDeps, "expand")).toHaveLength(0);
+  });
+
+  it("falha do provider preserva a causa própria no diagnóstico", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "done"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_expansion",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_expansion", {
+            baseStatus: "done",
+            expansionStatus: "pending",
+          }),
+        ),
+        acquire: vi.fn(async () => ({
+          acquired: true,
+          authorization: "execute",
+          reason: null,
+          attemptToken: "t",
+          attemptNumber: 1,
+          stage: "expansion",
+          target: "initial",
+        })),
+        finish: vi.fn(async () => ({
+          success: true,
+          idempotent: false,
+          status: "failed",
+          stage: "expansion",
+          attemptNumber: 1,
+        })),
+        recordOutcome: vi.fn(async (request: { outcome: string }) => ({
+          success: true,
+          idempotent: false,
+          outcome: request.outcome,
+          stage: "expansion",
+          supportReference: "ref",
+        })),
+      },
+      expand: vi.fn(async () => ({
+        kind: "provider_failure",
+        failure: { class: "transient", reason: "upstream_5xx" },
+      })),
+    });
+
+    const events = await run(continueInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "processing",
+      nextStep: "expansion",
+    });
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+    expect(logged.events[0]).toMatchObject({
+      event: "generation_failed",
+      errorCode: "transient",
+    });
+    expect(String(logged.events[0].errorCode)).not.toMatch(/pricing|model/);
   });
 
   it("emite campaign_copy running/complete conectado ao ciclo real da base", async () => {

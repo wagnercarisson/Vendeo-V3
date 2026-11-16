@@ -63,6 +63,8 @@ export type NineSixteenEvent =
       readonly code: string;
       readonly message: string;
       readonly refunded?: boolean;
+      /** Classificação técnica segura da causa (não é código público). */
+      readonly reason?: string;
     }
   | {
       readonly type: "unknown";
@@ -119,6 +121,25 @@ export type StepExecutionOutcome =
     }
   | { readonly kind: "skipped" };
 
+/**
+ * Preflight read-only de configuração da expansão (modelo + tarifas de usage).
+ * Nunca chama provider. `configuration_read_failed` cobre leitura
+ * indisponível/inesperada e permanece fail-closed.
+ */
+export type ExpansionConfigurationFailure =
+  | "model_unavailable"
+  | "pricing_unavailable"
+  | "configuration_read_failed";
+
+export type ExpansionConfigurationPreflight =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly failure: ExpansionConfigurationFailure;
+      readonly reason: string;
+      readonly missing: readonly string[];
+    };
+
 export interface RunNineSixteenDeps {
   /**
    * Cliente autorizado da composicao. O orquestrador o usa para a checagem
@@ -141,6 +162,11 @@ export interface RunNineSixteenDeps {
   readonly projectDelivered: typeof import("@/lib/product-1-1/orchestration/project-delivered-campaign").projectDeliveredCampaign;
   readonly projectClosed: typeof import("@/lib/product-1-1/orchestration/project-closed-campaign").projectClosedCampaign;
   readonly probeVertical: VerticalArtifactProbe;
+  /**
+   * Preflight read-only de modelo + pricing da expansão. Obrigatório: a
+   * ausência de dependência NÃO pode desligar silenciosamente o gate de gasto.
+   */
+  readonly preflightExpansion: () => Promise<ExpansionConfigurationPreflight>;
   /** Costuras read-only da expansao (fonte preparada + sonda do vertical). */
   readonly retrieveCompositionArtifact?: typeof import("@/lib/campaign/composition-artifacts/retrieve").retrieveCompositionArtifact;
   readonly probeExpansion?: typeof import("@/lib/campaign/vertical-expansion/probe").probeExpansionTarget;
