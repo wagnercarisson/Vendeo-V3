@@ -76,19 +76,32 @@ O sistema SHALL abrir no máximo uma operação por identidade `(campaign_id, op
 
 ### Requirement: Preflight de configuração da expansão antes da primeira chamada paga
 
-Antes da primeira chamada paga de uma geração nova, o sistema SHALL executar um preflight **read-only** do alvo de expansão e da cobertura das tarifas de usage (modelo ativo + tarifas aplicáveis), sem chamar provider, sem reservar crédito e sem criar tentativa. O preflight SHALL ocorrer antes da reserva quando a operação ainda não existe e antes de uma nova chamada paga da base numa continuação. Configuração incompleta SHALL impedir o gasto e encerrar com estado financeiro coerente: nenhuma reserva criada numa geração nova e, numa continuação que já possui reserva, estorno único e encerramento da operação — nunca reserva abandonada. A estimativa pré-chamada (`image_unit_usd`) SHALL NOT ser exigida para autorizar a geração; quando ausente, SHALL permanecer indisponível (`null`) e não SHALL virar zero nem custo efetivo. Replay, consulta somente leitura, retomada de etapa já concluída e entrega de vertical já comprovado SHALL NOT depender do pricing atual nem executar o preflight. A causa segura da falha (modelo ou pricing indisponível versus falha do provider) SHALL permanecer no diagnóstico e na referência de suporte da ocorrência, sem payload sensível nem evento de chamada fictício.
+Antes da primeira chamada paga de uma geração nova, o sistema SHALL executar um preflight **read-only** do alvo de expansão e da cobertura das tarifas de usage (modelo ativo + tarifas aplicáveis), sem chamar provider, sem reservar crédito e sem criar tentativa. O preflight SHALL ocorrer antes da reserva quando a operação ainda não existe e antes de uma nova chamada paga da base numa continuação. O preflight SHALL distinguir configuração **comprovadamente** ausente/incompleta de erro ou indeterminação de leitura: a primeira SHALL impedir o gasto e encerrar conforme o estágio; a segunda SHALL bloquear novas chamadas pagas sem inventar ausência, sem adquirir etapa, sem registrar desfecho `failed` e sem estorno automático, mantendo a operação reservada recuperável para nova leitura. A leitura estrita do preflight SHALL NOT alterar o comportamento fail-open dos leitores compartilhados usados pelo caminho legado. Numa geração nova, configuração incompleta ou leitura indeterminada SHALL impedir a reserva; numa continuação que já possui reserva, configuração comprovadamente incompleta SHALL encerrar com estorno único e leitura indeterminada SHALL NOT estornar. A estimativa pré-chamada (`image_unit_usd`) SHALL NOT ser exigida para autorizar a geração; quando ausente, SHALL permanecer indisponível (`null`) e não SHALL virar zero nem custo efetivo. Replay, consulta somente leitura, retomada de etapa já concluída e entrega de vertical já comprovado SHALL NOT depender do pricing atual nem executar o preflight. A causa segura da falha (modelo ou pricing indisponível versus falha do provider versus indeterminação de leitura) SHALL permanecer no diagnóstico e na referência de suporte da ocorrência, sem payload sensível nem evento de chamada fictício.
 
 #### Scenario: Configuração incompleta bloqueia antes da reserva
 
-- **WHEN** uma geração nova 9:16 teria início e o preflight de modelo/pricing da expansão falha
+- **WHEN** uma geração nova 9:16 teria início e o preflight de modelo/pricing da expansão falha de forma comprovada
 - **THEN** o sistema SHALL NOT reservar crédito, criar tentativa ou chamar provider de base/copy/expansão
 - **AND** o terminal SHALL indicar configuração indisponível com motivo seguro
 
 #### Scenario: Continuação com base pendente não abandona a reserva
 
-- **WHEN** a operação já reservada ainda precisa executar a base e o preflight da expansão falha
+- **WHEN** a operação já reservada ainda precisa executar a base e o preflight da expansão falha de forma comprovada
 - **THEN** o sistema SHALL NOT adquirir a etapa nem chamar provider
 - **AND** SHALL encerrar com estorno único e projeção de encerramento, sem deixar reserva abandonada
+
+#### Scenario: Leitura indeterminada bloqueia sem terminal failed e sem estorno
+
+- **WHEN** o preflight não consegue confirmar catálogo/pricing por erro ou indeterminação de leitura numa continuação reservada
+- **THEN** o sistema SHALL NOT adquirir etapa nem chamar provider
+- **AND** SHALL NOT registrar desfecho terminal `failed` nem estornar a operação por esse motivo
+- **AND** a operação reservada SHALL permanecer recuperável para uma leitura seguinte
+
+#### Scenario: Leitores legados preservam o comportamento fail-open
+
+- **WHEN** o preflight usa a leitura estrita sem alterar os leitores compartilhados do caminho legado
+- **THEN** os consumidores legados SHALL manter o comportamento anterior
+- **AND** a distinção de leitura SHALL existir apenas no resultado estrito do preflight
 
 #### Scenario: Replay e entrega já comprovada não dependem do pricing atual
 

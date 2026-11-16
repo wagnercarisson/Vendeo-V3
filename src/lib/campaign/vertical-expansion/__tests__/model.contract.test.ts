@@ -571,6 +571,40 @@ describe("F60.3 model — preflight de configuração", () => {
     expect(providerCalls.count).toBe(0);
     expect(storageCalls.count).toBe(0);
   });
+
+  it("erro de leitura do catálogo é indeterminação, não ausência comprovada", async () => {
+    const outcome = await preflightExpansionToNineSixteen({
+      catalog: {
+        getActiveCatalogRows: async () => {
+          throw new Error("catalog_down");
+        },
+      },
+      pricing: pricingReader(COMPLETE_PRICING),
+    });
+
+    expect(outcome).toEqual({
+      ok: false,
+      failure: "configuration_read_failed",
+      reason: "catalog_read_failed",
+    });
+  });
+
+  it("erro de leitura do pricing é indeterminação, não row_missing", async () => {
+    const outcome = await preflightExpansionToNineSixteen({
+      catalog: catalogOf([catalogRow()]),
+      pricing: {
+        getModelPricing: async () => {
+          throw new Error("pricing_down");
+        },
+      },
+    });
+
+    expect(outcome).toEqual({
+      ok: false,
+      failure: "configuration_read_failed",
+      reason: "pricing_read_failed",
+    });
+  });
 });
 
 describe("F60.3 model — fronteira de módulo", () => {

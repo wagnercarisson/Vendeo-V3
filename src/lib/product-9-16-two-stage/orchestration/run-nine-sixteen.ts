@@ -330,8 +330,35 @@ async function readExpansionConfiguration(
   }
 }
 
+function logPreflightIndeterminate(params: {
+  readonly input: RunNineSixteenInput;
+  readonly supportReference: string;
+  readonly configuration: Extract<ExpansionConfigurationPreflight, { ok: false }>;
+}): void {
+  logPipelineEvent({
+    event: "expansion_preflight_indeterminate",
+    traceId: params.input.traceId ?? params.input.operationId,
+    campaignId: params.input.campaignId,
+    storeId: params.input.storeId,
+    ...(params.input.authorization.kind === "owner"
+      ? { userId: params.input.authorization.userId }
+      : {}),
+    phase: "pre_stream",
+    status: "failed",
+    errorCode: `${params.configuration.failure}:${params.configuration.reason}`,
+    metadata: {
+      stage: "base",
+      reason: params.configuration.reason,
+      supportReference: params.supportReference,
+    },
+  });
+}
+
 const CONFIGURATION_UNAVAILABLE_MESSAGE =
   "A geração não foi iniciada porque a configuração de geração está indisponível. Nenhum crédito foi consumido.";
+
+const CONFIGURATION_READ_UNAVAILABLE_MESSAGE =
+  "Não foi possível confirmar a configuração de geração agora. Nenhum crédito foi consumido. Tente novamente.";
 
 async function handleStepFailure(
   input: RunNineSixteenInput,
@@ -582,6 +609,22 @@ async function execute(
       if (!configuration.ok) {
         const label = `${configuration.failure}:${configuration.reason}`;
         const supportReference = deps.newSupportReference();
+        if (configuration.failure === "configuration_read_failed") {
+          // Indeterminação de leitura não é configuração comprovadamente
+          // ausente: bloqueia o gasto, mas não inventa causa nem reserva.
+          logPreflightIndeterminate({ input, supportReference, configuration });
+          stream.emitPhase("campaign_validation", "failed");
+          stream.emitTerminal(
+            errorEvent(
+              input,
+              "configuration_unavailable",
+              CONFIGURATION_READ_UNAVAILABLE_MESSAGE,
+              undefined,
+              label,
+            ),
+          );
+          return;
+        }
         logFailureDiagnosis({
           input,
           stage: "base",
@@ -693,6 +736,19 @@ async function execute(
       if (allowNewPaidStep && view.credit.reserved) {
         const configuration = await readExpansionConfiguration(deps);
         if (!configuration.ok) {
+          if (configuration.failure === "configuration_read_failed") {
+            // Leitura indeterminada: nenhuma aquisição/provider/desfecho/estorno.
+            // A operação reservada permanece recuperável para uma nova leitura.
+            logPreflightIndeterminate({
+              input,
+              supportReference: deps.newSupportReference(),
+              configuration,
+            });
+            stream.emitTerminal(
+              processingEvent(input, "between_steps", "base", true),
+            );
+            return;
+          }
           await handleStepFailure(
             input,
             deps,

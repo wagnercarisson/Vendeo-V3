@@ -20,6 +20,15 @@ export interface AiModelCatalogRow {
 
 export type AiModelCatalogMap = Map<string, AiModelCatalogRow>;
 
+/**
+ * Resultado ESTRITO de leitura do catálogo (pré-chamada). Diferente do leitor
+ * legado fail-open, preserva a distinção entre ausência comprovada e falha de
+ * leitura — sem alterar `getCatalogRows`/`getActiveCatalogRows`.
+ */
+export type AiModelCatalogReadResult =
+  | { readonly kind: "ok"; readonly rows: readonly AiModelCatalogRow[] }
+  | { readonly kind: "read_failed"; readonly reason: string };
+
 export function catalogTupleKey(
   capability: string,
   provider: string,
@@ -79,6 +88,29 @@ export class AiModelCatalogService {
   async getActiveCatalogRows(): Promise<AiModelCatalogRow[]> {
     const rows = await this.getCatalogRows();
     return rows.filter((row) => row.status === "active");
+  }
+
+  /**
+   * Leitura ESTRITA e sem cache para o preflight pré-chamada: uma falha de
+   * banco não pode ser confundida com "nenhum modelo ativo". O caminho legado
+   * (`getCatalogRows`/`getActiveCatalogRows`) permanece fail-open e intocado.
+   */
+  async readActiveCatalogRows(): Promise<AiModelCatalogReadResult> {
+    try {
+      const { data, error } = await this.client
+        .from("ai_model_catalog")
+        .select("*");
+      if (error) return { kind: "read_failed", reason: "catalog_read_failed" };
+      if (!Array.isArray(data)) {
+        return { kind: "read_failed", reason: "catalog_read_malformed" };
+      }
+      return {
+        kind: "ok",
+        rows: (data as AiModelCatalogRow[]).filter((row) => row.status === "active"),
+      };
+    } catch {
+      return { kind: "read_failed", reason: "catalog_read_exception" };
+    }
   }
 
   invalidateModelCatalogCache(): void {

@@ -34,9 +34,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   AiModelCatalogService,
+  type AiModelCatalogReadResult,
   type AiModelCatalogRow,
 } from "@/lib/ai/ai-model-catalog-service";
-import { AiModelPricingService, type ModelPricing } from "@/lib/ai-cost/ai-model-pricing";
+import {
+  AiModelPricingService,
+  type ModelPricing,
+  type ModelPricingReadResult,
+} from "@/lib/ai-cost/ai-model-pricing";
 import { isEligibleImageModel, isEligibleImageQuality } from "@/lib/ai/image-model-pair";
 
 import {
@@ -59,6 +64,8 @@ export const EXPECTED_EXPANSION_TARGET = Object.freeze({
 /** Leitor de catálogo injetável (default: serviço real com `supabaseAdmin`). */
 export interface ExpansionCatalogReader {
   getActiveCatalogRows(): Promise<AiModelCatalogRow[]>;
+  /** Leitura estrita opcional (preflight): distingue falha de leitura. */
+  readActiveCatalogRows?(): Promise<AiModelCatalogReadResult>;
 }
 
 /** Leitor de pricing injetável (default: serviço real com `supabaseAdmin`). */
@@ -68,6 +75,12 @@ export interface ExpansionPricingReader {
     model: string;
     quality?: string;
   }): Promise<{ pricing: ModelPricing; versionId: string } | null>;
+  /** Leitura estrita opcional (preflight): distingue falha de leitura. */
+  readModelPricing?(params: {
+    provider: string;
+    model: string;
+    quality?: string;
+  }): Promise<ModelPricingReadResult>;
 }
 
 export type ExpandTargetFailureReason =
@@ -154,6 +167,11 @@ export type ExpansionPreflightResult =
       readonly failure: "pricing_unavailable";
       readonly reason: ExpansionPricingCoverageReason;
       readonly missing: readonly string[];
+    }
+  | {
+      readonly ok: false;
+      readonly failure: "configuration_read_failed";
+      readonly reason: "catalog_read_failed" | "pricing_read_failed";
     };
 
 /**
@@ -218,29 +236,9 @@ export function isEligibleExpansionTarget(row: AiModelCatalogRow): boolean {
   );
 }
 
-/**
- * Resolve o alvo efetivo no catálogo. Nunca lança: exceção ou retorno que não é
- * array vira `catalog_read_failed`; ausência de linha Sunburst vira
- * `catalog_row_missing` mesmo que existam outros modelos elegíveis.
- */
-export async function resolveExpansionTarget(
-  deps: {
-    readonly catalog?: ExpansionCatalogReader;
-    readonly client?: SupabaseClient;
-  } = {},
-): Promise<ExpandTargetResolution> {
-  const reader: ExpansionCatalogReader =
-    deps.catalog ?? new AiModelCatalogService(deps.client);
-
-  let rows: readonly AiModelCatalogRow[];
-  try {
-    const loaded = await reader.getActiveCatalogRows();
-    if (!Array.isArray(loaded)) return targetFailure("catalog_read_failed");
-    rows = loaded;
-  } catch {
-    return targetFailure("catalog_read_failed");
-  }
-
+function resolveTargetFromRows(
+  rows: readonly AiModelCatalogRow[],
+): ExpandTargetResolution {
   const row = rows.find((candidate) => isExpectedActiveRow(candidate));
   if (row === undefined) return targetFailure("catalog_row_missing");
 
@@ -268,6 +266,32 @@ export async function resolveExpansionTarget(
     quality: EXPANSION_QUALITY,
     catalogRow: row,
   });
+}
+
+/**
+ * Resolve o alvo efetivo no catálogo. Nunca lança: exceção ou retorno que não é
+ * array vira `catalog_read_failed`; ausência de linha Sunburst vira
+ * `catalog_row_missing` mesmo que existam outros modelos elegíveis.
+ */
+export async function resolveExpansionTarget(
+  deps: {
+    readonly catalog?: ExpansionCatalogReader;
+    readonly client?: SupabaseClient;
+  } = {},
+): Promise<ExpandTargetResolution> {
+  const reader: ExpansionCatalogReader =
+    deps.catalog ?? new AiModelCatalogService(deps.client);
+
+  let rows: readonly AiModelCatalogRow[];
+  try {
+    const loaded = await reader.getActiveCatalogRows();
+    if (!Array.isArray(loaded)) return targetFailure("catalog_read_failed");
+    rows = loaded;
+  } catch {
+    return targetFailure("catalog_read_failed");
+  }
+
+  return resolveTargetFromRows(rows);
 }
 
 /**
@@ -409,6 +433,11 @@ export async function resolveExpansionPricing(
  * Preflight read-only de modelo + pricing da expansão. Nunca lança e nunca
  * chama provider: resolve a linha ativa do catálogo e a cobertura de tarifas de
  * usage (estimativa pré-chamada é reportada à parte, podendo estar indisponível).
+ *
+ * Distingue config comprovadamente ausente/incompleta de falha/indeterminação
+ * de leitura: os leitores estritos dos serviços preservam o erro de banco; os
+ * leitores legados injetados continuam suportados (exceção → falha de leitura,
+ * `null` → linha ausente).
  */
 export async function preflightExpansionToNineSixteen(
   deps: {
@@ -417,10 +446,16 @@ export async function preflightExpansionToNineSixteen(
     readonly client?: SupabaseClient;
   } = {},
 ): Promise<ExpansionPreflightResult> {
-  const target = await resolveExpansionTarget({
-    ...(deps.catalog === undefined ? {} : { catalog: deps.catalog }),
-    ...(deps.client === undefined ? {} : { client: deps.client }),
-  });
+  const catalog = await readPreflightCatalog(deps);
+  if (catalog.kind === "read_failed") {
+    return Object.freeze({
+      ok: false as const,
+      failure: "configuration_read_failed" as const,
+      reason: "catalog_read_failed" as const,
+    });
+  }
+
+  const target = resolveTargetFromRows(catalog.rows);
   if (!target.ok) {
     return Object.freeze({
       ok: false as const,
@@ -430,25 +465,42 @@ export async function preflightExpansionToNineSixteen(
     });
   }
 
-  const pricing = await resolveExpansionPricing(
-    {
-      provider: target.provider,
-      model: target.model,
-      quality: target.quality,
-    },
-    {
-      ...(deps.pricing === undefined ? {} : { pricing: deps.pricing }),
-      ...(deps.client === undefined ? {} : { client: deps.client }),
-    },
-  );
-  if (!pricing.ok) {
+  const pricing = await readPreflightPricing(deps, target);
+  if (pricing.kind === "read_failed") {
+    return Object.freeze({
+      ok: false as const,
+      failure: "configuration_read_failed" as const,
+      reason: "pricing_read_failed" as const,
+    });
+  }
+  if (pricing.kind === "row_missing") {
     return Object.freeze({
       ok: false as const,
       failure: "pricing_unavailable" as const,
-      reason: pricing.reason,
-      missing: pricing.missing,
+      reason: "row_missing" as const,
+      missing: Object.freeze(["pricing_row"]),
     });
   }
+  if (pricing.kind === "code_default") {
+    return Object.freeze({
+      ok: false as const,
+      failure: "pricing_unavailable" as const,
+      reason: "code_default" as const,
+      missing: Object.freeze(["pricing_code_default"]),
+    });
+  }
+
+  const coverage = evaluatePricingCoverage(pricing.pricing, pricing.versionId);
+  if (!coverage.complete) {
+    return Object.freeze({
+      ok: false as const,
+      failure: "pricing_unavailable" as const,
+      reason: coverage.reason ?? "incomplete_coverage",
+      missing: coverage.missing,
+    });
+  }
+
+  const estimate = evaluatePreCallEstimate(pricing.pricing);
 
   return Object.freeze({
     ok: true as const,
@@ -458,7 +510,68 @@ export async function preflightExpansionToNineSixteen(
     quality: target.quality,
     pricing: pricing.pricing,
     versionId: pricing.versionId,
-    imageUnitUsd: pricing.imageUnitUsd,
-    estimateAvailable: pricing.estimateAvailable,
+    imageUnitUsd: estimate.imageUnitUsd,
+    estimateAvailable: estimate.available,
   });
+}
+
+async function readPreflightCatalog(deps: {
+  readonly catalog?: ExpansionCatalogReader;
+  readonly client?: SupabaseClient;
+}): Promise<
+  | { readonly kind: "ok"; readonly rows: readonly AiModelCatalogRow[] }
+  | { readonly kind: "read_failed" }
+> {
+  const reader: ExpansionCatalogReader =
+    deps.catalog ?? new AiModelCatalogService(deps.client);
+  try {
+    if (typeof reader.readActiveCatalogRows === "function") {
+      const result = await reader.readActiveCatalogRows();
+      return result.kind === "ok"
+        ? { kind: "ok" as const, rows: result.rows }
+        : { kind: "read_failed" as const };
+    }
+    const rows = await reader.getActiveCatalogRows();
+    if (!Array.isArray(rows)) return { kind: "read_failed" as const };
+    return { kind: "ok" as const, rows };
+  } catch {
+    return { kind: "read_failed" as const };
+  }
+}
+
+async function readPreflightPricing(
+  deps: {
+    readonly pricing?: ExpansionPricingReader;
+    readonly client?: SupabaseClient;
+  },
+  target: {
+    readonly provider: string;
+    readonly model: string;
+    readonly quality: "low";
+  },
+): Promise<ModelPricingReadResult> {
+  const reader: ExpansionPricingReader =
+    deps.pricing ?? new AiModelPricingService(deps.client);
+  try {
+    if (typeof reader.readModelPricing === "function") {
+      return await reader.readModelPricing({
+        provider: target.provider,
+        model: target.model,
+        quality: target.quality,
+      });
+    }
+    const legacy = await reader.getModelPricing({
+      provider: target.provider,
+      model: target.model,
+      quality: target.quality,
+    });
+    if (legacy === null) return { kind: "row_missing" as const };
+    return {
+      kind: "found" as const,
+      pricing: legacy.pricing,
+      versionId: legacy.versionId,
+    };
+  } catch {
+    return { kind: "read_failed" as const, reason: "legacy_reader_exception" };
+  }
 }

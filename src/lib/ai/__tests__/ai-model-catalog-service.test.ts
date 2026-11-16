@@ -89,4 +89,32 @@ describe("AiModelCatalogService", () => {
     expect(await service.getCatalogRows()).toHaveLength(1);
     expect(select).toHaveBeenCalledTimes(2);
   });
+
+  it("leitura estrita distingue falha de leitura de ausência sem alterar o caminho legado", async () => {
+    const select = vi
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: { message: "offline" } })
+      .mockResolvedValueOnce({ data: [row()], error: null })
+      .mockResolvedValueOnce({ data: { not: "an-array" }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "offline" } });
+    const client = { from: vi.fn(() => ({ select })) };
+    const service = new AiModelCatalogService(client as never);
+
+    await expect(service.readActiveCatalogRows()).resolves.toEqual({
+      kind: "read_failed",
+      reason: "catalog_read_failed",
+    });
+    await expect(service.readActiveCatalogRows()).resolves.toMatchObject({
+      kind: "ok",
+      rows: [expect.objectContaining({ id: "catalog-1" })],
+    });
+    await expect(service.readActiveCatalogRows()).resolves.toEqual({
+      kind: "read_failed",
+      reason: "catalog_read_malformed",
+    });
+
+    // Legado permanece fail-open e não usa o cache das leituras estritas.
+    await expect(service.getCatalogRows()).resolves.toEqual([]);
+    expect(select).toHaveBeenCalledTimes(4);
+  });
 });

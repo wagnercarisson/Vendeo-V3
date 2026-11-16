@@ -65,6 +65,20 @@ const CONTRACT_PATHS = [
   "src/lib/campaign/square-preparation",
 ];
 
+/**
+ * Quick 261116-vpx (autorizada): separação entre cobertura de usage e
+ * estimativa `image_unit_usd` + preflight de leitura estrita na expansão. Estes
+ * arquivos de F60.3 mudaram de propósito; qualquer OUTRO arquivo dos contratos
+ * protegidos continua bloqueado.
+ */
+const AUTHORIZED_CONTRACT_CHANGES = new Set([
+  "src/lib/campaign/vertical-expansion/model.ts",
+  "src/lib/campaign/vertical-expansion/telemetry.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/expand.core.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/model.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/telemetry.contract.test.ts",
+]);
+
 interface GitResult {
   readonly status: number | null;
   readonly stdout: string;
@@ -185,10 +199,22 @@ describe("F60.4 regressão — caminhos protegidos sem diff contra PHASE_BASE_SH
     expect(diff.status, diff.stderr).toBe(0);
   });
 
-  it("contratos F60.1/F60.3/F60.2 sem diff contra a base", () => {
+  it("contratos F60.1/F60.3/F60.2 sem diff não autorizado contra a base", () => {
     const sha = resolveBaseSha();
-    const diff = git(["diff", "--quiet", `${sha}..HEAD`, "--", ...CONTRACT_PATHS]);
-    expect(diff.status, diff.stderr).toBe(0);
+    const changed = git([
+      "diff",
+      "--name-only",
+      `${sha}..HEAD`,
+      "--",
+      ...CONTRACT_PATHS,
+    ]);
+    expect(changed.status, changed.stderr).toBe(0);
+    const unauthorized = changed.stdout
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .filter((file) => !AUTHORIZED_CONTRACT_CHANGES.has(file));
+    expect(unauthorized).toEqual([]);
   });
 
   it("controle POSITIVO: o mesmo range detecta mudança real em square-base", () => {

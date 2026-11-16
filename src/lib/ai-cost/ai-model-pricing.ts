@@ -17,6 +17,41 @@ export interface ModelPricing extends UsageTokenPricing {
   imageUnitCostUsd?: number;
 }
 
+/**
+ * Resultado ESTRITO de leitura de pricing (pré-chamada). Preserva a distinção
+ * entre linha ausente/incompleta comprovada e falha de leitura, sem alterar o
+ * comportamento fail-open de `getModelPricing`.
+ */
+export type ModelPricingReadResult =
+  | {
+      readonly kind: "found";
+      readonly pricing: ModelPricing;
+      readonly versionId: string;
+    }
+  | {
+      readonly kind: "code_default";
+      readonly pricing: ModelPricing;
+    }
+  | { readonly kind: "row_missing" }
+  | { readonly kind: "read_failed"; readonly reason: string };
+
+type ModelPricingReadInternal =
+  | {
+      readonly kind: "found";
+      readonly pricing: ModelPricing;
+      readonly versionId: string;
+    }
+  | {
+      readonly kind: "code_default";
+      readonly pricing: ModelPricing;
+    }
+  | { readonly kind: "row_missing" }
+  | {
+      readonly kind: "read_failed";
+      readonly reason: string;
+      readonly log: unknown;
+    };
+
 /** Bootstrap 7 seeds (D8): valores verificáveis da migration, não canonizados. */
 export const DEFAULT_AI_MODEL_PRICING: Record<string, ModelPricing> = {
   "gpt-4o": { inputCostUsd: 2.5, outputCostUsd: 10.0 },
@@ -114,6 +149,60 @@ export class AiModelPricingService {
     model: string;
     quality?: string;
   }): Promise<{ pricing: ModelPricing; versionId: string } | null> {
+    const result = await this.loadModelPricing({ provider, model, quality });
+    switch (result.kind) {
+      case "found":
+        return { pricing: result.pricing, versionId: result.versionId };
+      case "code_default":
+        return { pricing: result.pricing, versionId: "code_default" };
+      case "row_missing":
+        return null;
+      case "read_failed":
+        if (result.reason === "pricing_read_exception") {
+          console.error(
+            "[ai-model-pricing] getModelPricing exception (best-effort):",
+            result.log,
+          );
+        } else {
+          console.error(
+            "[ai-model-pricing] getModelPricing error (best-effort):",
+            result.log,
+          );
+        }
+        return null;
+    }
+  }
+
+  /**
+   * Leitura ESTRITA para o preflight pré-chamada: distingue linha ausente /
+   * `code_default` / cobertura incompleta (comprovadas) de falha de leitura.
+   * O caminho legado `getModelPricing` permanece fail-open e intocado.
+   */
+  async readModelPricing({
+    provider,
+    model,
+    quality,
+  }: {
+    provider: string;
+    model: string;
+    quality?: string;
+  }): Promise<ModelPricingReadResult> {
+    const result = await this.loadModelPricing({ provider, model, quality });
+    if (result.kind === "read_failed") {
+      return { kind: "read_failed", reason: result.reason };
+    }
+    return result;
+  }
+
+  private async loadModelPricing({
+    provider,
+    model,
+    quality,
+  }: {
+    provider: string;
+    model: string;
+    quality?: string;
+  }): Promise<ModelPricingReadInternal> {
     try {
       // F56.1 (D-08): `quality` é uma dimensão ADITIVA.
       //   - Omitido → comportamento legado preservado: seleciona as colunas legadas
@@ -146,26 +235,34 @@ export class AiModelPricingService {
       const error = response.error;
 
       if (error) {
-        console.error("[ai-model-pricing] getModelPricing error (best-effort):", error.message);
-        return null;
+        return {
+          kind: "read_failed",
+          reason: "pricing_read_failed",
+          log: error.message,
+        };
       }
 
       if (data) {
         const pricing = mapRowToModelPricing(data);
-        if (!pricing) return null; // linha inválida (violação defensiva do CHECK at_least_one_price)
-        return { pricing, versionId: data.id };
+        if (!pricing) return { kind: "row_missing" }; // linha inválida (violação defensiva do CHECK at_least_one_price)
+        return { kind: "found", pricing, versionId: data.id };
       }
 
       // Sem linha vigente:
       //   - com qualidade → null (sem inventar valor — D-09/D-10).
       //   - sem qualidade → bootstrap de código (D8, fail-open do fluxo legado).
-      if (quality !== undefined) return null;
+      if (quality !== undefined) return { kind: "row_missing" };
       const defaultPricing = DEFAULT_AI_MODEL_PRICING[normalizeModel(model)];
-      if (!defaultPricing || Object.keys(defaultPricing).length === 0) return null;
-      return { pricing: defaultPricing, versionId: "code_default" };
+      if (!defaultPricing || Object.keys(defaultPricing).length === 0) {
+        return { kind: "row_missing" };
+      }
+      return { kind: "code_default", pricing: defaultPricing };
     } catch (err) {
-      console.error("[ai-model-pricing] getModelPricing exception (best-effort):", err);
-      return null;
+      return {
+        kind: "read_failed",
+        reason: "pricing_read_exception",
+        log: err,
+      };
     }
   }
 }

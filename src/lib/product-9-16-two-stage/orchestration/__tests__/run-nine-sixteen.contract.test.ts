@@ -338,6 +338,87 @@ describe("runNineSixteenTwoStageGeneration", () => {
     });
   });
 
+  it("preflight de leitura indeterminada bloqueia a geração nova sem reserva e sem inventar causa", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "configuration_read_failed",
+        reason: "catalog_read_failed",
+        missing: [],
+      })),
+    });
+
+    const events = await run(initialInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "configuration_unavailable",
+      reason: "configuration_read_failed:catalog_read_failed",
+    });
+    expect(calls(d, "financial.reserveOperationOnce")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+    expect(logged.events[0]).toMatchObject({
+      event: "expansion_preflight_indeterminate",
+      errorCode: "configuration_read_failed:catalog_read_failed",
+    });
+  });
+
+  it("continuação com leitura indeterminada permanece recuperável, sem estorno nem desfecho", async () => {
+    const d = deps({
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "configuration_read_failed",
+        reason: "pricing_read_failed",
+        missing: [],
+      })),
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "pending"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_base",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_base", {
+            baseStatus: "pending",
+            baseAttempts: 0,
+          }),
+        ),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+    });
+
+    const events = await run(continueInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "processing",
+      state: "between_steps",
+      nextStep: "base",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "control.recordOutcome")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+    expect(logged.events[0]).toMatchObject({
+      event: "expansion_preflight_indeterminate",
+      errorCode: "configuration_read_failed:pricing_read_failed",
+      metadata: expect.objectContaining({ stage: "base" }),
+    });
+  });
+
   it("continuação que ainda geraria a base também é bloqueada e estornada sem chamadas", async () => {
     const d = deps({
       preflightExpansion: vi.fn(async () => ({

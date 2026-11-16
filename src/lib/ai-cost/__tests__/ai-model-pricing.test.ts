@@ -29,8 +29,12 @@ beforeEach(() => {
   mockSelect.mockReturnValue({ eq: mockEq });
   // Cadeia: .eq(provider).eq(model).is("effective_until", null).is("quality", null).maybeSingle()
   // O nó devolvido por `.is` aceita outro `.is` (filtro `quality IS NULL`) e o terminal `maybeSingle`.
-  mockEq.mockImplementation(() => ({ eq: mockEq, is: mockIs }));
-  mockIs.mockReturnValue({ is: mockIs, maybeSingle: mockMaybeSingle });
+  mockEq.mockImplementation(() => ({
+    eq: mockEq,
+    is: mockIs,
+    maybeSingle: mockMaybeSingle,
+  }));
+  mockIs.mockReturnValue({ eq: mockEq, is: mockIs, maybeSingle: mockMaybeSingle });
   mockMaybeSingle.mockResolvedValue({ data: null, error: null });
 });
 
@@ -168,5 +172,79 @@ describe("AiModelPricingService.getModelPricing (D8)", () => {
     expect(DEFAULT_AI_MODEL_PRICING["responses:image_generation"]).toEqual({ imageUnitCostUsd: 0.065 });
     // Modelos com sufixo de data NÃO têm entrada própria — o normalizeModel resolve na busca
     expect(DEFAULT_AI_MODEL_PRICING["gpt-5.5-2026-04-23"]).toBeUndefined();
+  });
+});
+
+describe("AiModelPricingService.readModelPricing (estrito)", () => {
+  const params = {
+    provider: "openai",
+    model: "gpt-image-2.5-sunburst",
+    quality: "low",
+  };
+
+  it("distingue falha de leitura de linha ausente e mantém getModelPricing fail-open", async () => {
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { message: "connection failed" },
+    });
+    await expect(service.readModelPricing(params)).resolves.toEqual({
+      kind: "read_failed",
+      reason: "pricing_read_failed",
+    });
+
+    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    await expect(service.readModelPricing(params)).resolves.toEqual({
+      kind: "row_missing",
+    });
+
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: {
+        id: UUID,
+        provider: "openai",
+        model: "gpt-image-2.5-sunburst",
+        input_token_usd_per_1m: 1,
+        output_token_usd_per_1m: null,
+        cached_input_token_usd_per_1m: 0.5,
+        image_unit_usd: null,
+        image_token_usd_per_1m: 40,
+        image_input_token_usd_per_1m: 10,
+        image_cached_input_token_usd_per_1m: 5,
+        quality: "low",
+      },
+      error: null,
+    });
+    await expect(service.readModelPricing(params)).resolves.toMatchObject({
+      kind: "found",
+      versionId: UUID,
+      pricing: {
+        inputCostUsd: 1,
+        cachedInputCostUsd: 0.5,
+        imageTokenUsdPer1M: 40,
+        imageInputTokenUsdPer1M: 10,
+        imageCachedInputTokenUsdPer1M: 5,
+      },
+    });
+
+    // Legado: mesma falha de leitura continua virando null (fail-open), não
+    // `row_missing` observável pelo consumidor antigo.
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { message: "connection failed" },
+    });
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(service.getModelPricing(params)).resolves.toBeNull();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("leitura estrita sem qualidade preserva code_default comprovado", async () => {
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    await expect(
+      service.readModelPricing({ provider: "openai", model: "gpt-4o" }),
+    ).resolves.toEqual({
+      kind: "code_default",
+      pricing: { inputCostUsd: 2.5, outputCostUsd: 10 },
+    });
   });
 });
