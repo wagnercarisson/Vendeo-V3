@@ -74,6 +74,35 @@ O sistema SHALL abrir no máximo uma operação por identidade `(campaign_id, op
 - **THEN** o sistema SHALL NOT chamar reserva de crédito
 - **AND** o saldo reservado SHALL permanecer o da abertura
 
+### Requirement: Preflight de configuração da expansão antes da primeira chamada paga
+
+Antes da primeira chamada paga de uma geração nova, o sistema SHALL executar um preflight **read-only** do alvo de expansão e da cobertura das tarifas de usage (modelo ativo + tarifas aplicáveis), sem chamar provider, sem reservar crédito e sem criar tentativa. O preflight SHALL ocorrer antes da reserva quando a operação ainda não existe e antes de uma nova chamada paga da base numa continuação. Configuração incompleta SHALL impedir o gasto e encerrar com estado financeiro coerente: nenhuma reserva criada numa geração nova e, numa continuação que já possui reserva, estorno único e encerramento da operação — nunca reserva abandonada. A estimativa pré-chamada (`image_unit_usd`) SHALL NOT ser exigida para autorizar a geração; quando ausente, SHALL permanecer indisponível (`null`) e não SHALL virar zero nem custo efetivo. Replay, consulta somente leitura, retomada de etapa já concluída e entrega de vertical já comprovado SHALL NOT depender do pricing atual nem executar o preflight. A causa segura da falha (modelo ou pricing indisponível versus falha do provider) SHALL permanecer no diagnóstico e na referência de suporte da ocorrência, sem payload sensível nem evento de chamada fictício.
+
+#### Scenario: Configuração incompleta bloqueia antes da reserva
+
+- **WHEN** uma geração nova 9:16 teria início e o preflight de modelo/pricing da expansão falha
+- **THEN** o sistema SHALL NOT reservar crédito, criar tentativa ou chamar provider de base/copy/expansão
+- **AND** o terminal SHALL indicar configuração indisponível com motivo seguro
+
+#### Scenario: Continuação com base pendente não abandona a reserva
+
+- **WHEN** a operação já reservada ainda precisa executar a base e o preflight da expansão falha
+- **THEN** o sistema SHALL NOT adquirir a etapa nem chamar provider
+- **AND** SHALL encerrar com estorno único e projeção de encerramento, sem deixar reserva abandonada
+
+#### Scenario: Replay e entrega já comprovada não dependem do pricing atual
+
+- **WHEN** a operação existente é consultada, retomada em etapa concluída ou já possui vertical íntegro para entrega
+- **THEN** o sistema SHALL NOT executar o preflight por causa de pricing indisponível
+- **AND** SHALL preservar consulta, acesso e entrega já comprovada
+
+#### Scenario: Diagnóstico distingue configuração de provider
+
+- **WHEN** a falha impede a chamada por modelo/pricing indisponível ou falha a chamada no provider
+- **THEN** o diagnóstico interno SHALL registrar classificações distintas e fechadas para cada causa
+- **AND** SHALL correlacionar a ocorrência à operação e à referência de suporte
+- **AND** SHALL NOT registrar segredo, payload bruto ou evento de chamada fictício
+
 ### Requirement: Base quadrada e copy como etapa interna
 
 O sistema SHALL executar a etapa `base` por meio do módulo F60.4, fornecendo identidade, autorização, conteúdo congelado, tentativa F60 e orçamento. A conclusão da base SHALL persistir a arte quadrada e SHALL NOT entregar campanha, confirmar crédito ou encerrar a operação. A falha ou indisponibilidade da copy SHALL NOT impedir a conclusão da base nem a entrega do vertical.
