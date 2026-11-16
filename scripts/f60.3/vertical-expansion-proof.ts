@@ -847,7 +847,8 @@ export async function runPreflight(
                 ok: true;
                 pricing: { imageUnitCostUsd?: unknown };
                 versionId: string;
-                imageUnitUsd: number;
+                imageUnitUsd: number | null;
+                estimateAvailable: boolean;
               }
             | { ok: false; reason: string; missing: readonly string[] }
           >;
@@ -886,11 +887,15 @@ export async function runPreflight(
             pricingVersion = pricing.versionId;
             imageUnitUsd = pricing.imageUnitUsd;
             catalogPricingOk = true;
+            const estimateLabel =
+              pricing.imageUnitUsd === null
+                ? "null (estimativa indisponível)"
+                : pricing.imageUnitUsd.toFixed(6);
             checks.push(
               pass(
                 "catalog_pricing",
                 "Catálogo/pricing",
-                `${target.provider}/${target.model}/${target.protocol} quality=${target.quality}; pricingVersion=${pricing.versionId}; imageUnitUsd=${pricing.imageUnitUsd.toFixed(6)}; cobertura completa`,
+                `${target.provider}/${target.model}/${target.protocol} quality=${target.quality}; pricingVersion=${pricing.versionId}; imageUnitUsd=${estimateLabel}; cobertura de usage completa`,
               ),
             );
           }

@@ -12,8 +12,10 @@ import type { ModelPricing } from "@/lib/ai-cost/ai-model-pricing";
 
 import {
   EXPECTED_EXPANSION_TARGET,
+  evaluatePreCallEstimate,
   evaluatePricingCoverage,
   isEligibleExpansionTarget,
+  preflightExpansionToNineSixteen,
   resolveExpansionPricing,
   resolveExpansionTarget,
 } from "../model";
@@ -290,28 +292,86 @@ describe("F60.3 model — cobertura de pricing pré-chamada", () => {
     );
   });
 
-  it("image_unit_usd zero, negativo ou ausente nunca completa a cobertura", () => {
-    const candidates: ModelPricing[] = [
-      { ...COMPLETE_PRICING, imageUnitCostUsd: 0 },
-      { ...COMPLETE_PRICING, imageUnitCostUsd: -0.01 },
-      { ...COMPLETE_PRICING, imageUnitCostUsd: undefined },
+  it("image_unit_usd isolado nunca completa a cobertura de usage", () => {
+    const candidates: Array<{ label: string; pricing: ModelPricing }> = [
+      { label: "positivo", pricing: { imageUnitCostUsd: 0.05 } },
+      { label: "zero", pricing: { imageUnitCostUsd: 0 } },
+      { label: "negativo", pricing: { imageUnitCostUsd: -0.01 } },
     ];
-    const { imageUnitCostUsd: _omitted, ...withoutUnit } = COMPLETE_PRICING;
-    candidates.push(withoutUnit);
 
-    for (const pricing of candidates) {
+    for (const { label, pricing } of candidates) {
       const coverage = evaluatePricingCoverage(pricing, "version-1");
 
-      expect(coverage.complete).toBe(false);
-      expect(coverage.reason).toBe("incomplete_coverage");
-      expect(coverage.missing).toContain("image_unit_usd");
+      expect(coverage.complete, label).toBe(false);
+      expect(coverage.reason, label).toBe("incomplete_coverage");
+      expect([...coverage.missing].sort(), label).toEqual(
+        [
+          "inputCostUsd",
+          "cachedInputCostUsd",
+          "imageInputTokenUsdPer1M",
+          "imageTokenUsdPer1M",
+          "imageCachedInputTokenUsdPer1M",
+        ].sort(),
+      );
+      expect(coverage.missing, label).not.toContain("image_unit_usd");
     }
+  });
+
+  it("tarifas de usage completas + image_unit_usd NULL é cobertura completa", () => {
+    const { imageUnitCostUsd: _omitted, ...withoutUnit } = COMPLETE_PRICING;
+    // `AiModelPricingService` normaliza NULL para ausência; este caso cobre
+    // também um runtime que ainda entregue `null` explícito.
+    const nullUnit = {
+      ...COMPLETE_PRICING,
+      imageUnitCostUsd: null,
+    } as unknown as ModelPricing;
+
+    expect(evaluatePricingCoverage(withoutUnit, "version-1")).toEqual({
+      complete: true,
+      missing: [],
+    });
+    expect(evaluatePricingCoverage(nullUnit, "version-1")).toEqual({
+      complete: true,
+      missing: [],
+    });
   });
 
   it("linha completa é complete com missing vazio", () => {
     expect(evaluatePricingCoverage(COMPLETE_PRICING, "version-1")).toEqual({
       complete: true,
       missing: [],
+    });
+  });
+});
+
+describe("F60.3 model — estimativa pré-chamada separada", () => {
+  it("image_unit_usd positivo produz estimativa disponível", () => {
+    expect(evaluatePreCallEstimate(COMPLETE_PRICING)).toEqual({
+      available: true,
+      imageUnitUsd: 0.05,
+    });
+  });
+
+  it("estimativa ausente, zero, negativa ou NaN fica explicitamente indisponível", () => {
+    const { imageUnitCostUsd: _omitted, ...withoutUnit } = COMPLETE_PRICING;
+    const candidates: ModelPricing[] = [
+      withoutUnit,
+      { ...COMPLETE_PRICING, imageUnitCostUsd: 0 },
+      { ...COMPLETE_PRICING, imageUnitCostUsd: -1 },
+      { ...COMPLETE_PRICING, imageUnitCostUsd: Number.NaN },
+    ];
+
+    for (const pricing of candidates) {
+      expect(evaluatePreCallEstimate(pricing)).toEqual({
+        available: false,
+        imageUnitUsd: null,
+        reason: "image_unit_usd",
+      });
+    }
+    expect(evaluatePreCallEstimate(null)).toEqual({
+      available: false,
+      imageUnitUsd: null,
+      reason: "image_unit_usd",
     });
   });
 });
@@ -343,7 +403,51 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
       pricing: COMPLETE_PRICING,
       versionId: "version-1",
       imageUnitUsd: 0.05,
+      estimateAvailable: true,
     });
+  });
+
+  it("tarifas completas + image_unit_usd ausente resolve OK com estimativa indisponível", async () => {
+    const { imageUnitCostUsd: _omitted, ...withoutUnit } = COMPLETE_PRICING;
+    const reader = {
+      getModelPricing: async () => ({
+        pricing: withoutUnit,
+        versionId: "version-1",
+      }),
+    };
+
+    const resolution = await resolveExpansionPricing(
+      { provider: "openai", model: "gpt-image-2.5-sunburst", quality: "low" },
+      { pricing: reader },
+    );
+
+    expect(resolution).toEqual({
+      ok: true,
+      pricing: withoutUnit,
+      versionId: "version-1",
+      imageUnitUsd: null,
+      estimateAvailable: false,
+    });
+  });
+
+  it("tarifas de usage ausentes continuam bloqueando mesmo com image_unit_usd", async () => {
+    const reader = {
+      getModelPricing: async () => ({
+        pricing: { imageUnitCostUsd: 0.05 },
+        versionId: "version-1",
+      }),
+    };
+
+    const resolution = await resolveExpansionPricing(
+      { provider: "openai", model: "gpt-image-2.5-sunburst", quality: "low" },
+      { pricing: reader },
+    );
+
+    expect(resolution.ok).toBe(false);
+    if (resolution.ok) return;
+    expect(resolution.reason).toBe("incomplete_coverage");
+    expect(resolution.missing).not.toContain("image_unit_usd");
+    expect(resolution.missing).toHaveLength(5);
   });
 
   it("code_default nunca produz ok: true", async () => {
@@ -399,6 +503,73 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
         { pricing: reader },
       ),
     ).resolves.toEqual({ ok: false, reason: "row_missing", missing: ["pricing_row"] });
+  });
+});
+
+describe("F60.3 model — preflight de configuração", () => {
+  const pricingReader = (pricing: ModelPricing) => ({
+    getModelPricing: async () => ({ pricing, versionId: "version-1" }),
+  });
+
+  it("modelo + tarifas de usage completas ⇒ ok sem exigir image_unit_usd", async () => {
+    const { imageUnitCostUsd: _omitted, ...withoutUnit } = COMPLETE_PRICING;
+
+    const outcome = await preflightExpansionToNineSixteen({
+      catalog: catalogOf([catalogRow()]),
+      pricing: pricingReader(withoutUnit),
+    });
+
+    expect(outcome).toEqual({
+      ok: true,
+      provider: "openai",
+      model: "gpt-image-2.5-sunburst",
+      protocol: "images",
+      quality: "low",
+      pricing: withoutUnit,
+      versionId: "version-1",
+      imageUnitUsd: null,
+      estimateAvailable: false,
+    });
+  });
+
+  it("catálogo sem linha ativa devolve model_unavailable", async () => {
+    const outcome = await preflightExpansionToNineSixteen({
+      catalog: catalogOf([]),
+      pricing: pricingReader(COMPLETE_PRICING),
+    });
+
+    expect(outcome).toEqual({
+      ok: false,
+      failure: "model_unavailable",
+      reason: "catalog_row_missing",
+    });
+  });
+
+  it("tarifa de usage aplicável ausente devolve pricing_unavailable", async () => {
+    const outcome = await preflightExpansionToNineSixteen({
+      catalog: catalogOf([catalogRow()]),
+      pricing: pricingReader({
+        inputCostUsd: 1,
+        imageInputTokenUsdPer1M: 3,
+      }),
+    });
+
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    if (outcome.failure !== "pricing_unavailable") {
+      throw new Error(`expected pricing_unavailable, got ${outcome.failure}`);
+    }
+    expect(outcome.reason).toBe("incomplete_coverage");
+    expect(outcome.missing).not.toContain("image_unit_usd");
+  });
+
+  it("não chama provider nem Storage", async () => {
+    await preflightExpansionToNineSixteen({
+      catalog: catalogOf([catalogRow()]),
+      pricing: pricingReader(COMPLETE_PRICING),
+    });
+    expect(providerCalls.count).toBe(0);
+    expect(storageCalls.count).toBe(0);
   });
 });
 

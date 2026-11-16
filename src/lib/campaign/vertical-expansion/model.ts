@@ -11,13 +11,20 @@ import "server-only";
  * bancada nem configuração paralela de par de modelos.
  *
  * Pricing: a cobertura pré-chamada exige a linha vigente da qualidade (nunca
- * `code_default`) e as tarifas de usage APLICÁVEIS ao protocolo, além de
- * `image_unit_usd` positivo. Para `images.edit`, a saída é imagem
- * (`imageTokenUsdPer1M`); `outputCostUsd` é tarifa de saída TEXTUAL e só é
- * exigida quando o protocolo/modelo pode produzir tokens textuais positivos.
- * O calculador pós-chamada (`calculateProductOneToOneImageUsageCost`) segue a
- * mesma regra: só exige `outputCostUsd` quando `outputTextTokens > 0`. Qualquer
- * ausência aplicável bloqueia antes da chamada (T-60.3-05).
+ * `code_default`) e as tarifas de usage APLICÁVEIS ao protocolo. Para
+ * `images.edit`, a saída é imagem (`imageTokenUsdPer1M`); `outputCostUsd` é
+ * tarifa de saída TEXTUAL e só é exigida quando o protocolo/modelo pode
+ * produzir tokens textuais positivos. O calculador pós-chamada
+ * (`calculateProductOneToOneImageUsageCost`) segue a mesma regra: só exige
+ * `outputCostUsd` quando `outputTextTokens > 0`. Qualquer ausência aplicável de
+ * tarifa de usage bloqueia antes da chamada (T-60.3-05).
+ *
+ * `image_unit_usd` NÃO compõe a cobertura de usage: ele é apenas a estimativa
+ * pré-chamada (teto/auditoria). Quando ausente, a estimativa permanece
+ * explicitamente indisponível (`null`) e nunca vira zero, cópia de outra linha
+ * ou custo efetivo; o custo pós-chamada continua sendo o de usage × tarifas.
+ * A autorização de gasto do fluxo 9:16 continua sendo a reserva de 1 crédito,
+ * não a estimativa por unidade.
  *
  * Este módulo é server-only porque constrói serviços com `supabaseAdmin` como
  * default; os leitores são injetáveis nos testes (`catalog`/`pricing`).
@@ -100,7 +107,12 @@ export type ExpansionPricingResolution =
       readonly ok: true;
       readonly pricing: ModelPricing;
       readonly versionId: string;
-      readonly imageUnitUsd: number;
+      /**
+       * Estimativa pré-chamada (`image_unit_usd`). `null` quando a linha não
+       * cobre essa dimensão — a estimativa permanece indisponível, nunca zero.
+       */
+      readonly imageUnitUsd: number | null;
+      readonly estimateAvailable: boolean;
     }
   | {
       readonly ok: false;
@@ -109,11 +121,48 @@ export type ExpansionPricingResolution =
     };
 
 /**
- * Tarifas obrigatórias para o cálculo por usage tokens no protocolo `images`:
- * entrada textual, cache textual, entrada de imagem, saída de imagem e cache de
- * imagem. `outputCostUsd` (saída textual) NÃO entra por padrão: modelos de
- * imagem usam `-` nessa dimensão e o calculador só a exige quando há tokens
- * textuais de saída positivos.
+ * Estimativa pré-chamada (`image_unit_usd`), SEPARADA da cobertura de uso.
+ * Ausente/zero/negativa ⇒ indisponível (`null`), nunca zero nem custo efetivo.
+ */
+export interface ExpansionPreCallEstimate {
+  readonly available: boolean;
+  readonly imageUnitUsd: number | null;
+  readonly reason?: "image_unit_usd";
+}
+
+/** Preflight read-only de modelo + pricing da expansão (nenhuma chamada paga). */
+export type ExpansionPreflightResult =
+  | {
+      readonly ok: true;
+      readonly provider: "openai";
+      readonly model: string;
+      readonly protocol: "images";
+      readonly quality: "low";
+      readonly pricing: ModelPricing;
+      readonly versionId: string;
+      readonly imageUnitUsd: number | null;
+      readonly estimateAvailable: boolean;
+    }
+  | {
+      readonly ok: false;
+      readonly failure: "model_unavailable";
+      readonly reason: ExpandTargetFailureReason;
+      readonly detail?: string;
+    }
+  | {
+      readonly ok: false;
+      readonly failure: "pricing_unavailable";
+      readonly reason: ExpansionPricingCoverageReason;
+      readonly missing: readonly string[];
+    };
+
+/**
+ * Tarifas de usage obrigatórias para o cálculo no protocolo `images`: entrada
+ * textual, cache textual, entrada de imagem, saída de imagem e cache de imagem.
+ * `image_unit_usd` NÃO entra: é estimativa pré-chamada, não tarifa de usage.
+ * `outputCostUsd` (saída textual) NÃO entra por padrão: modelos de imagem usam
+ * `-` nessa dimensão e o calculador só a exige quando há tokens textuais de
+ * saída positivos.
  */
 const REQUIRED_PRICING_FIELDS = Object.freeze([
   "inputCostUsd",
@@ -222,10 +271,11 @@ export async function resolveExpansionTarget(
 }
 
 /**
- * Cobertura de pricing pré-chamada (T-60.3-05): a linha precisa existir, não
- * pode ser `code_default` e precisa cobrir as tarifas aplicáveis ao protocolo
- * mais um `image_unit_usd` positivo. `outputCostUsd` é exigida apenas quando
- * `requiresTextOutputRate` é `true`; `image_unit_usd` sozinho nunca é completo.
+ * Cobertura de tarifas de usage pré-chamada (T-60.3-05): a linha precisa
+ * existir, não pode ser `code_default` e precisa cobrir as tarifas aplicáveis ao
+ * protocolo. `outputCostUsd` é exigida apenas quando `requiresTextOutputRate` é
+ * `true`. `image_unit_usd` sozinho nunca é completo e também não é exigido:
+ * quando ausente, a estimativa é tratada por `evaluatePreCallEstimate`.
  */
 export function evaluatePricingCoverage(
   pricing: ModelPricing | null,
@@ -262,15 +312,6 @@ export function evaluatePricingCoverage(
     }
   }
 
-  const imageUnitCostUsd = pricing.imageUnitCostUsd;
-  if (
-    typeof imageUnitCostUsd !== "number" ||
-    !Number.isFinite(imageUnitCostUsd) ||
-    imageUnitCostUsd <= 0
-  ) {
-    missing.push("image_unit_usd");
-  }
-
   if (missing.length > 0) {
     return Object.freeze({
       complete: false,
@@ -280,6 +321,31 @@ export function evaluatePricingCoverage(
   }
 
   return Object.freeze({ complete: true, missing: Object.freeze([]) });
+}
+
+/**
+ * Avalia SOMENTE a estimativa pré-chamada. Ausente/zero/negativa/NaN ⇒
+ * indisponível (`imageUnitUsd: null`), nunca `0` e nunca custo efetivo.
+ */
+export function evaluatePreCallEstimate(
+  pricing: ModelPricing | null,
+): ExpansionPreCallEstimate {
+  const imageUnitCostUsd = pricing?.imageUnitCostUsd;
+  if (
+    typeof imageUnitCostUsd === "number" &&
+    Number.isFinite(imageUnitCostUsd) &&
+    imageUnitCostUsd > 0
+  ) {
+    return Object.freeze({
+      available: true,
+      imageUnitUsd: imageUnitCostUsd,
+    });
+  }
+  return Object.freeze({
+    available: false,
+    imageUnitUsd: null,
+    reason: "image_unit_usd" as const,
+  });
 }
 
 /**
@@ -328,10 +394,71 @@ export async function resolveExpansionPricing(
     });
   }
 
+  const estimate = evaluatePreCallEstimate(read.pricing);
+
   return Object.freeze({
     ok: true as const,
     pricing: read.pricing,
     versionId: read.versionId,
-    imageUnitUsd: read.pricing.imageUnitCostUsd as number,
+    imageUnitUsd: estimate.imageUnitUsd,
+    estimateAvailable: estimate.available,
+  });
+}
+
+/**
+ * Preflight read-only de modelo + pricing da expansão. Nunca lança e nunca
+ * chama provider: resolve a linha ativa do catálogo e a cobertura de tarifas de
+ * usage (estimativa pré-chamada é reportada à parte, podendo estar indisponível).
+ */
+export async function preflightExpansionToNineSixteen(
+  deps: {
+    readonly catalog?: ExpansionCatalogReader;
+    readonly pricing?: ExpansionPricingReader;
+    readonly client?: SupabaseClient;
+  } = {},
+): Promise<ExpansionPreflightResult> {
+  const target = await resolveExpansionTarget({
+    ...(deps.catalog === undefined ? {} : { catalog: deps.catalog }),
+    ...(deps.client === undefined ? {} : { client: deps.client }),
+  });
+  if (!target.ok) {
+    return Object.freeze({
+      ok: false as const,
+      failure: "model_unavailable" as const,
+      reason: target.reason,
+      ...(target.detail === undefined ? {} : { detail: target.detail }),
+    });
+  }
+
+  const pricing = await resolveExpansionPricing(
+    {
+      provider: target.provider,
+      model: target.model,
+      quality: target.quality,
+    },
+    {
+      ...(deps.pricing === undefined ? {} : { pricing: deps.pricing }),
+      ...(deps.client === undefined ? {} : { client: deps.client }),
+    },
+  );
+  if (!pricing.ok) {
+    return Object.freeze({
+      ok: false as const,
+      failure: "pricing_unavailable" as const,
+      reason: pricing.reason,
+      missing: pricing.missing,
+    });
+  }
+
+  return Object.freeze({
+    ok: true as const,
+    provider: target.provider,
+    model: target.model,
+    protocol: target.protocol,
+    quality: target.quality,
+    pricing: pricing.pricing,
+    versionId: pricing.versionId,
+    imageUnitUsd: pricing.imageUnitUsd,
+    estimateAvailable: pricing.estimateAvailable,
   });
 }

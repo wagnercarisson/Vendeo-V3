@@ -443,6 +443,36 @@ describe("expandVerticalToNineSixteen — custo reconstruído após o flush", ()
     expect(result.call.cost.costSource).toBe("not_available");
     expect(result.call.cost.estimatedCostUsd).toBeNull();
   });
+
+  it("estimativa image_unit ausente não bloqueia nem vira zero: custo efetivo vem de usage × tarifas", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+    const { imageUnitCostUsd: _omitted, ...withoutUnit } = COMPLETE_PRICING;
+
+    const result = await expandVerticalToNineSixteen(
+      expandInput(),
+      baseDeps(backend, invoker.invoker, {
+        pricing: {
+          getModelPricing: async () => ({
+            pricing: withoutUnit,
+            versionId: "pricing-version-1",
+          }),
+        },
+      }),
+    );
+
+    expect(result.kind).toBe("expanded");
+    if (result.kind !== "expanded") return;
+    expect(invoker.calls).toBe(1);
+    expect(result.call.cost.costSource).toBe("pricing_table");
+    expect(typeof result.call.cost.estimatedCostUsd).toBe("number");
+    expect(result.call.cost.estimatedCostUsd as number).toBeGreaterThan(0);
+
+    const internal = captured.events[0].metadata as Record<string, unknown>;
+    expect(internal.internal_cost_origin).toBe("expansion_pair_pricing");
+    expect(internal.internal_cost_pre_call_estimate_usd).toBeNull();
+  });
 });
 
 describe("expandVerticalToNineSixteen — timer descartado em todos os caminhos", () => {

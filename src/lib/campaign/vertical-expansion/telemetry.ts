@@ -123,8 +123,11 @@ export interface ExpansionTelemetryInput {
   readonly quality: "low";
   readonly pricingVersion: string;
   readonly tokenPricing: UsageTokenPricing;
-  /** Estimativa pré-chamada (`image_unit`) usada apenas como teto/auditoria. */
-  readonly imageUnitUsd: number;
+  /**
+   * Estimativa pré-chamada (`image_unit`) usada apenas como teto/auditoria.
+   * `null` = estimativa indisponível (nunca zero nem custo efetivo).
+   */
+  readonly imageUnitUsd: number | null;
 }
 
 export interface ExpansionTelemetryDetails {

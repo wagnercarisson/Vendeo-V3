@@ -204,6 +204,20 @@ describe("createExpansionTelemetry — custo com origem", () => {
     expect(cost.costSource).toBe("not_available");
     expect(cost.estimatedCostUsd).toBeNull();
   });
+
+  it("estimativa ausente (image_unit null) não vira zero: custo efetivo vem de usage × tarifas", async () => {
+    const handle = createExpansionTelemetry(telemetryInput({ imageUnitUsd: null }));
+    await handle.telemetry.sink.emit(envelope({ usage: FULL_USAGE }));
+    handle.finalize({ outcome: "expanded", returnedSize: "1152x2048", durationMs: 10 });
+    await handle.flush();
+
+    const event = captured.events[0];
+    const cost = event.cost as Record<string, unknown>;
+    expect(cost.costSource).toBe("pricing_table");
+    expect(typeof cost.estimatedCostUsd).toBe("number");
+    expect(cost.estimatedCostUsd as number).toBeGreaterThan(0);
+    expect((event.metadata as Record<string, unknown>).internal_cost_pre_call_estimate_usd).toBeNull();
+  });
 });
 
 describe("createExpansionTelemetry — flush único e protegido", () => {
