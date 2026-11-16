@@ -41,12 +41,19 @@ copy já terem sido pagas; a operação foi estornada.
 - Novo `preflightExpansionToNineSixteen` (server-only, read-only): resolve o
   alvo ativo do catálogo e a cobertura de tarifas de usage; nunca chama
   provider.
+- O preflight distingue **configuração comprovadamente ausente/incompleta** de
+  **erro/indeterminação de leitura**. Os serviços compartilhados ganharam uma
+  leitura estrita aditiva (`readActiveCatalogRows` / `readModelPricing`);
+  `getActiveCatalogRows`/`getCatalogRows` e `getModelPricing` continuam
+  fail-open, com o mesmo comportamento legado.
 - O orquestrador executa o preflight:
-  - numa **geração nova**, antes de `reserveOperationOnce` — falha ⇒ nenhuma
-    reserva, nenhuma tentativa, nenhuma chamada de base/copy/expansão;
+  - numa **geração nova**, antes de `reserveOperationOnce` — falha comprovada
+    ou leitura indeterminada ⇒ nenhuma reserva, nenhuma tentativa, nenhuma
+    chamada de base/copy/expansão;
   - numa **continuação que ainda executaria a base**, antes de adquirir a
-    etapa — falha ⇒ estorno único + encerramento da projeção, sem reserva
-    abandonada.
+    etapa — falha comprovada ⇒ estorno único + encerramento; leitura
+    indeterminada ⇒ **`processing` recuperável**, sem acquire/provider,
+    sem desfecho `failed` e sem estorno.
 - Replay/consulta somente leitura, retomada de etapa já concluída e entrega de
   vertical já comprovado **não** executam o preflight.
 - A dependência `preflightExpansion` é obrigatória em `RunNineSixteenDeps`;
@@ -71,14 +78,17 @@ copy já terem sido pagas; a operação foi estornada.
 
 | Arquivo | Mudança |
 |---|---|
-| `src/lib/campaign/vertical-expansion/model.ts` | cobertura de usage separada da estimativa; `evaluatePreCallEstimate`; `preflightExpansionToNineSixteen`; `imageUnitUsd` anulável |
+| `src/lib/campaign/vertical-expansion/model.ts` | cobertura de usage separada da estimativa; `evaluatePreCallEstimate`; preflight com leitura estrita e distinção de indeterminação |
 | `src/lib/campaign/vertical-expansion/telemetry.ts` | estimativa pré-chamada anulável |
+| `src/lib/ai/ai-model-catalog-service.ts` | leitura estrita aditiva (`readActiveCatalogRows`); legado fail-open intocado |
+| `src/lib/ai-cost/ai-model-pricing.ts` | leitura estrita aditiva (`readModelPricing`); legado fail-open intocado |
 | `src/lib/product-9-16-two-stage/orchestration/types.ts` | `ExpansionConfigurationPreflight` obrigatório + `reason` aditivo no terminal |
 | `src/lib/product-9-16-two-stage/orchestration/delivery-deps.ts` | preflight real read-only |
-| `src/lib/product-9-16-two-stage/orchestration/run-nine-sixteen.ts` | gate antes da reserva/base; diagnóstico seguro; referência de suporte |
+| `src/lib/product-9-16-two-stage/orchestration/run-nine-sixteen.ts` | gate antes da reserva/base; leitura indeterminada recuperável; diagnóstico seguro; referência de suporte |
 | `scripts/f60.3/vertical-expansion-proof.ts` | estimativa anulável no preflight da prova |
+| `src/lib/campaign/square-base/__tests__/regression.contract.test.ts` | allowlist explícita dos arquivos F60.3 autorizados nesta quick |
 | `openspec/specs/campaign-vertical-ai-expansion/spec.md` | cobertura usage × estimativa; cenários de `image_unit_usd` nulo |
-| `openspec/specs/product-9-16-two-stage-orchestration/spec.md` | requisito de preflight, replay/entrega e diagnóstico |
+| `openspec/specs/product-9-16-two-stage-orchestration/spec.md` | preflight, leitura indeterminada, replay/entrega e diagnóstico |
 
 ## Provas offline
 
@@ -86,8 +96,8 @@ Comandos executados localmente (sem rede/produção/banco/Storage/provider):
 
 | Gate | Resultado |
 |---|---|
-| `npx vitest run src/lib/campaign/vertical-expansion src/lib/product-9-16-two-stage` | **51 arquivos / 447 testes PASS** |
-| `npx vitest run src/lib/campaign src/lib/product-vertical-9-16` | **88 arquivos / 1163 testes PASS** |
+| `npx vitest run src/lib/campaign/vertical-expansion src/lib/product-9-16-two-stage src/lib/ai/__tests__/ai-model-catalog-service.test.ts src/lib/ai-cost/__tests__/ai-model-pricing.test.ts` | **54 arquivos / 470 testes PASS** |
+| `npx vitest run src/lib/campaign src/lib/product-vertical-9-16` | **88 arquivos / 1165 testes PASS** |
 | `npx vitest run src/app/api/campaign/generate-image src/app/api/campaign/generation-status src/app/api/campaign/[id]/continue` | **5 arquivos / 140 testes PASS** |
 | `npx vitest run` (1:1: orquestração, crédito, estados, failure-closure layer1) | **4 arquivos / 104 testes PASS** |
 | `npm run test:scripts` | **102 / 102 PASS** |
@@ -109,6 +119,30 @@ Cobertura específica adicionada:
 - replay/entrega comprovada não consultam pricing;
 - diagnóstico distingue `pricing_unavailable:incomplete_coverage` /
   `model_unavailable:catalog_row_missing` de `transient`/`provider_failure`.
+
+### Correção do achado de revisão — leitura indeterminada
+
+- Leitores compartilhados receberam leitura estrita **aditiva**
+  (`readActiveCatalogRows`, `readModelPricing`); os métodos legados
+  `getActiveCatalogRows`/`getCatalogRows`/`getModelPricing` continuam
+  fail-open e cobertos pelos testes de regressão.
+- `preflightExpansionToNineSixteen` distingue:
+  - `configuration_read_failed` / `catalog_read_failed`;
+  - `configuration_read_failed` / `pricing_read_failed`;
+  - `pricing_unavailable` comprovado (`row_missing`, `code_default`,
+    `incomplete_coverage`);
+  - `model_unavailable` comprovado (linha/protocolo/qualidade).
+- Teste com a **fábrica real** (`createNineSixteenDeps`) + leitores reais +
+  cliente Supabase simulado:
+  - erro de catálogo → continuação reservada retorna `processing` recuperável,
+    zero acquire/provider/`recordOutcome`/estorno; após a leitura voltar, a
+    mesma operação prossegue (acquire + base);
+  - erro de pricing → mesmo comportamento;
+  - pricing incompleto comprovado → falha definitiva, `recordOutcome` failed e
+    estorno único.
+- Guard `square-base/regression.contract.test.ts` reconciliado por allowlist
+  explícita dos 5 arquivos de `vertical-expansion` autorizados nesta quick;
+  qualquer outro arquivo dos contratos protegidos continua bloqueado.
 
 **Falhas preexistentes confirmadas na base** (reproduzidas com a worktree
 limpa/stash): `src/lib/ai/__tests__/telemetry-coverage.test.ts` (1) e

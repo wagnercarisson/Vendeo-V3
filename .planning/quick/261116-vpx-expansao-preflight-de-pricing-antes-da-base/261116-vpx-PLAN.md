@@ -37,11 +37,18 @@ como se fosse cobertura de usage, bloqueando um cálculo que, no protocolo
    - Modelo + tarifas de usage são verificados em modo read-only antes da
      reserva de uma geração nova e antes de uma nova chamada paga da base numa
      continuação.
-   - Falha impede reserva/tentativa/provider de base, copy e expansão.
-   - Numa continuação já reservada, a operação é encerrada com estorno único e
-     projeção de encerramento — sem reserva abandonada.
+   - **Configuração comprovadamente ausente/incompleta** impede
+     reserva/tentativa/provider de base, copy e expansão; numa continuação já
+     reservada, encerra com estorno único e projeção de encerramento.
+   - **Erro/indeterminação de leitura** (catálogo ou pricing) é distinto:
+     bloqueia novas chamadas, mas numa continuação reservada não adquire etapa,
+     não chama provider, não registra desfecho `failed` e não estorna; a
+     operação permanece recuperável para uma leitura seguinte.
    - Replay/consulta, retomada de etapa concluída e entrega de vertical já
      comprovado não executam o preflight e não dependem do pricing atual.
+   - Os leitores compartilhados do caminho legado mantêm o comportamento
+     fail-open; a distinção de leitura existe apenas no resultado estrito do
+     preflight.
 
 3. **Diagnóstico seguro.**
    - `pricing_unavailable`, `model_unavailable` e

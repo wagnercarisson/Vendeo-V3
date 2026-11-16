@@ -7,15 +7,17 @@ provider ou produção.
 ## Suítes
 
 ```
-npx vitest run src/lib/campaign/vertical-expansion src/lib/product-9-16-two-stage
-Test Files  51 passed (51)
-     Tests  447 passed (447)
+npx vitest run src/lib/campaign/vertical-expansion src/lib/product-9-16-two-stage \
+  src/lib/ai/__tests__/ai-model-catalog-service.test.ts \
+  src/lib/ai-cost/__tests__/ai-model-pricing.test.ts
+Test Files  54 passed (54)
+     Tests  470 passed (470)
 ```
 
 ```
 npx vitest run src/lib/campaign src/lib/product-vertical-9-16
 Test Files  88 passed (88)
-     Tests  1163 passed (1163)
+     Tests  1165 passed (1165)
 ```
 
 ```
@@ -71,6 +73,28 @@ Specification 'campaign-vertical-ai-expansion' is valid
 
 openspec validate product-9-16-two-stage-orchestration --strict
 Specification 'product-9-16-two-stage-orchestration' is valid
+```
+
+## Correção do achado de revisão — leitura indeterminada
+
+- Serviços compartilhados: leitura estrita aditiva; legado fail-open
+  preservado e coberto por `ai-model-catalog-service.test.ts` /
+  `ai-model-pricing.test.ts`.
+- Teste integrado novo
+  `src/lib/product-9-16-two-stage/orchestration/__tests__/preflight-read-indeterminate.contract.test.ts`
+  usa `createNineSixteenDeps` + leitores reais + cliente Supabase simulado:
+  erro de catálogo, erro de pricing, retomada após a leitura voltar e pricing
+  incompleto comprovado.
+- Guard `square-base/regression.contract.test.ts` atualizado para allowlist
+  explícita dos 5 arquivos F60.3 autorizados; qualquer outro diff nos contratos
+  protegidos continua falhando.
+
+```
+npx vitest run src/lib/campaign/vertical-expansion src/lib/product-9-16-two-stage \
+  src/lib/ai/__tests__/ai-model-catalog-service.test.ts \
+  src/lib/ai-cost/__tests__/ai-model-pricing.test.ts
+Test Files  54 passed (54)
+     Tests  470 passed (470)
 ```
 
 ## Falhas preexistentes confirmadas na base
