@@ -1,6 +1,10 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  isExpansionSelection,
+  type ExpansionSelection,
+} from "@/lib/ai/nine-sixteen-expansion-model-config";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import {
   ProductOneToOneCreditOperationClient,
@@ -140,13 +144,49 @@ export class TwoStageFinancialService {
    * Abertura atômica; a RPC não devolve `amount`, então a conferência de 1
    * crédito é feita na autoridade financeira. Replay de operação entregue ou
    * estornada é legítimo.
+   *
+   * F60.6: a seleção entra na MESMA transação da reserva (`open` v2). Operação
+   * nova SEM seleção é recusada ANTES da RPC (`operation_selection_required`,
+   * zero reserva); apenas reabertura de operação v1 existente é permitida sem
+   * seleção. Nenhuma segunda reserva, pré-checagem duplicada ou estorno
+   * compensatório é introduzido aqui.
    */
   async reserveOperationOnce(input: {
     storeId: string;
     campaignId: string;
     operationId: string;
+    selection?: ExpansionSelection;
   }): Promise<ReserveOperationResult> {
-    const open = await this.control.open(input);
+    let selection: ExpansionSelection | undefined;
+    if (input.selection !== undefined) {
+      if (!isExpansionSelection(input.selection)) {
+        throw new TwoStageFinancialError(
+          "invalid_transition",
+          "operation_selection_required",
+        );
+      }
+      selection = input.selection;
+    } else {
+      // Sem seleção: SOMENTE reabertura de operação v1 já existente. Ausência,
+      // leitura indeterminada ou operação v2 são fail-closed, nunca legado.
+      const lookup = await this.control.getOperationView({
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+      });
+      if (lookup.kind !== "found" || lookup.view.contractVersion !== 1) {
+        throw new TwoStageFinancialError(
+          "invalid_transition",
+          "operation_selection_required",
+        );
+      }
+    }
+
+    const open = await this.control.open({
+      storeId: input.storeId,
+      campaignId: input.campaignId,
+      operationId: input.operationId,
+      ...(selection === undefined ? {} : { selection }),
+    });
     if (!open.success) {
       throw new TwoStageFinancialError(
         open.reason === "operation_terminal" ? "operation_terminal" : "invalid_transition",

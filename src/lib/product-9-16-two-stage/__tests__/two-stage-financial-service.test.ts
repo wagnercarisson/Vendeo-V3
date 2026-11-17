@@ -27,6 +27,55 @@ const authority = {
   publicationState: "none",
 };
 
+const CONFIGURED_SELECTION = {
+  model: "gpt-image-2.5-flare",
+  quality: "medium",
+  configVersionId: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  origin: "configured",
+} as const;
+
+function viewLookup(contractVersion: 1 | 2) {
+  return {
+    kind: "found",
+    view: {
+      campaignId: "c",
+      operationId: "o",
+      origin: "9_16_two_stage",
+      contractVersion,
+      frozenSelection: null,
+      credit: {
+        status: "reserved",
+        terminal: false,
+        delivered: false,
+        refunded: false,
+        reserved: true,
+      },
+      base: {
+        stage: "base",
+        status: "pending",
+        attemptsUsed: 0,
+        failureClass: null,
+        attemptNumber: null,
+        claimedAt: null,
+      },
+      expansion: {
+        stage: "expansion",
+        status: "pending",
+        attemptsUsed: 0,
+        failureClass: null,
+        attemptNumber: null,
+        claimedAt: null,
+      },
+      unknown: false,
+      failedOutcome: false,
+      supportReference: null,
+      nextAction: "acquire_base",
+      canContinue: true,
+      processingPhase: null,
+    },
+  };
+}
+
 function serviceWith(overrides: {
   open?: unknown;
   resume?: unknown;
@@ -34,6 +83,7 @@ function serviceWith(overrides: {
   probe?: VerticalArtifactProbe;
   credit?: Record<string, unknown>;
   resolvePending?: unknown;
+  view?: unknown;
 } = {}) {
   const credit = {
     getPublicationEpoch: vi.fn(async () => overrides.epoch ?? 7),
@@ -43,8 +93,11 @@ function serviceWith(overrides: {
     ...(overrides.credit ?? {}),
   };
   const control = {
+    getOperationView: vi.fn(async () => overrides.view ?? { kind: "absent" }),
     open: vi.fn(async () => overrides.open ?? {
       success: true,
+      contractVersion: 2,
+      selection: CONFIGURED_SELECTION,
       idempotent: false,
       status: "reserved",
       campaignId: "c",
@@ -98,16 +151,30 @@ function serviceWith(overrides: {
 
 describe("serviço financeiro do fluxo de duas etapas", () => {
   it("abertura confere amount na autoridade e aceita replay entregue", async () => {
-    const { service } = serviceWith();
+    const { service, control } = serviceWith();
     const spy = vi.spyOn(service, "readFinancialAuthority").mockResolvedValue(authority);
     await expect(
-      service.reserveOperationOnce({ storeId: "s", campaignId: "c", operationId: "o" }),
+      service.reserveOperationOnce({
+        storeId: "s",
+        campaignId: "c",
+        operationId: "o",
+        selection: CONFIGURED_SELECTION,
+      }),
     ).resolves.toMatchObject({ authority: { amount: 1 } });
     expect(spy).toHaveBeenCalledWith("c", "o");
+    expect(control.open).toHaveBeenCalledTimes(1);
+    expect(control.open).toHaveBeenCalledWith({
+      storeId: "s",
+      campaignId: "c",
+      operationId: "o",
+      selection: CONFIGURED_SELECTION,
+    });
 
     const delivered = serviceWith({
       open: {
         success: true,
+        contractVersion: 2,
+        selection: CONFIGURED_SELECTION,
         idempotent: true,
         status: "delivered",
         campaignId: "c",
@@ -124,7 +191,12 @@ describe("serviço financeiro do fluxo de duas etapas", () => {
       reserved: false,
     });
     await expect(
-      delivered.service.reserveOperationOnce({ storeId: "s", campaignId: "c", operationId: "o" }),
+      delivered.service.reserveOperationOnce({
+        storeId: "s",
+        campaignId: "c",
+        operationId: "o",
+        selection: CONFIGURED_SELECTION,
+      }),
     ).resolves.toBeTruthy();
   });
 
@@ -540,5 +612,118 @@ describe("serviço financeiro do fluxo de duas etapas", () => {
       { storeId: "s", campaignId: "c", operationId: "o" },
       expect.objectContaining({ client: expect.anything() }),
     );
+  });
+});
+
+describe("reserva atômica com seleção congelada (F60.6)", () => {
+  it("operação nova sem seleção é recusada ANTES da RPC (zero reserva)", async () => {
+    const { service, control } = serviceWith();
+    await expect(
+      service.reserveOperationOnce({ storeId: "s", campaignId: "c", operationId: "o" }),
+    ).rejects.toMatchObject({
+      code: "invalid_transition",
+      message: "operation_selection_required",
+    });
+    expect(control.getOperationView).toHaveBeenCalledWith({
+      campaignId: "c",
+      operationId: "o",
+    });
+    // Zero chamada à RPC de abertura: nenhum crédito é reservado.
+    expect(control.open).not.toHaveBeenCalled();
+  });
+
+  it("reabertura de operação v1 existente sem seleção continua permitida", async () => {
+    const { service, control } = serviceWith({ view: viewLookup(1) });
+    vi.spyOn(service, "readFinancialAuthority").mockResolvedValue(authority);
+    await expect(
+      service.reserveOperationOnce({ storeId: "s", campaignId: "c", operationId: "o" }),
+    ).resolves.toMatchObject({ authority: { amount: 1 } });
+    expect(control.open).toHaveBeenCalledTimes(1);
+    expect(control.open).toHaveBeenCalledWith({
+      storeId: "s",
+      campaignId: "c",
+      operationId: "o",
+    });
+  });
+
+  it("operação v2 existente sem seleção é recusada sem sobrescrever", async () => {
+    const { service, control } = serviceWith({ view: viewLookup(2) });
+    await expect(
+      service.reserveOperationOnce({ storeId: "s", campaignId: "c", operationId: "o" }),
+    ).rejects.toMatchObject({
+      code: "invalid_transition",
+      message: "operation_selection_required",
+    });
+    expect(control.open).not.toHaveBeenCalled();
+  });
+
+  it("leitura indeterminada da operação falha fechado antes da RPC", async () => {
+    const { service, control } = serviceWith({
+      view: { kind: "read_failed", reason: "db_offline" },
+    });
+    await expect(
+      service.reserveOperationOnce({ storeId: "s", campaignId: "c", operationId: "o" }),
+    ).rejects.toMatchObject({ message: "operation_selection_required" });
+    expect(control.open).not.toHaveBeenCalled();
+  });
+
+  it("seleção malformada é recusada antes de qualquer RPC", async () => {
+    const { service, control } = serviceWith();
+    await expect(
+      service.reserveOperationOnce({
+        storeId: "s",
+        campaignId: "c",
+        operationId: "o",
+        // `origin` não pertence à lista fechada do contrato de 60.6-01.
+        selection: {
+          model: "gpt-image-2.5-flare",
+          quality: "medium",
+          configVersionId: null,
+          origin: "default",
+        } as never,
+      }),
+    ).rejects.toMatchObject({ message: "operation_selection_required" });
+    expect(control.getOperationView).not.toHaveBeenCalled();
+    expect(control.open).not.toHaveBeenCalled();
+  });
+
+  it("amount diferente de 1 continua inválido e não há segunda reserva", async () => {
+    const { service, control } = serviceWith();
+    const authoritySpy = vi
+      .spyOn(service, "readFinancialAuthority")
+      .mockResolvedValue({ ...authority, amount: 2 });
+    await expect(
+      service.reserveOperationOnce({
+        storeId: "s",
+        campaignId: "c",
+        operationId: "o",
+        selection: CONFIGURED_SELECTION,
+      }),
+    ).rejects.toMatchObject({ code: "amount_mismatch" });
+    expect(authoritySpy).toHaveBeenCalledTimes(1);
+    expect(control.open).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha de abertura mantém o mapeamento existente e não reserva de novo", async () => {
+    for (const [reason, code] of [
+      ["operation_terminal", "operation_terminal"],
+      ["operation_config_conflict", "invalid_transition"],
+      ["operation_origin_conflict", "invalid_transition"],
+    ] as const) {
+      const { service, control } = serviceWith({
+        open: { success: false, reason },
+      });
+      const authoritySpy = vi.spyOn(service, "readFinancialAuthority");
+      await expect(
+        service.reserveOperationOnce({
+          storeId: "s",
+          campaignId: "c",
+          operationId: "o",
+          selection: CONFIGURED_SELECTION,
+        }),
+      ).rejects.toMatchObject({ code, message: reason });
+      expect(control.open).toHaveBeenCalledTimes(1);
+      expect(authoritySpy).not.toHaveBeenCalled();
+    }
   });
 });
