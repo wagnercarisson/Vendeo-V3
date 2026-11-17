@@ -18,21 +18,17 @@ import {
   OPERATION_ID,
   createOfflineDeps,
   createOfflineWorld,
-  continueInput,
   initialInput,
   runOffline,
   terminalOf,
 } from "./offline-harness";
-
-const BASE_REQUEST = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const EXPANSION_REQUEST = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 describe("preservacao, suspensao e acesso (offline)", () => {
   beforeAll(() => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://offline.supabase.test";
   });
 
-  it("flag OFF suspende a etapa paga sem provider/cobranca e nao bloqueia a consulta", async () => {
+  it("flag OFF suspende a etapa paga sem provider/cobranca e nao cria operacao", async () => {
     const world = createOfflineWorld();
     world.seedScenario();
     const { deps, counters } = await createOfflineDeps(world);
@@ -49,41 +45,27 @@ describe("preservacao, suspensao e acesso (offline)", () => {
     expect(counters.baseProviderCalls).toBe(0);
     expect(counters.expansionProviderCalls).toBe(0);
     expect(world.rpcCounts.product_1_1_close_failed_operation ?? 0).toBe(0);
+    // Suspensão SEM efeitos: sem seleção não existe abertura legítima, então
+    // nada é aberto/reservado/adquirido enquanto a geração está pausada.
+    expect(world.rpcCounts.product_9_16_open_operation_v2 ?? 0).toBe(0);
+    expect(world.rpcCounts.product_9_16_open_operation ?? 0).toBe(0);
+    expect(world.rpcCounts.product_9_16_acquire_step ?? 0).toBe(0);
+    expect(world.credit()).toBeNull();
 
+    // A consulta continua possível: a operação ainda não existe (ausência é
+    // ausência, não erro) e nenhum estado foi inventado.
     const view = await deps.control.getOperationView({
       campaignId: CAMPAIGN_ID,
       operationId: OPERATION_ID,
     });
-    expect(view.kind).toBe("found");
-    if (view.kind === "found") {
-      const status = deriveTwoStageStatus(view.view, { allowNewPaidStep: false });
-      expect(status.state).toBe("processing");
-      expect(status.processingPhase).toBe("suspended");
-      expect(status.canContinue).toBe(false);
-    }
+    expect(view.kind).toBe("absent");
 
-    // A mesma operacao continua normalmente quando autorizada; cada
-    // continuacao executa UMA etapa (a UI encadeia).
-    const afterBase = await runOffline(
-      continueInput({
-        allowNewPaidStep: true,
-        acquisitionIds: { base: BASE_REQUEST, expansion: EXPANSION_REQUEST },
-      }),
+    // Autorizada, a geração nova começa e conclui normalmente.
+    const started = await runOffline(
+      initialInput({ allowNewPaidStep: true }),
       deps,
     );
-    expect(terminalOf(afterBase)).toMatchObject({
-      type: "processing",
-      nextStep: "expansion",
-      canContinue: true,
-    });
-    const resumed = await runOffline(
-      continueInput({
-        allowNewPaidStep: true,
-        acquisitionIds: { base: BASE_REQUEST, expansion: EXPANSION_REQUEST },
-      }),
-      deps,
-    );
-    expect(terminalOf(resumed)).toMatchObject({ type: "result" });
+    expect(terminalOf(started)).toMatchObject({ type: "result" });
     expect(counters.baseProviderCalls).toBe(1);
     expect(counters.expansionProviderCalls).toBe(1);
   });
@@ -119,7 +101,7 @@ describe("preservacao, suspensao e acesso (offline)", () => {
     const { deps } = await createOfflineDeps(world);
     await runOffline(initialInput(), deps);
 
-    expect(world.rpcCounts.product_9_16_open_operation).toBe(1);
+    expect(world.rpcCounts.product_9_16_open_operation_v2).toBe(1);
     expect(world.rpcCounts.product_1_1_begin_publication).toBe(1);
     expect(world.rpcCounts.product_1_1_mark_campaign_credit_art_uploaded).toBe(1);
     expect(world.rpcCounts.product_1_1_deliver_campaign_credit_operation).toBe(1);

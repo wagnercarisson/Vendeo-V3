@@ -18,12 +18,14 @@ import {
   PRODUCT_CONTENT_ID,
   createOfflineDeps,
   createOfflineWorld,
+  frozenSelectionOf,
   initialInput,
   resetTelemetryEvents,
   runOffline,
   telemetryEvents,
   terminalOf,
 } from "./offline-harness";
+import { LEGACY_SUNBURST_LOW } from "@/lib/ai/nine-sixteen-expansion-model-config";
 
 describe("percurso integrado offline (deps reais, DB/Storage/provider simulados)", () => {
   beforeAll(() => {
@@ -49,7 +51,9 @@ describe("percurso integrado offline (deps reais, DB/Storage/provider simulados)
     expect(copyPhases.at(-1)).toMatchObject({
       message: "Texto da campanha gerado.",
     });
-    expect(world.rpcCounts.product_9_16_open_operation).toBe(1);
+    expect(world.rpcCounts.product_9_16_open_operation_v2).toBe(1);
+    // A abertura v2 conta SOMENTE como v2 (nenhum alias legado artificial).
+    expect(world.rpcCounts.product_9_16_open_operation ?? 0).toBe(0);
     expect(world.rpcCounts.product_1_1_deliver_campaign_credit_operation).toBe(1);
     expect(world.rpcCounts.product_1_1_close_failed_operation ?? 0).toBe(0);
     expect(counters.baseProviderCalls).toBe(1);
@@ -112,8 +116,8 @@ describe("percurso integrado offline (deps reais, DB/Storage/provider simulados)
     expect(terminalOf(events)).toMatchObject({ type: "result" });
     expect(second.counters.baseProviderCalls).toBe(0);
     expect(second.counters.expansionProviderCalls).toBe(0);
-    expect(world.rpcCounts.product_9_16_open_operation).toBe(
-      before.product_9_16_open_operation,
+    expect(world.rpcCounts.product_9_16_open_operation_v2).toBe(
+      before.product_9_16_open_operation_v2,
     );
     expect(world.rpcCounts.product_9_16_acquire_step).toBe(
       before.product_9_16_acquire_step,
@@ -152,5 +156,57 @@ describe("percurso integrado offline (deps reais, DB/Storage/provider simulados)
     expect(terminalOf(resumeEvents)).toMatchObject({ type: "result" });
     expect(counters.baseProviderCalls).toBe(1);
     expect(counters.expansionProviderCalls).toBe(1);
+  });
+
+  it("a abertura nova congela a seleção na operação v2 (pass-through real, sem emulação)", async () => {
+    const world = createOfflineWorld();
+    world.seedScenario();
+    const { deps, counters } = await createOfflineDeps(world);
+
+    await runOffline(initialInput(), deps);
+
+    expect(world.operation()).toMatchObject({
+      contract_version: 2,
+      expansion_model: "gpt-image-2.5-sunburst",
+      expansion_quality: "low",
+      expansion_selection_origin: "configured",
+    });
+    expect(world.rpcCounts.product_9_16_open_operation_v2).toBe(1);
+    // v2 conta SOMENTE como v2: nenhum alias legado artificial.
+    expect(world.rpcCounts.product_9_16_open_operation ?? 0).toBe(0);
+    // O preflight da seleção congelada roda UMA vez por etapa paga.
+    expect(counters.frozenPreflightCalls).toBe(1);
+
+    // A derivação REAL (view do cliente de controle + função pura) devolve a
+    // seleção efetivamente congelada na operação.
+    await expect(frozenSelectionOf(deps)).resolves.toMatchObject({
+      kind: "found",
+      selection: {
+        origin: "configured",
+        model: "gpt-image-2.5-sunburst",
+        quality: "low",
+        configVersionId: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+      },
+    });
+  });
+
+  it("operação v1 deriva o legado e v2 incompleta falha fechado (sem banco real)", async () => {
+    const legacy = createOfflineWorld();
+    legacy.seedScenario();
+    legacy.seedOperation({ contractVersion: 1 });
+    const legacyComposition = await createOfflineDeps(legacy);
+    await expect(frozenSelectionOf(legacyComposition.deps)).resolves.toEqual({
+      kind: "found",
+      selection: LEGACY_SUNBURST_LOW,
+    });
+
+    const broken = createOfflineWorld();
+    broken.seedScenario();
+    broken.seedOperation({ contractVersion: 2 });
+    const brokenComposition = await createOfflineDeps(broken);
+    await expect(frozenSelectionOf(brokenComposition.deps)).resolves.toEqual({
+      kind: "invalid",
+      reason: "frozen_selection_missing",
+    });
   });
 });

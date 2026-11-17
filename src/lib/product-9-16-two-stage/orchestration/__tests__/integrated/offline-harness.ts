@@ -25,7 +25,10 @@ import type {
   RunNineSixteenInput,
 } from "../../types";
 import type { TwoStageStepStatus } from "../../../types";
-import { createNineSixteenDeps } from "../../delivery-deps";
+import {
+  createNineSixteenDeps,
+  deriveFrozenExpansionSelection,
+} from "../../delivery-deps";
 import { runNineSixteenTwoStageGeneration } from "../../run-nine-sixteen";
 
 export const STORE_ID = "1a2b3c4d-1a2b-4c3d-8e4f-1a2b3c4d5e6f";
@@ -350,20 +353,67 @@ export function createOfflineWorld() {
     });
   }
 
+  /**
+   * Semeia uma operação JÁ EXISTENTE sem passar pelo orquestrador, para provar
+   * a derivação do congelado em operações legadas (v1) e em operações v2
+   * incompletas. Nunca usado para simular o caminho de geração nova.
+   */
+  function seedOperation(input: {
+    contractVersion: 1 | 2;
+    selection?: Row;
+  }) {
+    rows.push({
+      __table: "product_9_16_two_stage_operations",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      store_id: STORE_ID,
+      origin: "9_16_two_stage",
+      contract_version: input.contractVersion,
+      expansion_model: input.selection?.expansion_model ?? null,
+      expansion_quality: input.selection?.expansion_quality ?? null,
+      expansion_config_version_id: input.selection?.expansion_config_version_id ?? null,
+      expansion_selection_origin: input.selection?.expansion_selection_origin ?? null,
+    });
+    rows.push(
+      {
+        __table: "product_9_16_two_stage_steps",
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        stage: "base",
+        status: "pending",
+        attempts_used: 0,
+        failure_class: null,
+      },
+      {
+        __table: "product_9_16_two_stage_steps",
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        stage: "expansion",
+        status: "pending",
+        attempts_used: 0,
+        failure_class: null,
+      },
+    );
+    rows.push({
+      __table: "product_1_1_campaign_credit_operations",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      store_id: STORE_ID,
+      amount: 1,
+      status: "reserved",
+      state_epoch: 0,
+      publication_state: "none",
+      publication_token: null,
+      credit_tx_id: "tx-1",
+      refund_tx_id: null,
+    });
+  }
+
   /* ---------------------------------------------------------------------- */
   /* RPCs (contratos das migrations, sem Postgres)                           */
   /* ---------------------------------------------------------------------- */
-
   function rpc(name: string, params: Record<string, unknown>) {
     rpcCounts[name] = (rpcCounts[name] ?? 0) + 1;
-    if (name === "product_9_16_open_operation_v2") {
-      // Compatibilidade de contagem: as suites integradas anteriores à F60.6
-      // contam a abertura lógica em `product_9_16_open_operation`. O harness
-      // mantém esse contador durante o interino (60.6-04 migra o orquestrador
-      // para a v2 e pode atualizar as asserções).
-      rpcCounts.product_9_16_open_operation =
-        (rpcCounts.product_9_16_open_operation ?? 0) + 1;
-    }
     switch (name) {
       case "product_9_16_open_operation":
         return openOperation(params);
@@ -1140,6 +1190,7 @@ export function createOfflineWorld() {
     rpcCounts,
     seedScenario,
     seedFrozenState,
+    seedOperation,
     credit: creditRow,
     copyState: () => copyRows().map(copy),
     step: (stage: "base" | "expansion") =>
@@ -1165,6 +1216,16 @@ export interface OfflineProviderOptions {
   readonly copyText?: string;
   /** Avanca o relogio injetado depois da chamada da base (orcamento). */
   readonly baseClockAdvanceMs?: number;
+  /**
+   * Controlador do preflight read-only da seleção congelada (catálogo+pricing
+   * falsos). `undefined`/`"ok"` valida contra as costuras; os demais forçam a
+   * falha correspondente sem banco.
+   */
+  readonly frozenPreflight?:
+    | "ok"
+    | "model_unavailable"
+    | "pricing_unavailable"
+    | "configuration_read_failed";
 }
 
 const CATALOG_ROW = {
@@ -1233,6 +1294,7 @@ export async function createOfflineDeps(
     copyCalls: 0,
     copyInputs: [] as unknown[],
     telemetryEmits: 0,
+    frozenPreflightCalls: 0,
   };
   let expansionAttempt = 0;
   let now = world.clock();
@@ -1470,30 +1532,75 @@ export async function createOfflineDeps(
   });
 
   /**
-   * INTERINO 60.6-03: `reserveOperationOnce` já recusa operação nova sem seleção
-   * (zero reserva), mas o encaminhamento pelo orquestrador só chega em 60.6-04.
-   * Este harness é a composição de TESTE e emula o chamador da wave 4 passando a
-   * seleção congelada — nunca um default de produção. Nenhum outro método do
-   * serviço financeiro é alterado.
+   * Preflight read-only da seleção CONGELADA sobre as costuras FALSAS de
+   * catálogo/pricing (nunca lê a configuração administrativa e nunca toca
+   * banco/rede). O controlador `frozenPreflight` força os três desfechos.
    */
-  const financial = new Proxy(real.financial, {
-    get(target, property) {
-      if (property === "reserveOperationOnce") {
-        return (input: Parameters<typeof target.reserveOperationOnce>[0]) =>
-          target.reserveOperationOnce({
-            ...input,
-            selection: CONFIGURED_SELECTION,
-          });
-      }
-      const value = Reflect.get(target, property, target);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
-  });
+  const preflightFrozenExpansion: RunNineSixteenDeps["preflightFrozenExpansion"] = async (
+    selection,
+  ) => {
+    counters.frozenPreflightCalls += 1;
+    const forced = options.frozenPreflight;
+    if (forced === "configuration_read_failed") {
+      return {
+        ok: false,
+        failure: "configuration_read_failed",
+        reason: "catalog_read_failed",
+        missing: [],
+      };
+    }
+    if (forced === "model_unavailable") {
+      return {
+        ok: false,
+        failure: "model_unavailable",
+        reason: "catalog_row_missing",
+        missing: [],
+      };
+    }
+    if (forced === "pricing_unavailable") {
+      return {
+        ok: false,
+        failure: "pricing_unavailable",
+        reason: "incomplete_coverage",
+        missing: ["imageTokenUsdPer1M"],
+      };
+    }
+
+    const catalogRows = await expandSeams.catalog!.getActiveCatalogRows();
+    const catalogRow = catalogRows.find(
+      (row) =>
+        row.model === selection.model &&
+        row.status === "active" &&
+        row.capability === "campaign_product_image",
+    );
+    if (!catalogRow) {
+      return {
+        ok: false,
+        failure: "model_unavailable",
+        reason: "catalog_row_missing",
+        missing: [],
+      };
+    }
+    const read = await expandSeams.pricing!.getModelPricing({
+      provider: "openai",
+      model: selection.model,
+      quality: selection.quality,
+    });
+    if (!read || !read.pricing) {
+      return {
+        ok: false,
+        failure: "pricing_unavailable",
+        reason: "row_missing",
+        missing: ["pricing_row"],
+      };
+    }
+    return { ok: true, selection };
+  };
 
   const deps: RunNineSixteenDeps = {
     ...real,
-    financial,
     preflightExpansion: async () => ({ ok: true, selection: CONFIGURED_SELECTION }),
+    preflightFrozenExpansion,
     base: (input, inner) =>
       real.base(input, { ...baseSeams, ...(inner ?? {}) }),
     prepare: (input, inner) => real.prepare(input, inner),
@@ -1559,6 +1666,21 @@ export async function runOffline(
 
 export function terminalOf(events: Array<Record<string, unknown>>) {
   return events.at(-1) ?? {};
+}
+
+/**
+ * Deriva a seleção congelada da operação REALMENTE persistida no mundo falso,
+ * usando o cliente de controle REAL e a derivação PURA do orquestrador:
+ * v1 → `legacy_sunburst_low` explícito; v2 completa → seleção congelada;
+ * v2 incompleta → `invalid`. Nenhum banco/rede.
+ */
+export async function frozenSelectionOf(deps: RunNineSixteenDeps) {
+  const lookup = await deps.control.getOperationView({
+    campaignId: CAMPAIGN_ID,
+    operationId: OPERATION_ID,
+  });
+  if (lookup.kind !== "found") throw new Error(`operation_${lookup.kind}`);
+  return deriveFrozenExpansionSelection(lookup.view);
 }
 
 export const COMPOSITION_BUCKET = COMPOSITION_ARTIFACT_BUCKET;

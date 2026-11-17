@@ -12,7 +12,7 @@ import { canAffordStep, remainingForStep } from "./deadline-budget";
 import { mapModuleOutcomeToControl, type ModuleOutcome } from "./failure-mapping";
 import { finishStepWithAck } from "./finish-ack";
 import { reconcileExpansionArtifact } from "./reconciliation";
-import type { StepExecutionOutcome } from "./types";
+import type { StepExecutionOutcome, ExpansionConfigurationPreflight } from "./types";
 
 export interface ExpansionStepInput {
   readonly storeId: string;
@@ -51,6 +51,14 @@ export interface ExpansionStepDeps {
     },
     deps: { readonly selection: ExpansionSelection },
   ) => Promise<ExpandVerticalResult>;
+  /**
+   * Preflight read-only de catálogo + pricing da seleção CONGELADA. Obrigatório:
+   * a ausência de dependência não pode desligar silenciosamente o gate de gasto.
+   * Nunca lê a configuração administrativa vigente.
+   */
+  readonly preflightFrozenExpansion: (
+    selection: ExpansionSelection,
+  ) => Promise<ExpansionConfigurationPreflight>;
   readonly retrieve?: typeof retrieveCompositionArtifact;
   readonly probe?: typeof probeExpansionTarget;
   readonly clock: () => number;
@@ -179,6 +187,41 @@ export async function runExpansionStep(
   // Revalidar cancelamento/orcamento apos as leituras lentas, antes de adquirir.
   const gate = preCallGate(input, deps);
   if (gate) return gate;
+
+  /**
+   * Preflight READ-ONLY da seleção congelada: acontece UMA única vez por
+   * invocação que executaria etapa paga, entre a sonda e o `acquire`, para que
+   * um erro de configuração/modelo/pricing não consuma tentativa. Ordem
+   * contratual: retrieve -> probe -> gate -> preflight -> recheck -> acquire.
+   */
+  let preflight: ExpansionConfigurationPreflight;
+  try {
+    preflight = await deps.preflightFrozenExpansion(input.selection);
+  } catch {
+    preflight = {
+      ok: false,
+      failure: "configuration_read_failed",
+      reason: "preflight_read_failed",
+      missing: [],
+    };
+  }
+  if (!preflight.ok) {
+    if (preflight.failure === "configuration_read_failed") {
+      // Indeterminação: recuperável, sem acquire/desfecho/estorno.
+      return recoverable("configuration_read_failed");
+    }
+    // Configuração comprovadamente inválida: definitivo para esta operação,
+    // sem acquire, sem tentativa consumida e sem efeito financeiro direto.
+    return {
+      kind: "definitive",
+      reason: `${preflight.failure}:${preflight.reason}`,
+    };
+  }
+
+  // Recheck obrigatório imediatamente antes de adquirir: cancelamento ou
+  // orçamento esgotado durante o preflight não podem consumir tentativa.
+  const recheck = preCallGate(input, deps);
+  if (recheck) return recheck;
 
   const acquire = await deps.control.acquire({
     campaignId: input.campaignId,

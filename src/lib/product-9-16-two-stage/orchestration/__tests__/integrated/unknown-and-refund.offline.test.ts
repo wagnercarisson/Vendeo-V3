@@ -47,7 +47,7 @@ describe("resultado desconhecido, estorno e arte tardia (offline)", () => {
     const resend = await runOffline(initialInput(), deps);
     expect(terminalOf(resend)).toMatchObject({ type: "unknown" });
     expect(counters.expansionProviderCalls).toBe(1);
-    expect(world.rpcCounts.product_9_16_open_operation).toBe(1);
+    expect(world.rpcCounts.product_9_16_open_operation_v2).toBe(1);
 
     // Continuacao autorizada: resume devolve blocked/unknown; nada executa.
     const resumed = await runOffline(

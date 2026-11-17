@@ -122,6 +122,10 @@ function deps(overrides: Record<string, unknown> = {}) {
       bytes: Buffer.alloc(0),
     })),
     probe: vi.fn(async () => ({ kind: "proceed" })),
+    preflightFrozenExpansion: vi.fn(async (selection: unknown) => ({
+      ok: true,
+      selection,
+    })),
     clock: () => 0,
     ...overrides,
   } as never;
@@ -250,5 +254,198 @@ describe("runExpansionStep", () => {
     });
     expect(calls(d, "control.acquire")).toHaveLength(0);
     expect(calls(d, "expand")).toHaveLength(0);
+  });
+});
+
+describe("runExpansionStep — preflight da seleção congelada antes de acquire", () => {
+  it("executa retrieve -> probe -> gate -> preflight -> recheck -> acquire -> expand -> finish", async () => {
+    const order: string[] = [];
+    let now = 0;
+    const d = deps({
+      retrieve: vi.fn(async () => {
+        order.push("retrieve");
+        return { kind: "integral", artifact: sourceArtifact, bytes: Buffer.alloc(0) };
+      }),
+      probe: vi.fn(async () => {
+        order.push("probe");
+        return { kind: "proceed" };
+      }),
+      preflightFrozenExpansion: vi.fn(async (selection: unknown) => {
+        order.push("preflight");
+        return { ok: true, selection };
+      }),
+      control: {
+        acquire: vi.fn(async () => {
+          order.push("acquire");
+          return {
+            acquired: true,
+            authorization: "execute",
+            reason: null,
+            attemptToken: "t",
+            attemptNumber: 1,
+            stage: "expansion",
+            target: "initial",
+          };
+        }),
+        finish: vi.fn(async () => {
+          order.push("finish");
+          return {
+            success: true,
+            idempotent: false,
+            status: "completed",
+            stage: "expansion",
+            attemptNumber: 1,
+          };
+        }),
+        getOperationView: vi.fn(),
+      },
+      expand: vi.fn(async () => {
+        order.push("expand");
+        return {
+          kind: "expanded",
+          artifact: {},
+          bytes: Buffer.alloc(0),
+          persistence: "created",
+          call: {},
+        };
+      }),
+      clock: () => {
+        order.push("clock");
+        return now;
+      },
+    });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(order.filter((entry) => entry !== "clock")).toEqual([
+      "retrieve",
+      "probe",
+      "preflight",
+      "acquire",
+      "expand",
+      "finish",
+    ]);
+    // O recheck (leitura de relógio) acontece DEPOIS do preflight e ANTES do acquire.
+    const acquireIndex = order.indexOf("acquire");
+    const preflightIndex = order.indexOf("preflight");
+    expect(preflightIndex).toBeGreaterThan(order.indexOf("probe"));
+    expect(order.lastIndexOf("clock", acquireIndex)).toBeGreaterThan(preflightIndex);
+    // Uma única invocação do preflight por etapa paga.
+    expect(calls(d, "preflightFrozenExpansion")).toHaveLength(1);
+    expect((calls(d, "preflightFrozenExpansion") as Array<[unknown]>)[0][0]).toBe(
+      CONFIGURED_SELECTION,
+    );
+    now = 0;
+  });
+
+  it("configuração comprovadamente inválida encerra definitivo sem acquire/provider", async () => {
+    for (const failure of ["model_unavailable", "pricing_unavailable"] as const) {
+      const d = deps({
+        preflightFrozenExpansion: vi.fn(async () => ({
+          ok: false,
+          failure,
+          reason: failure === "model_unavailable" ? "catalog_row_missing" : "incomplete_coverage",
+          missing: failure === "pricing_unavailable" ? ["imageTokenUsdPer1M"] : [],
+        })),
+      });
+
+      const result = await runExpansionStep(expansionInput(), d);
+
+      expect(result).toEqual({
+        kind: "definitive",
+        reason: `${failure}:${failure === "model_unavailable" ? "catalog_row_missing" : "incomplete_coverage"}`,
+      });
+      expect(calls(d, "control.acquire")).toHaveLength(0);
+      expect(calls(d, "control.finish")).toHaveLength(0);
+      expect(calls(d, "expand")).toHaveLength(0);
+      expect(calls(d, "preflightFrozenExpansion")).toHaveLength(1);
+    }
+  });
+
+  it("leitura indeterminada permanece recuperável sem acquire/desfecho/estorno", async () => {
+    const d = deps({
+      preflightFrozenExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "configuration_read_failed",
+        reason: "catalog_read_failed",
+        missing: [],
+      })),
+    });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toMatchObject({
+      kind: "processing",
+      state: "between_steps",
+      nextStep: "expansion",
+      canContinue: true,
+      reason: "configuration_read_failed",
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "control.finish")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+  });
+
+  it("exceção inesperada do preflight é indeterminação (recuperável, sem acquire)", async () => {
+    const d = deps({
+      preflightFrozenExpansion: vi.fn(async () => {
+        throw new Error("db down");
+      }),
+    });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toMatchObject({
+      kind: "processing",
+      canContinue: true,
+      reason: "configuration_read_failed",
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+  });
+
+  it("recheck após preflight: deadline esgotado não adquire nem expande", async () => {
+    let now = 0;
+    const d = deps({
+      preflightFrozenExpansion: vi.fn(async (selection: unknown) => {
+        // O preflight "demora": o prazo deixa de cobrir o piso da expansão.
+        now = 95_000;
+        return { ok: true, selection };
+      }),
+      clock: () => now,
+    });
+
+    const result = await runExpansionStep(expansionInput(), d);
+
+    expect(result).toMatchObject({
+      kind: "processing",
+      state: "between_steps",
+      canContinue: true,
+      reason: "deadline_exceeded",
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "control.finish")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    now = 0;
+  });
+
+  it("preflightFrozenExpansion é obrigatória no step", async () => {
+    const complete = deps();
+    const withoutPreflight = {
+      ...(complete as unknown as Record<string, unknown>),
+    };
+    delete withoutPreflight.preflightFrozenExpansion;
+
+    // @ts-expect-error — `preflightFrozenExpansion` é obrigatória em `ExpansionStepDeps`.
+    await runExpansionStep(expansionInput(), withoutPreflight);
+
+    const source = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const text = source.readFileSync(
+      fileURLToPath(new URL("../expansion-step.ts", import.meta.url)),
+      "utf8",
+    );
+    expect(text).not.toMatch(/nine_sixteen_expansion_model_config|readNineSixteenExpansionConfig/);
   });
 });

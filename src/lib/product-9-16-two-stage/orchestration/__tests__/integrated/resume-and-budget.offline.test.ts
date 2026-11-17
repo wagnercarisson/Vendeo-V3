@@ -106,7 +106,7 @@ describe("retomada, orcamento e retry entre requisicoes (offline)", () => {
     );
     expect(terminalOf(retried)).toMatchObject({ type: "result" });
     expect(counters.expansionProviderCalls).toBe(2);
-    expect(world.rpcCounts.product_9_16_open_operation).toBe(1);
+    expect(world.rpcCounts.product_9_16_open_operation_v2).toBe(1);
     expect(world.rpcCounts.product_1_1_begin_publication).toBe(1);
     expect(world.rpcCounts.product_1_1_close_failed_operation ?? 0).toBe(0);
     expect(world.credit()?.status).toBe("delivered");
