@@ -2,10 +2,11 @@
 /**
  * F60.6 / 60.6-03 — prova OFFLINE da concorrência de abertura.
  *
- * Nenhum Postgres, Docker, `DATABASE_URL` ou rede: o "banco" é um Map com a
- * semântica contratual da RPC v2 (unicidade por `(campaign_id, operation_id)`,
- * serialização como `FOR UPDATE`/UNIQUE, uma reserva por identidade, seleção
- * divergente recusada sem sobrescrever e replay idempotente por conteúdo).
+ * Nenhum banco relacional, container, string de conexão ou rede: o "banco" é um
+ * Map com a semântica contratual da RPC v2 (unicidade por
+ * `(campaign_id, operation_id)`, serialização como `FOR UPDATE`/UNIQUE, uma
+ * reserva por identidade, seleção divergente recusada sem sobrescrever e replay
+ * idempotente por conteúdo).
  */
 import { describe, expect, it, vi } from "vitest";
 import { ProductTwoStageOperationClient } from "../two-stage-operation-client";
