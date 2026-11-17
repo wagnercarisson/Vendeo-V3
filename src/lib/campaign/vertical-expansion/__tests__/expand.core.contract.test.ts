@@ -50,6 +50,7 @@ import {
 import { expandVerticalToNineSixteen, type ExpandVerticalDeps } from "../expand";
 import type { ExpansionInvoker } from "../transport";
 import type { ExpandVerticalInput } from "../types";
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
 
 const STORE_ID = "1a2b3c4d-1a2b-4c3d-8e4f-1a2b3c4d5e6f";
 const CAMPAIGN_ID = "2b3c4d5e-2b3c-4d5e-8f6a-2b3c4d5e6f7a";
@@ -59,6 +60,17 @@ const SOURCE_ARTIFACT_ID = "5e6f7a8b-5e6f-4a8b-9c8d-5e6f7a8b9c0d";
 const OWNER_USER_ID = "user-owner";
 const MODEL = "gpt-image-2.5-sunburst";
 const CALL_ID = "6f7a8b9c-6f7a-4b9c-8d9e-6f7a8b9c0d1e";
+
+/** Versão congelada fixa da configuração (UUID v4) do fixture. */
+const CONFIG_VERSION_ID = "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d";
+
+/** Seleção congelada explícita: Sunburst low (origem `configured`). */
+const CONFIGURED_SELECTION: ExpansionSelection = {
+  model: MODEL,
+  quality: "low",
+  configVersionId: CONFIG_VERSION_ID,
+  origin: "configured",
+};
 
 const FULL_USAGE = {
   inputTextTokens: 100,
@@ -253,6 +265,7 @@ function baseDeps(
     clock: () => 1000,
     callIdFactory: () => CALL_ID,
     invoker,
+    selection: CONFIGURED_SELECTION,
     catalog: { getActiveCatalogRows: async () => [catalogRow()] },
     pricing: {
       getModelPricing: async () => ({
@@ -687,6 +700,174 @@ describe("expandVerticalToNineSixteen — reused de corrida também faz readback
     expect(invoker.calls).toBe(1);
     expect(captured.events).toHaveLength(1);
     expect(eventOutcome(captured.events[0])).toBe("persistence_failed");
+  });
+});
+
+describe("expand.ts — seleção congelada obrigatória", () => {
+  it("falha fechado sem seleção, sem I/O, provider, telemetria ou persistência", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+
+    const { selection: _omitted, ...withoutSelection } = baseDeps(
+      backend,
+      invoker.invoker,
+    );
+
+    const result = await expandVerticalToNineSixteen(
+      expandInput(),
+      withoutSelection as never,
+    );
+
+    expect(result).toEqual({
+      kind: "model_unavailable",
+      reason: "expansion_selection_required",
+    });
+    expect(invoker.calls).toBe(0);
+    expect(captured.events).toHaveLength(0);
+    expect(backend.handles.signed).toBe(0);
+    expect(backend.handles.removes).toBe(0);
+  });
+
+  it("rejeita seleção malformada (origem/versão divergentes) antes de qualquer I/O", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+
+    const result = await expandVerticalToNineSixteen(
+      expandInput(),
+      {
+        ...baseDeps(backend, invoker.invoker),
+        selection: {
+          model: MODEL,
+          quality: "low",
+          configVersionId: null,
+          origin: "configured",
+        } as never,
+      },
+    );
+
+    expect(result).toEqual({
+      kind: "model_unavailable",
+      reason: "expansion_selection_required",
+    });
+    expect(invoker.calls).toBe(0);
+  });
+
+  it("as quatro combinações chegam ao request, à evidência e à telemetria", async () => {
+    const combinations: Array<{
+      readonly model: string;
+      readonly quality: "low" | "medium";
+    }> = [
+      { model: "gpt-image-2.5-sunburst", quality: "low" },
+      { model: "gpt-image-2.5-sunburst", quality: "medium" },
+      { model: "gpt-image-2.5-flare", quality: "low" },
+      { model: "gpt-image-2.5-flare", quality: "medium" },
+    ];
+
+    for (const combination of combinations) {
+      captured.events.length = 0;
+      const backend = createBackend();
+      seedSource(backend);
+      const requests: AiInvocationRequest[] = [];
+      const invoker = fakeInvoker(async (request) => {
+        requests.push(request);
+        return pngResult({ model: combination.model });
+      });
+      const selection: ExpansionSelection = {
+        model: combination.model as never,
+        quality: combination.quality,
+        configVersionId: CONFIG_VERSION_ID,
+        origin: "configured",
+      };
+
+      const result = await expandVerticalToNineSixteen(
+        expandInput(),
+        {
+          ...baseDeps(backend, invoker.invoker),
+          selection,
+          catalog: {
+            getActiveCatalogRows: async () => [catalogRow({ model: combination.model })],
+          },
+        },
+      );
+
+      const label = `${combination.model}|${combination.quality}`;
+      expect(result.kind, label).toBe("expanded");
+      expect(requests, label).toHaveLength(1);
+      expect(requests[0].quality, label).toBe(combination.quality);
+      expect(requests[0].size, label).toBe("1152x2048");
+      if (result.kind !== "expanded" && result.kind !== "reused") continue;
+      const call = result.call;
+      expect(call?.model, label).toBe(combination.model);
+      expect(call?.quality, label).toBe(combination.quality);
+      expect(call?.configVersionId, label).toBe(CONFIG_VERSION_ID);
+      expect(call?.selectionOrigin, label).toBe("configured");
+      expect(call?.requestedSize, label).toBe("1152x2048");
+      expect(result.artifact.width).toBe(1080);
+      expect(result.artifact.height).toBe(1920);
+
+      const metadata = captured.events[0].metadata as Record<string, unknown>;
+      expect(metadata.model, label).toBe(combination.model);
+      expect(metadata.quality, label).toBe(combination.quality);
+      expect(metadata.configVersionId, label).toBe(CONFIG_VERSION_ID);
+      expect(metadata.selectionOrigin, label).toBe("configured");
+      expect(captured.events, label).toHaveLength(1);
+    }
+  });
+
+  it("nunca lê tabelas administrativas (config da expansão, par 1:1 ou seleção)", async () => {
+    const ADMIN_TABLES = [
+      "nine_sixteen_expansion_model_config",
+      "image_model_pair_config",
+      "ai_model_selection",
+    ];
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+    const touched: string[] = [];
+
+    const guardedClient = {
+      ...backend.client,
+      from(table: string) {
+        touched.push(table);
+        if (ADMIN_TABLES.includes(table)) {
+          throw new Error(`admin_table_read:${table}`);
+        }
+        return backend.client.from(table);
+      },
+    };
+
+    const result = await expandVerticalToNineSixteen(expandInput(), {
+      ...baseDeps(backend, invoker.invoker),
+      client: guardedClient as never,
+    });
+
+    expect(result.kind).toBe("expanded");
+    expect(touched.filter((table) => ADMIN_TABLES.includes(table))).toEqual([]);
+  });
+
+  it("a origem legada é registrada na evidência sem trocar o desfecho", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+
+    const result = await expandVerticalToNineSixteen(expandInput(), {
+      ...baseDeps(backend, invoker.invoker),
+      selection: {
+        model: MODEL,
+        quality: "low",
+        configVersionId: null,
+        origin: "legacy_sunburst_low",
+      },
+    });
+
+    expect(result.kind).toBe("expanded");
+    if (result.kind !== "expanded") return;
+    expect(result.call.selectionOrigin).toBe("legacy_sunburst_low");
+    expect(result.call.configVersionId).toBeNull();
+    expect(captured.events).toHaveLength(1);
+    expect(eventOutcome(captured.events[0])).toBe("expanded");
   });
 });
 

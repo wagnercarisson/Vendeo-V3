@@ -25,6 +25,10 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { AiModelCatalogRow } from "@/lib/ai/ai-model-catalog-service";
+import {
+  isExpansionSelection,
+  type ExpansionSelection,
+} from "@/lib/ai/nine-sixteen-expansion-model-config";
 import type { ModelPricing } from "@/lib/ai-cost/ai-model-pricing";
 import type { TokenUsage } from "@/lib/ai-cost/types";
 import { AiInvocationError, type AiInvocationRequest } from "@/lib/ai/types";
@@ -55,7 +59,6 @@ import {
   DESTINATION_ROLE,
   EXPANSION_ORIGIN,
   EXPANSION_PROMPT_VERSION,
-  EXPANSION_QUALITY,
   EXPANSION_SOURCE,
   PROVIDER_SIZE,
   parseExpandVerticalInput,
@@ -84,6 +87,12 @@ import type {
 export interface ExpandVerticalDeps {
   readonly client?: SupabaseClient;
   readonly clock?: () => number;
+  /**
+   * Seleção congelada da expansão 9:16 (modelo + qualidade + versão + origem),
+   * resolvida e congelada no servidor. OBRIGATÓRIA e sem default: um default
+   * reintroduziria o fallback fixo Sunburst low. Nunca vem de payload público.
+   */
+  readonly selection: ExpansionSelection;
   /** Invoker do gateway (teste); o alvo/preparação continuam internos. */
   readonly invoker?: ExpansionInvoker;
   readonly catalog?: ExpansionCatalogReader;
@@ -98,6 +107,13 @@ export interface ExpandVerticalDeps {
   /** Costura de teste: gate pré-chamada. Default = probe linha/objeto real. */
   readonly probe?: typeof probeExpansionTarget;
 }
+
+/**
+ * Costuras do expansor, sem a seleção congelada. Usado por consumidores que
+ * reencaminham seams (orquestração) e que recebem a seleção por argumento
+ * explícito — nunca por default.
+ */
+export type ExpandVerticalSeams = Omit<ExpandVerticalDeps, "selection">;
 
 type WithoutCall<T> = Omit<T, "call">;
 
@@ -122,6 +138,17 @@ function blocked(): ExpandVerticalResult {
     kind: "blocked" as const,
     reason: "pre_call_probe_indeterminate" as const,
     call: null,
+  });
+}
+
+/**
+ * Falha fechada quando a seleção congelada não é fornecida: nenhum I/O, nenhum
+ * provider, nenhuma telemetria e nenhuma persistência acontecem.
+ */
+function expansionSelectionRequired(): ExpandVerticalResult {
+  return Object.freeze({
+    kind: "model_unavailable" as const,
+    reason: "expansion_selection_required" as const,
   });
 }
 
@@ -245,12 +272,19 @@ function readReturnedSize(value: unknown): string | null {
 
 /**
  * Expande um `square_prepared` 1152×1152 em `vertical` JPEG 1080×1920, com no
- * máximo uma chamada paga. Única API pública do módulo.
+ * máximo uma chamada paga. Única API pública do módulo. A seleção congelada é
+ * dependência server-only obrigatória.
  */
 export async function expandVerticalToNineSixteen(
   input: ExpandVerticalInput,
-  deps: ExpandVerticalDeps = {},
+  deps: ExpandVerticalDeps,
 ): Promise<ExpandVerticalResult> {
+  // (0) Seleção congelada: falha fechada ANTES de parse e de qualquer I/O.
+  if (!isExpansionSelection(deps?.selection)) {
+    return expansionSelectionRequired();
+  }
+  const selection = deps.selection;
+
   // (1) Entrada — nenhum I/O antes da recusa.
   const parsed = parseExpandVerticalInput(input);
   if (!parsed.ok) return invalidInput(parsed.reason);
@@ -379,10 +413,13 @@ export async function expandVerticalToNineSixteen(
   }
 
   // (5) Alvo do catálogo e pricing ANTES de qualquer chamada paga.
-  const targetResolution = await resolveExpansionTarget({
-    ...(deps.catalog === undefined ? {} : { catalog: deps.catalog }),
-    ...(client === undefined ? {} : { client }),
-  });
+  const targetResolution = await resolveExpansionTarget(
+    {
+      ...(deps.catalog === undefined ? {} : { catalog: deps.catalog }),
+      ...(client === undefined ? {} : { client }),
+    },
+    selection,
+  );
   if (!targetResolution.ok) {
     return Object.freeze({
       kind: "model_unavailable" as const,
@@ -395,14 +432,10 @@ export async function expandVerticalToNineSixteen(
 
   const pricingResolution = await resolveExpansionPricing(
     {
-      provider: targetResolution.provider,
-      model: targetResolution.model,
-      quality: targetResolution.quality,
-    },
-    {
       ...(deps.pricing === undefined ? {} : { pricing: deps.pricing }),
       ...(client === undefined ? {} : { client }),
     },
+    selection,
   );
   if (!pricingResolution.ok) {
     return Object.freeze({
@@ -414,9 +447,9 @@ export async function expandVerticalToNineSixteen(
 
   const transportTarget: ExpansionTransportTarget = {
     provider: targetResolution.provider,
-    model: targetResolution.model,
+    model: selection.model,
     protocol: targetResolution.protocol,
-    quality: targetResolution.quality,
+    quality: selection.quality,
   };
   const transport = createExpansionTransport(transportTarget, {
     ...(deps.invoker === undefined ? {} : { invoker: deps.invoker }),
@@ -436,7 +469,9 @@ export async function expandVerticalToNineSixteen(
     sourceArtifactId: sourceArtifact.id,
     provider: transportTarget.provider,
     model: transportTarget.model,
-    quality: transportTarget.quality,
+    quality: deps.selection.quality,
+    configVersionId: deps.selection.configVersionId,
+    selectionOrigin: deps.selection.origin,
     pricingVersion: pricingResolution.versionId,
     tokenPricing: pricingResolution.pricing,
     imageUnitUsd: pricingResolution.imageUnitUsd,
@@ -468,7 +503,7 @@ export async function expandVerticalToNineSixteen(
         prompt: EXPANSION_PROMPT,
         productImagesDataUrls: [dataUrl(sourceBytes)],
         size: PROVIDER_SIZE,
-        quality: EXPANSION_QUALITY,
+        quality: deps.selection.quality,
         signal: abortHandle.signal,
       };
 
@@ -478,6 +513,7 @@ export async function expandVerticalToNineSixteen(
         prepared,
         request,
         telemetry: telemetryHandle.telemetry,
+        expectedQuality: deps.selection.quality,
       });
 
       if ("error" in once) {
@@ -636,7 +672,9 @@ export async function expandVerticalToNineSixteen(
     provider: transportTarget.provider,
     model: transportTarget.model,
     protocol: "images" as const,
-    quality: EXPANSION_QUALITY,
+    quality: deps.selection.quality,
+    configVersionId: deps.selection.configVersionId,
+    selectionOrigin: deps.selection.origin,
     requestedSize: PROVIDER_SIZE,
     returnedSize,
     durationMs: Math.max(0, clock() - startedAt),

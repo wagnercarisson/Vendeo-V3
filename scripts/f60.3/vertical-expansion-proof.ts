@@ -199,8 +199,20 @@ export interface ProofArgs {
   readonly authorized?: string | null;
 }
 
+/**
+ * Seleção congelada mínima exigida pelo expansor, declarada explicitamente pelo
+ * harness (nunca lida da configuração administrativa).
+ */
+export interface ProofExpansionSelection {
+  readonly model: "gpt-image-2.5-flare" | "gpt-image-2.5-sunburst";
+  readonly quality: "low" | "medium";
+  readonly configVersionId: string | null;
+  readonly origin: "configured" | "legacy_sunburst_low";
+}
+
 export type ExpandFn = (
   input: ExpandVerticalInput,
+  deps: { readonly selection: ProofExpansionSelection },
 ) => Promise<ExpandVerticalResult>;
 
 export type PrepareSourceFn = (input: {
@@ -829,7 +841,10 @@ export async function runPreflight(
     } else {
       try {
         const modelModule = (await import("../../src/lib/campaign/vertical-expansion/model")) as {
-          resolveExpansionTarget: (deps: { client?: SupabaseClient }) => Promise<
+          resolveExpansionTarget: (
+            deps: { client?: SupabaseClient },
+            selection: ProofExpansionSelection,
+          ) => Promise<
             | {
                 ok: true;
                 provider: string;
@@ -840,8 +855,8 @@ export async function runPreflight(
             | { ok: false; reason: string; detail?: string }
           >;
           resolveExpansionPricing: (
-            target: { provider: string; model: string; quality: string },
             deps: { client?: SupabaseClient },
+            selection: ProofExpansionSelection,
           ) => Promise<
             | {
                 ok: true;
@@ -854,7 +869,16 @@ export async function runPreflight(
           >;
         };
 
-        const target = await modelModule.resolveExpansionTarget({ client: admin.client });
+        // A prova F60.3 continua fixada no alvo pré-F60.6 (Sunburst `low`),
+        // declarado explicitamente em vez de ler configuração administrativa.
+        const { LEGACY_SUNBURST_LOW } = (await import(
+          "../../src/lib/ai/nine-sixteen-expansion-model-config"
+        )) as { LEGACY_SUNBURST_LOW: ProofExpansionSelection };
+
+        const target = await modelModule.resolveExpansionTarget(
+          { client: admin.client },
+          LEGACY_SUNBURST_LOW,
+        );
         if (!target.ok) {
           checks.push(
             fail(
@@ -870,8 +894,8 @@ export async function runPreflight(
           quality = target.quality;
 
           const pricing = await modelModule.resolveExpansionPricing(
-            { provider: target.provider, model: target.model, quality: target.quality },
             { client: admin.client },
+            LEGACY_SUNBURST_LOW,
           );
 
           if (!pricing.ok) {
@@ -1543,16 +1567,32 @@ export async function runProof(
   const expand: ExpandFn =
     deps.expand ??
     (async (value) => {
+      // A prova F60.3 permanece fixada no alvo pré-F60.6 (Sunburst `low`):
+      // `LEGACY_SUNBURST_LOW` é importado dinamicamente e declarado de forma
+      // explícita, sem ler configuração administrativa, sem flag nova e sem ser
+      // executado nesta fase (segue atrás de `--apply --authorized`).
+      const { LEGACY_SUNBURST_LOW } = (await import(
+        "../../src/lib/ai/nine-sixteen-expansion-model-config"
+      )) as { LEGACY_SUNBURST_LOW: ProofExpansionSelection };
       const expandModule = (await import("../../src/lib/campaign/vertical-expansion/expand")) as {
-        expandVerticalToNineSixteen: (input: ExpandVerticalInput) => Promise<ExpandVerticalResult>;
+        expandVerticalToNineSixteen: (
+          input: ExpandVerticalInput,
+          deps: { selection: ProofExpansionSelection },
+        ) => Promise<ExpandVerticalResult>;
       };
-      return expandModule.expandVerticalToNineSixteen(value);
+      return expandModule.expandVerticalToNineSixteen(value, {
+        selection: LEGACY_SUNBURST_LOW,
+      });
     });
 
   let result: ExpandVerticalResult | null = null;
   let thrown: unknown = null;
   try {
-    result = await expand(input);
+    // Seleção declarada explicitamente: nunca configuração administrativa.
+    const { LEGACY_SUNBURST_LOW } = (await import(
+      "../../src/lib/ai/nine-sixteen-expansion-model-config"
+    )) as { LEGACY_SUNBURST_LOW: ProofExpansionSelection };
+    result = await expand(input, { selection: LEGACY_SUNBURST_LOW });
   } catch (error) {
     thrown = error;
   }

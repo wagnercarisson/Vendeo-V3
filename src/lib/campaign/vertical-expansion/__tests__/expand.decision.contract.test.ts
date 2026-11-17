@@ -48,8 +48,10 @@ import {
 
 import { expandVerticalToNineSixteen, type ExpandVerticalDeps } from "../expand";
 import { EXPANSION_PROMPT } from "../prompt";
+import { expansionOutcomeFor } from "../telemetry";
 import type { ExpansionInvoker } from "../transport";
 import type { ExpandVerticalInput } from "../types";
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
 
 const STORE_ID = "1a2b3c4d-1a2b-4c3d-8e4f-1a2b3c4d5e6f";
 const OTHER_STORE_ID = "9b0c1d2e-9b0c-4d2e-8f0a-9b0c1d2e3f4a";
@@ -62,6 +64,17 @@ const VERTICAL_ARTIFACT_ID = "7a8b9c0d-7a8b-4c0d-8e9f-7a8b9c0d1e2f";
 const OWNER_USER_ID = "user-owner";
 const MODEL = "gpt-image-2.5-sunburst";
 const CALL_ID = "8b9c0d1e-8b9c-4d1e-8f0a-8b9c0d1e2f3a";
+
+/** Versão congelada fixa da configuração (UUID v4) do fixture. */
+const CONFIG_VERSION_ID = "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d";
+
+/** Seleção congelada explícita: Sunburst low (origem `configured`). */
+const CONFIGURED_SELECTION: ExpansionSelection = {
+  model: MODEL,
+  quality: "low",
+  configVersionId: CONFIG_VERSION_ID,
+  origin: "configured",
+};
 
 const FULL_USAGE = {
   inputTextTokens: 100,
@@ -447,6 +460,7 @@ function baseDeps(
     clock: () => 1000,
     callIdFactory: () => CALL_ID,
     invoker,
+    selection: CONFIGURED_SELECTION,
     catalog: { getActiveCatalogRows: async () => [catalogRow()] },
     pricing: {
       getModelPricing: async () => ({
@@ -1135,5 +1149,94 @@ describe("expandVerticalToNineSixteen — persistência/readback", () => {
       expect(backend.handles.removes).toBe(0);
       expect(backend.handles.updates).toBe(0);
     }
+  });
+});
+
+describe("expand.ts — decisão dirigida pela seleção congelada", () => {
+  it("troca o alvo efetivo quando a seleção é flare/medium", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const requests: AiInvocationRequest[] = [];
+    const invoker = fakeInvoker(async (request) => {
+      requests.push(request);
+      return pngResult({ model: "gpt-image-2.5-flare" });
+    });
+
+    const selection: ExpansionSelection = {
+      model: "gpt-image-2.5-flare",
+      quality: "medium",
+      configVersionId: CONFIG_VERSION_ID,
+      origin: "configured",
+    };
+
+    const result = await expandVerticalToNineSixteen(expandInput(), {
+      ...baseDeps(backend, invoker.invoker),
+      selection,
+      catalog: {
+        getActiveCatalogRows: async () => [
+          catalogRow({ model: "gpt-image-2.5-flare" }),
+        ],
+      },
+    });
+
+    expect(result.kind).toBe("expanded");
+    if (result.kind !== "expanded") return;
+    expect(requests).toHaveLength(1);
+    expect(requests[0].quality).toBe("medium");
+    expect(requests[0].size).toBe("1152x2048");
+    expect(result.call.model).toBe("gpt-image-2.5-flare");
+    expect(result.call.quality).toBe("medium");
+    expect(result.call.selectionOrigin).toBe("configured");
+    expect(result.artifact.width).toBe(1080);
+    expect(result.artifact.height).toBe(1920);
+  });
+
+  it("seleção flare/medium sem linha ativa do modelo falha antes da chamada", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+
+    const result = await expandVerticalToNineSixteen(expandInput(), {
+      ...baseDeps(backend, invoker.invoker),
+      selection: {
+        model: "gpt-image-2.5-flare",
+        quality: "medium",
+        configVersionId: CONFIG_VERSION_ID,
+        origin: "configured",
+      },
+    });
+
+    expect(result).toEqual({ kind: "model_unavailable", reason: "catalog_row_missing" });
+    expect(invoker.calls).toBe(0);
+    expect(captured.events).toHaveLength(0);
+  });
+
+  it("origem legada é registrada na evidência e na telemetria sem trocar o desfecho", async () => {
+    const backend = createBackend();
+    seedSource(backend);
+    const invoker = fakeInvoker(async () => pngResult());
+
+    const result = await expandVerticalToNineSixteen(expandInput(), {
+      ...baseDeps(backend, invoker.invoker),
+      selection: {
+        model: MODEL,
+        quality: "low",
+        configVersionId: null,
+        origin: "legacy_sunburst_low",
+      },
+    });
+
+    expect(result.kind).toBe("expanded");
+    if (result.kind !== "expanded") return;
+    expect(result.call.selectionOrigin).toBe("legacy_sunburst_low");
+    expect(result.call.configVersionId).toBeNull();
+
+    const metadata = captured.events[0].metadata as Record<string, unknown>;
+    expect(metadata.selectionOrigin).toBe("legacy_sunburst_low");
+    expect(metadata.configVersionId).toBeNull();
+    expect(metadata.expansionOutcome).toBe("expanded");
+    // Nenhum `kind` novo: o mapa de desfechos segue exaustivo e inalterado.
+    expect(expansionOutcomeFor("model_unavailable")).toBeNull();
+    expect(captured.events).toHaveLength(1);
   });
 });

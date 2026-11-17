@@ -47,6 +47,7 @@ import { expandVerticalToNineSixteen, type ExpandVerticalDeps } from "../expand"
 import { probeExpansionTarget } from "../probe";
 import type { ExpansionInvoker } from "../transport";
 import type { ExpandVerticalInput } from "../types";
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
 
 const STORE_ID = "1a2b3c4d-1a2b-4c3d-8e4f-1a2b3c4d5e6f";
 const CAMPAIGN_ID = "2b3c4d5e-2b3c-4d5e-8f6a-2b3c4d5e6f7a";
@@ -58,6 +59,20 @@ const OWNER_USER_ID = "user-owner";
 const MODEL = "gpt-image-2.5-sunburst";
 const CALL_ID_A = "8b9c0d1e-8b9c-4d1e-8f0a-8b9c0d1e2f3a";
 const CALL_ID_B = "9c0d1e2f-9c0d-4e2f-9a1b-9c0d1e2f3a4b";
+
+/** Versão congelada fixa da configuração (UUID v4) do fixture. */
+const CONFIG_VERSION_ID = "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d";
+
+/**
+ * Seleção congelada IDÊNTICA nas duas execuções concorrentes: a divergência
+ * testada é de `callId`, nunca de modelo/qualidade.
+ */
+const CONFIGURED_SELECTION: ExpansionSelection = {
+  model: MODEL,
+  quality: "low",
+  configVersionId: CONFIG_VERSION_ID,
+  origin: "configured",
+};
 
 const FULL_USAGE = {
   inputTextTokens: 10,
@@ -327,6 +342,7 @@ function baseDeps(
     clock: () => 1000,
     callIdFactory: () => callId,
     invoker,
+    selection: CONFIGURED_SELECTION,
     catalog: { getActiveCatalogRows: async () => [catalogRow()] },
     pricing: {
       getModelPricing: async () => ({
