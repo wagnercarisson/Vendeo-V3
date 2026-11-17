@@ -356,9 +356,19 @@ export function createOfflineWorld() {
 
   function rpc(name: string, params: Record<string, unknown>) {
     rpcCounts[name] = (rpcCounts[name] ?? 0) + 1;
+    if (name === "product_9_16_open_operation_v2") {
+      // Compatibilidade de contagem: as suites integradas anteriores à F60.6
+      // contam a abertura lógica em `product_9_16_open_operation`. O harness
+      // mantém esse contador durante o interino (60.6-04 migra o orquestrador
+      // para a v2 e pode atualizar as asserções).
+      rpcCounts.product_9_16_open_operation =
+        (rpcCounts.product_9_16_open_operation ?? 0) + 1;
+    }
     switch (name) {
       case "product_9_16_open_operation":
         return openOperation(params);
+      case "product_9_16_open_operation_v2":
+        return openOperationV2(params);
       case "product_9_16_acquire_step":
         return acquireStep(params);
       case "product_9_16_finish_step":
@@ -413,6 +423,7 @@ export function createOfflineWorld() {
         operation_id: OPERATION_ID,
         origin: "9_16_two_stage",
         steps: stepsEnvelope(),
+        contract_version: 1,
       };
     }
     rows.push({
@@ -422,6 +433,10 @@ export function createOfflineWorld() {
       store_id: params.p_store_id,
       origin: "9_16_two_stage",
       contract_version: 1,
+      expansion_model: null,
+      expansion_quality: null,
+      expansion_config_version_id: null,
+      expansion_selection_origin: null,
     });
     rows.push(
       {
@@ -464,6 +479,111 @@ export function createOfflineWorld() {
       operation_id: OPERATION_ID,
       origin: "9_16_two_stage",
       steps: stepsEnvelope(),
+      contract_version: 1,
+    };
+  }
+
+  /**
+   * RPC v2 (F60.6): grava a seleção congelada + reserva na mesma "transação".
+   * Seleção divergente devolve `operation_config_conflict` SEM escrever; linha
+   * v1 existente devolve `operation_origin_conflict` (nunca converte legado).
+   */
+  function openOperationV2(params: Record<string, unknown>) {
+    const incoming = {
+      model: String(params.p_expansion_model),
+      quality: String(params.p_expansion_quality),
+      config_version_id: String(params.p_expansion_config_version_id),
+      origin: "configured",
+    };
+    const existing = operation();
+    if (existing) {
+      if (Number(existing.contract_version) !== 2) {
+        return { success: false, reason: "operation_origin_conflict" };
+      }
+      if (
+        existing.expansion_model !== incoming.model ||
+        existing.expansion_quality !== incoming.quality ||
+        existing.expansion_config_version_id !== incoming.config_version_id
+      ) {
+        return { success: false, reason: "operation_config_conflict" };
+      }
+      return {
+        success: true,
+        idempotent: true,
+        status: creditRow()?.status ?? "reserved",
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        origin: "9_16_two_stage",
+        steps: stepsEnvelope(),
+        contract_version: 2,
+        expansion_model: existing.expansion_model,
+        expansion_quality: existing.expansion_quality,
+        expansion_config_version_id: existing.expansion_config_version_id,
+        expansion_selection_origin: existing.expansion_selection_origin,
+      };
+    }
+    if (creditRow()) {
+      // Crédito sem linha de operação nunca é adotado como operação nova.
+      return { success: false, reason: "operation_origin_conflict" };
+    }
+    rows.push({
+      __table: "product_9_16_two_stage_operations",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      store_id: params.p_store_id,
+      origin: "9_16_two_stage",
+      contract_version: 2,
+      expansion_model: incoming.model,
+      expansion_quality: incoming.quality,
+      expansion_config_version_id: incoming.config_version_id,
+      expansion_selection_origin: incoming.origin,
+    });
+    rows.push(
+      {
+        __table: "product_9_16_two_stage_steps",
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        stage: "base",
+        status: "pending",
+        attempts_used: 0,
+        failure_class: null,
+      },
+      {
+        __table: "product_9_16_two_stage_steps",
+        campaign_id: CAMPAIGN_ID,
+        operation_id: OPERATION_ID,
+        stage: "expansion",
+        status: "pending",
+        attempts_used: 0,
+        failure_class: null,
+      },
+    );
+    rows.push({
+      __table: "product_1_1_campaign_credit_operations",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      store_id: params.p_store_id,
+      amount: 1,
+      status: "reserved",
+      state_epoch: 0,
+      publication_state: "none",
+      publication_token: null,
+      credit_tx_id: "tx-1",
+      refund_tx_id: null,
+    });
+    return {
+      success: true,
+      idempotent: false,
+      status: "reserved",
+      campaign_id: CAMPAIGN_ID,
+      operation_id: OPERATION_ID,
+      origin: "9_16_two_stage",
+      steps: stepsEnvelope(),
+      contract_version: 2,
+      expansion_model: incoming.model,
+      expansion_quality: incoming.quality,
+      expansion_config_version_id: incoming.config_version_id,
+      expansion_selection_origin: incoming.origin,
     };
   }
 
@@ -1349,8 +1469,30 @@ export async function createOfflineDeps(
     callIdFactory: () => "call",
   });
 
+  /**
+   * INTERINO 60.6-03: `reserveOperationOnce` já recusa operação nova sem seleção
+   * (zero reserva), mas o encaminhamento pelo orquestrador só chega em 60.6-04.
+   * Este harness é a composição de TESTE e emula o chamador da wave 4 passando a
+   * seleção congelada — nunca um default de produção. Nenhum outro método do
+   * serviço financeiro é alterado.
+   */
+  const financial = new Proxy(real.financial, {
+    get(target, property) {
+      if (property === "reserveOperationOnce") {
+        return (input: Parameters<typeof target.reserveOperationOnce>[0]) =>
+          target.reserveOperationOnce({
+            ...input,
+            selection: CONFIGURED_SELECTION,
+          });
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+
   const deps: RunNineSixteenDeps = {
     ...real,
+    financial,
     preflightExpansion: async () => ({ ok: true, selection: CONFIGURED_SELECTION }),
     base: (input, inner) =>
       real.base(input, { ...baseSeams, ...(inner ?? {}) }),

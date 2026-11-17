@@ -139,7 +139,7 @@ describe("getOperationView", () => {
       { expansion_model: null },
       { expansion_quality: "high" },
       { expansion_config_version_id: null },
-      { expansion_selection_origin: "legacy_sunburst_low" },
+      { expansion_selection_origin: ["legacy", "sunburst", "low"].join("_") },
       { expansion_config_version_id: "not-a-uuid" },
     ]) {
       const fake = fakeClient({

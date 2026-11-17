@@ -44,6 +44,8 @@ const view = {
   campaignId: "c",
   operationId: "o",
   origin: "9_16_two_stage",
+  contractVersion: 1,
+  frozenSelection: null,
   credit: { status: "reserved", terminal: false, delivered: false, refunded: false, reserved: true },
   base: { stage: "base", status: "done", attemptsUsed: 1, failureClass: null, attemptNumber: 1, claimedAt: null },
   expansion: { stage: "expansion", status: "pending", attemptsUsed: 0, failureClass: null, attemptNumber: null, claimedAt: null },

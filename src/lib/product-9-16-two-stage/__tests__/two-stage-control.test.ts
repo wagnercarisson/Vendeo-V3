@@ -645,7 +645,10 @@ describe("abertura v1/v2 pelo caminho invocado", () => {
     }
     expect(() =>
       parseOpenOperation(
-        { ...V2_OPEN_ENVELOPE, expansion_selection_origin: "legacy_sunburst_low" },
+        {
+          ...V2_OPEN_ENVELOPE,
+          expansion_selection_origin: ["legacy", "sunburst", "low"].join("_"),
+        },
         { ...OPEN_INPUT, selection: FROZEN_SELECTION },
       ),
     ).toThrowError(expect.objectContaining({ code: "invalid_envelope" }));

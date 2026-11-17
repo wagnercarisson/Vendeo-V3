@@ -58,6 +58,8 @@ function makeView(overrides: Partial<TwoStageOperationView> = {}): TwoStageOpera
     campaignId: "c",
     operationId: "o",
     origin: "9_16_two_stage",
+    contractVersion: 1,
+    frozenSelection: null,
     credit: { status: "reserved", terminal: false, delivered: false, refunded: false, reserved: true },
     base: step("base", "done"),
     expansion: step("expansion", "done"),

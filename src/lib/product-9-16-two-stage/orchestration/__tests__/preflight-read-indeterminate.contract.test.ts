@@ -190,6 +190,8 @@ function pendingView(): TwoStageOperationView {
     campaignId: "c",
     operationId: "o",
     origin: "9_16_two_stage",
+    contractVersion: 1,
+    frozenSelection: null,
     credit: {
       status: "reserved",
       terminal: false,

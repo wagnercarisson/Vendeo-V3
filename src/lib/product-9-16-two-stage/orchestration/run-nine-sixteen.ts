@@ -123,6 +123,10 @@ function defaultView(input: RunNineSixteenInput): TwoStageOperationView {
     campaignId: input.campaignId,
     operationId: input.operationId,
     origin: "9_16_two_stage",
+    // Operação ainda não tem linha: a view default é explicitamente legada v1
+    // (sem seleção persistida). A derivação real do congelado é de 60.6-04.
+    contractVersion: 1,
+    frozenSelection: null,
     credit: {
       status: "reserved",
       terminal: false,

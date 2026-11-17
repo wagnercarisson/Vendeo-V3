@@ -30,6 +30,8 @@ function view(baseStatus: TwoStageOperationView["base"]["status"]): TwoStageOper
     campaignId: "c",
     operationId: "o",
     origin: "9_16_two_stage",
+    contractVersion: 1,
+    frozenSelection: null,
     credit: { status: "reserved", terminal: false, delivered: false, refunded: false, reserved: true },
     base: { ...pending("base"), status: baseStatus },
     expansion: pending("expansion"),

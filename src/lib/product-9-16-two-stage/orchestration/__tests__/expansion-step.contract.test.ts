@@ -75,6 +75,8 @@ function deps(overrides: Record<string, unknown> = {}) {
           campaignId: "c",
           operationId: "o",
           origin: "9_16_two_stage",
+          contractVersion: 1,
+          frozenSelection: null,
           credit: {
             status: "reserved",
             terminal: false,
@@ -173,6 +175,8 @@ describe("runExpansionStep", () => {
             campaignId: "c",
             operationId: "o",
             origin: "9_16_two_stage",
+            contractVersion: 1,
+            frozenSelection: null,
             credit: {
               status: "reserved",
               terminal: false,

@@ -6,6 +6,8 @@ export const INTEGRATED_VIEW = {
   campaignId: "c",
   operationId: "o",
   origin: "9_16_two_stage" as const,
+  contractVersion: 1 as const,
+  frozenSelection: null,
   credit: { status: "reserved", terminal: false, delivered: false, refunded: false, reserved: true },
   base: { stage: "base" as const, status: "pending" as const, attemptsUsed: 0, failureClass: null, attemptNumber: null, claimedAt: null },
   expansion: { stage: "expansion" as const, status: "pending" as const, attemptsUsed: 0, failureClass: null, attemptNumber: null, claimedAt: null },
