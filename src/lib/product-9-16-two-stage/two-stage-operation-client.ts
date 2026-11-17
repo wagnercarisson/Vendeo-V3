@@ -1,6 +1,15 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  isEligibleImageQuality,
+} from "@/lib/ai/image-model-pair";
+import {
+  isExpansionSelection,
+  isNineSixteenConfigVersionId,
+  isNineSixteenExpansionModel,
+  type ExpansionSelection,
+} from "@/lib/ai/nine-sixteen-expansion-model-config";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import {
   ProductTwoStageOperationError,
@@ -36,6 +45,7 @@ const KNOWN_REASONS: readonly TwoStageReason[] = [
   "invalid_target",
   "operation_identity_conflict",
   "operation_origin_conflict",
+  "operation_config_conflict",
   "operation_not_reserved",
   "operation_not_found",
 ];
@@ -126,6 +136,94 @@ function stepOf(value: unknown): StepState {
   });
 }
 
+const LEGACY_EXPANSION_ENVELOPE_KEYS = [
+  "expansion_model",
+  "expansion_quality",
+  "expansion_config_version_id",
+  "expansion_selection_origin",
+] as const;
+
+/**
+ * Envelope v2 ESTRITO: exige `contract_version = 2` e as quatro colunas
+ * congeladas válidas. Qualquer ausência/incoerência é `invalid_envelope`
+ * (fail-closed) — nunca um ramo leniente.
+ */
+function parseFrozenSelectionEnvelope(
+  record: Record<string, unknown>,
+): ExpansionSelection {
+  if (record.contract_version !== 2) {
+    throw new ProductTwoStageOperationError(
+      "invalid_envelope",
+      "missing_contract_version_2",
+    );
+  }
+  const model = record.expansion_model;
+  if (typeof model !== "string" || !isNineSixteenExpansionModel(model)) {
+    throw new ProductTwoStageOperationError("invalid_envelope", "invalid_expansion_model");
+  }
+  const quality = record.expansion_quality;
+  if (typeof quality !== "string" || !isEligibleImageQuality(quality)) {
+    throw new ProductTwoStageOperationError("invalid_envelope", "invalid_expansion_quality");
+  }
+  const configVersionId = record.expansion_config_version_id;
+  if (!isNineSixteenConfigVersionId(configVersionId)) {
+    throw new ProductTwoStageOperationError(
+      "invalid_envelope",
+      "invalid_expansion_config_version_id",
+    );
+  }
+  if (record.expansion_selection_origin !== "configured") {
+    throw new ProductTwoStageOperationError(
+      "invalid_envelope",
+      "invalid_expansion_selection_origin",
+    );
+  }
+  return Object.freeze({
+    model,
+    quality,
+    configVersionId,
+    origin: "configured" as const,
+  });
+}
+
+/**
+ * Linha persistida de `product_9_16_two_stage_operations` (v2). Reusa a mesma
+ * validação estrita do envelope; a diferença é que a origem de uma linha v2 é
+ * sempre `configured`.
+ */
+function parseFrozenSelectionRow(
+  row: Record<string, unknown>,
+): ExpansionSelection {
+  return parseFrozenSelectionEnvelope(row);
+}
+
+/**
+ * Envelope v1 REAL não traz `contract_version` nem `expansion_*`. Se o campo de
+ * versão aparecer, precisa ser `1`; qualquer coluna de expansão presente é
+ * rejeitada (fail-closed).
+ */
+function assertLegacyOpenEnvelope(record: Record<string, unknown>): null {
+  if (
+    record.contract_version !== undefined &&
+    record.contract_version !== null &&
+    record.contract_version !== 1
+  ) {
+    throw new ProductTwoStageOperationError(
+      "invalid_envelope",
+      "legacy_envelope_wrong_contract_version",
+    );
+  }
+  for (const key of LEGACY_EXPANSION_ENVELOPE_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(record, key)) {
+      throw new ProductTwoStageOperationError(
+        "invalid_envelope",
+        "legacy_envelope_has_expansion_fields",
+      );
+    }
+  }
+  return null;
+}
+
 export function parseOpenOperation(
   data: unknown,
   input: OpenOperationRequest,
@@ -135,6 +233,16 @@ export function parseOpenOperation(
   if (record.success !== true) {
     throw new ProductTwoStageOperationError("invalid_envelope", "incomplete_open_envelope");
   }
+
+  // A versão esperada deriva SEMPRE do caminho invocado — nunca de um default do
+  // envelope. A RPC v1 REAL não devolve `contract_version`; a v2 devolve as
+  // quatro colunas `expansion_*` e `contract_version = 2`.
+  const contractVersion: 1 | 2 = isExpansionSelection(input.selection) ? 2 : 1;
+  const selection =
+    contractVersion === 2
+      ? parseFrozenSelectionEnvelope(record)
+      : assertLegacyOpenEnvelope(record);
+
   if (typeof record.idempotent !== "boolean") {
     throw new ProductTwoStageOperationError("invalid_envelope", "missing_idempotent");
   }
@@ -157,6 +265,8 @@ export function parseOpenOperation(
   }
   return Object.freeze({
     success: true,
+    contractVersion,
+    ...(selection === null ? {} : { selection }),
     idempotent: record.idempotent,
     status: record.status,
     campaignId: input.campaignId,
@@ -375,6 +485,21 @@ export class ProductTwoStageOperationClient {
   constructor(private readonly client: SupabaseClient = supabaseAdmin) {}
 
   async open(input: OpenOperationRequest): Promise<OpenOperationResult> {
+    // v2 SOMENTE com seleção validada. Sem seleção, apenas a RPC v1 (reabertura
+    // legada/teste explícito); abrir operação nova sem seleção é recusado pelo
+    // serviço financeiro antes desta chamada.
+    if (isExpansionSelection(input.selection)) {
+      const { data, error } = await this.client.rpc("product_9_16_open_operation_v2", {
+        p_store_id: input.storeId,
+        p_campaign_id: input.campaignId,
+        p_operation_id: input.operationId,
+        p_expansion_model: input.selection.model,
+        p_expansion_quality: input.selection.quality,
+        p_expansion_config_version_id: input.selection.configVersionId,
+      });
+      if (error) throw mapError(error.message);
+      return parseOpenOperation(data, input);
+    }
     const { data, error } = await this.client.rpc("product_9_16_open_operation", {
       p_store_id: input.storeId,
       p_campaign_id: input.campaignId,
@@ -441,7 +566,9 @@ export class ProductTwoStageOperationClient {
     try {
       const opResult = await this.client
         .from("product_9_16_two_stage_operations")
-        .select("campaign_id, operation_id, origin")
+        .select(
+          "campaign_id, operation_id, origin, contract_version, expansion_model, expansion_quality, expansion_config_version_id, expansion_selection_origin",
+        )
         .eq("campaign_id", input.campaignId)
         .eq("operation_id", input.operationId)
         .maybeSingle();
@@ -449,6 +576,23 @@ export class ProductTwoStageOperationClient {
         return { kind: "read_failed", reason: opResult.error.message };
       }
       if (!opResult.data) return { kind: "absent" };
+
+      const operationRow = opResult.data as Record<string, unknown>;
+      const rawContractVersion = operationRow.contract_version;
+      if (rawContractVersion !== 1 && rawContractVersion !== 2) {
+        // Ausência/incoerência NUNCA é promovida a v1 (legado): falha fechada.
+        return { kind: "read_failed", reason: "invalid_contract_version" };
+      }
+      const contractVersion: 1 | 2 = rawContractVersion;
+      let frozenSelection: ExpansionSelection | null = null;
+      if (contractVersion === 2) {
+        try {
+          frozenSelection = parseFrozenSelectionRow(operationRow);
+        } catch {
+          // v2 incompleta/inválida: o chamador falha fechado; nunca legado.
+          frozenSelection = null;
+        }
+      }
 
       const [stepsResult, claimsResult, outcomeResult, creditResult] = await Promise.all([
         this.client
@@ -535,6 +679,8 @@ export class ProductTwoStageOperationClient {
         campaignId: input.campaignId,
         operationId: input.operationId,
         origin: "9_16_two_stage" as const,
+        contractVersion,
+        frozenSelection,
         credit: {
           status: financial.status,
           terminal: financial.terminal,

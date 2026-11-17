@@ -6,6 +6,8 @@
  * serviço e os erros observáveis. Nenhuma escrita/consulta vive aqui.
  */
 
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
+
 export type TwoStageStage = "base" | "expansion";
 export type TwoStageStepStatus =
   | "pending"
@@ -37,6 +39,7 @@ export type TwoStageReason =
   | "invalid_target"
   | "operation_identity_conflict"
   | "operation_origin_conflict"
+  | "operation_config_conflict"
   | "operation_not_reserved"
   | "operation_not_found";
 
@@ -73,17 +76,25 @@ export interface OpenOperationRequest {
   readonly storeId: string;
   readonly campaignId: string;
   readonly operationId: string;
+  /**
+   * Seleção efetiva da expansão (F60.6). Presente ⇒ abertura `contract_version = 2`
+   * via `product_9_16_open_operation_v2`; ausente ⇒ somente reabertura legada v1.
+   */
+  readonly selection?: ExpansionSelection;
 }
 
 export type OpenOperationResult =
   | {
       readonly success: true;
+      readonly contractVersion: 1 | 2;
       readonly idempotent: boolean;
       readonly status: string;
       readonly campaignId: string;
       readonly operationId: string;
       readonly origin: "9_16_two_stage";
       readonly steps: readonly StepState[];
+      /** Presente somente quando `contractVersion === 2`. */
+      readonly selection?: ExpansionSelection;
     }
   | { readonly success: false; readonly reason: TwoStageReason };
 
@@ -283,6 +294,16 @@ export interface TwoStageOperationView {
   readonly campaignId: string;
   readonly operationId: string;
   readonly origin: "9_16_two_stage";
+  /**
+   * Versão de contrato persistida na linha da operação: `1` = legado explícito
+   * (Sunburst low, sem seleção gravada); `2` = seleção congelada (F60.6).
+   */
+  readonly contractVersion: 1 | 2;
+  /**
+   * Seleção congelada (v2). `null` em v1 por design e em v2 incompleta/inválida —
+   * nesse caso o chamador falha fechado, nunca promove a legado.
+   */
+  readonly frozenSelection: ExpansionSelection | null;
   readonly credit: {
     readonly status: string;
     readonly terminal: boolean;

@@ -5,6 +5,7 @@ import {
   parseOpenOperation,
   parseRecordOutcome,
   parseResumeOperation,
+  ProductTwoStageOperationClient,
 } from "../two-stage-operation-client";
 import {
   assertExecuteAuthorized,
@@ -285,6 +286,10 @@ describe("parsers de envelope real", () => {
       openInput,
     );
     expect(result.success).toBe(true);
+    if (!result.success) return;
+    // A v1 REAL não devolve `contract_version`: a versão vem do caminho invocado.
+    expect(result.contractVersion).toBe(1);
+    expect(result.selection).toBeUndefined();
   });
 
   it("acquire aceita execução sem campaign_id/operation_id na resposta", () => {
@@ -480,5 +485,188 @@ describe("derivação financeira", () => {
       terminal: false,
       reserved: true,
     });
+  });
+});
+
+const FROZEN_SELECTION = {
+  model: "gpt-image-2.5-flare",
+  quality: "medium",
+  configVersionId: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  origin: "configured",
+} as const;
+
+const OPEN_STEPS = [
+  { stage: "base", status: "pending", attempts_used: 0, failure_class: null },
+  { stage: "expansion", status: "pending", attempts_used: 0, failure_class: null },
+];
+
+/** Envelope v1 LITERAL: copiado da forma real da RPC v1 (sem `contract_version`). */
+const V1_OPEN_ENVELOPE = {
+  success: true,
+  idempotent: false,
+  status: "reserved",
+  campaign_id: "c",
+  operation_id: "o",
+  origin: "9_16_two_stage",
+  steps: OPEN_STEPS,
+};
+
+const V2_OPEN_ENVELOPE = {
+  ...V1_OPEN_ENVELOPE,
+  contract_version: 2,
+  expansion_model: FROZEN_SELECTION.model,
+  expansion_quality: FROZEN_SELECTION.quality,
+  expansion_config_version_id: FROZEN_SELECTION.configVersionId,
+  expansion_selection_origin: "configured",
+};
+
+function fakeRpcClient(envelope: unknown) {
+  const calls: Array<{ name: string; params: Record<string, unknown> }> = [];
+  return {
+    calls,
+    client: {
+      rpc: async (name: string, params: Record<string, unknown>) => {
+        calls.push({ name, params });
+        return { data: envelope, error: null };
+      },
+    } as never,
+  };
+}
+
+const OPEN_INPUT = { storeId: "s", campaignId: "c", operationId: "o" };
+
+describe("abertura v1/v2 pelo caminho invocado", () => {
+  it("com seleção valida usa a v2 com exatamente os seis parâmetros", async () => {
+    const { calls, client } = fakeRpcClient(V2_OPEN_ENVELOPE);
+    const operationClient = new ProductTwoStageOperationClient(client);
+    const result = await operationClient.open({
+      ...OPEN_INPUT,
+      selection: FROZEN_SELECTION,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].name).toBe("product_9_16_open_operation_v2");
+    expect(Object.keys(calls[0].params).sort()).toEqual(
+      [
+        "p_campaign_id",
+        "p_expansion_config_version_id",
+        "p_expansion_model",
+        "p_expansion_quality",
+        "p_operation_id",
+        "p_store_id",
+      ].sort(),
+    );
+    expect(calls[0].params).toEqual({
+      p_store_id: "s",
+      p_campaign_id: "c",
+      p_operation_id: "o",
+      p_expansion_model: FROZEN_SELECTION.model,
+      p_expansion_quality: FROZEN_SELECTION.quality,
+      p_expansion_config_version_id: FROZEN_SELECTION.configVersionId,
+    });
+    expect(calls[0].params).not.toHaveProperty("p_actor_id");
+    expect(calls[0].params).not.toHaveProperty("p_selection");
+    expect(result).toMatchObject({
+      success: true,
+      contractVersion: 2,
+      selection: {
+        model: FROZEN_SELECTION.model,
+        quality: FROZEN_SELECTION.quality,
+        configVersionId: FROZEN_SELECTION.configVersionId,
+        origin: "configured",
+      },
+    });
+  });
+
+  it("sem seleção usa a v1 e aceita o envelope real sem contract_version", async () => {
+    const { calls, client } = fakeRpcClient(V1_OPEN_ENVELOPE);
+    const operationClient = new ProductTwoStageOperationClient(client);
+    const result = await operationClient.open(OPEN_INPUT);
+
+    expect(calls[0].name).toBe("product_9_16_open_operation");
+    expect(Object.keys(calls[0].params).sort()).toEqual(
+      ["p_campaign_id", "p_operation_id", "p_store_id"].sort(),
+    );
+    expect(result).toMatchObject({ success: true, contractVersion: 1 });
+    if (!result.success) return;
+    expect(result.selection).toBeUndefined();
+  });
+
+  it("deriva a versão do caminho: o mesmo envelope v1 falha na v2", () => {
+    // Prova que a expectativa vem do caminho invocado (`selection` válida), não
+    // de um default do parser: o payload v1 é aceito na v1 e recusado na v2.
+    expect(parseOpenOperation(V1_OPEN_ENVELOPE, OPEN_INPUT)).toMatchObject({
+      success: true,
+      contractVersion: 1,
+    });
+    expect(() =>
+      parseOpenOperation(V1_OPEN_ENVELOPE, {
+        ...OPEN_INPUT,
+        selection: FROZEN_SELECTION,
+      }),
+    ).toThrowError(expect.objectContaining({ code: "invalid_envelope" }));
+  });
+
+  it("v1 recusa contract_version 2 e qualquer coluna expansion_*", () => {
+    expect(() =>
+      parseOpenOperation(
+        { ...V1_OPEN_ENVELOPE, contract_version: 2 },
+        OPEN_INPUT,
+      ),
+    ).toThrowError(expect.objectContaining({ code: "invalid_envelope" }));
+    for (const key of [
+      "expansion_model",
+      "expansion_quality",
+      "expansion_config_version_id",
+      "expansion_selection_origin",
+    ]) {
+      expect(() =>
+        parseOpenOperation(
+          { ...V1_OPEN_ENVELOPE, [key]: null },
+          OPEN_INPUT,
+        ),
+      ).toThrowError(expect.objectContaining({ code: "invalid_envelope" }));
+    }
+  });
+
+  it("v2 é estrita: falta de qualquer chave do envelope falha fechado", () => {
+    for (const key of [
+      "contract_version",
+      "expansion_model",
+      "expansion_quality",
+      "expansion_config_version_id",
+      "expansion_selection_origin",
+    ]) {
+      const incomplete: Record<string, unknown> = { ...V2_OPEN_ENVELOPE };
+      delete incomplete[key];
+      expect(() =>
+        parseOpenOperation(incomplete, { ...OPEN_INPUT, selection: FROZEN_SELECTION }),
+      ).toThrowError(expect.objectContaining({ code: "invalid_envelope" }));
+    }
+    expect(() =>
+      parseOpenOperation(
+        { ...V2_OPEN_ENVELOPE, expansion_selection_origin: "legacy_sunburst_low" },
+        { ...OPEN_INPUT, selection: FROZEN_SELECTION },
+      ),
+    ).toThrowError(expect.objectContaining({ code: "invalid_envelope" }));
+  });
+
+  it("operation_config_conflict chega tipado, sem virar invalid_envelope", async () => {
+    const { client } = fakeRpcClient({
+      success: false,
+      reason: "operation_config_conflict",
+    });
+    const operationClient = new ProductTwoStageOperationClient(client);
+    await expect(
+      operationClient.open({ ...OPEN_INPUT, selection: FROZEN_SELECTION }),
+    ).resolves.toEqual({ success: false, reason: "operation_config_conflict" });
+
+    const origin = fakeRpcClient({
+      success: false,
+      reason: "operation_origin_conflict",
+    });
+    await expect(
+      new ProductTwoStageOperationClient(origin.client).open(OPEN_INPUT),
+    ).resolves.toEqual({ success: false, reason: "operation_origin_conflict" });
   });
 });
