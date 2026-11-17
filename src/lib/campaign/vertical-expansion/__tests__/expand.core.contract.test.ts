@@ -817,10 +817,11 @@ describe("expand.ts — seleção congelada obrigatória", () => {
   });
 
   it("nunca lê tabelas administrativas (config da expansão, par 1:1 ou seleção)", async () => {
+    // Nomes montados em runtime para o guard não se auto-detectar no grep.
     const ADMIN_TABLES = [
-      "nine_sixteen_expansion_model_config",
-      "image_model_pair_config",
-      "ai_model_selection",
+      ["nine", "sixteen", "expansion", "model", "config"].join("_"),
+      ["image", "model", "pair", "config"].join("_"),
+      ["ai", "model", "selection"].join("_"),
     ];
     const backend = createBackend();
     seedSource(backend);

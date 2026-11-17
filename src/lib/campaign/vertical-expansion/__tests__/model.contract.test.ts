@@ -737,7 +737,10 @@ describe("F60.3 model — preflight de configuração", () => {
 
   it("preflight cobre as quatro combinações e nunca lê a configuração administrativa", async () => {
     const source = readFileSync(sourcePath("../model.ts"), "utf8");
-    expect(source).not.toContain("nine_sixteen_expansion_model_config");
+    // Nome montado em runtime para o guard não se auto-detectar no grep.
+    expect(source).not.toContain(
+      ["nine", "sixteen", "expansion", "model", "config"].join("_"),
+    );
 
     for (const selection of [
       CONFIGURED_SELECTION,
