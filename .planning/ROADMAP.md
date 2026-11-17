@@ -920,3 +920,26 @@ Plans:
 **Depends on:** Phase 60, 60.1, 60.3 and 60.4; F60.1 migration applied in the authorized environment; approved OpenSpec change; plan-check PASS_WITH_FINDINGS. Proof/activation additionally require explicit authorization.
 
 **Directory:** .planning/phases/60.5-f60-5-integracao-e-entrega-9-16-por-expansao/.
+
+### Phase 60.6: F60.6 - Configuracao admin da expansao 9:16
+
+**Status:** **PLANEJAMENTO ACEITO EM 2026-11-17; 5 PLANOS / 5 WAVES; `60.6-01` LIBERADO ISOLADAMENTE; `60.6-02..05` NÃO INICIADOS.** A change OpenSpec `f60-6-configuracao-admin-modelo-qualidade-expansao-9-16` e a autoridade aprovada (`--strict` valido; 4 capabilities; 10 deltas; 1 migration planejada). `PHASE_BASE_SHA` deve ser capturado após a consolidação documental e antes da implementação; o diff será conferido por `git diff --name-status $PHASE_BASE_SHA..HEAD`, não apenas pelo worktree. Testes SQL estaticos/fakes **não equivalem** à aplicação real da migration; a aplicação permanece autorização separada. Nenhum código de produção, migration aplicada, banco/Storage/provider, chamada paga, merge, push ou deploy foi executado.
+
+**Goal:** Permitir ao administrador selecionar, exclusivamente para a expansao 9:16, Flare ou Sunburst em `low`/`medium`, com configuracao independente da base quadrada e do 1:1, motivo/auditoria/idempotencia, provisionamento inicial explicito de Sunburst `low`, validacao fail-closed e congelamento da selecao por operacao. O preflight valida a selecao efetiva antes de qualquer gasto; continuacao/retry/telemetria usam o congelado; operacoes anteriores mantem explicitamente `legacy_sunburst_low`. O expansor preserva uma chamada por tentativa, sem retry/fallback, e a saida 1152x2048 -> 1080x1920. Testes somente offline; aplicacao da migration e gate separado.
+
+**Requirements**: REQ-60.6-01, REQ-60.6-02, REQ-60.6-03, REQ-60.6-04, REQ-60.6-05, REQ-60.6-06
+
+**Source:** `openspec/changes/f60-6-configuracao-admin-modelo-qualidade-expansao-9-16/` (proposal, design, specs `product-9-16-expansion-model-config` + deltas em `campaign-vertical-ai-expansion`, `product-9-16-two-stage-operation-control` e `product-9-16-two-stage-orchestration`, tasks; `--strict` valido).
+
+**Plans:** 5 plans in 5 waves (configuracao/persistencia/contratos -> expansor/telemetria -> congelamento da operacao -> orquestracao/preflight/continuacao -> painel administrativo/regressoes); implementation not started.
+
+Plans:
+- [ ] 60.6-01-PLAN.md - Configuracao/persistencia/contratos: contrato e leitura admin (client injetado), schema, migration autorada (tabela/RPC/auditoria/steps/trigger) e garantias de banco; nao aplicada.
+- [ ] 60.6-02-PLAN.md - Expansor/telemetria: selecao obrigatoria por dependencia, quatro combinacoes no request/telemetria, uma chamada sem retry/fallback e migracao de todos os call sites.
+- [ ] 60.6-03-PLAN.md - Congelamento da operacao: `contract_version`/`frozenSelection`, abertura v2 atomica, envelope v1/v2, concorrencia e imutabilidade.
+- [ ] 60.6-04-PLAN.md - Orquestracao/preflight/continuacao: preflight estrito antes da reserva, preflight do congelado antes de acquire, legado v1, indeterminacao recuperavel, replay/entrega sem leitura e recheck de deadline/sinal.
+- [ ] 60.6-05-PLAN.md - Painel administrativo/regressoes: view/API/UI (cobertura por usage, sem `productionActive`), testes offline e gates de codigo; `PHASE_BASE_SHA` e diff por range.
+
+**Depends on:** Phase 60/60.3/60.4/60.5; approved OpenSpec change; plan-check PASS. Migration application and any paid proof/activation additionally require separate authorization.
+
+**Directory:** .planning/phases/60.6-f60-6-configuracao-admin-da-expansao-9-16/.

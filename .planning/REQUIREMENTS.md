@@ -363,3 +363,18 @@ ajuste; o contador conservador do piloto não precisa ser alterado para fechar a
 | REQ-60.3-12 | Offline primeiro com provider/DB/Storage simulados e Sharp real; prova real separada, homolog/infra existente, sem login de lojista, migration ou reconstrução; fonte/credencial/chamadas/orçamento definidos e uma chamada autorizada, sem retry | Matriz offline + autorização/manifesto da prova |
 
 **Não executar nesta rodada de planejamento:** código, migration, SQL, banco, chamada paga, ativação, deploy ou push.
+
+## F60.6 - Planejamento (Configuração administrativa do modelo e qualidade da expansão 9:16)
+
+**Fonte aprovada:** `openspec/changes/f60-6-configuracao-admin-modelo-qualidade-expansao-9-16/` (proposal, design, specs e tasks; `--strict` válido). **Status:** proposta aceita em 2026-11-16; planejamento GSD em andamento; implementação e migration não autorizadas. **Escopo:** configuração administrativa independente, congelamento por operação e conexão ao expansor; sem prova paga, homolog, saldo ou aprovação visual.
+
+| REQ-ID | Requirement | Prova principal |
+|---|---|---|
+| REQ-60.6-01 | Configuração admin singleton e independente da expansão 9:16, restrita a Flare/Sunburst em `low`/`medium`; Sunburst `low` provisionado explicitamente; ausência/invalidade falha fechado sem reserva/provider | Testes de opções, provisionamento, ausência e independência do 1:1/base |
+| REQ-60.6-02 | Autorização admin derivada no servidor e revalidada na RPC; motivo, `operationId`, auditoria transacional; mesmo conteúdo idempotente, conteúdo divergente em conflito sem gravação/auditoria extra | Testes de autorização, motivo, idempotência/conflito e auditoria |
+| REQ-60.6-03 | Seleção congelada por operação (`contract_version = 2`) na mesma transação da reserva; imutável por grants/trigger; concorrência gera uma reserva/operação/seleção; v1 legado explícito sem backfill | Testes de congelamento, imutabilidade, concorrência e legado |
+| REQ-60.6-04 | Expansor recebe a seleção congelada server-side (nunca do navegador), usa modelo+qualidade no request/telemetria/evidência, mantém uma chamada sem retry/fallback e saída 1152x2048 -> 1080x1920 | Testes das quatro combinações no transporte/telemetria e chamada única |
+| REQ-60.6-05 | Preflight valida seleção+catálogo+pricing antes do gasto; configuração ausente/inválida e leitura indeterminada são distintas; continuação reservada não estorna por indeterminação; replay/entrega não dependem da config atual | Testes de preflight, falhas, recuperação e independência de replay/entrega |
+| REQ-60.6-06 | Migration forward-only planejada com rollback operacional não destrutivo; testes somente offline e gates typecheck/lint/build/diff/OpenSpec; sem migration aplicada, prova paga ou ativação | Testes offline, gates e revisão do diff/migration não aplicada |
+
+**Não executar nesta rodada de planejamento:** código, migration, SQL, banco, chamada paga, homolog, saldo, aprovação visual, ativação, deploy ou push.
