@@ -178,7 +178,14 @@ export class NineSixteenExpansionConfigService {
 
     if (error) throw new NineSixteenExpansionConfigReadError(error.message);
 
-    return (data as NineSixteenExpansionConfigRow | null) ?? null;
+    // `absent` e exclusivo de `data === null` sem erro. `undefined`, array ou
+    // qualquer resposta malformada e falha de leitura, nunca ausencia.
+    if (data === null) return null;
+    if (data === undefined || typeof data !== "object" || Array.isArray(data)) {
+      throw new NineSixteenExpansionConfigReadError("malformed_response");
+    }
+
+    return data as NineSixteenExpansionConfigRow;
   }
 }
 

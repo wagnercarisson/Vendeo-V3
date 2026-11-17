@@ -117,6 +117,19 @@ describe("NineSixteenExpansionConfigService — leitura estrita (found/absent/in
     expect(result.kind).not.toBe("absent");
   });
 
+  it("resposta malformada (data undefined) → read_failed (nunca absent)", async () => {
+    const fake = fakeClient(() => ({ data: undefined as never, error: null }));
+    const service = new NineSixteenExpansionConfigService(fake.client as never);
+
+    const result = await service.readNineSixteenExpansionConfig();
+
+    expect(result.kind).toBe("read_failed");
+    expect(result.kind).not.toBe("absent");
+    if (result.kind === "read_failed") {
+      expect(result.reason).toContain("malformed_response");
+    }
+  });
+
   it("erro de leitura NUNCA vira absent", async () => {
     const fake = fakeClient(() => ({ data: null, error: { message: "connection refused" } }));
     const service = new NineSixteenExpansionConfigService(fake.client as never);

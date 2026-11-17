@@ -7,7 +7,7 @@
 --
 -- Escopo (D1/D2/D3/D4/D9.5):
 --   1. Tabela singleton `nine_sixteen_expansion_model_config` (scope 'expansion').
---   2. RLS service-only, grants sem DELETE e provisionamento idempotente Sunburst low.
+--   2. RLS service-only, SELECT-only (escrita exclusiva pela RPC) e provisionamento idempotente Sunburst low.
 --   3. RPC auditada `admin_set_nine_sixteen_expansion_model_config`: ator
 --      revalidado em `admin_users`, motivo, `operationId`, idempotencia estrita
 --      por CONTEUDO (mesmo conteudo = replay; conteudo divergente = conflito sem
@@ -49,18 +49,21 @@ COMMENT ON TABLE public.nine_sixteen_expansion_model_config IS
   'F60.6 — selecao unica (modelo + qualidade) da expansao 9:16. Sem par principal/auxiliar, sem gpt-image-2 e sem DELETE (ausencia falha fechado).';
 
 -- =============================================================================
--- 2. RLS service-only, grants sem DELETE
+-- 2. RLS service-only, SELECT-only para escrita exclusiva pela RPC
 -- =============================================================================
 ALTER TABLE public.nine_sixteen_expansion_model_config ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role manages nine sixteen expansion config"
   ON public.nine_sixteen_expansion_model_config;
-CREATE POLICY "Service role manages nine sixteen expansion config"
-  ON public.nine_sixteen_expansion_model_config FOR ALL TO service_role
-  USING (true) WITH CHECK (true);
+CREATE POLICY "Service role reads nine sixteen expansion config"
+  ON public.nine_sixteen_expansion_model_config FOR SELECT TO service_role
+  USING (true);
 
 REVOKE ALL ON TABLE public.nine_sixteen_expansion_model_config FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.nine_sixteen_expansion_model_config TO service_role;
+-- Escrita exclusivamente pela RPC SECURITY DEFINER; service_role nao recebe
+-- INSERT/UPDATE/DELETE direto (inclusive se houver default privilege no ambiente).
+REVOKE ALL ON TABLE public.nine_sixteen_expansion_model_config FROM service_role;
+GRANT SELECT ON TABLE public.nine_sixteen_expansion_model_config TO service_role;
 
 -- =============================================================================
 -- 3. Provisionamento inicial explicito e idempotente (D4)
@@ -115,14 +118,22 @@ BEGIN
     RAISE EXCEPTION 'invalid_quality';
   END IF;
 
+  -- Serializa a decisao de idempotencia do MESMO operation_id antes de ler a
+  -- auditoria. Duas chamadas concorrentes nao podem ambas observar ausencia e
+  -- disputar o indice unico: a segunda espera e encontra o replay/conflito.
+  PERFORM pg_advisory_xact_lock(
+    hashtext('f60.6:nine_sixteen_expansion_model_config:' || p_operation_id::text)
+  );
+
   -- Idempotencia ESTRITA por conteudo: mesmo operation_id + mesmo conteudo e
   -- replay; conteudo divergente e conflito SEM gravacao, SEM nova versao e SEM
-  -- auditoria adicional. Este bloco precede qualquer escrita.
+  -- auditoria adicional. A consulta e SOMENTE por operation_id (sem filtrar
+  -- action): um ID ja usado por outra acao vira conflito explicito, nunca 23505.
   SELECT metadata, action, actor_id, btrim(reason)
     INTO v_existing_metadata, v_existing_action, v_existing_actor, v_existing_reason
   FROM public.admin_audit_log
   WHERE operation_id = p_operation_id
-    AND action = 'nine_sixteen_expansion_model_config_update';
+  LIMIT 1;
 
   IF FOUND THEN
     IF v_existing_action IS DISTINCT FROM 'nine_sixteen_expansion_model_config_update'

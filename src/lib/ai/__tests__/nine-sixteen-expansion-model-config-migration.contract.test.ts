@@ -215,21 +215,33 @@ describe("tabela singleton da configuracao", () => {
     expect(modelCheck).not.toContain("'gpt-image-2'");
   });
 
-  it("habilita RLS service-only e grants sem DELETE", () => {
+  it("habilita RLS service-only e concede apenas SELECT (escrita so pela RPC)", () => {
     expect(SQL).toContain(
       "ALTER TABLE public.nine_sixteen_expansion_model_config ENABLE ROW LEVEL SECURITY",
     );
     expect(SQL).toContain(
-      'CREATE POLICY "Service role manages nine sixteen expansion config"',
+      'CREATE POLICY "Service role reads nine sixteen expansion config"',
+    );
+    expect(SQL).toMatch(
+      /CREATE POLICY "Service role reads nine sixteen expansion config"\s+ON public\.nine_sixteen_expansion_model_config FOR SELECT TO service_role/i,
+    );
+    expect(SQL).not.toMatch(
+      /CREATE POLICY "Service role reads nine sixteen expansion config"\s+ON public\.nine_sixteen_expansion_model_config FOR ALL/i,
     );
     expect(SQL).toContain(
       "REVOKE ALL ON TABLE public.nine_sixteen_expansion_model_config FROM PUBLIC, anon, authenticated",
     );
     expect(SQL).toContain(
-      "GRANT SELECT, INSERT, UPDATE ON TABLE public.nine_sixteen_expansion_model_config TO service_role",
+      "REVOKE ALL ON TABLE public.nine_sixteen_expansion_model_config FROM service_role",
+    );
+    expect(SQL).toContain(
+      "GRANT SELECT ON TABLE public.nine_sixteen_expansion_model_config TO service_role",
     );
     expect(SQL).not.toMatch(
-      /GRANT[^;]*DELETE[^;]*ON TABLE public\.nine_sixteen_expansion_model_config/i,
+      /GRANT[^;]*(INSERT|UPDATE|DELETE)[^;]*ON TABLE public\.nine_sixteen_expansion_model_config/i,
+    );
+    expect(SQL).not.toMatch(
+      /GRANT[^;]*ON TABLE public\.nine_sixteen_expansion_model_config[^;]*(INSERT|UPDATE|DELETE)/i,
     );
   });
 });
@@ -289,18 +301,32 @@ describe("RPC administrativa auditada", () => {
     expect(audit).toBeGreaterThan(firstWrite);
   });
 
-  it("idempotencia estrita por conteudo, com conflito ANTES do upsert", () => {
-    expect(rpc).toContain("WHERE operation_id = p_operation_id");
-    expect(rpc).toContain("action = 'nine_sixteen_expansion_model_config_update'");
+  it("idempotencia estrita por conteudo, serializada e com conflito ANTES do upsert", () => {
+    const lock = rpc.indexOf("pg_advisory_xact_lock");
+    const auditSelect = rpc.indexOf("FROM public.admin_audit_log");
+    const conflict = rpc.indexOf("operation_id_conflict");
+    const upsert = rpc.indexOf("ON CONFLICT (scope) DO UPDATE");
+
+    expect(lock).toBeGreaterThan(-1);
+    expect(auditSelect).toBeGreaterThan(lock);
+    expect(conflict).toBeGreaterThan(auditSelect);
+    expect(upsert).toBeGreaterThan(conflict);
+
+    const auditLookup = textBetween(
+      rpc,
+      "FROM public.admin_audit_log",
+      "LIMIT 1;",
+    );
+    expect(auditLookup).toContain("WHERE operation_id = p_operation_id");
+    // ID usado por outra acao nao pode ser filtrado para fora: a consulta e
+    // somente por operation_id e o conflito de action e explicitado depois.
+    expect(auditLookup).not.toContain("AND action =");
+
+    expect(rpc).toContain("v_existing_action IS DISTINCT FROM 'nine_sixteen_expansion_model_config_update'");
     expect(rpc).toContain("RAISE EXCEPTION 'operation_id_conflict'");
     expect(rpc).toContain("'idempotent', true");
     expect(rpc).toContain("v_existing_metadata ->> 'model' IS DISTINCT FROM btrim(p_model)");
     expect(rpc).toContain("v_existing_metadata ->> 'quality' IS DISTINCT FROM p_quality");
-
-    const conflict = rpc.indexOf("operation_id_conflict");
-    const upsert = rpc.indexOf("ON CONFLICT (scope) DO UPDATE");
-    expect(conflict).toBeGreaterThan(-1);
-    expect(upsert).toBeGreaterThan(conflict);
   });
 
   it("grava versao nova e audita na mesma transacao com acao/target proprios", () => {
