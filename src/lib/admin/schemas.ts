@@ -5,6 +5,7 @@ import {
   ELIGIBLE_IMAGE_QUALITIES,
   isEligibleImageModel,
 } from "@/lib/ai/image-model-pair";
+import { isNineSixteenExpansionModel } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import {
   CreateLabEvaluationInputSchema,
   CreateLabExperimentInputSchema,
@@ -209,7 +210,37 @@ export const ImageModelPairConfigUpdateSchema = z
     }
   });
 
-/** Segmentos econômicos da entrega (D9) — mesmo enum do service (sem server-only). */
+/**
+ * Body de PUT /api/admin/nine-sixteen-expansion-model-config (F60.6, D1/D2).
+ *
+ * Configuração própria da expansão 9:16: modelo restrito à lista FECHADA da
+ * expansão (`NINE_SIXTEEN_EXPANSION_MODELS`, sem `gpt-image-2`), qualidade em
+ * `low`/`medium`, `reason` obrigatório (auditoria) e `operationId` UUID
+ * (idempotência estrita por conteúdo). `.strict()` recusa chaves desconhecidas —
+ * em especial campos de ator, par principal/auxiliar e ativação, que nunca vêm
+ * do corpo do navegador. A gravação ocorre apenas pela RPC auditada.
+ */
+export const NineSixteenExpansionConfigUpdateSchema = z
+  .object({
+    model: z.string().trim().min(1),
+    quality: z.enum(ELIGIBLE_IMAGE_QUALITIES),
+    reason: z.string().trim().min(1),
+    operationId: z.string().uuid(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (!isNineSixteenExpansionModel(value.model)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["model"],
+        message: "modelo fora da lista da expansao 9:16",
+      });
+    }
+  });
+
+/**
+ * Segmentos econômicos da entrega (D9) — mesmo enum do service (sem server-only).
+ */
 export const OPERATION_RUN_SEGMENTS = [
   "test",
   "freemium/promotional",
