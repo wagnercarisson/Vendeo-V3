@@ -88,6 +88,11 @@ describe("NineSixteenExpansionConfigService — leitura estrita (found/absent/in
         configVersionId: CONFIG_VERSION_ID,
         origin: "configured",
       },
+      metadata: {
+        updatedBy: "33333333-3333-4333-8333-333333333333",
+        updatedAt: "2026-11-17T00:00:00.000Z",
+        reason: "troca aprovada",
+      },
     });
     expect(fake.from).toHaveBeenCalledWith("nine_sixteen_expansion_model_config");
     expect(fake.select).toHaveBeenCalledWith("*");

@@ -54,9 +54,27 @@ export class NineSixteenExpansionConfigReadError extends Error {
   }
 }
 
+/**
+ * Metadados de auditoria da linha vigente (autor/data/motivo).
+ *
+ * A UI administrativa (F60.6-05) precisa exibir quem alterou, quando e por quê.
+ * Eles vêm da MESMA leitura estrita — nunca de uma segunda consulta nem de um
+ * valor fabricado no cliente. Aditivo: consumidores das fases 02-04 seguem
+ * usando apenas `selection`.
+ */
+export interface NineSixteenExpansionConfigMetadata {
+  readonly updatedBy: string | null;
+  readonly updatedAt: string;
+  readonly reason: string | null;
+}
+
 /** Resultado discriminado da leitura estrita. */
 export type NineSixteenExpansionConfigReadResult =
-  | { kind: "found"; selection: ExpansionSelection }
+  | {
+      kind: "found";
+      selection: ExpansionSelection;
+      metadata: NineSixteenExpansionConfigMetadata;
+    }
   | { kind: "absent" }
   | { kind: "invalid"; reason: string }
   | { kind: "read_failed"; reason: string };
@@ -156,7 +174,16 @@ export class NineSixteenExpansionConfigService {
     if (row === null) return { kind: "absent" };
 
     try {
-      return { kind: "found", selection: resolveNineSixteenExpansionConfigFromRow(row) };
+      const selection = resolveNineSixteenExpansionConfigFromRow(row);
+      return {
+        kind: "found",
+        selection,
+        metadata: {
+          updatedBy: row.updated_by ?? null,
+          updatedAt: row.updated_at,
+          reason: row.reason ?? null,
+        },
+      };
     } catch (error) {
       // Linha PRESENTE, mas incompleta/divergente: nunca vira `absent` (que e
       // reservado para `data === null` sem erro).
