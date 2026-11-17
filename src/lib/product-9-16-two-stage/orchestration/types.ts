@@ -148,6 +148,21 @@ export type ExpansionConfigurationPreflight =
     };
 
 /**
+ * Resultado PURO da derivação da seleção congelada a partir da `view` já lida.
+ *
+ * `absent`/`read_failed` são responsabilidade de `OperationViewLookup` (tratados
+ * ANTES da derivação): aqui só existem `found` (seleção efetiva) e `invalid`
+ * (v2 sem seleção completa — falha fechada, nunca promovida a legado).
+ *
+ * A implementação vive uma única vez em `delivery-deps.ts`; este arquivo
+ * declara apenas o contrato, sem duplicar a derivação nem introduzir uma
+ * dependência com I/O.
+ */
+export type FrozenExpansionSelectionLookup =
+  | { readonly kind: "found"; readonly selection: ExpansionSelection }
+  | { readonly kind: "invalid"; readonly reason: string };
+
+/**
  * Dependências da etapa de expansão: as costuras do expansor (sem a seleção) e
  * a seleção congelada como argumento EXPLÍCITO. Nunca opcional.
  */
@@ -191,6 +206,15 @@ export interface RunNineSixteenDeps {
    * ausência de dependência NÃO pode desligar silenciosamente o gate de gasto.
    */
   readonly preflightExpansion: () => Promise<ExpansionConfigurationPreflight>;
+  /**
+   * Preflight read-only de catálogo + pricing da seleção CONGELADA da operação
+   * (continuação/retry e etapa de expansão). Obrigatório. Nunca lê a
+   * configuração administrativa vigente: a seleção chega por argumento, vinda
+   * exclusivamente da operação congelada.
+   */
+  readonly preflightFrozenExpansion: (
+    selection: ExpansionSelection,
+  ) => Promise<ExpansionConfigurationPreflight>;
   /** Costuras read-only da expansao (fonte preparada + sonda do vertical). */
   readonly retrieveCompositionArtifact?: typeof import("@/lib/campaign/composition-artifacts/retrieve").retrieveCompositionArtifact;
   readonly probeExpansion?: typeof import("@/lib/campaign/vertical-expansion/probe").probeExpansionTarget;

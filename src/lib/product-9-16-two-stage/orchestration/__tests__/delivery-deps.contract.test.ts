@@ -2,6 +2,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHash } from "node:crypto";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({
@@ -85,8 +88,9 @@ vi.mock("@/lib/campaign/square-base/frozen-state", () => ({
     createHash("sha256").update(dataUrl).digest("hex"),
 }));
 
-import { createNineSixteenDeps } from "../delivery-deps";
+import { createNineSixteenDeps, deriveFrozenExpansionSelection } from "../delivery-deps";
 import { runNineSixteenTwoStageGeneration } from "../run-nine-sixteen";
+import { LEGACY_SUNBURST_LOW } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import { preflightExpansionToNineSixteen } from "@/lib/campaign/vertical-expansion/model";
 import { readNineSixteenExpansionConfig } from "@/lib/ai/nine-sixteen-expansion-model-config-service";
 import {
@@ -507,5 +511,207 @@ describe("createNineSixteenDeps", () => {
     >;
     expect(baseCalls).toHaveLength(1);
     expect(baseCalls[0][0].productImagesDataUrls).toEqual([DURABLE_DATA_URL]);
+  });
+});
+
+function orchestrationSource(relative: string): string {
+  return readFileSync(
+    fileURLToPath(new URL(relative, import.meta.url)),
+    "utf8",
+  );
+}
+
+function blockAround(source: string, anchor: string, before = 0, after = 24): string {
+  const lines = source.split("\n");
+  const index = lines.findIndex((line) => line.includes(anchor));
+  if (index === -1) throw new Error(`anchor_not_found:${anchor}`);
+  return lines
+    .slice(Math.max(0, index - before), index + after + 1)
+    .join("\n");
+}
+
+function filesUnder(directory: string): string[] {
+  const collected: string[] = [];
+  for (const entry of readdirSync(directory)) {
+    const path = join(directory, entry);
+    if (statSync(path).isDirectory()) {
+      collected.push(...filesUnder(path));
+      continue;
+    }
+    if (path.endsWith(".ts") || path.endsWith(".tsx")) collected.push(path);
+  }
+  return collected;
+}
+
+const FROZEN_VIEW_V2 = {
+  contractVersion: 2 as const,
+  frozenSelection: CONFIGURED_SELECTION,
+};
+
+describe("preflight do congelado (catálogo + pricing da seleção já congelada)", () => {
+  it("valida a seleção recebida com o MESMO client e devolve a mesma seleção", async () => {
+    const client = { marker: "injected" } as never;
+    const deps = createNineSixteenDeps({ client });
+
+    await expect(deps.preflightFrozenExpansion(CONFIGURED_SELECTION)).resolves.toEqual({
+      ok: true,
+      selection: CONFIGURED_SELECTION,
+    });
+    expect(preflightExpansionToNineSixteen).toHaveBeenCalledWith(
+      { client },
+      CONFIGURED_SELECTION,
+    );
+    // O gate do congelado NÃO lê a configuração administrativa vigente.
+    expect(configRead.readNineSixteenExpansionConfig).not.toHaveBeenCalled();
+
+    // Outra combinação (Flare medium) também é validada como recebida.
+    const flareMedium = {
+      model: "gpt-image-2.5-flare",
+      quality: "medium",
+      configVersionId: "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+      origin: "configured",
+    } as const;
+    await expect(deps.preflightFrozenExpansion(flareMedium)).resolves.toEqual({
+      ok: true,
+      selection: flareMedium,
+    });
+    expect(preflightExpansionToNineSixteen).toHaveBeenLastCalledWith(
+      { client },
+      flareMedium,
+    );
+  });
+
+  it("propaga model_unavailable/pricing_unavailable/configuration_read_failed com missing só em pricing", async () => {
+    const deps = createNineSixteenDeps({ client: {} as never });
+
+    vi.mocked(preflightExpansionToNineSixteen).mockResolvedValueOnce({
+      ok: false,
+      failure: "model_unavailable",
+      reason: "catalog_row_missing",
+    } as never);
+    await expect(deps.preflightFrozenExpansion(CONFIGURED_SELECTION)).resolves.toEqual({
+      ok: false,
+      failure: "model_unavailable",
+      reason: "catalog_row_missing",
+      missing: [],
+    });
+
+    vi.mocked(preflightExpansionToNineSixteen).mockResolvedValueOnce({
+      ok: false,
+      failure: "pricing_unavailable",
+      reason: "incomplete_coverage",
+      missing: ["imageTokenUsdPer1M"],
+    } as never);
+    await expect(deps.preflightFrozenExpansion(CONFIGURED_SELECTION)).resolves.toEqual({
+      ok: false,
+      failure: "pricing_unavailable",
+      reason: "incomplete_coverage",
+      missing: ["imageTokenUsdPer1M"],
+    });
+
+    vi.mocked(preflightExpansionToNineSixteen).mockResolvedValueOnce({
+      ok: false,
+      failure: "configuration_read_failed",
+      reason: "catalog_read_failed",
+    } as never);
+    await expect(deps.preflightFrozenExpansion(CONFIGURED_SELECTION)).resolves.toEqual({
+      ok: false,
+      failure: "configuration_read_failed",
+      reason: "catalog_read_failed",
+      missing: [],
+    });
+
+    // Nunca inventa `configuration_missing`: a seleção já está congelada.
+    expect(configRead.readNineSixteenExpansionConfig).not.toHaveBeenCalled();
+  });
+
+  it("o corpo do gate do congelado não referencia o serviço de configuração", () => {
+    const source = orchestrationSource("../delivery-deps.ts");
+    const block = blockAround(source, "preflightFrozenExpansion", 0, 16);
+
+    expect(block).toContain("preflightExpansionToNineSixteen");
+    expect(block).not.toMatch(/readNineSixteenExpansionConfig|nineSixteenExpansionConfigService/);
+  });
+});
+
+describe("deriveFrozenExpansionSelection (pura, a partir da view já lida)", () => {
+  it("v1 deriva o legado explícito Sunburst low", () => {
+    const derived = deriveFrozenExpansionSelection({
+      contractVersion: 1,
+      frozenSelection: null,
+    });
+
+    expect(derived).toEqual({ kind: "found", selection: LEGACY_SUNBURST_LOW });
+    expect(derived).toMatchObject({
+      kind: "found",
+      selection: { origin: "legacy_sunburst_low", configVersionId: null },
+    });
+  });
+
+  it("v2 com seleção persistida deriva a seleção congelada (nunca o legado)", () => {
+    expect(deriveFrozenExpansionSelection(FROZEN_VIEW_V2)).toEqual({
+      kind: "found",
+      selection: CONFIGURED_SELECTION,
+    });
+  });
+
+  it("v2 sem seleção falha fechado, sem sintetizar o legado", () => {
+    const derived = deriveFrozenExpansionSelection({
+      contractVersion: 2,
+      frozenSelection: null,
+    });
+
+    expect(derived).toEqual({ kind: "invalid", reason: "frozen_selection_missing" });
+    expect(JSON.stringify(derived)).not.toContain("legacy_sunburst_low");
+  });
+
+  it("é pura: síncrona, sem I/O e sem segunda leitura da operação", () => {
+    const call = deriveFrozenExpansionSelection(FROZEN_VIEW_V2) as unknown;
+    expect(call).not.toBeInstanceOf(Promise);
+
+    const source = orchestrationSource("../delivery-deps.ts");
+    const block = blockAround(source, "export function deriveFrozenExpansionSelection", 0, 30);
+    expect(block).not.toContain("getOperationView");
+    expect(block).not.toMatch(/await\s/);
+    expect(block).not.toMatch(/\.from\(/);
+
+    // Uma única implementação/export no diretório de orquestração.
+    const matches = filesUnder(
+      fileURLToPath(new URL("..", import.meta.url)),
+    ).flatMap((path) =>
+      readFileSync(path, "utf8")
+        .split("\n")
+        .map((line, index) => ({ path, line, number: index + 1 }))
+        .filter((entry) => /^export function deriveFrozenExpansionSelection/.test(entry.line)),
+    );
+    expect(matches).toHaveLength(1);
+    expect(matches[0].path.endsWith("delivery-deps.ts")).toBe(true);
+  });
+});
+
+describe("composição única das dependências", () => {
+  it("expõe as duas deps de preflight e mantém as deps congeladas", () => {
+    const deps = createNineSixteenDeps({ client: {} as never });
+
+    expect(Object.isFrozen(deps)).toBe(true);
+    expect(typeof deps.preflightExpansion).toBe("function");
+    expect(typeof deps.preflightFrozenExpansion).toBe("function");
+  });
+
+  it("nenhuma rota monta RunNineSixteenDeps à mão", () => {
+    const roots = [
+      fileURLToPath(new URL("../../../../app", import.meta.url)),
+      fileURLToPath(new URL("../..", import.meta.url)),
+    ];
+    const handMounted = roots
+      .flatMap((root) => filesUnder(root))
+      .filter((path) => !path.includes("__tests__"))
+      // `types.ts` declara o contrato (a propriedade), nunca monta o objeto.
+      .filter((path) => !path.endsWith("types.ts"))
+      .filter((path) => readFileSync(path, "utf8").includes("preflightExpansion:"))
+      .map((path) => path.replace(/\\/g, "/"));
+
+    expect(handMounted).toHaveLength(1);
+    expect(handMounted[0]).toMatch(/orchestration\/delivery-deps\.ts$/);
   });
 });

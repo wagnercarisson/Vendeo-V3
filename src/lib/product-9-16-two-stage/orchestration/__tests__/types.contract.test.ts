@@ -6,6 +6,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import type { NineSixteenEvent } from "../types";
 import type {
   ExpansionConfigurationPreflight,
+  FrozenExpansionSelectionLookup,
   RunNineSixteenDeps,
   RunNineSixteenExpandDeps,
 } from "../types";
@@ -114,5 +115,62 @@ describe("orchestration — seleção congelada nos tipos", () => {
     expect(source).toContain("RunNineSixteenExpandDeps");
     expect(source).not.toMatch(/preflightExpansion\?/);
     expect(source).not.toMatch(/selection\?/);
+  });
+});
+
+describe("orchestration — preflight do congelado e derivação (tipos)", () => {
+  it("exige as DUAS dependências de preflight (nunca opcionais)", () => {
+    expectTypeOf<RunNineSixteenDeps["preflightExpansion"]>().toEqualTypeOf<
+      () => Promise<ExpansionConfigurationPreflight>
+    >();
+    expectTypeOf<RunNineSixteenDeps["preflightFrozenExpansion"]>().toEqualTypeOf<
+      (selection: ExpansionSelection) => Promise<ExpansionConfigurationPreflight>
+    >();
+
+    // Omitir qualquer uma delas deixa de satisfazer `RunNineSixteenDeps`: um
+    // fake incompleto não compila.
+    type WithoutFrozen = Omit<RunNineSixteenDeps, "preflightFrozenExpansion">;
+    // @ts-expect-error — `preflightFrozenExpansion` é obrigatória.
+    const missingFrozen: RunNineSixteenDeps = {} as WithoutFrozen;
+    expect(missingFrozen).toBeDefined();
+
+    type WithoutAdmin = Omit<RunNineSixteenDeps, "preflightExpansion">;
+    // @ts-expect-error — `preflightExpansion` é obrigatória.
+    const missingAdmin: RunNineSixteenDeps = {} as WithoutAdmin;
+    expect(missingAdmin).toBeDefined();
+  });
+
+  it("o lookup do congelado distingue apenas found e invalid", () => {
+    const found: FrozenExpansionSelectionLookup = {
+      kind: "found",
+      selection: CONFIGURED_SELECTION,
+    };
+    const invalid: FrozenExpansionSelectionLookup = {
+      kind: "invalid",
+      reason: "frozen_selection_missing",
+    };
+
+    expect(found).toMatchObject({ kind: "found", selection: CONFIGURED_SELECTION });
+    expect(invalid).toEqual({ kind: "invalid", reason: "frozen_selection_missing" });
+
+    // `absent`/`read_failed` continuam sendo responsabilidade de
+    // `OperationViewLookup` — nunca colapsados aqui.
+    // @ts-expect-error — `absent` não pertence ao lookup do congelado.
+    const absent: FrozenExpansionSelectionLookup = { kind: "absent" };
+    // @ts-expect-error — `read_failed` não pertence ao lookup do congelado.
+    const readFailed: FrozenExpansionSelectionLookup = { kind: "read_failed", reason: "x" };
+    expect(absent).toBeDefined();
+    expect(readFailed).toBeDefined();
+  });
+
+  it("a derivação é declarada apenas como TIPO em types.ts e nunca lê configuração", () => {
+    const source = readFileSync(sourcePath("../types.ts"), "utf8");
+
+    // A derivação é implementada/exportada uma única vez em `delivery-deps.ts`.
+    expect(source).not.toContain("deriveFrozenExpansionSelection");
+    expect(source).toContain("FrozenExpansionSelectionLookup");
+    expect(source).not.toMatch(/readNineSixteenExpansionConfig|nineSixteenExpansionConfigService/);
+    // Nenhuma dependência de leitura do congelado: a `view` já lida é a fonte.
+    expect(source).not.toMatch(/readFrozenExpansionSelection/);
   });
 });

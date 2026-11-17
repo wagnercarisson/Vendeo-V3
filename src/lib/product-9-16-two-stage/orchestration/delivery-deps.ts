@@ -12,6 +12,10 @@ import { prepareSquareForExpansion } from "@/lib/campaign/square-preparation/pre
 import { expandVerticalToNineSixteen } from "@/lib/campaign/vertical-expansion/expand";
 import { preflightExpansionToNineSixteen } from "@/lib/campaign/vertical-expansion/model";
 import { readNineSixteenExpansionConfig } from "@/lib/ai/nine-sixteen-expansion-model-config-service";
+import {
+  LEGACY_SUNBURST_LOW,
+  type ExpansionSelection,
+} from "@/lib/ai/nine-sixteen-expansion-model-config";
 import { createDefaultThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
 import type {
   ThumbnailContext,
@@ -28,8 +32,9 @@ import {
 import { projectClosedCampaign } from "@/lib/product-1-1/orchestration/project-closed-campaign";
 import { ProductTwoStageOperationClient } from "../two-stage-operation-client";
 import { TwoStageFinancialService } from "../two-stage-financial-service";
-import type { RunNineSixteenDeps } from "./types";
+import type { RunNineSixteenDeps, FrozenExpansionSelectionLookup } from "./types";
 import { CompositionVerticalProbe } from "./vertical-probe";
+import type { TwoStageOperationView } from "../types";
 
 export interface NineSixteenDepsOptions {
   readonly client?: SupabaseClient;
@@ -100,6 +105,30 @@ function thumbnailContextFor(client: SupabaseClient): ThumbnailContext | null {
     },
   };
   return { endpoint, uploader };
+}
+
+/**
+ * Derivação PURA da seleção congelada a partir da `view` JÁ lida da operação.
+ *
+ * Única implementação do repositório (o orquestrador importa daqui; nenhuma
+ * segunda cópia, nenhuma dependência com I/O e nenhuma leitura adicional da
+ * operação). Regras fechadas:
+ * - `contractVersion = 1` → `LEGACY_SUNBURST_LOW` explícito (comportamento
+ *   original Sunburst `low`, sem backfill e sem versão inventada);
+ * - `contractVersion = 2` com seleção persistida → a seleção congelada;
+ * - `contractVersion = 2` sem seleção completa → `invalid` (falha fechada,
+ *   jamais promovido a legado).
+ */
+export function deriveFrozenExpansionSelection(
+  view: Pick<TwoStageOperationView, "contractVersion" | "frozenSelection">,
+): FrozenExpansionSelectionLookup {
+  if (view.contractVersion === 1) {
+    return { kind: "found", selection: LEGACY_SUNBURST_LOW };
+  }
+  if (view.frozenSelection === null) {
+    return { kind: "invalid", reason: "frozen_selection_missing" };
+  }
+  return { kind: "found", selection: view.frozenSelection };
 }
 
 /**
@@ -185,6 +214,27 @@ export function createNineSixteenDeps(
     };
   };
 
+  /**
+   * Gate da CONTINUAÇÃO/RETRY e da etapa de expansão: preflight read-only de
+   * catálogo + pricing **apenas** da seleção congelada recebida. Não toca a
+   * configuração administrativa vigente, então uma mudança administrativa
+   * posterior não altera uma operação já aberta. Fail-closed, sem provider.
+   */
+  const preflightFrozenExpansion: RunNineSixteenDeps["preflightFrozenExpansion"] = async (
+    selection,
+  ) => {
+    const outcome = await preflightExpansionToNineSixteen({ client }, selection);
+    if (outcome.ok) return { ok: true, selection };
+    const missing =
+      outcome.failure === "pricing_unavailable" ? outcome.missing : [];
+    return {
+      ok: false,
+      failure: outcome.failure,
+      reason: outcome.reason,
+      missing,
+    };
+  };
+
   const readFrozen: RunNineSixteenDeps["readFrozenState"] = (input, deps) =>
     readSquareBaseFrozenState(input, { client, ...(deps ?? {}) });
 
@@ -239,6 +289,7 @@ export function createNineSixteenDeps(
     projectClosed,
     probeVertical,
     preflightExpansion,
+    preflightFrozenExpansion,
     generateThumbnail,
     reconstruction: {
       client,
