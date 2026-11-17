@@ -58,9 +58,6 @@ export const EXPANSION_TARGET = Object.freeze({
 /** Origem F60.1 usada na persistência do vertical expandido. */
 export const EXPANSION_ORIGIN = "ai_expansion" as const;
 
-/** Qualidade fixa desta fatia (validada contra a lista fechada da F56.1). */
-export const EXPANSION_QUALITY = "low" as const;
-
 /** Etapa de telemetria/custo correlacionada com a base 1:1. */
 export const EXPANSION_STAGE = "expansion" as const;
 
@@ -75,9 +72,6 @@ export const EXPANSION_PROVIDER = "openai" as const;
 
 /** Protocolo exigido na linha ativa do catálogo. */
 export const EXPANSION_PROTOCOL = "images" as const;
-
-/** Modelo esperado nesta fatia; o identificador efetivo vem da linha do catálogo. */
-export const EXPECTED_MODEL = "gpt-image-2.5-sunburst" as const;
 
 /** Versão do prompt estático (mesmo literal de `prompt.ts`). */
 export const EXPANSION_PROMPT_VERSION = "f60.3-expand-9-16-v1" as const;

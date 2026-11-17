@@ -21,6 +21,8 @@ import "server-only";
  */
 
 import { BufferingAiTelemetrySink, createDefaultTelemetryContext } from "@/lib/ai/telemetry-sink";
+import type { ImageQuality } from "@/lib/ai/image-model-pair";
+import type { ExpansionSelectionOrigin } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import type { AiCallEnvelope, AiEnvelopeInternalCost, AiTelemetryContext } from "@/lib/ai/types";
 import type { CostResolution, UsageTokenPricing } from "@/lib/ai-cost/types";
 
@@ -41,6 +43,8 @@ export const EXPANSION_TELEMETRY_FIELDS = Object.freeze([
   "provider",
   "model",
   "quality",
+  "configVersionId",
+  "selectionOrigin",
 ] as const);
 
 /**
@@ -120,7 +124,10 @@ export interface ExpansionTelemetryInput {
   readonly sourceArtifactId: string;
   readonly provider: string;
   readonly model: string;
-  readonly quality: "low";
+  readonly quality: ImageQuality;
+  /** Versão da configuração congelada; `null` apenas no legado explícito. */
+  readonly configVersionId: string | null;
+  readonly selectionOrigin: ExpansionSelectionOrigin;
   readonly pricingVersion: string;
   readonly tokenPricing: UsageTokenPricing;
   /**
@@ -193,6 +200,8 @@ function decorateEnvelope(
       model: typeof envelope.model === "string" ? envelope.model : input.model,
       quality:
         typeof envelope.quality === "string" ? envelope.quality : input.quality,
+      configVersionId: input.configVersionId,
+      selectionOrigin: input.selectionOrigin,
     },
   };
 }

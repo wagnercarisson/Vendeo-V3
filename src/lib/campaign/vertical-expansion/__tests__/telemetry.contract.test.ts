@@ -36,6 +36,7 @@ const CALL_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const STORE_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const CAMPAIGN_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const SOURCE_ARTIFACT_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const CONFIG_VERSION_ID = "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d";
 
 function telemetryInput(
   overrides: Partial<ExpansionTelemetryInput> = {},
@@ -52,6 +53,8 @@ function telemetryInput(
     provider: "openai",
     model: "gpt-image-2.5-sunburst",
     quality: "low",
+    configVersionId: CONFIG_VERSION_ID,
+    selectionOrigin: "configured",
     pricingVersion: "pricing-version-1",
     tokenPricing: {
       inputCostUsd: 1,
@@ -144,6 +147,8 @@ describe("createExpansionTelemetry — contexto e um envelope por chamada", () =
       provider: "openai",
       model: "gpt-image-2.5-sunburst",
       quality: "low",
+      configVersionId: CONFIG_VERSION_ID,
+      selectionOrigin: "configured",
     });
 
     for (const field of EXPANSION_TELEMETRY_FIELDS) {
@@ -165,6 +170,27 @@ describe("createExpansionTelemetry — contexto e um envelope por chamada", () =
 
     const event = captured.events[0];
     expect(handle.resolvedCost()).toEqual(event.cost);
+  });
+
+  it("registra a origem legada explícita sem criar um novo desfecho", async () => {
+    const handle = createExpansionTelemetry(
+      telemetryInput({
+        quality: "medium",
+        configVersionId: null,
+        selectionOrigin: "legacy_sunburst_low",
+      }),
+    );
+    await handle.telemetry.sink.emit(envelope({ quality: "medium" }));
+    handle.finalize({ outcome: "expanded", returnedSize: "1152x2048", durationMs: 10 });
+    await handle.flush();
+
+    const metadata = captured.events[0].metadata as Record<string, unknown>;
+    expect(metadata.quality).toBe("medium");
+    expect(metadata.configVersionId).toBeNull();
+    expect(metadata.selectionOrigin).toBe("legacy_sunburst_low");
+    expect(metadata.expansionOutcome).toBe("expanded");
+    expect(EXPANSION_TELEMETRY_FIELDS).toContain("configVersionId");
+    expect(EXPANSION_TELEMETRY_FIELDS).toContain("selectionOrigin");
   });
 });
 

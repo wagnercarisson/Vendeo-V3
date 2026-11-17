@@ -14,6 +14,8 @@
  */
 
 import type { CostResolution, TokenUsage } from "@/lib/ai-cost/types";
+import type { ImageQuality } from "@/lib/ai/image-model-pair";
+import type { ExpansionSelectionOrigin } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import type {
   ArtifactRecord,
   AuthorizationContext,
@@ -56,9 +58,10 @@ export interface ExpandVerticalInput {
 
 /**
  * Evidência da chamada real (uma por invocação paga). `returnedSize` é medido
- * dos bytes devolvidos, nunca copiado do tamanho solicitado. `cost` segue a
- * verdade do contrato de custo: desconhecido é `estimatedCostUsd: null` +
- * `costSource: "not_available"`, nunca zero.
+ * dos bytes devolvidos, nunca copiado do tamanho solicitado. `quality`,
+ * `configVersionId` e `selectionOrigin` registram exatamente a seleção congelada
+ * usada na chamada. `cost` segue a verdade do contrato de custo: desconhecido é
+ * `estimatedCostUsd: null` + `costSource: "not_available"`, nunca zero.
  */
 export interface ExpansionCallEvidence {
   readonly callId: string;
@@ -68,7 +71,10 @@ export interface ExpansionCallEvidence {
   readonly provider: string;
   readonly model: string;
   readonly protocol: "images";
-  readonly quality: "low";
+  readonly quality: ImageQuality;
+  /** Versão da configuração congelada; `null` apenas no legado explícito. */
+  readonly configVersionId: string | null;
+  readonly selectionOrigin: ExpansionSelectionOrigin;
   readonly requestedSize: "1152x2048";
   readonly returnedSize: string | null;
   readonly durationMs: number;
@@ -129,11 +135,16 @@ export type ExpandVerticalResult =
     }
   | {
       readonly kind: "model_unavailable";
+      /**
+       * União FECHADA. `expansion_selection_required` descreve "o chamador não
+       * forneceu a seleção congelada" — é falha de alvo/modelo, não de origem.
+       */
       readonly reason:
         | "catalog_row_missing"
         | "catalog_read_failed"
         | "unsupported_protocol"
-        | "quality_not_eligible";
+        | "quality_not_eligible"
+        | "expansion_selection_required";
       readonly detail?: string;
     }
   | {

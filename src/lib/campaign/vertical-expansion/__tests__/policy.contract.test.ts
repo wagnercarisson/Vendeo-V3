@@ -15,12 +15,10 @@ import {
   EXPANSION_PROMPT_VERSION,
   EXPANSION_PROTOCOL,
   EXPANSION_PROVIDER,
-  EXPANSION_QUALITY,
   EXPANSION_SOURCE,
   EXPANSION_STAGE,
   EXPANSION_TARGET,
   EXPANSION_TIMEOUT_MS,
-  EXPECTED_MODEL,
   SOURCE_ROLE,
   effectiveTimeout,
   parseExpandVerticalInput,
@@ -282,15 +280,22 @@ describe("F60.3 policy — constantes derivadas (sem literais duplicados)", () =
   it("PROVIDER_SIZE vem de dimensions.ts e os demais literais são fechados", () => {
     expect(PROVIDER_SIZE).toBe("1152x2048");
     expect(EXPANSION_ORIGIN).toBe("ai_expansion");
-    expect(EXPANSION_QUALITY).toBe("low");
     expect(EXPANSION_STAGE).toBe("expansion");
     expect(EXPANSION_CAPABILITY).toBe("campaign_product_image");
     expect(EXPANSION_PROVIDER).toBe("openai");
     expect(EXPANSION_PROTOCOL).toBe("images");
-    expect(EXPECTED_MODEL).toBe("gpt-image-2.5-sunburst");
     expect(EXPANSION_PROMPT_VERSION).toBe("f60.3-expand-9-16-v1");
+    expect(EXPANSION_TIMEOUT_MS).toBe(180_000);
     expect(Object.isFrozen(EXPANSION_SOURCE)).toBe(true);
     expect(Object.isFrozen(EXPANSION_TARGET)).toBe(true);
+  });
+
+  it("não fixa alvo (modelo/qualidade) no módulo de política", () => {
+    const source = readFileSync(sourcePath("../policy.ts"), "utf8");
+
+    // O alvo vem exclusivamente da seleção congelada recebida por dependência.
+    expect(source).not.toMatch(/gpt-image-2\.5-(flare|sunburst)/);
+    expect(source).not.toMatch(/"low"/);
   });
 });
 

@@ -9,6 +9,7 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: {} }));
 
 import type { AiModelCatalogRow } from "@/lib/ai/ai-model-catalog-service";
 import type { ModelPricing } from "@/lib/ai-cost/ai-model-pricing";
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
 
 import {
   EXPECTED_EXPANSION_TARGET,
@@ -71,6 +72,32 @@ const COMPLETE_PRICING: ModelPricing = {
   imageUnitCostUsd: 0.05,
 };
 
+/** UUID v4 fixo do fixture (versão congelada da configuração). */
+const CONFIG_VERSION_ID = "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d";
+
+/** Seleção congelada padrão da suíte (Sunburst low, origem `configured`). */
+const CONFIGURED_SELECTION: ExpansionSelection = {
+  model: "gpt-image-2.5-sunburst",
+  quality: "low",
+  configVersionId: CONFIG_VERSION_ID,
+  origin: "configured",
+};
+
+/** Seleções equivalentes para as demais combinações fechadas. */
+const SUNBURST_MEDIUM: ExpansionSelection = {
+  ...CONFIGURED_SELECTION,
+  quality: "medium",
+};
+const FLARE_LOW: ExpansionSelection = {
+  ...CONFIGURED_SELECTION,
+  model: "gpt-image-2.5-flare",
+};
+const FLARE_MEDIUM: ExpansionSelection = {
+  ...CONFIGURED_SELECTION,
+  model: "gpt-image-2.5-flare",
+  quality: "medium",
+};
+
 async function withImagePairMock<T>(
   overrides: Record<string, unknown>,
   run: (mod: typeof import("../model")) => Promise<T>,
@@ -90,9 +117,12 @@ async function withImagePairMock<T>(
 }
 
 describe("F60.3 model — alvo resolvido pela linha ativa do catálogo", () => {
-  it("linha ativa Sunburst devolve provider/model/protocol copiados da linha", async () => {
+  it("linha ativa Sunburst devolve provider/model/protocol copiados da seleção e da linha", async () => {
     const sunburst = catalogRow();
-    const resolution = await resolveExpansionTarget({ catalog: catalogOf([sunburst]) });
+    const resolution = await resolveExpansionTarget(
+      { catalog: catalogOf([sunburst]) },
+      CONFIGURED_SELECTION,
+    );
 
     expect(resolution.ok).toBe(true);
     if (!resolution.ok) return;
@@ -102,26 +132,52 @@ describe("F60.3 model — alvo resolvido pela linha ativa do catálogo", () => {
     expect(resolution.protocol).toBe("images");
     expect(resolution.quality).toBe("low");
     expect(resolution.provider).toBe(sunburst.provider);
-    expect(resolution.model).toBe(sunburst.model);
+    expect(resolution.model).toBe(CONFIGURED_SELECTION.model);
     expect(resolution.protocol).toBe(sunburst.protocol);
     expect(resolution.catalogRow).toBe(sunburst);
   });
 
-  it("a tupla esperada é derivada de policy.ts (sem literais duplicados)", () => {
+  it("a tupla fixa é derivada de policy.ts e não carrega modelo/qualidade", () => {
     expect(EXPECTED_EXPANSION_TARGET).toEqual({
       capability: "campaign_product_image",
       provider: "openai",
       protocol: "images",
-      model: "gpt-image-2.5-sunburst",
-      quality: "low",
     });
     expect(Object.isFrozen(EXPECTED_EXPANSION_TARGET)).toBe(true);
-    expect(isEligibleExpansionTarget(catalogRow())).toBe(true);
-    expect(isEligibleExpansionTarget(catalogRow({ status: "deprecated" }))).toBe(false);
+    expect(isEligibleExpansionTarget(catalogRow(), CONFIGURED_SELECTION)).toBe(true);
+    expect(
+      isEligibleExpansionTarget(catalogRow({ status: "deprecated" }), CONFIGURED_SELECTION),
+    ).toBe(false);
+  });
+
+  it("resolve cada combinação selecionada contra a linha ativa exata", async () => {
+    const combinations: Array<{
+      readonly label: string;
+      readonly selection: ExpansionSelection;
+    }> = [
+      { label: "sunburst/low", selection: CONFIGURED_SELECTION },
+      { label: "sunburst/medium", selection: SUNBURST_MEDIUM },
+      { label: "flare/low", selection: FLARE_LOW },
+      { label: "flare/medium", selection: FLARE_MEDIUM },
+    ];
+
+    for (const { label, selection } of combinations) {
+      const resolution = await resolveExpansionTarget(
+        { catalog: catalogOf([catalogRow({ model: selection.model })]) },
+        selection,
+      );
+
+      expect(resolution.ok, label).toBe(true);
+      if (!resolution.ok) continue;
+      expect(resolution.model, label).toBe(selection.model);
+      expect(resolution.quality, label).toBe(selection.quality);
+    }
   });
 
   it("catálogo sem linha correspondente devolve catalog_row_missing", async () => {
-    await expect(resolveExpansionTarget({ catalog: catalogOf([]) })).resolves.toEqual({
+    await expect(
+      resolveExpansionTarget({ catalog: catalogOf([]) }, CONFIGURED_SELECTION),
+    ).resolves.toEqual({
       ok: false,
       reason: "catalog_row_missing",
     });
@@ -129,28 +185,38 @@ describe("F60.3 model — alvo resolvido pela linha ativa do catálogo", () => {
 
   it("linha inativa não casa (o leitor devolve só ativas; a checagem é redundante)", async () => {
     await expect(
-      resolveExpansionTarget({ catalog: catalogOf([]) }),
+      resolveExpansionTarget({ catalog: catalogOf([]) }, CONFIGURED_SELECTION),
     ).resolves.toEqual({ ok: false, reason: "catalog_row_missing" });
 
     await expect(
-      resolveExpansionTarget({
-        catalog: catalogOf([catalogRow({ status: "deprecated" })]),
-      }),
+      resolveExpansionTarget(
+        {
+          catalog: catalogOf([catalogRow({ status: "deprecated" })]),
+        },
+        CONFIGURED_SELECTION,
+      ),
     ).resolves.toEqual({ ok: false, reason: "catalog_row_missing" });
   });
 
   it("linha com protocolo divergente devolve unsupported_protocol", async () => {
     await expect(
-      resolveExpansionTarget({
-        catalog: catalogOf([catalogRow({ protocol: "responses" })]),
-      }),
+      resolveExpansionTarget(
+        {
+          catalog: catalogOf([catalogRow({ protocol: "responses" })]),
+        },
+        CONFIGURED_SELECTION,
+      ),
     ).resolves.toEqual({ ok: false, reason: "unsupported_protocol" });
   });
 
   it("modelo fora da lista elegível devolve catalog_row_missing/model_not_eligible", async () => {
     const resolution = await withImagePairMock(
       { isEligibleImageModel: () => false },
-      (mod) => mod.resolveExpansionTarget({ catalog: catalogOf([catalogRow()]) }),
+      (mod) =>
+        mod.resolveExpansionTarget(
+          { catalog: catalogOf([catalogRow()]) },
+          CONFIGURED_SELECTION,
+        ),
     );
 
     expect(resolution).toEqual({
@@ -163,7 +229,11 @@ describe("F60.3 model — alvo resolvido pela linha ativa do catálogo", () => {
   it("qualidade fora da lista elegível devolve quality_not_eligible (ramo defensivo)", async () => {
     const resolution = await withImagePairMock(
       { isEligibleImageQuality: () => false },
-      (mod) => mod.resolveExpansionTarget({ catalog: catalogOf([catalogRow()]) }),
+      (mod) =>
+        mod.resolveExpansionTarget(
+          { catalog: catalogOf([catalogRow()]) },
+          CONFIGURED_SELECTION,
+        ),
     );
 
     expect(resolution).toEqual({ ok: false, reason: "quality_not_eligible" });
@@ -176,7 +246,9 @@ describe("F60.3 model — alvo resolvido pela linha ativa do catálogo", () => {
       },
     };
 
-    await expect(resolveExpansionTarget({ catalog: throwing })).resolves.toEqual({
+    await expect(
+      resolveExpansionTarget({ catalog: throwing }, CONFIGURED_SELECTION),
+    ).resolves.toEqual({
       ok: false,
       reason: "catalog_read_failed",
     });
@@ -186,16 +258,21 @@ describe("F60.3 model — alvo resolvido pela linha ativa do catálogo", () => {
         ({ rows: [] } as unknown) as AiModelCatalogRow[],
     };
 
-    await expect(resolveExpansionTarget({ catalog: nonArray })).resolves.toEqual({
+    await expect(
+      resolveExpansionTarget({ catalog: nonArray }, CONFIGURED_SELECTION),
+    ).resolves.toEqual({
       ok: false,
       reason: "catalog_read_failed",
     });
   });
 
-  it("outro modelo elegível sozinho não substitui o Sunburst esperado", async () => {
-    const resolution = await resolveExpansionTarget({
-      catalog: catalogOf([catalogRow({ id: "flare-row", model: "gpt-image-2.5-flare" })]),
-    });
+  it("outro modelo elegível sozinho não substitui o modelo selecionado", async () => {
+    const resolution = await resolveExpansionTarget(
+      {
+        catalog: catalogOf([catalogRow({ id: "flare-row", model: "gpt-image-2.5-flare" })]),
+      },
+      CONFIGURED_SELECTION,
+    );
 
     expect(resolution).toEqual({ ok: false, reason: "catalog_row_missing" });
     expect(JSON.stringify(resolution)).not.toContain("flare");
@@ -210,7 +287,7 @@ describe("F60.3 model — alvo resolvido pela linha ativa do catálogo", () => {
       },
     };
 
-    await resolveExpansionTarget({ catalog: reader });
+    await resolveExpansionTarget({ catalog: reader }, CONFIGURED_SELECTION);
     expect(reads).toBe(1);
   });
 });
@@ -377,7 +454,7 @@ describe("F60.3 model — estimativa pré-chamada separada", () => {
 });
 
 describe("F60.3 model — pricing do alvo resolvido", () => {
-  it("repassa provider/model/quality do alvo ao leitor, exatamente uma vez", async () => {
+  it("repassa provider/model/quality da seleção ao leitor, exatamente uma vez", async () => {
     const calls: Array<{ provider: string; model: string; quality?: string }> = [];
     const reader = {
       getModelPricing: async (params: {
@@ -391,8 +468,8 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
     };
 
     const resolution = await resolveExpansionPricing(
-      { provider: "openai", model: "gpt-image-2.5-sunburst", quality: "low" },
       { pricing: reader },
+      CONFIGURED_SELECTION,
     );
 
     expect(calls).toEqual([
@@ -407,6 +484,40 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
     });
   });
 
+  it("repassa exatamente a combinação selecionada (quatro combinações, low e medium)", async () => {
+    const combinations: ExpansionSelection[] = [
+      CONFIGURED_SELECTION,
+      SUNBURST_MEDIUM,
+      FLARE_LOW,
+      FLARE_MEDIUM,
+    ];
+
+    for (const selection of combinations) {
+      const calls: Array<{ provider: string; model: string; quality?: string }> = [];
+      const reader = {
+        getModelPricing: async (params: {
+          provider: string;
+          model: string;
+          quality?: string;
+        }) => {
+          calls.push({ ...params });
+          return { pricing: COMPLETE_PRICING, versionId: "version-1" };
+        },
+      };
+
+      const resolution = await resolveExpansionPricing({ pricing: reader }, selection);
+
+      expect(resolution.ok, `${selection.model}|${selection.quality}`).toBe(true);
+      expect(calls).toEqual([
+        {
+          provider: "openai",
+          model: selection.model,
+          quality: selection.quality,
+        },
+      ]);
+    }
+  });
+
   it("tarifas completas + image_unit_usd ausente resolve OK com estimativa indisponível", async () => {
     const { imageUnitCostUsd: _omitted, ...withoutUnit } = COMPLETE_PRICING;
     const reader = {
@@ -417,8 +528,8 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
     };
 
     const resolution = await resolveExpansionPricing(
-      { provider: "openai", model: "gpt-image-2.5-sunburst", quality: "low" },
       { pricing: reader },
+      CONFIGURED_SELECTION,
     );
 
     expect(resolution).toEqual({
@@ -439,8 +550,8 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
     };
 
     const resolution = await resolveExpansionPricing(
-      { provider: "openai", model: "gpt-image-2.5-sunburst", quality: "low" },
       { pricing: reader },
+      CONFIGURED_SELECTION,
     );
 
     expect(resolution.ok).toBe(false);
@@ -459,8 +570,8 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
     };
 
     const resolution = await resolveExpansionPricing(
-      { provider: "openai", model: "gpt-image-2.5-sunburst", quality: "low" },
       { pricing: reader },
+      CONFIGURED_SELECTION,
     );
 
     expect(resolution.ok).toBe(false);
@@ -480,8 +591,8 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
     };
 
     const resolution = await resolveExpansionPricing(
-      { provider: "openai", model: "gpt-image-2.5-sunburst", quality: "low" },
       { pricing: reader },
+      CONFIGURED_SELECTION,
     );
 
     expect(resolution.ok).toBe(false);
@@ -499,8 +610,8 @@ describe("F60.3 model — pricing do alvo resolvido", () => {
 
     await expect(
       resolveExpansionPricing(
-        { provider: "openai", model: "gpt-image-2.5-sunburst", quality: "low" },
         { pricing: reader },
+        CONFIGURED_SELECTION,
       ),
     ).resolves.toEqual({ ok: false, reason: "row_missing", missing: ["pricing_row"] });
   });
@@ -514,10 +625,13 @@ describe("F60.3 model — preflight de configuração", () => {
   it("modelo + tarifas de usage completas ⇒ ok sem exigir image_unit_usd", async () => {
     const { imageUnitCostUsd: _omitted, ...withoutUnit } = COMPLETE_PRICING;
 
-    const outcome = await preflightExpansionToNineSixteen({
-      catalog: catalogOf([catalogRow()]),
-      pricing: pricingReader(withoutUnit),
-    });
+    const outcome = await preflightExpansionToNineSixteen(
+      {
+        catalog: catalogOf([catalogRow()]),
+        pricing: pricingReader(withoutUnit),
+      },
+      CONFIGURED_SELECTION,
+    );
 
     expect(outcome).toEqual({
       ok: true,
@@ -533,10 +647,13 @@ describe("F60.3 model — preflight de configuração", () => {
   });
 
   it("catálogo sem linha ativa devolve model_unavailable", async () => {
-    const outcome = await preflightExpansionToNineSixteen({
-      catalog: catalogOf([]),
-      pricing: pricingReader(COMPLETE_PRICING),
-    });
+    const outcome = await preflightExpansionToNineSixteen(
+      {
+        catalog: catalogOf([]),
+        pricing: pricingReader(COMPLETE_PRICING),
+      },
+      CONFIGURED_SELECTION,
+    );
 
     expect(outcome).toEqual({
       ok: false,
@@ -546,13 +663,16 @@ describe("F60.3 model — preflight de configuração", () => {
   });
 
   it("tarifa de usage aplicável ausente devolve pricing_unavailable", async () => {
-    const outcome = await preflightExpansionToNineSixteen({
-      catalog: catalogOf([catalogRow()]),
-      pricing: pricingReader({
-        inputCostUsd: 1,
-        imageInputTokenUsdPer1M: 3,
-      }),
-    });
+    const outcome = await preflightExpansionToNineSixteen(
+      {
+        catalog: catalogOf([catalogRow()]),
+        pricing: pricingReader({
+          inputCostUsd: 1,
+          imageInputTokenUsdPer1M: 3,
+        }),
+      },
+      CONFIGURED_SELECTION,
+    );
 
     expect(outcome.ok).toBe(false);
     if (outcome.ok) return;
@@ -564,23 +684,29 @@ describe("F60.3 model — preflight de configuração", () => {
   });
 
   it("não chama provider nem Storage", async () => {
-    await preflightExpansionToNineSixteen({
-      catalog: catalogOf([catalogRow()]),
-      pricing: pricingReader(COMPLETE_PRICING),
-    });
+    await preflightExpansionToNineSixteen(
+      {
+        catalog: catalogOf([catalogRow()]),
+        pricing: pricingReader(COMPLETE_PRICING),
+      },
+      CONFIGURED_SELECTION,
+    );
     expect(providerCalls.count).toBe(0);
     expect(storageCalls.count).toBe(0);
   });
 
   it("erro de leitura do catálogo é indeterminação, não ausência comprovada", async () => {
-    const outcome = await preflightExpansionToNineSixteen({
-      catalog: {
-        getActiveCatalogRows: async () => {
-          throw new Error("catalog_down");
+    const outcome = await preflightExpansionToNineSixteen(
+      {
+        catalog: {
+          getActiveCatalogRows: async () => {
+            throw new Error("catalog_down");
+          },
         },
+        pricing: pricingReader(COMPLETE_PRICING),
       },
-      pricing: pricingReader(COMPLETE_PRICING),
-    });
+      CONFIGURED_SELECTION,
+    );
 
     expect(outcome).toEqual({
       ok: false,
@@ -590,20 +716,48 @@ describe("F60.3 model — preflight de configuração", () => {
   });
 
   it("erro de leitura do pricing é indeterminação, não row_missing", async () => {
-    const outcome = await preflightExpansionToNineSixteen({
-      catalog: catalogOf([catalogRow()]),
-      pricing: {
-        getModelPricing: async () => {
-          throw new Error("pricing_down");
+    const outcome = await preflightExpansionToNineSixteen(
+      {
+        catalog: catalogOf([catalogRow()]),
+        pricing: {
+          getModelPricing: async () => {
+            throw new Error("pricing_down");
+          },
         },
       },
-    });
+      CONFIGURED_SELECTION,
+    );
 
     expect(outcome).toEqual({
       ok: false,
       failure: "configuration_read_failed",
       reason: "pricing_read_failed",
     });
+  });
+
+  it("preflight cobre as quatro combinações e nunca lê a configuração administrativa", async () => {
+    const source = readFileSync(sourcePath("../model.ts"), "utf8");
+    expect(source).not.toContain("nine_sixteen_expansion_model_config");
+
+    for (const selection of [
+      CONFIGURED_SELECTION,
+      SUNBURST_MEDIUM,
+      FLARE_LOW,
+      FLARE_MEDIUM,
+    ]) {
+      const outcome = await preflightExpansionToNineSixteen(
+        {
+          catalog: catalogOf([catalogRow({ model: selection.model })]),
+          pricing: pricingReader(COMPLETE_PRICING),
+        },
+        selection,
+      );
+
+      expect(outcome.ok, `${selection.model}|${selection.quality}`).toBe(true);
+      if (!outcome.ok) continue;
+      expect(outcome.model).toBe(selection.model);
+      expect(outcome.quality).toBe(selection.quality);
+    }
   });
 });
 

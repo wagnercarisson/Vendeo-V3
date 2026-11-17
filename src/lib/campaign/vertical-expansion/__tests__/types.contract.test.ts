@@ -158,6 +158,8 @@ const EVIDENCE: ExpansionCallEvidence = {
   model: "gpt-image-2.5-sunburst",
   protocol: "images",
   quality: "low",
+  configVersionId: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  selectionOrigin: "configured",
   requestedSize: "1152x2048",
   returnedSize: "1152x2048",
   durationMs: 1500,
@@ -228,6 +230,41 @@ describe("F60.3 contract — ExpandVerticalResult", () => {
     expectTypeOf<ReusedVariant["call"]>().toEqualTypeOf<ExpansionCallEvidence | null>();
     expectTypeOf<ExpandedVariant["persistence"]>().toEqualTypeOf<"created">();
     expectTypeOf<Extract<ExpandVerticalResult, { kind: "blocked" }>["call"]>().toEqualTypeOf<null>();
+  });
+
+  it("a evidência carrega a seleção congelada (quality, versão e origem)", () => {
+    expect(EVIDENCE.quality).toBe("low");
+    expect(EVIDENCE.configVersionId).toBe("9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d");
+    expect(EVIDENCE.selectionOrigin).toBe("configured");
+    expectTypeOf<ExpansionCallEvidence["quality"]>().toEqualTypeOf<"low" | "medium">();
+    expectTypeOf<ExpansionCallEvidence["configVersionId"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<ExpansionCallEvidence["selectionOrigin"]>().toEqualTypeOf<
+      "configured" | "legacy_sunburst_low"
+    >();
+  });
+
+  it("seleção ausente é falha de modelo — sem `kind` novo na união fechada", () => {
+    const selectionRequired: ExpandVerticalResult = {
+      kind: "model_unavailable",
+      reason: "expansion_selection_required",
+    };
+
+    expect(describeResult(selectionRequired)).toBe(
+      "model_unavailable:expansion_selection_required",
+    );
+    expectTypeOf<
+      Extract<ExpandVerticalResult, { kind: "model_unavailable" }>["reason"]
+    >().toEqualTypeOf<
+      | "catalog_row_missing"
+      | "catalog_read_failed"
+      | "unsupported_protocol"
+      | "quality_not_eligible"
+      | "expansion_selection_required"
+    >();
+    // A lista de `kind` continua idêntica: o motivo novo é mapeado pelo braço
+    // existente e não cria variante própria.
+    expect(RESULT_KINDS).toHaveLength(17);
+    expect(RESULT_KINDS as readonly string[]).not.toContain("selection_unavailable");
   });
 });
 

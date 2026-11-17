@@ -10,9 +10,9 @@ import "server-only";
  * `returnedSize` real dos bytes devolvidos.
  *
  * Garantias (T-60.3-09/T-60.3-17/T-60.3-33):
- * - o alvo (`provider`/`model`/`protocol`/`quality`) chega JÁ RESOLVIDO pelo
- *   catálogo; o transporte nunca resolve modelo, nunca monta literal de modelo
- *   e nunca escolhe alvo implícito;
+ * - o alvo (`provider`/`model`/`protocol`/`quality`) chega JÁ RESOLVIDO pela
+ *   seleção congelada + catálogo; o transporte nunca resolve modelo, nunca monta
+ *   literal de modelo e nunca escolhe alvo implícito;
  * - no máximo UMA invocação por chamada de `invokeExpansionOnce`, sem laço, sem
  *   segunda tentativa e sem alvo alternativo;
  * - o loader padrão usa o argumento de credencial do adapter (`getApiKey`) e
@@ -38,20 +38,25 @@ import {
 } from "@/lib/ai/types";
 import { VerticalImagesAdapter } from "@/lib/product-vertical-9-16/telemetry/vertical-images-adapter";
 
+import type { ImageQuality } from "@/lib/ai/image-model-pair";
+import type { NineSixteenExpansionModel } from "@/lib/ai/nine-sixteen-expansion-model-config";
+
 import {
   EXPANSION_CAPABILITY,
-  EXPANSION_QUALITY,
   EXPANSION_TIMEOUT_MS,
   PROVIDER_SIZE,
   effectiveTimeout,
 } from "./policy";
 
-/** Alvo JÁ RESOLVIDO pelo catálogo (nunca literal de modelo dentro do transporte). */
+/**
+ * Alvo JÁ RESOLVIDO pela seleção congelada + catálogo (nunca literal de modelo
+ * dentro do transporte).
+ */
 export interface ExpansionTransportTarget {
   readonly provider: "openai";
-  readonly model: string;
+  readonly model: NineSixteenExpansionModel;
   readonly protocol: "images";
-  readonly quality: "low";
+  readonly quality: ImageQuality;
 }
 
 /** Seam de invocação: só `invokePrepared` é substituível (nunca `prepare`). */
@@ -158,17 +163,23 @@ export interface InvokeExpansionOnceInput {
   readonly prepared: PreparedInvocation;
   readonly request: AiInvocationRequest;
   readonly telemetry: AiTelemetryContext;
+  /** Qualidade congelada da seleção; o request precisa casar exatamente. */
+  readonly expectedQuality: ImageQuality;
 }
 
 /**
- * Valida o request ANTES de qualquer invocação: qualidade `low`, exatamente uma
- * referência (sem imagem de identidade), tamanho do provider e prompt não vazio.
+ * Valida o request ANTES de qualquer invocação: qualidade exatamente igual à
+ * seleção congelada, exatamente uma referência (sem imagem de identidade),
+ * tamanho do provider e prompt não vazio.
  */
-function isValidExpansionRequest(request: AiInvocationRequest): boolean {
+export function isValidExpansionRequest(
+  request: AiInvocationRequest,
+  expectedQuality: ImageQuality,
+): boolean {
   if (typeof request.prompt !== "string" || request.prompt.trim().length === 0) {
     return false;
   }
-  if (request.quality !== EXPANSION_QUALITY) return false;
+  if (request.quality !== expectedQuality) return false;
   if (request.size !== PROVIDER_SIZE) return false;
   if (request.identityImageUrl !== undefined) return false;
 
@@ -185,7 +196,7 @@ function isValidExpansionRequest(request: AiInvocationRequest): boolean {
 export async function invokeExpansionOnce(
   input: InvokeExpansionOnceInput,
 ): Promise<ExpansionOnceOutcome> {
-  if (!isValidExpansionRequest(input.request)) {
+  if (!isValidExpansionRequest(input.request, input.expectedQuality)) {
     return Object.freeze({
       error: new Error("invalid_expansion_request"),
       sendEvidence: "not_sent" as const,

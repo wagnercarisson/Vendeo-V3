@@ -52,6 +52,7 @@ import {
   createExpansionAbortSignal,
   createExpansionTransport,
   invokeExpansionOnce,
+  isValidExpansionRequest,
   type ExpansionTransportTarget,
 } from "../transport";
 
@@ -61,6 +62,13 @@ const TARGET: ExpansionTransportTarget = {
   protocol: "images",
   quality: "low",
 };
+
+const TARGETS: readonly ExpansionTransportTarget[] = [
+  TARGET,
+  { ...TARGET, quality: "medium" },
+  { ...TARGET, model: "gpt-image-2.5-flare" },
+  { ...TARGET, model: "gpt-image-2.5-flare", quality: "medium" },
+];
 
 const silentLoader: UpstreamImagesSdkLoader = async () => ({
   client: { images: { edit: async () => ({ data: [{ b64_json: "IMG" }] }) } },
@@ -131,6 +139,29 @@ describe("createExpansionTransport — alvo resolvido e sem retry oculto", () =>
     const transport = createExpansionTransport(TARGET, { loadSdk: silentLoader });
     expect(transport.adapter.protocol).toBe("images");
   });
+
+  it("as quatro combinações chegam ao transporte com modelo e qualidade exatos", async () => {
+    for (const target of TARGETS) {
+      const transport = createExpansionTransport(target, { loadSdk: silentLoader });
+      const prepared = await transport.prepare();
+
+      expect(prepared.model).toBe(target.model);
+      expect(prepared.provider).toBe(target.provider);
+      expect(prepared.protocol).toBe(target.protocol);
+      expect(transport.target.quality).toBe(target.quality);
+
+      // Tamanho do provider e qualidade EXATA da seleção.
+      expect(
+        isValidExpansionRequest(
+          { ...VALID_REQUEST, quality: target.quality },
+          target.quality,
+        ),
+      ).toBe(true);
+      expect(
+        isValidExpansionRequest({ ...VALID_REQUEST, size: "1024x1024" }, target.quality),
+      ).toBe(false);
+    }
+  });
 });
 
 describe("invokeExpansionOnce — no máximo uma invocação", () => {
@@ -154,6 +185,7 @@ describe("invokeExpansionOnce — no máximo uma invocação", () => {
         prepared,
         request,
         telemetry: telemetryContext(),
+        expectedQuality: "low",
       });
       expect(outcome.sendEvidence).toBe("not_sent");
     }
@@ -172,6 +204,7 @@ describe("invokeExpansionOnce — no máximo uma invocação", () => {
       prepared,
       request: VALID_REQUEST,
       telemetry: telemetryContext(),
+      expectedQuality: "low",
     });
     expect(ok.sendEvidence).toBe("confirmed_sent");
     expect(okInvoker.invokePrepared).toHaveBeenCalledTimes(1);
@@ -190,9 +223,37 @@ describe("invokeExpansionOnce — no máximo uma invocação", () => {
       prepared,
       request: VALID_REQUEST,
       telemetry: telemetryContext(),
+      expectedQuality: "low",
     });
     expect(failed.sendEvidence).toBe("possibly_sent");
     expect(failingInvoker.invokePrepared).toHaveBeenCalledTimes(1);
+  });
+
+  it("qualidade medium só é aceita quando a seleção congelada é medium", async () => {
+    const prepared = await preparedInvocation();
+    const invoker = {
+      invokePrepared: vi.fn(async () => ({ imageBase64: "IMG", model: TARGET.model })),
+    };
+    const mediumRequest: AiInvocationRequest = { ...VALID_REQUEST, quality: "medium" };
+
+    const rejected = await invokeExpansionOnce({
+      invoker,
+      prepared,
+      request: mediumRequest,
+      telemetry: telemetryContext(),
+      expectedQuality: "low",
+    });
+    expect(rejected.sendEvidence).toBe("not_sent");
+
+    const accepted = await invokeExpansionOnce({
+      invoker,
+      prepared,
+      request: mediumRequest,
+      telemetry: telemetryContext(),
+      expectedQuality: "medium",
+    });
+    expect(accepted.sendEvidence).toBe("confirmed_sent");
+    expect(invoker.invokePrepared).toHaveBeenCalledTimes(1);
   });
 });
 

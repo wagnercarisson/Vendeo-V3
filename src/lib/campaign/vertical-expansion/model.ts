@@ -1,14 +1,17 @@
 import "server-only";
 
 /**
- * F60.3 — Resolução server-only do alvo de expansão e cobertura de pricing.
+ * F60.3/F60.6 — Resolução server-only do alvo de expansão e cobertura de pricing.
  *
- * O alvo efetivo (`gpt-image-2.5-sunburst` + `low`) é resolvido por uma linha
- * ATIVA de `ai_model_catalog` na capability `campaign_product_image`, provider
- * `openai` e protocolo `images`. `provider`/`model`/`protocol` são copiados da
- * linha casada — nunca montados por literal nem substituídos por outro modelo
- * elegível. Não há seletor administrativo, modelo alternativo, preset de
- * bancada nem configuração paralela de par de modelos.
+ * O alvo efetivo é resolvido a partir da **seleção congelada** recebida por
+ * dependência server-only (modelo Flare/Sunburst + qualidade `low`/`medium`) e
+ * de uma linha ATIVA de `ai_model_catalog` na capability
+ * `campaign_product_image`, provider `openai` e protocolo `images`.
+ * `provider`/`protocol`/`model` são confirmados na linha casada — nunca
+ * montados por literal nem substituídos por outro modelo elegível. Não há
+ * seletor administrativo, modelo alternativo, preset de bancada nem
+ * configuração paralela de par de modelos: a configuração administrativa é lida
+ * apenas no composition root, nunca aqui.
  *
  * Pricing: a cobertura pré-chamada exige a linha vigente da qualidade (nunca
  * `code_default`) e as tarifas de usage APLICÁVEIS ao protocolo. Para
@@ -42,23 +45,27 @@ import {
   type ModelPricing,
   type ModelPricingReadResult,
 } from "@/lib/ai-cost/ai-model-pricing";
-import { isEligibleImageModel, isEligibleImageQuality } from "@/lib/ai/image-model-pair";
+import { isEligibleImageModel, isEligibleImageQuality, type ImageQuality } from "@/lib/ai/image-model-pair";
+import type {
+  ExpansionSelection,
+  NineSixteenExpansionModel,
+} from "@/lib/ai/nine-sixteen-expansion-model-config";
 
 import {
   EXPANSION_CAPABILITY,
   EXPANSION_PROVIDER,
   EXPANSION_PROTOCOL,
-  EXPANSION_QUALITY,
-  EXPECTED_MODEL,
 } from "./policy";
 
-/** Tupla esperada desta fatia, derivada das constantes de `policy.ts`. */
+/**
+ * Tupla fixa do alvo (capability/provider/protocolo). Modelo e qualidade NÃO
+ * fazem parte da tupla: eles vêm exclusivamente da seleção congelada recebida
+ * por dependência server-only.
+ */
 export const EXPECTED_EXPANSION_TARGET = Object.freeze({
   capability: EXPANSION_CAPABILITY,
   provider: EXPANSION_PROVIDER,
   protocol: EXPANSION_PROTOCOL,
-  model: EXPECTED_MODEL,
-  quality: EXPANSION_QUALITY,
 });
 
 /** Leitor de catálogo injetável (default: serviço real com `supabaseAdmin`). */
@@ -93,9 +100,9 @@ export type ExpandTargetResolution =
   | {
       readonly ok: true;
       readonly provider: "openai";
-      readonly model: string;
+      readonly model: NineSixteenExpansionModel;
       readonly protocol: "images";
-      readonly quality: "low";
+      readonly quality: ImageQuality;
       readonly catalogRow: AiModelCatalogRow;
     }
   | {
@@ -148,9 +155,9 @@ export type ExpansionPreflightResult =
   | {
       readonly ok: true;
       readonly provider: "openai";
-      readonly model: string;
+      readonly model: NineSixteenExpansionModel;
       readonly protocol: "images";
-      readonly quality: "low";
+      readonly quality: ImageQuality;
       readonly pricing: ModelPricing;
       readonly versionId: string;
       readonly imageUnitUsd: number | null;
@@ -210,39 +217,47 @@ function targetFailure(
   );
 }
 
-/** Igualdade estrita da linha com a tupla esperada; nenhum campo é inferido. */
-function isExpectedActiveRow(row: AiModelCatalogRow): boolean {
+/**
+ * Igualdade estrita da linha com a tupla (capability/provider) e com o modelo
+ * da seleção congelada; nenhum campo é inferido.
+ */
+function isExpectedActiveRow(row: AiModelCatalogRow, selection: ExpansionSelection): boolean {
   return (
     row.status === "active" &&
     row.capability === EXPECTED_EXPANSION_TARGET.capability &&
     row.provider === EXPECTED_EXPANSION_TARGET.provider &&
-    row.model === EXPECTED_EXPANSION_TARGET.model
+    row.model === selection.model
   );
 }
 
 /**
  * `true` somente quando a linha é ativa, casa capability/provider/protocolo da
- * tupla esperada e o modelo/qualidade pertencem às listas fechadas da F56.1.
+ * tupla, o modelo da seleção e a qualidade da seleção pertence à lista fechada
+ * da F56.1.
  */
-export function isEligibleExpansionTarget(row: AiModelCatalogRow): boolean {
+export function isEligibleExpansionTarget(
+  row: AiModelCatalogRow,
+  selection: ExpansionSelection,
+): boolean {
   return (
     row.status === "active" &&
     row.capability === EXPECTED_EXPANSION_TARGET.capability &&
     row.provider === EXPECTED_EXPANSION_TARGET.provider &&
     row.protocol === EXPECTED_EXPANSION_TARGET.protocol &&
-    row.model === EXPECTED_EXPANSION_TARGET.model &&
+    row.model === selection.model &&
     isEligibleImageModel(row.model) &&
-    isEligibleImageQuality(EXPECTED_EXPANSION_TARGET.quality)
+    isEligibleImageQuality(selection.quality)
   );
 }
 
 function resolveTargetFromRows(
   rows: readonly AiModelCatalogRow[],
+  selection: ExpansionSelection,
 ): ExpandTargetResolution {
-  const row = rows.find((candidate) => isExpectedActiveRow(candidate));
+  const row = rows.find((candidate) => isExpectedActiveRow(candidate, selection));
   if (row === undefined) return targetFailure("catalog_row_missing");
 
-  if (!isEligibleImageQuality(EXPANSION_QUALITY)) {
+  if (!isEligibleImageQuality(selection.quality)) {
     return targetFailure("quality_not_eligible");
   }
 
@@ -261,26 +276,31 @@ function resolveTargetFromRows(
   return Object.freeze({
     ok: true as const,
     provider: row.provider,
-    model: row.model,
+    model: selection.model,
     protocol: row.protocol,
-    quality: EXPANSION_QUALITY,
+    quality: selection.quality,
     catalogRow: row,
   });
 }
 
 /**
- * Resolve o alvo efetivo no catálogo. Nunca lança: exceção ou retorno que não é
- * array vira `catalog_read_failed`; ausência de linha Sunburst vira
- * `catalog_row_missing` mesmo que existam outros modelos elegíveis.
+ * Resolve o alvo efetivo no catálogo para a seleção congelada. Nunca lança:
+ * exceção ou retorno que não é array vira `catalog_read_failed`; ausência da
+ * linha do modelo selecionado vira `catalog_row_missing` mesmo que existam
+ * outros modelos elegíveis.
  */
 export async function resolveExpansionTarget(
-  deps: {
-    readonly catalog?: ExpansionCatalogReader;
-    readonly client?: SupabaseClient;
-  } = {},
+  deps:
+    | {
+        readonly catalog?: ExpansionCatalogReader;
+        readonly client?: SupabaseClient;
+      }
+    | undefined,
+  selection: ExpansionSelection,
 ): Promise<ExpandTargetResolution> {
+  const safeDeps = deps ?? {};
   const reader: ExpansionCatalogReader =
-    deps.catalog ?? new AiModelCatalogService(deps.client);
+    safeDeps.catalog ?? new AiModelCatalogService(safeDeps.client);
 
   let rows: readonly AiModelCatalogRow[];
   try {
@@ -291,7 +311,7 @@ export async function resolveExpansionTarget(
     return targetFailure("catalog_read_failed");
   }
 
-  return resolveTargetFromRows(rows);
+  return resolveTargetFromRows(rows, selection);
 }
 
 /**
@@ -373,29 +393,28 @@ export function evaluatePreCallEstimate(
 }
 
 /**
- * Lê o pricing do alvo resolvido repassando `provider`/`model`/`quality` sem
- * trocar nada, e aplica a cobertura pré-chamada. Nunca lança.
+ * Lê o pricing da seleção congelada repassando `provider`/`model`/`quality`
+ * exatos (nunca troca nada) e aplica a cobertura pré-chamada. Nunca lança.
  */
 export async function resolveExpansionPricing(
-  target: {
-    readonly provider: string;
-    readonly model: string;
-    readonly quality: "low";
-  },
-  deps: {
-    readonly pricing?: ExpansionPricingReader;
-    readonly client?: SupabaseClient;
-  } = {},
+  deps:
+    | {
+        readonly pricing?: ExpansionPricingReader;
+        readonly client?: SupabaseClient;
+      }
+    | undefined,
+  selection: ExpansionSelection,
 ): Promise<ExpansionPricingResolution> {
+  const safeDeps = deps ?? {};
   const reader: ExpansionPricingReader =
-    deps.pricing ?? new AiModelPricingService(deps.client);
+    safeDeps.pricing ?? new AiModelPricingService(safeDeps.client);
 
   let read: { pricing: ModelPricing; versionId: string } | null = null;
   try {
     read = await reader.getModelPricing({
-      provider: target.provider,
-      model: target.model,
-      quality: target.quality,
+      provider: EXPANSION_PROVIDER,
+      model: selection.model,
+      quality: selection.quality,
     });
   } catch {
     read = null;
@@ -438,13 +457,17 @@ export async function resolveExpansionPricing(
  * de leitura: os leitores estritos dos serviços preservam o erro de banco; os
  * leitores legados injetados continuam suportados (exceção → falha de leitura,
  * `null` → linha ausente).
+ *
+ * Assinatura única do repositório: `preflightExpansionToNineSixteen({ client }, selection)`.
+ * A seleção congelada é sempre o segundo argumento (nunca um campo de `deps`).
  */
 export async function preflightExpansionToNineSixteen(
   deps: {
     readonly catalog?: ExpansionCatalogReader;
     readonly pricing?: ExpansionPricingReader;
     readonly client?: SupabaseClient;
-  } = {},
+  },
+  selection: ExpansionSelection,
 ): Promise<ExpansionPreflightResult> {
   const catalog = await readPreflightCatalog(deps);
   if (catalog.kind === "read_failed") {
@@ -455,7 +478,7 @@ export async function preflightExpansionToNineSixteen(
     });
   }
 
-  const target = resolveTargetFromRows(catalog.rows);
+  const target = resolveTargetFromRows(catalog.rows, selection);
   if (!target.ok) {
     return Object.freeze({
       ok: false as const,
@@ -547,7 +570,7 @@ async function readPreflightPricing(
   target: {
     readonly provider: string;
     readonly model: string;
-    readonly quality: "low";
+    readonly quality: ImageQuality;
   },
 ): Promise<ModelPricingReadResult> {
   const reader: ExpansionPricingReader =
