@@ -70,6 +70,12 @@ const CONTRACT_PATHS = [
  * estimativa `image_unit_usd` + preflight de leitura estrita na expansão. Estes
  * arquivos de F60.3 mudaram de propósito; qualquer OUTRO arquivo dos contratos
  * protegidos continua bloqueado.
+ *
+ * F60.6 / plano 60.6-02 (autorizado): o expansor passa a consumir a seleção
+ * congelada (`ExpansionSelection`) por dependência server-only obrigatória, com
+ * `expansion_selection_required`, `quality`/`configVersionId`/`selectionOrigin`
+ * em request/evidência/telemetria. Os arquivos abaixo estão na lista
+ * `files_modified` autorizada do plano; qualquer outro continua bloqueado.
  */
 const AUTHORIZED_CONTRACT_CHANGES = new Set([
   "src/lib/campaign/vertical-expansion/model.ts",
@@ -77,6 +83,19 @@ const AUTHORIZED_CONTRACT_CHANGES = new Set([
   "src/lib/campaign/vertical-expansion/__tests__/expand.core.contract.test.ts",
   "src/lib/campaign/vertical-expansion/__tests__/model.contract.test.ts",
   "src/lib/campaign/vertical-expansion/__tests__/telemetry.contract.test.ts",
+  // F60.6 / 60.6-02 — contrato, execução e suites orientados à seleção.
+  "src/lib/campaign/vertical-expansion/policy.ts",
+  "src/lib/campaign/vertical-expansion/transport.ts",
+  "src/lib/campaign/vertical-expansion/types.ts",
+  "src/lib/campaign/vertical-expansion/expand.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/policy.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/transport.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/types.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/expand.decision.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/expand.boundaries.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/expand.concurrency.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/expand.failure-output.contract.test.ts",
+  "src/lib/campaign/vertical-expansion/__tests__/probe.contract.test.ts",
 ]);
 
 interface GitResult {
