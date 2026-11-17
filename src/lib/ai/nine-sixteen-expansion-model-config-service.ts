@@ -2,7 +2,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import {
-  NineSixteenExpansionConfigMissingError,
   resolveNineSixteenExpansionConfigFromRow,
   type ExpansionSelection,
   type NineSixteenExpansionConfigRow,
@@ -159,9 +158,8 @@ export class NineSixteenExpansionConfigService {
     try {
       return { kind: "found", selection: resolveNineSixteenExpansionConfigFromRow(row) };
     } catch (error) {
-      if (error instanceof NineSixteenExpansionConfigMissingError) {
-        return { kind: "absent" };
-      }
+      // Linha PRESENTE, mas incompleta/divergente: nunca vira `absent` (que e
+      // reservado para `data === null` sem erro).
       return { kind: "invalid", reason: errorDetail(error) };
     }
   }

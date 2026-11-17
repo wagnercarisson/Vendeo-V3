@@ -103,6 +103,20 @@ describe("NineSixteenExpansionConfigService — leitura estrita (found/absent/in
     });
   });
 
+  it("linha PRESENTE mas incompleta → invalid (nunca absent)", async () => {
+    const incomplete = { ...VALID_ROW, config_version_id: "" };
+    const fake = fakeClient(() => ({
+      data: incomplete as NineSixteenExpansionConfigRow,
+      error: null,
+    }));
+    const service = new NineSixteenExpansionConfigService(fake.client as never);
+
+    const result = await service.readNineSixteenExpansionConfig();
+
+    expect(result.kind).toBe("invalid");
+    expect(result.kind).not.toBe("absent");
+  });
+
   it("erro de leitura NUNCA vira absent", async () => {
     const fake = fakeClient(() => ({ data: null, error: { message: "connection refused" } }));
     const service = new NineSixteenExpansionConfigService(fake.client as never);
