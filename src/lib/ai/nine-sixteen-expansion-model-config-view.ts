@@ -32,7 +32,7 @@ import {
  * não aqui.
  *
  * Cobertura de pricing: derivada das **tarifas de usage** aplicáveis ao par
- * modelo+qualidade (`AiModelPricingService.getModelPricing` +
+ * modelo+qualidade (`AiModelPricingService.readModelPricing` estrito +
  * `evaluatePricingCoverage`). `image_unit_usd` é apenas estimativa opcional e
  * NUNCA participa da decisão do badge — por isso esta view não reutiliza o
  * resolvedor de cobertura do par 1:1 (que exige somente o componente de
@@ -147,8 +147,9 @@ function coverageStatus(
 }
 
 /**
- * Resolvedor PADRÃO: lê as tarifas de usage da combinação via
- * `AiModelPricingService` e classifica com `evaluatePricingCoverage`.
+ * Resolvedor PADRÃO: lê as tarifas de usage da combinação via leitura estrita
+ * (`AiModelPricingService.readModelPricing`) e classifica com
+ * `evaluatePricingCoverage`.
  *
  * Recebe o serviço já instanciado para garantir **uma** instância por build da
  * view (quatro leituras, nenhum serviço novo por combinação). Exportado para
@@ -156,17 +157,37 @@ function coverageStatus(
  * pricing falso (nenhum banco/rede).
  */
 export function createUsagePricingCoverageResolver(
-  pricing: Pick<AiModelPricingService, "getModelPricing">,
+  pricing: Pick<AiModelPricingService, "readModelPricing">,
   options: PricingCoverageOptions = {},
 ): NineSixteenExpansionTargetCoverageResolver {
   return async ({ model, quality }) => {
-    const read = await pricing.getModelPricing({ provider: "openai", model, quality });
-    const coverage = evaluatePricingCoverage(
-      read?.pricing ?? null,
-      read?.versionId ?? null,
-      options,
+    const read = await pricing.readModelPricing({ provider: "openai", model, quality });
+
+    // Leitura estrita: erro de pricing é cobertura DESCONHECIDA (a combinação é
+    // omitida pelo build), nunca "Ausente". Apenas ausência comprovada da linha
+    // vira `missing`.
+    if (read.kind === "read_failed") {
+      throw new Error(`pricing_read_failed:${read.reason}`);
+    }
+    if (read.kind === "row_missing") {
+      return coverageStatus(
+        model,
+        quality,
+        evaluatePricingCoverage(null, null, options),
+      );
+    }
+    if (read.kind === "code_default") {
+      return coverageStatus(
+        model,
+        quality,
+        evaluatePricingCoverage(read.pricing, "code_default", options),
+      );
+    }
+    return coverageStatus(
+      model,
+      quality,
+      evaluatePricingCoverage(read.pricing, read.versionId, options),
     );
-    return coverageStatus(model, quality, coverage);
   };
 }
 

@@ -158,10 +158,16 @@ describe("NineSixteenExpansionModelSection — ausência, invalidez e falha de l
     expect(screen.getByRole("button", { name: "Salvar configuração" })).toBeInTheDocument();
   });
 
-  it("invalid → EmptyState e formulário visível", async () => {
+  it("invalid → estado próprio de configuração inválida, nunca ausência", async () => {
     await renderSection({ ...EMPTY_VIEW, state: "invalid" });
 
-    expect(screen.getByText("Nenhuma configuração registrada")).toBeInTheDocument();
+    expect(screen.getByText("Configuração inválida")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Existe uma configuração registrada para a expansão 9:16, mas ela está fora do catálogo elegível. Ajuste a combinação abaixo para regularizar.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Nenhuma configuração registrada")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar configuração" })).toBeInTheDocument();
   });
 

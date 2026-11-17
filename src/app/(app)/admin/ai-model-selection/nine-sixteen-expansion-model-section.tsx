@@ -115,6 +115,13 @@ export async function NineSixteenExpansionModelSection() {
               description="Não foi possível ler a configuração da expansão 9:16. Isso não significa ausência de configuração. Recarregue a página."
             />
           </Card>
+        ) : view.state === "invalid" ? (
+          <Card className="p-6">
+            <ErrorState
+              title="Configuração inválida"
+              description="Existe uma configuração registrada para a expansão 9:16, mas ela está fora do catálogo elegível. Ajuste a combinação abaixo para regularizar."
+            />
+          </Card>
         ) : !view.configured || !current ? (
           <Card className="p-6">
             <EmptyState

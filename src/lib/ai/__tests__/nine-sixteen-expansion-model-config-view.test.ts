@@ -26,6 +26,7 @@ import {
 } from "../nine-sixteen-expansion-model-config-view";
 import type { NineSixteenExpansionConfigReadResult } from "../nine-sixteen-expansion-model-config-service";
 import type { ModelPricing } from "@/lib/ai-cost/ai-model-pricing";
+import { AiModelPricingService } from "@/lib/ai-cost/ai-model-pricing";
 
 const CONFIG_VERSION_ID = "11111111-1111-4111-8111-111111111111";
 const ADMIN_ID = "33333333-3333-4333-8333-333333333333";
@@ -244,7 +245,8 @@ describe("createUsagePricingCoverageResolver — decisão por tarifas de usage",
 
   it("tarifas de usage completas com imageUnitCostUsd null → complete (image_unit fora da decisão)", async () => {
     const resolver = createUsagePricingCoverageResolver({
-      getModelPricing: async () => ({
+      readModelPricing: async () => ({
+        kind: "found",
         pricing: { ...COMPLETE_USAGE_PRICING, imageUnitCostUsd: undefined },
         versionId: CONFIG_VERSION_ID,
       }),
@@ -265,7 +267,11 @@ describe("createUsagePricingCoverageResolver — decisão por tarifas de usage",
       imageTokenUsdPer1M: undefined,
     };
     const resolver = createUsagePricingCoverageResolver({
-      getModelPricing: async () => ({ pricing: withoutUsageRate, versionId: CONFIG_VERSION_ID }),
+      readModelPricing: async () => ({
+        kind: "found",
+        pricing: withoutUsageRate,
+        versionId: CONFIG_VERSION_ID,
+      }),
     });
 
     const status = await resolver({ model: "gpt-image-2.5-flare", quality: "medium" });
@@ -277,7 +283,8 @@ describe("createUsagePricingCoverageResolver — decisão por tarifas de usage",
 
   it("linha só com image_unit_usd (sem tarifas de usage) → nunca complete", async () => {
     const resolver = createUsagePricingCoverageResolver({
-      getModelPricing: async () => ({
+      readModelPricing: async () => ({
+        kind: "found",
         pricing: { imageUnitCostUsd: 0.04 },
         versionId: CONFIG_VERSION_ID,
       }),
@@ -299,7 +306,7 @@ describe("createUsagePricingCoverageResolver — decisão por tarifas de usage",
 
   it("linha ausente → missing com pricing_row", async () => {
     const resolver = createUsagePricingCoverageResolver({
-      getModelPricing: async () => null,
+      readModelPricing: async () => ({ kind: "row_missing" }),
     });
 
     const status = await resolver({ model: "gpt-image-2.5-flare", quality: "low" });
@@ -310,9 +317,9 @@ describe("createUsagePricingCoverageResolver — decisão por tarifas de usage",
 
   it("code_default → missing com pricing_code_default (nunca complete)", async () => {
     const resolver = createUsagePricingCoverageResolver({
-      getModelPricing: async () => ({
+      readModelPricing: async () => ({
+        kind: "code_default",
         pricing: COMPLETE_USAGE_PRICING,
-        versionId: "code_default",
       }),
     });
 
@@ -320,6 +327,38 @@ describe("createUsagePricingCoverageResolver — decisão por tarifas de usage",
 
     expect(status.pricingCoverage).toBe("missing");
     expect(status.missingComponents).toContain("pricing_code_default");
+  });
+
+  it("erro de leitura real com DB simulado → cobertura desconhecida (chave omitida), nunca Ausente", async () => {
+    const chain = {
+      eq: vi.fn(),
+      is: vi.fn(),
+      maybeSingle: vi.fn(async () => ({
+        data: null,
+        error: { message: "db down" },
+      })),
+    };
+    chain.eq.mockReturnValue(chain);
+    chain.is.mockReturnValue(chain);
+    const client = {
+      from: vi.fn(() => ({
+        select: vi.fn(() => chain),
+      })),
+    };
+    const pricing = new AiModelPricingService(client as never);
+    const resolver = createUsagePricingCoverageResolver(pricing);
+
+    await expect(
+      resolver({ model: "gpt-image-2.5-flare", quality: "low" }),
+    ).rejects.toThrow("pricing_read_failed");
+
+    const view = await buildNineSixteenExpansionConfigView({
+      service: fakeService(FOUND).service,
+      coverage: resolver,
+    });
+
+    expect(view.state).toBe("configured");
+    expect(view.targetCoverageByCombination).toEqual({});
   });
 });
 
