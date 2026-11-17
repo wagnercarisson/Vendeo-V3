@@ -2,6 +2,7 @@ import { buildAiModelSelectionView } from "@/lib/ai/ai-model-selection-view";
 import { buildVisualSignatureAdminConfigView } from "@/lib/visual-signature/admin-config-view";
 import { AiModelSelectionForm } from "./form";
 import { ProductOneToOneImageModelSection } from "./image-model-pair-section";
+import { NineSixteenExpansionModelSection } from "./nine-sixteen-expansion-model-section";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,9 @@ export default async function AdminAiModelSelectionPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-text-primary sm:text-3xl">Modelos de IA</h1>
         <p className="mt-2 text-sm leading-6 text-text-secondary">
-          Configure, em um único lugar, os modelos por capacidade e o par de imagem do fluxo
-          Produto 1:1. Cada seção salva de forma independente, com auditoria e motivo obrigatório.
+          Configure, em um único lugar, os modelos por capacidade, o par de imagem do fluxo
+          Produto 1:1 e a combinação da expansão 9:16. Cada seção salva de forma independente,
+          com auditoria e motivo obrigatório.
         </p>
       </header>
 
@@ -48,6 +50,8 @@ export default async function AdminAiModelSelectionPage() {
       </section>
 
       <ProductOneToOneImageModelSection />
+
+      <NineSixteenExpansionModelSection />
     </div>
   );
 }
