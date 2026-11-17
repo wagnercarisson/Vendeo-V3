@@ -16,7 +16,8 @@ vi.mock("@/lib/logging/pipeline-logger", () => ({
 }));
 
 // Dependências alheias ao preflight: isoladas para o teste exercitar os
-// LEITORES REAIS com um cliente de banco simulado.
+// LEITORES REAIS (catálogo/pricing) da seleção CONGELADA com um cliente de
+// banco simulado. A configuração administrativa nem existe no fake.
 vi.mock("../two-stage-operation-client", () => ({
   ProductTwoStageOperationClient: class {},
 }));
@@ -100,17 +101,8 @@ interface PricingBuilder {
   maybeSingle(): Promise<{ data: unknown; error: { message: string } | null }>;
 }
 
-/** Linha vigente válida da configuração administrativa da expansão. */
-const EXPANSION_CONFIG_ROW = {
-  scope: "expansion",
-  model: "gpt-image-2.5-sunburst",
-  quality: "low",
-  config_version_id: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
-  reason: null,
-  updated_by: null,
-  updated_at: "2026-11-17T00:00:00.000Z",
-  created_at: "2026-11-17T00:00:00.000Z",
-};
+/** Tabela da configuração administrativa: NÃO deve ser lida na continuação. */
+const ADMIN_CONFIG_TABLE = "nine_sixteen_expansion_model_config";
 
 function pricingRow(incomplete: boolean) {
   return {
@@ -158,13 +150,10 @@ function makeClient(state: DbState): SupabaseClient {
         };
         return builder;
       }
-      if (table === "nine_sixteen_expansion_model_config") {
-        const builder = {
-          select: () => builder,
-          eq: () => builder,
-          maybeSingle: async () => ({ data: EXPANSION_CONFIG_ROW, error: null }),
-        };
-        return builder;
+      if (table === ADMIN_CONFIG_TABLE) {
+        // A continuação NUNCA lê a configuração administrativa: a seleção vem
+        // da operação congelada. Uma leitura aqui é falha de contrato.
+        throw new Error("admin_config_read_in_continuation");
       }
       throw new Error(`unexpected_table:${table}`);
     },

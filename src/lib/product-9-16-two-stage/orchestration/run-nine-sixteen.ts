@@ -8,7 +8,8 @@ import { logPipelineEvent } from "@/lib/logging/pipeline-logger";
 import type { AcquireStepResult, ResumeOperationResult } from "../types";
 import { newAcquisitionIds, parseAcquisitionIds } from "./acquisition-ids";
 import { runBaseStep } from "./base-step";
-import { computeInvocationDeadline } from "./deadline-budget";
+import { canAffordStep, computeInvocationDeadline } from "./deadline-budget";
+import { deriveFrozenExpansionSelection } from "./delivery-deps";
 import {
   deliverVertical,
   finalizeDefinitiveFailure,
@@ -335,6 +336,28 @@ async function readExpansionConfiguration(
   }
 }
 
+/**
+ * Preflight read-only da seleção CONGELADA (continuação/retry). Nunca lê a
+ * configuração administrativa: a seleção vem da operação já aberta. Exceção
+ * inesperada da dependência permanece indeterminação (fail-closed), nunca
+ * ausência comprovada.
+ */
+async function readFrozenExpansion(
+  deps: RunNineSixteenDeps,
+  selection: ExpansionSelection,
+): Promise<ExpansionConfigurationPreflight> {
+  try {
+    return await deps.preflightFrozenExpansion(selection);
+  } catch {
+    return {
+      ok: false,
+      failure: "configuration_read_failed",
+      reason: "preflight_read_failed",
+      missing: [],
+    };
+  }
+}
+
 function logPreflightIndeterminate(params: {
   readonly input: RunNineSixteenInput;
   readonly supportReference: string;
@@ -590,12 +613,11 @@ async function execute(
   const allowNewPaidStep = input.allowNewPaidStep !== false;
 
   /**
-   * Seleção congelada da expansão. `null` = nenhuma chamada paga permitida
-   * (`allowNewPaidStep === false`) ou preflight ainda não executado.
-   *
-   * INTERINO 60.6-02: a seleção vem do preflight do composition root. 60.6-03
-   * congela a seleção na operação e 60.6-04 passa a ler o congelado, removendo
-   * este estado interino.
+   * Seleção efetiva da expansão. Na geração nova vem do preflight estrito e é
+   * congelada na MESMA abertura que reserva. Na continuação/retry vem
+   * EXCLUSIVAMENTE da operação congelada (`deriveFrozenExpansionSelection`) —
+   * nunca da configuração administrativa vigente. `null` = nenhuma chamada paga
+   * permitida (`allowNewPaidStep === false` ou seleção ainda não resolvida).
    */
   let expansionSelection: ExpansionSelection | null = null;
 
@@ -628,11 +650,20 @@ async function execute(
       return;
     }
 
+    if (!allowNewPaidStep) {
+      // Suspensão ANTES de qualquer efeito: sem seleção não existe abertura
+      // legítima (abrir operação nova sem seleção é proibido), então nada é
+      // reservado/aberto/adquirido enquanto a geração está pausada.
+      stream.emitPhase("campaign_validation", "complete");
+      stream.emitTerminal(processingEvent(input, "suspended", "base", false));
+      return;
+    }
+
     // Gate de gasto: a configuração da expansão (modelo + tarifas de usage) é
     // verificada ANTES da primeira chamada paga da base e ANTES de reservar.
     // Falha ⇒ nenhuma reserva é criada (nada a estornar) e nenhuma chamada de
     // base/copy/expansão acontece.
-    if (allowNewPaidStep) {
+    {
       const configuration = await readExpansionConfiguration(deps);
       if (!configuration.ok) {
         const label = `${configuration.failure}:${configuration.reason}`;
@@ -683,6 +714,9 @@ async function execute(
         storeId: input.storeId,
         campaignId: input.campaignId,
         operationId: input.operationId,
+        // A seleção resolvida entra na MESMA transação da reserva (`open` v2):
+        // nenhuma operação nova é aberta sem seleção e nada muda depois disso.
+        selection: expansionSelection ?? undefined,
       });
     } catch {
       stream.emitPhase("campaign_validation", "failed");
@@ -759,11 +793,29 @@ async function execute(
       return;
     }
     if (resume.action === "acquire_base" || resume.action === "retry_base") {
-      // Mesma proteção de gasto num retry/continuação que AINDA vai executar
-      // uma nova chamada paga da base. Falha ⇒ encerra a operação com estorno
-      // único (sem reserva abandonada) e zero chamadas.
+      // Proteção de gasto numa continuação/retry que AINDA executa uma nova
+      // chamada paga da base. A seleção vem EXCLUSIVAMENTE da operação já lida
+      // (`view`): v1 → legado explícito; v2 incompleta → falha fechada. Nenhuma
+      // leitura da configuração administrativa vigente acontece aqui.
       if (allowNewPaidStep && view.credit.reserved) {
-        const configuration = await readExpansionConfiguration(deps);
+        const frozenLookup = deriveFrozenExpansionSelection(view);
+        if (frozenLookup.kind === "invalid") {
+          await handleStepFailure(
+            input,
+            deps,
+            stream,
+            { kind: "definitive", reason: "configuration_unavailable" },
+            "base",
+            {
+              ok: false,
+              failure: "configuration_missing",
+              reason: frozenLookup.reason,
+              missing: [],
+            },
+          );
+          return;
+        }
+        const configuration = await readFrozenExpansion(deps, frozenLookup.selection);
         if (!configuration.ok) {
           if (configuration.failure === "configuration_read_failed") {
             // Leitura indeterminada: nenhuma aquisição/provider/desfecho/estorno.
@@ -786,6 +838,15 @@ async function execute(
             "base",
             configuration,
           );
+          return;
+        }
+        // Revalidar cancelamento/orçamento DEPOIS do preflight e imediatamente
+        // antes do acquire: proven-invalid nunca consome tentativa.
+        if (
+          input.signal?.aborted ||
+          !canAffordStep(deps.clock(), deadlineAtMs, "base")
+        ) {
+          stream.emitTerminal(processingEvent(input, "between_steps", "base", true));
           return;
         }
       }
@@ -813,35 +874,31 @@ async function execute(
       return;
     }
     if (resume.action === "acquire_expansion" || resume.action === "retry_expansion") {
-      // INTERINO 60.6-02: a seleção da continuação vem do preflight (registro
-      // administrativo) — fail-closed, substituído pela seleção congelada na
-      // operação em 60.6-04. Nunca há fallback: sem seleção não há chamada paga.
+      // Seleção congelada da operação (v1 → legado explícito; v2 incompleta →
+      // falha fechada com finalização segura). A derivação é PURA e usa a `view`
+      // já lida: nenhuma leitura adicional da operação e nenhuma leitura da
+      // configuração administrativa vigente. O preflight read-only da seleção
+      // acontece UMA única vez, dentro do `expansion-step` (autoridade da
+      // expansão), imediatamente antes do `acquire`.
       if (allowNewPaidStep) {
-        const configuration = await readExpansionConfiguration(deps);
-        if (!configuration.ok) {
-          if (configuration.failure === "configuration_read_failed") {
-            // Leitura indeterminada: nenhuma aquisição/provider/desfecho/estorno.
-            logPreflightIndeterminate({
-              input,
-              supportReference: deps.newSupportReference(),
-              configuration,
-            });
-            stream.emitTerminal(
-              processingEvent(input, "between_steps", "expansion", true),
-            );
-            return;
-          }
+        const frozenLookup = deriveFrozenExpansionSelection(view);
+        if (frozenLookup.kind === "invalid") {
           await handleStepFailure(
             input,
             deps,
             stream,
             { kind: "definitive", reason: "configuration_unavailable" },
             "expansion",
-            configuration,
+            {
+              ok: false,
+              failure: "configuration_missing",
+              reason: frozenLookup.reason,
+              missing: [],
+            },
           );
           return;
         }
-        expansionSelection = configuration.selection;
+        expansionSelection = frozenLookup.selection;
       }
 
       // Preparacao 1152 SEMPRE antes da expansao paga (gratuita e reutilizavel).
@@ -865,6 +922,20 @@ async function execute(
       if (expansion.kind === "completed") {
         await deliverAndEmit(input, deps, stream);
       } else if (expansion.kind === "processing") {
+        if (expansion.reason === "configuration_read_failed") {
+          // Leitura indeterminada da seleção congelada: recuperável, sem
+          // acquire/desfecho/estorno; o diagnóstico continua registrado.
+          logPreflightIndeterminate({
+            input,
+            supportReference: deps.newSupportReference(),
+            configuration: {
+              ok: false,
+              failure: "configuration_read_failed",
+              reason: "frozen_preflight",
+              missing: [],
+            },
+          });
+        }
         stream.emitTerminal(
           processingEvent(
             input,

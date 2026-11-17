@@ -107,6 +107,10 @@ export function makeIntegratedDeps(overrides: Record<string, unknown> = {}): Run
       })),
     },
     preflightExpansion: vi.fn(async () => ({ ok: true })),
+    preflightFrozenExpansion: vi.fn(async (selection: unknown) => ({
+      ok: true,
+      selection,
+    })),
     generateThumbnail: vi.fn(async () => ({ status: "created" })),
     reconstruction: durableReconstruction(),
     ...overrides,

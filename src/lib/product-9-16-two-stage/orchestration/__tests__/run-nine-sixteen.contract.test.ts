@@ -12,6 +12,7 @@ vi.mock("@/lib/logging/pipeline-logger", () => ({
   },
 }));
 import { runNineSixteenTwoStageGeneration } from "../run-nine-sixteen";
+import { LEGACY_SUNBURST_LOW } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import type { RunNineSixteenDeps, RunNineSixteenInput } from "../types";
 import type { TwoStageOperationView } from "../../types";
 import {
@@ -186,6 +187,10 @@ function deps(overrides: Record<string, unknown> = {}): RunNineSixteenDeps {
     preflightExpansion: vi.fn(async () => ({
       ok: true,
       selection: CONFIGURED_SELECTION,
+    })),
+    preflightFrozenExpansion: vi.fn(async (selection: unknown) => ({
+      ok: true,
+      selection,
     })),
     generateThumbnail: vi.fn(async () => ({ status: "created" })),
     reconstruction: durableReconstruction(),
@@ -375,8 +380,17 @@ describe("runNineSixteenTwoStageGeneration", () => {
       code: "configuration_unavailable",
       reason: "configuration_read_failed:catalog_read_failed",
     });
+    // Antes da reserva não existe operação para `/continue` retomar: o terminal
+    // é erro de configuração recuperável por NOVA submissão inicial — nunca
+    // `processing`/`canContinue: true`.
+    expect(terminal(events).type).not.toBe("processing");
+    expect(String(terminal(events).message)).toContain("Tente novamente");
     expect(calls(d, "financial.reserveOperationOnce")).toHaveLength(0);
     expect(calls(d, "base")).toHaveLength(0);
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "control.recordOutcome")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+    expect(logged.events).toHaveLength(1);
     expect(logged.events[0]).toMatchObject({
       event: "expansion_preflight_indeterminate",
       errorCode: "configuration_read_failed:catalog_read_failed",
@@ -385,7 +399,7 @@ describe("runNineSixteenTwoStageGeneration", () => {
 
   it("continuação com leitura indeterminada permanece recuperável, sem estorno nem desfecho", async () => {
     const d = deps({
-      preflightExpansion: vi.fn(async () => ({
+      preflightFrozenExpansion: vi.fn(async () => ({
         ok: false,
         failure: "configuration_read_failed",
         reason: "pricing_read_failed",
@@ -425,6 +439,8 @@ describe("runNineSixteenTwoStageGeneration", () => {
     expect(calls(d, "expand")).toHaveLength(0);
     expect(calls(d, "control.recordOutcome")).toHaveLength(0);
     expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+    // Zero leitura administrativa na continuação: só o congelado é lido.
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
     expect(logged.events[0]).toMatchObject({
       event: "expansion_preflight_indeterminate",
       errorCode: "configuration_read_failed:pricing_read_failed",
@@ -434,7 +450,7 @@ describe("runNineSixteenTwoStageGeneration", () => {
 
   it("continuação que ainda geraria a base também é bloqueada e estornada sem chamadas", async () => {
     const d = deps({
-      preflightExpansion: vi.fn(async () => ({
+      preflightFrozenExpansion: vi.fn(async () => ({
         ok: false,
         failure: "pricing_unavailable",
         reason: "incomplete_coverage",
@@ -479,6 +495,7 @@ describe("runNineSixteenTwoStageGeneration", () => {
     expect(calls(d, "control.acquire")).toHaveLength(0);
     expect(calls(d, "base")).toHaveLength(0);
     expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
     expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(1);
     const recorded = calls(d, "control.recordOutcome")[0] as [
       { supportReference?: string; outcome?: string },
@@ -509,14 +526,25 @@ describe("runNineSixteenTwoStageGeneration", () => {
         reason: "row_missing",
         missing: ["pricing_row"],
       })),
+      preflightFrozenExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "pricing_unavailable",
+        reason: "row_missing",
+        missing: ["pricing_row"],
+      })),
     });
 
     const events = await run(continueInput(), deliverDeps);
 
     expect(terminal(events)).toMatchObject({ type: "result" });
+    // Replay/consulta/entrega: ZERO leitura administrativa e ZERO preflight do
+    // congelado, mesmo com a configuração/pricing "quebrados" no fake.
     expect(calls(deliverDeps, "preflightExpansion")).toHaveLength(0);
+    expect(calls(deliverDeps, "preflightFrozenExpansion")).toHaveLength(0);
     expect(calls(deliverDeps, "control.acquire")).toHaveLength(0);
     expect(calls(deliverDeps, "expand")).toHaveLength(0);
+    // A única leitura da operação é a do início da execução (lookup).
+    expect(calls(deliverDeps, "control.getOperationView")).toHaveLength(1);
   });
 
   it("falha do provider preserva a causa própria no diagnóstico", async () => {
@@ -1418,6 +1446,26 @@ describe("runNineSixteenTwoStageGeneration", () => {
 });
 
 describe("runNineSixteenTwoStageGeneration — seleção congelada", () => {
+  beforeEach(() => {
+    logged.events.length = 0;
+  });
+
+  /** Seleção congelada persistida em uma operação `contract_version = 2`. */
+  const FROZEN_V2_SELECTION = {
+    model: "gpt-image-2.5-flare",
+    quality: "medium",
+    configVersionId: "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+    origin: "configured",
+  } as const;
+
+  function frozenV2View(overrides: Partial<TwoStageOperationView> = {}) {
+    return makeView({
+      contractVersion: 2,
+      frozenSelection: FROZEN_V2_SELECTION,
+      ...overrides,
+    });
+  }
+
   it("propaga a seleção do preflight até deps.expand na geração nova", async () => {
     const d = deps({
       control: {
@@ -1457,6 +1505,53 @@ describe("runNineSixteenTwoStageGeneration — seleção congelada", () => {
       operationId: "o",
     });
     expect(expandCalls[0][1]).toEqual({ selection: CONFIGURED_SELECTION });
+
+    // A MESMA seleção entra na reserva atômica (pass-through real até a v2),
+    // exatamente uma vez, e o preflight do congelado roda uma vez (no step).
+    const reserveCalls = calls(d, "financial.reserveOperationOnce") as Array<
+      [{ selection?: unknown }]
+    >;
+    expect(reserveCalls).toHaveLength(1);
+    expect(reserveCalls[0][0]).toMatchObject({
+      storeId: "s",
+      campaignId: "c",
+      operationId: "o",
+      selection: CONFIGURED_SELECTION,
+    });
+    expect(calls(d, "preflightExpansion")).toHaveLength(1);
+    expect(calls(d, "preflightFrozenExpansion")).toHaveLength(1);
+  });
+
+  it("geração nova sem configuração (comprovada) não reserva, não adquire e não gasta", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "configuration_missing",
+        reason: "expansion_config_absent",
+        missing: [],
+      })),
+    });
+
+    const events = await run(initialInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "configuration_unavailable",
+      reason: "configuration_missing:expansion_config_absent",
+    });
+    expect(calls(d, "financial.reserveOperationOnce")).toHaveLength(0);
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "control.recordOutcome")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+    expect(calls(d, "preflightFrozenExpansion")).toHaveLength(0);
   });
 
   it("allowNewPaidStep false suspende sem preflight e sem chamada paga", async () => {
@@ -1477,12 +1572,69 @@ describe("runNineSixteenTwoStageGeneration — seleção congelada", () => {
       canContinue: false,
     });
     expect(calls(d, "preflightExpansion")).toHaveLength(0);
+    expect(calls(d, "preflightFrozenExpansion")).toHaveLength(0);
     expect(calls(d, "expand")).toHaveLength(0);
-    // A reserva não é o objeto desde teste; o gate é a etapa paga.
     expect(calls(d, "control.acquire")).toHaveLength(0);
+    // Sem seleção não existe abertura legítima: a suspensão não reserva nada.
+    expect(calls(d, "financial.reserveOperationOnce")).toHaveLength(0);
+    expect(calls(d, "control.getOperationView")).toHaveLength(1);
   });
 
-  it("continuação usa a seleção do preflight (estado interino) e não lê config própria", async () => {
+  it("continuação de expansão usa EXCLUSIVAMENTE a seleção congelada (zero leitura administrativa)", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: frozenV2View({
+            base: step("base", "done"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_expansion",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_expansion", {
+            baseStatus: "done",
+            expansionStatus: "pending",
+          }),
+        ),
+        acquire: vi.fn(async () => ({
+          acquired: true,
+          authorization: "execute",
+          reason: null,
+          attemptToken: "t",
+          attemptNumber: 1,
+          stage: "expansion",
+          target: "initial",
+        })),
+        finish: vi.fn(async () => ({
+          success: true,
+          idempotent: false,
+          status: "completed",
+          stage: "expansion",
+          attemptNumber: 1,
+        })),
+        recordOutcome: vi.fn(),
+      },
+    });
+
+    const events = await run(continueInput(), d);
+    expect(terminals(events)).toHaveLength(1);
+    // A configuração administrativa NÃO é lida na continuação; o preflight da
+    // seleção congelada roda UMA vez (dentro do expansion-step).
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
+    expect(calls(d, "preflightFrozenExpansion")).toHaveLength(1);
+    expect(calls(d, "control.getOperationView")).toHaveLength(1);
+    const preflightCalls = calls(d, "preflightFrozenExpansion") as Array<[unknown]>;
+    expect(preflightCalls[0][0]).toEqual(FROZEN_V2_SELECTION);
+
+    const expandCalls = calls(d, "expand") as Array<
+      [unknown, { selection: unknown }]
+    >;
+    expect(expandCalls).toHaveLength(1);
+    expect(expandCalls[0][1]).toEqual({ selection: FROZEN_V2_SELECTION });
+  });
+
+  it("continuação de operação v1 usa o legado explícito Sunburst low", async () => {
     const d = deps({
       control: {
         getOperationView: vi.fn(async () => ({
@@ -1519,29 +1671,127 @@ describe("runNineSixteenTwoStageGeneration — seleção congelada", () => {
       },
     });
 
-    const events = await run(continueInput(), d);
-    expect(terminals(events)).toHaveLength(1);
-    expect(calls(d, "preflightExpansion")).toHaveLength(1);
+    await run(continueInput(), d);
+
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
+    const preflightCalls = calls(d, "preflightFrozenExpansion") as Array<[unknown]>;
+    expect(preflightCalls).toHaveLength(1);
+    expect(preflightCalls[0][0]).toEqual(LEGACY_SUNBURST_LOW);
 
     const expandCalls = calls(d, "expand") as Array<
       [unknown, { selection: unknown }]
     >;
     expect(expandCalls).toHaveLength(1);
-    expect(expandCalls[0][1]).toEqual({ selection: CONFIGURED_SELECTION });
+    expect(expandCalls[0][1]).toEqual({ selection: LEGACY_SUNBURST_LOW });
+    expect(
+      (expandCalls[0][1].selection as { origin: string }).origin,
+    ).toBe("legacy_sunburst_low");
+  });
+
+  it("continuação de base valida o congelado antes de adquirir (zero leitura administrativa)", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "pending"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_base",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_base", { baseStatus: "pending", baseAttempts: 0 }),
+        ),
+        acquire: vi.fn(async () => ({
+          acquired: true,
+          authorization: "execute",
+          reason: null,
+          attemptToken: "t",
+          attemptNumber: 1,
+          stage: "base",
+          target: "primary",
+        })),
+        finish: vi.fn(async () => ({
+          success: true,
+          idempotent: false,
+          status: "completed",
+          stage: "base",
+          attemptNumber: 1,
+        })),
+        recordOutcome: vi.fn(),
+      },
+    });
+
+    const events = await run(continueInput(), d);
+
+    expect(terminal(events)).toMatchObject({ type: "processing", nextStep: "expansion" });
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
+    const preflightCalls = calls(d, "preflightFrozenExpansion") as Array<[unknown]>;
+    expect(preflightCalls).toHaveLength(1);
+    expect(preflightCalls[0][0]).toEqual(LEGACY_SUNBURST_LOW);
+    expect(calls(d, "control.acquire")).toHaveLength(1);
+    expect(calls(d, "base")).toHaveLength(1);
+    // A seleção é derivada da MESMA view do lookup: nenhuma leitura adicional.
+    expect(calls(d, "control.getOperationView")).toHaveLength(1);
+  });
+
+  it("continuação de base com v2 sem seleção falha fechado com estorno único", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            contractVersion: 2,
+            frozenSelection: null,
+            base: step("base", "pending"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_base",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_base", { baseStatus: "pending", baseAttempts: 0 }),
+        ),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(async (request: { outcome: string }) => ({
+          success: true,
+          idempotent: false,
+          outcome: request.outcome,
+          stage: "base",
+          supportReference: "ref",
+        })),
+      },
+      probeVertical: { probeVerticalArtifact: vi.fn(async () => ({ kind: "absent" })) },
+    });
+
+    const events = await run(continueInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "generation_failed",
+      refunded: true,
+      reason: "configuration_missing:frozen_selection_missing",
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "base")).toHaveLength(0);
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
+    expect(calls(d, "preflightFrozenExpansion")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(1);
+    expect(calls(d, "control.recordOutcome")).toHaveLength(1);
   });
 
   it("continuação com leitura indeterminada não adquire, não gasta e não estorna", async () => {
     const d = deps({
-      preflightExpansion: vi.fn(async () => ({
+      preflightFrozenExpansion: vi.fn(async () => ({
         ok: false,
         failure: "configuration_read_failed",
-        reason: "nine_sixteen_expansion_config_read_failed:down",
+        reason: "catalog_read_failed",
         missing: [],
       })),
       control: {
         getOperationView: vi.fn(async () => ({
           kind: "found",
-          view: makeView({
+          view: frozenV2View({
             base: step("base", "done"),
             expansion: step("expansion", "pending"),
             nextAction: "acquire_expansion",
@@ -1569,23 +1819,20 @@ describe("runNineSixteenTwoStageGeneration — seleção congelada", () => {
     expect(calls(d, "expand")).toHaveLength(0);
     expect(calls(d, "control.recordOutcome")).toHaveLength(0);
     expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
     expect(logged.events[0]).toMatchObject({
       event: "expansion_preflight_indeterminate",
     });
   });
 
-  it("continuação com configuração comprovadamente ausente encerra com estorno único", async () => {
+  it("continuação de operação v2 sem seleção falha fechado com estorno único", async () => {
     const d = deps({
-      preflightExpansion: vi.fn(async () => ({
-        ok: false,
-        failure: "configuration_missing",
-        reason: "expansion_config_absent",
-        missing: [],
-      })),
       control: {
         getOperationView: vi.fn(async () => ({
           kind: "found",
           view: makeView({
+            contractVersion: 2,
+            frozenSelection: null,
             base: step("base", "done"),
             expansion: step("expansion", "pending"),
             nextAction: "acquire_expansion",
@@ -1616,10 +1863,12 @@ describe("runNineSixteenTwoStageGeneration — seleção congelada", () => {
       type: "error",
       code: "generation_failed",
       refunded: true,
-      reason: "configuration_missing:expansion_config_absent",
+      reason: "configuration_missing:frozen_selection_missing",
     });
     expect(calls(d, "control.acquire")).toHaveLength(0);
     expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
+    expect(calls(d, "preflightFrozenExpansion")).toHaveLength(0);
     expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(1);
     expect(calls(d, "control.recordOutcome")).toHaveLength(1);
   });
