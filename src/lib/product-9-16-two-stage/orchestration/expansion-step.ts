@@ -184,38 +184,48 @@ export async function runExpansionStep(
     return { kind: "definitive", reason: probeResult.reason };
   }
 
+  // Reutilização comprovada da arte existente não é uma nova geração paga:
+  // pricing/catálogo não podem bloquear a recuperação. Ainda assim, a etapa é
+  // confirmada pelo caminho normal (acquire -> expand reutilizado -> finish),
+  // preservando reconciliação e autoridade financeira; nada é marcado
+  // `completed` só porque a imagem existe.
+  const reusableArtifact =
+    probeResult.kind === "reused" || probeResult.kind === "adopted";
+
   // Revalidar cancelamento/orcamento apos as leituras lentas, antes de adquirir.
   const gate = preCallGate(input, deps);
   if (gate) return gate;
 
-  /**
-   * Preflight READ-ONLY da seleção congelada: acontece UMA única vez por
-   * invocação que executaria etapa paga, entre a sonda e o `acquire`, para que
-   * um erro de configuração/modelo/pricing não consuma tentativa. Ordem
-   * contratual: retrieve -> probe -> gate -> preflight -> recheck -> acquire.
-   */
-  let preflight: ExpansionConfigurationPreflight;
-  try {
-    preflight = await deps.preflightFrozenExpansion(input.selection);
-  } catch {
-    preflight = {
-      ok: false,
-      failure: "configuration_read_failed",
-      reason: "preflight_read_failed",
-      missing: [],
-    };
-  }
-  if (!preflight.ok) {
-    if (preflight.failure === "configuration_read_failed") {
-      // Indeterminação: recuperável, sem acquire/desfecho/estorno.
-      return recoverable("configuration_read_failed");
+  if (!reusableArtifact) {
+    /**
+     * Preflight READ-ONLY da seleção congelada: acontece UMA única vez por
+     * invocação que executaria etapa paga, entre a sonda e o `acquire`, para que
+     * um erro de configuração/modelo/pricing não consuma tentativa. Ordem
+     * contratual: retrieve -> probe -> gate -> preflight -> recheck -> acquire.
+     */
+    let preflight: ExpansionConfigurationPreflight;
+    try {
+      preflight = await deps.preflightFrozenExpansion(input.selection);
+    } catch {
+      preflight = {
+        ok: false,
+        failure: "configuration_read_failed",
+        reason: "preflight_read_failed",
+        missing: [],
+      };
     }
-    // Configuração comprovadamente inválida: definitivo para esta operação,
-    // sem acquire, sem tentativa consumida e sem efeito financeiro direto.
-    return {
-      kind: "definitive",
-      reason: `${preflight.failure}:${preflight.reason}`,
-    };
+    if (!preflight.ok) {
+      if (preflight.failure === "configuration_read_failed") {
+        // Indeterminação: recuperável, sem acquire/desfecho/estorno.
+        return recoverable("configuration_read_failed");
+      }
+      // Configuração comprovadamente inválida: definitivo para esta operação,
+      // sem acquire, sem tentativa consumida e sem efeito financeiro direto.
+      return {
+        kind: "definitive",
+        reason: `${preflight.failure}:${preflight.reason}`,
+      };
+    }
   }
 
   // Recheck obrigatório imediatamente antes de adquirir: cancelamento ou

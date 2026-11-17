@@ -1554,6 +1554,69 @@ describe("runNineSixteenTwoStageGeneration — seleção congelada", () => {
     expect(calls(d, "preflightFrozenExpansion")).toHaveLength(0);
   });
 
+  it("cancelamento durante o preflight inicial não reserva e pede nova submissão", async () => {
+    const controller = new AbortController();
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      preflightExpansion: vi.fn(async () => {
+        controller.abort();
+        return { ok: true, selection: CONFIGURED_SELECTION };
+      }),
+    });
+
+    const events = await run(initialInput({ signal: controller.signal }), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "generation_failed",
+      reason: "cancelled_before_reservation",
+    });
+    expect(terminal(events)).not.toMatchObject({ type: "processing", canContinue: true });
+    expect(calls(d, "financial.reserveOperationOnce")).toHaveLength(0);
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "control.recordOutcome")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+  });
+
+  it("prazo esgotado durante o preflight inicial não reserva e pede nova submissão", async () => {
+    let now = 0;
+    const d = deps({
+      clock: () => now,
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+      preflightExpansion: vi.fn(async () => {
+        now = 1_000_000;
+        return { ok: true, selection: CONFIGURED_SELECTION };
+      }),
+    });
+
+    const events = await run(initialInput(), d);
+
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "generation_failed",
+      reason: "deadline_before_reservation",
+    });
+    expect(terminal(events)).not.toMatchObject({ type: "processing", canContinue: true });
+    expect(calls(d, "financial.reserveOperationOnce")).toHaveLength(0);
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "control.recordOutcome")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+  });
+
   it("allowNewPaidStep false suspende sem preflight e sem chamada paga", async () => {
     const d = deps({
       control: {

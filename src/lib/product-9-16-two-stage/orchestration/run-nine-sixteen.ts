@@ -709,6 +709,32 @@ async function execute(
       expansionSelection = configuration.selection;
     }
 
+    // Recheck obrigatório imediatamente antes da reserva: o preflight pode ter
+    // demorado e o usuário pode ter cancelado. Sem operação criada, não há
+    // `/continue`; devolve erro recuperável por nova submissão inicial.
+    if (
+      input.signal?.aborted === true ||
+      !canAffordStep(deps.clock(), deadlineAtMs, "base")
+    ) {
+      const aborted = input.signal?.aborted === true;
+      const reason = aborted
+        ? "cancelled_before_reservation"
+        : "deadline_before_reservation";
+      stream.emitPhase("campaign_validation", "failed");
+      stream.emitTerminal(
+        errorEvent(
+          input,
+          "generation_failed",
+          aborted
+            ? "A geração foi cancelada antes da reserva. Nenhum crédito foi consumido."
+            : "O tempo da geração esgotou antes da reserva. Nenhum crédito foi consumido.",
+          undefined,
+          reason,
+        ),
+      );
+      return;
+    }
+
     try {
       await deps.financial.reserveOperationOnce({
         storeId: input.storeId,

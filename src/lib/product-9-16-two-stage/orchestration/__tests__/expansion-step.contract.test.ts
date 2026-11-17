@@ -405,6 +405,39 @@ describe("runExpansionStep — preflight da seleção congelada antes de acquire
     expect(calls(d, "expand")).toHaveLength(0);
   });
 
+  it.each(["reused", "adopted"] as const)(
+    "vertical já comprovado (%s) não consulta pricing e confirma a etapa pelo caminho normal",
+    async (kind) => {
+      const d = deps({
+        probe: vi.fn(async () => ({
+          kind,
+          artifact: sourceArtifact,
+          bytes: Buffer.alloc(0),
+        })),
+        // Se o step consultar pricing para um artefato já comprovado, este fake
+        // falha o teste de forma observável.
+        preflightFrozenExpansion: vi.fn(async () => {
+          throw new Error("pricing must not be called for a reusable artifact");
+        }),
+        expand: vi.fn(async () => ({
+          kind: "reused",
+          artifact: sourceArtifact,
+          bytes: Buffer.alloc(0),
+          adoption: kind === "adopted",
+          call: null,
+        })),
+      });
+
+      const result = await runExpansionStep(expansionInput(), d);
+
+      expect(result).toEqual({ kind: "completed" });
+      expect(calls(d, "preflightFrozenExpansion")).toHaveLength(0);
+      expect(calls(d, "control.acquire")).toHaveLength(1);
+      expect(calls(d, "expand")).toHaveLength(1);
+      expect(calls(d, "control.finish")).toHaveLength(1);
+    },
+  );
+
   it("recheck após preflight: deadline esgotado não adquire nem expande", async () => {
     let now = 0;
     const d = deps({
