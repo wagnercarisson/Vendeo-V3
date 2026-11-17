@@ -100,6 +100,18 @@ interface PricingBuilder {
   maybeSingle(): Promise<{ data: unknown; error: { message: string } | null }>;
 }
 
+/** Linha vigente válida da configuração administrativa da expansão. */
+const EXPANSION_CONFIG_ROW = {
+  scope: "expansion",
+  model: "gpt-image-2.5-sunburst",
+  quality: "low",
+  config_version_id: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  reason: null,
+  updated_by: null,
+  updated_at: "2026-11-17T00:00:00.000Z",
+  created_at: "2026-11-17T00:00:00.000Z",
+};
+
 function pricingRow(incomplete: boolean) {
   return {
     id: "f9a278bb-c8ef-4ac4-bada-bf4bb886e041",
@@ -143,6 +155,14 @@ function makeClient(state: DbState): SupabaseClient {
               error: null,
             };
           },
+        };
+        return builder;
+      }
+      if (table === "nine_sixteen_expansion_model_config") {
+        const builder = {
+          select: () => builder,
+          eq: () => builder,
+          maybeSingle: async () => ({ data: EXPANSION_CONFIG_ROW, error: null }),
         };
         return builder;
       }

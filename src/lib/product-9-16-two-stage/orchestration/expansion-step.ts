@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AuthorizationContext } from "@/lib/campaign/composition-artifacts/types";
 import type { ArtifactRecord } from "@/lib/campaign/composition-artifacts/types";
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
 import type { ExpandVerticalResult } from "@/lib/campaign/vertical-expansion/types";
 import { probeExpansionTarget } from "@/lib/campaign/vertical-expansion/probe";
@@ -24,24 +25,32 @@ export interface ExpansionStepInput {
   readonly deadlineAtMs: number;
   readonly expansionStatus: TwoStageStepStatus;
   readonly allowNewPaidStep: boolean;
+  /**
+   * Seleção congelada da expansão. Recebida do orquestrador (preflight) e
+   * encaminhada ao expansor; o step nunca monta seleção própria.
+   */
+  readonly selection: ExpansionSelection;
   readonly signal?: AbortSignal;
 }
 
 export interface ExpansionStepDeps {
   readonly control: Pick<ProductTwoStageOperationClient, "acquire" | "finish" | "getOperationView">;
-  readonly expand: (input: {
-    source: {
-      storeId: string;
-      campaignId: string;
+  readonly expand: (
+    input: {
+      source: {
+        storeId: string;
+        campaignId: string;
+        operationId: string;
+        role: "square_prepared";
+      };
       operationId: string;
-      role: "square_prepared";
-    };
-    operationId: string;
-    attempt: { number: number; reference: string };
-    authorization: AuthorizationContext;
-    timeoutMs: number;
-    signal?: AbortSignal;
-  }) => Promise<ExpandVerticalResult>;
+      attempt: { number: number; reference: string };
+      authorization: AuthorizationContext;
+      timeoutMs: number;
+      signal?: AbortSignal;
+    },
+    deps: { readonly selection: ExpansionSelection },
+  ) => Promise<ExpandVerticalResult>;
   readonly retrieve?: typeof retrieveCompositionArtifact;
   readonly probe?: typeof probeExpansionTarget;
   readonly clock: () => number;
@@ -188,19 +197,22 @@ export async function runExpansionStep(
     };
   }
 
-  const result = await deps.expand({
-    source: {
-      storeId: input.storeId,
-      campaignId: input.campaignId,
+  const result = await deps.expand(
+    {
+      source: {
+        storeId: input.storeId,
+        campaignId: input.campaignId,
+        operationId: input.operationId,
+        role: "square_prepared",
+      },
       operationId: input.operationId,
-      role: "square_prepared",
+      attempt: { number: acquire.attemptNumber, reference: input.attemptReference },
+      authorization: input.authorization,
+      timeoutMs: remainingForStep(deps.clock(), input.deadlineAtMs),
+      ...(input.signal === undefined ? {} : { signal: input.signal }),
     },
-    operationId: input.operationId,
-    attempt: { number: acquire.attemptNumber, reference: input.attemptReference },
-    authorization: input.authorization,
-    timeoutMs: remainingForStep(deps.clock(), input.deadlineAtMs),
-    ...(input.signal === undefined ? {} : { signal: input.signal }),
-  });
+    { selection: input.selection },
+  );
 
   if (result.kind === "expanded" || result.kind === "reused") {
     const ack = await finishStepWithAck(

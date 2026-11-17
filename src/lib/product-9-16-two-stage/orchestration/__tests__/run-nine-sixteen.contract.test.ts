@@ -23,6 +23,14 @@ import {
 const BASE_ID = "11111111-1111-4111-8111-111111111111";
 const EXPANSION_ID = "22222222-2222-4222-8222-222222222222";
 
+/** Seleção congelada devolvida pelo preflight dos fakes. */
+const CONFIGURED_SELECTION = {
+  model: "gpt-image-2.5-sunburst",
+  quality: "low",
+  configVersionId: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  origin: "configured",
+} as const;
+
 const integralProbe = {
   kind: "integral" as const,
   format: "9:16" as const,
@@ -173,7 +181,10 @@ function deps(overrides: Record<string, unknown> = {}): RunNineSixteenDeps {
     projectDelivered: vi.fn(async () => ({ projected: true, reason: "projected" })),
     projectClosed: vi.fn(async () => ({ projected: true, reason: "projected" })),
     probeVertical: { probeVerticalArtifact: vi.fn(async () => integralProbe) },
-    preflightExpansion: vi.fn(async () => ({ ok: true })),
+    preflightExpansion: vi.fn(async () => ({
+      ok: true,
+      selection: CONFIGURED_SELECTION,
+    })),
     generateThumbnail: vi.fn(async () => ({ status: "created" })),
     reconstruction: durableReconstruction(),
     ...overrides,
@@ -1401,5 +1412,213 @@ describe("runNineSixteenTwoStageGeneration", () => {
     const events = await run(initialInput(), d);
     expect(terminals(events)).toHaveLength(1);
     expect(terminal(events)).toMatchObject({ type: "unknown", operationId: "o" });
+  });
+});
+
+describe("runNineSixteenTwoStageGeneration — seleção congelada", () => {
+  it("propaga a seleção do preflight até deps.expand na geração nova", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(),
+        acquire: vi.fn(async (request: { stage: string }) => ({
+          acquired: true,
+          authorization: "execute",
+          reason: null,
+          attemptToken: "t",
+          attemptNumber: 1,
+          stage: request.stage,
+          target: request.stage === "base" ? "primary" : "initial",
+        })),
+        finish: vi.fn(async (request: { stage?: string }) => ({
+          success: true,
+          idempotent: false,
+          status: "completed",
+          stage: request.stage ?? "base",
+          attemptNumber: 1,
+        })),
+        recordOutcome: vi.fn(),
+      },
+    });
+
+    const events = await run(initialInput(), d);
+    // A entrega não é o objeto deste teste: o que importa é a expansão paga
+    // receber a seleção do preflight exatamente uma vez.
+    expect(terminals(events)).toHaveLength(1);
+
+    const expandCalls = calls(d, "expand") as Array<
+      [unknown, { selection: unknown }]
+    >;
+    expect(expandCalls).toHaveLength(1);
+    expect(expandCalls[0][0]).toMatchObject({
+      source: { role: "square_prepared" },
+      operationId: "o",
+    });
+    expect(expandCalls[0][1]).toEqual({ selection: CONFIGURED_SELECTION });
+  });
+
+  it("allowNewPaidStep false suspende sem preflight e sem chamada paga", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({ kind: "absent" })),
+        resume: vi.fn(),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+    });
+
+    const events = await run(initialInput({ allowNewPaidStep: false }), d);
+    expect(terminal(events)).toMatchObject({
+      type: "processing",
+      state: "suspended",
+      canContinue: false,
+    });
+    expect(calls(d, "preflightExpansion")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    // A reserva não é o objeto desde teste; o gate é a etapa paga.
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+  });
+
+  it("continuação usa a seleção do preflight (estado interino) e não lê config própria", async () => {
+    const d = deps({
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "done"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_expansion",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_expansion", {
+            baseStatus: "done",
+            expansionStatus: "pending",
+          }),
+        ),
+        acquire: vi.fn(async () => ({
+          acquired: true,
+          authorization: "execute",
+          reason: null,
+          attemptToken: "t",
+          attemptNumber: 1,
+          stage: "expansion",
+          target: "initial",
+        })),
+        finish: vi.fn(async () => ({
+          success: true,
+          idempotent: false,
+          status: "completed",
+          stage: "expansion",
+          attemptNumber: 1,
+        })),
+        recordOutcome: vi.fn(),
+      },
+    });
+
+    const events = await run(continueInput(), d);
+    expect(terminals(events)).toHaveLength(1);
+    expect(calls(d, "preflightExpansion")).toHaveLength(1);
+
+    const expandCalls = calls(d, "expand") as Array<
+      [unknown, { selection: unknown }]
+    >;
+    expect(expandCalls).toHaveLength(1);
+    expect(expandCalls[0][1]).toEqual({ selection: CONFIGURED_SELECTION });
+  });
+
+  it("continuação com leitura indeterminada não adquire, não gasta e não estorna", async () => {
+    const d = deps({
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "configuration_read_failed",
+        reason: "nine_sixteen_expansion_config_read_failed:down",
+        missing: [],
+      })),
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "done"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_expansion",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_expansion", {
+            baseStatus: "done",
+            expansionStatus: "pending",
+          }),
+        ),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(),
+      },
+    });
+
+    const events = await run(continueInput(), d);
+    expect(terminal(events)).toMatchObject({
+      type: "processing",
+      nextStep: "expansion",
+      canContinue: true,
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "control.recordOutcome")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(0);
+    expect(logged.events[0]).toMatchObject({
+      event: "expansion_preflight_indeterminate",
+    });
+  });
+
+  it("continuação com configuração comprovadamente ausente encerra com estorno único", async () => {
+    const d = deps({
+      preflightExpansion: vi.fn(async () => ({
+        ok: false,
+        failure: "configuration_missing",
+        reason: "expansion_config_absent",
+        missing: [],
+      })),
+      control: {
+        getOperationView: vi.fn(async () => ({
+          kind: "found",
+          view: makeView({
+            base: step("base", "done"),
+            expansion: step("expansion", "pending"),
+            nextAction: "acquire_expansion",
+          }),
+        })),
+        resume: vi.fn(async () =>
+          resumeResult("acquire_expansion", {
+            baseStatus: "done",
+            expansionStatus: "pending",
+          }),
+        ),
+        acquire: vi.fn(),
+        finish: vi.fn(),
+        recordOutcome: vi.fn(async (request: { outcome: string }) => ({
+          success: true,
+          idempotent: false,
+          outcome: request.outcome,
+          stage: "expansion",
+          supportReference: "ref",
+        })),
+      },
+      // Sem vertical íntegro: o caminho definitivo estorna a reserva.
+      probeVertical: { probeVerticalArtifact: vi.fn(async () => ({ kind: "absent" })) },
+    });
+
+    const events = await run(continueInput(), d);
+    expect(terminal(events)).toMatchObject({
+      type: "error",
+      code: "generation_failed",
+      refunded: true,
+      reason: "configuration_missing:expansion_config_absent",
+    });
+    expect(calls(d, "control.acquire")).toHaveLength(0);
+    expect(calls(d, "expand")).toHaveLength(0);
+    expect(calls(d, "financial.refundOnDefinitiveFailure")).toHaveLength(1);
+    expect(calls(d, "control.recordOutcome")).toHaveLength(1);
   });
 });

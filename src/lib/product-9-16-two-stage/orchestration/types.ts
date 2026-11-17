@@ -1,4 +1,9 @@
 import type { AuthorizationContext } from "@/lib/campaign/composition-artifacts/types";
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
+import type {
+  ExpandVerticalInput,
+  ExpandVerticalResult,
+} from "@/lib/campaign/vertical-expansion/types";
 import type { ProductOneToOneBackgroundDirection } from "@/lib/product-1-1/background-direction";
 import type { ProductOneToOneCopyContext } from "@/lib/product-1-1/copy/default-copy-runner";
 import type { ProductOneToOneIntent } from "@/lib/product-1-1/intent-selection";
@@ -123,22 +128,33 @@ export type StepExecutionOutcome =
 
 /**
  * Preflight read-only de configuração da expansão (modelo + tarifas de usage).
- * Nunca chama provider. `configuration_read_failed` cobre leitura
- * indisponível/inesperada e permanece fail-closed.
+ * Nunca chama provider. `configuration_missing` cobre configuração
+ * administrativa comprovadamente ausente/inválida e `configuration_read_failed`
+ * cobre leitura indisponível/inesperada — ambos permanecem fail-closed.
  */
 export type ExpansionConfigurationFailure =
   | "model_unavailable"
   | "pricing_unavailable"
+  | "configuration_missing"
   | "configuration_read_failed";
 
 export type ExpansionConfigurationPreflight =
-  | { readonly ok: true }
+  | { readonly ok: true; readonly selection: ExpansionSelection }
   | {
       readonly ok: false;
       readonly failure: ExpansionConfigurationFailure;
       readonly reason: string;
       readonly missing: readonly string[];
     };
+
+/**
+ * Dependências da etapa de expansão: as costuras do expansor (sem a seleção) e
+ * a seleção congelada como argumento EXPLÍCITO. Nunca opcional.
+ */
+export type RunNineSixteenExpandDeps =
+  import("@/lib/campaign/vertical-expansion/expand").ExpandVerticalSeams & {
+    readonly selection: ExpansionSelection;
+  };
 
 export interface RunNineSixteenDeps {
   /**
@@ -157,7 +173,15 @@ export interface RunNineSixteenDeps {
   readonly newSupportReference: () => string;
   readonly base: typeof import("@/lib/campaign/square-base/run-square-base").runSquareBase;
   readonly prepare: typeof import("@/lib/campaign/square-preparation/prepare").prepareSquareForExpansion;
-  readonly expand: typeof import("@/lib/campaign/vertical-expansion/expand").expandVerticalToNineSixteen;
+  /**
+   * Expansão paga. Assinatura EXPLÍCITA: a seleção congelada atravessa o limite
+   * como argumento próprio (nunca montada pela rota nem lida pela config atual
+   * dentro do expansor). Apenas o composition root injeta essa dependência.
+   */
+  readonly expand: (
+    input: ExpandVerticalInput,
+    deps: RunNineSixteenExpandDeps,
+  ) => Promise<ExpandVerticalResult>;
   readonly readFrozenState: typeof import("@/lib/campaign/square-base/frozen-state").readSquareBaseFrozenState;
   readonly projectDelivered: typeof import("@/lib/product-1-1/orchestration/project-delivered-campaign").projectDeliveredCampaign;
   readonly projectClosed: typeof import("@/lib/product-1-1/orchestration/project-closed-campaign").projectClosedCampaign;

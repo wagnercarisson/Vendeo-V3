@@ -25,6 +25,13 @@ const sourceArtifact = {
   createdAt: "now",
 } as never;
 
+const CONFIGURED_SELECTION = {
+  model: "gpt-image-2.5-sunburst",
+  quality: "low",
+  configVersionId: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  origin: "configured",
+} as const;
+
 function expansionInput() {
   return {
     storeId: "s",
@@ -37,6 +44,7 @@ function expansionInput() {
     deadlineAtMs: 100_000,
     expansionStatus: "pending",
     allowNewPaidStep: true,
+    selection: CONFIGURED_SELECTION,
   } as never;
 }
 
@@ -131,6 +139,20 @@ describe("runExpansionStep", () => {
     await expect(runExpansionStep(expansionInput(), d)).resolves.toEqual({ kind: "completed" });
     expect(calls(d, "control.acquire")).toHaveLength(1);
     expect(calls(d, "control.finish")).toHaveLength(1);
+  });
+
+  it("encaminha a seleção do input ao expansor (nunca monta seleção própria)", async () => {
+    const d = deps();
+    await expect(runExpansionStep(expansionInput(), d)).resolves.toEqual({
+      kind: "completed",
+    });
+
+    const expandCalls = calls(d, "expand") as Array<
+      [{ source: { role: string } }, { selection: unknown }]
+    >;
+    expect(expandCalls).toHaveLength(1);
+    expect(expandCalls[0][0].source.role).toBe("square_prepared");
+    expect(expandCalls[0][1]).toEqual({ selection: CONFIGURED_SELECTION });
   });
 
   it("does not advance when finish is refused", async () => {    const d = deps({

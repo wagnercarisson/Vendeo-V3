@@ -11,6 +11,7 @@ import { downloadCampaignInputFileWithClient } from "@/lib/campaign/persistence"
 import { prepareSquareForExpansion } from "@/lib/campaign/square-preparation/prepare";
 import { expandVerticalToNineSixteen } from "@/lib/campaign/vertical-expansion/expand";
 import { preflightExpansionToNineSixteen } from "@/lib/campaign/vertical-expansion/model";
+import { readNineSixteenExpansionConfig } from "@/lib/ai/nine-sixteen-expansion-model-config-service";
 import { createDefaultThumbnailContext } from "@/lib/campaign/thumbnail/thumbnail-generator";
 import type {
   ThumbnailContext,
@@ -132,17 +133,48 @@ export function createNineSixteenDeps(
   const prepare: RunNineSixteenDeps["prepare"] = (input, deps) =>
     prepareSquareForExpansion(input, { client, ...(deps ?? {}) });
 
+  /**
+   * ÚNICO ponto do repositório que traduz a seleção congelada (recebida do
+   * orquestrador) para `ExpandVerticalDeps`. A seleção nunca vem da rota.
+   */
   const expand: RunNineSixteenDeps["expand"] = (input, deps) =>
-    expandVerticalToNineSixteen(input, { client, ...(deps ?? {}) });
+    expandVerticalToNineSixteen(input, { client, ...deps });
 
   /**
-   * Gate pré-chamada da expansão (modelo + tarifas de usage). Read-only,
-   * fail-closed e sem provider; a estimativa `image_unit_usd` é reportada à
-   * parte e pode estar indisponível sem bloquear a cobertura de usage.
+   * Gate pré-chamada da expansão: leitura estrita da configuração administrativa
+   * (uma vez por invocação, com o MESMO client da fábrica) + preflight read-only
+   * de modelo/pricing. Fail-closed e sem provider; a estimativa `image_unit_usd`
+   * é reportada à parte e pode estar indisponível sem bloquear a cobertura.
    */
   const preflightExpansion: RunNineSixteenDeps["preflightExpansion"] = async () => {
-    const outcome = await preflightExpansionToNineSixteen({ client });
-    if (outcome.ok) return { ok: true };
+    const read = await readNineSixteenExpansionConfig({ client });
+    if (read.kind === "absent") {
+      return {
+        ok: false,
+        failure: "configuration_missing",
+        reason: "expansion_config_absent",
+        missing: [],
+      };
+    }
+    if (read.kind === "invalid") {
+      return {
+        ok: false,
+        failure: "configuration_missing",
+        reason: read.reason,
+        missing: [],
+      };
+    }
+    if (read.kind === "read_failed") {
+      return {
+        ok: false,
+        failure: "configuration_read_failed",
+        reason: read.reason,
+        missing: [],
+      };
+    }
+
+    const outcome = await preflightExpansionToNineSixteen({ client }, read.selection);
+    if (outcome.ok) return { ok: true, selection: read.selection };
     const missing =
       outcome.failure === "pricing_unavailable" ? outcome.missing : [];
     return {

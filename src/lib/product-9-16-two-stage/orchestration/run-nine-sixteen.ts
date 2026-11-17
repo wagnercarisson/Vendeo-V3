@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import { verifyCampaignAccess } from "@/lib/campaign/composition-artifacts/access";
 import type { CopyProgressEvent } from "@/lib/campaign/square-base/run-square-base";
 import type { FrozenStateReadResult } from "@/lib/campaign/square-base/types";
@@ -518,9 +519,21 @@ async function runExpansion(
     expansionStatus: TwoStageOperationView["expansion"]["status"];
     deadlineAtMs: number;
     allowNewPaidStep: boolean;
+    /** Seleção congelada; `null` = nenhuma chamada paga permitida. */
+    selection: ExpansionSelection | null;
   },
 ): Promise<StepExecutionOutcome> {
   stream.emitPhase("campaign_expansion", "running");
+  if (options.selection === null) {
+    // Sem seleção congelada não existe chamada paga: suspende ANTES do step,
+    // exatamente como `allowNewPaidStep === false` faz hoje.
+    return {
+      kind: "processing",
+      state: "suspended",
+      nextStep: "expansion",
+      canContinue: false,
+    };
+  }
   const outcome = await runExpansionStep(
     {
       storeId: input.storeId,
@@ -533,6 +546,7 @@ async function runExpansion(
       deadlineAtMs: options.deadlineAtMs,
       expansionStatus: options.expansionStatus,
       allowNewPaidStep: options.allowNewPaidStep,
+      selection: options.selection,
       ...(input.signal === undefined ? {} : { signal: input.signal }),
     },
     {
@@ -570,6 +584,16 @@ async function execute(
 
   const deadlineAtMs = computeInvocationDeadline(input.requestStartedAtMs, input.timeoutMs);
   const allowNewPaidStep = input.allowNewPaidStep !== false;
+
+  /**
+   * Seleção congelada da expansão. `null` = nenhuma chamada paga permitida
+   * (`allowNewPaidStep === false`) ou preflight ainda não executado.
+   *
+   * INTERINO 60.6-02: a seleção vem do preflight do composition root. 60.6-03
+   * congela a seleção na operação e 60.6-04 passa a ler o congelado, removendo
+   * este estado interino.
+   */
+  let expansionSelection: ExpansionSelection | null = null;
 
   let acquisitionIds;
   if (input.mode === "initial") {
@@ -647,6 +671,7 @@ async function execute(
         );
         return;
       }
+      expansionSelection = configuration.selection;
     }
 
     try {
@@ -784,6 +809,37 @@ async function execute(
       return;
     }
     if (resume.action === "acquire_expansion" || resume.action === "retry_expansion") {
+      // INTERINO 60.6-02: a seleção da continuação vem do preflight (registro
+      // administrativo) — fail-closed, substituído pela seleção congelada na
+      // operação em 60.6-04. Nunca há fallback: sem seleção não há chamada paga.
+      if (allowNewPaidStep) {
+        const configuration = await readExpansionConfiguration(deps);
+        if (!configuration.ok) {
+          if (configuration.failure === "configuration_read_failed") {
+            // Leitura indeterminada: nenhuma aquisição/provider/desfecho/estorno.
+            logPreflightIndeterminate({
+              input,
+              supportReference: deps.newSupportReference(),
+              configuration,
+            });
+            stream.emitTerminal(
+              processingEvent(input, "between_steps", "expansion", true),
+            );
+            return;
+          }
+          await handleStepFailure(
+            input,
+            deps,
+            stream,
+            { kind: "definitive", reason: "configuration_unavailable" },
+            "expansion",
+            configuration,
+          );
+          return;
+        }
+        expansionSelection = configuration.selection;
+      }
+
       // Preparacao 1152 SEMPRE antes da expansao paga (gratuita e reutilizavel).
       const preparation = await runPreparation(input, deps, stream);
       if (preparation.kind === "processing") {
@@ -800,6 +856,7 @@ async function execute(
         expansionStatus: view.expansion.status,
         deadlineAtMs,
         allowNewPaidStep,
+        selection: expansionSelection,
       });
       if (expansion.kind === "completed") {
         await deliverAndEmit(input, deps, stream);
@@ -868,6 +925,7 @@ async function execute(
     expansionStatus: view.expansion.status,
     deadlineAtMs,
     allowNewPaidStep,
+    selection: expansionSelection,
   });
   if (expansion.kind === "processing") {
     stream.emitTerminal(

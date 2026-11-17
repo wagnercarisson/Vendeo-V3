@@ -19,7 +19,7 @@ import type { AiInvocationResult } from "@/lib/ai/types";
 import { AiInvocationError } from "@/lib/ai/types";
 import type { SquareBaseDeps } from "@/lib/campaign/square-base/run-square-base";
 import type { SquareBaseInput } from "@/lib/campaign/square-base/types";
-import type { ExpandVerticalDeps } from "@/lib/campaign/vertical-expansion/expand";
+import type { ExpandVerticalSeams } from "@/lib/campaign/vertical-expansion/expand";
 import type {
   RunNineSixteenDeps,
   RunNineSixteenInput,
@@ -1072,6 +1072,17 @@ const COMPLETE_PRICING = {
   imageUnitCostUsd: 0.05,
 } as unknown as ModelPricing;
 
+/**
+ * Seleção congelada do harness, compatível com `CATALOG_ROW`/`COMPLETE_PRICING`.
+ * O preflight é injetado (nunca lê a configuração administrativa).
+ */
+const CONFIGURED_SELECTION = {
+  model: "gpt-image-2.5-sunburst",
+  quality: "low",
+  configVersionId: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  origin: "configured",
+} as const;
+
 async function imageBase64(
   width: number,
   height: number,
@@ -1279,7 +1290,7 @@ export async function createOfflineDeps(
     })) as never,
   };
 
-  const expandSeams: ExpandVerticalDeps = {
+  const expandSeams: ExpandVerticalSeams = {
     client: world.client,
     clock: () => now,
     callIdFactory: () => `exp-call-${counters.expansionProviderCalls + 1}`,
@@ -1340,7 +1351,7 @@ export async function createOfflineDeps(
 
   const deps: RunNineSixteenDeps = {
     ...real,
-    preflightExpansion: async () => ({ ok: true }),
+    preflightExpansion: async () => ({ ok: true, selection: CONFIGURED_SELECTION }),
     base: (input, inner) =>
       real.base(input, { ...baseSeams, ...(inner ?? {}) }),
     prepare: (input, inner) => real.prepare(input, inner),

@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { createHash } from "node:crypto";
 
 vi.mock("server-only", () => ({}));
@@ -72,6 +73,12 @@ vi.mock("@/lib/campaign/vertical-expansion/expand", () => ({
 vi.mock("@/lib/campaign/vertical-expansion/model", () => ({
   preflightExpansionToNineSixteen: vi.fn(async () => ({ ok: true })),
 }));
+const configRead = vi.hoisted(() => ({
+  readNineSixteenExpansionConfig: vi.fn(),
+}));
+vi.mock("@/lib/ai/nine-sixteen-expansion-model-config-service", () => ({
+  readNineSixteenExpansionConfig: configRead.readNineSixteenExpansionConfig,
+}));
 vi.mock("@/lib/campaign/square-base/frozen-state", () => ({
   readSquareBaseFrozenState: vi.fn(),
   hashImageDataUrl: (dataUrl: string) =>
@@ -81,6 +88,7 @@ vi.mock("@/lib/campaign/square-base/frozen-state", () => ({
 import { createNineSixteenDeps } from "../delivery-deps";
 import { runNineSixteenTwoStageGeneration } from "../run-nine-sixteen";
 import { preflightExpansionToNineSixteen } from "@/lib/campaign/vertical-expansion/model";
+import { readNineSixteenExpansionConfig } from "@/lib/ai/nine-sixteen-expansion-model-config-service";
 import {
   DURABLE_BYTES,
   DURABLE_DATA_URL,
@@ -99,6 +107,23 @@ import { generateCampaignThumbnailSafely } from "@/lib/campaign/thumbnail/thumbn
 const STORE = "11111111-1111-4111-8111-111111111111";
 const CAMPAIGN = "22222222-2222-4222-8222-222222222222";
 const OPERATION = "33333333-3333-4333-8333-333333333333";
+
+/** Seleção congelada fixa usada pela leitura estrita mockada. */
+const CONFIGURED_SELECTION = {
+  model: "gpt-image-2.5-sunburst",
+  quality: "low",
+  configVersionId: "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  origin: "configured",
+} as const;
+
+beforeEach(() => {
+  vi.mocked(preflightExpansionToNineSixteen).mockClear();
+  configRead.readNineSixteenExpansionConfig.mockReset();
+  configRead.readNineSixteenExpansionConfig.mockResolvedValue({
+    kind: "found",
+    selection: CONFIGURED_SELECTION,
+  });
+});
 
 describe("createNineSixteenDeps", () => {
   it("composes every required dependency with real implementations", () => {
@@ -127,8 +152,19 @@ describe("createNineSixteenDeps", () => {
   });
 
   it("maps the real preflight result without inventing missing rates", async () => {
-    const deps = createNineSixteenDeps({ client: {} as never });
-    await expect(deps.preflightExpansion()).resolves.toEqual({ ok: true });
+    const client = { marker: "injected" } as never;
+    const deps = createNineSixteenDeps({ client });
+    await expect(deps.preflightExpansion()).resolves.toEqual({
+      ok: true,
+      selection: CONFIGURED_SELECTION,
+    });
+    // A leitura estrita usa o MESMO client da fábrica (nunca o global, que lança)
+    // e é seguida do preflight de modelo/pricing com a seleção resolvida.
+    expect(readNineSixteenExpansionConfig).toHaveBeenCalledWith({ client });
+    expect(preflightExpansionToNineSixteen).toHaveBeenCalledWith(
+      { client },
+      CONFIGURED_SELECTION,
+    );
 
     vi.mocked(preflightExpansionToNineSixteen).mockResolvedValueOnce({
       ok: false,
@@ -154,6 +190,44 @@ describe("createNineSixteenDeps", () => {
       reason: "catalog_row_missing",
       missing: [],
     });
+  });
+
+  it("distingue configuração ausente/inválida de leitura indeterminada", async () => {
+    const deps = createNineSixteenDeps({ client: {} as never });
+
+    configRead.readNineSixteenExpansionConfig.mockResolvedValueOnce({
+      kind: "absent",
+    });
+    await expect(deps.preflightExpansion()).resolves.toEqual({
+      ok: false,
+      failure: "configuration_missing",
+      reason: "expansion_config_absent",
+      missing: [],
+    });
+
+    configRead.readNineSixteenExpansionConfig.mockResolvedValueOnce({
+      kind: "invalid",
+      reason: "nine_sixteen_expansion_config_divergent:model",
+    });
+    await expect(deps.preflightExpansion()).resolves.toEqual({
+      ok: false,
+      failure: "configuration_missing",
+      reason: "nine_sixteen_expansion_config_divergent:model",
+      missing: [],
+    });
+
+    configRead.readNineSixteenExpansionConfig.mockResolvedValueOnce({
+      kind: "read_failed",
+      reason: "nine_sixteen_expansion_config_read_failed:pricing_down",
+    });
+    await expect(deps.preflightExpansion()).resolves.toEqual({
+      ok: false,
+      failure: "configuration_read_failed",
+      reason: "nine_sixteen_expansion_config_read_failed:pricing_down",
+      missing: [],
+    });
+    // Nenhuma dessas leituras chega ao preflight de modelo/pricing.
+    expect(preflightExpansionToNineSixteen).not.toHaveBeenCalled();
   });
 
   it("projects the composition source with the persisted vertical path", async () => {
@@ -229,10 +303,10 @@ describe("createNineSixteenDeps", () => {
       expect.objectContaining({ client }),
     );
 
-    await deps.expand({} as never);
+    await deps.expand({} as never, { selection: CONFIGURED_SELECTION } as never);
     expect(expandVerticalToNineSixteen).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ client }),
+      expect.objectContaining({ client, selection: CONFIGURED_SELECTION }),
     );
 
     await deps.readFrozenState({} as never);
