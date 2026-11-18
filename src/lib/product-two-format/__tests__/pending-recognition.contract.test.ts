@@ -13,6 +13,7 @@ import {
   listJointPendingOperations,
   type JointPendingRecognitionDeps,
 } from "../orchestration/pending-recognition";
+import { decideJointResolution } from "../orchestration/pending-guards";
 
 const STORE = "11111111-1111-4111-8111-111111111111";
 const CAMPAIGN = "22222222-2222-4222-8222-222222222222";
@@ -94,9 +95,15 @@ function makeClient(tables: FakeTables, errors: Record<string, string> = {}) {
               error: { message: errors[table] },
             }).then(resolve, reject);
           }
-          const rows = (tables[table] ?? []).filter((row) =>
-            filters.every(([column, value]) => row[column] === value),
+          const raw = tables[table] ?? [];
+          const hasMalformed = raw.some(
+            (row) => typeof row !== "object" || row === null,
           );
+          const rows = hasMalformed
+            ? raw
+            : raw.filter((row) =>
+                filters.every(([column, value]) => row[column] === value),
+              );
           return Promise.resolve({ data: rows, error: null }).then(
             resolve,
             reject,
@@ -418,5 +425,144 @@ describe("F60.7-08 — reconhecimento de pendências conjuntas", () => {
       ),
     );
     expect(malformed.kind).toBe("inconsistent");
+  });
+
+  it("Teste 12: loja divergente/ausente no crédito invalida o par e o guard bloqueia", async () => {
+    const probes = makeProbes();
+    const mismatch = await listJointPendingOperations(
+      makeDeps(
+        baseTables({
+          [CREDIT]: [credit(OPERATION), credit(SQUARE_ID, "reserved", { store_id: "outra" })],
+        }),
+        probes,
+      ),
+    );
+    expect(mismatch.kind).toBe("ok");
+    if (mismatch.kind !== "ok") throw new Error("esperava ok");
+    expect(mismatch.items).toHaveLength(2);
+    expect(mismatch.items.every((item) => item.linkComplete === false)).toBe(true);
+    for (const item of mismatch.items) {
+      expect(
+        decideJointResolution({
+          action: "deliver",
+          creditStatus: item.creditStatus,
+          outcomeKind: item.outcomeKind,
+          sharedOutcomeKind: item.sharedOutcomeKind,
+          sharedCreditStatus: item.sharedCreditStatus,
+          artifactKind: item.artifactKind,
+          activeClaim: item.activeClaim,
+          linkComplete: item.linkComplete,
+        }),
+      ).toEqual({ allowed: false, block: "delivery_link_incomplete" });
+    }
+
+    const missingStore = await listJointPendingOperations(
+      makeDeps(
+        baseTables({
+          [CREDIT]: [credit(OPERATION), credit(SQUARE_ID, "reserved", { store_id: null })],
+        }),
+        probes,
+      ),
+    );
+    expect(missingStore.kind).toBe("ok");
+    if (missingStore.kind !== "ok") throw new Error("esperava ok");
+    expect(missingStore.items.every((item) => item.linkComplete === false)).toBe(true);
+  });
+
+  it("Teste 13: linha malformada extra invalida o par mesmo com dois vínculos válidos", async () => {
+    const probes = makeProbes();
+    const result = await listJointPendingOperations(
+      makeDeps(
+        baseTables({
+          [LINKS]: [link("1:1"), link("9:16"), link("1:1", { format: "4:3" })],
+        }),
+        probes,
+      ),
+    );
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") throw new Error("esperava ok");
+    expect(result.items).toHaveLength(2);
+    expect(result.items.every((item) => item.linkComplete === false)).toBe(true);
+    expect(
+      decideJointResolution({
+        action: "deliver",
+        creditStatus: result.items[0].creditStatus,
+        outcomeKind: result.items[0].outcomeKind,
+        sharedOutcomeKind: result.items[0].sharedOutcomeKind,
+        sharedCreditStatus: result.items[0].sharedCreditStatus,
+        artifactKind: result.items[0].artifactKind,
+        activeClaim: result.items[0].activeClaim,
+        linkComplete: result.items[0].linkComplete,
+      }),
+    ).toEqual({ allowed: false, block: "delivery_link_incomplete" });
+  });
+
+  it("Teste 14: outcome malformado/duplicado é indeterminado, nunca none", async () => {
+    const probes = makeProbes();
+    const malformedControl = await listJointPendingOperations(
+      makeDeps(
+        baseTables({
+          [CONTROL_OUTCOMES]: [null as unknown as Row],
+        }),
+        probes,
+      ),
+    );
+    expect(malformedControl.kind).toBe("ok");
+    if (malformedControl.kind !== "ok") throw new Error("esperava ok");
+    expect(malformedControl.items[0].sharedOutcomeKind).toBe("indeterminate");
+    expect(
+      decideJointResolution({
+        action: "deliver",
+        creditStatus: malformedControl.items[0].creditStatus,
+        outcomeKind: malformedControl.items[0].outcomeKind,
+        sharedOutcomeKind: malformedControl.items[0].sharedOutcomeKind,
+        sharedCreditStatus: malformedControl.items[0].sharedCreditStatus,
+        artifactKind: "integral",
+        activeClaim: false,
+        linkComplete: true,
+      }),
+    ).toEqual({ allowed: false, block: "outcome_indeterminate" });
+
+    const duplicateControl = await listJointPendingOperations(
+      makeDeps(
+        baseTables({
+          [CONTROL_OUTCOMES]: [
+            outcome(OPERATION, "failed"),
+            outcome(OPERATION, "unknown"),
+          ],
+        }),
+        probes,
+      ),
+    );
+    expect(duplicateControl.kind).toBe("ok");
+    if (duplicateControl.kind !== "ok") throw new Error("esperava ok");
+    expect(duplicateControl.items[0].sharedOutcomeKind).toBe("indeterminate");
+
+    const malformedOwn = await listJointPendingOperations(
+      makeDeps(
+        baseTables({
+          [SQUARE_OUTCOMES]: [null as unknown as Row],
+        }),
+        probes,
+      ),
+    );
+    expect(malformedOwn.kind).toBe("ok");
+    if (malformedOwn.kind !== "ok") throw new Error("esperava ok");
+    const square = malformedOwn.items.find((item) => item.format === "1:1");
+    expect(square?.outcomeKind).toBe("indeterminate");
+  });
+
+  it("Teste 15: claims malformados impedem autorização e não comprovam ausência", async () => {
+    const probes = makeProbes();
+    const result = await listJointPendingOperations(
+      makeDeps(
+        baseTables({
+          [CLAIMS]: [null as unknown as Row],
+        }),
+        probes,
+      ),
+    );
+    expect(result.kind).toBe("read_failed");
+    expect((result as { reason: string }).reason).toContain("active_claim_read_failed");
   });
 });

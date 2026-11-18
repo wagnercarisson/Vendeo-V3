@@ -76,17 +76,24 @@ interface Group {
   readonly operationId: string;
   readonly storeId: string;
   readonly rows: LinkRow[];
+  malformed: boolean;
 }
 
 type RowsRead =
   | { readonly ok: true; readonly rows: readonly Record<string, unknown>[] }
   | { readonly ok: false; readonly reason: string };
 
+/**
+ * Estrutura ESTRITA: qualquer elemento que não seja objeto invalida a resposta
+ * inteira (nunca é descartado silenciosamente). `[null]` não pode virar `[]`.
+ */
 function toRows(data: unknown): Record<string, unknown>[] | null {
   if (!Array.isArray(data)) return null;
   const rows: Record<string, unknown>[] = [];
   for (const item of data) {
-    if (typeof item !== "object" || item === null) continue;
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      return null;
+    }
     rows.push({ ...(item as Record<string, unknown>) });
   }
   return rows;
@@ -113,33 +120,44 @@ function parseOutcomeRows(
   rows: readonly Record<string, unknown>[],
 ): JointOutcomeKind | null {
   if (rows.length === 0) return "none";
+  // Cardinalidade estrita: duplicidade não é "a primeira linha", é indeterminada.
+  if (rows.length !== 1) return null;
   const value = rows[0].outcome;
   if (value === "failed" || value === "unknown") return value;
   return null;
 }
 
-function parseLink(row: Record<string, unknown>): LinkRow | string {
+interface LinkIdentity {
+  readonly campaignId: string;
+  readonly operationId: string;
+  readonly storeId: string;
+}
+
+function parseIdentity(row: Record<string, unknown>): LinkIdentity | string {
   const campaignId = stringField(row, "campaign_id");
   const operationId = stringField(row, "operation_id");
   const storeId = stringField(row, "store_id");
+  if (campaignId === null || operationId === null || storeId === null) {
+    return "link_missing_identity";
+  }
+  return { campaignId, operationId, storeId };
+}
+
+function parseLink(
+  row: Record<string, unknown>,
+  identity: LinkIdentity,
+): LinkRow | string {
   const deliveryOperationId = stringField(row, "delivery_operation_id");
   const format = row.format;
   const artifactRole = row.artifact_role;
-  if (
-    campaignId === null ||
-    operationId === null ||
-    storeId === null ||
-    deliveryOperationId === null
-  ) {
-    return "link_missing_identity";
-  }
+  if (deliveryOperationId === null) return "link_missing_delivery_identity";
   if (format !== "1:1" && format !== "9:16") return "link_unknown_format";
   const expectedRole = format === "1:1" ? "square_original" : "vertical";
   if (artifactRole !== expectedRole) return "link_role_mismatch";
   return {
-    campaignId,
-    operationId,
-    storeId,
+    campaignId: identity.campaignId,
+    operationId: identity.operationId,
+    storeId: identity.storeId,
     format,
     deliveryOperationId,
     artifactRole: expectedRole,
@@ -282,6 +300,11 @@ async function buildGroup(
     reasons.push("shared_credit_invalid_status");
     return [];
   }
+  // O crédito compartilhado precisa pertencer à MESMA loja/campanha do vínculo.
+  let pairInvalid =
+    sharedCredit.rows.length !== 1 ||
+    stringField(sharedCredit.rows[0] ?? {}, "store_id") !== group.storeId;
+  if (pairInvalid) reasons.push("shared_credit_store_mismatch");
 
   const claims = await readActiveClaim(
     deps.client,
@@ -308,12 +331,13 @@ async function buildGroup(
     reasons.push("shared_outcome_indeterminate");
   }
 
-  const linkComplete = pairComplete(group);
-  if (!linkComplete) {
-    reasons.push(`pair_incomplete:${group.campaignId}:${group.operationId}`);
+  interface Draft {
+    readonly link: LinkRow;
+    readonly creditStatus: JointCreditStatus;
+    readonly outcomeKind: JointOutcomeKind;
+    readonly artifactKind: JointArtifactKind;
   }
-
-  const items: JointPendingItem[] = [];
+  const drafts: Draft[] = [];
   for (const link of group.rows) {
     const credit = await readCredit(
       deps.client,
@@ -322,20 +346,23 @@ async function buildGroup(
     );
     if (!credit.ok) {
       state.readErrors += 1;
+      pairInvalid = true;
       reasons.push(`credit_read_failed:${link.format}:${credit.reason}`);
       continue;
     }
     const creditStatus = parseCreditStatus(credit.rows[0]?.status);
     if (creditStatus === null) {
+      pairInvalid = true;
       reasons.push(`credit_invalid_status:${link.format}`);
       continue;
     }
+    const creditStore = stringField(credit.rows[0] ?? {}, "store_id");
+    if (credit.rows.length !== 1 || creditStore === null || creditStore !== group.storeId) {
+      pairInvalid = true;
+      reasons.push(`credit_store_mismatch:${link.format}`);
+    }
     if (creditStatus !== "reserved" && creditStatus !== "art_uploaded") {
       continue;
-    }
-    const creditStore = stringField(credit.rows[0] ?? {}, "store_id");
-    if (creditStore !== null && creditStore !== group.storeId) {
-      reasons.push(`credit_store_mismatch:${link.format}`);
     }
 
     let outcomeKind: JointOutcomeKind;
@@ -361,26 +388,34 @@ async function buildGroup(
       reasons.push(`probe_indeterminate:${link.format}`);
     }
 
-    items.push(
-      Object.freeze({
-        campaignId: group.campaignId,
-        operationId: group.operationId,
-        storeId: group.storeId,
-        format: link.format,
-        deliveryOperationId: link.deliveryOperationId,
-        artifactRole: link.artifactRole,
-        creditStatus,
-        outcomeKind,
-        sharedOutcomeKind,
-        sharedCreditStatus,
-        artifactKind,
-        activeClaim,
-        linkComplete,
-        supportReference: null,
-      }),
-    );
+    drafts.push({ link, creditStatus, outcomeKind, artifactKind });
   }
-  return items;
+
+  // `linkComplete` só é verdadeiro com o PAR estrito: sem linhas malformadas,
+  // sem divergência/ausência de loja e sem crédito ilegível/incoerente.
+  const linkComplete = pairComplete(group) && !group.malformed && !pairInvalid;
+  if (!linkComplete) {
+    reasons.push(`pair_incomplete:${group.campaignId}:${group.operationId}`);
+  }
+
+  return drafts.map((draft) =>
+    Object.freeze({
+      campaignId: group.campaignId,
+      operationId: group.operationId,
+      storeId: group.storeId,
+      format: draft.link.format,
+      deliveryOperationId: draft.link.deliveryOperationId,
+      artifactRole: draft.link.artifactRole,
+      creditStatus: draft.creditStatus,
+      outcomeKind: draft.outcomeKind,
+      sharedOutcomeKind,
+      sharedCreditStatus,
+      artifactKind: draft.artifactKind,
+      activeClaim,
+      linkComplete,
+      supportReference: null,
+    }),
+  );
 }
 
 function sortItems(items: JointPendingItem[]): JointPendingItem[] {
@@ -400,23 +435,34 @@ export async function listJointPendingOperations(
   const reasons: string[] = [];
   const groups = new Map<string, Group>();
   for (const raw of links.rows) {
-    const parsed = parseLink(raw);
+    const identity = parseIdentity(raw);
+    if (typeof identity === "string") {
+      reasons.push(identity);
+      continue;
+    }
+    const key = `${identity.campaignId}|${identity.operationId}`;
+    let group = groups.get(key);
+    if (group === undefined) {
+      group = {
+        campaignId: identity.campaignId,
+        operationId: identity.operationId,
+        storeId: identity.storeId,
+        rows: [],
+        malformed: false,
+      };
+      groups.set(key, group);
+    }
+    if (identity.storeId !== group.storeId) {
+      group.malformed = true;
+      reasons.push("link_store_mismatch");
+    }
+    const parsed = parseLink(raw, identity);
     if (typeof parsed === "string") {
+      group.malformed = true;
       reasons.push(parsed);
       continue;
     }
-    const key = `${parsed.campaignId}|${parsed.operationId}`;
-    const existing = groups.get(key);
-    if (existing !== undefined) {
-      existing.rows.push(parsed);
-      continue;
-    }
-    groups.set(key, {
-      campaignId: parsed.campaignId,
-      operationId: parsed.operationId,
-      storeId: parsed.storeId,
-      rows: [parsed],
-    });
+    group.rows.push(parsed);
   }
 
   const state = { readErrors: 0 };
