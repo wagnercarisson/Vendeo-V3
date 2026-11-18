@@ -415,6 +415,17 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     prefixes: [],
     exact: ["@/lib/product-1-1/credit-operation/types"],
   },
+  // F60.7 B (06) — idem: mapeamento fechado do código de erro do epoch.
+  ["src/lib/product-two-format/orchestration/finalize-joint-failure.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/credit-operation/types"],
+  },
+  // F60.7 B (06) — idem: `failed.code` preserva o código do cliente de crédito
+  // (beginPublication/deliverFormat). Nenhum runtime.
+  ["src/lib/product-two-format/orchestration/deliver-joint-vertical.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/credit-operation/types"],
+  },
 });
 const SIDE_EFFECT_IMPORT_RE =
   /(?:from\s*|import\s*\(\s*)["'][^"']*(?:\/api\/campaign|\/adapters?(?:\/|$)|\/gateway(?:\/|$)|provider|\/credit(?:\/|$)|delivery|download|image-generation-operations-repository|prompt-composition)[^"']*["']/i;
@@ -1442,6 +1453,8 @@ describe("F60.7 B — pares exatos joint-deps/deliver-square ↔ product-1-1 (te
   const IMPORTERS = [
     "src/lib/product-two-format/orchestration/joint-deps.ts",
     "src/lib/product-two-format/orchestration/deliver-square.ts",
+    "src/lib/product-two-format/orchestration/deliver-joint-vertical.ts",
+    "src/lib/product-two-format/orchestration/finalize-joint-failure.ts",
   ] as const;
 
   it("cada importador conjunto corresponde EXATAMENTE ao conjunto real de specifiers", () => {
