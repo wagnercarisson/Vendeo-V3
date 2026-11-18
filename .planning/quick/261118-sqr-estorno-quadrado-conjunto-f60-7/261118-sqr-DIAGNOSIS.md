@@ -103,7 +103,9 @@ O defeito **não é da autoridade SQL de A**. É uma **omissão de handoff no pl
 - 7 violações pré-existentes do `non-activation.contract.test.ts` (F60.6) — dívida separada.
 - B/C, migration apply, banco, provider, UI, flags/pricing.
 
-## 7. Arquivos previstos para a implementação
+## 7. Arquivos previstos para a implementação de B (NÃO nesta Quick)
+
+A Quick é documental; os arquivos abaixo pertencem aos planos 06/09/10 e só serão alterados na implementação autorizada:
 
 - `src/lib/product-two-format/orchestration/joint-deps.ts` (modificar)
 - `src/lib/product-two-format/orchestration/finalize-joint-failure.ts` (modificar)
@@ -114,9 +116,5 @@ O defeito **não é da autoridade SQL de A**. É uma **omissão de handoff no pl
 - `src/lib/product-two-format/orchestration/__tests__/joint-journeys.integration.test.ts` (ajustar)
 - `src/lib/product-two-format/orchestration/__tests__/joint-admin-protection.integration.test.ts` (ajustar)
 - `src/lib/product-two-format/orchestration/__tests__/support/joint-offline-world.ts` (ajustar)
-- `.planning/phases/60.7-.../60.7-06-PLAN.md`, `60.7-09-PLAN.md`, `60.7-10-PLAN.md` (corrigir)
-- `.planning/phases/60.7-.../60.7-B-CONTEXT.md` (corrigir)
-- `openspec/changes/f60-7-.../design.md`, `specs/product-two-format-credit-billing/spec.md`, `tasks.md` (esclarecer handoff)
-- `.planning/phases/60.7-.../60.7-A-REOPENING-SQUARE-REFUND.md` (novo)
 
-**Nenhuma migration nova está prevista.**
+**Nenhuma migration nova está prevista.** Nesta Quick, apenas os documentos (planos, B-CONTEXT, OpenSpec, reabertura, SUMMARY/STATE) são alterados.
