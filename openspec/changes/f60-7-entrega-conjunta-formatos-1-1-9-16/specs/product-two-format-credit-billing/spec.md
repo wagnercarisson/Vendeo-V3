@@ -136,7 +136,7 @@ Falha definitiva SHALL estornar somente o crédito do formato comprovadamente n�
 - **AND** SHALL verificar claims e finalidade sob essa trava, antes de qualquer efeito
 - **AND** SHALL exigir crédito compartilhado `refunded` ou desfecho `failed` persistido da operação
 - **AND** SHALL NOT considerar o desfecho da identidade financeira do quadrado, sozinho, como prova de finalidade compartilhada
-- **AND** SHALL NOT estornar se a operação compartilhada ainda permitir nova aquisição
+- **AND** SHALL NOT estornar se a operação compartilhada ainda permitir nova aquisição, retornando/levantando `shared_operation_not_final`
 
 ### Requirement: Indeterminação não autoriza estorno nem repetição cega
 

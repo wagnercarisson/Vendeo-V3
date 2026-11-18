@@ -62,7 +62,7 @@ Após uma entrega confirmada, o sistema SHALL projetar a campanha de forma idemp
 #### Scenario: Projeção exige dois vínculos da mesma operação
 
 - **WHEN** a campanha possui vínculos de mais de uma operação, ou menos de dois vínculos coerentes da mesma operação
-- **THEN** a projeção SHALL falhar fechado sem atualizar `campaigns`
+- **THEN** a projeção SHALL falhar fechado sem atualizar `campaigns`, com `delivery_links_inconsistent`
 - **AND** SHALL NOT escolher uma operação arbitrária por `LIMIT 1`
 - **AND** SHALL NOT misturar formatos de operações diferentes
 
