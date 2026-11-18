@@ -245,6 +245,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "artifact_present",
       formats: ["9:16"],
       outcomeRecorded: false,
+      refunded: [],
     });
     expect(deps.recordOutcome).not.toHaveBeenCalled();
     expect(deps.refundFormat).not.toHaveBeenCalled();
@@ -379,6 +380,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "delivered_not_refundable",
       formats: ["1:1"],
       outcomeRecorded: true,
+      refunded: ["9:16"],
     });
     expect(deps.refundFormat).toHaveBeenCalledTimes(2);
   });
@@ -392,6 +394,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "artifact_present",
       formats: ["9:16", "1:1"],
       outcomeRecorded: true,
+      refunded: [],
     });
     expect(deps.refundFormat).toHaveBeenCalledTimes(1);
   });
@@ -404,6 +407,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
         code,
         formats: ["9:16", "1:1"],
         outcomeRecorded: true,
+        refunded: [],
       });
       expect(run.deps.refundFormat).toHaveBeenCalledTimes(1);
     }
@@ -420,6 +424,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
         code,
         formats: ["9:16", "1:1"],
         outcomeRecorded: true,
+        refunded: [],
       });
     }
   });
@@ -473,6 +478,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "delivered_not_refundable",
       formats: ["1:1"],
       outcomeRecorded: false,
+      refunded: [],
     });
     expect(delivered.deps.refundFormat).not.toHaveBeenCalled();
 
@@ -493,6 +499,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "delivery_link_missing",
       formats: ["1:1"],
       outcomeRecorded: false,
+      refunded: [],
     });
     expect(noLink.deps.recordOutcome).not.toHaveBeenCalled();
   });
@@ -506,6 +513,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "publication_in_progress",
       formats: ["9:16", "1:1"],
       outcomeRecorded: true,
+      refunded: [],
     });
     expect(deps.recordOutcome).toHaveBeenCalledTimes(1);
     expect(deps.recordFormatOutcome).toHaveBeenCalledTimes(1);
@@ -589,6 +597,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "delivered_not_refundable",
       formats: ["1:1"],
       outcomeRecorded: true,
+      refunded: ["9:16"],
     });
     expect(deps.recordFormatOutcome).toHaveBeenCalledTimes(1);
   });
@@ -605,20 +614,41 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "operation_identity_conflict",
       formats: ["9:16", "1:1"],
       outcomeRecorded: false,
+      refunded: [],
     });
     expect(deps.recordFormatOutcome).not.toHaveBeenCalled();
     expect(deps.refundFormat).not.toHaveBeenCalled();
   });
 
-  it("Teste 19: outcome do QUADRADO não confirmado ⇒ blocked sem refund", async () => {
+  it("Teste 19: outcome do QUADRADO reconhece os códigos do `AttemptStartError`", async () => {
+    for (const code of [
+      "operation_terminal",
+      "operation_identity_conflict",
+    ] as const) {
+      const run = makeDeps({
+        squareOutcomeThrows: attemptStartError(code),
+      });
+      expect(await finalizeJointFailure(input(), run.deps)).toEqual({
+        kind: "blocked",
+        code,
+        formats: ["9:16", "1:1"],
+        outcomeRecorded: false,
+        refunded: [],
+      });
+      expect(run.deps.refundFormat).not.toHaveBeenCalled();
+    }
+  });
+
+  it("Teste 19b: código desconhecido do `AttemptStartError` permanece `unknown`", async () => {
     const { deps } = makeDeps({
-      squareOutcomeThrows: attemptStartError("operation_terminal"),
+      squareOutcomeThrows: attemptStartError("attempt_claim_not_found"),
     });
     expect(await finalizeJointFailure(input(), deps)).toEqual({
       kind: "blocked",
       code: "unknown",
       formats: ["9:16", "1:1"],
       outcomeRecorded: false,
+      refunded: [],
     });
     expect(deps.refundFormat).not.toHaveBeenCalled();
   });
@@ -635,6 +665,7 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       code: "operation_identity_conflict",
       formats: ["9:16", "1:1"],
       outcomeRecorded: false,
+      refunded: [],
     });
     expect(deps.recordOutcome).toHaveBeenCalledTimes(1);
     expect(deps.refundFormat).not.toHaveBeenCalled();
@@ -659,5 +690,38 @@ describe("F60.7-06 — finalização D12 (falha, indeterminação, estorno parci
       expect(run.deps.recordOutcome).not.toHaveBeenCalled();
       expect(run.deps.refundFormat).not.toHaveBeenCalled();
     }
+  });
+
+  it("Teste 22: `unknown` com pendência após estorno do vertical ⇒ unknown, sem regravar outcome nem refund", async () => {
+    const { deps } = makeDeps({
+      read: readFound({
+        vertical: { state: "absent", creditRefunded: true },
+      }),
+    });
+    expect(
+      await finalizeJointFailure(input({ outcomeKind: "unknown" }), deps),
+    ).toEqual({ kind: "unknown", reason: "outcome_unknown" });
+    expect(deps.recordOutcome).not.toHaveBeenCalled();
+    expect(deps.refundFormat).not.toHaveBeenCalled();
+    expect(deps.recordFormatOutcome).not.toHaveBeenCalled();
+  });
+
+  it("Teste 23: `unknown` com TODOS os formatos do escopo estornados ⇒ refunded idempotente", async () => {
+    const { deps } = makeDeps({
+      read: readFound({
+        vertical: { state: "absent", creditRefunded: true },
+        square: { state: "absent", creditRefunded: true },
+      }),
+    });
+    expect(
+      await finalizeJointFailure(input({ outcomeKind: "unknown" }), deps),
+    ).toEqual({
+      kind: "refunded",
+      formats: ["1:1", "9:16"],
+      idempotent: true,
+      campaignStatus: null,
+    });
+    expect(deps.recordOutcome).not.toHaveBeenCalled();
+    expect(deps.refundFormat).not.toHaveBeenCalled();
   });
 });

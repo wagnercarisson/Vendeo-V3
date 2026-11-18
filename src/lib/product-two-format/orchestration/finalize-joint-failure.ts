@@ -114,6 +114,8 @@ export type JointFinalizeOutcome =
       readonly code: TwoFormatDeliveryErrorCode | CreditOperationErrorCode;
       readonly formats: readonly TwoFormatFormat[];
       readonly outcomeRecorded: boolean;
+      /** Estornos já efetivados, preservados mesmo quando o próximo é bloqueado. */
+      readonly refunded: readonly TwoFormatFormat[];
     }
   | { readonly kind: "unknown"; readonly reason: string };
 
@@ -144,10 +146,36 @@ function creditErrorCode(error: unknown): CreditOperationErrorCode | null {
   return typeof code === "string" ? (code as CreditOperationErrorCode) : null;
 }
 
+/**
+ * Códigos pertinentes do cliente de outcome do quadrado (`AttemptStartError`).
+ * Lista FECHADA: os demais continuam `unknown` (nunca são promovidos a sucesso).
+ */
+const ATTEMPT_START_OUTCOME_CODES: readonly (
+  | TwoFormatDeliveryErrorCode
+  | CreditOperationErrorCode
+)[] = ["operation_terminal", "operation_identity_conflict"];
+
+function attemptStartOutcomeCode(error: unknown): string | null {
+  if (!(error instanceof Error) || error.name !== "AttemptStartError") {
+    return null;
+  }
+  const code = (error as { readonly code?: unknown }).code;
+  if (typeof code !== "string") return null;
+  return ATTEMPT_START_OUTCOME_CODES.includes(
+    code as TwoFormatDeliveryErrorCode | CreditOperationErrorCode,
+  )
+    ? code
+    : null;
+}
+
 function errorCode(
   error: unknown,
 ): TwoFormatDeliveryErrorCode | CreditOperationErrorCode {
-  return twoFormatErrorCode(error) ?? creditErrorCode(error) ?? "unknown";
+  const known =
+    twoFormatErrorCode(error) ?? creditErrorCode(error) ?? attemptStartOutcomeCode(error);
+  return known === null
+    ? "unknown"
+    : (known as TwoFormatDeliveryErrorCode | CreditOperationErrorCode);
 }
 
 function durableStage(stage: JointFinalizeInput["stage"]): TwoStageStage {
@@ -173,8 +201,15 @@ function blockedByRefusal(
   code: TwoFormatDeliveryErrorCode | CreditOperationErrorCode,
   pending: readonly TwoFormatFormat[],
   outcomeRecorded: boolean,
+  refunded: readonly TwoFormatFormat[] = [],
 ): JointFinalizeOutcome {
-  return { kind: "blocked", code, formats: pending, outcomeRecorded };
+  return {
+    kind: "blocked",
+    code,
+    formats: pending,
+    outcomeRecorded,
+    refunded: sortFormats(refunded),
+  };
 }
 
 /**
@@ -226,6 +261,7 @@ export async function finalizeJointFailure(
         "delivered_not_refundable",
         [item.format],
         false,
+        alreadyRefundedFormats,
       );
     }
     if (item.view.state === "unknown" || item.view.state === "unavailable") {
@@ -236,7 +272,12 @@ export async function finalizeJointFailure(
       continue;
     }
     if (item.view.deliveryOperationId === null) {
-      return blockedByRefusal("delivery_link_missing", [item.format], false);
+      return blockedByRefusal(
+        "delivery_link_missing",
+        [item.format],
+        false,
+        alreadyRefundedFormats,
+      );
     }
     candidates.push({
       format: item.format,
@@ -247,7 +288,10 @@ export async function finalizeJointFailure(
 
   // ---- unknown: nenhum estorno, apenas finalidade indeterminada confirmada ----
   if (input.outcomeKind === "unknown") {
-    if (alreadyRefundedFormats.length > 0) {
+    const everyScopeFormatRefunded = inScope.every((item) =>
+      alreadyRefundedFormats.includes(item.format),
+    );
+    if (everyScopeFormatRefunded) {
       return {
         kind: "refunded",
         formats: sortFormats(alreadyRefundedFormats),
@@ -255,12 +299,18 @@ export async function finalizeJointFailure(
         campaignStatus: null,
       };
     }
+    if (alreadyRefundedFormats.length > 0) {
+      // Crédito compartilhado já terminal e ainda há formato pendente: não se
+      // regrava o outcome terminal nem se estorna; a pendência permanece unknown.
+      return { kind: "unknown", reason: "outcome_unknown" };
+    }
     const recorded = await recordControlOutcome(input, deps, "unknown");
     if (!recorded.ok) {
       return blockedByRefusal(
         recorded.code,
         candidates.map((candidate) => candidate.format),
         false,
+        alreadyRefundedFormats,
       );
     }
     return { kind: "unknown", reason: "outcome_unknown" };
@@ -280,6 +330,7 @@ export async function finalizeJointFailure(
         errorCode(error),
         candidates.map((item) => item.format),
         false,
+        alreadyRefundedFormats,
       );
     }
     const probe =
@@ -310,7 +361,12 @@ export async function finalizeJointFailure(
   if (verticalProbe !== undefined && verticalProbe.probe.kind === "integral") {
     if (input.stage === "base") {
       // Base comprovadamente ausente com vertical presente é incoerente.
-      return blockedByRefusal("artifact_present", ["9:16"], false);
+      return blockedByRefusal(
+        "artifact_present",
+        ["9:16"],
+        false,
+        alreadyRefundedFormats,
+      );
     }
     return {
       kind: "delivery_required",
@@ -334,6 +390,7 @@ export async function finalizeJointFailure(
         recorded.code,
         probed.map((item) => item.format),
         false,
+        alreadyRefundedFormats,
       );
     }
     return { kind: "unknown", reason: `probe_${indeterminate.probe.kind}` };
@@ -348,7 +405,12 @@ export async function finalizeJointFailure(
   if (controlNeeded) {
     const control = await recordControlOutcome(input, deps, "failed");
     if (!control.ok) {
-      return blockedByRefusal(control.code, pendingFormats, false);
+      return blockedByRefusal(
+        control.code,
+        pendingFormats,
+        false,
+        alreadyRefundedFormats,
+      );
     }
   }
 
@@ -362,7 +424,12 @@ export async function finalizeJointFailure(
         supportReference: input.supportReference ?? null,
       });
     } catch (error) {
-      return blockedByRefusal(errorCode(error), pendingFormats, false);
+      return blockedByRefusal(
+        errorCode(error),
+        pendingFormats,
+        false,
+        alreadyRefundedFormats,
+      );
     }
   }
   outcomeRecorded = controlNeeded || squareCandidate !== undefined;
@@ -398,12 +465,18 @@ export async function finalizeJointFailure(
           campaignStatus: null,
         };
       }
-      return blockedByRefusal(code, pending, outcomeRecorded);
+      return blockedByRefusal(code, pending, outcomeRecorded, refunded);
     }
 
     if (!result.success) {
       // Recusa de negócio (ex.: delivered_not_refundable) é terminal: sem retry.
-      return blockedByRefusal(result.reason, pending, outcomeRecorded);
+      // O progresso já efetivado é preservado na resposta.
+      return blockedByRefusal(
+        result.reason,
+        pending,
+        outcomeRecorded,
+        refunded,
+      );
     }
 
     refunded.push(candidate.format);
