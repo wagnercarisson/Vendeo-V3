@@ -163,6 +163,7 @@ export function createOfflineWorld() {
   const rows: Row[] = [];
   const rpcCounts: RpcCounts = {};
   const clockBase = Date.now();
+  let snapshotSeq = 0;
 
   const tableRows = (table: string) => rows.filter((row) => row.__table === table);
   const creditRow = (): CreditRow | null =>
@@ -463,45 +464,45 @@ export function createOfflineWorld() {
 
   /**
    * F60.7-05 — fronteira simulada da RPC atômica de snapshot+binding (F60.1).
-   * Usada APENAS pelo teste de reconstrução reparável; não implementa a
-   * evidência (essa é gravada pelo reparo real via client).
+   *
+   * Reproduz as verificações da RPC real
+   * (`20261009000003_f56_2b1b_frozen_evidence.sql`):
+   * - fingerprint obrigatório;
+   * - snapshot idempotente por `campaign_id` (ON CONFLICT DO NOTHING, nunca
+   *   alterado) e reuso SOMENTE sob equivalência de par/qualidade/versão/origem;
+   * - binding inserido com ON CONFLICT DO NOTHING (`snapshot_original_id` é PK e
+   *   `(campaign_id, operation_id)` é UNIQUE) e verificado por
+   *   snapshot+campanha+operação+fingerprint.
+   * Divergência em qualquer eixo ⇒ `operation_identity_conflict`, sem mutação:
+   * nenhuma linha existente é reescrita (o binding real é imutável por trigger).
    */
   function persistSnapshotWithBinding(params: Record<string, unknown>) {
     const campaignId = String(params.p_campaign_id);
     const operationId = String(params.p_operation_id);
-    const fingerprint = String(params.p_content_fingerprint);
+    const fingerprint = params.p_content_fingerprint;
+    if (typeof fingerprint !== "string" || fingerprint === "") {
+      throw new Error("content_fingerprint_required");
+    }
+
+    // 1. Snapshot idempotente por campanha: a linha existente NUNCA é alterada.
     const existingSnapshot = tableRows("image_generation_config_snapshots").find(
       (row) => row.campaign_id === campaignId,
     );
+    if (existingSnapshot && !snapshotConfigMatches(existingSnapshot, params)) {
+      // 2. Reuso só com par/qualidade/versão/origem equivalentes.
+      throw new Error("operation_identity_conflict");
+    }
     const snapshot =
-      existingSnapshot ??
-      (() => {
-        const created = {
-          __table: "image_generation_config_snapshots",
-          id: "7a8b9c0d-7a8b-4c0d-9e1f-7a8b9c0d1e2f",
-          campaign_id: campaignId,
-          primary_model: String(params.p_primary_model ?? "gpt-image-2.5-sunburst"),
-          primary_quality: String(params.p_primary_quality ?? "medium"),
-          fallback_model: String(params.p_fallback_model ?? "gpt-image-2"),
-          fallback_quality: String(params.p_fallback_quality ?? "low"),
-          config_version_id: String(params.p_config_version_id ?? "cfg-1"),
-          origin: String(params.p_origin ?? "selection"),
-          run_id: params.p_run_id ?? null,
-          trace_id: params.p_trace_id ?? null,
-          created_at: "2026-11-18T00:00:00.000Z",
-        };
-        rows.push(created);
-        return created;
-      })();
+      existingSnapshot ?? createSnapshotRow(campaignId, params);
 
-    const binding = tableRows("product_1_1_snapshot_content_binding").find(
+    // 3. Binding: ON CONFLICT DO NOTHING em `snapshot_original_id` (PK) e em
+    //    `(campaign_id, operation_id)` (UNIQUE).
+    const conflicts = tableRows("product_1_1_snapshot_content_binding").some(
       (row) =>
-        row.campaign_id === campaignId && row.operation_id === operationId,
+        row.snapshot_original_id === snapshot.id ||
+        (row.campaign_id === campaignId && row.operation_id === operationId),
     );
-    const reused = binding !== undefined;
-    if (binding) {
-      binding.content_fingerprint = fingerprint;
-    } else {
+    if (!conflicts) {
       rows.push({
         __table: "product_1_1_snapshot_content_binding",
         snapshot_original_id: snapshot.id,
@@ -510,11 +511,64 @@ export function createOfflineWorld() {
         content_fingerprint: fingerprint,
       });
     }
+
+    // 4. Equivalência do binding persistido (mesma snapshot, campanha, operação
+    //    e fingerprint). Divergência ⇒ conflito, sem reescrever o binding.
+    const equivalent = tableRows("product_1_1_snapshot_content_binding").some(
+      (row) =>
+        row.snapshot_original_id === snapshot.id &&
+        row.campaign_id === campaignId &&
+        row.operation_id === operationId &&
+        row.content_fingerprint === fingerprint,
+    );
+    if (!equivalent) throw new Error("operation_identity_conflict");
+
     return {
       snapshot_original_id: snapshot.id,
+      reused: conflicts,
       content_fingerprint: fingerprint,
-      reused,
     };
+  }
+
+  function snapshotConfigMatches(
+    row: Record<string, unknown>,
+    params: Record<string, unknown>,
+  ): boolean {
+    return (
+      row.primary_model === String(params.p_primary_model) &&
+      row.primary_quality === String(params.p_primary_quality) &&
+      row.fallback_model === String(params.p_fallback_model) &&
+      row.fallback_quality === String(params.p_fallback_quality) &&
+      row.config_version_id === String(params.p_config_version_id) &&
+      row.origin === String(params.p_origin)
+    );
+  }
+
+  function createSnapshotRow(
+    campaignId: string,
+    params: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const created = {
+      __table: "image_generation_config_snapshots",
+      id: nextSnapshotId(),
+      campaign_id: campaignId,
+      primary_model: String(params.p_primary_model),
+      primary_quality: String(params.p_primary_quality),
+      fallback_model: String(params.p_fallback_model),
+      fallback_quality: String(params.p_fallback_quality),
+      config_version_id: String(params.p_config_version_id),
+      origin: String(params.p_origin),
+      run_id: params.p_run_id ?? null,
+      trace_id: params.p_trace_id ?? null,
+      created_at: "2026-11-18T00:00:00.000Z",
+    };
+    rows.push(created);
+    return created;
+  }
+
+  function nextSnapshotId(): string {
+    snapshotSeq += 1;
+    return `7a8b9c0d-7a8b-4c0d-9e1f-${String(snapshotSeq).padStart(12, "0")}`;
   }
 
   function openOperation(params: Record<string, unknown>) {
