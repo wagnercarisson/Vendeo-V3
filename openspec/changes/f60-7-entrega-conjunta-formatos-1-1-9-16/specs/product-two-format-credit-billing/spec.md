@@ -64,6 +64,13 @@ A abertura da operação conjunta SHALL criar a operação de controle, o víncu
 - **AND** SHALL NOT depender do catálogo ou da configuração administrativa vigente
 - **AND** SHALL incluir a seleção congelada no envelope de resposta
 
+#### Scenario: Segunda operação conjunta na mesma campanha é recusada
+
+- **WHEN** uma abertura tenta criar uma operação conjunta diferente para uma campanha que já possui vínculos de outra operação
+- **THEN** o sistema SHALL retornar `operation_origin_conflict` antes de qualquer reserva
+- **AND** SHALL NOT criar vínculos, reservar crédito ou chamar provider
+- **AND** a projeção SHALL NOT misturar vínculos de operações diferentes
+
 ### Requirement: Confirmação financeira por formato entregue
 
 O consumo definitivo SHALL ser confirmado separadamente por formato. O quadrado SHALL ser confirmado quando sua arte canônica `square_original` estiver comprovadamente íntegra, imediatamente após a base e antes da preparação/expansão. O vertical SHALL ser confirmado somente quando o vertical final estiver comprovadamente íntegro. A confirmação de um formato SHALL NOT confirmar o outro.
@@ -114,6 +121,13 @@ Falha definitiva SHALL estornar somente o crédito do formato comprovadamente n�
 
 - **WHEN** o crédito de um formato está `delivered`
 - **THEN** qualquer pedido de estorno desse formato SHALL ser recusado
+
+#### Scenario: Estorno verifica a execução ativa da operação compartilhada
+
+- **WHEN** o estorno de qualquer formato é solicitado enquanto a operação conjunta tem tentativa `in_progress`
+- **THEN** o sistema SHALL recusar com `operation_in_progress` antes de encerrar o crédito
+- **AND** SHALL NOT estornar, projetar encerramento ou chamar a autoridade de falha
+- **AND** as verificações de ausência, finalidade e epoch da autoridade financeira SHALL permanecer
 
 ### Requirement: Indeterminação não autoriza estorno nem repetição cega
 

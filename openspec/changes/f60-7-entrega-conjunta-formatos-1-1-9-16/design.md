@@ -133,7 +133,7 @@ Nova RPC `product_two_format_open_delivery` (nome de trabalho), executada em uma
 5. chama `product_1_1_reserve_credit_operation` para o quadrado na mesma transação;
 6. devolve os dois IDs, a seleção congelada, o status e os steps.
 
-Reenvios equivalentes reutilizam os vínculos e as duas reservas, comparando a seleção recebida com modelo/qualidade/`configVersionId`/origem CONGELADOS na operação; seleção divergente retorna `operation_config_conflict` sem escrita/reserva e o replay não lê catálogo/configuração vigente. Operação de origem não conjunta retorna conflito de origem. Qualquer falha na segunda reserva aborta também a abertura vertical, sem estado parcial.
+Reenvios equivalentes reutilizam os vínculos e as duas reservas, comparando a seleção recebida com modelo/qualidade/`configVersionId`/origem CONGELADOS na operação; seleção divergente retorna `operation_config_conflict` sem escrita/reserva e o replay não lê catálogo/configuração vigente. Esta fatia admite **uma única operação conjunta por campanha**: antes de qualquer reserva, uma segunda operação (ou mistura de operações) já vinculada à campanha é recusada com `operation_origin_conflict`. Operação de origem não conjunta retorna conflito de origem. Qualquer falha na segunda reserva aborta também a abertura vertical, sem estado parcial.
 
 **Por quê:** cumpre “2 créditos” sem duas transações independentes e sem cobrança parcial silenciosa. Reutiliza a abertura v2 e a reserva existentes, sem modificar suas semânticas.
 
@@ -169,7 +169,7 @@ O quadrado segue o mesmo padrão com sua identidade financeira própria e a sond
 
 ### D10. Projeção da campanha é derivada, idempotente e não é a autoridade
 
-A projeção conjunta adquire primeiro o lock comum da campanha (`campaigns ... FOR UPDATE`), depois lê o vínculo das entregas, as linhas financeiras e as linhas de artefato, e só então atualiza `campaigns`. Entrega, estorno e reparo direto seguem a mesma ordem: campanha → vínculo/crédito → leitura/projeção. A projeção:
+A projeção conjunta adquire primeiro o lock comum da campanha (`campaigns ... FOR UPDATE`), depois exige **dois vínculos coerentes da mesma operação** (1:1 e 9:16) — sem seleção arbitrária por `LIMIT 1` e falhando fechado em mistura/incompletude — e só então lê as linhas financeiras/artefatos e atualiza `campaigns`. Entrega, estorno e reparo direto seguem a mesma ordem: campanha → vínculo/crédito → leitura/projeção. A projeção:
 
 - se o quadrado estiver `delivered` e o artefato `square_original` for compatível ⇒ `status = ready`, `storage_path = square_original.jpg`;
 - senão, se o vertical estiver `delivered` e o artefato `vertical` for compatível ⇒ `status = ready`, `storage_path = vertical.jpg`;
@@ -191,7 +191,7 @@ Novas RPCs (nomes de trabalho):
 - `product_two_format_refund_format`: executa o encerramento por falha comprovada do `delivery_operation_id` e re-projeta na mesma transação;
 - `product_two_format_project_campaign`: reparo idempotente da projeção, sem efeito financeiro.
 
-**Por quê:** fecha a janela entre confirmação financeira e projeção. Se a projeção falhar, a transação inteira não confirma a entrega; o retry reexecuta sem dupla cobrança. As RPCs existentes continuam intocadas. Entrega/estorno e o reparo direto adquirirem o lock da campanha ANTES dos locks de vínculo/crédito garante que duas projeções concorrentes não calculem estados diferentes nem permitam que uma gravação atrasada substitua a preferência quadrada.
+**Por quê:** fecha a janela entre confirmação financeira e projeção. Se a projeção falhar, a transação inteira não confirma a entrega; o retry reexecuta sem dupla cobrança. As RPCs existentes continuam intocadas. Entrega/estorno e o reparo direto adquirirem o lock da campanha ANTES dos locks de vínculo/crédito garante que duas projeções concorrentes não calculem estados diferentes nem permitam que uma gravação atrasada substitua a preferência quadrada. O estorno também verifica a execução ativa da operação conjunta (`product_9_16_two_stage_attempt_claims`) antes de chamar a autoridade de falha: a base compartilhada executa sob a identidade da operação, não sob a identidade financeira do quadrado, e as checagens existentes de ausência/finalidade/epoch permanecem.
 
 **Regra de chamada:** no caminho conjunto, a ordem é sempre **artefato canônico persistido e verificado → aquisição do token de publicação → RPC de confirmação + projeção**. O app NÃO chama `markArtUploaded`/`deliver` separadamente e NÃO reenvia nem duplica a imagem já persistida. `beginPublication` protege a publicação financeira do artefato existente; `mark_art_uploaded` é transição de estado, não upload. `mark_art_uploaded` + `deliver` + projeção são uma única transação na RPC de entrega por formato. O mesmo vale para o estorno por formato.
 

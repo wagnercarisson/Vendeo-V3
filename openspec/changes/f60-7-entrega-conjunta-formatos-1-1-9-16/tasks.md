@@ -9,11 +9,11 @@
 - [ ] 1.5 Auditar todos os consumidores de `resolveCampaignFormat` e `resolveCampaignGenerationOrigin` para tratar o novo caso sem fallback silencioso, garantindo que fluxos individuais, download, pendências e restauração continuem fail-closed apenas quando apropriado.
 - [ ] 1.6 Cobrir com testes puros: par conjunto válido, versão ausente/desconhecida, par incoerente, lista de formatos recusada, 1:1 sem chaves e 9:16 individual inalterado.
 - [ ] 1.7 Definir o modelo de vínculo entrega↔formato↔operação financeira: duas linhas por requisição conjunta, identidade financeira própria, papel do artefato e unicidade por campanha/operação/formato.
-- [ ] 1.8 Autorar a tabela forward-only, índices, FKs, RLS e grants exclusivos de leitura para `service_role`, sem backfill e sem alterar tabelas existentes além de referenciá-las.
-- [ ] 1.9 Autorar a RPC de abertura conjunta idempotente que valida o contrato persistido, compara a seleção recebida com a seleção congelada no replay, reutiliza a abertura v2, insere os dois vínculos e reserva os dois créditos na mesma transação.
+- [ ] 1.8 Autorar a tabela forward-only, índices, FKs, RLS e `REVOKE ALL` de `service_role` seguido de `GRANT SELECT`, sem backfill e sem alterar tabelas existentes além de referenciá-las.
+- [ ] 1.9 Autorar a RPC de abertura conjunta idempotente que valida o contrato persistido, impede uma segunda operação conjunta na mesma campanha antes de reservar, compara a seleção recebida com a seleção congelada no replay, reutiliza a abertura v2, insere os dois vínculos e reserva os dois créditos na mesma transação.
 - [ ] 1.10 Autorar a RPC de entrega por formato que valida vínculo/artefato, adquire o lock da campanha antes dos locks específicos, executa `mark_art_uploaded` + `deliver` da identidade correta e re-projeta a campanha na mesma transação.
-- [ ] 1.11 Autorar a RPC de estorno por formato que encerra somente a identidade comprovadamente não entregue, adquire o lock da campanha antes dos locks específicos e re-projeta sem rebaixar entrega existente.
-- [ ] 1.12 Autorar a RPC de projeção idempotente com lock comum da campanha, preferência quadrada, fallback vertical e preservação de `ready`.
+- [ ] 1.11 Autorar a RPC de estorno por formato que verifica a execução ativa da operação conjunta antes de encerrar somente a identidade comprovadamente não entregue, adquire o lock da campanha antes dos locks específicos e re-projeta sem rebaixar entrega existente.
+- [ ] 1.12 Autorar a RPC de projeção idempotente com lock comum da campanha, dois vínculos coerentes da mesma operação sem `LIMIT 1`, preferência quadrada, fallback vertical e preservação de `ready`.
 - [ ] 1.13 Conferir `amount = 1`, CHECKs, grants e semântica das RPCs existentes; documentar timestamp UTC real e checagem de unicidade do prefixo antes da criação da migration.
 - [ ] 1.14 Criar testes estáticos/contratuais do SQL e dos envelopes, sem executar migration, banco, Docker ou homolog.
 - [ ] 1.15 Implementar cliente server-only das novas RPCs com client injetável, validação fechada de envelope e erros tipados; não alterar os clientes existentes.

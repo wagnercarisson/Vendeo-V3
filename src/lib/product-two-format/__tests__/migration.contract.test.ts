@@ -258,13 +258,13 @@ describe("grupo 5 — RLS e grants somente leitura", () => {
       "REVOKE ALL ON TABLE public.product_two_format_deliveries FROM PUBLIC, anon, authenticated",
     );
     expect(SQL).toContain(
-      "REVOKE INSERT, UPDATE, DELETE ON TABLE public.product_two_format_deliveries FROM service_role",
+      "REVOKE ALL ON TABLE public.product_two_format_deliveries FROM service_role",
     );
     expect(SQL).toContain(
       "GRANT SELECT ON TABLE public.product_two_format_deliveries TO service_role",
     );
     expect(SQL).not.toMatch(
-      /GRANT\s+(INSERT|UPDATE|DELETE)[^;]*public\.product_two_format_deliveries/i,
+      /GRANT\s+(INSERT|UPDATE|DELETE|TRUNCATE|REFERENCES|TRIGGER)[^;]*public\.product_two_format_deliveries/i,
     );
   });
 });
@@ -290,6 +290,18 @@ describe("grupo 6 — abertura conjunta atômica e replay congelado", () => {
     expect(open).toContain("public.product_9_16_open_operation_v2(");
     expect(open).toContain("public.product_1_1_reserve_credit_operation(");
     expect(open).toContain(", 1,");
+  });
+
+  it("rejeita uma segunda operação conjunta na campanha antes de reservar", () => {
+    expect(open).toContain("COUNT(DISTINCT operation_id)");
+    expect(open).toContain("operation_origin_conflict");
+
+    const guard = open.indexOf("COUNT(DISTINCT operation_id)");
+    const reserve = open.indexOf("public.product_1_1_reserve_credit_operation(");
+    const openV2 = open.indexOf("public.product_9_16_open_operation_v2(");
+    expect(guard).toBeGreaterThan(-1);
+    expect(reserve).toBeGreaterThan(guard);
+    expect(openV2).toBeGreaterThan(guard);
   });
 
   it("insere exatamente os dois vínculos e não insere steps", () => {
@@ -367,6 +379,15 @@ describe("grupo 8 — estorno por formato com evidência de ausência", () => {
     );
   });
 
+  it("verifica a execução ativa da operação compartilhada antes do estorno", () => {
+    expect(refund).toContain("product_9_16_two_stage_attempt_claims");
+    expect(refund).toContain("operation_in_progress");
+    const check = refund.indexOf("product_9_16_two_stage_attempt_claims");
+    const close = refund.indexOf("product_1_1_close_failed_operation(");
+    expect(check).toBeGreaterThan(-1);
+    expect(close).toBeGreaterThan(check);
+  });
+
   it("nunca usa o atalho de estorno direto", () => {
     expect(RAW).not.toContain("product_1_1_refund_campaign_credit_operation");
     expect(refund).not.toContain("p_square_delivery_id");
@@ -381,6 +402,14 @@ describe("grupo 9 — projeção prefere o quadrado e preserva ready", () => {
     const firstVertical = project.indexOf("'vertical'");
     expect(firstSquare).toBeGreaterThan(-1);
     expect(firstVertical).toBeGreaterThan(firstSquare);
+  });
+
+  it("exige dois vínculos coerentes da mesma operação, sem LIMIT 1", () => {
+    expect(project).toContain("COUNT(DISTINCT operation_id)");
+    expect(project).toContain("delivery_links_inconsistent");
+    expect(project).toContain("v_link_count <> 2");
+    expect(project).not.toMatch(/ORDER BY\s+format\s+LIMIT\s+1/i);
+    expect(project).toContain("AND operation_id = v_operation_id");
   });
 
   it("usa mensagem segura e nunca entrega square_prepared", () => {
@@ -413,10 +442,11 @@ describe("grupo 9 — projeção prefere o quadrado e preserva ready", () => {
 
 describe("grupo 10 — preservação das autoridades existentes", () => {
   it("não contém DDL/DML destrutivo nem reescreve a tabela de crédito", () => {
-    expect(RAW).not.toMatch(/DROP\s+TABLE/i);
-    expect(RAW).not.toMatch(/TRUNCATE/i);
-    expect(RAW).not.toMatch(/DELETE\s+FROM/i);
-    expect(RAW).not.toMatch(
+    // Comentários podem citar TRUNCATE/REVOKE; o contrato vale para o SQL ativo.
+    expect(SQL).not.toMatch(/DROP\s+TABLE/i);
+    expect(SQL).not.toMatch(/TRUNCATE/i);
+    expect(SQL).not.toMatch(/DELETE\s+FROM/i);
+    expect(SQL).not.toMatch(
       /ALTER\s+TABLE\s+public\.product_1_1_campaign_credit_operations/i,
     );
   });

@@ -84,7 +84,9 @@ CREATE POLICY "Service role reads two format deliveries"
   USING (true);
 
 REVOKE ALL ON TABLE public.product_two_format_deliveries FROM PUBLIC, anon, authenticated;
-REVOKE INSERT, UPDATE, DELETE ON TABLE public.product_two_format_deliveries FROM service_role;
+-- Remove TODOS os privilégios de service_role (inclusive TRUNCATE/REFERENCES/
+-- TRIGGER, que podem vir de defaults) antes de conceder somente leitura.
+REVOKE ALL ON TABLE public.product_two_format_deliveries FROM service_role;
 GRANT SELECT ON TABLE public.product_two_format_deliveries TO service_role;
 
 -- =============================================================================
@@ -107,6 +109,8 @@ DECLARE
   v_storage_path          TEXT;
   v_error_message         TEXT;
   v_operation_id          UUID;
+  v_operation_count       INTEGER := 0;
+  v_link_count            INTEGER := 0;
   v_square_delivery_id    UUID;
   v_vertical_delivery_id  UUID;
   v_square_credit_status  TEXT;
@@ -138,22 +142,53 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'reason', 'campaign_not_found');
   END IF;
 
-  SELECT operation_id
-    INTO v_operation_id
+  -- A projeção só é válida quando a campanha tem UM ÚNICO conjunto coerente:
+  -- exatamente dois vínculos (1:1 e 9:16) da MESMA operação. Não há seleção
+  -- arbitrária por LIMIT 1; zero vínculos mantém a campanha como está, e
+  -- qualquer mistura/incompletude falha fechado.
+  SELECT COUNT(DISTINCT operation_id)
+    INTO v_operation_count
     FROM public.product_two_format_deliveries
-   WHERE campaign_id = p_campaign_id
-   ORDER BY format
-   LIMIT 1;
+   WHERE campaign_id = p_campaign_id;
 
-  SELECT delivery_operation_id
-    INTO v_square_delivery_id
-    FROM public.product_two_format_deliveries
-   WHERE campaign_id = p_campaign_id AND format = '1:1';
+  IF v_operation_count > 1 THEN
+    RAISE EXCEPTION 'delivery_links_inconsistent';
+  END IF;
 
-  SELECT delivery_operation_id
-    INTO v_vertical_delivery_id
-    FROM public.product_two_format_deliveries
-   WHERE campaign_id = p_campaign_id AND format = '9:16';
+  IF v_operation_count = 1 THEN
+    SELECT DISTINCT operation_id
+      INTO v_operation_id
+      FROM public.product_two_format_deliveries
+     WHERE campaign_id = p_campaign_id;
+
+    SELECT COUNT(*)
+      INTO v_link_count
+      FROM public.product_two_format_deliveries
+     WHERE campaign_id = p_campaign_id
+       AND operation_id = v_operation_id;
+
+    IF v_link_count <> 2 THEN
+      RAISE EXCEPTION 'delivery_links_inconsistent';
+    END IF;
+
+    SELECT delivery_operation_id
+      INTO v_square_delivery_id
+      FROM public.product_two_format_deliveries
+     WHERE campaign_id = p_campaign_id
+       AND operation_id = v_operation_id
+       AND format = '1:1';
+
+    SELECT delivery_operation_id
+      INTO v_vertical_delivery_id
+      FROM public.product_two_format_deliveries
+     WHERE campaign_id = p_campaign_id
+       AND operation_id = v_operation_id
+       AND format = '9:16';
+
+    IF v_square_delivery_id IS NULL OR v_vertical_delivery_id IS NULL THEN
+      RAISE EXCEPTION 'delivery_links_inconsistent';
+    END IF;
+  END IF;
 
   IF v_square_delivery_id IS NOT NULL THEN
     SELECT status
@@ -283,6 +318,7 @@ SET search_path = ''
 AS $$
 DECLARE
   v_input_snapshot         JSONB;
+  v_campaign_operation_count INTEGER := 0;
   v_link_11                UUID;
   v_link_916               UUID;
   v_contract_version       INTEGER;
@@ -333,6 +369,27 @@ BEGIN
   PERFORM pg_advisory_xact_lock(
     hashtext('p2f_open:' || p_campaign_id::text || ':' || p_operation_id::text)
   );
+
+  -- Esta fatia admite UMA única operação conjunta por campanha. Antes de
+  -- qualquer reserva, rejeita outra operação (ou mistura de operações) já
+  -- vinculada à mesma campanha; o replay da MESMA operação continua permitido.
+  SELECT COUNT(DISTINCT operation_id)
+    INTO v_campaign_operation_count
+    FROM public.product_two_format_deliveries
+   WHERE campaign_id = p_campaign_id;
+
+  IF v_campaign_operation_count > 1
+     OR (
+       v_campaign_operation_count = 1
+       AND NOT EXISTS (
+         SELECT 1
+           FROM public.product_two_format_deliveries
+          WHERE campaign_id = p_campaign_id
+            AND operation_id = p_operation_id
+       )
+     ) THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'operation_origin_conflict');
+  END IF;
 
   SELECT delivery_operation_id
     INTO v_link_11
@@ -666,6 +723,7 @@ DECLARE
   v_artifact_role         TEXT;
   v_credit_status         TEXT;
   v_artifact_exists       BOOLEAN := false;
+  v_shared_operation_active BOOLEAN := false;
   v_projection            JSONB;
 BEGIN
   IF p_store_id IS NULL THEN RAISE EXCEPTION 'missing_store_id'; END IF;
@@ -748,6 +806,22 @@ BEGIN
 
   IF v_credit_status NOT IN ('reserved', 'art_uploaded') THEN
     RETURN jsonb_build_object('success', false, 'reason', 'invalid_transition');
+  END IF;
+
+  -- A base compartilhada executa sob a identidade da operação conjunta, não
+  -- sob a identidade financeira do quadrado. Verificar também a execução ativa
+  -- da operação antes de qualquer estorno, preservando as checagens de
+  -- ausência/finalidade/epoch da autoridade financeira.
+  SELECT EXISTS (
+    SELECT 1
+      FROM public.product_9_16_two_stage_attempt_claims c
+     WHERE c.campaign_id = p_campaign_id
+       AND c.operation_id = p_operation_id
+       AND c.status = 'in_progress'
+  ) INTO v_shared_operation_active;
+
+  IF v_shared_operation_active THEN
+    RAISE EXCEPTION 'operation_in_progress';
   END IF;
 
   -- Evidência de ausência no banco: nenhuma linha de arte para o papel.

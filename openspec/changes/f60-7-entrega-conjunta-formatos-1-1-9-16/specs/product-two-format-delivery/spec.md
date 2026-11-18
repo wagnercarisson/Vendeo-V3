@@ -59,6 +59,13 @@ Após uma entrega confirmada, o sistema SHALL projetar a campanha de forma idemp
 - **AND** a projeção SHALL ler as duas entregas sob esse lock comum
 - **AND** uma gravação atrasada SHALL NOT substituir a preferência quadrada
 
+#### Scenario: Projeção exige dois vínculos da mesma operação
+
+- **WHEN** a campanha possui vínculos de mais de uma operação, ou menos de dois vínculos coerentes da mesma operação
+- **THEN** a projeção SHALL falhar fechado sem atualizar `campaigns`
+- **AND** SHALL NOT escolher uma operação arbitrária por `LIMIT 1`
+- **AND** SHALL NOT misturar formatos de operações diferentes
+
 ### Requirement: Estados parciais são explícitos e não ocultam o formato entregue
 
 O sistema SHALL representar cada formato como `delivered`, `processing`, `absent`, `unknown` ou `unavailable`. A campanha conjunta SHALL poder ser exibida com um formato entregue e o outro em processamento, ausente ou com crédito devolvido. A presença de formato faltante SHALL NOT ocultar, invalidar ou bloquear o acesso ao formato entregue. Formato ausente cujo crédito foi estornado SHALL informar o crédito devolvido quando essa confirmação existir.
