@@ -62,17 +62,23 @@ function creditError(code: string): Error {
 function fakeDeps(overrides: Record<string, unknown> = {}) {
   const order: string[] = [];
   const deps = {
-    probeSquareOriginal: vi.fn(async () => {
-      order.push("probe");
-      return {
-        kind: "integral" as const,
-        storagePath: PATH,
-        artifactId: "artifact",
-        width: 1024 as const,
-        height: 1024 as const,
-        mimeType: "image/jpeg" as const,
-      };
-    }),
+    probeSquareOriginal: vi.fn(
+      async (_input: {
+        storeId: string;
+        campaignId: string;
+        operationId: string;
+      }) => {
+        order.push("probe");
+        return {
+          kind: "integral" as const,
+          storagePath: PATH,
+          artifactId: "artifact",
+          width: 1024 as const,
+          height: 1024 as const,
+          mimeType: "image/jpeg" as const,
+        };
+      },
+    ),
     beginPublication: vi.fn(async () => {
       order.push("token");
       return { acquired: true, token: "token-1", publicationState: "in_flight" };

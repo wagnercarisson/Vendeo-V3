@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { readNineSixteenExpansionConfig } from "@/lib/ai/nine-sixteen-expansion-model-config-service";
+import type { ExpansionSelection } from "@/lib/ai/nine-sixteen-expansion-model-config";
 import {
   createDefaultThumbnailContext,
   type ThumbnailContext,
@@ -180,18 +181,22 @@ export function createJointDeps(
     preflight: Object.freeze({
       readConfiguration: () =>
         readNineSixteenExpansionConfig({ client }),
-      preflightSelection: (selection) =>
+      preflightSelection: (selection: ExpansionSelection) =>
         preflightExpansionToNineSixteen({ client }, selection),
     }),
     control: new ProductTwoStageOperationClient(client),
     base: (input: SquareBaseInput, deps: SquareBaseDeps = {}) =>
       runSquareBase(input, { ...deps, client }),
-    readFrozenState: (input, deps = {}) =>
-      readSquareBaseFrozenState(input, { ...deps, client }),
+    readFrozenState: (
+      input: Parameters<typeof readSquareBaseFrozenState>[0],
+      deps: Parameters<typeof readSquareBaseFrozenState>[1] = {},
+    ) => readSquareBaseFrozenState(input, { ...deps, client }),
     readInputBytes: (storagePath: string) =>
       downloadCampaignInputFileWithClient(client, storagePath),
-    repairEvidence: (input, deps = {}) =>
-      repairFrozenEvidence(input, { ...deps, client }),
+    repairEvidence: (
+      input: Parameters<typeof repairFrozenEvidence>[0],
+      deps: Parameters<typeof repairFrozenEvidence>[1] = {},
+    ) => repairFrozenEvidence(input, { ...deps, client }),
     probeSquare: new CompositionSquareOriginalProbe({ client }),
     probeVertical: new CompositionVerticalProbe({ client }),
     generateThumbnail,

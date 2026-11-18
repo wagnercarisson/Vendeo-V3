@@ -62,11 +62,18 @@ export interface JointSquareProbe {
   }): Promise<JointSquareProbeResult>;
 }
 
+export interface JointSquareProbeStorage {
+  readObjectInfo(
+    path: string,
+    bucket?: string,
+  ): Promise<Awaited<ReturnType<CompositionArtifactStorage["readObjectInfo"]>>>;
+}
+
 export interface JointSquareProbeDeps {
   readonly client?: SupabaseClient;
   readonly getRow?: typeof getArtifactByIdentity;
   readonly retrieve?: typeof retrieveCompositionArtifact;
-  readonly storage?: CompositionArtifactStorage;
+  readonly storage?: JointSquareProbeStorage;
 }
 
 function invalid(reason: string): JointSquareProbeResult {
@@ -77,7 +84,7 @@ export class CompositionSquareOriginalProbe implements JointSquareProbe {
   private readonly client: SupabaseClient;
   private readonly getRow: typeof getArtifactByIdentity;
   private readonly retrieve: typeof retrieveCompositionArtifact;
-  private readonly storage: CompositionArtifactStorage;
+  private readonly storage: JointSquareProbeStorage;
 
   constructor(deps: JointSquareProbeDeps = {}) {
     this.client = deps.client ?? supabaseAdmin;

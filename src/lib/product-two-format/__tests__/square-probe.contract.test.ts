@@ -7,13 +7,19 @@ import {
 } from "@/lib/campaign/composition-artifacts/evidence";
 import { computeChecksumSha256 } from "@/lib/campaign/composition-artifacts/integrity";
 import { compositionArtifactStoragePath } from "@/lib/campaign/composition-artifacts/artifact-path";
+import { getArtifactByIdentity } from "@/lib/campaign/composition-artifacts/repository";
+import { retrieveCompositionArtifact } from "@/lib/campaign/composition-artifacts/retrieve";
+import type { CompositionArtifactStorage } from "@/lib/campaign/composition-artifacts/storage";
 import type { ArtifactRecord } from "@/lib/campaign/composition-artifacts/types";
 import {
   SQUARE_BASE_ORIGIN,
   SQUARE_BASE_TARGET,
 } from "@/lib/campaign/square-base/policy";
 
-import { CompositionSquareOriginalProbe } from "../orchestration/square-probe";
+import {
+  CompositionSquareOriginalProbe,
+  type JointSquareProbeStorage,
+} from "../orchestration/square-probe";
 
 const { verifyCampaignAccessMock } = vi.hoisted(() => ({
   verifyCampaignAccessMock: vi.fn(),
@@ -79,22 +85,40 @@ function validMetadata(record: ArtifactRecord = artifact()) {
   return buildEvidenceMetadata(expected.evidence);
 }
 
-function fakeDeps(config: {
-  row?: unknown;
-  retrieve?: unknown;
-  info?: unknown;
-} = {}) {
-  return {
-    getRow: vi.fn(async () => config.row ?? { kind: "found", record: artifact() }),
-    retrieve: vi.fn(async () =>
+type RowResult = Awaited<ReturnType<typeof getArtifactByIdentity>>;
+type RetrieveResult = Awaited<ReturnType<typeof retrieveCompositionArtifact>>;
+type InfoResult = Awaited<
+  ReturnType<CompositionArtifactStorage["readObjectInfo"]>
+>;
+
+interface FakeConfig {
+  readonly row?: RowResult;
+  readonly retrieve?: RetrieveResult;
+  readonly info?: InfoResult;
+}
+
+function fakeDeps(config: FakeConfig = {}) {
+  const getRow = vi.fn(
+    async (
+      _identity: Parameters<typeof getArtifactByIdentity>[0],
+      _client?: Parameters<typeof getArtifactByIdentity>[1],
+    ): Promise<RowResult> =>
+      config.row ?? { kind: "found", record: artifact() },
+  );
+  const retrieve = vi.fn(
+    async (
+      _input: Parameters<typeof retrieveCompositionArtifact>[0],
+      _deps?: Parameters<typeof retrieveCompositionArtifact>[1],
+    ): Promise<RetrieveResult> =>
       config.retrieve ?? { kind: "integral", artifact: artifact(), bytes: BYTES },
-    ),
-    storage: {
-      readObjectInfo: vi.fn(async () =>
+  );
+  const storage: JointSquareProbeStorage = {
+    readObjectInfo: vi.fn(
+      async (_path: string, _bucket?: string): Promise<InfoResult> =>
         config.info ?? { kind: "found", metadata: validMetadata() },
-      ),
-    } as never,
+    ),
   };
+  return { getRow, retrieve, storage };
 }
 
 describe("sonda de composição do square_original", () => {
@@ -102,7 +126,6 @@ describe("sonda de composição do square_original", () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
     const deps = fakeDeps();
     const probe = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...deps,
     });
 
@@ -128,7 +151,6 @@ describe("sonda de composição do square_original", () => {
   it("Teste 2: sem linha e sem objeto ⇒ absent", async () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
     const probe = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ row: { kind: "absent" }, info: { kind: "absent" } }),
     });
     expect(
@@ -139,7 +161,6 @@ describe("sonda de composição do square_original", () => {
   it("Teste 3: objeto presente sem linha ⇒ invalid", async () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
     const probe = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ row: { kind: "absent" }, info: { kind: "found", metadata: {} } }),
     });
     expect(
@@ -150,8 +171,8 @@ describe("sonda de composição do square_original", () => {
   it("Teste 4: linha incompatível (papel/formato/dimensão/MIME/origem/proveniência) ⇒ invalid", async () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
     const cases: ArtifactRecord[] = [
-      artifact({ role: "square_prepared" as never }),
-      artifact({ format: "9:16" as never }),
+      artifact({ role: "square_prepared" }),
+      artifact({ format: "9:16" }),
       artifact({ width: 1152 }),
       artifact({ height: 1152 }),
       artifact({ mimeType: "image/png" }),
@@ -162,7 +183,6 @@ describe("sonda de composição do square_original", () => {
     ];
     for (const record of cases) {
       const probe = new CompositionSquareOriginalProbe({
-        client: {} as never,
         ...fakeDeps({
           row: { kind: "found", record },
           retrieve: { kind: "integral", artifact: record, bytes: BYTES },
@@ -180,8 +200,13 @@ describe("sonda de composição do square_original", () => {
   it("Teste 5: retrieve com metadata_conflict ⇒ invalid", async () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
     const probe = new CompositionSquareOriginalProbe({
-      client: {} as never,
-      ...fakeDeps({ retrieve: { kind: "metadata_conflict" } }),
+      ...fakeDeps({
+        retrieve: {
+          kind: "metadata_conflict",
+          artifact: artifact(),
+          reason: "checksum_mismatch",
+        },
+      }),
     });
     expect(
       await probe.probeSquareOriginal({ storeId: STORE, campaignId: CAMPAIGN, operationId: OPERATION }),
@@ -191,15 +216,13 @@ describe("sonda de composição do square_original", () => {
   it("Teste 6: falha de leitura em qualquer etapa ⇒ indeterminate", async () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
     const rowFailure = new CompositionSquareOriginalProbe({
-      client: {} as never,
-      ...fakeDeps({ row: { kind: "read_failed" } }),
+      ...fakeDeps({ row: { kind: "read_failed", message: "timeout" } }),
     });
     expect(
       await rowFailure.probeSquareOriginal({ storeId: STORE, campaignId: CAMPAIGN, operationId: OPERATION }),
     ).toEqual({ kind: "indeterminate" });
 
     const retrieveFailure = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ retrieve: { kind: "indeterminate" } }),
     });
     expect(
@@ -207,7 +230,6 @@ describe("sonda de composição do square_original", () => {
     ).toEqual({ kind: "indeterminate" });
 
     const infoFailure = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ info: { kind: "indeterminate" } }),
     });
     expect(
@@ -218,7 +240,6 @@ describe("sonda de composição do square_original", () => {
   it("Teste 7: square_prepared nunca é integral", async () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
     const absent = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ row: { kind: "absent" }, info: { kind: "absent" } }),
     });
     expect(
@@ -226,7 +247,6 @@ describe("sonda de composição do square_original", () => {
     ).toEqual({ kind: "absent" });
 
     const orphan = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ row: { kind: "absent" }, info: { kind: "found", metadata: {} } }),
     });
     expect(
@@ -237,7 +257,6 @@ describe("sonda de composição do square_original", () => {
   it("Teste 8: presença de objeto não é prova; linha sem objeto não é integral", async () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
     const withoutObject = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ retrieve: { kind: "absent" } }),
     });
     expect(
@@ -248,7 +267,7 @@ describe("sonda de composição do square_original", () => {
   it("Teste 9: vínculo campanha→loja falha ⇒ indeterminate", async () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: false, reason: "not_found" });
     const deps = fakeDeps();
-    const probe = new CompositionSquareOriginalProbe({ client: {} as never, ...deps });
+    const probe = new CompositionSquareOriginalProbe({ ...deps });
     expect(
       await probe.probeSquareOriginal({ storeId: STORE, campaignId: CAMPAIGN, operationId: OPERATION }),
     ).toEqual({ kind: "indeterminate" });
@@ -259,7 +278,6 @@ describe("sonda de composição do square_original", () => {
     verifyCampaignAccessMock.mockResolvedValue({ ok: true });
 
     const missing = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ info: { kind: "found", metadata: {} } }),
     });
     expect(
@@ -282,7 +300,6 @@ describe("sonda de composição do square_original", () => {
     });
     if (!tamperedEvidence.ok) throw new Error("fixture evidence failed");
     const tampered = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({
         info: {
           kind: "found",
@@ -295,7 +312,6 @@ describe("sonda de composição do square_original", () => {
     ).toEqual({ kind: "invalid", reason: "object_unverified" });
 
     const missingObject = new CompositionSquareOriginalProbe({
-      client: {} as never,
       ...fakeDeps({ info: { kind: "absent" } }),
     });
     expect(

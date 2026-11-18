@@ -437,6 +437,8 @@ export function createOfflineWorld() {
         return getCredit();
       case "product_1_1_get_publication_epoch":
         return creditRow()?.state_epoch ?? null;
+      case "product_1_1_persist_snapshot_with_binding":
+        return persistSnapshotWithBinding(params);
       case "product_1_1_close_failed_operation":
         return closeFailed(params);
       case "product_1_1_acquire_copy_attempt":
@@ -457,6 +459,62 @@ export function createOfflineWorld() {
       attempts_used: row.attempts_used,
       failure_class: row.failure_class,
     }));
+  }
+
+  /**
+   * F60.7-05 — fronteira simulada da RPC atômica de snapshot+binding (F60.1).
+   * Usada APENAS pelo teste de reconstrução reparável; não implementa a
+   * evidência (essa é gravada pelo reparo real via client).
+   */
+  function persistSnapshotWithBinding(params: Record<string, unknown>) {
+    const campaignId = String(params.p_campaign_id);
+    const operationId = String(params.p_operation_id);
+    const fingerprint = String(params.p_content_fingerprint);
+    const existingSnapshot = tableRows("image_generation_config_snapshots").find(
+      (row) => row.campaign_id === campaignId,
+    );
+    const snapshot =
+      existingSnapshot ??
+      (() => {
+        const created = {
+          __table: "image_generation_config_snapshots",
+          id: "7a8b9c0d-7a8b-4c0d-9e1f-7a8b9c0d1e2f",
+          campaign_id: campaignId,
+          primary_model: String(params.p_primary_model ?? "gpt-image-2.5-sunburst"),
+          primary_quality: String(params.p_primary_quality ?? "medium"),
+          fallback_model: String(params.p_fallback_model ?? "gpt-image-2"),
+          fallback_quality: String(params.p_fallback_quality ?? "low"),
+          config_version_id: String(params.p_config_version_id ?? "cfg-1"),
+          origin: String(params.p_origin ?? "selection"),
+          run_id: params.p_run_id ?? null,
+          trace_id: params.p_trace_id ?? null,
+          created_at: "2026-11-18T00:00:00.000Z",
+        };
+        rows.push(created);
+        return created;
+      })();
+
+    const binding = tableRows("product_1_1_snapshot_content_binding").find(
+      (row) =>
+        row.campaign_id === campaignId && row.operation_id === operationId,
+    );
+    const reused = binding !== undefined;
+    if (binding) {
+      binding.content_fingerprint = fingerprint;
+    } else {
+      rows.push({
+        __table: "product_1_1_snapshot_content_binding",
+        snapshot_original_id: snapshot.id,
+        campaign_id: campaignId,
+        operation_id: operationId,
+        content_fingerprint: fingerprint,
+      });
+    }
+    return {
+      snapshot_original_id: snapshot.id,
+      content_fingerprint: fingerprint,
+      reused,
+    };
   }
 
   function openOperation(params: Record<string, unknown>) {

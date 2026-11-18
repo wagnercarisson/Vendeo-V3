@@ -29,7 +29,7 @@ export type JointBaseOutcome =
   | {
       readonly kind: "processing";
       readonly state: string;
-      readonly nextStep: string;
+      readonly nextStep: string | null;
       readonly canContinue: boolean;
     }
   | { readonly kind: "skipped" };
