@@ -111,14 +111,14 @@ describe("preflight conjunto — seleção administrativa", () => {
         ok: false,
         failure: "pricing_unavailable",
         reason: "incomplete_coverage",
-        missing: ["image_unit_usd"],
+        missing: ["imageTokenUsdPer1M"],
       },
     );
     expect(await preflightJointSelection(deps)).toEqual({
       ok: false,
       kind: "invalid",
       reason: "incomplete_coverage",
-      missing: ["image_unit_usd"],
+      missing: ["imageTokenUsdPer1M"],
     });
   });
 
