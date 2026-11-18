@@ -195,6 +195,8 @@ Novas RPCs (nomes de trabalho):
 
 **Regra de chamada:** no caminho conjunto, a ordem é sempre **artefato canônico persistido e verificado → aquisição do token de publicação → RPC de confirmação + projeção**. O app NÃO chama `markArtUploaded`/`deliver` separadamente e NÃO reenvia nem duplica a imagem já persistida. `beginPublication` protege a publicação financeira do artefato existente; `mark_art_uploaded` é transição de estado, não upload. `mark_art_uploaded` + `deliver` + projeção são uma única transação na RPC de entrega por formato. O mesmo vale para o estorno por formato.
 
+**Desfecho durável do quadrado antes do estorno:** a autoridade de fechamento exige um desfecho `failed` para a MESMA identidade financeira. O contrato já prevê que o orquestrador grave esse desfecho pela RPC existente `product_1_1_record_generation_outcome` antes de solicitar o estorno do quadrado; a view de outcomes o encontra porque o `squareDeliveryId` não possui operação de duas etapas. B implementa esse handoff, não cria migration. `unknown` persistido é imutável e bloqueia o estorno. Se o desfecho for gravado e o estorno falhar, o retry é idempotente; se um dos dois estornos da falha de base falhar, o resultado é parcial e retomável. O app não promete detectar antecipadamente toda corrida: a autoridade SQL revalida sob trava e, se uma entrega vencer, `delivered_not_refundable` prevalece sem segundo efeito.
+
 ### D12. Semântica de falha e estorno parcial
 
 | Situação | Quadrado | Vertical | Efeito |
@@ -208,6 +210,8 @@ Novas RPCs (nomes de trabalho):
 | Vertical íntegro, mas confirmação falha | entregue | artefato presente | nenhum estorno; recuperação entrega o vertical existente |
 | Ambos entregues | entregue | entregue | replay apenas repara projeção/miniatura |
 | Vertical já estornado | entregue | ausente | não reabre; sem nova cobrança; informa crédito devolvido |
+
+**Janelas de falha:** entre o desfecho `failed` e o estorno, e entre os dois estornos da falha de base, o estado permanece seguro e retomável; a ordem da base é vertical→quadrado, e uma falha parcial não projeta `error`. A revalidação SQL decide a corrida com entrega (`delivered_not_refundable`); não há promessa de detecção antecipada.
 
 **Por quê:** “devolver somente o crédito do formato comprovadamente não entregue” e “indeterminado não autoriza estorno presumido”. A prova de ausência/integridade vem de sonda server-side, nunca do cliente.
 

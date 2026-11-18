@@ -138,6 +138,34 @@ Falha definitiva SHALL estornar somente o crédito do formato comprovadamente n�
 - **AND** SHALL NOT considerar o desfecho da identidade financeira do quadrado, sozinho, como prova de finalidade compartilhada
 - **AND** SHALL NOT estornar se a operação compartilhada ainda permitir nova aquisição, retornando/levantando `shared_operation_not_final`
 
+#### Scenario: Estorno do quadrado grava o desfecho da própria identidade
+
+- **WHEN** o estorno do formato quadrado é solicitado com ausência comprovada, sem claim ativo, publicação inativa e epoch fresco
+- **THEN** o sistema SHALL gravar o desfecho `failed` da identidade financeira do quadrado pela RPC existente de outcome, antes do estorno
+- **AND** o desfecho SHALL ser visível à autoridade de fechamento pela view de outcomes
+- **AND** `unknown` persistido SHALL NOT ser sobrescrito; o estorno SHALL ser recusado
+- **AND** a solução SHALL NOT exigir migration nova
+
+#### Scenario: Falha entre desfecho e estorno é retomável
+
+- **WHEN** o desfecho `failed` do quadrado foi gravado e o estorno é recusado por publicação, epoch ou evidência
+- **THEN** o estado SHALL permanecer seguro, sem cobrança dupla e com o desfecho durável
+- **AND** o retry SHALL ser idempotente e só estornar após nova revalidação
+
+#### Scenario: Falha entre os dois estornos é parcial e retomável
+
+- **WHEN** a base falha definitivamente e, após o estorno do vertical, o estorno do quadrado é recusado
+- **THEN** o resultado SHALL ser parcial, com o vertical estornado e o quadrado pendente
+- **AND** a campanha SHALL NOT ser projetada como `error`
+- **AND** o retry SHALL estornar somente o formato pendente, sem tocar o já estornado
+
+#### Scenario: Corrida com entrega não é detectada antecipadamente
+
+- **WHEN** uma entrega concorrente vence entre o desfecho `failed` e o estorno
+- **THEN** a autoridade SQL SHALL recusar o estorno com `delivered_not_refundable`
+- **AND** o estado terminal `delivered` SHALL prevalecer, sem segundo efeito
+- **AND** o sistema SHALL NOT prometer detecção antecipada de toda condição concorrente
+
 ### Requirement: Indeterminação não autoriza estorno nem repetição cega
 
 Quando o resultado de uma etapa ou de uma confirmação for desconhecido, o sistema SHALL NOT estornar automaticamente e SHALL NOT iniciar nova tentativa paga. O crédito do formato indeterminado SHALL permanecer reservado até resolução segura. Se o outro formato já estiver entregue, ele SHALL permanecer visível e baixável.
@@ -222,6 +250,13 @@ O caminho administrativo SHALL reconhecer as duas entregas da campanha conjunta 
 - **THEN** o artefato daquele formato SHALL estar íntegro
 - **AND** a projeção SHALL usar o caminho validado
 - **AND** a decisão SHALL ser auditada
+
+#### Scenario: Estorno administrativo do quadrado usa o mesmo handoff
+
+- **WHEN** um administrador decide estornar a entrega quadrada com ausência comprovada
+- **THEN** o sistema SHALL gravar o desfecho `failed` do `squareDeliveryId` antes do estorno
+- **AND** SHALL recusar se houver `unknown` persistido, publicação ativa, claim ativo ou arte presente
+- **AND** a decisão SHALL ser auditada somente após o sucesso
 
 #### Scenario: Indeterminação não permite estorno presumido
 
