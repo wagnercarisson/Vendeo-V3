@@ -35,6 +35,7 @@ export interface JointProjectionRepairDeps {
     readonly campaignId: string;
     readonly role: "square_original" | "vertical";
   }) => Promise<boolean>;
+  /** Contrato real: `{status:"created"|"already_exists"|"skipped"|"failed"}`. */
   readonly generateThumbnail: (input: {
     readonly storeId: string;
     readonly campaignId: string;
@@ -64,11 +65,16 @@ function twoFormatErrorCode(error: unknown): TwoFormatDeliveryErrorCode | null {
   return typeof code === "string" ? (code as TwoFormatDeliveryErrorCode) : null;
 }
 
-function thumbnailFailed(result: unknown): boolean {
+/**
+ * Contrato real do gerador: `{status:"created"|"already_exists"|"skipped"|"failed"}`.
+ * Só `created` é uma NOVA geração. Resposta ausente/malformada nunca é
+ * presumida como sucesso.
+ */
+function thumbnailCreated(result: unknown): boolean {
   return (
     typeof result === "object" &&
     result !== null &&
-    (result as { readonly status?: unknown }).status === "failed"
+    (result as { readonly status?: unknown }).status === "created"
   );
 }
 
@@ -104,12 +110,12 @@ export async function repairJointProjection(
     if (item.view.state !== "delivered" || item.view.artifactPath === null) {
       continue;
     }
-    const exists = await deps.thumbnailExists({
-      campaignId: input.campaignId,
-      role: item.role,
-    });
-    if (exists) continue;
     try {
+      const exists = await deps.thumbnailExists({
+        campaignId: input.campaignId,
+        role: item.role,
+      });
+      if (exists) continue;
       const generated = await deps.generateThumbnail({
         storeId: input.storeId,
         campaignId: input.campaignId,
@@ -117,9 +123,12 @@ export async function repairJointProjection(
         role: item.role,
         storagePath: item.view.artifactPath,
       });
-      if (!thumbnailFailed(generated)) thumbnails.push(item.format);
+      // Só geração explicitamente confirmada entra na lista; `already_exists`,
+      // `skipped`, `failed`, ausente ou malformada não são nova geração.
+      if (thumbnailCreated(generated)) thumbnails.push(item.format);
     } catch {
-      // Best-effort: falha de miniatura não rebaixa a projeção.
+      // Best-effort POR FORMATO: falha de consulta/geração não rebaixa a
+      // projeção já concluída e não impede o outro formato.
     }
   }
 

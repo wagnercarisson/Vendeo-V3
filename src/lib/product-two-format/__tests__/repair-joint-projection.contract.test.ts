@@ -87,6 +87,7 @@ interface DepsConfig {
   }) => boolean;
   readonly thumbnailThrows?: Error;
   readonly thumbnailResult?: unknown;
+  readonly useThumbnailResult?: boolean;
 }
 
 function makeDeps(config: DepsConfig = {}) {
@@ -108,7 +109,13 @@ function makeDeps(config: DepsConfig = {}) {
     generateThumbnail: vi.fn(async (input) => {
       order.push(`thumbnail:${input.role}`);
       if (config.thumbnailThrows !== undefined) throw config.thumbnailThrows;
-      return config.thumbnailResult ?? { status: "generated" };
+      if (config.useThumbnailResult === true) return config.thumbnailResult;
+      return {
+        status: "created",
+        thumbnailPath: `${CAMPAIGN}-thumb.jpg`,
+        width: 640,
+        height: 360,
+      };
     }),
   };
   return { deps, order };
@@ -204,18 +211,23 @@ describe("F60.7-07 — reparo idempotente de projeção e miniatura", () => {
       thumbnails: [],
     });
 
-    const failed = makeDeps({ thumbnailResult: { status: "failed" } });
-    expect(
-      await repairJointProjection(
-        { storeId: STORE, campaignId: CAMPAIGN, operationId: OPERATION },
-        failed.deps,
-      ),
-    ).toEqual({
-      kind: "repaired",
-      projected: true,
-      alreadyProjected: false,
-      thumbnails: [],
-    });
+    for (const status of ["failed", "skipped"] as const) {
+      const notCreated = makeDeps({
+        thumbnailResult: { status },
+        useThumbnailResult: true,
+      });
+      expect(
+        await repairJointProjection(
+          { storeId: STORE, campaignId: CAMPAIGN, operationId: OPERATION },
+          notCreated.deps,
+        ),
+      ).toEqual({
+        kind: "repaired",
+        projected: true,
+        alreadyProjected: false,
+        thumbnails: [],
+      });
+    }
   });
 
   it("Teste 6: campaign_not_found ⇒ projection_failed sem efeitos", async () => {
@@ -268,7 +280,7 @@ describe("F60.7-07 — reparo idempotente de projeção e miniatura", () => {
       thumbnailExists: vi.fn(async () => generated),
       generateThumbnail: vi.fn(async () => {
         generated = true;
-        return { status: "generated" };
+        return { status: "created", thumbnailPath: "t.jpg", width: 640, height: 360 };
       }),
     };
     await repairJointProjection(
@@ -281,5 +293,54 @@ describe("F60.7-07 — reparo idempotente de projeção e miniatura", () => {
     );
     expect(deps.projectCampaign).toHaveBeenCalledTimes(2);
     expect(deps.generateThumbnail).toHaveBeenCalledTimes(1);
+  });
+
+  it("Teste 10: exceção em thumbnailExists não rejeita e preserva o outro formato", async () => {
+    const { deps } = makeDeps({
+      exists: (item) => {
+        if (item.role === "square_original") throw new Error("storage");
+        return false;
+      },
+    });
+    const outcome = await repairJointProjection(
+      { storeId: STORE, campaignId: CAMPAIGN, operationId: OPERATION },
+      deps,
+    );
+    expect(outcome).toEqual({
+      kind: "repaired",
+      projected: true,
+      alreadyProjected: false,
+      thumbnails: ["9:16"],
+    });
+    expect(deps.generateThumbnail).toHaveBeenCalledTimes(1);
+    expect(deps.generateThumbnail).toHaveBeenCalledWith(
+      expect.objectContaining({ role: "vertical" }),
+    );
+  });
+
+  it("Teste 11: contrato real do gerador — só `created` é nova geração", async () => {
+    for (const thumbnailResult of [
+      { status: "already_exists", thumbnailPath: "t.jpg" },
+      { status: "skipped", reason: "upstream_failed" },
+      { status: "failed", reason: "thumbnail_generation_failed" },
+      {},
+      undefined,
+    ]) {
+      const run = makeDeps({
+        thumbnailResult,
+        useThumbnailResult: true,
+      });
+      expect(
+        await repairJointProjection(
+          { storeId: STORE, campaignId: CAMPAIGN, operationId: OPERATION },
+          run.deps,
+        ),
+      ).toEqual({
+        kind: "repaired",
+        projected: true,
+        alreadyProjected: false,
+        thumbnails: [],
+      });
+    }
   });
 });
