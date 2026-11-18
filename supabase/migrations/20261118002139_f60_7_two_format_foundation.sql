@@ -722,8 +722,10 @@ DECLARE
   v_delivery_operation_id UUID;
   v_artifact_role         TEXT;
   v_credit_status         TEXT;
+  v_shared_credit_status  TEXT;
   v_artifact_exists       BOOLEAN := false;
   v_shared_operation_active BOOLEAN := false;
+  v_shared_finality       BOOLEAN := false;
   v_projection            JSONB;
 BEGIN
   IF p_store_id IS NULL THEN RAISE EXCEPTION 'missing_store_id'; END IF;
@@ -770,14 +772,36 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'reason', 'delivery_link_missing');
   END IF;
 
+  -- Trava a MESMA autoridade financeira que `product_9_16_acquire_step`
+  -- trava antes de iniciar qualquer etapa: a linha de crédito da operação
+  -- conjunta (`p_operation_id`, isto é, o crédito vertical). A checagem de
+  -- claims/finalidade só é segura sob essa trava; o crédito do quadrado é uma
+  -- linha distinta e não substitui essa serialização.
   SELECT status
-    INTO v_credit_status
+    INTO v_shared_credit_status
     FROM public.product_1_1_campaign_credit_operations
-   WHERE campaign_id = p_campaign_id AND operation_id = v_delivery_operation_id
+   WHERE campaign_id = p_campaign_id AND operation_id = p_operation_id
    FOR UPDATE;
 
   IF NOT FOUND THEN
     RETURN jsonb_build_object('success', false, 'reason', 'credit_operation_missing');
+  END IF;
+
+  IF v_delivery_operation_id IS NOT DISTINCT FROM p_operation_id THEN
+    -- Vertical: a identidade financeira da entrega É a operação compartilhada.
+    v_credit_status := v_shared_credit_status;
+  ELSE
+    -- Quadrado: linha financeira própria, travada DEPOIS da operação
+    -- compartilhada para manter a ordem campanha → vínculo → operação → quadrado.
+    SELECT status
+      INTO v_credit_status
+      FROM public.product_1_1_campaign_credit_operations
+     WHERE campaign_id = p_campaign_id AND operation_id = v_delivery_operation_id
+     FOR UPDATE;
+
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('success', false, 'reason', 'credit_operation_missing');
+    END IF;
   END IF;
 
   IF v_credit_status = 'delivered' THEN
@@ -822,6 +846,27 @@ BEGIN
 
   IF v_shared_operation_active THEN
     RAISE EXCEPTION 'operation_in_progress';
+  END IF;
+
+  -- Finalidade durável da operação compartilhada, sob a MESMA trava de
+  -- `product_9_16_acquire_step`: crédito compartilhado já terminal (`refunded`)
+  -- ou desfecho `failed` persistido em `product_9_16_two_stage_outcomes`.
+  -- O desfecho da identidade financeira do quadrado, sozinho, não impede uma
+  -- nova aquisição da base compartilhada e, portanto, não basta.
+  IF v_shared_credit_status = 'refunded' THEN
+    v_shared_finality := true;
+  ELSE
+    SELECT EXISTS (
+      SELECT 1
+        FROM public.product_9_16_two_stage_outcomes o
+       WHERE o.campaign_id = p_campaign_id
+         AND o.operation_id = p_operation_id
+         AND o.outcome = 'failed'
+    ) INTO v_shared_finality;
+  END IF;
+
+  IF NOT v_shared_finality THEN
+    RAISE EXCEPTION 'shared_operation_not_final';
   END IF;
 
   -- Evidência de ausência no banco: nenhuma linha de arte para o papel.

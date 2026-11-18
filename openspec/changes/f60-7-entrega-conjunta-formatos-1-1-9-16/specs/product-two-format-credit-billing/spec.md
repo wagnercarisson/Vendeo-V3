@@ -129,6 +129,15 @@ Falha definitiva SHALL estornar somente o crédito do formato comprovadamente n�
 - **AND** SHALL NOT estornar, projetar encerramento ou chamar a autoridade de falha
 - **AND** as verificações de ausência, finalidade e epoch da autoridade financeira SHALL permanecer
 
+#### Scenario: Estorno serializa com a aquisição compartilhada e exige finalidade durável
+
+- **WHEN** o estorno do quadrado é solicitado concorrentemente com uma aquisição da base compartilhada
+- **THEN** o estorno SHALL travar a mesma linha financeira da operação conjunta que a aquisição trava
+- **AND** SHALL verificar claims e finalidade sob essa trava, antes de qualquer efeito
+- **AND** SHALL exigir crédito compartilhado `refunded` ou desfecho `failed` persistido da operação
+- **AND** SHALL NOT considerar o desfecho da identidade financeira do quadrado, sozinho, como prova de finalidade compartilhada
+- **AND** SHALL NOT estornar se a operação compartilhada ainda permitir nova aquisição
+
 ### Requirement: Indeterminação não autoriza estorno nem repetição cega
 
 Quando o resultado de uma etapa ou de uma confirmação for desconhecido, o sistema SHALL NOT estornar automaticamente e SHALL NOT iniciar nova tentativa paga. O crédito do formato indeterminado SHALL permanecer reservado até resolução segura. Se o outro formato já estiver entregue, ele SHALL permanecer visível e baixável.

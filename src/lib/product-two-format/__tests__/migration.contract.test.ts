@@ -388,6 +388,20 @@ describe("grupo 8 — estorno por formato com evidência de ausência", () => {
     expect(close).toBeGreaterThan(check);
   });
 
+  it("serializa contra acquire_step e exige finalidade durável da operação", () => {
+    const sharedLock = refund.indexOf("INTO v_shared_credit_status");
+    const squareLock = refund.indexOf("INTO v_credit_status");
+    expect(sharedLock).toBeGreaterThan(-1);
+    expect(squareLock).toBeGreaterThan(sharedLock);
+    expect(refund).toContain("product_9_16_two_stage_outcomes");
+    expect(refund).toContain("shared_operation_not_final");
+
+    const finality = refund.indexOf("shared_operation_not_final");
+    const close = refund.indexOf("product_1_1_close_failed_operation(");
+    expect(finality).toBeGreaterThan(-1);
+    expect(close).toBeGreaterThan(finality);
+  });
+
   it("nunca usa o atalho de estorno direto", () => {
     expect(RAW).not.toContain("product_1_1_refund_campaign_credit_operation");
     expect(refund).not.toContain("p_square_delivery_id");
