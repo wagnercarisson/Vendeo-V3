@@ -59,6 +59,18 @@ export const COMPOSITION_VERTICAL_PATH_RE = new RegExp(
   "i",
 );
 
+/**
+ * F60.7 — base quadrada de composição (bucket interno):
+ * `{storeId}/{campaignId}/{operationId}/square_original.jpg`.
+ *
+ * Elegível apenas como fonte de miniatura derivada da entrega 1:1 conjunta.
+ * O preparado 1152×1152 permanece inelegível e nunca é entrega.
+ */
+export const COMPOSITION_SQUARE_ORIGINAL_PATH_RE = new RegExp(
+  `^${UUID}/${UUID}/${UUID}/square_original\\.jpe?g$`,
+  "i",
+);
+
 function thumbnailPattern(original: RegExp): RegExp {
   const source = original.source.replace(/\\\.jpe\?g\$$/i, "");
   return new RegExp(
@@ -73,6 +85,7 @@ const THUMBNAIL_PATH_RES = [
   thumbnailPattern(NEW_FLOW_PATH_RE),
   thumbnailPattern(VERTICAL_FLOW_PATH_RE),
   thumbnailPattern(COMPOSITION_VERTICAL_PATH_RE),
+  thumbnailPattern(COMPOSITION_SQUARE_ORIGINAL_PATH_RE),
 ] as const;
 
 /** Caminho é uma arte final canônica e elegível para miniatura. */
@@ -96,7 +109,8 @@ export function isEligibleCampaignArtPath(path: string): boolean {
     VERSIONED_ART_PATH_RE.test(path) ||
     NEW_FLOW_PATH_RE.test(path) ||
     VERTICAL_FLOW_PATH_RE.test(path) ||
-    COMPOSITION_VERTICAL_PATH_RE.test(path)
+    COMPOSITION_VERTICAL_PATH_RE.test(path) ||
+    COMPOSITION_SQUARE_ORIGINAL_PATH_RE.test(path)
   );
 }
 

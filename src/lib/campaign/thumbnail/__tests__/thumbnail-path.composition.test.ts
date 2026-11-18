@@ -28,10 +28,13 @@ describe("thumbnail path for the composition vertical", () => {
     ).toBe(true);
   });
 
-  it("keeps internal square roles and inputs ineligible", () => {
+  it("keeps square_prepared, inputs and branding ineligible", () => {
+    // F60.7 (Subfatia A): `square_original` tornou-se elegível como fonte da
+    // miniatura derivada da entrega 1:1 conjunta. `square_prepared` permanece
+    // interno e inelegível, como antes.
     expect(
       isEligibleCampaignArtPath(`${STORE}/${CAMPAIGN}/${OPERATION}/square_original.jpg`),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isEligibleCampaignArtPath(`${STORE}/${CAMPAIGN}/${OPERATION}/square_prepared.jpg`),
     ).toBe(false);
