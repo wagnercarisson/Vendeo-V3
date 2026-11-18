@@ -29,6 +29,7 @@ const CAMPAIGN = "22222222-2222-4222-8222-222222222222";
 const OPERATION = "33333333-3333-4333-8333-333333333333";
 const SQUARE_DELIVERY = "44444444-4444-4444-8444-444444444444";
 const CONFIG_VERSION = "9b1d3c4e-5f60-4a7b-8c9d-0e1f2a3b4c5d";
+const PUBLICATION_TOKEN = "55555555-5555-4555-8555-555555555555";
 const MODEL = "gpt-image-2.5-flare";
 const QUALITY = "medium";
 
@@ -164,7 +165,7 @@ function deliverInput(overrides: Record<string, unknown> = {}) {
     campaignId: CAMPAIGN,
     operationId: OPERATION,
     format: "1:1" as const,
-    publicationToken: "publication-token",
+    publicationToken: PUBLICATION_TOKEN,
     ...overrides,
   };
 }
@@ -368,7 +369,7 @@ describe("cliente financeiro conjunto — construção e RPCs", () => {
       p_campaign_id: CAMPAIGN,
       p_operation_id: OPERATION,
       p_format: "1:1",
-      p_publication_token: "publication-token",
+      p_publication_token: PUBLICATION_TOKEN,
     });
 
     expect(
@@ -382,6 +383,19 @@ describe("cliente financeiro conjunto — construção e RPCs", () => {
         client.deliverFormat(deliverInput({ publicationToken: 42 as unknown as string })),
       ),
     ).toBe("missing_publication_token");
+    // O parâmetro SQL é UUID: token malformado falha local e não chama a RPC.
+    expect(
+      await codeOf(
+        client.deliverFormat(deliverInput({ publicationToken: "publication-token" })),
+      ),
+    ).toBe("invalid_publication_token");
+    expect(
+      await codeOf(
+        client.deliverFormat(
+          deliverInput({ publicationToken: "12345678-1234-1234-1234-12345678901" }),
+        ),
+      ),
+    ).toBe("invalid_publication_token");
     expect(await codeOf(client.deliverFormat(deliverInput({ format: "4:3" })))).toBe(
       "unsupported_format",
     );
@@ -503,6 +517,75 @@ describe("cliente financeiro conjunto — construção e RPCs", () => {
     }
   });
 
+  it("Teste 13: motivos por RPC — repassados, faltantes, desconhecidos e cruzados", async () => {
+    // Motivos que a abertura realmente devolve (próprios + repassados pela v2).
+    for (const reason of [
+      "operation_origin_conflict",
+      "operation_in_progress",
+      "joint_open_failed",
+    ]) {
+      const fake = fakeClient({ [OPEN_RPC]: { success: false, reason } });
+      const client = new TwoFormatJointFinancialClient(fake.client);
+      expect(await client.openJointDelivery(openInput())).toEqual({ success: false, reason });
+    }
+
+    // `missing_publication_token` é rejeição de negócio do SQL de entrega.
+    const tokenEnvelope = fakeClient({
+      [DELIVER_RPC]: { success: false, reason: "missing_publication_token" },
+    });
+    expect(
+      await new TwoFormatJointFinancialClient(tokenEnvelope.client).deliverFormat(deliverInput()),
+    ).toEqual({ success: false, reason: "missing_publication_token" });
+
+    // Motivo legítimo de OUTRA RPC continua sendo envelope inválido.
+    const crossOpen = fakeClient({ [OPEN_RPC]: { success: false, reason: "artifact_present" } });
+    expect(
+      await codeOf(new TwoFormatJointFinancialClient(crossOpen.client).openJointDelivery(openInput())),
+    ).toBe("invalid_envelope");
+
+    const crossDeliver = fakeClient({
+      [DELIVER_RPC]: { success: false, reason: "operation_in_progress" },
+    });
+    expect(
+      await codeOf(
+        new TwoFormatJointFinancialClient(crossDeliver.client).deliverFormat(deliverInput()),
+      ),
+    ).toBe("invalid_envelope");
+
+    const crossRefund = fakeClient({
+      [REFUND_RPC]: { success: false, reason: "joint_open_failed" },
+    });
+    expect(
+      await codeOf(
+        new TwoFormatJointFinancialClient(crossRefund.client).refundFormat(refundInput()),
+      ),
+    ).toBe("invalid_envelope");
+
+    // Exceção recebida como envelope na projeção também falha fechado.
+    for (const reason of ["delivery_links_inconsistent", "shared_operation_not_final"]) {
+      const asProjectionEnvelope = fakeClient({ [PROJECT_RPC]: { success: false, reason } });
+      expect(
+        await codeOf(
+          new TwoFormatJointFinancialClient(asProjectionEnvelope.client).projectCampaign({
+            campaignId: CAMPAIGN,
+          }),
+        ),
+      ).toBe("invalid_envelope");
+    }
+
+    // Motivo desconhecido em qualquer RPC é envelope inválido.
+    const unknownProject = fakeClient({
+      [PROJECT_RPC]: { success: false, reason: "not_a_real_reason" },
+    });
+    expect(
+      await codeOf(
+        new TwoFormatJointFinancialClient(unknownProject.client).projectCampaign({
+          campaignId: CAMPAIGN,
+        }),
+      ),
+    ).toBe("invalid_envelope");
+  });
+
   it("Teste 10: estorno envia evidência de ausência e devolve a união discriminada", async () => {
     const fake = fakeClient({ [REFUND_RPC]: refundEnvelope() });
     const client = new TwoFormatJointFinancialClient(fake.client);
@@ -598,6 +681,33 @@ describe("contrato SQL ↔ cliente", () => {
     return Array.from(signature(name).matchAll(/\bp_[a-z_]+/g)).map((match) => match[0]);
   }
 
+  function normalized(fileName: string): string {
+    return readFileSync(path.join(migrationsDir, fileName), "utf8")
+      .split(/\r?\n/)
+      .map((line) => line.replace(/--.*$/, ""))
+      .join("\n")
+      .replace(/\s+/g, " ");
+  }
+
+  function functionBody(source: string, name: string): string {
+    const marker = `FUNCTION public.${name}(`;
+    const start = source.indexOf(marker);
+    expect(start).toBeGreaterThan(-1);
+    const next = source.indexOf("CREATE OR REPLACE FUNCTION", start + marker.length);
+    return source.slice(start, next < 0 ? source.length : next);
+  }
+
+  function returnedReasons(source: string, name: string): string[] {
+    return Array.from(
+      new Set(
+        Array.from(
+          functionBody(source, name).matchAll(/'reason',\s*'([a-z_]+)'/g),
+          (match) => match[1],
+        ),
+      ),
+    );
+  }
+
   it("Teste 12: nomes e parâmetros do cliente existem nas assinaturas autoradas", () => {
     expect(fileName).not.toBe("");
 
@@ -647,5 +757,61 @@ describe("contrato SQL ↔ cliente", () => {
 
     expect(sql).toContain("RAISE EXCEPTION 'delivery_links_inconsistent'");
     expect(sql).toContain("RAISE EXCEPTION 'shared_operation_not_final'");
+  });
+
+  it("Teste 14: motivos devolvidos por função (incluindo os repassados pela v2) são aceitos", async () => {
+    const v2Sql = normalized("20261117170916_f60_6_nine_sixteen_expansion_model_config.sql");
+
+    const openOwn = returnedReasons(sql, OPEN_RPC);
+    const openForwarded = returnedReasons(v2Sql, "product_9_16_open_operation_v2");
+    expect(openOwn.length).toBeGreaterThan(0);
+    expect(openForwarded.length).toBeGreaterThan(0);
+    // Fronteira explícita: a abertura repassa estes motivos verbatim da v2.
+    expect(openForwarded).toEqual(
+      expect.arrayContaining(["operation_origin_conflict", "operation_in_progress"]),
+    );
+
+    for (const reason of [...openOwn, ...openForwarded]) {
+      const fake = fakeClient({ [OPEN_RPC]: { success: false, reason } });
+      await expect(
+        new TwoFormatJointFinancialClient(fake.client).openJointDelivery(openInput()),
+      ).resolves.toEqual({ success: false, reason });
+    }
+
+    const deliverReasons = returnedReasons(sql, DELIVER_RPC);
+    expect(deliverReasons).toEqual(
+      expect.arrayContaining(["unsupported_format", "missing_publication_token"]),
+    );
+    for (const reason of deliverReasons) {
+      const fake = fakeClient({ [DELIVER_RPC]: { success: false, reason } });
+      await expect(
+        new TwoFormatJointFinancialClient(fake.client).deliverFormat(deliverInput()),
+      ).resolves.toEqual({ success: false, reason });
+    }
+
+    const refundReasons = returnedReasons(sql, REFUND_RPC);
+    expect(refundReasons).toEqual(
+      expect.arrayContaining(["artifact_present", "delivered_not_refundable"]),
+    );
+    for (const reason of refundReasons) {
+      const fake = fakeClient({ [REFUND_RPC]: { success: false, reason } });
+      await expect(
+        new TwoFormatJointFinancialClient(fake.client).refundFormat(refundInput()),
+      ).resolves.toEqual({ success: false, reason });
+    }
+
+    const projectReasons = returnedReasons(sql, PROJECT_RPC);
+    expect(projectReasons).toEqual(["campaign_not_found"]);
+    for (const reason of projectReasons) {
+      const fake = fakeClient({ [PROJECT_RPC]: { success: false, reason } });
+      await expect(
+        new TwoFormatJointFinancialClient(fake.client).projectCampaign({ campaignId: CAMPAIGN }),
+      ).resolves.toEqual({ success: false, reason });
+    }
+
+    // O inverso: exceção nunca é devolvida como motivo de negócio no SQL.
+    const returned = new Set([...openOwn, ...deliverReasons, ...refundReasons, ...projectReasons]);
+    expect(returned.has("delivery_links_inconsistent")).toBe(false);
+    expect(returned.has("shared_operation_not_final")).toBe(false);
   });
 });

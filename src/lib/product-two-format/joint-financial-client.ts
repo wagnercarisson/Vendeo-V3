@@ -30,9 +30,11 @@ import {
  * financeiro acontece dentro da RPC conjunta. Sem token não há chamada.
  *
  * Envelopes são lidos como união fechada: sucesso exige as chaves e identidades
- * exatas, versão de contrato exata, status conhecidos e flags booleanas. Falha
- * de vínculo/finalidade levantada no banco é exceção — ela NUNCA é aceita como
- * rejeição de negócio (`success: false`): vira `invalid_envelope`.
+ * exatas, versão de contrato exata, status conhecidos e flags booleanas. Cada
+ * RPC tem sua PRÓPRIA allowlist de motivos de negócio — incluindo os que a
+ * abertura repassa da autoridade v2 —, e motivo legítimo de outra RPC também é
+ * `invalid_envelope`. Falha de vínculo/finalidade levantada no banco é exceção:
+ * ela NUNCA é aceita como rejeição de negócio (`success: false`).
  *
  * Este módulo não lê configuração/catálogo vigentes: na abertura ele apenas
  * compara a seleção congelada devolvida com a seleção solicitada.
@@ -43,6 +45,7 @@ export type TwoFormatDeliveryErrorCode =
   | "invalid_envelope"
   | "identity_mismatch"
   | "missing_publication_token"
+  | "invalid_publication_token"
   | "unsupported_format"
   | "delivery_identity_conflict"
   | "joint_contract_required"
@@ -87,31 +90,57 @@ export class TwoFormatDeliveryError extends Error {
 }
 
 /**
- * Motivos devolvidos como rejeição de negócio (`success: false`). Qualquer
- * outro motivo é tratado como envelope inválido: em especial as falhas que o
- * SQL levanta como exceção nunca são aceitas aqui.
+ * Motivos devolvidos como rejeição de negócio (`success: false`), POR RPC.
+ *
+ * A lista é fechada e específica de cada função: um motivo legítimo de uma RPC
+ * não é aceito como envelope de outra. Motivos que o SQL levanta como exceção
+ * (`delivery_links_inconsistent`, `shared_operation_not_final`, ...) nunca
+ * entram aqui — recebê-los em envelope é `invalid_envelope`.
  */
-const RETURNED_REASONS = [
+const OPEN_RETURNED_REASONS = [
   "joint_contract_required",
-  "operation_config_conflict",
+  "operation_origin_conflict",
   "operation_identity_conflict",
-  "campaign_store_mismatch",
-  "delivery_link_missing",
+  "operation_config_conflict",
+  // Repassado verbatim pela abertura v2 em corrida de mesma identidade.
+  "operation_in_progress",
   "delivery_link_incomplete",
-  "credit_operation_missing",
+  // Fallback autorado quando a v2 não devolve envelope v2.
+  "joint_open_failed",
+] as const;
+export type TwoFormatOpenReason = (typeof OPEN_RETURNED_REASONS)[number];
+
+const DELIVER_RETURNED_REASONS = [
+  "unsupported_format",
+  // O SQL devolve este motivo como rejeição de negócio, além do erro local.
+  "missing_publication_token",
+  "delivery_link_missing",
   "artifact_incompatible",
-  "artifact_present",
+  "credit_operation_missing",
+  "invalid_transition",
+] as const;
+export type TwoFormatDeliverReason = (typeof DELIVER_RETURNED_REASONS)[number];
+
+const REFUND_RETURNED_REASONS = [
+  "unsupported_format",
   "insufficient_evidence",
-  "evidence_stale",
-  "absent_not_confirmed",
-  "operation_terminal",
+  "delivery_link_missing",
+  "credit_operation_missing",
   "delivered_not_refundable",
   "invalid_transition",
-  "campaign_not_found",
-  "unsupported_format",
+  "artifact_present",
 ] as const;
+export type TwoFormatRefundReason = (typeof REFUND_RETURNED_REASONS)[number];
 
-export type TwoFormatBusinessReason = (typeof RETURNED_REASONS)[number];
+const PROJECT_RETURNED_REASONS = ["campaign_not_found"] as const;
+export type TwoFormatProjectReason = (typeof PROJECT_RETURNED_REASONS)[number];
+
+/** União de todos os motivos de negócio, já discriminados por RPC acima. */
+export type TwoFormatBusinessReason =
+  | TwoFormatOpenReason
+  | TwoFormatDeliverReason
+  | TwoFormatRefundReason
+  | TwoFormatProjectReason;
 
 /** Códigos mapeados a partir de mensagens de erro do PostgREST. */
 const ERROR_CODES: readonly TwoFormatDeliveryErrorCode[] = [
@@ -240,7 +269,7 @@ export type TwoFormatOpenResult =
       readonly squareCreditStatus: TwoFormatCreditStatus;
       readonly steps: readonly TwoFormatDeliveryStep[];
     }
-  | { readonly success: false; readonly reason: TwoFormatBusinessReason };
+  | { readonly success: false; readonly reason: TwoFormatOpenReason };
 
 export type TwoFormatDeliverResult =
   | {
@@ -258,7 +287,7 @@ export type TwoFormatDeliverResult =
       readonly projected: boolean;
       readonly alreadyProjected: boolean;
     }
-  | { readonly success: false; readonly reason: TwoFormatBusinessReason };
+  | { readonly success: false; readonly reason: TwoFormatDeliverReason };
 
 export type TwoFormatRefundResult =
   | {
@@ -276,7 +305,7 @@ export type TwoFormatRefundResult =
       readonly projected: boolean;
       readonly alreadyProjected: boolean;
     }
-  | { readonly success: false; readonly reason: TwoFormatBusinessReason };
+  | { readonly success: false; readonly reason: TwoFormatRefundReason };
 
 export type TwoFormatProjectResult =
   | {
@@ -288,7 +317,7 @@ export type TwoFormatProjectResult =
       readonly storagePath: string | null;
       readonly preferredFormat: TwoFormatFormat | null;
     }
-  | { readonly success: false; readonly reason: TwoFormatBusinessReason };
+  | { readonly success: false; readonly reason: TwoFormatProjectReason };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -316,15 +345,15 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function closedReason(record: Record<string, unknown>): TwoFormatBusinessReason {
+function closedReason<T extends string>(
+  record: Record<string, unknown>,
+  allowed: readonly T[],
+): T {
   const reason = record.reason;
-  if (
-    typeof reason !== "string" ||
-    !(RETURNED_REASONS as readonly string[]).includes(reason)
-  ) {
+  if (typeof reason !== "string" || !allowed.includes(reason as T)) {
     throw invalidEnvelope("invalid_business_reason");
   }
-  return reason as TwoFormatBusinessReason;
+  return reason as T;
 }
 
 function booleanField(record: Record<string, unknown>, key: string): boolean {
@@ -501,12 +530,21 @@ function assertPublicationToken(token: string | null): string {
       "publication_token_required",
     );
   }
+  // O parâmetro SQL é UUID: um token malformado nunca chega ao banco.
+  if (!isUuid(token)) {
+    throw new TwoFormatDeliveryError(
+      "invalid_publication_token",
+      "publication_token_not_uuid",
+    );
+  }
   return token;
 }
 
 function parseOpenResult(data: unknown, input: TwoFormatOpenInput): TwoFormatOpenResult {
   const record = asRecord(data);
-  if (record.success === false) return { success: false, reason: closedReason(record) };
+  if (record.success === false) {
+    return { success: false, reason: closedReason(record, OPEN_RETURNED_REASONS) };
+  }
   if (record.success !== true) throw invalidEnvelope("incomplete_open_envelope");
 
   if (record.contract_version !== TWO_FORMAT_CONTRACT_VERSION) {
@@ -550,7 +588,9 @@ function parseFormatDeliveryResult(
   input: TwoFormatDeliverInput,
 ): TwoFormatDeliverResult {
   const record = asRecord(data);
-  if (record.success === false) return { success: false, reason: closedReason(record) };
+  if (record.success === false) {
+    return { success: false, reason: closedReason(record, DELIVER_RETURNED_REASONS) };
+  }
   if (record.success !== true) throw invalidEnvelope("incomplete_deliver_envelope");
 
   if (
@@ -608,7 +648,9 @@ function parseRefundResult(
   input: TwoFormatRefundInput,
 ): TwoFormatRefundResult {
   const record = asRecord(data);
-  if (record.success === false) return { success: false, reason: closedReason(record) };
+  if (record.success === false) {
+    return { success: false, reason: closedReason(record, REFUND_RETURNED_REASONS) };
+  }
   if (record.success !== true) throw invalidEnvelope("incomplete_refund_envelope");
 
   if (
@@ -666,7 +708,9 @@ function parseProjectResult(
   campaignId: string,
 ): TwoFormatProjectResult {
   const record = asRecord(data);
-  if (record.success === false) return { success: false, reason: closedReason(record) };
+  if (record.success === false) {
+    return { success: false, reason: closedReason(record, PROJECT_RETURNED_REASONS) };
+  }
   if (record.success !== true) throw invalidEnvelope("incomplete_project_envelope");
 
   if (record.campaign_id !== campaignId) {
@@ -721,8 +765,10 @@ export class TwoFormatJointFinancialClient {
   }
 
   /**
-   * Entrega por formato: exige o token JÁ adquirido pelo chamador e delega à
-   * RPC única que transita o estado financeiro e reprojeta a campanha.
+   * Entrega por formato: exige o token JÁ adquirido pelo chamador (UUID de
+   * `beginPublication`) e delega à RPC única que transita o estado financeiro e
+   * reprojeta a campanha. Token ausente, vazio ou não-UUID falha localmente,
+   * sem RPC.
    */
   async deliverFormat(input: TwoFormatDeliverInput): Promise<TwoFormatDeliverResult> {
     const format = formatField(input.format);
