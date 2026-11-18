@@ -209,31 +209,44 @@ const ABORTABLE_DELIVER_REASONS: ReadonlySet<string> = new Set<string>([
   "invalid_transition",
 ]);
 
-const BUSINESS_BLOCKS: ReadonlySet<string> = new Set<string>([
-  "delivery_link_missing",
-  "credit_operation_missing",
-  "artifact_incompatible",
-  "artifact_present",
-  "insufficient_evidence",
-  "absent_not_confirmed",
-  "evidence_stale",
-  "finality_not_recorded",
-  "shared_operation_not_final",
-  "operation_in_progress",
-  "operation_terminal",
-  "operation_identity_conflict",
-  "publication_in_progress",
-  "publication_not_owner",
-  "stale_publication",
-  "delivered_not_refundable",
-  "already_delivered",
-  "invalid_transition",
-]);
+const BUSINESS_BLOCKS: ReadonlySet<JointResolutionBlock09> =
+  new Set<JointResolutionBlock09>([
+    "delivery_link_missing",
+    "credit_operation_missing",
+    "artifact_present",
+    "insufficient_evidence",
+    "evidence_stale",
+    "finality_not_recorded",
+    "shared_operation_not_final",
+    "operation_in_progress",
+    "operation_terminal",
+    "operation_identity_conflict",
+    "publication_in_progress",
+    "publication_not_owner",
+    "stale_publication",
+    "delivered_not_refundable",
+    "already_delivered",
+    "invalid_transition",
+  ]);
 
-const ATTEMPT_START_OUTCOME_CODES: ReadonlySet<string> = new Set<string>([
-  "operation_terminal",
-  "operation_identity_conflict",
-]);
+/**
+ * Motivos de RPC que NÃO pertencem à união fechada do 09 são mapeados aqui,
+ * explicitamente, para que `BUSINESS_BLOCKS` permaneça tipado pela união:
+ * - `absent_not_confirmed` (ausência não comprovada) ⇒ `insufficient_evidence`;
+ * - `artifact_incompatible` permanece falha definitiva (`failed`), sem bloco.
+ */
+function blockForFailure(
+  code: TwoFormatDeliveryErrorCode | CreditOperationErrorCode,
+): JointResolutionBlock09 | null {
+  if (code === "absent_not_confirmed") return "insufficient_evidence";
+  return isBlock(code) ? code : null;
+}
+
+const ATTEMPT_START_OUTCOME_CODES: ReadonlySet<JointResolutionBlock09> =
+  new Set<JointResolutionBlock09>([
+    "operation_terminal",
+    "operation_identity_conflict",
+  ]);
 
 function twoFormatErrorCode(error: unknown): TwoFormatDeliveryErrorCode | null {
   if (!(error instanceof Error) || error.name !== "TwoFormatDeliveryError") {
@@ -251,16 +264,33 @@ function creditErrorCode(error: unknown): CreditOperationErrorCode | null {
   return typeof code === "string" ? (code as CreditOperationErrorCode) : null;
 }
 
-function attemptStartOutcomeCode(error: unknown): string | null {
+function attemptStartOutcomeCode(
+  error: unknown,
+): JointResolutionBlock09 | null {
   if (!(error instanceof Error) || error.name !== "AttemptStartError") return null;
   const code = (error as { readonly code?: unknown }).code;
-  return typeof code === "string" && ATTEMPT_START_OUTCOME_CODES.has(code)
-    ? code
-    : null;
+  if (typeof code !== "string") return null;
+  for (const block of ATTEMPT_START_OUTCOME_CODES) {
+    if (block === code) return block;
+  }
+  return null;
 }
 
 function isBlock(code: string): code is JointResolutionBlock09 {
-  return BUSINESS_BLOCKS.has(code);
+  for (const block of BUSINESS_BLOCKS) {
+    if (block === code) return true;
+  }
+  return false;
+}
+
+function isTerminalCredit(
+  action: "deliver" | "refund",
+  status: JointCreditStatus,
+): boolean {
+  return (
+    (action === "deliver" && status === "delivered") ||
+    (action === "refund" && status === "refunded")
+  );
 }
 
 function errorCode(
@@ -354,30 +384,6 @@ function terminalAuditOutcome(
   };
 }
 
-interface AuditExpectation {
-  readonly targetId: string;
-  readonly operationId: string;
-  readonly action: "deliver" | "refund";
-  readonly format: TwoFormatFormat;
-  readonly controlOperationId: string;
-  readonly deliveryOperationId: string;
-  readonly kind: JointAuditKind;
-}
-
-function compatibleAudit(
-  lookup: JointAuditLookup,
-  expected: AuditExpectation,
-): "none" | "resolution" | "reconciliation" | "conflict" | "read_failed" {
-  if (lookup.kind === "read_failed") return "read_failed";
-  if (lookup.kind === "absent") return "none";
-  if (auditMatches(lookup.record, expected)) {
-    return lookup.record.metadata?.kind === "reconciliation"
-      ? "reconciliation"
-      : "resolution";
-  }
-  return "conflict";
-}
-
 function auditMetadata(input: {
   readonly request: JointResolutionRequest;
   readonly kind: JointAuditKind;
@@ -434,31 +440,19 @@ async function writeResolutionAudit(
     if (!auditUniqueViolation(error)) {
       return { kind: "audit_pending", code: "audit_write_failed" };
     }
-    const lookup = await deps.readAuditByOperationId(deliveryOperationId);
-    const match = compatibleAudit(lookup, {
-      targetId: request.campaignId,
-      operationId: deliveryOperationId,
-      action: request.action,
-      format: request.format,
-      controlOperationId: request.operationId,
-      deliveryOperationId,
-      kind: "resolution",
-    });
-    if (match === "resolution") {
-      return {
-        kind: "resolved",
-        action: request.action,
-        format: request.format,
-        idempotent: true,
-        auditRecorded: true,
-        alreadyAudited: true,
-      };
-    }
-    if (match === "read_failed") {
+    let lookup: JointAuditLookup;
+    try {
+      lookup = await deps.readAuditByOperationId(deliveryOperationId);
+    } catch {
       return { kind: "audit_unavailable", code: "audit_read_failed" };
     }
-    if (match === "none") return { kind: "audit_pending", code: "audit_write_failed" };
-    return { kind: "audit_conflict" };
+    if (lookup.kind === "read_failed") {
+      return { kind: "audit_unavailable", code: "audit_read_failed" };
+    }
+    // Reconciliação concorrente equivalente é reconhecida sem autoria admin.
+    const closed = terminalAuditOutcome(lookup, request, deliveryOperationId);
+    if (closed !== null) return closed;
+    return { kind: "audit_pending", code: "audit_write_failed" };
   }
 }
 
@@ -486,7 +480,12 @@ async function writeReconciliationAudit(
     if (!auditUniqueViolation(error)) {
       return { kind: "audit_pending", code: "audit_write_failed" };
     }
-    const lookup = await deps.readAuditByOperationId(deliveryOperationId);
+    let lookup: JointAuditLookup;
+    try {
+      lookup = await deps.readAuditByOperationId(deliveryOperationId);
+    } catch {
+      return { kind: "audit_unavailable", code: "audit_read_failed" };
+    }
     const closed = terminalAuditOutcome(lookup, request, deliveryOperationId);
     if (closed !== null) return closed;
     return { kind: "audit_conflict" };
@@ -569,9 +568,7 @@ export async function resolveJointPending(
     };
   }
 
-  const terminal =
-    (request.action === "deliver" && state.creditStatus === "delivered") ||
-    (request.action === "refund" && state.creditStatus === "refunded");
+  const terminal = isTerminalCredit(request.action, state.creditStatus);
 
   let preAudit: JointAuditLookup;
   try {
@@ -591,7 +588,38 @@ export async function resolveJointPending(
     request,
     deliveryOperationId,
   );
-  if (preAuditOutcome !== null) return preAuditOutcome;
+  if (preAuditOutcome !== null) {
+    // Auditoria não substitui a autoridade financeira: se o estado lido não é
+    // terminal, relê a autoridade e só aceita equivalência com crédito terminal.
+    if (
+      preAuditOutcome.kind === "audit_conflict" ||
+      preAuditOutcome.kind === "audit_unavailable"
+    ) {
+      return preAuditOutcome;
+    }
+    let confirmation: JointResolutionStateResult;
+    try {
+      confirmation = await deps.readResolutionState({
+        campaignId: request.campaignId,
+        operationId: request.operationId,
+        deliveryOperationId,
+      });
+    } catch {
+      return { kind: "audit_unavailable", code: "audit_read_failed" };
+    }
+    if (confirmation.kind === "read_failed") {
+      return { kind: "audit_unavailable", code: "audit_read_failed" };
+    }
+    if (confirmation.kind !== "found") return { kind: "audit_conflict" };
+    if (
+      !confirmation.state.linkComplete ||
+      confirmation.state.storeId !== state.storeId ||
+      !isTerminalCredit(request.action, confirmation.state.creditStatus)
+    ) {
+      return { kind: "audit_conflict" };
+    }
+    return preAuditOutcome;
+  }
 
   let observedEpoch = 0;
   if (request.action === "refund") {
@@ -602,8 +630,9 @@ export async function resolveJointPending(
       );
     } catch (error) {
       const code = errorCode(error);
-      return isBlock(code)
-        ? { kind: "blocked", block: code, outcomeRecorded: false }
+      const block = blockForFailure(code);
+      return block !== null
+        ? { kind: "blocked", block, outcomeRecorded: false }
         : { kind: "failed", code };
     }
   }
@@ -656,8 +685,9 @@ export async function resolveJointPending(
       );
     } catch (error) {
       const code = errorCode(error);
-      return isBlock(code)
-        ? { kind: "blocked", block: code, outcomeRecorded: false }
+      const block = blockForFailure(code);
+      return block !== null
+        ? { kind: "blocked", block, outcomeRecorded: false }
         : { kind: "failed", code };
     }
     if (!publication.acquired || publication.token === null) {
@@ -680,10 +710,11 @@ export async function resolveJointPending(
       if (twoFormatCode === "missing_publication_token") {
         return { kind: "publication_pending" };
       }
-      if (code !== null && isBlock(code)) {
-        return { kind: "blocked", block: code, outcomeRecorded: false };
-      }
-      return { kind: "failed", code: code ?? "unknown" };
+      if (code === null) return { kind: "failed", code: "unknown" };
+      const block = blockForFailure(code);
+      return block !== null
+        ? { kind: "blocked", block, outcomeRecorded: false }
+        : { kind: "failed", code };
     }
 
     if (!delivered.success) {
@@ -702,8 +733,9 @@ export async function resolveJointPending(
       if (delivered.reason === "missing_publication_token") {
         return { kind: "publication_pending" };
       }
-      return isBlock(delivered.reason)
-        ? { kind: "blocked", block: delivered.reason, outcomeRecorded: false }
+      const block = blockForFailure(delivered.reason);
+      return block !== null
+        ? { kind: "blocked", block, outcomeRecorded: false }
         : { kind: "failed", code: delivered.reason };
     }
 
@@ -746,7 +778,7 @@ export async function resolveJointPending(
       outcomeRecorded = true;
     } catch (error) {
       const code = attemptStartOutcomeCode(error);
-      if (code !== null && isBlock(code)) {
+      if (code !== null) {
         return { kind: "blocked", block: code, outcomeRecorded: false };
       }
       return { kind: "failed", code: errorCode(error) };
@@ -766,14 +798,16 @@ export async function resolveJointPending(
     });
   } catch (error) {
     const code = errorCode(error);
-    return isBlock(code)
-      ? { kind: "blocked", block: code, outcomeRecorded }
+    const block = blockForFailure(code);
+    return block !== null
+      ? { kind: "blocked", block, outcomeRecorded }
       : { kind: "failed", code };
   }
 
   if (!refunded.success) {
-    return isBlock(refunded.reason)
-      ? { kind: "blocked", block: refunded.reason, outcomeRecorded }
+    const block = blockForFailure(refunded.reason);
+    return block !== null
+      ? { kind: "blocked", block, outcomeRecorded }
       : { kind: "failed", code: refunded.reason };
   }
 

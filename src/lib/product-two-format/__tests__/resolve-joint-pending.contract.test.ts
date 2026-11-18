@@ -258,6 +258,8 @@ interface AuditStore {
   record: JointAuditRecord | null;
   writes: JointAuditEntry[];
   reads: string[];
+  readCount: number;
+  failReadAt: number | null;
   readError: Error | null;
   writeError: Error | null;
   read: (operationId: string) => Promise<JointAuditLookup>;
@@ -269,11 +271,16 @@ function makeAuditStore(initial: JointAuditRecord | null = null): AuditStore {
     record: initial,
     writes: [],
     reads: [],
+    readCount: 0,
+    failReadAt: null,
     readError: null,
     writeError: null,
     async read(operationId) {
       store.reads.push(operationId);
-      if (store.readError !== null) throw store.readError;
+      store.readCount += 1;
+      if (store.readError !== null || store.readCount === store.failReadAt) {
+        throw new Error("audit_read_failed");
+      }
       return store.record === null
         ? { kind: "absent" }
         : { kind: "found", record: store.record };
@@ -296,6 +303,7 @@ function makeAuditStore(initial: JointAuditRecord | null = null): AuditStore {
 interface DepsConfig {
   readonly read?: TwoFormatReadResult;
   readonly state?: JointResolutionStateResult;
+  readonly stateSequence?: readonly JointResolutionStateResult[];
   readonly squareProbe?: Behavior<JointSquareProbeResult>;
   readonly verticalProbe?: Behavior<VerticalArtifactProbeResult>;
   readonly publication?: Behavior<{
@@ -323,6 +331,7 @@ function makeDeps(
   audit: AuditStore = makeAuditStore(),
 ): DepsRun {
   const order: string[] = [];
+  let stateReadIndex = 0;
   const deps: JointResolutionDeps = {
     readDelivery: vi.fn(async () => {
       order.push("read");
@@ -330,6 +339,12 @@ function makeDeps(
     }),
     readResolutionState: vi.fn(async () => {
       order.push("state");
+      const sequence = config.stateSequence;
+      if (sequence !== undefined && sequence.length > 0) {
+        const index = Math.min(stateReadIndex, sequence.length - 1);
+        stateReadIndex += 1;
+        return sequence[index];
+      }
       return config.state ?? foundState();
     }),
     probeSquare: vi.fn(async () => {
@@ -574,7 +589,15 @@ describe("F60.7-09 — resolução administrativa por formato", () => {
     expectNoFinancialEffect(run);
     expectNoAuditWrite(run);
 
-    const equivalent = makeDeps({}, makeAuditStore(auditRecord()));
+    const equivalent = makeDeps(
+      {
+        stateSequence: [
+          foundState(),
+          foundState({ creditStatus: "delivered" }),
+        ],
+      },
+      makeAuditStore(auditRecord()),
+    );
     expect(await resolveJointPending(request(), equivalent.deps)).toEqual({
       kind: "resolved",
       action: "deliver",
@@ -583,11 +606,25 @@ describe("F60.7-09 — resolução administrativa por formato", () => {
       auditRecorded: true,
       alreadyAudited: true,
     });
+    expect(equivalent.order.filter((step) => step === "state")).toHaveLength(2);
     expectNoFinancialEffect(equivalent);
     expectNoAuditWrite(equivalent);
 
+    const nonTerminal = makeDeps({}, makeAuditStore(auditRecord()));
+    expect(await resolveJointPending(request(), nonTerminal.deps)).toEqual({
+      kind: "audit_conflict",
+    });
+    expect(nonTerminal.order.filter((step) => step === "state")).toHaveLength(2);
+    expectNoFinancialEffect(nonTerminal);
+    expectNoAuditWrite(nonTerminal);
+
     const reconciled = makeDeps(
-      {},
+      {
+        stateSequence: [
+          foundState(),
+          foundState({ creditStatus: "delivered" }),
+        ],
+      },
       makeAuditStore(auditRecord({ kind: "reconciliation" })),
     );
     expect(await resolveJointPending(request(), reconciled.deps)).toEqual({
@@ -600,6 +637,22 @@ describe("F60.7-09 — resolução administrativa por formato", () => {
     });
     expectNoFinancialEffect(reconciled);
     expectNoAuditWrite(reconciled);
+
+    const rereadFailed = makeDeps(
+      {
+        stateSequence: [
+          foundState(),
+          { kind: "read_failed", reason: "db_down" },
+        ],
+      },
+      makeAuditStore(auditRecord()),
+    );
+    expect(await resolveJointPending(request(), rereadFailed.deps)).toEqual({
+      kind: "audit_unavailable",
+      code: "audit_read_failed",
+    });
+    expectNoFinancialEffect(rereadFailed);
+    expectNoAuditWrite(rereadFailed);
   });
 
   it("Teste 6: deliver de crédito refundido é bloqueio terminal sem efeito nem auditoria", async () => {
@@ -903,7 +956,6 @@ describe("F60.7-09 — resolução administrativa por formato", () => {
     const deliverBlocks: readonly TwoFormatDeliverReason[] = [
       "delivery_link_missing",
       "credit_operation_missing",
-      "artifact_incompatible",
       "invalid_transition",
     ];
     for (const reason of deliverBlocks) {
@@ -915,6 +967,15 @@ describe("F60.7-09 — resolução administrativa por formato", () => {
       });
       expectNoAuditWrite(run);
     }
+
+    const incompatible = makeDeps({
+      deliver: { success: false, reason: "artifact_incompatible" },
+    });
+    expect(await resolveJointPending(request(), incompatible.deps)).toEqual({
+      kind: "failed",
+      code: "artifact_incompatible",
+    });
+    expectNoAuditWrite(incompatible);
 
     const refundBlocks: readonly TwoFormatRefundReason[] = [
       "delivered_not_refundable",
@@ -965,6 +1026,23 @@ describe("F60.7-09 — resolução administrativa por formato", () => {
       expectNoAuditWrite(run);
     }
 
+    const absentNotConfirmed = makeDeps({
+      state: foundState({ sharedCreditStatus: "refunded" }),
+      verticalProbe: { kind: "absent" },
+      refund: creditError("absent_not_confirmed"),
+    });
+    expect(
+      await resolveJointPending(
+        request({ action: "refund" }),
+        absentNotConfirmed.deps,
+      ),
+    ).toEqual({
+      kind: "blocked",
+      block: "insufficient_evidence",
+      outcomeRecorded: false,
+    });
+    expectNoAuditWrite(absentNotConfirmed);
+
     const failedCodes: readonly string[] = [
       "invalid_envelope",
       "delivery_links_inconsistent",
@@ -988,7 +1066,10 @@ describe("F60.7-09 — resolução administrativa por formato", () => {
     const abortable = makeDeps({
       deliver: { success: false, reason: "artifact_incompatible" },
     });
-    await resolveJointPending(request(), abortable.deps);
+    expect(await resolveJointPending(request(), abortable.deps)).toEqual({
+      kind: "failed",
+      code: "artifact_incompatible",
+    });
     expect(abortable.deps.abortPublication).toHaveBeenCalledTimes(1);
     expect(abortable.deps.abortPublication).toHaveBeenCalledWith(
       CAMPAIGN,
@@ -1089,6 +1170,53 @@ describe("F60.7-09 — resolução administrativa por formato", () => {
       kind: "audit_conflict",
     });
     expectNoAuditWrite(divergent);
+
+    const reconciledAudit = makeAuditStore();
+    reconciledAudit.writeError = uniqueViolation();
+    const reconciliationCollision = makeDeps(
+      {
+        onDeliver: (audit) => {
+          audit.record = auditRecord({ kind: "reconciliation" });
+        },
+      },
+      reconciledAudit,
+    );
+    expect(
+      await resolveJointPending(request(), reconciliationCollision.deps),
+    ).toEqual({
+      kind: "reconciled",
+      action: "deliver",
+      format: "9:16",
+      auditRecorded: true,
+      authorship: "unverified",
+      alreadyReconciled: true,
+    });
+    expectNoAuditWrite(reconciliationCollision);
+
+    const rereadFailure = makeAuditStore();
+    rereadFailure.writeError = uniqueViolation();
+    rereadFailure.failReadAt = 2;
+    const resolutionReread = makeDeps({}, rereadFailure);
+    expect(await resolveJointPending(request(), resolutionReread.deps)).toEqual({
+      kind: "audit_unavailable",
+      code: "audit_read_failed",
+    });
+    expect(resolutionReread.deps.deliverFormat).toHaveBeenCalledTimes(1);
+
+    const reconciliationReread = makeAuditStore();
+    reconciliationReread.writeError = uniqueViolation();
+    reconciliationReread.failReadAt = 2;
+    const reconciliationRun = makeDeps(
+      { state: foundState({ creditStatus: "delivered" }) },
+      reconciliationReread,
+    );
+    expect(
+      await resolveJointPending(request(), reconciliationRun.deps),
+    ).toEqual({
+      kind: "audit_unavailable",
+      code: "audit_read_failed",
+    });
+    expectNoFinancialEffect(reconciliationRun);
   });
 
   it("Teste 15: falha de auditoria deixa `audit_pending` e retry só audita", async () => {
