@@ -103,6 +103,14 @@ O sistema SHALL representar cada formato como `delivered`, `processing`, `absent
 - **AND** SHALL preservar o outro formato como `delivered`
 - **AND** SHALL NOT converter a falha em `absent`, `not_found` ou `not_two_format`
 
+#### Scenario: Vínculo ausente é indisponível e preserva o irmão (contrato para a orquestração)
+
+- **WHEN** a campanha conjunta tem apenas um dos dois vínculos de entrega, ou nenhum
+- **THEN** a leitura SHALL retornar o formato sem vínculo como `unavailable`
+- **AND** SHALL manter o formato com vínculo, crédito e artefato coerentes como `delivered`
+- **AND** SHALL NOT converter o formato sem vínculo em `absent`
+- **AND** a orquestração SHALL NOT tratar essa leitura parcial como autorização de estorno, pois a projeção continua falhando fechado com `delivery_link_incomplete`/`delivery_links_inconsistent`
+
 ### Requirement: Acesso individual por formato
 
 O detalhe da campanha conjunta SHALL permitir acesso individual ao preview e ao download de cada formato entregue. O preview e o download SHALL usar o artefato original do formato, com autorização de loja/campanha e URL assinada de curta duração para preview. Nenhuma URL, thumbnail ou download SHALL ser produzido antes da confirmação financeira `delivered` do formato e da validação do artefato. A campanha conjunta SHALL aceitar a seleção de formato na URL (`?format=1:1|9:16`) para abrir diretamente o formato escolhido.
