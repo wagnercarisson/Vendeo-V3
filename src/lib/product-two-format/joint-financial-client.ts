@@ -740,7 +740,9 @@ export class TwoFormatJointFinancialClient {
 
   /**
    * Estorno por formato: só com evidência comprovada de ausência e frescor
-   * observado ANTES da sonda (ver `beginPublication`/epoch no chamador).
+   * observado ANTES da sonda. O `observedEpoch` vem de
+   * `product_1_1_get_publication_epoch` lido pelo chamador ANTES da sonda de
+   * ausência; ler depois não provaria frescor.
    */
   async refundFormat(input: TwoFormatRefundInput): Promise<TwoFormatRefundResult> {
     const format = formatField(input.format);
