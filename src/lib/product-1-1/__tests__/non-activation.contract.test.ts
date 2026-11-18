@@ -403,6 +403,18 @@ const AUTHORIZED_PRODUCT_FLOW_IMPORTS: Readonly<
     prefixes: [],
     exact: ["@/lib/product-1-1/orchestration/instrumentation"],
   },
+  // F60.7 B — ÚNICO importador conjundo de product-1-1 (cliente de crédito).
+  // Par EXATO; nunca um prefixo `product-two-format/**` nem `product-1-1/**`.
+  ["src/lib/product-two-format/orchestration/joint-deps.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/credit-operation/credit-operation-client"],
+  },
+  // F60.7 B — importação TYPE-ONLY do código de erro de crédito. Par EXATO;
+  // nenhum runtime é importado e nenhum prefixo é liberado.
+  ["src/lib/product-two-format/orchestration/deliver-square.ts"]: {
+    prefixes: [],
+    exact: ["@/lib/product-1-1/credit-operation/types"],
+  },
 });
 const SIDE_EFFECT_IMPORT_RE =
   /(?:from\s*|import\s*\(\s*)["'][^"']*(?:\/api\/campaign|\/adapters?(?:\/|$)|\/gateway(?:\/|$)|provider|\/credit(?:\/|$)|delivery|download|image-generation-operations-repository|prompt-composition)[^"']*["']/i;
@@ -1420,6 +1432,36 @@ describe("F60.4 — pares exatos square-base ↔ product-1-1 (test-only)", () =>
     expect(
       hasUnauthorizedProductFlowImport(
         "src/lib/campaign/square-base/novo-runtime.ts",
+        source,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("F60.7 B — pares exatos joint-deps/deliver-square ↔ product-1-1 (test-only)", () => {
+  const IMPORTERS = [
+    "src/lib/product-two-format/orchestration/joint-deps.ts",
+    "src/lib/product-two-format/orchestration/deliver-square.ts",
+  ] as const;
+
+  it("cada importador conjunto corresponde EXATAMENTE ao conjunto real de specifiers", () => {
+    for (const importer of IMPORTERS) {
+      const source = readFileSync(path.resolve(process.cwd(), importer), "utf8");
+      const actual = new Set(collectProductFlowImports(source));
+      const rule = AUTHORIZED_PRODUCT_FLOW_IMPORTS[importer];
+
+      expect(rule, importer).toBeDefined();
+      expect(new Set(rule.exact ?? []), importer).toEqual(actual);
+      expect(rule.prefixes, importer).toEqual([]);
+    }
+  });
+
+  it("um caminho conjunto novo (fora do mapa) continua violação", () => {
+    const source =
+      'import { ProductOneToOneCreditOperationClient } from "@/lib/product-1-1/credit-operation/credit-operation-client";';
+    expect(
+      hasUnauthorizedProductFlowImport(
+        "src/lib/product-two-format/orchestration/outro-runtime.ts",
         source,
       ),
     ).toBe(true);
