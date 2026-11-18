@@ -2,31 +2,31 @@
 
 > Entrega técnica intermediária, sem orquestração integrada e sem disponibilidade ao lojista. Nenhuma migration é aplicada nesta subfatia.
 
-- [ ] 1.1 Definir o contrato puro conjunto de formato em módulo dedicado que reconhece `campaignFormat: "1:1+9:16"` + `formatContractVersion: "f60.7-two-format-v1"` e delega os casos não conjuntos aos resolvedores existentes, mantendo `1:1`, `9:16` e históricos byte-compatíveis.
-- [ ] 1.2 Definir o contrato puro conjunto de origem em módulo dedicado que reconhece `generationOrigin: "two_format_two_stage"` + sua versão e delega os casos não conjuntos, distinguindo origem conjunta de `9_16_two_stage`, histórico e indeterminado.
-- [ ] 1.3 Definir o contrato estrito de declaração conjunta em módulo dedicado, sem conectar ao schema de produção; a extensão do `NewFlowGenerateImageRequestSchema` e o dispatch permanecem na Subfatia C para não expor a opção conjunta antes da jornada.
-- [ ] 1.4 Preparar apenas os tipos puros necessários ao contrato conjunto; atualização de restauração, formulário e review permanece na Subfatia C.
-- [ ] 1.5 Auditar todos os consumidores de `resolveCampaignFormat` e `resolveCampaignGenerationOrigin` para tratar o novo caso sem fallback silencioso, garantindo que fluxos individuais, download, pendências e restauração continuem fail-closed apenas quando apropriado.
-- [ ] 1.6 Cobrir com testes puros: par conjunto válido, versão ausente/desconhecida, par incoerente, lista de formatos recusada, 1:1 sem chaves e 9:16 individual inalterado.
-- [ ] 1.7 Definir o modelo de vínculo entrega↔formato↔operação financeira: duas linhas por requisição conjunta, identidade financeira própria, papel do artefato e unicidade por campanha/operação/formato.
-- [ ] 1.8 Autorar a tabela forward-only, índices, FKs, RLS e `REVOKE ALL` de `service_role` seguido de `GRANT SELECT`, sem backfill e sem alterar tabelas existentes além de referenciá-las.
-- [ ] 1.9 Autorar a RPC de abertura conjunta idempotente que valida o contrato persistido, impede uma segunda operação conjunta na mesma campanha antes de reservar, compara a seleção recebida com a seleção congelada no replay, reutiliza a abertura v2, insere os dois vínculos e reserva os dois créditos na mesma transação.
-- [ ] 1.10 Autorar a RPC de entrega por formato que valida vínculo/artefato, adquire o lock da campanha antes dos locks específicos, executa `mark_art_uploaded` + `deliver` da identidade correta e re-projeta a campanha na mesma transação.
-- [ ] 1.11 Autorar a RPC de estorno por formato que trava a mesma linha financeira da operação conjunta usada por `product_9_16_acquire_step`, verifica execução ativa e finalidade durável compartilhada antes de encerrar somente a identidade comprovadamente não entregue, mantém o lock da campanha antes dos locks específicos e re-projeta sem rebaixar entrega existente.
-- [ ] 1.12 Autorar a RPC de projeção idempotente com lock comum da campanha, dois vínculos coerentes da mesma operação sem `LIMIT 1`, preferência quadrada, fallback vertical e preservação de `ready`.
-- [ ] 1.13 Conferir `amount = 1`, CHECKs, grants e semântica das RPCs existentes; documentar timestamp UTC real e checagem de unicidade do prefixo antes da criação da migration.
-- [ ] 1.14 Criar testes estáticos/contratuais do SQL e dos envelopes, sem executar migration, banco, Docker ou homolog.
-- [ ] 1.15 Implementar cliente server-only das novas RPCs com client injetável, validação fechada de envelope e erros tipados; não alterar os clientes existentes.
-- [ ] 1.16 Definir o contrato do modelo de leitura por formato (`delivered`, `processing`, `absent`, `unknown`, `unavailable`), com crédito devolvido, referência de suporte e miniatura preferida, preservando o outro formato entregue quando crédito/artefato de um formato falha, usando fakes de banco.
-- [ ] 1.17 Definir os contratos de acesso por formato (preview/download/miniatura) e a elegibilidade do caminho canônico de `square_original`, sem montar UI ou rotas.
-- [ ] 1.18 Cobrir leitura/acesso com testes contratuais: formato entregue, processando, ausente, indeterminado, crédito devolvido, miniatura preferida e ausência de fallback para o original.
-- [ ] 1.19 Confirmar que a Subfatia A não altera a semântica dos fluxos 1:1/9:16 individuais, não expõe opção conjunta e não aplica migration.
+- [x] 1.1 Definir o contrato puro conjunto de formato em módulo dedicado que reconhece `campaignFormat: "1:1+9:16"` + `formatContractVersion: "f60.7-two-format-v1"` e delega os casos não conjuntos aos resolvedores existentes, mantendo `1:1`, `9:16` e históricos byte-compatíveis.
+- [x] 1.2 Definir o contrato puro conjunto de origem em módulo dedicado que reconhece `generationOrigin: "two_format_two_stage"` + sua versão e delega os casos não conjuntos, distinguindo origem conjunta de `9_16_two_stage`, histórico e indeterminado.
+- [x] 1.3 Definir o contrato estrito de declaração conjunta em módulo dedicado, sem conectar ao schema de produção; a extensão do `NewFlowGenerateImageRequestSchema` e o dispatch permanecem na Subfatia C para não expor a opção conjunta antes da jornada.
+- [x] 1.4 Preparar apenas os tipos puros necessários ao contrato conjunto; atualização de restauração, formulário e review permanece na Subfatia C.
+- [x] 1.5 Auditar todos os consumidores de `resolveCampaignFormat` e `resolveCampaignGenerationOrigin` para tratar o novo caso sem fallback silencioso, garantindo que fluxos individuais, download, pendências e restauração continuem fail-closed apenas quando apropriado.
+- [x] 1.6 Cobrir com testes puros: par conjunto válido, versão ausente/desconhecida, par incoerente, lista de formatos recusada, 1:1 sem chaves e 9:16 individual inalterado.
+- [x] 1.7 Definir o modelo de vínculo entrega↔formato↔operação financeira: duas linhas por requisição conjunta, identidade financeira própria, papel do artefato e unicidade por campanha/operação/formato.
+- [x] 1.8 Autorar a tabela forward-only, índices, FKs, RLS e `REVOKE ALL` de `service_role` seguido de `GRANT SELECT`, sem backfill e sem alterar tabelas existentes além de referenciá-las.
+- [x] 1.9 Autorar a RPC de abertura conjunta idempotente que valida o contrato persistido, impede uma segunda operação conjunta na mesma campanha antes de reservar, compara a seleção recebida com a seleção congelada no replay, reutiliza a abertura v2, insere os dois vínculos e reserva os dois créditos na mesma transação.
+- [x] 1.10 Autorar a RPC de entrega por formato que valida vínculo/artefato, adquire o lock da campanha antes dos locks específicos, executa `mark_art_uploaded` + `deliver` da identidade correta e re-projeta a campanha na mesma transação.
+- [x] 1.11 Autorar a RPC de estorno por formato que trava a mesma linha financeira da operação conjunta usada por `product_9_16_acquire_step`, verifica execução ativa e finalidade durável compartilhada antes de encerrar somente a identidade comprovadamente não entregue, mantém o lock da campanha antes dos locks específicos e re-projeta sem rebaixar entrega existente.
+- [x] 1.12 Autorar a RPC de projeção idempotente com lock comum da campanha, dois vínculos coerentes da mesma operação sem `LIMIT 1`, preferência quadrada, fallback vertical e preservação de `ready`.
+- [x] 1.13 Conferir `amount = 1`, CHECKs, grants e semântica das RPCs existentes; documentar timestamp UTC real e checagem de unicidade do prefixo antes da criação da migration.
+- [x] 1.14 Criar testes estáticos/contratuais do SQL e dos envelopes, sem executar migration, banco, Docker ou homolog.
+- [x] 1.15 Implementar cliente server-only das novas RPCs com client injetável, validação fechada de envelope e erros tipados; não alterar os clientes existentes.
+- [x] 1.16 Definir o contrato do modelo de leitura por formato (`delivered`, `processing`, `absent`, `unknown`, `unavailable`), com crédito devolvido, referência de suporte e miniatura preferida, preservando o outro formato entregue quando crédito/artefato de um formato falha, usando fakes de banco.
+- [x] 1.17 Definir os contratos de acesso por formato (preview/download/miniatura) e a elegibilidade do caminho canônico de `square_original`, sem montar UI ou rotas.
+- [x] 1.18 Cobrir leitura/acesso com testes contratuais: formato entregue, processando, ausente, indeterminado, crédito devolvido, miniatura preferida e ausência de fallback para o original.
+- [x] 1.19 Confirmar que a Subfatia A não altera a semântica dos fluxos 1:1/9:16 individuais, não expõe opção conjunta e não aplica migration.
 
 ## 2. Gate A — Revisão e aceite da fundação
 
-- [ ] 2.1 Executar typecheck/lint/diff e as suítes focadas da Subfatia A; validar OpenSpec strict.
-- [ ] 2.2 Revisar contratos de formato/origem, schema/RPCs, clientes, leitura e acesso, com atenção a idempotência, identidades financeiras e preservação dos fluxos atuais.
-- [ ] 2.3 Registrar aceite ou correções da Subfatia A antes de iniciar a orquestração; nenhuma migration é aplicada neste gate.
+- [x] 2.1 Executar typecheck/lint/diff e as suítes focadas da Subfatia A; validar OpenSpec strict.
+- [x] 2.2 Revisar contratos de formato/origem, schema/RPCs, clientes, leitura e acesso, com atenção a idempotência, identidades financeiras e preservação dos fluxos atuais.
+- [x] 2.3 Registrar aceite ou correções da Subfatia A antes de iniciar a orquestração; nenhuma migration é aplicada neste gate.
 
 ## 3. Subfatia B — Orquestração conjunta e proteção administrativa
 
